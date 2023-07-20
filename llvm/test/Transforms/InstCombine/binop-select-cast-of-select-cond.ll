@@ -4,9 +4,7 @@
 define i64 @add_select_zext(i1 %c) {
 ; CHECK-LABEL: define i64 @add_select_zext
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 64, i64 1
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SEL]], [[EXT]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i64 65, i64 1
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %sel = select i1 %c, i64 64, i64 1
@@ -18,9 +16,7 @@ define i64 @add_select_zext(i1 %c) {
 define i64 @add_select_sext(i1 %c) {
 ; CHECK-LABEL: define i64 @add_select_sext
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 64, i64 1
-; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[C]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SEL]], [[EXT]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i64 63, i64 1
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %sel = select i1 %c, i64 64, i64 1
@@ -32,10 +28,7 @@ define i64 @add_select_sext(i1 %c) {
 define i64 @add_select_not_zext(i1 %c) {
 ; CHECK-LABEL: define i64 @add_select_not_zext
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 64, i64 1
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[NOT_C]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SEL]], [[EXT]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i64 64, i64 2
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %sel = select i1 %c, i64 64, i64 1
@@ -48,10 +41,7 @@ define i64 @add_select_not_zext(i1 %c) {
 define i64 @add_select_not_sext(i1 %c) {
 ; CHECK-LABEL: define i64 @add_select_not_sext
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 64, i64 1
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
-; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[NOT_C]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SEL]], [[EXT]]
+; CHECK-NEXT:    [[ADD:%.*]] = select i1 [[C]], i64 64, i64 0
 ; CHECK-NEXT:    ret i64 [[ADD]]
 ;
   %sel = select i1 %c, i64 64, i64 1
@@ -64,9 +54,7 @@ define i64 @add_select_not_sext(i1 %c) {
 define i64 @sub_select_sext(i1 %c, i64 %arg) {
 ; CHECK-LABEL: define i64 @sub_select_sext
 ; CHECK-SAME: (i1 [[C:%.*]], i64 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 64, i64 [[ARG]]
-; CHECK-NEXT:    [[EXT_NEG:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[SEL]], [[EXT_NEG]]
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i64 65, i64 [[ARG]]
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;
   %sel = select i1 %c, i64 64, i64 %arg
@@ -78,10 +66,7 @@ define i64 @sub_select_sext(i1 %c, i64 %arg) {
 define i64 @sub_select_not_zext(i1 %c, i64 %arg) {
 ; CHECK-LABEL: define i64 @sub_select_not_zext
 ; CHECK-SAME: (i1 [[C:%.*]], i64 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 [[ARG]], i64 64
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
-; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext i1 [[NOT_C]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[SEL]], [[EXT_NEG]]
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i64 [[ARG]], i64 63
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;
   %sel = select i1 %c, i64 %arg, i64 64
@@ -94,10 +79,7 @@ define i64 @sub_select_not_zext(i1 %c, i64 %arg) {
 define i64 @sub_select_not_sext(i1 %c, i64 %arg) {
 ; CHECK-LABEL: define i64 @sub_select_not_sext
 ; CHECK-SAME: (i1 [[C:%.*]], i64 [[ARG:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 [[ARG]], i64 64
-; CHECK-NEXT:    [[NOT_C:%.*]] = xor i1 [[C]], true
-; CHECK-NEXT:    [[EXT_NEG:%.*]] = zext i1 [[NOT_C]] to i64
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[SEL]], [[EXT_NEG]]
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i64 [[ARG]], i64 65
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;
   %sel = select i1 %c, i64 %arg, i64 64
@@ -122,9 +104,7 @@ define i64 @mul_select_zext(i1 %c, i64 %arg) {
 define i64 @mul_select_sext(i1 %c) {
 ; CHECK-LABEL: define i64 @mul_select_sext
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[C]] to i64
-; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[C]], i64 6, i64 0
-; CHECK-NEXT:    [[MUL:%.*]] = shl i64 [[EXT]], [[TMP1]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[C]], i64 -64, i64 0
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %sel = select i1 %c, i64 64, i64 1
@@ -168,10 +148,7 @@ define <2 x i64> @vector_test(i1 %c) {
 define i64 @multiuse_add(i1 %c) {
 ; CHECK-LABEL: define i64 @multiuse_add
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 64, i64 1
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[SEL]], [[EXT]]
-; CHECK-NEXT:    [[ADD2:%.*]] = add nuw nsw i64 [[ADD]], 1
+; CHECK-NEXT:    [[ADD2:%.*]] = select i1 [[C]], i64 66, i64 2
 ; CHECK-NEXT:    ret i64 [[ADD2]]
 ;
   %sel = select i1 %c, i64 64, i64 1
@@ -184,10 +161,7 @@ define i64 @multiuse_add(i1 %c) {
 define i64 @multiuse_select(i1 %c) {
 ; CHECK-LABEL: define i64 @multiuse_select
 ; CHECK-SAME: (i1 [[C:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 64, i64 0
-; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext i1 [[C]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nsw i64 [[SEL]], [[EXT_NEG]]
-; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i64 [[SEL]], [[ADD]]
+; CHECK-NEXT:    [[MUL:%.*]] = select i1 [[C]], i64 4032, i64 0
 ; CHECK-NEXT:    ret i64 [[MUL]]
 ;
   %sel = select i1 %c, i64 64, i64 0
@@ -200,9 +174,8 @@ define i64 @multiuse_select(i1 %c) {
 define i64 @select_non_const_sides(i1 %c, i64 %arg1, i64 %arg2) {
 ; CHECK-LABEL: define i64 @select_non_const_sides
 ; CHECK-SAME: (i1 [[C:%.*]], i64 [[ARG1:%.*]], i64 [[ARG2:%.*]]) {
-; CHECK-NEXT:    [[EXT_NEG:%.*]] = sext i1 [[C]] to i64
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i64 [[ARG1]], i64 [[ARG2]]
-; CHECK-NEXT:    [[SUB:%.*]] = add i64 [[SEL]], [[EXT_NEG]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i64 [[ARG1]], -1
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i64 [[TMP1]], i64 [[ARG2]]
 ; CHECK-NEXT:    ret i64 [[SUB]]
 ;
   %ext = zext i1 %c to i64
@@ -214,9 +187,9 @@ define i64 @select_non_const_sides(i1 %c, i64 %arg1, i64 %arg2) {
 define i6 @sub_select_sext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) {
 ; CHECK-LABEL: define i6 @sub_select_sext_op_swapped_non_const_args
 ; CHECK-SAME: (i1 [[C:%.*]], i6 [[ARGT:%.*]], i6 [[ARGF:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i6 [[ARGT]], i6 [[ARGF]]
-; CHECK-NEXT:    [[EXT:%.*]] = sext i1 [[C]] to i6
-; CHECK-NEXT:    [[SUB:%.*]] = sub i6 [[EXT]], [[SEL]]
+; CHECK-DAG:     [[TMP1:%.*]] = xor i6 [[ARGT]], -1
+; CHECK-DAG:     [[TMP2:%.*]] = sub i6 0, [[ARGF]]
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i6 [[TMP1]], i6 [[TMP2]]
 ; CHECK-NEXT:    ret i6 [[SUB]]
 ;
   %sel = select i1 %c, i6 %argT, i6 %argF
@@ -228,9 +201,9 @@ define i6 @sub_select_sext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) 
 define i6 @sub_select_zext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) {
 ; CHECK-LABEL: define i6 @sub_select_zext_op_swapped_non_const_args
 ; CHECK-SAME: (i1 [[C:%.*]], i6 [[ARGT:%.*]], i6 [[ARGF:%.*]]) {
-; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[C]], i6 [[ARGT]], i6 [[ARGF]]
-; CHECK-NEXT:    [[EXT:%.*]] = zext i1 [[C]] to i6
-; CHECK-NEXT:    [[SUB:%.*]] = sub i6 [[EXT]], [[SEL]]
+; CHECK-DAG:     [[TMP1:%.*]] = sub i6 1, [[ARGT]]
+; CHECK-DAG:     [[TMP2:%.*]] = sub i6 0, [[ARGF]]
+; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i6 [[TMP1]], i6 [[TMP2]]
 ; CHECK-NEXT:    ret i6 [[SUB]]
 ;
   %sel = select i1 %c, i6 %argT, i6 %argF
