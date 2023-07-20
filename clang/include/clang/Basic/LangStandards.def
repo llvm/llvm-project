@@ -214,14 +214,6 @@ LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++")
 LANGSTANDARD_ALIAS_DEPR(openclcpp10, "CLC++1.0")
 LANGSTANDARD_ALIAS_DEPR(openclcpp2021, "CLC++2021")
 
-// CUDA
-LANGSTANDARD(cuda, "cuda", CUDA, "NVIDIA CUDA(tm)",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
-
-// HIP
-LANGSTANDARD(hip, "hip", HIP, "HIP",
-             LineComment | CPlusPlus | CPlusPlus11 | CPlusPlus14 | Digraphs)
-
 // HLSL
 LANGSTANDARD(hlsl, "hlsl",
              HLSL, "High Level Shader Language",
