@@ -75,6 +75,25 @@ public:
 
 using Offset2UnitMap = DenseMap<uint64_t, CompileUnit *>;
 
+struct DebugAddrPool {
+  DenseMap<uint64_t, uint64_t> AddrIndexMap;
+  SmallVector<uint64_t> Addrs;
+
+  uint64_t getAddrIndex(uint64_t Addr) {
+    DenseMap<uint64_t, uint64_t>::iterator It = AddrIndexMap.find(Addr);
+    if (It == AddrIndexMap.end()) {
+      It = AddrIndexMap.insert(std::make_pair(Addr, Addrs.size())).first;
+      Addrs.push_back(Addr);
+    }
+    return It->second;
+  }
+
+  void clear() {
+    AddrIndexMap.clear();
+    Addrs.clear();
+  }
+};
+
 /// DwarfEmitter presents interface to generate all debug info tables.
 class DwarfEmitter {
 public:
@@ -137,7 +156,7 @@ public:
   virtual void emitDwarfDebugLocListFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
-      PatchLocation Patch) = 0;
+      PatchLocation Patch, DebugAddrPool &AddrPool) = 0;
 
   /// Emit debug locations (.debug_loc, .debug_loclists) footer.
   virtual void emitDwarfDebugLocListFooter(const CompileUnit &Unit,
@@ -636,27 +655,6 @@ private:
     DWARFFile &ObjFile;
     OffsetsStringPool &DebugStrPool;
     OffsetsStringPool &DebugLineStrPool;
-
-    struct DebugAddrPool {
-      DenseMap<uint64_t, uint64_t> AddrIndexMap;
-      SmallVector<uint64_t> Addrs;
-
-      uint64_t getAddrIndex(uint64_t Addr) {
-        DenseMap<uint64_t, uint64_t>::iterator It = AddrIndexMap.find(Addr);
-        if (It == AddrIndexMap.end()) {
-          It = AddrIndexMap.insert(std::make_pair(Addr, Addrs.size())).first;
-          Addrs.push_back(Addr);
-        }
-        return It->second;
-      }
-
-      void clear() {
-        AddrIndexMap.clear();
-        Addrs.clear();
-      }
-
-    };
-
     DebugAddrPool AddrPool;
 
     /// Allocator used for all the DIEValue objects.
@@ -704,6 +702,15 @@ private:
     /// Emit the .debug_addr section for the \p Unit.
     void emitDebugAddrSection(CompileUnit &Unit,
                               const uint16_t DwarfVersion) const;
+
+    using ExpressionHandlerRef = function_ref<void(
+        SmallVectorImpl<uint8_t> &, SmallVectorImpl<uint8_t> &,
+        int64_t AddrRelocAdjustment)>;
+
+    /// Compute and emit debug locations (.debug_loc, .debug_loclists)
+    /// for \p Unit, patch the attributes referencing it.
+    void generateUnitLocations(CompileUnit &Unit, const DWARFFile &File,
+                               ExpressionHandlerRef ExprHandler);
 
   private:
     using AttributeSpec = DWARFAbbreviationDeclaration::AttributeSpec;
@@ -819,15 +826,6 @@ private:
   /// Compute and emit debug ranges(.debug_aranges, .debug_ranges,
   /// .debug_rnglists) for \p Unit, patch the attributes referencing it.
   void generateUnitRanges(CompileUnit &Unit, const DWARFFile &File) const;
-
-  using ExpressionHandlerRef =
-      function_ref<void(SmallVectorImpl<uint8_t> &, SmallVectorImpl<uint8_t> &,
-                        int64_t AddrRelocAdjustment)>;
-
-  /// Compute and emit debug locations (.debug_loc, .debug_loclists)
-  /// for \p Unit, patch the attributes referencing it.
-  void generateUnitLocations(CompileUnit &Unit, const DWARFFile &File,
-                             ExpressionHandlerRef ExprHandler) const;
 
   /// Emit the accelerator entries for \p Unit.
   void emitAcceleratorEntriesForUnit(CompileUnit &Unit);

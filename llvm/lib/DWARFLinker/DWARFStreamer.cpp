@@ -544,13 +544,14 @@ MCSymbol *DwarfStreamer::emitDwarfDebugLocListHeader(const CompileUnit &Unit) {
 void DwarfStreamer::emitDwarfDebugLocListFragment(
     const CompileUnit &Unit,
     const DWARFLocationExpressionsVector &LinkedLocationExpression,
-    PatchLocation Patch) {
+    PatchLocation Patch, DebugAddrPool &AddrPool) {
   if (Unit.getOrigUnit().getVersion() < 5) {
     emitDwarfDebugLocTableFragment(Unit, LinkedLocationExpression, Patch);
     return;
   }
 
-  emitDwarfDebugLocListsTableFragment(Unit, LinkedLocationExpression, Patch);
+  emitDwarfDebugLocListsTableFragment(Unit, LinkedLocationExpression, Patch,
+                                      AddrPool);
 }
 
 /// Emit debug locations(.debug_loc, .debug_loclists) footer.
@@ -661,7 +662,7 @@ void DwarfStreamer::emitDwarfDebugAddrsFooter(const CompileUnit &Unit,
 void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
     const CompileUnit &Unit,
     const DWARFLocationExpressionsVector &LinkedLocationExpression,
-    PatchLocation Patch) {
+    PatchLocation Patch, DebugAddrPool &AddrPool) {
   Patch.set(LocListsSectionSize);
 
   // Make .debug_loclists the current section.
@@ -677,11 +678,10 @@ void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
         BaseAddress = LocExpression.Range->LowPC;
 
         // Emit base address.
-        MS->emitInt8(dwarf::DW_LLE_base_address);
+        MS->emitInt8(dwarf::DW_LLE_base_addressx);
         LocListsSectionSize += 1;
-        unsigned AddressSize = Unit.getOrigUnit().getAddressByteSize();
-        MS->emitIntValue(*BaseAddress, AddressSize);
-        LocListsSectionSize += AddressSize;
+        LocListsSectionSize +=
+            MS->emitULEB128IntValue(AddrPool.getAddrIndex(*BaseAddress));
       }
 
       // Emit type of entry.

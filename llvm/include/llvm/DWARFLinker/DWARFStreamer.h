@@ -122,7 +122,7 @@ public:
   void emitDwarfDebugLocListFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
-      PatchLocation Patch) override;
+      PatchLocation Patch, DebugAddrPool &AddrPool) override;
 
   /// Emit debug ranges(.debug_loc, .debug_loclists) footer.
   void emitDwarfDebugLocListFooter(const CompileUnit &Unit,
@@ -232,7 +232,7 @@ private:
   void emitDwarfDebugLocListsTableFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
-      PatchLocation Patch);
+      PatchLocation Patch, DebugAddrPool &AddrPool);
 
   /// \defgroup Line table emission
   /// @{
