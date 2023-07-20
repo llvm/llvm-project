@@ -7902,6 +7902,7 @@ cc_library(
         ":TransformPDLExtension",
         ":Transforms",
         ":TransformsPassIncGen",
+	":UBDialect",
         ":VectorDialect",
         ":VectorToLLVM",
         ":VectorToSCF",
@@ -11919,4 +11920,89 @@ td_library(
     name = "DialectConversionPdllFiles",
     srcs = ["include/mlir/Transforms/DialectConversion.pdll"],
     includes = ["include"],
+)
+
+td_library(
+    name = "UBDialectTdFiles",
+    srcs = [
+        "include/mlir/Dialect/UB/IR/UBOps.td",
+        "include/mlir/Dialect/UB/IR/UBOpsInterfaces.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":OpBaseTdFiles",
+        ":SideEffectInterfacesTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "UBOpsInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["--gen-attr-interface-decls"],
+            "include/mlir/Dialect/UB/IR/UBOpsInterfaces.h.inc",
+        ),
+        (
+            ["--gen-attr-interface-defs"],
+            "include/mlir/Dialect/UB/IR/UBOpsInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/UB/IR/UBOpsInterfaces.td",
+    deps = [":UBDialectTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "UBOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            [
+                "-gen-dialect-decls",
+                "-dialect=ub",
+            ],
+            "include/mlir/Dialect/UB/IR/UBOpsDialect.h.inc",
+        ),
+        (
+            [
+                "-gen-dialect-defs",
+                "-dialect=ub",
+            ],
+            "include/mlir/Dialect/UB/IR/UBOpsDialect.cpp.inc",
+        ),
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/UB/IR/UBOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/UB/IR/UBOps.cpp.inc",
+        ),
+        (
+            ["--gen-attrdef-decls"],
+            "include/mlir/Dialect/UB/IR/UBOpsAttributes.h.inc",
+        ),
+        (
+            ["--gen-attrdef-defs"],
+            "include/mlir/Dialect/UB/IR/UBOpsAttributes.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/UB/IR/UBOps.td",
+    deps = [":UBDialectTdFiles"],
+)
+
+cc_library(
+    name = "UBDialect",
+    srcs = ["lib/Dialect/UB/IR/UBOps.cpp"],
+    hdrs = ["include/mlir/Dialect/UB/IR/UBOps.h"],
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":SideEffectInterfaces",
+        ":UBOpsIncGen",
+        ":UBOpsInterfacesIncGen",
+        "//third_party/llvm/llvm-project/llvm:Support",
+    ],
 )
