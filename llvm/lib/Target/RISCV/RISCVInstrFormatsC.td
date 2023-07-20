@@ -20,8 +20,6 @@ class RVInst16<dag outs, dag ins, string opcodestr, string argstr,
   // to build the decode table.
   field bits<16> SoftFail = 0;
   let Size = 2;
-
-  bits<2> Opcode = 0;
 }
 
 class RVInst16CR<bits<4> funct4, bits<2> opcode, dag outs, dag ins,
