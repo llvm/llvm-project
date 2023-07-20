@@ -52,6 +52,11 @@ Changes to the LLVM IR
 
 * The `llvm.stacksave` and `llvm.stackrestore` intrinsics now use
   an overloaded pointer type to support non-0 address spaces.
+* The constant expression variants of the following instructions have been
+  removed:
+
+  * ``and``
+  * ``or``
 
 Changes to LLVM infrastructure
 ------------------------------
@@ -126,6 +131,13 @@ Changes to the C API
 * Added ``LLVMGetTailCallKind`` and ``LLVMSetTailCallKind`` to
   allow getting and setting ``tail``, ``musttail``, and ``notail``
   attributes on call instructions.
+* The following functions for creating constant expressions have been removed,
+  because the underlying constant expressions are no longer supported. Instead,
+  an instruction should be created using the ``LLVMBuildXYZ`` APIs, which will
+  constant fold the operands if possible and create an instruction otherwise:
+
+  * ``LLVMConstAnd``
+  * ``LLVMConstOr``
 
 Changes to the CodeGen infrastructure
 -------------------------------------
