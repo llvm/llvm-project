@@ -25,7 +25,7 @@ def Rec1 : Class1<"Alice"> {
 }
 
 #ifdef ERROR1
-// ERROR1: Value specified for template argument 'Class1:nm' (#0) is of type int
+// ERROR1: Value specified for template argument 'Class1:nm' is of type int
 
 def Rec2 : Class1<42> {
 }
@@ -52,7 +52,7 @@ def Rec4 : Class2<42> {
 }
 
 #ifdef ERROR2
-// ERROR2: Value specified for template argument 'Class2:cd' (#0) is of type string
+// ERROR2: Value specified for template argument 'Class2:cd' is of type string
 
 def Rec5 : Class2<"oops"> {
   list<int> CodeList = [Code];
@@ -69,7 +69,7 @@ def Rec6 {
 }
 
 #ifdef ERROR3
-// ERROR3: Value specified for template argument 'Class1:nm' (#0) is of type int
+// ERROR3: Value specified for template argument 'Class1:nm' is of type int
 
 def Rec7 {
   string Name = Class1<42>.Name;
@@ -84,7 +84,7 @@ def Rec8 {
 }
 
 #ifdef ERROR4
-// ERROR4: Value specified for template argument 'Class2:cd' (#0) is of type string
+// ERROR4: Value specified for template argument 'Class2:cd' is of type string
 
 def Rec9 {
   list<int> CodeList = [Class2<"huh?">.Code];
@@ -110,7 +110,7 @@ multiclass MC1<string nm> {
 defm RecMC1 : MC1<"Carol">;
 
 #ifdef ERROR5
-// ERROR5: Value specified for template argument 'MC1::nm' (#0) is of type int
+// ERROR5: Value specified for template argument 'MC1::nm' is of type int
 
 defm RecMC2 : MC1<42>;
 #endif
@@ -137,7 +137,7 @@ multiclass MC2<bits<8> cd> {
 defm RecMC3 : MC2<42>;
 
 #ifdef ERROR6
-// ERROR6: Value specified for template argument 'MC2::cd' (#0) is of type string
+// ERROR6: Value specified for template argument 'MC2::cd' is of type string
 
 defm RecMC4 : MC2<"Bob">;
 #endif
