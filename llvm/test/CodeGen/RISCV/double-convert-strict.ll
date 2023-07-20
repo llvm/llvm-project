@@ -147,7 +147,7 @@ define i32 @fcvt_w_d(double %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %a, metadata !"fpexcept.strict") strictfp
+  %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %a, metadata !"fpexcept.strict")
   ret i32 %1
 }
 declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
@@ -193,14 +193,14 @@ define i32 @fcvt_wu_d(double %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %a, metadata !"fpexcept.strict") strictfp
+  %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %a, metadata !"fpexcept.strict")
   ret i32 %1
 }
 declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 
 ; Test where the fptoui has multiple uses, one of which causes a sext to be
 ; inserted on RV64.
-define i32 @fcvt_wu_d_multiple_use(double %x, ptr %y) nounwind {
+define i32 @fcvt_wu_d_multiple_use(double %x, ptr %y) nounwind strictfp {
 ; CHECKIFD-LABEL: fcvt_wu_d_multiple_use:
 ; CHECKIFD:       # %bb.0:
 ; CHECKIFD-NEXT:    fcvt.wu.d a0, fa0, rtz
@@ -249,7 +249,7 @@ define i32 @fcvt_wu_d_multiple_use(double %x, ptr %y) nounwind {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %a = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %x, metadata !"fpexcept.strict") strictfp
+  %a = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %x, metadata !"fpexcept.strict")
   %b = icmp eq i32 %a, 0
   %c = select i1 %b, i32 1, i32 %a
   ret i32 %c
@@ -295,7 +295,7 @@ define double @fcvt_d_w(i32 %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
 declare double @llvm.experimental.constrained.sitofp.f64.i32(i32, metadata, metadata)
@@ -345,7 +345,7 @@ define double @fcvt_d_w_load(ptr %p) nounwind strictfp {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %a = load i32, ptr %p
-  %1 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
 
@@ -389,7 +389,7 @@ define double @fcvt_d_wu(i32 %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
 declare double @llvm.experimental.constrained.uitofp.f64.i32(i32, metadata, metadata)
@@ -445,7 +445,7 @@ define double @fcvt_d_wu_load(ptr %p) nounwind strictfp {
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
   %a = load i32, ptr %p
-  %1 = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
 
@@ -495,7 +495,7 @@ define i64 @fcvt_l_d(double %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %a, metadata !"fpexcept.strict") strictfp
+  %1 = call i64 @llvm.experimental.constrained.fptosi.i64.f64(double %a, metadata !"fpexcept.strict")
   ret i64 %1
 }
 declare i64 @llvm.experimental.constrained.fptosi.i64.f64(double, metadata)
@@ -546,7 +546,7 @@ define i64 @fcvt_lu_d(double %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %a, metadata !"fpexcept.strict") strictfp
+  %1 = call i64 @llvm.experimental.constrained.fptoui.i64.f64(double %a, metadata !"fpexcept.strict")
   ret i64 %1
 }
 declare i64 @llvm.experimental.constrained.fptoui.i64.f64(double, metadata)
@@ -597,7 +597,7 @@ define double @fcvt_d_l(i64 %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
 declare double @llvm.experimental.constrained.sitofp.f64.i64(i64, metadata, metadata)
@@ -648,7 +648,7 @@ define double @fcvt_d_lu(i64 %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
 declare double @llvm.experimental.constrained.uitofp.f64.i64(i64, metadata, metadata)
@@ -692,7 +692,7 @@ define double @fcvt_d_w_i8(i8 signext %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.sitofp.f64.i8(i8 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.sitofp.f64.i8(i8 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
 declare double @llvm.experimental.constrained.sitofp.f64.i8(i8, metadata, metadata)
@@ -736,7 +736,7 @@ define double @fcvt_d_wu_i8(i8 zeroext %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.uitofp.f64.i8(i8 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.uitofp.f64.i8(i8 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
 declare double @llvm.experimental.constrained.uitofp.f64.i8(i8, metadata, metadata)
@@ -780,7 +780,7 @@ define double @fcvt_d_w_i16(i16 signext %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.sitofp.f64.i16(i16 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.sitofp.f64.i16(i16 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
 declare double @llvm.experimental.constrained.sitofp.f64.i16(i16, metadata, metadata)
@@ -824,13 +824,13 @@ define double @fcvt_d_wu_i16(i16 zeroext %a) nounwind strictfp {
 ; RV64I-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64I-NEXT:    addi sp, sp, 16
 ; RV64I-NEXT:    ret
-  %1 = call double @llvm.experimental.constrained.uitofp.f64.i16(i16 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %1 = call double @llvm.experimental.constrained.uitofp.f64.i16(i16 %a, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret double %1
 }
 declare double @llvm.experimental.constrained.uitofp.f64.i16(i16, metadata, metadata)
 
 ; Make sure we select W version of addi on RV64.
-define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
+define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, ptr %1) nounwind strictfp {
 ; RV32IFD-LABEL: fcvt_d_w_demanded_bits:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi a0, a0, 1
@@ -899,13 +899,13 @@ define signext i32 @fcvt_d_w_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
   %3 = add i32 %0, 1
-  %4 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %3, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %4 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %3, metadata !"round.dynamic", metadata !"fpexcept.strict")
   store double %4, ptr %1, align 8
   ret i32 %3
 }
 
 ; Make sure we select W version of addi on RV64.
-define signext i32 @fcvt_d_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
+define signext i32 @fcvt_d_wu_demanded_bits(i32 signext %0, ptr %1) nounwind strictfp {
 ; RV32IFD-LABEL: fcvt_d_wu_demanded_bits:
 ; RV32IFD:       # %bb.0:
 ; RV32IFD-NEXT:    addi a0, a0, 1
@@ -972,7 +972,7 @@ define signext i32 @fcvt_d_wu_demanded_bits(i32 signext %0, ptr %1) nounwind {
 ; RV64I-NEXT:    addi sp, sp, 32
 ; RV64I-NEXT:    ret
   %3 = add i32 %0, 1
-  %4 = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %3, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
+  %4 = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %3, metadata !"round.dynamic", metadata !"fpexcept.strict")
   store double %4, ptr %1, align 8
   ret i32 %3
 }
