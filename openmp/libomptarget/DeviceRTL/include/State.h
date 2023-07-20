@@ -52,6 +52,7 @@ struct ICVStateTy {
   uint32_t NThreadsVar;
   uint32_t LevelVar;
   uint32_t ActiveLevelVar;
+  uint32_t Padding0Val;
   uint32_t MaxActiveLevelsVar;
   uint32_t RunSchedVar;
   uint32_t RunSchedChunkVar;
@@ -153,7 +154,7 @@ inline uint32_t &lookupForModify32Impl(uint32_t state::ICVStateTy::*Var,
   if (OMP_UNLIKELY(!ThreadStates[TId])) {
     ThreadStates[TId] = reinterpret_cast<ThreadStateTy *>(memory::allocGlobal(
         sizeof(ThreadStateTy), "ICV modification outside data environment"));
-    ASSERT(ThreadStates[TId] != nullptr && "Nullptr returned by malloc!");
+    ASSERT(ThreadStates[TId] != nullptr, "Nullptr returned by malloc!");
     TeamState.HasThreadState = true;
     ThreadStates[TId]->init();
   }
@@ -248,7 +249,7 @@ template <typename Ty, ValueKind Kind> struct Value {
   __attribute__((flatten, always_inline)) void
   assert_eq(const Ty &V, IdentTy *Ident = nullptr,
             bool ForceTeamState = false) {
-    ASSERT(lookup(/* IsReadonly */ true, Ident, ForceTeamState) == V);
+    ASSERT(lookup(/* IsReadonly */ true, Ident, ForceTeamState) == V, nullptr);
   }
 
 private:
@@ -308,8 +309,7 @@ template <typename VTy, typename Ty> struct ValueRAII {
         Val(OldValue), Active(Active) {
     if (!Active)
       return;
-    ASSERT(*Ptr == OldValue &&
-           "ValueRAII initialization with wrong old value!");
+    ASSERT(*Ptr == OldValue, "ValueRAII initialization with wrong old value!");
     *Ptr = NewValue;
   }
   ~ValueRAII() {
@@ -339,6 +339,9 @@ inline state::PtrValue<ParallelRegionFnTy, state::VK_ParallelRegionFn>
 void runAndCheckState(void(Func(void)));
 
 void assumeInitialState(bool IsSPMD);
+
+/// Return the value of the ParallelTeamSize ICV.
+int getEffectivePTeamSize();
 
 } // namespace state
 

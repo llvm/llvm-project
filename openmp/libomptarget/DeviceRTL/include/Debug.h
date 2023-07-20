@@ -20,14 +20,14 @@
 /// {
 extern "C" {
 void __assert_assume(bool condition);
-void __assert_fail(const char *assertion, const char *file, unsigned line,
-                   const char *function);
+void __assert_fail(const char *expr, const char *msg, const char *file,
+                   unsigned line, const char *function);
 }
 
-#define ASSERT(expr)                                                           \
+#define ASSERT(expr, msg)                                                      \
   {                                                                            \
     if (config::isDebugMode(config::DebugKind::Assertion) && !(expr))          \
-      __assert_fail(#expr, __FILE__, __LINE__, __PRETTY_FUNCTION__);           \
+      __assert_fail(#expr, msg, __FILE__, __LINE__, __PRETTY_FUNCTION__);      \
     else                                                                       \
       __assert_assume(expr);                                                   \
   }

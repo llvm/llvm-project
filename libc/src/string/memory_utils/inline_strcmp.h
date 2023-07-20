@@ -6,16 +6,16 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_STRCMP_IMPLEMENTATIONS_H
-#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_STRCMP_IMPLEMENTATIONS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_STRCMP_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_STRCMP_H
 
 #include <stddef.h>
 
 namespace __llvm_libc {
 
 template <typename Comp>
-LIBC_INLINE constexpr int
-strcmp_implementation(const char *left, const char *right, Comp &&comp) {
+LIBC_INLINE constexpr int inline_strcmp(const char *left, const char *right,
+                                        Comp &&comp) {
   // TODO: Look at benefits for comparing words at a time.
   for (; *left && !comp(*left, *right); ++left, ++right)
     ;
@@ -24,9 +24,8 @@ strcmp_implementation(const char *left, const char *right, Comp &&comp) {
 }
 
 template <typename Comp>
-LIBC_INLINE constexpr int strncmp_implementation(const char *left,
-                                                 const char *right, size_t n,
-                                                 Comp &&comp) {
+LIBC_INLINE constexpr int inline_strncmp(const char *left, const char *right,
+                                         size_t n, Comp &&comp) {
   if (n == 0)
     return 0;
 
@@ -42,4 +41,4 @@ LIBC_INLINE constexpr int strncmp_implementation(const char *left,
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_STRCMP_IMPLEMENTATIONS_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_STRCMP_H

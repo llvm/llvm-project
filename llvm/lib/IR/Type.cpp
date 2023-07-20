@@ -57,12 +57,6 @@ bool Type::isIntegerTy(unsigned Bitwidth) const {
   return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
 }
 
-bool Type::isOpaquePointerTy() const {
-  if (auto *PTy = dyn_cast<PointerType>(this))
-    return PTy->isOpaque();
-  return false;
-}
-
 bool Type::isScalableTy() const {
   if (const auto *STy = dyn_cast<StructType>(this)) {
     SmallPtrSet<Type *, 4> Visited;
@@ -814,15 +808,8 @@ PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
   return Entry;
 }
 
-PointerType::PointerType(Type *E, unsigned AddrSpace)
-  : Type(E->getContext(), PointerTyID), PointeeTy(E) {
-  ContainedTys = &PointeeTy;
-  NumContainedTys = 1;
-  setSubclassData(AddrSpace);
-}
-
 PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
-    : Type(C, PointerTyID), PointeeTy(nullptr) {
+    : Type(C, PointerTyID) {
   setSubclassData(AddrSpace);
 }
 

@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BZERO_IMPLEMENTATIONS_H
-#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BZERO_IMPLEMENTATIONS_H
+#ifndef LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_BZERO_H
+#define LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_BZERO_H
 
 #include "src/__support/common.h"
-#include "src/string/memory_utils/memset_implementations.h"
+#include "src/string/memory_utils/inline_memset.h"
 
 #include <stddef.h> // size_t
 
@@ -26,4 +26,4 @@ LIBC_INLINE static void inline_bzero(void *dst, size_t count) {
 
 } // namespace __llvm_libc
 
-#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_BZERO_IMPLEMENTATIONS_H
+#endif // LLVM_LIBC_SRC_STRING_MEMORY_UTILS_INLINE_BZERO_H
