@@ -55,7 +55,7 @@ LIBC_INLINE int fwrite_unlocked(const void *ptr, size_t size, size_t nmemb,
 
 namespace printf_core {
 
-int file_write_hook(cpp::string_view new_str, void *fp) {
+LIBC_INLINE int file_write_hook(cpp::string_view new_str, void *fp) {
   ::FILE *target_file = reinterpret_cast<::FILE *>(fp);
   // Write new_str to the target file. The logic preventing a zero-length write
   // is in the writer, so we don't check here.
@@ -66,8 +66,9 @@ int file_write_hook(cpp::string_view new_str, void *fp) {
   return WRITE_OK;
 }
 
-int vfprintf_internal(::FILE *__restrict stream, const char *__restrict format,
-                      internal::ArgList &args) {
+LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
+                                  const char *__restrict format,
+                                  internal::ArgList &args) {
   constexpr size_t BUFF_SIZE = 1024;
   char buffer[BUFF_SIZE];
   printf_core::WriteBuffer wb(buffer, BUFF_SIZE, &file_write_hook,
