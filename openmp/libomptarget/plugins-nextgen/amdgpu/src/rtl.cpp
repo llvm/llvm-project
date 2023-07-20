@@ -3417,6 +3417,10 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     ::OmptCallbackInit();
 #endif
 
+    // Initialize flags for device type:
+    HasGFX90ADevice = hasGfx90aDeviceHelper();
+    HasAPUDevice = hasAPUDeviceHelper();
+
     return NumDevices;
   }
 
@@ -3443,78 +3447,15 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
 
   bool hasAPUDevice() override final {
-
-    CHECK_KMT_ERROR(hsaKmtOpenKFD());
-
-    HsaSystemProperties sp;
-    int errSys = CHECK_KMT_ERROR(hsaKmtAcquireSystemProperties(&sp));
-    if (errSys) return false;
-
-    for (int i = 0; i < sp.NumNodes; ++i) {
-
-      HsaNodeProperties props;
-      CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, &props));
-
-      // Check for 'small' APU system
-      if (props.NumCPUCores && props.NumFComputeCores) {
-        CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
-        CHECK_KMT_ERROR(hsaKmtCloseKFD());
-        return true;
-      }
-
-      // For an appAPU it is only neccesary to compare GPUs with all connected
-      // CPUs.
-      if (props.NumCPUCores) {
-        continue;
-      }
-
-      // Retrieving GPU's interconnect graph
-      std::vector<HsaIoLinkProperties> IoLinkProperties(props.NumIOLinks);
-      if (hsaKmtGetNodeIoLinkProperties(i, props.NumIOLinks,
-                                        IoLinkProperties.data())) {
-        DP("Unable to get Node IO Link Information for node %u\n", i);
-        continue;
-      }
-
-      // Checking connection weight between GPU and CPU.
-      // If connection weight is 13 (= KFD_CRAT_INTRA_SOCKET_WEIGHT), we found
-      // an AppAPU
-      for (int linkId = 0; linkId < props.NumIOLinks; linkId++) {
-        HsaNodeProperties linkProps;
-
-        if (hsaKmtGetNodeProperties(IoLinkProperties[linkId].NodeTo,
-                                    &linkProps)) {
-          DP("Unable to get IO Link informationen for connected node\n");
-          break;
-        }
-
-        if (linkProps.NumCPUCores && IoLinkProperties[linkId].Weight == 13) {
-          CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
-          CHECK_KMT_ERROR(hsaKmtCloseKFD());
-          return true;
-        }
-      }
-    }
-
-    CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
-    CHECK_KMT_ERROR(hsaKmtCloseKFD());
-    return false;
+    if (!Initialized)
+      FATAL_MESSAGE(1, "%s", "hasAPUDevice called on uninitialized plugin");
+    return HasAPUDevice;
   }
 
   bool hasGfx90aDevice() override final {
-    char name[64];
-    const auto &KernelAgents = Plugin::get<AMDGPUPluginTy>().getKernelAgents();
-
-    for (const auto &agent : KernelAgents) {
-      memset(&name, 0, sizeof(char) * 64);
-      hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
-
-      llvm::StringRef srName(name);
-      if (srName.equals_insensitive("gfx90a")) {
-        return true;
-      }
-    }
-    return false;
+    if (!Initialized)
+      FATAL_MESSAGE(1, "%s", "hasGfx90aDevice called on uninitialized plugin");
+    return HasGFX90ADevice;
   }
 
   /// Check whether the image is compatible with an AMDGPU device.
@@ -3614,10 +3555,90 @@ private:
     return HSA_STATUS_ERROR;
   }
 
+  /// Helper function for detecting AMD APU devices.
+  bool hasAPUDeviceHelper() {
+    CHECK_KMT_ERROR(hsaKmtOpenKFD());
+    HsaSystemProperties sp;
+    int errSys = CHECK_KMT_ERROR(hsaKmtAcquireSystemProperties(&sp));
+    if (errSys)
+      return false;
+
+    for (int i = 0; i < sp.NumNodes; ++i) {
+      HsaNodeProperties props;
+      CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, &props));
+
+      // Check for 'small' APU system
+      if (props.NumCPUCores && props.NumFComputeCores) {
+        CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+        CHECK_KMT_ERROR(hsaKmtCloseKFD());
+        return true;
+      }
+
+      // For an appAPU it is only neccesary to compare GPUs with all connected
+      // CPUs.
+      if (props.NumCPUCores) {
+        continue;
+      }
+
+      // Retrieving GPU's interconnect graph
+      std::vector<HsaIoLinkProperties> IoLinkProperties(props.NumIOLinks);
+      if (hsaKmtGetNodeIoLinkProperties(i, props.NumIOLinks,
+                                        IoLinkProperties.data())) {
+        DP("Unable to get Node IO Link Information for node %u\n", i);
+        continue;
+      }
+
+      // Checking connection weight between GPU and CPU.
+      // If connection weight is 13 (= KFD_CRAT_INTRA_SOCKET_WEIGHT), we found
+      // an AppAPU
+      for (int linkId = 0; linkId < props.NumIOLinks; linkId++) {
+        HsaNodeProperties linkProps;
+
+        if (hsaKmtGetNodeProperties(IoLinkProperties[linkId].NodeTo,
+                                    &linkProps)) {
+          DP("Unable to get IO Link informationen for connected node\n");
+          break;
+        }
+
+        if (linkProps.NumCPUCores && IoLinkProperties[linkId].Weight == 13) {
+          CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+          CHECK_KMT_ERROR(hsaKmtCloseKFD());
+          return true;
+        }
+      }
+    }
+
+    CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
+    CHECK_KMT_ERROR(hsaKmtCloseKFD());
+    return false;
+  }
+
+  /// Helper function for detecting GFX90A architecture.
+  bool hasGfx90aDeviceHelper() {
+    char name[64];
+
+    for (const auto &agent : KernelAgents) {
+      memset(&name, 0, sizeof(char) * 64);
+      hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
+
+      llvm::StringRef srName(name);
+      if (srName.equals_insensitive("gfx90a")) {
+        return true;
+      }
+    }
+    return false;
+  }
+
   /// Indicate whether the HSA runtime was correctly initialized. Even if there
   /// is no available devices this boolean will be true. It indicates whether
   /// we can safely call HSA functions (e.g., hsa_shut_down).
   bool Initialized;
+
+  /// Flag that shows if device is a GFX90A AMD GPU
+  bool HasGFX90ADevice;
+
+  /// Flag that shows if device is an APU device
+  bool HasAPUDevice;
 
   /// Arrays of the available GPU and CPU agents. These arrays of handles should
   /// not be here but in the AMDGPUDeviceTy structures directly. However, the
