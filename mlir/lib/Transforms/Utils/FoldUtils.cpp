@@ -215,19 +215,8 @@ bool OperationFolder::isFolderOwnedConstant(Operation *op) const {
 /// `results` with the results of the folding.
 LogicalResult OperationFolder::tryToFold(Operation *op,
                                          SmallVectorImpl<Value> &results) {
-  SmallVector<Attribute, 8> operandConstants;
-
-  // Check to see if any operands to the operation is constant and whether
-  // the operation knows how to constant fold itself.
-  operandConstants.assign(op->getNumOperands(), Attribute());
-  for (unsigned i = 0, e = op->getNumOperands(); i != e; ++i)
-    matchPattern(op->getOperand(i), m_Constant(&operandConstants[i]));
-
-  // Attempt to constant fold the operation. If we failed, check to see if we at
-  // least updated the operands of the operation. We treat this as an in-place
-  // fold.
   SmallVector<OpFoldResult, 8> foldResults;
-  if (failed(op->fold(operandConstants, foldResults)) ||
+  if (failed(op->fold(foldResults)) ||
       failed(processFoldResults(op, results, foldResults)))
     return failure();
   return success();
