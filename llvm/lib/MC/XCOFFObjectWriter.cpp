@@ -255,6 +255,42 @@ struct ExceptionSectionEntry : public SectionEntry {
   virtual ~ExceptionSectionEntry() = default;
 };
 
+struct CInfoSymInfo {
+  // Name of the C_INFO symbol associated with the section
+  std::string Name;
+  std::string Metadata;
+  // Offset into the start of the metadata in the section
+  uint64_t Offset;
+
+  CInfoSymInfo(std::string Name, std::string Metadata)
+      : Name(Name), Metadata(Metadata) {}
+  // Metadata needs to be padded out to an even word size.
+  uint32_t paddingSize() const {
+    return alignTo(Metadata.size(), sizeof(uint32_t)) - Metadata.size();
+  };
+
+  // Total size of the entry, including the 4 byte length
+  uint32_t size() const {
+    return Metadata.size() + paddingSize() + sizeof(uint32_t);
+  };
+};
+
+struct CInfoSymSectionEntry : public SectionEntry {
+  std::unique_ptr<CInfoSymInfo> Entry;
+
+  CInfoSymSectionEntry(StringRef N, int32_t Flags) : SectionEntry(N, Flags) {}
+  virtual ~CInfoSymSectionEntry() = default;
+  void addEntry(std::unique_ptr<CInfoSymInfo> NewEntry) {
+    Entry = std::move(NewEntry);
+    Entry->Offset = sizeof(uint32_t);
+    Size += Entry->size();
+  }
+  void reset() override {
+    SectionEntry::reset();
+    Entry.reset();
+  }
+};
+
 class XCOFFObjectWriter : public MCObjectWriter {
 
   uint32_t SymbolTableEntryCount = 0;
@@ -309,6 +345,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   std::vector<SectionEntry> OverflowSections;
 
   ExceptionSectionEntry ExceptionSection;
+  CInfoSymSectionEntry CInfoSymSection;
 
   CsectGroup &getCsectGroup(const MCSectionXCOFF *MCSec);
 
@@ -350,6 +387,10 @@ class XCOFFObjectWriter : public MCObjectWriter {
   void writeSectionForExceptionSectionEntry(
       const MCAssembler &Asm, const MCAsmLayout &Layout,
       ExceptionSectionEntry &ExceptionEntry, uint64_t &CurrentAddressLocation);
+  void writeSectionForCInfoSymSectionEntry(const MCAssembler &Asm,
+                                           const MCAsmLayout &Layout,
+                                           CInfoSymSectionEntry &CInfoSymEntry,
+                                           uint64_t &CurrentAddressLocation);
   void writeSymbolTable(const MCAsmLayout &Layout);
   void writeSymbolAuxDwarfEntry(uint64_t LengthOfSectionPortion,
                                 uint64_t NumberOfRelocEnt = 0);
@@ -390,6 +431,7 @@ class XCOFFObjectWriter : public MCObjectWriter {
   unsigned getExceptionSectionSize();
   unsigned getExceptionOffset(const MCSymbol *Symbol);
 
+  void addCInfoSymEntry(StringRef Name, StringRef Metadata) override;
   size_t auxiliaryHeaderSize() const {
     // 64-bit object files have no auxiliary header.
     return HasVisibility && !is64Bit() ? XCOFF::AuxFileHeaderSizeShort : 0;
@@ -418,7 +460,8 @@ XCOFFObjectWriter::XCOFFObjectWriter(
             CsectGroups{&TDataCsects}),
       TBSS(".tbss", XCOFF::STYP_TBSS, /* IsVirtual */ true,
            CsectGroups{&TBSSCsects}),
-      ExceptionSection(".except", XCOFF::STYP_EXCEPT) {}
+      ExceptionSection(".except", XCOFF::STYP_EXCEPT),
+      CInfoSymSection(".info", XCOFF::STYP_INFO) {}
 
 void XCOFFObjectWriter::reset() {
   // Clear the mappings we created.
@@ -434,6 +477,7 @@ void XCOFFObjectWriter::reset() {
   for (auto &OverflowSec : OverflowSections)
     OverflowSec.reset();
   ExceptionSection.reset();
+  CInfoSymSection.reset();
 
   // Reset states in XCOFFObjectWriter.
   SymbolTableEntryCount = 0;
@@ -580,6 +624,10 @@ void XCOFFObjectWriter::executePostLayoutBinding(MCAssembler &Asm,
     if (nameShouldBeInStringTable(XSym->getSymbolTableName()))
       Strings.add(XSym->getSymbolTableName());
   }
+
+  std::unique_ptr<CInfoSymInfo> &CISI = CInfoSymSection.Entry;
+  if (CISI && nameShouldBeInStringTable(CISI->Name))
+    Strings.add(CISI->Name);
 
   FileNames = Asm.getFileNames();
   // Emit ".file" as the source file name when there is no file name.
@@ -743,6 +791,8 @@ void XCOFFObjectWriter::writeSections(const MCAssembler &Asm,
                                      CurrentAddressLocation);
   writeSectionForExceptionSectionEntry(Asm, Layout, ExceptionSection,
                                        CurrentAddressLocation);
+  writeSectionForCInfoSymSectionEntry(Asm, Layout, CInfoSymSection,
+                                      CurrentAddressLocation);
 }
 
 uint64_t XCOFFObjectWriter::writeObject(MCAssembler &Asm,
@@ -1012,6 +1062,8 @@ void XCOFFObjectWriter::writeSectionHeaderTable() {
     writeSectionHeader(&OverflowSec);
   if (hasExceptionSection())
     writeSectionHeader(&ExceptionSection);
+  if (CInfoSymSection.Entry)
+    writeSectionHeader(&CInfoSymSection);
 }
 
 void XCOFFObjectWriter::writeRelocation(XCOFFRelocation Reloc,
@@ -1059,6 +1111,12 @@ void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
                      /*SymbolType=*/0, XCOFF::C_FILE,
                      /*NumberOfAuxEntries=*/0);
   }
+
+  if (CInfoSymSection.Entry)
+    writeSymbolEntry(CInfoSymSection.Entry->Name, CInfoSymSection.Entry->Offset,
+                     CInfoSymSection.Index,
+                     /*SymbolType=*/0, XCOFF::C_INFO,
+                     /*NumberOfAuxEntries=*/0);
 
   for (const auto &Csect : UndefinedCsects) {
     writeSymbolEntryForControlSection(Csect, XCOFF::ReservedSectionNum::N_UNDEF,
@@ -1197,6 +1255,9 @@ void XCOFFObjectWriter::finalizeSectionInfo() {
   if (hasExceptionSection())
     RawPointer = ExceptionSection.advanceFileOffset(MaxRawDataSize, RawPointer);
 
+  if (CInfoSymSection.Entry)
+    RawPointer = CInfoSymSection.advanceFileOffset(MaxRawDataSize, RawPointer);
+
   for (auto *Sec : Sections) {
     if (Sec->Index != SectionEntry::UninitializedIndex)
       calcOffsetToRelocations(Sec, RawPointer);
@@ -1258,9 +1319,18 @@ unsigned XCOFFObjectWriter::getExceptionOffset(const MCSymbol *Symbol) {
                                : XCOFF::ExceptionSectionEntrySize32);
 }
 
+void XCOFFObjectWriter::addCInfoSymEntry(StringRef Name, StringRef Metadata) {
+  assert(!CInfoSymSection.Entry && "Multiple entries are not supported");
+  CInfoSymSection.addEntry(
+      std::make_unique<CInfoSymInfo>(Name.str(), Metadata.str()));
+}
+
 void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
   // The symbol table starts with all the C_FILE symbols.
   uint32_t SymbolTableIndex = FileNames.size();
+
+  if (CInfoSymSection.Entry)
+    SymbolTableIndex++;
 
   // Calculate indices for undefined symbols.
   for (auto &Csect : UndefinedCsects) {
@@ -1418,6 +1488,14 @@ void XCOFFObjectWriter::assignAddressesAndIndices(const MCAsmLayout &Layout) {
     Address = alignTo(Address, DefaultSectionAlign);
   }
 
+  if (CInfoSymSection.Entry) {
+    CInfoSymSection.Index = SectionIndex++;
+    SectionCount++;
+    CInfoSymSection.Address = 0;
+    Address += CInfoSymSection.Size;
+    Address = alignTo(Address, DefaultSectionAlign);
+  }
+
   SymbolTableEntryCount = SymbolTableIndex;
 }
 
@@ -1517,6 +1595,41 @@ void XCOFFObjectWriter::writeSectionForExceptionSectionEntry(
   }
 
   CurrentAddressLocation += getExceptionSectionSize();
+}
+
+void XCOFFObjectWriter::writeSectionForCInfoSymSectionEntry(
+    const MCAssembler &Asm, const MCAsmLayout &Layout,
+    CInfoSymSectionEntry &CInfoSymEntry, uint64_t &CurrentAddressLocation) {
+  if (!CInfoSymSection.Entry)
+    return;
+
+  constexpr int WordSize = sizeof(uint32_t);
+  std::unique_ptr<CInfoSymInfo> &CISI = CInfoSymEntry.Entry;
+  const std::string &Metadata = CISI->Metadata;
+
+  // Emit the 4-byte length of the metadata.
+  W.write<uint32_t>(Metadata.size());
+
+  if (Metadata.size() == 0)
+    return;
+
+  // Write out the payload one word at a time.
+  size_t Index = 0;
+  while (Index + WordSize <= Metadata.size()) {
+    uint32_t NextWord =
+        llvm::support::endian::read32be(Metadata.data() + Index);
+    W.write<uint32_t>(NextWord);
+    Index += WordSize;
+  }
+
+  // If there is padding, we have at least one byte of payload left to emit.
+  if (CISI->paddingSize()) {
+    std::array<uint8_t, WordSize> LastWord = {0};
+    ::memcpy(LastWord.data(), Metadata.data() + Index, Metadata.size() - Index);
+    W.write<uint32_t>(llvm::support::endian::read32be(LastWord.data()));
+  }
+
+  CurrentAddressLocation += CISI->size();
 }
 
 // Takes the log base 2 of the alignment and shifts the result into the 5 most
