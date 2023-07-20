@@ -12,7 +12,7 @@
 
 class RVInst16<dag outs, dag ins, string opcodestr, string argstr,
                list<dag> pattern, InstFormat format>
-    : RVInstCommon<format> {
+    : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<16> Inst;
   // SoftFail is a field the disassembler can use to provide a way for
   // instructions to not match without killing the whole decode process. It is
@@ -22,11 +22,6 @@ class RVInst16<dag outs, dag ins, string opcodestr, string argstr,
   let Size = 2;
 
   bits<2> Opcode = 0;
-
-  dag OutOperandList = outs;
-  dag InOperandList = ins;
-  let AsmString = opcodestr # "\t" # argstr;
-  let Pattern = pattern;
 }
 
 class RVInst16CR<bits<4> funct4, bits<2> opcode, dag outs, dag ins,
