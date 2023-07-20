@@ -29,4 +29,9 @@ inline unsigned getBitWidth(Type type) {
   llvm_unreachable("unhandled bit width computation for type");
 }
 
+LogicalResult extractValueFromConstOp(Operation *op, int32_t &value);
+
+LogicalResult verifyMemorySemantics(Operation *op,
+                                    spirv::MemorySemantics memorySemantics);
+
 } // namespace mlir::spirv
