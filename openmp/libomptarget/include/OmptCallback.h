@@ -81,6 +81,9 @@ void finalizeLibrary(ompt_data_t *tool_data);
 /// functions to their respective higher layer.
 void connectLibrary();
 
+/// OMPT initialization status; false if initializeLibrary has not been executed
+extern bool Initialized;
+
 } // namespace ompt
 } // namespace target
 } // namespace omp
