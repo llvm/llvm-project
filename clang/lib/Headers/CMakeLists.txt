@@ -204,6 +204,7 @@ set(x86_files
   rtmintrin.h
   serializeintrin.h
   sgxintrin.h
+  sha512intrin.h
   shaintrin.h
   smmintrin.h
   tbmintrin.h

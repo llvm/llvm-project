@@ -261,6 +261,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512VP2INTERSECT = true;
     } else if (Feature == "+sha") {
       HasSHA = true;
+    } else if (Feature == "+sha512") {
+      HasSHA512 = true;
     } else if (Feature == "+shstk") {
       HasSHSTK = true;
     } else if (Feature == "+movbe") {
@@ -749,6 +751,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512VP2INTERSECT__");
   if (HasSHA)
     Builder.defineMacro("__SHA__");
+  if (HasSHA512)
+    Builder.defineMacro("__SHA512__");
 
   if (HasFXSR)
     Builder.defineMacro("__FXSR__");
@@ -999,6 +1003,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("serialize", true)
       .Case("sgx", true)
       .Case("sha", true)
+      .Case("sha512", true)
       .Case("shstk", true)
       .Case("sse", true)
       .Case("sse2", true)
@@ -1104,6 +1109,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("serialize", HasSERIALIZE)
       .Case("sgx", HasSGX)
       .Case("sha", HasSHA)
+      .Case("sha512", HasSHA512)
       .Case("shstk", HasSHSTK)
       .Case("sse", SSELevel >= SSE1)
       .Case("sse2", SSELevel >= SSE2)
