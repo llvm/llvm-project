@@ -310,7 +310,9 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
   // Loop over all of the fields in the instruction, determining which are the
   // operands to the instruction.
   bool Success = true;
+  size_t OrigBitOffsetCaseSize = BitOffsetCase.size();
   BitOffsetCase += "      switch (OpNum) {\n";
+  size_t BitOffsetCaseSizeBeforeLoop = BitOffsetCase.size();
   for (const RecordVal &RV : EncodingDef->getValues()) {
     // Ignore fixed fields in the record, we're looking for values like:
     //    bits<5> RST = { ?, ?, ?, ?, ? };
@@ -320,7 +322,11 @@ void CodeEmitterGen::addInstructionCasesForEncoding(
     Success &= addCodeToMergeInOperand(R, BI, std::string(RV.getName()), Case,
                                        BitOffsetCase, Target);
   }
-  BitOffsetCase += "      }\n";
+  // Avoid empty switches.
+  if (BitOffsetCase.size() == BitOffsetCaseSizeBeforeLoop)
+    BitOffsetCase.resize(OrigBitOffsetCaseSize);
+  else
+    BitOffsetCase += "      }\n";
 
   if (!Success) {
     // Dump the record, so we can see what's going on...
