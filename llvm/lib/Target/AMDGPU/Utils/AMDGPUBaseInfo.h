@@ -694,13 +694,12 @@ private:
 
   // VOPD3 instructions may have 2 or 3 source modifiers, src2 modifier is not
   // used if there is tied accumulator. Indexing of this array:
-  // MC_SRC_IDX[Kind][VOPD3ModsNum][SrcNo]. For the second component
-  // add OpX.MCSrcNum + OpX.VOPD3ModsNum.
+  // MC_SRC_IDX[VOPD3ModsNum][SrcNo]. This returns an index for a SINGLE
+  // instruction layout, add 1 for COMPONENT_X or COMPONENT_Y. For the second
+  // component add OpX.MCSrcNum + OpX.VOPD3ModsNum.
   // For VOPD1/VOPD2 use column with zero modifiers.
-  static constexpr unsigned MC_SRC_IDX[3][4][3] =
-      {{{1, 2, 3}, {2, 3, 4}, {2, 4, 5}, {2, 4, 6}}, // SINGLE
-       {{2, 3, 4}, {3, 4, 5}, {3, 5, 6}, {3, 5, 7}}, // COMPONENT_X
-       {{2, 3, 4}, {3, 4, 5}, {3, 5, 6}, {3, 5, 7}}}; // COMPONENT_Y
+  static constexpr unsigned SINGLE_MC_SRC_IDX[4][3] =
+      {{1, 2, 3}, {2, 3, 4}, {2, 4, 5}, {2, 4, 6}};
 
   // Parsed operands of regular instructions are ordered as follows:
   //   Mnemo dst src0 [vsrc1 ...]
@@ -744,10 +743,11 @@ public:
       return BitOp3Idx;
 
     if (VOPD3)
-      return MC_SRC_IDX[Kind][VOPD3ModsNum][CompSrcIdx] +
-             getPrevCompSrcNum() + getPrevCompVOPD3ModsNum();
+      return SINGLE_MC_SRC_IDX[VOPD3ModsNum][CompSrcIdx] + getPrevCompSrcNum() +
+             getPrevCompVOPD3ModsNum() + (Kind != SINGLE ? 1 : 0);
 
-    return MC_SRC_IDX[Kind][0][CompSrcIdx] + getPrevCompSrcNum();
+    return SINGLE_MC_SRC_IDX[0][CompSrcIdx] + getPrevCompSrcNum() +
+           (Kind != SINGLE ? 1 : 0);
   }
 
   // Return the index of dst operand in the parsed operands array.
