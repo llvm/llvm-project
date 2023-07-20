@@ -23,16 +23,16 @@ entry:
 }
 
 ; CHECK:      Section {{.*}} .rela.debug_info {
-; CHECK:        0x22 R_RISCV_ADD32 - 0x0
-; CHECK-NEXT:   0x22 R_RISCV_SUB32 - 0x0
-; CHECK:        0x2B R_RISCV_ADD32 - 0x0
-; CHECK-NEXT:   0x2B R_RISCV_SUB32 - 0x0
+; CHECK:        0x22 R_RISCV_ADD32 <null> 0x0
+; CHECK-NEXT:   0x22 R_RISCV_SUB32 <null> 0x0
+; CHECK:        0x2B R_RISCV_ADD32 <null> 0x0
+; CHECK-NEXT:   0x2B R_RISCV_SUB32 <null> 0x0
 ; CHECK:      }
 
 ; CHECK:      Section {{.*}} .rela.eh_frame {
-; CHECK:        0x1C R_RISCV_32_PCREL - 0x0
-; CHECK:        0x20 R_RISCV_ADD32 - 0x0
-; CHECK-NEXT:   0x20 R_RISCV_SUB32 - 0x0
+; CHECK:        0x1C R_RISCV_32_PCREL <null> 0x0
+; CHECK:        0x20 R_RISCV_ADD32 <null> 0x0
+; CHECK-NEXT:   0x20 R_RISCV_SUB32 <null> 0x0
 ; CHECK:      }
 
 !llvm.dbg.cu = !{!0}
