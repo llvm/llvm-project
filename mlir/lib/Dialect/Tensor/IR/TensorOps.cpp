@@ -1215,6 +1215,14 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
     SmallVector<int64_t> newShape;
     operandsAndShape(resultType, dynamicExtents, newOperands, newShape);
 
+    for (int64_t newdim : newShape) {
+      // This check also occurs in the verifier, but we need it here too
+      // since intermediate passes may have some replaced dynamic dimensions
+      // by constants.
+      if (newdim < 0 && !ShapedType::isDynamic(newdim))
+        return failure();
+    }
+
     if (newOperands.size() == tensorFromElements.getDynamicExtents().size())
       return failure();
 
@@ -2126,7 +2134,8 @@ static Value foldExtractAfterInsertSlice(ExtractSliceOp extractOp) {
 }
 
 OpFoldResult ExtractSliceOp::fold(FoldAdaptor adaptor) {
-  if (auto splat = llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
+  if (auto splat =
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
     auto resultType = llvm::cast<ShapedType>(getResult().getType());
     if (resultType.hasStaticShape())
       return splat.resizeSplat(resultType);
