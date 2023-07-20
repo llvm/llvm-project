@@ -1,3 +1,4 @@
+# REQUIRES: x86
 # RUN: llvm-mc -filetype=obj -triple=x86_64-unknown-linux %s -o %t
 # RUN: not ld.lld %t -o /dev/null --fat-lto-objects 2>&1 | FileCheck %s
 
