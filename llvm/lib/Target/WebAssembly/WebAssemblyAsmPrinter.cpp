@@ -25,9 +25,9 @@
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
 #include "WebAssemblyTargetMachine.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/Analysis.h"
@@ -565,7 +565,7 @@ void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
     return;
 
   // Group all the custom attributes by name.
-  StringMap<SmallVector<MCSymbol *, 4>> CustomSections;
+  MapVector<StringRef, SmallVector<MCSymbol *, 4>> CustomSections;
   const ConstantArray *CA = cast<ConstantArray>(V->getOperand(0));
   for (Value *Op : CA->operands()) {
     auto *CS = cast<ConstantStruct>(Op);
@@ -580,15 +580,14 @@ void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
     auto *GV = cast<GlobalVariable>(CS->getOperand(1)->stripPointerCasts());
     StringRef AnnotationString;
     getConstantStringInfo(GV, AnnotationString);
-    std::string Name = "annotate." + AnnotationString.str();
     auto *Sym = cast<MCSymbolWasm>(getSymbol(F));
-    CustomSections[Name].push_back(Sym);
+    CustomSections[AnnotationString].push_back(Sym);
   }
 
   // Emit a custom section for each unique attribute.
   for (const auto &[Name, Symbols] : CustomSections) {
     MCSectionWasm *CustomSection = OutContext.getWasmSection(
-        ".custom_section.llvm.func_attr." + Name, SectionKind::getMetadata());
+        ".custom_section.llvm.func_attr.annotate." + Name, SectionKind::getMetadata());
     OutStreamer->pushSection();
     OutStreamer->switchSection(CustomSection);
 
