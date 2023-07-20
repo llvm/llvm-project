@@ -15,14 +15,14 @@
 ; FOUND_VARS: DW_AT_name        ("bb")
 ; FOUND_VARS: DW_AT_name        ("cA")
 
+; ALL_ENTRIES: Apple accelerator entries with name = "bb":
+; ALL_ENTRIES: DW_AT_name        ("bb")
 ; ALL_ENTRIES: Apple accelerator entries with name = "cA":
 ; ALL_ENTRIES: DW_AT_name        ("cA")
 ; ALL_ENTRIES: Apple accelerator entries with name = "some_other_hash":
 ; ALL_ENTRIES: DW_AT_name        ("some_other_hash")
 ; ALL_ENTRIES: Apple accelerator entries with name = "int":
 ; ALL_ENTRIES: DW_AT_name        ("int")
-; ALL_ENTRIES: Apple accelerator entries with name = "bb":
-; ALL_ENTRIES: DW_AT_name        ("bb")
 
 @bb = global i32 200, align 4, !dbg !0
 @cA = global i32 10, align 4, !dbg !5
