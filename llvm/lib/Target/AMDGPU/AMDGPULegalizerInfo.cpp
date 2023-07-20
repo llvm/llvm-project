@@ -3312,7 +3312,7 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
                                        MachineIRBuilder &B) const {
   Register Dst = MI.getOperand(0).getReg();
   Register X = MI.getOperand(1).getReg();
-  unsigned Flags = MI.getFlags();
+  const unsigned Flags = MI.getFlags();
   MachineFunction &MF = B.getMF();
   MachineRegisterInfo &MRI = *B.getMRI();
   LLT Ty = MRI.getType(Dst);
@@ -3375,7 +3375,7 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   //    q = r + (r^2)/2! + (r^3)/3! + (r^4)/4! + (r^5)/5!
   //
   //    e^x = (2^m) * ( (2^(j/64)) + q*(2^(j/64)) )
-
+  const unsigned FlagsNoContract = Flags & ~MachineInstr::FmContract;
   Register PH, PL;
 
   if (ST.hasFastFMAF32()) {
@@ -3414,7 +3414,9 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
   }
 
   auto E = B.buildFRint(Ty, PH, Flags);
-  auto PHSubE = B.buildFSub(Ty, PH, E, Flags);
+
+  // It is unsafe to contract this fsub into the PH multiply.
+  auto PHSubE = B.buildFSub(Ty, PH, E, FlagsNoContract);
   auto A = B.buildFAdd(Ty, PHSubE, PL, Flags);
   auto IntE = B.buildFPTOSI(LLT::scalar(32), E);
 

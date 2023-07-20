@@ -262,6 +262,7 @@ Non-comprehensive list of changes in this release
 - Added ``__builtin_elementwise_nearbyint`` for floating point
   types. This allows access to ``llvm.nearbyint`` for arbitrary
   floating-point and vector of floating-point types.
+- Clang AST matcher now matches concept declarations with `conceptDecl`.
 
 New Compiler Flags
 ------------------
