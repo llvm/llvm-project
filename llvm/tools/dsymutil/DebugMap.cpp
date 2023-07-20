@@ -229,6 +229,7 @@ MappingTraits<dsymutil::DebugMapObject>::YamlDMO::YamlDMO(
   for (auto &Entry : Obj.Symbols)
     Entries.push_back(
         std::make_pair(std::string(Entry.getKey()), Entry.getValue()));
+  llvm::sort(Entries, llvm::less_first());
 }
 
 dsymutil::DebugMapObject
