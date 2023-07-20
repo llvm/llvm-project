@@ -1545,10 +1545,9 @@ def : Pat<(brind (add GPRJALR:$rs1, simm12:$imm12)),
 // Define isCodeGenOnly = 0 to support parsing assembly "call" instruction.
 let isCall = 1, isBarrier = 1, isCodeGenOnly = 0, Size = 8, hasSideEffects = 0,
     mayStore = 0, mayLoad = 0 in
-def PseudoCALLReg : Pseudo<(outs GPR:$rd), (ins call_symbol:$func), []>,
-                    Sched<[WriteIALU, WriteJalr, ReadJalr]> {
-  let AsmString = "call\t$rd, $func";
-}
+def PseudoCALLReg : Pseudo<(outs GPR:$rd), (ins call_symbol:$func), [],
+                           "call", "$rd, $func">,
+                    Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
 // PseudoCALL is a pseudo instruction which will eventually expand to auipc
 // and jalr while encoding. This is desirable, as an auipc+jalr pair with
@@ -1557,10 +1556,9 @@ def PseudoCALLReg : Pseudo<(outs GPR:$rd), (ins call_symbol:$func), []>,
 // Define AsmString to print "call" when compile with -S flag.
 // Define isCodeGenOnly = 0 to support parsing assembly "call" instruction.
 let isCall = 1, Defs = [X1], isCodeGenOnly = 0, Size = 8 in
-def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), []>,
-                 Sched<[WriteIALU, WriteJalr, ReadJalr]> {
-  let AsmString = "call\t$func";
-}
+def PseudoCALL : Pseudo<(outs), (ins call_symbol:$func), [],
+                        "call", "$func">,
+                 Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
 def : Pat<(riscv_call tglobaladdr:$func), (PseudoCALL tglobaladdr:$func)>;
 def : Pat<(riscv_call texternalsym:$func), (PseudoCALL texternalsym:$func)>;
@@ -1582,10 +1580,9 @@ def PseudoRET : Pseudo<(outs), (ins), [(riscv_ret_glue)]>,
 // Define AsmString to print "tail" when compile with -S flag.
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2],
     Size = 8, isCodeGenOnly = 0 in
-def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), []>,
-                 Sched<[WriteIALU, WriteJalr, ReadJalr]> {
-  let AsmString = "tail\t$dst";
-}
+def PseudoTAIL : Pseudo<(outs), (ins call_symbol:$dst), [],
+                        "tail", "$dst">,
+                 Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
 let isCall = 1, isTerminator = 1, isReturn = 1, isBarrier = 1, Uses = [X2] in
 def PseudoTAILIndirect : Pseudo<(outs), (ins GPRTC:$rs1),
@@ -1599,10 +1596,9 @@ def : Pat<(riscv_tail (iPTR texternalsym:$dst)),
 
 let isCall = 0, isBarrier = 1, isBranch = 1, isTerminator = 1, Size = 8,
     isCodeGenOnly = 0, hasSideEffects = 0, mayStore = 0, mayLoad = 0 in
-def PseudoJump : Pseudo<(outs GPR:$rd), (ins pseudo_jump_symbol:$target), []>,
-                 Sched<[WriteIALU, WriteJalr, ReadJalr]> {
-  let AsmString = "jump\t$target, $rd";
-}
+def PseudoJump : Pseudo<(outs GPR:$rd), (ins pseudo_jump_symbol:$target), [],
+                        "jump", "$target, $rd">,
+                 Sched<[WriteIALU, WriteJalr, ReadJalr]>;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Size = 8, isCodeGenOnly = 0,
     isAsmParserOnly = 1 in
