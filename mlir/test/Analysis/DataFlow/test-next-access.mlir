@@ -70,10 +70,7 @@ func.func @dead_branch(%arg0: memref<f32>, %arg1: f32) -> f32 {
 func.func @loop(%arg0: memref<?xf32>, %arg1: f32, %arg2: index, %arg3: index, %arg4: index) -> f32 {
   %c0 = arith.constant 0.0 : f32
   // CHECK:      name = "pre"
-  // CHECK-SAME: next_access = {{\[}}["loop"], "unknown"]
-  // The above is not entirely correct when the loop has 0 iterations, but 
-  // the region control flow specificaiton is currently incapable of
-  // specifying that.
+  // CHECK-SAME: next_access = {{\[}}["outside", "loop"], "unknown"]
   memref.load %arg0[%arg4] {name = "pre"} : memref<?xf32>
   %l = scf.for %i = %arg2 to %arg3 step %arg4 iter_args(%ia = %c0) -> (f32) {
     // CHECK:      name = "loop"
@@ -90,10 +87,7 @@ func.func @loop(%arg0: memref<?xf32>, %arg1: f32, %arg2: index, %arg3: index, %a
 // CHECK-LABEL: @conditional
 func.func @conditional(%cond: i1, %arg0: memref<f32>) {
   // CHECK:      name = "pre"
-  // CHECK-SAME: next_access = {{\[}}["then"]]
-  // The above is not entirely correct when the condition is false, but 
-  // the region control flow specificaiton is currently incapable of
-  // specifying that.
+  // CHECK-SAME: next_access = {{\[}}["post", "then"]]
   memref.load %arg0[] {name = "pre"}: memref<f32>
   scf.if %cond {
     // CHECK:      name = "then"
@@ -126,10 +120,7 @@ func.func @two_sided_conditional(%cond: i1, %arg0: memref<f32>) {
 func.func @dead_conditional(%arg0: memref<f32>) {
   %false = arith.constant 0 : i1
   // CHECK:      name = "pre"
-  // CHECK-SAME: next_access = ["unknown"]
-  // The above is not entirely correct when the condition is false, but 
-  // the region control flow specificaiton is currently incapable of
-  // specifying that.
+  // CHECK-SAME: next_access = {{\[}}["post"]]
   memref.load %arg0[] {name = "pre"}: memref<f32>
   scf.if %false {
     // CHECK:      name = "then"
@@ -301,10 +292,7 @@ func.func @infinite_recursive_call(%arg0: memref<f32>) {
 // CHECK-LABEL: @recursive_call
 func.func @recursive_call(%arg0: memref<f32>, %cond: i1) {
   // CHECK:      name = "pre"
-  // CHECK-SAME: next_access = {{\[}}["pre"]]
-  // The above is not entirely correct when the condition is false, but 
-  // the region control flow specificaiton is currently incapable of
-  // specifying that.
+  // CHECK-SAME: next_access = {{\[}}["post", "pre"]]
   memref.load %arg0[] {name = "pre"} : memref<f32>
   scf.if %cond {
     func.call @recursive_call(%arg0, %cond) : (memref<f32>, i1) -> ()
