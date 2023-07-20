@@ -752,25 +752,23 @@ define amdgpu_kernel void @div_1_by_minus_x_correctly_rounded(ptr addrspace(1) %
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-FLUSH-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; GCN-FLUSH-NEXT:    v_div_scale_f32 v1, s[2:3], v0, v0, 1.0
-; GCN-FLUSH-NEXT:    v_div_scale_f32 v2, vcc, 1.0, v0, 1.0
-; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v3, v1
+; GCN-FLUSH-NEXT:    v_div_scale_f32 v0, s[2:3], -s4, -s4, 1.0
+; GCN-FLUSH-NEXT:    v_div_scale_f32 v1, vcc, 1.0, -s4, 1.0
+; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v2, v0
 ; GCN-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GCN-FLUSH-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
-; GCN-FLUSH-NEXT:    v_fma_f32 v3, v4, v3, v3
-; GCN-FLUSH-NEXT:    v_mul_f32_e32 v4, v2, v3
-; GCN-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v2
-; GCN-FLUSH-NEXT:    v_fma_f32 v4, v5, v3, v4
-; GCN-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v2
+; GCN-FLUSH-NEXT:    v_fma_f32 v3, -v0, v2, 1.0
+; GCN-FLUSH-NEXT:    v_fma_f32 v2, v3, v2, v2
+; GCN-FLUSH-NEXT:    v_mul_f32_e32 v3, v1, v2
+; GCN-FLUSH-NEXT:    v_fma_f32 v4, -v0, v3, v1
+; GCN-FLUSH-NEXT:    v_fma_f32 v3, v4, v2, v3
+; GCN-FLUSH-NEXT:    v_fma_f32 v0, -v0, v3, v1
 ; GCN-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GCN-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
-; GCN-FLUSH-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, 1.0
-; GCN-FLUSH-NEXT:    global_store_dword v2, v0, s[0:1]
+; GCN-FLUSH-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
+; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-FLUSH-NEXT:    v_div_fixup_f32 v0, v0, -s4, 1.0
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fsub float -0.000000e+00, %load
@@ -805,25 +803,23 @@ define amdgpu_kernel void @div_minus_1_by_minus_x_correctly_rounded(ptr addrspac
 ; GCN-FLUSH:       ; %bb.0:
 ; GCN-FLUSH-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    s_load_dword s2, s[0:1], 0x0
+; GCN-FLUSH-NEXT:    s_load_dword s4, s[0:1], 0x0
 ; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
-; GCN-FLUSH-NEXT:    v_mov_b32_e32 v0, s2
-; GCN-FLUSH-NEXT:    v_sub_f32_e32 v0, 0x80000000, v0
-; GCN-FLUSH-NEXT:    v_div_scale_f32 v1, s[2:3], v0, v0, -1.0
-; GCN-FLUSH-NEXT:    v_div_scale_f32 v2, vcc, -1.0, v0, -1.0
-; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v3, v1
+; GCN-FLUSH-NEXT:    v_div_scale_f32 v0, s[2:3], -s4, -s4, -1.0
+; GCN-FLUSH-NEXT:    v_div_scale_f32 v1, vcc, -1.0, -s4, -1.0
+; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v2, v0
 ; GCN-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 3
-; GCN-FLUSH-NEXT:    v_fma_f32 v4, -v1, v3, 1.0
-; GCN-FLUSH-NEXT:    v_fma_f32 v3, v4, v3, v3
-; GCN-FLUSH-NEXT:    v_mul_f32_e32 v4, v2, v3
-; GCN-FLUSH-NEXT:    v_fma_f32 v5, -v1, v4, v2
-; GCN-FLUSH-NEXT:    v_fma_f32 v4, v5, v3, v4
-; GCN-FLUSH-NEXT:    v_fma_f32 v1, -v1, v4, v2
+; GCN-FLUSH-NEXT:    v_fma_f32 v3, -v0, v2, 1.0
+; GCN-FLUSH-NEXT:    v_fma_f32 v2, v3, v2, v2
+; GCN-FLUSH-NEXT:    v_mul_f32_e32 v3, v1, v2
+; GCN-FLUSH-NEXT:    v_fma_f32 v4, -v0, v3, v1
+; GCN-FLUSH-NEXT:    v_fma_f32 v3, v4, v2, v3
+; GCN-FLUSH-NEXT:    v_fma_f32 v0, -v0, v3, v1
 ; GCN-FLUSH-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 4, 2), 0
-; GCN-FLUSH-NEXT:    v_div_fmas_f32 v1, v1, v3, v4
-; GCN-FLUSH-NEXT:    v_mov_b32_e32 v2, 0
-; GCN-FLUSH-NEXT:    v_div_fixup_f32 v0, v1, v0, -1.0
-; GCN-FLUSH-NEXT:    global_store_dword v2, v0, s[0:1]
+; GCN-FLUSH-NEXT:    v_div_fmas_f32 v0, v0, v2, v3
+; GCN-FLUSH-NEXT:    v_mov_b32_e32 v1, 0
+; GCN-FLUSH-NEXT:    v_div_fixup_f32 v0, v0, -s4, -1.0
+; GCN-FLUSH-NEXT:    global_store_dword v1, v0, s[0:1]
 ; GCN-FLUSH-NEXT:    s_endpgm
   %load = load float, ptr addrspace(1) %arg, align 4
   %neg = fsub float -0.000000e+00, %load

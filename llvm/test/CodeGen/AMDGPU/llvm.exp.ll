@@ -5793,8 +5793,8 @@ define float @v_exp_f32_undef() {
 ; VI-SDAG:       ; %bb.0:
 ; VI-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; VI-SDAG-NEXT:    v_rndne_f32_e32 v0, 0
-; VI-SDAG-NEXT:    v_sub_f32_e32 v1, 0, v0
-; VI-SDAG-NEXT:    v_add_f32_e32 v1, 0x7fc00000, v1
+; VI-SDAG-NEXT:    s_mov_b32 s4, 0x7fc00000
+; VI-SDAG-NEXT:    v_add_f32_e64 v1, -v0, s4
 ; VI-SDAG-NEXT:    v_exp_f32_e32 v1, v1
 ; VI-SDAG-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; VI-SDAG-NEXT:    v_ldexp_f32 v0, v1, v0
