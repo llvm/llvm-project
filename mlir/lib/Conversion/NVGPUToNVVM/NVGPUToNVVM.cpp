@@ -25,6 +25,17 @@ namespace mlir {
 
 using namespace mlir;
 
+/// GPU has 32 bit registers, this function truncates values when larger width
+/// is not needed.
+static Value truncToI32(ConversionPatternRewriter &rewriter, Location loc,
+                        Value value) {
+  Type type = value.getType();
+  assert(llvm::isa<IntegerType>(type) && "expected an integer Value");
+  if (type.getIntOrFloatBitWidth() <= 32)
+    return value;
+  return rewriter.create<LLVM::TruncOp>(loc, rewriter.getI32Type(), value);
+}
+
 /// Returns the type for the intrinsic given the vectorResultType of the
 /// `gpu.mma.sync` operation.
 static Type inferIntrinsicResultType(Type vectorResultType) {
@@ -850,6 +861,55 @@ struct NVGPUMBarrierTestWaitLowering
   }
 };
 
+struct NVGPUMBarrierArriveExpectTxLowering
+    : public ConvertOpToLLVMPattern<nvgpu::MBarrierArriveExpectTxOp> {
+  using ConvertOpToLLVMPattern<
+      nvgpu::MBarrierArriveExpectTxOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::MBarrierArriveExpectTxOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value barrier = getMbarrierPtr(rewriter, *getTypeConverter(),
+                                   op.getBarrier(), adaptor.getBarrier());
+    Value txcount = truncToI32(rewriter, op->getLoc(), adaptor.getTxcount());
+
+    if (isMbarrierShared(op.getBarrier().getType())) {
+      rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxSharedOp>(
+          op, barrier, txcount);
+      return success();
+    }
+
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierArriveExpectTxOp>(op, barrier,
+                                                                txcount);
+    return success();
+  }
+};
+
+struct NVGPUMBarrierTryWaitParityLowering
+    : public ConvertOpToLLVMPattern<nvgpu::MBarrierTryWaitParityOp> {
+  using ConvertOpToLLVMPattern<
+      nvgpu::MBarrierTryWaitParityOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(nvgpu::MBarrierTryWaitParityOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Value barrier = getMbarrierPtr(rewriter, *getTypeConverter(),
+                                   op.getBarrier(), adaptor.getBarrier());
+    Value ticks = truncToI32(rewriter, op->getLoc(), adaptor.getTicks());
+    Value phase = truncToI32(rewriter, op->getLoc(), adaptor.getPhase());
+
+    if (isMbarrierShared(op.getBarrier().getType())) {
+      rewriter.replaceOpWithNewOp<NVVM::MBarrierTryWaitParitySharedOp>(
+          op, barrier, phase, ticks);
+      return success();
+    }
+
+    rewriter.replaceOpWithNewOp<NVVM::MBarrierTryWaitParityOp>(op, barrier,
+                                                               phase, ticks);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
@@ -859,7 +919,9 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUMBarrierInitLowering,             // nvgpu.mbarrier.init
       NVGPUMBarrierArriveLowering,           // nvgpu.mbarrier.arrive
       NVGPUMBarrierArriveNoCompleteLowering, // nvgpu.mbarrier.arrive.no_complete
-      NVGPUMBarrierTestWaitLowering,         // nvgpu.try_wait_parity
+      NVGPUMBarrierTestWaitLowering,         // nvgpu.mbarrier.test_wait_parity
+      NVGPUMBarrierTryWaitParityLowering,    // nvgpu.mbarrier.try_wait_parity
+      NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
       NVGPUAsyncCreateGroupLowering, NVGPUAsyncWaitLowering,
       NVGPUMmaSparseSyncLowering>(converter);

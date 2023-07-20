@@ -469,4 +469,44 @@ def NVGPU_MBarrierArriveNoCompleteOp : NVGPU_Op<"mbarrier.arrive.nocomplete", []
   let assemblyFormat = "$barrier `,` $count attr-dict `:` type($barrier) `->` type($token)";
 }
 
+def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
+  let summary = "Performs expect_tx operation on the `nvgpu.mbarrier.arrive`";
+  let description = [{
+    A thread executing the Op performs an expect-tx operation on the mbarrier 
+    object at the location specified by the address operand $barrier. The 
+    expect-tx operation, with an $txcount argument, increases the tx-count of 
+    an mbarrier object by the value specified by $txcount. This makes the 
+    current phase of the mbarrier object to expect and track the completion of 
+    additional asynchronous transactions.
+    
+    The `$txCount` specifies the number of element to the expect-tx operation.
+
+    Example:
+    ```mlir
+      nvgpu.mbarrier.arrive.expect_tx %barrier, %ic0 : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+    ```
+  }];
+  let arguments = (ins NVGPU_MBarrier:$barrier,
+                       Index:$txcount);  
+  let assemblyFormat = "$barrier `,` $txcount  attr-dict `:` type($barrier)";
+}
+
+def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
+  let summary = "Waits for the `nvgpu.mbarrier` to complete its current phase.";
+  let description = [{
+    Checks whether the mbarrier object has completed the phase. It is is a 
+    potentially blocking instruction which tests for the completion of the 
+    phase. Suspended thread resumes execution when the specified phase completes 
+    OR before the phase completes following a system-dependent time limit. 
+
+    Example:
+    ```mlir
+      nvgpu.mbarrier.try_wait.parity %barrier, %phase, %ticks : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+    ```
+
+  }];
+  let arguments = (ins NVGPU_MBarrier:$barrier, Index:$phase, Index:$ticks);
+  let assemblyFormat = "$barrier `,` $phase `,` $ticks attr-dict `:` type($barrier)";  
+}
+
 #endif // NVGPU
