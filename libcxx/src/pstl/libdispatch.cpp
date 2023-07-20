@@ -10,23 +10,24 @@
 #include <__algorithm/pstl_backends/cpu_backends/libdispatch.h>
 #include <__config>
 #include <dispatch/dispatch.h>
-#include <memory_resource>
 #include <thread>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 namespace __par_backend::inline __libdispatch {
 
-pmr::memory_resource* __get_memory_resource() {
-  static std::pmr::synchronized_pool_resource pool{pmr::new_delete_resource()};
-  return &pool;
-}
 
 void __dispatch_apply(size_t chunk_count, void* context, void (*func)(void* context, size_t chunk)) noexcept {
   ::dispatch_apply_f(chunk_count, DISPATCH_APPLY_AUTO, context, func);
 }
 
 __chunk_partitions __partition_chunks(ptrdiff_t element_count) {
+  if (element_count == 0) {
+    return __chunk_partitions{1, 0, 0};
+  } else if (element_count == 1) {
+    return __chunk_partitions{1, 0, 1};
+  }
+
   __chunk_partitions partitions;
   partitions.__chunk_count_ = [&] {
     ptrdiff_t cores = std::max(1u, thread::hardware_concurrency());

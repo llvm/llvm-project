@@ -2577,38 +2577,16 @@ libc_support_library(
 )
 
 libc_support_library(
-    name = "printf_string_writer",
-    srcs = ["src/stdio/printf_core/string_writer.cpp"],
-    hdrs = ["src/stdio/printf_core/string_writer.h"],
-    defines = PRINTF_COPTS,
-    deps = [
-        ":__support_cpp_string_view",
-        ":libc_root",
-        ":printf_core_structs",
-        ":string_memory_utils",
-    ],
-)
-
-libc_support_library(
-    name = "printf_file_writer",
-    hdrs = ["src/stdio/printf_core/file_writer.h"],
-    defines = PRINTF_COPTS,
-    deps = [
-        ":__support_cpp_string_view",
-        ":__support_file_file",
-        ":libc_root",
-        ":printf_core_structs",
-    ],
-)
-
-libc_support_library(
     name = "printf_writer",
     srcs = ["src/stdio/printf_core/writer.cpp"],
     hdrs = ["src/stdio/printf_core/writer.h"],
     defines = PRINTF_COPTS,
     deps = [
         ":__support_cpp_string_view",
+        ":__support_macros_optimization",
         ":libc_root",
+        ":printf_core_structs",
+        ":string_memory_utils",
     ],
 )
 
@@ -2671,9 +2649,9 @@ libc_function(
     defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
+        ":__support_cpp_limits",
         ":errno",
         ":printf_main",
-        ":printf_string_writer",
         ":printf_writer",
     ],
 )
@@ -2687,7 +2665,6 @@ libc_function(
         ":__support_arg_list",
         ":errno",
         ":printf_main",
-        ":printf_string_writer",
         ":printf_writer",
     ],
 )
@@ -2700,7 +2677,6 @@ libc_support_library(
         ":__support_arg_list",
         ":__support_file_file",
         ":__support_macros_attributes",
-        ":printf_file_writer",
         ":printf_main",
         ":printf_writer",
     ],
@@ -2713,6 +2689,7 @@ libc_function(
     defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
+        ":__support_file_file",
         ":errno",
         ":vfprintf_internal",
     ],
@@ -2725,6 +2702,7 @@ libc_function(
     defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",
+        ":__support_file_file",
         ":errno",
         ":vfprintf_internal",
     ],

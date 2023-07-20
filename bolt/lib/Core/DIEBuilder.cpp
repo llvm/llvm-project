@@ -838,12 +838,11 @@ static uint64_t getHash(const DWARFUnit &DU) {
   // Before DWARF5 TU units are in their own section, so at least one offset,
   // first one, will be the same as CUs in .debug_info.dwo section
   if (DU.getVersion() < 5 && DU.isTypeUnit()) {
-    MD5 Hash;
-    uint64_t TypeUnitHash = cast_or_null<DWARFTypeUnit>(&DU)->getTypeHash();
-    uint64_t Offset = DU.getOffset();
-    Hash.update(llvm::ArrayRef((uint8_t *)&TypeUnitHash, sizeof(TypeUnitHash)));
-    Hash.update(llvm::ArrayRef((uint8_t *)&Offset, sizeof(Offset)));
-    return Hash.final().high();
+    const uint64_t TypeUnitHash =
+        cast_or_null<DWARFTypeUnit>(&DU)->getTypeHash();
+    const uint64_t Offset = DU.getOffset();
+    return llvm::hash_combine(llvm::hash_value(TypeUnitHash),
+                              llvm::hash_value(Offset));
   }
   return DU.getOffset();
 }

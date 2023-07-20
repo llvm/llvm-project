@@ -8,7 +8,7 @@
 
 // <iostream>
 
-// istream wcout;
+// wostream wcout;
 
 // UNSUPPORTED: no-wide-characters
 // REQUIRES: target={{.+}}-windows-{{.+}}
