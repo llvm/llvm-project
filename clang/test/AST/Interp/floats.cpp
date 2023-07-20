@@ -125,3 +125,7 @@ namespace ZeroInit {
   constexpr A<double> b{12};
   static_assert(a.f == 0.0, "");
 };
+
+namespace LongDouble {
+  constexpr long double ld = 3.1425926539;
+}
