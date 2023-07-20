@@ -238,6 +238,27 @@ static void handleAliasScopes(Operation *call,
   appendCallOpAliasScopes(call, inlinedBlocks);
 }
 
+/// Appends any access groups of the call operation to any inlined memory
+/// operation.
+static void handleAccessGroups(Operation *call,
+                               iterator_range<Region::iterator> inlinedBlocks) {
+  auto callAccessGroupInterface = dyn_cast<LLVM::AccessGroupOpInterface>(call);
+  if (!callAccessGroupInterface)
+    return;
+
+  auto accessGroups = callAccessGroupInterface.getAccessGroupsOrNull();
+  if (!accessGroups)
+    return;
+
+  // Simply append the call op's access groups to any operation implementing
+  // AccessGroupOpInterface.
+  for (Block &block : inlinedBlocks)
+    for (auto accessGroupOpInterface :
+         block.getOps<LLVM::AccessGroupOpInterface>())
+      accessGroupOpInterface.setAccessGroups(concatArrayAttr(
+          accessGroupOpInterface.getAccessGroupsOrNull(), accessGroups));
+}
+
 /// If `requestedAlignment` is higher than the alignment specified on `alloca`,
 /// realigns `alloca` if this does not exceed the natural stack alignment.
 /// Returns the post-alignment of `alloca`, whether it was realigned or not.
@@ -433,16 +454,6 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
   bool isLegalToInline(Operation *op, Region *, bool, IRMapping &) const final {
     if (isPure(op))
       return true;
-    // Some attributes on memory operations require handling during
-    // inlining. Since this is not yet implemented, refuse to inline memory
-    // operations that have any of these attributes.
-    if (auto iface = dyn_cast<LLVM::AccessGroupOpInterface>(op)) {
-      if (iface.getAccessGroupsOrNull()) {
-        LLVM_DEBUG(llvm::dbgs()
-                   << "Cannot inline: unhandled access group metadata\n");
-        return false;
-      }
-    }
     // clang-format off
     if (isa<LLVM::AllocaOp,
             LLVM::AssumeOp,
@@ -525,6 +536,7 @@ struct LLVMInlinerInterface : public DialectInlinerInterface {
       iterator_range<Region::iterator> inlinedBlocks) const override {
     handleInlinedAllocas(call, inlinedBlocks);
     handleAliasScopes(call, inlinedBlocks);
+    handleAccessGroups(call, inlinedBlocks);
   }
 
   // Keeping this (immutable) state on the interface allows us to look up
