@@ -356,7 +356,10 @@ static const SCEVAddRecExpr *findAddRecForLoop(const SCEV *S, const Loop *L) {
 }
 
 const SCEV *IVUsers::getStride(const IVStrideUse &IU, const Loop *L) const {
-  if (const SCEVAddRecExpr *AR = findAddRecForLoop(getExpr(IU), L))
+  const SCEV *Expr = getExpr(IU);
+  if (!Expr)
+    return nullptr;
+  if (const SCEVAddRecExpr *AR = findAddRecForLoop(Expr, L))
     return AR->getStepRecurrence(*SE);
   return nullptr;
 }
