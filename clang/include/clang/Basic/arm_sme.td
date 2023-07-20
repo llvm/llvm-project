@@ -114,3 +114,14 @@ defm SVWRITE_ZA16 : ZAWrite<"za16", "sUshb", "aarch64_sme_write", [ImmCheck<0, I
 defm SVWRITE_ZA32 : ZAWrite<"za32", "iUif", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_3>, ImmCheck<2, ImmCheck0_3>]>;
 defm SVWRITE_ZA64 : ZAWrite<"za64", "lUld", "aarch64_sme_write", [ImmCheck<0, ImmCheck0_7>, ImmCheck<2, ImmCheck0_1>]>;
 defm SVWRITE_ZA128 : ZAWrite<"za128", "csilUcUsUiUlhbfd", "aarch64_sme_writeq", [ImmCheck<0, ImmCheck0_15>, ImmCheck<2, ImmCheck0_0>]>;
+
+////////////////////////////////////////////////////////////////////////////////
+// SME - Zero
+
+let TargetGuard = "sme" in {
+  def SVZERO_MASK_ZA : SInst<"svzero_mask_za", "vi", "", MergeNone, "aarch64_sme_zero",
+                             [IsOverloadNone, IsStreamingCompatible, IsSharedZA],
+                             [ImmCheck<0, ImmCheck0_255>]>;
+  def SVZERO_ZA      : SInst<"svzero_za", "v", "", MergeNone, "aarch64_sme_zero",
+                             [IsOverloadNone, IsStreamingCompatible, IsSharedZA]>;
+}
