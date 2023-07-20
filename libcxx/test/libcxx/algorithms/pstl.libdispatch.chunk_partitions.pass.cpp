@@ -10,8 +10,6 @@
 
 // REQUIRES: libcpp-pstl-cpu-backend-libdispatch
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
-
 // __chunk_partitions __partition_chunks(ptrdiff_t);
 
 #include <__algorithm/pstl_backends/cpu_backends/libdispatch.h>
