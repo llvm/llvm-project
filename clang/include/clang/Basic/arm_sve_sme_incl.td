@@ -245,6 +245,7 @@ def ImmCheck0_2                 : ImmCheckType<14>; // 0..2
 def ImmCheck0_3                 : ImmCheckType<15>; // 0..3
 def ImmCheck0_0                 : ImmCheckType<16>; // 0..0
 def ImmCheck0_15                : ImmCheckType<17>; // 0..15
+def ImmCheck0_255               : ImmCheckType<18>; // 0..255
 
 class ImmCheck<int arg, ImmCheckType kind, int eltSizeArg = -1> {
   int Arg = arg;

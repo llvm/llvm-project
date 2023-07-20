@@ -4283,6 +4283,9 @@ public:
   llvm::Value *EmitSMEReadWrite(SVETypeFlags TypeFlags,
                                 llvm::SmallVectorImpl<llvm::Value *> &Ops,
                                 unsigned IntID);
+  llvm::Value *EmitSMEZero(SVETypeFlags TypeFlags,
+                           llvm::SmallVectorImpl<llvm::Value *> &Ops,
+                           unsigned IntID);
   llvm::Value *EmitAArch64SMEBuiltinExpr(unsigned BuiltinID, const CallExpr *E);
 
   llvm::Value *EmitAArch64BuiltinExpr(unsigned BuiltinID, const CallExpr *E,
