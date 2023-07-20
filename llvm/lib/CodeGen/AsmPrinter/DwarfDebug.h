@@ -186,6 +186,9 @@ struct EntryValue {
     EntryValues.insert({Reg, **NonVariadicExpr});
   }
 };
+/// Alias for the std::variant specialization base class of DbgVariable.
+using Variant = std::variant<std::monostate, Loc::Single, Loc::Multi, Loc::MMI,
+                             Loc::EntryValue>;
 } // namespace Loc
 
 //===----------------------------------------------------------------------===//
@@ -209,11 +212,16 @@ struct EntryValue {
 /// DebugLocListIndex and (optionally) \c DebugLocListTagOffset, while those
 /// with a single location hold a \c Loc::Single alternative which use \c
 /// ValueLoc and (optionally) a single \c Expr.
-class DbgVariable : public DbgEntity,
-                    public std::variant<std::monostate, Loc::Single, Loc::Multi,
-                                        Loc::MMI, Loc::EntryValue> {
+class DbgVariable : public DbgEntity, public Loc::Variant {
 
 public:
+  /// To workaround P2162R0 https://github.com/cplusplus/papers/issues/873 the
+  /// base class subobject needs to be passed directly to std::visit, so expose
+  /// it directly here.
+  Loc::Variant &asVariant() { return *static_cast<Loc::Variant *>(this); }
+  const Loc::Variant &asVariant() const {
+    return *static_cast<const Loc::Variant *>(this);
+  }
   /// Member shorthand for std::holds_alternative
   template <typename T> bool holds() const {
     return std::holds_alternative<T>(*this);
