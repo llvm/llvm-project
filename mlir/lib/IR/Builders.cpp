@@ -475,15 +475,9 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   if (matchPattern(op, m_Constant()))
     return cleanupFailure();
 
-  // Check to see if any operands to the operation is constant and whether
-  // the operation knows how to constant fold itself.
-  SmallVector<Attribute, 4> constOperands(op->getNumOperands());
-  for (unsigned i = 0, e = constOperands.size(); i != e; ++i)
-    matchPattern(op->getOperand(i), m_Constant(&constOperands[i]));
-
   // Try to fold the operation.
   SmallVector<OpFoldResult, 4> foldResults;
-  if (failed(op->fold(constOperands, foldResults)) || foldResults.empty())
+  if (failed(op->fold(foldResults)) || foldResults.empty())
     return cleanupFailure();
 
   // A temporary builder used for creating constants during folding.

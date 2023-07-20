@@ -679,10 +679,24 @@ public:
 
   /// Attempt to fold this operation with the specified constant operand values
   /// - the elements in "operands" will correspond directly to the operands of
-  /// the operation, but may be null if non-constant. If folding is successful,
-  /// this fills in the `results` vector. If not, `results` is unspecified.
+  /// the operation, but may be null if non-constant.
+  ///
+  /// If folding was successful, this function returns "success".
+  /// * If this operation was modified in-place (but not folded away),
+  ///   `results` is empty.
+  /// * Otherwise, `results` is filled with the folded results.
+  /// If folding was unsuccessful, this function returns "failure".
   LogicalResult fold(ArrayRef<Attribute> operands,
                      SmallVectorImpl<OpFoldResult> &results);
+
+  /// Attempt to fold this operation.
+  ///
+  /// If folding was successful, this function returns "success".
+  /// * If this operation was modified in-place (but not folded away),
+  ///   `results` is empty.
+  /// * Otherwise, `results` is filled with the folded results.
+  /// If folding was unsuccessful, this function returns "failure".
+  LogicalResult fold(SmallVectorImpl<OpFoldResult> &results);
 
   /// Returns true if the operation was registered with a particular trait, e.g.
   /// hasTrait<OperandsAreSignlessIntegerLike>().
