@@ -37,8 +37,6 @@ class SystemZMCCodeEmitter : public MCCodeEmitter {
   const MCInstrInfo &MCII;
   MCContext &Ctx;
 
-  mutable unsigned MemOpsEmitted;
-
 public:
   SystemZMCCodeEmitter(const MCInstrInfo &mcii, MCContext &ctx)
     : MCII(mcii), Ctx(ctx) {
@@ -56,6 +54,8 @@ private:
   uint64_t getBinaryCodeForInstr(const MCInst &MI,
                                  SmallVectorImpl<MCFixup> &Fixups,
                                  const MCSubtargetInfo &STI) const;
+  uint32_t getOperandBitOffset(const MCInst &MI, unsigned OpNum,
+                               const MCSubtargetInfo &STI) const;
 
   // Called by the TableGen code to get the binary encoding of operand
   // MO in MI.  Fixups is the list of fixups against MI.
@@ -67,6 +67,7 @@ private:
   // add a fixup for it and return 0.
   uint64_t getDispOpValue(const MCInst &MI, unsigned OpNum,
                           SmallVectorImpl<MCFixup> &Fixups,
+                          const MCSubtargetInfo &STI, unsigned OpSize,
                           SystemZ::FixupKind Kind) const;
 
   // Called by the TableGen code to get the binary encoding of an address.
@@ -144,7 +145,6 @@ void SystemZMCCodeEmitter::encodeInstruction(const MCInst &MI,
                                              SmallVectorImpl<char> &CB,
                                              SmallVectorImpl<MCFixup> &Fixups,
                                              const MCSubtargetInfo &STI) const {
-  MemOpsEmitted = 0;
   uint64_t Bits = getBinaryCodeForInstr(MI, Fixups, STI);
   unsigned Size = MCII.get(MI.getOpcode()).getSize();
   // Big-endian insertion of Size bytes.
@@ -166,21 +166,20 @@ getMachineOpValue(const MCInst &MI, const MCOperand &MO,
   llvm_unreachable("Unexpected operand type!");
 }
 
-uint64_t SystemZMCCodeEmitter::
-getDispOpValue(const MCInst &MI, unsigned OpNum,
-               SmallVectorImpl<MCFixup> &Fixups,
-               SystemZ::FixupKind Kind) const {
+uint64_t SystemZMCCodeEmitter::getDispOpValue(const MCInst &MI, unsigned OpNum,
+                                              SmallVectorImpl<MCFixup> &Fixups,
+                                              const MCSubtargetInfo &STI,
+                                              unsigned OpSize,
+                                              SystemZ::FixupKind Kind) const {
   const MCOperand &MO = MI.getOperand(OpNum);
-  if (MO.isImm()) {
-    ++MemOpsEmitted;
+  if (MO.isImm())
     return static_cast<uint64_t>(MO.getImm());
-  }
   if (MO.isExpr()) {
-    // All instructions follow the pattern where the first displacement has a
-    // 2 bytes offset, and the second one 4 bytes.
-    unsigned ByteOffs = MemOpsEmitted++ == 0 ? 2 : 4;
-    Fixups.push_back(MCFixup::create(ByteOffs, MO.getExpr(), (MCFixupKind)Kind,
-                                     MI.getLoc()));
+    unsigned MIBitSize = MCII.get(MI.getOpcode()).getSize() * 8;
+    uint32_t RawBitOffset = getOperandBitOffset(MI, OpNum, STI);
+    uint32_t BitOffset = MIBitSize - RawBitOffset - OpSize;
+    Fixups.push_back(MCFixup::create(BitOffset >> 3, MO.getExpr(),
+                                     (MCFixupKind)Kind, MI.getLoc()));
     assert(Fixups.size() <= 2 && "More than two memory operands in MI?");
     return 0;
   }
@@ -199,14 +198,16 @@ uint64_t
 SystemZMCCodeEmitter::getDisp12Encoding(const MCInst &MI, unsigned OpNum,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
-  return getDispOpValue(MI, OpNum, Fixups, SystemZ::FixupKind::FK_390_12);
+  return getDispOpValue(MI, OpNum, Fixups, STI, 12,
+                        SystemZ::FixupKind::FK_390_12);
 }
 
 uint64_t
 SystemZMCCodeEmitter::getDisp20Encoding(const MCInst &MI, unsigned OpNum,
                                         SmallVectorImpl<MCFixup> &Fixups,
                                         const MCSubtargetInfo &STI) const {
-  return getDispOpValue(MI, OpNum, Fixups, SystemZ::FixupKind::FK_390_20);
+  return getDispOpValue(MI, OpNum, Fixups, STI, 20,
+                        SystemZ::FixupKind::FK_390_20);
 }
 
 uint64_t
@@ -241,6 +242,7 @@ SystemZMCCodeEmitter::getPCRelEncoding(const MCInst &MI, unsigned OpNum,
   return 0;
 }
 
+#define GET_OPERAND_BIT_OFFSET
 #include "SystemZGenMCCodeEmitter.inc"
 
 MCCodeEmitter *llvm::createSystemZMCCodeEmitter(const MCInstrInfo &MCII,
