@@ -86,6 +86,18 @@ namespace compound {
     return f;
   }
   static_assert(f2() == __FLT_MAX__, "");
+
+  constexpr float ff() {
+    float a[] = {1,2};
+    int i = 0;
+
+    // RHS should be evaluated before LHS, so this should
+    // write to a[1];
+    a[i++] += ++i;
+
+    return a[1];
+  }
+  static_assert(ff() == 3, "");
 }
 
 namespace unary {
