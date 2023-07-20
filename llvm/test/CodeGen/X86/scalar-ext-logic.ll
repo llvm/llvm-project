@@ -35,7 +35,7 @@ define i32 @sextinreg_i32(ptr %p0, ptr %p1) {
   ret i32 %and
 }
 
-; TODO: MISMATCH and(sextinreg(v0,i2),sextinreg(v1,i5)) -> sextinreg(and(v0,v1),i2)
+; MISMATCH and(sextinreg(v0,i2),sextinreg(v1,i5)) != sextinreg(and(v0,v1),i2)
 define i32 @sextinreg_i32_mismatch(ptr %p0, ptr %p1) {
 ; X86-LABEL: sextinreg_i32_mismatch:
 ; X86:       # %bb.0:
@@ -43,18 +43,22 @@ define i32 @sextinreg_i32_mismatch(ptr %p0, ptr %p1) {
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
 ; X86-NEXT:    movzbl (%ecx), %ecx
 ; X86-NEXT:    movzbl (%eax), %eax
+; X86-NEXT:    shll $30, %ecx
+; X86-NEXT:    sarl $30, %ecx
+; X86-NEXT:    shll $27, %eax
+; X86-NEXT:    sarl $27, %eax
 ; X86-NEXT:    andl %ecx, %eax
-; X86-NEXT:    shll $30, %eax
-; X86-NEXT:    sarl $30, %eax
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: sextinreg_i32_mismatch:
 ; X64:       # %bb.0:
 ; X64-NEXT:    movzbl (%rdi), %ecx
 ; X64-NEXT:    movzbl (%rsi), %eax
+; X64-NEXT:    shll $30, %ecx
+; X64-NEXT:    sarl $30, %ecx
+; X64-NEXT:    shll $27, %eax
+; X64-NEXT:    sarl $27, %eax
 ; X64-NEXT:    andl %ecx, %eax
-; X64-NEXT:    shll $30, %eax
-; X64-NEXT:    sarl $30, %eax
 ; X64-NEXT:    retq
   %v0 = load i8, ptr %p0, align 1
   %v1 = load i8, ptr %p1, align 1
