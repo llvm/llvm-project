@@ -135,3 +135,19 @@ let TargetGuard = "sme" in {
   def SVZERO_ZA      : SInst<"svzero_za", "v", "", MergeNone, "aarch64_sme_zero",
                              [IsOverloadNone, IsStreamingCompatible, IsSharedZA]>;
 }
+
+////////////////////////////////////////////////////////////////////////////////
+// SME - Counting elements in a streaming vector
+
+multiclass ZACount<string n_suffix> {
+  let TargetGuard = "sme" in {
+    def NAME : SInst<"sv" # n_suffix, "nv", "", MergeNone,
+                      "aarch64_sme_" # n_suffix,
+                      [IsOverloadNone, IsStreamingCompatible, IsPreservesZA]>;
+  }
+}
+
+defm SVCNTSB : ZACount<"cntsb">;
+defm SVCNTSH : ZACount<"cntsh">;
+defm SVCNTSW : ZACount<"cntsw">;
+defm SVCNTSD : ZACount<"cntsd">;
