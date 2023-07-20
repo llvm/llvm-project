@@ -16925,7 +16925,7 @@ bool Sema::EvaluateStaticAssertMessageAsString(Expr *Message,
     OverloadCandidateSet::iterator Best;
     switch (Candidates.BestViableFunction(*this, Loc, Best)) {
     case OR_Success:
-      return MemberLookup;
+      return std::move(MemberLookup);
     default:
       if (Diag)
         Candidates.NoteCandidates(
