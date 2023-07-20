@@ -123,6 +123,19 @@ void test_range_0_3(svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svaddha_za32, _s32, _m,)(4, pg, pg, svundef_s32());
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
   SVE_ACLE_FUNC(svaddva_za32, _s32, _m,)(-1, pg, pg, svundef_s32());
+
+  // expected-error@+1 {{argument value 4 is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svmopa_za32, _s8, _m,)(4, pg, pg, svundef_s8(), svundef_s8());
+  // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svmops_za32, _s8, _m,)(-1, pg, pg, svundef_s8(), svundef_s8());
+  // expected-error@+1 {{argument value 4 is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svsumopa_za32, _s8, _m,)(4, pg, pg, svundef_s8(), svundef_u8());
+  // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svsumops_za32, _s8, _m,)(-1, pg, pg, svundef_s8(), svundef_u8());
+  // expected-error@+1 {{argument value 4 is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svusmopa_za32, _u8, _m,)(4, pg, pg, svundef_u8(), svundef_s8());
+  // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 3]}}
+  SVE_ACLE_FUNC(svusmops_za32, _u8, _m,)(-1, pg, pg, svundef_u8(), svundef_s8());
 }
 
 void test_range_0_7(svbool_t pg, void *ptr) {
@@ -164,6 +177,19 @@ void test_range_0_7(svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svaddha_za64, _s64, _m,)(8, pg, pg, svundef_s64());
   // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
   SVE_ACLE_FUNC(svaddva_za64, _s64, _m,)(-1, pg, pg, svundef_s64());
+
+  // expected-error@+1 {{argument value 8 is outside the valid range [0, 7]}}
+  SVE_ACLE_FUNC(svmopa_za64, _s16, _m,)(8, pg, pg, svundef_s16(), svundef_s16());
+  // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  SVE_ACLE_FUNC(svmops_za64, _s16, _m,)(-1, pg, pg, svundef_s16(), svundef_s16());
+  // expected-error@+1 {{argument value 8 is outside the valid range [0, 7]}}
+  SVE_ACLE_FUNC(svsumopa_za64, _s16, _m,)(8, pg, pg, svundef_s16(), svundef_u16());
+  // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  SVE_ACLE_FUNC(svsumops_za64, _s16, _m,)(-1, pg, pg, svundef_s16(), svundef_u16());
+  // expected-error@+1 {{argument value 8 is outside the valid range [0, 7]}}
+  SVE_ACLE_FUNC(svusmopa_za64, _u16, _m,)(8, pg, pg, svundef_u16(), svundef_s16());
+  // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 7]}}
+  SVE_ACLE_FUNC(svusmops_za64, _u16, _m,)(-1, pg, pg, svundef_u16(), svundef_s16());
 }
 
 void test_range_0_15(svbool_t pg, void *ptr) {

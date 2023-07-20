@@ -171,3 +171,89 @@ multiclass ZAAdd<string n_suffix> {
 
 defm SVADDHA : ZAAdd<"addha">;
 defm SVADDVA : ZAAdd<"addva">;
+
+////////////////////////////////////////////////////////////////////////////////
+// SME - SMOPA, SMOPS, UMOPA, UMOPS
+
+multiclass ZAIntOuterProd<string n_suffix1, string n_suffix2> {
+  let TargetGuard = "sme" in {
+    def NAME # _ZA32_B: SInst<"sv" # n_suffix2 # "_za32[_{d}]",
+                              "viPPdd", !cond(!eq(n_suffix1, "s") : "", true: "U") # "c",
+                              MergeOp1, "aarch64_sme_" # n_suffix1 # n_suffix2 # "_wide",
+                              [IsStreaming, IsSharedZA],
+                              [ImmCheck<0, ImmCheck0_3>]>;
+  }
+
+  let TargetGuard = "sme-i16i64" in {
+    def NAME # _ZA64_H: SInst<"sv" # n_suffix2 # "_za64[_{d}]",
+                              "viPPdd", !cond(!eq(n_suffix1, "s") : "", true: "U") # "s",
+                              MergeOp1, "aarch64_sme_" # n_suffix1 # n_suffix2 # "_wide",
+                              [IsStreaming, IsSharedZA],
+                              [ImmCheck<0, ImmCheck0_7>]>;
+  }
+}
+
+defm SVSMOPA : ZAIntOuterProd<"s", "mopa">;
+defm SVSMOPS : ZAIntOuterProd<"s", "mops">;
+defm SVUMOPA : ZAIntOuterProd<"u", "mopa">;
+defm SVUMOPS : ZAIntOuterProd<"u", "mops">;
+
+////////////////////////////////////////////////////////////////////////////////
+// SME - SUMOPA, SUMOPS, USMOPA, USMOPS
+
+multiclass ZAIntOuterProdMixedSigns<string n_suffix1, string n_suffix2> {
+  let TargetGuard = "sme" in {
+    def NAME # _ZA32_B: SInst<"sv" # n_suffix1 # n_suffix2 # "_za32[_{d}]",
+                              "viPPd" # !cond(!eq(n_suffix1, "su") : "u", true: "x"),
+                              !cond(!eq(n_suffix1, "su") : "", true: "U") # "c",
+                              MergeOp1, "aarch64_sme_" # n_suffix1 # n_suffix2 # "_wide",
+                              [IsStreaming, IsSharedZA],
+                              [ImmCheck<0, ImmCheck0_3>]>;
+  }
+
+  let TargetGuard = "sme-i16i64" in {
+    def NAME # _ZA64_H: SInst<"sv" # n_suffix1 # n_suffix2 # "_za64[_{d}]",
+                              "viPPd" # !cond(!eq(n_suffix1, "su") : "u", true: "x"),
+                              !cond(!eq(n_suffix1, "su") : "", true: "U") # "s",
+                              MergeOp1, "aarch64_sme_" # n_suffix1 # n_suffix2 # "_wide",
+                              [IsStreaming, IsSharedZA],
+                              [ImmCheck<0, ImmCheck0_7>]>;
+  }
+}
+
+defm SVSUMOPA : ZAIntOuterProdMixedSigns<"su", "mopa">;
+defm SVSUMOPS : ZAIntOuterProdMixedSigns<"su", "mops">;
+defm SVUSMOPA : ZAIntOuterProdMixedSigns<"us", "mopa">;
+defm SVUSMOPS : ZAIntOuterProdMixedSigns<"us", "mops">;
+
+////////////////////////////////////////////////////////////////////////////////
+// SME - FMOPA, FMOPS
+
+multiclass ZAFPOuterProd<string n_suffix> {
+  let TargetGuard = "sme" in {
+    def NAME # _ZA32_B: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPdd", "h",
+                              MergeOp1, "aarch64_sme_" # n_suffix # "_wide",
+                              [IsStreaming, IsSharedZA],
+                              [ImmCheck<0, ImmCheck0_3>]>;
+
+    def NAME # _ZA32_H: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPdd", "b",
+                              MergeOp1, "aarch64_sme_" # n_suffix # "_wide",
+                              [IsStreaming, IsSharedZA],
+                              [ImmCheck<0, ImmCheck0_3>]>;
+
+    def NAME # _ZA32_S: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPdd", "f",
+                              MergeOp1, "aarch64_sme_" # n_suffix,
+                              [IsStreaming, IsSharedZA],
+                              [ImmCheck<0, ImmCheck0_3>]>;
+  }
+
+  let TargetGuard = "sme-f64f64" in {
+    def NAME # _ZA64_D: SInst<"sv" # n_suffix # "_za64[_{d}]", "viPPdd", "d",
+                              MergeOp1, "aarch64_sme_" # n_suffix,
+                              [IsStreaming, IsSharedZA],
+                              [ImmCheck<0, ImmCheck0_3>]>;
+  }
+}
+
+defm SVMOPA : ZAFPOuterProd<"mopa">;
+defm SVMOPS : ZAFPOuterProd<"mops">;
