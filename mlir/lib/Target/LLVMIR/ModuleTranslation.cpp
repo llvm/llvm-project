@@ -664,6 +664,10 @@ LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments,
 
     if (failed(convertOperation(op, builder)))
       return failure();
+
+    // Set the branch weight metadata on the translated instruction.
+    if (auto iface = dyn_cast<BranchWeightOpInterface>(op))
+      setBranchWeightsMetadata(iface);
   }
 
   return success();
@@ -1181,6 +1185,19 @@ void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
 
   llvm::MDNode *node = getTBAANode(cast<TBAATagAttr>(tagRefs[0]));
   inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
+}
+
+void ModuleTranslation::setBranchWeightsMetadata(BranchWeightOpInterface op) {
+  DenseI32ArrayAttr weightsAttr = op.getBranchWeightsOrNull();
+  if (!weightsAttr)
+    return;
+
+  llvm::Instruction *inst = isa<CallOp>(op) ? lookupCall(op) : lookupBranch(op);
+  assert(inst && "expected the operation to have a mapping to an instruction");
+  SmallVector<uint32_t> weights(weightsAttr.asArrayRef());
+  inst->setMetadata(
+      llvm::LLVMContext::MD_prof,
+      llvm::MDBuilder(getLLVMContext()).createBranchWeights(weights));
 }
 
 LogicalResult ModuleTranslation::createTBAAMetadata() {
