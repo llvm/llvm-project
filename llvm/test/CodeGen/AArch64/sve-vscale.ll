@@ -101,6 +101,17 @@ define i32 @rdvl_max() nounwind {
   ret i32 %1
 }
 
+define i1 @rdvl_i1() {
+; CHECK-LABEL: rdvl_i1:
+; CHECK:         rdvl x8, #-1
+; CHECK-NEXT:    asr x8, x8, #4
+; CHECK-NEXT:    and w0, w8, #0x1
+; CHECK-NEXT:    ret
+  %a = tail call i64 @llvm.vscale.i64()
+  %b = trunc i64 %a to i1
+  ret i1 %b
+}
+
 ;
 ; CNTH
 ;
