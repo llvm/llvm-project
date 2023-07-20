@@ -103,7 +103,7 @@ static void stressNew() {
       Cv.wait(Lock);
   }
   for (size_t I = 0; I < 256U; I++) {
-    const size_t N = std::rand() % 128U;
+    const size_t N = static_cast<size_t>(std::rand()) % 128U;
     uintptr_t *P = new uintptr_t[N];
     if (P) {
       memset(P, 0x42, sizeof(uintptr_t) * N);
