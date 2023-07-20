@@ -27,11 +27,6 @@
 #include <string>
 #include <utility>
 
-// FIXME: There are still remaining checks here that check for consistency
-// between `StructValue` and `AggregateStorageLocation`. Now that the redundancy
-// between these two classes has been eliminated, these checks aren't needed any
-// more, so remove them.
-
 namespace {
 
 using namespace clang;
@@ -268,13 +263,7 @@ TEST(TransferTest, StructVarDecl) {
 
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *BarLoc =
-            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
-
-        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
-        const auto *BarVal =
-            cast<IntegerValue>(getFieldValue(FooVal, *BarDecl, Env));
-        EXPECT_EQ(Env.getValue(*BarLoc), BarVal);
+        EXPECT_TRUE(isa<IntegerValue>(getFieldValue(FooLoc, *BarDecl, Env)));
       });
 }
 
@@ -317,13 +306,7 @@ TEST(TransferTest, StructVarDeclWithInit) {
 
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *BarLoc =
-            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
-
-        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
-        const auto *BarVal =
-            cast<IntegerValue>(getFieldValue(FooVal, *BarDecl, Env));
-        EXPECT_EQ(Env.getValue(*BarLoc), BarVal);
+        EXPECT_TRUE(isa<IntegerValue>(getFieldValue(FooLoc, *BarDecl, Env)));
       });
 }
 
@@ -365,13 +348,7 @@ TEST(TransferTest, ClassVarDecl) {
 
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *BarLoc =
-            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
-
-        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
-        const auto *BarVal =
-            cast<IntegerValue>(getFieldValue(FooVal, *BarDecl, Env));
-        EXPECT_EQ(Env.getValue(*BarLoc), BarVal);
+        EXPECT_TRUE(isa<IntegerValue>(getFieldValue(FooLoc, *BarDecl, Env)));
       });
 }
 
@@ -1046,13 +1023,7 @@ TEST(TransferTest, StructParamDecl) {
 
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *BarLoc =
-            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
-
-        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
-        const auto *BarVal =
-            cast<IntegerValue>(getFieldValue(FooVal, *BarDecl, Env));
-        EXPECT_EQ(Env.getValue(*BarLoc), BarVal);
+        EXPECT_TRUE(isa<IntegerValue>(getFieldValue(FooLoc, *BarDecl, Env)));
       });
 }
 
@@ -1150,9 +1121,8 @@ TEST(TransferTest, StructMember) {
 
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal =
-            cast<IntegerValue>(getFieldValue(FooVal, *BarDecl, Env));
+            cast<IntegerValue>(getFieldValue(FooLoc, *BarDecl, Env));
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
@@ -1392,9 +1362,8 @@ TEST(TransferTest, ClassMember) {
 
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal =
-            cast<IntegerValue>(getFieldValue(FooVal, *BarDecl, Env));
+            cast<IntegerValue>(getFieldValue(FooLoc, *BarDecl, Env));
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
@@ -1553,14 +1522,10 @@ TEST(TransferTest, StructThisMember) {
 
         const auto *QuxLoc =
             cast<AggregateStorageLocation>(ThisLoc->getChild(*QuxDecl));
-        const auto *QuxVal = dyn_cast<StructValue>(Env.getValue(*QuxLoc));
-        ASSERT_THAT(QuxVal, NotNull());
+        EXPECT_THAT(dyn_cast<StructValue>(Env.getValue(*QuxLoc)), NotNull());
 
-        const auto *BazLoc =
-            cast<ScalarStorageLocation>(QuxLoc->getChild(*BazDecl));
         const auto *BazVal =
-            cast<IntegerValue>(getFieldValue(QuxVal, *BazDecl, Env));
-        EXPECT_EQ(Env.getValue(*BazLoc), BazVal);
+            cast<IntegerValue>(getFieldValue(QuxLoc, *BazDecl, Env));
 
         const ValueDecl *QuuxDecl = findValueDecl(ASTCtx, "Quux");
         ASSERT_THAT(QuuxDecl, NotNull());
@@ -1628,14 +1593,10 @@ TEST(TransferTest, ClassThisMember) {
 
         const auto *QuxLoc =
             cast<AggregateStorageLocation>(ThisLoc->getChild(*QuxDecl));
-        const auto *QuxVal = dyn_cast<StructValue>(Env.getValue(*QuxLoc));
-        ASSERT_THAT(QuxVal, NotNull());
+        EXPECT_THAT(dyn_cast<StructValue>(Env.getValue(*QuxLoc)), NotNull());
 
-        const auto *BazLoc =
-            cast<ScalarStorageLocation>(QuxLoc->getChild(*BazDecl));
         const auto *BazVal =
-            cast<IntegerValue>(getFieldValue(QuxVal, *BazDecl, Env));
-        EXPECT_EQ(Env.getValue(*BazLoc), BazVal);
+            cast<IntegerValue>(getFieldValue(QuxLoc, *BazDecl, Env));
 
         const ValueDecl *QuuxDecl = findValueDecl(ASTCtx, "Quux");
         ASSERT_THAT(QuuxDecl, NotNull());
@@ -1915,13 +1876,7 @@ TEST(TransferTest, TemporaryObject) {
 
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *BarLoc =
-            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
-
-        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
-        const auto *BarVal =
-            cast<IntegerValue>(getFieldValue(FooVal, *BarDecl, Env));
-        EXPECT_EQ(Env.getValue(*BarLoc), BarVal);
+        EXPECT_TRUE(isa<IntegerValue>(getFieldValue(FooLoc, *BarDecl, Env)));
       });
 }
 
@@ -1954,13 +1909,7 @@ TEST(TransferTest, ElidableConstructor) {
 
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *BarLoc =
-            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
-
-        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
-        const auto *BarVal =
-            cast<IntegerValue>(getFieldValue(FooVal, *BarDecl, Env));
-        EXPECT_EQ(Env.getValue(*BarLoc), BarVal);
+        EXPECT_TRUE(isa<IntegerValue>(getFieldValue(FooLoc, *BarDecl, Env)));
       },
       LangStandard::lang_cxx14);
 }
@@ -2973,20 +2922,15 @@ TEST(TransferTest, AssignToUnionMember) {
         ASSERT_THAT(BazLoc, NotNull());
         ASSERT_THAT(Env.getValue(*BazLoc), NotNull());
 
-        const auto *BazVal = cast<StructValue>(Env.getValue(*BazLoc));
-        const auto *FooValFromBazVal =
-            cast<IntegerValue>(getFieldValue(BazVal, *FooDecl, Env));
-        const auto *FooValFromBazLoc =
+        const auto *FooVal =
             cast<IntegerValue>(getFieldValue(BazLoc, *FooDecl, Env));
-        EXPECT_EQ(FooValFromBazLoc, FooValFromBazVal);
 
         const ValueDecl *BarDecl = findValueDecl(ASTCtx, "Bar");
         ASSERT_THAT(BarDecl, NotNull());
         const auto *BarLoc = Env.getStorageLocation(*BarDecl);
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
 
-        EXPECT_EQ(Env.getValue(*BarLoc), FooValFromBazVal);
-        EXPECT_EQ(Env.getValue(*BarLoc), FooValFromBazLoc);
+        EXPECT_EQ(Env.getValue(*BarLoc), FooVal);
       });
 }
 
