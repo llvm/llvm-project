@@ -9955,6 +9955,7 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
   getContext().GetBuiltinType(BuiltinID, Error, &ICEArguments);
   assert(Error == ASTContext::GE_None && "Should not codegen an error");
 
+  llvm::Type *Ty = ConvertType(E->getType());
   llvm::SmallVector<Value *, 4> Ops;
   for (unsigned i = 0, e = E->getNumArgs(); i != e; i++) {
     if ((ICEArguments & (1 << i)) == 0)
@@ -9987,6 +9988,12 @@ Value *CodeGenFunction::EmitAArch64SMEBuiltinExpr(unsigned BuiltinID,
   else if (BuiltinID == SME::BI__builtin_sme_svldr_vnum_za ||
            BuiltinID == SME::BI__builtin_sme_svstr_vnum_za)
     return EmitSMELdrStr(TypeFlags, Ops, Builtin->LLVMIntrinsic);
+  else if (Builtin->LLVMIntrinsic != 0) {
+    Function *F = CGM.getIntrinsic(Builtin->LLVMIntrinsic,
+                                   getSVEOverloadTypes(TypeFlags, Ty, Ops));
+    Value *Call = Builder.CreateCall(F, Ops);
+    return Call;
+  }
 
   /// Should not happen
   return nullptr;
