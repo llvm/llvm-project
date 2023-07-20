@@ -150,7 +150,6 @@ TEST(Decl, ConceptDecl) {
 
   auto AST = tooling::buildASTFromCodeWithArgs(Code, {"-std=c++20"});
   ASTContext &Ctx = AST->getASTContext();
-  SourceManager &SM = Ctx.getSourceManager();
 
   const auto *Decl =
       selectFirst<ConceptDecl>("decl", match(conceptDecl().bind("decl"), Ctx));
