@@ -30,7 +30,6 @@ endif()
 set(CLANG_OCL_FLAGS -fcolor-diagnostics -Werror -Wno-error=atomic-alignment -x cl -Xclang
   -cl-std=CL2.0 -target "${AMDGPU_TARGET_TRIPLE}" -fvisibility=protected -fomit-frame-pointer
   -Xclang -finclude-default-header -Xclang -fexperimental-strict-floating-point
-  -ffp-contract=fast
   -Xclang -fdenormal-fp-math=dynamic
   -nogpulib -cl-no-stdinc "${CLANG_OPTIONS_APPEND}")
 
