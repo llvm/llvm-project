@@ -95,10 +95,10 @@ MCStreamer *createELFStreamer(MCContext &Ctx,
                               std::unique_ptr<MCCodeEmitter> &&CE,
                               bool RelaxAll);
 MCStreamer *createSQELFStreamer(MCContext &Ctx,
-                              std::unique_ptr<MCAsmBackend> &&TAB,
-                              std::unique_ptr<MCObjectWriter> &&OW,
-                              std::unique_ptr<MCCodeEmitter> &&CE,
-                              bool RelaxAll);
+                                std::unique_ptr<MCAsmBackend> &&TAB,
+                                std::unique_ptr<MCObjectWriter> &&OW,
+                                std::unique_ptr<MCCodeEmitter> &&CE,
+                                bool RelaxAll);
 MCStreamer *createMachOStreamer(MCContext &Ctx,
                                 std::unique_ptr<MCAsmBackend> &&TAB,
                                 std::unique_ptr<MCObjectWriter> &&OW,
@@ -602,10 +602,10 @@ public:
     case Triple::SQELF:
       if (SQELFStreamerCtorFn)
         S = SQELFStreamerCtorFn(T, Ctx, std::move(TAB), std::move(OW),
-                              std::move(Emitter), RelaxAll);
+                                std::move(Emitter), RelaxAll);
       else
         S = createSQELFStreamer(Ctx, std::move(TAB), std::move(OW),
-                              std::move(Emitter), RelaxAll);
+                                std::move(Emitter), RelaxAll);
       break;
     case Triple::Wasm:
       if (WasmStreamerCtorFn)

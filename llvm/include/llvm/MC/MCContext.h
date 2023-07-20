@@ -82,6 +82,7 @@ public:
   enum Environment {
     IsMachO,
     IsELF,
+    IsSQELF,
     IsGOFF,
     IsCOFF,
     IsSPIRV,

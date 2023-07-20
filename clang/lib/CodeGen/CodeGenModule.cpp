@@ -6039,6 +6039,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   case llvm::Triple::XCOFF:
     llvm_unreachable("unimplemented");
   case llvm::Triple::COFF:
+  case llvm::Triple::SQELF:
   case llvm::Triple::ELF:
   case llvm::Triple::Wasm:
     GV->setSection("cfstring");

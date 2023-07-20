@@ -5065,6 +5065,7 @@ std::string CGObjCCommonMac::GetSectionName(StringRef Section,
     assert(Section.substr(0, 2) == "__" &&
            "expected the name to begin with __");
     return ("." + Section.substr(2) + "$B").str();
+  case llvm::Triple::SQELF:
   case llvm::Triple::Wasm:
   case llvm::Triple::GOFF:
   case llvm::Triple::SPIRV:

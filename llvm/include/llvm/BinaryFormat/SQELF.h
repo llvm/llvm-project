@@ -4,14 +4,12 @@
 #include <sqlite3.h>
 
 namespace llvm {
-    namespace BinaryFormat {
-        class SQELF {
+namespace BinaryFormat {
+class SQELF {
 
-            SQELF();
-
-        };
-    }
-}
-
+  SQELF();
+};
+} // namespace BinaryFormat
+} // namespace llvm
 
 #endif // LLVM_BINARYFORMAT_SQELF_H

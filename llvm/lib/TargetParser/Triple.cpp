@@ -303,7 +303,8 @@ StringRef Triple::getObjectFormatTypeName(ObjectFormatType Kind) {
   case UnknownObjectFormat: return "";
   case COFF: return "coff";
   case ELF: return "elf";
-  case SQELF: return "sqelf";
+  case SQELF:
+    return "sqelf";
   case GOFF: return "goff";
   case MachO: return "macho";
   case Wasm: return "wasm";

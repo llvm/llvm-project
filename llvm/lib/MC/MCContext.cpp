@@ -94,6 +94,9 @@ MCContext::MCContext(const Triple &TheTriple, const MCAsmInfo *mai,
   case Triple::ELF:
     Env = IsELF;
     break;
+  case Triple::SQELF:
+    Env = IsSQELF;
+    break;
   case Triple::Wasm:
     Env = IsWasm;
     break;
@@ -244,6 +247,9 @@ MCSymbol *MCContext::createSymbolImpl(const StringMapEntry<bool> *Name,
   case MCContext::IsCOFF:
     return new (Name, *this) MCSymbolCOFF(Name, IsTemporary);
   case MCContext::IsELF:
+    return new (Name, *this) MCSymbolELF(Name, IsTemporary);
+  case MCContext::IsSQELF:
+    // TODO(fzakaria): Does this need it's own symbol type?
     return new (Name, *this) MCSymbolELF(Name, IsTemporary);
   case MCContext::IsGOFF:
     return new (Name, *this) MCSymbolGOFF(Name, IsTemporary);

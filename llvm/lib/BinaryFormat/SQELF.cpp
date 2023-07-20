@@ -3,7 +3,4 @@
 using namespace llvm;
 using namespace BinaryFormat;
 
-
-SQELF::SQELF() {
-    
-}
+SQELF::SQELF() {}

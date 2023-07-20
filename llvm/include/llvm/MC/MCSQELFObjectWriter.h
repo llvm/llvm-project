@@ -7,7 +7,6 @@
 
 namespace llvm {
 
-
 class MCSQELFObjectTargetWriter : public MCObjectTargetWriter {
 
 protected:
@@ -30,7 +29,7 @@ public:
 /// \returns The constructed object writer.
 std::unique_ptr<MCObjectWriter>
 createSQELFObjectWriter(std::unique_ptr<MCSQELFObjectTargetWriter> MOTW,
-                       raw_pwrite_stream &OS);
+                        raw_pwrite_stream &OS);
 
 } // namespace llvm
 

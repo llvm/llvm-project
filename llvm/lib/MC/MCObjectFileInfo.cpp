@@ -331,6 +331,8 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   TLSExtraDataSection = TLSTLVSection;
 }
 
+void MCObjectFileInfo::initSQELFMCObjectFileInfo(const Triple &T) {}
+
 void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   switch (T.getArch()) {
   case Triple::mips:
@@ -1071,6 +1073,9 @@ void MCObjectFileInfo::initMCObjectFileInfo(MCContext &MCCtx, bool PIC,
   case MCContext::IsELF:
     initELFMCObjectFileInfo(TheTriple, LargeCodeModel);
     break;
+  case MCContext::IsSQELF:
+    initSQELFMCObjectFileInfo(TheTriple);
+    break;
   case MCContext::IsGOFF:
     initGOFFMCObjectFileInfo(TheTriple);
     break;
@@ -1098,6 +1103,7 @@ MCSection *MCObjectFileInfo::getDwarfComdatSection(const char *Name,
   case Triple::Wasm:
     return Ctx->getWasmSection(Name, SectionKind::getMetadata(), 0,
                                utostr(Hash), MCContext::GenericSectionID);
+  case Triple::SQELF:
   case Triple::MachO:
   case Triple::COFF:
   case Triple::GOFF:
