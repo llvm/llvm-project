@@ -85,7 +85,7 @@ public:
   /// Clears the stack without calling any destructors.
   void clear();
 
-  // Returns whether the stack is empty.
+  /// Returns whether the stack is empty.
   bool empty() const { return StackSize == 0; }
 
 private:
