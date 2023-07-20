@@ -1759,6 +1759,7 @@ bool sys::getHostCPUFeatures(StringMap<bool> &Features) {
   Features["avxvnniint8"] = HasLeaf7Subleaf1 && ((EDX >> 4) & 1) && HasAVXSave;
   Features["avxneconvert"] = HasLeaf7Subleaf1 && ((EDX >> 5) & 1) && HasAVXSave;
   Features["amx-complex"] = HasLeaf7Subleaf1 && ((EDX >> 8) & 1) && HasAMXSave;
+  Features["avxvnniint16"] = HasLeaf7Subleaf1 && ((EDX >> 10) & 1) && HasAVXSave;
   Features["prefetchi"]  = HasLeaf7Subleaf1 && ((EDX >> 14) & 1);
 
   bool HasLeafD = MaxLevel >= 0xd &&

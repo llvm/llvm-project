@@ -160,6 +160,7 @@ set(x86_files
   avxifmaintrin.h
   avxintrin.h
   avxneconvertintrin.h
+  avxvnniint16intrin.h
   avxvnniint8intrin.h
   avxvnniintrin.h
   bmi2intrin.h
