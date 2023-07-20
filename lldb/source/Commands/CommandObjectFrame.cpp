@@ -499,12 +499,41 @@ protected:
     }
   }
 
+  /// Finds all the variables in `all_variables` whose name matches `regex`,
+  /// inserting them into `matches`. Variables already contained in `matches`
+  /// are not inserted again.
+  /// Nullopt is returned in case of no matches.
+  /// A sub-range of `matches` with all newly inserted variables is returned.
+  /// This may be empty if all matches were already contained in `matches`.
+  std::optional<llvm::ArrayRef<VariableSP>>
+  findUniqueRegexMatches(RegularExpression &regex,
+                         VariableList &matches,
+                         const VariableList &all_variables) {
+    bool any_matches = false;
+    const size_t previous_num_vars = matches.GetSize();
+
+    for (const VariableSP &var : all_variables) {
+      if (!var->NameMatches(regex) || !ScopeRequested(var->GetScope()))
+        continue;
+      any_matches = true;
+      matches.AddVariableIfUnique(var);
+    }
+
+    if (any_matches)
+      return matches.toArrayRef().drop_front(previous_num_vars);
+    return std::nullopt;
+  }
+
   bool DoExecute(Args &command, CommandReturnObject &result) override {
     // No need to check "frame" for validity as eCommandRequiresFrame ensures
     // it is valid
     StackFrame *frame = m_exe_ctx.GetFramePtr();
 
     Stream &s = result.GetOutputStream();
+
+    // Using a regex should behave like looking for an exact name match: it
+    // also finds globals.
+    m_option_variable.show_globals |= m_option_variable.use_regex;
 
     // Be careful about the stack frame, if any summary formatter runs code, it
     // might clear the StackFrameList for the thread.  So hold onto a shared
@@ -518,7 +547,6 @@ protected:
       result.AppendError(error.AsCString());
 
     }
-    VariableSP var_sp;
     ValueObjectSP valobj_sp;
 
     TypeSummaryImplSP summary_format_sp;
@@ -551,46 +579,38 @@ protected:
         // objects from them...
         for (auto &entry : command) {
           if (m_option_variable.use_regex) {
-            const size_t regex_start_index = regex_var_list.GetSize();
             llvm::StringRef name_str = entry.ref();
             RegularExpression regex(name_str);
             if (regex.IsValid()) {
-              size_t num_matches = 0;
-              const size_t num_new_regex_vars =
-                  variable_list->AppendVariablesIfUnique(regex, regex_var_list,
-                                                         num_matches);
-              if (num_new_regex_vars > 0) {
-                for (size_t regex_idx = regex_start_index,
-                            end_index = regex_var_list.GetSize();
-                     regex_idx < end_index; ++regex_idx) {
-                  var_sp = regex_var_list.GetVariableAtIndex(regex_idx);
-                  if (var_sp) {
-                    valobj_sp = frame->GetValueObjectForFrameVariable(
-                        var_sp, m_varobj_options.use_dynamic);
-                    if (valobj_sp) {
-                      std::string scope_string;
-                      if (m_option_variable.show_scope)
-                        scope_string = GetScopeString(var_sp).str();
-
-                      if (!scope_string.empty())
-                        s.PutCString(scope_string);
-
-                      if (m_option_variable.show_decl &&
-                          var_sp->GetDeclaration().GetFile()) {
-                        bool show_fullpaths = false;
-                        bool show_module = true;
-                        if (var_sp->DumpDeclaration(&s, show_fullpaths,
-                                                    show_module))
-                          s.PutCString(": ");
-                      }
-                      valobj_sp->Dump(result.GetOutputStream(), options);
-                    }
-                  }
-                }
-              } else if (num_matches == 0) {
+              std::optional<llvm::ArrayRef<VariableSP>> results =
+                  findUniqueRegexMatches(regex, regex_var_list, *variable_list);
+              if (!results) {
                 result.AppendErrorWithFormat(
                     "no variables matched the regular expression '%s'.",
                     entry.c_str());
+                continue;
+              }
+              for (const VariableSP &var_sp : *results) {
+                valobj_sp = frame->GetValueObjectForFrameVariable(
+                    var_sp, m_varobj_options.use_dynamic);
+                if (valobj_sp) {
+                  std::string scope_string;
+                  if (m_option_variable.show_scope)
+                    scope_string = GetScopeString(var_sp).str();
+
+                  if (!scope_string.empty())
+                    s.PutCString(scope_string);
+
+                  if (m_option_variable.show_decl &&
+                      var_sp->GetDeclaration().GetFile()) {
+                    bool show_fullpaths = false;
+                    bool show_module = true;
+                    if (var_sp->DumpDeclaration(&s, show_fullpaths,
+                                                show_module))
+                      s.PutCString(": ");
+                  }
+                  valobj_sp->Dump(result.GetOutputStream(), options);
+                }
               }
             } else {
               if (llvm::Error err = regex.GetError())
@@ -648,7 +668,7 @@ protected:
         const size_t num_variables = variable_list->GetSize();
         if (num_variables > 0) {
           for (size_t i = 0; i < num_variables; i++) {
-            var_sp = variable_list->GetVariableAtIndex(i);
+            VariableSP var_sp = variable_list->GetVariableAtIndex(i);
             if (!ScopeRequested(var_sp->GetScope()))
                 continue;
             std::string scope_string;
