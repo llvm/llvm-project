@@ -20,6 +20,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
 
@@ -5860,15 +5861,15 @@ TEST_F(OpenMPIRBuilderTest, registerTargetGlobalVariable) {
 
   // Metadata generated for the host offload module
   NamedMDNode *OffloadMetadata = M->getNamedMetadata("omp_offload.info");
-  EXPECT_NE(OffloadMetadata, nullptr);
-  if (OffloadMetadata) {
-    EXPECT_EQ(OffloadMetadata->getOperand(0)->getOperand(1).equalsStr(
-                  "test_data_int_0"),
-              true);
-    EXPECT_EQ(OffloadMetadata->getOperand(1)->getOperand(1).equalsStr(
-                  "test_data_int_1_decl_tgt_ref_ptr"),
-              true);
-  }
+  ASSERT_THAT(OffloadMetadata, testing::NotNull());
+  StringRef Nodes[2] = {
+      cast<MDString>(OffloadMetadata->getOperand(0)->getOperand(1))
+          ->getString(),
+      cast<MDString>(OffloadMetadata->getOperand(1)->getOperand(1))
+          ->getString()};
+  EXPECT_THAT(
+      Nodes, testing::UnorderedElementsAre("test_data_int_0",
+                                           "test_data_int_1_decl_tgt_ref_ptr"));
 }
 
 TEST_F(OpenMPIRBuilderTest, createGPUOffloadEntry) {

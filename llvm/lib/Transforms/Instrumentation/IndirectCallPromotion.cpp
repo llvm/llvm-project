@@ -109,20 +109,19 @@ namespace {
 class ICallPromotionFunc {
 private:
   Function &F;
-  Module *M;
 
   // Symtab that maps indirect call profile values to function names and
   // defines.
-  InstrProfSymtab *Symtab;
+  InstrProfSymtab *const Symtab;
 
-  bool SamplePGO;
+  const bool SamplePGO;
 
   OptimizationRemarkEmitter &ORE;
 
   // A struct that records the direct target and it's call count.
   struct PromotionCandidate {
-    Function *TargetFunction;
-    uint64_t Count;
+    Function *const TargetFunction;
+    const uint64_t Count;
 
     PromotionCandidate(Function *F, uint64_t C) : TargetFunction(F), Count(C) {}
   };
@@ -143,9 +142,9 @@ private:
                         uint64_t &TotalCount);
 
 public:
-  ICallPromotionFunc(Function &Func, Module *Modu, InstrProfSymtab *Symtab,
-                     bool SamplePGO, OptimizationRemarkEmitter &ORE)
-      : F(Func), M(Modu), Symtab(Symtab), SamplePGO(SamplePGO), ORE(ORE) {}
+  ICallPromotionFunc(Function &Func, InstrProfSymtab *Symtab, bool SamplePGO,
+                     OptimizationRemarkEmitter &ORE)
+      : F(Func), Symtab(Symtab), SamplePGO(SamplePGO), ORE(ORE) {}
   ICallPromotionFunc(const ICallPromotionFunc &) = delete;
   ICallPromotionFunc &operator=(const ICallPromotionFunc &) = delete;
 
@@ -319,8 +318,8 @@ bool ICallPromotionFunc::processFunction(ProfileSummaryInfo *PSI) {
     if (TotalCount == 0 || NumPromoted == NumVals)
       continue;
     // Otherwise we need update with the un-promoted records back.
-    annotateValueSite(*M, *CB, ICallProfDataRef.slice(NumPromoted), TotalCount,
-                      IPVK_IndirectCallTarget, NumCandidates);
+    annotateValueSite(*F.getParent(), *CB, ICallProfDataRef.slice(NumPromoted),
+                      TotalCount, IPVK_IndirectCallTarget, NumCandidates);
   }
   return Changed;
 }
@@ -345,7 +344,7 @@ static bool promoteIndirectCalls(Module &M, ProfileSummaryInfo *PSI, bool InLTO,
         MAM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
     auto &ORE = FAM.getResult<OptimizationRemarkEmitterAnalysis>(F);
 
-    ICallPromotionFunc ICallPromotion(F, &M, &Symtab, SamplePGO, ORE);
+    ICallPromotionFunc ICallPromotion(F, &Symtab, SamplePGO, ORE);
     bool FuncChanged = ICallPromotion.processFunction(PSI);
     if (ICPDUMPAFTER && FuncChanged) {
       LLVM_DEBUG(dbgs() << "\n== IR Dump After =="; F.print(dbgs()));

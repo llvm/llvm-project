@@ -10700,8 +10700,11 @@ def err_omp_simd_region_cannot_use_stmt : Error<
 def warn_omp_loop_64_bit_var : Warning<
   "OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed">,
   InGroup<OpenMPLoopForm>;
-def err_omp_unknown_reduction_identifier : Error<
+def err_omp_unknown_reduction_identifier_prior_omp_6_0 : Error<
   "incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', "
+  "'&&', '||', 'min' or 'max' or declare reduction for type %0">;
+def err_omp_unknown_reduction_identifier_since_omp_6_0 : Error<
+  "incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', "
   "'&&', '||', 'min' or 'max' or declare reduction for type %0">;
 def err_omp_not_resolved_reduction_identifier : Error<
   "unable to resolve declare reduction construct for type %0">;
