@@ -894,7 +894,7 @@ protected:
 
         if (m_silently_skip_wp) {
           m_should_stop = false;
-          wp_sp->IncrementFalseAlarmsAndReviseHitCount();
+          wp_sp->UndoHitCount();
         }
 
         if (wp_sp->GetHitCount() <= wp_sp->GetIgnoreCount()) {
