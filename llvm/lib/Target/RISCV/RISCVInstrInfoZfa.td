@@ -65,7 +65,7 @@ class FPUnaryOp_imm<bits<7> funct7, bits<5> rs2val, bits<3> funct3, RISCVOpcode 
   let Inst{19-15} = imm;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,

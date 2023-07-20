@@ -37,7 +37,7 @@ class THInstVdotVV<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
                    string opcodestr, string argstr>
     : RVInstVV<funct6, opv, outs, ins, opcodestr, argstr> {
   let Inst{26} = 0;
-  let Opcode = OPC_CUSTOM_0.Value;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
   let DecoderNamespace = "THeadV";
 }
 
@@ -45,7 +45,7 @@ class THInstVdotVX<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
                    string opcodestr, string argstr>
     : RVInstVX<funct6, opv, outs, ins, opcodestr, argstr> {
   let Inst{26} = 1;
-  let Opcode = OPC_CUSTOM_0.Value;
+  let Inst{6-0} = OPC_CUSTOM_0.Value;
   let DecoderNamespace = "THeadV";
 }
 
