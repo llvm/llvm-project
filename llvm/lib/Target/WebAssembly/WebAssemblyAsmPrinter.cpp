@@ -303,8 +303,8 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
   // only find symbols that have been used. Unused symbols from globals will
   // not be found here.
   MachineModuleInfoWasm &MMIW = MMI->getObjFileInfo<MachineModuleInfoWasm>();
-  for (const auto &Name : MMIW.MachineSymbolsUsed) {
-    auto *WasmSym = cast<MCSymbolWasm>(getOrCreateWasmSymbol(Name.getKey()));
+  for (StringRef Name : MMIW.MachineSymbolsUsed) {
+    auto *WasmSym = cast<MCSymbolWasm>(getOrCreateWasmSymbol(Name));
     if (WasmSym->isFunction()) {
       // TODO(wvo): is there any case where this overlaps with the call to
       // emitFunctionType in the loop below?

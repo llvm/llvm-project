@@ -15,7 +15,7 @@
 #define LLVM_CODEGEN_MACHINEMODULEINFOIMPLS_H
 
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/StringSet.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include <cassert>
@@ -144,7 +144,7 @@ class MachineModuleInfoWasm : public MachineModuleInfoImpl {
 public:
   MachineModuleInfoWasm(const MachineModuleInfo &) {}
 
-  StringSet<> MachineSymbolsUsed;
+  SetVector<StringRef> MachineSymbolsUsed;
 };
 
 } // end namespace llvm
