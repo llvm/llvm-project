@@ -31,10 +31,6 @@ ELF Improvements
 * ``PT_RISCV_ATTRIBUTES`` is added to include the SHT_RISCV_ATTRIBUTES section.
   (`D152065 <https://reviews.llvm.org/D152065>`_)
 
-- ``--fat-lto-objects`` option is added to support LLVM FatLTO.
-  Without ``--fat-lto-objects``, LLD will link LLVM FatLTO objects using the
-  relocatable object file. (`D146778 <https://reviews.llvm.org/D146778>`_)
-
 Breaking changes
 ----------------
 
