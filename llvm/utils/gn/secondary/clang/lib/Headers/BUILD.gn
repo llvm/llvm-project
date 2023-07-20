@@ -235,6 +235,7 @@ copy("Headers") {
     "s390intrin.h",
     "serializeintrin.h",
     "sgxintrin.h",
+    "sha512intrin.h",
     "shaintrin.h",
     "sifive_vector.h",
     "smmintrin.h",
