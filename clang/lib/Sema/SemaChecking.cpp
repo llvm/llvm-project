@@ -3315,6 +3315,10 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 15))
         HasError = true;
       break;
+    case SVETypeFlags::ImmCheck0_255:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 255))
+        HasError = true;
+      break;
     }
   }
 

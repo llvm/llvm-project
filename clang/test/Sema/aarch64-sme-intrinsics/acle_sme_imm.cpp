@@ -192,6 +192,13 @@ void test_range_0_15(svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svwrite_ver_za8, _s8, _m,)(0, -1, 16, pg, svundef_s8());
 }
 
+void test_range_0_255(svbool_t pg, void *ptr) {
+  // expected-error@+1 {{argument value 256 is outside the valid range [0, 255]}}
+  SVE_ACLE_FUNC(svzero_mask_za,,,)(256);
+  // expected-error@+1 {{argument value 18446744073709551615 is outside the valid range [0, 255]}}
+  SVE_ACLE_FUNC(svzero_mask_za,,,)(-1);
+}
+
 void test_constant(uint64_t u64, svbool_t pg, void *ptr) {
   SVE_ACLE_FUNC(svld1_hor_za8,,,)(u64, u64, 0, pg, ptr);  // expected-error {{argument to 'svld1_hor_za8' must be a constant integer}}
   SVE_ACLE_FUNC(svld1_ver_za16,,,)(0, u64, u64, pg, ptr); // expected-error {{argument to 'svld1_ver_za16' must be a constant integer}}
