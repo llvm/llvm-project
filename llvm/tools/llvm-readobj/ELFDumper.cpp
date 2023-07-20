@@ -3761,15 +3761,18 @@ void GNUELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
   if (RelSym.Sym)
     Fields[3].Str =
         to_string(format_hex_no_prefix(RelSym.Sym->getValue(), Width));
+  if (RelSym.Sym && RelSym.Name.empty())
+    Fields[4].Str = "<null>";
+  else
+    Fields[4].Str = std::string(RelSym.Name);
 
-  Fields[4].Str = std::string(RelSym.Name);
   for (const Field &F : Fields)
     printField(F);
 
   std::string Addend;
   if (std::optional<int64_t> A = R.Addend) {
     int64_t RelAddend = *A;
-    if (!RelSym.Name.empty()) {
+    if (!Fields[4].Str.empty()) {
       if (RelAddend < 0) {
         Addend = " - ";
         RelAddend = std::abs(RelAddend);
@@ -6951,6 +6954,8 @@ template <class ELFT>
 void LLVMELFDumper<ELFT>::printRelRelaReloc(const Relocation<ELFT> &R,
                                             const RelSymbol<ELFT> &RelSym) {
   StringRef SymbolName = RelSym.Name;
+  if (RelSym.Sym && RelSym.Name.empty())
+    SymbolName = "<null>";
   SmallString<32> RelocName;
   this->Obj.getRelocationTypeName(R.Type, RelocName);
 
