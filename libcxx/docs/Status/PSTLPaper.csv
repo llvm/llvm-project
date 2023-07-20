@@ -62,7 +62,7 @@ Section,Description,Assignee,Complete
 | `[alg.set.operations] <https://wg21.link/alg.set.operations>`_,std::set_intersection,Nikolas Klauser,|Not Started|
 | `[alg.set.operations] <https://wg21.link/alg.set.operations>`_,std::set_symmetric_difference,Nikolas Klauser,|Not Started|
 | `[alg.set.operations] <https://wg21.link/alg.set.operations>`_,std::set_union,Nikolas Klauser,|Not Started|
-| `[alg.sort] <https://wg21.link/alg.sort>`_,std::sort,Nikolas Klauser,|Not Started|
+| `[alg.sort] <https://wg21.link/alg.sort>`_,std::sort,Nikolas Klauser,|Complete|
 | `[alg.partitions] <https://wg21.link/alg.partitions>`_,std::stable_partition,Nikolas Klauser,|Not Started|
 | `[alg.sort] <https://wg21.link/alg.sort>`_,std::stable_sort,Nikolas Klauser,|Complete|
 | `[alg.swap] <https://wg21.link/alg.swap>`_,std::swap_ranges,Nikolas Klauser,|Not Started|
