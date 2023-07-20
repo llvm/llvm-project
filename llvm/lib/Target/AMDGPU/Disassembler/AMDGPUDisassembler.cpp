@@ -443,15 +443,19 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     // encodings
     if (isGFX11Plus() && Bytes.size() >= 12 ) {
       DecoderUInt128 DecW = eat12Bytes(Bytes);
-      Res = tryDecodeInst(DecoderTableDPP8GFX1196, MI, DecW, Address, CS);
+      Res =
+          tryDecodeInst(DecoderTableDPP8GFX1196, DecoderTableDPP8GFX11_FAKE1696,
+                        MI, DecW, Address, CS);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
-      Res = tryDecodeInst(DecoderTableDPP8GFX1296, MI, DecW, Address, CS);
+      Res = tryDecodeInst(DecoderTableDPP8GFX1296, DecoderTableDPP8GFX12_FAKE1696,
+                          MI, DecW, Address, CS);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
-      Res = tryDecodeInst(DecoderTableDPPGFX1196, MI, DecW, Address, CS);
+      Res = tryDecodeInst(DecoderTableDPPGFX1196, DecoderTableDPPGFX11_FAKE1696,
+                          MI, DecW, Address, CS);
       if (Res) {
         if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3P)
           convertVOP3PDPPInst(MI);
@@ -463,7 +467,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         }
         break;
       }
-      Res = tryDecodeInst(DecoderTableDPPGFX1296, MI, DecW, Address, CS);
+      Res = tryDecodeInst(DecoderTableDPPGFX1296, DecoderTableDPPGFX12_FAKE1696,
+                          MI, DecW, Address, CS);
       if (Res) {
         if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOP3P)
           convertVOP3PDPPInst(MI);
@@ -519,12 +524,14 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
         break;
       MI = MCInst(); // clear
 
-      Res = tryDecodeInst(DecoderTableDPP8GFX1164, MI, QW, Address, CS);
+      Res = tryDecodeInst(DecoderTableDPP8GFX1164,
+                          DecoderTableDPP8GFX11_FAKE1664, MI, QW, Address, CS);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
 
-      Res = tryDecodeInst(DecoderTableDPP8GFX1264, MI, QW, Address, CS);
+      Res = tryDecodeInst(DecoderTableDPP8GFX1264, DecoderTableDPP8GFX12_FAKE1664,
+                          MI, QW, Address, CS);
       if (Res && convertDPP8Inst(MI) == MCDisassembler::Success)
         break;
       MI = MCInst(); // clear
@@ -532,14 +539,16 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       Res = tryDecodeInst(DecoderTableDPP64, MI, QW, Address, CS);
       if (Res) break;
 
-      Res = tryDecodeInst(DecoderTableDPPGFX1164, MI, QW, Address, CS);
+      Res = tryDecodeInst(DecoderTableDPPGFX1164, DecoderTableDPPGFX11_FAKE1664,
+                          MI, QW, Address, CS);
       if (Res) {
         if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOPC)
           convertVOPCDPPInst(MI);
         break;
       }
 
-      Res = tryDecodeInst(DecoderTableDPPGFX1264, MI, QW, Address, CS);
+      Res = tryDecodeInst(DecoderTableDPPGFX1264, DecoderTableDPPGFX12_FAKE1664,
+                          MI, QW, Address, CS);
       if (Res) {
         if (MCII->get(MI.getOpcode()).TSFlags & SIInstrFlags::VOPC)
           convertVOPCDPPInst(MI);
@@ -600,10 +609,12 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableGFX1032, MI, DW, Address, CS);
     if (Res) break;
 
-    Res = tryDecodeInst(DecoderTableGFX1132, MI, DW, Address, CS);
+    Res = tryDecodeInst(DecoderTableGFX1132, DecoderTableGFX11_FAKE1632, MI, DW,
+                        Address, CS);
     if (Res) break;
 
-    Res = tryDecodeInst(DecoderTableGFX1232, MI, DW, Address, CS);
+    Res = tryDecodeInst(DecoderTableGFX1232, DecoderTableGFX12_FAKE1632,
+                        MI, DW, Address, CS);
     if (Res) break;
 
     if (Bytes.size() < 4) break;
@@ -633,7 +644,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
     Res = tryDecodeInst(DecoderTableGFX1064, MI, QW, Address, CS);
     if (Res) break;
 
-    Res = tryDecodeInst(DecoderTableGFX1264, MI, QW, Address, CS);
+    Res = tryDecodeInst(DecoderTableGFX1264, DecoderTableGFX12_FAKE1664, MI, QW,
+                        Address, CS);
     if (Res) {
       if (AMDGPU::isVOP1Cvt_F32_Fp8_Bf8_e64(MI.getOpcode())) {
         // Add omod and clamp modifiers.
@@ -645,7 +657,8 @@ DecodeStatus AMDGPUDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
       break;
     }
 
-    Res = tryDecodeInst(DecoderTableGFX1164, MI, QW, Address, CS);
+    Res = tryDecodeInst(DecoderTableGFX1164, DecoderTableGFX11_FAKE1664, MI, QW,
+                        Address, CS);
     if (Res)
       break;
 
