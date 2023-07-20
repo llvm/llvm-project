@@ -1936,10 +1936,10 @@ void DWARFLinker::generateUnitRanges(CompileUnit &Unit,
   }
 }
 
-void DWARFLinker::generateUnitLocations(
+void DWARFLinker::DIECloner::generateUnitLocations(
     CompileUnit &Unit, const DWARFFile &File,
-    ExpressionHandlerRef ExprHandler) const {
-  if (LLVM_UNLIKELY(Options.Update))
+    ExpressionHandlerRef ExprHandler) {
+  if (LLVM_UNLIKELY(Linker.Options.Update))
     return;
 
   const LocListAttributesTy &AllLocListAttributes =
@@ -1949,7 +1949,7 @@ void DWARFLinker::generateUnitLocations(
     return;
 
   // Emit locations list table header.
-  MCSymbol *EndLabel = TheDwarfEmitter->emitDwarfDebugLocListHeader(Unit);
+  MCSymbol *EndLabel = Emitter->emitDwarfDebugLocListHeader(Unit);
 
   for (auto &CurLocAttr : AllLocListAttributes) {
     // Get location expressions vector corresponding to the current attribute
@@ -1959,7 +1959,7 @@ void DWARFLinker::generateUnitLocations(
 
     if (!OriginalLocations) {
       llvm::consumeError(OriginalLocations.takeError());
-      reportWarning("Invalid location attribute ignored.", File);
+      Linker.reportWarning("Invalid location attribute ignored.", File);
       continue;
     }
 
@@ -1983,12 +1983,12 @@ void DWARFLinker::generateUnitLocations(
     }
 
     // Emit locations list table fragment corresponding to the CurLocAttr.
-    TheDwarfEmitter->emitDwarfDebugLocListFragment(
-        Unit, LinkedLocationExpressions, CurLocAttr);
+    Emitter->emitDwarfDebugLocListFragment(Unit, LinkedLocationExpressions,
+                                           CurLocAttr, AddrPool);
   }
 
   // Emit locations list table footer.
-  TheDwarfEmitter->emitDwarfDebugLocListFooter(Unit, EndLabel);
+  Emitter->emitDwarfDebugLocListFooter(Unit, EndLabel);
 }
 
 static void patchAddrBase(DIE &Die, DIEInteger Offset) {
@@ -2585,7 +2585,7 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
                         File, *CurrentUnit, OutBytes, RelocAdjustment,
                         IsLittleEndian);
       };
-      Linker.generateUnitLocations(*CurrentUnit, File, ProcessExpr);
+      generateUnitLocations(*CurrentUnit, File, ProcessExpr);
       emitDebugAddrSection(*CurrentUnit, DwarfVersion);
     }
     AddrPool.clear();
