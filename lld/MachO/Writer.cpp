@@ -1182,10 +1182,7 @@ void Writer::writeUuid() {
   TimeTraceScope timeScope("Computing UUID");
 
   ArrayRef<uint8_t> data{buffer->getBufferStart(), buffer->getBufferEnd()};
-  unsigned chunkCount = parallel::strategy.compute_thread_count() * 10;
-  // Round-up integer division
-  size_t chunkSize = (data.size() + chunkCount - 1) / chunkCount;
-  std::vector<ArrayRef<uint8_t>> chunks = split(data, chunkSize);
+  std::vector<ArrayRef<uint8_t>> chunks = split(data, 1024 * 1024);
   // Leave one slot for filename
   std::vector<uint64_t> hashes(chunks.size() + 1);
   SmallVector<std::shared_future<void>> threadFutures;
