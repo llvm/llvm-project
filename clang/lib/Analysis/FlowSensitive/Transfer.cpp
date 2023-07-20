@@ -460,29 +460,10 @@ public:
     if (BaseLoc == nullptr)
       return;
 
-    auto &MemberLoc = BaseLoc->getChild(*Member);
-    if (MemberLoc.getType()->isReferenceType()) {
-      // Based on its type, `MemberLoc` must be mapped either to nothing or to a
-      // `ReferenceValue`. For the former, we won't set a storage location for
-      // this expression, so as to maintain an invariant lvalue expressions;
-      // namely, that their location maps to a `ReferenceValue`.  In this,
-      // lvalues are unlike other expressions, where it is valid for their
-      // location to map to nothing (because they are not modeled).
-      //
-      // Note: we need this invariant for lvalues so that, when accessing a
-      // value, we can distinguish an rvalue from an lvalue. An alternative
-      // design, which takes the expression's value category into account, would
-      // avoid the need for this invariant.
-      if (auto *V = Env.getValue(MemberLoc)) {
-        assert(isa<ReferenceValue>(V) &&
-               "reference-typed declarations map to `ReferenceValue`s");
-        Env.setStorageLocation(*S, MemberLoc);
-      }
-    } else {
-      auto &Loc = Env.createStorageLocation(*S);
-      Env.setStorageLocation(*S, Loc);
-      Env.setValue(Loc, Env.create<ReferenceValue>(MemberLoc));
-    }
+    auto *MemberLoc = BaseLoc->getChild(*Member);
+    if (MemberLoc == nullptr)
+      return;
+    Env.setStorageLocationStrict(*S, *MemberLoc);
   }
 
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
@@ -510,22 +491,18 @@ public:
 
       if (S->isElidable()) {
         Env.setStorageLocation(*S, *ArgLoc);
-      } else {
-        auto &Loc =
-            cast<AggregateStorageLocation>(Env.createStorageLocation(*S));
-        Env.setStorageLocation(*S, Loc);
-        if (Value *Val = Env.createValue(S->getType())) {
-          Env.setValue(Loc, *Val);
-          copyRecord(*ArgLoc, Loc, Env);
-        }
+      } else if (auto *ArgVal = cast_or_null<StructValue>(
+                     Env.getValue(*Arg, SkipPast::Reference))) {
+        auto &Val = *cast<StructValue>(Env.createValue(S->getType()));
+        Env.setValueStrict(*S, Val);
+        copyRecord(ArgVal->getAggregateLoc(), Val.getAggregateLoc(), Env);
       }
       return;
     }
 
-    auto &Loc = Env.createStorageLocation(*S);
-    Env.setStorageLocation(*S, Loc);
-    if (Value *Val = Env.createValue(S->getType()))
-      Env.setValue(Loc, *Val);
+    auto &InitialVal = *cast<StructValue>(Env.createValue(S->getType()));
+    copyRecord(InitialVal.getAggregateLoc(), Env.getResultObjectLocation(*S),
+               Env);
 
     transferInlineCall(S, ConstructorDecl);
   }
@@ -549,21 +526,15 @@ public:
           !Method->isMoveAssignmentOperator())
         return;
 
-      auto *ObjectLoc = cast_or_null<AggregateStorageLocation>(
-          Env.getStorageLocation(*Arg0, SkipPast::Reference));
-      if (ObjectLoc == nullptr)
-        return;
+      auto *LocSrc = cast_or_null<AggregateStorageLocation>(
+          Env.getStorageLocationStrict(*Arg1));
+      auto *LocDst = cast_or_null<AggregateStorageLocation>(
+          Env.getStorageLocationStrict(*Arg0));
 
-      auto *ArgLoc = cast_or_null<AggregateStorageLocation>(
-          Env.getStorageLocation(*Arg1, SkipPast::Reference));
-      if (ArgLoc == nullptr)
-        return;
-
-      copyRecord(*ArgLoc, *ObjectLoc, Env);
-
-      // FIXME: Add a test for the value of the whole expression.
-      // Assign a storage location for the whole expression.
-      Env.setStorageLocation(*S, *ObjectLoc);
+      if (LocSrc != nullptr && LocDst != nullptr) {
+        copyRecord(*LocSrc, *LocDst, Env);
+        Env.setStorageLocationStrict(*S, *LocDst);
+      }
     }
   }
 
@@ -620,9 +591,14 @@ public:
     if (SubExprVal == nullptr)
       return;
 
-    auto &Loc = Env.createStorageLocation(*S);
-    Env.setStorageLocationStrict(*S, Loc);
+    if (StructValue *StructVal = dyn_cast<StructValue>(SubExprVal)) {
+      Env.setStorageLocation(*S, StructVal->getAggregateLoc());
+      return;
+    }
+
+    StorageLocation &Loc = Env.createStorageLocation(*S);
     Env.setValue(Loc, *SubExprVal);
+    Env.setStorageLocation(*S, Loc);
   }
 
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *S) {
@@ -645,43 +621,43 @@ public:
     // FIXME: Revisit this once flow conditions are added to the framework. For
     // `a = b ? c : d` we can add `b => a == c && !b => a == d` to the flow
     // condition.
-    if (S->isGLValue()) {
-      auto &Loc = Env.createStorageLocation(*S);
-      Env.setStorageLocationStrict(*S, Loc);
-      if (Value *Val = Env.createValue(S->getType()))
-        Env.setValue(Loc, *Val);
-    } else if (Value *Val = Env.createValue(S->getType())) {
+    if (S->isGLValue())
+      Env.setStorageLocationStrict(*S, Env.createObject(S->getType()));
+    else if (Value *Val = Env.createValue(S->getType()))
       Env.setValueStrict(*S, *Val);
-    }
   }
 
   void VisitInitListExpr(const InitListExpr *S) {
     QualType Type = S->getType();
 
-    auto &Loc = Env.createStorageLocation(*S);
-    Env.setStorageLocation(*S, Loc);
+    if (!Type->isStructureOrClassType()) {
+      if (auto *Val = Env.createValue(Type))
+        Env.setValueStrict(*S, *Val);
 
-    auto *Val = Env.createValue(Type);
-    if (Val == nullptr)
       return;
-
-    Env.setValue(Loc, *Val);
-
-    if (Type->isStructureOrClassType()) {
-      std::vector<FieldDecl *> Fields =
-          getFieldsForInitListExpr(Type->getAsRecordDecl());
-      for (auto [Field, Init] : llvm::zip(Fields, S->inits())) {
-        assert(Field != nullptr);
-        assert(Init != nullptr);
-
-        if (Field->getType()->isReferenceType()) {
-          if (StorageLocation *Loc = Env.getStorageLocationStrict(*Init))
-            cast<StructValue>(Val)->setChild(*Field,
-                                             Env.create<ReferenceValue>(*Loc));
-        } else if (Value *InitVal = Env.getValue(*Init, SkipPast::None))
-          cast<StructValue>(Val)->setChild(*Field, *InitVal);
-      }
     }
+
+    std::vector<FieldDecl *> Fields =
+        getFieldsForInitListExpr(Type->getAsRecordDecl());
+    llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
+
+    for (auto [Field, Init] : llvm::zip(Fields, S->inits())) {
+      assert(Field != nullptr);
+      assert(Init != nullptr);
+
+      FieldLocs.insert({Field, &Env.createObject(Field->getType(), Init)});
+    }
+
+    auto &Loc =
+        Env.getDataflowAnalysisContext()
+            .arena()
+            .create<AggregateStorageLocation>(Type, std::move(FieldLocs));
+    StructValue &StructVal = Env.create<StructValue>(Loc);
+
+    Env.setValue(Loc, StructVal);
+
+    Env.setValueStrict(*S, StructVal);
+
     // FIXME: Implement array initialization.
   }
 
