@@ -1749,7 +1749,7 @@ getPredicateResult(unsigned Pred, Constant *C, const ValueLatticeElement &Val,
   Constant *Res = nullptr;
   if (Val.isConstant()) {
     Res = ConstantFoldCompareInstOperands(Pred, Val.getConstant(), C, DL, TLI);
-    if (ConstantInt *ResCI = dyn_cast<ConstantInt>(Res))
+    if (ConstantInt *ResCI = dyn_cast_or_null<ConstantInt>(Res))
       return ResCI->isZero() ? LazyValueInfo::False : LazyValueInfo::True;
     return LazyValueInfo::Unknown;
   }
@@ -1791,14 +1791,14 @@ getPredicateResult(unsigned Pred, Constant *C, const ValueLatticeElement &Val,
       Res = ConstantFoldCompareInstOperands(ICmpInst::ICMP_NE,
                                             Val.getNotConstant(), C, DL,
                                             TLI);
-      if (Res->isNullValue())
+      if (Res && Res->isNullValue())
         return LazyValueInfo::False;
     } else if (Pred == ICmpInst::ICMP_NE) {
       // !C1 != C -> true iff C1 == C.
       Res = ConstantFoldCompareInstOperands(ICmpInst::ICMP_NE,
                                             Val.getNotConstant(), C, DL,
                                             TLI);
-      if (Res->isNullValue())
+      if (Res && Res->isNullValue())
         return LazyValueInfo::True;
     }
     return LazyValueInfo::Unknown;
