@@ -42,6 +42,7 @@
 #include "lldb/Utility/Status.h"
 #include "lldb/Utility/Timer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/Error.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/VersionTuple.h"
@@ -1095,8 +1096,21 @@ void PlatformDarwin::AddClangModuleCompilationOptionsForSDKType(
   }
 
   FileSpec sysroot_spec;
-  // Scope for mutex locker below
-  {
+
+  if (target) {
+    if (ModuleSP exe_module_sp = target->GetExecutableModule()) {
+      auto path_or_err = ResolveSDKPathFromDebugInfo(*exe_module_sp);
+      if (path_or_err) {
+        sysroot_spec = FileSpec(*path_or_err);
+      } else {
+        LLDB_LOG_ERROR(GetLog(LLDBLog::Types | LLDBLog::Host),
+                       path_or_err.takeError(),
+                       "Failed to resolve SDK path: {0}");
+      }
+    }
+  }
+
+  if (!FileSystem::Instance().IsDirectory(sysroot_spec.GetPath())) {
     std::lock_guard<std::mutex> guard(m_mutex);
     sysroot_spec = GetSDKDirectoryForModules(sdk_type);
   }
@@ -1334,4 +1348,54 @@ llvm::Triple::OSType PlatformDarwin::GetHostOSType() {
 #error "LLDB being compiled for an unrecognized Darwin OS"
 #endif
 #endif // __APPLE__
+}
+
+llvm::Expected<std::pair<XcodeSDK, bool>>
+PlatformDarwin::GetSDKPathFromDebugInfo(Module &module) {
+  SymbolFile *sym_file = module.GetSymbolFile();
+  if (!sym_file)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("No symbol file available for module '{0}'",
+                      module.GetFileSpec().GetFilename().AsCString("")));
+
+  bool found_public_sdk = false;
+  bool found_internal_sdk = false;
+  XcodeSDK merged_sdk;
+  for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i) {
+    if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i)) {
+      auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
+      bool is_internal_sdk = cu_sdk.IsAppleInternalSDK();
+      found_public_sdk |= !is_internal_sdk;
+      found_internal_sdk |= is_internal_sdk;
+
+      merged_sdk.Merge(cu_sdk);
+    }
+  }
+
+  const bool found_mismatch = found_internal_sdk && found_public_sdk;
+
+  return std::pair{std::move(merged_sdk), found_mismatch};
+}
+
+llvm::Expected<std::string>
+PlatformDarwin::ResolveSDKPathFromDebugInfo(Module &module) {
+  auto sdk_or_err = GetSDKPathFromDebugInfo(module);
+  if (!sdk_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Failed to parse SDK path from debug-info: {0}",
+                      llvm::toString(sdk_or_err.takeError())));
+
+  auto [sdk, _] = std::move(*sdk_or_err);
+
+  auto path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
+  if (!path_or_err)
+    return llvm::createStringError(
+        llvm::inconvertibleErrorCode(),
+        llvm::formatv("Error while searching for SDK (XcodeSDK '{0}'): {1}",
+                      sdk.GetString(),
+                      llvm::toString(path_or_err.takeError())));
+
+  return path_or_err->str();
 }
