@@ -1971,6 +1971,45 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDeleteExpr>
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNoexceptExpr>
     cxxNoexceptExpr;
 
+/// Matches a loop initializing the elements of an array in a number of contexts:
+///  * in the implicit copy/move constructor for a class with an array member
+///  * when a lambda-expression captures an array by value
+///  * when a decomposition declaration decomposes an array
+///
+/// Given
+/// \code
+///   void testLambdaCapture() {
+///     int a[10];
+///     auto Lam1 = [a]() {
+///       return;
+///     };
+///   }
+/// \endcode
+/// arrayInitLoopExpr() matches the implicit loop that initializes each element of
+/// the implicit array field inside the lambda object, that represents the array `a`
+/// captured by value.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitLoopExpr>
+    arrayInitLoopExpr;
+
+/// The arrayInitIndexExpr consists of two subexpressions: a common expression
+/// (the source array) that is evaluated once up-front, and a per-element initializer
+/// that runs once for each array element. Within the per-element initializer,
+/// the current index may be obtained via an ArrayInitIndexExpr.
+///
+/// Given
+/// \code
+///   void testStructBinding() {
+///     int a[2] = {1, 2};
+///     auto [x, y] = a;
+///   }
+/// \endcode
+/// arrayInitIndexExpr() matches the array index that implicitly iterates
+/// over the array `a` to copy each element to the anonymous array
+/// that backs the structured binding `[x, y]` elements of which are
+/// referred to by their aliases `x` and `y`.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitIndexExpr>
+    arrayInitIndexExpr;
+
 /// Matches array subscript expressions.
 ///
 /// Given
