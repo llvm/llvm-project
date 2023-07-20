@@ -2547,10 +2547,8 @@ module attributes {omp.flags = #omp.flags<assume_teams_oversubscription = true, 
 // -----
 
 module attributes {omp.is_target_device = false} {
-  // DISABLED, this portion of the test is disabled via the removal of the colon for the time 
-  // being as filtering is enabled for device only for the time being while a fix is in progress. 
-  // CHECK-NOT @filter_host_nohost
-  llvm.func @filter_host_nohost() -> ()
+  // CHECK: define void @filter_nohost
+  llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
           #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
@@ -2558,8 +2556,8 @@ module attributes {omp.is_target_device = false} {
     llvm.return
   }
 
-  // CHECK: @filter_host_host
-  llvm.func @filter_host_host() -> ()
+  // CHECK: define void @filter_host
+  llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
           #omp.declaretarget<device_type = (host), capture_clause = (to)>
@@ -2571,8 +2569,8 @@ module attributes {omp.is_target_device = false} {
 // -----
 
 module attributes {omp.is_target_device = true} {
-  // CHECK: @filter_device_nohost
-  llvm.func @filter_device_nohost() -> ()
+  // CHECK: define void @filter_nohost
+  llvm.func @filter_nohost() -> ()
       attributes {
         omp.declare_target =
           #omp.declaretarget<device_type = (nohost), capture_clause = (to)>
@@ -2580,8 +2578,8 @@ module attributes {omp.is_target_device = true} {
     llvm.return
   }
 
-  // CHECK-NOT: @filter_device_host
-  llvm.func @filter_device_host() -> ()
+  // CHECK-NOT: define void @filter_host
+  llvm.func @filter_host() -> ()
       attributes {
         omp.declare_target =
           #omp.declaretarget<device_type = (host), capture_clause = (to)>
