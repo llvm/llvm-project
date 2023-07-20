@@ -80,6 +80,7 @@ struct PSVInfo {
   uint32_t Version;
 
   dxbc::PSV::v2::RuntimeInfo Info;
+  uint32_t ResourceStride;
   std::vector<ResourceBindInfo> Resources;
 
   void mapInfoForVersion(yaml::IO &IO);
