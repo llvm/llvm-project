@@ -865,11 +865,15 @@ void State::addInfoFor(BasicBlock &BB) {
 namespace {
 /// Helper to keep track of a condition and if it should be treated as negated
 /// for reproducer construction.
+/// Pred == Predicate::BAD_ICMP_PREDICATE indicates that this entry is a
+/// placeholder to keep the ReproducerCondStack in sync with DFSInStack.
 struct ReproducerEntry {
-  CmpInst *Cond;
-  bool IsNot;
+  ICmpInst::Predicate Pred;
+  Value *LHS;
+  Value *RHS;
 
-  ReproducerEntry(CmpInst *Cond, bool IsNot) : Cond(Cond), IsNot(IsNot) {}
+  ReproducerEntry(ICmpInst::Predicate Pred, Value *LHS, Value *RHS)
+      : Pred(Pred), LHS(LHS), RHS(RHS) {}
 };
 } // namespace
 
@@ -898,13 +902,9 @@ static void generateReproducer(CmpInst *Cond, Module *M,
   // ConstraintElimination can decompose. Such values will be considered as
   // external inputs to the reproducer, they are collected and added as function
   // arguments later.
-  auto CollectArguments = [&](CmpInst *Cond) {
-    if (!Cond)
-      return;
-    auto &Value2Index =
-        Info.getValue2Index(CmpInst::isSigned(Cond->getPredicate()));
-    SmallVector<Value *, 4> WorkList;
-    WorkList.push_back(Cond);
+  auto CollectArguments = [&](ArrayRef<Value *> Ops, bool IsSigned) {
+    auto &Value2Index = Info.getValue2Index(IsSigned);
+    SmallVector<Value *, 4> WorkList(Ops);
     while (!WorkList.empty()) {
       Value *V = WorkList.pop_back_val();
       if (!Seen.insert(V).second)
@@ -927,8 +927,9 @@ static void generateReproducer(CmpInst *Cond, Module *M,
   };
 
   for (auto &Entry : Stack)
-    CollectArguments(Entry.Cond);
-  CollectArguments(Cond);
+    if (Entry.Pred != ICmpInst::BAD_ICMP_PREDICATE)
+      CollectArguments({Entry.LHS, Entry.RHS}, ICmpInst::isSigned(Entry.Pred));
+  CollectArguments(Cond, ICmpInst::isSigned(Cond->getPredicate()));
 
   SmallVector<Type *> ParamTys;
   for (auto *P : Args)
@@ -990,19 +991,16 @@ static void generateReproducer(CmpInst *Cond, Module *M,
   // function. Then add an ICmp for the condition (with the inverse predicate if
   // the entry is negated) and an assert using the ICmp.
   for (auto &Entry : Stack) {
-    if (!Entry.Cond)
+    if (Entry.Pred == ICmpInst::BAD_ICMP_PREDICATE)
       continue;
 
-    LLVM_DEBUG(dbgs() << "  Materializing assumption " << *Entry.Cond << "\n");
-    CmpInst::Predicate Pred = Entry.Cond->getPredicate();
-    if (Entry.IsNot)
-      Pred = CmpInst::getInversePredicate(Pred);
+    LLVM_DEBUG(
+        dbgs() << "  Materializing assumption icmp " << Entry.Pred << ' ';
+        Entry.LHS->printAsOperand(dbgs(), /*PrintType=*/true); dbgs() << ", ";
+        Entry.RHS->printAsOperand(dbgs(), /*PrintType=*/false); dbgs() << "\n");
+    CloneInstructions({Entry.LHS, Entry.RHS}, CmpInst::isSigned(Entry.Pred));
 
-    CloneInstructions({Entry.Cond->getOperand(0), Entry.Cond->getOperand(1)},
-                      CmpInst::isSigned(Entry.Cond->getPredicate()));
-
-    auto *Cmp = Builder.CreateICmp(Pred, Entry.Cond->getOperand(0),
-                                   Entry.Cond->getOperand(1));
+    auto *Cmp = Builder.CreateICmp(Entry.Pred, Entry.LHS, Entry.RHS);
     Builder.CreateAssumption(Cmp);
   }
 
@@ -1383,7 +1381,7 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
 
       Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size())
-        ReproducerCondStack.emplace_back(cast<CmpInst>(Cmp), CB.Not);
+        ReproducerCondStack.emplace_back(Pred, A, B);
 
       Info.transferToOtherSystem(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size()) {
@@ -1392,7 +1390,8 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
         for (unsigned I = 0,
                       E = (DFSInStack.size() - ReproducerCondStack.size());
              I < E; ++I) {
-          ReproducerCondStack.emplace_back(nullptr, false);
+          ReproducerCondStack.emplace_back(ICmpInst::BAD_ICMP_PREDICATE,
+                                           nullptr, nullptr);
         }
       }
     }
