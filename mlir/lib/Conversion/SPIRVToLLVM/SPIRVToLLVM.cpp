@@ -553,10 +553,12 @@ public:
   matchAndRewrite(spirv::BranchConditionalOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     // If branch weights exist, map them to 32-bit integer vector.
-    ElementsAttr branchWeights = nullptr;
+    DenseI32ArrayAttr branchWeights = nullptr;
     if (auto weights = op.getBranchWeights()) {
-      VectorType weightType = VectorType::get(2, rewriter.getI32Type());
-      branchWeights = DenseElementsAttr::get(weightType, weights->getValue());
+      SmallVector<int32_t> weightValues;
+      for (auto weight : weights->getAsRange<IntegerAttr>())
+        weightValues.push_back(weight.getInt());
+      branchWeights = DenseI32ArrayAttr::get(getContext(), weightValues);
     }
 
     rewriter.replaceOpWithNewOp<LLVM::CondBrOp>(
