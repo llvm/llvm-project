@@ -5106,6 +5106,20 @@ let TargetPrefix = "x86" in {
 }
 
 //===----------------------------------------------------------------------===//
+// SHA512 intrinsics
+let TargetPrefix = "x86" in {
+def int_x86_vsha512msg1 : ClangBuiltin<"__builtin_ia32_vsha512msg1">,
+    DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4i64_ty, llvm_v2i64_ty],
+                          [IntrNoMem]>;
+def int_x86_vsha512msg2 : ClangBuiltin<"__builtin_ia32_vsha512msg2">,
+    DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4i64_ty, llvm_v4i64_ty],
+                          [IntrNoMem]>;
+def int_x86_vsha512rnds2 : ClangBuiltin<"__builtin_ia32_vsha512rnds2">,
+    DefaultAttrsIntrinsic<[llvm_v4i64_ty], [llvm_v4i64_ty, llvm_v4i64_ty, llvm_v2i64_ty],
+                          [IntrNoMem]>;
+}
+
+//===----------------------------------------------------------------------===//
 // Thread synchronization ops with timer.
 let TargetPrefix = "x86" in {
   def int_x86_monitorx

@@ -660,6 +660,19 @@
 // AVXNECONVERTNOAVX2-NOT: #define __AVX2__ 1
 // AVXNECONVERTNOAVX2-NOT: #define __AVXNECONVERT__ 1
 
+// RUN: %clang -target i386-unknown-linux-gnu -march=atom -msha512 -x c -E -dM -o - %s | FileCheck  -check-prefix=SHA512 %s
+
+// SHA512: #define __AVX__ 1
+// SHA512: #define __SHA512__ 1
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=atom -mno-sha512 -x c -E -dM -o - %s | FileCheck  -check-prefix=NOSHA512 %s
+// NOSHA512-NOT: #define __SHA512__ 1
+
+// RUN: %clang -target i386-unknown-linux-gnu -march=atom -msha512 -mno-avx -x c -E -dM -o - %s | FileCheck  -check-prefix=SHA512NOAVX %s
+
+// SHA512NOAVX-NOT: #define __AVX__ 1
+// SHA512NOAVX-NOT: #define __SHA512__ 1
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mcrc32 -x c -E -dM -o - %s | FileCheck -check-prefix=CRC32 %s
 
 // CRC32: #define __CRC32__ 1

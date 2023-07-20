@@ -112,6 +112,7 @@ class LLVM_LIBRARY_VISIBILITY X86TargetInfo : public TargetInfo {
   bool HasAVX512IFMA = false;
   bool HasAVX512VP2INTERSECT = false;
   bool HasSHA = false;
+  bool HasSHA512 = false;
   bool HasSHSTK = false;
   bool HasSGX = false;
   bool HasCX8 = false;
