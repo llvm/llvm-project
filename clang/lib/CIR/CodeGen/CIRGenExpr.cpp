@@ -1138,19 +1138,22 @@ static mlir::Value buildArrayAccessOp(mlir::OpBuilder &builder,
                                       mlir::Location arrayLocBegin,
                                       mlir::Location arrayLocEnd,
                                       mlir::Value arrayPtr, mlir::Type eltTy,
-                                      mlir::Value idx) {
-  mlir::Value basePtr =
-      maybeBuildArrayDecay(builder, arrayLocBegin, arrayPtr, eltTy);
+                                      mlir::Value idx, bool shouldDecay) {
+  mlir::Value basePtr = arrayPtr;
+  if (shouldDecay)
+    basePtr = maybeBuildArrayDecay(builder, arrayLocBegin, arrayPtr, eltTy);
   mlir::Type flatPtrTy = basePtr.getType();
 
   return builder.create<mlir::cir::PtrStrideOp>(arrayLocEnd, flatPtrTy, basePtr,
                                                 idx);
 }
 
-static mlir::Value buildArraySubscriptPtr(
-    CIRGenFunction &CGF, mlir::Location beginLoc, mlir::Location endLoc,
-    mlir::Value ptr, mlir::Type eltTy, ArrayRef<mlir::Value> indices,
-    bool inbounds, bool signedIndices, const llvm::Twine &name = "arrayidx") {
+static mlir::Value
+buildArraySubscriptPtr(CIRGenFunction &CGF, mlir::Location beginLoc,
+                       mlir::Location endLoc, mlir::Value ptr, mlir::Type eltTy,
+                       ArrayRef<mlir::Value> indices, bool inbounds,
+                       bool signedIndices, bool shouldDecay,
+                       const llvm::Twine &name = "arrayidx") {
   assert(indices.size() == 1 && "cannot handle multiple indices yet");
   auto idx = indices.back();
   auto &CGM = CGF.getCIRGenModule();
@@ -1158,14 +1161,14 @@ static mlir::Value buildArraySubscriptPtr(
   // that would enhance tracking this later in CIR?
   if (inbounds)
     assert(!UnimplementedFeature::emitCheckedInBoundsGEP() && "NYI");
-  return buildArrayAccessOp(CGM.getBuilder(), beginLoc, endLoc, ptr, eltTy,
-                            idx);
+  return buildArrayAccessOp(CGM.getBuilder(), beginLoc, endLoc, ptr, eltTy, idx,
+                            shouldDecay);
 }
 
 static Address buildArraySubscriptPtr(
     CIRGenFunction &CGF, mlir::Location beginLoc, mlir::Location endLoc,
     Address addr, ArrayRef<mlir::Value> indices, QualType eltType,
-    bool inbounds, bool signedIndices, mlir::Location loc,
+    bool inbounds, bool signedIndices, mlir::Location loc, bool shouldDecay,
     QualType *arrayType = nullptr, const Expr *Base = nullptr,
     const llvm::Twine &name = "arrayidx") {
   // Determine the element size of the statically-sized base.  This is
@@ -1185,7 +1188,7 @@ static Address buildArraySubscriptPtr(
       (!CGF.IsInPreservedAIRegion && !isPreserveAIArrayBase(CGF, Base))) {
     eltPtr = buildArraySubscriptPtr(CGF, beginLoc, endLoc, addr.getPointer(),
                                     addr.getElementType(), indices, inbounds,
-                                    signedIndices, name);
+                                    signedIndices, shouldDecay, name);
   } else {
     // assert(!UnimplementedFeature::generateDebugInfo() && "NYI");
     // assert(indices.size() == 1 && "cannot handle multiple indices yet");
@@ -1275,7 +1278,8 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
         *this, CGM.getLoc(Array->getBeginLoc()), CGM.getLoc(Array->getEndLoc()),
         ArrayLV.getAddress(), {Idx}, E->getType(),
         !getLangOpts().isSignedOverflowDefined(), SignedIndices,
-        CGM.getLoc(E->getExprLoc()), &arrayType, E->getBase());
+        CGM.getLoc(E->getExprLoc()), /*shouldDecay=*/true, &arrayType,
+        E->getBase());
     EltBaseInfo = ArrayLV.getBaseInfo();
     // TODO(cir): EltTBAAInfo
     assert(!UnimplementedFeature::tbaa() && "TBAA is NYI");
@@ -1289,7 +1293,8 @@ LValue CIRGenFunction::buildArraySubscriptExpr(const ArraySubscriptExpr *E,
     Addr = buildArraySubscriptPtr(
         *this, CGM.getLoc(E->getBeginLoc()), CGM.getLoc(E->getEndLoc()), Addr,
         Idx, E->getType(), !getLangOpts().isSignedOverflowDefined(),
-        SignedIndices, CGM.getLoc(E->getExprLoc()), &ptrType, E->getBase());
+        SignedIndices, CGM.getLoc(E->getExprLoc()), /*shouldDecay=*/false,
+        &ptrType, E->getBase());
   }
 
   LValue LV = LValue::makeAddr(Addr, E->getType(), EltBaseInfo);
