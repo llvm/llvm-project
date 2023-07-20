@@ -103,3 +103,11 @@ func.func @no_negation(%a: f32, %b: f32, %c: vector<32xf32>) -> vector<32xf32> {
     abid = 0 : i32, cbsz = 0 : i32, negateA} blgp = none : f32, f32, vector<32xf32>
   func.return %d : vector<32xf32>
 }
+
+// -----
+
+func.func @wmma(%arg0 : vector<16xf16>, %arg1 : vector<8xi32>) -> vector<8xi32> {
+  // expected-error@+1 {{'amdgpu.wmma' op Expected int sources with int destination}}
+  %0 = amdgpu.wmma %arg0 * %arg0 + %arg1 : vector<16xf16>, vector<16xf16>, vector<8xi32>
+  func.return %0 : vector<8xi32>
+}
