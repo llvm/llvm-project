@@ -36,7 +36,7 @@ class RVInstIVI_VROR<bits<6> funct6, dag outs, dag ins, string opcodestr,
   let Inst{19-15} = imm{4-0};
   let Inst{14-12} = OPIVI.Value;
   let Inst{11-7} = vd;
-  let Opcode = OPC_OP_V.Value;
+  let Inst{6-0} = OPC_OP_V.Value;
 
   let Uses = [VTYPE, VL];
   let RVVConstraint = VMConstraint;
@@ -54,20 +54,20 @@ multiclass VROR_IV_V_X_I<string opcodestr, bits<6> funct6>
 // op vd, vs2, vs1
 class PALUVVNoVm<bits<6> funct6, RISCVVFormat opv, string opcodestr>
     : VALUVVNoVm<funct6, opv, opcodestr> {
-  let Opcode = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_P.Value;
 }
 
 // op vd, vs2, imm, vm
 class PALUVINoVm<bits<6> funct6, string opcodestr, Operand optype = simm5>
     : VALUVINoVm<funct6, opcodestr, optype> {
-  let Opcode = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_P.Value;
   let Inst{14-12} = OPMVV.Value;
 }
 
 // op vd, vs2 (use vs1 as instruction encoding)
 class PALUVs2NoVm<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, string opcodestr>
     : VALUVs2NoVm<funct6, vs1, opv, opcodestr> {
-  let Opcode = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_P.Value;
 }
 
 multiclass VAES_MV_V_S<bits<6> funct6_vv, bits<6> funct6_vs, bits<5> vs1,
@@ -80,7 +80,7 @@ multiclass VAES_MV_V_S<bits<6> funct6_vv, bits<6> funct6_vs, bits<5> vs1,
 // to customize one for them.
 class VAESKF_MV_I<bits<6> funct6, string opcodestr, Operand optype>
     : VALUVINoVm<funct6, opcodestr, optype> {
-  let Opcode = OPC_OP_P.Value;
+  let Inst{6-0} = OPC_OP_P.Value;
   let Inst{14-12} = OPMVV.Value;
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
