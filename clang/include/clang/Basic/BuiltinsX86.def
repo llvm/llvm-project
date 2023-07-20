@@ -2116,6 +2116,20 @@ TARGET_HEADER_BUILTIN(__readgsword,  "UsUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, 
 TARGET_HEADER_BUILTIN(__readgsdword, "UNiUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 TARGET_HEADER_BUILTIN(__readgsqword, "ULLiUNi", "nh", INTRIN_H, ALL_MS_LANGUAGES, "")
 
+// AVX-VNNI-INT16
+TARGET_BUILTIN(__builtin_ia32_vpdpwsud128, "V4iV4iV4iV4i", "nV:128:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwsud256, "V8iV8iV8iV8i", "nV:256:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwsuds128, "V4iV4iV4iV4i", "nV:128:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwsuds256, "V8iV8iV8iV8i", "nV:256:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwusd128, "V4iV4iV4iV4i", "nV:128:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwusd256, "V8iV8iV8iV8i", "nV:256:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwusds128, "V4iV4iV4iV4i", "nV:128:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwusds256, "V8iV8iV8iV8i", "nV:256:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwuud128, "V4iV4iV4iV4i", "nV:128:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwuud256, "V8iV8iV8iV8i", "nV:256:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwuuds128, "V4iV4iV4iV4i", "nV:128:", "avxvnniint16")
+TARGET_BUILTIN(__builtin_ia32_vpdpwuuds256, "V8iV8iV8iV8i", "nV:256:", "avxvnniint16")
+
 // AVX-NE-CONVERT
 TARGET_BUILTIN(__builtin_ia32_vbcstnebf162ps128, "V4fyC*", "nV:128:", "avxneconvert")
 TARGET_BUILTIN(__builtin_ia32_vbcstnebf162ps256, "V8fyC*", "nV:256:", "avxneconvert")

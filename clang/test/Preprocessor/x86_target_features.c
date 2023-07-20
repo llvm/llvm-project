@@ -700,6 +700,20 @@
 // SM4NOAVX-NOT: #define __AVX__ 1
 // SM4NOAVX-NOT: #define __SM4__ 1
 
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavxvnniint16 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVXVNNIINT16 %s
+
+// AVXVNNIINT16: #define __AVX2__ 1
+// AVXVNNIINT16: #define __AVXVNNIINT16__ 1
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mno-avxvnniint16 -x c -E -dM -o - %s | FileCheck  -check-prefix=NOAVXVNNIINT16 %s
+
+// NOAVXVNNIINT16-NOT: #define __AVXVNNIINT16__ 1
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mavxvnniint16 -mno-avx2 -x c -E -dM -o - %s | FileCheck  -check-prefix=AVXVNNIINT16NOAVX2 %s
+
+// AVXVNNIINT16NOAVX2-NOT: #define __AVX2__ 1
+// AVXVNNIINT16NOAVX2-NOT: #define __AVXVNNIINT16__ 1
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mcrc32 -x c -E -dM -o - %s | FileCheck -check-prefix=CRC32 %s
 
 // CRC32: #define __CRC32__ 1
