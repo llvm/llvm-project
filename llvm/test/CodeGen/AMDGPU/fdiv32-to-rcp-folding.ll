@@ -141,6 +141,51 @@ define amdgpu_kernel void @div_minus_1_by_minus_x_25ulp(ptr addrspace(1) %arg) {
 }
 
 define amdgpu_kernel void @div_v4_1_by_x_25ulp(ptr addrspace(1) %arg) {
+; GCN-DENORM-LABEL: div_v4_1_by_x_25ulp:
+; GCN-DENORM:       ; %bb.0:
+; GCN-DENORM-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GCN-DENORM-NEXT:    v_mov_b32_e32 v0, 0x6f800000
+; GCN-DENORM-NEXT:    v_mov_b32_e32 v1, 0x2f800000
+; GCN-DENORM-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DENORM-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GCN-DENORM-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-DENORM-NEXT:    v_cmp_gt_f32_e64 vcc, |s0|, v0
+; GCN-DENORM-NEXT:    v_cndmask_b32_e32 v2, 1.0, v1, vcc
+; GCN-DENORM-NEXT:    v_cmp_gt_f32_e64 vcc, |s1|, v0
+; GCN-DENORM-NEXT:    v_cndmask_b32_e32 v3, 1.0, v1, vcc
+; GCN-DENORM-NEXT:    v_cmp_gt_f32_e64 vcc, |s2|, v0
+; GCN-DENORM-NEXT:    v_cndmask_b32_e32 v7, 1.0, v1, vcc
+; GCN-DENORM-NEXT:    v_cmp_gt_f32_e64 vcc, |s3|, v0
+; GCN-DENORM-NEXT:    v_cndmask_b32_e32 v9, 1.0, v1, vcc
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v5, s0, v2
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v6, s1, v3
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v8, s2, v7
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v0, s3, v9
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v5, v5
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v6, v6
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v8, v8
+; GCN-DENORM-NEXT:    v_rcp_f32_e32 v10, v0
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v0, v2, v5
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v1, v3, v6
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v2, v7, v8
+; GCN-DENORM-NEXT:    v_mul_f32_e32 v3, v9, v10
+; GCN-DENORM-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5]
+; GCN-DENORM-NEXT:    s_endpgm
+;
+; GCN-FLUSH-LABEL: div_v4_1_by_x_25ulp:
+; GCN-FLUSH:       ; %bb.0:
+; GCN-FLUSH-NEXT:    s_load_dwordx2 s[4:5], s[0:1], 0x24
+; GCN-FLUSH-NEXT:    v_mov_b32_e32 v4, 0
+; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-FLUSH-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
+; GCN-FLUSH-NEXT:    s_waitcnt lgkmcnt(0)
+; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v0, s0
+; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v1, s1
+; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v2, s2
+; GCN-FLUSH-NEXT:    v_rcp_f32_e32 v3, s3
+; GCN-FLUSH-NEXT:    global_store_dwordx4 v4, v[0:3], s[4:5]
+; GCN-FLUSH-NEXT:    s_endpgm
   %load = load <4 x float>, ptr addrspace(1) %arg, align 16
   %div = fdiv <4 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+00, float 1.000000e+00>, %load, !fpmath !0
   store <4 x float> %div, ptr addrspace(1) %arg, align 16
