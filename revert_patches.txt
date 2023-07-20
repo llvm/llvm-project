@@ -57,3 +57,4 @@ Revert: [libc] Add support for creating wrapper headers for offloading in clang
 Revert "[Attributor][FIX] Ensure the function manager cache is updated"  
 
 Revert "[X86] Add SHA512 instructions."  
+Revert "[X86] Add SM3 instructions."
