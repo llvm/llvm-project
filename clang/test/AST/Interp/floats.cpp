@@ -94,6 +94,10 @@ namespace compound {
     // RHS should be evaluated before LHS, so this should
     // write to a[1];
     a[i++] += ++i;
+#if __cplusplus <= 201402L
+                  // expected-warning@-2 {{multiple unsequenced modifications}} \
+                  // ref-warning@-2 {{multiple unsequenced modifications}}
+#endif
 
     return a[1];
   }
