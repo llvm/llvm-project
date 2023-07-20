@@ -19,7 +19,9 @@
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
@@ -455,46 +457,30 @@ TEST(IncludeCleaner, NoCrash) {
       MainCode.range());
 }
 
-TEST(IncludeCleaner, FirstMatchedProvider) {
-  struct {
-    const char *Code;
-    const std::vector<include_cleaner::Header> Providers;
-    const std::optional<include_cleaner::Header> ExpectedProvider;
-  } Cases[] = {
-      {R"cpp(
-        #include "bar.h"
-        #include "foo.h"
-      )cpp",
-       {include_cleaner::Header{"bar.h"}, include_cleaner::Header{"foo.h"}},
-       include_cleaner::Header{"bar.h"}},
-      {R"cpp(
-        #include "bar.h"
-        #include "foo.h"
-      )cpp",
-       {include_cleaner::Header{"foo.h"}, include_cleaner::Header{"bar.h"}},
-       include_cleaner::Header{"foo.h"}},
-      {"#include \"bar.h\"",
-       {include_cleaner::Header{"bar.h"}},
-       include_cleaner::Header{"bar.h"}},
-      {"#include \"bar.h\"", {include_cleaner::Header{"foo.h"}}, std::nullopt},
-      {"#include \"bar.h\"", {}, std::nullopt}};
-  for (const auto &Case : Cases) {
-    Annotations Code{Case.Code};
-    SCOPED_TRACE(Code.code());
+TEST(IncludeCleaner, IsPreferredProvider) {
+  auto TU = TestTU::withCode(R"cpp(
+     #include "decl.h"
+     #include "def.h"
+     #include "def.h"
+  )cpp");
+  TU.AdditionalFiles["decl.h"] = "";
+  TU.AdditionalFiles["def.h"] = "";
 
-    TestTU TU;
-    TU.Code = Code.code();
-    TU.AdditionalFiles["bar.h"] = "";
-    TU.AdditionalFiles["foo.h"] = "";
+  auto AST = TU.build();
+  auto &IncludeDecl = AST.getIncludeStructure().MainFileIncludes[0];
+  auto &IncludeDef1 = AST.getIncludeStructure().MainFileIncludes[1];
+  auto &IncludeDef2 = AST.getIncludeStructure().MainFileIncludes[2];
 
-    auto AST = TU.build();
-    std::optional<include_cleaner::Header> MatchedProvider =
-        firstMatchedProvider(
-            convertIncludes(AST.getSourceManager(),
-                            AST.getIncludeStructure().MainFileIncludes),
-            Case.Providers);
-    EXPECT_EQ(MatchedProvider, Case.ExpectedProvider);
-  }
+  auto &FM = AST.getSourceManager().getFileManager();
+  auto *DeclH = &FM.getOptionalFileRef("decl.h")->getFileEntry();
+  auto *DefH = &FM.getOptionalFileRef("def.h")->getFileEntry();
+
+  auto Includes = convertIncludes(AST);
+  std::vector<include_cleaner::Header> Providers = {
+      include_cleaner::Header(DefH), include_cleaner::Header(DeclH)};
+  EXPECT_FALSE(isPreferredProvider(IncludeDecl, Includes, Providers));
+  EXPECT_TRUE(isPreferredProvider(IncludeDef1, Includes, Providers));
+  EXPECT_TRUE(isPreferredProvider(IncludeDef2, Includes, Providers));
 }
 
 TEST(IncludeCleaner, BatchFix) {
@@ -558,6 +544,32 @@ TEST(IncludeCleaner, BatchFix) {
                                     FixMessage("fix all includes")}),
                            withFix({FixMessage("remove #include directive"),
                                     FixMessage("fix all includes")})));
+}
+
+// In the presence of IWYU pragma private, we should accept spellings other
+// than the recommended one if they appear to name the same public header.
+TEST(IncludeCleaner, VerbatimEquivalence) {
+  auto TU = TestTU::withCode(R"cpp(
+    #include "lib/rel/public.h"
+    int x = Public;
+  )cpp");
+  TU.AdditionalFiles["repo/lib/rel/private.h"] = R"cpp(
+    #pragma once
+    // IWYU pragma: private, include "rel/public.h"
+    int Public;
+  )cpp";
+  TU.AdditionalFiles["repo/lib/rel/public.h"] = R"cpp(
+    #pragma once
+    #include "rel/private.h"
+  )cpp";
+
+  TU.ExtraArgs.push_back("-Irepo");
+  TU.ExtraArgs.push_back("-Irepo/lib");
+
+  auto AST = TU.build();
+  auto Findings = computeIncludeCleanerFindings(AST);
+  EXPECT_THAT(Findings.MissingIncludes, IsEmpty());
+  EXPECT_THAT(Findings.UnusedIncludes, IsEmpty());
 }
 
 } // namespace
