@@ -303,7 +303,8 @@ char *one_zero(void) {
 char *one_one_OK(void) {
   // CHECK:                           define{{.*}} ptr @one_one_OK()
   // CHECK-NEXT:                      [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:             br i1 and (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 1) to i64), i64 1), i64 1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             %[[AND:.*]] = and i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr null), icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 1) to i64), i64 1), i64 1), i64 0), !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             br i1 %[[AND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           br i1 xor (i1 icmp eq (ptr inttoptr (i64 1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 1) to i64), i64 1), i64 1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1100]], i64 1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 1) to i64), i64 1), i64 1))
@@ -321,7 +322,8 @@ char *one_one_OK(void) {
 char *one_allones_BAD(void) {
   // CHECK:                           define{{.*}} ptr @one_allones_BAD()
   // CHECK-NEXT:                      [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:             br i1 and (i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 -1) to i64), i64 1), i64 1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             %[[AND:.*]] = and i1 icmp ne (ptr inttoptr (i64 1 to ptr), ptr null), icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 -1) to i64), i64 1), i64 1), i64 0), !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             br i1 %[[AND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           br i1 xor (i1 icmp eq (ptr inttoptr (i64 1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 -1) to i64), i64 1), i64 1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1200]], i64 1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 1 to ptr), i64 -1) to i64), i64 1), i64 1))
@@ -390,7 +392,8 @@ char *allones_zero_OK(void) {
 char *allones_one_BAD(void) {
   // CHECK: define{{.*}} ptr @allones_one_BAD()
   // CHECK-NEXT: [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:             br i1 and (i1 icmp ne (ptr inttoptr (i64 -1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 1) to i64), i64 -1), i64 -1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             %[[AND:.*]] = and i1 icmp ne (ptr inttoptr (i64 -1 to ptr), ptr null), icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 1) to i64), i64 -1), i64 -1), i64 0), !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             br i1 %[[AND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           br i1 xor (i1 icmp eq (ptr inttoptr (i64 -1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 1) to i64), i64 -1), i64 -1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1500]], i64 -1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 1) to i64), i64 -1), i64 -1))
@@ -408,7 +411,8 @@ char *allones_one_BAD(void) {
 char *allones_allones_OK(void) {
   // CHECK: define{{.*}} ptr @allones_allones_OK()
   // CHECK-NEXT: [[ENTRY:.*]]:
-  // CHECK-SANITIZE-C-NEXT:             br i1 and (i1 icmp ne (ptr inttoptr (i64 -1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 -1) to i64), i64 -1), i64 -1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             %[[AND:.*]] = and i1 icmp ne (ptr inttoptr (i64 -1 to ptr), ptr null), icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 -1) to i64), i64 -1), i64 -1), i64 0), !nosanitize
+  // CHECK-SANITIZE-C-NEXT:             br i1 %[[AND]], label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE-CPP-NEXT:           br i1 xor (i1 icmp eq (ptr inttoptr (i64 -1 to ptr), ptr null), i1 icmp ne (i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 -1) to i64), i64 -1), i64 -1), i64 0)), label %[[CONT:.*]], label %[[HANDLER_POINTER_OVERFLOW:[^,]+]],{{.*}} !nosanitize
   // CHECK-SANITIZE:                  [[HANDLER_POINTER_OVERFLOW]]:
   // CHECK-SANITIZE-NORECOVER-NEXT:     call void @__ubsan_handle_pointer_overflow_abort(ptr @[[LINE_1600]], i64 -1, i64 add (i64 sub (i64 ptrtoint (ptr getelementptr inbounds (i8, ptr inttoptr (i64 -1 to ptr), i64 -1) to i64), i64 -1), i64 -1))
