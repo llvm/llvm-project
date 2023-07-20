@@ -63,8 +63,6 @@ public:
 
   ~Watchpoint() override;
 
-  void IncrementFalseAlarmsAndReviseHitCount();
-
   bool IsEnabled() const;
 
   // This doesn't really enable/disable the watchpoint.   It is currently just
@@ -214,12 +212,8 @@ private:
   // again, we check the count, if it is more than 1, it means the user-
   // supplied actions actually want the watchpoint to be disabled!
   uint32_t m_watch_read : 1, // 1 if we stop when the watched data is read from
-      m_watch_write : 1,     // 1 if we stop when the watched data is written to
-      m_watch_was_read : 1, // Set to 1 when watchpoint is hit for a read access
-      m_watch_was_written : 1;  // Set to 1 when watchpoint is hit for a write
-                                // access
+      m_watch_write : 1;     // 1 if we stop when the watched data is written to
   uint32_t m_ignore_count;      // Number of times to ignore this watchpoint
-  uint32_t m_false_alarms;      // Number of false alarms.
   std::string m_decl_str;       // Declaration information, if any.
   std::string m_watch_spec_str; // Spec for the watchpoint.
   lldb::ValueObjectSP m_old_value_sp;
