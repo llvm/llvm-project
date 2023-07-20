@@ -652,13 +652,8 @@ define <vscale x 1 x i16> @vnsrl_wx_i64_nxv1i16(<vscale x 1 x i32> %va, i64 %b) 
 ;
 ; RV64-LABEL: vnsrl_wx_i64_nxv1i16:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV64-NEXT:    vnsrl.wi v9, v9, 0
-; RV64-NEXT:    vsrl.vv v8, v8, v9
-; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli a1, zero, e16, mf4, ta, ma
+; RV64-NEXT:    vnsrl.wx v8, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 1 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <vscale x 1 x i64> %head, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
@@ -689,15 +684,8 @@ define <vscale x 1 x i8> @vnsrl_wx_i64_nxv1i8(<vscale x 1 x i16> %va, i64 %b) {
 ;
 ; RV64-LABEL: vnsrl_wx_i64_nxv1i8:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vsetvli a1, zero, e64, m1, ta, ma
-; RV64-NEXT:    vmv.v.x v9, a0
-; RV64-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
-; RV64-NEXT:    vnsrl.wi v9, v9, 0
-; RV64-NEXT:    vsetvli zero, zero, e16, mf4, ta, ma
-; RV64-NEXT:    vnsrl.wi v9, v9, 0
-; RV64-NEXT:    vsrl.vv v8, v8, v9
-; RV64-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
-; RV64-NEXT:    vnsrl.wi v8, v8, 0
+; RV64-NEXT:    vsetvli a1, zero, e8, mf8, ta, ma
+; RV64-NEXT:    vnsrl.wx v8, v8, a0
 ; RV64-NEXT:    ret
   %head = insertelement <vscale x 1 x i64> poison, i64 %b, i32 0
   %splat = shufflevector <vscale x 1 x i64> %head, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
