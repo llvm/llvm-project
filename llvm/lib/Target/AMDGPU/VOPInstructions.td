@@ -217,8 +217,10 @@ class VOP3_Real <VOP_Pseudo ps, int EncodingFamily, string asm_name = ps.Mnemoni
 
 class VOP3_Real_Gen <VOP_Pseudo ps, GFXGen Gen, string asm_name = ps.Mnemonic> :
   VOP3_Real <ps, Gen.Subtarget, asm_name> {
-  let AssemblerPredicate = Gen.AssemblerPredicate;
-  let DecoderNamespace = Gen.DecoderNamespace;
+  let AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
+                               Gen.AssemblerPredicate);
+  let DecoderNamespace = Gen.DecoderNamespace#
+                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
 
 // XXX - Is there any reason to distinguish this from regular VOP3
@@ -1369,8 +1371,10 @@ class VOP3_DPP16<bits<10> op, VOP_DPP_Pseudo ps, int subtarget,
 class VOP3_DPP16_Gen<bits<10> op, VOP_DPP_Pseudo ps, GFXGen Gen,
                      string opName = ps.OpName> :
   VOP3_DPP16 <op, ps, Gen.Subtarget, opName> {
-  let AssemblerPredicate = Gen.AssemblerPredicate;
-  let DecoderNamespace = "DPP"#Gen.DecoderNamespace;
+  let AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
+                               Gen.AssemblerPredicate);
+  let DecoderNamespace = "DPP"#Gen.DecoderNamespace#
+                         !if(ps.Pfl.IsRealTrue16, "", "_FAKE16");
 }
 
 class Base_VOP3_DPP8<bits<10> op, VOP_Pseudo ps, string opName = ps.OpName>
@@ -1525,8 +1529,10 @@ multiclass VOP3_Real_dpp8_with_name<GFXGen Gen, bits<10> op, string opName,
   defvar ps = !cast<VOP3_Pseudo>(opName#"_e64");
   if !not(ps.Pfl.HasExt64BitDPP) then
     let AsmString = asmName # ps.Pfl.AsmVOP3DPP8,
-        DecoderNamespace = "DPP8"#Gen.DecoderNamespace,
-        AssemblerPredicate = Gen.AssemblerPredicate in {
+        DecoderNamespace = "DPP8"#Gen.DecoderNamespace#
+                           !if(ps.Pfl.IsRealTrue16, "", "_FAKE16"),
+        AssemblerPredicate = !if(ps.Pfl.IsRealTrue16, UseRealTrue16Insts,
+                                 Gen.AssemblerPredicate) in {
       defm NAME : VOP3_Real_dpp8_Base<Gen, op, opName>;
   }
 }

@@ -1650,8 +1650,10 @@ let SubtargetPredicate = isGFX12Plus in
 def : ClampPat<V_MAX_NUM_F64_e64, f64>;
 let SubtargetPredicate = NotHasTrue16BitInsts in
 def : ClampPat<V_MAX_F16_e64, f16>;
-let SubtargetPredicate = HasTrue16BitInsts in
+let SubtargetPredicate = UseRealTrue16Insts in
 def : ClampPat<V_MAX_F16_t16_e64, f16>;
+let SubtargetPredicate = UseFakeTrue16Insts in
+def : ClampPat<V_MAX_F16_fake16_e64, f16>;
 
 let SubtargetPredicate = HasVOP3PInsts in {
 def : GCNPat <
@@ -2705,12 +2707,12 @@ def : GCNPat<
 let OtherPredicates = [HasTrue16BitInsts] in {
 def : GCNPat<
   (fcanonicalize (f16 (VOP3Mods f16:$src, i32:$src_mods))),
-  (V_MUL_F16_t16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
+  (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_ONE), $src_mods, $src)
 >;
 
 def : GCNPat<
   (fcanonicalize (f16 (fneg (VOP3Mods f16:$src, i32:$src_mods)))),
-  (V_MUL_F16_t16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
+  (V_MUL_F16_fake16_e64 0, (i32 CONST.FP16_NEG_ONE), $src_mods, $src)
 >;
 } // End OtherPredicates
 
