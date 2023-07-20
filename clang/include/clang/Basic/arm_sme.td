@@ -151,3 +151,23 @@ defm SVCNTSB : ZACount<"cntsb">;
 defm SVCNTSH : ZACount<"cntsh">;
 defm SVCNTSW : ZACount<"cntsw">;
 defm SVCNTSD : ZACount<"cntsd">;
+
+////////////////////////////////////////////////////////////////////////////////
+// SME - ADDHA/ADDVA
+
+multiclass ZAAdd<string n_suffix> {
+  let TargetGuard = "sme" in {
+    def NAME # _ZA32: SInst<"sv" # n_suffix # "_za32[_{d}]", "viPPd", "iUi", MergeOp1,
+                      "aarch64_sme_" # n_suffix, [IsStreaming, IsSharedZA],
+                      [ImmCheck<0, ImmCheck0_3>]>;
+  }
+
+  let TargetGuard = "sme-i16i64" in {
+    def NAME # _ZA64: SInst<"sv" # n_suffix # "_za64[_{d}]", "viPPd", "lUl", MergeOp1,
+                     "aarch64_sme_" # n_suffix, [IsStreaming, IsSharedZA],
+                     [ImmCheck<0, ImmCheck0_7>]>;
+  }
+}
+
+defm SVADDHA : ZAAdd<"addha">;
+defm SVADDVA : ZAAdd<"addva">;
