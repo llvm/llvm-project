@@ -1431,7 +1431,7 @@ multiclass VPatReductionVL_RM<SDNode vop, string instruction_name, bit is_float>
   }
 }
 
-multiclass VPatBinaryExtVL_WV_WX<SDNode op, string instruction_name> {
+multiclass VPatBinaryVL_WV_WX_WI<SDNode op, string instruction_name> {
   foreach vtiToWti = AllWidenableIntVectors in {
     defvar vti = vtiToWti.Vti;
     defvar wti = vtiToWti.Wti;
@@ -1458,26 +1458,17 @@ multiclass VPatBinaryExtVL_WV_WX<SDNode op, string instruction_name> {
         (!cast<Instruction>(instruction_name#"_WX_"#vti.LMul.MX)
           (vti.Vector (IMPLICIT_DEF)),
           wti.RegClass:$rs2, GPR:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
-    }
-  }
-}
 
-multiclass VPatBinaryVL_WV_WX_WI<SDNode op, string instruction_name>
-    : VPatBinaryExtVL_WV_WX<op, instruction_name> {
-  foreach vtiToWti = AllWidenableIntVectors in {
-    defvar vti = vtiToWti.Vti;
-    defvar wti = vtiToWti.Wti;
-    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
-                                 GetVTypePredicates<wti>.Predicates) in
-    def : Pat<
-      (vti.Vector
-        (riscv_trunc_vector_vl
-          (op (wti.Vector wti.RegClass:$rs2),
-              (wti.Vector (SplatPat_uimm5 uimm5:$rs1))), (vti.Mask true_mask),
-          VLOpFrag)),
-      (!cast<Instruction>(instruction_name#"_WI_"#vti.LMul.MX)
-        (vti.Vector (IMPLICIT_DEF)),
-        wti.RegClass:$rs2, uimm5:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
+      def : Pat<
+        (vti.Vector
+          (riscv_trunc_vector_vl
+            (op (wti.Vector wti.RegClass:$rs2),
+                (wti.Vector (SplatPat_uimm5 uimm5:$rs1))), (vti.Mask true_mask),
+            VLOpFrag)),
+        (!cast<Instruction>(instruction_name#"_WI_"#vti.LMul.MX)
+          (vti.Vector (IMPLICIT_DEF)),
+          wti.RegClass:$rs2, uimm5:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
+    }
   }
 }
 
