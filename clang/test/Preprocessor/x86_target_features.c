@@ -673,6 +673,20 @@
 // SHA512NOAVX-NOT: #define __AVX__ 1
 // SHA512NOAVX-NOT: #define __SHA512__ 1
 
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -msm3 -x c -E -dM -o - %s | FileCheck  -check-prefix=SM3 %s
+
+// SM3: #define __AVX__ 1
+// SM3: #define __SM3__ 1
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -mno-sm3 -x c -E -dM -o - %s | FileCheck  -check-prefix=NOSM3 %s
+
+// NOSM3-NOT: #define __SM3__ 1
+
+// RUN: %clang -target i686-unknown-linux-gnu -march=atom -msm3 -mno-avx -x c -E -dM -o - %s | FileCheck  -check-prefix=SM3NOAVX %s
+
+// SM3NOAVX-NOT: #define __SM3__ 1
+// SM3NOAVX-NOT: #define __AVX__ 1
+
 // RUN: %clang -target i386-unknown-linux-gnu -march=i386 -mcrc32 -x c -E -dM -o - %s | FileCheck -check-prefix=CRC32 %s
 
 // CRC32: #define __CRC32__ 1

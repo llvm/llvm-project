@@ -5058,6 +5058,8 @@ def msha : Flag<["-"], "msha">, Group<m_x86_Features_Group>;
 def mno_sha : Flag<["-"], "mno-sha">, Group<m_x86_Features_Group>;
 def msha512 : Flag<["-"], "msha512">, Group<m_x86_Features_Group>;
 def mno_sha512 : Flag<["-"], "mno-sha512">, Group<m_x86_Features_Group>;
+def msm3 : Flag<["-"], "msm3">, Group<m_x86_Features_Group>;
+def mno_sm3 : Flag<["-"], "mno-sm3">, Group<m_x86_Features_Group>;
 def mtbm : Flag<["-"], "mtbm">, Group<m_x86_Features_Group>;
 def mno_tbm : Flag<["-"], "mno-tbm">, Group<m_x86_Features_Group>;
 def mtsxldtrk : Flag<["-"], "mtsxldtrk">, Group<m_x86_Features_Group>;
