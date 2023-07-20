@@ -6968,27 +6968,27 @@ void CodeGenFunction::EmitOMPTeamsDistributeParallelForSimdDirective(
 void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
   llvm::OpenMPIRBuilder &OMPBuilder = CGM.getOpenMPRuntime().getOMPBuilder();
   llvm::Value *Device = nullptr;
+  llvm::Value *NumDependences = nullptr;
+  llvm::Value *DependenceList = nullptr;
+
   if (const auto *C = S.getSingleClause<OMPDeviceClause>())
     Device = EmitScalarExpr(C->getDevice());
 
-  llvm::Value *NumDependences = nullptr;
-  llvm::Value *DependenceAddress = nullptr;
-  if (const auto *DC = S.getSingleClause<OMPDependClause>()) {
-    OMPTaskDataTy::DependData Dependencies(DC->getDependencyKind(),
-                                           DC->getModifier());
-    Dependencies.DepExprs.append(DC->varlist_begin(), DC->varlist_end());
-    std::pair<llvm::Value *, Address> DependencePair =
-        CGM.getOpenMPRuntime().emitDependClause(*this, Dependencies,
-                                                DC->getBeginLoc());
-    NumDependences = DependencePair.first;
-    DependenceAddress = Builder.CreatePointerCast(
-        DependencePair.second.getPointer(), CGM.Int8PtrTy);
+  // Build list and emit dependences
+  OMPTaskDataTy Data;
+  buildDependences(S, Data);
+  if (!Data.Dependences.empty()) {
+    Address DependenciesArray = Address::invalid();
+    std::tie(NumDependences, DependenciesArray) =
+        CGM.getOpenMPRuntime().emitDependClause(*this, Data.Dependences,
+                                                S.getBeginLoc());
+    DependenceList = DependenciesArray.getPointer();
   }
+  Data.HasNowaitClause = S.hasClausesOfKind<OMPNowaitClause>();
 
-  assert(!(S.hasClausesOfKind<OMPNowaitClause>() &&
-           !(S.getSingleClause<OMPInitClause>() ||
-             S.getSingleClause<OMPDestroyClause>() ||
-             S.getSingleClause<OMPUseClause>())) &&
+  assert(!(Data.HasNowaitClause && !(S.getSingleClause<OMPInitClause>() ||
+                                     S.getSingleClause<OMPDestroyClause>() ||
+                                     S.getSingleClause<OMPUseClause>())) &&
          "OMPNowaitClause clause is used separately in OMPInteropDirective.");
 
   if (const auto *C = S.getSingleClause<OMPInitClause>()) {
@@ -7002,20 +7002,20 @@ void CodeGenFunction::EmitOMPInteropDirective(const OMPInteropDirective &S) {
       InteropType = llvm::omp::OMPInteropType::TargetSync;
     }
     OMPBuilder.createOMPInteropInit(Builder, InteropvarPtr, InteropType, Device,
-                                    NumDependences, DependenceAddress,
-                                    S.hasClausesOfKind<OMPNowaitClause>());
+                                    NumDependences, DependenceList,
+                                    Data.HasNowaitClause);
   } else if (const auto *C = S.getSingleClause<OMPDestroyClause>()) {
     llvm::Value *InteropvarPtr =
         EmitLValue(C->getInteropVar()).getPointer(*this);
     OMPBuilder.createOMPInteropDestroy(Builder, InteropvarPtr, Device,
-                                       NumDependences, DependenceAddress,
-                                       S.hasClausesOfKind<OMPNowaitClause>());
+                                       NumDependences, DependenceList,
+                                       Data.HasNowaitClause);
   } else if (const auto *C = S.getSingleClause<OMPUseClause>()) {
     llvm::Value *InteropvarPtr =
         EmitLValue(C->getInteropVar()).getPointer(*this);
     OMPBuilder.createOMPInteropUse(Builder, InteropvarPtr, Device,
-                                   NumDependences, DependenceAddress,
-                                   S.hasClausesOfKind<OMPNowaitClause>());
+                                   NumDependences, DependenceList,
+                                   Data.HasNowaitClause);
   }
 }
 
