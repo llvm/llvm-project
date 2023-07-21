@@ -243,6 +243,7 @@ class Property<string storageTypeParam = "", string desc = ""> {
   // Format:
   // - `$_storage` is the storage type value.
   // - `$_writer` is a `DialectBytecodeWriter`.
+  // - `$_ctxt` is a `MLIRContext *`.
   code writeToMlirBytecode = [{
     writeToMlirBytecode($_writer, $_storage)
   }];
@@ -252,6 +253,7 @@ class Property<string storageTypeParam = "", string desc = ""> {
   // Format:
   // - `$_storage` is the storage type value.
   // - `$_reader` is a `DialectBytecodeReader`.
+  // - `$_ctxt` is a `MLIRContext *`.
   code readFromMlirBytecode = [{
     if (::mlir::failed(readFromMlirBytecode($_reader, $_storage)))
       return ::mlir::failure();
@@ -260,6 +262,38 @@ class Property<string storageTypeParam = "", string desc = ""> {
   // Default value for the property.
   string defaultValue = ?;
 }
+
+/// Implementation of the Property class's `readFromMlirBytecode` field using
+/// the default `convertFromAttribute` implementation.
+/// Users not wanting to implement their own `readFromMlirBytecode` and
+/// `writeToMlirBytecode` implementations can opt into using this implementation
+/// by writing:
+///
+/// let writeToMlirBytecode = writeMlirBytecodeWithConvertToAttribute;
+/// let readFromMlirBytecode = readMlirBytecodeUsingConvertFromAttribute;
+///
+/// in their property definition.
+/// Serialization and deserialization is performed using the attributes
+/// returned by `convertFromAttribute` and `convertToAttribute`.
+///
+/// WARNING: This implementation creates a less than optimal encoding.
+/// Users caring about optimal encoding should not use this implementation and
+/// implement `readFromMlirBytecode` and `writeToMlirBytecode` themselves.
+defvar readMlirBytecodeUsingConvertFromAttribute = [{
+  ::mlir::Attribute attr;
+  if (::mlir::failed($_reader.readAttribute(attr)))
+    return ::mlir::failure();
+  if (::mlir::failed(convertFromAttribute($_storage, attr, nullptr)))
+    return ::mlir::failure();
+}];
+
+/// Implementation of the Property class's `writeToMlirBytecode` field using
+/// the default `convertToAttribute` implementation.
+/// See description of `readMlirBytecodeUsingConvertFromAttribute` above for
+/// details.
+defvar writeMlirBytecodeWithConvertToAttribute = [{
+  $_writer.writeAttribute(convertToAttribute($_ctxt, $_storage))
+}];
 
 // Subclass for constraints on an attribute.
 class AttrConstraint<Pred predicate, string summary = ""> :
