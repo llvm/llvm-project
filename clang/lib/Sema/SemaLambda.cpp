@@ -1633,6 +1633,11 @@ static void addFunctionPointerConversion(Sema &S, SourceRange IntroducerRange,
   Conversion->setAccess(AS_public);
   Conversion->setImplicit(true);
 
+  // A non-generic lambda may still be a templated entity. We need to preserve
+  // constraints when converting the lambda to a function pointer. See GH63181.
+  if (Expr *Requires = CallOperator->getTrailingRequiresClause())
+    Conversion->setTrailingRequiresClause(Requires);
+
   if (Class->isGenericLambda()) {
     // Create a template version of the conversion operator, using the template
     // parameter list of the function call operator.
