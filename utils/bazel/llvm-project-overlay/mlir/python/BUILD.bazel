@@ -754,6 +754,30 @@ gentbl_filegroup(
 )
 
 gentbl_filegroup(
+    name = "GPUTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=gpu_transform",
+            ],
+            "mlir/dialects/_gpu_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/GPUTransformOps.td",
+    deps = [
+        "//mlir:CallInterfacesTdFiles",
+        "//mlir:FunctionInterfacesTdFiles",
+        "//mlir:OpBaseTdFiles",
+        "//mlir:GPUTransformOpsTdFiles",
+        "//mlir:TransformDialectTdFiles",
+    ],
+)
+
+
+gentbl_filegroup(
     name = "StructuredTransformOpsPyGen",
     tbl_outs = [
         (
@@ -825,10 +849,12 @@ gentbl_filegroup(
 filegroup(
     name = "TransformOpsPyFiles",
     srcs = [
+        "mlir/dialects/_gpu_transform_ops_ext.py",
         "mlir/dialects/_loop_transform_ops_ext.py",
         "mlir/dialects/_structured_transform_ops_ext.py",
         "mlir/dialects/_transform_ops_ext.py",
         "mlir/dialects/_transform_pdl_extension_ops_ext.py",
+        ":GPUTransformOpsPyGen",
         ":LoopTransformOpsPyGen",
         ":PDLTransformOpsPyGen",
         ":StructuredTransformOpsPyGen",
