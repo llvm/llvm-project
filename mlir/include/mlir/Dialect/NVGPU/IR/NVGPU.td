@@ -600,4 +600,28 @@ def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", []> {
 
 }
 
+def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
+  let summary = "TMA create descriptor";
+  let description = [{
+    The Op creates a tensor map descriptor object representing tiled memory 
+    region. To do that it calls CUDA Driver's `cuTensorMapEncodeTiled`. The 
+    descriptor is used by Tensor Memory Access (TMA).
+
+    The `tensor` is the source tensor to be tiled. 
+
+    The `boxDimensions` is the size of the tiled memory region in each dimension.
+
+    For more information see below:
+    https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TENSOR__MEMORY.html
+  }];
+
+  let arguments = (ins AnyUnrankedMemRef:$tensor,
+                       Variadic<Index>:$boxDimensions);
+  let results = (outs NVGPU_TensorMapDescriptor:$tensorMap);
+  let assemblyFormat = [{
+         $tensor `box` `[` $boxDimensions `]` attr-dict `:` type($tensor) `->` type($tensorMap)
+  }];
+  let hasVerifier = 1;
+}
+
 #endif // NVGPU
