@@ -3404,6 +3404,44 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
   return nullptr;
 }
 
+static Instruction *foldCtpopPow2Test(ICmpInst &I, IntrinsicInst *CtpopLhs,
+                                      const APInt &CRhs,
+                                      InstCombiner::BuilderTy &Builder,
+                                      const SimplifyQuery &Q) {
+  assert(CtpopLhs->getIntrinsicID() == Intrinsic::ctpop &&
+         "Non-ctpop intrin in ctpop fold");
+  if (!CtpopLhs->hasOneUse())
+    return nullptr;
+
+  // Power of 2 test:
+  //    isPow2OrZero : ctpop(X) u< 2
+  //    isPow2       : ctpop(X) == 1
+  //    NotPow2OrZero: ctpop(X) u> 1
+  //    NotPow2      : ctpop(X) != 1
+  // If we know any bit of X can be folded to:
+  //    IsPow2       : X & (~Bit) == 0
+  //    NotPow2      : X & (~Bit) != 0
+  const ICmpInst::Predicate Pred = I.getPredicate();
+  if (((I.isEquality() || Pred == ICmpInst::ICMP_UGT) && CRhs == 1) ||
+      (Pred == ICmpInst::ICMP_ULT && CRhs == 2)) {
+    Value *Op = CtpopLhs->getArgOperand(0);
+    KnownBits OpKnown = computeKnownBits(Op, Q.DL,
+                                         /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
+    // No need to check for count > 1, that should be already constant folded.
+    if (OpKnown.countMinPopulation() == 1) {
+      Value *And = Builder.CreateAnd(
+          Op, Constant::getIntegerValue(Op->getType(), ~(OpKnown.One)));
+      return new ICmpInst(
+          (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_ULT)
+              ? ICmpInst::ICMP_EQ
+              : ICmpInst::ICMP_NE,
+          And, Constant::getNullValue(Op->getType()));
+    }
+  }
+
+  return nullptr;
+}
+
 /// Fold an equality icmp with LLVM intrinsic and constant operand.
 Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
     ICmpInst &Cmp, IntrinsicInst *II, const APInt &C) {
@@ -3749,6 +3787,11 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
             Pred, cast<SaturatingInst>(II), C, Builder))
       return Folded;
     break;
+  case Intrinsic::ctpop: {
+    const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
+    if (Instruction *R = foldCtpopPow2Test(Cmp, II, C, Builder, Q))
+      return R;
+  } break;
   }
 
   if (Cmp.isEquality())
