@@ -1360,7 +1360,8 @@ void OpEmitter::genPropertiesSupport() {
       FmtContext fctx;
       fctx.addSubst("_reader", "reader")
           .addSubst("_writer", "writer")
-          .addSubst("_storage", propertyStorage);
+          .addSubst("_storage", propertyStorage)
+          .addSubst("_ctxt", "this->getContext()");
       readPropertiesMethod << formatv(
           R"(
   {{
