@@ -1495,10 +1495,831 @@ define <2 x i1> @test91(<2 x half> %arg1, <2 x half> %arg2, <2 x half> %arg3) {
   ret <2 x i1> %and1
 }
 
+define i1 @test92(i32 %arg1, i32 %arg2, i32 %arg3, i32 %C) {
+; CHECK-LABEL: test92:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min3_u32 v0, v0, v1, v2
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v3
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ult i32 %arg3, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %or1, %cmp3
+  ret i1 %or2
+}
+
+define i1 @test93(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
+; CHECK-LABEL: test93:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_max_u32_e32 v1, v2, v3
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
+; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, v1, v4
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ugt i32 %arg3, %C
+  %cmp4 = icmp ugt i32 %arg4, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %cmp3, %cmp4
+  %or3 = or i1 %or1, %or2
+  ret i1 %or3
+}
+
+define i1 @test94(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %C) {
+; CHECK-LABEL: test94:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v2, v2, v3
+; CHECK-NEXT:    v_min3_u32 v0, v0, v1, v2
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v4
+; CHECK-NEXT:    v_min3_u32 v0, v5, v6, v0
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v8
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %or1  = or i1 %cmp1, %cmp2
+  %cmp3 = icmp ult i32 %arg3, %C
+  %cmp4 = icmp ult i32 %arg4, %C
+  %or2  = or i1 %cmp3, %cmp4
+  %cmp5 = icmp ult i32 %arg5, %C
+  %or3 = or i1 %or1, %or2
+  %or4 = or i1 %or3, %cmp5
+  %cmp6 = icmp ult i32 %arg6, %C
+  %cmp7 = icmp ult i32 %arg7, %C
+  %or5 = or i1 %cmp6, %cmp7
+  %cmp8 = icmp ult i32 %arg8, %C
+  %or6 = or i1 %or5, %or4
+  %or7 = or i1 %or6, %cmp8
+  ret i1 %or6
+}
+
+define i1 @test95(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
+; CHECK-LABEL: test95:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_maxmin_u32 v0, v0, v1, v2
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ult i32 %arg3, %C
+  %and1 = and i1 %cmp1, %cmp2
+  %or1 = or i1 %and1, %cmp3
+  ret i1 %or1
+}
+
+define i1 @test96(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
+; CHECK-LABEL: test96:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_minmax_u32 v0, v0, v1, v2
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ult i32 %arg3, %C
+  %and1 = or i1 %cmp1, %cmp2
+  %or1 = and i1 %and1, %cmp3
+  ret i1 %or1
+}
+
+define i1 @test97(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
+; CHECK-LABEL: test97:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_max3_u32 v0, v0, v2, v3
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ult i32 %arg3, %C
+  %cmp4 = icmp ult i32 %arg4, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %and1 = and i1 %cmp3, %cmp4
+  %and2 = and i1 %or1, %and1
+  ret i1 %and2
+}
+
+define i1 @test98(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
+; CHECK-LABEL: test98:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v2, v2, v3
+; CHECK-NEXT:    v_minmax_u32 v0, v0, v1, v2
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ult i32 %arg3, %C
+  %cmp4 = icmp ult i32 %arg4, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %cmp3, %cmp4
+  %and1 = and i1 %or1, %or2
+  ret i1 %and1
+}
+
+define i1 @test99(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
+; CHECK-LABEL: test99:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v2, v2, v3
+; CHECK-NEXT:    v_min3_u32 v0, v0, v1, v2
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ult i32 %arg3, %C
+  %cmp4 = icmp ult i32 %arg4, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %and1 = and i1 %cmp3, %cmp4
+  %or2 = or i1 %or1, %and1
+  ret i1 %or2
+}
+
+define i1 @test100(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %C) {
+; CHECK-LABEL: test100:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v2, v2, v3
+; CHECK-NEXT:    v_maxmin_u32 v0, v0, v1, v2
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v4
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ult i32 %arg3, %C
+  %cmp4 = icmp ult i32 %arg4, %C
+  %and1 = and i1 %cmp1, %cmp2
+  %and2 = and i1 %cmp3, %cmp4
+  %or1 = or i1 %and1, %and2
+  ret i1 %or1
+}
+
+define i1 @test101(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %C) {
+; CHECK-LABEL: test101:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_minmax_u32 v1, v3, v4, v5
+; CHECK-NEXT:    v_min3_u32 v0, v0, v2, v1
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v6
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ult i32 %arg3, %C
+  %and1 = and i1 %cmp1, %cmp2
+  %or1 = or i1 %and1, %cmp3
+  %cmp4 = icmp ult i32 %arg4, %C
+  %cmp5 = icmp ult i32 %arg5, %C
+  %cmp6 = icmp ult i32 %arg6, %C
+  %or2 = or i1 %cmp4, %cmp5
+  %and2 = and i1 %or2, %cmp6
+  %or3 = or i1 %or1, %and2
+  ret i1 %or3
+}
+
+define i1 @test102(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %C) {
+; CHECK-LABEL: test102:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_min_u32_e32 v1, v2, v3
+; CHECK-NEXT:    v_min3_u32 v0, v0, v5, v1
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v6
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ult i32 %arg3, %C
+  %cmp4 = icmp ult i32 %arg4, %C
+  %cmp5 = icmp ult i32 %arg5, %C
+  %cmp6 = icmp ult i32 %arg6, %C
+  %and1 = and i1 %cmp1, %cmp2
+  %or1 = or i1 %cmp3, %cmp4
+  %and2 = and i1 %cmp4, %cmp5
+  %or2 = or i1 %and1, %cmp6
+  %or3 = or i1 %or1, %and2
+  %or4 = or i1 %or2, %or3
+  ret i1 %or4
+}
+
+define i1 @test103(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %C) {
+; CHECK-LABEL: test103:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_max_u32_e32 v1, v2, v3
+; CHECK-NEXT:    v_max_u32_e32 v2, v4, v5
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v6
+; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, v1, v6
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s1, v2, v6
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ugt i32 %arg3, %C
+  %cmp4 = icmp ugt i32 %arg4, %C
+  %cmp5 = icmp ult i32 %arg5, %C
+  %cmp6 = icmp ult i32 %arg6, %C
+  %and1 = and i1 %cmp1, %cmp2
+  %or1 = or i1 %cmp3, %cmp4
+  %and2 = and i1 %cmp5, %cmp6
+  %or2 = or i1 %and1, %or1
+  %or3 = or i1 %or2, %and2
+  ret i1 %or3
+}
+
+
+define i1 @test104(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10, i32 %C) {
+; CHECK-LABEL: test104:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_max_u32_e32 v1, v2, v3
+; CHECK-NEXT:    v_min_u32_e32 v2, v4, v5
+; CHECK-NEXT:    v_max_u32_e32 v3, v6, v7
+; CHECK-NEXT:    v_min_u32_e32 v4, v8, v9
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v10
+; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, v1, v10
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s1, v2, v10
+; CHECK-NEXT:    v_cmp_gt_u32_e64 s2, v3, v10
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s3, v4, v10
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_or_b32 s1, s1, s2
+; CHECK-NEXT:    s_or_b32 s0, s3, s0
+; CHECK-NEXT:    s_or_b32 s0, s1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ugt i32 %arg3, %C
+  %cmp4 = icmp ugt i32 %arg4, %C
+  %cmp5 = icmp ult i32 %arg5, %C
+  %cmp6 = icmp ult i32 %arg6, %C
+  %cmp7 = icmp ugt i32 %arg7, %C
+  %cmp8 = icmp ugt i32 %arg8, %C
+  %cmp9 = icmp ult i32 %arg9, %C
+  %cmp10 = icmp ult i32 %arg10, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %cmp3, %cmp4
+  %or3 = or i1 %cmp5, %cmp6
+  %or4 = or i1 %cmp7, %cmp8
+  %or5 = or i1 %cmp9, %cmp10
+  %or6 = or i1 %or1, %or2
+  %or7 = or i1 %or3, %or4
+  %or8 = or i1 %or5, %or6
+  %or9 = or i1 %or7, %or8
+  ret i1 %or9
+}
+
+define i1 @test105(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10, i32 %C) {
+; CHECK-LABEL: test105:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_max_u32_e32 v1, v2, v3
+; CHECK-NEXT:    v_max_u32_e32 v2, v4, v5
+; CHECK-NEXT:    v_max_u32_e32 v3, v6, v7
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v10
+; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, v1, v10
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s1, v2, v10
+; CHECK-NEXT:    v_cmp_gt_u32_e64 s2, v3, v10
+; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_or_b32 s1, s2, s1
+; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C
+  %cmp2 = icmp ult i32 %arg2, %C
+  %cmp3 = icmp ugt i32 %arg3, %C
+  %cmp4 = icmp ugt i32 %arg4, %C
+  %cmp5 = icmp ult i32 %arg5, %C
+  %cmp6 = icmp ult i32 %arg6, %C
+  %cmp7 = icmp ugt i32 %arg7, %C
+  %cmp8 = icmp ugt i32 %arg8, %C
+  %and1 = and i1 %cmp1, %cmp2
+  %or1 = or i1 %cmp3, %cmp4
+  %and2 = and i1 %cmp5, %cmp6
+  %or2 = or i1 %cmp7, %cmp8
+  %and3 = and i1 %and1, %or1
+  %or3 = or i1 %or2, %and2
+  %or4 = and i1 %and3, %or3
+  ret i1 %or4
+}
+
+define i1 @test106(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %arg6, i32 %arg7, i32 %arg8, i32 %arg9, i32 %arg10, i32 %arg11, i32 %arg12, i32 %C1, i32 %C2) {
+; CHECK-LABEL: test106:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_min_u32_e32 v6, v6, v7
+; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
+; CHECK-NEXT:    v_min_u32_e32 v1, v10, v11
+; CHECK-NEXT:    v_min_u32_e32 v2, v2, v3
+; CHECK-NEXT:    v_min3_u32 v3, v4, v5, v6
+; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v12
+; CHECK-NEXT:    v_min3_u32 v0, v8, v9, v1
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, v2, v13
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s1, v3, v13
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s2, v0, v12
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_or_b32 s0, s2, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = icmp ult i32 %arg1, %C1
+  %cmp2 = icmp ult i32 %arg2, %C1
+  %cmp3 = icmp ult i32 %arg3, %C2
+  %cmp4 = icmp ult i32 %arg4, %C2
+  %cmp5 = icmp ult i32 %arg5, %C2
+  %cmp6 = icmp ult i32 %arg6, %C2
+  %cmp7 = icmp ult i32 %arg7, %C2
+  %cmp8 = icmp ult i32 %arg8, %C2
+  %cmp9 = icmp ult i32 %arg9, %C1
+  %cmp10 = icmp ult i32 %arg10, %C1
+  %cmp11 = icmp ult i32 %arg11, %C1
+  %cmp12 = icmp ult i32 %arg12, %C1
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %cmp3, %cmp4
+  %or3 = or i1 %cmp5, %cmp6
+  %or4 = or i1 %cmp7, %cmp8
+  %or5 = or i1 %cmp9, %cmp10
+  %or6 = or i1 %cmp11, %cmp12
+  %or7 = or i1 %or1, %or2
+  %or8 = or i1 %or3, %or4
+  %or9 = or i1 %or5, %or6
+  %or10 = or i1 %or7, %or8
+  %or11 = or i1 %or9, %or10
+  ret i1 %or11
+}
+
+define i1 @test107(float %arg1, float %arg2, float %arg3, float %C) {
+; CHECK-LABEL: test107:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v3
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v3
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v2, v3
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = fcmp olt float %arg1, %C
+  %cmp2 = fcmp olt float %arg2, %C
+  %cmp3 = fcmp olt float %arg3, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %or1, %cmp3
+  ret i1 %or2
+}
+
+define i1 @test108(float %arg1, float %arg2, float %arg3, float %C) {
+; CHECK-LABEL: test108:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v0, v3
+; CHECK-NEXT:    v_cmp_nge_f32_e64 s0, v1, v3
+; CHECK-NEXT:    v_cmp_nge_f32_e64 s1, v2, v3
+; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = fcmp ult float %arg1, %C
+  %cmp2 = fcmp ult float %arg2, %C
+  %cmp3 = fcmp ult float %arg3, %C
+  %and1 = and i1 %cmp1, %cmp2
+  %and2 = and i1 %and1, %cmp3
+  ret i1 %and2
+}
+
+define i1 @test109(float %arg1, float %arg2, float %arg3, float %arg4, float %C) {
+; CHECK-LABEL: test109:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v4
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v4
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s1, v2, v4
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s2, v3, v4
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_or_b32 s1, s1, s2
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = fcmp olt float %arg1, %C
+  %cmp2 = fcmp olt float %arg2, %C
+  %cmp3 = fcmp ogt float %arg3, %C
+  %cmp4 = fcmp ogt float %arg4, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %cmp3, %cmp4
+  %or3 = or i1 %or1, %or2
+  ret i1 %or3
+}
+
+define i1 @test110(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) #0 {
+; CHECK-LABEL: test110:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_dual_add_f32 v0, v0, v4 :: v_dual_add_f32 v1, v1, v5
+; CHECK-NEXT:    v_dual_add_f32 v2, v2, v6 :: v_dual_add_f32 v3, v3, v7
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v8
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s1, v2, v8
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s2, v3, v8
+; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_and_b32 s1, s1, s2
+; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %add1 = fadd nnan float %arg1, %C1
+  %add2 = fadd nnan float %arg2, %C2
+  %add3 = fadd nnan float %arg3, %C3
+  %add4 = fadd nnan float %arg4, %C4
+  %cmp1 = fcmp nnan ult float %add1, %C
+  %cmp2 = fcmp nnan ult float %add2, %C
+  %cmp3 = fcmp nnan ugt float %add3, %C
+  %cmp4 = fcmp nnan ugt float %add4, %C
+  %or1 = and i1 %cmp1, %cmp2
+  %or2 = and i1 %cmp3, %cmp4
+  %or3 = and i1 %or1, %or2
+  ret i1 %or3
+}
+
+define i1 @test111(float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, float %arg8, float %C) {
+; CHECK-LABEL: test111:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v2, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s2, v3, v8
+; CHECK-NEXT:    s_or_b32 s3, vcc_lo, s0
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v4, v8
+; CHECK-NEXT:    s_or_b32 s2, s1, s2
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v5, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v6, v8
+; CHECK-NEXT:    s_or_b32 s2, s3, s2
+; CHECK-NEXT:    s_or_b32 s2, s2, vcc_lo
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_or_b32 s0, s0, s2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = fcmp olt float %arg1, %C
+  %cmp2 = fcmp olt float %arg2, %C
+  %or1  = or i1 %cmp1, %cmp2
+  %cmp3 = fcmp olt float %arg3, %C
+  %cmp4 = fcmp olt float %arg4, %C
+  %or2  = or i1 %cmp3, %cmp4
+  %cmp5 = fcmp olt float %arg5, %C
+  %or3 = or i1 %or1, %or2
+  %or4 = or i1 %or3, %cmp5
+  %cmp6 = fcmp olt float %arg6, %C
+  %cmp7 = fcmp olt float %arg7, %C
+  %or5 = or i1 %cmp6, %cmp7
+  %cmp8 = fcmp olt float %arg8, %C
+  %or6 = or i1 %or5, %or4
+  %or7 = or i1 %or6, %cmp8
+  ret i1 %or6
+}
+
+define i1 @test112(float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, float %arg8, float %C) {
+; CHECK-LABEL: test112:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v2, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s2, v3, v8
+; CHECK-NEXT:    s_or_b32 s3, vcc_lo, s0
+; CHECK-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v4, v8
+; CHECK-NEXT:    s_or_b32 s2, s1, s2
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v5, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v6, v8
+; CHECK-NEXT:    s_or_b32 s2, s3, s2
+; CHECK-NEXT:    s_or_b32 s2, s2, vcc_lo
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_or_b32 s0, s0, s2
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = fcmp olt float %arg1, %C
+  %cmp2 = fcmp olt float %arg2, %C
+  %or1  = or i1 %cmp1, %cmp2
+  %cmp3 = fcmp olt float %arg3, %C
+  %cmp4 = fcmp olt float %arg4, %C
+  %or2  = or i1 %cmp3, %cmp4
+  %cmp5 = fcmp ult float %arg5, %C
+  %or3 = or i1 %or1, %or2
+  %or4 = or i1 %or3, %cmp5
+  %cmp6 = fcmp olt float %arg6, %C
+  %cmp7 = fcmp olt float %arg7, %C
+  %or5 = or i1 %cmp6, %cmp7
+  %cmp8 = fcmp ult float %arg8, %C
+  %or6 = or i1 %or5, %or4
+  %or7 = or i1 %or6, %cmp8
+  ret i1 %or6
+}
+
+define i1 @test113(float %arg1, float %arg2, float %arg3, float %C) {
+; CHECK-LABEL: test113:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v0, v3
+; CHECK-NEXT:    v_cmp_nge_f32_e64 s0, v1, v3
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v2, v3
+; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = fcmp ult float %arg1, %C
+  %cmp2 = fcmp ult float %arg2, %C
+  %cmp3 = fcmp olt float %arg3, %C
+  %and1 = and i1 %cmp1, %cmp2
+  %or1 = or i1 %and1, %cmp3
+  ret i1 %or1
+}
+
+define i1 @test114(float %arg1, float %arg2, float %arg3, float %C) {
+; CHECK-LABEL: test114:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_gt_f32_e32 vcc_lo, v0, v3
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s0, v1, v3
+; CHECK-NEXT:    v_cmp_nge_f32_e64 s1, v2, v3
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = fcmp ogt float %arg1, %C
+  %cmp2 = fcmp ogt float %arg2, %C
+  %cmp3 = fcmp ult float %arg3, %C
+  %and1 = or i1 %cmp1, %cmp2
+  %or1 = and i1 %and1, %cmp3
+  ret i1 %or1
+}
+
+define i1 @test115(float %arg1, float %arg2, float %arg3, float %arg4, float %C) {
+; CHECK-LABEL: test115:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_dual_max_f32 v2, v2, v2 :: v_dual_max_f32 v3, v3, v3
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v4
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v4
+; CHECK-NEXT:    v_cmp_nge_f32_e64 s1, v2, v4
+; CHECK-NEXT:    v_cmp_nge_f32_e64 s2, v3, v4
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_and_b32 s1, s1, s2
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = fcmp olt float %arg1, %C
+  %cmp2 = fcmp olt float %arg2, %C
+  %var3 = call float @llvm.canonicalize.f32(float %arg3)
+  %var4 = call float @llvm.canonicalize.f32(float %arg4)
+  %cmp3 = fcmp ult float %var3, %C
+  %cmp4 = fcmp ult float %var4, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %and1 = and i1 %cmp3, %cmp4
+  %or2 = or i1 %or1, %and1
+  ret i1 %or2
+}
+
+define i1 @test116(float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, float %arg8, float %arg9, float %arg10, float %C) {
+; CHECK-LABEL: test116:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v10
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v10
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s1, v2, v10
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s2, v3, v10
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s3, v4, v10
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s4, v5, v10
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s5, v6, v10
+; CHECK-NEXT:    v_cmp_gt_f32_e64 s6, v7, v10
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s7, v8, v10
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s8, v9, v10
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_or_b32 s1, s1, s2
+; CHECK-NEXT:    s_or_b32 s2, s3, s4
+; CHECK-NEXT:    s_or_b32 s3, s5, s6
+; CHECK-NEXT:    s_or_b32 s4, s7, s8
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_or_b32 s1, s2, s3
+; CHECK-NEXT:    s_or_b32 s0, s4, s0
+; CHECK-NEXT:    s_or_b32 s0, s1, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = fcmp olt float %arg1, %C
+  %cmp2 = fcmp olt float %arg2, %C
+  %cmp3 = fcmp ogt float %arg3, %C
+  %cmp4 = fcmp ogt float %arg4, %C
+  %cmp5 = fcmp olt float %arg5, %C
+  %cmp6 = fcmp olt float %arg6, %C
+  %cmp7 = fcmp ogt float %arg7, %C
+  %cmp8 = fcmp ogt float %arg8, %C
+  %cmp9 = fcmp olt float %arg9, %C
+  %cmp10 = fcmp olt float %arg10, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %cmp3, %cmp4
+  %or3 = or i1 %cmp5, %cmp6
+  %or4 = or i1 %cmp7, %cmp8
+  %or5 = or i1 %cmp9, %cmp10
+  %or6 = or i1 %or1, %or2
+  %or7 = or i1 %or3, %or4
+  %or8 = or i1 %or5, %or6
+  %or9 = or i1 %or7, %or8
+  ret i1 %or9
+}
+
+define i1 @test117(float %arg1, float %arg2, float %arg3, float %arg4, float %arg5, float %arg6, float %arg7, float %arg8, float %arg9, float %arg10, float %arg11, float %arg12, float %C1, float %C2) {
+; CHECK-LABEL: test117:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v12
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v12
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v2, v13
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s2, v3, v13
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s3, v4, v13
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s4, v5, v13
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s5, v6, v13
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s6, v7, v13
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s7, v8, v12
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s8, v9, v12
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s9, v10, v12
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s10, v11, v12
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_or_b32 s1, s1, s2
+; CHECK-NEXT:    s_or_b32 s2, s3, s4
+; CHECK-NEXT:    s_or_b32 s3, s5, s6
+; CHECK-NEXT:    s_or_b32 s4, s7, s8
+; CHECK-NEXT:    s_or_b32 s5, s9, s10
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_or_b32 s1, s2, s3
+; CHECK-NEXT:    s_or_b32 s2, s4, s5
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_or_b32 s0, s2, s0
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %cmp1 = fcmp olt float %arg1, %C1
+  %cmp2 = fcmp olt float %arg2, %C1
+  %cmp3 = fcmp olt float %arg3, %C2
+  %cmp4 = fcmp olt float %arg4, %C2
+  %cmp5 = fcmp olt float %arg5, %C2
+  %cmp6 = fcmp olt float %arg6, %C2
+  %cmp7 = fcmp olt float %arg7, %C2
+  %cmp8 = fcmp olt float %arg8, %C2
+  %cmp9 = fcmp olt float %arg9, %C1
+  %cmp10 = fcmp olt float %arg10, %C1
+  %cmp11 = fcmp olt float %arg11, %C1
+  %cmp12 = fcmp olt float %arg12, %C1
+  %or1 = or i1 %cmp1, %cmp2
+  %or2 = or i1 %cmp3, %cmp4
+  %or3 = or i1 %cmp5, %cmp6
+  %or4 = or i1 %cmp7, %cmp8
+  %or5 = or i1 %cmp9, %cmp10
+  %or6 = or i1 %cmp11, %cmp12
+  %or7 = or i1 %or1, %or2
+  %or8 = or i1 %or3, %or4
+  %or9 = or i1 %or5, %or6
+  %or10 = or i1 %or7, %or8
+  %or11 = or i1 %or9, %or10
+  ret i1 %or11
+}
+
+
+define i1 @test118(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) #0 {
+; CHECK-LABEL: test118:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_dual_add_f32 v0, v0, v4 :: v_dual_add_f32 v1, v1, v5
+; CHECK-NEXT:    v_dual_add_f32 v2, v2, v6 :: v_dual_add_f32 v3, v3, v7
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v2, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s2, v3, v8
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_and_b32 s1, s1, s2
+; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %add1 = fadd nnan float %arg1, %C1
+  %add2 = fadd nnan float %arg2, %C2
+  %add3 = fadd nnan float %arg3, %C3
+  %add4 = fadd nnan float %arg4, %C4
+  %cmp1 = fcmp nnan ult float %add1, %C
+  %cmp2 = fcmp nnan ult float %add2, %C
+  %cmp3 = fcmp nnan ult float %add3, %C
+  %cmp4 = fcmp nnan ult float %add4, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %and1 = and i1 %cmp3, %cmp4
+  %and2 = and i1 %or1, %and1
+  ret i1 %and2
+}
+
+define i1 @test119(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) #0 {
+; CHECK-LABEL: test119:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_dual_add_f32 v0, v0, v4 :: v_dual_add_f32 v1, v1, v5
+; CHECK-NEXT:    v_dual_add_f32 v2, v2, v6 :: v_dual_add_f32 v3, v3, v7
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v2, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s2, v3, v8
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_or_b32 s1, s1, s2
+; CHECK-NEXT:    s_and_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %add1 = fadd nnan float %arg1, %C1
+  %add2 = fadd nnan float %arg2, %C2
+  %add3 = fadd nnan float %arg3, %C3
+  %add4 = fadd nnan float %arg4, %C4
+  %cmp1 = fcmp nnan ult float %add1, %C
+  %cmp2 = fcmp nnan ult float %add2, %C
+  %cmp3 = fcmp nnan ult float %add3, %C
+  %cmp4 = fcmp nnan ult float %add4, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %and1 = or i1 %cmp3, %cmp4
+  %and2 = and i1 %or1, %and1
+  ret i1 %and2
+}
+
+define i1 @test120(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) #0 {
+; CHECK-LABEL: test120:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_dual_add_f32 v0, v0, v4 :: v_dual_add_f32 v1, v1, v5
+; CHECK-NEXT:    v_dual_add_f32 v2, v2, v6 :: v_dual_add_f32 v3, v3, v7
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v2, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s2, v3, v8
+; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_and_b32 s1, s1, s2
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %add1 = fadd nnan float %arg1, %C1
+  %add2 = fadd nnan float %arg2, %C2
+  %add3 = fadd nnan float %arg3, %C3
+  %add4 = fadd nnan float %arg4, %C4
+  %cmp1 = fcmp nnan ult float %add1, %C
+  %cmp2 = fcmp nnan ult float %add2, %C
+  %cmp3 = fcmp nnan ult float %add3, %C
+  %cmp4 = fcmp nnan ult float %add4, %C
+  %or1 = or i1 %cmp1, %cmp2
+  %and1 = and i1 %cmp3, %cmp4
+  %and2 = or i1 %or1, %and1
+  ret i1 %and2
+}
+
+define i1 @test121(float %arg1, float %arg2, float %arg3, float %arg4, float %C1, float %C2, float %C3, float %C4, float %C) #0 {
+; CHECK-LABEL: test121:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_dual_add_f32 v0, v0, v4 :: v_dual_add_f32 v1, v1, v5
+; CHECK-NEXT:    v_dual_add_f32 v2, v2, v6 :: v_dual_add_f32 v3, v3, v7
+; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s0, v1, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s1, v2, v8
+; CHECK-NEXT:    v_cmp_lt_f32_e64 s2, v3, v8
+; CHECK-NEXT:    s_and_b32 s0, vcc_lo, s0
+; CHECK-NEXT:    s_and_b32 s1, s1, s2
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %add1 = fadd nnan float %arg1, %C1
+  %add2 = fadd nnan float %arg2, %C2
+  %add3 = fadd nnan float %arg3, %C3
+  %add4 = fadd nnan float %arg4, %C4
+  %cmp1 = fcmp nnan ult float %add1, %C
+  %cmp2 = fcmp nnan ult float %add2, %C
+  %cmp3 = fcmp nnan ult float %add3, %C
+  %cmp4 = fcmp nnan ult float %add4, %C
+  %or1 = and i1 %cmp1, %cmp2
+  %and1 = and i1 %cmp3, %cmp4
+  %and2 = or i1 %or1, %and1
+  ret i1 %and2
+}
+
 ; The optimization does not apply to the following tests.
 
-define i1 @test92(i32 %arg1, i64 %arg2) {
-; CHECK-LABEL: test92:
+define i1 @test122(i32 %arg1, i64 %arg2) {
+; CHECK-LABEL: test122:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_mov_b64 s[0:1], 0x3e8
@@ -1513,8 +2334,8 @@ define i1 @test92(i32 %arg1, i64 %arg2) {
   ret i1 %or
 }
 
-define i1 @test93(i32 %arg1, i32 %arg2) {
-; CHECK-LABEL: test93:
+define i1 @test123(i32 %arg1, i32 %arg2) {
+; CHECK-LABEL: test123:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0x3e8, v0
@@ -1528,8 +2349,8 @@ define i1 @test93(i32 %arg1, i32 %arg2) {
   ret i1 %or
 }
 
-define i1 @test94(i32 %arg1, i32 %arg2) {
-; CHECK-LABEL: test94:
+define i1 @test124(i32 %arg1, i32 %arg2) {
+; CHECK-LABEL: test124:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0x3e8, v0
@@ -1543,8 +2364,8 @@ define i1 @test94(i32 %arg1, i32 %arg2) {
   ret i1 %or
 }
 
-define i1 @test95(i64 %arg1, i64 %arg2, i64 %arg3) {
-; CHECK-LABEL: test95:
+define i1 @test125(i64 %arg1, i64 %arg2, i64 %arg3) {
+; CHECK-LABEL: test125:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_lt_u64_e32 vcc_lo, v[0:1], v[4:5]
@@ -1558,8 +2379,8 @@ define i1 @test95(i64 %arg1, i64 %arg2, i64 %arg3) {
    ret i1 %or
 }
 
-define i1 @test96(i32 %arg1, i32 %arg2, i32 %arg3) {
-; CHECK-LABEL: test96:
+define i1 @test126(i32 %arg1, i32 %arg2, i32 %arg3) {
+; CHECK-LABEL: test126:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
@@ -1573,8 +2394,8 @@ define i1 @test96(i32 %arg1, i32 %arg2, i32 %arg3) {
   ret i1 %or
 }
 
-define i1 @test97(i32 %arg1, i32 %arg2, i32 %arg3) {
-; CHECK-LABEL: test97:
+define i1 @test127(i32 %arg1, i32 %arg2, i32 %arg3) {
+; CHECK-LABEL: test127:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
@@ -1588,8 +2409,8 @@ define i1 @test97(i32 %arg1, i32 %arg2, i32 %arg3) {
   ret i1 %or
 }
 
-define i1 @test98(i32 %arg1, i32 %arg2, i32 %arg3) {
-; CHECK-LABEL: test98:
+define i1 @test128(i32 %arg1, i32 %arg2, i32 %arg3) {
+; CHECK-LABEL: test128:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_le_u32_e32 vcc_lo, v2, v0
@@ -1603,8 +2424,8 @@ define i1 @test98(i32 %arg1, i32 %arg2, i32 %arg3) {
   ret i1 %or
 }
 
-define i1 @test99(i16 %arg1, i32 %arg2) {
-; CHECK-LABEL: test99:
+define i1 @test129(i16 %arg1, i32 %arg2) {
+; CHECK-LABEL: test129:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_gt_u16_e32 vcc_lo, 10, v0
@@ -1618,8 +2439,8 @@ define i1 @test99(i16 %arg1, i32 %arg2) {
   ret i1 %or
 }
 
-define i1 @test100(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4) {
-; CHECK-LABEL: test100:
+define i1 @test130(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4) {
+; CHECK-LABEL: test130:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v2
@@ -1639,8 +2460,8 @@ define i1 @test100(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4) {
   ret i1 %or3
 }
 
-define i1 @test101(i32 %arg1, i32 %arg2) {
-; CHECK-LABEL: test101:
+define i1 @test131(i32 %arg1, i32 %arg2) {
+; CHECK-LABEL: test131:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 0x64, v0
@@ -1654,8 +2475,8 @@ define i1 @test101(i32 %arg1, i32 %arg2) {
   ret i1 %or
 }
 
-define i1 @test102(float %arg1, float %arg2, float %arg3) #0 {
-; CHECK-LABEL: test102:
+define i1 @test132(float %arg1, float %arg2, float %arg3) #0 {
+; CHECK-LABEL: test132:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
@@ -1669,8 +2490,8 @@ define i1 @test102(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test103(float %arg1, float %arg2, float %arg3) #0 {
-; CHECK-LABEL: test103:
+define i1 @test133(float %arg1, float %arg2, float %arg3) #0 {
+; CHECK-LABEL: test133:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_nge_f32_e32 vcc_lo, v0, v2
@@ -1684,8 +2505,8 @@ define i1 @test103(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test104(double %arg1, double %arg2, double %arg3) {
-; CHECK-LABEL: test104:
+define i1 @test134(double %arg1, double %arg2, double %arg3) {
+; CHECK-LABEL: test134:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
@@ -1703,8 +2524,8 @@ define i1 @test104(double %arg1, double %arg2, double %arg3) {
   ret i1 %and1
 }
 
-define i1 @test105(float %arg1, float %arg2, float %arg3) {
-; CHECK-LABEL: test105:
+define i1 @test135(float %arg1, float %arg2, float %arg3) {
+; CHECK-LABEL: test135:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
@@ -1721,8 +2542,8 @@ define i1 @test105(float %arg1, float %arg2, float %arg3) {
   ret i1 %or1
 }
 
-define i1 @test106(float %arg1, float %arg2, float %arg3) #0 {
-; CHECK-LABEL: test106:
+define i1 @test136(float %arg1, float %arg2, float %arg3) #0 {
+; CHECK-LABEL: test136:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_lt_f32_e32 vcc_lo, v0, v2
@@ -1736,8 +2557,8 @@ define i1 @test106(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test107(double %arg1, double %arg2, double %arg3) #0 {
-; CHECK-LABEL: test107:
+define i1 @test137(double %arg1, double %arg2, double %arg3) #0 {
+; CHECK-LABEL: test137:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_le_f64_e32 vcc_lo, v[0:1], v[4:5]
@@ -1751,8 +2572,8 @@ define i1 @test107(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test108(double %arg1, double %arg2, double %arg3) #0 {
-; CHECK-LABEL: test108:
+define i1 @test138(double %arg1, double %arg2, double %arg3) #0 {
+; CHECK-LABEL: test138:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_gt_f64_e32 vcc_lo, v[0:1], v[4:5]
@@ -1766,8 +2587,8 @@ define i1 @test108(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test109(float %arg1, float %arg2, float %arg3) #0 {
-; CHECK-LABEL: test109:
+define i1 @test139(float %arg1, float %arg2, float %arg3) #0 {
+; CHECK-LABEL: test139:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_ge_f32_e32 vcc_lo, v0, v2
@@ -1781,8 +2602,8 @@ define i1 @test109(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %and1
 }
 
-define i1 @test110(double %arg1, double %arg2, double %arg3) #0 {
-; CHECK-LABEL: test110:
+define i1 @test140(double %arg1, double %arg2, double %arg3) #0 {
+; CHECK-LABEL: test140:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_nle_f64_e32 vcc_lo, v[0:1], v[4:5]
@@ -1796,8 +2617,8 @@ define i1 @test110(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test111(float %arg1, float %arg2, float %arg3) #0 {
-; CHECK-LABEL: test111:
+define i1 @test141(float %arg1, float %arg2, float %arg3) #0 {
+; CHECK-LABEL: test141:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_nlt_f32_e32 vcc_lo, v0, v2
@@ -1811,8 +2632,8 @@ define i1 @test111(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test112(float %arg1, float %arg2, float %arg3) #0 {
-; CHECK-LABEL: test112:
+define i1 @test142(float %arg1, float %arg2, float %arg3) #0 {
+; CHECK-LABEL: test142:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_ngt_f32_e32 vcc_lo, v0, v2
@@ -1826,8 +2647,8 @@ define i1 @test112(float %arg1, float %arg2, float %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test113(double %arg1, double %arg2, double %arg3) #0 {
-; CHECK-LABEL: test113:
+define i1 @test143(double %arg1, double %arg2, double %arg3) #0 {
+; CHECK-LABEL: test143:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_cmp_nge_f64_e32 vcc_lo, v[0:1], v[4:5]
@@ -1841,8 +2662,8 @@ define i1 @test113(double %arg1, double %arg2, double %arg3) #0 {
   ret i1 %or1
 }
 
-define i1 @test114(float %arg1, float %arg2, float %arg3) {
-; CHECK-LABEL: test114:
+define i1 @test144(float %arg1, float %arg2, float %arg3) {
+; CHECK-LABEL: test144:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
@@ -1859,8 +2680,8 @@ define i1 @test114(float %arg1, float %arg2, float %arg3) {
   ret i1 %and1
 }
 
-define i1 @test115(double %arg1, double %arg2, double %arg3) {
-; CHECK-LABEL: test115:
+define i1 @test145(double %arg1, double %arg2, double %arg3) {
+; CHECK-LABEL: test145:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
@@ -1878,8 +2699,8 @@ define i1 @test115(double %arg1, double %arg2, double %arg3) {
   ret i1 %and1
 }
 
-define i1 @test116(double %arg1, double %arg2, double %arg3) {
-; CHECK-LABEL: test116:
+define i1 @test146(double %arg1, double %arg2, double %arg3) {
+; CHECK-LABEL: test146:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
@@ -1897,8 +2718,8 @@ define i1 @test116(double %arg1, double %arg2, double %arg3) {
   ret i1 %and1
 }
 
-define i1 @test117(float %arg1, float %arg2, float %arg3) {
-; CHECK-LABEL: test117:
+define i1 @test147(float %arg1, float %arg2, float %arg3) {
+; CHECK-LABEL: test147:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
@@ -1915,8 +2736,8 @@ define i1 @test117(float %arg1, float %arg2, float %arg3) {
   ret i1 %and1
 }
 
-define i1 @test118(double %arg1, double %arg2, double %arg3) {
-; CHECK-LABEL: test118:
+define i1 @test148(double %arg1, double %arg2, double %arg3) {
+; CHECK-LABEL: test148:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
@@ -1934,8 +2755,8 @@ define i1 @test118(double %arg1, double %arg2, double %arg3) {
   ret i1 %or1
 }
 
-define i1 @test119(float %arg1, float %arg2, float %arg3) {
-; CHECK-LABEL: test119:
+define i1 @test149(float %arg1, float %arg2, float %arg3) {
+; CHECK-LABEL: test149:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
@@ -1952,8 +2773,8 @@ define i1 @test119(float %arg1, float %arg2, float %arg3) {
   ret i1 %or1
 }
 
-define i1 @test120(float %arg1, float %arg2, float %arg3) {
-; CHECK-LABEL: test120:
+define i1 @test150(float %arg1, float %arg2, float %arg3) {
+; CHECK-LABEL: test150:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_dual_max_f32 v0, v0, v0 :: v_dual_max_f32 v1, v1, v1
@@ -1970,8 +2791,8 @@ define i1 @test120(float %arg1, float %arg2, float %arg3) {
   ret i1 %or1
 }
 
-define i1 @test121(double %arg1, double %arg2, double %arg3) {
-; CHECK-LABEL: test121:
+define i1 @test151(double %arg1, double %arg2, double %arg3) {
+; CHECK-LABEL: test151:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_max_f64 v[0:1], v[0:1], v[0:1]
