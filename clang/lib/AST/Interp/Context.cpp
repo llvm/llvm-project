@@ -102,7 +102,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
     case 8:
       return PT_Sint8;
     default:
-      return {};
+      return std::nullopt;
     }
   }
 
@@ -117,7 +117,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
     case 8:
       return PT_Uint8;
     default:
-      return {};
+      return std::nullopt;
     }
   }
 
@@ -143,7 +143,7 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (const auto *DT = dyn_cast<MemberPointerType>(T))
     return classify(DT->getPointeeType());
 
-  return {};
+  return std::nullopt;
 }
 
 unsigned Context::getCharBit() const {
