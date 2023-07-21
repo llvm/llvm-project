@@ -278,8 +278,9 @@ mlir::Value HlfirTransposeLowering::lowerImpl(
   mlir::Type elementType = array.getEleTy();
   resultShape.push_back(arrayShape[0]);
   resultShape.push_back(arrayShape[1]);
-  mlir::Type resultTy = hlfir::ExprType::get(
-      builder.getContext(), resultShape, elementType, /*polymorphic=*/false);
+  mlir::Type resultTy =
+      hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
+                           fir::isPolymorphicType(stmtResultType));
   return createOp<hlfir::TransposeOp>(resultTy, operands[0]);
 }
 
