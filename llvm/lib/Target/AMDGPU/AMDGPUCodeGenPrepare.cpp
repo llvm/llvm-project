@@ -902,8 +902,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithRsq(
   if (!CLHS)
     return nullptr;
 
-  Type *Ty = Den->getType();
-  assert(Ty->isFloatTy());
+  assert(Den->getType()->isFloatTy());
 
   bool IsNegative = false;
 
@@ -940,8 +939,7 @@ AMDGPUCodeGenPrepareImpl::optimizeWithRcp(IRBuilder<> &Builder, Value *Num,
   // rcp_f16 is accurate to 0.51 ulp.
   // rcp_f32 is accurate for !fpmath >= 1.0ulp and denormals are flushed.
   // rcp_f64 is never accurate.
-  Type *Ty = Den->getType();
-  assert(Ty->isFloatTy());
+  assert(Den->getType()->isFloatTy());
 
   if (const ConstantFP *CLHS = dyn_cast<ConstantFP>(Num)) {
     bool IsNegative = false;
