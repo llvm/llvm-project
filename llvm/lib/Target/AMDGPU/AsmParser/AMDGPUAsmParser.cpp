@@ -280,6 +280,10 @@ public:
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::i16);
   }
 
+  bool isRegOrImmWithIntT16InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::i16);
+  }
+
   bool isRegOrImmWithInt32InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::i32);
   }
@@ -298,6 +302,10 @@ public:
 
   bool isRegOrImmWithFP16InputMods() const {
     return isRegOrImmWithInputMods(AMDGPU::VS_32RegClassID, MVT::f16);
+  }
+
+  bool isRegOrImmWithFPT16InputMods() const {
+    return isRegOrImmWithInputMods(AMDGPU::VS_16RegClassID, MVT::f16);
   }
 
   bool isRegOrImmWithFP32InputMods() const {
@@ -539,7 +547,15 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::i64);
   }
 
+  bool isVCSrcTB16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::i16);
+  }
+
   bool isVCSrcTB16_Lo128() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16_Lo128RegClassID, MVT::i16);
+  }
+
+  bool isVCSrcFake16B16_Lo128() const {
     return isRegOrInlineNoMods(AMDGPU::VS_32_Lo128RegClassID, MVT::i16);
   }
 
@@ -559,7 +575,15 @@ public:
     return isRegOrInlineNoMods(AMDGPU::VS_64RegClassID, MVT::f64);
   }
 
+  bool isVCSrcTF16() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16RegClassID, MVT::f16);
+  }
+
   bool isVCSrcTF16_Lo128() const {
+    return isRegOrInlineNoMods(AMDGPU::VS_16_Lo128RegClassID, MVT::f16);
+  }
+
+  bool isVCSrcFake16F16_Lo128() const {
     return isRegOrInlineNoMods(AMDGPU::VS_32_Lo128RegClassID, MVT::f16);
   }
 
@@ -579,8 +603,14 @@ public:
     return isVCSrcF64() || isLiteralImm(MVT::i64);
   }
 
+  bool isVSrcTB16() const { return isVCSrcTB16() || isLiteralImm(MVT::i16); }
+
   bool isVSrcTB16_Lo128() const {
     return isVCSrcTB16_Lo128() || isLiteralImm(MVT::i16);
+  }
+
+  bool isVSrcFake16B16_Lo128() const {
+    return isVCSrcFake16B16_Lo128() || isLiteralImm(MVT::i16);
   }
 
   bool isVSrcB16() const {
@@ -615,8 +645,14 @@ public:
     return isVCSrcF64() || isLiteralImm(MVT::f64);
   }
 
+  bool isVSrcTF16() const { return isVCSrcTF16() || isLiteralImm(MVT::f16); }
+
   bool isVSrcTF16_Lo128() const {
     return isVCSrcTF16_Lo128() || isLiteralImm(MVT::f16);
+  }
+
+  bool isVSrcFake16F16_Lo128() const {
+    return isVCSrcFake16F16_Lo128() || isLiteralImm(MVT::f16);
   }
 
   bool isVSrcF16() const {
