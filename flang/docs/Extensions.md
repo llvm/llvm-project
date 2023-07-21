@@ -289,6 +289,8 @@ end
   fixed form source by a '0' in column 6, can contain spaces
   between the letters of the word INCLUDE, and can have a
   numeric character literal kind prefix on the file name.
+* Intrinsic procedures TAND and ATAND. Constant folding is currently
+  not supported for these procedures but this is planned.
 
 ### Extensions supported when enabled by options
 

@@ -30,6 +30,14 @@
 #elif !defined(_LIBCPP_HAS_NO_THREADS)
 
 #if defined(_LIBCPP_HAS_THREAD_API_PTHREAD)
+// Some platforms require <bits/atomic_wide_counter.h> in order for
+// PTHREAD_COND_INITIALIZER to be expanded. Normally that would come
+// in via <pthread.h>, but it's a non-modular header on those platforms,
+// so libc++'s <math.h> usually absorbs atomic_wide_counter.h into the
+// module with <math.h> and makes atomic_wide_counter.h invisible.
+// Include <math.h> here to work around that.
+# include <math.h>
+
 # include <pthread.h>
 # include <sched.h>
 #elif defined(_LIBCPP_HAS_THREAD_API_C11)

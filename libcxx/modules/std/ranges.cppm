@@ -95,7 +95,7 @@ export namespace std {
     using std::ranges::borrowed_subrange_t;
 
     // [range.utility.conv], range conversions
-    // using std::ranges::to;
+    using std::ranges::to;
 
     // [range.empty], empty view
     using std::ranges::empty_view;
@@ -119,13 +119,12 @@ export namespace std {
     } // namespace views
 
     // [range.repeat], repeat view
-#if 0
     using std::ranges::repeat_view;
 
     namespace views {
       using std::ranges::views::repeat;
     } // namespace views
-#endif
+
 #ifndef _LIBCPP_HAS_NO_LOCALIZATION
     // [range.istream], istream view
     using std::ranges::basic_istream_view;

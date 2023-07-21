@@ -1,6 +1,7 @@
-! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-FAST"
+! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-PRECISE"
 ! RUN: bbc --math-runtime=precise -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
 ! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s
+! RUN: %flang_fc1 -fapprox-func -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-FAST"
 
 ! CHECK-LABEL: tan_testr
 subroutine tan_testr(a, b)

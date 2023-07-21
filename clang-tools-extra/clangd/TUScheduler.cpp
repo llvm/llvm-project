@@ -54,7 +54,7 @@
 #include "GlobalCompilationDatabase.h"
 #include "ParsedAST.h"
 #include "Preamble.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "support/Cancellation.h"
 #include "support/Context.h"
 #include "support/Logger.h"
@@ -1080,9 +1080,9 @@ void PreambleThread::build(Request Req) {
   LatestBuild = clang::clangd::buildPreamble(
       FileName, *Req.CI, Inputs, StoreInMemory,
       [&](CapturedASTCtx ASTCtx,
-          std::shared_ptr<const CanonicalIncludes> CanonIncludes) {
+          std::shared_ptr<const include_cleaner::PragmaIncludes> PI) {
         Callbacks.onPreambleAST(FileName, Inputs.Version, std::move(ASTCtx),
-                                CanonIncludes);
+                                std::move(PI));
       },
       &Stats);
   if (!LatestBuild)

@@ -356,54 +356,54 @@ TEST(ParseArchString,
      RejectsExperimentalExtensionsIfNotEnableExperimentalExtension) {
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv64izihintntl", false).takeError()),
+          RISCVISAInfo::parseArchString("rv64izicond", false).takeError()),
       "requires '-menable-experimental-extensions' for experimental extension "
-      "'zihintntl'");
+      "'zicond'");
 }
 
 TEST(ParseArchString,
      AcceptsExperimentalExtensionsIfEnableExperimentalExtension) {
-  // Note: If zihintntl becomes none-experimental, this test will need
+  // Note: If zicond becomes none-experimental, this test will need
   // updating (and unfortunately, it will still pass). The failure of
   // RejectsExperimentalExtensionsIfNotEnableExperimentalExtension will
   // hopefully serve as a reminder to update.
   auto MaybeISAInfo =
-      RISCVISAInfo::parseArchString("rv64izihintntl", true, false);
+      RISCVISAInfo::parseArchString("rv64izicond", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
-  EXPECT_EQ(Exts.count("zihintntl"), 1U);
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izihintntl0p2", true);
+  EXPECT_EQ(Exts.count("zicond"), 1U);
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izicond1p0", true);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   RISCVISAInfo::OrderedExtensionMap Exts2 = (*MaybeISAInfo2)->getExtensions();
   EXPECT_EQ(Exts2.size(), 2UL);
-  EXPECT_EQ(Exts2.count("zihintntl"), 1U);
+  EXPECT_EQ(Exts2.count("zicond"), 1U);
 }
 
 TEST(ParseArchString,
      RequiresExplicitVersionNumberForExperimentalExtensionByDefault) {
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv64izihintntl", true).takeError()),
-      "experimental extension requires explicit version number `zihintntl`");
+          RISCVISAInfo::parseArchString("rv64izicond", true).takeError()),
+      "experimental extension requires explicit version number `zicond`");
 }
 
 TEST(ParseArchString,
      AcceptsUnrecognizedVersionIfNotExperimentalExtensionVersionCheck) {
   auto MaybeISAInfo =
-      RISCVISAInfo::parseArchString("rv64izihintntl9p9", true, false);
+      RISCVISAInfo::parseArchString("rv64izicond9p9", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   RISCVISAInfo::OrderedExtensionMap Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
-  EXPECT_TRUE(Exts.at("zihintntl") == (RISCVExtensionInfo{9, 9}));
+  EXPECT_TRUE(Exts.at("zicond") == (RISCVExtensionInfo{9, 9}));
 }
 
 TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
   EXPECT_EQ(
       toString(
-          RISCVISAInfo::parseArchString("rv64izihintntl9p9", true).takeError()),
-      "unsupported version number 9.9 for experimental extension 'zihintntl' "
-      "(this compiler supports 0.2)");
+          RISCVISAInfo::parseArchString("rv64izicond9p9", true).takeError()),
+      "unsupported version number 9.9 for experimental extension 'zicond' "
+      "(this compiler supports 1.0)");
 }
 
 TEST(ParseArchString, RejectsExtensionVersionForG) {
@@ -478,16 +478,16 @@ TEST(ParseArchString, RejectsConflictingExtensions) {
 
 TEST(ToFeatureVector, IIsDroppedAndExperimentalExtensionsArePrefixed) {
   auto MaybeISAInfo1 =
-      RISCVISAInfo::parseArchString("rv64im_zihintntl", true, false);
+      RISCVISAInfo::parseArchString("rv64im_zicond", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
   EXPECT_THAT((*MaybeISAInfo1)->toFeatureVector(),
-              ElementsAre("+m", "+experimental-zihintntl"));
+              ElementsAre("+m", "+experimental-zicond"));
 
   auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
-      "rv32e_zihintntl_xventanacondops", true, false);
+      "rv32e_zicond_xventanacondops", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   EXPECT_THAT((*MaybeISAInfo2)->toFeatureVector(),
-              ElementsAre("+e", "+experimental-zihintntl", "+xventanacondops"));
+              ElementsAre("+e", "+experimental-zicond", "+xventanacondops"));
 }
 
 TEST(ToFeatureVector, UnsupportedExtensionsAreDropped) {

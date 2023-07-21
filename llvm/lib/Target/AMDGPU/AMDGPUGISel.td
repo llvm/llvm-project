@@ -31,6 +31,10 @@ def gi_vop3mods :
     GIComplexOperandMatcher<s32, "selectVOP3Mods">,
     GIComplexPatternEquiv<VOP3Mods>;
 
+def gi_vop3modsnoncanonicalizing :
+    GIComplexOperandMatcher<s32, "selectVOP3ModsNonCanonicalizing">,
+    GIComplexPatternEquiv<VOP3ModsNonCanonicalizing>;
+
 def gi_vop3_no_mods :
     GIComplexOperandMatcher<s32, "selectVOP3NoMods">,
     GIComplexPatternEquiv<VOP3NoMods>;

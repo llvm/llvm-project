@@ -82,7 +82,7 @@ class RVInstVCCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = OPC_CUSTOM_2.Value;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Uses = [VTYPE, VL];
   let RVVConstraint = NoConstraint;
@@ -105,7 +105,7 @@ class RVInstVCFCustom2<bits<4> funct6_hi4, bits<3> funct3, dag outs, dag ins,
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = OPC_CUSTOM_2.Value;
+  let Inst{6-0} = OPC_CUSTOM_2.Value;
 
   let Uses = [VTYPE, VL];
   let RVVConstraint = NoConstraint;

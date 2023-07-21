@@ -135,23 +135,22 @@ add_libc_unittest(
     libc.src.stdio.snprintf
 )
 
-# In fullbuild mode, fprintf's tests use the internal FILE for other functions.
-if(LLVM_LIBC_FULL_BUILD)
-add_libc_unittest(
-  fprintf_test
-  SUITE
-    libc_stdio_unittests
-  SRCS
-    fprintf_test.cpp
-  DEPENDS
-    libc.src.stdio.fprintf
-    libc.src.stdio.fclose
-    libc.src.stdio.ferror
-    libc.src.stdio.fopen
-    libc.src.stdio.fread
+list(APPEND fprintf_test_deps
+      libc.src.stdio.fprintf
 )
+if(LLVM_LIBC_FULL_BUILD)
+# In fullbuild mode, fprintf's tests use the internal FILE for other functions.
+ list(APPEND fprintf_test_deps
+      libc.src.stdio.fclose
+      libc.src.stdio.ferror
+      libc.src.stdio.fopen
+      libc.src.stdio.fread
+  )
 else()
 # Else in overlay mode they use the system's FILE.
+ set(fprintf_test_copts "-DLIBC_COPT_PRINTF_USE_SYSTEM_FILE")
+endif()
+
 add_libc_unittest(
   fprintf_test
   SUITE
@@ -159,11 +158,10 @@ add_libc_unittest(
   SRCS
     fprintf_test.cpp
   DEPENDS
-    libc.src.stdio.fprintf
+    ${fprintf_test_deps}
   COMPILE_OPTIONS
-    -DLIBC_COPT_PRINTF_USE_SYSTEM_FILE
+    ${fprintf_test_copts}
 )
-endif()
 
 add_libc_unittest(
   printf_test

@@ -124,21 +124,6 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
   return success();
 }
 
-/// Constructs branch weights metadata if the provided `weights` hold a value,
-/// otherwise returns nullptr.
-static llvm::MDNode *
-convertBranchWeights(std::optional<ElementsAttr> weights,
-                     LLVM::ModuleTranslation &moduleTranslation) {
-  if (!weights)
-    return nullptr;
-  SmallVector<uint32_t> weightValues;
-  weightValues.reserve(weights->size());
-  for (APInt weight : llvm::cast<DenseIntElementsAttr>(*weights))
-    weightValues.push_back(weight.getLimitedValue());
-  return llvm::MDBuilder(moduleTranslation.getLLVMContext())
-      .createBranchWeights(weightValues);
-}
-
 static LogicalResult
 convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
@@ -182,10 +167,6 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                                                       callOp.getArgOperands()),
                                 operandsRef.front(), operandsRef.drop_front());
     }
-    llvm::MDNode *branchWeights =
-        convertBranchWeights(callOp.getBranchWeights(), moduleTranslation);
-    if (branchWeights)
-      call->setMetadata(llvm::LLVMContext::MD_prof, branchWeights);
     moduleTranslation.setAccessGroupsMetadata(callOp, call);
     moduleTranslation.setAliasScopeMetadata(callOp, call);
     moduleTranslation.setTBAAMetadata(callOp, call);
@@ -196,7 +177,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       return success();
     }
     // Check that LLVM call returns void for 0-result functions.
-    return success(call->getType()->isVoidTy());
+    if (!call->getType()->isVoidTy())
+      return failure();
+    moduleTranslation.mapCall(callOp, call);
+    return success();
   }
 
   if (auto inlineAsmOp = dyn_cast<LLVM::InlineAsmOp>(opInst)) {
@@ -274,10 +258,6 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           moduleTranslation.lookupBlock(invOp.getSuccessor(1)),
           operandsRef.drop_front());
     }
-    llvm::MDNode *branchWeights =
-        convertBranchWeights(invOp.getBranchWeights(), moduleTranslation);
-    if (branchWeights)
-      result->setMetadata(llvm::LLVMContext::MD_prof, branchWeights);
     moduleTranslation.mapBranch(invOp, result);
     // InvokeOp can only have 0 or 1 result
     if (invOp->getNumResults() != 0) {
@@ -314,23 +294,19 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
     return success();
   }
   if (auto condbrOp = dyn_cast<LLVM::CondBrOp>(opInst)) {
-    llvm::MDNode *branchWeights =
-        convertBranchWeights(condbrOp.getBranchWeights(), moduleTranslation);
     llvm::BranchInst *branch = builder.CreateCondBr(
         moduleTranslation.lookupValue(condbrOp.getOperand(0)),
         moduleTranslation.lookupBlock(condbrOp.getSuccessor(0)),
-        moduleTranslation.lookupBlock(condbrOp.getSuccessor(1)), branchWeights);
+        moduleTranslation.lookupBlock(condbrOp.getSuccessor(1)));
     moduleTranslation.mapBranch(&opInst, branch);
     moduleTranslation.setLoopMetadata(&opInst, branch);
     return success();
   }
   if (auto switchOp = dyn_cast<LLVM::SwitchOp>(opInst)) {
-    llvm::MDNode *branchWeights =
-        convertBranchWeights(switchOp.getBranchWeights(), moduleTranslation);
     llvm::SwitchInst *switchInst = builder.CreateSwitch(
         moduleTranslation.lookupValue(switchOp.getValue()),
         moduleTranslation.lookupBlock(switchOp.getDefaultDestination()),
-        switchOp.getCaseDestinations().size(), branchWeights);
+        switchOp.getCaseDestinations().size());
 
     auto *ty = llvm::cast<llvm::IntegerType>(
         moduleTranslation.convertType(switchOp.getValue().getType()));

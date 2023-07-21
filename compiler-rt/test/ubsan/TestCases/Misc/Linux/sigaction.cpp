@@ -11,7 +11,7 @@
 #include <signal.h>
 #include <stdio.h>
 
-__attribute__((constructor(0))) void ctor() {
+__attribute__((constructor(1))) void ctor() {
   fprintf(stderr, "INIT\n");
   struct sigaction old;
   assert(!sigaction(SIGSEGV, nullptr, &old));

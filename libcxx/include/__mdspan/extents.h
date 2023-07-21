@@ -197,17 +197,17 @@ public:
 
   // access functions
   _LIBCPP_HIDE_FROM_ABI static constexpr _TStatic __static_value(size_t __i) noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__i < __size_, "extents access: index must be less than rank");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i < __size_, "extents access: index must be less than rank");
     return _StaticValues::__get(__i);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _TDynamic __value(size_t __i) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__i < __size_, "extents access: index must be less than rank");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i < __size_, "extents access: index must be less than rank");
     _TStatic __static_val = _StaticValues::__get(__i);
     return __static_val == _DynTag ? __dyn_vals_[_DynamicIdxMap::__get(__i)] : static_cast<_TDynamic>(__static_val);
   }
   _LIBCPP_HIDE_FROM_ABI constexpr _TDynamic operator[](size_t __i) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__i < __size_, "extents access: index must be less than rank");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__i < __size_, "extents access: index must be less than rank");
     return __value(__i);
   }
 

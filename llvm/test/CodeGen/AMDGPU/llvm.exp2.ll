@@ -2717,6 +2717,110 @@ define <3 x half> @v_exp2_v3f16_afn(<3 x half> %in) {
   ret <3 x half> %result
 }
 
+define float @v_exp2_f32_contract(float %in) {
+; GCN-SDAG-LABEL: v_exp2_f32_contract:
+; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GCN-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
+; GCN-SDAG-NEXT:    v_exp_f32_e32 v0, v0
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v1, 0x1f800000
+; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
+; GCN-SDAG-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-GISEL-LABEL: v_exp2_f32_contract:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
+; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
+; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
+; GCN-GISEL-NEXT:    v_exp_f32_e32 v0, v0
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0x1f800000
+; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
+; GCN-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; R600-LABEL: v_exp2_f32_contract:
+; R600:       ; %bb.0:
+; R600-NEXT:    CF_END
+; R600-NEXT:    PAD
+;
+; CM-LABEL: v_exp2_f32_contract:
+; CM:       ; %bb.0:
+; CM-NEXT:    CF_END
+; CM-NEXT:    PAD
+  %result = call contract float @llvm.exp2.f32(float %in)
+  ret float %result
+}
+
+define float @v_exp2_f32_contract_daz(float %in) #0 {
+; GCN-LABEL: v_exp2_f32_contract_daz:
+; GCN:       ; %bb.0:
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    v_exp_f32_e32 v0, v0
+; GCN-NEXT:    s_setpc_b64 s[30:31]
+;
+; R600-LABEL: v_exp2_f32_contract_daz:
+; R600:       ; %bb.0:
+; R600-NEXT:    CF_END
+; R600-NEXT:    PAD
+;
+; CM-LABEL: v_exp2_f32_contract_daz:
+; CM:       ; %bb.0:
+; CM-NEXT:    CF_END
+; CM-NEXT:    PAD
+  %result = call contract float @llvm.exp2.f32(float %in)
+  ret float %result
+}
+
+define float @v_exp2_f32_contract_nnan_ninf(float %in) {
+; GCN-SDAG-LABEL: v_exp2_f32_contract_nnan_ninf:
+; GCN-SDAG:       ; %bb.0:
+; GCN-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-SDAG-NEXT:    s_mov_b32 s4, 0xc2fc0000
+; GCN-SDAG-NEXT:    v_cmp_gt_f32_e32 vcc, s4, v0
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
+; GCN-SDAG-NEXT:    v_add_f32_e32 v0, v0, v2
+; GCN-SDAG-NEXT:    v_exp_f32_e32 v0, v0
+; GCN-SDAG-NEXT:    v_mov_b32_e32 v1, 0x1f800000
+; GCN-SDAG-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
+; GCN-SDAG-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-SDAG-NEXT:    s_setpc_b64 s[30:31]
+;
+; GCN-GISEL-LABEL: v_exp2_f32_contract_nnan_ninf:
+; GCN-GISEL:       ; %bb.0:
+; GCN-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0xc2fc0000
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v2, 0x42800000
+; GCN-GISEL-NEXT:    v_cmp_lt_f32_e32 vcc, v0, v1
+; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 0, v2, vcc
+; GCN-GISEL-NEXT:    v_add_f32_e32 v0, v0, v1
+; GCN-GISEL-NEXT:    v_exp_f32_e32 v0, v0
+; GCN-GISEL-NEXT:    v_mov_b32_e32 v1, 0x1f800000
+; GCN-GISEL-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
+; GCN-GISEL-NEXT:    v_mul_f32_e32 v0, v0, v1
+; GCN-GISEL-NEXT:    s_setpc_b64 s[30:31]
+;
+; R600-LABEL: v_exp2_f32_contract_nnan_ninf:
+; R600:       ; %bb.0:
+; R600-NEXT:    CF_END
+; R600-NEXT:    PAD
+;
+; CM-LABEL: v_exp2_f32_contract_nnan_ninf:
+; CM:       ; %bb.0:
+; CM-NEXT:    CF_END
+; CM-NEXT:    PAD
+  %result = call contract nnan ninf float @llvm.exp2.f32(float %in)
+  ret float %result
+}
+
 declare float @llvm.fabs.f32(float) #2
 declare float @llvm.exp2.f32(float) #2
 declare <2 x float> @llvm.exp2.v2f32(<2 x float>) #2

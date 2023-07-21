@@ -349,6 +349,26 @@
 // AVXNECONVERT: "-target-feature" "+avxneconvert"
 // NO-AVXNECONVERT: "-target-feature" "-avxneconvert"
 
+// RUN: %clang --target=i386 -msha512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SHA512 %s
+// RUN: %clang --target=i386 -mno-sha512 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SHA512 %s
+// SHA512: "-target-feature" "+sha512"
+// NO-SHA512: "-target-feature" "-sha512"
+
+// RUN: %clang --target=i386 -msm3 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SM3 %s
+// RUN: %clang --target=i386 -mno-sm3 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SM3 %s
+// SM3: "-target-feature" "+sm3"
+// NO-SM3: "-target-feature" "-sm3"
+
+// RUN: %clang --target=i386 -msm4 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=SM4 %s
+// RUN: %clang --target=i386 -mno-sm4 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SM4 %s
+// SM4: "-target-feature" "+sm4"
+// NO-SM4: "-target-feature" "-sm4"
+
+// RUN: %clang --target=i386 -mavxvnniint16 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=AVXVNNIINT16 %s
+// RUN: %clang --target=i386 -mno-avxvnniint16 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-AVXVNNIINT16 %s
+// AVXVNNIINT16: "-target-feature" "+avxvnniint16"
+// NO-AVXVNNIINT16: "-target-feature" "-avxvnniint16"
+
 // RUN: %clang --target=i386 -march=i386 -mcrc32 %s -### 2>&1 | FileCheck -check-prefix=CRC32 %s
 // RUN: %clang --target=i386 -march=i386 -mno-crc32 %s -### 2>&1 | FileCheck -check-prefix=NO-CRC32 %s
 // CRC32: "-target-feature" "+crc32"

@@ -86,11 +86,11 @@ foreach Ext = DExts in {
   }
 
   let SchedRW = [WriteFAdd64, ReadFAdd64, ReadFAdd64] in {
-    defm FADD_D : FPALU_rr_frm_m<0b0000001, "fadd.d", Ext, /*Commutable*/1>;
+    defm FADD_D : FPALU_rr_frm_m<0b0000001, "fadd.d", Ext, Commutable=1>;
     defm FSUB_D : FPALU_rr_frm_m<0b0000101, "fsub.d", Ext>;
   }
   let SchedRW = [WriteFMul64, ReadFMul64, ReadFMul64] in
-  defm FMUL_D : FPALU_rr_frm_m<0b0001001, "fmul.d", Ext, /*Commutable*/1>;
+  defm FMUL_D : FPALU_rr_frm_m<0b0001001, "fmul.d", Ext, Commutable=1>;
 
   let SchedRW = [WriteFDiv64, ReadFDiv64, ReadFDiv64] in
   defm FDIV_D : FPALU_rr_frm_m<0b0001101, "fdiv.d", Ext>;
@@ -107,8 +107,8 @@ foreach Ext = DExts in {
   }
 
   let SchedRW = [WriteFMinMax64, ReadFMinMax64, ReadFMinMax64] in {
-    defm FMIN_D   : FPALU_rr_m<0b0010101, 0b000, "fmin.d", Ext, /*Commutable*/1>;
-    defm FMAX_D   : FPALU_rr_m<0b0010101, 0b001, "fmax.d", Ext, /*Commutable*/1>;
+    defm FMIN_D   : FPALU_rr_m<0b0010101, 0b000, "fmin.d", Ext, Commutable=1>;
+    defm FMAX_D   : FPALU_rr_m<0b0010101, 0b001, "fmax.d", Ext, Commutable=1>;
   }
 
   defm FCVT_S_D : FPUnaryOp_r_frm_m<0b0100000, 0b00001, Ext, Ext.F32Ty,
@@ -120,7 +120,7 @@ foreach Ext = DExts in {
                   Sched<[WriteFCvtF32ToF64, ReadFCvtF32ToF64]>;
 
   let SchedRW = [WriteFCmp64, ReadFCmp64, ReadFCmp64] in {
-    defm FEQ_D : FPCmp_rr_m<0b1010001, 0b010, "feq.d", Ext, /*Commutable*/1>;
+    defm FEQ_D : FPCmp_rr_m<0b1010001, 0b010, "feq.d", Ext, Commutable=1>;
     defm FLT_D : FPCmp_rr_m<0b1010001, 0b001, "flt.d", Ext>;
     defm FLE_D : FPCmp_rr_m<0b1010001, 0b000, "fle.d", Ext>;
   }

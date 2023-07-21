@@ -41,21 +41,15 @@ function test_complex4(c)
   complex(4) :: c, test_complex4
   test_complex4 = abs(c)
 end function
-
 ! ALL-LABEL: @_QPtest_complex4
-! FAST: {{%[A-Za-z0-9._]+}} = complex.abs {{%[A-Za-z0-9._]+}} : complex<f32>
-! RELAXED: {{%[A-Za-z0-9._]+}} = complex.abs {{%[A-Za-z0-9._]+}} : complex<f32>
-! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @cabsf({{%[A-Za-z0-9._]+}}) {{.*}}: (!fir.complex<4>) -> f32
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @cabsf({{%[A-Za-z0-9._]+}}) {{.*}}: (!fir.complex<4>) -> f32
 
 function test_complex8(c)
   complex(8) :: c, test_complex8
   test_complex8 = abs(c)
 end function
-
 ! ALL-LABEL: @_QPtest_complex8
-! FAST: {{%[A-Za-z0-9._]+}} = complex.abs {{%[A-Za-z0-9._]+}} : complex<f64>
-! RELAXED: {{%[A-Za-z0-9._]+}} = complex.abs {{%[A-Za-z0-9._]+}} : complex<f64>
-! PRECISE: {{%[A-Za-z0-9._]+}} = fir.call @cabs({{%[A-Za-z0-9._]+}}) {{.*}}: (!fir.complex<8>) -> f64
+! ALL: {{%[A-Za-z0-9._]+}} = fir.call @cabs({{%[A-Za-z0-9._]+}}) {{.*}}: (!fir.complex<8>) -> f64
 
 ! PRECISE-DAG: func.func private @fabsf(f32) -> f32 attributes {fir.bindc_name = "fabsf", fir.runtime}
 ! PRECISE-DAG: func.func private @fabs(f64) -> f64 attributes {fir.bindc_name = "fabs", fir.runtime}

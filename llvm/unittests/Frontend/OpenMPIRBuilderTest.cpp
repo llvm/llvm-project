@@ -20,6 +20,7 @@
 #include "llvm/Passes/PassBuilder.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <optional>
 
@@ -5860,15 +5861,57 @@ TEST_F(OpenMPIRBuilderTest, registerTargetGlobalVariable) {
 
   // Metadata generated for the host offload module
   NamedMDNode *OffloadMetadata = M->getNamedMetadata("omp_offload.info");
-  EXPECT_NE(OffloadMetadata, nullptr);
-  if (OffloadMetadata) {
-    EXPECT_EQ(OffloadMetadata->getOperand(0)->getOperand(1).equalsStr(
-                  "test_data_int_0"),
-              true);
-    EXPECT_EQ(OffloadMetadata->getOperand(1)->getOperand(1).equalsStr(
-                  "test_data_int_1_decl_tgt_ref_ptr"),
-              true);
-  }
+  ASSERT_THAT(OffloadMetadata, testing::NotNull());
+  StringRef Nodes[2] = {
+      cast<MDString>(OffloadMetadata->getOperand(0)->getOperand(1))
+          ->getString(),
+      cast<MDString>(OffloadMetadata->getOperand(1)->getOperand(1))
+          ->getString()};
+  EXPECT_THAT(
+      Nodes, testing::UnorderedElementsAre("test_data_int_0",
+                                           "test_data_int_1_decl_tgt_ref_ptr"));
+}
+
+TEST_F(OpenMPIRBuilderTest, createGPUOffloadEntry) {
+  OpenMPIRBuilder OMPBuilder(*M);
+  OMPBuilder.initialize();
+  OpenMPIRBuilderConfig Config(/* IsTargetDevice = */ true,
+                               /* IsGPU = */ true,
+                               /* HasRequiresUnifiedSharedMemory = */ false,
+                               /* OpenMPOffloadMandatory = */ false);
+  OMPBuilder.setConfig(Config);
+
+  FunctionCallee FnTypeAndCallee =
+      M->getOrInsertFunction("test_kernel", Type::getVoidTy(Ctx));
+
+  auto *Fn = cast<Function>(FnTypeAndCallee.getCallee());
+  OMPBuilder.createOffloadEntry(/* ID = */ nullptr, Fn,
+                                /* Size = */ 0,
+                                /* Flags = */ 0, GlobalValue::WeakAnyLinkage);
+
+  // Check nvvm.annotations only created for GPU kernels
+  NamedMDNode *MD = M->getNamedMetadata("nvvm.annotations");
+  EXPECT_NE(MD, nullptr);
+  EXPECT_EQ(MD->getNumOperands(), 1u);
+
+  MDNode *Annotations = MD->getOperand(0);
+  EXPECT_EQ(Annotations->getNumOperands(), 3u);
+
+  Constant *ConstVal =
+      dyn_cast<ConstantAsMetadata>(Annotations->getOperand(0))->getValue();
+  EXPECT_TRUE(isa<Function>(Fn));
+  EXPECT_EQ(ConstVal, cast<Function>(Fn));
+
+  EXPECT_TRUE(Annotations->getOperand(1).equalsStr("kernel"));
+
+  EXPECT_TRUE(mdconst::hasa<ConstantInt>(Annotations->getOperand(2)));
+  APInt IntVal =
+      mdconst::extract<ConstantInt>(Annotations->getOperand(2))->getValue();
+  EXPECT_EQ(IntVal, 1);
+
+  // Check kernel attributes
+  EXPECT_TRUE(Fn->hasFnAttribute("kernel"));
+  EXPECT_TRUE(Fn->hasFnAttribute(Attribute::MustProgress));
 }
 
 } // namespace

@@ -8,6 +8,7 @@
 
 #include "src/stdio/printf.h"
 
+#include "src/__support/File/file.h"
 #include "src/__support/arg_list.h"
 #include "src/stdio/printf_core/vfprintf_internal.h"
 
@@ -15,7 +16,6 @@
 #include <stdio.h>
 
 #ifndef LIBC_COPT_PRINTF_USE_SYSTEM_FILE
-#include "src/__support/File/file.h"
 #define PRINTF_STDOUT __llvm_libc::stdout
 #else // LIBC_COPT_PRINTF_USE_SYSTEM_FILE
 #define PRINTF_STDOUT ::stdout
@@ -30,7 +30,8 @@ LLVM_LIBC_FUNCTION(int, printf, (const char *__restrict format, ...)) {
                                  // and pointer semantics, as well as handling
                                  // destruction automatically.
   va_end(vlist);
-  int ret_val = printf_core::vfprintf_internal(PRINTF_STDOUT, format, args);
+  int ret_val = printf_core::vfprintf_internal(
+      reinterpret_cast<::FILE *>(PRINTF_STDOUT), format, args);
   return ret_val;
 }
 

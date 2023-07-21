@@ -546,7 +546,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
                                 ->getNumElements();
 
         if (SrcIdx < 0)
-          return replaceInstUsesWith(EI, UndefValue::get(EI.getType()));
+          return replaceInstUsesWith(EI, PoisonValue::get(EI.getType()));
         if (SrcIdx < (int)LHSWidth)
           Src = SVI->getOperand(0);
         else {
@@ -1480,10 +1480,10 @@ static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
       }
       ++ValI;
     }
-    // Remaining values are filled with 'undef' values.
+    // Remaining values are filled with 'poison' values.
     for (unsigned I = 0; I < NumElts; ++I) {
       if (!Values[I]) {
-        Values[I] = UndefValue::get(InsElt.getType()->getElementType());
+        Values[I] = PoisonValue::get(InsElt.getType()->getElementType());
         Mask[I] = I;
       }
     }
@@ -1704,7 +1704,7 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
         if (LR.first != &IE && LR.second != &IE) {
           // We now have a shuffle of LHS, RHS, Mask.
           if (LR.second == nullptr)
-            LR.second = UndefValue::get(LR.first->getType());
+            LR.second = PoisonValue::get(LR.first->getType());
           return new ShuffleVectorInst(LR.first, LR.second, Mask);
         }
       }

@@ -813,8 +813,10 @@ template <class LP> void Writer::createLoadCommands() {
     llvm_unreachable("unhandled output file type");
   }
 
-  uuidCommand = make<LCUuid>();
-  in.header->addLoadCommand(uuidCommand);
+  if (config->generateUuid) {
+    uuidCommand = make<LCUuid>();
+    in.header->addLoadCommand(uuidCommand);
+  }
 
   if (useLCBuildVersion(config->platformInfo))
     in.header->addLoadCommand(make<LCBuildVersion>(config->platformInfo));
@@ -1180,24 +1182,21 @@ void Writer::writeUuid() {
   TimeTraceScope timeScope("Computing UUID");
 
   ArrayRef<uint8_t> data{buffer->getBufferStart(), buffer->getBufferEnd()};
-  unsigned chunkCount = parallel::strategy.compute_thread_count() * 10;
-  // Round-up integer division
-  size_t chunkSize = (data.size() + chunkCount - 1) / chunkCount;
-  std::vector<ArrayRef<uint8_t>> chunks = split(data, chunkSize);
+  std::vector<ArrayRef<uint8_t>> chunks = split(data, 1024 * 1024);
   // Leave one slot for filename
   std::vector<uint64_t> hashes(chunks.size() + 1);
   SmallVector<std::shared_future<void>> threadFutures;
   threadFutures.reserve(chunks.size());
   for (size_t i = 0; i < chunks.size(); ++i)
     threadFutures.emplace_back(threadPool.async(
-        [&](size_t j) { hashes[j] = xxHash64(chunks[j]); }, i));
+        [&](size_t j) { hashes[j] = xxh3_64bits(chunks[j]); }, i));
   for (std::shared_future<void> &future : threadFutures)
     future.wait();
   // Append the output filename so that identical binaries with different names
   // don't get the same UUID.
-  hashes[chunks.size()] = xxHash64(sys::path::filename(config->finalOutput));
-  uint64_t digest = xxHash64({reinterpret_cast<uint8_t *>(hashes.data()),
-                              hashes.size() * sizeof(uint64_t)});
+  hashes[chunks.size()] = xxh3_64bits(sys::path::filename(config->finalOutput));
+  uint64_t digest = xxh3_64bits({reinterpret_cast<uint8_t *>(hashes.data()),
+                                 hashes.size() * sizeof(uint64_t)});
   uuidCommand->writeUuid(digest);
 }
 
@@ -1264,7 +1263,8 @@ void Writer::writeOutputFile() {
   writeSections();
   applyOptimizationHints();
   buildFixupChains();
-  writeUuid();
+  if (config->generateUuid)
+    writeUuid();
   writeCodeSignature();
 
   if (auto e = buffer->commit())

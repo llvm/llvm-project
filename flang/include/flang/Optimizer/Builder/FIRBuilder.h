@@ -613,7 +613,9 @@ fir::ExtendedValue arraySectionElementToExtendedValue(
 void genScalarAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
                          const fir::ExtendedValue &rhs,
+                         bool needFinalization = false,
                          bool isTemporaryLHS = false);
+
 /// Assign \p rhs to \p lhs. Both \p rhs and \p lhs must be scalar derived
 /// types. The assignment follows Fortran intrinsic assignment semantic for
 /// derived types (10.2.1.3 point 13).

@@ -1601,8 +1601,8 @@ define <4 x i1> @is_positive_mask_v4i64_v4i1(<4 x i64> %x, <4 x i1> %y) {
 ; SSE42-NEXT:    pcmpeqd %xmm3, %xmm3
 ; SSE42-NEXT:    pcmpgtq %xmm3, %xmm1
 ; SSE42-NEXT:    pcmpgtq %xmm3, %xmm0
-; SSE42-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
-; SSE42-NEXT:    andps %xmm2, %xmm0
+; SSE42-NEXT:    packssdw %xmm1, %xmm0
+; SSE42-NEXT:    pand %xmm2, %xmm0
 ; SSE42-NEXT:    retq
 ;
 ; AVX1-LABEL: is_positive_mask_v4i64_v4i1:

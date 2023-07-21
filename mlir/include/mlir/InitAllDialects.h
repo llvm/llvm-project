@@ -79,6 +79,7 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/PDLExtension/PDLExtension.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
@@ -128,6 +129,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   tensor::TensorDialect,
                   tosa::TosaDialect,
                   transform::TransformDialect,
+                  ub::UBDialect,
                   vector::VectorDialect,
                   x86vector::X86VectorDialect>();
   // clang-format on

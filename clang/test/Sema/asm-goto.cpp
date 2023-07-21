@@ -59,3 +59,13 @@ int test3(int n)
 loop:
   return 0;
 }
+
+void test4cleanup(int*);
+// No errors expected.
+void test4(void) {
+  asm goto(""::::l0);
+l0:;
+  int x __attribute__((cleanup(test4cleanup)));
+  asm goto(""::::l1);
+l1:;
+}
