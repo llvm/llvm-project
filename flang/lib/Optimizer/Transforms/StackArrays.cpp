@@ -139,9 +139,9 @@ public:
 };
 
 class AllocationAnalysis
-    : public mlir::dataflow::DenseDataFlowAnalysis<LatticePoint> {
+    : public mlir::dataflow::DenseForwardDataFlowAnalysis<LatticePoint> {
 public:
-  using DenseDataFlowAnalysis::DenseDataFlowAnalysis;
+  using DenseForwardDataFlowAnalysis::DenseForwardDataFlowAnalysis;
 
   void visitOperation(mlir::Operation *op, const LatticePoint &before,
                       LatticePoint *after) override;

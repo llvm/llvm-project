@@ -1,8 +1,12 @@
-//===- TestDenseDataFlowAnalysis.cpp - Test dense data flow analysis ------===//
+//===- TestDenseForwardDataFlowAnalysis.cpp -------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+//
+// Implementation of tests passes exercising dense forward data flow analysis.
 //
 //===----------------------------------------------------------------------===//
 
@@ -40,9 +44,10 @@ public:
   }
 };
 
-class LastModifiedAnalysis : public DenseDataFlowAnalysis<LastModification> {
+class LastModifiedAnalysis
+    : public DenseForwardDataFlowAnalysis<LastModification> {
 public:
-  using DenseDataFlowAnalysis::DenseDataFlowAnalysis;
+  using DenseForwardDataFlowAnalysis::DenseForwardDataFlowAnalysis;
 
   /// Visit an operation. If the operation has no memory effects, then the state
   /// is propagated with no change. If the operation allocates a resource, then
@@ -120,8 +125,8 @@ void LastModifiedAnalysis::visitCallControlFlowTransfer(
                             !testCallAndStore.getStoreBeforeCall()))) {
     return visitOperation(call, before, after);
   }
-  AbstractDenseDataFlowAnalysis::visitCallControlFlowTransfer(call, action,
-                                                              before, after);
+  AbstractDenseForwardDataFlowAnalysis::visitCallControlFlowTransfer(
+      call, action, before, after);
 }
 
 void LastModifiedAnalysis::visitRegionBranchControlFlowTransfer(
@@ -135,7 +140,7 @@ void LastModifiedAnalysis::visitRegionBranchControlFlowTransfer(
        (!regionFrom && testStoreWithARegion.getStoreBeforeRegion()))) {
     return visitOperation(branch, before, after);
   }
-  AbstractDenseDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
+  AbstractDenseForwardDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
       branch, regionFrom, regionTo, before, after);
 }
 
