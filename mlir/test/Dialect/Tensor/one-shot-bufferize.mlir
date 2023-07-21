@@ -131,8 +131,9 @@ func.func @insert_slice_fun_not_inplace(
 
 // CHECK-LABEL: func @tensor_cast_not_in_place(
 //  CHECK-SAME:     %[[A:.*]]: memref<?xf32{{.*}}>, %[[B:.*]]: memref<?xf32{{.*}}>
+//       CHECK:   %[[casted:.*]] = memref.cast %[[A]] : memref<?xf32, strided<[?], offset: ?>> to memref<4xf32, strided<[?], offset: ?>>
 //       CHECK:   %[[alloc:.*]] = memref.alloc
-//       CHECK:   memref.copy %[[A]], %[[alloc]]
+//       CHECK:   memref.copy %[[casted]], %[[alloc]]
 //       CHECK:   %[[subview:.*]] = memref.subview %[[A]][{{.*}}] [4] [1] : {{.*}} to memref<4xf32
 //       CHECK:   memref.copy %[[alloc]], %[[subview]]
 func.func @tensor_cast_not_in_place(
@@ -326,7 +327,8 @@ func.func @insert_slice_full_overwrite(%t: tensor<10xf32>, %b: tensor<10xf32>) -
   vector.print %vec : vector<10xf32>
 
   // Write back a different value (not %1).
-  // CHECK: memref.copy %[[b]], %[[t]]
+  // CHECK: %[[subview:.*]] = memref.subview %[[t]][0] [10] [1]
+  // CHECK: memref.copy %[[b]], %[[subview]]
   %2 = tensor.insert_slice %b into %t[0][10][1] : tensor<10xf32> into tensor<10xf32>
   return %2 : tensor<10xf32>
 }
