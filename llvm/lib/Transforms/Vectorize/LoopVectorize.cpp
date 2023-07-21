@@ -3902,7 +3902,8 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
         ReducedPartRdx = createAnyOfOp(Builder, ReductionStartValue, RK,
                                        ReducedPartRdx, RdxPart);
       else if (RecurrenceDescriptor::isFindLastIVRecurrenceKind(RK))
-        ReducedPartRdx = createFindLastIVOp(Builder, ReducedPartRdx, RdxPart);
+        ReducedPartRdx =
+            createFindLastIVOp(Builder, RK, ReducedPartRdx, RdxPart);
       else
         ReducedPartRdx = createMinMaxOp(Builder, RK, ReducedPartRdx, RdxPart);
     }

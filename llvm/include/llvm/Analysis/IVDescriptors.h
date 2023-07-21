@@ -54,12 +54,18 @@ enum class RecurKind {
             ///< loop invariant, and both x and y are integer type.
   FAnyOf,   ///< Any_of reduction with select(fcmp(),x,y) where one of (x,y) is
             ///< loop invariant, and both x and y are integer type.
-  IFindLastIV, ///< FindLast reduction with select(icmp(),x,y) where one of
-               ///< (x,y) is increasing loop induction PHI, and both x and y are
-               ///< integer type.
-  FFindLastIV ///< FindLast reduction with select(fcmp(),x,y) where one of (x,y)
-              ///< is increasing loop induction PHI, and both x and y are
-              ///< integer type.
+  IFindLastIncIV, ///< FindLast reduction with select(icmp(),x,y) where one of
+                  ///< (x,y) is increasing loop induction PHI, and both x and y
+                  ///< are integer type.
+  FFindLastIncIV, ///< FindLast reduction with select(fcmp(),x,y) where one of
+                  ///< (x,y) is increasing loop induction PHI, and both x and y
+                  ///< are integer type.
+  IFindLastDecIV, ///< FindLast reduction with select(icmp(),x,y) where one of
+                  ///< (x,y) is decreasing loop induction PHI, and both x and y
+                  ///< are integer type.
+  FFindLastDecIV  ///< FindLast reduction with select(fcmp(),x,y) where one of
+                  ///< (x,y) is decreasing loop induction PHI, and both x and y
+                  ///< are integer type.
   // TODO: Any_of and FindLast reduction need not be restricted to integer type
   // only.
 };
@@ -163,10 +169,8 @@ public:
   /// Returns a struct describing whether the instruction is either a
   ///   Select(ICmp(A, B), X, Y), or
   ///   Select(FCmp(A, B), X, Y)
-  /// where one of (X, Y) is an increasing loop induction variable, and the
-  /// other is a PHI value.
-  // TODO: FindLast does not need be restricted to increasing loop induction
-  // variables.
+  /// where one of (X, Y) is an increasing/decreasing loop induction variable,
+  /// and the other is a PHI value.
   static InstDesc isFindLastIVPattern(Loop *Loop, PHINode *OrigPhi,
                                       Instruction *I, ScalarEvolution *SE);
 
@@ -259,9 +263,13 @@ public:
   }
 
   /// Returns true if the recurrence kind is of the form
-  ///   select(cmp(),x,y) where one of (x,y) is increasing loop induction.
+  ///   select(cmp(),x,y) where one of (x,y) is increasing/decreasing loop
+  ///   induction.
   static bool isFindLastIVRecurrenceKind(RecurKind Kind) {
-    return Kind == RecurKind::IFindLastIV || Kind == RecurKind::FFindLastIV;
+    return Kind == RecurKind::IFindLastIncIV ||
+           Kind == RecurKind::FFindLastIncIV ||
+           Kind == RecurKind::IFindLastDecIV ||
+           Kind == RecurKind::FFindLastDecIV;
   }
 
   /// Returns the type of the recurrence. This type can be narrower than the

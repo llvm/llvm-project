@@ -942,9 +942,18 @@ Value *llvm::createAnyOfOp(IRBuilderBase &Builder, Value *StartVal,
   return Builder.CreateSelect(Cmp, Left, Right, "rdx.select");
 }
 
-Value *llvm::createFindLastIVOp(IRBuilderBase &Builder, Value *Left,
-                                Value *Right) {
-  return createMinMaxOp(Builder, RecurKind::SMax, Left, Right);
+Value *llvm::createFindLastIVOp(IRBuilderBase &Builder, RecurKind RK,
+                                Value *Left, Value *Right) {
+  switch (RK) {
+  default:
+    llvm_unreachable("Unexpected reduction kind");
+  case RecurKind::IFindLastIncIV:
+  case RecurKind::FFindLastIncIV:
+    return createMinMaxOp(Builder, RecurKind::SMax, Left, Right);
+  case RecurKind::IFindLastDecIV:
+  case RecurKind::FFindLastDecIV:
+    return createMinMaxOp(Builder, RecurKind::SMin, Left, Right);
+  }
 }
 
 Value *llvm::createMinMaxOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
@@ -1069,10 +1078,16 @@ Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder, Value *Src,
 
 Value *llvm::createFindLastIVTargetReduction(IRBuilderBase &Builder, Value *Src,
                                              const RecurrenceDescriptor &Desc) {
-  assert(RecurrenceDescriptor::isFindLastIVRecurrenceKind(
-             Desc.getRecurrenceKind()) &&
-         "Unexpected reduction kind");
-  return Builder.CreateIntMaxReduce(Src, true);
+  switch (Desc.getRecurrenceKind()) {
+  default:
+    llvm_unreachable("Unexpected reduction kind");
+  case RecurKind::IFindLastIncIV:
+  case RecurKind::FFindLastIncIV:
+    return Builder.CreateIntMaxReduce(Src, true);
+  case RecurKind::IFindLastDecIV:
+  case RecurKind::FFindLastDecIV:
+    return Builder.CreateIntMinReduce(Src, true);
+  }
 }
 
 Value *llvm::createSimpleTargetReduction(IRBuilderBase &Builder, Value *Src,

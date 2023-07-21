@@ -1747,6 +1747,211 @@ exit:                                             ; preds = %for.body
   ret i64 %cond
 }
 
+define i64 @select_decreasing_induction_icmp_const_start(ptr %a) {
+; CHECK-VF4IC1-LABEL: define i64 @select_decreasing_induction_icmp_const_start(
+; CHECK-VF4IC1-SAME: ptr [[A:%.*]]) {
+; CHECK-VF4IC1-NEXT:  entry:
+; CHECK-VF4IC1-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF4IC1:       vector.ph:
+; CHECK-VF4IC1-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-VF4IC1:       vector.body:
+; CHECK-VF4IC1-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 19999, i64 19998, i64 19997, i64 19996>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ <i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807>, [[VECTOR_PH]] ], [ [[TMP5:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 19999, [[INDEX]]
+; CHECK-VF4IC1-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-VF4IC1-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF4IC1-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i64, ptr [[TMP1]], i32 0
+; CHECK-VF4IC1-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i64, ptr [[TMP2]], i32 -3
+; CHECK-VF4IC1-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP3]], align 8
+; CHECK-VF4IC1-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i64> [[WIDE_LOAD]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-VF4IC1-NEXT:    [[TMP4:%.*]] = icmp sgt <4 x i64> [[REVERSE]], <i64 3, i64 3, i64 3, i64 3>
+; CHECK-VF4IC1-NEXT:    [[TMP5]] = select <4 x i1> [[TMP4]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-VF4IC1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-VF4IC1-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[VEC_IND]], <i64 -4, i64 -4, i64 -4, i64 -4>
+; CHECK-VF4IC1-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20000
+; CHECK-VF4IC1-NEXT:    br i1 [[TMP6]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-VF4IC1:       middle.block:
+; CHECK-VF4IC1-NEXT:    [[TMP7:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[TMP5]])
+; CHECK-VF4IC1-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP7]], 9223372036854775807
+; CHECK-VF4IC1-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP7]], i64 331
+; CHECK-VF4IC1-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF4IC1:       scalar.ph:
+; CHECK-VF4IC1-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, [[MIDDLE_BLOCK]] ], [ 19999, [[ENTRY:%.*]] ]
+; CHECK-VF4IC1-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4IC1-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-VF4IC1:       for.body:
+; CHECK-VF4IC1-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[DEC:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4IC1-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-VF4IC1-NEXT:    [[TMP8:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; CHECK-VF4IC1-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP8]], 3
+; CHECK-VF4IC1-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP]], i64 [[IV]], i64 [[RDX]]
+; CHECK-VF4IC1-NEXT:    [[DEC]] = add nsw i64 [[IV]], -1
+; CHECK-VF4IC1-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[IV]], 0
+; CHECK-VF4IC1-NEXT:    br i1 [[CMP_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-VF4IC1:       exit:
+; CHECK-VF4IC1-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4IC1-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
+;
+; CHECK-VF4IC4-LABEL: define i64 @select_decreasing_induction_icmp_const_start(
+; CHECK-VF4IC4-SAME: ptr [[A:%.*]]) {
+; CHECK-VF4IC4-NEXT:  entry:
+; CHECK-VF4IC4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF4IC4:       vector.ph:
+; CHECK-VF4IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-VF4IC4:       vector.body:
+; CHECK-VF4IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[VEC_IND:%.*]] = phi <4 x i64> [ <i64 19999, i64 19998, i64 19997, i64 19996>, [[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[VEC_PHI:%.*]] = phi <4 x i64> [ <i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807>, [[VECTOR_PH]] ], [ [[TMP20:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[VEC_PHI4:%.*]] = phi <4 x i64> [ <i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807>, [[VECTOR_PH]] ], [ [[TMP21:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[VEC_PHI5:%.*]] = phi <4 x i64> [ <i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807>, [[VECTOR_PH]] ], [ [[TMP22:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[VEC_PHI6:%.*]] = phi <4 x i64> [ <i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807, i64 9223372036854775807>, [[VECTOR_PH]] ], [ [[TMP23:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[STEP_ADD:%.*]] = add <4 x i64> [[VEC_IND]], <i64 -4, i64 -4, i64 -4, i64 -4>
+; CHECK-VF4IC4-NEXT:    [[STEP_ADD1:%.*]] = add <4 x i64> [[STEP_ADD]], <i64 -4, i64 -4, i64 -4, i64 -4>
+; CHECK-VF4IC4-NEXT:    [[STEP_ADD2:%.*]] = add <4 x i64> [[STEP_ADD1]], <i64 -4, i64 -4, i64 -4, i64 -4>
+; CHECK-VF4IC4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 19999, [[INDEX]]
+; CHECK-VF4IC4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-VF4IC4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -4
+; CHECK-VF4IC4-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -8
+; CHECK-VF4IC4-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], -12
+; CHECK-VF4IC4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF4IC4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
+; CHECK-VF4IC4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
+; CHECK-VF4IC4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
+; CHECK-VF4IC4-NEXT:    [[TMP8:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 0
+; CHECK-VF4IC4-NEXT:    [[TMP9:%.*]] = getelementptr inbounds i64, ptr [[TMP8]], i32 -3
+; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD:%.*]] = load <4 x i64>, ptr [[TMP9]], align 8
+; CHECK-VF4IC4-NEXT:    [[REVERSE:%.*]] = shufflevector <4 x i64> [[WIDE_LOAD]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-VF4IC4-NEXT:    [[TMP10:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 -4
+; CHECK-VF4IC4-NEXT:    [[TMP11:%.*]] = getelementptr inbounds i64, ptr [[TMP10]], i32 -3
+; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD7:%.*]] = load <4 x i64>, ptr [[TMP11]], align 8
+; CHECK-VF4IC4-NEXT:    [[REVERSE8:%.*]] = shufflevector <4 x i64> [[WIDE_LOAD7]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-VF4IC4-NEXT:    [[TMP12:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 -8
+; CHECK-VF4IC4-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i64, ptr [[TMP12]], i32 -3
+; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD9:%.*]] = load <4 x i64>, ptr [[TMP13]], align 8
+; CHECK-VF4IC4-NEXT:    [[REVERSE10:%.*]] = shufflevector <4 x i64> [[WIDE_LOAD9]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-VF4IC4-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i64, ptr [[TMP4]], i32 -12
+; CHECK-VF4IC4-NEXT:    [[TMP15:%.*]] = getelementptr inbounds i64, ptr [[TMP14]], i32 -3
+; CHECK-VF4IC4-NEXT:    [[WIDE_LOAD11:%.*]] = load <4 x i64>, ptr [[TMP15]], align 8
+; CHECK-VF4IC4-NEXT:    [[REVERSE12:%.*]] = shufflevector <4 x i64> [[WIDE_LOAD11]], <4 x i64> poison, <4 x i32> <i32 3, i32 2, i32 1, i32 0>
+; CHECK-VF4IC4-NEXT:    [[TMP16:%.*]] = icmp sgt <4 x i64> [[REVERSE]], <i64 3, i64 3, i64 3, i64 3>
+; CHECK-VF4IC4-NEXT:    [[TMP17:%.*]] = icmp sgt <4 x i64> [[REVERSE8]], <i64 3, i64 3, i64 3, i64 3>
+; CHECK-VF4IC4-NEXT:    [[TMP18:%.*]] = icmp sgt <4 x i64> [[REVERSE10]], <i64 3, i64 3, i64 3, i64 3>
+; CHECK-VF4IC4-NEXT:    [[TMP19:%.*]] = icmp sgt <4 x i64> [[REVERSE12]], <i64 3, i64 3, i64 3, i64 3>
+; CHECK-VF4IC4-NEXT:    [[TMP20]] = select <4 x i1> [[TMP16]], <4 x i64> [[VEC_IND]], <4 x i64> [[VEC_PHI]]
+; CHECK-VF4IC4-NEXT:    [[TMP21]] = select <4 x i1> [[TMP17]], <4 x i64> [[STEP_ADD]], <4 x i64> [[VEC_PHI4]]
+; CHECK-VF4IC4-NEXT:    [[TMP22]] = select <4 x i1> [[TMP18]], <4 x i64> [[STEP_ADD1]], <4 x i64> [[VEC_PHI5]]
+; CHECK-VF4IC4-NEXT:    [[TMP23]] = select <4 x i1> [[TMP19]], <4 x i64> [[STEP_ADD2]], <4 x i64> [[VEC_PHI6]]
+; CHECK-VF4IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 16
+; CHECK-VF4IC4-NEXT:    [[VEC_IND_NEXT]] = add <4 x i64> [[STEP_ADD2]], <i64 -4, i64 -4, i64 -4, i64 -4>
+; CHECK-VF4IC4-NEXT:    [[TMP24:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20000
+; CHECK-VF4IC4-NEXT:    br i1 [[TMP24]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-VF4IC4:       middle.block:
+; CHECK-VF4IC4-NEXT:    [[RDX_MINMAX:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[TMP20]], <4 x i64> [[TMP21]])
+; CHECK-VF4IC4-NEXT:    [[RDX_MINMAX13:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[RDX_MINMAX]], <4 x i64> [[TMP22]])
+; CHECK-VF4IC4-NEXT:    [[RDX_MINMAX14:%.*]] = call <4 x i64> @llvm.smin.v4i64(<4 x i64> [[RDX_MINMAX13]], <4 x i64> [[TMP23]])
+; CHECK-VF4IC4-NEXT:    [[TMP25:%.*]] = call i64 @llvm.vector.reduce.smin.v4i64(<4 x i64> [[RDX_MINMAX14]])
+; CHECK-VF4IC4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[TMP25]], 9223372036854775807
+; CHECK-VF4IC4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[TMP25]], i64 331
+; CHECK-VF4IC4-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF4IC4:       scalar.ph:
+; CHECK-VF4IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, [[MIDDLE_BLOCK]] ], [ 19999, [[ENTRY:%.*]] ]
+; CHECK-VF4IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4IC4-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-VF4IC4:       for.body:
+; CHECK-VF4IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[DEC:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ]
+; CHECK-VF4IC4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-VF4IC4-NEXT:    [[TMP26:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; CHECK-VF4IC4-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP26]], 3
+; CHECK-VF4IC4-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP]], i64 [[IV]], i64 [[RDX]]
+; CHECK-VF4IC4-NEXT:    [[DEC]] = add nsw i64 [[IV]], -1
+; CHECK-VF4IC4-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[IV]], 0
+; CHECK-VF4IC4-NEXT:    br i1 [[CMP_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-VF4IC4:       exit:
+; CHECK-VF4IC4-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF4IC4-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
+;
+; CHECK-VF1IC4-LABEL: define i64 @select_decreasing_induction_icmp_const_start(
+; CHECK-VF1IC4-SAME: ptr [[A:%.*]]) {
+; CHECK-VF1IC4-NEXT:  entry:
+; CHECK-VF1IC4-NEXT:    br i1 false, label [[SCALAR_PH:%.*]], label [[VECTOR_PH:%.*]]
+; CHECK-VF1IC4:       vector.ph:
+; CHECK-VF1IC4-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-VF1IC4:       vector.body:
+; CHECK-VF1IC4-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[VEC_PHI:%.*]] = phi i64 [ 9223372036854775807, [[VECTOR_PH]] ], [ [[TMP16:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[VEC_PHI1:%.*]] = phi i64 [ 9223372036854775807, [[VECTOR_PH]] ], [ [[TMP17:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[VEC_PHI2:%.*]] = phi i64 [ 9223372036854775807, [[VECTOR_PH]] ], [ [[TMP18:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[VEC_PHI3:%.*]] = phi i64 [ 9223372036854775807, [[VECTOR_PH]] ], [ [[TMP19:%.*]], [[VECTOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[OFFSET_IDX:%.*]] = sub i64 19999, [[INDEX]]
+; CHECK-VF1IC4-NEXT:    [[TMP0:%.*]] = add i64 [[OFFSET_IDX]], 0
+; CHECK-VF1IC4-NEXT:    [[TMP1:%.*]] = add i64 [[OFFSET_IDX]], -1
+; CHECK-VF1IC4-NEXT:    [[TMP2:%.*]] = add i64 [[OFFSET_IDX]], -2
+; CHECK-VF1IC4-NEXT:    [[TMP3:%.*]] = add i64 [[OFFSET_IDX]], -3
+; CHECK-VF1IC4-NEXT:    [[TMP4:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP0]]
+; CHECK-VF1IC4-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP1]]
+; CHECK-VF1IC4-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP2]]
+; CHECK-VF1IC4-NEXT:    [[TMP7:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[TMP3]]
+; CHECK-VF1IC4-NEXT:    [[TMP8:%.*]] = load i64, ptr [[TMP4]], align 8
+; CHECK-VF1IC4-NEXT:    [[TMP9:%.*]] = load i64, ptr [[TMP5]], align 8
+; CHECK-VF1IC4-NEXT:    [[TMP10:%.*]] = load i64, ptr [[TMP6]], align 8
+; CHECK-VF1IC4-NEXT:    [[TMP11:%.*]] = load i64, ptr [[TMP7]], align 8
+; CHECK-VF1IC4-NEXT:    [[TMP12:%.*]] = icmp sgt i64 [[TMP8]], 3
+; CHECK-VF1IC4-NEXT:    [[TMP13:%.*]] = icmp sgt i64 [[TMP9]], 3
+; CHECK-VF1IC4-NEXT:    [[TMP14:%.*]] = icmp sgt i64 [[TMP10]], 3
+; CHECK-VF1IC4-NEXT:    [[TMP15:%.*]] = icmp sgt i64 [[TMP11]], 3
+; CHECK-VF1IC4-NEXT:    [[TMP16]] = select i1 [[TMP12]], i64 [[TMP0]], i64 [[VEC_PHI]]
+; CHECK-VF1IC4-NEXT:    [[TMP17]] = select i1 [[TMP13]], i64 [[TMP1]], i64 [[VEC_PHI1]]
+; CHECK-VF1IC4-NEXT:    [[TMP18]] = select i1 [[TMP14]], i64 [[TMP2]], i64 [[VEC_PHI2]]
+; CHECK-VF1IC4-NEXT:    [[TMP19]] = select i1 [[TMP15]], i64 [[TMP3]], i64 [[VEC_PHI3]]
+; CHECK-VF1IC4-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
+; CHECK-VF1IC4-NEXT:    [[TMP20:%.*]] = icmp eq i64 [[INDEX_NEXT]], 20000
+; CHECK-VF1IC4-NEXT:    br i1 [[TMP20]], label [[MIDDLE_BLOCK:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; CHECK-VF1IC4:       middle.block:
+; CHECK-VF1IC4-NEXT:    [[RDX_MINMAX:%.*]] = call i64 @llvm.smin.i64(i64 [[TMP16]], i64 [[TMP17]])
+; CHECK-VF1IC4-NEXT:    [[RDX_MINMAX4:%.*]] = call i64 @llvm.smin.i64(i64 [[RDX_MINMAX]], i64 [[TMP18]])
+; CHECK-VF1IC4-NEXT:    [[RDX_MINMAX5:%.*]] = call i64 @llvm.smin.i64(i64 [[RDX_MINMAX4]], i64 [[TMP19]])
+; CHECK-VF1IC4-NEXT:    [[RDX_SELECT_CMP:%.*]] = icmp ne i64 [[RDX_MINMAX5]], 9223372036854775807
+; CHECK-VF1IC4-NEXT:    [[RDX_SELECT:%.*]] = select i1 [[RDX_SELECT_CMP]], i64 [[RDX_MINMAX5]], i64 331
+; CHECK-VF1IC4-NEXT:    br i1 true, label [[EXIT:%.*]], label [[SCALAR_PH]]
+; CHECK-VF1IC4:       scalar.ph:
+; CHECK-VF1IC4-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ -1, [[MIDDLE_BLOCK]] ], [ 19999, [[ENTRY:%.*]] ]
+; CHECK-VF1IC4-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 331, [[ENTRY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1IC4-NEXT:    br label [[FOR_BODY:%.*]]
+; CHECK-VF1IC4:       for.body:
+; CHECK-VF1IC4-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[DEC:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[RDX:%.*]] = phi i64 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[SPEC_SELECT:%.*]], [[FOR_BODY]] ]
+; CHECK-VF1IC4-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i64, ptr [[A]], i64 [[IV]]
+; CHECK-VF1IC4-NEXT:    [[TMP21:%.*]] = load i64, ptr [[ARRAYIDX]], align 8
+; CHECK-VF1IC4-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[TMP21]], 3
+; CHECK-VF1IC4-NEXT:    [[SPEC_SELECT]] = select i1 [[CMP]], i64 [[IV]], i64 [[RDX]]
+; CHECK-VF1IC4-NEXT:    [[DEC]] = add nsw i64 [[IV]], -1
+; CHECK-VF1IC4-NEXT:    [[CMP_NOT:%.*]] = icmp eq i64 [[IV]], 0
+; CHECK-VF1IC4-NEXT:    br i1 [[CMP_NOT]], label [[EXIT]], label [[FOR_BODY]], !llvm.loop [[LOOP3:![0-9]+]]
+; CHECK-VF1IC4:       exit:
+; CHECK-VF1IC4-NEXT:    [[SPEC_SELECT_LCSSA:%.*]] = phi i64 [ [[SPEC_SELECT]], [[FOR_BODY]] ], [ [[RDX_SELECT]], [[MIDDLE_BLOCK]] ]
+; CHECK-VF1IC4-NEXT:    ret i64 [[SPEC_SELECT_LCSSA]]
+;
+entry:
+  br label %for.body
+
+for.body:                                         ; preds = %entry, %for.body
+  %iv = phi i64 [ 19999, %entry ], [ %dec, %for.body ]
+  %rdx = phi i64 [ 331, %entry ], [ %spec.select, %for.body ]
+  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
+  %0 = load i64, ptr %arrayidx, align 8
+  %cmp = icmp sgt i64 %0, 3
+  %spec.select = select i1 %cmp, i64 %iv, i64 %rdx
+  %dec = add nsw i64 %iv, -1
+  %cmp.not = icmp eq i64 %iv, 0
+  br i1 %cmp.not, label %exit, label %for.body
+
+exit:                                             ; preds = %for.body
+  ret i64 %spec.select
+}
+
 ; Negative tests
 
 define float @not_vectorized_select_float_induction_icmp(ptr %a, ptr %b, float %rdx.start, i64 %n) {
@@ -1773,28 +1978,6 @@ for.body:                                         ; preds = %entry, %for.body
 
 exit:                                             ; preds = %for.body
   ret float %cond
-}
-
-define i64 @not_vectorized_select_decreasing_induction_icmp_const_start(ptr %a) {
-; CHECK-LABEL: @not_vectorized_select_decreasing_induction_icmp_const_start
-; CHECK-NOT:   vector.body:
-;
-entry:
-  br label %for.body
-
-for.body:                                         ; preds = %entry, %for.body
-  %iv = phi i64 [ 19999, %entry ], [ %dec, %for.body ]
-  %rdx = phi i64 [ 331, %entry ], [ %spec.select, %for.body ]
-  %arrayidx = getelementptr inbounds i64, ptr %a, i64 %iv
-  %0 = load i64, ptr %arrayidx, align 8
-  %cmp = icmp sgt i64 %0, 3
-  %spec.select = select i1 %cmp, i64 %iv, i64 %rdx
-  %dec = add nsw i64 %iv, -1
-  %cmp.not = icmp eq i64 %iv, 0
-  br i1 %cmp.not, label %exit, label %for.body
-
-exit:                                             ; preds = %for.body
-  ret i64 %spec.select
 }
 
 define i64 @not_vectorized_select_decreasing_induction_icmp_non_const_start(ptr %a, ptr %b, i64 %rdx.start, i64 %n) {

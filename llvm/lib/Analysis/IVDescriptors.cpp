@@ -54,8 +54,10 @@ bool RecurrenceDescriptor::isIntegerRecurrenceKind(RecurKind Kind) {
   case RecurKind::UMin:
   case RecurKind::IAnyOf:
   case RecurKind::FAnyOf:
-  case RecurKind::IFindLastIV:
-  case RecurKind::FFindLastIV:
+  case RecurKind::IFindLastIncIV:
+  case RecurKind::FFindLastIncIV:
+  case RecurKind::IFindLastDecIV:
+  case RecurKind::FFindLastDecIV:
     return true;
   }
   return false;
@@ -664,6 +666,8 @@ RecurrenceDescriptor::isAnyOfPattern(Loop *Loop, PHINode *OrigPhi,
                                                      : RecurKind::FAnyOf);
 }
 
+enum class LoopInductionDirection { None, Increasing, Decreasing };
+
 // We are looking for loops that do something like this:
 //   int r = 0;
 //   for (int i = 0; i < n; i++) {
@@ -711,47 +715,65 @@ RecurrenceDescriptor::isFindLastIVPattern(Loop *Loop, PHINode *OrigPhi,
   else
     return InstDesc(false, I);
 
-  auto IsIncreasingLoopInduction = [&SE, &Loop](Value *V) {
-    if (!SE)
-      return false;
-
+  auto GetLoopInduction = [&SE, &Loop](Value *V) {
     Type *Ty = V->getType();
-    if (!SE->isSCEVable(Ty))
-      return false;
+    if (!SE || !SE->isSCEVable(Ty))
+      return LoopInductionDirection::None;
 
     auto *AR = dyn_cast<SCEVAddRecExpr>(SE->getSCEV(V));
     if (!AR)
-      return false;
-
-    const SCEV *Step = AR->getStepRecurrence(*SE);
-    if (!SE->isKnownPositive(Step))
-      return false;
+      return LoopInductionDirection::None;
 
     const ConstantRange IVRange = SE->getSignedRange(AR);
     unsigned NumBits = Ty->getIntegerBitWidth();
-    // Keep the minmum value of the recurrence type as the sentinel value.
-    // The maximum acceptable range for the increasing induction variable,
-    // called the valid range, will be defined as
-    //   [<sentinel value> + 1, SignedMin(<recurrence type>))
-    // TODO: This range restriction can be lifted by adding an additional
-    // virtual OR reduction.
-    const APInt Sentinel = APInt::getSignedMinValue(NumBits);
-    const ConstantRange ValidRange = ConstantRange::getNonEmpty(
-        Sentinel + 1, APInt::getSignedMinValue(NumBits));
-    LLVM_DEBUG(dbgs() << "LV: FindLastIV valid range is " << ValidRange
-                      << ", and the signed range of " << *AR << " is "
-                      << IVRange << "\n");
-    return ValidRange.contains(IVRange);
+    const SCEV *Step = AR->getStepRecurrence(*SE);
+
+    if (SE->isKnownPositive(Step)) {
+      // For increasing IV, keep the minimum value of the recurrence type as the
+      // sentinel value. The maximum acceptable range will be defined as
+      //   [<sentinel value> + 1, <sentinel value>)
+      // TODO: This range restriction can be lifted by adding an additional
+      // virtual OR reduction.
+      const APInt Sentinel = APInt::getSignedMinValue(NumBits);
+      const ConstantRange ValidRange =
+          ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
+      LLVM_DEBUG(dbgs() << "LV: FindLastIncIV valid range is " << ValidRange
+                        << ", and the signed range of " << *AR << " is "
+                        << IVRange << "\n");
+      if (ValidRange.contains(IVRange))
+        return LoopInductionDirection::Increasing;
+    } else if (SE->isKnownNegative(Step)) {
+      // For decreasing IV, keep the maximum value of the recurrence type as the
+      // sentinel value. The maximum acceptable range will be defined as
+      //   [<sentinel value> + 1, <sentinel value>)
+      const APInt Sentinel = APInt::getSignedMaxValue(NumBits);
+      const ConstantRange ValidRange =
+          ConstantRange::getNonEmpty(Sentinel + 1, Sentinel);
+      LLVM_DEBUG(dbgs() << "LV: FindLastDecIV valid range is " << ValidRange
+                        << ", and the signed range of " << *AR << " is "
+                        << IVRange << "\n");
+      if (ValidRange.contains(IVRange))
+        return LoopInductionDirection::Decreasing;
+    }
+    return LoopInductionDirection::None;
   };
 
   // We are looking for selects of the form:
   //   select(cmp(), phi, loop_induction) or
   //   select(cmp(), loop_induction, phi)
-  if (!IsIncreasingLoopInduction(NonRdxPhi))
-    return InstDesc(false, I);
-
-  return InstDesc(I, isa<ICmpInst>(I->getOperand(0)) ? RecurKind::IFindLastIV
-                                                     : RecurKind::FFindLastIV);
+  switch (GetLoopInduction(NonRdxPhi)) {
+  case LoopInductionDirection::None:
+    break;
+  case LoopInductionDirection::Increasing:
+    return InstDesc(I, isa<ICmpInst>(I->getOperand(0))
+                           ? RecurKind::IFindLastIncIV
+                           : RecurKind::FFindLastIncIV);
+  case LoopInductionDirection::Decreasing:
+    return InstDesc(I, isa<ICmpInst>(I->getOperand(0))
+                           ? RecurKind::IFindLastDecIV
+                           : RecurKind::FFindLastDecIV);
+  }
+  return InstDesc(false, I);
 }
 
 RecurrenceDescriptor::InstDesc
@@ -995,8 +1017,8 @@ bool RecurrenceDescriptor::isReductionPHI(PHINode *Phi, Loop *TheLoop,
                       << *Phi << "\n");
     return true;
   }
-  if (AddReductionVar(Phi, RecurKind::IFindLastIV, TheLoop, FMF, RedDes, DB, AC,
-                      DT, SE)) {
+  if (AddReductionVar(Phi, RecurKind::IFindLastIncIV, TheLoop, FMF, RedDes, DB,
+                      AC, DT, SE)) {
     LLVM_DEBUG(dbgs() << "Found a FindLastIV reduction PHI." << *Phi << "\n");
     return true;
   }
@@ -1189,9 +1211,12 @@ Value *RecurrenceDescriptor::getRecurrenceIdentity(RecurKind K, Type *Tp,
   case RecurKind::FAnyOf:
     return getRecurrenceStartValue();
     break;
-  case RecurKind::IFindLastIV:
-  case RecurKind::FFindLastIV:
+  case RecurKind::IFindLastIncIV:
+  case RecurKind::FFindLastIncIV:
     return getRecurrenceIdentity(RecurKind::SMax, Tp, FMF);
+  case RecurKind::IFindLastDecIV:
+  case RecurKind::FFindLastDecIV:
+    return getRecurrenceIdentity(RecurKind::SMin, Tp, FMF);
   default:
     llvm_unreachable("Unknown recurrence kind");
   }
@@ -1219,14 +1244,16 @@ unsigned RecurrenceDescriptor::getOpcode(RecurKind Kind) {
   case RecurKind::UMax:
   case RecurKind::UMin:
   case RecurKind::IAnyOf:
-  case RecurKind::IFindLastIV:
+  case RecurKind::IFindLastIncIV:
+  case RecurKind::IFindLastDecIV:
     return Instruction::ICmp;
   case RecurKind::FMax:
   case RecurKind::FMin:
   case RecurKind::FMaximum:
   case RecurKind::FMinimum:
   case RecurKind::FAnyOf:
-  case RecurKind::FFindLastIV:
+  case RecurKind::FFindLastIncIV:
+  case RecurKind::FFindLastDecIV:
     return Instruction::FCmp;
   default:
     llvm_unreachable("Unknown recurrence operation");

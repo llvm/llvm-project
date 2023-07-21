@@ -374,9 +374,10 @@ Value *createAnyOfOp(IRBuilderBase &Builder, Value *StartVal, RecurKind RK,
 
 /// See RecurrenceDescriptor::isFindLastIVPattern for a description of the
 /// pattern we are trying to match. In this pattern, since the selected set of
-/// values forms an increasing sequence, we are selecting the maximum value from
-/// \p Left and \p Right.
-Value *createFindLastIVOp(IRBuilderBase &Builder, Value *Left, Value *Right);
+/// values forms an increasing/decreasing sequence, we are selecting the
+/// maximum/minimum value from \p Left and \p Right.
+Value *createFindLastIVOp(IRBuilderBase &Builder, RecurKind RK, Value *Left,
+                          Value *Right);
 
 /// Returns a Min/Max operation corresponding to MinMaxRecurrenceKind.
 /// The Builder's fast-math-flags must be set to propagate the expected values.
@@ -409,7 +410,8 @@ Value *createAnyOfTargetReduction(IRBuilderBase &B, Value *Src,
                                   PHINode *OrigPhi);
 
 /// Create a target reduction of the given vector \p Src for a reduction of the
-/// kind RecurKind::IFindLastIV or RecurKind::FFindLastIV. The reduction
+/// kinds RecurKind::IFindLastIncIV, RecurKind::FFindLastIncIV,
+/// RecurKind::IFindLastDecIV, and RecurKind::FFindLastDecIV. The reduction
 /// operation is described by \p Desc.
 Value *createFindLastIVTargetReduction(IRBuilderBase &B, Value *Src,
                                        const RecurrenceDescriptor &Desc);

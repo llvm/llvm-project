@@ -912,9 +912,9 @@ for.end:                                          ; preds = %for.body, %entry
 
 @table = constant [13 x i16] [i16 10, i16 35, i16 69, i16 147, i16 280, i16 472, i16 682, i16 1013, i16 1559, i16 2544, i16 4553, i16 6494, i16 10000], align 1 
 
-; CHECK-LABEL: @non_reduction_index(
-; CHECK-NOT:     <4 x i16>
-define i16 @non_reduction_index(i16 noundef %val) {
+; CHECK-LABEL: @reduction_index(
+; CHECK:         <4 x i16>
+define i16 @reduction_index(i16 noundef %val) {
 entry:
   br label %for.body
 
@@ -936,9 +936,9 @@ for.body:                                         ; preds = %entry, %for.body
 
 @tablef = constant [13 x half] [half 10.0, half 35.0, half 69.0, half 147.0, half 280.0, half 472.0, half 682.0, half 1013.0, half 1559.0, half 2544.0, half 4556.0, half 6496.0, half 10000.0], align 1 
 
-; CHECK-LABEL: @non_reduction_index_half(
-; CHECK-NOT:     <4 x half>
-define i16 @non_reduction_index_half(half noundef %val) {
+; CHECK-LABEL: @reduction_index_half(
+; CHECK:         <4 x half>
+define i16 @reduction_index_half(half noundef %val) {
 entry:
   br label %for.body
 
