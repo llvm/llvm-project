@@ -370,17 +370,8 @@ LogicalResult TmaCreateDescriptorOp::verify() {
 // TableGen'd dialect, type, and op definitions
 //===----------------------------------------------------------------------===//
 
-#ifdef __GNUC__
-#pragma GCC diagnostic push
-#pragma GCC diagnostic ignored "-Wunused-function"
-#endif
-
 #define GET_ATTRDEF_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.cpp.inc"
-
-#ifdef __GNUC__
-#pragma GCC diagnostic pop
-#endif
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUEnums.cpp.inc"
 
