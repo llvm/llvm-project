@@ -660,6 +660,9 @@ Bug Fixes in This Version
 - Fixed false positive error diagnostic observed from mixing ``asm goto`` with
   ``__attribute__((cleanup()))`` variables falsely warning that jumps to
   non-targets would skip cleanup.
+- Correcly diagnose jumps into statement expressions.
+  This ensures the behavior of Clang is consistent with GCC.
+  (`#63682 <https://github.com/llvm/llvm-project/issues/63682>`_)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -949,7 +952,7 @@ AST Matchers
 
 - The ``hasBody`` matcher now matches coroutine body nodes in
   ``CoroutineBodyStmts``.
-  
+
 - Add ``arrayInitIndexExpr`` and ``arrayInitLoopExpr`` matchers.
 
 clang-format
