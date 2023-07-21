@@ -69,12 +69,12 @@ void WrittenToAnalysis::visitOperation(Operation *op,
     propagateIfChanged(operands[0], operands[0]->addWrites(newWrites));
     return;
   } // By default, every result of an op depends on every operand.
-    for (const WrittenTo *r : results) {
-      for (WrittenTo *operand : operands) {
-        meet(operand, *r);
-      }
-      addDependency(const_cast<WrittenTo *>(r), op);
+  for (const WrittenTo *r : results) {
+    for (WrittenTo *operand : operands) {
+      meet(operand, *r);
     }
+    addDependency(const_cast<WrittenTo *>(r), op);
+  }
 }
 
 void WrittenToAnalysis::visitBranchOperand(OpOperand &operand) {
