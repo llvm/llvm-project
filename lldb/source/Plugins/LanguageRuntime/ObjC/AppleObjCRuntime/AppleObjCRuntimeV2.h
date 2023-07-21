@@ -38,6 +38,8 @@ public:
 
   static llvm::StringRef GetPluginNameStatic() { return "apple-objc-v2"; }
 
+  LanguageRuntime *GetPreferredLanguageRuntime(ValueObject &in_value) override;
+
   static char ID;
 
   bool isA(const void *ClassID) const override {
