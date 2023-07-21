@@ -64,6 +64,7 @@ define amdgpu_kernel void @is_local_vgpr(ptr addrspace(1) %ptr.ptr) {
 ; GFX11-NEXT:    v_cmp_eq_u32_e32 vcc_lo, s1, v1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, vcc_lo
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %id = call i32 @llvm.amdgcn.workitem.id.x()
@@ -131,6 +132,7 @@ define amdgpu_kernel void @is_local_sgpr(ptr %ptr) {
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB1_2: ; %bb1
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %val = call i1 @llvm.amdgcn.is.shared(ptr %ptr)

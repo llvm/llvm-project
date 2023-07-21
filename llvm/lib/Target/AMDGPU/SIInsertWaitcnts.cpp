@@ -1967,6 +1967,10 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   // Insert DEALLOC_VGPR messages before previously identified S_ENDPGM
   // instructions.
   for (MachineInstr *MI : ReleaseVGPRInsts) {
+    if (ST->requiresNopBeforeDeallocVGPRs()) {
+      BuildMI(*MI->getParent(), MI, DebugLoc(), TII->get(AMDGPU::S_NOP))
+          .addImm(0);
+    }
     BuildMI(*MI->getParent(), MI, DebugLoc(), TII->get(AMDGPU::S_SENDMSG))
         .addImm(AMDGPU::SendMsg::ID_DEALLOC_VGPRS_GFX11Plus);
     Modified = true;

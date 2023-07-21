@@ -1419,4 +1419,51 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : NVVM_Op<"cp.async.bulk.tenso
   let hasVerifier = 1;
 }
 
+//===----------------------------------------------------------------------===//
+// NVVM Wgmma Ops
+//===----------------------------------------------------------------------===//
+
+def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", 
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> {
+  let arguments = (ins);
+  let description = [{
+    Enforce an ordering of register accesses between warpgroup level matrix 
+    multiplication and other operations. 
+    See for more information:
+    https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence
+  }];
+  let assemblyFormat = "attr-dict";
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() { return std::string("wgmma.fence.sync.aligned;"); }
+  }];
+}
+
+def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned", 
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
+  Arguments<(ins )> {
+  let assemblyFormat = "attr-dict";
+  let description = [{
+    Commits all prior uncommitted warpgroup level matrix multiplication operations.
+    See for more information:
+    https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group
+  }];
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() { return std::string("wgmma.commit_group.sync.aligned;"); }
+  }];
+}
+
+def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", 
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>{
+  let arguments = (ins I32Attr:$group);
+  let assemblyFormat = "attr-dict $group";
+  let description = [{
+    Signal the completion of a preceding warpgroup operation.
+    See for more information:
+    https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group
+  }];
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() { return std::string("wgmma.wait_group.sync.aligned %0;"); }
+  }];
+}
+
 #endif // NVVMIR_OPS
