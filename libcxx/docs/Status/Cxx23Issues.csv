@@ -299,7 +299,7 @@
 "`3870 <https://wg21.link/LWG3870>`__","Remove ``voidify``","February 2023","","",""
 "`3871 <https://wg21.link/LWG3871>`__","Adjust note about ``terminate``","February 2023","","",""
 "`3872 <https://wg21.link/LWG3872>`__","``basic_const_iterator`` should have custom ``iter_move``","February 2023","","",""
-"`3875 <https://wg21.link/LWG3875>`__","``std::ranges::repeat_view<T, IntegerClass>::iterator`` may be ill-formed","February 2023","","","|ranges|"
+"`3875 <https://wg21.link/LWG3875>`__","``std::ranges::repeat_view<T, IntegerClass>::iterator`` may be ill-formed","February 2023","|Complete|","17.0","|ranges|"
 "`3876 <https://wg21.link/LWG3876>`__","Default constructor of ``std::layout_XX::mapping`` misses precondition","February 2023","","",""
 "`3877 <https://wg21.link/LWG3877>`__","Incorrect constraints on ``const``-qualified monadic overloads for ``std::expected``","February 2023","|Complete|","17.0",""
 "`3878 <https://wg21.link/LWG3878>`__","import ``std;`` should guarantee initialization of standard iostreams objects","February 2023","","",""

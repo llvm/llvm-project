@@ -153,4 +153,7 @@ ParseResult parseMemoryAccessAttributes(
     OpAsmParser &parser, OperationState &state,
     StringRef attrName = AttrNames::kMemoryAccessAttrName);
 
+ParseResult parseVariableDecorations(OpAsmParser &parser,
+                                     OperationState &state);
+
 } // namespace mlir::spirv

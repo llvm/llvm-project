@@ -31,10 +31,11 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
                                           const char *filename, unsigned line,
                                           const char *funcname) {
   char line_str[IntegerToString::dec_bufsize<unsigned>()];
-  IntegerToString::dec(line, line_str);
+  // dec returns an optional, will always be valid for this size buffer
+  auto line_number = IntegerToString::dec(line, line_str);
   __llvm_libc::write_to_stderr(filename);
   __llvm_libc::write_to_stderr(":");
-  __llvm_libc::write_to_stderr(line_str);
+  __llvm_libc::write_to_stderr(*line_number);
   __llvm_libc::write_to_stderr(": Assertion failed: '");
   __llvm_libc::write_to_stderr(assertion);
   __llvm_libc::write_to_stderr("' in function: '");

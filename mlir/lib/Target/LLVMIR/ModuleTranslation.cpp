@@ -664,6 +664,10 @@ LogicalResult ModuleTranslation::convertBlock(Block &bb, bool ignoreArguments,
 
     if (failed(convertOperation(op, builder)))
       return failure();
+
+    // Set the branch weight metadata on the translated instruction.
+    if (auto iface = dyn_cast<BranchWeightOpInterface>(op))
+      setBranchWeightsMetadata(iface);
   }
 
   return success();
@@ -1183,6 +1187,19 @@ void ModuleTranslation::setTBAAMetadata(AliasAnalysisOpInterface op,
   inst->setMetadata(llvm::LLVMContext::MD_tbaa, node);
 }
 
+void ModuleTranslation::setBranchWeightsMetadata(BranchWeightOpInterface op) {
+  DenseI32ArrayAttr weightsAttr = op.getBranchWeightsOrNull();
+  if (!weightsAttr)
+    return;
+
+  llvm::Instruction *inst = isa<CallOp>(op) ? lookupCall(op) : lookupBranch(op);
+  assert(inst && "expected the operation to have a mapping to an instruction");
+  SmallVector<uint32_t> weights(weightsAttr.asArrayRef());
+  inst->setMetadata(
+      llvm::LLVMContext::MD_prof,
+      llvm::MDBuilder(getLLVMContext()).createBranchWeights(weights));
+}
+
 LogicalResult ModuleTranslation::createTBAAMetadata() {
   llvm::LLVMContext &ctx = llvmModule->getContext();
   llvm::IntegerType *offsetTy = llvm::IntegerType::get(ctx, 64);
@@ -1266,24 +1283,25 @@ llvm::OpenMPIRBuilder *ModuleTranslation::getOpenMPBuilder() {
   if (!ompBuilder) {
     ompBuilder = std::make_unique<llvm::OpenMPIRBuilder>(*llvmModule);
 
-    bool isTargetDevice = false;
+    bool isTargetDevice = false, isGPU = false;
     llvm::StringRef hostIRFilePath = "";
 
-    if (Attribute deviceAttr = mlirModule->getAttr("omp.is_target_device"))
-      if (::llvm::isa<mlir::BoolAttr>(deviceAttr))
-        isTargetDevice =
-            ::llvm::dyn_cast<mlir::BoolAttr>(deviceAttr).getValue();
+    if (auto deviceAttr =
+            mlirModule->getAttrOfType<mlir::BoolAttr>("omp.is_target_device"))
+      isTargetDevice = deviceAttr.getValue();
 
-    if (Attribute filepath = mlirModule->getAttr("omp.host_ir_filepath"))
-      if (::llvm::isa<mlir::StringAttr>(filepath))
-        hostIRFilePath =
-            ::llvm::dyn_cast<mlir::StringAttr>(filepath).getValue();
+    if (auto gpuAttr = mlirModule->getAttrOfType<mlir::BoolAttr>("omp.is_gpu"))
+      isGPU = gpuAttr.getValue();
+
+    if (auto filepathAttr =
+            mlirModule->getAttrOfType<mlir::StringAttr>("omp.host_ir_filepath"))
+      hostIRFilePath = filepathAttr.getValue();
 
     ompBuilder->initialize(hostIRFilePath);
 
     // TODO: set the flags when available
     llvm::OpenMPIRBuilderConfig config(
-        isTargetDevice, /* IsGPU */ false,
+        isTargetDevice, isGPU,
         /* HasRequiresUnifiedSharedMemory */ false,
         /* OpenMPOffloadMandatory */ false);
     ompBuilder->setConfig(config);

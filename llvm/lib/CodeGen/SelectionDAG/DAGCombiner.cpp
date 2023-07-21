@@ -5706,7 +5706,7 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
   SDLoc DL(N);
   if (ISD::isExtOpcode(HandOpcode) || ISD::isExtVecInRegOpcode(HandOpcode) ||
       (HandOpcode == ISD::SIGN_EXTEND_INREG &&
-       N0.getOperand(1) == N0.getOperand(1))) {
+       N0.getOperand(1) == N1.getOperand(1))) {
     // If both operands have other uses, this transform would create extra
     // instructions without eliminating anything.
     if (!N0.hasOneUse() && !N1.hasOneUse())

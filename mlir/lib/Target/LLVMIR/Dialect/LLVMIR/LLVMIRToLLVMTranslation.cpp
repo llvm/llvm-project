@@ -125,13 +125,11 @@ static LogicalResult setProfilingAttr(OpBuilder &builder, llvm::MDNode *node,
     branchWeights.push_back(branchWeight->getZExtValue());
   }
 
-  return TypeSwitch<Operation *, LogicalResult>(op)
-      .Case<CondBrOp, SwitchOp, CallOp, InvokeOp>([&](auto branchWeightOp) {
-        branchWeightOp.setBranchWeightsAttr(
-            builder.getI32VectorAttr(branchWeights));
-        return success();
-      })
-      .Default([](auto) { return failure(); });
+  if (auto iface = dyn_cast<BranchWeightOpInterface>(op)) {
+    iface.setBranchWeights(builder.getDenseI32ArrayAttr(branchWeights));
+    return success();
+  }
+  return failure();
 }
 
 /// Searches for the attribute that maps to the given TBAA metadata `node` and

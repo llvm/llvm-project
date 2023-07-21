@@ -158,6 +158,7 @@ __cpp_lib_ranges_chunk                                  202202L <ranges>
 __cpp_lib_ranges_chunk_by                               202202L <ranges>
 __cpp_lib_ranges_iota                                   202202L <numeric>
 __cpp_lib_ranges_join_with                              202202L <ranges>
+__cpp_lib_ranges_repeat                                 202207L <ranges>
 __cpp_lib_ranges_slide                                  202202L <ranges>
 __cpp_lib_ranges_starts_ends_with                       202106L <algorithm>
 __cpp_lib_ranges_to_container                           202202L <deque> <forward_list> <list>
@@ -436,6 +437,7 @@ __cpp_lib_within_lifetime                               202306L <type_traits>
 // # define __cpp_lib_ranges_chunk_by                      202202L
 // # define __cpp_lib_ranges_iota                          202202L
 // # define __cpp_lib_ranges_join_with                     202202L
+# define __cpp_lib_ranges_repeat                        202207L
 // # define __cpp_lib_ranges_slide                         202202L
 // # define __cpp_lib_ranges_starts_ends_with              202106L
 // # define __cpp_lib_ranges_to_container                  202202L

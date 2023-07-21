@@ -21,6 +21,7 @@
     __cpp_lib_ranges_chunk        202202L [C++23]
     __cpp_lib_ranges_chunk_by     202202L [C++23]
     __cpp_lib_ranges_join_with    202202L [C++23]
+    __cpp_lib_ranges_repeat       202207L [C++23]
     __cpp_lib_ranges_slide        202202L [C++23]
     __cpp_lib_ranges_zip          202110L [C++23]
 */
@@ -48,6 +49,10 @@
 
 # ifdef __cpp_lib_ranges_join_with
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_slide
@@ -80,6 +85,10 @@
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
 # endif
 
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_ranges_slide
 #   error "__cpp_lib_ranges_slide should not be defined before c++23"
 # endif
@@ -108,6 +117,10 @@
 
 # ifdef __cpp_lib_ranges_join_with
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_slide
@@ -141,6 +154,10 @@
 
 # ifdef __cpp_lib_ranges_join_with
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_slide
@@ -204,6 +221,13 @@
 #   ifdef __cpp_lib_ranges_join_with
 #     error "__cpp_lib_ranges_join_with should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_repeat != 202207L
+#   error "__cpp_lib_ranges_repeat should have the value 202207L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -285,6 +309,13 @@
 #   ifdef __cpp_lib_ranges_join_with
 #     error "__cpp_lib_ranges_join_with should not be defined because it is unimplemented in libc++!"
 #   endif
+# endif
+
+# ifndef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_repeat != 202207L
+#   error "__cpp_lib_ranges_repeat should have the value 202207L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

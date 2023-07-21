@@ -253,7 +253,8 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryIterate) {
   Cache.init(nullptr, Allocator.get());
   std::vector<std::pair<scudo::uptr, void *>> V;
   for (scudo::uptr I = 0; I < 64U; I++) {
-    const scudo::uptr Size = std::rand() % Primary::SizeClassMap::MaxSize;
+    const scudo::uptr Size =
+        static_cast<scudo::uptr>(std::rand()) % Primary::SizeClassMap::MaxSize;
     const scudo::uptr ClassId = Primary::SizeClassMap::getClassIdBySize(Size);
     void *P = Cache.allocate(ClassId);
     V.push_back(std::make_pair(ClassId, P));
@@ -300,8 +301,8 @@ SCUDO_TYPED_TEST(ScudoPrimaryTest, PrimaryThreaded) {
           Cv.wait(Lock);
       }
       for (scudo::uptr I = 0; I < 256U; I++) {
-        const scudo::uptr Size =
-            std::rand() % Primary::SizeClassMap::MaxSize / 4;
+        const scudo::uptr Size = static_cast<scudo::uptr>(std::rand()) %
+                                 Primary::SizeClassMap::MaxSize / 4;
         const scudo::uptr ClassId =
             Primary::SizeClassMap::getClassIdBySize(Size);
         void *P = Cache.allocate(ClassId);

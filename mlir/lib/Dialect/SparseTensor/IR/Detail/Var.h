@@ -424,8 +424,6 @@ public:
     return oid ? &access(*oid) : nullptr;
   }
 
-  Var toVar(VarInfo::ID id) const { return vars[to_underlying(id)].getVar(); }
-
 private:
   VarInfo &access(VarInfo::ID id) {
     return const_cast<VarInfo &>(std::as_const(*this).access(id));
@@ -472,12 +470,20 @@ public:
 
   InFlightDiagnostic emitErrorIfAnyUnbound(AsmParser &parser) const;
 
+  /// Returns the current ranks of bound variables.  This method should
+  /// only be used after the environment is "finished", since binding new
+  /// variables will (semantically) invalidate any previously returned `Ranks`.
   Ranks getRanks() const { return Ranks(nextNum); }
 
-  /// Adds all variables of given kind to the vector.
-  void
-  addVars(SmallVectorImpl<std::pair<StringRef, AffineExpr>> &dimsAndSymbols,
-          VarKind vk, MLIRContext *context) const;
+  /// Gets the `Var` identified by the `VarInfo::ID`, raising an assertion
+  /// failure if the variable is not bound.
+  Var getVar(VarInfo::ID id) const { return access(id).getVar(); }
+
+  /// Gets the `Var` identified by the `VarInfo::ID`, returning nullopt
+  /// if the variable is not bound.
+  std::optional<Var> tryGetVar(VarInfo::ID id) const {
+    return access(id).tryGetVar();
+  }
 };
 
 //===----------------------------------------------------------------------===//

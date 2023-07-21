@@ -8,7 +8,7 @@
 
 // <iostream>
 
-// istream wcerr;
+// wostream wcerr;
 
 // UNSUPPORTED: no-wide-characters
 

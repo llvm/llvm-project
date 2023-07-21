@@ -396,7 +396,7 @@ Changes in existing checks
   using macro between namespace declarations, to fix false positive when using namespace
   with attributes and to support nested inline namespace introduced in c++20.
 
-- Fixed an issue in `modernize-loop-convert
+- Fixed an issue in :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` generating wrong code
   when using structured bindings.
 

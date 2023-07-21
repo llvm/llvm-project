@@ -51,7 +51,7 @@ def SPIRV_BitcastOp : SPIRV_Op<"Bitcast", [Pure]> {
 
     If Result Type has a different number of components than Operand, the
     total number of bits in Result Type must equal the total number of bits
-    in Operand. Let L be the type, either Result Type or Operand’s type,
+    in Operand. Let L be the type, either Result Type or Operand's type,
     that has the larger number of components. Let S be the other type, with
     the smaller number of components. The number of components in L must be
     an integer multiple of the number of components in S. The first
@@ -335,17 +335,17 @@ def SPIRV_UConvertOp : SPIRV_CastOp<"UConvert",
 
 def SPIRV_ConvertPtrToUOp : SPIRV_Op<"ConvertPtrToU", []> {
   let summary = [{
-    Bit pattern-preserving conversion of a pointer to 
+    Bit pattern-preserving conversion of a pointer to
     an unsigned scalar integer of possibly different bit width.
   }];
 
   let description = [{
     Result Type must be a scalar of integer type, whose Signedness operand is 0.
 
-    Pointer must be a physical pointer type. If the bit width of Pointer is 
-    smaller than that of Result Type, the conversion zero extends Pointer. 
-    If the bit width of Pointer is larger than that of Result Type, 
-    the conversion truncates Pointer. 
+    Pointer must be a physical pointer type. If the bit width of Pointer is
+    smaller than that of Result Type, the conversion zero extends Pointer.
+    If the bit width of Pointer is larger than that of Result Type,
+    the conversion truncates Pointer.
 
     For same bit width Pointer and Result Type, this is the same as OpBitcast.
 
@@ -359,7 +359,7 @@ def SPIRV_ConvertPtrToUOp : SPIRV_Op<"ConvertPtrToU", []> {
     #### Example:
 
     ```mlir
-    %1 = spirv.ConvertPtrToU %0 : !spirv.ptr<i32, Generic> to i32         
+    %1 = spirv.ConvertPtrToU %0 : !spirv.ptr<i32, Generic> to i32
     ```
   }];
 
@@ -390,18 +390,18 @@ def SPIRV_ConvertPtrToUOp : SPIRV_Op<"ConvertPtrToU", []> {
 
 def SPIRV_ConvertUToPtrOp : SPIRV_Op<"ConvertUToPtr", [UnsignedOp]> {
   let summary = [{
-    Bit pattern-preserving conversion of an unsigned scalar integer 
+    Bit pattern-preserving conversion of an unsigned scalar integer
     to a pointer.
   }];
 
   let description = [{
     Result Type must be a physical pointer type.
 
-    Integer Value must be a scalar of integer type, whose Signedness 
-    operand is 0. If the bit width of Integer Value is smaller 
+    Integer Value must be a scalar of integer type, whose Signedness
+    operand is 0. If the bit width of Integer Value is smaller
     than that of Result Type, the conversion zero extends Integer Value.
-    If the bit width of Integer Value is larger than that of Result Type, 
-    the conversion truncates Integer Value. 
+    If the bit width of Integer Value is larger than that of Result Type,
+    the conversion truncates Integer Value.
 
     For same-width Integer Value and Result Type, this is the same as OpBitcast.
 
@@ -415,7 +415,7 @@ def SPIRV_ConvertUToPtrOp : SPIRV_Op<"ConvertUToPtr", [UnsignedOp]> {
     #### Example:
 
     ```mlir
-    %1 = spirv.ConvertUToPtr %0 :  i32 to !spirv.ptr<i32, Generic>         
+    %1 = spirv.ConvertUToPtr %0 :  i32 to !spirv.ptr<i32, Generic>
     ```
   }];
 

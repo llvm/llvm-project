@@ -156,8 +156,14 @@ def OPC_SYSTEM    : RISCVOpcode<"SYSTEM",    0b1110011>;
 def OPC_OP_P      : RISCVOpcode<"OP_P",      0b1110111>;
 def OPC_CUSTOM_3  : RISCVOpcode<"CUSTOM_3",  0b1111011>;
 
-class RVInstCommon<InstFormat format> : Instruction {
+class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
+                   list<dag> pattern, InstFormat format> : Instruction {
   let Namespace = "RISCV";
+
+  dag OutOperandList = outs;
+  dag InOperandList = ins;
+  let AsmString = opcodestr # "\t" # argstr;
+  let Pattern = pattern;
 
   let TSFlags{4-0} = format.Value;
 
@@ -210,7 +216,7 @@ class RVInstCommon<InstFormat format> : Instruction {
 
 class RVInst<dag outs, dag ins, string opcodestr, string argstr,
              list<dag> pattern, InstFormat format>
-    : RVInstCommon<format> {
+    : RVInstCommon<outs, ins, opcodestr, argstr, pattern, format> {
   field bits<32> Inst;
   // SoftFail is a field the disassembler can use to provide a way for
   // instructions to not match without killing the whole decode process. It is
@@ -218,15 +224,6 @@ class RVInst<dag outs, dag ins, string opcodestr, string argstr,
   // to build the decode table.
   field bits<32> SoftFail = 0;
   let Size = 4;
-
-  bits<7> Opcode = 0;
-
-  let Inst{6-0} = Opcode;
-
-  dag OutOperandList = outs;
-  dag InOperandList = ins;
-  let AsmString = opcodestr # "\t" # argstr;
-  let Pattern = pattern;
 }
 
 // Pseudo instructions
@@ -288,7 +285,7 @@ class RVInstR<bits<7> funct7, bits<3> funct3, RISCVOpcode opcode, dag outs,
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstR4<bits<2> funct2, bits<3> funct3, RISCVOpcode opcode, dag outs,
@@ -305,7 +302,7 @@ class RVInstR4<bits<2> funct2, bits<3> funct3, RISCVOpcode opcode, dag outs,
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstR4Frm<bits<2> funct2, RISCVOpcode opcode, dag outs, dag ins,
@@ -323,7 +320,7 @@ class RVInstR4Frm<bits<2> funct2, RISCVOpcode opcode, dag outs, dag ins,
   let Inst{19-15} = rs1;
   let Inst{14-12} = frm;
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstRAtomic<bits<5> funct5, bit aq, bit rl, bits<3> funct3,
@@ -341,7 +338,7 @@ class RVInstRAtomic<bits<5> funct5, bit aq, bit rl, bits<3> funct3,
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstRFrm<bits<7> funct7, RISCVOpcode opcode, dag outs, dag ins,
@@ -357,7 +354,7 @@ class RVInstRFrm<bits<7> funct7, RISCVOpcode opcode, dag outs, dag ins,
   let Inst{19-15} = rs1;
   let Inst{14-12} = frm;
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstI<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
@@ -371,7 +368,7 @@ class RVInstI<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstIShift<bits<5> imm11_7, bits<3> funct3, RISCVOpcode opcode,
@@ -387,7 +384,7 @@ class RVInstIShift<bits<5> imm11_7, bits<3> funct3, RISCVOpcode opcode,
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstIShiftW<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
@@ -402,7 +399,7 @@ class RVInstIShiftW<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstS<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
@@ -417,7 +414,7 @@ class RVInstS<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = imm12{4-0};
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstB<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
@@ -434,7 +431,7 @@ class RVInstB<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
   let Inst{14-12} = funct3;
   let Inst{11-8} = imm12{3-0};
   let Inst{7} = imm12{10};
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstU<RISCVOpcode opcode, dag outs, dag ins, string opcodestr,
@@ -445,7 +442,7 @@ class RVInstU<RISCVOpcode opcode, dag outs, dag ins, string opcodestr,
 
   let Inst{31-12} = imm20;
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstJ<RISCVOpcode opcode, dag outs, dag ins, string opcodestr,
@@ -459,7 +456,7 @@ class RVInstJ<RISCVOpcode opcode, dag outs, dag ins, string opcodestr,
   let Inst{20} = imm20{10};
   let Inst{19-12} = imm20{18-11};
   let Inst{11-7} = rd;
-  let Opcode = opcode.Value;
+  let Inst{6-0} = opcode.Value;
 }
 
 //===----------------------------------------------------------------------===//
@@ -481,7 +478,7 @@ class DirectiveInsnR<dag outs, dag ins, string argstr>
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = opcode;
+  let Inst{6-0} = opcode;
 
   let AsmString = ".insn r " # argstr;
 }
@@ -503,7 +500,7 @@ class DirectiveInsnR4<dag outs, dag ins, string argstr>
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = opcode;
+  let Inst{6-0} = opcode;
 
   let AsmString = ".insn r4 " # argstr;
 }
@@ -521,7 +518,7 @@ class DirectiveInsnI<dag outs, dag ins, string argstr>
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
-  let Opcode = opcode;
+  let Inst{6-0} = opcode;
 
   let AsmString = ".insn i " # argstr;
 }
@@ -540,7 +537,7 @@ class DirectiveInsnS<dag outs, dag ins, string argstr>
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = imm12{4-0};
-  let Opcode = opcode;
+  let Inst{6-0} = opcode;
 
   let AsmString = ".insn s " # argstr;
 }
@@ -561,7 +558,7 @@ class DirectiveInsnB<dag outs, dag ins, string argstr>
   let Inst{14-12} = funct3;
   let Inst{11-8} = imm12{3-0};
   let Inst{7} = imm12{10};
-  let Opcode = opcode;
+  let Inst{6-0} = opcode;
 
   let AsmString = ".insn b " # argstr;
 }
@@ -575,7 +572,7 @@ class DirectiveInsnU<dag outs, dag ins, string argstr>
 
   let Inst{31-12} = imm20;
   let Inst{11-7} = rd;
-  let Opcode = opcode;
+  let Inst{6-0} = opcode;
 
   let AsmString = ".insn u " # argstr;
 }
@@ -589,7 +586,7 @@ class DirectiveInsnJ<dag outs, dag ins, string argstr>
 
   let Inst{31-12} = imm20;
   let Inst{11-7} = rd;
-  let Opcode = opcode;
+  let Inst{6-0} = opcode;
 
   let AsmString = ".insn j " # argstr;
 }

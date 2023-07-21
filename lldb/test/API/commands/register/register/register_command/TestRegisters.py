@@ -606,3 +606,47 @@ class RegisterCommandsTestCase(TestBase):
 
         # This has an alternative name according to the ABI.
         self.expect("register info x30", substrs=["Name: lr (x30)"])
+
+    @skipUnlessPlatform(["linux"])
+    @skipIf(archs=no_match(["x86_64"]))
+    def test_fs_gs_base(self):
+        """
+        Tests fs_base register can be read and equals to pthread_self() return value
+        and gs_base register equals zero.
+        """
+        self.build()
+        target = self.createTestTarget()
+        # Launch the process and stop.
+        self.expect("run", PROCESS_STOPPED, substrs=["stopped"])
+
+        process = target.GetProcess()
+
+        thread = process.GetThreadAtIndex(0)
+        self.assertTrue(thread.IsValid(), "current thread is valid")
+
+        current_frame = thread.GetFrameAtIndex(0)
+        self.assertTrue(current_frame.IsValid(), "current frame is valid")
+
+        reg_fs_base = current_frame.FindRegister("fs_base")
+        self.assertTrue(reg_fs_base.IsValid(), "fs_base is not available")
+        reg_gs_base = current_frame.FindRegister("gs_base")
+        self.assertTrue(reg_gs_base.IsValid(), "gs_base is not available")
+        self.assertEqual(
+            reg_gs_base.GetValueAsSigned(-1), 0, f"gs_base should be zero"
+        )
+
+        # Evaluate pthread_self() and compare against fs_base register read.
+        pthread_self_code = "(uint64_t)pthread_self()"
+        pthread_self_val = current_frame.EvaluateExpression(pthread_self_code)
+        self.assertTrue(
+            pthread_self_val.IsValid(), f"{pthread_self_code} evaluation has failed"
+        )
+        self.assertNotEqual(
+            reg_fs_base.GetValueAsSigned(-1), -1, f"fs_base returned -1 which is wrong"
+        )
+
+        self.assertEqual(
+            reg_fs_base.GetValueAsUnsigned(0),
+            pthread_self_val.GetValueAsUnsigned(0),
+            "fs_base does not equal to pthread_self() value.",
+        )

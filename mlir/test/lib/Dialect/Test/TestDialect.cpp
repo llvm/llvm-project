@@ -1437,9 +1437,8 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
   // Create return type consisting of the last element of the first operand.
   auto operandType = operands.front().getType();
   auto sval = dyn_cast<ShapedType>(operandType);
-  if (!sval) {
+  if (!sval)
     return emitOptionalError(location, "only shaped type operands allowed");
-  }
   int64_t dim = sval.hasRank() ? sval.getShape().front() : ShapedType::kDynamic;
   auto type = IntegerType::get(context, 17);
 
@@ -1451,6 +1450,35 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
 }
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::reifyReturnTypeShapes(
+    OpBuilder &builder, ValueRange operands,
+    llvm::SmallVectorImpl<Value> &shapes) {
+  shapes = SmallVector<Value, 1>{
+      builder.createOrFold<tensor::DimOp>(getLoc(), operands.front(), 0)};
+  return success();
+}
+
+LogicalResult
+OpWithShapedTypeInferTypeAdaptorInterfaceOp::inferReturnTypeComponents(
+    MLIRContext *context, std::optional<Location> location,
+    OpWithShapedTypeInferTypeAdaptorInterfaceOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  // Create return type consisting of the last element of the first operand.
+  auto operandType = adaptor.getOperand1().getType();
+  auto sval = dyn_cast<ShapedType>(operandType);
+  if (!sval)
+    return emitOptionalError(location, "only shaped type operands allowed");
+  int64_t dim = sval.hasRank() ? sval.getShape().front() : ShapedType::kDynamic;
+  auto type = IntegerType::get(context, 17);
+
+  Attribute encoding;
+  if (auto rankedTy = dyn_cast<RankedTensorType>(sval))
+    encoding = rankedTy.getEncoding();
+  inferredReturnShapes.push_back(ShapedTypeComponents({dim}, type, encoding));
+  return success();
+}
+
+LogicalResult
+OpWithShapedTypeInferTypeAdaptorInterfaceOp::reifyReturnTypeShapes(
     OpBuilder &builder, ValueRange operands,
     llvm::SmallVectorImpl<Value> &shapes) {
   shapes = SmallVector<Value, 1>{

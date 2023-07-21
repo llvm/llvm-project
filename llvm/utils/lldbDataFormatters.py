@@ -59,12 +59,12 @@ def __lldb_init_module(debugger, internal_dict):
     debugger.HandleCommand(
         "type summary add -w llvm "
         "-F lldbDataFormatters.StringRefSummaryProvider "
-        '-x "^llvm::StringRef$"'
+        "llvm::StringRef"
     )
     debugger.HandleCommand(
         "type summary add -w llvm "
         "-F lldbDataFormatters.ConstStringSummaryProvider "
-        '-x "^lldb_private::ConstString$"'
+        "lldb_private::ConstString"
     )
 
     # The synthetic providers for PointerIntPair and PointerUnion are disabled

@@ -99,6 +99,9 @@ Changes to building LLVM
 Changes to TableGen
 -------------------
 
+* Named arguments are supported. Arguments can be specified in the form of
+  ``name=value``.
+
 Changes to Interprocedural Optimizations
 ----------------------------------------
 

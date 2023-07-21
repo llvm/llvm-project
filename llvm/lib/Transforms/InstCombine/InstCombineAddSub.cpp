@@ -1618,6 +1618,9 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
   if (Instruction *Res = foldBinOpOfDisplacedShifts(I))
     return Res;
 
+  if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
+    return Res;
+
   return Changed ? &I : nullptr;
 }
 
@@ -2465,6 +2468,9 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
       return replaceInstUsesWith(I, Call);
     }
   }
+
+  if (Instruction *Res = foldBinOpOfSelectAndCastOfSelectCondition(I))
+    return Res;
 
   return TryToNarrowDeduceFlags();
 }

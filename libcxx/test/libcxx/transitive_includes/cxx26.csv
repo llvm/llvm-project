@@ -575,7 +575,10 @@ stdexcept iosfwd
 stop_token atomic
 stop_token cstddef
 stop_token cstdint
+stop_token cstring
+stop_token ctime
 stop_token limits
+stop_token ratio
 stop_token thread
 stop_token version
 streambuf cstdint

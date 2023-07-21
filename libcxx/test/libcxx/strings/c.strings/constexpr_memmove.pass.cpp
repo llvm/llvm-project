@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// ADDITIONAL_COMPILE_FLAGS: -Wno-private-header
-
 // _Tp* __constexpr_memmove(_Tp* __dest, _Up* __src, __element_count __n);
 //
 // General tests for __constexpr_memmove.

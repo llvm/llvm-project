@@ -40,14 +40,14 @@
 # CHECK-NEXT: 0x00000020: [DW_RLE_end_of_list ]
 
 # RELOC:      Section ([[#]]) .rela.eh_frame {
-# RELOC-NEXT:   0x1C R_RISCV_32_PCREL - 0x0
-# RELOC-NEXT:   0x20 R_RISCV_ADD32 - 0x0
-# RELOC-NEXT:   0x20 R_RISCV_SUB32 - 0x0
-# RELOC-NEXT:   0x25 R_RISCV_SET6 - 0x0
-# RELOC-NEXT:   0x25 R_RISCV_SUB6 - 0x0
-# RELOC-NEXT:   0x34 R_RISCV_32_PCREL - 0x0
-# RELOC-NEXT:   0x38 R_RISCV_ADD32 - 0x0
-# RELOC-NEXT:   0x38 R_RISCV_SUB32 - 0x0
+# RELOC-NEXT:   0x1C R_RISCV_32_PCREL <null> 0x0
+# RELOC-NEXT:   0x20 R_RISCV_ADD32 <null> 0x0
+# RELOC-NEXT:   0x20 R_RISCV_SUB32 <null> 0x0
+# RELOC-NEXT:   0x25 R_RISCV_SET6 <null> 0x0
+# RELOC-NEXT:   0x25 R_RISCV_SUB6 <null> 0x0
+# RELOC-NEXT:   0x34 R_RISCV_32_PCREL <null> 0x0
+# RELOC-NEXT:   0x38 R_RISCV_ADD32 <null> 0x0
+# RELOC-NEXT:   0x38 R_RISCV_SUB32 <null> 0x0
 # RELOC-NEXT: }
 
 ## TODO A section needs two relocations.
@@ -57,12 +57,12 @@
 # RELOC-NEXT: }
 
 # RELOC:      Section ([[#]]) .rela.debug_line {
-# RELOC:        R_RISCV_ADD16 - 0x0
-# RELOC-NEXT:   R_RISCV_SUB16 - 0x0
-# RELOC-NEXT:   R_RISCV_ADD16 - 0x0
-# RELOC-NEXT:   R_RISCV_SUB16 - 0x0
-# RELOC-NEXT:   R_RISCV_ADD16 - 0x0
-# RELOC-NEXT:   R_RISCV_SUB16 - 0x0
+# RELOC:        R_RISCV_ADD16 <null> 0x0
+# RELOC-NEXT:   R_RISCV_SUB16 <null> 0x0
+# RELOC-NEXT:   R_RISCV_ADD16 <null> 0x0
+# RELOC-NEXT:   R_RISCV_SUB16 <null> 0x0
+# RELOC-NEXT:   R_RISCV_ADD16 <null> 0x0
+# RELOC-NEXT:   R_RISCV_SUB16 <null> 0x0
 # RELOC:      }
 
 .section .text.foo,"ax"
