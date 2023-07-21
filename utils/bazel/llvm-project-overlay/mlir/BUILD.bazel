@@ -4807,16 +4807,20 @@ cc_library(
         "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
     ],
     hdrs = [
+        "include/mlir/Conversion/GPUCommon/GPUCommonPass.h",
         "lib/Conversion/GPUCommon/GPUOpsLowering.h",
         "lib/Conversion/GPUCommon/IndexIntrinsicsOpLowering.h",
         "lib/Conversion/GPUCommon/OpToFuncCallLowering.h",
     ],
     deps = [
+        ":ConversionPassIncGen",
         ":FuncDialect",
         ":GPUDialect",
+        ":GPUTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":Support",
         "//llvm:Support",
     ],
 )
@@ -4910,6 +4914,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ConversionPassIncGen",
+        ":GPUCommonTransforms",
         ":GPUDialect",
         ":GPUToGPURuntimeTransforms",
         ":IR",
@@ -4919,6 +4924,7 @@ cc_library(
         ":NVGPUDialect",
         ":NVVMDialect",
         ":Pass",
+        "//llvm:Support",
     ],
 )
 
