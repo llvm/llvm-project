@@ -60,6 +60,7 @@ define amdgpu_kernel void @test_convert_fp16_to_fp32(ptr addrspace(1) noalias %o
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;

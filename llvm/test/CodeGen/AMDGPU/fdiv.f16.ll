@@ -125,6 +125,7 @@ define amdgpu_kernel void @v_fdiv_f16(
 ; GFX11-NEXT:    v_fma_mixlo_f16 v3, v1, v3, 0 op_sel_hi:[1,0,0]
 ; GFX11-NEXT:    v_div_fixup_f16 v1, v3, v2, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
@@ -223,6 +224,7 @@ define amdgpu_kernel void @v_rcp_f16(ptr addrspace(1) %r, ptr addrspace(1) %b) #
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -316,6 +318,7 @@ define amdgpu_kernel void @v_rcp_f16_abs(ptr addrspace(1) %r, ptr addrspace(1) %
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_rcp_f16_e64 v1, |v1|
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -412,6 +415,7 @@ define amdgpu_kernel void @reciprocal_f16_rounded(ptr addrspace(1) %r, ptr addrs
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -492,6 +496,7 @@ define amdgpu_kernel void @v_rcp_f16_afn(ptr addrspace(1) %r, ptr addrspace(1) %
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_rcp_f16_e32 v1, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -585,6 +590,7 @@ define amdgpu_kernel void @v_rcp_f16_neg(ptr addrspace(1) %r, ptr addrspace(1) %
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_rcp_f16_e64 v1, -v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -679,6 +685,7 @@ define amdgpu_kernel void @v_rsq_f16(ptr addrspace(1) %r, ptr addrspace(1) %b) #
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_rsq_f16_e32 v1, v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -779,6 +786,7 @@ define amdgpu_kernel void @v_rsq_f16_neg(ptr addrspace(1) %r, ptr addrspace(1) %
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_rcp_f16_e64 v1, -v1
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -888,6 +896,7 @@ define amdgpu_kernel void @v_fdiv_f16_afn(ptr addrspace(1) %r, ptr addrspace(1) 
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -998,6 +1007,7 @@ define amdgpu_kernel void @v_fdiv_f16_unsafe(ptr addrspace(1) %r, ptr addrspace(
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_mul_f16_e32 v1, v1, v2
 ; GFX11-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -1071,6 +1081,7 @@ define amdgpu_kernel void @div_afn_2_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; GFX11-NEXT:    v_mul_f16_e32 v0, 0.5, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %x = load half, ptr addrspace(1) undef
@@ -1137,6 +1148,7 @@ define amdgpu_kernel void @div_afn_k_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; GFX11-NEXT:    v_mul_f16_e32 v0, 0x2e66, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %x = load half, ptr addrspace(1) undef
@@ -1203,6 +1215,7 @@ define amdgpu_kernel void @div_afn_neg_k_x_pat_f16(ptr addrspace(1) %out) #0 {
 ; GFX11-NEXT:    v_mul_f16_e32 v0, 0xae66, v0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b16 v1, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %x = load half, ptr addrspace(1) undef

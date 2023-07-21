@@ -39,6 +39,7 @@ define amdgpu_kernel void @global_atomic_ordered_add_b64_rtn(ptr addrspace(1) %a
 ; GFX12-SDAG-NEXT:    global_atomic_ordered_add_b64 v[0:1], v2, v[0:1], s[4:5] offset:32 th:TH_ATOMIC_RETURN
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
@@ -53,6 +54,7 @@ define amdgpu_kernel void @global_atomic_ordered_add_b64_rtn(ptr addrspace(1) %a
 ; GFX12-GISEL-NEXT:    global_atomic_ordered_add_b64 v[0:1], v2, v[0:1], s[4:5] offset:32 th:TH_ATOMIC_RETURN
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b64 v2, v[0:1], s[0:1]
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 entry:

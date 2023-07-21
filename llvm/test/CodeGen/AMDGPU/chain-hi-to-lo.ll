@@ -565,6 +565,7 @@ define amdgpu_kernel void @vload2_private(ptr addrspace(1) nocapture readonly %i
 ; GFX11-NEXT:    scratch_load_b32 v1, off, off offset:6
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:

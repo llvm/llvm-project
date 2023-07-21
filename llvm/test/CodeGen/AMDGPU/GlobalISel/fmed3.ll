@@ -108,6 +108,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod0(ptr addrspa
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_med3_f32 v1, v1, v2, v3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -230,6 +231,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat1_srcmod0(ptr addrspa
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_med3_f32 v1, v1, v2, v3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -375,6 +377,7 @@ define amdgpu_kernel void @v_test_no_global_nnans_med3_f32_pat0_srcmod0(ptr addr
 ; GFX11-NEXT:    v_dual_max_f32 v1, v1, v2 :: v_dual_max_f32 v2, v3, v3
 ; GFX11-NEXT:    v_minmax_f32 v1, v1, v2, v4
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -497,6 +500,7 @@ define amdgpu_kernel void @v_test_nnan_on_call_med3_f32_pat0_srcmod0(ptr addrspa
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_med3_f32 v1, v1, v2, v3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -624,6 +628,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_srcmod012(ptr addrs
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_med3_f32 v1, v1, |v2|, v3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -762,6 +767,7 @@ define amdgpu_kernel void @v_test_global_nnans_med3_f32_pat0_negabs012(ptr addrs
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_med3_f32 v1, v1, v2, v3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -901,6 +907,7 @@ define amdgpu_kernel void @v_nnan_inputs_med3_f32_pat0(ptr addrspace(1) %out, pt
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_med3_f32 v1, v1, v2, v3
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
@@ -1066,6 +1073,7 @@ define amdgpu_kernel void @v_test_safe_med3_f32_pat0_multi_use0(ptr addrspace(1)
 ; GFX11-NEXT:    global_store_b32 v[0:1], v4, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()

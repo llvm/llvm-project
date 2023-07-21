@@ -108,6 +108,7 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GCNES0-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GCNES0-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GCNES0-NEXT:  .LBB1_3: ; %for.end
+; GCNES0-NEXT:    s_nop 0
 ; GCNES0-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCNES0-NEXT:    s_endpgm
 ;
@@ -138,6 +139,7 @@ define amdgpu_kernel void @copy_global(ptr addrspace(1) nocapture %d, ptr addrsp
 ; GCNES2-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GCNES2-NEXT:    s_cbranch_scc1 .LBB1_2
 ; GCNES2-NEXT:  .LBB1_3: ; %for.end
+; GCNES2-NEXT:    s_nop 0
 ; GCNES2-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCNES2-NEXT:    s_endpgm
 entry:
@@ -184,6 +186,7 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GCNES0-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GCNES0-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GCNES0-NEXT:  .LBB2_3: ; %for.end
+; GCNES0-NEXT:    s_nop 0
 ; GCNES0-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCNES0-NEXT:    s_endpgm
 ;
@@ -214,6 +217,7 @@ define amdgpu_kernel void @copy_constant(ptr addrspace(1) nocapture %d, ptr addr
 ; GCNES2-NEXT:    s_add_nc_u64 s[0:1], s[0:1], 16
 ; GCNES2-NEXT:    s_cbranch_scc1 .LBB2_2
 ; GCNES2-NEXT:  .LBB2_3: ; %for.end
+; GCNES2-NEXT:    s_nop 0
 ; GCNES2-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCNES2-NEXT:    s_endpgm
 entry:

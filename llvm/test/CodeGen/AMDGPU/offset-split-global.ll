@@ -2466,6 +2466,7 @@ define amdgpu_kernel void @global_inst_salu_offset_1(ptr addrspace(1) %p) {
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] offset:1 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -2479,6 +2480,7 @@ define amdgpu_kernel void @global_inst_salu_offset_1(ptr addrspace(1) %p) {
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 1
@@ -2516,6 +2518,7 @@ define amdgpu_kernel void @global_inst_salu_offset_11bit_max(ptr addrspace(1) %p
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] offset:2047 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -2529,6 +2532,7 @@ define amdgpu_kernel void @global_inst_salu_offset_11bit_max(ptr addrspace(1) %p
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 2047
@@ -2566,6 +2570,7 @@ define amdgpu_kernel void @global_inst_salu_offset_12bit_max(ptr addrspace(1) %p
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] offset:4095 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -2579,6 +2584,7 @@ define amdgpu_kernel void @global_inst_salu_offset_12bit_max(ptr addrspace(1) %p
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 4095
@@ -2616,6 +2622,7 @@ define amdgpu_kernel void @global_inst_salu_offset_13bit_max(ptr addrspace(1) %p
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] offset:4095 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -2629,6 +2636,7 @@ define amdgpu_kernel void @global_inst_salu_offset_13bit_max(ptr addrspace(1) %p
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 8191
@@ -2666,6 +2674,7 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_11bit_max(ptr addrspace(1
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] offset:-2048 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -2679,6 +2688,7 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_11bit_max(ptr addrspace(1
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 -2048
@@ -2719,6 +2729,7 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_12bit_max(ptr addrspace(1
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] offset:-4096 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -2732,6 +2743,7 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_12bit_max(ptr addrspace(1
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -2788,6 +2800,7 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_13bit_max(ptr addrspace(1
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -2801,6 +2814,7 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_13bit_max(ptr addrspace(1
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -2825,6 +2839,7 @@ define amdgpu_kernel void @global_inst_salu_offset_neg_13bit_max(ptr addrspace(1
 ; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 -8192
@@ -2862,6 +2877,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_11bit_max(ptr addrspace(1)
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] offset:4095 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -2875,6 +2891,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_11bit_max(ptr addrspace(1)
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 4095
@@ -2912,6 +2929,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_12bit_max(ptr addrspace(1)
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] offset:4095 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -2925,6 +2943,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_12bit_max(ptr addrspace(1)
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 8191
@@ -2962,6 +2981,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_13bit_max(ptr addrspace(1)
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] offset:4095 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -2975,6 +2995,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_13bit_max(ptr addrspace(1)
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 16383
@@ -3015,6 +3036,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_11bit_max(ptr addrspac
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] offset:-4096 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -3028,6 +3050,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_11bit_max(ptr addrspac
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -3084,6 +3107,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_12bit_max(ptr addrspac
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -3097,6 +3121,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_12bit_max(ptr addrspac
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -3121,6 +3146,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_12bit_max(ptr addrspac
 ; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 -8192
@@ -3166,6 +3192,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_13bit_max(ptr addrspac
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -3179,6 +3206,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_13bit_max(ptr addrspac
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 ;
@@ -3203,6 +3231,7 @@ define amdgpu_kernel void @global_inst_salu_offset_2x_neg_13bit_max(ptr addrspac
 ; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 -16384
@@ -3249,6 +3278,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split0(ptr addrsp
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -3265,6 +3295,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split0(ptr addrsp
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -3289,6 +3320,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split0(ptr addrsp
 ; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off offset:2047 glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -3304,6 +3336,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split0(ptr addrsp
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 8589936639
@@ -3350,6 +3383,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split1(ptr addrsp
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -3366,6 +3400,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split1(ptr addrsp
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -3390,6 +3425,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split1(ptr addrsp
 ; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off offset:2048 glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -3405,6 +3441,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_split1(ptr addrsp
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 8589936640
@@ -3451,6 +3488,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split0(ptr addrsp
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -3467,6 +3505,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split0(ptr addrsp
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -3491,6 +3530,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split0(ptr addrsp
 ; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off offset:4095 glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -3506,6 +3546,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split0(ptr addrsp
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 8589938687
@@ -3552,6 +3593,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split1(ptr addrsp
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -3568,6 +3610,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split1(ptr addrsp
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -3592,6 +3635,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split1(ptr addrsp
 ; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -3607,6 +3651,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_split1(ptr addrsp
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 8589938688
@@ -3653,6 +3698,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split0(ptr addrsp
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -3669,6 +3715,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split0(ptr addrsp
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -3693,6 +3740,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split0(ptr addrsp
 ; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off offset:4095 glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -3708,6 +3756,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split0(ptr addrsp
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 8589942783
@@ -3754,6 +3803,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split1(ptr addrsp
 ; GFX11-GISEL-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-GISEL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-GISEL-NEXT:    s_nop 0
 ; GFX11-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-GISEL-NEXT:    s_endpgm
 ;
@@ -3770,6 +3820,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split1(ptr addrsp
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -3794,6 +3845,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split1(ptr addrsp
 ; GFX11-SDAG-NEXT:    global_load_u8 v0, v[0:1], off glc dlc
 ; GFX11-SDAG-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-SDAG-NEXT:    s_nop 0
 ; GFX11-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-SDAG-NEXT:    s_endpgm
 ;
@@ -3809,6 +3861,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_split1(ptr addrsp
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 8589942784
@@ -3853,6 +3906,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_neg_high_split0(p
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -3868,6 +3922,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_neg_high_split0(p
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -3884,6 +3939,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_neg_high_split0(p
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 -9223372036854773761
@@ -3928,6 +3984,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_neg_high_split1(p
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -3943,6 +4000,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_neg_high_split1(p
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -3959,6 +4017,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_11bit_neg_high_split1(p
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 -9223372036854773760
@@ -4003,6 +4062,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_neg_high_split0(p
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -4018,6 +4078,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_neg_high_split0(p
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -4034,6 +4095,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_neg_high_split0(p
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 -9223372036854771713
@@ -4078,6 +4140,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_neg_high_split1(p
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -4093,6 +4156,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_neg_high_split1(p
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -4109,6 +4173,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_12bit_neg_high_split1(p
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 -9223372036854771712
@@ -4153,6 +4218,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_neg_high_split0(p
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -4168,6 +4234,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_neg_high_split0(p
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -4184,6 +4251,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_neg_high_split0(p
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 -9223372036854767617
@@ -4228,6 +4296,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_neg_high_split1(p
 ; GFX11-NEXT:    global_load_u8 v0, v0, s[0:1] glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -4243,6 +4312,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_neg_high_split1(p
 ; GFX12-GISEL-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-GISEL-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-GISEL-NEXT:    s_nop 0
 ; GFX12-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-NEXT:    s_endpgm
 ;
@@ -4259,6 +4329,7 @@ define amdgpu_kernel void @global_inst_salu_offset_64bit_13bit_neg_high_split1(p
 ; GFX12-SDAG-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-SDAG-NEXT:    global_store_b8 v[0:1], v0, off
+; GFX12-SDAG-NEXT:    s_nop 0
 ; GFX12-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-NEXT:    s_endpgm
   %gep = getelementptr i8, ptr addrspace(1) %p, i64 -9223372036854767616

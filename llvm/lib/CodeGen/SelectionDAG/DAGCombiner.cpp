@@ -5704,8 +5704,7 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
   SDValue Y = N1.getOperand(0);
   EVT XVT = X.getValueType();
   SDLoc DL(N);
-  if (HandOpcode == ISD::ANY_EXTEND || HandOpcode == ISD::ZERO_EXTEND ||
-      HandOpcode == ISD::SIGN_EXTEND) {
+  if (ISD::isExtOpcode(HandOpcode) || ISD::isExtVecInRegOpcode(HandOpcode)) {
     // If both operands have other uses, this transform would create extra
     // instructions without eliminating anything.
     if (!N0.hasOneUse() && !N1.hasOneUse())
@@ -5720,8 +5719,9 @@ SDValue DAGCombiner::hoistLogicOpWithSameOpcodeHands(SDNode *N) {
       return SDValue();
     // Avoid infinite looping with PromoteIntBinOp.
     // TODO: Should we apply desirable/legal constraints to all opcodes?
-    if (HandOpcode == ISD::ANY_EXTEND && LegalTypes &&
-        !TLI.isTypeDesirableForOp(LogicOpcode, XVT))
+    if ((HandOpcode == ISD::ANY_EXTEND ||
+         HandOpcode == ISD::ANY_EXTEND_VECTOR_INREG) &&
+        LegalTypes && !TLI.isTypeDesirableForOp(LogicOpcode, XVT))
       return SDValue();
     // logic_op (hand_op X), (hand_op Y) --> hand_op (logic_op X, Y)
     SDValue Logic = DAG.getNode(LogicOpcode, DL, XVT, X, Y);

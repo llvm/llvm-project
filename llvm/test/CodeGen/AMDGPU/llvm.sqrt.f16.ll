@@ -61,6 +61,7 @@ define amdgpu_kernel void @sqrt_f16(
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_sqrt_f16_e32 v0, v0
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[4:7], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
@@ -147,6 +148,7 @@ define amdgpu_kernel void @sqrt_v2f16(
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[4:7], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
     ptr addrspace(1) %r,
