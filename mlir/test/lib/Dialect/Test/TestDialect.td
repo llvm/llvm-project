@@ -29,7 +29,9 @@ def Test_Dialect : Dialect {
 
   let extraClassDeclaration = [{
     void registerAttributes();
+    void registerInterfaces();
     void registerTypes();
+    void registerOpsSyntax();
 
     // Provides a custom printing/parsing for some operations.
     ::std::optional<ParseOpHook>
