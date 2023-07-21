@@ -782,6 +782,19 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// Get the RPC server running on this device.
   RPCServerTy *getRPCServer() const { return RPCServer; }
 
+  /// The number of parallel RPC ports to use on the device. In general, this
+  /// should be roughly equivalent to the amount of hardware parallelism the
+  /// device can support. This is because GPUs in general do not have forward
+  /// progress guarantees, so we minimize thread level dependencies by
+  /// allocating enough space such that each device thread can have a port. This
+  /// is likely overly pessimistic in the average case, but guarantees no
+  /// deadlocks at the cost of memory. This must be overloaded by targets
+  /// expecting to use the RPC server.
+  virtual uint64_t requestedRPCPortCount() const {
+    assert(!shouldSetupRPCServer() && "Default implementation cannot be used");
+    return 0;
+  }
+
 private:
   /// Register offload entry for global variable.
   Error registerGlobalOffloadEntry(DeviceImageTy &DeviceImage,
@@ -888,7 +901,6 @@ protected:
 #endif
 
 private:
-
   /// Return the kernel environment object for kernel \p Name.
   Expected<KernelEnvironmentTy>
   getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);

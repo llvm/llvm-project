@@ -295,6 +295,19 @@ struct CUDADeviceTy : public GenericDeviceTy {
                                  ComputeCapability.Minor))
       return Err;
 
+    uint32_t NumMuliprocessors = 0;
+    uint32_t MaxThreadsPerSM = 0;
+    uint32_t WarpSize = 0;
+    if (auto Err = getDeviceAttr(CU_DEVICE_ATTRIBUTE_MULTIPROCESSOR_COUNT,
+                                 NumMuliprocessors))
+      return Err;
+    if (auto Err = getDeviceAttr(CU_DEVICE_ATTRIBUTE_MAX_THREADS_PER_MULTIPROCESSOR,
+                                 MaxThreadsPerSM))
+      return Err;
+    if (auto Err = getDeviceAttr(CU_DEVICE_ATTRIBUTE_WARP_SIZE, WarpSize))
+      return Err;
+    HardwareParallelism = NumMuliprocessors * (MaxThreadsPerSM / WarpSize);
+
     return Plugin::success();
   }
 
@@ -364,6 +377,12 @@ struct CUDADeviceTy : public GenericDeviceTy {
   /// availible.
   bool shouldSetupRPCServer() const override {
     return libomptargetSupportsRPC();
+  }
+
+  /// NVIDIA returns the product of the SM count and the number of warps that
+  /// fit if the maximum number of threads were scheduled on each SM.
+  uint64_t requestedRPCPortCount() const override {
+    return HardwareParallelism;
   }
 
   /// Get the stream of the asynchronous info sructure or get a new one.
@@ -876,6 +895,10 @@ private:
       return "sm_" + std::to_string(Major * 10 + Minor);
     }
   } ComputeCapability;
+
+  /// The maximum number of warps that can be resident on all the SMs
+  /// simultaneously.
+  uint32_t HardwareParallelism = 0;
 };
 
 Error CUDAKernelTy::launchImpl(GenericDeviceTy &GenericDevice,
