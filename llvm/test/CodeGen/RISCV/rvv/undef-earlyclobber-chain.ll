@@ -145,3 +145,18 @@ declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
 declare <vscale x 1 x i16> @llvm.experimental.stepvector.nxv1i16()
 declare <vscale x 8 x i16> @llvm.vector.insert.nxv8i16.nxv1i16(<vscale x 8 x i16>, <vscale x 1 x i16>, i64 immarg)
 declare <vscale x 8 x i8> @llvm.riscv.vrgatherei16.vv.nxv8i8.i64(<vscale x 8 x i8>, <vscale x 8 x i8>, <vscale x 8 x i16>, i64)
+
+
+define void @repeat_shuffle(<2 x double> %v, ptr noalias %q) {
+; CHECK-LABEL: repeat_shuffle:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmv2r.v v12, v8
+; CHECK-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; CHECK-NEXT:    vmv1r.v v13, v10
+; CHECK-NEXT:    vslideup.vi v8, v12, 2
+; CHECK-NEXT:    vse64.v v8, (a0)
+; CHECK-NEXT:    ret
+  %w = shufflevector <2 x double> %v, <2 x double> poison, <4 x i32> <i32 0, i32 1, i32 0, i32 1>
+  store <4 x double> %w, ptr %q
+  ret void
+}
