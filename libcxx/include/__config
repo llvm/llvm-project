@@ -281,11 +281,10 @@
 // Enabled checks.
 #    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)      _LIBCPP_ASSERT(expression, message)
 #    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)   _LIBCPP_ASSERT(expression, message)
-// TODO(hardening): Don't enable uncategorized assertions in the hardened mode.
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)          _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
 #    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)   _LIBCPP_ASSUME(expression)
 #    define _LIBCPP_ASSERT_INTERNAL(expression, message)               _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)          _LIBCPP_ASSUME(expression)
 
 // Debug mode checks.
 
