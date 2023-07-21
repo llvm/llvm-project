@@ -225,6 +225,22 @@ __pstl_reduce(TestBackend, ForwardIterator, ForwardIterator) {
   return {};
 }
 
+bool pstl_sort_called = false;
+
+template <class, class RandomAccessIterator, class Comp>
+void __pstl_sort(TestBackend, RandomAccessIterator, RandomAccessIterator, Comp) {
+  assert(!pstl_sort_called);
+  pstl_sort_called = true;
+}
+
+bool pstl_stable_sort_called = false;
+
+template <class, class RandomAccessIterator, class Comp>
+void __pstl_stable_sort(TestBackend, RandomAccessIterator, RandomAccessIterator, Comp) {
+  assert(!pstl_stable_sort_called);
+  pstl_stable_sort_called = true;
+}
+
 bool pstl_unary_transform_reduce_called = false;
 
 template <class, class ForwardIterator, class T, class UnaryOperation, class BinaryOperation>
@@ -314,6 +330,10 @@ int main(int, char**) {
   assert(std::pstl_reduce_with_init_called);
   (void)std::reduce(TestPolicy{}, std::begin(a), std::end(a));
   assert(std::pstl_reduce_without_init_called);
+  (void)std::sort(TestPolicy{}, std::begin(a), std::end(a));
+  assert(std::pstl_sort_called);
+  (void)std::stable_sort(TestPolicy{}, std::begin(a), std::end(a));
+  assert(std::pstl_stable_sort_called);
   (void)std::transform_reduce(TestPolicy{}, std::begin(a), std::end(a), 0, pred, pred);
   assert(std::pstl_unary_transform_reduce_called);
   (void)std::transform_reduce(TestPolicy{}, std::begin(a), std::end(a), std::begin(a), 0, pred, pred);

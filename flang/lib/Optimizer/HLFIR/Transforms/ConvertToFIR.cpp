@@ -153,11 +153,18 @@ public:
       else
         fir::runtime::genAssign(builder, loc, toMutableBox, from);
     } else {
+      // TODO: use the type specification to see if IsFinalizable is set,
+      // or propagate IsFinalizable attribute from lowering.
+      bool needFinalization =
+          !assignOp.isTemporaryLHS() &&
+          mlir::isa<fir::RecordType>(fir::getElementTypeOf(lhsExv));
+
       // genScalarAssignment() must take care of potential overlap
       // between LHS and RHS. Note that the overlap is possible
       // also for components of LHS/RHS, and the Assign() runtime
       // must take care of it.
       fir::factory::genScalarAssignment(builder, loc, lhsExv, rhsExv,
+                                        needFinalization,
                                         assignOp.isTemporaryLHS());
     }
     rewriter.eraseOp(assignOp);

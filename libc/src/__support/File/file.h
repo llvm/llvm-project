@@ -151,15 +151,6 @@ protected:
                    static_cast<ModeFlags>(OpenMode::PLUS));
   }
 
-  // The GPU build should not emit a destructor because we do not support global
-  // destructors in all cases and it is unneccessary without buffering.
-#if !defined(LIBC_TARGET_ARCH_IS_GPU)
-  ~File() {
-    if (own_buf)
-      delete buf;
-  }
-#endif
-
 public:
   // We want this constructor to be constexpr so that global file objects
   // like stdout do not require invocation of the constructor which can
@@ -234,6 +225,13 @@ public:
         }
       }
     }
+
+    // If we own the buffer, delete it before calling the platform close
+    // implementation. The platform close should not need to access the buffer
+    // and we need to clean it up before the entire structure is removed.
+    if (own_buf)
+      delete buf;
+
     // Platform close is expected to cleanup the file data structure which
     // includes the file mutex. Hence, we call platform_close after releasing
     // the file lock. Another thread doing file operations while a thread is

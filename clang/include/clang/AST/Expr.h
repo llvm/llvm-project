@@ -762,6 +762,11 @@ public:
   /// strlen, false otherwise.
   bool tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const;
 
+  bool EvaluateCharRangeAsString(std::string &Result,
+                                 const Expr *SizeExpression,
+                                 const Expr *PtrExpression, ASTContext &Ctx,
+                                 EvalResult &Status) const;
+
   /// Enumeration used to describe the kind of Null pointer constant
   /// returned from \c isNullPointerConstant().
   enum NullPointerConstantKind {

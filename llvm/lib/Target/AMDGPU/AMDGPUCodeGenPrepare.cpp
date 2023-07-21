@@ -88,6 +88,13 @@ static cl::opt<bool> DisableIDivExpand(
   cl::ReallyHidden,
   cl::init(false));
 
+// Disable processing of fdiv so we can better test the backend implementations.
+static cl::opt<bool> DisableFDivExpand(
+  "amdgpu-codegenprepare-disable-fdiv-expansion",
+  cl::desc("Prevent expanding floating point division in AMDGPUCodeGenPrepare"),
+  cl::ReallyHidden,
+  cl::init(false));
+
 class AMDGPUCodeGenPrepareImpl
     : public InstVisitor<AMDGPUCodeGenPrepareImpl, bool> {
 public:
@@ -834,6 +841,9 @@ static Value *optimizeWithFDivFast(Value *Num, Value *Den, float ReqdAccuracy,
 //
 // NOTE: rcp is the preference in cases that both are legal.
 bool AMDGPUCodeGenPrepareImpl::visitFDiv(BinaryOperator &FDiv) {
+  if (DisableFDivExpand)
+    return false;
+
   Type *Ty = FDiv.getType()->getScalarType();
   if (!Ty->isFloatTy())
     return false;

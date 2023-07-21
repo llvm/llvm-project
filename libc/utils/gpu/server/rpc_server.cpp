@@ -23,7 +23,7 @@ using namespace __llvm_libc;
 static_assert(sizeof(rpc_buffer_t) == sizeof(rpc::Buffer),
               "Buffer size mismatch");
 
-static_assert(RPC_MAXIMUM_PORT_COUNT == rpc::MAX_PORT_COUNT,
+static_assert(RPC_MAXIMUM_PORT_COUNT == rpc::DEFAULT_PORT_COUNT,
               "Incorrect maximum port count");
 
 // The client needs to support different lane sizes for the SIMT model. Because
@@ -126,6 +126,18 @@ private:
         int status = 0;
         std::memcpy(&status, buffer->data, sizeof(int));
         exit(status);
+      });
+      break;
+    }
+    case RPC_HOST_CALL: {
+      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
+      void *args[rpc::MAX_LANE_SIZE] = {nullptr};
+      port->recv_n(args, sizes, [&](uint64_t size) { return new char[size]; });
+      port->recv([&](rpc::Buffer *buffer, uint32_t id) {
+        reinterpret_cast<void (*)(void *)>(buffer->data[0])(args[id]);
+      });
+      port->send([&](rpc::Buffer *, uint32_t id) {
+        delete[] reinterpret_cast<uint8_t *>(args[id]);
       });
       break;
     }
@@ -341,7 +353,7 @@ uint64_t rpc_get_client_size() { return sizeof(rpc::Client); }
 using ServerPort = std::variant<rpc::Server<1>::Port *, rpc::Server<32>::Port *,
                                 rpc::Server<64>::Port *>;
 
-ServerPort getPort(rpc_port_t ref) {
+ServerPort get_port(rpc_port_t ref) {
   if (ref.lane_size == 1)
     return reinterpret_cast<rpc::Server<1>::Port *>(ref.handle);
   else if (ref.lane_size == 32)
@@ -353,7 +365,7 @@ ServerPort getPort(rpc_port_t ref) {
 }
 
 void rpc_send(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
-  auto port = getPort(ref);
+  auto port = get_port(ref);
   std::visit(
       [=](auto &port) {
         port->send([=](rpc::Buffer *buffer) {
@@ -364,7 +376,7 @@ void rpc_send(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
 }
 
 void rpc_recv(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
-  auto port = getPort(ref);
+  auto port = get_port(ref);
   std::visit(
       [=](auto &port) {
         port->recv([=](rpc::Buffer *buffer) {
@@ -376,7 +388,7 @@ void rpc_recv(rpc_port_t ref, rpc_port_callback_ty callback, void *data) {
 
 void rpc_recv_and_send(rpc_port_t ref, rpc_port_callback_ty callback,
                        void *data) {
-  auto port = getPort(ref);
+  auto port = get_port(ref);
   std::visit(
       [=](auto &port) {
         port->recv_and_send([=](rpc::Buffer *buffer) {

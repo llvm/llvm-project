@@ -894,7 +894,7 @@ def hlfir_DestroyOp : hlfir_Op<"destroy", [MemoryEffects<[MemFree]>]> {
     buffer of an hlfir.expr, if any, will be deallocated if it was heap
     allocated.
     It is not required to create an hlfir.destroy operation for and hlfir.expr
-    created inside an hlfir.elemental an returned in the hlfir.yield_element.
+    created inside an hlfir.elemental and returned in the hlfir.yield_element.
     The last use of such expression is implicit and an hlfir.destroy could
     not be emitted after the hlfir.yield_element since it is a terminator.
 

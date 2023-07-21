@@ -156,12 +156,16 @@ void transform::ApplyEraseUnnecessaryInputsPatternsOp::populatePatterns(
 
 void transform::ApplyFoldUnitExtentDimsViaReshapesPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  linalg::populateFoldUnitExtentDimsViaReshapesPatterns(patterns);
+  linalg::ControlDropUnitDims options;
+  linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
 }
 
 void transform::ApplyFoldUnitExtentDimsViaSlicesPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  linalg::populateFoldUnitExtentDimsViaSlicesPatterns(patterns);
+  linalg::ControlDropUnitDims options;
+  options.rankReductionStrategy =
+      linalg::ControlDropUnitDims::RankReductionStrategy::ExtractInsertSlice;
+  linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
 }
 
 void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(

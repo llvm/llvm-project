@@ -206,6 +206,34 @@ void RawBufferAtomicCmpswapOp::getCanonicalizationPatterns(
 }
 
 //===----------------------------------------------------------------------===//
+// WMMAOp
+//===----------------------------------------------------------------------===//
+LogicalResult WMMAOp::verify() {
+  Type sourceAType = getSourceA().getType();
+  Type destType = getDestC().getType();
+
+  VectorType sourceVectorAType = sourceAType.dyn_cast<VectorType>();
+  VectorType destVectorType = destType.dyn_cast<VectorType>();
+
+  Type sourceAElemType = sourceVectorAType.getElementType();
+  Type destElemType = destVectorType.getElementType();
+
+  bool isDestFloat =
+      (destElemType.isF32() || destElemType.isF16() || destElemType.isBF16());
+  bool isSrcFloat = (sourceAElemType.isF16() || sourceAElemType.isBF16());
+
+  if (isDestFloat && !isSrcFloat) {
+    return emitOpError("Expected float sources with float destination");
+  }
+
+  if (!isDestFloat && isSrcFloat) {
+    return emitOpError("Expected int sources with int destination");
+  }
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // MFMAOp
 //===----------------------------------------------------------------------===//
 LogicalResult MFMAOp::verify() {

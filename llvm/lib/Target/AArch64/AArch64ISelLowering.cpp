@@ -22107,15 +22107,19 @@ static SDValue performDUPCombine(SDNode *N,
   // 128bit vector version.
   if (VT.is64BitVector() && DCI.isAfterLegalizeDAG()) {
     EVT LVT = VT.getDoubleNumVectorElementsVT(*DCI.DAG.getContext());
-    if (SDNode *LN = DCI.DAG.getNodeIfExists(
-            N->getOpcode(), DCI.DAG.getVTList(LVT), {N->getOperand(0)})) {
+    SmallVector<SDValue> Ops(N->ops());
+    if (SDNode *LN = DCI.DAG.getNodeIfExists(N->getOpcode(),
+                                             DCI.DAG.getVTList(LVT), Ops)) {
       SDLoc DL(N);
       return DCI.DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, SDValue(LN, 0),
                              DCI.DAG.getConstant(0, DL, MVT::i64));
     }
   }
 
-  return performPostLD1Combine(N, DCI, false);
+  if (N->getOpcode() == AArch64ISD::DUP)
+    return performPostLD1Combine(N, DCI, false);
+
+  return SDValue();
 }
 
 /// Get rid of unnecessary NVCASTs (that don't change the type).
@@ -23043,6 +23047,10 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::CSEL:
     return performCSELCombine(N, DCI, DAG);
   case AArch64ISD::DUP:
+  case AArch64ISD::DUPLANE8:
+  case AArch64ISD::DUPLANE16:
+  case AArch64ISD::DUPLANE32:
+  case AArch64ISD::DUPLANE64:
     return performDUPCombine(N, DCI);
   case AArch64ISD::DUPLANE128:
     return performDupLane128Combine(N, DAG);
@@ -25858,7 +25866,8 @@ bool AArch64TargetLowering::isConstantUnsignedBitfieldExtractLegal(
 }
 
 bool AArch64TargetLowering::isComplexDeinterleavingSupported() const {
-  return Subtarget->hasSVE() || Subtarget->hasComplxNum();
+  return Subtarget->hasSVE() || Subtarget->hasSVE2() ||
+         Subtarget->hasComplxNum();
 }
 
 bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
@@ -25884,6 +25893,11 @@ bool AArch64TargetLowering::isComplexDeinterleavingOperationSupported(
       !llvm::isPowerOf2_32(VTyWidth))
     return false;
 
+  if (ScalarTy->isIntegerTy() && Subtarget->hasSVE2()) {
+    unsigned ScalarWidth = ScalarTy->getScalarSizeInBits();
+    return 8 <= ScalarWidth && ScalarWidth <= 64;
+  }
+
   return (ScalarTy->isHalfTy() && Subtarget->hasFullFP16()) ||
          ScalarTy->isFloatTy() || ScalarTy->isDoubleTy();
 }
@@ -25894,6 +25908,7 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
     Value *Accumulator) const {
   VectorType *Ty = cast<VectorType>(InputA->getType());
   bool IsScalable = Ty->isScalableTy();
+  bool IsInt = Ty->getElementType()->isIntegerTy();
 
   unsigned TyWidth =
       Ty->getScalarSizeInBits() * Ty->getElementCount().getKnownMinValue();
@@ -25929,10 +25944,15 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
 
   if (OperationType == ComplexDeinterleavingOperation::CMulPartial) {
     if (Accumulator == nullptr)
-      Accumulator = ConstantFP::get(Ty, 0);
+      Accumulator = Constant::getNullValue(Ty);
 
     if (IsScalable) {
-      auto *Mask = B.CreateVectorSplat(Ty->getElementCount(), B.getInt1(true));
+      if (IsInt)
+        return B.CreateIntrinsic(
+            Intrinsic::aarch64_sve_cmla_x, Ty,
+            {Accumulator, InputA, InputB, B.getInt32((int)Rotation * 90)});
+
+      auto *Mask = B.getAllOnesMask(Ty->getElementCount());
       return B.CreateIntrinsic(
           Intrinsic::aarch64_sve_fcmla, Ty,
           {Mask, Accumulator, InputA, InputB, B.getInt32((int)Rotation * 90)});
@@ -25950,12 +25970,18 @@ Value *AArch64TargetLowering::createComplexDeinterleavingIR(
 
   if (OperationType == ComplexDeinterleavingOperation::CAdd) {
     if (IsScalable) {
-      auto *Mask = B.CreateVectorSplat(Ty->getElementCount(), B.getInt1(true));
       if (Rotation == ComplexDeinterleavingRotation::Rotation_90 ||
-          Rotation == ComplexDeinterleavingRotation::Rotation_270)
+          Rotation == ComplexDeinterleavingRotation::Rotation_270) {
+        if (IsInt)
+          return B.CreateIntrinsic(
+              Intrinsic::aarch64_sve_cadd_x, Ty,
+              {InputA, InputB, B.getInt32((int)Rotation * 90)});
+
+        auto *Mask = B.getAllOnesMask(Ty->getElementCount());
         return B.CreateIntrinsic(
             Intrinsic::aarch64_sve_fcadd, Ty,
             {Mask, InputA, InputB, B.getInt32((int)Rotation * 90)});
+      }
       return nullptr;
     }
 

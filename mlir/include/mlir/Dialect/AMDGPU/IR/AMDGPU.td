@@ -380,6 +380,10 @@ def MFMAOutTypes : AnyTypeOf<[F64,
                               VectorOfLengthAndType<[4, 16, 32], [F32]>,
                               VectorOfLengthAndType<[4, 16, 32], [I32]>,
                               VectorOfLengthAndType<[4], [F64]>]>;
+// wmma
+def WMMAInTypes : AnyTypeOf<[VectorOfLengthAndType<[16], [F16, BF16, I8, SI8, UI8]>]>;
+def WMMAOutTypes : AnyTypeOf<[VectorOfLengthAndType<[4, 8], [F32, I32]>,
+                              VectorOfLengthAndType<[8, 16], [F16, BF16]>]>;
 
 def AMDGPU_MFMAOp :
     AMDGPU_Op<"mfma", [AllTypesMatch<["destC", "destD"]>,
@@ -433,6 +437,43 @@ def AMDGPU_MFMAOp :
     $sourceA `*` $sourceB `+` $destC
     attr-dict
     `blgp` `=` $blgp
+    `:` type($sourceA) `,` type($sourceB) `,` type($destC)
+  }];
+  let hasVerifier = 1;
+}
+
+def AMDGPU_WMMAOp :
+    AMDGPU_Op<"wmma", [AllTypesMatch<["destC", "destD"]>,
+                       AllTypesMatch<["sourceA", "sourceB"]>,
+                        Pure]>,
+    Arguments<(ins
+                   WMMAInTypes:$sourceA,
+                   WMMAInTypes:$sourceB,
+                   WMMAOutTypes:$destC,
+                   DefaultValuedAttr<ConfinedAttr<I32Attr, [IntMinValue<0>, IntMaxValue<1>]>, "0">:$subwordOffset,
+                   UnitAttr:$unsignedA,
+                   UnitAttr:$unsignedB,
+                   UnitAttr:$clamp)>,
+    Results<(outs WMMAOutTypes: $destD)> {
+  let summary = "MLIR wrapper for RDNA3 wmma instructions";
+  let description = [{
+    The `amdgpu.wmma` op is an MLIR wrapper around intrinsics
+    for various `wmma` instructions in the RDNA3 architecture, which perform
+    a 16x16 matrix multiplication for different data types.
+
+    When emitting f16->f16 (or bf16->bf16) wmma the output is a 16xf16 (or 16xbf16) vector
+    containing only 8 valid values:
+      - If `subwordOffset` is 0, then the output is stored at indices 0, 2, 4, ..., 14.
+      - If `subwordOffset` is 1, then the output is stored at indices 1, 3, 5, ..., 15.
+
+    `unsignedA` and `unsignedB` flag that the `int8` LLVM inputs are unsigned.
+
+    The `clamp` flag is used to saturate the output of type T to numeric_limits<T>::max()
+    in case of overflow.
+  }];
+  let assemblyFormat = [{
+    $sourceA `*` $sourceB `+` $destC
+    attr-dict
     `:` type($sourceA) `,` type($sourceB) `,` type($destC)
   }];
   let hasVerifier = 1;

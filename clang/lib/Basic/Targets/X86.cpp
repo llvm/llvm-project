@@ -261,8 +261,14 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVX512VP2INTERSECT = true;
     } else if (Feature == "+sha") {
       HasSHA = true;
+    } else if (Feature == "+sha512") {
+      HasSHA512 = true;
     } else if (Feature == "+shstk") {
       HasSHSTK = true;
+    } else if (Feature == "+sm3") {
+      HasSM3 = true;
+    } else if (Feature == "+sm4") {
+      HasSM4 = true;
     } else if (Feature == "+movbe") {
       HasMOVBE = true;
     } else if (Feature == "+sgx") {
@@ -347,6 +353,8 @@ bool X86TargetInfo::handleTargetFeatures(std::vector<std::string> &Features,
       HasAVXNECONVERT= true;
     } else if (Feature == "+avxvnni") {
       HasAVXVNNI = true;
+    } else if (Feature == "+avxvnniint16") {
+      HasAVXVNNIINT16 = true;
     } else if (Feature == "+avxvnniint8") {
       HasAVXVNNIINT8 = true;
     } else if (Feature == "+serialize") {
@@ -749,6 +757,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVX512VP2INTERSECT__");
   if (HasSHA)
     Builder.defineMacro("__SHA__");
+  if (HasSHA512)
+    Builder.defineMacro("__SHA512__");
 
   if (HasFXSR)
     Builder.defineMacro("__FXSR__");
@@ -772,6 +782,10 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__SHSTK__");
   if (HasSGX)
     Builder.defineMacro("__SGX__");
+  if (HasSM3)
+    Builder.defineMacro("__SM3__");
+  if (HasSM4)
+    Builder.defineMacro("__SM4__");
   if (HasPREFETCHI)
     Builder.defineMacro("__PREFETCHI__");
   if (HasPREFETCHWT1)
@@ -824,6 +838,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
     Builder.defineMacro("__AVXNECONVERT__");
   if (HasAVXVNNI)
     Builder.defineMacro("__AVXVNNI__");
+  if (HasAVXVNNIINT16)
+    Builder.defineMacro("__AVXVNNIINT16__");
   if (HasAVXVNNIINT8)
     Builder.defineMacro("__AVXVNNIINT8__");
   if (HasSERIALIZE)
@@ -952,6 +968,7 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("avxifma", true)
       .Case("avxneconvert", true)
       .Case("avxvnni", true)
+      .Case("avxvnniint16", true)
       .Case("avxvnniint8", true)
       .Case("bmi", true)
       .Case("bmi2", true)
@@ -999,7 +1016,10 @@ bool X86TargetInfo::isValidFeatureName(StringRef Name) const {
       .Case("serialize", true)
       .Case("sgx", true)
       .Case("sha", true)
+      .Case("sha512", true)
       .Case("shstk", true)
+      .Case("sm3", true)
+      .Case("sm4", true)
       .Case("sse", true)
       .Case("sse2", true)
       .Case("sse3", true)
@@ -1054,6 +1074,7 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("avxifma", HasAVXIFMA)
       .Case("avxneconvert", HasAVXNECONVERT)
       .Case("avxvnni", HasAVXVNNI)
+      .Case("avxvnniint16", HasAVXVNNIINT16)
       .Case("avxvnniint8", HasAVXVNNIINT8)
       .Case("bmi", HasBMI)
       .Case("bmi2", HasBMI2)
@@ -1104,7 +1125,10 @@ bool X86TargetInfo::hasFeature(StringRef Feature) const {
       .Case("serialize", HasSERIALIZE)
       .Case("sgx", HasSGX)
       .Case("sha", HasSHA)
+      .Case("sha512", HasSHA512)
       .Case("shstk", HasSHSTK)
+      .Case("sm3", HasSM3)
+      .Case("sm4", HasSM4)
       .Case("sse", SSELevel >= SSE1)
       .Case("sse2", SSELevel >= SSE2)
       .Case("sse3", SSELevel >= SSE3)

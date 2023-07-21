@@ -31,12 +31,27 @@ int main(int, char**)
 {
     {
         typedef cpp17_input_iterator<int*> MyInputIter;
-        // Sould not trigger ASan.
+        // Should not trigger ASan.
         std::deque<int> v;
         int i[] = {42};
         v.insert(v.begin(), MyInputIter(i), MyInputIter(i + 1));
         assert(v[0] == 42);
         assert(is_double_ended_contiguous_container_asan_correct(v));
+    }
+    {
+        typedef int T;
+        typedef std::deque<T, min_allocator<T> > C;
+        const T t[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
+        C c(std::begin(t), std::end(t));
+        assert(is_double_ended_contiguous_container_asan_correct(c));
+    }
+    {
+        typedef char T;
+        typedef std::deque<T, safe_allocator<T> > C;
+        const T t[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'};
+        C c(std::begin(t), std::end(t));
+        c.pop_front();
+        assert(is_double_ended_contiguous_container_asan_correct(c));
     }
     __sanitizer_set_death_callback(do_exit);
     {

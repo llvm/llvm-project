@@ -30,6 +30,7 @@
 #include <__ranges/iota_view.h>
 #include <__ranges/non_propagating_cache.h>
 #include <__ranges/range_adaptor.h>
+#include <__ranges/repeat_view.h>
 #include <__ranges/size.h>
 #include <__ranges/subrange.h>
 #include <__ranges/view_interface.h>
@@ -267,6 +268,32 @@ struct __fn {
                               ranges::end(__rng),
                               std::__to_unsigned_like(__dist - __clamped)
                               );}
+// clang-format off
+#if _LIBCPP_STD_VER >= 23
+  // [range.drop.overview]: the `repeat_view` "_RawRange models sized_range" case.
+  template <class _Range,
+            convertible_to<range_difference_t<_Range>> _Np,
+            class _RawRange = remove_cvref_t<_Range>,
+            class _Dist     = range_difference_t<_Range>>
+    requires (__is_repeat_specialization<_RawRange> && sized_range<_RawRange>)
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI constexpr auto operator()(_Range&& __range, _Np&& __n) const
+    noexcept(noexcept(views::repeat(*__range.__value_, ranges::distance(__range) - std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n)))))
+    -> decltype(      views::repeat(*__range.__value_, ranges::distance(__range) - std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))))
+    { return          views::repeat(*__range.__value_, ranges::distance(__range) - std::min<_Dist>(ranges::distance(__range), std::forward<_Np>(__n))); }
+
+  // [range.drop.overview]: the `repeat_view` "otherwise" case.
+  template <class _Range,
+            convertible_to<range_difference_t<_Range>> _Np,
+            class _RawRange = remove_cvref_t<_Range>,
+            class _Dist     = range_difference_t<_Range>>
+    requires (__is_repeat_specialization<_RawRange> && !sized_range<_RawRange>)
+  _LIBCPP_NODISCARD_EXT _LIBCPP_HIDE_FROM_ABI
+  constexpr auto operator()(_Range&& __range, _Np&&) const
+    noexcept(noexcept(_LIBCPP_AUTO_CAST(std::forward<_Range>(__range))))
+    -> decltype(      _LIBCPP_AUTO_CAST(std::forward<_Range>(__range)))
+    { return          _LIBCPP_AUTO_CAST(std::forward<_Range>(__range)); }
+#endif
+// clang-format on
 
   // [range.drop.overview]: the "otherwise" case.
   template <class _Range, convertible_to<range_difference_t<_Range>> _Np,
@@ -274,6 +301,9 @@ struct __fn {
     // Note: without specifically excluding the other cases, GCC sees this overload as ambiguous with the other
     // overloads.
     requires (!(__is_empty_view<_RawRange> ||
+#if _LIBCPP_STD_VER >= 23
+                __is_repeat_specialization<_RawRange> ||
+#endif
                (__is_subrange_specialization_with_store_size<_RawRange> &&
                sized_range<_RawRange> &&
                 random_access_range<_RawRange>) ||

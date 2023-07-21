@@ -325,7 +325,8 @@ public:
 
   /// Dereferences a primitive element.
   template <typename T> T &elem(unsigned I) const {
-    return reinterpret_cast<T *>(Pointee->rawData())[I];
+    assert(I < getNumElems());
+    return reinterpret_cast<T *>(Pointee->data() + sizeof(InitMap *))[I];
   }
 
   /// Initializes a field.

@@ -3003,6 +3003,10 @@ bool Sema::CheckSVEBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 15))
         HasError = true;
       break;
+    case SVETypeFlags::ImmCheck0_255:
+      if (SemaBuiltinConstantArgRange(TheCall, ArgNum, 0, 255))
+        HasError = true;
+      break;
     }
   }
 
@@ -5405,7 +5409,7 @@ void Sema::checkRVVTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
       !TI.hasFeature("zve64x"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zve64x";
   if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ true) &&
-      !TI.hasFeature("experimental-zvfh"))
+      !TI.hasFeature("zvfh"))
     Diag(Loc, diag::err_riscv_type_requires_extension, D) << Ty << "zvfh";
   if (Ty->isRVVType(/* Bitwidth */ 32, /* IsFloat */ true) &&
       !TI.hasFeature("zve32f"))
@@ -6296,6 +6300,7 @@ bool Sema::CheckX86BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
   case X86::BI__builtin_ia32_pternlogq128_maskz:
   case X86::BI__builtin_ia32_pternlogq256_mask:
   case X86::BI__builtin_ia32_pternlogq256_maskz:
+  case X86::BI__builtin_ia32_vsm3rnds2:
     i = 3; l = 0; u = 255;
     break;
   case X86::BI__builtin_ia32_gatherpfdpd:

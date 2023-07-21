@@ -440,8 +440,11 @@ class DebugCommunication(object):
         print("invalid response")
         return None
 
-    def get_completions(self, text):
-        response = self.request_completions(text)
+    def get_completions(self, text, frameId=None):
+        if frameId is None:
+            stackFrame = self.get_stackFrame()
+            frameId = stackFrame["id"]
+        response = self.request_completions(text, frameId)
         return response["body"]["targets"]
 
     def get_scope_variables(self, scope_name, frameIndex=0, threadId=None):
@@ -675,6 +678,7 @@ class DebugCommunication(object):
                 "supportsRunInTerminalRequest": True,
                 "supportsVariablePaging": True,
                 "supportsVariableType": True,
+                "supportsStartDebuggingRequest": True,
                 "sourceInitFile": sourceInitFile,
             },
         }
@@ -869,8 +873,10 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         return response
 
-    def request_completions(self, text):
+    def request_completions(self, text, frameId=None):
         args_dict = {"text": text, "column": len(text)}
+        if frameId:
+            args_dict["frameId"] = frameId
         command_dict = {
             "command": "completions",
             "type": "request",

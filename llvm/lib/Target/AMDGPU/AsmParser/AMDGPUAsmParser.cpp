@@ -1312,8 +1312,6 @@ private:
                              unsigned RegWidth);
   void cvtMubufImpl(MCInst &Inst, const OperandVector &Operands,
                     bool IsAtomic);
-  void cvtDSImpl(MCInst &Inst, const OperandVector &Operands,
-                 bool IsGdsHardcoded);
 
 public:
   enum AMDGPUMatchResultTy {
@@ -1567,9 +1565,6 @@ public:
   bool tryParseFmt(const char *Pref, int64_t MaxVal, int64_t &Val);
   bool matchDfmtNfmt(int64_t &Dfmt, int64_t &Nfmt, StringRef FormatStr, SMLoc Loc);
 
-  void cvtDSOffset01(MCInst &Inst, const OperandVector &Operands);
-  void cvtDS(MCInst &Inst, const OperandVector &Operands) { cvtDSImpl(Inst, Operands, false); }
-  void cvtDSGds(MCInst &Inst, const OperandVector &Operands) { cvtDSImpl(Inst, Operands, true); }
   void cvtExp(MCInst &Inst, const OperandVector &Operands);
 
   bool parseCnt(int64_t &IntVal);
@@ -6280,75 +6275,8 @@ ParseStatus AMDGPUAsmParser::parseBLGP(OperandVector &Operands) {
 }
 
 //===----------------------------------------------------------------------===//
-// ds
+// Exp
 //===----------------------------------------------------------------------===//
-
-void AMDGPUAsmParser::cvtDSOffset01(MCInst &Inst,
-                                    const OperandVector &Operands) {
-  OptionalImmIndexMap OptionalIdx;
-
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
-
-    // Add the register arguments
-    if (Op.isReg()) {
-      Op.addRegOperands(Inst, 1);
-      continue;
-    }
-
-    // Handle optional arguments
-    OptionalIdx[Op.getImmTy()] = i;
-  }
-
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset0);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyOffset1);
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGDS);
-
-  Inst.addOperand(MCOperand::createReg(AMDGPU::M0)); // m0
-}
-
-void AMDGPUAsmParser::cvtDSImpl(MCInst &Inst, const OperandVector &Operands,
-                                bool IsGdsHardcoded) {
-  OptionalImmIndexMap OptionalIdx;
-  const MCInstrDesc &Desc = MII.get(Inst.getOpcode());
-  AMDGPUOperand::ImmTy OffsetType = AMDGPUOperand::ImmTyOffset;
-
-  for (unsigned i = 1, e = Operands.size(); i != e; ++i) {
-    AMDGPUOperand &Op = ((AMDGPUOperand &)*Operands[i]);
-
-    auto TiedTo =
-        Desc.getOperandConstraint(Inst.getNumOperands(), MCOI::TIED_TO);
-
-    if (TiedTo != -1) {
-      assert((unsigned)TiedTo < Inst.getNumOperands());
-      Inst.addOperand(Inst.getOperand(TiedTo));
-    }
-
-    // Add the register arguments
-    if (Op.isReg()) {
-      Op.addRegOperands(Inst, 1);
-      continue;
-    }
-
-    if (Op.isToken() && Op.getToken() == "gds") {
-      IsGdsHardcoded = true;
-      continue;
-    }
-
-    // Handle optional arguments
-    OptionalIdx[Op.getImmTy()] = i;
-
-    if (Op.getImmTy() == AMDGPUOperand::ImmTySwizzle)
-      OffsetType = AMDGPUOperand::ImmTySwizzle;
-  }
-
-  addOptionalImmOperand(Inst, Operands, OptionalIdx, OffsetType);
-
-  if (!IsGdsHardcoded) {
-    addOptionalImmOperand(Inst, Operands, OptionalIdx, AMDGPUOperand::ImmTyGDS);
-  }
-  Inst.addOperand(MCOperand::createReg(AMDGPU::M0)); // m0
-}
 
 void AMDGPUAsmParser::cvtExp(MCInst &Inst, const OperandVector &Operands) {
   OptionalImmIndexMap OptionalIdx;

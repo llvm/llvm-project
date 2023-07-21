@@ -216,8 +216,11 @@ private:
   bool SelectMOVRELOffset(SDValue Index, SDValue &Base, SDValue &Offset) const;
 
   bool SelectVOP3ModsImpl(SDValue In, SDValue &Src, unsigned &SrcMods,
+                          bool IsCanonicalizing = true,
                           bool AllowAbs = true) const;
   bool SelectVOP3Mods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
+  bool SelectVOP3ModsNonCanonicalizing(SDValue In, SDValue &Src,
+                                       SDValue &SrcMods) const;
   bool SelectVOP3BMods(SDValue In, SDValue &Src, SDValue &SrcMods) const;
   bool SelectVOP3NoMods(SDValue In, SDValue &Src) const;
   bool SelectVOP3Mods0(SDValue In, SDValue &Src, SDValue &SrcMods,

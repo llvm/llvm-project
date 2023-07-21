@@ -93,11 +93,11 @@ foreach Ext = ZfhExts in {
   }
 
   let SchedRW = [WriteFAdd16, ReadFAdd16, ReadFAdd16] in {
-    defm FADD_H : FPALU_rr_frm_m<0b0000010, "fadd.h", Ext, /*Commutable*/1>;
+    defm FADD_H : FPALU_rr_frm_m<0b0000010, "fadd.h", Ext, Commutable=1>;
     defm FSUB_H : FPALU_rr_frm_m<0b0000110, "fsub.h", Ext>;
   }
   let SchedRW = [WriteFMul16, ReadFMul16, ReadFMul16] in
-  defm FMUL_H : FPALU_rr_frm_m<0b0001010, "fmul.h", Ext, /*Commutable*/1>;
+  defm FMUL_H : FPALU_rr_frm_m<0b0001010, "fmul.h", Ext, Commutable=1>;
 
   let SchedRW = [WriteFDiv16, ReadFDiv16, ReadFDiv16] in
   defm FDIV_H : FPALU_rr_frm_m<0b0001110, "fdiv.h", Ext>;
@@ -114,8 +114,8 @@ foreach Ext = ZfhExts in {
   }
 
   let SchedRW = [WriteFMinMax16, ReadFMinMax16, ReadFMinMax16] in {
-    defm FMIN_H   : FPALU_rr_m<0b0010110, 0b000, "fmin.h", Ext, /*Commutable*/1>;
-    defm FMAX_H   : FPALU_rr_m<0b0010110, 0b001, "fmax.h", Ext, /*Commutable*/1>;
+    defm FMIN_H   : FPALU_rr_m<0b0010110, 0b000, "fmin.h", Ext, Commutable=1>;
+    defm FMAX_H   : FPALU_rr_m<0b0010110, 0b001, "fmax.h", Ext, Commutable=1>;
   }
 
   let IsSignExtendingOpW = 1 in
@@ -159,7 +159,7 @@ def FMV_H_X : FPUnaryOp_r<0b1111010, 0b00000, 0b000, FPR16, GPR, "fmv.h.x">,
 
 foreach Ext = ZfhExts in {
   let SchedRW = [WriteFCmp16, ReadFCmp16, ReadFCmp16] in {
-    defm FEQ_H : FPCmp_rr_m<0b1010010, 0b010, "feq.h", Ext, /*Commutable*/1>;
+    defm FEQ_H : FPCmp_rr_m<0b1010010, 0b010, "feq.h", Ext, Commutable=1>;
     defm FLT_H : FPCmp_rr_m<0b1010010, 0b001, "flt.h", Ext>;
     defm FLE_H : FPCmp_rr_m<0b1010010, 0b000, "fle.h", Ext>;
   }

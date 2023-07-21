@@ -379,9 +379,26 @@ struct GetLengthOpConversion
 /// expression bufferization at hlfir.end_associate. If there was more than one
 /// hlfir.end_associate, it would be cleaned up multiple times, perhaps before
 /// one of the other uses.
+/// Note that we have to be careful about expressions used by a single
+/// hlfir.end_associate that may be executed more times than the producer
+/// of the expression value. This may also cause multiple clean-ups
+/// for the same memory (e.g. cause double-free errors). For example,
+/// hlfir.end_associate inside hlfir.elemental may cause such issues
+/// for expressions produced outside of hlfir.elemental.
 static bool allOtherUsesAreSafeForAssociate(mlir::Value value,
                                             mlir::Operation *currentUse,
                                             mlir::Operation *endAssociate) {
+  // If value producer is from a different region than
+  // hlfir.associate/end_associate, then conservatively assume
+  // that the hlfir.end_associate may execute more times than
+  // the value producer.
+  // TODO: this may be improved for operations that cannot
+  // result in multiple executions (e.g. ifOp).
+  if (value.getParentRegion() != currentUse->getParentRegion() ||
+      (endAssociate &&
+       value.getParentRegion() != endAssociate->getParentRegion()))
+    return false;
+
   for (mlir::Operation *useOp : value.getUsers())
     if (!mlir::isa<hlfir::DestroyOp>(useOp) && useOp != currentUse) {
       // hlfir.shape_of and hlfir.get_length will not disrupt cleanup so it is
@@ -504,7 +521,7 @@ struct AssociateOpConversion
     }
     // non-trivial value with more than one use. We will have to make a copy and
     // use that
-    hlfir::Entity source = hlfir::Entity{adaptor.getSource()};
+    hlfir::Entity source = hlfir::Entity{bufferizedExpr};
     auto [temp, cleanup] = createTempFromMold(loc, builder, source);
     builder.create<hlfir::AssignOp>(loc, source, temp, temp.isAllocatable(),
                                     /*keep_lhs_length_if_realloc=*/false,

@@ -817,6 +817,11 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_ranges_repeat",
+            "values": { "c++23": 202207},
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_ranges_slide",
             "values": {"c++23": 202202},
             "headers": ["ranges"],
@@ -836,8 +841,8 @@ feature_test_macros = [
                 "forward_list",
                 "list",
                 "map",
-                "priority_queue",
                 "queue",
+                "ranges",
                 "set",
                 "stack",
                 "string",
@@ -845,7 +850,6 @@ feature_test_macros = [
                 "unordered_set",
                 "vector",
             ],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_zip",

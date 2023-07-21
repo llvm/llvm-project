@@ -134,8 +134,9 @@ TEST(ScudoReleaseTest, FreePagesRangeTracker) {
     // Strip trailing '.'-pages before comparing the results as they are not
     // going to be reported to range_recorder anyway.
     const char *LastX = strrchr(TestCase, 'x');
-    std::string Expected(TestCase,
-                         LastX == nullptr ? 0 : (LastX - TestCase + 1));
+    std::string Expected(
+        TestCase,
+        LastX == nullptr ? 0U : static_cast<size_t>(LastX - TestCase + 1));
     EXPECT_STREQ(Expected.c_str(), Recorder.ReportedPages.c_str());
   }
 }

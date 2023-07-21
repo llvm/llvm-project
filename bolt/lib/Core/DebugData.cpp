@@ -651,7 +651,7 @@ static void writeLegacyLocList(DIEValue &AttrInfo,
                                DebugLocationsVector &LocList,
                                DIEBuilder &DIEBldr, DIE &Die,
                                DebugAddrWriter &AddrWriter,
-                               DebugBufferVector LocBuffer, DWARFUnit &CU,
+                               DebugBufferVector &LocBuffer, DWARFUnit &CU,
                                raw_svector_ostream &LocStream) {
   if (LocList.empty()) {
     replaceLocValbyForm(DIEBldr, Die, AttrInfo, AttrInfo.getForm(),
