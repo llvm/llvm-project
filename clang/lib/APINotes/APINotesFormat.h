@@ -220,7 +220,7 @@ using TagDataLayout =
                                           // below)
                          llvm::BCBlob     // map from name to tag information
                          >;
-}; // namespace tag_block
+} // namespace tag_block
 
 namespace typedef_block {
 enum { TYPEDEF_DATA = 1 };
@@ -231,7 +231,7 @@ using TypedefDataLayout =
                                           // below)
                          llvm::BCBlob // map from name to typedef information
                          >;
-}; // namespace typedef_block
+} // namespace typedef_block
 
 namespace enum_constant_block {
 enum { ENUM_CONSTANT_DATA = 1 };
