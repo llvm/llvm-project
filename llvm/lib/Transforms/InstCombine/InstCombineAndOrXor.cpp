@@ -2131,10 +2131,9 @@ static Instruction *canonicalizeLogicFirst(BinaryOperator &I,
     llvm_unreachable("Unexpected BinaryOp!");
   }
 
-  auto *Add = cast<BinaryOperator>(Op0);
   Value *NewBinOp = Builder.CreateBinOp(OpC, X, ConstantInt::get(Ty, *C));
   return BinaryOperator::CreateWithCopiedFlags(Instruction::Add, NewBinOp,
-                                               ConstantInt::get(Ty, *C2), Add);
+                                               ConstantInt::get(Ty, *C2), Op0);
 }
 
 // binop(shift(ShiftedC1, ShAmt), shift(ShiftedC2, add(ShAmt, AddC))) ->
