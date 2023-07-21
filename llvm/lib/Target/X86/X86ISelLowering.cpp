@@ -39942,6 +39942,22 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
       isTargetShuffleEquivalent(MaskVT, Mask, {0, 2, 4, 6}, DAG) &&
       V1.getScalarValueSizeInBits() == 64 &&
       V2.getScalarValueSizeInBits() == 64) {
+    // Use (SSE41) PACKUSWD if the leading zerobits goto the lowest 16-bits.
+    unsigned MinLZV1 = DAG.computeKnownBits(V1).countMinLeadingZeros();
+    unsigned MinLZV2 = DAG.computeKnownBits(V2).countMinLeadingZeros();
+    if (Subtarget.hasSSE41() && MinLZV1 >= 48 && MinLZV2 >= 48) {
+      SrcVT = MVT::v4i32;
+      DstVT = MVT::v8i16;
+      Shuffle = X86ISD::PACKUS;
+      return true;
+    }
+    // Use PACKUSBW if the leading zerobits goto the lowest 8-bits.
+    if (MinLZV1 >= 56 && MinLZV2 >= 56) {
+      SrcVT = MVT::v8i16;
+      DstVT = MVT::v16i8;
+      Shuffle = X86ISD::PACKUS;
+      return true;
+    }
     // Use PACKSSWD if the signbits extend to the lowest 16-bits.
     if (DAG.ComputeNumSignBits(V1) > 48 && DAG.ComputeNumSignBits(V2) > 48) {
       SrcVT = MVT::v4i32;

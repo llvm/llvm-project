@@ -245,18 +245,25 @@ define <8 x i16> @shuffle_lshr_2v4i32(<4 x i32> %a0, <4 x i32> %a1) {
 }
 
 define <4 x i32> @shuffle_lshr_2v2i64(<2 x i64> %a0, <2 x i64> %a1) {
-; SSE-LABEL: shuffle_lshr_2v2i64:
-; SSE:       # %bb.0:
-; SSE-NEXT:    psrlq $63, %xmm0
-; SSE-NEXT:    psrlq $63, %xmm1
-; SSE-NEXT:    packssdw %xmm1, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE2-LABEL: shuffle_lshr_2v2i64:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    psrlq $63, %xmm0
+; SSE2-NEXT:    psrlq $63, %xmm1
+; SSE2-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-NEXT:    ret{{[l|q]}}
+;
+; SSE4-LABEL: shuffle_lshr_2v2i64:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    psrlq $63, %xmm0
+; SSE4-NEXT:    psrlq $63, %xmm1
+; SSE4-NEXT:    packusdw %xmm1, %xmm0
+; SSE4-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: shuffle_lshr_2v2i64:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrlq $63, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrlq $63, %xmm1, %xmm1
-; AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
   %lshr0 = lshr <2 x i64> %a0, <i64 63, i64 63>
   %lshr1 = lshr <2 x i64> %a1, <i64 63, i64 63>
@@ -267,18 +274,25 @@ define <4 x i32> @shuffle_lshr_2v2i64(<2 x i64> %a0, <2 x i64> %a1) {
 }
 
 define <4 x float> @shuffle_lshr_2v2i64_bitcast(<2 x i64> %a0, <2 x i64> %a1) {
-; SSE-LABEL: shuffle_lshr_2v2i64_bitcast:
-; SSE:       # %bb.0:
-; SSE-NEXT:    psrlq $63, %xmm0
-; SSE-NEXT:    psrlq $63, %xmm1
-; SSE-NEXT:    packssdw %xmm1, %xmm0
-; SSE-NEXT:    ret{{[l|q]}}
+; SSE2-LABEL: shuffle_lshr_2v2i64_bitcast:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    psrlq $63, %xmm0
+; SSE2-NEXT:    psrlq $63, %xmm1
+; SSE2-NEXT:    packuswb %xmm1, %xmm0
+; SSE2-NEXT:    ret{{[l|q]}}
+;
+; SSE4-LABEL: shuffle_lshr_2v2i64_bitcast:
+; SSE4:       # %bb.0:
+; SSE4-NEXT:    psrlq $63, %xmm0
+; SSE4-NEXT:    psrlq $63, %xmm1
+; SSE4-NEXT:    packusdw %xmm1, %xmm0
+; SSE4-NEXT:    ret{{[l|q]}}
 ;
 ; AVX-LABEL: shuffle_lshr_2v2i64_bitcast:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vpsrlq $63, %xmm0, %xmm0
 ; AVX-NEXT:    vpsrlq $63, %xmm1, %xmm1
-; AVX-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; AVX-NEXT:    ret{{[l|q]}}
   %lshr0 = lshr <2 x i64> %a0, <i64 63, i64 63>
   %lshr1 = lshr <2 x i64> %a1, <i64 63, i64 63>
