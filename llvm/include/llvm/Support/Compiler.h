@@ -114,7 +114,7 @@
 /// this attribute will be made public and visible outside of any shared library
 /// they are linked in to.
 
-#if LLVM_HAS_CPP_ATTRIBUTE(gnu::visibility)
+#if LLVM_HAS_CPP_ATTRIBUTE(gnu::visibility) && defined(__GNUC__) && !defined(__clang__)
 #define LLVM_ATTRIBUTE_VISIBILITY_HIDDEN [[gnu::visibility("hidden")]]
 #define LLVM_ATTRIBUTE_VISIBILITY_DEFAULT [[gnu::visibility("default")]]
 #elif __has_attribute(visibility)
@@ -139,11 +139,25 @@
 #define LLVM_EXTERNAL_VISIBILITY
 #endif
 
-/// These macros will be used for adding visibility attributes to classes and
-/// functions.  For now, they are just place holders, so we can add the macro
-/// in all the places we need to.
-#define LLVM_CLASS_ABI
-#define LLVM_FUNC_ABI
+#if defined(__ELF__)
+# define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+# define LLVM_CLASS_ABI LLVM_ABI
+# define LLVM_FUNC_ABI LLVM_ABI
+#elif defined(__MACH__) || defined(__WASM__)
+# define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+# define LLVM_CLASS_ABI LLVM_ABI
+# define LLVM_FUNC_ABI LLVM_ABI
+#else
+# if defined(LLVM_ABI_EXPORTS)
+#   define LLVM_ABI __declspec(dllexport)
+# elif defined(LLVM_DLL_IMPORT)
+#   define LLVM_ABI __declspec(dllimport)
+# else
+#   define LLVM_ABI
+# endif
+# define LLVM_CLASS_ABI
+# define LLVM_FUNC_ABI LLVM_ABI
+#endif
 
 #if defined(__GNUC__)
 #define LLVM_PREFETCH(addr, rw, locality) __builtin_prefetch(addr, rw, locality)
