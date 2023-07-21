@@ -97,14 +97,28 @@ def testInterchange():
 
 
 @run
-def testMatchOpNames():
+def testMatchOpNamesString():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MatchOp.match_op_names(sequence.bodyTarget, "test.dummy")
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMatchOpNamesString
+    # CHECK: transform.structured.match ops
+    # CHECK-SAME: ["test.dummy"]
+    # CHECK-SAME: (!transform.any_op) -> !transform.any_op
+
+
+@run
+def testMatchOpNamesList():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
     )
     with InsertionPoint(sequence.body):
         structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
         transform.YieldOp()
-    # CHECK-LABEL: TEST: testMatchOpNames
+    # CHECK-LABEL: TEST: testMatchOpNamesList
     # CHECK: transform.structured.match ops
     # CHECK-SAME: ["test.dummy"]
     # CHECK-SAME: (!transform.any_op) -> !transform.any_op
