@@ -355,6 +355,17 @@ LogicalResult TmaAsyncLoadOp::verify() {
   return success();
 }
 
+LogicalResult TmaCreateDescriptorOp::verify() {
+  if (getBoxDimensions().size() > 5) {
+    return emitError() << "Maximum 5 dimensional box is supported.";
+  }
+  nvgpu::TensorMapDescriptorType desc = getTensorMap().getType();
+  if (desc.getInterleave() != TensorMapInterleaveKind::INTERLEAVE_NONE)
+    return emitError() << "Interleave options are not supported yet.";
+
+  return success();
+}
+
 //===----------------------------------------------------------------------===//
 // TableGen'd dialect, type, and op definitions
 //===----------------------------------------------------------------------===//

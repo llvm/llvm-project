@@ -8,15 +8,19 @@
 
 #include "mlir/Conversion/NVGPUToNVVM/NVGPUToNVVM.h"
 
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Pass/Pass.h"
+#include "llvm/Support/raw_ostream.h"
 
 namespace mlir {
 #define GEN_PASS_DEF_CONVERTNVGPUTONVVMPASS
@@ -925,6 +929,121 @@ struct NVGPUTmaAsyncLoadOpLowering
     return success();
   }
 };
+
+static Value makeI64Const(RewriterBase &rewriter, Operation *op,
+                          int32_t index) {
+  return rewriter.create<LLVM::ConstantOp>(op->getLoc(),
+                                           rewriter.getIntegerType(64),
+                                           rewriter.getI32IntegerAttr(index));
+}
+
+/// Returns a Value that holds data type enum that is expected by CUDA driver.
+static Value elementTypeAsLLVMConstant(RewriterBase &rewriter, Operation *op,
+                                       Type type) {
+  // Enum is from CUDA driver API
+  // https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TYPES.html
+  enum CUtensorMapDataTypeEnum {
+    CU_TENSOR_MAP_DATA_TYPE_UINT8 = 0,
+    CU_TENSOR_MAP_DATA_TYPE_UINT16,
+    CU_TENSOR_MAP_DATA_TYPE_UINT32,
+    CU_TENSOR_MAP_DATA_TYPE_INT32,
+    CU_TENSOR_MAP_DATA_TYPE_UINT64,
+    CU_TENSOR_MAP_DATA_TYPE_INT64,
+    CU_TENSOR_MAP_DATA_TYPE_FLOAT16,
+    CU_TENSOR_MAP_DATA_TYPE_FLOAT32,
+    CU_TENSOR_MAP_DATA_TYPE_FLOAT64,
+    CU_TENSOR_MAP_DATA_TYPE_BFLOAT16,
+    CU_TENSOR_MAP_DATA_TYPE_FLOAT32_FTZ,
+    CU_TENSOR_MAP_DATA_TYPE_TFLOAT32,
+    CU_TENSOR_MAP_DATA_TYPE_TFLOAT32_FTZ
+  };
+
+  if (type.isUnsignedInteger(8))
+    return makeI64Const(rewriter, op, CU_TENSOR_MAP_DATA_TYPE_UINT8);
+  if (type.isUnsignedInteger(16))
+    return makeI64Const(rewriter, op, CU_TENSOR_MAP_DATA_TYPE_UINT16);
+  if (type.isUnsignedInteger(32))
+    return makeI64Const(rewriter, op, CU_TENSOR_MAP_DATA_TYPE_UINT32);
+  if (type.isUnsignedInteger(64))
+    return makeI64Const(rewriter, op, CU_TENSOR_MAP_DATA_TYPE_UINT64);
+  if (type.isSignlessInteger(32))
+    return makeI64Const(rewriter, op, CU_TENSOR_MAP_DATA_TYPE_INT32);
+  if (type.isSignlessInteger(64))
+    return makeI64Const(rewriter, op, CU_TENSOR_MAP_DATA_TYPE_INT64);
+  if (type.isF16())
+    return makeI64Const(rewriter, op, CU_TENSOR_MAP_DATA_TYPE_FLOAT16);
+  if (type.isF32())
+    return makeI64Const(rewriter, op, CU_TENSOR_MAP_DATA_TYPE_FLOAT32);
+  if (type.isF64())
+    return makeI64Const(rewriter, op, CU_TENSOR_MAP_DATA_TYPE_FLOAT64);
+  if (type.isBF16())
+    return makeI64Const(rewriter, op, CU_TENSOR_MAP_DATA_TYPE_BFLOAT16);
+
+  llvm_unreachable("Not supported data type");
+}
+
+struct NVGPUTmaCreateDescriptorOpLowering
+    : public ConvertOpToLLVMPattern<nvgpu::TmaCreateDescriptorOp> {
+  using ConvertOpToLLVMPattern<
+      nvgpu::TmaCreateDescriptorOp>::ConvertOpToLLVMPattern;
+  LogicalResult
+  matchAndRewrite(nvgpu::TmaCreateDescriptorOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op->getLoc();
+    LLVM::LLVMPointerType llvmPointerType = getTypeConverter()->getPointerType(
+        IntegerType::get(op->getContext(), 8));
+    Type llvmInt64Type = IntegerType::get(op->getContext(), 64);
+
+    Value tensorElementType = elementTypeAsLLVMConstant(
+        rewriter, op, op.getTensor().getType().getElementType());
+    auto promotedOperands = getTypeConverter()->promoteOperands(
+        loc, op->getOperands(), adaptor.getOperands(), rewriter);
+
+    Value boxArrayPtr = rewriter.create<LLVM::AllocaOp>(
+        loc, llvmPointerType, llvmInt64Type, makeI64Const(rewriter, op, 5));
+    for (auto [index, value] : llvm::enumerate(adaptor.getBoxDimensions())) {
+      Value gep = rewriter.create<LLVM::GEPOp>(
+          loc, llvmPointerType, llvmPointerType, boxArrayPtr,
+          makeI64Const(rewriter, op, index));
+      rewriter.create<LLVM::StoreOp>(loc, value, gep);
+    }
+
+    nvgpu::TensorMapDescriptorType desc = op.getTensorMap().getType();
+    // Set Arguments for the function call
+    SmallVector<Value> arguments;
+    arguments.push_back(promotedOperands[0]); // rank
+    arguments.push_back(promotedOperands[1]); // descriptor
+    arguments.push_back(tensorElementType);   // data type
+    arguments.push_back(
+        makeI64Const(rewriter, op, (int)desc.getInterleave())); // interleave
+    arguments.push_back(
+        makeI64Const(rewriter, op, (int)desc.getSwizzle())); // swizzle
+    arguments.push_back(
+        makeI64Const(rewriter, op, (int)desc.getL2promo())); // l2promo
+    arguments.push_back(makeI64Const(rewriter, op, (int)desc.getOob())); // oob
+    arguments.push_back(boxArrayPtr); // box dimensions
+
+    // Set data types of the arguments
+    SmallVector<Type> argTypes = {
+        llvmInt64Type,   /* int64_t tensorRank */
+        llvmPointerType, /* ptr */
+        llvmInt64Type,   /* int64_t */
+        llvmInt64Type,   /* int64_t */
+        llvmInt64Type,   /* int64_t */
+        llvmInt64Type,   /* int64_t */
+        llvmInt64Type,   /* int64_t */
+        llvmPointerType  /* ptr  */
+    };
+    FunctionCallBuilder hostRegisterCallBuilder = {
+        "mgpuTensorMapEncodeTiledMemref", llvmPointerType, argTypes};
+    Value tensorMap =
+        hostRegisterCallBuilder.create(loc, rewriter, arguments).getResult();
+
+    rewriter.replaceOp(op, tensorMap);
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
@@ -936,6 +1055,8 @@ void mlir::populateNVGPUToNVVMConversionPatterns(LLVMTypeConverter &converter,
       NVGPUMBarrierArriveNoCompleteLowering, // nvgpu.mbarrier.arrive.no_complete
       NVGPUMBarrierTestWaitLowering,         // nvgpu.mbarrier.test_wait_parity
       NVGPUMBarrierTryWaitParityLowering,    // nvgpu.mbarrier.try_wait_parity
+      NVGPUTmaAsyncLoadOpLowering,           // nvgpu.tma.async.load
+      NVGPUTmaCreateDescriptorOpLowering,    // nvgpu.tma.create.descriptor
       NVGPUMBarrierArriveExpectTxLowering,   // nvgpu.mbarrier.arrive.expect_tx
       NVGPUTmaAsyncLoadOpLowering,           // nvgpu.tma.async.load
       MmaSyncOptoNVVM, MmaLdMatrixOpToNVVM, NVGPUAsyncCopyLowering,
