@@ -656,6 +656,7 @@ let SubtargetPredicate = isGFX11Plus in {
                                       getVOP1Pat64<int_amdgcn_permlane64,
                                                    VOP_MOVRELS>.ret,
                                       /*VOP1Only=*/ 1>;
+  defm V_MOV_B16_t16    : VOP1Inst<"v_mov_b16_t16", VOPProfile_True16<VOP_I16_I16>>;
   defm V_NOT_B16        : VOP1Inst_t16<"v_not_b16", VOP_I16_I16>;
   defm V_CVT_I32_I16    : VOP1Inst_t16<"v_cvt_i32_i16", VOP_I32_I16>;
   defm V_CVT_U32_U16    : VOP1Inst_t16<"v_cvt_u32_u16", VOP_I32_I16>;
@@ -804,6 +805,7 @@ defm V_CTZ_I32_B32         : VOP1_Real_FULL_with_name_gfx11<0x03a,
 defm V_CLS_I32             : VOP1_Real_FULL_with_name_gfx11<0x03b,
   "V_FFBH_I32", "v_cls_i32">;
 defm V_PERMLANE64_B32      : VOP1Only_Real_gfx11<0x067>;
+defm V_MOV_B16_t16           : VOP1_Real_FULL_t16_gfx11<0x01c, "v_mov_b16">;
 defm V_NOT_B16_t16           : VOP1_Real_FULL_t16_gfx11<0x069, "v_not_b16">;
 defm V_CVT_I32_I16_t16       : VOP1_Real_FULL_t16_gfx11<0x06a, "v_cvt_i32_i16">;
 defm V_CVT_U32_U16_t16       : VOP1_Real_FULL_t16_gfx11<0x06b, "v_cvt_u32_u16">;
