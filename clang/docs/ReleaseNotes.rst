@@ -657,6 +657,9 @@ Bug Fixes in This Version
   (`#63169 <https://github.com/llvm/llvm-project/issues/63169>_`)
 - Fix crash when casting an object to an array type.
   (`#63758 <https://github.com/llvm/llvm-project/issues/63758>_`)
+- Fixed false positive error diagnostic observed from mixing ``asm goto`` with
+  ``__attribute__((cleanup()))`` variables falsely warning that jumps to
+  non-targets would skip cleanup.
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
