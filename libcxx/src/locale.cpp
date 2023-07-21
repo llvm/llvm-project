@@ -94,7 +94,7 @@ T& make(Args ...args)
 
 template <typename T, size_t N>
 inline
-_LIBCPP_CONSTEXPR
+constexpr
 size_t
 countof(const T (&)[N])
 {
@@ -103,7 +103,7 @@ countof(const T (&)[N])
 
 template <typename T>
 inline
-_LIBCPP_CONSTEXPR
+constexpr
 size_t
 countof(const T * const begin, const T * const end)
 {
@@ -1097,7 +1097,7 @@ extern "C" const int ** __ctype_toupper_loc();
 const ctype<char>::mask*
 ctype<char>::classic_table() noexcept
 {
-    static _LIBCPP_CONSTEXPR const ctype<char>::mask builtin_table[table_size] = {
+    static constexpr const ctype<char>::mask builtin_table[table_size] = {
         cntrl,                          cntrl,
         cntrl,                          cntrl,
         cntrl,                          cntrl,
