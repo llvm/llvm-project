@@ -181,6 +181,12 @@ The timing data is stored in the `test_exec_root` in a file named
  Run the tests in a random order, not failing/slowest first. Deprecated,
  use :option:`--order` instead.
 
+.. option:: --per-test-coverage
+
+ Emit the necessary test coverage data, divided per test case (involves
+ setting a unique value to LLVM_PROFILE_FILE for each RUN). The coverage
+ data files will be emitted in the directory specified by `config.test_exec_root`.
+
 .. option:: --max-failures N
 
  Stop execution after the given number ``N`` of failures.

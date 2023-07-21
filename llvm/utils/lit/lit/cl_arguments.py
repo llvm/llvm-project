@@ -185,6 +185,12 @@ def parse_args():
         action="store_true",
     )
     execution_group.add_argument(
+        "--per-test-coverage",
+        dest="per_test_coverage",
+        action="store_true",
+        help="Enable individual test case coverage",
+    )
+    execution_group.add_argument(
         "--ignore-fail",
         dest="ignoreFail",
         action="store_true",

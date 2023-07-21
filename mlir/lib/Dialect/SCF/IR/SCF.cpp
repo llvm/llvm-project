@@ -534,13 +534,8 @@ ForOp mlir::scf::getForInductionVarOwner(Value val) {
 
 /// Return operands used when entering the region at 'index'. These operands
 /// correspond to the loop iterator operands, i.e., those excluding the
-/// induction variable. LoopOp only has one region, so 0 is the only valid value
-/// for `index`.
+/// induction variable.
 OperandRange ForOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
-  assert(index && *index == 0 && "invalid region index");
-
-  // The initial operands map to the loop arguments after the induction
-  // variable.
   return getInitArgs();
 }
 
@@ -552,15 +547,9 @@ OperandRange ForOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
 void ForOp::getSuccessorRegions(std::optional<unsigned> index,
                                 ArrayRef<Attribute> operands,
                                 SmallVectorImpl<RegionSuccessor> &regions) {
-  // If the predecessor is the ForOp, branch into the body using the iterator
-  // arguments.
-  if (!index) {
-    regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
-    return;
-  }
-
-  // Otherwise, the loop may branch back to itself or the parent operation.
-  assert(*index == 0 && "expected loop region");
+  // Both the operation itself and the region may be branching into the body or
+  // back into the operation itself. It is possible for loop not to enter the
+  // body.
   regions.push_back(RegionSuccessor(&getLoopBody(), getRegionIterArgs()));
   regions.push_back(RegionSuccessor(getResults()));
 }
@@ -1728,14 +1717,10 @@ void ForallOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void ForallOp::getSuccessorRegions(std::optional<unsigned> index,
                                    ArrayRef<Attribute> operands,
                                    SmallVectorImpl<RegionSuccessor> &regions) {
-  // If the predecessor is ForallOp, branch into the body with empty arguments.
-  if (!index) {
-    regions.push_back(RegionSuccessor(&getRegion()));
-    return;
-  }
-
-  // Otherwise, the loop should branch back to the parent operation.
-  assert(*index == 0 && "expected loop region");
+  // Both the operation itself and the region may be branching into the body or
+  // back into the operation itself. It is possible for loop not to enter the
+  // body.
+  regions.push_back(RegionSuccessor(&getRegion()));
   regions.push_back(RegionSuccessor());
 }
 
@@ -2031,9 +2016,12 @@ void IfOp::getSuccessorRegions(std::optional<unsigned> index,
   } else {
     // If the condition isn't constant, both regions may be executed.
     regions.push_back(RegionSuccessor(&getThenRegion()));
-    // If the else region does not exist, it is not a viable successor.
+    // If the else region does not exist, it is not a viable successor, so the
+    // control will go back to this operation instead.
     if (elseRegion)
       regions.push_back(RegionSuccessor(elseRegion));
+    else
+      regions.push_back(RegionSuccessor());
     return;
   }
 
@@ -3040,15 +3028,10 @@ void ParallelOp::getCanonicalizationPatterns(RewritePatternSet &results,
 void ParallelOp::getSuccessorRegions(
     std::optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
-  // If the predecessor is ParallelOp, branch into the body with empty
-  // arguments.
-  if (!index) {
-    regions.push_back(RegionSuccessor(&getRegion()));
-    return;
-  }
-
-  assert(*index == 0 && "expected loop region");
-  // Otherwise, the loop should branch back to the parent operation.
+  // Both the operation itself and the region may be branching into the body or
+  // back into the operation itself. It is possible for loop not to enter the
+  // body.
+  regions.push_back(RegionSuccessor(&getRegion()));
   regions.push_back(RegionSuccessor());
 }
 

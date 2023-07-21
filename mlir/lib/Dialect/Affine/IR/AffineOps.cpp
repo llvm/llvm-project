@@ -2868,10 +2868,13 @@ void AffineIfOp::getSuccessorRegions(
     regions.reserve(2);
     regions.push_back(
         RegionSuccessor(&getThenRegion(), getThenRegion().getArguments()));
-    // Don't consider the else region if it is empty.
-    if (!getElseRegion().empty())
+    // If the "else" region is empty, branch bach into parent.
+    if (getElseRegion().empty()) {
+      regions.push_back(getResults());
+    } else {
       regions.push_back(
           RegionSuccessor(&getElseRegion(), getElseRegion().getArguments()));
+    }
     return;
   }
 
