@@ -82,6 +82,7 @@
 
 #include "Plugins/ExpressionParser/Clang/ClangHost.h"
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
+#include "Plugins/Platform/MacOSX/PlatformDarwin.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/DumpDataExtractor.h"
@@ -1683,26 +1684,23 @@ static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
 /// Force parsing of the CUs to extract the SDK info.
 static std::string GetSDKPathFromDebugInfo(std::string m_description,
                                            Module &module) {
-  XcodeSDK sdk;
-  bool found_public_sdk = false;
-  bool found_internal_sdk = false;
-  if (SymbolFile *sym_file = module.GetSymbolFile())
-    for (unsigned i = 0; i < sym_file->GetNumCompileUnits(); ++i)
-      if (auto cu_sp = sym_file->GetCompileUnitAtIndex(i))
-        if (cu_sp->GetLanguage() == lldb::eLanguageTypeSwift) {
-          auto cu_sdk = sym_file->ParseXcodeSDK(*cu_sp);
-          sdk.Merge(cu_sdk);
-          bool is_internal_sdk = cu_sdk.IsAppleInternalSDK();
-          found_public_sdk |= !is_internal_sdk;
-          found_internal_sdk |= is_internal_sdk;
-        }
 
-  if (found_public_sdk && found_internal_sdk)
+  auto sdk_or_err = PlatformDarwin::GetSDKPathFromDebugInfo(module);
+  if (!sdk_or_err) {
+    Debugger::ReportError("Error while parsing SDK path from debug-info: " +
+                          toString(sdk_or_err.takeError()));
+    return {};
+  }
+
+  auto [sdk, found_mismatch] = std::move(*sdk_or_err);
+
+  if (found_mismatch)
     HEALTH_LOG_PRINTF("Unsupported mixing of public and internal SDKs in "
                       "'%s'. Mixed use of SDKs indicates use of different "
                       "toolchains, which is not supported.",
                       module.GetFileSpec().GetFilename().GetCString());
-  return GetSDKPath(m_description, sdk);
+
+  return GetSDKPath(m_description, std::move(sdk));
 }
 
 /// Detect whether a Swift module was "imported" by DWARFImporter.
