@@ -322,12 +322,13 @@ std::error_code ModularizeUtilities::loadModuleMap(
 // Walks the modules and collects referenced headers into
 // HeaderFileNames.
 bool ModularizeUtilities::collectModuleMapHeaders(clang::ModuleMap *ModMap) {
-  for (ModuleMap::module_iterator I = ModMap->module_begin(),
-    E = ModMap->module_end();
-    I != E; ++I) {
-    if (!collectModuleHeaders(*I->second))
+  SmallVector<std::pair<StringRef, const Module *>, 0> Vec;
+  for (auto &M : ModMap->modules())
+    Vec.emplace_back(M.first(), M.second);
+  llvm::sort(Vec, llvm::less_first());
+  for (auto &I : Vec)
+    if (!collectModuleHeaders(*I.second))
       return false;
-  }
   return true;
 }
 
