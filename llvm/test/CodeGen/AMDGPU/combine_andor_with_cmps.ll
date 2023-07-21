@@ -1722,14 +1722,12 @@ define i1 @test103(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %a
 ; CHECK-LABEL: test103:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_max_u32_e32 v0, v0, v1
-; CHECK-NEXT:    v_max_u32_e32 v1, v2, v3
-; CHECK-NEXT:    v_max_u32_e32 v2, v4, v5
-; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v6
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, v1, v6
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s1, v2, v6
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    v_max_u32_e32 v4, v4, v5
+; CHECK-NEXT:    v_max_u32_e32 v2, v2, v3
+; CHECK-NEXT:    v_maxmin_u32 v0, v0, v1, v4
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v2, v6
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, v0, v6
+; CHECK-NEXT:    s_or_b32 s0, s0, vcc_lo
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
@@ -1751,20 +1749,18 @@ define i1 @test104(i32 %arg1, i32 %arg2, i32 %arg3, i32 %arg4, i32 %arg5, i32 %a
 ; CHECK-LABEL: test104:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_min_u32_e32 v0, v0, v1
-; CHECK-NEXT:    v_max_u32_e32 v1, v2, v3
-; CHECK-NEXT:    v_min_u32_e32 v2, v4, v5
-; CHECK-NEXT:    v_max_u32_e32 v3, v6, v7
-; CHECK-NEXT:    v_min_u32_e32 v4, v8, v9
-; CHECK-NEXT:    v_cmp_lt_u32_e32 vcc_lo, v0, v10
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, v1, v10
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s1, v2, v10
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s2, v3, v10
-; CHECK-NEXT:    v_cmp_lt_u32_e64 s3, v4, v10
-; CHECK-NEXT:    s_or_b32 s0, vcc_lo, s0
-; CHECK-NEXT:    s_or_b32 s1, s1, s2
-; CHECK-NEXT:    s_or_b32 s0, s3, s0
-; CHECK-NEXT:    s_or_b32 s0, s1, s0
+; CHECK-NEXT:    v_min_u32_e32 v8, v8, v9
+; CHECK-NEXT:    v_max_u32_e32 v2, v2, v3
+; CHECK-NEXT:    v_min_u32_e32 v3, v4, v5
+; CHECK-NEXT:    v_max_u32_e32 v4, v6, v7
+; CHECK-NEXT:    v_min3_u32 v0, v0, v1, v8
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, v2, v10
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s0, v3, v10
+; CHECK-NEXT:    v_cmp_gt_u32_e64 s1, v4, v10
+; CHECK-NEXT:    v_cmp_lt_u32_e64 s2, v0, v10
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
+; CHECK-NEXT:    s_or_b32 s1, s2, vcc_lo
+; CHECK-NEXT:    s_or_b32 s0, s0, s1
 ; CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %cmp1 = icmp ult i32 %arg1, %C
