@@ -630,9 +630,13 @@ mgpuDestroyCuSparseLtSpMat(void *sh, CUstream /*stream*/) {
 
 // Several things are being done in this stage, algorithm selection, planning,
 // and returning workspace and compressed matrices data buffer sizes.
+// The parameter prune_flag is used to indicate whether pruning and pruning
+// check will happen 0 means not prune or prune check, 1 means prune, 2 means
+// prune & prune check
 extern "C" MLIR_CUDA_WRAPPERS_EXPORT void
 mgpuCuSparseLtSpMMBufferSize(void *bs, int32_t ma, int32_t mb, void *a, void *b,
-                             void *c, int32_t ctp, CUstream stream) {
+                             void *c, int32_t ctp, int32_t prune_flag,
+                             CUstream stream) {
   assert(cusparseLt_initiated && "client did not call mgpuCreateSparseLtEnv()");
   // TODO: support more advanced settings, e.g., the input right operand is a
   // sparse matrix assuming matA is the sparse matrix
@@ -662,23 +666,26 @@ mgpuCuSparseLtSpMMBufferSize(void *bs, int32_t ma, int32_t mb, void *a, void *b,
       &cusparseLt_env, &(matA->plan), &(matA->matmul), &(matA->alg_sel)))
 
   // Pruning step (in-place).
-  CUSPARSE_REPORT_IF_ERROR(
-      cusparseLtSpMMAPrune(&cusparseLt_env, &(matA->matmul), matA->values,
-                           matA->values, CUSPARSELT_PRUNE_SPMMA_STRIP, stream))
+  if (prune_flag > 0)
+    CUSPARSE_REPORT_IF_ERROR(cusparseLtSpMMAPrune(
+        &cusparseLt_env, &(matA->matmul), matA->values, matA->values,
+        CUSPARSELT_PRUNE_SPMMA_STRIP, stream))
 
   // Check structure of A.
   // Note that this adds a synchronization on the stream.
   // TODO: Do we want that?
-  int *dvalid = (int *)mgpuMemAlloc(sizeof(int), stream);
-  CUSPARSE_REPORT_IF_ERROR(cusparseLtSpMMAPruneCheck(
-      &cusparseLt_env, &(matA->matmul), matA->values, dvalid, stream))
-  int valid = 0;
-  mgpuMemcpy(&valid, dvalid, sizeof(int), stream);
-  mgpuStreamSynchronize(stream);
-  mgpuMemFree(dvalid, stream);
-  if (valid != 0)
-    fprintf(stderr, "CUPARSE-LT: sparse matrix is not 2:4; computed results "
-                    "will be invalid\n");
+  if (prune_flag == 2) {
+    int *dvalid = (int *)mgpuMemAlloc(sizeof(int), stream);
+    CUSPARSE_REPORT_IF_ERROR(cusparseLtSpMMAPruneCheck(
+        &cusparseLt_env, &(matA->matmul), matA->values, dvalid, stream))
+    int valid = 0;
+    mgpuMemcpy(&valid, dvalid, sizeof(int), stream);
+    mgpuStreamSynchronize(stream);
+    mgpuMemFree(dvalid, stream);
+    if (valid != 0)
+      fprintf(stderr, "CUPARSE-LT: sparse matrix is not 2:4; computed results "
+                      "will be invalid\n");
+  }
 
   CUSPARSE_REPORT_IF_ERROR(cusparseLtMatmulGetWorkspace(
       &cusparseLt_env, &(matA->plan), &workspace_size_))
