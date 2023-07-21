@@ -170,6 +170,7 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
         .Case("buster/sid", Distro::DebianBuster)
         .Case("bullseye/sid", Distro::DebianBullseye)
         .Case("bookworm/sid", Distro::DebianBookworm)
+        .Case("trixie/sid", Distro::DebianTrixie)
         .Default(Distro::UnknownDistro);
   }
 
