@@ -5836,7 +5836,7 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
   if (ScalarTy->isFloatTy() || ScalarTy->isDoubleTy())
     return true;
 
-  if (ScalarTy->is16bitFPTy() && ST->hasBWI())
+  if (ScalarTy->isHalfTy() && ST->hasBWI())
     return true;
 
   if (!ScalarTy->isIntegerTy())
@@ -6299,7 +6299,7 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
     if (EltTy->isFloatTy() || EltTy->isDoubleTy() || EltTy->isIntegerTy(64) ||
         EltTy->isIntegerTy(32) || EltTy->isPointerTy())
       return true;
-    if (EltTy->isIntegerTy(16) || EltTy->isIntegerTy(8) || EltTy->is16bitFPTy())
+    if (EltTy->isIntegerTy(16) || EltTy->isIntegerTy(8) || EltTy->isHalfTy())
       return HasBW;
     return false;
   };
