@@ -133,6 +133,9 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
     `alloc_op`. Currently supported are "memref.alloc" and "memref.alloca". In
     case of a "memref.alloca", the buffer is not deallocated.
 
+    If `bufferize_destination_only` is set, only the destination operands of the
+    op are bufferized to a new memory allocation, but not the op itself.
+
     #### Return modes
 
     This operation consumes the `target` handle and produces the
@@ -144,12 +147,13 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
                        DefaultValuedAttr<StrAttr, "\"memref.tensor_store\"">:
                            $memcpy_op,
                        DefaultValuedAttr<StrAttr, "\"memref.alloc\"">:
-                           $alloc_op);
+                           $alloc_op,
+                       UnitAttr:$bufferize_destination_only);
   let hasVerifier = 1;
   let results = (outs Transform_AnyValue:$allocated_buffer,
                       Transform_AnyOpType:$new_ops);
   let assemblyFormat = "$target attr-dict `:` type($target)";
-  
+
   let builders = [
     OpBuilder<(ins "Value":$target, "Attribute":$memorySpace)>,
     OpBuilder<(ins "Value":$target, "int64_t":$memorySpace)>

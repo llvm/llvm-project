@@ -197,3 +197,24 @@ transform.sequence failures(propagate) {
   %0 = transform.structured.match ops{["vector.mask"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4} : !transform.any_op
 }
+
+// -----
+
+// CHECK-LABEL: func @tensor_insert_destination(
+//  CHECK-SAME:     %[[t:.*]]: tensor<?x10xindex>
+//       CHECK:   %[[alloc:.*]] = memref.alloc(%{{.*}}) : memref<?x10xindex, 4>
+//       CHECK:   memref.tensor_store %[[t]], %[[alloc]]
+//       CHECK:   %[[t2:.*]] = bufferization.to_tensor %[[alloc]] restrict writable
+//       CHECK:   %[[inserted:.*]] = tensor.insert %{{.*}} into %[[t2]]
+//       CHECK:   memref.dealloc %[[alloc]]
+//       CHECK:   return %[[inserted]]
+func.func @tensor_insert_destination(%t: tensor<?x10xindex>, %idx: index, %v: index) -> tensor<?x10xindex> {
+  %r = tensor.insert %v into %t[%idx, %idx] : tensor<?x10xindex>
+  return %r : tensor<?x10xindex>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.insert"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %2, %new = transform.structured.bufferize_to_allocation %0 {memory_space = 4, bufferize_destination_only} : !transform.any_op
+}
