@@ -2679,6 +2679,14 @@ static bool isKnownNonZeroFromOperator(const Operator *I,
     return isKnownNonZero(I->getOperand(0), Depth, Q) &&
            isGuaranteedNotToBePoison(I->getOperand(0), Q.AC, Q.CxtI, Q.DT,
                                      Depth);
+  case Instruction::Load:
+    // A Load tagged with nonnull metadata is never null.
+    if (Q.IIQ.getMetadata(cast<LoadInst>(I), LLVMContext::MD_nonnull))
+      return true;
+
+    // No need to fall through to computeKnownBits as range metadata is already
+    // handled in isKnownNonZero.
+    return false;
   case Instruction::Call:
     if (auto *II = dyn_cast<IntrinsicInst>(I)) {
       switch (II->getIntrinsicID()) {
@@ -2842,11 +2850,6 @@ bool isKnownNonZero(const Value *V, const APInt &DemandedElts, unsigned Depth,
            A->hasNonNullAttr()))
         return true;
     }
-
-    // A Load tagged with nonnull metadata is never null.
-    if (const LoadInst *LI = dyn_cast<LoadInst>(V))
-      if (Q.IIQ.getMetadata(LI, LLVMContext::MD_nonnull))
-        return true;
 
     if (const auto *Call = dyn_cast<CallBase>(V)) {
       if (Call->isReturnNonNull())
