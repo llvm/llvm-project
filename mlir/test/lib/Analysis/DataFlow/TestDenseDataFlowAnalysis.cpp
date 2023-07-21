@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "TestDenseDataFlowAnalysis.h"
+#include "TestDialect.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/DenseAnalysis.h"
@@ -22,8 +23,7 @@ namespace {
 
 /// This lattice represents, for a given memory resource, the potential last
 /// operations that modified the resource.
-class LastModification : public AbstractDenseLattice,
-                         public test::AccessLatticeBase {
+class LastModification : public AbstractDenseLattice, public AccessLatticeBase {
 public:
   MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(LastModification)
 
@@ -31,7 +31,7 @@ public:
 
   /// Join the last modifications.
   ChangeResult join(const AbstractDenseLattice &lattice) override {
-    return AccessLatticeBase::merge(static_cast<test::AccessLatticeBase>(
+    return AccessLatticeBase::merge(static_cast<AccessLatticeBase>(
         static_cast<const LastModification &>(lattice)));
   }
 
@@ -50,6 +50,17 @@ public:
   /// resource, then its reaching definition is set to the written value.
   void visitOperation(Operation *op, const LastModification &before,
                       LastModification *after) override;
+
+  void visitCallControlFlowTransfer(CallOpInterface call,
+                                    CallControlFlowAction action,
+                                    const LastModification &before,
+                                    LastModification *after) override;
+
+  void visitRegionBranchControlFlowTransfer(RegionBranchOpInterface branch,
+                                            std::optional<unsigned> regionFrom,
+                                            std::optional<unsigned> regionTo,
+                                            const LastModification &before,
+                                            LastModification *after) override;
 
   /// At an entry point, the last modifications of all memory resources are
   /// unknown.
@@ -80,12 +91,14 @@ void LastModifiedAnalysis::visitOperation(Operation *op,
     if (!value)
       return setToEntryState(after);
 
+    // If we cannot find the underlying value, we shouldn't just propagate the
+    // effects through, return the pessimistic state.
     value = UnderlyingValueAnalysis::getMostUnderlyingValue(
         value, [&](Value value) {
           return getOrCreateFor<UnderlyingValueLattice>(op, value);
         });
     if (!value)
-      return;
+      return setToEntryState(after);
 
     // Nothing to do for reads.
     if (isa<MemoryEffects::Read>(effect.getEffect()))
@@ -94,6 +107,36 @@ void LastModifiedAnalysis::visitOperation(Operation *op,
     result |= after->set(value, op);
   }
   propagateIfChanged(after, result);
+}
+
+void LastModifiedAnalysis::visitCallControlFlowTransfer(
+    CallOpInterface call, CallControlFlowAction action,
+    const LastModification &before, LastModification *after) {
+  auto testCallAndStore =
+      dyn_cast<::test::TestCallAndStoreOp>(call.getOperation());
+  if (testCallAndStore && ((action == CallControlFlowAction::EnterCallee &&
+                            testCallAndStore.getStoreBeforeCall()) ||
+                           (action == CallControlFlowAction::ExitCallee &&
+                            !testCallAndStore.getStoreBeforeCall()))) {
+    return visitOperation(call, before, after);
+  }
+  AbstractDenseDataFlowAnalysis::visitCallControlFlowTransfer(call, action,
+                                                              before, after);
+}
+
+void LastModifiedAnalysis::visitRegionBranchControlFlowTransfer(
+    RegionBranchOpInterface branch, std::optional<unsigned> regionFrom,
+    std::optional<unsigned> regionTo, const LastModification &before,
+    LastModification *after) {
+  auto testStoreWithARegion =
+      dyn_cast<::test::TestStoreWithARegion>(branch.getOperation());
+  if (testStoreWithARegion &&
+      ((!regionTo && !testStoreWithARegion.getStoreBeforeRegion()) ||
+       (!regionFrom && testStoreWithARegion.getStoreBeforeRegion()))) {
+    return visitOperation(branch, before, after);
+  }
+  AbstractDenseDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
+      branch, regionFrom, regionTo, before, after);
 }
 
 namespace {

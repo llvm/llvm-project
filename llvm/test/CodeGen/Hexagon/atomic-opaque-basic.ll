@@ -63,34 +63,30 @@ define void @f1() #0 {
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r2 = ##g0
-; CHECK-NEXT:     r0 = #255
+; CHECK-NEXT:     r3 = ##g0
+; CHECK-NEXT:     r1:0 = combine(#1,##255)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = and(r2,#3)
+; CHECK-NEXT:     r2 = and(r3,#3)
+; CHECK-NEXT:     r3 = and(r3,#-4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r1 = asl(r1,#3)
+; CHECK-NEXT:     r2 = asl(r2,#3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = r1
+; CHECK-NEXT:     r4 = asl(r0,r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r4 = insert(r2,#2,#3)
-; CHECK-NEXT:     r2 = and(r2,#-4)
-; CHECK-NEXT:    }
-; CHECK-NEXT:    {
-; CHECK-NEXT:     r3 = lsl(#1,r4)
-; CHECK-NEXT:     r4 = asl(r0,r4)
+; CHECK-NEXT:     r4 = sub(#-1,r4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    .p2align 4
 ; CHECK-NEXT:  .LBB1_1: // %cmpxchg.start
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r5 = memw_locked(r2)
+; CHECK-NEXT:     r5 = memw_locked(r3)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r6 = lsr(r5,r1)
+; CHECK-NEXT:     r6 = lsr(r5,r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     p0 = !bitsclr(r6,r0)
@@ -99,13 +95,13 @@ define void @f1() #0 {
 ; CHECK-NEXT:  .LBB1_2: // %cmpxchg.trystore
 ; CHECK-NEXT:    // in Loop: Header=BB1_1 Depth=1
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r6 = r3
+; CHECK-NEXT:     r5 = and(r5,r4)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     r6 |= and(r5,~r4)
+; CHECK-NEXT:     r5 |= asl(r1,r2)
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
-; CHECK-NEXT:     memw_locked(r2,p0) = r6
+; CHECK-NEXT:     memw_locked(r3,p0) = r5
 ; CHECK-NEXT:    }
 ; CHECK-NEXT:    {
 ; CHECK-NEXT:     if (!p0) jump:nt .LBB1_1

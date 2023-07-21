@@ -4732,6 +4732,8 @@ def note_ovl_candidate_bad_target : Note<
 def note_ovl_candidate_constraints_not_satisfied : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: constraints "
     "not satisfied">;
+def note_ovl_surrogate_constraints_not_satisfied : Note<
+    "conversion candidate %0 not viable: constraints not satisfied">;
 def note_implicit_member_target_infer_collision : Note<
     "implicit %sub{select_special_member_kind}0 inferred target collision: call to both "
     "%select{__device__|__global__|__host__|__host__ __device__}1 and "

@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/AST/ASTContext.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/CXXInheritance.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclObjC.h"
@@ -7885,6 +7886,17 @@ void Sema::AddSurrogateCandidate(CXXConversionDecl *Conversion,
     }
   }
 
+  if (Conversion->getTrailingRequiresClause()) {
+    ConstraintSatisfaction Satisfaction;
+    if (CheckFunctionConstraints(Conversion, Satisfaction, /*Loc*/ {},
+                                 /*ForOverloadResolution*/ true) ||
+        !Satisfaction.IsSatisfied) {
+      Candidate.Viable = false;
+      Candidate.FailureKind = ovl_fail_constraints_not_satisfied;
+      return;
+    }
+  }
+
   if (EnableIfAttr *FailedAttr =
           CheckEnableIf(Conversion, CandidateSet.getLocation(), std::nullopt)) {
     Candidate.Viable = false;
@@ -11646,8 +11658,17 @@ static void NoteSurrogateCandidate(Sema &S, OverloadCandidate *Cand) {
   if (isRValueReference) FnType = S.Context.getRValueReferenceType(FnType);
   if (isLValueReference) FnType = S.Context.getLValueReferenceType(FnType);
 
-  S.Diag(Cand->Surrogate->getLocation(), diag::note_ovl_surrogate_cand)
-    << FnType;
+  if (Cand->FailureKind == ovl_fail_constraints_not_satisfied) {
+    S.Diag(Cand->Surrogate->getLocation(),
+           diag::note_ovl_surrogate_constraints_not_satisfied)
+        << Cand->Surrogate;
+    ConstraintSatisfaction Satisfaction;
+    if (S.CheckFunctionConstraints(Cand->Surrogate, Satisfaction))
+      S.DiagnoseUnsatisfiedConstraint(Satisfaction);
+  } else {
+    S.Diag(Cand->Surrogate->getLocation(), diag::note_ovl_surrogate_cand)
+        << FnType;
+  }
 }
 
 static void NoteBuiltinOperatorCandidate(Sema &S, StringRef Opc,
@@ -14970,6 +14991,22 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
                        /*SuppressUserConversion=*/false);
   }
 
+  // When calling a lambda, both the call operator, and
+  // the conversion operator to function pointer
+  // are considered. But when constraint checking
+  // on the call operator fails, it will also fail on the
+  // conversion operator as the constraints are always the same.
+  // As the user probably does not intend to perform a surrogate call,
+  // we filter them out to produce better error diagnostics, ie to avoid
+  // showing 2 failed overloads instead of one.
+  bool IgnoreSurrogateFunctions = false;
+  if (CandidateSet.size() == 1 && Record->getAsCXXRecordDecl()->isLambda()) {
+    const OverloadCandidate &Candidate = *CandidateSet.begin();
+    if (!Candidate.Viable &&
+        Candidate.FailureKind == ovl_fail_constraints_not_satisfied)
+      IgnoreSurrogateFunctions = true;
+  }
+
   // C++ [over.call.object]p2:
   //   In addition, for each (non-explicit in C++0x) conversion function
   //   declared in T of the form
@@ -14989,7 +15026,8 @@ Sema::BuildCallToObjectOfClassType(Scope *S, Expr *Obj,
   //   within T by another intervening declaration.
   const auto &Conversions =
       cast<CXXRecordDecl>(Record->getDecl())->getVisibleConversionFunctions();
-  for (auto I = Conversions.begin(), E = Conversions.end(); I != E; ++I) {
+  for (auto I = Conversions.begin(), E = Conversions.end();
+       !IgnoreSurrogateFunctions && I != E; ++I) {
     NamedDecl *D = *I;
     CXXRecordDecl *ActingContext = cast<CXXRecordDecl>(D->getDeclContext());
     if (isa<UsingShadowDecl>(D))

@@ -14,20 +14,30 @@
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
+#include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 using namespace mlir::nvgpu;
 
+#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
+
 void nvgpu::NVGPUDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc"
+      >();
+  addAttributes<
+#define GET_ATTRDEF_LIST
+#include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.cpp.inc"
       >();
   addOperations<
 #define GET_OP_LIST
@@ -321,10 +331,49 @@ LogicalResult LdMatrixOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// NVGPU_TmaAsyncLoadOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult TmaAsyncLoadOp::verify() {
+  // Destination memref
+  auto dstMemref = llvm::cast<MemRefType>(getDst().getType());
+  if (!NVGPUDialect::hasSharedMemoryAddressSpace(dstMemref)) {
+    return emitError()
+           << "The operation stores data to shared memory, but "
+              "the destination memref does not have a memory space of "
+           << NVGPUDialect::kSharedMemoryAddressSpace;
+  }
+  if (getCoordinates().size() > 5) {
+    return emitError() << "Maximum 5 coordinates are supported.";
+  }
+  if (getCoordinates().size() != size_t(dstMemref.getRank())) {
+    return emitError() << "Destination memref rank is "
+                       << size_t(dstMemref.getRank()) << " but there are  "
+                       << getCoordinates().size()
+                       << " coordinates. They must match.";
+  }
+  return success();
+}
+
+LogicalResult TmaCreateDescriptorOp::verify() {
+  if (getBoxDimensions().size() > 5) {
+    return emitError() << "Maximum 5 dimensional box is supported.";
+  }
+  nvgpu::TensorMapDescriptorType desc = getTensorMap().getType();
+  if (desc.getInterleave() != TensorMapInterleaveKind::INTERLEAVE_NONE)
+    return emitError() << "Interleave options are not supported yet.";
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // TableGen'd dialect, type, and op definitions
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.cpp.inc"
+
+#include "mlir/Dialect/NVGPU/IR/NVGPUEnums.cpp.inc"
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPU.cpp.inc"
