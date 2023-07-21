@@ -12,6 +12,7 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/MathExtras.h"
+#include "llvm/Support/ReverseIteration.h"
 #include "llvm/Support/xxhash.h"
 
 using namespace llvm;
@@ -85,6 +86,8 @@ unsigned StringMapImpl::LookupBucketFor(StringRef Name) {
   if (NumBuckets == 0)
     init(16);
   unsigned FullHashValue = xxHash64(Name);
+  if (shouldReverseIterate())
+    FullHashValue = ~FullHashValue;
   unsigned BucketNo = FullHashValue & (NumBuckets - 1);
   unsigned *HashTable = getHashTable(TheTable, NumBuckets);
 
@@ -140,6 +143,8 @@ int StringMapImpl::FindKey(StringRef Key) const {
   if (NumBuckets == 0)
     return -1; // Really empty table?
   unsigned FullHashValue = xxHash64(Key);
+  if (shouldReverseIterate())
+    FullHashValue = ~FullHashValue;
   unsigned BucketNo = FullHashValue & (NumBuckets - 1);
   unsigned *HashTable = getHashTable(TheTable, NumBuckets);
 
