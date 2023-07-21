@@ -155,10 +155,12 @@ struct SelectOpInterface
           bufferization::getBufferType(selectOp.getResult(), options);
       if (failed(targetType))
         return failure();
-      trueBuffer =
-          rewriter.create<memref::CastOp>(loc, *targetType, trueBuffer);
-      falseBuffer =
-          rewriter.create<memref::CastOp>(loc, *targetType, falseBuffer);
+      if (trueBuffer.getType() != *targetType)
+        trueBuffer =
+            rewriter.create<memref::CastOp>(loc, *targetType, trueBuffer);
+      if (falseBuffer.getType() != *targetType)
+        falseBuffer =
+            rewriter.create<memref::CastOp>(loc, *targetType, falseBuffer);
     }
 
     replaceOpWithNewBufferizedOp<arith::SelectOp>(
