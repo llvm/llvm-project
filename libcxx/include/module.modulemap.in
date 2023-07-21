@@ -1718,6 +1718,7 @@ module std_private_ranges_subrange_fwd               [system] {
 }
 module std_private_ranges_take_view                  [system] { header "__ranges/take_view.h" }
 module std_private_ranges_take_while_view            [system] { header "__ranges/take_while_view.h" }
+module std_private_ranges_to                         [system] { header "__ranges/to.h" }
 module std_private_ranges_transform_view             [system] {
   header "__ranges/transform_view.h"
   export std_private_functional_bind_back

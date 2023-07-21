@@ -841,8 +841,8 @@ feature_test_macros = [
                 "forward_list",
                 "list",
                 "map",
-                "priority_queue",
                 "queue",
+                "ranges",
                 "set",
                 "stack",
                 "string",
@@ -850,7 +850,6 @@ feature_test_macros = [
                 "unordered_set",
                 "vector",
             ],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_zip",
