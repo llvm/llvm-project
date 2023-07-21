@@ -20,5 +20,4 @@
 #define MATH_DIV(X,Y) BUILTIN_DIV_F16(X, Y)
 
 #define MATH_FAST_SQRT(X) BUILTIN_SQRT_F16(X)
-#define MATH_SQRT(X) ((half)BUILTIN_SQRT_F32((float)(X)))
-
+#define MATH_SQRT(X) ((half)BUILTIN_AMDGPU_SQRT_F32((float)(X)))

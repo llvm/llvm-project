@@ -182,6 +182,8 @@
 #define BUILTIN_SQRT_F64(X) __builtin_sqrt(X)
 #define BUILTIN_SQRT_F16(X) __builtin_sqrtf16(X)
 
+#define BUILTIN_AMDGPU_SQRT_F32(X) __builtin_amdgcn_sqrtf(X)
+
 #define BUILTIN_TRUNC_F32 __builtin_truncf
 #define BUILTIN_TRUNC_F64 __builtin_trunc
 #define BUILTIN_TRUNC_F16 __builtin_truncf16
