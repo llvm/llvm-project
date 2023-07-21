@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -eliminate-empty-tensors -empty-tensor-to-alloc-tensor -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs" -canonicalize -split-input-file | FileCheck %s
+// RUN: mlir-opt %s -eliminate-empty-tensors -empty-tensor-to-alloc-tensor -one-shot-bufferize="bufferize-function-boundaries allow-return-allocs" -cse -canonicalize -split-input-file | FileCheck %s
 
 //      CHECK: func @buffer_forwarding_conflict(
 // CHECK-SAME:   %[[FUNC_ARG:[0-9a-zA-Z]*]]: memref<?xf32>
@@ -101,7 +101,6 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
   %c5 = arith.constant 5 : index
 
   // CHECK-NOT: memref.alloc
-  // CHECK: %[[subview:.*]] = memref.subview %[[t]][%[[idx]]] [5] [1]
   %blank = tensor.empty() : tensor<5xf32>
 
   // CHECK: scf.for %[[iv:.*]] = %{{.*}} to %[[sz]] step %{{.*}} {
@@ -109,6 +108,7 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
     %iv_i32 = arith.index_cast %iv : index to i32
     %f = arith.sitofp %iv_i32 : i32 to f32
 
+    // CHECK: %[[subview:.*]] = memref.subview %[[t]][%[[idx]]] [5] [1]
     // CHECK: linalg.fill ins(%{{.*}}{{.*}}outs(%[[subview]]
     %filled = linalg.fill ins(%f : f32) outs(%blank : tensor<5xf32>) -> tensor<5xf32>
 

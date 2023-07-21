@@ -72,7 +72,6 @@
 #include "clang/Driver/Util.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -102,6 +101,7 @@
 #include <map>
 #include <memory>
 #include <optional>
+#include <set>
 #include <utility>
 #if LLVM_ON_UNIX
 #include <unistd.h> // getpid
@@ -1007,6 +1007,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
     }
 
     std::set<std::string> OffloadArchs;
+    llvm::StringMap<llvm::DenseSet<StringRef>> DerivedArchs;
+    llvm::StringMap<StringRef> FoundNormalizedTriples;
+    std::multiset<StringRef> OpenMPTriples;
 
     if (Arg *OpenMPTargets =
             C.getInputArgs().getLastArg(options::OPT_fopenmp_targets_EQ)) {
@@ -1016,6 +1019,8 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
             << OpenMPTargets->getAsString(C.getInputArgs());
         return;
       }
+      for (StringRef T : OpenMPTargets->getValues())
+        OpenMPTriples.insert(T);
 
       // First, handle errors in command line for OpenMP target offload
       bool IsHostOffloading =
@@ -1049,6 +1054,9 @@ void Driver::CreateOffloadingDeviceToolChains(Compilation &C,
       auto status = GetTargetInfoFromMarch(C, OffloadArchs);
       if (!status)
         return;
+
+      for (const auto &TripleAndArchs : DerivedArchs)
+        OpenMPTriples.insert(TripleAndArchs.first());
     }
     auto status = GetTargetInfoFromOffloadArchOpts(C, OffloadArchs);
     if (!status)

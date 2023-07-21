@@ -199,6 +199,9 @@ defm PseudoVCLZ : VPseudoUnaryV_V;
 defm PseudoVCTZ : VPseudoUnaryV_V;
 defm PseudoVCPOP : VPseudoUnaryV_V;
 
+defm PseudoVROL : VPseudoVALU_VV_VX;
+defm PseudoVROR : VPseudoVALU_VV_VX_VI<uimm6>;
+
 //===----------------------------------------------------------------------===//
 // SDNode patterns
 //===----------------------------------------------------------------------===//
@@ -249,6 +252,29 @@ defm : VPatUnarySDNode_V<bswap, "PseudoVREV8">;
 defm : VPatUnarySDNode_V<ctlz, "PseudoVCLZ">;
 defm : VPatUnarySDNode_V<cttz, "PseudoVCTZ">;
 defm : VPatUnarySDNode_V<ctpop, "PseudoVCPOP">;
+
+defm : VPatBinarySDNode_VV_VX<rotl, "PseudoVROL">;
+
+def NegImm64 : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(0x3f & (64 - N->getZExtValue()), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+
+// Although there is no vrol.vi, an immediate rotate left can be achieved by
+// negating the immediate in vror.vi
+foreach vti = AllIntegerVectors in {
+  let Predicates = !listconcat([HasStdExtZvbb],
+                               GetVTypePredicates<vti>.Predicates) in {
+    def : Pat<(vti.Vector (rotl vti.RegClass:$rs2,
+                                (vti.Vector (SplatPat_uimm6 uimm6:$rs1)))),
+              (!cast<Instruction>("PseudoVROR_VI_"#vti.LMul.MX)
+                 (vti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2,
+                 (NegImm64 uimm6:$rs1),
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
+  }
+}
+defm : VPatBinarySDNode_VV_VX_VI<rotr, "PseudoVROR", uimm6>;
 
 //===----------------------------------------------------------------------===//
 // VL patterns

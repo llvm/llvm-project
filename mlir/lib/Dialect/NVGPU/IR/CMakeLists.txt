@@ -6,6 +6,9 @@ add_mlir_dialect_library(MLIRNVGPUDialect
 
   DEPENDS
   MLIRNVGPUIncGen
+  MLIRNVGPUEnumsIncGen
+  MLIRNVGPUAttributesIncGen
+  MLIRNVGPUTypesIncGen
 
   LINK_LIBS PUBLIC
   MLIRGPUDialect

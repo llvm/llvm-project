@@ -95,7 +95,7 @@ export namespace std {
     using std::ranges::borrowed_subrange_t;
 
     // [range.utility.conv], range conversions
-    // using std::ranges::to;
+    using std::ranges::to;
 
     // [range.empty], empty view
     using std::ranges::empty_view;

@@ -476,7 +476,7 @@ void SIShrinkInstructions::shrinkMadFma(MachineInstr &MI) const {
   }
 }
 
-/// Attempt to shink AND/OR/XOR operations requiring non-inlineable literals.
+/// Attempt to shrink AND/OR/XOR operations requiring non-inlineable literals.
 /// For AND or OR, try using S_BITSET{0,1} to clear or set bits.
 /// If the inverse of the immediate is legal, use ANDN2, ORN2 or
 /// XNOR (as a ^ b == ~(a ^ ~b)).

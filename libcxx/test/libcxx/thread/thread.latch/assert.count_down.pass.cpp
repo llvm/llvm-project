@@ -18,7 +18,7 @@
 // higher than the internal counter triggers an assertion.
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
+// UNSUPPORTED: !libcpp-has-debug-mode
 // XFAIL: availability-verbose_abort-missing
 
 #include <latch>

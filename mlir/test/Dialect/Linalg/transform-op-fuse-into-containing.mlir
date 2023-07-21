@@ -628,3 +628,36 @@ module {
       : (!transform.op<"linalg.generic">, !transform.op<"scf.forall">) -> (!transform.any_op, !transform.any_op)
   }
 }
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Tests below are expected to fail.
+////////////////////////////////////////////////////////////////////////////////
+
+// -----
+
+// NO-CHECK-LABEL-ON-EXPECTED-ERROR
+func.func @copy_1d_1024xf16(%arg0: tensor<123x456xf32>, %arg1: tensor<456x789xf32>, %arg2 : tensor<123x789xf32>) -> tensor<123x789xf32> {
+  %0 = arith.constant 0.000000e+00 : f32
+  %1 = linalg.fill ins(%0 : f32) outs(%arg2 : tensor<123x789xf32>) -> tensor<123x789xf32>
+  // expected-note @below {{containing op}}
+  %2 = linalg.matmul ins(%arg0, %arg1 : tensor<123x456xf32>, tensor<456x789xf32>) outs(%1 : tensor<123x789xf32>) -> tensor<123x789xf32>
+  return %2 : tensor<123x789xf32>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.fill"]} in %arg1
+    : (!transform.any_op) -> !transform.any_op
+  %1 = transform.structured.match ops{["linalg.matmul"]} in %arg1
+    : (!transform.any_op) -> !transform.any_op
+  %forall_op, %tiled_op = transform.structured.tile_to_forall_op %1
+    num_threads [] tile_sizes [50, 16]
+    : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  // Note that we pass in %tiled_op, which isn't a container op.
+  // expected-error @+2 {{could not find next producer to fuse into container}}
+  %fused_op, %new_containing_op =
+    transform.structured.fuse_into_containing_op %0 into %tiled_op
+      : (!transform.any_op, !transform.any_op)
+        -> (!transform.any_op, !transform.any_op)
+}

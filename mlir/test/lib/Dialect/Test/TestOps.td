@@ -3367,6 +3367,17 @@ def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
   let arguments = (ins IntProperty<"int64_t">:$first, IntProperty<"int64_t">:$second);
 }
 
+def IntPropertyWithWorseBytecode : Property<"int64_t"> {
+  let writeToMlirBytecode = writeMlirBytecodeWithConvertToAttribute;
+
+  let readFromMlirBytecode = readMlirBytecodeUsingConvertFromAttribute;
+}
+
+def TestOpUsingIntPropertyWithWorseBytecode
+    : TEST_Op<"using_int_property_with_worse_bytecode"> {
+  let arguments = (ins IntPropertyWithWorseBytecode:$value);
+}
+
 // Op with a properties struct defined out-of-line. The struct has custom
 // printer/parser.
 
@@ -3432,6 +3443,41 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// Test Dataflow
+//===----------------------------------------------------------------------===//
 
+def TestCallAndStoreOp : TEST_Op<"call_and_store",
+    [DeclareOpInterfaceMethods<CallOpInterface>]> {
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    Arg<AnyMemRef, "", [MemWrite]>:$address,
+    Variadic<AnyType>:$callee_operands,
+    BoolAttr:$store_before_call
+  );
+  let results = (outs
+    Variadic<AnyType>:$results
+  );
+  let assemblyFormat =
+    "$callee `(` $callee_operands `)` `,` $address attr-dict "
+    "`:` functional-type(operands, results)";
+}
+
+def TestStoreWithARegion : TEST_Op<"store_with_a_region",
+    [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+     SingleBlock]> {
+  let arguments = (ins 
+    Arg<AnyMemRef, "", [MemWrite]>:$address,
+    BoolAttr:$store_before_region
+  );
+  let regions = (region AnyRegion:$body);
+  let assemblyFormat =
+    "$address attr-dict-with-keyword regions `:` type($address)";
+}
+
+def TestStoreWithARegionTerminator : TEST_Op<"store_with_a_region_terminator",
+    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, Terminator, NoMemoryEffect]> {
+  let assemblyFormat = "attr-dict";
+}
 
 #endif // TEST_OPS
