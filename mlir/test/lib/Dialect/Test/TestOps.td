@@ -3367,6 +3367,17 @@ def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
   let arguments = (ins IntProperty<"int64_t">:$first, IntProperty<"int64_t">:$second);
 }
 
+def IntPropertyWithWorseBytecode : Property<"int64_t"> {
+  let writeToMlirBytecode = writeMlirBytecodeWithConvertToAttribute;
+
+  let readFromMlirBytecode = readMlirBytecodeUsingConvertFromAttribute;
+}
+
+def TestOpUsingIntPropertyWithWorseBytecode
+    : TEST_Op<"using_int_property_with_worse_bytecode"> {
+  let arguments = (ins IntPropertyWithWorseBytecode:$value);
+}
+
 // Op with a properties struct defined out-of-line. The struct has custom
 // printer/parser.
 
