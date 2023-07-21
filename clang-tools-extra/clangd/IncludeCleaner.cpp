@@ -38,7 +38,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -47,6 +46,7 @@
 #include "llvm/Support/Regex.h"
 #include <cassert>
 #include <iterator>
+#include <map>
 #include <memory>
 #include <optional>
 #include <string>
@@ -256,7 +256,7 @@ addAllMissingIncludes(llvm::ArrayRef<Diag> MissingIncludeDiags) {
   AddAllMissing.Message = "add all missing includes";
   // A map to deduplicate the edits with the same new text.
   // newText (#include "my_missing_header.h") -> TextEdit.
-  llvm::StringMap<TextEdit> Edits;
+  std::map<std::string, TextEdit> Edits;
   for (const auto &Diag : MissingIncludeDiags) {
     assert(Diag.Fixes.size() == 1 && "Expected exactly one fix.");
     for (const auto &Edit : Diag.Fixes.front().Edits) {
@@ -272,7 +272,7 @@ addAllMissingIncludes(llvm::ArrayRef<Diag> MissingIncludeDiags) {
   unsigned I = 0;
   for (auto &It : Edits) {
     ChangeAnnotationIdentifier ID = AddAllMissingID + std::to_string(I++);
-    AddAllMissing.Edits.push_back(std::move(It.getValue()));
+    AddAllMissing.Edits.push_back(std::move(It.second));
     AddAllMissing.Edits.back().annotationId = ID;
 
     AddAllMissing.Annotations.push_back({ID, Annotation});
