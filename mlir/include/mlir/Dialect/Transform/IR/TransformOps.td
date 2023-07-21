@@ -172,6 +172,10 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
     in which patterns are applied is unspecified; i.e., the ordering of ops in
     the region of this op is irrelevant.
 
+    If `apple_cse` is set, the greedy pattern rewrite is interleaved with
+    common subexpression elimination (CSE): both are repeated until a fixpoint
+    is reached.
+
     This transform only reads the target handle and modifies the payload. If a
     pattern erases or replaces a tracked op, the mapping is updated accordingly.
 
@@ -188,7 +192,7 @@ def ApplyPatternsOp : TransformDialectOp<"apply_patterns",
   }];
 
   let arguments = (ins
-    TransformHandleTypeInterface:$target);
+    TransformHandleTypeInterface:$target, UnitAttr:$apply_cse);
   let results = (outs);
   let regions = (region MaxSizedRegion<1>:$patterns);
 
