@@ -950,9 +950,14 @@ bool CompilerInvocation::createFromArgs(
   success &= parseSemaArgs(res, args, diags);
   success &= parseDialectArgs(res, args, diags);
   success &= parseDiagArgs(res, args, diags);
+
+  // Collect LLVM (-mllvm) and MLIR (-mmlir) options.
+  // NOTE: Try to avoid adding any options directly to `llvmArgs` or
+  // `mlirArgs`. Instead, you can use
+  //    * `-mllvm <your-llvm-option>`, or
+  //    * `-mmlir <your-mlir-option>`.
   res.frontendOpts.llvmArgs =
       args.getAllArgValues(clang::driver::options::OPT_mllvm);
-
   res.frontendOpts.mlirArgs =
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
