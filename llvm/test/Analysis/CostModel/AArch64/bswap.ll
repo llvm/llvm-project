@@ -35,15 +35,15 @@ define void @scalar() {
 
 define void @neon() {
 ; CHECK-LABEL: 'neon'
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v4i16 = call <4 x i16> @llvm.bswap.v4i16(<4 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 29 for instruction: %v8i16 = call <8 x i16> @llvm.bswap.v8i16(<8 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 58 for instruction: %v16i16 = call <16 x i16> @llvm.bswap.v16i16(<16 x i16> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i32 = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 13 for instruction: %v4i32 = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 26 for instruction: %v8i32 = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 5 for instruction: %v2i64 = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v4i64 = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> undef)
-; CHECK-NEXT:  Cost Model: Found an estimated cost of 9 for instruction: %v3i32 = call <3 x i32> @llvm.bswap.v3i32(<3 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i16 = call <4 x i16> @llvm.bswap.v4i16(<4 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v8i16 = call <8 x i16> @llvm.bswap.v8i16(<8 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v16i16 = call <16 x i16> @llvm.bswap.v16i16(<16 x i16> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i32 = call <2 x i32> @llvm.bswap.v2i32(<2 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v4i32 = call <4 x i32> @llvm.bswap.v4i32(<4 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v8i32 = call <8 x i32> @llvm.bswap.v8i32(<8 x i32> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v2i64 = call <2 x i64> @llvm.bswap.v2i64(<2 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %v4i64 = call <4 x i64> @llvm.bswap.v4i64(<4 x i64> undef)
+; CHECK-NEXT:  Cost Model: Found an estimated cost of 1 for instruction: %v3i32 = call <3 x i32> @llvm.bswap.v3i32(<3 x i32> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 10 for instruction: %v4i48 = call <4 x i48> @llvm.bswap.v4i48(<4 x i48> undef)
 ; CHECK-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
