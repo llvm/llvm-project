@@ -1067,26 +1067,9 @@ def executeScriptInternal(test, litConfig, tmpBase, commands, cwd):
 def executeScript(test, litConfig, tmpBase, commands, cwd):
     bashPath = litConfig.getBashPath()
     isWin32CMDEXE = litConfig.isWindows and not bashPath
-    coverage_index = 0  # Counter for coverage file index
     script = tmpBase + ".script"
     if isWin32CMDEXE:
         script += ".bat"
-
-    # Set unique LLVM_PROFILE_FILE for each run command
-    for j, ln in enumerate(commands):
-        match = re.match(kPdbgRegex, ln)
-        if match:
-            command = match.group(2)
-            commands[j] = match.expand(": '\\1'; \\2" if command else ": '\\1'")
-            if litConfig.per_test_coverage:
-                # Extract the test case name from the test object
-                test_case_name = test.path_in_suite[-1]
-                test_case_name = test_case_name.rsplit(".", 1)[0]  # Remove the file extension
-                llvm_profile_file = f"{test_case_name}{coverage_index}.profraw"
-                env = dict(test.config.environment)  # Create a copy of the environment
-                env["LLVM_PROFILE_FILE"] = llvm_profile_file
-                commands[j] = f"export LLVM_PROFILE_FILE={llvm_profile_file} && {commands[j]}"
-                coverage_index += 1
 
     # Write script file
     mode = "w"
