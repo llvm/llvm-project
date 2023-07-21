@@ -210,3 +210,24 @@ module {
     }
   }
 }
+
+// -----
+
+// CHECK-LABEL: func @canonicalization_and_cse(
+//   CHECK-NOT:   memref.subview
+//   CHECK-NOT:   memref.copy
+func.func @canonicalization_and_cse(%m: memref<5xf32>) {
+  %c2 = arith.constant 2 : index
+  %s0 = memref.subview %m[1] [2] [1] : memref<5xf32> to memref<2xf32, strided<[1], offset: 1>>
+  %s1 = memref.subview %m[1] [%c2] [1] : memref<5xf32> to memref<?xf32, strided<[1], offset: 1>>
+  memref.copy %s0, %s1 : memref<2xf32, strided<[1], offset: 1>> to memref<?xf32, strided<[1], offset: 1>>
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns to %1 {
+    transform.apply_patterns.canonicalization
+  } {apply_cse} : !transform.any_op
+}
