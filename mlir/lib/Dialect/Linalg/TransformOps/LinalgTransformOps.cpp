@@ -3378,21 +3378,26 @@ DiagnosedSilenceableFailure transform::InsertSliceToCopyOp::applyToOne(
 //===----------------------------------------------------------------------===//
 // MapCopyToThreadsOp
 //===----------------------------------------------------------------------===//
+
 DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
-    transform::TransformRewriter &rewriter, linalg::CopyOp copyOp,
+    transform::TransformRewriter &rewriter, Operation *target,
     transform::ApplyToEachResultList &results,
     transform::TransformState &state) {
-  auto transformOp = cast<TransformOpInterface>(getOperation());
-  ShapedType resultShapedType;
-  if (copyOp) {
-    resultShapedType =
-        cast<ShapedType>(copyOp.getDpsInitOperand(0)->get().getType());
-  }
-  if (!copyOp || !resultShapedType.hasStaticShape()) {
+  // Check if the op is supported.
+  if (!isa<linalg::CopyOp, tensor::PadOp>(target)) {
     DiagnosedSilenceableFailure diag =
-        transformOp.emitSilenceableError()
-        << "only statically sized linalg.copy ops of rank <= 3 are supported";
-    diag.attachNote(copyOp->getLoc()) << "target op";
+        emitSilenceableError()
+        << "only linalg.copy and tensor.pad target ops are supported";
+    diag.attachNote(target->getLoc()) << "target op";
+    return diag;
+  }
+  assert(target->getNumResults() == 1 && "expected single result");
+  auto resultShapedType = cast<ShapedType>(target->getResult(0).getType());
+  if (!resultShapedType.hasStaticShape()) {
+    DiagnosedSilenceableFailure diag =
+        emitSilenceableError()
+        << "only statically sized ops of rank <= 3 are supported";
+    diag.attachNote(target->getLoc()) << "target op";
     return diag;
   }
 
@@ -3414,11 +3419,11 @@ DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
       resultShapedType.getElementType().getIntOrFloatBitWidth());
   if (mapping.status == gpu::CopyMappingInfo::Status::Invalid) {
     DiagnosedSilenceableFailure diag =
-        transformOp.emitSilenceableError()
+        emitSilenceableError()
         << "too few threads to map copy op to threads on the most minor "
            "dimension, given alignment and vector size constraints, try "
            "smaller tile size of mapping to more threads";
-    diag.attachNote(copyOp->getLoc()) << "target op";
+    diag.attachNote(target->getLoc()) << "target op";
     return diag;
   }
 
@@ -3428,8 +3433,8 @@ DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
   DiagnosedSilenceableFailure diag = tileToForallOpImpl(
       /*rewriter=*/rewriter,
       /*state=*/state,
-      /*transformOp=*/transformOp,
-      /*target=*/copyOp,
+      /*transformOp=*/*this,
+      /*target=*/target,
       /*mixedNumThreads=*/getMixedValues(mapping.numThreads, {}, b),
       /*mixedTileSizes=*/ArrayRef<OpFoldResult>{},
       /*mapping=*/b.getArrayAttr(mapping.threadMapping),
@@ -3437,6 +3442,7 @@ DiagnosedSilenceableFailure transform::MapCopyToThreadsOp::applyToOne(
   if (!diag.succeeded())
     return diag;
 
+  results.push_back(tilingResult.tileOp);
   results.push_back(tilingResult.tiledOp);
   return DiagnosedSilenceableFailure::success();
 }
