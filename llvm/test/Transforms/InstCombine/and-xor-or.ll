@@ -4756,3 +4756,25 @@ define i8 @canonicalize_logic_first_xor_bad_constants2(i8 %x) {
   %r = xor i8 %a, 32  ; 00100000
   ret i8 %r
 }
+
+@g = external global i8
+
+define i32 @canonicalize_logic_first_constexpr(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_constexpr
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    ret i32 and (i32 add (i32 ptrtoint (ptr @g to i32), i32 48), i32 -10)
+;
+  %a = add i32 ptrtoint (ptr @g to i32), 48
+  %r = and i32 %a, -10
+  ret i32 %r
+}
+
+define i32 @canonicalize_logic_first_constexpr_nuw(i32 %x) {
+; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_constexpr_nuw
+; CHECK-SAME: (i32 [[X:%.*]]) {
+; CHECK-NEXT:    ret i32 and (i32 add (i32 ptrtoint (ptr @g to i32), i32 48), i32 -10)
+;
+  %a = add nuw i32 ptrtoint (ptr @g to i32), 48
+  %r = and i32 %a, -10
+  ret i32 %r
+}
