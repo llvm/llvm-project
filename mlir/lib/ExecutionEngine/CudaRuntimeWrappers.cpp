@@ -254,6 +254,71 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuSetDefaultDevice(int32_t device) {
   defaultDevice = device;
 }
 
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void mgpuTensorMapEncodeTiled(
+    CUtensorMap *tensorMap,             // Tensor map object
+    CUtensorMapDataType tensorDataType, // Tensor data type
+    cuuint32_t tensorRank,              // Dimensionality of tensor
+    void *globalAddress,                // Starting address
+    const cuuint64_t *globalDim,        // Tensor size (number of elements)
+    const cuuint64_t *globalStrides,    // Stride size (in bytes)
+    const cuuint32_t *boxDim,           // Traversal box (number of elments)
+    const cuuint32_t *elementStrides,   // Traversal stride
+    CUtensorMapInterleave interleave,   // Type of interleaved layout
+    CUtensorMapSwizzle swizzle,         // Bank swizzling pattern
+    CUtensorMapL2promotion l2Promotion, // L2 promotion size
+    CUtensorMapFloatOOBfill oobFill     // Padding zfill or NaN fill
+) {
+  ScopedContext scopedContext;
+  CUDA_REPORT_IF_ERROR(cuTensorMapEncodeTiled(
+      tensorMap, tensorDataType, tensorRank, globalAddress, globalDim,
+      globalStrides, boxDim, elementStrides, interleave, swizzle, l2Promotion,
+      oobFill));
+}
+
+extern "C" MLIR_CUDA_WRAPPERS_EXPORT void *mgpuTensorMapEncodeTiledMemref(
+    int64_t tensorRank,                       // Dimensionality of tensor
+    StridedMemRefType<char, 1> *descriptor,   // Starting address
+    const CUtensorMapDataType tensorDataType, // Stride size (in bytes)
+    CUtensorMapInterleave interleave,         // Type of interleaved layout
+    CUtensorMapSwizzle swizzle,               // Bank swizzling pattern
+    CUtensorMapL2promotion l2Promotion,       // L2 promotion size
+    CUtensorMapFloatOOBfill oobFill,          // Padding zfill or NaN fill
+    int64_t *inputBoxDims // Tensor size (number of elements)
+) {
+  CUtensorMap tensorMap;
+
+  auto *globalAddress = descriptor->data;
+  uint32_t boxDim[5] = {0}, elementStrides[5] = {0};
+  uint64_t globalDim[5] = {0}, globalStrides[5] = {0};
+  uint32_t tensorRank32 = uint32_t(tensorRank);
+
+  static const int elementSizeInBytes[] = {1, 2, 4, 4, 8, 8, 2,
+                                           4, 8, 2, 4, 4, 4};
+  for (int64_t r = 0; r < tensorRank; ++r) {
+    elementStrides[r] = uint32_t(1);
+    boxDim[r] = static_cast<uint32_t>(inputBoxDims[tensorRank - r - 1]);
+    globalDim[r] = static_cast<uint64_t>(descriptor->sizes[tensorRank - r - 1]);
+  }
+
+  globalStrides[0] = globalDim[0] * elementSizeInBytes[tensorDataType];
+  for (int r = 1; r < tensorRank - 1; r++)
+    globalStrides[r] = globalStrides[r - 1] * globalDim[1] *
+                       elementSizeInBytes[tensorDataType];
+
+  ScopedContext scopedContext;
+  mgpuTensorMapEncodeTiled(&tensorMap, tensorDataType, tensorRank32,
+                           globalAddress, globalDim, globalStrides, boxDim,
+                           elementStrides, interleave, swizzle, l2Promotion,
+                           oobFill);
+  // Copy created tensor map to device
+  CUdeviceptr dTensorMap;
+  CUDA_REPORT_IF_ERROR(cuMemAlloc(&dTensorMap, sizeof(CUtensorMap)));
+  CUDA_REPORT_IF_ERROR(cuMemcpy(dTensorMap,
+                                reinterpret_cast<CUdeviceptr>(&tensorMap),
+                                sizeof(CUtensorMap)));
+  return reinterpret_cast<void *>(dTensorMap);
+}
+
 #ifdef MLIR_ENABLE_CUDA_CUSPARSE
 
 ///

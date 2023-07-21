@@ -43,12 +43,24 @@ SystemZObjectWriter::SystemZObjectWriter(uint8_t OSABI)
 // Return the relocation type for an absolute value of MCFixupKind Kind.
 static unsigned getAbsoluteReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
   switch (Kind) {
-  case FK_Data_1: return ELF::R_390_8;
-  case FK_Data_2: return ELF::R_390_16;
-  case FK_Data_4: return ELF::R_390_32;
-  case FK_Data_8: return ELF::R_390_64;
-  case SystemZ::FK_390_12: return ELF::R_390_12;
-  case SystemZ::FK_390_20: return ELF::R_390_20;
+  case FK_Data_1:
+  case SystemZ::FK_390_U8Imm:
+  case SystemZ::FK_390_S8Imm:
+    return ELF::R_390_8;
+  case SystemZ::FK_390_U12Imm:
+    return ELF::R_390_12;
+  case FK_Data_2:
+  case SystemZ::FK_390_U16Imm:
+  case SystemZ::FK_390_S16Imm:
+    return ELF::R_390_16;
+  case SystemZ::FK_390_S20Imm:
+    return ELF::R_390_20;
+  case FK_Data_4:
+  case SystemZ::FK_390_U32Imm:
+  case SystemZ::FK_390_S32Imm:
+    return ELF::R_390_32;
+  case FK_Data_8:
+    return ELF::R_390_64;
   }
   Ctx.reportError(Loc, "Unsupported absolute address");
   return 0;
@@ -57,13 +69,24 @@ static unsigned getAbsoluteReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
 // Return the relocation type for a PC-relative value of MCFixupKind Kind.
 static unsigned getPCRelReloc(MCContext &Ctx, SMLoc Loc, unsigned Kind) {
   switch (Kind) {
-  case FK_Data_2:                return ELF::R_390_PC16;
-  case FK_Data_4:                return ELF::R_390_PC32;
-  case FK_Data_8:                return ELF::R_390_PC64;
-  case SystemZ::FK_390_PC12DBL:  return ELF::R_390_PC12DBL;
-  case SystemZ::FK_390_PC16DBL:  return ELF::R_390_PC16DBL;
-  case SystemZ::FK_390_PC24DBL:  return ELF::R_390_PC24DBL;
-  case SystemZ::FK_390_PC32DBL:  return ELF::R_390_PC32DBL;
+  case FK_Data_2:
+  case SystemZ::FK_390_U16Imm:
+  case SystemZ::FK_390_S16Imm:
+    return ELF::R_390_PC16;
+  case FK_Data_4:
+  case SystemZ::FK_390_U32Imm:
+  case SystemZ::FK_390_S32Imm:
+    return ELF::R_390_PC32;
+  case FK_Data_8:
+    return ELF::R_390_PC64;
+  case SystemZ::FK_390_PC12DBL:
+    return ELF::R_390_PC12DBL;
+  case SystemZ::FK_390_PC16DBL:
+    return ELF::R_390_PC16DBL;
+  case SystemZ::FK_390_PC24DBL:
+    return ELF::R_390_PC24DBL;
+  case SystemZ::FK_390_PC32DBL:
+    return ELF::R_390_PC32DBL;
   }
   Ctx.reportError(Loc, "Unsupported PC-relative address");
   return 0;
