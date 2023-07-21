@@ -24,6 +24,9 @@ void InterpStack::clear() {
     std::free(Chunk);
   Chunk = nullptr;
   StackSize = 0;
+#ifndef NDEBUG
+  ItemTypes.clear();
+#endif
 }
 
 void *InterpStack::grow(size_t Size) {
