@@ -733,18 +733,11 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
   // we remove Fix16BitCopies and this code block?
   if (Fix16BitCopies) {
     if (((Size == 16) != (SrcSize == 16))) {
-      if (ST.hasTrue16BitInsts()) {
-        // Non-VGPR Src and Dst will later be expanded back to 32 bits.
-        MCRegister &RegToFix = (Size == 32) ? DestReg : SrcReg;
-        MCRegister SubReg = RI.getSubReg(RegToFix, AMDGPU::lo16);
-        RegToFix = SubReg;
-      } else {
-        MCRegister &RegToFix = (Size == 16) ? DestReg : SrcReg;
-        MCRegister Super = RI.get32BitRegister(RegToFix);
-        assert(RI.getSubReg(Super, AMDGPU::lo16) == RegToFix ||
-               RI.getSubReg(Super, AMDGPU::hi16) == RegToFix);
-        RegToFix = Super;
-      }
+      // Non-VGPR Src and Dst will later be expanded back to 32 bits.
+      assert(ST.hasTrue16BitInsts());
+      MCRegister &RegToFix = (Size == 32) ? DestReg : SrcReg;
+      MCRegister SubReg = RI.getSubReg(RegToFix, AMDGPU::lo16);
+      RegToFix = SubReg;
 
       if (DestReg == SrcReg) {
         // Identity copy. Insert empty bundle since ExpandPostRA expects an
