@@ -12,6 +12,7 @@
 // RUN: FileCheck --check-prefixes=CHECK5,CHECK5v11 --input-file=%t2 %s
 // RUN: FileCheck --check-prefix=CHECK6    --input-file=%t2 %s
 // REQUIRES: asserts
+// UNSUPPORTED: reverse_iteration
 
 struct A {
   int a;
