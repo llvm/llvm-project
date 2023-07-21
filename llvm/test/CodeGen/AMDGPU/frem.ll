@@ -203,6 +203,7 @@ define amdgpu_kernel void @frem_f16(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX1150-NEXT:    v_xor_b32_e32 v3, 0x8000, v3
 ; GFX1150-NEXT:    v_fmac_f16_e32 v1, v3, v2
 ; GFX1150-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                       ptr addrspace(1) %in2) #0 {
@@ -371,6 +372,7 @@ define amdgpu_kernel void @fast_frem_f16(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX1150-NEXT:    v_xor_b32_e32 v3, 0x8000, v3
 ; GFX1150-NEXT:    v_fmac_f16_e32 v1, v3, v2
 ; GFX1150-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                       ptr addrspace(1) %in2) #0 {
@@ -539,6 +541,7 @@ define amdgpu_kernel void @unsafe_frem_f16(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1150-NEXT:    v_xor_b32_e32 v3, 0x8000, v3
 ; GFX1150-NEXT:    v_fmac_f16_e32 v1, v3, v2
 ; GFX1150-NEXT:    global_store_b16 v0, v1, s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                              ptr addrspace(1) %in2) #1 {
@@ -784,6 +787,7 @@ define amdgpu_kernel void @frem_f32(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX1150-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
 ; GFX1150-NEXT:    v_fmac_f32_e32 v1, v3, v2
 ; GFX1150-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                       ptr addrspace(1) %in2) #0 {
@@ -944,6 +948,7 @@ define amdgpu_kernel void @fast_frem_f32(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX1150-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
 ; GFX1150-NEXT:    v_fmac_f32_e32 v1, v3, v2
 ; GFX1150-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                       ptr addrspace(1) %in2) #0 {
@@ -1104,6 +1109,7 @@ define amdgpu_kernel void @unsafe_frem_f32(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1150-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
 ; GFX1150-NEXT:    v_fmac_f32_e32 v1, v3, v2
 ; GFX1150-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                              ptr addrspace(1) %in2) #1 {
@@ -1359,6 +1365,7 @@ define amdgpu_kernel void @frem_f64(ptr addrspace(1) %out, ptr addrspace(1) %in1
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; GFX1150-NEXT:    global_store_b64 v12, v[0:1], s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                       ptr addrspace(1) %in2) #0 {
@@ -1583,6 +1590,7 @@ define amdgpu_kernel void @fast_frem_f64(ptr addrspace(1) %out, ptr addrspace(1)
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; GFX1150-NEXT:    global_store_b64 v10, v[0:1], s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                       ptr addrspace(1) %in2) #0 {
@@ -1807,6 +1815,7 @@ define amdgpu_kernel void @unsafe_frem_f64(ptr addrspace(1) %out, ptr addrspace(
 ; GFX1150-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX1150-NEXT:    v_fma_f64 v[0:1], -v[4:5], v[2:3], v[0:1]
 ; GFX1150-NEXT:    global_store_b64 v10, v[0:1], s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                              ptr addrspace(1) %in2) #1 {
@@ -2115,6 +2124,7 @@ define amdgpu_kernel void @frem_v2f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    v_fmac_f16_e32 v1, v3, v2
 ; GFX1150-NEXT:    v_pack_b32_f16 v1, v1, v5
 ; GFX1150-NEXT:    global_store_b32 v0, v1, s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                         ptr addrspace(1) %in2) #0 {
@@ -2600,6 +2610,7 @@ define amdgpu_kernel void @frem_v4f16(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    v_fmac_f16_e32 v1, v2, v3
 ; GFX1150-NEXT:    v_pack_b32_f16 v1, v1, v6
 ; GFX1150-NEXT:    global_store_b64 v4, v[0:1], s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                         ptr addrspace(1) %in2) #0 {
@@ -2963,6 +2974,7 @@ define amdgpu_kernel void @frem_v2f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    v_xor_b32_e32 v3, 0x80000000, v3
 ; GFX1150-NEXT:    v_fmac_f32_e32 v0, v3, v2
 ; GFX1150-NEXT:    global_store_b64 v4, v[0:1], s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                         ptr addrspace(1) %in2) #0 {
@@ -3562,6 +3574,7 @@ define amdgpu_kernel void @frem_v4f32(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    v_xor_b32_e32 v5, 0x80000000, v5
 ; GFX1150-NEXT:    v_fmac_f32_e32 v0, v5, v4
 ; GFX1150-NEXT:    global_store_b128 v8, v[0:3], s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                         ptr addrspace(1) %in2) #0 {
@@ -3945,6 +3958,7 @@ define amdgpu_kernel void @frem_v2f64(ptr addrspace(1) %out, ptr addrspace(1) %i
 ; GFX1150-NEXT:    v_trunc_f64_e32 v[6:7], v[6:7]
 ; GFX1150-NEXT:    v_fma_f64 v[0:1], -v[6:7], v[4:5], v[0:1]
 ; GFX1150-NEXT:    global_store_b128 v16, v[0:3], s[4:5]
+; GFX1150-NEXT:    s_nop 0
 ; GFX1150-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1150-NEXT:    s_endpgm
                         ptr addrspace(1) %in2) #0 {
