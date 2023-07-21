@@ -4,6 +4,61 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+v -target-abi=lp64 \
 ; RUN:     -verify-machineinstrs < %s | FileCheck %s
 
+define <vscale x 1 x i32> @vnsra_wx_i64_nxv1i32(<vscale x 1 x i64> %va, i64 %b) {
+; CHECK-LABEL: vnsra_wx_i64_nxv1i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vnsra.wx v8, v8, a0
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 1 x i64> poison, i64 %b, i32 0
+  %splat = shufflevector <vscale x 1 x i64> %head, <vscale x 1 x i64> poison, <vscale x 1 x i32> zeroinitializer
+  %x = ashr <vscale x 1 x i64> %va, %splat
+  %y = trunc <vscale x 1 x i64> %x to <vscale x 1 x i32>
+  ret <vscale x 1 x i32> %y
+}
+
+define <vscale x 2 x i32> @vnsra_wx_i64_nxv2i32(<vscale x 2 x i64> %va, i64 %b) {
+; CHECK-LABEL: vnsra_wx_i64_nxv2i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vnsra.wx v10, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 2 x i64> poison, i64 %b, i32 0
+  %splat = shufflevector <vscale x 2 x i64> %head, <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
+  %x = ashr <vscale x 2 x i64> %va, %splat
+  %y = trunc <vscale x 2 x i64> %x to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %y
+}
+
+define <vscale x 4 x i32> @vnsra_wx_i64_nxv4i32(<vscale x 4 x i64> %va, i64 %b) {
+; CHECK-LABEL: vnsra_wx_i64_nxv4i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vnsra.wx v12, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 4 x i64> poison, i64 %b, i32 0
+  %splat = shufflevector <vscale x 4 x i64> %head, <vscale x 4 x i64> poison, <vscale x 4 x i32> zeroinitializer
+  %x = ashr <vscale x 4 x i64> %va, %splat
+  %y = trunc <vscale x 4 x i64> %x to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %y
+}
+
+define <vscale x 8 x i32> @vnsra_wx_i64_nxv8i32(<vscale x 8 x i64> %va, i64 %b) {
+; CHECK-LABEL: vnsra_wx_i64_nxv8i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vnsra.wx v16, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 8 x i64> poison, i64 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i64> %head, <vscale x 8 x i64> poison, <vscale x 8 x i32> zeroinitializer
+  %x = ashr <vscale x 8 x i64> %va, %splat
+  %y = trunc <vscale x 8 x i64> %x to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %y
+}
+
 define <vscale x 1 x i32> @vnsra_wv_nxv1i32_sext(<vscale x 1 x i64> %va, <vscale x 1 x i32> %vb) {
 ; CHECK-LABEL: vnsra_wv_nxv1i32_sext:
 ; CHECK:       # %bb.0:
@@ -25,6 +80,34 @@ define <vscale x 1 x i32> @vnsra_wx_i32_nxv1i32_sext(<vscale x 1 x i64> %va, i32
   %head = insertelement <vscale x 1 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 1 x i32> %head, <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer
   %vb = sext <vscale x 1 x i32> %splat to <vscale x 1 x i64>
+  %x = ashr <vscale x 1 x i64> %va, %vb
+  %y = trunc <vscale x 1 x i64> %x to <vscale x 1 x i32>
+  ret <vscale x 1 x i32> %y
+}
+
+define <vscale x 1 x i32> @vnsra_wx_i16_nxv1i32_sext(<vscale x 1 x i64> %va, i16 %b) {
+; CHECK-LABEL: vnsra_wx_i16_nxv1i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vnsra.wx v8, v8, a0
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 1 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
+  %vb = sext <vscale x 1 x i16> %splat to <vscale x 1 x i64>
+  %x = ashr <vscale x 1 x i64> %va, %vb
+  %y = trunc <vscale x 1 x i64> %x to <vscale x 1 x i32>
+  ret <vscale x 1 x i32> %y
+}
+
+define <vscale x 1 x i32> @vnsra_wx_i8_nxv1i32_sext(<vscale x 1 x i64> %va, i8 %b) {
+; CHECK-LABEL: vnsra_wx_i8_nxv1i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vnsra.wx v8, v8, a0
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 1 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
+  %vb = sext <vscale x 1 x i8> %splat to <vscale x 1 x i64>
   %x = ashr <vscale x 1 x i64> %va, %vb
   %y = trunc <vscale x 1 x i64> %x to <vscale x 1 x i32>
   ret <vscale x 1 x i32> %y
@@ -67,6 +150,36 @@ define <vscale x 2 x i32> @vnsra_wx_i32_nxv2i32_sext(<vscale x 2 x i64> %va, i32
   %head = insertelement <vscale x 2 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   %vb = sext <vscale x 2 x i32> %splat to <vscale x 2 x i64>
+  %x = ashr <vscale x 2 x i64> %va, %vb
+  %y = trunc <vscale x 2 x i64> %x to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %y
+}
+
+define <vscale x 2 x i32> @vnsra_wx_i16_nxv2i32_sext(<vscale x 2 x i64> %va, i16 %b) {
+; CHECK-LABEL: vnsra_wx_i16_nxv2i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vnsra.wx v10, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 2 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %vb = sext <vscale x 2 x i16> %splat to <vscale x 2 x i64>
+  %x = ashr <vscale x 2 x i64> %va, %vb
+  %y = trunc <vscale x 2 x i64> %x to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %y
+}
+
+define <vscale x 2 x i32> @vnsra_wx_i8_nxv2i32_sext(<vscale x 2 x i64> %va, i8 %b) {
+; CHECK-LABEL: vnsra_wx_i8_nxv2i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vnsra.wx v10, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 2 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
+  %vb = sext <vscale x 2 x i8> %splat to <vscale x 2 x i64>
   %x = ashr <vscale x 2 x i64> %va, %vb
   %y = trunc <vscale x 2 x i64> %x to <vscale x 2 x i32>
   ret <vscale x 2 x i32> %y
@@ -115,6 +228,36 @@ define <vscale x 4 x i32> @vnsra_wx_i32_nxv4i32_sext(<vscale x 4 x i64> %va, i32
   ret <vscale x 4 x i32> %y
 }
 
+define <vscale x 4 x i32> @vnsra_wx_i16_nxv4i32_sext(<vscale x 4 x i64> %va, i16 %b) {
+; CHECK-LABEL: vnsra_wx_i16_nxv4i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vnsra.wx v12, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 4 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
+  %vb = sext <vscale x 4 x i16> %splat to <vscale x 4 x i64>
+  %x = ashr <vscale x 4 x i64> %va, %vb
+  %y = trunc <vscale x 4 x i64> %x to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %y
+}
+
+define <vscale x 4 x i32> @vnsra_wx_i8_nxv4i32_sext(<vscale x 4 x i64> %va, i8 %b) {
+; CHECK-LABEL: vnsra_wx_i8_nxv4i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vnsra.wx v12, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 4 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
+  %vb = sext <vscale x 4 x i8> %splat to <vscale x 4 x i64>
+  %x = ashr <vscale x 4 x i64> %va, %vb
+  %y = trunc <vscale x 4 x i64> %x to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %y
+}
+
 define <vscale x 4 x i32> @vnsra_wi_i32_nxv4i32_sext(<vscale x 4 x i64> %va) {
 ; CHECK-LABEL: vnsra_wi_i32_nxv4i32_sext:
 ; CHECK:       # %bb.0:
@@ -153,6 +296,36 @@ define <vscale x 8 x i32> @vnsra_wx_i32_nxv8i32_sext(<vscale x 8 x i64> %va, i32
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
   %vb = sext <vscale x 8 x i32> %splat to <vscale x 8 x i64>
+  %x = ashr <vscale x 8 x i64> %va, %vb
+  %y = trunc <vscale x 8 x i64> %x to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %y
+}
+
+define <vscale x 8 x i32> @vnsra_wx_i16_nxv8i32_sext(<vscale x 8 x i64> %va, i16 %b) {
+; CHECK-LABEL: vnsra_wx_i16_nxv8i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vnsra.wx v16, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+  %vb = sext <vscale x 8 x i16> %splat to <vscale x 8 x i64>
+  %x = ashr <vscale x 8 x i64> %va, %vb
+  %y = trunc <vscale x 8 x i64> %x to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %y
+}
+
+define <vscale x 8 x i32> @vnsra_wx_i8_nxv8i32_sext(<vscale x 8 x i64> %va, i8 %b) {
+; CHECK-LABEL: vnsra_wx_i8_nxv8i32_sext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vnsra.wx v16, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+  %vb = sext <vscale x 8 x i8> %splat to <vscale x 8 x i64>
   %x = ashr <vscale x 8 x i64> %va, %vb
   %y = trunc <vscale x 8 x i64> %x to <vscale x 8 x i32>
   ret <vscale x 8 x i32> %y
@@ -199,6 +372,34 @@ define <vscale x 1 x i32> @vnsra_wx_i32_nxv1i32_zext(<vscale x 1 x i64> %va, i32
   ret <vscale x 1 x i32> %y
 }
 
+define <vscale x 1 x i32> @vnsra_wx_i16_nxv1i32_zext(<vscale x 1 x i64> %va, i16 %b) {
+; CHECK-LABEL: vnsra_wx_i16_nxv1i32_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vnsra.wx v8, v8, a0
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 1 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <vscale x 1 x i16> %head, <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer
+  %vb = zext <vscale x 1 x i16> %splat to <vscale x 1 x i64>
+  %x = ashr <vscale x 1 x i64> %va, %vb
+  %y = trunc <vscale x 1 x i64> %x to <vscale x 1 x i32>
+  ret <vscale x 1 x i32> %y
+}
+
+define <vscale x 1 x i32> @vnsra_wx_i8_nxv1i32_zext(<vscale x 1 x i64> %va, i8 %b) {
+; CHECK-LABEL: vnsra_wx_i8_nxv1i32_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, mf2, ta, ma
+; CHECK-NEXT:    vnsra.wx v8, v8, a0
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 1 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <vscale x 1 x i8> %head, <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer
+  %vb = zext <vscale x 1 x i8> %splat to <vscale x 1 x i64>
+  %x = ashr <vscale x 1 x i64> %va, %vb
+  %y = trunc <vscale x 1 x i64> %x to <vscale x 1 x i32>
+  ret <vscale x 1 x i32> %y
+}
+
 define <vscale x 1 x i32> @vnsra_wi_i32_nxv1i32_zext(<vscale x 1 x i64> %va) {
 ; CHECK-LABEL: vnsra_wi_i32_nxv1i32_zext:
 ; CHECK:       # %bb.0:
@@ -236,6 +437,36 @@ define <vscale x 2 x i32> @vnsra_wx_i32_nxv2i32_zext(<vscale x 2 x i64> %va, i32
   %head = insertelement <vscale x 2 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 2 x i32> %head, <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
   %vb = zext <vscale x 2 x i32> %splat to <vscale x 2 x i64>
+  %x = ashr <vscale x 2 x i64> %va, %vb
+  %y = trunc <vscale x 2 x i64> %x to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %y
+}
+
+define <vscale x 2 x i32> @vnsra_wx_i16_nxv2i32_zext(<vscale x 2 x i64> %va, i16 %b) {
+; CHECK-LABEL: vnsra_wx_i16_nxv2i32_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vnsra.wx v10, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 2 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <vscale x 2 x i16> %head, <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer
+  %vb = zext <vscale x 2 x i16> %splat to <vscale x 2 x i64>
+  %x = ashr <vscale x 2 x i64> %va, %vb
+  %y = trunc <vscale x 2 x i64> %x to <vscale x 2 x i32>
+  ret <vscale x 2 x i32> %y
+}
+
+define <vscale x 2 x i32> @vnsra_wx_i8_nxv2i32_zext(<vscale x 2 x i64> %va, i8 %b) {
+; CHECK-LABEL: vnsra_wx_i8_nxv2i32_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m1, ta, ma
+; CHECK-NEXT:    vnsra.wx v10, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v10
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 2 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <vscale x 2 x i8> %head, <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer
+  %vb = zext <vscale x 2 x i8> %splat to <vscale x 2 x i64>
   %x = ashr <vscale x 2 x i64> %va, %vb
   %y = trunc <vscale x 2 x i64> %x to <vscale x 2 x i32>
   ret <vscale x 2 x i32> %y
@@ -284,6 +515,36 @@ define <vscale x 4 x i32> @vnsra_wx_i32_nxv4i32_zext(<vscale x 4 x i64> %va, i32
   ret <vscale x 4 x i32> %y
 }
 
+define <vscale x 4 x i32> @vnsra_wx_i16_nxv4i32_zext(<vscale x 4 x i64> %va, i16 %b) {
+; CHECK-LABEL: vnsra_wx_i16_nxv4i32_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vnsra.wx v12, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 4 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <vscale x 4 x i16> %head, <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
+  %vb = zext <vscale x 4 x i16> %splat to <vscale x 4 x i64>
+  %x = ashr <vscale x 4 x i64> %va, %vb
+  %y = trunc <vscale x 4 x i64> %x to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %y
+}
+
+define <vscale x 4 x i32> @vnsra_wx_i8_nxv4i32_zext(<vscale x 4 x i64> %va, i8 %b) {
+; CHECK-LABEL: vnsra_wx_i8_nxv4i32_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m2, ta, ma
+; CHECK-NEXT:    vnsra.wx v12, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 4 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <vscale x 4 x i8> %head, <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer
+  %vb = zext <vscale x 4 x i8> %splat to <vscale x 4 x i64>
+  %x = ashr <vscale x 4 x i64> %va, %vb
+  %y = trunc <vscale x 4 x i64> %x to <vscale x 4 x i32>
+  ret <vscale x 4 x i32> %y
+}
+
 define <vscale x 4 x i32> @vnsra_wi_i32_nxv4i32_zext(<vscale x 4 x i64> %va) {
 ; CHECK-LABEL: vnsra_wi_i32_nxv4i32_zext:
 ; CHECK:       # %bb.0:
@@ -322,6 +583,36 @@ define <vscale x 8 x i32> @vnsra_wx_i32_nxv8i32_zext(<vscale x 8 x i64> %va, i32
   %head = insertelement <vscale x 8 x i32> poison, i32 %b, i32 0
   %splat = shufflevector <vscale x 8 x i32> %head, <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer
   %vb = zext <vscale x 8 x i32> %splat to <vscale x 8 x i64>
+  %x = ashr <vscale x 8 x i64> %va, %vb
+  %y = trunc <vscale x 8 x i64> %x to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %y
+}
+
+define <vscale x 8 x i32> @vnsra_wx_i16_nxv8i32_zext(<vscale x 8 x i64> %va, i16 %b) {
+; CHECK-LABEL: vnsra_wx_i16_nxv8i32_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vnsra.wx v16, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 8 x i16> poison, i16 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i16> %head, <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer
+  %vb = zext <vscale x 8 x i16> %splat to <vscale x 8 x i64>
+  %x = ashr <vscale x 8 x i64> %va, %vb
+  %y = trunc <vscale x 8 x i64> %x to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %y
+}
+
+define <vscale x 8 x i32> @vnsra_wx_i8_nxv8i32_zext(<vscale x 8 x i64> %va, i8 %b) {
+; CHECK-LABEL: vnsra_wx_i8_nxv8i32_zext:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli a1, zero, e32, m4, ta, ma
+; CHECK-NEXT:    vnsra.wx v16, v8, a0
+; CHECK-NEXT:    vmv.v.v v8, v16
+; CHECK-NEXT:    ret
+  %head = insertelement <vscale x 8 x i8> poison, i8 %b, i32 0
+  %splat = shufflevector <vscale x 8 x i8> %head, <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer
+  %vb = zext <vscale x 8 x i8> %splat to <vscale x 8 x i64>
   %x = ashr <vscale x 8 x i64> %va, %vb
   %y = trunc <vscale x 8 x i64> %x to <vscale x 8 x i32>
   ret <vscale x 8 x i32> %y

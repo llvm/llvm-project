@@ -19,6 +19,11 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 
+#include "mlir/Dialect/NVGPU/IR/NVGPUEnums.h.inc"
+
+#define GET_ATTRDEF_CLASSES
+#include "mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc"
+
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/NVGPU/IR/NVGPUTypes.h.inc"
 

@@ -195,7 +195,7 @@ class MatchOp:
     def match_op_names(
         cls,
         target: Union[Operation, Value],
-        names: Sequence[str],
+        names: Union[str, Sequence[str]],
         *,
         loc=None,
         ip=None,
@@ -208,7 +208,7 @@ class MatchOp:
         cls,
         result_type: Type,
         target: Union[Operation, Value],
-        names: Sequence[str],
+        names: Union[str, Sequence[str]],
         *,
         loc=None,
         ip=None,
@@ -219,8 +219,8 @@ class MatchOp:
     def match_op_names(
         cls,
         result_type_or_target: Union[Type, Operation, Value],
-        target_or_names: Union[Operation, Value,  Sequence[str]],
-        names_or_none: Optional[Sequence[str]] = None,
+        target_or_names: Union[Operation, Value, Sequence[str], str],
+        names_or_none: Optional[Union[Sequence[str], str]] = None,
         *,
         loc=None,
         ip=None,
@@ -233,6 +233,9 @@ class MatchOp:
            result_type = transform.AnyOpType.get()
            target = result_type_or_target
            names = target_or_names
+
+        if isinstance(names, str):
+           names = [names]
 
         return cls(
             result_type,

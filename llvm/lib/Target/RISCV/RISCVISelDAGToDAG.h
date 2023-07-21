@@ -128,9 +128,13 @@ public:
 
   bool selectVSplat(SDValue N, SDValue &SplatVal);
   bool selectVSplatSimm5(SDValue N, SDValue &SplatVal);
-  bool selectVSplatUimm5(SDValue N, SDValue &SplatVal);
+  bool selectVSplatUimm(SDValue N, unsigned Bits, SDValue &SplatVal);
+  template <unsigned Bits> bool selectVSplatUimmBits(SDValue N, SDValue &Val) {
+    return selectVSplatUimm(N, Bits, Val);
+  }
   bool selectVSplatSimm5Plus1(SDValue N, SDValue &SplatVal);
   bool selectVSplatSimm5Plus1NonZero(SDValue N, SDValue &SplatVal);
+  bool selectExtOneUseVSplat(SDValue N, SDValue &SplatVal);
   bool selectFPImm(SDValue N, SDValue &Imm);
 
   bool selectRVVSimm5(SDValue N, unsigned Width, SDValue &Imm);

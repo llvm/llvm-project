@@ -93,11 +93,11 @@ void BufferViewFlowAnalysis::build(Operation *op) {
       for (RegionSuccessor &entrySuccessor : entrySuccessors) {
         // Wire the entry region's successor arguments with the initial
         // successor inputs.
-        assert(entrySuccessor.getSuccessor() &&
-               "Invalid entry region without an attached successor region");
         registerDependencies(
             regionInterface.getSuccessorEntryOperands(
-                entrySuccessor.getSuccessor()->getRegionNumber()),
+                entrySuccessor.isParent()
+                    ? std::optional<unsigned>()
+                    : entrySuccessor.getSuccessor()->getRegionNumber()),
             entrySuccessor.getSuccessorInputs());
       }
 
