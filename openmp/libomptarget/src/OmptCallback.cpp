@@ -394,6 +394,8 @@ private:
 /// Object that will maintain the RTL finalizer from the plugin
 LibomptargetRtlFinalizer *LibraryFinalizer = nullptr;
 
+bool llvm::omp::target::ompt::Initialized = false;
+
 ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
 ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
 
@@ -420,6 +422,8 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
          "LibraryFinalizer should not be initialized yet");
 
   LibraryFinalizer = new LibomptargetRtlFinalizer();
+
+  Initialized = true;
 
   return 0;
 }
@@ -463,7 +467,7 @@ extern "C" {
 /// Used for connecting libomptarget with a plugin
 void ompt_libomptarget_connect(ompt_start_tool_result_t *result) {
   DP("Enter ompt_libomptarget_connect\n");
-  if (result && LibraryFinalizer) {
+  if (Initialized && result && LibraryFinalizer) {
     // Cache each fini function, so that they can be invoked on exit
     LibraryFinalizer->registerRtl(result->finalize);
     // Invoke the provided init function with the lookup function maintained
