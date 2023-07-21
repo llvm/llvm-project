@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -verify -fcxx-exceptions %s
+// RUN: %clang_cc1 -fsyntax-only -verify -fcxx-exceptions -std=c++17 %s
 // expected-no-diagnostics
 
 //PR9463
