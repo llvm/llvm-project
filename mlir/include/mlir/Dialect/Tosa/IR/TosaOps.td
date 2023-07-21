@@ -747,12 +747,17 @@ def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
   );
 }
 
+def MulOperandsAndResultElementType :
+  NativeOpTrait<"MulOperandsAndResultElementType"> {
+  let cppNamespace = "mlir::OpTrait::tosa";
+}
+
 //===----------------------------------------------------------------------===//
 // Operator: mul
 //===----------------------------------------------------------------------===//
 def Tosa_MulOp : Tosa_ElementwiseOp<"mul", [
     Commutative,
-    SameOperandsAndResultElementType]> {
+    MulOperandsAndResultElementType]> {
   let summary = "Multiplication operator";
 
   let description = [{
