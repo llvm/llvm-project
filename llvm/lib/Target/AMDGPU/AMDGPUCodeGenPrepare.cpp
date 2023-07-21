@@ -1003,8 +1003,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithFDivFast(
     return nullptr;
 
   // Only have fdiv.fast for f32.
-  Type *Ty = Den->getType();
-  assert(Ty->isFloatTy());
+  assert(Den->getType()->isFloatTy());
 
   bool NumIsOne = false;
   if (const ConstantFP *CNum = dyn_cast<ConstantFP>(Num)) {
