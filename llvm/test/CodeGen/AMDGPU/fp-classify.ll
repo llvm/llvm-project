@@ -44,6 +44,7 @@ define amdgpu_kernel void @test_isinf_pattern(ptr addrspace(1) nocapture %out, f
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fabs = tail call float @llvm.fabs.f32(float %x) #1
@@ -91,6 +92,7 @@ define amdgpu_kernel void @test_not_isinf_pattern_0(ptr addrspace(1) nocapture %
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fabs = tail call float @llvm.fabs.f32(float %x) #1
@@ -127,6 +129,7 @@ define amdgpu_kernel void @test_not_isinf_pattern_1(ptr addrspace(1) nocapture %
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX11-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v0, v0, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fabs = tail call float @llvm.fabs.f32(float %x) #1
@@ -174,6 +177,7 @@ define amdgpu_kernel void @test_isfinite_pattern_0(ptr addrspace(1) nocapture %o
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
@@ -223,6 +227,7 @@ define amdgpu_kernel void @test_isfinite_pattern_1(ptr addrspace(1) nocapture %o
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %x.fabs = tail call float @llvm.fabs.f32(float %x) #3
@@ -269,6 +274,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_0(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
@@ -325,6 +331,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_1(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_and_b32 s2, s3, s2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
@@ -378,6 +385,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_2(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_and_b32 s2, s2, s3
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
@@ -434,6 +442,7 @@ define amdgpu_kernel void @test_isfinite_not_pattern_3(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_and_b32 s2, s3, s2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp uno float %x, 0.000000e+00
@@ -483,6 +492,7 @@ define amdgpu_kernel void @test_isfinite_pattern_4(ptr addrspace(1) nocapture %o
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
@@ -532,6 +542,7 @@ define amdgpu_kernel void @test_isfinite_pattern_4_commute_and(ptr addrspace(1) 
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, 0.000000e+00
@@ -592,6 +603,7 @@ define amdgpu_kernel void @test_not_isfinite_pattern_4_wrong_ord_test(ptr addrsp
 ; GFX11-NEXT:    s_and_b32 s2, s3, s2
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord float %x, %y
@@ -642,6 +654,7 @@ define amdgpu_kernel void @test_isinf_pattern_f16(ptr addrspace(1) nocapture %ou
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %fabs = tail call half @llvm.fabs.f16(half %x) #1
@@ -690,6 +703,7 @@ define amdgpu_kernel void @test_isfinite_pattern_0_f16(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord half %x, 0.0
@@ -740,6 +754,7 @@ define amdgpu_kernel void @test_isfinite_pattern_4_f16(ptr addrspace(1) nocaptur
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s2
 ; GFX11-NEXT:    global_store_b32 v0, v1, s[0:1]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ord = fcmp ord half %x, 0.0

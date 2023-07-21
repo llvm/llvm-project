@@ -6,6 +6,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_iu8_zext_src0(i32 %A, i32 %B, <4 x
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_wmma_i32_16x16x16_iu8 v[2:5], v0, v1, v[2:5] neg_lo:[1,0,0]
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -19,6 +20,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_iu8_zext_src1(i32 %A, i32 %B, <4 x
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_wmma_i32_16x16x16_iu8 v[2:5], v0, v1, v[2:5] neg_lo:[0,1,0]
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -32,6 +34,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_iu8_clamp(i32 %A, i32 %B, <4 x i32
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_wmma_i32_16x16x16_iu8 v[2:5], v0, v1, v[2:5] clamp
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -47,6 +50,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_iu4_zext_src0(i32 %A, i32 %B, <4 x
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_wmma_i32_16x16x16_iu4 v[2:5], v0, v1, v[2:5] neg_lo:[1,0,0]
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -60,6 +64,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_iu4_zext_src1(i32 %A, i32 %B, <4 x
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_wmma_i32_16x16x16_iu4 v[2:5], v0, v1, v[2:5] neg_lo:[0,1,0]
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -73,6 +78,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x16_iu4_clamp(i32 %A, i32 %B, <4 x i32
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_wmma_i32_16x16x16_iu4 v[2:5], v0, v1, v[2:5] clamp
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -88,6 +94,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x32_iu4_zext_src0(i32 %A, i32 %B, <4 x
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_wmma_i32_16x16x32_iu4 v[2:5], v0, v1, v[2:5] neg_lo:[1,0,0]
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -101,6 +108,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x32_iu4_zext_src1(i32 %A, i32 %B, <4 x
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_wmma_i32_16x16x32_iu4 v[2:5], v0, v1, v[2:5] neg_lo:[0,1,0]
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -114,6 +122,7 @@ define amdgpu_ps void @test_wmma_i32_16x16x32_iu4_clamp(i32 %A, i32 %B, <4 x i32
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_wmma_i32_16x16x32_iu4 v[2:5], v0, v1, v[2:5] clamp
 ; GFX12-NEXT:    global_store_b128 v[6:7], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -132,6 +141,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu8_zext_src0(i32 %A, <2 x i32> 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_swmmac_i32_16x16x32_iu8 v[3:6], v0, v[1:2], v7 neg_lo:[1,0,0]
 ; GFX12-NEXT:    global_store_b128 v[8:9], v[3:6], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -145,6 +155,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu8_zext_src1(i32 %A, <2 x i32> 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_swmmac_i32_16x16x32_iu8 v[3:6], v0, v[1:2], v7 neg_lo:[0,1,0]
 ; GFX12-NEXT:    global_store_b128 v[8:9], v[3:6], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -158,6 +169,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu8_clamp(i32 %A, <2 x i32> %B, 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_swmmac_i32_16x16x32_iu8 v[3:6], v0, v[1:2], v7 clamp
 ; GFX12-NEXT:    global_store_b128 v[8:9], v[3:6], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -173,6 +185,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu4_zext_src0(i32 %A, i32 %B, <4
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_swmmac_i32_16x16x32_iu4 v[2:5], v0, v1, v6 neg_lo:[1,0,0]
 ; GFX12-NEXT:    global_store_b128 v[7:8], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -186,6 +199,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu4_zext_src1(i32 %A, i32 %B, <4
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_swmmac_i32_16x16x32_iu4 v[2:5], v0, v1, v6 neg_lo:[0,1,0]
 ; GFX12-NEXT:    global_store_b128 v[7:8], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -199,6 +213,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x32_iu4_clamp(i32 %A, i32 %B, <4 x i
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_swmmac_i32_16x16x32_iu4 v[2:5], v0, v1, v6 clamp
 ; GFX12-NEXT:    global_store_b128 v[7:8], v[2:5], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -214,6 +229,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x64_iu4_zext_src0(i32 %A, <2 x i32> 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_swmmac_i32_16x16x64_iu4 v[3:6], v0, v[1:2], v7 neg_lo:[1,0,0]
 ; GFX12-NEXT:    global_store_b128 v[8:9], v[3:6], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -227,6 +243,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x64_iu4_zext_src1(i32 %A, <2 x i32> 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_swmmac_i32_16x16x64_iu4 v[3:6], v0, v[1:2], v7 neg_lo:[0,1,0]
 ; GFX12-NEXT:    global_store_b128 v[8:9], v[3:6], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:
@@ -240,6 +257,7 @@ define amdgpu_ps void @test_swmmac_i32_16x16x64_iu4_clamp(i32 %A, <2 x i32> %B, 
 ; GFX12:       ; %bb.0: ; %bb
 ; GFX12-NEXT:    v_swmmac_i32_16x16x64_iu4 v[3:6], v0, v[1:2], v7 clamp
 ; GFX12-NEXT:    global_store_b128 v[8:9], v[3:6], off
+; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 bb:

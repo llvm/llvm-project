@@ -457,9 +457,9 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
 
     // If we are extracting from 2 different indexes, then one operand must be
     // shuffled before performing the vector operation. The shuffle mask is
-    // undefined except for 1 lane that is being translated to the remaining
+    // poison except for 1 lane that is being translated to the remaining
     // extraction lane. Therefore, it is a splat shuffle. Ex:
-    // ShufMask = { undef, undef, 0, undef }
+    // ShufMask = { poison, poison, 0, poison }
     // TODO: The cost model has an option for a "broadcast" shuffle
     //       (splat-from-element-0), but no option for a more general splat.
     NewCost +=
@@ -476,9 +476,9 @@ bool VectorCombine::isExtractExtractCheap(ExtractElementInst *Ext0,
 /// to a new element location.
 static Value *createShiftShuffle(Value *Vec, unsigned OldIndex,
                                  unsigned NewIndex, IRBuilder<> &Builder) {
-  // The shuffle mask is undefined except for 1 lane that is being translated
+  // The shuffle mask is poison except for 1 lane that is being translated
   // to the new element index. Example for OldIndex == 2 and NewIndex == 0:
-  // ShufMask = { 2, undef, undef, undef }
+  // ShufMask = { 2, poison, poison, poison }
   auto *VecTy = cast<FixedVectorType>(Vec->getType());
   SmallVector<int, 32> ShufMask(VecTy->getNumElements(), PoisonMaskElem);
   ShufMask[NewIndex] = OldIndex;
@@ -929,7 +929,7 @@ bool VectorCombine::foldExtractedCmps(Instruction &I) {
 
   // Create a vector constant from the 2 scalar constants.
   SmallVector<Constant *, 32> CmpC(VecTy->getNumElements(),
-                                   UndefValue::get(VecTy->getElementType()));
+                                   PoisonValue::get(VecTy->getElementType()));
   CmpC[Index0] = C0;
   CmpC[Index1] = C1;
   Value *VCmp = Builder.CreateCmp(Pred, X, ConstantVector::get(CmpC));
