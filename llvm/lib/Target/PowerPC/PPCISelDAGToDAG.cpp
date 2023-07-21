@@ -7635,6 +7635,7 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       break;
     case PPC::ADDItoc:
     case PPC::ADDItoc8:
+      ReplaceFlags = false;
       if (RequiresMod4Offset) {
         if (GlobalAddressSDNode *GA =
                 dyn_cast<GlobalAddressSDNode>(Base.getOperand(0))) {
@@ -7649,42 +7650,58 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       break;
     }
 
-    SDValue ImmOpnd = Base.getOperand(1);
+    const unsigned BaseOpcode = Base.getMachineOpcode();
+    // ADDItoc and ADDItoc8 are pseudos used exclusively by AIX small code
+    // model when a global is defined in the TOC.
+    const bool OpcodeIsAIXSmallTocData =
+        BaseOpcode == PPC::ADDItoc || BaseOpcode == PPC::ADDItoc8;
 
-    // On PPC64, the TOC base pointer is guaranteed by the ABI only to have
-    // 8-byte alignment, and so we can only use offsets less than 8 (otherwise,
-    // we might have needed different @ha relocation values for the offset
-    // pointers).
-    int MaxDisplacement = 7;
-    if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
-      const GlobalValue *GV = GA->getGlobal();
-      Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
-      MaxDisplacement = std::min((int)Alignment.value() - 1, MaxDisplacement);
+    SDValue RegOperand;
+    SDValue ImmOpnd;
+    // The AIX small code model nodes have the operands reversed.
+    if (OpcodeIsAIXSmallTocData) {
+      RegOperand = Base.getOperand(1);
+      ImmOpnd = Base.getOperand(0);
+    } else {
+      RegOperand = Base.getOperand(0);
+      ImmOpnd = Base.getOperand(1);
     }
 
-    bool UpdateHBase = false;
-    SDValue HBase = Base.getOperand(0);
-
     int Offset = N->getConstantOperandVal(FirstOp);
+
+    SDValue HBase;
+    bool UpdateHBase = false;
     if (ReplaceFlags) {
+      // On PPC64, the TOC base pointer is guaranteed by the ABI only to have
+      // 8-byte alignment, and so we can only use offsets less than 8
+      // (otherwise, we might have needed different @ha relocation values for
+      // the offset pointers).
+      int MaxDisplacement = 7;
+      if (GlobalAddressSDNode *GA = dyn_cast<GlobalAddressSDNode>(ImmOpnd)) {
+        const GlobalValue *GV = GA->getGlobal();
+        Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
+        MaxDisplacement = std::min((int)Alignment.value() - 1, MaxDisplacement);
+      }
+
       if (Offset < 0 || Offset > MaxDisplacement) {
         // If we have a addi(toc@l)/addis(toc@ha) pair, and the addis has only
         // one use, then we can do this for any offset, we just need to also
         // update the offset (i.e. the symbol addend) on the addis also.
-        if (Base.getMachineOpcode() != PPC::ADDItocL)
+        if (BaseOpcode != PPC::ADDItocL)
           continue;
 
-        if (!HBase.isMachineOpcode() ||
-            HBase.getMachineOpcode() != PPC::ADDIStocHA8)
+        if (!RegOperand.isMachineOpcode() ||
+            RegOperand.getMachineOpcode() != PPC::ADDIStocHA8)
           continue;
 
-        if (!Base.hasOneUse() || !HBase.hasOneUse())
+        if (!Base.hasOneUse() || !RegOperand.hasOneUse())
           continue;
 
-        SDValue HImmOpnd = HBase.getOperand(1);
+        SDValue HImmOpnd = RegOperand.getOperand(1);
         if (HImmOpnd != ImmOpnd)
           continue;
 
+        HBase = RegOperand;
         UpdateHBase = true;
       }
     } else {
@@ -7709,10 +7726,10 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       }
     }
 
-    // We found an opportunity.  Reverse the operands from the add
-    // immediate and substitute them into the load or store.  If
-    // needed, update the target flags for the immediate operand to
-    // reflect the necessary relocation information.
+    // We found an opportunity.  Forward the operands from the add
+    // immediate to the load or store.  If needed, update the target
+    // flags for the immediate operand to reflect the necessary
+    // relocation information.
     LLVM_DEBUG(dbgs() << "Folding add-immediate into mem-op:\nBase:    ");
     LLVM_DEBUG(Base->dump(CurDAG));
     LLVM_DEBUG(dbgs() << "\nN: ");
@@ -7728,6 +7745,10 @@ void PPCDAGToDAGISel::PeepholePPC64() {
         Align Alignment = GV->getPointerAlignment(CurDAG->getDataLayout());
         // We can't perform this optimization for data whose alignment
         // is insufficient for the instruction encoding.
+        // TODO FIXME Verify and document why the offset must be a multiple of
+        // 4 when the aligment is less than 4. It is not about the encoding of
+        // the instruction: the value of Offset comes directly from the original
+        // load/store instruction on the path that reaches this check.
         if (Alignment < 4 && (RequiresMod4Offset || (Offset % 4) != 0)) {
           LLVM_DEBUG(dbgs() << "Rejected this candidate for alignment.\n\n");
           continue;
@@ -7741,27 +7762,12 @@ void PPCDAGToDAGISel::PeepholePPC64() {
       }
     }
 
-    const unsigned BaseOpcode = Base.getMachineOpcode();
-    // ADDItoc and ADDItoc8 are pseudos used exclusively by AIX small code
-    // model when a global is defined in the TOC.
-    const bool OpcodeIsAIXTocData =
-        BaseOpcode == PPC::ADDItoc || BaseOpcode == PPC::ADDItoc8;
-
     if (FirstOp == 1) // Store
-      if (OpcodeIsAIXTocData)
-        (void)CurDAG->UpdateNodeOperands(N, N->getOperand(0),
-                                         Base.getOperand(0), Base.getOperand(1),
-                                         N->getOperand(3));
-      else
-        (void)CurDAG->UpdateNodeOperands(N, N->getOperand(0), ImmOpnd,
-                                         Base.getOperand(0), N->getOperand(3));
+      (void)CurDAG->UpdateNodeOperands(N, N->getOperand(0), ImmOpnd, RegOperand,
+                                       N->getOperand(3));
     else // Load
-      if (OpcodeIsAIXTocData)
-        (void)CurDAG->UpdateNodeOperands(N, Base.getOperand(0),
-                                         Base.getOperand(1), N->getOperand(2));
-      else
-        (void)CurDAG->UpdateNodeOperands(N, ImmOpnd, Base.getOperand(0),
-                                         N->getOperand(2));
+      (void)CurDAG->UpdateNodeOperands(N, ImmOpnd, RegOperand,
+                                       N->getOperand(2));
 
     if (UpdateHBase)
       (void)CurDAG->UpdateNodeOperands(HBase.getNode(), HBase.getOperand(0),
