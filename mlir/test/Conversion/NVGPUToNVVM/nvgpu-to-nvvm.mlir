@@ -558,3 +558,49 @@ func.func @mbarrier_nocomplete() {
 
   func.return 
 }
+
+
+// -----
+!barrierType = !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+!tokenType = !nvgpu.mbarrier.token
+
+// CHECK-LABEL: func @mbarrier_txcount
+func.func @mbarrier_txcount() {
+      %num_threads = arith.constant 128 : index
+
+    // CHECK: %[[barMemref:.+]] = memref.get_global @__mbarrier : memref<1xi64, 3>
+    %barrier = nvgpu.mbarrier.create -> !barrierType
+
+    // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[barPtr:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+    // CHECK: nvvm.mbarrier.init.shared %[[barPtr]]
+    nvgpu.mbarrier.init %barrier, %num_threads : !barrierType
+    
+    %c0 = arith.constant 0 : index  
+    %tidxreg = nvvm.read.ptx.sreg.tid.x : i32
+    %tidx = arith.index_cast %tidxreg : i32 to index
+    %cnd = arith.cmpi eq, %tidx, %c0 : index  
+
+    scf.if %cnd {
+      %txcount = arith.constant 256 : index
+      // CHECK: %[[barPtr2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+      // CHECK: nvvm.mbarrier.arrive.expect_tx.shared %[[barPtr2]]
+      nvgpu.mbarrier.arrive.expect_tx %barrier, %txcount : !barrierType
+      scf.yield 
+    } else {
+      %txcount = arith.constant 0 : index
+      // CHECK: %[[barPtr2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+      // CHECK: nvvm.mbarrier.arrive.expect_tx.shared %[[barPtr2]]
+      nvgpu.mbarrier.arrive.expect_tx %barrier, %txcount : !barrierType
+      scf.yield 
+    }
+      
+
+    %phase = arith.constant 0 : index
+    %ticks = arith.constant 10000000 : index
+    // CHECK: %[[barPtr3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+    // CHECK: nvvm.mbarrier.try_wait.parity.shared %[[barPtr3]]
+    nvgpu.mbarrier.try_wait.parity %barrier, %phase, %ticks : !barrierType
+
+    func.return 
+}

@@ -43,8 +43,8 @@ foo:
 
 
 # DEFAULT:      Contents of section build_id:
-# DEFAULT-NEXT: 0000 10cdbf99 f76b1f5e ebb2f36a 1bde1d6c  .....k.^...j...l
-# DEFAULT-NEXT: 0010 01
+# DEFAULT-NEXT: 0000 100e228e 4e2fa853 6393b43d ed1d4676
+# DEFAULT-NEXT: 0010 13 .
 
 # SHA1:      Contents of section build_id:
 # SHA1-NEXT: 0000 14ad22e8 54d72438 94af85de 3c5592bd  ..".T.$8....<U..

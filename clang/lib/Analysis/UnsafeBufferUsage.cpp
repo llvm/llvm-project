@@ -119,9 +119,6 @@ public:
       return true;
     if (!match(*Node))
       return false;
-    // To skip callables:
-    if (isa<LambdaExpr>(Node))
-      return true;
     return VisitorBase::TraverseStmt(Node);
   }
 
@@ -467,7 +464,9 @@ public:
       return stmt(arraySubscriptExpr(
             hasBase(ignoringParenImpCasts(
               anyOf(hasPointerType(), hasArrayType()))),
-            unless(hasIndex(integerLiteral(equals(0)))))
+            unless(hasIndex(
+                anyOf(integerLiteral(equals(0)), arrayInitIndexExpr())
+             )))
             .bind(ArraySubscrTag));
     // clang-format on
   }
@@ -1385,8 +1384,18 @@ getPointeeTypeText(const ParmVarDecl *VD, const SourceManager &SM,
   TypeLoc PteTyLoc = TyLoc.getUnqualifiedLoc().getNextTypeLoc();
   SourceLocation VDNameStartLoc = VD->getLocation();
 
-  if (!SM.isBeforeInTranslationUnit(PteTyLoc.getSourceRange().getEnd(),
-                                    VDNameStartLoc)) {
+  if (!(VDNameStartLoc.isValid() && PteTyLoc.getSourceRange().isValid())) {
+    // We are expecting these locations to be valid. But in some cases, they are
+    // not all valid. It is a Clang bug to me and we are not responsible for
+    // fixing it.  So we will just give up for now when it happens.
+    return std::nullopt;
+  }
+
+  // Note that TypeLoc.getEndLoc() returns the begin location of the last token:
+  SourceLocation PteEndOfTokenLoc =
+      Lexer::getLocForEndOfToken(PteTyLoc.getEndLoc(), 0, SM, LangOpts);
+
+  if (!SM.isBeforeInTranslationUnit(PteEndOfTokenLoc, VDNameStartLoc)) {
     // We only deal with the cases where the source text of the pointee type
     // appears on the left-hand side of the variable identifier completely,
     // including the following forms:
@@ -1401,13 +1410,8 @@ getPointeeTypeText(const ParmVarDecl *VD, const SourceManager &SM,
     // `PteTy` via source ranges.
     *QualifiersToAppend = PteTy.getQualifiers();
   }
-
-  // Note that TypeLoc.getEndLoc() returns the begin location of the last token:
-  SourceRange CSR{
-      PteTyLoc.getBeginLoc(),
-      Lexer::getLocForEndOfToken(PteTyLoc.getEndLoc(), 0, SM, LangOpts)};
-
-  return getRangeText(CSR, SM, LangOpts)->str();
+  return getRangeText({PteTyLoc.getBeginLoc(), PteEndOfTokenLoc}, SM, LangOpts)
+      ->str();
 }
 
 // Returns the text of the name (with qualifiers) of a `FunctionDecl`.
@@ -1885,9 +1889,12 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
       const ParmVarDecl *Parm = FD->getParamDecl(i);
 
       if (Parm->isImplicit())
-        continue;
-      assert(Parm->getIdentifier() &&
-             "A parameter of a function definition has no name");
+        continue;      
+      // FIXME: If a parameter has no name, it is unused in the
+      // definition. So we could just leave it as it is.
+      if (!Parm->getIdentifier()) 
+	// If a parameter of a function definition has no name:
+        return std::nullopt;
       if (i == ParmIdx)
         // This is our spanified paramter!
         SS << NewTypeText.str() << "(" << Parm->getIdentifier()->getName().str() << ", "
@@ -2201,6 +2208,13 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler,
                                    bool EmitSuggestions) {
   assert(D && D->getBody());
+  
+  // We do not want to visit a Lambda expression defined inside a method independently.
+  // Instead, it should be visited along with the outer method.
+  if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
+    if (fd->getParent()->isLambda() && fd->getParent()->isLocalClass())
+      return;
+  }
 
   // Do not emit fixit suggestions for functions declared in an
   // extern "C" block.
@@ -2246,7 +2260,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
        it != FixablesForAllVars.byVar.cend();) {
       // FIXME: need to deal with global variables later
       if ((!it->first->isLocalVarDecl() && !isa<ParmVarDecl>(it->first)) ||
-          Tracker.hasUnclaimedUses(it->first)) {
+          Tracker.hasUnclaimedUses(it->first) || it->first->isInitCapture()) {
       it = FixablesForAllVars.byVar.erase(it);
     } else {
       ++it;

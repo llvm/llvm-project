@@ -46,7 +46,7 @@ namespace include_cleaner {
 
 /// We consider a macro to be a different symbol each time it is defined.
 struct Macro {
-  IdentifierInfo *Name;
+  const IdentifierInfo *Name;
   /// The location of the Name where the macro is defined.
   SourceLocation Definition;
 

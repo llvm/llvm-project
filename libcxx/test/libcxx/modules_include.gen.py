@@ -31,6 +31,9 @@ for header in public_headers:
 // UNSUPPORTED{BLOCKLIT}: windows
 // UNSUPPORTED{BLOCKLIT}: buildhost=windows
 
+// The AIX headers don't appear to be compatible with modules
+// UNSUPPORTED{BLOCKLIT}: LIBCXX-AIX-FIXME
+
 // The Android headers don't appear to be compatible with modules yet
 // XFAIL{BLOCKLIT}: LIBCXX-ANDROID-FIXME
 

@@ -831,7 +831,7 @@ class getVOPCClassPat64 <VOPProfile P> {
   list<dag> ret =
     [(set i1:$sdst,
       (AMDGPUfp_class
-        (P.Src0VT (VOP3Mods P.Src0VT:$src0, i32:$src0_modifiers)),
+        (P.Src0VT (VOP3ModsNonCanonicalizing P.Src0VT:$src0, i32:$src0_modifiers)),
         i32:$src1))];
 }
 

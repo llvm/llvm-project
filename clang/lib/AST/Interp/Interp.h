@@ -105,8 +105,9 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This);
 
 /// Checks if the shift operation is legal.
-template <typename RT>
-bool CheckShift(InterpState &S, CodePtr OpPC, const RT &RHS, unsigned Bits) {
+template <typename LT, typename RT>
+bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
+                unsigned Bits) {
   if (RHS.isNegative()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
@@ -122,6 +123,20 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const RT &RHS, unsigned Bits) {
     S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
     return false;
   }
+
+  if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    // C++11 [expr.shift]p2: A signed left shift must have a non-negative
+    // operand, and must not overflow the corresponding unsigned type.
+    if (LHS.isNegative())
+      S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
+    else if (LHS.toUnsigned().countLeadingZeros() < static_cast<unsigned>(RHS))
+      S.CCEDiag(E, diag::note_constexpr_lshift_discards);
+  }
+
+  // C++2a [expr.shift]p2: [P0907R4]:
+  //    E1 << E2 is the unique value congruent to
+  //    E1 x 2^E2 module 2^N.
   return true;
 }
 
@@ -154,7 +169,7 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
 bool Interpret(InterpState &S, APValue &Result);
 
 /// Interpret a builtin function.
-bool InterpretBuiltin(InterpState &S, CodePtr &PC, unsigned BuiltinID);
+bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F);
 
 enum class ArithOp { Add, Sub };
 
@@ -1523,7 +1538,7 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
 
-  if (!CheckShift<RT>(S, OpPC, RHS, Bits))
+  if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
   Integral<LT::bitWidth(), false> R;
@@ -1540,7 +1555,7 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
 
-  if (!CheckShift<RT>(S, OpPC, RHS, Bits))
+  if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
   Integral<LT::bitWidth(), false> R;
@@ -1686,7 +1701,7 @@ inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func->getBuiltinID())) {
+  if (InterpretBuiltin(S, PC, Func)) {
     NewFrame.release();
     return true;
   }

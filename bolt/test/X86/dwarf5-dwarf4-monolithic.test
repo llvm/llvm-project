@@ -7,11 +7,12 @@
 # RUN: %clang %cflags -dwarf-5 %tmain.o %t0.o %t1.o %t2.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe | FileCheck --check-prefix=PRECHECK %s
-# RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.exe | FileCheck --check-prefix=PRECHECK-LINE %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.exe > %t_line.txt
 # RUN: llvm-dwarfdump --show-form --verbose --debug-addr %t.bolt > %t.txt
 # RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt >> %t.txt
 # RUN: cat %t.txt | FileCheck --check-prefix=POSTCHECK %s
-# RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.bolt | FileCheck --check-prefix=POSTCHECK-LINE %s
+# RUN: llvm-dwarfdump --show-form --verbose --debug-line %t.bolt >> %t_line.txt
+# RUN: FileCheck --check-prefix=CHECK-LINE %s --input-file %t_line.txt
 
 
 # Check BOLT handles monolithic mix of DWARF4 and DWARF5.
@@ -120,39 +121,39 @@
 
 # Checking debug line.
 
-# PRECHECK-LINE: debug_line[
-# PRECHECK-LINE: version: 5
-# PRECHECK-LINE: include_directories[  0] =  .debug_line_str[0x00000009] = "/test"
-# PRECHECK-LINE-NEXT: file_names[  0]:
-# PRECHECK-LINE-NEXT: name:  .debug_line_str[0x00000000] = "main.cpp"
-# PRECHECK-LINE-NEXT: dir_index: 0
-# PRECHECK-LINE-NEXT: md5_checksum: e3a18fae8565a087d09d6076b542cdab
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 5
+# CHECK-LINE: include_directories[  0] =  .debug_line_str[0x[[#%.8x,TEST_DEBUG_LINE:]]] = "/test"
+# CHECK-LINE-NEXT: file_names[  0]:
+# CHECK-LINE-NEXT: name:  .debug_line_str[0x[[#%.8x,MAIN_DEBUG_LINE:]]] = "main.cpp"
+# CHECK-LINE-NEXT: dir_index: 0
+# CHECK-LINE-NEXT: md5_checksum: e3a18fae8565a087d09d6076b542cdab
 
-# PRECHECK-LINE: debug_line[
-# PRECHECK-LINE: version: 4
-# PRECHECK-LINE: include_directories[  1] = "/test"
-# PRECHECK-LINE-NEXT: file_names[  1]:
-# PRECHECK-LINE-NEXT: name: "helper0.cpp"
-# PRECHECK-LINE-NEXT: dir_index: 1
-# PRECHECK-LINE-NEXT: mod_time:
-# PRECHECK-LINE-NEXT: length:
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 4
+# CHECK-LINE: include_directories[  1] = "/test"
+# CHECK-LINE-NEXT: file_names[  1]:
+# CHECK-LINE-NEXT: name: "helper0.cpp"
+# CHECK-LINE-NEXT: dir_index: 1
+# CHECK-LINE-NEXT: mod_time:
+# CHECK-LINE-NEXT: length:
 
-# PRECHECK-LINE: debug_line[
-# PRECHECK-LINE: version: 5
-# PRECHECK-LINE: include_directories[  0] =  .debug_line_str[0x00000009] = "/test"
-# PRECHECK-LINE-NEXT: file_names[  0]:
-# PRECHECK-LINE-NEXT: name:  .debug_line_str[0x0000000f] = "helper1.cpp"
-# PRECHECK-LINE-NEXT: dir_index: 0
-# PRECHECK-LINE-NEXT: md5_checksum: e6dbd773fdf80bfea332cdf8284cddce
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 5
+# CHECK-LINE: include_directories[  0] =  .debug_line_str[0x[[#TEST_DEBUG_LINE]]] = "/test"
+# CHECK-LINE-NEXT: file_names[  0]:
+# CHECK-LINE-NEXT: name:  .debug_line_str[0x[[#%.8x,HELPER_DEBUG_LINE:]]] = "helper1.cpp"
+# CHECK-LINE-NEXT: dir_index: 0
+# CHECK-LINE-NEXT: md5_checksum: e6dbd773fdf80bfea332cdf8284cddce
 
-# PRECHECK-LINE: debug_line[
-# PRECHECK-LINE: version: 4
-# PRECHECK-LINE: include_directories[  1] = "/test"
-# PRECHECK-LINE-NEXT: file_names[  1]:
-# PRECHECK-LINE-NEXT: name: "helper2.cpp"
-# PRECHECK-LINE-NEXT: dir_index: 1
-# PRECHECK-LINE-NEXT: mod_time:
-# PRECHECK-LINE-NEXT: length:
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 4
+# CHECK-LINE: include_directories[  1] = "/test"
+# CHECK-LINE-NEXT: file_names[  1]:
+# CHECK-LINE-NEXT: name: "helper2.cpp"
+# CHECK-LINE-NEXT: dir_index: 1
+# CHECK-LINE-NEXT: mod_time:
+# CHECK-LINE-NEXT: length:
 
 
 # POST BOLT.
@@ -304,36 +305,36 @@
 
 # Checking debug line.
 
-# POSTCHECK-LINE: debug_line[
-# POSTCHECK-LINE: version: 5
-# POSTCHECK-LINE: include_directories[  0] =  .debug_line_str[0x00000009] = "/test"
-# POSTCHECK-LINE-NEXT: file_names[  0]:
-# POSTCHECK-LINE-NEXT: name:  .debug_line_str[0x00000000] = "main.cpp"
-# POSTCHECK-LINE-NEXT: dir_index: 0
-# POSTCHECK-LINE-NEXT: md5_checksum: e3a18fae8565a087d09d6076b542cdab
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 5
+# CHECK-LINE: include_directories[  0] =  .debug_line_str[0x[[#TEST_DEBUG_LINE]]] = "/test"
+# CHECK-LINE-NEXT: file_names[  0]:
+# CHECK-LINE-NEXT: name:  .debug_line_str[0x[[#MAIN_DEBUG_LINE]]] = "main.cpp"
+# CHECK-LINE-NEXT: dir_index: 0
+# CHECK-LINE-NEXT: md5_checksum: e3a18fae8565a087d09d6076b542cdab
 
-# POSTCHECK-LINE: debug_line[
-# POSTCHECK-LINE: version: 4
-# POSTCHECK-LINE: include_directories[  1] = "/test"
-# POSTCHECK-LINE-NEXT: file_names[  1]:
-# POSTCHECK-LINE-NEXT: name: "helper0.cpp"
-# POSTCHECK-LINE-NEXT: dir_index: 1
-# POSTCHECK-LINE-NEXT: mod_time:
-# POSTCHECK-LINE-NEXT: length:
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 4
+# CHECK-LINE: include_directories[  1] = "/test"
+# CHECK-LINE-NEXT: file_names[  1]:
+# CHECK-LINE-NEXT: name: "helper0.cpp"
+# CHECK-LINE-NEXT: dir_index: 1
+# CHECK-LINE-NEXT: mod_time:
+# CHECK-LINE-NEXT: length:
 
-# POSTCHECK-LINE: debug_line[
-# POSTCHECK-LINE: version: 5
-# POSTCHECK-LINE: include_directories[  0] =  .debug_line_str[0x00000009] = "/test"
-# POSTCHECK-LINE-NEXT: file_names[  0]:
-# POSTCHECK-LINE-NEXT: name:  .debug_line_str[0x0000000f] = "helper1.cpp"
-# POSTCHECK-LINE-NEXT: dir_index: 0
-# POSTCHECK-LINE-NEXT: md5_checksum: e6dbd773fdf80bfea332cdf8284cddce
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 5
+# CHECK-LINE: include_directories[  0] =  .debug_line_str[0x[[#TEST_DEBUG_LINE]]] = "/test"
+# CHECK-LINE-NEXT: file_names[  0]:
+# CHECK-LINE-NEXT: name:  .debug_line_str[0x[[#HELPER_DEBUG_LINE]]] = "helper1.cpp"
+# CHECK-LINE-NEXT: dir_index: 0
+# CHECK-LINE-NEXT: md5_checksum: e6dbd773fdf80bfea332cdf8284cddce
 
-# POSTCHECK-LINE: debug_line[
-# POSTCHECK-LINE: version: 4
-# POSTCHECK-LINE: include_directories[  1] = "/test"
-# POSTCHECK-LINE-NEXT: file_names[  1]:
-# POSTCHECK-LINE-NEXT: name: "helper2.cpp"
-# POSTCHECK-LINE-NEXT: dir_index: 1
-# POSTCHECK-LINE-NEXT: mod_time:
-# POSTCHECK-LINE-NEXT: length:
+# CHECK-LINE: debug_line[
+# CHECK-LINE: version: 4
+# CHECK-LINE: include_directories[  1] = "/test"
+# CHECK-LINE-NEXT: file_names[  1]:
+# CHECK-LINE-NEXT: name: "helper2.cpp"
+# CHECK-LINE-NEXT: dir_index: 1
+# CHECK-LINE-NEXT: mod_time:
+# CHECK-LINE-NEXT: length:

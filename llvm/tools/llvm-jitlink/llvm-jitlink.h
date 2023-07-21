@@ -29,8 +29,6 @@
 
 namespace llvm {
 
-struct Session;
-
 struct Session {
 
   orc::ExecutionSession ES;
@@ -78,8 +76,6 @@ struct Session {
 
   SymbolInfoMap SymbolInfos;
   FileInfoMap FileInfos;
-  uint64_t SizeBeforePruning = 0;
-  uint64_t SizeAfterFixups = 0;
 
   StringSet<> HarnessFiles;
   StringSet<> HarnessExternals;
@@ -90,6 +86,20 @@ struct Session {
 
 private:
   Session(std::unique_ptr<orc::ExecutorProcessControl> EPC, Error &Err);
+};
+
+class LLVMJITLinkStatistics {
+public:
+  LLVMJITLinkStatistics(Session &S);
+  void print(raw_ostream &OS);
+
+private:
+  Error recordPrePruneStats(jitlink::LinkGraph &G);
+  Error recordPostFixupStats(jitlink::LinkGraph &G);
+
+  std::mutex M;
+  std::optional<uint64_t> PrePruneTotalBlockSize;
+  std::optional<uint64_t> PostFixupTotalBlockSize;
 };
 
 /// Record symbols, GOT entries, stubs, and sections for ELF file.

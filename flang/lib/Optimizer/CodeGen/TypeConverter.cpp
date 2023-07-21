@@ -37,7 +37,7 @@ LLVMTypeConverter::LLVMTypeConverter(mlir::ModuleOp module, bool applyTBAA)
       specifics(CodeGenSpecifics::get(module.getContext(),
                                       getTargetTriple(module),
                                       getKindMapping(module))),
-      tbaaBuilder(module, applyTBAA) {
+      tbaaBuilder(module->getContext(), applyTBAA) {
   LLVM_DEBUG(llvm::dbgs() << "FIR type converter\n");
 
   // Each conversion should return a value of type mlir::Type.

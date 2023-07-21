@@ -156,12 +156,17 @@ public:
 
   unsigned getNumParams() const { return ParamTypes.size(); }
 
+  unsigned getParamOffset(unsigned ParamIndex) const {
+    return ParamOffsets[ParamIndex];
+  }
+
 private:
   /// Construct a function representing an actual function.
   Function(Program &P, const FunctionDecl *F, unsigned ArgSize,
-           llvm::SmallVector<PrimType, 8> &&ParamTypes,
+           llvm::SmallVectorImpl<PrimType> &&ParamTypes,
            llvm::DenseMap<unsigned, ParamDescriptor> &&Params,
-           bool HasThisPointer, bool HasRVO);
+           llvm::SmallVectorImpl<unsigned> &&ParamOffsets, bool HasThisPointer,
+           bool HasRVO);
 
   /// Sets the code of a function.
   void setCode(unsigned NewFrameSize, std::vector<std::byte> &&NewCode,
@@ -201,6 +206,8 @@ private:
   llvm::SmallVector<PrimType, 8> ParamTypes;
   /// Map from byte offset to parameter descriptor.
   llvm::DenseMap<unsigned, ParamDescriptor> Params;
+  /// List of parameter offsets.
+  llvm::SmallVector<unsigned, 8> ParamOffsets;
   /// Flag to indicate if the function is valid.
   bool IsValid = false;
   /// Flag to indicate if the function is done being

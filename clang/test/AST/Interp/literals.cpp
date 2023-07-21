@@ -764,6 +764,17 @@ namespace IncDec {
   }
   static_assert(bug1Dec() == 3);
 
+  constexpr int f() {
+    int a[] = {1,2};
+    int i = 0;
+
+    // RHS should be evaluated before LHS, so this should
+    // write to a[1];
+    a[i++] += ++i;
+
+    return a[1];
+  }
+  static_assert(f() == 3, "");
 };
 #endif
 

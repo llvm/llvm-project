@@ -385,7 +385,7 @@
 // CHECK-RV32IMAFC-SAME: "-L[[SYSROOT:[^"]+]]{{[/\\]+}}rv32imafc{{[/\\]+}}ilp32f{{[/\\]+}}lib"
 // CHECK-RV32IMAFC-SAME: "-L[[RESOURCE_DIR:[^"]+]]{{[/\\]+}}lib{{[/\\]+}}baremetal{{[/\\]+}}rv32imafc{{[/\\]+}}ilp32f"
 
-// RUN: %clang %s -### --target=powerpc-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### --target=powerpc-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPCEABI %s
 // CHECK-PPCEABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPCEABI: "-nostdsysteminc"
@@ -398,7 +398,7 @@
 // CHECK-PPCEABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-PPCEABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpc" "-o" "a.out"
 
-// RUN: %clang %s -### --target=powerpc64-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### --target=powerpc64-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64EABI %s
 // CHECK-PPC64EABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPC64EABI: "-nostdsysteminc"
@@ -411,7 +411,7 @@
 // CHECK-PPC64EABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-PPC64EABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpc64" "-o" "a.out"
 
-// RUN: %clang %s -### --target=powerpcle-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### --target=powerpcle-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPCLEEABI %s
 // CHECK-PPCLEEABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPCLEEABI: "-nostdsysteminc"
@@ -424,7 +424,7 @@
 // CHECK-PPCLEEABI-SAME: "-L[[RESOURCE]]{{[/\\]+}}lib{{[/\\]+}}baremetal"
 // CHECK-PPCLEEABI-SAME: "-lc" "-lm" "-lclang_rt.builtins-powerpcle" "-o" "a.out"
 
-// RUN: %clang %s -### --target=powerpc64le-unknown-eabi 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### --target=powerpc64le-unknown-eabi 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-PPC64LEEABI %s
 // CHECK-PPC64LEEABI: InstalledDir: [[INSTALLEDDIR:.+]]
 // CHECK-PPC64LEEABI: "-nostdsysteminc"

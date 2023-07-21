@@ -223,7 +223,7 @@ static bool emitIntrinsic(const llvm::Record &record, llvm::raw_ostream &os) {
     operands.push_back("OptionalAttr<LLVM_AliasScopeArrayAttr>:$alias_scopes");
     operands.push_back(
         "OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes");
-    operands.push_back("OptionalAttr<SymbolRefArrayAttr>:$tbaa");
+    operands.push_back("OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa");
   }
 
   // Emit the definition.

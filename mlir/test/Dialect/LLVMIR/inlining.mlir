@@ -53,42 +53,6 @@ func.func @test_inline(%ptr : !llvm.ptr) -> i32 {
 }
 
 // -----
-
-#group = #llvm.access_group<id = distinct[0]<>>
-
-llvm.func @inlinee(%ptr : !llvm.ptr) -> i32 {
-  %0 = llvm.load %ptr { access_groups = [#group] } : !llvm.ptr -> i32
-  llvm.return %0 : i32
-}
-
-// CHECK-LABEL: func @test_not_inline
-llvm.func @test_not_inline(%ptr : !llvm.ptr) -> i32 {
-  // CHECK-NEXT: llvm.call @inlinee
-  %0 = llvm.call @inlinee(%ptr) : (!llvm.ptr) -> (i32)
-  llvm.return %0 : i32
-}
-
-// -----
-
-#group = #llvm.access_group<id = distinct[0]<>>
-
-func.func private @with_mem_attr(%ptr : !llvm.ptr) {
-  %0 = llvm.mlir.constant(42 : i32) : i32
-  // Do not inline load/store operations that carry attributes requiring
-  // handling while inlining, until this is supported by the inliner.
-  llvm.store %0, %ptr { access_groups = [#group] }: i32, !llvm.ptr
-  return
-}
-
-// CHECK-LABEL: func.func @test_not_inline
-// CHECK-NEXT: call @with_mem_attr
-// CHECK-NEXT: return
-func.func @test_not_inline(%ptr : !llvm.ptr) {
-  call @with_mem_attr(%ptr) : (!llvm.ptr) -> ()
-  return
-}
-
-// -----
 // Check that llvm.return is correctly handled
 
 func.func @func(%arg0 : i32) -> i32  {
@@ -560,7 +524,7 @@ llvm.func @test_byval_global() {
 
 // -----
 
-llvm.func @ignored_attrs(%ptr : !llvm.ptr { llvm.inreg, llvm.noalias, llvm.nocapture, llvm.nofree, llvm.preallocated = i32, llvm.returned, llvm.alignstack = 32 : i64, llvm.writeonly, llvm.noundef, llvm.nonnull }, %x : i32 { llvm.zeroext }) -> (!llvm.ptr { llvm.noundef, llvm.inreg, llvm.nonnull }) {
+llvm.func @ignored_attrs(%ptr : !llvm.ptr { llvm.inreg, llvm.nocapture, llvm.nofree, llvm.preallocated = i32, llvm.returned, llvm.alignstack = 32 : i64, llvm.writeonly, llvm.noundef, llvm.nonnull }, %x : i32 { llvm.zeroext }) -> (!llvm.ptr { llvm.noundef, llvm.inreg, llvm.nonnull }) {
   llvm.return %ptr : !llvm.ptr
 }
 
@@ -583,4 +547,48 @@ llvm.func @disallowed_arg_attr(%ptr : !llvm.ptr { llvm.inalloca = i64 }) {
 llvm.func @test_disallow_arg_attr(%ptr : !llvm.ptr) {
   llvm.call @disallowed_arg_attr(%ptr) : (!llvm.ptr) -> ()
   llvm.return
+}
+
+// -----
+
+#callee = #llvm.access_group<id = distinct[0]<>>
+#caller = #llvm.access_group<id = distinct[1]<>>
+
+llvm.func @inlinee(%ptr : !llvm.ptr) -> i32 {
+  %0 = llvm.load %ptr { access_groups = [#callee] } : !llvm.ptr -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK-DAG: #[[$CALLEE:.*]] = #llvm.access_group<id = {{.*}}>
+// CHECK-DAG: #[[$CALLER:.*]] = #llvm.access_group<id = {{.*}}>
+
+// CHECK-LABEL: func @caller
+// CHECK: llvm.load
+// CHECK-SAME: access_groups = [#[[$CALLEE]], #[[$CALLER]]]
+llvm.func @caller(%ptr : !llvm.ptr) -> i32 {
+  %0 = llvm.call @inlinee(%ptr) { access_groups = [#caller] } : (!llvm.ptr) -> (i32)
+  llvm.return %0 : i32
+}
+
+// -----
+
+#caller = #llvm.access_group<id = distinct[1]<>>
+
+llvm.func @inlinee(%ptr : !llvm.ptr) -> i32 {
+  %0 = llvm.load %ptr : !llvm.ptr -> i32
+  llvm.return %0 : i32
+}
+
+// CHECK-DAG: #[[$CALLER:.*]] = #llvm.access_group<id = {{.*}}>
+
+// CHECK-LABEL: func @caller
+// CHECK: llvm.load
+// CHECK-SAME: access_groups = [#[[$CALLER]]]
+// CHECK: llvm.store
+// CHECK-SAME: access_groups = [#[[$CALLER]]]
+llvm.func @caller(%ptr : !llvm.ptr) -> i32 {
+  %c5 = llvm.mlir.constant(5 : i32) : i32
+  %0 = llvm.call @inlinee(%ptr) { access_groups = [#caller] } : (!llvm.ptr) -> (i32)
+  llvm.store %c5, %ptr { access_groups = [#caller] } : i32, !llvm.ptr
+  llvm.return %0 : i32
 }

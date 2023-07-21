@@ -2475,7 +2475,7 @@ void ModuleMapParser::parseHeaderDecl(MMToken::TokenKind LeadingToken,
   bool NeedsFramework = false;
   Map.addUnresolvedHeader(ActiveModule, std::move(Header), NeedsFramework);
 
-  if (NeedsFramework && ActiveModule)
+  if (NeedsFramework)
     Diags.Report(CurrModuleDeclLoc, diag::note_mmap_add_framework_keyword)
       << ActiveModule->getFullModuleName()
       << FixItHint::CreateReplacement(CurrModuleDeclLoc, "framework module");

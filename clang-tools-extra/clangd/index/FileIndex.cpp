@@ -9,7 +9,7 @@
 #include "FileIndex.h"
 #include "CollectMacros.h"
 #include "ParsedAST.h"
-#include "index/CanonicalIncludes.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/Index.h"
 #include "index/MemIndex.h"
 #include "index/Merge.h"
@@ -46,11 +46,12 @@ namespace {
 SlabTuple indexSymbols(ASTContext &AST, Preprocessor &PP,
                        llvm::ArrayRef<Decl *> DeclsToIndex,
                        const MainFileMacros *MacroRefsToIndex,
-                       const CanonicalIncludes &Includes, bool IsIndexMainAST,
-                       llvm::StringRef Version, bool CollectMainFileRefs) {
+                       const include_cleaner::PragmaIncludes &PI,
+                       bool IsIndexMainAST, llvm::StringRef Version,
+                       bool CollectMainFileRefs) {
   SymbolCollector::Options CollectorOpts;
   CollectorOpts.CollectIncludePath = true;
-  CollectorOpts.Includes = &Includes;
+  CollectorOpts.PragmaIncludes = &PI;
   CollectorOpts.CountReferences = false;
   CollectorOpts.Origin =
       IsIndexMainAST ? SymbolOrigin::Open : SymbolOrigin::Preamble;
@@ -222,18 +223,18 @@ FileShardedIndex::getShard(llvm::StringRef Uri) const {
 SlabTuple indexMainDecls(ParsedAST &AST) {
   return indexSymbols(
       AST.getASTContext(), AST.getPreprocessor(), AST.getLocalTopLevelDecls(),
-      &AST.getMacros(), AST.getCanonicalIncludes(),
+      &AST.getMacros(), *AST.getPragmaIncludes(),
       /*IsIndexMainAST=*/true, AST.version(), /*CollectMainFileRefs=*/true);
 }
 
 SlabTuple indexHeaderSymbols(llvm::StringRef Version, ASTContext &AST,
                              Preprocessor &PP,
-                             const CanonicalIncludes &Includes) {
+                             const include_cleaner::PragmaIncludes &PI) {
   std::vector<Decl *> DeclsToIndex(
       AST.getTranslationUnitDecl()->decls().begin(),
       AST.getTranslationUnitDecl()->decls().end());
   return indexSymbols(AST, PP, DeclsToIndex,
-                      /*MainFileMacros=*/nullptr, Includes,
+                      /*MainFileMacros=*/nullptr, PI,
                       /*IsIndexMainAST=*/false, Version,
                       /*CollectMainFileRefs=*/false);
 }
@@ -458,10 +459,10 @@ void FileIndex::updatePreamble(IndexFileIn IF) {
 
 void FileIndex::updatePreamble(PathRef Path, llvm::StringRef Version,
                                ASTContext &AST, Preprocessor &PP,
-                               const CanonicalIncludes &Includes) {
+                               const include_cleaner::PragmaIncludes &PI) {
   IndexFileIn IF;
   std::tie(IF.Symbols, std::ignore, IF.Relations) =
-      indexHeaderSymbols(Version, AST, PP, Includes);
+      indexHeaderSymbols(Version, AST, PP, PI);
   updatePreamble(std::move(IF));
 }
 

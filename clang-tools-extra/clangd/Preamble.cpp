@@ -11,18 +11,21 @@
 #include "Compiler.h"
 #include "Config.h"
 #include "Diagnostics.h"
+#include "FS.h"
+#include "FeatureModule.h"
 #include "Headers.h"
 #include "Protocol.h"
 #include "SourceCode.h"
 #include "clang-include-cleaner/Record.h"
-#include "index/CanonicalIncludes.h"
 #include "support/Logger.h"
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "support/Trace.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Type.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/DiagnosticLex.h"
+#include "clang/Basic/DiagnosticOptions.h"
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -51,12 +54,17 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/ErrorOr.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
+#include <cassert>
+#include <chrono>
 #include <cstddef>
+#include <cstdint>
+#include <cstdlib>
 #include <functional>
 #include <memory>
 #include <optional>
@@ -95,7 +103,6 @@ public:
   include_cleaner::PragmaIncludes takePragmaIncludes() {
     return std::move(Pragmas);
   }
-  CanonicalIncludes takeCanonicalIncludes() { return std::move(CanonIncludes); }
 
   std::optional<CapturedASTCtx> takeLife() { return std::move(CapturedCtx); }
 
@@ -141,7 +148,6 @@ public:
   }
 
   void BeforeExecute(CompilerInstance &CI) override {
-    CanonIncludes.addSystemHeadersMapping(CI.getLangOpts());
     LangOpts = &CI.getLangOpts();
     SourceMgr = &CI.getSourceManager();
     PP = &CI.getPreprocessor();
@@ -158,11 +164,6 @@ public:
     return std::make_unique<PPChainedCallbacks>(
         std::make_unique<CollectMainFileMacros>(*PP, Macros),
         collectPragmaMarksCallback(*SourceMgr, Marks));
-  }
-
-  CommentHandler *getCommentHandler() override {
-    IWYUHandler = collectIWYUHeaderMaps(&CanonIncludes);
-    return IWYUHandler.get();
   }
 
   static bool isLikelyForwardingFunction(FunctionTemplateDecl *FT) {
@@ -214,12 +215,10 @@ public:
 private:
   PathRef File;
   IncludeStructure Includes;
-  CanonicalIncludes CanonIncludes;
   include_cleaner::PragmaIncludes Pragmas;
   MainFileMacros Macros;
   std::vector<PragmaMark> Marks;
   bool IsMainFileIncludeGuarded = false;
-  std::unique_ptr<CommentHandler> IWYUHandler = nullptr;
   const clang::LangOptions *LangOpts = nullptr;
   const SourceManager *SourceMgr = nullptr;
   const Preprocessor *PP = nullptr;
@@ -616,7 +615,8 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       });
   llvm::IntrusiveRefCntPtr<DiagnosticsEngine> PreambleDiagsEngine =
       CompilerInstance::createDiagnostics(&CI.getDiagnosticOpts(),
-                                          &PreambleDiagnostics, false);
+                                          &PreambleDiagnostics,
+                                          /*ShouldOwnClient=*/false);
   const Config &Cfg = Config::current();
   PreambleDiagnostics.setLevelAdjuster([&](DiagnosticsEngine::Level DiagLevel,
                                            const clang::Diagnostic &Info) {
@@ -663,8 +663,12 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
   auto BuiltPreamble = PrecompiledPreamble::Build(
       CI, ContentsBuffer.get(), Bounds, *PreambleDiagsEngine,
       Stats ? TimedFS : StatCacheFS, std::make_shared<PCHContainerOperations>(),
-      StoreInMemory, /*StoragePath=*/StringRef(), CapturedInfo);
+      StoreInMemory, /*StoragePath=*/"", CapturedInfo);
   PreambleTimer.stopTimer();
+  // Reset references to ref-counted-ptrs before executing the callbacks, to
+  // prevent resetting them concurrently.
+  PreambleDiagsEngine.reset();
+  CI.DiagnosticOpts.reset();
 
   // When building the AST for the main file, we do want the function
   // bodies.
@@ -686,11 +690,10 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
     Result->CompileCommand = Inputs.CompileCommand;
     Result->Diags = std::move(Diags);
     Result->Includes = CapturedInfo.takeIncludes();
-    Result->Pragmas = CapturedInfo.takePragmaIncludes();
+    Result->Pragmas = std::make_shared<const include_cleaner::PragmaIncludes>(
+        CapturedInfo.takePragmaIncludes());
     Result->Macros = CapturedInfo.takeMacros();
     Result->Marks = CapturedInfo.takeMarks();
-    Result->CanonIncludes = std::make_shared<const CanonicalIncludes>(
-        (CapturedInfo.takeCanonicalIncludes()));
     Result->StatCache = StatCache;
     Result->MainIsIncludeGuarded = CapturedInfo.isMainFileIncludeGuarded();
     if (PreambleCallback) {
@@ -703,7 +706,7 @@ buildPreamble(PathRef FileName, CompilerInvocation CI,
       // While extending the life of FileMgr and VFS, StatCache should also be
       // extended.
       Ctx->setStatCache(Result->StatCache);
-      PreambleCallback(std::move(*Ctx), Result->CanonIncludes);
+      PreambleCallback(std::move(*Ctx), Result->Pragmas);
     }
     return Result;
   }

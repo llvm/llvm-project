@@ -485,7 +485,7 @@ MicrosoftMangleContextImpl::MicrosoftMangleContextImpl(ASTContext &Context,
   SourceManager &SM = Context.getSourceManager();
   if (const FileEntry *FE = SM.getFileEntryForID(SM.getMainFileID())) {
     // Truncate the hash so we get 8 characters of hexadecimal.
-    uint32_t TruncatedHash = uint32_t(xxHash64(FE->getName()));
+    uint32_t TruncatedHash = uint32_t(xxh3_64bits(FE->getName()));
     AnonymousNamespaceHash = llvm::utohexstr(TruncatedHash);
   } else {
     // If we don't have a path to the main file, we'll just use 0.

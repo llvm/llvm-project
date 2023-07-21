@@ -121,7 +121,7 @@ bool RISCVPushPopOpt::runOnMachineFunction(MachineFunction &Fn) {
   if (Fn.getTarget().Options.DisableFramePointerElim(Fn))
     return false;
 
-  TII = static_cast<const RISCVInstrInfo *>(Subtarget->getInstrInfo());
+  TII = Subtarget->getInstrInfo();
   TRI = Subtarget->getRegisterInfo();
   // Resize the modified and used register unit trackers.  We do this once
   // per function and then clear the register units each time we determine

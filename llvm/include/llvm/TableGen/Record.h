@@ -36,6 +36,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -482,11 +483,21 @@ public:
 };
 
 // Represent an argument.
+using ArgAuxType = std::variant<unsigned, Init *>;
 class ArgumentInit : public Init, public FoldingSetNode {
+public:
+  enum Kind {
+    Positional,
+    Named,
+  };
+
+private:
   Init *Value;
+  ArgAuxType Aux;
 
 protected:
-  explicit ArgumentInit(Init *Value) : Init(IK_ArgumentInit), Value(Value) {}
+  explicit ArgumentInit(Init *Value, ArgAuxType Aux)
+      : Init(IK_ArgumentInit), Value(Value), Aux(Aux) {}
 
 public:
   ArgumentInit(const ArgumentInit &) = delete;
@@ -496,14 +507,33 @@ public:
 
   RecordKeeper &getRecordKeeper() const { return Value->getRecordKeeper(); }
 
-  static ArgumentInit *get(Init *Value);
+  static ArgumentInit *get(Init *Value, ArgAuxType Aux);
+
+  bool isPositional() const { return Aux.index() == Positional; }
+  bool isNamed() const { return Aux.index() == Named; }
 
   Init *getValue() const { return Value; }
+  unsigned getIndex() const {
+    assert(isPositional() && "Should be positional!");
+    return std::get<Positional>(Aux);
+  }
+  Init *getName() const {
+    assert(isNamed() && "Should be named!");
+    return std::get<Named>(Aux);
+  }
+  ArgumentInit *cloneWithValue(Init *Value) const { return get(Value, Aux); }
 
   void Profile(FoldingSetNodeID &ID) const;
 
   Init *resolveReferences(Resolver &R) const override;
-  std::string getAsString() const override { return Value->getAsString(); }
+  std::string getAsString() const override {
+    if (isPositional())
+      return utostr(getIndex()) + ": " + Value->getAsString();
+    if (isNamed())
+      return getName()->getAsString() + ": " + Value->getAsString();
+    llvm_unreachable("Unsupported argument type!");
+    return "";
+  }
 
   bool isComplete() const override { return false; }
   bool isConcrete() const override { return false; }

@@ -8,7 +8,7 @@
 
 // <iostream>
 
-// istream wcin;
+// wistream wcin;
 
 // UNSUPPORTED: no-wide-characters
 

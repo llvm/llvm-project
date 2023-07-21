@@ -128,17 +128,17 @@
 // CHK-PHASES-FILES-NEXT: 4: input, "[[INPUT]]", c, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 5: preprocessor, {4}, cpp-output, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 6: compiler, {5}, ir, (device-openmp)
-// CHK-PHASES-FILES-NEXT: 7: offload, "host-openmp (powerpc64-ibm-linux-gnu)" {3}, "device-openmp (x86_64-pc-linux-gnu)" {6}, ir
+// CHK-PHASES-FILES-NEXT: 7: offload, "host-openmp (powerpc64-ibm-linux-gnu)" {3}, "device-openmp (powerpc64-ibm-linux-gnu)" {6}, ir
 // CHK-PHASES-FILES-NEXT: 8: backend, {7}, assembler, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 9: assembler, {8}, object, (device-openmp)
-// CHK-PHASES-FILES-NEXT: 10: offload, "device-openmp (x86_64-pc-linux-gnu)" {9}, object
+// CHK-PHASES-FILES-NEXT: 10: offload, "device-openmp (powerpc64-ibm-linux-gnu)" {9}, object
 // CHK-PHASES-FILES-NEXT: 11: input, "[[INPUT]]", c, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 12: preprocessor, {11}, cpp-output, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 13: compiler, {12}, ir, (device-openmp)
-// CHK-PHASES-FILES-NEXT: 14: offload, "host-openmp (powerpc64-ibm-linux-gnu)" {3}, "device-openmp (powerpc64-ibm-linux-gnu)" {13}, ir
+// CHK-PHASES-FILES-NEXT: 14: offload, "host-openmp (powerpc64-ibm-linux-gnu)" {3}, "device-openmp (x86_64-pc-linux-gnu)" {13}, ir
 // CHK-PHASES-FILES-NEXT: 15: backend, {14}, assembler, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 16: assembler, {15}, object, (device-openmp)
-// CHK-PHASES-FILES-NEXT: 17: offload, "device-openmp (powerpc64-ibm-linux-gnu)" {16}, object
+// CHK-PHASES-FILES-NEXT: 17: offload, "device-openmp (x86_64-pc-linux-gnu)" {16}, object
 // CHK-PHASES-FILES-NEXT: 18: clang-offload-packager, {10, 17}, image, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 19: offload, "host-openmp (powerpc64-ibm-linux-gnu)" {3}, "device-openmp (powerpc64-ibm-linux-gnu)" {18}, ir
 // CHK-PHASES-FILES-NEXT: 20: backend, {19}, assembler, (host-openmp)
@@ -149,17 +149,17 @@
 // CHK-PHASES-FILES-NEXT: 25: input, "[[INPUT]]", c, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 26: preprocessor, {25}, cpp-output, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 27: compiler, {26}, ir, (device-openmp)
-// CHK-PHASES-FILES-NEXT: 28: offload, "host-openmp (powerpc64-ibm-linux-gnu)" {24}, "device-openmp (x86_64-pc-linux-gnu)" {27}, ir
+// CHK-PHASES-FILES-NEXT: 28: offload, "host-openmp (powerpc64-ibm-linux-gnu)" {24}, "device-openmp (powerpc64-ibm-linux-gnu)" {27}, ir
 // CHK-PHASES-FILES-NEXT: 29: backend, {28}, assembler, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 30: assembler, {29}, object, (device-openmp)
-// CHK-PHASES-FILES-NEXT: 31: offload, "device-openmp (x86_64-pc-linux-gnu)" {30}, object
+// CHK-PHASES-FILES-NEXT: 31: offload, "device-openmp (powerpc64-ibm-linux-gnu)" {30}, object
 // CHK-PHASES-FILES-NEXT: 32: input, "[[INPUT]]", c, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 33: preprocessor, {32}, cpp-output, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 34: compiler, {33}, ir, (device-openmp)
-// CHK-PHASES-FILES-NEXT: 35: offload, "host-openmp (powerpc64-ibm-linux-gnu)" {24}, "device-openmp (powerpc64-ibm-linux-gnu)" {34}, ir
+// CHK-PHASES-FILES-NEXT: 35: offload, "host-openmp (powerpc64-ibm-linux-gnu)" {24}, "device-openmp (x86_64-pc-linux-gnu)" {34}, ir
 // CHK-PHASES-FILES-NEXT: 36: backend, {35}, assembler, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 37: assembler, {36}, object, (device-openmp)
-// CHK-PHASES-FILES-NEXT: 38: offload, "device-openmp (powerpc64-ibm-linux-gnu)" {37}, object
+// CHK-PHASES-FILES-NEXT: 38: offload, "device-openmp (x86_64-pc-linux-gnu)" {37}, object
 // CHK-PHASES-FILES-NEXT: 39: clang-offload-packager, {31, 38}, image, (device-openmp)
 // CHK-PHASES-FILES-NEXT: 40: offload, "host-openmp (powerpc64-ibm-linux-gnu)" {24}, "device-openmp (powerpc64-ibm-linux-gnu)" {39}, ir
 // CHK-PHASES-FILES-NEXT: 41: backend, {40}, assembler, (host-openmp)

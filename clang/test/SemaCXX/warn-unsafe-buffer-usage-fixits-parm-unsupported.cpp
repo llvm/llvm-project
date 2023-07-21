@@ -33,6 +33,26 @@ void unnamedPointeeType(PTR_TO_ANON p) {  // expected-warning{{'p' is an unsafe 
   }
 }
 
+// The analysis requires accurate source location informations from
+// `TypeLoc`s of types of variable (parameter) declarations in order
+// to generate fix-its for them. But those information is not always
+// available (probably due to some bugs in clang but it is irrelevant
+// to the safe-buffer project).  The following is an example.  When
+// `_Atomic` is used, we cannot get valid source locations of the
+// pointee type of `unsigned *`.  The analysis gives up in such a
+// case.
+// CHECK-NOT: fix-it:
+void typeLocSourceLocationInvalid(_Atomic unsigned *map) { // expected-warning{{'map' is an unsafe pointer used for buffer access}}
+  map[5] = 5; // expected-note{{used in buffer access here}}
+}
+
+// CHECK: fix-it:"{{.*}}":{[[@LINE+1]]:33-[[@LINE+1]]:46}:"std::span<unsigned> map"
+void typeLocSourceLocationValid(unsigned *map) { // expected-warning{{'map' is an unsafe pointer used for buffer access}} \
+						    expected-note{{change type of 'map' to 'std::span' to preserve bounds information}}
+  map[5] = 5; // expected-note{{used in buffer access here}}
+}
+// CHECK: fix-it:"{{.*}}":{[[@LINE-1]]:2-[[@LINE-1]]:2}:"\n{{\[}}{{\[}}clang::unsafe_buffer_usage{{\]}}{{\]}} void typeLocSourceLocationValid(unsigned *map) {return typeLocSourceLocationValid(std::span<unsigned>(map, <# size #>));}\n"
+
 // We do not fix parameters participating unsafe operations for the
 // following functions/methods or function-like expressions:
 
@@ -128,4 +148,3 @@ void parmWithDefaultValueDecl(int * x) {
   int tmp;
   tmp = x[5]; // expected-note{{used in buffer access here}}
 }
-

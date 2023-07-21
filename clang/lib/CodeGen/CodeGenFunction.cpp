@@ -577,8 +577,8 @@ CodeGenFunction::getUBSanFunctionTypeHash(QualType Ty) const {
   std::string Mangled;
   llvm::raw_string_ostream Out(Mangled);
   CGM.getCXXABI().getMangleContext().mangleTypeName(Ty, Out, false);
-  return llvm::ConstantInt::get(CGM.Int32Ty,
-                                static_cast<uint32_t>(llvm::xxHash64(Mangled)));
+  return llvm::ConstantInt::get(
+      CGM.Int32Ty, static_cast<uint32_t>(llvm::xxh3_64bits(Mangled)));
 }
 
 void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,

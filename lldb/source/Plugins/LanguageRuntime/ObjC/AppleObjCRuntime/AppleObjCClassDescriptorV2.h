@@ -12,6 +12,7 @@
 #include <mutex>
 
 #include "AppleObjCRuntimeV2.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 
 #include "Plugins/LanguageRuntime/ObjC/ObjCLanguageRuntime.h"
@@ -33,6 +34,8 @@ public:
   bool IsValid() override {
     return true; // any Objective-C v2 runtime class descriptor we vend is valid
   }
+
+  lldb::LanguageType GetImplementationLanguage() const override;
 
   // a custom descriptor is used for tagged pointers
   bool GetTaggedPointerInfo(uint64_t *info_bits = nullptr,

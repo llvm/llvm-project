@@ -780,6 +780,13 @@ def OpWithShapedTypeInferTypeInterfaceOp : TEST_Op<"op_with_shaped_type_infer_ty
   let results = (outs AnyTensor);
 }
 
+def OpWithShapedTypeInferTypeAdaptorInterfaceOp : 
+      TEST_Op<"op_with_shaped_type_infer_type_adaptor_if",
+              [InferTensorTypeAdaptorWithReify]> {
+  let arguments = (ins AnyTensor:$operand1, AnyTensor:$operand2);
+  let results = (outs AnyTensor:$result);
+}
+
 def OpWithResultShapeInterfaceOp : TEST_Op<"op_with_result_shape_interface",
       [DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
           ["reifyReturnTypeShapes"]>]> {
@@ -3358,6 +3365,17 @@ def TestOpUsingPropertyInCustom : TEST_Op<"using_property_in_custom"> {
 def TestOpUsingPropertyRefInCustom : TEST_Op<"using_property_ref_in_custom"> {
   let assemblyFormat = "custom<IntProperty>($first) `+` custom<SumProperty>($second, ref($first)) attr-dict";
   let arguments = (ins IntProperty<"int64_t">:$first, IntProperty<"int64_t">:$second);
+}
+
+def IntPropertyWithWorseBytecode : Property<"int64_t"> {
+  let writeToMlirBytecode = writeMlirBytecodeWithConvertToAttribute;
+
+  let readFromMlirBytecode = readMlirBytecodeUsingConvertFromAttribute;
+}
+
+def TestOpUsingIntPropertyWithWorseBytecode
+    : TEST_Op<"using_int_property_with_worse_bytecode"> {
+  let arguments = (ins IntPropertyWithWorseBytecode:$value);
 }
 
 // Op with a properties struct defined out-of-line. The struct has custom

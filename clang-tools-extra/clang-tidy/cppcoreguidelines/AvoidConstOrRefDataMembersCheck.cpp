@@ -19,17 +19,86 @@ AST_MATCHER(FieldDecl, isMemberOfLambda) {
   return Node.getParent()->isLambda();
 }
 
+struct MemberFunctionInfo {
+  bool Declared{};
+  bool Deleted{};
+};
+
+struct MemberFunctionPairInfo {
+  MemberFunctionInfo Copy{};
+  MemberFunctionInfo Move{};
+};
+
+MemberFunctionPairInfo getConstructorsInfo(CXXRecordDecl const &Node) {
+  MemberFunctionPairInfo Constructors{};
+
+  for (CXXConstructorDecl const *Ctor : Node.ctors()) {
+    if (Ctor->isCopyConstructor()) {
+      Constructors.Copy.Declared = true;
+      if (Ctor->isDeleted())
+        Constructors.Copy.Deleted = true;
+    }
+    if (Ctor->isMoveConstructor()) {
+      Constructors.Move.Declared = true;
+      if (Ctor->isDeleted())
+        Constructors.Move.Deleted = true;
+    }
+  }
+
+  return Constructors;
+}
+
+MemberFunctionPairInfo getAssignmentsInfo(CXXRecordDecl const &Node) {
+  MemberFunctionPairInfo Assignments{};
+
+  for (CXXMethodDecl const *Method : Node.methods()) {
+    if (Method->isCopyAssignmentOperator()) {
+      Assignments.Copy.Declared = true;
+      if (Method->isDeleted())
+        Assignments.Copy.Deleted = true;
+    }
+
+    if (Method->isMoveAssignmentOperator()) {
+      Assignments.Move.Declared = true;
+      if (Method->isDeleted())
+        Assignments.Move.Deleted = true;
+    }
+  }
+
+  return Assignments;
+}
+
+AST_MATCHER(CXXRecordDecl, isCopyableOrMovable) {
+  MemberFunctionPairInfo Constructors = getConstructorsInfo(Node);
+  MemberFunctionPairInfo Assignments = getAssignmentsInfo(Node);
+
+  if (Node.hasSimpleCopyConstructor() ||
+      (Constructors.Copy.Declared && !Constructors.Copy.Deleted))
+    return true;
+  if (Node.hasSimpleMoveConstructor() ||
+      (Constructors.Move.Declared && !Constructors.Move.Deleted))
+    return true;
+  if (Node.hasSimpleCopyAssignment() ||
+      (Assignments.Copy.Declared && !Assignments.Copy.Deleted))
+    return true;
+  if (Node.hasSimpleMoveAssignment() ||
+      (Assignments.Move.Declared && !Assignments.Move.Deleted))
+    return true;
+
+  return false;
+}
+
 } // namespace
 
 void AvoidConstOrRefDataMembersCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(fieldDecl(unless(isMemberOfLambda()),
-                               hasType(hasCanonicalType(referenceType())))
-                         .bind("ref"),
-                     this);
-  Finder->addMatcher(fieldDecl(unless(isMemberOfLambda()),
-                               hasType(qualType(isConstQualified())))
-                         .bind("const"),
-                     this);
+  Finder->addMatcher(
+      fieldDecl(
+          unless(isMemberOfLambda()),
+          anyOf(
+              fieldDecl(hasType(hasCanonicalType(referenceType()))).bind("ref"),
+              fieldDecl(hasType(qualType(isConstQualified()))).bind("const")),
+          hasDeclContext(cxxRecordDecl(isCopyableOrMovable()))),
+      this);
 }
 
 void AvoidConstOrRefDataMembersCheck::check(

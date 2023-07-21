@@ -19,8 +19,8 @@
 ; CHECK:      .debug_pubtypes contents:
 ; CHECK-NEXT: length = 0x0000000000000032, format = DWARF64, version = 0x0002, unit_offset =
 ; CHECK-NEXT: Offset     Name
-; CHECK-NEXT: 0x00000000[[BASET]] "int"
 ; CHECK-NEXT: 0x00000000[[STRUCT]] "Foo"
+; CHECK-NEXT: 0x00000000[[BASET]] "int"
 
 ; IR generated and reduced from:
 ; $ cat foo.c
