@@ -22890,11 +22890,19 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
 
   // Recursively pack lower/upper subvectors, concat result and pack again.
   assert(SrcSizeInBits >= 256 && "Expected 256-bit vector or greater");
-  EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems / 2);
-  Lo = truncateVectorWithPACK(Opcode, PackedVT, Lo, DL, DAG, Subtarget);
-  Hi = truncateVectorWithPACK(Opcode, PackedVT, Hi, DL, DAG, Subtarget);
 
-  PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
+  EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
+  if (PackedVT.is128BitVector()) {
+    // Avoid CONCAT_VECTORS on sub-128bit nodes as these can fail after
+    // type legalization.
+    SDValue Res =
+        truncateVectorWithPACK(Opcode, PackedVT, In, DL, DAG, Subtarget);
+    return truncateVectorWithPACK(Opcode, DstVT, Res, DL, DAG, Subtarget);
+  }
+
+  EVT HalfPackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems / 2);
+  Lo = truncateVectorWithPACK(Opcode, HalfPackedVT, Lo, DL, DAG, Subtarget);
+  Hi = truncateVectorWithPACK(Opcode, HalfPackedVT, Hi, DL, DAG, Subtarget);
   SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedVT, Lo, Hi);
   return truncateVectorWithPACK(Opcode, DstVT, Res, DL, DAG, Subtarget);
 }
