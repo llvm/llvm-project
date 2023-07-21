@@ -6751,6 +6751,25 @@ static bool collectConcatOps(SDNode *N, SmallVectorImpl<SDValue> &Ops,
   return false;
 }
 
+// Helper to check if \p V can be split into subvectors and the upper subvectors
+// are all undef. In which case return the lower subvectors.
+static bool isUpperSubvectorUndef(SDValue V, SmallVectorImpl<SDValue> &LowerOps,
+                                  SelectionDAG &DAG) {
+  SmallVector<SDValue> SubOps;
+  if (!collectConcatOps(V.getNode(), SubOps, DAG))
+    return false;
+
+  unsigned NumSubOps = SubOps.size();
+  assert((NumSubOps % 2) == 0 && "Unexpected number of subvectors");
+
+  ArrayRef<SDValue> UpperOps(SubOps.begin() + (NumSubOps / 2), SubOps.end());
+  if (any_of(UpperOps, [](SDValue Op) { return !Op.isUndef(); }))
+    return false;
+
+  LowerOps.assign(SubOps.begin(), SubOps.begin() + (NumSubOps / 2));
+  return true;
+}
+
 // Helper to check if we can access all the constituent subvectors without any
 // extract ops.
 static bool isFreeToSplitVector(SDNode *N, SelectionDAG &DAG) {
@@ -22762,11 +22781,19 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
 
   // Recursively pack lower/upper subvectors, concat result and pack again.
   assert(SrcSizeInBits >= 256 && "Expected 256-bit vector or greater");
-  EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems / 2);
-  Lo = truncateVectorWithPACK(Opcode, PackedVT, Lo, DL, DAG, Subtarget);
-  Hi = truncateVectorWithPACK(Opcode, PackedVT, Hi, DL, DAG, Subtarget);
 
-  PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
+  EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
+  if (PackedVT.is128BitVector()) {
+    // Avoid CONCAT_VECTORS on sub-128bit nodes as these can fail after
+    // type legalization.
+    SDValue Res =
+        truncateVectorWithPACK(Opcode, PackedVT, In, DL, DAG, Subtarget);
+    return truncateVectorWithPACK(Opcode, DstVT, Res, DL, DAG, Subtarget);
+  }
+
+  EVT HalfPackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems / 2);
+  Lo = truncateVectorWithPACK(Opcode, HalfPackedVT, Lo, DL, DAG, Subtarget);
+  Hi = truncateVectorWithPACK(Opcode, HalfPackedVT, Hi, DL, DAG, Subtarget);
   SDValue Res = DAG.getNode(ISD::CONCAT_VECTORS, DL, PackedVT, Lo, Hi);
   return truncateVectorWithPACK(Opcode, DstVT, Res, DL, DAG, Subtarget);
 }
@@ -22808,6 +22835,26 @@ static SDValue LowerTruncateVecPackWithSignBits(MVT DstVT, SDValue In,
   if (!((SrcSVT == MVT::i16 || SrcSVT == MVT::i32 || SrcSVT == MVT::i64) &&
         (DstSVT == MVT::i8 || DstSVT == MVT::i16 || DstSVT == MVT::i32)))
     return SDValue();
+
+  // Don't lower with PACK nodes on AVX512 targets if we'd need more than one.
+  if (Subtarget.hasAVX512() &&
+      SrcSVT.getSizeInBits() > (DstSVT.getSizeInBits() * 2))
+    return SDValue();
+
+  // If the upper half of the source is undef, then attempt to split and
+  // only truncate the lower half.
+  if (DstVT.getSizeInBits() >= 128) {
+    SmallVector<SDValue> LowerOps;
+    if (isUpperSubvectorUndef(In, LowerOps, DAG)) {
+      MVT DstHalfVT = DstVT.getHalfNumVectorElementsVT();
+      MVT SrcHalfVT = SrcVT.getHalfNumVectorElementsVT();
+      SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcHalfVT, LowerOps);
+      if (SDValue Res = LowerTruncateVecPackWithSignBits(DstHalfVT, Lo, DL,
+                                                         Subtarget, DAG))
+        return widenSubVector(Res, false, Subtarget, DAG, DL,
+                              DstVT.getSizeInBits());
+    }
+  }
 
   unsigned NumSrcEltBits = SrcVT.getScalarSizeInBits();
   unsigned NumPackedSignBits = std::min<unsigned>(DstSVT.getSizeInBits(), 16);
@@ -22857,21 +22904,14 @@ static SDValue LowerTruncateVecPack(MVT DstVT, SDValue In, const SDLoc &DL,
   // If the upper half of the source is undef, then attempt to split and
   // only truncate the lower half.
   if (DstVT.getSizeInBits() >= 128) {
-    SmallVector<SDValue> SubOps;
-    if (collectConcatOps(In.getNode(), SubOps, DAG)) {
-      ArrayRef<SDValue> LowerOps(SubOps.begin(), SubOps.end());
-      ArrayRef<SDValue> UpperOps(SubOps.begin(), SubOps.end());
-      LowerOps = LowerOps.drop_back(SubOps.size() / 2);
-      UpperOps = UpperOps.drop_front(SubOps.size() / 2);
-      if (all_of(UpperOps, [](SDValue Op) { return Op.isUndef(); })) {
-        MVT DstHalfVT = DstVT.getHalfNumVectorElementsVT();
-        MVT SrcHalfVT = SrcVT.getHalfNumVectorElementsVT();
-        SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcHalfVT, LowerOps);
-        if (SDValue Res =
-                LowerTruncateVecPack(DstHalfVT, Lo, DL, Subtarget, DAG))
-            return widenSubVector(Res, false, Subtarget, DAG, DL,
-                                  DstVT.getSizeInBits());
-      }
+    SmallVector<SDValue> LowerOps;
+    if (isUpperSubvectorUndef(In, LowerOps, DAG)) {
+      MVT DstHalfVT = DstVT.getHalfNumVectorElementsVT();
+      MVT SrcHalfVT = SrcVT.getHalfNumVectorElementsVT();
+      SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcHalfVT, LowerOps);
+      if (SDValue Res = LowerTruncateVecPack(DstHalfVT, Lo, DL, Subtarget, DAG))
+        return widenSubVector(Res, false, Subtarget, DAG, DL,
+                              DstVT.getSizeInBits());
     }
   }
 
@@ -39788,6 +39828,22 @@ static bool matchBinaryShuffle(MVT MaskVT, ArrayRef<int> Mask,
       isTargetShuffleEquivalent(MaskVT, Mask, {0, 2, 4, 6}, DAG) &&
       V1.getScalarValueSizeInBits() == 64 &&
       V2.getScalarValueSizeInBits() == 64) {
+    // Use (SSE41) PACKUSWD if the leading zerobits goto the lowest 16-bits.
+    unsigned MinLZV1 = DAG.computeKnownBits(V1).countMinLeadingZeros();
+    unsigned MinLZV2 = DAG.computeKnownBits(V2).countMinLeadingZeros();
+    if (Subtarget.hasSSE41() && MinLZV1 >= 48 && MinLZV2 >= 48) {
+      SrcVT = MVT::v4i32;
+      DstVT = MVT::v8i16;
+      Shuffle = X86ISD::PACKUS;
+      return true;
+    }
+    // Use PACKUSBW if the leading zerobits goto the lowest 8-bits.
+    if (MinLZV1 >= 56 && MinLZV2 >= 56) {
+      SrcVT = MVT::v8i16;
+      DstVT = MVT::v16i8;
+      Shuffle = X86ISD::PACKUS;
+      return true;
+    }
     // Use PACKSSWD if the signbits extend to the lowest 16-bits.
     if (DAG.ComputeNumSignBits(V1) > 48 && DAG.ComputeNumSignBits(V2) > 48) {
       SrcVT = MVT::v4i32;
@@ -44869,9 +44925,10 @@ static SDValue combineBitcastvxi1(SelectionDAG &DAG, EVT VT, SDValue Src,
   if (SExtVT == MVT::v16i8 || SExtVT == MVT::v32i8 || SExtVT == MVT::v64i8) {
     V = getPMOVMSKB(DL, V, DAG, Subtarget);
   } else {
-    if (SExtVT == MVT::v8i16)
-      V = DAG.getNode(X86ISD::PACKSS, DL, MVT::v16i8, V,
-                      DAG.getUNDEF(MVT::v8i16));
+    if (SExtVT == MVT::v8i16) {
+      V = widenSubVector(V, false, Subtarget, DAG, DL, 256);
+      V = DAG.getNode(ISD::TRUNCATE, DL, MVT::v16i8, V);
+    }
     V = DAG.getNode(X86ISD::MOVMSK, DL, MVT::i32, V);
   }
 

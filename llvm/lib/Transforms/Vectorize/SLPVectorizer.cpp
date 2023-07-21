@@ -4136,6 +4136,8 @@ BoUpSLP::getReorderingData(const TreeEntry &TE, bool TopToBottom) {
     return TE.ReorderIndices;
   if (TE.State == TreeEntry::Vectorize && TE.getOpcode() == Instruction::PHI) {
     auto PHICompare = [](llvm::Value *V1, llvm::Value *V2) {
+      if (V1 == V2)
+        return false;
       if (!V1->hasOneUse() || !V2->hasOneUse())
         return false;
       auto *FirstUserOfPhi1 = cast<Instruction>(*V1->user_begin());

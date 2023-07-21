@@ -20,7 +20,37 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 128
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
+}
+
+// -----
+
+!tt = tensor<8xf16>
+!tin = tensor<?xf16>
+
+// CHECK-LABEL: func @pad_1d_8xf16
+func.func @pad_1d_8xf16(%t0: !tin, %sz: index) -> !tt {
+  %cst = arith.constant 0.0 : f16
+  /// Too little data for all threads, needs predication, while keeping most
+  /// minor transfer size -> 1 thread.
+  // CHECK: scf.forall {{.*}} in (1) {{.*}}
+  // CHECK:   %[[padded:.*]] = tensor.pad {{.*}}
+  // CHECK:   tensor.cast %[[padded]] : tensor<?xf16> to tensor<8xf16>
+  // CHECK: {mapping = [#gpu.linear<x>]}
+  %0 = tensor.pad %t0 low[0] high[%sz] {
+  ^bb0(%arg0: index):
+    tensor.yield %cst : f16
+  } : !tin to !tt
+  return %0 : !tt
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["tensor.pad"]} in %arg1
+    : (!transform.any_op) -> !transform.any_op
+  transform.structured.gpu.map_copy_to_threads %0
+    total_num_threads = 32 desired_bit_alignment = 128
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"tensor.pad">)
 }
 
 // -----
@@ -44,7 +74,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 128
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -68,7 +98,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 128
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 
@@ -93,7 +123,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 128
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -117,7 +147,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 128
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -140,7 +170,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 128
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -162,7 +192,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 128
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -184,7 +214,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 64
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -206,7 +236,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 128
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -228,7 +258,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 8
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -254,7 +284,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 8
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -277,7 +307,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 128 desired_bit_alignment = 8
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -300,7 +330,7 @@ transform.sequence failures(propagate) {
     : (!transform.any_op) -> !transform.any_op
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 128 desired_bit_alignment = 64
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 
@@ -330,7 +360,7 @@ transform.sequence failures(propagate) {
   // expected-error @below {{too few threads to map copy op to threads on the most minor dimension, given alignment and vector size constraints}}
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 128
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -355,7 +385,7 @@ transform.sequence failures(propagate) {
   // expected-error @below {{too few threads to map copy op to threads on the most minor dimension, given alignment and vector size constraints}}
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 128
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -379,7 +409,7 @@ transform.sequence failures(propagate) {
   // expected-error @below {{too few threads to map copy op to threads on the most minor dimension, given alignment and vector size constraints}}
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 8
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }
 
 // -----
@@ -403,5 +433,5 @@ transform.sequence failures(propagate) {
   // expected-error @below {{too few threads to map copy op to threads on the most minor dimension, given alignment and vector size constraints}}
   transform.structured.gpu.map_copy_to_threads %0 
     total_num_threads = 32 desired_bit_alignment = 8
-      : (!transform.any_op) -> (!transform.op<"linalg.copy">)
+      : (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.copy">)
 }

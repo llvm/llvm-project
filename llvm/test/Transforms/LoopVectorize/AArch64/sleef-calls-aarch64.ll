@@ -648,8 +648,9 @@ declare float @llvm.log2.f32(float) #0
 
 define void @log2_f64(double* nocapture %varray) {
   ; CHECK-LABEL: @log2_f64(
-  ; CHECK:    [[TMP5:%.*]] = call <2 x double> @_ZGVnN2v_log2(<2 x double> [[TMP4:%.*]])
-  ; CHECK:    ret void
+  ; NEON:    [[TMP5:%.*]] = call <2 x double> @_ZGVnN2v_log2(<2 x double> [[TMP4:%.*]])
+  ; SVE:     [[TMP5:%.*]] = call <vscale x 2 x double> @_ZGVsMxv_log2(<vscale x 2 x double> [[TMP4:%.*]], <vscale x 2 x i1> {{.*}})
+  ; CHECK:   ret void
   ;
   entry:
   br label %for.body
@@ -671,8 +672,9 @@ define void @log2_f64(double* nocapture %varray) {
 
 define void @log2_f32(float* nocapture %varray) {
   ; CHECK-LABEL: @log2_f32(
-  ; CHECK:    [[TMP5:%.*]] = call <4 x float> @_ZGVnN4v_log2f(<4 x float> [[TMP4:%.*]])
-  ; CHECK:    ret void
+  ; NEON:    [[TMP5:%.*]] = call <4 x float> @_ZGVnN4v_log2f(<4 x float> [[TMP4:%.*]])
+  ; SVE:     [[TMP5:%.*]] = call <vscale x 4 x float> @_ZGVsMxv_log2f(<vscale x 4 x float> [[TMP4:%.*]], <vscale x 4 x i1> {{.*}})
+  ; CHECK:   ret void
   ;
   entry:
   br label %for.body

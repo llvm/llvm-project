@@ -15,8 +15,6 @@
 using namespace llvm;
 
 class RISCVELFStreamer : public MCELFStreamer {
-  static bool requiresFixups(MCContext &C, const MCExpr *Value,
-                             const MCExpr *&LHS, const MCExpr *&RHS);
   void reset() override;
 
 public:
@@ -24,8 +22,6 @@ public:
                    std::unique_ptr<MCObjectWriter> MOW,
                    std::unique_ptr<MCCodeEmitter> MCE)
       : MCELFStreamer(C, std::move(MAB), std::move(MOW), std::move(MCE)) {}
-
-  void emitValueImpl(const MCExpr *Value, unsigned Size, SMLoc Loc) override;
 };
 
 namespace llvm {

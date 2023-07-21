@@ -120,6 +120,9 @@ class LLVMConfig(object):
         if have_zstd:
             features.add("zstd")
 
+        if getattr(config, "reverse_iteration", None):
+            features.add("reverse_iteration")
+
         # Check if we should run long running tests.
         long_tests = lit_config.params.get("run_long_tests", None)
         if lit.util.pythonize_bool(long_tests):
