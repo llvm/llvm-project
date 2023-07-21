@@ -261,6 +261,7 @@ DiagnosedSilenceableFailure transform::BufferizeToAllocationOp::apply(
   } else {
     llvm_unreachable("invalid alloc op");
   }
+  options.bufferizeDestinationOnly = getBufferizeDestinationOnly();
 
   // Bufferize ops.
   Attribute memorySpace =

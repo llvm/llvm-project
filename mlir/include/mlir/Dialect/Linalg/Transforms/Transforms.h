@@ -52,6 +52,11 @@ struct BufferizeToAllocationOptions {
 
   enum class MemcpyOp { MemrefTensorStore = 0, MemrefCopy = 1, LinalgCopy = 2 };
   MemcpyOp memcpyOp = MemcpyOp::MemrefTensorStore;
+
+  /// If set to "true", only the destination tensor operands are bufferized to
+  /// a new allocation (and wrapped in "bufferization.to_tensor"), but not the
+  /// targeted op itself.
+  bool bufferizeDestinationOnly = false;
 };
 
 /// Materialize a buffer allocation for the given tensor.pad op and lower the
