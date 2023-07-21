@@ -186,6 +186,9 @@ public:
     return blockOperationCounts[block];
   }
 
+  /// Get the set desired bytecode version to emit.
+  int64_t getDesiredBytecodeVersion() const;
+
 private:
   /// This class is used to provide a fake dialect writer for numbering nested
   /// attributes and types.
