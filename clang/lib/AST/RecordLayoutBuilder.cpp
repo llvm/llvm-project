@@ -2545,7 +2545,10 @@ struct MicrosoftRecordLayoutBuilder {
     CharUnits Alignment;
   };
   typedef llvm::DenseMap<const CXXRecordDecl *, CharUnits> BaseOffsetsMapTy;
-  MicrosoftRecordLayoutBuilder(const ASTContext &Context) : Context(Context) {}
+  MicrosoftRecordLayoutBuilder(const ASTContext &Context,
+                               EmptySubobjectMap *EmptySubobjects)
+      : Context(Context), EmptySubobjects(EmptySubobjects) {}
+
 private:
   MicrosoftRecordLayoutBuilder(const MicrosoftRecordLayoutBuilder &) = delete;
   void operator=(const MicrosoftRecordLayoutBuilder &) = delete;
@@ -2562,7 +2565,11 @@ public:
   void layoutNonVirtualBase(const CXXRecordDecl *RD,
                             const CXXRecordDecl *BaseDecl,
                             const ASTRecordLayout &BaseLayout,
-                            const ASTRecordLayout *&PreviousBaseLayout);
+                            const ASTRecordLayout *&PreviousBaseLayout,
+                            BaseSubobjectInfo *Base);
+  BaseSubobjectInfo *computeBaseSubobjectInfo(const CXXRecordDecl *RD,
+                                              bool IsVirtual,
+                                              BaseSubobjectInfo *Derived);
   void injectVFPtr(const CXXRecordDecl *RD);
   void injectVBPtr(const CXXRecordDecl *RD);
   /// Lays out the fields of the record.  Also rounds size up to
@@ -2595,6 +2602,12 @@ public:
       llvm::SmallPtrSetImpl<const CXXRecordDecl *> &HasVtorDispSet,
       const CXXRecordDecl *RD) const;
   const ASTContext &Context;
+  EmptySubobjectMap *EmptySubobjects;
+  llvm::SpecificBumpPtrAllocator<BaseSubobjectInfo> BaseSubobjectInfoAllocator;
+  typedef llvm::DenseMap<const CXXRecordDecl *, BaseSubobjectInfo *>
+      BaseSubobjectInfoMapTy;
+  BaseSubobjectInfoMapTy VirtualBaseInfo;
+
   /// The size of the record being laid out.
   CharUnits Size;
   /// The non-virtual size of the record layout.
@@ -2818,6 +2831,8 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
   // Iterate through the bases and lay out the non-virtual ones.
   for (const CXXBaseSpecifier &Base : RD->bases()) {
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
+    BaseSubobjectInfo *BaseInfo =
+        computeBaseSubobjectInfo(BaseDecl, Base.isVirtual(), nullptr);
     HasPolymorphicBaseClass |= BaseDecl->isPolymorphic();
     const ASTRecordLayout &BaseLayout = Context.getASTRecordLayout(BaseDecl);
     // Mark and skip virtual bases.
@@ -2839,7 +2854,8 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
       LeadsWithZeroSizedBase = BaseLayout.leadsWithZeroSizedBase();
     }
     // Lay out the base.
-    layoutNonVirtualBase(RD, BaseDecl, BaseLayout, PreviousBaseLayout);
+    layoutNonVirtualBase(RD, BaseDecl, BaseLayout, PreviousBaseLayout,
+                         BaseInfo);
   }
   // Figure out if we need a fresh VFPtr for this class.
   if (RD->isPolymorphic()) {
@@ -2864,10 +2880,21 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
   bool CheckLeadingLayout = !PrimaryBase;
   // Iterate through the bases and lay out the non-virtual ones.
   for (const CXXBaseSpecifier &Base : RD->bases()) {
-    if (Base.isVirtual())
-      continue;
     const CXXRecordDecl *BaseDecl = Base.getType()->getAsCXXRecordDecl();
     const ASTRecordLayout &BaseLayout = Context.getASTRecordLayout(BaseDecl);
+    BaseSubobjectInfo *BaseInfo =
+        computeBaseSubobjectInfo(BaseDecl, Base.isVirtual(), nullptr);
+
+    if (Base.isVirtual()) {
+      // Mark offset for virtual base.
+      CharUnits Offset = CharUnits::Zero();
+      while (!EmptySubobjects->CanPlaceBaseAtOffset(BaseInfo, Offset)) {
+        ElementInfo Info = getAdjustedElementInfo(BaseLayout);
+        Offset += Info.Alignment;
+      }
+      continue;
+    }
+
     // Only lay out bases without extendable VFPtrs on the second pass.
     if (BaseLayout.hasExtendableVFPtr()) {
       VBPtrOffset = Bases[BaseDecl] + BaseLayout.getNonVirtualSize();
@@ -2880,7 +2907,8 @@ MicrosoftRecordLayoutBuilder::layoutNonVirtualBases(const CXXRecordDecl *RD) {
       LeadsWithZeroSizedBase = BaseLayout.leadsWithZeroSizedBase();
     }
     // Lay out the base.
-    layoutNonVirtualBase(RD, BaseDecl, BaseLayout, PreviousBaseLayout);
+    layoutNonVirtualBase(RD, BaseDecl, BaseLayout, PreviousBaseLayout,
+                         BaseInfo);
     VBPtrOffset = Bases[BaseDecl] + BaseLayout.getNonVirtualSize();
   }
   // Set our VBPtroffset if we know it at this point.
@@ -2908,10 +2936,9 @@ static bool recordUsesEBO(const RecordDecl *RD) {
 }
 
 void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
-    const CXXRecordDecl *RD,
-    const CXXRecordDecl *BaseDecl,
+    const CXXRecordDecl *RD, const CXXRecordDecl *BaseDecl,
     const ASTRecordLayout &BaseLayout,
-    const ASTRecordLayout *&PreviousBaseLayout) {
+    const ASTRecordLayout *&PreviousBaseLayout, BaseSubobjectInfo *Base) {
   // Insert padding between two bases if the left first one is zero sized or
   // contains a zero sized subobject and the right is zero sized or one leads
   // with a zero sized base.
@@ -2927,7 +2954,7 @@ void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
   if (UseExternalLayout) {
     FoundBase = External.getExternalNVBaseOffset(BaseDecl, BaseOffset);
     if (BaseOffset > Size) {
-      Size = BaseOffset;
+      DataSize = Size = BaseOffset;
     }
   }
 
@@ -2937,12 +2964,95 @@ void MicrosoftRecordLayoutBuilder::layoutNonVirtualBase(
       BaseOffset = CharUnits::Zero();
     } else {
       // Otherwise, lay the base out at the end of the MDC.
-      BaseOffset = Size = Size.alignTo(Info.Alignment);
+      BaseOffset = DataSize = Size = Size.alignTo(Info.Alignment);
     }
+
+    // Place in EmptySubobjects map but don't check the position? MSVC seems to
+    // not allow fields to overlap at the end of a virtual base, but they can
+    // overlap with other bass.
+    EmptySubobjects->CanPlaceBaseAtOffset(Base, BaseOffset);
   }
+
   Bases.insert(std::make_pair(BaseDecl, BaseOffset));
   Size += BaseLayout.getNonVirtualSize();
+  DataSize = Size;
   PreviousBaseLayout = &BaseLayout;
+}
+
+BaseSubobjectInfo *MicrosoftRecordLayoutBuilder::computeBaseSubobjectInfo(
+    const CXXRecordDecl *RD, bool IsVirtual, BaseSubobjectInfo *Derived) {
+  // This is copied directly from ItaniumRecordLayoutBuilder::ComputeBaseSubobjectInfo.
+  BaseSubobjectInfo *Info;
+
+  if (IsVirtual) {
+    // Check if we already have info about this virtual base.
+    BaseSubobjectInfo *&InfoSlot = VirtualBaseInfo[RD];
+    if (InfoSlot) {
+      assert(InfoSlot->Class == RD && "Wrong class for virtual base info!");
+      return InfoSlot;
+    }
+
+    // We don't, create it.
+    InfoSlot = new (BaseSubobjectInfoAllocator.Allocate()) BaseSubobjectInfo;
+    Info = InfoSlot;
+  } else {
+    Info = new (BaseSubobjectInfoAllocator.Allocate()) BaseSubobjectInfo;
+  }
+
+  Info->Class = RD;
+  Info->IsVirtual = IsVirtual;
+  Info->Derived = nullptr;
+  Info->PrimaryVirtualBaseInfo = nullptr;
+
+  const CXXRecordDecl *PrimaryVirtualBase = nullptr;
+  BaseSubobjectInfo *PrimaryVirtualBaseInfo = nullptr;
+
+  // Check if this base has a primary virtual base.
+  if (RD->getNumVBases()) {
+    const ASTRecordLayout &Layout = Context.getASTRecordLayout(RD);
+    if (Layout.isPrimaryBaseVirtual()) {
+      // This base does have a primary virtual base.
+      PrimaryVirtualBase = Layout.getPrimaryBase();
+      assert(PrimaryVirtualBase && "Didn't have a primary virtual base!");
+
+      // Now check if we have base subobject info about this primary base.
+      PrimaryVirtualBaseInfo = VirtualBaseInfo.lookup(PrimaryVirtualBase);
+
+      if (PrimaryVirtualBaseInfo) {
+        if (PrimaryVirtualBaseInfo->Derived) {
+          // We did have info about this primary base, and it turns out that it
+          // has already been claimed as a primary virtual base for another
+          // base.
+          PrimaryVirtualBase = nullptr;
+        } else {
+          // We can claim this base as our primary base.
+          Info->PrimaryVirtualBaseInfo = PrimaryVirtualBaseInfo;
+          PrimaryVirtualBaseInfo->Derived = Info;
+        }
+      }
+    }
+  }
+
+  // Now go through all direct bases.
+  for (const auto &I : RD->bases()) {
+    bool IsVirtual = I.isVirtual();
+
+    const CXXRecordDecl *BaseDecl = I.getType()->getAsCXXRecordDecl();
+
+    Info->Bases.push_back(computeBaseSubobjectInfo(BaseDecl, IsVirtual, Info));
+  }
+
+  if (PrimaryVirtualBase && !PrimaryVirtualBaseInfo) {
+    // Traversing the bases must have created the base info for our primary
+    // virtual base.
+    PrimaryVirtualBaseInfo = VirtualBaseInfo.lookup(PrimaryVirtualBase);
+    assert(PrimaryVirtualBaseInfo && "Did not create a primary virtual base!");
+
+    // Claim the primary virtual base as our primary virtual base.
+    Info->PrimaryVirtualBaseInfo = PrimaryVirtualBaseInfo;
+    PrimaryVirtualBaseInfo->Derived = Info;
+  }
+  return Info;
 }
 
 void MicrosoftRecordLayoutBuilder::layoutFields(const RecordDecl *RD) {
@@ -2956,18 +3066,48 @@ void MicrosoftRecordLayoutBuilder::layoutField(const FieldDecl *FD) {
     layoutBitField(FD);
     return;
   }
+
   LastFieldIsNonZeroWidthBitfield = false;
   ElementInfo Info = getAdjustedElementInfo(FD);
   Alignment = std::max(Alignment, Info.Alignment);
-  CharUnits FieldOffset;
-  if (UseExternalLayout)
+
+  const CXXRecordDecl *FieldClass = FD->getType()->getAsCXXRecordDecl();
+  bool IsOverlappingEmptyField = FD->isPotentiallyOverlapping() &&
+                                 FieldClass->isEmpty() &&
+                                 FieldClass->fields().empty();
+  const CXXRecordDecl *ParentClass = cast<CXXRecordDecl>(FD->getParent());
+  bool HasBases =
+      !ParentClass->bases().empty() || !ParentClass->vbases().empty();
+
+  CharUnits FieldOffset = CharUnits::Zero();
+
+  if (UseExternalLayout) {
     FieldOffset =
         Context.toCharUnitsFromBits(External.getExternalFieldOffset(FD));
-  else if (IsUnion)
+  } else if (IsUnion) {
     FieldOffset = CharUnits::Zero();
-  else
+  } else if (EmptySubobjects) {
+    if (!IsOverlappingEmptyField)
+      FieldOffset = DataSize.alignTo(Info.Alignment);
+
+    while (!EmptySubobjects->CanPlaceFieldAtOffset(FD, FieldOffset)) {
+      if (FieldOffset == CharUnits::Zero() && DataSize != CharUnits::Zero() &&
+          HasBases) {
+        // MSVC appears to only do this when there are base classes;
+        // otherwise it overlaps no_unique_address fields in non-zero offsets.
+        FieldOffset = DataSize.alignTo(Info.Alignment);
+      } else {
+        FieldOffset += Info.Alignment;
+      }
+    }
+  } else {
     FieldOffset = Size.alignTo(Info.Alignment);
+  }
   placeFieldAtOffset(FieldOffset);
+
+  if (!IsOverlappingEmptyField)
+    DataSize = std::max(DataSize, FieldOffset + Info.Size);
+
   Size = std::max(Size, FieldOffset + Info.Size);
 }
 
@@ -2999,17 +3139,17 @@ void MicrosoftRecordLayoutBuilder::layoutBitField(const FieldDecl *FD) {
     auto NewSize = Context.toCharUnitsFromBits(
         llvm::alignDown(FieldBitOffset, Context.toBits(Info.Alignment)) +
         Context.toBits(Info.Size));
-    Size = std::max(Size, NewSize);
+    DataSize = Size = std::max(Size, NewSize);
     Alignment = std::max(Alignment, Info.Alignment);
   } else if (IsUnion) {
     placeFieldAtOffset(CharUnits::Zero());
-    Size = std::max(Size, Info.Size);
+    DataSize = Size = std::max(Size, Info.Size);
     // TODO: Add a Sema warning that MS ignores bitfield alignment in unions.
   } else {
     // Allocate a new block of memory and place the bitfield in it.
     CharUnits FieldOffset = Size.alignTo(Info.Alignment);
     placeFieldAtOffset(FieldOffset);
-    Size = FieldOffset + Info.Size;
+    DataSize = Size = FieldOffset + Info.Size;
     Alignment = std::max(Alignment, Info.Alignment);
     RemainingBitsInField = Context.toBits(Info.Size) - Width;
   }
@@ -3029,13 +3169,13 @@ MicrosoftRecordLayoutBuilder::layoutZeroWidthBitField(const FieldDecl *FD) {
   ElementInfo Info = getAdjustedElementInfo(FD);
   if (IsUnion) {
     placeFieldAtOffset(CharUnits::Zero());
-    Size = std::max(Size, Info.Size);
+    DataSize = Size = std::max(Size, Info.Size);
     // TODO: Add a Sema warning that MS ignores bitfield alignment in unions.
   } else {
     // Round up the current record size to the field's alignment boundary.
     CharUnits FieldOffset = Size.alignTo(Info.Alignment);
     placeFieldAtOffset(FieldOffset);
-    Size = FieldOffset;
+    DataSize = Size = FieldOffset;
     Alignment = std::max(Alignment, Info.Alignment);
   }
 }
@@ -3055,7 +3195,7 @@ void MicrosoftRecordLayoutBuilder::injectVBPtr(const CXXRecordDecl *RD) {
     // It is possible that there were no fields or bases located after vbptr,
     // so the size was not adjusted before.
     if (Size < FieldStart)
-      Size = FieldStart;
+      DataSize = Size = FieldStart;
     return;
   }
   // Make sure that the amount we push the fields back by is a multiple of the
@@ -3103,6 +3243,7 @@ void MicrosoftRecordLayoutBuilder::injectVFPtr(const CXXRecordDecl *RD) {
 void MicrosoftRecordLayoutBuilder::layoutVirtualBases(const CXXRecordDecl *RD) {
   if (!HasVBPtr)
     return;
+
   // Vtordisps are always 4 bytes (even in 64-bit mode)
   CharUnits VtorDispSize = CharUnits::fromQuantity(4);
   CharUnits VtorDispAlignment = VtorDispSize;
@@ -3136,7 +3277,7 @@ void MicrosoftRecordLayoutBuilder::layoutVirtualBases(const CXXRecordDecl *RD) {
     if ((PreviousBaseLayout && PreviousBaseLayout->endsWithZeroSizedObject() &&
          BaseLayout.leadsWithZeroSizedBase() && !recordUsesEBO(RD)) ||
         HasVtordisp) {
-      Size = Size.alignTo(VtorDispAlignment) + VtorDispSize;
+      DataSize = Size = Size.alignTo(VtorDispAlignment) + VtorDispSize;
       Alignment = std::max(VtorDispAlignment, Alignment);
     }
     // Insert the virtual base.
@@ -3154,7 +3295,7 @@ void MicrosoftRecordLayoutBuilder::layoutVirtualBases(const CXXRecordDecl *RD) {
 
     VBases.insert(std::make_pair(BaseDecl,
         ASTRecordLayout::VBaseInfo(BaseOffset, HasVtordisp)));
-    Size = BaseOffset + BaseLayout.getNonVirtualSize();
+    DataSize = Size = BaseOffset + BaseLayout.getNonVirtualSize();
     PreviousBaseLayout = &BaseLayout;
   }
 }
@@ -3304,8 +3445,9 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
   const ASTRecordLayout *NewEntry = nullptr;
 
   if (isMsLayout(*this)) {
-    MicrosoftRecordLayoutBuilder Builder(*this);
     if (const auto *RD = dyn_cast<CXXRecordDecl>(D)) {
+      EmptySubobjectMap EmptySubobjects(*this, RD);
+      MicrosoftRecordLayoutBuilder Builder(*this, &EmptySubobjects);
       Builder.cxxLayout(RD);
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.Size, Builder.Alignment, Builder.Alignment,
@@ -3317,6 +3459,7 @@ ASTContext::getASTRecordLayout(const RecordDecl *D) const {
           Builder.EndsWithZeroSizedObject, Builder.LeadsWithZeroSizedBase,
           Builder.Bases, Builder.VBases);
     } else {
+      MicrosoftRecordLayoutBuilder Builder(*this, /*EmptySubobjects*/ nullptr);
       Builder.layout(D);
       NewEntry = new (*this) ASTRecordLayout(
           *this, Builder.Size, Builder.Alignment, Builder.Alignment,

@@ -8371,6 +8371,20 @@ static void handleNoMergeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   D->addAttr(NoMergeAttr::Create(S.Context, AL));
 }
 
+static void handleNoUniqueAddressAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  NoUniqueAddressAttr TmpAttr(S.Context, AL);
+  if (S.getLangOpts().MSVCCompat) {
+    if (TmpAttr.isDefault()) {
+      S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
+      return;
+    }
+  } else if (TmpAttr.isMSVC()) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
+    return;
+  }
+  D->addAttr(NoUniqueAddressAttr::Create(S.Context, AL));
+}
+
 static void handleSYCLKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   // The 'sycl_kernel' attribute applies only to function templates.
   const auto *FD = cast<FunctionDecl>(D);
@@ -9275,6 +9289,9 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_NoMerge:
     handleNoMergeAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_NoUniqueAddress:
+    handleNoUniqueAddressAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AvailableOnlyInDefaultEvalMethod:

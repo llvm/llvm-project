@@ -1798,11 +1798,13 @@ def ArmMveStrictPolymorphism : TypeAttr, TargetSpecificAttr<TargetARM> {
   let Documentation = [ArmMveStrictPolymorphismDocs];
 }
 
-def NoUniqueAddress : InheritableAttr, TargetSpecificAttr<TargetItaniumCXXABI> {
-  let Spellings = [CXX11<"", "no_unique_address", 201803>];
+def NoUniqueAddress : InheritableAttr {
+  let Spellings = [CXX11<"", "no_unique_address", 201803>,
+                   CXX11<"msvc", "no_unique_address", 201803>];
+  let Accessors = [Accessor<"isDefault", [CXX11<"", "no_unique_address", 201803>]>,
+                   Accessor<"isMSVC", [CXX11<"msvc", "no_unique_address", 201803>]>];
   let Subjects = SubjectList<[NonBitField], ErrorDiag>;
   let Documentation = [NoUniqueAddressDocs];
-  let SimpleHandler = 1;
 }
 
 def ReturnsTwice : InheritableAttr {
