@@ -345,7 +345,7 @@ def Tosa_TransposeConv2DOp : Tosa_Op<"transpose_conv2d",
 //===----------------------------------------------------------------------===//
 // Operator: clamp
 //===----------------------------------------------------------------------===//
-def Tosa_ClampOp : Tosa_ElemWiseUnaryOp<"clamp"> {
+def Tosa_ClampOp : Tosa_ElementwiseOp<"clamp"> {
   let summary = "Computes clamp(features, min, max).";
 
   let description = [{
@@ -374,7 +374,7 @@ def Tosa_ClampOp : Tosa_ElemWiseUnaryOp<"clamp"> {
 //===----------------------------------------------------------------------===//
 // Operator: sigmoid
 //===----------------------------------------------------------------------===//
-def Tosa_SigmoidOp : Tosa_ElemWiseUnaryOp<"sigmoid"> {
+def Tosa_SigmoidOp : Tosa_ElementwiseOp<"sigmoid"> {
   let summary = "Computes elementwise sigmoid of input.";
 
   let description = [{
@@ -397,7 +397,7 @@ def Tosa_SigmoidOp : Tosa_ElemWiseUnaryOp<"sigmoid"> {
 //===----------------------------------------------------------------------===//
 // Operator: tanh
 //===----------------------------------------------------------------------===//
-def Tosa_TanhOp : Tosa_ElemWiseUnaryOp<"tanh"> {
+def Tosa_TanhOp : Tosa_ElementwiseOp<"tanh", [SameOperandsAndResultElementType]> {
   let summary = "Computes elementwise hyperbolic tangent of input";
 
   let description = [{
@@ -451,7 +451,9 @@ def Tosa_ErfOp : Tosa_Op<"erf", [
 //===----------------------------------------------------------------------===//
 // Operator: add
 //===----------------------------------------------------------------------===//
-def Tosa_AddOp : Tosa_ElemWiseBinaryOp<"add", [Commutative]> {
+def Tosa_AddOp : Tosa_ElementwiseOp<"add", [
+    Commutative,
+    SameOperandsAndResultElementType]> {
   let summary = "Elementwise addition operator";
 
   let description = [{
@@ -474,7 +476,8 @@ def Tosa_AddOp : Tosa_ElemWiseBinaryOp<"add", [Commutative]> {
 //===----------------------------------------------------------------------===//
 // Operator: arithmetic_right_shift
 //===----------------------------------------------------------------------===//
-def Tosa_ArithmeticRightShiftOp : Tosa_ElemWiseBinaryOp<"arithmetic_right_shift"> {
+def Tosa_ArithmeticRightShiftOp : Tosa_ElementwiseOp<"arithmetic_right_shift",
+    [SameOperandsAndResultElementType]> {
   let summary = "Elementwise Arithmetic Right Shift";
 
   let description = [{
@@ -496,7 +499,9 @@ def Tosa_ArithmeticRightShiftOp : Tosa_ElemWiseBinaryOp<"arithmetic_right_shift"
 //===----------------------------------------------------------------------===//
 // Operator: bitwise_and
 //===----------------------------------------------------------------------===//
-def Tosa_BitwiseAndOp : Tosa_ElemWiseBinaryOp<"bitwise_and", [Commutative]> {
+def Tosa_BitwiseAndOp : Tosa_ElementwiseOp<"bitwise_and", [
+    Commutative,
+    SameOperandsAndResultElementType]> {
   let summary = "Bitwise AND operator";
 
   let description = [{
@@ -517,7 +522,9 @@ def Tosa_BitwiseAndOp : Tosa_ElemWiseBinaryOp<"bitwise_and", [Commutative]> {
 //===----------------------------------------------------------------------===//
 // Operator: bitwise_or
 //===----------------------------------------------------------------------===//
-def Tosa_BitwiseOrOp : Tosa_ElemWiseBinaryOp<"bitwise_or", [Commutative]> {
+def Tosa_BitwiseOrOp : Tosa_ElementwiseOp<"bitwise_or", [
+    Commutative,
+    SameOperandsAndResultElementType]> {
   let summary = "Bitwise OR operator";
 
   let description = [{
@@ -538,7 +545,9 @@ def Tosa_BitwiseOrOp : Tosa_ElemWiseBinaryOp<"bitwise_or", [Commutative]> {
 //===----------------------------------------------------------------------===//
 // Operator: bitwise_xor
 //===----------------------------------------------------------------------===//
-def Tosa_BitwiseXorOp : Tosa_ElemWiseBinaryOp<"bitwise_xor", [Commutative]> {
+def Tosa_BitwiseXorOp : Tosa_ElementwiseOp<"bitwise_xor", [
+    Commutative,
+    SameOperandsAndResultElementType]> {
   let summary = "Bitwise XOR operator";
 
   let description = [{
@@ -559,7 +568,7 @@ def Tosa_BitwiseXorOp : Tosa_ElemWiseBinaryOp<"bitwise_xor", [Commutative]> {
 //===----------------------------------------------------------------------===//
 // Operator: div
 //===----------------------------------------------------------------------===//
-def Tosa_DivOp : Tosa_ElemWiseBinaryOp<"div"> {
+def Tosa_DivOp : Tosa_ElementwiseOp<"div", [SameOperandsAndResultElementType]> {
   let summary = "Integer divide operator";
 
   let description = [{
@@ -582,7 +591,9 @@ def Tosa_DivOp : Tosa_ElemWiseBinaryOp<"div"> {
 //===----------------------------------------------------------------------===//
 // Operator: logical_and
 //===----------------------------------------------------------------------===//
-def Tosa_LogicalAndOp : Tosa_ElemWiseBinaryOp<"logical_and", [Commutative]> {
+def Tosa_LogicalAndOp : Tosa_ElementwiseOp<"logical_and", [
+    Commutative,
+    SameOperandsAndResultElementType]> {
   let summary = "Returns the truth value of x AND y element-wise.";
 
   let description = [{
@@ -603,7 +614,8 @@ def Tosa_LogicalAndOp : Tosa_ElemWiseBinaryOp<"logical_and", [Commutative]> {
 //===----------------------------------------------------------------------===//
 // Operator: logical_left_shift
 //===----------------------------------------------------------------------===//
-def Tosa_LogicalLeftShiftOp : Tosa_ElemWiseBinaryOp<"logical_left_shift"> {
+def Tosa_LogicalLeftShiftOp : Tosa_ElementwiseOp<"logical_left_shift",
+    [SameOperandsAndResultElementType]> {
   let summary = "Elementwise Logical Left Shift";
 
   let description = [{
@@ -624,7 +636,8 @@ def Tosa_LogicalLeftShiftOp : Tosa_ElemWiseBinaryOp<"logical_left_shift"> {
 //===----------------------------------------------------------------------===//
 // Operator: logical_right_shift
 //===----------------------------------------------------------------------===//
-def Tosa_LogicalRightShiftOp : Tosa_ElemWiseBinaryOp<"logical_right_shift"> {
+def Tosa_LogicalRightShiftOp : Tosa_ElementwiseOp<"logical_right_shift",
+    [SameOperandsAndResultElementType]> {
   let summary = "Elementwise Logical Right Shift";
 
   let description = [{
@@ -645,7 +658,9 @@ def Tosa_LogicalRightShiftOp : Tosa_ElemWiseBinaryOp<"logical_right_shift"> {
 //===----------------------------------------------------------------------===//
 // Operator: logical_or
 //===----------------------------------------------------------------------===//
-def Tosa_LogicalOrOp : Tosa_ElemWiseBinaryOp<"logical_or", [Commutative]> {
+def Tosa_LogicalOrOp : Tosa_ElementwiseOp<"logical_or", [
+    Commutative,
+    SameOperandsAndResultElementType]> {
   let summary = "Returns the truth value of x OR y element-wise.";
 
   let description = [{
@@ -666,7 +681,9 @@ def Tosa_LogicalOrOp : Tosa_ElemWiseBinaryOp<"logical_or", [Commutative]> {
 //===----------------------------------------------------------------------===//
 // Operator: logical_xor
 //===----------------------------------------------------------------------===//
-def Tosa_LogicalXorOp : Tosa_ElemWiseBinaryOp<"logical_xor", [Commutative]> {
+def Tosa_LogicalXorOp : Tosa_ElementwiseOp<"logical_xor", [
+    Commutative,
+    SameOperandsAndResultElementType]> {
   let summary = "Returns the truth value of x XOR y element-wise.";
 
   let description = [{
@@ -687,7 +704,9 @@ def Tosa_LogicalXorOp : Tosa_ElemWiseBinaryOp<"logical_xor", [Commutative]> {
 //===----------------------------------------------------------------------===//
 // Operator: maximum
 //===----------------------------------------------------------------------===//
-def Tosa_MaximumOp : Tosa_ElemWiseBinaryOp<"maximum", [Commutative]> {
+def Tosa_MaximumOp : Tosa_ElementwiseOp<"maximum", [
+    Commutative,
+    SameOperandsAndResultElementType]> {
   let summary = "Elementwise Maximum";
 
   let description = [{
@@ -708,7 +727,9 @@ def Tosa_MaximumOp : Tosa_ElemWiseBinaryOp<"maximum", [Commutative]> {
 //===----------------------------------------------------------------------===//
 // Operator: minimum
 //===----------------------------------------------------------------------===//
-def Tosa_MinimumOp : Tosa_ElemWiseBinaryOp<"minimum", [Commutative]> {
+def Tosa_MinimumOp : Tosa_ElementwiseOp<"minimum", [
+    Commutative,
+    SameOperandsAndResultElementType]> {
   let summary = "Elementwise Minimum";
 
   let description = [{
@@ -729,7 +750,9 @@ def Tosa_MinimumOp : Tosa_ElemWiseBinaryOp<"minimum", [Commutative]> {
 //===----------------------------------------------------------------------===//
 // Operator: mul
 //===----------------------------------------------------------------------===//
-def Tosa_MulOp : Tosa_ElemWiseBinaryOp<"mul", [Commutative]> {
+def Tosa_MulOp : Tosa_ElementwiseOp<"mul", [
+    Commutative,
+    SameOperandsAndResultElementType]> {
   let summary = "Multiplication operator";
 
   let description = [{
@@ -754,7 +777,7 @@ def Tosa_MulOp : Tosa_ElemWiseBinaryOp<"mul", [Commutative]> {
 //===----------------------------------------------------------------------===//
 // Operator: pow
 //===----------------------------------------------------------------------===//
-def Tosa_PowOp : Tosa_ElemWiseBinaryOp<"pow"> {
+def Tosa_PowOp : Tosa_ElementwiseOp<"pow", [SameOperandsAndResultElementType]> {
   let summary = "Computes the power of one value to another.";
 
   let description = [{
@@ -775,7 +798,7 @@ def Tosa_PowOp : Tosa_ElemWiseBinaryOp<"pow"> {
 //===----------------------------------------------------------------------===//
 // Operator: sub
 //===----------------------------------------------------------------------===//
-def Tosa_SubOp : Tosa_ElemWiseBinaryOp<"sub"> {
+def Tosa_SubOp : Tosa_ElementwiseOp<"sub", [SameOperandsAndResultElementType]> {
   let summary = "Elementwise subtraction operator";
 
   let description = [{
@@ -838,7 +861,7 @@ def Tosa_TableOp : Tosa_Op<"table", [InferShapedTypeOpAdaptor, Pure]> {
 //===----------------------------------------------------------------------===//
 // Operator: abs
 //===----------------------------------------------------------------------===//
-def Tosa_AbsOp : Tosa_ElemWiseUnaryOp<"abs"> {
+def Tosa_AbsOp : Tosa_ElementwiseOp<"abs", [SameOperandsAndResultElementType]> {
   let summary = "Elementwise abs op";
 
   let description = [{
@@ -859,7 +882,8 @@ def Tosa_AbsOp : Tosa_ElemWiseUnaryOp<"abs"> {
 //===----------------------------------------------------------------------===//
 // Operator: bitwise_not
 //===----------------------------------------------------------------------===//
-def Tosa_BitwiseNotOp : Tosa_ElemWiseUnaryOp<"bitwise_not"> {
+def Tosa_BitwiseNotOp : Tosa_ElementwiseOp<"bitwise_not",
+    [SameOperandsAndResultElementType]> {
   let summary = "Bitwise NOT operator";
 
   let description = [{
@@ -878,7 +902,7 @@ def Tosa_BitwiseNotOp : Tosa_ElemWiseUnaryOp<"bitwise_not"> {
 //===----------------------------------------------------------------------===//
 // Operator: ceil
 //===----------------------------------------------------------------------===//
-def Tosa_CeilOp : Tosa_ElemWiseUnaryOp<"ceil"> {
+def Tosa_CeilOp : Tosa_ElementwiseOp<"ceil", [SameOperandsAndResultElementType]> {
   let summary = "Elementwise ceil op";
 
   let description = [{
@@ -897,7 +921,7 @@ def Tosa_CeilOp : Tosa_ElemWiseUnaryOp<"ceil"> {
 //===----------------------------------------------------------------------===//
 // Operator: clz
 //===----------------------------------------------------------------------===//
-def Tosa_ClzOp : Tosa_ElemWiseUnaryOp<"clz"> {
+def Tosa_ClzOp : Tosa_ElementwiseOp<"clz", [SameOperandsAndResultElementType]> {
   let summary = "Elementwise count leading zero op";
 
   let description = [{
@@ -916,7 +940,7 @@ def Tosa_ClzOp : Tosa_ElemWiseUnaryOp<"clz"> {
 //===----------------------------------------------------------------------===//
 // Operator: exp
 //===----------------------------------------------------------------------===//
-def Tosa_ExpOp : Tosa_ElemWiseUnaryOp<"exp"> {
+def Tosa_ExpOp : Tosa_ElementwiseOp<"exp", [SameOperandsAndResultElementType]> {
   let summary = "Elementwise exp op";
 
   let description = [{
@@ -937,7 +961,7 @@ def Tosa_ExpOp : Tosa_ElemWiseUnaryOp<"exp"> {
 //===----------------------------------------------------------------------===//
 // Operator: floor
 //===----------------------------------------------------------------------===//
-def Tosa_FloorOp : Tosa_ElemWiseUnaryOp<"floor"> {
+def Tosa_FloorOp : Tosa_ElementwiseOp<"floor", [SameOperandsAndResultElementType]> {
   let summary = "Elementwise floor op";
 
   let description = [{
@@ -956,7 +980,7 @@ def Tosa_FloorOp : Tosa_ElemWiseUnaryOp<"floor"> {
 //===----------------------------------------------------------------------===//
 // Operator: log
 //===----------------------------------------------------------------------===//
-def Tosa_LogOp : Tosa_ElemWiseUnaryOp<"log"> {
+def Tosa_LogOp : Tosa_ElementwiseOp<"log", [SameOperandsAndResultElementType]> {
   let summary = "Elementwise log op";
 
   let description = [{
@@ -977,7 +1001,8 @@ def Tosa_LogOp : Tosa_ElemWiseUnaryOp<"log"> {
 //===----------------------------------------------------------------------===//
 // Operator: logical_not
 //===----------------------------------------------------------------------===//
-def Tosa_LogicalNotOp : Tosa_ElemWiseUnaryOp<"logical_not"> {
+def Tosa_LogicalNotOp : Tosa_ElementwiseOp<"logical_not",
+    [SameOperandsAndResultElementType]> {
   let summary = "Returns the truth value of NOT x element-wise.";
 
   let description = [{
@@ -996,7 +1021,8 @@ def Tosa_LogicalNotOp : Tosa_ElemWiseUnaryOp<"logical_not"> {
 //===----------------------------------------------------------------------===//
 // Operator: negate
 //===----------------------------------------------------------------------===//
-def Tosa_NegateOp : Tosa_ElemWiseUnaryOp<"negate"> {
+def Tosa_NegateOp : Tosa_ElementwiseOp<"negate",
+    [SameOperandsAndResultElementType]> {
   let summary = "Elementwise negate op";
 
   let description = [{
@@ -1020,7 +1046,8 @@ def Tosa_NegateOp : Tosa_ElemWiseUnaryOp<"negate"> {
 //===----------------------------------------------------------------------===//
 // Operator: reciprocal
 //===----------------------------------------------------------------------===//
-def Tosa_ReciprocalOp : Tosa_ElemWiseUnaryOp<"reciprocal"> {
+def Tosa_ReciprocalOp : Tosa_ElementwiseOp<"reciprocal",
+    [SameOperandsAndResultElementType]> {
   let summary = "Elementwise reciprocal op";
 
   let description = [{
@@ -1040,7 +1067,8 @@ def Tosa_ReciprocalOp : Tosa_ElemWiseUnaryOp<"reciprocal"> {
 //===----------------------------------------------------------------------===//
 // Operator: rsqrt
 //===----------------------------------------------------------------------===//
-def Tosa_RsqrtOp : Tosa_ElemWiseUnaryOp<"rsqrt"> {
+def Tosa_RsqrtOp : Tosa_ElementwiseOp<"rsqrt",
+    [SameOperandsAndResultElementType]> {
   let summary = "Elementwise 1/sqrt op";
 
   let description = [{
@@ -1066,9 +1094,7 @@ def Tosa_RsqrtOp : Tosa_ElemWiseUnaryOp<"rsqrt"> {
 //===----------------------------------------------------------------------===//
 // Operator: select
 //===----------------------------------------------------------------------===//
-def Tosa_SelectOp : Tosa_Op<"select", [
-    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>, Pure]> {
+def Tosa_SelectOp : Tosa_ElementwiseOp<"select"> {
   let summary = "Elementwise select operator";
 
   let description = [{
@@ -1096,8 +1122,10 @@ def Tosa_SelectOp : Tosa_Op<"select", [
 //===----------------------------------------------------------------------===//
 // Operator: equal
 //===----------------------------------------------------------------------===//
-def Tosa_EqualOp : Tosa_Op<"equal", [InferTensorType, ResultsBroadcastableShape,
-    Commutative, Pure, SameOperandsElementType]> {
+def Tosa_EqualOp : Tosa_ElementwiseOp<"equal", [
+    InferTensorType,
+    Commutative,
+    SameOperandsElementType]> {
   let summary = "Returns the truth value of (x == y) element-wise.";
 
   let description = [{
@@ -1125,10 +1153,7 @@ def Tosa_EqualOp : Tosa_Op<"equal", [InferTensorType, ResultsBroadcastableShape,
 //===----------------------------------------------------------------------===//
 // Operator: greater
 //===----------------------------------------------------------------------===//
-def Tosa_GreaterOp : Tosa_Op<"greater", [
-    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>,
-    ResultsBroadcastableShape, Pure, SameOperandsElementType]> {
+def Tosa_GreaterOp : Tosa_ElementwiseOp<"greater", [SameOperandsElementType]> {
   let summary = "Returns the truth value of (x > y) element-wise.";
 
   let description = [{
@@ -1150,10 +1175,8 @@ def Tosa_GreaterOp : Tosa_Op<"greater", [
 //===----------------------------------------------------------------------===//
 // Operator: greater_equal
 //===----------------------------------------------------------------------===//
-def Tosa_GreaterEqualOp : Tosa_Op<"greater_equal", [
-    DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                              ["inferReturnTypeComponents"]>,
-    ResultsBroadcastableShape, Pure, SameOperandsElementType]> {
+def Tosa_GreaterEqualOp : Tosa_ElementwiseOp<"greater_equal",
+    [SameOperandsElementType]> {
   let summary = "Returns the truth value of (x >= y) element-wise.";
 
   let description = [{
