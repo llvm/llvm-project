@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-dwarfdump.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringSet.h"
@@ -470,7 +471,7 @@ static void filterByAccelName(ArrayRef<std::string> Names, DWARFContext &DICtx,
 static void findAllApple(
     DWARFContext &DICtx, raw_ostream &OS,
     std::function<StringRef(uint64_t RegNum, bool IsEH)> GetNameForDWARFReg) {
-  StringMap<llvm::SmallSet<DWARFDie, 2>> NameToDies;
+  MapVector<StringRef, llvm::SmallSet<DWARFDie, 2>> NameToDies;
 
   auto PushDIEs = [&](const AppleAcceleratorTable &Accel) {
     for (const auto &Entry : Accel.entries()) {

@@ -20,6 +20,7 @@
 #include "GlobalISelMatchTableExecutorEmitter.h"
 #include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/Hashing.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
@@ -552,7 +553,7 @@ private:
   /// Set by findRoots.
   Pattern *MatchRoot = nullptr;
 
-  StringMap<OperandTableEntry> OperandTable;
+  MapVector<StringRef, OperandTableEntry> OperandTable;
   SmallVector<MatchDataInfo, 2> MatchDatas;
 };
 
@@ -640,9 +641,8 @@ void CombineRuleBuilder::print(raw_ostream &OS) const {
     OS << "<empty>)\n";
   else {
     OS << "\n";
-    for (const auto &Entry : OperandTable) {
-      OS << "    [" << Entry.getKey();
-      auto &Val = Entry.getValue();
+    for (const auto &[Key, Val] : OperandTable) {
+      OS << "    [" << Key;
       if (const auto *P = Val.MatchPat)
         OS << " match_pat:" << P->getName();
       if (const auto *P = Val.ApplyPat)
@@ -1106,7 +1106,7 @@ bool CombineRuleBuilder::emitInstructionMatchPattern(
 
   unsigned OpIdx = 0;
   for (auto &O : P.operands()) {
-    auto &OpTableEntry = OperandTable.at(O.Name);
+    auto &OpTableEntry = OperandTable.find(O.Name)->second;
 
     OperandMatcher &OM =
         IM.addOperand(OpIdx++, O.Name, AllocatedTemporariesBaseID++);
