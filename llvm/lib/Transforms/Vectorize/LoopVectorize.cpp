@@ -5784,7 +5784,7 @@ LoopVectorizationCostModel::selectInterleaveCount(ElementCount VF,
     return 1;
 
   // We used the distance for the interleave count.
-  if (Legal->getMaxSafeDepDistBytes() != -1U)
+  if (!Legal->isSafeForAnyVectorWidth())
     return 1;
 
   auto BestKnownTC = getSmallBestKnownTC(*PSE.getSE(), TheLoop);
