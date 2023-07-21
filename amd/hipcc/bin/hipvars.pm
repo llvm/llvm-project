@@ -26,7 +26,7 @@ use Cwd;
 use File::Basename;
 
 $HIP_BASE_VERSION_MAJOR = "5";
-$HIP_BASE_VERSION_MINOR = "5";
+$HIP_BASE_VERSION_MINOR = "7";
 $HIP_BASE_VERSION_PATCH = "0";
 
 #---
@@ -154,7 +154,11 @@ if ($HIP_COMPILER eq "clang") {
 #---
 # Read .hipVersion
 my %hipVersion = ();
-parse_config_file("$hipvars::HIP_PATH/bin/.hipVersion", \%hipVersion);
+if ($isWindows) {
+    parse_config_file("$hipvars::HIP_PATH/bin/.hipVersion", \%hipVersion);
+} else {
+    parse_config_file("$hipvars::HIP_PATH/share/hip/version", \%hipVersion);
+}
 $HIP_VERSION_MAJOR = $hipVersion{'HIP_VERSION_MAJOR'} // $HIP_BASE_VERSION_MAJOR;
 $HIP_VERSION_MINOR = $hipVersion{'HIP_VERSION_MINOR'} // $HIP_BASE_VERSION_MINOR;
 $HIP_VERSION_PATCH = $hipVersion{'HIP_VERSION_PATCH'} // $HIP_BASE_VERSION_PATCH;
