@@ -494,7 +494,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
   static constexpr llvm::ArrayRef<llvm::StringLiteral> NAME(                   \
       NAME##_init, std::size(NAME##_init) - 1);
 #define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
-               FLAGS, PARAM, HELP, METAVAR, VALUES)                            \
+               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
   Prefixes[DriverID::OPT_##ID] = PREFIX;
 #include "clang/Driver/Options.inc"
 #undef OPTION
@@ -506,7 +506,7 @@ llvm::ArrayRef<ArgStripper::Rule> ArgStripper::rulesFor(llvm::StringRef Arg) {
       const void *AliasArgs;
     } AliasTable[] = {
 #define OPTION(PREFIX, PREFIXED_NAME, ID, KIND, GROUP, ALIAS, ALIASARGS,       \
-               FLAGS, PARAM, HELP, METAVAR, VALUES)                            \
+               FLAGS, VISIBILITY, PARAM, HELP, METAVAR, VALUES)                \
   {DriverID::OPT_##ID, DriverID::OPT_##ALIAS, ALIASARGS},
 #include "clang/Driver/Options.inc"
 #undef OPTION
