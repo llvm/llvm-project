@@ -134,9 +134,11 @@ public:
               // a name given by LLVM which could theoretically change. Luckily,
               // this should all go away once we only move variables to the
               // shadowstack that have their reference taken.
-              if (ST->getName() == "YkCtrlPointVars" ||
-                  ST->getName() == "struct.YkLocation") {
-                continue;
+              if (!ST->isLiteral()) {
+                if (ST->getName() == "YkCtrlPointVars" ||
+                    ST->getName() == "struct.YkLocation") {
+                  continue;
+                }
               }
             }
             Builder.SetInsertPoint(&I);
