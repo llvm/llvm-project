@@ -635,3 +635,18 @@ func.func @async_tma_load(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2d
   func.return 
 }
 
+// -----
+
+!barrierType = !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+module @find_parent{
+  func.func @main()  {
+  %c1 = arith.constant 1 : index   
+    gpu.launch blocks(%bx, %by, %bz) in (%grid_x = %c1, %grid_y = %c1, %grid_z = %c1)
+          threads(%tx, %ty, %tz) in (%block_x = %c1, %block_y = %c1, %block_z = %c1) {
+          // CHECK: memref.get_global @__mbarrier : memref<1xi64, 3>
+          %barrier = nvgpu.mbarrier.create -> !barrierType
+          gpu.terminator
+    }
+    func.return 
+  }
+}

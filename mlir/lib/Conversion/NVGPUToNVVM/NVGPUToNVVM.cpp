@@ -744,14 +744,13 @@ struct NVGPUMBarrierCreateLowering
   matchAndRewrite(nvgpu::MBarrierCreateOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Operation *funcOp = op->getParentOp();
-    Operation *mOp = funcOp->getParentOp();
     MemRefType barrierType =
         createMBarrierMemrefType(rewriter, op.getBarrier().getType());
 
     memref::GlobalOp global;
-    if (auto moduleOp = dyn_cast<gpu::GPUModuleOp>(mOp))
+    if (auto moduleOp = funcOp->getParentOfType<gpu::GPUModuleOp>())
       global = generateGlobalBarrier(rewriter, funcOp, moduleOp, barrierType);
-    else if (auto moduleOp = dyn_cast<ModuleOp>(mOp))
+    else if (auto moduleOp = funcOp->getParentOfType<ModuleOp>())
       global = generateGlobalBarrier(rewriter, funcOp, moduleOp, barrierType);
 
     rewriter.setInsertionPoint(op);
