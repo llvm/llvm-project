@@ -1130,6 +1130,30 @@ class RegOrF16 <string RegisterClass, string OperandTypePrefix>
   : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
                      !subst("_f16", "F16", NAME), "_Imm16">;
 
+class RegOrB16T <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT16",
+                     !subst("_b16", "B16", NAME), "_Imm16"> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
+
+class RegOrF16T <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
+                     !subst("_f16", "F16", NAME), "_Imm16"> {
+  let EncoderMethod = "getMachineOpValueT16";
+}
+
+class RegOrB16_Lo128T <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT16",
+                     !subst("_b16_Lo128", "B16_Lo128", NAME), "_Imm16"> {
+  let EncoderMethod = "getMachineOpValueT16Lo128";
+}
+
+class RegOrF16_Lo128T <string RegisterClass, string OperandTypePrefix>
+  : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16",
+                     !subst("_f16_Lo128", "F16_Lo128", NAME), "_Imm16"> {
+  let EncoderMethod = "getMachineOpValueT16Lo128";
+}
+
 class RegOrB32 <string RegisterClass, string OperandTypePrefix>
   : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_INT32",
                      !subst("_b32", "B32", NAME), "_Imm32">;
@@ -1185,6 +1209,7 @@ class RegOrF16_Lo128_Deferred <string RegisterClass,
   : RegOrImmOperand <RegisterClass, OperandTypePrefix # "_FP16_DEFERRED",
                      !subst("_f16_Lo128_Deferred", "F16_Lo128", NAME),
                      "_Deferred_Imm16">;
+
 //===----------------------------------------------------------------------===//
 //  SSrc_* Operands with an SGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
@@ -1215,8 +1240,30 @@ def SCSrc_b64 : RegOrB64 <"SReg_64", "OPERAND_REG_INLINE_C">;
 //  VSrc_* Operands with an SGPR, VGPR or a 32-bit immediate
 //===----------------------------------------------------------------------===//
 
+// The current and temporary future default used case for VOP3.
 def VSrc_b16 : RegOrB16 <"VS_32", "OPERAND_REG_IMM">;
 def VSrc_f16 : RegOrF16 <"VS_32", "OPERAND_REG_IMM">;
+
+// True16 VOP3 operands.
+def VSrcT_b16 : RegOrB16T <"VS_16", "OPERAND_REG_IMM"> {
+  let DecoderMethod = "decodeOperand_VSrcT16";
+}
+def VSrcT_f16 : RegOrF16T <"VS_16", "OPERAND_REG_IMM"> {
+  let DecoderMethod = "decodeOperand_VSrcT16";
+}
+
+// True16 VOP1/2/C operands.
+def VSrcT_b16_Lo128 : RegOrB16_Lo128T <"VS_16_Lo128", "OPERAND_REG_IMM"> {
+  let DecoderMethod = "decodeOperand_VSrcT16_Lo128";
+}
+def VSrcT_f16_Lo128 : RegOrF16_Lo128T <"VS_16_Lo128", "OPERAND_REG_IMM"> {
+  let DecoderMethod = "decodeOperand_VSrcT16_Lo128";
+}
+
+// The current and temporary future default used case for fake VOP1/2/C.
+def VSrcFake16_b16_Lo128 : RegOrB16_Lo128 <"VS_32_Lo128", "OPERAND_REG_IMM">;
+def VSrcFake16_f16_Lo128 : RegOrF16_Lo128 <"VS_32_Lo128", "OPERAND_REG_IMM">;
+
 def VSrc_b32 : RegOrB32 <"VS_32", "OPERAND_REG_IMM">;
 def VSrc_f32 : RegOrF32 <"VS_32", "OPERAND_REG_IMM">;
 def VSrc_v2b16 : RegOrV2B16 <"VS_32", "OPERAND_REG_IMM">;
@@ -1226,9 +1273,6 @@ def VSrc_f64 : RegOrF64 <"VS_64", "OPERAND_REG_IMM">;
 def VSrc_v2b32 : RegOrV2B32 <"VS_64", "OPERAND_REG_IMM">;
 def VSrc_v2f32 : RegOrV2F32 <"VS_64", "OPERAND_REG_IMM">;
 
-def VSrcT_b16_Lo128 : RegOrB16_Lo128 <"VS_32_Lo128", "OPERAND_REG_IMM">;
-def VSrcT_f16_Lo128 : RegOrF16_Lo128 <"VS_32_Lo128", "OPERAND_REG_IMM">;
-
 //===----------------------------------------------------------------------===//
 //  VSrc_*_Deferred Operands with an SGPR, VGPR or a 32-bit immediate for use
 //  with FMAMK/FMAAK
@@ -1237,8 +1281,8 @@ def VSrcT_f16_Lo128 : RegOrF16_Lo128 <"VS_32_Lo128", "OPERAND_REG_IMM">;
 def VSrc_f16_Deferred : RegOrF16_Deferred<"VS_32", "OPERAND_REG_IMM">;
 def VSrc_f32_Deferred : RegOrF32_Deferred<"VS_32", "OPERAND_REG_IMM">;
 
-def VSrcT_f16_Lo128_Deferred : RegOrF16_Lo128_Deferred<"VS_32_Lo128",
-                                                       "OPERAND_REG_IMM">;
+def VSrcFake16_f16_Lo128_Deferred : RegOrF16_Lo128_Deferred<"VS_32_Lo128",
+                                                            "OPERAND_REG_IMM">;
 
 //===----------------------------------------------------------------------===//
 //  VRegSrc_* Operands with a VGPR
@@ -1276,6 +1320,11 @@ def VGPRSrc_32 : RegisterOperand<VGPR_32> {
 }
 def VGPRSrc_32_Lo128 : RegisterOperand<VGPR_32_Lo128> {
   let DecoderMethod = "DecodeVGPR_32RegisterClass";
+}
+
+def VGPRSrc_16_Lo128 : RegisterOperand<VGPR_16_Lo128> {
+  let DecoderMethod = "DecodeVGPR_16_Lo128RegisterClass";
+  let EncoderMethod = "getMachineOpValueT16Lo128";
 }
 
 //===----------------------------------------------------------------------===//
