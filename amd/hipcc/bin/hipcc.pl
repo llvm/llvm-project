@@ -133,11 +133,7 @@ $HIP_VERSION    =   $hipvars::HIP_VERSION;
 $HIP_ROCCLR_HOME =   $hipvars::HIP_ROCCLR_HOME;
 
 sub get_normalized_path {
-    if ($isWindows) {
-      return $doubleQuote . $_[0] . $doubleQuote;
-    } else {
-      return $_[0];
-    }
+  return $doubleQuote . $_[0] . $doubleQuote;
 }
 
 if ($HIP_PLATFORM eq "amd") {
