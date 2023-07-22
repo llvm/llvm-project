@@ -2,7 +2,7 @@
 // RUN: %clang_lsan %s -o %t
 // RUN: %run %t 2>&1
 
-#include <cstdint>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 
