@@ -1223,9 +1223,9 @@ static Value *findBasePointer(Value *I, DefiningValueMapTy &Cache,
       if (!BdvSV->isZeroEltSplat())
         UpdateOperand(1); // vector operand
       else {
-        // Never read, so just use undef
+        // Never read, so just use poison
         Value *InVal = BdvSV->getOperand(1);
-        BaseSV->setOperand(1, UndefValue::get(InVal->getType()));
+        BaseSV->setOperand(1, PoisonValue::get(InVal->getType()));
       }
     }
   }
@@ -2956,9 +2956,9 @@ static void stripNonValidDataFromBody(Function &F) {
     }
   }
 
-  // Delete the invariant.start instructions and RAUW undef.
+  // Delete the invariant.start instructions and RAUW poison.
   for (auto *II : InvariantStartInstructions) {
-    II->replaceAllUsesWith(UndefValue::get(II->getType()));
+    II->replaceAllUsesWith(PoisonValue::get(II->getType()));
     II->eraseFromParent();
   }
 }
