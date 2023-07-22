@@ -379,8 +379,8 @@ Cookie IONAME(BeginOpenUnit)( // OPEN(without NEWUNIT=)
           IostatBadOpOnChildUnit, nullptr /* no unit */, sourceFile,
           sourceLine);
     } else {
-      return &unit->BeginIoStatement<OpenStatementState>(
-          terminator, *unit, wasExtant, sourceFile, sourceLine);
+      return &unit->BeginIoStatement<OpenStatementState>(terminator, *unit,
+          wasExtant, false /*not NEWUNIT=*/, sourceFile, sourceLine);
     }
   } else {
     return NoopUnit(terminator, unitNumber, IostatBadUnitNumber);
@@ -392,8 +392,9 @@ Cookie IONAME(BeginOpenNewUnit)( // OPEN(NEWUNIT=j)
   Terminator terminator{sourceFile, sourceLine};
   ExternalFileUnit &unit{
       ExternalFileUnit::NewUnit(terminator, false /*not child I/O*/)};
-  return &unit.BeginIoStatement<OpenStatementState>(
-      terminator, unit, false /*was an existing file*/, sourceFile, sourceLine);
+  return &unit.BeginIoStatement<OpenStatementState>(terminator, unit,
+      false /*was an existing file*/, true /*NEWUNIT=*/, sourceFile,
+      sourceLine);
 }
 
 Cookie IONAME(BeginWait)(ExternalUnit unitNumber, AsynchronousId id,
