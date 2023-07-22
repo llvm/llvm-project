@@ -115,15 +115,17 @@ applyPatternsAndFoldGreedily(Operation *op,
                              const FrozenRewritePatternSet &patterns,
                              GreedyRewriteConfig config = GreedyRewriteConfig(),
                              bool *changed = nullptr) {
+  bool anyRegionChanged = false;
   bool failed = false;
   for (Region &region : op->getRegions()) {
     bool regionChanged;
     failed |=
         applyPatternsAndFoldGreedily(region, patterns, config, &regionChanged)
             .failed();
-    if (changed)
-      *changed |= regionChanged;
+    anyRegionChanged |= regionChanged;
   }
+  if (changed)
+    *changed = anyRegionChanged;
   return failure(failed);
 }
 
