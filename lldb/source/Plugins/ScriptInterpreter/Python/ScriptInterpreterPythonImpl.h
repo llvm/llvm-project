@@ -83,6 +83,9 @@ public:
                            std::string &error_str,
                            lldb::ThreadPlanSP thread_plan) override;
 
+  StructuredData::ObjectSP
+  CreateStructuredDataFromScriptObject(ScriptObject obj) override;
+
   bool ScriptedThreadPlanExplainsStop(StructuredData::ObjectSP implementor_sp,
                                       Event *event,
                                       bool &script_error) override;

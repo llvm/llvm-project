@@ -1519,6 +1519,17 @@ ScriptInterpreterPythonImpl::CreateScriptedProcessInterface() {
   return std::make_unique<ScriptedProcessPythonInterface>(*this);
 }
 
+StructuredData::ObjectSP
+ScriptInterpreterPythonImpl::CreateStructuredDataFromScriptObject(
+    ScriptObject obj) {
+  void *ptr = const_cast<void *>(obj.GetPointer());
+  PythonObject py_obj(PyRefType::Borrowed, static_cast<PyObject *>(ptr));
+  if (!py_obj.IsValid() || py_obj.IsNone())
+    return {};
+  Locker py_lock(this, Locker::AcquireLock | Locker::NoSTDIN, Locker::FreeLock);
+  return py_obj.CreateStructuredObject();
+}
+
 StructuredData::GenericSP
 ScriptInterpreterPythonImpl::OSPlugin_CreatePluginObject(
     const char *class_name, lldb::ProcessSP process_sp) {
