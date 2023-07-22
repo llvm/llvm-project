@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 %s -fsyntax-only -fdouble-square-bracket-attributes -verify
+// RUN: %clang_cc1 %s -fsyntax-only -verify
 
 const char *some_function();
 
