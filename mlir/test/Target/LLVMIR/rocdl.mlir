@@ -20,11 +20,11 @@ llvm.func @rocdl_special_regs() -> i32 {
   %8 = rocdl.workgroup.dim.y : i64
   // CHECK: call i64 @__ockl_get_local_size(i32 2)
   %9 = rocdl.workgroup.dim.z : i64
-  // CHECK: call i64 @__ockl_get_global_size(i32 0)
+  // CHECK: call i64 @__ockl_get_num_groups(i32 0)
   %10 = rocdl.grid.dim.x : i64
-  // CHECK: call i64 @__ockl_get_global_size(i32 1)
+  // CHECK: call i64 @__ockl_get_num_groups(i32 1)
   %11 = rocdl.grid.dim.y : i64
-  // CHECK: call i64 @__ockl_get_global_size(i32 2)
+  // CHECK: call i64 @__ockl_get_num_groups(i32 2)
   %12 = rocdl.grid.dim.z : i64
 
   // CHECK: call i32 @llvm.amdgcn.workitem.id.x(),{{.*}} !range ![[$RANGE:[0-9]+]]

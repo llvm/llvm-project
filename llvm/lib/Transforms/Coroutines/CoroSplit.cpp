@@ -576,7 +576,7 @@ void CoroCloner::replaceRetconOrAsyncSuspendUses() {
   if (NewS->use_empty()) return;
 
   // Otherwise, we need to create an aggregate.
-  Value *Agg = UndefValue::get(NewS->getType());
+  Value *Agg = PoisonValue::get(NewS->getType());
   for (size_t I = 0, E = Args.size(); I != E; ++I)
     Agg = Builder.CreateInsertValue(Agg, Args[I], I);
 
@@ -897,7 +897,7 @@ void CoroCloner::create() {
   // frame.
   SmallVector<Instruction *> DummyArgs;
   for (Argument &A : OrigF.args()) {
-    DummyArgs.push_back(new FreezeInst(UndefValue::get(A.getType())));
+    DummyArgs.push_back(new FreezeInst(PoisonValue::get(A.getType())));
     VMap[&A] = DummyArgs.back();
   }
 
@@ -1055,7 +1055,7 @@ void CoroCloner::create() {
   // All uses of the arguments should have been resolved by this point,
   // so we can safely remove the dummy values.
   for (Instruction *DummyArg : DummyArgs) {
-    DummyArg->replaceAllUsesWith(UndefValue::get(DummyArg->getType()));
+    DummyArg->replaceAllUsesWith(PoisonValue::get(DummyArg->getType()));
     DummyArg->deleteValue();
   }
 
@@ -1901,7 +1901,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
       if (ReturnPHIs.size() == 1) {
         RetV = CastedContinuation;
       } else {
-        RetV = UndefValue::get(RetTy);
+        RetV = PoisonValue::get(RetTy);
         RetV = Builder.CreateInsertValue(RetV, CastedContinuation, 0);
         for (size_t I = 1, E = ReturnPHIs.size(); I != E; ++I)
           RetV = Builder.CreateInsertValue(RetV, ReturnPHIs[I], I);

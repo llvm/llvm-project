@@ -364,6 +364,10 @@ define void @vector_reductions(float %0, <8 x float> %1, <8 x i32> %2) {
   %17 = call reassoc float @llvm.vector.reduce.fmul.v8f32(float %0, <8 x float> %1)
   ; CHECK:  "llvm.intr.vector.reduce.xor"(%{{.*}}) : (vector<8xi32>) -> i32
   %18 = call i32 @llvm.vector.reduce.xor.v8i32(<8 x i32> %2)
+  ; CHECK: llvm.intr.vector.reduce.fmaximum(%{{.*}}) : (vector<8xf32>) -> f32
+  %19 = call float @llvm.vector.reduce.fmaximum.v8f32(<8 x float> %1)
+  ; CHECK: llvm.intr.vector.reduce.fminimum(%{{.*}}) : (vector<8xf32>) -> f32
+  %20 = call float @llvm.vector.reduce.fminimum.v8f32(<8 x float> %1)
   ret void
 }
 
@@ -944,6 +948,8 @@ declare i32 @llvm.vector.reduce.add.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.and.v8i32(<8 x i32>)
 declare float @llvm.vector.reduce.fmax.v8f32(<8 x float>)
 declare float @llvm.vector.reduce.fmin.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fmaximum.v8f32(<8 x float>)
+declare float @llvm.vector.reduce.fminimum.v8f32(<8 x float>)
 declare i32 @llvm.vector.reduce.mul.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.or.v8i32(<8 x i32>)
 declare i32 @llvm.vector.reduce.smax.v8i32(<8 x i32>)

@@ -10165,6 +10165,7 @@ cc_library(
         ":TensorUtils",
         ":TosaDialect",
         ":Transforms",
+        "//llvm:Support",
     ],
 )
 

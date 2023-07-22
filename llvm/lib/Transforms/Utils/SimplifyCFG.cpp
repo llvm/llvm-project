@@ -3872,7 +3872,7 @@ static Value *ensureValueAvailableInSuccessor(Value *V, BasicBlock *BB,
   for (BasicBlock *PredBB : predecessors(Succ))
     if (PredBB != BB)
       PHI->addIncoming(
-          AlternativeV ? AlternativeV : UndefValue::get(V->getType()), PredBB);
+          AlternativeV ? AlternativeV : PoisonValue::get(V->getType()), PredBB);
   return PHI;
 }
 

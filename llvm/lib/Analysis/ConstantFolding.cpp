@@ -1976,7 +1976,7 @@ static Constant *constantFoldCanonicalize(const Type *Ty, const CallBase *CI,
     if (DenormMode == DenormalMode::getIEEE())
       return nullptr;
 
-    if (DenormMode == DenormalMode::getDynamic())
+    if (DenormMode.Input == DenormalMode::Dynamic)
       return nullptr;
 
     // If we know if either input or output is flushed, we can fold.
