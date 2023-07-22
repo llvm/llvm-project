@@ -32282,8 +32282,19 @@ static SDValue LowerFunnelShift(SDValue Op, const X86Subtarget &Subtarget,
 
     // fshl(x,y,z) -> unpack(y,x) << (z & (bw-1))) >> bw.
     // fshr(x,y,z) -> unpack(y,x) >> (z & (bw-1))).
-    if (IsCstSplat)
-      return SDValue();
+    if (IsCstSplat) {
+      // TODO: Can't use generic expansion as UNDEF amt elements can be
+      // converted to other values when folded to shift amounts, losing the
+      // splat.
+      uint64_t ShiftAmt = APIntShiftAmt.urem(EltSizeInBits);
+      uint64_t ShXAmt = IsFSHR ? (EltSizeInBits - ShiftAmt) : ShiftAmt;
+      uint64_t ShYAmt = IsFSHR ? ShiftAmt : (EltSizeInBits - ShiftAmt);
+      SDValue ShX = DAG.getNode(ISD::SHL, DL, VT, Op0,
+                                DAG.getShiftAmountConstant(ShXAmt, VT, DL));
+      SDValue ShY = DAG.getNode(ISD::SRL, DL, VT, Op1,
+                                DAG.getShiftAmountConstant(ShYAmt, VT, DL));
+      return DAG.getNode(ISD::OR, DL, VT, ShX, ShY);
+    }
 
     SDValue AmtMask = DAG.getConstant(EltSizeInBits - 1, DL, VT);
     SDValue AmtMod = DAG.getNode(ISD::AND, DL, VT, Amt, AmtMask);
