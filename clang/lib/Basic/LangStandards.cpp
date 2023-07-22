@@ -66,8 +66,6 @@ LangStandard::Kind clang::getDefaultLanguageStandard(clang::Language Lang,
   case Language::ObjCXX:
   case Language::CUDA:
   case Language::HIP:
-    if (T.isPS())
-      return LangStandard::lang_gnucxx14;
     return LangStandard::lang_gnucxx17;
   case Language::RenderScript:
     return LangStandard::lang_c99;
