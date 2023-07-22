@@ -58,7 +58,7 @@ Implemented Papers
 - P1206R7 - ``ranges::to``: A function to convert any range to a container
 - P2520R0 - ``move_iterator<T*>`` should be a random access iterator
 - P1328R1 - ``constexpr type_info::operator==()``
-- P1413R3 - Formatting ``thread::id`` (the ``stacktrace`` is not done yet)
+- P2693R1 - Formatting ``thread::id`` (the ``stacktrace`` is not done yet)
 - P2675R1 - ``format``'s width estimation is too approximate and not forward compatible
 - P2505R5 - Monadic operations for ``std::expected``
 - P2711R1 - Making Multi-Param Constructors Of views explicit (``join_with_view`` is not done yet)

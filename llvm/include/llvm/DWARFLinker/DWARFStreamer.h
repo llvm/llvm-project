@@ -107,11 +107,22 @@ public:
   /// Emit debug locations(.debug_loc, .debug_loclists) header.
   MCSymbol *emitDwarfDebugLocListHeader(const CompileUnit &Unit) override;
 
+  /// Emit .debug_addr header.
+  MCSymbol *emitDwarfDebugAddrsHeader(const CompileUnit &Unit) override;
+
+  /// Emit the addresses described by \p Addrs into .debug_addr table.
+  void emitDwarfDebugAddrs(const SmallVector<uint64_t> &Addrs,
+                           uint8_t AddrSize) override;
+
+  /// Emit .debug_addr footer.
+  void emitDwarfDebugAddrsFooter(const CompileUnit &Unit,
+                                 MCSymbol *EndLabel) override;
+
   /// Emit debug ranges(.debug_loc, .debug_loclists) fragment.
   void emitDwarfDebugLocListFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
-      PatchLocation Patch) override;
+      PatchLocation Patch, DebugAddrPool &AddrPool) override;
 
   /// Emit debug ranges(.debug_loc, .debug_loclists) footer.
   void emitDwarfDebugLocListFooter(const CompileUnit &Unit,
@@ -185,6 +196,8 @@ public:
     return LocListsSectionSize;
   }
 
+  uint64_t getDebugAddrSectionSize() const override { return AddrSectionSize; }
+
   void emitMacroTables(DWARFContext *Context,
                        const Offset2UnitMap &UnitMacroMap,
                        OffsetsStringPool &StringPool) override;
@@ -219,7 +232,7 @@ private:
   void emitDwarfDebugLocListsTableFragment(
       const CompileUnit &Unit,
       const DWARFLocationExpressionsVector &LinkedLocationExpression,
-      PatchLocation Patch);
+      PatchLocation Patch, DebugAddrPool &AddrPool);
 
   /// \defgroup Line table emission
   /// @{
@@ -277,6 +290,7 @@ private:
   uint64_t DebugInfoSectionSize = 0;
   uint64_t MacInfoSectionSize = 0;
   uint64_t MacroSectionSize = 0;
+  uint64_t AddrSectionSize = 0;
 
   /// Keep track of emitted CUs and their Unique ID.
   struct EmittedUnit {

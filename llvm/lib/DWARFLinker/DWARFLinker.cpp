@@ -1364,7 +1364,7 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
   std::optional<uint64_t> Addr = AddrAttribute->getAsAddress();
   if (!Addr) {
     Linker.reportWarning("Cann't read address attribute value.", ObjFile);
-    Addr = 0;
+    return 0;
   }
 
   if (InputDIE.getTag() == dwarf::DW_TAG_compile_unit &&
@@ -1383,25 +1383,18 @@ unsigned DWARFLinker::DIECloner::cloneAddressAttribute(
     *Addr += Info.PCOffset;
   }
 
-  switch (AttrSpec.Form) {
-  case dwarf::DW_FORM_addrx:
-  case dwarf::DW_FORM_addrx1:
-  case dwarf::DW_FORM_addrx2:
-  case dwarf::DW_FORM_addrx3:
-  case dwarf::DW_FORM_addrx4: {
-    // DWARFLinker does not use addrx forms since it generates relocated
-    // addresses. Replace DW_FORM_addrx* with DW_FORM_addr here.
-    AttrSpec.Form = dwarf::DW_FORM_addr;
-    break;
-  }
-  default:
-    // Nothing to do.
-    break;
+  if (AttrSpec.Form == dwarf::DW_FORM_addr) {
+    Die.addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),
+                 AttrSpec.Form, DIEInteger(*Addr));
+    return Unit.getOrigUnit().getAddressByteSize();
   }
 
-  Die.addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),
-               AttrSpec.Form, DIEInteger(*Addr));
-  return Unit.getOrigUnit().getAddressByteSize();
+  auto AddrIndex = AddrPool.getAddrIndex(*Addr);
+
+  return Die
+      .addValue(DIEAlloc, static_cast<dwarf::Attribute>(AttrSpec.Attr),
+                dwarf::Form::DW_FORM_addrx, DIEInteger(AddrIndex))
+      ->sizeOf(Unit.getOrigUnit().getFormParams());
 }
 
 unsigned DWARFLinker::DIECloner::cloneScalarAttribute(
@@ -1665,9 +1658,6 @@ shouldSkipAttribute(bool Update,
   case dwarf::DW_AT_high_pc:
   case dwarf::DW_AT_ranges:
     return !Update && SkipPC;
-  case dwarf::DW_AT_addr_base:
-    // In case !Update the .debug_addr table is not generated/preserved.
-    return !Update;
   case dwarf::DW_AT_rnglists_base:
     // In case !Update the .debug_addr table is not generated/preserved.
     // Thus instead of DW_FORM_rnglistx the DW_FORM_sec_offset is used.
@@ -1946,10 +1936,10 @@ void DWARFLinker::generateUnitRanges(CompileUnit &Unit,
   }
 }
 
-void DWARFLinker::generateUnitLocations(
+void DWARFLinker::DIECloner::generateUnitLocations(
     CompileUnit &Unit, const DWARFFile &File,
-    ExpressionHandlerRef ExprHandler) const {
-  if (LLVM_UNLIKELY(Options.Update))
+    ExpressionHandlerRef ExprHandler) {
+  if (LLVM_UNLIKELY(Linker.Options.Update))
     return;
 
   const LocListAttributesTy &AllLocListAttributes =
@@ -1959,7 +1949,7 @@ void DWARFLinker::generateUnitLocations(
     return;
 
   // Emit locations list table header.
-  MCSymbol *EndLabel = TheDwarfEmitter->emitDwarfDebugLocListHeader(Unit);
+  MCSymbol *EndLabel = Emitter->emitDwarfDebugLocListHeader(Unit);
 
   for (auto &CurLocAttr : AllLocListAttributes) {
     // Get location expressions vector corresponding to the current attribute
@@ -1969,7 +1959,7 @@ void DWARFLinker::generateUnitLocations(
 
     if (!OriginalLocations) {
       llvm::consumeError(OriginalLocations.takeError());
-      reportWarning("Invalid location attribute ignored.", File);
+      Linker.reportWarning("Invalid location attribute ignored.", File);
       continue;
     }
 
@@ -1993,12 +1983,42 @@ void DWARFLinker::generateUnitLocations(
     }
 
     // Emit locations list table fragment corresponding to the CurLocAttr.
-    TheDwarfEmitter->emitDwarfDebugLocListFragment(
-        Unit, LinkedLocationExpressions, CurLocAttr);
+    Emitter->emitDwarfDebugLocListFragment(Unit, LinkedLocationExpressions,
+                                           CurLocAttr, AddrPool);
   }
 
   // Emit locations list table footer.
-  TheDwarfEmitter->emitDwarfDebugLocListFooter(Unit, EndLabel);
+  Emitter->emitDwarfDebugLocListFooter(Unit, EndLabel);
+}
+
+static void patchAddrBase(DIE &Die, DIEInteger Offset) {
+  for (auto &V : Die.values())
+    if (V.getAttribute() == dwarf::DW_AT_addr_base) {
+      V = DIEValue(V.getAttribute(), V.getForm(), Offset);
+      return;
+    }
+
+  llvm_unreachable("Didn't find a DW_AT_addr_base in cloned DIE!");
+}
+
+void DWARFLinker::DIECloner::emitDebugAddrSection(
+    CompileUnit &Unit,
+    const uint16_t DwarfVersion) const {
+
+  if (LLVM_UNLIKELY(Linker.Options.Update))
+    return;
+
+  if (DwarfVersion < 5)
+    return;
+
+  if (AddrPool.Addrs.empty())
+    return;
+
+  MCSymbol *EndLabel = Emitter->emitDwarfDebugAddrsHeader(Unit);
+  patchAddrBase(*Unit.getOutputUnitDIE(),
+                DIEInteger(Emitter->getDebugAddrSectionSize()));
+  Emitter->emitDwarfDebugAddrs(AddrPool.Addrs, Unit.getOrigUnit().getAddressByteSize());
+  Emitter->emitDwarfDebugAddrsFooter(Unit, EndLabel);
 }
 
 /// Insert the new line info sequence \p Seq into the current
@@ -2565,8 +2585,10 @@ uint64_t DWARFLinker::DIECloner::cloneAllCompileUnits(
                         File, *CurrentUnit, OutBytes, RelocAdjustment,
                         IsLittleEndian);
       };
-      Linker.generateUnitLocations(*CurrentUnit, File, ProcessExpr);
+      generateUnitLocations(*CurrentUnit, File, ProcessExpr);
+      emitDebugAddrSection(*CurrentUnit, DwarfVersion);
     }
+    AddrPool.clear();
   }
 
   if (Emitter != nullptr) {
