@@ -330,6 +330,10 @@ Changes in existing checks
   to emit warnings only on classes that are copyable/movable, as required by the
   corresponding rule.
 
+- Improved :doc:`cppcoreguidelines-owning-memory
+  <clang-tidy/checks/cppcoreguidelines/owning-memory>` check now finds more
+  issues, especially those related to implicit casts.
+
 - Deprecated C.48 enforcement from :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`. Please use
   :doc:`cppcoreguidelines-use-default-member-init
