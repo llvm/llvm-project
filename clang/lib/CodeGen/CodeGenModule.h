@@ -30,6 +30,7 @@
 #include "clang/Basic/XRayLists.h"
 #include "clang/Lex/PreprocessorOptions.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringMap.h"
@@ -378,8 +379,7 @@ private:
   /// multiversion function resolvers and ifuncs are defined and emitted.
   std::vector<GlobalDecl> MultiVersionFuncs;
 
-  typedef llvm::StringMap<llvm::TrackingVH<llvm::Constant> > ReplacementsTy;
-  ReplacementsTy Replacements;
+  llvm::MapVector<StringRef, llvm::TrackingVH<llvm::Constant>> Replacements;
 
   /// List of global values to be replaced with something else. Used when we
   /// want to replace a GlobalValue but can't identify it by its mangled name
