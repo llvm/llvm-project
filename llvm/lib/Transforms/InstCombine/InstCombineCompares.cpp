@@ -4979,6 +4979,7 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   const CmpInst::Predicate Pred = I.getPredicate();
   Value *A = nullptr;
+  bool CheckIs;
   if (I.isEquality()) {
     // (A & (A-1)) == 0 --> ctpop(A) < 2 (two commuted variants)
     // ((A-1) & A) != 0 --> ctpop(A) > 1 (two commuted variants)
@@ -4994,14 +4995,28 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
     else if (match(Op1,
                    m_OneUse(m_c_And(m_Neg(m_Specific(Op0)), m_Specific(Op0)))))
       A = Op0;
+
+    CheckIs = Pred == ICmpInst::ICMP_EQ;
+  } else if (Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_ULT) {
+    // (A ^ (A-1)) u>= A --> ctpop(A) < 2 (two commuted variants)
+    // ((A-1) ^ A) u< A --> ctpop(A) > 1 (two commuted variants)
+    if (match(Op0, m_OneUse(m_c_Xor(m_Add(m_Specific(Op1), m_AllOnes()),
+                                    m_Specific(Op1)))))
+      A = Op1;
+    else if (match(Op1, m_OneUse(m_c_Xor(m_Add(m_Specific(Op0), m_AllOnes()),
+                                         m_Specific(Op0)))))
+      A = Op0;
+
+    CheckIs = Pred == ICmpInst::ICMP_UGE;
   }
+
   if (A) {
     Type *Ty = A->getType();
     CallInst *CtPop = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, A);
-    return Pred == ICmpInst::ICMP_EQ ? new ICmpInst(ICmpInst::ICMP_ULT, CtPop,
-                                                    ConstantInt::get(Ty, 2))
-                                     : new ICmpInst(ICmpInst::ICMP_UGT, CtPop,
-                                                    ConstantInt::get(Ty, 1));
+    return CheckIs ? new ICmpInst(ICmpInst::ICMP_ULT, CtPop,
+                                  ConstantInt::get(Ty, 2))
+                   : new ICmpInst(ICmpInst::ICMP_UGT, CtPop,
+                                  ConstantInt::get(Ty, 1));
   }
 
   return nullptr;
