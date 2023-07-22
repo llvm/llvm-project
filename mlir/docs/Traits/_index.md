@@ -241,16 +241,7 @@ that has the trait AutomaticAllocationScope.
 
 This trait adds the property that the operation is known to have
 [broadcast-compatible](https://docs.scipy.org/doc/numpy/user/basics.broadcasting.html)
-operands and its result types' shape is the broadcast compatible with the shape
-of the broadcasted operands. Specifically, starting from the most varying
-dimension, each dimension pair of the two operands' shapes should either be the
-same or one of them is one. Also, the result shape should have the corresponding
-dimension equal to the larger one, if known. Shapes are checked partially if
-ranks or dimensions are not known. For example, an op with `tensor<?x2xf32>` and
-`tensor<2xf32>` as operand types and `tensor<3x2xf32>` as the result type is
-broadcast-compatible.
-
-This trait requires that the operands are either vector or tensor types.
+operands and that its result type is compatible with the inferred broadcast shape. See [The `Broadcastable` Trait](Traits/Broadcastable.md) for details.
 
 ### Commutative
 
