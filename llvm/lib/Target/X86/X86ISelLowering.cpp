@@ -30777,7 +30777,7 @@ static SDValue LowerFMINIMUM_FMAXIMUM(SDValue Op, const X86Subtarget &Subtarget,
   bool IgnoreNaN = DAG.getTarget().Options.NoNaNsFPMath ||
                    Op->getFlags().hasNoNaNs() || (IsXNeverNaN && IsYNeverNaN);
 
-  // If we did no ordering operands for singed zero handling and we need
+  // If we did no ordering operands for signed zero handling and we need
   // to process NaN and we know that the second operand is not NaN then put
   // it in first operand and we will not need to post handle NaN after max/min.
   if (IgnoreSignedZero && !IgnoreNaN && DAG.isKnownNeverNaN(NewY))
