@@ -800,7 +800,7 @@ public:
   bool Accumulate(Type x) {
     auto absX{std::abs(static_cast<AccumType>(x))};
     if (!max_) {
-      max_ = x;
+      max_ = absX;
     } else if (absX > max_) {
       auto t{max_ / absX}; // < 1.0
       auto tsq{t * t};
