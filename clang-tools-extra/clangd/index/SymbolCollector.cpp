@@ -516,7 +516,8 @@ bool SymbolCollector::shouldCollectSymbol(const NamedDecl &ND,
   if (isPrivateProtoDecl(ND))
     return false;
   if (!Opts.CollectReserved &&
-      (hasReservedName(ND) || hasReservedScope(*ND.getDeclContext())))
+      (hasReservedName(ND) || hasReservedScope(*ND.getDeclContext())) &&
+      ASTCtx.getSourceManager().isInSystemHeader(ND.getLocation()))
     return false;
 
   return true;

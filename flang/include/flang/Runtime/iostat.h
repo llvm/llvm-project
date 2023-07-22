@@ -83,6 +83,7 @@ enum Iostat {
   IostatBadUnitNumber,
   IostatBadFlushUnit,
   IostatBadOpOnChildUnit,
+  IostatBadNewUnit,
 };
 
 const char *IostatErrorString(int);

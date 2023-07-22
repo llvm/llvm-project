@@ -29,6 +29,47 @@ Expr<T> PackageConstantBounds(
   }
 }
 
+// If a DIM= argument to LBOUND(), UBOUND(), or SIZE() exists and has a valid
+// constant value, return in "dimVal" that value, less 1 (to make it suitable
+// for use as a C++ vector<> index).  Also check for erroneous constant values
+// and returns false on error.
+static bool CheckDimArg(const std::optional<ActualArgument> &dimArg,
+    const Expr<SomeType> &array, parser::ContextualMessages &messages,
+    bool isLBound, std::optional<int> &dimVal) {
+  dimVal.reset();
+  if (int rank{array.Rank()}; rank > 0 || IsAssumedRank(array)) {
+    auto named{ExtractNamedEntity(array)};
+    if (auto dim64{ToInt64(dimArg)}) {
+      if (*dim64 < 1) {
+        messages.Say("DIM=%jd dimension must be positive"_err_en_US, *dim64);
+        return false;
+      } else if (!IsAssumedRank(array) && *dim64 > rank) {
+        messages.Say(
+            "DIM=%jd dimension is out of range for rank-%d array"_err_en_US,
+            *dim64, rank);
+        return false;
+      } else if (!isLBound && named &&
+          semantics::IsAssumedSizeArray(named->GetLastSymbol()) &&
+          *dim64 == rank) {
+        messages.Say(
+            "DIM=%jd dimension is out of range for rank-%d assumed-size array"_err_en_US,
+            *dim64, rank);
+        return false;
+      } else if (IsAssumedRank(array)) {
+        if (*dim64 > common::maxRank) {
+          messages.Say(
+              "DIM=%jd dimension is too large for any array (maximum rank %d)"_err_en_US,
+              *dim64, common::maxRank);
+          return false;
+        }
+      } else {
+        dimVal = static_cast<int>(*dim64 - 1); // 1-based to 0-based
+      }
+    }
+  }
+  return true;
+}
+
 // Class to retrieve the constant bound of an expression which is an
 // array that devolves to a type of Constant<T>
 class GetConstantArrayBoundHelper {
@@ -115,21 +156,14 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
   using T = Type<TypeCategory::Integer, KIND>;
   ActualArguments &args{funcRef.arguments()};
   if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-    if (int rank{array->Rank()}; rank > 0 && !IsAssumedRank(*array)) {
+    if (int rank{array->Rank()}; rank > 0 || IsAssumedRank(*array)) {
       std::optional<int> dim;
       if (funcRef.Rank() == 0) {
         // Optional DIM= argument is present: result is scalar.
-        if (auto dim64{ToInt64(args[1])}) {
-          if (*dim64 < 1 || *dim64 > rank) {
-            context.messages().Say(
-                "DIM=%jd dimension is out of range for rank-%d array"_err_en_US,
-                *dim64, rank);
-            return MakeInvalidIntrinsic<T>(std::move(funcRef));
-          } else {
-            dim = *dim64 - 1; // 1-based to 0-based
-          }
-        } else {
-          // DIM= is present but not constant
+        if (!CheckDimArg(args[1], *array, context.messages(), true, dim)) {
+          return MakeInvalidIntrinsic<T>(std::move(funcRef));
+        } else if (!dim) {
+          // DIM= is present but not constant, or error
           return Expr<T>{std::move(funcRef)};
         }
       }
@@ -169,20 +203,13 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
   using T = Type<TypeCategory::Integer, KIND>;
   ActualArguments &args{funcRef.arguments()};
   if (auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-    if (int rank{array->Rank()}; rank > 0 && !IsAssumedRank(*array)) {
+    if (int rank{array->Rank()}; rank > 0 || IsAssumedRank(*array)) {
       std::optional<int> dim;
       if (funcRef.Rank() == 0) {
         // Optional DIM= argument is present: result is scalar.
-        if (auto dim64{ToInt64(args[1])}) {
-          if (*dim64 < 1 || *dim64 > rank) {
-            context.messages().Say(
-                "DIM=%jd dimension is out of range for rank-%d array"_err_en_US,
-                *dim64, rank);
-            return MakeInvalidIntrinsic<T>(std::move(funcRef));
-          } else {
-            dim = *dim64 - 1; // 1-based to 0-based
-          }
-        } else {
+        if (!CheckDimArg(args[1], *array, context.messages(), false, dim)) {
+          return MakeInvalidIntrinsic<T>(std::move(funcRef));
+        } else if (!dim) {
           // DIM= is present but not constant
           return Expr<T>{std::move(funcRef)};
         }
@@ -193,12 +220,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
         if (symbol.Rank() == rank) {
           takeBoundsFromShape = false;
           if (dim) {
-            if (semantics::IsAssumedSizeArray(symbol) && *dim == rank - 1) {
-              context.messages().Say(
-                  "DIM=%jd dimension is out of range for rank-%d assumed-size array"_err_en_US,
-                  rank, rank);
-              return MakeInvalidIntrinsic<T>(std::move(funcRef));
-            } else if (auto ub{GetUBOUND(context, *named, *dim)}) {
+            if (auto ub{GetUBOUND(context, *named, *dim)}) {
               return Fold(context, ConvertToType<T>(std::move(*ub)));
             }
           } else {
@@ -1189,23 +1211,14 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         }));
   } else if (name == "size") {
     if (auto shape{GetContextFreeShape(context, args[0])}) {
-      if (auto &dimArg{args[1]}) { // DIM= is present, get one extent
-        if (auto dim{ToInt64(args[1])}) {
-          int rank{GetRank(*shape)};
-          if (*dim >= 1 && *dim <= rank) {
-            const Symbol *symbol{UnwrapWholeSymbolDataRef(args[0])};
-            if (symbol && IsAssumedSizeArray(*symbol) && *dim == rank) {
-              context.messages().Say(
-                  "size(array,dim=%jd) of last dimension is not available for rank-%d assumed-size array dummy argument"_err_en_US,
-                  *dim, rank);
-              return MakeInvalidIntrinsic<T>(std::move(funcRef));
-            } else if (auto &extent{shape->at(*dim - 1)}) {
-              return Fold(context, ConvertToType<T>(std::move(*extent)));
-            }
-          } else {
-            context.messages().Say(
-                "size(array,dim=%jd) dimension is out of range for rank-%d array"_warn_en_US,
-                *dim, rank);
+      if (args[1]) { // DIM= is present, get one extent
+        std::optional<int> dim;
+        if (const auto *array{args[0].value().UnwrapExpr()}; array &&
+            !CheckDimArg(args[1], *array, context.messages(), false, dim)) {
+          return MakeInvalidIntrinsic<T>(std::move(funcRef));
+        } else if (dim) {
+          if (auto &extent{shape->at(*dim)}) {
+            return Fold(context, ConvertToType<T>(std::move(*extent)));
           }
         }
       } else if (auto extents{common::AllElementsPresent(std::move(*shape))}) {

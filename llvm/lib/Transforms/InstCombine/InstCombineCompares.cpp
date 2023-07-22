@@ -3404,6 +3404,44 @@ Instruction *InstCombinerImpl::foldICmpBinOpEqualityWithConstant(
   return nullptr;
 }
 
+static Instruction *foldCtpopPow2Test(ICmpInst &I, IntrinsicInst *CtpopLhs,
+                                      const APInt &CRhs,
+                                      InstCombiner::BuilderTy &Builder,
+                                      const SimplifyQuery &Q) {
+  assert(CtpopLhs->getIntrinsicID() == Intrinsic::ctpop &&
+         "Non-ctpop intrin in ctpop fold");
+  if (!CtpopLhs->hasOneUse())
+    return nullptr;
+
+  // Power of 2 test:
+  //    isPow2OrZero : ctpop(X) u< 2
+  //    isPow2       : ctpop(X) == 1
+  //    NotPow2OrZero: ctpop(X) u> 1
+  //    NotPow2      : ctpop(X) != 1
+  // If we know any bit of X can be folded to:
+  //    IsPow2       : X & (~Bit) == 0
+  //    NotPow2      : X & (~Bit) != 0
+  const ICmpInst::Predicate Pred = I.getPredicate();
+  if (((I.isEquality() || Pred == ICmpInst::ICMP_UGT) && CRhs == 1) ||
+      (Pred == ICmpInst::ICMP_ULT && CRhs == 2)) {
+    Value *Op = CtpopLhs->getArgOperand(0);
+    KnownBits OpKnown = computeKnownBits(Op, Q.DL,
+                                         /*Depth*/ 0, Q.AC, Q.CxtI, Q.DT);
+    // No need to check for count > 1, that should be already constant folded.
+    if (OpKnown.countMinPopulation() == 1) {
+      Value *And = Builder.CreateAnd(
+          Op, Constant::getIntegerValue(Op->getType(), ~(OpKnown.One)));
+      return new ICmpInst(
+          (Pred == ICmpInst::ICMP_EQ || Pred == ICmpInst::ICMP_ULT)
+              ? ICmpInst::ICMP_EQ
+              : ICmpInst::ICMP_NE,
+          And, Constant::getNullValue(Op->getType()));
+    }
+  }
+
+  return nullptr;
+}
+
 /// Fold an equality icmp with LLVM intrinsic and constant operand.
 Instruction *InstCombinerImpl::foldICmpEqIntrinsicWithConstant(
     ICmpInst &Cmp, IntrinsicInst *II, const APInt &C) {
@@ -3749,6 +3787,11 @@ Instruction *InstCombinerImpl::foldICmpIntrinsicWithConstant(ICmpInst &Cmp,
             Pred, cast<SaturatingInst>(II), C, Builder))
       return Folded;
     break;
+  case Intrinsic::ctpop: {
+    const SimplifyQuery Q = SQ.getWithInstruction(&Cmp);
+    if (Instruction *R = foldCtpopPow2Test(Cmp, II, C, Builder, Q))
+      return R;
+  } break;
   }
 
   if (Cmp.isEquality())
@@ -4979,6 +5022,7 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
   const CmpInst::Predicate Pred = I.getPredicate();
   Value *A = nullptr;
+  bool CheckIs;
   if (I.isEquality()) {
     // (A & (A-1)) == 0 --> ctpop(A) < 2 (two commuted variants)
     // ((A-1) & A) != 0 --> ctpop(A) > 1 (two commuted variants)
@@ -4994,14 +5038,28 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
     else if (match(Op1,
                    m_OneUse(m_c_And(m_Neg(m_Specific(Op0)), m_Specific(Op0)))))
       A = Op0;
+
+    CheckIs = Pred == ICmpInst::ICMP_EQ;
+  } else if (Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_ULT) {
+    // (A ^ (A-1)) u>= A --> ctpop(A) < 2 (two commuted variants)
+    // ((A-1) ^ A) u< A --> ctpop(A) > 1 (two commuted variants)
+    if (match(Op0, m_OneUse(m_c_Xor(m_Add(m_Specific(Op1), m_AllOnes()),
+                                    m_Specific(Op1)))))
+      A = Op1;
+    else if (match(Op1, m_OneUse(m_c_Xor(m_Add(m_Specific(Op0), m_AllOnes()),
+                                         m_Specific(Op0)))))
+      A = Op0;
+
+    CheckIs = Pred == ICmpInst::ICMP_UGE;
   }
+
   if (A) {
     Type *Ty = A->getType();
     CallInst *CtPop = Builder.CreateUnaryIntrinsic(Intrinsic::ctpop, A);
-    return Pred == ICmpInst::ICMP_EQ ? new ICmpInst(ICmpInst::ICMP_ULT, CtPop,
-                                                    ConstantInt::get(Ty, 2))
-                                     : new ICmpInst(ICmpInst::ICMP_UGT, CtPop,
-                                                    ConstantInt::get(Ty, 1));
+    return CheckIs ? new ICmpInst(ICmpInst::ICMP_ULT, CtPop,
+                                  ConstantInt::get(Ty, 2))
+                   : new ICmpInst(ICmpInst::ICMP_UGT, CtPop,
+                                  ConstantInt::get(Ty, 1));
   }
 
   return nullptr;

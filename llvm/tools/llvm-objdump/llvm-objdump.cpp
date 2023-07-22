@@ -1156,11 +1156,11 @@ collectBBAddrMapLabels(const std::unordered_map<uint64_t, BBAddrMap> &AddrToBBAd
   auto Iter = AddrToBBAddrMap.find(StartAddress);
   if (Iter == AddrToBBAddrMap.end())
     return;
-  for (unsigned I = 0, Size = Iter->second.BBEntries.size(); I < Size; ++I) {
-    uint64_t BBAddress = Iter->second.BBEntries[I].Offset + Iter->second.Addr;
+  for (const BBAddrMap::BBEntry &BBEntry : Iter->second.BBEntries) {
+    uint64_t BBAddress = BBEntry.Offset + Iter->second.Addr;
     if (BBAddress >= EndAddress)
       continue;
-    Labels[BBAddress].push_back(("BB" + Twine(I)).str());
+    Labels[BBAddress].push_back(("BB" + Twine(BBEntry.ID)).str());
   }
 }
 
