@@ -5121,8 +5121,51 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     break;
   }
   case Instruction::ExtractValue: {
-    computeKnownFPClass(Op->getOperand(0), DemandedElts, InterestedClasses,
-                        Known, Depth + 1, Q);
+    const ExtractValueInst *Extract = cast<ExtractValueInst>(Op);
+    ArrayRef<unsigned> Indices = Extract->getIndices();
+    const Value *Src = Extract->getAggregateOperand();
+    if (isa<StructType>(Src->getType()) && Indices.size() == 1 &&
+        Indices[0] == 0) {
+      if (const auto *II = dyn_cast<IntrinsicInst>(Src)) {
+        switch (II->getIntrinsicID()) {
+        case Intrinsic::frexp: {
+          Known.knownNot(fcSubnormal);
+
+          KnownFPClass KnownSrc;
+          computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                              InterestedClasses, KnownSrc, Depth + 1, Q);
+
+          const Function *F = cast<Instruction>(Op)->getFunction();
+
+          if (KnownSrc.isKnownNever(fcNegative))
+            Known.knownNot(fcNegative);
+          else {
+            if (F && KnownSrc.isKnownNeverLogicalNegZero(*F, Op->getType()))
+              Known.knownNot(fcNegZero);
+            if (KnownSrc.isKnownNever(fcNegInf))
+              Known.knownNot(fcNegInf);
+          }
+
+          if (KnownSrc.isKnownNever(fcPositive))
+            Known.knownNot(fcPositive);
+          else {
+            if (F && KnownSrc.isKnownNeverLogicalPosZero(*F, Op->getType()))
+              Known.knownNot(fcPosZero);
+            if (KnownSrc.isKnownNever(fcPosInf))
+              Known.knownNot(fcPosInf);
+          }
+
+          Known.propagateNaN(KnownSrc);
+          return;
+        }
+        default:
+          break;
+        }
+      }
+    }
+
+    computeKnownFPClass(Src, DemandedElts, InterestedClasses, Known, Depth + 1,
+                        Q);
     break;
   }
   case Instruction::PHI: {
