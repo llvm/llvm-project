@@ -269,6 +269,14 @@ public:
                           Value *RsqOp, const Instruction *FDiv,
                           float ReqdAccuracy) const;
 
+  std::pair<Value *, Value *> getFrexpResults(IRBuilder<> &Builder,
+                                              Value *Src) const;
+
+  Value *emitRcpIEEE1ULP(IRBuilder<> &Builder, Value *Src,
+                         bool IsNegative) const;
+  Value *emitFrexpDiv(IRBuilder<> &Builder, Value *LHS, Value *RHS,
+                      FastMathFlags FMF) const;
+
 public:
   bool visitFDiv(BinaryOperator &I);
 
@@ -763,9 +771,30 @@ bool AMDGPUCodeGenPrepareImpl::foldBinOpIntoSelect(BinaryOperator &BO) const {
   return true;
 }
 
+std::pair<Value *, Value *>
+AMDGPUCodeGenPrepareImpl::getFrexpResults(IRBuilder<> &Builder,
+                                          Value *Src) const {
+  Type *Ty = Src->getType();
+  Value *Frexp = Builder.CreateIntrinsic(Intrinsic::frexp,
+                                         {Ty, Builder.getInt32Ty()}, Src);
+  Value *FrexpMant = Builder.CreateExtractValue(Frexp, {0});
+
+  // Bypass the bug workaround for the exponent result since it doesn't matter.
+  // TODO: Does the bug workaround even really need to consider the exponent
+  // result? It's unspecified by the spec.
+
+  Value *FrexpExp =
+      ST->hasFractBug()
+          ? Builder.CreateIntrinsic(Intrinsic::amdgcn_frexp_exp,
+                                    {Builder.getInt32Ty(), Ty}, Src)
+          : Builder.CreateExtractValue(Frexp, {1});
+  return {FrexpMant, FrexpExp};
+}
+
 /// Emit an expansion of 1.0 / Src good for 1ulp that supports denormals.
-static Value *emitRcpIEEE1ULP(IRBuilder<> &Builder, Value *Src, bool IsNegative,
-                              bool HasFractBug) {
+Value *AMDGPUCodeGenPrepareImpl::emitRcpIEEE1ULP(IRBuilder<> &Builder,
+                                                 Value *Src,
+                                                 bool IsNegative) const {
   // Same as for 1.0, but expand the sign out of the constant.
   // -1.0 / x -> rcp (fneg x)
   if (IsNegative)
@@ -782,23 +811,42 @@ static Value *emitRcpIEEE1ULP(IRBuilder<> &Builder, Value *Src, bool IsNegative,
   // 0x1p+126 < den <= 0x1p+127.
 
   Type *Ty = Src->getType();
-  Value *Frexp = Builder.CreateIntrinsic(Intrinsic::frexp,
-                                         {Ty, Builder.getInt32Ty()}, Src);
-  Value *FrexpMant = Builder.CreateExtractValue(Frexp, {0});
 
-  // Bypass the bug workaround for the exponent result since it doesn't matter.
-  // TODO: Does the bug workaround even really need to consider the exponent
-  // result? It's unspecified by the spec.
-
-  Value *FrexpExp =
-      HasFractBug ? Builder.CreateIntrinsic(Intrinsic::amdgcn_frexp_exp,
-                                            {Builder.getInt32Ty(), Ty}, Src)
-                  : Builder.CreateExtractValue(Frexp, {1});
-
+  auto [FrexpMant, FrexpExp] = getFrexpResults(Builder, Src);
   Value *ScaleFactor = Builder.CreateNeg(FrexpExp);
   Value *Rcp = Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rcp, FrexpMant);
   return Builder.CreateIntrinsic(Intrinsic::ldexp, {Ty, Builder.getInt32Ty()},
                                  {Rcp, ScaleFactor});
+}
+
+/// Emit a 2ulp expansion for fdiv by using frexp for input scaling.
+Value *AMDGPUCodeGenPrepareImpl::emitFrexpDiv(IRBuilder<> &Builder, Value *LHS,
+                                              Value *RHS,
+                                              FastMathFlags FMF) const {
+  // If we have have to work around the fract/frexp bug, we're worse off than
+  // using the fdiv.fast expansion. The full safe expansion is faster if we have
+  // fast FMA.
+  if (HasFP32DenormalFlush && ST->hasFractBug() && !ST->hasFastFMAF32() &&
+      (!FMF.noNaNs() || !FMF.noInfs()))
+    return nullptr;
+
+  // We're scaling the LHS to avoid a denormal input, and scale the denominator
+  // to avoid large values underflowing the result.
+  Type *Ty = LHS->getType();
+
+  auto [FrexpMantRHS, FrexpExpRHS] = getFrexpResults(Builder, RHS);
+
+  Value *Rcp =
+      Builder.CreateUnaryIntrinsic(Intrinsic::amdgcn_rcp, FrexpMantRHS);
+
+  auto [FrexpMantLHS, FrexpExpLHS] = getFrexpResults(Builder, LHS);
+  Value *Mul = Builder.CreateFMul(FrexpMantLHS, Rcp);
+
+  // We multiplied by 2^N/2^M, so we need to multiply by 2^(N-M) to scale the
+  // result.
+  Value *ExpDiff = Builder.CreateSub(FrexpExpLHS, FrexpExpRHS);
+  return Builder.CreateIntrinsic(Intrinsic::ldexp, {Ty, Builder.getInt32Ty()},
+                                 {Mul, ExpDiff});
 }
 
 /// Emit an expansion of 1.0 / sqrt(Src) good for 1ulp that supports denormals.
@@ -922,7 +970,7 @@ AMDGPUCodeGenPrepareImpl::optimizeWithRcp(IRBuilder<> &Builder, Value *Num,
 
       // TODO: If the input isn't denormal, and we know the input exponent isn't
       // big enough to introduce a denormal we can avoid the scaling.
-      return emitRcpIEEE1ULP(Builder, Src, IsNegative, ST->hasFractBug());
+      return emitRcpIEEE1ULP(Builder, Src, IsNegative);
     }
   }
 
@@ -936,7 +984,7 @@ AMDGPUCodeGenPrepareImpl::optimizeWithRcp(IRBuilder<> &Builder, Value *Num,
       return Builder.CreateFMul(Num, Recip);
     }
 
-    Value *Recip = emitRcpIEEE1ULP(Builder, Den, false, ST->hasFractBug());
+    Value *Recip = emitRcpIEEE1ULP(Builder, Den, false);
     return Builder.CreateFMul(Num, Recip);
   }
 
@@ -958,8 +1006,7 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithFDivFast(
 
   // Only have fdiv.fast for f32.
   Type *Ty = Den->getType();
-  if (!Ty->isFloatTy())
-    return nullptr;
+  assert(Ty->isFloatTy());
 
   bool NumIsOne = false;
   if (const ConstantFP *CNum = dyn_cast<ConstantFP>(Num)) {
@@ -968,6 +1015,9 @@ Value *AMDGPUCodeGenPrepareImpl::optimizeWithFDivFast(
   }
 
   // fdiv does not support denormals. But 1.0/x is always fine to use it.
+  //
+  // TODO: This works for any value with a specific known exponent range, don't
+  // just limit to constant 1.
   if (!HasFP32DenormalFlush && !NumIsOne)
     return nullptr;
 
@@ -989,7 +1039,15 @@ Value *AMDGPUCodeGenPrepareImpl::visitFDivElement(
   if (Rcp)
     return Rcp;
 
-  return optimizeWithFDivFast(Builder, Num, Den, ReqdDivAccuracy);
+  // In the basic case fdiv_fast has the same instruction count as the frexp div
+  // expansion. Slightly prefer fdiv_fast since it ends in an fmul that can
+  // potentially be fused into a user. Also, materialization of the constants
+  // can be reused for multiple instances.
+  Value *FDivFast = optimizeWithFDivFast(Builder, Num, Den, ReqdDivAccuracy);
+  if (FDivFast)
+    return FDivFast;
+
+  return emitFrexpDiv(Builder, Num, Den, DivFMF);
 }
 
 // Optimizations is performed based on fpmath, fast math flags as well as
