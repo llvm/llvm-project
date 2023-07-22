@@ -497,7 +497,7 @@ let Class = PropertyTypeCase<APValue, "LValue"> in {
   }
   def : Property<"type", QualType> {
     let Conditional = [{ hasBase && (isTypeInfo || isDynamicAlloc) }];
-    let Read = [{ 
+    let Read = [{
       isTypeInfo
         ? node.getLValueBase().getTypeInfoType()
         : node.getLValueBase().getDynamicAllocType()
