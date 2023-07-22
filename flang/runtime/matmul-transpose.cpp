@@ -110,7 +110,8 @@ inline static void DoMatmulTranspose(
   int yRank{y.rank()};
   int resRank{xRank + yRank - 2};
   if (xRank * yRank != 2 * resRank) {
-    terminator.Crash("MATMUL: bad argument ranks (%d * %d)", xRank, yRank);
+    terminator.Crash(
+        "MATMUL-TRANSPOSE: bad argument ranks (%d * %d)", xRank, yRank);
   }
   SubscriptValue extent[2]{x.GetDimension(1).Extent(),
       resRank == 2 ? y.GetDimension(1).Extent() : 0};
@@ -122,7 +123,8 @@ inline static void DoMatmulTranspose(
     }
     if (int stat{result.Allocate()}) {
       terminator.Crash(
-          "MATMUL: could not allocate memory for result; STAT=%d", stat);
+          "MATMUL-TRANSPOSE: could not allocate memory for result; STAT=%d",
+          stat);
     }
   } else {
     RUNTIME_CHECK(terminator, resRank == result.rank());
@@ -134,7 +136,8 @@ inline static void DoMatmulTranspose(
   }
   SubscriptValue n{x.GetDimension(0).Extent()};
   if (n != y.GetDimension(0).Extent()) {
-    terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
+    terminator.Crash(
+        "MATMUL-TRANSPOSE: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
         static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
         static_cast<std::intmax_t>(x.GetDimension(1).Extent()),
         static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
@@ -163,7 +166,8 @@ inline static void DoMatmulTranspose(
       }
       // else V*M -> V (not allowed because TRANSPOSE() is only defined for rank
       // 1 matrices
-      terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
+      terminator.Crash(
+          "MATMUL-TRANSPOSE: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
           static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
           static_cast<std::intmax_t>(n),
           static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
@@ -231,7 +235,8 @@ inline static void DoMatmulTranspose(
     }
   } else { // V*M -> V
     // TRANSPOSE(V) not allowed by fortran standard
-    terminator.Crash("MATMUL: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
+    terminator.Crash(
+        "MATMUL-TRANSPOSE: unacceptable operand shapes (%jdx%jd, %jdx%jd)",
         static_cast<std::intmax_t>(x.GetDimension(0).Extent()),
         static_cast<std::intmax_t>(n),
         static_cast<std::intmax_t>(y.GetDimension(0).Extent()),
@@ -259,7 +264,7 @@ template <bool IS_ALLOCATING> struct MatmulTranspose {
                 CppTypeFor<YCAT, YKIND>>(result, x, y, terminator);
           }
         }
-        terminator.Crash("MATMUL: bad operand types (%d(%d), %d(%d))",
+        terminator.Crash("MATMUL-TRANSPOSE: bad operand types (%d(%d), %d(%d))",
             static_cast<int>(XCAT), XKIND, static_cast<int>(YCAT), YKIND);
       }
     };
