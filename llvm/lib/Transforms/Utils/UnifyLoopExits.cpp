@@ -130,7 +130,7 @@ static void restoreSSA(const DominatorTree &DT, const Loop *L,
         NewPhi->addIncoming(Def, In);
       } else {
         LLVM_DEBUG(dbgs() << "not dominated\n");
-        NewPhi->addIncoming(UndefValue::get(Def->getType()), In);
+        NewPhi->addIncoming(PoisonValue::get(Def->getType()), In);
       }
     }
 
