@@ -11,6 +11,7 @@
 #include "clang-include-cleaner/Types.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Testing/TestAST.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Path.h"
@@ -42,6 +43,10 @@ std::string testPath(llvm::StringRef File) {
 class DummyIncludeSpeller : public IncludeSpeller {
 public:
   std::string operator()(const IncludeSpeller::Input &Input) const override {
+    if (Input.H.kind() == Header::Standard)
+      return "<bits/stdc++.h>";
+    if (Input.H.kind() != Header::Physical)
+      return "";
     llvm::StringRef AbsolutePath = Input.H.physical()->tryGetRealPathName();
     std::string RootWithSeparator{testRoot()};
     RootWithSeparator += llvm::sys::path::get_separator();
@@ -69,6 +74,16 @@ TEST(IncludeSpeller, IsRelativeToTestRoot) {
                                       HS, MainFile}));
   EXPECT_EQ("<header.h>",
             spellHeader({Header{*FM.getFile("dir/header.h")}, HS, MainFile}));
+}
+
+TEST(IncludeSpeller, CanOverrideSystemHeaders) {
+  TestAST AST("");
+  auto &HS = AST.preprocessor().getHeaderSearchInfo();
+  const auto *MainFile = AST.sourceManager().getFileEntryForID(
+      AST.sourceManager().getMainFileID());
+  EXPECT_EQ("<bits/stdc++.h>",
+            spellHeader({Header{*tooling::stdlib::Header::named("<vector>")},
+                         HS, MainFile}));
 }
 
 IncludeSpellingStrategy::Add<DummyIncludeSpeller>
