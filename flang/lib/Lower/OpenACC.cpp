@@ -680,15 +680,24 @@ static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
   llvm_unreachable("OpenACC reduction unsupported type");
 }
 
+/// Check if the DataBoundsOp is a constant bound (lb and ub are constants or
+/// extent is a constant).
+bool isConstantBound(mlir::acc::DataBoundsOp &op) {
+  if (op.getLowerbound() && fir::getIntIfConstant(op.getLowerbound()) &&
+      op.getUpperbound() && fir::getIntIfConstant(op.getUpperbound()))
+    return true;
+  if (op.getExtent() && fir::getIntIfConstant(op.getExtent()))
+    return true;
+  return false;
+}
+
 /// Determine if the bounds represent a dynamic shape.
 bool hasDynamicShape(llvm::SmallVector<mlir::Value> &bounds) {
   if (bounds.empty())
     return false;
   for (auto b : bounds) {
     auto op = mlir::dyn_cast<mlir::acc::DataBoundsOp>(b.getDefiningOp());
-    if (((op.getLowerbound() && !fir::getIntIfConstant(op.getLowerbound())) ||
-         (op.getUpperbound() && !fir::getIntIfConstant(op.getUpperbound()))) &&
-        op.getExtent() && !fir::getIntIfConstant(op.getExtent()))
+    if (!isConstantBound(op))
       return true;
   }
   return false;
