@@ -154,6 +154,9 @@ protected:
 
     std::optional<hlfir::EntityWithAttributes> resultEntity;
     if (fir::isa_trivial(firBaseTy)) {
+      // Some intrinsics return i1 when the original operation
+      // produces fir.logical<>, so we may need to cast it.
+      firBase = builder.createConvert(loc, op->getResult(0).getType(), firBase);
       resultEntity = hlfir::EntityWithAttributes{firBase};
     } else {
       resultEntity =
