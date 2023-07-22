@@ -147,7 +147,7 @@ class MergeId:
         return self.fetch(REMOTE, self.target_branch, refspec)
 
     def fetch_merge_candidate_ref_name(self):
-        refspec = self.merge_candidate_ref_name + ":" + self.merge_candidate_ref_name
+        refspec = "+" + self.merge_candidate_ref_name + ":" + self.merge_candidate_ref_name
         return self.fetch(REMOTE, refspec)
 
     @staticmethod
