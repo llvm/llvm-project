@@ -397,7 +397,8 @@ void CheckHelper::Check(const Symbol &symbol) {
         messages_.Say(
             "An assumed-length CHARACTER(*) function cannot return a POINTER"_err_en_US);
       }
-    } else if (IsProcedurePointer(symbol) && IsDummy(symbol)) {
+    }
+    if (IsProcedurePointer(symbol) && IsDummy(symbol)) {
       messages_.Say(
           "A dummy procedure pointer should not have assumed-length CHARACTER(*) result type"_port_en_US);
       // The non-dummy case is a hard error that's caught elsewhere.
