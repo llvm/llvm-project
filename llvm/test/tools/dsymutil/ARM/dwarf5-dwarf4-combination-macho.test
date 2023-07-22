@@ -67,13 +67,11 @@ CHECK-NEXT:            (0x[[#sub(LOC_PAIR_START,LOC_LOWPC)]], 0x[[#sub(LOC_PAIR_
 CHECK-NEXT:            (0x[[#sub(LOC_PAIR_START2,LOC_LOWPC)]], 0x[[#sub(LOC_PAIR_END2,LOC_LOWPC)]]): [[LOC_EXPR2:.*]]
 
 CHECK: .debug_loclists contents:
-CHECK-NEXT: 0x00000000: locations list header: length = 0x0000001f, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+CHECK-NEXT: 0x00000000: locations list header: length = 0x00000018, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 CHECK-NEXT: 0x[[LOCLIST_OFFSET]]: 
-CHECK-NEXT:            DW_LLE_base_address    (0x[[#LOCLIST_LOWPC]])
+CHECK-NEXT:            DW_LLE_base_addressx   (0x0000000000000000)
 CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END,LOCLIST_LOWPC)]])
-CHECK-NEXT:                      => [0x[[#LOCLIST_PAIR_START]], 0x[[#LOCLIST_PAIR_END]]): [[LOCLIST_EXPR]]
 CHECK-NEXT:            DW_LLE_offset_pair     (0x[[#sub(LOCLIST_PAIR_START2,LOCLIST_LOWPC)]], 0x[[#sub(LOCLIST_PAIR_END2,LOCLIST_LOWPC)]])
-CHECK-NEXT:                      => [0x[[#LOCLIST_PAIR_START2]], 0x[[#LOCLIST_PAIR_END2]]): [[LOCLIST_EXPR2]]
 CHECK-NEXT:            DW_LLE_end_of_list     ()
 
 CHECK: .debug_line contents:
