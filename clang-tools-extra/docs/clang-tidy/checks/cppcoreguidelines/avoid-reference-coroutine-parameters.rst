@@ -16,5 +16,6 @@ Examples:
     if (val) ...
   }
 
-This check implements
-`CppCoreGuideline CP.53 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-reference-parameters>`_.
+This check implements `CP.53
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rcoro-reference-parameters>`_
+from the C++ Core Guidelines.
