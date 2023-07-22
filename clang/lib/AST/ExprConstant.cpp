@@ -12630,6 +12630,56 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
     return Success(DidOverflow, E);
   }
+  case Builtin::BI__builtin_addcb:
+  case Builtin::BI__builtin_addcs:
+  case Builtin::BI__builtin_addc:
+  case Builtin::BI__builtin_addcl:
+  case Builtin::BI__builtin_addcll:
+  case Builtin::BI__builtin_subcb:
+  case Builtin::BI__builtin_subcs:
+  case Builtin::BI__builtin_subc:
+  case Builtin::BI__builtin_subcl:
+  case Builtin::BI__builtin_subcll: {
+    APSInt X, Y, CarryIn;
+    LValue CarryOut;
+
+    QualType ResultType = E->getArg(3)->getType()->getPointeeType();
+    if (!EvaluateInteger(E->getArg(0), X, Info) ||
+        !EvaluateInteger(E->getArg(1), Y, Info) ||
+        !EvaluateInteger(E->getArg(2), CarryIn, Info) ||
+        !EvaluatePointer(E->getArg(3), CarryOut, Info))
+      return false;
+
+    APInt Result;
+    bool DidOverflow1 = false;
+    bool DidOverflow2 = false;
+
+    switch (BuiltinOp) {
+    default:
+      llvm_unreachable("Invalid value for BuiltinOp");
+    case Builtin::BI__builtin_addcb:
+    case Builtin::BI__builtin_addcs:
+    case Builtin::BI__builtin_addc:
+    case Builtin::BI__builtin_addcl:
+    case Builtin::BI__builtin_addcll:
+      Result = X.uadd_ov(Y, DidOverflow1).uadd_ov(CarryIn, DidOverflow2);
+      break;
+    case Builtin::BI__builtin_subcb:
+    case Builtin::BI__builtin_subcs:
+    case Builtin::BI__builtin_subc:
+    case Builtin::BI__builtin_subcl:
+    case Builtin::BI__builtin_subcll:
+      Result = X.usub_ov(Y, DidOverflow1).usub_ov(CarryIn, DidOverflow2);
+      break;
+    }
+
+    APSInt DidOverflow(
+        APInt(Result.getBitWidth(), DidOverflow1 || DidOverflow2));
+    APValue DidOverflowVal(DidOverflow);
+    if (!handleAssignment(Info, E, CarryOut, ResultType, DidOverflowVal))
+      return false;
+    return Success(Result, E);
+  }
   }
 }
 
