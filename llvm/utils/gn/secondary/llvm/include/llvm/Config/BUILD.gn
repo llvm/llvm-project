@@ -1,3 +1,4 @@
+import("//llvm/include/llvm/Config/config.gni")
 import("//llvm/lib/DebugInfo/PDB/enable_dia.gni")
 import("//llvm/lib/Target/targets.gni")
 import("//llvm/lib/Target/targets_with_asm_parsers.gni")
@@ -45,9 +46,6 @@ import("//llvm/version.gni")
 declare_args() {
   # Enable additional checks that alter the LLVM C++ ABI.
   llvm_enable_abi_breaking_checks = llvm_enable_assertions
-
-  # Iterate unordered llvm containers in reverse.
-  llvm_enable_reverse_iteration = false
 
   # Force enable statistics.
   llvm_force_enable_stats = false
