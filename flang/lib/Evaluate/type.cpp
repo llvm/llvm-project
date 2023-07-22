@@ -283,18 +283,53 @@ using SetOfDerivedTypePairs =
     std::set<std::pair<const semantics::DerivedTypeSpec *,
         const semantics::DerivedTypeSpec *>>;
 
+static bool AreSameDerivedType(const semantics::DerivedTypeSpec &,
+    const semantics::DerivedTypeSpec &, bool ignoreTypeParameterValues,
+    bool ignoreLenParameters, SetOfDerivedTypePairs &inProgress);
+
+// F2023 7.5.3.2
 static bool AreSameComponent(const semantics::Symbol &x,
-    const semantics::Symbol &y,
-    SetOfDerivedTypePairs & /* inProgress - not yet used */) {
+    const semantics::Symbol &y, SetOfDerivedTypePairs &inProgress) {
   if (x.attrs() != y.attrs()) {
     return false;
   }
   if (x.attrs().test(semantics::Attr::PRIVATE)) {
     return false;
   }
-  // TODO: compare types, parameters, bounds, &c.
-  return x.has<semantics::ObjectEntityDetails>() ==
-      y.has<semantics::ObjectEntityDetails>();
+  if (x.size() && y.size()) {
+    if (x.offset() != y.offset() || x.size() != y.size()) {
+      return false;
+    }
+  }
+  const auto *xObj{x.detailsIf<semantics::ObjectEntityDetails>()};
+  const auto *yObj{y.detailsIf<semantics::ObjectEntityDetails>()};
+  const auto *xProc{x.detailsIf<semantics::ProcEntityDetails>()};
+  const auto *yProc{y.detailsIf<semantics::ProcEntityDetails>()};
+  if (!xObj != !yObj || !xProc != !yProc) {
+    return false;
+  }
+  auto xType{DynamicType::From(x)};
+  auto yType{DynamicType::From(y)};
+  if (xType && yType) {
+    if (xType->category() == TypeCategory::Derived) {
+      if (yType->category() != TypeCategory::Derived ||
+          !xType->IsUnlimitedPolymorphic() !=
+              !yType->IsUnlimitedPolymorphic() ||
+          (!xType->IsUnlimitedPolymorphic() &&
+              !AreSameDerivedType(xType->GetDerivedTypeSpec(),
+                  yType->GetDerivedTypeSpec(), false, false, inProgress))) {
+        return false;
+      }
+    } else if (!xType->IsTkLenCompatibleWith(*yType)) {
+      return false;
+    }
+  } else if (xType || yType || !(xProc && yProc)) {
+    return false;
+  }
+  if (xProc) {
+    // TODO: compare argument types, &c.
+  }
+  return true;
 }
 
 // TODO: These utilities were cloned out of Semantics to avoid a cyclic
@@ -403,6 +438,7 @@ static bool AreTypeParamCompatible(const semantics::DerivedTypeSpec &x,
   return true;
 }
 
+// F2023 7.5.3.2
 static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
     const semantics::DerivedTypeSpec &y, bool ignoreTypeParameterValues,
     bool ignoreLenParameters, SetOfDerivedTypePairs &inProgress) {
@@ -413,8 +449,8 @@ static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
       !AreTypeParamCompatible(x, y, ignoreLenParameters)) {
     return false;
   }
-  const auto &xSymbol{x.typeSymbol()};
-  const auto &ySymbol{y.typeSymbol()};
+  const auto &xSymbol{x.typeSymbol().GetUltimate()};
+  const auto &ySymbol{y.typeSymbol().GetUltimate()};
   if (xSymbol == ySymbol) {
     return true;
   }
@@ -432,7 +468,7 @@ static bool AreSameDerivedType(const semantics::DerivedTypeSpec &x,
       !(xSymbol.attrs().test(semantics::Attr::BIND_C) &&
           ySymbol.attrs().test(semantics::Attr::BIND_C))) {
     // PGI does not enforce this requirement; all other Fortran
-    // processors do with a hard error when violations are caught.
+    // compilers do with a hard error when violations are caught.
     return false;
   }
   // Compare the component lists in their orders of declaration.
