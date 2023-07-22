@@ -274,17 +274,28 @@ define float @v_neg_rcp_f32_daz(float %x) #0 {
 }
 
 define float @v_rcp_f32_ieee_ulp25(float %x) #3 {
-; GCN-LABEL: v_rcp_f32_ieee_ulp25:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_rcp_f32_ieee_ulp25:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; SI-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; SI-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_rcp_f32_ieee_ulp25:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; VI-NEXT:    v_rcp_f32_e32 v1, v1
+; VI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; VI-NEXT:    v_sub_u32_e32 v0, vcc, 0, v0
+; VI-NEXT:    v_ldexp_f32 v0, v1, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_rcp_f32_ieee_ulp25:
 ; R600:       ; %bb.0:
@@ -295,17 +306,28 @@ define float @v_rcp_f32_ieee_ulp25(float %x) #3 {
 }
 
 define float @v_rcp_f32_ieee_ulp25_known_not_denormal(float nofpclass(sub) %x) #3 {
-; GCN-LABEL: v_rcp_f32_ieee_ulp25_known_not_denormal:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_rcp_f32_ieee_ulp25_known_not_denormal:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; SI-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; SI-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_rcp_f32_ieee_ulp25_known_not_denormal:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; VI-NEXT:    v_rcp_f32_e32 v1, v1
+; VI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; VI-NEXT:    v_sub_u32_e32 v0, vcc, 0, v0
+; VI-NEXT:    v_ldexp_f32 v0, v1, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_rcp_f32_ieee_ulp25_known_not_denormal:
 ; R600:       ; %bb.0:
@@ -316,17 +338,28 @@ define float @v_rcp_f32_ieee_ulp25_known_not_denormal(float nofpclass(sub) %x) #
 }
 
 define float @v_neg_rcp_f32_ieee_ulp25_known_not_denormal(float nofpclass(sub) %x) #3 {
-; GCN-LABEL: v_neg_rcp_f32_ieee_ulp25_known_not_denormal:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-NEXT:    v_mul_f32_e64 v0, v0, -v1
-; GCN-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_neg_rcp_f32_ieee_ulp25_known_not_denormal:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
+; SI-NEXT:    v_cndmask_b32_e64 v1, -v0, v1, s[4:5]
+; SI-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_neg_rcp_f32_ieee_ulp25_known_not_denormal:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; VI-NEXT:    v_rcp_f32_e32 v1, v1
+; VI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; VI-NEXT:    v_sub_u32_e32 v0, vcc, 0, v0
+; VI-NEXT:    v_ldexp_f32 v0, v1, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_neg_rcp_f32_ieee_ulp25_known_not_denormal:
 ; R600:       ; %bb.0:
@@ -337,17 +370,28 @@ define float @v_neg_rcp_f32_ieee_ulp25_known_not_denormal(float nofpclass(sub) %
 }
 
 define float @v_rcp_f32_ieee_ulp25_ninf_nnan(float %x) #3 {
-; GCN-LABEL: v_rcp_f32_ieee_ulp25_ninf_nnan:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-NEXT:    v_mul_f32_e32 v0, v0, v1
-; GCN-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_rcp_f32_ieee_ulp25_ninf_nnan:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; SI-NEXT:    v_cmp_lt_f32_e64 vcc, |v0|, s4
+; SI-NEXT:    v_cndmask_b32_e32 v1, v0, v1, vcc
+; SI-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_rcp_f32_ieee_ulp25_ninf_nnan:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_frexp_mant_f32_e32 v1, v0
+; VI-NEXT:    v_rcp_f32_e32 v1, v1
+; VI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; VI-NEXT:    v_sub_u32_e32 v0, vcc, 0, v0
+; VI-NEXT:    v_ldexp_f32 v0, v1, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_rcp_f32_ieee_ulp25_ninf_nnan:
 ; R600:       ; %bb.0:
@@ -373,17 +417,28 @@ define float @v_rcp_f32_daz_ulp25(float %x) #0 {
 }
 
 define float @v_neg_rcp_f32_ieee_ulp25(float %x) #3 {
-; GCN-LABEL: v_neg_rcp_f32_ieee_ulp25:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-NEXT:    v_mul_f32_e64 v0, v0, -v1
-; GCN-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_neg_rcp_f32_ieee_ulp25:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
+; SI-NEXT:    v_cndmask_b32_e64 v1, -v0, v1, s[4:5]
+; SI-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_neg_rcp_f32_ieee_ulp25:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_frexp_mant_f32_e64 v1, -v0
+; VI-NEXT:    v_rcp_f32_e32 v1, v1
+; VI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; VI-NEXT:    v_sub_u32_e32 v0, vcc, 0, v0
+; VI-NEXT:    v_ldexp_f32 v0, v1, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_neg_rcp_f32_ieee_ulp25:
 ; R600:       ; %bb.0:
@@ -501,17 +556,28 @@ define float @v_rcp_fabs_f32_daz(float %x) #0 {
 }
 
 define float @v_rcp_fabs_f32_ieee_ulp25(float %x) #3 {
-; GCN-LABEL: v_rcp_fabs_f32_ieee_ulp25:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-NEXT:    v_mul_f32_e64 v0, |v0|, v1
-; GCN-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_rcp_fabs_f32_ieee_ulp25:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    v_frexp_mant_f32_e64 v1, |v0|
+; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
+; SI-NEXT:    v_cndmask_b32_e64 v1, |v0|, v1, s[4:5]
+; SI-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_rcp_fabs_f32_ieee_ulp25:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_frexp_mant_f32_e64 v1, |v0|
+; VI-NEXT:    v_rcp_f32_e32 v1, v1
+; VI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; VI-NEXT:    v_sub_u32_e32 v0, vcc, 0, v0
+; VI-NEXT:    v_ldexp_f32 v0, v1, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_rcp_fabs_f32_ieee_ulp25:
 ; R600:       ; %bb.0:
@@ -631,17 +697,28 @@ define float @v_rcp_neg_fabs_f32_daz(float %x) #0 {
 }
 
 define float @v_rcp_neg_fabs_f32_ieee_ulp25(float %x) #3 {
-; GCN-LABEL: v_rcp_neg_fabs_f32_ieee_ulp25:
-; GCN:       ; %bb.0:
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s4, 0x6f800000
-; GCN-NEXT:    v_mov_b32_e32 v1, 0x2f800000
-; GCN-NEXT:    v_cmp_gt_f32_e64 vcc, |v0|, s4
-; GCN-NEXT:    v_cndmask_b32_e32 v1, 1.0, v1, vcc
-; GCN-NEXT:    v_mul_f32_e64 v0, |v0|, -v1
-; GCN-NEXT:    v_rcp_f32_e32 v0, v0
-; GCN-NEXT:    v_mul_f32_e32 v0, v1, v0
-; GCN-NEXT:    s_setpc_b64 s[30:31]
+; SI-LABEL: v_rcp_neg_fabs_f32_ieee_ulp25:
+; SI:       ; %bb.0:
+; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; SI-NEXT:    s_mov_b32 s4, 0x7f800000
+; SI-NEXT:    v_frexp_mant_f32_e64 v1, -|v0|
+; SI-NEXT:    v_cmp_lt_f32_e64 s[4:5], |v0|, s4
+; SI-NEXT:    v_cndmask_b32_e64 v1, -|v0|, v1, s[4:5]
+; SI-NEXT:    v_rcp_f32_e32 v1, v1
+; SI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; SI-NEXT:    v_sub_i32_e32 v0, vcc, 0, v0
+; SI-NEXT:    v_ldexp_f32_e32 v0, v1, v0
+; SI-NEXT:    s_setpc_b64 s[30:31]
+;
+; VI-LABEL: v_rcp_neg_fabs_f32_ieee_ulp25:
+; VI:       ; %bb.0:
+; VI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; VI-NEXT:    v_frexp_mant_f32_e64 v1, -|v0|
+; VI-NEXT:    v_rcp_f32_e32 v1, v1
+; VI-NEXT:    v_frexp_exp_i32_f32_e32 v0, v0
+; VI-NEXT:    v_sub_u32_e32 v0, vcc, 0, v0
+; VI-NEXT:    v_ldexp_f32 v0, v1, v0
+; VI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; R600-LABEL: v_rcp_neg_fabs_f32_ieee_ulp25:
 ; R600:       ; %bb.0:
