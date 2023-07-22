@@ -22,6 +22,20 @@ program test_size
     print *, size(scalar)
     !ERROR: missing mandatory 'dim=' argument
     print *, ubound(scalar)
+    !ERROR: DIM=0 dimension must be positive
+    print *, lbound(arg, 0)
+    !ERROR: DIM=0 dimension must be positive
+    print *, lbound(assumedRank, 0)
+    !ERROR: DIM=666 dimension is too large for any array (maximum rank 15)
+    print *, lbound(assumedRank, 666)
+    !ERROR: DIM=0 dimension must be positive
+    print *, ubound(arg, 0)
+    !ERROR: DIM=2 dimension is out of range for rank-2 assumed-size array
+    print *, ubound(arg, 2)
+    !ERROR: DIM=0 dimension must be positive
+    print *, ubound(assumedRank, 0)
+    !ERROR: DIM=666 dimension is too large for any array (maximum rank 15)
+    print *, ubound(assumedRank, 666)
     select rank(assumedRank)
     rank(1)
       !ERROR: DIM=2 dimension is out of range for rank-1 array
