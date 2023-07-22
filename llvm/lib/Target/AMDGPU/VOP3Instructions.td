@@ -681,7 +681,9 @@ def VOP3_PERMLANE_Profile : VOP3_Profile<VOPProfile <[i32, i32, i32, i32]>, VOP3
 }
 
 def opsel_i1timm : SDNodeXForm<timm, [{
-  return CurDAG->getTargetConstant(N->getZExtValue() ? SISrcMods::OP_SEL_0 : 0, SDLoc(N), MVT::i32);
+  return CurDAG->getTargetConstant(
+      N->getZExtValue() ? SISrcMods::OP_SEL_0 : SISrcMods::NONE,
+      SDLoc(N), MVT::i32);
 }]>;
 def gi_opsel_i1timm : GICustomOperandRenderer<"renderOpSelTImm">,
   GISDNodeXFormEquiv<opsel_i1timm>;
