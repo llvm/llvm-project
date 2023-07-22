@@ -3394,14 +3394,10 @@ static void GenerateHasAttrSpellingStringSwitch(
       // If this is the C++11 variety, also add in the LangOpts test.
       if (Variety == "CXX11")
         Test += " && LangOpts.CPlusPlus11";
-      else if (Variety == "C2x")
-        Test += " && LangOpts.DoubleSquareBracketAttributes";
     } else if (Variety == "CXX11")
       // C++11 mode should be checked against LangOpts, which is presumed to be
       // present in the caller.
       Test = "LangOpts.CPlusPlus11";
-    else if (Variety == "C2x")
-      Test = "LangOpts.DoubleSquareBracketAttributes";
 
     std::string TestStr = !Test.empty()
                               ? Test + " ? " + llvm::itostr(Version) + " : 0"

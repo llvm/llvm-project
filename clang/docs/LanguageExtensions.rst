@@ -1429,15 +1429,15 @@ More information could be found `here <https://clang.llvm.org/docs/Modules.html>
 Language Extensions Back-ported to Previous Standards
 =====================================================
 
-====================================== ================================ ============= ============= ==================================
-Feature                                Feature Test Macro               Introduced In Backported To Required Flags
-====================================== ================================ ============= ============= ==================================
+====================================== ================================ ============= =============
+Feature                                Feature Test Macro               Introduced In Backported To
+====================================== ================================ ============= =============
 variadic templates                     __cpp_variadic_templates         C++11         C++03
 Alias templates                        __cpp_alias_templates            C++11         C++03
 Non-static data member initializers    __cpp_nsdmi                      C++11         C++03
 Range-based ``for`` loop               __cpp_range_based_for            C++11         C++03
 RValue references                      __cpp_rvalue_references          C++11         C++03
-Attributes                             __cpp_attributes                 C++11         C++03         -fdouble-square-bracket-attributes
+Attributes                             __cpp_attributes                 C++11         C++03
 variable templates                     __cpp_variable_templates         C++14         C++03
 Binary literals                        __cpp_binary_literals            C++14         C++03
 Relaxed constexpr                      __cpp_constexpr                  C++14         C++11
@@ -1457,10 +1457,11 @@ Conditional ``explicit``               __cpp_conditional_explicit       C++20   
 ``using enum``                         __cpp_using_enum                 C++20         C++03
 ``if consteval``                       __cpp_if_consteval               C++23         C++20
 ``static operator()``                  __cpp_static_call_operator       C++23         C++03
--------------------------------------- -------------------------------- ------------- ------------- ----------------------------------
+-------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                          C99           C89
 Array & element qualification (N2607)                                   C2x           C89
-====================================== ================================ ============= ============= ==================================
+Attributes (N2335)                                                      C2x           C89
+====================================== ================================ ============= =============
 
 Type Trait Primitives
 =====================

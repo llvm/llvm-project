@@ -1267,9 +1267,7 @@ def fast : Flag<["-"], "fast">, Group<f_Group>;
 def fasynchronous_unwind_tables : Flag<["-"], "fasynchronous-unwind-tables">, Group<f_Group>;
 
 defm double_square_bracket_attributes : BoolFOption<"double-square-bracket-attributes",
-  LangOpts<"DoubleSquareBracketAttributes">, Default<!strconcat(cpp11.KeyPath, "||", c2x.KeyPath)>,
-  PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
-  BothFlags<[NoXarchOption, CC1Option], " '[[]]' attributes in all C and C++ language modes">>;
+  LangOpts<"DoubleSquareBracketAttributes">, DefaultTrue, PosFlag<SetTrue>, NegFlag<SetFalse>>;
 
 defm autolink : BoolFOption<"autolink",
   CodeGenOpts<"Autolink">, DefaultTrue,
