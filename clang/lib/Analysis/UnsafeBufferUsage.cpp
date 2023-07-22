@@ -1889,11 +1889,11 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
       const ParmVarDecl *Parm = FD->getParamDecl(i);
 
       if (Parm->isImplicit())
-        continue;      
+        continue;
       // FIXME: If a parameter has no name, it is unused in the
       // definition. So we could just leave it as it is.
-      if (!Parm->getIdentifier()) 
-	// If a parameter of a function definition has no name:
+      if (!Parm->getIdentifier())
+        // If a parameter of a function definition has no name:
         return std::nullopt;
       if (i == ParmIdx)
         // This is our spanified paramter!
@@ -2208,7 +2208,7 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler,
                                    bool EmitSuggestions) {
   assert(D && D->getBody());
-  
+
   // We do not want to visit a Lambda expression defined inside a method independently.
   // Instead, it should be visited along with the outer method.
   if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
