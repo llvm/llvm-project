@@ -288,6 +288,71 @@ void transform::ApplyCommonSubexpressionEliminationOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// ApplyDeadCodeEliminationOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::ApplyDeadCodeEliminationOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    ApplyToEachResultList &results, transform::TransformState &state) {
+  // Make sure that this transform is not applied to itself. Modifying the
+  // transform IR while it is being interpreted is generally dangerous.
+  DiagnosedSilenceableFailure payloadCheck =
+      ensurePayloadIsSeparateFromTransform(*this, target);
+  if (!payloadCheck.succeeded())
+    return payloadCheck;
+
+  // Maintain a worklist of potentially dead ops.
+  SetVector<Operation *> worklist;
+
+  // Helper function that adds all defining ops of used values (operands and
+  // operands of nested ops).
+  auto addDefiningOpsToWorklist = [&](Operation *op) {
+    op->walk([&](Operation *op) {
+      for (Value v : op->getOperands())
+        if (Operation *defOp = v.getDefiningOp())
+          if (target->isProperAncestor(defOp))
+            worklist.insert(defOp);
+    });
+  };
+
+  // Helper function that erases an op.
+  auto eraseOp = [&](Operation *op) {
+    // Remove op and nested ops from the worklist.
+    op->walk([&](Operation *op) {
+      auto it = llvm::find(worklist, op);
+      if (it != worklist.end())
+        worklist.erase(it);
+    });
+    rewriter.eraseOp(op);
+  };
+
+  // Initial walk over the IR.
+  target->walk<WalkOrder::PostOrder>([&](Operation *op) {
+    if (op != target && isOpTriviallyDead(op)) {
+      addDefiningOpsToWorklist(op);
+      eraseOp(op);
+    }
+  });
+
+  // Erase all ops that have become dead.
+  while (!worklist.empty()) {
+    Operation *op = worklist.pop_back_val();
+    if (!isOpTriviallyDead(op))
+      continue;
+    addDefiningOpsToWorklist(op);
+    eraseOp(op);
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::ApplyDeadCodeEliminationOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
 // ApplyPatternsOp
 //===----------------------------------------------------------------------===//
 

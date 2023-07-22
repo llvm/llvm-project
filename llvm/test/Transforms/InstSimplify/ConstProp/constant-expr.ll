@@ -9,7 +9,7 @@
 @B = global i1 sub (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z)), align 2
 ; CHECK: @B = global i1 xor (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z))
 @C = global i1 mul (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z))
-; CHECK: @C = global i1 mul (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z))
+; CHECK: @C = global i1 and (i1 icmp ult (ptr @X, ptr @Y), i1 icmp ult (ptr @X, ptr @Z))
 
 @H = global i1 icmp ule (ptr @X, ptr @Y)
 ; CHECK: @H = global i1 icmp ule (ptr @X, ptr @Y)

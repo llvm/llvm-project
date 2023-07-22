@@ -38,6 +38,7 @@
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBMemoryRegionInfo.h"
 #include "lldb/API/SBMemoryRegionInfoList.h"
+#include "lldb/API/SBScriptObject.h"
 #include "lldb/API/SBStream.h"
 #include "lldb/API/SBStringList.h"
 #include "lldb/API/SBStructuredData.h"
@@ -1285,8 +1286,10 @@ lldb::SBError SBProcess::DeallocateMemory(lldb::addr_t ptr) {
   return sb_error;
 }
 
-ScriptedObject SBProcess::GetScriptedImplementation() {
+lldb::SBScriptObject SBProcess::GetScriptedImplementation() {
   LLDB_INSTRUMENT_VA(this);
   ProcessSP process_sp(GetSP());
-  return (process_sp) ? process_sp->GetImplementation() : nullptr;
+  return lldb::SBScriptObject((process_sp) ? process_sp->GetImplementation()
+                                           : nullptr,
+                              eScriptLanguageDefault);
 }

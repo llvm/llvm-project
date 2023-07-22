@@ -88,6 +88,7 @@ class LLDB_API SBProcess;
 class LLDB_API SBProcessInfo;
 class LLDB_API SBQueue;
 class LLDB_API SBQueueItem;
+class LLDB_API SBScriptObject;
 class LLDB_API SBSection;
 class LLDB_API SBSourceManager;
 class LLDB_API SBStream;
@@ -131,8 +132,6 @@ typedef void (*SBDebuggerDestroyCallback)(lldb::user_id_t debugger_id,
 typedef SBError (*SBPlatformLocateModuleCallback)(
     void *baton, const SBModuleSpec &module_spec, SBFileSpec &module_file_spec,
     SBFileSpec &symbol_file_spec);
-
-typedef void *ScriptedObject;
 }
 
 #endif // LLDB_API_SBDEFINES_H
