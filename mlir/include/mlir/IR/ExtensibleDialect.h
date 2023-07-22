@@ -24,6 +24,7 @@
 #include "mlir/IR/DialectInterface.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/OpDefinition.h"
+#include "mlir/IR/OperationSupport.h"
 #include "mlir/Support/TypeID.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -485,7 +486,9 @@ public:
   void populateDefaultProperties(OperationName opName,
                                  OpaqueProperties properties) final {}
 
-  LogicalResult setPropertiesFromAttr(Operation *op, Attribute attr,
+  LogicalResult setPropertiesFromAttr(OperationName opName,
+                                      OpaqueProperties properties,
+                                      Attribute attr,
                                       InFlightDiagnostic *diag) final {
     return failure();
   }
