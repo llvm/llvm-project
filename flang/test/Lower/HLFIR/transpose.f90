@@ -1,5 +1,5 @@
 ! Test lowering of TRANSPOSE intrinsic to HLFIR
-! RUN: bbc -emit-hlfir -o - %s 2>&1 | FileCheck %s
+! RUN: bbc -emit-hlfir --polymorphic-type -o - %s 2>&1 | FileCheck %s
 
 subroutine transpose1(m, res)
   integer :: m(1,2), res(2, 1)
@@ -45,3 +45,20 @@ endsubroutine
 ! CHECK-NEXT:    hlfir.destroy %[[EXPR]]
 ! CHECK-NEXT:    return
 ! CHECK-NEXT:  }
+
+! Test that the result type is polymorphic.
+subroutine test_polymorphic_result(m, res)
+  class(*), allocatable, dimension(:, :) :: m, res
+  res = transpose(m)
+end subroutine test_polymorphic_result
+! CHECK-LABEL:   func.func @_QPtest_polymorphic_result(
+! CHECK-SAME:        %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>> {fir.bindc_name = "m"},
+! CHECK-SAME:        %[[VAL_1:.*]]: !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>> {fir.bindc_name = "res"}) {
+! CHECK:           %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_0]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_polymorphic_resultEm"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>)
+! CHECK:           %[[VAL_3:.*]]:2 = hlfir.declare %[[VAL_1]] {fortran_attrs = #fir.var_attrs<allocatable>, uniq_name = "_QFtest_polymorphic_resultEres"} : (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>) -> (!fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>)
+! CHECK:           %[[VAL_4:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
+! CHECK:           %[[VAL_5:.*]] = hlfir.transpose %[[VAL_4]] : (!fir.class<!fir.heap<!fir.array<?x?xnone>>>) -> !hlfir.expr<?x?xnone?>
+! CHECK:           hlfir.assign %[[VAL_5]] to %[[VAL_3]]#0 realloc : !hlfir.expr<?x?xnone?>, !fir.ref<!fir.class<!fir.heap<!fir.array<?x?xnone>>>>
+! CHECK:           hlfir.destroy %[[VAL_5]] : !hlfir.expr<?x?xnone?>
+! CHECK:           return
+! CHECK:         }
