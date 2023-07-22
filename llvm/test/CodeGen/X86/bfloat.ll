@@ -1158,4 +1158,29 @@ define <32 x bfloat> @pr63017_2() nounwind {
   ret <32 x bfloat> %1
 }
 
+define <32 x bfloat> @pr62997_3(<32 x bfloat> %0, bfloat %1) {
+; SSE2-LABEL: pr62997_3:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    movq %xmm0, %rax
+; SSE2-NEXT:    movabsq $-4294967296, %rcx # imm = 0xFFFFFFFF00000000
+; SSE2-NEXT:    andq %rax, %rcx
+; SSE2-NEXT:    movzwl %ax, %eax
+; SSE2-NEXT:    movd %xmm4, %edx
+; SSE2-NEXT:    shll $16, %edx
+; SSE2-NEXT:    orl %eax, %edx
+; SSE2-NEXT:    orq %rcx, %rdx
+; SSE2-NEXT:    movq %rdx, %xmm4
+; SSE2-NEXT:    movsd {{.*#+}} xmm0 = xmm4[0],xmm0[1]
+; SSE2-NEXT:    retq
+;
+; BF16-LABEL: pr62997_3:
+; BF16:       # %bb.0:
+; BF16-NEXT:    vmovd %xmm1, %eax
+; BF16-NEXT:    vpinsrw $1, %eax, %xmm0, %xmm1
+; BF16-NEXT:    vinserti32x4 $0, %xmm1, %zmm0, %zmm0
+; BF16-NEXT:    retq
+  %3 = insertelement <32 x bfloat> %0, bfloat %1, i64 1
+  ret <32 x bfloat> %3
+}
+
 declare <32 x bfloat> @llvm.masked.load.v32bf16.p0(ptr, i32, <32 x i1>, <32 x bfloat>)
