@@ -95,7 +95,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
   ReturnType = this->classify(F->getReturnType());
 
   // Constructor. Set up field initializers.
-  if (const auto Ctor = dyn_cast<CXXConstructorDecl>(F)) {
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(F)) {
     const RecordDecl *RD = Ctor->getParent();
     const Record *R = this->getRecord(RD);
     if (!R)
@@ -133,7 +133,7 @@ bool ByteCodeStmtGen<Emitter>::visitFunc(const FunctionDecl *F) {
       } else if (const Type *Base = Init->getBaseClass()) {
         // Base class initializer.
         // Get This Base and call initializer on it.
-        auto *BaseDecl = Base->getAsCXXRecordDecl();
+        const auto *BaseDecl = Base->getAsCXXRecordDecl();
         assert(BaseDecl);
         const Record::Base *B = R->getBase(BaseDecl);
         assert(B);
