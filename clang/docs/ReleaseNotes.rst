@@ -229,6 +229,8 @@ C++2c Feature Support
 
 Resolutions to C++ Defect Reports
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Implemented `CWG2137 <https://wg21.link/CWG2137>`_ which allows
+  list-initialization from objects of the same type.
 
 - Implemented `CWG2598 <https://wg21.link/CWG2598>`_ and `CWG2096 <https://wg21.link/CWG2096>`_,
   making unions (that have either no members or at least one literal member) literal types.
