@@ -2226,8 +2226,8 @@ static llvm::Value *EmitDynamicCastToNull(CodeGenFunction &CGF,
   if (!CGF.CGM.getCXXABI().EmitBadCastCall(CGF))
     return nullptr;
 
-  CGF.EmitBlock(CGF.createBasicBlock("dynamic_cast.end"));
-  return llvm::UndefValue::get(DestLTy);
+  CGF.Builder.ClearInsertionPoint();
+  return llvm::PoisonValue::get(DestLTy);
 }
 
 llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
@@ -2240,17 +2240,16 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   // C++ [expr.dynamic.cast]p7:
   //   If T is "pointer to cv void," then the result is a pointer to the most
   //   derived object pointed to by v.
-  const PointerType *DestPTy = DestTy->getAs<PointerType>();
-
-  bool isDynamicCastToVoid;
+  bool IsDynamicCastToVoid = DestTy->isVoidPointerType();
   QualType SrcRecordTy;
   QualType DestRecordTy;
-  if (DestPTy) {
-    isDynamicCastToVoid = DestPTy->getPointeeType()->isVoidType();
+  if (IsDynamicCastToVoid) {
+    SrcRecordTy = SrcTy->getPointeeType();
+    // No DestRecordTy.
+  } else if (const PointerType *DestPTy = DestTy->getAs<PointerType>()) {
     SrcRecordTy = SrcTy->castAs<PointerType>()->getPointeeType();
     DestRecordTy = DestPTy->getPointeeType();
   } else {
-    isDynamicCastToVoid = false;
     SrcRecordTy = SrcTy;
     DestRecordTy = DestTy->castAs<ReferenceType>()->getPointeeType();
   }
@@ -2263,18 +2262,29 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   EmitTypeCheck(TCK_DynamicOperation, DCE->getExprLoc(), ThisAddr.getPointer(),
                 SrcRecordTy);
 
-  if (DCE->isAlwaysNull())
-    if (llvm::Value *T = EmitDynamicCastToNull(*this, DestTy))
+  if (DCE->isAlwaysNull()) {
+    if (llvm::Value *T = EmitDynamicCastToNull(*this, DestTy)) {
+      // Expression emission is expected to retain a valid insertion point.
+      if (!Builder.GetInsertBlock())
+        EmitBlock(createBasicBlock("dynamic_cast.unreachable"));
       return T;
+    }
+  }
 
   assert(SrcRecordTy->isRecordType() && "source type must be a record type!");
+
+  // If the destination is effectively final, the cast succeeds if and only
+  // if the dynamic type of the pointer is exactly the destination type.
+  bool IsExact = !IsDynamicCastToVoid &&
+                 DestRecordTy->getAsCXXRecordDecl()->isEffectivelyFinal() &&
+                 CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy);
 
   // C++ [expr.dynamic.cast]p4:
   //   If the value of v is a null pointer value in the pointer case, the result
   //   is the null pointer value of type T.
   bool ShouldNullCheckSrcValue =
-      CGM.getCXXABI().shouldDynamicCastCallBeNullChecked(SrcTy->isPointerType(),
-                                                         SrcRecordTy);
+      IsExact || CGM.getCXXABI().shouldDynamicCastCallBeNullChecked(
+                     SrcTy->isPointerType(), SrcRecordTy);
 
   llvm::BasicBlock *CastNull = nullptr;
   llvm::BasicBlock *CastNotNull = nullptr;
@@ -2290,29 +2300,38 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   }
 
   llvm::Value *Value;
-  if (isDynamicCastToVoid) {
+  if (IsDynamicCastToVoid) {
     Value = CGM.getCXXABI().emitDynamicCastToVoid(*this, ThisAddr, SrcRecordTy);
+  } else if (IsExact) {
+    // If the destination type is effectively final, this pointer points to the
+    // right type if and only if its vptr has the right value.
+    Value = CGM.getCXXABI().emitExactDynamicCast(
+        *this, ThisAddr, SrcRecordTy, DestTy, DestRecordTy, CastEnd, CastNull);
   } else {
     assert(DestRecordTy->isRecordType() &&
            "destination type must be a record type!");
     Value = CGM.getCXXABI().emitDynamicCastCall(*this, ThisAddr, SrcRecordTy,
                                                 DestTy, DestRecordTy, CastEnd);
-    CastNotNull = Builder.GetInsertBlock();
   }
+  CastNotNull = Builder.GetInsertBlock();
 
+  llvm::Value *NullValue = nullptr;
   if (ShouldNullCheckSrcValue) {
     EmitBranch(CastEnd);
 
     EmitBlock(CastNull);
+    NullValue = EmitDynamicCastToNull(*this, DestTy);
+    CastNull = Builder.GetInsertBlock();
+
     EmitBranch(CastEnd);
   }
 
   EmitBlock(CastEnd);
 
-  if (ShouldNullCheckSrcValue) {
+  if (CastNull) {
     llvm::PHINode *PHI = Builder.CreatePHI(Value->getType(), 2);
     PHI->addIncoming(Value, CastNotNull);
-    PHI->addIncoming(llvm::Constant::getNullValue(Value->getType()), CastNull);
+    PHI->addIncoming(NullValue, CastNull);
 
     Value = PHI;
   }
