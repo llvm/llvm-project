@@ -4253,9 +4253,7 @@ LexStart:
     if (LangOpts.Digraphs && Char == '>') {
       Kind = tok::r_square; // ':>' -> ']'
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
-    } else if ((LangOpts.CPlusPlus ||
-                LangOpts.DoubleSquareBracketAttributes) &&
-               Char == ':') {
+    } else if (Char == ':') {
       Kind = tok::coloncolon;
       CurPtr = ConsumeChar(CurPtr, SizeTmp, Result);
     } else {
@@ -4472,8 +4470,7 @@ bool Lexer::LexDependencyDirectiveToken(Token &Result) {
     Result.setLiteralData(TokPtr);
     return true;
   }
-  if (Result.is(tok::colon) &&
-      (LangOpts.CPlusPlus || LangOpts.DoubleSquareBracketAttributes)) {
+  if (Result.is(tok::colon)) {
     // Convert consecutive colons to 'tok::coloncolon'.
     if (*BufferPtr == ':') {
       assert(DepDirectives.front().Tokens[NextDepDirectiveTokenIndex].is(

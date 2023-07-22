@@ -277,6 +277,9 @@ New Compiler Flags
 Deprecated Compiler Flags
 -------------------------
 
+- ``-fdouble-square-bracket-attributes`` has been deprecated. It is ignored now
+  and will be removed in Clang 18.
+
 Modified Compiler Flags
 -----------------------
 

@@ -719,8 +719,17 @@ def warn_cxx14_compat_ns_enum_attribute : Warning<
 def warn_cxx98_compat_alignas : Warning<"'alignas' is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def warn_cxx98_compat_attribute : Warning<
-  "C++11 attribute syntax is incompatible with C++98">,
+  "[[]] attributes are incompatible with C++ standards before C++11">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def warn_ext_cxx11_attributes : Extension<
+  "[[]] attributes are a C++11 extension">,
+  InGroup<CXX11>;
+def warn_pre_c2x_compat_attributes : Warning<
+  "[[]] attributes are incompatible with C standards before C2x">,
+  DefaultIgnore, InGroup<CPre2xCompat>;
+def warn_ext_c2x_attributes : Extension<
+  "[[]] attributes are a C2x extension">,
+  InGroup<C2x>;
 def err_cxx11_attribute_forbids_arguments : Error<
   "attribute %0 cannot have an argument list">;
 def err_attribute_requires_arguments : Error<

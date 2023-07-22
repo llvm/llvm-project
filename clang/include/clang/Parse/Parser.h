@@ -2712,12 +2712,6 @@ public:
 private:
   void ParseBlockId(SourceLocation CaretLoc);
 
-  /// Are [[]] attributes enabled?
-  bool standardAttributesAllowed() const {
-    const LangOptions &LO = getLangOpts();
-    return LO.DoubleSquareBracketAttributes;
-  }
-
   /// Return true if the next token should be treated as a [[]] attribute,
   /// or as a keyword that behaves like one.  The former is only true if
   /// [[]] attributes are enabled, whereas the latter is true whenever
@@ -2726,15 +2720,14 @@ private:
   bool isAllowedCXX11AttributeSpecifier(bool Disambiguate = false,
                                         bool OuterMightBeMessageSend = false) {
     return (Tok.isRegularKeywordAttribute() ||
-            (standardAttributesAllowed() &&
-             isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend)));
+            isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend));
   }
 
   // Check for the start of an attribute-specifier-seq in a context where an
   // attribute is not allowed.
   bool CheckProhibitedCXX11Attribute() {
     assert(Tok.is(tok::l_square));
-    if (!standardAttributesAllowed() || NextToken().isNot(tok::l_square))
+    if (NextToken().isNot(tok::l_square))
       return false;
     return DiagnoseProhibitedCXX11Attribute();
   }
@@ -2742,13 +2735,10 @@ private:
   bool DiagnoseProhibitedCXX11Attribute();
   void CheckMisplacedCXX11Attribute(ParsedAttributes &Attrs,
                                     SourceLocation CorrectLocation) {
-    if (!Tok.isRegularKeywordAttribute()) {
-      if (!standardAttributesAllowed())
-        return;
-      if ((Tok.isNot(tok::l_square) || NextToken().isNot(tok::l_square)) &&
-          Tok.isNot(tok::kw_alignas))
-        return;
-    }
+    if (!Tok.isRegularKeywordAttribute() &&
+        (Tok.isNot(tok::l_square) || NextToken().isNot(tok::l_square)) &&
+        Tok.isNot(tok::kw_alignas))
+      return;
     DiagnoseMisplacedCXX11Attribute(Attrs, CorrectLocation);
   }
   void DiagnoseMisplacedCXX11Attribute(ParsedAttributes &Attrs,
