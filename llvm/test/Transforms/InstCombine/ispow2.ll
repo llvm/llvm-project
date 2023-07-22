@@ -1269,9 +1269,8 @@ define i1 @blsmsk_is_p2_or_z_fail_bad_cmp(i32 %x, i32 %z) {
 declare <2 x i32> @llvm.ctpop.2xi32(<2 x i32>)
 define i1 @is_pow2_nz_known_bits(i32 %xin) {
 ; CHECK-LABEL: @is_pow2_nz_known_bits(
-; CHECK-NEXT:    [[X:%.*]] = or i32 [[XIN:%.*]], 64
-; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG3:![0-9]+]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[CNT]], 1
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[XIN:%.*]], -65
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = or i32 %xin, 64
@@ -1283,7 +1282,7 @@ define i1 @is_pow2_nz_known_bits(i32 %xin) {
 define i1 @is_pow2_nz_known_bits_fail_multiuse(i32 %xin) {
 ; CHECK-LABEL: @is_pow2_nz_known_bits_fail_multiuse(
 ; CHECK-NEXT:    [[X:%.*]] = or i32 [[XIN:%.*]], 64
-; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG3]]
+; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG3:![0-9]+]]
 ; CHECK-NEXT:    call void @use.i32(i32 [[CNT]])
 ; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[CNT]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
@@ -1297,9 +1296,7 @@ define i1 @is_pow2_nz_known_bits_fail_multiuse(i32 %xin) {
 
 define i1 @not_pow2_nz_known_bits(i32 %xin) {
 ; CHECK-LABEL: @not_pow2_nz_known_bits(
-; CHECK-NEXT:    [[X:%.*]] = or i32 [[XIN:%.*]], 1
-; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG3]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ne i32 [[CNT]], 1
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[XIN:%.*]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = or i32 %xin, 1
@@ -1323,9 +1320,8 @@ define i1 @not_pow2_nz_known_bits_fail_not_p2_test(i32 %xin) {
 
 define i1 @is_pow2_or_z_known_bits(i32 %xin) {
 ; CHECK-LABEL: @is_pow2_or_z_known_bits(
-; CHECK-NEXT:    [[X:%.*]] = or i32 [[XIN:%.*]], -2147483648
-; CHECK-NEXT:    [[CNT:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG3]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[CNT]], 2
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[XIN:%.*]], 2147483647
+; CHECK-NEXT:    [[R:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = or i32 %xin, 2147483648
@@ -1336,9 +1332,8 @@ define i1 @is_pow2_or_z_known_bits(i32 %xin) {
 
 define <2 x i1> @not_pow2_or_z_known_bits(<2 x i32> %xin) {
 ; CHECK-LABEL: @not_pow2_or_z_known_bits(
-; CHECK-NEXT:    [[X:%.*]] = or <2 x i32> [[XIN:%.*]], <i32 64, i32 64>
-; CHECK-NEXT:    [[CNT:%.*]] = call <2 x i32> @llvm.ctpop.v2i32(<2 x i32> [[X]]), !range [[RNG3]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt <2 x i32> [[CNT]], <i32 1, i32 1>
+; CHECK-NEXT:    [[TMP1:%.*]] = and <2 x i32> [[XIN:%.*]], <i32 -65, i32 -65>
+; CHECK-NEXT:    [[R:%.*]] = icmp ne <2 x i32> [[TMP1]], zeroinitializer
 ; CHECK-NEXT:    ret <2 x i1> [[R]]
 ;
   %x = or <2 x i32> %xin, <i32 64, i32 64>
