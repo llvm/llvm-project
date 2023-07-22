@@ -1240,9 +1240,11 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::TRUNCATE,    MVT::v2i8,  Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v2i16, Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v2i32, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v2i64, Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v4i8,  Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v4i16, Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v4i32, Custom);
+    setOperationAction(ISD::TRUNCATE,    MVT::v4i64, Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v8i8,  Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v8i16, Custom);
     setOperationAction(ISD::TRUNCATE,    MVT::v8i32, Custom);
@@ -22957,6 +22959,13 @@ static SDValue LowerTruncateVecPackWithSignBits(MVT DstVT, SDValue In,
   // Don't lower with PACK nodes on AVX512 targets if we'd need more than one.
   if (Subtarget.hasAVX512() &&
       SrcSVT.getSizeInBits() > (DstSVT.getSizeInBits() * 2))
+    return SDValue();
+
+  // Prefer to lower v4i64 -> v4i32 as a shuffle unless we can cheaply
+  // split this for packing.
+  if (SrcVT == MVT::v4i64 && DstVT == MVT::v4i32 &&
+      !isFreeToSplitVector(In.getNode(), DAG) &&
+      (!Subtarget.hasInt256() || DAG.ComputeNumSignBits(In) != 64))
     return SDValue();
 
   // If the upper half of the source is undef, then attempt to split and
