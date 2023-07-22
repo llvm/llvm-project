@@ -1253,6 +1253,13 @@ def static_libsan : Flag<["-"], "static-libsan">,
 def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
+defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
+  CodeGenOpts<"AssumeUniqueVTables">, DefaultTrue,
+  PosFlag<SetTrue>,
+  NegFlag<SetFalse, [CC1Option],
+          "Disable optimizations based on vtable pointer identity">,
+  BothFlags<[CoreOption]>>;
+
 def fassume_sane_operator_new : Flag<["-"], "fassume-sane-operator-new">, Group<f_Group>;
 def fastcp : Flag<["-"], "fastcp">, Group<f_Group>;
 def fastf : Flag<["-"], "fastf">, Group<f_Group>;
