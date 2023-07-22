@@ -17,12 +17,11 @@ define i8 @phis_of_switch_minimal(i8 noundef %arg) {
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       case1:
-; CHECK-NEXT:    br label [[CASE01]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       case01:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 2, [[CASE1]] ], [ 1, [[START:%.*]] ]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[PHI1]], [[CASE01]] ], [ 3, [[START]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 3, [[START:%.*]] ], [ 2, [[CASE1]] ], [ 1, [[CASE01]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 start:
@@ -58,14 +57,13 @@ define i8 @phis_of_switch(i8 noundef %arg) {
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       case1:
-; CHECK-NEXT:    br label [[CASE012]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       case2:
-; CHECK-NEXT:    br label [[CASE012]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       case012:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 3, [[CASE2]] ], [ 2, [[CASE1]] ], [ 1, [[START:%.*]] ]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[PHI1]], [[CASE012]] ], [ 4, [[START]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ 4, [[START:%.*]] ], [ 3, [[CASE2]] ], [ 2, [[CASE1]] ], [ 1, [[CASE012]] ]
 ; CHECK-NEXT:    ret i8 [[PHI2]]
 ;
 start:
@@ -105,17 +103,15 @@ define i8 @multiple_phis_of_switch(i8 noundef %arg) {
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       case1:
-; CHECK-NEXT:    br label [[CASE012]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       case2:
-; CHECK-NEXT:    br label [[CASE012]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       case012:
-; CHECK-NEXT:    [[PHI1_1:%.*]] = phi i8 [ 3, [[CASE2]] ], [ 2, [[CASE1]] ], [ 1, [[START:%.*]] ]
-; CHECK-NEXT:    [[PHI1_2:%.*]] = phi i8 [ 6, [[CASE2]] ], [ 5, [[CASE1]] ], [ 4, [[START]] ]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI2_1:%.*]] = phi i8 [ [[PHI1_1]], [[CASE012]] ], [ 4, [[START]] ]
-; CHECK-NEXT:    [[PHI2_2:%.*]] = phi i8 [ [[PHI1_1]], [[CASE012]] ], [ 5, [[START]] ]
-; CHECK-NEXT:    [[PHI2_3:%.*]] = phi i8 [ [[PHI1_2]], [[CASE012]] ], [ 3, [[START]] ]
+; CHECK-NEXT:    [[PHI2_1:%.*]] = phi i8 [ 4, [[START:%.*]] ], [ 3, [[CASE2]] ], [ 2, [[CASE1]] ], [ 1, [[CASE012]] ]
+; CHECK-NEXT:    [[PHI2_2:%.*]] = phi i8 [ 5, [[START]] ], [ 3, [[CASE2]] ], [ 2, [[CASE1]] ], [ 1, [[CASE012]] ]
+; CHECK-NEXT:    [[PHI2_3:%.*]] = phi i8 [ 3, [[START]] ], [ 6, [[CASE2]] ], [ 5, [[CASE1]] ], [ 4, [[CASE012]] ]
 ; CHECK-NEXT:    call void @use(i8 [[PHI2_1]])
 ; CHECK-NEXT:    call void @use(i8 [[PHI2_2]])
 ; CHECK-NEXT:    call void @use(i8 [[PHI2_3]])
@@ -166,19 +162,17 @@ define i8 @phis_of_switch_multiple_stage0(i8 noundef %arg) {
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       case0:
-; CHECK-NEXT:    br label [[CASE0123]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       case1:
-; CHECK-NEXT:    br label [[CASE0123]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       case2:
-; CHECK-NEXT:    br label [[CASE0123]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       case0123:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi i8 [ 4, [[START:%.*]] ], [ 3, [[CASE2]] ], [ 2, [[CASE1]] ], [ 1, [[CASE0]] ]
-; CHECK-NEXT:    br label [[CASE01234]]
+; CHECK-NEXT:    br label [[END]]
 ; CHECK:       case01234:
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i8 [ [[PHI1]], [[CASE0123]] ], [ 5, [[START]] ]
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI3:%.*]] = phi i8 [ [[PHI2]], [[CASE01234]] ], [ 6, [[START]] ]
+; CHECK-NEXT:    [[PHI3:%.*]] = phi i8 [ 6, [[START:%.*]] ], [ 3, [[CASE2]] ], [ 2, [[CASE1]] ], [ 1, [[CASE0]] ], [ 4, [[CASE0123]] ], [ 5, [[CASE01234]] ]
 ; CHECK-NEXT:    ret i8 [[PHI3]]
 ;
 start:
@@ -231,21 +225,19 @@ define i8 @phis_of_switch_multiple_stage1(i8 noundef %arg) {
 ; CHECK:       unreachable:
 ; CHECK-NEXT:    unreachable
 ; CHECK:       case0:
-; CHECK-NEXT:    br label [[CASE012]]
+; CHECK-NEXT:    br label [[CASE0123456]]
 ; CHECK:       case1:
-; CHECK-NEXT:    br label [[CASE012]]
+; CHECK-NEXT:    br label [[CASE0123456]]
 ; CHECK:       case012:
-; CHECK-NEXT:    [[PHI123:%.*]] = phi i8 [ 3, [[START:%.*]] ], [ 2, [[CASE1]] ], [ 1, [[CASE0]] ]
 ; CHECK-NEXT:    br label [[CASE0123456]]
 ; CHECK:       case3:
-; CHECK-NEXT:    br label [[CASE345]]
+; CHECK-NEXT:    br label [[CASE0123456]]
 ; CHECK:       case4:
-; CHECK-NEXT:    br label [[CASE345]]
+; CHECK-NEXT:    br label [[CASE0123456]]
 ; CHECK:       case345:
-; CHECK-NEXT:    [[PHI456:%.*]] = phi i8 [ 6, [[START]] ], [ 5, [[CASE4]] ], [ 4, [[CASE3]] ]
 ; CHECK-NEXT:    br label [[CASE0123456]]
 ; CHECK:       case0123456:
-; CHECK-NEXT:    [[PHI1234567:%.*]] = phi i8 [ 7, [[START]] ], [ [[PHI456]], [[CASE345]] ], [ [[PHI123]], [[CASE012]] ]
+; CHECK-NEXT:    [[PHI1234567:%.*]] = phi i8 [ 7, [[START:%.*]] ], [ 2, [[CASE1]] ], [ 1, [[CASE0]] ], [ 3, [[CASE012]] ], [ 5, [[CASE4]] ], [ 4, [[CASE3]] ], [ 6, [[CASE345]] ]
 ; CHECK-NEXT:    ret i8 [[PHI1234567]]
 ;
 start:
