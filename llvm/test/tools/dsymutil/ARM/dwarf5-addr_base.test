@@ -1,0 +1,153 @@
+; This test checks to ensure that if three DWARFv5 object files have correct values for the DW_AT_addr_base in their compile units.
+
+; 1.o was produced with the source file:
+
+; a.cpp
+; __attribute__((section("1,__text_foo"))) void foo() {}
+; 
+; int foo2(int a) {
+;     return a+5;
+; }
+; 
+; int foo3(int x) {
+;     return x+2;
+; }
+; 
+; int main () {
+;     return 1;
+; }
+
+; clang -g -c -O1 a.cpp -gdwarf-5 -o 1.o
+
+; 2.o was produced with the following source file:
+
+; b.cpp
+; __attribute__((section("1,__text_foo"))) void bar() {}
+; 
+; int bar2(int a) {
+;     return a+5;
+; }
+; 
+; int bar3(int x) {
+;     return x+2;
+; }
+
+; clang -g -c -O1 b.cpp -gdwarf-5 -o 2.o
+
+; 3.o was produced with the following source file:
+
+; c.cpp
+; 
+; int baz(int x) {
+;     return x+2;
+; }
+
+; clang -g -c -O1 c.cpp -gdwarf-5 -o 3.o
+
+
+RUN: rm -rf %t.dir && mkdir -p %t.dir
+RUN: dsymutil -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr_base -o %t.dir/dwarf5-addr_base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr_base.dSYM -a --verbose | FileCheck %s
+
+RUN: dsymutil --update -y %p/dummy-debug-map-amr64.map -oso-prepend-path=%p/../Inputs/DWARF5-addr_base -o %t.dir/dwarf5-addr_base.dSYM
+RUN: llvm-dwarfdump %t.dir/dwarf5-addr_base.dSYM -a --verbose | FileCheck %s --check-prefix=UPD
+
+CHECK: .debug_info contents:
+CHECK-NEXT: 0x00000000: Compile Unit: length = 0x00000061, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000065)
+
+CHECK: 0x0000000c: DW_TAG_compile_unit [1] *
+CHECK:               DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+
+CHECK: 0x00000037:   DW_TAG_subprogram [2] * (0x0000000c)
+CHECK-NEXT:                DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR1:[0-9a-f]+]])
+
+
+CHECK: 0x00000065: Compile Unit: length = 0x00000061, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x000000ca)
+
+CHECK: 0x00000071: DW_TAG_compile_unit [1] *
+CHECK:              DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000018)
+
+CHECK: 0x0000009c:   DW_TAG_subprogram [2] * (0x00000071)
+CHECK-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR2:[0-9a-f]+]])
+
+CHECK: 0x000000ca: Compile Unit: length = 0x0000005a, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x00000128)
+
+CHECK: 0x000000d6: DW_TAG_compile_unit [5] *
+CHECK: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000028)
+
+CHECK: 0x000000fa:   DW_TAG_subprogram [2] * (0x000000d6)
+CHECK-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x[[ADDR3:[0-9a-f]+]])
+
+CHECK: .debug_addr contents:
+CHECK-NEXT: 0x00000000: Address table header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: Addrs: [
+CHECK-NEXT: 0x[[ADDR1]]
+CHECK-NEXT: ]
+CHECK-NEXT: 0x00000010: Address table header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: Addrs: [
+CHECK-NEXT: 0x[[ADDR2]]
+CHECK-NEXT: ]
+CHECK-NEXT: 0x00000020: Address table header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+CHECK-NEXT: Addrs: [
+CHECK-NEXT: 0x[[ADDR3]]
+CHECK-NEXT: ]
+
+UPD: .debug_info contents:
+UPD-NEXT: 0x00000000: Compile Unit: length = 0x000000aa, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x000000ae)
+
+UPD: 0x0000000c: DW_TAG_compile_unit [1] *
+UPD:               DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+
+UPD: 0x0000003c:   DW_TAG_subprogram [2]   (0x0000000c)
+UPD-NEXT:                DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000018)
+
+UPD: 0x0000004e:   DW_TAG_subprogram [3] * (0x0000000c)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000000000000)
+
+UPD: 0x00000071:   DW_TAG_subprogram [3] * (0x0000000c)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000002) address = 0x0000000000000008)
+
+UPD: 0x00000094:   DW_TAG_subprogram [5]   (0x0000000c)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000003) address = 0x0000000000000010)
+
+
+UPD: 0x000000ae: Compile Unit: length = 0x00000098, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x0000014a)
+
+UPD: 0x000000ba: DW_TAG_compile_unit [1] *
+UPD:              DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+
+UPD: 0x000000ea:   DW_TAG_subprogram [2]   (0x000000ba)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000018)
+
+UPD: 0x000000fc:   DW_TAG_subprogram [3] * (0x000000ba)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000000000000)
+
+UPD: 0x0000011f:   DW_TAG_subprogram [3] * (0x000000ba)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000002) address = 0x0000000000000008)
+
+UPD: 0x0000014a: Compile Unit: length = 0x0000005b, format = DWARF32, version = 0x0005, unit_type = DW_UT_compile, abbr_offset = 0x0000, addr_size = 0x08 (next unit at 0x000001a9)
+
+UPD: 0x00000156: DW_TAG_compile_unit [7] *
+UPD: DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
+
+UPD: 0x0000017e:   DW_TAG_subprogram [3] * (0x00000156)
+UPD-NEXT:                 DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000000000018)
+
+UPD: .debug_addr contents:
+UPD-NEXT: 0x00000000: Address table header: length = 0x00000024, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+UPD-NEXT: Addrs: [
+UPD-NEXT: 0x0000000000000018
+UPD-NEXT: 0x0000000000000000
+UPD-NEXT: 0x0000000000000008
+UPD-NEXT: 0x0000000000000010
+UPD-NEXT: ]
+UPD-NEXT: 0x00000028: Address table header: length = 0x0000001c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+UPD-NEXT: Addrs: [
+UPD-NEXT: 0x0000000000000010
+UPD-NEXT: 0x0000000000000000
+UPD-NEXT: 0x0000000000000008
+UPD-NEXT: ]
+UPD-NEXT: 0x00000048: Address table header: length = 0x0000000c, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00
+UPD-NEXT: Addrs: [
+UPD-NEXT: 0x0000000000000000
+UPD-NEXT: ]

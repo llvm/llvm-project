@@ -606,6 +606,57 @@ void DwarfStreamer::emitDwarfDebugLocTableFragment(
   LocSectionSize += AddressSize;
 }
 
+/// Emit .debug_addr header.
+MCSymbol *DwarfStreamer::emitDwarfDebugAddrsHeader(const CompileUnit &Unit) {
+
+  // Make .debug_addr the current section.
+  MS->switchSection(MC->getObjectFileInfo()->getDwarfAddrSection());
+
+  MCSymbol *BeginLabel = Asm->createTempSymbol("Bdebugaddr");
+  MCSymbol *EndLabel = Asm->createTempSymbol("Edebugaddr");
+  unsigned AddrSize = Unit.getOrigUnit().getAddressByteSize();
+
+  // Emit length.
+  Asm->emitLabelDifference(EndLabel, BeginLabel, sizeof(uint32_t));
+  Asm->OutStreamer->emitLabel(BeginLabel);
+  AddrSectionSize += sizeof(uint32_t);
+
+  // Emit version.
+  Asm->emitInt16(5);
+  AddrSectionSize += 2;
+
+  // Emit address size.
+  Asm->emitInt8(AddrSize);
+  AddrSectionSize += 1;
+
+  // Emit segment size.
+  Asm->emitInt8(0);
+  AddrSectionSize += 1;
+
+  return EndLabel;
+}
+
+/// Emit the .debug_addr addresses stored in \p Addrs.
+void DwarfStreamer::emitDwarfDebugAddrs(const SmallVector<uint64_t> &Addrs,
+                                        uint8_t AddrSize) {
+  Asm->OutStreamer->switchSection(MOFI->getDwarfAddrSection());
+  for (auto Addr : Addrs) {
+    Asm->OutStreamer->emitIntValue(Addr, AddrSize);
+    AddrSectionSize += AddrSize;
+  }
+}
+
+/// Emit .debug_addr footer.
+void DwarfStreamer::emitDwarfDebugAddrsFooter(const CompileUnit &Unit,
+                                              MCSymbol *EndLabel) {
+
+  // Make .debug_addr the current section.
+  MS->switchSection(MC->getObjectFileInfo()->getDwarfAddrSection());
+
+  if (EndLabel != nullptr)
+    Asm->OutStreamer->emitLabel(EndLabel);
+}
+
 /// Emit piece of .debug_loclists for \p LinkedLocationExpression.
 void DwarfStreamer::emitDwarfDebugLocListsTableFragment(
     const CompileUnit &Unit,
