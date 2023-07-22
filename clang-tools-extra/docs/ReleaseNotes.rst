@@ -106,6 +106,11 @@ Improvements to clang-tidy
 - Support specifying `SystemHeaders` in the `.clang-tidy` configuration file,
   with the same functionality as the command-line option `--system-headers`.
 
+- `WarningsAsErrors` (`--warnings-as-errors=`) no longer promotes unlisted
+  warnings to errors. Only the warnings listed in `Checks` (`--checks=`) will
+  be promoted to errors. For custom error promotion, use `-Werror=<warning>`
+  on the compiler command-line, irrespective of `Checks` (`--checks=`) settings.
+
 New checks
 ^^^^^^^^^^
 
