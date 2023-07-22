@@ -35,6 +35,7 @@
 #include "lldb/Host/Config.h"
 #include "lldb/Utility/StringExtractorGDBRemote.h"
 
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/JSON.h"
 
@@ -826,8 +827,12 @@ llvm::Error GDBRemoteCommunicationClient::LaunchProcess(const Args &args) {
 }
 
 int GDBRemoteCommunicationClient::SendEnvironment(const Environment &env) {
-  for (const auto &KV : env) {
-    int r = SendEnvironmentPacket(Environment::compose(KV).c_str());
+  llvm::SmallVector<std::pair<llvm::StringRef, llvm::StringRef>, 0> vec;
+  for (const auto &kv : env)
+    vec.emplace_back(kv.first(), kv.second);
+  llvm::sort(vec, llvm::less_first());
+  for (const auto &[k, v] : vec) {
+    int r = SendEnvironmentPacket((k + "=" + v).str().c_str());
     if (r != 0)
       return r;
   }
