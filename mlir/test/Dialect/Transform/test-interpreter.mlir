@@ -1974,3 +1974,26 @@ transform.sequence failures(propagate) {
   %bar = transform.select "test.bar" in %0 : (!transform.any_op) -> !transform.any_op
   test_print_remark_at_operand %bar, "found bar" : !transform.any_op
 }
+
+// -----
+
+// CHECK-LABEL: func @apply_dce(
+//  CHECK-NEXT:   memref.store
+//  CHECK-NEXT:   return
+func.func @apply_dce(%f: f32, %m: memref<5xf32>, %idx: index) {
+  // Two dead ops, interleaved with a non-dead op.
+  %0 = tensor.empty() : tensor<5xf32>
+  memref.store %f, %m[%idx] : memref<5xf32>
+  %1 = tensor.insert %f into %0[%idx] : tensor<5xf32>
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %func_op = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %empty_op = transform.structured.match ops{["tensor.empty"]} in %func_op : (!transform.any_op) -> !transform.any_op
+  transform.apply_dce to %func_op : !transform.any_op
+
+  // expected-remark @below{{0}}
+  test_print_number_of_associated_payload_ir_ops %empty_op : !transform.any_op
+}
