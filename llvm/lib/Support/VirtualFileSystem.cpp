@@ -778,7 +778,7 @@ public:
   }
 
   InMemoryNode *addChild(StringRef Name, std::unique_ptr<InMemoryNode> Child) {
-    return Entries.insert(make_pair(Name, std::move(Child)))
+    return Entries.insert(make_pair(Name.str(), std::move(Child)))
         .first->second.get();
   }
 
