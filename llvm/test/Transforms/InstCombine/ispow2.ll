@@ -1153,3 +1153,118 @@ define i1 @is_pow2_fail_pr63327(i32 %x) {
   %r = icmp sge i32 %x_and_nx, %x
   ret i1 %r
 }
+
+define i1 @blsmsk_is_p2_or_z(i32 %xx, i32 %yy) {
+; CHECK-LABEL: @blsmsk_is_p2_or_z(
+; CHECK-NEXT:    [[X:%.*]] = or i32 [[XX:%.*]], [[YY:%.*]]
+; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[X]], [[XM1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i32 %xx, %yy
+  %xm1 = add i32 %x, -1
+  %y = xor i32 %x, %xm1
+  %r = icmp uge i32 %x, %y
+  ret i1 %r
+}
+
+define i1 @blsmsk_isnt_p2_or_z(i32 %x) {
+; CHECK-LABEL: @blsmsk_isnt_p2_or_z(
+; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xm1 = add i32 %x, -1
+  %y = xor i32 %x, %xm1
+  %r = icmp ult i32 %y, %x
+  ret i1 %r
+}
+
+define i1 @blsmsk_is_p2_or_z_fail(i32 %xx, i32 %yy) {
+; CHECK-LABEL: @blsmsk_is_p2_or_z_fail(
+; CHECK-NEXT:    [[X:%.*]] = or i32 [[XX:%.*]], [[YY:%.*]]
+; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[X]], [[XM1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i32 %xx, %yy
+  %xm1 = add i32 %x, -1
+  %y = xor i32 %x, %xm1
+  %r = icmp ugt i32 %x, %y
+  ret i1 %r
+}
+
+define i1 @blsmsk_isnt_p2_or_z_fail(i32 %x) {
+; CHECK-LABEL: @blsmsk_isnt_p2_or_z_fail(
+; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xm1 = add i32 %x, -1
+  %y = xor i32 %x, %xm1
+  %r = icmp ule i32 %y, %x
+  ret i1 %r
+}
+
+declare void @use.i32(i32)
+
+define i1 @blsmsk_isnt_p2_or_z_fail_multiuse(i32 %x) {
+; CHECK-LABEL: @blsmsk_isnt_p2_or_z_fail_multiuse(
+; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[X]]
+; CHECK-NEXT:    call void @use.i32(i32 [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xm1 = add i32 %x, -1
+  %y = xor i32 %x, %xm1
+  call void @use.i32(i32 %y)
+  %r = icmp ult i32 %y, %x
+  ret i1 %r
+}
+
+
+define i1 @blsmsk_isnt_p2_or_z_fail_wrong_add(i32 %x, i32 %z) {
+; CHECK-LABEL: @blsmsk_isnt_p2_or_z_fail_wrong_add(
+; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[Z:%.*]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[X:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xm1 = add i32 %z, -1
+  %y = xor i32 %x, %xm1
+  %r = icmp ult i32 %y, %x
+  ret i1 %r
+}
+
+
+define i1 @blsmsk_isnt_p2_or_z_fail_bad_xor(i32 %x, i32 %z) {
+; CHECK-LABEL: @blsmsk_isnt_p2_or_z_fail_bad_xor(
+; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[Z:%.*]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[Y]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xm1 = add i32 %x, -1
+  %y = xor i32 %z, %xm1
+  %r = icmp ult i32 %y, %x
+  ret i1 %r
+}
+
+
+define i1 @blsmsk_is_p2_or_z_fail_bad_cmp(i32 %x, i32 %z) {
+; CHECK-LABEL: @blsmsk_is_p2_or_z_fail_bad_cmp(
+; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X:%.*]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[XM1]], [[X]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[Y]], [[Z:%.*]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %xm1 = add i32 %x, -1
+  %y = xor i32 %x, %xm1
+  %r = icmp uge i32 %y, %z
+  ret i1 %r
+}
