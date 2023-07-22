@@ -528,6 +528,7 @@ public:
   void addPostRegAlloc() override;
   void addPreSched2() override;
   void addPreEmitPass() override;
+  void addPostBBSections() override;
   void addPreEmitPass2() override;
 
   std::unique_ptr<CSEConfigBase> getCSEConfig() const override;
@@ -817,20 +818,12 @@ void AArch64PassConfig::addPreEmitPass() {
   if (EnableBranchTargets)
     addPass(createAArch64BranchTargetsPass());
 
-  // Relax conditional branch instructions if they're otherwise out of
-  // range of their destination.
-  if (BranchRelaxation)
-    addPass(&BranchRelaxationPassID);
-
   if (TM->getTargetTriple().isOSWindows()) {
     // Identify valid longjmp targets for Windows Control Flow Guard.
     addPass(createCFGuardLongjmpPass());
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardCatchretPass());
   }
-
-  if (TM->getOptLevel() != CodeGenOpt::None && EnableCompressJumpTables)
-    addPass(createAArch64CompressJumpTablesPass());
 
   // Expand hardened pseudo-instructions.
   // Do this now to enable LOH emission.
@@ -839,6 +832,16 @@ void AArch64PassConfig::addPreEmitPass() {
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())
     addPass(createAArch64CollectLOHPass());
+}
+
+void AArch64PassConfig::addPostBBSections() {
+  // Relax conditional branch instructions if they're otherwise out of
+  // range of their destination.
+  if (BranchRelaxation)
+    addPass(&BranchRelaxationPassID);
+
+  if (TM->getOptLevel() != CodeGenOpt::None && EnableCompressJumpTables)
+    addPass(createAArch64CompressJumpTablesPass());
 }
 
 void AArch64PassConfig::addPreEmitPass2() {

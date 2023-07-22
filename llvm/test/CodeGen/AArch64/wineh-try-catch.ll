@@ -44,7 +44,7 @@
 ; CHECK:        [[CATCHRETDEST:.LBB0_[0-9]+]]:      // %catchret.dest
 
 ; Check the catch funclet.
-; CHECK-LABEL: "?catch$2@?0??func@@YAHXZ@4HA":
+; CHECK-LABEL: "?catch$4@?0??func@@YAHXZ@4HA":
 
 ; Check that the stack space is allocated only for the callee saved registers.
 ; CHECK:       stp     x19, x20, [sp, #-48]!
@@ -66,7 +66,7 @@
 ; CHECK:       stur    w8, [x29, [[X_OFFSET]]]
 
 ; Check that the funclet branches back to the catchret destination
-; CHECK:       adrp    x0, .LBB0_3
+; CHECK:       adrp    x0, .LBB0_2
 ; CHECK-NEXT:  add     x0, x0, [[CATCHRETDEST]]
 
 
@@ -91,7 +91,7 @@
 ; UNWIND-NEXT: ; str x21, [sp, #16]
 ; UNWIND-NEXT: ; stp x19, x20, [sp, #-64]!
 ; UNWIND-NEXT: ; end
-; UNWIND: Function: ?catch$2@?0??func@@YAHXZ@4HA
+; UNWIND: Function: ?catch$4@?0??func@@YAHXZ@4HA
 ; UNWIND: Prologue [
 ; UNWIND-NEXT: ; stp x29, x30, [sp, #32]
 ; UNWIND-NEXT: ; str x28, [sp, #24]
