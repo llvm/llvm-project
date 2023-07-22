@@ -1600,6 +1600,14 @@ void ArrayConstructorContext::Push(MaybeExpr &&x) {
       messageDisplayedSet_ |= 8;
     }
     return;
+  } else if (dyType->category() == TypeCategory::Derived &&
+      dyType->GetDerivedTypeSpec().typeSymbol().attrs().test(
+          semantics::Attr::ABSTRACT)) { // F'2023 C7125
+    if (!(messageDisplayedSet_ & 0x200)) {
+      exprAnalyzer_.Say(
+          "An item whose declared type is ABSTRACT may not appear in an array constructor"_err_en_US);
+      messageDisplayedSet_ |= 0x200;
+    }
   }
   DynamicTypeWithLength xType{dyType.value()};
   if (Expr<SomeCharacter> * charExpr{UnwrapExpr<Expr<SomeCharacter>>(*x)}) {
