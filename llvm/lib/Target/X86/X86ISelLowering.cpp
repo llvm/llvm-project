@@ -5296,10 +5296,9 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
 
     SmallVector<CCValAssign, 16> ArgLocs;
     CCState CCInfo(CalleeCC, isVarArg, MF, ArgLocs, C);
-
     CCInfo.AnalyzeCallOperands(Outs, CC_X86);
-    for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i)
-      if (!ArgLocs[i].isRegLoc())
+    for (const auto &VA : ArgLocs)
+      if (!VA.isRegLoc())
         return false;
   }
 
@@ -5307,8 +5306,8 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
   // stack.  Therefore, if it's not used by the call it is not safe to optimize
   // this into a sibcall.
   bool Unused = false;
-  for (unsigned i = 0, e = Ins.size(); i != e; ++i) {
-    if (!Ins[i].Used) {
+  for (const auto &In : Ins) {
+    if (!In.Used) {
       Unused = true;
       break;
     }
@@ -5317,8 +5316,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
     SmallVector<CCValAssign, 16> RVLocs;
     CCState CCInfo(CalleeCC, false, MF, RVLocs, C);
     CCInfo.AnalyzeCallResult(Ins, RetCC_X86);
-    for (unsigned i = 0, e = RVLocs.size(); i != e; ++i) {
-      CCValAssign &VA = RVLocs[i];
+    for (const auto &VA : RVLocs) {
       if (VA.getLocReg() == X86::FP0 || VA.getLocReg() == X86::FP1)
         return false;
     }
@@ -5360,15 +5358,15 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       MachineFrameInfo &MFI = MF.getFrameInfo();
       const MachineRegisterInfo *MRI = &MF.getRegInfo();
       const X86InstrInfo *TII = Subtarget.getInstrInfo();
-      for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-        CCValAssign &VA = ArgLocs[i];
-        SDValue Arg = OutVals[i];
-        ISD::ArgFlagsTy Flags = Outs[i].Flags;
+      for (unsigned I = 0, E = ArgLocs.size(); I != E; ++I) {
+        const CCValAssign &VA = ArgLocs[I];
+        SDValue Arg = OutVals[I];
+        ISD::ArgFlagsTy Flags = Outs[I].Flags;
         if (VA.getLocInfo() == CCValAssign::Indirect)
           return false;
         if (!VA.isRegLoc()) {
-          if (!MatchingStackOffset(Arg, VA.getLocMemOffset(), Flags,
-                                   MFI, MRI, TII, VA))
+          if (!MatchingStackOffset(Arg, VA.getLocMemOffset(), Flags, MFI, MRI,
+                                   TII, VA))
             return false;
         }
       }
@@ -5388,8 +5386,7 @@ bool X86TargetLowering::IsEligibleForTailCallOptimization(
       // for the callee.
       unsigned MaxInRegs = PositionIndependent ? 2 : 3;
 
-      for (unsigned i = 0, e = ArgLocs.size(); i != e; ++i) {
-        CCValAssign &VA = ArgLocs[i];
+      for (const auto &VA : ArgLocs) {
         if (!VA.isRegLoc())
           continue;
         Register Reg = VA.getLocReg();
