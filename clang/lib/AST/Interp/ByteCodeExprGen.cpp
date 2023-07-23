@@ -512,6 +512,58 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
 }
 
 template <class Emitter>
+bool ByteCodeExprGen<Emitter>::visitInitList(ArrayRef<const Expr *> Inits,
+                                             const Expr *E) {
+  assert(E->getType()->isRecordType());
+  const Record *R = getRecord(E->getType());
+
+  unsigned InitIndex = 0;
+  for (const Expr *Init : Inits) {
+    if (!this->emitDupPtr(E))
+      return false;
+
+    if (std::optional<PrimType> T = classify(Init)) {
+      const Record::Field *FieldToInit = R->getField(InitIndex);
+      if (!this->visit(Init))
+        return false;
+      if (!this->emitInitField(*T, FieldToInit->Offset, E))
+        return false;
+      if (!this->emitPopPtr(E))
+        return false;
+      ++InitIndex;
+    } else {
+      // Initializer for a direct base class.
+      if (const Record::Base *B = R->getBase(Init->getType())) {
+        if (!this->emitGetPtrBasePop(B->Offset, Init))
+          return false;
+
+        if (!this->visitInitializer(Init))
+          return false;
+
+        if (!this->emitPopPtr(E))
+          return false;
+        // Base initializers don't increase InitIndex, since they don't count
+        // into the Record's fields.
+      } else {
+        const Record::Field *FieldToInit = R->getField(InitIndex);
+        // Non-primitive case. Get a pointer to the field-to-initialize
+        // on the stack and recurse into visitInitializer().
+        if (!this->emitGetPtrField(FieldToInit->Offset, Init))
+          return false;
+
+        if (!this->visitInitializer(Init))
+          return false;
+
+        if (!this->emitPopPtr(E))
+          return false;
+        ++InitIndex;
+      }
+    }
+  }
+  return true;
+}
+
+template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
   // Handle discarding first.
   if (DiscardResult) {
@@ -530,56 +582,8 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
   }
 
   QualType T = E->getType();
-  if (T->isRecordType()) {
-    const Record *R = getRecord(T);
-
-    unsigned InitIndex = 0;
-    for (const Expr *Init : E->inits()) {
-      if (!this->emitDupPtr(E))
-        return false;
-
-      if (std::optional<PrimType> T = classify(Init)) {
-        const Record::Field *FieldToInit = R->getField(InitIndex);
-        if (!this->visit(Init))
-          return false;
-
-        if (!this->emitInitField(*T, FieldToInit->Offset, E))
-          return false;
-
-        if (!this->emitPopPtr(E))
-          return false;
-        ++InitIndex;
-      } else {
-        // Initializer for a direct base class.
-        if (const Record::Base *B = R->getBase(Init->getType())) {
-          if (!this->emitGetPtrBasePop(B->Offset, Init))
-            return false;
-
-          if (!this->visitInitializer(Init))
-            return false;
-
-          if (!this->emitPopPtr(E))
-            return false;
-          // Base initializers don't increase InitIndex, since they don't count
-          // into the Record's fields.
-        } else {
-          const Record::Field *FieldToInit = R->getField(InitIndex);
-          // Non-primitive case. Get a pointer to the field-to-initialize
-          // on the stack and recurse into visitInitializer().
-          if (!this->emitGetPtrField(FieldToInit->Offset, Init))
-            return false;
-
-          if (!this->visitInitializer(Init))
-            return false;
-
-          if (!this->emitPopPtr(E))
-            return false;
-          ++InitIndex;
-        }
-      }
-    }
-    return true;
-  }
+  if (T->isRecordType())
+    return this->visitInitList(E->inits(), E);
 
   if (T->isArrayType()) {
     // FIXME: Array fillers.
@@ -610,6 +614,21 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
   }
 
   return false;
+}
+
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXParenListInitExpr(
+    const CXXParenListInitExpr *E) {
+  if (DiscardResult) {
+    for (const Expr *Init : E->getInitExprs()) {
+      if (!this->discard(Init))
+        return false;
+    }
+    return true;
+  }
+
+  assert(E->getType()->isRecordType());
+  return this->visitInitList(E->getInitExprs(), E);
 }
 
 template <class Emitter>

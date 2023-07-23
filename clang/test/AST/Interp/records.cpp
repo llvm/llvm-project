@@ -941,7 +941,7 @@ namespace TemporaryObjectExpr {
   static_assert(foo(F()) == 0, "");
 }
 
-namespace ZeroInit {
+  namespace ZeroInit {
   struct F {
     int a;
   };
@@ -1052,3 +1052,17 @@ namespace ZeroInit {
   };
 #endif
 }
+
+#if __cplusplus >= 202002L
+namespace ParenInit {
+  struct A {
+    int a;
+  };
+
+  struct B : A {
+    int b;
+  };
+
+  constexpr B b(A(1),2);
+}
+#endif
