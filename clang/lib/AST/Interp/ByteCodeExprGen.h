@@ -80,6 +80,7 @@ public:
   bool VisitSubstNonTypeTemplateParmExpr(const SubstNonTypeTemplateParmExpr *E);
   bool VisitArraySubscriptExpr(const ArraySubscriptExpr *E);
   bool VisitInitListExpr(const InitListExpr *E);
+  bool VisitCXXParenListInitExpr(const CXXParenListInitExpr *E);
   bool VisitConstantExpr(const ConstantExpr *E);
   bool VisitUnaryExprOrTypeTraitExpr(const UnaryExprOrTypeTraitExpr *E);
   bool VisitMemberExpr(const MemberExpr *E);
@@ -198,6 +199,8 @@ protected:
 
     return this->emitPopPtr(I);
   }
+
+  bool visitInitList(ArrayRef<const Expr *> Inits, const Expr *E);
 
   /// Creates a local primitive value.
   unsigned allocateLocalPrimitive(DeclTy &&Decl, PrimType Ty, bool IsConst,
