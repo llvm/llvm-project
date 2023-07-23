@@ -5671,15 +5671,15 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy,
     const Value *Ptrs = GEP->getPointerOperand();
     if (Ptrs->getType()->isVectorTy() && !getSplatValue(Ptrs))
       return IndexSize;
-    for (unsigned i = 1; i < GEP->getNumOperands(); ++i) {
-      if (isa<Constant>(GEP->getOperand(i)))
+    for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I) {
+      if (isa<Constant>(GEP->getOperand(I)))
         continue;
-      Type *IndxTy = GEP->getOperand(i)->getType();
+      Type *IndxTy = GEP->getOperand(I)->getType();
       if (auto *IndexVTy = dyn_cast<VectorType>(IndxTy))
         IndxTy = IndexVTy->getElementType();
       if ((IndxTy->getPrimitiveSizeInBits() == 64 &&
-          !isa<SExtInst>(GEP->getOperand(i))) ||
-         ++NumOfVarIndices > 1)
+           !isa<SExtInst>(GEP->getOperand(I))) ||
+          ++NumOfVarIndices > 1)
         return IndexSize; // 64
     }
     return (unsigned)32;
