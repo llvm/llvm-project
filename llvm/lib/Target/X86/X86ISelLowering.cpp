@@ -3205,12 +3205,12 @@ ArrayRef<MCPhysReg> X86TargetLowering::getRoundingControlRegisters() const {
 /// Lowers masks values (v*i1) to the local register values
 /// \returns DAG node after lowering to register type
 static SDValue lowerMasksToReg(const SDValue &ValArg, const EVT &ValLoc,
-                               const SDLoc &Dl, SelectionDAG &DAG) {
+                               const SDLoc &DL, SelectionDAG &DAG) {
   EVT ValVT = ValArg.getValueType();
 
   if (ValVT == MVT::v1i1)
-    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, Dl, ValLoc, ValArg,
-                       DAG.getIntPtrConstant(0, Dl));
+    return DAG.getNode(ISD::EXTRACT_VECTOR_ELT, DL, ValLoc, ValArg,
+                       DAG.getIntPtrConstant(0, DL));
 
   if ((ValVT == MVT::v8i1 && (ValLoc == MVT::i8 || ValLoc == MVT::i32)) ||
       (ValVT == MVT::v16i1 && (ValLoc == MVT::i16 || ValLoc == MVT::i32))) {
@@ -3220,7 +3220,7 @@ static SDValue lowerMasksToReg(const SDValue &ValArg, const EVT &ValLoc,
     EVT TempValLoc = ValVT == MVT::v8i1 ? MVT::i8 : MVT::i16;
     SDValue ValToCopy = DAG.getBitcast(TempValLoc, ValArg);
     if (ValLoc == MVT::i32)
-      ValToCopy = DAG.getNode(ISD::ANY_EXTEND, Dl, ValLoc, ValToCopy);
+      ValToCopy = DAG.getNode(ISD::ANY_EXTEND, DL, ValLoc, ValToCopy);
     return ValToCopy;
   }
 
@@ -3231,12 +3231,12 @@ static SDValue lowerMasksToReg(const SDValue &ValArg, const EVT &ValLoc,
     return DAG.getBitcast(ValLoc, ValArg);
   }
 
-  return DAG.getNode(ISD::ANY_EXTEND, Dl, ValLoc, ValArg);
+  return DAG.getNode(ISD::ANY_EXTEND, DL, ValLoc, ValArg);
 }
 
 /// Breaks v64i1 value into two registers and adds the new node to the DAG
 static void Passv64i1ArgInRegs(
-    const SDLoc &Dl, SelectionDAG &DAG, SDValue &Arg,
+    const SDLoc &DL, SelectionDAG &DAG, SDValue &Arg,
     SmallVectorImpl<std::pair<Register, SDValue>> &RegsToPass, CCValAssign &VA,
     CCValAssign &NextVA, const X86Subtarget &Subtarget) {
   assert(Subtarget.hasBWI() && "Expected AVX512BW target!");
@@ -3250,7 +3250,7 @@ static void Passv64i1ArgInRegs(
 
   // Splitting the value into two i32 types
   SDValue Lo, Hi;
-  std::tie(Lo, Hi) = DAG.SplitScalar(Arg, Dl, MVT::i32, MVT::i32);
+  std::tie(Lo, Hi) = DAG.SplitScalar(Arg, DL, MVT::i32, MVT::i32);
 
   // Attach the two i32 types into corresponding registers
   RegsToPass.push_back(std::make_pair(VA.getLocReg(), Lo));
@@ -3531,7 +3531,7 @@ EVT X86TargetLowering::getTypeForExtReturn(LLVMContext &Context, EVT VT,
 /// \return a new SDvalue of size 64bit.
 static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
                                 SDValue &Root, SelectionDAG &DAG,
-                                const SDLoc &Dl, const X86Subtarget &Subtarget,
+                                const SDLoc &DL, const X86Subtarget &Subtarget,
                                 SDValue *InGlue = nullptr) {
   assert((Subtarget.hasBWI()) && "Expected AVX512BW target!");
   assert(Subtarget.is32Bit() && "Expecting 32 bit target");
@@ -3553,17 +3553,17 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
     // When no physical register is present,
     // create an intermediate virtual register.
     Register Reg = MF.addLiveIn(VA.getLocReg(), RC);
-    ArgValueLo = DAG.getCopyFromReg(Root, Dl, Reg, MVT::i32);
+    ArgValueLo = DAG.getCopyFromReg(Root, DL, Reg, MVT::i32);
     Reg = MF.addLiveIn(NextVA.getLocReg(), RC);
-    ArgValueHi = DAG.getCopyFromReg(Root, Dl, Reg, MVT::i32);
+    ArgValueHi = DAG.getCopyFromReg(Root, DL, Reg, MVT::i32);
   } else {
     // When a physical register is available read the value from it and glue
     // the reads together.
     ArgValueLo =
-      DAG.getCopyFromReg(Root, Dl, VA.getLocReg(), MVT::i32, *InGlue);
+      DAG.getCopyFromReg(Root, DL, VA.getLocReg(), MVT::i32, *InGlue);
     *InGlue = ArgValueLo.getValue(2);
     ArgValueHi =
-      DAG.getCopyFromReg(Root, Dl, NextVA.getLocReg(), MVT::i32, *InGlue);
+      DAG.getCopyFromReg(Root, DL, NextVA.getLocReg(), MVT::i32, *InGlue);
     *InGlue = ArgValueHi.getValue(2);
   }
 
@@ -3574,19 +3574,19 @@ static SDValue getv64i1Argument(CCValAssign &VA, CCValAssign &NextVA,
   Hi = DAG.getBitcast(MVT::v32i1, ArgValueHi);
 
   // Concatenate the two values together.
-  return DAG.getNode(ISD::CONCAT_VECTORS, Dl, MVT::v64i1, Lo, Hi);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, MVT::v64i1, Lo, Hi);
 }
 
 /// The function will lower a register of various sizes (8/16/32/64)
 /// to a mask value of the expected size (v8i1/v16i1/v32i1/v64i1)
 /// \returns a DAG node contains the operand after lowering to mask type.
 static SDValue lowerRegToMasks(const SDValue &ValArg, const EVT &ValVT,
-                               const EVT &ValLoc, const SDLoc &Dl,
+                               const EVT &ValLoc, const SDLoc &DL,
                                SelectionDAG &DAG) {
   SDValue ValReturned = ValArg;
 
   if (ValVT == MVT::v1i1)
-    return DAG.getNode(ISD::SCALAR_TO_VECTOR, Dl, MVT::v1i1, ValReturned);
+    return DAG.getNode(ISD::SCALAR_TO_VECTOR, DL, MVT::v1i1, ValReturned);
 
   if (ValVT == MVT::v64i1) {
     // In 32 bit machine, this case is handled by getv64i1Argument
@@ -3608,7 +3608,7 @@ static SDValue lowerRegToMasks(const SDValue &ValArg, const EVT &ValVT,
       llvm_unreachable("Expecting a vector of i1 types");
     }
 
-    ValReturned = DAG.getNode(ISD::TRUNCATE, Dl, maskLen, ValReturned);
+    ValReturned = DAG.getNode(ISD::TRUNCATE, DL, maskLen, ValReturned);
   }
   return DAG.getBitcast(ValVT, ValReturned);
 }
@@ -29138,25 +29138,25 @@ static SDValue MarkEHGuard(SDValue Op, SelectionDAG &DAG) {
 
 /// Emit Truncating Store with signed or unsigned saturation.
 static SDValue
-EmitTruncSStore(bool SignedSat, SDValue Chain, const SDLoc &Dl, SDValue Val,
+EmitTruncSStore(bool SignedSat, SDValue Chain, const SDLoc &DL, SDValue Val,
                 SDValue Ptr, EVT MemVT, MachineMemOperand *MMO,
                 SelectionDAG &DAG) {
   SDVTList VTs = DAG.getVTList(MVT::Other);
   SDValue Undef = DAG.getUNDEF(Ptr.getValueType());
   SDValue Ops[] = { Chain, Val, Ptr, Undef };
   unsigned Opc = SignedSat ? X86ISD::VTRUNCSTORES : X86ISD::VTRUNCSTOREUS;
-  return DAG.getMemIntrinsicNode(Opc, Dl, VTs, Ops, MemVT, MMO);
+  return DAG.getMemIntrinsicNode(Opc, DL, VTs, Ops, MemVT, MMO);
 }
 
 /// Emit Masked Truncating Store with signed or unsigned saturation.
-static SDValue
-EmitMaskedTruncSStore(bool SignedSat, SDValue Chain, const SDLoc &Dl,
+static SDValue EmitMaskedTruncSStore(bool SignedSat, SDValue Chain,
+                                     const SDLoc &DL,
                       SDValue Val, SDValue Ptr, SDValue Mask, EVT MemVT,
                       MachineMemOperand *MMO, SelectionDAG &DAG) {
   SDVTList VTs = DAG.getVTList(MVT::Other);
   SDValue Ops[] = { Chain, Val, Ptr, Mask };
   unsigned Opc = SignedSat ? X86ISD::VMTRUNCSTORES : X86ISD::VMTRUNCSTOREUS;
-  return DAG.getMemIntrinsicNode(Opc, Dl, VTs, Ops, MemVT, MMO);
+  return DAG.getMemIntrinsicNode(Opc, DL, VTs, Ops, MemVT, MMO);
 }
 
 static SDValue LowerINTRINSIC_W_CHAIN(SDValue Op, const X86Subtarget &Subtarget,
