@@ -5192,8 +5192,6 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   auto *Deinit = TargetStore->getNextNode();
   EXPECT_NE(Deinit, nullptr);
 
-  M->dump();
-
   auto *DeinitCall = dyn_cast<CallInst>(Deinit);
   EXPECT_NE(DeinitCall, nullptr);
   EXPECT_EQ(DeinitCall->getCalledFunction()->getName(), "__kmpc_target_deinit");
