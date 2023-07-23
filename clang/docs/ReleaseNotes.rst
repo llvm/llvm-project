@@ -407,6 +407,8 @@ Improvements to Clang's diagnostics
   by making use of the syntactical structure of function calls. This avoids display
   of syntactically invalid codes in diagnostics.
   (`#57081: <https://github.com/llvm/llvm-project/issues/57081>`_)
+- Clang no longer emits inappropriate notes about the loss of ``__unaligned`` qualifier
+  on overload resolution, when the actual reason for the failure is loss of other qualifiers.
 - The note emitted when an ``operator==`` was defaulted as deleted used to refer to
   the lack of a data member's "three-way comparison operator". It now refers correctly
   to the data member's ``operator==``.
