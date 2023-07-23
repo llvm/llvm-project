@@ -432,6 +432,14 @@ Changes in existing checks
   `IgnoreTemplateInstantiations` option to optionally ignore virtual function
   overrides that are part of template instantiations.
 
+- Improved :doc:`performance-for-range-copy
+  <clang-tidy/checks/performance/for-range-copy>`
+  check by extending const usage analysis to include the type's members.
+
+- Improved :doc:`performance-inefficient-vector-operation
+  <clang-tidy/checks/performance/inefficient-vector-operation>`
+  check by extending const usage analysis to include the type's members.
+
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check to warn when move
   special member functions are not available.
@@ -444,6 +452,14 @@ Changes in existing checks
 - Fixed an issue in the :doc:`performance-noexcept-move-constructor
   <clang-tidy/checks/performance/noexcept-move-constructor>` checker that was causing
   false-positives when the move constructor or move assign operator were defaulted.
+
+- Improved :doc:`performance-unnecessary-copy-initialization
+  <clang-tidy/checks/performance/unnecessary-copy-initialization>`
+  check by extending const usage analysis to include the type's members.
+
+- Improved :doc:`performance-unnecessary-value-param
+  <clang-tidy/checks/performance/unnecessary-value-param>`
+  check by extending const usage analysis to include the type's members.
 
 - Improved :doc:`readability-container-data-pointer
   <clang-tidy/checks/readability/container-data-pointer>` check with new
