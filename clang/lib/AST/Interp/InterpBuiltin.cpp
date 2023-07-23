@@ -56,6 +56,41 @@ static bool retInt(InterpState &S, CodePtr OpPC, APValue &Result) {
   llvm_unreachable("Int isn't 16 or 32 bit?");
 }
 
+static void pushSizeT(InterpState &S, uint64_t Val) {
+  const TargetInfo &TI = S.getCtx().getTargetInfo();
+  unsigned SizeTWidth = TI.getTypeWidth(TI.getSizeType());
+
+  switch (SizeTWidth) {
+  case 64:
+    S.Stk.push<Integral<64, false>>(Integral<64, false>::from(Val));
+    break;
+  case 32:
+    S.Stk.push<Integral<32, false>>(Integral<32, false>::from(Val));
+    break;
+  case 16:
+    S.Stk.push<Integral<16, false>>(Integral<16, false>::from(Val));
+    break;
+  default:
+    llvm_unreachable("We don't handle this size_t size.");
+  }
+}
+
+static bool retSizeT(InterpState &S, CodePtr OpPC, APValue &Result) {
+  const TargetInfo &TI = S.getCtx().getTargetInfo();
+  unsigned SizeTWidth = TI.getTypeWidth(TI.getSizeType());
+
+  switch (SizeTWidth) {
+  case 64:
+    return Ret<PT_Uint64>(S, OpPC, Result);
+  case 32:
+    return Ret<PT_Uint32>(S, OpPC, Result);
+  case 16:
+    return Ret<PT_Uint16>(S, OpPC, Result);
+  }
+
+  llvm_unreachable("size_t isn't 64 or 32 bit?");
+}
+
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame) {
   const Pointer &A = getParam<Pointer>(Frame, 0);
@@ -92,6 +127,34 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   }
 
   pushInt(S, Result);
+  return true;
+}
+
+static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
+                                   const InterpFrame *Frame) {
+  const Pointer &StrPtr = getParam<Pointer>(Frame, 0);
+
+  if (!CheckArray(S, OpPC, StrPtr))
+    return false;
+
+  if (!CheckLive(S, OpPC, StrPtr, AK_Read))
+    return false;
+
+  assert(StrPtr.getFieldDesc()->isPrimitiveArray());
+
+  size_t Len = 0;
+  for (size_t I = StrPtr.getIndex();; ++I, ++Len) {
+    const Pointer &ElemPtr = StrPtr.atIndex(I);
+
+    if (!CheckRange(S, OpPC, ElemPtr, AK_Read))
+      return false;
+
+    uint8_t Val = ElemPtr.deref<uint8_t>();
+    if (Val == 0)
+      break;
+  }
+
+  pushSizeT(S, Len);
   return true;
 }
 
@@ -337,6 +400,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
   case Builtin::BI__builtin_strcmp:
     if (interp__builtin_strcmp(S, OpPC, Frame))
       return retInt(S, OpPC, Dummy);
+    break;
+  case Builtin::BI__builtin_strlen:
+    if (interp__builtin_strlen(S, OpPC, Frame))
+      return retSizeT(S, OpPC, Dummy);
     break;
   case Builtin::BI__builtin_nan:
   case Builtin::BI__builtin_nanf:
