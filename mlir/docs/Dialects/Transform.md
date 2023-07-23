@@ -1,6 +1,6 @@
 # Transform Dialect
 
-Fine-grain transformation control dialect. See [../Tutorials/transform](tutorial) for more introductory information.
+Fine-grain transformation control dialect. See [tutorial](../Tutorials/transform) for more introductory information.
 
 [TOC]
 
