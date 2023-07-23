@@ -21,6 +21,7 @@
 #include "mlir/Dialect/Transform/IR/TransformInterfaces.h"
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
 #include "mlir/IR/AffineExpr.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -45,6 +46,132 @@ using namespace mlir::transform::gpu;
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 #define DBGS_ALIAS() (llvm::dbgs() << '[' << DEBUG_TYPE_ALIAS << "] ")
+
+//===----------------------------------------------------------------------===//
+// ApplyUnrollVectorsSubgroupMmaOp
+//===----------------------------------------------------------------------===//
+
+/// Pick an unrolling order that will allow tensorcore operation to reuse LHS
+/// register.
+static std::optional<SmallVector<int64_t>>
+gpuMmaUnrollOrder(vector::ContractionOp contract) {
+  SmallVector<int64_t> order;
+  // First make reduction the outer dimensions.
+  for (auto [index, iter] : llvm::enumerate(contract.getIteratorTypes())) {
+    if (vector::isReductionIterator(iter)) {
+      order.push_back(index);
+    }
+  }
+
+  llvm::SmallDenseSet<int64_t> dims;
+  for (AffineExpr expr : contract.getIndexingMapsArray()[0].getResults()) {
+    dims.insert(expr.cast<AffineDimExpr>().getPosition());
+  }
+  // Then parallel dimensions that are part of Lhs as we want to re-use Lhs.
+  for (auto [index, iter] : llvm::enumerate(contract.getIteratorTypes())) {
+    if (vector::isParallelIterator(iter) && dims.count(index)) {
+      order.push_back(index);
+    }
+  }
+  // Then the remaining parallel loops.
+  for (auto [index, iter] : llvm::enumerate(contract.getIteratorTypes())) {
+    if (vector::isParallelIterator(iter) && !dims.count(index)) {
+      order.push_back(index);
+    }
+  }
+  return order;
+}
+
+/// Returns the target vector size for the target operation based on the native
+/// vector size specified with `m`, `n`, and `k`.
+static std::optional<SmallVector<int64_t>>
+getSubgroupMmaNativeVectorSize(Operation *op, int64_t m, int64_t n, int64_t k) {
+  if (auto contract = dyn_cast<vector::ContractionOp>(op)) {
+    int64_t contractRank = contract.getIteratorTypes().size();
+    if (contractRank < 3)
+      return std::nullopt;
+    SmallVector<int64_t> nativeSize(contractRank - 3, 1);
+    nativeSize.append({m, n, k});
+    return nativeSize;
+  }
+  if (auto writeOp = dyn_cast<vector::TransferWriteOp>(op)) {
+    int64_t writeRank = writeOp.getVectorType().getRank();
+    if (writeRank < 2)
+      return std::nullopt;
+    SmallVector<int64_t> nativeSize(writeRank - 2, 1);
+    nativeSize.append({m, n});
+    return nativeSize;
+  }
+  if (auto readOp = dyn_cast<vector::TransferReadOp>(op)) {
+    // Transfer read ops may need different shapes based on how they are being
+    // used. For simplicity just match the shape used by the extract strided op.
+    VectorType sliceType;
+    for (Operation *users : op->getUsers()) {
+      auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
+      if (!extract)
+        return std::nullopt;
+      auto vecType = extract.getResult().getType().cast<VectorType>();
+      if (sliceType && sliceType != vecType)
+        return std::nullopt;
+      sliceType = vecType;
+    }
+    return llvm::to_vector(sliceType.getShape());
+  }
+  if ((OpTrait::hasElementwiseMappableTraits(op) && op->getNumResults() == 1)) {
+    if (auto vecType = op->getResultTypes()[0].dyn_cast<VectorType>()) {
+      // TODO: The condition for unrolling elementwise should be restricted
+      // only to operations that need unrolling (connected to the contract).
+      if (vecType.getRank() < 2)
+        return std::nullopt;
+
+      // First check whether there is a slice to infer the shape from. This is
+      // required for cases where the accumulator type differs from the input
+      // types, in which case we will see an `arith.ext_` between the contract
+      // and transfer_read which needs to be unrolled.
+      VectorType sliceType;
+      for (Operation *users : op->getUsers()) {
+        auto extract = dyn_cast<vector::ExtractStridedSliceOp>(users);
+        if (!extract)
+          return std::nullopt;
+        auto vecType = extract.getResult().getType().cast<VectorType>();
+        if (sliceType && sliceType != vecType)
+          return std::nullopt;
+        sliceType = vecType;
+      }
+      if (sliceType)
+        return llvm::to_vector(sliceType.getShape());
+
+      // Else unroll for trailing elementwise.
+      SmallVector<int64_t> nativeSize(vecType.getRank() - 2, 1);
+      // Map elementwise ops to the output shape.
+      nativeSize.append({m, n});
+      return nativeSize;
+    }
+  }
+  return std::nullopt;
+}
+
+void transform::ApplyUnrollVectorsSubgroupMmaOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  auto unrollOrder = [](Operation *op) -> std::optional<SmallVector<int64_t>> {
+    auto contract = dyn_cast<vector::ContractionOp>(op);
+    if (!contract)
+      return std::nullopt;
+    return gpuMmaUnrollOrder(contract);
+  };
+
+  int64_t m = getM();
+  int64_t n = getN();
+  int64_t k = getK();
+  auto nativeShapeFn =
+      [m, n, k](Operation *op) -> std::optional<SmallVector<int64_t>> {
+    return getSubgroupMmaNativeVectorSize(op, m, n, k);
+  };
+  vector::populateVectorUnrollPatterns(
+      patterns, vector::UnrollVectorOptions()
+                    .setNativeShapeFn(nativeShapeFn)
+                    .setUnrollTraversalOrderFn(unrollOrder));
+}
 
 //===----------------------------------------------------------------------===//
 // EliminateBarriersOp
