@@ -421,8 +421,6 @@ void ClangTidyDiagnosticConsumer::HandleDiagnostic(
 
     bool IsWarningAsError = DiagLevel == DiagnosticsEngine::Warning &&
                             Context.treatAsError(CheckName);
-    if (IsWarningAsError)
-      Level = ClangTidyError::Error;
     Errors.emplace_back(CheckName, Level, Context.getCurrentBuildDirectory(),
                         IsWarningAsError);
   }

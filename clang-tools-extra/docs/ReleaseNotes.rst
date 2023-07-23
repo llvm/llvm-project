@@ -106,6 +106,11 @@ Improvements to clang-tidy
 - Support specifying `SystemHeaders` in the `.clang-tidy` configuration file,
   with the same functionality as the command-line option `--system-headers`.
 
+- `WarningsAsErrors` (`--warnings-as-errors=`) no longer promotes unlisted
+  warnings to errors. Only the warnings listed in `Checks` (`--checks=`) will
+  be promoted to errors. For custom error promotion, use `-Werror=<warning>`
+  on the compiler command-line, irrespective of `Checks` (`--checks=`) settings.
+
 New checks
 ^^^^^^^^^^
 
@@ -283,6 +288,10 @@ Changes in existing checks
   <clang-tidy/checks/bugprone/fold-init-type>` to handle iterators that do not
   define `value_type` type aliases.
 
+- Improved :doc:`bugprone-forwarding-reference-overload
+  <clang-tidy/checks/bugprone/forwarding-reference-overload>` check to ignore
+  constructors with associated constraints (C++ concepts).
+
 - Improved :doc:`bugprone-incorrect-roundings
   <clang-tidy/checks/bugprone/incorrect-roundings>` check by adding support for
   other floating point representations in float constant like ``0.5L``.
@@ -329,6 +338,10 @@ Changes in existing checks
   <clang-tidy/checks/cppcoreguidelines/avoid-const-or-ref-data-members>` check
   to emit warnings only on classes that are copyable/movable, as required by the
   corresponding rule.
+
+- Improved :doc:`cppcoreguidelines-owning-memory
+  <clang-tidy/checks/cppcoreguidelines/owning-memory>` check now finds more
+  issues, especially those related to implicit casts.
 
 - Deprecated C.48 enforcement from :doc:`cppcoreguidelines-prefer-member-initializer
   <clang-tidy/checks/cppcoreguidelines/prefer-member-initializer>`. Please use

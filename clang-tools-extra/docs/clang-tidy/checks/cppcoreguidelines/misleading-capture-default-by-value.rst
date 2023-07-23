@@ -43,5 +43,6 @@ Examples:
         }
       };
 
-This check implements
-`CppCoreGuideline F.54 <https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#f54-when-writing-a-lambda-that-captures-this-or-any-class-data-member-dont-use--default-capture>`_.
+This check implements `F.54
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#f54-when-writing-a-lambda-that-captures-this-or-any-class-data-member-dont-use--default-capture>`_
+from the C++ Core Guidelines.
