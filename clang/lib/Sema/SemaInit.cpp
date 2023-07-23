@@ -4261,6 +4261,14 @@ static void TryConstructorInitialization(Sema &S,
         Entity.getKind() !=
             InitializedEntity::EK_LambdaToBlockConversionBlockElement);
 
+  bool CopyElisionPossible = false;
+  auto ElideConstructor = [&] {
+    // Convert qualifications if necessary.
+    Sequence.AddQualificationConversionStep(DestType, VK_PRValue);
+    if (ILE)
+      Sequence.RewrapReferenceInitList(DestType, ILE);
+  };
+
   // C++17 [dcl.init]p17:
   //     - If the initializer expression is a prvalue and the cv-unqualified
   //       version of the source type is the same class as the class of the
@@ -4271,13 +4279,19 @@ static void TryConstructorInitialization(Sema &S,
   // ObjC++: Lambda captured by the block in the lambda to block conversion
   // should avoid copy elision.
   if (S.getLangOpts().CPlusPlus17 && !RequireActualConstructor &&
-      Args.size() == 1 && Args[0]->isPRValue() &&
-      S.Context.hasSameUnqualifiedType(Args[0]->getType(), DestType)) {
-    // Convert qualifications if necessary.
-    Sequence.AddQualificationConversionStep(DestType, VK_PRValue);
-    if (ILE)
-      Sequence.RewrapReferenceInitList(DestType, ILE);
-    return;
+      UnwrappedArgs.size() == 1 && UnwrappedArgs[0]->isPRValue() &&
+      S.Context.hasSameUnqualifiedType(UnwrappedArgs[0]->getType(), DestType)) {
+    if (ILE && !DestType->isAggregateType()) {
+      // CWG2311: T{ prvalue_of_type_T } is not eligible for copy elision
+      // Make this an elision if this won't call an initializer-list
+      // constructor. (Always on an aggregate type or check constructors first.)
+      assert(!IsInitListCopy &&
+             "IsInitListCopy only possible with aggregate types");
+      CopyElisionPossible = true;
+    } else {
+      ElideConstructor();
+      return;
+    }
   }
 
   const RecordType *DestRecordType = DestType->getAs<RecordType>();
@@ -4322,6 +4336,12 @@ static void TryConstructorInitialization(Sema &S,
           S, Kind.getLocation(), Args, CandidateSet, DestType, Ctors, Best,
           CopyInitialization, AllowExplicit,
           /*OnlyListConstructors=*/true, IsListInit, RequireActualConstructor);
+
+    if (CopyElisionPossible && Result == OR_No_Viable_Function) {
+      // No initializer list candidate
+      ElideConstructor();
+      return;
+    }
   }
 
   // C++11 [over.match.list]p1:

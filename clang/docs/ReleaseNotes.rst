@@ -258,6 +258,10 @@ Resolutions to C++ Defect Reports
   a single element of the same type instead of always copying.
   (`CWG2137: List-initialization from object of same type <https://cplusplus.github.io/CWG/issues/2137.html>`)
 
+- Implemented `CWG2311 <https://wg21.link/CWG2311>`_: given a prvalue ``e`` of object type
+  ``T``, ``T{e}`` will try to resolve an initializer list constructor and will use it if successful (CWG2137).
+  Otherwise, if there is no initializer list constructor, the copy will be elided as if it was ``T(e)``.
+
 C Language Changes
 ------------------
 
