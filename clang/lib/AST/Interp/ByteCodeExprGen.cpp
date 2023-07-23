@@ -67,7 +67,7 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
 
   case CK_LValueToRValue: {
     return dereference(
-        CE->getSubExpr(), DerefKind::Read,
+        SubExpr, DerefKind::Read,
         [](PrimType) {
           // Value loaded - nothing to do here.
           return true;
