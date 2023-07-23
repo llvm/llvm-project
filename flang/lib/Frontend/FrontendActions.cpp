@@ -165,7 +165,7 @@ getExplicitAndImplicitAMDGPUTargetFeatures(CompilerInstance &ci,
                            implicitFeatureItem.first().str())
                               .str());
   }
-
+  llvm::sort(featuresVec);
   return llvm::join(featuresVec, ",");
 }
 
