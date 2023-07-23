@@ -1,0 +1,12 @@
+// RUN: cir-translate %s -cir-to-llvmir -o %t.ll
+// RUN: FileCheck --input-file=%t.ll %s
+
+module {
+  // Should lower #cir.zero on structs to a zeroinitializer.
+  llvm.mlir.global external @bar() {addr_space = 0 : i32, cir.initial_value = #cir.zero : !llvm.struct<"struct.S", (i8, i32)>} : !llvm.struct<"struct.S", (i8, i32)>
+  // CHECK: @bar = global %struct.S zeroinitializer
+
+  // Should lower #cir.null on pointers to a null initializer.
+  llvm.mlir.global external @ptr() {addr_space = 0 : i32, cir.initial_value = #cir.zero : !llvm.ptr} : !llvm.ptr
+  // CHECK: @ptr = global ptr null
+}
