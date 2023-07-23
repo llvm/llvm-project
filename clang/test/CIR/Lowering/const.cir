@@ -1,6 +1,5 @@
-// RUN: cir-tool %s -cir-to-llvm -o %t.mlir
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
 // RUN: FileCheck --input-file=%t.mlir %s
-// XFAIL: *
 
 !s32i = !cir.int<s, 32>
 !s8i = !cir.int<s, 8>
