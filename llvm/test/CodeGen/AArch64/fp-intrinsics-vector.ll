@@ -74,11 +74,10 @@ define <4 x i32> @fptoui_v4i32_v4f32(<4 x float> %x) #0 {
 define <4 x i64> @fptosi_v4i64_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fptosi_v4i64_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    fcvtl2 v1.2d, v0.4s
 ; CHECK-NEXT:    fcvtl v0.2d, v0.2s
-; CHECK-NEXT:    fcvtl v1.2d, v1.2s
-; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    fcvtzs v1.2d, v1.2d
+; CHECK-NEXT:    fcvtzs v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %val = call <4 x i64> @llvm.experimental.constrained.fptosi.v4i64.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
   ret <4 x i64> %val
@@ -87,11 +86,10 @@ define <4 x i64> @fptosi_v4i64_v4f32(<4 x float> %x) #0 {
 define <4 x i64> @fptoui_v4i64_v4f32(<4 x float> %x) #0 {
 ; CHECK-LABEL: fptoui_v4i64_v4f32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
+; CHECK-NEXT:    fcvtl2 v1.2d, v0.4s
 ; CHECK-NEXT:    fcvtl v0.2d, v0.2s
-; CHECK-NEXT:    fcvtl v1.2d, v1.2s
-; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
 ; CHECK-NEXT:    fcvtzu v1.2d, v1.2d
+; CHECK-NEXT:    fcvtzu v0.2d, v0.2d
 ; CHECK-NEXT:    ret
   %val = call <4 x i64> @llvm.experimental.constrained.fptoui.v4i64.v4f32(<4 x float> %x, metadata !"fpexcept.strict") #0
   ret <4 x i64> %val
