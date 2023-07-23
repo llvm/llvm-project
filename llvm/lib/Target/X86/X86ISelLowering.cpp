@@ -3593,22 +3593,22 @@ static SDValue lowerRegToMasks(const SDValue &ValArg, const EVT &ValVT,
     assert(ValLoc == MVT::i64 && "Expecting only i64 locations");
     // In 64 bit machine, There is no need to truncate the value only bitcast
   } else {
-    MVT maskLen;
+    MVT MaskLenVT;
     switch (ValVT.getSimpleVT().SimpleTy) {
     case MVT::v8i1:
-      maskLen = MVT::i8;
+      MaskLenVT = MVT::i8;
       break;
     case MVT::v16i1:
-      maskLen = MVT::i16;
+      MaskLenVT = MVT::i16;
       break;
     case MVT::v32i1:
-      maskLen = MVT::i32;
+      MaskLenVT = MVT::i32;
       break;
     default:
       llvm_unreachable("Expecting a vector of i1 types");
     }
 
-    ValReturned = DAG.getNode(ISD::TRUNCATE, DL, maskLen, ValReturned);
+    ValReturned = DAG.getNode(ISD::TRUNCATE, DL, MaskLenVT, ValReturned);
   }
   return DAG.getBitcast(ValVT, ValReturned);
 }
