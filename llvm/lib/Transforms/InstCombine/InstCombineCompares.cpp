@@ -5040,17 +5040,21 @@ static Instruction *foldICmpPow2Test(ICmpInst &I,
       A = Op0;
 
     CheckIs = Pred == ICmpInst::ICMP_EQ;
-  } else if (Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_ULT) {
+  } else if (ICmpInst::isUnsigned(Pred)) {
     // (A ^ (A-1)) u>= A --> ctpop(A) < 2 (two commuted variants)
     // ((A-1) ^ A) u< A --> ctpop(A) > 1 (two commuted variants)
-    if (match(Op0, m_OneUse(m_c_Xor(m_Add(m_Specific(Op1), m_AllOnes()),
-                                    m_Specific(Op1)))))
-      A = Op1;
-    else if (match(Op1, m_OneUse(m_c_Xor(m_Add(m_Specific(Op0), m_AllOnes()),
-                                         m_Specific(Op0)))))
-      A = Op0;
 
-    CheckIs = Pred == ICmpInst::ICMP_UGE;
+    if ((Pred == ICmpInst::ICMP_UGE || Pred == ICmpInst::ICMP_ULT) &&
+        match(Op0, m_OneUse(m_c_Xor(m_Add(m_Specific(Op1), m_AllOnes()),
+                                    m_Specific(Op1))))) {
+      A = Op1;
+      CheckIs = Pred == ICmpInst::ICMP_UGE;
+    } else if ((Pred == ICmpInst::ICMP_UGT || Pred == ICmpInst::ICMP_ULE) &&
+               match(Op1, m_OneUse(m_c_Xor(m_Add(m_Specific(Op0), m_AllOnes()),
+                                           m_Specific(Op0))))) {
+      A = Op0;
+      CheckIs = Pred == ICmpInst::ICMP_ULE;
+    }
   }
 
   if (A) {

@@ -1157,8 +1157,9 @@ define i1 @is_pow2_fail_pr63327(i32 %x) {
 define i1 @blsmsk_is_p2_or_z(i32 %xx, i32 %yy) {
 ; CHECK-LABEL: @blsmsk_is_p2_or_z(
 ; CHECK-NEXT:    [[X:%.*]] = or i32 [[XX:%.*]], [[YY:%.*]]
-; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ult i32 [[TMP1]], 2
+; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[X]], [[XM1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i32 [[X]], [[Y]]
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = or i32 %xx, %yy
@@ -1183,9 +1184,8 @@ define i1 @blsmsk_isnt_p2_or_z(i32 %x) {
 define i1 @blsmsk_is_p2_or_z_fail(i32 %xx, i32 %yy) {
 ; CHECK-LABEL: @blsmsk_is_p2_or_z_fail(
 ; CHECK-NEXT:    [[X:%.*]] = or i32 [[XX:%.*]], [[YY:%.*]]
-; CHECK-NEXT:    [[XM1:%.*]] = add i32 [[X]], -1
-; CHECK-NEXT:    [[Y:%.*]] = xor i32 [[X]], [[XM1]]
-; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.ctpop.i32(i32 [[X]]), !range [[RNG0]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i32 [[TMP1]], 1
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %x = or i32 %xx, %yy
@@ -1263,6 +1263,128 @@ define i1 @blsmsk_is_p2_or_z_fail_bad_cmp(i32 %x, i32 %z) {
   %xm1 = add i32 %x, -1
   %y = xor i32 %x, %xm1
   %r = icmp uge i32 %y, %z
+  ret i1 %r
+}
+
+define i1 @blsmsk_is_p2_or_z_ule_xy(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @blsmsk_is_p2_or_z_ule_xy(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], [[YY:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], 2
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, %yy
+  %xm1 = add i8 %x, -1
+  %y = xor i8 %x, %xm1
+  %r = icmp ule i8 %x, %y
+  ret i1 %r
+}
+
+
+define i1 @blsmsk_is_p2_or_z_ule_yx_fail(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @blsmsk_is_p2_or_z_ule_yx_fail(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], [[YY:%.*]]
+; CHECK-NEXT:    [[XM1:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[X]], [[XM1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ule i8 [[Y]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, %yy
+  %xm1 = add i8 %x, -1
+  %y = xor i8 %x, %xm1
+  %r = icmp ule i8 %y, %x
+  ret i1 %r
+}
+
+
+define i1 @blsmsk_is_p2_or_z_uge_yx(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @blsmsk_is_p2_or_z_uge_yx(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], [[YY:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[TMP1]], 2
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, %yy
+  %xm1 = add i8 %x, -1
+  %y = xor i8 %x, %xm1
+  %r = icmp uge i8 %y, %x
+  ret i1 %r
+}
+
+
+define i1 @blsmsk_is_p2_or_z_uge_xy_fail(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @blsmsk_is_p2_or_z_uge_xy_fail(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], [[YY:%.*]]
+; CHECK-NEXT:    [[XM1:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[X]], [[XM1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp uge i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, %yy
+  %xm1 = add i8 %x, -1
+  %y = xor i8 %x, %xm1
+  %r = icmp uge i8 %x, %y
+  ret i1 %r
+}
+
+define i1 @blsmsk_isnt_p2_or_z_ugt_xy(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @blsmsk_isnt_p2_or_z_ugt_xy(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], [[YY:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, %yy
+  %xm1 = add i8 %x, -1
+  %y = xor i8 %x, %xm1
+  %r = icmp ugt i8 %x, %y
+  ret i1 %r
+}
+
+
+define i1 @blsmsk_isnt_p2_or_z_ugt_yx_fail(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @blsmsk_isnt_p2_or_z_ugt_yx_fail(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], [[YY:%.*]]
+; CHECK-NEXT:    [[XM1:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[X]], [[XM1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[Y]], [[X]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, %yy
+  %xm1 = add i8 %x, -1
+  %y = xor i8 %x, %xm1
+  %r = icmp ugt i8 %y, %x
+  ret i1 %r
+}
+
+
+define i1 @blsmsk_isnt_p2_or_z_ult_yx(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @blsmsk_isnt_p2_or_z_ult_yx(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], [[YY:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.ctpop.i8(i8 [[X]]), !range [[RNG1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ugt i8 [[TMP1]], 1
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, %yy
+  %xm1 = add i8 %x, -1
+  %y = xor i8 %x, %xm1
+  %r = icmp ult i8 %y, %x
+  ret i1 %r
+}
+
+
+define i1 @blsmsk_isnt_p2_or_z_ult_xy_fail(i8 %xx, i8 %yy) {
+; CHECK-LABEL: @blsmsk_isnt_p2_or_z_ult_xy_fail(
+; CHECK-NEXT:    [[X:%.*]] = or i8 [[XX:%.*]], [[YY:%.*]]
+; CHECK-NEXT:    [[XM1:%.*]] = add i8 [[X]], -1
+; CHECK-NEXT:    [[Y:%.*]] = xor i8 [[X]], [[XM1]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ult i8 [[X]], [[Y]]
+; CHECK-NEXT:    ret i1 [[R]]
+;
+  %x = or i8 %xx, %yy
+  %xm1 = add i8 %x, -1
+  %y = xor i8 %x, %xm1
+  %r = icmp ult i8 %x, %y
   ret i1 %r
 }
 
