@@ -1335,6 +1335,10 @@ public:
 
   bool hasAddPC64Inst() const { return GFX12_10Insts; }
 
+  /// \returns true if the target has s_wait_xcnt insertion. Supported for
+  /// GFX1210.
+  bool hasWaitXCnt() const { return GFX12_10Insts; }
+
   // A single DWORD instructions can use a 64-bit literal.
   bool has64BitLiterals() const { return Has64BitLiterals; }
 

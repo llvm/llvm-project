@@ -48,6 +48,7 @@ define amdgpu_ps void @test_swmmac_f32_16x16x64_bf16(<16 x bfloat> %A, <32 x bfl
 ; GISEL-LABEL: test_swmmac_f32_16x16x64_bf16:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
+; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v33, 16, v0 :: v_dual_lshrrev_b32 v36, 16, v1
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v37, 16, v2 :: v_dual_lshrrev_b32 v38, 16, v3
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v39, 16, v4 :: v_dual_lshrrev_b32 v40, 16, v5
@@ -176,6 +177,7 @@ define amdgpu_ps void @test_swmmac_bf16_16x16x64_bf16(<16 x bfloat> %A, <32 x bf
 ; GISEL-LABEL: test_swmmac_bf16_16x16x64_bf16:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    global_load_b32 v28, v[28:29], off
+; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v29, 16, v0 :: v_dual_lshrrev_b32 v32, 16, v1
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v33, 16, v2 :: v_dual_lshrrev_b32 v35, 16, v3
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v36, 16, v4 :: v_dual_lshrrev_b32 v37, 16, v5
@@ -288,6 +290,7 @@ define amdgpu_ps void @test_swmmac_bf16f32_16x16x64_bf16(<16 x bfloat> %A, <32 x
 ; GISEL-LABEL: test_swmmac_bf16f32_16x16x64_bf16:
 ; GISEL:       ; %bb.0: ; %bb
 ; GISEL-NEXT:    global_load_b32 v32, v[32:33], off
+; GISEL-NEXT:    s_wait_xcnt 0x0
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v33, 16, v0 :: v_dual_lshrrev_b32 v36, 16, v1
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v37, 16, v2 :: v_dual_lshrrev_b32 v38, 16, v3
 ; GISEL-NEXT:    v_dual_lshrrev_b32 v39, 16, v4 :: v_dual_lshrrev_b32 v40, 16, v5
