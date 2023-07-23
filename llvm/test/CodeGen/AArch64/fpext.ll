@@ -75,9 +75,9 @@ define <4 x double> @fpext_v4f32_v4f64(<4 x float> %a) {
 ;
 ; CHECK-GI-LABEL: fpext_v4f32_v4f64:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    fcvtl v0.2d, v0.2s
-; CHECK-GI-NEXT:    fcvtl v1.2d, v1.2s
+; CHECK-GI-NEXT:    fcvtl v2.2d, v0.2s
+; CHECK-GI-NEXT:    fcvtl2 v1.2d, v0.4s
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = fpext <4 x float> %a to <4 x double>
@@ -224,9 +224,9 @@ define <8 x float> @fpext_v8f16_v8f32(<8 x half> %a) {
 ;
 ; CHECK-GI-LABEL: fpext_v8f16_v8f32:
 ; CHECK-GI:       // %bb.0: // %entry
-; CHECK-GI-NEXT:    mov d1, v0.d[1]
-; CHECK-GI-NEXT:    fcvtl v0.4s, v0.4h
-; CHECK-GI-NEXT:    fcvtl v1.4s, v1.4h
+; CHECK-GI-NEXT:    fcvtl v2.4s, v0.4h
+; CHECK-GI-NEXT:    fcvtl2 v1.4s, v0.8h
+; CHECK-GI-NEXT:    mov v0.16b, v2.16b
 ; CHECK-GI-NEXT:    ret
 entry:
   %c = fpext <8 x half> %a to <8 x float>
