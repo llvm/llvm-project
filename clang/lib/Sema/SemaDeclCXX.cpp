@@ -8209,7 +8209,8 @@ private:
 
       if (Diagnose == ExplainDeleted) {
         S.Diag(Subobj.Loc, diag::note_defaulted_comparison_no_viable_function)
-            << FD << (OO == OO_ExclaimEqual) << Subobj.Kind << Subobj.Decl;
+            << FD << (OO == OO_EqualEqual || OO == OO_ExclaimEqual)
+            << Subobj.Kind << Subobj.Decl;
 
         // For a three-way comparison, list both the candidates for the
         // original operator and the candidates for the synthesized operator.
