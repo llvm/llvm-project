@@ -209,6 +209,10 @@ const char *amdgpu::dlr::getCbslCommandArgs(
   for (const auto &II : InputFileNames)
     CbslArgs.push_back(Args.MakeArgString(II));
 
+  // Get the environment variable ROCM_CBSL_ARGS and add to
+  // clang-build-select-link.
+  addROCmEnvArgs(Args, CbslArgs, "ROCM_CBSL_ARGS");
+
   CbslArgs.push_back("-o");
   auto PreLinkFileName =
       getOutputFileName(C, OutputFilePrefix, "-prelinked", "bc");
