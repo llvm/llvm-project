@@ -4,7 +4,8 @@
 
 target triple = "amdgcn-amd-amdhsa"
 
-%struct.ident_t = type { i32, i32, i32, i32, ptr }
+%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
 
 @G = internal addrspace(3) global i32 undef, align 4
 @H = internal addrspace(3) global i32 undef, align 4
@@ -24,54 +25,36 @@ target triple = "amdgcn-amd-amdhsa"
 @UAA1 = internal addrspace(3) global i32 undef, align 4
 @UAA2 = internal addrspace(3) global i32 undef, align 4
 @str = private unnamed_addr addrspace(4) constant [1 x i8] c"\00", align 1
+@kernel_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
 
 ; Make sure we do not delete the stores to @G without also replacing the load with `1`.
 ;.
-; TUNIT: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QB1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QC1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QD1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QA2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QB2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QC2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QD2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QA3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QB3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QC3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[QD3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[UAA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[UAA2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; TUNIT: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
-; TUNIT: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
-;.
-; CGSCC: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QB1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QC1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QD1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QA2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QB2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QC2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QD2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QA3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QB3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QC3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[QD3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[UAA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[UAA2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
-; CGSCC: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
+; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[X:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QB1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QC1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QD1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QA2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QB2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QC2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QD2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QA3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QB3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QC3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[QD3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[UAA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[UAA2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CHECK: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
+; CHECK: @[[KERNEL_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1 }, ptr null, ptr null }
 ;.
 define void @kernel() "kernel" {
 ;
 ; TUNIT: Function Attrs: norecurse
 ; TUNIT-LABEL: define {{[^@]+}}@kernel
 ; TUNIT-SAME: () #[[ATTR0:[0-9]+]] {
-; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
+; TUNIT-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
 ; TUNIT-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
 ; TUNIT-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; TUNIT:       if.then:
@@ -89,13 +72,13 @@ define void @kernel() "kernel" {
 ; TUNIT-NEXT:    call void @barrier() #[[ATTR6]]
 ; TUNIT-NEXT:    br label [[IF_END]]
 ; TUNIT:       if.end:
-; TUNIT-NEXT:    call void @__kmpc_target_deinit(ptr undef, i8 1)
+; TUNIT-NEXT:    call void @__kmpc_target_deinit()
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: norecurse
 ; CGSCC-LABEL: define {{[^@]+}}@kernel
 ; CGSCC-SAME: () #[[ATTR0:[0-9]+]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
 ; CGSCC-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], -1
 ; CGSCC-NEXT:    br i1 [[CMP]], label [[IF_THEN:%.*]], label [[IF_ELSE:%.*]]
 ; CGSCC:       if.then:
@@ -113,10 +96,10 @@ define void @kernel() "kernel" {
 ; CGSCC-NEXT:    call void @barrier() #[[ATTR6]]
 ; CGSCC-NEXT:    br label [[IF_END]]
 ; CGSCC:       if.end:
-; CGSCC-NEXT:    call void @__kmpc_target_deinit(ptr undef, i8 1)
+; CGSCC-NEXT:    call void @__kmpc_target_deinit()
 ; CGSCC-NEXT:    ret void
 ;
-  %call = call i32 @__kmpc_target_init(ptr undef, i8 1, i1 false)
+  %call = call i32 @__kmpc_target_init(ptr @kernel_kernel_environment)
   %cmp = icmp eq i32 %call, -1
   br i1 %cmp, label %if.then, label %if.else
 if.then:
@@ -141,7 +124,7 @@ if.then2:
   call void @barrier();
   br label %if.end
 if.end:
-  call void @__kmpc_target_deinit(ptr undef, i8 1)
+  call void @__kmpc_target_deinit()
   ret void
 }
 
@@ -755,8 +738,8 @@ S:
 declare void @sync()
 declare void @barrier() norecurse nounwind nocallback "llvm.assume"="ompx_aligned_barrier"
 declare void @use1(i32) nosync norecurse nounwind nocallback
-declare i32 @__kmpc_target_init(ptr, i8, i1) nocallback
-declare void @__kmpc_target_deinit(ptr, i8) nocallback
+declare i32 @__kmpc_target_init(ptr) nocallback
+declare void @__kmpc_target_deinit() nocallback
 declare void @llvm.assume(i1)
 
 !llvm.module.flags = !{!0, !1}
