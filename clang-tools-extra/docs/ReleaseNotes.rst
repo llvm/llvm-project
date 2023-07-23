@@ -114,6 +114,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-empty-catch
+  <clang-tidy/checks/bugprone/empty-catch>` check.
+
+  Detects and suggests addressing issues with empty catch statements.
+
 - New :doc:`bugprone-multiple-new-in-one-expression
   <clang-tidy/checks/bugprone/multiple-new-in-one-expression>` check.
 
