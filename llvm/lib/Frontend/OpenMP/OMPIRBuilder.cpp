@@ -24,6 +24,7 @@
 #include "llvm/Bitcode/BitcodeReader.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CFG.h"
+#include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/DerivedTypes.h"
@@ -4016,14 +4017,60 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
   ConstantInt *IsSPMDVal = ConstantInt::getSigned(
       IntegerType::getInt8Ty(Int8->getContext()),
       IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
-  ConstantInt *UseGenericStateMachine =
-      ConstantInt::getBool(Int32->getContext(), !IsSPMD);
+  ConstantInt *UseGenericStateMachineVal = ConstantInt::getSigned(
+      IntegerType::getInt8Ty(Int8->getContext()), !IsSPMD);
+  ConstantInt *MayUseNestedParallelismVal =
+      ConstantInt::getSigned(IntegerType::getInt8Ty(Int8->getContext()), true);
+  ConstantInt *DebugIndentionLevelVal =
+      ConstantInt::getSigned(IntegerType::getInt16Ty(Int8->getContext()), 0);
+
+  // We need to strip the debug prefix to get the correct kernel name.
+  Function *Kernel = Builder.GetInsertBlock()->getParent();
+  StringRef KernelName = Kernel->getName();
+  const std::string DebugPrefix = "_debug__";
+  if (KernelName.ends_with(DebugPrefix))
+    KernelName = KernelName.drop_back(DebugPrefix.length());
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_init);
+  const DataLayout &DL = Fn->getParent()->getDataLayout();
 
-  CallInst *ThreadKind = Builder.CreateCall(
-      Fn, {Ident, IsSPMDVal, UseGenericStateMachine});
+  Twine DynamicEnvironmentName = KernelName + "_dynamic_environment";
+  Constant *DynamicEnvironmentInitializer =
+      ConstantStruct::get(DynamicEnvironment, {DebugIndentionLevelVal});
+  Constant *DynamicEnvironmentGV = new GlobalVariable(
+      M, DynamicEnvironment, /* IsConstant */ false,
+      GlobalValue::InternalLinkage, DynamicEnvironmentInitializer,
+      DynamicEnvironmentName,
+      /* InsertBefore */ nullptr, llvm::GlobalValue::NotThreadLocal,
+      DL.getDefaultGlobalsAddressSpace());
+  if (DynamicEnvironmentGV->getType() != DynamicEnvironmentPtr)
+    DynamicEnvironmentGV = ConstantExpr::getAddrSpaceCast(
+        DynamicEnvironmentGV, DynamicEnvironmentPtr);
+
+  Constant *ConfigurationEnvironmentInitializer = ConstantStruct::get(
+      ConfigurationEnvironment, {
+                                    UseGenericStateMachineVal,
+                                    MayUseNestedParallelismVal,
+                                    IsSPMDVal,
+                                });
+  Constant *KernelEnvironmentInitializer = ConstantStruct::get(
+      KernelEnvironment, {
+                             ConfigurationEnvironmentInitializer,
+                             Ident,
+                             DynamicEnvironmentGV,
+                         });
+  Twine KernelEnvironmentName = KernelName + "_kernel_environment";
+  Constant *KernelEnvironmentGV = new GlobalVariable(
+      M, KernelEnvironment, /* IsConstant */ true, GlobalValue::ExternalLinkage,
+      KernelEnvironmentInitializer, KernelEnvironmentName,
+      /* InsertBefore */ nullptr, llvm::GlobalValue::NotThreadLocal,
+      DL.getDefaultGlobalsAddressSpace());
+  if (KernelEnvironmentGV->getType() != KernelEnvironmentPtr)
+    KernelEnvironmentGV = ConstantExpr::getAddrSpaceCast(KernelEnvironmentGV,
+                                                         KernelEnvironmentPtr);
+
+  CallInst *ThreadKind = Builder.CreateCall(Fn, {KernelEnvironmentGV});
 
   Value *ExecUserCode = Builder.CreateICmpEQ(
       ThreadKind, ConstantInt::get(ThreadKind->getType(), -1),
@@ -4056,22 +4103,14 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
   return InsertPointTy(UserCodeEntryBB, UserCodeEntryBB->getFirstInsertionPt());
 }
 
-void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc,
-                                         bool IsSPMD) {
+void OpenMPIRBuilder::createTargetDeinit(const LocationDescription &Loc) {
   if (!updateToLocation(Loc))
     return;
-
-  uint32_t SrcLocStrSize;
-  Constant *SrcLocStr = getOrCreateSrcLocStr(Loc, SrcLocStrSize);
-  Value *Ident = getOrCreateIdent(SrcLocStr, SrcLocStrSize);
-  ConstantInt *IsSPMDVal = ConstantInt::getSigned(
-      IntegerType::getInt8Ty(Int8->getContext()),
-      IsSPMD ? OMP_TGT_EXEC_MODE_SPMD : OMP_TGT_EXEC_MODE_GENERIC);
 
   Function *Fn = getOrCreateRuntimeFunctionPtr(
       omp::RuntimeFunction::OMPRTL___kmpc_target_deinit);
 
-  Builder.CreateCall(Fn, {Ident, IsSPMDVal});
+  Builder.CreateCall(Fn, {});
 }
 
 void OpenMPIRBuilder::setOutlinedTargetRegionFunctionAttributes(
@@ -4321,7 +4360,7 @@ createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
 
   // Insert target deinit call in the device compilation pass.
   if (OMPBuilder.Config.isTargetDevice())
-    OMPBuilder.createTargetDeinit(Builder, /*IsSPMD*/ false);
+    OMPBuilder.createTargetDeinit(Builder);
 
   // Insert return instruction.
   Builder.CreateRetVoid();
