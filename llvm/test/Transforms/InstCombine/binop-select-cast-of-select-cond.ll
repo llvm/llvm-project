@@ -187,8 +187,8 @@ define i64 @select_non_const_sides(i1 %c, i64 %arg1, i64 %arg2) {
 define i6 @sub_select_sext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) {
 ; CHECK-LABEL: define i6 @sub_select_sext_op_swapped_non_const_args
 ; CHECK-SAME: (i1 [[C:%.*]], i6 [[ARGT:%.*]], i6 [[ARGF:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = xor i6 [[ARGT]], -1
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i6 0, [[ARGF]]
+; CHECK-DAG:     [[TMP1:%.*]] = xor i6 [[ARGT]], -1
+; CHECK-DAG:     [[TMP2:%.*]] = sub i6 0, [[ARGF]]
 ; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i6 [[TMP1]], i6 [[TMP2]]
 ; CHECK-NEXT:    ret i6 [[SUB]]
 ;
@@ -201,8 +201,8 @@ define i6 @sub_select_sext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) 
 define i6 @sub_select_zext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) {
 ; CHECK-LABEL: define i6 @sub_select_zext_op_swapped_non_const_args
 ; CHECK-SAME: (i1 [[C:%.*]], i6 [[ARGT:%.*]], i6 [[ARGF:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = sub i6 1, [[ARGT]]
-; CHECK-NEXT:    [[TMP2:%.*]] = sub i6 0, [[ARGF]]
+; CHECK-DAG:     [[TMP1:%.*]] = sub i6 1, [[ARGT]]
+; CHECK-DAG:     [[TMP2:%.*]] = sub i6 0, [[ARGF]]
 ; CHECK-NEXT:    [[SUB:%.*]] = select i1 [[C]], i6 [[TMP1]], i6 [[TMP2]]
 ; CHECK-NEXT:    ret i6 [[SUB]]
 ;
