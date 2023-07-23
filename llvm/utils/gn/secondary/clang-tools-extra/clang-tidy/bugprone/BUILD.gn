@@ -27,6 +27,7 @@ static_library("bugprone") {
     "DanglingHandleCheck.cpp",
     "DynamicStaticInitializersCheck.cpp",
     "EasilySwappableParametersCheck.cpp",
+    "EmptyCatchCheck.cpp",
     "ExceptionEscapeCheck.cpp",
     "FoldInitTypeCheck.cpp",
     "ForwardDeclarationNamespaceCheck.cpp",
