@@ -111,6 +111,9 @@ enum NodeType : unsigned {
   FCVT_W_RV64,
   FCVT_WU_RV64,
 
+  FP_ROUND_BF16,
+  FP_EXTEND_BF16,
+
   // Rounds an FP value to its corresponding integer in the same FP format.
   // First operand is the value to round, the second operand is the largest
   // integer that can be represented exactly in the FP format. This will be
