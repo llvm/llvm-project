@@ -90,6 +90,8 @@ template <> struct ScalarTraits<SwiftVersion> {
   static QuotingType mustQuote(StringRef);
 };
 
+// UUIDs are no longer respected but kept in the YAML parser
+// to keep reading in older TBDs.
 template <> struct ScalarTraits<UUID> {
   static void output(const UUID &, void *, raw_ostream &);
   static StringRef input(StringRef, void *, UUID &);

@@ -59,30 +59,6 @@ void InterfaceFile::addRPath(const Target &InputTarget, StringRef RPath) {
   RPaths.emplace(Iter, InputTarget, std::string(RPath));
 }
 
-void InterfaceFile::addUUID(const Target &Target_, StringRef UUID) {
-  auto Iter = lower_bound(UUIDs, Target_,
-                          [](const std::pair<Target, std::string> &LHS,
-                             Target RHS) { return LHS.first < RHS; });
-
-  if ((Iter != UUIDs.end()) && !(Target_ < Iter->first)) {
-    Iter->second = std::string(UUID);
-    return;
-  }
-
-  UUIDs.emplace(Iter, Target_, std::string(UUID));
-}
-
-void InterfaceFile::addUUID(const Target &Target, uint8_t UUID[16]) {
-  std::stringstream Stream;
-  for (unsigned i = 0; i < 16; ++i) {
-    if (i == 4 || i == 6 || i == 8 || i == 10)
-      Stream << '-';
-    Stream << std::setfill('0') << std::setw(2) << std::uppercase << std::hex
-           << static_cast<int>(UUID[i]);
-  }
-  addUUID(Target, Stream.str());
-}
-
 void InterfaceFile::addTarget(const Target &Target) {
   addEntry(Targets, Target);
 }
@@ -122,8 +98,6 @@ bool InterfaceFile::operator==(const InterfaceFile &O) const {
   if (IsTwoLevelNamespace != O.IsTwoLevelNamespace)
     return false;
   if (IsAppExtensionSafe != O.IsAppExtensionSafe)
-    return false;
-  if (IsInstallAPI != O.IsInstallAPI)
     return false;
   if (ParentUmbrellas != O.ParentUmbrellas)
     return false;
