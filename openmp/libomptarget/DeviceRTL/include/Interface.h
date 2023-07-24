@@ -214,14 +214,12 @@ uint32_t __kmpc_get_warp_size();
 /// Kernel
 ///
 ///{
-// Forward declaration
-struct KernelEnvironmentTy;
-
 int8_t __kmpc_is_spmd_exec_mode();
 
-int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment);
+int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
+                           bool UseGenericStateMachine);
 
-void __kmpc_target_deinit();
+void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode);
 
 ///}
 
