@@ -118,6 +118,15 @@ static DecodeStatus DecodeLASX256RegisterClass(MCInst &Inst, uint64_t RegNo,
   return MCDisassembler::Success;
 }
 
+static DecodeStatus DecodeSCRRegisterClass(MCInst &Inst, uint64_t RegNo,
+                                           uint64_t Address,
+                                           const MCDisassembler *Decoder) {
+  if (RegNo >= 4)
+    return MCDisassembler::Fail;
+  Inst.addOperand(MCOperand::createReg(LoongArch::SCR0 + RegNo));
+  return MCDisassembler::Success;
+}
+
 template <unsigned N, int P = 0>
 static DecodeStatus decodeUImmOperand(MCInst &Inst, uint64_t Imm,
                                       int64_t Address,
