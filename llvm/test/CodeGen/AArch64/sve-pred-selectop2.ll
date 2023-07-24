@@ -1178,6 +1178,198 @@ entry:
   ret <vscale x 2 x double> %b
 }
 
+define <vscale x 4 x float> @minnum_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %n) {
+; CHECK-LABEL: minnum_nxv4f32_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
+; CHECK-NEXT:    fminnm z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.s, p1/m, z1.s
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
+  %a = call <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y)
+  %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %x
+  ret <vscale x 4 x float> %b
+}
+
+define <vscale x 8 x half> @minnum_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %n) {
+; CHECK-LABEL: minnum_nxv8f16_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
+; CHECK-NEXT:    fminnm z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.h, p1/m, z1.h
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
+  %a = call <vscale x 8 x half> @llvm.minnum.nxv8f16(<vscale x 8 x half> %x, <vscale x 8 x half> %y)
+  %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %x
+  ret <vscale x 8 x half> %b
+}
+
+define <vscale x 2 x double> @minnum_nxv2f64_x(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %n) {
+; CHECK-LABEL: minnum_nxv2f64_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
+; CHECK-NEXT:    fminnm z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
+  %a = call <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y)
+  %b = select <vscale x 2 x i1> %c, <vscale x 2 x double> %a, <vscale x 2 x double> %x
+  ret <vscale x 2 x double> %b
+}
+
+define <vscale x 4 x float> @maxnum_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %n) {
+; CHECK-LABEL: maxnum_nxv4f32_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
+; CHECK-NEXT:    fmaxnm z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.s, p1/m, z1.s
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
+  %a = call <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y)
+  %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %x
+  ret <vscale x 4 x float> %b
+}
+
+define <vscale x 8 x half> @maxnum_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %n) {
+; CHECK-LABEL: maxnum_nxv8f16_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
+; CHECK-NEXT:    fmaxnm z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.h, p1/m, z1.h
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
+  %a = call <vscale x 8 x half> @llvm.maxnum.nxv8f16(<vscale x 8 x half> %x, <vscale x 8 x half> %y)
+  %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %x
+  ret <vscale x 8 x half> %b
+}
+
+define <vscale x 2 x double> @maxnum_nxv2f64_x(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %n) {
+; CHECK-LABEL: maxnum_nxv2f64_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
+; CHECK-NEXT:    fmaxnm z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
+  %a = call <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y)
+  %b = select <vscale x 2 x i1> %c, <vscale x 2 x double> %a, <vscale x 2 x double> %x
+  ret <vscale x 2 x double> %b
+}
+
+define <vscale x 4 x float> @minimum_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %n) {
+; CHECK-LABEL: minimum_nxv4f32_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
+; CHECK-NEXT:    fmin z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.s, p1/m, z1.s
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
+  %a = call <vscale x 4 x float> @llvm.minimum.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y)
+  %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %x
+  ret <vscale x 4 x float> %b
+}
+
+define <vscale x 8 x half> @minimum_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %n) {
+; CHECK-LABEL: minimum_nxv8f16_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
+; CHECK-NEXT:    fmin z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.h, p1/m, z1.h
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
+  %a = call <vscale x 8 x half> @llvm.minimum.nxv8f16(<vscale x 8 x half> %x, <vscale x 8 x half> %y)
+  %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %x
+  ret <vscale x 8 x half> %b
+}
+
+define <vscale x 2 x double> @minimum_nxv2f64_x(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %n) {
+; CHECK-LABEL: minimum_nxv2f64_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
+; CHECK-NEXT:    fmin z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
+  %a = call <vscale x 2 x double> @llvm.minimum.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y)
+  %b = select <vscale x 2 x i1> %c, <vscale x 2 x double> %a, <vscale x 2 x double> %x
+  ret <vscale x 2 x double> %b
+}
+
+define <vscale x 4 x float> @maximum_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %n) {
+; CHECK-LABEL: maximum_nxv4f32_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
+; CHECK-NEXT:    fmax z1.s, p0/m, z1.s, z0.s
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.s, p1/m, z1.s
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
+  %a = call <vscale x 4 x float> @llvm.maximum.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y)
+  %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %x
+  ret <vscale x 4 x float> %b
+}
+
+define <vscale x 8 x half> @maximum_nxv8f16_x(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %n) {
+; CHECK-LABEL: maximum_nxv8f16_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
+; CHECK-NEXT:    fmax z1.h, p0/m, z1.h, z0.h
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.h, p1/m, z1.h
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
+  %a = call <vscale x 8 x half> @llvm.maximum.nxv8f16(<vscale x 8 x half> %x, <vscale x 8 x half> %y)
+  %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %x
+  ret <vscale x 8 x half> %b
+}
+
+define <vscale x 2 x double> @maximum_nxv2f64_x(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %n) {
+; CHECK-LABEL: maximum_nxv2f64_x:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
+; CHECK-NEXT:    fmax z1.d, p0/m, z1.d, z0.d
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    mov z0.d, p1/m, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
+  %a = call <vscale x 2 x double> @llvm.maximum.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y)
+  %b = select <vscale x 2 x i1> %c, <vscale x 2 x double> %a, <vscale x 2 x double> %x
+  ret <vscale x 2 x double> %b
+}
+
 define <vscale x 4 x float> @fmai_nxv4f32_x(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %z, <vscale x 4 x float> %n) {
 ; CHECK-LABEL: fmai_nxv4f32_x:
 ; CHECK:       // %bb.0: // %entry
@@ -2491,6 +2683,198 @@ entry:
   ret <vscale x 2 x double> %b
 }
 
+define <vscale x 4 x float> @minnum_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %n) {
+; CHECK-LABEL: minnum_nxv4f32_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
+; CHECK-NEXT:    fminnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
+  %a = call <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y)
+  %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %y
+  ret <vscale x 4 x float> %b
+}
+
+define <vscale x 8 x half> @minnum_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %n) {
+; CHECK-LABEL: minnum_nxv8f16_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
+; CHECK-NEXT:    fminnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
+  %a = call <vscale x 8 x half> @llvm.minnum.nxv8f16(<vscale x 8 x half> %x, <vscale x 8 x half> %y)
+  %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %y
+  ret <vscale x 8 x half> %b
+}
+
+define <vscale x 2 x double> @minnum_nxv2f64_y(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %n) {
+; CHECK-LABEL: minnum_nxv2f64_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
+; CHECK-NEXT:    fminnm z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
+  %a = call <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y)
+  %b = select <vscale x 2 x i1> %c, <vscale x 2 x double> %a, <vscale x 2 x double> %y
+  ret <vscale x 2 x double> %b
+}
+
+define <vscale x 4 x float> @maxnum_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %n) {
+; CHECK-LABEL: maxnum_nxv4f32_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
+; CHECK-NEXT:    fmaxnm z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
+  %a = call <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y)
+  %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %y
+  ret <vscale x 4 x float> %b
+}
+
+define <vscale x 8 x half> @maxnum_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %n) {
+; CHECK-LABEL: maxnum_nxv8f16_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
+; CHECK-NEXT:    fmaxnm z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
+  %a = call <vscale x 8 x half> @llvm.maxnum.nxv8f16(<vscale x 8 x half> %x, <vscale x 8 x half> %y)
+  %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %y
+  ret <vscale x 8 x half> %b
+}
+
+define <vscale x 2 x double> @maxnum_nxv2f64_y(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %n) {
+; CHECK-LABEL: maxnum_nxv2f64_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
+; CHECK-NEXT:    fmaxnm z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
+  %a = call <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y)
+  %b = select <vscale x 2 x i1> %c, <vscale x 2 x double> %a, <vscale x 2 x double> %y
+  ret <vscale x 2 x double> %b
+}
+
+define <vscale x 4 x float> @minimum_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %n) {
+; CHECK-LABEL: minimum_nxv4f32_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
+; CHECK-NEXT:    fmin z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
+  %a = call <vscale x 4 x float> @llvm.minimum.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y)
+  %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %y
+  ret <vscale x 4 x float> %b
+}
+
+define <vscale x 8 x half> @minimum_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %n) {
+; CHECK-LABEL: minimum_nxv8f16_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
+; CHECK-NEXT:    fmin z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
+  %a = call <vscale x 8 x half> @llvm.minimum.nxv8f16(<vscale x 8 x half> %x, <vscale x 8 x half> %y)
+  %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %y
+  ret <vscale x 8 x half> %b
+}
+
+define <vscale x 2 x double> @minimum_nxv2f64_y(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %n) {
+; CHECK-LABEL: minimum_nxv2f64_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
+; CHECK-NEXT:    fmin z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
+  %a = call <vscale x 2 x double> @llvm.minimum.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y)
+  %b = select <vscale x 2 x i1> %c, <vscale x 2 x double> %a, <vscale x 2 x double> %y
+  ret <vscale x 2 x double> %b
+}
+
+define <vscale x 4 x float> @maximum_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %n) {
+; CHECK-LABEL: maximum_nxv4f32_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    fcmle p1.s, p0/z, z2.s, #0.0
+; CHECK-NEXT:    fmax z0.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.s, p1, z0.s, z1.s
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 4 x float> %n, zeroinitializer
+  %a = call <vscale x 4 x float> @llvm.maximum.nxv4f32(<vscale x 4 x float> %x, <vscale x 4 x float> %y)
+  %b = select <vscale x 4 x i1> %c, <vscale x 4 x float> %a, <vscale x 4 x float> %y
+  ret <vscale x 4 x float> %b
+}
+
+define <vscale x 8 x half> @maximum_nxv8f16_y(<vscale x 8 x half> %x, <vscale x 8 x half> %y, <vscale x 8 x half> %n) {
+; CHECK-LABEL: maximum_nxv8f16_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.h
+; CHECK-NEXT:    fcmle p1.h, p0/z, z2.h, #0.0
+; CHECK-NEXT:    fmax z0.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.h, p1, z0.h, z1.h
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 8 x half> %n, zeroinitializer
+  %a = call <vscale x 8 x half> @llvm.maximum.nxv8f16(<vscale x 8 x half> %x, <vscale x 8 x half> %y)
+  %b = select <vscale x 8 x i1> %c, <vscale x 8 x half> %a, <vscale x 8 x half> %y
+  ret <vscale x 8 x half> %b
+}
+
+define <vscale x 2 x double> @maximum_nxv2f64_y(<vscale x 2 x double> %x, <vscale x 2 x double> %y, <vscale x 2 x double> %n) {
+; CHECK-LABEL: maximum_nxv2f64_y:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    fcmle p1.d, p0/z, z2.d, #0.0
+; CHECK-NEXT:    fmax z0.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    not p1.b, p0/z, p1.b
+; CHECK-NEXT:    sel z0.d, p1, z0.d, z1.d
+; CHECK-NEXT:    ret
+entry:
+  %c = fcmp ugt <vscale x 2 x double> %n, zeroinitializer
+  %a = call <vscale x 2 x double> @llvm.maximum.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x double> %y)
+  %b = select <vscale x 2 x i1> %c, <vscale x 2 x double> %a, <vscale x 2 x double> %y
+  ret <vscale x 2 x double> %b
+}
+
 define <vscale x 4 x float> @fmai_nxv4f32_y(<vscale x 4 x float> %x, <vscale x 4 x float> %y, <vscale x 4 x float> %z, <vscale x 4 x float> %n) {
 ; CHECK-LABEL: fmai_nxv4f32_y:
 ; CHECK:       // %bb.0: // %entry
@@ -2611,3 +2995,15 @@ entry:
 declare <vscale x 2 x double> @llvm.fma.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>, <vscale x 2 x double>)
 declare <vscale x 4 x float> @llvm.fma.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>, <vscale x 4 x float>)
 declare <vscale x 8 x half> @llvm.fma.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, <vscale x 8 x half>)
+declare <vscale x 2 x double> @llvm.minnum.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
+declare <vscale x 4 x float> @llvm.minnum.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
+declare <vscale x 8 x half> @llvm.minnum.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
+declare <vscale x 2 x double> @llvm.maxnum.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
+declare <vscale x 4 x float> @llvm.maxnum.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
+declare <vscale x 8 x half> @llvm.maxnum.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
+declare <vscale x 2 x double> @llvm.minimum.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
+declare <vscale x 4 x float> @llvm.minimum.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
+declare <vscale x 8 x half> @llvm.minimum.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
+declare <vscale x 2 x double> @llvm.maximum.nxv2f64(<vscale x 2 x double>, <vscale x 2 x double>)
+declare <vscale x 4 x float> @llvm.maximum.nxv4f32(<vscale x 4 x float>, <vscale x 4 x float>)
+declare <vscale x 8 x half> @llvm.maximum.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>)
