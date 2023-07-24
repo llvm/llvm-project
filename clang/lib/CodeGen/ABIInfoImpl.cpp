@@ -246,7 +246,7 @@ Address CodeGen::emitMergePHI(CodeGenFunction &CGF, Address Addr1,
 }
 
 bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
-                           bool AllowArrays, bool AsIfNoUniqueAddr) {
+                           bool AllowArrays) {
   if (FD->isUnnamedBitfield())
     return true;
 
@@ -280,14 +280,13 @@ bool CodeGen::isEmptyField(ASTContext &Context, const FieldDecl *FD,
   // not arrays of records, so we must also check whether we stripped off an
   // array type above.
   if (isa<CXXRecordDecl>(RT->getDecl()) &&
-      (WasArray || (!AsIfNoUniqueAddr && !FD->hasAttr<NoUniqueAddressAttr>())))
+      (WasArray || !FD->hasAttr<NoUniqueAddressAttr>()))
     return false;
 
-  return isEmptyRecord(Context, FT, AllowArrays, AsIfNoUniqueAddr);
+  return isEmptyRecord(Context, FT, AllowArrays);
 }
 
-bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
-                            bool AsIfNoUniqueAddr) {
+bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays) {
   const RecordType *RT = T->getAs<RecordType>();
   if (!RT)
     return false;
@@ -298,11 +297,11 @@ bool CodeGen::isEmptyRecord(ASTContext &Context, QualType T, bool AllowArrays,
   // If this is a C++ record, check the bases first.
   if (const CXXRecordDecl *CXXRD = dyn_cast<CXXRecordDecl>(RD))
     for (const auto &I : CXXRD->bases())
-      if (!isEmptyRecord(Context, I.getType(), true, AsIfNoUniqueAddr))
+      if (!isEmptyRecord(Context, I.getType(), true))
         return false;
 
   for (const auto *I : RD->fields())
-    if (!isEmptyField(Context, I, AllowArrays, AsIfNoUniqueAddr))
+    if (!isEmptyField(Context, I, AllowArrays))
       return false;
   return true;
 }

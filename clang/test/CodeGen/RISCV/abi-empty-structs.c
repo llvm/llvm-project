@@ -19,9 +19,8 @@
 #include <stdint.h>
 
 // Fields containing empty structs or unions are ignored when flattening
-// structs for the hard FP ABIs, even in C++. The rules for arrays of empty
-// structs or unions are subtle and documented in
-// <https://github.com/riscv-non-isa/riscv-elf-psabi-doc/blob/master/riscv-cc.adoc#hardware-floating-point-calling-convention>.
+// structs for the hard FP ABIs, even in C++.
+// FIXME: This isn't currently respected.
 
 struct empty { struct { struct { } e; }; };
 struct s1 { struct empty e; float f; };
@@ -30,9 +29,13 @@ struct s1 { struct empty e; float f; };
 // CHECK-C-SAME: (float [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-C:  entry:
 //
-// CHECK-CXX-LABEL: define dso_local float @_Z7test_s12s1
-// CHECK-CXX-SAME: (float [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
-// CHECK-CXX:  entry:
+// CHECK32-CXX-LABEL: define dso_local [2 x i32] @_Z7test_s12s1
+// CHECK32-CXX-SAME: ([2 x i32] [[A_COERCE:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK32-CXX:  entry:
+//
+// CHECK64-CXX-LABEL: define dso_local i64 @_Z7test_s12s1
+// CHECK64-CXX-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0:[0-9]+]] {
+// CHECK64-CXX:  entry:
 //
 struct s1 test_s1(struct s1 a) {
   return a;
@@ -44,9 +47,13 @@ struct s2 { struct empty e; int32_t i; float f; };
 // CHECK-C-SAME: (i32 [[TMP0:%.*]], float [[TMP1:%.*]]) #[[ATTR0]] {
 // CHECK-C:  entry:
 //
-// CHECK-CXX-LABEL: define dso_local { i32, float } @_Z7test_s22s2
-// CHECK-CXX-SAME: (i32 [[TMP0:%.*]], float [[TMP1:%.*]]) #[[ATTR0]] {
-// CHECK-CXX:  entry:
+// CHECK32-CXX-LABEL: define dso_local void @_Z7test_s22s2
+// CHECK32-CXX-SAME: (ptr noalias sret([[STRUCT_S2:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK32-CXX:  entry:
+//
+// CHECK64-CXX-LABEL: define dso_local [2 x i64] @_Z7test_s22s2
+// CHECK64-CXX-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK64-CXX:  entry:
 //
 struct s2 test_s2(struct s2 a) {
   return a;
@@ -58,9 +65,13 @@ struct s3 { struct empty e; float f; float g; };
 // CHECK-C-SAME: (float [[TMP0:%.*]], float [[TMP1:%.*]]) #[[ATTR0]] {
 // CHECK-C:  entry:
 //
-// CHECK-CXX-LABEL: define dso_local { float, float } @_Z7test_s32s3
-// CHECK-CXX-SAME: (float [[TMP0:%.*]], float [[TMP1:%.*]]) #[[ATTR0]] {
-// CHECK-CXX:  entry:
+// CHECK32-CXX-LABEL: define dso_local void @_Z7test_s32s3
+// CHECK32-CXX-SAME: (ptr noalias sret([[STRUCT_S3:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK32-CXX:  entry:
+//
+// CHECK64-CXX-LABEL: define dso_local [2 x i64] @_Z7test_s32s3
+// CHECK64-CXX-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK64-CXX:  entry:
 //
 struct s3 test_s3(struct s3 a) {
   return a;
@@ -72,9 +83,13 @@ struct s4 { struct empty e; float __complex__ c; };
 // CHECK-C-SAME: (float [[TMP0:%.*]], float [[TMP1:%.*]]) #[[ATTR0]] {
 // CHECK-C:  entry:
 //
-// CHECK-CXX-LABEL: define dso_local { float, float } @_Z7test_s42s4
-// CHECK-CXX-SAME: (float [[TMP0:%.*]], float [[TMP1:%.*]]) #[[ATTR0]] {
-// CHECK-CXX:  entry:
+// CHECK32-CXX-LABEL: define dso_local void @_Z7test_s42s4
+// CHECK32-CXX-SAME: (ptr noalias sret([[STRUCT_S4:%.*]]) align 4 [[AGG_RESULT:%.*]], ptr noundef [[A:%.*]]) #[[ATTR0]] {
+// CHECK32-CXX:  entry:
+//
+// CHECK64-CXX-LABEL: define dso_local [2 x i64] @_Z7test_s42s4
+// CHECK64-CXX-SAME: ([2 x i64] [[A_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK64-CXX:  entry:
 //
 struct s4 test_s4(struct s4 a) {
   return a;
@@ -127,7 +142,7 @@ struct s7 { struct empty e[0]; float f; };
 // CHECK-C:  entry:
 //
 // CHECK-CXX-LABEL: define dso_local float @_Z7test_s72s7
-// CHECK-CXX-SAME: (float [[TMP0:%.*]]) #[[ATTR0]] {
+// CHECK-CXX-SAME: (float [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-CXX:  entry:
 //
 struct s7 test_s7(struct s7 a) {
@@ -141,9 +156,13 @@ struct s8 { struct empty_arr0 e; float f; };
 // CHECK-C-SAME: (float [[TMP0:%.*]]) #[[ATTR0]] {
 // CHECK-C:  entry:
 //
-// CHECK-CXX-LABEL: define dso_local float @_Z7test_s82s8
-// CHECK-CXX-SAME: (float [[TMP0:%.*]]) #[[ATTR0]] {
-// CHECK-CXX:  entry:
+// CHECK32-CXX-LABEL: define dso_local i32 @_Z7test_s82s8
+// CHECK32-CXX-SAME: (i32 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK32-CXX:  entry:
+//
+// CHECK64-CXX-LABEL: define dso_local i64 @_Z7test_s82s8
+// CHECK64-CXX-SAME: (i64 [[A_COERCE:%.*]]) #[[ATTR0]] {
+// CHECK64-CXX:  entry:
 //
 struct s8 test_s8(struct s8 a) {
   return a;
