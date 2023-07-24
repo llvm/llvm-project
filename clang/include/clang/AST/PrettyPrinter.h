@@ -61,9 +61,9 @@ struct PrintingPolicy {
         SuppressTagKeyword(LO.CPlusPlus), IncludeTagDefinition(false),
         SuppressScope(false), SuppressUnwrittenScope(false),
         SuppressInlineNamespace(true), SuppressElaboration(false),
-        SuppressInitializers(false), ConstantArraySizeAsWritten(false),
-        AnonymousTagLocations(true), SuppressStrongLifetime(false),
-        SuppressLifetimeQualifiers(false),
+        AlwaysSuppressInlineNamespace(false), SuppressInitializers(false),
+        ConstantArraySizeAsWritten(false), AnonymousTagLocations(true),
+        SuppressStrongLifetime(false), SuppressLifetimeQualifiers(false),
         SuppressTemplateArgsInCXXConstructors(false),
         SuppressDefaultTemplateArgs(true), Bool(LO.Bool),
         Nullptr(LO.CPlusPlus11 || LO.C23), NullptrTypeInNamespace(LO.CPlusPlus),
@@ -150,6 +150,11 @@ struct PrintingPolicy {
   /// instead letting the underlying type print as normal.
   LLVM_PREFERRED_TYPE(bool)
   unsigned SuppressElaboration : 1;
+
+  /// Suppress printing parts of scope specifiers that correspond
+  /// to inline namespaces, even if the name is ambiguous with the specifier
+  /// removed.
+  unsigned AlwaysSuppressInlineNamespace : 1;
 
   /// Suppress printing of variable initializers.
   ///
