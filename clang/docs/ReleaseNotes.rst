@@ -677,6 +677,8 @@ Bug Fixes in This Version
 - Invalidate BlockDecl with invalid ParmVarDecl. Remove redundant dump of
   BlockDecl's ParmVarDecl
   (`#64005 <https://github.com/llvm/llvm-project/issues/64005>_`)
+- Fix crash on nested templated class with template function call.
+  (`#61159 <https://github.com/llvm/llvm-project/issues/61159>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
