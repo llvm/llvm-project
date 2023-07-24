@@ -1,3 +1,5 @@
+# REQUIRES: aarch64-registered-target
+
 ## Check that AMD64 image file with CHPE data is recognized as ARM64EC.
 # RUN: yaml2obj %s -o %t -DMACHINE=IMAGE_FILE_MACHINE_AMD64
 # RUN: llvm-objdump -d %t | FileCheck --check-prefixes=DISASM,ARM64EC %s
