@@ -5,7 +5,6 @@ from lldbsuite.test import lldbutil
 
 
 class TestCase(TestBase):
-    @expectedFailureAll(oslist=["windows"])
     def test(self):
         self.build()
         lldbutil.run_to_source_breakpoint(
