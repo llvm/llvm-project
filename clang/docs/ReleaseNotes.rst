@@ -674,7 +674,8 @@ Bug Fixes in This Version
   value exprs is invalid. Propagating the error info up by replacing BlockExpr
   with a RecoveryExpr. This fixes:
   (`#63863 <https://github.com/llvm/llvm-project/issues/63863>_`)
-- Invalidate BlockDecl with invalid ParmVarDecl
+- Invalidate BlockDecl with invalid ParmVarDecl. Remove redundant dump of
+  BlockDecl's ParmVarDecl
   (`#64005 <https://github.com/llvm/llvm-project/issues/64005>_`)
 
 Bug Fixes to Compiler Builtins
