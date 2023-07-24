@@ -1185,7 +1185,8 @@ unsigned LoongArchAsmParser::checkTargetMatchPredicate(MCInst &Inst) {
       return Match_RequiresLAORdDifferRj;
     break;
   }
-  case LoongArch::CSRXCHG: {
+  case LoongArch::CSRXCHG:
+  case LoongArch::GCSRXCHG: {
     unsigned Rj = Inst.getOperand(2).getReg();
     if (Rj == LoongArch::R0 || Rj == LoongArch::R1)
       return Match_RequiresOpnd2NotR0R1;
@@ -1347,6 +1348,9 @@ bool LoongArchAsmParser::MatchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
         /*Upper=*/(1 << 12) - 1,
         "operand must be a symbol with modifier (e.g. %abs_lo12) or an "
         "integer in the range");
+  case Match_InvalidUImm14:
+    return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
+                                      /*Upper=*/(1 << 14) - 1);
   case Match_InvalidUImm15:
     return generateImmOutOfRangeError(Operands, ErrorInfo, /*Lower=*/0,
                                       /*Upper=*/(1 << 15) - 1);
