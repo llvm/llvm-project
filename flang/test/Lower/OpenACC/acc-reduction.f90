@@ -2,34 +2,6 @@
 
 ! RUN: bbc -fopenacc -emit-fir %s -o - | FileCheck %s
 
-! CHECK-LABEL: acc.reduction.recipe @reduction_add_ref_10xi32 : !fir.ref<!fir.array<10xi32>> reduction_operator <add> init {
-! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.array<10xi32>>):
-! CHECK:   %[[INIT:.*]] = arith.constant 0 : i32
-! CHECK:   %[[ALLOCA:.*]] = fir.alloca !fir.array<10xi32>
-! CHECK:   %[[LB:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB:.*]] = arith.constant 9 : index
-! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
-! CHECK:     %[[COORD:.*]] = fir.coordinate_of %0, %[[IV]] : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
-! CHECK:     fir.store %[[INIT]] to %[[COORD]] : !fir.ref<i32>
-! CHECK:   }
-! CHECK:   acc.yield %[[ALLOCA]] : !fir.ref<!fir.array<10xi32>>
-! CHECK: } combiner {
-! CHECK: ^bb0(%[[ARG0:.*]]: !fir.ref<!fir.array<10xi32>>, %[[ARG1:.*]]: !fir.ref<!fir.array<10xi32>>):
-! CHECK:   %[[LB:.*]] = arith.constant 0 : index
-! CHECK:   %[[UB:.*]] = arith.constant 9 : index
-! CHECK:   %[[STEP:.*]] = arith.constant 1 : index
-! CHECK:   fir.do_loop %[[IV:.*]] = %[[LB]] to %[[UB]] step %[[STEP]] {
-! CHECK:     %[[COORD1:.*]] = fir.coordinate_of %[[ARG0]], %[[IV]] : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
-! CHECK:     %[[COORD2:.*]] = fir.coordinate_of %[[ARG1]], %[[IV]] : (!fir.ref<!fir.array<10xi32>>, index) -> !fir.ref<i32>
-! CHECK:     %[[LOAD1:.*]] = fir.load %[[COORD1]] : !fir.ref<i32>
-! CHECK:     %[[LOAD2:.*]] = fir.load %[[COORD2]] : !fir.ref<i32>
-! CHECK:     %[[COMBINED:.*]] = arith.addi %[[LOAD1]], %[[LOAD2]] : i32
-! CHECK:     fir.store %[[COMBINED]] to %[[COORD1]] : !fir.ref<i32>
-! CHECK:   }
-! CHECK:   acc.yield %[[ARG0]] : !fir.ref<!fir.array<10xi32>>
-! CHECK: }
-
 ! CHECK-LABEL: acc.reduction.recipe @reduction_mul_ref_z32 : !fir.ref<!fir.complex<4>> reduction_operator <mul> init {
 ! CHECK: ^bb0(%{{.*}}: !fir.ref<!fir.complex<4>>):
 ! CHECK:   %[[REAL:.*]] = arith.constant 1.000000e+00 : f32
@@ -950,5 +922,5 @@ end subroutine
 ! CHECK: %[[LB:.*]] = arith.constant 10 : index
 ! CHECK: %[[UB:.*]] = arith.constant 19 : index
 ! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%[[LB]] : index) upperbound(%[[UB]] : index) stride(%[[C1]] : index) startIdx(%[[C1]] : index)
-! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xi32>> {name = "a(11:20)"}
-! CHECK: acc.parallel reduction(@reduction_add_ref_10xi32 -> %[[RED]] : !fir.ref<!fir.array<10xi32>>)
+! CHECK: %[[RED:.*]] = acc.reduction varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xi32>> {name = "a(11:20)"}
+! CHECK: acc.parallel reduction(@reduction_add_ref_100xi32 -> %[[RED]] : !fir.ref<!fir.array<100xi32>>)
