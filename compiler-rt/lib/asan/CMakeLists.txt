@@ -359,23 +359,25 @@ else()
       DEFS ${ASAN_DYNAMIC_DEFINITIONS}
       PARENT_TARGET asan)
 
-    set_target_properties(clang_rt.asan${MSVC_DBG_SUFFIX}-dynamic-${arch}
-      PROPERTIES ARCHIVE_OUTPUT_NAME clang_rt.asan_dynamic-${arch}_implib
-                 ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+    if(WIN32)
+      set_target_properties(clang_rt.asan${MSVC_DBG_SUFFIX}-dynamic-${arch}
+        PROPERTIES ARCHIVE_OUTPUT_NAME clang_rt.asan_dynamic-${arch}_implib
+                  ARCHIVE_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
-    add_library(clang_rt.asan-${arch}_implib STATIC)
-    target_link_libraries(clang_rt.asan-${arch}_implib RTAsan_static_implib.${arch})
-    add_dependencies(clang_rt.asan-${arch}_implib clang_rt.asan${MSVC_DBG_SUFFIX}-dynamic-${arch})
-    get_compiler_rt_output_dir(${arch} IMPLIB_OUTPUT_DIR)
-    set_target_properties(clang_rt.asan-${arch}_implib
-      PROPERTIES ARCHIVE_OUTPUT_NAME clang_rt.asan${MSVC_DBG_SUFFIX}_dynamic-${arch}
-                  ARCHIVE_OUTPUT_DIRECTORY ${IMPLIB_OUTPUT_DIR}
-                  STATIC_LIBRARY_OPTIONS "$<TARGET_LINKER_FILE:clang_rt.asan${MSVC_DBG_SUFFIX}-dynamic-${arch}>")
-    get_compiler_rt_install_dir(${arch} IMPLIB_INSTALL_DIR)
-    install(TARGETS clang_rt.asan-${arch}_implib
-      ARCHIVE DESTINATION ${IMPLIB_INSTALL_DIR}
-      LIBRARY DESTINATION ${IMPLIB_INSTALL_DIR}
-      RUNTIME DESTINATION ${IMPLIB_INSTALL_DIR})
+      add_library(clang_rt.asan-${arch}_implib STATIC)
+      target_link_libraries(clang_rt.asan-${arch}_implib RTAsan_static_implib.${arch})
+      add_dependencies(clang_rt.asan-${arch}_implib clang_rt.asan${MSVC_DBG_SUFFIX}-dynamic-${arch})
+      get_compiler_rt_output_dir(${arch} IMPLIB_OUTPUT_DIR)
+      set_target_properties(clang_rt.asan-${arch}_implib
+        PROPERTIES ARCHIVE_OUTPUT_NAME clang_rt.asan${MSVC_DBG_SUFFIX}_dynamic-${arch}
+                    ARCHIVE_OUTPUT_DIRECTORY ${IMPLIB_OUTPUT_DIR}
+                    STATIC_LIBRARY_OPTIONS "$<TARGET_LINKER_FILE:clang_rt.asan${MSVC_DBG_SUFFIX}-dynamic-${arch}>")
+      get_compiler_rt_install_dir(${arch} IMPLIB_INSTALL_DIR)
+      install(TARGETS clang_rt.asan-${arch}_implib
+        ARCHIVE DESTINATION ${IMPLIB_INSTALL_DIR}
+        LIBRARY DESTINATION ${IMPLIB_INSTALL_DIR}
+        RUNTIME DESTINATION ${IMPLIB_INSTALL_DIR})
+    endif()
 
     if (SANITIZER_USE_SYMBOLS AND NOT ${arch} STREQUAL "i386")
       add_sanitizer_rt_symbols(clang_rt.asan_cxx
