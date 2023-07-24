@@ -7,18 +7,14 @@
 define i32 @and_add_lsr(i32 %x, i32 %y) {
 ; RV32I-LABEL: and_add_lsr:
 ; RV32I:       # %bb.0:
-; RV32I-NEXT:    lui a2, 1
-; RV32I-NEXT:    addi a2, a2, -1
-; RV32I-NEXT:    add a0, a0, a2
+; RV32I-NEXT:    addi a0, a0, -1
 ; RV32I-NEXT:    srli a1, a1, 20
 ; RV32I-NEXT:    and a0, a1, a0
 ; RV32I-NEXT:    ret
 ;
 ; RV64I-LABEL: and_add_lsr:
 ; RV64I:       # %bb.0:
-; RV64I-NEXT:    lui a2, 1
-; RV64I-NEXT:    addiw a2, a2, -1
-; RV64I-NEXT:    addw a0, a0, a2
+; RV64I-NEXT:    addiw a0, a0, -1
 ; RV64I-NEXT:    srliw a1, a1, 20
 ; RV64I-NEXT:    and a0, a1, a0
 ; RV64I-NEXT:    ret
