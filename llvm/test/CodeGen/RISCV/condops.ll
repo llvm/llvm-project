@@ -3467,15 +3467,14 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64XVENTANACONDOPS-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64XVENTANACONDOPS-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64XVENTANACONDOPS-NEXT:    vt.maskcn a3, a3, a0
-; RV64XVENTANACONDOPS-NEXT:    vt.maskc a0, a2, a0
-; RV64XVENTANACONDOPS-NEXT:    or a0, a0, a3
-; RV64XVENTANACONDOPS-NEXT:    slli s0, a0, 48
+; RV64XVENTANACONDOPS-NEXT:    vt.maskc s0, a2, a0
+; RV64XVENTANACONDOPS-NEXT:    or s0, s0, a3
 ; RV64XVENTANACONDOPS-NEXT:    beqz a1, .LBB58_2
 ; RV64XVENTANACONDOPS-NEXT:  # %bb.1:
-; RV64XVENTANACONDOPS-NEXT:    srai a0, s0, 48
+; RV64XVENTANACONDOPS-NEXT:    mv a0, s0
 ; RV64XVENTANACONDOPS-NEXT:    call bat@plt
 ; RV64XVENTANACONDOPS-NEXT:  .LBB58_2:
-; RV64XVENTANACONDOPS-NEXT:    srai a0, s0, 48
+; RV64XVENTANACONDOPS-NEXT:    mv a0, s0
 ; RV64XVENTANACONDOPS-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64XVENTANACONDOPS-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64XVENTANACONDOPS-NEXT:    addi sp, sp, 16
@@ -3505,15 +3504,14 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV32ZICOND-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32ZICOND-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32ZICOND-NEXT:    czero.nez a3, a3, a0
-; RV32ZICOND-NEXT:    czero.eqz a0, a2, a0
-; RV32ZICOND-NEXT:    or a0, a0, a3
-; RV32ZICOND-NEXT:    slli s0, a0, 16
+; RV32ZICOND-NEXT:    czero.eqz s0, a2, a0
+; RV32ZICOND-NEXT:    or s0, s0, a3
 ; RV32ZICOND-NEXT:    beqz a1, .LBB58_2
 ; RV32ZICOND-NEXT:  # %bb.1:
-; RV32ZICOND-NEXT:    srai a0, s0, 16
+; RV32ZICOND-NEXT:    mv a0, s0
 ; RV32ZICOND-NEXT:    call bat@plt
 ; RV32ZICOND-NEXT:  .LBB58_2:
-; RV32ZICOND-NEXT:    srai a0, s0, 16
+; RV32ZICOND-NEXT:    mv a0, s0
 ; RV32ZICOND-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32ZICOND-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
 ; RV32ZICOND-NEXT:    addi sp, sp, 16
@@ -3525,15 +3523,14 @@ define signext i16 @numsignbits(i16 signext %0, i16 signext %1, i16 signext %2, 
 ; RV64ZICOND-NEXT:    sd ra, 8(sp) # 8-byte Folded Spill
 ; RV64ZICOND-NEXT:    sd s0, 0(sp) # 8-byte Folded Spill
 ; RV64ZICOND-NEXT:    czero.nez a3, a3, a0
-; RV64ZICOND-NEXT:    czero.eqz a0, a2, a0
-; RV64ZICOND-NEXT:    or a0, a0, a3
-; RV64ZICOND-NEXT:    slli s0, a0, 48
+; RV64ZICOND-NEXT:    czero.eqz s0, a2, a0
+; RV64ZICOND-NEXT:    or s0, s0, a3
 ; RV64ZICOND-NEXT:    beqz a1, .LBB58_2
 ; RV64ZICOND-NEXT:  # %bb.1:
-; RV64ZICOND-NEXT:    srai a0, s0, 48
+; RV64ZICOND-NEXT:    mv a0, s0
 ; RV64ZICOND-NEXT:    call bat@plt
 ; RV64ZICOND-NEXT:  .LBB58_2:
-; RV64ZICOND-NEXT:    srai a0, s0, 48
+; RV64ZICOND-NEXT:    mv a0, s0
 ; RV64ZICOND-NEXT:    ld ra, 8(sp) # 8-byte Folded Reload
 ; RV64ZICOND-NEXT:    ld s0, 0(sp) # 8-byte Folded Reload
 ; RV64ZICOND-NEXT:    addi sp, sp, 16
