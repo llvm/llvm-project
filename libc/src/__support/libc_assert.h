@@ -25,26 +25,6 @@
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 
-namespace __llvm_libc {
-
-LIBC_INLINE void report_assertion_failure(const char *assertion,
-                                          const char *filename, unsigned line,
-                                          const char *funcname) {
-  char line_str[IntegerToString::dec_bufsize<unsigned>()];
-  // dec returns an optional, will always be valid for this size buffer
-  auto line_number = IntegerToString::dec(line, line_str);
-  __llvm_libc::write_to_stderr(filename);
-  __llvm_libc::write_to_stderr(":");
-  __llvm_libc::write_to_stderr(*line_number);
-  __llvm_libc::write_to_stderr(": Assertion failed: '");
-  __llvm_libc::write_to_stderr(assertion);
-  __llvm_libc::write_to_stderr("' in function: '");
-  __llvm_libc::write_to_stderr(funcname);
-  __llvm_libc::write_to_stderr("'\n");
-}
-
-} // namespace __llvm_libc
-
 #ifdef LIBC_ASSERT
 #error "Unexpected: LIBC_ASSERT macro already defined"
 #endif
@@ -60,11 +40,22 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
   do {                                                                         \
   } while (false)
 #else
+
+// Convert __LINE__ to a string using macros. The indirection is necessary
+// because otherwise it will turn "__LINE__" into a string, not its value. The
+// value is evaluated in the indirection step.
+#define __LIBC_MACRO_TO_STR(x) #x
+#define __LIBC_MACRO_TO_STR_INDIR(y) __LIBC_MACRO_TO_STR(y)
+#define __LIBC_LINE_STR__ __LIBC_MACRO_TO_STR_INDIR(__LINE__)
+
 #define LIBC_ASSERT(COND)                                                      \
   do {                                                                         \
     if (!(COND)) {                                                             \
-      __llvm_libc::report_assertion_failure(#COND, __FILE__, __LINE__,         \
-                                            __PRETTY_FUNCTION__);              \
+      __llvm_libc::write_to_stderr(__FILE__ ":" __LIBC_LINE_STR__              \
+                                            ": Assertion failed: '" #COND      \
+                                            "' in function: '");               \
+      __llvm_libc::write_to_stderr(__PRETTY_FUNCTION__);                       \
+      __llvm_libc::write_to_stderr("'\n");                                     \
       __llvm_libc::quick_exit(0xFF);                                           \
     }                                                                          \
   } while (false)
