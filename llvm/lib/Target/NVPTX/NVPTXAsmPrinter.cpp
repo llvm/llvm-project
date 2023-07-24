@@ -873,6 +873,8 @@ void NVPTXAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
   printReturnValStr(F, OS);
   OS << Name->getName();
   emitFunctionParamList(F, OS);
+  if (shouldEmitPTXNoReturn(F, TM))
+    OS << "\n.noreturn";
   OS << ";\n";
 
   OS << ".alias " << Name->getName() << ", " << F->getName() << ";\n";
