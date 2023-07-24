@@ -19,3 +19,12 @@ from the `LLVM releases web site <https://llvm.org/releases/>`_.
 
 Non-comprehensive list of changes in this release
 =================================================
+
+- Removed the "old" device plugins along with support for the ``remote`` and
+  ``ve`` plugins
+- Added basic experimental support for ``libc`` functions on the GPU via the
+  `LLVM C Library for GPUs <https://libc.llvm.org/gpu/>`_.
+- Added minimal support for calling host functions from the device using the
+  ``libc`` interface, see this `example
+  <https://github.com/llvm/llvm-project/blob/main/openmp/libomptarget/test/libc/host_call.c>`_.
+- Fixed the implementation of ``omp_get_wtime`` for AMDGPU targets.
