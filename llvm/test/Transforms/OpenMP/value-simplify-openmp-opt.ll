@@ -45,7 +45,7 @@ target triple = "amdgcn-amd-amdhsa"
 ; TUNIT: @[[UAA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; TUNIT: @[[UAA2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; TUNIT: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
-; TUNIT: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; TUNIT: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 0
 ;.
 ; CGSCC: @[[G:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; CGSCC: @[[H:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
