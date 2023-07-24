@@ -2038,11 +2038,8 @@ int main(int argc, char *argv[]) {
 
   ExitOnErr(runChecks(*S));
 
-  if (NoExec)
-    return 0;
-
   int Result = 0;
-  {
+  if (!NoExec) {
     LLVM_DEBUG(dbgs() << "Running \"" << EntryPointName << "\"...\n");
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
     if (!OrcRuntime.empty())
