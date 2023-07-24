@@ -3738,6 +3738,11 @@ StmtResult Sema::ActOnCapScopeReturnStmt(SourceLocation ReturnLoc,
   if (FunctionScopes.back()->FirstReturnLoc.isInvalid())
     FunctionScopes.back()->FirstReturnLoc = ReturnLoc;
 
+  if (auto *CurBlock = dyn_cast<BlockScopeInfo>(CurCap);
+      CurBlock && CurCap->HasImplicitReturnType && RetValExp &&
+      RetValExp->containsErrors())
+    CurBlock->TheDecl->setInvalidDecl();
+
   return Result;
 }
 
