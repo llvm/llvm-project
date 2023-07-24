@@ -3247,6 +3247,10 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   return true;
 }
 
+bool LoongArchTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
+  return isInt<12>(Imm);
+}
+
 bool LoongArchTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   return isInt<12>(Imm);
 }
