@@ -17,9 +17,9 @@ define void @fmuladd_test(float %0, float %1, <8 x float> %2, ptr %3) {
 
 ; CHECK-LABEL:  llvm.func @fpclass_test
 define void @fpclass_test(float %0, <8 x float> %1) {
-  ; CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 0 : i32}> : (f32) -> i1
+  ; CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 0 : i32}> : (f32) -> i1
   %3 = call i1 @llvm.is.fpclass.f32(float %0, i32 0)
-  ; CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{bit = 1 : i32}> : (vector<8xf32>) -> vector<8xi1>
+  ; CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 1 : i32}> : (vector<8xf32>) -> vector<8xi1>
   %4 = call <8 x i1> @llvm.is.fpclass.v8f32(<8 x float> %1, i32 1)
   ret void
 }
