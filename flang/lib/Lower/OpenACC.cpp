@@ -703,10 +703,11 @@ bool hasDynamicShape(llvm::SmallVector<mlir::Value> &bounds) {
   return false;
 }
 
-static mlir::Value
-genReductionInitValue(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Type ty, mlir::acc::ReductionOperator op,
-                      llvm::SmallVector<mlir::Value> &bounds) {
+/// Return a constant with the initial value for the reduction operator and
+/// type combination.
+static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
+                                         mlir::Location loc, mlir::Type ty,
+                                         mlir::acc::ReductionOperator op) {
   if (op == mlir::acc::ReductionOperator::AccLand ||
       op == mlir::acc::ReductionOperator::AccLor ||
       op == mlir::acc::ReductionOperator::AccEqv ||
@@ -745,26 +746,48 @@ genReductionInitValue(fir::FirOpBuilder &builder, mlir::Location loc,
     return fir::factory::Complex{builder, loc}.createComplex(
         cmplxTy.getFKind(), realInit, imagInit);
   }
-  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
-      mlir::Type vecTy =
-          mlir::VectorType::get(seqTy.getShape(), seqTy.getEleTy());
-      auto shTy = vecTy.cast<mlir::ShapedType>();
-      if (seqTy.getEleTy().isIntOrIndex())
-        return builder.create<mlir::arith::ConstantOp>(
-            loc, vecTy,
-            mlir::DenseElementsAttr::get(
-                shTy,
-                getReductionInitValue<llvm::APInt>(op, seqTy.getEleTy())));
-      if (mlir::isa<mlir::FloatType>(seqTy.getEleTy()))
-        return builder.create<mlir::arith::ConstantOp>(
-            loc, vecTy,
-            mlir::DenseElementsAttr::get(
-                shTy,
-                getReductionInitValue<llvm::APFloat>(op, seqTy.getEleTy())));
+
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+    return getReductionInitValue(builder, loc, seqTy.getEleTy(), op);
+
+  llvm::report_fatal_error("Unsupported OpenACC reduction type");
+}
+
+static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
+                                          mlir::Location loc, mlir::Type ty,
+                                          mlir::acc::ReductionOperator op) {
+  ty = fir::unwrapRefType(ty);
+  mlir::Value initValue = getReductionInitValue(builder, loc, ty, op);
+  if (fir::isa_trivial(ty)) {
+    mlir::Value alloca = builder.create<fir::AllocaOp>(loc, ty);
+    builder.create<fir::StoreOp>(loc, builder.createConvert(loc, ty, initValue),
+                                 alloca);
+    return alloca;
+  } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
+    if (seqTy.hasDynamicExtents())
+      TODO(loc, "private recipe of array with dynamic extents");
+    if (fir::isa_trivial(seqTy.getEleTy())) {
+      mlir::Value alloca = builder.create<fir::AllocaOp>(loc, seqTy);
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
+      llvm::SmallVector<fir::DoLoopOp> loops;
+      llvm::SmallVector<mlir::Value> ivs;
+      for (auto ext : llvm::reverse(seqTy.getShape())) {
+        auto lb = builder.createIntegerConstant(loc, idxTy, 0);
+        auto ub = builder.createIntegerConstant(loc, idxTy, ext - 1);
+        auto step = builder.createIntegerConstant(loc, idxTy, 1);
+        auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
+                                                  /*unordered=*/false);
+        builder.setInsertionPointToStart(loop.getBody());
+        loops.push_back(loop);
+        ivs.push_back(loop.getInductionVar());
+      }
+      auto coord = builder.create<fir::CoordinateOp>(loc, refTy, alloca, ivs);
+      builder.create<fir::StoreOp>(loc, initValue, coord);
+      builder.setInsertionPointAfter(loops[0]);
+      return alloca;
     }
   }
-
   llvm::report_fatal_error("Unsupported OpenACC reduction type");
 }
 
@@ -775,8 +798,16 @@ static mlir::Value genLogicalCombiner(fir::FirOpBuilder &builder,
   mlir::Type i1 = builder.getI1Type();
   mlir::Value v1 = builder.create<fir::ConvertOp>(loc, i1, value1);
   mlir::Value v2 = builder.create<fir::ConvertOp>(loc, i1, value2);
-  mlir::Value add = builder.create<Op>(loc, v1, v2);
-  return builder.create<fir::ConvertOp>(loc, value1.getType(), add);
+  mlir::Value combined = builder.create<Op>(loc, v1, v2);
+  return builder.create<fir::ConvertOp>(loc, value1.getType(), combined);
+}
+
+static mlir::Value loadIfRef(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value value) {
+  if (mlir::isa<fir::ReferenceType, fir::PointerType, fir::HeapType>(
+          value.getType()))
+    return builder.create<fir::LoadOp>(loc, value);
+  return value;
 }
 
 static mlir::Value genComparisonCombiner(fir::FirOpBuilder &builder,
@@ -791,45 +822,13 @@ static mlir::Value genComparisonCombiner(fir::FirOpBuilder &builder,
   return builder.create<fir::ConvertOp>(loc, value1.getType(), add);
 }
 
-static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::acc::ReductionOperator op, mlir::Type ty,
-                               mlir::Value value1, mlir::Value value2) {
-
-  // Handle combiner on arrays.
-  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
-      if (seqTy.hasDynamicExtents())
-        TODO(loc, "OpenACC reduction on array with dynamic extents");
-      mlir::Type idxTy = builder.getIndexType();
-      mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
-
-      llvm::SmallVector<fir::DoLoopOp> loops;
-      llvm::SmallVector<mlir::Value> ivs;
-      for (auto ext : llvm::reverse(seqTy.getShape())) {
-        auto lb = builder.create<mlir::arith::ConstantOp>(
-            loc, idxTy, builder.getIntegerAttr(idxTy, 0));
-        auto ub = builder.create<mlir::arith::ConstantOp>(
-            loc, idxTy, builder.getIntegerAttr(idxTy, ext - 1));
-        auto step = builder.create<mlir::arith::ConstantOp>(
-            loc, idxTy, builder.getIntegerAttr(idxTy, 1));
-        auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
-                                                  /*unordered=*/false);
-        builder.setInsertionPointToStart(loop.getBody());
-        loops.push_back(loop);
-        ivs.push_back(loop.getInductionVar());
-      }
-      auto addr1 = builder.create<fir::CoordinateOp>(loc, refTy, value1, ivs);
-      auto addr2 = builder.create<fir::CoordinateOp>(loc, refTy, value2, ivs);
-      auto load1 = builder.create<fir::LoadOp>(loc, addr1);
-      auto load2 = builder.create<fir::LoadOp>(loc, addr2);
-      auto combined =
-          genCombiner(builder, loc, op, seqTy.getEleTy(), load1, load2);
-      builder.create<fir::StoreOp>(loc, combined, addr1);
-      builder.setInsertionPointAfter(loops[0]);
-      return value1;
-    }
-  }
-
+static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
+                                     mlir::Location loc,
+                                     mlir::acc::ReductionOperator op,
+                                     mlir::Type ty, mlir::Value value1,
+                                     mlir::Value value2) {
+  value1 = loadIfRef(builder, loc, value1);
+  value2 = loadIfRef(builder, loc, value2);
   if (op == mlir::acc::ReductionOperator::AccAdd) {
     if (ty.isIntOrIndex())
       return builder.create<mlir::arith::AddIOp>(loc, value1, value2);
@@ -883,6 +882,43 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
   TODO(loc, "reduction operator");
 }
 
+static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
+                        mlir::acc::ReductionOperator op, mlir::Type ty,
+                        mlir::Value value1, mlir::Value value2) {
+  ty = fir::unwrapRefType(ty);
+
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    if (seqTy.hasDynamicExtents())
+      TODO(loc, "OpenACC reduction on array with dynamic extents");
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
+
+    llvm::SmallVector<fir::DoLoopOp> loops;
+    llvm::SmallVector<mlir::Value> ivs;
+    for (auto ext : llvm::reverse(seqTy.getShape())) {
+      auto lb = builder.createIntegerConstant(loc, idxTy, 0);
+      auto ub = builder.createIntegerConstant(loc, idxTy, ext - 1);
+      auto step = builder.createIntegerConstant(loc, idxTy, 1);
+      auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
+                                                /*unordered=*/false);
+      builder.setInsertionPointToStart(loop.getBody());
+      loops.push_back(loop);
+      ivs.push_back(loop.getInductionVar());
+    }
+    auto addr1 = builder.create<fir::CoordinateOp>(loc, refTy, value1, ivs);
+    auto addr2 = builder.create<fir::CoordinateOp>(loc, refTy, value2, ivs);
+    auto load1 = builder.create<fir::LoadOp>(loc, addr1);
+    auto load2 = builder.create<fir::LoadOp>(loc, addr2);
+    mlir::Value res =
+        genScalarCombiner(builder, loc, op, seqTy.getEleTy(), load1, load2);
+    builder.create<fir::StoreOp>(loc, res, addr1);
+    builder.setInsertionPointAfter(loops[0]);
+  } else {
+    mlir::Value res = genScalarCombiner(builder, loc, op, ty, value1, value2);
+    builder.create<fir::StoreOp>(loc, res, value1);
+  }
+}
+
 mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
     fir::FirOpBuilder &builder, llvm::StringRef recipeName, mlir::Location loc,
     mlir::Type ty, mlir::acc::ReductionOperator op,
@@ -899,7 +935,7 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
                       {ty}, {loc});
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
-  mlir::Value initValue = genReductionInitValue(builder, loc, ty, op, bounds);
+  mlir::Value initValue = genReductionInitRegion(builder, loc, ty, op);
   builder.create<mlir::acc::YieldOp>(loc, initValue);
 
   builder.createBlock(&recipe.getCombinerRegion(),
@@ -907,8 +943,8 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   builder.setInsertionPointToEnd(&recipe.getCombinerRegion().back());
   mlir::Value v1 = recipe.getCombinerRegion().front().getArgument(0);
   mlir::Value v2 = recipe.getCombinerRegion().front().getArgument(1);
-  mlir::Value combinedValue = genCombiner(builder, loc, op, ty, v1, v2);
-  builder.create<mlir::acc::YieldOp>(loc, combinedValue);
+  genCombiner(builder, loc, op, ty, v1, v2);
+  builder.create<mlir::acc::YieldOp>(loc, v1);
   builder.restoreInsertionPoint(crtPos);
   return recipe;
 }
@@ -950,9 +986,7 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
     auto op = createDataEntryOp<mlir::acc::ReductionOp>(
         builder, operandLocation, baseAddr, asFortran, bounds,
         /*structured=*/true, mlir::acc::DataClause::acc_reduction, retTy);
-    mlir::Type ty = fir::unwrapRefType(op.getAccPtr().getType());
-    if (!fir::isa_trivial(ty))
-      ty = retTy;
+    mlir::Type ty = op.getAccPtr().getType();
     std::string recipeName = fir::getTypeAsString(
         ty, converter.getKindMap(),
         ("reduction_" + stringifyReductionOperator(mlirOp)).str());
