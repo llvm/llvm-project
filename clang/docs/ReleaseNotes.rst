@@ -899,7 +899,7 @@ RISC-V Support
 - The rules for ordering of extensions in ``-march`` strings were relaxed. A
   canonical ordering is no longer enforced on ``z*``, ``s*``, and ``x*``
   prefixed extensions.
-* An ABI mismatch between GCC and Clang related to the handling of empty
+- An ABI mismatch between GCC and Clang related to the handling of empty
   structs in C++ parameter passing under the hard floating point calling
   conventions was fixed.
 
