@@ -75,7 +75,7 @@ bool mayConsiderUnused(const Inclusion &Inc, ParsedAST &AST,
   auto FE = AST.getSourceManager().getFileManager().getFileRef(
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
-  if (PI && (PI->shouldKeep(Inc.HashLine + 1) || PI->shouldKeep(*FE)))
+  if (PI && PI->shouldKeep(*FE))
     return false;
   // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
   // System headers are likely to be standard library headers.

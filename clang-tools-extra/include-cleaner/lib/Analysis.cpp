@@ -91,7 +91,7 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
         HeaderFilter(I.Resolved->getFileEntry().tryGetRealPathName()))
       continue;
     if (PI) {
-      if (PI->shouldKeep(I.Line) || PI->shouldKeep(*I.Resolved))
+      if (PI->shouldKeep(*I.Resolved))
         continue;
       // Check if main file is the public interface for a private header. If so
       // we shouldn't diagnose it as unused.
