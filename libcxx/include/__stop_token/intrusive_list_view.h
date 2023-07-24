@@ -67,7 +67,7 @@ struct __intrusive_list_view {
         __node->__next_->__prev_ = __node->__prev_;
       }
     } else {
-      _LIBCPP_ASSERT_UNCATEGORIZED(__node == __head_, "Node to be removed has no prev node, so it has to be the head");
+      _LIBCPP_ASSERT_INTERNAL(__node == __head_, "Node to be removed has no prev node, so it has to be the head");
       __pop_front();
     }
   }
