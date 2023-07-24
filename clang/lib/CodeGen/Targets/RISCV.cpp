@@ -152,6 +152,13 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
   if (const ConstantArrayType *ATy = getContext().getAsConstantArrayType(Ty)) {
     uint64_t ArraySize = ATy->getSize().getZExtValue();
     QualType EltTy = ATy->getElementType();
+    // Non-zero-length arrays of empty records make the struct ineligible for
+    // the FP calling convention in C++.
+    if (const auto *RTy = EltTy->getAs<RecordType>()) {
+      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getDecl()) &&
+          isEmptyRecord(getContext(), EltTy, true, true))
+        return false;
+    }
     CharUnits EltSize = getContext().getTypeSizeInChars(EltTy);
     for (uint64_t i = 0; i < ArraySize; ++i) {
       bool Ret = detectFPCCEligibleStructHelper(EltTy, CurOff, Field1Ty,
@@ -168,7 +175,7 @@ bool RISCVABIInfo::detectFPCCEligibleStructHelper(QualType Ty, CharUnits CurOff,
     // copy constructor are not eligible for the FP calling convention.
     if (getRecordArgABI(Ty, CGT.getCXXABI()))
       return false;
-    if (isEmptyRecord(getContext(), Ty, true))
+    if (isEmptyRecord(getContext(), Ty, true, true))
       return true;
     const RecordDecl *RD = RTy->getDecl();
     // Unions aren't eligible unless they're empty (which is caught above).
