@@ -7,14 +7,12 @@
 define zeroext i8 @test_zext_i8(ptr %p) nounwind {
 ; LA32-LABEL: test_zext_i8:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    ld.b $a0, $a0, 0
-; LA32-NEXT:    andi $a0, $a0, 255
+; LA32-NEXT:    ld.bu $a0, $a0, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_zext_i8:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.b $a0, $a0, 0
-; LA64-NEXT:    andi $a0, $a0, 255
+; LA64-NEXT:    ld.bu $a0, $a0, 0
 ; LA64-NEXT:    ret
   %a = load i8, ptr %p, align 1
   br label %exit
@@ -26,16 +24,14 @@ define zeroext i16 @test_zext_i16(ptr %p) nounwind {
 ; LA32-LABEL: test_zext_i16:
 ; LA32:       # %bb.0:
 ; LA32-NEXT:    ld.bu $a1, $a0, 0
-; LA32-NEXT:    ld.b $a0, $a0, 1
+; LA32-NEXT:    ld.bu $a0, $a0, 1
 ; LA32-NEXT:    slli.w $a0, $a0, 8
 ; LA32-NEXT:    or $a0, $a0, $a1
-; LA32-NEXT:    bstrpick.w $a0, $a0, 15, 0
 ; LA32-NEXT:    ret
 ;
 ; LA64-LABEL: test_zext_i16:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.h $a0, $a0, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 15, 0
+; LA64-NEXT:    ld.hu $a0, $a0, 0
 ; LA64-NEXT:    ret
   %a = load i16, ptr %p, align 1
   br label %exit
