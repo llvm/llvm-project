@@ -242,12 +242,6 @@ public:
   /// Get the Objective-C constraint.
   ObjCConstraintType getObjCConstraint() const { return ObjcConstraint; }
 
-  /// Specify if this file was generated during InstallAPI (or not).
-  void setInstallAPI(bool V = true) { IsInstallAPI = V; }
-
-  /// Check if this file was generated during InstallAPI.
-  bool isInstallAPI() const { return IsInstallAPI; }
-
   /// Set the parent umbrella frameworks.
   /// \param Target_ The target applicable to Parent
   /// \param Parent  The name of Parent
@@ -291,25 +285,6 @@ public:
   /// \return Returns a list of re-exported libraries.
   const std::vector<InterfaceFileRef> &reexportedLibraries() const {
     return ReexportedLibraries;
-  }
-
-  /// Add an Target/UUID pair.
-  ///
-  /// \param Target The target triple for which this applies.
-  /// \param UUID The UUID of the library for the specified architecture.
-  void addUUID(const Target &Target, StringRef UUID);
-
-  /// Add an Target/UUID pair.
-  ///
-  /// \param Target The target triple for which this applies.
-  /// \param UUID The UUID of the library for the specified architecture.
-  void addUUID(const Target &Target, uint8_t UUID[16]);
-
-  /// Get the list of Target/UUID pairs.
-  ///
-  /// \return Returns a list of Target/UUID pairs.
-  const std::vector<std::pair<Target, std::string>> &uuids() const {
-    return UUIDs;
   }
 
   /// Add a library for inlining to top level library.
@@ -398,7 +373,7 @@ public:
   };
 
   /// The equality is determined by attributes that impact linking
-  /// compatibilities. UUIDs, Path, & FileKind are irrelevant since these by
+  /// compatibilities. Path, & FileKind are irrelevant since these by
   /// itself should not impact linking.
   /// This is an expensive operation.
   bool operator==(const InterfaceFile &O) const;
@@ -425,13 +400,11 @@ private:
   uint8_t SwiftABIVersion{0};
   bool IsTwoLevelNamespace{false};
   bool IsAppExtensionSafe{false};
-  bool IsInstallAPI{false};
   ObjCConstraintType ObjcConstraint = ObjCConstraintType::None;
   std::vector<std::pair<Target, std::string>> ParentUmbrellas;
   std::vector<InterfaceFileRef> AllowableClients;
   std::vector<InterfaceFileRef> ReexportedLibraries;
   std::vector<std::shared_ptr<InterfaceFile>> Documents;
-  std::vector<std::pair<Target, std::string>> UUIDs;
   std::vector<std::pair<Target, std::string>> RPaths;
   std::unique_ptr<SymbolSet> SymbolsSet;
   InterfaceFile *Parent = nullptr;
