@@ -84,6 +84,7 @@ C++ Language Changes
   directly rather than instantiating the definition from the standard library.
 - Implemented `CWG2518 <https://wg21.link/CWG2518>`_ which allows ``static_assert(false)``
   to not be ill-formed when its condition is evaluated in the context of a template definition.
+- Declaring namespace std to be an inline namespace is now prohibited, `[namespace.std]p7`.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
