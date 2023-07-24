@@ -195,7 +195,7 @@ define void @store_v1i64(ptr %a) #0 {
 define void @store_v1f64(ptr %a) #0 {
 ; CHECK-LABEL: store_v1f64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    movi d0, #0000000000000000
+; CHECK-NEXT:    fmov d0, xzr
 ; CHECK-NEXT:    str d0, [x0]
 ; CHECK-NEXT:    ret
   store <1 x double> zeroinitializer, ptr %a
