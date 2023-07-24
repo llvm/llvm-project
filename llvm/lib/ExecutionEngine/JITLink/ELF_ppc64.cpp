@@ -230,7 +230,7 @@ private:
         Addend += ELF::decodePPC64LocalEntryOffset((*ObjSymbol)->st_other);
       } else {
         Kind = ELFReloc == ELF::R_PPC64_REL24 ? ppc64::RequestPLTCallStubSaveTOC
-                                              : ppc64::RequestPLTCallStub;
+                                              : ppc64::RequestPLTCallStubNoTOC;
       }
       break;
     }

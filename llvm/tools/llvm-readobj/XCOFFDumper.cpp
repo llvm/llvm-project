@@ -710,7 +710,7 @@ static StringRef GetSymbolValueName(XCOFF::StorageClass SC) {
 const EnumEntry<XCOFF::CFileLangId> CFileLangIdClass[] = {
 #define ECase(X)                                                               \
   { #X, XCOFF::X }
-    ECase(TB_C), ECase(TB_CPLUSPLUS)
+    ECase(TB_C), ECase(TB_Fortran), ECase(TB_CPLUSPLUS)
 #undef ECase
 };
 
