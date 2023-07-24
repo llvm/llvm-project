@@ -208,16 +208,16 @@ define void @store_i8_stride8_vf4(ptr %in.vecptr0, ptr %in.vecptr1, ptr %in.vecp
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r10
 ; AVX2-NEXT:    movq {{[0-9]+}}(%rsp), %r11
 ; AVX2-NEXT:    vmovdqa (%rdi), %xmm0
-; AVX2-NEXT:    vmovdqa (%rdx), %xmm1
-; AVX2-NEXT:    vmovdqa (%r8), %xmm2
-; AVX2-NEXT:    vmovdqa (%r11), %xmm3
-; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm0 = xmm0[0],mem[0],xmm0[1],mem[1]
-; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm2[0],mem[0],xmm2[1],mem[1]
-; AVX2-NEXT:    vpunpckldq {{.*#+}} xmm2 = xmm3[0],mem[0],xmm3[1],mem[1]
-; AVX2-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
-; AVX2-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-NEXT:    vmovdqa (%rsi), %xmm1
+; AVX2-NEXT:    vmovdqa (%rdx), %xmm2
+; AVX2-NEXT:    vmovdqa (%rcx), %xmm3
+; AVX2-NEXT:    vinserti128 $1, (%r11), %ymm3, %ymm3
+; AVX2-NEXT:    vinserti128 $1, (%r10), %ymm2, %ymm2
+; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm2 = ymm2[0],ymm3[0],ymm2[1],ymm3[1],ymm2[4],ymm3[4],ymm2[5],ymm3[5]
+; AVX2-NEXT:    vinserti128 $1, (%r9), %ymm1, %ymm1
+; AVX2-NEXT:    vinserti128 $1, (%r8), %ymm0, %ymm0
+; AVX2-NEXT:    vpunpckldq {{.*#+}} ymm0 = ymm0[0],ymm1[0],ymm0[1],ymm1[1],ymm0[4],ymm1[4],ymm0[5],ymm1[5]
+; AVX2-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
 ; AVX2-NEXT:    vpshufb {{.*#+}} ymm0 = ymm0[0,4,8,12,1,5,9,13,2,6,10,14,3,7,11,15,16,20,24,28,17,21,25,29,18,22,26,30,19,23,27,31]
 ; AVX2-NEXT:    vmovdqa {{.*#+}} ymm1 = [0,4,1,5,2,6,3,7]
 ; AVX2-NEXT:    vpermd %ymm0, %ymm1, %ymm0
