@@ -38,7 +38,7 @@ private:
 
 TestSerializeToCubinPass::TestSerializeToCubinPass() {
   this->triple = "nvptx64-nvidia-cuda";
-  this->chip = "sm_50";
+  this->chip = "sm_35";
   this->features = "+ptx60";
 }
 
