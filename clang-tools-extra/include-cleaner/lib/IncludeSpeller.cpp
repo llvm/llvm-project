@@ -34,6 +34,7 @@ public:
           Input.H.physical(), Input.Main->tryGetRealPathName(), &IsSystem);
       return IsSystem ? "<" + FinalSpelling + ">" : "\"" + FinalSpelling + "\"";
     }
+    llvm_unreachable("Unknown clang::include_cleaner::Header::Kind enum");
   }
 };
 
