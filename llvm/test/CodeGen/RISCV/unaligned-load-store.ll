@@ -267,11 +267,16 @@ define void @store_i64(ptr %p, i64 %v) {
 }
 
 define void @merge_stores_i8_i16(ptr %p) {
-; ALL-LABEL: merge_stores_i8_i16:
-; ALL:       # %bb.0:
-; ALL-NEXT:    sb zero, 0(a0)
-; ALL-NEXT:    sb zero, 1(a0)
-; ALL-NEXT:    ret
+; SLOW-LABEL: merge_stores_i8_i16:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    sb zero, 0(a0)
+; SLOW-NEXT:    sb zero, 1(a0)
+; SLOW-NEXT:    ret
+;
+; FAST-LABEL: merge_stores_i8_i16:
+; FAST:       # %bb.0:
+; FAST-NEXT:    sh zero, 0(a0)
+; FAST-NEXT:    ret
   store i8 0, ptr %p
   %p2 = getelementptr i8, ptr %p, i32 1
   store i8 0, ptr %p2
@@ -279,13 +284,18 @@ define void @merge_stores_i8_i16(ptr %p) {
 }
 
 define void @merge_stores_i8_i32(ptr %p) {
-; ALL-LABEL: merge_stores_i8_i32:
-; ALL:       # %bb.0:
-; ALL-NEXT:    sb zero, 0(a0)
-; ALL-NEXT:    sb zero, 1(a0)
-; ALL-NEXT:    sb zero, 2(a0)
-; ALL-NEXT:    sb zero, 3(a0)
-; ALL-NEXT:    ret
+; SLOW-LABEL: merge_stores_i8_i32:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    sb zero, 0(a0)
+; SLOW-NEXT:    sb zero, 1(a0)
+; SLOW-NEXT:    sb zero, 2(a0)
+; SLOW-NEXT:    sb zero, 3(a0)
+; SLOW-NEXT:    ret
+;
+; FAST-LABEL: merge_stores_i8_i32:
+; FAST:       # %bb.0:
+; FAST-NEXT:    sw zero, 0(a0)
+; FAST-NEXT:    ret
   store i8 0, ptr %p
   %p2 = getelementptr i8, ptr %p, i32 1
   store i8 0, ptr %p2
@@ -297,17 +307,28 @@ define void @merge_stores_i8_i32(ptr %p) {
 }
 
 define void @merge_stores_i8_i64(ptr %p) {
-; ALL-LABEL: merge_stores_i8_i64:
-; ALL:       # %bb.0:
-; ALL-NEXT:    sb zero, 0(a0)
-; ALL-NEXT:    sb zero, 1(a0)
-; ALL-NEXT:    sb zero, 2(a0)
-; ALL-NEXT:    sb zero, 3(a0)
-; ALL-NEXT:    sb zero, 4(a0)
-; ALL-NEXT:    sb zero, 5(a0)
-; ALL-NEXT:    sb zero, 6(a0)
-; ALL-NEXT:    sb zero, 7(a0)
-; ALL-NEXT:    ret
+; SLOW-LABEL: merge_stores_i8_i64:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    sb zero, 0(a0)
+; SLOW-NEXT:    sb zero, 1(a0)
+; SLOW-NEXT:    sb zero, 2(a0)
+; SLOW-NEXT:    sb zero, 3(a0)
+; SLOW-NEXT:    sb zero, 4(a0)
+; SLOW-NEXT:    sb zero, 5(a0)
+; SLOW-NEXT:    sb zero, 6(a0)
+; SLOW-NEXT:    sb zero, 7(a0)
+; SLOW-NEXT:    ret
+;
+; RV32I-FAST-LABEL: merge_stores_i8_i64:
+; RV32I-FAST:       # %bb.0:
+; RV32I-FAST-NEXT:    sw zero, 0(a0)
+; RV32I-FAST-NEXT:    sw zero, 4(a0)
+; RV32I-FAST-NEXT:    ret
+;
+; RV64I-FAST-LABEL: merge_stores_i8_i64:
+; RV64I-FAST:       # %bb.0:
+; RV64I-FAST-NEXT:    sd zero, 0(a0)
+; RV64I-FAST-NEXT:    ret
   store i8 0, ptr %p
   %p2 = getelementptr i8, ptr %p, i32 1
   store i8 0, ptr %p2
@@ -327,11 +348,16 @@ define void @merge_stores_i8_i64(ptr %p) {
 }
 
 define void @merge_stores_i16_i32(ptr %p) {
-; ALL-LABEL: merge_stores_i16_i32:
-; ALL:       # %bb.0:
-; ALL-NEXT:    sh zero, 0(a0)
-; ALL-NEXT:    sh zero, 2(a0)
-; ALL-NEXT:    ret
+; SLOW-LABEL: merge_stores_i16_i32:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    sh zero, 0(a0)
+; SLOW-NEXT:    sh zero, 2(a0)
+; SLOW-NEXT:    ret
+;
+; FAST-LABEL: merge_stores_i16_i32:
+; FAST:       # %bb.0:
+; FAST-NEXT:    sw zero, 0(a0)
+; FAST-NEXT:    ret
   store i16 0, ptr %p
   %p2 = getelementptr i16, ptr %p, i32 1
   store i16 0, ptr %p2
@@ -339,13 +365,24 @@ define void @merge_stores_i16_i32(ptr %p) {
 }
 
 define void @merge_stores_i16_i64(ptr %p) {
-; ALL-LABEL: merge_stores_i16_i64:
-; ALL:       # %bb.0:
-; ALL-NEXT:    sh zero, 0(a0)
-; ALL-NEXT:    sh zero, 2(a0)
-; ALL-NEXT:    sh zero, 4(a0)
-; ALL-NEXT:    sh zero, 6(a0)
-; ALL-NEXT:    ret
+; SLOW-LABEL: merge_stores_i16_i64:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    sh zero, 0(a0)
+; SLOW-NEXT:    sh zero, 2(a0)
+; SLOW-NEXT:    sh zero, 4(a0)
+; SLOW-NEXT:    sh zero, 6(a0)
+; SLOW-NEXT:    ret
+;
+; RV32I-FAST-LABEL: merge_stores_i16_i64:
+; RV32I-FAST:       # %bb.0:
+; RV32I-FAST-NEXT:    sw zero, 0(a0)
+; RV32I-FAST-NEXT:    sw zero, 4(a0)
+; RV32I-FAST-NEXT:    ret
+;
+; RV64I-FAST-LABEL: merge_stores_i16_i64:
+; RV64I-FAST:       # %bb.0:
+; RV64I-FAST-NEXT:    sd zero, 0(a0)
+; RV64I-FAST-NEXT:    ret
   store i16 0, ptr %p
   %p2 = getelementptr i16, ptr %p, i32 1
   store i16 0, ptr %p2
@@ -357,11 +394,22 @@ define void @merge_stores_i16_i64(ptr %p) {
 }
 
 define void @merge_stores_i32_i64(ptr %p) {
-; ALL-LABEL: merge_stores_i32_i64:
-; ALL:       # %bb.0:
-; ALL-NEXT:    sw zero, 0(a0)
-; ALL-NEXT:    sw zero, 4(a0)
-; ALL-NEXT:    ret
+; SLOW-LABEL: merge_stores_i32_i64:
+; SLOW:       # %bb.0:
+; SLOW-NEXT:    sw zero, 0(a0)
+; SLOW-NEXT:    sw zero, 4(a0)
+; SLOW-NEXT:    ret
+;
+; RV32I-FAST-LABEL: merge_stores_i32_i64:
+; RV32I-FAST:       # %bb.0:
+; RV32I-FAST-NEXT:    sw zero, 0(a0)
+; RV32I-FAST-NEXT:    sw zero, 4(a0)
+; RV32I-FAST-NEXT:    ret
+;
+; RV64I-FAST-LABEL: merge_stores_i32_i64:
+; RV64I-FAST:       # %bb.0:
+; RV64I-FAST-NEXT:    sd zero, 0(a0)
+; RV64I-FAST-NEXT:    ret
   store i32 0, ptr %p
   %p2 = getelementptr i32, ptr %p, i32 1
   store i32 0, ptr %p2
