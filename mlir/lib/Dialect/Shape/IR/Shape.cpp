@@ -919,15 +919,8 @@ LogicalResult mlir::shape::ConstShapeOp::inferReturnTypes(
     ConstShapeOp::Adaptor adaptor, SmallVectorImpl<Type> &inferredReturnTypes) {
   Builder b(context);
   const Properties prop = adaptor.getProperties();
-  DenseIntElementsAttr shape;
-  // TODO: this is only exercised by the Python bindings codepath which does not
-  // support properties
-  shape = prop.shape ? prop.shape : 
-            adaptor.getAttributes().getAs<DenseIntElementsAttr>("shape");
-  if (!shape)
-    return emitOptionalError(location, "missing shape attribute");
   inferredReturnTypes.assign({RankedTensorType::get(
-      {static_cast<int64_t>(shape.size())}, b.getIndexType())});
+      {static_cast<int64_t>(prop.shape.size())}, b.getIndexType())});
   return success();
 }
 
