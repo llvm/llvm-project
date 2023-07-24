@@ -257,8 +257,7 @@ SerializeToCubinPass::serializeISA(const std::string &isa) {
       return std::make_unique<std::vector<char>>(
           maybeCubinImage.value().begin(), maybeCubinImage.value().end());
     }
-    emitError(loc) << message;
-    return {};
+    llvm::errs() << message << ". It fallsback to JIT compilation.\n";
   }
 
   // Fallback to JIT compilation if ptxas fails.
