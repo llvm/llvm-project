@@ -4,6 +4,7 @@
 # RUN: llvm-jitlink --noexec \
 # RUN:              --abs external_data=0xdeadbeef \
 # RUN:              --abs external_func=0xcafef00d \
+# RUN:              --abs external_func_notoc=0x88880000 \
 # RUN:              --check %s %t/elf_reloc.o
 
 # jitlink-check: section_addr(elf_reloc.o, $__GOT) + 0x8000 = __TOC__
@@ -52,6 +53,8 @@ test_tocrel16:
 # jitlink-check: *{8}(got_addr(elf_reloc.o, external_func)) = external_func
 # jitlink-check: decode_operand(test_external_call, 0) = \
 # jitlink-check:   (stub_addr(elf_reloc.o, external_func) - test_external_call) >> 2
+# Check r2 is saved.
+# jitlink-check: *{4}(stub_addr(elf_reloc.o, external_func)) = 0xf8410018
   .global test_external_call
   .p2align 4
   .type test_external_call,@function
@@ -60,6 +63,24 @@ test_external_call:
   nop
   blr
   .size test_external_call, .-test_external_call
+
+# FIXME: Current implementation allows only one plt call stub for a target function,
+# so we can't re-use `external_func` as target here.
+# Check R_PPC64_REL24_NOTOC
+# jitlink-check: *{8}(got_addr(elf_reloc.o, external_func_notoc)) = external_func_notoc
+# jitlink-check: decode_operand(test_external_call_notoc, 0) = \
+# jitlink-check:   (stub_addr(elf_reloc.o, external_func_notoc) - test_external_call_notoc) >> 2
+# jitlink-check: (*{4}(stub_addr(elf_reloc.o, external_func_notoc) + 16)) & 0xffff = \
+# jitlink-check:   ((((got_addr(elf_reloc.o, external_func_notoc) - stub_addr(elf_reloc.o, external_func_notoc)) - 8) + 0x8000) >> 16) & 0xffff
+# jitlink-check: (*{4}(stub_addr(elf_reloc.o, external_func_notoc) + 20)) & 0xffff = \
+# jitlink-check:   ((got_addr(elf_reloc.o, external_func_notoc) - stub_addr(elf_reloc.o, external_func_notoc)) - 8) & 0xffff
+  .global test_external_call_notoc
+  .p2align 4
+  .type test_external_call_notoc,@function
+test_external_call_notoc:
+  bl external_func_notoc@notoc
+  blr
+  .size test_external_call_notoc, .-test_external_call_notoc
 
  .section .toc,"aw",@progbits
 .LC0:
