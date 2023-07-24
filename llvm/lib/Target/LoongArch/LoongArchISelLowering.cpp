@@ -3255,6 +3255,21 @@ bool LoongArchTargetLowering::isLegalAddImmediate(int64_t Imm) const {
   return isInt<12>(Imm);
 }
 
+bool LoongArchTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
+  // Zexts are free if they can be combined with a load.
+  // Don't advertise i32->i64 zextload as being free for LA64. It interacts
+  // poorly with type legalization of compares preferring sext.
+  if (auto *LD = dyn_cast<LoadSDNode>(Val)) {
+    EVT MemVT = LD->getMemoryVT();
+    if ((MemVT == MVT::i8 || MemVT == MVT::i16) &&
+        (LD->getExtensionType() == ISD::NON_EXTLOAD ||
+         LD->getExtensionType() == ISD::ZEXTLOAD))
+      return true;
+  }
+
+  return TargetLowering::isZExtFree(Val, VT2);
+}
+
 bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {
   // TODO: Support vectors.
   if (Y.getValueType().isVector())
