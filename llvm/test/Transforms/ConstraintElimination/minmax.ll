@@ -11,7 +11,7 @@ define i1 @umax_ugt(i32 %x, i32 %y) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], [[CMP3]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
@@ -39,7 +39,7 @@ define i1 @umax_uge(i32 %x, i32 %y) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp uge i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], [[CMP3]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], true
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
@@ -67,7 +67,7 @@ define i1 @umin_ult(i32 %x, i32 %y) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], [[CMP3]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
@@ -95,7 +95,7 @@ define i1 @umin_ule(i32 %x, i32 %y) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ult i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ule i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], [[CMP3]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], true
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
@@ -123,7 +123,7 @@ define i1 @smax_sgt(i32 %x, i32 %y) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp sge i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], [[CMP3]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
@@ -151,7 +151,7 @@ define i1 @smax_sge(i32 %x, i32 %y) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp sge i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], [[CMP3]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], true
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
@@ -179,7 +179,7 @@ define i1 @smin_slt(i32 %x, i32 %y) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp sle i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], [[CMP3]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
@@ -207,7 +207,7 @@ define i1 @smin_sle(i32 %x, i32 %y) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp slt i32 [[Y]], [[X]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp sle i32 [[Y]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], [[CMP3]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP2]], true
 ; CHECK-NEXT:    ret i1 [[RET]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
@@ -235,7 +235,7 @@ define i1 @umax_uge_ugt_with_add_nuw(i32 %x, i32 %y) {
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[Y]], [[X]]
-; CHECK-NEXT:    ret i1 [[CMP2]]
+; CHECK-NEXT:    ret i1 true
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
 ;
@@ -297,7 +297,7 @@ define i1 @umax_ugt_ugt_both(i32 %x, i32 %y, i32 %z) {
 ; CHECK:       if:
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp ugt i32 [[Z]], [[X]]
 ; CHECK-NEXT:    [[CMP3:%.*]] = icmp ugt i32 [[Z]], [[Y]]
-; CHECK-NEXT:    [[AND:%.*]] = xor i1 [[CMP2]], [[CMP3]]
+; CHECK-NEXT:    [[AND:%.*]] = xor i1 true, true
 ; CHECK-NEXT:    ret i1 [[AND]]
 ; CHECK:       end:
 ; CHECK-NEXT:    ret i1 false
@@ -323,7 +323,7 @@ define i1 @smin_branchless(i32 %x, i32 %y) {
 ; CHECK-NEXT:    [[MIN:%.*]] = call i32 @llvm.smin.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp sle i32 [[MIN]], [[X]]
 ; CHECK-NEXT:    [[CMP2:%.*]] = icmp sgt i32 [[MIN]], [[X]]
-; CHECK-NEXT:    [[RET:%.*]] = xor i1 [[CMP1]], [[CMP2]]
+; CHECK-NEXT:    [[RET:%.*]] = xor i1 true, false
 ; CHECK-NEXT:    ret i1 [[RET]]
 ;
 entry:
