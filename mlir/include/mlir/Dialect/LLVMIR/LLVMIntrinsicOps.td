@@ -120,17 +120,21 @@ def LLVM_AbsOp : LLVM_OneResultIntrOp<"abs", [], [0], [Pure]> {
   }];
 }
 
-def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure]> {
-  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in, I32Attr:$bit);
+def LLVM_IsFPClass : LLVM_OneResultIntrOp<"is.fpclass", [], [0], [Pure],
+                                          /*requiresFastmath=*/1> {
+  let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyFloat>:$in,
+                       I32Attr:$kinds,
+                       DefaultValuedAttr<LLVM_FastmathFlagsAttr, "{}">:$fastmathFlags);
   string mlirBuilder = [{
     auto op = $_builder.create<$_qualCppClassName>($_location,
-      $_resultType, $in, $_int_attr($bit));
-      $res = op;
+      $_resultType, $in, $_int_attr($kinds), nullptr);
+    moduleImport.setFastmathFlagsAttr(inst, op);
+    $res = op;
   }];
   string llvmBuilder = [{
     auto *inst = createIntrinsicCall(
       builder, llvm::Intrinsic::}] # llvmEnumName # [{,
-      {$in, builder.getInt32(op.getBit())},
+      {$in, builder.getInt32(op.getKinds())},
       }] # declTypes # [{);
     $res = inst;
   }];
