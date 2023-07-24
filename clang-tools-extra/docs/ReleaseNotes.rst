@@ -111,6 +111,9 @@ Improvements to clang-tidy
   be promoted to errors. For custom error promotion, use `-Werror=<warning>`
   on the compiler command-line, irrespective of `Checks` (`--checks=`) settings.
 
+- Fixed an issue where compiler warnings couldn't be suppressed using
+  `-Wno-<warning>` under C++20 and above.
+
 New checks
 ^^^^^^^^^^
 
