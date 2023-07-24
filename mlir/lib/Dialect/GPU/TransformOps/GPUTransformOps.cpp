@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
@@ -34,6 +33,7 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -770,23 +770,23 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
         return isa<GPUBlockMappingAttr>(attr);
       });
-  bool hasThreadMapping =
+  bool hasWarpgroupMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPUThreadMappingAttr>(attr);
+        return isa<GPUWarpgroupMappingAttr>(attr);
       });
   bool hasWarpMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
         return isa<GPUWarpMappingAttr>(attr);
       });
-  bool hasLinearMapping =
+  bool hasThreadMapping =
       llvm::any_of(forallOp.getMapping().value(), [](Attribute attr) {
-        return isa<GPULinearIdMappingAttr>(attr);
+        return isa<GPUThreadMappingAttr>(attr);
       });
   int64_t countMappingTypes = 0;
   countMappingTypes += hasBlockMapping ? 1 : 0;
-  countMappingTypes += hasThreadMapping ? 1 : 0;
+  countMappingTypes += hasWarpgroupMapping ? 1 : 0;
   countMappingTypes += hasWarpMapping ? 1 : 0;
-  countMappingTypes += hasLinearMapping ? 1 : 0;
+  countMappingTypes += hasThreadMapping ? 1 : 0;
   if (countMappingTypes > 1) {
     return definiteFailureHelper(
         transformOp, forallOp,
@@ -798,10 +798,20 @@ checkMappingAttributeTypes(std::optional<TransformOpInterface> transformOp,
     if (seen.contains(map)) {
       return definiteFailureHelper(
           transformOp, forallOp,
-          "duplicated attribute, cannot map different loops "
-          "to the same processor");
+          "duplicate attribute, cannot map different loops "
+          "to the same mapping id");
     }
     seen.insert(map);
+  }
+
+  auto isLinear = [](Attribute a) {
+    return cast<DeviceMappingAttrInterface>(a).isLinearMapping();
+  };
+  if (llvm::any_of(forallOp.getMapping()->getValue(), isLinear) &&
+      !llvm::all_of(forallOp.getMapping()->getValue(), isLinear)) {
+    return definiteFailureHelper(
+        transformOp, forallOp,
+        "cannot mix linear and non-linear mapping modes");
   }
 
   return DiagnosedSilenceableFailure::success();
@@ -823,14 +833,27 @@ verifyGpuMapping(std::optional<TransformOpInterface> transformOp,
   if (forallOp.getNumResults() > 0)
     return definiteFailureHelper(transformOp, forallOp,
                                  "only bufferized scf.forall can be mapped");
-  if (forallOp.getRank() > 3)
+  bool useLinearMapping = cast<DeviceMappingAttrInterface>(
+                              forallOp.getMapping()->getValue().front())
+                              .isLinearMapping();
+  // TODO: This would be more natural with support for Optional<EnumParameter>
+  // in GPUDeviceMappingAttr.
+  int64_t maxNumMappingsSupported =
+      useLinearMapping ? (getMaxEnumValForMappingId() -
+                          static_cast<uint64_t>(MappingId::DimZ))
+                       : 3;
+  if (forallOp.getRank() > maxNumMappingsSupported) {
     return definiteFailureHelper(transformOp, forallOp,
-                                 "scf.forall with rank > 3 does not lower");
-  if (llvm::any_of(forallOp.getMixedUpperBound(), [&](OpFoldResult ofr) {
-        return !getConstantIntValue(ofr).has_value();
-      })) {
-    return definiteFailureHelper(transformOp, forallOp,
-                                 "unsupported dynamic sizes in forall op");
+                                 "scf.forall with rank > ")
+           << maxNumMappingsSupported
+           << " does not lower for the specified mapping attribute type";
+  }
+  auto numParallelIterations =
+      getConstantIntValues(forallOp.getMixedUpperBound());
+  if (!forallOp.isNormalized() || !numParallelIterations.has_value()) {
+    return definiteFailureHelper(
+        transformOp, forallOp,
+        "requires statically sized, normalized forall op");
   }
   return DiagnosedSilenceableFailure::success();
 }
@@ -855,8 +878,8 @@ replaceUnitMappingIdsHelper(RewriterBase &rewriter, Location loc,
 
 static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
     RewriterBase &rewriter, std::optional<TransformOpInterface> transformOp,
-    scf::ForallOp forallOp, ForallRewriteResult &result,
-    ArrayRef<int64_t> availableMappingSizes, const GpuIdBuilder &gpuIdBuilder) {
+    scf::ForallOp forallOp, ArrayRef<int64_t> availableMappingSizes,
+    ForallRewriteResult &result, const GpuIdBuilder &gpuIdBuilder) {
   LDBG("--start rewriteOneForallCommonImpl");
 
   // Step 0. GPU-specific verifications. There is no better place to anchor
@@ -867,18 +890,36 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
     return diag;
 
   // Step 1. Complete the mapping to a full mapping (with 1s) if necessary.
-  SmallVector<int64_t> tmpMappingSizes = llvm::to_vector(
-      llvm::map_range(forallOp.getMixedUpperBound(), [](OpFoldResult ofr) {
-        auto maybeStaticValue = getConstantIntValue(ofr);
-        assert(maybeStaticValue && "expected static value");
-        return maybeStaticValue.value();
-      }));
-  SmallVector<Attribute> forallMappingAttrs =
-      llvm::to_vector(forallOp.getMapping()->getValue());
+  auto numParallelIterations =
+      getConstantIntValues(forallOp.getMixedUpperBound());
+  assert(forallOp.isNormalized() && numParallelIterations.has_value() &&
+         "requires statically sized, normalized forall op");
+  SmallVector<int64_t> tmpMappingSizes = numParallelIterations.value();
+  SetVector<Attribute> forallMappingAttrs;
+  forallMappingAttrs.insert(forallOp.getMapping()->getValue().begin(),
+                            forallOp.getMapping()->getValue().end());
+  auto comparator = [](Attribute a, Attribute b) -> bool {
+    return cast<DeviceMappingAttrInterface>(a).getMappingId() <
+           cast<DeviceMappingAttrInterface>(b).getMappingId();
+  };
+
+  // Step 1.b. In the linear case, compute the max mapping to avoid needlessly
+  // mapping all dimensions. In the 3-D mapping case we need to map all
+  // dimensions.
+  DeviceMappingAttrInterface maxMapping =
+      cast<DeviceMappingAttrInterface>(*std::max_element(
+          forallMappingAttrs.begin(), forallMappingAttrs.end(), comparator));
+  DeviceMappingAttrInterface maxLinearMapping;
+  if (maxMapping.isLinearMapping())
+    maxLinearMapping = maxMapping;
   for (auto attr : gpuIdBuilder.mappingAttributes) {
-    if (llvm::is_contained(forallMappingAttrs, attr))
+    // If attr overflows, just skip.
+    if (maxLinearMapping && comparator(maxLinearMapping, attr))
       continue;
-    forallMappingAttrs.push_back(attr);
+    // Try to insert. If element was already present, just continue.
+    if (!forallMappingAttrs.insert(attr))
+      continue;
+    // Otherwise, we have a new insertion without a size -> use size 1.
     tmpMappingSizes.push_back(1);
   }
   LLVM_DEBUG(
@@ -888,60 +929,65 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
       llvm::dbgs() << "\n");
 
   // Step 2. sort the values by the corresponding DeviceMappingAttrInterface.
-  auto comparator = [&](Attribute a, Attribute b) -> bool {
-    return cast<DeviceMappingAttrInterface>(a).getMappingId() <
-           cast<DeviceMappingAttrInterface>(b).getMappingId();
-  };
-  SmallVector<int64_t> forallMappingSizes =
-      getValuesSortedByKey(forallMappingAttrs, tmpMappingSizes, comparator);
+  SmallVector<int64_t> forallMappingSizes = getValuesSortedByKey(
+      forallMappingAttrs.getArrayRef(), tmpMappingSizes, comparator);
   LLVM_DEBUG(llvm::interleaveComma(forallMappingSizes,
                                    DBGS() << "----forallMappingSizes: ");
              llvm::dbgs() << "\n"; llvm::interleaveComma(
-                 forallMappingAttrs, DBGS() << "----mappingAttrs: ");
+                 forallMappingAttrs, DBGS() << "----forallMappingAttrs: ");
              llvm::dbgs() << "\n");
 
   // Step 3. Generate the mappingIdOps using the provided generator.
   Location loc = forallOp.getLoc();
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPoint(forallOp);
-  IdBuilderResult builderResult =
-      gpuIdBuilder.idBuilder(rewriter, loc, forallMappingSizes);
+  SmallVector<int64_t> originalBasis(availableMappingSizes);
+  bool originalBasisWasProvided = !originalBasis.empty();
+  if (!originalBasisWasProvided) {
+    originalBasis = forallMappingSizes;
+    while (originalBasis.size() < 3)
+      originalBasis.push_back(1);
+  }
 
-  // Step 4. Map the induction variables to the mappingIdOps, this may involve a
-  // permutation.
+  IdBuilderResult builderResult =
+      gpuIdBuilder.idBuilder(rewriter, loc, forallMappingSizes, originalBasis);
+
+  // Step 4. Map the induction variables to the mappingIdOps, this may involve
+  // a permutation.
   SmallVector<Value> mappingIdOps = builderResult.mappingIdOps;
   IRMapping bvm;
-  for (auto [iv, dim] :
-       llvm::zip_equal(forallOp.getInductionVars(),
-                       ArrayRef<Attribute>{forallMappingAttrs}.take_front(
-                           forallOp.getInductionVars().size()))) {
-    Value peIdOp = mappingIdOps[static_cast<int64_t>(
-        cast<DeviceMappingAttrInterface>(dim).getMappingId())];
+  for (auto [iv, dim] : llvm::zip_equal(
+           forallOp.getInductionVars(),
+           forallMappingAttrs.getArrayRef().take_front(forallOp.getRank()))) {
+    auto mappingAttr = cast<DeviceMappingAttrInterface>(dim);
+    Value peIdOp = mappingIdOps[mappingAttr.getRelativeIndex()];
     bvm.map(iv, peIdOp);
   }
 
-  // Step 5. If the availableMappingSizes are already known, create conditionals
-  // to predicate the region. Otherwise, the current forall determines the
-  // availableMappingSizes and no predication occurs.
+  // Step 5. If the originalBasis is already known, create conditionals to
+  // predicate the region. Otherwise, the current forall determines the
+  // originalBasis and no predication occurs.
   Value predicate;
-  if (!availableMappingSizes.empty()) {
-    SmallVector<int64_t> predicateMappingSizes =
-        builderResult.predicateMappingSizes;
-    SmallVector<Value> predicateIdOps = builderResult.predicateIdOps;
+  if (originalBasisWasProvided) {
+    SmallVector<int64_t> activeMappingSizes = builderResult.activeMappingSizes;
+    SmallVector<int64_t> availableMappingSizes =
+        builderResult.availableMappingSizes;
+    SmallVector<Value> activeIdOps = builderResult.activeIdOps;
     // clang-format off
     LLVM_DEBUG(
         llvm::interleaveComma(
-          predicateMappingSizes, DBGS() << "----predicateMappingSizes: ");
+          activeMappingSizes, DBGS() << "----activeMappingSizes: ");
         llvm::dbgs() << "\n"; 
         llvm::interleaveComma(
           availableMappingSizes, DBGS() << "----availableMappingSizes: ");
         llvm::dbgs() << "\n";
-        llvm::interleaveComma(predicateIdOps, DBGS() << "----predicateIdOps: ");
+        llvm::interleaveComma(activeIdOps, DBGS() << "----activeIdOps: ");
         llvm::dbgs() << "\n");
     // clang-format on
-    for (auto [id, mappingSize, availableMappingSize] : llvm::zip_equal(
-             predicateIdOps, predicateMappingSizes, availableMappingSizes)) {
-      if (mappingSize > availableMappingSize) {
+    for (auto [activeId, activeMappingSize, availableMappingSize] :
+         llvm::zip_equal(activeIdOps, activeMappingSizes,
+                         availableMappingSizes)) {
+      if (activeMappingSize > availableMappingSize) {
         return definiteFailureHelper(
             transformOp, forallOp,
             "Trying to map to fewer GPU threads than loop iterations but "
@@ -949,11 +995,12 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
             "Try additional tiling of the before mapping or map to more "
             "threads.");
       }
-      if (mappingSize == availableMappingSize)
+      if (activeMappingSize == availableMappingSize)
         continue;
-      Value idx = rewriter.create<arith::ConstantIndexOp>(loc, mappingSize);
+      Value idx =
+          rewriter.create<arith::ConstantIndexOp>(loc, activeMappingSize);
       Value tmpPredicate = rewriter.create<arith::CmpIOp>(
-          loc, arith::CmpIPredicate::ult, id, idx);
+          loc, arith::CmpIPredicate::ult, activeId, idx);
       LDBG("----predicate: " << tmpPredicate);
       predicate = predicate ? rewriter.create<arith::AndIOp>(loc, predicate,
                                                              tmpPredicate)
@@ -991,6 +1038,12 @@ static DiagnosedSilenceableFailure rewriteOneForallCommonImpl(
   // Step 8. Erase old op.
   rewriter.eraseOp(forallOp);
 
+  LLVM_DEBUG(llvm::interleaveComma(forallMappingSizes,
+                                   DBGS() << "----result forallMappingSizes: ");
+             llvm::dbgs() << "\n"; llvm::interleaveComma(
+                 mappingIdOps, DBGS() << "----result mappingIdOps: ");
+             llvm::dbgs() << "\n");
+
   result = ForallRewriteResult{forallMappingSizes, mappingIdOps};
   return DiagnosedSilenceableFailure::success();
 }
@@ -1016,25 +1069,49 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapForallToBlocksImpl(
     zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   }
 
-  SmallVector<int64_t> anyAvailableMappingSizes;
   ForallRewriteResult rewriteResult;
-  // Pass an empty anyAvailableMappingSizes.
-  DiagnosedSilenceableFailure diag =
-      rewriteOneForallCommonImpl(rewriter, transformOp, forallOp, rewriteResult,
-                                 anyAvailableMappingSizes, gpuIdBuilder);
+  DiagnosedSilenceableFailure diag = rewriteOneForallCommonImpl(
+      rewriter, transformOp, forallOp,
+      /*availableMappingSizes=*/gridDims, rewriteResult, gpuIdBuilder);
 
-  // Return if anything goes wrong, use silenceable failure as a match failure.
+  // Return if anything goes wrong, use silenceable failure as a match
+  // failure.
   if (!diag.succeeded())
     return diag;
 
-  // Set the gridDims that act as a return.
-  gridDims = rewriteResult.mappingSizes;
+  // If gridDims was not provided already, set it from the return.
+  if (gridDims.empty()) {
+    gridDims = rewriteResult.mappingSizes;
+    while (gridDims.size() < 3)
+      gridDims.push_back(1);
+  }
+  assert(gridDims.size() == 3 && "Need 3-D gridDims");
 
   // Replace ids of dimensions known to be 1 by 0 to simplify the IR.
   // Here, the result of mapping determines the available mapping sizes.
   replaceUnitMappingIdsHelper<BlockDimOp>(rewriter, loc, parentBlock, zero,
-                                          gridDims);
+                                          rewriteResult.mappingSizes);
 
+  return DiagnosedSilenceableFailure::success();
+}
+
+DiagnosedSilenceableFailure
+mlir::transform::gpu::findTopLevelForallOp(Operation *target,
+                                           scf::ForallOp &topLevelForallOp,
+                                           TransformOpInterface transformOp) {
+  auto walkResult = target->walk([&](scf::ForallOp forallOp) {
+    if (forallOp->getParentOfType<scf::ForallOp>())
+      return WalkResult::advance();
+    if (topLevelForallOp)
+      // TODO: Handle multiple forall if they are independent.
+      return WalkResult::interrupt();
+    topLevelForallOp = forallOp;
+    return WalkResult::advance();
+  });
+
+  if (walkResult.wasInterrupted())
+    return transformOp.emitSilenceableError()
+           << "could not find a unique topLevel scf.forall";
   return DiagnosedSilenceableFailure::success();
 }
 
@@ -1072,23 +1149,28 @@ DiagnosedSilenceableFailure transform::MapForallToBlocks::applyToOne(
   if (getGenerateGpuLaunch()) {
     DiagnosedSilenceableFailure diag =
         createGpuLaunch(rewriter, target->getLoc(), transformOp, gpuLaunch);
-    if (!diag.succeeded()) {
+    if (!diag.succeeded())
       return diag;
-    }
+
     rewriter.setInsertionPointToStart(&gpuLaunch.getBody().front());
     Operation *newForallOp = rewriter.clone(*topLevelForallOp);
     rewriter.eraseOp(topLevelForallOp);
     topLevelForallOp = cast<scf::ForallOp>(newForallOp);
   }
 
-  GpuBlockIdBuilder gpuBlockIdBuilder(getContext(), {}, {});
+  // The BlockIdBuilder adapts to whatever is thrown at it.
+  auto mappingAttr = cast<DeviceMappingAttrInterface>(
+      topLevelForallOp.getMapping()->getValue().front());
+  bool useLinearMapping = mappingAttr.isLinearMapping();
+  GpuBlockIdBuilder gpuBlockIdBuilder(getContext(), useLinearMapping);
+
   diag = mlir::transform::gpu::mapForallToBlocksImpl(
       rewriter, transformOp, topLevelForallOp, gridDims, gpuBlockIdBuilder);
   if (!diag.succeeded())
     return diag;
 
-  // Set the GPU launch configuration for the grid dims late, this is subject to
-  // IR inspection.
+  // Set the GPU launch configuration for the grid dims late, this is
+  // subject to IR inspection.
   diag = alterGpuLaunch(rewriter, gpuLaunch,
                         cast<TransformOpInterface>(getOperation()), gridDims[0],
                         gridDims[1], gridDims[2]);
@@ -1101,19 +1183,90 @@ DiagnosedSilenceableFailure transform::MapForallToBlocks::applyToOne(
 // MapNestedForallToThreads
 //===----------------------------------------------------------------------===//
 
+static DiagnosedSilenceableFailure checkMappingSpec(
+    std::optional<TransformOpInterface> transformOp, scf::ForallOp forallOp,
+    ArrayRef<int64_t> numParallelIterations, ArrayRef<int64_t> blockOrGridSizes,
+    int factor, bool useLinearMapping = false) {
+  if (!useLinearMapping && blockOrGridSizes.front() % factor != 0) {
+    auto diag = definiteFailureHelper(
+        transformOp, forallOp,
+        Twine("3-D mapping: size of threadIdx.x must be a multiple of ") +
+            std::to_string(factor));
+    return diag;
+  }
+  if (computeProduct(numParallelIterations) * factor >
+      computeProduct(blockOrGridSizes)) {
+    auto diag = definiteFailureHelper(
+        transformOp, forallOp,
+        Twine(
+            "the number of required parallel resources (blocks or threads) ") +
+            std::to_string(computeProduct(numParallelIterations) * factor) +
+            std::string(" overflows the number of available resources ") +
+            std::to_string(computeProduct(blockOrGridSizes)));
+    return diag;
+  }
+  return DiagnosedSilenceableFailure::success();
+}
+
+static DiagnosedSilenceableFailure
+getThreadIdBuilder(std::optional<TransformOpInterface> transformOp,
+                   scf::ForallOp forallOp, ArrayRef<int64_t> blockSizes,
+                   int64_t warpSize, GpuIdBuilder &gpuIdBuilder) {
+  auto mappingAttr = cast<DeviceMappingAttrInterface>(
+      forallOp.getMapping()->getValue().front());
+  bool useLinearMapping = mappingAttr.isLinearMapping();
+
+  // Sanity checks that may result in runtime verification errors.
+  auto numParallelIterations =
+      getConstantIntValues((forallOp.getMixedUpperBound()));
+  if (!forallOp.isNormalized() || !numParallelIterations.has_value()) {
+    return definiteFailureHelper(
+        transformOp, forallOp,
+        "requires statically sized, normalized forall op");
+  }
+  int64_t factor = 1;
+  if (isa<GPUWarpgroupMappingAttr>(mappingAttr)) {
+    factor = GpuWarpgroupIdBuilder::kNumWarpsPerGroup * warpSize;
+  } else if (isa<GPUWarpMappingAttr>(mappingAttr)) {
+    factor = warpSize;
+  }
+  DiagnosedSilenceableFailure diag =
+      checkMappingSpec(transformOp, forallOp, numParallelIterations.value(),
+                       blockSizes, factor, useLinearMapping);
+  if (!diag.succeeded())
+    return diag;
+
+  // Start mapping.
+  MLIRContext *ctx = forallOp.getContext();
+  gpuIdBuilder =
+      TypeSwitch<DeviceMappingAttrInterface, GpuIdBuilder>(mappingAttr)
+          .Case([&](GPUWarpgroupMappingAttr) {
+            return GpuWarpgroupIdBuilder(ctx, warpSize, useLinearMapping);
+          })
+          .Case([&](GPUWarpMappingAttr) {
+            return GpuWarpIdBuilder(ctx, warpSize, useLinearMapping);
+          })
+          .Case([&](GPUThreadMappingAttr) {
+            return GpuThreadIdBuilder(ctx, useLinearMapping);
+          })
+          .Default([&](DeviceMappingAttrInterface) -> GpuIdBuilder {
+            llvm_unreachable("unknown mapping attribute");
+          });
+  return DiagnosedSilenceableFailure::success();
+}
+
 DiagnosedSilenceableFailure mlir::transform::gpu::mapOneForallToThreadsImpl(
     RewriterBase &rewriter, std::optional<TransformOpInterface> transformOp,
-    scf::ForallOp forallOp, ArrayRef<int64_t> availableMappingSizes,
-    bool syncAfterDistribute, const GpuIdBuilder &gpuIdBuilder) {
-  // Ignore cases with different attributes than this builder supports.
-  for (Attribute map : forallOp.getMapping()->getValue()) {
-    if (!llvm::is_contained(gpuIdBuilder.mappingAttributes, map)) {
-      LDBG("--skip " << map);
-      LLVM_DEBUG(llvm::interleaveComma(gpuIdBuilder.mappingAttributes,
-                                       DBGS() << "----not in: ");
-                 llvm::dbgs() << "\n";);
-      return emitSilenceableFailure(forallOp);
-    }
+    scf::ForallOp forallOp, ArrayRef<int64_t> blockSizes, int64_t warpSize,
+    bool syncAfterDistribute) {
+
+  GpuIdBuilder gpuIdBuilder;
+  {
+    // Try to construct the id builder, if it fails, return.
+    DiagnosedSilenceableFailure diag = getThreadIdBuilder(
+        transformOp, forallOp, blockSizes, warpSize, gpuIdBuilder);
+    if (!diag.succeeded())
+      return diag;
   }
 
   Location loc = forallOp.getLoc();
@@ -1121,14 +1274,10 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapOneForallToThreadsImpl(
   // Insert after to allow for syncthreads after `forall` is erased.
   rewriter.setInsertionPointAfter(forallOp);
   ForallRewriteResult rewriteResult;
-  DiagnosedSilenceableFailure diag =
-      rewriteOneForallCommonImpl(rewriter, transformOp, forallOp, rewriteResult,
-                                 availableMappingSizes, gpuIdBuilder);
-
-  // Return if anything goes wrong, use silenceable failure as a match failure.
+  DiagnosedSilenceableFailure diag = rewriteOneForallCommonImpl(
+      rewriter, transformOp, forallOp, blockSizes, rewriteResult, gpuIdBuilder);
   if (!diag.succeeded())
     return diag;
-
   // Add a syncthreads if needed. TODO: warpsync
   if (syncAfterDistribute)
     rewriter.create<BarrierOp>(loc);
@@ -1138,20 +1287,12 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapOneForallToThreadsImpl(
 
 DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForallToThreadsImpl(
     RewriterBase &rewriter, std::optional<TransformOpInterface> transformOp,
-    Operation *target, ArrayRef<int64_t> blockDims, ArrayRef<int64_t> warpDims,
+    Operation *target, ArrayRef<int64_t> blockDims, int64_t warpSize,
     bool syncAfterDistribute) {
   LDBG("Start mapNestedForallToThreadsImpl");
-  MLIRContext *ctx = rewriter.getContext();
-  SmallVector<OpFoldResult> blockDimsOfr =
-      getAsIndexOpFoldResult(ctx, blockDims);
-
-  if (blockDims.size() != 3)
+  if (blockDims.size() != 3) {
     return definiteFailureHelper(transformOp, target,
                                  "requires size-3 thread mapping");
-  if (!warpDims.empty()) {
-    if (warpDims.size() != 3)
-      return definiteFailureHelper(transformOp, target,
-                                   "requires empty or size-3 warp mapping");
   }
 
   // Create an early zero index value for replacements.
@@ -1159,64 +1300,13 @@ DiagnosedSilenceableFailure mlir::transform::gpu::mapNestedForallToThreadsImpl(
   Value zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);
   DiagnosedSilenceableFailure diag = DiagnosedSilenceableFailure::success();
   WalkResult walkResult = target->walk([&](scf::ForallOp forallOp) {
-    //===--------------------------------------------------------------------===//
-    // Mapping to warp ids.
-    //===--------------------------------------------------------------------===//
-    if (!warpDims.empty()) {
-      LLVM_DEBUG(
-          llvm::interleaveComma(
-              warpDims, DBGS() << "+mapNestedForallToThreadsImpl warpDims: ");
-          llvm::dbgs() << "\n");
-      LLVM_DEBUG(llvm::interleaveComma(
-                     blockDimsOfr, DBGS() << "--warpDims with blockDimsOfr:  ");
-                 llvm::dbgs() << "\n");
-      GpuWarpIdBuilder gpuWarpIdBuilder(ctx, blockDimsOfr, warpDims);
-      diag = mlir::transform::gpu::mapOneForallToThreadsImpl(
-          rewriter, transformOp, forallOp, warpDims, syncAfterDistribute,
-          gpuWarpIdBuilder);
-      // Use silenceable failure to encode "failure to match" and pass
-      // through.
-      if (diag.isDefiniteFailure())
-        return WalkResult::interrupt();
-      if (diag.succeeded())
-        return WalkResult::skip();
-    }
-
-    //===--------------------------------------------------------------------===//
-    // Mapping to linear ids.
-    //===--------------------------------------------------------------------===//
-    LDBG("+mapNestedForallToThreadsImpl linearDims");
-    LLVM_DEBUG(llvm::interleaveComma(
-                   blockDimsOfr, DBGS() << "--linearDims with blockDimsOfr:  ");
-               llvm::dbgs() << "\n");
-    int64_t numThreads = 1;
-    for (int64_t b : blockDims)
-      numThreads *= b;
-    GpuLinearIdBuilder gpuLinearIdBuilder(ctx, blockDimsOfr, numThreads);
     diag = mlir::transform::gpu::mapOneForallToThreadsImpl(
-        rewriter, transformOp, forallOp, numThreads, syncAfterDistribute,
-        gpuLinearIdBuilder);
-    // Use silenceable failure to encode "failure to match" and pass through.
+        rewriter, transformOp, forallOp, blockDims, warpSize,
+        syncAfterDistribute);
     if (diag.isDefiniteFailure())
       return WalkResult::interrupt();
     if (diag.succeeded())
       return WalkResult::skip();
-
-    //===--------------------------------------------------------------------===//
-    // Mapping to block ids (happens last so we can replay ThreadIdOp).
-    //===--------------------------------------------------------------------===//
-    LLVM_DEBUG(
-        llvm::interleaveComma(
-            blockDimsOfr, DBGS() << "mapNestedForallToThreadsImpl blockDims: ");
-        llvm::dbgs() << "\n");
-    GpuThreadIdBuilder gpuThreadIdBuilder(ctx, blockDimsOfr, blockDims);
-    diag = mlir::transform::gpu::mapOneForallToThreadsImpl(
-        rewriter, transformOp, forallOp, blockDims, syncAfterDistribute,
-        gpuThreadIdBuilder);
-    // Use silenceable failure to encode "failure to match" and pass through.
-    if (diag.isDefiniteFailure())
-      return WalkResult::interrupt();
-
     return WalkResult::advance();
   });
   if (walkResult.wasInterrupted())
@@ -1242,7 +1332,6 @@ DiagnosedSilenceableFailure transform::MapNestedForallToThreads::applyToOne(
 
   // Mapping to block ids.
   SmallVector<int64_t> blockDims{getBlockDims()};
-
   DiagnosedSilenceableFailure diag =
       checkGpuLimits(transformOp, std::nullopt, std::nullopt, std::nullopt,
                      blockDims[0], blockDims[1], blockDims[2]);
@@ -1260,7 +1349,7 @@ DiagnosedSilenceableFailure transform::MapNestedForallToThreads::applyToOne(
   rewriter.setInsertionPointToStart(&gpuLaunch.getBody().front());
   diag =
       mapNestedForallToThreadsImpl(rewriter, transformOp, gpuLaunch, blockDims,
-                                   getWarpDims(), getSyncAfterDistribute());
+                                   getWarpSize(), getSyncAfterDistribute());
 
   results.push_back(gpuLaunch.getOperation());
   return diag;
