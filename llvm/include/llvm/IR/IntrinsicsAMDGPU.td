@@ -1926,7 +1926,7 @@ def int_amdgcn_ballot :
 
 def int_amdgcn_inverse_ballot :
   Intrinsic<[llvm_i1_ty], [llvm_anyint_ty],
-            [IntrNoMem, IntrConvergent, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
+            [IntrNoMem, IntrWillReturn, IntrNoCallback, IntrNoFree]>;
 
 class AMDGPUWaveReduce<LLVMType data_ty = llvm_anyint_ty> : Intrinsic<
     [data_ty], 
