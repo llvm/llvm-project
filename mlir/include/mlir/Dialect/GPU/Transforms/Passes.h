@@ -70,6 +70,32 @@ inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
 }
 
 namespace gpu {
+
+/// Options for Serialization
+struct SerializationToCubinOptions {
+  /// LLVM target triple
+  std::string triple;
+
+  /// SM Architecture of the GPU
+  std::string chip;
+
+  /// PTX version that is wanted to produce
+  std::string features;
+
+  /// Optimization level
+  int optLevel = 2;
+
+  /// Dump generated PTX to stderr for debug purposes
+  bool dumpPtx = false;
+
+  /// Compiles generated PTX by ptxas compiler. When it is false, the generated
+  /// PTX is compilet by JIT compielr by the driver.
+  bool usePtxas = true;
+
+  /// Parameters to pass ptxas compiler. It is ignored for JIT compiler.
+  std::string ptxasParams;
+};
+
 /// Base pass class to serialize kernel functions through LLVM into
 /// user-specified IR and add the resulting blob as module attribute.
 class SerializeToBlobPass : public OperationPass<gpu::GPUModuleOp> {
@@ -117,9 +143,18 @@ protected:
       *this, "gpu-binary-annotation",
       llvm::cl::desc("Annotation attribute string for GPU binary"),
       llvm::cl::init(getDefaultGpuBinaryAnnotation())};
+
   Option<bool> dumpPtx{*this, "dump-ptx",
                        ::llvm::cl::desc("Dump generated PTX"),
                        llvm::cl::init(false)};
+
+  Option<bool> usePtxas{
+      *this, "use-ptxas",
+      ::llvm::cl::desc("Compile generated PTX by ptxas compiler"),
+      llvm::cl::init(true)};
+  Option<std::string> ptxasParams{
+      *this, "ptxas-params",
+      ::llvm::cl::desc("Parameters to pass ptxas compiler")};
 };
 } // namespace gpu
 
@@ -137,11 +172,8 @@ void registerGpuSerializeToHsacoPass();
 
 /// Create an instance of the GPU kernel function to CUBIN binary serialization
 /// pass with optLevel (default level 2).
-std::unique_ptr<Pass> createGpuSerializeToCubinPass(StringRef triple,
-                                                    StringRef chip,
-                                                    StringRef features,
-                                                    int optLevel = 2,
-                                                    bool dumpPtx = false);
+std::unique_ptr<Pass>
+createGpuSerializeToCubinPass(const gpu::SerializationToCubinOptions &options);
 
 /// Create an instance of the GPU kernel function to HSAco binary serialization
 /// pass.
