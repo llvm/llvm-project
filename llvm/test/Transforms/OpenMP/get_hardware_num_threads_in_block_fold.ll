@@ -2,27 +2,26 @@
 ; RUN: opt -S -passes=openmp-opt < %s | FileCheck %s
 target triple = "nvptx64"
 
-%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
+
+@kernel0_exec_mode = weak constant i8 1
 
 @G = external global i32
-
-@kernel0_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
-@kernel1_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
-@kernel2_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
-
 ;.
+; CHECK: @[[KERNEL0_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32
-; CHECK: @[[KERNEL0_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3 }, ptr null, ptr null }
-; CHECK: @[[KERNEL1_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3 }, ptr null, ptr null }
-; CHECK: @[[KERNEL2_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3 }, ptr null, ptr null }
+; CHECK: @[[KERNEL1_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; CHECK: @[[KERNEL2_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; CHECK: @[[KERNEL0_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[KERNEL1_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[KERNEL2_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
 ;.
 define weak void @kernel0() "kernel" #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel0
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @kernel0_kernel_environment)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
 ; CHECK-NEXT:    [[THREAD_ID_IN_BLOCK:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 ; CHECK-NEXT:    [[THREAD_IS_MAIN:%.*]] = icmp ne i32 [[THREAD_ID_IN_BLOCK]], 0
 ; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN]], label [[EXIT_THREADS:%.*]], label [[MAIN_THREAD_USER_CODE:%.*]]
@@ -32,21 +31,24 @@ define weak void @kernel0() "kernel" #0 {
 ; CHECK-NEXT:    call void @helper0() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
 ; CHECK-NEXT:    call void @helper2() #[[ATTR1]]
-; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 2)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr @kernel0_kernel_environment)
+
+  %i = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
   call void @helper0()
   call void @helper1()
   call void @helper2()
-  call void @__kmpc_target_deinit()
+  call void @__kmpc_target_deinit(ptr null, i8 1)
   ret void
 }
+
+@kernel1_exec_mode = weak constant i8 1
 
 define weak void @kernel1() "kernel" #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel1
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @kernel1_kernel_environment)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
 ; CHECK-NEXT:    [[THREAD_ID_IN_BLOCK:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
 ; CHECK-NEXT:    [[THREAD_IS_MAIN:%.*]] = icmp ne i32 [[THREAD_ID_IN_BLOCK]], 0
 ; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN]], label [[EXIT_THREADS:%.*]], label [[MAIN_THREAD_USER_CODE:%.*]]
@@ -54,21 +56,24 @@ define weak void @kernel1() "kernel" #0 {
 ; CHECK-NEXT:    ret void
 ; CHECK:       main.thread.user_code:
 ; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
-; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 2)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr @kernel1_kernel_environment)
+
+  %i = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
   call void @helper1()
-  call void @__kmpc_target_deinit()
+  call void @__kmpc_target_deinit(ptr null, i8 1)
   ret void
 }
+
+@kernel2_exec_mode = weak constant i8 1
 
 define weak void @kernel2() "kernel" #0 {
 ; CHECK-LABEL: define {{[^@]+}}@kernel2
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @kernel2_kernel_environment)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[I]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
@@ -79,12 +84,12 @@ define weak void @kernel2() "kernel" #0 {
 ; CHECK-NEXT:    call void @helper1() #[[ATTR1]]
 ; CHECK-NEXT:    call void @helper2() #[[ATTR1]]
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 2)
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %captured_vars_addrs = alloca [0 x ptr], align 8
-  %i = call i32 @__kmpc_target_init(ptr @kernel2_kernel_environment)
+  %i = call i32 @__kmpc_target_init(ptr null, i8 1, i1 true)
   %exec_user_code = icmp eq i32 %i, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -97,7 +102,7 @@ user_code.entry:
   call void @helper1()
   call void @helper2()
   call void @__kmpc_parallel_51(ptr null, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr %captured_vars_addrs, i64 0)
-  call void @__kmpc_target_deinit()
+  call void @__kmpc_target_deinit(ptr null, i8 1)
   ret void
 }
 
@@ -193,8 +198,8 @@ define internal i32 @__kmpc_get_hardware_num_threads_in_block() {
   ret i32 %ret
 }
 declare i32 @__kmpc_get_hardware_num_threads_in_block_dummy()
-declare i32 @__kmpc_target_init(ptr) #1
-declare void @__kmpc_target_deinit() #1
+declare i32 @__kmpc_target_init(ptr, i8, i1 zeroext) #1
+declare void @__kmpc_target_deinit(ptr nocapture readnone, i8) #1
 declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
 declare i32 @__kmpc_global_thread_num(ptr)
 
@@ -209,6 +214,7 @@ attributes #0 = { "omp_target_thread_limit"="666" "omp_target_num_teams"="777"}
 !2 = !{ptr @kernel0, !"kernel", i32 1}
 !3 = !{ptr @kernel1, !"kernel", i32 1}
 !4 = !{ptr @kernel2, !"kernel", i32 1}
+;
 ;.
 ; CHECK: attributes #[[ATTR0]] = { "kernel" "omp_target_num_teams"="777" "omp_target_thread_limit"="666" }
 ; CHECK: attributes #[[ATTR1]] = { nounwind }

@@ -2,37 +2,42 @@
 ; RUN: opt -S -passes=openmp-opt < %s | FileCheck %s
 target triple = "nvptx64"
 
-%struct.KernelEnvironmentTy = type { %struct.ConfigurationEnvironmentTy, ptr, ptr }
-%struct.ConfigurationEnvironmentTy = type { i8, i8, i8 }
+%struct.ident_t = type { i32, i32, i32, i32, ptr }
 
+@is_spmd_exec_mode = weak constant i8 0
+@will_be_spmd_exec_mode = weak constant i8 1
+@non_spmd_exec_mode = weak constant i8 1
+@will_not_be_spmd_exec_mode = weak constant i8 1
 @G = external global i8
-@is_spmd_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 2 }, ptr null, ptr null }
-@will_be_spmd_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
-@none_spmd_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
-@will_not_be_spmd_kernel_environment = local_unnamed_addr constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 0, i8 0, i8 1 }, ptr null, ptr null }
+@llvm.compiler.used = appending global [4 x ptr] [ptr @is_spmd_exec_mode, ptr @will_be_spmd_exec_mode, ptr @non_spmd_exec_mode, ptr @will_not_be_spmd_exec_mode ], section "llvm.metadata"
 
 ;.
+; CHECK: @[[IS_SPMD_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[WILL_BE_SPMD_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; CHECK: @[[NON_SPMD_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
+; CHECK: @[[WILL_NOT_BE_SPMD_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i8
-; CHECK: @[[IS_SPMD_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 2 }, ptr null, ptr null }
-; CHECK: @[[WILL_BE_SPMD_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 3 }, ptr null, ptr null }
-; CHECK: @[[NONE_SPMD_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1 }, ptr null, ptr null }
-; CHECK: @[[WILL_NOT_BE_SPMD_KERNEL_ENVIRONMENT:[a-zA-Z0-9_$"\\.-]+]] = local_unnamed_addr constant [[STRUCT_KERNELENVIRONMENTTY:%.*]] { [[STRUCT_CONFIGURATIONENVIRONMENTTY:%.*]] { i8 0, i8 0, i8 1 }, ptr null, ptr null }
+; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [4 x ptr] [ptr @is_spmd_exec_mode, ptr @will_be_spmd_exec_mode, ptr @non_spmd_exec_mode, ptr @will_not_be_spmd_exec_mode], section "llvm.metadata"
+; CHECK: @[[IS_SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[WILL_BE_SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[NON_SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[WILL_NOT_BE_SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ;.
 define weak void @is_spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@is_spmd
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @is_spmd_kernel_environment)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
 ; CHECK-NEXT:    call void @is_spmd_helper1()
 ; CHECK-NEXT:    call void @is_spmd_helper2()
 ; CHECK-NEXT:    call void @is_mixed_helper()
-; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 2)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr @is_spmd_kernel_environment)
+  %i = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
   call void @is_spmd_helper1()
   call void @is_spmd_helper2()
   call void @is_mixed_helper()
-  call void @__kmpc_target_deinit()
+  call void @__kmpc_target_deinit(ptr null, i8 2)
   ret void
 }
 
@@ -41,7 +46,7 @@ define weak void @will_be_spmd() "kernel" {
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [0 x ptr], align 8
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @will_be_spmd_kernel_environment)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 2, i1 false)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[I]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[COMMON_RET:%.*]]
 ; CHECK:       common.ret:
@@ -50,12 +55,12 @@ define weak void @will_be_spmd() "kernel" {
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_global_thread_num(ptr null) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    call void @is_spmd_helper2()
 ; CHECK-NEXT:    call void @__kmpc_parallel_51(ptr null, i32 [[TMP0]], i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr [[CAPTURED_VARS_ADDRS]], i64 0)
-; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 2)
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %captured_vars_addrs = alloca [0 x ptr], align 8
-  %i = call i32 @__kmpc_target_init(ptr @will_be_spmd_kernel_environment)
+  %i = call i32 @__kmpc_target_init(ptr null, i8 1, i1 true)
   %exec_user_code = icmp eq i32 %i, -1
   br i1 %exec_user_code, label %user_code.entry, label %common.ret
 
@@ -66,43 +71,43 @@ user_code.entry:
   %0 = call i32 @__kmpc_global_thread_num(ptr null)
   call void @is_spmd_helper2()
   call void @__kmpc_parallel_51(ptr null, i32 %0, i32 1, i32 -1, i32 -1, ptr @__omp_outlined__, ptr @__omp_outlined___wrapper, ptr %captured_vars_addrs, i64 0)
-  call void @__kmpc_target_deinit()
+  call void @__kmpc_target_deinit(ptr null, i8 1)
   ret void
 }
 
 define weak void @non_spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@non_spmd
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @none_spmd_kernel_environment)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
 ; CHECK-NEXT:    call void @is_generic_helper1()
 ; CHECK-NEXT:    call void @is_generic_helper2()
 ; CHECK-NEXT:    call void @is_mixed_helper()
-; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 1)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr @none_spmd_kernel_environment)
+  %i = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
   call void @is_generic_helper1()
   call void @is_generic_helper2()
   call void @is_mixed_helper()
-  call void @__kmpc_target_deinit()
+  call void @__kmpc_target_deinit(ptr null, i8 1)
   ret void
 }
 
 define weak void @will_not_be_spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@will_not_be_spmd
 ; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr @will_not_be_spmd_kernel_environment)
+; CHECK-NEXT:    [[I:%.*]] = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
 ; CHECK-NEXT:    call void @is_generic_helper1()
 ; CHECK-NEXT:    call void @is_generic_helper2()
 ; CHECK-NEXT:    call void @is_mixed_helper()
-; CHECK-NEXT:    call void @__kmpc_target_deinit()
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr null, i8 1)
 ; CHECK-NEXT:    ret void
 ;
-  %i = call i32 @__kmpc_target_init(ptr @will_not_be_spmd_kernel_environment)
+  %i = call i32 @__kmpc_target_init(ptr null, i8 1, i1 false)
   call void @is_generic_helper1()
   call void @is_generic_helper2()
   call void @is_mixed_helper()
-  call void @__kmpc_target_deinit()
+  call void @__kmpc_target_deinit(ptr null, i8 1)
   ret void
 }
 
@@ -199,8 +204,8 @@ entry:
 
 declare void @spmd_compatible() "llvm.assume"="ompx_spmd_amenable"
 declare i8 @__kmpc_is_spmd_exec_mode()
-declare i32 @__kmpc_target_init(ptr)
-declare void @__kmpc_target_deinit()
+declare i32 @__kmpc_target_init(ptr, i8, i1 zeroext)
+declare void @__kmpc_target_deinit(ptr nocapture readnone, i8)
 declare void @__kmpc_parallel_51(ptr, i32, i32, i32, i32, ptr, ptr, ptr, i64)
 declare i32 @__kmpc_global_thread_num(ptr)
 declare void @foo()

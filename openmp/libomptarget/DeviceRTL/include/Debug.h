@@ -50,6 +50,8 @@ void __assert_fail(const char *expr, const char *msg, const char *file,
 struct DebugEntryRAII {
   DebugEntryRAII(const char *File, const unsigned Line, const char *Function);
   ~DebugEntryRAII();
+
+  static void init();
 };
 
 #endif

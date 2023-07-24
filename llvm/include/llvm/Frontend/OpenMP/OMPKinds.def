@@ -96,11 +96,6 @@ __OMP_STRUCT_TYPE(KernelArgs, __tgt_kernel_arguments, false, Int32, Int32, VoidP
 		  Int64, Int64, Int32Arr3Ty, Int32Arr3Ty, Int32)
 __OMP_STRUCT_TYPE(AsyncInfo, __tgt_async_info, false, Int8Ptr)
 __OMP_STRUCT_TYPE(DependInfo, kmp_dep_info, false, SizeTy, SizeTy, Int8)
-__OMP_STRUCT_TYPE(ConfigurationEnvironment, ConfigurationEnvironmentTy, false,
-                  Int8, Int8, Int8)
-__OMP_STRUCT_TYPE(DynamicEnvironment, DynamicEnvironmentTy, false, Int16)
-__OMP_STRUCT_TYPE(KernelEnvironment, KernelEnvironmentTy, false,
-                  ConfigurationEnvironment, IdentPtr, DynamicEnvironmentPtr)
 
 #undef __OMP_STRUCT_TYPE
 #undef OMP_STRUCT_TYPE
@@ -457,8 +452,8 @@ __OMP_RTL(__kmpc_task_allow_completion_event, false, VoidPtr, IdentPtr,
           /* Int */ Int32, /* kmp_task_t */ VoidPtr)
 
 /// OpenMP Device runtime functions
-__OMP_RTL(__kmpc_target_init, false, Int32, KernelEnvironmentPtr)
-__OMP_RTL(__kmpc_target_deinit, false, Void,)
+__OMP_RTL(__kmpc_target_init, false, Int32, IdentPtr, Int8, Int1)
+__OMP_RTL(__kmpc_target_deinit, false, Void, IdentPtr, Int8)
 __OMP_RTL(__kmpc_kernel_prepare_parallel, false, Void, VoidPtr)
 __OMP_RTL(__kmpc_parallel_51, false, Void, IdentPtr, Int32, Int32, Int32, Int32,
           VoidPtr, VoidPtr, VoidPtrPtr, SizeTy)
@@ -1025,9 +1020,9 @@ __OMP_RTL_ATTRS(__kmpc_task_allow_completion_event, DefaultAttrs,
                 ReturnPtrAttrs, ParamAttrs(ReadOnlyPtrAttrs, SExt))
 
 __OMP_RTL_ATTRS(__kmpc_target_init, AttributeSet(), SExt,
-                ParamAttrs(AttributeSet()))
+                ParamAttrs(AttributeSet(), SExt, SExt))
 __OMP_RTL_ATTRS(__kmpc_target_deinit, AttributeSet(), AttributeSet(),
-                ParamAttrs())
+                ParamAttrs(AttributeSet(), SExt))
 __OMP_RTL_ATTRS(__kmpc_parallel_51, AlwaysInlineAttrs, AttributeSet(),
                 ParamAttrs(AttributeSet(), SExt, SExt, SExt, SExt,
                            AttributeSet(), AttributeSet(), AttributeSet(),
