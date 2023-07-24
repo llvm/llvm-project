@@ -4818,8 +4818,15 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
-  if (isGFX12Plus())
+  if (isGFX12Plus()) {
+    if (!isGFX12_10() && (CPol & CPol::NV)) {
+      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+      StringRef CStr(S.getPointer());
+      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
+      Error(S, "nv is not supported on this GPU");
+    }
     return validateTHAndScopeBits(Inst, Operands, CPol);
+  }
 
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
   if (TSFlags & SIInstrFlags::SMRD) {
