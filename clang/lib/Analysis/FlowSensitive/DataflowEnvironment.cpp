@@ -122,7 +122,7 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
 
   Value *MergedVal = nullptr;
   if (auto *StructVal1 = dyn_cast<StructValue>(&Val1)) {
-    auto *StructVal2 = cast<StructValue>(&Val2);
+    [[maybe_unused]] auto *StructVal2 = cast<StructValue>(&Val2);
 
     // Values to be merged are always associated with the same location in
     // `LocToVal`. The location stored in `StructVal` should therefore also
