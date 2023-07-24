@@ -6,6 +6,7 @@ add_llvm_component_library(LLVMTextAPI
   PackedVersion.cpp
   Platform.cpp
   Symbol.cpp
+  SymbolSet.cpp
   Target.cpp
   TextStub.cpp
   TextStubCommon.cpp
