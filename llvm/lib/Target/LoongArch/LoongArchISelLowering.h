@@ -202,6 +202,7 @@ public:
                              unsigned AS,
                              Instruction *I = nullptr) const override;
 
+  bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
 
   bool hasAndNotCompare(SDValue Y) const override;
