@@ -1055,6 +1055,18 @@ def UBToLLVMConversionPass : Pass<"convert-ub-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
+// UBToSPIRV
+//===----------------------------------------------------------------------===//
+
+def UBToSPIRVConversionPass : Pass<"convert-ub-to-spirv"> {
+  let summary = "Convert UB dialect to SPIR-V dialect";
+  let description = [{
+    This pass converts supported UB ops to SPIR-V dialect ops.
+  }];
+  let dependentDialects = ["spirv::SPIRVDialect"];
+}
+
+//===----------------------------------------------------------------------===//
 // VectorToGPU
 //===----------------------------------------------------------------------===//
 
