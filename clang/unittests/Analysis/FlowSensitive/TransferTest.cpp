@@ -27,6 +27,11 @@
 #include <string>
 #include <utility>
 
+// FIXME: There are still remaining checks here that check for consistency
+// between `StructValue` and `AggregateStorageLocation`. Now that the redundancy
+// between these two classes has been eliminated, these checks aren't needed any
+// more, so remove them.
+
 namespace {
 
 using namespace clang;
@@ -186,7 +191,7 @@ TEST(TransferTest, StructFieldUnmodeled) {
 
     void target() {
       D Bar;
-      A Foo = Bar.F1.F2.F3;
+      A &Foo = Bar.F1.F2.F3;
       int Zab = Foo.Unmodeled.X;
       // [[p]]
     }
@@ -200,8 +205,9 @@ TEST(TransferTest, StructFieldUnmodeled) {
 
         const ValueDecl *FooDecl = findValueDecl(ASTCtx, "Foo");
         ASSERT_THAT(FooDecl, NotNull());
-        ASSERT_TRUE(FooDecl->getType()->isStructureType());
-        auto FooFields = FooDecl->getType()->getAsRecordDecl()->fields();
+        QualType FooReferentType = FooDecl->getType()->getPointeeType();
+        ASSERT_TRUE(FooReferentType->isStructureType());
+        auto FooFields = FooReferentType->getAsRecordDecl()->fields();
 
         FieldDecl *UnmodeledDecl = nullptr;
         for (FieldDecl *Field : FooFields) {
@@ -215,9 +221,9 @@ TEST(TransferTest, StructFieldUnmodeled) {
 
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *UnmodeledLoc = &FooLoc->getChild(*UnmodeledDecl);
-        ASSERT_TRUE(isa<ScalarStorageLocation>(UnmodeledLoc));
-        ASSERT_THAT(Env.getValue(*UnmodeledLoc), IsNull());
+        const auto *UnmodeledLoc = FooLoc->getChild(*UnmodeledDecl);
+        ASSERT_TRUE(isa<AggregateStorageLocation>(UnmodeledLoc));
+        EXPECT_THAT(Env.getValue(*UnmodeledLoc), IsNull());
 
         const ValueDecl *ZabDecl = findValueDecl(ASTCtx, "Zab");
         ASSERT_THAT(ZabDecl, NotNull());
@@ -263,7 +269,7 @@ TEST(TransferTest, StructVarDecl) {
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
 
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal =
@@ -312,7 +318,7 @@ TEST(TransferTest, StructVarDeclWithInit) {
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
 
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal =
@@ -360,7 +366,7 @@ TEST(TransferTest, ClassVarDecl) {
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
 
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal =
@@ -479,34 +485,26 @@ TEST(TransferTest, SelfReferentialReferenceVarDecl) {
 
     const auto &FooLoc =
         *cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-    const auto &FooReferentVal = *cast<StructValue>(Env.getValue(FooLoc));
 
-    const auto &BarVal =
-        *cast<ReferenceValue>(FooReferentVal.getChild(*BarDecl));
-    const auto &BarReferentVal =
-        *cast<StructValue>(Env.getValue(BarVal.getReferentLoc()));
+    const auto &BarLoc =
+        *cast<AggregateStorageLocation>(FooLoc.getChild(*BarDecl));
 
-    const auto &FooRefVal =
-        *cast<ReferenceValue>(getFieldValue(&BarReferentVal, *FooRefDecl, Env));
     const auto &FooReferentLoc =
-        cast<AggregateStorageLocation>(FooRefVal.getReferentLoc());
+        *cast<AggregateStorageLocation>(BarLoc.getChild(*FooRefDecl));
     EXPECT_THAT(Env.getValue(FooReferentLoc), NotNull());
     EXPECT_THAT(getFieldValue(&FooReferentLoc, *BarDecl, Env), IsNull());
 
     const auto &FooPtrVal =
-        *cast<PointerValue>(getFieldValue(&BarReferentVal, *FooPtrDecl, Env));
+        *cast<PointerValue>(getFieldValue(&BarLoc, *FooPtrDecl, Env));
     const auto &FooPtrPointeeLoc =
         cast<AggregateStorageLocation>(FooPtrVal.getPointeeLoc());
     EXPECT_THAT(Env.getValue(FooPtrPointeeLoc), NotNull());
     EXPECT_THAT(getFieldValue(&FooPtrPointeeLoc, *BarDecl, Env), IsNull());
 
-    const auto &BazRefVal =
-        *cast<ReferenceValue>(getFieldValue(&BarReferentVal, *BazRefDecl, Env));
-    const StorageLocation &BazReferentLoc = BazRefVal.getReferentLoc();
-    EXPECT_THAT(Env.getValue(BazReferentLoc), NotNull());
+    EXPECT_THAT(getFieldValue(&BarLoc, *BazRefDecl, Env), NotNull());
 
     const auto &BazPtrVal =
-        *cast<PointerValue>(getFieldValue(&BarReferentVal, *BazPtrDecl, Env));
+        *cast<PointerValue>(getFieldValue(&BarLoc, *BazPtrDecl, Env));
     const StorageLocation &BazPtrPointeeLoc = BazPtrVal.getPointeeLoc();
     EXPECT_THAT(Env.getValue(BazPtrPointeeLoc), NotNull());
   });
@@ -648,10 +646,7 @@ TEST(TransferTest, SelfReferentialPointerVarDecl) {
         const auto &BarPointeeVal =
             *cast<StructValue>(Env.getValue(BarVal.getPointeeLoc()));
 
-        const auto &FooRefVal = *cast<ReferenceValue>(
-            getFieldValue(&BarPointeeVal, *FooRefDecl, Env));
-        const StorageLocation &FooReferentLoc = FooRefVal.getReferentLoc();
-        EXPECT_THAT(Env.getValue(FooReferentLoc), IsNull());
+        EXPECT_THAT(getFieldValue(&BarPointeeVal, *FooRefDecl, Env), NotNull());
 
         const auto &FooPtrVal = *cast<PointerValue>(
             getFieldValue(&BarPointeeVal, *FooPtrDecl, Env));
@@ -659,10 +654,7 @@ TEST(TransferTest, SelfReferentialPointerVarDecl) {
             cast<AggregateStorageLocation>(FooPtrVal.getPointeeLoc());
         EXPECT_THAT(Env.getValue(FooPtrPointeeLoc), IsNull());
 
-        const auto &BazRefVal = *cast<ReferenceValue>(
-            getFieldValue(&BarPointeeVal, *BazRefDecl, Env));
-        const StorageLocation &BazReferentLoc = BazRefVal.getReferentLoc();
-        EXPECT_THAT(Env.getValue(BazReferentLoc), NotNull());
+        EXPECT_THAT(getFieldValue(&BarPointeeVal, *BazRefDecl, Env), NotNull());
 
         const auto &BazPtrVal = *cast<PointerValue>(
             getFieldValue(&BarPointeeVal, *BazPtrDecl, Env));
@@ -689,9 +681,7 @@ TEST(TransferTest, DirectlySelfReferentialReference) {
         const ValueDecl *SelfDecl = findValueDecl(ASTCtx, "self");
 
         auto *ThisLoc = Env.getThisPointeeStorageLocation();
-        auto *RefVal =
-            cast<ReferenceValue>(Env.getValue(ThisLoc->getChild(*SelfDecl)));
-        ASSERT_EQ(&RefVal->getReferentLoc(), ThisLoc);
+        ASSERT_EQ(ThisLoc->getChild(*SelfDecl), ThisLoc);
       });
 }
 
@@ -1057,7 +1047,7 @@ TEST(TransferTest, StructParamDecl) {
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
 
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal =
@@ -1290,36 +1280,8 @@ TEST(TransferTest, DerivedBaseMemberClass) {
         ASSERT_THAT(APrivateDecl, NotNull());
         ASSERT_THAT(APublicDecl, NotNull());
 
-        const auto &FooLoc =
-            *cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto &FooVal = *cast<StructValue>(Env.getValue(FooLoc));
-
-        // Note: we can't test presence of children in `FooLoc`, because
-        // `getChild` requires its argument be present (or fails an assert). So,
-        // we limit to testing presence in `FooVal` and coherence between the
-        // two.
-
-        // Base-class fields.
-        EXPECT_THAT(FooVal.getChild(*ADefaultDecl), NotNull());
-        EXPECT_THAT(FooVal.getChild(*APrivateDecl), NotNull());
-
-        EXPECT_THAT(FooVal.getChild(*AProtectedDecl), NotNull());
-        EXPECT_EQ(Env.getValue(FooLoc.getChild(*APublicDecl)),
-                  FooVal.getChild(*APublicDecl));
-        EXPECT_THAT(FooVal.getChild(*APublicDecl), NotNull());
-        EXPECT_EQ(Env.getValue(FooLoc.getChild(*AProtectedDecl)),
-                  FooVal.getChild(*AProtectedDecl));
-
-        // Derived-class fields.
-        EXPECT_THAT(FooVal.getChild(*BDefaultDecl), NotNull());
-        EXPECT_EQ(Env.getValue(FooLoc.getChild(*BDefaultDecl)),
-                  FooVal.getChild(*BDefaultDecl));
-        EXPECT_THAT(FooVal.getChild(*BProtectedDecl), NotNull());
-        EXPECT_EQ(Env.getValue(FooLoc.getChild(*BProtectedDecl)),
-                  FooVal.getChild(*BProtectedDecl));
-        EXPECT_THAT(FooVal.getChild(*BPrivateDecl), NotNull());
-        EXPECT_EQ(Env.getValue(FooLoc.getChild(*BPrivateDecl)),
-                  FooVal.getChild(*BPrivateDecl));
+        ASSERT_TRUE(
+            isa<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl)));
       });
 }
 
@@ -1352,8 +1314,7 @@ static void derivedBaseMemberExpectations(
   const auto &FooLoc =
       *cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
   const auto &FooVal = *cast<StructValue>(Env.getValue(FooLoc));
-  EXPECT_THAT(FooVal.getChild(*BarDecl), NotNull());
-  EXPECT_EQ(Env.getValue(FooLoc.getChild(*BarDecl)), FooVal.getChild(*BarDecl));
+  EXPECT_EQ(&FooVal.getAggregateLoc(), &FooLoc);
 }
 
 TEST(TransferTest, DerivedBaseMemberStructDefault) {
@@ -1522,10 +1483,8 @@ TEST(TransferTest, ReferenceMember) {
 
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
-        const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
-        const auto *BarVal = cast<ReferenceValue>(FooVal->getChild(*BarDecl));
         const auto *BarReferentVal =
-            cast<IntegerValue>(Env.getValue(BarVal->getReferentLoc()));
+            cast<IntegerValue>(getFieldValue(FooLoc, *BarDecl, Env));
 
         const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
         ASSERT_THAT(BazDecl, NotNull());
@@ -1566,7 +1525,7 @@ TEST(TransferTest, StructThisMember) {
         ASSERT_THAT(BarDecl, NotNull());
 
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&ThisLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(ThisLoc->getChild(*BarDecl));
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
 
         const Value *BarVal = Env.getValue(*BarLoc);
@@ -1593,12 +1552,12 @@ TEST(TransferTest, StructThisMember) {
         ASSERT_THAT(BazDecl, NotNull());
 
         const auto *QuxLoc =
-            cast<AggregateStorageLocation>(&ThisLoc->getChild(*QuxDecl));
+            cast<AggregateStorageLocation>(ThisLoc->getChild(*QuxDecl));
         const auto *QuxVal = dyn_cast<StructValue>(Env.getValue(*QuxLoc));
         ASSERT_THAT(QuxVal, NotNull());
 
         const auto *BazLoc =
-            cast<ScalarStorageLocation>(&QuxLoc->getChild(*BazDecl));
+            cast<ScalarStorageLocation>(QuxLoc->getChild(*BazDecl));
         const auto *BazVal =
             cast<IntegerValue>(getFieldValue(QuxVal, *BazDecl, Env));
         EXPECT_EQ(Env.getValue(*BazLoc), BazVal);
@@ -1641,7 +1600,7 @@ TEST(TransferTest, ClassThisMember) {
         ASSERT_THAT(BarDecl, NotNull());
 
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&ThisLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(ThisLoc->getChild(*BarDecl));
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
 
         const Value *BarVal = Env.getValue(*BarLoc);
@@ -1668,12 +1627,12 @@ TEST(TransferTest, ClassThisMember) {
         ASSERT_THAT(BazDecl, NotNull());
 
         const auto *QuxLoc =
-            cast<AggregateStorageLocation>(&ThisLoc->getChild(*QuxDecl));
+            cast<AggregateStorageLocation>(ThisLoc->getChild(*QuxDecl));
         const auto *QuxVal = dyn_cast<StructValue>(Env.getValue(*QuxLoc));
         ASSERT_THAT(QuxVal, NotNull());
 
         const auto *BazLoc =
-            cast<ScalarStorageLocation>(&QuxLoc->getChild(*BazDecl));
+            cast<ScalarStorageLocation>(QuxLoc->getChild(*BazDecl));
         const auto *BazVal =
             cast<IntegerValue>(getFieldValue(QuxVal, *BazDecl, Env));
         EXPECT_EQ(Env.getValue(*BazLoc), BazVal);
@@ -1713,7 +1672,7 @@ TEST(TransferTest, UnionThisMember) {
         ASSERT_THAT(FooDecl, NotNull());
 
         const auto *FooLoc =
-            cast<ScalarStorageLocation>(&ThisLoc->getChild(*FooDecl));
+            cast<ScalarStorageLocation>(ThisLoc->getChild(*FooDecl));
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(FooLoc));
 
         const Value *FooVal = Env.getValue(*FooLoc);
@@ -1723,7 +1682,7 @@ TEST(TransferTest, UnionThisMember) {
         ASSERT_THAT(BarDecl, NotNull());
 
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&ThisLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(ThisLoc->getChild(*BarDecl));
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
 
         const Value *BarVal = Env.getValue(*BarLoc);
@@ -1758,7 +1717,7 @@ TEST(TransferTest, StructThisInLambda) {
         ASSERT_THAT(BarDecl, NotNull());
 
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&ThisLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(ThisLoc->getChild(*BarDecl));
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
 
         const Value *BarVal = Env.getValue(*BarLoc);
@@ -1796,7 +1755,7 @@ TEST(TransferTest, StructThisInLambda) {
         ASSERT_THAT(BarDecl, NotNull());
 
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&ThisLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(ThisLoc->getChild(*BarDecl));
         ASSERT_TRUE(isa_and_nonnull<ScalarStorageLocation>(BarLoc));
 
         const Value *BarVal = Env.getValue(*BarLoc);
@@ -1957,7 +1916,7 @@ TEST(TransferTest, TemporaryObject) {
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
 
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal =
@@ -1996,7 +1955,7 @@ TEST(TransferTest, ElidableConstructor) {
         const auto *FooLoc =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*FooDecl));
         const auto *BarLoc =
-            cast<ScalarStorageLocation>(&FooLoc->getChild(*BarDecl));
+            cast<ScalarStorageLocation>(FooLoc->getChild(*BarDecl));
 
         const auto *FooVal = cast<StructValue>(Env.getValue(*FooLoc));
         const auto *BarVal =
@@ -2341,11 +2300,11 @@ TEST(TransferTest, MoveConstructor) {
         const auto *BarLoc1 =
             cast<AggregateStorageLocation>(Env1.getStorageLocation(*BarDecl));
 
+        EXPECT_FALSE(recordsEqual(*FooLoc1, *BarLoc1, Env1));
+
         const auto *FooVal1 = cast<StructValue>(Env1.getValue(*FooLoc1));
         const auto *BarVal1 = cast<StructValue>(Env1.getValue(*BarLoc1));
         EXPECT_NE(FooVal1, BarVal1);
-
-        EXPECT_FALSE(recordsEqual(*FooLoc1, *BarLoc1, Env1));
 
         const auto *FooBazVal1 =
             cast<IntegerValue>(getFieldValue(FooLoc1, *BazDecl, Env1));
@@ -2938,9 +2897,7 @@ TEST(TransferTest, AggregateInitializationReferenceField) {
         auto &ILoc = getLocForDecl<StorageLocation>(ASTCtx, Env, "i");
         auto &SLoc = getLocForDecl<AggregateStorageLocation>(ASTCtx, Env, "s");
 
-        auto &RefValue =
-            *cast<ReferenceValue>(getFieldValue(&SLoc, *RefFieldDecl, Env));
-        EXPECT_EQ(&RefValue.getReferentLoc(), &ILoc);
+        EXPECT_EQ(SLoc.getChild(*RefFieldDecl), &ILoc);
       });
 }
 
@@ -5512,8 +5469,8 @@ TEST(TransferTest, NewExpressions_Structs) {
 
         auto &OuterLoc = cast<AggregateStorageLocation>(P.getPointeeLoc());
         auto &OuterFieldLoc =
-            cast<AggregateStorageLocation>(OuterLoc.getChild(*OuterField));
-        auto &InnerFieldLoc = OuterFieldLoc.getChild(*InnerField);
+            *cast<AggregateStorageLocation>(OuterLoc.getChild(*OuterField));
+        auto &InnerFieldLoc = *OuterFieldLoc.getChild(*InnerField);
 
         // Values for the struct and all fields exist after the new.
         EXPECT_THAT(Env.getValue(OuterLoc), NotNull());
@@ -5620,7 +5577,7 @@ TEST(TransferTest, AnonymousStruct) {
 
         auto *S =
             cast<AggregateStorageLocation>(Env.getStorageLocation(*SDecl));
-        auto &AnonStruct = cast<AggregateStorageLocation>(
+        auto &AnonStruct = *cast<AggregateStorageLocation>(
             S->getChild(*cast<ValueDecl>(IndirectField->chain().front())));
 
         auto *B = cast<BoolValue>(getFieldValue(&AnonStruct, *BDecl, Env));
@@ -5651,7 +5608,7 @@ TEST(TransferTest, AnonymousStructWithInitializer) {
 
         auto *ThisLoc =
             cast<AggregateStorageLocation>(Env.getThisPointeeStorageLocation());
-        auto &AnonStruct = cast<AggregateStorageLocation>(ThisLoc->getChild(
+        auto &AnonStruct = *cast<AggregateStorageLocation>(ThisLoc->getChild(
             *cast<ValueDecl>(IndirectField->chain().front())));
 
         auto *B = cast<BoolValue>(getFieldValue(&AnonStruct, *BDecl, Env));
@@ -5684,13 +5641,10 @@ TEST(TransferTest, AnonymousStructWithReferenceField) {
 
         auto *ThisLoc =
             cast<AggregateStorageLocation>(Env.getThisPointeeStorageLocation());
-        auto &AnonStruct = cast<AggregateStorageLocation>(ThisLoc->getChild(
+        auto &AnonStruct = *cast<AggregateStorageLocation>(ThisLoc->getChild(
             *cast<ValueDecl>(IndirectField->chain().front())));
 
-        auto *RefVal =
-            cast<ReferenceValue>(Env.getValue(AnonStruct.getChild(*IDecl)));
-
-        ASSERT_EQ(&RefVal->getReferentLoc(),
+        ASSERT_EQ(AnonStruct.getChild(*IDecl),
                   Env.getStorageLocation(*GlobalIDecl));
       });
 }
