@@ -202,6 +202,8 @@ public:
                              unsigned AS,
                              Instruction *I = nullptr) const override;
 
+  bool isLegalAddImmediate(int64_t Imm) const override;
+
   bool hasAndNotCompare(SDValue Y) const override;
 
   bool convertSelectOfConstantsToMath(EVT VT) const override { return true; }
