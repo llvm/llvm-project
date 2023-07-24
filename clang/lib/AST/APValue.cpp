@@ -390,13 +390,11 @@ APValue &APValue::operator=(const APValue &RHS) {
 }
 
 APValue &APValue::operator=(APValue &&RHS) {
-  if (this != RHS) {
-    if (Kind != None && Kind != Indeterminate)
-      DestroyDataAndMakeUninit();
-    Kind = RHS.Kind;
-    Data = RHS.Data;
-    RHS.Kind = None;
-  }
+  if (Kind != None && Kind != Indeterminate)
+    DestroyDataAndMakeUninit();
+  Kind = RHS.Kind;
+  Data = RHS.Data;
+  RHS.Kind = None;
   return *this;
 }
 
