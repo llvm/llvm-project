@@ -793,6 +793,12 @@ AsmParser::AsmParser(SourceMgr &SM, MCContext &Ctx, MCStreamer &Out,
   case MCContext::IsELF:
     PlatformParser.reset(createELFAsmParser());
     break;
+  // TODO(fzakaria): Let's reuse the ASM ELF parser for SQELF
+  // The goal of SQELF is about exploring the final object format
+  // and not necessarily the assembly file itself.
+  case MCContext::IsSQELF:
+    PlatformParser.reset(createELFAsmParser());
+    break;
   case MCContext::IsGOFF:
     PlatformParser.reset(createGOFFAsmParser());
     break;
