@@ -1,12 +1,6 @@
-// DEFINE: %{option} = enable-runtime-library=false
-// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
-// DEFINE: mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext | \
-// DEFINE: FileCheck %s
-//
-// RUN: %{command}
-//
+// REDEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// RUN: %{compile} | %{run} | FileCheck %s
 
 // TODO: support lib path.
 
