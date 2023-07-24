@@ -736,9 +736,9 @@ declare i32 @__kmpc_shuffle_int32(i32, i16, i16);
 
 declare i64 @__kmpc_shuffle_int64(i64, i16, i16);
 
-declare void @__kmpc_target_deinit();
+declare void @__kmpc_target_deinit(ptr, i8);
 
-declare i32 @__kmpc_target_init(ptr);
+declare i32 @__kmpc_target_init(ptr, i8, i1);
 
 declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32);
 
@@ -1389,10 +1389,10 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; CHECK: declare i64 @__kmpc_shuffle_int64(i64, i16, i16)
 
 ; CHECK-NOT: Function Attrs
-; CHECK: declare void @__kmpc_target_deinit()
+; CHECK: declare void @__kmpc_target_deinit(ptr, i8)
 
 ; CHECK-NOT: Function Attrs
-; CHECK: declare i32 @__kmpc_target_init(ptr)
+; CHECK: declare i32 @__kmpc_target_init(ptr, i8, i1)
 
 ; CHECK-NOT: Function Attrs
 ; CHECK: declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32)
@@ -2037,10 +2037,10 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; OPTIMISTIC: declare i64 @__kmpc_shuffle_int64(i64, i16, i16)
 
 ; OPTIMISTIC-NOT: Function Attrs
-; OPTIMISTIC: declare void @__kmpc_target_deinit()
+; OPTIMISTIC: declare void @__kmpc_target_deinit(ptr, i8)
 
 ; OPTIMISTIC-NOT: Function Attrs
-; OPTIMISTIC: declare i32 @__kmpc_target_init(ptr)
+; OPTIMISTIC: declare i32 @__kmpc_target_init(ptr, i8, i1)
 
 ; OPTIMISTIC-NOT: Function Attrs
 ; OPTIMISTIC: declare void @__tgt_interop_destroy(ptr, i32, ptr, i32, i32, ptr, i32)
@@ -2698,10 +2698,10 @@ declare i32 @__tgt_target_kernel_nowait(ptr, i64, i32, i32, ptr, ptr, i32, ptr, 
 ; EXT: declare i64 @__kmpc_shuffle_int64(i64, i16 signext, i16 signext)
 
 ; EXT-NOT: Function Attrs
-; EXT: declare void @__kmpc_target_deinit()
+; EXT: declare void @__kmpc_target_deinit(ptr, i8 signext)
 
 ; EXT-NOT: Function Attrs
-; EXT: declare signext i32 @__kmpc_target_init(ptr)
+; EXT: declare signext i32 @__kmpc_target_init(ptr, i8 signext, i1 signext)
 
 ; EXT-NOT: Function Attrs
 ; EXT: declare void @__tgt_interop_destroy(ptr, i32 signext, ptr, i32 signext, i32 signext, ptr, i32 signext)
