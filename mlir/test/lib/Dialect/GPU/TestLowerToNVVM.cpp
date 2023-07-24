@@ -172,12 +172,8 @@ void buildGpuPassPipeline(OpPassManager &pm,
   pm.addNestedPass<gpu::GPUModuleOp>(createReconcileUnrealizedCastsPass());
 
 #if MLIR_GPU_TO_CUBIN_PASS_ENABLE
-  gpu::SerializationToCubinOptions cubinOptions;
-  cubinOptions.triple = options.cubinTriple;
-  cubinOptions.chip = options.cubinChip;
-  cubinOptions.features = options.cubinFeatures;
-  pm.addNestedPass<gpu::GPUModuleOp>(
-      createGpuSerializeToCubinPass(cubinOptions));
+  pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass(
+      options.cubinTriple, options.cubinChip, options.cubinFeatures));
 #endif // MLIR_GPU_TO_CUBIN_PASS_ENABLE
 }
 
