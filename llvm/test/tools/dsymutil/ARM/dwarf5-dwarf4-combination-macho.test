@@ -146,9 +146,11 @@ CHECK: .debug_ranges contents:
 CHECK-NEXT: 00000000 [[#sub(RANGE_START,RANGE_LOWPC)]] [[#sub(RANGE_END,RANGE_LOWPC)]]
 
 CHECK: .debug_rnglists contents:
-CHECK-NEXT: 0x00000000: range list header: length = 0x00000013, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
+CHECK-NEXT: 0x00000000: range list header: length = 0x0000000e, format = DWARF32, version = 0x0005, addr_size = 0x08, seg_size = 0x00, offset_entry_count = 0x00000000
 CHECK-NEXT: ranges:
-CHECK-NEXT: [[RANGELIST_OFFSET]]: [DW_RLE_start_length]: {{.*}}[0x[[RANGELIST_OFFSET_START]], 0x[[RANGELIST_OFFSET_END]])
+CHECK-NEXT: [[RANGELIST_OFFSET]]: [DW_RLE_base_addressx]:  0x0000000000000000
+CHECK-NEXT: 0x0000000e: [DW_RLE_offset_pair  ]: {{.*}}[0x[[RANGELIST_OFFSET_START]], 0x[[RANGELIST_OFFSET_END]])
+CHECK-NEXT: 0x00000011: [DW_RLE_end_of_list  ]
 
 CHECK: .debug_names contents:
 CHECK-NEXT: Name Index @ 0x0 {

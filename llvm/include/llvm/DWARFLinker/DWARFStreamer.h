@@ -95,7 +95,8 @@ public:
   /// Emit debug ranges(.debug_ranges, .debug_rnglists) fragment.
   void emitDwarfDebugRangeListFragment(const CompileUnit &Unit,
                                        const AddressRanges &LinkedRanges,
-                                       PatchLocation Patch) override;
+                                       PatchLocation Patch,
+                                       DebugAddrPool &AddrPool) override;
 
   /// Emit debug ranges(.debug_ranges, .debug_rnglists) footer.
   void emitDwarfDebugRangeListFooter(const CompileUnit &Unit,
@@ -217,7 +218,8 @@ private:
   /// Emit piece of .debug_rnglists for \p LinkedRanges.
   void emitDwarfDebugRngListsTableFragment(const CompileUnit &Unit,
                                            const AddressRanges &LinkedRanges,
-                                           PatchLocation Patch);
+                                           PatchLocation Patch,
+                                           DebugAddrPool &AddrPool);
 
   /// Emit piece of .debug_loc for \p LinkedRanges.
   void emitDwarfDebugLocTableFragment(

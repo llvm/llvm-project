@@ -137,10 +137,9 @@ public:
   virtual MCSymbol *emitDwarfDebugRangeListHeader(const CompileUnit &Unit) = 0;
 
   /// Emit debug ranges (.debug_ranges, .debug_rnglists) fragment.
-  virtual void
-  emitDwarfDebugRangeListFragment(const CompileUnit &Unit,
-                                  const AddressRanges &LinkedRanges,
-                                  PatchLocation Patch) = 0;
+  virtual void emitDwarfDebugRangeListFragment(
+      const CompileUnit &Unit, const AddressRanges &LinkedRanges,
+      PatchLocation Patch, DebugAddrPool &AddrPool) = 0;
 
   /// Emit debug ranges (.debug_ranges, .debug_rnglists) footer.
   virtual void emitDwarfDebugRangeListFooter(const CompileUnit &Unit,
@@ -821,7 +820,8 @@ private:
 
   /// Compute and emit debug ranges(.debug_aranges, .debug_ranges,
   /// .debug_rnglists) for \p Unit, patch the attributes referencing it.
-  void generateUnitRanges(CompileUnit &Unit, const DWARFFile &File) const;
+  void generateUnitRanges(CompileUnit &Unit, const DWARFFile &File,
+                          DebugAddrPool &AddrPool) const;
 
   /// Emit the accelerator entries for \p Unit.
   void emitAcceleratorEntriesForUnit(CompileUnit &Unit);
