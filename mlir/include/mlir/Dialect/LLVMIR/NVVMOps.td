@@ -372,53 +372,59 @@ def NVVM_MBarrierArriveNocompleteSharedOp : NVVM_Op<"mbarrier.arrive.nocomplete.
 }
 
 def NVVM_MBarrierArriveExpectTxOp : NVVM_Op<"mbarrier.arrive.expect_tx",
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Results<(outs LLVM_Type:$res)>,
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,  
   Arguments<(ins LLVM_i64ptr_any:$addr, I32:$txcount)> {
-  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands) `->` type($res)";
+  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
   let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.b64 %0, [%1], %2;"); }
+    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.b64 _, [%0], %1;"); }
   }];
 }
 
 def NVVM_MBarrierArriveExpectTxSharedOp : NVVM_Op<"mbarrier.arrive.expect_tx.shared", 
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Results<(outs LLVM_Type:$res)>,
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,  
   Arguments<(ins LLVM_i64ptr_shared:$addr, I32:$txcount)> {    
-  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands) `->` type($res)";
+  let assemblyFormat = "$addr `,` $txcount attr-dict `:` type(operands)";
   let extraClassDefinition = [{
-    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.shared.b64 %0, [%1], %2;"); }
+    std::string $cppClass::getPtx() { return std::string("mbarrier.arrive.expect_tx.shared.b64 _, [%0], %1;"); }
   }];
 }
 
 def NVVM_MBarrierTryWaitParityOp : NVVM_Op<"mbarrier.try_wait.parity", 
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_i64ptr_any:$addr, LLVM_Type:$token)> {
-  let assemblyFormat = "$addr `,` $token attr-dict `:` type(operands) `->` type($res)";
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,  
+  Arguments<(ins LLVM_i64ptr_any:$addr, I32:$phase, I32:$ticks)> {  
+  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
-      return std::string("{\n\t"
-              ".reg .pred P1; \n\t"
-              "mbarrier.try_wait.parity.b64 P1, [%1], %2; \n\t"
-              "selp.b32 %0, 1, 0, P1; \n\t"
-              "}"); 
+      return std::string(
+        "{\n\t"
+        ".reg .pred       P1; \n\t"
+        "LAB_WAIT: \n\t"
+        "mbarrier.try_wait.parity.b64 P1, [%0], %1, %2; \n\t"
+        "@P1 bra.uni DONE; \n\t"
+        "bra.uni     LAB_WAIT; \n\t"
+        "DONE: \n\t"
+        "}"
+      ); 
     }
   }];
 }
 
 def NVVM_MBarrierTryWaitParitySharedOp : NVVM_Op<"mbarrier.try_wait.parity.shared", 
-                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
-  Results<(outs LLVM_Type:$res)>,
-  Arguments<(ins LLVM_i64ptr_shared:$addr, LLVM_Type:$token)> {  
-  let assemblyFormat = "$addr `,` $token attr-dict `:` type(operands) `->` type($res)";
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,  
+  Arguments<(ins LLVM_i64ptr_shared:$addr, I32:$phase, I32:$ticks)> {  
+  let assemblyFormat = "$addr `,` $phase `,` $ticks attr-dict `:` type(operands)";
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() {
-      return std::string("{\n\t"
-              ".reg .pred P1; \n\t"
-              "mbarrier.try_wait.parity.shared.b64 P1, [%1], %2; \n\t"
-              "selp.b32 %0, 1, 0, P1; \n\t"
-              "}"); 
+      return std::string(
+        "{\n\t"
+        ".reg .pred       P1; \n\t"
+        "LAB_WAIT: \n\t"
+        "mbarrier.try_wait.parity.shared.b64 P1, [%0], %1, %2; \n\t"
+        "@P1 bra.uni DONE; \n\t"
+        "bra.uni     LAB_WAIT; \n\t"
+        "DONE: \n\t"
+        "}"
+      ); 
     }
   }];
 }
@@ -1417,6 +1423,53 @@ def NVVM_CpAsyncBulkTensorGlobalToSharedClusterOp : NVVM_Op<"cp.async.bulk.tenso
     }
   }];
   let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM Wgmma Ops
+//===----------------------------------------------------------------------===//
+
+def NVVM_WgmmaFenceAlignedOp : NVVM_Op<"wgmma.fence.aligned", 
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]> {
+  let arguments = (ins);
+  let description = [{
+    Enforce an ordering of register accesses between warpgroup level matrix 
+    multiplication and other operations. 
+    See for more information:
+    https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-instructions-wgmma-fence
+  }];
+  let assemblyFormat = "attr-dict";
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() { return std::string("wgmma.fence.sync.aligned;"); }
+  }];
+}
+
+def NVVM_WgmmaGroupSyncAlignedOp : NVVM_Op<"wgmma.commit.group.sync.aligned", 
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>,
+  Arguments<(ins )> {
+  let assemblyFormat = "attr-dict";
+  let description = [{
+    Commits all prior uncommitted warpgroup level matrix multiplication operations.
+    See for more information:
+    https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-instructions-wgmma-commit-group
+  }];
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() { return std::string("wgmma.commit_group.sync.aligned;"); }
+  }];
+}
+
+def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned", 
+                    [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>]>{
+  let arguments = (ins I32Attr:$group);
+  let assemblyFormat = "attr-dict $group";
+  let description = [{
+    Signal the completion of a preceding warpgroup operation.
+    See for more information:
+    https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#asynchronous-warpgroup-level-matrix-instructions-wgmma-wait-group
+  }];
+  let extraClassDefinition = [{
+    std::string $cppClass::getPtx() { return std::string("wgmma.wait_group.sync.aligned %0;"); }
+  }];
 }
 
 #endif // NVVMIR_OPS

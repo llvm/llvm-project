@@ -124,6 +124,10 @@ bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                             const DominatorTree *DT = nullptr,
                             bool UseInstrInfo = true);
 
+/// Return true if the given instruction is only used in zero comparison
+bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
+
+/// Return true if the given instruction is only used in zero equality comparison
 bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
 
 /// Return true if the given value is known to be non-zero when defined. For

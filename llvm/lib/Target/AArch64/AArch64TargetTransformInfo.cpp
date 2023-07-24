@@ -437,6 +437,15 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
       return LT.first;
     break;
   }
+  case Intrinsic::bswap: {
+    static const auto ValidAbsTys = {MVT::v4i16, MVT::v8i16, MVT::v2i32,
+                                     MVT::v4i32, MVT::v2i64};
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }) &&
+        LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits())
+      return LT.first;
+    break;
+  }
   case Intrinsic::experimental_stepvector: {
     InstructionCost Cost = 1; // Cost of the `index' instruction
     auto LT = getTypeLegalizationCost(RetTy);

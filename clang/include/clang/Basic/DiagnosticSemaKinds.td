@@ -83,8 +83,8 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|explicit specifier argument|noexcept specifier argument}0 "
-  "is not a constant expression">;
+  "array size|explicit specifier argument|noexcept specifier argument|"
+  "call to 'size()'|call to 'data()'}0 is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
   "%select{case value|enumerator value|non-type template argument|"
   "array size|explicit specifier argument|noexcept specifier argument}0 "
@@ -1545,6 +1545,24 @@ def err_static_assert_requirement_failed : Error<
   "static assertion failed due to requirement '%0'%select{: %2|}1">;
 def note_expr_evaluates_to : Note<
   "expression evaluates to '%0 %1 %2'">;
+def err_static_assert_invalid_message : Error<
+  "the message in a static assertion must be a string literal or an "
+  "object with 'data()' and 'size()' member functions">;
+def err_static_assert_missing_member_function : Error<
+  "the message object in this static assertion is missing %select{"
+  "a 'size()' member function|"
+  "a 'data()' member function|"
+  "'data()' and 'size()' member functions}0">;
+def err_static_assert_invalid_mem_fn_ret_ty : Error<
+  "the message in a static assertion must have a '%select{size|data}0()' member "
+  "function returning an object convertible to '%select{std::size_t|const char *}0'">;
+def warn_static_assert_message_constexpr : Warning<
+  "the message in this static assertion is not a "
+  "constant expression">,
+  DefaultError, InGroup<DiagGroup<"invalid-static-assert-message">>;
+def err_static_assert_message_constexpr : Error<
+  "the message in a static assertion must be produced by a "
+  "constant expression">;
 
 def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,
@@ -4714,6 +4732,8 @@ def note_ovl_candidate_bad_target : Note<
 def note_ovl_candidate_constraints_not_satisfied : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: constraints "
     "not satisfied">;
+def note_ovl_surrogate_constraints_not_satisfied : Note<
+    "conversion candidate %0 not viable: constraints not satisfied">;
 def note_implicit_member_target_infer_collision : Note<
     "implicit %sub{select_special_member_kind}0 inferred target collision: call to both "
     "%select{__device__|__global__|__host__|__host__ __device__}1 and "
@@ -10682,8 +10702,11 @@ def err_omp_simd_region_cannot_use_stmt : Error<
 def warn_omp_loop_64_bit_var : Warning<
   "OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed">,
   InGroup<OpenMPLoopForm>;
-def err_omp_unknown_reduction_identifier : Error<
+def err_omp_unknown_reduction_identifier_prior_omp_6_0 : Error<
   "incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', "
+  "'&&', '||', 'min' or 'max' or declare reduction for type %0">;
+def err_omp_unknown_reduction_identifier_since_omp_6_0 : Error<
+  "incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', "
   "'&&', '||', 'min' or 'max' or declare reduction for type %0">;
 def err_omp_not_resolved_reduction_identifier : Error<
   "unable to resolve declare reduction construct for type %0">;

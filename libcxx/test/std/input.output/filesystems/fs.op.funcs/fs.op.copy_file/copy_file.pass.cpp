@@ -19,8 +19,7 @@
 // bool copy_file(const path& from, const path& to);
 // bool copy_file(const path& from, const path& to, error_code& ec) noexcept;
 // bool copy_file(const path& from, const path& to, copy_options options);
-// bool copy_file(const path& from, const path& to, copy_options options,
-//           error_code& ec) noexcept;
+// bool copy_file(const path& from, const path& to, copy_options options, error_code& ec) noexcept;
 
 #include "filesystem_include.h"
 #include <type_traits>

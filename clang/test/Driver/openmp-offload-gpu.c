@@ -292,10 +292,10 @@
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-NVIDIA-AMDGPU
 
 // CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HOST_BC:.+]]"
+// CHECK-NVIDIA-AMDGPU: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[AMD_BC:.+]]"
 // CHECK-NVIDIA-AMDGPU: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[NVIDIA_PTX:.+]]"
 // CHECK-NVIDIA-AMDGPU: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[NVIDIA_PTX]]"], output: "[[NVIDIA_CUBIN:.+]]"
-// CHECK-NVIDIA-AMDGPU: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[AMD_BC:.+]]"
-// CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[NVIDIA_CUBIN]]", "[[AMD_BC]]"], output: "[[BINARY:.*]]"
+// CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[AMD_BC]]", "[[NVIDIA_CUBIN]]"], output: "[[BINARY:.*]]"
 // CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[BINARY]]"], output: "[[HOST_OBJ:.+]]"
 // CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
 

@@ -20,6 +20,7 @@ define amdgpu_cs void @test_wave_id(ptr addrspace(1) %out) {
 ; GFX1200-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1200-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1200-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1200-NEXT:    s_nop 0
 ; GFX1200-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1200-NEXT:    s_endpgm
 ;
@@ -29,8 +30,18 @@ define amdgpu_cs void @test_wave_id(ptr addrspace(1) %out) {
 ; GFX1210-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX1210-NEXT:    v_mov_b32_e32 v2, s0
 ; GFX1210-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX1210-NEXT:    s_nop 0
 ; GFX1210-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX1210-NEXT:    s_endpgm
+; GFX12-LABEL: test_wave_id:
+; GFX12:       ; %bb.0:
+; GFX12-NEXT:    s_bfe_u32 s0, ttmp8, 0x50019
+; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; GFX12-NEXT:    v_mov_b32_e32 v2, s0
+; GFX12-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX12-NEXT:    s_nop 0
+; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GFX12-NEXT:    s_endpgm
   %waveid = call i32 @llvm.amdgcn.wave.id()
   store i32 %waveid, ptr addrspace(1) %out
   ret void

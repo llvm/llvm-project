@@ -490,7 +490,6 @@ add_entrypoint_object(
     sprintf.h
   DEPENDS
     libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.string_writer
     libc.src.stdio.printf_core.writer
 )
 
@@ -502,18 +501,17 @@ add_entrypoint_object(
     snprintf.h
   DEPENDS
     libc.src.stdio.printf_core.printf_main
-    libc.src.stdio.printf_core.string_writer
     libc.src.stdio.printf_core.writer
 )
 
-list(APPEND printf_deps 
-      libc.src.__support.arg_list 
+list(APPEND printf_deps
+      libc.src.__support.arg_list
       libc.src.stdio.printf_core.vfprintf_internal
 )
 if(LLVM_LIBC_FULL_BUILD)
- list(APPEND printf_deps  
-      libc.src.__support.File.file 
-      libc.src.__support.File.platform_file 
+ list(APPEND printf_deps
+      libc.src.__support.File.file
+      libc.src.__support.File.platform_file
   )
 else()
  set(printf_copts "-DLIBC_COPT_PRINTF_USE_SYSTEM_FILE")

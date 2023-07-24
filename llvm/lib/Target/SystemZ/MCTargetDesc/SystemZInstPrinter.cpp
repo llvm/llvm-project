@@ -83,7 +83,12 @@ void SystemZInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 template <unsigned N>
 void SystemZInstPrinter::printUImmOperand(const MCInst *MI, int OpNum,
                                           raw_ostream &O) {
-  int64_t Value = MI->getOperand(OpNum).getImm();
+  const MCOperand &MO = MI->getOperand(OpNum);
+  if (MO.isExpr()) {
+    O << *MO.getExpr();
+    return;
+  }
+  uint64_t Value = static_cast<uint64_t>(MO.getImm());
   assert(isUInt<N>(Value) && "Invalid uimm argument");
   O << markup("<imm:") << Value << markup(">");
 }
@@ -91,6 +96,11 @@ void SystemZInstPrinter::printUImmOperand(const MCInst *MI, int OpNum,
 template <unsigned N>
 void SystemZInstPrinter::printSImmOperand(const MCInst *MI, int OpNum,
                                           raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  if (MO.isExpr()) {
+    O << *MO.getExpr();
+    return;
+  }
   int64_t Value = MI->getOperand(OpNum).getImm();
   assert(isInt<N>(Value) && "Invalid simm argument");
   O << markup("<imm:") << Value << markup(">");

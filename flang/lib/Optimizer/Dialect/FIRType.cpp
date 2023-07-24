@@ -518,8 +518,12 @@ std::string getTypeAsString(mlir::Type ty, const fir::KindMapping &kindMap,
         name << "x" << charTy.getLen();
       break;
     } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
-      for (auto extent : seqTy.getShape())
-        name << extent << 'x';
+      for (auto extent : seqTy.getShape()) {
+        if (extent == fir::SequenceType::getUnknownExtent())
+          name << "?x";
+        else
+          name << extent << 'x';
+      }
       ty = seqTy.getEleTy();
     } else if (auto refTy = mlir::dyn_cast_or_null<fir::ReferenceType>(ty)) {
       name << "ref_";

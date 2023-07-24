@@ -4679,6 +4679,7 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) 
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[36:39], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -5102,6 +5103,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_store_b32 v1, off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;

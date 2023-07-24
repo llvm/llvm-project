@@ -5234,7 +5234,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
   // Is accessible from all the threads within the grid and from the host
   // through the runtime library (cudaGetSymbolAddress() / cudaGetSymbolSize()
   // / cudaMemcpyToSymbol() / cudaMemcpyFromSymbol())."
-  if (GV && LangOpts.CUDA) {
+  if (LangOpts.CUDA) {
     if (LangOpts.CUDAIsDevice) {
       if (Linkage != llvm::GlobalValue::InternalLinkage &&
           (D->hasAttr<CUDADeviceAttr>() || D->hasAttr<CUDAConstantAttr>() ||
@@ -7155,7 +7155,7 @@ llvm::Constant *CodeGenModule::GetAddrOfRTTIDescriptor(QualType Ty,
   if ((!ForEH && !getLangOpts().RTTI) || getLangOpts().CUDAIsDevice ||
       (getLangOpts().OpenMP && getLangOpts().OpenMPIsTargetDevice &&
        getTriple().isNVPTX()))
-    return llvm::Constant::getNullValue(Int8PtrTy);
+    return llvm::Constant::getNullValue(GlobalsInt8PtrTy);
 
   if (ForEH && Ty->isObjCObjectPointerType() &&
       LangOpts.ObjCRuntime.isGNUFamily())

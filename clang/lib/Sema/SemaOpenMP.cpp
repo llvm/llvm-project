@@ -19169,6 +19169,8 @@ static bool actOnOMPReductionKindClause(
   // operators: +, -, *, &, |, ^, && and ||
   switch (OOK) {
   case OO_Plus:
+    BOK = BO_Add;
+    break;
   case OO_Minus:
     // Minus(-) operator is not supported in TR11 (OpenMP 6.0). Setting BOK to
     // BO_Comma will automatically diagnose it for OpenMP > 52 as not allowed
@@ -19418,9 +19420,14 @@ static bool actOnOMPReductionKindClause(
     }
     if (BOK == BO_Comma && DeclareReductionRef.isUnset()) {
       // Not allowed reduction identifier is found.
-      S.Diag(ReductionId.getBeginLoc(),
-             diag::err_omp_unknown_reduction_identifier)
-          << Type << ReductionIdRange;
+      if (S.LangOpts.OpenMP > 52)
+        S.Diag(ReductionId.getBeginLoc(),
+               diag::err_omp_unknown_reduction_identifier_since_omp_6_0)
+            << Type << ReductionIdRange;
+      else
+        S.Diag(ReductionId.getBeginLoc(),
+               diag::err_omp_unknown_reduction_identifier_prior_omp_6_0)
+            << Type << ReductionIdRange;
       continue;
     }
 

@@ -22,6 +22,7 @@ define amdgpu_kernel void @global_load_tr_b64(ptr addrspace(1) %addr, ptr addrsp
 ; GFX12-SDAG-W64-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-W64-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-W64-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX12-SDAG-W64-NEXT:    s_nop 0
 ; GFX12-SDAG-W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-W64-NEXT:    s_endpgm
 ;
@@ -40,6 +41,7 @@ define amdgpu_kernel void @global_load_tr_b64(ptr addrspace(1) %addr, ptr addrsp
 ; GFX12-GISEL-W64-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-W64-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-GISEL-W64-NEXT:    global_store_b32 v0, v1, s[2:3]
+; GFX12-GISEL-W64-NEXT:    s_nop 0
 ; GFX12-GISEL-W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-W64-NEXT:    s_endpgm
 entry:
@@ -65,6 +67,7 @@ define amdgpu_kernel void @global_load_tr_b128_i16(ptr addrspace(1) %addr, ptr a
 ; GFX12-SDAG-W64-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-W64-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-W64-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX12-SDAG-W64-NEXT:    s_nop 0
 ; GFX12-SDAG-W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-W64-NEXT:    s_endpgm
 ;
@@ -83,6 +86,7 @@ define amdgpu_kernel void @global_load_tr_b128_i16(ptr addrspace(1) %addr, ptr a
 ; GFX12-GISEL-W64-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-W64-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-GISEL-W64-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX12-GISEL-W64-NEXT:    s_nop 0
 ; GFX12-GISEL-W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-W64-NEXT:    s_endpgm
 entry:
@@ -108,6 +112,7 @@ define amdgpu_kernel void @global_load_tr_b128_half(ptr addrspace(1) %addr, ptr 
 ; GFX12-SDAG-W64-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-SDAG-W64-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-SDAG-W64-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX12-SDAG-W64-NEXT:    s_nop 0
 ; GFX12-SDAG-W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-SDAG-W64-NEXT:    s_endpgm
 ;
@@ -126,6 +131,7 @@ define amdgpu_kernel void @global_load_tr_b128_half(ptr addrspace(1) %addr, ptr 
 ; GFX12-GISEL-W64-NEXT:    s_wait_loadcnt_dscnt 0x0
 ; GFX12-GISEL-W64-NEXT:    global_inv scope:SCOPE_SYS
 ; GFX12-GISEL-W64-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
+; GFX12-GISEL-W64-NEXT:    s_nop 0
 ; GFX12-GISEL-W64-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-GISEL-W64-NEXT:    s_endpgm
 entry:

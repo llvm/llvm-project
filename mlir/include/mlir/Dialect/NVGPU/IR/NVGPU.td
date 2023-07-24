@@ -23,6 +23,7 @@
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/IR/AttrTypeBase.td"
 include "mlir/IR/OpBase.td"
+include "mlir/IR/EnumAttr.td"
 
 def NVGPU_Dialect : Dialect {
   let name = "nvgpu";
@@ -62,6 +63,58 @@ def NVGPU_Dialect : Dialect {
 }
 
 //===----------------------------------------------------------------------===//
+// NVGPU Attribute Definitions
+//===----------------------------------------------------------------------===//
+
+def TensorMapSwizzleNone : I32EnumAttrCase<"SWIZZLE_NONE", 0, "none">;
+def TensorMapSwizzle32B  : I32EnumAttrCase<"SWIZZLE_32B", 1, "swizzle_32b">;
+def TensorMapSwizzle64B  : I32EnumAttrCase<"SWIZZLE_64B", 2, "swizzle_64b">;
+def TensorMapSwizzle128B : I32EnumAttrCase<"SWIZZLE_128B", 3, "swizzle_128b">;
+def TensorMapSwizzleKind : I32EnumAttr<"TensorMapSwizzleKind", 
+                                "Tensor map swizzling mode of shared memory banks",
+  [ TensorMapSwizzleNone, TensorMapSwizzle32B, TensorMapSwizzle64B, 
+    TensorMapSwizzle128B]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::nvgpu";
+}
+
+def TensorMapL2PromoNone : I32EnumAttrCase<"L2PROMO_NONE", 0, "none">;
+def TensorMapL2Promo64B  : I32EnumAttrCase<"L2PROMO_64B", 1, "l2promo_64b">;
+def TensorMapL2Promo128B : I32EnumAttrCase<"L2PROMO_128B", 2, "l2promo_128b">;
+def TensorMapL2Promo256B : I32EnumAttrCase<"L2PROMO_256B", 3, "l2promo_256b">;
+def TensorMapL2PromoKind : I32EnumAttr<"TensorMapL2PromoKind", 
+                                "Tensor map L2 promotion type",
+  [ TensorMapL2PromoNone, TensorMapL2Promo64B, TensorMapL2Promo128B, 
+    TensorMapL2Promo256B]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::nvgpu";
+}
+
+def TensorMapOOBZero : I32EnumAttrCase<"OOB_ZERO", 0, "zero">;
+def TensorMapOOBNaN  : I32EnumAttrCase<"OOB_NAN", 1, "nan">;
+def TensorMapOOBKind : I32EnumAttr<"TensorMapOOBKind", 
+                                "Tensor map out-of-bounds fill type",
+  [ TensorMapOOBZero, TensorMapOOBNaN]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::nvgpu";
+}
+
+def TensorMapInterleaveNone : I32EnumAttrCase<"INTERLEAVE_NONE", 0, "none">;
+def TensorMapInterleave16B  : I32EnumAttrCase<"INTERLEAVE_16B", 1, "interleave_16b">;
+def TensorMapInterleave32B  : I32EnumAttrCase<"INTERLEAVE_32B", 2, "interleave_32b">;
+def TensorMapInterleaveKind : I32EnumAttr<"TensorMapInterleaveKind", 
+                                "Tensor map interleave layout type",
+  [ TensorMapInterleaveNone, TensorMapInterleave16B, TensorMapInterleave32B]> {
+  let genSpecializedAttr = 0;
+  let cppNamespace = "::mlir::nvgpu";
+}
+
+def TensorMapSwizzleAttr : EnumAttr<NVGPU_Dialect, TensorMapSwizzleKind, "swizzle">;
+def TensorMapL2PromoAttr : EnumAttr<NVGPU_Dialect, TensorMapL2PromoKind, "l2promo">;
+def TensorMapOOBAttr : EnumAttr<NVGPU_Dialect, TensorMapOOBKind, "oob">;
+def TensorMapInterleaveAttr : EnumAttr<NVGPU_Dialect, TensorMapInterleaveKind, "interleave">;
+
+//===----------------------------------------------------------------------===//
 // NVGPU Type Definitions
 //===----------------------------------------------------------------------===//
 
@@ -99,6 +152,21 @@ def NVGPU_MBarrier : NVGPU_Type<"MBarrier", "mbarrier.barrier", []> {
 }
 
 def NVGPU_MBarrierToken : NVGPU_Type<"MBarrierToken", "mbarrier.token", []> { }
+
+// https://docs.nvidia.com/cuda/parallel-thread-execution/#tensor-map
+def NVGPU_TensorMapDescriptor : NVGPU_Type<"TensorMapDescriptor", "tensormap.descriptor", []> {
+  let summary = "TensorMap descriptor";
+  let parameters = (ins "MemRefType":$tensor,
+                        EnumParameter<TensorMapSwizzleKind>:$swizzle,
+                        EnumParameter<TensorMapL2PromoKind>:$l2promo,
+                        EnumParameter<TensorMapOOBKind>:$oob,
+                        EnumParameter<TensorMapInterleaveKind>:$interleave);
+  let description = [{
+    `nvgpu.tma.descriptor` is a type that represents a TMA descriptor. It is 
+    128-byte object either in constant space or kernel paramater.    
+  }];
+  let assemblyFormat = "`<` struct(params) `>`";
+}
 
 //===----------------------------------------------------------------------===//
 // NVGPU Op Definitions
@@ -467,6 +535,93 @@ def NVGPU_MBarrierArriveNoCompleteOp : NVGPU_Op<"mbarrier.arrive.nocomplete", []
                        Index:$count);
   let results = (outs NVGPU_MBarrierToken:$token);
   let assemblyFormat = "$barrier `,` $count attr-dict `:` type($barrier) `->` type($token)";
+}
+
+def NVGPU_MBarrierArriveExpectTxOp : NVGPU_Op<"mbarrier.arrive.expect_tx", []> {
+  let summary = "Performs expect_tx operation on the `nvgpu.mbarrier.arrive`";
+  let description = [{
+    A thread executing the Op performs an expect-tx operation on the mbarrier 
+    object at the location specified by the address operand $barrier. The 
+    expect-tx operation, with an $txcount argument, increases the tx-count of 
+    an mbarrier object by the value specified by $txcount. This makes the 
+    current phase of the mbarrier object to expect and track the completion of 
+    additional asynchronous transactions.
+    
+    The `$txCount` specifies the number of element to the expect-tx operation.
+
+    Example:
+    ```mlir
+      nvgpu.mbarrier.arrive.expect_tx %barrier, %ic0 : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+    ```
+  }];
+  let arguments = (ins NVGPU_MBarrier:$barrier,
+                       Index:$txcount);  
+  let assemblyFormat = "$barrier `,` $txcount  attr-dict `:` type($barrier)";
+}
+
+def NVGPU_MBarrierTryWaitParityOp : NVGPU_Op<"mbarrier.try_wait.parity", []> {
+  let summary = "Waits for the `nvgpu.mbarrier` to complete its current phase.";
+  let description = [{
+    Checks whether the mbarrier object has completed the phase. It is is a 
+    potentially blocking instruction which tests for the completion of the 
+    phase. Suspended thread resumes execution when the specified phase completes 
+    OR before the phase completes following a system-dependent time limit. 
+
+    Example:
+    ```mlir
+      nvgpu.mbarrier.try_wait.parity %barrier, %phase, %ticks : !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+    ```
+
+  }];
+  let arguments = (ins NVGPU_MBarrier:$barrier, Index:$phase, Index:$ticks);
+  let assemblyFormat = "$barrier `,` $phase `,` $ticks attr-dict `:` type($barrier)";  
+}
+
+def NVGPU_TmaAsyncLoadOp : NVGPU_Op<"tma.async.load", []> {
+  let summary = "TMA asynchronous load";
+  let description = [{
+    The Op loads a tile memory region from global memory to shared memory by 
+    Tensor Memory Access (TMA).
+    
+    `$tensorMapDescriptor` is tensor map descriptor which has information about
+    tile shape. The descriptor is created by `nvgpu.tma.create.descriptor`
+
+    The Op uses `$barrier` mbarrier based completion mechanism. 
+  }];  
+  let arguments = (ins Arg<AnyMemRef, "", [MemWrite]>:$dst,
+                       NVGPU_MBarrier:$barrier,
+                       NVGPU_TensorMapDescriptor:$tensorMapDescriptor,
+                       Variadic<Index>:$coordinates);
+  let assemblyFormat = [{
+    $tensorMapDescriptor `[` $coordinates `]` `,` $barrier `to` $dst
+      attr-dict `:` type($tensorMapDescriptor) `,` type($barrier) `->` type($dst)
+  }];
+  let hasVerifier = 1;
+
+}
+
+def NVGPU_TmaCreateDescriptorOp : NVGPU_Op<"tma.create.descriptor", []> {
+  let summary = "TMA create descriptor";
+  let description = [{
+    The Op creates a tensor map descriptor object representing tiled memory 
+    region. To do that it calls CUDA Driver's `cuTensorMapEncodeTiled`. The 
+    descriptor is used by Tensor Memory Access (TMA).
+
+    The `tensor` is the source tensor to be tiled. 
+
+    The `boxDimensions` is the size of the tiled memory region in each dimension.
+
+    For more information see below:
+    https://docs.nvidia.com/cuda/cuda-driver-api/group__CUDA__TENSOR__MEMORY.html
+  }];
+
+  let arguments = (ins AnyUnrankedMemRef:$tensor,
+                       Variadic<Index>:$boxDimensions);
+  let results = (outs NVGPU_TensorMapDescriptor:$tensorMap);
+  let assemblyFormat = [{
+         $tensor `box` `[` $boxDimensions `]` attr-dict `:` type($tensor) `->` type($tensorMap)
+  }];
+  let hasVerifier = 1;
 }
 
 #endif // NVGPU

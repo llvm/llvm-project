@@ -11,6 +11,7 @@ define amdgpu_cs void @constant_false_inverse_ballot(ptr addrspace(1) %out) {
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -28,6 +29,7 @@ define amdgpu_cs void @constant_true_inverse_ballot(ptr addrspace(1) %out) {
 ; GFX11-NEXT:    s_mov_b32 s0, -1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -43,6 +45,7 @@ define amdgpu_cs void @constant_mask_inverse_ballot(ptr addrspace(1) %out) {
 ; GFX11-NEXT:    s_movk_i32 s0, 0x1000
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -60,6 +63,7 @@ define amdgpu_cs void @vgpr_inverse_ballot(i32 %input, ptr addrspace(1) %out) {
 ; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11-NEXT:    global_store_b32 v[1:2], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -74,6 +78,7 @@ define amdgpu_cs void @sgpr_inverse_ballot(i32 inreg %input, ptr addrspace(1) %o
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -94,6 +99,7 @@ define amdgpu_cs void @phi_uniform(i32 inreg %s0_1, i32 inreg %s2, ptr addrspace
 ; GFX11-NEXT:  .LBB5_2: ; %endif
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, 0, 1, s0
 ; GFX11-NEXT:    global_store_b32 v[0:1], v2, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 entry:
@@ -128,6 +134,7 @@ define amdgpu_cs void @inverse_ballot_branch(i32 inreg %s0_1, i32 inreg %s2, ptr
 ; GISEL-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; GISEL-NEXT:    v_mov_b32_e32 v2, s0
 ; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GISEL-NEXT:    s_nop 0
 ; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GISEL-NEXT:    s_endpgm
 ;
@@ -142,6 +149,7 @@ define amdgpu_cs void @inverse_ballot_branch(i32 inreg %s0_1, i32 inreg %s2, ptr
 ; SDAG-NEXT:  ; %bb.2: ; %endif
 ; SDAG-NEXT:    s_or_b32 exec_lo, exec_lo, s1
 ; SDAG-NEXT:    global_store_b32 v[0:1], v2, off
+; SDAG-NEXT:    s_nop 0
 ; SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; SDAG-NEXT:    s_endpgm
 entry:

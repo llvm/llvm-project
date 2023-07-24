@@ -227,21 +227,9 @@ static Value *convertStrToInt(CallInst *CI, StringRef &Str, Value *EndPtr,
   return ConstantInt::get(RetTy, Result);
 }
 
-static bool isOnlyUsedInComparisonWithZero(Value *V) {
-  for (User *U : V->users()) {
-    if (ICmpInst *IC = dyn_cast<ICmpInst>(U))
-      if (Constant *C = dyn_cast<Constant>(IC->getOperand(1)))
-        if (C->isNullValue())
-          continue;
-    // Unknown instruction.
-    return false;
-  }
-  return true;
-}
-
 static bool canTransformToMemCmp(CallInst *CI, Value *Str, uint64_t Len,
                                  const DataLayout &DL) {
-  if (!isOnlyUsedInComparisonWithZero(CI))
+  if (!isOnlyUsedInZeroComparison(CI))
     return false;
 
   if (!isDereferenceableAndAlignedPointer(Str, Align(1), APInt(64, Len), DL))

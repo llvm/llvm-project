@@ -108,6 +108,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX11-WGP-NEXT:    scratch_load_b32 v0, off, s2 glc dlc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-WGP-NEXT:    s_nop 0
 ; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -121,6 +122,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX11-CU-NEXT:    scratch_load_b32 v0, off, s2 glc dlc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-CU-NEXT:    s_nop 0
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
 ;
@@ -136,6 +138,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-WGP-NEXT:    s_nop 0
 ; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
@@ -151,6 +154,7 @@ define amdgpu_kernel void @private_volatile_load_0(
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-CU-NEXT:    s_nop 0
 ; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(5) %in, ptr addrspace(1) %out) {
@@ -263,6 +267,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX11-WGP-NEXT:    scratch_load_b32 v0, v0, off glc dlc
 ; GFX11-WGP-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-WGP-NEXT:    s_nop 0
 ; GFX11-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-WGP-NEXT:    s_endpgm
 ;
@@ -277,6 +282,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX11-CU-NEXT:    scratch_load_b32 v0, v0, off glc dlc
 ; GFX11-CU-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX11-CU-NEXT:    s_nop 0
 ; GFX11-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-CU-NEXT:    s_endpgm
 ;
@@ -291,6 +297,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX12-WGP-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-WGP-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-WGP-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-WGP-NEXT:    s_nop 0
 ; GFX12-WGP-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-WGP-NEXT:    s_endpgm
 ;
@@ -305,6 +312,7 @@ define amdgpu_kernel void @private_volatile_load_1(
 ; GFX12-CU-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-CU-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-CU-NEXT:    global_store_b32 v1, v0, s[0:1]
+; GFX12-CU-NEXT:    s_nop 0
 ; GFX12-CU-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-CU-NEXT:    s_endpgm
     ptr addrspace(5) %in, ptr addrspace(1) %out) {

@@ -135,6 +135,11 @@ static llvm::cl::opt<bool>
                        llvm::cl::desc("enable openmp device compilation"),
                        llvm::cl::init(false));
 
+static llvm::cl::opt<bool>
+    enableOpenMPGPU("fopenmp-is-gpu",
+                    llvm::cl::desc("enable openmp GPU target codegen"),
+                    llvm::cl::init(false));
+
 // A simplified subset of the OpenMP RTL Flags from Flang, only the primary
 // positive options are available, no negative options e.g. fopen_assume* vs
 // fno_open_assume*
@@ -288,10 +293,16 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
-    auto offloadModuleOpts = OffloadModuleOpts(
-        setOpenMPTargetDebug, setOpenMPTeamSubscription,
-        setOpenMPThreadSubscription, setOpenMPNoThreadState,
-        setOpenMPNoNestedParallelism, enableOpenMPDevice, setOpenMPVersion);
+    if (enableOpenMPGPU && !enableOpenMPDevice) {
+      llvm::errs() << "FATAL: -fopenmp-is-gpu can only be set if "
+                      "-fopenmp-is-target-device is also set";
+      return mlir::failure();
+    }
+    auto offloadModuleOpts =
+        OffloadModuleOpts(setOpenMPTargetDebug, setOpenMPTeamSubscription,
+                          setOpenMPThreadSubscription, setOpenMPNoThreadState,
+                          setOpenMPNoNestedParallelism, enableOpenMPDevice,
+                          enableOpenMPGPU, setOpenMPVersion);
     setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
     setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
   }

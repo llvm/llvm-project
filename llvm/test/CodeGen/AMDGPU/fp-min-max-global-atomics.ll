@@ -16,6 +16,7 @@ define amdgpu_cs void @global_atomic_fmin_f32_noret(ptr addrspace(1) %ptr, float
 ; GFX11-LABEL: global_atomic_fmin_f32_noret:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_min_f32 v[0:1], v2, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ret = call float @llvm.amdgcn.global.atomic.fmin.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
@@ -31,6 +32,7 @@ define amdgpu_cs void @global_atomic_fmax_f32_noret(ptr addrspace(1) %ptr, float
 ; GFX11-LABEL: global_atomic_fmax_f32_noret:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    global_atomic_max_f32 v[0:1], v2, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ret = call float @llvm.amdgcn.global.atomic.fmax.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
@@ -50,6 +52,7 @@ define amdgpu_cs void @global_atomic_fmax_f32_rtn(ptr addrspace(1) %ptr, float %
 ; GFX11-NEXT:    global_atomic_max_f32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ret = call float @llvm.amdgcn.global.atomic.fmax.f32.p1.f32(ptr addrspace(1) %ptr, float %data)
@@ -70,6 +73,7 @@ define amdgpu_cs void @global_atomic_fmin_f32_rtn(ptr addrspace(1) %ptr, float %
 ; GFX11-NEXT:    global_atomic_min_f32 v0, v[0:1], v2, off glc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    global_store_b32 v[3:4], v0, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ret = call float @llvm.amdgcn.global.atomic.fmin.f32.p1.f32(ptr addrspace(1) %ptr, float %data)

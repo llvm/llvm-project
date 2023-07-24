@@ -685,4 +685,149 @@ def LLVM_AccessGroupArrayAttr
   let constBuilderCall = ?;
 }
 
+//===----------------------------------------------------------------------===//
+// TBAARootAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TBAARootAttr : LLVM_Attr<"TBAARoot", "tbaa_root", [], "TBAANodeAttr"> {
+  let parameters = (ins OptionalParameter<"StringAttr">:$id);
+
+  let summary = "LLVM dialect TBAA root metadata";
+  let description = [{
+    Defines a TBAA root node.
+
+    Example:
+    ```mlir
+    #cpp_root = #llvm.tbaa_root<identity = "Simple C/C++ TBAA">
+    #other_root = #llvm.tbaa_root
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#tbaa-metadata
+  }];
+
+  let assemblyFormat = "(`<` struct(params)^ `>`)?";
+}
+
+//===----------------------------------------------------------------------===//
+// TBAATypeDescriptorAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TBAAMemberAttr : LLVM_Attr<"TBAAMember", "tbaa_member"> {
+  let parameters = (ins
+    "TBAANodeAttr":$typeDesc,
+    "int64_t":$offset
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "TBAANodeAttr":$typeDesc,
+                                        "int64_t":$offset), [{
+      return $_get(typeDesc.getContext(), typeDesc, offset);
+    }]>
+  ];
+
+  let assemblyFormat = "`<` params `>`";
+}
+
+def LLVM_TBAAMemberAttrArray : ArrayRefParameter<"TBAAMemberAttr"> {
+  let printer = [{
+    $_printer << '{';
+    llvm::interleaveComma($_self, $_printer, [&](TBAAMemberAttr attr) {
+        $_printer.printStrippedAttrOrType(attr);
+    });
+    $_printer << '}';
+  }];
+
+  let parser = [{
+    [&]() -> FailureOr<SmallVector<TBAAMemberAttr>> {
+        using Result = SmallVector<TBAAMemberAttr>;
+        if ($_parser.parseLBrace())
+            return failure();
+        FailureOr<Result> result = FieldParser<Result>::parse($_parser);
+        if (failed(result))
+            return failure();
+        if ($_parser.parseRBrace())
+            return failure();
+        return result;
+    }()
+  }];
+}
+
+def LLVM_TBAATypeDescriptorAttr : LLVM_Attr<"TBAATypeDescriptor",
+    "tbaa_type_desc", [], "TBAANodeAttr"> {
+  let parameters = (ins
+    StringRefParameter<>:$id,
+    LLVM_TBAAMemberAttrArray:$members
+  );
+
+  let summary = "LLVM dialect TBAA type metadata";
+
+  let description = [{
+    Defines a TBAA node describing a type.
+
+    Example:
+    ```mlir
+    #tbaa_root = #llvm.tbaa_root<identity = "Simple C/C++ TBAA">
+    #tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+    #tbaa_type_desc2 = #llvm.tbaa_type_desc<id = "long long", members = {<#tbaa_root, 0>}>
+    #tbaa_type_desc3 = #llvm.tbaa_type_desc<id = "agg2_t", members = {<#tbaa_type_desc2, 0>, <#tbaa_type_desc2, 8>}>
+    #tbaa_type_desc4 = #llvm.tbaa_type_desc<id = "int", members = {<#tbaa_type_desc1, 0>}>
+    #tbaa_type_desc5 = #llvm.tbaa_type_desc<id = "agg1_t", members = {<#tbaa_type_desc4, 0>, <#tbaa_type_desc4, 4>}>
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#tbaa-metadata
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
+// TBAATagAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_TBAATagAttr : LLVM_Attr<"TBAATag", "tbaa_tag"> {
+  let parameters = (ins
+    "TBAATypeDescriptorAttr":$base_type,
+    "TBAATypeDescriptorAttr":$access_type,
+    "int64_t":$offset,
+    DefaultValuedParameter<"bool", "false">:$constant
+  );
+
+  let builders = [
+    AttrBuilderWithInferredContext<(ins "TBAATypeDescriptorAttr":$baseType,
+                                        "TBAATypeDescriptorAttr":$accessType,
+                                        "int64_t":$offset), [{
+      return $_get(baseType.getContext(), baseType, accessType, offset,
+                    /*constant=*/false);
+    }]>
+  ];
+
+  let summary = "LLVM dialect TBAA tag metadata";
+
+  let description = [{
+    Defines a TBAA node describing a memory access.
+
+    Example:
+    ```mlir
+    #tbaa_root = #llvm.tbaa_root<identity = "Simple C/C++ TBAA">
+    #tbaa_type_desc1 = #llvm.tbaa_type_desc<id = "omnipotent char", members = {<#tbaa_root, 0>}>
+    #tbaa_type_desc2 = #llvm.tbaa_type_desc<id = "int", members = {<#tbaa_type_desc1, 0>}>
+    #tbaa_type_desc3 = #llvm.tbaa_type_desc<id = "agg1_t", members = {<#tbaa_type_desc4, 0>, <#tbaa_type_desc4, 4>}>
+    #tbaa_tag = #llvm.tbaa_tag<base_type = #tbaa_type_desc3, access_type = #tbaa_type_desc2, offset = 0, constant = true>
+    ```
+
+    See the following link for more details:
+    https://llvm.org/docs/LangRef.html#tbaa-metadata
+  }];
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+def LLVM_TBAATagArrayAttr
+    : TypedArrayAttrBase<LLVM_TBAATagAttr,
+                         LLVM_TBAATagAttr.summary # " array"> {
+  let constBuilderCall = ?;
+}
+
 #endif // LLVMIR_ATTRDEFS

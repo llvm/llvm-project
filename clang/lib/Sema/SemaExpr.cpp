@@ -10926,11 +10926,9 @@ static bool tryGCCVectorConvertAndSplat(Sema &S, ExprResult *Scalar,
     return true;
 
   // Adjust scalar if desired.
-  if (Scalar) {
-    if (ScalarCast != CK_NoOp)
-      *Scalar = S.ImpCastExprToType(Scalar->get(), VectorEltTy, ScalarCast);
-    *Scalar = S.ImpCastExprToType(Scalar->get(), VectorTy, CK_VectorSplat);
-  }
+  if (ScalarCast != CK_NoOp)
+    *Scalar = S.ImpCastExprToType(Scalar->get(), VectorEltTy, ScalarCast);
+  *Scalar = S.ImpCastExprToType(Scalar->get(), VectorTy, CK_VectorSplat);
   return false;
 }
 

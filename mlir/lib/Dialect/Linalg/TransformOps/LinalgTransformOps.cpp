@@ -156,12 +156,16 @@ void transform::ApplyEraseUnnecessaryInputsPatternsOp::populatePatterns(
 
 void transform::ApplyFoldUnitExtentDimsViaReshapesPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  linalg::populateFoldUnitExtentDimsViaReshapesPatterns(patterns);
+  linalg::ControlDropUnitDims options;
+  linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
 }
 
 void transform::ApplyFoldUnitExtentDimsViaSlicesPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
-  linalg::populateFoldUnitExtentDimsViaSlicesPatterns(patterns);
+  linalg::ControlDropUnitDims options;
+  options.rankReductionStrategy =
+      linalg::ControlDropUnitDims::RankReductionStrategy::ExtractInsertSlice;
+  linalg::populateFoldUnitExtentDimsPatterns(patterns, options);
 }
 
 void transform::ApplyTilingCanonicalizationPatternsOp::populatePatterns(
@@ -915,8 +919,10 @@ transform::FuseIntoContainingOp::apply(transform::TransformRewriter &rewriter,
   while (!remainingProducers.empty()) {
     auto nextProducer = getNextProducer();
     if (failed(nextProducer)) {
-      return mlir::emitSilenceableFailure(containingOp->getLoc())
+      auto diag = mlir::emitSilenceableFailure(getLoc())
              << "could not find next producer to fuse into container";
+      diag.attachNote(containingOp->getLoc()) << "containing op";
+      return diag;
     }
 
     Operation *producerOp = *nextProducer;

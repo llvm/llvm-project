@@ -8,7 +8,7 @@
 
 // <iostream>
 
-// istream wcerr;
+// wostream wcerr;
 
 // XFAIL: no-wide-characters
 

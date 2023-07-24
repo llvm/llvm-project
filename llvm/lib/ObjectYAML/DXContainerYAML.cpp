@@ -127,6 +127,7 @@ void MappingTraits<DXContainerYAML::PSVInfo>::mapping(
   IO.mapRequired("ShaderStage", PSV.Info.ShaderStage);
   PSV.mapInfoForVersion(IO);
 
+  IO.mapRequired("ResourceStride", PSV.ResourceStride);
   IO.mapRequired("Resources", PSV.Resources);
 
   // Restore the YAML context.

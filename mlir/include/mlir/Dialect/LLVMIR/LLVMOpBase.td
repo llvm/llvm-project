@@ -281,7 +281,7 @@ class LLVM_MemAccessOpBase<string mnemonic, list<Trait> traits = []> :
   dag aliasAttrs = (ins OptionalAttr<LLVM_AccessGroupArrayAttr>:$access_groups,
                     OptionalAttr<LLVM_AliasScopeArrayAttr>:$alias_scopes,
                     OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes,
-                    OptionalAttr<SymbolRefArrayAttr>:$tbaa);
+                    OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa);
 }
 
 // Base class for LLVM intrinsics operation. It is similar to LLVM_Op, but
@@ -326,7 +326,7 @@ class LLVM_IntrOpBase<Dialect dialect, string opName, string enumName,
         !if(!gt(requiresAliasAnalysis, 0),
             (ins OptionalAttr<LLVM_AliasScopeArrayAttr>:$alias_scopes,
                  OptionalAttr<LLVM_AliasScopeArrayAttr>:$noalias_scopes,
-                 OptionalAttr<SymbolRefArrayAttr>:$tbaa),
+                 OptionalAttr<LLVM_TBAATagArrayAttr>:$tbaa),
             (ins )));
   string resultPattern = !if(!gt(numResults, 1),
                              LLVM_IntrPatterns.structResult,

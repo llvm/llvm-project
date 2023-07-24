@@ -1016,14 +1016,17 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
       return nullptr;
     }
 
-    if (!isTokenStringLiteral()) {
+    if (isTokenStringLiteral())
+      AssertMessage = ParseUnevaluatedStringLiteralExpression();
+    else if (getLangOpts().CPlusPlus26)
+      AssertMessage = ParseConstantExpressionInExprEvalContext();
+    else {
       Diag(Tok, diag::err_expected_string_literal)
           << /*Source='static_assert'*/ 1;
       SkipMalformedDecl();
       return nullptr;
     }
 
-    AssertMessage = ParseUnevaluatedStringLiteralExpression();
     if (AssertMessage.isInvalid()) {
       SkipMalformedDecl();
       return nullptr;

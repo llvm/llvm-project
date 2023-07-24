@@ -25,6 +25,9 @@ enum class VecOp {
   Cmpgt,
   Cmple,
   Cmplt,
+  Convert,
+  Ctf,
+  Cvf,
   Mul,
   Sl,
   Sld,
@@ -111,6 +114,10 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
   template <VecOp>
   fir::ExtendedValue genVecCmp(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
+  fir::ExtendedValue genVecConvert(mlir::Type resultType,
+                                   llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
   fir::ExtendedValue genVecAnyCompare(mlir::Type resultType,

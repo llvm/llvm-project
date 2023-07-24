@@ -26,6 +26,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Set up argument indices.
   unsigned ParamOffset = 0;
   SmallVector<PrimType, 8> ParamTypes;
+  SmallVector<unsigned, 8> ParamOffsets;
   llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
 
   // If the return is not a primitive, a pointer to the storage where the
@@ -36,6 +37,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (!Ty->isVoidType() && !Ctx.classify(Ty)) {
     HasRVO = true;
     ParamTypes.push_back(PT_Ptr);
+    ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT_Ptr));
   }
 
@@ -47,6 +49,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
     if (MD->isInstance()) {
       HasThisPointer = true;
       ParamTypes.push_back(PT_Ptr);
+      ParamOffsets.push_back(ParamOffset);
       ParamOffset += align(primSize(PT_Ptr));
     }
 
@@ -75,6 +78,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
     Descriptor *Desc = P.createDescriptor(PD, Ty);
     ParamDescriptors.insert({ParamOffset, {Ty, Desc}});
     Params.insert({PD, ParamOffset});
+    ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(Ty));
     ParamTypes.push_back(Ty);
   }
@@ -82,9 +86,9 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
   if (!Func)
-    Func =
-        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                         std::move(ParamDescriptors), HasThisPointer, HasRVO);
+    Func = P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                            std::move(ParamDescriptors),
+                            std::move(ParamOffsets), HasThisPointer, HasRVO);
 
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and

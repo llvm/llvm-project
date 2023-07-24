@@ -27,7 +27,7 @@ class StringPoolEntryInfo {
 public:
   /// \returns Hash value for the specified \p Key.
   static inline uint64_t getHashValue(const StringRef &Key) {
-    return xxHash64(Key);
+    return xxh3_64bits(Key);
   }
 
   /// \returns true if both \p LHS and \p RHS are equal.

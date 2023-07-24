@@ -400,25 +400,25 @@ def SEXT_H : RVBUnary<0b0110000, 0b00101, 0b001, OPC_OP_IMM, "sext.h">,
 } // Predicates = [HasStdExtZbb]
 
 let Predicates = [HasStdExtZbc] in {
-def CLMULR : ALU_rr<0b0000101, 0b010, "clmulr", /*Commutable*/1>,
+def CLMULR : ALU_rr<0b0000101, 0b010, "clmulr", Commutable=1>,
              Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
 } // Predicates = [HasStdExtZbc]
 
 let Predicates = [HasStdExtZbcOrZbkc] in {
-def CLMUL  : ALU_rr<0b0000101, 0b001, "clmul", /*Commutable*/1>,
+def CLMUL  : ALU_rr<0b0000101, 0b001, "clmul", Commutable=1>,
              Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
-def CLMULH : ALU_rr<0b0000101, 0b011, "clmulh", /*Commutable*/1>,
+def CLMULH : ALU_rr<0b0000101, 0b011, "clmulh", Commutable=1>,
              Sched<[WriteCLMUL, ReadCLMUL, ReadCLMUL]>;
 } // Predicates = [HasStdExtZbcOrZbkc]
 
 let Predicates = [HasStdExtZbb] in {
-def MIN  : ALU_rr<0b0000101, 0b100, "min", /*Commutable*/1>,
+def MIN  : ALU_rr<0b0000101, 0b100, "min", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def MINU : ALU_rr<0b0000101, 0b101, "minu", /*Commutable*/1>,
+def MINU : ALU_rr<0b0000101, 0b101, "minu", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def MAX  : ALU_rr<0b0000101, 0b110, "max", /*Commutable*/1>,
+def MAX  : ALU_rr<0b0000101, 0b110, "max", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
-def MAXU : ALU_rr<0b0000101, 0b111, "maxu", /*Commutable*/1>,
+def MAXU : ALU_rr<0b0000101, 0b111, "maxu", Commutable=1>,
            Sched<[WriteIALU, ReadIALU, ReadIALU]>;
 } // Predicates = [HasStdExtZbb]
 

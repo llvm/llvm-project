@@ -1,9 +1,10 @@
-! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-FAST"
+! RUN: bbc -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-PRECISE"
 ! RUN: bbc --math-runtime=precise -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
-! RUN: bbc --disable-mlir-complex -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
-! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-FAST"
+! RUN: bbc --force-mlir-complex -emit-fir -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-FAST"
+! RUN: %flang_fc1 -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CHECK,CMPLX-PRECISE"
+! RUN: %flang_fc1 -fapprox-func -emit-fir -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-FAST"
 ! RUN: %flang_fc1 -emit-fir -mllvm --math-runtime=precise -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
-! RUN: %flang_fc1 -emit-fir -mllvm --disable-mlir-complex -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-PRECISE"
+! RUN: %flang_fc1 -emit-fir -mllvm --force-mlir-complex -mllvm -outline-intrinsics %s -o - | FileCheck %s --check-prefixes="CMPLX-FAST"
 
 ! CHECK-LABEL: sqrt_testr
 subroutine sqrt_testr(a, b)

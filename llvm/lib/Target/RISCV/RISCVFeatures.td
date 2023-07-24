@@ -478,7 +478,7 @@ def HasStdExtZvfbfwma : Predicate<"Subtarget->hasStdExtZvfbfwma()">,
                                   "'Zvfbfwma' (Vector BF16 widening mul-add)">;
 
 def FeatureStdExtZvfh
-    : SubtargetFeature<"experimental-zvfh", "HasStdExtZvfh", "true",
+    : SubtargetFeature<"zvfh", "HasStdExtZvfh", "true",
                        "'Zvfh' (Vector Half-Precision Floating-Point)",
                        [FeatureStdExtZve32f, FeatureStdExtZfhmin]>;
 

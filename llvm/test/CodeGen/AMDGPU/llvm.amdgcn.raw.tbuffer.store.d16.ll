@@ -44,6 +44,7 @@ define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data) {
 ; GFX11-PACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-PACKED-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX11-PACKED-NEXT:    s_nop 0
 ; GFX11-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PACKED-NEXT:    s_endpgm
 ;
@@ -55,6 +56,7 @@ define amdgpu_kernel void @tbuffer_store_d16_x(<4 x i32> %rsrc, half %data) {
 ; GFX12-PACKED-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX12-PACKED-NEXT:    tbuffer_store_d16_format_x v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-NEXT:    s_nop 0
 ; GFX12-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-PACKED-NEXT:    s_endpgm
 main_body:
@@ -102,6 +104,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xy(<4 x i32> %rsrc, <2 x half> %dat
 ; GFX11-PACKED-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX11-PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-PACKED-NEXT:    tbuffer_store_d16_format_xy v0, off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX11-PACKED-NEXT:    s_nop 0
 ; GFX11-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PACKED-NEXT:    s_endpgm
 ;
@@ -113,6 +116,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xy(<4 x i32> %rsrc, <2 x half> %dat
 ; GFX12-PACKED-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX12-PACKED-NEXT:    tbuffer_store_d16_format_xy v0, off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-NEXT:    s_nop 0
 ; GFX12-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-PACKED-NEXT:    s_endpgm
 main_body:
@@ -168,6 +172,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX11-PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-PACKED-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX11-PACKED-NEXT:    tbuffer_store_d16_format_xyz v[0:1], off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX11-PACKED-NEXT:    s_nop 0
 ; GFX11-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PACKED-NEXT:    s_endpgm
 ;
@@ -181,6 +186,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX12-PACKED-SDAG-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX12-PACKED-SDAG-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX12-PACKED-SDAG-NEXT:    tbuffer_store_d16_format_xyz v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-SDAG-NEXT:    s_nop 0
 ; GFX12-PACKED-SDAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-PACKED-SDAG-NEXT:    s_endpgm
 ;
@@ -195,6 +201,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyz(<4 x i32> %rsrc, <4 x half> %da
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX12-PACKED-GISEL-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX12-PACKED-GISEL-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-GISEL-NEXT:    s_nop 0
 ; GFX12-PACKED-GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-PACKED-GISEL-NEXT:    s_endpgm
 main_body:
@@ -250,6 +257,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyzw(<4 x i32> %rsrc, <4 x half> %d
 ; GFX11-PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX11-PACKED-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX11-PACKED-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], 0 format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX11-PACKED-NEXT:    s_nop 0
 ; GFX11-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-PACKED-NEXT:    s_endpgm
 ;
@@ -262,6 +270,7 @@ define amdgpu_kernel void @tbuffer_store_d16_xyzw(<4 x i32> %rsrc, <4 x half> %d
 ; GFX12-PACKED-NEXT:    v_mov_b32_e32 v0, s4
 ; GFX12-PACKED-NEXT:    v_mov_b32_e32 v1, s5
 ; GFX12-PACKED-NEXT:    tbuffer_store_d16_format_xyzw v[0:1], off, s[0:3], null format:[BUF_FMT_10_10_10_2_SNORM]
+; GFX12-PACKED-NEXT:    s_nop 0
 ; GFX12-PACKED-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-PACKED-NEXT:    s_endpgm
 main_body:

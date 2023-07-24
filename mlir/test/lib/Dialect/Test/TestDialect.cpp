@@ -26,6 +26,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
+#include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/InferIntRangeInterface.h"
 #include "mlir/Reducer/ReductionPatternInterface.h"
 #include "mlir/Support/LogicalResult.h"
@@ -1437,9 +1438,8 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
   // Create return type consisting of the last element of the first operand.
   auto operandType = operands.front().getType();
   auto sval = dyn_cast<ShapedType>(operandType);
-  if (!sval) {
+  if (!sval)
     return emitOptionalError(location, "only shaped type operands allowed");
-  }
   int64_t dim = sval.hasRank() ? sval.getShape().front() : ShapedType::kDynamic;
   auto type = IntegerType::get(context, 17);
 
@@ -1451,6 +1451,35 @@ LogicalResult OpWithShapedTypeInferTypeInterfaceOp::inferReturnTypeComponents(
 }
 
 LogicalResult OpWithShapedTypeInferTypeInterfaceOp::reifyReturnTypeShapes(
+    OpBuilder &builder, ValueRange operands,
+    llvm::SmallVectorImpl<Value> &shapes) {
+  shapes = SmallVector<Value, 1>{
+      builder.createOrFold<tensor::DimOp>(getLoc(), operands.front(), 0)};
+  return success();
+}
+
+LogicalResult
+OpWithShapedTypeInferTypeAdaptorInterfaceOp::inferReturnTypeComponents(
+    MLIRContext *context, std::optional<Location> location,
+    OpWithShapedTypeInferTypeAdaptorInterfaceOp::Adaptor adaptor,
+    SmallVectorImpl<ShapedTypeComponents> &inferredReturnShapes) {
+  // Create return type consisting of the last element of the first operand.
+  auto operandType = adaptor.getOperand1().getType();
+  auto sval = dyn_cast<ShapedType>(operandType);
+  if (!sval)
+    return emitOptionalError(location, "only shaped type operands allowed");
+  int64_t dim = sval.hasRank() ? sval.getShape().front() : ShapedType::kDynamic;
+  auto type = IntegerType::get(context, 17);
+
+  Attribute encoding;
+  if (auto rankedTy = dyn_cast<RankedTensorType>(sval))
+    encoding = rankedTy.getEncoding();
+  inferredReturnShapes.push_back(ShapedTypeComponents({dim}, type, encoding));
+  return success();
+}
+
+LogicalResult
+OpWithShapedTypeInferTypeAdaptorInterfaceOp::reifyReturnTypeShapes(
     OpBuilder &builder, ValueRange operands,
     llvm::SmallVectorImpl<Value> &shapes) {
   shapes = SmallVector<Value, 1>{
@@ -1984,6 +2013,37 @@ static bool parseSumProperty(OpAsmParser &parser, int64_t &second,
 static void printSumProperty(OpAsmPrinter &printer, Operation *op,
                              int64_t second, int64_t first) {
   printer << second << " = " << (second + first);
+}
+
+//===----------------------------------------------------------------------===//
+// Test Dataflow
+//===----------------------------------------------------------------------===//
+
+CallInterfaceCallable TestCallAndStoreOp::getCallableForCallee() {
+  return getCallee();
+}
+
+void TestCallAndStoreOp::setCalleeFromCallable(CallInterfaceCallable callee) {
+  setCalleeAttr(callee.get<SymbolRefAttr>());
+}
+
+Operation::operand_range TestCallAndStoreOp::getArgOperands() {
+  return getCalleeOperands();
+}
+
+void TestStoreWithARegion::getSuccessorRegions(
+    std::optional<unsigned> index, ArrayRef<Attribute> operands,
+    SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!index) {
+    regions.emplace_back(&getBody(), getBody().front().getArguments());
+  } else {
+    regions.emplace_back();
+  }
+}
+
+MutableOperandRange TestStoreWithARegionTerminator::getMutableSuccessorOperands(
+    std::optional<unsigned> index) {
+  return MutableOperandRange(getOperation());
 }
 
 #include "TestOpEnums.cpp.inc"

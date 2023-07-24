@@ -237,7 +237,7 @@ public:
     return Kind == KindImm;
   }
   bool isImm(int64_t MinValue, int64_t MaxValue) const {
-    return Kind == KindImm && inRange(Imm, MinValue, MaxValue);
+    return Kind == KindImm && inRange(Imm, MinValue, MaxValue, true);
   }
   const MCExpr *getImm() const {
     assert(Kind == KindImm && "Not an immediate");

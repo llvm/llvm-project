@@ -14,7 +14,7 @@
 // these tests will focus on snprintf exclusive features.
 
 TEST(LlvmLibcSNPrintfTest, CutOff) {
-  char buff[64];
+  char buff[100];
   int written;
 
   written =
@@ -25,6 +25,18 @@ TEST(LlvmLibcSNPrintfTest, CutOff) {
   written = __llvm_libc::snprintf(buff, 5, "%s", "1234567890");
   EXPECT_EQ(written, 10);
   ASSERT_STREQ(buff, "1234");
+
+  written = __llvm_libc::snprintf(buff, 67, "%-101c", 'a');
+  EXPECT_EQ(written, 101);
+  ASSERT_STREQ(buff, "a "
+                     "        " // Each of these is 8 spaces, and there are 8.
+                     "        " // In total there are 65 spaces
+                     "        " // 'a' + 65 spaces + '\0' = 67
+                     "        "
+                     "        "
+                     "        "
+                     "        "
+                     "        ");
 
   // passing null as the output pointer is allowed as long as buffsz is 0.
   written = __llvm_libc::snprintf(nullptr, 0, "%s and more", "1234567890");

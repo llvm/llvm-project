@@ -323,8 +323,8 @@ public:
     constexpr _LIBCPP_HIDE_FROM_ABI basic_string_view(_It __begin, _End __end)
        : __data_(_VSTD::to_address(__begin)), __size_(__end - __begin)
     {
-      _LIBCPP_ASSERT_UNCATEGORIZED((__end - __begin) >= 0,
-                                   "std::string_view::string_view(iterator, sentinel) received invalid range");
+      _LIBCPP_ASSERT_VALID_INPUT_RANGE((__end - __begin) >= 0,
+                                       "std::string_view::string_view(iterator, sentinel) received invalid range");
     }
 #endif // _LIBCPP_STD_VER >= 20
 
@@ -405,7 +405,7 @@ public:
     // [string.view.access], element access
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_reference operator[](size_type __pos) const _NOEXCEPT {
-      return _LIBCPP_ASSERT_UNCATEGORIZED(__pos < size(), "string_view[] index out of bounds"), __data_[__pos];
+      return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__pos < size(), "string_view[] index out of bounds"), __data_[__pos];
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
@@ -419,13 +419,14 @@ public:
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_reference front() const _NOEXCEPT
     {
-        return _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string_view::front(): string is empty"), __data_[0];
+        return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string_view::front(): string is empty"), __data_[0];
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
     const_reference back() const _NOEXCEPT
     {
-        return _LIBCPP_ASSERT_UNCATEGORIZED(!empty(), "string_view::back(): string is empty"), __data_[__size_-1];
+        return _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!empty(), "string_view::back(): string is empty"),
+               __data_[__size_ - 1];
     }
 
     _LIBCPP_CONSTEXPR _LIBCPP_INLINE_VISIBILITY
@@ -435,7 +436,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     void remove_prefix(size_type __n) _NOEXCEPT
     {
-        _LIBCPP_ASSERT_UNCATEGORIZED(__n <= size(), "remove_prefix() can't remove more than size()");
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n <= size(), "remove_prefix() can't remove more than size()");
         __data_ += __n;
         __size_ -= __n;
     }
@@ -443,7 +444,7 @@ public:
     _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_INLINE_VISIBILITY
     void remove_suffix(size_type __n) _NOEXCEPT
     {
-        _LIBCPP_ASSERT_UNCATEGORIZED(__n <= size(), "remove_suffix() can't remove more than size()");
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n <= size(), "remove_suffix() can't remove more than size()");
         __size_ -= __n;
     }
 

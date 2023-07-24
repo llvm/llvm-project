@@ -405,7 +405,7 @@ void indirect_function_call(void (*p)(int)) {
   // CalleeTypeHash check
   // CHECK: [[CalleeTypeHashPtr:%.+]] = getelementptr <{ i32, i32 }>, ptr [[PTR]], i32 -1, i32 1
   // CHECK-NEXT: [[CalleeTypeHash:%.+]] = load i32, ptr [[CalleeTypeHashPtr]]
-  // CHECK-NEXT: [[CalleeTypeHashMatch:%.+]] = icmp eq i32 [[CalleeTypeHash]], 27004076
+  // CHECK-NEXT: [[CalleeTypeHashMatch:%.+]] = icmp eq i32 [[CalleeTypeHash]], -1988405058
   // CHECK-NEXT: br i1 [[CalleeTypeHashMatch]]
 
   p(42);
@@ -740,4 +740,4 @@ void ThisAlign::this_align_lambda_2() {
 
 // CHECK: attributes [[NR_NUW]] = { noreturn nounwind }
 
-// CHECK-FUNCSAN: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1302768377}
+// CHECK-FUNCSAN: ![[FUNCSAN]] = !{i32 -1056584962, i32 -1000226989}

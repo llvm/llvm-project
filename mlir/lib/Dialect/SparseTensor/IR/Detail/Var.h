@@ -390,8 +390,9 @@ public:
 // static_assert(IsZeroCostAbstraction<VarInfo>);
 
 //===----------------------------------------------------------------------===//
-enum class CreationPolicy { MustNot, May, Must };
+enum class Policy { MustNot, May, Must };
 
+//===----------------------------------------------------------------------===//
 class VarEnv final {
   /// Map from `VarKind` to the next free `Var::Num`; used by `bindVar`.
   VarKindArray<Var::Num> nextNum;
@@ -423,8 +424,6 @@ public:
     return oid ? &access(*oid) : nullptr;
   }
 
-  Var toVar(VarInfo::ID id) const { return vars[to_underlying(id)].getVar(); }
-
 private:
   VarInfo &access(VarInfo::ID id) {
     return const_cast<VarInfo &>(std::as_const(*this).access(id));
@@ -448,7 +447,7 @@ public:
                                       VarKind vk, bool verifyUsage = false);
 
   /// Attempts to lookup or create a variable according to the given
-  /// `CreationPolicy`.  Returns nullopt in one of two circumstances:
+  /// `Policy`.  Returns nullopt in one of two circumstances:
   /// (1) the policy says we `Must` create, yet the variable already exists;
   /// (2) the policy says we `MustNot` create, yet no such variable exists.
   /// Otherwise, if the variable already exists then it is validated against
@@ -458,7 +457,7 @@ public:
   // TODO(wrengr): Prolly want to rename this to `create` and move the
   // current method of that name to being a private `createImpl`.
   std::optional<std::pair<VarInfo::ID, bool>>
-  lookupOrCreate(CreationPolicy policy, StringRef name, llvm::SMLoc loc,
+  lookupOrCreate(Policy creationPolicy, StringRef name, llvm::SMLoc loc,
                  VarKind vk);
 
   /// Binds the given variable to the next free `Var::Num` for its `VarKind`.
@@ -471,12 +470,20 @@ public:
 
   InFlightDiagnostic emitErrorIfAnyUnbound(AsmParser &parser) const;
 
+  /// Returns the current ranks of bound variables.  This method should
+  /// only be used after the environment is "finished", since binding new
+  /// variables will (semantically) invalidate any previously returned `Ranks`.
   Ranks getRanks() const { return Ranks(nextNum); }
 
-  /// Adds all variables of given kind to the vector.
-  void
-  addVars(SmallVectorImpl<std::pair<StringRef, AffineExpr>> &dimsAndSymbols,
-          VarKind vk, MLIRContext *context) const;
+  /// Gets the `Var` identified by the `VarInfo::ID`, raising an assertion
+  /// failure if the variable is not bound.
+  Var getVar(VarInfo::ID id) const { return access(id).getVar(); }
+
+  /// Gets the `Var` identified by the `VarInfo::ID`, returning nullopt
+  /// if the variable is not bound.
+  std::optional<Var> tryGetVar(VarInfo::ID id) const {
+    return access(id).tryGetVar();
+  }
 };
 
 //===----------------------------------------------------------------------===//

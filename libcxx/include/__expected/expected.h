@@ -526,32 +526,32 @@ public:
 
   // [expected.object.obs], observers
   _LIBCPP_HIDE_FROM_ABI constexpr const _Tp* operator->() const noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__has_val_, "expected::operator-> requires the expected to contain a value");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__has_val_, "expected::operator-> requires the expected to contain a value");
     return std::addressof(__union_.__val_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp* operator->() noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__has_val_, "expected::operator-> requires the expected to contain a value");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__has_val_, "expected::operator-> requires the expected to contain a value");
     return std::addressof(__union_.__val_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _Tp& operator*() const& noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__has_val_, "expected::operator* requires the expected to contain a value");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__has_val_, "expected::operator* requires the expected to contain a value");
     return __union_.__val_;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp& operator*() & noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__has_val_, "expected::operator* requires the expected to contain a value");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__has_val_, "expected::operator* requires the expected to contain a value");
     return __union_.__val_;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _Tp&& operator*() const&& noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__has_val_, "expected::operator* requires the expected to contain a value");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__has_val_, "expected::operator* requires the expected to contain a value");
     return std::move(__union_.__val_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Tp&& operator*() && noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__has_val_, "expected::operator* requires the expected to contain a value");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__has_val_, "expected::operator* requires the expected to contain a value");
     return std::move(__union_.__val_);
   }
 
@@ -594,22 +594,22 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!__has_val_, "expected::error requires the expected to contain an error");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__has_val_, "expected::error requires the expected to contain an error");
     return __union_.__unex_;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!__has_val_, "expected::error requires the expected to contain an error");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__has_val_, "expected::error requires the expected to contain an error");
     return __union_.__unex_;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!__has_val_, "expected::error requires the expected to contain an error");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__has_val_, "expected::error requires the expected to contain an error");
     return std::move(__union_.__unex_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!__has_val_, "expected::error requires the expected to contain an error");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__has_val_, "expected::error requires the expected to contain an error");
     return std::move(__union_.__unex_);
   }
 
@@ -1217,7 +1217,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr bool has_value() const noexcept { return __has_val_; }
 
   _LIBCPP_HIDE_FROM_ABI constexpr void operator*() const noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__has_val_, "expected::operator* requires the expected to contain a value");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__has_val_, "expected::operator* requires the expected to contain a value");
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr void value() const& {
@@ -1233,22 +1233,22 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _Err& error() const& noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!__has_val_, "expected::error requires the expected to contain an error");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__has_val_, "expected::error requires the expected to contain an error");
     return __union_.__unex_;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Err& error() & noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!__has_val_, "expected::error requires the expected to contain an error");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__has_val_, "expected::error requires the expected to contain an error");
     return __union_.__unex_;
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr const _Err&& error() const&& noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!__has_val_, "expected::error requires the expected to contain an error");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__has_val_, "expected::error requires the expected to contain an error");
     return std::move(__union_.__unex_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr _Err&& error() && noexcept {
-    _LIBCPP_ASSERT_UNCATEGORIZED(!__has_val_, "expected::error requires the expected to contain an error");
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(!__has_val_, "expected::error requires the expected to contain an error");
     return std::move(__union_.__unex_);
   }
 

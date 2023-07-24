@@ -245,7 +245,7 @@ public:
 #include "llvm/IR/Instruction.def"
 
   static BinaryOperator *
-  CreateWithCopiedFlags(BinaryOps Opc, Value *V1, Value *V2, Instruction *CopyO,
+  CreateWithCopiedFlags(BinaryOps Opc, Value *V1, Value *V2, Value *CopyO,
                         const Twine &Name = "",
                         Instruction *InsertBefore = nullptr) {
     BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);

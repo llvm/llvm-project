@@ -73,10 +73,6 @@ MATCHER_P(writtenInclusion, Written, "") {
 }
 
 TEST(IncludeCleaner, StdlibUnused) {
-  setIncludeCleanerAnalyzesStdlib(true);
-  auto Cleanup =
-      llvm::make_scope_exit([] { setIncludeCleanerAnalyzesStdlib(false); });
-
   auto TU = TestTU::withCode(R"cpp(
     #include <list>
     #include <queue>

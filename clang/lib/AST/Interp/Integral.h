@@ -127,7 +127,11 @@ public:
     return Compare(V, RHS.V);
   }
 
-  unsigned countLeadingZeros() const { return llvm::countl_zero<ReprT>(V); }
+  unsigned countLeadingZeros() const {
+    if constexpr (!Signed)
+      return llvm::countl_zero<ReprT>(V);
+    llvm_unreachable("Don't call countLeadingZeros() on signed types.");
+  }
 
   Integral truncate(unsigned TruncBits) const {
     if (TruncBits >= Bits)
