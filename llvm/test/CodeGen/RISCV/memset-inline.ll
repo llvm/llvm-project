@@ -1248,40 +1248,66 @@ define void @aligned_bzero_64(ptr %a) nounwind {
 ; Usual overlap tricks
 
 define void @aligned_bzero_7(ptr %a) nounwind {
-; RV32-BOTH-LABEL: aligned_bzero_7:
-; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    sb zero, 6(a0)
-; RV32-BOTH-NEXT:    sh zero, 4(a0)
-; RV32-BOTH-NEXT:    sw zero, 0(a0)
-; RV32-BOTH-NEXT:    ret
+; RV32-LABEL: aligned_bzero_7:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sb zero, 6(a0)
+; RV32-NEXT:    sh zero, 4(a0)
+; RV32-NEXT:    sw zero, 0(a0)
+; RV32-NEXT:    ret
 ;
-; RV64-BOTH-LABEL: aligned_bzero_7:
-; RV64-BOTH:       # %bb.0:
-; RV64-BOTH-NEXT:    sb zero, 6(a0)
-; RV64-BOTH-NEXT:    sh zero, 4(a0)
-; RV64-BOTH-NEXT:    sw zero, 0(a0)
-; RV64-BOTH-NEXT:    ret
+; RV64-LABEL: aligned_bzero_7:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sb zero, 6(a0)
+; RV64-NEXT:    sh zero, 4(a0)
+; RV64-NEXT:    sw zero, 0(a0)
+; RV64-NEXT:    ret
+;
+; RV32-FAST-LABEL: aligned_bzero_7:
+; RV32-FAST:       # %bb.0:
+; RV32-FAST-NEXT:    sw zero, 3(a0)
+; RV32-FAST-NEXT:    sw zero, 0(a0)
+; RV32-FAST-NEXT:    ret
+;
+; RV64-FAST-LABEL: aligned_bzero_7:
+; RV64-FAST:       # %bb.0:
+; RV64-FAST-NEXT:    sw zero, 3(a0)
+; RV64-FAST-NEXT:    sw zero, 0(a0)
+; RV64-FAST-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr align 8 %a, i8 0, i64 7, i1 0)
   ret void
 }
 
 define void @aligned_bzero_15(ptr %a) nounwind {
-; RV32-BOTH-LABEL: aligned_bzero_15:
-; RV32-BOTH:       # %bb.0:
-; RV32-BOTH-NEXT:    sb zero, 14(a0)
-; RV32-BOTH-NEXT:    sh zero, 12(a0)
-; RV32-BOTH-NEXT:    sw zero, 8(a0)
-; RV32-BOTH-NEXT:    sw zero, 4(a0)
-; RV32-BOTH-NEXT:    sw zero, 0(a0)
-; RV32-BOTH-NEXT:    ret
+; RV32-LABEL: aligned_bzero_15:
+; RV32:       # %bb.0:
+; RV32-NEXT:    sb zero, 14(a0)
+; RV32-NEXT:    sh zero, 12(a0)
+; RV32-NEXT:    sw zero, 8(a0)
+; RV32-NEXT:    sw zero, 4(a0)
+; RV32-NEXT:    sw zero, 0(a0)
+; RV32-NEXT:    ret
 ;
-; RV64-BOTH-LABEL: aligned_bzero_15:
-; RV64-BOTH:       # %bb.0:
-; RV64-BOTH-NEXT:    sb zero, 14(a0)
-; RV64-BOTH-NEXT:    sh zero, 12(a0)
-; RV64-BOTH-NEXT:    sw zero, 8(a0)
-; RV64-BOTH-NEXT:    sd zero, 0(a0)
-; RV64-BOTH-NEXT:    ret
+; RV64-LABEL: aligned_bzero_15:
+; RV64:       # %bb.0:
+; RV64-NEXT:    sb zero, 14(a0)
+; RV64-NEXT:    sh zero, 12(a0)
+; RV64-NEXT:    sw zero, 8(a0)
+; RV64-NEXT:    sd zero, 0(a0)
+; RV64-NEXT:    ret
+;
+; RV32-FAST-LABEL: aligned_bzero_15:
+; RV32-FAST:       # %bb.0:
+; RV32-FAST-NEXT:    sw zero, 11(a0)
+; RV32-FAST-NEXT:    sw zero, 8(a0)
+; RV32-FAST-NEXT:    sw zero, 4(a0)
+; RV32-FAST-NEXT:    sw zero, 0(a0)
+; RV32-FAST-NEXT:    ret
+;
+; RV64-FAST-LABEL: aligned_bzero_15:
+; RV64-FAST:       # %bb.0:
+; RV64-FAST-NEXT:    sd zero, 7(a0)
+; RV64-FAST-NEXT:    sd zero, 0(a0)
+; RV64-FAST-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr align 8 %a, i8 0, i64 15, i1 0)
   ret void
 }
