@@ -3312,6 +3312,10 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
   // kill the second parameter.
 
   if (IsForRef) {
+    if (auto *EWC = dyn_cast<ExprWithCleanups>(this))
+      return EWC->getSubExpr()->isConstantInitializer(Ctx, true, Culprit);
+    if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(this))
+      return MTE->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
     EvalResult Result;
     if (EvaluateAsLValue(Result, Ctx) && !Result.HasSideEffects)
       return true;
