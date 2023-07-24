@@ -12,4 +12,31 @@ define fp128 @test_streaming_compatible_register_mov(fp128 %q0, fp128 %q1) #0 {
   ret fp128 %q1
 }
 
+; Test that `movi` isn't used (invalid in streaming mode), but fmov or SVE mov instead.
+define double @fp_zero_constant() #0 {
+; CHECK-LABEL: fp_zero_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmov d0, xzr
+; CHECK-NEXT:    ret
+  ret double 0.0
+}
+
+define <2 x i64> @fixed_vec_zero_constant() #0 {
+; CHECK-LABEL: fixed_vec_zero_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+  ret <2 x i64> zeroinitializer
+}
+
+define <2 x double> @fixed_vec_fp_zero_constant() #0 {
+; CHECK-LABEL: fixed_vec_fp_zero_constant:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    mov z0.d, #0 // =0x0
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-NEXT:    ret
+  ret <2 x double> <double 0.0, double 0.0>
+}
+
 attributes #0 = { "target-features"="+sve" }
