@@ -57272,6 +57272,24 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       break;
     }
+    case X86ISD::UNPCKH:
+    case X86ISD::UNPCKL: {
+      // Don't concatenate build_vector patterns.
+      if (!IsSplat && VT.getScalarSizeInBits() >= 32 &&
+          ((VT.is256BitVector() && Subtarget.hasInt256()) ||
+           (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
+          none_of(Ops, [](SDValue Op) {
+            return peekThroughBitcasts(Op.getOperand(0)).getOpcode() ==
+                       ISD::SCALAR_TO_VECTOR ||
+                   peekThroughBitcasts(Op.getOperand(1)).getOpcode() ==
+                       ISD::SCALAR_TO_VECTOR;
+          })) {
+        return DAG.getNode(Op0.getOpcode(), DL, VT,
+                           ConcatSubOperand(VT, Ops, 0),
+                           ConcatSubOperand(VT, Ops, 1));
+      }
+      break;
+    }
     case X86ISD::PSHUFHW:
     case X86ISD::PSHUFLW:
     case X86ISD::PSHUFD:
