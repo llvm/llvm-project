@@ -24,3 +24,9 @@ void k(Foo *foo) {
 int (^gh63863)() = ^() {
   return undef;
 };
+
+// CHECK:      `-BlockExpr {{.*}} 'int (^)(int, int)'
+// CHECK-NEXT:   `-BlockDecl {{.*}} invalid
+int (^gh64005)(int, int) = ^(int, undefined b) {
+   return 1;
+};
