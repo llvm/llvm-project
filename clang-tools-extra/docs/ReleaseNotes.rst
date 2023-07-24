@@ -319,7 +319,7 @@ Changes in existing checks
 
 - Improved :doc:`bugprone-unchecked-optional-access
   <clang-tidy/checks/bugprone/unchecked-optional-access>` check to properly handle calls
-  to ``std::forward``.
+  to ``std::forward`` and support for ``folly::Optional`` were added.
 
 - Extend :doc:`bugprone-unused-return-value
   <clang-tidy/checks/bugprone/unused-return-value>` check to check for all functions
