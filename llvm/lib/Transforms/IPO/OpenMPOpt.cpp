@@ -3707,10 +3707,11 @@ struct AAKernelInfoFunction : AAKernelInfo {
     Function *Kernel = getAnchorScope();
     Module &M = *Kernel->getParent();
     Type *Int8Ty = Type::getInt8Ty(M.getContext());
-    new GlobalVariable(M, Int8Ty, /* isConstant */ true,
-                       GlobalValue::WeakAnyLinkage,
-                       ConstantInt::get(Int8Ty, NestedParallelism ? 1 : 0),
-                       Kernel->getName() + "_nested_parallelism");
+    auto *GV = new GlobalVariable(
+        M, Int8Ty, /* isConstant */ true, GlobalValue::WeakAnyLinkage,
+        ConstantInt::get(Int8Ty, NestedParallelism ? 1 : 0),
+        Kernel->getName() + "_nested_parallelism");
+    GV->setVisibility(GlobalValue::HiddenVisibility);
 
     // If we can we change the execution mode to SPMD-mode otherwise we build a
     // custom state machine.
