@@ -9853,6 +9853,9 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
   };
 
   if (!hasScalarValue(Def, {Part, 0})) {
+    assert(Def->isLiveIn() && "expected a live-in");
+    if (Part != 0)
+      return get(Def, 0);
     Value *IRV = Def->getLiveInIRValue();
     Value *B = GetBroadcastInstrs(IRV);
     set(Def, B, Part);

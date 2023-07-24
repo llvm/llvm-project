@@ -441,6 +441,10 @@ def AArch64smax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_smax, AAr
 def AArch64umax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_umax, AArch64umax_p>;
 def AArch64smin_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_smin, AArch64smin_p>;
 def AArch64umin_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_umin, AArch64umin_p>;
+def AArch64fminnm_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fminnm, AArch64fminnm_p>;
+def AArch64fmaxnm_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmaxnm, AArch64fmaxnm_p>;
+def AArch64fmin_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmin, AArch64fmin_p>;
+def AArch64fmax_m1 : VSelectCommPredOrPassthruPatFrags<int_aarch64_sve_fmax, AArch64fmax_p>;
 
 let Predicates = [HasSVE] in {
   defm RDFFR_PPz  : sve_int_rdffr_pred<0b0, "rdffr", int_aarch64_sve_rdffr_z>;
@@ -622,10 +626,10 @@ let Predicates = [HasSVEorSME] in {
   defm FSUB_ZPmZ   : sve_fp_2op_p_zds<0b0001, "fsub", "FSUB_ZPZZ", AArch64fsub_m1, DestructiveBinaryCommWithRev, "FSUBR_ZPmZ">;
   defm FMUL_ZPmZ   : sve_fp_2op_p_zds<0b0010, "fmul", "FMUL_ZPZZ", AArch64fmul_m1, DestructiveBinaryComm>;
   defm FSUBR_ZPmZ  : sve_fp_2op_p_zds<0b0011, "fsubr", "FSUBR_ZPZZ", int_aarch64_sve_fsubr, DestructiveBinaryCommWithRev, "FSUB_ZPmZ", /*isReverseInstr*/ 1>;
-  defm FMAXNM_ZPmZ : sve_fp_2op_p_zds<0b0100, "fmaxnm", "FMAXNM_ZPZZ", int_aarch64_sve_fmaxnm, DestructiveBinaryComm>;
-  defm FMINNM_ZPmZ : sve_fp_2op_p_zds<0b0101, "fminnm", "FMINNM_ZPZZ", int_aarch64_sve_fminnm, DestructiveBinaryComm>;
-  defm FMAX_ZPmZ   : sve_fp_2op_p_zds<0b0110, "fmax", "FMAX_ZPZZ", int_aarch64_sve_fmax, DestructiveBinaryComm>;
-  defm FMIN_ZPmZ   : sve_fp_2op_p_zds<0b0111, "fmin", "FMIN_ZPZZ", int_aarch64_sve_fmin, DestructiveBinaryComm>;
+  defm FMAXNM_ZPmZ : sve_fp_2op_p_zds<0b0100, "fmaxnm", "FMAXNM_ZPZZ", AArch64fmaxnm_m1, DestructiveBinaryComm>;
+  defm FMINNM_ZPmZ : sve_fp_2op_p_zds<0b0101, "fminnm", "FMINNM_ZPZZ", AArch64fminnm_m1, DestructiveBinaryComm>;
+  defm FMAX_ZPmZ   : sve_fp_2op_p_zds<0b0110, "fmax", "FMAX_ZPZZ", AArch64fmax_m1, DestructiveBinaryComm>;
+  defm FMIN_ZPmZ   : sve_fp_2op_p_zds<0b0111, "fmin", "FMIN_ZPZZ", AArch64fmin_m1, DestructiveBinaryComm>;
   defm FABD_ZPmZ   : sve_fp_2op_p_zds<0b1000, "fabd", "FABD_ZPZZ", int_aarch64_sve_fabd, DestructiveBinaryComm>;
   defm FSCALE_ZPmZ : sve_fp_2op_p_zds_fscale<0b1001, "fscale", int_aarch64_sve_fscale>;
   defm FMULX_ZPmZ  : sve_fp_2op_p_zds<0b1010, "fmulx", "FMULX_ZPZZ", int_aarch64_sve_fmulx, DestructiveBinaryComm>;

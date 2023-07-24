@@ -677,6 +677,13 @@ Bug Fixes in This Version
 - Correcly diagnose jumps into statement expressions.
   This ensures the behavior of Clang is consistent with GCC.
   (`#63682 <https://github.com/llvm/llvm-project/issues/63682>`_)
+- Invalidate BlockDecl with implicit return type, in case any of the return
+  value exprs is invalid. Propagating the error info up by replacing BlockExpr
+  with a RecoveryExpr. This fixes:
+  (`#63863 <https://github.com/llvm/llvm-project/issues/63863>_`)
+- Invalidate BlockDecl with invalid ParmVarDecl. Remove redundant dump of
+  BlockDecl's ParmVarDecl
+  (`#64005 <https://github.com/llvm/llvm-project/issues/64005>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -891,6 +898,9 @@ RISC-V Support
 - The rules for ordering of extensions in ``-march`` strings were relaxed. A
   canonical ordering is no longer enforced on ``z*``, ``s*``, and ``x*``
   prefixed extensions.
+- An ABI mismatch between GCC and Clang related to the handling of empty
+  structs in C++ parameter passing under the hard floating point calling
+  conventions was fixed.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

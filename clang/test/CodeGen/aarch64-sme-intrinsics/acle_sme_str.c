@@ -18,8 +18,8 @@ void test_svstr_vnum_za(uint32_t slice_base, void *ptr) {
 // CHECK-C-LABEL: @test_svstr_vnum_za_1(
 // CHECK-CXX-LABEL: @_Z20test_svstr_vnum_za_1jPv(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[VSCALE:%.*]] = tail call i64 @llvm.vscale.i64()
-// CHECK-NEXT:    [[MULVL:%.*]] = mul nuw nsw i64 [[VSCALE]], 240
+// CHECK-NEXT:    [[SVLB:%.*]] = tail call i64 @llvm.aarch64.sme.cntsb()
+// CHECK-NEXT:    [[MULVL:%.*]] = mul i64 [[SVLB]], 15
 // CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[PTR:%.*]], i64 [[MULVL]]
 // CHECK-NEXT:    [[TILESLICE:%.*]] = add i32 [[SLICE_BASE:%.*]], 15
 // CHECK-NEXT:    tail call void @llvm.aarch64.sme.str(i32 [[TILESLICE]], ptr [[TMP0]])

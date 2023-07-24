@@ -359,6 +359,25 @@ void testTaintedVLASize(void) {
   int vla[x]; // expected-warning{{Declared variable-length array (VLA) has tainted size}}
 }
 
+int testTaintedAllocaMem() {
+  char x;
+  void * p;
+  scanf("%c", &x);
+  p = __builtin_alloca(1);
+  __builtin_memcpy(p, &x, 1);
+  return 5 / *(char*)p; // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+int testTaintedMallocMem() {
+  char x;
+  void * p;
+  scanf("%c", &x);
+  p = malloc(1);
+  __builtin_memcpy(p, &x, 1);
+  return 5 / *(char*)p; // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+
 // This computation used to take a very long time.
 #define longcmp(a,b,c) { \
   a -= c;  a ^= c;  c += b; b -= a;  b ^= (a<<6) | (a >> (32-b));  a += c; c -= b;  c ^= b;  b += a; \

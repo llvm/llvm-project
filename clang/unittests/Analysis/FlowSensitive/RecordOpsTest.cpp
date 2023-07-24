@@ -60,13 +60,12 @@ TEST(RecordOpsTest, CopyRecord) {
 
         auto &S1 = getLocForDecl<AggregateStorageLocation>(ASTCtx, Env, "s1");
         auto &S2 = getLocForDecl<AggregateStorageLocation>(ASTCtx, Env, "s2");
-        auto &Inner1 = cast<AggregateStorageLocation>(S1.getChild(*InnerDecl));
-        auto &Inner2 = cast<AggregateStorageLocation>(S2.getChild(*InnerDecl));
+        auto &Inner1 = *cast<AggregateStorageLocation>(S1.getChild(*InnerDecl));
+        auto &Inner2 = *cast<AggregateStorageLocation>(S2.getChild(*InnerDecl));
 
         EXPECT_NE(getFieldValue(&S1, *OuterIntDecl, Env),
                   getFieldValue(&S2, *OuterIntDecl, Env));
-        EXPECT_NE(Env.getValue(S1.getChild(*RefDecl)),
-                  Env.getValue(S2.getChild(*RefDecl)));
+        EXPECT_NE(S1.getChild(*RefDecl), S2.getChild(*RefDecl));
         EXPECT_NE(getFieldValue(&Inner1, *InnerIntDecl, Env),
                   getFieldValue(&Inner2, *InnerIntDecl, Env));
 
@@ -80,8 +79,7 @@ TEST(RecordOpsTest, CopyRecord) {
 
         EXPECT_EQ(getFieldValue(&S1, *OuterIntDecl, Env),
                   getFieldValue(&S2, *OuterIntDecl, Env));
-        EXPECT_EQ(Env.getValue(S1.getChild(*RefDecl)),
-                  Env.getValue(S2.getChild(*RefDecl)));
+        EXPECT_EQ(S1.getChild(*RefDecl), S2.getChild(*RefDecl));
         EXPECT_EQ(getFieldValue(&Inner1, *InnerIntDecl, Env),
                   getFieldValue(&Inner2, *InnerIntDecl, Env));
 
@@ -122,7 +120,7 @@ TEST(RecordOpsTest, RecordsEqual) {
 
         auto &S1 = getLocForDecl<AggregateStorageLocation>(ASTCtx, Env, "s1");
         auto &S2 = getLocForDecl<AggregateStorageLocation>(ASTCtx, Env, "s2");
-        auto &Inner2 = cast<AggregateStorageLocation>(S2.getChild(*InnerDecl));
+        auto &Inner2 = *cast<AggregateStorageLocation>(S2.getChild(*InnerDecl));
 
         cast<StructValue>(Env.getValue(S1))
             ->setProperty("prop", Env.getBoolLiteralValue(true));
@@ -139,33 +137,26 @@ TEST(RecordOpsTest, RecordsEqual) {
         EXPECT_TRUE(recordsEqual(S1, S2, Env));
 
         // S2 has a different outer_int.
-        Env.setValue(S2.getChild(*OuterIntDecl), Env.create<IntegerValue>());
+        Env.setValue(*S2.getChild(*OuterIntDecl), Env.create<IntegerValue>());
         EXPECT_FALSE(recordsEqual(S1, S2, Env));
         copyRecord(S1, S2, Env);
         EXPECT_TRUE(recordsEqual(S1, S2, Env));
 
         // S2 doesn't have outer_int at all.
-        Env.clearValue(S2.getChild(*OuterIntDecl));
+        Env.clearValue(*S2.getChild(*OuterIntDecl));
         EXPECT_FALSE(recordsEqual(S1, S2, Env));
         copyRecord(S1, S2, Env);
         EXPECT_TRUE(recordsEqual(S1, S2, Env));
 
         // S2 has a different ref.
-        Env.setValue(S2.getChild(*RefDecl),
-                     Env.create<ReferenceValue>(Env.createStorageLocation(
-                         RefDecl->getType().getNonReferenceType())));
-        EXPECT_FALSE(recordsEqual(S1, S2, Env));
-        copyRecord(S1, S2, Env);
-        EXPECT_TRUE(recordsEqual(S1, S2, Env));
-
-        // S2 doesn't have ref at all.
-        Env.clearValue(S2.getChild(*RefDecl));
+        S2.setChild(*RefDecl, &Env.createStorageLocation(
+                                  RefDecl->getType().getNonReferenceType()));
         EXPECT_FALSE(recordsEqual(S1, S2, Env));
         copyRecord(S1, S2, Env);
         EXPECT_TRUE(recordsEqual(S1, S2, Env));
 
         // S2 as a different inner_int.
-        Env.setValue(Inner2.getChild(*InnerIntDecl),
+        Env.setValue(*Inner2.getChild(*InnerIntDecl),
                      Env.create<IntegerValue>());
         EXPECT_FALSE(recordsEqual(S1, S2, Env));
         copyRecord(S1, S2, Env);

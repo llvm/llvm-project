@@ -784,6 +784,11 @@ void State::addInfoFor(BasicBlock &BB) {
       continue;
     }
 
+    if (isa<MinMaxIntrinsic>(&I)) {
+      WorkList.push_back(FactOrCheck::getFact(DT.getNode(&BB), &I));
+      continue;
+    }
+
     Value *Cond;
     // For now, just handle assumes with a single compare as condition.
     if (match(&I, m_Intrinsic<Intrinsic::assume>(m_Value(Cond))) &&
@@ -1363,21 +1368,13 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
     }
 
     LLVM_DEBUG(dbgs() << "fact to add to the system: " << *CB.Inst << "\n");
-    ICmpInst::Predicate Pred;
-    Value *A, *B;
-    Value *Cmp = CB.Inst;
-    match(Cmp, m_Intrinsic<Intrinsic::assume>(m_Value(Cmp)));
-    if (match(Cmp, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+    auto AddFact = [&](CmpInst::Predicate Pred, Value *A, Value *B) {
       if (Info.getCS(CmpInst::isSigned(Pred)).size() > MaxRows) {
         LLVM_DEBUG(
             dbgs()
             << "Skip adding constraint because system has too many rows.\n");
-        continue;
+        return;
       }
-
-      // Use the inverse predicate if required.
-      if (CB.Not)
-        Pred = CmpInst::getInversePredicate(Pred);
 
       Info.addFact(Pred, A, B, CB.NumIn, CB.NumOut, DFSInStack);
       if (ReproducerModule && DFSInStack.size() > ReproducerCondStack.size())
@@ -1394,6 +1391,25 @@ static bool eliminateConstraints(Function &F, DominatorTree &DT,
                                            nullptr, nullptr);
         }
       }
+    };
+
+    ICmpInst::Predicate Pred;
+    if (auto *MinMax = dyn_cast<MinMaxIntrinsic>(CB.Inst)) {
+      Pred = ICmpInst::getNonStrictPredicate(MinMax->getPredicate());
+      AddFact(Pred, MinMax, MinMax->getLHS());
+      AddFact(Pred, MinMax, MinMax->getRHS());
+      continue;
+    }
+
+    Value *A, *B;
+    Value *Cmp = CB.Inst;
+    match(Cmp, m_Intrinsic<Intrinsic::assume>(m_Value(Cmp)));
+    if (match(Cmp, m_ICmp(Pred, m_Value(A), m_Value(B)))) {
+      // Use the inverse predicate if required.
+      if (CB.Not)
+        Pred = CmpInst::getInversePredicate(Pred);
+
+      AddFact(Pred, A, B);
     }
   }
 

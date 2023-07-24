@@ -102,8 +102,12 @@ void mlir::sparse_tensor::buildSparseCompiler(
   // Finalize GPU code generation.
   if (gpuCodegen) {
 #if MLIR_GPU_TO_CUBIN_PASS_ENABLE
-    pm.addNestedPass<gpu::GPUModuleOp>(createGpuSerializeToCubinPass(
-        options.gpuTriple, options.gpuChip, options.gpuFeatures));
+    gpu::SerializationToCubinOptions cubinOptions;
+    cubinOptions.triple = options.gpuTriple;
+    cubinOptions.chip = options.gpuChip;
+    cubinOptions.features = options.gpuFeatures;
+    pm.addNestedPass<gpu::GPUModuleOp>(
+        createGpuSerializeToCubinPass(cubinOptions));
 #endif
     pm.addPass(createGpuToLLVMConversionPass());
   }
