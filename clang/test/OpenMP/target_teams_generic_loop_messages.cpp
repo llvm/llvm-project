@@ -127,6 +127,16 @@ void foo()
   for (i=0; i<1000; ++i)
     z = i+11;
 
+  // expected-error@+1 {{directive name modifier 'teams' is not allowed for '#pragma omp target teams loop'}}
+  #pragma omp target teams loop if(teams:1)
+  for (i=0; i<1000; ++i)
+    z = i+11;
+
+  // expected-error@+1 {{directive name modifier 'parallel' is not allowed for '#pragma omp target teams loop'}}
+  #pragma omp target teams loop if(parallel:0)
+  for (i=0; i<1000; ++i)
+    z = i+11;
+
 }
 
 template <typename T, int C>
