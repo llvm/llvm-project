@@ -840,9 +840,12 @@ private:
     inline void __emplace_back_slow_path(_Args&&... __args);
 
     // The following functions are no-ops outside of AddressSanitizer mode.
-    // We call annotatations only for the default Allocator because other allocators
-    // may not meet the AddressSanitizer alignment constraints.
-    // See the documentation for __sanitizer_annotate_contiguous_container for more details.
+    // We call annotations for every allocator, unless explicitly disabled.
+    //
+    // To disable annotations for a particular allocator, change value of
+    // __asan_annotate_container_with_allocator to false.
+    // For more details, see the "Using libc++" documentation page or
+    // the documentation for __sanitizer_annotate_contiguous_container.
 #ifndef _LIBCPP_HAS_NO_ASAN
     _LIBCPP_CONSTEXPR_SINCE_CXX20
     void __annotate_contiguous_container(const void *__beg, const void *__end,
