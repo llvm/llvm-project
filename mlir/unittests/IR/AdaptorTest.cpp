@@ -39,7 +39,7 @@ TEST(Adaptor, GenericAdaptorsOperandAccess) {
     // value from the value 0.
     SmallVector<std::optional<int>> v = {0, 4};
     OIListSimple::Properties prop;
-    llvm::copy(ArrayRef{1, 0, 1}, prop.odsOperandSegmentSizes);
+    prop.operand_segment_sizes = builder.getDenseI32ArrayAttr({1, 0, 1});
     OIListSimple::GenericAdaptor<ArrayRef<std::optional<int>>> d(v, {}, prop,
                                                                  {});
     EXPECT_EQ(d.getArg0(), 0);

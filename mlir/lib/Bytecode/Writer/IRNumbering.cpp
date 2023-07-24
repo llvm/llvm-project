@@ -48,7 +48,7 @@ struct IRNumberingState::NumberingDialectWriter : public DialectBytecodeWriter {
   void writeOwnedBool(bool value) override {}
 
   int64_t getBytecodeVersion() const override {
-    return state.getDesiredBytecodeVersion();
+    llvm_unreachable("unexpected querying of version in IRNumbering");
   }
 
   /// The parent numbering state that is populated by this writer.
@@ -389,10 +389,6 @@ void IRNumberingState::number(Dialect *dialect,
     dialectNumber.resourceMap.insert({numbering->key, numbering});
     dialectResources.try_emplace(resource, numbering);
   }
-}
-
-int64_t IRNumberingState::getDesiredBytecodeVersion() const {
-  return config.getDesiredBytecodeVersion();
 }
 
 namespace {

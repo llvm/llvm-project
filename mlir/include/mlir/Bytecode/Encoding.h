@@ -45,12 +45,8 @@ enum BytecodeVersion {
   /// with the discardable attributes.
   kNativePropertiesEncoding = 5,
 
-  /// ODS emits operand/result segment_size as native properties instead of
-  /// an attribute.
-  kNativePropertiesODSSegmentSize = 6,
-
   /// The current bytecode version.
-  kVersion = 6,
+  kVersion = 5,
 
   /// An arbitrary value used to fill alignment padding.
   kAlignmentByte = 0xCB,

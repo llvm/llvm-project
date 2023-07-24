@@ -1654,6 +1654,16 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
                                                          MethodBody &body) {
   if (!allOperands) {
     if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
+      if (op.getDialect().usePropertiesForAttributes()) {
+        body << formatv("  "
+                        "result.getOrAddProperties<{0}::Properties>().operand_"
+                        "segment_sizes = "
+                        "(parser.getBuilder().getDenseI32ArrayAttr({{",
+                        op.getCppClassName());
+      } else {
+        body << "  result.addAttribute(\"operand_segment_sizes\", "
+             << "parser.getBuilder().getDenseI32ArrayAttr({";
+      }
       auto interleaveFn = [&](const NamedTypeConstraint &operand) {
         // If the operand is variadic emit the parsed size.
         if (operand.isVariableLength())
@@ -1661,19 +1671,8 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
         else
           body << "1";
       };
-      if (op.getDialect().usePropertiesForAttributes()) {
-        body << "llvm::copy(ArrayRef<int32_t>({";
-        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-        body << formatv("}), "
-                        "result.getOrAddProperties<{0}::Properties>()."
-                        "odsOperandSegmentSizes);\n",
-                        op.getCppClassName());
-      } else {
-        body << "  result.addAttribute(\"operand_segment_sizes\", "
-             << "parser.getBuilder().getDenseI32ArrayAttr({";
-        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-        body << "}));\n";
-      }
+      llvm::interleaveComma(op.getOperands(), body, interleaveFn);
+      body << "}));\n";
     }
     for (const NamedTypeConstraint &operand : op.getOperands()) {
       if (!operand.isVariadicOfVariadic())
@@ -1698,6 +1697,16 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
 
   if (!allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
+    if (op.getDialect().usePropertiesForAttributes()) {
+      body << formatv(
+          "  "
+          "result.getOrAddProperties<{0}::Properties>().result_segment_sizes = "
+          "(parser.getBuilder().getDenseI32ArrayAttr({{",
+          op.getCppClassName());
+    } else {
+      body << "  result.addAttribute(\"result_segment_sizes\", "
+           << "parser.getBuilder().getDenseI32ArrayAttr({";
+    }
     auto interleaveFn = [&](const NamedTypeConstraint &result) {
       // If the result is variadic emit the parsed size.
       if (result.isVariableLength())
@@ -1705,20 +1714,8 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
       else
         body << "1";
     };
-    if (op.getDialect().usePropertiesForAttributes()) {
-      body << "llvm::copy(ArrayRef<int32_t>({";
-      llvm::interleaveComma(op.getResults(), body, interleaveFn);
-      body << formatv(
-          "}), "
-          "result.getOrAddProperties<{0}::Properties>().odsResultSegmentSizes"
-          ");\n",
-          op.getCppClassName());
-    } else {
-      body << "  result.addAttribute(\"odsResultSegmentSizes\", "
-           << "parser.getBuilder().getDenseI32ArrayAttr({";
-      llvm::interleaveComma(op.getResults(), body, interleaveFn);
-      body << "}));\n";
-    }
+    llvm::interleaveComma(op.getResults(), body, interleaveFn);
+    body << "}));\n";
   }
 }
 

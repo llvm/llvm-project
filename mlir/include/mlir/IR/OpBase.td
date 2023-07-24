@@ -1241,7 +1241,6 @@ class ArrayProperty<string storageTypeParam = "", int n, string desc = ""> :
   let interfaceType = "::llvm::ArrayRef<" # storageTypeParam # ">";
   let convertFromStorage = "$_storage";
   let assignToStorage = "::llvm::copy($_value, $_storage)";
-  let hashProperty = "llvm::hash_combine_range(std::begin($_storage), std::end($_storage));";
 }
 
 //===----------------------------------------------------------------------===//

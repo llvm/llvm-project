@@ -839,7 +839,8 @@ def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
     Variadic<I32>:$a,
     Variadic<I32>:$b,
     I32:$c,
-    Variadic<I32>:$d
+    Variadic<I32>:$d,
+    DenseI32ArrayAttr:$operand_segment_sizes
   );
 }
 

@@ -115,15 +115,13 @@ public:
   // This alias is the only definition needed for enabling "properties" for this
   // operation.
   using Properties = TestProperties;
-  static std::optional<mlir::Attribute> getInherentAttr(MLIRContext *context,
-                                                        const Properties &prop,
+  static std::optional<mlir::Attribute> getInherentAttr(const Properties &prop,
                                                         StringRef name) {
     return std::nullopt;
   }
   static void setInherentAttr(Properties &prop, StringRef name,
                               mlir::Attribute value) {}
-  static void populateInherentAttrs(MLIRContext *context,
-                                    const Properties &prop,
+  static void populateInherentAttrs(const Properties &prop,
                                     NamedAttrList &attrs) {}
   static LogicalResult
   verifyInherentAttrs(OperationName opName, NamedAttrList &attrs,
