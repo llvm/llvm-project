@@ -670,6 +670,10 @@ Bug Fixes in This Version
 - Correcly diagnose jumps into statement expressions.
   This ensures the behavior of Clang is consistent with GCC.
   (`#63682 <https://github.com/llvm/llvm-project/issues/63682>`_)
+- Invalidate BlockDecl with implicit return type, in case any of the return
+  value exprs is invalid. Propagating the error info up by replacing BlockExpr
+  with a RecoveryExpr. This fixes:
+  (`#63863 <https://github.com/llvm/llvm-project/issues/63863>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
