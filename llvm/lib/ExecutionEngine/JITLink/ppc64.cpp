@@ -35,6 +35,29 @@ const char PointerJumpStubContent_big[20] = {
     0x4e,       (char)0x80, 0x04, 0x20,       // bctr
 };
 
+// TODO: We can use prefixed instructions if LLJIT is running on power10.
+const char PointerJumpStubNoTOCContent_little[32] = {
+    (char)0xa6, 0x02,       (char)0x88, 0x7d,       // mflr 12
+    0x05,       (char)0x00, (char)0x9f, 0x42,       // bcl 20,31,.+4
+    (char)0xa6, 0x02,       0x68,       0x7d,       // mflr 11
+    (char)0xa6, 0x03,       (char)0x88, 0x7d,       // mtlr 12
+    0x00,       0x00,       (char)0x8b, 0x3d,       // addis 12,11,OffHa
+    0x00,       0x00,       (char)0x8c, (char)0xe9, // ld 12, OffLo(12)
+    (char)0xa6, 0x03,       (char)0x89, 0x7d,       // mtctr 12
+    0x20,       0x04,       (char)0x80, 0x4e,       // bctr
+};
+
+const char PointerJumpStubNoTOCContent_big[32] = {
+    0x7d,       (char)0x88, 0x02, (char)0xa6, // mflr 12
+    0x42,       (char)0x9f, 0x00, 0x05,       // bcl 20,31,.+4
+    0x7d,       0x68,       0x02, (char)0xa6, // mflr 11
+    0x7d,       (char)0x88, 0x03, (char)0xa6, // mtlr 12
+    0x3d,       (char)0x8b, 0x00, 0x00,       // addis 12,11,OffHa
+    (char)0xe9, (char)0x8c, 0x00, 0x00,       // ld 12, OffLo(12)
+    0x7d,       (char)0x89, 0x03, (char)0xa6, // mtctr 12
+    0x4e,       (char)0x80, 0x04, 0x20,       // bctr
+};
+
 const char *getEdgeKindName(Edge::Kind K) {
   switch (K) {
   case Pointer64:
@@ -69,6 +92,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "RequestPLTCallStub";
   case RequestPLTCallStubSaveTOC:
     return "RequestPLTCallStubSaveTOC";
+  case RequestPLTCallStubNoTOC:
+    return "RequestPLTCallStubNoTOC";
   default:
     return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
   }
