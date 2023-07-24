@@ -423,6 +423,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     // We need to custom promote this.
     if (Subtarget.is64Bit())
       setOperationAction(ISD::FPOWI, MVT::i32, Custom);
+
+    if (!Subtarget.hasStdExtZfa())
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f16, Custom);
   }
 
   if (Subtarget.hasStdExtFOrZfinx()) {
@@ -445,6 +448,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     if (Subtarget.hasStdExtZfa())
       setOperationAction(ISD::FNEARBYINT, MVT::f32, Legal);
+    else
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f32, Custom);
   }
 
   if (Subtarget.hasStdExtFOrZfinx() && Subtarget.is64Bit())
@@ -461,6 +466,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     } else {
       if (Subtarget.is64Bit())
         setOperationAction(FPRndMode, MVT::f64, Custom);
+
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, MVT::f64, Custom);
     }
 
     setOperationAction(ISD::STRICT_FP_ROUND, MVT::f32, Legal);
@@ -4624,6 +4631,34 @@ SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
                       ISD::CondCode::SETNE);
 }
 
+// Lower fmaximum and fminimum. Unlike our fmax and fmin instructions, these
+// operations propagate nans.
+static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
+                                      const RISCVSubtarget &Subtarget) {
+  SDLoc DL(Op);
+  EVT VT = Op.getValueType();
+
+  SDValue X = Op.getOperand(0);
+  SDValue Y = Op.getOperand(1);
+
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  // If X is a nan, replace Y with X. If Y is a nan, replace X with Y. This
+  // ensures that when one input is a nan, the other will also be a nan allowing
+  // the nan to propagate. If both inputs are nan, this will swap the inputs
+  // which is harmless.
+  // FIXME: Handle nonans FMF and use isKnownNeverNaN.
+  SDValue XIsNonNan = DAG.getSetCC(DL, XLenVT, X, X, ISD::SETOEQ);
+  SDValue NewY = DAG.getSelect(DL, VT, XIsNonNan, Y, X);
+
+  SDValue YIsNonNan = DAG.getSetCC(DL, XLenVT, Y, Y, ISD::SETOEQ);
+  SDValue NewX = DAG.getSelect(DL, VT, YIsNonNan, X, Y);
+
+  unsigned Opc =
+      Op.getOpcode() == ISD::FMAXIMUM ? RISCVISD::FMAX : RISCVISD::FMIN;
+  return DAG.getNode(Opc, DL, VT, NewX, NewY);
+}
+
 /// Get a RISCV target specified VL op for a given SDNode.
 static unsigned getRISCVVLOp(SDValue Op) {
 #define OP_CASE(NODE)                                                          \
@@ -4948,6 +4983,9 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     }
     return SDValue();
   }
+  case ISD::FMAXIMUM:
+  case ISD::FMINIMUM:
+    return lowerFMAXIMUM_FMINIMUM(Op, DAG, Subtarget);
   case ISD::FP_EXTEND: {
     SDLoc DL(Op);
     EVT VT = Op.getValueType();
@@ -16054,6 +16092,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(FP_EXTEND_BF16)
   NODE_NAME_CASE(FROUND)
   NODE_NAME_CASE(FPCLASS)
+  NODE_NAME_CASE(FMAX)
+  NODE_NAME_CASE(FMIN)
   NODE_NAME_CASE(READ_CYCLE_WIDE)
   NODE_NAME_CASE(BREV8)
   NODE_NAME_CASE(ORC_B)

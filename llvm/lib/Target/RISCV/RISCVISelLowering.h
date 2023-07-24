@@ -122,6 +122,10 @@ enum NodeType : unsigned {
   FROUND,
 
   FPCLASS,
+
+  // Floating point fmax and fmin matching the RISC-V instruction semantics.
+  FMAX, FMIN,
+
   // READ_CYCLE_WIDE - A read of the 64-bit cycle CSR on a 32-bit target
   // (returns (Lo, Hi)). It takes a chain operand.
   READ_CYCLE_WIDE,
