@@ -1,15 +1,10 @@
-// DEFINE: %{option} = "enable-runtime-library=false enable-index-reduction=true"
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
-// DEFINE: FileCheck %s
-//
-// RUN: %{compile} | %{run}
+// REDEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true enable-index-reduction=true
+// RUN: %{compile} | %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = "enable-runtime-library=true enable-buffer-initialization=true enable-index-reduction=true"
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true enable-index-reduction=true
+// RUN: %{compile} | %{run} | FileCheck %s
 
 #CCCC = #sparse_tensor.encoding<{ lvlTypes = [ "compressed", "compressed", "compressed", "compressed" ], posWidth = 32, crdWidth = 32 }>
 
