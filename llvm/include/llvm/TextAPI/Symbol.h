@@ -65,12 +65,26 @@ constexpr StringLiteral ObjC2EHTypePrefix = "_OBJC_EHTYPE_$_";
 constexpr StringLiteral ObjC2IVarPrefix = "_OBJC_IVAR_$_";
 
 using TargetList = SmallVector<Target, 5>;
+
+// Keep containers that hold Targets in sorted order and uniqued.
+template <typename C>
+typename C::iterator addEntry(C &Container, const Target &Targ) {
+  auto Iter =
+      lower_bound(Container, Targ, [](const Target &LHS, const Target &RHS) {
+        return LHS < RHS;
+      });
+  if ((Iter != std::end(Container)) && !(Targ < *Iter))
+    return Iter;
+
+  return Container.insert(Iter, Targ);
+}
+
 class Symbol {
 public:
   Symbol(SymbolKind Kind, StringRef Name, TargetList Targets, SymbolFlags Flags)
       : Name(Name), Targets(std::move(Targets)), Kind(Kind), Flags(Flags) {}
 
-  void addTarget(Target target) { Targets.emplace_back(target); }
+  void addTarget(Target InputTarget) { addEntry(Targets, InputTarget); }
   SymbolKind getKind() const { return Kind; }
   StringRef getName() const { return Name; }
   ArchitectureSet getArchitectures() const {
