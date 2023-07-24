@@ -81,16 +81,16 @@ def InstTest0 : GICombineRule<
 // CHECK-NEXT:      (MatchDataInfo pattern_symbol:r0 type:'Register' var_name:MDInfo0)
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (MatchPats
-// CHECK-NEXT:     __anon_pat_match_3_0:(InstructionPattern inst:ZEXT operands:[<def>x, a])
 // CHECK-NEXT:     <root>d:(InstructionPattern inst:MOV operands:[<def>a, b])
+// CHECK-NEXT:     __anon_pat_match_3_0:(InstructionPattern inst:ZEXT operands:[<def>x, a])
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (ApplyPats
 // CHECK-NEXT:     __anon_pat_apply_3_1:(CXXPattern apply code:"APPLY")
 // CHECK-NEXT:   )
 // CHECK-NEXT:   (OperandTable
-// CHECK-NEXT:     [x match_pat:__anon_pat_match_3_0]
 // CHECK-NEXT:     [a match_pat:d]
 // CHECK-NEXT:     [b live-in]
+// CHECK-NEXT:     [x match_pat:__anon_pat_match_3_0]
 // CHECK-NEXT:   )
 // CHECK-NEXT: )
 let Predicates = [HasAnswerToEverything] in
