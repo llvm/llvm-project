@@ -982,10 +982,10 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
          !bounds.empty()))
       TODO(operandLocation, "reduction with unsupported type");
 
-    mlir::Type retTy = getTypeFromBounds(bounds, baseAddr.getType());
     auto op = createDataEntryOp<mlir::acc::ReductionOp>(
         builder, operandLocation, baseAddr, asFortran, bounds,
-        /*structured=*/true, mlir::acc::DataClause::acc_reduction, retTy);
+        /*structured=*/true, mlir::acc::DataClause::acc_reduction,
+        baseAddr.getType());
     mlir::Type ty = op.getAccPtr().getType();
     std::string recipeName = fir::getTypeAsString(
         ty, converter.getKindMap(),
