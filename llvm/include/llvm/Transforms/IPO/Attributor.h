@@ -1917,13 +1917,13 @@ struct Attributor {
 
   /// Remove all \p AttrKinds attached to \p IRP.
   ChangeStatus removeAttrs(const IRPosition &IRP,
-                           const ArrayRef<Attribute::AttrKind> &AttrKinds);
+                           ArrayRef<Attribute::AttrKind> AttrKinds);
   ChangeStatus removeAttrs(const IRPosition &IRP, ArrayRef<StringRef> Attrs);
 
   /// Attach \p DeducedAttrs to \p IRP, if \p ForceReplace is set we do this
   /// even if the same attribute kind was already present.
   ChangeStatus manifestAttrs(const IRPosition &IRP,
-                             const ArrayRef<Attribute> &DeducedAttrs,
+                             ArrayRef<Attribute> DeducedAttrs,
                              bool ForceReplace = false);
 
 private:
@@ -1934,8 +1934,7 @@ private:
 
   /// Helper to apply \p CB on all attributes of type \p AttrDescs of \p IRP.
   template <typename DescTy>
-  ChangeStatus updateAttrMap(const IRPosition &IRP,
-                             const ArrayRef<DescTy> &AttrDescs,
+  ChangeStatus updateAttrMap(const IRPosition &IRP, ArrayRef<DescTy> AttrDescs,
                              function_ref<bool(const DescTy &, AttributeSet,
                                                AttributeMask &, AttrBuilder &)>
                                  CB);
@@ -2324,7 +2323,7 @@ public:
   bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                const Function *Fn,
                                const AbstractAttribute *QueryingAA,
-                               const ArrayRef<unsigned> &Opcodes,
+                               ArrayRef<unsigned> Opcodes,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly = false,
                                bool CheckPotentiallyDead = false);
@@ -2335,7 +2334,7 @@ public:
   /// present in \p Opcode and return true if \p Pred holds on all of them.
   bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                const AbstractAttribute &QueryingAA,
-                               const ArrayRef<unsigned> &Opcodes,
+                               ArrayRef<unsigned> Opcodes,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly = false,
                                bool CheckPotentiallyDead = false);
