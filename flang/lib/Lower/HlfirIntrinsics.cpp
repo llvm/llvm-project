@@ -278,6 +278,18 @@ mlir::Value HlfirTransposeLowering::lowerImpl(
   mlir::Type elementType = array.getEleTy();
   resultShape.push_back(arrayShape[0]);
   resultShape.push_back(arrayShape[1]);
+  if (auto resCharType = mlir::dyn_cast<fir::CharacterType>(elementType))
+    if (!resCharType.hasConstantLen()) {
+      // The FunctionRef expression might have imprecise character
+      // type at this point, and we can improve it by propagating
+      // the constant length from the argument.
+      auto argCharType = mlir::dyn_cast<fir::CharacterType>(
+          hlfir::getFortranElementType(operands[0].getType()));
+      if (argCharType && argCharType.hasConstantLen())
+        elementType = fir::CharacterType::get(
+            builder.getContext(), resCharType.getFKind(), argCharType.getLen());
+    }
+
   mlir::Type resultTy =
       hlfir::ExprType::get(builder.getContext(), resultShape, elementType,
                            fir::isPolymorphicType(stmtResultType));
