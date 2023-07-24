@@ -69,8 +69,7 @@ protected:
                  mlir::PatternRewriter &rewriter,
                  const fir::IntrinsicArgumentLoweringRules *argLowering) const {
     mlir::Location loc = op->getLoc();
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping, op};
+    fir::FirOpBuilder builder{rewriter, op};
 
     llvm::SmallVector<fir::ExtendedValue, 3> ret;
     llvm::SmallVector<std::function<void()>, 2> cleanupFns;
@@ -229,8 +228,7 @@ public:
       return mlir::failure();
     }
 
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping, operation};
+    fir::FirOpBuilder builder{rewriter, operation.getOperation()};
     const mlir::Location &loc = operation->getLoc();
 
     mlir::Type i32 = builder.getI32Type();
@@ -271,8 +269,7 @@ struct CountOpConversion : public HlfirIntrinsicConversion<hlfir::CountOp> {
   mlir::LogicalResult
   matchAndRewrite(hlfir::CountOp count,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping, count};
+    fir::FirOpBuilder builder{rewriter, count.getOperation()};
     const mlir::Location &loc = count->getLoc();
 
     mlir::Type i32 = builder.getI32Type();
@@ -304,8 +301,7 @@ struct MatmulOpConversion : public HlfirIntrinsicConversion<hlfir::MatmulOp> {
   mlir::LogicalResult
   matchAndRewrite(hlfir::MatmulOp matmul,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping, matmul};
+    fir::FirOpBuilder builder{rewriter, matmul.getOperation()};
     const mlir::Location &loc = matmul->getLoc();
 
     mlir::Value lhs = matmul.getLhs();
@@ -336,8 +332,7 @@ struct DotProductOpConversion
   mlir::LogicalResult
   matchAndRewrite(hlfir::DotProductOp dotProduct,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping, dotProduct};
+    fir::FirOpBuilder builder{rewriter, dotProduct.getOperation()};
     const mlir::Location &loc = dotProduct->getLoc();
 
     mlir::Value lhs = dotProduct.getLhs();
@@ -368,8 +363,7 @@ class TransposeOpConversion
   mlir::LogicalResult
   matchAndRewrite(hlfir::TransposeOp transpose,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping, transpose};
+    fir::FirOpBuilder builder{rewriter, transpose.getOperation()};
     const mlir::Location &loc = transpose->getLoc();
 
     mlir::Value arg = transpose.getArray();
@@ -399,8 +393,7 @@ struct MatmulTransposeOpConversion
   mlir::LogicalResult
   matchAndRewrite(hlfir::MatmulTransposeOp multranspose,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping, multranspose};
+    fir::FirOpBuilder builder{rewriter, multranspose.getOperation()};
     const mlir::Location &loc = multranspose->getLoc();
 
     mlir::Value lhs = multranspose.getLhs();
