@@ -181,21 +181,6 @@ static cl::opt<std::string> ShowLinkGraphs(
              "matching that regex after fixups have been applied"),
     cl::Optional, cl::cat(JITLinkCategory));
 
-enum class JITLinkStats {
-  PrePruneTotalBlockSize,
-  PostFixupTotalBlockSize
-};
-
-static cl::list<JITLinkStats> ShowStats(
-    cl::desc("Statistics:"),
-    cl::values(
-        clEnumValN(JITLinkStats::PrePruneTotalBlockSize,
-                   "pre-prune-total-block-size",
-                   "Total size of all blocks in all graphs (pre-pruning)"),
-        clEnumValN(JITLinkStats::PostFixupTotalBlockSize,
-                   "post-fixup-total-block-size",
-                   "Tatal size of all blocks in all graphs (post-fixup)")));
-
 static cl::opt<bool> ShowTimes("show-times",
                                cl::desc("Show times for llvm-jitlink phases"),
                                cl::init(false), cl::cat(JITLinkCategory));
@@ -1926,89 +1911,6 @@ static Error addSelfRelocations(LinkGraph &G) {
   return Error::success();
 }
 
-LLVMJITLinkStatistics::LLVMJITLinkStatistics(Session &S) {
-
-  class StatisticsPlugin : public ObjectLinkingLayer::Plugin {
-  public:
-    StatisticsPlugin(LLVMJITLinkStatistics &Stats) : Stats(Stats) {}
-
-    void modifyPassConfig(MaterializationResponsibility &MR, LinkGraph &G,
-                          PassConfiguration &PassConfig) override {
-      PassConfig.PrePrunePasses.push_back(
-          [this](LinkGraph &G) { return Stats.recordPrePruneStats(G); });
-      PassConfig.PostFixupPasses.push_back(
-          [this](LinkGraph &G) { return Stats.recordPostFixupStats(G); });
-    }
-
-    Error notifyFailed(MaterializationResponsibility &MR) override {
-      return Error::success();
-    }
-
-    Error notifyRemovingResources(JITDylib &JD, ResourceKey K) override {
-      return Error::success();
-    }
-
-    void notifyTransferringResources(JITDylib &JD, ResourceKey DstKey,
-                                     ResourceKey SrcKey) override {}
-
-  private:
-    LLVMJITLinkStatistics &Stats;
-  };
-
-  S.ObjLayer.addPlugin(std::make_unique<StatisticsPlugin>(*this));
-
-  // Walk command line option and enable requested stats.
-  for (auto &Stat : ShowStats) {
-    switch (Stat) {
-    case JITLinkStats::PrePruneTotalBlockSize:
-      PrePruneTotalBlockSize = 0;
-      break;
-    case JITLinkStats::PostFixupTotalBlockSize:
-      PostFixupTotalBlockSize = 0;
-      break;
-    }
-  }
-}
-
-void LLVMJITLinkStatistics::print(raw_ostream &OS) {
-
-  if (!OrcRuntime.empty())
-    OS << "Note: Session stats include runtime and entry point lookup, but "
-          "not JITDylib initialization/deinitialization.\n";
-
-  OS << "Statistics:\n";
-  if (PrePruneTotalBlockSize)
-    OS << "  Total size of all blocks before pruning: "
-       << *PrePruneTotalBlockSize << "\n";
-
-  if (PostFixupTotalBlockSize)
-    OS << "  Total size of all blocks after fixups: "
-       << *PostFixupTotalBlockSize << "\n";
-}
-
-static uint64_t computeTotalBlockSizes(LinkGraph &G) {
-  uint64_t TotalSize = 0;
-  for (auto *B : G.blocks())
-    TotalSize += B->getSize();
-  return TotalSize;
-}
-
-Error LLVMJITLinkStatistics::recordPrePruneStats(LinkGraph &G) {
-  std::lock_guard<std::mutex> Lock(M);
-
-  if (PrePruneTotalBlockSize)
-    *PrePruneTotalBlockSize += computeTotalBlockSizes(G);
-  return Error::success();
-}
-
-Error LLVMJITLinkStatistics::recordPostFixupStats(LinkGraph &G) {
-  std::lock_guard<std::mutex> Lock(M);
-
-  if (PostFixupTotalBlockSize)
-    *PostFixupTotalBlockSize += computeTotalBlockSizes(G);
-  return Error::success();
-}
-
 static Expected<ExecutorSymbolDef> getMainEntryPoint(Session &S) {
   return S.ES.lookup(S.JDSearchOrder, S.ES.intern(EntryPointName));
 }
@@ -2100,9 +2002,7 @@ int main(int argc, char *argv[]) {
 
   auto S = ExitOnErr(Session::Create(std::move(TT), std::move(Features)));
 
-  std::unique_ptr<LLVMJITLinkStatistics> Stats;
-  if (!ShowStats.empty())
-    Stats = std::make_unique<LLVMJITLinkStatistics>(*S);
+  enableStatistics(*S, !OrcRuntime.empty());
 
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
@@ -2128,9 +2028,6 @@ int main(int argc, char *argv[]) {
 
   if (ShowAddrs)
     S->dumpSessionInfo(outs());
-
-  if (Stats)
-    Stats->print(outs());
 
   if (!EntryPoint) {
     if (Timers)
