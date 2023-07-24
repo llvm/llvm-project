@@ -35,76 +35,51 @@ class Property {
 public:
   explicit Property(const llvm::Record *record);
   explicit Property(const llvm::DefInit *init);
-  Property(StringRef storageType, StringRef interfaceType,
-           StringRef convertFromStorageCall, StringRef assignToStorageCall,
-           StringRef convertToAttributeCall, StringRef convertFromAttributeCall,
-           StringRef readFromMlirBytecodeCall,
-           StringRef writeToMlirBytecodeCall, StringRef hashPropertyCall,
-           StringRef defaultValue);
 
   // Returns the storage type.
-  StringRef getStorageType() const { return storageType; }
+  StringRef getStorageType() const;
 
   // Returns the interface type for this property.
-  StringRef getInterfaceType() const { return interfaceType; }
+  StringRef getInterfaceType() const;
 
   // Returns the template getter method call which reads this property's
   // storage and returns the value as of the desired return type.
-  StringRef getConvertFromStorageCall() const { return convertFromStorageCall; }
+  StringRef getConvertFromStorageCall() const;
 
   // Returns the template setter method call which reads this property's
   // in the provided interface type and assign it to the storage.
-  StringRef getAssignToStorageCall() const { return assignToStorageCall; }
+  StringRef getAssignToStorageCall() const;
 
   // Returns the conversion method call which reads this property's
   // in the storage type and builds an attribute.
-  StringRef getConvertToAttributeCall() const { return convertToAttributeCall; }
+  StringRef getConvertToAttributeCall() const;
 
   // Returns the setter method call which reads this property's
   // in the provided interface type and assign it to the storage.
-  StringRef getConvertFromAttributeCall() const {
-    return convertFromAttributeCall;
-  }
+  StringRef getConvertFromAttributeCall() const;
 
   // Returns the method call which reads this property from
   // bytecode and assign it to the storage.
-  StringRef getReadFromMlirBytecodeCall() const {
-    return readFromMlirBytecodeCall;
-  }
+  StringRef getReadFromMlirBytecodeCall() const;
 
   // Returns the method call which write this property's
   // to the the bytecode.
-  StringRef getWriteToMlirBytecodeCall() const {
-    return writeToMlirBytecodeCall;
-  }
+  StringRef getWriteToMlirBytecodeCall() const;
 
   // Returns the code to compute the hash for this property.
-  StringRef getHashPropertyCall() const { return hashPropertyCall; }
+  StringRef getHashPropertyCall() const;
 
   // Returns whether this Property has a default value.
-  bool hasDefaultValue() const { return !defaultValue.empty(); }
-
+  bool hasDefaultValue() const;
   // Returns the default value for this Property.
-  StringRef getDefaultValue() const { return defaultValue; }
+  StringRef getDefaultValue() const;
 
   // Returns the TableGen definition this Property was constructed from.
-  const llvm::Record &getDef() const { return *def; }
+  const llvm::Record &getDef() const;
 
 private:
   // The TableGen definition of this constraint.
   const llvm::Record *def;
-
-  // Elements describing a Property, in general fetched from the record.
-  StringRef storageType;
-  StringRef interfaceType;
-  StringRef convertFromStorageCall;
-  StringRef assignToStorageCall;
-  StringRef convertToAttributeCall;
-  StringRef convertFromAttributeCall;
-  StringRef readFromMlirBytecodeCall;
-  StringRef writeToMlirBytecodeCall;
-  StringRef hashPropertyCall;
-  StringRef defaultValue;
 };
 
 // A struct wrapping an op property and its name together

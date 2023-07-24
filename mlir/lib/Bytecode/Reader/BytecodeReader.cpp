@@ -796,10 +796,9 @@ class AttrTypeReader {
 
 public:
   AttrTypeReader(StringSectionReader &stringReader,
-                 ResourceSectionReader &resourceReader, Location fileLoc,
-                 uint64_t &bytecodeVersion)
+                 ResourceSectionReader &resourceReader, Location fileLoc)
       : stringReader(stringReader), resourceReader(resourceReader),
-        fileLoc(fileLoc), bytecodeVersion(bytecodeVersion) {}
+        fileLoc(fileLoc) {}
 
   /// Initialize the attribute and type information within the reader.
   LogicalResult initialize(MutableArrayRef<BytecodeDialect> dialects,
@@ -884,30 +883,23 @@ private:
 
   /// A location used for error emission.
   Location fileLoc;
-
-  /// Current bytecode version being used.
-  uint64_t &bytecodeVersion;
 };
 
 class DialectReader : public DialectBytecodeReader {
 public:
   DialectReader(AttrTypeReader &attrTypeReader,
                 StringSectionReader &stringReader,
-                ResourceSectionReader &resourceReader, EncodingReader &reader,
-                uint64_t &bytecodeVersion)
+                ResourceSectionReader &resourceReader, EncodingReader &reader)
       : attrTypeReader(attrTypeReader), stringReader(stringReader),
-        resourceReader(resourceReader), reader(reader),
-        bytecodeVersion(bytecodeVersion) {}
+        resourceReader(resourceReader), reader(reader) {}
 
   InFlightDiagnostic emitError(const Twine &msg) override {
     return reader.emitError(msg);
   }
 
-  uint64_t getBytecodeVersion() const override { return bytecodeVersion; }
-
   DialectReader withEncodingReader(EncodingReader &encReader) {
     return DialectReader(attrTypeReader, stringReader, resourceReader,
-                         encReader, bytecodeVersion);
+                         encReader);
   }
 
   Location getLoc() const { return reader.getLoc(); }
@@ -1011,7 +1003,6 @@ private:
   StringSectionReader &stringReader;
   ResourceSectionReader &resourceReader;
   EncodingReader &reader;
-  uint64_t &bytecodeVersion;
 };
 
 /// Wraps the properties section and handles reading properties out of it.
@@ -1216,8 +1207,7 @@ template <typename T>
 LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
                                                EncodingReader &reader,
                                                StringRef entryType) {
-  DialectReader dialectReader(*this, stringReader, resourceReader, reader,
-                              bytecodeVersion);
+  DialectReader dialectReader(*this, stringReader, resourceReader, reader);
   if (failed(entry.dialect->load(dialectReader, fileLoc.getContext())))
     return failure();
   // Ensure that the dialect implements the bytecode interface.
@@ -1262,7 +1252,7 @@ public:
        llvm::MemoryBufferRef buffer,
        const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef)
       : config(config), fileLoc(fileLoc), lazyLoading(lazyLoading),
-        attrTypeReader(stringReader, resourceReader, fileLoc, version),
+        attrTypeReader(stringReader, resourceReader, fileLoc),
         // Use the builtin unrealized conversion cast operation to represent
         // forward references to values that aren't yet defined.
         forwardRefOpState(UnknownLoc::get(config.getContext()),
@@ -1792,7 +1782,7 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
   if (!opName->opName) {
     // Load the dialect and its version.
     DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
-                                reader, version);
+                                reader);
     if (failed(opName->dialect->load(dialectReader, getContext())))
       return failure();
     // If the opName is empty, this is because we use to accept names such as
@@ -1835,7 +1825,7 @@ LogicalResult BytecodeReader::Impl::parseResourceSection(
 
   // Initialize the resource reader with the resource sections.
   DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
-                              reader, version);
+                              reader);
   return resourceReader.initialize(fileLoc, config, dialects, stringReader,
                                    *resourceData, *resourceOffsetData,
                                    dialectReader, bufferOwnerRef);
@@ -2196,7 +2186,7 @@ BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
     // interface and control the serialization.
     if (wasRegistered) {
       DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
-                                  reader, version);
+                                  reader);
       if (failed(
               propertiesReader.read(fileLoc, dialectReader, &*opName, opState)))
         return failure();
