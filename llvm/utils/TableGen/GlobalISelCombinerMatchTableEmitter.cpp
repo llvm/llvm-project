@@ -677,10 +677,10 @@ void CombineRuleBuilder::verify() const {
       // string. They simply reference the std::string inside Pattern. Ensure
       // this is the case to avoid memory issues.
       if (Name.data() != Pat->getName().data()) {
-        dbgs() << "Map StringRef: '" << Name << "' @ " << (void *)Name.data()
-               << "\n";
+        dbgs() << "Map StringRef: '" << Name << "' @ "
+               << (const void *)Name.data() << "\n";
         dbgs() << "Pat String: '" << Pat->getName() << "' @ "
-               << (void *)Pat->getName().data() << "\n";
+               << (const void *)Pat->getName().data() << "\n";
         PrintFatalError("StringRef stored in the PatternMap is not referencing "
                         "the same string as its Pattern!");
       }
