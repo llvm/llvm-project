@@ -17,31 +17,6 @@
 using namespace llvm;
 using namespace llvm::MachO;
 
-namespace {
-template <typename C>
-typename C::iterator addEntry(C &Container, StringRef InstallName) {
-  auto I = partition_point(Container, [=](const InterfaceFileRef &O) {
-    return O.getInstallName() < InstallName;
-  });
-  if (I != Container.end() && I->getInstallName() == InstallName)
-    return I;
-
-  return Container.emplace(I, InstallName);
-}
-
-template <typename C>
-typename C::iterator addEntry(C &Container, const Target &Target_) {
-  auto Iter =
-      lower_bound(Container, Target_, [](const Target &LHS, const Target &RHS) {
-        return LHS < RHS;
-      });
-  if ((Iter != std::end(Container)) && !(Target_ < *Iter))
-    return Iter;
-
-  return Container.insert(Iter, Target_);
-}
-} // end namespace
-
 void InterfaceFileRef::addTarget(const Target &Target) {
   addEntry(Targets, Target);
 }
@@ -120,17 +95,6 @@ InterfaceFile::targets(ArchitectureSet Archs) const {
   return make_filter_range(Targets, fn);
 }
 
-void InterfaceFile::addSymbol(SymbolKind Kind, StringRef Name,
-                              const TargetList &Targets, SymbolFlags Flags) {
-  Name = copyString(Name);
-  auto result = Symbols.try_emplace(SymbolsMapKey{Kind, Name}, nullptr);
-  if (result.second)
-    result.first->second = new (Allocator) Symbol{Kind, Name, Targets, Flags};
-  else
-    for (const auto &Target : Targets)
-      result.first->second->addTarget(Target);
-}
-
 void InterfaceFile::addDocument(std::shared_ptr<InterfaceFile> &&Document) {
   auto Pos = llvm::lower_bound(Documents, Document,
                                [](const std::shared_ptr<InterfaceFile> &LHS,
@@ -167,7 +131,7 @@ bool InterfaceFile::operator==(const InterfaceFile &O) const {
     return false;
   if (ReexportedLibraries != O.ReexportedLibraries)
     return false;
-  if (Symbols != O.Symbols)
+  if (*SymbolsSet != *O.SymbolsSet)
     return false;
   // Don't compare run search paths for older filetypes that cannot express
   // them.
