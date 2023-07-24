@@ -1422,6 +1422,11 @@ MCSection *TargetLoweringObjectFileMachO::getSectionForConstant(
   return ReadOnlySection;  // .const
 }
 
+MCSection *TargetLoweringObjectFileMachO::getSectionForCommandLines() const {
+  return getContext().getMachOSection("__TEXT", "__command_line", 0,
+                                      SectionKind::getReadOnly());
+}
+
 const MCExpr *TargetLoweringObjectFileMachO::getTTypeGlobalReference(
     const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
     MachineModuleInfo *MMI, MCStreamer &Streamer) const {
