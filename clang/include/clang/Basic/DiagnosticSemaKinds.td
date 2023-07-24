@@ -1579,6 +1579,8 @@ def warn_inline_namespace_reopened_noninline : Warning<
   InGroup<InlineNamespaceReopenedNoninline>;
 def err_inline_namespace_mismatch : Error<
   "non-inline namespace cannot be reopened as inline">;
+def err_inline_namespace_std : Error<
+  "cannot declare the namespace 'std' to be inline">;
 
 def err_unexpected_friend : Error<
   "friends can only be classes or functions">;

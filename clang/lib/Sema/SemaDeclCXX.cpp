@@ -11388,6 +11388,20 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
 
   NamespaceDecl *PrevNS = nullptr;
   if (II) {
+    // C++ [namespace.std]p7:
+    //   A translation unit shall not declare namespace std to be an inline
+    //   namespace (9.8.2).
+    //
+    // Precondition: the std namespace is in the file scope and is declared to
+    // be inline
+    auto DiagnoseInlineStdNS = [&]() {
+      assert(IsInline && II->isStr("std") &&
+             CurContext->getRedeclContext()->isTranslationUnit() &&
+             "Precondition of DiagnoseInlineStdNS not met");
+      Diag(InlineLoc, diag::err_inline_namespace_std)
+          << SourceRange(InlineLoc, InlineLoc.getLocWithOffset(6));
+      IsInline = false;
+    };
     // C++ [namespace.def]p2:
     //   The identifier in an original-namespace-definition shall not
     //   have been previously defined in the declarative region in
@@ -11408,7 +11422,10 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
 
     if (PrevNS) {
       // This is an extended namespace definition.
-      if (IsInline != PrevNS->isInline())
+      if (IsInline && II->isStr("std") &&
+          CurContext->getRedeclContext()->isTranslationUnit())
+        DiagnoseInlineStdNS();
+      else if (IsInline != PrevNS->isInline())
         DiagnoseNamespaceInlineMismatch(*this, NamespaceLoc, Loc, II,
                                         &IsInline, PrevNS);
     } else if (PrevDecl) {
@@ -11420,6 +11437,8 @@ Decl *Sema::ActOnStartNamespaceDef(Scope *NamespcScope,
       // Continue on to push Namespc as current DeclContext and return it.
     } else if (II->isStr("std") &&
                CurContext->getRedeclContext()->isTranslationUnit()) {
+      if (IsInline)
+        DiagnoseInlineStdNS();
       // This is the first "real" definition of the namespace "std", so update
       // our cache of the "std" namespace to point at this definition.
       PrevNS = getStdNamespace();
