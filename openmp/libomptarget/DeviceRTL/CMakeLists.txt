@@ -143,6 +143,76 @@ set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
 )
 
+function(addAMDSpecificBcLibs depend_target gfxname abi_num bc_files local_depend_files)
+ #  ------------------------ Consider moving this block out of loop
+  # For amdgpu, the libomptarget bc is "all inclusive".
+  # During user compilation, the libomptarget bc is essentially the only
+  # non-user library linked. It is linked once in GPU link phase
+  # following llvm-link options: --internalize --only-needed
+  if(NOT amd_device_libs_found)
+    find_package(AMDDeviceLibs REQUIRED CONFIG
+      HINTS
+      ${CMAKE_INSTALL_PREFIX}
+      PATHS
+      /opt/rocm)
+    if(AMDDeviceLibs_DIR)
+      set(amd_device_libs_found ON)
+      libomptarget_say("DeviceRTLs ${gfxname}: Getting ROCm device libs from ${AMDDeviceLibs_DIR}")
+    else()
+      libomptarget_say("DeviceRTLs ${gfxname}: Not building AMDGCN device RTL: Could not find AMDDeviceLibs package")
+      return()
+    endif()
+  endif()
+  get_target_property(ockl_bc_file ockl LOCATION)
+  get_target_property(ocml_bc_file ocml LOCATION)
+  set(amdgpu_wfsz_is32 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103)
+  string(FIND "${amdgpu_wfsz_is32}" "${gfxname}" is_32bit)
+  if(NOT is_32bit EQUAL -1)
+    get_target_property(oclc_wf_bc_file oclc_wavefrontsize64_off LOCATION)
+  else()
+    get_target_property(oclc_wf_bc_file oclc_wavefrontsize64_on LOCATION)
+  endif()
+  string(LENGTH "${gfxname}" gfxlen)
+  if(gfxlen EQUAL 6)
+    string(SUBSTRING ${gfxname} 3 3 gfxnum)
+  else()
+    string(SUBSTRING ${gfxname} 3 4 gfxnum)
+  endif()
+  get_target_property(oclc_isa_bc_file oclc_isa_version_${gfxnum} LOCATION)
+  get_target_property(oclc_abi_version_file oclc_abi_version_${abi_num} LOCATION)
+  # ------ end consider moving this block out of loop 
+
+  # add_custom_command can only depend on files that are local to this CMakes. 
+  # The "All-inclusive" libomptarget needs bc files from libm and hostexec.
+  # So we use add_custom_target followed by add_dependencies
+  # to ensure libm and hostexec files were created.
+  add_custom_target(${depend_target} 
+    COMMAND touch ${depend_target}
+    COMMENT "Generating ${depend_target}"
+  )
+  # Add dependencies to touch-target-${abi_num}-$(gfxname)
+  # so all $bc_files will exist or be created.
+  add_dependencies(${depend_target}
+    libm-target-${abi_num}-${gfxname}
+    libhostexec-${abi_num}-${gfxname}.bc
+  )
+
+  # Add amdgcn-specific bc files to link command including libm and hostexec
+  list(APPEND bc_files
+    ${CMAKE_BINARY_DIR}/libm-${abi_num}-${gfxname}.bc
+    ${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-${abi_num}-${gfxname}.bc
+    ${ocml_bc_file}
+    ${ockl_bc_file}
+    ${oclc_wf_bc_file}
+    ${oclc_isa_bc_file}
+    ${oclc_abi_version_file}
+  )
+  set (bc_files ${bc_files} PARENT_SCOPE)
+
+  list(APPEND local_depend_files ${depend_target})
+  set (local_depend_files ${local_depend_files} PARENT_SCOPE)
+endfunction()
+
 # first create an object target
 add_library(omptarget.devicertl.all_objs OBJECT IMPORTED)
 function(compileDeviceRTLLibrary target_cpu target_name target_triple)
@@ -179,13 +249,21 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
 
   set(bclib_name "libomptarget-${target_name}-${target_cpu}.bc")
 
+  set(local_depend_files "")
+  if( ${target_name} STREQUAL "amdgpu" )
+    addAMDSpecificBcLibs("touch-target-${target_cpu}" ${target_cpu} "500" "${bc_files}" "${local_depend_files}")
+  else()
+    set(local_depend_files ${bc_files})
+  endif()
+
   # Link to a bitcode library.
   add_custom_target(linked_${bclib_name}
       COMMAND ${LINK_TOOL}
         -o ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name} ${bc_files}
+      DEPENDS ${bc_files}
       COMMENT "Linking LLVM bitcode ${bclib_name}"
   )
-  add_dependencies(linked_${bclib_name} ${bc_files})
+  add_dependencies(linked_${bclib_name} ${local_depend_files})
   if("${LINK_TOOL}" STREQUAL "$<TARGET_FILE:llvm-link>")
     add_dependencies(linked_${bclib_name} llvm-link)
   endif()
@@ -328,70 +406,7 @@ function(buildAMDAllInclusiveBcLib gfxname target_name target_triple abi_num)
 
   set(bclib_name_abi "libomptarget-${abi_num}-${target_name}-${gfxname}.bc")
 
-  #  ------------------------ Consider moving this block out of loop
-  # For amdgpu, the libomptarget bc is "all inclusive".
-  # During user compilation, the libomptarget bc is essentially the only
-  # non-user library linked. It is linked once in GPU link phase
-  # following llvm-link options: --internalize --only-needed
-  if(NOT amd_device_libs_found)
-    find_package(AMDDeviceLibs REQUIRED CONFIG
-      HINTS
-      ${CMAKE_INSTALL_PREFIX}
-      PATHS
-      /opt/rocm)
-    if(AMDDeviceLibs_DIR)
-      set(amd_device_libs_found ON)
-      libomptarget_say("DeviceRTLs ${gfxname}: Getting ROCm device libs from ${AMDDeviceLibs_DIR}")
-    else()
-      libomptarget_say("DeviceRTLs ${gfxname}: Not building AMDGCN device RTL: Could not find AMDDeviceLibs package")
-      return()
-    endif()
-  endif()
-  get_target_property(ockl_bc_file ockl LOCATION)
-  get_target_property(ocml_bc_file ocml LOCATION)
-  set(amdgpu_wfsz_is32 gfx1030 gfx1031 gfx1032 gfx1033 gfx1034 gfx1035 gfx1036 gfx1100 gfx1101 gfx1102 gfx1103)
-  string(FIND "${amdgpu_wfsz_is32}" "${gfxname}" is_32bit)
-  if(NOT is_32bit EQUAL -1)
-    get_target_property(oclc_wf_bc_file oclc_wavefrontsize64_off LOCATION)
-  else()
-    get_target_property(oclc_wf_bc_file oclc_wavefrontsize64_on LOCATION)
-  endif()
-  string(LENGTH "${gfxname}" gfxlen)
-  if(gfxlen EQUAL 6)
-    string(SUBSTRING ${gfxname} 3 3 gfxnum)
-  else()
-    string(SUBSTRING ${gfxname} 3 4 gfxnum)
-  endif()
-  get_target_property(oclc_isa_bc_file oclc_isa_version_${gfxnum} LOCATION)
-  get_target_property(oclc_abi_version_file oclc_abi_version_${abi_num} LOCATION)
-  # ------ end consider moving this block out of loop 
-
-  # add_custom_command can only depend on files that are local to this CMakes. 
-  # The "All-inclusive" libomptarget needs bc files from libm and hostexec.
-  # So we use add_custom_target followed by add_dependencies
-  # to ensure libm and hostexec files were created.
-  add_custom_target(touch-target-${abi_num}-${gfxname} 
-    COMMAND touch touch-target-${abi_num}-${gfxname} 
-    COMMENT "Generating touch-target-${abi_num}-${gfxname}"
-  )
-  # Add dependencies to touch-target-${abi_num}-$(gfxname)
-  # so all $bc_files will exist or be created.
-  add_dependencies(touch-target-${abi_num}-${gfxname}
-    libm-target-${abi_num}-${gfxname}
-    libhostexec-${abi_num}-${gfxname}.bc
-  )
-
-  # Add amdgcn-specific bc files to link command including libm and hostexec
-  list(APPEND bc_files
-    ${CMAKE_BINARY_DIR}/libm-${abi_num}-${gfxname}.bc
-    ${CMAKE_BINARY_DIR}/libomptarget/hostexec/libhostexec-${abi_num}-${gfxname}.bc
-    ${ocml_bc_file}
-    ${ockl_bc_file}
-    ${oclc_wf_bc_file}
-    ${oclc_isa_bc_file}
-    ${oclc_abi_version_file}
-  )
-  list(APPEND local_depend_files touch-target-${abi_num}-${gfxname})
+  addAMDSpecificBcLibs("touch-target-${abi_num}-${gfxname}" ${gfxname} ${abi_num} "${bc_files}" "${local_depend_files}")
 
   # 2. Link to create the bitcode library.
 
