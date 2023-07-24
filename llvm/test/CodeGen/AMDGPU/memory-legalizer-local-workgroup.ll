@@ -2658,7 +2658,7 @@ define amdgpu_kernel void @local_workgroup_monotonic_monotonic_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_monotonic_monotonic_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -2820,7 +2820,7 @@ define amdgpu_kernel void @local_workgroup_acquire_monotonic_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acquire_monotonic_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -2985,7 +2985,7 @@ define amdgpu_kernel void @local_workgroup_release_monotonic_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_release_monotonic_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -3166,7 +3166,7 @@ define amdgpu_kernel void @local_workgroup_acq_rel_monotonic_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acq_rel_monotonic_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -3348,7 +3348,7 @@ define amdgpu_kernel void @local_workgroup_seq_cst_monotonic_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_seq_cst_monotonic_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -3512,7 +3512,7 @@ define amdgpu_kernel void @local_workgroup_monotonic_acquire_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_monotonic_acquire_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -3675,7 +3675,7 @@ define amdgpu_kernel void @local_workgroup_acquire_acquire_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acquire_acquire_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -3856,7 +3856,7 @@ define amdgpu_kernel void @local_workgroup_release_acquire_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_release_acquire_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -4038,7 +4038,7 @@ define amdgpu_kernel void @local_workgroup_acq_rel_acquire_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acq_rel_acquire_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -4220,7 +4220,7 @@ define amdgpu_kernel void @local_workgroup_seq_cst_acquire_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_seq_cst_acquire_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -4402,7 +4402,7 @@ define amdgpu_kernel void @local_workgroup_monotonic_seq_cst_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_monotonic_seq_cst_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -4584,7 +4584,7 @@ define amdgpu_kernel void @local_workgroup_acquire_seq_cst_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acquire_seq_cst_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -4766,7 +4766,7 @@ define amdgpu_kernel void @local_workgroup_release_seq_cst_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_release_seq_cst_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -4948,7 +4948,7 @@ define amdgpu_kernel void @local_workgroup_acq_rel_seq_cst_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acq_rel_seq_cst_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -5130,7 +5130,7 @@ define amdgpu_kernel void @local_workgroup_seq_cst_seq_cst_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_seq_cst_seq_cst_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -5304,7 +5304,7 @@ define amdgpu_kernel void @local_workgroup_monotonic_monotonic_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_monotonic_monotonic_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -5485,7 +5485,7 @@ define amdgpu_kernel void @local_workgroup_acquire_monotonic_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acquire_monotonic_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -5679,7 +5679,7 @@ define amdgpu_kernel void @local_workgroup_release_monotonic_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_release_monotonic_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -5879,7 +5879,7 @@ define amdgpu_kernel void @local_workgroup_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acq_rel_monotonic_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -6079,7 +6079,7 @@ define amdgpu_kernel void @local_workgroup_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_seq_cst_monotonic_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -6261,7 +6261,7 @@ define amdgpu_kernel void @local_workgroup_monotonic_acquire_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_monotonic_acquire_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -6442,7 +6442,7 @@ define amdgpu_kernel void @local_workgroup_acquire_acquire_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acquire_acquire_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -6641,7 +6641,7 @@ define amdgpu_kernel void @local_workgroup_release_acquire_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_release_acquire_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -6841,7 +6841,7 @@ define amdgpu_kernel void @local_workgroup_acq_rel_acquire_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acq_rel_acquire_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -7041,7 +7041,7 @@ define amdgpu_kernel void @local_workgroup_seq_cst_acquire_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_seq_cst_acquire_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -7241,7 +7241,7 @@ define amdgpu_kernel void @local_workgroup_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_monotonic_seq_cst_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -7441,7 +7441,7 @@ define amdgpu_kernel void @local_workgroup_acquire_seq_cst_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acquire_seq_cst_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -7641,7 +7641,7 @@ define amdgpu_kernel void @local_workgroup_release_seq_cst_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_release_seq_cst_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -7841,7 +7841,7 @@ define amdgpu_kernel void @local_workgroup_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -8041,7 +8041,7 @@ define amdgpu_kernel void @local_workgroup_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -10475,7 +10475,7 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_monotonic_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_monotonic_monotonic_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -10621,7 +10621,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_monotonic_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acquire_monotonic_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -10767,7 +10767,7 @@ define amdgpu_kernel void @local_workgroup_one_as_release_monotonic_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_release_monotonic_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -10913,7 +10913,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_monotonic_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acq_rel_monotonic_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -11059,7 +11059,7 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_monotonic_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_seq_cst_monotonic_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -11205,7 +11205,7 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_acquire_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_monotonic_acquire_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -11351,7 +11351,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_acquire_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acquire_acquire_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -11497,7 +11497,7 @@ define amdgpu_kernel void @local_workgroup_one_as_release_acquire_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_release_acquire_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -11643,7 +11643,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_acquire_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acq_rel_acquire_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -11789,7 +11789,7 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_acquire_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_seq_cst_acquire_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -11935,7 +11935,7 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_seq_cst_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_monotonic_seq_cst_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -12081,7 +12081,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_seq_cst_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acquire_seq_cst_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -12227,7 +12227,7 @@ define amdgpu_kernel void @local_workgroup_one_as_release_seq_cst_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_release_seq_cst_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -12373,7 +12373,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_seq_cst_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acq_rel_seq_cst_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -12519,7 +12519,7 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_seq_cst_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_seq_cst_seq_cst_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -12691,7 +12691,7 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_monotonic_ret_cmpxch
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_monotonic_monotonic_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -12867,7 +12867,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_monotonic_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acquire_monotonic_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -13043,7 +13043,7 @@ define amdgpu_kernel void @local_workgroup_one_as_release_monotonic_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_release_monotonic_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -13219,7 +13219,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acq_rel_monotonic_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -13395,7 +13395,7 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_seq_cst_monotonic_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -13571,7 +13571,7 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_acquire_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_monotonic_acquire_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -13747,7 +13747,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_acquire_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acquire_acquire_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -13923,7 +13923,7 @@ define amdgpu_kernel void @local_workgroup_one_as_release_acquire_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_release_acquire_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -14099,7 +14099,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_acquire_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acq_rel_acquire_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -14275,7 +14275,7 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_acquire_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_seq_cst_acquire_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -14451,7 +14451,7 @@ define amdgpu_kernel void @local_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_monotonic_seq_cst_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -14627,7 +14627,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acquire_seq_cst_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acquire_seq_cst_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -14803,7 +14803,7 @@ define amdgpu_kernel void @local_workgroup_one_as_release_seq_cst_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_release_seq_cst_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -14979,7 +14979,7 @@ define amdgpu_kernel void @local_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_acq_rel_seq_cst_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
@@ -15155,7 +15155,7 @@ define amdgpu_kernel void @local_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg(
 ;
 ; GFX1210-CU-LABEL: local_workgroup_one_as_seq_cst_seq_cst_ret_cmpxchg:
 ; GFX1210-CU:       ; %bb.0: ; %entry
-; GFX1210-CU-NEXT:    s_load_b128 s[0:3], s[0:1], 0x0
+; GFX1210-CU-NEXT:    s_load_b96 s[0:2], s[0:1], 0x0
 ; GFX1210-CU-NEXT:    s_wait_kmcnt 0x0
 ; GFX1210-CU-NEXT:    v_dual_mov_b32 v0, s0 :: v_dual_mov_b32 v1, s1
 ; GFX1210-CU-NEXT:    v_mov_b32_e32 v2, s2
