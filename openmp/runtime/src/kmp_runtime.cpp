@@ -5407,6 +5407,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
         }
 
 #if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
+        /* Restore initial primary thread's affinity mask */
         new_temp_affinity.restore();
 #endif
 #if KMP_NESTED_HOT_TEAMS
