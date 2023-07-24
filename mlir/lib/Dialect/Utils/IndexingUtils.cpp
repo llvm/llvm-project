@@ -161,13 +161,13 @@ AffineExpr mlir::computeSum(MLIRContext *ctx, ArrayRef<AffineExpr> basis) {
   if (basis.empty())
     return getAffineConstantExpr(0, ctx);
   return std::accumulate(basis.begin(), basis.end(),
-                         getAffineConstantExpr(1, ctx),
+                         getAffineConstantExpr(0, ctx),
                          std::plus<AffineExpr>());
 }
 
 AffineExpr mlir::computeProduct(MLIRContext *ctx, ArrayRef<AffineExpr> basis) {
   if (basis.empty())
-    return getAffineConstantExpr(0, ctx);
+    return getAffineConstantExpr(1, ctx);
   return std::accumulate(basis.begin(), basis.end(),
                          getAffineConstantExpr(1, ctx),
                          std::multiplies<AffineExpr>());
