@@ -1,4 +1,3 @@
-// UNSUPPORTED: reverse_iteration
 // RUN: llvm-tblgen -I %p/../../../include -gen-global-isel-combiner-matchtable \
 // RUN:     -gicombiner-stop-after-parse -combiners=MyCombiner %s | \
 // RUN: FileCheck %s
