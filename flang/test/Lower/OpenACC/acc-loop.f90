@@ -279,7 +279,7 @@ program acc_loop
     reduction_i = 1
   end do
 
-! CHECK:      acc.loop reduction(@reduction_add_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_i32 -> %{{.*}} : !fir.ref<i32>) {
+! CHECK:      acc.loop reduction(@reduction_add_ref_f32 -> %{{.*}} : !fir.ref<f32>, @reduction_mul_ref_i32 -> %{{.*}} : !fir.ref<i32>) {
 ! CHECK:        fir.do_loop
 ! CHECK:        acc.yield
 ! CHECK-NEXT: }{{$}}
