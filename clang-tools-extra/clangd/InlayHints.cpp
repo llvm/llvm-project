@@ -222,6 +222,7 @@ const NamedDecl *getDeclForType(const Type *T) {
     return getDeclForTypeImpl(llvm::cast<TY##Type>(T));
 #include "clang/AST/TypeNodes.inc"
   }
+  llvm_unreachable("Unknown TypeClass enum");
 }
 
 // getSimpleName() returns the plain identifier for an entity, if any.
