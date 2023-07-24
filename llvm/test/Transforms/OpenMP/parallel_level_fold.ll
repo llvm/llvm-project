@@ -16,9 +16,9 @@ target triple = "nvptx64"
 ; CHECK: @[[PARALLEL_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i16
 ; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [3 x ptr] [ptr @no_spmd_exec_mode, ptr @spmd_exec_mode, ptr @parallel_exec_mode], section "llvm.metadata"
-; CHECK: @[[NONE_SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
-; CHECK: @[[SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
-; CHECK: @[[PARALLEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[NONE_SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 0
+; CHECK: @[[SPMD_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 0
+; CHECK: @[[PARALLEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 0
 ;.
 define weak void @none_spmd() "kernel" {
 ; CHECK-LABEL: define {{[^@]+}}@none_spmd
