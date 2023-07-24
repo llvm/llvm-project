@@ -219,12 +219,13 @@ public:
       }
     if (!IncludedHeader && File)
       IncludedHeader = &File->getFileEntry();
-    checkForExport(HashFID, HashLine, std::move(IncludedHeader));
-    checkForKeep(HashLine);
+    checkForExport(HashFID, HashLine, std::move(IncludedHeader), File);
+    checkForKeep(HashLine, File);
   }
 
   void checkForExport(FileID IncludingFile, int HashLine,
-                      std::optional<Header> IncludedHeader) {
+                      std::optional<Header> IncludedHeader,
+                      OptionalFileEntryRef IncludedFile) {
     if (ExportStack.empty())
       return;
     auto &Top = ExportStack.back();
@@ -248,20 +249,22 @@ public:
         }
       }
       // main-file #include with export pragma should never be removed.
-      if (Top.SeenAtFile == SM.getMainFileID())
-        Out->ShouldKeep.insert(HashLine);
+      if (Top.SeenAtFile == SM.getMainFileID() && IncludedFile)
+        Out->ShouldKeep.insert(IncludedFile->getUniqueID());
     }
     if (!Top.Block) // Pop immediately for single-line export pragma.
       ExportStack.pop_back();
   }
 
-  void checkForKeep(int HashLine) {
+  void checkForKeep(int HashLine, OptionalFileEntryRef IncludedFile) {
     if (!InMainFile || KeepStack.empty())
       return;
     KeepPragma &Top = KeepStack.back();
     // Check if the current include is covered by a keep pragma.
-    if ((Top.Block && HashLine > Top.SeenAtLine) || Top.SeenAtLine == HashLine)
-      Out->ShouldKeep.insert(HashLine);
+    if (IncludedFile && ((Top.Block && HashLine > Top.SeenAtLine) ||
+                         Top.SeenAtLine == HashLine)) {
+      Out->ShouldKeep.insert(IncludedFile->getUniqueID());
+    }
 
     if (!Top.Block)
       KeepStack.pop_back(); // Pop immediately for single-line keep pragma.
@@ -321,7 +324,7 @@ public:
       return false;
     }
     if (Pragma->consume_front("always_keep")) {
-      Out->AlwaysKeep.insert(CommentUID);
+      Out->ShouldKeep.insert(CommentUID);
       return false;
     }
     return false;
@@ -418,12 +421,8 @@ bool PragmaIncludes::isPrivate(const FileEntry *FE) const {
   return IWYUPublic.contains(FE->getUniqueID());
 }
 
-bool PragmaIncludes::shouldKeep(unsigned HashLineNumber) const {
-  return ShouldKeep.contains(HashLineNumber);
-}
-
 bool PragmaIncludes::shouldKeep(const FileEntry *FE) const {
-  return AlwaysKeep.contains(FE->getUniqueID());
+  return ShouldKeep.contains(FE->getUniqueID());
 }
 
 namespace {

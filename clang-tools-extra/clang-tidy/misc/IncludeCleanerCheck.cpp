@@ -143,7 +143,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
        RecordedPreprocessor.Includes.all()) {
     if (Used.contains(&I) || !I.Resolved)
       continue;
-    if (RecordedPI.shouldKeep(I.Line) || RecordedPI.shouldKeep(*I.Resolved))
+    if (RecordedPI.shouldKeep(*I.Resolved))
       continue;
     // Check if main file is the public interface for a private header. If so
     // we shouldn't diagnose it as unused.
