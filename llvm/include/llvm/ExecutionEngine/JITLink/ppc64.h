@@ -98,6 +98,7 @@ inline PLTCallStubInfo pickStub(PLTCallStubKind StubKind) {
     };
   }
   }
+  llvm_unreachable("Unknown PLTCallStubKind enum");
 }
 
 inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
