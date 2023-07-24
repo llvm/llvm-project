@@ -9508,11 +9508,11 @@ Value *CodeGenFunction::EmitSMEZero(SVETypeFlags TypeFlags,
 Value *CodeGenFunction::EmitSMELdrStr(SVETypeFlags TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
-  Function *Vscale = CGM.getIntrinsic(Intrinsic::vscale, Int64Ty);
-  llvm::Value *VscaleCall = Builder.CreateCall(Vscale, {}, "vscale");
+  Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
+  llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
   llvm::Value *MulVL = Builder.CreateMul(
-      VscaleCall,
-      Builder.getInt64(16 * cast<llvm::ConstantInt>(Ops[1])->getZExtValue()),
+      CntsbCall,
+      Builder.getInt64(cast<llvm::ConstantInt>(Ops[1])->getZExtValue()),
       "mulvl");
   Ops[2] = Builder.CreateGEP(Int8Ty, Ops[2], MulVL);
   Ops[0] = EmitTileslice(Ops[1], Ops[0]);
