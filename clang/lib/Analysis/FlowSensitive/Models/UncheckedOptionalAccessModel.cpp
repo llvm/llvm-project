@@ -1048,10 +1048,5 @@ UncheckedOptionalAccessDiagnoser::UncheckedOptionalAccessDiagnoser(
     UncheckedOptionalAccessModelOptions Options)
     : DiagnoseMatchSwitch(buildDiagnoseMatchSwitch(Options)) {}
 
-std::vector<SourceLocation> UncheckedOptionalAccessDiagnoser::diagnose(
-    ASTContext &Ctx, const CFGElement *Elt, const Environment &Env) {
-  return DiagnoseMatchSwitch(*Elt, Ctx, Env);
-}
-
 } // namespace dataflow
 } // namespace clang
