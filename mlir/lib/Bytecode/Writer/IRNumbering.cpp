@@ -115,19 +115,29 @@ static void groupByDialectPerByte(T range) {
 IRNumberingState::IRNumberingState(Operation *op,
                                    const BytecodeWriterConfig &config)
     : config(config) {
-  // Compute a global operation ID numbering according to the pre-order walk of
-  // the IR. This is used as reference to construct use-list orders.
-  unsigned operationID = 0;
-  op->walk<WalkOrder::PreOrder>(
-      [&](Operation *op) { operationIDs.try_emplace(op, operationID++); });
+  computeGlobalNumberingState(op);
 
   // Number the root operation.
   number(*op);
 
-  // Push all of the regions of the root operation onto the worklist.
+  // A worklist of region contexts to number and the next value id before that
+  // region.
   SmallVector<std::pair<Region *, unsigned>, 8> numberContext;
-  for (Region &region : op->getRegions())
-    numberContext.emplace_back(&region, nextValueID);
+
+  // Functor to push the regions of the given operation onto the numbering
+  // context.
+  auto addOpRegionsToNumber = [&](Operation *op) {
+    MutableArrayRef<Region> regions = op->getRegions();
+    if (regions.empty())
+      return;
+
+    // Isolated regions don't share value numbers with their parent, so we can
+    // start numbering these regions at zero.
+    unsigned opFirstValueID = isIsolatedFromAbove(op) ? 0 : nextValueID;
+    for (Region &region : regions)
+      numberContext.emplace_back(&region, opFirstValueID);
+  };
+  addOpRegionsToNumber(op);
 
   // Iteratively process each of the nested regions.
   while (!numberContext.empty()) {
@@ -136,14 +146,8 @@ IRNumberingState::IRNumberingState(Operation *op,
     number(*region);
 
     // Traverse into nested regions.
-    for (Operation &op : region->getOps()) {
-      // Isolated regions don't share value numbers with their parent, so we can
-      // start numbering these regions at zero.
-      unsigned opFirstValueID =
-          op.hasTrait<OpTrait::IsIsolatedFromAbove>() ? 0 : nextValueID;
-      for (Region &region : op.getRegions())
-        numberContext.emplace_back(&region, opFirstValueID);
-    }
+    for (Operation &op : region->getOps())
+      addOpRegionsToNumber(&op);
   }
 
   // Number each of the dialects. For now this is just in the order they were
@@ -176,6 +180,116 @@ IRNumberingState::IRNumberingState(Operation *op,
 
   // Finalize the numbering of the dialect resources.
   finalizeDialectResourceNumberings(op);
+}
+
+void IRNumberingState::computeGlobalNumberingState(Operation *rootOp) {
+  // A simple state struct tracking data used when walking operations.
+  struct StackState {
+    /// The operation currently being walked.
+    Operation *op;
+
+    /// The numbering of the operation.
+    OperationNumbering *numbering;
+
+    /// A flag indicating if the current state or one of its parents has
+    /// unresolved isolation status. This is tracked separately from the
+    /// isIsolatedFromAbove bit on `numbering` because we need to be able to
+    /// handle the given case:
+    ///   top.op {
+    ///     %value = ...
+    ///     middle.op {
+    ///       %value2 = ...
+    ///       inner.op {
+    ///         // Here we mark `inner.op` as not isolated. Note `middle.op`
+    ///         // isn't known not isolated yet.
+    ///         use.op %value2
+    ///
+    ///         // Here inner.op is already known to be non-isolated, but
+    ///         // `middle.op` is now also discovered to be non-isolated.
+    ///         use.op %value
+    ///       }
+    ///     }
+    ///   }
+    bool hasUnresolvedIsolation;
+  };
+
+  // Compute a global operation ID numbering according to the pre-order walk of
+  // the IR. This is used as reference to construct use-list orders.
+  unsigned operationID = 0;
+
+  // Walk each of the operations within the IR, tracking a stack of operations
+  // as we recurse into nested regions. This walk method hooks in at two stages
+  // during the walk:
+  //
+  //   BeforeAllRegions:
+  //     Here we generate a numbering for the operation and push it onto the
+  //     stack if it has regions. We also compute the isolation status of parent
+  //     regions at this stage. This is done by checking the parent regions of
+  //     operands used by the operation, and marking each region between the
+  //     the operand region and the current as not isolated. See
+  //     StackState::hasUnresolvedIsolation above for an example.
+  //
+  //   AfterAllRegions:
+  //     Here we pop the operation from the stack, and if it hasn't been marked
+  //     as non-isolated, we mark it as so. A non-isolated use would have been
+  //     found while walking the regions, so it is safe to mark the operation at
+  //     this point.
+  //
+  SmallVector<StackState> opStack;
+  rootOp->walk([&](Operation *op, const WalkStage &stage) {
+    // After visiting all nested regions, we pop the operation from the stack.
+    if (stage.isAfterAllRegions()) {
+      // If no non-isolated uses were found, we can safely mark this operation
+      // as isolated from above.
+      OperationNumbering *numbering = opStack.pop_back_val().numbering;
+      if (!numbering->isIsolatedFromAbove.has_value())
+        numbering->isIsolatedFromAbove = true;
+      return;
+    }
+
+    // When visiting before nested regions, we process "IsolatedFromAbove"
+    // checks and compute the number for this operation.
+    if (!stage.isBeforeAllRegions())
+      return;
+    // Update the isolation status of parent regions if any have yet to be
+    // resolved.
+    if (!opStack.empty() && opStack.back().hasUnresolvedIsolation) {
+      Region *parentRegion = op->getParentRegion();
+      for (Value operand : op->getOperands()) {
+        Region *operandRegion = operand.getParentRegion();
+        if (operandRegion == parentRegion)
+          continue;
+        // We've found a use of an operand outside of the current region,
+        // walk the operation stack searching for the parent operation,
+        // marking every region on the way as not isolated.
+        Operation *operandContainerOp = operandRegion->getParentOp();
+        auto it = std::find_if(
+            opStack.rbegin(), opStack.rend(), [=](const StackState &it) {
+              // We only need to mark up to the container region, or the first
+              // that has an unresolved status.
+              return !it.hasUnresolvedIsolation || it.op == operandContainerOp;
+            });
+        assert(it != opStack.rend() && "expected to find the container");
+        for (auto &state : llvm::make_range(opStack.rbegin(), it)) {
+          // If we stopped at a region that knows its isolation status, we can
+          // stop updating the isolation status for the parent regions.
+          state.hasUnresolvedIsolation = it->hasUnresolvedIsolation;
+          state.numbering->isIsolatedFromAbove = false;
+        }
+      }
+    }
+
+    // Compute the number for this op and push it onto the stack.
+    auto *numbering =
+        new (opAllocator.Allocate()) OperationNumbering(operationID++);
+    if (op->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      numbering->isIsolatedFromAbove = true;
+    operations.try_emplace(op, numbering);
+    if (op->getNumRegions()) {
+      opStack.emplace_back(StackState{
+          op, numbering, !numbering->isIsolatedFromAbove.has_value()});
+    }
+  });
 }
 
 void IRNumberingState::number(Attribute attr) {
