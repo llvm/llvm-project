@@ -627,8 +627,12 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef MangledName, mlir::Type Ty,
     }
 
     // Emit section information for extern variables.
-    if (D->hasExternalStorage())
-      assert(0 && "not implemented");
+    if (D->hasExternalStorage()) {
+      if (const SectionAttr *SA = D->getAttr<SectionAttr>()) {
+        assert(!UnimplementedFeature::setGlobalVarSection());
+        llvm_unreachable("section info for extern vars is NYI");
+      }
+    }
 
     // Handle XCore specific ABI requirements.
     if (getTriple().getArch() == llvm::Triple::xcore)
