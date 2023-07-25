@@ -1172,6 +1172,80 @@ TEST_F(LibclangParseTest, UnaryOperator) {
   });
 }
 
+TEST_F(LibclangParseTest, VisitStaticAssertDecl_noMessage) {
+  const char testSource[] = R"cpp(static_assert(true))cpp";
+  std::string fileName = "main.cpp";
+  WriteFile(fileName, testSource);
+  const char *Args[] = {"-xc++"};
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args, 1,
+                                       nullptr, 0, TUFlags);
+
+  std::optional<CXCursor> staticAssertCsr;
+  Traverse([&](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_StaticAssert) {
+      staticAssertCsr.emplace(cursor);
+      return CXChildVisit_Break;
+    }
+    return CXChildVisit_Recurse;
+  });
+  ASSERT_TRUE(staticAssertCsr.has_value());
+  Traverse(*staticAssertCsr, [](CXCursor cursor, CXCursor parent) {
+    EXPECT_EQ(cursor.kind, CXCursor_CXXBoolLiteralExpr);
+    return CXChildVisit_Break;
+  });
+  EXPECT_EQ(fromCXString(clang_getCursorSpelling(*staticAssertCsr)), "");
+}
+
+TEST_F(LibclangParseTest, VisitStaticAssertDecl_exprMessage) {
+  const char testSource[] = R"cpp(
+template <unsigned s>
+constexpr unsigned size(const char (&)[s])
+{
+    return s - 1;
+}
+
+struct Message {
+    static constexpr char message[] = "Hello World!";
+    constexpr const char* data() const { return message;}
+    constexpr unsigned size() const
+    {
+        return ::size(message);
+    }
+};
+Message message;
+static_assert(true, message);
+)cpp";
+  std::string fileName = "main.cpp";
+  WriteFile(fileName, testSource);
+  const char *Args[] = {"-xc++", "-std=c++26"};
+  ClangTU = clang_parseTranslationUnit(Index, fileName.c_str(), Args,
+                                       std::size(Args), nullptr, 0, TUFlags);
+  ASSERT_EQ(clang_getNumDiagnostics(ClangTU), 0);
+  std::optional<CXCursor> staticAssertCsr;
+  Traverse([&](CXCursor cursor, CXCursor parent) -> CXChildVisitResult {
+    if (cursor.kind == CXCursor_StaticAssert) {
+      staticAssertCsr.emplace(cursor);
+    }
+    return CXChildVisit_Continue;
+  });
+  ASSERT_TRUE(staticAssertCsr.has_value());
+  size_t argCnt = 0;
+  Traverse(*staticAssertCsr, [&argCnt](CXCursor cursor, CXCursor parent) {
+    switch (argCnt) {
+    case 0:
+      EXPECT_EQ(cursor.kind, CXCursor_CXXBoolLiteralExpr);
+      break;
+    case 1:
+      EXPECT_EQ(cursor.kind, CXCursor_DeclRefExpr);
+      break;
+    }
+    ++argCnt;
+    return CXChildVisit_Continue;
+  });
+  ASSERT_EQ(argCnt, 2);
+  EXPECT_EQ(fromCXString(clang_getCursorSpelling(*staticAssertCsr)), "");
+}
+
 class LibclangRewriteTest : public LibclangParseTest {
 public:
   CXRewriter Rew = nullptr;
