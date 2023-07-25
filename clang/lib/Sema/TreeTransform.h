@@ -2377,18 +2377,6 @@ public:
                                                     EndLoc);
   }
 
-  /// Build a new OpenMP 'ompx_attribute' clause.
-  ///
-  /// By default, performs semantic analysis to build the new OpenMP clause.
-  /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPXAttributeClause(ArrayRef<const Attr *> Attrs,
-                                        SourceLocation StartLoc,
-                                        SourceLocation LParenLoc,
-                                        SourceLocation EndLoc) {
-    return getSema().ActOnOpenMPXAttributeClause(Attrs, StartLoc, LParenLoc,
-                                                 EndLoc);
-  }
-
   /// Build a new OpenMP 'align' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -10766,16 +10754,6 @@ TreeTransform<Derived>::TransformOMPDoacrossClause(OMPDoacrossClause *C) {
   return getDerived().RebuildOMPDoacrossClause(
       C->getDependenceType(), C->getDependenceLoc(), C->getColonLoc(), Vars,
       C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
-}
-
-template <typename Derived>
-OMPClause *
-TreeTransform<Derived>::TransformOMPXAttributeClause(OMPXAttributeClause *C) {
-  SmallVector<const Attr *> NewAttrs;
-  for (auto *A : C->getAttrs())
-    NewAttrs.push_back(getDerived().TransformAttr(A));
-  return getDerived().RebuildOMPXAttributeClause(
-      NewAttrs, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 //===----------------------------------------------------------------------===//
