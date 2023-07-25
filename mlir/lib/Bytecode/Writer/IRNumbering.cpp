@@ -238,7 +238,7 @@ void IRNumberingState::computeGlobalNumberingState(Operation *rootOp) {
   SmallVector<StackState> opStack;
   rootOp->walk([&](Operation *op, const WalkStage &stage) {
     // After visiting all nested regions, we pop the operation from the stack.
-    if (stage.isAfterAllRegions()) {
+    if (op->getNumRegions() && stage.isAfterAllRegions()) {
       // If no non-isolated uses were found, we can safely mark this operation
       // as isolated from above.
       OperationNumbering *numbering = opStack.pop_back_val().numbering;
