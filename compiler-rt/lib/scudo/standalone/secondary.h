@@ -102,20 +102,22 @@ public:
 static const uptr MaxUnusedCachePages = 4U;
 
 template <typename Config>
-void mapSecondary(Options Options, uptr CommitBase, uptr CommitSize,
+bool mapSecondary(Options Options, uptr CommitBase, uptr CommitSize,
                   uptr AllocPos, uptr Flags, MemMapT &MemMap) {
+  Flags |= MAP_RESIZABLE;
+  Flags |= MAP_ALLOWNOMEM;
+
   const uptr MaxUnusedCacheBytes = MaxUnusedCachePages * getPageSizeCached();
   if (useMemoryTagging<Config>(Options) && CommitSize > MaxUnusedCacheBytes) {
     const uptr UntaggedPos = Max(AllocPos, CommitBase + MaxUnusedCacheBytes);
-    MemMap.remap(CommitBase, UntaggedPos - CommitBase, "scudo:secondary",
-                 MAP_RESIZABLE | MAP_MEMTAG | Flags);
-    MemMap.remap(UntaggedPos, CommitBase + CommitSize - UntaggedPos,
-                 "scudo:secondary", MAP_RESIZABLE | Flags);
+    return MemMap.remap(CommitBase, UntaggedPos - CommitBase, "scudo:secondary",
+                        MAP_MEMTAG | Flags) &&
+           MemMap.remap(UntaggedPos, CommitBase + CommitSize - UntaggedPos,
+                        "scudo:secondary", Flags);
   } else {
     const uptr RemapFlags =
-        MAP_RESIZABLE | (useMemoryTagging<Config>(Options) ? MAP_MEMTAG : 0) |
-        Flags;
-    MemMap.remap(CommitBase, CommitSize, "scudo:secondary", RemapFlags);
+        (useMemoryTagging<Config>(Options) ? MAP_MEMTAG : 0) | Flags;
+    return MemMap.remap(CommitBase, CommitSize, "scudo:secondary", RemapFlags);
   }
 }
 
@@ -295,8 +297,7 @@ public:
       } else if (Entry.BlockBegin < NewBlockBegin) {
         storeTags(Entry.BlockBegin, NewBlockBegin);
       } else {
-        storeTags(untagPointer(NewBlockBegin),
-                  untagPointer(Entry.BlockBegin));
+        storeTags(untagPointer(NewBlockBegin), untagPointer(Entry.BlockBegin));
       }
     }
     (*H)->CommitBase = Entry.CommitBase;
@@ -592,7 +593,11 @@ void *MapAllocator<Config>::allocate(Options Options, uptr Size, uptr Alignment,
 
   const uptr CommitSize = MapEnd - PageSize - CommitBase;
   const uptr AllocPos = roundDown(CommitBase + CommitSize - Size, Alignment);
-  mapSecondary<Config>(Options, CommitBase, CommitSize, AllocPos, 0, MemMap);
+  if (!mapSecondary<Config>(Options, CommitBase, CommitSize, AllocPos, 0,
+                            MemMap)) {
+    MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
+    return nullptr;
+  }
   const uptr HeaderPos =
       AllocPos - Chunk::getHeaderSize() - LargeBlock::getHeaderSize();
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
