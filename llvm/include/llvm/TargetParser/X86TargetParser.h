@@ -109,6 +109,7 @@ enum CPUKind {
   CK_Sierraforest,
   CK_Grandridge,
   CK_Graniterapids,
+  CK_GraniterapidsD,
   CK_Emeraldrapids,
   CK_KNL,
   CK_KNM,
