@@ -97,6 +97,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`performance-enum-size
+  <clang-tidy/checks/performance/enum-size>` check.
+
+  Recommends the smallest possible underlying type for an ``enum`` or ``enum``
+  class based on the range of its enumerators.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

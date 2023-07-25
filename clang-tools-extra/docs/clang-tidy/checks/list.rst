@@ -323,6 +323,7 @@ Clang-Tidy Checks
    `openmp-exception-escape <openmp/exception-escape.html>`_,
    `openmp-use-default-none <openmp/use-default-none.html>`_,
    `performance-avoid-endl <performance/avoid-endl.html>`_, "Yes"
+   `performance-enum-size <performance/enum-size.html>`_,
    `performance-faster-string-find <performance/faster-string-find.html>`_, "Yes"
    `performance-for-range-copy <performance/for-range-copy.html>`_, "Yes"
    `performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop.html>`_,
