@@ -162,7 +162,7 @@ class RVInstCommon<dag outs, dag ins, string opcodestr, string argstr,
 
   dag OutOperandList = outs;
   dag InOperandList = ins;
-  let AsmString = opcodestr # "\t" # argstr;
+  let AsmString = opcodestr # !if(!empty(argstr), "", "\t" # argstr);
   let Pattern = pattern;
 
   let TSFlags{4-0} = format.Value;
