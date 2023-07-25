@@ -149,12 +149,23 @@ bool FixStackmapsSpillReloads::runOnMachineFunction(MachineFunction &MF) {
               } else if (TII->isLoadFromStackSlotPostFE(*SMI, FI)) {
                 // If the reload is a load from the stack, replace the operand
                 // with multiple operands describing a stack location.
-                MIB.addImm(StackMaps::IndirectMemRefOp);
                 std::optional<unsigned> Size = SMI->getRestoreSize(TII);
-                assert(Size.has_value() && "RestoreSize has no value.");
-                MIB.addImm(Size.value()); // Size
-                MIB.add(SMI->getOperand(1)); // Register
-                MIB.add(SMI->getOperand(4)); // Offset
+                if(!Size.has_value()) {
+                  // This reload isn't a spill (e.g. this could be loading an
+                  // argument passed via the stack), so we don't need to
+                  // replace it. Since registers in lower frames aren't reset
+                  // during deopt, this is only of consequence to the top stack
+                  // frame. And even there this will simply temporarily put a
+                  // value into the register MOI, only to then immediately
+                  // reload the same value into MOI once the reload instruction
+                  // `SMI` is executed after deopt returns to normal execution.
+                  MIB.add(*MOI);
+                } else {
+                  MIB.addImm(StackMaps::IndirectMemRefOp);
+                  MIB.addImm(Size.value()); // Size
+                  MIB.add(SMI->getOperand(1)); // Register
+                  MIB.add(SMI->getOperand(4)); // Offset
+                }
               } else {
                 assert(false && "Unknown instruction found");
               }
