@@ -2964,6 +2964,18 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
         NewArgumentAttributes));
     AttributeFuncs::updateMinLegalVectorWidthAttr(*NewFn, LargestVectorWidth);
 
+    // Remove argmem from the memory effects if we have no more pointer
+    // arguments, or they are readnone.
+    MemoryEffects ME = NewFn->getMemoryEffects();
+    int ArgNo = -1;
+    if (ME.doesAccessArgPointees() && all_of(NewArgumentTypes, [&](Type *T) {
+          ++ArgNo;
+          return !T->isPtrOrPtrVectorTy() ||
+                 NewFn->hasParamAttribute(ArgNo, Attribute::ReadNone);
+        })) {
+      NewFn->setMemoryEffects(ME - MemoryEffects::argMemOnly());
+    }
+
     // Since we have now created the new function, splice the body of the old
     // function right into the new function, leaving the old rotting hulk of the
     // function empty.
