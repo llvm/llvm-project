@@ -5,8 +5,8 @@
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=hawaii -mattr=-unaligned-access-mode < %s | FileCheck -check-prefixes=GCN,GFX7,GFX7-NOUNALIGNED %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -mattr=+unaligned-access-mode < %s | FileCheck -check-prefixes=GFX12,GFX12-UNALIGNED %s
 ; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1200 -mattr=-unaligned-access-mode < %s | FileCheck -check-prefixes=GFX12,GFX12-NOUNALIGNED %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1210 -mattr=+unaligned-access-mode < %s | FileCheck -check-prefixes=GFX12,GFX1210-UNALIGNED %s
-; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1210 -mattr=-unaligned-access-mode < %s | FileCheck -check-prefixes=GFX12,GFX1210-NOUNALIGNED %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1210 -mattr=+unaligned-access-mode < %s | FileCheck -check-prefixes=GFX12,GFX1210,GFX1210-UNALIGNED %s
+; RUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=gfx1210 -mattr=-unaligned-access-mode < %s | FileCheck -check-prefixes=GFX12,GFX1210,GFX1210-NOUNALIGNED %s
 
 ; FIXME:
 ; XUN: llc -global-isel -mtriple=amdgcn-amd-amdpal -mcpu=tahiti < %s | FileCheck -check-prefixes=GCN,GFX6 %s
@@ -580,41 +580,23 @@ define <12 x i8> @v_load_constant_v12i8_align8(ptr addrspace(4) %ptr) {
 ; GFX12-NOUNALIGNED-NEXT:    v_mov_b32_e32 v2, v12
 ; GFX12-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX1210-UNALIGNED-LABEL: v_load_constant_v12i8_align8:
-; GFX1210-UNALIGNED:       ; %bb.0:
-; GFX1210-UNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_expcnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_samplecnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_bvhcnt 0x0
-; GFX1210-UNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-UNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
-; GFX1210-UNALIGNED-NEXT:    s_wait_loadcnt 0x0
-; GFX1210-UNALIGNED-NEXT:    v_dual_lshrrev_b32 v13, 8, v0 :: v_dual_lshrrev_b32 v12, 16, v0
-; GFX1210-UNALIGNED-NEXT:    v_dual_lshrrev_b32 v3, 24, v0 :: v_dual_lshrrev_b32 v5, 8, v1
-; GFX1210-UNALIGNED-NEXT:    v_dual_lshrrev_b32 v6, 16, v1 :: v_dual_lshrrev_b32 v7, 24, v1
-; GFX1210-UNALIGNED-NEXT:    v_dual_lshrrev_b32 v9, 8, v2 :: v_dual_lshrrev_b32 v10, 16, v2
-; GFX1210-UNALIGNED-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_lshrrev_b32 v11, 24, v2
-; GFX1210-UNALIGNED-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_mov_b32 v1, v13
-; GFX1210-UNALIGNED-NEXT:    v_mov_b32_e32 v2, v12
-; GFX1210-UNALIGNED-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX1210-NOUNALIGNED-LABEL: v_load_constant_v12i8_align8:
-; GFX1210-NOUNALIGNED:       ; %bb.0:
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_loadcnt_dscnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_expcnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_samplecnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_bvhcnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_kmcnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    global_load_b96 v[0:2], v[0:1], off
-; GFX1210-NOUNALIGNED-NEXT:    s_wait_loadcnt 0x0
-; GFX1210-NOUNALIGNED-NEXT:    v_dual_lshrrev_b32 v13, 8, v0 :: v_dual_lshrrev_b32 v12, 16, v0
-; GFX1210-NOUNALIGNED-NEXT:    v_dual_lshrrev_b32 v3, 24, v0 :: v_dual_lshrrev_b32 v5, 8, v1
-; GFX1210-NOUNALIGNED-NEXT:    v_dual_lshrrev_b32 v6, 16, v1 :: v_dual_lshrrev_b32 v7, 24, v1
-; GFX1210-NOUNALIGNED-NEXT:    v_dual_lshrrev_b32 v9, 8, v2 :: v_dual_lshrrev_b32 v10, 16, v2
-; GFX1210-NOUNALIGNED-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_lshrrev_b32 v11, 24, v2
-; GFX1210-NOUNALIGNED-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_mov_b32 v1, v13
-; GFX1210-NOUNALIGNED-NEXT:    v_mov_b32_e32 v2, v12
-; GFX1210-NOUNALIGNED-NEXT:    s_setpc_b64 s[30:31]
+; GFX1210-LABEL: v_load_constant_v12i8_align8:
+; GFX1210:       ; %bb.0:
+; GFX1210-NEXT:    s_wait_loadcnt_dscnt 0x0
+; GFX1210-NEXT:    s_wait_expcnt 0x0
+; GFX1210-NEXT:    s_wait_samplecnt 0x0
+; GFX1210-NEXT:    s_wait_bvhcnt 0x0
+; GFX1210-NEXT:    s_wait_kmcnt 0x0
+; GFX1210-NEXT:    global_load_b96 v[0:2], v[0:1], off
+; GFX1210-NEXT:    s_wait_loadcnt 0x0
+; GFX1210-NEXT:    v_dual_lshrrev_b32 v13, 8, v0 :: v_dual_lshrrev_b32 v12, 16, v0
+; GFX1210-NEXT:    v_dual_lshrrev_b32 v3, 24, v0 :: v_dual_lshrrev_b32 v5, 8, v1
+; GFX1210-NEXT:    v_dual_lshrrev_b32 v6, 16, v1 :: v_dual_lshrrev_b32 v7, 24, v1
+; GFX1210-NEXT:    v_dual_lshrrev_b32 v9, 8, v2 :: v_dual_lshrrev_b32 v10, 16, v2
+; GFX1210-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_lshrrev_b32 v11, 24, v2
+; GFX1210-NEXT:    v_dual_mov_b32 v8, v2 :: v_dual_mov_b32 v1, v13
+; GFX1210-NEXT:    v_mov_b32_e32 v2, v12
+; GFX1210-NEXT:    s_setpc_b64 s[30:31]
   %load = load <12 x i8>, ptr addrspace(4) %ptr, align 8
   ret <12 x i8> %load
 }
