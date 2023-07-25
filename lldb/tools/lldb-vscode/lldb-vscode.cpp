@@ -191,6 +191,28 @@ void SendThreadExitedEvent(lldb::tid_t tid) {
   g_vsc.SendJSON(llvm::json::Value(std::move(event)));
 }
 
+// Send a "continued" event to indicate the process is in the running state.
+void SendContinuedEvent() {
+  lldb::SBProcess process = g_vsc.target.GetProcess();
+  if (!process.IsValid()) {
+    return;
+  }
+
+  // If the focus thread is not set then we haven't reported any thread status
+  // to the client, so nothing to report.
+  if (!g_vsc.configuration_done_sent ||
+      g_vsc.focus_tid == LLDB_INVALID_THREAD_ID) {
+    return;
+  }
+
+  llvm::json::Object event(CreateEventObject("continued"));
+  llvm::json::Object body;
+  body.try_emplace("threadId", (int64_t)g_vsc.focus_tid);
+  body.try_emplace("allThreadsContinued", true);
+  event.try_emplace("body", std::move(body));
+  g_vsc.SendJSON(llvm::json::Value(std::move(event)));
+}
+
 // Send a "terminated" event to indicate the process is done being
 // debugged.
 void SendTerminatedEvent() {
@@ -252,7 +274,7 @@ void SendThreadStoppedEvent() {
         }
       }
 
-      // We will have cleared g_vsc.focus_tid if he focus thread doesn't have
+      // We will have cleared g_vsc.focus_tid if the focus thread doesn't have
       // a stop reason, so if it was cleared, or wasn't set, or doesn't exist,
       // then set the focus thread to the first thread with a stop reason.
       if (!focus_thread_exists || g_vsc.focus_tid == LLDB_INVALID_THREAD_ID)
@@ -262,6 +284,7 @@ void SendThreadStoppedEvent() {
       // we at least let the UI know we stopped.
       if (num_threads_with_reason == 0) {
         lldb::SBThread thread = process.GetThreadAtIndex(0);
+        g_vsc.focus_tid = thread.GetThreadID();
         g_vsc.SendJSON(CreateThreadStopped(thread, stop_id));
       } else {
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
@@ -468,6 +491,7 @@ void EventThreadFunction() {
             break;
           case lldb::eStateRunning:
             g_vsc.WillContinue();
+            SendContinuedEvent();
             break;
           case lldb::eStateExited:
             // When restarting, we can get an "exited" event for the process we
@@ -766,10 +790,6 @@ void request_continue(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   lldb::SBProcess process = g_vsc.target.GetProcess();
-  auto arguments = request.getObject("arguments");
-  // Remember the thread ID that caused the resume so we can set the
-  // "threadCausedFocus" boolean value in the "stopped" events.
-  g_vsc.focus_tid = GetUnsigned(arguments, "threadId", LLDB_INVALID_THREAD_ID);
   lldb::SBError error = process.Continue();
   llvm::json::Object body;
   body.try_emplace("allThreadsContinued", true);
