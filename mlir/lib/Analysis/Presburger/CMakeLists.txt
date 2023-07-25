@@ -3,6 +3,7 @@ add_mlir_library(MLIRPresburger
   LinearTransform.cpp
   Matrix.cpp
   MPInt.cpp
+  Barvinok.cpp
   PresburgerRelation.cpp
   PresburgerSpace.cpp
   PWMAFunction.cpp
