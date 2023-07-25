@@ -1525,6 +1525,8 @@ const MCRegisterClass *getVGPRPhysRegClass(MCPhysReg Reg,
 std::pair<bool, const MCRegisterClass*> isHighVGPR(MCPhysReg Reg,
                                                    const MCRegisterInfo &MRI);
 
+/// \returns true if a memory instruction supports scale_offset modifier.
+bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode);
 } // end namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS,

@@ -168,7 +168,7 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
 
   bits<7> saddr;
   bits<8> vdst;
-  bits<6> cpol;
+  bits<12> cpol;
   bits<8> vdata; // vsrc
   bits<8> vaddr;
   bits<24> offset;
@@ -2563,6 +2563,7 @@ class VFLAT_Real_gfx12 <bits<8> op, FLAT_Pseudo ps,
 
   let Inst{25-24} = !if(ps.is_flat_scratch, 0b01,
                         !if(ps.is_flat_global, 0b10, 0b00));
+  let Inst{48} = cpol{CPolBit.SCAL}; // scale offset
 }
 
 multiclass VFLAT_Aliases_gfx12<string ps, string opName, int renamed, string alias> {

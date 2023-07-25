@@ -4818,15 +4818,30 @@ bool AMDGPUAsmParser::validateCoherencyBits(const MCInst &Inst,
 
   unsigned CPol = Inst.getOperand(CPolPos).getImm();
 
-  if (isGFX12Plus()) {
-    if (!isGFX12_10() && (CPol & CPol::NV)) {
+  if (!isGFX12_10()) {
+    if (CPol & CPol::SCAL) {
+      SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+      StringRef CStr(S.getPointer());
+      S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
+      Error(S, "scale_offset is not supported on this GPU");
+    }
+    if (CPol & CPol::NV) {
       SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
       StringRef CStr(S.getPointer());
       S = SMLoc::getFromPointer(&CStr.data()[CStr.find("nv")]);
       Error(S, "nv is not supported on this GPU");
     }
-    return validateTHAndScopeBits(Inst, Operands, CPol);
   }
+
+  if ((CPol & CPol::SCAL) && !supportsScaleOffset(MII, Inst.getOpcode())) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyCPol, Operands);
+    StringRef CStr(S.getPointer());
+    S = SMLoc::getFromPointer(&CStr.data()[CStr.find("scale_offset")]);
+    Error(S, "scale_offset is not supported for this instruction");
+  }
+
+  if (isGFX12Plus())
+    return validateTHAndScopeBits(Inst, Operands, CPol);
 
   uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
   if (TSFlags & SIInstrFlags::SMRD) {
@@ -6445,6 +6460,7 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
     ParseStatus ResTH = ParseStatus::NoMatch;
     ParseStatus ResScope = ParseStatus::NoMatch;
     ParseStatus ResNV = ParseStatus::NoMatch;
+    ParseStatus ResScal = ParseStatus::NoMatch;
 
     for (;;) {
       if (ResTH.isNoMatch()) {
@@ -6483,10 +6499,22 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
         }
       }
 
+      if (ResScal.isNoMatch()) {
+        if (trySkipId("scale_offset")) {
+          ResScal = ParseStatus::Success;
+          CPolVal |= CPol::SCAL;
+          continue;
+        } else if (trySkipId("no", "scale_offset")) {
+          ResScal = ParseStatus::Success;
+          continue;
+        }
+      }
+
       break;
     }
 
-    if (ResTH.isNoMatch() && ResScope.isNoMatch() && ResNV.isNoMatch())
+    if (ResTH.isNoMatch() && ResScope.isNoMatch() && ResNV.isNoMatch() &&
+        ResScal.isNoMatch())
       return ParseStatus::NoMatch;
 
     Operands.push_back(AMDGPUOperand::CreateImm(this, CPolVal, StringLoc,

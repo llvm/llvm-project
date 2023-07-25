@@ -391,6 +391,8 @@ enum CPol {
 
   SWZ = 1 << 6, // Swizzle bit
 
+  SCAL = 1 << 11, // Scale offset bit
+
   ALL = TH | SCOPE | NV,
 
   // Helper bits
