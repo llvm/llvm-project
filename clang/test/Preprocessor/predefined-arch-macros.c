@@ -1838,9 +1838,13 @@
 // RUN: %clang -march=graniterapids -m32 -E -dM %s -o - 2>&1 \
 // RUN:     --target=i386 \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_GNR_M32
+// RUN: %clang -march=graniterapids-d -m32 -E -dM %s -o - 2>&1 \
+// RUN:     --target=i386 \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_GNR_M32,CHECK_GNRD_M32
 // CHECK_GNR_M32: #define __AES__ 1
 // CHECK_GNR_M32: #define __AMX_BF16__ 1
-// CHECK_GNR_M32: #define __AMX_COMPLEX__ 1
+// CHECK_GNR_M32-NOT: #define __AMX_COMPLEX__ 1
+// CHECK_GNRD_M32: #define __AMX_COMPLEX__ 1
 // CHECK_GNR_M32: #define __AMX_FP16__ 1
 // CHECK_GNR_M32: #define __AMX_INT8__ 1
 // CHECK_GNR_M32: #define __AMX_TILE__ 1
@@ -1913,9 +1917,13 @@
 // RUN: %clang -march=graniterapids -m64 -E -dM %s -o - 2>&1 \
 // RUN:     --target=x86_64 \
 // RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_GNR_M64
+// RUN: %clang -march=graniterapids-d -m64 -E -dM %s -o - 2>&1 \
+// RUN:     --target=x86_64 \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_GNR_M64,CHECK_GNRD_M64
 // CHECK_GNR_M64: #define __AES__ 1
 // CHECK_GNR_M64: #define __AMX_BF16__ 1
-// CHECK_GNR_M64: #define __AMX_COMPLEX__ 1
+// CHECK_GNR_M64-NOT: #define __AMX_COMPLEX__ 1
+// CHECK_GNRD_M64: #define __AMX_COMPLEX__ 1
 // CHECK_GNR_M64: #define __AMX_FP16__ 1
 // CHECK_GNR_M64: #define __AMX_INT8__ 1
 // CHECK_GNR_M64: #define __AMX_TILE__ 1
