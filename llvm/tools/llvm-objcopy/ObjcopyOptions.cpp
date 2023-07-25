@@ -205,6 +205,7 @@ static SectionFlag parseSectionRenameFlag(StringRef SectionName) {
       .CaseLower("contents", SectionFlag::SecContents)
       .CaseLower("share", SectionFlag::SecShare)
       .CaseLower("exclude", SectionFlag::SecExclude)
+      .CaseLower("large", SectionFlag::SecLarge)
       .Default(SectionFlag::SecNone);
 }
 
@@ -218,7 +219,7 @@ parseSectionFlagSet(ArrayRef<StringRef> SectionFlags) {
           errc::invalid_argument,
           "unrecognized section flag '%s'. Flags supported for GNU "
           "compatibility: alloc, load, noload, readonly, exclude, debug, "
-          "code, data, rom, share, contents, merge, strings",
+          "code, data, rom, share, contents, merge, strings, large",
           Flag.str().c_str());
     ParsedFlags |= ParsedFlag;
   }
