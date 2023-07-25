@@ -1192,7 +1192,7 @@ const IRPosition
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
 
-  // Helper to determine if operand bundles on a call site are benin or
+  // Helper to determine if operand bundles on a call site are benign or
   // potentially problematic. We handle only llvm.assume for now.
   auto CanIgnoreOperandBundles = [](const CallBase &CB) {
     return (isa<IntrinsicInst>(CB) &&
