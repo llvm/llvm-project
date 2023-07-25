@@ -25,6 +25,28 @@
 #include "src/__support/integer_to_string.h"
 #include "src/__support/macros/attributes.h" // For LIBC_INLINE
 
+namespace __llvm_libc {
+
+// This is intended to be removed in a future patch to use a similar design to
+// below, but it's necessary for the external assert.
+LIBC_INLINE void report_assertion_failure(const char *assertion,
+                                          const char *filename, unsigned line,
+                                          const char *funcname) {
+  char line_str[IntegerToString::dec_bufsize<unsigned>()];
+  // dec returns an optional, will always be valid for this size buffer
+  auto line_number = IntegerToString::dec(line, line_str);
+  __llvm_libc::write_to_stderr(filename);
+  __llvm_libc::write_to_stderr(":");
+  __llvm_libc::write_to_stderr(*line_number);
+  __llvm_libc::write_to_stderr(": Assertion failed: '");
+  __llvm_libc::write_to_stderr(assertion);
+  __llvm_libc::write_to_stderr("' in function: '");
+  __llvm_libc::write_to_stderr(funcname);
+  __llvm_libc::write_to_stderr("'\n");
+}
+
+} // namespace __llvm_libc
+
 #ifdef LIBC_ASSERT
 #error "Unexpected: LIBC_ASSERT macro already defined"
 #endif
