@@ -263,6 +263,17 @@ static cl::opt<bool>
                                        cl::init(false), cl::Hidden,
                                        cl::cat(ClangTidyCategory));
 
+static cl::opt<bool> EnableModuleHeadersParsing("enable-module-headers-parsing",
+                                                desc(R"(
+Enables preprocessor-level module header parsing
+for C++20 and above, empowering specific checks
+to detect macro definitions within modules. This
+feature may cause performance and parsing issues
+and is therefore considered experimental.
+)"),
+                                                cl::init(false),
+                                                cl::cat(ClangTidyCategory));
+
 static cl::opt<std::string> ExportFixes("export-fixes", desc(R"(
 YAML file to store suggested fixes in. The
 stored fixes can be applied to the input source
@@ -659,7 +670,8 @@ int clangTidyMain(int argc, const char **argv) {
   llvm::InitializeAllAsmParsers();
 
   ClangTidyContext Context(std::move(OwningOptionsProvider),
-                           AllowEnablingAnalyzerAlphaCheckers);
+                           AllowEnablingAnalyzerAlphaCheckers,
+                           EnableModuleHeadersParsing);
   std::vector<ClangTidyError> Errors =
       runClangTidy(Context, OptionsParser->getCompilations(), PathList, BaseFS,
                    FixNotes, EnableCheckProfile, ProfilePrefix);

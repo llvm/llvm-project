@@ -94,6 +94,20 @@ The improvements are...
 Improvements to clang-tidy
 --------------------------
 
+- Preprocessor-level module header parsing is now disabled by default due to
+  the problems it caused in C++20 and above, leading to performance and code
+  parsing issues regardless of whether modules were used or not. This change
+  will impact only the following checks:
+  :doc:`modernize-replace-disallow-copy-and-assign-macro
+  <clang-tidy/checks/modernize/replace-disallow-copy-and-assign-macro>`,
+  :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone/reserved-identifier>`, and
+  :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>`. Those checks will no
+  longer see macros defined in modules. Users can still enable this
+  functionality using the newly added command line option
+  `--enable-module-headers-parsing`.
+
 New checks
 ^^^^^^^^^^
 
