@@ -8,6 +8,7 @@ set(LIBS
   MLIRAnalysis
   MLIRArithDialect
   MLIRBuiltinToLLVMIRTranslation
+  MLIRExecutionEngine
   MLIRFuncDialect
   MLIRGPUDialect
   MLIRGPUToGPURuntimeTransforms
@@ -34,22 +35,6 @@ set(LIBS
   MLIRVectorToLLVM
   )
 
-# This is how it is defined in mlir/lib/Dialect/GPU/CMakeLists.txt
-# We probably want something better project-wide
-if(MLIR_ENABLE_CUDA_RUNNER)
-  # Enable gpu-to-cubin pass.
-  target_compile_definitions(MLIRGPUTestPasses
-    PRIVATE
-    MLIR_GPU_TO_CUBIN_PASS_ENABLE=1
-  )
-
-  set(LIBS
-    ${LIBS}
-
-    MLIRExecutionEngine
-  )
-endif()
-
 add_mlir_library(MLIRGPUTestPasses
   TestConvertGPUKernelToCubin.cpp
   TestConvertGPUKernelToHsaco.cpp
@@ -62,3 +47,13 @@ add_mlir_library(MLIRGPUTestPasses
   LINK_LIBS PUBLIC
   ${LIBS}
   )
+
+# This is how it is defined in mlir/lib/Dialect/GPU/CMakeLists.txt
+# We probably want something better project-wide
+if(MLIR_ENABLE_CUDA_RUNNER)
+  # Enable gpu-to-cubin pass.
+  target_compile_definitions(MLIRGPUTestPasses
+    PRIVATE
+    MLIR_GPU_TO_CUBIN_PASS_ENABLE=1
+  )
+endif()
