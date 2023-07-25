@@ -15,7 +15,7 @@
 #include "clang/Basic/MacroBuilder.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "llvm/Support/raw_ostream.h"
-#include "llvm/TargetParser/TargetParser.h"
+#include "llvm/TargetParser/LoongArchTargetParser.h"
 
 using namespace clang;
 using namespace clang::targets;
@@ -198,7 +198,19 @@ void LoongArchTargetInfo::getTargetDefines(const LangOptions &Opts,
   else
     Builder.defineMacro("__loongarch_frlen", "0");
 
-  // TODO: define __loongarch_arch and __loongarch_tune.
+  // Define __loongarch_arch.
+  StringRef Arch = llvm::LoongArch::getArch();
+  if (Arch.empty())
+    Arch = llvm::LoongArch::getDefaultArch(GRLen == 64);
+  if (!Arch.empty())
+    Builder.defineMacro("__loongarch_arch", Arch);
+
+  // Define __loongarch_tune.
+  StringRef TuneCPU = llvm::LoongArch::getTuneCPU();
+  if (TuneCPU.empty())
+    TuneCPU = Arch;
+  if (!TuneCPU.empty())
+    Builder.defineMacro("__loongarch_tune", TuneCPU);
 
   StringRef ABI = getABI();
   if (ABI == "lp64d" || ABI == "lp64f" || ABI == "lp64s")
@@ -269,4 +281,13 @@ bool LoongArchTargetInfo::handleTargetFeatures(
     }
   }
   return true;
+}
+
+bool LoongArchTargetInfo::isValidTuneCPUName(StringRef Name) const {
+  return llvm::LoongArch::isValidTuneCPUName(Name);
+}
+
+void LoongArchTargetInfo::fillValidTuneCPUList(
+    SmallVectorImpl<StringRef> &Values) const {
+  llvm::LoongArch::fillValidTuneCPUList(Values);
 }
