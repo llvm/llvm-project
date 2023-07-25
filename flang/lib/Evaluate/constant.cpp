@@ -56,6 +56,15 @@ Constant<SubscriptInteger> ConstantBounds::SHAPE() const {
   return AsConstantShape(shape_);
 }
 
+bool ConstantBounds::HasNonDefaultLowerBound() const {
+  for (auto n : lbounds_) {
+    if (n != 1) {
+      return true;
+    }
+  }
+  return false;
+}
+
 ConstantSubscript ConstantBounds::SubscriptsToOffset(
     const ConstantSubscripts &index) const {
   CHECK(GetRank(index) == GetRank(shape_));
