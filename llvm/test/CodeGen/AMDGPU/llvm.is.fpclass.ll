@@ -1060,7 +1060,7 @@ define i1 @isnan_f32_strictfp(float %x) strictfp nounwind {
 ; GFX11CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 3)  ; nan
+  %1 = call i1 @llvm.is.fpclass.f32(float %x, i32 3) strictfp ; nan
   ret i1 %1
 }
 
@@ -1100,7 +1100,7 @@ define i1 @isnan_f64_strictfp(double %x) strictfp nounwind {
 ; GFX11CHECK-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 3)  ; nan
+  %1 = call i1 @llvm.is.fpclass.f64(double %x, i32 3) strictfp ; nan
   ret i1 %1
 }
 

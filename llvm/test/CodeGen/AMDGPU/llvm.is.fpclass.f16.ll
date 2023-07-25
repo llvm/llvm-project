@@ -1388,7 +1388,7 @@ define i1 @isnan_f16_strictfp(half %x) strictfp nounwind {
 ; GFX11CHECK-NEXT:    v_cmp_class_f16_e64 s0, v0, 3
 ; GFX11CHECK-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
 ; GFX11CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3)  ; nan
+  %1 = call i1 @llvm.is.fpclass.f16(half %x, i32 3) strictfp ; nan
   ret i1 %1
 }
 
