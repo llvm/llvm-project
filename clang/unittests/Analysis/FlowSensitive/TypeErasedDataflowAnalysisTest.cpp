@@ -47,6 +47,7 @@ using namespace test;
 using namespace ast_matchers;
 using llvm::IsStringMapEntry;
 using ::testing::DescribeMatcher;
+using ::testing::ElementsAre;
 using ::testing::IsEmpty;
 using ::testing::NotNull;
 using ::testing::Test;
@@ -82,6 +83,30 @@ TEST(DataflowAnalysisTest, NoopAnalysis) {
   EXPECT_EQ(BlockStates.size(), 2u);
   EXPECT_TRUE(BlockStates[0].has_value());
   EXPECT_TRUE(BlockStates[1].has_value());
+}
+
+// Basic test that `diagnoseFunction` calls the Diagnoser function for the
+// number of elements expected.
+TEST(DataflowAnalysisTest, DiagnoseFunctionDiagnoserCalledOnEachElement) {
+  std::string Code = R"(void target() { int x = 0; ++x; })";
+  std::unique_ptr<ASTUnit> AST =
+      tooling::buildASTFromCodeWithArgs(Code, {"-std=c++11"});
+
+  auto *Func =
+      cast<FunctionDecl>(findValueDecl(AST->getASTContext(), "target"));
+  auto Diagnoser = [](const CFGElement &Elt, ASTContext &,
+                      const TransferStateForDiagnostics<NoopLattice> &) {
+    std::vector<std::string> Diagnostics(1);
+    llvm::raw_string_ostream OS(Diagnostics.front());
+    Elt.dumpToStream(OS);
+    return Diagnostics;
+  };
+  auto Result = diagnoseFunction<NoopAnalysis, std::string>(
+      *Func, AST->getASTContext(), Diagnoser);
+  // `diagnoseFunction` provides no guarantees about the order in which elements
+  // are visited, so we use `UnorderedElementsAre`.
+  EXPECT_THAT_EXPECTED(Result, llvm::HasValue(UnorderedElementsAre(
+                                   "0\n", "int x = 0;\n", "x\n", "++x\n")));
 }
 
 struct NonConvergingLattice {
