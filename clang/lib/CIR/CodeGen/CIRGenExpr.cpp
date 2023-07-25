@@ -1992,6 +1992,8 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     // bitfield lvalue or some other non-simple lvalue?
     return LV;
   }
+  case Expr::ParenExprClass:
+    return buildLValue(cast<ParenExpr>(E)->getSubExpr());
   case Expr::DeclRefExprClass:
     return buildDeclRefLValue(cast<DeclRefExpr>(E));
   case Expr::UnaryOperatorClass:
