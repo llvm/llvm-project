@@ -23,6 +23,8 @@ target triple = "amdgcn-amd-amdhsa"
 @QD3 = internal addrspace(3) global i32 undef, align 4
 @UAA1 = internal addrspace(3) global i32 undef, align 4
 @UAA2 = internal addrspace(3) global i32 undef, align 4
+@UAA3 = internal addrspace(3) global i32 undef, align 4
+@UANA1 = internal addrspace(3) global i32 undef, align 4
 @str = private unnamed_addr addrspace(4) constant [1 x i8] c"\00", align 1
 
 ; Make sure we do not delete the stores to @G without also replacing the load with `1`.
@@ -44,6 +46,8 @@ target triple = "amdgcn-amd-amdhsa"
 ; TUNIT: @[[QD3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; TUNIT: @[[UAA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; TUNIT: @[[UAA2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @[[UAA3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; TUNIT: @[[UANA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; TUNIT: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
 ; TUNIT: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 0
 ;.
@@ -64,6 +68,8 @@ target triple = "amdgcn-amd-amdhsa"
 ; CGSCC: @[[QD3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; CGSCC: @[[UAA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; CGSCC: @[[UAA2:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @[[UAA3:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
+; CGSCC: @[[UANA1:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global i32 undef, align 4
 ; CGSCC: @[[STR:[a-zA-Z0-9_$"\\.-]+]] = private unnamed_addr addrspace(4) constant [1 x i8] zeroinitializer, align 1
 ;.
 define void @kernel() "kernel" {
@@ -677,7 +683,7 @@ define void @kernel_unknown_and_aligned1(i1 %c) "kernel" {
 ; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; TUNIT:       L:
-; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       S:
 ; TUNIT-NEXT:    call void @sync()
@@ -689,7 +695,7 @@ define void @kernel_unknown_and_aligned1(i1 %c) "kernel" {
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; CGSCC:       L:
-; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
+; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       S:
 ; CGSCC-NEXT:    call void @sync()
@@ -717,7 +723,7 @@ define void @kernel_unknown_and_aligned2(i1 %c) "kernel" {
 ; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; TUNIT:       L:
 ; TUNIT-NEXT:    call void @sync()
-; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
+; TUNIT-NEXT:    call void @use1(i32 undef) #[[ATTR7]]
 ; TUNIT-NEXT:    ret void
 ; TUNIT:       S:
 ; TUNIT-NEXT:    call void @sync()
@@ -730,7 +736,7 @@ define void @kernel_unknown_and_aligned2(i1 %c) "kernel" {
 ; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
 ; CGSCC:       L:
 ; CGSCC-NEXT:    call void @sync()
-; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
+; CGSCC-NEXT:    call void @use1(i32 undef) #[[ATTR6]]
 ; CGSCC-NEXT:    ret void
 ; CGSCC:       S:
 ; CGSCC-NEXT:    call void @sync()
@@ -752,6 +758,85 @@ S:
   ret void
 }
 
+define void @kernel_unknown_and_aligned3(i1 %c) "kernel" {
+; TUNIT-LABEL: define {{[^@]+}}@kernel_unknown_and_aligned3
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
+; TUNIT-NEXT:    call void @barrier() #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@kernel_unknown_and_aligned3
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
+; CGSCC-NEXT:    call void @barrier() #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    ret void
+;
+  br i1 %c, label %S, label %L
+L:
+  call void @sync();
+  %v = load i32, ptr addrspace(3) @UAA3
+  call void @use1(i32 %v)
+  call void @barrier();
+  ret void
+S:
+  call void @sync();
+  store i32 2, ptr addrspace(3) @UAA3
+  call void @sync();
+  ret void
+}
+
+define void @kernel_unknown_and_not_aligned1(i1 %c) "kernel" {
+; TUNIT-LABEL: define {{[^@]+}}@kernel_unknown_and_not_aligned1
+; TUNIT-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; TUNIT-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; TUNIT:       L:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @use1(i32 2) #[[ATTR7]]
+; TUNIT-NEXT:    ret void
+; TUNIT:       S:
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    call void @sync()
+; TUNIT-NEXT:    ret void
+;
+; CGSCC-LABEL: define {{[^@]+}}@kernel_unknown_and_not_aligned1
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR1]] {
+; CGSCC-NEXT:    br i1 [[C]], label [[S:%.*]], label [[L:%.*]]
+; CGSCC:       L:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @use1(i32 2) #[[ATTR6]]
+; CGSCC-NEXT:    ret void
+; CGSCC:       S:
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    call void @sync()
+; CGSCC-NEXT:    ret void
+;
+  br i1 %c, label %S, label %L
+L:
+  call void @sync();
+  %v = load i32, ptr addrspace(3) @UANA1
+  call void @use1(i32 %v)
+  ret void
+S:
+  call void @sync();
+  store i32 2, ptr addrspace(3) @UANA1
+  call void @sync();
+  ret void
+}
+
 declare void @sync()
 declare void @barrier() norecurse nounwind nocallback "llvm.assume"="ompx_aligned_barrier"
 declare void @use1(i32) nosync norecurse nounwind nocallback
@@ -760,7 +845,7 @@ declare void @__kmpc_target_deinit(ptr, i8) nocallback
 declare void @llvm.assume(i1)
 
 !llvm.module.flags = !{!0, !1}
-!nvvm.annotations = !{!2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18}
+!nvvm.annotations = !{!2, !3, !4, !5, !6, !7, !8, !9, !10, !11, !12, !13, !14, !15, !16, !17, !18, !19, !20}
 
 !0 = !{i32 7, !"openmp", i32 50}
 !1 = !{i32 7, !"openmp-device", i32 50}
@@ -781,6 +866,8 @@ declare void @llvm.assume(i1)
 !16 = !{ptr @kernel4d3, !"kernel", i32 1}
 !17 = !{ptr @kernel_unknown_and_aligned1, !"kernel", i32 1}
 !18 = !{ptr @kernel_unknown_and_aligned2, !"kernel", i32 1}
+!19 = !{ptr @kernel_unknown_and_aligned3, !"kernel", i32 1}
+!20 = !{ptr @kernel_unknown_and_not_aligned1, !"kernel", i32 1}
 
 ;.
 ; TUNIT: attributes #[[ATTR0]] = { norecurse "kernel" }
@@ -819,4 +906,6 @@ declare void @llvm.assume(i1)
 ; CHECK: [[META16:![0-9]+]] = !{ptr @kernel4d3, !"kernel", i32 1}
 ; CHECK: [[META17:![0-9]+]] = !{ptr @kernel_unknown_and_aligned1, !"kernel", i32 1}
 ; CHECK: [[META18:![0-9]+]] = !{ptr @kernel_unknown_and_aligned2, !"kernel", i32 1}
+; CHECK: [[META19:![0-9]+]] = !{ptr @kernel_unknown_and_aligned3, !"kernel", i32 1}
+; CHECK: [[META20:![0-9]+]] = !{ptr @kernel_unknown_and_not_aligned1, !"kernel", i32 1}
 ;.

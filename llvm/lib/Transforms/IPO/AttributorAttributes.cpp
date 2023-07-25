@@ -10590,10 +10590,12 @@ struct AAInterFnReachabilityFunction
 
     // Determine call like instructions that we can reach from the inst.
     auto CheckCallBase = [&](Instruction &CBInst) {
-      if (!IntraFnReachability || !IntraFnReachability->isAssumedReachable(
-                                      A, *RQI.From, CBInst, RQI.ExclusionSet))
+      // There are usually less nodes in the call graph, check inter function
+      // reachability first.
+      if (CheckReachableCallBase(cast<CallBase>(&CBInst)))
         return true;
-      return CheckReachableCallBase(cast<CallBase>(&CBInst));
+      return IntraFnReachability && !IntraFnReachability->isAssumedReachable(
+                                        A, *RQI.From, CBInst, RQI.ExclusionSet);
     };
 
     bool UsedExclusionSet = /* conservative */ true;
