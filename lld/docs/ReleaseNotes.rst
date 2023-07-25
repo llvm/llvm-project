@@ -51,6 +51,7 @@ ELF Improvements
 * Program header assignment can now be used within ``OVERLAY``. This functionality was accidentally lost in 2020.
   (`D150445 <https://reviews.llvm.org/D150445>`_)
 * Operators ``^`` and ``^=`` can now be used in linker scripts.
+* LoongArch is now supported.
 * ``DT_AARCH64_MEMTAG_*`` dynamic tags are now supported.
   (`D143769 <https://reviews.llvm.org/D143769>`_)
 * AArch32 port now supports BE-8 and BE-32 modes for big-endian.
