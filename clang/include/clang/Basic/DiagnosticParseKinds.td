@@ -1540,6 +1540,9 @@ def warn_omp_more_one_omp_all_memory : Warning<
   InGroup<OpenMPClauses>;
 def warn_omp_depend_in_ordered_deprecated : Warning<"'depend' clause for"
   " 'ordered' is deprecated; use 'doacross' instead">, InGroup<Deprecated>;
+def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' clause only allows "
+  "'amdgpu_flat_work_group_size', 'amdgpu_waves_per_eu', and 'launch_bounds'; "
+  "%0 is ignored">, InGroup<OpenMPExtensions>;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<
