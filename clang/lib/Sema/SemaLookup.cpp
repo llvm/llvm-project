@@ -513,19 +513,40 @@ void LookupResult::resolveKind() {
   const NamedDecl *HasNonFunction = nullptr;
 
   llvm::SmallVector<const NamedDecl *, 4> EquivalentNonFunctions;
+  llvm::BitVector RemovedDecls(N);
 
-  unsigned UniqueTagIndex = 0;
-
-  unsigned I = 0;
-  while (I < N) {
+  for (unsigned I = 0; I < N; I++) {
     const NamedDecl *D = Decls[I]->getUnderlyingDecl();
     D = cast<NamedDecl>(D->getCanonicalDecl());
 
     // Ignore an invalid declaration unless it's the only one left.
     // Also ignore HLSLBufferDecl which not have name conflict with other Decls.
-    if ((D->isInvalidDecl() || isa<HLSLBufferDecl>(D)) && !(I == 0 && N == 1)) {
-      Decls[I] = Decls[--N];
+    if ((D->isInvalidDecl() || isa<HLSLBufferDecl>(D)) &&
+        N - RemovedDecls.count() > 1) {
+      RemovedDecls.set(I);
       continue;
+    }
+
+    // C++ [basic.scope.hiding]p2:
+    //   A class name or enumeration name can be hidden by the name of
+    //   an object, function, or enumerator declared in the same
+    //   scope. If a class or enumeration name and an object, function,
+    //   or enumerator are declared in the same scope (in any order)
+    //   with the same name, the class or enumeration name is hidden
+    //   wherever the object, function, or enumerator name is visible.
+    if (HideTags && isa<TagDecl>(D)) {
+      bool Hidden = false;
+      for (auto *OtherDecl : Decls) {
+        if (canHideTag(OtherDecl) &&
+            getContextForScopeMatching(OtherDecl)->Equals(
+                getContextForScopeMatching(Decls[I]))) {
+          RemovedDecls.set(I);
+          Hidden = true;
+          break;
+        }
+      }
+      if (Hidden)
+        continue;
     }
 
     std::optional<unsigned> ExistingI;
@@ -560,7 +581,7 @@ void LookupResult::resolveKind() {
       if (isPreferredLookupResult(getSema(), getLookupKind(), Decls[I],
                                   Decls[*ExistingI]))
         Decls[*ExistingI] = Decls[I];
-      Decls[I] = Decls[--N];
+      RemovedDecls.set(I);
       continue;
     }
 
@@ -571,7 +592,6 @@ void LookupResult::resolveKind() {
     } else if (isa<TagDecl>(D)) {
       if (HasTag)
         Ambiguous = true;
-      UniqueTagIndex = I;
       HasTag = true;
     } else if (isa<FunctionTemplateDecl>(D)) {
       HasFunction = true;
@@ -587,7 +607,7 @@ void LookupResult::resolveKind() {
         if (getSema().isEquivalentInternalLinkageDeclaration(HasNonFunction,
                                                              D)) {
           EquivalentNonFunctions.push_back(D);
-          Decls[I] = Decls[--N];
+          RemovedDecls.set(I);
           continue;
         }
 
@@ -595,28 +615,6 @@ void LookupResult::resolveKind() {
       }
       HasNonFunction = D;
     }
-    I++;
-  }
-
-  // C++ [basic.scope.hiding]p2:
-  //   A class name or enumeration name can be hidden by the name of
-  //   an object, function, or enumerator declared in the same
-  //   scope. If a class or enumeration name and an object, function,
-  //   or enumerator are declared in the same scope (in any order)
-  //   with the same name, the class or enumeration name is hidden
-  //   wherever the object, function, or enumerator name is visible.
-  // But it's still an error if there are distinct tag types found,
-  // even if they're not visible. (ref?)
-  if (N > 1 && HideTags && HasTag && !Ambiguous &&
-      (HasFunction || HasNonFunction || HasUnresolved)) {
-    const NamedDecl *OtherDecl = Decls[UniqueTagIndex ? 0 : N - 1];
-    if (isa<TagDecl>(Decls[UniqueTagIndex]->getUnderlyingDecl()) &&
-        getContextForScopeMatching(Decls[UniqueTagIndex])->Equals(
-            getContextForScopeMatching(OtherDecl)) &&
-        canHideTag(OtherDecl))
-      Decls[UniqueTagIndex] = Decls[--N];
-    else
-      Ambiguous = true;
   }
 
   // FIXME: This diagnostic should really be delayed until we're done with
@@ -625,9 +623,15 @@ void LookupResult::resolveKind() {
     getSema().diagnoseEquivalentInternalLinkageDeclarations(
         getNameLoc(), HasNonFunction, EquivalentNonFunctions);
 
+  // Remove decls by replacing them with decls from the end (which
+  // means that we need to iterate from the end) and then truncating
+  // to the new size.
+  for (int I = RemovedDecls.find_last(); I >= 0; I = RemovedDecls.find_prev(I))
+    Decls[I] = Decls[--N];
   Decls.truncate(N);
 
-  if (HasNonFunction && (HasFunction || HasUnresolved))
+  if ((HasNonFunction && (HasFunction || HasUnresolved)) ||
+      (HideTags && HasTag && (HasFunction || HasNonFunction || HasUnresolved)))
     Ambiguous = true;
 
   if (Ambiguous)

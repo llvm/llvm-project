@@ -877,6 +877,9 @@ Cost FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
   // The below heuristic is only concerned with exposing inlining
   // opportunities via indirect call promotion. If the argument is not a
   // (potentially casted) function pointer, give up.
+  //
+  // TODO: Perhaps we should consider checking such inlining opportunities
+  // while traversing the users of the specialization arguments ?
   Function *CalledFunction = dyn_cast<Function>(C->stripPointerCasts());
   if (!CalledFunction)
     return TotalCost;
