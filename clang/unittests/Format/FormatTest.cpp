@@ -11031,14 +11031,16 @@ TEST_F(FormatTest, UnderstandsFunctionRefQualification) {
   verifyFormat("template <typename T> void operator=(T) && {}", AlignMiddle);
 
   FormatStyle Spaces = getLLVMStyle();
-  Spaces.SpacesInCStyleCastParentheses = true;
+  Spaces.SpacesInParens = FormatStyle::SIPO_Custom;
+  Spaces.SpacesInParensOptions = {};
+  Spaces.SpacesInParensOptions.InCStyleCasts = true;
   verifyFormat("Deleted &operator=(const Deleted &) & = default;", Spaces);
   verifyFormat("SomeType MemberFunction(const Deleted &) & = delete;", Spaces);
   verifyFormat("Deleted &operator=(const Deleted &) &;", Spaces);
   verifyFormat("SomeType MemberFunction(const Deleted &) &;", Spaces);
 
-  Spaces.SpacesInCStyleCastParentheses = false;
-  Spaces.SpacesInParentheses = true;
+  Spaces.SpacesInParensOptions.InCStyleCasts = false;
+  Spaces.SpacesInParensOptions.Other = true;
   verifyFormat("Deleted &operator=( const Deleted & ) & = default;", Spaces);
   verifyFormat("SomeType MemberFunction( const Deleted & ) & = delete;",
                Spaces);
@@ -13674,7 +13676,8 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
 
   FormatStyle SpaceBetweenBraces = getLLVMStyle();
   SpaceBetweenBraces.SpacesInAngles = FormatStyle::SIAS_Always;
-  SpaceBetweenBraces.SpacesInParentheses = true;
+  SpaceBetweenBraces.SpacesInParens = FormatStyle::SIPO_Custom;
+  SpaceBetweenBraces.SpacesInParensOptions.Other = true;
   SpaceBetweenBraces.SpacesInSquareBrackets = true;
   verifyFormat("vector< int > x{ 1, 2, 3, 4 };", SpaceBetweenBraces);
   verifyFormat("f( {}, { {}, {} }, MyMap[ { k, v } ] );", SpaceBetweenBraces);
@@ -13697,7 +13700,8 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
             "};",
             format("vector<int>x{1,2,3,4,};", SpaceBetweenBraces));
   verifyFormat("vector< int > x{};", SpaceBetweenBraces);
-  SpaceBetweenBraces.SpaceInEmptyParentheses = true;
+  SpaceBetweenBraces.SpacesInParens = FormatStyle::SIPO_Custom;
+  SpaceBetweenBraces.SpacesInParensOptions.InEmptyParentheses = true;
   verifyFormat("vector< int > x{ };", SpaceBetweenBraces);
 }
 
@@ -16707,10 +16711,43 @@ TEST_F(FormatTest, SpaceAfterLogicalNot) {
   verifyFormat("! ! x", Spaces);
 }
 
-TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
+TEST_F(FormatTest, ConfigurableSpacesInParens) {
   FormatStyle Spaces = getLLVMStyle();
 
-  Spaces.SpacesInParentheses = true;
+  verifyFormat("do_something(::globalVar);", Spaces);
+  verifyFormat("call(x, y, z);", Spaces);
+  verifyFormat("call();", Spaces);
+  verifyFormat("std::function<void(int, int)> callback;", Spaces);
+  verifyFormat("void inFunction() { std::function<void(int, int)> fct; }",
+               Spaces);
+  verifyFormat("while ((bool)1)\n"
+               "  continue;",
+               Spaces);
+  verifyFormat("for (;;)\n"
+               "  continue;",
+               Spaces);
+  verifyFormat("if (true)\n"
+               "  f();\n"
+               "else if (true)\n"
+               "  f();",
+               Spaces);
+  verifyFormat("do {\n"
+               "  do_something((int)i);\n"
+               "} while (something());",
+               Spaces);
+  verifyFormat("switch (x) {\n"
+               "default:\n"
+               "  break;\n"
+               "}",
+               Spaces);
+  verifyFormat("SomeType *__attribute__((attr)) *a = NULL;", Spaces);
+  verifyFormat("void __attribute__((naked)) foo(int bar)", Spaces);
+  verifyFormat("void f() __attribute__((asdf));", Spaces);
+
+  Spaces.SpacesInParens = FormatStyle::SIPO_Custom;
+  Spaces.SpacesInParensOptions = {};
+  Spaces.SpacesInParensOptions.Other = true;
+  Spaces.SpacesInParensOptions.InConditionalStatements = true;
   verifyFormat("do_something( ::globalVar );", Spaces);
   verifyFormat("call( x, y, z );", Spaces);
   verifyFormat("call();", Spaces);
@@ -16737,9 +16774,13 @@ TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
                "  break;\n"
                "}",
                Spaces);
+  verifyFormat("SomeType *__attribute__( ( attr ) ) *a = NULL;", Spaces);
+  verifyFormat("void __attribute__( ( naked ) ) foo( int bar )", Spaces);
+  verifyFormat("void f() __attribute__( ( asdf ) );", Spaces);
 
-  Spaces.SpacesInParentheses = false;
-  Spaces.SpacesInCStyleCastParentheses = true;
+  Spaces.SpacesInParens = FormatStyle::SIPO_Custom;
+  Spaces.SpacesInParensOptions = {};
+  Spaces.SpacesInParensOptions.InCStyleCasts = true;
   verifyFormat("Type *A = ( Type * )P;", Spaces);
   verifyFormat("Type *A = ( vector<Type *, int *> )P;", Spaces);
   verifyFormat("x = ( int32 )y;", Spaces);
@@ -16750,9 +16791,10 @@ TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
   verifyFormat("#define x (( int )-1)", Spaces);
 
   // Run the first set of tests again with:
-  Spaces.SpacesInParentheses = false;
-  Spaces.SpaceInEmptyParentheses = true;
-  Spaces.SpacesInCStyleCastParentheses = true;
+  Spaces.SpacesInParens = FormatStyle::SIPO_Custom;
+  Spaces.SpacesInParensOptions = {};
+  Spaces.SpacesInParensOptions.InEmptyParentheses = true;
+  Spaces.SpacesInParensOptions.InCStyleCasts = true;
   verifyFormat("call(x, y, z);", Spaces);
   verifyFormat("call( );", Spaces);
   verifyFormat("std::function<void(int, int)> callback;", Spaces);
@@ -16776,6 +16818,9 @@ TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
                "  break;\n"
                "}",
                Spaces);
+  verifyFormat("SomeType *__attribute__((attr)) *a = NULL;", Spaces);
+  verifyFormat("void __attribute__((naked)) foo(int bar)", Spaces);
+  verifyFormat("void f( ) __attribute__((asdf));", Spaces);
 
   // Run the first set of tests again with:
   Spaces.SpaceAfterCStyleCast = true;
@@ -16808,9 +16853,12 @@ TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
   verifyFormat("bool *y = ( bool * ) ( void * ) (x);", Spaces);
   verifyFormat("bool *y = ( bool * ) (x);", Spaces);
   verifyFormat("throw ( int32 ) x;", Spaces);
+  verifyFormat("SomeType *__attribute__((attr)) *a = NULL;", Spaces);
+  verifyFormat("void __attribute__((naked)) foo(int bar)", Spaces);
+  verifyFormat("void f( ) __attribute__((asdf));", Spaces);
 
   // Run subset of tests again with:
-  Spaces.SpacesInCStyleCastParentheses = false;
+  Spaces.SpacesInParensOptions.InCStyleCasts = false;
   Spaces.SpaceAfterCStyleCast = true;
   verifyFormat("while ((bool) 1)\n"
                "  continue;",
@@ -16833,6 +16881,9 @@ TEST_F(FormatTest, ConfigurableSpacesInParentheses) {
   verifyFormat("bool *y = (bool *) (void *) (int) (x);", Spaces);
   verifyFormat("bool *y = (bool *) (void *) (int) foo(x);", Spaces);
   verifyFormat("throw (int32) x;", Spaces);
+  verifyFormat("SomeType *__attribute__((attr)) *a = NULL;", Spaces);
+  verifyFormat("void __attribute__((naked)) foo(int bar)", Spaces);
+  verifyFormat("void f( ) __attribute__((asdf));", Spaces);
 
   Spaces.ColumnLimit = 80;
   Spaces.IndentWidth = 4;
@@ -23757,11 +23808,11 @@ TEST_F(FormatTest, AtomicQualifier) {
   verifyFormat("_Atomic(int*)* a;", Style);
   verifyFormat("vector<_Atomic(uint64_t)* attr> x;", Style);
 
-  Style.SpacesInCStyleCastParentheses = true;
-  Style.SpacesInParentheses = false;
+  Style.SpacesInParens = FormatStyle::SIPO_Custom;
+  Style.SpacesInParensOptions.InCStyleCasts = true;
   verifyFormat("x = ( _Atomic(uint64_t) )*a;", Style);
-  Style.SpacesInCStyleCastParentheses = false;
-  Style.SpacesInParentheses = true;
+  Style.SpacesInParensOptions.InCStyleCasts = false;
+  Style.SpacesInParensOptions.Other = true;
   verifyFormat("x = (_Atomic( uint64_t ))*a;", Style);
   verifyFormat("x = (_Atomic( uint64_t ))&a;", Style);
 }
@@ -23824,7 +23875,8 @@ TEST_F(FormatTest, SpacesInConditionalStatement) {
   FormatStyle Spaces = getLLVMStyle();
   Spaces.IfMacros.clear();
   Spaces.IfMacros.push_back("MYIF");
-  Spaces.SpacesInConditionalStatement = true;
+  Spaces.SpacesInParens = FormatStyle::SIPO_Custom;
+  Spaces.SpacesInParensOptions.InConditionalStatements = true;
   verifyFormat("for ( int i = 0; i; i++ )\n  continue;", Spaces);
   verifyFormat("if ( !a )\n  return;", Spaces);
   verifyFormat("if ( a )\n  return;", Spaces);

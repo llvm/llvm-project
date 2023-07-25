@@ -4151,17 +4151,10 @@ struct FormatStyle {
   bool SpaceInEmptyBlock;
 
   /// If ``true``, spaces may be inserted into ``()``.
-  /// \code
-  ///    true:                                false:
-  ///    void f( ) {                    vs.   void f() {
-  ///      int x[] = {foo( ), bar( )};          int x[] = {foo(), bar()};
-  ///      if (true) {                          if (true) {
-  ///        f( );                                f();
-  ///      }                                    }
-  ///    }                                    }
-  /// \endcode
+  /// This option is **deprecated**. See ``InEmptyParentheses`` of
+  /// ``SpacesInParensOptions``.
   /// \version 3.7
-  bool SpaceInEmptyParentheses;
+  // bool SpaceInEmptyParentheses;
 
   /// The number of spaces before trailing line comments
   /// (``//`` - comments).
@@ -4208,13 +4201,10 @@ struct FormatStyle {
 
   /// If ``true``, spaces will be inserted around if/for/switch/while
   /// conditions.
-  /// \code
-  ///    true:                                  false:
-  ///    if ( a )  { ... }              vs.     if (a) { ... }
-  ///    while ( i < 5 )  { ... }               while (i < 5) { ... }
-  /// \endcode
+  /// This option is **deprecated**. See ``InConditionalStatements`` of
+  /// ``SpacesInParensOptions``.
   /// \version 10
-  bool SpacesInConditionalStatement;
+  // bool SpacesInConditionalStatement;
 
   /// If ``true``, spaces are inserted inside container literals (e.g.  ObjC and
   /// Javascript array and dict literals). For JSON, use
@@ -4228,12 +4218,10 @@ struct FormatStyle {
   bool SpacesInContainerLiterals;
 
   /// If ``true``, spaces may be inserted into C style casts.
-  /// \code
-  ///    true:                                  false:
-  ///    x = ( int32 )y                 vs.     x = (int32)y
-  /// \endcode
+  /// This option is **deprecated**. See ``InCStyleCasts`` of
+  /// ``SpacesInParensOptions``.
   /// \version 3.7
-  bool SpacesInCStyleCastParentheses;
+  // bool SpacesInCStyleCastParentheses;
 
   /// Control of spaces within a single line comment.
   struct SpacesInLineComment {
@@ -4277,13 +4265,112 @@ struct FormatStyle {
   /// \version 13
   SpacesInLineComment SpacesInLineCommentPrefix;
 
-  /// If ``true``, spaces will be inserted after ``(`` and before ``)``.
-  /// \code
-  ///    true:                                  false:
-  ///    t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
-  /// \endcode
+  /// Different ways to put a space before opening and closing parentheses.
+  enum SpacesInParensStyle : int8_t {
+    /// Never put a space in parentheses.
+    /// \code
+    ///    void f() {
+    ///      if(true) {
+    ///        f();
+    ///      }
+    ///    }
+    /// \endcode
+    SIPO_Never,
+    /// Configure each individual space in parentheses in
+    /// `SpacesInParensOptions`.
+    SIPO_Custom,
+  };
+
+  /// If ``true'', spaces will be inserted after ``(`` and before ``)``.
+  /// This option is **deprecated**. The previous behavior is preserved by using
+  /// ``SpacesInParens`` with ``Custom`` and by setting all
+  /// ``SpacesInParensOptions`` to ``true`` except for ``InCStyleCasts`` and
+  /// ``InEmptyParentheses``.
   /// \version 3.7
-  bool SpacesInParentheses;
+  // bool SpacesInParentheses;
+
+  /// Defines in which cases spaces will be inserted after ``(`` and before
+  /// ``)``.
+  /// \version 17
+  SpacesInParensStyle SpacesInParens;
+
+  /// Precise control over the spacing in parentheses.
+  /// \code
+  ///   # Should be declared this way:
+  ///   SpacesInParens: Custom
+  ///   SpacesInParensOptions:
+  ///     InConditionalStatements: true
+  ///     Other: true
+  /// \endcode
+  struct SpacesInParensCustom {
+    /// Put a space in parentheses only inside conditional statements
+    /// (``for/if/while/switch...``).
+    /// \code
+    ///    true:                                  false:
+    ///    if ( a )  { ... }              vs.     if (a) { ... }
+    ///    while ( i < 5 )  { ... }               while (i < 5) { ... }
+    /// \endcode
+    bool InConditionalStatements;
+    /// Put a space in C style casts.
+    /// \code
+    ///    true:                                  false:
+    ///    x = ( int32 )y                 vs.     x = (int32)y
+    /// \endcode
+    bool InCStyleCasts;
+    /// Put a space in parentheses only if the parentheses are empty i.e. '()'
+    /// \code
+    ///    true:                                false:
+    ///    void f( ) {                    vs.   void f() {
+    ///      int x[] = {foo( ), bar( )};          int x[] = {foo(), bar()};
+    ///      if (true) {                          if (true) {
+    ///        f( );                                f();
+    ///      }                                    }
+    ///    }                                    }
+    /// \endcode
+    bool InEmptyParentheses;
+    /// Put a space in parentheses not covered by preceding options.
+    /// \code
+    ///    true:                                  false:
+    ///    t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+    /// \endcode
+    bool Other;
+
+    SpacesInParensCustom()
+        : InConditionalStatements(false), InCStyleCasts(false),
+          InEmptyParentheses(false), Other(false) {}
+
+    SpacesInParensCustom(bool InConditionalStatements, bool InCStyleCasts,
+        bool InEmptyParentheses, bool Other)
+        : InConditionalStatements(InConditionalStatements),
+          InCStyleCasts(InCStyleCasts),
+          InEmptyParentheses(InEmptyParentheses),
+          Other(Other) {}
+
+    bool operator==(const SpacesInParensCustom &R) const {
+      return InConditionalStatements == R.InConditionalStatements &&
+             InCStyleCasts == R.InCStyleCasts &&
+             InEmptyParentheses == R.InEmptyParentheses &&
+             Other == R.Other;
+    }
+    bool operator!=(const SpacesInParensCustom &R) const {
+      return !(*this == R);
+    }
+  };
+
+  /// Control of individual spaces in parentheses.
+  ///
+  /// If ``SpacesInParens`` is set to ``Custom``, use this to specify
+  /// how each individual space in parentheses case should be handled.
+  /// Otherwise, this is ignored.
+  /// \code{.yaml}
+  ///   # Example of usage:
+  ///   SpacesInParens: Custom
+  ///   SpacesInParensOptions:
+  ///     InConditionalStatements: true
+  ///     InEmptyParentheses: true
+  /// \endcode
+  /// \version 17
+  SpacesInParensCustom SpacesInParensOptions;
 
   /// If ``true``, spaces will be inserted after ``[`` and before ``]``.
   /// Lambdas without arguments or unspecified size array declarations will not
@@ -4587,17 +4674,15 @@ struct FormatStyle {
                R.SpaceBeforeRangeBasedForLoopColon &&
            SpaceBeforeSquareBrackets == R.SpaceBeforeSquareBrackets &&
            SpaceInEmptyBlock == R.SpaceInEmptyBlock &&
-           SpaceInEmptyParentheses == R.SpaceInEmptyParentheses &&
            SpacesBeforeTrailingComments == R.SpacesBeforeTrailingComments &&
            SpacesInAngles == R.SpacesInAngles &&
-           SpacesInConditionalStatement == R.SpacesInConditionalStatement &&
            SpacesInContainerLiterals == R.SpacesInContainerLiterals &&
-           SpacesInCStyleCastParentheses == R.SpacesInCStyleCastParentheses &&
            SpacesInLineCommentPrefix.Minimum ==
                R.SpacesInLineCommentPrefix.Minimum &&
            SpacesInLineCommentPrefix.Maximum ==
                R.SpacesInLineCommentPrefix.Maximum &&
-           SpacesInParentheses == R.SpacesInParentheses &&
+           SpacesInParens == R.SpacesInParens &&
+           SpacesInParensOptions == R.SpacesInParensOptions &&
            SpacesInSquareBrackets == R.SpacesInSquareBrackets &&
            Standard == R.Standard &&
            StatementAttributeLikeMacros == R.StatementAttributeLikeMacros &&
