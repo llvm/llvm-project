@@ -121,6 +121,10 @@ public:
     return (Flags & SymbolFlags::Text) == SymbolFlags::Text;
   }
 
+  bool hasArchitecture(Architecture Arch) const {
+    return mapToArchitectureSet(Targets).contains(Arch);
+  }
+
   using const_target_iterator = TargetList::const_iterator;
   using const_target_range = llvm::iterator_range<const_target_iterator>;
   const_target_range targets() const { return {Targets}; }

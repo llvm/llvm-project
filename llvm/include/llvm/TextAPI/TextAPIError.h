@@ -1,0 +1,38 @@
+//===- llvm/TextAPI/TextAPIError.h - TAPI Error -----------------*- C++ -*-===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+///
+/// \file
+/// \brief Define TAPI specific error codes.
+///
+//===----------------------------------------------------------------------===//
+
+#ifndef LLVM_TEXTAPI_TEXTAPIERROR_H
+#define LLVM_TEXTAPI_TEXTAPIERROR_H
+
+#include "llvm/Support/Error.h"
+
+namespace llvm::MachO {
+enum class TextAPIErrorCode {
+  NoSuchArchitecture,
+  EmptyResults,
+  GenericFrontendError,
+};
+
+class TextAPIError : public llvm::ErrorInfo<TextAPIError> {
+public:
+  static char ID;
+  TextAPIErrorCode EC;
+
+  TextAPIError(TextAPIErrorCode EC) : EC(EC) {}
+
+  void log(raw_ostream &OS) const override;
+  std::error_code convertToErrorCode() const override;
+};
+
+} // namespace llvm::MachO
+#endif // LLVM_TEXTAPI_TEXTAPIERROR_H

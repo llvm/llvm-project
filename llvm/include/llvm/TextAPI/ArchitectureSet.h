@@ -40,13 +40,18 @@ public:
   ArchitectureSet(Architecture Arch) : ArchitectureSet() { set(Arch); }
   ArchitectureSet(const std::vector<Architecture> &Archs);
 
+  static ArchitectureSet All() { return ArchitectureSet(EndIndexVal); }
+
   void set(Architecture Arch) {
     if (Arch == AK_unknown)
       return;
     ArchSet |= 1U << static_cast<int>(Arch);
   }
 
-  void clear(Architecture Arch) { ArchSet &= ~(1U << static_cast<int>(Arch)); }
+  ArchitectureSet clear(Architecture Arch) {
+    ArchSet &= ~(1U << static_cast<int>(Arch));
+    return ArchSet;
+  }
 
   bool has(Architecture Arch) const {
     return ArchSet & (1U << static_cast<int>(Arch));
