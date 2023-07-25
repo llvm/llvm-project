@@ -109,6 +109,7 @@ private:
   SDValue LowerFFREXP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerTrig(SDValue Op, SelectionDAG &DAG) const;
+  SDValue lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerATOMIC_CMP_SWAP(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const;
