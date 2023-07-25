@@ -11279,12 +11279,12 @@ struct AAPotentialValuesArgument final : AAPotentialValuesImpl {
   ChangeStatus updateImpl(Attributor &A) override {
     auto AssumedBefore = getAssumed();
 
-    unsigned CSArgNo = getCallSiteArgNo();
+    unsigned ArgNo = getCalleeArgNo();
 
     bool UsedAssumedInformation = false;
     SmallVector<AA::ValueAndContext> Values;
     auto CallSitePred = [&](AbstractCallSite ACS) {
-      const auto CSArgIRP = IRPosition::callsite_argument(ACS, CSArgNo);
+      const auto CSArgIRP = IRPosition::callsite_argument(ACS, ArgNo);
       if (CSArgIRP.getPositionKind() == IRP_INVALID)
         return false;
 
