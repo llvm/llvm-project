@@ -481,8 +481,7 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV32I-NEXT:    addi a1, a4, 1
 ; RV32I-NEXT:    seqz a2, a1
 ; RV32I-NEXT:    add a3, a5, a2
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    addi a0, a0, -1
+; RV32I-NEXT:    neg a0, a0
 ; RV32I-NEXT:    and a2, a0, a1
 ; RV32I-NEXT:    and a3, a0, a3
 ; RV32I-NEXT:    sw a4, 8(sp)
@@ -537,8 +536,7 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; RV32IA-NEXT:    addi a1, a4, 1
 ; RV32IA-NEXT:    seqz a2, a1
 ; RV32IA-NEXT:    add a3, a5, a2
-; RV32IA-NEXT:    xori a0, a0, 1
-; RV32IA-NEXT:    addi a0, a0, -1
+; RV32IA-NEXT:    neg a0, a0
 ; RV32IA-NEXT:    and a2, a0, a1
 ; RV32IA-NEXT:    and a3, a0, a3
 ; RV32IA-NEXT:    sw a4, 8(sp)
