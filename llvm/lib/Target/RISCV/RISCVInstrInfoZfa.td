@@ -54,18 +54,14 @@ class FPBinaryOp_rr<bits<7> funct7, bits<3> funct3, DAGOperand rdty,
               (ins rsty:$rs1, rsty:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class FPUnaryOp_imm<bits<7> funct7, bits<5> rs2val, bits<3> funct3,
-                    dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+class FPFLI_r<bits<7> funct7, bits<5> rs2val, bits<3> funct3,
+              DAGOperand rdty, string opcodestr>
+    : RVInstR<funct7, funct3, OPC_OP_FP, (outs rdty:$rd),
+              (ins loadfpimm:$imm), opcodestr, "$rd, $imm"> {
   bits<5> imm;
-  bits<5> rd;
 
-  let Inst{31-25} = funct7;
-  let Inst{24-20} = rs2val;
-  let Inst{19-15} = imm;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_OP_FP.Value;
+  let rs2 = rs2val;
+  let rs1 = imm;
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0, mayRaiseFPException = 1,
@@ -84,8 +80,7 @@ class FPUnaryOp_r_rtz<bits<7> funct7, bits<5> rs2val, DAGOperand rdty,
 
 let Predicates = [HasStdExtZfa] in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
-def FLI_S : FPUnaryOp_imm<0b1111000, 0b00001, 0b000, (outs FPR32:$rd),
-            (ins loadfpimm:$imm), "fli.s", "$rd, $imm">,
+def FLI_S : FPFLI_r<0b1111000, 0b00001, 0b000, FPR32, "fli.s">,
             Sched<[WriteFLI32]>;
 
 let SchedRW = [WriteFMinMax32, ReadFMinMax32, ReadFMinMax32] in {
@@ -106,8 +101,7 @@ def FLEQ_S : FPCmp_rr<0b1010000, 0b100, "fleq.s", FPR32>;
 
 let Predicates = [HasStdExtZfa, HasStdExtD] in {
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
-def FLI_D : FPUnaryOp_imm<0b1111001, 0b00001, 0b000, (outs FPR64:$rd),
-            (ins loadfpimm:$imm), "fli.d", "$rd, $imm">,
+def FLI_D : FPFLI_r<0b1111001, 0b00001, 0b000, FPR64, "fli.d">,
             Sched<[WriteFLI64]>;
 
 let SchedRW = [WriteFMinMax64, ReadFMinMax64, ReadFMinMax64] in {
@@ -146,8 +140,7 @@ def FMV_X_W_FPR64 : FPUnaryOp_r<0b1110000, 0b00000, 0b000, GPR, FPR64,
 
 let Predicates = [HasStdExtZfa, HasStdExtZfhOrZvfh] in
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in
-def FLI_H : FPUnaryOp_imm<0b1111010, 0b00001, 0b000, (outs FPR16:$rd),
-            (ins loadfpimm:$imm), "fli.h", "$rd, $imm">,
+def FLI_H : FPFLI_r<0b1111010, 0b00001, 0b000, FPR16, "fli.h">,
             Sched<[WriteFLI16]>;
 
 let Predicates = [HasStdExtZfa, HasStdExtZfh] in {
