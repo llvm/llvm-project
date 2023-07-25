@@ -942,7 +942,7 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   // emitting the regions first (e.g. if the regions are huge, backpatching the
   // op encoding mask is more annoying).
   if (numRegions) {
-    bool isIsolatedFromAbove = op->hasTrait<OpTrait::IsIsolatedFromAbove>();
+    bool isIsolatedFromAbove = numberingState.isIsolatedFromAbove(op);
     emitter.emitVarIntWithFlag(numRegions, isIsolatedFromAbove);
 
     // If the region is not isolated from above, or we are emitting bytecode
