@@ -1294,7 +1294,7 @@ bool CursorVisitor::VisitUnresolvedUsingTypenameDecl(
 bool CursorVisitor::VisitStaticAssertDecl(StaticAssertDecl *D) {
   if (Visit(MakeCXCursor(D->getAssertExpr(), StmtParent, TU, RegionOfInterest)))
     return true;
-  if (auto *Message = dyn_cast<StringLiteral>(D->getMessage()))
+  if (auto *Message = D->getMessage())
     if (Visit(MakeCXCursor(Message, StmtParent, TU, RegionOfInterest)))
       return true;
   return false;
