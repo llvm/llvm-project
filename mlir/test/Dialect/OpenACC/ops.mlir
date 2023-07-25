@@ -1605,32 +1605,32 @@ func.func @testdeclareop(%a: memref<f32>, %b: memref<f32>, %c: memref<f32>) -> (
 
 // -----
 
-llvm.mlir.global external @globalvar() { acc.declare = #acc<data_clause acc_create> } : i32 {
+llvm.mlir.global external @globalvar() { acc.declare = #acc.declare<dataClause = acc_create> } : i32 {
   %0 = llvm.mlir.constant(0 : i32) : i32
   llvm.return %0 : i32
 }
 
 acc.global_ctor @acc_constructor {
-  %0 = llvm.mlir.addressof @globalvar { acc.declare = #acc<data_clause acc_create> } : !llvm.ptr<i32>
+  %0 = llvm.mlir.addressof @globalvar { acc.declare = #acc.declare<dataClause = acc_create> } : !llvm.ptr<i32>
   %1 = acc.create varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32>
   acc.declare_enter dataOperands(%1 : !llvm.ptr<i32>)
   acc.terminator
 }
 
 acc.global_dtor @acc_destructor {
-  %0 = llvm.mlir.addressof @globalvar { acc.declare = #acc<data_clause acc_create> } : !llvm.ptr<i32>
-  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32> { dataClause = #acc<data_clause acc_create>}
+  %0 = llvm.mlir.addressof @globalvar { acc.declare = #acc.declare<dataClause = acc_create> } : !llvm.ptr<i32>
+  %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32> {dataClause = #acc<data_clause acc_create>}
   acc.declare_exit dataOperands(%1 : !llvm.ptr<i32>)
   acc.delete accPtr(%1 : !llvm.ptr<i32>)
   acc.terminator
 }
 
 // CHECK-LABEL: acc.global_ctor @acc_constructor
-// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar {acc.declare = #acc<data_clause acc_create>} : !llvm.ptr<i32>
+// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar {acc.declare = #acc.declare<dataClause = acc_create>} : !llvm.ptr<i32>
 // CHECK-NEXT: %[[CREATE:.*]] = acc.create varPtr(%[[ADDR]] : !llvm.ptr<i32>) -> !llvm.ptr<i32>
 // CHECK-NEXT: acc.declare_enter dataOperands(%[[CREATE]] : !llvm.ptr<i32>)
 // CHECK: acc.global_dtor @acc_destructor
-// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar {acc.declare = #acc<data_clause acc_create>} : !llvm.ptr<i32>
+// CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @globalvar {acc.declare = #acc.declare<dataClause = acc_create>} : !llvm.ptr<i32>
 // CHECK-NEXT: %[[DELETE:.*]] = acc.getdeviceptr varPtr(%[[ADDR]] : !llvm.ptr<i32>) -> !llvm.ptr<i32> {dataClause = #acc<data_clause acc_create>}
 // CHECK-NEXT: acc.declare_exit dataOperands(%[[DELETE]] : !llvm.ptr<i32>)
 // CHECK-NEXT: acc.delete accPtr(%[[DELETE]] : !llvm.ptr<i32>)
