@@ -2276,6 +2276,7 @@ llvm::Value *CodeGenFunction::EmitDynamicCast(Address ThisAddr,
   // If the destination is effectively final, the cast succeeds if and only
   // if the dynamic type of the pointer is exactly the destination type.
   bool IsExact = !IsDynamicCastToVoid &&
+                 CGM.getCodeGenOpts().OptimizationLevel > 0 &&
                  DestRecordTy->getAsCXXRecordDecl()->isEffectivelyFinal() &&
                  CGM.getCXXABI().shouldEmitExactDynamicCast(DestRecordTy);
 
