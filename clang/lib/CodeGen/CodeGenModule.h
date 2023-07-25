@@ -1019,11 +1019,6 @@ public:
   /// Return a pointer to a constant CFString object for the given string.
   ConstantAddress GetAddrOfConstantCFString(const StringLiteral *Literal);
 
-  /// Return a pointer to a constant NSString object for the given string. Or a
-  /// user defined String object as defined via
-  /// -fconstant-string-class=class_name option.
-  ConstantAddress GetAddrOfConstantString(const StringLiteral *Literal);
-
   /// Return a constant array for the given string.
   llvm::Constant *GetConstantArrayFromStringLiteral(const StringLiteral *E);
 
