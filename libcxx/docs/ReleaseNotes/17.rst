@@ -69,6 +69,7 @@ Implemented Papers
 - P2585R0 - Improving default container formatting
 - P0408R7 - Efficient Access to ``basic_stringbuf``'s Buffer
 - P2474R2 - ``views::repeat``
+- P0009R18 - ``mdspan`` (``layout_stride`` is not done yet)
 
 Improvements and New Features
 -----------------------------

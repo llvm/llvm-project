@@ -1714,7 +1714,7 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
           ");\n",
           op.getCppClassName());
     } else {
-      body << "  result.addAttribute(\"odsResultSegmentSizes\", "
+      body << "  result.addAttribute(\"result_segment_sizes\", "
            << "parser.getBuilder().getDenseI32ArrayAttr({";
       llvm::interleaveComma(op.getResults(), body, interleaveFn);
       body << "}));\n";
