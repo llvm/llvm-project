@@ -49,8 +49,8 @@ template<class _Tp>
 concept __move_deref =
   !__unqualified_iter_move<_Tp> &&
   requires (_Tp&& __t) {
-    *__t;
-    requires is_lvalue_reference_v<decltype(*__t)>;
+    *std::forward<_Tp>(__t);
+    requires is_lvalue_reference_v<decltype(*std::forward<_Tp>(__t))>;
   };
 
 template<class _Tp>
@@ -58,8 +58,8 @@ concept __just_deref =
   !__unqualified_iter_move<_Tp> &&
   !__move_deref<_Tp> &&
   requires (_Tp&& __t) {
-    *__t;
-    requires (!is_lvalue_reference_v<decltype(*__t)>);
+    *std::forward<_Tp>(__t);
+    requires (!is_lvalue_reference_v<decltype(*std::forward<_Tp>(__t))>);
   };
 
 // [iterator.cust.move]
