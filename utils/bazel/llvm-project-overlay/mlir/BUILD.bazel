@@ -3353,6 +3353,7 @@ cc_library(
         ":TosaToSCF",
         ":TosaToTensor",
         ":UBToLLVM",
+        ":UBToSPIRV",
         ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
@@ -12049,5 +12050,25 @@ cc_library(
         ":LLVMDialect",
         ":Pass",
         ":UBDialect",
+    ],
+)
+
+cc_library(
+    name = "UBToSPIRV",
+    srcs = glob([
+        "lib/Conversion/UBToSPIRV/*.cpp",
+        "lib/Conversion/UBToSPIRV/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/UBToSPIRV/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":Pass",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
+        ":UBDialect",
+        "//llvm:Core",
     ],
 )
