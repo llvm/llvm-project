@@ -299,103 +299,6 @@ struct FormatStyle {
   /// \version 3.8
   AlignConsecutiveStyle AlignConsecutiveDeclarations;
 
-  /// Alignment options.
-  ///
-  struct ShortCaseStatementsAlignmentStyle {
-    /// Whether aligning is enabled.
-    /// \code
-    ///   true:
-    ///   switch (level) {
-    ///   case log::info:    return "info:";
-    ///   case log::warning: return "warning:";
-    ///   default:           return "";
-    ///   }
-    ///
-    ///   false:
-    ///   switch (level) {
-    ///   case log::info: return "info:";
-    ///   case log::warning: return "warning:";
-    ///   default: return "";
-    ///   }
-    /// \endcode
-    bool Enabled;
-    /// Whether to align across empty lines.
-    /// \code
-    ///   true:
-    ///   switch (level) {
-    ///   case log::info:    return "info:";
-    ///   case log::warning: return "warning:";
-    ///
-    ///   default:           return "";
-    ///   }
-    ///
-    ///   false:
-    ///   switch (level) {
-    ///   case log::info:    return "info:";
-    ///   case log::warning: return "warning:";
-    ///
-    ///   default: return "";
-    ///   }
-    /// \endcode
-    bool AcrossEmptyLines;
-    /// Whether to align across comments.
-    /// \code
-    ///   true:
-    ///   switch (level) {
-    ///   case log::info:    return "info:";
-    ///   case log::warning: return "warning:";
-    ///   /* A comment. */
-    ///   default:           return "";
-    ///   }
-    ///
-    ///   false:
-    ///   switch (level) {
-    ///   case log::info:    return "info:";
-    ///   case log::warning: return "warning:";
-    ///   /* A comment. */
-    ///   default: return "";
-    ///   }
-    /// \endcode
-    bool AcrossComments;
-    /// Whether aligned case labels are aligned on the colon, or on the
-    /// , or on the tokens after the colon.
-    /// \code
-    ///   true:
-    ///   switch (level) {
-    ///   case log::info   : return "info:";
-    ///   case log::warning: return "warning:";
-    ///   default          : return "";
-    ///   }
-    ///
-    ///   false:
-    ///   switch (level) {
-    ///   case log::info:    return "info:";
-    ///   case log::warning: return "warning:";
-    ///   default:           return "";
-    ///   }
-    /// \endcode
-    bool AlignCaseColons;
-    bool operator==(const ShortCaseStatementsAlignmentStyle &R) const {
-      return Enabled == R.Enabled && AcrossEmptyLines == R.AcrossEmptyLines &&
-             AcrossComments == R.AcrossComments &&
-             AlignCaseColons == R.AlignCaseColons;
-    }
-  };
-
-  /// Style of aligning consecutive short case labels.
-  /// Only applies if ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
-  ///
-  /// \code{.yaml}
-  ///   # Example of usage:
-  ///   AlignConsecutiveShortCaseStatements:
-  ///     Enabled: true
-  ///     AcrossEmptyLines: true
-  ///     AcrossComments: true
-  ///     AlignCaseColons: false
-  /// \endcode
-  /// \version 17
-  ShortCaseStatementsAlignmentStyle AlignConsecutiveShortCaseStatements;
-
   /// Different styles for aligning escaped newlines.
   enum EscapedNewlineAlignmentStyle : int8_t {
     /// Don't align escaped newlines.
@@ -4454,8 +4357,6 @@ struct FormatStyle {
            AlignConsecutiveBitFields == R.AlignConsecutiveBitFields &&
            AlignConsecutiveDeclarations == R.AlignConsecutiveDeclarations &&
            AlignConsecutiveMacros == R.AlignConsecutiveMacros &&
-           AlignConsecutiveShortCaseStatements ==
-               R.AlignConsecutiveShortCaseStatements &&
            AlignEscapedNewlines == R.AlignEscapedNewlines &&
            AlignOperands == R.AlignOperands &&
            AlignTrailingComments == R.AlignTrailingComments &&
