@@ -309,7 +309,7 @@ __DEVICE__
 float lgammaf(float __x) { return __ocml_lgamma_f32(__x); }
 
 __DEVICE__
-long long int llrintf(float __x) { return __ocml_rint_f32(__x); }
+long long int llrintf(float __x) { return __builtin_rintf(__x); }
 
 __DEVICE__
 long long int llroundf(float __x) { return __builtin_roundf(__x); }
@@ -330,7 +330,7 @@ __DEVICE__
 float logf(float __x) { return __builtin_logf(__x); }
 
 __DEVICE__
-long int lrintf(float __x) { return __ocml_rint_f32(__x); }
+long int lrintf(float __x) { return __builtin_rintf(__x); }
 
 __DEVICE__
 long int lroundf(float __x) { return __builtin_roundf(__x); }
@@ -435,7 +435,7 @@ __DEVICE__
 float rhypotf(float __x, float __y) { return __ocml_rhypot_f32(__x, __y); }
 
 __DEVICE__
-float rintf(float __x) { return __ocml_rint_f32(__x); }
+float rintf(float __x) { return __builtin_rintf(__x); }
 
 __DEVICE__
 float rnorm3df(float __x, float __y, float __z) {
@@ -857,7 +857,7 @@ __DEVICE__
 double lgamma(double __x) { return __ocml_lgamma_f64(__x); }
 
 __DEVICE__
-long long int llrint(double __x) { return __ocml_rint_f64(__x); }
+long long int llrint(double __x) { return __builtin_rint(__x); }
 
 __DEVICE__
 long long int llround(double __x) { return __builtin_round(__x); }
@@ -878,7 +878,7 @@ __DEVICE__
 double logb(double __x) { return __ocml_logb_f64(__x); }
 
 __DEVICE__
-long int lrint(double __x) { return __ocml_rint_f64(__x); }
+long int lrint(double __x) { return __builtin_rint(__x); }
 
 __DEVICE__
 long int lround(double __x) { return __builtin_round(__x); }
@@ -991,7 +991,7 @@ __DEVICE__
 double rhypot(double __x, double __y) { return __ocml_rhypot_f64(__x, __y); }
 
 __DEVICE__
-double rint(double __x) { return __ocml_rint_f64(__x); }
+double rint(double __x) { return __builtin_rint(__x); }
 
 __DEVICE__
 double rnorm(int __dim,
