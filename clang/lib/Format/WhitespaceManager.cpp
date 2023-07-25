@@ -102,7 +102,6 @@ const tooling::Replacements &WhitespaceManager::generateReplacements() {
   llvm::sort(Changes, Change::IsBeforeInFile(SourceMgr));
   calculateLineBreakInformation();
   alignConsecutiveMacros();
-  alignConsecutiveShortCaseStatements();
   alignConsecutiveDeclarations();
   alignConsecutiveBitFields();
   alignConsecutiveAssignments();
@@ -676,12 +675,14 @@ static unsigned AlignTokens(const FormatStyle &Style, F &&Matches,
 //
 // We need to adjust the StartOfTokenColumn of each Change that is on a line
 // containing any matching token to be aligned and located after such token.
-static void AlignMatchingTokenSequence(
+static void AlignMacroSequence(
     unsigned &StartOfSequence, unsigned &EndOfSequence, unsigned &MinColumn,
-    std::function<bool(const WhitespaceManager::Change &C)> Matches,
+    unsigned &MaxColumn, bool &FoundMatchOnLine,
+    std::function<bool(const WhitespaceManager::Change &C)> AlignMacrosMatches,
     SmallVector<WhitespaceManager::Change, 16> &Changes) {
   if (StartOfSequence > 0 && StartOfSequence < EndOfSequence) {
-    bool FoundMatchOnLine = false;
+
+    FoundMatchOnLine = false;
     int Shift = 0;
 
     for (unsigned I = StartOfSequence; I != EndOfSequence; ++I) {
@@ -692,8 +693,8 @@ static void AlignMatchingTokenSequence(
 
       // If this is the first matching token to be aligned, remember by how many
       // spaces it has to be shifted, so the rest of the changes on the line are
-      // shifted by the same amount.
-      if (!FoundMatchOnLine && Matches(Changes[I])) {
+      // shifted by the same amount
+      if (!FoundMatchOnLine && AlignMacrosMatches(Changes[I])) {
         FoundMatchOnLine = true;
         Shift = MinColumn - Changes[I].StartOfTokenColumn;
         Changes[I].Spaces += Shift;
@@ -707,6 +708,7 @@ static void AlignMatchingTokenSequence(
   }
 
   MinColumn = 0;
+  MaxColumn = UINT_MAX;
   StartOfSequence = 0;
   EndOfSequence = 0;
 }
@@ -745,6 +747,7 @@ void WhitespaceManager::alignConsecutiveMacros() {
   };
 
   unsigned MinColumn = 0;
+  unsigned MaxColumn = UINT_MAX;
 
   // Start and end of the token sequence we're processing.
   unsigned StartOfSequence = 0;
@@ -772,8 +775,8 @@ void WhitespaceManager::alignConsecutiveMacros() {
           !(LineIsComment && Style.AlignConsecutiveMacros.AcrossComments);
 
       if (EmptyLineBreak || NoMatchBreak) {
-        AlignMatchingTokenSequence(StartOfSequence, EndOfSequence, MinColumn,
-                                   AlignMacrosMatches, Changes);
+        AlignMacroSequence(StartOfSequence, EndOfSequence, MinColumn, MaxColumn,
+                           FoundMatchOnLine, AlignMacrosMatches, Changes);
       }
 
       // A new line starts, re-initialize line status tracking bools.
@@ -793,12 +796,18 @@ void WhitespaceManager::alignConsecutiveMacros() {
       StartOfSequence = I;
 
     unsigned ChangeMinColumn = Changes[I].StartOfTokenColumn;
+    int LineLengthAfter = -Changes[I].Spaces;
+    for (unsigned j = I; j != E && Changes[j].NewlinesBefore == 0; ++j)
+      LineLengthAfter += Changes[j].Spaces + Changes[j].TokenLength;
+    unsigned ChangeMaxColumn = Style.ColumnLimit - LineLengthAfter;
+
     MinColumn = std::max(MinColumn, ChangeMinColumn);
+    MaxColumn = std::min(MaxColumn, ChangeMaxColumn);
   }
 
   EndOfSequence = I;
-  AlignMatchingTokenSequence(StartOfSequence, EndOfSequence, MinColumn,
-                             AlignMacrosMatches, Changes);
+  AlignMacroSequence(StartOfSequence, EndOfSequence, MinColumn, MaxColumn,
+                     FoundMatchOnLine, AlignMacrosMatches, Changes);
 }
 
 void WhitespaceManager::alignConsecutiveAssignments() {
@@ -852,110 +861,6 @@ void WhitespaceManager::alignConsecutiveBitFields() {
         return C.Tok->is(TT_BitFieldColon);
       },
       Changes, /*StartAt=*/0, Style.AlignConsecutiveBitFields);
-}
-
-void WhitespaceManager::alignConsecutiveShortCaseStatements() {
-  if (!Style.AlignConsecutiveShortCaseStatements.Enabled ||
-      !Style.AllowShortCaseLabelsOnASingleLine) {
-    return;
-  }
-
-  auto Matches = [&](const Change &C) {
-    if (Style.AlignConsecutiveShortCaseStatements.AlignCaseColons)
-      return C.Tok->is(TT_CaseLabelColon);
-
-    // Ignore 'IsInsideToken' to allow matching trailing comments which
-    // need to be reflowed as that causes the token to appear in two
-    // different changes, which will cause incorrect alignment as we'll
-    // reflow early due to detecting multiple aligning tokens per line.
-    return !C.IsInsideToken && C.Tok->Previous &&
-           C.Tok->Previous->is(TT_CaseLabelColon);
-  };
-
-  unsigned MinColumn = 0;
-
-  // Empty case statements don't break the alignment, but don't necessarily
-  // match our predicate, so we need to track their column so they can push out
-  // our alignment.
-  unsigned MinEmptyCaseColumn = 0;
-
-  // Start and end of the token sequence we're processing.
-  unsigned StartOfSequence = 0;
-  unsigned EndOfSequence = 0;
-
-  // Whether a matching token has been found on the current line.
-  bool FoundMatchOnLine = false;
-
-  bool LineIsComment = true;
-  bool LineIsEmptyCase = false;
-
-  unsigned I = 0;
-  for (unsigned E = Changes.size(); I != E; ++I) {
-    if (Changes[I].NewlinesBefore != 0) {
-      // Whether to break the alignment sequence because of an empty line.
-      bool EmptyLineBreak =
-          (Changes[I].NewlinesBefore > 1) &&
-          !Style.AlignConsecutiveShortCaseStatements.AcrossEmptyLines;
-
-      // Whether to break the alignment sequence because of a line without a
-      // match.
-      bool NoMatchBreak =
-          !FoundMatchOnLine &&
-          !(LineIsComment &&
-            Style.AlignConsecutiveShortCaseStatements.AcrossComments) &&
-          !LineIsEmptyCase;
-
-      if (EmptyLineBreak || NoMatchBreak) {
-        AlignMatchingTokenSequence(StartOfSequence, EndOfSequence, MinColumn,
-                                   Matches, Changes);
-        MinEmptyCaseColumn = 0;
-      }
-
-      // A new line starts, re-initialize line status tracking bools.
-      FoundMatchOnLine = false;
-      LineIsComment = true;
-      LineIsEmptyCase = false;
-    }
-
-    if (Changes[I].Tok->isNot(tok::comment))
-      LineIsComment = false;
-
-    if (Changes[I].Tok->is(TT_CaseLabelColon)) {
-      LineIsEmptyCase =
-          !Changes[I].Tok->Next || Changes[I].Tok->Next->isTrailingComment();
-
-      if (LineIsEmptyCase) {
-        if (Style.AlignConsecutiveShortCaseStatements.AlignCaseColons) {
-          MinEmptyCaseColumn =
-              std::max(MinEmptyCaseColumn, Changes[I].StartOfTokenColumn);
-        } else {
-          MinEmptyCaseColumn =
-              std::max(MinEmptyCaseColumn, Changes[I].StartOfTokenColumn + 2);
-        }
-      }
-    }
-
-    if (!Matches(Changes[I]))
-      continue;
-
-    if (LineIsEmptyCase)
-      continue;
-
-    FoundMatchOnLine = true;
-
-    if (StartOfSequence == 0)
-      StartOfSequence = I;
-
-    EndOfSequence = I + 1;
-
-    MinColumn = std::max(MinColumn, Changes[I].StartOfTokenColumn);
-
-    // Allow empty case statements to push out our alignment.
-    MinColumn = std::max(MinColumn, MinEmptyCaseColumn);
-  }
-
-  AlignMatchingTokenSequence(StartOfSequence, EndOfSequence, MinColumn, Matches,
-                             Changes);
 }
 
 void WhitespaceManager::alignConsecutiveDeclarations() {
