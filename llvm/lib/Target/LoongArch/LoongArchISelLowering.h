@@ -205,6 +205,7 @@ public:
   bool isLegalICmpImmediate(int64_t Imm) const override;
   bool isLegalAddImmediate(int64_t Imm) const override;
   bool isZExtFree(SDValue Val, EVT VT2) const override;
+  bool isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const override;
 
   bool hasAndNotCompare(SDValue Y) const override;
 
