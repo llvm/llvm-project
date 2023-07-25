@@ -10370,9 +10370,6 @@ OMPClause *OMPClauseReader::readClause() {
     C = OMPDoacrossClause::CreateEmpty(Context, NumVars, NumLoops);
     break;
   }
-  case llvm::omp::OMPC_ompx_attribute:
-    C = new (Context) OMPXAttributeClause();
-    break;
 #define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Enum:                                                        \
     break;
@@ -11463,15 +11460,6 @@ void OMPClauseReader::VisitOMPDoacrossClause(OMPDoacrossClause *C) {
   C->setVarRefs(Vars);
   for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I)
     C->setLoopData(I, Record.readSubExpr());
-}
-
-void OMPClauseReader::VisitOMPXAttributeClause(OMPXAttributeClause *C) {
-  AttrVec Attrs;
-  Record.readAttributes(Attrs);
-  C->setAttrs(Attrs);
-  C->setLocStart(Record.readSourceLocation());
-  C->setLParenLoc(Record.readSourceLocation());
-  C->setLocEnd(Record.readSourceLocation());
 }
 
 OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {
