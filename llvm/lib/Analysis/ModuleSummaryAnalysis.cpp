@@ -266,7 +266,9 @@ static void computeFunctionSummary(
   unsigned NumInsts = 0;
   // Map from callee ValueId to profile count. Used to accumulate profile
   // counts for all static calls to a given callee.
-  MapVector<ValueInfo, CalleeInfo> CallGraphEdges;
+  MapVector<ValueInfo, CalleeInfo, DenseMap<ValueInfo, unsigned>,
+            std::vector<std::pair<ValueInfo, CalleeInfo>>>
+      CallGraphEdges;
   SetVector<ValueInfo> RefEdges, LoadRefEdges, StoreRefEdges;
   SetVector<GlobalValue::GUID> TypeTests;
   SetVector<FunctionSummary::VFuncId> TypeTestAssumeVCalls,
