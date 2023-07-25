@@ -587,6 +587,13 @@ private:
   LogicalResult writeRegion(EncodingEmitter &emitter, Region *region);
   LogicalResult writeIRSection(EncodingEmitter &emitter, Operation *op);
 
+  LogicalResult writeRegions(EncodingEmitter &emitter,
+                             MutableArrayRef<Region> regions) {
+    return success(llvm::all_of(regions, [&](Region &region) {
+      return succeeded(writeRegion(emitter, &region));
+    }));
+  }
+
   //===--------------------------------------------------------------------===//
   // Resources
 
@@ -938,20 +945,17 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
     bool isIsolatedFromAbove = op->hasTrait<OpTrait::IsIsolatedFromAbove>();
     emitter.emitVarIntWithFlag(numRegions, isIsolatedFromAbove);
 
-    for (Region &region : op->getRegions()) {
-      // If the region is not isolated from above, or we are emitting bytecode
-      // targeting version <kLazyLoading, we don't use a section.
-      if (!isIsolatedFromAbove ||
-          config.bytecodeVersion < bytecode::kLazyLoading) {
-        if (failed(writeRegion(emitter, &region)))
-          return failure();
-        continue;
-      }
-
+    // If the region is not isolated from above, or we are emitting bytecode
+    // targeting version <kLazyLoading, we don't use a section.
+    if (isIsolatedFromAbove &&
+        config.bytecodeVersion >= bytecode::kLazyLoading) {
       EncodingEmitter regionEmitter;
-      if (failed(writeRegion(regionEmitter, &region)))
+      if (failed(writeRegions(regionEmitter, op->getRegions())))
         return failure();
       emitter.emitSection(bytecode::Section::kIR, std::move(regionEmitter));
+
+    } else if (failed(writeRegions(emitter, op->getRegions()))) {
+      return failure();
     }
   }
   return success();
