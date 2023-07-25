@@ -53,6 +53,14 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f32, &LoongArch::FPR32RegClass);
   if (Subtarget.hasBasicD())
     addRegisterClass(MVT::f64, &LoongArch::FPR64RegClass);
+  if (Subtarget.hasExtLSX())
+    for (auto VT : {MVT::v4f32, MVT::v2f64, MVT::v16i8, MVT::v8i16, MVT::v4i32,
+                    MVT::v2i64})
+      addRegisterClass(VT, &LoongArch::LSX128RegClass);
+  if (Subtarget.hasExtLASX())
+    for (auto VT : {MVT::v8f32, MVT::v4f64, MVT::v32i8, MVT::v16i16, MVT::v8i32,
+                    MVT::v4i64})
+      addRegisterClass(VT, &LoongArch::LASX256RegClass);
 
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, GRLenVT,
                    MVT::i1, Promote);
@@ -3048,6 +3056,12 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
         return std::make_pair(0U, &LoongArch::FPR32RegClass);
       if (Subtarget.hasBasicD() && VT == MVT::f64)
         return std::make_pair(0U, &LoongArch::FPR64RegClass);
+      if (Subtarget.hasExtLSX() &&
+          TRI->isTypeLegalForClass(LoongArch::LSX128RegClass, VT))
+        return std::make_pair(0U, &LoongArch::LSX128RegClass);
+      if (Subtarget.hasExtLASX() &&
+          TRI->isTypeLegalForClass(LoongArch::LASX256RegClass, VT))
+        return std::make_pair(0U, &LoongArch::LASX256RegClass);
       break;
     default:
       break;
@@ -3065,7 +3079,8 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
   // decode the usage of register name aliases into their official names. And
   // AFAIK, the not yet upstreamed `rustc` for LoongArch will always use
   // official register names.
-  if (Constraint.startswith("{$r") || Constraint.startswith("{$f")) {
+  if (Constraint.startswith("{$r") || Constraint.startswith("{$f") ||
+      Constraint.startswith("{$vr") || Constraint.startswith("{$xr")) {
     bool IsFP = Constraint[2] == 'f';
     std::pair<StringRef, StringRef> Temp = Constraint.split('$');
     std::pair<unsigned, const TargetRegisterClass *> R;
