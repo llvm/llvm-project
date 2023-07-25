@@ -4293,13 +4293,37 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::createTargetData(
   return Builder.saveIP();
 }
 
+// Copy input from pointer or i64 to the expected argument type.
+static Value *copyInput(IRBuilderBase &Builder, unsigned AddrSpace,
+                        Value *Input, Argument &Arg) {
+  auto Addr = Builder.CreateAlloca(Arg.getType()->isPointerTy()
+                                       ? Arg.getType()
+                                       : Type::getInt64Ty(Builder.getContext()),
+                                   AddrSpace);
+  auto AddrAscast =
+      Builder.CreatePointerBitCastOrAddrSpaceCast(Addr, Input->getType());
+  Builder.CreateStore(&Arg, AddrAscast);
+  auto Copy = Builder.CreateLoad(Arg.getType(), AddrAscast);
+
+  return Copy;
+}
+
 static Function *
 createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
                        StringRef FuncName, SmallVectorImpl<Value *> &Inputs,
                        OpenMPIRBuilder::TargetBodyGenCallbackTy &CBFunc) {
   SmallVector<Type *> ParameterTypes;
-  for (auto &Arg : Inputs)
-    ParameterTypes.push_back(Arg->getType());
+  if (OMPBuilder.Config.isTargetDevice()) {
+    // All parameters to target devices are passed as pointers
+    // or i64. This assumes 64-bit address spaces/pointers.
+    for (auto &Arg : Inputs)
+      ParameterTypes.push_back(Arg->getType()->isPointerTy()
+                                   ? Arg->getType()
+                                   : Type::getInt64Ty(Builder.getContext()));
+  } else {
+    for (auto &Arg : Inputs)
+      ParameterTypes.push_back(Arg->getType());
+  }
 
   auto FuncType = FunctionType::get(Builder.getVoidTy(), ParameterTypes,
                                     /*isVarArg*/ false);
@@ -4317,9 +4341,10 @@ createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   if (OMPBuilder.Config.isTargetDevice())
     Builder.restoreIP(OMPBuilder.createTargetInit(Builder, /*IsSPMD*/ false));
 
-  Builder.restoreIP(CBFunc(Builder.saveIP(), Builder.saveIP()));
+  BasicBlock *UserCodeEntryBB = Builder.GetInsertBlock();
 
   // Insert target deinit call in the device compilation pass.
+  Builder.restoreIP(CBFunc(Builder.saveIP(), Builder.saveIP()));
   if (OMPBuilder.Config.isTargetDevice())
     OMPBuilder.createTargetDeinit(Builder, /*IsSPMD*/ false);
 
@@ -4327,15 +4352,23 @@ createOutlinedFunction(OpenMPIRBuilder &OMPBuilder, IRBuilderBase &Builder,
   Builder.CreateRetVoid();
 
   // Rewrite uses of input valus to parameters.
+  Builder.SetInsertPoint(UserCodeEntryBB->getFirstNonPHIOrDbg());
   for (auto InArg : zip(Inputs, Func->args())) {
     Value *Input = std::get<0>(InArg);
     Argument &Arg = std::get<1>(InArg);
+
+    Value *InputCopy =
+        OMPBuilder.Config.isTargetDevice()
+            ? copyInput(Builder,
+                        OMPBuilder.M.getDataLayout().getAllocaAddrSpace(),
+                        Input, Arg)
+            : &Arg;
 
     // Collect all the instructions
     for (User *User : make_early_inc_range(Input->users()))
       if (auto Instr = dyn_cast<Instruction>(User))
         if (Instr->getFunction() == Func)
-          Instr->replaceUsesOfWith(Input, &Arg);
+          Instr->replaceUsesOfWith(Input, InputCopy);
   }
 
   // Restore insert point.
