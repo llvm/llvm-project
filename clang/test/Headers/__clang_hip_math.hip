@@ -22,7 +22,7 @@
 // RUN:   -internal-isystem %S/../../lib/Headers/cuda_wrappers \
 // RUN:   -internal-isystem %S/Inputs/include \
 // RUN:   -triple amdgcn-amd-amdhsa -aux-triple x86_64-unknown-unknown \
-// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -fcuda-approx-transcendentals -o - \
+// RUN:   -target-cpu gfx906 -emit-llvm %s -fcuda-is-device -O1 -fgpu-approx-transcendentals -o - \
 // RUN:   -D__HIPCC_RTC__ | FileCheck -check-prefixes=CHECK,APPROX %s
 
 #define BOOL_TYPE int
@@ -3694,10 +3694,13 @@ extern "C" __device__ BOOL_TYPE test___signbit(double x) {
 //
 // APPROX-LABEL: @test_sincosf(
 // APPROX-NEXT:  entry:
-// APPROX-NEXT:    [[CALL_I_I:%.*]] = tail call contract float @__ocml_native_sin_f32(float noundef [[X:%.*]]) #[[ATTR16]]
-// APPROX-NEXT:    store float [[CALL_I_I]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA16]]
-// APPROX-NEXT:    [[CALL1_I_I:%.*]] = tail call contract float @__ocml_native_cos_f32(float noundef [[X]]) #[[ATTR16]]
-// APPROX-NEXT:    store float [[CALL1_I_I]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA16]]
+// APPROX-NEXT:    [[__TMP_I:%.*]] = alloca float, align 4, addrspace(5)
+// APPROX-NEXT:    call void @llvm.lifetime.start.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
+// APPROX-NEXT:    [[CALL_I:%.*]] = call contract float @__ocml_sincos_f32(float noundef [[X:%.*]], ptr addrspace(5) noundef [[__TMP_I]]) #[[ATTR16]]
+// APPROX-NEXT:    store float [[CALL_I]], ptr [[Y:%.*]], align 4, !tbaa [[TBAA16]]
+// APPROX-NEXT:    [[TMP0:%.*]] = load float, ptr addrspace(5) [[__TMP_I]], align 4, !tbaa [[TBAA16]]
+// APPROX-NEXT:    store float [[TMP0]], ptr [[Z:%.*]], align 4, !tbaa [[TBAA16]]
+// APPROX-NEXT:    call void @llvm.lifetime.end.p5(i64 4, ptr addrspace(5) [[__TMP_I]]) #[[ATTR17]]
 // APPROX-NEXT:    ret void
 //
 extern "C" __device__ void test_sincosf(float x, float *y, float *z) {
