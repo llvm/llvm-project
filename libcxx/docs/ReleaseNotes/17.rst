@@ -107,8 +107,9 @@ Improvements and New Features
   Users can control whether the debug mode is enabled on a per translation unit basis using the
   ``-D_LIBCPP_ENABLE_DEBUG_MODE=1`` macro. See ``libcxx/docs/Hardening.rst`` for more details.
 
-- ASAN annotations to detect container overflow have been added to the
-  containers ``std::deque``, and ``std::vector``.
+- ASan container annotations have been extended to cover all allocators in ``std::vector``.
+
+- ASan annotations have been added to the ``std::deque`` container, to detect container overflows.
 
 Deprecations and Removals
 -------------------------
@@ -203,9 +204,9 @@ LLVM 18
 
 API Changes
 -----------
-- Added ``__asan_annotate_container_with_allocator``, which is is a
-  customization point to allow users to disable Address Sanitizer annotations
-  for containers for specific allocators. See :ref:`turning-off-asan` for more
+- Added ``__asan_annotate_container_with_allocator``, which is a
+  customization point to allow users to disable Address Sanitizer container annotations
+  for specific allocators. See :ref:`turning-off-asan` for more
   information.
 
 ABI Affecting Changes
