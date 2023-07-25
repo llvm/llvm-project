@@ -1264,13 +1264,11 @@ define i64 @setge(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
 ; RV32I-NEXT:    beq a1, a3, .LBB24_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    slt a0, a1, a3
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    beqz a0, .LBB24_3
+; RV32I-NEXT:    bnez a0, .LBB24_3
 ; RV32I-NEXT:    j .LBB24_4
 ; RV32I-NEXT:  .LBB24_2:
 ; RV32I-NEXT:    sltu a0, a0, a2
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    bnez a0, .LBB24_4
+; RV32I-NEXT:    beqz a0, .LBB24_4
 ; RV32I-NEXT:  .LBB24_3:
 ; RV32I-NEXT:    mv a4, a6
 ; RV32I-NEXT:    mv a5, a7
@@ -1410,13 +1408,11 @@ define i64 @setle(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
 ; RV32I-NEXT:    beq a1, a3, .LBB26_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    slt a0, a3, a1
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    beqz a0, .LBB26_3
+; RV32I-NEXT:    bnez a0, .LBB26_3
 ; RV32I-NEXT:    j .LBB26_4
 ; RV32I-NEXT:  .LBB26_2:
 ; RV32I-NEXT:    sltu a0, a2, a0
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    bnez a0, .LBB26_4
+; RV32I-NEXT:    beqz a0, .LBB26_4
 ; RV32I-NEXT:  .LBB26_3:
 ; RV32I-NEXT:    mv a4, a6
 ; RV32I-NEXT:    mv a5, a7
@@ -1556,13 +1552,11 @@ define i64 @setuge(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
 ; RV32I-NEXT:    beq a1, a3, .LBB28_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    sltu a0, a1, a3
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    beqz a0, .LBB28_3
+; RV32I-NEXT:    bnez a0, .LBB28_3
 ; RV32I-NEXT:    j .LBB28_4
 ; RV32I-NEXT:  .LBB28_2:
 ; RV32I-NEXT:    sltu a0, a0, a2
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    bnez a0, .LBB28_4
+; RV32I-NEXT:    beqz a0, .LBB28_4
 ; RV32I-NEXT:  .LBB28_3:
 ; RV32I-NEXT:    mv a4, a6
 ; RV32I-NEXT:    mv a5, a7
@@ -1702,13 +1696,11 @@ define i64 @setule(i64 %a, i64 %b, i64 %rs1, i64 %rs2) {
 ; RV32I-NEXT:    beq a1, a3, .LBB30_2
 ; RV32I-NEXT:  # %bb.1:
 ; RV32I-NEXT:    sltu a0, a3, a1
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    beqz a0, .LBB30_3
+; RV32I-NEXT:    bnez a0, .LBB30_3
 ; RV32I-NEXT:    j .LBB30_4
 ; RV32I-NEXT:  .LBB30_2:
 ; RV32I-NEXT:    sltu a0, a2, a0
-; RV32I-NEXT:    xori a0, a0, 1
-; RV32I-NEXT:    bnez a0, .LBB30_4
+; RV32I-NEXT:    beqz a0, .LBB30_4
 ; RV32I-NEXT:  .LBB30_3:
 ; RV32I-NEXT:    mv a4, a6
 ; RV32I-NEXT:    mv a5, a7
