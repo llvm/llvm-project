@@ -149,6 +149,15 @@ Changes to the AMDGPU Backend
   improves the interaction between AMDGPU buffer operations and the LLVM memory
   model, and so the non `.ptr` intrinsics are deprecated.
 
+* SGPR spilling is now performed to virtual VGPRs. This should avoid
+  some assorted register allocation failures.
+
+* Backend now performs range merging of "amdgpu-waves-per-eu" attribute based on
+  known callers.
+
+* Certain :ref:`atomicrmw <i_atomicrmw>` operations are now optimized by
+  performing a wave reduction if the access is uniform by default.
+
 * Removed ``llvm.amdgcn.atomic.inc`` and ``llvm.amdgcn.atomic.dec``
   intrinsics. :ref:`atomicrmw <i_atomicrmw>` should be used instead
   with ``uinc_wrap`` and ``udec_wrap``.
@@ -175,6 +184,9 @@ Changes to the AMDGPU Backend
 
 * `llvm.sqrt.f64` is now lowered correctly. Use `llvm.amdgcn.sqrt.f64`
   for raw instruction access.
+
+* Deprecate `llvm.amdgcn.ldexp` intrinsic. :ref:`llvm.ldexp <int_ldexp>`
+  should be used instead.
 
 Changes to the ARM Backend
 --------------------------
