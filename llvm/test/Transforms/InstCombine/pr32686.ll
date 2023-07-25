@@ -8,8 +8,9 @@ define void @tinkywinky() {
 ; CHECK-LABEL: @tinkywinky(
 ; CHECK-NEXT:    [[PATATINO:%.*]] = load i8, ptr @a, align 1
 ; CHECK-NEXT:    [[TOBOOL_NOT:%.*]] = icmp eq i8 [[PATATINO]], 0
-; CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[TOBOOL_NOT]] to i32
-; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[TMP1]], or (i32 zext (i1 icmp ne (ptr @a, ptr @b) to i32), i32 2)
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[TOBOOL_NOT]], icmp ne (ptr @a, ptr @b)
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP1]] to i32
+; CHECK-NEXT:    [[OR1:%.*]] = or i32 [[TMP2]], 2
 ; CHECK-NEXT:    store i32 [[OR1]], ptr @b, align 4
 ; CHECK-NEXT:    ret void
 ;
