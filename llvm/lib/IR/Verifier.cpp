@@ -1429,6 +1429,15 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(N.isDistinct(), "subprogram definitions must be distinct", &N);
     CheckDI(Unit, "subprogram definitions must have a compile unit", &N);
     CheckDI(isa<DICompileUnit>(Unit), "invalid unit type", &N, Unit);
+    // There's no good way to cross the CU boundary to insert a nested
+    // DISubprogram definition in one CU into a type defined in another CU.
+    auto *CT = dyn_cast_or_null<DICompositeType>(N.getRawScope());
+    if (CT && CT->getRawIdentifier() &&
+        M.getContext().isODRUniquingDebugTypes())
+      CheckDI(N.getDeclaration(),
+              "definition subprograms cannot be nested within DICompositeType "
+              "when enabling ODR",
+              &N);
     if (N.getFile())
       verifySourceDebugInfo(*N.getUnit(), *N.getFile());
   } else {
