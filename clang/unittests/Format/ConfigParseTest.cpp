@@ -195,6 +195,11 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(SpaceBeforeSquareBrackets);
   CHECK_PARSE_BOOL(VerilogBreakBetweenInstancePorts);
 
+  CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, Enabled);
+  CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements,
+                          AcrossEmptyLines);
+  CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AcrossComments);
+  CHECK_PARSE_NESTED_BOOL(AlignConsecutiveShortCaseStatements, AlignCaseColons);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterCaseLabel);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterClass);
   CHECK_PARSE_NESTED_BOOL(BraceWrapping, AfterEnum);
