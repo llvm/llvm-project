@@ -108,3 +108,10 @@ void get_globals() {
   // CHECK: %[[RES:[0-9]+]] = cir.get_global @ll : cir.ptr <!cir.array<!s64i x 4>>
   // CHECK: %{{[0-9]+}} = cir.cast(array_to_ptrdecay, %[[RES]] : !cir.ptr<!cir.array<!s64i x 4>>), !cir.ptr<!s64i>
 }
+
+// Should generate extern global variables.
+extern int externVar;
+int testExternVar(void) { return externVar; }
+// CHECK: cir.global "private" external @externVar : !s32i
+// CHECK: cir.func @{{.+}}testExternVar
+// CHECK:   cir.get_global @externVar : cir.ptr <!s32i>
