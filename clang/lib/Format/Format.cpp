@@ -112,17 +112,6 @@ template <> struct MappingTraits<FormatStyle::AlignConsecutiveStyle> {
 };
 
 template <>
-struct MappingTraits<FormatStyle::ShortCaseStatementsAlignmentStyle> {
-  static void mapping(IO &IO,
-                      FormatStyle::ShortCaseStatementsAlignmentStyle &Value) {
-    IO.mapOptional("Enabled", Value.Enabled);
-    IO.mapOptional("AcrossEmptyLines", Value.AcrossEmptyLines);
-    IO.mapOptional("AcrossComments", Value.AcrossComments);
-    IO.mapOptional("AlignCaseColons", Value.AlignCaseColons);
-  }
-};
-
-template <>
 struct ScalarEnumerationTraits<FormatStyle::AttributeBreakingStyle> {
   static void enumeration(IO &IO, FormatStyle::AttributeBreakingStyle &Value) {
     IO.enumCase(Value, "Always", FormatStyle::ABS_Always);
@@ -868,8 +857,6 @@ template <> struct MappingTraits<FormatStyle> {
     IO.mapOptional("AlignConsecutiveDeclarations",
                    Style.AlignConsecutiveDeclarations);
     IO.mapOptional("AlignConsecutiveMacros", Style.AlignConsecutiveMacros);
-    IO.mapOptional("AlignConsecutiveShortCaseStatements",
-                   Style.AlignConsecutiveShortCaseStatements);
     IO.mapOptional("AlignEscapedNewlines", Style.AlignEscapedNewlines);
     IO.mapOptional("AlignOperands", Style.AlignOperands);
     IO.mapOptional("AlignTrailingComments", Style.AlignTrailingComments);
@@ -1346,7 +1333,6 @@ FormatStyle getLLVMStyle(FormatStyle::LanguageKind Language) {
   LLVMStyle.AlignConsecutiveBitFields = {};
   LLVMStyle.AlignConsecutiveDeclarations = {};
   LLVMStyle.AlignConsecutiveMacros = {};
-  LLVMStyle.AlignConsecutiveShortCaseStatements = {};
   LLVMStyle.AlignTrailingComments = {};
   LLVMStyle.AlignTrailingComments.Kind = FormatStyle::TCAS_Always;
   LLVMStyle.AlignTrailingComments.OverEmptyLines = 0;
