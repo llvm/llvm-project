@@ -789,6 +789,104 @@ the configuration (without a prefix: ``Auto``).
       bbb >>= 2;
 
 
+.. _AlignConsecutiveShortCaseStatements:
+
+**AlignConsecutiveShortCaseStatements** (``ShortCaseStatementsAlignmentStyle``) :versionbadge:`clang-format 17` :ref:`¶ <AlignConsecutiveShortCaseStatements>`
+  Style of aligning consecutive short case labels.
+  Only applies if ``AllowShortCaseLabelsOnASingleLine`` is ``true``.
+
+
+  .. code-block:: yaml
+
+    # Example of usage:
+    AlignConsecutiveShortCaseStatements:
+      Enabled: true
+      AcrossEmptyLines: true
+      AcrossComments: true
+      AlignCaseColons: false
+
+  Nested configuration flags:
+
+  Alignment options.
+
+  * ``bool Enabled`` Whether aligning is enabled.
+
+    .. code-block:: c++
+
+      true:
+      switch (level) {
+      case log::info:    return "info:";
+      case log::warning: return "warning:";
+      default:           return "";
+      }
+
+      false:
+      switch (level) {
+      case log::info: return "info:";
+      case log::warning: return "warning:";
+      default: return "";
+      }
+
+  * ``bool AcrossEmptyLines`` Whether to align across empty lines.
+
+    .. code-block:: c++
+
+      true:
+      switch (level) {
+      case log::info:    return "info:";
+      case log::warning: return "warning:";
+
+      default:           return "";
+      }
+
+      false:
+      switch (level) {
+      case log::info:    return "info:";
+      case log::warning: return "warning:";
+
+      default: return "";
+      }
+
+  * ``bool AcrossComments`` Whether to align across comments.
+
+    .. code-block:: c++
+
+      true:
+      switch (level) {
+      case log::info:    return "info:";
+      case log::warning: return "warning:";
+      /* A comment. */
+      default:           return "";
+      }
+
+      false:
+      switch (level) {
+      case log::info:    return "info:";
+      case log::warning: return "warning:";
+      /* A comment. */
+      default: return "";
+      }
+
+  * ``bool AlignCaseColons`` Whether aligned case labels are aligned on the colon, or on the
+    , or on the tokens after the colon.
+
+    .. code-block:: c++
+
+      true:
+      switch (level) {
+      case log::info   : return "info:";
+      case log::warning: return "warning:";
+      default          : return "";
+      }
+
+      false:
+      switch (level) {
+      case log::info:    return "info:";
+      case log::warning: return "warning:";
+      default:           return "";
+      }
+
+
 .. _AlignEscapedNewlines:
 
 **AlignEscapedNewlines** (``EscapedNewlineAlignmentStyle``) :versionbadge:`clang-format 5` :ref:`¶ <AlignEscapedNewlines>`
