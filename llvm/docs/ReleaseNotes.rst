@@ -298,6 +298,7 @@ Changes to the X86 Backend
 * Support ISA of ``SM3``.
 * Support ISA of ``SM4``.
 * Support ISA of ``AVX-VNNI-INT16``.
+* ``-mcpu=graniterapids-d`` is now supported.
 
 Changes to the OCaml bindings
 -----------------------------

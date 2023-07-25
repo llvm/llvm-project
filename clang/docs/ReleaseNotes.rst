@@ -860,6 +860,7 @@ X86 Support
   * Support intrinsic of ``_mm(256)_dpwsud(s)_epi32``.
   * Support intrinsic of ``_mm(256)_dpwusd(s)_epi32``.
   * Support intrinsic of ``_mm(256)_dpwuud(s)_epi32``.
+- ``-march=graniterapids-d`` is now supported.
 
 Arm and AArch64 Support
 ^^^^^^^^^^^^^^^^^^^^^^^
