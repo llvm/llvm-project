@@ -28,14 +28,7 @@
 using llvm::SmallVector;
 
 #ifdef OMPT_SUPPORT
-#define OMPT_IF_ENABLED(stmts)                                                 \
-  do {                                                                         \
-    if (llvm::omp::target::ompt::Initialized) {                                \
-      stmts                                                                    \
-    }                                                                          \
-  } while (0)
-#else
-#define OMPT_IF_ENABLED(stmts)
+using namespace llvm::omp::target::ompt;
 #endif
 
 int AsyncInfoTy::synchronize() {
@@ -1702,24 +1695,27 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   DP("Launching target execution %s with pointer " DPxMOD " (index=%d).\n",
      TargetTable->EntriesBegin[TM->Index].name, DPxPTR(TgtEntryPtr), TM->Index);
 
-  OMPT_IF_ENABLED(llvm::omp::target::ompt::OmptInterface.ompt_state_set(
-      OMPT_GET_FRAME_ADDRESS(0), OMPT_GET_RETURN_ADDRESS(0));
-                  llvm::omp::target::ompt::OmptInterface.beginTargetSubmit(
-                      KernelArgs.NumTeams[0]););
-
   {
     assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
     TIMESCOPE_WITH_NAME_AND_IDENT("Initiate Kernel Launch", Loc);
+
+#ifdef OMPT_SUPPORT
+    assert(KernelArgs.NumTeams[1] == 0 && KernelArgs.NumTeams[2] == 0 &&
+           "Multi dimensional launch not supported yet.");
+    /// RAII to establish tool anchors before and after kernel launch
+    int32_t NumTeams = KernelArgs.NumTeams[0];
+    // No need to guard this with OMPT_IF_BUILT
+    InterfaceRAII TargetSubmitRAII(
+        RegionInterface.getCallbacks<ompt_callback_target_submit>(), NumTeams);
+    // ToDo: mhalk Do we need a check for TracingActive here?
+    InterfaceRAII TargetSubmitTraceRAII(
+        RegionInterface.getTraceGenerators<ompt_callback_target_submit>(),
+        NumTeams);
+#endif
+
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
                               KernelArgs, AsyncInfo);
   }
-
-  OMPT_IF_ENABLED(
-      llvm::omp::target::ompt::OmptInterface.target_submit_trace_record_gen(
-          KernelArgs.NumTeams[0]);
-      llvm::omp::target::ompt::OmptInterface.endTargetSubmit(
-          KernelArgs.NumTeams[0]);
-      llvm::omp::target::ompt::OmptInterface.ompt_state_clear(););
 
   if (Ret != OFFLOAD_SUCCESS) {
     REPORT("Executing target region abort target.\n");

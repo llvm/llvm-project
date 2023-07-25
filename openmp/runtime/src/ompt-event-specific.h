@@ -61,7 +61,6 @@
 #define ompt_callback_target_data_op_emi_implemented ompt_event_MAY_ALWAYS
 #define ompt_callback_target_submit_implemented ompt_event_MAY_ALWAYS
 #define ompt_callback_target_submit_emi_implemented ompt_event_MAY_ALWAYS
-
 #define ompt_callback_control_tool_implemented ompt_event_MAY_ALWAYS
 
 #define ompt_callback_device_initialize_implemented ompt_event_MAY_ALWAYS

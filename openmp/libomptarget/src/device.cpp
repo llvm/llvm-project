@@ -16,7 +16,6 @@
 #include "omptarget.h"
 #include "private.h"
 #include "rtl.h"
-
 #include "Utilities.h"
 
 #include <cassert>
@@ -29,92 +28,7 @@
 
 #ifdef OMPT_SUPPORT
 using namespace llvm::omp::target;
-using namespace llvm::omp::target::ompt;
-#define OMPT_IF_ENABLED(stmts)                                                 \
-  do {                                                                         \
-    if (ompt::Initialized) {                                                   \
-      stmts                                                                    \
-    }                                                                          \
-  } while (0)
-
-/// Used for invoking OMPT target callbacks before and after data operations.
-struct OmptInterfaceTargetDataOpRAII {
-  OmptInterfaceTargetDataOpRAII(ompt_target_data_op_t Type, void *HPtr,
-                                void *TPtr, int64_t TgtId, int64_t Sz)
-      : OpType{Type}, HstPtr{HPtr}, TgtPtr{TPtr},
-        RTLDeviceID{TgtId}, Size{Sz}, CodePtr{nullptr} {
-    OMPT_IF_ENABLED(init(););
-  }
-  ~OmptInterfaceTargetDataOpRAII() { OMPT_IF_ENABLED(fini();); }
-
-private:
-  ompt_target_data_op_t OpType;
-  void *HstPtr;
-  void *TgtPtr;
-  int64_t RTLDeviceID;
-  int64_t Size;
-  void *CodePtr;
-
-  void init() {
-    CodePtr = OMPT_GET_RETURN_ADDRESS(0);
-    OmptInterface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), CodePtr);
-    // Data allocation callbacks are handled elsewhere
-    switch (OpType) {
-    case ompt_target_data_delete:
-    case ompt_target_data_delete_async:
-      OmptInterface.beginTargetDataDelete(RTLDeviceID, TgtPtr, CodePtr);
-      break;
-    case ompt_target_data_transfer_to_device:
-    case ompt_target_data_transfer_to_device_async:
-      OmptInterface.beginTargetDataSubmit(RTLDeviceID, HstPtr, TgtPtr, Size,
-                                          CodePtr);
-      break;
-    case ompt_target_data_transfer_from_device:
-    case ompt_target_data_transfer_from_device_async:
-      OmptInterface.beginTargetDataRetrieve(RTLDeviceID, HstPtr, TgtPtr, Size,
-                                            CodePtr);
-      break;
-    default:
-      break;
-    }
-  }
-
-  void fini() {
-    switch (OpType) {
-    case ompt_target_data_delete:
-    case ompt_target_data_delete_async:
-      OmptInterface.target_data_submit_trace_record_gen(
-          ompt_target_data_delete, /*src_addr=*/TgtPtr,
-          /*src_device_num=*/RTLDeviceID, /*dest_addr=*/nullptr,
-          /*dest_device_num=*/-1, Size);
-      OmptInterface.endTargetDataDelete(RTLDeviceID, TgtPtr, CodePtr);
-      break;
-    case ompt_target_data_transfer_to_device:
-    case ompt_target_data_transfer_to_device_async:
-      OmptInterface.target_data_submit_trace_record_gen(
-          ompt_target_data_transfer_to_device, /*src_addr=*/HstPtr,
-          /*src_device_num=*/omp_get_initial_device(), /*dest_addr=*/TgtPtr,
-          /*dest_device_num=*/RTLDeviceID, Size);
-      OmptInterface.endTargetDataSubmit(RTLDeviceID, HstPtr, TgtPtr, Size,
-                                        CodePtr);
-      break;
-    case ompt_target_data_transfer_from_device:
-    case ompt_target_data_transfer_from_device_async:
-      OmptInterface.target_data_submit_trace_record_gen(
-          ompt_target_data_transfer_from_device, /*src_addr=*/TgtPtr,
-          /*src_device_num=*/RTLDeviceID, /*dest_addr=*/HstPtr,
-          /*dest_device_num=*/omp_get_initial_device(), Size);
-      OmptInterface.endTargetDataRetrieve(RTLDeviceID, HstPtr, TgtPtr, Size,
-                                          CodePtr);
-      break;
-    default:
-      break;
-    }
-    OmptInterface.ompt_state_clear();
-  }
-};
-#else
-#define OMPT_IF_ENABLED(stmts)
+using namespace ompt;
 #endif
 
 int HostDataToTargetTy::addEventIfNecessary(DeviceTy &Device,
@@ -702,34 +616,35 @@ __tgt_target_table *DeviceTy::loadBinary(void *Img) {
 }
 
 void *DeviceTy::allocData(int64_t Size, void *HstPtr, int32_t Kind) {
-  void *CodePtr = nullptr;
-  void *TgtPtr = nullptr;
-  // Can't use OmptInterfaceTargetDataOpRAII since the target pointer
-  // is not available yet.
-  OMPT_IF_ENABLED(
-      CodePtr = OMPT_GET_RETURN_ADDRESS(0);
-      OmptInterface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), CodePtr);
-      OmptInterface.beginTargetDataAlloc(RTLDeviceID, HstPtr, &TgtPtr, Size,
-                                         CodePtr););
+  /// RAII to establish tool anchors before and after data allocation
+  void *TargetPtr = nullptr;
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataAllocRAII(
+          RegionInterface.getCallbacks<ompt_target_data_alloc>(), RTLDeviceID,
+          HstPtr, &TargetPtr, Size,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));
+      // ToDo: mhalk Do we need a check for TracingActive here?
+      InterfaceRAII TargetDataSubmitTraceRAII(
+          RegionInterface.getTraceGenerators<ompt_target_data_alloc>(),
+          RTLDeviceID, HstPtr, &TargetPtr, Size,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
-  TgtPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
-
-  OMPT_IF_ENABLED(OmptInterface.target_data_submit_trace_record_gen(
-      ompt_target_data_alloc, /*src_addr=*/HstPtr,
-      /*src_device_num=*/omp_get_initial_device(), /*dest_addr=*/TgtPtr,
-      /*dest_device_num=*/RTLDeviceID, Size);
-                  OmptInterface.endTargetDataAlloc(RTLDeviceID, HstPtr, &TgtPtr,
-                                                   Size, CodePtr);
-                  OmptInterface.ompt_state_clear(););
-  return TgtPtr;
+  TargetPtr = RTL->data_alloc(RTLDeviceID, Size, HstPtr, Kind);
+  return TargetPtr;
 }
 
 int32_t DeviceTy::deleteData(void *TgtAllocBegin, int32_t Kind) {
-  // If enabled, trigger OMPT callbacks before and after data delete. A trace
-  // record is generated as well.
-  OmptInterfaceTargetDataOpRAII delete_raii(ompt_target_data_delete,
-                                            /*host ptr=*/nullptr, TgtAllocBegin,
-                                            RTLDeviceID, /*Size=*/0);
+  /// RAII to establish tool anchors before and after data deletion
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataDeleteRAII(
+          RegionInterface.getCallbacks<ompt_target_data_delete>(), RTLDeviceID,
+          TgtAllocBegin,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));
+      // ToDo: mhalk Do we need a check for TracingActive here?
+      InterfaceRAII TargetDataSubmitTraceRAII(
+          RegionInterface.getTraceGenerators<ompt_target_data_delete>(),
+          RTLDeviceID, TgtAllocBegin,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
   return RTL->data_delete(RTLDeviceID, TgtAllocBegin, Kind);
 }
@@ -762,14 +677,22 @@ int32_t DeviceTy::submitData(void *TgtPtrBegin, void *HstPtrBegin, int64_t Size,
                   Entry);
   }
 
-  // If enabled, trigger OMPT callbacks before and after data submit. A trace
-  // record is generated as well.
-  OmptInterfaceTargetDataOpRAII submit_raii(ompt_target_data_transfer_to_device,
-                                            HstPtrBegin, TgtPtrBegin,
-                                            RTLDeviceID, Size);
+  /// RAII to establish tool anchors before and after data submit
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataSubmitRAII(
+          RegionInterface.getCallbacks<ompt_target_data_transfer_to_device>(),
+          RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));
+      // ToDo: mhalk Do we need a check for TracingActive here?
+      InterfaceRAII TargetDataSubmitTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_to_device>(),
+          RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
+
   if (ForceSynchronousTargetRegions || !AsyncInfo ||
 #ifdef OMPT_SUPPORT
-      ompt::Initialized ||
+      ompt::CallbacksInitialized ||
 #endif
       !RTL->data_submit_async || !RTL->synchronize)
     return RTL->data_submit(RTLDeviceID, TgtPtrBegin, HstPtrBegin, Size);
@@ -792,14 +715,22 @@ int32_t DeviceTy::retrieveData(void *HstPtrBegin, void *TgtPtrBegin,
                   Entry);
   }
 
-  // If enabled, trigger OMPT callbacks before and after data retrieve. A trace
-  // record is generated as well.
-  OmptInterfaceTargetDataOpRAII retrieve_raii(
-      ompt_target_data_transfer_from_device, HstPtrBegin, TgtPtrBegin,
-      RTLDeviceID, Size);
+  /// RAII to establish tool anchors before and after data retrieval
+  OMPT_IF_BUILT(
+      InterfaceRAII TargetDataRetrieveRAII(
+          RegionInterface.getCallbacks<ompt_target_data_transfer_from_device>(),
+          RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));
+      // ToDo: mhalk Do we need a check for TracingActive here?
+      InterfaceRAII TargetDataSubmitTraceRAII(
+          RegionInterface
+              .getTraceGenerators<ompt_target_data_transfer_from_device>(),
+          RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
+
   if (ForceSynchronousTargetRegions || !RTL->data_retrieve_async ||
 #ifdef OMPT_SUPPORT
-      ompt::Initialized ||
+      ompt::CallbacksInitialized ||
 #endif
       !RTL->synchronize)
     return RTL->data_retrieve(RTLDeviceID, HstPtrBegin, TgtPtrBegin, Size);
@@ -812,7 +743,7 @@ int32_t DeviceTy::dataExchange(void *SrcPtr, DeviceTy &DstDev, void *DstPtr,
                                int64_t Size, AsyncInfoTy &AsyncInfo) {
   if (ForceSynchronousTargetRegions || !AsyncInfo ||
 #ifdef OMPT_SUPPORT
-      ompt::Initialized ||
+      ompt::CallbacksInitialized ||
 #endif
       !RTL->data_exchange_async || !RTL->synchronize) {
     assert(RTL->data_exchange && "RTL->data_exchange is nullptr");
@@ -857,7 +788,7 @@ int32_t DeviceTy::launchKernel(void *TgtEntryPtr, void **TgtVarsPtr,
                                AsyncInfoTy &AsyncInfo) {
   if (ForceSynchronousTargetRegions || !RTL->launch_kernel ||
 #ifdef OMPT_SUPPORT
-      ompt::Initialized ||
+      ompt::CallbacksInitialized ||
 #endif
       !RTL->synchronize)
     return RTL->launch_kernel_sync(RTLDeviceID, TgtEntryPtr, TgtVarsPtr,

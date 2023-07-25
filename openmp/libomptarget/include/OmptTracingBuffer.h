@@ -13,6 +13,8 @@
 #ifndef OPENMP_LIBOMPTARGET_OMPTTRACINGBUFFER_H
 #define OPENMP_LIBOMPTARGET_OMPTTRACINGBUFFER_H
 
+#include <atomic>
+#include <cassert>
 #include <condition_variable>
 #include <cstdint>
 #include <map>
@@ -222,13 +224,13 @@ private:
 
   // Add a last cursor
   void addLastCursor(void *cursor) {
-    std::unique_lock<std::mutex> lck(LastCursorMutex);
+    std::unique_lock<std::mutex> Lock(LastCursorMutex);
     LastCursors.emplace(cursor);
   }
 
   // Remove a last cursor
   void removeLastCursor(void *cursor) {
-    std::unique_lock<std::mutex> lck(LastCursorMutex);
+    std::unique_lock<std::mutex> Lock(LastCursorMutex);
     assert(LastCursors.find(cursor) != LastCursors.end());
     LastCursors.erase(cursor);
   }
@@ -364,7 +366,7 @@ public:
 
   // Is this a last cursor of a buffer completion callback?
   bool isLastCursor(void *Cursor) {
-    std::unique_lock<std::mutex> lck(LastCursorMutex);
+    std::unique_lock<std::mutex> Lock(LastCursorMutex);
     return LastCursors.find(Cursor) != LastCursors.end();
   }
 

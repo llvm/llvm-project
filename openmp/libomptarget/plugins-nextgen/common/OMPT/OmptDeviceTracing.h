@@ -16,7 +16,12 @@
 
 #ifdef OMPT_SUPPORT
 
-#include "OmptCommon.h"
+#include "OmptCommonDefs.h"
+
+#include "llvm/Support/DynamicLibrary.h"
+
+#include <map>
+#include <memory>
 
 #pragma push_macro("DEBUG_PREFIX")
 #undef DEBUG_PREFIX
@@ -31,51 +36,82 @@ namespace omp {
 namespace target {
 namespace ompt {
 
-void compute_parent_dyn_lib(const char *lib_name);
+// Declare OMPT device tracing function entry points
+#define declareOmptTracingFn(Name) extern libomptarget_##Name##_t Name##_fn;
+FOREACH_OMPT_DEVICE_TRACING_FN_IMPLEMENTAIONS(declareOmptTracingFn)
+#undef declareOmptTracingFn
 
-std::shared_ptr<llvm::sys::DynamicLibrary> get_parent_dyn_lib();
+// Declare OMPT device tracing function mutexes
+#define declareOmptTracingFnMutex(Name) extern std::mutex Name##_mutex;
+FOREACH_OMPT_DEVICE_TRACING_FN_IMPLEMENTAIONS(declareOmptTracingFnMutex)
+#undef declareOmptTracingFnMutex
 
-/// Search for FuncName inside the OmptDeviceCallbacks object and assign to
-/// FuncPtr.
+extern std::mutex DeviceIdWritingMutex;
+
+/// Activate / deactivate tracing
+void setTracingState(bool Enabled);
+
+/// Set 'start' and 'stop' in trace records
+void setOmptTimestamp(uint64_t StartTime, uint64_t EndTime);
+
+/// Set the linear function correlation between host and device clocks
+void setOmptHostToDeviceRate(double Slope, double Offset);
+
+/// Set / store the number of granted teams in trace records
+void setOmptGrantedNumTeams(uint64_t NumTeams);
+
+/// Lookup the given device pointer and return its RTL device ID
+int getDeviceId(ompt_device_t *Device);
+
+/// Map the given device pointer to the given DeviceId
+void setDeviceId(ompt_device_t *Device, int32_t DeviceId);
+
+/// Rempve the given device pointer from the current mapping
+void removeDeviceId(ompt_device_t *Device);
+
+/// Provide name based lookup for the device tracing functions
+ompt_interface_fn_t doLookup(const char *InterfaceFunctionName);
+
+/// Host to device linear clock correlation
+extern double HostToDeviceSlope;
+
+/// Host to device constant clock offset
+extern double HostToDeviceOffset;
+
+/// Mapping of device pointers to their corresponding RTL device ID
+extern std::map<ompt_device_t *, int32_t> Devices;
+
+// Keep track of enabled tracing event types
+extern std::atomic<uint64_t> TracingTypesEnabled;
+
+/// OMPT tracing status; (Re-)Set via 'setTracingState'
+extern bool TracingActive;
+
+/// Parent library pointer
+extern std::shared_ptr<llvm::sys::DynamicLibrary> ParentLibrary;
+
+/// Get the parent library by pointer. If it is not already set, it will set the
+/// parent library pointer.
+std::shared_ptr<llvm::sys::DynamicLibrary> getParentLibrary();
+
+/// Set the parent library by filename
+void setParentLibrary(const char *Filename);
+
+/// Search for FuncName inside the parent library and assign to FuncPtr.
 /// IMPORTANT: This function assumes that the *caller* holds the respective lock
 /// for FuncPtr.
 template <typename FT>
 void ensureFuncPtrLoaded(const std::string &FuncName, FT *FuncPtr) {
-  if (!(*FuncPtr)) {
-    auto libomptarget_dyn_lib = get_parent_dyn_lib();
-    if (libomptarget_dyn_lib == nullptr || !libomptarget_dyn_lib->isValid())
+  if (*FuncPtr == nullptr) {
+    if ((ParentLibrary == nullptr && getParentLibrary() == nullptr) ||
+        !ParentLibrary->isValid())
       return;
-    void *VPtr = libomptarget_dyn_lib->getAddressOfSymbol(FuncName.c_str());
-    if (!VPtr)
+    void *SymbolPtr = ParentLibrary->getAddressOfSymbol(FuncName.c_str());
+    if (SymbolPtr == nullptr)
       return;
-    *FuncPtr = reinterpret_cast<FT>(VPtr);
+    *FuncPtr = reinterpret_cast<FT>(SymbolPtr);
   }
 }
-
-double HostToDeviceSlope = .0;
-double HostToDeviceOffset = .0;
-
-libomptarget_ompt_set_trace_ompt_t ompt_set_trace_ompt_fn = nullptr;
-libomptarget_ompt_start_trace_t ompt_start_trace_fn = nullptr;
-libomptarget_ompt_flush_trace_t ompt_flush_trace_fn = nullptr;
-libomptarget_ompt_stop_trace_t ompt_stop_trace_fn = nullptr;
-libomptarget_ompt_advance_buffer_cursor_t ompt_advance_buffer_cursor_fn =
-    nullptr;
-libomptarget_ompt_get_record_type_t ompt_get_record_type_fn = nullptr;
-
-/// Libomptarget function that will be used to set timestamps in trace records.
-libomptarget_ompt_set_timestamp_t ompt_set_timestamp_fn = nullptr;
-/// Libomptarget function that will be used to set num_teams in trace records.
-libomptarget_ompt_set_granted_teams_t ompt_set_granted_teams_fn = nullptr;
-
-std::mutex set_trace_mutex;
-std::mutex start_trace_mutex;
-std::mutex flush_trace_mutex;
-std::mutex stop_trace_mutex;
-std::mutex advance_buffer_cursor_mutex;
-std::mutex get_record_type_mutex;
-std::mutex ompt_set_timestamp_mtx;
-std::mutex granted_teams_mtx;
 
 } // namespace ompt
 } // namespace target

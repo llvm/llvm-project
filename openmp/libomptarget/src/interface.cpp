@@ -11,8 +11,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <omptarget.h>
-
 #include "OmptCallback.h"
 #include "OmptInterface.h"
 #include "device.h"
@@ -30,48 +28,7 @@
 #include <type_traits>
 
 #ifdef OMPT_SUPPORT
-#define OMPT_IF_ENABLED(stmts)                                                 \
-  do {                                                                         \
-    if (llvm::omp::target::ompt::Initialized) {                                \
-      stmts                                                                    \
-    }                                                                          \
-  } while (0)
-#else
-#define OMPT_IF_ENABLED(stmts)
-#endif
-
-#ifdef OMPT_SUPPORT
 using namespace llvm::omp::target::ompt;
-/// Holds information to delay OMPT call after device initialization
-class OMPTInvokeWrapper {
-public:
-  OMPTInvokeWrapper()
-      : IsNullOpt(true), CodePtr(nullptr), ReturnFramePtr(nullptr),
-        DeviceId(-1), Kind(ompt_target), ScopeKind(ompt_scope_begin) {}
-  OMPTInvokeWrapper(void *CodePtr, void *ReturnFramePtr, int64_t DeviceId,
-                    ompt_target_t Kind, ompt_scope_endpoint_t ScopeKind)
-      : IsNullOpt(false), CodePtr(CodePtr), ReturnFramePtr(ReturnFramePtr),
-        DeviceId(DeviceId), Kind(Kind), ScopeKind(ScopeKind) {}
-
-  void setDeviceId(int64_t DevId) { DeviceId = DevId; }
-
-  void invoke() {
-    if (IsNullOpt)
-      return;
-
-    OmptInterface.ompt_state_set(ReturnFramePtr, CodePtr);
-    OmptInterface.beginTargetDataEnter(DeviceId, CodePtr);
-    OmptInterface.target_trace_record_gen(DeviceId, Kind, ScopeKind, CodePtr);
-  }
-
-private:
-  bool IsNullOpt;
-  void *CodePtr;
-  void *ReturnFramePtr;
-  int64_t DeviceId;
-  ompt_target_t Kind;
-  ompt_scope_endpoint_t ScopeKind;
-};
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////
@@ -123,22 +80,6 @@ targetDataMapper(ident_t *Loc, int64_t DeviceId, int32_t ArgNum,
                  int64_t *ArgTypes, map_var_info_t *ArgNames, void **ArgMappers,
                  TargetDataFuncPtrTy TargetDataFunction,
                  const char *RegionTypeMsg, const char *RegionName) {
-
-  OMPTInvokeWrapper IWrapper;
-
-  targetDataMapper<TargetAsyncInfoTy>(
-      Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
-      ArgMappers, TargetDataFunction, RegionTypeMsg, RegionName, &IWrapper);
-}
-
-template <typename TargetAsyncInfoTy>
-static inline void
-targetDataMapper(ident_t *Loc, int64_t DeviceId, int32_t ArgNum,
-                 void **ArgsBase, void **Args, int64_t *ArgSizes,
-                 int64_t *ArgTypes, map_var_info_t *ArgNames, void **ArgMappers,
-                 TargetDataFuncPtrTy TargetDataFunction,
-                 const char *RegionTypeMsg, const char *RegionName,
-                 OMPTInvokeWrapper *OMPTInvoker) {
   static_assert(std::is_convertible_v<TargetAsyncInfoTy, AsyncInfoTy>,
                 "TargetAsyncInfoTy must be convertible to AsyncInfoTy.");
 
@@ -168,9 +109,31 @@ targetDataMapper(ident_t *Loc, int64_t DeviceId, int32_t ArgNum,
   TargetAsyncInfoTy TargetAsyncInfo(Device);
   AsyncInfoTy &AsyncInfo = TargetAsyncInfo;
 
-  // DeviceId is only valid after the call to checkDeviceAndCtors, so we update
-  // the DevicId in the Wrapper object before invoking OMPT
-  OMPT_IF_ENABLED(OMPTInvoker->setDeviceId(DeviceId); OMPTInvoker->invoke(););
+  /// RAII to establish tool anchors before and after data begin / end / update
+  OMPT_IF_BUILT(
+      assert((TargetDataFunction == targetDataBegin ||
+              TargetDataFunction == targetDataEnd ||
+              TargetDataFunction == targetDataUpdate) &&
+             "Encountered unexpected TargetDataFunction during "
+             "execution of targetDataMapper");
+      auto CallbackFunctions =
+          (TargetDataFunction == targetDataBegin)
+              ? RegionInterface.getCallbacks<ompt_target_enter_data>()
+          : (TargetDataFunction == targetDataEnd)
+              ? RegionInterface.getCallbacks<ompt_target_exit_data>()
+              : RegionInterface.getCallbacks<ompt_target_update>();
+      auto TraceGenerators =
+          (TargetDataFunction == targetDataBegin)
+              ? RegionInterface.getTraceGenerators<ompt_target_enter_data>()
+          : (TargetDataFunction == targetDataEnd)
+              ? RegionInterface.getTraceGenerators<ompt_target_exit_data>()
+              : RegionInterface.getTraceGenerators<ompt_target_update>();
+      InterfaceRAII TargetDataRAII(CallbackFunctions, DeviceId,
+                                   OMPT_GET_RETURN_ADDRESS(0));
+      // ToDo: mhalk Do we need a check for TracingActive here?
+      InterfaceRAII TargetDataTraceRAII(
+          TraceGenerators, DeviceId,
+          /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = TargetDataFunction(Loc, Device, ArgNum, ArgsBase, Args, ArgSizes,
@@ -193,18 +156,10 @@ EXTERN void __tgt_target_data_begin_mapper(ident_t *Loc, int64_t DeviceId,
                                            map_var_info_t *ArgNames,
                                            void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
-
-#ifdef OMPT_SUPPORT
-  OMPTInvokeWrapper IWrapper(OMPT_GET_RETURN_ADDRESS(0),
-                             OMPT_GET_FRAME_ADDRESS(0), -1,
-                             ompt_target_enter_data, ompt_scope_begin);
-#else
-  OMPTInvokeWrapper IWrapper;
-#endif
-
   targetDataMapper<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
                                 ArgTypes, ArgNames, ArgMappers, targetDataBegin,
-                                "Entering OpenMP data region with being_mapper", "begin");
+                                "Entering OpenMP data region with begin_mapper",
+                                "begin");
 }
 
 EXTERN void __tgt_target_data_begin_nowait_mapper(
@@ -212,10 +167,10 @@ EXTERN void __tgt_target_data_begin_nowait_mapper(
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
-  
   targetDataMapper<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
-      ArgMappers, targetDataBegin, "Entering OpenMP data region with being_nowait_mapper", "begin");
+      ArgMappers, targetDataBegin,
+      "Entering OpenMP data region with begin_nowait_mapper", "begin");
 }
 
 /// passes data from the target, releases target memory and destroys
@@ -228,15 +183,6 @@ EXTERN void __tgt_target_data_end_mapper(ident_t *Loc, int64_t DeviceId,
                                          map_var_info_t *ArgNames,
                                          void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
-
-#ifdef OMPT_SUPPORT
-  OMPTInvokeWrapper IWrapper(OMPT_GET_RETURN_ADDRESS(0),
-                             OMPT_GET_FRAME_ADDRESS(0), -1,
-                             ompt_target_exit_data, ompt_scope_begin);
-#else
-  OMPTInvokeWrapper IWrapper;
-#endif
-
   targetDataMapper<AsyncInfoTy>(Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes,
                                 ArgTypes, ArgNames, ArgMappers, targetDataEnd,
                                 "Exiting OpenMP data region with end_mapper", "end");
@@ -247,7 +193,6 @@ EXTERN void __tgt_target_data_end_nowait_mapper(
     void **Args, int64_t *ArgSizes, int64_t *ArgTypes, map_var_info_t *ArgNames,
     void **ArgMappers, int32_t DepNum, void *DepList, int32_t NoAliasDepNum,
     void *NoAliasDepList) {
-  
   targetDataMapper<TaskAsyncInfoWrapperTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
       ArgMappers, targetDataEnd, "Exiting OpenMP data region with end_nowait_mapper", "end");
@@ -260,15 +205,6 @@ EXTERN void __tgt_target_data_update_mapper(ident_t *Loc, int64_t DeviceId,
                                             map_var_info_t *ArgNames,
                                             void **ArgMappers) {
   TIMESCOPE_WITH_IDENT(Loc);
-
-#ifdef OMPT_SUPPORT
-  OMPTInvokeWrapper IWrapper(OMPT_GET_RETURN_ADDRESS(0),
-                             OMPT_GET_FRAME_ADDRESS(0), -1, ompt_target_update,
-                             ompt_scope_begin);
-#else
-  OMPTInvokeWrapper IWrapper;
-#endif
-  
   targetDataMapper<AsyncInfoTy>(
       Loc, DeviceId, ArgNum, ArgsBase, Args, ArgSizes, ArgTypes, ArgNames,
       ArgMappers, targetDataUpdate, "Updating data within the OpenMP data region with update_mapper", "update");
@@ -367,14 +303,13 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
   DeviceTy &Device = *PM->Devices[DeviceId];
   TargetAsyncInfoTy TargetAsyncInfo(Device);
   AsyncInfoTy &AsyncInfo = TargetAsyncInfo;
-
-  void *CodePtr = nullptr;
-  OMPT_IF_ENABLED(
-      CodePtr = OMPT_GET_RETURN_ADDRESS(0);
-      OmptInterface.ompt_state_set(OMPT_GET_FRAME_ADDRESS(0), CodePtr);
-      OmptInterface.beginTarget(DeviceId, CodePtr);
-      OmptInterface.target_trace_record_gen(DeviceId, ompt_target,
-                                            ompt_scope_begin, CodePtr););
+  OMPT_IF_BUILT(InterfaceRAII TargetRAII(
+                    RegionInterface.getCallbacks<ompt_target>(), DeviceId,
+                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));
+                // ToDo: mhalk Do we need a check for TracingActive here?
+                InterfaceRAII TargetTraceRAII(
+                    RegionInterface.getTraceGenerators<ompt_target>(), DeviceId,
+                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
   int Rc = OFFLOAD_SUCCESS;
   Rc = target(Loc, Device, HostPtr, *KernelArgs, AsyncInfo);
@@ -384,12 +319,6 @@ static inline int targetKernel(ident_t *Loc, int64_t DeviceId, int32_t NumTeams,
 
   handleTargetOutcome(Rc == OFFLOAD_SUCCESS, Loc);
   assert(Rc == OFFLOAD_SUCCESS && "offload failed");
-
-  OMPT_IF_ENABLED(OmptInterface.target_trace_record_gen(
-      DeviceId, ompt_target, ompt_scope_end, CodePtr);
-                  OmptInterface.endTarget(DeviceId, CodePtr);
-                  OmptInterface.ompt_state_clear(););
-
   assert(Rc == OFFLOAD_SUCCESS && "__tgt_target_kernel unexpected failure!");
 
   return OMP_TGT_SUCCESS;
@@ -469,6 +398,13 @@ EXTERN int __tgt_target_kernel_replay(ident_t *Loc, int64_t DeviceId,
     return OMP_TGT_FAIL;
   }
   DeviceTy &Device = *PM->Devices[DeviceId];
+  OMPT_IF_BUILT(InterfaceRAII TargetRAII(
+                    RegionInterface.getCallbacks<ompt_target>(), DeviceId,
+                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));
+                // ToDo: mhalk Do we need a check for TracingActive here?
+                InterfaceRAII TargetTraceRAII(
+                    RegionInterface.getTraceGenerators<ompt_target>(), DeviceId,
+                    /* CodePtr */ OMPT_GET_RETURN_ADDRESS(0));)
 
   AsyncInfoTy AsyncInfo(Device);
   int Rc = target_replay(Loc, Device, HostPtr, DeviceMemory, DeviceMemorySize,

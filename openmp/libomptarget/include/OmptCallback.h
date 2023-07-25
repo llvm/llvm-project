@@ -11,12 +11,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef _OMPTCALLBACK_H
-#define _OMPTCALLBACK_H
+#ifndef OPENMP_LIBOMPTARGET_INCLUDE_OMPTCALLBACK_H
+#define OPENMP_LIBOMPTARGET_INCLUDE_OMPTCALLBACK_H
 
 #ifdef OMPT_SUPPORT
 
-#include "OmptCommon.h"
+#include "OmptCommonDefs.h"
 
 #pragma push_macro("DEBUG_PREFIX")
 #undef DEBUG_PREFIX
@@ -70,7 +70,7 @@ void finalizeLibrary(ompt_data_t *tool_data);
 void connectLibrary();
 
 /// OMPT initialization status; false if initializeLibrary has not been executed
-extern bool Initialized;
+extern bool CallbacksInitialized;
 
 } // namespace ompt
 } // namespace target
@@ -81,4 +81,4 @@ extern bool Initialized;
 
 #endif // OMPT_SUPPORT
 
-#endif // _OMPTCALLBACK_H
+#endif // OPENMP_LIBOMPTARGET_INCLUDE_OMPTCALLBACK_H

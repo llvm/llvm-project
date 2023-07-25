@@ -12,6 +12,10 @@
 
 #ifdef OMPT_SUPPORT
 
+#include "OmptCallback.h"
+#include "Debug.h"
+#include "OmptConnector.h"
+
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/ErrorHandling.h"
 
@@ -19,13 +23,9 @@
 #include <cstring>
 #include <memory>
 
-#include "Debug.h"
-#include "OmptCallback.h"
-#include "OmptConnector.h"
-
 using namespace llvm::omp::target::ompt;
 
-bool llvm::omp::target::ompt::Initialized = false;
+bool llvm::omp::target::ompt::CallbacksInitialized = false;
 
 ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
 ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
@@ -39,37 +39,37 @@ static ompt_get_target_info_t LIBOMPTARGET_GET_TARGET_OPID;
 int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
                                                int initial_device_num,
                                                ompt_data_t *tool_data) {
-  DP("OMPT: Executing initializeLibrary (libomptarget)\n");
+  DP("Executing initializeLibrary (libomptarget)\n");
 
   LIBOMPTARGET_GET_TARGET_OPID =
       (ompt_get_target_info_t)lookup(stringify(LIBOMPTARGET_GET_TARGET_OPID));
 
-  DP("OMPT: libomptarget_get_target_info = %p\n",
+  DP("libomptarget_get_target_info = %p\n",
      FUNCPTR_TO_PTR(LIBOMPTARGET_GET_TARGET_OPID));
 
 #define bindOmptFunctionName(OmptFunction, DestinationFunction)                \
   if (lookup)                                                                  \
     DestinationFunction = (OmptFunction##_t)lookup(#OmptFunction);             \
-  DP("OMPT: initializeLibrary (libomptarget) bound %s=%p\n",                   \
-     #DestinationFunction, ((void *)(uint64_t)DestinationFunction));
+  DP("initializeLibrary (libomptarget) bound %s=%p\n", #DestinationFunction,   \
+     ((void *)(uint64_t)DestinationFunction));
 
-    bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
+  bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
 #undef bindOmptFunctionName
 
     // Store pointer of 'ompt_libomp_target_fn_lookup' for use by the plugin
     lookupCallbackByName = lookup;
 
-    Initialized = true;
+    CallbacksInitialized = true;
 
     return 0;
 }
 
   void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t * tool_data) {
-    DP("OMPT: Executing finalizeLibrary (libomptarget)\n");
+    DP("Executing finalizeLibrary (libomptarget)\n");
   }
 
   void llvm::omp::target::ompt::connectLibrary() {
-    DP("OMPT: Entering connectLibrary (libomptarget)\n");
+    DP("Entering connectLibrary (libomptarget)\n");
     /// Connect plugin instance with libomptarget
     OmptLibraryConnectorTy LibomptargetConnector("libomptarget");
     ompt_start_tool_result_t OmptResult;
@@ -82,7 +82,7 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
 
     // Now call connect that causes the above init/fini functions to be called
     LibomptargetConnector.connect(&OmptResult);
-    DP("OMPT: Exiting connectLibrary (libomptarget)\n");
+    DP("Exiting connectLibrary (libomptarget)\n");
   }
 
 #pragma pop_macro("DEBUG_PREFIX")

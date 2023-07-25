@@ -61,25 +61,6 @@
 #include "hsa/hsa_ext_amd.h"
 #endif
 
-#ifdef OMPT_SUPPORT
-#include "OmptCallback.h"
-#define OMPT_IF_ENABLED(stmts)                                                 \
-  do {                                                                         \
-    if (llvm::omp::target::ompt::Initialized) {                                \
-      stmts                                                                    \
-    }                                                                          \
-  } while (0)
-#define OMPT_IF_TRACING_ENABLED(stmts)                                         \
-  do {                                                                         \
-    if (llvm::omp::target::ompt::TracingInitialized) {                         \
-      stmts                                                                    \
-    }                                                                          \
-  } while (0)
-#else
-#define OMPT_IF_ENABLED(stmts)
-#define OMPT_IF_TRACING_ENABLED(stmts)
-#endif
-
 #define KMT_EXPECT_SUCCESS(val) kmtExpectSucc((val), #val, __FILE__, __LINE__)
 template <typename T>
 int kmtExpectSucc(T err, const char *const func, const char *const file,
@@ -92,8 +73,12 @@ int kmtExpectSucc(T err, const char *const func, const char *const file,
 }
 
 #ifdef OMPT_SUPPORT
-extern void setOmptTimestamp(uint64_t Start, uint64_t End);
-extern void setOmptHostToDeviceRate(double Slope, double Offset);
+#include "OmptDeviceTracing.h"
+
+using namespace llvm::omp::target;
+
+extern void ompt::setOmptTimestamp(uint64_t Start, uint64_t End);
+extern void ompt::setOmptHostToDeviceRate(double Slope, double Offset);
 
 /// HSA system clock frequency
 double TicksToTime = 1.0;
@@ -159,8 +144,8 @@ void completeH2DTimeRate(double HostRef1, uint64_t DeviceRef1) {
   uint64_t DeviceDiff = DeviceRef2 - DeviceRef1;
   double Slope = DeviceDiff != 0 ? (HostDiff / DeviceDiff) : HostDiff;
   double Offset = HostRef1 - Slope * DeviceRef1;
-  setOmptHostToDeviceRate(Slope, Offset);
-  DP("OMPT: Translate time Slope: %f Offset: %f\n", Slope, Offset);
+  ompt::setOmptHostToDeviceRate(Slope, Offset);
+  DP("Translate time Slope: %f Offset: %f\n", Slope, Offset);
 }
 
 #endif
@@ -1549,8 +1534,10 @@ private:
     hsa_amd_profiling_dispatch_time_t TimeRec;
     hsa_status_t Status = hsa_amd_profiling_get_dispatch_time(
         Args->Agent, Args->Signal->get(), &TimeRec);
-    ::setOmptTimestamp(TimeRec.start * Args->TicksToTime,
-                       TimeRec.end * Args->TicksToTime);
+#ifdef OMPT_SUPPORT
+    ompt::setOmptTimestamp(TimeRec.start * Args->TicksToTime,
+                           TimeRec.end * Args->TicksToTime);
+#endif
     return Plugin::check(Status,
                          "Error in hsa_amd_profiling_get_dispatch_time");
   }
@@ -2681,7 +2668,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    if (ompt::Initialized || OMPX_ForceSyncRegions ||
+    if (ompt::CallbacksInitialized || OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
@@ -2746,7 +2733,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
 
     // For large transfers use synchronous behavior.
     // If OMPT is enabled or synchronous behavior is explicitly requested:
-    if (ompt::Initialized || OMPX_ForceSyncRegions ||
+    if (ompt::CallbacksInitialized || OMPX_ForceSyncRegions ||
         Size >= OMPX_MaxAsyncCopyBytes) {
       if (AsyncInfoWrapper.hasQueue())
         if (auto Err = synchronize(AsyncInfoWrapper))
@@ -3102,8 +3089,10 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       DP("Error while getting async copy time\n");
       return;
     }
-    ::setOmptTimestamp(time_rec.start * TicksToTime,
-                       time_rec.end * TicksToTime);
+#ifdef OMPT_SUPPORT
+    ompt::setOmptTimestamp(time_rec.start * TicksToTime,
+                           time_rec.end * TicksToTime);
+#endif
   }
 
   /// Getters and setters for stack and heap sizes.

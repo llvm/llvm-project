@@ -11,12 +11,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef OPENMP_LIBOMPTARGET_OMPTTRACING_H
-#define OPENMP_LIBOMPTARGET_OMPTTRACING_H
+#ifndef OPENMP_LIBOMPTARGET_INCLUDE_OMPTTRACING_H
+#define OPENMP_LIBOMPTARGET_INCLUDE_OMPTTRACING_H
 
 #ifdef OMPT_SUPPORT
 
-#include "OmptCommon.h"
+#include "OmptCommonDefs.h"
+#include "OmptTracingBuffer.h"
 
 #pragma push_macro("DEBUG_PREFIX")
 #undef DEBUG_PREFIX
@@ -27,72 +28,72 @@ namespace omp {
 namespace target {
 namespace ompt {
 
-enum class TraceOperations { SET, START, STOP, FLUSH, SELECT_NEXT, GET_TYPE };
+/// Invoke callback function for buffer request events
+void ompt_callback_buffer_request(int DeviceId, ompt_buffer_t **BufferPtr,
+                                  size_t *Bytes);
 
-#define declareOmptTracingFunction(Name)                                       \
-  extern libomptarget_##Name##_t Name##_fn;
-FOREACH_OMPT_DEVICE_TRACING_FN(declareOmptTracingFunction)
-#undef declareOmptTracingFunction
+/// Invoke callback function for buffer complete events
+void ompt_callback_buffer_complete(int DeviceId, ompt_buffer_t *Buffer,
+                                   size_t Bytes,
+                                   ompt_buffer_cursor_t BeginCursor,
+                                   int BufferOwned);
 
-void ompt_callback_buffer_request(int device_num, ompt_buffer_t **buffer,
-                                  size_t *bytes);
-
-void ompt_callback_buffer_complete(int device_num, ompt_buffer_t *buffer,
-                                   size_t bytes, ompt_buffer_cursor_t begin,
-                                   int buffer_owned);
-
-void set_buffer_request(ompt_callback_buffer_request_t callback);
-
-void set_buffer_complete(ompt_callback_buffer_complete_t callback);
-
-void set_tracing_state(bool Enabled);
-
-bool is_tracing_type_enabled(unsigned int etype);
-
-void set_tracing_type_enabled(unsigned int etype, bool b);
-
-ompt_set_result_t set_trace_ompt(ompt_device_t *device, unsigned int enable,
-                                 unsigned int etype);
-
-extern std::shared_ptr<llvm::sys::DynamicLibrary> parent_dyn_lib;
-
+/// Callback function pointer for buffer request events
 extern ompt_callback_buffer_request_t ompt_callback_buffer_request_fn;
+
+/// Callback function pointer for buffer complete events
 extern ompt_callback_buffer_complete_t ompt_callback_buffer_complete_fn;
+
+/// Set 'start' and 'stop' for the current trace record
+void setOmptTimestamp(uint64_t StartTime, uint64_t EndTime);
+
+/// Set the linear function correlation between host and device clocks
+void setOmptHostToDeviceRate(double Slope, double Offset);
+
+/// Set / store the number of granted teams
+void setOmptGrantedNumTeams(uint64_t NumTeams);
+
+/// Set the given callback as function pointer for buffer request events
+void setBufferRequestFn(ompt_callback_buffer_request_t Callback);
+
+/// Set the given callback as function pointer for buffer complete events
+void setBufferCompleteFn(ompt_callback_buffer_complete_t Callback);
+
+/// Activate / deactivate tracing
+void setTracingState(bool Enabled);
+
+/// Check if the given tracing type is monitored
+bool isTracingTypeEnabled(unsigned int EventTy);
+
+/// Set whether the given tracing type should be monitored (or not)
+void setTracingTypeEnabled(unsigned int EventTy, bool Enable);
+
+/// Set / reset the given tracing types (EventTy = 0 corresponds to 'all')
+ompt_set_result_t setTraceEventTy(ompt_device_t *Device, unsigned int Enable,
+                                  unsigned int EventTy);
 
 // Mutexes to serialize invocation of device-independent entry points
 extern std::mutex TraceAccessMutex;
 extern std::mutex TraceControlMutex;
 
-// Serialize calls to std::hash
-// thread_id_hash_mutex
+// Ensure serialization of calls to std::hash
 extern std::mutex TraceHashThreadMutex;
-
-// Mutexes to protect the function pointers
-extern std::mutex set_trace_mutex;
-extern std::mutex start_trace_mutex;
-extern std::mutex flush_trace_mutex;
-extern std::mutex stop_trace_mutex;
-extern std::mutex advance_buffer_cursor_mutex;
-extern std::mutex get_record_type_mutex;
 
 // Thread local variables used by the plugin to communicate OMPT information
 // that are then used to populate trace records. This method assumes a
 // synchronous implementation, otherwise it won't work.
-
-// static thread_local ompt_num_granted_teams
 extern thread_local uint32_t TraceRecordNumGrantedTeams;
-
-// static thread_local ompt_tr_start_time
 extern thread_local uint64_t TraceRecordStartTime;
-
-// static thread_local ompt_tr_end_time
 extern thread_local uint64_t TraceRecordStopTime;
 
+// Manage all tracing records in one place
+extern OmptTracingBufferMgr TraceRecordManager;
+
+// Keep track of enabled tracing event types
 extern std::atomic<uint64_t> TracingTypesEnabled;
 
-/// OMPT tracing initialization status; false if initializeLibrary has not been
-/// executed
-extern bool TracingInitialized;
+/// OMPT tracing status; (Re-)Set via 'setTracingState'
+extern bool TracingActive;
 
 } // namespace ompt
 } // namespace target
@@ -103,4 +104,4 @@ extern bool TracingInitialized;
 
 #endif // OMPT_SUPPORT
 
-#endif // OPENMP_LIBOMPTARGET_OMPTTRACING_H
+#endif // OPENMP_LIBOMPTARGET_INCLUDE_OMPTTRACING_H

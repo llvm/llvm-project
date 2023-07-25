@@ -12,23 +12,22 @@
 
 #ifdef OMPT_SUPPORT
 
+#include "OmptCallback.h"
+#include "Debug.h"
+#include "OmptConnector.h"
+#include "OmptInterface.h"
+#include "omp-tools.h"
+#include "private.h"
+
 #include "llvm/Support/DynamicLibrary.h"
 
-#include <assert.h>
 #include <atomic>
+#include <cassert>
 #include <cstdlib>
 #include <cstring>
 #include <memory>
 #include <mutex>
 #include <thread>
-
-#include <omp-tools.h>
-
-#include "Debug.h"
-#include "OmptCallback.h"
-#include "OmptConnector.h"
-#include "OmptInterface.h"
-#include "private.h"
 
 #pragma push_macro("DEBUG_PREFIX")
 #undef DEBUG_PREFIX
@@ -49,10 +48,9 @@ class LibomptargetRtlFinalizer;
 /// Object that will maintain the RTL finalizer from the plugin
 LibomptargetRtlFinalizer *LibraryFinalizer = nullptr;
 
-/// Thread local state for target region and associated metadata
-thread_local Interface llvm::omp::target::ompt::OmptInterface;
+thread_local Interface llvm::omp::target::ompt::RegionInterface;
 
-bool llvm::omp::target::ompt::Initialized = false;
+bool llvm::omp::target::ompt::CallbacksInitialized = false;
 
 ompt_get_callback_t llvm::omp::target::ompt::lookupCallbackByCode = nullptr;
 ompt_function_lookup_t llvm::omp::target::ompt::lookupCallbackByName = nullptr;
@@ -71,14 +69,14 @@ static uint64_t createId() { return IdCounter.fetch_add(1); }
 /// Create a new correlation id and update the operations id
 static uint64_t createOpId() {
   uint64_t NewId = createId();
-  OmptInterface.setHostOpId(NewId);
+  RegionInterface.setHostOpId(NewId);
   return NewId;
 }
 
 /// Create a new correlation id and update the target region id
 static uint64_t createRegionId() {
   uint64_t NewId = createId();
-  OmptInterface.setTargetDataValue(NewId);
+  RegionInterface.setTargetDataValue(NewId);
   return NewId;
 }
 
@@ -234,26 +232,26 @@ void Interface::endTargetDataRetrieve(int64_t DeviceId, void *HstPtrBegin,
   endTargetDataOperation();
 }
 
-void Interface::beginTargetSubmit(unsigned int numTeams) {
+void Interface::beginTargetSubmit(unsigned int NumTeams) {
   if (ompt_callback_target_submit_emi_fn) {
     // HostOpId is set by the tool. Invoke the tool supplied target submit EMI
     // callback
     ompt_callback_target_submit_emi_fn(ompt_scope_begin, &TargetData, &HostOpId,
-                                       numTeams);
+                                       NumTeams);
   } else if (ompt_callback_target_submit_fn) {
     // HostOpId is set by the runtime
     HostOpId = createOpId();
-    ompt_callback_target_submit_fn(TargetData.value, HostOpId, numTeams);
+    ompt_callback_target_submit_fn(TargetData.value, HostOpId, NumTeams);
   }
 }
 
-void Interface::endTargetSubmit(unsigned int numTeams) {
+void Interface::endTargetSubmit(unsigned int NumTeams) {
   // Only EMI callback handles end scope
   if (ompt_callback_target_submit_emi_fn) {
     // HostOpId is set by the tool. Invoke the tool supplied target submit EMI
     // callback
     ompt_callback_target_submit_emi_fn(ompt_scope_end, &TargetData, &HostOpId,
-                                       numTeams);
+                                       NumTeams);
   }
 }
 
@@ -399,24 +397,6 @@ void Interface::endTargetRegion() {
   TargetData = ompt_data_none;
 }
 
-void Interface::ompt_state_set_helper(void *enter_frame, void *codeptr_ra,
-                                      int flags, int state) {
-  _enter_frame = enter_frame;
-  _codeptr_ra = codeptr_ra;
-  if (ompt_set_frame_enter_fn) {
-    _state = ompt_set_frame_enter_fn(_enter_frame, flags, state);
-  }
-
-  return;
-}
-
-void Interface::ompt_state_set(void *enter_frame, void *codeptr_ra) {
-  ompt_state_set_helper(enter_frame, codeptr_ra, OMPT_FRAME_FLAGS,
-                        ompt_state_work_parallel);
-}
-
-void Interface::ompt_state_clear() { ompt_state_set_helper(0, 0, 0, _state); }
-
 /// Used to maintain the finalization functions that are received
 /// from the plugins during connect.
 /// Note: Currently, there are no plugin-specific finalizations, so each plugin
@@ -444,10 +424,10 @@ private:
 int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
                                                int initial_device_num,
                                                ompt_data_t *tool_data) {
-  DP("OMPT: Executing initializeLibrary (libomp)\n");
+  DP("Executing initializeLibrary (libomp)\n");
 #define bindOmptFunctionName(OmptFunction, DestinationFunction)                \
   DestinationFunction = (OmptFunction##_t)lookup(#OmptFunction);               \
-  DP("OMPT: initializeLibrary (libomp) bound %s=%p\n", #DestinationFunction,   \
+  DP("initializeLibrary (libomp) bound %s=%p\n", #DestinationFunction,         \
      ((void *)(uint64_t)DestinationFunction));
 
   bindOmptFunctionName(ompt_get_callback, lookupCallbackByCode);
@@ -471,21 +451,22 @@ int llvm::omp::target::ompt::initializeLibrary(ompt_function_lookup_t lookup,
 
   LibraryFinalizer = new LibomptargetRtlFinalizer();
 
-  Initialized = true;
+  CallbacksInitialized = true;
 
   return 0;
 }
 
 void llvm::omp::target::ompt::finalizeLibrary(ompt_data_t *data) {
-  DP("OMPT: Executing finalizeLibrary (libomp)\n");
+  DP("Executing finalizeLibrary (libomp)\n");
   // Before disabling OMPT, call the (plugin) finalizations that were registered
   // with this library
   LibraryFinalizer->finalize();
   delete LibraryFinalizer;
+  CallbacksInitialized = false;
 }
 
 void llvm::omp::target::ompt::connectLibrary() {
-  DP("OMPT: Entering connectLibrary (libomp)\n");
+  DP("Entering connectLibrary (libomp)\n");
   // Connect with libomp
   static OmptLibraryConnectorTy LibompConnector("libomp");
   static ompt_start_tool_result_t OmptResult;
@@ -508,17 +489,14 @@ void llvm::omp::target::ompt::connectLibrary() {
   FOREACH_OMPT_EMI_EVENT(bindOmptCallback)
 #undef bindOmptCallback
 
-  DP("OMPT: Exiting connectLibrary (libomp)\n");
+  DP("Exiting connectLibrary (libomp)\n");
 }
 
-/*****************************************************************************
- * OMPT interface operations
- *****************************************************************************/
-
-static void LIBOMPTARGET_GET_TARGET_OPID(uint64_t *device_num,
-                                         ompt_id_t *target_id,
-                                         ompt_id_t *host_op_id) {
-  *host_op_id = IdCounter;
+static void LIBOMPTARGET_GET_TARGET_OPID(uint64_t *DeviceId,
+                                         ompt_id_t *TargetId,
+                                         ompt_id_t *HostOpId) {
+  printf("  -- Executing LIBOMPTARGET_GET_TARGET_OPID <<<<<<<<<<<<<<<<<<<<<<<");
+  *HostOpId = IdCounter;
 }
 
 ompt_interface_fn_t
@@ -533,8 +511,8 @@ llvm::omp::target::ompt::doLookup(const char *InterfaceFunctionName) {
 extern "C" {
 /// Used for connecting libomptarget with a plugin
 void ompt_libomptarget_connect(ompt_start_tool_result_t *result) {
-  DP("OMPT: Enter ompt_libomptarget_connect\n");
-  if (Initialized && result && LibraryFinalizer) {
+  DP("Enter ompt_libomptarget_connect\n");
+  if (CallbacksInitialized && result && LibraryFinalizer) {
     // Cache each fini function, so that they can be invoked on exit
     LibraryFinalizer->registerRtl(result->finalize);
     // Invoke the provided init function with the lookup function maintained
@@ -543,7 +521,7 @@ void ompt_libomptarget_connect(ompt_start_tool_result_t *result) {
     result->initialize(lookupCallbackByName,
                        /* initial_device_num */ 0, /* tool_data */ nullptr);
   }
-  DP("OMPT: Leave ompt_libomptarget_connect\n");
+  DP("Leave ompt_libomptarget_connect\n");
 }
 }
 

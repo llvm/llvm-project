@@ -11,7 +11,7 @@ ompt_id_t next_op_id = 0x8000000000000001;
 
 // Synchronous callbacks
 static void on_ompt_callback_device_initialize(int device_num, const char *type,
-                                               ompt_device_t *device,
+                                               ompt_device_t *Device,
                                                ompt_function_lookup_t lookup,
                                                const char *documentation) {
   printf("Callback Init: device_num=%d type=%s device=%p lookup=%p doc=%p\n",
