@@ -136,7 +136,7 @@ static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   SetCurrentThread(t);
   auto res = t->ThreadStart(GetTid());
   t->Destroy();  // POSIX calls this from TSD destructor.
-  return rest;
+  return res;
 }
 
 INTERCEPTOR_WINAPI(HANDLE, CreateThread, LPSECURITY_ATTRIBUTES security,
