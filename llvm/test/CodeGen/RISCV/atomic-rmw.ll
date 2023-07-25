@@ -15019,10 +15019,9 @@ define i64 @atomicrmw_min_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a0, s2, a4
 ; RV32I-NEXT:  .LBB205_5: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB205_2 Depth=1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    bnez a0, .LBB205_1
+; RV32I-NEXT:    beqz a0, .LBB205_1
 ; RV32I-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB205_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -15074,10 +15073,9 @@ define i64 @atomicrmw_min_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    sltu a0, s2, a4
 ; RV32IA-NEXT:  .LBB205_5: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB205_2 Depth=1
-; RV32IA-NEXT:    xori a0, a0, 1
 ; RV32IA-NEXT:    mv a2, a4
 ; RV32IA-NEXT:    mv a3, a5
-; RV32IA-NEXT:    bnez a0, .LBB205_1
+; RV32IA-NEXT:    beqz a0, .LBB205_1
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB205_2 Depth=1
 ; RV32IA-NEXT:    mv a2, s2
@@ -15174,10 +15172,9 @@ define i64 @atomicrmw_min_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a0, s2, a4
 ; RV32I-NEXT:  .LBB206_5: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB206_2 Depth=1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    bnez a0, .LBB206_1
+; RV32I-NEXT:    beqz a0, .LBB206_1
 ; RV32I-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB206_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -15229,10 +15226,9 @@ define i64 @atomicrmw_min_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    sltu a0, s2, a4
 ; RV32IA-NEXT:  .LBB206_5: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB206_2 Depth=1
-; RV32IA-NEXT:    xori a0, a0, 1
 ; RV32IA-NEXT:    mv a2, a4
 ; RV32IA-NEXT:    mv a3, a5
-; RV32IA-NEXT:    bnez a0, .LBB206_1
+; RV32IA-NEXT:    beqz a0, .LBB206_1
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB206_2 Depth=1
 ; RV32IA-NEXT:    mv a2, s2
@@ -15329,10 +15325,9 @@ define i64 @atomicrmw_min_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a0, s2, a4
 ; RV32I-NEXT:  .LBB207_5: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB207_2 Depth=1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    bnez a0, .LBB207_1
+; RV32I-NEXT:    beqz a0, .LBB207_1
 ; RV32I-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB207_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -15384,10 +15379,9 @@ define i64 @atomicrmw_min_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    sltu a0, s2, a4
 ; RV32IA-NEXT:  .LBB207_5: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB207_2 Depth=1
-; RV32IA-NEXT:    xori a0, a0, 1
 ; RV32IA-NEXT:    mv a2, a4
 ; RV32IA-NEXT:    mv a3, a5
-; RV32IA-NEXT:    bnez a0, .LBB207_1
+; RV32IA-NEXT:    beqz a0, .LBB207_1
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB207_2 Depth=1
 ; RV32IA-NEXT:    mv a2, s2
@@ -15484,10 +15478,9 @@ define i64 @atomicrmw_min_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a0, s2, a4
 ; RV32I-NEXT:  .LBB208_5: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB208_2 Depth=1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    bnez a0, .LBB208_1
+; RV32I-NEXT:    beqz a0, .LBB208_1
 ; RV32I-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB208_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -15539,10 +15532,9 @@ define i64 @atomicrmw_min_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    sltu a0, s2, a4
 ; RV32IA-NEXT:  .LBB208_5: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB208_2 Depth=1
-; RV32IA-NEXT:    xori a0, a0, 1
 ; RV32IA-NEXT:    mv a2, a4
 ; RV32IA-NEXT:    mv a3, a5
-; RV32IA-NEXT:    bnez a0, .LBB208_1
+; RV32IA-NEXT:    beqz a0, .LBB208_1
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB208_2 Depth=1
 ; RV32IA-NEXT:    mv a2, s2
@@ -15639,10 +15631,9 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a0, s2, a4
 ; RV32I-NEXT:  .LBB209_5: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB209_2 Depth=1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    bnez a0, .LBB209_1
+; RV32I-NEXT:    beqz a0, .LBB209_1
 ; RV32I-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB209_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -15694,10 +15685,9 @@ define i64 @atomicrmw_min_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    sltu a0, s2, a4
 ; RV32IA-NEXT:  .LBB209_5: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB209_2 Depth=1
-; RV32IA-NEXT:    xori a0, a0, 1
 ; RV32IA-NEXT:    mv a2, a4
 ; RV32IA-NEXT:    mv a3, a5
-; RV32IA-NEXT:    bnez a0, .LBB209_1
+; RV32IA-NEXT:    beqz a0, .LBB209_1
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB209_2 Depth=1
 ; RV32IA-NEXT:    mv a2, s2
@@ -16559,10 +16549,9 @@ define i64 @atomicrmw_umin_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a0, s2, a4
 ; RV32I-NEXT:  .LBB215_5: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB215_2 Depth=1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    bnez a0, .LBB215_1
+; RV32I-NEXT:    beqz a0, .LBB215_1
 ; RV32I-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB215_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -16614,10 +16603,9 @@ define i64 @atomicrmw_umin_i64_monotonic(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    sltu a0, s2, a4
 ; RV32IA-NEXT:  .LBB215_5: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB215_2 Depth=1
-; RV32IA-NEXT:    xori a0, a0, 1
 ; RV32IA-NEXT:    mv a2, a4
 ; RV32IA-NEXT:    mv a3, a5
-; RV32IA-NEXT:    bnez a0, .LBB215_1
+; RV32IA-NEXT:    beqz a0, .LBB215_1
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB215_2 Depth=1
 ; RV32IA-NEXT:    mv a2, s2
@@ -16714,10 +16702,9 @@ define i64 @atomicrmw_umin_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a0, s2, a4
 ; RV32I-NEXT:  .LBB216_5: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB216_2 Depth=1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    bnez a0, .LBB216_1
+; RV32I-NEXT:    beqz a0, .LBB216_1
 ; RV32I-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB216_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -16769,10 +16756,9 @@ define i64 @atomicrmw_umin_i64_acquire(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    sltu a0, s2, a4
 ; RV32IA-NEXT:  .LBB216_5: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB216_2 Depth=1
-; RV32IA-NEXT:    xori a0, a0, 1
 ; RV32IA-NEXT:    mv a2, a4
 ; RV32IA-NEXT:    mv a3, a5
-; RV32IA-NEXT:    bnez a0, .LBB216_1
+; RV32IA-NEXT:    beqz a0, .LBB216_1
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB216_2 Depth=1
 ; RV32IA-NEXT:    mv a2, s2
@@ -16869,10 +16855,9 @@ define i64 @atomicrmw_umin_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a0, s2, a4
 ; RV32I-NEXT:  .LBB217_5: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB217_2 Depth=1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    bnez a0, .LBB217_1
+; RV32I-NEXT:    beqz a0, .LBB217_1
 ; RV32I-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB217_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -16924,10 +16909,9 @@ define i64 @atomicrmw_umin_i64_release(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    sltu a0, s2, a4
 ; RV32IA-NEXT:  .LBB217_5: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB217_2 Depth=1
-; RV32IA-NEXT:    xori a0, a0, 1
 ; RV32IA-NEXT:    mv a2, a4
 ; RV32IA-NEXT:    mv a3, a5
-; RV32IA-NEXT:    bnez a0, .LBB217_1
+; RV32IA-NEXT:    beqz a0, .LBB217_1
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB217_2 Depth=1
 ; RV32IA-NEXT:    mv a2, s2
@@ -17024,10 +17008,9 @@ define i64 @atomicrmw_umin_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a0, s2, a4
 ; RV32I-NEXT:  .LBB218_5: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB218_2 Depth=1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    bnez a0, .LBB218_1
+; RV32I-NEXT:    beqz a0, .LBB218_1
 ; RV32I-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB218_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -17079,10 +17062,9 @@ define i64 @atomicrmw_umin_i64_acq_rel(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    sltu a0, s2, a4
 ; RV32IA-NEXT:  .LBB218_5: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB218_2 Depth=1
-; RV32IA-NEXT:    xori a0, a0, 1
 ; RV32IA-NEXT:    mv a2, a4
 ; RV32IA-NEXT:    mv a3, a5
-; RV32IA-NEXT:    bnez a0, .LBB218_1
+; RV32IA-NEXT:    beqz a0, .LBB218_1
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB218_2 Depth=1
 ; RV32IA-NEXT:    mv a2, s2
@@ -17179,10 +17161,9 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32I-NEXT:    sltu a0, s2, a4
 ; RV32I-NEXT:  .LBB219_5: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB219_2 Depth=1
-; RV32I-NEXT:    xori a0, a0, 1
 ; RV32I-NEXT:    mv a2, a4
 ; RV32I-NEXT:    mv a3, a5
-; RV32I-NEXT:    bnez a0, .LBB219_1
+; RV32I-NEXT:    beqz a0, .LBB219_1
 ; RV32I-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32I-NEXT:    # in Loop: Header=BB219_2 Depth=1
 ; RV32I-NEXT:    mv a2, s2
@@ -17234,10 +17215,9 @@ define i64 @atomicrmw_umin_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV32IA-NEXT:    sltu a0, s2, a4
 ; RV32IA-NEXT:  .LBB219_5: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB219_2 Depth=1
-; RV32IA-NEXT:    xori a0, a0, 1
 ; RV32IA-NEXT:    mv a2, a4
 ; RV32IA-NEXT:    mv a3, a5
-; RV32IA-NEXT:    bnez a0, .LBB219_1
+; RV32IA-NEXT:    beqz a0, .LBB219_1
 ; RV32IA-NEXT:  # %bb.6: # %atomicrmw.start
 ; RV32IA-NEXT:    # in Loop: Header=BB219_2 Depth=1
 ; RV32IA-NEXT:    mv a2, s2
