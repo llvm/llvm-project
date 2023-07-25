@@ -1512,8 +1512,8 @@ PointerDereferenceGadget::getFixits(const Strategy &S) const {
                         FixItHint::CreateInsertion(
                             (*EndOfOperand).getLocWithOffset(1), "[0]")}};
     }
+    break;
   }
-    [[fallthrough]];
   case Strategy::Kind::Iterator:
   case Strategy::Kind::Array:
   case Strategy::Kind::Vector:
@@ -1541,8 +1541,9 @@ std::optional<FixItList> UPCStandalonePointerGadget::getFixits(const Strategy &S
       if (EndOfOperand)
         return FixItList{{FixItHint::CreateInsertion(
             *EndOfOperand, ".data()")}};
+      // FIXME: Points inside a macro expansion.
+      break;
     }
-      [[fallthrough]];
     case Strategy::Kind::Wontfix:
     case Strategy::Kind::Iterator:
     case Strategy::Kind::Array:
