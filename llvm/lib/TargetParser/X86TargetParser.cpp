@@ -234,8 +234,8 @@ constexpr FeatureBitset FeaturesAlderlake =
     FeatureCLDEMOTE | FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG |
     FeatureAVXVNNI | FeatureHRESET | FeatureWIDEKL;
 constexpr FeatureBitset FeaturesSierraforest =
-    FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA |
-    FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
+    FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA | FeatureUINTR |
+    FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
 constexpr FeatureBitset FeaturesGrandridge =
     FeaturesSierraforest | FeatureRAOINT;
 

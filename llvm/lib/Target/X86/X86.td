@@ -1200,6 +1200,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> SRFAdditionalFeatures = [FeatureCMPCCXADD,
                                                   FeatureAVXIFMA,
                                                   FeatureAVXNECONVERT,
+                                                  FeatureENQCMD,
+                                                  FeatureUINTR,
                                                   FeatureAVXVNNIINT8];
   list<SubtargetFeature> SRFFeatures =
     !listconcat(ADLFeatures, SRFAdditionalFeatures);
