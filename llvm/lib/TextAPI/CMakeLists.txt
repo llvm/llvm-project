@@ -8,6 +8,7 @@ add_llvm_component_library(LLVMTextAPI
   Symbol.cpp
   SymbolSet.cpp
   Target.cpp
+  TextAPIError.cpp
   TextStub.cpp
   TextStubCommon.cpp
 

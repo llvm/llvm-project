@@ -372,6 +372,37 @@ public:
     return SymbolsSet->undefineds();
   };
 
+  /// Extract architecture slice from Interface.
+  ///
+  /// \param Arch architecture to extract from.
+  /// \return New InterfaceFile with extracted architecture slice.
+  llvm::Expected<std::unique_ptr<InterfaceFile>>
+  extract(Architecture Arch) const;
+
+  /// Remove architecture slice from Interface.
+  ///
+  /// \param Arch architecture to remove.
+  /// \return New Interface File with removed architecture slice.
+  llvm::Expected<std::unique_ptr<InterfaceFile>>
+  remove(Architecture Arch) const;
+
+  /// Merge Interfaces for the same library. The following library attributes
+  /// must match.
+  /// * Install name, Current & Compatibility version,
+  /// * Two-level namespace enablement, and App extension enablement.
+  ///
+  /// \param O The Interface to merge.
+  /// \return New Interface File that was merged.
+  llvm::Expected<std::unique_ptr<InterfaceFile>>
+  merge(const InterfaceFile *O) const;
+
+  /// Inline reexported library into Interface.
+  ///
+  /// \param Library Interface of reexported library.
+  /// \param Overwrite Whether to overwrite preexisting inlined library.
+  void inlineLibrary(std::shared_ptr<InterfaceFile> Library,
+                     bool Overwrite = false);
+
   /// The equality is determined by attributes that impact linking
   /// compatibilities. Path, & FileKind are irrelevant since these by
   /// itself should not impact linking.
