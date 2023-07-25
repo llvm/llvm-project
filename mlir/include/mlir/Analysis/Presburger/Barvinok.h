@@ -26,6 +26,7 @@ namespace presburger {
 using PolyhedronH = IntegerRelation;
 using PolyhedronV = Matrix;
 using ConeH = PolyhedronH;
+using ConeV = PolyhedronV;
 using Point = SmallVector<MPInt, 16>;
 
 // Describe the type of generating function
@@ -48,24 +49,25 @@ private:
 
 // Get the index of a cone.
 // If it has more rays than the dimension, return 0.
-MPInt getIndex(ConeH);
+MPInt getIndex(ConeV);
 
 // Get the smallest vector in the basis described by the rays of the cone,
 // and the coefficients needed to express it in that basis.
-std::pair<Point, SmallVector<MPInt, 16>> getSamplePoint(ConeH);
+std::pair<Point, SmallVector<MPInt, 16>> getSamplePoint(ConeV);
 
 // Get the dual of a cone, returning the V-representation of it.
-PolyhedronV getDual(ConeH);
+ConeV getDual(ConeH);
+ConeH getDual(ConeV);
 
 // Decompose a cone into unimodular cones,
 // triangulating it first if it is not simplicial.
-SmallVector<ConeH, 16> unimodularDecomposition(ConeH);
+SmallVector<std::pair<int, ConeH>, 16> unimodularDecomposition(ConeH);
 
 // Decompose a simplicial cone into unimodular cones.
-SmallVector<ConeH, 16> unimodularDecompositionSimplicial(ConeH);
+SmallVector<std::pair<int, ConeV>, 16> unimodularDecompositionSimplicial(int, ConeV);
 
 // Triangulate a non-simplicial cone into a simplicial cones.
-SmallVector<ConeH, 16> triangulate(ConeH);
+SmallVector<ConeV, 16> triangulate(ConeV);
 
 // Compute the generating function for a unimodular cone.
 GeneratingFunction unimodularConeGeneratingFunction(ConeH);
