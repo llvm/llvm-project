@@ -2236,7 +2236,7 @@ static bool requiresMemberFunctionPointerTypeMetadata(CodeGenModule &CGM,
          !isa<CXXDestructorDecl>(MD);
 }
 
-std::vector<const CXXRecordDecl *>
+SmallVector<const CXXRecordDecl *, 0>
 CodeGenModule::getMostBaseClasses(const CXXRecordDecl *RD) {
   llvm::SetVector<const CXXRecordDecl *> MostBases;
 
