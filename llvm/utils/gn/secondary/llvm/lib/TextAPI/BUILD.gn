@@ -14,6 +14,7 @@ static_library("TextAPI") {
     "Symbol.cpp",
     "SymbolSet.cpp",
     "Target.cpp",
+    "TextAPIError.cpp",
     "TextStub.cpp",
     "TextStubCommon.cpp",
     "TextStubV5.cpp",
