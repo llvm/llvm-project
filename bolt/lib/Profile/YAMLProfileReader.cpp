@@ -79,6 +79,7 @@ bool YAMLProfileReader::parseFunctionProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
   BinaryContext &BC = BF.getBinaryContext();
 
+  const bool IsDFSOrder = YamlBP.Header.IsDFSOrder;
   bool ProfileMatched = true;
   uint64_t MismatchedBlocks = 0;
   uint64_t MismatchedCalls = 0;
@@ -94,7 +95,7 @@ bool YAMLProfileReader::parseFunctionProfile(
       FuncRawBranchCount += YamlSI.Count;
   BF.setRawBranchCount(FuncRawBranchCount);
 
-  if (!opts::IgnoreHash && YamlBF.Hash != BF.computeHash(opts::ProfileUseDFS)) {
+  if (!opts::IgnoreHash && YamlBF.Hash != BF.computeHash(IsDFSOrder)) {
     if (opts::Verbosity >= 1)
       errs() << "BOLT-WARNING: function hash mismatch\n";
     ProfileMatched = false;
@@ -107,7 +108,7 @@ bool YAMLProfileReader::parseFunctionProfile(
   }
 
   BinaryFunction::BasicBlockOrderType Order;
-  if (opts::ProfileUseDFS)
+  if (IsDFSOrder)
     llvm::copy(BF.dfs(), std::back_inserter(Order));
   else
     llvm::copy(BF.getLayout().blocks(), std::back_inserter(Order));
@@ -346,7 +347,7 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
 
     // Recompute hash once per function.
     if (!opts::IgnoreHash)
-      Function.computeHash(opts::ProfileUseDFS);
+      Function.computeHash(YamlBP.Header.IsDFSOrder);
 
     for (StringRef FunctionName : Function.getNames()) {
       auto PI = ProfileNameToProfile.find(FunctionName);
