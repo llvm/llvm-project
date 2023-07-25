@@ -897,6 +897,8 @@ LoongArch Support
   on LoongArch.
 - Unaligned memory accesses can be toggled by ``-m[no-]unaligned-access`` or the
   aliases ``-m[no-]strict-align``.
+- Non ``$``-prefixed GPR names (e.g. ``r4`` and ``a0``) are allowed in inlineasm
+  like GCC does.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
@@ -1095,6 +1097,7 @@ Static Analyzer
 
 Sanitizers
 ----------
+- Several more sanitizers are now ported to LoongArch: MSan, DFsan, Profile, XRay and libFuzzer.
 
 Python Binding Changes
 ----------------------
