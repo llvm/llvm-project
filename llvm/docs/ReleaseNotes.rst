@@ -218,6 +218,11 @@ Changes to the PowerPC Backend
   only supported on AIX.
 * On AIX, teach the profile runtime to check for a build-id string; such string
   can be created by the -mxcoff-build-id option.
+* Removed ``-ppc-quadword-atomics`` which only affected lock-free quadword
+  atomics on AIX. Now backend generates lock-free quadword atomics code on AIX
+  by default. To support lock-free quadword atomics in libatomic, the OS level
+  must be at least AIX 7.2 TL5 SP3 with libc++.rte of version 17.1.1 or above
+  installed.
 
 Changes to the RISC-V Backend
 -----------------------------
