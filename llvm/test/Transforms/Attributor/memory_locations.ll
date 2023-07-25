@@ -717,7 +717,7 @@ define void @argmem_and_unknown(i1 %c, ptr %arg) memory(argmem: readwrite) {
 ; TUNIT-SAME: (i1 noundef [[C:%.*]], ptr writeonly [[ARG:%.*]]) #[[ATTR11:[0-9]+]] {
 ; TUNIT-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; TUNIT:       t:
-; TUNIT-NEXT:    [[P:%.*]] = call ptr @no_mem_unknown_ptr(ptr noalias readnone [[ARG]])
+; TUNIT-NEXT:    [[P:%.*]] = call ptr @no_mem_unknown_ptr(ptr noalias readnone [[ARG]]) #[[ATTR14:[0-9]+]]
 ; TUNIT-NEXT:    store i32 0, ptr [[P]], align 4
 ; TUNIT-NEXT:    br label [[F]]
 ; TUNIT:       f:
@@ -728,7 +728,7 @@ define void @argmem_and_unknown(i1 %c, ptr %arg) memory(argmem: readwrite) {
 ; CGSCC-SAME: (i1 noundef [[C:%.*]], ptr writeonly [[ARG:%.*]]) #[[ATTR12:[0-9]+]] {
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    [[P:%.*]] = call ptr @no_mem_unknown_ptr(ptr noalias readnone [[ARG]])
+; CGSCC-NEXT:    [[P:%.*]] = call ptr @no_mem_unknown_ptr(ptr noalias readnone [[ARG]]) #[[ATTR16:[0-9]+]]
 ; CGSCC-NEXT:    store i32 0, ptr [[P]], align 4
 ; CGSCC-NEXT:    br label [[F]]
 ; CGSCC:       f:
@@ -757,6 +757,7 @@ f:
 ; TUNIT: attributes #[[ATTR11]] = { nosync memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR12]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR13]] = { nofree nosync nounwind memory(write) }
+; TUNIT: attributes #[[ATTR14]] = { nosync }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { memory(inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { memory(argmem: readwrite, inaccessiblemem: readwrite) }
@@ -774,4 +775,5 @@ f:
 ; CGSCC: attributes #[[ATTR13]] = { nofree nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR14]] = { nofree nosync nounwind memory(write) }
 ; CGSCC: attributes #[[ATTR15]] = { nofree nounwind memory(write) }
+; CGSCC: attributes #[[ATTR16]] = { nosync }
 ;.
