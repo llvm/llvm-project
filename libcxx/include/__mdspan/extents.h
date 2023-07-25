@@ -315,7 +315,8 @@ public:
   }
 
   template <class _OtherIndexType, size_t _Size>
-    requires(is_convertible_v<_OtherIndexType, index_type> && is_nothrow_constructible_v<index_type, _OtherIndexType> &&
+    requires(is_convertible_v<const _OtherIndexType&, index_type> &&
+             is_nothrow_constructible_v<index_type, const _OtherIndexType&> &&
              (_Size == __rank_ || _Size == __rank_dynamic_))
   explicit(_Size != __rank_dynamic_)
       _LIBCPP_HIDE_FROM_ABI constexpr extents(const array<_OtherIndexType, _Size>& __exts) noexcept
@@ -325,7 +326,8 @@ public:
   }
 
   template <class _OtherIndexType, size_t _Size>
-    requires(is_convertible_v<_OtherIndexType, index_type> && is_nothrow_constructible_v<index_type, _OtherIndexType> &&
+    requires(is_convertible_v<const _OtherIndexType&, index_type> &&
+             is_nothrow_constructible_v<index_type, const _OtherIndexType&> &&
              (_Size == __rank_ || _Size == __rank_dynamic_))
   explicit(_Size != __rank_dynamic_)
       _LIBCPP_HIDE_FROM_ABI constexpr extents(const span<_OtherIndexType, _Size>& __exts) noexcept
