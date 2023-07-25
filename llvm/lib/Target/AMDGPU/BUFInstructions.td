@@ -2357,7 +2357,6 @@ class VBUFFER_Real <BUF_Pseudo ps, string real_name = ps.Mnemonic> :
   let Inst{62}    = ps.offen;
   let Inst{63}    = ps.idxen;
 
-  let Inst{7}     = cpol{5};   // nv
   let Inst{54-53} = cpol{2-1}; // th{2-1}
   let Inst{52}    = !if(ps.IsAtomicRet, 1, cpol{0}); // th{0}
   let Inst{51-50} = cpol{4-3}; // scope

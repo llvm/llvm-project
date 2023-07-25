@@ -179,7 +179,6 @@ class VFLAT_Real <bits<8> op, FLAT_Pseudo ps, string opName = ps.Mnemonic> :
   let Inst{31-26} = 0x3b;
   let Inst{39-32} = !if(ps.has_vdst, vdst, ?);
   let Inst{49} = ps.sve;
-  let Inst{7} = cpol{5}; // nv
   let Inst{54-53} = cpol{2-1}; // th{2-1}
   let Inst{52} = !if(ps.IsAtomicRet, 1, cpol{0}); // th{0}
   let Inst{51-50} = cpol{4-3}; // scope

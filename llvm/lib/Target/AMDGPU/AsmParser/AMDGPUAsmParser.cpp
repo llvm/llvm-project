@@ -6270,20 +6270,10 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
     if (Res2.isFailure())
       return Res2;
 
-    // TODO-GFX12: NV modifier should only be enabled for MI400
-    bool NV = false;
-    ParseStatus Res3 = ParseStatus::NoMatch;
-    if (trySkipId("nv")) {
-      NV = true;
-      Res3 = ParseStatus::Success;
-    } else if (trySkipId("no", "nv")) {
-      Res3 = ParseStatus::Success;
-    }
-
-    if (Res1.isNoMatch() && Res2.isNoMatch() && Res3.isNoMatch())
+    if (Res1.isNoMatch() && Res2.isNoMatch())
       return ParseStatus::NoMatch;
 
-    int64_t CPolVal = (NV ? CPol::NV : 0) | Scope | TH;
+    int64_t CPolVal = Scope | TH;
     Operands.push_back(AMDGPUOperand::CreateImm(this, CPolVal, StringLoc,
                                                 AMDGPUOperand::ImmTyCPol));
     return ParseStatus::Success;
