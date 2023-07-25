@@ -8,8 +8,6 @@
 // RUN: %env_hwasan_opts=stack_history_size=2048 not %run %t 2045 2>&1 | FileCheck %s --check-prefix=YES
 // RUN: %env_hwasan_opts=stack_history_size=2048 not %run %t 2047 2>&1 | FileCheck %s --check-prefix=NO
 
-// REQUIRES: stable-runtime
-
 // Stack histories are currently not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
 

@@ -2,7 +2,6 @@
 // RUN:     %run %t 2>&1
 
 // REQUIRES: aarch64-target-arch || riscv64-target-arch
-// REQUIRES: stable-runtime
 
 #include <sanitizer/hwasan_interface.h>
 #include <setjmp.h>

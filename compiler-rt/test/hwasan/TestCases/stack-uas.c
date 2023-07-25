@@ -12,8 +12,6 @@
 // The output should be the exact same.
 // RUN: %clang_hwasan -mllvm -hwasan-use-after-scope -mllvm -hwasan-record-stack-history=libcall -g %s -o %t && not %env_hwasan_opts=symbolize=0 %run %t 2>&1 | FileCheck %s --check-prefix=NOSYM
 
-// REQUIRES: stable-runtime
-
 // Stack histories currently are not recorded on x86.
 // XFAIL: target=x86_64{{.*}}
 
