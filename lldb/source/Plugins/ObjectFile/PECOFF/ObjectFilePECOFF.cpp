@@ -343,6 +343,7 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     specs.Append(module_spec);
     break;
   case MachineArm64:
+  case MachineArm64X:
     spec.SetTriple("aarch64-pc-windows");
     spec.GetTriple().setEnvironment(env);
     specs.Append(module_spec);
