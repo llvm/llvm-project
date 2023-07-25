@@ -61,10 +61,9 @@ inline const DagInit *getDagWithSpecificOperator(const Init &N,
 inline const DagInit *getDagWithOperatorOfSubClass(const Init &N,
                                                    StringRef Cls) {
   if (const DagInit *I = dyn_cast<DagInit>(&N))
-    if (I->getNumArgs() > 0)
-      if (const DefInit *OpI = dyn_cast<DefInit>(I->getOperator()))
-        if (OpI->getDef()->isSubClassOf(Cls))
-          return I;
+    if (const DefInit *OpI = dyn_cast<DefInit>(I->getOperator()))
+      if (OpI->getDef()->isSubClassOf(Cls))
+        return I;
   return nullptr;
 }
 } // namespace llvm
