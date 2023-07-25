@@ -3297,6 +3297,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // Every function might be "will-return".
   checkAndQueryIRAttr<Attribute::WillReturn, AAWillReturn>(FPos, FnAttrs);
 
+  // Every function might be marked "nosync"
+  checkAndQueryIRAttr<Attribute::NoSync, AANoSync>(FPos, FnAttrs);
+
   // Everything that is visible from the outside (=function, argument, return
   // positions), cannot be changed if the function is not IPO amendable. We can
   // however analyse the code inside.
@@ -3304,9 +3307,6 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
     // Every function can be nounwind.
     checkAndQueryIRAttr<Attribute::NoUnwind, AANoUnwind>(FPos, FnAttrs);
-
-    // Every function might be marked "nosync"
-    checkAndQueryIRAttr<Attribute::NoSync, AANoSync>(FPos, FnAttrs);
 
     // Every function might be "no-return".
     checkAndQueryIRAttr<Attribute::NoReturn, AANoReturn>(FPos, FnAttrs);
