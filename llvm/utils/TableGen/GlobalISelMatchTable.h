@@ -526,6 +526,8 @@ public:
                            std::make_unique<Kind>(std::forward<Args>(args)...));
   }
 
+  void setPermanentGISelFlags(GISelFlags V) { Flags = V; }
+
   // Update the active GISelFlags based on the GISelFlags Record R.
   // A SaveAndRestore object is returned so the old GISelFlags are restored
   // at the end of the scope.
@@ -647,6 +649,10 @@ public:
     return Predicates.size();
   }
   bool predicates_empty() const { return Predicates.empty(); }
+
+  template <typename Ty> bool contains() const {
+    return any_of(Predicates, [&](auto &P) { return isa<Ty>(P.get()); });
+  }
 
   std::unique_ptr<PredicateTy> predicates_pop_front() {
     std::unique_ptr<PredicateTy> Front = std::move(Predicates.front());
@@ -1930,23 +1936,41 @@ public:
 };
 
 /// Adds a specific immediate to the instruction being built.
+/// If a LLT is passed, a ConstantInt immediate is created instead.
 class ImmRenderer : public OperandRenderer {
 protected:
   unsigned InsnID;
   int64_t Imm;
+  std::optional<LLTCodeGen> CImmLLT;
 
 public:
   ImmRenderer(unsigned InsnID, int64_t Imm)
       : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm) {}
+
+  ImmRenderer(unsigned InsnID, int64_t Imm, const LLTCodeGen &CImmLLT)
+      : OperandRenderer(OR_Imm), InsnID(InsnID), Imm(Imm), CImmLLT(CImmLLT) {
+    KnownTypes.insert(CImmLLT);
+  }
 
   static bool classof(const OperandRenderer *R) {
     return R->getKind() == OR_Imm;
   }
 
   void emitRenderOpcodes(MatchTable &Table, RuleMatcher &Rule) const override {
-    Table << MatchTable::Opcode("GIR_AddImm") << MatchTable::Comment("InsnID")
-          << MatchTable::IntValue(InsnID) << MatchTable::Comment("Imm")
-          << MatchTable::IntValue(Imm) << MatchTable::LineBreak;
+    if (CImmLLT) {
+      assert(Table.isCombiner() &&
+             "ConstantInt immediate are only for combiners!");
+      Table << MatchTable::Opcode("GIR_AddCImm")
+            << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
+            << MatchTable::Comment("Type")
+            << MatchTable::NamedValue(CImmLLT->getCxxEnumValue())
+            << MatchTable::Comment("Imm") << MatchTable::IntValue(Imm)
+            << MatchTable::LineBreak;
+    } else {
+      Table << MatchTable::Opcode("GIR_AddImm") << MatchTable::Comment("InsnID")
+            << MatchTable::IntValue(InsnID) << MatchTable::Comment("Imm")
+            << MatchTable::IntValue(Imm) << MatchTable::LineBreak;
+    }
   }
 };
 

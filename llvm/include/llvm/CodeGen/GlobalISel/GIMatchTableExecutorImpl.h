@@ -17,6 +17,7 @@
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
+#include "llvm/CodeGen/GlobalISel/GISelChangeObserver.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineOperand.h"
@@ -27,6 +28,7 @@
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Type.h"
 #include "llvm/Support/CodeGenCoverage.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -46,7 +48,7 @@ bool GIMatchTableExecutor::executeMatchTable(
     const int64_t *MatchTable, const TargetInstrInfo &TII,
     MachineRegisterInfo &MRI, const TargetRegisterInfo &TRI,
     const RegisterBankInfo &RBI, const PredicateBitset &AvailableFeatures,
-    CodeGenCoverage *CoverageInfo) const {
+    CodeGenCoverage *CoverageInfo, GISelChangeObserver *Observer) const {
 
   uint64_t CurrentIdx = 0;
   SmallVector<uint64_t, 4> OnFailResumeAt;
@@ -299,8 +301,7 @@ bool GIMatchTableExecutor::executeMatchTable(
       assert(State.MIs[InsnID] != nullptr && "Used insn before defined");
       assert(State.MIs[InsnID]->getOpcode() == TargetOpcode::G_CONSTANT &&
              "Expected G_CONSTANT");
-      assert(Predicate > GICXXPred_Invalid &&
-             "Expected a valid predicate");
+      assert(Predicate > GICXXPred_Invalid && "Expected a valid predicate");
       if (!State.MIs[InsnID]->getOperand(1).isCImm())
         llvm_unreachable("Expected Imm or CImm operand");
 
@@ -323,8 +324,7 @@ bool GIMatchTableExecutor::executeMatchTable(
              "Expected G_FCONSTANT");
       assert(State.MIs[InsnID]->getOperand(1).isFPImm() &&
              "Expected FPImm operand");
-      assert(Predicate > GICXXPred_Invalid &&
-             "Expected a valid predicate");
+      assert(Predicate > GICXXPred_Invalid && "Expected a valid predicate");
       const APFloat &Value =
           State.MIs[InsnID]->getOperand(1).getFPImm()->getValueAPF();
 
@@ -727,9 +727,16 @@ bool GIMatchTableExecutor::executeMatchTable(
       if (MO.isReg()) {
         // isOperandImmEqual() will sign-extend to 64-bits, so should we.
         LLT Ty = MRI.getType(MO.getReg());
-        Value = SignExtend64(Value, Ty.getSizeInBits());
+        // If the type is > 64 bits, it can't be a constant int, so we bail
+        // early because SignExtend64 will assert otherwise.
+        if (Ty.getScalarSizeInBits() > 64) {
+          if (handleReject() == RejectAndGiveUp)
+            return false;
+          break;
+        }
 
-        if (!isOperandImmEqual(MO, Value, MRI)) {
+        Value = SignExtend64(Value, Ty.getScalarSizeInBits());
+        if (!isOperandImmEqual(MO, Value, MRI, /*Splat=*/true)) {
           if (handleReject() == RejectAndGiveUp)
             return false;
         }
@@ -1022,6 +1029,23 @@ bool GIMatchTableExecutor::executeMatchTable(
       break;
     }
 
+    case GIR_AddCImm: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t TypeID = MatchTable[CurrentIdx++];
+      int64_t Imm = MatchTable[CurrentIdx++];
+      assert(OutMIs[InsnID] && "Attempted to add to undefined instruction");
+
+      unsigned Width = ExecInfo.TypeObjects[TypeID].getScalarSizeInBits();
+      LLVMContext &Ctx = MF->getFunction().getContext();
+      OutMIs[InsnID].addCImm(
+          ConstantInt::get(IntegerType::get(Ctx, Width), Imm, /*signed*/ true));
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_AddCImm(OutMIs[" << InsnID
+                             << "], TypeID=" << TypeID << ", Imm=" << Imm
+                             << ")\n");
+      break;
+    }
+
     case GIR_ComplexRenderer: {
       int64_t InsnID = MatchTable[CurrentIdx++];
       int64_t RendererID = MatchTable[CurrentIdx++];
@@ -1121,7 +1145,7 @@ bool GIMatchTableExecutor::executeMatchTable(
                       dbgs() << CurrentIdx << ": GIR_CustomAction(FnID=" << FnID
                              << ")\n");
       assert(FnID > GICXXCustomAction_Invalid && "Expected a valid FnID");
-      runCustomAction(FnID, State);
+      runCustomAction(FnID, State, OutMIs);
       break;
     }
     case GIR_CustomOperandRenderer: {
@@ -1191,12 +1215,14 @@ bool GIMatchTableExecutor::executeMatchTable(
 
     case GIR_EraseFromParent: {
       int64_t InsnID = MatchTable[CurrentIdx++];
-      assert(State.MIs[InsnID] &&
-             "Attempted to erase an undefined instruction");
-      State.MIs[InsnID]->eraseFromParent();
+      MachineInstr *MI = State.MIs[InsnID];
+      assert(MI && "Attempted to erase an undefined instruction");
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_EraseFromParent(MIs["
                              << InsnID << "])\n");
+      if (Observer)
+        Observer->erasingInstr(*MI);
+      MI->eraseFromParent();
       break;
     }
 
@@ -1226,6 +1252,10 @@ bool GIMatchTableExecutor::executeMatchTable(
     case GIR_Done:
       DEBUG_WITH_TYPE(TgtExecutor::getName(),
                       dbgs() << CurrentIdx << ": GIR_Done\n");
+      if (Observer) {
+        for (MachineInstr *MI : OutMIs)
+          Observer->createdInstr(*MI);
+      }
       propagateFlags(OutMIs);
       return true;
     default:
