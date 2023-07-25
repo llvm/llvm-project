@@ -17,6 +17,7 @@
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinOps.h"
+#include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/Operation.h"
@@ -369,10 +370,15 @@ static LogicalResult inferOperationTypes(OperationState &state) {
   if (!properties && info->getOpPropertyByteSize() > 0 && !attributes.empty()) {
     auto prop = std::make_unique<char[]>(info->getOpPropertyByteSize());
     properties = OpaqueProperties(prop.get());
+    InFlightDiagnostic diag = emitError(state.location)
+                              << " failed properties conversion while building "
+                              << state.name.getStringRef() << " with `"
+                              << attributes << "`: ";
     if (failed(info->setOpPropertiesFromAttribute(state.name, properties,
-                                                  attributes, nullptr))) {
+                                                  attributes, &diag))) {
       return failure();
     }
+    diag.abandon();
 
     if (succeeded(inferInterface->inferReturnTypes(
             context, state.location, state.operands, attributes, properties,
