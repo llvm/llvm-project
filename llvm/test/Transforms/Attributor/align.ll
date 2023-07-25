@@ -1136,6 +1136,6 @@ attributes #2 = { null_pointer_is_valid }
 ; CGSCC: attributes #[[ATTR11]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR12]] = { mustprogress nofree nosync nounwind willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR13]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR14]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR14]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR15]] = { nofree willreturn memory(read) }
 ;.

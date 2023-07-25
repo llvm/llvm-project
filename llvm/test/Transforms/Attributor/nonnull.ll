@@ -982,7 +982,7 @@ define ptr @g1() {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@g1
 ; CGSCC-SAME: () #[[ATTR10:[0-9]+]] {
-; CGSCC-NEXT:    [[C:%.*]] = call noundef nonnull align 4 ptr @g2() #[[ATTR15]]
+; CGSCC-NEXT:    [[C:%.*]] = call noundef nonnull align 4 ptr @g2() #[[ATTR18:[0-9]+]]
 ; CGSCC-NEXT:    ret ptr [[C]]
 ;
   %c = call ptr @g2()
@@ -1390,14 +1390,23 @@ declare ptr @strrchr(ptr %0, i32 %1) nofree nounwind readonly willreturn
 
 ; We should not mark the return of @strrchr as `nonnull`, it may well be NULL!
 define ptr @mybasename(ptr nofree readonly %str) {
-; CHECK: Function Attrs: mustprogress nofree nounwind willreturn memory(read)
-; CHECK-LABEL: define {{[^@]+}}@mybasename
-; CHECK-SAME: (ptr nofree readonly [[STR:%.*]]) #[[ATTR14:[0-9]+]] {
-; CHECK-NEXT:    [[CALL:%.*]] = call ptr @strrchr(ptr nofree readonly [[STR]], i32 noundef 47) #[[ATTR18:[0-9]+]]
-; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[CALL]], null
-; CHECK-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 1
-; CHECK-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], ptr [[ADD_PTR]], ptr [[STR]]
-; CHECK-NEXT:    ret ptr [[COND]]
+; TUNIT: Function Attrs: mustprogress nofree nounwind willreturn memory(read)
+; TUNIT-LABEL: define {{[^@]+}}@mybasename
+; TUNIT-SAME: (ptr nofree readonly [[STR:%.*]]) #[[ATTR14:[0-9]+]] {
+; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @strrchr(ptr nofree readonly [[STR]], i32 noundef 47) #[[ATTR18:[0-9]+]]
+; TUNIT-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[CALL]], null
+; TUNIT-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 1
+; TUNIT-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], ptr [[ADD_PTR]], ptr [[STR]]
+; TUNIT-NEXT:    ret ptr [[COND]]
+;
+; CGSCC: Function Attrs: mustprogress nofree nounwind willreturn memory(read)
+; CGSCC-LABEL: define {{[^@]+}}@mybasename
+; CGSCC-SAME: (ptr nofree readonly [[STR:%.*]]) #[[ATTR14:[0-9]+]] {
+; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @strrchr(ptr nofree readonly [[STR]], i32 noundef 47) #[[ATTR19:[0-9]+]]
+; CGSCC-NEXT:    [[TOBOOL:%.*]] = icmp ne ptr [[CALL]], null
+; CGSCC-NEXT:    [[ADD_PTR:%.*]] = getelementptr inbounds i8, ptr [[CALL]], i64 1
+; CGSCC-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], ptr [[ADD_PTR]], ptr [[STR]]
+; CGSCC-NEXT:    ret ptr [[COND]]
 ;
   %call = call ptr @strrchr(ptr %str, i32 47)
   %tobool = icmp ne ptr %call, null
@@ -1557,5 +1566,6 @@ attributes #1 = { nounwind willreturn}
 ; CGSCC: attributes #[[ATTR15]] = { nofree willreturn }
 ; CGSCC: attributes #[[ATTR16]] = { nofree nosync nounwind memory(read) }
 ; CGSCC: attributes #[[ATTR17]] = { willreturn memory(read) }
-; CGSCC: attributes #[[ATTR18]] = { nofree willreturn memory(read) }
+; CGSCC: attributes #[[ATTR18]] = { nofree nosync willreturn }
+; CGSCC: attributes #[[ATTR19]] = { nofree willreturn memory(read) }
 ;.
