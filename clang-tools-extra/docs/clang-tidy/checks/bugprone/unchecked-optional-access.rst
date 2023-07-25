@@ -8,8 +8,9 @@ results. Therefore, it may be more resource intensive (RAM, CPU) than the
 average clang-tidy check.
 
 This check identifies unsafe accesses to values contained in
-``std::optional<T>``, ``absl::optional<T>``, or ``base::Optional<T>``
-objects. Below we will refer to all these types collectively as ``optional<T>``.
+``std::optional<T>``, ``absl::optional<T>``, ``base::Optional<T>``, or
+``folly::Optional<T>`` objects. Below we will refer to all these types
+collectively as ``optional<T>``.
 
 An access to the value of an ``optional<T>`` occurs when one of its ``value``,
 ``operator*``, or ``operator->`` member functions is invoked.  To align with

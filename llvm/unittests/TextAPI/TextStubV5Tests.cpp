@@ -124,6 +124,8 @@ TEST(TBDv5, ReadFile) {
               "_globalVar"
           ],
           "objc_class": [
+              "ClassA",
+              "ClassB",
               "ClassData"
           ],
           "objc_eh_type": [
@@ -264,7 +266,18 @@ TEST(TBDv5, ReadFile) {
        false,
        true,
        {Target(AK_x86_64, PLATFORM_MACOS)}},
-      {SymbolKind::ObjectiveCClass, "ClassA", false, false, true, MacOSTargets},
+      {SymbolKind::ObjectiveCClass,
+       "ClassA",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
+      {SymbolKind::ObjectiveCClass,
+       "ClassB",
+       false,
+       false,
+       true,
+       {Target(AK_x86_64, PLATFORM_MACOS)}},
       {SymbolKind::ObjectiveCClass,
        "ClassData",
        false,
@@ -333,6 +346,9 @@ TEST(TBDv5, ReadFile) {
                          std::begin(ExpectedReexportedSymbols)));
   EXPECT_TRUE(std::equal(Undefineds.begin(), Undefineds.end(),
                          std::begin(ExpectedUndefinedSymbols)));
+
+  EXPECT_TRUE(
+      File->getSymbol(SymbolKind::GlobalSymbol, "_globalBind").has_value());
 }
 
 TEST(TBDv5, ReadMultipleTargets) {
@@ -440,7 +456,7 @@ TEST(TBDv5, ReadMultipleDocuments) {
       {
         "data": {
           "thread_local": [ "_globalVar" ],
-          "objc_class": [ "ClassData" ], 
+          "objc_class": [ "ClassData", "ClassA", "ClassB"], 
           "objc_eh_type": [ "ClassA", "ClassB" ]
         },
         "text": {
@@ -495,6 +511,8 @@ TEST(TBDv5, ReadMultipleDocuments) {
   ExportedSymbolSeq ExpectedExports = {
       {SymbolKind::GlobalSymbol, "_funcFoo", false, false, false, {iOSTarget}},
       {SymbolKind::GlobalSymbol, "_globalVar", false, true, true, {iOSTarget}},
+      {SymbolKind::ObjectiveCClass, "ClassA", false, false, true, {iOSTarget}},
+      {SymbolKind::ObjectiveCClass, "ClassB", false, false, true, {iOSTarget}},
       {SymbolKind::ObjectiveCClass,
        "ClassData",
        false,
@@ -622,6 +640,8 @@ TEST(TBDv5, WriteFile) {
               "_globalVar"
           ],
           "objc_class": [
+              "ClassA",
+              "ClassB",
               "ClassData"
           ],
           "objc_eh_type": [

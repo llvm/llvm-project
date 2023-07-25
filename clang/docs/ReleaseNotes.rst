@@ -84,6 +84,7 @@ C++ Language Changes
   directly rather than instantiating the definition from the standard library.
 - Implemented `CWG2518 <https://wg21.link/CWG2518>`_ which allows ``static_assert(false)``
   to not be ill-formed when its condition is evaluated in the context of a template definition.
+- Declaring namespace std to be an inline namespace is now prohibited, `[namespace.std]p7`.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -684,6 +685,8 @@ Bug Fixes in This Version
 - Invalidate BlockDecl with invalid ParmVarDecl. Remove redundant dump of
   BlockDecl's ParmVarDecl
   (`#64005 <https://github.com/llvm/llvm-project/issues/64005>_`)
+- Fix crash on nested templated class with template function call.
+  (`#61159 <https://github.com/llvm/llvm-project/issues/61159>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -898,9 +901,6 @@ RISC-V Support
 - The rules for ordering of extensions in ``-march`` strings were relaxed. A
   canonical ordering is no longer enforced on ``z*``, ``s*``, and ``x*``
   prefixed extensions.
-- An ABI mismatch between GCC and Clang related to the handling of empty
-  structs in C++ parameter passing under the hard floating point calling
-  conventions was fixed.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -953,6 +953,7 @@ Floating Point Support in Clang
 - Add ``__builtin_elementwise_exp`` builtin for floating point types only.
 - Add ``__builtin_elementwise_exp2`` builtin for floating point types only.
 - Add ``__builtin_set_flt_rounds`` builtin for X86, x86_64, Arm and AArch64 only.
+- Add ``__builtin_elementwise_pow`` builtin for floating point types only.
 
 AST Matchers
 ------------

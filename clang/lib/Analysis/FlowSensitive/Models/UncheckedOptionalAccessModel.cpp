@@ -56,9 +56,10 @@ static bool hasOptionalClassName(const CXXRecordDecl &RD) {
   }
 
   if (RD.getName() == "Optional") {
-    // Check whether namespace is "::base".
+    // Check whether namespace is "::base" or "::folly".
     const auto *N = dyn_cast_or_null<NamespaceDecl>(RD.getDeclContext());
-    return N != nullptr && isTopLevelNamespaceWithName(*N, "base");
+    return N != nullptr && (isTopLevelNamespaceWithName(*N, "base") ||
+                            isTopLevelNamespaceWithName(*N, "folly"));
   }
 
   return false;
@@ -87,8 +88,8 @@ auto optionalOrAliasType() {
 /// Matches any of the spellings of the optional types and sugar, aliases, etc.
 auto hasOptionalType() { return hasType(optionalOrAliasType()); }
 
-auto isOptionalMemberCallWithName(
-    llvm::StringRef MemberName,
+auto isOptionalMemberCallWithNameMatcher(
+    ast_matchers::internal::Matcher<NamedDecl> matcher,
     const std::optional<StatementMatcher> &Ignorable = std::nullopt) {
   auto Exception = unless(Ignorable ? expr(anyOf(*Ignorable, cxxThisExpr()))
                                     : cxxThisExpr());
@@ -96,7 +97,7 @@ auto isOptionalMemberCallWithName(
       on(expr(Exception,
               anyOf(hasOptionalType(),
                     hasType(pointerType(pointee(optionalOrAliasType())))))),
-      callee(cxxMethodDecl(hasName(MemberName))));
+      callee(cxxMethodDecl(matcher)));
 }
 
 auto isOptionalOperatorCallWithName(
@@ -109,15 +110,15 @@ auto isOptionalOperatorCallWithName(
 }
 
 auto isMakeOptionalCall() {
-  return callExpr(
-      callee(functionDecl(hasAnyName(
-          "std::make_optional", "base::make_optional", "absl::make_optional"))),
-      hasOptionalType());
+  return callExpr(callee(functionDecl(hasAnyName(
+                      "std::make_optional", "base::make_optional",
+                      "absl::make_optional", "folly::make_optional"))),
+                  hasOptionalType());
 }
 
 auto nulloptTypeDecl() {
-  return namedDecl(
-      hasAnyName("std::nullopt_t", "absl::nullopt_t", "base::nullopt_t"));
+  return namedDecl(hasAnyName("std::nullopt_t", "absl::nullopt_t",
+                              "base::nullopt_t", "folly::None"));
 }
 
 auto hasNulloptType() { return hasType(nulloptTypeDecl()); }
@@ -129,8 +130,8 @@ auto hasAnyOptionalType() {
 }
 
 auto inPlaceClass() {
-  return recordDecl(
-      hasAnyName("std::in_place_t", "absl::in_place_t", "base::in_place_t"));
+  return recordDecl(hasAnyName("std::in_place_t", "absl::in_place_t",
+                               "base::in_place_t", "folly::in_place_t"));
 }
 
 auto isOptionalNulloptConstructor() {
@@ -750,7 +751,8 @@ ignorableOptional(const UncheckedOptionalAccessModelOptions &Options) {
 
 StatementMatcher
 valueCall(const std::optional<StatementMatcher> &IgnorableOptional) {
-  return isOptionalMemberCallWithName("value", IgnorableOptional);
+  return isOptionalMemberCallWithNameMatcher(hasName("value"),
+                                             IgnorableOptional);
 }
 
 StatementMatcher
@@ -832,19 +834,22 @@ auto buildTransferMatchSwitch() {
                                  transferArrowOpCall(E, E->getArg(0), State);
                                })
 
-      // optional::has_value
+      // optional::has_value, optional::hasValue
+      // Of the supported optionals only folly::Optional uses hasValue, but this
+      // will also pass for other types
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithName("has_value"),
+          isOptionalMemberCallWithNameMatcher(
+              hasAnyName("has_value", "hasValue")),
           transferOptionalHasValueCall)
 
       // optional::operator bool
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithName("operator bool"),
+          isOptionalMemberCallWithNameMatcher(hasName("operator bool")),
           transferOptionalHasValueCall)
 
       // optional::emplace
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithName("emplace"),
+          isOptionalMemberCallWithNameMatcher(hasName("emplace")),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (AggregateStorageLocation *Loc =
@@ -856,7 +861,7 @@ auto buildTransferMatchSwitch() {
 
       // optional::reset
       .CaseOfCFGStmt<CXXMemberCallExpr>(
-          isOptionalMemberCallWithName("reset"),
+          isOptionalMemberCallWithNameMatcher(hasName("reset")),
           [](const CXXMemberCallExpr *E, const MatchFinder::MatchResult &,
              LatticeTransferState &State) {
             if (AggregateStorageLocation *Loc =
@@ -867,8 +872,9 @@ auto buildTransferMatchSwitch() {
           })
 
       // optional::swap
-      .CaseOfCFGStmt<CXXMemberCallExpr>(isOptionalMemberCallWithName("swap"),
-                                        transferSwapCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(
+          isOptionalMemberCallWithNameMatcher(hasName("swap")),
+          transferSwapCall)
 
       // std::swap
       .CaseOfCFGStmt<CallExpr>(isStdSwapCall(), transferStdSwapCall)

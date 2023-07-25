@@ -239,13 +239,15 @@
 // - `_LIBCPP_ASSERT_VALID_INPUT_RANGE` -- checks that ranges (whether expressed as an iterator pair, an iterator and
 //   a sentinel, an iterator and a count, or a `std::range`) given as input to library functions are valid:
 //   - the sentinel is reachable from the begin iterator;
-//   - TODO(hardening): where applicable, the input range and the output range do not overlap;
 //   - TODO(hardening): both iterators refer to the same container.
 //
 // - `_LIBCPP_ASSERT_VALID_ELEMENT_ACCESS` -- checks that any attempts to access a container element, whether through
 //   the container object or through an iterator, are valid and do not attempt to go out of bounds or otherwise access
 //   a non-existent element. For iterator checks to work, bounded iterators must be enabled in the ABI. Types like
 //   `optional` and `function` are considered one-element containers for the purposes of this check.
+//
+// - `_LIBCPP_ASSERT_NON_OVERLAPPING_RANGES` -- for functions that take several ranges as arguments, checks that the
+//   given ranges do not overlap.
 //
 // - `_LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR` -- checks any operations that exchange nodes between containers to make sure
 //   the containers have compatible allocators.
@@ -279,34 +281,39 @@
 #  if _LIBCPP_ENABLE_HARDENED_MODE
 
 // Enabled checks.
-#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)      _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)   _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)        _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)     _LIBCPP_ASSERT(expression, message)
 // Disabled checks.
-#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)   _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_INTERNAL(expression, message)               _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)          _LIBCPP_ASSUME(expression)
+// Overlapping ranges will make algorithms produce incorrect results but don't directly lead to a security
+// vulnerability.
+#    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)   _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)     _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                 _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)            _LIBCPP_ASSUME(expression)
 
 // Debug mode checks.
 
 #  elif _LIBCPP_ENABLE_DEBUG_MODE
 
 // All checks enabled.
-#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)       _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)    _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)    _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                _LIBCPP_ASSERT(expression, message)
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)           _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSERT(expression, message)
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSERT(expression, message)
 
 // Disable all checks if hardening is not enabled.
 
 #  else
 
 // All checks disabled.
-#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)       _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)    _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)    _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                _LIBCPP_ASSUME(expression)
-#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)           _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_VALID_INPUT_RANGE(expression, message)         _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_NON_OVERLAPPING_RANGES(expression, message)    _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_COMPATIBLE_ALLOCATOR(expression, message)      _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_INTERNAL(expression, message)                  _LIBCPP_ASSUME(expression)
+#    define _LIBCPP_ASSERT_UNCATEGORIZED(expression, message)             _LIBCPP_ASSUME(expression)
 
 #  endif // _LIBCPP_ENABLE_HARDENED_MODE
 // clang-format on

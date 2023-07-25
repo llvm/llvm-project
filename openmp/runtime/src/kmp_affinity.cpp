@@ -1273,28 +1273,6 @@ bool kmp_topology_t::is_close(int hwt1, int hwt2, int hw_level) const {
 ////////////////////////////////////////////////////////////////////////////////
 
 #if KMP_AFFINITY_SUPPORTED
-class kmp_affinity_raii_t {
-  kmp_affin_mask_t *mask;
-  bool restored;
-
-public:
-  kmp_affinity_raii_t() : restored(false) {
-    KMP_CPU_ALLOC(mask);
-    KMP_ASSERT(mask != NULL);
-    __kmp_get_system_affinity(mask, TRUE);
-  }
-  void restore() {
-    __kmp_set_system_affinity(mask, TRUE);
-    KMP_CPU_FREE(mask);
-    restored = true;
-  }
-  ~kmp_affinity_raii_t() {
-    if (!restored) {
-      __kmp_set_system_affinity(mask, TRUE);
-      KMP_CPU_FREE(mask);
-    }
-  }
-};
 
 bool KMPAffinity::picked_api = false;
 

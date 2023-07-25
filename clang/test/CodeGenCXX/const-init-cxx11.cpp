@@ -88,7 +88,7 @@ namespace BaseClass {
 
   struct E {};
   struct Test2 : X<E,0>, X<E,1>, X<E,2>, X<E,3> {};
-  // CHECK: @_ZN9BaseClass2t2E ={{.*}} constant {{.*}} undef
+  // CHECK: @_ZN9BaseClass2t2E ={{.*}} constant {{.*}} zeroinitializer, align 1
   extern constexpr Test2 t2 = Test2();
 
   struct __attribute((packed)) PackedD { double y = 2; };

@@ -17,8 +17,6 @@
 ; CHECK-NEXT:                > 1.2
 ; CHECK-NEXT:        Swift ABI Version
 ; CHECK-NEXT:                > 3
-; CHECK-NEXT:        InstallAPI
-; CHECK-NEXT:                > false
 ; CHECK-NEXT:        Two Level Namespace
 ; CHECK-NEXT:                > true
 ; CHECK-NEXT:        Application Extension Safe
