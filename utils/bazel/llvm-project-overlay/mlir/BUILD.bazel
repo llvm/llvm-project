@@ -1838,6 +1838,18 @@ cc_library(
 )
 
 cc_library(
+    name = "ArmSMEUtils",
+    srcs = glob(["lib/Dialect/ArmSME/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/ArmSME/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArmSMEDialect",
+        ":IR",
+        ":Dialect",
+    ],
+)
+
+cc_library(
     name = "ArmSMETransforms",
     srcs = glob(["lib/Dialect/ArmSME/Transforms/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/ArmSME/Transforms/*.h"]),
@@ -1845,6 +1857,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArmSMEDialect",
+        ":ArmSMEUtils",
         ":ArmSMETransformsPassIncGen",
         ":FuncDialect",
         ":IR",
@@ -9899,6 +9912,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEDialect",
+        ":ArmSMEUtils",
         ":ConversionPassIncGen",
         ":IR",
         ":Pass",
