@@ -233,32 +233,31 @@ define i1 @cmpxchg_i8_acquire_acquire_reti1(ptr %ptr, i8 %cmp, i8 %val) nounwind
 ; LA64-NEXT:    addi.w $a3, $zero, -4
 ; LA64-NEXT:    and $a3, $a0, $a3
 ; LA64-NEXT:    slli.d $a0, $a0, 3
-; LA64-NEXT:    andi $a1, $a1, 255
-; LA64-NEXT:    sll.w $a1, $a1, $a0
 ; LA64-NEXT:    ori $a4, $zero, 255
 ; LA64-NEXT:    sll.w $a4, $a4, $a0
+; LA64-NEXT:    andi $a1, $a1, 255
+; LA64-NEXT:    sll.w $a1, $a1, $a0
 ; LA64-NEXT:    andi $a2, $a2, 255
 ; LA64-NEXT:    sll.w $a0, $a2, $a0
 ; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    addi.w $a2, $a4, 0
-; LA64-NEXT:    addi.w $a5, $a1, 0
 ; LA64-NEXT:  .LBB8_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ll.w $a6, $a3, 0
-; LA64-NEXT:    and $a7, $a6, $a2
-; LA64-NEXT:    bne $a7, $a5, .LBB8_3
+; LA64-NEXT:    ll.w $a5, $a3, 0
+; LA64-NEXT:    and $a6, $a5, $a2
+; LA64-NEXT:    bne $a6, $a1, .LBB8_3
 ; LA64-NEXT:  # %bb.2: # in Loop: Header=BB8_1 Depth=1
 ; LA64-NEXT:    dbar 0
-; LA64-NEXT:    andn $a7, $a6, $a2
-; LA64-NEXT:    or $a7, $a7, $a0
-; LA64-NEXT:    sc.w $a7, $a3, 0
-; LA64-NEXT:    beqz $a7, .LBB8_1
+; LA64-NEXT:    andn $a6, $a5, $a2
+; LA64-NEXT:    or $a6, $a6, $a0
+; LA64-NEXT:    sc.w $a6, $a3, 0
+; LA64-NEXT:    beqz $a6, .LBB8_1
 ; LA64-NEXT:    b .LBB8_4
 ; LA64-NEXT:  .LBB8_3:
 ; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB8_4:
-; LA64-NEXT:    and $a0, $a6, $a4
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 0
+; LA64-NEXT:    and $a0, $a5, $a4
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    xor $a0, $a1, $a0
 ; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:    ret
@@ -273,33 +272,32 @@ define i1 @cmpxchg_i16_acquire_acquire_reti1(ptr %ptr, i16 %cmp, i16 %val) nounw
 ; LA64-NEXT:    addi.w $a3, $zero, -4
 ; LA64-NEXT:    and $a3, $a0, $a3
 ; LA64-NEXT:    slli.d $a0, $a0, 3
-; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
-; LA64-NEXT:    sll.w $a1, $a1, $a0
 ; LA64-NEXT:    lu12i.w $a4, 15
 ; LA64-NEXT:    ori $a4, $a4, 4095
 ; LA64-NEXT:    sll.w $a4, $a4, $a0
+; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
+; LA64-NEXT:    sll.w $a1, $a1, $a0
 ; LA64-NEXT:    bstrpick.d $a2, $a2, 15, 0
 ; LA64-NEXT:    sll.w $a0, $a2, $a0
 ; LA64-NEXT:    addi.w $a0, $a0, 0
+; LA64-NEXT:    addi.w $a1, $a1, 0
 ; LA64-NEXT:    addi.w $a2, $a4, 0
-; LA64-NEXT:    addi.w $a5, $a1, 0
 ; LA64-NEXT:  .LBB9_1: # =>This Inner Loop Header: Depth=1
-; LA64-NEXT:    ll.w $a6, $a3, 0
-; LA64-NEXT:    and $a7, $a6, $a2
-; LA64-NEXT:    bne $a7, $a5, .LBB9_3
+; LA64-NEXT:    ll.w $a5, $a3, 0
+; LA64-NEXT:    and $a6, $a5, $a2
+; LA64-NEXT:    bne $a6, $a1, .LBB9_3
 ; LA64-NEXT:  # %bb.2: # in Loop: Header=BB9_1 Depth=1
 ; LA64-NEXT:    dbar 0
-; LA64-NEXT:    andn $a7, $a6, $a2
-; LA64-NEXT:    or $a7, $a7, $a0
-; LA64-NEXT:    sc.w $a7, $a3, 0
-; LA64-NEXT:    beqz $a7, .LBB9_1
+; LA64-NEXT:    andn $a6, $a5, $a2
+; LA64-NEXT:    or $a6, $a6, $a0
+; LA64-NEXT:    sc.w $a6, $a3, 0
+; LA64-NEXT:    beqz $a6, .LBB9_1
 ; LA64-NEXT:    b .LBB9_4
 ; LA64-NEXT:  .LBB9_3:
 ; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB9_4:
-; LA64-NEXT:    and $a0, $a6, $a4
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
-; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 0
+; LA64-NEXT:    and $a0, $a5, $a4
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    xor $a0, $a1, $a0
 ; LA64-NEXT:    sltui $a0, $a0, 1
 ; LA64-NEXT:    ret
