@@ -999,21 +999,21 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                              marked with the :ref:`afn <fastmath_afn>` flag.
 
   llvm.amdgcn.wave.reduce.umin               Performs an arithmetic unsigned min reduction on the unsigned values
-                                             provided by each lane in the wavefront. 
-                                             Intrinsic takes a hint for reduction strategy using second operand
-                                             0: Target default preference,
-                                             1: `Iterative strategy`, and
-                                             2: `DPP`. 
-                                             If target does not support the DPP operations (e.g. gfx6/7),
-                                             reduction will be performed using default iterative strategy.
-                                             Intrinsic is currently only implemented for i32.
-
-  llvm.amdgcn.wave.reduce.umax               Performs an arithmetic unsigned max reduction on the unsigned values 
                                              provided by each lane in the wavefront.
                                              Intrinsic takes a hint for reduction strategy using second operand
                                              0: Target default preference,
                                              1: `Iterative strategy`, and
-                                             2: `DPP`. 
+                                             2: `DPP`.
+                                             If target does not support the DPP operations (e.g. gfx6/7),
+                                             reduction will be performed using default iterative strategy.
+                                             Intrinsic is currently only implemented for i32.
+
+  llvm.amdgcn.wave.reduce.umax               Performs an arithmetic unsigned max reduction on the unsigned values
+                                             provided by each lane in the wavefront.
+                                             Intrinsic takes a hint for reduction strategy using second operand
+                                             0: Target default preference,
+                                             1: `Iterative strategy`, and
+                                             2: `DPP`.
                                              If target does not support the DPP operations (e.g. gfx6/7),
                                              reduction will be performed using default iterative strategy.
                                              Intrinsic is currently only implemented for i32.
