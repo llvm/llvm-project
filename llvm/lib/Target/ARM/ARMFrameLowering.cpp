@@ -2966,6 +2966,7 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   // We save R4 and R5 before use and restore them before leaving the function.
   unsigned ScratchReg0 = ARM::R4;
   unsigned ScratchReg1 = ARM::R5;
+  unsigned MovOp = ST->useMovt() ? ARM::t2MOVi32imm : ARM::tMOVi32imm;
   uint64_t AlignedStackSize;
 
   MachineBasicBlock *PrevStackMBB = MF.CreateMachineBasicBlock();
@@ -3083,8 +3084,8 @@ void ARMFrameLowering::adjustForSegmentedStacks(
           .addImm(AlignedStackSize)
           .add(predOps(ARMCC::AL));
     } else {
-      if (Thumb2) {
-        BuildMI(McrMBB, DL, TII.get(ARM::t2MOVi32imm), ScratchReg0)
+      if (Thumb2 || ST->genExecuteOnly()) {
+        BuildMI(McrMBB, DL, TII.get(MovOp), ScratchReg0)
             .addImm(AlignedStackSize);
       } else {
         auto MBBI = McrMBB->end();
@@ -3119,16 +3120,21 @@ void ARMFrameLowering::adjustForSegmentedStacks(
   }
 
   if (Thumb && ST->isThumb1Only()) {
-    unsigned PCLabelId = ARMFI->createPICLabelUId();
-    ARMConstantPoolValue *NewCPV = ARMConstantPoolSymbol::Create(
-        MF.getFunction().getContext(), "__STACK_LIMIT", PCLabelId, 0);
-    MachineConstantPool *MCP = MF.getConstantPool();
-    unsigned CPI = MCP->getConstantPoolIndex(NewCPV, Align(4));
+    if (ST->genExecuteOnly()) {
+      BuildMI(GetMBB, DL, TII.get(MovOp), ScratchReg0)
+          .addExternalSymbol("__STACK_LIMIT");
+    } else {
+      unsigned PCLabelId = ARMFI->createPICLabelUId();
+      ARMConstantPoolValue *NewCPV = ARMConstantPoolSymbol::Create(
+          MF.getFunction().getContext(), "__STACK_LIMIT", PCLabelId, 0);
+      MachineConstantPool *MCP = MF.getConstantPool();
+      unsigned CPI = MCP->getConstantPoolIndex(NewCPV, Align(4));
 
-    // ldr SR0, [pc, offset(STACK_LIMIT)]
-    BuildMI(GetMBB, DL, TII.get(ARM::tLDRpci), ScratchReg0)
-        .addConstantPoolIndex(CPI)
-        .add(predOps(ARMCC::AL));
+      // ldr SR0, [pc, offset(STACK_LIMIT)]
+      BuildMI(GetMBB, DL, TII.get(ARM::tLDRpci), ScratchReg0)
+          .addConstantPoolIndex(CPI)
+          .add(predOps(ARMCC::AL));
+    }
 
     // ldr SR0, [SR0]
     BuildMI(GetMBB, DL, TII.get(ARM::tLDRi), ScratchReg0)
@@ -3188,8 +3194,8 @@ void ARMFrameLowering::adjustForSegmentedStacks(
           .addImm(AlignedStackSize)
           .add(predOps(ARMCC::AL));
     } else {
-      if (Thumb2) {
-        BuildMI(AllocMBB, DL, TII.get(ARM::t2MOVi32imm), ScratchReg0)
+      if (Thumb2 || ST->genExecuteOnly()) {
+        BuildMI(AllocMBB, DL, TII.get(MovOp), ScratchReg0)
             .addImm(AlignedStackSize);
       } else {
         auto MBBI = AllocMBB->end();
@@ -3221,8 +3227,8 @@ void ARMFrameLowering::adjustForSegmentedStacks(
           .addImm(alignToARMConstant(ARMFI->getArgumentStackSize()))
           .add(predOps(ARMCC::AL));
     } else {
-      if (Thumb2) {
-        BuildMI(AllocMBB, DL, TII.get(ARM::t2MOVi32imm), ScratchReg1)
+      if (Thumb2 || ST->genExecuteOnly()) {
+        BuildMI(AllocMBB, DL, TII.get(MovOp), ScratchReg1)
             .addImm(alignToARMConstant(ARMFI->getArgumentStackSize()));
       } else {
         auto MBBI = AllocMBB->end();
