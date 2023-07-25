@@ -32,6 +32,17 @@
 #define __DEVICE__ static __device__ inline __attribute__((always_inline))
 #endif
 
+// Device library provides fast low precision and slow full-recision
+// implementations for some functions. Which one gets selected depends on
+// __CLANG_CUDA_APPROX_TRANSCENDENTALS__ which gets defined by clang if
+// -ffast-math or -fcuda-approx-transcendentals are in effect.
+#pragma push_macro("__FAST_OR_SLOW")
+#if defined(__CLANG_CUDA_APPROX_TRANSCENDENTALS__)
+#define __FAST_OR_SLOW(fast, slow) fast
+#else
+#define __FAST_OR_SLOW(fast, slow) slow
+#endif
+
 // A few functions return bool type starting only in C++11.
 #pragma push_macro("__RETURN_TYPE")
 #ifdef __OPENMP_AMDGCN__
@@ -139,6 +150,168 @@ uint64_t __make_mantissa(const char *__tagp __attribute__((nonnull))) {
 }
 
 // BEGIN FLOAT
+
+// BEGIN INTRINSICS
+
+__DEVICE__
+float __cosf(float __x) { return __ocml_native_cos_f32(__x); }
+
+__DEVICE__
+float __exp10f(float __x) {
+  const float __log2_10 = 0x1.a934f0p+1f;
+  return __builtin_amdgcn_exp2f(__log2_10 * __x);
+}
+
+__DEVICE__
+float __expf(float __x) {
+  const float __log2_e = 0x1.715476p+0;
+  return __builtin_amdgcn_exp2f(__log2_e * __x);
+}
+
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
+__DEVICE__
+float __fadd_rd(float __x, float __y) { return __ocml_add_rtn_f32(__x, __y); }
+__DEVICE__
+float __fadd_rn(float __x, float __y) { return __ocml_add_rte_f32(__x, __y); }
+__DEVICE__
+float __fadd_ru(float __x, float __y) { return __ocml_add_rtp_f32(__x, __y); }
+__DEVICE__
+float __fadd_rz(float __x, float __y) { return __ocml_add_rtz_f32(__x, __y); }
+#else
+__DEVICE__
+float __fadd_rn(float __x, float __y) { return __x + __y; }
+#endif
+
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
+__DEVICE__
+float __fdiv_rd(float __x, float __y) { return __ocml_div_rtn_f32(__x, __y); }
+__DEVICE__
+float __fdiv_rn(float __x, float __y) { return __ocml_div_rte_f32(__x, __y); }
+__DEVICE__
+float __fdiv_ru(float __x, float __y) { return __ocml_div_rtp_f32(__x, __y); }
+__DEVICE__
+float __fdiv_rz(float __x, float __y) { return __ocml_div_rtz_f32(__x, __y); }
+#else
+__DEVICE__
+float __fdiv_rn(float __x, float __y) { return __x / __y; }
+#endif
+
+__DEVICE__
+float __fdividef(float __x, float __y) { return __x / __y; }
+
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
+__DEVICE__
+float __fmaf_rd(float __x, float __y, float __z) {
+  return __ocml_fma_rtn_f32(__x, __y, __z);
+}
+__DEVICE__
+float __fmaf_rn(float __x, float __y, float __z) {
+  return __ocml_fma_rte_f32(__x, __y, __z);
+}
+__DEVICE__
+float __fmaf_ru(float __x, float __y, float __z) {
+  return __ocml_fma_rtp_f32(__x, __y, __z);
+}
+__DEVICE__
+float __fmaf_rz(float __x, float __y, float __z) {
+  return __ocml_fma_rtz_f32(__x, __y, __z);
+}
+#else
+__DEVICE__
+float __fmaf_rn(float __x, float __y, float __z) {
+  return __builtin_fmaf(__x, __y, __z);
+}
+#endif
+
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
+__DEVICE__
+float __fmul_rd(float __x, float __y) { return __ocml_mul_rtn_f32(__x, __y); }
+__DEVICE__
+float __fmul_rn(float __x, float __y) { return __ocml_mul_rte_f32(__x, __y); }
+__DEVICE__
+float __fmul_ru(float __x, float __y) { return __ocml_mul_rtp_f32(__x, __y); }
+__DEVICE__
+float __fmul_rz(float __x, float __y) { return __ocml_mul_rtz_f32(__x, __y); }
+#else
+__DEVICE__
+float __fmul_rn(float __x, float __y) { return __x * __y; }
+#endif
+
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
+__DEVICE__
+float __frcp_rd(float __x) { return __ocml_div_rtn_f32(1.0f, __x); }
+__DEVICE__
+float __frcp_rn(float __x) { return __ocml_div_rte_f32(1.0f, __x); }
+__DEVICE__
+float __frcp_ru(float __x) { return __ocml_div_rtp_f32(1.0f, __x); }
+__DEVICE__
+float __frcp_rz(float __x) { return __ocml_div_rtz_f32(1.0f, __x); }
+#else
+__DEVICE__
+float __frcp_rn(float __x) { return 1.0f / __x; }
+#endif
+
+__DEVICE__
+float __frsqrt_rn(float __x) { return __builtin_amdgcn_rsqf(__x); }
+
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
+__DEVICE__
+float __fsqrt_rd(float __x) { return __ocml_sqrt_rtn_f32(__x); }
+__DEVICE__
+float __fsqrt_rn(float __x) { return __ocml_sqrt_rte_f32(__x); }
+__DEVICE__
+float __fsqrt_ru(float __x) { return __ocml_sqrt_rtp_f32(__x); }
+__DEVICE__
+float __fsqrt_rz(float __x) { return __ocml_sqrt_rtz_f32(__x); }
+#else
+__DEVICE__
+float __fsqrt_rn(float __x) { return __ocml_native_sqrt_f32(__x); }
+#endif
+
+#if defined OCML_BASIC_ROUNDED_OPERATIONS
+__DEVICE__
+float __fsub_rd(float __x, float __y) { return __ocml_sub_rtn_f32(__x, __y); }
+__DEVICE__
+float __fsub_rn(float __x, float __y) { return __ocml_sub_rte_f32(__x, __y); }
+__DEVICE__
+float __fsub_ru(float __x, float __y) { return __ocml_sub_rtp_f32(__x, __y); }
+__DEVICE__
+float __fsub_rz(float __x, float __y) { return __ocml_sub_rtz_f32(__x, __y); }
+#else
+__DEVICE__
+float __fsub_rn(float __x, float __y) { return __x - __y; }
+#endif
+
+__DEVICE__
+float __log10f(float __x) { return __builtin_log10f(__x); }
+
+__DEVICE__
+float __log2f(float __x) { return __builtin_amdgcn_logf(__x); }
+
+__DEVICE__
+float __logf(float __x) { return __builtin_logf(__x); }
+
+__DEVICE__
+float __powf(float __x, float __y) { return __ocml_pow_f32(__x, __y); }
+
+__DEVICE__
+float __saturatef(float __x) { return (__x < 0) ? 0 : ((__x > 1) ? 1 : __x); }
+
+__DEVICE__
+void __sincosf(float __x, float *__sinptr, float *__cosptr) {
+  *__sinptr = __ocml_native_sin_f32(__x);
+  *__cosptr = __ocml_native_cos_f32(__x);
+}
+
+__DEVICE__
+float __sinf(float __x) { return __ocml_native_sin_f32(__x); }
+
+__DEVICE__
+float __tanf(float __x) {
+  return __sinf(__x) * __builtin_amdgcn_rcpf(__cosf(__x));
+}
+// END INTRINSICS
+
 #if defined(__cplusplus)
 __DEVICE__
 int abs(int __x) {
@@ -188,7 +361,7 @@ __DEVICE__
 float copysignf(float __x, float __y) { return __builtin_copysignf(__x, __y); }
 
 __DEVICE__
-float cosf(float __x) { return __ocml_cos_f32(__x); }
+float cosf(float __x) { return __FAST_OR_SLOW(__cosf, __ocml_cos_f32)(__x); }
 
 __DEVICE__
 float coshf(float __x) { return __ocml_cosh_f32(__x); }
@@ -321,13 +494,13 @@ __DEVICE__
 float log1pf(float __x) { return __ocml_log1p_f32(__x); }
 
 __DEVICE__
-float log2f(float __x) { return __builtin_log2f(__x); }
+float log2f(float __x) { return __FAST_OR_SLOW(__log2f, __ocml_log2_f32)(__x); }
 
 __DEVICE__
 float logbf(float __x) { return __ocml_logb_f32(__x); }
 
 __DEVICE__
-float logf(float __x) { return __builtin_logf(__x); }
+float logf(float __x) { return __FAST_OR_SLOW(__logf, __ocml_log_f32)(__x); }
 
 __DEVICE__
 long int lrintf(float __x) { return __builtin_rintf(__x); }
@@ -483,9 +656,13 @@ void sincosf(float __x, float *__sinptr, float *__cosptr) {
 #ifdef __OPENMP_AMDGCN__
 #pragma omp allocate(__tmp) allocator(omp_thread_mem_alloc)
 #endif
+#ifdef __CLANG_CUDA_APPROX_TRANSCENDENTALS__
+  __sincosf(__x, __sinptr, __cosptr);
+#else
   *__sinptr =
       __ocml_sincos_f32(__x, (__attribute__((address_space(5))) float *)&__tmp);
   *__cosptr = __tmp;
+#endif
 }
 
 __DEVICE__
@@ -500,7 +677,7 @@ void sincospif(float __x, float *__sinptr, float *__cosptr) {
 }
 
 __DEVICE__
-float sinf(float __x) { return __ocml_sin_f32(__x); }
+float sinf(float __x) { return __FAST_OR_SLOW(__sinf, __ocml_sin_f32)(__x); }
 
 __DEVICE__
 float sinhf(float __x) { return __ocml_sinh_f32(__x); }
@@ -551,158 +728,7 @@ float ynf(int __n, float __x) { // TODO: we could use Ahmes multiplication
   return __x1;
 }
 
-// BEGIN INTRINSICS
 
-__DEVICE__
-float __cosf(float __x) { return __ocml_native_cos_f32(__x); }
-
-__DEVICE__
-float __exp10f(float __x) { return __ocml_native_exp10_f32(__x); }
-
-__DEVICE__
-float __expf(float __x) { return __ocml_native_exp_f32(__x); }
-
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
-__DEVICE__
-float __fadd_rd(float __x, float __y) { return __ocml_add_rtn_f32(__x, __y); }
-__DEVICE__
-float __fadd_rn(float __x, float __y) { return __ocml_add_rte_f32(__x, __y); }
-__DEVICE__
-float __fadd_ru(float __x, float __y) { return __ocml_add_rtp_f32(__x, __y); }
-__DEVICE__
-float __fadd_rz(float __x, float __y) { return __ocml_add_rtz_f32(__x, __y); }
-#else
-__DEVICE__
-float __fadd_rn(float __x, float __y) { return __x + __y; }
-#endif
-
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
-__DEVICE__
-float __fdiv_rd(float __x, float __y) { return __ocml_div_rtn_f32(__x, __y); }
-__DEVICE__
-float __fdiv_rn(float __x, float __y) { return __ocml_div_rte_f32(__x, __y); }
-__DEVICE__
-float __fdiv_ru(float __x, float __y) { return __ocml_div_rtp_f32(__x, __y); }
-__DEVICE__
-float __fdiv_rz(float __x, float __y) { return __ocml_div_rtz_f32(__x, __y); }
-#else
-__DEVICE__
-float __fdiv_rn(float __x, float __y) { return __x / __y; }
-#endif
-
-__DEVICE__
-float __fdividef(float __x, float __y) { return __x / __y; }
-
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
-__DEVICE__
-float __fmaf_rd(float __x, float __y, float __z) {
-  return __ocml_fma_rtn_f32(__x, __y, __z);
-}
-__DEVICE__
-float __fmaf_rn(float __x, float __y, float __z) {
-  return __ocml_fma_rte_f32(__x, __y, __z);
-}
-__DEVICE__
-float __fmaf_ru(float __x, float __y, float __z) {
-  return __ocml_fma_rtp_f32(__x, __y, __z);
-}
-__DEVICE__
-float __fmaf_rz(float __x, float __y, float __z) {
-  return __ocml_fma_rtz_f32(__x, __y, __z);
-}
-#else
-__DEVICE__
-float __fmaf_rn(float __x, float __y, float __z) {
-  return __builtin_fmaf(__x, __y, __z);
-}
-#endif
-
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
-__DEVICE__
-float __fmul_rd(float __x, float __y) { return __ocml_mul_rtn_f32(__x, __y); }
-__DEVICE__
-float __fmul_rn(float __x, float __y) { return __ocml_mul_rte_f32(__x, __y); }
-__DEVICE__
-float __fmul_ru(float __x, float __y) { return __ocml_mul_rtp_f32(__x, __y); }
-__DEVICE__
-float __fmul_rz(float __x, float __y) { return __ocml_mul_rtz_f32(__x, __y); }
-#else
-__DEVICE__
-float __fmul_rn(float __x, float __y) { return __x * __y; }
-#endif
-
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
-__DEVICE__
-float __frcp_rd(float __x) { return __ocml_div_rtn_f32(1.0f, __x); }
-__DEVICE__
-float __frcp_rn(float __x) { return __ocml_div_rte_f32(1.0f, __x); }
-__DEVICE__
-float __frcp_ru(float __x) { return __ocml_div_rtp_f32(1.0f, __x); }
-__DEVICE__
-float __frcp_rz(float __x) { return __ocml_div_rtz_f32(1.0f, __x); }
-#else
-__DEVICE__
-float __frcp_rn(float __x) { return 1.0f / __x; }
-#endif
-
-__DEVICE__
-float __frsqrt_rn(float __x) { return __builtin_amdgcn_rsqf(__x); }
-
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
-__DEVICE__
-float __fsqrt_rd(float __x) { return __ocml_sqrt_rtn_f32(__x); }
-__DEVICE__
-float __fsqrt_rn(float __x) { return __ocml_sqrt_rte_f32(__x); }
-__DEVICE__
-float __fsqrt_ru(float __x) { return __ocml_sqrt_rtp_f32(__x); }
-__DEVICE__
-float __fsqrt_rz(float __x) { return __ocml_sqrt_rtz_f32(__x); }
-#else
-__DEVICE__
-float __fsqrt_rn(float __x) { return __ocml_native_sqrt_f32(__x); }
-#endif
-
-#if defined OCML_BASIC_ROUNDED_OPERATIONS
-__DEVICE__
-float __fsub_rd(float __x, float __y) { return __ocml_sub_rtn_f32(__x, __y); }
-__DEVICE__
-float __fsub_rn(float __x, float __y) { return __ocml_sub_rte_f32(__x, __y); }
-__DEVICE__
-float __fsub_ru(float __x, float __y) { return __ocml_sub_rtp_f32(__x, __y); }
-__DEVICE__
-float __fsub_rz(float __x, float __y) { return __ocml_sub_rtz_f32(__x, __y); }
-#else
-__DEVICE__
-float __fsub_rn(float __x, float __y) { return __x - __y; }
-#endif
-
-__DEVICE__
-float __log10f(float __x) { return __ocml_native_log10_f32(__x); }
-
-__DEVICE__
-float __log2f(float __x) { return __ocml_native_log2_f32(__x); }
-
-__DEVICE__
-float __logf(float __x) { return __ocml_native_log_f32(__x); }
-
-__DEVICE__
-float __powf(float __x, float __y) { return __ocml_pow_f32(__x, __y); }
-
-__DEVICE__
-float __saturatef(float __x) { return (__x < 0) ? 0 : ((__x > 1) ? 1 : __x); }
-
-__DEVICE__
-void __sincosf(float __x, float *__sinptr, float *__cosptr) {
-  *__sinptr = __ocml_native_sin_f32(__x);
-  *__cosptr = __ocml_native_cos_f32(__x);
-}
-
-__DEVICE__
-float __sinf(float __x) { return __ocml_native_sin_f32(__x); }
-
-__DEVICE__
-float __tanf(float __x) { return __ocml_tan_f32(__x); }
-// END INTRINSICS
 // END FLOAT
 
 // BEGIN DOUBLE
@@ -1299,5 +1325,6 @@ __host__ inline static int max(int __arg1, int __arg2) {
 
 #pragma pop_macro("__DEVICE__")
 #pragma pop_macro("__RETURN_TYPE")
+#pragma pop_macro("__FAST_OR_SLOW")
 
 #endif // __CLANG_HIP_MATH_H__
