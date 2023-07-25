@@ -2200,8 +2200,15 @@ ChangeStatus AANoSyncImpl::updateImpl(Attributor &A) {
     if (I.mayReadOrWriteMemory())
       return true;
 
+    bool IsKnown;
+    CallBase &CB = cast<CallBase>(I);
+    if (AA::hasAssumedIRAttr<Attribute::NoSync>(
+            A, this, IRPosition::callsite_function(CB), DepClassTy::OPTIONAL,
+            IsKnown))
+      return true;
+
     // non-convergent and readnone imply nosync.
-    return !cast<CallBase>(I).isConvergent();
+    return !CB.isConvergent();
   };
 
   bool UsedAssumedInformation = false;

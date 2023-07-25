@@ -432,7 +432,7 @@ define i32 @read_only_constant_mem() {
 ; CGSCC: attributes #[[ATTR10]] = { mustprogress nofree norecurse nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR11]] = { memory(none) }
 ; CGSCC: attributes #[[ATTR12]] = { nounwind memory(read) }
-; CGSCC: attributes #[[ATTR13]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR13]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR14]] = { nofree willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR15]] = { nofree willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR16]] = { nounwind }

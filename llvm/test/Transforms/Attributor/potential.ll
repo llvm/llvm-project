@@ -686,7 +686,7 @@ define i1 @potential_test16(i1 %c0, i1 %c1) {
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR2]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR2]] = { nofree nosync willreturn }
 ;.
 ; TUNIT: [[RNG0]] = !{i32 0, i32 2}
 ; TUNIT: [[RNG1]] = !{i32 0, i32 3}

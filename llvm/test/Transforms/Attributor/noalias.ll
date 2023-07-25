@@ -955,7 +955,7 @@ l2:
 ; CGSCC: attributes #[[ATTR8]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR9]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR10]] = { mustprogress nofree nosync nounwind willreturn memory(write) }
-; CGSCC: attributes #[[ATTR11]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR11]] = { nofree nosync willreturn }
 ; CGSCC: attributes #[[ATTR12]] = { nofree willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR13]] = { nofree willreturn memory(readwrite) }
 ; CGSCC: attributes #[[ATTR14]] = { nofree nounwind willreturn memory(write) }
