@@ -3593,15 +3593,15 @@ extern template class _LIBCPP_EXTERN_TEMPLATE_TYPE_VIS messages_byname<wchar_t>;
 #endif
 
 template<class _Codecvt, class _Elem = wchar_t,
-         class _Wide_alloc = allocator<_Elem>,
-         class _Byte_alloc = allocator<char> >
+         class _WideAlloc = allocator<_Elem>,
+         class _ByteAlloc = allocator<char> >
 class _LIBCPP_TEMPLATE_VIS _LIBCPP_DEPRECATED_IN_CXX17 wstring_convert
 {
 public:
-    typedef basic_string<char, char_traits<char>, _Byte_alloc>   byte_string;
-    typedef basic_string<_Elem, char_traits<_Elem>, _Wide_alloc> wide_string;
-    typedef typename _Codecvt::state_type                        state_type;
-    typedef typename wide_string::traits_type::int_type          int_type;
+    typedef basic_string<char, char_traits<char>, _ByteAlloc>   byte_string;
+    typedef basic_string<_Elem, char_traits<_Elem>, _WideAlloc> wide_string;
+    typedef typename _Codecvt::state_type                       state_type;
+    typedef typename wide_string::traits_type::int_type         int_type;
 
 private:
     byte_string __byte_err_string_;
@@ -3663,25 +3663,25 @@ public:
 };
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-template<class _Codecvt, class _Elem, class _Wide_alloc, class _Byte_alloc>
+template<class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
 inline
-wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
+wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::
     wstring_convert(_Codecvt* __pcvt)
         : __cvtptr_(__pcvt), __cvtstate_(), __cvtcount_(0)
 {
 }
 _LIBCPP_SUPPRESS_DEPRECATED_POP
 
-template<class _Codecvt, class _Elem, class _Wide_alloc, class _Byte_alloc>
+template<class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
 inline
-wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
+wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::
     wstring_convert(_Codecvt* __pcvt, state_type __state)
         : __cvtptr_(__pcvt), __cvtstate_(__state), __cvtcount_(0)
 {
 }
 
-template<class _Codecvt, class _Elem, class _Wide_alloc, class _Byte_alloc>
-wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
+template<class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
+wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::
     wstring_convert(const byte_string& __byte_err, const wide_string& __wide_err)
         : __byte_err_string_(__byte_err), __wide_err_string_(__wide_err),
           __cvtstate_(), __cvtcount_(0)
@@ -3691,9 +3691,9 @@ wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
 
 #ifndef _LIBCPP_CXX03_LANG
 
-template<class _Codecvt, class _Elem, class _Wide_alloc, class _Byte_alloc>
+template<class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
 inline
-wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
+wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::
     wstring_convert(wstring_convert&& __wc)
         : __byte_err_string_(_VSTD::move(__wc.__byte_err_string_)),
           __wide_err_string_(_VSTD::move(__wc.__wide_err_string_)),
@@ -3706,15 +3706,15 @@ wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
 #endif // _LIBCPP_CXX03_LANG
 
 _LIBCPP_SUPPRESS_DEPRECATED_PUSH
-template<class _Codecvt, class _Elem, class _Wide_alloc, class _Byte_alloc>
-wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::~wstring_convert()
+template<class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
+wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::~wstring_convert()
 {
     delete __cvtptr_;
 }
 
-template<class _Codecvt, class _Elem, class _Wide_alloc, class _Byte_alloc>
-typename wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::wide_string
-wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
+template<class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
+typename wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::wide_string
+wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::
     from_bytes(const char* __frm, const char* __frm_end)
 {
 _LIBCPP_SUPPRESS_DEPRECATED_POP
@@ -3774,9 +3774,9 @@ _LIBCPP_SUPPRESS_DEPRECATED_POP
     return __wide_err_string_;
 }
 
-template<class _Codecvt, class _Elem, class _Wide_alloc, class _Byte_alloc>
-typename wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::byte_string
-wstring_convert<_Codecvt, _Elem, _Wide_alloc, _Byte_alloc>::
+template<class _Codecvt, class _Elem, class _WideAlloc, class _ByteAlloc>
+typename wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::byte_string
+wstring_convert<_Codecvt, _Elem, _WideAlloc, _ByteAlloc>::
     to_bytes(const _Elem* __frm, const _Elem* __frm_end)
 {
     __cvtcount_ = 0;
