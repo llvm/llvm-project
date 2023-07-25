@@ -59,6 +59,14 @@ void declareOperandExpansion(CodeExpansions &CE, const OperandMatcher &OM,
                        "]->getOperand(" + to_string(OM.getOpIdx()) + ")");
 }
 
+template <typename Container> auto keys(Container &&C) {
+  return map_range(C, [](auto &Entry) -> auto & { return Entry.first; });
+}
+
+template <typename Container> auto values(Container &&C) {
+  return map_range(C, [](auto &Entry) -> auto & { return Entry.second; });
+}
+
 //===- MatchData Handling -------------------------------------------------===//
 
 /// Represents MatchData defined by the match stage and required by the apply
@@ -785,7 +793,7 @@ bool CombineRuleBuilder::findRoots() {
 
 bool CombineRuleBuilder::buildOperandsTable() {
   // Walk each instruction pattern
-  for (auto &[_, P] : MatchPats) {
+  for (auto &P : values(MatchPats)) {
     auto *IP = dyn_cast<InstructionPattern>(P.get());
     if (!IP)
       continue;
@@ -806,7 +814,7 @@ bool CombineRuleBuilder::buildOperandsTable() {
     }
   }
 
-  for (auto &[_, P] : ApplyPats) {
+  for (auto &P : values(ApplyPats)) {
     auto *IP = dyn_cast<InstructionPattern>(P.get());
     if (!IP)
       continue;
@@ -1019,7 +1027,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
     return false;
 
   // Emit remaining patterns
-  for (auto &[_, Pat] : MatchPats) {
+  for (auto &Pat : values(MatchPats)) {
     if (SeenPats.contains(Pat.get()))
       continue;
 
@@ -1058,7 +1066,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
     IM.addPredicate<InstructionOpcodeMatcher>(CGI);
 
     // Emit remaining patterns.
-    for (auto &[_, Pat] : MatchPats) {
+    for (auto &Pat : values(MatchPats)) {
       if (Pat.get() == &AOP)
         continue;
 
@@ -1087,7 +1095,7 @@ bool CombineRuleBuilder::emitMatchPattern(CodeExpansions &CE,
 }
 
 bool CombineRuleBuilder::emitApplyPatterns(CodeExpansions &CE, RuleMatcher &M) {
-  for (auto &[_, Pat] : ApplyPats) {
+  for (auto &Pat : values(ApplyPats)) {
     switch (Pat->getKind()) {
     case Pattern::K_AnyOpcode:
     case Pattern::K_Inst:
@@ -1371,7 +1379,7 @@ void GICombinerEmitter::emitTestSimplePredicate(raw_ostream &OS) {
     // (GICXXPred_Invalid + 1).
     unsigned ExpectedID = 0;
     (void)ExpectedID;
-    for (const auto &[ID, _] : AllCombineRules) {
+    for (const auto &ID : keys(AllCombineRules)) {
       assert(ExpectedID++ == ID && "combine rules are not ordered!");
       OS << "  " << getIsEnabledPredicateEnumName(ID) << EnumeratorSeparator;
       EnumeratorSeparator = ",\n";
