@@ -1838,6 +1838,18 @@ cc_library(
 )
 
 cc_library(
+    name = "ArmSMEUtils",
+    srcs = glob(["lib/Dialect/ArmSME/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/ArmSME/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArmSMEDialect",
+        ":IR",
+        ":Dialect",
+    ],
+)
+
+cc_library(
     name = "ArmSMETransforms",
     srcs = glob(["lib/Dialect/ArmSME/Transforms/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/ArmSME/Transforms/*.h"]),
@@ -1845,6 +1857,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArmSMEDialect",
+        ":ArmSMEUtils",
         ":ArmSMETransformsPassIncGen",
         ":FuncDialect",
         ":IR",
@@ -3353,6 +3366,7 @@ cc_library(
         ":TosaToSCF",
         ":TosaToTensor",
         ":UBToLLVM",
+        ":UBToSPIRV",
         ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
@@ -4747,12 +4761,12 @@ gentbl_cc_library(
 
 cc_library(
     name = "GPUTransformOps",
-    srcs = [
-        "lib/Dialect/GPU/TransformOps/GPUTransformOps.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/GPU/TransformOps/GPUTransformOps.h",
-    ],
+    srcs = glob([
+        "lib/Dialect/GPU/TransformOps/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/GPU/TransformOps/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -9898,6 +9912,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEDialect",
+        ":ArmSMEUtils",
         ":ConversionPassIncGen",
         ":IR",
         ":Pass",
@@ -12049,5 +12064,25 @@ cc_library(
         ":LLVMDialect",
         ":Pass",
         ":UBDialect",
+    ],
+)
+
+cc_library(
+    name = "UBToSPIRV",
+    srcs = glob([
+        "lib/Conversion/UBToSPIRV/*.cpp",
+        "lib/Conversion/UBToSPIRV/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/UBToSPIRV/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":Pass",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
+        ":UBDialect",
+        "//llvm:Core",
     ],
 )

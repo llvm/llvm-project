@@ -285,6 +285,12 @@ bool MprotectReadOnly(uptr addr, uptr size) {
          ZX_OK;
 }
 
+bool MprotectReadWrite(uptr addr, uptr size) {
+  return _zx_vmar_protect(_zx_vmar_root_self(),
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, addr,
+                          size) == ZX_OK;
+}
+
 void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
                                    const char *mem_type) {
   CHECK_GE(size, GetPageSize());

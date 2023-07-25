@@ -284,8 +284,8 @@ public:
     return get();
   }
 
-  template <class _Tp_ = _Tp, class _Up = enable_if_t<is_convertible<
-                                  const _Tp_, const element_type *>::value>>
+  template <class _Dummy = _Tp, class _Up = enable_if_t<is_convertible<
+                                  const _Dummy, const element_type *>::value>>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR operator const element_type *() const {
     return get();
   }
@@ -300,8 +300,8 @@ public:
     return get();
   }
 
-  template <class _Tp_ = _Tp, class _Up = enable_if_t<
-                                  is_convertible<_Tp_, element_type *>::value>>
+  template <class _Dummy = _Tp, class _Up = enable_if_t<
+                                  is_convertible<_Dummy, element_type *>::value>>
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR operator element_type *() {
     return get();
   }

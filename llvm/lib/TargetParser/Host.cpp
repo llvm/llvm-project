@@ -832,6 +832,20 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::INTEL_COREI7_ALDERLAKE;
       break;
 
+    // Graniterapids:
+    case 0xad:
+      CPU = "graniterapids";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_GRANITERAPIDS;
+      break;
+
+    // Granite Rapids D:
+    case 0xae:
+      CPU = "graniterapids-d";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_GRANITERAPIDS_D;
+      break;
+
     // Icelake Xeon:
     case 0x6a:
     case 0x6c:

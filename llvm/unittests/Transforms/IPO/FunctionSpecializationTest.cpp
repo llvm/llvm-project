@@ -287,3 +287,56 @@ TEST_F(FunctionSpecializationTest, Misc) {
   Bonus = Specializer.getSpecializationBonus(F->getArg(3), Undef, Visitor);
   EXPECT_TRUE(Bonus == 0);
 }
+
+TEST_F(FunctionSpecializationTest, PhiNode) {
+  const char *ModuleString = R"(
+    define void @foo(i32 %a, i32 %b, i32 %i) {
+    entry:
+      br label %loop
+    loop:
+      switch i32 %i, label %default
+      [ i32 1, label %case1
+        i32 2, label %case2 ]
+    case1:
+      %0 = add i32 %a, 1
+      br label %bb
+    case2:
+      %1 = sub i32 %b, 1
+      br label %bb
+    bb:
+      %2 = phi i32 [ %0, %case1 ], [ %1, %case2 ], [ %2, %bb ]
+      %3 = icmp eq i32 %2, 2
+      br i1 %3, label %bb, label %loop
+    default:
+      ret void
+    }
+  )";
+
+  Module &M = parseModule(ModuleString);
+  Function *F = M.getFunction("foo");
+  FunctionSpecializer Specializer = getSpecializerFor(F);
+  InstCostVisitor Visitor = Specializer.getInstCostVisitorFor(F);
+
+  Constant *One = ConstantInt::get(IntegerType::getInt32Ty(M.getContext()), 1);
+
+  auto FuncIter = F->begin();
+  for (int I = 0; I < 4; ++I)
+    ++FuncIter;
+
+  BasicBlock &BB = *FuncIter;
+
+  Instruction &Phi = BB.front();
+  Instruction &Icmp = *++BB.begin();
+
+  Cost Bonus = Specializer.getSpecializationBonus(F->getArg(0), One, Visitor) +
+               Specializer.getSpecializationBonus(F->getArg(1), One, Visitor) +
+               Specializer.getSpecializationBonus(F->getArg(2), One, Visitor);
+  EXPECT_TRUE(Bonus > 0);
+
+  // phi + icmp
+  Cost Ref = getInstCost(Phi) + getInstCost(Icmp);
+  Bonus = Visitor.getBonusFromPendingPHIs();
+  EXPECT_EQ(Bonus, Ref);
+  EXPECT_TRUE(Bonus > 0);
+}
+

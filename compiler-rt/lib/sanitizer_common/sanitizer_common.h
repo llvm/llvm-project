@@ -117,6 +117,7 @@ void *MmapAlignedOrDieOnFatalError(uptr size, uptr alignment,
 // unaccessible memory.
 bool MprotectNoAccess(uptr addr, uptr size);
 bool MprotectReadOnly(uptr addr, uptr size);
+bool MprotectReadWrite(uptr addr, uptr size);
 
 void MprotectMallocZones(void *addr, int prot);
 

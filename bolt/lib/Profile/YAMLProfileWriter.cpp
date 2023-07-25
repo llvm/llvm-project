@@ -188,6 +188,7 @@ std::error_code YAMLProfileWriter::writeProfile(const RewriteInstance &RI) {
   std::optional<StringRef> BuildID = BC.getFileBuildID();
   BP.Header.Id = BuildID ? std::string(*BuildID) : "<unknown>";
   BP.Header.Origin = std::string(RI.getProfileReader()->getReaderName());
+  BP.Header.IsDFSOrder = opts::ProfileUseDFS;
 
   StringSet<> EventNames = RI.getProfileReader()->getEventNames();
   if (!EventNames.empty()) {

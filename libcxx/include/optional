@@ -683,7 +683,7 @@ class optional;
 #if _LIBCPP_STD_VER >= 20
 
 template <class _Tp>
-concept __is_derived_from_optional = requires(const _Tp& __t) { []<class __Up>(const optional<__Up>&) {}(__t); };
+concept __is_derived_from_optional = requires(const _Tp& __t) { []<class _Up>(const optional<_Up>&) {}(__t); };
 
 #  endif // _LIBCPP_STD_VER >= 20
 

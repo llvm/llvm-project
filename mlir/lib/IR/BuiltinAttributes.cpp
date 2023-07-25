@@ -438,6 +438,9 @@ LogicalResult OpaqueAttr::verify(function_ref<InFlightDiagnostic()> emitError,
 // DenseElementsAttr Utilities
 //===----------------------------------------------------------------------===//
 
+const char DenseIntOrFPElementsAttrStorage::kSplatTrue = ~0;
+const char DenseIntOrFPElementsAttrStorage::kSplatFalse = 0;
+
 /// Get the bitwidth of a dense element type within the buffer.
 /// DenseElementsAttr requires bitwidths greater than 1 to be aligned by 8.
 static size_t getDenseElementStorageWidth(size_t origWidth) {
