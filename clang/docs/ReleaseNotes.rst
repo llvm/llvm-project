@@ -274,6 +274,11 @@ New Compiler Flags
 - ``-fcaret-diagnostics-max-lines=`` has been added as a driver options, which
   lets users control the maximum number of source lines printed for a
   caret diagnostic.
+- ``-fkeep-persistent-storage-variables`` has been implemented to keep all
+  variables that have a persistent storage duration—including global, static
+  and thread-local variables—to guarantee that they can be directly addressed.
+  Since this inhibits the merging of the affected variables, the number of
+  individual relocations in the program will generally increase.
 
 Deprecated Compiler Flags
 -------------------------
