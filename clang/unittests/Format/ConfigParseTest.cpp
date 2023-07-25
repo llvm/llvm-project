@@ -175,13 +175,9 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_BOOL(ReflowComments);
   CHECK_PARSE_BOOL(RemoveBracesLLVM);
   CHECK_PARSE_BOOL(RemoveSemicolon);
-  CHECK_PARSE_BOOL(SpacesInParentheses);
   CHECK_PARSE_BOOL(SpacesInSquareBrackets);
-  CHECK_PARSE_BOOL(SpacesInConditionalStatement);
   CHECK_PARSE_BOOL(SpaceInEmptyBlock);
-  CHECK_PARSE_BOOL(SpaceInEmptyParentheses);
   CHECK_PARSE_BOOL(SpacesInContainerLiterals);
-  CHECK_PARSE_BOOL(SpacesInCStyleCastParentheses);
   CHECK_PARSE_BOOL(SpaceAfterCStyleCast);
   CHECK_PARSE_BOOL(SpaceAfterTemplateKeyword);
   CHECK_PARSE_BOOL(SpaceAfterLogicalNot);
@@ -226,6 +222,10 @@ TEST(ConfigParseTest, ParsesConfigurationBools) {
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterIfMacros);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, AfterOverloadedOperator);
   CHECK_PARSE_NESTED_BOOL(SpaceBeforeParensOptions, BeforeNonEmptyParentheses);
+  CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InCStyleCasts);
+  CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InConditionalStatements);
+  CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, InEmptyParentheses);
+  CHECK_PARSE_NESTED_BOOL(SpacesInParensOptions, Other);
 }
 
 #undef CHECK_PARSE_BOOL
@@ -590,6 +590,30 @@ TEST(ConfigParseTest, ParsesConfiguration) {
   CHECK_PARSE("SpaceBeforeParens: ControlStatementsExceptForEachMacros",
               SpaceBeforeParens,
               FormatStyle::SBPO_ControlStatementsExceptControlMacros);
+
+  // For backward compatibility:
+  Style.SpacesInParens = FormatStyle::SIPO_Never;
+  Style.SpacesInParensOptions = {};
+  CHECK_PARSE("SpacesInParentheses: true", SpacesInParens,
+              FormatStyle::SIPO_Custom);
+  Style.SpacesInParens = FormatStyle::SIPO_Never;
+  Style.SpacesInParensOptions = {};
+  CHECK_PARSE("SpacesInParentheses: true", SpacesInParensOptions,
+              FormatStyle::SpacesInParensCustom(true, false, false, true));
+  Style.SpacesInParens = FormatStyle::SIPO_Never;
+  Style.SpacesInParensOptions = {};
+  CHECK_PARSE("SpacesInConditionalStatement: true", SpacesInParensOptions,
+              FormatStyle::SpacesInParensCustom(true, false, false, false));
+  Style.SpacesInParens = FormatStyle::SIPO_Never;
+  Style.SpacesInParensOptions = {};
+  CHECK_PARSE("SpacesInCStyleCastParentheses: true", SpacesInParensOptions,
+              FormatStyle::SpacesInParensCustom(false, true, false, false));
+  Style.SpacesInParens = FormatStyle::SIPO_Never;
+  Style.SpacesInParensOptions = {};
+  CHECK_PARSE("SpaceInEmptyParentheses: true", SpacesInParensOptions,
+              FormatStyle::SpacesInParensCustom(false, false, true, false));
+  Style.SpacesInParens = FormatStyle::SIPO_Never;
+  Style.SpacesInParensOptions = {};
 
   Style.ColumnLimit = 123;
   FormatStyle BaseStyle = getLLVMStyle();

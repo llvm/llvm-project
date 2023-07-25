@@ -990,6 +990,9 @@ clang-format
 - Add ``TypeNames`` to treat listed non-keyword identifiers as type names.
 - Add ``AlignConsecutiveShortCaseStatements`` which can be used to align case
   labels in conjunction with ``AllowShortCaseLabelsOnASingleLine``.
+- Add ``SpacesInParens`` style with ``SpacesInParensOptions`` to replace
+  ``SpacesInConditionalStatement``, ``SpacesInCStyleCastParentheses``,
+  ``SpaceInEmptyParentheses``, and ``SpacesInParentheses``.
 
 libclang
 --------

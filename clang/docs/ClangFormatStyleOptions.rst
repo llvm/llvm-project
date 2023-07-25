@@ -5215,16 +5215,8 @@ the configuration (without a prefix: ``Auto``).
 
 **SpaceInEmptyParentheses** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <SpaceInEmptyParentheses>`
   If ``true``, spaces may be inserted into ``()``.
-
-  .. code-block:: c++
-
-     true:                                false:
-     void f( ) {                    vs.   void f() {
-       int x[] = {foo( ), bar( )};          int x[] = {foo(), bar()};
-       if (true) {                          if (true) {
-         f( );                                f();
-       }                                    }
-     }                                    }
+  This option is **deprecated**. See ``InEmptyParentheses`` of
+  ``SpacesInParensOptions``.
 
 .. _SpacesBeforeTrailingComments:
 
@@ -5281,23 +5273,16 @@ the configuration (without a prefix: ``Auto``).
 
 **SpacesInCStyleCastParentheses** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <SpacesInCStyleCastParentheses>`
   If ``true``, spaces may be inserted into C style casts.
-
-  .. code-block:: c++
-
-     true:                                  false:
-     x = ( int32 )y                 vs.     x = (int32)y
+  This option is **deprecated**. See ``InCStyleCasts`` of
+  ``SpacesInParensOptions``.
 
 .. _SpacesInConditionalStatement:
 
 **SpacesInConditionalStatement** (``Boolean``) :versionbadge:`clang-format 10` :ref:`¶ <SpacesInConditionalStatement>`
   If ``true``, spaces will be inserted around if/for/switch/while
   conditions.
-
-  .. code-block:: c++
-
-     true:                                  false:
-     if ( a )  { ... }              vs.     if (a) { ... }
-     while ( i < 5 )  { ... }               while (i < 5) { ... }
+  This option is **deprecated**. See ``InConditionalStatements`` of
+  ``SpacesInParensOptions``.
 
 .. _SpacesInContainerLiterals:
 
@@ -5358,15 +5343,104 @@ the configuration (without a prefix: ``Auto``).
   * ``unsigned Maximum`` The maximum number of spaces at the start of the comment.
 
 
-.. _SpacesInParentheses:
+.. _SpacesInParens:
 
-**SpacesInParentheses** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <SpacesInParentheses>`
-  If ``true``, spaces will be inserted after ``(`` and before ``)``.
+**SpacesInParens** (``SpacesInParensStyle``) :versionbadge:`clang-format 17` :ref:`¶ <SpacesInParens>`
+  Defines in which cases spaces will be inserted after ``(`` and before
+  ``)``.
+
+  Possible values:
+
+  * ``SIPO_Never`` (in configuration: ``Never``)
+    Never put a space in parentheses.
+
+    .. code-block:: c++
+
+       void f() {
+         if(true) {
+           f();
+         }
+       }
+
+  * ``SIPO_Custom`` (in configuration: ``Custom``)
+    Configure each individual space in parentheses in
+    `SpacesInParensOptions`.
+
+
+
+.. _SpacesInParensOptions:
+
+**SpacesInParensOptions** (``SpacesInParensCustom``) :versionbadge:`clang-format 17` :ref:`¶ <SpacesInParensOptions>`
+  Control of individual spaces in parentheses.
+
+  If ``SpacesInParens`` is set to ``Custom``, use this to specify
+  how each individual space in parentheses case should be handled.
+  Otherwise, this is ignored.
+
+  .. code-block:: yaml
+
+    # Example of usage:
+    SpacesInParens: Custom
+    SpacesInParensOptions:
+      InConditionalStatements: true
+      InEmptyParentheses: true
+
+  Nested configuration flags:
+
+  Precise control over the spacing in parentheses.
 
   .. code-block:: c++
 
-     true:                                  false:
-     t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+    # Should be declared this way:
+    SpacesInParens: Custom
+    SpacesInParensOptions:
+      InConditionalStatements: true
+      Other: true
+
+  * ``bool InConditionalStatements`` Put a space in parentheses only inside conditional statements
+    (``for/if/while/switch...``).
+
+    .. code-block:: c++
+
+       true:                                  false:
+       if ( a )  { ... }              vs.     if (a) { ... }
+       while ( i < 5 )  { ... }               while (i < 5) { ... }
+
+  * ``bool InCStyleCasts`` Put a space in C style casts.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       x = ( int32 )y                 vs.     x = (int32)y
+
+  * ``bool InEmptyParentheses`` Put a space in parentheses only if the parentheses are empty i.e. '()'
+
+    .. code-block:: c++
+
+       true:                                false:
+       void f( ) {                    vs.   void f() {
+         int x[] = {foo( ), bar( )};          int x[] = {foo(), bar()};
+         if (true) {                          if (true) {
+           f( );                                f();
+         }                                    }
+       }                                    }
+
+  * ``bool Other`` Put a space in parentheses not covered by preceding options.
+
+    .. code-block:: c++
+
+       true:                                  false:
+       t f( Deleted & ) & = delete;   vs.     t f(Deleted &) & = delete;
+
+
+.. _SpacesInParentheses:
+
+**SpacesInParentheses** (``Boolean``) :versionbadge:`clang-format 3.7` :ref:`¶ <SpacesInParentheses>`
+  If ``true'', spaces will be inserted after ``(`` and before ``)``.
+  This option is **deprecated**. The previous behavior is preserved by using
+  ``SpacesInParens`` with ``Custom`` and by setting all
+  ``SpacesInParensOptions`` to ``true`` except for ``InCStyleCasts`` and
+  ``InEmptyParentheses``.
 
 .. _SpacesInSquareBrackets:
 
