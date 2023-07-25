@@ -5,7 +5,7 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-
+#include <iostream>
 #include "Clang.h"
 #include "AMDGPU.h"
 #include "AMDGPUOpenMP.h"
@@ -8859,7 +8859,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
 
         ArgStringList Features;
         SmallVector<StringRef> FeatureArgs;
-        getTargetFeatures(TC.getDriver(), TC.getTriple(), Args, Features,
+        getTargetFeatures(TC.getDriver(), TheTriple, Args, Features,
                           false);
         llvm::copy_if(Features, std::back_inserter(FeatureArgs),
                       [](StringRef Arg) { return !Arg.startswith("-target"); });
@@ -8926,7 +8926,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
     // ---------- Step 4 opt  -----------
     ArgStringList OptArgs;
     auto OptOutputFileName = amdgpu::dlr::getOptCommandArgs(
-        C, Args, OptArgs, TC.getTriple(), TargetID, OutputFilePrefix,
+        C, Args, OptArgs, TheTriple, TargetID, OutputFilePrefix,
         LinkOutputFileName);
 
     const char *OptExec =
@@ -8938,7 +8938,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
     // ---------- Step 5 llc  -----------
     ArgStringList LlcArgs;
     auto LlcOutputFileName = amdgpu::dlr::getLlcCommandArgs(
-        C, Args, LlcArgs, TC.getTriple(), TargetID, OutputFilePrefix,
+        C, Args, LlcArgs, TheTriple, TargetID, OutputFilePrefix,
         OptOutputFileName);
 
     const char *LlcExec =
@@ -8950,7 +8950,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
     // ---------- Step 6 lld  -----------
     ArgStringList LldArgs;
     auto LldOutputFileName = amdgpu::dlr::getLldCommandArgs(
-        C, Output, Args, LldArgs, TC.getTriple(), TargetID, LlcOutputFileName,
+        C, Output, Args, LldArgs, TheTriple, TargetID, LlcOutputFileName,
         OutputFilePrefix);
 
     // create vector of pairs of TargetID,lldname for step 7 inputs.
