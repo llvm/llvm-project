@@ -45,8 +45,15 @@ enum class VecOp {
   Sr,
   Srl,
   Sro,
+  St,
+  Ste,
+  Stxv,
   Sub,
-  Xor
+  Xor,
+  Xst,
+  Xst_be,
+  Xstd2,
+  Xstw4
 };
 
 /// Enums used to templatize and share lowering of PowerPC MMA intrinsics.
@@ -195,6 +202,12 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
 
   fir::ExtendedValue genVecSel(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
+  void genVecStore(llvm::ArrayRef<fir::ExtendedValue>);
+
+  template <VecOp>
+  void genVecXStore(llvm::ArrayRef<fir::ExtendedValue>);
 };
 
 const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name);
