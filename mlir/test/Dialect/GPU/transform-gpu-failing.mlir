@@ -89,7 +89,7 @@ func.func @map_nested_forall_to_threads_fewer_threads(%x: memref<2 x 32 x f32>, 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{Trying to map to fewer GPU threads than loop iterations but overprovisioning is not yet supported. Try additional tiling of the before mapping or map to more threads.}}
+  // expected-error @below {{the number of required parallel resources (blocks or threads) 6300 overflows the number of available resources 512}}
   transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1] : (!transform.any_op) -> !transform.any_op
 }
 
@@ -115,7 +115,7 @@ func.func @map_nested_forall_to_threads_dynamic_trip_count(%x: memref<2 x 32 x f
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{unsupported dynamic sizes}}
+  // expected-error @below {{requires statically sized, normalized forall op}}
   transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1] : (!transform.any_op) -> !transform.any_op
 }
 
@@ -135,11 +135,11 @@ func.func @map_nested_forall_to_threads_not_buffer(%x: tensor<32x32xf32>, %y: te
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
   %matmul = transform.structured.match ops{["linalg.matmul"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  %forall, %tiled = transform.structured.tile_to_forall_op %matmul num_threads [10, 20, 30] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
+  %forall, %tiled = transform.structured.tile_to_forall_op %matmul num_threads [2, 3, 1] (mapping = [ #gpu.thread<y>, #gpu.thread<x>, #gpu.thread<z> ] )
     : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
   // expected-error @below {{only bufferized scf.forall can be mapped}}
-  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [128, 4, 1] : (!transform.any_op) -> !transform.any_op
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [96, 4, 1] : (!transform.any_op) -> !transform.any_op
 }
 
 // -----
@@ -262,6 +262,33 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
         %5 = memref.load %y[%i, %j] : !type
         %6 = arith.mulf %4, %5 : f32
         memref.store %6, %y[%i, %j] : !type
+     }  { mapping = [#gpu.thread<x>, #gpu.warp<y>] }
+    gpu.terminator
+  }
+  return %y : !type
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !transform.any_op):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  // expected-error @below {{cannot mix different mapping types, use nesting}}
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1] : (!transform.any_op) -> !transform.any_op
+}
+
+// -----
+
+!type = memref<32x32xf32>
+func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) -> !type {
+  %c32 = arith.constant 32 : index
+  %one = arith.constant 1 : index
+  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
+            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
+  {
+    scf.forall (%i, %j) in (%c32, %c32) {
+        %4 = memref.load %x[%i, %j] : !type
+        %5 = memref.load %y[%i, %j] : !type
+        %6 = arith.mulf %4, %5 : f32
+        memref.store %6, %y[%i, %j] : !type
      }  { mapping = [#gpu.thread<x>, #gpu.thread<x>] }
     gpu.terminator
   }
@@ -271,6 +298,33 @@ func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) 
 transform.sequence failures(propagate) {
 ^bb1(%arg0: !transform.any_op):
   %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below {{duplicated attribute, cannot map different loops to the same processor}}
+  // expected-error @below {{duplicate attribute, cannot map different loops to the same mapping id}}
+  transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1] : (!transform.any_op) -> !transform.any_op
+}
+
+// -----
+
+!type = memref<32x32xf32>
+func.func @saxpy2d_singleloop(%x: !type, %y: !type, %stream : !gpu.async.token) -> !type {
+  %c32 = arith.constant 32 : index
+  %one = arith.constant 1 : index
+  %name = gpu.launch async[%stream] blocks(%arg3, %arg4, %arg5) in (%arg9 = %one, %arg10 = %one, %arg11 = %one)
+            threads(%arg6, %arg7, %arg8) in (%arg12 = %one, %arg13 = %one, %arg14 = %one)
+  {
+    scf.forall (%i, %j) in (%c32, %c32) {
+        %4 = memref.load %x[%i, %j] : !type
+        %5 = memref.load %y[%i, %j] : !type
+        %6 = arith.mulf %4, %5 : f32
+        memref.store %6, %y[%i, %j] : !type
+     }  { mapping = [#gpu.thread<x>, #gpu.thread<linear_dim_0>] }
+    gpu.terminator
+  }
+  return %y : !type
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg0: !transform.any_op):
+  %funcop = transform.structured.match ops{["gpu.launch"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  // expected-error @below {{cannot mix linear and non-linear mapping modes}}
   transform.gpu.map_nested_forall_to_threads %funcop block_dims = [32, 32, 1] : (!transform.any_op) -> !transform.any_op
 }
