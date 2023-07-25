@@ -160,10 +160,6 @@ void __asan_unpoison_memory_region(void const volatile *addr, uptr size) {
     return;
   }
   CHECK_LT(beg.chunk, end.chunk);
-  if (beg.offset > 0) {
-    *beg.chunk = 0;
-    beg.chunk++;
-  }
   REAL(memset)(beg.chunk, 0, end.chunk - beg.chunk);
   if (end.offset > 0 && end.value != 0) {
     *end.chunk = Max(end.value, end.offset);
