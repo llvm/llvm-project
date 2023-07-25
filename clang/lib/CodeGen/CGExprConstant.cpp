@@ -1215,6 +1215,10 @@ public:
     return Visit(E->getSubExpr(), T);
   }
 
+  llvm::Constant *VisitIntegerLiteral(IntegerLiteral *I, QualType T) {
+    return llvm::ConstantInt::get(CGM.getLLVMContext(), I->getValue());
+  }
+
   llvm::Constant *EmitArrayInitialization(InitListExpr *ILE, QualType T) {
     auto *CAT = CGM.getContext().getAsConstantArrayType(ILE->getType());
     assert(CAT && "can't emit array init for non-constant-bound array");
