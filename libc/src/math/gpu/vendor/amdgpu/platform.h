@@ -25,7 +25,7 @@ extern const uint8_t __oclc_unsafe_math_opt = 0;
 extern const uint8_t __oclc_daz_opt = 0;
 
 // Disable rounding optimizations for 32-bit square roots.
-extern const uint8_t __oclc_correctly_rounded_sqrt32 = 0;
+extern const uint8_t __oclc_correctly_rounded_sqrt32 = 1;
 
 // Disable finite math optimizations.
 extern const uint8_t __oclc_finite_only_opt = 0;
