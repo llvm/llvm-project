@@ -286,14 +286,24 @@ else()
     DEFS ${ASAN_COMMON_DEFINITIONS}
     PARENT_TARGET asan)
 
+if(WIN32)
   add_compiler_rt_runtime(clang_rt.asan_static
     STATIC
     ARCHS ${ASAN_SUPPORTED_ARCH}
     OBJECT_LIBS RTAsan_static
-      $<$<PLATFORM_ID:Windows>:RTAsan_static_implib>
+      RTAsan_static_implib
     CFLAGS ${ASAN_CFLAGS}
     DEFS ${ASAN_COMMON_DEFINITIONS}
     PARENT_TARGET asan)
+else()
+  add_compiler_rt_runtime(clang_rt.asan_static
+    STATIC
+    ARCHS ${ASAN_SUPPORTED_ARCH}
+    OBJECT_LIBS RTAsan_static
+    CFLAGS ${ASAN_CFLAGS}
+    DEFS ${ASAN_COMMON_DEFINITIONS}
+    PARENT_TARGET asan)
+endif()
 
   add_compiler_rt_runtime(clang_rt.asan-preinit
     STATIC
