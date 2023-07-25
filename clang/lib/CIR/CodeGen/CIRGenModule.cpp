@@ -1382,6 +1382,7 @@ mlir::SymbolTable::Visibility CIRGenModule::getMLIRVisibilityFromCIRLinkage(
   case mlir::cir::GlobalLinkageKind::ExternalLinkage:
   case mlir::cir::GlobalLinkageKind::ExternalWeakLinkage:
   case mlir::cir::GlobalLinkageKind::LinkOnceODRLinkage:
+  case mlir::cir::GlobalLinkageKind::AvailableExternallyLinkage:
     return mlir::SymbolTable::Visibility::Public;
   default: {
     llvm::errs() << "visibility not implemented for '"
