@@ -20,14 +20,13 @@
 #include "mlir/Support/LogicalResult.h"
 #include <optional>
 
+namespace mlir {
+namespace presburger {
 
 using PolyhedronH = IntegerRelation;
 using PolyhedronV = Matrix;
 using ConeH = PolyhedronH;
-using Point = SmallVector<MPInt>
-
-namespace mlir {
-namespace presburger {
+using Point = SmallVector<MPInt, 16>;
 
 // Describe the type of generating function
 // used to enumerate the integer points in a polytope.
@@ -38,13 +37,13 @@ namespace presburger {
 class GeneratingFunction
 {
 public:
-    GeneratingFunction(SmallVector<int> s, SmallVector<Point> nums, SmallVector<SmallVector<Point>> dens)
+    GeneratingFunction(SmallVector<int, 16> s, SmallVector<Point, 16> nums, SmallVector<SmallVector<Point, 16>, 8> dens)
         : signs(s), numerators(nums), denominators(dens) {};
 
 private:
-    SmallVector<int> signs;
-    SmallVector<Point> numerators;
-    SmallVector<SmallVector<Point>> denominators;
+    SmallVector<int, 16> signs;
+    SmallVector<Point, 16> numerators;
+    SmallVector<SmallVector<Point, 16>, 8> denominators;
 };
 
 // Get the index of a cone.
@@ -53,20 +52,20 @@ MPInt getIndex(ConeH);
 
 // Get the smallest vector in the basis described by the rays of the cone,
 // and the coefficients needed to express it in that basis.
-std::pair<Point, SmallVector<MPInt>> getSamplePoint(ConeH);
+std::pair<Point, SmallVector<MPInt, 16>> getSamplePoint(ConeH);
 
 // Get the dual of a cone, returning the V-representation of it.
 PolyhedronV getDual(ConeH);
 
 // Decompose a cone into unimodular cones,
 // triangulating it first if it is not simplicial.
-SmallVector<ConeH> unimodularDecomposition(ConeH);
+SmallVector<ConeH, 16> unimodularDecomposition(ConeH);
 
 // Decompose a simplicial cone into unimodular cones.
-SmallVector<ConeH> unimodularDecompositionSimplicial(ConeH);
+SmallVector<ConeH, 16> unimodularDecompositionSimplicial(ConeH);
 
 // Triangulate a non-simplicial cone into a simplicial cones.
-SmallVector<ConeH> triangulate(Cone);
+SmallVector<ConeH, 16> triangulate(ConeH);
 
 // Compute the generating function for a unimodular cone.
 GeneratingFunction unimodularConeGeneratingFunction(ConeH);
