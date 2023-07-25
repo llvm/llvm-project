@@ -9,14 +9,12 @@ declare i32 @test3()
 define i32 @duplicate_returns(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: duplicate_returns:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bstrpick.d $a2, $a0, 31, 0
-; CHECK-NEXT:    beqz $a2, .LBB0_4
-; CHECK-NEXT:  # %bb.1: # %if.else
-; CHECK-NEXT:    bstrpick.d $a2, $a1, 31, 0
-; CHECK-NEXT:    beqz $a2, .LBB0_5
-; CHECK-NEXT:  # %bb.2: # %if.else2
 ; CHECK-NEXT:    addi.w $a0, $a0, 0
+; CHECK-NEXT:    beqz $a0, .LBB0_4
+; CHECK-NEXT:  # %bb.1: # %if.else
 ; CHECK-NEXT:    addi.w $a1, $a1, 0
+; CHECK-NEXT:    beqz $a1, .LBB0_5
+; CHECK-NEXT:  # %bb.2: # %if.else2
 ; CHECK-NEXT:    bge $a1, $a0, .LBB0_6
 ; CHECK-NEXT:  # %bb.3: # %if.then3
 ; CHECK-NEXT:    b %plt(test2)

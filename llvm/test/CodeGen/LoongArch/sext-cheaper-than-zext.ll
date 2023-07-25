@@ -4,9 +4,7 @@
 define signext i32 @sext_icmp(i32 signext %x, i32 signext %y) {
 ; CHECK-LABEL: sext_icmp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    bstrpick.d $a1, $a1, 31, 0
-; CHECK-NEXT:    addi.d $a0, $a0, 1
-; CHECK-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; CHECK-NEXT:    addi.w $a0, $a0, 1
 ; CHECK-NEXT:    xor $a0, $a0, $a1
 ; CHECK-NEXT:    sltu $a0, $zero, $a0
 ; CHECK-NEXT:    ret
