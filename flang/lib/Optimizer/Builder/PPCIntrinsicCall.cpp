@@ -208,6 +208,21 @@ static constexpr IntrinsicHandler ppcHandlers[]{
          &PI::genVecShift<VecOp::Sro>),
      {{{"arg1", asValue}, {"arg2", asValue}}},
      /*isElemental=*/true},
+    {"__ppc_vec_st",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genVecStore<VecOp::St>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
+     /*isElemental=*/false},
+    {"__ppc_vec_ste",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genVecStore<VecOp::Ste>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
+     /*isElemental=*/false},
+    {"__ppc_vec_stxv",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genVecXStore<VecOp::Stxv>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
+     /*isElemental=*/false},
     {"__ppc_vec_sub",
      static_cast<IntrinsicLibrary::ExtendedGenerator>(
          &PI::genVecAddAndMulSubXor<VecOp::Sub>),
@@ -218,6 +233,26 @@ static constexpr IntrinsicHandler ppcHandlers[]{
          &PI::genVecAddAndMulSubXor<VecOp::Xor>),
      {{{"arg1", asValue}, {"arg2", asValue}}},
      /*isElemental=*/true},
+    {"__ppc_vec_xst",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genVecXStore<VecOp::Xst>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
+     /*isElemental=*/false},
+    {"__ppc_vec_xst_be",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genVecXStore<VecOp::Xst_be>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
+     /*isElemental=*/false},
+    {"__ppc_vec_xstd2_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genVecXStore<VecOp::Xstd2>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
+     /*isElemental=*/false},
+    {"__ppc_vec_xstw4_",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genVecXStore<VecOp::Xstw4>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
+     /*isElemental=*/false},
 };
 
 static constexpr MathOperation ppcMathOperations[] = {
@@ -1678,6 +1713,190 @@ void PPCIntrinsicLibrary::genMmaIntr(llvm::ArrayRef<fir::ExtendedValue> args) {
     // Copy the result.
     builder.create<fir::StoreOp>(loc, callResult, destPtr);
   }
+}
+
+static mlir::Value addOffsetToAddress(fir::FirOpBuilder &builder,
+                                      mlir::Location loc, mlir::Value baseAddr,
+                                      mlir::Value offset) {
+  auto typeExtent{fir::SequenceType::getUnknownExtent()};
+  // Construct an !fir.ref<!ref.array<?xi8>> type
+  auto arrRefTy{builder.getRefType(fir::SequenceType::get(
+      {typeExtent}, mlir::IntegerType::get(builder.getContext(), 8)))};
+  // Convert arg to !fir.ref<!ref.array<?xi8>>
+  auto resAddr{builder.create<fir::ConvertOp>(loc, arrRefTy, baseAddr)};
+
+  return builder.create<fir::CoordinateOp>(loc, arrRefTy, resAddr, offset);
+}
+
+static mlir::Value reverseVectorElements(fir::FirOpBuilder &builder,
+                                         mlir::Location loc, mlir::Value v,
+                                         int64_t len) {
+  assert(v.getType().isa<mlir::VectorType>());
+  assert(len > 0);
+  llvm::SmallVector<int64_t, 16> mask;
+  for (int64_t i = 0; i < len; ++i) {
+    mask.push_back(len - 1 - i);
+  }
+
+  auto undefVec{builder.create<fir::UndefOp>(loc, v.getType())};
+  return builder.create<mlir::vector::ShuffleOp>(loc, v, undefVec, mask);
+}
+
+// VEC_ST, VEC_STE
+template <VecOp vop>
+void PPCIntrinsicLibrary::genVecStore(llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+
+  auto context{builder.getContext()};
+  auto argBases{getBasesForArgs(args)};
+  auto arg1TyInfo{getVecTypeFromFir(argBases[0])};
+
+  auto addr{addOffsetToAddress(builder, loc, argBases[2], argBases[1])};
+
+  llvm::StringRef fname{};
+  mlir::VectorType stTy{nullptr};
+  auto i32ty{mlir::IntegerType::get(context, 32)};
+  switch (vop) {
+  case VecOp::St:
+    stTy = mlir::VectorType::get(4, i32ty);
+    fname = "llvm.ppc.altivec.stvx";
+    break;
+  case VecOp::Ste: {
+    const auto width{arg1TyInfo.eleTy.getIntOrFloatBitWidth()};
+    const auto len{arg1TyInfo.len};
+
+    if (arg1TyInfo.isFloat32()) {
+      stTy = mlir::VectorType::get(len, i32ty);
+      fname = "llvm.ppc.altivec.stvewx";
+    } else if (arg1TyInfo.eleTy.isa<mlir::IntegerType>()) {
+      stTy = mlir::VectorType::get(len, mlir::IntegerType::get(context, width));
+
+      switch (width) {
+      case 8:
+        fname = "llvm.ppc.altivec.stvebx";
+        break;
+      case 16:
+        fname = "llvm.ppc.altivec.stvehx";
+        break;
+      case 32:
+        fname = "llvm.ppc.altivec.stvewx";
+        break;
+      default:
+        assert("invalid element size");
+      }
+    } else
+      assert("unknown type");
+    break;
+  }
+  default:
+    llvm_unreachable("invalid vector operation for generator");
+  }
+
+  auto funcType{
+      mlir::FunctionType::get(context, {stTy, addr.getType()}, std::nullopt)};
+  mlir::func::FuncOp funcOp = builder.addNamedFunction(loc, fname, funcType);
+
+  llvm::SmallVector<mlir::Value, 4> biArgs;
+
+  mlir::Value newArg1;
+  auto vecTyInfo{getVecTypeFromFirType(argBases[0].getType())};
+  auto cnv{builder.createConvert(loc, vecTyInfo.toMlirVectorType(context),
+                                 argBases[0])};
+
+  if (stTy != arg1TyInfo.toMlirVectorType(context))
+    newArg1 = builder.create<mlir::vector::BitCastOp>(loc, stTy, cnv);
+  else
+    newArg1 = cnv;
+
+  if (isBEVecElemOrderOnLE())
+    newArg1 = builder.createConvert(
+        loc, stTy, reverseVectorElements(builder, loc, newArg1, 4));
+
+  biArgs.push_back(newArg1);
+  biArgs.push_back(addr);
+
+  builder.create<fir::CallOp>(loc, funcOp, biArgs);
+}
+
+static mlir::NamedAttribute getAlignmentAttr(fir::FirOpBuilder &builder,
+                                             const int val) {
+  auto i64ty{mlir::IntegerType::get(builder.getContext(), 64)};
+  auto alignAttr{mlir::IntegerAttr::get(i64ty, val)};
+  return builder.getNamedAttr("alignment", alignAttr);
+}
+
+// VEC_XST, VEC_XST_BE, VEC_STXV, VEC_XSTD2, VEC_XSTW4
+template <VecOp vop>
+void PPCIntrinsicLibrary::genVecXStore(
+    llvm::ArrayRef<fir::ExtendedValue> args) {
+  assert(args.size() == 3);
+  auto context{builder.getContext()};
+  auto argBases{getBasesForArgs(args)};
+  VecTypeInfo arg1TyInfo{getVecTypeFromFir(argBases[0])};
+
+  auto addr{addOffsetToAddress(builder, loc, argBases[2], argBases[1])};
+
+  mlir::Value trg{nullptr};
+  mlir::Value src{nullptr};
+
+  switch (vop) {
+  case VecOp::Xst:
+  case VecOp::Xst_be: {
+    src = argBases[0];
+    trg = builder.createConvert(loc, builder.getRefType(argBases[0].getType()),
+                                addr);
+
+    if (vop == VecOp::Xst_be || isBEVecElemOrderOnLE()) {
+      auto cnv{builder.createConvert(loc, arg1TyInfo.toMlirVectorType(context),
+                                     argBases[0])};
+      auto shf{reverseVectorElements(builder, loc, cnv, arg1TyInfo.len)};
+
+      src = builder.createConvert(loc, arg1TyInfo.toFirVectorType(), shf);
+    }
+    break;
+  }
+  case VecOp::Xstd2:
+  case VecOp::Xstw4: {
+    // an 16-byte vector arg1 is treated as two 8-byte elements or
+    // four 4-byte elements
+    mlir::IntegerType elemTy;
+    uint64_t numElem = (vop == VecOp::Xstd2) ? 2 : 4;
+    elemTy = builder.getIntegerType(128 / numElem);
+
+    mlir::VectorType mlirVecTy{mlir::VectorType::get(numElem, elemTy)};
+    fir::VectorType firVecTy{fir::VectorType::get(numElem, elemTy)};
+
+    auto cnv{builder.createConvert(loc, arg1TyInfo.toMlirVectorType(context),
+                                   argBases[0])};
+
+    mlir::Type srcTy{nullptr};
+    if (numElem != arg1TyInfo.len) {
+      cnv = builder.create<mlir::vector::BitCastOp>(loc, mlirVecTy, cnv);
+      srcTy = firVecTy;
+    } else {
+      srcTy = arg1TyInfo.toFirVectorType();
+    }
+
+    trg = builder.createConvert(loc, builder.getRefType(srcTy), addr);
+
+    if (isBEVecElemOrderOnLE()) {
+      cnv = reverseVectorElements(builder, loc, cnv, numElem);
+    }
+
+    src = builder.createConvert(loc, srcTy, cnv);
+    break;
+  }
+  case VecOp::Stxv:
+    src = argBases[0];
+    trg = builder.createConvert(loc, builder.getRefType(argBases[0].getType()),
+                                addr);
+    break;
+  default:
+    assert("Invalid vector operation for generator");
+  }
+  builder.create<fir::StoreOp>(loc, mlir::TypeRange{},
+                               mlir::ValueRange{src, trg},
+                               getAlignmentAttr(builder, 1));
 }
 
 } // namespace fir

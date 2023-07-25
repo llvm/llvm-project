@@ -323,6 +323,81 @@ module __ppc_intrinsics
 #undef ELEM_FUNC_VIVIVIVU_2
 #undef ELEM_FUNC_VRVRVRVR
 
+!! ================ 3 argument subroutine interfaces =================================
+! subroutine(vector(i), i, vector(i))
+#define SUB_VIIVI(VKIND) \
+  pure subroutine sub_vi##VKIND##ivi##VKIND(arg1, arg2, arg3); \
+    vector(integer(VKIND)), intent(in) :: arg1; \
+    integer(8), intent(in) :: arg2; \
+    !dir$ ignore_tkr(k) arg2; \
+    vector(integer(VKIND)), intent(in) :: arg3; \
+    !dir$ ignore_tkr(r) arg3; \
+  end subroutine ;
+
+! subroutine(vector(u), i, vector(u))
+#define SUB_VUIVU(VKIND) \
+  pure subroutine sub_vu##VKIND##ivu##VKIND(arg1, arg2, arg3); \
+    vector(unsigned(VKIND)), intent(in) :: arg1; \
+    integer(8), intent(in) :: arg2; \
+    !dir$ ignore_tkr(k) arg2; \
+    vector(unsigned(VKIND)), intent(in) :: arg3; \
+    !dir$ ignore_tkr(r) arg3; \
+  end subroutine ;
+
+! subroutine(vector(r), i, vector(r))
+#define SUB_VRIVR(VKIND) \
+  pure subroutine sub_vr##VKIND##ivr##VKIND(arg1, arg2, arg3); \
+    vector(real(VKIND)), intent(in) :: arg1; \
+    integer(8), intent(in) :: arg2; \
+    !dir$ ignore_tkr(k) arg2; \
+    vector(real(VKIND)), intent(in) :: arg3; \
+    !dir$ ignore_tkr(r) arg3; \
+  end subroutine ;
+
+! subroutine(vector(i), i, i)
+#define SUB_VIII(VKIND) \
+  pure subroutine sub_vi##VKIND##ii##VKIND(arg1, arg2, arg3); \
+    vector(integer(VKIND)), intent(in) :: arg1; \
+    integer(8), intent(in) :: arg2; \
+    !dir$ ignore_tkr(k) arg2; \
+    integer(VKIND), intent(out) :: arg3; \
+    !dir$ ignore_tkr(r) arg3; \
+  end subroutine ;
+
+! subroutine(vector(u), i, i)
+#define SUB_VUII(VKIND) \
+  pure subroutine sub_vu##VKIND##ii##VKIND(arg1, arg2, arg3); \
+    vector(unsigned(VKIND)), intent(in) :: arg1; \
+    integer(8), intent(in) :: arg2; \
+    !dir$ ignore_tkr(k) arg2; \
+    integer(VKIND), intent(out) :: arg3; \
+    !dir$ ignore_tkr(r) arg3; \
+  end subroutine ;
+
+! subroutine(vector(r), i, r)
+#define SUB_VRIR(VKIND) \
+  pure subroutine sub_vr##VKIND##ir##VKIND(arg1, arg2, arg3); \
+    vector(real(VKIND)), intent(in) :: arg1; \
+    integer(8), intent(in) :: arg2; \
+    !dir$ ignore_tkr(k) arg2; \
+    real(VKIND), intent(out) :: arg3; \
+    !dir$ ignore_tkr(r) arg3; \
+  end subroutine ;
+
+  SUB_VIIVI(1) SUB_VIIVI(2) SUB_VIIVI(4) SUB_VIIVI(8)
+  SUB_VUIVU(1) SUB_VUIVU(2) SUB_VUIVU(4) SUB_VUIVU(8)
+  SUB_VRIVR(4) SUB_VRIVR(8)
+  SUB_VIII(1) SUB_VIII(2) SUB_VIII(4) SUB_VIII(8)
+  SUB_VUII(1) SUB_VUII(2) SUB_VUII(4) SUB_VUII(8)
+  SUB_VRIR(4) SUB_VRIR(8)
+
+#undef SUB_VRIR
+#undef SUB_VUII
+#undef SUB_VIII
+#undef SUB_VRIVR
+#undef SUB_VUIVU
+#undef SUB_VIIVI
+
   end interface
 
   procedure(func_r4r4r4r4) :: __ppc_fmadd_r4
@@ -1101,5 +1176,156 @@ module __ppc_intrinsics
 #undef VEC_VR_VI_I
 #undef VR_VU_I
 #undef VR_VI_I
+
+!--------------------------------------------------
+! subroutine(vector, integer, vector/integer/real)
+!--------------------------------------------------
+! 'i0' stands for the integer argument being ignored via
+! the `ignore_tkr' directive.
+#define SUB_VI_I_VI(NAME, VKIND) __ppc_##NAME##_vi##VKIND##i0vi##VKIND
+#define SUB_VU_I_VU(NAME, VKIND) __ppc_##NAME##_vu##VKIND##i0vu##VKIND
+#define SUB_VR_I_VR(NAME, VKIND) __ppc_##NAME##_vr##VKIND##i0vr##VKIND
+#define SUB_VI_I_I(NAME, VKIND) __ppc_##NAME##_vi##VKIND##i0i##VKIND
+#define SUB_VU_I_I(NAME, VKIND) __ppc_##NAME##_vu##VKIND##i0u##VKIND
+#define SUB_VR_I_R(NAME, VKIND) __ppc_##NAME##_vr##VKIND##i0r##VKIND
+
+#define VEC_SUB_VI_I_VI(NAME, VKIND) \
+  procedure(sub_vi##VKIND##ivi##VKIND) :: SUB_VI_I_VI(NAME, VKIND);
+#define VEC_SUB_VU_I_VU(NAME, VKIND) \
+  procedure(sub_vu##VKIND##ivu##VKIND) :: SUB_VU_I_VU(NAME, VKIND);
+#define VEC_SUB_VR_I_VR(NAME, VKIND) \
+  procedure(sub_vr##VKIND##ivr##VKIND) :: SUB_VR_I_VR(NAME, VKIND);
+#define VEC_SUB_VI_I_I(NAME, VKIND) \
+  procedure(sub_vi##VKIND##ii##VKIND) :: SUB_VI_I_I(NAME, VKIND);
+#define VEC_SUB_VU_I_I(NAME, VKIND) \
+  procedure(sub_vu##VKIND##ii##VKIND) :: SUB_VU_I_I(NAME, VKIND);
+#define VEC_SUB_VR_I_R(NAME, VKIND) \
+  procedure(sub_vr##VKIND##ir##VKIND) :: SUB_VR_I_R(NAME, VKIND);
+
+! vec_st
+  VEC_SUB_VI_I_VI(vec_st,1) VEC_SUB_VI_I_VI(vec_st,2) VEC_SUB_VI_I_VI(vec_st,4)
+  VEC_SUB_VU_I_VU(vec_st,1) VEC_SUB_VU_I_VU(vec_st,2) VEC_SUB_VU_I_VU(vec_st,4)
+  VEC_SUB_VR_I_VR(vec_st,4)
+  VEC_SUB_VI_I_I(vec_st,1) VEC_SUB_VI_I_I(vec_st,2) VEC_SUB_VI_I_I(vec_st,4)
+  VEC_SUB_VU_I_I(vec_st,1) VEC_SUB_VU_I_I(vec_st,2) VEC_SUB_VU_I_I(vec_st,4)
+  VEC_SUB_VR_I_R(vec_st,4)
+  interface vec_st
+    procedure :: SUB_VI_I_VI(vec_st,1), SUB_VI_I_VI(vec_st,2), SUB_VI_I_VI(vec_st,4)
+    procedure :: SUB_VU_I_VU(vec_st,1), SUB_VU_I_VU(vec_st,2), SUB_VU_I_VU(vec_st,4)
+    procedure :: SUB_VR_I_VR(vec_st,4)
+    procedure :: SUB_VI_I_I(vec_st,1), SUB_VI_I_I(vec_st,2), SUB_VI_I_I(vec_st,4)
+    procedure :: SUB_VU_I_I(vec_st,1), SUB_VU_I_I(vec_st,2), SUB_VU_I_I(vec_st,4)
+    procedure :: SUB_VR_I_R(vec_st,4)
+  end interface vec_st
+  public :: vec_st
+
+! vec_ste
+  VEC_SUB_VI_I_I(vec_ste,1) VEC_SUB_VI_I_I(vec_ste,2) VEC_SUB_VI_I_I(vec_ste,4)
+  VEC_SUB_VU_I_I(vec_ste,1) VEC_SUB_VU_I_I(vec_ste,2) VEC_SUB_VU_I_I(vec_ste,4)
+  VEC_SUB_VR_I_R(vec_ste,4)
+  interface vec_ste
+    procedure :: SUB_VI_I_I(vec_ste,1), SUB_VI_I_I(vec_ste,2), SUB_VI_I_I(vec_ste,4)
+    procedure :: SUB_VU_I_I(vec_ste,1), SUB_VU_I_I(vec_ste,2), SUB_VU_I_I(vec_ste,4)
+    procedure :: SUB_VR_I_R(vec_ste,4)
+  end interface vec_ste
+  public :: vec_ste
+
+! vec_stxv
+  VEC_SUB_VI_I_VI(vec_stxv,1) VEC_SUB_VI_I_VI(vec_stxv,2) VEC_SUB_VI_I_VI(vec_stxv,4) VEC_SUB_VI_I_VI(vec_stxv,8)
+  VEC_SUB_VU_I_VU(vec_stxv,1) VEC_SUB_VU_I_VU(vec_stxv,2) VEC_SUB_VU_I_VU(vec_stxv,4) VEC_SUB_VU_I_VU(vec_stxv,8)
+  VEC_SUB_VR_I_VR(vec_stxv,4) VEC_SUB_VR_I_VR(vec_stxv,8)
+  VEC_SUB_VI_I_I(vec_stxv,1) VEC_SUB_VI_I_I(vec_stxv,2) VEC_SUB_VI_I_I(vec_stxv,4) VEC_SUB_VI_I_I(vec_stxv,8)
+  VEC_SUB_VU_I_I(vec_stxv,1) VEC_SUB_VU_I_I(vec_stxv,2) VEC_SUB_VU_I_I(vec_stxv,4) VEC_SUB_VU_I_I(vec_stxv,8)
+  VEC_SUB_VR_I_R(vec_stxv,4) VEC_SUB_VR_I_R(vec_stxv,8)
+  interface vec_stxv
+    procedure :: SUB_VI_I_VI(vec_stxv,1), SUB_VI_I_VI(vec_stxv,2), SUB_VI_I_VI(vec_stxv,4), SUB_VI_I_VI(vec_stxv,8)
+    procedure :: SUB_VU_I_VU(vec_stxv,1), SUB_VU_I_VU(vec_stxv,2), SUB_VU_I_VU(vec_stxv,4), SUB_VU_I_VU(vec_stxv,8)
+    procedure :: SUB_VR_I_VR(vec_stxv,4), SUB_VR_I_VR(vec_stxv,8)
+    procedure :: SUB_VI_I_I(vec_stxv,1), SUB_VI_I_I(vec_stxv,2), SUB_VI_I_I(vec_stxv,4), SUB_VI_I_I(vec_stxv,8)
+    procedure :: SUB_VU_I_I(vec_stxv,1), SUB_VU_I_I(vec_stxv,2), SUB_VU_I_I(vec_stxv,4), SUB_VU_I_I(vec_stxv,8)
+    procedure :: SUB_VR_I_R(vec_stxv,4), SUB_VR_I_R(vec_stxv,8)
+  end interface vec_stxv
+  public :: vec_stxv
+
+! vec_xst
+  VEC_SUB_VI_I_VI(vec_xst,1) VEC_SUB_VI_I_VI(vec_xst,2) VEC_SUB_VI_I_VI(vec_xst,4) VEC_SUB_VI_I_VI(vec_xst,8)
+  VEC_SUB_VU_I_VU(vec_xst,1) VEC_SUB_VU_I_VU(vec_xst,2) VEC_SUB_VU_I_VU(vec_xst,4) VEC_SUB_VU_I_VU(vec_xst,8)
+  VEC_SUB_VR_I_VR(vec_xst,4) VEC_SUB_VR_I_VR(vec_xst,8)
+  VEC_SUB_VI_I_I(vec_xst,1) VEC_SUB_VI_I_I(vec_xst,2) VEC_SUB_VI_I_I(vec_xst,4) VEC_SUB_VI_I_I(vec_xst,8)
+  VEC_SUB_VU_I_I(vec_xst,1) VEC_SUB_VU_I_I(vec_xst,2) VEC_SUB_VU_I_I(vec_xst,4) VEC_SUB_VU_I_I(vec_xst,8)
+  VEC_SUB_VR_I_R(vec_xst,4) VEC_SUB_VR_I_R(vec_xst,8)
+  interface vec_xst
+    procedure :: SUB_VI_I_VI(vec_xst,1), SUB_VI_I_VI(vec_xst,2), SUB_VI_I_VI(vec_xst,4), SUB_VI_I_VI(vec_xst,8)
+    procedure :: SUB_VU_I_VU(vec_xst,1), SUB_VU_I_VU(vec_xst,2), SUB_VU_I_VU(vec_xst,4), SUB_VU_I_VU(vec_xst,8)
+    procedure :: SUB_VR_I_VR(vec_xst,4), SUB_VR_I_VR(vec_xst,8)
+    procedure :: SUB_VI_I_I(vec_xst,1), SUB_VI_I_I(vec_xst,2), SUB_VI_I_I(vec_xst,4), SUB_VI_I_I(vec_xst,8)
+    procedure :: SUB_VU_I_I(vec_xst,1), SUB_VU_I_I(vec_xst,2), SUB_VU_I_I(vec_xst,4), SUB_VU_I_I(vec_xst,8)
+    procedure :: SUB_VR_I_R(vec_xst,4), SUB_VR_I_R(vec_xst,8)
+  end interface vec_xst
+  public :: vec_xst
+
+! vec_xst_be
+  VEC_SUB_VI_I_VI(vec_xst_be,1) VEC_SUB_VI_I_VI(vec_xst_be,2) VEC_SUB_VI_I_VI(vec_xst_be,4) VEC_SUB_VI_I_VI(vec_xst_be,8)
+  VEC_SUB_VU_I_VU(vec_xst_be,1) VEC_SUB_VU_I_VU(vec_xst_be,2) VEC_SUB_VU_I_VU(vec_xst_be,4) VEC_SUB_VU_I_VU(vec_xst_be,8)
+  VEC_SUB_VR_I_VR(vec_xst_be,4) VEC_SUB_VR_I_VR(vec_xst_be,8)
+  VEC_SUB_VI_I_I(vec_xst_be,1) VEC_SUB_VI_I_I(vec_xst_be,2) VEC_SUB_VI_I_I(vec_xst_be,4) VEC_SUB_VI_I_I(vec_xst_be,8)
+  VEC_SUB_VU_I_I(vec_xst_be,1) VEC_SUB_VU_I_I(vec_xst_be,2) VEC_SUB_VU_I_I(vec_xst_be,4) VEC_SUB_VU_I_I(vec_xst_be,8)
+  VEC_SUB_VR_I_R(vec_xst_be,4) VEC_SUB_VR_I_R(vec_xst_be,8)
+  interface vec_xst_be
+    procedure :: SUB_VI_I_VI(vec_xst_be,1), SUB_VI_I_VI(vec_xst_be,2), SUB_VI_I_VI(vec_xst_be,4), SUB_VI_I_VI(vec_xst_be,8)
+    procedure :: SUB_VU_I_VU(vec_xst_be,1), SUB_VU_I_VU(vec_xst_be,2), SUB_VU_I_VU(vec_xst_be,4), SUB_VU_I_VU(vec_xst_be,8)
+    procedure :: SUB_VR_I_VR(vec_xst_be,4), SUB_VR_I_VR(vec_xst_be,8)
+    procedure :: SUB_VI_I_I(vec_xst_be,1), SUB_VI_I_I(vec_xst_be,2), SUB_VI_I_I(vec_xst_be,4), SUB_VI_I_I(vec_xst_be,8)
+    procedure :: SUB_VU_I_I(vec_xst_be,1), SUB_VU_I_I(vec_xst_be,2), SUB_VU_I_I(vec_xst_be,4), SUB_VU_I_I(vec_xst_be,8)
+    procedure :: SUB_VR_I_R(vec_xst_be,4), SUB_VR_I_R(vec_xst_be,8)
+  end interface vec_xst_be
+  public :: vec_xst_be
+
+! vec_xstd2
+  VEC_SUB_VI_I_VI(vec_xstd2_,1) VEC_SUB_VI_I_VI(vec_xstd2_,2) VEC_SUB_VI_I_VI(vec_xstd2_,4) VEC_SUB_VI_I_VI(vec_xstd2_,8)
+  VEC_SUB_VU_I_VU(vec_xstd2_,1) VEC_SUB_VU_I_VU(vec_xstd2_,2) VEC_SUB_VU_I_VU(vec_xstd2_,4) VEC_SUB_VU_I_VU(vec_xstd2_,8)
+  VEC_SUB_VR_I_VR(vec_xstd2_,4) VEC_SUB_VR_I_VR(vec_xstd2_,8)
+  VEC_SUB_VI_I_I(vec_xstd2_,1) VEC_SUB_VI_I_I(vec_xstd2_,2) VEC_SUB_VI_I_I(vec_xstd2_,4) VEC_SUB_VI_I_I(vec_xstd2_,8)
+  VEC_SUB_VU_I_I(vec_xstd2_,1) VEC_SUB_VU_I_I(vec_xstd2_,2) VEC_SUB_VU_I_I(vec_xstd2_,4) VEC_SUB_VU_I_I(vec_xstd2_,8)
+  VEC_SUB_VR_I_R(vec_xstd2_,4) VEC_SUB_VR_I_R(vec_xstd2_,8)
+  interface vec_xstd2
+    procedure :: SUB_VI_I_VI(vec_xstd2_,1), SUB_VI_I_VI(vec_xstd2_,2), SUB_VI_I_VI(vec_xstd2_,4), SUB_VI_I_VI(vec_xstd2_,8)
+    procedure :: SUB_VU_I_VU(vec_xstd2_,1), SUB_VU_I_VU(vec_xstd2_,2), SUB_VU_I_VU(vec_xstd2_,4), SUB_VU_I_VU(vec_xstd2_,8)
+    procedure :: SUB_VR_I_VR(vec_xstd2_,4), SUB_VR_I_VR(vec_xstd2_,8)
+    procedure :: SUB_VI_I_I(vec_xstd2_,1), SUB_VI_I_I(vec_xstd2_,2), SUB_VI_I_I(vec_xstd2_,4), SUB_VI_I_I(vec_xstd2_,8)
+    procedure :: SUB_VU_I_I(vec_xstd2_,1), SUB_VU_I_I(vec_xstd2_,2), SUB_VU_I_I(vec_xstd2_,4), SUB_VU_I_I(vec_xstd2_,8)
+    procedure :: SUB_VR_I_R(vec_xstd2_,4), SUB_VR_I_R(vec_xstd2_,8)
+  end interface vec_xstd2
+  public :: vec_xstd2
+
+! vec_xstw4
+  VEC_SUB_VI_I_VI(vec_xstw4_,1) VEC_SUB_VI_I_VI(vec_xstw4_,2) VEC_SUB_VI_I_VI(vec_xstw4_,4)
+  VEC_SUB_VU_I_VU(vec_xstw4_,1) VEC_SUB_VU_I_VU(vec_xstw4_,2) VEC_SUB_VU_I_VU(vec_xstw4_,4)
+  VEC_SUB_VR_I_VR(vec_xstw4_,4)
+  VEC_SUB_VI_I_I(vec_xstw4_,1) VEC_SUB_VI_I_I(vec_xstw4_,2) VEC_SUB_VI_I_I(vec_xstw4_,4)
+  VEC_SUB_VU_I_I(vec_xstw4_,1) VEC_SUB_VU_I_I(vec_xstw4_,2) VEC_SUB_VU_I_I(vec_xstw4_,4)
+  VEC_SUB_VR_I_R(vec_xstw4_,4)
+  interface vec_xstw4
+    procedure :: SUB_VI_I_VI(vec_xstw4_,1), SUB_VI_I_VI(vec_xstw4_,2), SUB_VI_I_VI(vec_xstw4_,4)
+    procedure :: SUB_VU_I_VU(vec_xstw4_,1), SUB_VU_I_VU(vec_xstw4_,2), SUB_VU_I_VU(vec_xstw4_,4)
+    procedure :: SUB_VR_I_VR(vec_xstw4_,4)
+    procedure :: SUB_VI_I_I(vec_xstw4_,1), SUB_VI_I_I(vec_xstw4_,2), SUB_VI_I_I(vec_xstw4_,4)
+    procedure :: SUB_VU_I_I(vec_xstw4_,1), SUB_VU_I_I(vec_xstw4_,2), SUB_VU_I_I(vec_xstw4_,4)
+    procedure :: SUB_VR_I_R(vec_xstw4_,4)
+  end interface vec_xstw4
+  public :: vec_xstw4
+
+#undef VEC_SUB_VI_I_VI
+#undef VEC_SUB_VU_I_VU
+#undef VEC_SUB_VR_I_VR
+#undef VEC_SUB_VI_I_I
+#undef VEC_SUB_VU_I_I
+#undef VEC_SUB_VR_I_R
+#undef SUB_VI_I_VI
+#undef SUB_VU_I_VU
+#undef SUB_VR_I_VR
+#undef SUB_VI_I_I
+#undef SUB_VU_I_I
+#undef SUB_VR_Ik_R
 
 end module __ppc_intrinsics
