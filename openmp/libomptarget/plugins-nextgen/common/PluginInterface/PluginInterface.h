@@ -1182,15 +1182,36 @@ public:
     return Plugin::success();
   }
 
-  /// Get a resource from the pool or create new ones. If the function succeeds,
-  /// the handle to the resource is saved in \p Handle.
-  Error getResource(ResourceHandleTy &Handle) {
-    return getResources(1, &Handle);
+  /// Get a resource from the pool or create new ones. If the function
+  /// succeeeds, the handle to the resource is saved in \p Handle.
+  virtual Error getResource(ResourceHandleTy &Handle) {
+    // Get a resource with an empty resource processor.
+    return getResourcesImpl(1, &Handle,
+                            [](ResourceHandleTy) { return Plugin::success(); });
   }
 
   /// Get multiple resources from the pool or create new ones. If the function
   /// succeeeds, the handles to the resources are saved in \p Handles.
-  Error getResources(uint32_t Num, ResourceHandleTy *Handles) {
+  virtual Error getResources(uint32_t Num, ResourceHandleTy *Handles) {
+    // Get resources with an empty resource processor.
+    return getResourcesImpl(Num, Handles,
+                            [](ResourceHandleTy) { return Plugin::success(); });
+  }
+
+  /// Return resource to the pool.
+  virtual Error returnResource(ResourceHandleTy Handle) {
+    // Return a resource with an empty resource processor.
+    return returnResourceImpl(
+        Handle, [](ResourceHandleTy) { return Plugin::success(); });
+  }
+
+protected:
+  /// Get multiple resources from the pool or create new ones. If the function
+  /// succeeeds, the handles to the resources are saved in \p Handles. Also
+  /// process each of the obtained resources with \p Processor.
+  template <typename FuncTy>
+  Error getResourcesImpl(uint32_t Num, ResourceHandleTy *Handles,
+                         FuncTy Processor) {
     const std::lock_guard<std::mutex> Lock(Mutex);
 
     assert(NextAvailable <= ResourcePool.size() &&
@@ -1206,14 +1227,24 @@ public:
     for (uint32_t r = 0; r < Num; ++r)
       Handles[r] = ResourcePool[NextAvailable + r];
 
+    // Process all obtained resources.
+    for (uint32_t r = 0; r < Num; ++r)
+      if (auto Err = Processor(Handles[r]))
+        return Err;
+
     NextAvailable += Num;
 
     return Plugin::success();
   }
 
-  /// Return resource to the pool.
-  Error returnResource(ResourceHandleTy Handle) {
+  /// Return resource to the pool and process the resource with \p Processor.
+  template <typename FuncTy>
+  Error returnResourceImpl(ResourceHandleTy Handle, FuncTy Processor) {
     const std::lock_guard<std::mutex> Lock(Mutex);
+
+    // Process the returned resource.
+    if (auto Err = Processor(Handle))
+      return Err;
 
     assert(NextAvailable > 0 && "Resource pool is corrupted");
     ResourcePool[--NextAvailable] = Handle;
