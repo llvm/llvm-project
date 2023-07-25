@@ -93,7 +93,7 @@ extern cl::opt<bool> ScalePartialSampleProfileWorkingSetSize;
 // instruction in it takes an address of any basic block, because instruction
 // can only take an address of basic block located in the same function.
 static bool findRefEdges(ModuleSummaryIndex &Index, const User *CurUser,
-                         SetVector<ValueInfo, std::vector<ValueInfo>> &RefEdges,
+                         SetVector<ValueInfo> &RefEdges,
                          SmallPtrSet<const User *, 8> &Visited) {
   bool HasBlockAddress = false;
   SmallVector<const User *, 32> Worklist;
@@ -144,12 +144,9 @@ static bool isNonRenamableLocal(const GlobalValue &GV) {
 
 /// Determine whether this call has all constant integer arguments (excluding
 /// "this") and summarize it to VCalls or ConstVCalls as appropriate.
-static void addVCallToSet(
-    DevirtCallSite Call, GlobalValue::GUID Guid,
-    SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
-        &VCalls,
-    SetVector<FunctionSummary::ConstVCall,
-              std::vector<FunctionSummary::ConstVCall>> &ConstVCalls) {
+static void addVCallToSet(DevirtCallSite Call, GlobalValue::GUID Guid,
+                          SetVector<FunctionSummary::VFuncId> &VCalls,
+                          SetVector<FunctionSummary::ConstVCall> &ConstVCalls) {
   std::vector<uint64_t> Args;
   // Start from the second argument to skip the "this" pointer.
   for (auto &Arg : drop_begin(Call.CB.args())) {
@@ -166,18 +163,11 @@ static void addVCallToSet(
 /// If this intrinsic call requires that we add information to the function
 /// summary, do so via the non-constant reference arguments.
 static void addIntrinsicToSummary(
-    const CallInst *CI,
-    SetVector<GlobalValue::GUID, std::vector<GlobalValue::GUID>> &TypeTests,
-    SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
-        &TypeTestAssumeVCalls,
-    SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
-        &TypeCheckedLoadVCalls,
-    SetVector<FunctionSummary::ConstVCall,
-              std::vector<FunctionSummary::ConstVCall>>
-        &TypeTestAssumeConstVCalls,
-    SetVector<FunctionSummary::ConstVCall,
-              std::vector<FunctionSummary::ConstVCall>>
-        &TypeCheckedLoadConstVCalls,
+    const CallInst *CI, SetVector<GlobalValue::GUID> &TypeTests,
+    SetVector<FunctionSummary::VFuncId> &TypeTestAssumeVCalls,
+    SetVector<FunctionSummary::VFuncId> &TypeCheckedLoadVCalls,
+    SetVector<FunctionSummary::ConstVCall> &TypeTestAssumeConstVCalls,
+    SetVector<FunctionSummary::ConstVCall> &TypeCheckedLoadConstVCalls,
     DominatorTree &DT) {
   switch (CI->getCalledFunction()->getIntrinsicID()) {
   case Intrinsic::type_test:
@@ -279,14 +269,12 @@ static void computeFunctionSummary(
   MapVector<ValueInfo, CalleeInfo, DenseMap<ValueInfo, unsigned>,
             std::vector<std::pair<ValueInfo, CalleeInfo>>>
       CallGraphEdges;
-  SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges, LoadRefEdges,
-      StoreRefEdges;
-  SetVector<GlobalValue::GUID, std::vector<GlobalValue::GUID>> TypeTests;
-  SetVector<FunctionSummary::VFuncId, std::vector<FunctionSummary::VFuncId>>
-      TypeTestAssumeVCalls, TypeCheckedLoadVCalls;
-  SetVector<FunctionSummary::ConstVCall,
-            std::vector<FunctionSummary::ConstVCall>>
-      TypeTestAssumeConstVCalls, TypeCheckedLoadConstVCalls;
+  SetVector<ValueInfo> RefEdges, LoadRefEdges, StoreRefEdges;
+  SetVector<GlobalValue::GUID> TypeTests;
+  SetVector<FunctionSummary::VFuncId> TypeTestAssumeVCalls,
+      TypeCheckedLoadVCalls;
+  SetVector<FunctionSummary::ConstVCall> TypeTestAssumeConstVCalls,
+      TypeCheckedLoadConstVCalls;
   ICallPromotionAnalysis ICallAnalysis;
   SmallPtrSet<const User *, 8> Visited;
 
@@ -517,7 +505,7 @@ static void computeFunctionSummary(
   std::vector<ValueInfo> Refs;
   if (IsThinLTO) {
     auto AddRefEdges = [&](const std::vector<const Instruction *> &Instrs,
-                           SetVector<ValueInfo, std::vector<ValueInfo>> &Edges,
+                           SetVector<ValueInfo> &Edges,
                            SmallPtrSet<const User *, 8> &Cache) {
       for (const auto *I : Instrs) {
         Cache.erase(I);
@@ -722,7 +710,7 @@ static void computeVariableSummary(ModuleSummaryIndex &Index,
                                    DenseSet<GlobalValue::GUID> &CantBePromoted,
                                    const Module &M,
                                    SmallVectorImpl<MDNode *> &Types) {
-  SetVector<ValueInfo, std::vector<ValueInfo>> RefEdges;
+  SetVector<ValueInfo> RefEdges;
   SmallPtrSet<const User *, 8> Visited;
   bool HasBlockAddress = findRefEdges(Index, &V, RefEdges, Visited);
   bool NonRenamableLocal = isNonRenamableLocal(V);
