@@ -6,7 +6,7 @@
 //===----------------------------------------------------------------------===//
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: !libcpp-has-debug-mode
+// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
 // XFAIL: availability-verbose_abort-missing
 
 // <mdspan>
@@ -42,7 +42,7 @@
 #include <mdspan>
 
 #include "check_assertion.h"
-#include "CustomTestLayouts.h"
+#include "../../../../../std/containers/views/mdspan/mdspan/CustomTestLayouts.h"
 
 // We use a funky mapping in this test that doesn't check the dynamic/static extents mismatch itself
 int main(int, char**) {
