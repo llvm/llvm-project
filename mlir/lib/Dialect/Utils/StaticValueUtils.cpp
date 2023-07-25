@@ -121,6 +121,20 @@ std::optional<int64_t> getConstantIntValue(OpFoldResult ofr) {
   return std::nullopt;
 }
 
+std::optional<SmallVector<int64_t>>
+getConstantIntValues(ArrayRef<OpFoldResult> ofrs) {
+  bool failed = false;
+  SmallVector<int64_t> res = llvm::map_to_vector(ofrs, [&](OpFoldResult ofr) {
+    auto cv = getConstantIntValue(ofr);
+    if (!cv.has_value())
+      failed = true;
+    return cv.has_value() ? cv.value() : 0;
+  });
+  if (failed)
+    return std::nullopt;
+  return res;
+}
+
 /// Return true if `ofr` is constant integer equal to `value`.
 bool isConstantIntValue(OpFoldResult ofr, int64_t value) {
   auto val = getConstantIntValue(ofr);
