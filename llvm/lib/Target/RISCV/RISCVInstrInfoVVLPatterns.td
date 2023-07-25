@@ -1697,6 +1697,31 @@ multiclass VPatNarrowShiftSplatExt_WX<SDNode op, PatFrags extop, string instruct
   }
 }
 
+multiclass VPatNarrowShiftExtVL_WV<SDNode op, PatFrags extop, string instruction_name> {
+  foreach vtiToWti = AllWidenableIntVectors in {
+    defvar vti = vtiToWti.Vti;
+    defvar wti = vtiToWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<vti>.Predicates,
+                                 GetVTypePredicates<wti>.Predicates) in
+    def : Pat<
+      (vti.Vector
+        (riscv_trunc_vector_vl
+          (op (wti.Vector wti.RegClass:$rs2),
+              (wti.Vector (extop (vti.Vector vti.RegClass:$rs1),
+                                 (vti.Mask true_mask), VLOpFrag)),
+          srcvalue, (vti.Mask true_mask), VLOpFrag),
+        (vti.Mask V0), VLOpFrag)),
+      (!cast<Instruction>(instruction_name#"_WV_"#vti.LMul.MX#"_MASK")
+        (vti.Vector (IMPLICIT_DEF)), wti.RegClass:$rs2, vti.RegClass:$rs1,
+        (vti.Mask V0), GPR:$vl, vti.Log2SEW, TU_MU)>;
+  }
+}
+
+multiclass VPatNarrowShiftVL_WV<SDNode op, string instruction_name> {
+  defm : VPatNarrowShiftExtVL_WV<op, riscv_sext_vl_oneuse, instruction_name>;
+  defm : VPatNarrowShiftExtVL_WV<op, riscv_zext_vl_oneuse, instruction_name>;
+}
+
 multiclass VPatMultiplyAddVL_VV_VX<SDNode op, string instruction_name> {
   foreach vti = AllIntegerVectors in {
     defvar suffix = vti.LMul.MX;
@@ -2120,6 +2145,9 @@ defm : VPatNarrowShiftSplatExt_WX<riscv_sra_vl, riscv_sext_vl_oneuse, "PseudoVNS
 defm : VPatNarrowShiftSplatExt_WX<riscv_sra_vl, riscv_zext_vl_oneuse, "PseudoVNSRA">;
 defm : VPatNarrowShiftSplatExt_WX<riscv_srl_vl, riscv_sext_vl_oneuse, "PseudoVNSRL">;
 defm : VPatNarrowShiftSplatExt_WX<riscv_srl_vl, riscv_zext_vl_oneuse, "PseudoVNSRL">;
+
+defm : VPatNarrowShiftVL_WV<riscv_srl_vl, "PseudoVNSRL">;
+defm : VPatNarrowShiftVL_WV<riscv_sra_vl, "PseudoVNSRA">;
 
 defm : VPatBinaryNVL_WV_WX_WI<riscv_vnsrl_vl, "PseudoVNSRL">;
 
