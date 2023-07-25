@@ -199,9 +199,13 @@ Changes to the Hexagon Backend
 Changes to the LoongArch Backend
 --------------------------------
 
+* Adds assembler/disassembler support for the LSX, LASX, LVZ and LBT ISA extensions.
 * The ``lp64s`` ABI is supported now and has been tested on Rust bare-matal target.
 * A target feature ``ual`` is introduced to allow unaligned memory accesses and
   this feature is enabled by default for generic 64-bit processors.
+* Adds support for the ``large`` code model, which is equivalent to GCC's ``extreme`` one.
+* Assorted codegen improvements.
+* llvm-objcopy now supports processing LoongArch objects.
 
 Changes to the MIPS Backend
 ---------------------------
