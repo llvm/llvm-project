@@ -6451,7 +6451,8 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
     if (Res2.isFailure())
       return Res2;
 
-    // TODO-GFX12: NV modifier should only be enabled for MI400
+    // NV bit exists on GFX12+, but does something starting from GFX1210.
+    // Allow parsing on all GFX12 and fail on validation for better diagnostics.
     bool NV = false;
     ParseStatus Res3 = ParseStatus::NoMatch;
     if (trySkipId("nv")) {

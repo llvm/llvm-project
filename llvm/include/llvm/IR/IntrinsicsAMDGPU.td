@@ -862,7 +862,7 @@ class AMDGPUImageDimIntrinsic<AMDGPUDimProfile P_,
                         llvm_i1_ty], []),        // unorm(imm)
       [llvm_i32_ty,                              // texfailctrl(imm; bit 0 = tfe, bit 1 = lwe)
        llvm_i32_ty]),                            // cachepolicy(imm; bit 0 = glc, bit 1 = slc, bit 2 = dlc;
-                                                 //   gfx12+ imm: bits [0-2] = th, bits [3-4] = scope, bit 5 = nv)
+                                                 //   gfx12+ imm: bits [0-2] = th, bits [3-4] = scope)
                                                  // TODO-GFX12: Update all other cachepolicy descriptions.
 
      !listconcat(props,
