@@ -23,3 +23,8 @@ static int var = 0;
 int get_var(void) {
   return var;
 }
+
+// Should generate available_externally linkage.
+inline int availableExternallyMethod(void) { return 0; }
+void callAvailableExternallyMethod(void) { availableExternallyMethod(); }
+// CIR: cir.func available_externally @availableExternallyMethod
