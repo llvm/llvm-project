@@ -11,12 +11,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MipsInstPrinter.h"
-#include "MipsInstrInfo.h"
+#include "Mips.h"
 #include "MipsMCExpr.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/raw_ostream.h"
