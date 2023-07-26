@@ -592,10 +592,9 @@ define i1 @icmp_or_xor_4_2(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3,
 
 define i1 @icmp_or_sub_2_eq(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
 ; CHECK-LABEL: @icmp_or_sub_2_eq(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SUB]], [[SUB1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i64 %x1, %y1
@@ -607,10 +606,9 @@ define i1 @icmp_or_sub_2_eq(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
 
 define i1 @icmp_or_sub_2_ne(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
 ; CHECK-LABEL: @icmp_or_sub_2_ne(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SUB]], [[SUB1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[OR]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = or i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i64 %x1, %y1
@@ -698,12 +696,11 @@ define i1 @icmp_or_sub_2_4_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
 
 define i1 @icmp_or_sub_3_1(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3) {
 ; CHECK-LABEL: @icmp_or_sub_3_1(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SUB]], [[SUB1]]
-; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[X3:%.*]], [[Y3:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[OR]], [[SUB2]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[X3:%.*]], [[Y3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i64 %x1, %y1
@@ -738,12 +735,11 @@ define i1 @icmp_or_sub_3_2_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64
 
 define i1 @icmp_or_sub_3_3(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3) {
 ; CHECK-LABEL: @icmp_or_sub_3_3(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SUB]], [[SUB1]]
-; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[X3:%.*]], [[Y3:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[SUB2]], [[OR]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[X3:%.*]], [[Y3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i64 %x1, %y1
@@ -778,14 +774,13 @@ define i1 @icmp_or_sub_3_4_fail(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64
 
 define i1 @icmp_or_sub_4_1(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3, i64 %x4, i64 %y4) {
 ; CHECK-LABEL: @icmp_or_sub_4_1(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SUB]], [[SUB1]]
-; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[X3:%.*]], [[Y3:%.*]]
-; CHECK-NEXT:    [[SUB3:%.*]] = sub i64 [[X4:%.*]], [[Y4:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[SUB2]], [[SUB3]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[OR]], [[OR1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR2]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X3:%.*]], [[Y3:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X4:%.*]], [[Y4:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i64 %x1, %y1
@@ -801,14 +796,13 @@ define i1 @icmp_or_sub_4_1(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3,
 
 define i1 @icmp_or_sub_4_2(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3, i64 %x4, i64 %y4) {
 ; CHECK-LABEL: @icmp_or_sub_4_2(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SUB]], [[SUB1]]
-; CHECK-NEXT:    [[SUB2:%.*]] = sub i64 [[X3:%.*]], [[Y3:%.*]]
-; CHECK-NEXT:    [[SUB3:%.*]] = sub i64 [[X4:%.*]], [[Y4:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[SUB2]], [[SUB3]]
-; CHECK-NEXT:    [[OR2:%.*]] = or i64 [[OR1]], [[OR]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR2]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[X3:%.*]], [[Y3:%.*]]
+; CHECK-NEXT:    [[TMP5:%.*]] = and i1 [[TMP3]], [[TMP4]]
+; CHECK-NEXT:    [[TMP6:%.*]] = icmp eq i64 [[X4:%.*]], [[Y4:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP5]], [[TMP6]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i64 %x1, %y1
@@ -824,10 +818,9 @@ define i1 @icmp_or_sub_4_2(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3,
 
 define i1 @icmp_or_xor_with_sub_2_eq(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
 ; CHECK-LABEL: @icmp_or_xor_with_sub_2_eq(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %xor = xor i64 %x1, %y1
@@ -839,10 +832,9 @@ define i1 @icmp_or_xor_with_sub_2_eq(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
 
 define i1 @icmp_or_xor_with_sub_2_ne(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
 ; CHECK-LABEL: @icmp_or_xor_with_sub_2_ne(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[SUB]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i64 [[OR]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp ne i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = or i1 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %xor = xor i64 %x1, %y1
@@ -854,12 +846,11 @@ define i1 @icmp_or_xor_with_sub_2_ne(i64 %x1, i64 %y1, i64 %x2, i64 %y2) {
 
 define i1 @icmp_or_xor_with_sub_3_1(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3) {
 ; CHECK-LABEL: @icmp_or_xor_with_sub_3_1(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[XOR1]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[X3:%.*]], [[Y3:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[OR]], [[SUB1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[X3:%.*]], [[Y3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %xor = xor i64 %x1, %y1
@@ -873,12 +864,11 @@ define i1 @icmp_or_xor_with_sub_3_1(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3,
 
 define i1 @icmp_or_xor_with_sub_3_2(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3) {
 ; CHECK-LABEL: @icmp_or_xor_with_sub_3_2(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[SUB]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X3:%.*]], [[Y3:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[OR]], [[XOR1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[X3:%.*]], [[Y3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %xor = xor i64 %x1, %y1
@@ -892,12 +882,11 @@ define i1 @icmp_or_xor_with_sub_3_2(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3,
 
 define i1 @icmp_or_xor_with_sub_3_3(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3) {
 ; CHECK-LABEL: @icmp_or_xor_with_sub_3_3(
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[XOR]], [[SUB]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[X3:%.*]], [[Y3:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[OR]], [[SUB1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[X3:%.*]], [[Y3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %xor = xor i64 %x1, %y1
@@ -911,12 +900,11 @@ define i1 @icmp_or_xor_with_sub_3_3(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3,
 
 define i1 @icmp_or_xor_with_sub_3_4(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3) {
 ; CHECK-LABEL: @icmp_or_xor_with_sub_3_4(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SUB]], [[XOR]]
-; CHECK-NEXT:    [[XOR1:%.*]] = xor i64 [[X3:%.*]], [[Y3:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[OR]], [[XOR1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[X3:%.*]], [[Y3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i64 %x1, %y1
@@ -930,12 +918,11 @@ define i1 @icmp_or_xor_with_sub_3_4(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3,
 
 define i1 @icmp_or_xor_with_sub_3_5(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3) {
 ; CHECK-LABEL: @icmp_or_xor_with_sub_3_5(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SUB]], [[XOR]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[X3:%.*]], [[Y3:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[OR]], [[SUB1]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[X3:%.*]], [[Y3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i64 %x1, %y1
@@ -949,12 +936,11 @@ define i1 @icmp_or_xor_with_sub_3_5(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3,
 
 define i1 @icmp_or_xor_with_sub_3_6(i64 %x1, i64 %y1, i64 %x2, i64 %y2, i64 %x3, i64 %y3) {
 ; CHECK-LABEL: @icmp_or_xor_with_sub_3_6(
-; CHECK-NEXT:    [[SUB:%.*]] = sub i64 [[X1:%.*]], [[Y1:%.*]]
-; CHECK-NEXT:    [[SUB1:%.*]] = sub i64 [[X2:%.*]], [[Y2:%.*]]
-; CHECK-NEXT:    [[OR:%.*]] = or i64 [[SUB]], [[SUB1]]
-; CHECK-NEXT:    [[XOR:%.*]] = xor i64 [[X3:%.*]], [[Y3:%.*]]
-; CHECK-NEXT:    [[OR1:%.*]] = or i64 [[OR]], [[XOR]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i64 [[OR1]], 0
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[X1:%.*]], [[Y1:%.*]]
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp eq i64 [[X2:%.*]], [[Y2:%.*]]
+; CHECK-NEXT:    [[TMP3:%.*]] = and i1 [[TMP1]], [[TMP2]]
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[X3:%.*]], [[Y3:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = and i1 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %sub = sub i64 %x1, %y1
