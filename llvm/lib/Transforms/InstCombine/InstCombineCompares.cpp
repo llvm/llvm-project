@@ -1944,19 +1944,18 @@ Instruction *InstCombinerImpl::foldICmpAndConstant(ICmpInst &Cmp,
   return nullptr;
 }
 
-/// Fold icmp eq/ne (or (xor (X1, X2), xor(X3, X4))), 0.
-static Value *foldICmpOrXorChain(ICmpInst &Cmp, BinaryOperator *Or,
-                                 InstCombiner::BuilderTy &Builder) {
-  // Are we using xors to bitwise check for a pair or pairs of (in)equalities?
-  // Convert to a shorter form that has more potential to be folded even
-  // further.
-  // ((X1 ^ X2) || (X3 ^ X4)) == 0 --> (X1 == X2) && (X3 == X4)
-  // ((X1 ^ X2) || (X3 ^ X4)) != 0 --> (X1 != X2) || (X3 != X4)
-  // ((X1 ^ X2) || (X3 ^ X4) || (X5 ^ X6)) == 0 -->
+/// Fold icmp eq/ne (or (xor/sub (X1, X2), xor/sub (X3, X4))), 0.
+static Value *foldICmpOrXorSubChain(ICmpInst &Cmp, BinaryOperator *Or,
+                                    InstCombiner::BuilderTy &Builder) {
+  // Are we using xors or subs to bitwise check for a pair or pairs of
+  // (in)equalities? Convert to a shorter form that has more potential to be
+  // folded even further.
+  // ((X1 ^/- X2) || (X3 ^/- X4)) == 0 --> (X1 == X2) && (X3 == X4)
+  // ((X1 ^/- X2) || (X3 ^/- X4)) != 0 --> (X1 != X2) || (X3 != X4)
+  // ((X1 ^/- X2) || (X3 ^/- X4) || (X5 ^/- X6)) == 0 -->
   // (X1 == X2) && (X3 == X4) && (X5 == X6)
-  // ((X1 ^ X2) || (X3 ^ X4) || (X5 ^ X6)) != 0 -->
+  // ((X1 ^/- X2) || (X3 ^/- X4) || (X5 ^/- X6)) != 0 -->
   // (X1 != X2) || (X3 != X4) || (X5 != X6)
-  // TODO: Implement for sub
   SmallVector<std::pair<Value *, Value *>, 2> CmpValues;
   SmallVector<Value *, 16> WorkList(1, Or);
 
@@ -1967,9 +1966,16 @@ static Value *foldICmpOrXorChain(ICmpInst &Cmp, BinaryOperator *Or,
       if (match(OrOperatorArgument,
                 m_OneUse(m_Xor(m_Value(Lhs), m_Value(Rhs))))) {
         CmpValues.emplace_back(Lhs, Rhs);
-      } else {
-        WorkList.push_back(OrOperatorArgument);
+        return;
       }
+
+      if (match(OrOperatorArgument,
+                m_OneUse(m_Sub(m_Value(Lhs), m_Value(Rhs))))) {
+        CmpValues.emplace_back(Lhs, Rhs);
+        return;
+      }
+
+      WorkList.push_back(OrOperatorArgument);
     };
 
     Value *CurrentValue = WorkList.pop_back_val();
@@ -2082,7 +2088,7 @@ Instruction *InstCombinerImpl::foldICmpOrConstant(ICmpInst &Cmp,
     return BinaryOperator::Create(BOpc, CmpP, CmpQ);
   }
 
-  if (Value *V = foldICmpOrXorChain(Cmp, Or, Builder))
+  if (Value *V = foldICmpOrXorSubChain(Cmp, Or, Builder))
     return replaceInstUsesWith(Cmp, V);
 
   return nullptr;
