@@ -55,22 +55,31 @@ enum FileType : unsigned {
   /// Invalid file type.
   Invalid = 0U,
 
+  /// \brief MachO Dynamic Library file.
+  MachO_DynamicLibrary      = 1U <<  0,
+
+  /// \brief MachO Dynamic Library Stub file.
+  MachO_DynamicLibrary_Stub = 1U <<  1,
+
+  /// \brief MachO Bundle file.
+  MachO_Bundle              = 1U <<  2,
+
   /// Text-based stub file (.tbd) version 1.0
-  TBD_V1  = 1U <<  0,
+  TBD_V1                    = 1U <<  3,
 
   /// Text-based stub file (.tbd) version 2.0
-  TBD_V2  = 1U <<  1,
+  TBD_V2                    = 1U <<  4,
 
   /// Text-based stub file (.tbd) version 3.0
-  TBD_V3  = 1U <<  2,
+  TBD_V3                    = 1U <<  5,
 
   /// Text-based stub file (.tbd) version 4.0
-  TBD_V4  = 1U <<  3,
+  TBD_V4                    = 1U <<  6,
 
   /// Text-based stub file (.tbd) version 5.0
-  TBD_V5  = 1U <<  4,
+  TBD_V5                    = 1U <<  7,
 
-  All     = ~0U,
+  All                       = ~0U,
 
   LLVM_MARK_AS_BITMASK_ENUM(/*LargestValue=*/All),
 };
@@ -93,6 +102,10 @@ public:
   template <typename RangeT> void addTargets(RangeT &&Targets) {
     for (const auto &Target : Targets)
       addTarget(Target(Target));
+  }
+
+  bool hasTarget(Target &Targ) const {
+    return llvm::is_contained(Targets, Targ);
   }
 
   using const_target_iterator = TargetList::const_iterator;
@@ -172,6 +185,13 @@ public:
   ///
   /// \param Target the target to add into.
   void addTarget(const Target &Target);
+
+  /// Determine if target triple slice exists in file.
+  ///
+  /// \param Target the value to find.
+  bool hasTarget(const Target &Targ) const {
+    return llvm::is_contained(Targets, Targ);
+  }
 
   /// Set and add targets.
   ///

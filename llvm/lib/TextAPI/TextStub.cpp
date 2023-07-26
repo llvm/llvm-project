@@ -787,7 +787,7 @@ template <> struct MappingTraits<const InterfaceFile *> {
     NormalizedTBD_V4(IO &IO, const InterfaceFile *&File) {
       auto Ctx = reinterpret_cast<TextAPIContext *>(IO.getContext());
       assert(Ctx);
-      TBDVersion = Ctx->FileKind >> 1;
+      TBDVersion = Ctx->FileKind >> 4;
       Targets.insert(Targets.begin(), File->targets().begin(),
                      File->targets().end());
       InstallName = File->getInstallName();

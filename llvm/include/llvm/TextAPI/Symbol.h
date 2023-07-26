@@ -125,6 +125,10 @@ public:
     return mapToArchitectureSet(Targets).contains(Arch);
   }
 
+  bool hasTarget(const Target &Targ) const {
+    return llvm::is_contained(Targets, Targ);
+  }
+
   using const_target_iterator = TargetList::const_iterator;
   using const_target_range = llvm::iterator_range<const_target_iterator>;
   const_target_range targets() const { return {Targets}; }
@@ -146,8 +150,7 @@ public:
   bool operator!=(const Symbol &O) const { return !(*this == O); }
 
   bool operator<(const Symbol &O) const {
-    return std::tie(Name, Kind, Targets, Flags) <
-           std::tie(O.Name, O.Kind, O.Targets, O.Flags);
+    return std::tie(Kind, Name) < std::tie(O.Kind, O.Name);
   }
 
 private:
