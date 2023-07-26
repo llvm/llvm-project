@@ -2,7 +2,7 @@
 ; RUN: llc < %s -mtriple=x86_64-win32 | FileCheck %s -check-prefix=WIN64
 ; RUN: llc < %s -mtriple=x86_64-mingw32 | FileCheck %s -check-prefix=WIN64
 
-define i64 @double_to_i128(double %d) nounwind strictfp {
+define i64 @double_to_i128(double %d) nounwind {
 ; WIN64-LABEL: double_to_i128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $40, %rsp
@@ -15,7 +15,7 @@ define i64 @double_to_i128(double %d) nounwind strictfp {
   ret i64 %2
 }
 
-define i64 @double_to_ui128(double %d) nounwind strictfp {
+define i64 @double_to_ui128(double %d) nounwind {
 ; WIN64-LABEL: double_to_ui128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $40, %rsp
@@ -28,7 +28,7 @@ define i64 @double_to_ui128(double %d) nounwind strictfp {
   ret i64 %2
 }
 
-define i64 @float_to_i128(float %d) nounwind strictfp {
+define i64 @float_to_i128(float %d) nounwind {
 ; WIN64-LABEL: float_to_i128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $40, %rsp
@@ -41,7 +41,7 @@ define i64 @float_to_i128(float %d) nounwind strictfp {
   ret i64 %2
 }
 
-define i64 @float_to_ui128(float %d) nounwind strictfp {
+define i64 @float_to_ui128(float %d) nounwind {
 ; WIN64-LABEL: float_to_ui128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $40, %rsp
@@ -54,7 +54,7 @@ define i64 @float_to_ui128(float %d) nounwind strictfp {
   ret i64 %2
 }
 
-define i64 @longdouble_to_i128(ptr nocapture readonly %0) nounwind strictfp {
+define i64 @longdouble_to_i128(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: longdouble_to_i128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -71,7 +71,7 @@ define i64 @longdouble_to_i128(ptr nocapture readonly %0) nounwind strictfp {
   ret i64 %4
 }
 
-define i64 @longdouble_to_ui128(ptr nocapture readonly %0) nounwind strictfp {
+define i64 @longdouble_to_ui128(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: longdouble_to_ui128:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -88,7 +88,7 @@ define i64 @longdouble_to_ui128(ptr nocapture readonly %0) nounwind strictfp {
   ret i64 %4
 }
 
-define double @i128_to_double(ptr nocapture readonly %0) nounwind strictfp {
+define double @i128_to_double(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: i128_to_double:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -103,7 +103,7 @@ define double @i128_to_double(ptr nocapture readonly %0) nounwind strictfp {
   ret double %3
 }
 
-define double @ui128_to_double(ptr nocapture readonly %0) nounwind strictfp {
+define double @ui128_to_double(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: ui128_to_double:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -118,7 +118,7 @@ define double @ui128_to_double(ptr nocapture readonly %0) nounwind strictfp {
   ret double %3
 }
 
-define float @i128_to_float(ptr nocapture readonly %0) nounwind strictfp {
+define float @i128_to_float(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: i128_to_float:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -133,7 +133,7 @@ define float @i128_to_float(ptr nocapture readonly %0) nounwind strictfp {
   ret float %3
 }
 
-define float @ui128_to_float(ptr nocapture readonly %0) nounwind strictfp {
+define float @ui128_to_float(ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: ui128_to_float:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    subq $56, %rsp
@@ -148,7 +148,7 @@ define float @ui128_to_float(ptr nocapture readonly %0) nounwind strictfp {
   ret float %3
 }
 
-define void @i128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %agg.result, ptr nocapture readonly %0) nounwind strictfp {
+define void @i128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %agg.result, ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: i128_to_longdouble:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsi
@@ -171,7 +171,7 @@ define void @i128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %a
   ret void
 }
 
-define void @ui128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %agg.result, ptr nocapture readonly %0) nounwind strictfp {
+define void @ui128_to_longdouble(ptr noalias nocapture sret(x86_fp80) align 16 %agg.result, ptr nocapture readonly %0) nounwind {
 ; WIN64-LABEL: ui128_to_longdouble:
 ; WIN64:       # %bb.0:
 ; WIN64-NEXT:    pushq %rsi
