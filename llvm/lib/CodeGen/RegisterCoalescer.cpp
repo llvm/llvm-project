@@ -1416,6 +1416,8 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
   // $edi = MOV32r0 implicit-def dead $eflags, implicit-def $rdi
   // undef %0.sub_32bit = MOV32r0 implicit-def dead $eflags, implicit-def %0
 
+  bool NewMIDefinesFullReg = false;
+
   SmallVector<MCRegister, 4> NewMIImplDefs;
   for (unsigned i = NewMI.getDesc().getNumOperands(),
                 e = NewMI.getNumOperands();
@@ -1424,6 +1426,9 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     if (MO.isReg() && MO.isDef()) {
       assert(MO.isImplicit());
       if (MO.getReg().isPhysical()) {
+        if (MO.getReg() == DstReg)
+          NewMIDefinesFullReg = true;
+
         assert(MO.isImplicit() && MO.getReg().isPhysical() &&
                (MO.isDead() ||
                 (DefSubIdx && (TRI->getSubReg(MO.getReg(), DefSubIdx) ==
@@ -1552,8 +1557,12 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     assert(DstReg.isPhysical() &&
            "Only expect virtual or physical registers in remat");
     NewMI.getOperand(0).setIsDead(true);
-    NewMI.addOperand(MachineOperand::CreateReg(
-        CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
+
+    if (!NewMIDefinesFullReg) {
+      NewMI.addOperand(MachineOperand::CreateReg(
+          CopyDstReg, true /*IsDef*/, true /*IsImp*/, false /*IsKill*/));
+    }
+
     // Record small dead def live-ranges for all the subregisters
     // of the destination register.
     // Otherwise, variables that live through may miss some
