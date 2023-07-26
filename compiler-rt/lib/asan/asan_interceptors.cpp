@@ -224,12 +224,9 @@ static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   auto args = asanThreadArgRetval().GetArgs(self);
   t->ThreadStart(GetTid());
 
-#    if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-        SANITIZER_SOLARIS
   __sanitizer_sigset_t sigset;
   t->GetStartData(sigset);
   SetSigProcMask(&sigset, nullptr);
-#    endif
 
   thread_return_t retval = (*args.routine)(args.arg_retval);
   asanThreadArgRetval().Finish(self, retval);
@@ -252,10 +249,7 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
   u32 current_tid = GetCurrentTidOrInvalid();
 
   __sanitizer_sigset_t sigset;
-#    if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-        SANITIZER_SOLARIS
   ScopedBlockSignals block(&sigset);
-#    endif
 
   AsanThread *t = AsanThread::Create(sigset, current_tid, &stack, detached);
 

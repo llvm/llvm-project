@@ -110,6 +110,9 @@ void PlatformTSDDtor(void *tsd) {
   key.key = nullptr;
   // Make sure that signal handler can not see a stale current thread pointer.
   atomic_signal_fence(memory_order_seq_cst);
+  // After this point it's unsafe to execute signal handlers which may be
+  // instrumented.
+  BlockSignals();
   AsanThread::TSDDtor(tsd);
 }
 #else
@@ -138,12 +141,9 @@ void PlatformTSDDtor(void *tsd) {
     CHECK_EQ(0, pthread_setspecific(tsd_key, tsd));
     return;
   }
-#    if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
-        SANITIZER_SOLARIS
   // After this point it's unsafe to execute signal handlers which may be
-  // instrumented. It's probably not just a Linux issue.
+  // instrumented.
   BlockSignals();
-#    endif
   AsanThread::TSDDtor(tsd);
 }
 #endif
