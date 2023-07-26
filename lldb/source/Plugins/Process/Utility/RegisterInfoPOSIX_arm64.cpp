@@ -212,7 +212,7 @@ RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
     // dynamic register set like MTE, Pointer Authentication regset then we need
     // to create dynamic register infos and regset array. Push back all optional
     // register infos and regset and calculate register offsets accordingly.
-    if (m_opt_regsets.AllSet(eRegsetMaskSVE)) {
+    if (m_opt_regsets.AnySet(eRegsetMaskSVE | eRegsetMaskSSVE)) {
       m_register_info_p = g_register_infos_arm64_sve_le;
       m_register_info_count = sve_ffr + 1;
       m_per_regset_regnum_range[m_register_set_count++] =
