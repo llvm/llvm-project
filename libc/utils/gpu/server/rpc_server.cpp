@@ -94,9 +94,8 @@ private:
                 ? stdout
                 : (port->get_opcode() == RPC_WRITE_TO_STDERR ? stderr
                                                              : files[id]);
-        int ret = fwrite(strs[id], sizes[id], 1, file);
-        ret = ret >= 0 ? sizes[id] : ret;
-        std::memcpy(buffer->data, &ret, sizeof(int));
+        uint64_t ret = fwrite(strs[id], 1, sizes[id], file);
+        std::memcpy(buffer->data, &ret, sizeof(uint64_t));
       });
       for (uint64_t i = 0; i < rpc::MAX_LANE_SIZE; ++i) {
         if (strs[i])
