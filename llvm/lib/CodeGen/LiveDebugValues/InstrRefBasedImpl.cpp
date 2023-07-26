@@ -2116,7 +2116,7 @@ bool InstrRefBasedLDV::transferSpillOrRestoreInst(MachineInstr &MI) {
 }
 
 bool InstrRefBasedLDV::transferRegisterCopy(MachineInstr &MI) {
-  auto DestSrc = TII->isCopyInstr(MI);
+  auto DestSrc = TII->isCopyInstr(MI, false);
   if (!DestSrc)
     return false;
 
