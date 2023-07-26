@@ -293,9 +293,12 @@ static int RunInMultipleProcesses(const std::vector<std::string> &Args,
   std::vector<std::thread> V;
   std::thread Pulse(PulseThread);
   Pulse.detach();
-  for (unsigned i = 0; i < NumWorkers; i++)
-    V.push_back(std::thread(WorkerThread, std::ref(Cmd), &Counter, NumJobs,
-                            &HasErrors));
+  V.resize(NumWorkers);
+  for (unsigned i = 0; i < NumWorkers; i++) {
+    V[i] = std::thread(WorkerThread, std::ref(Cmd), &Counter, NumJobs,
+                            &HasErrors);
+    SetThreadName(V[i], "FuzzerWorker");
+  }
   for (auto &T : V)
     T.join();
   return HasErrors ? 1 : 0;
