@@ -54,6 +54,10 @@ class ROCDL_Op<string mnemonic, list<Trait> traits = []> :
   LLVM_OpBase<ROCDL_Dialect, mnemonic, traits> {
 }
 
+class ROCDL_IntrPure1Op<string mnemonic> :
+  LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
+  "amdgcn_" # !subst(".", "_", mnemonic), [], [], [Pure], 1>;
+
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
 //===----------------------------------------------------------------------===//
@@ -76,6 +80,20 @@ class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
   # device_function # "\", " # parameter # ");";
   let assemblyFormat = "attr-dict `:` type($res)";
 }
+
+//===----------------------------------------------------------------------===//
+// Wave-level primitives
+
+class ROCDL_MbcntOp<string mnemonic> :
+    ROCDL_IntrPure1Op<"mbcnt." # mnemonic>,
+  Arguments<(ins I32:$in0, I32:$in1)> {
+  let assemblyFormat = [{
+    $in0 `,` $in1  attr-dict `:` `(` type($in0) `,` type($in1) `)` `->` type($res)
+   }];
+}
+
+def ROCDL_MbcntLoOp : ROCDL_MbcntOp<"lo">;
+def ROCDL_MbcntHiOp : ROCDL_MbcntOp<"hi">;
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
