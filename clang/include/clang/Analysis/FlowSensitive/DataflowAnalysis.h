@@ -287,7 +287,7 @@ llvm::Expected<std::vector<Diagnostic>> diagnoseFunction(
                 llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
               })
               .takeError())
-    return Err;
+    return std::move(Err);
 
   if (Solver->reachedLimit())
     return llvm::createStringError(llvm::errc::interrupted,
