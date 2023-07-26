@@ -73,12 +73,3 @@ LLVM_DUMP_METHOD void Program::dump(llvm::raw_ostream &OS) const {
     Anon->dump();
   }
 }
-
-llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, interp::CastKind CK) {
-  switch (CK) {
-  case interp::CastKind::Reinterpret:
-    OS << "reinterpret_cast";
-    break;
-  }
-  return OS;
-}
