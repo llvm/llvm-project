@@ -314,23 +314,37 @@ bool SIMachineFunctionInfo::isCalleeSavedReg(const MCPhysReg *CSRegs,
   return false;
 }
 
-bool SIMachineFunctionInfo::allocateVirtualVGPRForSGPRSpills(
-    MachineFunction &MF, int FI, unsigned LaneIndex) {
+bool SIMachineFunctionInfo::allocateVGPRForSGPRSpills(MachineFunction &MF,
+                                                      int FI,
+                                                      unsigned LaneIndex) {
+  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   Register LaneVGPR;
   if (!LaneIndex) {
-    LaneVGPR = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+    LaneVGPR = TRI->findUnusedRegister(MRI, &AMDGPU::VGPR_32RegClass, MF);
+    if (LaneVGPR == AMDGPU::NoRegister) {
+      // We have no VGPRs left for spilling SGPRs. Reset because we will not
+      // partially spill the SGPR to VGPRs.
+      SGPRSpillToVGPRLanes.erase(FI);
+      return false;
+    }
+
     SpillVGPRs.push_back(LaneVGPR);
+    // Add this register as live-in to all blocks to avoid machine verifier
+    // complaining about use of an undefined physical register.
+    for (MachineBasicBlock &BB : MF)
+      BB.addLiveIn(LaneVGPR);
   } else {
     LaneVGPR = SpillVGPRs.back();
   }
 
-  SGPRSpillsToVirtualVGPRLanes[FI].push_back(
+  SGPRSpillToVGPRLanes[FI].push_back(
       SIRegisterInfo::SpilledReg(LaneVGPR, LaneIndex));
   return true;
 }
 
-bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
+bool SIMachineFunctionInfo::allocateVGPRForPrologEpilogSGPRSpills(
     MachineFunction &MF, int FI, unsigned LaneIndex) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIRegisterInfo *TRI = ST.getRegisterInfo();
@@ -341,21 +355,16 @@ bool SIMachineFunctionInfo::allocatePhysicalVGPRForSGPRSpills(
     if (LaneVGPR == AMDGPU::NoRegister) {
       // We have no VGPRs left for spilling SGPRs. Reset because we will not
       // partially spill the SGPR to VGPRs.
-      SGPRSpillsToPhysicalVGPRLanes.erase(FI);
+      PrologEpilogSGPRSpillToVGPRLanes.erase(FI);
       return false;
     }
 
     allocateWWMSpill(MF, LaneVGPR);
-    reserveWWMRegister(LaneVGPR);
-    for (MachineBasicBlock &MBB : MF) {
-      MBB.addLiveIn(LaneVGPR);
-      MBB.sortUniqueLiveIns();
-    }
   } else {
-    LaneVGPR = WWMReservedRegs.back();
+    LaneVGPR = WWMSpills.back().first;
   }
 
-  SGPRSpillsToPhysicalVGPRLanes[FI].push_back(
+  PrologEpilogSGPRSpillToVGPRLanes[FI].push_back(
       SIRegisterInfo::SpilledReg(LaneVGPR, LaneIndex));
   return true;
 }
@@ -364,8 +373,8 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(MachineFunction &MF,
                                                         int FI,
                                                         bool IsPrologEpilog) {
   std::vector<SIRegisterInfo::SpilledReg> &SpillLanes =
-      IsPrologEpilog ? SGPRSpillsToPhysicalVGPRLanes[FI]
-                     : SGPRSpillsToVirtualVGPRLanes[FI];
+      IsPrologEpilog ? PrologEpilogSGPRSpillToVGPRLanes[FI]
+                     : SGPRSpillToVGPRLanes[FI];
 
   // This has already been allocated.
   if (!SpillLanes.empty())
@@ -386,14 +395,15 @@ bool SIMachineFunctionInfo::allocateSGPRSpillToVGPRLane(MachineFunction &MF,
          "not spilling SGPRs to VGPRs");
 
   unsigned &NumSpillLanes =
-      IsPrologEpilog ? NumPhysicalVGPRSpillLanes : NumVirtualVGPRSpillLanes;
+      IsPrologEpilog ? NumVGPRPrologEpilogSpillLanes : NumVGPRSpillLanes;
 
   for (unsigned I = 0; I < NumLanes; ++I, ++NumSpillLanes) {
     unsigned LaneIndex = (NumSpillLanes % WaveSize);
 
-    bool Allocated = IsPrologEpilog
-                         ? allocatePhysicalVGPRForSGPRSpills(MF, FI, LaneIndex)
-                         : allocateVirtualVGPRForSGPRSpills(MF, FI, LaneIndex);
+    bool Allocated =
+        IsPrologEpilog
+            ? allocateVGPRForPrologEpilogSGPRSpills(MF, FI, LaneIndex)
+            : allocateVGPRForSGPRSpills(MF, FI, LaneIndex);
     if (!Allocated) {
       NumSpillLanes -= I;
       return false;
@@ -474,25 +484,16 @@ bool SIMachineFunctionInfo::allocateVGPRSpillToAGPR(MachineFunction &MF,
 
 bool SIMachineFunctionInfo::removeDeadFrameIndices(
     MachineFrameInfo &MFI, bool ResetSGPRSpillStackIDs) {
-  // Remove dead frame indices from function frame, however keep FP & BP since
-  // spills for them haven't been inserted yet. And also make sure to remove the
-  // frame indices from `SGPRSpillsToVirtualVGPRLanes` data structure,
-  // otherwise, it could result in an unexpected side effect and bug, in case of
-  // any re-mapping of freed frame indices by later pass(es) like "stack slot
+  // Remove dead frame indices from function frame. And also make sure to remove
+  // the frame indices from `SGPRSpillToVGPRLanes` data structure, otherwise, it
+  // could result in an unexpected side effect and bug, in case of any
+  // re-mapping of freed frame indices by later pass(es) like "stack slot
   // coloring".
-  for (auto &R : make_early_inc_range(SGPRSpillsToVirtualVGPRLanes)) {
+  for (auto &R : make_early_inc_range(SGPRSpillToVGPRLanes)) {
     MFI.RemoveStackObject(R.first);
-    SGPRSpillsToVirtualVGPRLanes.erase(R.first);
+    SGPRSpillToVGPRLanes.erase(R.first);
   }
 
-  // Remove the dead frame indices of CSR SGPRs which are spilled to physical
-  // VGPR lanes during SILowerSGPRSpills pass.
-  if (!ResetSGPRSpillStackIDs) {
-    for (auto &R : make_early_inc_range(SGPRSpillsToPhysicalVGPRLanes)) {
-      MFI.RemoveStackObject(R.first);
-      SGPRSpillsToPhysicalVGPRLanes.erase(R.first);
-    }
-  }
   bool HaveSGPRToMemory = false;
 
   if (ResetSGPRSpillStackIDs) {
