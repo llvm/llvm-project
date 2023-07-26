@@ -943,10 +943,6 @@ Error RISCVISAInfo::checkDependency() {
     return createStringError(errc::invalid_argument,
                              "'zcf' is only supported for 'rv32'");
 
-  // Additional dependency checks.
-  // TODO: The 'q' extension requires rv64.
-  // TODO: It is illegal to specify 'e' extensions with 'f' and 'd'.
-
   return Error::success();
 }
 
