@@ -1125,6 +1125,19 @@ void LifetimeCheckPass::updatePointsToForConstStruct(
   }
 }
 
+static mlir::Operation *ignoreBitcasts(mlir::Operation *op) {
+  while (auto bitcast = dyn_cast<CastOp>(op)) {
+    if (bitcast.getKind() != CastKind::bitcast)
+      return op;
+    auto b = bitcast.getSrc().getDefiningOp();
+    // Do not handle block arguments just yet.
+    if (!b)
+      return op;
+    op = b;
+  }
+  return op;
+}
+
 void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
                                        mlir::Location loc) {
 
@@ -1142,6 +1155,12 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
   // Do not handle block arguments just yet.
   if (!dataSrcOp)
     return;
+
+  // Ignore chains of bitcasts and update data source. Note that when
+  // dataSrcOp gets updated, `data` might not be the most updated resource
+  // to use, so avoid using it directly, and instead get things from newer
+  // dataSrcOp.
+  dataSrcOp = ignoreBitcasts(dataSrcOp);
 
   // 2.4.2 - If the declaration includes an initialization, the
   // initialization is treated as a separate operation
@@ -1169,7 +1188,7 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
   if (auto allocaOp = dyn_cast<AllocaOp>(dataSrcOp)) {
     // p = &x;
     getPmap()[addr].clear();
-    getPmap()[addr].insert(State::getLocalValue(data));
+    getPmap()[addr].insert(State::getLocalValue(allocaOp.getAddr()));
     return;
   }
 
@@ -1183,7 +1202,7 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
     return;
   }
 
-  // From here on, some uninterestring store (for now?)
+  // What should we add next?
 }
 
 void LifetimeCheckPass::checkStore(StoreOp storeOp) {
@@ -1526,6 +1545,7 @@ void LifetimeCheckPass::checkForOwnerAndPointerArguments(CallOp callOp,
     // - Pointers: always check for deref.
     // - Coroutine tasks: check the task for deref when calling methods of
     //   the task, but also when the passing the task around to other functions.
+    // - Aggregates: check ptr subelements for deref.
     //
     // FIXME: even before 2.5 we should only invalidate non-const param types.
     if (owners.count(arg))
@@ -1534,6 +1554,19 @@ void LifetimeCheckPass::checkForOwnerAndPointerArguments(CallOp callOp,
       ptrsToDeref.insert(arg);
     if (tasks.count(arg))
       ptrsToDeref.insert(arg);
+    if (aggregates.count(arg)) {
+      int memberIdx = 0;
+      auto sTy =
+          arg.getType().cast<PointerType>().getPointee().dyn_cast<StructType>();
+      assert(sTy && "expected struct type");
+      for (auto m : sTy.getMembers()) {
+        auto ptrMemberAddr = aggregates[arg][memberIdx];
+        if (m.isa<PointerType>() && ptrMemberAddr) {
+          ptrsToDeref.insert(ptrMemberAddr);
+        }
+        memberIdx++;
+      }
+    }
   }
 
   // FIXME: CIR should track source info on the passed args, so we can get
