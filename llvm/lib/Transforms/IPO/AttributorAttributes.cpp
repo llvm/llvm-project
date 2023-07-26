@@ -10889,64 +10889,104 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
 
     // Simplify the operands first.
     bool UsedAssumedInformation = false;
-    const auto &SimplifiedLHS = A.getAssumedSimplified(
-        IRPosition::value(*LHS, getCallBaseContext()), *this,
-        UsedAssumedInformation, AA::Intraprocedural);
-    if (!SimplifiedLHS.has_value())
+    SmallVector<AA::ValueAndContext> LHSValues, RHSValues;
+    auto GetSimplifiedValues = [&](Value &V,
+                                   SmallVector<AA::ValueAndContext> &Values) {
+      if (!A.getAssumedSimplifiedValues(
+              IRPosition::value(V, getCallBaseContext()), this, Values,
+              AA::Intraprocedural, UsedAssumedInformation)) {
+        Values.clear();
+        Values.push_back(AA::ValueAndContext{V, II.I.getCtxI()});
+      }
+      return Values.empty();
+    };
+    if (GetSimplifiedValues(*LHS, LHSValues))
       return true;
-    if (!*SimplifiedLHS)
-      return false;
-    LHS = *SimplifiedLHS;
-
-    const auto &SimplifiedRHS = A.getAssumedSimplified(
-        IRPosition::value(*RHS, getCallBaseContext()), *this,
-        UsedAssumedInformation, AA::Intraprocedural);
-    if (!SimplifiedRHS.has_value())
+    if (GetSimplifiedValues(*RHS, RHSValues))
       return true;
-    if (!*SimplifiedRHS)
-      return false;
-    RHS = *SimplifiedRHS;
 
     LLVMContext &Ctx = LHS->getContext();
-    // Handle the trivial case first in which we don't even need to think about
-    // null or non-null.
-    if (LHS == RHS &&
-        (CmpInst::isTrueWhenEqual(Pred) || CmpInst::isFalseWhenEqual(Pred))) {
-      Constant *NewV = ConstantInt::get(Type::getInt1Ty(Ctx),
-                                        CmpInst::isTrueWhenEqual(Pred));
+
+    InformationCache &InfoCache = A.getInfoCache();
+    Instruction *CmpI = dyn_cast<Instruction>(&Cmp);
+    Function *F = CmpI ? CmpI->getFunction() : nullptr;
+    const auto *DT =
+        F ? InfoCache.getAnalysisResultForFunction<DominatorTreeAnalysis>(*F)
+          : nullptr;
+    const auto *TLI =
+        F ? A.getInfoCache().getTargetLibraryInfoForFunction(*F) : nullptr;
+    auto *AC =
+        F ? InfoCache.getAnalysisResultForFunction<AssumptionAnalysis>(*F)
+          : nullptr;
+
+    const DataLayout &DL = A.getDataLayout();
+    SimplifyQuery Q(DL, TLI, DT, AC, CmpI);
+
+    auto CheckPair = [&](Value &LHSV, Value &RHSV) {
+      if (isa<UndefValue>(LHSV) || isa<UndefValue>(RHSV)) {
+        addValue(A, getState(), *UndefValue::get(Cmp.getType()),
+                 /* CtxI */ nullptr, II.S, getAnchorScope());
+        return true;
+      }
+
+      // Handle the trivial case first in which we don't even need to think
+      // about null or non-null.
+      if (&LHSV == &RHSV &&
+          (CmpInst::isTrueWhenEqual(Pred) || CmpInst::isFalseWhenEqual(Pred))) {
+        Constant *NewV = ConstantInt::get(Type::getInt1Ty(Ctx),
+                                          CmpInst::isTrueWhenEqual(Pred));
+        addValue(A, getState(), *NewV, /* CtxI */ nullptr, II.S,
+                 getAnchorScope());
+        return true;
+      }
+
+      auto *TypedLHS = AA::getWithType(LHSV, *LHS->getType());
+      auto *TypedRHS = AA::getWithType(RHSV, *RHS->getType());
+      if (TypedLHS && TypedRHS) {
+        Value *NewV = simplifyCmpInst(Pred, TypedLHS, TypedRHS, Q);
+        if (NewV && NewV != &Cmp) {
+          addValue(A, getState(), *NewV, /* CtxI */ nullptr, II.S,
+                   getAnchorScope());
+          return true;
+        }
+      }
+
+      // From now on we only handle equalities (==, !=).
+      if (!CmpInst::isEquality(Pred))
+        return false;
+
+      bool LHSIsNull = isa<ConstantPointerNull>(LHSV);
+      bool RHSIsNull = isa<ConstantPointerNull>(RHSV);
+      if (!LHSIsNull && !RHSIsNull)
+        return false;
+
+      // Left is the nullptr ==/!= non-nullptr case. We'll use AANonNull on the
+      // non-nullptr operand and if we assume it's non-null we can conclude the
+      // result of the comparison.
+      assert((LHSIsNull || RHSIsNull) &&
+             "Expected nullptr versus non-nullptr comparison at this point");
+
+      // The index is the operand that we assume is not null.
+      unsigned PtrIdx = LHSIsNull;
+      bool IsKnownNonNull;
+      bool IsAssumedNonNull = AA::hasAssumedIRAttr<Attribute::NonNull>(
+          A, this, IRPosition::value(*(PtrIdx ? &RHSV : &LHSV)),
+          DepClassTy::REQUIRED, IsKnownNonNull);
+      if (!IsAssumedNonNull)
+        return false;
+
+      // The new value depends on the predicate, true for != and false for ==.
+      Constant *NewV =
+          ConstantInt::get(Type::getInt1Ty(Ctx), Pred == CmpInst::ICMP_NE);
       addValue(A, getState(), *NewV, /* CtxI */ nullptr, II.S,
                getAnchorScope());
       return true;
-    }
+    };
 
-    // From now on we only handle equalities (==, !=).
-    if (!CmpInst::isEquality(Pred))
-      return false;
-
-    bool LHSIsNull = isa<ConstantPointerNull>(LHS);
-    bool RHSIsNull = isa<ConstantPointerNull>(RHS);
-    if (!LHSIsNull && !RHSIsNull)
-      return false;
-
-    // Left is the nullptr ==/!= non-nullptr case. We'll use AANonNull on the
-    // non-nullptr operand and if we assume it's non-null we can conclude the
-    // result of the comparison.
-    assert((LHSIsNull || RHSIsNull) &&
-           "Expected nullptr versus non-nullptr comparison at this point");
-
-    // The index is the operand that we assume is not null.
-    unsigned PtrIdx = LHSIsNull;
-    bool IsKnownNonNull;
-    bool IsAssumedNonNull = AA::hasAssumedIRAttr<Attribute::NonNull>(
-        A, this, IRPosition::value(*(PtrIdx ? RHS : LHS)), DepClassTy::REQUIRED,
-        IsKnownNonNull);
-    if (!IsAssumedNonNull)
-      return false;
-
-    // The new value depends on the predicate, true for != and false for ==.
-    Constant *NewV =
-        ConstantInt::get(Type::getInt1Ty(Ctx), Pred == CmpInst::ICMP_NE);
-    addValue(A, getState(), *NewV, /* CtxI */ nullptr, II.S, getAnchorScope());
+    for (auto &LHSValue : LHSValues)
+      for (auto &RHSValue : RHSValues)
+        if (!CheckPair(*LHSValue.getValue(), *RHSValue.getValue()))
+          return false;
     return true;
   }
 
@@ -11161,9 +11201,8 @@ struct AAPotentialValuesFloating : AAPotentialValuesImpl {
       SmallVectorImpl<ItemInfo> &Worklist,
       SmallMapVector<const Function *, LivenessInfo, 4> &LivenessAAs) {
     if (auto *CI = dyn_cast<CmpInst>(&I))
-      if (handleCmp(A, *CI, CI->getOperand(0), CI->getOperand(1),
-                    CI->getPredicate(), II, Worklist))
-        return true;
+      return handleCmp(A, *CI, CI->getOperand(0), CI->getOperand(1),
+                       CI->getPredicate(), II, Worklist);
 
     switch (I.getOpcode()) {
     case Instruction::Select:

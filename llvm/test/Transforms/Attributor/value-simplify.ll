@@ -858,7 +858,7 @@ define i1 @test_merge_with_undef_values_ptr(i1 %c) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_merge_with_undef_values_ptr
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[R1:%.*]] = call noundef i1 @undef_then_null(i1 noundef [[C]]) #[[ATTR12]]
+; CGSCC-NEXT:    [[R1:%.*]] = call i1 @undef_then_null(i1 [[C]]) #[[ATTR12]]
 ; CGSCC-NEXT:    ret i1 [[R1]]
 ;
   %r1 = call i1 @undef_then_null(i1 %c, ptr undef, ptr undef)
@@ -867,8 +867,9 @@ define i1 @test_merge_with_undef_values_ptr(i1 %c) {
 define internal i1 @undef_then_null(i1 %c, ptr %i32Aptr, ptr %i32Bptr) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@undef_then_null
-; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[OR:%.*]] = or i1 false, [[C]]
+; CGSCC-NEXT:    br i1 [[OR]], label [[A:%.*]], label [[B:%.*]]
 ; CGSCC:       a:
 ; CGSCC-NEXT:    ret i1 false
 ; CGSCC:       b:
@@ -894,7 +895,7 @@ define i1 @test_merge_with_undef_values(i1 %c) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_merge_with_undef_values
 ; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    [[R1:%.*]] = call noundef i1 @undef_then_1(i1 noundef [[C]]) #[[ATTR12]]
+; CGSCC-NEXT:    [[R1:%.*]] = call i1 @undef_then_1(i1 [[C]]) #[[ATTR12]]
 ; CGSCC-NEXT:    ret i1 [[R1]]
 ;
   %r1 = call i1 @undef_then_1(i1 %c, i32 undef, i32 undef)
@@ -904,8 +905,9 @@ define internal i1 @undef_then_1(i1 %c, i32 %i32A, i32 %i32B) {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@undef_then_1
-; CGSCC-SAME: (i1 noundef [[C:%.*]]) #[[ATTR3]] {
-; CGSCC-NEXT:    br i1 [[C]], label [[A:%.*]], label [[B:%.*]]
+; CGSCC-SAME: (i1 [[C:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[OR:%.*]] = or i1 false, [[C]]
+; CGSCC-NEXT:    br i1 [[OR]], label [[A:%.*]], label [[B:%.*]]
 ; CGSCC:       a:
 ; CGSCC-NEXT:    ret i1 false
 ; CGSCC:       b:
@@ -1389,6 +1391,11 @@ define internal void @not_called2() {
   ret void
 }
 define internal void @not_called3() {
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@not_called3
+; TUNIT-SAME: () #[[ATTR2]] {
+; TUNIT-NEXT:    ret void
+;
 ; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@not_called3
 ; CGSCC-SAME: () #[[ATTR1]] {
@@ -1410,7 +1417,7 @@ define i1 @user_of_not_called() {
 ; CHECK-LABEL: define {{[^@]+}}@user_of_not_called() {
 ; CHECK-NEXT:    call void @useFnDecl(ptr addrspace(42) noundef nonnull addrspacecast (ptr @not_called1 to ptr addrspace(42)))
 ; CHECK-NEXT:    call void @useFnDef(ptr addrspace(42) noundef nonnull addrspacecast (ptr @not_called2 to ptr addrspace(42)))
-; CHECK-NEXT:    ret i1 false
+; CHECK-NEXT:    ret i1 icmp eq (ptr addrspace(42) addrspacecast (ptr @not_called3 to ptr addrspace(42)), ptr addrspace(42) null)
 ;
   call void @useFnDecl(ptr addrspace(42) addrspacecast (ptr @not_called1 to ptr addrspace(42)))
   call void @useFnDef(ptr addrspace(42) addrspacecast (ptr @not_called2 to ptr addrspace(42)))
