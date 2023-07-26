@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "Debug.h"
-#include "DeviceEnvironment.h"
+#include "Environment.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
@@ -868,6 +868,12 @@ protected:
   /// Internal representation for OMPT device (initialize & finalize)
   std::atomic<bool> OmptInitialized;
 #endif
+
+private:
+
+  /// Return the kernel environment object for kernel \p Name.
+  Expected<KernelEnvironmentTy>
+  getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
