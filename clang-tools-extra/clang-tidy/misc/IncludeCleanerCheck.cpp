@@ -147,7 +147,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
       continue;
     // Check if main file is the public interface for a private header. If so
     // we shouldn't diagnose it as unused.
-    if (auto PHeader = RecordedPI.getPublic(I.Resolved); !PHeader.empty()) {
+    if (auto PHeader = RecordedPI.getPublic(*I.Resolved); !PHeader.empty()) {
       PHeader = PHeader.trim("<>\"");
       // Since most private -> public mappings happen in a verbatim way, we
       // check textually here. This might go wrong in presence of symlinks or
@@ -156,9 +156,10 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
         continue;
     }
 
-    if (llvm::none_of(IgnoreHeadersRegex,
-                      [Resolved = I.Resolved->tryGetRealPathName()](
-                          const llvm::Regex &R) { return R.match(Resolved); }))
+    if (llvm::none_of(
+            IgnoreHeadersRegex,
+            [Resolved = (*I.Resolved).getFileEntry().tryGetRealPathName()](
+                const llvm::Regex &R) { return R.match(Resolved); }))
       Unused.push_back(&I);
   }
 

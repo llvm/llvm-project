@@ -359,10 +359,10 @@ convertIncludes(const SourceManager &SM,
         SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
     TransformedInc.Line = Inc.HashLine + 1;
     TransformedInc.Angled = WrittenRef.starts_with("<");
-    auto FE = SM.getFileManager().getFile(Inc.Resolved);
+    auto FE = SM.getFileManager().getFileRef(Inc.Resolved);
     if (!FE) {
       elog("IncludeCleaner: Failed to get an entry for resolved path {0}: {1}",
-           Inc.Resolved, FE.getError().message());
+           Inc.Resolved, FE.takeError());
       continue;
     }
     TransformedInc.Resolved = *FE;
@@ -401,7 +401,7 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
           }
           for (auto *Inc : ConvertedIncludes.match(H)) {
             Satisfied = true;
-            auto HeaderID = Includes.getID(Inc->Resolved);
+            auto HeaderID = Includes.getID(&Inc->Resolved->getFileEntry());
             assert(HeaderID.has_value() &&
                    "ConvertedIncludes only contains resolved includes.");
             Used.insert(*HeaderID);

@@ -801,6 +801,9 @@ MLIR_CAPI_EXPORTED intptr_t mlirOpResultGetResultNumber(MlirValue value);
 /// Returns the type of the value.
 MLIR_CAPI_EXPORTED MlirType mlirValueGetType(MlirValue value);
 
+/// Set the type of the value.
+MLIR_CAPI_EXPORTED void mlirValueSetType(MlirValue value, MlirType type);
+
 /// Prints the value to the standard error stream.
 MLIR_CAPI_EXPORTED void mlirValueDump(MlirValue value);
 

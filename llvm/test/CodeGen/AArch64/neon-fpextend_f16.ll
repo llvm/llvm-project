@@ -15,7 +15,7 @@ define <1 x double> @fpext_v1f16_v1f64(ptr %a) {
   ret <1 x double> %c
 }
 
-define <1 x double> @strict_fpext_v1f32_v1f64(<1 x half> %x) #0 {
+define <1 x double> @strict_fpext_v1f32_v1f64(<1 x half> %x) strictfp {
 ; CHECK-LABEL: strict_fpext_v1f32_v1f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    fcvt d0, h0
