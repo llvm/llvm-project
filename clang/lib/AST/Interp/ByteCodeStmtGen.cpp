@@ -243,6 +243,9 @@ bool ByteCodeStmtGen<Emitter>::visitStmt(const Stmt *S) {
     return visitCaseStmt(cast<CaseStmt>(S));
   case Stmt::DefaultStmtClass:
     return visitDefaultStmt(cast<DefaultStmt>(S));
+  case Stmt::GCCAsmStmtClass:
+  case Stmt::MSAsmStmtClass:
+    return visitAsmStmt(cast<AsmStmt>(S));
   case Stmt::NullStmtClass:
     return true;
   default: {
@@ -615,6 +618,11 @@ template <class Emitter>
 bool ByteCodeStmtGen<Emitter>::visitDefaultStmt(const DefaultStmt *S) {
   this->emitLabel(*DefaultLabel);
   return this->visitStmt(S->getSubStmt());
+}
+
+template <class Emitter>
+bool ByteCodeStmtGen<Emitter>::visitAsmStmt(const AsmStmt *S) {
+  return this->emitInvalid(S);
 }
 
 namespace clang {

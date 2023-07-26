@@ -325,7 +325,8 @@ namespace InitializerTemporaries {
   struct S {
     constexpr S() {}
     constexpr ~S() noexcept(false) { throw 12; } // expected-error {{cannot use 'throw'}} \
-                                                 // expected-note {{declared here}} \
+                                                 // expected-error {{never produces a constant expression}} \
+                                                 // expected-note 2{{subexpression not valid}} \
                                                  // ref-error {{cannot use 'throw'}} \
                                                  // ref-error {{never produces a constant expression}} \
                                                  // ref-note 2{{subexpression not valid}}
@@ -333,7 +334,8 @@ namespace InitializerTemporaries {
 
   constexpr int f() {
     S{}; // ref-note {{in call to 'S{}.~S()'}}
-    return 12; // expected-note {{undefined function '~S'}}
+    /// FIXME: Wrong source location below.
+    return 12; // expected-note {{in call to '&S{}->~S()'}}
   }
   static_assert(f() == 12); // expected-error {{not an integral constant expression}} \
                             // expected-note {{in call to 'f()'}} \
