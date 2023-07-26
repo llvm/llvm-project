@@ -6,7 +6,7 @@ context of LLVM releases. It is updated on a best effort basis.
 At the moment the MLIR community does not qualify the LLVM release branch
 specifically, it is a snapshot of the MLIR development at the time of the release.
 
-\[TOC\]
+[TOC]
 
 ## LLVM 17
 
