@@ -686,7 +686,7 @@ void Environment::setValueStrict(const Expr &E, Value &Val) {
   assert(E.isPRValue());
 
   if (auto *StructVal = dyn_cast<StructValue>(&Val)) {
-    if (auto *ExistingVal = cast_or_null<StructValue>(getValueStrict(E)))
+    if (auto *ExistingVal = cast_or_null<StructValue>(getValue(E)))
       assert(&ExistingVal->getAggregateLoc() == &StructVal->getAggregateLoc());
     if (StorageLocation *ExistingLoc = getStorageLocation(E, SkipPast::None))
       assert(ExistingLoc == &StructVal->getAggregateLoc());
@@ -724,9 +724,7 @@ Value *Environment::getValue(const Expr &E, SkipPast SP) const {
 
 Value *Environment::getValueStrict(const Expr &E) const {
   assert(E.isPRValue());
-  Value *Val = getValue(E, SkipPast::None);
-
-  return Val;
+  return getValue(E);
 }
 
 Value *Environment::createValue(QualType Type) {
@@ -859,7 +857,7 @@ StorageLocation &Environment::createObjectInternal(const VarDecl *D,
     // assert that `InitExpr` is interpreted, rather than supplying a
     // default value (assuming we don't update the environment API to return
     // references).
-    Val = getValueStrict(*InitExpr);
+    Val = getValue(*InitExpr);
   if (!Val)
     Val = createValue(Ty);
 
@@ -964,8 +962,7 @@ StructValue &refreshStructValue(const Expr &Expr, Environment &Env) {
   assert(Expr.getType()->isRecordType());
 
   if (Expr.isPRValue()) {
-    if (auto *ExistingVal =
-            cast_or_null<StructValue>(Env.getValueStrict(Expr))) {
+    if (auto *ExistingVal = cast_or_null<StructValue>(Env.getValue(Expr))) {
       auto &NewVal = Env.create<StructValue>(ExistingVal->getAggregateLoc());
       Env.setValueStrict(Expr, NewVal);
       return NewVal;

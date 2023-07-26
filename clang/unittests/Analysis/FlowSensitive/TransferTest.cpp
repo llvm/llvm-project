@@ -5546,7 +5546,7 @@ TEST(TransferTest, BuiltinFunctionModeled) {
                   ASTCtx));
 
         ASSERT_THAT(ImplicitCast, NotNull());
-        EXPECT_THAT(Env.getValueStrict(*ImplicitCast), IsNull());
+        EXPECT_THAT(Env.getValue(*ImplicitCast), IsNull());
       });
 }
 
