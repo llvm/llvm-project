@@ -632,14 +632,13 @@ library calls on different targets.
 --------------------------------------------------------
 
 Combine expression patterns to form expressions with fewer, simple instructions.
-This pass does not modify the CFG.
 
 For example, this pass reduce width of expressions post-dominated by TruncInst
 into smaller width when applicable.
 
-It differs from instcombine pass in that it contains pattern optimization that
-requires higher complexity than the O(1), thus, it should run fewer times than
-instcombine pass.
+It differs from instcombine pass in that it can modify CFG and contains pattern
+optimization that requires higher complexity than the O(1), thus, it should run fewer
+times than instcombine pass.
 
 ``-internalize``: Internalize Global Symbols
 --------------------------------------------
