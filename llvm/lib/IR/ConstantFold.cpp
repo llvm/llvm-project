@@ -1084,9 +1084,7 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
   } else if (isa<ConstantInt>(C1)) {
     // If C1 is a ConstantInt and C2 is not, swap the operands.
     if (Instruction::isCommutative(Opcode))
-      return ConstantExpr::isDesirableBinOp(Opcode)
-                 ? ConstantExpr::get(Opcode, C2, C1)
-                 : ConstantFoldBinaryInstruction(Opcode, C2, C1);
+      return ConstantExpr::get(Opcode, C2, C1);
   }
 
   if (ConstantInt *CI1 = dyn_cast<ConstantInt>(C1)) {
