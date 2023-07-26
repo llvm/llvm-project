@@ -102,6 +102,7 @@ add_entrypoint_object(
   HDRS
     ../../cos.h
   COMPILE_OPTIONS
+    ${bitcode_link_flags}
     -O2
 )
 
@@ -112,6 +113,7 @@ add_entrypoint_object(
   HDRS
     ../../cosf.h
   COMPILE_OPTIONS
+    ${bitcode_link_flags}
     -O2
 )
 
@@ -254,6 +256,7 @@ add_entrypoint_object(
   HDRS
     ../../ldexp.h
   COMPILE_OPTIONS
+    ${bitcode_link_flags}
     -O2
 )
 
@@ -264,6 +267,7 @@ add_entrypoint_object(
   HDRS
     ../../ldexpf.h
   COMPILE_OPTIONS
+    ${bitcode_link_flags}
     -O2
 )
 
@@ -274,6 +278,7 @@ add_entrypoint_object(
   HDRS
     ../../llrint.h
   COMPILE_OPTIONS
+    ${bitcode_link_flags}
     -O2
 )
 
@@ -284,6 +289,7 @@ add_entrypoint_object(
   HDRS
     ../../llrintf.h
   COMPILE_OPTIONS
+    ${bitcode_link_flags}
     -O2
 )
 
@@ -294,6 +300,7 @@ add_entrypoint_object(
   HDRS
     ../../llround.h
   COMPILE_OPTIONS
+    ${bitcode_link_flags}
     -O2
 )
 
@@ -304,6 +311,7 @@ add_entrypoint_object(
   HDRS
     ../../llroundf.h
   COMPILE_OPTIONS
+    ${bitcode_link_flags}
     -O2
 )
 
@@ -314,6 +322,7 @@ add_entrypoint_object(
   HDRS
     ../../pow.h
   COMPILE_OPTIONS
+    ${bitcode_link_flags}
     -O2
 )
 
@@ -324,6 +333,7 @@ add_entrypoint_object(
   HDRS
     ../../powf.h
   COMPILE_OPTIONS
+    ${bitcode_link_flags}
     -O2
 )
 
