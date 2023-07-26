@@ -6,13 +6,15 @@
 //===----------------------------------------------------------------------===//
 // REQUIRES: has-unix-headers
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20
-// UNSUPPORTED: !libcpp-has-debug-mode
+// UNSUPPORTED: !libcpp-has-hardened-mode && !libcpp-has-debug-mode
 // XFAIL: availability-verbose_abort-missing
 
-// Test construction from span:
+// <mdspan>
+
+// Test construction from array:
 //
 // template<class OtherIndexType, size_t N>
-//     constexpr explicit(N != rank_dynamic()) extents(span<OtherIndexType, N> exts) noexcept;
+//     constexpr explicit(N != rank_dynamic()) extents(const array<OtherIndexType, N>& exts) noexcept;
 //
 // Constraints:
 //   * is_convertible_v<const OtherIndexType&, index_type> is true,
@@ -35,28 +37,33 @@
 
 int main(int, char**) {
   constexpr size_t D = std::dynamic_extent;
-  // working case sanity check
+  // working case
   {
-    std::array args{1000, 5};
-    [[maybe_unused]] std::extents<int, D, 5> e1(std::span{args});
+    [[maybe_unused]] std::extents<int, D, 5> e1(std::array{1000, 5}); // should work
   }
   // mismatch of static extent
   {
-    std::array args{1000, 3};
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<int, D, 5> e1(std::span{args}); }()),
-                               "extents construction: mismatch of provided arguments with static extents.");
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([] {
+          std::extents<int, D, 5> e1(std::array{1000, 3});
+        }()),
+        "extents construction: mismatch of provided arguments with static extents.");
   }
   // value out of range
   {
-    std::array args{1000, 5};
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<char, D, 5> e1(std::span{args}); }()),
-                               "extents ctor: arguments must be representable as index_type and nonnegative");
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([] {
+          std::extents<char, D, 5> e1(std::array{1000, 5});
+        }()),
+        "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   // negative value
   {
-    std::array args{-1, 5};
-    TEST_LIBCPP_ASSERT_FAILURE(([=] { std::extents<char, D, 5> e1(std::span{args}); }()),
-                               "extents ctor: arguments must be representable as index_type and nonnegative");
+    TEST_LIBCPP_ASSERT_FAILURE(
+        ([] {
+          std::extents<char, D, 5> e1(std::array{-1, 5});
+        }()),
+        "extents ctor: arguments must be representable as index_type and nonnegative");
   }
   return 0;
 }

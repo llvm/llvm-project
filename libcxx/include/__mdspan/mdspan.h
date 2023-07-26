@@ -166,7 +166,10 @@ public:
     // always construct its extents() only from the dynamic extents, instead of from the other extents.
     if constexpr (rank() > 0) {
       for (size_t __r = 0; __r < rank(); __r++) {
-        _LIBCPP_ASSERT_UNCATEGORIZED(
+        // Not catching this could lead to out of bounds errors later
+        // e.g. mdspan<int, dextents<char,1>, non_checking_layout> m =
+        //        mdspan<int, dextents<unsigned, 1>, non_checking_layout>(ptr, 200); leads to an extent of -56 on m
+        _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
             (static_extent(__r) == dynamic_extent) ||
                 (static_cast<index_type>(__other.extent(__r)) == static_cast<index_type>(static_extent(__r))),
             "mdspan: conversion mismatch of source dynamic extents with static extents");
@@ -185,8 +188,10 @@ public:
              (is_nothrow_constructible_v<index_type, _OtherIndexTypes> && ...) &&
              (sizeof...(_OtherIndexTypes) == rank()))
   _LIBCPP_HIDE_FROM_ABI constexpr reference operator[](_OtherIndexTypes... __indices) const {
-    _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__is_multidimensional_index_in(extents(), __indices...),
-                                 "mdspan: operator[] out of bounds access");
+    // Note the standard layouts would also check this, but user provided ones may not, so we
+    // check the precondition here
+    _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__mdspan_detail::__is_multidimensional_index_in(extents(), __indices...),
+                                        "mdspan: operator[] out of bounds access");
     return __acc_.access(__ptr_, __map_(static_cast<index_type>(std::move(__indices))...));
   }
 
@@ -209,6 +214,8 @@ public:
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr size_type size() const noexcept {
+    // Could leave this as only checked in debug mode: semantically size() is never
+    // guaranteed to be related to any accessible range
     _LIBCPP_ASSERT_UNCATEGORIZED(
         false == ([&]<size_t... _Idxs>(index_sequence<_Idxs...>) {
           size_type __prod = 1;
@@ -260,13 +267,13 @@ template <class _ElementType, class... _OtherIndexTypes>
 explicit mdspan(_ElementType*, _OtherIndexTypes...)
     -> mdspan<_ElementType, dextents<size_t, sizeof...(_OtherIndexTypes)>>;
 
-template <class Pointer>
-  requires(is_pointer_v<remove_reference_t<Pointer>>)
-mdspan(Pointer&&) -> mdspan<remove_pointer_t<remove_reference_t<Pointer>>, extents<size_t>>;
+template <class _Pointer>
+  requires(is_pointer_v<remove_reference_t<_Pointer>>)
+mdspan(_Pointer&&) -> mdspan<remove_pointer_t<remove_reference_t<_Pointer>>, extents<size_t>>;
 
-template <class CArray>
-  requires(is_array_v<CArray> && (rank_v<CArray> == 1))
-mdspan(CArray&) -> mdspan<remove_all_extents_t<CArray>, extents<size_t, extent_v<CArray, 0>>>;
+template <class _CArray>
+  requires(is_array_v<_CArray> && (rank_v<_CArray> == 1))
+mdspan(_CArray&) -> mdspan<remove_all_extents_t<_CArray>, extents<size_t, extent_v<_CArray, 0>>>;
 
 template <class _ElementType, class _OtherIndexType, size_t _Size>
 mdspan(_ElementType*, const array<_OtherIndexType, _Size>&) -> mdspan<_ElementType, dextents<size_t, _Size>>;
@@ -281,16 +288,16 @@ template <class _ElementType, class _OtherIndexType, size_t... _ExtentsPack>
 mdspan(_ElementType*, const extents<_OtherIndexType, _ExtentsPack...>&)
     -> mdspan<_ElementType, extents<_OtherIndexType, _ExtentsPack...>>;
 
-template <class _ElementType, class MappingType>
-mdspan(_ElementType*, const MappingType&)
-    -> mdspan<_ElementType, typename MappingType::extents_type, typename MappingType::layout_type>;
+template <class _ElementType, class _MappingType>
+mdspan(_ElementType*, const _MappingType&)
+    -> mdspan<_ElementType, typename _MappingType::extents_type, typename _MappingType::layout_type>;
 
-template <class MappingType, class AccessorType>
-mdspan(const typename AccessorType::data_handle_type, const MappingType&, const AccessorType&)
-    -> mdspan<typename AccessorType::element_type,
-              typename MappingType::extents_type,
-              typename MappingType::layout_type,
-              AccessorType>;
+template <class _MappingType, class _AccessorType>
+mdspan(const typename _AccessorType::data_handle_type, const _MappingType&, const _AccessorType&)
+    -> mdspan<typename _AccessorType::element_type,
+              typename _MappingType::extents_type,
+              typename _MappingType::layout_type,
+              _AccessorType>;
 
 #endif // _LIBCPP_STD_VER >= 23
 
