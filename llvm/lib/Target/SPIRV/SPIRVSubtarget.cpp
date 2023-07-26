@@ -96,8 +96,11 @@ void SPIRVSubtarget::initAvailableExtensions() {
   if (!isOpenCLEnv())
     return;
   // A default extension for testing.
+  // FIXME: This should be changed when we can select extensions through a
+  // command line flag.
   AvailableExtensions.insert(
       SPIRV::Extension::SPV_KHR_no_integer_wrap_decoration);
+  AvailableExtensions.insert(SPIRV::Extension::SPV_INTEL_optnone);
 }
 
 // TODO: use command line args for this rather than just defaults.
