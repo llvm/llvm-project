@@ -34,6 +34,9 @@ using namespace llvm;
 
 #define DEBUG_TYPE "bpf-mi-zext-elim"
 
+static cl::opt<int> GotolAbsLowBound("gotol-abs-low-bound", cl::Hidden,
+  cl::init(INT16_MAX >> 1), cl::desc("Specify gotol lower bound"));
+
 STATISTIC(ZExtElemNum, "Number of zero extension shifts eliminated");
 
 namespace {
@@ -302,6 +305,8 @@ struct BPFMIPreEmitPeephole : public MachineFunctionPass {
   static char ID;
   MachineFunction *MF;
   const TargetRegisterInfo *TRI;
+  const BPFInstrInfo *TII;
+  bool SupportGotol;
 
   BPFMIPreEmitPeephole() : MachineFunctionPass(ID) {
     initializeBPFMIPreEmitPeepholePass(*PassRegistry::getPassRegistry());
@@ -311,7 +316,9 @@ private:
   // Initialize class variables.
   void initialize(MachineFunction &MFParm);
 
+  bool in16BitRange(int Num);
   bool eliminateRedundantMov();
+  bool adjustBranch();
 
 public:
 
@@ -322,14 +329,20 @@ public:
 
     initialize(MF);
 
-    return eliminateRedundantMov();
+    bool Changed;
+    Changed = eliminateRedundantMov();
+    if (SupportGotol)
+      Changed = adjustBranch() || Changed;
+    return Changed;
   }
 };
 
 // Initialize class variables.
 void BPFMIPreEmitPeephole::initialize(MachineFunction &MFParm) {
   MF = &MFParm;
+  TII = MF->getSubtarget<BPFSubtarget>().getInstrInfo();
   TRI = MF->getSubtarget<BPFSubtarget>().getRegisterInfo();
+  SupportGotol = MF->getSubtarget<BPFSubtarget>().hasGotol();
   LLVM_DEBUG(dbgs() << "*** BPF PreEmit peephole pass ***\n\n");
 }
 
@@ -372,6 +385,215 @@ bool BPFMIPreEmitPeephole::eliminateRedundantMov() {
   }
 
   return Eliminated;
+}
+
+bool BPFMIPreEmitPeephole::in16BitRange(int Num) {
+  // Well, the cut-off is not precisely at 16bit range since
+  // new codes are added during the transformation. So let us
+  // a little bit conservative.
+  return Num >= -GotolAbsLowBound && Num <= GotolAbsLowBound;
+}
+
+// Before cpu=v4, only 16bit branch target offset (-0x8000 to 0x7fff)
+// is supported for both unconditional (JMP) and condition (JEQ, JSGT,
+// etc.) branches. In certain cases, e.g., full unrolling, the branch
+// target offset might exceed 16bit range. If this happens, the llvm
+// will generate incorrect code as the offset is truncated to 16bit.
+//
+// To fix this rare case, a new insn JMPL is introduced. This new
+// insn supports supports 32bit branch target offset. The compiler
+// does not use this insn during insn selection. Rather, BPF backend
+// will estimate the branch target offset and do JMP -> JMPL and
+// JEQ -> JEQ + JMPL conversion if the estimated branch target offset
+// is beyond 16bit.
+bool BPFMIPreEmitPeephole::adjustBranch() {
+  bool Changed = false;
+  int CurrNumInsns = 0;
+  DenseMap<MachineBasicBlock *, int> SoFarNumInsns;
+  DenseMap<MachineBasicBlock *, MachineBasicBlock *> FollowThroughBB;
+  std::vector<MachineBasicBlock *> MBBs;
+
+  MachineBasicBlock *PrevBB = nullptr;
+  for (MachineBasicBlock &MBB : *MF) {
+    // MBB.size() is the number of insns in this basic block, including some
+    // debug info, e.g., DEBUG_VALUE, so we may over-count a little bit.
+    // Typically we have way more normal insns than DEBUG_VALUE insns.
+    // Also, if we indeed need to convert conditional branch like JEQ to
+    // JEQ + JMPL, we actually introduced some new insns like below.
+    CurrNumInsns += (int)MBB.size();
+    SoFarNumInsns[&MBB] = CurrNumInsns;
+    if (PrevBB != nullptr)
+      FollowThroughBB[PrevBB] = &MBB;
+    PrevBB = &MBB;
+    // A list of original BBs to make later traveral easier.
+    MBBs.push_back(&MBB);
+  }
+  FollowThroughBB[PrevBB] = nullptr;
+
+  for (unsigned i = 0; i < MBBs.size(); i++) {
+    // We have four cases here:
+    //  (1). no terminator, simple follow through.
+    //  (2). jmp to another bb.
+    //  (3). conditional jmp to another bb or follow through.
+    //  (4). conditional jmp followed by an unconditional jmp.
+    MachineInstr *CondJmp = nullptr, *UncondJmp = nullptr;
+
+    MachineBasicBlock *MBB = MBBs[i];
+    for (MachineInstr &Term : MBB->terminators()) {
+      if (Term.isConditionalBranch()) {
+        assert(CondJmp == nullptr);
+        CondJmp = &Term;
+      } else if (Term.isUnconditionalBranch()) {
+        assert(UncondJmp == nullptr);
+        UncondJmp = &Term;
+      }
+    }
+
+    // (1). no terminator, simple follow through.
+    if (!CondJmp && !UncondJmp)
+      continue;
+
+    MachineBasicBlock *CondTargetBB, *JmpBB;
+    CurrNumInsns = SoFarNumInsns[MBB];
+
+    // (2). jmp to another bb.
+    if (!CondJmp && UncondJmp) {
+      JmpBB = UncondJmp->getOperand(0).getMBB();
+      if (in16BitRange(SoFarNumInsns[JmpBB] - JmpBB->size() - CurrNumInsns))
+        continue;
+
+      // replace this insn as a JMPL.
+      BuildMI(MBB, UncondJmp->getDebugLoc(), TII->get(BPF::JMPL)).addMBB(JmpBB);
+      UncondJmp->eraseFromParent();
+      Changed = true;
+      continue;
+    }
+
+    const BasicBlock *TermBB = MBB->getBasicBlock();
+    int Dist;
+
+    // (3). conditional jmp to another bb or follow through.
+    if (!UncondJmp) {
+      CondTargetBB = CondJmp->getOperand(2).getMBB();
+      MachineBasicBlock *FollowBB = FollowThroughBB[MBB];
+      Dist = SoFarNumInsns[CondTargetBB] - CondTargetBB->size() - CurrNumInsns;
+      if (in16BitRange(Dist))
+        continue;
+
+      // We have
+      //   B2: ...
+      //       if (cond) goto B5
+      //   B3: ...
+      // where B2 -> B5 is beyond 16bit range.
+      //
+      // We do not have 32bit cond jmp insn. So we try to do
+      // the following.
+      //   B2:     ...
+      //           if (cond) goto New_B1
+      //   New_B0  goto B3
+      //   New_B1: gotol B5
+      //   B3: ...
+      // Basically two new basic blocks are created.
+      MachineBasicBlock *New_B0 = MF->CreateMachineBasicBlock(TermBB);
+      MachineBasicBlock *New_B1 = MF->CreateMachineBasicBlock(TermBB);
+
+      // Insert New_B0 and New_B1 into function block list.
+      MachineFunction::iterator MBB_I  = ++MBB->getIterator();
+      MF->insert(MBB_I, New_B0);
+      MF->insert(MBB_I, New_B1);
+
+      // replace B2 cond jump
+      if (CondJmp->getOperand(1).isReg())
+        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
+            .addReg(CondJmp->getOperand(0).getReg())
+            .addReg(CondJmp->getOperand(1).getReg())
+            .addMBB(New_B1);
+      else
+        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
+            .addReg(CondJmp->getOperand(0).getReg())
+            .addImm(CondJmp->getOperand(1).getImm())
+            .addMBB(New_B1);
+
+      // it is possible that CondTargetBB and FollowBB are the same. But the
+      // above Dist checking should already filtered this case.
+      MBB->removeSuccessor(CondTargetBB);
+      MBB->removeSuccessor(FollowBB);
+      MBB->addSuccessor(New_B0);
+      MBB->addSuccessor(New_B1);
+
+      // Populate insns in New_B0 and New_B1.
+      BuildMI(New_B0, CondJmp->getDebugLoc(), TII->get(BPF::JMP)).addMBB(FollowBB);
+      BuildMI(New_B1, CondJmp->getDebugLoc(), TII->get(BPF::JMPL))
+          .addMBB(CondTargetBB);
+
+      New_B0->addSuccessor(FollowBB);
+      New_B1->addSuccessor(CondTargetBB);
+      CondJmp->eraseFromParent();
+      Changed = true;
+      continue;
+    }
+
+    //  (4). conditional jmp followed by an unconditional jmp.
+    CondTargetBB = CondJmp->getOperand(2).getMBB();
+    JmpBB = UncondJmp->getOperand(0).getMBB();
+
+    // We have
+    //   B2: ...
+    //       if (cond) goto B5
+    //       JMP B7
+    //   B3: ...
+    //
+    // If only B2->B5 is out of 16bit range, we can do
+    //   B2: ...
+    //       if (cond) goto new_B
+    //       JMP B7
+    //   New_B: gotol B5
+    //   B3: ...
+    //
+    // If only 'JMP B7' is out of 16bit range, we can replace
+    // 'JMP B7' with 'JMPL B7'.
+    //
+    // If both B2->B5 and 'JMP B7' is out of range, just do
+    // both the above transformations.
+    Dist = SoFarNumInsns[CondTargetBB] - CondTargetBB->size() - CurrNumInsns;
+    if (!in16BitRange(Dist)) {
+      MachineBasicBlock *New_B = MF->CreateMachineBasicBlock(TermBB);
+
+      // Insert New_B0 into function block list.
+      MF->insert(++MBB->getIterator(), New_B);
+
+      // replace B2 cond jump
+      if (CondJmp->getOperand(1).isReg())
+        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
+            .addReg(CondJmp->getOperand(0).getReg())
+            .addReg(CondJmp->getOperand(1).getReg())
+            .addMBB(New_B);
+      else
+        BuildMI(*MBB, MachineBasicBlock::iterator(*CondJmp), CondJmp->getDebugLoc(), TII->get(CondJmp->getOpcode()))
+            .addReg(CondJmp->getOperand(0).getReg())
+            .addImm(CondJmp->getOperand(1).getImm())
+            .addMBB(New_B);
+
+      if (CondTargetBB != JmpBB)
+        MBB->removeSuccessor(CondTargetBB);
+      MBB->addSuccessor(New_B);
+
+      // Populate insn in New_B.
+      BuildMI(New_B, CondJmp->getDebugLoc(), TII->get(BPF::JMPL)).addMBB(CondTargetBB);
+
+      New_B->addSuccessor(CondTargetBB);
+      CondJmp->eraseFromParent();
+      Changed = true;
+    }
+
+    if (!in16BitRange(SoFarNumInsns[JmpBB] - CurrNumInsns)) {
+      BuildMI(MBB, UncondJmp->getDebugLoc(), TII->get(BPF::JMPL)).addMBB(JmpBB);
+      UncondJmp->eraseFromParent();
+      Changed = true;
+    }
+  }
+
+  return Changed;
 }
 
 } // end default namespace
