@@ -84,11 +84,13 @@ Config noHintsConfig() {
 }
 
 template <typename... ExpectedHints>
-void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
-                 ExpectedHints... Expected) {
+void assertHintsWithHeader(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
+                           llvm::StringRef HeaderContent,
+                           ExpectedHints... Expected) {
   Annotations Source(AnnotatedSource);
   TestTU TU = TestTU::withCode(Source.code());
   TU.ExtraArgs.push_back("-std=c++20");
+  TU.HeaderCode = HeaderContent;
   auto AST = TU.build();
 
   EXPECT_THAT(hintsOfKind(AST, Kind),
@@ -97,6 +99,13 @@ void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
   // We'll hit an assertion failure if addInlayHint still gets called.
   WithContextValue WithCfg(Config::Key, noHintsConfig());
   EXPECT_THAT(inlayHints(AST, std::nullopt), IsEmpty());
+}
+
+template <typename... ExpectedHints>
+void assertHints(InlayHintKind Kind, llvm::StringRef AnnotatedSource,
+                 ExpectedHints... Expected) {
+  return assertHintsWithHeader(Kind, AnnotatedSource, "",
+                               std::move(Expected)...);
 }
 
 // Hack to allow expression-statements operating on parameter packs in C++14.
@@ -1433,8 +1442,7 @@ TEST(TypeHints, Decltype) {
 }
 
 TEST(TypeHints, SubstTemplateParameterAliases) {
-  assertTypeHints(
-      R"cpp(
+  llvm::StringRef Header = R"cpp(
   template <class T> struct allocator {};
 
   template <class T, class A>
@@ -1467,9 +1475,34 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
 
     T elements[10];
   };
+  )cpp";
 
+  llvm::StringRef VectorIntPtr = R"cpp(
+    vector<int *> array;
+    auto $no_modifier[[x]] = array[3];
+    auto* $ptr_modifier[[ptr]] = &array[3];
+    auto& $ref_modifier[[ref]] = array[3];
+    auto& $at[[immutable]] = array.at(3);
+
+    auto $data[[data]] = array.data();
+    auto $allocator[[alloc]] = array.get_allocator();
+    auto $size[[size]] = array.size();
+    auto $begin[[begin]] = array.begin();
+    auto $end[[end]] = array.end();
+  )cpp";
+
+  assertHintsWithHeader(
+      InlayHintKind::Type, VectorIntPtr, Header,
+      ExpectedHint{": int *", "no_modifier"},
+      ExpectedHint{": int **", "ptr_modifier"},
+      ExpectedHint{": int *&", "ref_modifier"},
+      ExpectedHint{": int *const &", "at"}, ExpectedHint{": int **", "data"},
+      ExpectedHint{": allocator<int *>", "allocator"},
+      ExpectedHint{": size_type", "size"}, ExpectedHint{": iterator", "begin"},
+      ExpectedHint{": non_template_iterator", "end"});
+
+  llvm::StringRef VectorInt = R"cpp(
   vector<int> array;
-
   auto $no_modifier[[by_value]] = array[3];
   auto* $ptr_modifier[[ptr]] = &array[3];
   auto& $ref_modifier[[ref]] = array[3];
@@ -1480,8 +1513,19 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
   auto $size[[size]] = array.size();
   auto $begin[[begin]] = array.begin();
   auto $end[[end]] = array.end();
+  )cpp";
 
+  assertHintsWithHeader(
+      InlayHintKind::Type, VectorInt, Header,
+      ExpectedHint{": int", "no_modifier"},
+      ExpectedHint{": int *", "ptr_modifier"},
+      ExpectedHint{": int &", "ref_modifier"},
+      ExpectedHint{": const int &", "at"}, ExpectedHint{": int *", "data"},
+      ExpectedHint{": allocator<int>", "allocator"},
+      ExpectedHint{": size_type", "size"}, ExpectedHint{": iterator", "begin"},
+      ExpectedHint{": non_template_iterator", "end"});
 
+  llvm::StringRef TypeAlias = R"cpp(
   // If the type alias is not of substituted template parameter type,
   // do not show desugared type.
   using VeryLongLongTypeName = my_iterator;
@@ -1496,16 +1540,11 @@ TEST(TypeHints, SubstTemplateParameterAliases) {
   using static_vector = basic_static_vector<T, allocator<T>>;
 
   auto $vector_name[[vec]] = static_vector<int>();
-  )cpp",
-      ExpectedHint{": int", "no_modifier"},
-      ExpectedHint{": int *", "ptr_modifier"},
-      ExpectedHint{": int &", "ref_modifier"},
-      ExpectedHint{": const int &", "at"}, ExpectedHint{": int *", "data"},
-      ExpectedHint{": allocator<int>", "allocator"},
-      ExpectedHint{": size_type", "size"}, ExpectedHint{": iterator", "begin"},
-      ExpectedHint{": non_template_iterator", "end"},
-      ExpectedHint{": Short", "short_name"},
-      ExpectedHint{": static_vector<int>", "vector_name"});
+  )cpp";
+
+  assertHintsWithHeader(InlayHintKind::Type, TypeAlias, Header,
+                        ExpectedHint{": Short", "short_name"},
+                        ExpectedHint{": static_vector<int>", "vector_name"});
 }
 
 TEST(DesignatorHints, Basic) {
