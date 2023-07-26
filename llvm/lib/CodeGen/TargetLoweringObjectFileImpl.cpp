@@ -2426,23 +2426,6 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
         Name, Kind, XCOFF::CsectProperties(SMC, XCOFF::XTY_CM));
   }
 
-  if (Kind.isMergeableCString()) {
-    Align Alignment = GO->getParent()->getDataLayout().getPreferredAlign(
-        cast<GlobalVariable>(GO));
-
-    unsigned EntrySize = getEntrySizeForKind(Kind);
-    std::string SizeSpec = ".rodata.str" + utostr(EntrySize) + ".";
-    SmallString<128> Name;
-    Name = SizeSpec + utostr(Alignment.value());
-
-    if (TM.getDataSections())
-      getNameWithPrefix(Name, GO, TM);
-
-    return getContext().getXCOFFSection(
-        Name, Kind, XCOFF::CsectProperties(XCOFF::XMC_RO, XCOFF::XTY_SD),
-        /* MultiSymbolsAllowed*/ !TM.getDataSections());
-  }
-
   if (Kind.isText()) {
     if (TM.getFunctionSections()) {
       return cast<MCSymbolXCOFF>(getFunctionEntryPointSymbol(GO, TM))
