@@ -484,6 +484,7 @@ set(files
   __mdspan/extents.h
   __mdspan/layout_left.h
   __mdspan/layout_right.h
+  __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h
   __memory/aligned_alloc.h

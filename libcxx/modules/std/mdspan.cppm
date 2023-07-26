@@ -27,5 +27,5 @@ export namespace std {
   using std::default_accessor;
 
   // [mdspan.mdspan], class template mdspan
-  // using std::mdspan;
+  using std::mdspan;
 } // namespace std

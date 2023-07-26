@@ -75,8 +75,9 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr mapping() noexcept               = default;
   _LIBCPP_HIDE_FROM_ABI constexpr mapping(const mapping&) noexcept = default;
   _LIBCPP_HIDE_FROM_ABI constexpr mapping(const extents_type& __ext) noexcept : __extents_(__ext) {
-    _LIBCPP_ASSERT(__required_span_size_is_representable(__ext),
-                   "layout_left::mapping extents ctor: product of extents must be representable as index_type.");
+    _LIBCPP_ASSERT_UNCATEGORIZED(
+        __required_span_size_is_representable(__ext),
+        "layout_left::mapping extents ctor: product of extents must be representable as index_type.");
   }
 
   template <class _OtherExtents>
@@ -84,7 +85,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
       mapping(const mapping<_OtherExtents>& __other) noexcept
       : __extents_(__other.extents()) {
-    _LIBCPP_ASSERT(
+    _LIBCPP_ASSERT_UNCATEGORIZED(
         __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
         "layout_left::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
@@ -94,7 +95,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr explicit(!is_convertible_v<_OtherExtents, extents_type>)
       mapping(const layout_right::mapping<_OtherExtents>& __other) noexcept
       : __extents_(__other.extents()) {
-    _LIBCPP_ASSERT(
+    _LIBCPP_ASSERT_UNCATEGORIZED(
         __mdspan_detail::__is_representable_as<index_type>(__other.required_span_size()),
         "layout_left::mapping converting ctor: other.required_span_size() must be representable as index_type.");
   }
@@ -122,8 +123,8 @@ public:
     requires((sizeof...(_Indices) == extents_type::rank()) && (is_convertible_v<_Indices, index_type> && ...) &&
              (is_nothrow_constructible_v<index_type, _Indices> && ...))
   _LIBCPP_HIDE_FROM_ABI constexpr index_type operator()(_Indices... __idx) const noexcept {
-    _LIBCPP_ASSERT(__mdspan_detail::__is_multidimensional_index_in(__extents_, __idx...),
-                   "layout_left::mapping: out of bounds indexing");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__mdspan_detail::__is_multidimensional_index_in(__extents_, __idx...),
+                                 "layout_left::mapping: out of bounds indexing");
     array<index_type, extents_type::rank()> __idx_a{static_cast<index_type>(__idx)...};
     return [&]<size_t... _Pos>(index_sequence<_Pos...>) {
       index_type __res = 0;
@@ -144,7 +145,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr index_type stride(rank_type __r) const noexcept
     requires(extents_type::rank() > 0)
   {
-    _LIBCPP_ASSERT(__r < extents_type::rank(), "layout_left::mapping::stride(): invalid rank index");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__r < extents_type::rank(), "layout_left::mapping::stride(): invalid rank index");
     index_type __s = 1;
     for (rank_type __i = extents_type::rank() - 1; __i > __r; __i--)
       __s *= __extents_.extent(__i);
@@ -159,7 +160,7 @@ public:
   }
 
 private:
-  extents_type __extents_{}; // exposition only
+  _LIBCPP_NO_UNIQUE_ADDRESS extents_type __extents_{};
 };
 
 #endif // _LIBCPP_STD_VER >= 23
