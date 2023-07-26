@@ -8871,9 +8871,7 @@ void LinkerWrapper::ConstructOpaqueJob(Compilation &C, const JobAction &JA,
     for (const auto &II : Inputs) {
       if (II.isFilename()) {
         OutputFile = llvm::sys::path::stem(II.getFilename()).str();
-        OutputFilePrefix = llvm::sys::path::filename(
-                               Args.getLastArgValue(options::OPT_o, "a.out"))
-                               .str() +
+        OutputFilePrefix = llvm::sys::path::stem(II.getBaseInput()).str() +
                            "-openmp-" + TheTriple.str();
 
         // generate command to unpackage each II.getFilename()
