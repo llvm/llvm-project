@@ -15,6 +15,7 @@ namespace interp {
 
 template <typename T>
 static T getParam(const InterpFrame *Frame, unsigned Index) {
+  assert(Frame->getFunction()->getNumParams() > Index);
   unsigned Offset = Frame->getFunction()->getParamOffset(Index);
   return Frame->getParam<T>(Offset);
 }
