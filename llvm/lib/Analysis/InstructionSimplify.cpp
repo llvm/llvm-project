@@ -6539,13 +6539,10 @@ static Value *simplifyIntrinsic(CallBase *Call, Value *Callee,
   if (!NumOperands) {
     switch (IID) {
     case Intrinsic::vscale: {
-      auto Attr = Call->getFunction()->getFnAttribute(Attribute::VScaleRange);
-      if (!Attr.isValid())
-        return nullptr;
-      unsigned VScaleMin = Attr.getVScaleRangeMin();
-      std::optional<unsigned> VScaleMax = Attr.getVScaleRangeMax();
-      if (VScaleMax && VScaleMin == VScaleMax)
-        return ConstantInt::get(F->getReturnType(), VScaleMin);
+      Type *RetTy = F->getReturnType();
+      ConstantRange CR = getVScaleRange(Call->getFunction(), 64);
+      if (const APInt *C = CR.getSingleElement())
+        return ConstantInt::get(RetTy, C->getZExtValue());
       return nullptr;
     }
     default:
