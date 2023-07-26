@@ -2607,7 +2607,7 @@ static bool isReplicationMaskWithParams(ArrayRef<int> Mask,
   assert(Mask.size() == (unsigned)ReplicationFactor * VF &&
          "Unexpected mask size.");
 
-  for (int CurrElt : seq(0, VF)) {
+  for (int CurrElt : seq(VF)) {
     ArrayRef<int> CurrSubMask = Mask.take_front(ReplicationFactor);
     assert(CurrSubMask.size() == (unsigned)ReplicationFactor &&
            "Run out of mask?");
