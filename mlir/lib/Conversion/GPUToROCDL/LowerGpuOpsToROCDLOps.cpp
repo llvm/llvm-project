@@ -60,6 +60,38 @@ static bool canBeCalledWithBarePointers(gpu::GPUFuncOp func) {
 }
 
 namespace {
+struct GPULaneIdOpToROCDL : ConvertOpToLLVMPattern<gpu::LaneIdOp> {
+  using ConvertOpToLLVMPattern<gpu::LaneIdOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(gpu::LaneIdOp op, gpu::LaneIdOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = op->getLoc();
+    MLIRContext *context = rewriter.getContext();
+    // convert to:  %mlo = call @llvm.amdgcn.mbcnt.lo(-1, 0)
+    // followed by: %lid = call @llvm.amdgcn.mbcnt.hi(-1, %mlo)
+
+    Type intTy = IntegerType::get(context, 32);
+    Value zero = rewriter.createOrFold<arith::ConstantIntOp>(loc, 0, 32);
+    Value minus1 = rewriter.createOrFold<arith::ConstantIntOp>(loc, -1, 32);
+    Value mbcntLo =
+        rewriter.create<ROCDL::MbcntLoOp>(loc, intTy, ValueRange{minus1, zero});
+    Value laneId = rewriter.create<ROCDL::MbcntHiOp>(
+        loc, intTy, ValueRange{minus1, mbcntLo});
+    // Truncate or extend the result depending on the index bitwidth specified
+    // by the LLVMTypeConverter options.
+    const unsigned indexBitwidth = getTypeConverter()->getIndexTypeBitwidth();
+    if (indexBitwidth > 32) {
+      laneId = rewriter.create<LLVM::SExtOp>(
+          loc, IntegerType::get(context, indexBitwidth), laneId);
+    } else if (indexBitwidth < 32) {
+      laneId = rewriter.create<LLVM::TruncOp>(
+          loc, IntegerType::get(context, indexBitwidth), laneId);
+    }
+    rewriter.replaceOp(op, {laneId});
+    return success();
+  }
+};
 
 /// Import the GPU Ops to ROCDL Patterns.
 #include "GPUToROCDL.cpp.inc"
@@ -239,6 +271,8 @@ void mlir::populateGpuToROCDLConversionPatterns(
     // Use address space = 4 to match the OpenCL definition of printf()
     patterns.add<GPUPrintfOpToLLVMCallLowering>(converter, /*addressSpace=*/4);
   }
+
+  patterns.add<GPULaneIdOpToROCDL>(converter);
 
   populateOpPatterns<math::AbsFOp>(converter, patterns, "__ocml_fabs_f32",
                                    "__ocml_fabs_f64");
