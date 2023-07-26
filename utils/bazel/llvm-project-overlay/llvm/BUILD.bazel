@@ -4674,6 +4674,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "SancovOptsTableGen",
+    strip_include_prefix = "tools/sancov",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/sancov/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/sancov/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "sancov",
     srcs = glob([
@@ -4690,6 +4702,8 @@ cc_binary(
         ":MC",
         ":MCDisassembler",
         ":Object",
+        ":Option",
+        ":SancovOptsTableGen",
         ":Support",
         ":Symbolize",
     ],
