@@ -1336,13 +1336,15 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
   else
     D << "use of invalid pointer '" << varName << "'";
 
+  // TODO: add accuracy levels, different combinations of invalid and null
+  // could have different ratios of false positives.
   if (hasInvalid && opts.emitHistoryInvalid())
     emitInvalidHistory(D, addr, loc, forRetLambda);
 
   if (hasNullptr && opts.emitHistoryNull()) {
     assert(pmapNullHist.count(addr) && "expected nullptr hist");
     auto &note = pmapNullHist[addr];
-    D.attachNote(*note) << "invalidated here";
+    D.attachNote(*note) << "'nullptr' invalidated here";
   }
 
   if (!psetRemarkEmitted && opts.emitRemarkPsetInvalid())
