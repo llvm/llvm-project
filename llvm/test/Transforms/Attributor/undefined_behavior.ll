@@ -479,15 +479,23 @@ e:
 ; Branch on undef that depends on propagation of
 ; undef of a previous instruction.
 define i32 @cond_br_on_undef3() {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define {{[^@]+}}@cond_br_on_undef3
-; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 1, undef
-; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[E:%.*]]
-; CHECK:       t:
-; CHECK-NEXT:    ret i32 1
-; CHECK:       e:
-; CHECK-NEXT:    ret i32 2
+; TUNIT: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@cond_br_on_undef3
+; TUNIT-SAME: () #[[ATTR5]] {
+; TUNIT-NEXT:    unreachable
+; TUNIT:       t:
+; TUNIT-NEXT:    unreachable
+; TUNIT:       e:
+; TUNIT-NEXT:    unreachable
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@cond_br_on_undef3
+; CGSCC-SAME: () #[[ATTR8]] {
+; CGSCC-NEXT:    unreachable
+; CGSCC:       t:
+; CGSCC-NEXT:    unreachable
+; CGSCC:       e:
+; CGSCC-NEXT:    unreachable
 ;
   %cond = icmp ne i32 1, undef
   br i1 %cond, label %t, label %e

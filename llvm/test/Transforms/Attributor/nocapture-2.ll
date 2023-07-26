@@ -53,11 +53,9 @@ define i32 @is_null_control(ptr %p) #0 {
 ; CHECK-NEXT:    store i32 1, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    br label [[RETURN:%.*]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr null, [[P]]
-; CHECK-NEXT:    br i1 [[CMP1]], label [[IF_THEN2:%.*]], label [[IF_END3:%.*]]
+; CHECK-NEXT:    br label [[IF_END3:%.*]]
 ; CHECK:       if.then2:
-; CHECK-NEXT:    store i32 1, ptr [[RETVAL]], align 4
-; CHECK-NEXT:    br label [[RETURN]]
+; CHECK-NEXT:    unreachable
 ; CHECK:       if.end3:
 ; CHECK-NEXT:    store i32 0, ptr [[RETVAL]], align 4
 ; CHECK-NEXT:    br label [[RETURN]]
