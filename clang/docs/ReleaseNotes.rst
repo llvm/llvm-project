@@ -899,6 +899,8 @@ LoongArch Support
   aliases ``-m[no-]strict-align``.
 - Non ``$``-prefixed GPR names (e.g. ``r4`` and ``a0``) are allowed in inlineasm
   like GCC does.
+- The ``-march=native`` ``-mtune=`` options and ``__loongarch_{arch,tune}``
+  macros are now supported.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
