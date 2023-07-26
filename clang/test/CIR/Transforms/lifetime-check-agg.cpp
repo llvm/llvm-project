@@ -34,6 +34,6 @@ void exploded_fields(bool cond) {
     // check if calls like `escape_info` are used to further initialize `info`.
 
     escape_info(&info); // expected-remark {{pset => { invalid, nullptr }}}
-                        // expected-warning@-1 {{use of invalid pointer 'info.next'}}
+                        // expected-warning@-1 {{passing aggregate containing invalid pointer member 'info.next'}}
   }
 }
