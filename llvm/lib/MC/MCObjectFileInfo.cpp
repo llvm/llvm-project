@@ -331,7 +331,10 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
   TLSExtraDataSection = TLSTLVSection;
 }
 
-void MCObjectFileInfo::initSQELFMCObjectFileInfo(const Triple &T) {}
+void MCObjectFileInfo::initSQELFMCObjectFileInfo(const Triple &T) {
+    // TODO(fzakaria): For now just do the ELF MCObjectInfo initialization
+    initELFMCObjectFileInfo(T, false);
+}
 
 void MCObjectFileInfo::initELFMCObjectFileInfo(const Triple &T, bool Large) {
   switch (T.getArch()) {

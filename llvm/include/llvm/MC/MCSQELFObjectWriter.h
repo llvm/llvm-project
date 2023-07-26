@@ -9,10 +9,8 @@ namespace llvm {
 
 class MCSQELFObjectTargetWriter : public MCObjectTargetWriter {
 
-protected:
-  explicit MCSQELFObjectTargetWriter();
-
 public:
+  explicit MCSQELFObjectTargetWriter();
   virtual ~MCSQELFObjectTargetWriter();
 
   Triple::ObjectFormatType getFormat() const override { return Triple::SQELF; }

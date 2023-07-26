@@ -678,6 +678,11 @@ public:
     return getOS() == Triple::AIX;
   }
 
+    /// Tests whether the OS uses the SQELF binary format.
+  bool isOSBinFormatSQELF() const {
+    return getObjectFormat() == Triple::SQELF;
+  }
+
   /// Tests whether the OS uses the ELF binary format.
   bool isOSBinFormatELF() const {
     return getObjectFormat() == Triple::ELF;

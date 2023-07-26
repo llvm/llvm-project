@@ -27,6 +27,7 @@
 #include "llvm/MC/MCObjectStreamer.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
+#include "llvm/MC/MCSQELFObjectWriter.h"
 #include "llvm/MC/MCSectionMachO.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCValue.h"
@@ -166,6 +167,10 @@ public:
 
   unsigned getNumFixupKinds() const override {
     return X86::NumTargetFixupKinds;
+  }
+
+  const MCSubtargetInfo & getSTI() const { 
+    return STI;
   }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
@@ -1102,10 +1107,18 @@ class ELFX86_64AsmBackend : public ELFX86AsmBackend {
 public:
   ELFX86_64AsmBackend(const Target &T, uint8_t OSABI,
                       const MCSubtargetInfo &STI)
-    : ELFX86AsmBackend(T, OSABI, STI) {}
+    : ELFX86AsmBackend(T, OSABI, STI) {
+    
+    }
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
+    // TODO(fzakaria): Is there a better way to separate the AsmBackend from the
+    // ObjectWriter? We need to first create the ObjectTargetWriter
+    // which creates the ObjectWriter in AsmBackend::createObjectWriter
+    if (getSTI().getTargetTriple().isOSBinFormatSQELF()) {
+      return std::make_unique<MCSQELFObjectTargetWriter>();
+    }
     return createX86ELFObjectWriter(/*IsELF64*/ true, OSABI, ELF::EM_X86_64);
   }
 };

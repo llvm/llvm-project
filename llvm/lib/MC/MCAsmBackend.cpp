@@ -9,6 +9,7 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCDXContainerWriter.h"
 #include "llvm/MC/MCELFObjectWriter.h"
+#include "llvm/MC/MCSQELFObjectWriter.h"
 #include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCMachObjectWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
@@ -31,6 +32,8 @@ std::unique_ptr<MCObjectWriter>
 MCAsmBackend::createObjectWriter(raw_pwrite_stream &OS) const {
   auto TW = createObjectTargetWriter();
   switch (TW->getFormat()) {
+  case Triple::SQELF:
+    return createSQELFObjectWriter(cast<MCSQELFObjectTargetWriter>(std::move(TW)), OS);
   case Triple::ELF:
     return createELFObjectWriter(cast<MCELFObjectTargetWriter>(std::move(TW)), OS,
                                  Endian == support::little);

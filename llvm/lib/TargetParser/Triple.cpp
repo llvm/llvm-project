@@ -672,6 +672,9 @@ static Triple::ObjectFormatType parseFormat(StringRef EnvironmentName) {
       // pattern matching.
       .EndsWith("xcoff", Triple::XCOFF)
       .EndsWith("coff", Triple::COFF)
+      // "sqelf" must come before "elf" because of the order-dependent
+      // pattern matching.
+      .EndsWith("sqelf", Triple::SQELF)
       .EndsWith("elf", Triple::ELF)
       .EndsWith("goff", Triple::GOFF)
       .EndsWith("macho", Triple::MachO)
