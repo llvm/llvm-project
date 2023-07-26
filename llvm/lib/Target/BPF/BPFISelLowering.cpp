@@ -102,7 +102,8 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::SDIVREM, VT, Expand);
     setOperationAction(ISD::UDIVREM, VT, Expand);
-    setOperationAction(ISD::SREM, VT, Expand);
+    if (!STI.hasSdivSmod())
+      setOperationAction(ISD::SREM, VT, Expand);
     setOperationAction(ISD::MULHU, VT, Expand);
     setOperationAction(ISD::MULHS, VT, Expand);
     setOperationAction(ISD::UMUL_LOHI, VT, Expand);
@@ -131,9 +132,11 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::CTLZ_ZERO_UNDEF, MVT::i64, Custom);
 
   setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i1, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
-  setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i32, Expand);
+  if (!STI.hasMovsx()) {
+    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i8, Expand);
+    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i16, Expand);
+    setOperationAction(ISD::SIGN_EXTEND_INREG, MVT::i32, Expand);
+  }
 
   // Extended load operations for i1 types must be promoted
   for (MVT VT : MVT::integer_valuetypes()) {
@@ -141,9 +144,11 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
     setLoadExtAction(ISD::ZEXTLOAD, VT, MVT::i1, Promote);
     setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i1, Promote);
 
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8, Expand);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i16, Expand);
-    setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i32, Expand);
+    if (!STI.hasLdsx()) {
+      setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i8, Expand);
+      setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i16, Expand);
+      setLoadExtAction(ISD::SEXTLOAD, VT, MVT::i32, Expand);
+    }
   }
 
   setBooleanContents(ZeroOrOneBooleanContent);
@@ -183,6 +188,7 @@ BPFTargetLowering::BPFTargetLowering(const TargetMachine &TM,
   HasAlu32 = STI.getHasAlu32();
   HasJmp32 = STI.getHasJmp32();
   HasJmpExt = STI.getHasJmpExt();
+  HasMovsx = STI.hasMovsx();
 }
 
 bool BPFTargetLowering::isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const {
@@ -673,11 +679,15 @@ BPFTargetLowering::EmitSubregExt(MachineInstr &MI, MachineBasicBlock *BB,
   Register PromotedReg0 = RegInfo.createVirtualRegister(RC);
   Register PromotedReg1 = RegInfo.createVirtualRegister(RC);
   Register PromotedReg2 = RegInfo.createVirtualRegister(RC);
-  BuildMI(BB, DL, TII.get(BPF::MOV_32_64), PromotedReg0).addReg(Reg);
-  BuildMI(BB, DL, TII.get(BPF::SLL_ri), PromotedReg1)
-    .addReg(PromotedReg0).addImm(32);
-  BuildMI(BB, DL, TII.get(RShiftOp), PromotedReg2)
-    .addReg(PromotedReg1).addImm(32);
+  if (HasMovsx) {
+    BuildMI(BB, DL, TII.get(BPF::MOVSX_rr_32), PromotedReg0).addReg(Reg);
+  } else {
+    BuildMI(BB, DL, TII.get(BPF::MOV_32_64), PromotedReg0).addReg(Reg);
+    BuildMI(BB, DL, TII.get(BPF::SLL_ri), PromotedReg1)
+      .addReg(PromotedReg0).addImm(32);
+    BuildMI(BB, DL, TII.get(RShiftOp), PromotedReg2)
+      .addReg(PromotedReg1).addImm(32);
+  }
 
   return PromotedReg2;
 }

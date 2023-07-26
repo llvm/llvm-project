@@ -192,15 +192,17 @@ void BPFDAGToDAGISel::Select(SDNode *Node) {
   default:
     break;
   case ISD::SDIV: {
-    DebugLoc Empty;
-    const DebugLoc &DL = Node->getDebugLoc();
-    if (DL != Empty)
-      errs() << "Error at line " << DL.getLine() << ": ";
-    else
-      errs() << "Error: ";
-    errs() << "Unsupport signed division for DAG: ";
-    Node->print(errs(), CurDAG);
-    errs() << "Please convert to unsigned div/mod.\n";
+    if (!Subtarget->hasSdivSmod()) {
+      DebugLoc Empty;
+      const DebugLoc &DL = Node->getDebugLoc();
+      if (DL != Empty)
+        errs() << "Error at line " << DL.getLine() << ": ";
+      else
+        errs() << "Error: ";
+      errs() << "Unsupport signed division for DAG: ";
+      Node->print(errs(), CurDAG);
+      errs() << "Please convert to unsigned div/mod.\n";
+    }
     break;
   }
   case ISD::INTRINSIC_W_CHAIN: {

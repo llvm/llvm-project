@@ -56,6 +56,16 @@ llvm.func @known_block_sizes()
   llvm.return
 }
 
+llvm.func @rocdl.lane_id() -> i32 {
+  // CHECK: [[mbcntlo:%.+]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  // CHECK-NEXT: call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[mbcntlo]])
+  %0 = llvm.mlir.constant(-1 : i32) : i32
+  %1 = llvm.mlir.constant(0 : i32) : i32
+  %2 = rocdl.mbcnt.lo %0, %1 : (i32, i32) -> i32
+  %3 = rocdl.mbcnt.hi %0, %2 : (i32, i32) -> i32
+  llvm.return %3 : i32
+}
+
 llvm.func @rocdl.barrier() {
   // CHECK:      fence syncscope("workgroup") release
   // CHECK-NEXT: call void @llvm.amdgcn.s.barrier()
