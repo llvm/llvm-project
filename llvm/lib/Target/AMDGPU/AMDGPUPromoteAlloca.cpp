@@ -386,6 +386,8 @@ static Value *promoteAllocaUserToVector(
   };
 
   Type *VecEltTy = VectorTy->getElementType();
+  const unsigned NumVecElts = VectorTy->getNumElements();
+
   switch (Inst->getOpcode()) {
   case Instruction::Load: {
     // Loads can only be lowered if the value is known.
@@ -413,13 +415,13 @@ static Value *promoteAllocaUserToVector(
     // Loading a subvector.
     if (isa<FixedVectorType>(AccessTy)) {
       assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
-      const unsigned NumElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
-      auto *SubVecTy = FixedVectorType::get(VecEltTy, NumElts);
+      const unsigned NumLoadedElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
+      auto *SubVecTy = FixedVectorType::get(VecEltTy, NumLoadedElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
       unsigned IndexVal = cast<ConstantInt>(Index)->getZExtValue();
       Value *SubVec = PoisonValue::get(SubVecTy);
-      for (unsigned K = 0; K < NumElts; ++K) {
+      for (unsigned K = 0; K < NumLoadedElts; ++K) {
         SubVec = Builder.CreateInsertElement(
             SubVec, Builder.CreateExtractElement(CurVal, IndexVal + K), K);
       }
@@ -465,8 +467,9 @@ static Value *promoteAllocaUserToVector(
     // Storing a subvector.
     if (isa<FixedVectorType>(AccessTy)) {
       assert(AccessSize.isKnownMultipleOf(DL.getTypeStoreSize(VecEltTy)));
-      const unsigned NumElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
-      auto *SubVecTy = FixedVectorType::get(VecEltTy, NumElts);
+      const unsigned NumWrittenElts =
+          AccessSize / DL.getTypeStoreSize(VecEltTy);
+      auto *SubVecTy = FixedVectorType::get(VecEltTy, NumWrittenElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
       if (SubVecTy->isPtrOrPtrVectorTy())
@@ -478,7 +481,8 @@ static Value *promoteAllocaUserToVector(
 
       unsigned IndexVal = cast<ConstantInt>(Index)->getZExtValue();
       Value *CurVec = GetOrLoadCurrentVectorValue();
-      for (unsigned K = 0; (IndexVal + K) < NumElts; ++K) {
+      for (unsigned K = 0; K < NumWrittenElts && ((IndexVal + K) < NumVecElts);
+           ++K) {
         CurVec = Builder.CreateInsertElement(
             CurVec, Builder.CreateExtractElement(Val, K), IndexVal + K);
       }
