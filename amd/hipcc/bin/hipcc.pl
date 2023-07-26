@@ -471,7 +471,7 @@ foreach $arg (@ARGV)
     if (not $isWindows and $escapeArg) {
         $arg =~ s/[^-a-zA-Z0-9_=+,.\/]/\\$&/g;
     }
-    $toolArgs .= " " . get_normalized_path("$arg") unless $swallowArg;
+    $toolArgs .= " $arg" unless $swallowArg;
     $prevArg = $arg;
 }
 
