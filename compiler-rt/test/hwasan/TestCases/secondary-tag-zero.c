@@ -1,9 +1,6 @@
 // Test that tagging of freed large region is 0, which is better for RSS usage.
 // RUN: %clang_hwasan -mllvm -hwasan-globals=0 -mllvm -hwasan-instrument-stack=0 %s -o %t && %run %t 2>&1
 
-// TODO: implement.
-// XFAIL: pointer-tagging
-
 #include <assert.h>
 #include <stdlib.h>
 
