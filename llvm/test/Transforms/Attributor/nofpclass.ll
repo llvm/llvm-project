@@ -591,25 +591,24 @@ entry:
 ; Make sure if looking through the fabs finds a different source
 ; value, we still identify a test mask by ignoring the fabs
 define half @assume_fcmp_fabs_with_other_fabs_assume_fallback(half %arg) {
-; CHECK-LABEL: define nofpclass(all) half @assume_fcmp_fabs_with_other_fabs_assume_fallback
-; CHECK-SAME: (half returned nofpclass(all) [[ARG:%.*]]) {
+; CHECK-LABEL: define nofpclass(nan inf norm) half @assume_fcmp_fabs_with_other_fabs_assume_fallback
+; CHECK-SAME: (half returned nofpclass(nan inf norm) [[ARG:%.*]]) {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[FABS:%.*]] = call half @llvm.fabs.f16(half nofpclass(all) [[ARG]]) #[[ATTR14]]
-; CHECK-NEXT:    [[ONE_INF:%.*]] = fcmp oeq half [[ARG]], 0xH7C00
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[ONE_INF]]) #[[ATTR14]]
+; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan inf nzero sub norm) half @llvm.fabs.f16(half nofpclass(nan inf norm) [[ARG]]) #[[ATTR14]]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR14]]
 ; CHECK-NEXT:    [[UNRELATED_FABS:%.*]] = fcmp oeq half [[FABS]], 0xH0000
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[UNRELATED_FABS]]) #[[ATTR14]]
 ; CHECK-NEXT:    [[IS_SUBNORMAL:%.*]] = fcmp olt half [[FABS]], 0xH0400
 ; CHECK-NEXT:    call void @llvm.assume(i1 noundef [[IS_SUBNORMAL]]) #[[ATTR14]]
-; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(all) [[ARG]])
-; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(all) [[FABS]])
+; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf norm) [[ARG]])
+; CHECK-NEXT:    call void @extern.use.f16(half nofpclass(nan inf nzero sub norm) [[FABS]])
 ; CHECK-NEXT:    ret half [[ARG]]
 ;
 entry:
 
   %fabs = call half @llvm.fabs.f16(half %arg)
 
-  %one.inf = fcmp oeq half %arg, 0xH7C00
+  %one.inf = fcmp one half %arg, 0xH7C00
   call void @llvm.assume(i1 %one.inf)
 
   %unrelated.fabs = fcmp oeq half %fabs, 0.0
