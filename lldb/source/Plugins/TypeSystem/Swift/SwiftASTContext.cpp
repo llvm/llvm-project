@@ -5340,6 +5340,7 @@ SwiftASTContext::GetTypeInfo(opaque_compiler_type_t type,
     break;
 
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::PackArchetype:
   case swift::TypeKind::BuiltinPackIndex:
@@ -5371,6 +5372,7 @@ lldb::TypeClass SwiftASTContext::GetTypeClass(opaque_compiler_type_t type) {
   case swift::TypeKind::BuiltinPackIndex:    
   case swift::TypeKind::BuiltinTuple:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::ParameterizedProtocol:
   case swift::TypeKind::Placeholder:
@@ -5866,6 +5868,7 @@ lldb::Encoding SwiftASTContext::GetEncoding(opaque_compiler_type_t type,
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
@@ -5970,6 +5973,7 @@ uint32_t SwiftASTContext::GetNumChildren(opaque_compiler_type_t type,
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
@@ -6111,6 +6115,7 @@ uint32_t SwiftASTContext::GetNumFields(opaque_compiler_type_t type,
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
@@ -6343,6 +6348,7 @@ CompilerType SwiftASTContext::GetFieldAtIndex(opaque_compiler_type_t type,
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
@@ -6533,6 +6539,7 @@ uint32_t SwiftASTContext::GetNumPointeeChildren(opaque_compiler_type_t type) {
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
@@ -6689,6 +6696,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
@@ -7000,6 +7008,7 @@ size_t SwiftASTContext::GetIndexOfChildMemberWithName(
     case swift::TypeKind::Module:
     case swift::TypeKind::BuiltinPackIndex:
     case swift::TypeKind::Pack:
+    case swift::TypeKind::PackElement:
     case swift::TypeKind::PackExpansion:
     case swift::TypeKind::SILPack:
     case swift::TypeKind::ParameterizedProtocol:
@@ -7387,6 +7396,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::Module:
   case swift::TypeKind::BuiltinPackIndex:
   case swift::TypeKind::Pack:
+  case swift::TypeKind::PackElement:
   case swift::TypeKind::PackExpansion:
   case swift::TypeKind::SILPack:
   case swift::TypeKind::ParameterizedProtocol:
