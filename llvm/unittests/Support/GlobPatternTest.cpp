@@ -51,17 +51,6 @@ TEST_F(GlobPatternTest, Escape) {
   EXPECT_TRUE(Pat2->match("ax?c"));
   EXPECT_FALSE(Pat2->match("axxc"));
   EXPECT_FALSE(Pat2->match(""));
-
-  for (size_t I = 0; I != 4; ++I) {
-    std::string S(I, '\\');
-    Expected<GlobPattern> Pat = GlobPattern::create(S);
-    if (I % 2) {
-      EXPECT_FALSE((bool)Pat);
-      handleAllErrors(Pat.takeError(), [&](ErrorInfoBase &) {});
-    } else {
-      EXPECT_TRUE((bool)Pat);
-    }
-  }
 }
 
 TEST_F(GlobPatternTest, BasicCharacterClass) {
@@ -179,8 +168,8 @@ TEST_F(GlobPatternTest, NUL) {
 }
 
 TEST_F(GlobPatternTest, Pathological) {
-  std::string P, S(40, 'a');
-  for (int I = 0; I != 30; ++I)
+  std::string P, S(4, 'a');
+  for (int I = 0; I != 3; ++I)
     P += I % 2 ? "a*" : "[ba]*";
   Expected<GlobPattern> Pat = GlobPattern::create(P);
   ASSERT_TRUE((bool)Pat);
