@@ -68,7 +68,6 @@ static bool compareDistinctValues(QualType Type, Value &Val1,
   case ComparisonResult::Unknown:
     switch (Val1.getKind()) {
     case Value::Kind::Integer:
-    case Value::Kind::Reference:
     case Value::Kind::Pointer:
     case Value::Kind::Struct:
       // FIXME: this choice intentionally introduces unsoundness to allow
@@ -140,11 +139,6 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
 
   // FIXME: Consider destroying `MergedValue` immediately if `ValueModel::merge`
   // returns false to avoid storing unneeded values in `DACtx`.
-  // FIXME: Creating the value based on the type alone creates misshapen values
-  // for lvalues, since the type does not reflect the need for `ReferenceValue`.
-  // This issue will be resolved when `ReferenceValue` is eliminated as part
-  // of the ongoing migration to strict handling of value categories (see
-  // https://discourse.llvm.org/t/70086 for details).
   if (MergedVal)
     if (Model.merge(Type, Val1, Env1, Val2, Env2, *MergedVal, MergedEnv))
       return MergedVal;
@@ -611,7 +605,6 @@ StorageLocation &Environment::createStorageLocation(const Expr &E) {
 
 void Environment::setStorageLocation(const ValueDecl &D, StorageLocation &Loc) {
   assert(!DeclToLoc.contains(&D));
-  assert(!isa_and_nonnull<ReferenceValue>(getValue(Loc)));
   DeclToLoc[&D] = &Loc;
 }
 
@@ -621,8 +614,6 @@ StorageLocation *Environment::getStorageLocation(const ValueDecl &D) const {
     return nullptr;
 
   StorageLocation *Loc = It->second;
-
-  assert(!isa_and_nonnull<ReferenceValue>(getValue(*Loc)));
 
   return Loc;
 }
@@ -647,7 +638,7 @@ StorageLocation *Environment::getStorageLocation(const Expr &E,
                                                  SkipPast SP) const {
   // FIXME: Add a test with parens.
   auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
-  return It == ExprToLoc.end() ? nullptr : &skip(*It->second, SP);
+  return It == ExprToLoc.end() ? nullptr : &*It->second;
 }
 
 StorageLocation *Environment::getStorageLocationStrict(const Expr &E) const {
@@ -658,9 +649,6 @@ StorageLocation *Environment::getStorageLocationStrict(const Expr &E) const {
 
   if (Loc == nullptr)
     return nullptr;
-
-  if (auto *RefVal = dyn_cast_or_null<ReferenceValue>(getValue(*Loc)))
-    return &RefVal->getReferentLoc();
 
   return Loc;
 }
@@ -696,7 +684,6 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
 
 void Environment::setValueStrict(const Expr &E, Value &Val) {
   assert(E.isPRValue());
-  assert(!isa<ReferenceValue>(Val));
 
   if (auto *StructVal = dyn_cast<StructValue>(&Val)) {
     if (auto *ExistingVal = cast_or_null<StructValue>(getValueStrict(E)))
@@ -739,8 +726,6 @@ Value *Environment::getValueStrict(const Expr &E) const {
   assert(E.isPRValue());
   Value *Val = getValue(E, SkipPast::None);
 
-  assert(Val == nullptr || !isa<ReferenceValue>(Val));
-
   return Val;
 }
 
@@ -760,6 +745,7 @@ Value *Environment::createValueUnlessSelfReferential(
     QualType Type, llvm::DenseSet<QualType> &Visited, int Depth,
     int &CreatedValuesCount) {
   assert(!Type.isNull());
+  assert(!Type->isReferenceType());
 
   // Allow unlimited fields at depth 1; only cap at deeper nesting levels.
   if ((Depth > 1 && CreatedValuesCount > MaxCompositeValueSize) ||
@@ -779,16 +765,13 @@ Value *Environment::createValueUnlessSelfReferential(
     return &arena().create<IntegerValue>();
   }
 
-  if (Type->isReferenceType() || Type->isPointerType()) {
+  if (Type->isPointerType()) {
     CreatedValuesCount++;
     QualType PointeeType = Type->getPointeeType();
     StorageLocation &PointeeLoc =
         createLocAndMaybeValue(PointeeType, Visited, Depth, CreatedValuesCount);
 
-    if (Type->isReferenceType())
-      return &arena().create<ReferenceValue>(PointeeLoc);
-    else
-      return &arena().create<PointerValue>(PointeeLoc);
+    return &arena().create<PointerValue>(PointeeLoc);
   }
 
   if (Type->isRecordType()) {
@@ -890,25 +873,6 @@ StorageLocation &Environment::createObjectInternal(const VarDecl *D,
     setValue(Loc, *Val);
 
   return Loc;
-}
-
-StorageLocation &Environment::skip(StorageLocation &Loc, SkipPast SP) const {
-  switch (SP) {
-  case SkipPast::None:
-    return Loc;
-  case SkipPast::Reference:
-    // References cannot be chained so we only need to skip past one level of
-    // indirection.
-    if (auto *Val = dyn_cast_or_null<ReferenceValue>(getValue(Loc)))
-      return Val->getReferentLoc();
-    return Loc;
-  }
-  llvm_unreachable("bad SkipPast kind");
-}
-
-const StorageLocation &Environment::skip(const StorageLocation &Loc,
-                                         SkipPast SP) const {
-  return skip(*const_cast<StorageLocation *>(&Loc), SP);
 }
 
 void Environment::addToFlowCondition(const Formula &Val) {
