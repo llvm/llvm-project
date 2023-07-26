@@ -134,7 +134,8 @@ INTERCEPTOR(int, _except_handler4, void *a, void *b, void *c, void *d) {
 static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   AsanThread *t = (AsanThread *)arg;
   SetCurrentThread(t);
-  auto res = t->ThreadStart(GetTid());
+  t->ThreadStart(GetTid());
+  auto res = t->RunThread();
   t->Destroy();  // POSIX calls this from TSD destructor.
   return res;
 }

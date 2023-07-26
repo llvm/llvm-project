@@ -222,7 +222,8 @@ static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   SetCurrentThread(t);
   auto self = GetThreadSelf();
   auto args = asanThreadArgRetval().GetArgs(self);
-  thread_return_t retval = t->ThreadStart(GetTid());
+  t->ThreadStart(GetTid());
+  thread_return_t retval = t->RunThread();
   asanThreadArgRetval().Finish(self, retval);
   CHECK_EQ(args.arg_retval, t->get_arg());
   return retval;
