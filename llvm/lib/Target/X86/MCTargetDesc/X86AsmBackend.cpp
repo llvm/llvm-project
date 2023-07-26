@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/X86BaseInfo.h"
-#include "MCTargetDesc/X86FixupKinds.h"
 #include "MCTargetDesc/X86EncodingOptimization.h"
+#include "MCTargetDesc/X86FixupKinds.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/BinaryFormat/MachO.h"
@@ -169,9 +169,7 @@ public:
     return X86::NumTargetFixupKinds;
   }
 
-  const MCSubtargetInfo & getSTI() const { 
-    return STI;
-  }
+  const MCSubtargetInfo &getSTI() const { return STI; }
 
   std::optional<MCFixupKind> getFixupKind(StringRef Name) const override;
 
@@ -1107,9 +1105,7 @@ class ELFX86_64AsmBackend : public ELFX86AsmBackend {
 public:
   ELFX86_64AsmBackend(const Target &T, uint8_t OSABI,
                       const MCSubtargetInfo &STI)
-    : ELFX86AsmBackend(T, OSABI, STI) {
-    
-    }
+      : ELFX86AsmBackend(T, OSABI, STI) {}
 
   std::unique_ptr<MCObjectTargetWriter>
   createObjectTargetWriter() const override {
