@@ -18,11 +18,11 @@
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PN:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PM:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smopa.wide.nxv8i16(i32 1, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.smopa.wide.nxv8i16(i32 7, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 void test_svmopa_za64_s16(svbool_t pn, svbool_t pm, svint16_t zn, svint16_t zm) {
-  SME_ACLE_FUNC(svmopa_za64, _s16, _m)(1, pn, pm, zn, zm);
+  SME_ACLE_FUNC(svmopa_za64, _s16, _m)(7, pn, pm, zn, zm);
 }
 
 // CHECK-C-LABEL: @test_svmopa_za64_u16(
@@ -42,11 +42,11 @@ void test_svmopa_za64_u16(svbool_t pn, svbool_t pm, svuint16_t zn, svuint16_t zm
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PN:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 2 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv2i1(<vscale x 16 x i1> [[PM:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mopa.nxv2f64(i32 1, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i1> [[TMP1]], <vscale x 2 x double> [[ZN:%.*]], <vscale x 2 x double> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.mopa.nxv2f64(i32 7, <vscale x 2 x i1> [[TMP0]], <vscale x 2 x i1> [[TMP1]], <vscale x 2 x double> [[ZN:%.*]], <vscale x 2 x double> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 void test_svmopa_za64_f64(svbool_t pn, svbool_t pm, svfloat64_t zn, svfloat64_t zm) {
-  SME_ACLE_FUNC(svmopa_za64, _f64, _m)(1, pn, pm, zn, zm);
+  SME_ACLE_FUNC(svmopa_za64, _f64, _m)(7, pn, pm, zn, zm);
 }
 
 // CHECK-C-LABEL: @test_svsumopa_za64_s16(
@@ -66,9 +66,9 @@ void test_svsumopa_za64_s16(svbool_t pn, svbool_t pm, svint16_t zn, svuint16_t z
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PN:%.*]])
 // CHECK-NEXT:    [[TMP1:%.*]] = tail call <vscale x 8 x i1> @llvm.aarch64.sve.convert.from.svbool.nxv8i1(<vscale x 16 x i1> [[PM:%.*]])
-// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmopa.wide.nxv8i16(i32 2, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
+// CHECK-NEXT:    tail call void @llvm.aarch64.sme.usmopa.wide.nxv8i16(i32 7, <vscale x 8 x i1> [[TMP0]], <vscale x 8 x i1> [[TMP1]], <vscale x 8 x i16> [[ZN:%.*]], <vscale x 8 x i16> [[ZM:%.*]])
 // CHECK-NEXT:    ret void
 //
 void test_svusmopa_za64_u16(svbool_t pn, svbool_t pm, svuint16_t zn, svint16_t zm) {
-  SME_ACLE_FUNC(svusmopa_za64, _u16, _m)(2, pn, pm, zn, zm);
+  SME_ACLE_FUNC(svusmopa_za64, _u16, _m)(7, pn, pm, zn, zm);
 }
