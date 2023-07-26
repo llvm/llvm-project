@@ -118,6 +118,11 @@ TEST_F(GlobPatternTest, SpecialCharsInCharacterClass) {
   EXPECT_TRUE(Pat1->match("^"));
   EXPECT_FALSE(Pat1->match("*?^"));
   EXPECT_FALSE(Pat1->match(""));
+
+  Expected<GlobPattern> Pat2 = GlobPattern::create("[*]");
+  ASSERT_TRUE((bool)Pat2);
+  EXPECT_TRUE(Pat2->match("*"));
+  EXPECT_FALSE(Pat2->match("]"));
 }
 
 TEST_F(GlobPatternTest, Invalid) {
