@@ -227,6 +227,7 @@ add_libc_test(
   SRCS
     fopen_test.cpp
   DEPENDS
+    libc.src.stdio.fread
     libc.src.stdio.fputs
     libc.src.stdio.fclose
     libc.src.stdio.fopen

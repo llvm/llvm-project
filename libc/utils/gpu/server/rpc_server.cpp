@@ -103,6 +103,26 @@ private:
       }
       break;
     }
+    case RPC_READ_FROM_STREAM:
+    case RPC_READ_FROM_STDIN: {
+      uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
+      void *data[rpc::MAX_LANE_SIZE] = {nullptr};
+      uint64_t rets[rpc::MAX_LANE_SIZE] = {0};
+      port->recv([&](rpc::Buffer *buffer, uint32_t id) {
+        sizes[id] = buffer->data[0];
+        data[id] = new char[sizes[id]];
+        FILE *file = port->get_opcode() == RPC_READ_FROM_STREAM
+                         ? reinterpret_cast<FILE *>(buffer->data[1])
+                         : stdin;
+        rets[id] = fread(data[id], 1, sizes[id], file);
+      });
+      port->send_n(data, sizes);
+      port->send([&](rpc::Buffer *buffer, uint32_t id) {
+        delete[] reinterpret_cast<uint8_t *>(data[id]);
+        std::memcpy(buffer->data, &rets[id], sizeof(uint64_t));
+      });
+      break;
+    }
     case RPC_OPEN_FILE: {
       uint64_t sizes[rpc::MAX_LANE_SIZE] = {0};
       void *paths[rpc::MAX_LANE_SIZE] = {nullptr};
