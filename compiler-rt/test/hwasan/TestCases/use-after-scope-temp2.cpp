@@ -4,7 +4,6 @@
 // RUN:     not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: aarch64-target-arch || riscv64-target-arch
-// REQUIRES: stable-runtime
 
 struct IntHolder {
   __attribute__((noinline)) const IntHolder &Self() const {

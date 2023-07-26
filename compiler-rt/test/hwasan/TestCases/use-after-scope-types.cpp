@@ -28,7 +28,6 @@
 // RUN: not %run %t-noexcept 10 2>&1 | FileCheck %s
 
 // REQUIRES: aarch64-target-arch || riscv64-target-arch
-// REQUIRES: stable-runtime
 
 #include <stdlib.h>
 #include <string>

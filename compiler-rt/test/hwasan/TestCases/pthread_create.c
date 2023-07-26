@@ -1,7 +1,6 @@
 // Tests that our thread initialization hooks work properly with random_tags=1.
 // RUN: %clang_hwasan %s -o %t
 // RUN: %env_hwasan_opts=random_tags=1 %run %t
-// REQUIRES: stable-runtime
 
 #include <pthread.h>
 
