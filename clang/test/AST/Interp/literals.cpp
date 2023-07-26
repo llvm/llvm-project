@@ -880,5 +880,16 @@ namespace PredefinedExprs {
     static_assert(strings_match(__func__, "foo"), "");
     static_assert(strings_match(__PRETTY_FUNCTION__, "void PredefinedExprs::foo()"), "");
   }
+
+  constexpr char heh(unsigned index) {
+    __FUNCTION__;               // ref-warning {{result unused}} \
+                                // expected-warning {{result unused}}
+    __extension__ __FUNCTION__; // ref-warning {{result unused}} \
+                                // expected-warning {{result unused}}
+    return __FUNCTION__[index];
+  }
+  static_assert(heh(0) == 'h', "");
+  static_assert(heh(1) == 'e', "");
+  static_assert(heh(2) == 'h', "");
 #endif
 }
