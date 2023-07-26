@@ -152,7 +152,6 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
   //   2. Verify the isa pointer is a known class
   //   3. Require addresses to be on the heap
   std::string modified_expr_storage;
-  // Either Swift was explicitly specified, or the frame is Swift.
   bool is_swift = language == lldb::eLanguageTypeSwift;
   if (is_swift && is_po) {
     lldb::addr_t addr;
