@@ -954,6 +954,11 @@ bool CompilerInvocation::createFromArgs(
     res.loweringOpts.setPolymorphicTypeImpl(true);
   }
 
+  // -fno-ppc-native-vector-element-order
+  if (args.hasArg(clang::driver::options::OPT_fno_ppc_native_vec_elem_order)) {
+    res.loweringOpts.setNoPPCNativeVecElemOrder(true);
+  }
+
   success &= parseFrontendArgs(res.getFrontendOpts(), args, diags);
   parseTargetArgs(res.getTargetOpts(), args);
   parsePreprocessorArgs(res.getPreprocessorOpts(), args);

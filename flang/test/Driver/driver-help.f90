@@ -46,6 +46,8 @@
 ! HELP-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! HELP-NEXT: -fno-integrated-as      Disable the integrated assembler
+! HELP-NEXT: -fno-ppc-native-vector-element-order
+! HELP-NEXT:                        Specifies PowerPC non-native vector element order
 ! HELP-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
 ! HELP-NEXT: -fno-stack-arrays      Allocate array temporaries on the heap (default)
 ! HELP-NEXT: -fno-version-loops-for-stride
@@ -59,6 +61,8 @@
 ! HELP-NEXT: -foptimization-record-passes=<regex>
 ! HELP-NEXT:                        Only include passes which match a specified regular expression in the generated optimization record (by default, include all passes)
 ! HELP-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
+! HELP-NEXT: -fppc-native-vector-element-order
+! HELP-NEXT:                        Specifies PowerPC native vector element order
 ! HELP-NEXT: -freciprocal-math      Allow division operations to be reassociated
 ! HELP-NEXT: -fsave-optimization-record=<format>
 ! HELP-NEXT:                        Generate an optimization record file in a specific format
@@ -158,6 +162,8 @@
 ! HELP-FC1-NEXT:                        Do not use the analyzed objects when unparsing
 ! HELP-FC1-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! HELP-FC1-NEXT: -fno-debug-pass-manager Disables debug printing for the new pass manager
+! HELP-FC1-NEXT: -fno-ppc-native-vector-element-order
+! HELP-FC1-NEXT:                        Specifies PowerPC non-native vector element order
 ! HELP-FC1-NEXT: -fno-reformat          Dump the cooked character stream in -E mode
 ! HELP-FC1-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
 ! HELP-FC1-NEXT: -fno-stack-arrays      Allocate array temporaries on the heap (default)
@@ -173,6 +179,8 @@
 ! HELP-FC1-NEXT:                        Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
 ! HELP-FC1-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
 ! HELP-FC1-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
+! HELP-FC1-NEXT: -fppc-native-vector-element-order
+! HELP-FC1-NEXT:                        Specifies PowerPC native vector element order
 ! HELP-FC1-NEXT: -freciprocal-math      Allow division operations to be reassociated
 ! HELP-FC1-NEXT: -fstack-arrays         Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-FC1-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
