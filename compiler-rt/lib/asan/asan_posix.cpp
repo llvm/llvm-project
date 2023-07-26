@@ -138,7 +138,8 @@ void PlatformTSDDtor(void *tsd) {
     CHECK_EQ(0, pthread_setspecific(tsd_key, tsd));
     return;
   }
-#    if SANITIZER_LINUX
+#    if SANITIZER_FREEBSD || SANITIZER_LINUX || SANITIZER_NETBSD || \
+        SANITIZER_SOLARIS
   // After this point it's unsafe to execute signal handlers which may be
   // instrumented. It's probably not just a Linux issue.
   BlockSignals();
