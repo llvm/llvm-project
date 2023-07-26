@@ -355,7 +355,7 @@ define void @nonnull_assume_pos(ptr %arg1, ptr %arg2, ptr %arg3, ptr %arg4) {
 ;
 ; CHECK-LABEL: define {{[^@]+}}@nonnull_assume_pos
 ; CHECK-SAME: (ptr nofree [[ARG1:%.*]], ptr [[ARG2:%.*]], ptr nofree [[ARG3:%.*]], ptr [[ARG4:%.*]]) {
-; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR14]] [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
+; CHECK-NEXT:    call void @llvm.assume(i1 noundef true) #[[ATTR15:[0-9]+]] [ "nofree"(ptr [[ARG1]]), "nofree"(ptr [[ARG3]]) ]
 ; CHECK-NEXT:    call void @unknown(ptr nofree [[ARG1]], ptr [[ARG2]], ptr nofree [[ARG3]], ptr [[ARG4]])
 ; CHECK-NEXT:    ret void
 ;
@@ -500,7 +500,8 @@ attributes #2 = { nobuiltin nounwind }
 ; TUNIT: attributes #[[ATTR11]] = { nofree }
 ; TUNIT: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; TUNIT: attributes #[[ATTR13:[0-9]+]] = { nounwind willreturn }
-; TUNIT: attributes #[[ATTR14]] = { nofree willreturn }
+; TUNIT: attributes #[[ATTR14]] = { nofree nosync willreturn }
+; TUNIT: attributes #[[ATTR15]] = { nofree willreturn }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { nounwind }
 ; CGSCC: attributes #[[ATTR1]] = { noinline nounwind uwtable }
@@ -516,5 +517,6 @@ attributes #2 = { nobuiltin nounwind }
 ; CGSCC: attributes #[[ATTR11]] = { nofree }
 ; CGSCC: attributes #[[ATTR12:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR13:[0-9]+]] = { nounwind willreturn }
-; CGSCC: attributes #[[ATTR14]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR14]] = { nofree nosync willreturn }
+; CGSCC: attributes #[[ATTR15]] = { nofree willreturn }
 ;.

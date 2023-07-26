@@ -383,7 +383,7 @@ define float @call_noinf_0(float nofpclass(inf) %arg) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define float @call_noinf_0
 ; CGSCC-SAME: (float nofpclass(inf) [[ARG:%.*]]) #[[ATTR4:[0-9]+]] {
-; CGSCC-NEXT:    [[RESULT:%.*]] = call float @only_nofpclass_inf_callers(float nofpclass(inf) [[ARG]]) #[[ATTR14]]
+; CGSCC-NEXT:    [[RESULT:%.*]] = call float @only_nofpclass_inf_callers(float nofpclass(inf) [[ARG]]) #[[ATTR15:[0-9]+]]
 ; CGSCC-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @only_nofpclass_inf_callers(float %arg)
@@ -400,7 +400,7 @@ define float @call_noinf_1(float %arg) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define float @call_noinf_1
 ; CGSCC-SAME: (float [[ARG:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    [[RESULT:%.*]] = call float @only_nofpclass_inf_callers(float nofpclass(inf) [[ARG]]) #[[ATTR14]]
+; CGSCC-NEXT:    [[RESULT:%.*]] = call float @only_nofpclass_inf_callers(float nofpclass(inf) [[ARG]]) #[[ATTR15]]
 ; CGSCC-NEXT:    ret float [[RESULT]]
 ;
   %result = call float @only_nofpclass_inf_callers(float nofpclass(inf) %arg)
@@ -429,7 +429,7 @@ define float @call_noinf_return_0(float %arg) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define nofpclass(inf) float @call_noinf_return_0
 ; CGSCC-SAME: (float [[ARG:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    [[RESULT:%.*]] = call nofpclass(inf) float @only_nofpclass_inf_return_users(float [[ARG]]) #[[ATTR14]]
+; CGSCC-NEXT:    [[RESULT:%.*]] = call nofpclass(inf) float @only_nofpclass_inf_return_users(float [[ARG]]) #[[ATTR15]]
 ; CGSCC-NEXT:    ret float [[RESULT]]
 ;
   %result = call nofpclass(inf) float @only_nofpclass_inf_return_users(float %arg)
@@ -446,7 +446,7 @@ define float @call_noinf_return_1(float %arg) {
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define nofpclass(inf) float @call_noinf_return_1
 ; CGSCC-SAME: (float [[ARG:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    [[RESULT:%.*]] = call nofpclass(inf) float @only_nofpclass_inf_return_users(float [[ARG]]) #[[ATTR14]]
+; CGSCC-NEXT:    [[RESULT:%.*]] = call nofpclass(inf) float @only_nofpclass_inf_return_users(float [[ARG]]) #[[ATTR15]]
 ; CGSCC-NEXT:    ret float [[RESULT]]
 ;
   %result = call nofpclass(inf) float @only_nofpclass_inf_return_users(float %arg)
@@ -675,7 +675,7 @@ define float @pass_nofpclass_inf_through_memory(float nofpclass(inf) %arg) {
 ; CGSCC-SAME: (float nofpclass(inf) [[ARG:%.*]]) #[[ATTR4]] {
 ; CGSCC-NEXT:    [[ALLOCA:%.*]] = alloca float, align 4
 ; CGSCC-NEXT:    store float [[ARG]], ptr [[ALLOCA]], align 4
-; CGSCC-NEXT:    [[RET:%.*]] = call float @returned_load(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ALLOCA]]) #[[ATTR15:[0-9]+]]
+; CGSCC-NEXT:    [[RET:%.*]] = call float @returned_load(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[ALLOCA]]) #[[ATTR16:[0-9]+]]
 ; CGSCC-NEXT:    ret float [[RET]]
 ;
   %alloca = alloca float
@@ -685,176 +685,272 @@ define float @pass_nofpclass_inf_through_memory(float nofpclass(inf) %arg) {
 }
 
 define float @returned_fabs(float %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs
-; CHECK-SAME: (float [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs
+; TUNIT-SAME: (float [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR17:[0-9]+]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs
+; CGSCC-SAME: (float [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_nosnan(float nofpclass(snan) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(snan ninf nzero nsub nnorm) float @returned_fabs_nosnan
-; CHECK-SAME: (float nofpclass(snan) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(snan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(snan) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(snan ninf nzero nsub nnorm) float @returned_fabs_nosnan
+; TUNIT-SAME: (float nofpclass(snan) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(snan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(snan) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(snan ninf nzero nsub nnorm) float @returned_fabs_nosnan
+; CGSCC-SAME: (float nofpclass(snan) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(snan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(snan) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_noqnan(float nofpclass(qnan) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(qnan ninf nzero nsub nnorm) float @returned_fabs_noqnan
-; CHECK-SAME: (float nofpclass(qnan) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(qnan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(qnan) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(qnan ninf nzero nsub nnorm) float @returned_fabs_noqnan
+; TUNIT-SAME: (float nofpclass(qnan) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(qnan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(qnan) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(qnan ninf nzero nsub nnorm) float @returned_fabs_noqnan
+; CGSCC-SAME: (float nofpclass(qnan) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(qnan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(qnan) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_nonan(float nofpclass(nan) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @returned_fabs_nonan
-; CHECK-SAME: (float nofpclass(nan) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @returned_fabs_nonan
+; TUNIT-SAME: (float nofpclass(nan) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @returned_fabs_nonan
+; CGSCC-SAME: (float nofpclass(nan) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_noinf(float nofpclass(inf) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(inf nzero nsub nnorm) float @returned_fabs_noinf
-; CHECK-SAME: (float nofpclass(inf) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(inf) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(inf nzero nsub nnorm) float @returned_fabs_noinf
+; TUNIT-SAME: (float nofpclass(inf) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(inf) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(inf nzero nsub nnorm) float @returned_fabs_noinf
+; CGSCC-SAME: (float nofpclass(inf) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(inf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(inf) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_nopos(float nofpclass(psub pnorm pinf) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nopos
-; CHECK-SAME: (float nofpclass(pinf psub pnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf psub pnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nopos
+; TUNIT-SAME: (float nofpclass(pinf psub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf psub pnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nopos
+; CGSCC-SAME: (float nofpclass(pinf psub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf psub pnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_nopos_nopzero(float nofpclass(psub pnorm pinf pzero) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nopos_nopzero
-; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf pzero psub pnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nopos_nopzero
+; TUNIT-SAME: (float nofpclass(pinf pzero psub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf pzero psub pnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nopos_nopzero
+; CGSCC-SAME: (float nofpclass(pinf pzero psub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf pzero psub pnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_nopos_nozero(float nofpclass(psub pnorm pinf zero) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf zero nsub nnorm) float @returned_fabs_nopos_nozero
-; CHECK-SAME: (float nofpclass(pinf zero psub pnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf zero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf zero psub pnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(ninf zero nsub nnorm) float @returned_fabs_nopos_nozero
+; TUNIT-SAME: (float nofpclass(pinf zero psub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf zero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf zero psub pnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(ninf zero nsub nnorm) float @returned_fabs_nopos_nozero
+; CGSCC-SAME: (float nofpclass(pinf zero psub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf zero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf zero psub pnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_nopos_nonan(float nofpclass(psub pnorm pinf nan) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @returned_fabs_nopos_nonan
-; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan pinf psub pnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @returned_fabs_nopos_nonan
+; TUNIT-SAME: (float nofpclass(nan pinf psub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan pinf psub pnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @returned_fabs_nopos_nonan
+; CGSCC-SAME: (float nofpclass(nan pinf psub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan pinf psub pnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_noneg(float nofpclass(nsub nnorm ninf) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_noneg
-; CHECK-SAME: (float nofpclass(ninf nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf nsub nnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_noneg
+; TUNIT-SAME: (float nofpclass(ninf nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf nsub nnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_noneg
+; CGSCC-SAME: (float nofpclass(ninf nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf nsub nnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_noneg_nonzero(float nofpclass(nsub nnorm ninf nzero) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_noneg_nonzero
-; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf nzero nsub nnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_noneg_nonzero
+; TUNIT-SAME: (float nofpclass(ninf nzero nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf nzero nsub nnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_noneg_nonzero
+; CGSCC-SAME: (float nofpclass(ninf nzero nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf nzero nsub nnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_noneg_nozero(float nofpclass(nsub nnorm ninf zero) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf zero nsub nnorm) float @returned_fabs_noneg_nozero
-; CHECK-SAME: (float nofpclass(ninf zero nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf zero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf zero nsub nnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(ninf zero nsub nnorm) float @returned_fabs_noneg_nozero
+; TUNIT-SAME: (float nofpclass(ninf zero nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf zero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf zero nsub nnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(ninf zero nsub nnorm) float @returned_fabs_noneg_nozero
+; CGSCC-SAME: (float nofpclass(ninf zero nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf zero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf zero nsub nnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_noneg_nonan(float nofpclass(nsub nnorm ninf nan) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @returned_fabs_noneg_nonan
-; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan ninf nsub nnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @returned_fabs_noneg_nonan
+; TUNIT-SAME: (float nofpclass(nan ninf nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan ninf nsub nnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(nan ninf nzero nsub nnorm) float @returned_fabs_noneg_nonan
+; CGSCC-SAME: (float nofpclass(nan ninf nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan ninf nsub nnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_nonsub_nopnorm_nonzero(float nofpclass(nsub pnorm nzero) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nonsub_nopnorm_nonzero
-; CHECK-SAME: (float nofpclass(nzero nsub pnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nzero nsub pnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nonsub_nopnorm_nonzero
+; TUNIT-SAME: (float nofpclass(nzero nsub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nzero nsub pnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nonsub_nopnorm_nonzero
+; CGSCC-SAME: (float nofpclass(nzero nsub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nzero nsub pnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_nopsub_nonnorm_nopzero(float nofpclass(psub nnorm pzero) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nopsub_nonnorm_nopzero
-; CHECK-SAME: (float nofpclass(pzero psub nnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pzero psub nnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nopsub_nonnorm_nopzero
+; TUNIT-SAME: (float nofpclass(pzero psub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pzero psub nnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nopsub_nonnorm_nopzero
+; CGSCC-SAME: (float nofpclass(pzero psub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pzero psub nnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
 }
 
 define float @returned_fabs_nonnorm_nozero(float nofpclass(nnorm nzero) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nonnorm_nozero
-; CHECK-SAME: (float nofpclass(nzero nnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nzero nnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    ret float [[FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nonnorm_nozero
+; TUNIT-SAME: (float nofpclass(nzero nnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nzero nnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    ret float [[FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(ninf nzero nsub nnorm) float @returned_fabs_nonnorm_nozero
+; CGSCC-SAME: (float nofpclass(nzero nnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nzero nnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    ret float [[FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   ret float %fabs
@@ -993,12 +1089,19 @@ define float @returned_fneg_mixed(float nofpclass(psub nnorm nzero qnan ninf) %x
 }
 
 define float @returned_fneg_fabs(float %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @returned_fneg_fabs
-; CHECK-SAME: (float [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(pinf pzero psub pnorm) float @returned_fneg_fabs
+; TUNIT-SAME: (float [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; TUNIT-NEXT:    ret float [[FNEG_FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(pinf pzero psub pnorm) float @returned_fneg_fabs
+; CGSCC-SAME: (float [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CGSCC-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   %fneg.fabs = fneg float %fabs
@@ -1006,12 +1109,19 @@ define float @returned_fneg_fabs(float %x) {
 }
 
 define float @returned_fneg_fabs_nosnan(float nofpclass(snan) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(snan pinf pzero psub pnorm) float @returned_fneg_fabs_nosnan
-; CHECK-SAME: (float nofpclass(snan) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(snan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(snan) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(snan pinf pzero psub pnorm) float @returned_fneg_fabs_nosnan
+; TUNIT-SAME: (float nofpclass(snan) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(snan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(snan) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; TUNIT-NEXT:    ret float [[FNEG_FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(snan pinf pzero psub pnorm) float @returned_fneg_fabs_nosnan
+; CGSCC-SAME: (float nofpclass(snan) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(snan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(snan) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CGSCC-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   %fneg.fabs = fneg float %fabs
@@ -1019,12 +1129,19 @@ define float @returned_fneg_fabs_nosnan(float nofpclass(snan) %x) {
 }
 
 define float @returned_fneg_fabs_noqnan(float nofpclass(qnan) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(qnan pinf pzero psub pnorm) float @returned_fneg_fabs_noqnan
-; CHECK-SAME: (float nofpclass(qnan) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(qnan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(qnan) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(qnan pinf pzero psub pnorm) float @returned_fneg_fabs_noqnan
+; TUNIT-SAME: (float nofpclass(qnan) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(qnan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(qnan) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; TUNIT-NEXT:    ret float [[FNEG_FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(qnan pinf pzero psub pnorm) float @returned_fneg_fabs_noqnan
+; CGSCC-SAME: (float nofpclass(qnan) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(qnan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(qnan) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CGSCC-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   %fneg.fabs = fneg float %fabs
@@ -1032,12 +1149,19 @@ define float @returned_fneg_fabs_noqnan(float nofpclass(qnan) %x) {
 }
 
 define float @returned_fneg_fabs_nonan(float nofpclass(nan) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @returned_fneg_fabs_nonan
-; CHECK-SAME: (float nofpclass(nan) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @returned_fneg_fabs_nonan
+; TUNIT-SAME: (float nofpclass(nan) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; TUNIT-NEXT:    ret float [[FNEG_FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(nan pinf pzero psub pnorm) float @returned_fneg_fabs_nonan
+; CGSCC-SAME: (float nofpclass(nan) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(nan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(nan) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CGSCC-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   %fneg.fabs = fneg float %fabs
@@ -1045,12 +1169,19 @@ define float @returned_fneg_fabs_nonan(float nofpclass(nan) %x) {
 }
 
 define float @returned_fneg_fabs_noneg(float nofpclass(ninf nsub nnorm nzero) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @returned_fneg_fabs_noneg
-; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf nzero nsub nnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(pinf pzero psub pnorm) float @returned_fneg_fabs_noneg
+; TUNIT-SAME: (float nofpclass(ninf nzero nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf nzero nsub nnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; TUNIT-NEXT:    ret float [[FNEG_FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(pinf pzero psub pnorm) float @returned_fneg_fabs_noneg
+; CGSCC-SAME: (float nofpclass(ninf nzero nsub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(ninf nzero nsub nnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CGSCC-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   %fneg.fabs = fneg float %fabs
@@ -1058,12 +1189,19 @@ define float @returned_fneg_fabs_noneg(float nofpclass(ninf nsub nnorm nzero) %x
 }
 
 define float @returned_fneg_fabs_nopos(float nofpclass(pinf psub pnorm pzero) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(pinf pzero psub pnorm) float @returned_fneg_fabs_nopos
-; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf pzero psub pnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(pinf pzero psub pnorm) float @returned_fneg_fabs_nopos
+; TUNIT-SAME: (float nofpclass(pinf pzero psub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf pzero psub pnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; TUNIT-NEXT:    ret float [[FNEG_FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(pinf pzero psub pnorm) float @returned_fneg_fabs_nopos
+; CGSCC-SAME: (float nofpclass(pinf pzero psub pnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(pinf pzero psub pnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CGSCC-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   %fneg.fabs = fneg float %fabs
@@ -1071,12 +1209,19 @@ define float @returned_fneg_fabs_nopos(float nofpclass(pinf psub pnorm pzero) %x
 }
 
 define float @returned_fneg_fabs_mixed(float nofpclass(psub nnorm nzero qnan ninf) %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(qnan pinf pzero psub pnorm) float @returned_fneg_fabs_mixed
-; CHECK-SAME: (float nofpclass(qnan ninf nzero psub nnorm) [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(qnan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(qnan ninf nzero psub nnorm) [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(qnan pinf pzero psub pnorm) float @returned_fneg_fabs_mixed
+; TUNIT-SAME: (float nofpclass(qnan ninf nzero psub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(qnan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(qnan ninf nzero psub nnorm) [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; TUNIT-NEXT:    ret float [[FNEG_FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(qnan pinf pzero psub pnorm) float @returned_fneg_fabs_mixed
+; CGSCC-SAME: (float nofpclass(qnan ninf nzero psub nnorm) [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(qnan ninf nzero nsub nnorm) float @llvm.fabs.f32(float nofpclass(qnan ninf nzero psub nnorm) [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CGSCC-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   %fneg.fabs = fneg float %fabs
@@ -1084,12 +1229,19 @@ define float @returned_fneg_fabs_mixed(float nofpclass(psub nnorm nzero qnan nin
 }
 
 define float @returned_fneg_fabs_ninf_flag_fabs(float %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(inf pzero psub pnorm) float @returned_fneg_fabs_ninf_flag_fabs
-; CHECK-SAME: (float [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call ninf nofpclass(inf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(inf pzero psub pnorm) float @returned_fneg_fabs_ninf_flag_fabs
+; TUNIT-SAME: (float [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call ninf nofpclass(inf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; TUNIT-NEXT:    ret float [[FNEG_FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(inf pzero psub pnorm) float @returned_fneg_fabs_ninf_flag_fabs
+; CGSCC-SAME: (float [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call ninf nofpclass(inf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CGSCC-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call ninf float @llvm.fabs.f32(float %x)
   %fneg.fabs = fneg float %fabs
@@ -1097,12 +1249,19 @@ define float @returned_fneg_fabs_ninf_flag_fabs(float %x) {
 }
 
 define float @returned_fneg_fabs_ninf_flag_fneg(float %x) {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define nofpclass(inf pzero psub pnorm) float @returned_fneg_fabs_ninf_flag_fneg
-; CHECK-SAME: (float [[X:%.*]]) #[[ATTR3]] {
-; CHECK-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR14]]
-; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg ninf float [[FABS]]
-; CHECK-NEXT:    ret float [[FNEG_FABS]]
+; TUNIT: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define nofpclass(inf pzero psub pnorm) float @returned_fneg_fabs_ninf_flag_fneg
+; TUNIT-SAME: (float [[X:%.*]]) #[[ATTR3]] {
+; TUNIT-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR17]]
+; TUNIT-NEXT:    [[FNEG_FABS:%.*]] = fneg ninf float [[FABS]]
+; TUNIT-NEXT:    ret float [[FNEG_FABS]]
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define nofpclass(inf pzero psub pnorm) float @returned_fneg_fabs_ninf_flag_fneg
+; CGSCC-SAME: (float [[X:%.*]]) #[[ATTR3]] {
+; CGSCC-NEXT:    [[FABS:%.*]] = call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float [[X]]) #[[ATTR15]]
+; CGSCC-NEXT:    [[FNEG_FABS:%.*]] = fneg ninf float [[FABS]]
+; CGSCC-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %x)
   %fneg.fabs = fneg ninf float %fabs
