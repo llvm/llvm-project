@@ -265,3 +265,29 @@ namespace CallWithArgs {
     g(0);
   }
 }
+
+namespace ReturnLocalPtr {
+  constexpr int *p() {
+    int a = 12;
+    return &a; // ref-warning {{address of stack memory}} \
+               // expected-warning {{address of stack memory}}
+  }
+
+  /// GCC rejects the expression below, just like the new interpreter. The current interpreter
+  /// however accepts it and only warns about the function above returning an address to stack
+  /// memory. If we change the condition to 'p() != nullptr', it even succeeds.
+  static_assert(p() == nullptr, ""); // ref-error {{static assertion failed}} \
+                                     // expected-error {{not an integral constant expression}}
+
+  /// FIXME: The current interpreter emits diagnostics in the reference case below, but the
+  /// new one does not.
+  constexpr const int &p2() {
+    int a = 12; // ref-note {{declared here}}
+    return a; // ref-warning {{reference to stack memory associated with local variable}} \
+              // expected-warning {{reference to stack memory associated with local variable}}
+  }
+
+  static_assert(p2() == 12, ""); // ref-error {{not an integral constant expression}} \
+                                 // ref-note {{read of variable whose lifetime has ended}} \
+                                 // expected-error {{not an integral constant expression}}
+}
