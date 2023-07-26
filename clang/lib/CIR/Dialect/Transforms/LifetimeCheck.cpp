@@ -1137,15 +1137,15 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
     return castOp.getSrc();
   };
 
-  auto defOp = data.getDefiningOp();
+  auto dataSrcOp = data.getDefiningOp();
 
   // Do not handle block arguments just yet.
-  if (!defOp)
+  if (!dataSrcOp)
     return;
 
   // 2.4.2 - If the declaration includes an initialization, the
   // initialization is treated as a separate operation
-  if (auto cstOp = dyn_cast<ConstantOp>(defOp)) {
+  if (auto cstOp = dyn_cast<ConstantOp>(dataSrcOp)) {
     // Aggregates can be bulk materialized in CIR, handle proper update of
     // individual exploded fields.
     if (auto constStruct =
@@ -1166,14 +1166,14 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
     return;
   }
 
-  if (auto allocaOp = dyn_cast<AllocaOp>(defOp)) {
+  if (auto allocaOp = dyn_cast<AllocaOp>(dataSrcOp)) {
     // p = &x;
     getPmap()[addr].clear();
     getPmap()[addr].insert(State::getLocalValue(data));
     return;
   }
 
-  if (auto ptrStrideOp = dyn_cast<PtrStrideOp>(defOp)) {
+  if (auto ptrStrideOp = dyn_cast<PtrStrideOp>(dataSrcOp)) {
     // p = &a[0];
     auto array = getArrayFromSubscript(ptrStrideOp);
     if (array) {
