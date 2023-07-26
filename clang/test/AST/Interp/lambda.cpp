@@ -107,3 +107,58 @@ namespace LambdaParams {
   static_assert(foo() == 1); // expected-error {{not an integral constant expression}}
 }
 
+namespace StaticInvoker {
+  constexpr int sv1(int i) {
+    auto l = []() { return 12; };
+    int (*fp)() = l;
+    return fp();
+  }
+  static_assert(sv1(12) == 12);
+
+  constexpr int sv2(int i) {
+    auto l = [](int m, float f, void *A) { return m; };
+    int (*fp)(int, float, void*) = l;
+    return fp(i, 4.0f, nullptr);
+  }
+  static_assert(sv2(12) == 12);
+
+  constexpr int sv3(int i) {
+    auto l = [](int m, const int &n) { return m; };
+    int (*fp)(int, const int &) = l;
+    return fp(i, 3);
+  }
+  static_assert(sv3(12) == 12);
+
+  constexpr int sv4(int i) {
+    auto l = [](int &m) { return m; };
+    int (*fp)(int&) = l;
+    return fp(i);
+  }
+  static_assert(sv4(12) == 12);
+
+
+
+  /// FIXME: This is broken for lambda-unrelated reasons.
+#if 0
+  constexpr int sv5(int i) {
+    struct F { int a; float f; };
+    auto l = [](int m, F f) { return m; };
+    int (*fp)(int, F) = l;
+    return fp(i, F{12, 14.0});
+  }
+  static_assert(sv5(12) == 12);
+#endif
+
+  constexpr int sv6(int i) {
+    struct F { int a;
+      constexpr F(int a) : a(a) {}
+    };
+
+    auto l = [](int m) { return F(12); };
+    F (*fp)(int) = l;
+    F f = fp(i);
+
+    return fp(i).a;
+  }
+  static_assert(sv6(12) == 12);
+}
