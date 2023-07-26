@@ -1122,10 +1122,15 @@ void SwiftASTContext::DiagnoseWarnings(Process &process, Module &module) const {
 /// by converting  ${toolchain}/usr/(local)?/lib/swift/host/plugins
 /// into           ${toolchain}/usr/bin/swift-plugin-server
 /// FIXME: move this to Host, it may be platform-specific.
-static std::string GetPluginServer(llvm::StringRef plugin_library_path) {
-  llvm::StringRef path = llvm::sys::path::parent_path(plugin_library_path);
-  if (llvm::sys::path::filename(path) != "plugins")
-    return {};
+std::string
+SwiftASTContext::GetPluginServer(llvm::StringRef plugin_library_path) {
+  llvm::StringRef path = plugin_library_path;
+  if (llvm::sys::path::filename(path) != "plugins") {
+    // Strip off a plugin name.
+    path = llvm::sys::path::parent_path(plugin_library_path);
+    if (llvm::sys::path::filename(path) != "plugins")
+      return {};
+  }
   path = llvm::sys::path::parent_path(path);
   if (llvm::sys::path::filename(path) != "host")
     return {};
@@ -1140,10 +1145,7 @@ static std::string GetPluginServer(llvm::StringRef plugin_library_path) {
     path = llvm::sys::path::parent_path(path);
   llvm::SmallString<256> server(path);
   llvm::sys::path::append(server, "bin", "swift-plugin-server");
-  std::string result(server);
-  if (FileSystem::Instance().Exists(result))
-    return result;
-  return {};
+  return std::string(server);
 }
 
 static std::string GetPluginServerForSDK(llvm::StringRef sdk_path) {
@@ -1320,8 +1322,12 @@ static bool DeserializeAllCompilerFlags(swift::CompilerInvocation &invocation,
             // Rewrite them to go through an ABI-compatible swift-plugin-server.
             if (known_plugin_search_paths.insert(path).second) {
               if (known_external_plugin_search_paths.insert(path).second) {
-                std::string server = get_plugin_server(
-                    path, [&]() { return GetPluginServer(path); });
+                std::string server = get_plugin_server(path, [&]() {
+                  std::string server = SwiftASTContext::GetPluginServer(path);
+                  if (!server.empty() && !FileSystem::Instance().Exists(server))
+                    server.clear();
+                  return server;
+                });
                 if (server.empty())
                   continue;
                 if (exists(path))
