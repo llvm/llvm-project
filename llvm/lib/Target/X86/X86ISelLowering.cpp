@@ -6776,22 +6776,24 @@ static bool collectConcatOps(SDNode *N, SmallVectorImpl<SDValue> &Ops,
 }
 
 // Helper to check if \p V can be split into subvectors and the upper subvectors
-// are all undef. In which case return the lower subvectors.
-static bool isUpperSubvectorUndef(SDValue V, SmallVectorImpl<SDValue> &LowerOps,
-                                  SelectionDAG &DAG) {
+// are all undef. In which case return the lower subvector.
+static SDValue isUpperSubvectorUndef(SDValue V, const SDLoc &DL,
+                                     SelectionDAG &DAG) {
   SmallVector<SDValue> SubOps;
   if (!collectConcatOps(V.getNode(), SubOps, DAG))
-    return false;
+    return SDValue();
 
   unsigned NumSubOps = SubOps.size();
+  unsigned HalfNumSubOps = NumSubOps / 2;
   assert((NumSubOps % 2) == 0 && "Unexpected number of subvectors");
 
-  ArrayRef<SDValue> UpperOps(SubOps.begin() + (NumSubOps / 2), SubOps.end());
+  ArrayRef<SDValue> UpperOps(SubOps.begin() + HalfNumSubOps, SubOps.end());
   if (any_of(UpperOps, [](SDValue Op) { return !Op.isUndef(); }))
-    return false;
+    return SDValue();
 
-  LowerOps.assign(SubOps.begin(), SubOps.begin() + (NumSubOps / 2));
-  return true;
+  EVT HalfVT = V.getValueType().getHalfNumVectorElementsVT(*DAG.getContext());
+  ArrayRef<SDValue> LowerOps(SubOps.begin(), SubOps.begin() + HalfNumSubOps);
+  return DAG.getNode(ISD::CONCAT_VECTORS, DL, HalfVT, LowerOps);
 }
 
 // Helper to check if we can access all the constituent subvectors without any
@@ -22973,10 +22975,8 @@ static SDValue LowerTruncateVecPackWithSignBits(MVT DstVT, SDValue In,
   // only truncate the lower half.
   if (DstVT.getSizeInBits() >= 128) {
     SmallVector<SDValue> LowerOps;
-    if (isUpperSubvectorUndef(In, LowerOps, DAG)) {
+    if (SDValue Lo = isUpperSubvectorUndef(In, DL, DAG)) {
       MVT DstHalfVT = DstVT.getHalfNumVectorElementsVT();
-      MVT SrcHalfVT = SrcVT.getHalfNumVectorElementsVT();
-      SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcHalfVT, LowerOps);
       if (SDValue Res = LowerTruncateVecPackWithSignBits(DstHalfVT, Lo, DL,
                                                          Subtarget, DAG))
         return widenSubVector(Res, false, Subtarget, DAG, DL,
@@ -23033,10 +23033,8 @@ static SDValue LowerTruncateVecPack(MVT DstVT, SDValue In, const SDLoc &DL,
   // only truncate the lower half.
   if (DstVT.getSizeInBits() >= 128) {
     SmallVector<SDValue> LowerOps;
-    if (isUpperSubvectorUndef(In, LowerOps, DAG)) {
+    if (SDValue Lo = isUpperSubvectorUndef(In, DL, DAG)) {
       MVT DstHalfVT = DstVT.getHalfNumVectorElementsVT();
-      MVT SrcHalfVT = SrcVT.getHalfNumVectorElementsVT();
-      SDValue Lo = DAG.getNode(ISD::CONCAT_VECTORS, DL, SrcHalfVT, LowerOps);
       if (SDValue Res = LowerTruncateVecPack(DstHalfVT, Lo, DL, Subtarget, DAG))
         return widenSubVector(Res, false, Subtarget, DAG, DL,
                               DstVT.getSizeInBits());
