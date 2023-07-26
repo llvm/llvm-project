@@ -1243,6 +1243,8 @@ Constant *llvm::ConstantFoldBinaryInstruction(unsigned Opcode, Constant *C1,
     case Instruction::Add:
     case Instruction::Sub:
       return ConstantExpr::getXor(C1, C2);
+    case Instruction::Mul:
+      return ConstantExpr::getAnd(C1, C2);
     case Instruction::Shl:
     case Instruction::LShr:
     case Instruction::AShr:
