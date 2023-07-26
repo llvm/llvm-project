@@ -3432,6 +3432,12 @@ void mlir::python::populateIRCore(py::module &m) {
       .def_property_readonly(
           "type", [](PyValue &self) { return mlirValueGetType(self.get()); })
       .def(
+          "set_type",
+          [](PyValue &self, const PyType &type) {
+            return mlirValueSetType(self.get(), type);
+          },
+          py::arg("type"))
+      .def(
           "replace_all_uses_with",
           [](PyValue &self, PyValue &with) {
             mlirValueReplaceAllUsesOfWith(self.get(), with.get());

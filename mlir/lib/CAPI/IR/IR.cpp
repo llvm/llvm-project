@@ -823,6 +823,10 @@ MlirType mlirValueGetType(MlirValue value) {
   return wrap(unwrap(value).getType());
 }
 
+void mlirValueSetType(MlirValue value, MlirType type) {
+  unwrap(value).setType(unwrap(type));
+}
+
 void mlirValueDump(MlirValue value) { unwrap(value).dump(); }
 
 void mlirValuePrint(MlirValue value, MlirStringCallback callback,
