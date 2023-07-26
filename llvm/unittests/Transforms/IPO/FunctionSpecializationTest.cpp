@@ -81,12 +81,18 @@ protected:
                                GetAC);
   }
 
-  Cost getInstCost(Instruction &I) {
+  Bonus getInstCost(Instruction &I, bool SizeOnly = false) {
     auto &TTI = FAM.getResult<TargetIRAnalysis>(*I.getFunction());
     auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*I.getFunction());
 
-    return BFI.getBlockFreq(I.getParent()).getFrequency() / BFI.getEntryFreq() *
-         TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
+    Cost CodeSize =
+        TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
+
+    Cost Latency = SizeOnly ? 0 :
+        BFI.getBlockFreq(I.getParent()).getFrequency() / BFI.getEntryFreq() *
+        TTI.getInstructionCost(&I, TargetTransformInfo::TCK_Latency);
+
+    return {CodeSize, Latency};
   }
 };
 
@@ -130,12 +136,13 @@ TEST_F(FunctionSpecializationTest, SwitchInst) {
   Constant *One = ConstantInt::get(IntegerType::getInt32Ty(M.getContext()), 1);
 
   auto FuncIter = F->begin();
-  ++FuncIter;
+  BasicBlock &Loop = *++FuncIter;
   BasicBlock &Case1 = *++FuncIter;
   BasicBlock &Case2 = *++FuncIter;
   BasicBlock &BB1 = *++FuncIter;
   BasicBlock &BB2 = *++FuncIter;
 
+  Instruction &Switch = Loop.front();
   Instruction &Mul = Case1.front();
   Instruction &And = Case2.front();
   Instruction &Sdiv = *++Case2.begin();
@@ -145,22 +152,25 @@ TEST_F(FunctionSpecializationTest, SwitchInst) {
   Instruction &BrLoop = BB2.back();
 
   // mul
-  Cost Ref = getInstCost(Mul);
-  Cost Bonus = Specializer.getSpecializationBonus(F->getArg(0), One, Visitor);
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  Bonus Ref = getInstCost(Mul);
+  Bonus Test = Specializer.getSpecializationBonus(F->getArg(0), One, Visitor);
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 
   // and + or + add
   Ref = getInstCost(And) + getInstCost(Or) + getInstCost(Add);
-  Bonus = Specializer.getSpecializationBonus(F->getArg(1), One, Visitor);
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  Test = Specializer.getSpecializationBonus(F->getArg(1), One, Visitor);
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 
-  // sdiv + br + br
-  Ref = getInstCost(Sdiv) + getInstCost(BrBB2) + getInstCost(BrLoop);
-  Bonus = Specializer.getSpecializationBonus(F->getArg(2), One, Visitor);
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  // switch + sdiv + br + br
+  Ref = getInstCost(Switch) +
+        getInstCost(Sdiv, /*SizeOnly =*/ true) +
+        getInstCost(BrBB2, /*SizeOnly =*/ true) +
+        getInstCost(BrLoop, /*SizeOnly =*/ true);
+  Test = Specializer.getSpecializationBonus(F->getArg(2), One, Visitor);
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 }
 
 TEST_F(FunctionSpecializationTest, BranchInst) {
@@ -192,10 +202,11 @@ TEST_F(FunctionSpecializationTest, BranchInst) {
   Constant *False = ConstantInt::getFalse(M.getContext());
 
   auto FuncIter = F->begin();
-  ++FuncIter;
+  BasicBlock &Loop = *++FuncIter;
   BasicBlock &BB0 = *++FuncIter;
   BasicBlock &BB1 = *++FuncIter;
 
+  Instruction &Branch = Loop.front();
   Instruction &Mul = BB0.front();
   Instruction &Sub = *++BB0.begin();
   Instruction &BrBB1 = BB0.back();
@@ -204,23 +215,26 @@ TEST_F(FunctionSpecializationTest, BranchInst) {
   Instruction &BrLoop = BB1.back();
 
   // mul
-  Cost Ref = getInstCost(Mul);
-  Cost Bonus = Specializer.getSpecializationBonus(F->getArg(0), One, Visitor);
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  Bonus Ref = getInstCost(Mul);
+  Bonus Test = Specializer.getSpecializationBonus(F->getArg(0), One, Visitor);
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 
   // add
   Ref = getInstCost(Add);
-  Bonus = Specializer.getSpecializationBonus(F->getArg(1), One, Visitor);
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  Test = Specializer.getSpecializationBonus(F->getArg(1), One, Visitor);
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 
-  // sub + br + sdiv + br
-  Ref = getInstCost(Sub) + getInstCost(BrBB1) + getInstCost(Sdiv) +
-        getInstCost(BrLoop);
-  Bonus = Specializer.getSpecializationBonus(F->getArg(2), False, Visitor);
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  // branch + sub + br + sdiv + br
+  Ref = getInstCost(Branch) +
+        getInstCost(Sub, /*SizeOnly =*/ true) +
+        getInstCost(BrBB1, /*SizeOnly =*/ true) +
+        getInstCost(Sdiv, /*SizeOnly =*/ true) +
+        getInstCost(BrLoop, /*SizeOnly =*/ true);
+  Test = Specializer.getSpecializationBonus(F->getArg(2), False, Visitor);
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 }
 
 TEST_F(FunctionSpecializationTest, Misc) {
@@ -266,26 +280,26 @@ TEST_F(FunctionSpecializationTest, Misc) {
   Instruction &Smax = *BlockIter++;
 
   // icmp + zext
-  Cost Ref = getInstCost(Icmp) + getInstCost(Zext);
-  Cost Bonus = Specializer.getSpecializationBonus(F->getArg(0), One, Visitor);
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  Bonus Ref = getInstCost(Icmp) + getInstCost(Zext);
+  Bonus Test = Specializer.getSpecializationBonus(F->getArg(0), One, Visitor);
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 
   // select
   Ref = getInstCost(Select);
-  Bonus = Specializer.getSpecializationBonus(F->getArg(1), True, Visitor);
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  Test = Specializer.getSpecializationBonus(F->getArg(1), True, Visitor);
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 
   // gep + load + freeze + smax
   Ref = getInstCost(Gep) + getInstCost(Load) + getInstCost(Freeze) +
         getInstCost(Smax);
-  Bonus = Specializer.getSpecializationBonus(F->getArg(2), GV, Visitor);
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  Test = Specializer.getSpecializationBonus(F->getArg(2), GV, Visitor);
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 
-  Bonus = Specializer.getSpecializationBonus(F->getArg(3), Undef, Visitor);
-  EXPECT_TRUE(Bonus == 0);
+  Test = Specializer.getSpecializationBonus(F->getArg(3), Undef, Visitor);
+  EXPECT_TRUE(Test.CodeSize == 0 && Test.Latency == 0);
 }
 
 TEST_F(FunctionSpecializationTest, PhiNode) {
@@ -327,16 +341,17 @@ TEST_F(FunctionSpecializationTest, PhiNode) {
 
   Instruction &Phi = BB.front();
   Instruction &Icmp = *++BB.begin();
+  Instruction &Branch = BB.back();
 
-  Cost Bonus = Specializer.getSpecializationBonus(F->getArg(0), One, Visitor) +
+  Bonus Test = Specializer.getSpecializationBonus(F->getArg(0), One, Visitor) +
                Specializer.getSpecializationBonus(F->getArg(1), One, Visitor) +
                Specializer.getSpecializationBonus(F->getArg(2), One, Visitor);
-  EXPECT_TRUE(Bonus > 0);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 
-  // phi + icmp
-  Cost Ref = getInstCost(Phi) + getInstCost(Icmp);
-  Bonus = Visitor.getBonusFromPendingPHIs();
-  EXPECT_EQ(Bonus, Ref);
-  EXPECT_TRUE(Bonus > 0);
+  // phi + icmp + branch
+  Bonus Ref = getInstCost(Phi) + getInstCost(Icmp) + getInstCost(Branch);
+  Test = Visitor.getBonusFromPendingPHIs();
+  EXPECT_EQ(Test, Ref);
+  EXPECT_TRUE(Test.CodeSize > 0 && Test.Latency > 0);
 }
 
