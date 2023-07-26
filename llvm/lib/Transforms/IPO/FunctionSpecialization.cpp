@@ -78,11 +78,6 @@ static cl::opt<unsigned> MaxClones(
     "The maximum number of clones allowed for a single function "
     "specialization"));
 
-static cl::opt<unsigned> MaxIncomingPhiValues(
-    "funcspec-max-incoming-phi-values", cl::init(4), cl::Hidden, cl::desc(
-    "The maximum number of incoming values a PHI node can have to be "
-    "considered during the specialization bonus estimation"));
-
 static cl::opt<unsigned> MinFunctionSize(
     "funcspec-min-function-size", cl::init(100), cl::Hidden, cl::desc(
     "Don't specialize functions that have less than this number of "
@@ -101,25 +96,26 @@ static cl::opt<bool> SpecializeLiteralConstant(
     "Enable specialization of functions that take a literal constant as an "
     "argument"));
 
-// Estimates the codesize savings due to dead code after constant propagation.
-// \p WorkList represents the basic blocks of a specialization which will
-// eventually become dead once we replace instructions that are known to be
-// constants. The successors of such blocks are added to the list as long as
-// the \p Solver found they were executable prior to specialization, and only
-// if they have a unique predecessor.
+// Estimates the instruction cost of all the basic blocks in \p WorkList.
+// The successors of such blocks are added to the list as long as they are
+// executable and they have a unique predecessor. \p WorkList represents
+// the basic blocks of a specialization which become dead once we replace
+// instructions that are known to be constants. The aim here is to estimate
+// the combination of size and latency savings in comparison to the non
+// specialized version of the function.
 static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
-                                DenseSet<BasicBlock *> &DeadBlocks,
                                 ConstMap &KnownConstants, SCCPSolver &Solver,
+                                BlockFrequencyInfo &BFI,
                                 TargetTransformInfo &TTI) {
-  Cost CodeSize = 0;
+  Cost Bonus = 0;
+
   // Accumulate the instruction cost of each basic block weighted by frequency.
   while (!WorkList.empty()) {
     BasicBlock *BB = WorkList.pop_back_val();
 
-    // These blocks are considered dead as far as the InstCostVisitor is
-    // concerned. They haven't been proven dead yet by the Solver, but
-    // may become if we propagate the constant specialization arguments.
-    if (!DeadBlocks.insert(BB).second)
+    uint64_t Weight = BFI.getBlockFreq(BB).getFrequency() /
+                      BFI.getEntryFreq();
+    if (!Weight)
       continue;
 
     for (Instruction &I : *BB) {
@@ -131,11 +127,11 @@ static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
       if (KnownConstants.contains(&I))
         continue;
 
-      Cost C = TTI.getInstructionCost(&I, TargetTransformInfo::TCK_CodeSize);
+      Bonus += Weight *
+          TTI.getInstructionCost(&I, TargetTransformInfo::TCK_SizeAndLatency);
 
-      LLVM_DEBUG(dbgs() << "FnSpecialization:     CodeSize " << C
-                        << " for user " << I << "\n");
-      CodeSize += C;
+      LLVM_DEBUG(dbgs() << "FnSpecialization:     Bonus " << Bonus
+                        << " after user " << I << "\n");
     }
 
     // Keep adding dead successors to the list as long as they are
@@ -145,7 +141,7 @@ static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
           SuccBB->getUniquePredecessor() == BB)
         WorkList.push_back(SuccBB);
   }
-  return CodeSize;
+  return Bonus;
 }
 
 static Constant *findConstantFor(Value *V, ConstMap &KnownConstants) {
@@ -156,56 +152,42 @@ static Constant *findConstantFor(Value *V, ConstMap &KnownConstants) {
   return nullptr;
 }
 
-Bonus InstCostVisitor::getBonusFromPendingPHIs() {
-  Bonus B;
-  while (!PendingPHIs.empty()) {
-    Instruction *Phi = PendingPHIs.pop_back_val();
-    B += getUserBonus(Phi);
-  }
-  return B;
-}
-
-Bonus InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) {
+Cost InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) {
   // Cache the iterator before visiting.
-  LastVisited = Use ? KnownConstants.insert({Use, C}).first
-                    : KnownConstants.end();
+  LastVisited = KnownConstants.insert({Use, C}).first;
 
-  Cost CodeSize = 0;
-  if (auto *I = dyn_cast<SwitchInst>(User)) {
-    CodeSize = estimateSwitchInst(*I);
-  } else if (auto *I = dyn_cast<BranchInst>(User)) {
-    CodeSize = estimateBranchInst(*I);
-  } else {
-    C = visit(*User);
-    if (!C)
-      return {0, 0};
-    KnownConstants.insert({User, C});
-  }
+  if (auto *I = dyn_cast<SwitchInst>(User))
+    return estimateSwitchInst(*I);
 
-  CodeSize += TTI.getInstructionCost(User, TargetTransformInfo::TCK_CodeSize);
+  if (auto *I = dyn_cast<BranchInst>(User))
+    return estimateBranchInst(*I);
+
+  C = visit(*User);
+  if (!C)
+    return 0;
+
+  KnownConstants.insert({User, C});
 
   uint64_t Weight = BFI.getBlockFreq(User->getParent()).getFrequency() /
                     BFI.getEntryFreq();
+  if (!Weight)
+    return 0;
 
-  Cost Latency = Weight *
-      TTI.getInstructionCost(User, TargetTransformInfo::TCK_Latency);
+  Cost Bonus = Weight *
+      TTI.getInstructionCost(User, TargetTransformInfo::TCK_SizeAndLatency);
 
-  LLVM_DEBUG(dbgs() << "FnSpecialization:     {CodeSize = " << CodeSize
-                    << ", Latency = " << Latency << "} for user "
-                    << *User << "\n");
+  LLVM_DEBUG(dbgs() << "FnSpecialization:     Bonus " << Bonus
+                    << " for user " << *User << "\n");
 
-  Bonus B(CodeSize, Latency);
   for (auto *U : User->users())
     if (auto *UI = dyn_cast<Instruction>(U))
-      if (UI != User && Solver.isBlockExecutable(UI->getParent()))
-        B += getUserBonus(UI, User, C);
+      if (Solver.isBlockExecutable(UI->getParent()))
+        Bonus += getUserBonus(UI, User, C);
 
-  return B;
+  return Bonus;
 }
 
 Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   if (I.getCondition() != LastVisited->first)
     return 0;
 
@@ -226,12 +208,10 @@ Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
     WorkList.push_back(BB);
   }
 
-  return estimateBasicBlocks(WorkList, DeadBlocks, KnownConstants, Solver, TTI);
+  return estimateBasicBlocks(WorkList, KnownConstants, Solver, BFI, TTI);
 }
 
 Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   if (I.getCondition() != LastVisited->first)
     return 0;
 
@@ -243,38 +223,10 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
       Succ->getUniquePredecessor() == I.getParent())
     WorkList.push_back(Succ);
 
-  return estimateBasicBlocks(WorkList, DeadBlocks, KnownConstants, Solver, TTI);
-}
-
-Constant *InstCostVisitor::visitPHINode(PHINode &I) {
-  if (I.getNumIncomingValues() > MaxIncomingPhiValues)
-    return nullptr;
-
-  bool Inserted = VisitedPHIs.insert(&I).second;
-  Constant *Const = nullptr;
-
-  for (unsigned Idx = 0, E = I.getNumIncomingValues(); Idx != E; ++Idx) {
-    Value *V = I.getIncomingValue(Idx);
-    if (auto *Inst = dyn_cast<Instruction>(V))
-      if (Inst == &I || DeadBlocks.contains(I.getIncomingBlock(Idx)))
-        continue;
-    Constant *C = findConstantFor(V, KnownConstants);
-    if (!C) {
-      if (Inserted)
-        PendingPHIs.push_back(&I);
-      return nullptr;
-    }
-    if (!Const)
-      Const = C;
-    else if (C != Const)
-      return nullptr;
-  }
-  return Const;
+  return estimateBasicBlocks(WorkList, KnownConstants, Solver, BFI, TTI);
 }
 
 Constant *InstCostVisitor::visitFreezeInst(FreezeInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   if (isGuaranteedNotToBeUndefOrPoison(LastVisited->second))
     return LastVisited->second;
   return nullptr;
@@ -301,8 +253,6 @@ Constant *InstCostVisitor::visitCallBase(CallBase &I) {
 }
 
 Constant *InstCostVisitor::visitLoadInst(LoadInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   if (isa<ConstantPointerNull>(LastVisited->second))
     return nullptr;
   return ConstantFoldLoadFromConstPtr(LastVisited->second, I.getType(), DL);
@@ -325,8 +275,6 @@ Constant *InstCostVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 }
 
 Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   if (I.getCondition() != LastVisited->first)
     return nullptr;
 
@@ -342,8 +290,6 @@ Constant *InstCostVisitor::visitCastInst(CastInst &I) {
 }
 
 Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   bool Swap = I.getOperand(1) == LastVisited->first;
   Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
   Constant *Other = findConstantFor(V, KnownConstants);
@@ -357,14 +303,10 @@ Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
 }
 
 Constant *InstCostVisitor::visitUnaryOperator(UnaryOperator &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   return ConstantFoldUnaryOpOperand(I.getOpcode(), LastVisited->second, DL);
 }
 
 Constant *InstCostVisitor::visitBinaryOperator(BinaryOperator &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   bool Swap = I.getOperand(1) == LastVisited->first;
   Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
   Constant *Other = findConstantFor(V, KnownConstants);
@@ -564,18 +506,13 @@ bool FunctionSpecializer::run() {
     if (!Inserted && !Metrics.isRecursive && !SpecializeLiteralConstant)
       continue;
 
-    int64_t Sz = *Metrics.NumInsts.getValue();
-    assert(Sz > 0 && "CodeSize should be positive");
-    // It is safe to down cast from int64_t, NumInsts is always positive.
-    unsigned SpecCost = static_cast<unsigned>(Sz);
-
     LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization cost for "
-                      << F.getName() << " is " << SpecCost << "\n");
+                      << F.getName() << " is " << Metrics.NumInsts << "\n");
 
     if (Inserted && Metrics.isRecursive)
       promoteConstantStackValues(&F);
 
-    if (!findSpecializations(&F, SpecCost, AllSpecs, SM)) {
+    if (!findSpecializations(&F, Metrics.NumInsts, AllSpecs, SM)) {
       LLVM_DEBUG(
           dbgs() << "FnSpecialization: No possible specializations found for "
                  << F.getName() << "\n");
@@ -710,7 +647,7 @@ static Function *cloneCandidateFunction(Function *F) {
   return Clone;
 }
 
-bool FunctionSpecializer::findSpecializations(Function *F, unsigned SpecCost,
+bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
                                               SmallVectorImpl<Spec> &AllSpecs,
                                               SpecMap &SM) {
   // A mapping from a specialisation signature to the index of the respective
@@ -776,22 +713,17 @@ bool FunctionSpecializer::findSpecializations(Function *F, unsigned SpecCost,
       AllSpecs[Index].CallSites.push_back(&CS);
     } else {
       // Calculate the specialisation gain.
-      Bonus B;
+      Cost Score = 0 - SpecCost;
       InstCostVisitor Visitor = getInstCostVisitorFor(F);
       for (ArgInfo &A : S.Args)
-        B += getSpecializationBonus(A.Formal, A.Actual, Visitor);
-      B += Visitor.getBonusFromPendingPHIs();
-
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization score {CodeSize = "
-                        << B.CodeSize << ", Latency = " << B.Latency
-                        << "}\n");
+        Score += getSpecializationBonus(A.Formal, A.Actual, Visitor);
 
       // Discard unprofitable specialisations.
-      if (!ForceSpecialization && B.Latency <= SpecCost - B.CodeSize)
+      if (!ForceSpecialization && Score <= 0)
         continue;
 
       // Create a new specialisation entry.
-      auto &Spec = AllSpecs.emplace_back(F, S, B.Latency);
+      auto &Spec = AllSpecs.emplace_back(F, S, Score);
       if (CS.getFunction() != F)
         Spec.CallSites.push_back(&CS);
       const unsigned Index = AllSpecs.size() - 1;
@@ -858,20 +790,19 @@ Function *FunctionSpecializer::createSpecialization(Function *F,
 }
 
 /// Compute a bonus for replacing argument \p A with constant \p C.
-Bonus FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
+Cost FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
                                                  InstCostVisitor &Visitor) {
   LLVM_DEBUG(dbgs() << "FnSpecialization: Analysing bonus for constant: "
                     << C->getNameOrAsOperand() << "\n");
 
-  Bonus B;
+  Cost TotalCost = 0;
   for (auto *U : A->users())
     if (auto *UI = dyn_cast<Instruction>(U))
       if (Solver.isBlockExecutable(UI->getParent()))
-        B += Visitor.getUserBonus(UI, A, C);
+        TotalCost += Visitor.getUserBonus(UI, A, C);
 
-  LLVM_DEBUG(dbgs() << "FnSpecialization:   Accumulated bonus {CodeSize = "
-                    << B.CodeSize << ", Latency = " << B.Latency
-                    << "} for argument " << *A << "\n");
+  LLVM_DEBUG(dbgs() << "FnSpecialization:   Accumulated user bonus "
+                    << TotalCost << " for argument " << *A << "\n");
 
   // The below heuristic is only concerned with exposing inlining
   // opportunities via indirect call promotion. If the argument is not a
@@ -881,7 +812,7 @@ Bonus FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
   // while traversing the users of the specialization arguments ?
   Function *CalledFunction = dyn_cast<Function>(C->stripPointerCasts());
   if (!CalledFunction)
-    return B;
+    return TotalCost;
 
   // Get TTI for the called function (used for the inline cost).
   auto &CalleeTTI = (GetTTI)(*CalledFunction);
@@ -891,7 +822,7 @@ Bonus FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
   // calls to be promoted to direct calls. If the indirect call promotion
   // would likely enable the called function to be inlined, specializing is a
   // good idea.
-  int InliningBonus = 0;
+  int Bonus = 0;
   for (User *U : A->users()) {
     if (!isa<CallInst>(U) && !isa<InvokeInst>(U))
       continue;
@@ -918,15 +849,15 @@ Bonus FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
     // We clamp the bonus for this call to be between zero and the default
     // threshold.
     if (IC.isAlways())
-      InliningBonus += Params.DefaultThreshold;
+      Bonus += Params.DefaultThreshold;
     else if (IC.isVariable() && IC.getCostDelta() > 0)
-      InliningBonus += IC.getCostDelta();
+      Bonus += IC.getCostDelta();
 
-    LLVM_DEBUG(dbgs() << "FnSpecialization:   Inlining bonus " << InliningBonus
+    LLVM_DEBUG(dbgs() << "FnSpecialization:   Inlining bonus " << Bonus
                       << " for user " << *U << "\n");
   }
 
-  return B += {0, InliningBonus};
+  return TotalCost + Bonus;
 }
 
 /// Determine if it is possible to specialise the function for constant values
