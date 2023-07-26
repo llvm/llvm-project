@@ -108,6 +108,9 @@ Improvements to clang-tidy
   functionality using the newly added command line option
   `--enable-module-headers-parsing`.
 
+- Remove configuration option `AnalyzeTemporaryDestructors`, which was deprecated since
+  :program:`clang-tidy` 16.
+
 New checks
 ^^^^^^^^^^
 
