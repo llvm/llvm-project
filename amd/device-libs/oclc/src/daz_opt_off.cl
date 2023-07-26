@@ -5,7 +5,4 @@
  * License. See LICENSE.TXT for details.
  *===------------------------------------------------------------------------*/
 
-#include "oclc.h"
-
-const __constant bool __oclc_daz_opt = 0;
-
+// Placeholder until clang stops looking for this library

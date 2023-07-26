@@ -1559,15 +1559,14 @@ typedef enum amd_comgr_action_kind_s {
    * For OpenCL and HIP these include:
    *
    *    correctly_rounded_sqrt
-   *    daz_opt
    *    finite_only
    *    unsafe_math
    *    wavefrontsize64
    *
-   * For example, to enable daz_opt and unsafe_math, the options should be set
+   * For example, to enable finite_only unsafe_math, the options should be set
    * as:
    *
-   *    const char *options[] = {"daz_opt, "unsafe_math"};
+   *    const char *options[] = {"finite_only", "unsafe_math"};
    *    size_t optionsCount = sizeof(options) / sizeof(options[0]);
    *    amd_comgr_action_info_set_option_list(info, options, optionsCount);
    *

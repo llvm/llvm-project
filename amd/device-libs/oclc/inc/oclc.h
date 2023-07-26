@@ -17,10 +17,7 @@
 //        - the application will only pass finite arguments and expects only finite results
 //
 //    __constant bool __oclc_unsafe_math_opt
-//        - the aopplication accepts optimizations that may lower the accuracy of the results
-//
-//    __constant bool __oclc_daz_opt(void)
-//        - the application allows subnormal inputs or outputs to be flushed to zero
+//        - the application accepts optimizations that may lower the accuracy of the results
 //
 //    __constant bool __oclc_correctly_rounded_sqrt32(void)
 //        - the application is expecting sqrt(float) to produce a correctly rounded result
@@ -43,7 +40,6 @@
 
 extern const __constant bool __oclc_finite_only_opt;
 extern const __constant bool __oclc_unsafe_math_opt;
-extern const __constant bool __oclc_daz_opt;
 extern const __constant bool __oclc_correctly_rounded_sqrt32;
 extern const __constant bool __oclc_wavefrontsize64;
 extern const __constant uint __oclc_wavefrontsize_log2;

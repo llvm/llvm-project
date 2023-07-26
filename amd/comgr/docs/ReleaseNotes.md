@@ -23,6 +23,8 @@ process, which is an issue because -h is a common short form for -help.
 device library from v4 to v5
 -  Updated shared library name on Windows 64-bit to include Comgr major version
 (libamd\_comgr.dll -> libamd\_comgr\_X.dll, where X is the major version)
+- oclc_daz_opt_on.bc and oclc_daz_opt_off.bc, and the corresponding
+  variable __oclc_daz_opt are no longer necessary.
 
 New Features
 ------------

@@ -34,7 +34,6 @@
  *******************************************************************************/
 extern const __constant bool __oclc_finite_only_opt;
 extern const __constant bool __oclc_unsafe_math_opt;
-extern const __constant bool __oclc_daz_opt;
 extern const __constant bool __oclc_correctly_rounded_sqrt32;
 extern const __constant bool __oclc_wavefrontsize64;
 extern const __constant int __oclc_ISA_version;
@@ -44,7 +43,6 @@ void kernel device_libs(__global float *status) {
 
  if (__oclc_finite_only_opt)            status[0] = 1.0;
  if (__oclc_unsafe_math_opt)            status[1] = 1.0;
- if (__oclc_daz_opt)                    status[2] = 1.0;
  if (__oclc_correctly_rounded_sqrt32)   status[3] = 1.0;
  if (__oclc_wavefrontsize64)            status[4] = 1.0;
  if (__oclc_ISA_version)                status[5] = 1.0;

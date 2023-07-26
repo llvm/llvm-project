@@ -156,6 +156,8 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
     if (!Flag || *Flag) {
       return AMD_COMGR_STATUS_ERROR_INVALID_ARGUMENT;
     }
+
+    // TODO: Warn if daz_opt is used as it no longer does anything.
     *Flag = true;
   }
 
@@ -165,9 +167,6 @@ amd_comgr_status_t addDeviceLibraries(DataAction *ActionInfo,
 
   if (auto Status = addOCLCObject(
           ResultSet, get_oclc_correctly_rounded_sqrt(CorrectlyRoundedSqrt))) {
-    return Status;
-  }
-  if (auto Status = addOCLCObject(ResultSet, get_oclc_daz_opt(DazOpt))) {
     return Status;
   }
   if (auto Status =
