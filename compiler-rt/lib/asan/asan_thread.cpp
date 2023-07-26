@@ -91,18 +91,25 @@ AsanThreadContext *GetThreadContextByTidLocked(u32 tid) {
 
 // AsanThread implementation.
 
-AsanThread *AsanThread::Create(thread_callback_t start_routine, void *arg,
+AsanThread *AsanThread::Create(const void *start_data, uptr data_size,
                                u32 parent_tid, StackTrace *stack,
                                bool detached) {
   uptr PageSize = GetPageSizeCached();
   uptr size = RoundUpTo(sizeof(AsanThread), PageSize);
   AsanThread *thread = (AsanThread *)MmapOrDie(size, __func__);
-  thread->start_routine_ = start_routine;
-  thread->arg_ = arg;
+  if (data_size) {
+    uptr availible_size = (uptr)thread + size - (uptr)(thread->start_data_);
+    CHECK_LE(data_size, availible_size);
+    internal_memcpy(thread->start_data_, start_data, data_size);
+  }
   AsanThreadContext::CreateThreadContextArgs args = {thread, stack};
   asanThreadRegistry().CreateThread(0, detached, parent_tid, &args);
 
   return thread;
+}
+
+void AsanThread::GetStartData(void *out, uptr out_size) const {
+  internal_memcpy(out, start_data_, out_size);
 }
 
 void AsanThread::TSDDtor(void *tsd) {
@@ -281,11 +288,9 @@ void AsanThread::ThreadStart(tid_t os_id) {
     SetAlternateSignalStack();
 }
 
-thread_return_t AsanThread::RunThread() { return start_routine_(arg_); }
-
 AsanThread *CreateMainThread() {
   AsanThread *main_thread = AsanThread::Create(
-      /* start_routine */ nullptr, /* arg */ nullptr, /* parent_tid */ kMainTid,
+      /* parent_tid */ kMainTid,
       /* stack */ nullptr, /* detached */ true);
   SetCurrentThread(main_thread);
   main_thread->ThreadStart(internal_getpid());
