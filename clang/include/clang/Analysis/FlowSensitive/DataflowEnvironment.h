@@ -47,6 +47,7 @@ enum class SkipPast {
   /// No indirections should be skipped past.
   None,
   /// An optional reference should be skipped past.
+  /// This is deprecated; it is equivalent to `None` and will be removed.
   Reference,
 };
 
@@ -304,9 +305,10 @@ public:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
   void setStorageLocationStrict(const Expr &E, StorageLocation &Loc);
 
-  /// Returns the storage location assigned to `E` in the environment, applying
-  /// the `SP` policy for skipping past indirections, or null if `E` isn't
-  /// assigned a storage location in the environment.
+  /// Returns the storage location assigned to `E` in the environment, or null
+  /// if `E` isn't assigned a storage location in the environment.
+  ///
+  /// The `SP` parameter has no effect.
   ///
   /// This function is deprecated; prefer `getStorageLocationStrict()`.
   /// For details, see https://discourse.llvm.org/t/70086.
@@ -490,12 +492,14 @@ public:
   /// isn't assigned a value in the environment.
   Value *getValue(const StorageLocation &Loc) const;
 
-  /// Equivalent to `getValue(getStorageLocation(D, SP), SkipPast::None)` if `D`
-  /// is assigned a storage location in the environment, otherwise returns null.
+  /// Equivalent to `getValue(getStorageLocation(D))` if `D` is assigned a
+  /// storage location in the environment, otherwise returns null.
   Value *getValue(const ValueDecl &D) const;
 
-  /// Equivalent to `getValue(getStorageLocation(E, SP), SkipPast::None)` if `E`
-  /// is assigned a storage location in the environment, otherwise returns null.
+  /// Equivalent to `getValue(getStorageLocation(E, SP))` if `E` is assigned a
+  /// storage location in the environment, otherwise returns null.
+  ///
+  /// The `SP` parameter has no effect.
   ///
   /// This function is deprecated; prefer `getValueStrict()`. For details, see
   /// https://discourse.llvm.org/t/70086.
@@ -671,9 +675,6 @@ private:
   /// `D` and `InitExpr` may be null.
   StorageLocation &createObjectInternal(const VarDecl *D, QualType Ty,
                                         const Expr *InitExpr);
-
-  StorageLocation &skip(StorageLocation &Loc, SkipPast SP) const;
-  const StorageLocation &skip(const StorageLocation &Loc, SkipPast SP) const;
 
   /// Shared implementation of `pushCall` overloads. Note that unlike
   /// `pushCall`, this member is invoked on the environment of the callee, not

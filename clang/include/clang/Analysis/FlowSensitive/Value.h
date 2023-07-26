@@ -34,7 +34,6 @@ class Value {
 public:
   enum class Kind {
     Integer,
-    Reference,
     Pointer,
     Struct,
 
@@ -163,23 +162,6 @@ public:
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::Integer;
   }
-};
-
-/// Models a dereferenced pointer. For example, a reference in C++ or an lvalue
-/// in C.
-class ReferenceValue final : public Value {
-public:
-  explicit ReferenceValue(StorageLocation &ReferentLoc)
-      : Value(Kind::Reference), ReferentLoc(ReferentLoc) {}
-
-  static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Reference;
-  }
-
-  StorageLocation &getReferentLoc() const { return ReferentLoc; }
-
-private:
-  StorageLocation &ReferentLoc;
 };
 
 /// Models a symbolic pointer. Specifically, any value of type `T*`.
