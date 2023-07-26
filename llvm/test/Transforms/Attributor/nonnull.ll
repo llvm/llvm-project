@@ -1522,7 +1522,6 @@ define void @nonnull_caller(ptr %p) {
   call void @nonnull_callee(ptr %p)
   ret void
 }
-
 declare void @nonnull_callee(ptr nonnull %p)
 
 define ptr @phi(ptr %p) {
@@ -1555,15 +1554,15 @@ define void @phi_caller(ptr %p) {
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@phi_caller
 ; TUNIT-SAME: (ptr nofree [[P:%.*]]) #[[ATTR5]] {
-; TUNIT-NEXT:    [[C:%.*]] = call ptr @phi(ptr noalias nofree readnone [[P]]) #[[ATTR19:[0-9]+]]
-; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[C]]) #[[ATTR5]]
+; TUNIT-NEXT:    [[C:%.*]] = call nonnull ptr @phi(ptr noalias nofree readnone [[P]]) #[[ATTR19:[0-9]+]]
+; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[C]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@phi_caller
 ; CGSCC-SAME: (ptr nofree [[P:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    [[C:%.*]] = call ptr @phi(ptr noalias nofree readnone [[P]]) #[[ATTR15]]
-; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[C]]) #[[ATTR4]]
+; CGSCC-NEXT:    [[C:%.*]] = call nonnull ptr @phi(ptr noalias nofree readnone [[P]]) #[[ATTR15]]
+; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[C]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   %c = call ptr @phi(ptr %p)
@@ -1595,15 +1594,15 @@ define void @multi_ret_caller(ptr %p) {
 ; TUNIT: Function Attrs: nounwind
 ; TUNIT-LABEL: define {{[^@]+}}@multi_ret_caller
 ; TUNIT-SAME: (ptr nofree [[P:%.*]]) #[[ATTR5]] {
-; TUNIT-NEXT:    [[C:%.*]] = call ptr @multi_ret(ptr noalias nofree readnone [[P]]) #[[ATTR19]]
-; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[C]]) #[[ATTR5]]
+; TUNIT-NEXT:    [[C:%.*]] = call nonnull ptr @multi_ret(ptr noalias nofree readnone [[P]]) #[[ATTR19]]
+; TUNIT-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[C]]) #[[ATTR5]]
 ; TUNIT-NEXT:    ret void
 ;
 ; CGSCC: Function Attrs: nounwind
 ; CGSCC-LABEL: define {{[^@]+}}@multi_ret_caller
 ; CGSCC-SAME: (ptr nofree [[P:%.*]]) #[[ATTR4]] {
-; CGSCC-NEXT:    [[C:%.*]] = call ptr @multi_ret(ptr noalias nofree readnone [[P]]) #[[ATTR15]]
-; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree readnone [[C]]) #[[ATTR4]]
+; CGSCC-NEXT:    [[C:%.*]] = call nonnull ptr @multi_ret(ptr noalias nofree readnone [[P]]) #[[ATTR15]]
+; CGSCC-NEXT:    call void @use_i8_ptr(ptr noalias nocapture nofree nonnull readnone [[C]]) #[[ATTR4]]
 ; CGSCC-NEXT:    ret void
 ;
   %c = call ptr @multi_ret(ptr %p)

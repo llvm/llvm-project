@@ -723,7 +723,7 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
 
     // Check if we can reach returns.
     bool UsedAssumedInformation = false;
-    if (A.checkForAllInstructions(ReturnInstCB, FromFn, QueryingAA,
+    if (A.checkForAllInstructions(ReturnInstCB, FromFn, &QueryingAA,
                                   {Instruction::Ret}, UsedAssumedInformation)) {
       LLVM_DEBUG(dbgs() << "[AA] No return is reachable, done\n");
       continue;
@@ -1967,7 +1967,7 @@ static bool checkForAllInstructionsImpl(
 
 bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                          const Function *Fn,
-                                         const AbstractAttribute &QueryingAA,
+                                         const AbstractAttribute *QueryingAA,
                                          const ArrayRef<unsigned> &Opcodes,
                                          bool &UsedAssumedInformation,
                                          bool CheckBBLivenessOnly,
@@ -1978,12 +1978,12 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
 
   const IRPosition &QueryIRP = IRPosition::function(*Fn);
   const auto *LivenessAA =
-      CheckPotentiallyDead
+      CheckPotentiallyDead && QueryingAA
           ? nullptr
-          : (getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE));
+          : (getAAFor<AAIsDead>(*QueryingAA, QueryIRP, DepClassTy::NONE));
 
   auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(*Fn);
-  if (!checkForAllInstructionsImpl(this, OpcodeInstMap, Pred, &QueryingAA,
+  if (!checkForAllInstructionsImpl(this, OpcodeInstMap, Pred, QueryingAA,
                                    LivenessAA, Opcodes, UsedAssumedInformation,
                                    CheckBBLivenessOnly, CheckPotentiallyDead))
     return false;
@@ -1999,7 +1999,7 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                          bool CheckPotentiallyDead) {
   const IRPosition &IRP = QueryingAA.getIRPosition();
   const Function *AssociatedFunction = IRP.getAssociatedFunction();
-  return checkForAllInstructions(Pred, AssociatedFunction, QueryingAA, Opcodes,
+  return checkForAllInstructions(Pred, AssociatedFunction, &QueryingAA, Opcodes,
                                  UsedAssumedInformation, CheckBBLivenessOnly,
                                  CheckPotentiallyDead);
 }

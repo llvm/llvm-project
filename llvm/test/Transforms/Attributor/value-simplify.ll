@@ -502,7 +502,7 @@ define ptr @complicated_args_preallocated() {
 ; CGSCC-SAME: () #[[ATTR4:[0-9]+]] {
 ; CGSCC-NEXT:    [[C:%.*]] = call token @llvm.call.preallocated.setup(i32 noundef 1) #[[ATTR13]]
 ; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @test_preallocated(ptr nofree noundef writeonly preallocated(i32) align 4294967296 null) #[[ATTR14:[0-9]+]] [ "preallocated"(token [[C]]) ]
-; CGSCC-NEXT:    ret ptr null
+; CGSCC-NEXT:    unreachable
 ;
   %c = call token @llvm.call.preallocated.setup(i32 1)
   %call = call ptr @test_preallocated(ptr preallocated(i32) null) ["preallocated"(token %c)]

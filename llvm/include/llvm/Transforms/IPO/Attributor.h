@@ -2289,7 +2289,7 @@ public:
   /// present in \p Opcode and return true if \p Pred holds on all of them.
   bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                const Function *Fn,
-                               const AbstractAttribute &QueryingAA,
+                               const AbstractAttribute *QueryingAA,
                                const ArrayRef<unsigned> &Opcodes,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly = false,

@@ -2457,9 +2457,6 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
   if (A.hasAttr(IRP, AttrKinds, IgnoreSubsumingPositions, Attribute::NonNull))
     return true;
 
-  if (IRP.getPositionKind() == IRP_RETURNED)
-    return false;
-
   DominatorTree *DT = nullptr;
   AssumptionCache *AC = nullptr;
   InformationCache &InfoCache = A.getInfoCache();
@@ -2470,9 +2467,27 @@ bool AANonNull::isImpliedByIR(Attributor &A, const IRPosition &IRP,
     }
   }
 
-  if (!isKnownNonZero(&IRP.getAssociatedValue(), A.getDataLayout(), 0, AC,
-                      IRP.getCtxI(), DT))
+  SmallVector<AA::ValueAndContext> Worklist;
+  if (IRP.getPositionKind() != IRP_RETURNED) {
+    Worklist.push_back({IRP.getAssociatedValue(), IRP.getCtxI()});
+  } else {
+    bool UsedAssumedInformation = false;
+    if (!A.checkForAllInstructions(
+            [&](Instruction &I) {
+              Worklist.push_back({*cast<ReturnInst>(I).getReturnValue(), &I});
+              return true;
+            },
+            IRP.getAssociatedFunction(), nullptr, {Instruction::Ret},
+            UsedAssumedInformation))
+      return false;
+  }
+
+  if (llvm::any_of(Worklist, [&](AA::ValueAndContext VAC) {
+        return !isKnownNonZero(VAC.getValue(), A.getDataLayout(), 0, AC,
+                               VAC.getCtxI(), DT);
+      }))
     return false;
+
   A.manifestAttrs(IRP, {Attribute::get(IRP.getAnchorValue().getContext(),
                                        Attribute::NonNull)});
   return true;
@@ -2617,6 +2632,23 @@ struct AANonNullFloating : public AANonNullImpl {
           Values.size() != 1 || Values.front().getValue() != AssociatedValue;
 
     if (!Stripped) {
+      bool IsKnown;
+      if (auto *PHI = dyn_cast<PHINode>(AssociatedValue))
+        if (llvm::all_of(PHI->incoming_values(), [&](Value *Op) {
+              return AA::hasAssumedIRAttr<Attribute::NonNull>(
+                  A, this, IRPosition::value(*Op), DepClassTy::OPTIONAL,
+                  IsKnown);
+            }))
+          return ChangeStatus::UNCHANGED;
+      if (auto *Select = dyn_cast<SelectInst>(AssociatedValue))
+        if (AA::hasAssumedIRAttr<Attribute::NonNull>(
+                A, this, IRPosition::value(*Select->getFalseValue()),
+                DepClassTy::OPTIONAL, IsKnown) &&
+            AA::hasAssumedIRAttr<Attribute::NonNull>(
+                A, this, IRPosition::value(*Select->getTrueValue()),
+                DepClassTy::OPTIONAL, IsKnown))
+          return ChangeStatus::UNCHANGED;
+
       // If we haven't stripped anything we might still be able to use a
       // different AA, but only if the IRP changes. Effectively when we
       // interpret this not as a call site value but as a floating/argument
@@ -2641,10 +2673,11 @@ struct AANonNullFloating : public AANonNullImpl {
 /// NonNull attribute for function return value.
 struct AANonNullReturned final
     : AAReturnedFromReturnedValues<AANonNull, AANonNull, AANonNull::StateType,
-                                   false, AANonNull::IRAttributeKind> {
+                                   false, AANonNull::IRAttributeKind, false> {
   AANonNullReturned(const IRPosition &IRP, Attributor &A)
       : AAReturnedFromReturnedValues<AANonNull, AANonNull, AANonNull::StateType,
-                                     false, Attribute::NonNull>(IRP, A) {}
+                                     false, Attribute::NonNull, false>(IRP, A) {
+  }
 
   /// See AbstractAttribute::getAsStr().
   const std::string getAsStr(Attributor *A) const override {
