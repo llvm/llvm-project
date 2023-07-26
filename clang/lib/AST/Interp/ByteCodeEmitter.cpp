@@ -96,8 +96,15 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (!FuncDecl->isDefined())
     return Func;
 
+  // Lambda static invokers are a special case that we emit custom code for.
+  bool IsEligibleForCompilation = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl))
+    IsEligibleForCompilation = MD->isLambdaStaticInvoker();
+  if (!IsEligibleForCompilation)
+    IsEligibleForCompilation = FuncDecl->isConstexpr();
+
   // Compile the function body.
-  if (!FuncDecl->isConstexpr() || !visitFunc(FuncDecl)) {
+  if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
     // Return a dummy function if compilation failed.
     if (BailLocation)
       return llvm::make_error<ByteCodeGenError>(*BailLocation);

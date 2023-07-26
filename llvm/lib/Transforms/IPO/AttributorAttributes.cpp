@@ -10640,10 +10640,6 @@ struct AAInterFnReachabilityFunction
   }
 
   void trackStatistics() const override {}
-
-private:
-  SmallVector<RQITy *> QueryVector;
-  DenseSet<RQITy *> QueryCache;
 };
 } // namespace
 

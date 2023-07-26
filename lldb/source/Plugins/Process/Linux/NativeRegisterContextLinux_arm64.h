@@ -149,13 +149,15 @@ private:
 
   void *GetTLSTPIDR() { return &m_tls_tpidr_reg; }
 
-  void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); };
+  void *GetSVEBuffer() { return m_sve_ptrace_payload.data(); }
 
   size_t GetSVEHeaderSize() { return sizeof(m_sve_header); }
 
   size_t GetPACMaskSize() { return sizeof(m_pac_mask); }
 
   size_t GetSVEBufferSize() { return m_sve_ptrace_payload.size(); }
+
+  unsigned GetSVERegSet();
 
   size_t GetMTEControlSize() { return sizeof(m_mte_ctrl_reg); }
 
