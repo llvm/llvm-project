@@ -855,8 +855,22 @@ constexpr int ignoredExprs() {
   (a); // expected-warning {{unused}} \
        // ref-warning {{unused}}
 
+  (void)5, (void)6;
+
   return 0;
 }
+
+/// Ignored comma expressions still have their
+/// expressions evaluated.
+constexpr int Comma(int start) {
+    int i = start;
+
+    (void)i++;
+    (void)i++,(void)i++;
+    return i;
+}
+constexpr int Value = Comma(5);
+static_assert(Value == 8, "");
 
 #endif
 
