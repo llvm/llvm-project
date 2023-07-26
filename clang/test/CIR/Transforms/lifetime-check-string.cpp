@@ -82,6 +82,6 @@ void sv3() {
   sv = name; // expected-remark@-1 {{pset => { invalid }}}
   cout << sv; // expected-remark {{pset => { name__2' }}}
   cout << name; // expected-note {{invalidated by non-const use of owner type}}
-  cout << sv; // expected-warning {{use of invalid pointer 'sv'}}
+  cout << sv; // expected-warning {{passing invalid pointer 'sv'}}
   // expected-remark@-1 {{pset => { invalid }}}
 }
