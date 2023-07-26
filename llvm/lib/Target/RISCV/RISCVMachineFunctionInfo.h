@@ -127,7 +127,7 @@ public:
   unsigned getCalleeSavedStackSize() const { return CalleeSavedStackSize; }
   void setCalleeSavedStackSize(unsigned Size) { CalleeSavedStackSize = Size; }
 
-  uint64_t isPushable(const MachineFunction &MF) const {
+  bool isPushable(const MachineFunction &MF) const {
     return (!useSaveRestoreLibCalls(MF) &&
             MF.getSubtarget<RISCVSubtarget>().hasStdExtZcmp() &&
             !MF.getTarget().Options.DisableFramePointerElim(MF));
