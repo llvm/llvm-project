@@ -36,17 +36,18 @@ enum EdgeKind_ppc64 : Edge::Kind {
   CallBranchDelta,
   // Need to restore r2 after the bl, suggesting the bl is followed by a nop.
   CallBranchDeltaRestoreTOC,
-  // Need PLT call stub using TOC, TOC pointer is not saved before branching.
-  RequestPLTCallStub,
-  // Need PLT call stub using TOC, TOC pointer is saved before branching.
-  RequestPLTCallStubSaveTOC,
-  // Need PLT call stub without using TOC.
-  RequestPLTCallStubNoTOC,
+  // Request calling function with TOC.
+  RequestCall,
+  // Request calling function without TOC.
+  RequestCallNoTOC,
 };
 
 enum PLTCallStubKind {
+  // Setup function entry(r12) and long branch to target using TOC.
   LongBranch,
+  // Save TOC pointer, setup function entry and long branch to target using TOC.
   LongBranchSaveR2,
+  // Setup function entry(r12) and long branch to target without using TOC.
   LongBranchNoTOC,
 };
 
@@ -141,8 +142,7 @@ public:
     case TOCDelta16DS:
     case TOCDelta16LODS:
     case CallBranchDeltaRestoreTOC:
-    case RequestPLTCallStub:
-    case RequestPLTCallStubSaveTOC:
+    case RequestCall:
       // Create TOC section if TOC relocation, PLT or GOT is used.
       getOrCreateTOCSection(G);
       return false;
@@ -174,14 +174,25 @@ public:
   static StringRef getSectionName() { return "$__STUBS"; }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
+    bool isExternal = E.getTarget().isExternal();
     Edge::Kind K = E.getKind();
-    if (K == ppc64::RequestPLTCallStubSaveTOC && E.getTarget().isExternal()) {
-      E.setKind(ppc64::CallBranchDeltaRestoreTOC);
-      this->StubKind = LongBranchSaveR2;
-      E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+    if (K == ppc64::RequestCall) {
+      if (isExternal) {
+        E.setKind(ppc64::CallBranchDeltaRestoreTOC);
+        this->StubKind = LongBranchSaveR2;
+        E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+        // We previously set branching to local entry. Now reverse that
+        // operation.
+        E.setAddend(0);
+      } else
+        // TODO: There are cases a local function call need a call stub.
+        // 1. Caller uses TOC, the callee doesn't, need a r2 save stub.
+        // 2. Caller doesn't use TOC, the callee does, need a r12 setup stub.
+        // 3. Branching target is out of range.
+        E.setKind(ppc64::CallBranchDelta);
       return true;
     }
-    if (K == ppc64::RequestPLTCallStubNoTOC && E.getTarget().isExternal()) {
+    if (K == ppc64::RequestCallNoTOC) {
       E.setKind(ppc64::CallBranchDelta);
       this->StubKind = LongBranchNoTOC;
       E.setTarget(this->getEntryForTarget(G, E.getTarget()));
