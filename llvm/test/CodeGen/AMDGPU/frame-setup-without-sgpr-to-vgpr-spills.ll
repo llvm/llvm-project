@@ -14,11 +14,12 @@ define void @callee_with_stack_and_call() #0 {
 ; SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s32
 ; SPILL-TO-VGPR-NEXT:    s_or_saveexec_b64 s[8:9], -1
 ; SPILL-TO-VGPR-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Spill
+; SPILL-TO-VGPR-NEXT:    buffer_store_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Spill
 ; SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[8:9]
-; SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s4, 2
 ; SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0x400
 ; SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s30, 0
 ; SPILL-TO-VGPR-NEXT:    v_mov_b32_e32 v0, 0
+; SPILL-TO-VGPR-NEXT:    v_writelane_b32 v41, s4, 0
 ; SPILL-TO-VGPR-NEXT:    v_writelane_b32 v40, s31, 1
 ; SPILL-TO-VGPR-NEXT:    buffer_store_dword v0, off, s[0:3], s33
 ; SPILL-TO-VGPR-NEXT:    s_waitcnt vmcnt(0)
@@ -28,9 +29,10 @@ define void @callee_with_stack_and_call() #0 {
 ; SPILL-TO-VGPR-NEXT:    s_swappc_b64 s[30:31], s[4:5]
 ; SPILL-TO-VGPR-NEXT:    v_readlane_b32 s31, v40, 1
 ; SPILL-TO-VGPR-NEXT:    v_readlane_b32 s30, v40, 0
-; SPILL-TO-VGPR-NEXT:    v_readlane_b32 s4, v40, 2
+; SPILL-TO-VGPR-NEXT:    v_readlane_b32 s4, v41, 0
 ; SPILL-TO-VGPR-NEXT:    s_or_saveexec_b64 s[6:7], -1
 ; SPILL-TO-VGPR-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:4 ; 4-byte Folded Reload
+; SPILL-TO-VGPR-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:8 ; 4-byte Folded Reload
 ; SPILL-TO-VGPR-NEXT:    s_mov_b64 exec, s[6:7]
 ; SPILL-TO-VGPR-NEXT:    s_addk_i32 s32, 0xfc00
 ; SPILL-TO-VGPR-NEXT:    s_mov_b32 s33, s4

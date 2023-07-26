@@ -172,13 +172,6 @@ def STRICT_WQM : PseudoInstSI <(outs unknown:$vdst), (ins unknown:$src0)>;
 
 } // End let hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC]
 
-def WWM_COPY : SPseudoInstSI <
-  (outs unknown:$dst), (ins unknown:$src)> {
-  let hasSideEffects = 0;
-  let isAsCheapAsAMove = 1;
-  let isConvergent = 1;
-}
-
 def ENTER_STRICT_WWM : SPseudoInstSI <(outs SReg_1:$sdst), (ins i64imm:$src0)> {
   let Uses = [EXEC];
   let Defs = [EXEC, SCC];
