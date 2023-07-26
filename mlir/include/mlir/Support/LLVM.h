@@ -122,7 +122,7 @@ template <typename KeyT, typename ValueT,
 using DenseMap = llvm::DenseMap<KeyT, ValueT, KeyInfoT, BucketT>;
 template <typename ValueT, typename ValueInfoT = DenseMapInfo<ValueT>>
 using DenseSet = llvm::DenseSet<ValueT, ValueInfoT>;
-template <typename T, typename Vector = std::vector<T>,
+template <typename T, typename Vector = llvm::SmallVector<T, 0>,
           typename Set = DenseSet<T>, unsigned N = 0>
 using SetVector = llvm::SetVector<T, Vector, Set, N>;
 template <typename AllocatorTy = llvm::MallocAllocator>

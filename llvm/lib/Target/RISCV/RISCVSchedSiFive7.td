@@ -292,6 +292,16 @@ def : WriteRes<WriteSHXADD, [SiFive7PipeB]>;
 def : WriteRes<WriteSHXADD32, [SiFive7PipeB]>;
 }
 
+// Single-bit instructions
+// BEXT[I] instruction is available on all ALUs and the other instructions
+// are only available on the SiFive7B pipe.
+let Latency = 3 in {
+def : WriteRes<WriteSingleBit, [SiFive7PipeB]>;
+def : WriteRes<WriteSingleBitImm, [SiFive7PipeB]>;
+def : WriteRes<WriteBEXT, [SiFive7PipeAB]>;
+def : WriteRes<WriteBEXTI, [SiFive7PipeAB]>;
+}
+
 // Memory
 def : WriteRes<WriteSTB, [SiFive7PipeA]>;
 def : WriteRes<WriteSTH, [SiFive7PipeA]>;
@@ -987,6 +997,9 @@ def : SiFive7AnyToGPRBypass<ReadORCB>;
 def : SiFive7AnyToGPRBypass<ReadREV8>;
 def : SiFive7AnyToGPRBypass<ReadSHXADD>;
 def : SiFive7AnyToGPRBypass<ReadSHXADD32>;
+// Single-bit instructions
+def : SiFive7AnyToGPRBypass<ReadSingleBit>;
+def : SiFive7AnyToGPRBypass<ReadSingleBitImm>;
 
 // 6. Configuration-Setting Instructions
 def : ReadAdvance<ReadVSETVLI, 2>;
@@ -1158,7 +1171,6 @@ def : ReadAdvance<ReadVMask, 0>;
 //===----------------------------------------------------------------------===//
 // Unsupported extensions
 defm : UnsupportedSchedZbc;
-defm : UnsupportedSchedZbs;
 defm : UnsupportedSchedZbkb;
 defm : UnsupportedSchedZbkx;
 defm : UnsupportedSchedZfa;

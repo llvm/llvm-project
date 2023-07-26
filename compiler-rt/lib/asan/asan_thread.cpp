@@ -288,17 +288,7 @@ thread_return_t AsanThread::ThreadStart(tid_t os_id) {
     return 0;
   }
 
-  thread_return_t res = start_routine_(arg_);
-
-  // On POSIX systems we defer this to the TSD destructor. LSan will consider
-  // the thread's memory as non-live from the moment we call Destroy(), even
-  // though that memory might contain pointers to heap objects which will be
-  // cleaned up by a user-defined TSD destructor. Thus, calling Destroy() before
-  // the TSD destructors have run might cause false positives in LSan.
-  if (!SANITIZER_POSIX)
-    this->Destroy();
-
-  return res;
+  return start_routine_(arg_);
 }
 
 AsanThread *CreateMainThread() {

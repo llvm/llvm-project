@@ -907,6 +907,8 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       uint64_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
       snprintf(desc_str, sizeof(desc_str), "breakpoint %" PRIu64 ".%" PRIu64,
                bp_id, bp_loc_id);
+      body.try_emplace("hitBreakpointIds",
+                       llvm::json::Array{llvm::json::Value(bp_id)});
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
@@ -951,6 +953,7 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       EmplaceSafeString(body, "description", std::string(description));
     }
   }
+  // "threadCausedFocus" is used in tests to validate breaking behavior.
   if (tid == g_vsc.focus_tid) {
     body.try_emplace("threadCausedFocus", true);
   }

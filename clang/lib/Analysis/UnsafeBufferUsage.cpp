@@ -1090,16 +1090,6 @@ findGadgets(const Decl *D, const UnsafeBufferUsageHandler &Handler,
   }
 
   M.match(*D->getBody(), D->getASTContext());
-
-  // Gadgets "claim" variables they're responsible for. Once this loop finishes,
-  // the tracker will only track DREs that weren't claimed by any gadgets,
-  // i.e. not understood by the analysis.
-  for (const auto &G : CB.FixableGadgets) {
-    for (const auto *DRE : G->getClaimedVarUseSites()) {
-      CB.Tracker.claimUse(DRE);
-    }
-  }
-
   return {std::move(CB.FixableGadgets), std::move(CB.WarningGadgets),
           std::move(CB.Tracker)};
 }
@@ -1512,8 +1502,8 @@ PointerDereferenceGadget::getFixits(const Strategy &S) const {
                         FixItHint::CreateInsertion(
                             (*EndOfOperand).getLocWithOffset(1), "[0]")}};
     }
+    break;
   }
-    [[fallthrough]];
   case Strategy::Kind::Iterator:
   case Strategy::Kind::Array:
   case Strategy::Kind::Vector:
@@ -1541,8 +1531,9 @@ std::optional<FixItList> UPCStandalonePointerGadget::getFixits(const Strategy &S
       if (EndOfOperand)
         return FixItList{{FixItHint::CreateInsertion(
             *EndOfOperand, ".data()")}};
+      // FIXME: Points inside a macro expansion.
+      break;
     }
-      [[fallthrough]];
     case Strategy::Kind::Wontfix:
     case Strategy::Kind::Iterator:
     case Strategy::Kind::Array:
@@ -2249,6 +2240,33 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
     return;
   }
 
+  // If no `WarningGadget`s ever matched, there is no unsafe operations in the
+  //  function under the analysis. No need to fix any Fixables.
+  if (!WarningGadgets.empty()) {
+    // Gadgets "claim" variables they're responsible for. Once this loop
+    // finishes, the tracker will only track DREs that weren't claimed by any
+    // gadgets, i.e. not understood by the analysis.
+    for (const auto &G : FixableGadgets) {
+      for (const auto *DRE : G->getClaimedVarUseSites()) {
+        Tracker.claimUse(DRE);
+      }
+    }
+  }
+
+  // If no `WarningGadget`s ever matched, there is no unsafe operations in the
+  // function under the analysis.  Thus, it early returns here as there is
+  // nothing needs to be fixed.
+  //
+  // Note this claim is based on the assumption that there is no unsafe
+  // variable whose declaration is invisible from the analyzing function.
+  // Otherwise, we need to consider if the uses of those unsafe varuables needs
+  // fix.
+  // So far, we are not fixing any global variables or class members. And,
+  // lambdas will be analyzed along with the enclosing function. So this early
+  // return is correct for now.
+  if (WarningGadgets.empty())
+    return;
+
   UnsafeOps = groupWarningGadgetsByVar(std::move(WarningGadgets));
   FixablesForAllVars = groupFixablesByVar(std::move(FixableGadgets));
 
@@ -2353,6 +2371,34 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
         }
       }
     }
+  }
+
+  // Remove a `FixableGadget` if the associated variable is not in the graph
+  // computed above.  We do not want to generate fix-its for such variables,
+  // since they are neither warned nor reachable from a warned one.
+  //
+  // Note a variable is not warned if it is not directly used in any unsafe
+  // operation. A variable `v` is NOT reachable from an unsafe variable, if it
+  // does not exist another variable `u` such that `u` is warned and fixing `u`
+  // (transitively) implicates fixing `v`.
+  //
+  // For example,
+  // ```
+  // void f(int * p) {
+  //   int * a = p; *p = 0;
+  // }
+  // ```
+  // `*p = 0` is a fixable gadget associated with a variable `p` that is neither
+  // warned nor reachable from a warned one.  If we add `a[5] = 0` to the end of
+  // the function above, `p` becomes reachable from a warned variable.
+  for (auto I = FixablesForAllVars.byVar.begin();
+       I != FixablesForAllVars.byVar.end();) {
+    // Note `VisitedVars` contain all the variables in the graph:
+    if (VisitedVars.find((*I).first) == VisitedVars.end()) {
+      // no such var in graph:
+      I = FixablesForAllVars.byVar.erase(I);
+    } else
+      ++I;
   }
 
   Strategy NaiveStrategy = getNaiveStrategy(UnsafeVars);

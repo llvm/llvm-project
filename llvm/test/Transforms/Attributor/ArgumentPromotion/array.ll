@@ -30,8 +30,9 @@ entry:
 }
 
 define internal void @callee(ptr noalias %arg) {
+; CHECK: Function Attrs: memory(readwrite, argmem: none)
 ; CHECK-LABEL: define {{[^@]+}}@callee
-; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) {
+; CHECK-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]], i32 [[TMP2:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[ARG_PRIV:%.*]] = alloca [3 x i32], align 4
 ; CHECK-NEXT:    store i32 [[TMP0]], ptr [[ARG_PRIV]], align 4
@@ -46,3 +47,6 @@ entry:
   call void @use(ptr %arg)
   ret void
 }
+;.
+; CHECK: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
+;.

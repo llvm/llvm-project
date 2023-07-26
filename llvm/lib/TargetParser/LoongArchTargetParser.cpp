@@ -16,6 +16,9 @@
 using namespace llvm;
 using namespace llvm::LoongArch;
 
+StringRef Arch;
+StringRef TuneCPU;
+
 const FeatureInfo AllFeatures[] = {
 #define LOONGARCH_FEATURE(NAME, KIND) {NAME, KIND},
 #include "llvm/TargetParser/LoongArchTargetParser.def"
@@ -46,3 +49,25 @@ bool LoongArch::getArchFeatures(StringRef Arch,
   }
   return false;
 }
+
+bool LoongArch::isValidTuneCPUName(StringRef TuneCPU) {
+  return isValidArchName(TuneCPU);
+}
+
+void LoongArch::fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) {
+  for (const auto A : AllArchs)
+    Values.emplace_back(A.Name);
+}
+
+StringRef LoongArch::getDefaultArch(bool Is64Bit) {
+  // TODO: use a real 32-bit arch name.
+  return Is64Bit ? "loongarch64" : "";
+}
+
+void LoongArch::setArch(StringRef Name) { Arch = Name; }
+
+StringRef LoongArch::getArch() { return Arch; }
+
+void LoongArch::setTuneCPU(StringRef Name) { TuneCPU = Name; }
+
+StringRef LoongArch::getTuneCPU() { return TuneCPU; }

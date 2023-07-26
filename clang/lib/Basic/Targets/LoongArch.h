@@ -80,6 +80,9 @@ public:
                  const std::vector<std::string> &FeaturesVec) const override;
 
   bool hasFeature(StringRef Feature) const override;
+
+  bool isValidTuneCPUName(StringRef Name) const override;
+  void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values) const override;
 };
 
 class LLVM_LIBRARY_VISIBILITY LoongArch32TargetInfo

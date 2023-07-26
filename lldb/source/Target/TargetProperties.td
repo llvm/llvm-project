@@ -244,10 +244,18 @@ let Definition = "process" in {
     DefaultTrue,
     Desc<"If true, stop when the inferior exec's.">;
   def UtilityExpressionTimeout: Property<"utility-expression-timeout", "UInt64">,
+#ifdef LLDB_SANITIZED
+    DefaultUnsignedValue<60>,
+#else
     DefaultUnsignedValue<15>,
+#endif
     Desc<"The time in seconds to wait for LLDB-internal utility expressions.">;
   def InterruptTimeout: Property<"interrupt-timeout", "UInt64">,
+#ifdef LLDB_SANITIZED
+    DefaultUnsignedValue<60>,
+#else
     DefaultUnsignedValue<20>,
+#endif
     Desc<"The time in seconds to wait for an interrupt succeed in stopping the target.">;
   def SteppingRunsAllThreads: Property<"run-all-threads", "Boolean">,
     DefaultFalse,

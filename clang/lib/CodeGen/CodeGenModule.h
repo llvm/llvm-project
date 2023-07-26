@@ -1131,11 +1131,6 @@ public:
   /// Return a pointer to a constant CFString object for the given string.
   ConstantAddress GetAddrOfConstantCFString(const StringLiteral *Literal);
 
-  /// Return a pointer to a constant NSString object for the given string. Or a
-  /// user defined String object as defined via
-  /// -fconstant-string-class=class_name option.
-  ConstantAddress GetAddrOfConstantString(const StringLiteral *Literal);
-
   /// Return a constant array for the given string.
   llvm::Constant *GetConstantArrayFromStringLiteral(const StringLiteral *E);
 
@@ -1617,7 +1612,7 @@ public:
   ///
   /// A most-base class of a class C is defined as a recursive base class of C,
   /// including C itself, that does not have any bases.
-  std::vector<const CXXRecordDecl *>
+  SmallVector<const CXXRecordDecl *, 0>
   getMostBaseClasses(const CXXRecordDecl *RD);
 
   /// Get the declaration of std::terminate for the platform.

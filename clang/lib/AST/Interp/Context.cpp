@@ -88,12 +88,6 @@ bool Context::evaluateAsInitializer(State &Parent, const VarDecl *VD,
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
 std::optional<PrimType> Context::classify(QualType T) const {
-  if (T->isFunctionPointerType() || T->isFunctionReferenceType())
-    return PT_FnPtr;
-
-  if (T->isReferenceType() || T->isPointerType())
-    return PT_Ptr;
-
   if (T->isBooleanType())
     return PT_Bool;
 
@@ -133,8 +127,21 @@ std::optional<PrimType> Context::classify(QualType T) const {
   if (T->isFloatingType())
     return PT_Float;
 
-  if (auto *AT = dyn_cast<AtomicType>(T))
+  if (T->isFunctionPointerType() || T->isFunctionReferenceType() ||
+      T->isFunctionType())
+    return PT_FnPtr;
+
+  if (T->isReferenceType() || T->isPointerType())
+    return PT_Ptr;
+
+  if (const auto *AT = dyn_cast<AtomicType>(T))
     return classify(AT->getValueType());
+
+  if (const auto *DT = dyn_cast<DecltypeType>(T))
+    return classify(DT->getUnderlyingType());
+
+  if (const auto *DT = dyn_cast<MemberPointerType>(T))
+    return classify(DT->getPointeeType());
 
   return {};
 }

@@ -2628,12 +2628,12 @@ MCSymbol *TargetLoweringObjectFileXCOFF::getFunctionEntryPointSymbol(
   // function entry point csect instead. And for function delcarations, the
   // undefined symbols gets treated as csect with XTY_ER property.
   if (((TM.getFunctionSections() && !Func->hasSection()) ||
-       Func->isDeclaration()) &&
+       Func->isDeclarationForLinker()) &&
       isa<Function>(Func)) {
     return getContext()
         .getXCOFFSection(
             NameStr, SectionKind::getText(),
-            XCOFF::CsectProperties(XCOFF::XMC_PR, Func->isDeclaration()
+            XCOFF::CsectProperties(XCOFF::XMC_PR, Func->isDeclarationForLinker()
                                                       ? XCOFF::XTY_ER
                                                       : XCOFF::XTY_SD))
         ->getQualNameSymbol();

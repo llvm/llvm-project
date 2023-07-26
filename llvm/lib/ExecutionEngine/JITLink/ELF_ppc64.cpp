@@ -217,23 +217,14 @@ private:
       Kind = ppc64::Delta32;
       break;
     case ELF::R_PPC64_REL24_NOTOC:
-    case ELF::R_PPC64_REL24: {
-      bool isLocal = !GraphSymbol->isExternal();
-      if (isLocal) {
-        // TODO: There are cases a local function call need a call stub.
-        // 1. Caller uses TOC, the callee doesn't, need a r2 save stub.
-        // 2. Caller doesn't use TOC, the callee does, need a r12 setup stub.
-        // FIXME: For a local call, we might need a thunk if branch target is
-        // out of range.
-        Kind = ppc64::CallBranchDelta;
-        // Branch to local entry.
-        Addend += ELF::decodePPC64LocalEntryOffset((*ObjSymbol)->st_other);
-      } else {
-        Kind = ELFReloc == ELF::R_PPC64_REL24 ? ppc64::RequestPLTCallStubSaveTOC
-                                              : ppc64::RequestPLTCallStubNoTOC;
-      }
+      Kind = ppc64::RequestCallNoTOC;
       break;
-    }
+    case ELF::R_PPC64_REL24:
+      Kind = ppc64::RequestCall;
+      assert(Addend == 0 && "Addend is expected to be 0 for a function call");
+      // We assume branching to local entry, will reverse the addend if not.
+      Addend = ELF::decodePPC64LocalEntryOffset((*ObjSymbol)->st_other);
+      break;
     case ELF::R_PPC64_REL64:
       Kind = ppc64::Delta64;
       break;

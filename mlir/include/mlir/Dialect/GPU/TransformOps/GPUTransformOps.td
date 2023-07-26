@@ -167,15 +167,15 @@ def MapNestedForallToThreads :
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                    DefaultValuedAttr<DenseI64ArrayAttr, "{}">:$block_dims,
-                   DefaultValuedOptionalAttr<DenseI64ArrayAttr, "{}">:$warp_dims,
-                   DefaultValuedAttr<BoolAttr, "true">:$sync_after_distribute);
+                   DefaultValuedAttr<BoolAttr, "true">:$sync_after_distribute,
+                   DefaultValuedAttr<I64Attr, "32">:$warp_size);
   let results = (outs TransformHandleTypeInterface:$result);
 
   let assemblyFormat = [{
     $target
     `block_dims` `=` $block_dims
-    (`warp_dims` `=` $warp_dims^)?
     (`sync_after_distribute` `=` $sync_after_distribute^)?
+    (`warp_size` `=` $warp_size^)?
     attr-dict
     `:` functional-type($target, $result)
   }];

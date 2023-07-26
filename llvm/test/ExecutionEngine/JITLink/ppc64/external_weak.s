@@ -11,7 +11,7 @@
 # CHECK: External symbols:
 # CHECK:   {{.*}} linkage: weak, scope: default, dead  -   foo
 # CHECK: section .text:
-# CHECK:   {{.*}} kind = CallBranchDelta, target = foo
+# CHECK:   {{.*}} kind = CallBranchDeltaRestoreTOC, target = addressable@{{.*}}
 # `foo` is weak in both relocatable files. `foo` is resolved to the one
 # defined in `%t/external_weak.o`. So calling `foo` in `%t/external_weak_main.o`
 # is expected to be an external function call.
