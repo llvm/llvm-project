@@ -232,6 +232,9 @@ void RuntimePointerChecking::insert(Loop *Lp, Value *Ptr, const SCEV *PtrExpr,
       ScEnd = SE->getUMaxExpr(AR->getStart(), ScEnd);
     }
   }
+  assert(SE->isLoopInvariant(ScStart, Lp) && "ScStart needs to be invariant");
+  assert(SE->isLoopInvariant(ScEnd, Lp)&& "ScEnd needs to be invariant");
+
   // Add the size of the pointed element to ScEnd.
   auto &DL = Lp->getHeader()->getModule()->getDataLayout();
   Type *IdxTy = DL.getIndexType(Ptr->getType());

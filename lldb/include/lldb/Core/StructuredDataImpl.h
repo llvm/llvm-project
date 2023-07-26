@@ -161,6 +161,17 @@ public:
     return (::snprintf(dst, dst_len, "%s", result.data()));
   }
 
+  void *GetGenericValue() const {
+    if (!m_data_sp)
+      return nullptr;
+
+    StructuredData::Generic *generic_data = m_data_sp->GetAsGeneric();
+    if (!generic_data)
+      return nullptr;
+
+    return generic_data->GetValue();
+  }
+
   StructuredData::ObjectSP GetObjectSP() const { return m_data_sp; }
 
 private:

@@ -34,8 +34,8 @@ void b() {}
 // YAML:     Line:            [[@LINE+1]]
 int main() { return 0; }
 
-// CHECK: main
-// CHECK: a
-// CHECK: b
+// CHECK:      a
+// CHECK-NEXT: b
+// CHECK-NEXT: main
 // CHECK: Counters section size: 0x18 bytes
 // CHECK: Found 3 functions

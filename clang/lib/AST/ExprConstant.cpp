@@ -5227,7 +5227,7 @@ static EvalStmtResult EvaluateStmt(StmtResult &Result, EvalInfo &Info,
       return ESR_Succeeded;
     }
 
-    Info.FFDiag(S->getBeginLoc());
+    Info.FFDiag(S->getBeginLoc()) << S->getSourceRange();
     return ESR_Failed;
 
   case Stmt::NullStmtClass:
@@ -7454,7 +7454,7 @@ public:
   /// Report an evaluation error. This should only be called when an error is
   /// first discovered. When propagating an error, just return false.
   bool Error(const Expr *E, diag::kind D) {
-    Info.FFDiag(E, D);
+    Info.FFDiag(E, D) << E->getSourceRange();
     return false;
   }
   bool Error(const Expr *E) {
@@ -8391,8 +8391,8 @@ bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
       E->getSubExpr()->skipRValueSubobjectAdjustments(CommaLHSs, Adjustments);
 
   // If we passed any comma operators, evaluate their LHSs.
-  for (unsigned I = 0, N = CommaLHSs.size(); I != N; ++I)
-    if (!EvaluateIgnoredValue(Info, CommaLHSs[I]))
+  for (const Expr *E : CommaLHSs)
+    if (!EvaluateIgnoredValue(Info, E))
       return false;
 
   // A materialized temporary with static storage duration can appear within the
@@ -8400,6 +8400,8 @@ bool LValueExprEvaluator::VisitMaterializeTemporaryExpr(
   // value for use outside this evaluation.
   APValue *Value;
   if (E->getStorageDuration() == SD_Static) {
+    if (Info.EvalMode == EvalInfo::EM_ConstantFold)
+      return false;
     // FIXME: What about SD_Thread?
     Value = E->getOrCreateValue(true);
     *Value = APValue();
@@ -15475,7 +15477,7 @@ bool Expr::EvaluateAsInitializer(APValue &Value, const ASTContext &Ctx,
   EStatus.Diag = &Notes;
 
   EvalInfo Info(Ctx, EStatus,
-                (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus11)
+                (IsConstantInitialization && Ctx.getLangOpts().CPlusPlus)
                     ? EvalInfo::EM_ConstantExpression
                     : EvalInfo::EM_ConstantFold);
   Info.setEvaluatingDecl(VD, Value);

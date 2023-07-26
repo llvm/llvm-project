@@ -93,6 +93,7 @@ cc_library(
         "//mlir:AffineAnalysis",
         "//mlir:AffineDialect",
         "//mlir:Analysis",
+        "//mlir:ControlFlowInterfaces",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:MemRefDialect",

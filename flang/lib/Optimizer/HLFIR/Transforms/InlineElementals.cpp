@@ -14,7 +14,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
-#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -91,8 +90,7 @@ public:
     assert(elemental.getRegion().hasOneBlock() &&
            "expect elemental region to have one block");
 
-    fir::FirOpBuilder builder{rewriter,
-                              fir::KindMapping{rewriter.getContext()}};
+    fir::FirOpBuilder builder{rewriter, elemental.getOperation()};
     builder.setInsertionPointAfter(apply);
     hlfir::YieldElementOp yield = hlfir::inlineElementalOp(
         elemental.getLoc(), builder, elemental, apply.getIndices());

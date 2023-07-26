@@ -4690,11 +4690,16 @@ defm FCVTL  : SIMDFPWidenTwoVector<0, 0, 0b10111, "fcvtl">;
 def : Pat<(v4f32 (int_aarch64_neon_vcvthf2fp (v4i16 V64:$Rn))),
           (FCVTLv4i16 V64:$Rn)>;
 def : Pat<(v4f32 (int_aarch64_neon_vcvthf2fp (extract_subvector (v8i16 V128:$Rn),
-                                                              (i64 4)))),
+                                                                (i64 4)))),
           (FCVTLv8i16 V128:$Rn)>;
-def : Pat<(v2f64 (any_fpextend (v2f32 V64:$Rn))), (FCVTLv2i32 V64:$Rn)>;
-
-def : Pat<(v4f32 (any_fpextend (v4f16 V64:$Rn))), (FCVTLv4i16 V64:$Rn)>;
+def : Pat<(v2f64 (any_fpextend (v2f32 V64:$Rn))),
+          (FCVTLv2i32 V64:$Rn)>;
+def : Pat<(v2f64 (any_fpextend (v2f32 (extract_high_v4f32 (v4f32 V128:$Rn))))),
+          (FCVTLv4i32 V128:$Rn)>;
+def : Pat<(v4f32 (any_fpextend (v4f16 V64:$Rn))),
+          (FCVTLv4i16 V64:$Rn)>;
+def : Pat<(v4f32 (any_fpextend (v4f16 (extract_high_v8f16 (v8f16 V128:$Rn))))),
+          (FCVTLv8i16 V128:$Rn)>;
 
 defm FCVTMS : SIMDTwoVectorFPToInt<0,0,0b11011, "fcvtms",int_aarch64_neon_fcvtms>;
 defm FCVTMU : SIMDTwoVectorFPToInt<1,0,0b11011, "fcvtmu",int_aarch64_neon_fcvtmu>;

@@ -688,6 +688,14 @@ Currently, clang requires the file name of an ``importable module unit`` should 
 
 This is tracked in: https://github.com/llvm/llvm-project/issues/57416
 
+clang-cl is not compatible with the standard C++ modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Now we can't use the `/clang:-fmodule-file` or `/clang:-fprebuilt-module-path` to specify
+the BMI within ``clang-cl.exe``.
+
+This is tracked in: https://github.com/llvm/llvm-project/issues/64118
+
 Header Units
 ============
 

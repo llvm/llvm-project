@@ -51,6 +51,17 @@ TEST_F(GlobPatternTest, Escape) {
   EXPECT_TRUE(Pat2->match("ax?c"));
   EXPECT_FALSE(Pat2->match("axxc"));
   EXPECT_FALSE(Pat2->match(""));
+
+  for (size_t I = 0; I != 4; ++I) {
+    std::string S(I, '\\');
+    Expected<GlobPattern> Pat = GlobPattern::create(S);
+    if (I % 2) {
+      EXPECT_FALSE((bool)Pat);
+      handleAllErrors(Pat.takeError(), [&](ErrorInfoBase &) {});
+    } else {
+      EXPECT_TRUE((bool)Pat);
+    }
+  }
 }
 
 TEST_F(GlobPatternTest, BasicCharacterClass) {
@@ -66,6 +77,11 @@ TEST_F(GlobPatternTest, BasicCharacterClass) {
   EXPECT_TRUE(Pat1->match("z"));
   EXPECT_FALSE(Pat1->match("g"));
   EXPECT_FALSE(Pat1->match(""));
+
+  Expected<GlobPattern> Pat2 = GlobPattern::create("[ab]*[cd]?**[ef]");
+  ASSERT_TRUE((bool)Pat2);
+  EXPECT_TRUE(Pat2->match("aecde"));
+  EXPECT_FALSE(Pat2->match("aecdg"));
 }
 
 TEST_F(GlobPatternTest, NegatedCharacterClass) {
@@ -113,6 +129,11 @@ TEST_F(GlobPatternTest, SpecialCharsInCharacterClass) {
   EXPECT_TRUE(Pat1->match("^"));
   EXPECT_FALSE(Pat1->match("*?^"));
   EXPECT_FALSE(Pat1->match(""));
+
+  Expected<GlobPattern> Pat2 = GlobPattern::create("[*]");
+  ASSERT_TRUE((bool)Pat2);
+  EXPECT_TRUE(Pat2->match("*"));
+  EXPECT_FALSE(Pat2->match("]"));
 }
 
 TEST_F(GlobPatternTest, Invalid) {
@@ -145,5 +166,34 @@ TEST_F(GlobPatternTest, IsTrivialMatchAll) {
     EXPECT_TRUE((bool)Pat2);
     EXPECT_FALSE(Pat2->isTrivialMatchAll());
   }
+}
+
+TEST_F(GlobPatternTest, NUL) {
+  for (char C : "?*{") {
+    std::string S(1, C);
+    Expected<GlobPattern> Pat = GlobPattern::create(S);
+    ASSERT_TRUE((bool)Pat);
+    EXPECT_TRUE(Pat->match(S));
+    if (C == '*') {
+      EXPECT_TRUE(Pat->match(S + '\0'));
+    } else {
+      EXPECT_FALSE(Pat->match(S + '\0'));
+      handleAllErrors(Pat.takeError(), [&](ErrorInfoBase &) {});
+    }
+  }
+}
+
+TEST_F(GlobPatternTest, Pathological) {
+  std::string P, S(40, 'a');
+  for (int I = 0; I != 30; ++I)
+    P += I % 2 ? "a*" : "[ba]*";
+  Expected<GlobPattern> Pat = GlobPattern::create(P);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_TRUE(Pat->match(S));
+  P += 'b';
+  Pat = GlobPattern::create(P);
+  ASSERT_TRUE((bool)Pat);
+  EXPECT_FALSE(Pat->match(S));
+  EXPECT_TRUE(Pat->match(S + 'b'));
 }
 }

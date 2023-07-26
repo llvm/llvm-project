@@ -70,7 +70,8 @@ class ClangTidyContext {
 public:
   /// Initializes \c ClangTidyContext instance.
   ClangTidyContext(std::unique_ptr<ClangTidyOptionsProvider> OptionsProvider,
-                   bool AllowEnablingAnalyzerAlphaCheckers = false);
+                   bool AllowEnablingAnalyzerAlphaCheckers = false,
+                   bool EnableModuleHeadersParsing = false);
   /// Sets the DiagnosticsEngine that diag() will emit diagnostics to.
   // FIXME: this is required initialization, and should be a constructor param.
   // Fix the context -> diag engine -> consumer -> context initialization cycle.
@@ -198,6 +199,12 @@ public:
     return AllowEnablingAnalyzerAlphaCheckers;
   }
 
+  // This method determines whether preprocessor-level module header parsing is
+  // enabled using the `--experimental-enable-module-headers-parsing` option.
+  bool canEnableModuleHeadersParsing() const {
+    return EnableModuleHeadersParsing;
+  }
+
   void setSelfContainedDiags(bool Value) { SelfContainedDiags = Value; }
 
   bool areDiagsSelfContained() const { return SelfContainedDiags; }
@@ -245,6 +252,7 @@ private:
   std::string ProfilePrefix;
 
   bool AllowEnablingAnalyzerAlphaCheckers;
+  bool EnableModuleHeadersParsing;
 
   bool SelfContainedDiags;
 

@@ -605,6 +605,10 @@ size_t PageSize() {
   return PageSizeCached;
 }
 
+void SetThreadName(std::thread &thread, const std::string &name) {
+  // TODO ?
+}
+
 } // namespace fuzzer
 
 #endif // LIBFUZZER_FUCHSIA

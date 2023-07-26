@@ -101,13 +101,13 @@ def ROCDL_BlockDimZOp : ROCDL_DeviceFunctionOp<"workgroup.dim.z",
                                                "__ockl_get_local_size", 2>;
 
 def ROCDL_GridDimXOp : ROCDL_DeviceFunctionOp<"grid.dim.x",
-                                               "__ockl_get_global_size", 0>;
+                                               "__ockl_get_num_groups", 0>;
 
 def ROCDL_GridDimYOp : ROCDL_DeviceFunctionOp<"grid.dim.y",
-                                               "__ockl_get_global_size", 1>;
+                                               "__ockl_get_num_groups", 1>;
 
 def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
-                                               "__ockl_get_global_size", 2>;
+                                               "__ockl_get_num_groups", 2>;
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives

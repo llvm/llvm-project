@@ -484,6 +484,7 @@ private:
   friend class SBListener;
   friend class SBProcess;
   friend class SBSourceManager;
+  friend class SBStructuredData;
   friend class SBTarget;
   friend class SBTrace;
 

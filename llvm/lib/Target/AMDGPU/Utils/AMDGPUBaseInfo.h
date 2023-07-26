@@ -573,7 +573,7 @@ constexpr unsigned COMPONENTS_NUM = 2;
 class ComponentProps {
 private:
   unsigned SrcOperandsNum = 0;
-  std::optional<unsigned> MandatoryLiteralIdx;
+  unsigned MandatoryLiteralIdx = ~0u;
   bool HasSrc2Acc = false;
 
 public:
@@ -589,13 +589,13 @@ public:
   }
 
   // Return true iif this component has a mandatory literal.
-  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx.has_value(); }
+  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx != ~0u; }
 
   // If this component has a mandatory literal, return component operand
   // index of this literal (i.e. either Component::SRC1 or Component::SRC2).
   unsigned getMandatoryLiteralCompOperandIndex() const {
     assert(hasMandatoryLiteral());
-    return *MandatoryLiteralIdx;
+    return MandatoryLiteralIdx;
   }
 
   // Return true iif this component has operand
@@ -611,8 +611,7 @@ public:
 private:
   bool hasMandatoryLiteralAt(unsigned CompSrcIdx) const {
     assert(CompSrcIdx < Component::MAX_SRC_NUM);
-    return hasMandatoryLiteral() &&
-           *MandatoryLiteralIdx == Component::DST_NUM + CompSrcIdx;
+    return MandatoryLiteralIdx == Component::DST_NUM + CompSrcIdx;
   }
 };
 

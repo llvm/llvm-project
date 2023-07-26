@@ -153,10 +153,10 @@ define void @tiny_tree_not_fully_vectorizable2(ptr noalias nocapture %dst, ptr n
 ; CHECK-NEXT:    [[I_023:%.*]] = phi i64 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY:%.*]] ]
 ; CHECK-NEXT:    [[DST_ADDR_022:%.*]] = phi ptr [ [[ADD_PTR8:%.*]], [[FOR_BODY]] ], [ [[DST:%.*]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[SRC_ADDR_021:%.*]] = phi ptr [ [[ADD_PTR:%.*]], [[FOR_BODY]] ], [ [[SRC:%.*]], [[ENTRY]] ]
-; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[SRC_ADDR_021]], i64 4
-; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[SRC_ADDR_021]], i64 2
 ; CHECK-NEXT:    [[TMP0:%.*]] = load float, ptr [[SRC_ADDR_021]], align 4
+; CHECK-NEXT:    [[ARRAYIDX2:%.*]] = getelementptr inbounds float, ptr [[SRC_ADDR_021]], i64 4
 ; CHECK-NEXT:    [[TMP1:%.*]] = load float, ptr [[ARRAYIDX2]], align 4
+; CHECK-NEXT:    [[ARRAYIDX4:%.*]] = getelementptr inbounds float, ptr [[SRC_ADDR_021]], i64 2
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x float>, ptr [[ARRAYIDX4]], align 4
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i32 0
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <4 x float> [[TMP3]], float [[TMP1]], i32 1

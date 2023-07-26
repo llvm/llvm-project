@@ -40,8 +40,8 @@ target triple = "nvptx64"
 ; CHECK: @[[I_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 16
 ; CHECK: @[[I_I_SHARED:[a-zA-Z0-9_$"\\.-]+]] = internal addrspace(3) global [4 x i8] undef, align 16
 ; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [2 x ptr] [ptr @__omp_offloading_10302_bd7e0_main_l13_exec_mode, ptr @__omp_offloading_10302_bd7e0_main_l16_exec_mode], section "llvm.metadata"
-; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L13_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
-; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L16_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 0
+; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L13_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 1
+; CHECK: @[[__OMP_OFFLOADING_10302_BD7E0_MAIN_L16_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 0
 ;.
 define weak_odr protected void @__omp_offloading_10302_bd7e0_main_l13(i64 noundef %i) local_unnamed_addr "kernel" {
 ; CHECK-LABEL: @__omp_offloading_10302_bd7e0_main_l13(

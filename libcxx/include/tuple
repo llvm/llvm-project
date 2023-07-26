@@ -960,13 +960,13 @@ public:
 
     // tuple(const pair<U1, U2>&) constructors (including allocator_arg_t variants)
 
-    template <template <class...> class Pred, class _Pair, class _DecayedPair = __remove_cvref_t<_Pair>, class _Tuple = tuple>
+    template <template <class...> class _Pred, class _Pair, class _DecayedPair = __remove_cvref_t<_Pair>, class _Tuple = tuple>
     struct _CtorPredicateFromPair : false_type{};
 
-    template <template <class...> class Pred, class _Pair, class _Up1, class _Up2, class _Tp1, class _Tp2>
-    struct _CtorPredicateFromPair<Pred, _Pair, pair<_Up1, _Up2>, tuple<_Tp1, _Tp2> > : _And<
-        Pred<_Tp1, __copy_cvref_t<_Pair, _Up1> >,
-        Pred<_Tp2, __copy_cvref_t<_Pair, _Up2> >
+    template <template <class...> class _Pred, class _Pair, class _Up1, class _Up2, class _Tp1, class _Tp2>
+    struct _CtorPredicateFromPair<_Pred, _Pair, pair<_Up1, _Up2>, tuple<_Tp1, _Tp2> > : _And<
+        _Pred<_Tp1, __copy_cvref_t<_Pair, _Up1> >,
+        _Pred<_Tp2, __copy_cvref_t<_Pair, _Up2> >
     > {};
 
     template <class _Pair>
@@ -1207,15 +1207,15 @@ public:
     }
 #endif // _LIBCPP_STD_VER >= 23
 
-    template <template<class...> class Pred, bool _Const,
+    template <template<class...> class _Pred, bool _Const,
               class _Pair, class _DecayedPair = __remove_cvref_t<_Pair>, class _Tuple = tuple>
     struct _AssignPredicateFromPair : false_type {};
 
-    template <template<class...> class Pred, bool _Const,
+    template <template<class...> class _Pred, bool _Const,
               class _Pair, class _Up1, class _Up2, class _Tp1, class _Tp2>
-    struct _AssignPredicateFromPair<Pred, _Const, _Pair, pair<_Up1, _Up2>, tuple<_Tp1, _Tp2> > :
-        _And<Pred<__maybe_const<_Const, _Tp1>&, __copy_cvref_t<_Pair, _Up1> >,
-             Pred<__maybe_const<_Const, _Tp2>&, __copy_cvref_t<_Pair, _Up2> >
+    struct _AssignPredicateFromPair<_Pred, _Const, _Pair, pair<_Up1, _Up2>, tuple<_Tp1, _Tp2> > :
+        _And<_Pred<__maybe_const<_Const, _Tp1>&, __copy_cvref_t<_Pair, _Up1> >,
+             _Pred<__maybe_const<_Const, _Tp2>&, __copy_cvref_t<_Pair, _Up2> >
             > {};
 
     template <bool _Const, class _Pair>

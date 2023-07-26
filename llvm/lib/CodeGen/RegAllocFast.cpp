@@ -932,9 +932,18 @@ bool RegAllocFast::defineVirtReg(MachineInstr &MI, unsigned OpNum,
       }
     }
   }
-  if (LRI->PhysReg == 0)
+  if (LRI->PhysReg == 0) {
     allocVirtReg(MI, *LRI, 0, LookAtPhysRegUses);
-  else {
+    // If no physical register is available for LRI, we assign one at random
+    // and bail out of this function immediately.
+    if (LRI->Error) {
+      const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
+      ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
+      if (AllocationOrder.empty())
+        return setPhysReg(MI, MO, MCRegister::NoRegister);
+      return setPhysReg(MI, MO, *AllocationOrder.begin());
+    }
+  } else {
     assert(!isRegUsedInInstr(LRI->PhysReg, LookAtPhysRegUses) &&
            "TODO: preassign mismatch");
     LLVM_DEBUG(dbgs() << "In def of " << printReg(VirtReg, TRI)
@@ -943,7 +952,6 @@ bool RegAllocFast::defineVirtReg(MachineInstr &MI, unsigned OpNum,
   }
 
   MCPhysReg PhysReg = LRI->PhysReg;
-  assert(PhysReg != 0 && "Register not assigned");
   if (LRI->Reloaded || LRI->LiveOut) {
     if (!MI.isImplicitDef()) {
       MachineBasicBlock::iterator SpillBefore =
@@ -1024,6 +1032,8 @@ bool RegAllocFast::useVirtReg(MachineInstr &MI, unsigned OpNum,
     if (LRI->Error) {
       const TargetRegisterClass &RC = *MRI->getRegClass(VirtReg);
       ArrayRef<MCPhysReg> AllocationOrder = RegClassInfo.getOrder(&RC);
+      if (AllocationOrder.empty())
+        return setPhysReg(MI, MO, MCRegister::NoRegister);
       return setPhysReg(MI, MO, *AllocationOrder.begin());
     }
   }

@@ -1639,16 +1639,20 @@ void BinaryFunction::postProcessJumpTables() {
         JT.Entries.push_back(Label);
         continue;
       }
-      // Create local label for targets cannot be reached by other fragments
-      // Otherwise, secondary entry point to target function
+      // Create a local label for targets that cannot be reached by other
+      // fragments. Otherwise, create a secondary entry point in the target
+      // function.
       BinaryFunction *TargetBF =
           BC.getBinaryFunctionContainingAddress(EntryAddress);
-      if (uint64_t Offset = EntryAddress - TargetBF->getAddress()) {
-        MCSymbol *Label = (HasOneParent && TargetBF == this)
-                              ? getOrCreateLocalLabel(EntryAddress, true)
-                              : TargetBF->addEntryPointAtOffset(Offset);
-        JT.Entries.push_back(Label);
+      MCSymbol *Label;
+      if (HasOneParent && TargetBF == this) {
+        Label = getOrCreateLocalLabel(EntryAddress, true);
+      } else {
+        const uint64_t Offset = EntryAddress - TargetBF->getAddress();
+        Label = Offset ? TargetBF->addEntryPointAtOffset(Offset)
+                       : TargetBF->getSymbol();
       }
+      JT.Entries.push_back(Label);
     }
   }
 

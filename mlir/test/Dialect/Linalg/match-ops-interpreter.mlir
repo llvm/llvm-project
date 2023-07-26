@@ -55,6 +55,34 @@ module attributes { transform.with_named_sequence } {
     transform.yield
   }
 
+  transform.named_sequence @print_in_matcher(%arg0: !transform.any_op {transform.readonly}) -> !transform.any_op {
+    transform.print %arg0 : !transform.any_op
+    transform.yield %arg0 : !transform.any_op
+  }
+
+  transform.sequence failures(propagate) attributes { transform.target_tag = "transform" } {
+  ^bb0(%arg0: !transform.any_op):
+    transform.foreach_match in %arg0
+        @print_in_matcher -> @do_nothing
+        : (!transform.any_op) -> !transform.any_op
+  }
+
+  func.func @payload() attributes { transform.target_tag = "start_here" } {
+    // CHECK: [[ IR Printer ]]
+    // CHECK: test.print_me
+    %0 = "test.print_me"() : () -> (i1)
+    return
+  }
+}
+
+// -----
+
+
+module attributes { transform.with_named_sequence } {
+  transform.named_sequence @do_nothing(%arg0: !transform.any_op {transform.readonly}) {
+    transform.yield
+  }
+
   // Entry point. Match any structured operation and emit a remark. Also emit
   // a different remark at all considered operations. When it fails, the
   // failure is suppressed and the resulting handle is assocaited with an empty

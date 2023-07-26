@@ -847,9 +847,8 @@ bool GIMatchTableExecutor::executeMatchTable(
 
       if (MatcherOpcode == GIM_CheckIsSameOperandIgnoreCopies) {
         if (Op.isReg() && OtherOp.isReg()) {
-          MachineInstr *MI = getDefIgnoringCopies(Op.getReg(), MRI);
-          MachineInstr *OtherMI = getDefIgnoringCopies(OtherOp.getReg(), MRI);
-          if (MI && MI == OtherMI)
+          if (getSrcRegIgnoringCopies(Op.getReg(), MRI) ==
+              getSrcRegIgnoringCopies(OtherOp.getReg(), MRI))
             break;
         }
       }

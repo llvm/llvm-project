@@ -1838,6 +1838,18 @@ cc_library(
 )
 
 cc_library(
+    name = "ArmSMEUtils",
+    srcs = glob(["lib/Dialect/ArmSME/Utils/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/ArmSME/Utils/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArmSMEDialect",
+        ":IR",
+        ":Dialect",
+    ],
+)
+
+cc_library(
     name = "ArmSMETransforms",
     srcs = glob(["lib/Dialect/ArmSME/Transforms/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/ArmSME/Transforms/*.h"]),
@@ -1845,6 +1857,7 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArmSMEDialect",
+        ":ArmSMEUtils",
         ":ArmSMETransformsPassIncGen",
         ":FuncDialect",
         ":IR",
@@ -2791,6 +2804,22 @@ gentbl_cc_library(
             ["-gen-typedef-defs"],
             "include/mlir/Dialect/NVGPU/IR/NVGPUTypes.cpp.inc",
         ),
+        (
+            ["-gen-enum-decls"],
+            "include/mlir/Dialect/NVGPU/IR/NVGPUEnums.h.inc",
+        ),
+        (
+            ["-gen-enum-defs"],
+            "include/mlir/Dialect/NVGPU/IR/NVGPUEnums.cpp.inc",
+        ),
+        (
+            ["-gen-attrdef-decls"],
+            "include/mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.h.inc",
+        ),
+        (
+            ["-gen-attrdef-defs"],
+            "include/mlir/Dialect/NVGPU/IR/NVGPUAttrDefs.cpp.inc",
+        ),
     ],
     tblgen = ":mlir-tblgen",
     td_file = "include/mlir/Dialect/NVGPU/IR/NVGPU.td",
@@ -3336,6 +3365,8 @@ cc_library(
         ":TosaToLinalg",
         ":TosaToSCF",
         ":TosaToTensor",
+        ":UBToLLVM",
+        ":UBToSPIRV",
         ":VectorToArmSME",
         ":VectorToGPU",
         ":VectorToLLVM",
@@ -4730,12 +4761,12 @@ gentbl_cc_library(
 
 cc_library(
     name = "GPUTransformOps",
-    srcs = [
-        "lib/Dialect/GPU/TransformOps/GPUTransformOps.cpp",
-    ],
-    hdrs = [
-        "include/mlir/Dialect/GPU/TransformOps/GPUTransformOps.h",
-    ],
+    srcs = glob([
+        "lib/Dialect/GPU/TransformOps/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/GPU/TransformOps/*.h",
+    ]),
     includes = ["include"],
     deps = [
         ":AffineDialect",
@@ -4756,6 +4787,7 @@ cc_library(
         ":TransformDialect",
         ":TransformUtils",
         ":VectorDialect",
+        ":VectorTransforms",
         "//llvm:Support",
     ],
 )
@@ -4791,16 +4823,20 @@ cc_library(
         "lib/Conversion/GPUCommon/GPUOpsLowering.cpp",
     ],
     hdrs = [
+        "include/mlir/Conversion/GPUCommon/GPUCommonPass.h",
         "lib/Conversion/GPUCommon/GPUOpsLowering.h",
         "lib/Conversion/GPUCommon/IndexIntrinsicsOpLowering.h",
         "lib/Conversion/GPUCommon/OpToFuncCallLowering.h",
     ],
     deps = [
+        ":ConversionPassIncGen",
         ":FuncDialect",
         ":GPUDialect",
+        ":GPUTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
+        ":Support",
         "//llvm:Support",
     ],
 )
@@ -4894,7 +4930,9 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ConversionPassIncGen",
+        ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUToGPURuntimeTransforms",
         ":IR",
         ":LLVMCommonConversion",
         ":LLVMDialect",
@@ -4902,6 +4940,7 @@ cc_library(
         ":NVGPUDialect",
         ":NVVMDialect",
         ":Pass",
+        "//llvm:Support",
     ],
 )
 
@@ -9874,6 +9913,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEDialect",
+        ":ArmSMEUtils",
         ":ConversionPassIncGen",
         ":IR",
         ":Pass",
@@ -10142,6 +10182,7 @@ cc_library(
         ":TensorUtils",
         ":TosaDialect",
         ":Transforms",
+        "//llvm:Support",
     ],
 )
 
@@ -12004,5 +12045,45 @@ cc_library(
         ":UBOpsIncGen",
         ":UBOpsInterfacesIncGen",
         "//llvm:Support",
+    ],
+)
+
+cc_library(
+    name = "UBToLLVM",
+    srcs = glob([
+        "lib/Conversion/UBToLLVM/*.cpp",
+        "lib/Conversion/UBToLLVM/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/UBToLLVM/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":Pass",
+        ":UBDialect",
+    ],
+)
+
+cc_library(
+    name = "UBToSPIRV",
+    srcs = glob([
+        "lib/Conversion/UBToSPIRV/*.cpp",
+        "lib/Conversion/UBToSPIRV/*.h",
+    ]),
+    hdrs = glob([
+        "include/mlir/Conversion/UBToSPIRV/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":Pass",
+        ":SPIRVConversion",
+        ":SPIRVDialect",
+        ":UBDialect",
+        "//llvm:Core",
     ],
 )

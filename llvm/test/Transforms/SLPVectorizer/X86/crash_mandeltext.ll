@@ -93,9 +93,9 @@ for.end48:                                        ; preds = %for.end44
 define void @zot(ptr %arg) {
 ; CHECK-LABEL: @zot(
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_HOGE:%.*]], ptr [[ARG:%.*]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP:%.*]] = load double, ptr undef, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load double, ptr undef, align 8
+; CHECK-NEXT:    [[TMP7:%.*]] = getelementptr inbounds [[STRUCT_HOGE:%.*]], ptr [[ARG:%.*]], i64 0, i32 1
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <2 x double> poison, double [[TMP2]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x double> [[TMP0]], double [[TMP]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = fsub <2 x double> [[TMP1]], undef

@@ -415,6 +415,13 @@ uint64_t InstrProfSymtab::getFunctionHashFromAddress(uint64_t Address) {
   return 0;
 }
 
+void InstrProfSymtab::dumpNames(raw_ostream &OS) const {
+  SmallVector<StringRef, 0> Sorted(NameTab.keys());
+  llvm::sort(Sorted);
+  for (StringRef S : Sorted)
+    OS << S << '\n';
+}
+
 Error collectPGOFuncNameStrings(ArrayRef<std::string> NameStrs,
                                 bool doCompression, std::string &Result) {
   assert(!NameStrs.empty() && "No name data to emit");

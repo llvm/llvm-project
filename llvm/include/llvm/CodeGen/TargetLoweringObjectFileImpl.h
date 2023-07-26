@@ -156,6 +156,8 @@ public:
 
   void getNameWithPrefix(SmallVectorImpl<char> &OutName, const GlobalValue *GV,
                          const TargetMachine &TM) const override;
+
+  MCSection *getSectionForCommandLines() const override;
 };
 
 class TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {

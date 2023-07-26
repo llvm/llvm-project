@@ -27,6 +27,8 @@
 
 namespace __llvm_libc {
 
+// This is intended to be removed in a future patch to use a similar design to
+// below, but it's necessary for the external assert.
 LIBC_INLINE void report_assertion_failure(const char *assertion,
                                           const char *filename, unsigned line,
                                           const char *funcname) {
@@ -60,11 +62,22 @@ LIBC_INLINE void report_assertion_failure(const char *assertion,
   do {                                                                         \
   } while (false)
 #else
+
+// Convert __LINE__ to a string using macros. The indirection is necessary
+// because otherwise it will turn "__LINE__" into a string, not its value. The
+// value is evaluated in the indirection step.
+#define __LIBC_MACRO_TO_STR(x) #x
+#define __LIBC_MACRO_TO_STR_INDIR(y) __LIBC_MACRO_TO_STR(y)
+#define __LIBC_LINE_STR__ __LIBC_MACRO_TO_STR_INDIR(__LINE__)
+
 #define LIBC_ASSERT(COND)                                                      \
   do {                                                                         \
     if (!(COND)) {                                                             \
-      __llvm_libc::report_assertion_failure(#COND, __FILE__, __LINE__,         \
-                                            __PRETTY_FUNCTION__);              \
+      __llvm_libc::write_to_stderr(__FILE__ ":" __LIBC_LINE_STR__              \
+                                            ": Assertion failed: '" #COND      \
+                                            "' in function: '");               \
+      __llvm_libc::write_to_stderr(__PRETTY_FUNCTION__);                       \
+      __llvm_libc::write_to_stderr("'\n");                                     \
       __llvm_libc::quick_exit(0xFF);                                           \
     }                                                                          \
   } while (false)

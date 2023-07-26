@@ -1078,10 +1078,13 @@ public:
   public:
     SynthesizedFunctionScope(Sema &S, DeclContext *DC)
         : S(S), SavedContext(S, DC) {
+      auto *FD = dyn_cast<FunctionDecl>(DC);
       S.PushFunctionScope();
       S.PushExpressionEvaluationContext(
-          Sema::ExpressionEvaluationContext::PotentiallyEvaluated);
-      if (auto *FD = dyn_cast<FunctionDecl>(DC)) {
+          (FD && FD->isConsteval())
+              ? ExpressionEvaluationContext::ImmediateFunctionContext
+              : ExpressionEvaluationContext::PotentiallyEvaluated);
+      if (FD) {
         FD->setWillHaveBody(true);
         S.ExprEvalContexts.back().InImmediateFunctionContext =
             FD->isImmediateFunction();
@@ -1106,8 +1109,10 @@ public:
     ~SynthesizedFunctionScope() {
       if (PushedCodeSynthesisContext)
         S.popCodeSynthesisContext();
-      if (auto *FD = dyn_cast<FunctionDecl>(S.CurContext))
+      if (auto *FD = dyn_cast<FunctionDecl>(S.CurContext)) {
         FD->setWillHaveBody(false);
+        S.CheckImmediateEscalatingFunctionDefinition(FD, S.getCurFunction());
+      }
       S.PopExpressionEvaluationContext();
       S.PopFunctionScopeInfo();
     }
@@ -6578,11 +6583,11 @@ public:
   ExprResult CheckForImmediateInvocation(ExprResult E, FunctionDecl *Decl);
 
   bool CheckImmediateEscalatingFunctionDefinition(
-      FunctionDecl *FD, bool HasImmediateEscalatingExpression);
+      FunctionDecl *FD, const sema::FunctionScopeInfo *FSI);
 
   void MarkExpressionAsImmediateEscalating(Expr *E);
 
-  void DiagnoseImmediateEscalatingReason(const clang::FunctionDecl *FD);
+  void DiagnoseImmediateEscalatingReason(FunctionDecl *FD);
 
   bool CompleteConstructorCall(CXXConstructorDecl *Constructor,
                                QualType DeclInitType, MultiExprArg ArgsPtr,
@@ -10983,6 +10988,11 @@ public:
   bool ConstantFoldAttrArgs(const AttributeCommonInfo &CI,
                             MutableArrayRef<Expr *> Args);
 
+  /// Create an CUDALaunchBoundsAttr attribute.
+  CUDALaunchBoundsAttr *CreateLaunchBoundsAttr(const AttributeCommonInfo &CI,
+                                               Expr *MaxThreads,
+                                               Expr *MinBlocks);
+
   /// AddLaunchBoundsAttr - Adds a launch_bounds attribute to a particular
   /// declaration.
   void AddLaunchBoundsAttr(Decl *D, const AttributeCommonInfo &CI,
@@ -10999,10 +11009,20 @@ public:
   void AddXConsumedAttr(Decl *D, const AttributeCommonInfo &CI,
                         RetainOwnershipKind K, bool IsTemplateInstantiation);
 
+  /// Create an AMDGPUWavesPerEUAttr attribute.
+  AMDGPUFlatWorkGroupSizeAttr *
+  CreateAMDGPUFlatWorkGroupSizeAttr(const AttributeCommonInfo &CI, Expr *Min,
+                                    Expr *Max);
+
   /// addAMDGPUFlatWorkGroupSizeAttr - Adds an amdgpu_flat_work_group_size
   /// attribute to a particular declaration.
   void addAMDGPUFlatWorkGroupSizeAttr(Decl *D, const AttributeCommonInfo &CI,
                                       Expr *Min, Expr *Max);
+
+  /// Create an AMDGPUWavesPerEUAttr attribute.
+  AMDGPUWavesPerEUAttr *
+  CreateAMDGPUWavesPerEUAttr(const AttributeCommonInfo &CI, Expr *Min,
+                             Expr *Max);
 
   /// addAMDGPUWavePersEUAttr - Adds an amdgpu_waves_per_eu attribute to a
   /// particular declaration.
@@ -12335,6 +12355,12 @@ public:
                             SourceLocation DepLoc, SourceLocation ColonLoc,
                             ArrayRef<Expr *> VarList, SourceLocation StartLoc,
                             SourceLocation LParenLoc, SourceLocation EndLoc);
+
+  /// Called on a well-formed 'ompx_attribute' clause.
+  OMPClause *ActOnOpenMPXAttributeClause(ArrayRef<const Attr *> Attrs,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc);
 
   /// The kind of conversion being performed.
   enum CheckedConversionKind {

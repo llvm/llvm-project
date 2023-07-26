@@ -212,9 +212,6 @@ std::vector<DiffOutput> getSingleIF(InterfaceFile *Interface,
   diffAttribute("Swift ABI Version", Output,
                 DiffScalarVal<uint8_t, AD_Diff_Scalar_Unsigned>(
                     Order, Interface->getSwiftABIVersion()));
-  diffAttribute("InstallAPI", Output,
-                DiffScalarVal<bool, AD_Diff_Scalar_Bool>(
-                    Order, Interface->isInstallAPI()));
   diffAttribute("Two Level Namespace", Output,
                 DiffScalarVal<bool, AD_Diff_Scalar_Bool>(
                     Order, Interface->isTwoLevelNamespace()));
@@ -349,11 +346,6 @@ DiffEngine::findDifferences(const InterfaceFile *IFLHS,
                           DiffScalarVal<uint8_t, AD_Diff_Scalar_Unsigned>(
                               rhs, IFRHS->getSwiftABIVersion()),
                           "Swift ABI Version"));
-  if (IFLHS->isInstallAPI() != IFRHS->isInstallAPI())
-    Output.push_back(recordDifferences(
-        DiffScalarVal<bool, AD_Diff_Scalar_Bool>(lhs, IFLHS->isInstallAPI()),
-        DiffScalarVal<bool, AD_Diff_Scalar_Bool>(rhs, IFRHS->isInstallAPI()),
-        "InstallAPI"));
 
   if (IFLHS->isTwoLevelNamespace() != IFRHS->isTwoLevelNamespace())
     Output.push_back(recordDifferences(DiffScalarVal<bool, AD_Diff_Scalar_Bool>(

@@ -269,15 +269,6 @@ struct OneShotBufferizePass
     this->numBufferDealloc = statistics.numBufferDealloc;
     this->numTensorInPlace = statistics.numTensorInPlace;
     this->numTensorOutOfPlace = statistics.numTensorOutOfPlace;
-
-    if (opt.testAnalysisOnly)
-      return;
-
-    OpPassManager cleanupPipeline("builtin.module");
-    cleanupPipeline.addPass(createCanonicalizerPass());
-    cleanupPipeline.addPass(createCSEPass());
-    cleanupPipeline.addPass(createLoopInvariantCodeMotionPass());
-    (void)runPipeline(cleanupPipeline, moduleOp);
   }
 
 private:

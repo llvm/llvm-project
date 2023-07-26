@@ -332,7 +332,7 @@ defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, any_amdgcn_sqrt>;
 let TRANS = 1, SchedRW = [WriteTrans64] in {
 defm V_RCP_F64 : VOP1Inst <"v_rcp_f64", VOP_F64_F64, AMDGPUrcp>;
 defm V_RSQ_F64 : VOP1Inst <"v_rsq_f64", VOP_F64_F64, AMDGPUrsq>;
-defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64, any_amdgcn_sqrt>;
+defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64, int_amdgcn_sqrt>;
 } // End TRANS = 1, SchedRW = [WriteTrans64]
 
 let TRANS = 1, SchedRW = [WriteTrans32] in {

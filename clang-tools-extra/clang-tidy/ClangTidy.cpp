@@ -418,7 +418,8 @@ ClangTidyASTConsumerFactory::createASTConsumer(
   Preprocessor *PP = &Compiler.getPreprocessor();
   Preprocessor *ModuleExpanderPP = PP;
 
-  if (Context.getLangOpts().Modules && OverlayFS != nullptr) {
+  if (Context.canEnableModuleHeadersParsing() &&
+      Context.getLangOpts().Modules && OverlayFS != nullptr) {
     auto ModuleExpander = std::make_unique<ExpandModularHeadersPPCallbacks>(
         &Compiler, OverlayFS);
     ModuleExpanderPP = ModuleExpander->getPreprocessor();
@@ -620,6 +621,8 @@ void exportReplacements(const llvm::StringRef MainFilePath,
   TUD.MainSourceFile = std::string(MainFilePath);
   for (const auto &Error : Errors) {
     tooling::Diagnostic Diag = Error;
+    if (Error.IsWarningAsError)
+      Diag.DiagLevel = tooling::Diagnostic::Error;
     TUD.Diagnostics.insert(TUD.Diagnostics.end(), Diag);
   }
 

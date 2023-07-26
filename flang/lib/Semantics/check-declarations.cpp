@@ -277,6 +277,12 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckContiguous(symbol);
   }
   CheckGlobalName(symbol);
+  if (symbol.attrs().test(Attr::ASYNCHRONOUS) &&
+      !evaluate::IsVariable(symbol)) {
+    messages_.Say(
+        "An entity may not have the ASYNCHRONOUS attribute unless it is a variable"_err_en_US);
+  }
+
   if (isDone) {
     return; // following checks do not apply
   }
@@ -391,7 +397,8 @@ void CheckHelper::Check(const Symbol &symbol) {
         messages_.Say(
             "An assumed-length CHARACTER(*) function cannot return a POINTER"_err_en_US);
       }
-    } else if (IsProcedurePointer(symbol) && IsDummy(symbol)) {
+    }
+    if (IsProcedurePointer(symbol) && IsDummy(symbol)) {
       messages_.Say(
           "A dummy procedure pointer should not have assumed-length CHARACTER(*) result type"_port_en_US);
       // The non-dummy case is a hard error that's caught elsewhere.
@@ -428,11 +435,6 @@ void CheckHelper::Check(const Symbol &symbol) {
           "Procedure '%s' may not be an array without an explicit interface"_err_en_US,
           symbol.name());
     }
-  }
-  if (symbol.attrs().test(Attr::ASYNCHRONOUS) &&
-      !evaluate::IsVariable(symbol)) {
-    messages_.Say(
-        "An entity may not have the ASYNCHRONOUS attribute unless it is a variable"_err_en_US);
   }
 }
 

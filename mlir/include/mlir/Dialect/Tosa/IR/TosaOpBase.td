@@ -215,18 +215,12 @@ class Tosa_Op<string mnemonic, list<Trait> traits = []> :
     Op<Tosa_Dialect, mnemonic, !listconcat(traits, [TosaOpInterface])> {
 }
 
-class Tosa_ElemWiseUnaryOp<string mnemonic, list<Trait> traits = []> :
+class Tosa_ElementwiseOp<string mnemonic, list<Trait> traits = []> :
     Tosa_Op<mnemonic, !listconcat(traits, [
               DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
                                         ["inferReturnTypeComponents"]>,
-              Pure, SameOperandsAndResultElementType])> {
-}
-
-class Tosa_ElemWiseBinaryOp<string mnemonic, list<Trait> traits = []> :
-    Tosa_Op<mnemonic, !listconcat(traits, [
-              DeclareOpInterfaceMethods<InferShapedTypeOpInterface,
-                                        ["inferReturnTypeComponents"]>,
-              ResultsBroadcastableShape, Pure, SameOperandsAndResultElementType])> {
+              ResultsBroadcastableShape,
+              Pure])> {
 }
 
 #endif // TOSA_OP_BASE

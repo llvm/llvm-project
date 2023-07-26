@@ -30,12 +30,21 @@ module attributes {omp.is_target_device = true} {
 // CHECK-NEXT:   %[[CMP:.*]] = icmp eq i32 %3, -1
 // CHECK-NEXT:   br i1 %[[CMP]], label %[[LABEL_ENTRY:.*]], label %[[LABEL_EXIT:.*]]
 // CHECK:        [[LABEL_ENTRY]]:
+// CHECK:        %[[TMP_A:.*]] = alloca ptr, align 8
+// CHECK:        store ptr %[[ADDR_A]], ptr %[[TMP_A]], align 8
+// CHECK:        %[[PTR_A:.*]] = load ptr, ptr %[[TMP_A]], align 8
+// CHECK:        %[[TMP_B:.*]] = alloca ptr, align 8
+// CHECK:        store ptr %[[ADDR_B]], ptr %[[TMP_B]], align 8
+// CHECK:        %[[PTR_B:.*]] = load ptr, ptr %[[TMP_B]], align 8
+// CHECK:        %[[TMP_C:.*]] = alloca ptr, align 8
+// CHECK:        store ptr %[[ADDR_C]], ptr %[[TMP_C]], align 8
+// CHECK:        %[[PTR_C:.*]] = load ptr, ptr %[[TMP_C]], align 8
 // CHECK-NEXT:   br label %[[LABEL_TARGET:.*]]
 // CHECK:        [[LABEL_TARGET]]:
-// CHECK:        %[[A:.*]] = load i32, ptr %[[ADDR_A]], align 4
-// CHECK:        %[[B:.*]] = load i32, ptr %[[ADDR_B]], align 4
+// CHECK:        %[[A:.*]] = load i32, ptr %[[PTR_A]], align 4
+// CHECK:        %[[B:.*]] = load i32, ptr %[[PTR_B]], align 4
 // CHECK:        %[[C:.*]] = add i32 %[[A]], %[[B]]
-// CHECK:        store i32 %[[C]], ptr %[[ADDR_C]], align 4
+// CHECK:        store i32 %[[C]], ptr %[[PTR_C]], align 4
 // CHECK:        br label %[[LABEL_DEINIT:.*]]
 // CHECK:        [[LABEL_DEINIT]]:
 // CHECK-NEXT:   call void @__kmpc_target_deinit(ptr @[[IDENT]], i8 1)

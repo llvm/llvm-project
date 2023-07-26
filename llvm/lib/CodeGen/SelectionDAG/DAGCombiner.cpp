@@ -3017,7 +3017,8 @@ SDValue DAGCombiner::visitADDSAT(SDNode *N) {
   return SDValue();
 }
 
-static SDValue getAsCarry(const TargetLowering &TLI, SDValue V) {
+static SDValue getAsCarry(const TargetLowering &TLI, SDValue V,
+                          bool ForceCarryReconstruction = false) {
   bool Masked = false;
 
   // First, peel away TRUNCATE/ZERO_EXTEND/AND nodes due to legalization.
@@ -3028,10 +3029,16 @@ static SDValue getAsCarry(const TargetLowering &TLI, SDValue V) {
     }
 
     if (V.getOpcode() == ISD::AND && isOneConstant(V.getOperand(1))) {
+      if (ForceCarryReconstruction)
+        return V;
+
       Masked = true;
       V = V.getOperand(0);
       continue;
     }
+
+    if (ForceCarryReconstruction && V.getValueType() == MVT::i1)
+      return V;
 
     break;
   }
@@ -3542,11 +3549,8 @@ static SDValue combineCarryDiamond(SelectionDAG &DAG, const TargetLowering &TLI,
     return SDValue();
 
   // Verify that the carry/borrow in is plausibly a carry/borrow bit.
-  // TODO: make getAsCarry() aware of how partial carries are merged.
-  if (CarryIn.getOpcode() != ISD::ZERO_EXTEND)
-    return SDValue();
-  CarryIn = CarryIn.getOperand(0);
-  if (CarryIn.getValueType() != MVT::i1)
+  CarryIn = getAsCarry(TLI, CarryIn, true);
+  if (!CarryIn)
     return SDValue();
 
   SDLoc DL(N);
@@ -6018,7 +6022,8 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   // TODO: Search past casts/truncates.
   SDValue LHS = LogicOp->getOperand(0);
   SDValue RHS = LogicOp->getOperand(1);
-  if (LHS->getOpcode() != ISD::SETCC || RHS->getOpcode() != ISD::SETCC)
+  if (LHS->getOpcode() != ISD::SETCC || RHS->getOpcode() != ISD::SETCC ||
+      !LHS->hasOneUse() || !RHS->hasOneUse())
     return SDValue();
 
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
@@ -6046,64 +6051,58 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
   // (LHS0 < LHS1) | (RHS0 < RHS1) -> min(LHS0, RHS0) < LHS1
   // and and-cmp-cmp will be replaced with max-cmp sequence:
   // (LHS0 < LHS1) & (RHS0 < RHS1) -> max(LHS0, RHS0) < LHS1
-  if (OpVT.isInteger() && TLI.isOperationLegal(ISD::UMAX, OpVT) &&
+  // The optimization does not work for `==` or `!=` .
+  // The two comparisons should have either the same predicate or the
+  // predicate of one of the comparisons is the opposite of the other one.
+  if (OpVT.isInteger() && !ISD::isIntEqualitySetCC(CCL) &&
+      (CCL == CCR || CCL == ISD::getSetCCSwappedOperands(CCR)) &&
+      TLI.isOperationLegal(ISD::UMAX, OpVT) &&
       TLI.isOperationLegal(ISD::SMAX, OpVT) &&
       TLI.isOperationLegal(ISD::UMIN, OpVT) &&
       TLI.isOperationLegal(ISD::SMIN, OpVT)) {
-    SDValue CommonValue;
-    SDValue Operand1;
-    SDValue Operand2;
+    SDValue CommonValue, Operand1, Operand2;
     ISD::CondCode CC = ISD::SETCC_INVALID;
-    if (LHS->getOpcode() == ISD::SETCC && RHS->getOpcode() == ISD::SETCC &&
-        LHS->hasOneUse() && RHS->hasOneUse() &&
-        // The two comparisons should have either the same predicate or the
-        // predicate of one of the comparisons is the opposite of the other one.
-        (CCL == CCR || CCL == ISD::getSetCCSwappedOperands(CCR)) &&
-        // The optimization does not work for `==` or `!=` .
-        !ISD::isIntEqualitySetCC(CCL) && !ISD::isIntEqualitySetCC(CCR)) {
-      if (CCL == CCR) {
-        if (LHS0 == RHS0) {
-          CommonValue = LHS0;
-          Operand1 = LHS1;
-          Operand2 = RHS1;
-          CC = ISD::getSetCCSwappedOperands(CCL);
-        } else if (LHS1 == RHS1) {
-          CommonValue = LHS1;
-          Operand1 = LHS0;
-          Operand2 = RHS0;
-          CC = CCL;
-        }
-      } else if (CCL == ISD::getSetCCSwappedOperands(CCR)) {
-        if (LHS0 == RHS1) {
-          CommonValue = LHS0;
-          Operand1 = LHS1;
-          Operand2 = RHS0;
-          CC = ISD::getSetCCSwappedOperands(CCL);
-        } else if (RHS0 == LHS1) {
-          CommonValue = LHS1;
-          Operand1 = LHS0;
-          Operand2 = RHS1;
-          CC = CCL;
-        }
+    if (CCL == CCR) {
+      if (LHS0 == RHS0) {
+        CommonValue = LHS0;
+        Operand1 = LHS1;
+        Operand2 = RHS1;
+        CC = ISD::getSetCCSwappedOperands(CCL);
+      } else if (LHS1 == RHS1) {
+        CommonValue = LHS1;
+        Operand1 = LHS0;
+        Operand2 = RHS0;
+        CC = CCL;
       }
-
-      if (CC != ISD::SETCC_INVALID) {
-        unsigned NewOpcode;
-        bool IsSigned = isSignedIntSetCC(CC);
-        if (((CC == ISD::SETLE || CC == ISD::SETULE || CC == ISD::SETLT ||
-              CC == ISD::SETULT) &&
-             (LogicOp->getOpcode() == ISD::OR)) ||
-            ((CC == ISD::SETGE || CC == ISD::SETUGE || CC == ISD::SETGT ||
-              CC == ISD::SETUGT) &&
-             (LogicOp->getOpcode() == ISD::AND)))
-          NewOpcode = IsSigned ? ISD::SMIN : ISD::UMIN;
-        else
-          NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
-
-        SDValue MinMaxValue =
-            DAG.getNode(NewOpcode, DL, OpVT, Operand1, Operand2);
-        return DAG.getSetCC(DL, VT, MinMaxValue, CommonValue, CC);
+    } else {
+      assert(CCL == ISD::getSetCCSwappedOperands(CCR) && "Unexpected CC");
+      if (LHS0 == RHS1) {
+        CommonValue = LHS0;
+        Operand1 = LHS1;
+        Operand2 = RHS0;
+        CC = CCR;
+      } else if (RHS0 == LHS1) {
+        CommonValue = LHS1;
+        Operand1 = LHS0;
+        Operand2 = RHS1;
+        CC = CCL;
       }
+    }
+
+    if (CC != ISD::SETCC_INVALID) {
+      unsigned NewOpcode;
+      bool IsSigned = isSignedIntSetCC(CC);
+      bool IsLess = (CC == ISD::SETLE || CC == ISD::SETULE ||
+                     CC == ISD::SETLT || CC == ISD::SETULT);
+      bool IsOr = (LogicOp->getOpcode() == ISD::OR);
+      if (IsLess == IsOr)
+        NewOpcode = IsSigned ? ISD::SMIN : ISD::UMIN;
+      else
+        NewOpcode = IsSigned ? ISD::SMAX : ISD::UMAX;
+
+      SDValue MinMaxValue =
+          DAG.getNode(NewOpcode, DL, OpVT, Operand1, Operand2);
+      return DAG.getSetCC(DL, VT, MinMaxValue, CommonValue, CC);
     }
   }
 
@@ -6112,8 +6111,7 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
 
   if (CCL == CCR &&
       CCL == (LogicOp->getOpcode() == ISD::AND ? ISD::SETNE : ISD::SETEQ) &&
-      LHS0 == RHS0 && LHS1C && RHS1C && OpVT.isInteger() && LHS.hasOneUse() &&
-      RHS.hasOneUse()) {
+      LHS0 == RHS0 && LHS1C && RHS1C && OpVT.isInteger()) {
     const APInt &APLhs = LHS1C->getAPIntValue();
     const APInt &APRhs = RHS1C->getAPIntValue();
 
@@ -6190,6 +6188,11 @@ SDValue DAGCombiner::visitANDLike(SDValue N0, SDValue N1, SDNode *N) {
 
   if (SDValue V = foldLogicOfSetCCs(true, N0, N1, DL))
     return V;
+
+  // Canonicalize:
+  //   and(x, add) -> and(add, x)
+  if (N1.getOpcode() == ISD::ADD)
+    std::swap(N0, N1);
 
   // TODO: Rewrite this to return a new 'AND' instead of using CombineTo.
   if (N0.getOpcode() == ISD::ADD && N1.getOpcode() == ISD::SRL &&

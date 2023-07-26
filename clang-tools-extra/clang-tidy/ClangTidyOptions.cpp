@@ -157,14 +157,12 @@ static void mapChecks(IO &IO, std::optional<std::string> &Checks) {
 
 template <> struct MappingTraits<ClangTidyOptions> {
   static void mapping(IO &IO, ClangTidyOptions &Options) {
-    bool Ignored = false;
     mapChecks(IO, Options.Checks);
     IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
     IO.mapOptional("HeaderFileExtensions", Options.HeaderFileExtensions);
     IO.mapOptional("ImplementationFileExtensions",
                    Options.ImplementationFileExtensions);
     IO.mapOptional("HeaderFilterRegex", Options.HeaderFilterRegex);
-    IO.mapOptional("AnalyzeTemporaryDtors", Ignored); // deprecated
     IO.mapOptional("FormatStyle", Options.FormatStyle);
     IO.mapOptional("User", Options.User);
     IO.mapOptional("CheckOptions", Options.CheckOptions);

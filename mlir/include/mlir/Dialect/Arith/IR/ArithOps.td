@@ -285,6 +285,7 @@ def Arith_SubIOp : Arith_TotalIntBinaryOp<"subi"> {
 def Arith_MulIOp : Arith_TotalIntBinaryOp<"muli", [Commutative]> {
   let summary = "integer multiplication operation";
   let hasFolder = 1;
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

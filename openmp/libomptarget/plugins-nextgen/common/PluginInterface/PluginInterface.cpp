@@ -406,10 +406,11 @@ GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
   OmptInitialized.store(false);
   // Bind the callbacks to this device's member functions
 #define bindOmptCallback(Name, Type, Code)                                     \
-  if (ompt::lookupCallbackByCode)                                              \
+  if (ompt::Initialized && ompt::lookupCallbackByCode) {                       \
     ompt::lookupCallbackByCode((ompt_callbacks_t)(Code),                       \
                                ((ompt_callback_t *)&(Name##_fn)));             \
-  DP("OMPT: class bound %s=%p\n", #Name, ((void *)(uint64_t)Name##_fn));
+    DP("OMPT: class bound %s=%p\n", #Name, ((void *)(uint64_t)Name##_fn));     \
+  }
 
   FOREACH_OMPT_DEVICE_EVENT(bindOmptCallback);
 #undef bindOmptCallback
@@ -422,14 +423,16 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
     return Err;
 
 #ifdef OMPT_SUPPORT
-  bool ExpectedStatus = false;
-  if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
-    performOmptCallback(device_initialize,
-                        /* device_num */ DeviceId,
-                        /* type */ getComputeUnitKind().c_str(),
-                        /* device */ reinterpret_cast<ompt_device_t *>(this),
-                        /* lookup */ ompt::lookupCallbackByName,
-                        /* documentation */ nullptr);
+  if (ompt::Initialized) {
+    bool ExpectedStatus = false;
+    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, true))
+      performOmptCallback(device_initialize,
+                          /* device_num */ DeviceId,
+                          /* type */ getComputeUnitKind().c_str(),
+                          /* device */ reinterpret_cast<ompt_device_t *>(this),
+                          /* lookup */ ompt::lookupCallbackByName,
+                          /* documentation */ nullptr);
+  }
 #endif
 
   // Read and reinitialize the envars that depend on the device initialization.
@@ -488,9 +491,11 @@ Error GenericDeviceTy::deinit() {
       return Err;
 
 #ifdef OMPT_SUPPORT
-  bool ExpectedStatus = true;
-  if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
-    performOmptCallback(device_finalize, /* device_num */ DeviceId);
+  if (ompt::Initialized) {
+    bool ExpectedStatus = true;
+    if (OmptInitialized.compare_exchange_strong(ExpectedStatus, false))
+      performOmptCallback(device_finalize, /* device_num */ DeviceId);
+  }
 #endif
 
   return deinitImpl();
@@ -536,16 +541,19 @@ GenericDeviceTy::loadBinary(GenericPluginTy &Plugin,
     return std::move(Err);
 
 #ifdef OMPT_SUPPORT
-  size_t Bytes = getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
-  performOmptCallback(device_load,
-                      /* device_num */ DeviceId,
-                      /* FileName */ nullptr,
-                      /* File Offset */ 0,
-                      /* VmaInFile */ nullptr,
-                      /* ImgSize */ Bytes,
-                      /* HostAddr */ InputTgtImage->ImageStart,
-                      /* DeviceAddr */ nullptr,
-                      /* FIXME: ModuleId */ 0);
+  if (ompt::Initialized) {
+    size_t Bytes =
+        getPtrDiff(InputTgtImage->ImageEnd, InputTgtImage->ImageStart);
+    performOmptCallback(device_load,
+                        /* device_num */ DeviceId,
+                        /* FileName */ nullptr,
+                        /* File Offset */ 0,
+                        /* VmaInFile */ nullptr,
+                        /* ImgSize */ Bytes,
+                        /* HostAddr */ InputTgtImage->ImageStart,
+                        /* DeviceAddr */ nullptr,
+                        /* FIXME: ModuleId */ 0);
+  }
 #endif
 
   // Return the pointer to the table of entries.

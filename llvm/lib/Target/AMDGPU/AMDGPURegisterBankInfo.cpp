@@ -4514,6 +4514,16 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
       OpdsMapping[2] = AMDGPU::getValueMapping(MaskBank, MaskSize);
       break;
     }
+    case Intrinsic::amdgcn_wave_reduce_umin:
+    case Intrinsic::amdgcn_wave_reduce_umax: {
+      unsigned DstSize = MRI.getType(MI.getOperand(0).getReg()).getSizeInBits();
+      OpdsMapping[0] = AMDGPU::getValueMapping(AMDGPU::SGPRRegBankID, DstSize);
+      unsigned OpSize = MRI.getType(MI.getOperand(2).getReg()).getSizeInBits();
+      auto regBankID =
+          isSALUMapping(MI) ? AMDGPU::SGPRRegBankID : AMDGPU::VGPRRegBankID;
+      OpdsMapping[2] = AMDGPU::getValueMapping(regBankID, OpSize);
+      break;
+    }
     }
     break;
   }
