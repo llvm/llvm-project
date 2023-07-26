@@ -13,13 +13,21 @@ define void @test_trivial_subvector(<2 x i64> %val.0, <2 x i64> %val.1) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <4 x i64> [[TMP1]], i64 [[TMP2]], i64 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <2 x i64> [[VAL_1]], i64 0
 ; CHECK-NEXT:    [[TMP5:%.*]] = insertelement <4 x i64> [[TMP3]], i64 [[TMP4]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
-; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <2 x i64> [[TMP6]], i64 [[TMP4]], i64 1
-; CHECK-NEXT:    [[DUMMYUSER:%.*]] = freeze <2 x i64> [[TMP7]]
-; CHECK-NEXT:    [[TMP8:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i64 0
-; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <2 x i64> [[TMP8]], i64 undef, i64 1
-; CHECK-NEXT:    [[DUMMYUSER_1:%.*]] = freeze <2 x i64> [[TMP9]]
-; CHECK-NEXT:    [[DUMMYUSER_2:%.*]] = freeze <2 x i64> undef
+; CHECK-NEXT:    [[TMP6:%.*]] = extractelement <2 x i64> [[VAL_1]], i64 1
+; CHECK-NEXT:    [[TMP7:%.*]] = insertelement <4 x i64> [[TMP5]], i64 [[TMP6]], i64 2
+; CHECK-NEXT:    [[TMP8:%.*]] = extractelement <2 x i64> [[VAL_1]], i64 0
+; CHECK-NEXT:    [[TMP9:%.*]] = insertelement <4 x i64> [[TMP7]], i64 [[TMP8]], i64 2
+; CHECK-NEXT:    [[TMP10:%.*]] = extractelement <2 x i64> [[VAL_1]], i64 1
+; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <4 x i64> [[TMP9]], i64 [[TMP10]], i64 3
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i64> poison, i64 [[TMP0]], i64 0
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> [[TMP12]], i64 [[TMP4]], i64 1
+; CHECK-NEXT:    [[DUMMYUSER:%.*]] = freeze <2 x i64> [[TMP13]]
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> poison, i64 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP15:%.*]] = insertelement <2 x i64> [[TMP14]], i64 [[TMP8]], i64 1
+; CHECK-NEXT:    [[DUMMYUSER_1:%.*]] = freeze <2 x i64> [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i64> poison, i64 [[TMP8]], i64 0
+; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x i64> [[TMP16]], i64 [[TMP10]], i64 1
+; CHECK-NEXT:    [[DUMMYUSER_2:%.*]] = freeze <2 x i64> [[TMP17]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -58,17 +66,30 @@ define void @test_different_type_subvector(<4 x i32> %val.0, <8 x i16> %val.1, <
 ; CHECK-NEXT:    [[TMP8:%.*]] = bitcast <8 x i16> [[VAL_1]] to <2 x i64>
 ; CHECK-NEXT:    [[TMP9:%.*]] = extractelement <2 x i64> [[TMP8]], i64 0
 ; CHECK-NEXT:    [[TMP10:%.*]] = insertelement <4 x i64> [[TMP4]], i64 [[TMP9]], i64 1
-; CHECK-NEXT:    [[TMP11:%.*]] = insertelement <2 x i64> poison, i64 [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <2 x i64> [[TMP11]], i64 undef, i64 1
-; CHECK-NEXT:    [[TMP13:%.*]] = bitcast <2 x i64> [[TMP12]] to <8 x i16>
-; CHECK-NEXT:    [[DUMMYUSE_1:%.*]] = freeze <8 x i16> [[TMP13]]
-; CHECK-NEXT:    [[TMP14:%.*]] = bitcast <16 x i8> [[VAL_2]] to <2 x i64>
-; CHECK-NEXT:    [[DUMMYUSE_2:%.*]] = freeze <4 x i32> undef
-; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <128 x i1> [[VAL_3]] to <2 x i64>
-; CHECK-NEXT:    [[TMP16:%.*]] = insertelement <2 x i64> poison, i64 [[TMP9]], i64 0
-; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <2 x i64> [[TMP16]], i64 undef, i64 1
-; CHECK-NEXT:    [[TMP18:%.*]] = bitcast <2 x i64> [[TMP17]] to <128 x i1>
-; CHECK-NEXT:    [[DUMMYUSE_I1:%.*]] = freeze <128 x i1> [[TMP18]]
+; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <2 x i64> [[TMP8]], i64 1
+; CHECK-NEXT:    [[TMP12:%.*]] = insertelement <4 x i64> [[TMP10]], i64 [[TMP11]], i64 2
+; CHECK-NEXT:    [[TMP13:%.*]] = insertelement <2 x i64> poison, i64 [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP14:%.*]] = insertelement <2 x i64> [[TMP13]], i64 [[TMP11]], i64 1
+; CHECK-NEXT:    [[TMP15:%.*]] = bitcast <2 x i64> [[TMP14]] to <8 x i16>
+; CHECK-NEXT:    [[DUMMYUSE_1:%.*]] = freeze <8 x i16> [[TMP15]]
+; CHECK-NEXT:    [[TMP16:%.*]] = bitcast <16 x i8> [[VAL_2]] to <2 x i64>
+; CHECK-NEXT:    [[TMP17:%.*]] = extractelement <2 x i64> [[TMP16]], i64 0
+; CHECK-NEXT:    [[TMP18:%.*]] = insertelement <4 x i64> [[TMP12]], i64 [[TMP17]], i64 2
+; CHECK-NEXT:    [[TMP19:%.*]] = extractelement <2 x i64> [[TMP16]], i64 1
+; CHECK-NEXT:    [[TMP20:%.*]] = insertelement <4 x i64> [[TMP18]], i64 [[TMP19]], i64 3
+; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <2 x i64> poison, i64 [[TMP17]], i64 0
+; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <2 x i64> [[TMP21]], i64 [[TMP19]], i64 1
+; CHECK-NEXT:    [[TMP23:%.*]] = bitcast <2 x i64> [[TMP22]] to <4 x i32>
+; CHECK-NEXT:    [[DUMMYUSE_2:%.*]] = freeze <4 x i32> [[TMP23]]
+; CHECK-NEXT:    [[TMP24:%.*]] = bitcast <128 x i1> [[VAL_3]] to <2 x i64>
+; CHECK-NEXT:    [[TMP25:%.*]] = extractelement <2 x i64> [[TMP24]], i64 0
+; CHECK-NEXT:    [[TMP26:%.*]] = insertelement <4 x i64> [[TMP20]], i64 [[TMP25]], i64 2
+; CHECK-NEXT:    [[TMP27:%.*]] = extractelement <2 x i64> [[TMP24]], i64 1
+; CHECK-NEXT:    [[TMP28:%.*]] = insertelement <4 x i64> [[TMP26]], i64 [[TMP27]], i64 3
+; CHECK-NEXT:    [[TMP29:%.*]] = insertelement <2 x i64> poison, i64 [[TMP9]], i64 0
+; CHECK-NEXT:    [[TMP30:%.*]] = insertelement <2 x i64> [[TMP29]], i64 [[TMP25]], i64 1
+; CHECK-NEXT:    [[TMP31:%.*]] = bitcast <2 x i64> [[TMP30]] to <128 x i1>
+; CHECK-NEXT:    [[DUMMYUSE_I1:%.*]] = freeze <128 x i1> [[TMP31]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -310,6 +331,8 @@ define void @test_out_of_bounds_subvec(<2 x i64> %val) {
 ; CHECK-LABEL: define void @test_out_of_bounds_subvec
 ; CHECK-SAME: (<2 x i64> [[VAL:%.*]]) {
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <2 x i64> [[VAL]], i64 0
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i64> undef, i64 [[TMP0]], i64 3
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -351,9 +374,9 @@ define void @store_2xi32_into_double(double %foo) {
 ; CHECK-LABEL: define void @store_2xi32_into_double
 ; CHECK-SAME: (double [[FOO:%.*]]) {
 ; CHECK-NEXT:    [[DUMMYUSER0:%.*]] = freeze double 0x5F0000005E
-; CHECK-NEXT:    [[DUMMYUSER1:%.*]] = freeze double undef
-; CHECK-NEXT:    [[DUMMYUSER2:%.*]] = freeze double undef
-; CHECK-NEXT:    [[DUMMYUSER3:%.*]] = freeze double undef
+; CHECK-NEXT:    [[DUMMYUSER1:%.*]] = freeze double 0x6700000066
+; CHECK-NEXT:    [[DUMMYUSER2:%.*]] = freeze double 0x6900000068
+; CHECK-NEXT:    [[DUMMYUSER3:%.*]] = freeze double 0x6F0000006E
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [9 x double], align 8, addrspace(5)
