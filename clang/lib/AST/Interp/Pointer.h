@@ -77,6 +77,13 @@ public:
   /// Converts the pointer to an APValue.
   APValue toAPValue() const;
 
+  /// Converts the pointer to a string usable in diagnostics.
+  std::string toDiagnosticString(const ASTContext &Ctx) const;
+
+  unsigned getIntegerRepresentation() const {
+    return reinterpret_cast<uintptr_t>(Pointee) + Offset;
+  }
+
   /// Offsets a pointer inside an array.
   Pointer atIndex(unsigned Idx) const {
     if (Base == RootPtrMark)

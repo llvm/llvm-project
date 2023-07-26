@@ -565,6 +565,12 @@ def CastFloatingIntegral : Opcode {
   let HasGroup = 1;
 }
 
+def CastPointerIntegral : Opcode {
+  let Types = [AluTypeClass];
+  let Args = [];
+  let HasGroup = 1;
+}
+
 //===----------------------------------------------------------------------===//
 // Comparison opcodes.
 //===----------------------------------------------------------------------===//

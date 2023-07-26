@@ -462,6 +462,17 @@ bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This) {
   return CheckArrayInitialized(S, OpPC, This, CAT);
 }
 
+bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
+                                   const Pointer &Ptr) {
+  if (!S.inConstantContext())
+    return true;
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus;
+  return false;
+}
+
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {
   // In a constant context, assume that any dynamic rounding mode or FP
   // exception state matches the default floating-point environment.

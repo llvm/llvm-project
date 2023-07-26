@@ -127,6 +127,15 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
       return true;
     return this->emitNull(classifyPrim(CE->getType()), CE);
 
+  case CK_PointerToIntegral: {
+    // TODO: Discard handling.
+    if (!this->visit(SubExpr))
+      return false;
+
+    PrimType T = classifyPrim(CE->getType());
+    return this->emitCastPointerIntegral(T, CE);
+  }
+
   case CK_ArrayToPointerDecay:
   case CK_AtomicToNonAtomic:
   case CK_ConstructorConversion:
