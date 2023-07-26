@@ -24,6 +24,9 @@ namespace dataflow {
 
 class NoopAnalysis : public DataflowAnalysis<NoopAnalysis, NoopLattice> {
 public:
+  NoopAnalysis(ASTContext &Context)
+      : DataflowAnalysis<NoopAnalysis, NoopLattice>(Context) {}
+
   /// Deprecated. Use the `DataflowAnalysisOptions` constructor instead.
   NoopAnalysis(ASTContext &Context, bool ApplyBuiltinTransfer)
       : DataflowAnalysis<NoopAnalysis, NoopLattice>(Context,
