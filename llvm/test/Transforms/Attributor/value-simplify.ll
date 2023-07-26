@@ -1310,21 +1310,21 @@ define i32 @test_speculatable_expr() norecurse {
 ; TUNIT-LABEL: define {{[^@]+}}@test_speculatable_expr
 ; TUNIT-SAME: () #[[ATTR7:[0-9]+]] {
 ; TUNIT-NEXT:    [[STACK:%.*]] = alloca i32, align 4
-; TUNIT-NEXT:    [[SPEC_RESULT:%.*]] = call i32 @speculatable()
+; TUNIT-NEXT:    [[SPEC_RESULT:%.*]] = call i32 @speculatable() #[[ATTR14:[0-9]+]]
 ; TUNIT-NEXT:    [[PLUS1:%.*]] = add i32 [[SPEC_RESULT]], 1
 ; TUNIT-NEXT:    store i32 [[PLUS1]], ptr [[STACK]], align 4
 ; TUNIT-NEXT:    [[TMP1:%.*]] = load i32, ptr [[STACK]], align 4
-; TUNIT-NEXT:    [[RSPEC:%.*]] = call i32 @ret_speculatable_expr(i32 [[TMP1]]) #[[ATTR14:[0-9]+]]
+; TUNIT-NEXT:    [[RSPEC:%.*]] = call i32 @ret_speculatable_expr(i32 [[TMP1]]) #[[ATTR15:[0-9]+]]
 ; TUNIT-NEXT:    ret i32 [[RSPEC]]
 ;
 ; CGSCC: Function Attrs: norecurse nosync memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@test_speculatable_expr
 ; CGSCC-SAME: () #[[ATTR9:[0-9]+]] {
 ; CGSCC-NEXT:    [[STACK:%.*]] = alloca i32, align 4
-; CGSCC-NEXT:    [[SPEC_RESULT:%.*]] = call i32 @speculatable()
+; CGSCC-NEXT:    [[SPEC_RESULT:%.*]] = call i32 @speculatable() #[[ATTR17:[0-9]+]]
 ; CGSCC-NEXT:    [[PLUS1:%.*]] = add i32 [[SPEC_RESULT]], 1
 ; CGSCC-NEXT:    store i32 [[PLUS1]], ptr [[STACK]], align 4
-; CGSCC-NEXT:    [[RSPEC:%.*]] = call i32 @ret_speculatable_expr(i32 [[PLUS1]]) #[[ATTR17:[0-9]+]]
+; CGSCC-NEXT:    [[RSPEC:%.*]] = call i32 @ret_speculatable_expr(i32 [[PLUS1]]) #[[ATTR17]]
 ; CGSCC-NEXT:    ret i32 [[RSPEC]]
 ;
   %stack = alloca i32
@@ -1513,7 +1513,8 @@ define i1 @constexpr_icmp2() {
 ; TUNIT: attributes #[[ATTR11]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR12]] = { nofree willreturn memory(readwrite) }
 ; TUNIT: attributes #[[ATTR13]] = { nofree nosync nounwind willreturn }
-; TUNIT: attributes #[[ATTR14]] = { nosync nounwind memory(read) }
+; TUNIT: attributes #[[ATTR14]] = { nosync }
+; TUNIT: attributes #[[ATTR15]] = { nosync nounwind memory(read) }
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }

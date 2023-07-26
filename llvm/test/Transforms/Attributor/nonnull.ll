@@ -1390,7 +1390,7 @@ declare ptr @strrchr(ptr %0, i32 %1) nofree nounwind readonly willreturn
 
 ; We should not mark the return of @strrchr as `nonnull`, it may well be NULL!
 define ptr @mybasename(ptr nofree readonly %str) {
-; TUNIT: Function Attrs: mustprogress nofree nounwind willreturn memory(read)
+; TUNIT: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(read)
 ; TUNIT-LABEL: define {{[^@]+}}@mybasename
 ; TUNIT-SAME: (ptr nofree readonly [[STR:%.*]]) #[[ATTR14:[0-9]+]] {
 ; TUNIT-NEXT:    [[CALL:%.*]] = call ptr @strrchr(ptr nofree readonly [[STR]], i32 noundef 47) #[[ATTR18:[0-9]+]]
@@ -1399,7 +1399,7 @@ define ptr @mybasename(ptr nofree readonly %str) {
 ; TUNIT-NEXT:    [[COND:%.*]] = select i1 [[TOBOOL]], ptr [[ADD_PTR]], ptr [[STR]]
 ; TUNIT-NEXT:    ret ptr [[COND]]
 ;
-; CGSCC: Function Attrs: mustprogress nofree nounwind willreturn memory(read)
+; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(read)
 ; CGSCC-LABEL: define {{[^@]+}}@mybasename
 ; CGSCC-SAME: (ptr nofree readonly [[STR:%.*]]) #[[ATTR14:[0-9]+]] {
 ; CGSCC-NEXT:    [[CALL:%.*]] = call ptr @strrchr(ptr nofree readonly [[STR]], i32 noundef 47) #[[ATTR19:[0-9]+]]
@@ -1542,11 +1542,11 @@ attributes #1 = { nounwind willreturn}
 ; TUNIT: attributes #[[ATTR11]] = { naked }
 ; TUNIT: attributes #[[ATTR12]] = { noinline optnone }
 ; TUNIT: attributes #[[ATTR13:[0-9]+]] = { nofree nounwind willreturn memory(read) }
-; TUNIT: attributes #[[ATTR14]] = { mustprogress nofree nounwind willreturn memory(read) }
+; TUNIT: attributes #[[ATTR14]] = { mustprogress nofree nosync nounwind willreturn memory(read) }
 ; TUNIT: attributes #[[ATTR15]] = { nofree willreturn }
 ; TUNIT: attributes #[[ATTR16]] = { nofree nosync nounwind memory(read) }
-; TUNIT: attributes #[[ATTR17]] = { willreturn memory(read) }
-; TUNIT: attributes #[[ATTR18]] = { nofree willreturn memory(read) }
+; TUNIT: attributes #[[ATTR17]] = { nosync willreturn memory(read) }
+; TUNIT: attributes #[[ATTR18]] = { nofree nosync willreturn memory(read) }
 ;.
 ; CGSCC: attributes #[[ATTR0:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
@@ -1562,10 +1562,10 @@ attributes #1 = { nounwind willreturn}
 ; CGSCC: attributes #[[ATTR11]] = { naked }
 ; CGSCC: attributes #[[ATTR12]] = { noinline optnone }
 ; CGSCC: attributes #[[ATTR13:[0-9]+]] = { nofree nounwind willreturn memory(read) }
-; CGSCC: attributes #[[ATTR14]] = { mustprogress nofree nounwind willreturn memory(read) }
+; CGSCC: attributes #[[ATTR14]] = { mustprogress nofree nosync nounwind willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR15]] = { nofree willreturn }
 ; CGSCC: attributes #[[ATTR16]] = { nofree nosync nounwind memory(read) }
-; CGSCC: attributes #[[ATTR17]] = { willreturn memory(read) }
+; CGSCC: attributes #[[ATTR17]] = { nosync willreturn memory(read) }
 ; CGSCC: attributes #[[ATTR18]] = { nofree nosync willreturn }
-; CGSCC: attributes #[[ATTR19]] = { nofree willreturn memory(read) }
+; CGSCC: attributes #[[ATTR19]] = { nofree nosync willreturn memory(read) }
 ;.
