@@ -199,8 +199,11 @@ protected:
 // 15.3.2.2
 struct DummyDataObject {
   ENUM_CLASS(Attr, Optional, Allocatable, Asynchronous, Contiguous, Value,
-      Volatile, Pointer, Target)
+      Volatile, Pointer, Target, DeducedFromActual)
   using Attrs = common::EnumSet<Attr, Attr_enumSize>;
+  static bool IdenticalSignificantAttrs(const Attrs &x, const Attrs &y) {
+    return (x - Attr::DeducedFromActual) == (y - Attr::DeducedFromActual);
+  }
   DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(DummyDataObject)
   explicit DummyDataObject(const TypeAndShape &t) : type{t} {}
   explicit DummyDataObject(TypeAndShape &&t) : type{std::move(t)} {}
@@ -215,6 +218,7 @@ struct DummyDataObject {
       const semantics::Symbol &, FoldingContext &);
   bool CanBePassedViaImplicitInterface() const;
   llvm::raw_ostream &Dump(llvm::raw_ostream &) const;
+
   TypeAndShape type;
   std::vector<Expr<SubscriptInteger>> coshape;
   common::Intent intent{common::Intent::Default};
