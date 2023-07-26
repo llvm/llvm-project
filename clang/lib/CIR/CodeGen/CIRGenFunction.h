@@ -120,10 +120,19 @@ public:
   public:
     unsigned Depth = 0;
     bool HasReturn = false;
-    LexicalScopeContext(mlir::Location b, mlir::Location e, mlir::Block *eb)
-        : EntryBlock(eb), BeginLoc(b), EndLoc(e) {
+
+    LexicalScopeContext(mlir::Location loc, mlir::Block *eb)
+        : EntryBlock(eb), BeginLoc(loc), EndLoc(loc) {
+      // Has multiple locations: overwrite with separate start and end locs.
+      if (const auto fusedLoc = loc.dyn_cast<mlir::FusedLoc>()) {
+        assert(fusedLoc.getLocations().size() == 2 && "too many locations");
+        BeginLoc = fusedLoc.getLocations()[0];
+        EndLoc = fusedLoc.getLocations()[1];
+      }
+
       assert(EntryBlock && "expected valid block");
     }
+
     ~LexicalScopeContext() = default;
 
     // ---
