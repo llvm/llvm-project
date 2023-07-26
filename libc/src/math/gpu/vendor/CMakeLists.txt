@@ -30,6 +30,304 @@ endif()
 list(APPEND bitcode_link_flags "-Wno-linker-warnings")
 
 add_entrypoint_object(
+  acosf
+  SRCS
+    acosf.cpp
+  HDRS
+    ../../acosf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  acoshf
+  SRCS
+    acoshf.cpp
+  HDRS
+    ../../acoshf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  asinf
+  SRCS
+    asinf.cpp
+  HDRS
+    ../../asinf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  asinhf
+  SRCS
+    asinhf.cpp
+  HDRS
+    ../../asinhf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  atanf
+  SRCS
+    atanf.cpp
+  HDRS
+    ../../atanf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  atanhf
+  SRCS
+    atanhf.cpp
+  HDRS
+    ../../atanhf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  cos
+  SRCS
+    cos.cpp
+  HDRS
+    ../../cos.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  cosf
+  SRCS
+    cosf.cpp
+  HDRS
+    ../../cosf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  cosh
+  SRCS
+    cosh.cpp
+  HDRS
+    ../../cosh.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  coshf
+  SRCS
+    coshf.cpp
+  HDRS
+    ../../coshf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  exp10f
+  SRCS
+    exp10f.cpp
+  HDRS
+    ../../exp10f.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  exp2f
+  SRCS
+    exp2f.cpp
+  HDRS
+    ../../exp2f.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  expf
+  SRCS
+    expf.cpp
+  HDRS
+    ../../expf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  expm1f
+  SRCS
+    expm1f.cpp
+  HDRS
+    ../../expm1f.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  fdim
+  SRCS
+    fdim.cpp
+  HDRS
+    ../../fdim.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  fdimf
+  SRCS
+    fdimf.cpp
+  HDRS
+    ../../fdimf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  hypot
+  SRCS
+    hypot.cpp
+  HDRS
+    ../../hypot.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  hypotf
+  SRCS
+    hypotf.cpp
+  HDRS
+    ../../hypotf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  ilogb
+  SRCS
+    ilogb.cpp
+  HDRS
+    ../../ilogb.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  ilogbf
+  SRCS
+    ilogbf.cpp
+  HDRS
+    ../../ilogbf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  ldexp
+  SRCS
+    ldexp.cpp
+  HDRS
+    ../../ldexp.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  ldexpf
+  SRCS
+    ldexpf.cpp
+  HDRS
+    ../../ldexpf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  llrint
+  SRCS
+    llrint.cpp
+  HDRS
+    ../../llrint.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  llrintf
+  SRCS
+    llrintf.cpp
+  HDRS
+    ../../llrintf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  llround
+  SRCS
+    llround.cpp
+  HDRS
+    ../../llround.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  llroundf
+  SRCS
+    llroundf.cpp
+  HDRS
+    ../../llroundf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  pow
+  SRCS
+    pow.cpp
+  HDRS
+    ../../pow.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
+  powf
+  SRCS
+    powf.cpp
+  HDRS
+    ../../powf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_entrypoint_object(
   sin
   SRCS
     sin.cpp
