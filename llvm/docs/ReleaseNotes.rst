@@ -133,6 +133,7 @@ Changes to LLDB
 
 Changes to Sanitizers
 ---------------------
+* HWASan now defaults to detecting use-after-scope bugs.
 
 Other Changes
 -------------
