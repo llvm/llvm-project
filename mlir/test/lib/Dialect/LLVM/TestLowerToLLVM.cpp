@@ -14,7 +14,6 @@
 #include "mlir/Conversion/AffineToStandard/AffineToStandard.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVMPass.h"
 #include "mlir/Conversion/IndexToLLVM/IndexToLLVM.h"
-#include "mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h"
 #include "mlir/Conversion/MathToLLVM/MathToLLVM.h"
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 #include "mlir/Conversion/ReconcileUnrealizedCasts/ReconcileUnrealizedCasts.h"
@@ -65,8 +64,6 @@ void buildTestLowerToLLVM(OpPassManager &pm,
   // Sprinkle some cleanups.
   pm.addPass(createCanonicalizerPass());
   pm.addPass(createCSEPass());
-  // Blanket-convert any remaining linalg ops to LLVM if any remain.
-  pm.addPass(createConvertLinalgToLLVMPass());
   // Convert vector to LLVM (always needed).
   pm.addPass(createConvertVectorToLLVMPass(
       // TODO: add more options on a per-need basis.
