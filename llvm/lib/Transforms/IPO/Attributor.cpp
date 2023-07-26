@@ -1979,8 +1979,8 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
   const IRPosition &QueryIRP = IRPosition::function(*Fn);
   const auto *LivenessAA =
       CheckPotentiallyDead && QueryingAA
-          ? nullptr
-          : (getAAFor<AAIsDead>(*QueryingAA, QueryIRP, DepClassTy::NONE));
+          ? (getAAFor<AAIsDead>(*QueryingAA, QueryIRP, DepClassTy::NONE))
+          : nullptr;
 
   auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(*Fn);
   if (!checkForAllInstructionsImpl(this, OpcodeInstMap, Pred, QueryingAA,
