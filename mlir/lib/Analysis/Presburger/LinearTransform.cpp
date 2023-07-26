@@ -65,3 +65,23 @@ IntegerRelation LinearTransform::applyTo(const IntegerRelation &rel) const {
 
   return result;
 }
+
+MPInt LinearTransform::determinant()
+{
+    // Convert to column echelon form. Now `colEchelon` is lower triangular.
+    Matrix m = this->matrix;
+    LinearTransform colEchelon = makeTransformToColumnEchelon(m).second;
+    MPInt determinant(1);
+    for (unsigned i = 0; i < m.getNumColumns(); i++)
+    {
+        // Construct a one-hot vector for i.
+        SmallVector<MPInt, 8U> pickColumnVec(m.getNumRows(), MPInt(0));
+        pickColumnVec[i] = 1;
+        // Select column i by post-multiplying.
+        SmallVector<MPInt, 8> iThColumn = colEchelon.postMultiplyWithColumn(ArrayRef(pickColumnVec));
+        // Get ith element of column i.
+        determinant *= iThColumn[i];
+    }
+
+    return determinant;
+}
