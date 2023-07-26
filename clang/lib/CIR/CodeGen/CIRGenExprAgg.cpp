@@ -404,17 +404,8 @@ void AggExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
   [[maybe_unused]] auto scope = builder.create<mlir::cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        SmallVector<mlir::Location, 2> locs;
-        if (loc.isa<mlir::FileLineColLoc>()) {
-          locs.push_back(loc);
-          locs.push_back(loc);
-        } else if (loc.isa<mlir::FusedLoc>()) {
-          auto fusedLoc = loc.cast<mlir::FusedLoc>();
-          locs.push_back(fusedLoc.getLocations()[0]);
-          locs.push_back(fusedLoc.getLocations()[1]);
-        }
         CIRGenFunction::LexicalScopeContext lexScope{
-            locs[0], locs[1], builder.getInsertionBlock()};
+            loc, builder.getInsertionBlock()};
         CIRGenFunction::LexicalScopeGuard lexScopeGuard{CGF, &lexScope};
         Visit(E->getSubExpr());
       });

@@ -507,7 +507,9 @@ CIRGenFunction::generateCode(clang::GlobalDecl GD, mlir::cir::FuncOp Fn,
     mlir::Block *EntryBB = Fn.addEntryBlock();
     builder.setInsertionPointToStart(EntryBB);
 
-    LexicalScopeContext lexScope{FnBeginLoc, FnEndLoc, EntryBB};
+    const auto fusedLoc =
+        mlir::FusedLoc::get(builder.getContext(), {FnBeginLoc, FnEndLoc});
+    LexicalScopeContext lexScope{fusedLoc, EntryBB};
     LexicalScopeGuard scopeGuard{*this, &lexScope};
 
     // Emit the standard function prologue.

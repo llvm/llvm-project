@@ -1821,17 +1821,8 @@ mlir::Value ScalarExprEmitter::VisitExprWithCleanups(ExprWithCleanups *E) {
   auto scope = builder.create<mlir::cir::ScopeOp>(
       scopeLoc, /*scopeBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Type &yieldTy, mlir::Location loc) {
-        SmallVector<mlir::Location, 2> locs;
-        if (loc.isa<mlir::FileLineColLoc>()) {
-          locs.push_back(loc);
-          locs.push_back(loc);
-        } else if (loc.isa<mlir::FusedLoc>()) {
-          auto fusedLoc = loc.cast<mlir::FusedLoc>();
-          locs.push_back(fusedLoc.getLocations()[0]);
-          locs.push_back(fusedLoc.getLocations()[1]);
-        }
         CIRGenFunction::LexicalScopeContext lexScope{
-            locs[0], locs[1], builder.getInsertionBlock()};
+            loc, builder.getInsertionBlock()};
         CIRGenFunction::LexicalScopeGuard lexScopeGuard{CGF, &lexScope};
         auto scopeYieldVal = Visit(E->getSubExpr());
         if (scopeYieldVal) {
@@ -2024,17 +2015,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
   return builder.create<mlir::cir::TernaryOp>(
       loc, condV, /*trueBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        // FIXME: abstract all this massive location handling elsewhere.
-        SmallVector<mlir::Location, 2> locs;
-        if (loc.isa<mlir::FileLineColLoc>()) {
-          locs.push_back(loc);
-          locs.push_back(loc);
-        } else if (loc.isa<mlir::FusedLoc>()) {
-          auto fusedLoc = loc.cast<mlir::FusedLoc>();
-          locs.push_back(fusedLoc.getLocations()[0]);
-          locs.push_back(fusedLoc.getLocations()[1]);
-        }
-        CIRGenFunction::LexicalScopeContext lexScope{locs[0], locs[1],
+        CIRGenFunction::LexicalScopeContext lexScope{loc,
                                                      b.getInsertionBlock()};
         CIRGenFunction::LexicalScopeGuard lexThenGuard{CGF, &lexScope};
         CGF.currLexScope->setAsTernary();
@@ -2055,10 +2036,7 @@ mlir::Value ScalarExprEmitter::VisitAbstractConditionalOperator(
       },
       /*falseBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto fusedLoc = loc.cast<mlir::FusedLoc>();
-        auto locBegin = fusedLoc.getLocations()[0];
-        auto locEnd = fusedLoc.getLocations()[1];
-        CIRGenFunction::LexicalScopeContext lexScope{locBegin, locEnd,
+        CIRGenFunction::LexicalScopeContext lexScope{loc,
                                                      b.getInsertionBlock()};
         CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
         CGF.currLexScope->setAsTernary();
@@ -2122,7 +2100,7 @@ mlir::Value ScalarExprEmitter::VisitBinLAnd(const clang::BinaryOperator *E) {
   auto ResOp = Builder.create<mlir::cir::TernaryOp>(
       Loc, LHSCondV, /*trueBuilder=*/
       [&](mlir::OpBuilder &B, mlir::Location Loc) {
-        CIRGenFunction::LexicalScopeContext LexScope{Loc, Loc,
+        CIRGenFunction::LexicalScopeContext LexScope{Loc,
                                                      B.getInsertionBlock()};
         CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &LexScope};
         CGF.currLexScope->setAsTernary();
@@ -2130,17 +2108,8 @@ mlir::Value ScalarExprEmitter::VisitBinLAnd(const clang::BinaryOperator *E) {
         auto res = B.create<mlir::cir::TernaryOp>(
             Loc, RHSCondV, /*trueBuilder*/
             [&](mlir::OpBuilder &B, mlir::Location Loc) {
-              SmallVector<mlir::Location, 2> Locs;
-              if (Loc.isa<mlir::FileLineColLoc>()) {
-                Locs.push_back(Loc);
-                Locs.push_back(Loc);
-              } else if (Loc.isa<mlir::FusedLoc>()) {
-                auto fusedLoc = Loc.cast<mlir::FusedLoc>();
-                Locs.push_back(fusedLoc.getLocations()[0]);
-                Locs.push_back(fusedLoc.getLocations()[1]);
-              }
               CIRGenFunction::LexicalScopeContext lexScope{
-                  Locs[0], Locs[1], B.getInsertionBlock()};
+                  Loc, B.getInsertionBlock()};
               CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
               CGF.currLexScope->setAsTernary();
               auto res = B.create<mlir::cir::ConstantOp>(
@@ -2151,17 +2120,8 @@ mlir::Value ScalarExprEmitter::VisitBinLAnd(const clang::BinaryOperator *E) {
             },
             /*falseBuilder*/
             [&](mlir::OpBuilder &b, mlir::Location Loc) {
-              SmallVector<mlir::Location, 2> Locs;
-              if (Loc.isa<mlir::FileLineColLoc>()) {
-                Locs.push_back(Loc);
-                Locs.push_back(Loc);
-              } else if (Loc.isa<mlir::FusedLoc>()) {
-                auto fusedLoc = Loc.cast<mlir::FusedLoc>();
-                Locs.push_back(fusedLoc.getLocations()[0]);
-                Locs.push_back(fusedLoc.getLocations()[1]);
-              }
               CIRGenFunction::LexicalScopeContext lexScope{
-                  Locs[0], Locs[1], b.getInsertionBlock()};
+                  Loc, b.getInsertionBlock()};
               CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
               CGF.currLexScope->setAsTernary();
               auto res = b.create<mlir::cir::ConstantOp>(
@@ -2174,16 +2134,7 @@ mlir::Value ScalarExprEmitter::VisitBinLAnd(const clang::BinaryOperator *E) {
       },
       /*falseBuilder*/
       [&](mlir::OpBuilder &B, mlir::Location Loc) {
-        SmallVector<mlir::Location, 2> Locs;
-        if (Loc.isa<mlir::FileLineColLoc>()) {
-          Locs.push_back(Loc);
-          Locs.push_back(Loc);
-        } else if (Loc.isa<mlir::FusedLoc>()) {
-          auto fusedLoc = Loc.cast<mlir::FusedLoc>();
-          Locs.push_back(fusedLoc.getLocations()[0]);
-          Locs.push_back(fusedLoc.getLocations()[1]);
-        }
-        CIRGenFunction::LexicalScopeContext lexScope{Loc, Loc,
+        CIRGenFunction::LexicalScopeContext lexScope{Loc,
                                                      B.getInsertionBlock()};
         CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
         CGF.currLexScope->setAsTernary();
@@ -2229,16 +2180,7 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
   auto ResOp = Builder.create<mlir::cir::TernaryOp>(
       Loc, LHSCondV, /*trueBuilder=*/
       [&](mlir::OpBuilder &B, mlir::Location Loc) {
-        SmallVector<mlir::Location, 2> Locs;
-        if (Loc.isa<mlir::FileLineColLoc>()) {
-          Locs.push_back(Loc);
-          Locs.push_back(Loc);
-        } else if (Loc.isa<mlir::FusedLoc>()) {
-          auto fusedLoc = Loc.cast<mlir::FusedLoc>();
-          Locs.push_back(fusedLoc.getLocations()[0]);
-          Locs.push_back(fusedLoc.getLocations()[1]);
-        }
-        CIRGenFunction::LexicalScopeContext lexScope{Loc, Loc,
+        CIRGenFunction::LexicalScopeContext lexScope{Loc,
                                                      B.getInsertionBlock()};
         CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
         CGF.currLexScope->setAsTernary();
@@ -2249,7 +2191,7 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
       },
       /*falseBuilder*/
       [&](mlir::OpBuilder &B, mlir::Location Loc) {
-        CIRGenFunction::LexicalScopeContext LexScope{Loc, Loc,
+        CIRGenFunction::LexicalScopeContext LexScope{Loc,
                                                      B.getInsertionBlock()};
         CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &LexScope};
         CGF.currLexScope->setAsTernary();
@@ -2267,7 +2209,7 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
                 Locs.push_back(fusedLoc.getLocations()[1]);
               }
               CIRGenFunction::LexicalScopeContext lexScope{
-                  Loc, Loc, B.getInsertionBlock()};
+                  Loc, B.getInsertionBlock()};
               CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
               CGF.currLexScope->setAsTernary();
               auto res = B.create<mlir::cir::ConstantOp>(
@@ -2288,7 +2230,7 @@ mlir::Value ScalarExprEmitter::VisitBinLOr(const clang::BinaryOperator *E) {
                 Locs.push_back(fusedLoc.getLocations()[1]);
               }
               CIRGenFunction::LexicalScopeContext lexScope{
-                  Loc, Loc, B.getInsertionBlock()};
+                  Loc, B.getInsertionBlock()};
               CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
               CGF.currLexScope->setAsTernary();
               auto res = b.create<mlir::cir::ConstantOp>(

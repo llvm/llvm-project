@@ -1834,18 +1834,8 @@ CIRGenFunction::buildConditionalBlocks(const AbstractConditionalOperator *E,
           .create<mlir::cir::TernaryOp>(
               loc, condV, /*trueBuilder=*/
               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                // FIXME: abstract all this massive location handling elsewhere.
-                SmallVector<mlir::Location, 2> locs;
-                if (loc.isa<mlir::FileLineColLoc>()) {
-                  locs.push_back(loc);
-                  locs.push_back(loc);
-                } else if (loc.isa<mlir::FusedLoc>()) {
-                  auto fusedLoc = loc.cast<mlir::FusedLoc>();
-                  locs.push_back(fusedLoc.getLocations()[0]);
-                  locs.push_back(fusedLoc.getLocations()[1]);
-                }
                 CIRGenFunction::LexicalScopeContext lexScope{
-                    locs[0], locs[1], b.getInsertionBlock()};
+                    loc, b.getInsertionBlock()};
                 CIRGenFunction::LexicalScopeGuard lexThenGuard{CGF, &lexScope};
                 CGF.currLexScope->setAsTernary();
 
@@ -1866,11 +1856,8 @@ CIRGenFunction::buildConditionalBlocks(const AbstractConditionalOperator *E,
               },
               /*falseBuilder=*/
               [&](mlir::OpBuilder &b, mlir::Location loc) {
-                auto fusedLoc = loc.cast<mlir::FusedLoc>();
-                auto locBegin = fusedLoc.getLocations()[0];
-                auto locEnd = fusedLoc.getLocations()[1];
                 CIRGenFunction::LexicalScopeContext lexScope{
-                    locBegin, locEnd, b.getInsertionBlock()};
+                    loc, b.getInsertionBlock()};
                 CIRGenFunction::LexicalScopeGuard lexElseGuard{CGF, &lexScope};
                 CGF.currLexScope->setAsTernary();
 
@@ -1967,17 +1954,8 @@ LValue CIRGenFunction::buildLValue(const Expr *E) {
     [[maybe_unused]] auto scope = builder.create<mlir::cir::ScopeOp>(
         scopeLoc, /*scopeBuilder=*/
         [&](mlir::OpBuilder &b, mlir::Location loc) {
-          SmallVector<mlir::Location, 2> locs;
-          if (loc.isa<mlir::FileLineColLoc>()) {
-            locs.push_back(loc);
-            locs.push_back(loc);
-          } else if (loc.isa<mlir::FusedLoc>()) {
-            auto fusedLoc = loc.cast<mlir::FusedLoc>();
-            locs.push_back(fusedLoc.getLocations()[0]);
-            locs.push_back(fusedLoc.getLocations()[1]);
-          }
           CIRGenFunction::LexicalScopeContext lexScope{
-              locs[0], locs[1], builder.getInsertionBlock()};
+              loc, builder.getInsertionBlock()};
           CIRGenFunction::LexicalScopeGuard lexScopeGuard{*this, &lexScope};
 
           LV = buildLValue(cleanups->getSubExpr());
@@ -2072,28 +2050,23 @@ mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
       loc, condV, elseS,
       /*thenBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        // FIXME: abstract all this massive location handling elsewhere.
-        SmallVector<mlir::Location, 2> locs;
-        if (loc.isa<mlir::FileLineColLoc>()) {
-          locs.push_back(loc);
-          locs.push_back(loc);
-        } else if (loc.isa<mlir::FusedLoc>()) {
-          auto fusedLoc = loc.cast<mlir::FusedLoc>();
-          locs.push_back(fusedLoc.getLocations()[0]);
-          locs.push_back(fusedLoc.getLocations()[1]);
+        if (const auto fusedLoc = loc.dyn_cast<mlir::FusedLoc>()) {
+          loc = mlir::FusedLoc::get(
+              builder.getContext(),
+              {fusedLoc.getLocations()[0], fusedLoc.getLocations()[1]});
         }
-        LexicalScopeContext lexScope{locs[0], locs[1],
-                                     builder.getInsertionBlock()};
+        LexicalScopeContext lexScope{loc, builder.getInsertionBlock()};
         LexicalScopeGuard lexThenGuard{*this, &lexScope};
         resThen = buildStmt(thenS, /*useCurrentScope=*/true);
       },
       /*elseBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
-        auto fusedLoc = loc.cast<mlir::FusedLoc>();
-        auto locBegin = fusedLoc.getLocations()[2];
-        auto locEnd = fusedLoc.getLocations()[3];
-        LexicalScopeContext lexScope{locBegin, locEnd,
-                                     builder.getInsertionBlock()};
+        if (const auto fusedLoc = loc.dyn_cast<mlir::FusedLoc>()) {
+          loc = mlir::FusedLoc::get(
+              builder.getContext(),
+              {fusedLoc.getLocations()[2], fusedLoc.getLocations()[3]});
+        }
+        LexicalScopeContext lexScope{loc, builder.getInsertionBlock()};
         LexicalScopeGuard lexElseGuard{*this, &lexScope};
         resElse = buildStmt(elseS, /*useCurrentScope=*/true);
       });
