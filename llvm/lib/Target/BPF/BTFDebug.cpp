@@ -17,6 +17,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCObjectFileInfo.h"
 #include "llvm/MC/MCSectionELF.h"
@@ -1318,14 +1319,18 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   if (MI->isInlineAsm()) {
     // Count the number of register definitions to find the asm string.
     unsigned NumDefs = 0;
-    for (; MI->getOperand(NumDefs).isReg() && MI->getOperand(NumDefs).isDef();
-         ++NumDefs)
-      ;
-
-    // Skip this inline asm instruction if the asmstr is empty.
-    const char *AsmStr = MI->getOperand(NumDefs).getSymbolName();
-    if (AsmStr[0] == 0)
-      return;
+    while (true) {
+      const MachineOperand &MO = MI->getOperand(NumDefs);
+      if (MO.isReg() && MO.isDef()) {
+        ++NumDefs;
+        continue;
+      }
+      // Skip this inline asm instruction if the asmstr is empty.
+      const char *AsmStr = MO.getSymbolName();
+      if (AsmStr[0] == 0)
+        return;
+      break;
+    }
   }
 
   if (MI->getOpcode() == BPF::LD_imm64) {
