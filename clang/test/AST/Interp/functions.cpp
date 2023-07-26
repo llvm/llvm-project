@@ -257,3 +257,11 @@ namespace InvalidCall {
                    // ref-note {{in call to 'SS()'}}
 
 }
+
+namespace CallWithArgs {
+  /// This used to call problems during checkPotentialConstantExpression() runs.
+  constexpr void g(int a) {}
+  constexpr void f() {
+    g(0);
+  }
+}

@@ -64,12 +64,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   switch (F->getBuiltinID()) {
   case Builtin::BI__builtin_is_constant_evaluated:
     S.Stk.push<Boolean>(Boolean::from(S.inConstantContext()));
-    return Ret<PT_Bool, true>(S, OpPC, Dummy);
+    return Ret<PT_Bool>(S, OpPC, Dummy);
   case Builtin::BI__builtin_assume:
-    return RetVoid<true>(S, OpPC, Dummy);
+    return RetVoid(S, OpPC, Dummy);
   case Builtin::BI__builtin_strcmp:
     if (interp__builtin_strcmp(S, OpPC, Frame))
-      return Ret<PT_Sint32, true>(S, OpPC, Dummy);
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
     return false;
   default:
     return false;
