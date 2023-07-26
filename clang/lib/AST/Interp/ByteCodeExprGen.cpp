@@ -997,6 +997,15 @@ bool ByteCodeExprGen<Emitter>::VisitCXXThrowExpr(const CXXThrowExpr *E) {
   return this->emitInvalid(E);
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitCXXReinterpretCastExpr(
+    const CXXReinterpretCastExpr *E) {
+  if (!this->discard(E->getSubExpr()))
+    return false;
+
+  return this->emitInvalidCast(CastKind::Reinterpret, E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
