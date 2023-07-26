@@ -17,10 +17,6 @@
 
 using namespace llvm;
 
-static bool hasWildcard(StringRef S) {
-  return S.find_first_of("?*[\\") != StringRef::npos;
-}
-
 // Expands character ranges and returns a bitmap.
 // For example, "a-cf-hz" is expanded to "abcfghz".
 static Expected<BitVector> expand(StringRef S, StringRef Original) {
@@ -58,120 +54,95 @@ static Expected<BitVector> expand(StringRef S, StringRef Original) {
   return BV;
 }
 
-// This is a scanner for the glob pattern.
-// A glob pattern token is one of "*", "?", "\", "[<chars>]", "[^<chars>]"
-// (which is a negative form of "[<chars>]"), "[!<chars>]" (which is
-// equivalent to "[^<chars>]"), or a non-meta character.
-// This function returns the first token in S.
-static Expected<BitVector> scan(StringRef &S, StringRef Original) {
-  switch (S[0]) {
-  case '*':
-    S = S.substr(1);
-    // '*' is represented by an empty bitvector.
-    // All other bitvectors are 256-bit long.
-    return BitVector();
-  case '?':
-    S = S.substr(1);
-    return BitVector(256, true);
-  case '[': {
-    // ']' is allowed as the first character of a character class. '[]' is
-    // invalid. So, just skip the first character.
-    size_t End = S.find(']', 2);
-    if (End == StringRef::npos)
-      return make_error<StringError>("invalid glob pattern: " + Original,
-                                     errc::invalid_argument);
-
-    StringRef Chars = S.substr(1, End - 1);
-    S = S.substr(End + 1);
-    if (Chars.startswith("^") || Chars.startswith("!")) {
-      Expected<BitVector> BV = expand(Chars.substr(1), Original);
-      if (!BV)
-        return BV.takeError();
-      return BV->flip();
-    }
-    return expand(Chars, Original);
-  }
-  case '\\':
-    // Eat this character and fall through below to treat it like a non-meta
-    // character.
-    S = S.substr(1);
-    [[fallthrough]];
-  default:
-    BitVector BV(256, false);
-    BV[(uint8_t)S[0]] = true;
-    S = S.substr(1);
-    return BV;
-  }
-}
-
 Expected<GlobPattern> GlobPattern::create(StringRef S) {
   GlobPattern Pat;
 
-  // S doesn't contain any metacharacter,
-  // so the regular string comparison should work.
-  if (!hasWildcard(S)) {
-    Pat.Exact = S;
+  // Store the prefix that does not contain any metacharacter.
+  size_t PrefixSize = S.find_first_of("?*[\\");
+  Pat.Prefix = S.substr(0, PrefixSize);
+  if (PrefixSize == std::string::npos)
     return Pat;
-  }
-
-  // S is something like "foo*", and the "* is not escaped. We can use
-  // startswith().
-  if (S.endswith("*") && !S.endswith("\\*") && !hasWildcard(S.drop_back())) {
-    Pat.Prefix = S.drop_back();
-    return Pat;
-  }
-
-  // S is something like "*foo". We can use endswith().
-  if (S.startswith("*") && !hasWildcard(S.drop_front())) {
-    Pat.Suffix = S.drop_front();
-    return Pat;
-  }
-
-  // Otherwise, we need to do real glob pattern matching.
-  // Parse the pattern now.
   StringRef Original = S;
-  while (!S.empty()) {
-    Expected<BitVector> BV = scan(S, Original);
-    if (!BV)
-      return BV.takeError();
-    Pat.Tokens.push_back(*BV);
+  S = S.substr(PrefixSize);
+
+  // Parse brackets.
+  Pat.Pat = S;
+  for (size_t I = 0, E = S.size(); I != E; ++I) {
+    if (S[I] == '[') {
+      // ']' is allowed as the first character of a character class. '[]' is
+      // invalid. So, just skip the first character.
+      ++I;
+      size_t J = S.find(']', I + 1);
+      if (J == StringRef::npos)
+        return make_error<StringError>("invalid glob pattern: " + Original,
+                                       errc::invalid_argument);
+      StringRef Chars = S.substr(I, J - I);
+      bool Invert = S[I] == '^' || S[I] == '!';
+      Expected<BitVector> BV =
+          Invert ? expand(Chars.substr(1), S) : expand(Chars, S);
+      if (!BV)
+        return BV.takeError();
+      if (Invert)
+        BV->flip();
+      Pat.Brackets.push_back(Bracket{S.data() + J + 1, std::move(*BV)});
+      I = J;
+    } else if (S[I] == '\\') {
+      if (++I == E)
+        return make_error<StringError>("invalid glob pattern, stray '\\'",
+                                       errc::invalid_argument);
+    }
   }
   return Pat;
 }
 
 bool GlobPattern::match(StringRef S) const {
-  if (Exact)
-    return S == *Exact;
-  if (Prefix)
-    return S.startswith(*Prefix);
-  if (Suffix)
-    return S.endswith(*Suffix);
-  return matchOne(Tokens, S);
+  return S.consume_front(Prefix) && matchOne(S);
 }
 
-// Runs glob pattern Pats against string S.
-bool GlobPattern::matchOne(ArrayRef<BitVector> Pats, StringRef S) const {
-  for (;;) {
-    if (Pats.empty())
-      return S.empty();
-
-    // If Pats[0] is '*', try to match Pats[1..] against all possible
-    // tail strings of S to see at least one pattern succeeds.
-    if (Pats[0].size() == 0) {
-      Pats = Pats.slice(1);
-      if (Pats.empty())
-        // Fast path. If a pattern is '*', it matches anything.
-        return true;
-      for (size_t I = 0, E = S.size(); I < E; ++I)
-        if (matchOne(Pats, S.substr(I)))
-          return true;
-      return false;
+// Factor the pattern into segments split by '*'. The segment is matched
+// sequentianlly by finding the first occurrence past the end of the previous
+// match.
+bool GlobPattern::matchOne(StringRef Str) const {
+  const char *P = Pat.data(), *SegmentBegin = nullptr, *S = Str.data(),
+             *SavedS = S;
+  const char *const PEnd = P + Pat.size(), *const End = S + Str.size();
+  size_t B = 0, SavedB = 0;
+  while (S != End) {
+    if (P == PEnd)
+      ;
+    else if (*P == '*') {
+      // The non-* substring on the left of '*' matches the tail of S. Save the
+      // positions to be used by backtracking if we see a mismatch later.
+      SegmentBegin = ++P;
+      SavedS = S;
+      SavedB = B;
+      continue;
+    } else if (*P == '[') {
+      if (Brackets[B].Bytes[uint8_t(*S)]) {
+        P = Brackets[B++].Next;
+        ++S;
+        continue;
+      }
+    } else if (*P == '\\') {
+      if (*++P == *S) {
+        ++P;
+        ++S;
+        continue;
+      }
+    } else if (*P == *S || *P == '?') {
+      ++P;
+      ++S;
+      continue;
     }
-
-    // If Pats[0] is not '*', it must consume one character.
-    if (S.empty() || !Pats[0][(uint8_t)S[0]])
+    if (!SegmentBegin)
       return false;
-    Pats = Pats.slice(1);
-    S = S.substr(1);
+    // We have seen a '*'. Backtrack to the saved positions. Shift the S
+    // position to probe the next starting position in the segment.
+    P = SegmentBegin;
+    S = ++SavedS;
+    B = SavedB;
   }
+  // All bytes in Str have been matched. Return true if the rest part of Pat is
+  // empty or contains only '*'.
+  return Pat.find_first_not_of('*', P - Pat.data()) == std::string::npos;
 }
