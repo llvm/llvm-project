@@ -56,6 +56,9 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void classifyAndInitTypeCategories(mlir::Value addr, mlir::Type t,
                                      mlir::Location loc, unsigned nestLevel);
   void updatePointsTo(mlir::Value addr, mlir::Value data, mlir::Location loc);
+  void updatePointsToForConstStruct(mlir::Value addr,
+                                    mlir::cir::ConstStructAttr value,
+                                    mlir::Location loc);
 
   // FIXME: classify tasks and lambdas prior to check ptr deref
   // and pass down an enum.
@@ -279,6 +282,12 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
     // 2.3 - putting invalid into pset(x) is said to invalidate it
     pset.insert(State::getInvalid());
     invalidHist[ptr].add(ptr, invalidStyle, loc, extraVal);
+  }
+
+  void markPsetNull(mlir::Value addr, mlir::Location loc) {
+    getPmap()[addr].clear();
+    getPmap()[addr].insert(State::getNullPtr());
+    pmapNullHist[addr] = loc;
   }
 
   void joinPmaps(SmallVectorImpl<PMapType> &pmaps);
@@ -1098,6 +1107,24 @@ void LifetimeCheckPass::checkLambdaCaptureStore(StoreOp storeOp) {
     getPmap()[lambdaAddr].insert(State::getLocalValue(localByRefAddr));
 }
 
+void LifetimeCheckPass::updatePointsToForConstStruct(
+    mlir::Value addr, mlir::cir::ConstStructAttr value, mlir::Location loc) {
+  assert(aggregates.count(addr) && "expected association with aggregate");
+  int memberIdx = 0;
+  for (auto &attr : value.getMembers()) {
+    auto ta = attr.dyn_cast<mlir::TypedAttr>();
+    assert(ta && "expected typed attribute");
+    auto fieldAddr = aggregates[addr][memberIdx];
+    // Unseen fields are not tracked.
+    if (fieldAddr && ta.getType().isa<mlir::cir::PointerType>()) {
+      assert(ta.isa<mlir::cir::NullAttr>() &&
+             "other than null not implemented");
+      markPsetNull(fieldAddr, loc);
+    }
+    memberIdx++;
+  }
+}
+
 void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
                                        mlir::Location loc) {
 
@@ -1119,7 +1146,15 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
   // 2.4.2 - If the declaration includes an initialization, the
   // initialization is treated as a separate operation
   if (auto cstOp = dyn_cast<ConstantOp>(defOp)) {
-    assert(cstOp.isNullPtr() && "not implemented");
+    // Aggregates can be bulk materialized in CIR, handle proper update of
+    // individual exploded fields.
+    if (auto constStruct =
+            cstOp.getValue().dyn_cast<mlir::cir::ConstStructAttr>()) {
+      updatePointsToForConstStruct(addr, constStruct, loc);
+      return;
+    }
+
+    assert(cstOp.isNullPtr() && "other than null not implemented");
     assert(getPmap().count(addr) && "address should always be valid");
     // 2.4.2 - If the initialization is default initialization or zero
     // initialization, set pset(p) = {null}; for example:
@@ -1127,9 +1162,7 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
     //  int* p; => pset(p) == {invalid}
     //  int* p{}; or string_view p; => pset(p) == {null}.
     //  int *p = nullptr; => pset(p) == {nullptr} => pset(p) == {null}
-    getPmap()[addr].clear();
-    getPmap()[addr].insert(State::getNullPtr());
-    pmapNullHist[addr] = loc;
+    markPsetNull(addr, loc);
     return;
   }
 
@@ -1155,6 +1188,12 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
 
 void LifetimeCheckPass::checkStore(StoreOp storeOp) {
   auto addr = storeOp.getAddr();
+
+  // Decompose store's to aggregates into multiple updates to individual fields.
+  if (aggregates.count(addr)) {
+    updatePointsTo(addr, storeOp.getValue(), storeOp.getValue().getLoc());
+    return;
+  }
 
   // The bulk of the check is done on top of store to pointer categories,
   // which usually represent the most common case.
@@ -1402,9 +1441,7 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
     if (!dyn_cast_or_null<AllocaOp>(addr.getDefiningOp()))
       return;
 
-    getPmap()[addr].clear();
-    getPmap()[addr].insert(State::getNullPtr());
-    pmapNullHist[addr] = callOp.getLoc();
+    markPsetNull(addr, callOp.getLoc());
     return;
   }
 
