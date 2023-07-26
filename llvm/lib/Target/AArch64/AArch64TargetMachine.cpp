@@ -21,7 +21,6 @@
 #include "TargetInfo/AArch64TargetInfo.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/CFIFixup.h"
 #include "llvm/CodeGen/CSEConfigBase.h"
 #include "llvm/CodeGen/GlobalISel/CSEInfo.h"
@@ -399,10 +398,11 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   unsigned MinSVEVectorSize = 0;
   unsigned MaxSVEVectorSize = 0;
-  if (F.hasFnAttribute(Attribute::VScaleRange)) {
-    ConstantRange CR = getVScaleRange(&F, 64);
-    MinSVEVectorSize = CR.getUnsignedMin().getZExtValue() * 128;
-    MaxSVEVectorSize = CR.getUnsignedMax().getZExtValue() * 128;
+  Attribute VScaleRangeAttr = F.getFnAttribute(Attribute::VScaleRange);
+  if (VScaleRangeAttr.isValid()) {
+    std::optional<unsigned> VScaleMax = VScaleRangeAttr.getVScaleRangeMax();
+    MinSVEVectorSize = VScaleRangeAttr.getVScaleRangeMin() * 128;
+    MaxSVEVectorSize = VScaleMax ? *VScaleMax * 128 : 0;
   } else {
     MinSVEVectorSize = SVEVectorBitsMinOpt;
     MaxSVEVectorSize = SVEVectorBitsMaxOpt;
@@ -417,10 +417,12 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   // Sanitize user input in case of no asserts
   if (MaxSVEVectorSize == 0)
-    MinSVEVectorSize = MinSVEVectorSize;
+    MinSVEVectorSize = (MinSVEVectorSize / 128) * 128;
   else {
-    MinSVEVectorSize = std::min(MinSVEVectorSize, MaxSVEVectorSize);
-    MaxSVEVectorSize = std::max(MinSVEVectorSize, MaxSVEVectorSize);
+    MinSVEVectorSize =
+        (std::min(MinSVEVectorSize, MaxSVEVectorSize) / 128) * 128;
+    MaxSVEVectorSize =
+        (std::max(MinSVEVectorSize, MaxSVEVectorSize) / 128) * 128;
   }
 
   SmallString<512> Key;
