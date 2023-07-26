@@ -2166,6 +2166,11 @@ multiclass VPseudoBinaryW_VX<LMULInfo m> {
                              "@earlyclobber $rd">;
 }
 
+multiclass VPseudoBinaryW_VI<Operand ImmType, LMULInfo m> {
+  defm "_VI" : VPseudoBinary<m.wvrclass, m.vrclass, ImmType, m,
+                             "@earlyclobber $rd">;
+}
+
 multiclass VPseudoBinaryW_VF<LMULInfo m, FPR_Info f> {
   defm "_V" # f.FX : VPseudoBinary<m.wvrclass, m.vrclass,
                                    f.fprclass, m,
@@ -2742,6 +2747,12 @@ multiclass VPseudoVWALU_VV_VX {
               SchedBinary<"WriteVIWALUV", "ReadVIWALUV", "ReadVIWALUV", mx>;
     defm "" : VPseudoBinaryW_VX<m>,
               SchedBinary<"WriteVIWALUX", "ReadVIWALUV", "ReadVIWALUX", mx>;
+  }
+}
+
+multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> : VPseudoVWALU_VV_VX {
+  foreach m = MxListW in {
+    defm "" : VPseudoBinaryW_VI<ImmType, m>;
   }
 }
 
