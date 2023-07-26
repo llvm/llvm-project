@@ -310,7 +310,7 @@ entry:
 define weak_odr void @t3() {
 ; CHECK-LABEL: define {{[^@]+}}@t3() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr noundef align 4294967296 null, i8 noundef 0, i1 noundef false, i1 noundef false)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr noundef align 4294967296 null)
 ; CHECK-NEXT:    br label [[USER_CODE_ENTRY:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    br label [[FOR_COND:%.*]]
@@ -321,7 +321,7 @@ define weak_odr void @t3() {
 ; CHECK-NEXT:    ret void
 ;
 entry:
-  %0 = call i32 @__kmpc_target_init(ptr null, i8 0, i1 false, i1 false)
+  %0 = call i32 @__kmpc_target_init(ptr null)
   br label %user_code.entry
 
 user_code.entry:                                  ; preds = %entry
@@ -335,7 +335,7 @@ for.body:                                         ; preds = %for.cond
   ret void
 }
 
-declare i32 @__kmpc_target_init(ptr, i8, i1, i1)
+declare i32 @__kmpc_target_init(ptr)
 
 define %S.2 @t3.helper() {
 ; CHECK-LABEL: define {{[^@]+}}@t3.helper() {
@@ -380,8 +380,8 @@ define dso_local void @spam() {
 ; TUNIT-NEXT:    store i32 [[X]], ptr [[TMP]], align 4
 ; TUNIT-NEXT:    br label [[BB16:%.*]]
 ; TUNIT:       bb16:
-; TUNIT-NEXT:    [[TRUETMP18:%.*]] = icmp eq i32 [[X]], 0
-; TUNIT-NEXT:    br i1 [[TRUETMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
+; TUNIT-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[X]], 0
+; TUNIT-NEXT:    br i1 [[TMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
 ; TUNIT:       bb19:
 ; TUNIT-NEXT:    br label [[BB23:%.*]]
 ; TUNIT:       bb23:
@@ -404,8 +404,8 @@ define dso_local void @spam() {
 ; CGSCC-NEXT:    store i32 [[X]], ptr [[TMP]], align 4
 ; CGSCC-NEXT:    br label [[BB16:%.*]]
 ; CGSCC:       bb16:
-; CGSCC-NEXT:    [[TRUETMP18:%.*]] = icmp eq i32 [[X]], 0
-; CGSCC-NEXT:    br i1 [[TRUETMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
+; CGSCC-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[X]], 0
+; CGSCC-NEXT:    br i1 [[TMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
 ; CGSCC:       bb19:
 ; CGSCC-NEXT:    br label [[BB23:%.*]]
 ; CGSCC:       bb23:

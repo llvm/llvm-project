@@ -5168,12 +5168,19 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   auto *InitCall = dyn_cast<CallInst>(Init);
   EXPECT_NE(InitCall, nullptr);
   EXPECT_EQ(InitCall->getCalledFunction()->getName(), "__kmpc_target_init");
-  EXPECT_EQ(InitCall->arg_size(), 3U);
+  EXPECT_EQ(InitCall->arg_size(), 1U);
   EXPECT_TRUE(isa<GlobalVariable>(InitCall->getArgOperand(0)));
-  EXPECT_EQ(InitCall->getArgOperand(1),
+  auto *KernelEnvGV = cast<GlobalVariable>(InitCall->getArgOperand(0));
+  EXPECT_TRUE(isa<ConstantStruct>(KernelEnvGV->getInitializer()));
+  auto *KernelEnvC = cast<ConstantStruct>(KernelEnvGV->getInitializer());
+  EXPECT_TRUE(isa<ConstantStruct>(KernelEnvC->getAggregateElement(0U)));
+  auto ConfigC = cast<ConstantStruct>(KernelEnvC->getAggregateElement(0U));
+  EXPECT_EQ(ConfigC->getAggregateElement(0U),
+            ConstantInt::get(Type::getInt8Ty(Ctx), true));
+  EXPECT_EQ(ConfigC->getAggregateElement(1U),
+            ConstantInt::get(Type::getInt8Ty(Ctx), true));
+  EXPECT_EQ(ConfigC->getAggregateElement(2U),
             ConstantInt::get(Type::getInt8Ty(Ctx), OMP_TGT_EXEC_MODE_GENERIC));
-  EXPECT_EQ(InitCall->getArgOperand(2),
-            ConstantInt::get(Type::getInt1Ty(Ctx), true));
 
   auto *EntryBlockBranch = EntryBlock.getTerminator();
   EXPECT_NE(EntryBlockBranch, nullptr);
@@ -5204,10 +5211,7 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   auto *DeinitCall = dyn_cast<CallInst>(Deinit);
   EXPECT_NE(DeinitCall, nullptr);
   EXPECT_EQ(DeinitCall->getCalledFunction()->getName(), "__kmpc_target_deinit");
-  EXPECT_EQ(DeinitCall->arg_size(), 2U);
-  EXPECT_TRUE(isa<GlobalVariable>(DeinitCall->getArgOperand(0)));
-  EXPECT_EQ(DeinitCall->getArgOperand(1),
-            ConstantInt::get(Type::getInt8Ty(Ctx), OMP_TGT_EXEC_MODE_GENERIC));
+  EXPECT_EQ(DeinitCall->arg_size(), 0U);
 
   EXPECT_TRUE(isa<ReturnInst>(DeinitCall->getNextNode()));
 

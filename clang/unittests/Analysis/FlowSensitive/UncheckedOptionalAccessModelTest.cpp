@@ -1322,8 +1322,7 @@ protected:
                     ASTContext &Ctx, const CFGElement &Elt,
                     const TransferStateForDiagnostics<NoopLattice>
                         &State) mutable {
-                  auto EltDiagnostics =
-                      Diagnoser.diagnose(Ctx, &Elt, State.Env);
+                  auto EltDiagnostics = Diagnoser(Elt, Ctx, State);
                   llvm::move(EltDiagnostics, std::back_inserter(Diagnostics));
                 })
             .withASTBuildArgs(
