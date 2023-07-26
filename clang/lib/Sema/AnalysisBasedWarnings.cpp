@@ -2276,6 +2276,12 @@ public:
       for (const auto &F : Fixes)
         FD << F;
     }
+
+#ifndef NDEBUG
+    if (areDebugNotesRequested())
+      for (const DebugNote &Note: DebugNotesByVar[Variable])
+        S.Diag(Note.first, diag::note_safe_buffer_debug_mode) << Note.second;
+#endif
   }
 
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {

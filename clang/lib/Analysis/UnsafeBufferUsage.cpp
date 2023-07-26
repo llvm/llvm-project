@@ -316,6 +316,15 @@ public:
 
   Kind getKind() const { return K; }
 
+#ifndef NDEBUG
+  StringRef getDebugName() const {
+    switch (K) {
+#define GADGET(x) case Kind::x: return #x;
+#include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
+    }
+  }
+#endif
+
   virtual bool isWarningGadget() const = 0;
   virtual const Stmt *getBaseStmt() const = 0;
 
@@ -565,7 +574,11 @@ public:
 
   virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
 
-  virtual const Stmt *getBaseStmt() const override { return nullptr; }
+  virtual const Stmt *getBaseStmt() const override {
+    // FIXME: This needs to be the entire DeclStmt, assuming that this method
+    // makes sense at all on a FixableGadget.
+    return PtrInitRHS;
+  }
 
   virtual DeclUseList getClaimedVarUseSites() const override {
     return DeclUseList{PtrInitRHS};
@@ -613,7 +626,11 @@ public:
 
   virtual std::optional<FixItList> getFixits(const Strategy &S) const override;
 
-  virtual const Stmt *getBaseStmt() const override { return nullptr; }
+  virtual const Stmt *getBaseStmt() const override {
+    // FIXME: This should be the binary operator, assuming that this method
+    // makes sense at all on a FixableGadget.
+    return PtrLHS;
+  }
 
   virtual DeclUseList getClaimedVarUseSites() const override {
     return DeclUseList{PtrLHS, PtrRHS};
@@ -845,6 +862,16 @@ public:
     });
   }
 
+  UseSetTy getUnclaimedUses(const VarDecl *VD) const {
+    UseSetTy ReturnSet;
+    for (auto use : *Uses) {
+      if (use->getDecl()->getCanonicalDecl() == VD->getCanonicalDecl()) {
+        ReturnSet.insert(use);
+      }
+    }
+    return ReturnSet;
+  }
+  
   void discoverDecl(const DeclStmt *DS) {
     for (const Decl *D : DS->decls()) {
       if (const auto *VD = dyn_cast<VarDecl>(D)) {
@@ -1703,6 +1730,13 @@ populateInitializerFixItWithSpan(const Expr *Init, ASTContext &Ctx,
   return FixIts;
 }
 
+#ifndef NDEBUG
+#define DEBUG_NOTE_DECL_FAIL(D, Msg)  \
+Handler.addDebugNoteForVar((D), (D)->getBeginLoc(), "failed to produce fixit for declaration '" + (D)->getNameAsString() + "'" + (Msg))
+#else
+#define DEBUG_NOTE_DECL_FAIL(D, Msg)
+#endif
+
 // For a `VarDecl` of the form `T  * var (= Init)?`, this
 // function generates a fix-it for the declaration, which re-declares `var` to
 // be of `span<T>` type and transforms the initializer, if present, to a span
@@ -1717,7 +1751,9 @@ populateInitializerFixItWithSpan(const Expr *Init, ASTContext &Ctx,
 // Returns:
 //    the generated fix-it
 static FixItList fixVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
-                                    const StringRef UserFillPlaceHolder) {
+                                    const StringRef UserFillPlaceHolder,
+                                    UnsafeBufferUsageHandler &Handler) {
+  (void)Handler; // Suppress unused variable warning in release builds.
   const QualType &SpanEltT = D->getType()->getPointeeType();
   assert(!SpanEltT.isNull() && "Trying to fix a non-pointer type variable!");
 
@@ -1730,8 +1766,10 @@ static FixItList fixVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
     FixItList InitFixIts =
         populateInitializerFixItWithSpan(Init, Ctx, UserFillPlaceHolder);
 
-    if (InitFixIts.empty())
+    if (InitFixIts.empty()) {
+      DEBUG_NOTE_DECL_FAIL(D, " : empty initializer");
       return {};
+    }
 
     // The loc right before the initializer:
     ReplacementLastLoc = Init->getBeginLoc().getLocWithOffset(-1);
@@ -1746,8 +1784,10 @@ static FixItList fixVarDeclWithSpan(const VarDecl *D, ASTContext &Ctx,
 
   OS << "std::span<" << SpanEltT.getAsString() << "> " << D->getName();
 
-  if (!ReplacementLastLoc)
+  if (!ReplacementLastLoc) {
+    DEBUG_NOTE_DECL_FAIL(D, " : failed to get end char loc (macro)");
     return {};
+  }
 
   FixIts.push_back(FixItHint::CreateReplacement(
       SourceRange{D->getBeginLoc(), *ReplacementLastLoc}, OS.str()));
@@ -1939,26 +1979,35 @@ createOverloadsForFixedParams(unsigned ParmIdx, StringRef NewTyText,
 // `createOverloadsForFixedParams`).
 static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
                                   UnsafeBufferUsageHandler &Handler) {
-  if (PVD->hasDefaultArg())
+  if (PVD->hasDefaultArg()) {
     // FIXME: generate fix-its for default values:
+    DEBUG_NOTE_DECL_FAIL(PVD, " : has default arg");
     return {};
+  }
+  
   assert(PVD->getType()->isPointerType());
   auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
 
-  if (!FD)
+  if (!FD) {
+    DEBUG_NOTE_DECL_FAIL(PVD, " : invalid func decl");
     return {};
+  }
 
   std::optional<Qualifiers> PteTyQualifiers = std::nullopt;
   std::optional<std::string> PteTyText = getPointeeTypeText(
       PVD, Ctx.getSourceManager(), Ctx.getLangOpts(), &PteTyQualifiers);
 
-  if (!PteTyText)
+  if (!PteTyText) {
+    DEBUG_NOTE_DECL_FAIL(PVD, " : invalid pointee type");
     return {};
+  }
 
   std::optional<StringRef> PVDNameText = PVD->getIdentifier()->getName();
 
-  if (!PVDNameText)
+  if (!PVDNameText) {
+    DEBUG_NOTE_DECL_FAIL(PVD, " : invalid identifier name");
     return {};
+  }
 
   std::string SpanOpen = "std::span<";
   std::string SpanClose = ">";
@@ -1994,6 +2043,7 @@ static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
       Fixes.append(*OverloadFix);
       return Fixes;
     }
+  DEBUG_NOTE_DECL_FAIL(PVD, " : invalid number of parameters");
   return {};
 }
 
@@ -2005,6 +2055,7 @@ static FixItList fixVariableWithSpan(const VarDecl *VD,
   assert(DS && "Fixing non-local variables not implemented yet!");
   if (!DS->isSingleDecl()) {
     // FIXME: to support handling multiple `VarDecl`s in a single `DeclStmt`
+    DEBUG_NOTE_DECL_FAIL(VD, " : multiple VarDecls");
     return {};
   }
   // Currently DS is an unused variable but we'll need it when
@@ -2013,7 +2064,8 @@ static FixItList fixVariableWithSpan(const VarDecl *VD,
   (void)DS;
 
   // FIXME: handle cases where DS has multiple declarations
-  return fixVarDeclWithSpan(VD, Ctx, getUserFillPlaceHolder());
+  return fixVarDeclWithSpan(VD, Ctx, getUserFillPlaceHolder(),
+                            Handler);
 }
 
 // TODO: we should be consistent to use `std::nullopt` to represent no-fix due
@@ -2025,10 +2077,12 @@ fixVariable(const VarDecl *VD, Strategy::Kind K,
             UnsafeBufferUsageHandler &Handler) {
   if (const auto *PVD = dyn_cast<ParmVarDecl>(VD)) {
     auto *FD = dyn_cast<clang::FunctionDecl>(PVD->getDeclContext());
-    if (!FD || FD != D)
+    if (!FD || FD != D) {
       // `FD != D` means that `PVD` belongs to a function that is not being
       // analyzed currently.  Thus `FD` may not be complete.
+      DEBUG_NOTE_DECL_FAIL(VD, " : function not currently analyzed");
       return {};
+    }
 
     // TODO If function has a try block we can't change params unless we check
     // also its catch block for their use.
@@ -2041,8 +2095,10 @@ fixVariable(const VarDecl *VD, Strategy::Kind K,
         isa<CXXMethodDecl>(FD) ||
         // skip when the function body is a try-block
         (FD->hasBody() && isa<CXXTryStmt>(FD->getBody())) ||
-        FD->isOverloadedOperator())
+        FD->isOverloadedOperator()) {
+      DEBUG_NOTE_DECL_FAIL(VD, " : unsupported function decl");
       return {}; // TODO test all these cases
+    }
   }
 
   switch (K) {
@@ -2054,6 +2110,7 @@ fixVariable(const VarDecl *VD, Strategy::Kind K,
       if (VD->isLocalVarDecl())
         return fixVariableWithSpan(VD, Tracker, Ctx, Handler);
     }
+    DEBUG_NOTE_DECL_FAIL(VD, " : not a pointer");
     return {};
   }
   case Strategy::Kind::Iterator:
@@ -2113,6 +2170,12 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const Strategy &S,
     for (const auto &F : Fixables) {
       std::optional<FixItList> Fixits = F->getFixits(S);
       if (!Fixits) {
+#ifndef NDEBUG
+        Handler.addDebugNoteForVar(
+            VD, F->getBaseStmt()->getBeginLoc(),
+            ("gadget '" + F->getDebugName() + "' refused to produce a fix")
+                .str());
+#endif
         ImpossibleToFix = true;
         break;
       } else {
@@ -2198,6 +2261,10 @@ getNaiveStrategy(const llvm::SmallVectorImpl<const VarDecl *> &UnsafeVars) {
 void clang::checkUnsafeBufferUsage(const Decl *D,
                                    UnsafeBufferUsageHandler &Handler,
                                    bool EmitSuggestions) {
+#ifndef NDEBUG
+  Handler.clearDebugNotes();
+#endif
+
   assert(D && D->getBody());
 
   // We do not want to visit a Lambda expression defined inside a method independently.
@@ -2277,10 +2344,34 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   for (auto it = FixablesForAllVars.byVar.cbegin();
        it != FixablesForAllVars.byVar.cend();) {
       // FIXME: need to deal with global variables later
-      if ((!it->first->isLocalVarDecl() && !isa<ParmVarDecl>(it->first)) ||
-          Tracker.hasUnclaimedUses(it->first) || it->first->isInitCapture()) {
-      it = FixablesForAllVars.byVar.erase(it);
-    } else {
+      if ((!it->first->isLocalVarDecl() && !isa<ParmVarDecl>(it->first))) {
+#ifndef NDEBUG
+          Handler.addDebugNoteForVar(
+              it->first, it->first->getBeginLoc(),
+              ("failed to produce fixit for '" + it->first->getNameAsString() +
+               "' : neither local nor a parameter"));
+#endif
+        it = FixablesForAllVars.byVar.erase(it);
+      } else if (Tracker.hasUnclaimedUses(it->first)) {
+#ifndef NDEBUG
+        auto AllUnclaimed = Tracker.getUnclaimedUses(it->first);
+        for (auto UnclaimedDRE : AllUnclaimed) {
+          Handler.addDebugNoteForVar(
+              it->first, UnclaimedDRE->getBeginLoc(),
+                                     ("failed to produce fixit for '" + it->first->getNameAsString() +
+                                      "' : has an unclaimed use"));
+          }
+#endif
+        it = FixablesForAllVars.byVar.erase(it);
+      } else if (it->first->isInitCapture()) {
+#ifndef NDEBUG
+        Handler.addDebugNoteForVar(
+            it->first, it->first->getBeginLoc(),
+                                   ("failed to produce fixit for '" + it->first->getNameAsString() +
+                                    "' : init capture"));
+#endif
+        it = FixablesForAllVars.byVar.erase(it);
+      }else {
       ++it;
     }
   }
