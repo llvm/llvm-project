@@ -116,8 +116,6 @@ body:             |
 
 # Handle that rematerializing an instruction with an implicit def of a
 # virtual super register into a physical register works.
-#
-# FIXME: Resulting rematerializing has a redundant implicit-def
 ---
 name:            rematerialize_subregister_into_superreg_def_with_impdef_physreg
 tracksRegLiveness: true
@@ -134,7 +132,7 @@ body:             |
   ; CHECK-NEXT: bb.1:
   ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   dead $eax = MOV32ri -11, implicit-def $rax, implicit-def $rax
+  ; CHECK-NEXT:   dead $eax = MOV32ri -11, implicit-def $rax
   ; CHECK-NEXT:   CMP64ri8 %t3, 1, implicit-def $eflags
   ; CHECK-NEXT:   JCC_1 %bb.1, 4, implicit killed $eflags
   ; CHECK-NEXT:   RET 0, $rax
