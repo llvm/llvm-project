@@ -13,7 +13,8 @@
 namespace clang {
 namespace interp {
 
-template <typename T> T getParam(const InterpFrame *Frame, unsigned Index) {
+template <typename T>
+static T getParam(const InterpFrame *Frame, unsigned Index) {
   unsigned Offset = Frame->getFunction()->getParamOffset(Index);
   return Frame->getParam<T>(Offset);
 }
