@@ -55,8 +55,9 @@ MPInt getIndex(ConeV);
 // and the coefficients needed to express it in that basis.
 std::pair<Point, SmallVector<MPInt, 16>> getSamplePoint(ConeV);
 
-// Get the dual of a cone, returning the V-representation of it.
+// Get the dual of a cone in H-representation, returning the V-representation of it.
 ConeV getDual(ConeH);
+// Get the dual of a cone in V-representation, returning the H-representation of it.
 ConeH getDual(ConeV);
 
 // Decompose a cone into unimodular cones,
