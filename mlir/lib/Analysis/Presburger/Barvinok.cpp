@@ -74,6 +74,21 @@ ConeH mlir::presburger::getDual(ConeV cone)
     return dual;
 }
 
+// Find the index of a cone in V-representation.
+// If there are more rays than variables, return 0.
+MPInt mlir::presburger::getIndex(ConeV cone)
+{
+    unsigned rows = cone.getNumRows();
+    unsigned cols = cone.getNumColumns();
+    if (rows > cols)
+    {
+        return MPInt(0);
+    }
+    // Convert to a linear transform in order to perform Gaussian elimination.
+    LinearTransform lt(cone);
+    return lt.determinant();
+}
+
 // Decomposes a (not necessarily either unimodular or simplicial) cone
 // pointed at the origin. Before passing to this function, the constant
 // term should be eliminated from the cone.
