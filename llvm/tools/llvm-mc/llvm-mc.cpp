@@ -109,7 +109,11 @@ static cl::opt<bool>
                      cl::desc("Preserve Comments in outputted assembly"),
                      cl::cat(MCCategory));
 
-enum OutputFileType { OFT_Null, OFT_AssemblyFile, OFT_ObjectFile };
+enum OutputFileType {
+  OFT_Null,
+  OFT_AssemblyFile,
+  OFT_ObjectFile
+};
 static cl::opt<OutputFileType>
     FileType("filetype", cl::init(OFT_AssemblyFile),
              cl::desc("Choose an output file type:"),
@@ -233,8 +237,8 @@ static const Target *GetTarget(const char *ProgName) {
 
   // Get the target specific parser.
   std::string Error;
-  const Target *TheTarget =
-      TargetRegistry::lookupTarget(ArchName, TheTriple, Error);
+  const Target *TheTarget = TargetRegistry::lookupTarget(ArchName, TheTriple,
+                                                         Error);
   if (!TheTarget) {
     WithColor::error(errs(), ProgName) << Error;
     return nullptr;
@@ -245,8 +249,8 @@ static const Target *GetTarget(const char *ProgName) {
   return TheTarget;
 }
 
-static std::unique_ptr<ToolOutputFile>
-GetOutputStream(StringRef Path, sys::fs::OpenFlags Flags) {
+static std::unique_ptr<ToolOutputFile> GetOutputStream(StringRef Path,
+    sys::fs::OpenFlags Flags) {
   std::error_code EC;
   auto Out = std::make_unique<ToolOutputFile>(Path, EC, Flags);
   if (EC) {
@@ -270,12 +274,13 @@ static void setDwarfDebugFlags(int argc, char **argv) {
 
 static std::string DwarfDebugProducer;
 static void setDwarfDebugProducer() {
-  if (!getenv("DEBUG_PRODUCER"))
+  if(!getenv("DEBUG_PRODUCER"))
     return;
   DwarfDebugProducer += getenv("DEBUG_PRODUCER");
 }
 
-static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
+static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI,
+                      raw_ostream &OS) {
 
   AsmLexer Lexer(MAI);
   Lexer.setBuffer(SrcMgr.getMemoryBuffer(SrcMgr.getMainFileID())->getBuffer());
@@ -292,7 +297,7 @@ static int AsLexInput(SourceMgr &SrcMgr, MCAsmInfo &MAI, raw_ostream &OS) {
 }
 
 static int fillCommandLineSymbols(MCAsmParser &Parser) {
-  for (auto &I : DefineSymbol) {
+  for (auto &I: DefineSymbol) {
     auto Pair = StringRef(I).split('=');
     auto Sym = Pair.first;
     auto Val = Pair.second;
@@ -316,7 +321,8 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
                          SourceMgr &SrcMgr, MCContext &Ctx, MCStreamer &Str,
                          MCAsmInfo &MAI, MCSubtargetInfo &STI,
                          MCInstrInfo &MCII, MCTargetOptions const &MCOptions) {
-  std::unique_ptr<MCAsmParser> Parser(createMCAsmParser(SrcMgr, Ctx, Str, MAI));
+  std::unique_ptr<MCAsmParser> Parser(
+      createMCAsmParser(SrcMgr, Ctx, Str, MAI));
   std::unique_ptr<MCTargetAsmParser> TAP(
       TheTarget->createMCAsmParser(STI, *Parser, MCII, MCOptions));
 
@@ -327,7 +333,7 @@ static int AssembleInput(const char *ProgName, const Target *TheTarget,
   }
 
   int SymbolResult = fillCommandLineSymbols(*Parser);
-  if (SymbolResult)
+  if(SymbolResult)
     return SymbolResult;
   Parser->setShowParsedOperands(ShowInstOperands);
   Parser->setTargetParser(*TAP);
