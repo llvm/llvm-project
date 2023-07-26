@@ -361,7 +361,7 @@ LogicalResult ModuleImport::processTBAAMetadata(const llvm::MDNode *node) {
                                   ? builder.getStringAttr(**rootNodeIdentity)
                                   : nullptr;
       // The root nodes do not have operands, so we can create
-      // the TBAARootMetadataOp on the first walk.
+      // the TBAARootAttr on the first walk.
       tbaaMapping.insert({current, builder.getAttr<TBAARootAttr>(stringAttr)});
       continue;
     }
