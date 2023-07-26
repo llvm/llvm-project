@@ -40,7 +40,8 @@ void __assert_fail(const char *expr, const char *msg, const char *file,
 DebugEntryRAII::DebugEntryRAII(const char *File, const unsigned Line,
                                const char *Function) {
   if (config::isDebugMode(config::DebugKind::FunctionTracing) &&
-      mapping::getThreadIdInBlock() == 0 && mapping::getBlockId() == 0) {
+      mapping::getThreadIdInBlock() == 0 &&
+      mapping::getBlockIdInKernel() == 0) {
 
     uint16_t &Level =
         state::getKernelEnvironment().DynamicEnv->DebugIndentionLevel;
@@ -56,7 +57,8 @@ DebugEntryRAII::DebugEntryRAII(const char *File, const unsigned Line,
 
 DebugEntryRAII::~DebugEntryRAII() {
   if (config::isDebugMode(config::DebugKind::FunctionTracing) &&
-      mapping::getThreadIdInBlock() == 0 && mapping::getBlockId() == 0) {
+      mapping::getThreadIdInBlock() == 0 &&
+      mapping::getBlockIdInKernel() == 0) {
     uint16_t &Level =
         state::getKernelEnvironment().DynamicEnv->DebugIndentionLevel;
     Level--;
