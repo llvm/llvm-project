@@ -383,22 +383,15 @@ define dso_local void @spam() {
 ; TUNIT-NEXT:    [[TRUETMP18:%.*]] = icmp eq i32 [[X]], 0
 ; TUNIT-NEXT:    br i1 [[TRUETMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
 ; TUNIT:       bb19:
-; TUNIT-NEXT:    [[TRUETMP21:%.*]] = load float, ptr [[TMP]], align 4
-; TUNIT-NEXT:    [[TRUETMP22:%.*]] = fadd fast float [[TRUETMP21]], 0.000000e+00
 ; TUNIT-NEXT:    br label [[BB23:%.*]]
 ; TUNIT:       bb23:
-; TUNIT-NEXT:    [[TRUETMP24:%.*]] = phi <2 x float> [ undef, [[BB19]] ], [ [[TRUETMP26:%.*]], [[BB34:%.*]] ]
 ; TUNIT-NEXT:    br label [[BB25:%.*]]
 ; TUNIT:       bb25:
-; TUNIT-NEXT:    [[TRUETMP26]] = phi <2 x float> [ [[TRUETMP30:%.*]], [[BB28:%.*]] ], [ [[TRUETMP24]], [[BB23]] ]
-; TUNIT-NEXT:    [[TRUETMP27:%.*]] = icmp ult i32 undef, 8
-; TUNIT-NEXT:    br i1 [[TRUETMP27]], label [[BB28]], label [[BB34]]
+; TUNIT-NEXT:    unreachable
 ; TUNIT:       bb28:
-; TUNIT-NEXT:    [[TRUETMP29:%.*]] = insertelement <2 x float> [[TRUETMP26]], float undef, i32 0
-; TUNIT-NEXT:    [[TRUETMP30]] = insertelement <2 x float> [[TRUETMP29]], float [[TRUETMP22]], i32 1
-; TUNIT-NEXT:    br label [[BB25]]
+; TUNIT-NEXT:    unreachable
 ; TUNIT:       bb34:
-; TUNIT-NEXT:    br label [[BB23]]
+; TUNIT-NEXT:    unreachable
 ; TUNIT:       bb35:
 ; TUNIT-NEXT:    unreachable
 ;
@@ -414,22 +407,15 @@ define dso_local void @spam() {
 ; CGSCC-NEXT:    [[TRUETMP18:%.*]] = icmp eq i32 [[X]], 0
 ; CGSCC-NEXT:    br i1 [[TRUETMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
 ; CGSCC:       bb19:
-; CGSCC-NEXT:    [[TRUETMP21:%.*]] = load float, ptr [[TMP]], align 4
-; CGSCC-NEXT:    [[TRUETMP22:%.*]] = fadd fast float [[TRUETMP21]], 0.000000e+00
 ; CGSCC-NEXT:    br label [[BB23:%.*]]
 ; CGSCC:       bb23:
-; CGSCC-NEXT:    [[TRUETMP24:%.*]] = phi <2 x float> [ undef, [[BB19]] ], [ [[TRUETMP26:%.*]], [[BB34:%.*]] ]
 ; CGSCC-NEXT:    br label [[BB25:%.*]]
 ; CGSCC:       bb25:
-; CGSCC-NEXT:    [[TRUETMP26]] = phi <2 x float> [ [[TRUETMP30:%.*]], [[BB28:%.*]] ], [ [[TRUETMP24]], [[BB23]] ]
-; CGSCC-NEXT:    [[TRUETMP27:%.*]] = icmp ult i32 undef, 8
-; CGSCC-NEXT:    br i1 [[TRUETMP27]], label [[BB28]], label [[BB34]]
+; CGSCC-NEXT:    unreachable
 ; CGSCC:       bb28:
-; CGSCC-NEXT:    [[TRUETMP29:%.*]] = insertelement <2 x float> [[TRUETMP26]], float undef, i32 0
-; CGSCC-NEXT:    [[TRUETMP30]] = insertelement <2 x float> [[TRUETMP29]], float [[TRUETMP22]], i32 1
-; CGSCC-NEXT:    br label [[BB25]]
+; CGSCC-NEXT:    unreachable
 ; CGSCC:       bb34:
-; CGSCC-NEXT:    br label [[BB23]]
+; CGSCC-NEXT:    unreachable
 ; CGSCC:       bb35:
 ; CGSCC-NEXT:    unreachable
 ;
