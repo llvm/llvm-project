@@ -99,10 +99,10 @@ static void getVGPRSpillLaneOrTempRegister(
           SGPR, PrologEpilogSGPRSaveRestoreInfo(
                     SGPRSaveKind::SPILL_TO_VGPR_LANE, FI));
 
-      LLVM_DEBUG(auto Spill = MFI->getSGPRSpillToPhysicalVGPRLanes(FI).front();
-                 dbgs() << printReg(SGPR, TRI) << " requires fallback spill to "
-                        << printReg(Spill.VGPR, TRI) << ':' << Spill.Lane
-                        << '\n';);
+      LLVM_DEBUG(
+          auto Spill = MFI->getPrologEpilogSGPRSpillToVGPRLanes(FI).front();
+          dbgs() << printReg(SGPR, TRI) << " requires fallback spill to "
+                 << printReg(Spill.VGPR, TRI) << ':' << Spill.Lane << '\n';);
     } else {
       // Remove dead <FI> index
       MF.getFrameInfo().RemoveStackObject(FI);
@@ -264,7 +264,7 @@ class PrologEpilogSGPRSpillBuilder {
 
     assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
     ArrayRef<SIRegisterInfo::SpilledReg> Spill =
-        FuncInfo->getSGPRSpillToPhysicalVGPRLanes(FI);
+        FuncInfo->getPrologEpilogSGPRSpillToVGPRLanes(FI);
     assert(Spill.size() == NumSubRegs);
 
     for (unsigned I = 0; I < NumSubRegs; ++I) {
@@ -309,7 +309,7 @@ class PrologEpilogSGPRSpillBuilder {
   void restoreFromVGPRLane(const int FI) {
     assert(MFI.getStackID(FI) == TargetStackID::SGPRSpill);
     ArrayRef<SIRegisterInfo::SpilledReg> Spill =
-        FuncInfo->getSGPRSpillToPhysicalVGPRLanes(FI);
+        FuncInfo->getPrologEpilogSGPRSpillToVGPRLanes(FI);
     assert(Spill.size() == NumSubRegs);
 
     for (unsigned I = 0; I < NumSubRegs; ++I) {
@@ -1353,8 +1353,8 @@ void SIFrameLowering::processFunctionBeforeFrameFinalized(
           if (FuncInfo->allocateVGPRSpillToAGPR(MF, FI,
                                                 TRI->isAGPR(MRI, VReg))) {
             assert(RS != nullptr);
-            RS->enterBasicBlockEnd(MBB);
-            RS->backward(MI);
+            // FIXME: change to enterBasicBlockEnd()
+            RS->enterBasicBlock(MBB);
             TRI->eliminateFrameIndex(MI, 0, FIOp, RS);
             SpillFIs.set(FI);
             continue;

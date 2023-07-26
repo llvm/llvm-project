@@ -440,9 +440,8 @@ MachineInstr &TargetInstrInfo::duplicate(MachineBasicBlock &MBB,
 // If the COPY instruction in MI can be folded to a stack operation, return
 // the register class to use.
 static const TargetRegisterClass *canFoldCopy(const MachineInstr &MI,
-                                              const TargetInstrInfo &TII,
                                               unsigned FoldIdx) {
-  assert(TII.isCopyInstr(MI) && "MI must be a COPY instruction");
+  assert(MI.isCopy() && "MI must be a COPY instruction");
   if (MI.getNumOperands() != 2)
     return nullptr;
   assert(FoldIdx<2 && "FoldIdx refers no nonexistent operand");
@@ -631,10 +630,10 @@ MachineInstr *TargetInstrInfo::foldMemoryOperand(MachineInstr &MI,
   }
 
   // Straight COPY may fold as load/store.
-  if (!isCopyInstr(MI) || Ops.size() != 1)
+  if (!MI.isCopy() || Ops.size() != 1)
     return nullptr;
 
-  const TargetRegisterClass *RC = canFoldCopy(MI, *this, Ops[0]);
+  const TargetRegisterClass *RC = canFoldCopy(MI, Ops[0]);
   if (!RC)
     return nullptr;
 
