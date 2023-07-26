@@ -217,32 +217,21 @@
 // RUN:             | FileCheck -check-prefix=G_ONLY_DWARF2 %s
 // RUN: %clang -### -c -gline-directives-only -g0 %s 2>&1 \
 // RUN:             | FileCheck -check-prefix=GLIO_NO %s
-//
-// RUN: %clang -### -c -grecord-gcc-switches %s 2>&1 \
-//             | FileCheck -check-prefix=GRECORD %s
-// RUN: %clang -### -c -gno-record-gcc-switches %s 2>&1 \
-//             | FileCheck -check-prefix=GNO_RECORD %s
-// RUN: %clang -### -c -grecord-gcc-switches -gno-record-gcc-switches %s 2>&1 \
-//             | FileCheck -check-prefix=GNO_RECORD %s/
-// RUN: %clang -### -c -grecord-gcc-switches -o - %s 2>&1 \
-//             | FileCheck -check-prefix=GRECORD_O %s
-// RUN: %clang -### -c -O3 -ffunction-sections -grecord-gcc-switches %s 2>&1 \
-//             | FileCheck -check-prefix=GRECORD_OPT %s
-//
-// RUN: %clang -### -c -grecord-command-line %s 2>&1 \
-//             | FileCheck -check-prefix=GRECORD %s
-// RUN: %clang -### -c -gno-record-command-line %s 2>&1 \
-//             | FileCheck -check-prefix=GNO_RECORD %s
-// RUN: %clang -### -c -grecord-command-line -gno-record-command-line %s 2>&1 \
-//             | FileCheck -check-prefix=GNO_RECORD %s/
-// RUN: %clang -### -c -grecord-command-line -o - %s 2>&1 \
-//             | FileCheck -check-prefix=GRECORD_O %s
-// RUN: %clang -### -c -O3 -ffunction-sections -grecord-command-line %s 2>&1 \
-//             | FileCheck -check-prefix=GRECORD_OPT %s
-//
-// RUN: %clang -### -c -gstrict-dwarf -gno-strict-dwarf %s 2>&1 \
-// RUN:        | FileCheck -check-prefix=GIGNORE %s
-//
+
+// RUN: %clang -### -c -grecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=GRECORD %s
+// RUN: %clang -### -c -gno-record-gcc-switches %s 2>&1 | FileCheck -check-prefix=GNO_RECORD %s
+// RUN: %clang -### -c -grecord-gcc-switches -gno-record-gcc-switches %s 2>&1 | FileCheck -check-prefix=GNO_RECORD %s
+// RUN: %clang -### -c -grecord-gcc-switches -o - %s 2>&1 | FileCheck -check-prefix=GRECORD_O %s
+// RUN: %clang -### -c -O3 -ffunction-sections -grecord-gcc-switches %s 2>&1 | FileCheck -check-prefix=GRECORD_OPT %s
+
+// RUN: %clang -### -c -grecord-command-line %s 2>&1 | FileCheck -check-prefix=GRECORD %s
+// RUN: %clang -### -c -gno-record-command-line %s 2>&1 | FileCheck -check-prefix=GNO_RECORD %s
+// RUN: %clang -### -c -grecord-command-line -gno-record-command-line %s 2>&1 | FileCheck -check-prefix=GNO_RECORD %s
+// RUN: %clang -### -c -grecord-command-line -o - %s 2>&1 | FileCheck -check-prefix=GRECORD_O %s
+// RUN: %clang -### -c -O3 -ffunction-sections -grecord-command-line %s 2>&1 | FileCheck -check-prefix=GRECORD_OPT %s
+
+// RUN: %clang -### -c -gstrict-dwarf -gno-strict-dwarf %s 2>&1 | FileCheck -check-prefix=GIGNORE %s
+
 // RUN: %clang -### -c -ggnu-pubnames %s 2>&1 | FileCheck -check-prefix=GPUB %s
 // RUN: %clang -### -c -ggdb %s 2>&1 | FileCheck -check-prefix=NOPUB %s
 // RUN: %clang -### -c -ggnu-pubnames -gno-gnu-pubnames %s 2>&1 | FileCheck -check-prefix=NOPUB %s
@@ -370,15 +359,15 @@
 // GLIO_NO-NOT: -debug-info-kind=
 //
 // GRECORD: "-dwarf-debug-flags"
-// GRECORD: -### -c -grecord-gcc-switches
+// GRECORD: -### -c -grecord-command-line
 //
 // GNO_RECORD-NOT: "-dwarf-debug-flags"
-// GNO_RECORD-NOT: -### -c -grecord-gcc-switches
+// GNO_RECORD-NOT: -### -c -grecord-command-line
 //
 // GRECORD_O: "-dwarf-debug-flags"
-// GRECORD_O: -### -c -grecord-gcc-switches -o -
+// GRECORD_O: -### -c -grecord-command-line -o -
 //
-// GRECORD_OPT: -### -c -O3 -ffunction-sections -grecord-gcc-switches
+// GRECORD_OPT: -### -c -O3 -ffunction-sections -grecord-command-line
 //
 // GIGNORE-NOT: "argument unused during compilation"
 //
