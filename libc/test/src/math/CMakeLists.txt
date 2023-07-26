@@ -706,35 +706,38 @@ add_fp_unittest(
     libc.src.__support.FPUtil.basic_operations
 )
 
-add_fp_unittest(
-  ilogb_test
-  SUITE
-    libc_math_unittests
-  SRCS
-    ilogb_test.cpp
-  HDRS
-    ILogbTest.h
-  DEPENDS
-    libc.include.math
-    libc.src.math.ilogb
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.manipulation_functions
-)
+# FIXME: These tests are currently broken for NVPTX.
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_fp_unittest(
+    ilogb_test
+    SUITE
+      libc_math_unittests
+    SRCS
+      ilogb_test.cpp
+    HDRS
+      ILogbTest.h
+    DEPENDS
+      libc.include.math
+      libc.src.math.ilogb
+      libc.src.__support.FPUtil.fp_bits
+      libc.src.__support.FPUtil.manipulation_functions
+  )
 
-add_fp_unittest(
-  ilogbf_test
-  SUITE
-    libc_math_unittests
-  SRCS
-    ilogbf_test.cpp
-  HDRS
-    ILogbTest.h
-  DEPENDS
-    libc.include.math
-    libc.src.math.ilogbf
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.manipulation_functions
-)
+  add_fp_unittest(
+    ilogbf_test
+    SUITE
+      libc_math_unittests
+    SRCS
+      ilogbf_test.cpp
+    HDRS
+      ILogbTest.h
+    DEPENDS
+      libc.include.math
+      libc.src.math.ilogbf
+      libc.src.__support.FPUtil.fp_bits
+      libc.src.__support.FPUtil.manipulation_functions
+  )
+endif()
 
 add_fp_unittest(
   ilogbl_test

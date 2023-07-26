@@ -67,7 +67,8 @@ class AsanThread {
   struct InitOptions;
   void Init(const InitOptions *options = nullptr);
 
-  thread_return_t ThreadStart(tid_t os_id);
+  void ThreadStart(tid_t os_id);
+  thread_return_t RunThread();
 
   uptr stack_top();
   uptr stack_bottom();

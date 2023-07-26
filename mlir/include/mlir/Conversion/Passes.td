@@ -559,21 +559,6 @@ def ConvertIndexToLLVMPass : Pass<"convert-index-to-llvm"> {
 }
 
 //===----------------------------------------------------------------------===//
-// LinalgToLLVM
-//===----------------------------------------------------------------------===//
-
-def ConvertLinalgToLLVMPass : Pass<"convert-linalg-to-llvm", "ModuleOp"> {
-  let summary = "Convert the operations from the linalg dialect into the LLVM "
-                "dialect";
-  let dependentDialects = ["scf::SCFDialect", "LLVM::LLVMDialect"];
-  let options = [
-     Option<"useOpaquePointers", "use-opaque-pointers", "bool",
-                /*default=*/"true", "Generate LLVM IR using opaque pointers "
-                "instead of typed pointers">
-  ];
-}
-
-//===----------------------------------------------------------------------===//
 // LinalgToStandard
 //===----------------------------------------------------------------------===//
 

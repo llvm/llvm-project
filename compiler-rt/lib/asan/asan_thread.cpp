@@ -273,23 +273,15 @@ void AsanThread::Init(const InitOptions *options) {
 // asan_fuchsia.c definies CreateMainThread and SetThreadStackAndTls.
 #if !SANITIZER_FUCHSIA
 
-thread_return_t AsanThread::ThreadStart(tid_t os_id) {
+void AsanThread::ThreadStart(tid_t os_id) {
   Init();
   asanThreadRegistry().StartThread(tid(), os_id, ThreadType::Regular, nullptr);
 
   if (common_flags()->use_sigaltstack)
     SetAlternateSignalStack();
-
-  if (!start_routine_) {
-    // start_routine_ == 0 if we're on the main thread or on one of the
-    // OS X libdispatch worker threads. But nobody is supposed to call
-    // ThreadStart() for the worker threads.
-    CHECK_EQ(tid(), 0);
-    return 0;
-  }
-
-  return start_routine_(arg_);
 }
+
+thread_return_t AsanThread::RunThread() { return start_routine_(arg_); }
 
 AsanThread *CreateMainThread() {
   AsanThread *main_thread = AsanThread::Create(
