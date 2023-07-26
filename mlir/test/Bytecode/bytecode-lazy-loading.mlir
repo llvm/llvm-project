@@ -23,6 +23,21 @@ func.func @op_with_passthrough_region_args() {
   }, {
     "test.unknown_op"() : () -> ()
   }
+  
+  // Ensure operations that aren't tagged as IsolatedFromAbove can
+  // still be lazy loaded if they don't have references to values
+  // defined above.
+  "test.one_region_op"() ({
+    "test.unknown_op"() : () -> ()
+  }) : () -> ()
+
+  // Similar test as above, but check that if one region has a reference
+  // to a value defined above, we don't lazy load the operation.
+  "test.two_region_op"() ({
+    "test.unknown_op"() : () -> ()
+  }, {
+    "test.consumer"(%0) : (index) -> ()
+  }) : () -> ()
   return
 }
 
@@ -53,7 +68,12 @@ func.func @op_with_passthrough_region_args() {
 // CHECK: test.consumer
 // CHECK: isolated_region
 // CHECK-NOT: test.consumer
-// CHECK: Has 3 ops to materialize
+// CHECK: test.one_region_op
+// CHECK-NOT: test.op
+// CHECK: test.two_region_op
+// CHECK: test.unknown_op
+// CHECK: test.consumer
+// CHECK: Has 4 ops to materialize
 
 // CHECK: Before Materializing...
 // CHECK: test.isolated_region
@@ -62,7 +82,7 @@ func.func @op_with_passthrough_region_args() {
 // CHECK: test.isolated_region
 // CHECK: ^bb0(%arg0: index):
 // CHECK:  test.consumer
-// CHECK: Has 2 ops to materialize
+// CHECK: Has 3 ops to materialize
 
 // CHECK: Before Materializing...
 // CHECK: test.isolated_region
@@ -70,7 +90,7 @@ func.func @op_with_passthrough_region_args() {
 // CHECK: Materializing...
 // CHECK: test.isolated_region
 // CHECK: test.consumer
-// CHECK: Has 1 ops to materialize
+// CHECK: Has 2 ops to materialize
 
 // CHECK: Before Materializing...
 // CHECK: test.isolated_regions
@@ -78,5 +98,13 @@ func.func @op_with_passthrough_region_args() {
 // CHECK: Materializing...
 // CHECK: test.isolated_regions
 // CHECK: test.unknown_op
+// CHECK: test.unknown_op
+// CHECK: Has 1 ops to materialize
+
+// CHECK: Before Materializing...
+// CHECK: test.one_region_op
+// CHECK-NOT: test.unknown_op
+// CHECK: Materializing...
+// CHECK: test.one_region_op
 // CHECK: test.unknown_op
 // CHECK: Has 0 ops to materialize
