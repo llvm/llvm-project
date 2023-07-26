@@ -36,15 +36,71 @@ enum EdgeKind_ppc64 : Edge::Kind {
   CallBranchDelta,
   // Need to restore r2 after the bl, suggesting the bl is followed by a nop.
   CallBranchDeltaRestoreTOC,
-  // Need PLT call stub.
-  RequestPLTCallStub,
-  // Need PLT call stub following a save of r2.
-  RequestPLTCallStubSaveTOC,
+  // Request calling function with TOC.
+  RequestCall,
+  // Request calling function without TOC.
+  RequestCallNoTOC,
+};
+
+enum PLTCallStubKind {
+  // Setup function entry(r12) and long branch to target using TOC.
+  LongBranch,
+  // Save TOC pointer, setup function entry and long branch to target using TOC.
+  LongBranchSaveR2,
+  // Setup function entry(r12) and long branch to target without using TOC.
+  LongBranchNoTOC,
 };
 
 extern const char NullPointerContent[8];
 extern const char PointerJumpStubContent_big[20];
 extern const char PointerJumpStubContent_little[20];
+extern const char PointerJumpStubNoTOCContent_big[32];
+extern const char PointerJumpStubNoTOCContent_little[32];
+
+struct PLTCallStubReloc {
+  Edge::Kind K;
+  size_t Offset;
+  Edge::AddendT A;
+};
+
+struct PLTCallStubInfo {
+  ArrayRef<char> Content;
+  SmallVector<PLTCallStubReloc, 2> Relocs;
+};
+
+template <support::endianness Endianness>
+inline PLTCallStubInfo pickStub(PLTCallStubKind StubKind) {
+  constexpr bool isLE = Endianness == support::endianness::little;
+  switch (StubKind) {
+  case LongBranch: {
+    ArrayRef<char> Content =
+        isLE ? PointerJumpStubContent_little : PointerJumpStubContent_big;
+    // Skip save r2.
+    Content = Content.slice(4);
+    return PLTCallStubInfo{
+        Content,
+        {{TOCDelta16HA, 0, 0}, {TOCDelta16LO, 4, 0}},
+    };
+  }
+  case LongBranchSaveR2: {
+    ArrayRef<char> Content =
+        isLE ? PointerJumpStubContent_little : PointerJumpStubContent_big;
+    return PLTCallStubInfo{
+        Content,
+        {{TOCDelta16HA, 4, 0}, {TOCDelta16LO, 8, 0}},
+    };
+  }
+  case LongBranchNoTOC: {
+    ArrayRef<char> Content = isLE ? PointerJumpStubNoTOCContent_little
+                                  : PointerJumpStubNoTOCContent_big;
+    return PLTCallStubInfo{
+        Content,
+        {{Delta16HA, 16, 8}, {Delta16LO, 20, 12}},
+    };
+  }
+  }
+  llvm_unreachable("Unknown PLTCallStubKind enum");
+}
 
 inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
                                       Symbol *InitialTarget = nullptr,
@@ -60,32 +116,16 @@ inline Symbol &createAnonymousPointer(LinkGraph &G, Section &PointerSection,
 }
 
 template <support::endianness Endianness>
-inline Block &createPointerJumpStubBlock(LinkGraph &G, Section &StubSection,
-                                         Symbol &PointerSymbol, bool SaveR2) {
-  constexpr bool isLE = Endianness == support::endianness::little;
-  ArrayRef<char> C =
-      isLE ? PointerJumpStubContent_little : PointerJumpStubContent_big;
-  if (!SaveR2)
-    // Skip storing r2.
-    C = C.slice(4);
-  Block &B = G.createContentBlock(StubSection, C, orc::ExecutorAddr(), 4, 0);
-  size_t Offset = SaveR2 ? 4 : 0;
-  B.addEdge(TOCDelta16HA, Offset, PointerSymbol, 0);
-  B.addEdge(TOCDelta16LO, Offset + 4, PointerSymbol, 0);
-  return B;
-}
-
-template <support::endianness Endianness>
-inline Symbol &
-createAnonymousPointerJumpStub(LinkGraph &G, Section &StubSection,
-                               Symbol &PointerSymbol, bool SaveR2) {
-  constexpr bool isLE = Endianness == support::endianness::little;
-  constexpr ArrayRef<char> Stub =
-      isLE ? PointerJumpStubContent_little : PointerJumpStubContent_big;
-  return G.addAnonymousSymbol(createPointerJumpStubBlock<Endianness>(
-                                  G, StubSection, PointerSymbol, SaveR2),
-                              0, SaveR2 ? sizeof(Stub) : sizeof(Stub) - 4, true,
-                              false);
+inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
+                                              Section &StubSection,
+                                              Symbol &PointerSymbol,
+                                              PLTCallStubKind StubKind) {
+  PLTCallStubInfo StubInfo = pickStub<Endianness>(StubKind);
+  Block &B = G.createContentBlock(StubSection, StubInfo.Content,
+                                  orc::ExecutorAddr(), 4, 0);
+  for (auto const &Reloc : StubInfo.Relocs)
+    B.addEdge(Reloc.K, Reloc.Offset, PointerSymbol, Reloc.A);
+  return G.addAnonymousSymbol(B, 0, StubInfo.Content.size(), true, false);
 }
 
 template <support::endianness Endianness>
@@ -102,8 +142,7 @@ public:
     case TOCDelta16DS:
     case TOCDelta16LODS:
     case CallBranchDeltaRestoreTOC:
-    case RequestPLTCallStub:
-    case RequestPLTCallStubSaveTOC:
+    case RequestCall:
       // Create TOC section if TOC relocation, PLT or GOT is used.
       getOrCreateTOCSection(G);
       return false;
@@ -135,16 +174,27 @@ public:
   static StringRef getSectionName() { return "$__STUBS"; }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
+    bool isExternal = E.getTarget().isExternal();
     Edge::Kind K = E.getKind();
-    if (K == ppc64::RequestPLTCallStubSaveTOC && E.getTarget().isExternal()) {
-      E.setKind(ppc64::CallBranchDeltaRestoreTOC);
-      this->SaveR2InStub = true;
-      E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+    if (K == ppc64::RequestCall) {
+      if (isExternal) {
+        E.setKind(ppc64::CallBranchDeltaRestoreTOC);
+        this->StubKind = LongBranchSaveR2;
+        E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+        // We previously set branching to local entry. Now reverse that
+        // operation.
+        E.setAddend(0);
+      } else
+        // TODO: There are cases a local function call need a call stub.
+        // 1. Caller uses TOC, the callee doesn't, need a r2 save stub.
+        // 2. Caller doesn't use TOC, the callee does, need a r12 setup stub.
+        // 3. Branching target is out of range.
+        E.setKind(ppc64::CallBranchDelta);
       return true;
     }
-    if (K == ppc64::RequestPLTCallStub && E.getTarget().isExternal()) {
+    if (K == ppc64::RequestCallNoTOC) {
       E.setKind(ppc64::CallBranchDelta);
-      this->SaveR2InStub = false;
+      this->StubKind = LongBranchNoTOC;
       E.setTarget(this->getEntryForTarget(G, E.getTarget()));
       return true;
     }
@@ -154,7 +204,7 @@ public:
   Symbol &createEntry(LinkGraph &G, Symbol &Target) {
     return createAnonymousPointerJumpStub<Endianness>(
         G, getOrCreateStubsSection(G), TOC.getEntryForTarget(G, Target),
-        this->SaveR2InStub);
+        this->StubKind);
   }
 
 private:
@@ -168,7 +218,7 @@ private:
 
   TOCTableManager<Endianness> &TOC;
   Section *PLTSection = nullptr;
-  bool SaveR2InStub = false;
+  PLTCallStubKind StubKind;
 };
 
 /// Returns a string name for the given ppc64 edge. For debugging purposes

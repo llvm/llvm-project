@@ -110,3 +110,22 @@ subroutine test
   if (null(lp)) then
   end if
 end subroutine test
+
+module m
+  type :: pdt(n)
+    integer, len :: n
+  end type
+ contains
+  subroutine s1(x)
+    character(*), pointer, intent(in) :: x
+  end
+  subroutine s2(x)
+    type(pdt(*)), pointer, intent(in) :: x
+  end
+  subroutine test
+    !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a character length
+    call s1(null())
+    !ERROR: Actual argument associated with dummy argument 'x=' is a NULL() pointer without a MOLD= to provide a value for the assumed type parameter 'n'
+    call s2(null())
+  end
+end

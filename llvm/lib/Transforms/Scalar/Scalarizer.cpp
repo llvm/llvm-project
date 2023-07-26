@@ -1109,7 +1109,7 @@ bool ScalarizerVisitor::visitShuffleVectorInst(ShuffleVectorInst &SVI) {
   for (unsigned I = 0; I < VS->NumFragments; ++I) {
     int Selector = SVI.getMaskValue(I);
     if (Selector < 0)
-      Res[I] = UndefValue::get(VS->VecTy->getElementType());
+      Res[I] = PoisonValue::get(VS->VecTy->getElementType());
     else if (unsigned(Selector) < Op0.size())
       Res[I] = Op0[Selector];
     else

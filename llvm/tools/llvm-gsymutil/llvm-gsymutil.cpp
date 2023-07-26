@@ -315,6 +315,11 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
   auto ThreadCount =
       NumThreads > 0 ? NumThreads : std::thread::hardware_concurrency();
   auto &OS = outs();
+  // Make a stream refernce that will become a /dev/null log stream if
+  // Quiet is true, or normal output if Quiet is false. This can stop the
+  // errors and warnings from being displayed and producing too much output
+  // when they aren't desired.
+  auto &LogOS = Quiet ? nulls() : outs();
 
   GsymCreator Gsym(Quiet);
 
@@ -347,7 +352,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
 
   // Make a DWARF transformer object and populate the ranges of the code
   // so we don't end up adding invalid functions to GSYM data.
-  DwarfTransformer DT(*DICtx, OS, Gsym);
+  DwarfTransformer DT(*DICtx, LogOS, Gsym);
   if (!TextRanges.empty())
     Gsym.SetValidTextRanges(TextRanges);
 
@@ -356,7 +361,7 @@ static llvm::Error handleObjectFile(ObjectFile &Obj,
     return Err;
 
   // Get the UUID and convert symbol table to GSYM.
-  if (auto Err = ObjectFileTransformer::convert(Obj, OS, Gsym))
+  if (auto Err = ObjectFileTransformer::convert(Obj, LogOS, Gsym))
     return Err;
 
   // Finalize the GSYM to make it ready to save to disk. This will remove

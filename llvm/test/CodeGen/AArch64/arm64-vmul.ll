@@ -993,7 +993,7 @@ entry:
   ret <2 x double> %fmla1
 }
 
-define <2 x float> @fmls_indexed_2s_strict(<2 x float> %a, <2 x float> %b, <2 x float> %c) nounwind readnone ssp {
+define <2 x float> @fmls_indexed_2s_strict(<2 x float> %a, <2 x float> %b, <2 x float> %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmls_indexed_2s_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $q1
@@ -1006,7 +1006,7 @@ entry:
   ret <2 x float> %fmls1
 }
 
-define <4 x float> @fmls_indexed_4s_strict(<4 x float> %a, <4 x float> %b, <4 x float> %c) nounwind readnone ssp {
+define <4 x float> @fmls_indexed_4s_strict(<4 x float> %a, <4 x float> %b, <4 x float> %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmls_indexed_4s_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmls.4s v0, v2, v1[0]
@@ -1018,7 +1018,7 @@ entry:
   ret <4 x float> %fmls1
 }
 
-define <2 x double> @fmls_indexed_2d_strict(<2 x double> %a, <2 x double> %b, <2 x double> %c) nounwind readnone ssp {
+define <2 x double> @fmls_indexed_2d_strict(<2 x double> %a, <2 x double> %b, <2 x double> %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmls_indexed_2d_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmls.2d v0, v2, v1[0]
@@ -1030,7 +1030,7 @@ entry:
   ret <2 x double> %fmls1
 }
 
-define <2 x float> @fmla_indexed_scalar_2s_strict(<2 x float> %a, <2 x float> %b, float %c) nounwind readnone ssp {
+define <2 x float> @fmla_indexed_scalar_2s_strict(<2 x float> %a, <2 x float> %b, float %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmla_indexed_scalar_2s_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
@@ -1043,7 +1043,7 @@ entry:
   ret <2 x float> %fmla1
 }
 
-define <4 x float> @fmla_indexed_scalar_4s_strict(<4 x float> %a, <4 x float> %b, float %c) nounwind readnone ssp {
+define <4 x float> @fmla_indexed_scalar_4s_strict(<4 x float> %a, <4 x float> %b, float %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmla_indexed_scalar_4s_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $s2 killed $s2 def $q2
@@ -1058,7 +1058,7 @@ entry:
   ret <4 x float> %fmla1
 }
 
-define <2 x double> @fmla_indexed_scalar_2d_strict(<2 x double> %a, <2 x double> %b, double %c) nounwind readnone ssp {
+define <2 x double> @fmla_indexed_scalar_2d_strict(<2 x double> %a, <2 x double> %b, double %c) nounwind readnone ssp strictfp {
 ; CHECK-LABEL: fmla_indexed_scalar_2d_strict:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    // kill: def $d2 killed $d2 def $q2

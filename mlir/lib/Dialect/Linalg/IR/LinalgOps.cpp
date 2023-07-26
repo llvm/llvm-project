@@ -2465,31 +2465,32 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   Type elementType = inputType.getElementType();
   int64_t reductionDim = getDimension();
   SmallVector<OpFoldResult> dims = tensor::getMixedSizes(b, loc, input);
-  Value outputNd = b.create<tensor::EmptyOp>(loc, dims, elementType);
+  Value output = getOutput();
   dims.erase(dims.begin() + reductionDim);
   // Step 1: Compute max along dim.
-  Value output = b.create<tensor::EmptyOp>(loc, dims, elementType);
+  Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
   Value neutralForMaxF =
       arith::getIdentityValue(arith::AtomicRMWKind::maxf, elementType, b, loc);
   Value neutralForMaxFInit =
-      b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, output).result();
+      b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
+          .result();
   Value max =
       reduce<arith::MaxFOp>(b, loc, input, neutralForMaxFInit, reductionDim);
 
   // Step 2: Subtract max from input and exponentiate.
-  Value numerator =
-      buildSubAndExpOp(b, loc, input, max, outputNd, reductionDim);
+  Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);
 
   // Step 3: Compute sum along dim.
   Value zero =
       arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType, b, loc);
-  Value zeroInit = b.create<linalg::FillOp>(loc, Value{zero}, output).result();
+  Value zeroInit =
+      b.create<linalg::FillOp>(loc, Value{zero}, outputReduce).result();
   Value denominator =
       reduce<arith::AddFOp>(b, loc, numerator, zeroInit, reductionDim);
 
   // Step 4: Compute softmax.
   Value result =
-      buildDivOp(b, loc, numerator, denominator, outputNd, reductionDim);
+      buildDivOp(b, loc, numerator, denominator, output, reductionDim);
   return SmallVector<Value>{result};
 }
 

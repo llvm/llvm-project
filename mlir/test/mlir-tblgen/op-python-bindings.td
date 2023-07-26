@@ -245,14 +245,10 @@ def EmptyOp : TestOp<"empty">;
 // CHECK-LABEL: OPERATION_NAME = "test.infer_result_types_implied_op"
 def InferResultTypesImpliedOp : TestOp<"infer_result_types_implied_op"> {
   // CHECK:  def __init__(self, *, loc=None, ip=None):
-  // CHECK:    operands = []
-  // CHECK:    results = []
   // CHECK:    _ods_context = _ods_get_default_loc_context(loc)
-  // CHECK:    results = _ods_ir.InferTypeOpInterface(InferResultTypesImpliedOp).inferReturnTypes(
-  // CHECK:        operands=operands,
-  // CHECK:        attributes=_ods_ir.DictAttr.get(attributes, context=_ods_context),
-  // CHECK:        context=_ods_context,
-  // CHECK:        loc=loc)
+  // CHECK:   super().__init__(self.build_generic(
+  // CHECK:     attributes=attributes, operands=operands,
+  // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip))
   let results = (outs I32:$i32, F32:$f32);
 }
 
@@ -260,13 +256,9 @@ def InferResultTypesImpliedOp : TestOp<"infer_result_types_implied_op"> {
 def InferResultTypesOp : TestOp<"infer_result_types_op", [InferTypeOpInterface]> {
   // CHECK:  def __init__(self, *, loc=None, ip=None):
   // CHECK:    operands = []
-  // CHECK:    results = []
-  // CHECK:    _ods_context = _ods_get_default_loc_context(loc)
-  // CHECK:    results = _ods_ir.InferTypeOpInterface(InferResultTypesOp).inferReturnTypes(
-  // CHECK:        operands=operands,
-  // CHECK:        attributes=_ods_ir.DictAttr.get(attributes, context=_ods_context),
-  // CHECK:        context=_ods_context,
-  // CHECK:        loc=loc)
+  // CHECK:   super().__init__(self.build_generic(
+  // CHECK:     attributes=attributes, operands=operands,
+  // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip))
   let results = (outs AnyType, AnyType, AnyType);
 }
 

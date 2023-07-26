@@ -49,7 +49,7 @@ void TestConstantFold::runOnOperation() {
 
   // Collect and fold the operations within the operation.
   SmallVector<Operation *, 8> ops;
-  getOperation()->walk([&](Operation *op) { ops.push_back(op); });
+  getOperation()->walk<mlir::WalkOrder::PreOrder>([&](Operation *op) { ops.push_back(op); });
 
   // Fold the constants in reverse so that the last generated constants from
   // folding are at the beginning. This creates somewhat of a linear ordering to

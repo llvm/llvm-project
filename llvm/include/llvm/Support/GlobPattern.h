@@ -15,16 +15,14 @@
 #define LLVM_SUPPORT_GLOBPATTERN_H
 
 #include "llvm/ADT/BitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
 #include <optional>
-#include <vector>
 
 // This class represents a glob pattern. Supported metacharacters
 // are "*", "?", "\", "[<chars>]", "[^<chars>]", and "[!<chars>]".
 namespace llvm {
-
-template <typename T> class ArrayRef;
-class StringRef;
 
 class GlobPattern {
 public:
@@ -33,24 +31,19 @@ public:
 
   // Returns true for glob pattern "*". Can be used to avoid expensive
   // preparation/acquisition of the input for match().
-  bool isTrivialMatchAll() const {
-    if (Prefix && Prefix->empty()) {
-      assert(!Suffix);
-      return true;
-    }
-    return false;
-  }
+  bool isTrivialMatchAll() const { return Prefix.empty() && Pat == "*"; }
 
 private:
-  bool matchOne(ArrayRef<BitVector> Pat, StringRef S) const;
+  bool matchOne(StringRef Str) const;
 
-  // Parsed glob pattern.
-  std::vector<BitVector> Tokens;
+  // Brackets with their end position and matched bytes.
+  struct Bracket {
+    const char *Next;
+    BitVector Bytes;
+  };
+  SmallVector<Bracket, 0> Brackets;
 
-  // The following members are for optimization.
-  std::optional<StringRef> Exact;
-  std::optional<StringRef> Prefix;
-  std::optional<StringRef> Suffix;
+  StringRef Prefix, Pat;
 };
 }
 

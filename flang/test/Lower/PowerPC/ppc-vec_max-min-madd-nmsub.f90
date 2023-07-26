@@ -502,3 +502,127 @@ subroutine vec_nmsub_testf64(x, y, z)
 ! CHECK: %[[vnmsub:.*]] = call contract <2 x double> @llvm.ppc.fnmsub.v2f64(<2 x double> %[[x]], <2 x double> %[[y]], <2 x double> %[[z]])
 ! CHECK: store <2 x double> %[[vnmsub]], ptr %{{[0-9]}}, align 16
 end subroutine vec_nmsub_testf64
+
+! vec_msub
+
+! CHECK-LABEL: vec_msub_testf32
+subroutine vec_msub_testf32(x, y, z)
+  vector(real(4)) :: vmsub, x, y, z
+  vmsub = vec_msub(x, y, z)
+! CHECK-FIR: %[[x:.*]] = fir.load %arg0 : !fir.ref<!fir.vector<4:f32>>
+! CHECK-FIR: %[[y:.*]] = fir.load %arg1 : !fir.ref<!fir.vector<4:f32>>
+! CHECK-FIR: %[[z:.*]] = fir.load %arg2 : !fir.ref<!fir.vector<4:f32>>
+! CHECK-FIR: %[[vx:.*]] = fir.convert %[[x]] : (!fir.vector<4:f32>) -> vector<4xf32>
+! CHECK-FIR: %[[vy:.*]] = fir.convert %[[y]] : (!fir.vector<4:f32>) -> vector<4xf32>
+! CHECK-FIR: %[[vz:.*]] = fir.convert %[[z]] : (!fir.vector<4:f32>) -> vector<4xf32>
+! CHECK-FIR: %[[nz:.*]] = arith.negf %[[vz]] fastmath<contract> : vector<4xf32>
+! CHECK-FIR: %[[vmsub:.*]] = fir.call @llvm.fma.v4f32(%[[vx]], %[[vy]], %[[nz]]) fastmath<contract> : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> !fir.vector<4:f32>
+! CHECK-FIR: fir.store %[[vmsub]] to %{{[0-9]}} : !fir.ref<!fir.vector<4:f32>>
+
+! CHECK-LLVMIR: %[[x:.*]] = llvm.load %arg0 : !llvm.ptr<vector<4xf32>>
+! CHECK-LLVMIR: %[[y:.*]] = llvm.load %arg1 : !llvm.ptr<vector<4xf32>>
+! CHECK-LLVMIR: %[[z:.*]] = llvm.load %arg2 : !llvm.ptr<vector<4xf32>>
+! CHECK-LLVMIR: %[[nz:.*]] = llvm.fneg %[[z]]  {fastmathFlags = #llvm.fastmath<contract>} : vector<4xf32>
+! CHECK-LLVMIR: %[[vmsub:.*]] = llvm.call @llvm.fma.v4f32(%[[x]], %[[y]], %[[nz]]) {fastmathFlags = #llvm.fastmath<contract>} : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+! CHECK-LLVMIR: llvm.store %[[vmsub]], %{{[0-9]}} : !llvm.ptr<vector<4xf32>>
+
+! CHECK: %[[x:.*]] = load <4 x float>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[y:.*]] = load <4 x float>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[z:.*]] = load <4 x float>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[nz:.*]] = fneg contract <4 x float> %[[z]]
+! CHECK: %[[vmsub:.*]] = call contract <4 x float> @llvm.fma.v4f32(<4 x float> %[[x]], <4 x float> %[[y]], <4 x float> %[[nz]])
+! CHECK: store <4 x float> %[[vmsub]], ptr %{{[0-9]}}, align 16
+end subroutine vec_msub_testf32
+
+! CHECK-LABEL: vec_msub_testf64
+subroutine vec_msub_testf64(x, y, z)
+  vector(real(8)) :: vmsub, x, y, z
+  vmsub = vec_msub(x, y, z)
+! CHECK-FIR: %[[x:.*]] = fir.load %arg0 : !fir.ref<!fir.vector<2:f64>>
+! CHECK-FIR: %[[y:.*]] = fir.load %arg1 : !fir.ref<!fir.vector<2:f64>>
+! CHECK-FIR: %[[z:.*]] = fir.load %arg2 : !fir.ref<!fir.vector<2:f64>>
+! CHECK-FIR: %[[vx:.*]] = fir.convert %[[x]] : (!fir.vector<2:f64>) -> vector<2xf64>
+! CHECK-FIR: %[[vy:.*]] = fir.convert %[[y]] : (!fir.vector<2:f64>) -> vector<2xf64>
+! CHECK-FIR: %[[vz:.*]] = fir.convert %[[z]] : (!fir.vector<2:f64>) -> vector<2xf64>
+! CHECK-FIR: %[[nz:.*]] = arith.negf %[[vz]] fastmath<contract> : vector<2xf64>
+! CHECK-FIR: %[[vmsub:.*]] = fir.call @llvm.fma.v2f64(%[[vx]], %[[vy]], %[[nz]]) fastmath<contract> : (vector<2xf64>, vector<2xf64>, vector<2xf64>) -> !fir.vector<2:f64>
+! CHECK-FIR: fir.store %[[vmsub]] to %{{[0-9]}} : !fir.ref<!fir.vector<2:f64>>
+
+! CHECK-LLVMIR: %[[x:.*]] = llvm.load %arg0 : !llvm.ptr<vector<2xf64>>
+! CHECK-LLVMIR: %[[y:.*]] = llvm.load %arg1 : !llvm.ptr<vector<2xf64>>
+! CHECK-LLVMIR: %[[z:.*]] = llvm.load %arg2 : !llvm.ptr<vector<2xf64>>
+! CHECK-LLVMIR: %[[nz:.*]] = llvm.fneg %[[z]]  {fastmathFlags = #llvm.fastmath<contract>} : vector<2xf64>
+! CHECK-LLVMIR: %[[vmsub:.*]] = llvm.call @llvm.fma.v2f64(%[[x]], %[[y]], %[[nz]]) {fastmathFlags = #llvm.fastmath<contract>} : (vector<2xf64>, vector<2xf64>, vector<2xf64>) -> vector<2xf64>
+! CHECK-LLVMIR: llvm.store %[[vmsub]], %{{[0-9]}} : !llvm.ptr<vector<2xf64>>
+
+! CHECK: %[[x:.*]] = load <2 x double>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[y:.*]] = load <2 x double>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[z:.*]] = load <2 x double>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[nz:.*]] = fneg contract <2 x double> %[[z]]
+! CHECK: %[[vmsub:.*]] = call contract <2 x double> @llvm.fma.v2f64(<2 x double> %[[x]], <2 x double> %[[y]], <2 x double> %[[nz]])
+! CHECK: store <2 x double> %[[vmsub]], ptr %{{[0-9]}}, align 16
+end subroutine vec_msub_testf64
+
+! vec_nmadd
+
+! CHECK-LABEL: vec_nmadd_testf32
+subroutine vec_nmadd_testf32(x, y, z)
+  vector(real(4)) :: vnmsum, x, y, z
+  vnmsum = vec_nmadd(x, y, z)
+! CHECK-FIR: %[[x:.*]] = fir.load %arg0 : !fir.ref<!fir.vector<4:f32>>
+! CHECK-FIR: %[[y:.*]] = fir.load %arg1 : !fir.ref<!fir.vector<4:f32>>
+! CHECK-FIR: %[[z:.*]] = fir.load %arg2 : !fir.ref<!fir.vector<4:f32>>
+! CHECK-FIR: %[[vx:.*]] = fir.convert %[[x]] : (!fir.vector<4:f32>) -> vector<4xf32>
+! CHECK-FIR: %[[vy:.*]] = fir.convert %[[y]] : (!fir.vector<4:f32>) -> vector<4xf32>
+! CHECK-FIR: %[[vz:.*]] = fir.convert %[[z]] : (!fir.vector<4:f32>) -> vector<4xf32>
+! CHECK-FIR: %[[msum:.*]] = fir.call @llvm.fma.v4f32(%[[vx]], %[[vy]], %[[vz]]) fastmath<contract> : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> !fir.vector<4:f32>
+! CHECK-FIR: %[[vmsum:.*]] = fir.convert %[[msum]] : (!fir.vector<4:f32>) -> vector<4xf32>
+! CHECK-FIR: %[[nmsum:.*]] = arith.negf %[[vmsum]] fastmath<contract> : vector<4xf32>
+! CHECK-FIR: %[[vnmsum:.*]] = fir.convert %[[nmsum]] : (vector<4xf32>) -> !fir.vector<4:f32>
+! CHECK-FIR: fir.store %[[vnmsum]] to %{{[0-9]}} : !fir.ref<!fir.vector<4:f32>>
+
+! CHECK-LLVMIR: %[[x:.*]] = llvm.load %arg0 : !llvm.ptr<vector<4xf32>>
+! CHECK-LLVMIR: %[[y:.*]] = llvm.load %arg1 : !llvm.ptr<vector<4xf32>>
+! CHECK-LLVMIR: %[[z:.*]] = llvm.load %arg2 : !llvm.ptr<vector<4xf32>>
+! CHECK-LLVMIR: %[[msum:.*]] = llvm.call @llvm.fma.v4f32(%[[x]], %[[y]], %[[z]]) {fastmathFlags = #llvm.fastmath<contract>} : (vector<4xf32>, vector<4xf32>, vector<4xf32>) -> vector<4xf32>
+! CHECK-LLVMIR: %[[vnmsum:.*]] = llvm.fneg %[[msum]]  {fastmathFlags = #llvm.fastmath<contract>} : vector<4xf32>
+! CHECK-LLVMIR: llvm.store %[[vnmsum]], %{{[0-9]}} : !llvm.ptr<vector<4xf32>>
+
+! CHECK: %[[x:.*]] = load <4 x float>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[y:.*]] = load <4 x float>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[z:.*]] = load <4 x float>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[msum:.*]] = call contract <4 x float> @llvm.fma.v4f32(<4 x float> %[[x]], <4 x float> %[[y]], <4 x float> %[[z]])
+! CHECK: %[[vnmsum:.*]] = fneg contract <4 x float> %[[msum]]
+! CHECK: store <4 x float> %[[vnmsum]], ptr %{{[0-9]}}, align 16
+end subroutine vec_nmadd_testf32
+
+! CHECK-LABEL: vec_nmadd_testf64
+subroutine vec_nmadd_testf64(x, y, z)
+  vector(real(8)) :: vnmsum, x, y, z
+  vnmsum = vec_nmadd(x, y, z)
+! CHECK-FIR: %[[x:.*]] = fir.load %arg0 : !fir.ref<!fir.vector<2:f64>>
+! CHECK-FIR: %[[y:.*]] = fir.load %arg1 : !fir.ref<!fir.vector<2:f64>>
+! CHECK-FIR: %[[z:.*]] = fir.load %arg2 : !fir.ref<!fir.vector<2:f64>>
+! CHECK-FIR: %[[vx:.*]] = fir.convert %[[x]] : (!fir.vector<2:f64>) -> vector<2xf64>
+! CHECK-FIR: %[[vy:.*]] = fir.convert %[[y]] : (!fir.vector<2:f64>) -> vector<2xf64>
+! CHECK-FIR: %[[vz:.*]] = fir.convert %[[z]] : (!fir.vector<2:f64>) -> vector<2xf64>
+! CHECK-FIR: %[[msum:.*]] = fir.call @llvm.fma.v2f64(%[[vx]], %[[vy]], %[[vz]]) fastmath<contract> : (vector<2xf64>, vector<2xf64>, vector<2xf64>) -> !fir.vector<2:f64>
+! CHECK-FIR: %[[vmsum:.*]] = fir.convert %[[msum]] : (!fir.vector<2:f64>) -> vector<2xf64>
+! CHECK-FIR: %[[nmsum:.*]] = arith.negf %[[vmsum]] fastmath<contract> : vector<2xf64>
+! CHECK-FIR: %[[vnmsum:.*]] = fir.convert %[[nmsum]] : (vector<2xf64>) -> !fir.vector<2:f64>
+! CHECK-FIR: fir.store %[[vnmsum]] to %{{[0-9]}} : !fir.ref<!fir.vector<2:f64>>
+
+! CHECK-LLVMIR: %[[x:.*]] = llvm.load %arg0 : !llvm.ptr<vector<2xf64>>
+! CHECK-LLVMIR: %[[y:.*]] = llvm.load %arg1 : !llvm.ptr<vector<2xf64>>
+! CHECK-LLVMIR: %[[z:.*]] = llvm.load %arg2 : !llvm.ptr<vector<2xf64>>
+! CHECK-LLVMIR: %[[msum:.*]] = llvm.call @llvm.fma.v2f64(%[[x]], %[[y]], %[[z]]) {fastmathFlags = #llvm.fastmath<contract>} : (vector<2xf64>, vector<2xf64>, vector<2xf64>) -> vector<2xf64>
+! CHECK-LLVMIR: %[[vnmsum:.*]] = llvm.fneg %[[msum]]  {fastmathFlags = #llvm.fastmath<contract>} : vector<2xf64>
+! CHECK-LLVMIR: llvm.store %[[vnmsum]], %{{[0-9]}} : !llvm.ptr<vector<2xf64>>
+
+! CHECK: %[[x:.*]] = load <2 x double>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[y:.*]] = load <2 x double>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[z:.*]] = load <2 x double>, ptr %{{[0-9]}}, align 16
+! CHECK: %[[msum:.*]] = call contract <2 x double> @llvm.fma.v2f64(<2 x double> %[[x]], <2 x double> %[[y]], <2 x double> %[[z]])
+! CHECK: %[[vnmsum:.*]] = fneg contract <2 x double> %[[msum]]
+! CHECK: store <2 x double> %[[vnmsum]], ptr %{{[0-9]}}, align 16
+end subroutine vec_nmadd_testf64

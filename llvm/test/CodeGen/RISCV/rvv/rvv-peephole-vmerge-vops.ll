@@ -372,7 +372,7 @@ define <vscale x 2 x float> @vpmerge_constrained_fadd(<vscale x 2 x float> %pass
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float> %x, <vscale x 2 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
-  %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 %vl)
+  %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 %vl) strictfp
   ret <vscale x 2 x float> %b
 }
 declare <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float>, <vscale x 2 x float>, metadata, metadata)
@@ -389,7 +389,7 @@ define <vscale x 2 x float> @vpmerge_constrained_fadd_vlmax(<vscale x 2 x float>
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v9, v0
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x float> @llvm.experimental.constrained.fadd(<vscale x 2 x float> %x, <vscale x 2 x float> %y, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
-  %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 -1)
+  %b = call <vscale x 2 x float> @llvm.riscv.vmerge.nxv2f32.nxv2f32(<vscale x 2 x float> %passthru, <vscale x 2 x float> %passthru, <vscale x 2 x float> %a, <vscale x 2 x i1> %m, i64 -1) strictfp
   ret <vscale x 2 x float> %b
 }
 

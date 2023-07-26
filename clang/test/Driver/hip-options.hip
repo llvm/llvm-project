@@ -169,3 +169,39 @@
 // RUN: %clang -### -nogpuinc -nogpulib -fhip-fp32-correctly-rounded-divide-sqrt \
 // RUN:   --cuda-gpu-arch=gfx906  %s 2>&1 | FileCheck -check-prefixes=CRDS %s
 // CRDS-NOT: "-f{{(no-)?}}hip-fp32-correctly-rounded-divide-sqrt"
+
+// Check -fgpu-approx-transcendentals is passed to clang -cc1 but
+// (default) -fno-gpu-approx-transcendentals is not.
+// -ffast-math implies -fgpu-approx-transcendentals, which can be overridden
+// by -fno-gpu-approx-transcendentals.
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fgpu-approx-transcendentals \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=APPROX %s
+
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -ffast-math \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=APPROX %s
+
+// APPROX: "-cc1"{{.*}} "-triple" "amdgcn-amd-amdhsa" {{.*}} "-fgpu-approx-transcendentals"
+// APPROX: "-cc1"{{.*}} "-triple" "x86_64-unknown-linux-gnu" {{.*}} "-fgpu-approx-transcendentals"
+
+// RUN: %clang -### -nogpuinc -nogpulib -fno-gpu-approx-transcendentals \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOAPPROX %s
+
+// RUN: %clang -### -nogpuinc -nogpulib \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOAPPROX %s
+
+// RUN: %clang -### -nogpuinc -nogpulib -ffast-math -fno-fast-math \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOAPPROX %s
+
+// RUN: %clang -### -nogpuinc -nogpulib -ffast-math -fno-gpu-approx-transcendentals \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | FileCheck -check-prefix=NOAPPROX %s
+
+// NOAPPROX-NOT: "-f{{(no-)?}}gpu-approx-transcendentals"
+
+// Check no warnings for -fgpu-approx-transcendentals.
+
+// RUN: %clang -fdriver-only -Werror --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib -fgpu-approx-transcendentals \
+// RUN:   --cuda-gpu-arch=gfx906 %s 2>&1 | count 0
+
+// RUN: %clang -fdriver-only -Werror --target=x86_64-unknown-linux-gnu -nostdinc -nostdlib -fgpu-approx-transcendentals \
+// RUN:   -x c++ %s 2>&1 | count 0

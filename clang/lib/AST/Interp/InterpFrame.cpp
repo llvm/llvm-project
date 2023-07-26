@@ -229,3 +229,6 @@ SourceLocation InterpFrame::getLocation(CodePtr PC) const {
   return S.getLocation(Func, PC);
 }
 
+SourceRange InterpFrame::getRange(CodePtr PC) const {
+  return S.getRange(Func, PC);
+}

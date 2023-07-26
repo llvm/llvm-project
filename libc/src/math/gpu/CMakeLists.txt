@@ -24,6 +24,186 @@ function(add_math_entrypoint_gpu_object name)
 endfunction()
 
 add_math_entrypoint_gpu_object(
+  ceil
+  SRCS
+    ceil.cpp
+  HDRS
+    ../ceil.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  ceilf
+  SRCS
+    ceilf.cpp
+  HDRS
+    ../ceilf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  copysign
+  SRCS
+    copysign.cpp
+  HDRS
+    ../copysign.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  copysignf
+  SRCS
+    copysignf.cpp
+  HDRS
+    ../copysignf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  fabs
+  SRCS
+    fabs.cpp
+  HDRS
+    ../fabs.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  fabsf
+  SRCS
+    fabsf.cpp
+  HDRS
+    ../fabsf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  floor
+  SRCS
+    floor.cpp
+  HDRS
+    ../floor.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  floorf
+  SRCS
+    floorf.cpp
+  HDRS
+    ../floorf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  fma
+  SRCS
+    fma.cpp
+  HDRS
+    ../fma.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  fmaf
+  SRCS
+    fmaf.cpp
+  HDRS
+    ../fmaf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  fmax
+  SRCS
+    fmax.cpp
+  HDRS
+    ../fmax.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  fmaxf
+  SRCS
+    fmaxf.cpp
+  HDRS
+    ../fmaxf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  fmin
+  SRCS
+    fmin.cpp
+  HDRS
+    ../fmin.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  fminf
+  SRCS
+    fminf.cpp
+  HDRS
+    ../fminf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  fmod
+  SRCS
+    fmod.cpp
+  HDRS
+    ../fmod.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  fmodf
+  SRCS
+    fmodf.cpp
+  HDRS
+    ../fmodf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  frexp
+  SRCS
+    frexp.cpp
+  HDRS
+    ../frexp.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
+  frexpf
+  SRCS
+    frexpf.cpp
+  HDRS
+    ../frexpf.h
+  COMPILE_OPTIONS
+    -O2
+)
+
+add_math_entrypoint_gpu_object(
   round
   SRCS
     round.cpp

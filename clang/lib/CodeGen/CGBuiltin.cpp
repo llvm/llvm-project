@@ -3234,6 +3234,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_log10:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::log10, "elt.log10"));
+  case Builtin::BI__builtin_elementwise_pow: {
+    return RValue::get(emitBinaryBuiltin(*this, E, llvm::Intrinsic::pow));
+  }
   case Builtin::BI__builtin_elementwise_cos:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::cos, "elt.cos"));
@@ -7744,6 +7747,18 @@ enum SpecialRegisterAccessKind {
   Write,
 };
 
+static Value *EmitAMDGCNBallotForExec(CodeGenFunction &CGF, const CallExpr *E,
+                                      llvm::Type *RegisterType,
+                                      llvm::Type *ValueType) {
+  CodeGen::CGBuilderTy &Builder = CGF.Builder;
+  CodeGen::CodeGenModule &CGM = CGF.CGM;
+
+  llvm::Type *ResultType = CGF.ConvertType(E->getType());
+  Function *F = CGM.getIntrinsic(Intrinsic::amdgcn_ballot, {ResultType});
+  llvm::Value *Call = Builder.CreateCall(F, {Builder.getInt1(true)});
+  return Call;
+}
+
 // Generates the IR for the read/write special register builtin,
 // ValueType is the type of the value that is to be written or read,
 // RegisterType is the type of the register being written to or read from.
@@ -9508,11 +9523,11 @@ Value *CodeGenFunction::EmitSMEZero(SVETypeFlags TypeFlags,
 Value *CodeGenFunction::EmitSMELdrStr(SVETypeFlags TypeFlags,
                                       SmallVectorImpl<Value *> &Ops,
                                       unsigned IntID) {
-  Function *Vscale = CGM.getIntrinsic(Intrinsic::vscale, Int64Ty);
-  llvm::Value *VscaleCall = Builder.CreateCall(Vscale, {}, "vscale");
+  Function *Cntsb = CGM.getIntrinsic(Intrinsic::aarch64_sme_cntsb);
+  llvm::Value *CntsbCall = Builder.CreateCall(Cntsb, {}, "svlb");
   llvm::Value *MulVL = Builder.CreateMul(
-      VscaleCall,
-      Builder.getInt64(16 * cast<llvm::ConstantInt>(Ops[1])->getZExtValue()),
+      CntsbCall,
+      Builder.getInt64(cast<llvm::ConstantInt>(Ops[1])->getZExtValue()),
       "mulvl");
   Ops[2] = Builder.CreateGEP(Int8Ty, Ops[2], MulVL);
   Ops[0] = EmitTileslice(Ops[1], Ops[0]);
@@ -17476,20 +17491,10 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Function *F = CGM.getIntrinsic(IID, {ArgTy});
     return Builder.CreateCall(F, {Addr, Val, ZeroI32, ZeroI32, ZeroI1});
   }
-  case AMDGPU::BI__builtin_amdgcn_read_exec: {
-    CallInst *CI = cast<CallInst>(
-      EmitSpecialRegisterBuiltin(*this, E, Int64Ty, Int64Ty, NormalRead, "exec"));
-    CI->setConvergent();
-    return CI;
-  }
+  case AMDGPU::BI__builtin_amdgcn_read_exec:
   case AMDGPU::BI__builtin_amdgcn_read_exec_lo:
   case AMDGPU::BI__builtin_amdgcn_read_exec_hi: {
-    StringRef RegName = BuiltinID == AMDGPU::BI__builtin_amdgcn_read_exec_lo ?
-      "exec_lo" : "exec_hi";
-    CallInst *CI = cast<CallInst>(
-      EmitSpecialRegisterBuiltin(*this, E, Int32Ty, Int32Ty, NormalRead, RegName));
-    CI->setConvergent();
-    return CI;
+    return EmitAMDGCNBallotForExec(*this, E, Int64Ty, Int64Ty);
   }
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray:
   case AMDGPU::BI__builtin_amdgcn_image_bvh_intersect_ray_h:

@@ -7577,7 +7577,6 @@ mlir/include/mlir/Conversion/GPUToROCDL/GPUToROCDLPass.h
 mlir/include/mlir/Conversion/GPUToROCDL/Runtimes.h
 mlir/include/mlir/Conversion/GPUToSPIRV/GPUToSPIRV.h
 mlir/include/mlir/Conversion/GPUToSPIRV/GPUToSPIRVPass.h
-mlir/include/mlir/Conversion/LinalgToLLVM/LinalgToLLVM.h
 mlir/include/mlir/Conversion/LinalgToSPIRV/LinalgToSPIRV.h
 mlir/include/mlir/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.h
 mlir/include/mlir/Conversion/LinalgToStandard/LinalgToStandard.h
@@ -8005,7 +8004,6 @@ mlir/lib/Conversion/GPUToSPIRV/GPUToSPIRV.cpp
 mlir/lib/Conversion/GPUToSPIRV/GPUToSPIRVPass.cpp
 mlir/lib/Conversion/GPUToVulkan/ConvertGPULaunchFuncToVulkanLaunchFunc.cpp
 mlir/lib/Conversion/GPUToVulkan/ConvertLaunchFuncToVulkanCalls.cpp
-mlir/lib/Conversion/LinalgToLLVM/LinalgToLLVM.cpp
 mlir/lib/Conversion/LinalgToSPIRV/LinalgToSPIRVPass.cpp
 mlir/lib/Conversion/LLVMCommon/ConversionTarget.cpp
 mlir/lib/Conversion/LLVMCommon/LoweringOptions.cpp

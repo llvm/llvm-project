@@ -43,8 +43,9 @@ declare void @llvm.memset.p0.i32(ptr nocapture writeonly, i8, i32, i1 immarg)
 ; CHECKSYM-NEXT:     Name: <stdin>
 ; CHECKSYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECKSYM-NEXT:     Section: N_DEBUG
-; CHECKSYM-NEXT:     Source Language ID: TB_C (0x0)
-; CHECKSYM-NEXT:     CPU Version ID: 0x0
+; CHECKSYM-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
+; CHECKSYM32-NEXT:   CPU Version ID: TCPU_COM (0x3)
+; CHECKSYM64-NEXT:   CPU Version ID: TCPU_PPC64 (0x2)
 ; CHECKSYM-NEXT:     StorageClass: C_FILE (0x67)
 ; CHECKSYM-NEXT:     NumberOfAuxEntries: 0
 ; CHECKSYM-NEXT:   }

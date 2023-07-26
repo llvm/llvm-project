@@ -86,6 +86,9 @@ void InterpStack::shrink(size_t Size) {
 void InterpStack::dump() const {
 #ifndef NDEBUG
   llvm::errs() << "Items: " << ItemTypes.size() << ". Size: " << size() << "\n";
+  if (ItemTypes.empty())
+    return;
+
   size_t Index = 0;
   size_t Offset = align(primSize(ItemTypes[0]));
   for (PrimType Ty : ItemTypes) {

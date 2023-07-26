@@ -21,7 +21,7 @@
 #include <unordered_map>
 
 #include "Debug.h"
-#include "DeviceEnvironment.h"
+#include "Environment.h"
 #include "GlobalHandler.h"
 #include "OmptCallback.h"
 #include "PluginInterface.h"
@@ -2582,22 +2582,6 @@ struct AMDGPUGlobalHandlerTy final : public GenericGlobalHandlerTy {
 
     // Store the symbol address on the device global metadata.
     DeviceGlobal.setPtr(reinterpret_cast<void *>(SymbolAddr));
-
-    return Plugin::success();
-  }
-
-private:
-  /// Extract the global's information from the ELF image, section, and symbol.
-  Error getGlobalMetadataFromELF(const DeviceImageTy &Image,
-                                 const ELF64LE::Sym &Symbol,
-                                 const ELF64LE::Shdr &Section,
-                                 GlobalTy &ImageGlobal) override {
-    // The global's address in AMDGPU is computed as the image begin + the ELF
-    // symbol value. Notice we do not add the ELF section offset.
-    ImageGlobal.setPtr(advanceVoidPtr(Image.getStart(), Symbol.st_value));
-
-    // Set the global's size.
-    ImageGlobal.setSize(Symbol.st_size);
 
     return Plugin::success();
   }

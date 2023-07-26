@@ -82,12 +82,9 @@ struct SpecSig {
   SmallVector<ArgInfo, 4> Args;
 
   bool operator==(const SpecSig &Other) const {
-    if (Key != Other.Key || Args.size() != Other.Args.size())
+    if (Key != Other.Key)
       return false;
-    for (size_t I = 0; I < Args.size(); ++I)
-      if (Args[I] != Other.Args[I])
-        return false;
-    return true;
+    return Args == Other.Args;
   }
 
   friend hash_code hash_value(const SpecSig &S) {

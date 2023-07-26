@@ -100,7 +100,7 @@ define void @calls_convergent_intrinsic(ptr %dest, ptr %src, i64 %size) converge
 ; CGSCC: Function Attrs: convergent mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@calls_convergent_intrinsic
 ; CGSCC-SAME: (ptr nofree [[DEST:%.*]], ptr nofree [[SRC:%.*]], i64 [[SIZE:%.*]]) #[[ATTR4:[0-9]+]] {
-; CGSCC-NEXT:    call void @llvm.convergent.copy.p0i8.p0i8.i64(ptr nofree [[DEST]], ptr nofree [[SRC]], i64 [[SIZE]], i1 noundef false) #[[ATTR6]]
+; CGSCC-NEXT:    call void @llvm.convergent.copy.p0i8.p0i8.i64(ptr nofree [[DEST]], ptr nofree [[SRC]], i64 [[SIZE]], i1 noundef false) #[[ATTR7:[0-9]+]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @llvm.convergent.copy.p0i8.p0i8.i64(ptr %dest, ptr %src, i64 %size, i1 false)
@@ -119,7 +119,7 @@ define void @calls_intrinsic(ptr %dest, ptr %src, i64 %size) convergent {
 ; CGSCC: Function Attrs: convergent mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite)
 ; CGSCC-LABEL: define {{[^@]+}}@calls_intrinsic
 ; CGSCC-SAME: (ptr nocapture nofree writeonly [[DEST:%.*]], ptr nocapture nofree readonly [[SRC:%.*]], i64 [[SIZE:%.*]]) #[[ATTR3:[0-9]+]] {
-; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nocapture nofree writeonly [[DEST]], ptr nocapture nofree readonly [[SRC]], i64 [[SIZE]], i1 noundef false) #[[ATTR6]]
+; CGSCC-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nocapture nofree writeonly [[DEST]], ptr nocapture nofree readonly [[SRC]], i64 [[SIZE]], i1 noundef false) #[[ATTR7]]
 ; CGSCC-NEXT:    ret void
 ;
   call void @llvm.memcpy.p0i8.p0i8.i64(ptr %dest, ptr %src, i64 %size, i1 false)
@@ -142,5 +142,6 @@ attributes #0 = { convergent mustprogress nofree norecurse nosync nounwind willr
 ; CGSCC: attributes #[[ATTR3]] = { convergent mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR4]] = { convergent mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nounwind willreturn memory(argmem: readwrite) }
-; CGSCC: attributes #[[ATTR6]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR6]] = { nofree nosync willreturn }
+; CGSCC: attributes #[[ATTR7]] = { nofree willreturn }
 ;.

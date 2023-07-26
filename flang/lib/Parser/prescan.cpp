@@ -726,6 +726,11 @@ void Prescanner::QuotedCharacterLiteral(
         break;
       }
       inCharLiteral_ = true;
+      if (insertASpace_) {
+        Say(GetProvenanceRange(at_, end),
+            "Repeated quote mark in character literal continuation line should have been preceded by '&'"_port_en_US);
+        insertASpace_ = false;
+      }
     }
   }
   inCharLiteral_ = false;

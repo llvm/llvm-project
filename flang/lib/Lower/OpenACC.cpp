@@ -14,6 +14,7 @@
 #include "flang/Common/idioms.h"
 #include "flang/Lower/Bridge.h"
 #include "flang/Lower/ConvertType.h"
+#include "flang/Lower/Mangler.h"
 #include "flang/Lower/PFTBuilder.h"
 #include "flang/Lower/StatementContext.h"
 #include "flang/Lower/Support/Utils.h"
@@ -680,24 +681,34 @@ static R getReductionInitValue(mlir::acc::ReductionOperator op, mlir::Type ty) {
   llvm_unreachable("OpenACC reduction unsupported type");
 }
 
+/// Check if the DataBoundsOp is a constant bound (lb and ub are constants or
+/// extent is a constant).
+bool isConstantBound(mlir::acc::DataBoundsOp &op) {
+  if (op.getLowerbound() && fir::getIntIfConstant(op.getLowerbound()) &&
+      op.getUpperbound() && fir::getIntIfConstant(op.getUpperbound()))
+    return true;
+  if (op.getExtent() && fir::getIntIfConstant(op.getExtent()))
+    return true;
+  return false;
+}
+
 /// Determine if the bounds represent a dynamic shape.
 bool hasDynamicShape(llvm::SmallVector<mlir::Value> &bounds) {
   if (bounds.empty())
     return false;
   for (auto b : bounds) {
     auto op = mlir::dyn_cast<mlir::acc::DataBoundsOp>(b.getDefiningOp());
-    if (((op.getLowerbound() && !fir::getIntIfConstant(op.getLowerbound())) ||
-         (op.getUpperbound() && !fir::getIntIfConstant(op.getUpperbound()))) &&
-        op.getExtent() && !fir::getIntIfConstant(op.getExtent()))
+    if (!isConstantBound(op))
       return true;
   }
   return false;
 }
 
-static mlir::Value
-genReductionInitValue(fir::FirOpBuilder &builder, mlir::Location loc,
-                      mlir::Type ty, mlir::acc::ReductionOperator op,
-                      llvm::SmallVector<mlir::Value> &bounds) {
+/// Return a constant with the initial value for the reduction operator and
+/// type combination.
+static mlir::Value getReductionInitValue(fir::FirOpBuilder &builder,
+                                         mlir::Location loc, mlir::Type ty,
+                                         mlir::acc::ReductionOperator op) {
   if (op == mlir::acc::ReductionOperator::AccLand ||
       op == mlir::acc::ReductionOperator::AccLor ||
       op == mlir::acc::ReductionOperator::AccEqv ||
@@ -736,26 +747,48 @@ genReductionInitValue(fir::FirOpBuilder &builder, mlir::Location loc,
     return fir::factory::Complex{builder, loc}.createComplex(
         cmplxTy.getFKind(), realInit, imagInit);
   }
-  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
-      mlir::Type vecTy =
-          mlir::VectorType::get(seqTy.getShape(), seqTy.getEleTy());
-      auto shTy = vecTy.cast<mlir::ShapedType>();
-      if (seqTy.getEleTy().isIntOrIndex())
-        return builder.create<mlir::arith::ConstantOp>(
-            loc, vecTy,
-            mlir::DenseElementsAttr::get(
-                shTy,
-                getReductionInitValue<llvm::APInt>(op, seqTy.getEleTy())));
-      if (mlir::isa<mlir::FloatType>(seqTy.getEleTy()))
-        return builder.create<mlir::arith::ConstantOp>(
-            loc, vecTy,
-            mlir::DenseElementsAttr::get(
-                shTy,
-                getReductionInitValue<llvm::APFloat>(op, seqTy.getEleTy())));
+
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty))
+    return getReductionInitValue(builder, loc, seqTy.getEleTy(), op);
+
+  llvm::report_fatal_error("Unsupported OpenACC reduction type");
+}
+
+static mlir::Value genReductionInitRegion(fir::FirOpBuilder &builder,
+                                          mlir::Location loc, mlir::Type ty,
+                                          mlir::acc::ReductionOperator op) {
+  ty = fir::unwrapRefType(ty);
+  mlir::Value initValue = getReductionInitValue(builder, loc, ty, op);
+  if (fir::isa_trivial(ty)) {
+    mlir::Value alloca = builder.create<fir::AllocaOp>(loc, ty);
+    builder.create<fir::StoreOp>(loc, builder.createConvert(loc, ty, initValue),
+                                 alloca);
+    return alloca;
+  } else if (auto seqTy = mlir::dyn_cast_or_null<fir::SequenceType>(ty)) {
+    if (seqTy.hasDynamicExtents())
+      TODO(loc, "private recipe of array with dynamic extents");
+    if (fir::isa_trivial(seqTy.getEleTy())) {
+      mlir::Value alloca = builder.create<fir::AllocaOp>(loc, seqTy);
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
+      llvm::SmallVector<fir::DoLoopOp> loops;
+      llvm::SmallVector<mlir::Value> ivs;
+      for (auto ext : llvm::reverse(seqTy.getShape())) {
+        auto lb = builder.createIntegerConstant(loc, idxTy, 0);
+        auto ub = builder.createIntegerConstant(loc, idxTy, ext - 1);
+        auto step = builder.createIntegerConstant(loc, idxTy, 1);
+        auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
+                                                  /*unordered=*/false);
+        builder.setInsertionPointToStart(loop.getBody());
+        loops.push_back(loop);
+        ivs.push_back(loop.getInductionVar());
+      }
+      auto coord = builder.create<fir::CoordinateOp>(loc, refTy, alloca, ivs);
+      builder.create<fir::StoreOp>(loc, initValue, coord);
+      builder.setInsertionPointAfter(loops[0]);
+      return alloca;
     }
   }
-
   llvm::report_fatal_error("Unsupported OpenACC reduction type");
 }
 
@@ -766,8 +799,16 @@ static mlir::Value genLogicalCombiner(fir::FirOpBuilder &builder,
   mlir::Type i1 = builder.getI1Type();
   mlir::Value v1 = builder.create<fir::ConvertOp>(loc, i1, value1);
   mlir::Value v2 = builder.create<fir::ConvertOp>(loc, i1, value2);
-  mlir::Value add = builder.create<Op>(loc, v1, v2);
-  return builder.create<fir::ConvertOp>(loc, value1.getType(), add);
+  mlir::Value combined = builder.create<Op>(loc, v1, v2);
+  return builder.create<fir::ConvertOp>(loc, value1.getType(), combined);
+}
+
+static mlir::Value loadIfRef(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value value) {
+  if (mlir::isa<fir::ReferenceType, fir::PointerType, fir::HeapType>(
+          value.getType()))
+    return builder.create<fir::LoadOp>(loc, value);
+  return value;
 }
 
 static mlir::Value genComparisonCombiner(fir::FirOpBuilder &builder,
@@ -782,45 +823,13 @@ static mlir::Value genComparisonCombiner(fir::FirOpBuilder &builder,
   return builder.create<fir::ConvertOp>(loc, value1.getType(), add);
 }
 
-static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
-                               mlir::acc::ReductionOperator op, mlir::Type ty,
-                               mlir::Value value1, mlir::Value value2) {
-
-  // Handle combiner on arrays.
-  if (auto refTy = mlir::dyn_cast<fir::ReferenceType>(ty)) {
-    if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(refTy.getEleTy())) {
-      if (seqTy.hasDynamicExtents())
-        TODO(loc, "OpenACC reduction on array with dynamic extents");
-      mlir::Type idxTy = builder.getIndexType();
-      mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
-
-      llvm::SmallVector<fir::DoLoopOp> loops;
-      llvm::SmallVector<mlir::Value> ivs;
-      for (auto ext : llvm::reverse(seqTy.getShape())) {
-        auto lb = builder.create<mlir::arith::ConstantOp>(
-            loc, idxTy, builder.getIntegerAttr(idxTy, 0));
-        auto ub = builder.create<mlir::arith::ConstantOp>(
-            loc, idxTy, builder.getIntegerAttr(idxTy, ext - 1));
-        auto step = builder.create<mlir::arith::ConstantOp>(
-            loc, idxTy, builder.getIntegerAttr(idxTy, 1));
-        auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
-                                                  /*unordered=*/false);
-        builder.setInsertionPointToStart(loop.getBody());
-        loops.push_back(loop);
-        ivs.push_back(loop.getInductionVar());
-      }
-      auto addr1 = builder.create<fir::CoordinateOp>(loc, refTy, value1, ivs);
-      auto addr2 = builder.create<fir::CoordinateOp>(loc, refTy, value2, ivs);
-      auto load1 = builder.create<fir::LoadOp>(loc, addr1);
-      auto load2 = builder.create<fir::LoadOp>(loc, addr2);
-      auto combined =
-          genCombiner(builder, loc, op, seqTy.getEleTy(), load1, load2);
-      builder.create<fir::StoreOp>(loc, combined, addr1);
-      builder.setInsertionPointAfter(loops[0]);
-      return value1;
-    }
-  }
-
+static mlir::Value genScalarCombiner(fir::FirOpBuilder &builder,
+                                     mlir::Location loc,
+                                     mlir::acc::ReductionOperator op,
+                                     mlir::Type ty, mlir::Value value1,
+                                     mlir::Value value2) {
+  value1 = loadIfRef(builder, loc, value1);
+  value2 = loadIfRef(builder, loc, value2);
   if (op == mlir::acc::ReductionOperator::AccAdd) {
     if (ty.isIntOrIndex())
       return builder.create<mlir::arith::AddIOp>(loc, value1, value2);
@@ -874,6 +883,43 @@ static mlir::Value genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
   TODO(loc, "reduction operator");
 }
 
+static void genCombiner(fir::FirOpBuilder &builder, mlir::Location loc,
+                        mlir::acc::ReductionOperator op, mlir::Type ty,
+                        mlir::Value value1, mlir::Value value2) {
+  ty = fir::unwrapRefType(ty);
+
+  if (auto seqTy = mlir::dyn_cast<fir::SequenceType>(ty)) {
+    if (seqTy.hasDynamicExtents())
+      TODO(loc, "OpenACC reduction on array with dynamic extents");
+    mlir::Type idxTy = builder.getIndexType();
+    mlir::Type refTy = fir::ReferenceType::get(seqTy.getEleTy());
+
+    llvm::SmallVector<fir::DoLoopOp> loops;
+    llvm::SmallVector<mlir::Value> ivs;
+    for (auto ext : llvm::reverse(seqTy.getShape())) {
+      auto lb = builder.createIntegerConstant(loc, idxTy, 0);
+      auto ub = builder.createIntegerConstant(loc, idxTy, ext - 1);
+      auto step = builder.createIntegerConstant(loc, idxTy, 1);
+      auto loop = builder.create<fir::DoLoopOp>(loc, lb, ub, step,
+                                                /*unordered=*/false);
+      builder.setInsertionPointToStart(loop.getBody());
+      loops.push_back(loop);
+      ivs.push_back(loop.getInductionVar());
+    }
+    auto addr1 = builder.create<fir::CoordinateOp>(loc, refTy, value1, ivs);
+    auto addr2 = builder.create<fir::CoordinateOp>(loc, refTy, value2, ivs);
+    auto load1 = builder.create<fir::LoadOp>(loc, addr1);
+    auto load2 = builder.create<fir::LoadOp>(loc, addr2);
+    mlir::Value res =
+        genScalarCombiner(builder, loc, op, seqTy.getEleTy(), load1, load2);
+    builder.create<fir::StoreOp>(loc, res, addr1);
+    builder.setInsertionPointAfter(loops[0]);
+  } else {
+    mlir::Value res = genScalarCombiner(builder, loc, op, ty, value1, value2);
+    builder.create<fir::StoreOp>(loc, res, value1);
+  }
+}
+
 mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
     fir::FirOpBuilder &builder, llvm::StringRef recipeName, mlir::Location loc,
     mlir::Type ty, mlir::acc::ReductionOperator op,
@@ -890,7 +936,7 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   builder.createBlock(&recipe.getInitRegion(), recipe.getInitRegion().end(),
                       {ty}, {loc});
   builder.setInsertionPointToEnd(&recipe.getInitRegion().back());
-  mlir::Value initValue = genReductionInitValue(builder, loc, ty, op, bounds);
+  mlir::Value initValue = genReductionInitRegion(builder, loc, ty, op);
   builder.create<mlir::acc::YieldOp>(loc, initValue);
 
   builder.createBlock(&recipe.getCombinerRegion(),
@@ -898,8 +944,8 @@ mlir::acc::ReductionRecipeOp Fortran::lower::createOrGetReductionRecipe(
   builder.setInsertionPointToEnd(&recipe.getCombinerRegion().back());
   mlir::Value v1 = recipe.getCombinerRegion().front().getArgument(0);
   mlir::Value v2 = recipe.getCombinerRegion().front().getArgument(1);
-  mlir::Value combinedValue = genCombiner(builder, loc, op, ty, v1, v2);
-  builder.create<mlir::acc::YieldOp>(loc, combinedValue);
+  genCombiner(builder, loc, op, ty, v1, v2);
+  builder.create<mlir::acc::YieldOp>(loc, v1);
   builder.restoreInsertionPoint(crtPos);
   return recipe;
 }
@@ -937,13 +983,11 @@ genReductions(const Fortran::parser::AccObjectListWithReduction &objectList,
          !bounds.empty()))
       TODO(operandLocation, "reduction with unsupported type");
 
-    mlir::Type retTy = getTypeFromBounds(bounds, baseAddr.getType());
     auto op = createDataEntryOp<mlir::acc::ReductionOp>(
         builder, operandLocation, baseAddr, asFortran, bounds,
-        /*structured=*/true, mlir::acc::DataClause::acc_reduction, retTy);
-    mlir::Type ty = fir::unwrapRefType(op.getAccPtr().getType());
-    if (!fir::isa_trivial(ty))
-      ty = retTy;
+        /*structured=*/true, mlir::acc::DataClause::acc_reduction,
+        baseAddr.getType());
+    mlir::Type ty = op.getAccPtr().getType();
     std::string recipeName = fir::getTypeAsString(
         ty, converter.getKindMap(),
         ("reduction_" + stringifyReductionOperator(mlirOp)).str());
@@ -2239,6 +2283,134 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
     waitOp.setAsyncAttr(firOpBuilder.getUnitAttr());
 }
 
+static void addDeclareAttr(fir::FirOpBuilder &builder, mlir::Operation *op,
+                           mlir::acc::DataClause clause) {
+  op->setAttr(mlir::acc::getDeclareAttrName(),
+              mlir::acc::DeclareAttr::get(builder.getContext(),
+                                          mlir::acc::DataClauseAttr::get(
+                                              builder.getContext(), clause)));
+}
+
+static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
+                           mlir::OpBuilder &modBuilder,
+                           const Fortran::parser::AccObjectList &accObjectList,
+                           mlir::acc::DataClause clause) {
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  for (const auto &accObject : accObjectList.v) {
+    mlir::Location operandLocation = genOperandLocation(converter, accObject);
+    std::visit(
+        Fortran::common::visitors{
+            [&](const Fortran::parser::Designator &designator) {
+              if (const auto *name =
+                      Fortran::semantics::getDesignatorNameIfDataRef(
+                          designator)) {
+                std::string globalName = converter.mangleName(*name->symbol);
+                fir::GlobalOp globalOp = builder.getNamedGlobal(globalName);
+                if (!globalOp)
+                  llvm::report_fatal_error("could not retrieve global symbol");
+
+                // Create the new global constructor op after the FIR global.
+                std::stringstream globalCtorName;
+                globalCtorName << globalName << "_acc_ctor";
+                auto crtPos = builder.saveInsertionPoint();
+                addDeclareAttr(builder, globalOp.getOperation(), clause);
+                modBuilder.setInsertionPointAfter(globalOp);
+                auto globalCtor =
+                    modBuilder.create<mlir::acc::GlobalConstructorOp>(
+                        operandLocation, globalCtorName.str());
+                builder.createBlock(&globalCtor.getRegion(),
+                                    globalCtor.getRegion().end(), {}, {});
+                builder.setInsertionPointToEnd(&globalCtor.getRegion().back());
+
+                // Fill up the global constructor region.
+                fir::AddrOfOp addrOp = builder.create<fir::AddrOfOp>(
+                    operandLocation,
+                    fir::ReferenceType::get(globalOp.getType()),
+                    globalOp.getSymbol());
+                addDeclareAttr(builder, addrOp.getOperation(), clause);
+                std::stringstream asFortran;
+                asFortran << Fortran::lower::mangle::demangleName(globalName);
+                llvm::SmallVector<mlir::Value> bounds;
+                mlir::acc::CreateOp entry =
+                    createDataEntryOp<mlir::acc::CreateOp>(
+                        builder, operandLocation, addrOp.getResTy(), asFortran,
+                        bounds, true, clause, addrOp.getResTy().getType());
+                builder.create<mlir::acc::DeclareEnterOp>(
+                    operandLocation, mlir::ValueRange{entry.getAccPtr()});
+                builder.create<mlir::acc::TerminatorOp>(operandLocation);
+                builder.restoreInsertionPoint(crtPos);
+
+                // TODO: global destructor.
+              }
+            },
+            [&](const Fortran::parser::Name &name) {
+              TODO(operandLocation, "OpenACC Global Ctor from parser::Name");
+            }},
+        accObject.u);
+  }
+}
+
+template <typename Clause>
+static void
+genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
+                           mlir::OpBuilder &modBuilder, const Clause *x,
+                           Fortran::parser::AccDataModifier::Modifier mod,
+                           const mlir::acc::DataClause clause,
+                           const mlir::acc::DataClause clauseWithModifier) {
+  const Fortran::parser::AccObjectListWithModifier &listWithModifier = x->v;
+  const auto &accObjectList =
+      std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+  const auto &modifier =
+      std::get<std::optional<Fortran::parser::AccDataModifier>>(
+          listWithModifier.t);
+  mlir::acc::DataClause dataClause =
+      (modifier && (*modifier).v == mod) ? clauseWithModifier : clause;
+  genGlobalCtors(converter, modBuilder, accObjectList, dataClause);
+}
+
+static void genACC(Fortran::lower::AbstractConverter &converter,
+                   Fortran::semantics::SemanticsContext &semanticsContext,
+                   Fortran::lower::pft::Evaluation &eval,
+                   const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
+                       &declareConstruct) {
+
+  const auto &declarativeDir =
+      std::get<Fortran::parser::AccDeclarativeDirective>(declareConstruct.t);
+  const auto &accClauseList =
+      std::get<Fortran::parser::AccClauseList>(declareConstruct.t);
+
+  if (declarativeDir.v == llvm::acc::Directive::ACCD_declare) {
+    fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+    llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
+        copyoutEntryOperands, createEntryOperands;
+    Fortran::lower::StatementContext stmtCtx;
+    auto moduleOp =
+        builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
+    auto funcOp =
+        builder.getBlock()->getParent()->getParentOfType<mlir::func::FuncOp>();
+    if (funcOp) {
+      TODO(funcOp.getLoc(), "OpenACC declare in function/subroutine");
+    } else if (moduleOp) {
+      mlir::OpBuilder modBuilder(moduleOp.getBodyRegion());
+      for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+        mlir::Location clauseLocation = converter.genLocation(clause.source);
+        if (const auto *createClause =
+                std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
+          genGlobalCtorsWithModifier<Fortran::parser::AccClause::Create>(
+              converter, modBuilder, createClause,
+              Fortran::parser::AccDataModifier::Modifier::Zero,
+              mlir::acc::DataClause::acc_create,
+              mlir::acc::DataClause::acc_create_zero);
+        } else {
+          TODO(clauseLocation, "OpenACC declare clause");
+        }
+      }
+    }
+    return;
+  }
+  llvm_unreachable("unsupported declarative directive");
+}
+
 void Fortran::lower::genOpenACCConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
@@ -2278,6 +2450,7 @@ void Fortran::lower::genOpenACCConstruct(
 
 void Fortran::lower::genOpenACCDeclarativeConstruct(
     Fortran::lower::AbstractConverter &converter,
+    Fortran::semantics::SemanticsContext &semanticsContext,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct) {
 
@@ -2285,8 +2458,8 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
       common::visitors{
           [&](const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
                   &standaloneDeclarativeConstruct) {
-            TODO(converter.genLocation(standaloneDeclarativeConstruct.source),
-                 "OpenACC Standalone Declarative construct not lowered yet!");
+            genACC(converter, semanticsContext, eval,
+                   standaloneDeclarativeConstruct);
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct
                   &routineConstruct) {

@@ -126,8 +126,8 @@ define float @v_constained_fma_f32_fpexcept_strict_fabs_fabs(float %x, float %y,
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_fma_f32 v0, |v0|, |v1|, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
-  %neg.x = call float @llvm.fabs.f32(float %x)
-  %neg.y = call float @llvm.fabs.f32(float %y)
+  %neg.x = call float @llvm.fabs.f32(float %x) #0
+  %neg.y = call float @llvm.fabs.f32(float %y) #0
   %val = call float @llvm.experimental.constrained.fma.f32(float %neg.x, float %neg.y, float %z, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %val
 }
@@ -152,11 +152,10 @@ define <2 x float> @v_constained_fma_v2f32_fpexcept_strict_fneg_fneg(<2 x float>
   ret <2 x float> %val
 }
 
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata) #1
-declare <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float>, <2 x float>, <2 x float>, metadata, metadata) #1
-declare <3 x float> @llvm.experimental.constrained.fma.v3f32(<3 x float>, <3 x float>, <3 x float>, metadata, metadata) #1
-declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata) #1
+declare float @llvm.fabs.f32(float)
+declare float @llvm.experimental.constrained.fma.f32(float, float, float, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.fma.v2f32(<2 x float>, <2 x float>, <2 x float>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.fma.v3f32(<3 x float>, <3 x float>, <3 x float>, metadata, metadata)
+declare <4 x float> @llvm.experimental.constrained.fma.v4f32(<4 x float>, <4 x float>, <4 x float>, metadata, metadata)
 
 attributes #0 = { strictfp }
-attributes #1 = { inaccessiblememonly nounwind willreturn }

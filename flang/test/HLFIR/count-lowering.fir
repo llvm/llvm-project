@@ -39,6 +39,7 @@ func.func @_QPcount2(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc
 // CHECK-DAG:     %[[RES:.*]]:2 = hlfir.declare %[[ARG1]]
 
 // CHECK-DAG:     %[[RET_BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+// CHECK-DAG:     %[[KIND:.*]] = arith.constant 4 : index
 // CHECK-DAG:     %[[RET_ADDR:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[RET_SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
@@ -48,8 +49,9 @@ func.func @_QPcount2(%arg0: !fir.box<!fir.array<?x?x!fir.logical<4>>> {fir.bindc
 // CHECK-DAG:     %[[DIM:.*]] = fir.load %[[DIM_VAR]]#0 : !fir.ref<i32>
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK]]#1
+// CHECK-DAG:     %[[KIND_ARG:.*]] = fir.convert %[[KIND]] : (index) -> i32
 
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranACountDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> none
+// CHECK:         %[[NONE:.*]] = fir.call @_FortranACountDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[KIND_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]]) : (!fir.ref<!fir.box<none>>, !fir.box<none>, i32, i32, !fir.ref<i8>, i32) -> none
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]
@@ -80,6 +82,7 @@ func.func @_QPcount3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"}) 
 // CHECK-LABEL:  func.func @_QPcount3(
 // CHECK:           %[[ARG0:.*]]: !fir.ref<!fir.array<2xi32>>
 // CHECK-DAG:     %[[RET_BOX:.*]] = fir.alloca !fir.box<!fir.heap<!fir.array<?xi32>>>
+// CHECK-DAG:     %[[KIND:.*]] = arith.constant 4 : index
 // CHECK-DAG:     %[[RET_ADDR:.*]] = fir.zero_bits !fir.heap<!fir.array<?xi32>>
 // CHECK-DAG:     %[[C0:.*]] = arith.constant 0 : index
 // CHECK-DAG:     %[[RET_SHAPE:.*]] = fir.shape %[[C0]] : (index) -> !fir.shape<1>
@@ -95,7 +98,9 @@ func.func @_QPcount3(%arg0: !fir.ref<!fir.array<2xi32>> {fir.bindc_name = "s"}) 
 
 // CHECK-DAG:     %[[RET_ARG:.*]] = fir.convert %[[RET_BOX]]
 // CHECK-DAG:     %[[MASK_ARG:.*]] = fir.convert %[[MASK_BOX]] : (!fir.box<!fir.array<2x2x!fir.logical<4>>>) -> !fir.box<none>
-// CHECK:         %[[NONE:.*]] = fir.call @_FortranACountDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
+// CHECK-DAG:     %[[KIND_ARG:.*]] = fir.convert %[[KIND]] : (index) -> i32
+
+// CHECK:         %[[NONE:.*]] = fir.call @_FortranACountDim(%[[RET_ARG]], %[[MASK_ARG]], %[[DIM]], %[[KIND_ARG]], %[[LOC_STR:.*]], %[[LOC_N:.*]])
 // CHECK:         %[[RET:.*]] = fir.load %[[RET_BOX]]
 // CHECK:         %[[BOX_DIMS:.*]]:3 = fir.box_dims %[[RET]]
 // CHECK-NEXT:    %[[ADDR:.*]] = fir.box_addr %[[RET]]

@@ -458,15 +458,6 @@ void DwarfCompileUnit::attachLowHighPC(DIE &D, const MCSymbol *Begin,
     addLabelDelta(D, dwarf::DW_AT_high_pc, End, Begin);
 }
 
-// Find DIE for the given subprogram and attach appropriate DW_AT_low_pc
-// and DW_AT_high_pc attributes. If there are global variables in this
-// scope then create and insert DIEs for these variables.
-DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
-  DIE *SPDie = getOrCreateSubprogramDIE(SP, includeMinimalInlineScopes());
-  auto *ContextCU = static_cast<DwarfCompileUnit *>(SPDie->getUnit());
-  return ContextCU->updateSubprogramScopeDIEImpl(SP, SPDie);
-}
-
 // Add info for Wasm-global-based relocation.
 // 'GlobalIndex' is used for split dwarf, which currently relies on a few
 // assumptions that are not guaranteed in a formal way but work in practice.
@@ -500,8 +491,11 @@ void DwarfCompileUnit::addWasmRelocBaseGlobal(DIELoc *Loc, StringRef GlobalName,
   }
 }
 
-DIE &DwarfCompileUnit::updateSubprogramScopeDIEImpl(const DISubprogram *SP,
-                                                    DIE *SPDie) {
+// Find DIE for the given subprogram and attach appropriate DW_AT_low_pc
+// and DW_AT_high_pc attributes. If there are global variables in this
+// scope then create and insert DIEs for these variables.
+DIE &DwarfCompileUnit::updateSubprogramScopeDIE(const DISubprogram *SP) {
+  DIE *SPDie = getOrCreateSubprogramDIE(SP, includeMinimalInlineScopes());
   SmallVector<RangeSpan, 2> BB_List;
   // If basic block sections are on, ranges for each basic block section has
   // to be emitted separately.
@@ -1065,7 +1059,6 @@ sortLocalVars(SmallVectorImpl<DbgVariable *> &Input) {
 DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
                                                    LexicalScope *Scope) {
   DIE &ScopeDIE = updateSubprogramScopeDIE(Sub);
-  auto *ContextCU = static_cast<DwarfCompileUnit *>(ScopeDIE.getUnit());
 
   if (Scope) {
     assert(!Scope->getInlinedAt());
@@ -1073,10 +1066,8 @@ DIE &DwarfCompileUnit::constructSubprogramScopeDIE(const DISubprogram *Sub,
     // Collect lexical scope children first.
     // ObjectPointer might be a local (non-argument) local variable if it's a
     // block's synthetic this pointer.
-    if (DIE *ObjectPointer =
-            ContextCU->createAndAddScopeChildren(Scope, ScopeDIE))
-      ContextCU->addDIEEntry(ScopeDIE, dwarf::DW_AT_object_pointer,
-                             *ObjectPointer);
+    if (DIE *ObjectPointer = createAndAddScopeChildren(Scope, ScopeDIE))
+      addDIEEntry(ScopeDIE, dwarf::DW_AT_object_pointer, *ObjectPointer);
   }
 
   // If this is a variadic function, add an unspecified parameter.

@@ -1713,24 +1713,37 @@ Instruction *InstCombinerImpl::foldCastedBitwiseLogic(BinaryOperator &I) {
 
   Value *Op0 = I.getOperand(0), *Op1 = I.getOperand(1);
 
-  // ( A << (X - 1) ) | ((A > 0) zext to iX)
-  // <=> A < 0 | A > 0
-  // <=> (A != 0) zext to iX
-  Value *A;
-  ICmpInst::Predicate Pred;
+  // fold bitwise(A >> BW - 1, zext(icmp))     (BW is the scalar bits of the
+  // type of A)
+  //   -> bitwise(zext(A < 0), zext(icmp))
+  //   -> zext(bitwise(A < 0, icmp))
+  auto FoldBitwiseICmpZeroWithICmp = [&](Value *Op0,
+                                         Value *Op1) -> Instruction * {
+    ICmpInst::Predicate Pred;
+    Value *A;
+    bool IsMatched =
+        match(Op0,
+              m_OneUse(m_LShr(
+                  m_Value(A),
+                  m_SpecificInt(Op0->getType()->getScalarSizeInBits() - 1)))) &&
+        match(Op1, m_OneUse(m_ZExt(m_ICmp(Pred, m_Value(), m_Value()))));
 
-  auto MatchOrZExtICmp = [&](Value *Op0, Value *Op1) -> bool {
-    return match(Op0, m_LShr(m_Value(A), m_SpecificInt(Op0->getType()->getScalarSizeInBits() - 1))) &&
-           match(Op1, m_ZExt(m_ICmp(Pred, m_Specific(A), m_Zero())));
+    if (!IsMatched)
+      return nullptr;
+
+    auto *ICmpL =
+        Builder.CreateICmpSLT(A, Constant::getNullValue(A->getType()));
+    auto *ICmpR = cast<ZExtInst>(Op1)->getOperand(0);
+    auto *BitwiseOp = Builder.CreateBinOp(LogicOpc, ICmpL, ICmpR);
+
+    return new ZExtInst(BitwiseOp, Op0->getType());
   };
 
-  if (LogicOpc == Instruction::Or &&
-      (MatchOrZExtICmp(Op0, Op1) || MatchOrZExtICmp(Op1, Op0)) &&
-      Pred == ICmpInst::ICMP_SGT) {
-      Value *Cmp =
-          Builder.CreateICmpNE(A, Constant::getNullValue(A->getType()));
-      return new ZExtInst(Cmp, A->getType());
-  }
+  if (auto *Ret = FoldBitwiseICmpZeroWithICmp(Op0, Op1))
+    return Ret;
+
+  if (auto *Ret = FoldBitwiseICmpZeroWithICmp(Op1, Op0))
+    return Ret;
 
   CastInst *Cast0 = dyn_cast<CastInst>(Op0);
   if (!Cast0)

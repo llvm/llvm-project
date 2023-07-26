@@ -31,7 +31,7 @@ RUN: llvm-dwarfdump --verbose -debug-line %t.dSYM | FileCheck %s --check-prefix 
 CHECK-NOT: error:
 
 DEBUGINFO:   DW_TAG_subprogram
-DEBUGINFO:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000100003f4c)
+DEBUGINFO:     DW_AT_low_pc [DW_FORM_addrx]      (indexed (00000000) address = 0x0000000100003f4c)
 DEBUGINFO:     DW_AT_high_pc [DW_FORM_data4]   (0x00000054)
 DEBUGINFO:     DW_AT_name [DW_FORM_strp]       ( .debug_str[0x0000011c] = "main")
 

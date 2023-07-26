@@ -116,11 +116,11 @@ public:
         };
         __cxx_atomic_wait(&__a_.__a_, __test_fn);
     }
-    template <class Rep, class Period>
+    template <class _Rep, class _Period>
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
-    bool try_acquire_for(chrono::duration<Rep, Period> const& __rel_time)
+    bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time)
     {
-        if (__rel_time == chrono::duration<Rep, Period>::zero())
+        if (__rel_time == chrono::duration<_Rep, _Period>::zero())
             return try_acquire();
         auto const __test_fn = [this]() { return try_acquire(); };
         return std::__libcpp_thread_poll_with_backoff(__test_fn, __libcpp_timed_backoff_policy(), __rel_time);
@@ -178,9 +178,9 @@ public:
     {
         __semaphore_.acquire();
     }
-    template<class Rep, class Period>
+    template<class _Rep, class _Period>
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
-    bool try_acquire_for(chrono::duration<Rep, Period> const& __rel_time)
+    bool try_acquire_for(chrono::duration<_Rep, _Period> const& __rel_time)
     {
         return __semaphore_.try_acquire_for(chrono::duration_cast<chrono::nanoseconds>(__rel_time));
     }
@@ -189,11 +189,11 @@ public:
     {
         return __semaphore_.try_acquire();
     }
-    template <class Clock, class Duration>
+    template <class _Clock, class _Duration>
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
-    bool try_acquire_until(chrono::time_point<Clock, Duration> const& __abs_time)
+    bool try_acquire_until(chrono::time_point<_Clock, _Duration> const& __abs_time)
     {
-        auto const __current = Clock::now();
+        auto const __current = _Clock::now();
         if (__current >= __abs_time)
             return try_acquire();
         else

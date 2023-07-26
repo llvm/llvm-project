@@ -25,7 +25,7 @@
 // mmmm | mmmm mmmm mmmm mmmm mmmm mmmm mmmm mmmm | mmmm mmmm mmmm mmmm mmmm
 // mmmm mmmm mmmm
 
-#if defined(CRT_HAS_128BIT) && defined(CRT_LDBL_128BIT)
+#if defined(CRT_HAS_TF_MODE)
 COMPILER_RT_ABI fp_t __floattitf(ti_int a) {
   if (a == 0)
     return 0.0;

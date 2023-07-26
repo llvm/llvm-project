@@ -14,6 +14,7 @@
 #define MLIR_DIALECT_IRDL_IR_IRDLOPS
 
 include "IRDL.td"
+include "IRDLAttributes.td"
 include "IRDLTypes.td"
 include "IRDLInterfaces.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -223,10 +224,25 @@ def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
 
     The `mul` operation will expect two operands of type `cmath.complex`, that
     have the same type, and return a result of the same type.
+
+    The operands can also be marked as variadic or optional:
+    ```mlir
+    irdl.operands(%0, single %1, optional %2, variadic %3)
+    ```
+    
+    Here, %0 and %1 are required single operands, %2 is an optional operand,
+    and %3 is a variadic operand.
+
+    When more than one operand is marked as optional or variadic, the operation
+    will expect a 'operand_segment_sizes' attribute that defines the number of
+    operands in each segment.
   }];
 
-  let arguments = (ins Variadic<IRDL_AttributeType>:$args);
-  let assemblyFormat = " `(` $args `)` attr-dict ";
+  let arguments = (ins Variadic<IRDL_AttributeType>:$args, 
+                        VariadicityArrayAttr:$variadicity);
+  let assemblyFormat =
+    "`` custom<ValuesWithVariadicity>($args, $variadicity) attr-dict";
+  let hasVerifier = true;
 }
 
 def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
@@ -254,10 +270,25 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
 
     The operation will expect one operand of the `cmath.complex` type, and two
     results that have the underlying type of the `cmath.complex`.
+
+    The results can also be marked as variadic or optional:
+    ```mlir
+    irdl.results(%0, single %1, optional %2, variadic %3)
+    ```
+    
+    Here, %0 and %1 are required single results, %2 is an optional result,
+    and %3 is a variadic result.
+
+    When more than one result is marked as optional or variadic, the operation
+    will expect a 'result_segment_sizes' attribute that defines the number of
+    results in each segment.
   }];
 
-  let arguments = (ins Variadic<IRDL_AttributeType>:$args);
-  let assemblyFormat = " `(` $args `)` attr-dict ";
+  let arguments = (ins Variadic<IRDL_AttributeType>:$args, 
+                        VariadicityArrayAttr:$variadicity);
+  let assemblyFormat =
+    " `` custom<ValuesWithVariadicity>($args, $variadicity) attr-dict";
+  let hasVerifier = true;
 }
 
 def IRDL_AttributesOp : IRDL_Op<"attributes", [HasParent<"OperationOp">]> {

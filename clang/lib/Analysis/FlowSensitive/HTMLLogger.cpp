@@ -108,9 +108,13 @@ public:
           "pointee", [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
       break;
     case Value::Kind::Struct:
-      for (const auto &Child : cast<StructValue>(V).children())
-        JOS.attributeObject("f:" + Child.first->getNameAsString(),
-                            [&] { dump(*Child.second); });
+      for (const auto &Child :
+           cast<StructValue>(V).getAggregateLoc().children())
+        JOS.attributeObject("f:" + Child.first->getNameAsString(), [&] {
+          if (Child.second)
+            if (Value *Val = Env.getValue(*Child.second))
+              dump(*Val);
+        });
       break;
     }
 

@@ -801,10 +801,6 @@ void CudaToolChain::addClangTargetOptions(
     CC1Args.append(
         {"-fcuda-is-device", "-mllvm", "-enable-memcpyopt-without-libcalls"});
 
-    if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
-                           options::OPT_fno_cuda_approx_transcendentals, false))
-      CC1Args.push_back("-fcuda-approx-transcendentals");
-
     // Unsized function arguments used for variadics were introduced in CUDA-9.0
     // We still do not support generating code that actually uses variadic
     // arguments yet, but we do need to allow parsing them as recent CUDA

@@ -174,8 +174,8 @@ entry:
 ; SYM-NEXT:     Name: <stdin>
 ; SYM-NEXT:     Value (SymbolTableIndex): 0x0
 ; SYM-NEXT:     Section: N_DEBUG
-; SYM-NEXT:     Source Language ID: TB_C (0x0)
-; SYM-NEXT:     CPU Version ID: 0x0
+; SYM-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
+; SYM-NEXT:     CPU Version ID: TCPU_COM (0x3)
 ; SYM-NEXT:     StorageClass: C_FILE (0x67)
 ; SYM-NEXT:     NumberOfAuxEntries: 0
 ; SYM-NEXT:   }
