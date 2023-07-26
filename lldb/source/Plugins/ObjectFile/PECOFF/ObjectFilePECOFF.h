@@ -24,6 +24,7 @@ public:
     MachineArm = 0x1c0,
     MachineArmNt = 0x1c4,
     MachineArm64 = 0xaa64,
+    MachineArm64X = 0xa64e,
     MachineEbc = 0xebc,
     MachineX86 = 0x14c,
     MachineIA64 = 0x200,
