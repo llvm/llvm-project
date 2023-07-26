@@ -79,7 +79,9 @@ static lldb_private::RegisterInfo g_register_infos_mte[] = {
     DEFINE_EXTENSION_REG(mte_ctrl)};
 
 static lldb_private::RegisterInfo g_register_infos_tls[] = {
-    DEFINE_EXTENSION_REG(tpidr)};
+    DEFINE_EXTENSION_REG(tpidr),
+    // Only present when SME is present
+    DEFINE_EXTENSION_REG(tpidr2)};
 
 // Number of register sets provided by this context.
 enum {
@@ -87,7 +89,7 @@ enum {
   k_num_fpr_registers = fpu_fpcr - fpu_v0 + 1,
   k_num_sve_registers = sve_ffr - sve_vg + 1,
   k_num_mte_register = 1,
-  k_num_tls_register = 1,
+  // Number of TLS registers is dynamic so it is not listed here.
   k_num_pauth_register = 2,
   k_num_register_sets_default = 2,
   k_num_register_sets = 3
@@ -193,8 +195,7 @@ static const lldb_private::RegisterSet g_reg_set_pauth_arm64 = {
 static const lldb_private::RegisterSet g_reg_set_mte_arm64 = {
     "MTE Control Register", "mte", k_num_mte_register, nullptr};
 
-static const lldb_private::RegisterSet g_reg_set_tls_arm64 = {
-    "Thread Local Storage Registers", "tls", k_num_tls_register, nullptr};
+// The size of the TLS set is dynamic, so not listed here.
 
 RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
     const lldb_private::ArchSpec &target_arch, lldb_private::Flags opt_regsets)
@@ -236,9 +237,9 @@ RegisterInfoPOSIX_arm64::RegisterInfoPOSIX_arm64(
       if (m_opt_regsets.AllSet(eRegsetMaskMTE))
         AddRegSetMTE();
 
-      // tpidr is always present, but in future there will be others so this is
-      // done as a dynamic set.
-      AddRegSetTLS();
+      // The TLS set always contains tpidr but only has tpidr2 when SME is
+      // present.
+      AddRegSetTLS(m_opt_regsets.AllSet(eRegsetMaskSSVE));
 
       m_register_info_count = m_dynamic_reg_infos.size();
       m_register_info_p = m_dynamic_reg_infos.data();
@@ -323,18 +324,23 @@ void RegisterInfoPOSIX_arm64::AddRegSetMTE() {
   m_dynamic_reg_sets.back().registers = m_mte_regnum_collection.data();
 }
 
-void RegisterInfoPOSIX_arm64::AddRegSetTLS() {
+void RegisterInfoPOSIX_arm64::AddRegSetTLS(bool has_tpidr2) {
   uint32_t tls_regnum = m_dynamic_reg_infos.size();
-  m_tls_regnum_collection.push_back(tls_regnum);
-  m_dynamic_reg_infos.push_back(g_register_infos_tls[0]);
-  m_dynamic_reg_infos[tls_regnum].byte_offset =
-      m_dynamic_reg_infos[tls_regnum - 1].byte_offset +
-      m_dynamic_reg_infos[tls_regnum - 1].byte_size;
-  m_dynamic_reg_infos[tls_regnum].kinds[lldb::eRegisterKindLLDB] = tls_regnum;
+  uint32_t num_regs = has_tpidr2 ? 2 : 1;
+  for (uint32_t i = 0; i < num_regs; i++) {
+    m_tls_regnum_collection.push_back(tls_regnum + i);
+    m_dynamic_reg_infos.push_back(g_register_infos_tls[i]);
+    m_dynamic_reg_infos[tls_regnum + i].byte_offset =
+        m_dynamic_reg_infos[tls_regnum + i - 1].byte_offset +
+        m_dynamic_reg_infos[tls_regnum + i - 1].byte_size;
+    m_dynamic_reg_infos[tls_regnum + i].kinds[lldb::eRegisterKindLLDB] =
+        tls_regnum + i;
+  }
 
   m_per_regset_regnum_range[m_register_set_count] =
-      std::make_pair(tls_regnum, tls_regnum + 1);
-  m_dynamic_reg_sets.push_back(g_reg_set_tls_arm64);
+      std::make_pair(tls_regnum, m_dynamic_reg_infos.size());
+  m_dynamic_reg_sets.push_back(
+      {"Thread Local Storage Registers", "tls", num_regs, nullptr});
   m_dynamic_reg_sets.back().registers = m_tls_regnum_collection.data();
 }
 
