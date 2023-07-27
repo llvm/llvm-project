@@ -19,6 +19,7 @@ namespace __llvm_libc {
 namespace {
 
 FileIOResult write_func(File *, const void *, size_t);
+FileIOResult read_func(File *, void *, size_t);
 int close_func(File *);
 
 } // namespace
@@ -28,7 +29,7 @@ class GPUFile : public File {
 
 public:
   constexpr GPUFile(uintptr_t file, File::ModeFlags modeflags)
-      : File(&write_func, nullptr, nullptr, &close_func, nullptr, 0, _IONBF,
+      : File(&write_func, &read_func, nullptr, &close_func, nullptr, 0, _IONBF,
              false, modeflags),
         file(file) {}
 
@@ -82,6 +83,46 @@ FileIOResult write_func(File *f, const void *data, size_t size) {
     ret = write_to_stderr(data, size);
   else
     ret = write_to_stream(gpu_file->get_file(), data, size);
+  if (ret < 0)
+    return {0, -ret};
+  return ret;
+}
+
+int read_from_stdin(void *buf, size_t size) {
+  int ret = 0;
+  uint64_t recv_size;
+  rpc::Client::Port port = rpc::client.open<RPC_READ_FROM_STDIN>();
+  port.send([=](rpc::Buffer *buffer) { buffer->data[0] = size; });
+  port.recv_n(&buf, &recv_size, [&](uint64_t) { return buf; });
+  port.recv([&](rpc::Buffer *buffer) { ret = buffer->data[0]; });
+  port.close();
+  return ret;
+}
+
+int read_from_stream(uintptr_t file, void *buf, size_t size) {
+  int ret = 0;
+  uint64_t recv_size;
+  // TODO: For large sizes being written to a pointer in global memory, we
+  // should be able to initiate a H2D memcpy via a separate RPC call at high
+  // bandwidth.
+  rpc::Client::Port port = rpc::client.open<RPC_READ_FROM_STREAM>();
+  port.send([=](rpc::Buffer *buffer) {
+    buffer->data[0] = size;
+    buffer->data[1] = file;
+  });
+  port.recv_n(&buf, &recv_size, [&](uint64_t) { return buf; });
+  port.recv([&](rpc::Buffer *buffer) { ret = buffer->data[0]; });
+  port.close();
+  return ret;
+}
+
+FileIOResult read_func(File *f, void *buf, size_t size) {
+  auto *gpu_file = reinterpret_cast<GPUFile *>(f);
+  int ret = 0;
+  if (gpu_file == stdin)
+    ret = read_from_stdin(buf, size);
+  else
+    ret = read_from_stream(gpu_file->get_file(), buf, size);
   if (ret < 0)
     return {0, -ret};
   return ret;

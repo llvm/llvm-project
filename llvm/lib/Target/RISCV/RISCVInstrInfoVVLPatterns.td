@@ -577,8 +577,10 @@ def SplatPat_simm5_plus1
 def SplatPat_simm5_plus1_nonzero
     : ComplexPattern<vAny, 1, "selectVSplatSimm5Plus1NonZero", [], [], 3>;
 
-def ext_oneuse_SplatPat
-    : ComplexPattern<vAny, 1, "selectExtOneUseVSplat", [], [], 2>;
+// Selects extends or truncates of splats where we only care about the lowest 8
+// bits of each element.
+def Low8BitsSplatPat
+    : ComplexPattern<vAny, 1, "selectLow8BitsVSplat", [], [], 2>;
 
 def SelectFPImm : ComplexPattern<fAny, 1, "selectFPImm", [], [], 1>;
 
@@ -1453,7 +1455,7 @@ multiclass VPatBinaryVL_WV_WX_WI<SDNode op, string instruction_name> {
         (vti.Vector
           (riscv_trunc_vector_vl
             (op (wti.Vector wti.RegClass:$rs2),
-                (wti.Vector (ext_oneuse_SplatPat (XLenVT GPR:$rs1)))),
+                (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1)))),
             (vti.Mask true_mask),
             VLOpFrag)),
         (!cast<Instruction>(instruction_name#"_WX_"#vti.LMul.MX)

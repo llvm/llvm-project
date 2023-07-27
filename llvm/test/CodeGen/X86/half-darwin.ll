@@ -90,7 +90,7 @@ define float @extendhfsf(ptr %ptr) nounwind {
   ret float %float
 }
 
-define void @strict_truncsfhf(float %in, ptr %ptr) nounwind {
+define void @strict_truncsfhf(float %in, ptr %ptr) nounwind strictfp {
 ; CHECK-SOFT-LABEL: strict_truncsfhf:
 ; CHECK-SOFT:       ## %bb.0:
 ; CHECK-SOFT-NEXT:    pushq %rbx
@@ -121,7 +121,7 @@ define void @strict_truncsfhf(float %in, ptr %ptr) nounwind {
   ret void
 }
 
-define void @strict_truncdfhf(double %in, ptr %ptr) nounwind {
+define void @strict_truncdfhf(double %in, ptr %ptr) nounwind strictfp {
 ; CHECK-SOFT-LABEL: strict_truncdfhf:
 ; CHECK-SOFT:       ## %bb.0:
 ; CHECK-SOFT-NEXT:    pushq %rbx
@@ -152,7 +152,7 @@ define void @strict_truncdfhf(double %in, ptr %ptr) nounwind {
   ret void
 }
 
-define float @strict_extendhfsf(ptr %ptr) nounwind {
+define float @strict_extendhfsf(ptr %ptr) nounwind strictfp {
 ; CHECK-SOFT-LABEL: strict_extendhfsf:
 ; CHECK-SOFT:       ## %bb.0:
 ; CHECK-SOFT-NEXT:    pushq %rax

@@ -1782,15 +1782,14 @@ multiclass VPseudoILoad<bit Ordered> {
           defvar Vreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
           defvar HasConstraint = !ne(dataEEW, idxEEW);
-          defvar Order = !if(Ordered, "O", "U");
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
               VPseudoILoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint>,
-              VLXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
+              VLXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
               VPseudoILoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint>,
               RISCVMaskedPseudo<MaskIdx=3>,
-              VLXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
+              VLXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
           }
         }
       }
@@ -1853,14 +1852,13 @@ multiclass VPseudoIStore<bit Ordered> {
           defvar idxEMUL = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar Vreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
-          defvar Order = !if(Ordered, "O", "U");
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
               VPseudoIStoreNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered>,
-              VSXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
+              VSXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
               VPseudoIStoreMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered>,
-              VSXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
+              VSXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
           }
         }
       }
@@ -2163,6 +2161,11 @@ multiclass VPseudoBinaryW_VV_RM<LMULInfo m> {
 
 multiclass VPseudoBinaryW_VX<LMULInfo m> {
   defm "_VX" : VPseudoBinary<m.wvrclass, m.vrclass, GPR, m,
+                             "@earlyclobber $rd">;
+}
+
+multiclass VPseudoBinaryW_VI<Operand ImmType, LMULInfo m> {
+  defm "_VI" : VPseudoBinary<m.wvrclass, m.vrclass, ImmType, m,
                              "@earlyclobber $rd">;
 }
 
@@ -2742,6 +2745,12 @@ multiclass VPseudoVWALU_VV_VX {
               SchedBinary<"WriteVIWALUV", "ReadVIWALUV", "ReadVIWALUV", mx>;
     defm "" : VPseudoBinaryW_VX<m>,
               SchedBinary<"WriteVIWALUX", "ReadVIWALUV", "ReadVIWALUX", mx>;
+  }
+}
+
+multiclass VPseudoVWALU_VV_VX_VI<Operand ImmType> : VPseudoVWALU_VV_VX {
+  foreach m = MxListW in {
+    defm "" : VPseudoBinaryW_VI<ImmType, m>;
   }
 }
 
@@ -3528,18 +3537,17 @@ multiclass VPseudoISegLoad<bit Ordered> {
           defvar idxEMUL = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar DataVreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
-          defvar Order = !if(Ordered, "O", "U");
           let VLMul = dataEMUL.value in {
             foreach nf = NFSet<dataEMUL>.L in {
               defvar Vreg = SegRegClass<dataEMUL, nf>.RC;
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
                 VPseudoISegLoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                       nf, Ordered>,
-                VLXSEGSched<nf, dataEEW, Order, DataLInfo>;
+                VLXSEGSched<nf, dataEEW, Ordered, DataLInfo>;
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
                 VPseudoISegLoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                     nf, Ordered>,
-                VLXSEGSched<nf, dataEEW, Order, DataLInfo>;
+                VLXSEGSched<nf, dataEEW, Ordered, DataLInfo>;
             }
           }
         }
@@ -3595,18 +3603,17 @@ multiclass VPseudoISegStore<bit Ordered> {
           defvar idxEMUL = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar DataVreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
-          defvar Order = !if(Ordered, "O", "U");
           let VLMul = dataEMUL.value in {
             foreach nf = NFSet<dataEMUL>.L in {
               defvar Vreg = SegRegClass<dataEMUL, nf>.RC;
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
                 VPseudoISegStoreNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                        nf, Ordered>,
-                VSXSEGSched<nf, idxEEW, Order, DataLInfo>;
+                VSXSEGSched<nf, idxEEW, Ordered, DataLInfo>;
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
                 VPseudoISegStoreMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                      nf, Ordered>,
-                VSXSEGSched<nf, idxEEW, Order, DataLInfo>;
+                VSXSEGSched<nf, idxEEW, Ordered, DataLInfo>;
             }
           }
         }

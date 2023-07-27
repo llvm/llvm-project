@@ -682,7 +682,6 @@ cc_library(
         "//mlir:IR",
         "//mlir:IndexToLLVM",
         "//mlir:LLVMDialect",
-        "//mlir:LinalgToLLVM",
         "//mlir:LinalgTransforms",
         "//mlir:MathToLLVM",
         "//mlir:MemRefToLLVM",

@@ -398,7 +398,6 @@ cc_test(
         "//mlir:FuncToLLVM",
         "//mlir:IR",
         "//mlir:LLVMToLLVMIRTranslation",
-        "//mlir:LinalgToLLVM",
         "//mlir:LinalgTransforms",
         "//mlir:MemRefToLLVM",
         "//mlir:Parser",

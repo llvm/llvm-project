@@ -1038,6 +1038,61 @@ LogicalResult acc::DeclareExitOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// RoutineOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::RoutineOp::verify() {
+  int parallelism = 0;
+  parallelism += getGang() ? 1 : 0;
+  parallelism += getWorker() ? 1 : 0;
+  parallelism += getVector() ? 1 : 0;
+  parallelism += getSeq() ? 1 : 0;
+
+  if (parallelism > 1)
+    return emitError() << "only one of `gang`, `worker`, `vector`, `seq` can "
+                          "be present at the same time";
+
+  return success();
+}
+
+static ParseResult parseRoutineGangClause(OpAsmParser &parser, UnitAttr &gang,
+                                          IntegerAttr &gangDim) {
+  // Since gang clause exists, ensure that unit attribute is set.
+  gang = UnitAttr::get(parser.getBuilder().getContext());
+
+  // Next, look for dim on gang. Don't initialize `gangDim` yet since
+  // we leave it without attribute if there is no `dim` specifier.
+  if (succeeded(parser.parseOptionalLParen())) {
+    // Look for syntax that looks like `dim = 1 : i32`.
+    // Thus first look for `dim =`
+    if (failed(parser.parseKeyword(RoutineOp::getGangDimKeyword())) ||
+        failed(parser.parseEqual()))
+      return failure();
+
+    int64_t dimValue;
+    Type valueType;
+    // Now look for `1 : i32`
+    if (failed(parser.parseInteger(dimValue)) ||
+        failed(parser.parseColonType(valueType)))
+      return failure();
+
+    gangDim = IntegerAttr::get(valueType, dimValue);
+
+    if (failed(parser.parseRParen()))
+      return failure();
+  }
+
+  return success();
+}
+
+void printRoutineGangClause(OpAsmPrinter &p, Operation *op, UnitAttr gang,
+                            IntegerAttr gangDim) {
+  if (gangDim)
+    p << "(" << RoutineOp::getGangDimKeyword() << " = " << gangDim.getValue()
+      << " : " << gangDim.getType() << ")";
+}
+
+//===----------------------------------------------------------------------===//
 // InitOp
 //===----------------------------------------------------------------------===//
 
