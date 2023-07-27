@@ -299,7 +299,6 @@ group("test") {
     "//llvm/tools/llvm-readobj:symlinks",
     "//llvm/tools/llvm-readtapi",
     "//llvm/tools/llvm-reduce",
-    "//llvm/tools/llvm-remark-size-diff",
     "//llvm/tools/llvm-remarkutil",
     "//llvm/tools/llvm-rtdyld",
     "//llvm/tools/llvm-sim",

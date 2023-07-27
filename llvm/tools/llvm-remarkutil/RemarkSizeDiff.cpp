@@ -1,4 +1,4 @@
-//===-------------- llvm-remark-size-diff/RemarkSizeDiff.cpp --------------===//
+//===-------------- RemarkSizeDiff.cpp ------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -14,51 +14,38 @@
 ///
 //===----------------------------------------------------------------------===//
 
-#include "llvm-c/Remarks.h"
-#include "llvm/ADT/STLExtras.h"
+#include "RemarkUtilHelpers.h"
+#include "RemarkUtilRegistry.h"
 #include "llvm/ADT/SmallSet.h"
-#include "llvm/Remarks/Remark.h"
-#include "llvm/Remarks/RemarkParser.h"
-#include "llvm/Remarks/RemarkSerializer.h"
-#include "llvm/Support/CommandLine.h"
-#include "llvm/Support/Compiler.h"
-#include "llvm/Support/Error.h"
-#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
-#include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
-#include "llvm/Support/MemoryBuffer.h"
-#include "llvm/Support/ToolOutputFile.h"
-#include "llvm/Support/WithColor.h"
-#include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
-
-enum ParserFormatOptions { yaml, bitstream };
+using namespace remarks;
+using namespace remarkutil;
+static cl::SubCommand
+    RemarkSizeDiffUtil("size-diff",
+                       "Diff instruction count and stack size remarks "
+                       "between two remark files");
 enum ReportStyleOptions { human_output, json_output };
-static cl::OptionCategory SizeDiffCategory("llvm-remark-size-diff options");
 static cl::opt<std::string> InputFileNameA(cl::Positional, cl::Required,
-                                           cl::cat(SizeDiffCategory),
+                                           cl::sub(RemarkSizeDiffUtil),
                                            cl::desc("remarks_a"));
 static cl::opt<std::string> InputFileNameB(cl::Positional, cl::Required,
-                                           cl::cat(SizeDiffCategory),
+                                           cl::sub(RemarkSizeDiffUtil),
                                            cl::desc("remarks_b"));
 static cl::opt<std::string> OutputFilename("o", cl::init("-"),
-                                           cl::cat(SizeDiffCategory),
+                                           cl::sub(RemarkSizeDiffUtil),
                                            cl::desc("Output"),
                                            cl::value_desc("file"));
-static cl::opt<ParserFormatOptions>
-    ParserFormat("parser", cl::cat(SizeDiffCategory), cl::init(bitstream),
-                 cl::desc("Set the remark parser format:"),
-                 cl::values(clEnumVal(yaml, "YAML format"),
-                            clEnumVal(bitstream, "Bitstream format")));
+INPUT_FORMAT_COMMAND_LINE_OPTIONS(RemarkSizeDiffUtil)
 static cl::opt<ReportStyleOptions> ReportStyle(
-    "report_style", cl::cat(SizeDiffCategory),
+    "report_style", cl::sub(RemarkSizeDiffUtil),
     cl::init(ReportStyleOptions::human_output),
     cl::desc("Choose the report output format:"),
     cl::values(clEnumValN(human_output, "human", "Human-readable format"),
                clEnumValN(json_output, "json", "JSON format")));
-static cl::opt<bool> PrettyPrint("pretty", cl::cat(SizeDiffCategory),
+static cl::opt<bool> PrettyPrint("pretty", cl::sub(RemarkSizeDiffUtil),
                                  cl::init(false),
                                  cl::desc("Pretty-print JSON"));
 
@@ -300,14 +287,12 @@ static Error processRemark(const remarks::Remark &Remark,
 static Error readFileAndProcessRemarks(
     StringRef InputFileName,
     StringMap<InstCountAndStackSize> &FuncNameToSizeInfo) {
-  auto Buf = MemoryBuffer::getFile(InputFileName);
-  if (auto EC = Buf.getError())
-    return createStringError(
-        EC, Twine("Cannot open file '" + InputFileName + "': " + EC.message()));
-  auto MaybeParser = remarks::createRemarkParserFromMeta(
-      ParserFormat == bitstream ? remarks::Format::Bitstream
-                                : remarks::Format::YAML,
-      (*Buf)->getBuffer());
+
+  auto MaybeBuf = getInputMemoryBuffer(InputFileName);
+  if (!MaybeBuf)
+    return MaybeBuf.takeError();
+  auto MaybeParser =
+      createRemarkParserFromMeta(InputFormat, (*MaybeBuf)->getBuffer());
   if (!MaybeParser)
     return MaybeParser.takeError();
   auto &Parser = **MaybeParser;
@@ -340,17 +325,13 @@ static Error readFileAndProcessRemarks(
 ///
 /// \returns true if readFileAndProcessRemarks returned no errors. False
 /// otherwise.
-static bool tryReadFileAndProcessRemarks(
+static Error tryReadFileAndProcessRemarks(
     StringRef InputFileName,
     StringMap<InstCountAndStackSize> &FuncNameToSizeInfo) {
   if (Error E = readFileAndProcessRemarks(InputFileName, FuncNameToSizeInfo)) {
-    handleAllErrors(std::move(E), [&](const ErrorInfoBase &PE) {
-      PE.log(WithColor::error());
-      errs() << '\n';
-    });
-    return false;
+    return E;
   }
-  return true;
+  return Error::success();
 }
 
 /// Populates \p FuncDiffs with the difference between \p
@@ -489,33 +470,32 @@ outputAllDiffs(StringRef InputFileNameA, StringRef InputFileNameB,
 }
 
 /// Boolean wrapper for outputDiff which handles errors.
-static bool
+static Error
 tryOutputAllDiffs(StringRef InputFileNameA, StringRef InputFileNameB,
                   DiffsCategorizedByFilesPresent &DiffsByFilesPresent) {
   if (Error E =
           outputAllDiffs(InputFileNameA, InputFileNameB, DiffsByFilesPresent)) {
-    handleAllErrors(std::move(E), [&](const ErrorInfoBase &PE) {
-      PE.log(WithColor::error());
-      errs() << '\n';
-    });
-    return false;
+    return E;
   }
-  return true;
+  return Error::success();
 }
 
-int main(int argc, const char **argv) {
-  InitLLVM X(argc, argv);
-  cl::HideUnrelatedOptions(SizeDiffCategory);
-  cl::ParseCommandLineOptions(argc, argv,
-                              "Diff instruction count and stack size remarks "
-                              "between two remark files.\n");
+static Error trySizeSiff() {
   StringMap<InstCountAndStackSize> FuncNameToSizeInfoA;
   StringMap<InstCountAndStackSize> FuncNameToSizeInfoB;
-  if (!tryReadFileAndProcessRemarks(InputFileNameA, FuncNameToSizeInfoA) ||
-      !tryReadFileAndProcessRemarks(InputFileNameB, FuncNameToSizeInfoB))
-    return 1;
+  if (auto E =
+          tryReadFileAndProcessRemarks(InputFileNameA, FuncNameToSizeInfoA))
+    return E;
+  if (auto E =
+          tryReadFileAndProcessRemarks(InputFileNameB, FuncNameToSizeInfoB))
+    return E;
   DiffsCategorizedByFilesPresent DiffsByFilesPresent;
   computeDiff(FuncNameToSizeInfoA, FuncNameToSizeInfoB, DiffsByFilesPresent);
-  if (!tryOutputAllDiffs(InputFileNameA, InputFileNameB, DiffsByFilesPresent))
-    return 1;
+  if (auto E = tryOutputAllDiffs(InputFileNameA, InputFileNameB,
+                                 DiffsByFilesPresent))
+    return E;
+  return Error::success();
 }
+
+static CommandRegistration RemarkSizeSiffRegister(&RemarkSizeDiffUtil,
+                                                  trySizeSiff);
