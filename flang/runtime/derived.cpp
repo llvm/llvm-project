@@ -258,4 +258,22 @@ void Destroy(const Descriptor &descriptor, bool finalize,
   }
 }
 
+bool HasDynamicComponent(const Descriptor &descriptor) {
+  if (const DescriptorAddendum * addendum{descriptor.Addendum()}) {
+    if (const auto *derived = addendum->derivedType()) {
+      const Descriptor &componentDesc{derived->component()};
+      std::size_t myComponents{componentDesc.Elements()};
+      for (std::size_t k{0}; k < myComponents; ++k) {
+        const auto &comp{
+            *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
+        if (comp.genre() == typeInfo::Component::Genre::Allocatable ||
+            comp.genre() == typeInfo::Component::Genre::Automatic) {
+          return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
 } // namespace Fortran::runtime
