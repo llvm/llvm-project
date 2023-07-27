@@ -29,14 +29,20 @@ namespace interp {
 template <class Emitter> class DeclScope final : public VariableScope<Emitter> {
 public:
   DeclScope(ByteCodeExprGen<Emitter> *Ctx, const ValueDecl *VD)
-      : VariableScope<Emitter>(Ctx), Scope(Ctx->P, VD) {}
+      : VariableScope<Emitter>(Ctx), Scope(Ctx->P, VD),
+        OldGlobalDecl(Ctx->GlobalDecl) {
+    Ctx->GlobalDecl = Context::shouldBeGloballyIndexed(VD);
+  }
 
   void addExtended(const Scope::Local &Local) override {
     return this->addLocal(Local);
   }
 
+  ~DeclScope() { this->Ctx->GlobalDecl = OldGlobalDecl; }
+
 private:
   Program::DeclScope Scope;
+  bool OldGlobalDecl;
 };
 
 /// Scope used to handle initialization methods.
@@ -1198,21 +1204,30 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
   if (DiscardResult)
     return this->discard(SubExpr);
 
+  // When we're initializing a global variable *or* the storage duration of
+  // the temporary is explicitly static, create a global variable.
   std::optional<PrimType> SubExprT = classify(SubExpr);
-  if (E->getStorageDuration() == SD_Static) {
+  bool IsStatic = E->getStorageDuration() == SD_Static;
+  if (GlobalDecl || IsStatic) {
     std::optional<unsigned> GlobalIndex = P.createGlobal(E);
     if (!GlobalIndex)
       return false;
 
     const LifetimeExtendedTemporaryDecl *TempDecl =
         E->getLifetimeExtendedTemporaryDecl();
-    assert(TempDecl);
+    if (IsStatic)
+      assert(TempDecl);
 
     if (SubExprT) {
       if (!this->visit(SubExpr))
         return false;
-      if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
-        return false;
+      if (IsStatic) {
+        if (!this->emitInitGlobalTemp(*SubExprT, *GlobalIndex, TempDecl, E))
+          return false;
+      } else {
+        if (!this->emitInitGlobal(*SubExprT, *GlobalIndex, E))
+          return false;
+      }
       return this->emitGetPtrGlobal(*GlobalIndex, E);
     }
 
@@ -1221,7 +1236,9 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
       return false;
     if (!this->visitInitializer(SubExpr))
       return false;
-    return this->emitInitGlobalTempComp(TempDecl, E);
+    if (IsStatic)
+      return this->emitInitGlobalTempComp(TempDecl, E);
+    return true;
   }
 
   // For everyhing else, use local variables.
