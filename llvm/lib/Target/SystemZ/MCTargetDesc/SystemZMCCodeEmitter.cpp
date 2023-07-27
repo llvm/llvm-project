@@ -12,7 +12,6 @@
 
 #include "MCTargetDesc/SystemZMCFixups.h"
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
-#include "SystemZInstrInfo.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"

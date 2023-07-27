@@ -285,16 +285,31 @@ static void Assign(
       newFrom.raw().attribute = CFI_attribute_allocatable;
       auto stat{ReturnError(terminator, newFrom.Allocate())};
       if (stat == StatOk) {
-        char *toAt{newFrom.OffsetElement()};
-        std::size_t fromElements{from.Elements()};
-        if (from.IsContiguous()) {
-          std::memcpy(
-              toAt, from.OffsetElement(), fromElements * fromElementBytes);
+        if (HasDynamicComponent(from)) {
+          // If 'from' has allocatable/automatic component, we cannot
+          // just make a shallow copy of the descriptor member.
+          // This will still leave data overlap in 'to' and 'newFrom'.
+          // For example:
+          //   type t
+          //     character, allocatable :: c(:)
+          //   end type t
+          //   type(t) :: x(3)
+          //   x(2:3) = x(1:2)
+          // We have to make a deep copy into 'newFrom' in this case.
+          RTNAME(AssignTemporary)
+          (newFrom, from, terminator.sourceFileName(), terminator.sourceLine());
         } else {
-          SubscriptValue fromAt[maxRank];
-          for (from.GetLowerBounds(fromAt); fromElements-- > 0;
-               toAt += fromElementBytes, from.IncrementSubscripts(fromAt)) {
-            std::memcpy(toAt, from.Element<char>(fromAt), fromElementBytes);
+          char *toAt{newFrom.OffsetElement()};
+          std::size_t fromElements{from.Elements()};
+          if (from.IsContiguous()) {
+            std::memcpy(
+                toAt, from.OffsetElement(), fromElements * fromElementBytes);
+          } else {
+            SubscriptValue fromAt[maxRank];
+            for (from.GetLowerBounds(fromAt); fromElements-- > 0;
+                 toAt += fromElementBytes, from.IncrementSubscripts(fromAt)) {
+              std::memcpy(toAt, from.Element<char>(fromAt), fromElementBytes);
+            }
           }
         }
         Assign(to, newFrom, terminator,

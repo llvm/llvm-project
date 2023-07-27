@@ -78,11 +78,6 @@ static cl::opt<unsigned> MaxClones(
     "The maximum number of clones allowed for a single function "
     "specialization"));
 
-static cl::opt<unsigned> MaxIncomingPhiValues(
-    "funcspec-max-incoming-phi-values", cl::init(4), cl::Hidden, cl::desc(
-    "The maximum number of incoming values a PHI node can have to be "
-    "considered during the specialization bonus estimation"));
-
 static cl::opt<unsigned> MinFunctionSize(
     "funcspec-min-function-size", cl::init(100), cl::Hidden, cl::desc(
     "Don't specialize functions that have less than this number of "
@@ -109,7 +104,6 @@ static cl::opt<bool> SpecializeLiteralConstant(
 // the combination of size and latency savings in comparison to the non
 // specialized version of the function.
 static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
-                                DenseSet<BasicBlock *> &DeadBlocks,
                                 ConstMap &KnownConstants, SCCPSolver &Solver,
                                 BlockFrequencyInfo &BFI,
                                 TargetTransformInfo &TTI) {
@@ -122,12 +116,6 @@ static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
     uint64_t Weight = BFI.getBlockFreq(BB).getFrequency() /
                       BFI.getEntryFreq();
     if (!Weight)
-      continue;
-
-    // These blocks are considered dead as far as the InstCostVisitor
-    // is concerned. They haven't been proven dead yet by the Solver,
-    // but may become if we propagate the specialization arguments.
-    if (!DeadBlocks.insert(BB).second)
       continue;
 
     for (Instruction &I : *BB) {
@@ -164,25 +152,9 @@ static Constant *findConstantFor(Value *V, ConstMap &KnownConstants) {
   return nullptr;
 }
 
-Cost InstCostVisitor::getBonusFromPendingPHIs() {
-  Cost Bonus = 0;
-  while (!PendingPHIs.empty()) {
-    Instruction *Phi = PendingPHIs.pop_back_val();
-    // The pending PHIs could have been proven dead by now.
-    if (isBlockExecutable(Phi->getParent()))
-      Bonus += getUserBonus(Phi);
-  }
-  return Bonus;
-}
-
 Cost InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) {
-  // We have already propagated a constant for this user.
-  if (KnownConstants.contains(User))
-    return 0;
-
   // Cache the iterator before visiting.
-  LastVisited = Use ? KnownConstants.insert({Use, C}).first
-                    : KnownConstants.end();
+  LastVisited = KnownConstants.insert({Use, C}).first;
 
   if (auto *I = dyn_cast<SwitchInst>(User))
     return estimateSwitchInst(*I);
@@ -209,15 +181,13 @@ Cost InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) {
 
   for (auto *U : User->users())
     if (auto *UI = dyn_cast<Instruction>(U))
-      if (UI != User && isBlockExecutable(UI->getParent()))
+      if (Solver.isBlockExecutable(UI->getParent()))
         Bonus += getUserBonus(UI, User, C);
 
   return Bonus;
 }
 
 Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   if (I.getCondition() != LastVisited->first)
     return 0;
 
@@ -238,13 +208,10 @@ Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
     WorkList.push_back(BB);
   }
 
-  return estimateBasicBlocks(WorkList, DeadBlocks, KnownConstants, Solver, BFI,
-                             TTI);
+  return estimateBasicBlocks(WorkList, KnownConstants, Solver, BFI, TTI);
 }
 
 Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   if (I.getCondition() != LastVisited->first)
     return 0;
 
@@ -256,39 +223,10 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
       Succ->getUniquePredecessor() == I.getParent())
     WorkList.push_back(Succ);
 
-  return estimateBasicBlocks(WorkList, DeadBlocks, KnownConstants, Solver, BFI,
-                             TTI);
-}
-
-Constant *InstCostVisitor::visitPHINode(PHINode &I) {
-  if (I.getNumIncomingValues() > MaxIncomingPhiValues)
-    return nullptr;
-
-  bool Inserted = VisitedPHIs.insert(&I).second;
-  Constant *Const = nullptr;
-
-  for (unsigned Idx = 0, E = I.getNumIncomingValues(); Idx != E; ++Idx) {
-    Value *V = I.getIncomingValue(Idx);
-    if (auto *Inst = dyn_cast<Instruction>(V))
-      if (Inst == &I || DeadBlocks.contains(I.getIncomingBlock(Idx)))
-        continue;
-    Constant *C = findConstantFor(V, KnownConstants);
-    if (!C) {
-      if (Inserted)
-        PendingPHIs.push_back(&I);
-      return nullptr;
-    }
-    if (!Const)
-      Const = C;
-    else if (C != Const)
-      return nullptr;
-  }
-  return Const;
+  return estimateBasicBlocks(WorkList, KnownConstants, Solver, BFI, TTI);
 }
 
 Constant *InstCostVisitor::visitFreezeInst(FreezeInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   if (isGuaranteedNotToBeUndefOrPoison(LastVisited->second))
     return LastVisited->second;
   return nullptr;
@@ -315,8 +253,6 @@ Constant *InstCostVisitor::visitCallBase(CallBase &I) {
 }
 
 Constant *InstCostVisitor::visitLoadInst(LoadInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   if (isa<ConstantPointerNull>(LastVisited->second))
     return nullptr;
   return ConstantFoldLoadFromConstPtr(LastVisited->second, I.getType(), DL);
@@ -339,8 +275,6 @@ Constant *InstCostVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
 }
 
 Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   if (I.getCondition() != LastVisited->first)
     return nullptr;
 
@@ -356,8 +290,6 @@ Constant *InstCostVisitor::visitCastInst(CastInst &I) {
 }
 
 Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   bool Swap = I.getOperand(1) == LastVisited->first;
   Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
   Constant *Other = findConstantFor(V, KnownConstants);
@@ -371,14 +303,10 @@ Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
 }
 
 Constant *InstCostVisitor::visitUnaryOperator(UnaryOperator &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   return ConstantFoldUnaryOpOperand(I.getOpcode(), LastVisited->second, DL);
 }
 
 Constant *InstCostVisitor::visitBinaryOperator(BinaryOperator &I) {
-  assert(LastVisited != KnownConstants.end() && "Invalid iterator!");
-
   bool Swap = I.getOperand(1) == LastVisited->first;
   Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
   Constant *Other = findConstantFor(V, KnownConstants);
@@ -785,17 +713,13 @@ bool FunctionSpecializer::findSpecializations(Function *F, Cost SpecCost,
       AllSpecs[Index].CallSites.push_back(&CS);
     } else {
       // Calculate the specialisation gain.
-      Cost Score = 0;
+      Cost Score = 0 - SpecCost;
       InstCostVisitor Visitor = getInstCostVisitorFor(F);
       for (ArgInfo &A : S.Args)
         Score += getSpecializationBonus(A.Formal, A.Actual, Visitor);
-      Score += Visitor.getBonusFromPendingPHIs();
-
-      LLVM_DEBUG(dbgs() << "FnSpecialization: Specialization score = "
-                        << Score << "\n");
 
       // Discard unprofitable specialisations.
-      if (!ForceSpecialization && Score <= SpecCost)
+      if (!ForceSpecialization && Score <= 0)
         continue;
 
       // Create a new specialisation entry.
@@ -874,7 +798,7 @@ Cost FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
   Cost TotalCost = 0;
   for (auto *U : A->users())
     if (auto *UI = dyn_cast<Instruction>(U))
-      if (Visitor.isBlockExecutable(UI->getParent()))
+      if (Solver.isBlockExecutable(UI->getParent()))
         TotalCost += Visitor.getUserBonus(UI, A, C);
 
   LLVM_DEBUG(dbgs() << "FnSpecialization:   Accumulated user bonus "

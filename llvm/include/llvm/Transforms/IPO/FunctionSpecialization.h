@@ -123,15 +123,6 @@ class InstCostVisitor : public InstVisitor<InstCostVisitor, Constant *> {
   SCCPSolver &Solver;
 
   ConstMap KnownConstants;
-  // Basic blocks known to be unreachable after constant propagation.
-  DenseSet<BasicBlock *> DeadBlocks;
-  // PHI nodes we have visited before.
-  DenseSet<Instruction *> VisitedPHIs;
-  // PHI nodes we have visited once without successfully constant folding them.
-  // Once the InstCostVisitor has processed all the specialization arguments,
-  // it should be possible to determine whether those PHIs can be folded
-  // (some of their incoming values may have become constant or dead).
-  SmallVector<Instruction *> PendingPHIs;
 
   ConstMap::iterator LastVisited;
 
@@ -140,14 +131,7 @@ public:
                   TargetTransformInfo &TTI, SCCPSolver &Solver)
       : DL(DL), BFI(BFI), TTI(TTI), Solver(Solver) {}
 
-  bool isBlockExecutable(BasicBlock *BB) {
-    return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
-  }
-
-  Cost getUserBonus(Instruction *User, Value *Use = nullptr,
-                    Constant *C = nullptr);
-
-  Cost getBonusFromPendingPHIs();
+  Cost getUserBonus(Instruction *User, Value *Use, Constant *C);
 
 private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
@@ -156,7 +140,6 @@ private:
   Cost estimateBranchInst(BranchInst &I);
 
   Constant *visitInstruction(Instruction &I) { return nullptr; }
-  Constant *visitPHINode(PHINode &I);
   Constant *visitFreezeInst(FreezeInst &I);
   Constant *visitCallBase(CallBase &I);
   Constant *visitLoadInst(LoadInst &I);
