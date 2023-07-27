@@ -2437,6 +2437,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
   written = __llvm_libc::sprintf(buff, "%.3g", 1256.0);
   ASSERT_STREQ_LEN(written, buff, "1.26e+03");
 
+  // Found through large scale testing.
+  written = __llvm_libc::sprintf(buff, "%.15g", 22.25);
+  ASSERT_STREQ_LEN(written, buff, "22.25");
+
   // Subnormal Precision Tests
 
   written = __llvm_libc::sprintf(buff, "%.310g", 0x1.0p-1022);
