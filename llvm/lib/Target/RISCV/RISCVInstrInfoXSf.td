@@ -27,7 +27,7 @@ def VCIX_XV  : VCIXType<0b0010>;
 def VCIX_XVV : VCIXType<0b1010>;
 def VCIX_XVW : VCIXType<0b1111>;
 
-// The payload and timm5 operands are all marked as ImmArg in the IR
+// The payload and tsimm5 operands are all marked as ImmArg in the IR
 // intrinsic and will be target constant, so use TImmLeaf rather than ImmLeaf.
 def payload1 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isUInt<1>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<1>;
@@ -50,7 +50,7 @@ def payload5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
   let OperandNamespace = "RISCVOp";
 }
 
-def timm5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
+def tsimm5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isInt<5>(Imm);}]> {
   let ParserMatchClass = SImmAsmOperand<5>;
   let EncoderMethod = "getImmOpValue";
   let DecoderMethod = "decodeSImmOperand<5>";
@@ -330,12 +330,12 @@ multiclass VPseudoVC_XVW<LMULInfo m, DAGOperand RS1Class,
 let Predicates = [HasVendorXSfvcp] in {
   foreach m = MxList in {
     defm X : VPseudoVC_X<m, GPR>;
-    defm I : VPseudoVC_X<m, timm5>;
+    defm I : VPseudoVC_X<m, tsimm5>;
     defm XV : VPseudoVC_XV<m, GPR>;
-    defm IV : VPseudoVC_XV<m, timm5>;
+    defm IV : VPseudoVC_XV<m, tsimm5>;
     defm VV : VPseudoVC_XV<m, m.vrclass>;
     defm XVV : VPseudoVC_XVV<m, GPR>;
-    defm IVV : VPseudoVC_XVV<m, timm5>;
+    defm IVV : VPseudoVC_XVV<m, tsimm5>;
     defm VVV : VPseudoVC_XVV<m, m.vrclass>;
   }
   foreach f = FPList in {
@@ -346,7 +346,7 @@ let Predicates = [HasVendorXSfvcp] in {
   }
   foreach m = MxListW in {
     defm XVW : VPseudoVC_XVW<m, GPR>;
-    defm IVW : VPseudoVC_XVW<m, timm5>;
+    defm IVW : VPseudoVC_XVW<m, tsimm5>;
     defm VVW : VPseudoVC_XVW<m, m.vrclass>;
   }
   foreach f = FPListW in {
@@ -475,12 +475,12 @@ multiclass VPatVC_XVV<string intrinsic_suffix, string instruction_suffix,
 let Predicates = [HasVendorXSfvcp] in {
   foreach vti = AllIntegerVectors in {
     defm : VPatVC_X<"x", "X", vti, vti.Scalar, vti.ScalarRegClass>;
-    defm : VPatVC_X<"i", "I", vti, XLenVT, timm5>;
+    defm : VPatVC_X<"i", "I", vti, XLenVT, tsimm5>;
     defm : VPatVC_XV<"xv", "XV", vti, vti.Scalar, vti.ScalarRegClass>;
-    defm : VPatVC_XV<"iv", "IV", vti, XLenVT, timm5>;
+    defm : VPatVC_XV<"iv", "IV", vti, XLenVT, tsimm5>;
     defm : VPatVC_XV<"vv", "VV", vti, vti.Vector, vti.RegClass>;
     defm : VPatVC_XVV<"xvv", "XVV", vti, vti, vti.Scalar, vti.ScalarRegClass>;
-    defm : VPatVC_XVV<"ivv", "IVV", vti, vti, XLenVT, timm5>;
+    defm : VPatVC_XVV<"ivv", "IVV", vti, vti, XLenVT, tsimm5>;
     defm : VPatVC_XVV<"vvv", "VVV", vti, vti, vti.Vector, vti.RegClass>;
     if !ge(vti.SEW, 16) then {
       defm : VPatVC_XV<"fv", "F" # vti.SEW # "V", vti,
@@ -495,7 +495,7 @@ let Predicates = [HasVendorXSfvcp] in {
     defvar vti = VtiToWti.Vti;
     defvar wti = VtiToWti.Wti;
     defm : VPatVC_XVV<"xvw", "XVW", wti, vti, vti.Scalar, vti.ScalarRegClass>;
-    defm : VPatVC_XVV<"ivw", "IVW", wti, vti, XLenVT, timm5>;
+    defm : VPatVC_XVV<"ivw", "IVW", wti, vti, XLenVT, tsimm5>;
     defm : VPatVC_XVV<"vvw", "VVW", wti, vti, vti.Vector, vti.RegClass>;
     if !ge(vti.SEW, 16) then {
       defm : VPatVC_XVV<"fvw", "F" # vti.SEW # "VW", wti, vti,
