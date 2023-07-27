@@ -7,8 +7,8 @@ declare void @use.ptr(ptr)
 define ptr @fold_2x(ptr %p, i64 %m0, i64 %m1) {
 ; CHECK-LABEL: define ptr @fold_2x
 ; CHECK-SAME: (ptr [[P:%.*]], i64 [[M0:%.*]], i64 [[M1:%.*]]) {
-; CHECK-NEXT:    [[P0:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 [[M0]])
-; CHECK-NEXT:    [[P1:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P0]], i64 [[M1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 [[M1]], [[M0]]
+; CHECK-NEXT:    [[P1:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[P]], i64 [[TMP1]])
 ; CHECK-NEXT:    ret ptr [[P1]]
 ;
   %p0 = call ptr @llvm.ptrmask.p0.i64(ptr %p, i64 %m0)
@@ -19,8 +19,8 @@ define ptr @fold_2x(ptr %p, i64 %m0, i64 %m1) {
 define ptr @fold_2x_i32(ptr %p, i32 %m0, i32 %m1) {
 ; CHECK-LABEL: define ptr @fold_2x_i32
 ; CHECK-SAME: (ptr [[P:%.*]], i32 [[M0:%.*]], i32 [[M1:%.*]]) {
-; CHECK-NEXT:    [[P0:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[P]], i32 [[M0]])
-; CHECK-NEXT:    [[P1:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[P0]], i32 [[M1]])
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[M1]], [[M0]]
+; CHECK-NEXT:    [[P1:%.*]] = call ptr @llvm.ptrmask.p0.i32(ptr [[P]], i32 [[TMP1]])
 ; CHECK-NEXT:    ret ptr [[P1]]
 ;
   %p0 = call ptr @llvm.ptrmask.p0.i32(ptr %p, i32 %m0)
