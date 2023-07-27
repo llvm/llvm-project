@@ -29,6 +29,10 @@ enum class VecOp {
   Convert,
   Ctf,
   Cvf,
+  Ld,
+  Lde,
+  Ldl,
+  Lxvp,
   Mergeh,
   Mergel,
   Msub,
@@ -53,6 +57,8 @@ enum class VecOp {
   Stxv,
   Stxvp,
   Sub,
+  Xld2,
+  Xlw4,
   Xor,
   Xst,
   Xst_be,
@@ -204,6 +210,10 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
   template <VecOp>
   fir::ExtendedValue genVecPerm(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
+  fir::ExtendedValue genVecLdCallGrp(mlir::Type resultType,
+                                     llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
   fir::ExtendedValue genVecNmaddMsub(mlir::Type resultType,
