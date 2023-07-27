@@ -5287,12 +5287,16 @@ bool Sema::CheckRISCVBuiltinFunctionCall(const TargetInfo &TI,
     bool IsStore = BuiltinID == RISCV::BI__builtin_riscv_ntl_store;
     unsigned NumArgs = IsStore ? 3 : 2;
 
-    if (checkArgCount(*this, TheCall, NumArgs))
+    if (checkArgCountAtLeast(*this, TheCall, NumArgs - 1))
+      return true;
+
+    if (checkArgCountAtMost(*this, TheCall, NumArgs))
       return true;
 
     // Domain value should be compile-time constant.
     // 2 <= domain <= 5
-    if (SemaBuiltinConstantArgRange(TheCall, NumArgs - 1, 2, 5))
+    if (TheCall->getNumArgs() == NumArgs &&
+        SemaBuiltinConstantArgRange(TheCall, NumArgs - 1, 2, 5))
       return true;
 
     Expr *PointerArg = TheCall->getArg(0);
