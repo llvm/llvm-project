@@ -6,12 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "MCTargetDesc/BPFMCFixups.h"
 #include "MCTargetDesc/BPFMCTargetDesc.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCFixup.h"
+#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/Support/EndianStream.h"
 #include <cassert>
@@ -41,13 +43,30 @@ public:
     return false;
   }
 
-  unsigned getNumFixupKinds() const override { return 1; }
+  unsigned getNumFixupKinds() const override {
+    return BPF::NumTargetFixupKinds;
+  }
+  const MCFixupKindInfo &getFixupKindInfo(MCFixupKind Kind) const override;
 
   bool writeNopData(raw_ostream &OS, uint64_t Count,
                     const MCSubtargetInfo *STI) const override;
 };
 
 } // end anonymous namespace
+
+const MCFixupKindInfo &
+BPFAsmBackend::getFixupKindInfo(MCFixupKind Kind) const {
+  const static MCFixupKindInfo Infos[BPF::NumTargetFixupKinds] = {
+    { "FK_BPF_PCRel_4",  0, 32, MCFixupKindInfo::FKF_IsPCRel },
+  };
+
+  if (Kind < FirstTargetFixupKind)
+    return MCAsmBackend::getFixupKindInfo(Kind);
+
+  assert(unsigned(Kind - FirstTargetFixupKind) < getNumFixupKinds() &&
+         "Invalid kind!");
+  return Infos[Kind - FirstTargetFixupKind];
+}
 
 bool BPFAsmBackend::writeNopData(raw_ostream &OS, uint64_t Count,
                                  const MCSubtargetInfo *STI) const {
@@ -85,6 +104,11 @@ void BPFAsmBackend::applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
       Data[Fixup.getOffset() + 1] = 0x1;
       support::endian::write32be(&Data[Fixup.getOffset() + 4], Value);
     }
+  } else if (Fixup.getTargetKind() == BPF::FK_BPF_PCRel_4) {
+    // The input Value represents the number of bytes.
+    Value = (uint32_t)((Value - 8) / 8);
+    support::endian::write<uint32_t>(&Data[Fixup.getOffset() + 4], Value,
+                                     Endian);
   } else {
     assert(Fixup.getKind() == FK_PCRel_2);
 

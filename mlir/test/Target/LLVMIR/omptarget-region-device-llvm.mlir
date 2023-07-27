@@ -25,20 +25,31 @@ module attributes {omp.is_target_device = true} {
 
 // CHECK:      @[[SRC_LOC:.*]] = private unnamed_addr constant [23 x i8] c"{{[^"]*}}", align 1
 // CHECK:      @[[IDENT:.*]] = private unnamed_addr constant %struct.ident_t { i32 0, i32 2, i32 0, i32 22, ptr @[[SRC_LOC]] }, align 8
+// CHECK:      @[[DYNA_ENV:.*]] = internal global %struct.DynamicEnvironmentTy zeroinitializer
+// CHECK:      @[[KERNEL_ENV:.*]] = constant %struct.KernelEnvironmentTy { %struct.ConfigurationEnvironmentTy { i8 1, i8 1, i8 1 }, ptr @[[IDENT]], ptr @[[DYNA_ENV]] }
 // CHECK:      define weak_odr protected void @__omp_offloading_{{[^_]+}}_{{[^_]+}}_omp_target_region__l{{[0-9]+}}(ptr %[[ADDR_A:.*]], ptr %[[ADDR_B:.*]], ptr %[[ADDR_C:.*]])
-// CHECK:        %[[INIT:.*]] = call i32 @__kmpc_target_init(ptr @[[IDENT]], i8 1, i1 true)
+// CHECK:        %[[INIT:.*]] = call i32 @__kmpc_target_init(ptr @[[KERNEL_ENV]])
 // CHECK-NEXT:   %[[CMP:.*]] = icmp eq i32 %3, -1
 // CHECK-NEXT:   br i1 %[[CMP]], label %[[LABEL_ENTRY:.*]], label %[[LABEL_EXIT:.*]]
 // CHECK:        [[LABEL_ENTRY]]:
+// CHECK:        %[[TMP_A:.*]] = alloca ptr, align 8
+// CHECK:        store ptr %[[ADDR_A]], ptr %[[TMP_A]], align 8
+// CHECK:        %[[PTR_A:.*]] = load ptr, ptr %[[TMP_A]], align 8
+// CHECK:        %[[TMP_B:.*]] = alloca ptr, align 8
+// CHECK:        store ptr %[[ADDR_B]], ptr %[[TMP_B]], align 8
+// CHECK:        %[[PTR_B:.*]] = load ptr, ptr %[[TMP_B]], align 8
+// CHECK:        %[[TMP_C:.*]] = alloca ptr, align 8
+// CHECK:        store ptr %[[ADDR_C]], ptr %[[TMP_C]], align 8
+// CHECK:        %[[PTR_C:.*]] = load ptr, ptr %[[TMP_C]], align 8
 // CHECK-NEXT:   br label %[[LABEL_TARGET:.*]]
 // CHECK:        [[LABEL_TARGET]]:
-// CHECK:        %[[A:.*]] = load i32, ptr %[[ADDR_A]], align 4
-// CHECK:        %[[B:.*]] = load i32, ptr %[[ADDR_B]], align 4
+// CHECK:        %[[A:.*]] = load i32, ptr %[[PTR_A]], align 4
+// CHECK:        %[[B:.*]] = load i32, ptr %[[PTR_B]], align 4
 // CHECK:        %[[C:.*]] = add i32 %[[A]], %[[B]]
-// CHECK:        store i32 %[[C]], ptr %[[ADDR_C]], align 4
+// CHECK:        store i32 %[[C]], ptr %[[PTR_C]], align 4
 // CHECK:        br label %[[LABEL_DEINIT:.*]]
 // CHECK:        [[LABEL_DEINIT]]:
-// CHECK-NEXT:   call void @__kmpc_target_deinit(ptr @[[IDENT]], i8 1)
+// CHECK-NEXT:   call void @__kmpc_target_deinit()
 // CHECK-NEXT:   ret void
 // CHECK:        [[LABEL_EXIT]]:
 // CHECK-NEXT:   ret void

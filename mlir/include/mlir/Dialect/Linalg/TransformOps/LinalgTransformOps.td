@@ -133,6 +133,9 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
     `alloc_op`. Currently supported are "memref.alloc" and "memref.alloca". In
     case of a "memref.alloca", the buffer is not deallocated.
 
+    If `bufferize_destination_only` is set, only the destination operands of the
+    op are bufferized to a new memory allocation, but not the op itself.
+
     #### Return modes
 
     This operation consumes the `target` handle and produces the
@@ -144,12 +147,13 @@ def BufferizeToAllocationOp : Op<Transform_Dialect,
                        DefaultValuedAttr<StrAttr, "\"memref.tensor_store\"">:
                            $memcpy_op,
                        DefaultValuedAttr<StrAttr, "\"memref.alloc\"">:
-                           $alloc_op);
+                           $alloc_op,
+                       UnitAttr:$bufferize_destination_only);
   let hasVerifier = 1;
   let results = (outs Transform_AnyValue:$allocated_buffer,
                       Transform_AnyOpType:$new_ops);
   let assemblyFormat = "$target attr-dict `:` type($target)";
-  
+
   let builders = [
     OpBuilder<(ins "Value":$target, "Attribute":$memorySpace)>,
     OpBuilder<(ins "Value":$target, "int64_t":$memorySpace)>
@@ -2334,16 +2338,17 @@ def InsertSliceToCopyOp :
 
 def MapCopyToThreadsOp :
   Op<Transform_Dialect, "structured.gpu.map_copy_to_threads",
-    [FunctionalStyleTransformOpTrait, 
+    [FunctionalStyleTransformOpTrait,
      MemoryEffectsOpInterface,
-     TransformEachOpTrait, 
+     TransformEachOpTrait,
      TransformOpInterface]> {
   let description = [{
-    Targeted mapping of a copy operation on tensors to a GPU thread mapping.
+    Targeted mapping of a linalg.copy / tensor.pad operation on tensors to a GPU
+    thread mapping.
 
-    This operation implements a greedy heuristic that determines a good 
-    distribution of threads to break down the copy operation into.
-    The heuristic is driven by considerations related to the underlying 
+    This operation implements a greedy heuristic that determines a good
+    distribution of threads to break down the copy/pad operation into.
+    The heuristic is driven by considerations related to the underlying
     architecture for which good high-level decisions are needed assuming certain
     hardware features. Relevant features are exposed via first-class attributes
     to control the behavior of the transformation at a high level.
@@ -2351,22 +2356,25 @@ def MapCopyToThreadsOp :
     For now, a single heuristic is implemented and can be extended on a per-need
     basis.
 
-    #### Return modes:
+    #### Return modes
 
-    The operation always succeeds and returns a handle to the relevant tiled
-    linalg.copy op.
+    This operation fails definitely if there is an unsupported op (i.e., not
+    linalg.copy / tensor.pad) among the targeted op. Otherwise, the operation
+    always succeeds and returns a handle to the relevant tiled linalg.copy /
+    tensor.pad op and the enclosing scf.forall op.
   }];
 
   let arguments = (ins TransformHandleTypeInterface:$target,
                        I64Attr:$total_num_threads,
                        I64Attr:$desired_bit_alignment);
-  let results = (outs TransformHandleTypeInterface:$transformed);
+  let results = (outs TransformHandleTypeInterface:$forall_op,
+                      TransformHandleTypeInterface:$tiled_op);
 
   let assemblyFormat = [{
     $target
     `total_num_threads` `=` $total_num_threads
     `desired_bit_alignment` `=` $desired_bit_alignment
-    attr-dict 
+    attr-dict
     `:` functional-type(operands, results)
   }];
 
@@ -2376,7 +2384,7 @@ def MapCopyToThreadsOp :
   let extraClassDeclaration = [{
     ::mlir::DiagnosedSilenceableFailure applyToOne(
         ::mlir::transform::TransformRewriter &rewriter,
-        ::mlir::linalg::CopyOp copyOp,
+        ::mlir::Operation *target,
         ::mlir::transform::ApplyToEachResultList &results,
         ::mlir::transform::TransformState &state);
 

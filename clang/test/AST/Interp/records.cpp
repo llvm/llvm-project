@@ -311,16 +311,38 @@ namespace InitializerTemporaries {
     int Pos = 0;
 
     {
-      auto T = Test(Arr, Pos);
+      Test(Arr, Pos);
       // End of scope, should destroy Test.
     }
 
     return Arr[Index];
   }
-
   static_assert(T(0) == 1);
   static_assert(T(1) == 2);
   static_assert(T(2) == 3);
+
+  // Invalid destructor.
+  struct S {
+    constexpr S() {}
+    constexpr ~S() noexcept(false) { throw 12; } // expected-error {{cannot use 'throw'}} \
+                                                 // expected-error {{never produces a constant expression}} \
+                                                 // expected-note 2{{subexpression not valid}} \
+                                                 // ref-error {{cannot use 'throw'}} \
+                                                 // ref-error {{never produces a constant expression}} \
+                                                 // ref-note 2{{subexpression not valid}}
+  };
+
+  constexpr int f() {
+    S{}; // ref-note {{in call to 'S{}.~S()'}}
+    /// FIXME: Wrong source location below.
+    return 12; // expected-note {{in call to '&S{}->~S()'}}
+  }
+  static_assert(f() == 12); // expected-error {{not an integral constant expression}} \
+                            // expected-note {{in call to 'f()'}} \
+                            // ref-error {{not an integral constant expression}} \
+                            // ref-note {{in call to 'f()'}}
+
+
 #endif
 }
 
@@ -566,6 +588,26 @@ namespace Destructors {
     return i;
   }
   static_assert(test() == 1);
+
+  struct S {
+    constexpr S() {}
+    constexpr ~S() { // expected-error {{never produces a constant expression}} \
+                     // ref-error {{never produces a constant expression}}
+      int i = 1 / 0; // expected-warning {{division by zero}} \
+                     // expected-note 2{{division by zero}} \
+                     // ref-warning {{division by zero}} \
+                     // ref-note 2{{division by zero}}
+    }
+  };
+  constexpr int testS() {
+    S{}; // ref-note {{in call to 'S{}.~S()'}}
+    return 1; // expected-note {{in call to '&S{}->~S()'}}
+              // FIXME: ^ Wrong line
+  }
+  static_assert(testS() == 1); // expected-error {{not an integral constant expression}} \
+                               // expected-note {{in call to 'testS()'}} \
+                               // ref-error {{not an integral constant expression}} \
+                               // ref-note {{in call to 'testS()'}}
 }
 
 
@@ -689,5 +731,52 @@ namespace CtorDtor {
                                 // ref-note {{initializer of 'D2' is not a constant expression}}
 
 }
+
+namespace VirtualFunctionPointers {
+  struct S {
+    virtual constexpr int func() const { return 1; }
+  };
+
+  struct Middle : S {
+    constexpr Middle(int i) : i(i) {}
+    int i;
+  };
+
+  struct Other {
+    constexpr Other(int k) : k(k) {}
+    int k;
+  };
+
+  struct S2 : Middle, Other {
+    int j;
+    constexpr S2(int i, int j, int k) : Middle(i), Other(k), j(j) {}
+    virtual constexpr int func() const { return i + j + k  + S::func(); }
+  };
+
+  constexpr S s;
+  constexpr decltype(&S::func) foo = &S::func;
+  constexpr int value = (s.*foo)();
+  static_assert(value == 1);
+
+
+  constexpr S2 s2(1, 2, 3);
+  static_assert(s2.i == 1);
+  static_assert(s2.j == 2);
+  static_assert(s2.k == 3);
+
+  constexpr int value2 = s2.func();
+  constexpr int value3 = (s2.*foo)();
+  static_assert(value3 == 7);
+
+  constexpr int dynamicDispatch(const S &s) {
+    constexpr decltype(&S::func) SFunc = &S::func;
+
+    return (s.*SFunc)();
+  }
+
+  static_assert(dynamicDispatch(s) == 1);
+  static_assert(dynamicDispatch(s2) == 7);
+};
+
 };
 #endif

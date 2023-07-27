@@ -438,6 +438,10 @@ protected:
   /// immediately before machine code is emitted.
   virtual void addPreEmitPass() { }
 
+  /// This pass may be implemented by targets that want to run passes
+  /// immediately after basic block sections are assigned.
+  virtual void addPostBBSections() {}
+
   /// Targets may add passes immediately before machine code is emitted in this
   /// callback. This is called even later than `addPreEmitPass`.
   // FIXME: Rename `addPreEmitPass` to something more sensible given its actual

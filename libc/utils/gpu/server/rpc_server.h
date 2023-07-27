@@ -18,11 +18,14 @@ extern "C" {
 #endif
 
 /// The maxium number of ports that can be opened for any server.
-const uint64_t RPC_MAXIMUM_PORT_COUNT = 64;
+const uint64_t RPC_MAXIMUM_PORT_COUNT = 512;
+
+/// The maximum number of parallel lanes that we can support.
+const uint64_t RPC_MAXIMUM_LANE_SIZE = 64;
 
 /// The symbol name associated with the client for use with the LLVM C library
 /// implementation.
-inline const char *rpc_client_symbol_name = "__llvm_libc_rpc_client";
+const char *const rpc_client_symbol_name = "__llvm_libc_rpc_client";
 
 /// status codes.
 typedef enum {
@@ -100,8 +103,18 @@ uint64_t rpc_get_client_size();
 /// Use the \p port to send a buffer using the \p callback.
 void rpc_send(rpc_port_t port, rpc_port_callback_ty callback, void *data);
 
+/// Use the \p port to send \p bytes using the \p callback. The input is an
+/// array of at least the configured lane size.
+void rpc_send_n(rpc_port_t port, const void *const *src, uint64_t *size);
+
 /// Use the \p port to recieve a buffer using the \p callback.
 void rpc_recv(rpc_port_t port, rpc_port_callback_ty callback, void *data);
+
+/// Use the \p port to recieve \p bytes using the \p callback. The inputs is an
+/// array of at least the configured lane size. The \p alloc function allocates
+/// memory for the recieved bytes.
+void rpc_recv_n(rpc_port_t port, void **dst, uint64_t *size, rpc_alloc_ty alloc,
+                void *data);
 
 /// Use the \p port to receive and send a buffer using the \p callback.
 void rpc_recv_and_send(rpc_port_t port, rpc_port_callback_ty callback,

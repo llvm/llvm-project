@@ -50,7 +50,8 @@ void *map(void *Addr, uptr Size, const char *Name, uptr Flags,
 
   if (IS_ERR(P)) {
     errno = lk_err_to_errno(PTR_ERR(P));
-    dieOnMapUnmapError(Size);
+    if (!(Flags & MAP_ALLOWNOMEM) || errno != ENOMEM)
+      dieOnMapUnmapError(Size);
     return nullptr;
   }
 

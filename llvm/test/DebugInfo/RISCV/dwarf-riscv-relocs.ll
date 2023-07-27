@@ -70,9 +70,9 @@
 ; DWARF-DUMP-NEXT: Address            Line   Column File   ISA Discriminator OpIndex Flags
 ; DWARF-DUMP-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
 ; DWARF-DUMP-NEXT: 0x0000000000000000      2      0      0   0             0       0  is_stmt
-; DWARF-DUMP-NEXT: 0x0000000000000014      3      5      0   0             0       0  is_stmt prologue_end
-; DWARF-DUMP-NEXT: 0x0000000000000020      3      5      0   0             0       0  epilogue_begin
-; DWARF-DUMP-NEXT: 0x0000000000000028      3      5      0   0             0       0  end_sequence
+; DWARF-DUMP-NEXT: 0x000000000000001c      3      5      0   0             0       0  is_stmt prologue_end
+; DWARF-DUMP-NEXT: 0x0000000000000028      3      5      0   0             0       0  epilogue_begin
+; DWARF-DUMP-NEXT: 0x0000000000000030      3      5      0   0             0       0  end_sequence
 
 ; ModuleID = 'dwarf-riscv-relocs.c'
 source_filename = "dwarf-riscv-relocs.c"
@@ -82,10 +82,13 @@ target triple = "riscv32"
 ; Function Attrs: noinline nounwind optnone
 define dso_local i32 @main() #0 !dbg !7 {
 entry:
+  call void @ext()
   %retval = alloca i32, align 4
   store i32 0, ptr %retval, align 4
   ret i32 0, !dbg !11
 }
+
+declare void @ext()
 
 attributes #0 = { noinline nounwind optnone "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "min-legal-vector-width"="0" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+relax" "unsafe-fp-math"="false" "use-soft-float"="false" }
 

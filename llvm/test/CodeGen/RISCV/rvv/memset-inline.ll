@@ -836,10 +836,9 @@ define void @bzero_16(ptr %a) nounwind {
 ;
 ; RV32-FAST-LABEL: bzero_16:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    sw zero, 12(a0)
-; RV32-FAST-NEXT:    sw zero, 8(a0)
-; RV32-FAST-NEXT:    sw zero, 4(a0)
-; RV32-FAST-NEXT:    sw zero, 0(a0)
+; RV32-FAST-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-FAST-NEXT:    vmv.v.i v8, 0
+; RV32-FAST-NEXT:    vse32.v v8, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: bzero_16:
@@ -926,22 +925,16 @@ define void @bzero_32(ptr %a) nounwind {
 ;
 ; RV32-FAST-LABEL: bzero_32:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    sw zero, 28(a0)
-; RV32-FAST-NEXT:    sw zero, 24(a0)
-; RV32-FAST-NEXT:    sw zero, 20(a0)
-; RV32-FAST-NEXT:    sw zero, 16(a0)
-; RV32-FAST-NEXT:    sw zero, 12(a0)
-; RV32-FAST-NEXT:    sw zero, 8(a0)
-; RV32-FAST-NEXT:    sw zero, 4(a0)
-; RV32-FAST-NEXT:    sw zero, 0(a0)
+; RV32-FAST-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; RV32-FAST-NEXT:    vmv.v.i v8, 0
+; RV32-FAST-NEXT:    vse32.v v8, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: bzero_32:
 ; RV64-FAST:       # %bb.0:
-; RV64-FAST-NEXT:    sd zero, 24(a0)
-; RV64-FAST-NEXT:    sd zero, 16(a0)
-; RV64-FAST-NEXT:    sd zero, 8(a0)
-; RV64-FAST-NEXT:    sd zero, 0(a0)
+; RV64-FAST-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; RV64-FAST-NEXT:    vmv.v.i v8, 0
+; RV64-FAST-NEXT:    vse64.v v8, (a0)
 ; RV64-FAST-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 0, i64 32, i1 0)
   ret void
@@ -1086,34 +1079,16 @@ define void @bzero_64(ptr %a) nounwind {
 ;
 ; RV32-FAST-LABEL: bzero_64:
 ; RV32-FAST:       # %bb.0:
-; RV32-FAST-NEXT:    sw zero, 60(a0)
-; RV32-FAST-NEXT:    sw zero, 56(a0)
-; RV32-FAST-NEXT:    sw zero, 52(a0)
-; RV32-FAST-NEXT:    sw zero, 48(a0)
-; RV32-FAST-NEXT:    sw zero, 44(a0)
-; RV32-FAST-NEXT:    sw zero, 40(a0)
-; RV32-FAST-NEXT:    sw zero, 36(a0)
-; RV32-FAST-NEXT:    sw zero, 32(a0)
-; RV32-FAST-NEXT:    sw zero, 28(a0)
-; RV32-FAST-NEXT:    sw zero, 24(a0)
-; RV32-FAST-NEXT:    sw zero, 20(a0)
-; RV32-FAST-NEXT:    sw zero, 16(a0)
-; RV32-FAST-NEXT:    sw zero, 12(a0)
-; RV32-FAST-NEXT:    sw zero, 8(a0)
-; RV32-FAST-NEXT:    sw zero, 4(a0)
-; RV32-FAST-NEXT:    sw zero, 0(a0)
+; RV32-FAST-NEXT:    vsetivli zero, 16, e32, m4, ta, ma
+; RV32-FAST-NEXT:    vmv.v.i v8, 0
+; RV32-FAST-NEXT:    vse32.v v8, (a0)
 ; RV32-FAST-NEXT:    ret
 ;
 ; RV64-FAST-LABEL: bzero_64:
 ; RV64-FAST:       # %bb.0:
-; RV64-FAST-NEXT:    sd zero, 56(a0)
-; RV64-FAST-NEXT:    sd zero, 48(a0)
-; RV64-FAST-NEXT:    sd zero, 40(a0)
-; RV64-FAST-NEXT:    sd zero, 32(a0)
-; RV64-FAST-NEXT:    sd zero, 24(a0)
-; RV64-FAST-NEXT:    sd zero, 16(a0)
-; RV64-FAST-NEXT:    sd zero, 8(a0)
-; RV64-FAST-NEXT:    sd zero, 0(a0)
+; RV64-FAST-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
+; RV64-FAST-NEXT:    vmv.v.i v8, 0
+; RV64-FAST-NEXT:    vse64.v v8, (a0)
 ; RV64-FAST-NEXT:    ret
   tail call void @llvm.memset.inline.p0.i64(ptr %a, i8 0, i64 64, i1 0)
   ret void

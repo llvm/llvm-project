@@ -527,6 +527,7 @@ include "LoongArchInstrFormats.td"
 include "LoongArchFloatInstrFormats.td"
 include "LoongArchLSXInstrFormats.td"
 include "LoongArchLASXInstrFormats.td"
+include "LoongArchLBTInstrFormats.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -2036,3 +2037,13 @@ include "LoongArchLSXInstrInfo.td"
 // LASX Instructions
 //===----------------------------------------------------------------------===//
 include "LoongArchLASXInstrInfo.td"
+
+//===----------------------------------------------------------------------===//
+// LVZ Instructions
+//===----------------------------------------------------------------------===//
+include "LoongArchLVZInstrInfo.td"
+
+//===----------------------------------------------------------------------===//
+// LBT Instructions
+//===----------------------------------------------------------------------===//
+include "LoongArchLBTInstrInfo.td"

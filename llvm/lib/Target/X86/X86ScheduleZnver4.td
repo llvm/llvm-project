@@ -37,7 +37,8 @@ def Znver4Model : SchedMachineModel {
   // Ideally for znver4, we should have 6.75K. However we don't add that
   // considerting the impact compile time and prefer using default values 
   // instead.
-  // let LoopMicroOpBufferSize = 6750;
+  // Retaining minimal value to influence unrolling as we did for znver3.
+  let LoopMicroOpBufferSize = 512;
   // AMD SOG 19h, 2.6.2 L1 Data Cache
   // The L1 data cache has a 4- or 5- cycle integer load-to-use latency.
   // AMD SOG 19h, 2.12 L1 Data Cache

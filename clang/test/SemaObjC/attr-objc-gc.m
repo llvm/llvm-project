@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -fdouble-square-bracket-attributes -verify %s
+// RUN: %clang_cc1 -triple x86_64-apple-darwin10 -fsyntax-only -verify %s
 static id __attribute((objc_gc(weak))) a;
 static id __attribute((objc_gc(strong))) b;
 

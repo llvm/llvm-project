@@ -21,8 +21,8 @@ namespace mlir {
 namespace LLVM {
 namespace detail {
 
-/// A helper class that converts LoopAnnotationAttrs and AccessGroupMetadataOps
-/// into a corresponding llvm::MDNodes.
+/// A helper class that converts LoopAnnotationAttrs and AccessGroupAttrs into
+/// corresponding llvm::MDNodes.
 class LoopAnnotationTranslation {
 public:
   LoopAnnotationTranslation(ModuleTranslation &moduleTranslation,

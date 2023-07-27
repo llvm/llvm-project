@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/StringRef.h"
 #include "llvm/BinaryFormat/COFF.h"
+#include "llvm/Object/COFF.h"
 #include "llvm/ObjectYAML/CodeViewYAMLDebugSections.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypeHashing.h"
 #include "llvm/ObjectYAML/CodeViewYAMLTypes.h"
@@ -69,6 +70,8 @@ struct Relocation {
 struct SectionDataEntry {
   std::optional<uint32_t> UInt32;
   yaml::BinaryRef Binary;
+  std::optional<object::coff_load_configuration32> LoadConfig32;
+  std::optional<object::coff_load_configuration64> LoadConfig64;
 
   size_t size() const;
   void writeAsBinary(raw_ostream &OS) const;
@@ -244,6 +247,18 @@ template <> struct MappingTraits<COFF::AuxiliarySectionDefinition> {
 
 template <> struct MappingTraits<COFF::AuxiliaryCLRToken> {
   static void mapping(IO &IO, COFF::AuxiliaryCLRToken &ACT);
+};
+
+template <> struct MappingTraits<object::coff_load_configuration32> {
+  static void mapping(IO &IO, object::coff_load_configuration32 &ACT);
+};
+
+template <> struct MappingTraits<object::coff_load_configuration64> {
+  static void mapping(IO &IO, object::coff_load_configuration64 &ACT);
+};
+
+template <> struct MappingTraits<object::coff_load_config_code_integrity> {
+  static void mapping(IO &IO, object::coff_load_config_code_integrity &ACT);
 };
 
 template <>

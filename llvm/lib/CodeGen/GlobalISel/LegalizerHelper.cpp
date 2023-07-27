@@ -4950,7 +4950,8 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
     Observer.changedInstr(MI);
     return Legalized;
   }
-  case TargetOpcode::G_FPTRUNC: {
+  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FPEXT: {
     if (TypeIdx != 0)
       return UnableToLegalize;
     Observer.changingInstr(MI);

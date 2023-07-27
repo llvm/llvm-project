@@ -559,7 +559,7 @@ TextEdit toTextEdit(const FixItHint &FixIt, const SourceManager &M,
 }
 
 FileDigest digest(llvm::StringRef Content) {
-  uint64_t Hash{llvm::xxHash64(Content)};
+  uint64_t Hash{llvm::xxh3_64bits(Content)};
   FileDigest Result;
   for (unsigned I = 0; I < Result.size(); ++I) {
     Result[I] = uint8_t(Hash);

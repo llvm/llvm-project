@@ -7171,6 +7171,13 @@ void OMPClauseWriter::VisitOMPDoacrossClause(OMPDoacrossClause *C) {
     Record.AddStmt(C->getLoopData(I));
 }
 
+void OMPClauseWriter::VisitOMPXAttributeClause(OMPXAttributeClause *C) {
+  Record.AddAttributes(C->getAttrs());
+  Record.AddSourceLocation(C->getBeginLoc());
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddSourceLocation(C->getEndLoc());
+}
+
 void ASTRecordWriter::writeOMPTraitInfo(const OMPTraitInfo *TI) {
   writeUInt32(TI->Sets.size());
   for (const auto &Set : TI->Sets) {

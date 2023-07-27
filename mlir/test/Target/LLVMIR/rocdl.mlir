@@ -20,11 +20,11 @@ llvm.func @rocdl_special_regs() -> i32 {
   %8 = rocdl.workgroup.dim.y : i64
   // CHECK: call i64 @__ockl_get_local_size(i32 2)
   %9 = rocdl.workgroup.dim.z : i64
-  // CHECK: call i64 @__ockl_get_global_size(i32 0)
+  // CHECK: call i64 @__ockl_get_num_groups(i32 0)
   %10 = rocdl.grid.dim.x : i64
-  // CHECK: call i64 @__ockl_get_global_size(i32 1)
+  // CHECK: call i64 @__ockl_get_num_groups(i32 1)
   %11 = rocdl.grid.dim.y : i64
-  // CHECK: call i64 @__ockl_get_global_size(i32 2)
+  // CHECK: call i64 @__ockl_get_num_groups(i32 2)
   %12 = rocdl.grid.dim.z : i64
 
   // CHECK: call i32 @llvm.amdgcn.workitem.id.x(),{{.*}} !range ![[$RANGE:[0-9]+]]
@@ -54,6 +54,16 @@ llvm.func @known_block_sizes()
   // CHECK: #[[$KNOWN_BLOCK_SIZE_ATTRS:[0-9]+]]
   // CHECK: !reqd_work_group_size ![[$REQD_WORK_GROUP_SIZE:[0-9]+]]
   llvm.return
+}
+
+llvm.func @rocdl.lane_id() -> i32 {
+  // CHECK: [[mbcntlo:%.+]] = call i32 @llvm.amdgcn.mbcnt.lo(i32 -1, i32 0)
+  // CHECK-NEXT: call i32 @llvm.amdgcn.mbcnt.hi(i32 -1, i32 [[mbcntlo]])
+  %0 = llvm.mlir.constant(-1 : i32) : i32
+  %1 = llvm.mlir.constant(0 : i32) : i32
+  %2 = rocdl.mbcnt.lo %0, %1 : (i32, i32) -> i32
+  %3 = rocdl.mbcnt.hi %0, %2 : (i32, i32) -> i32
+  llvm.return %3 : i32
 }
 
 llvm.func @rocdl.barrier() {

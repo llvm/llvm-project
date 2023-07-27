@@ -344,6 +344,16 @@ void __ompt_lw_taskteam_unlink(kmp_info_t *thr) {
 // task support
 //----------------------------------------------------------
 
+ompt_data_t *__ompt_get_task_data() {
+  kmp_info_t *thr = ompt_get_thread();
+  ompt_data_t *task_data = thr ? OMPT_CUR_TASK_DATA(thr) : NULL;
+  return task_data;
+}
+
+ompt_data_t *__ompt_get_target_task_data() {
+  return &__kmp_threads[__kmp_get_gtid()]->th.ompt_thread_info.target_task_data;
+}
+
 int __ompt_get_task_info_internal(int ancestor_level, int *type,
                                   ompt_data_t **task_data,
                                   ompt_frame_t **task_frame,

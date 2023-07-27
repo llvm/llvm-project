@@ -926,7 +926,9 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
   });
 
   /// Check for taint propagation sources.
-  /// A rule is relevant if PropSrcArgs is empty, or if any of its signified
+  /// A rule will make the destination variables tainted if PropSrcArgs
+  /// is empty (taints the destination
+  /// arguments unconditionally), or if any of its signified
   /// args are tainted in context of the current CallEvent.
   bool IsMatching = PropSrcArgs.isEmpty();
   std::vector<SymbolRef> TaintedSymbols;
@@ -949,6 +951,8 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
     }
   });
 
+  // Early return for propagation rules which dont match.
+  // Matching propagations, Sinks and Filters will pass this point.
   if (!IsMatching)
     return;
 
@@ -975,10 +979,13 @@ void GenericTaintRule::process(const GenericTaintChecker &Checker,
           Result = F.add(Result, I);
         }
 
+        // Taint property gets lost if the variable is passed as a
+        // non-const pointer or reference to a function which is
+        // not inlined. For matching rules we want to preserve the taintedness.
         // TODO: We should traverse all reachable memory regions via the
         // escaping parameter. Instead of doing that we simply mark only the
         // referred memory region as tainted.
-        if (WouldEscape(V, E->getType())) {
+        if (WouldEscape(V, E->getType()) && getTaintedPointeeOrPointer(State, V)) {
           LLVM_DEBUG(if (!Result.contains(I)) {
             llvm::dbgs() << "PreCall<";
             Call.dump(llvm::dbgs());

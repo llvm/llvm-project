@@ -63,6 +63,8 @@ public:
       setFastMathFlags(fmi.getFastMathFlagsAttr().getValue());
     }
   }
+  FirOpBuilder(mlir::OpBuilder &builder, mlir::Operation *op)
+      : FirOpBuilder(builder, fir::getKindMapping(op), op) {}
 
   // The listener self-reference has to be updated in case of copy-construction.
   FirOpBuilder(const FirOpBuilder &other)

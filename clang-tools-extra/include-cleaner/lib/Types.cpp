@@ -102,7 +102,7 @@ void Includes::add(const Include &I) {
 
   BySpellingIt->second.push_back(Index);
   if (I.Resolved)
-    ByFile[I.Resolved].push_back(Index);
+    ByFile[&I.Resolved->getFileEntry()].push_back(Index);
   ByLine[I.Line] = Index;
 }
 

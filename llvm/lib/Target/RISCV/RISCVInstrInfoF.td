@@ -51,6 +51,9 @@ def riscv_fcvt_x
 def riscv_fcvt_xu
     : SDNode<"RISCVISD::FCVT_XU", SDT_RISCVFCVT_X>;
 
+def riscv_fmin : SDNode<"RISCVISD::FMIN", SDTFPBinOp>;
+def riscv_fmax : SDNode<"RISCVISD::FMAX", SDTFPBinOp>;
+
 def riscv_strict_fcvt_w_rv64
     : SDNode<"RISCVISD::STRICT_FCVT_W_RV64", SDT_RISCVFCVT_W_RV64,
              [SDNPHasChain]>;
@@ -555,6 +558,8 @@ def : Pat<(fneg (any_fma_nsz FPR32INX:$rs1, FPR32INX:$rs2, FPR32INX:$rs3)),
 foreach Ext = FExts in {
   defm : PatFprFpr_m<fminnum, FMIN_S, Ext>;
   defm : PatFprFpr_m<fmaxnum, FMAX_S, Ext>;
+  defm : PatFprFpr_m<riscv_fmin, FMIN_S, Ext>;
+  defm : PatFprFpr_m<riscv_fmax, FMAX_S, Ext>;
 }
 
 /// Setcc

@@ -1,5 +1,5 @@
 =======================================
-PSTL 17.0.0 (In-Progress) Release Notes
+PSTL 18.0.0 (In-Progress) Release Notes
 =======================================
 
 .. contents::
@@ -30,7 +30,7 @@ web page, this document applies to the *next* release, not the current one.
 To see the release notes for a specific release, please see the `releases
 page <https://llvm.org/releases/>`_.
 
-What's New in PSTL 17.0.0?
+What's New in PSTL 18.0.0?
 ==========================
 
 New Features

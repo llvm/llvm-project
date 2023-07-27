@@ -424,3 +424,23 @@ define i64 @and_i64_0xfff0_multiple_times(i64 %a, i64 %b, i64 %c) {
   %i = xor i64 %g, %h
   ret i64 %i
 }
+
+define i32 @and_add_lsr(i32 %x, i32 %y) {
+; LA32-LABEL: and_add_lsr:
+; LA32:       # %bb.0:
+; LA32-NEXT:    addi.w $a0, $a0, -1
+; LA32-NEXT:    srli.w $a1, $a1, 20
+; LA32-NEXT:    and $a0, $a1, $a0
+; LA32-NEXT:    ret
+;
+; LA64-LABEL: and_add_lsr:
+; LA64:       # %bb.0:
+; LA64-NEXT:    addi.d $a0, $a0, -1
+; LA64-NEXT:    bstrpick.d $a1, $a1, 31, 20
+; LA64-NEXT:    and $a0, $a1, $a0
+; LA64-NEXT:    ret
+  %1 = add i32 %x, 4095
+  %2 = lshr i32 %y, 20
+  %r = and i32 %2, %1
+  ret i32 %r
+}

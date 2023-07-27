@@ -35,8 +35,6 @@
 // RUN: %env_hwasan_opts=allocator_may_return_null=1     %run %t new-nothrow 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-nnNULL
 
-// REQUIRES: stable-runtime
-
 // TODO(alekseyshl): Fix it.
 // UNSUPPORTED: android
 

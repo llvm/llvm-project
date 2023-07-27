@@ -180,7 +180,7 @@ define float @v_constained_fmul_f32_fpexcept_strict_fabs_lhs(float %x, float %y)
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10PLUS-NEXT:    v_mul_f32_e64 v0, |v0|, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
-  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fabs.x = call float @llvm.fabs.f32(float %x) #0
   %val = call float @llvm.experimental.constrained.fmul.f32(float %fabs.x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %val
 }
@@ -197,7 +197,7 @@ define float @v_constained_fmul_f32_fpexcept_strict_fabs_rhs(float %x, float %y)
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10PLUS-NEXT:    v_mul_f32_e64 v0, v0, |v1|
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
-  %fabs.y = call float @llvm.fabs.f32(float %y)
+  %fabs.y = call float @llvm.fabs.f32(float %y) #0
   %val = call float @llvm.experimental.constrained.fmul.f32(float %x, float %fabs.y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %val
 }
@@ -214,16 +214,15 @@ define float @v_constained_fmul_f32_fpexcept_strict_fneg_fabs_lhs(float %x, floa
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10PLUS-NEXT:    v_mul_f32_e64 v0, -|v0|, v1
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
-  %fabs.x = call float @llvm.fabs.f32(float %x)
+  %fabs.x = call float @llvm.fabs.f32(float %x) #0
   %neg.fabs.x = fneg float %fabs.x
   %val = call float @llvm.experimental.constrained.fmul.f32(float %neg.fabs.x, float %y, metadata !"round.tonearest", metadata !"fpexcept.strict")
   ret float %val
 }
 
-declare float @llvm.fabs.f32(float) #1
-declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata) #1
-declare <2 x float> @llvm.experimental.constrained.fmul.v2f32(<2 x float>, <2 x float>, metadata, metadata) #1
-declare <3 x float> @llvm.experimental.constrained.fmul.v3f32(<3 x float>, <3 x float>, metadata, metadata) #1
+declare float @llvm.fabs.f32(float)
+declare float @llvm.experimental.constrained.fmul.f32(float, float, metadata, metadata)
+declare <2 x float> @llvm.experimental.constrained.fmul.v2f32(<2 x float>, <2 x float>, metadata, metadata)
+declare <3 x float> @llvm.experimental.constrained.fmul.v3f32(<3 x float>, <3 x float>, metadata, metadata)
 
 attributes #0 = { strictfp }
-attributes #1 = { inaccessiblememonly nounwind willreturn }

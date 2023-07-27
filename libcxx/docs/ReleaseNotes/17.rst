@@ -58,7 +58,7 @@ Implemented Papers
 - P1206R7 - ``ranges::to``: A function to convert any range to a container
 - P2520R0 - ``move_iterator<T*>`` should be a random access iterator
 - P1328R1 - ``constexpr type_info::operator==()``
-- P1413R3 - Formatting ``thread::id`` (the ``stacktrace`` is not done yet)
+- P2693R1 - Formatting ``thread::id`` (the ``stacktrace`` is not done yet)
 - P2675R1 - ``format``'s width estimation is too approximate and not forward compatible
 - P2505R5 - Monadic operations for ``std::expected``
 - P2711R1 - Making Multi-Param Constructors Of views explicit (``join_with_view`` is not done yet)
@@ -69,6 +69,7 @@ Implemented Papers
 - P2585R0 - Improving default container formatting
 - P0408R7 - Efficient Access to ``basic_stringbuf``'s Buffer
 - P2474R2 - ``views::repeat``
+- P0009R18 - ``mdspan`` (``layout_stride`` is not done yet)
 
 Improvements and New Features
 -----------------------------
@@ -107,8 +108,9 @@ Improvements and New Features
   Users can control whether the debug mode is enabled on a per translation unit basis using the
   ``-D_LIBCPP_ENABLE_DEBUG_MODE=1`` macro. See ``libcxx/docs/Hardening.rst`` for more details.
 
-- ASAN annotations to detect container overflow have been added to the
-  containers ``std::deque``, and ``std::vector``.
+- ASan container annotations have been extended to cover all allocators in ``std::vector``.
+
+- ASan annotations have been added to the ``std::deque`` container, to detect container overflows.
 
 Deprecations and Removals
 -------------------------
@@ -203,9 +205,9 @@ LLVM 18
 
 API Changes
 -----------
-- Added ``__asan_annotate_container_with_allocator``, which is is a
-  customization point to allow users to disable Address Sanitizer annotations
-  for containers for specific allocators. See :ref:`turning-off-asan` for more
+- Added ``__asan_annotate_container_with_allocator``, which is a
+  customization point to allow users to disable Address Sanitizer container annotations
+  for specific allocators. See :ref:`turning-off-asan` for more
   information.
 
 ABI Affecting Changes

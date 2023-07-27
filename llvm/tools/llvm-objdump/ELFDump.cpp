@@ -28,7 +28,7 @@ namespace {
 template <typename ELFT> class ELFDumper : public Dumper {
 public:
   ELFDumper(const ELFObjectFile<ELFT> &O) : Dumper(O), Obj(O) {}
-  void printPrivateHeaders(bool MachOOnlyFirst) override;
+  void printPrivateHeaders() override;
   void printDynamicRelocations() override;
 
 private:
@@ -426,7 +426,7 @@ template <class ELFT> void ELFDumper<ELFT>::printSymbolVersion() {
   }
 }
 
-template <class ELFT> void ELFDumper<ELFT>::printPrivateHeaders(bool) {
+template <class ELFT> void ELFDumper<ELFT>::printPrivateHeaders() {
   printProgramHeaders();
   printDynamicSection();
   printSymbolVersion();

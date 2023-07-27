@@ -1142,18 +1142,18 @@ llvm::MDNode *ModuleTranslation::getAliasScopes(
     ArrayRef<AliasScopeAttr> aliasScopeAttrs) const {
   SmallVector<llvm::Metadata *> nodes;
   nodes.reserve(aliasScopeAttrs.size());
-  for (AliasScopeAttr aliasScopeRef : aliasScopeAttrs)
-    nodes.push_back(getAliasScope(aliasScopeRef));
+  for (AliasScopeAttr aliasScopeAttr : aliasScopeAttrs)
+    nodes.push_back(getAliasScope(aliasScopeAttr));
   return llvm::MDNode::get(getLLVMContext(), nodes);
 }
 
 void ModuleTranslation::setAliasScopeMetadata(AliasAnalysisOpInterface op,
                                               llvm::Instruction *inst) {
-  auto populateScopeMetadata = [&](ArrayAttr aliasScopeRefs, unsigned kind) {
-    if (!aliasScopeRefs || aliasScopeRefs.empty())
+  auto populateScopeMetadata = [&](ArrayAttr aliasScopeAttrs, unsigned kind) {
+    if (!aliasScopeAttrs || aliasScopeAttrs.empty())
       return;
     llvm::MDNode *node = getAliasScopes(
-        llvm::to_vector(aliasScopeRefs.getAsRange<AliasScopeAttr>()));
+        llvm::to_vector(aliasScopeAttrs.getAsRange<AliasScopeAttr>()));
     inst->setMetadata(kind, node);
   };
 
@@ -1398,7 +1398,7 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
   llvm::IRBuilder<> llvmBuilder(llvmContext);
   for (Operation &o : getModuleBody(module).getOperations()) {
     if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp, LLVM::GlobalCtorsOp,
-             LLVM::GlobalDtorsOp, LLVM::MetadataOp, LLVM::ComdatOp>(&o) &&
+             LLVM::GlobalDtorsOp, LLVM::ComdatOp>(&o) &&
         !o.hasTrait<OpTrait::IsTerminator>() &&
         failed(translator.convertOperation(o, llvmBuilder))) {
       return nullptr;

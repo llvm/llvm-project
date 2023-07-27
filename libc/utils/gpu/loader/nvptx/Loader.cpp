@@ -177,6 +177,8 @@ CUresult launch_kernel(CUmodule binary, CUstream stream,
 
   // Register RPC callbacks for the malloc and free functions on HSA.
   uint32_t device_id = 0;
+  register_rpc_callbacks(device_id);
+
   rpc_register_callback(
       device_id, RPC_MALLOC,
       [](rpc_port_t port, void *data) {

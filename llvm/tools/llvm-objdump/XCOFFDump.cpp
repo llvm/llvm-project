@@ -32,7 +32,7 @@ namespace {
 class XCOFFDumper : public objdump::Dumper {
 public:
   XCOFFDumper(const object::XCOFFObjectFile &O) : Dumper(O) {}
-  void printPrivateHeaders(bool MachOOnlyFirst) override;
+  void printPrivateHeaders() override {}
 };
 } // namespace
 
@@ -40,8 +40,6 @@ std::unique_ptr<objdump::Dumper>
 objdump::createXCOFFDumper(const object::XCOFFObjectFile &Obj) {
   return std::make_unique<XCOFFDumper>(Obj);
 }
-
-void XCOFFDumper::printPrivateHeaders(bool) {}
 
 Error objdump::getXCOFFRelocationValueString(const XCOFFObjectFile &Obj,
                                              const RelocationRef &Rel,

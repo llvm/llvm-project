@@ -37,6 +37,13 @@ Attribute convertToAttribute(MLIRContext *ctx, int64_t storage);
 LogicalResult convertFromAttribute(MutableArrayRef<int64_t> storage,
                                    Attribute attr, InFlightDiagnostic *diag);
 
+/// Convert a DenseI32ArrayAttr to the provided storage. It is expected that the
+/// storage has the same size as the array. An error is returned if the
+/// attribute isn't a DenseI32ArrayAttr or it does not have the same size. If
+/// the optional diagnostic is provided an error message is also emitted.
+LogicalResult convertFromAttribute(MutableArrayRef<int32_t> storage,
+                                   Attribute attr, InFlightDiagnostic *diag);
+
 /// Convert the provided ArrayRef<int64_t> to a DenseI64ArrayAttr attribute.
 Attribute convertToAttribute(MLIRContext *ctx, ArrayRef<int64_t> storage);
 

@@ -36,6 +36,11 @@
 #define NT_ARM_SVE 0x405 /* ARM Scalable Vector Extension */
 #endif
 
+#ifndef NT_ARM_SSVE
+#define NT_ARM_SSVE                                                            \
+  0x40b /* ARM Scalable Matrix Extension, Streaming SVE mode */
+#endif
+
 #ifndef NT_ARM_PAC_MASK
 #define NT_ARM_PAC_MASK 0x406 /* Pointer authentication code masks */
 #endif
@@ -71,8 +76,19 @@ NativeRegisterContextLinux::CreateHostNativeRegisterContextLinux(
     if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
                                           native_thread.GetID(), &regset,
                                           &ioVec, sizeof(sve_header))
-            .Success())
+            .Success()) {
       opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSVE);
+
+      // We may also have the Scalable Matrix Extension (SME) which adds a
+      // streaming SVE mode.
+      ioVec.iov_len = sizeof(sve_header);
+      regset = NT_ARM_SSVE;
+      if (NativeProcessLinux::PtraceWrapper(PTRACE_GETREGSET,
+                                            native_thread.GetID(), &regset,
+                                            &ioVec, sizeof(sve_header))
+              .Success())
+        opt_regsets.Set(RegisterInfoPOSIX_arm64::eRegsetMaskSSVE);
+    }
 
     NativeProcessLinux &process = native_thread.GetProcess();
 
@@ -116,9 +132,9 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   ::memset(&m_hbp_regs, 0, sizeof(m_hbp_regs));
   ::memset(&m_sve_header, 0, sizeof(m_sve_header));
   ::memset(&m_pac_mask, 0, sizeof(m_pac_mask));
+  ::memset(&m_tls_regs, 0, sizeof(m_tls_regs));
 
   m_mte_ctrl_reg = 0;
-  m_tls_tpidr_reg = 0;
 
   // 16 is just a maximum value, query hardware for actual watchpoint count
   m_max_hwp_supported = 16;
@@ -132,9 +148,13 @@ NativeRegisterContextLinux_arm64::NativeRegisterContextLinux_arm64(
   m_sve_header_is_valid = false;
   m_pac_mask_is_valid = false;
   m_mte_ctrl_is_valid = false;
-  m_tls_tpidr_is_valid = false;
+  m_tls_is_valid = false;
 
-  if (GetRegisterInfo().IsSVEEnabled())
+  // SME adds the tpidr2 register
+  m_tls_size = GetRegisterInfo().IsSSVEEnabled() ? sizeof(m_tls_regs)
+                                                 : sizeof(m_tls_regs.tpidr_reg);
+
+  if (GetRegisterInfo().IsSVEEnabled() || GetRegisterInfo().IsSSVEEnabled())
     m_sve_state = SVEState::Unknown;
   else
     m_sve_state = SVEState::Disabled;
@@ -203,25 +223,27 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       assert(offset < GetFPRSize());
       src = (uint8_t *)GetFPRBuffer() + offset;
     } else {
-      // SVE enabled, we will read and cache SVE ptrace data
+      // SVE or SSVE enabled, we will read and cache SVE ptrace data.
+      // In SIMD or Full mode, the data comes from the SVE regset. In streaming
+      // mode it comes from the streaming SVE regset.
       error = ReadAllSVE();
       if (error.Fail())
         return error;
 
       // FPSR and FPCR will be located right after Z registers in
-      // SVEState::FPSIMD while in SVEState::Full they will be located at the
-      // end of register data after an alignment correction based on currently
-      // selected vector length.
+      // SVEState::FPSIMD while in SVEState::Full or SVEState::Streaming they
+      // will be located at the end of register data after an alignment
+      // correction based on currently selected vector length.
       uint32_t sve_reg_num = LLDB_INVALID_REGNUM;
       if (reg == GetRegisterInfo().GetRegNumFPSR()) {
         sve_reg_num = reg;
-        if (m_sve_state == SVEState::Full)
+        if (m_sve_state == SVEState::Full || m_sve_state == SVEState::Streaming)
           offset = sve::PTraceFPSROffset(sve::vq_from_vl(m_sve_header.vl));
         else if (m_sve_state == SVEState::FPSIMD)
           offset = sve::ptrace_fpsimd_offset + (32 * 16);
       } else if (reg == GetRegisterInfo().GetRegNumFPCR()) {
         sve_reg_num = reg;
-        if (m_sve_state == SVEState::Full)
+        if (m_sve_state == SVEState::Full || m_sve_state == SVEState::Streaming)
           offset = sve::PTraceFPCROffset(sve::vq_from_vl(m_sve_header.vl));
         else if (m_sve_state == SVEState::FPSIMD)
           offset = sve::ptrace_fpsimd_offset + (32 * 16) + 4;
@@ -237,13 +259,13 @@ NativeRegisterContextLinux_arm64::ReadRegister(const RegisterInfo *reg_info,
       src = (uint8_t *)GetSVEBuffer() + offset;
     }
   } else if (IsTLS(reg)) {
-    error = ReadTLSTPIDR();
+    error = ReadTLS();
     if (error.Fail())
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetTLSOffset();
-    assert(offset < GetTLSTPIDRSize());
-    src = (uint8_t *)GetTLSTPIDR() + offset;
+    assert(offset < GetTLSBufferSize());
+    src = (uint8_t *)GetTLSBuffer() + offset;
   } else if (IsSVE(reg)) {
     if (m_sve_state == SVEState::Disabled || m_sve_state == SVEState::Unknown)
       return Status("SVE disabled or not supported");
@@ -344,25 +366,25 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
       return WriteFPR();
     } else {
-      // SVE enabled, we will read and cache SVE ptrace data
+      // SVE enabled, we will read and cache SVE ptrace data.
       error = ReadAllSVE();
       if (error.Fail())
         return error;
 
       // FPSR and FPCR will be located right after Z registers in
-      // SVEState::FPSIMD while in SVEState::Full they will be located at the
-      // end of register data after an alignment correction based on currently
-      // selected vector length.
+      // SVEState::FPSIMD while in SVEState::Full or SVEState::Streaming they
+      // will be located at the end of register data after an alignment
+      // correction based on currently selected vector length.
       uint32_t sve_reg_num = LLDB_INVALID_REGNUM;
       if (reg == GetRegisterInfo().GetRegNumFPSR()) {
         sve_reg_num = reg;
-        if (m_sve_state == SVEState::Full)
+        if (m_sve_state == SVEState::Full || m_sve_state == SVEState::Streaming)
           offset = sve::PTraceFPSROffset(sve::vq_from_vl(m_sve_header.vl));
         else if (m_sve_state == SVEState::FPSIMD)
           offset = sve::ptrace_fpsimd_offset + (32 * 16);
       } else if (reg == GetRegisterInfo().GetRegNumFPCR()) {
         sve_reg_num = reg;
-        if (m_sve_state == SVEState::Full)
+        if (m_sve_state == SVEState::Full || m_sve_state == SVEState::Streaming)
           offset = sve::PTraceFPCROffset(sve::vq_from_vl(m_sve_header.vl));
         else if (m_sve_state == SVEState::FPSIMD)
           offset = sve::ptrace_fpsimd_offset + (32 * 16) + 4;
@@ -462,16 +484,16 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
     return WriteMTEControl();
   } else if (IsTLS(reg)) {
-    error = ReadTLSTPIDR();
+    error = ReadTLS();
     if (error.Fail())
       return error;
 
     offset = reg_info->byte_offset - GetRegisterInfo().GetTLSOffset();
-    assert(offset < GetTLSTPIDRSize());
-    dst = (uint8_t *)GetTLSTPIDR() + offset;
+    assert(offset < GetTLSBufferSize());
+    dst = (uint8_t *)GetTLSBuffer() + offset;
     ::memcpy(dst, reg_value.GetBytes(), reg_info->byte_size);
 
-    return WriteTLSTPIDR();
+    return WriteTLS();
   }
 
   return Status("Failed to write register value");
@@ -479,9 +501,10 @@ Status NativeRegisterContextLinux_arm64::WriteRegister(
 
 Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
     lldb::WritableDataBufferSP &data_sp) {
-  // AArch64 register data must contain GPRs, either FPR or SVE registers
-  // and optional MTE register. Pointer Authentication (PAC) registers are
-  // read-only and will be skiped.
+  // AArch64 register data must contain GPRs and either FPR or SVE registers.
+  // SVE registers can be non-streaming (aka SVE) or streaming (aka SSVE).
+  // Finally an optional MTE register. Pointer Authentication (PAC) registers
+  // are read-only and will be skipped.
 
   // In order to create register data checkpoint we first read all register
   // values if not done already and calculate total size of register set data.
@@ -495,8 +518,10 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
     return error;
 
   // If SVE is enabled we need not copy FPR separately.
-  if (GetRegisterInfo().IsSVEEnabled()) {
+  if (GetRegisterInfo().IsSVEEnabled() || GetRegisterInfo().IsSSVEEnabled()) {
     reg_data_byte_size += GetSVEBufferSize();
+    // Also store the current SVE mode.
+    reg_data_byte_size += sizeof(uint32_t);
     error = ReadAllSVE();
   } else {
     reg_data_byte_size += GetFPRSize();
@@ -512,9 +537,9 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
       return error;
   }
 
-  // tpidr is always present but there will be more in future.
-  reg_data_byte_size += GetTLSTPIDRSize();
-  error = ReadTLSTPIDR();
+  // tpidr is always present but tpidr2 depends on SME.
+  reg_data_byte_size += GetTLSBufferSize();
+  error = ReadTLS();
   if (error.Fail())
     return error;
 
@@ -524,7 +549,9 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   ::memcpy(dst, GetGPRBuffer(), GetGPRBufferSize());
   dst += GetGPRBufferSize();
 
-  if (GetRegisterInfo().IsSVEEnabled()) {
+  if (GetRegisterInfo().IsSVEEnabled() || GetRegisterInfo().IsSSVEEnabled()) {
+    *dst = static_cast<uint8_t>(m_sve_state);
+    dst += sizeof(m_sve_state);
     ::memcpy(dst, GetSVEBuffer(), GetSVEBufferSize());
     dst += GetSVEBufferSize();
   } else {
@@ -535,7 +562,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
   if (GetRegisterInfo().IsMTEEnabled())
     ::memcpy(dst, GetMTEControl(), GetMTEControlSize());
 
-  ::memcpy(dst, GetTLSTPIDR(), GetTLSTPIDRSize());
+  ::memcpy(dst, GetTLSBuffer(), GetTLSBufferSize());
 
   return error;
 }
@@ -543,8 +570,8 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
 Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
     const lldb::DataBufferSP &data_sp) {
   // AArch64 register data must contain GPRs, either FPR or SVE registers
-  // and optional MTE register. Pointer Authentication (PAC) registers are
-  // read-only and will be skiped.
+  // (which can be streaming or non-streaming) and optional MTE register.
+  // Pointer Authentication (PAC) registers are read-only and will be skipped.
 
   // We store all register values in data_sp by copying full PTrace data that
   // corresponds to register sets enabled by current register context. In order
@@ -594,6 +621,10 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
       (data_sp->GetByteSize() > (reg_data_min_size + GetSVEHeaderSize()));
 
   if (contains_sve_reg_data) {
+    // Restore to the correct mode, streaming or not.
+    m_sve_state = static_cast<SVEState>(*src);
+    src += sizeof(m_sve_state);
+
     // We have SVE register data first write SVE header.
     ::memcpy(GetSVEHeader(), src, GetSVEHeaderSize());
     if (!sve::vl_valid(m_sve_header.vl)) {
@@ -818,10 +849,14 @@ void NativeRegisterContextLinux_arm64::InvalidateAllRegisters() {
   m_sve_header_is_valid = false;
   m_pac_mask_is_valid = false;
   m_mte_ctrl_is_valid = false;
-  m_tls_tpidr_is_valid = false;
+  m_tls_is_valid = false;
 
   // Update SVE registers in case there is change in configuration.
   ConfigureRegisterContext();
+}
+
+unsigned NativeRegisterContextLinux_arm64::GetSVERegSet() {
+  return m_sve_state == SVEState::Streaming ? NT_ARM_SSVE : NT_ARM_SVE;
 }
 
 Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
@@ -834,7 +869,7 @@ Status NativeRegisterContextLinux_arm64::ReadSVEHeader() {
   ioVec.iov_base = GetSVEHeader();
   ioVec.iov_len = GetSVEHeaderSize();
 
-  error = ReadRegisterSet(&ioVec, GetSVEHeaderSize(), NT_ARM_SVE);
+  error = ReadRegisterSet(&ioVec, GetSVEHeaderSize(), GetSVERegSet());
 
   if (error.Success())
     m_sve_header_is_valid = true;
@@ -875,12 +910,11 @@ Status NativeRegisterContextLinux_arm64::WriteSVEHeader() {
   m_sve_header_is_valid = false;
   m_fpu_is_valid = false;
 
-  return WriteRegisterSet(&ioVec, GetSVEHeaderSize(), NT_ARM_SVE);
+  return WriteRegisterSet(&ioVec, GetSVEHeaderSize(), GetSVERegSet());
 }
 
 Status NativeRegisterContextLinux_arm64::ReadAllSVE() {
   Status error;
-
   if (m_sve_buffer_is_valid)
     return error;
 
@@ -888,7 +922,7 @@ Status NativeRegisterContextLinux_arm64::ReadAllSVE() {
   ioVec.iov_base = GetSVEBuffer();
   ioVec.iov_len = GetSVEBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetSVEBufferSize(), NT_ARM_SVE);
+  error = ReadRegisterSet(&ioVec, GetSVEBufferSize(), GetSVERegSet());
 
   if (error.Success())
     m_sve_buffer_is_valid = true;
@@ -912,7 +946,7 @@ Status NativeRegisterContextLinux_arm64::WriteAllSVE() {
   m_sve_header_is_valid = false;
   m_fpu_is_valid = false;
 
-  return WriteRegisterSet(&ioVec, GetSVEBufferSize(), NT_ARM_SVE);
+  return WriteRegisterSet(&ioVec, GetSVEBufferSize(), GetSVERegSet());
 }
 
 Status NativeRegisterContextLinux_arm64::ReadMTEControl() {
@@ -949,57 +983,79 @@ Status NativeRegisterContextLinux_arm64::WriteMTEControl() {
   return WriteRegisterSet(&ioVec, GetMTEControlSize(), NT_ARM_TAGGED_ADDR_CTRL);
 }
 
-Status NativeRegisterContextLinux_arm64::ReadTLSTPIDR() {
+Status NativeRegisterContextLinux_arm64::ReadTLS() {
   Status error;
 
-  if (m_tls_tpidr_is_valid)
+  if (m_tls_is_valid)
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetTLSTPIDR();
-  ioVec.iov_len = GetTLSTPIDRSize();
+  ioVec.iov_base = GetTLSBuffer();
+  ioVec.iov_len = GetTLSBufferSize();
 
-  error = ReadRegisterSet(&ioVec, GetTLSTPIDRSize(), NT_ARM_TLS);
+  error = ReadRegisterSet(&ioVec, GetTLSBufferSize(), NT_ARM_TLS);
 
   if (error.Success())
-    m_tls_tpidr_is_valid = true;
+    m_tls_is_valid = true;
 
   return error;
 }
 
-Status NativeRegisterContextLinux_arm64::WriteTLSTPIDR() {
+Status NativeRegisterContextLinux_arm64::WriteTLS() {
   Status error;
 
-  error = ReadTLSTPIDR();
+  error = ReadTLS();
   if (error.Fail())
     return error;
 
   struct iovec ioVec;
-  ioVec.iov_base = GetTLSTPIDR();
-  ioVec.iov_len = GetTLSTPIDRSize();
+  ioVec.iov_base = GetTLSBuffer();
+  ioVec.iov_len = GetTLSBufferSize();
 
-  m_tls_tpidr_is_valid = false;
+  m_tls_is_valid = false;
 
-  return WriteRegisterSet(&ioVec, GetTLSTPIDRSize(), NT_ARM_TLS);
+  return WriteRegisterSet(&ioVec, GetTLSBufferSize(), NT_ARM_TLS);
 }
 
 void NativeRegisterContextLinux_arm64::ConfigureRegisterContext() {
   // ConfigureRegisterContext gets called from InvalidateAllRegisters
-  // on every stop and configures SVE vector length.
+  // on every stop and configures SVE vector length and whether we are in
+  // streaming SVE mode.
   // If m_sve_state is set to SVEState::Disabled on first stop, code below will
   // be deemed non operational for the lifetime of current process.
   if (!m_sve_header_is_valid && m_sve_state != SVEState::Disabled) {
-    Status error = ReadSVEHeader();
-    if (error.Success()) {
-      // If SVE is enabled thread can switch between SVEState::FPSIMD and
-      // SVEState::Full on every stop.
-      if ((m_sve_header.flags & sve::ptrace_regs_mask) ==
-          sve::ptrace_regs_fpsimd)
-        m_sve_state = SVEState::FPSIMD;
-      else if ((m_sve_header.flags & sve::ptrace_regs_mask) ==
-               sve::ptrace_regs_sve)
-        m_sve_state = SVEState::Full;
+    // If we have SVE we may also have the SVE streaming mode that SME added.
+    // We can read the header of either mode, but only the active mode will
+    // have valid register data.
 
+    // Check whether SME is present and the streaming SVE mode is active.
+    m_sve_header_is_valid = false;
+    m_sve_buffer_is_valid = false;
+    m_sve_state = SVEState::Streaming;
+    Status error = ReadSVEHeader();
+
+    // Streaming mode is active if the header has the SVE active flag set.
+    if (!(error.Success() && ((m_sve_header.flags & sve::ptrace_regs_mask) ==
+                              sve::ptrace_regs_sve))) {
+      // Non-streaming might be active instead.
+      m_sve_header_is_valid = false;
+      m_sve_buffer_is_valid = false;
+      m_sve_state = SVEState::Full;
+      error = ReadSVEHeader();
+      if (error.Success()) {
+        // If SVE is enabled thread can switch between SVEState::FPSIMD and
+        // SVEState::Full on every stop.
+        if ((m_sve_header.flags & sve::ptrace_regs_mask) ==
+            sve::ptrace_regs_fpsimd)
+          m_sve_state = SVEState::FPSIMD;
+        // Else we are in SVEState::Full.
+      } else {
+        m_sve_state = SVEState::Disabled;
+      }
+    }
+
+    if (m_sve_state == SVEState::Full || m_sve_state == SVEState::FPSIMD ||
+        m_sve_state == SVEState::Streaming) {
       // On every stop we configure SVE vector length by calling
       // ConfigureVectorLength regardless of current SVEState of this thread.
       uint32_t vq = RegisterInfoPOSIX_arm64::eVectorQuadwordAArch64SVE;
@@ -1025,7 +1081,9 @@ uint32_t NativeRegisterContextLinux_arm64::CalculateSVEOffset(
     const uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
     sve_reg_offset = sve::ptrace_fpsimd_offset +
                      (reg - GetRegisterInfo().GetRegNumSVEZ0()) * 16;
-  } else if (m_sve_state == SVEState::Full) {
+    // Between non-streaming and streaming mode, the layout is identical.
+  } else if (m_sve_state == SVEState::Full ||
+             m_sve_state == SVEState::Streaming) {
     uint32_t sve_z0_offset = GetGPRSize() + 16;
     sve_reg_offset =
         sve::SigRegsOffset() + reg_info->byte_offset - sve_z0_offset;

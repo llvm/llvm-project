@@ -155,7 +155,7 @@ opportunities(Function &F,
 
       // After all candidates have been added, it doesn't need to be a set
       // anymore.
-      std::vector<Value *> Candidates = ReferencedVals.takeVector();
+      auto Candidates = ReferencedVals.takeVector();
 
       // Remove ineligible candidates.
       llvm::erase_if(Candidates, [&, OpVal](Value *V) {

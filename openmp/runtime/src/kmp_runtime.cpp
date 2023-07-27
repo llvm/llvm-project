@@ -4763,25 +4763,6 @@ static void __kmp_initialize_team(kmp_team_t *team, int new_nproc,
   KF_TRACE(10, ("__kmp_initialize_team: exit: team=%p\n", team));
 }
 
-#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
-/* Sets full mask for thread and returns old mask, no changes to structures. */
-static void
-__kmp_set_thread_affinity_mask_full_tmp(kmp_affin_mask_t *old_mask) {
-  if (KMP_AFFINITY_CAPABLE()) {
-    int status;
-    if (old_mask != NULL) {
-      status = __kmp_get_system_affinity(old_mask, TRUE);
-      int error = errno;
-      if (status != 0) {
-        __kmp_fatal(KMP_MSG(ChangeThreadAffMaskError), KMP_ERR(error),
-                    __kmp_msg_null);
-      }
-    }
-    __kmp_set_system_affinity(__kmp_affin_fullMask, TRUE);
-  }
-}
-#endif
-
 #if KMP_AFFINITY_SUPPORTED
 
 // __kmp_partition_places() is the heart of the OpenMP 4.0 affinity mechanism.
@@ -5347,12 +5328,6 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
 #endif
       }
     } else { // team->t.t_nproc < new_nproc
-#if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
-      kmp_affin_mask_t *old_mask;
-      if (KMP_AFFINITY_CAPABLE()) {
-        KMP_CPU_ALLOC(old_mask);
-      }
-#endif
 
       KA_TRACE(20,
                ("__kmp_allocate_team: increasing hot team thread count to %d\n",
@@ -5401,7 +5376,7 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
            primary thread, so if a lot of workers are created on the single
            core quickly, they don't get a chance to set their own affinity for
            a long time. */
-        __kmp_set_thread_affinity_mask_full_tmp(old_mask);
+        kmp_affinity_raii_t new_temp_affinity{__kmp_affin_fullMask};
 #endif
 
         /* allocate new threads for the hot team */
@@ -5432,11 +5407,8 @@ __kmp_allocate_team(kmp_root_t *root, int new_nproc, int max_nproc,
         }
 
 #if (KMP_OS_LINUX || KMP_OS_FREEBSD) && KMP_AFFINITY_SUPPORTED
-        if (KMP_AFFINITY_CAPABLE()) {
-          /* Restore initial primary thread's affinity mask */
-          __kmp_set_system_affinity(old_mask, TRUE);
-          KMP_CPU_FREE(old_mask);
-        }
+        /* Restore initial primary thread's affinity mask */
+        new_temp_affinity.restore();
 #endif
 #if KMP_NESTED_HOT_TEAMS
       } // end of check of t_nproc vs. new_nproc vs. hot_team_nth
@@ -7314,6 +7286,10 @@ static void __kmp_do_serial_initialize(void) {
   __kmp_init_counter++;
 
   __kmp_init_serial = TRUE;
+
+  if (__kmp_version) {
+    __kmp_print_version_1();
+  }
 
   if (__kmp_settings) {
     __kmp_env_print();

@@ -1,7 +1,5 @@
 // RUN: %clangxx_hwasan -DSIZE=16 -O0 %s -o %t && %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: stable-runtime
-
 #include <assert.h>
 #include <stdlib.h>
 #include <sys/mman.h>

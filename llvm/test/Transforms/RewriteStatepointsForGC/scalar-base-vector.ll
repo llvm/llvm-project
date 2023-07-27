@@ -16,7 +16,7 @@ define ptr addrspace(1) @test1(ptr addrspace(1) %base1, <2 x i64> %offsets, i1 %
 ; CHECK-NEXT:    [[PHI:%.*]] = phi ptr addrspace(1) [ [[BASE1:%.*]], [[ENTRY:%.*]] ], [ [[BASE21]], [[FIRST]] ]
 ; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[PHI]], i64 0, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[PHI]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT_BASE]], <2 x ptr addrspace(1)> undef, <2 x i32> zeroinitializer, !is_base_value !0
+; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT_BASE]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x ptr addrspace(1)> [[DOTSPLAT]], <2 x i64> [[OFFSETS:%.*]]
 ; CHECK-NEXT:    [[PTR_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[DOTSPLAT_BASE]], i32 1, !is_base_value !0
@@ -46,7 +46,7 @@ define ptr addrspace(1) @test2(ptr addrspace(1) %base, <2 x i64> %offsets) gc "s
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[BASE:%.*]], i64 0, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[BASE]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT_BASE]], <2 x ptr addrspace(1)> undef, <2 x i32> zeroinitializer, !is_base_value !0
+; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT_BASE]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x ptr addrspace(1)> [[DOTSPLAT]], <2 x i64> [[OFFSETS:%.*]]
 ; CHECK-NEXT:    [[PTR_BASE:%.*]] = extractelement <2 x ptr addrspace(1)> [[DOTSPLAT_BASE]], i32 1, !is_base_value !0
@@ -88,7 +88,7 @@ define ptr addrspace(1) @test4(ptr addrspace(1) %base, <2 x i64> %offsets) gc "s
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[DOTSPLATINSERT_BASE:%.*]] = insertelement <2 x ptr addrspace(1)> zeroinitializer, ptr addrspace(1) [[BASE:%.*]], i64 0, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <2 x ptr addrspace(1)> poison, ptr addrspace(1) [[BASE]], i64 0
-; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT_BASE]], <2 x ptr addrspace(1)> undef, <2 x i32> zeroinitializer, !is_base_value !0
+; CHECK-NEXT:    [[DOTSPLAT_BASE:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT_BASE]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer, !is_base_value !0
 ; CHECK-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <2 x ptr addrspace(1)> [[DOTSPLATINSERT]], <2 x ptr addrspace(1)> poison, <2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[VEC:%.*]] = getelementptr i32, <2 x ptr addrspace(1)> [[DOTSPLAT]], <2 x i64> [[OFFSETS:%.*]]
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @do_safepoint, i32 0, i32 0, i32 0, i32 0) [ "gc-live"(<2 x ptr addrspace(1)> [[VEC]], <2 x ptr addrspace(1)> [[DOTSPLAT_BASE]]) ]
@@ -129,7 +129,7 @@ define void @test6(i1 %c) gc "statepoint-example" {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    br label [[HEADER:%.*]]
 ; CHECK:       header:
-; CHECK-NEXT:    [[TMP:%.*]] = phi ptr addrspace(1) [ [[TMP6:%.*]], [[LATCH:%.*]] ], [ undef, [[BB:%.*]] ]
+; CHECK-NEXT:    [[TMP:%.*]] = phi ptr addrspace(1) [ [[TMP6:%.*]], [[LATCH:%.*]] ], [ poison, [[BB:%.*]] ]
 ; CHECK-NEXT:    br label [[BB10:%.*]]
 ; CHECK:       bb10:
 ; CHECK-NEXT:    [[STATEPOINT_TOKEN:%.*]] = call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 2882400000, i32 0, ptr elementtype(void ()) @spam, i32 0, i32 0, i32 0, i32 0) [ "deopt"(ptr addrspace(1) [[TMP]]), "gc-live"(ptr addrspace(1) [[TMP]]) ]
@@ -150,7 +150,7 @@ bb:
   br label %header
 
 header:                                              ; preds = %latch, %bb
-  %tmp = phi ptr addrspace(1) [ %tmp6, %latch ], [ undef, %bb ]
+  %tmp = phi ptr addrspace(1) [ %tmp6, %latch ], [ poison, %bb ]
   br label %bb10
 
 bb10:                                             ; preds = %bb2

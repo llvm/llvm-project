@@ -88,14 +88,14 @@ analyze(llvm::ArrayRef<Decl *> ASTRoots,
   AnalysisResults Results;
   for (const Include &I : Inc.all()) {
     if (Used.contains(&I) || !I.Resolved ||
-        HeaderFilter(I.Resolved->tryGetRealPathName()))
+        HeaderFilter(I.Resolved->getFileEntry().tryGetRealPathName()))
       continue;
     if (PI) {
       if (PI->shouldKeep(I.Line))
         continue;
       // Check if main file is the public interface for a private header. If so
       // we shouldn't diagnose it as unused.
-      if (auto PHeader = PI->getPublic(I.Resolved); !PHeader.empty()) {
+      if (auto PHeader = PI->getPublic(*I.Resolved); !PHeader.empty()) {
         PHeader = PHeader.trim("<>\"");
         // Since most private -> public mappings happen in a verbatim way, we
         // check textually here. This might go wrong in presence of symlinks or

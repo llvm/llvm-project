@@ -251,7 +251,7 @@ multiclass ZAFPOuterProd<string n_suffix> {
     def NAME # _ZA64_D: SInst<"sv" # n_suffix # "_za64[_{d}]", "viPPdd", "d",
                               MergeOp1, "aarch64_sme_" # n_suffix,
                               [IsStreaming, IsSharedZA],
-                              [ImmCheck<0, ImmCheck0_3>]>;
+                              [ImmCheck<0, ImmCheck0_7>]>;
   }
 }
 
