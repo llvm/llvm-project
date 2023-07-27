@@ -462,8 +462,9 @@ private:
       GraphS << "  " << blockID(I) << " [id=" << blockID(I) << "]\n";
     for (const auto *Block : CFG) {
       for (const auto &Succ : Block->succs()) {
-        GraphS << "  " << blockID(Block->getBlockID()) << " -> "
-               << blockID(Succ.getReachableBlock()->getBlockID()) << "\n";
+        if (Succ.getReachableBlock())
+          GraphS << "  " << blockID(Block->getBlockID()) << " -> "
+                 << blockID(Succ.getReachableBlock()->getBlockID()) << "\n";
       }
     }
     GraphS << "}\n";
