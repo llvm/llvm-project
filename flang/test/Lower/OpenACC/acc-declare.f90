@@ -55,3 +55,18 @@ end module
 ! CHECK:         acc.declare_enter dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<100000xf32>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }
+
+module acc_declare_device_resident_test
+ integer, parameter :: n = 5000
+ integer, dimension(n) :: data1
+ !$acc declare device_resident(data1)
+end module
+
+! CHECK-LABEL: fir.global @_QMacc_declare_device_resident_testEdata1 {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>} : !fir.array<5000xi32>
+
+! CHECK-LABEL: acc.global_ctor @_QMacc_declare_device_resident_testEdata1_acc_ctor {
+! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_device_resident_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>} : !fir.ref<!fir.array<5000xi32>>
+! CHECK:         %[[DEVICERESIDENT:.*]] = acc.declare_device_resident varPtr(%0 : !fir.ref<!fir.array<5000xi32>>) -> !fir.ref<!fir.array<5000xi32>> {name = "data1"}
+! CHECK:         acc.declare_enter dataOperands(%[[DEVICERESIDENT]] : !fir.ref<!fir.array<5000xi32>>)
+! CHECK:         acc.terminator
+! CHECK:       }
