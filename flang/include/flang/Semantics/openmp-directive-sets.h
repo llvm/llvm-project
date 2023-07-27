@@ -181,6 +181,49 @@ static const OmpDirectiveSet nonPartialVarSet{
     Directive::OMPD_declare_target,
 };
 
+static const OmpDirectiveSet loopConstructSet{
+    Directive::OMPD_distribute_parallel_do_simd,
+    Directive::OMPD_distribute_parallel_do,
+    Directive::OMPD_distribute_simd,
+    Directive::OMPD_distribute,
+    Directive::OMPD_do_simd,
+    Directive::OMPD_do,
+    Directive::OMPD_parallel_do_simd,
+    Directive::OMPD_parallel_do,
+    Directive::OMPD_simd,
+    Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_parallel_do,
+    Directive::OMPD_target_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do,
+    Directive::OMPD_target_teams_distribute_simd,
+    Directive::OMPD_target_teams_distribute,
+    Directive::OMPD_taskloop_simd,
+    Directive::OMPD_taskloop,
+    Directive::OMPD_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_parallel_do,
+    Directive::OMPD_teams_distribute_simd,
+    Directive::OMPD_teams_distribute,
+    Directive::OMPD_tile,
+    Directive::OMPD_unroll,
+};
+
+static const OmpDirectiveSet blockConstructSet{
+    Directive::OMPD_master,
+    Directive::OMPD_ordered,
+    Directive::OMPD_parallel_workshare,
+    Directive::OMPD_parallel,
+    Directive::OMPD_single,
+    Directive::OMPD_target_data,
+    Directive::OMPD_target_parallel,
+    Directive::OMPD_target_teams,
+    Directive::OMPD_target,
+    Directive::OMPD_task,
+    Directive::OMPD_taskgroup,
+    Directive::OMPD_teams,
+    Directive::OMPD_workshare,
+};
+
 //===----------------------------------------------------------------------===//
 // Directive sets for allowed/not allowed nested directives
 //===----------------------------------------------------------------------===//
