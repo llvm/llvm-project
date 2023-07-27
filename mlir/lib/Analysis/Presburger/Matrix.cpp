@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Matrix.h"
-#include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -351,53 +350,6 @@ std::pair<Matrix, Matrix> Matrix::computeHermiteNormalForm() const {
   }
 
   return {h, u};
-}
-
-MPInt dotProduct(ArrayRef<MPInt> a, ArrayRef<MPInt> b)
-{
-    MPInt sum(0);
-    for (unsigned long i = 0; i < a.size(); i++)
-    {
-        sum += a[i] * b[i];
-    }
-    return sum;
-}
-
-SmallVector<Fraction> scale(SmallVector<MPInt> v, Fraction f)
-{
-    SmallVector<Fraction> ret(v.size());
-    for (unsigned long i = 0; i < v.size(); i++)
-    {
-        ret[i] = f * Fraction(v[i], 1);
-    }
-    return ret;
-}
-
-SmallVector<SmallVector<Fraction, 16>, 16> Matrix::gramSchmidt()
-{
-    unsigned rows = this->getNumRows();
-    unsigned cols = this->getNumColumns();
-    SmallVector<SmallVector<Fraction, 16>, 16> orthogonalBasis(rows);
-    Fraction projection;
-    for (unsigned i = 0; i < rows; i++)
-    {
-        orthogonalBasis[i].resize(cols);
-        for (unsigned j = 0; j < cols; j++)
-        {
-            orthogonalBasis[i][j] = Fraction(at(i, j), 1);
-        }
-        for (unsigned j = i-1; j >= 0; j++)
-        {
-            projection = Fraction(dotProduct(getRow(i), getRow(j)),
-                                  dotProduct(getRow(j), getRow(j)));
-            for (unsigned k = 0; k < cols; k++)
-            {
-                orthogonalBasis[i][k] = orthogonalBasis[i][k] + (- projection * Fraction(at(j, k), 1));
-            }
-        }
-    }
-
-    return orthogonalBasis;
 }
 
 void Matrix::print(raw_ostream &os) const {

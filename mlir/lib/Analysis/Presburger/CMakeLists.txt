@@ -2,6 +2,7 @@ add_mlir_library(MLIRPresburger
   IntegerRelation.cpp
   LinearTransform.cpp
   Matrix.cpp
+  MatrixF.cpp
   MPInt.cpp
   Barvinok.cpp
   PresburgerRelation.cpp
