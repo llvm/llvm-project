@@ -1334,22 +1334,16 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
   if (IncludeOnLine == Includes.end())
     return std::nullopt;
 
-  const auto &Inc = *IncludeOnLine;
   const SourceManager &SM = AST.getSourceManager();
   ReferencesResult Results;
-  auto ConvertedMainFileIncludes = convertIncludes(SM, Includes);
-  auto ReferencedInclude = convertIncludes(SM, Inc);
+  auto Converted = convertIncludes(AST);
   include_cleaner::walkUsed(
       AST.getLocalTopLevelDecls(), collectMacroReferences(AST),
       AST.getPragmaIncludes().get(), SM,
       [&](const include_cleaner::SymbolReference &Ref,
           llvm::ArrayRef<include_cleaner::Header> Providers) {
-        if (Ref.RT != include_cleaner::RefType::Explicit)
-          return;
-
-        auto Provider =
-            firstMatchedProvider(ConvertedMainFileIncludes, Providers);
-        if (!Provider || ReferencedInclude.match(*Provider).empty())
+        if (Ref.RT != include_cleaner::RefType::Explicit ||
+            !isPreferredProvider(*IncludeOnLine, Converted, Providers))
           return;
 
         auto Loc = SM.getFileLoc(Ref.RefLocation);
@@ -1370,8 +1364,8 @@ maybeFindIncludeReferences(ParsedAST &AST, Position Pos,
 
   // Add the #include line to the references list.
   ReferencesResult::Reference Result;
-  Result.Loc.range =
-      rangeTillEOL(SM.getBufferData(SM.getMainFileID()), Inc.HashOffset);
+  Result.Loc.range = rangeTillEOL(SM.getBufferData(SM.getMainFileID()),
+                                  IncludeOnLine->HashOffset);
   Result.Loc.uri = URIMainFile;
   Results.References.push_back(std::move(Result));
   return Results;
