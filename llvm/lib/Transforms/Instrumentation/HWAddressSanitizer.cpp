@@ -957,35 +957,22 @@ bool HWAddressSanitizer::ignoreMemIntrinsic(MemIntrinsic *MI) {
 void HWAddressSanitizer::instrumentMemIntrinsic(MemIntrinsic *MI) {
   IRBuilder<> IRB(MI);
   if (isa<MemTransferInst>(MI)) {
-    if (UseMatchAllCallback) {
-      IRB.CreateCall(
-          isa<MemMoveInst>(MI) ? HwasanMemmove : HwasanMemcpy,
-          {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
-           IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
-           IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false),
-           ConstantInt::get(Int8Ty, *MatchAllTag)});
-    } else {
-      IRB.CreateCall(
-          isa<MemMoveInst>(MI) ? HwasanMemmove : HwasanMemcpy,
-          {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
-           IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
-           IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
-    }
+    SmallVector<Value *, 4> Args{
+        IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+        IRB.CreatePointerCast(MI->getOperand(1), IRB.getInt8PtrTy()),
+        IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)};
+
+    if (UseMatchAllCallback)
+      Args.emplace_back(ConstantInt::get(Int8Ty, *MatchAllTag));
+    IRB.CreateCall(isa<MemMoveInst>(MI) ? HwasanMemmove : HwasanMemcpy, Args);
   } else if (isa<MemSetInst>(MI)) {
-    if (UseMatchAllCallback) {
-      IRB.CreateCall(
-          HwasanMemset,
-          {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
-           IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
-           IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false),
-           ConstantInt::get(Int8Ty, *MatchAllTag)});
-    } else {
-      IRB.CreateCall(
-          HwasanMemset,
-          {IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
-           IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
-           IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)});
-    }
+    SmallVector<Value *, 4> Args{
+        IRB.CreatePointerCast(MI->getOperand(0), IRB.getInt8PtrTy()),
+        IRB.CreateIntCast(MI->getOperand(1), IRB.getInt32Ty(), false),
+        IRB.CreateIntCast(MI->getOperand(2), IntptrTy, false)};
+    if (UseMatchAllCallback)
+      Args.emplace_back(ConstantInt::get(Int8Ty, *MatchAllTag));
+    IRB.CreateCall(HwasanMemset, Args);
   }
   MI->eraseFromParent();
 }
@@ -1005,34 +992,24 @@ bool HWAddressSanitizer::instrumentMemAccess(InterestingMemoryOperand &O) {
        *O.Alignment >= O.TypeStoreSize / 8)) {
     size_t AccessSizeIndex = TypeSizeToSizeIndex(O.TypeStoreSize);
     if (InstrumentWithCalls) {
-      if (UseMatchAllCallback) {
-        IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
-                       {IRB.CreatePointerCast(Addr, IntptrTy),
-                        ConstantInt::get(Int8Ty, *MatchAllTag)});
-      } else {
-        IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
-                       IRB.CreatePointerCast(Addr, IntptrTy));
-      }
+      SmallVector<Value *, 2> Args{IRB.CreatePointerCast(Addr, IntptrTy)};
+      if (UseMatchAllCallback)
+        Args.emplace_back(ConstantInt::get(Int8Ty, *MatchAllTag));
+      IRB.CreateCall(HwasanMemoryAccessCallback[O.IsWrite][AccessSizeIndex],
+                     Args);
     } else if (OutlinedChecks) {
       instrumentMemAccessOutline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     } else {
       instrumentMemAccessInline(Addr, O.IsWrite, AccessSizeIndex, O.getInsn());
     }
   } else {
-    if (UseMatchAllCallback) {
-      IRB.CreateCall(
-          HwasanMemoryAccessCallbackSized[O.IsWrite],
-          {IRB.CreatePointerCast(Addr, IntptrTy),
-           IRB.CreateUDiv(IRB.CreateTypeSize(IntptrTy, O.TypeStoreSize),
-                          ConstantInt::get(IntptrTy, 8)),
-           ConstantInt::get(Int8Ty, *MatchAllTag)});
-    } else {
-      IRB.CreateCall(
-          HwasanMemoryAccessCallbackSized[O.IsWrite],
-          {IRB.CreatePointerCast(Addr, IntptrTy),
-           IRB.CreateUDiv(IRB.CreateTypeSize(IntptrTy, O.TypeStoreSize),
-                          ConstantInt::get(IntptrTy, 8))});
-    }
+    SmallVector<Value *, 3> Args{
+        IRB.CreatePointerCast(Addr, IntptrTy),
+        IRB.CreateUDiv(IRB.CreateTypeSize(IntptrTy, O.TypeStoreSize),
+                       ConstantInt::get(IntptrTy, 8))};
+    if (UseMatchAllCallback)
+      Args.emplace_back(ConstantInt::get(Int8Ty, *MatchAllTag));
+    IRB.CreateCall(HwasanMemoryAccessCallbackSized[O.IsWrite], Args);
   }
   untagPointerOperand(O.getInsn(), Addr);
 

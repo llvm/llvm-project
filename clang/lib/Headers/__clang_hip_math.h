@@ -967,7 +967,7 @@ double norm(int __dim,
     ++__a;
   }
 
-  return __ocml_sqrt_f64(__r);
+  return __builtin_sqrt(__r);
 }
 
 __DEVICE__
@@ -1090,7 +1090,7 @@ __DEVICE__
 double sinpi(double __x) { return __ocml_sinpi_f64(__x); }
 
 __DEVICE__
-double sqrt(double __x) { return __ocml_sqrt_f64(__x); }
+double sqrt(double __x) { return __builtin_sqrt(__x); }
 
 __DEVICE__
 double tan(double __x) { return __ocml_tan_f64(__x); }
@@ -1224,7 +1224,7 @@ __DEVICE__
 double __dsqrt_rz(double __x) { return __ocml_sqrt_rtz_f64(__x); }
 #else
 __DEVICE__
-double __dsqrt_rn(double __x) { return __ocml_sqrt_f64(__x); }
+double __dsqrt_rn(double __x) { return __builtin_sqrt(__x); }
 #endif
 
 #if defined OCML_BASIC_ROUNDED_OPERATIONS
