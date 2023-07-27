@@ -73,6 +73,8 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   // Extract operands of the operation.
   SmallVector<Value> operands;
   for (const NamedTypeConstraint &namedCons : tblgenOp.getOperands()) {
+    assert(namedCons.isVariableLength() &&
+           "Variable length operands not supported yet");
     auto operand = createConstraint(consBuilder, namedCons);
     operands.push_back(operand);
   }
@@ -80,6 +82,8 @@ irdl::OperationOp createIRDLOperation(OpBuilder &builder,
   // Extract results of the operation.
   SmallVector<Value> results;
   for (const NamedTypeConstraint &namedCons : tblgenOp.getResults()) {
+    assert(namedCons.isVariableLength() &&
+           "Variable length operands not supported yet");
     auto result = createConstraint(consBuilder, namedCons);
     results.push_back(result);
   }
