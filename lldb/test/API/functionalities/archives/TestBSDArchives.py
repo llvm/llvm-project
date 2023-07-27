@@ -131,6 +131,58 @@ class BSDArchivesTestCase(TestBase):
 
     @skipIfRemote
     @skipUnlessDarwin
+    def test_frame_var_errors_when_thin_archive_malformed(self):
+        """
+        Create thin archive libfoo.a and make it malformed to make sure
+        we don't crash and report an appropriate error when resolving
+        breakpoint using debug map.
+        """
+        self.build()
+        exe = self.getBuildArtifact("a.out")
+        libfoo_path = self.getBuildArtifact("libfoo.a")
+        libthin_path = self.getBuildArtifact("libfoo-thin.a")
+        objfile_a = self.getBuildArtifact("a.o")
+        # Replace the libfoo.a file with a thin archive containing the same
+        # debug information (a.o, b.o). Then remove a.o from the file system
+        # so we force an error when we set a breakpoint on a() function.
+        # Since the a.o is missing, the debug info won't be loaded and we
+        # should see an error when trying to break into a().
+        os.remove(libfoo_path)
+        shutil.copyfile(libthin_path, libfoo_path)
+        os.remove(objfile_a)
+
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        # We won't be able to see source file
+        self.expect(
+            "b a",
+            substrs=["Breakpoint 1: where = a.out`a, address ="],
+        )
+        # Break at a() should fail
+        (target, process, thread, bkpt) = lldbutil.run_to_name_breakpoint(
+            self, "a", bkpt_module=exe
+        )
+        error_strings = [
+            '"a.o" object from the "',
+            "libfoo.a\" archive: either the .o file doesn't exist in the archive or the modification time (0x",
+            ") of the .o file doesn't match",
+        ]
+        self.check_frame_variable_errors(thread, error_strings)
+
+        # Break at b() should succeed
+        (target, process, thread, bkpt) = lldbutil.run_to_name_breakpoint(
+            self, "b", bkpt_module=exe
+        )
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )
+        self.expect(
+            "frame variable", VARIABLES_DISPLAYED_CORRECTLY, substrs=["(int) arg = 2"]
+        )
+
+    @skipIfRemote
+    @skipUnlessDarwin
     def test_frame_var_errors_when_mtime_mistmatch_for_object_in_archive(self):
         """
         Break inside a() and modify the modification time for "a.o" within
