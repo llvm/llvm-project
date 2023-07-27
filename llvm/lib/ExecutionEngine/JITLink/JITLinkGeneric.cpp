@@ -65,7 +65,7 @@ void JITLinkerBase::linkPhase2(std::unique_ptr<JITLinkerBase> Self,
   if (AR)
     Alloc = std::move(*AR);
   else
-    return abandonAllocAndBailOut(std::move(Self), AR.takeError());
+    return Ctx->notifyFailed(AR.takeError());
 
   LLVM_DEBUG({
     dbgs() << "Link graph \"" << G->getName()
