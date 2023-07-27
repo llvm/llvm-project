@@ -1453,6 +1453,41 @@ bool ByteCodeExprGen<Emitter>::VisitSourceLocExpr(const SourceLocExpr *E) {
   return true;
 }
 
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::VisitOffsetOfExpr(const OffsetOfExpr *E) {
+  unsigned N = E->getNumComponents();
+  if (N == 0)
+    return false;
+
+  for (unsigned I = 0; I != N; ++I) {
+    const OffsetOfNode &Node = E->getComponent(I);
+    if (Node.getKind() == OffsetOfNode::Array) {
+      const Expr *ArrayIndexExpr = E->getIndexExpr(Node.getArrayExprIndex());
+      PrimType IndexT = classifyPrim(ArrayIndexExpr->getType());
+
+      if (DiscardResult) {
+        if (!this->discard(ArrayIndexExpr))
+          return false;
+        continue;
+      }
+
+      if (!this->visit(ArrayIndexExpr))
+        return false;
+      // Cast to Sint64.
+      if (IndexT != PT_Sint64) {
+        if (!this->emitCast(IndexT, PT_Sint64, E))
+          return false;
+      }
+    }
+  }
+
+  if (DiscardResult)
+    return true;
+
+  PrimType T = classifyPrim(E->getType());
+  return this->emitOffsetOf(T, E, E);
+}
+
 template <class Emitter> bool ByteCodeExprGen<Emitter>::discard(const Expr *E) {
   if (E->containsErrors())
     return false;
