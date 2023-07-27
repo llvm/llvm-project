@@ -70,3 +70,18 @@ end module
 ! CHECK:         acc.declare_enter dataOperands(%[[DEVICERESIDENT]] : !fir.ref<!fir.array<5000xi32>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }
+
+module acc_declare_device_link_test
+ integer, parameter :: n = 5000
+ integer, dimension(n) :: data1
+ !$acc declare link(data1)
+end module
+
+! CHECK-LABEL: fir.global @_QMacc_declare_device_link_testEdata1 {acc.declare = #acc.declare<dataClause =  acc_declare_link>} : !fir.array<5000xi32> {
+
+! CHECK-LABEL: acc.global_ctor @_QMacc_declare_device_link_testEdata1_acc_ctor {
+! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_device_link_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_declare_link>} : !fir.ref<!fir.array<5000xi32>>
+! CHECK:         %[[LINK:.*]] = acc.declare_link varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<5000xi32>>) -> !fir.ref<!fir.array<5000xi32>> {name = "data1"}
+! CHECK:         acc.declare_enter dataOperands(%[[LINK]] : !fir.ref<!fir.array<5000xi32>>)
+! CHECK:         acc.terminator
+! CHECK:       }
