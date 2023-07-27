@@ -397,7 +397,7 @@ public:
     }
   }
 
-  unsigned getTrapFillValue() const override { return 0xCC; }
+  StringRef getTrapFillValue() const override { return StringRef("\314", 1); }
 
   struct IndJmpMatcherFrag1 : MCInstMatcher {
     std::unique_ptr<MCInstMatcher> Base;
