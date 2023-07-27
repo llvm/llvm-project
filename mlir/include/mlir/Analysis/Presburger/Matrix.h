@@ -15,6 +15,7 @@
 #define MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 
 #include "mlir/Analysis/Presburger/MPInt.h"
+#include "mlir/Analysis/Presburger/Fraction.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -176,6 +177,10 @@ public:
   ///    the left of the pivots are nonnegative and strictly smaller than the
   ///    pivot.
   std::pair<Matrix, Matrix> computeHermiteNormalForm() const;
+
+  // Run Gram-Schmidt orthogonalisation on the matrix, returning the
+  // new basis without modifying the old one.
+  SmallVector<SmallVector<Fraction, 16>, 16> gramSchmidt();
 
   /// Resize the matrix to the specified dimensions. If a dimension is smaller,
   /// the values are truncated; if it is bigger, the new values are initialized
