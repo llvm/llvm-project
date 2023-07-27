@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/ByteProvider.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -11302,7 +11303,7 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
         return false;
     return true;
   case AMDGPU::G_INTRINSIC:
-    switch (MI->getIntrinsicID()) {
+    switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
     case Intrinsic::amdgcn_fmul_legacy:
     case Intrinsic::amdgcn_fmad_ftz:
     case Intrinsic::amdgcn_sqrt:
@@ -13736,7 +13737,7 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
   case AMDGPU::G_INTRINSIC: {
-    switch (MI->getIntrinsicID()) {
+    switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
     case Intrinsic::amdgcn_workitem_id_x:
       knownBitsForWorkitemID(*getSubtarget(), KB, Known, 0);
       break;
@@ -13801,21 +13802,17 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
   GISelKnownBits &KB, Register R, const MachineRegisterInfo &MRI,
   unsigned Depth) const {
   const MachineInstr *MI = MRI.getVRegDef(R);
-  switch (MI->getOpcode()) {
-  case AMDGPU::G_INTRINSIC:
-  case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
+  if (auto *GI = dyn_cast<GIntrinsic>(MI)) {
     // FIXME: Can this move to generic code? What about the case where the call
     // site specifies a lower alignment?
-    Intrinsic::ID IID = MI->getIntrinsicID();
+    Intrinsic::ID IID = GI->getIntrinsicID();
     LLVMContext &Ctx = KB.getMachineFunction().getFunction().getContext();
     AttributeList Attrs = Intrinsic::getAttributes(Ctx, IID);
     if (MaybeAlign RetAlign = Attrs.getRetAlignment())
       return *RetAlign;
     return Align(1);
   }
-  default:
-    return Align(1);
-  }
+  return Align(1);
 }
 
 Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {
