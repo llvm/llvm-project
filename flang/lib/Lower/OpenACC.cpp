@@ -2356,10 +2356,12 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                 createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, EntryOp,
                                       mlir::acc::DeclareEnterOp, ExitOp>(
                     modBuilder, builder, operandLocation, globalOp, clause);
-                createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
-                                      mlir::acc::GetDevicePtrOp,
-                                      mlir::acc::DeclareExitOp, ExitOp>(
-                    modBuilder, builder, operandLocation, globalOp, clause);
+                if constexpr (!std::is_same_v<EntryOp, ExitOp>) {
+                  createDeclareGlobalOp<mlir::acc::GlobalDestructorOp,
+                                        mlir::acc::GetDevicePtrOp,
+                                        mlir::acc::DeclareExitOp, ExitOp>(
+                      modBuilder, builder, operandLocation, globalOp, clause);
+                }
                 builder.restoreInsertionPoint(crtPos);
               }
             },
@@ -2423,6 +2425,15 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
               Fortran::parser::AccDataModifier::Modifier::Zero,
               mlir::acc::DataClause::acc_create,
               mlir::acc::DataClause::acc_create_zero);
+        } else if (const auto *copyinClause =
+                       std::get_if<Fortran::parser::AccClause::Copyin>(
+                           &clause.u)) {
+          genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,
+                                     mlir::acc::CopyinOp, mlir::acc::CopyinOp>(
+              converter, modBuilder, copyinClause,
+              Fortran::parser::AccDataModifier::Modifier::ReadOnly,
+              mlir::acc::DataClause::acc_copyin,
+              mlir::acc::DataClause::acc_copyin_readonly);
         } else {
           TODO(clauseLocation, "OpenACC declare clause");
         }
