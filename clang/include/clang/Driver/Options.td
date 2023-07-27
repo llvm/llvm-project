@@ -5533,7 +5533,7 @@ def triple : Separate<["-"], "triple">,
   MarshallingInfoString<TargetOpts<"Triple">, "llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple())">,
   AlwaysEmit, Normalizer<"normalizeTriple">;
 
-} // let Flags = [CC1Option, CC1ASOption, FC1Option, NoDriverOption]
+} // let Flags = [CC1Option, CC1AsOption, FC1Option, NoDriverOption]
 
 //===----------------------------------------------------------------------===//
 // Target Options (other)
@@ -6869,7 +6869,7 @@ def dwarf_debug_producer : Separate<["-"], "dwarf-debug-producer">,
 def defsym : Separate<["-"], "defsym">,
   HelpText<"Define a value for a symbol">;
 
-} // let Flags = [CC1AsOption]
+} // let Flags = [CC1AsOption, NoDriverOption]
 
 //===----------------------------------------------------------------------===//
 // clang-cl Options
