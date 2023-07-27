@@ -69,17 +69,20 @@ static_library("builtins") {
   complete_static_lib = true
   configs -= [ "//llvm/utils/gn/build:thin_archive" ]
 
-  cflags = [
-    "-fPIC",
-    "-fno-builtin",
-  ]
-  if (current_os != "android") {
-    cflags += [ "-fvisibility=hidden" ]
+  cflags = []
+  if (current_os != "win") {
+    cflags = [
+      "-fPIC",
+      "-fno-builtin",
+    ]
+    if (current_os != "android") {
+      cflags += [ "-fvisibility=hidden" ]
+    }
+    if (!is_debug) {
+      cflags += [ "-fomit-frame-pointer" ]
+    }
+    cflags_c = [ "-std=c11" ]
   }
-  if (!is_debug) {
-    cflags += [ "-fomit-frame-pointer" ]
-  }
-  cflags_c = [ "-std=c11" ]
 
   sources = [
     "absvdi2.c",
