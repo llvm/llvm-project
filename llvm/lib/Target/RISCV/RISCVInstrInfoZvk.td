@@ -269,7 +269,20 @@ defm : VPatUnarySDNode_V<ctpop, "PseudoVCPOP">;
 
 defm : VPatBinarySDNode_VV_VX<rotl, "PseudoVROL">;
 
-def NegImm64 : SDNodeXForm<imm, [{
+// Invert the immediate and mask it to SEW for readability.
+def InvRot8Imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(0x7 & (64 - N->getZExtValue()), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+def InvRot16Imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(0xf & (64 - N->getZExtValue()), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+def InvRot32Imm : SDNodeXForm<imm, [{
+  return CurDAG->getTargetConstant(0x1f & (64 - N->getZExtValue()), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+def InvRot64Imm : SDNodeXForm<imm, [{
   return CurDAG->getTargetConstant(0x3f & (64 - N->getZExtValue()), SDLoc(N),
                                    N->getValueType(0));
 }]>;
@@ -284,7 +297,7 @@ foreach vti = AllIntegerVectors in {
               (!cast<Instruction>("PseudoVROR_VI_"#vti.LMul.MX)
                  (vti.Vector (IMPLICIT_DEF)),
                  vti.RegClass:$rs2,
-                 (NegImm64 uimm6:$rs1),
+                 (!cast<SDNodeXForm>("InvRot" # vti.SEW # "Imm") uimm6:$rs1),
                  vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }
