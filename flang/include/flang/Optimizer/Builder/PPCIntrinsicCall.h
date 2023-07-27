@@ -45,6 +45,21 @@ enum class VecOp {
   Xor
 };
 
+/// Enums used to templatize and share lowering of PowerPC MMA intrinsics.
+enum class MMAOp {
+  AssembleAcc,
+  AssemblePair,
+  DisassembleAcc,
+  DisassemblePair,
+};
+
+enum class MMAHandlerOp {
+  NoOp,
+  SubToFunc,
+  SubToFuncReverseArgOnLE,
+  FirstArgIsResult,
+};
+
 // Wrapper struct to encapsulate information for a vector type. Preserves
 // sign of eleTy if eleTy is signed/unsigned integer. Helps with vector type
 // conversions.
@@ -120,13 +135,16 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
   PPCIntrinsicLibrary() = delete;
   PPCIntrinsicLibrary(const PPCIntrinsicLibrary &) = delete;
 
+  // PPC MMA intrinsic generic handler
+  template <MMAOp IntrId, MMAHandlerOp HandlerOp>
+  void genMmaIntr(llvm::ArrayRef<fir::ExtendedValue>);
+
   // PPC intrinsic handlers.
   template <bool isImm>
   void genMtfsf(llvm::ArrayRef<fir::ExtendedValue>);
 
   fir::ExtendedValue genVecAbs(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
-
   template <VecOp>
   fir::ExtendedValue
   genVecAddAndMulSubXor(mlir::Type resultType,
