@@ -181,6 +181,10 @@ bool Interpret(InterpState &S, APValue &Result);
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F,
                       const CallExpr *Call);
 
+/// Interpret an offsetof operation.
+bool InterpretOffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E,
+                       llvm::ArrayRef<int64_t> ArrayIndices, int64_t &Result);
+
 enum class ArithOp { Add, Sub };
 
 //===----------------------------------------------------------------------===//
@@ -1837,6 +1841,21 @@ inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
   S.FFDiag(Loc, diag::note_constexpr_invalid_cast)
       << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
   return false;
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+inline bool OffsetOf(InterpState &S, CodePtr OpPC, const OffsetOfExpr *E) {
+  llvm::SmallVector<int64_t> ArrayIndices;
+  for (size_t I = 0; I != E->getNumExpressions(); ++I)
+    ArrayIndices.emplace_back(S.Stk.pop<int64_t>());
+
+  int64_t Result;
+  if (!InterpretOffsetOf(S, OpPC, E, ArrayIndices, Result))
+    return false;
+
+  S.Stk.push<T>(T::from(Result));
+
+  return true;
 }
 
 //===----------------------------------------------------------------------===//

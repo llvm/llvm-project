@@ -14,6 +14,25 @@
 // RUN: %clang_cc1 -triple s390x-none-zos %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base
 // RUN: %clang_cc1 -triple s390x-none-zos %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=15 -DCLANG_ABI_COMPAT=15
 
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++98 -Wno-inaccessible-base -Wno-c++11-extensions
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple x86_64-apple-darwin    %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple x86_64-scei-ps4        %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=6
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple x86_64-sie-ps5         %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=6
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=6 -DCLANG_ABI_COMPAT=6
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=14 -DCLANG_ABI_COMPAT=14
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=15 -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple x86_64-unknown-unknown %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=16 -DCLANG_ABI_COMPAT=16
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple powerpc-ibm-aix7.3.0.0 %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple powerpc-ibm-aix7.3.0.0 %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=15 -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple powerpc64-ibm-aix7.3.0.0 %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple powerpc64-ibm-aix7.3.0.0 %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=15 -DCLANG_ABI_COMPAT=15
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple s390x-none-zos %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base
+// RUN: %clang_cc1 -fexperimental-new-constant-interpreter -triple s390x-none-zos %s -fsyntax-only -verify -std=c++11 -Wno-inaccessible-base -fclang-abi-compat=15 -DCLANG_ABI_COMPAT=15
+
+
+
+
 // expected-no-diagnostics
 
 #if !defined(__MVS__) && !defined(_AIX)
