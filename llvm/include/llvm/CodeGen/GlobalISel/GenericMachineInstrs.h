@@ -358,29 +358,6 @@ public:
   }
 };
 
-/// Represents a call to an intrinsic.
-class GIntrinsic final : public GenericMachineInstr {
-public:
-  Intrinsic::ID getIntrinsicID() const {
-    return getOperand(getNumExplicitDefs()).getIntrinsicID();
-  }
-
-  bool is(Intrinsic::ID ID) const { return getIntrinsicID() == ID; }
-  bool hasSideEffects() const {
-    return getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS;
-  }
-
-  static bool classof(const MachineInstr *MI) {
-    switch (MI->getOpcode()) {
-    case TargetOpcode::G_INTRINSIC:
-    case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
-      return true;
-    default:
-      return false;
-    }
-  }
-};
-
 } // namespace llvm
 
 #endif // LLVM_CODEGEN_GLOBALISEL_GENERICMACHINEINSTRS_H
