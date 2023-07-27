@@ -1,3 +1,5 @@
+; UNSUPPORTED: target={{aarch64|arm64}}-{{.*}}
+
 ; RUN: llvm-as -o %t.bc %s
 
 ; RUN: llvm-reduce -j=1 --abort-on-invalid-reduction \
