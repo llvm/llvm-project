@@ -1134,6 +1134,10 @@ public:
     }
   }
 
+  StringRef getTrapFillValue() const override {
+    return StringRef("\0\0\0\0", 4);
+  }
+
   bool createReturn(MCInst &Inst) const override {
     Inst.setOpcode(AArch64::RET);
     Inst.clear();
