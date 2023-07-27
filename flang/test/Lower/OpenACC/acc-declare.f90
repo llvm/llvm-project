@@ -41,3 +41,17 @@ end module
 ! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>) {dataClause = #acc<data_clause acc_create_zero>, name = "data2", structured = false}
 ! CHECK:         acc.terminator
 ! CHECK:       }
+
+module acc_declare_copyin_test
+ integer, parameter :: n = 100000
+ real, dimension(n) :: data1
+ !$acc declare copyin(data1)
+end module
+
+
+! CHECK-LABEL: acc.global_ctor @_QMacc_declare_copyin_testEdata1_acc_ctor {
+! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_copyin_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_copyin>} : !fir.ref<!fir.array<100000xf32>>
+! CHECK:         %[[COPYIN:.*]] = acc.copyin varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) -> !fir.ref<!fir.array<100000xf32>> {name = "data1"}
+! CHECK:         acc.declare_enter dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<100000xf32>>)
+! CHECK:         acc.terminator
+! CHECK:       }
