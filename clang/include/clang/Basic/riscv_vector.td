@@ -990,56 +990,6 @@ multiclass RVVPseudoVNCVTBuiltin<string IR, string MName, string type_range,
   }
 }
 
-// Define vread_csr&vwrite_csr described in RVV intrinsics doc.
-let HeaderCode =
-[{
-enum RVV_CSR {
-  RVV_VSTART = 0,
-  RVV_VXSAT,
-  RVV_VXRM,
-  RVV_VCSR,
-};
-
-static __inline__ __attribute__((__always_inline__, __nodebug__))
-unsigned long __riscv_vread_csr(enum RVV_CSR __csr) {
-  unsigned long __rv = 0;
-  switch (__csr) {
-    case RVV_VSTART:
-      __asm__ __volatile__ ("csrr\t%0, vstart" : "=r"(__rv) : : "memory");
-      break;
-    case RVV_VXSAT:
-      __asm__ __volatile__ ("csrr\t%0, vxsat" : "=r"(__rv) : : "memory");
-      break;
-    case RVV_VXRM:
-      __asm__ __volatile__ ("csrr\t%0, vxrm" : "=r"(__rv) : : "memory");
-      break;
-    case RVV_VCSR:
-      __asm__ __volatile__ ("csrr\t%0, vcsr" : "=r"(__rv) : : "memory");
-      break;
-  }
-  return __rv;
-}
-
-static __inline__ __attribute__((__always_inline__, __nodebug__))
-void __riscv_vwrite_csr(enum RVV_CSR __csr, unsigned long __value) {
-  switch (__csr) {
-    case RVV_VSTART:
-      __asm__ __volatile__ ("csrw\tvstart, %z0" : : "rJ"(__value) : "memory");
-      break;
-    case RVV_VXSAT:
-      __asm__ __volatile__ ("csrw\tvxsat, %z0" : : "rJ"(__value) : "memory");
-      break;
-    case RVV_VXRM:
-      __asm__ __volatile__ ("csrw\tvxrm, %z0" : : "rJ"(__value) : "memory");
-      break;
-    case RVV_VCSR:
-      __asm__ __volatile__ ("csrw\tvcsr, %z0" : : "rJ"(__value) : "memory");
-      break;
-  }
-}
-}] in
-def vread_vwrite_csr: RVVHeader;
-
 let HeaderCode =
 [{
 #define __riscv_vlenb() __builtin_rvv_vlenb()
