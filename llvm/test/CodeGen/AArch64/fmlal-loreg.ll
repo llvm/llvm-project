@@ -86,13 +86,12 @@ define void @sink(ptr %out_tile, ptr %lhs_panel, ptr %rhs_panel, i32 noundef %K,
 ; CHECK-NEXT:    movi v1.2d, #0000000000000000
 ; CHECK-NEXT:    mov w8, w3
 ; CHECK-NEXT:    movi v2.2d, #0000000000000000
-; CHECK-NEXT:    dup v0.8h, v0.h[0]
 ; CHECK-NEXT:  .LBB2_1: // %for.body
 ; CHECK-NEXT:    // =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    ldr q3, [x2], #2
 ; CHECK-NEXT:    subs x8, x8, #1
-; CHECK-NEXT:    fmlal v1.4s, v3.4h, v0.4h
-; CHECK-NEXT:    fmlal2 v2.4s, v3.4h, v0.4h
+; CHECK-NEXT:    fmlal v1.4s, v3.4h, v0.h[0]
+; CHECK-NEXT:    fmlal2 v2.4s, v3.4h, v0.h[0]
 ; CHECK-NEXT:    b.ne .LBB2_1
 ; CHECK-NEXT:  // %bb.2: // %for.cond.cleanup
 ; CHECK-NEXT:    stp q1, q2, [x0]
