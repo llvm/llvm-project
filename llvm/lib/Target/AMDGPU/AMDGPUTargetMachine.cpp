@@ -173,12 +173,6 @@ static VGPRRegisterRegAlloc fastRegAllocVGPR(
   "fast", "fast register allocator", createFastVGPRRegisterAllocator);
 }
 
-static cl::opt<bool> EnableSROA(
-  "amdgpu-sroa",
-  cl::desc("Run SROA after promote alloca pass"),
-  cl::ReallyHidden,
-  cl::init(true));
-
 static cl::opt<bool>
 EnableEarlyIfConversion("amdgpu-early-ifcvt", cl::Hidden,
                         cl::desc("Run early if-conversion"),
@@ -1011,8 +1005,6 @@ void AMDGPUPassConfig::addIRPasses() {
   if (TM.getOptLevel() > CodeGenOpt::None) {
     addPass(createAMDGPUPromoteAlloca());
 
-    if (EnableSROA)
-      addPass(createSROAPass());
     if (isPassEnabled(EnableScalarIRPasses))
       addStraightLineScalarOptimizationPasses();
 
