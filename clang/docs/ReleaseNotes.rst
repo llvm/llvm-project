@@ -85,6 +85,12 @@ C++ Language Changes
 - Implemented `CWG2518 <https://wg21.link/CWG2518>`_ which allows ``static_assert(false)``
   to not be ill-formed when its condition is evaluated in the context of a template definition.
 - Declaring namespace std to be an inline namespace is now prohibited, `[namespace.std]p7`.
+- Improved code generation for ``dynamic_cast`` to a ``final`` type. Instead of
+  dispatching to the runtime library to compare the RTTI data, Clang now
+  generates a direct comparison of the vtable pointer in cases where the ABI
+  requires the vtable for a class to be unique. This optimization can be
+  disabled with ``-fno-assume-unique-vtables``. This optimization is not yet
+  implemented for the MS C++ ABI.
 
 C++20 Feature Support
 ^^^^^^^^^^^^^^^^^^^^^
@@ -279,6 +285,8 @@ New Compiler Flags
   and thread-local variables—to guarantee that they can be directly addressed.
   Since this inhibits the merging of the affected variables, the number of
   individual relocations in the program will generally increase.
+- ``-f[no-]assume-unique-vtables`` controls whether Clang assumes that each
+  class has a unique vtable address, when that is required by the ABI.
 
 Deprecated Compiler Flags
 -------------------------
