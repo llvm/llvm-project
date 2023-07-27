@@ -2748,7 +2748,8 @@ Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
 
 // Under the assumption that I is unreachable, remove it and following
 // instructions.
-bool InstCombinerImpl::handleUnreachableFrom(Instruction *I) {
+bool InstCombinerImpl::handleUnreachableFrom(
+    Instruction *I, SmallVectorImpl<BasicBlock *> &Worklist) {
   bool Changed = false;
   BasicBlock *BB = I->getParent();
   for (Instruction &Inst : make_early_inc_range(
@@ -2774,27 +2775,41 @@ bool InstCombinerImpl::handleUnreachableFrom(Instruction *I) {
           Changed = true;
         }
 
-  // TODO: Successor blocks may also be dead.
+  // Handle potentially dead successors.
+  for (BasicBlock *Succ : successors(BB))
+    if (DeadEdges.insert({BB, Succ}).second)
+      Worklist.push_back(Succ);
+  return Changed;
+}
+
+bool InstCombinerImpl::handlePotentiallyDeadBlocks(
+    SmallVectorImpl<BasicBlock *> &Worklist) {
+  bool Changed = false;
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (!all_of(predecessors(BB), [&](BasicBlock *Pred) {
+          return DeadEdges.contains({Pred, BB}) || DT.dominates(BB, Pred);
+        }))
+      continue;
+
+    Changed |= handleUnreachableFrom(&BB->front(), Worklist);
+  }
   return Changed;
 }
 
 bool InstCombinerImpl::handlePotentiallyDeadSuccessors(BasicBlock *BB,
                                                        BasicBlock *LiveSucc) {
-  bool Changed = false;
+  SmallVector<BasicBlock *> Worklist;
   for (BasicBlock *Succ : successors(BB)) {
     // The live successor isn't dead.
     if (Succ == LiveSucc)
       continue;
 
-    if (!all_of(predecessors(Succ), [&](BasicBlock *Pred) {
-          return DT.dominates(BasicBlockEdge(BB, Succ),
-                              BasicBlockEdge(Pred, Succ));
-        }))
-      continue;
-
-    Changed |= handleUnreachableFrom(&Succ->front());
+    if (DeadEdges.insert({BB, Succ}).second)
+      Worklist.push_back(Succ);
   }
-  return Changed;
+
+  return handlePotentiallyDeadBlocks(Worklist);
 }
 
 Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
