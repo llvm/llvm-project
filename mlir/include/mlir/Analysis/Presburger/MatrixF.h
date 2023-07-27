@@ -200,6 +200,8 @@ private:
   SmallVector<Fraction, 16> data;
 };
 
+Fraction dotProduct(ArrayRef<Fraction>, ArrayRef<Fraction>);
+
 } // namespace presburger
 } // namespace mlir
 

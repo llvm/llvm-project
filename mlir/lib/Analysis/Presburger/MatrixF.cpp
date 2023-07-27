@@ -246,7 +246,7 @@ MatrixF::postMultiplyWithColumn(ArrayRef<Fraction> colVec) const {
   return result;
 }
 
-Fraction dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b)
+Fraction mlir::presburger::dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b)
 {
     Fraction sum(0, 1);
     for (unsigned long i = 0; i < a.size(); i++)
