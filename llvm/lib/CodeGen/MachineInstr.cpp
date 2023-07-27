@@ -1497,6 +1497,16 @@ bool MachineInstr::allDefsAreDead() const {
   return true;
 }
 
+bool MachineInstr::allImplicitDefsAreDead() const {
+  for (const MachineOperand &MO : implicit_operands()) {
+    if (!MO.isReg() || MO.isUse())
+      continue;
+    if (!MO.isDead())
+      return false;
+  }
+  return true;
+}
+
 /// copyImplicitOps - Copy implicit register operands from specified
 /// instruction to this instruction.
 void MachineInstr::copyImplicitOps(MachineFunction &MF,

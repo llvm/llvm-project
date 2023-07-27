@@ -1745,6 +1745,9 @@ public:
   /// Return true if all the defs of this instruction are dead.
   bool allDefsAreDead() const;
 
+  /// Return true if all the implicit defs of this instruction are dead.
+  bool allImplicitDefsAreDead() const;
+
   /// Return a valid size if the instruction is a spill instruction.
   std::optional<unsigned> getSpillSize(const TargetInstrInfo *TII) const;
 
