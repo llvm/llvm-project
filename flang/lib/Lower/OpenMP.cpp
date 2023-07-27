@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Builder/Todo.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/parse-tree.h"
+#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -2315,6 +2316,49 @@ createCombinedParallelOp(Fortran::lower::AbstractConverter &converter,
                                         /*isCombined=*/true);
 }
 
+/* When target is used in a combined construct, then use this function to
+ * create the target operation. It handles the target specific clauses
+ * and leaves the rest for handling at the inner operations.
+ */
+template <typename Directive>
+static void createCombinedTargetOp(Fortran::lower::AbstractConverter &converter,
+                                   Fortran::lower::pft::Evaluation &eval,
+                                   const Directive &directive) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::Location currentLocation = converter.getCurrentLocation();
+  Fortran::lower::StatementContext stmtCtx;
+  mlir::Value ifClauseOperand, deviceOperand, threadLimitOperand;
+  llvm::SmallVector<mlir::Value> mapOperands;
+  llvm::SmallVector<mlir::IntegerAttr> mapTypes;
+  mlir::UnitAttr nowaitAttr;
+  const auto &opClauseList =
+      std::get<Fortran::parser::OmpClauseList>(directive.t);
+
+  // Note: rest of the clauses are handled when the inner operation is created
+  ClauseProcessor cp(converter, opClauseList);
+  cp.processIf(stmtCtx,
+               Fortran::parser::OmpIfClause::DirectiveNameModifier::Target,
+               ifClauseOperand);
+  cp.processDevice(stmtCtx, deviceOperand);
+  cp.processThreadLimit(stmtCtx, threadLimitOperand);
+  cp.processNowait(nowaitAttr);
+  cp.processMap(mapOperands, mapTypes);
+
+  llvm::SmallVector<mlir::Attribute> mapTypesAttr(mapTypes.begin(),
+                                                  mapTypes.end());
+  mlir::ArrayAttr mapTypesArrayAttr =
+      mlir::ArrayAttr::get(firOpBuilder.getContext(), mapTypesAttr);
+
+  // Create and insert the operation.
+  auto targetOp = firOpBuilder.create<mlir::omp::TargetOp>(
+      currentLocation, ifClauseOperand, deviceOperand, threadLimitOperand,
+      nowaitAttr, mapOperands, mapTypesArrayAttr);
+
+  createBodyOfOp<mlir::omp::TargetOp>(targetOp, converter, currentLocation,
+                                      eval, &opClauseList,
+                                      /*iv=*/{}, /*isCombined=*/true);
+}
+
 static void genOMP(Fortran::lower::AbstractConverter &converter,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenMPLoopConstruct &loopConstruct) {
@@ -2342,13 +2386,41 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   const auto ompDirective =
       std::get<Fortran::parser::OmpLoopDirective>(beginLoopDirective.t).v;
 
-  if (llvm::omp::OMPD_parallel_do == ompDirective) {
-    createCombinedParallelOp<Fortran::parser::OmpBeginLoopDirective>(
-        converter, eval,
-        std::get<Fortran::parser::OmpBeginLoopDirective>(loopConstruct.t));
-  } else if (llvm::omp::OMPD_do != ompDirective &&
-             llvm::omp::OMPD_simd != ompDirective) {
-    TODO(currentLocation, "Construct enclosing do loop");
+  bool validDirective = false;
+  if (llvm::omp::topTaskloopSet.test(ompDirective)) {
+    validDirective = true;
+    TODO(currentLocation, "Taskloop construct");
+  } else {
+    // Create omp.{target, teams, distribute, parallel} nested operations
+    if ((llvm::omp::allTargetSet & llvm::omp::loopConstructSet)
+            .test(ompDirective)) {
+      validDirective = true;
+      createCombinedTargetOp<Fortran::parser::OmpBeginLoopDirective>(
+          converter, eval, beginLoopDirective);
+    }
+    if ((llvm::omp::allTeamsSet & llvm::omp::loopConstructSet)
+            .test(ompDirective)) {
+      validDirective = true;
+      TODO(currentLocation, "Teams construct");
+    }
+    if (llvm::omp::allDistributeSet.test(ompDirective)) {
+      validDirective = true;
+      TODO(currentLocation, "Distribute construct");
+    }
+    if ((llvm::omp::allParallelSet & llvm::omp::loopConstructSet)
+            .test(ompDirective)) {
+      validDirective = true;
+      createCombinedParallelOp<Fortran::parser::OmpBeginLoopDirective>(
+          converter, eval, beginLoopDirective);
+    }
+  }
+  if ((llvm::omp::allDoSet | llvm::omp::allSimdSet).test(ompDirective))
+    validDirective = true;
+
+  if (!validDirective) {
+    TODO(currentLocation, "Unhandled loop directive (" +
+                              llvm::omp::getOpenMPDirectiveName(ompDirective) +
+                              ")");
   }
 
   DataSharingProcessor dsp(converter, loopOpClauseList, eval);
@@ -2379,7 +2451,7 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
 
   // 2.9.3.1 SIMD construct
   // TODO: Support all the clauses
-  if (llvm::omp::OMPD_simd == ompDirective) {
+  if (llvm::omp::allSimdSet.test(ompDirective)) {
     mlir::TypeRange resultType;
     auto simdLoopOp = firOpBuilder.create<mlir::omp::SimdLoopOp>(
         currentLocation, resultType, lowerBound, upperBound, step, alignedVars,
