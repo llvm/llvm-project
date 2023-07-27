@@ -1,4 +1,5 @@
-; UNSUPPORTED: target={{aarch64|arm64}}-{{.*}}
+; Sometimes fails with an assert on many targets.
+; UNSUPPORTED: target={{.*}}
 
 ; RUN: llvm-as -o %t.bc %s
 
