@@ -9,7 +9,6 @@
 #include "AMDGPUCombinerHelper.h"
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/Target/TargetMachine.h"
@@ -43,7 +42,7 @@ static bool fnegFoldsIntoMI(const MachineInstr &MI) {
   case AMDGPU::G_AMDGPU_FMAX_LEGACY:
     return true;
   case AMDGPU::G_INTRINSIC: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+    unsigned IntrinsicID = MI.getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -93,7 +92,7 @@ static bool hasSourceMods(const MachineInstr &MI) {
   case AMDGPU::G_PHI:
     return false;
   case AMDGPU::G_INTRINSIC: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+    unsigned IntrinsicID = MI.getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_interp_p1:
     case Intrinsic::amdgcn_interp_p2:
@@ -229,7 +228,7 @@ bool AMDGPUCombinerHelper::matchFoldableFneg(MachineInstr &MI,
   case AMDGPU::G_AMDGPU_RCP_IFLAG:
     return true;
   case AMDGPU::G_INTRINSIC: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
+    unsigned IntrinsicID = MatchInfo->getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
@@ -328,7 +327,7 @@ void AMDGPUCombinerHelper::applyFoldableFneg(MachineInstr &MI,
     NegateOperand(MatchInfo->getOperand(1));
     break;
   case AMDGPU::G_INTRINSIC: {
-    unsigned IntrinsicID = cast<GIntrinsic>(MatchInfo)->getIntrinsicID();
+    unsigned IntrinsicID = MatchInfo->getIntrinsicID();
     switch (IntrinsicID) {
     case Intrinsic::amdgcn_rcp:
     case Intrinsic::amdgcn_rcp_legacy:
