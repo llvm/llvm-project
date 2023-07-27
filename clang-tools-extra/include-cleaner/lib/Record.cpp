@@ -14,13 +14,16 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/MacroInfo.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "llvm/ADT/StringRef.h"
 #include <memory>
 #include <utility>
+#include <vector>
 
 namespace clang::include_cleaner {
 namespace {
@@ -28,7 +31,11 @@ namespace {
 class PPRecorder : public PPCallbacks {
 public:
   PPRecorder(RecordedPP &Recorded, const Preprocessor &PP)
-      : Recorded(Recorded), PP(PP), SM(PP.getSourceManager()) {}
+      : Recorded(Recorded), PP(PP), SM(PP.getSourceManager()) {
+    for (const auto &Dir : PP.getHeaderSearchInfo().search_dir_range())
+      if (Dir.getLookupType() == DirectoryLookup::LT_NormalDir)
+        Recorded.Includes.addSearchDirectory(Dir.getDirRef()->getName());
+  }
 
   void FileChanged(SourceLocation Loc, FileChangeReason Reason,
                    SrcMgr::CharacteristicKind FileType,
