@@ -819,10 +819,10 @@ f:
 ; TUNIT: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; TUNIT: attributes #[[ATTR4]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: readwrite) }
 ; TUNIT: attributes #[[ATTR5]] = { nofree nosync nounwind memory(argmem: write) }
-; TUNIT: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; TUNIT: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; TUNIT: attributes #[[ATTR7]] = { nofree nosync nounwind willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR8]] = { nofree nosync nounwind memory(write) }
-; TUNIT: attributes #[[ATTR9]] = { nofree willreturn }
+; TUNIT: attributes #[[ATTR9]] = { nofree willreturn memory(write) }
 ; TUNIT: attributes #[[ATTR10]] = { nounwind }
 ;.
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(none) }
@@ -831,10 +831,10 @@ f:
 ; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
 ; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree nosync nounwind willreturn memory(argmem: readwrite) }
 ; CGSCC: attributes #[[ATTR5]] = { nofree nosync nounwind memory(argmem: write) }
-; CGSCC: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; CGSCC: attributes #[[ATTR6:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; CGSCC: attributes #[[ATTR7]] = { nofree nounwind willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR8]] = { nofree nosync nounwind memory(write) }
-; CGSCC: attributes #[[ATTR9]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR9]] = { nofree willreturn memory(write) }
 ; CGSCC: attributes #[[ATTR10]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i64 10, i64 100}
