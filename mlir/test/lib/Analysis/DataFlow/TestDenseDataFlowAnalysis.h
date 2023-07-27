@@ -130,9 +130,9 @@ struct UnderlyingValueLattice : public Lattice<UnderlyingValue> {
 /// analysis exists so that the test analysis and pass can test the behaviour of
 /// the dense data-flow analysis on the callgraph.
 class UnderlyingValueAnalysis
-    : public SparseDataFlowAnalysis<UnderlyingValueLattice> {
+    : public SparseForwardDataFlowAnalysis<UnderlyingValueLattice> {
 public:
-  using SparseDataFlowAnalysis::SparseDataFlowAnalysis;
+  using SparseForwardDataFlowAnalysis::SparseForwardDataFlowAnalysis;
 
   /// The underlying value of the results of an operation are not known.
   void visitOperation(Operation *op,
