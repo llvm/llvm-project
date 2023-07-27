@@ -23,4 +23,7 @@ add_llvm_component_library(LLVMBinaryFormat
   LINK_COMPONENTS
   Support
   TargetParser
+
+  LINK_LIBS
+  ${SQLite3_LIBRARIES}
 )
