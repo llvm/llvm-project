@@ -719,6 +719,36 @@ eLanguageTypeFortran03 = _lldb.eLanguageTypeFortran03
 
 eLanguageTypeFortran08 = _lldb.eLanguageTypeFortran08
 
+eLanguageTypeRenderScript = _lldb.eLanguageTypeRenderScript
+
+eLanguageTypeBLISS = _lldb.eLanguageTypeBLISS
+
+eLanguageTypeKotlin = _lldb.eLanguageTypeKotlin
+
+eLanguageTypeZig = _lldb.eLanguageTypeZig
+
+eLanguageTypeCrystal = _lldb.eLanguageTypeCrystal
+
+eLanguageTypeC_plus_plus_17 = _lldb.eLanguageTypeC_plus_plus_17
+
+eLanguageTypeC_plus_plus_20 = _lldb.eLanguageTypeC_plus_plus_20
+
+eLanguageTypeC17 = _lldb.eLanguageTypeC17
+
+eLanguageTypeFortran18 = _lldb.eLanguageTypeFortran18
+
+eLanguageTypeAda2005 = _lldb.eLanguageTypeAda2005
+
+eLanguageTypeAda2012 = _lldb.eLanguageTypeAda2012
+
+eLanguageTypeHIP = _lldb.eLanguageTypeHIP
+
+eLanguageTypeAssembly = _lldb.eLanguageTypeAssembly
+
+eLanguageTypeC_sharp = _lldb.eLanguageTypeC_sharp
+
+eLanguageTypeMojo = _lldb.eLanguageTypeMojo
+
 eLanguageTypeMipsAssembler = _lldb.eLanguageTypeMipsAssembler
 
 eNumLanguageTypes = _lldb.eNumLanguageTypes
@@ -957,6 +987,8 @@ eArgTypeStopHookID = _lldb.eArgTypeStopHookID
 
 eArgTypeBindGenTypeParamValue = _lldb.eArgTypeBindGenTypeParamValue
 
+eArgTypeCompletionType = _lldb.eArgTypeCompletionType
+
 eArgTypeLastArg = _lldb.eArgTypeLastArg
 
 eSymbolTypeAny = _lldb.eSymbolTypeAny
@@ -1143,6 +1175,8 @@ eSectionTypeDWARFDebugLocListsDwo = _lldb.eSectionTypeDWARFDebugLocListsDwo
 
 eSectionTypeDWARFDebugTuIndex = _lldb.eSectionTypeDWARFDebugTuIndex
 
+eSectionTypeCTF = _lldb.eSectionTypeCTF
+
 eEmulateInstructionOptionNone = _lldb.eEmulateInstructionOptionNone
 
 eEmulateInstructionOptionAutoAdvancePC = _lldb.eEmulateInstructionOptionAutoAdvancePC
@@ -1252,6 +1286,10 @@ eStructuredDataTypeBoolean = _lldb.eStructuredDataTypeBoolean
 eStructuredDataTypeString = _lldb.eStructuredDataTypeString
 
 eStructuredDataTypeDictionary = _lldb.eStructuredDataTypeDictionary
+
+eStructuredDataTypeSignedInteger = _lldb.eStructuredDataTypeSignedInteger
+
+eStructuredDataTypeUnsignedInteger = _lldb.eStructuredDataTypeUnsignedInteger
 
 eTypeClassInvalid = _lldb.eTypeClassInvalid
 
@@ -1637,6 +1675,60 @@ eWatchPointValueKindVariable = _lldb.eWatchPointValueKindVariable
 
 eWatchPointValueKindExpression = _lldb.eWatchPointValueKindExpression
 
+eNoCompletion = _lldb.eNoCompletion
+
+eSourceFileCompletion = _lldb.eSourceFileCompletion
+
+eDiskFileCompletion = _lldb.eDiskFileCompletion
+
+eDiskDirectoryCompletion = _lldb.eDiskDirectoryCompletion
+
+eSymbolCompletion = _lldb.eSymbolCompletion
+
+eModuleCompletion = _lldb.eModuleCompletion
+
+eSettingsNameCompletion = _lldb.eSettingsNameCompletion
+
+ePlatformPluginCompletion = _lldb.ePlatformPluginCompletion
+
+eArchitectureCompletion = _lldb.eArchitectureCompletion
+
+eVariablePathCompletion = _lldb.eVariablePathCompletion
+
+eRegisterCompletion = _lldb.eRegisterCompletion
+
+eBreakpointCompletion = _lldb.eBreakpointCompletion
+
+eProcessPluginCompletion = _lldb.eProcessPluginCompletion
+
+eDisassemblyFlavorCompletion = _lldb.eDisassemblyFlavorCompletion
+
+eTypeLanguageCompletion = _lldb.eTypeLanguageCompletion
+
+eFrameIndexCompletion = _lldb.eFrameIndexCompletion
+
+eModuleUUIDCompletion = _lldb.eModuleUUIDCompletion
+
+eStopHookIDCompletion = _lldb.eStopHookIDCompletion
+
+eThreadIndexCompletion = _lldb.eThreadIndexCompletion
+
+eWatchpointIDCompletion = _lldb.eWatchpointIDCompletion
+
+eBreakpointNameCompletion = _lldb.eBreakpointNameCompletion
+
+eProcessIDCompletion = _lldb.eProcessIDCompletion
+
+eProcessNameCompletion = _lldb.eProcessNameCompletion
+
+eRemoteDiskFileCompletion = _lldb.eRemoteDiskFileCompletion
+
+eRemoteDiskDirectoryCompletion = _lldb.eRemoteDiskDirectoryCompletion
+
+eTypeCategoryNameCompletion = _lldb.eTypeCategoryNameCompletion
+
+eCustomCompletion = _lldb.eCustomCompletion
+
 class SBAddress(object):
     r"""
     A section + offset based address class.
@@ -1970,6 +2062,14 @@ class SBAttachInfo(object):
     def SetListener(self, listener):
         r"""SetListener(SBAttachInfo self, SBListener listener)"""
         return _lldb.SBAttachInfo_SetListener(self, listener)
+
+    def GetShadowListener(self):
+        r"""GetShadowListener(SBAttachInfo self) -> SBListener"""
+        return _lldb.SBAttachInfo_GetShadowListener(self)
+
+    def SetShadowListener(self, listener):
+        r"""SetShadowListener(SBAttachInfo self, SBListener listener)"""
+        return _lldb.SBAttachInfo_SetShadowListener(self, listener)
 
     def GetScriptedProcessClassName(self):
         r"""GetScriptedProcessClassName(SBAttachInfo self) -> char const *"""
@@ -3221,6 +3321,10 @@ class SBCommandInterpreter(object):
         r"""WasInterrupted(SBCommandInterpreter self) -> bool"""
         return _lldb.SBCommandInterpreter_WasInterrupted(self)
 
+    def InterruptCommand(self):
+        r"""InterruptCommand(SBCommandInterpreter self) -> bool"""
+        return _lldb.SBCommandInterpreter_InterruptCommand(self)
+
     def IsActive(self):
         r"""IsActive(SBCommandInterpreter self) -> bool"""
         return _lldb.SBCommandInterpreter_IsActive(self)
@@ -4384,6 +4488,18 @@ class SBDebugger(object):
         r"""HandleCommand(SBDebugger self, char const * command)"""
         return _lldb.SBDebugger_HandleCommand(self, command)
 
+    def RequestInterrupt(self):
+        r"""RequestInterrupt(SBDebugger self)"""
+        return _lldb.SBDebugger_RequestInterrupt(self)
+
+    def CancelInterruptRequest(self):
+        r"""CancelInterruptRequest(SBDebugger self)"""
+        return _lldb.SBDebugger_CancelInterruptRequest(self)
+
+    def InterruptRequested(self):
+        r"""InterruptRequested(SBDebugger self) -> bool"""
+        return _lldb.SBDebugger_InterruptRequested(self)
+
     def GetListener(self):
         r"""GetListener(SBDebugger self) -> SBListener"""
         return _lldb.SBDebugger_GetListener(self)
@@ -4932,6 +5048,7 @@ class SBError(object):
         r"""
         __init__(SBError self) -> SBError
         __init__(SBError self, SBError rhs) -> SBError
+        __init__(SBError self, char const * message) -> SBError
         """
         _lldb.SBError_swiginit(self, _lldb.new_SBError(*args))
     __swig_destroy__ = _lldb.delete_SBError
@@ -6681,6 +6798,14 @@ class SBLaunchInfo(object):
         r"""SetListener(SBLaunchInfo self, SBListener listener)"""
         return _lldb.SBLaunchInfo_SetListener(self, listener)
 
+    def GetShadowListener(self):
+        r"""GetShadowListener(SBLaunchInfo self) -> SBListener"""
+        return _lldb.SBLaunchInfo_GetShadowListener(self)
+
+    def SetShadowListener(self, listener):
+        r"""SetShadowListener(SBLaunchInfo self, SBListener listener)"""
+        return _lldb.SBLaunchInfo_SetShadowListener(self, listener)
+
     def GetNumArguments(self):
         r"""GetNumArguments(SBLaunchInfo self) -> uint32_t"""
         return _lldb.SBLaunchInfo_GetNumArguments(self)
@@ -7916,6 +8041,22 @@ class SBModuleSpec(object):
         r"""SetUUIDBytes(SBModuleSpec self, uint8_t const * uuid, size_t uuid_len) -> bool"""
         return _lldb.SBModuleSpec_SetUUIDBytes(self, uuid, uuid_len)
 
+    def GetObjectOffset(self):
+        r"""GetObjectOffset(SBModuleSpec self) -> uint64_t"""
+        return _lldb.SBModuleSpec_GetObjectOffset(self)
+
+    def SetObjectOffset(self, object_offset):
+        r"""SetObjectOffset(SBModuleSpec self, uint64_t object_offset)"""
+        return _lldb.SBModuleSpec_SetObjectOffset(self, object_offset)
+
+    def GetObjectSize(self):
+        r"""GetObjectSize(SBModuleSpec self) -> uint64_t"""
+        return _lldb.SBModuleSpec_GetObjectSize(self)
+
+    def SetObjectSize(self, object_size):
+        r"""SetObjectSize(SBModuleSpec self, uint64_t object_size)"""
+        return _lldb.SBModuleSpec_SetObjectSize(self, object_size)
+
     def GetDescription(self, description):
         r"""GetDescription(SBModuleSpec self, SBStream description) -> bool"""
         return _lldb.SBModuleSpec_GetDescription(self, description)
@@ -8241,6 +8382,10 @@ class SBPlatform(object):
         r"""GetEnvironment(SBPlatform self) -> SBEnvironment"""
         return _lldb.SBPlatform_GetEnvironment(self)
 
+    def SetLocateModuleCallback(self, callback):
+        r"""SetLocateModuleCallback(SBPlatform self, lldb::SBPlatformLocateModuleCallback callback) -> SBError"""
+        return _lldb.SBPlatform_SetLocateModuleCallback(self, callback)
+
 # Register SBPlatform in _lldb:
 _lldb.SBPlatform_swigregister(SBPlatform)
 class SBProcess(object):
@@ -8534,6 +8679,10 @@ class SBProcess(object):
     def GetStopEventForStopID(self, stop_id):
         r"""GetStopEventForStopID(SBProcess self, uint32_t stop_id) -> SBEvent"""
         return _lldb.SBProcess_GetStopEventForStopID(self, stop_id)
+
+    def ForceScriptedState(self, new_state):
+        r"""ForceScriptedState(SBProcess self, lldb::StateType new_state)"""
+        return _lldb.SBProcess_ForceScriptedState(self, new_state)
 
     def ReadMemory(self, addr, buf, error):
         r"""
@@ -8982,7 +9131,6 @@ class SBQueue(object):
     def __init__(self, *args):
         r"""
         __init__(SBQueue self) -> SBQueue
-        __init__(SBQueue self, lldb::QueueSP const & queue_sp) -> SBQueue
         __init__(SBQueue self, SBQueue rhs) -> SBQueue
         """
         _lldb.SBQueue_swiginit(self, _lldb.new_SBQueue(*args))
@@ -9061,12 +9209,9 @@ class SBQueueItem(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
 
-    def __init__(self, *args):
-        r"""
-        __init__(SBQueueItem self) -> SBQueueItem
-        __init__(SBQueueItem self, lldb::QueueItemSP const & queue_item_sp) -> SBQueueItem
-        """
-        _lldb.SBQueueItem_swiginit(self, _lldb.new_SBQueueItem(*args))
+    def __init__(self):
+        r"""__init__(SBQueueItem self) -> SBQueueItem"""
+        _lldb.SBQueueItem_swiginit(self, _lldb.new_SBQueueItem())
     __swig_destroy__ = _lldb.delete_SBQueueItem
 
     def __nonzero__(self):
@@ -9098,10 +9243,6 @@ class SBQueueItem(object):
     def SetAddress(self, addr):
         r"""SetAddress(SBQueueItem self, SBAddress addr)"""
         return _lldb.SBQueueItem_SetAddress(self, addr)
-
-    def SetQueueItem(self, queue_item_sp):
-        r"""SetQueueItem(SBQueueItem self, lldb::QueueItemSP const & queue_item_sp)"""
-        return _lldb.SBQueueItem_SetQueueItem(self, queue_item_sp)
 
     def GetExtendedBacktraceThread(self, type):
         r"""GetExtendedBacktraceThread(SBQueueItem self, char const * type) -> SBThread"""
@@ -9142,6 +9283,48 @@ class SBReproducer(object):
 
 # Register SBReproducer in _lldb:
 _lldb.SBReproducer_swigregister(SBReproducer)
+class SBScriptObject(object):
+    r"""Proxy of C++ lldb::SBScriptObject class."""
+
+    thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
+    __repr__ = _swig_repr
+
+    def __init__(self, *args):
+        r"""
+        __init__(SBScriptObject self, lldb::ScriptObjectPtr const ptr, lldb::ScriptLanguage lang) -> SBScriptObject
+        __init__(SBScriptObject self, SBScriptObject rhs) -> SBScriptObject
+        """
+        _lldb.SBScriptObject_swiginit(self, _lldb.new_SBScriptObject(*args))
+    __swig_destroy__ = _lldb.delete_SBScriptObject
+
+    def __nonzero__(self):
+        return _lldb.SBScriptObject___nonzero__(self)
+    __bool__ = __nonzero__
+
+
+
+    def __ne__(self, rhs):
+        r"""__ne__(SBScriptObject self, SBScriptObject rhs) -> bool"""
+        return _lldb.SBScriptObject___ne__(self, rhs)
+
+    def IsValid(self):
+        r"""IsValid(SBScriptObject self) -> bool"""
+        return _lldb.SBScriptObject_IsValid(self)
+
+    def GetPointer(self):
+        r"""GetPointer(SBScriptObject self) -> lldb::ScriptObjectPtr"""
+        return _lldb.SBScriptObject_GetPointer(self)
+
+    def GetLanguage(self):
+        r"""GetLanguage(SBScriptObject self) -> lldb::ScriptLanguage"""
+        return _lldb.SBScriptObject_GetLanguage(self)
+
+    ptr = property(GetPointer, None, doc='''A read only property that returns the underlying script object.''')
+    lang = property(GetLanguage, None, doc='''A read only property that returns the script language associated with with this script object.''')
+
+
+# Register SBScriptObject in _lldb:
+_lldb.SBScriptObject_swigregister(SBScriptObject)
 class SBSection(object):
     r"""
     Represents an executable image section.
@@ -9549,7 +9732,7 @@ class SBStructuredData(object):
         r"""
         __init__(SBStructuredData self) -> SBStructuredData
         __init__(SBStructuredData self, SBStructuredData rhs) -> SBStructuredData
-        __init__(SBStructuredData self, lldb::EventSP const & event_sp) -> SBStructuredData
+        __init__(SBStructuredData self, SBScriptObject obj, SBDebugger debugger) -> SBStructuredData
         """
         _lldb.SBStructuredData_swiginit(self, _lldb.new_SBStructuredData(*args))
     __swig_destroy__ = _lldb.delete_SBStructuredData
@@ -9603,6 +9786,14 @@ class SBStructuredData(object):
         r"""GetItemAtIndex(SBStructuredData self, size_t idx) -> SBStructuredData"""
         return _lldb.SBStructuredData_GetItemAtIndex(self, idx)
 
+    def GetUnsignedIntegerValue(self, fail_value=0):
+        r"""GetUnsignedIntegerValue(SBStructuredData self, uint64_t fail_value=0) -> uint64_t"""
+        return _lldb.SBStructuredData_GetUnsignedIntegerValue(self, fail_value)
+
+    def GetSignedIntegerValue(self, fail_value=0):
+        r"""GetSignedIntegerValue(SBStructuredData self, int64_t fail_value=0) -> int64_t"""
+        return _lldb.SBStructuredData_GetSignedIntegerValue(self, fail_value)
+
     def GetIntegerValue(self, fail_value=0):
         r"""GetIntegerValue(SBStructuredData self, uint64_t fail_value=0) -> uint64_t"""
         return _lldb.SBStructuredData_GetIntegerValue(self, fail_value)
@@ -9618,6 +9809,10 @@ class SBStructuredData(object):
     def GetStringValue(self, dst):
         r"""GetStringValue(SBStructuredData self, char * dst) -> size_t"""
         return _lldb.SBStructuredData_GetStringValue(self, dst)
+
+    def GetGenericValue(self):
+        r"""GetGenericValue(SBStructuredData self) -> SBScriptObject"""
+        return _lldb.SBStructuredData_GetGenericValue(self)
 
 # Register SBStructuredData in _lldb:
 _lldb.SBStructuredData_swigregister(SBStructuredData)
@@ -10437,6 +10632,14 @@ class SBTarget(object):
         r"""GetABIName(SBTarget self) -> char const *"""
         return _lldb.SBTarget_GetABIName(self)
 
+    def GetLabel(self):
+        r"""GetLabel(SBTarget self) -> char const *"""
+        return _lldb.SBTarget_GetLabel(self)
+
+    def SetLabel(self, label):
+        r"""SetLabel(SBTarget self, char const * label) -> SBError"""
+        return _lldb.SBTarget_SetLabel(self, label)
+
     def GetDataByteSize(self):
         r"""
         GetDataByteSize(SBTarget self) -> uint32_t
@@ -10474,7 +10677,7 @@ class SBTarget(object):
         return _lldb.SBTarget_ClearSectionLoadAddress(self, section)
 
     def SetModuleLoadAddress(self, module, sections_offset):
-        r"""SetModuleLoadAddress(SBTarget self, SBModule module, int64_t sections_offset) -> SBError"""
+        r"""SetModuleLoadAddress(SBTarget self, SBModule module, uint64_t sections_offset) -> SBError"""
         return _lldb.SBTarget_SetModuleLoadAddress(self, module, sections_offset)
 
     def ClearModuleLoadAddress(self, module):
@@ -11047,7 +11250,7 @@ class SBTarget(object):
 
     def get_modules_access_object(self):
         '''An accessor function that returns a modules_access() object which allows lazy module access from a lldb.SBTarget object.'''
-        return self.modules_access (self)
+        return self.modules_access(self)
 
     def get_modules_array(self):
         '''An accessor function that returns a list() that contains all modules in a lldb.SBTarget object.'''
@@ -11066,10 +11269,68 @@ class SBTarget(object):
         object.'''
         return lldb_iter(self, 'GetNumBreakpoints', 'GetBreakpointAtIndex')
 
+    class bkpts_access(object):
+        '''A helper object that will lazily hand out bkpts for a target when supplied an index.'''
+        def __init__(self, sbtarget):
+            self.sbtarget = sbtarget
+
+        def __len__(self):
+            if self.sbtarget:
+                return int(self.sbtarget.GetNumBreakpoints())
+            return 0
+
+        def __getitem__(self, key):
+            if isinstance(key, int):
+                count = len(self)
+                if -count <= key < count:
+                    key %= count
+                    return self.sbtarget.GetBreakpointAtIndex(key)
+            return None
+
+    def get_bkpts_access_object(self):
+        '''An accessor function that returns a bkpts_access() object which allows lazy bkpt access from a lldb.SBtarget object.'''
+        return self.bkpts_access(self)
+
+    def get_target_bkpts(self):
+        '''An accessor function that returns a list() that contains all bkpts in a lldb.SBtarget object.'''
+        bkpts = []
+        for idx in range(self.GetNumBreakpoints()):
+            bkpts.append(self.GetBreakpointAtIndex(idx))
+        return bkpts
+
     def watchpoint_iter(self):
         '''Returns an iterator over all watchpoints in a lldb.SBTarget
         object.'''
         return lldb_iter(self, 'GetNumWatchpoints', 'GetWatchpointAtIndex')
+
+    class watchpoints_access(object):
+        '''A helper object that will lazily hand out watchpoints for a target when supplied an index.'''
+        def __init__(self, sbtarget):
+            self.sbtarget = sbtarget
+
+        def __len__(self):
+            if self.sbtarget:
+                return int(self.sbtarget.GetNumWatchpoints())
+            return 0
+
+        def __getitem__(self, key):
+            if isinstance(key, int):
+                count = len(self)
+                if -count <= key < count:
+                    key %= count
+                    return self.sbtarget.GetWatchpointAtIndex(key)
+            return None
+
+    def get_watchpoints_access_object(self):
+        '''An accessor function that returns a watchpoints_access() object which allows lazy watchpoint access from a lldb.SBtarget object.'''
+        return self.watchpoints_access(self)
+
+    def get_target_watchpoints(self):
+        '''An accessor function that returns a list() that contains all watchpoints in a lldb.SBtarget object.'''
+        watchpoints = []
+        for idx in range(self.GetNumWatchpoints()):
+            bkpts.append(self.GetWatchpointAtIndex(idx))
+        return watchpoints
 
     modules = property(get_modules_array, None, doc='''A read only property that returns a list() of lldb.SBModule objects contained in this target. This list is a list all modules that the target currently is tracking (the main executable and all dependent shared libraries).''')
     module = property(get_modules_access_object, None, doc=r'''A read only property that returns an object that implements python operator overloading with the square brackets().\n    target.module[<int>] allows array access to any modules.\n    target.module[<str>] allows access to modules by basename, full path, or uuid string value.\n    target.module[uuid.UUID()] allows module access by UUID.\n    target.module[re] allows module access using a regular expression that matches the module full path.''')
@@ -11077,7 +11338,11 @@ class SBTarget(object):
     executable = property(GetExecutable, None, doc='''A read only property that returns an lldb object that represents the main executable module (lldb.SBModule) for this target.''')
     debugger = property(GetDebugger, None, doc='''A read only property that returns an lldb object that represents the debugger (lldb.SBDebugger) that owns this target.''')
     num_breakpoints = property(GetNumBreakpoints, None, doc='''A read only property that returns the number of breakpoints that this target has as an integer.''')
+    breakpoints = property(get_target_bkpts, None, doc='''A read only property that returns a list() of lldb.SBBreakpoint objects for all breakpoints in this target.''')
+    breakpoint = property(get_bkpts_access_object, None, doc='''A read only property that returns an object that can be used to access breakpoints as an array ("bkpt_12 = lldb.target.bkpt[12]").''')
     num_watchpoints = property(GetNumWatchpoints, None, doc='''A read only property that returns the number of watchpoints that this target has as an integer.''')
+    watchpoints = property(get_target_watchpoints, None, doc='''A read only property that returns a list() of lldb.SBwatchpoint objects for all watchpoints in this target.''')
+    watchpoint = property(get_watchpoints_access_object, None, doc='''A read only property that returns an object that can be used to access watchpoints as an array ("watchpoint_12 = lldb.target.watchpoint[12]").''')
     broadcaster = property(GetBroadcaster, None, doc='''A read only property that an lldb object that represents the broadcaster (lldb.SBBroadcaster) for this target.''')
     byte_order = property(GetByteOrder, None, doc='''A read only property that returns an lldb enumeration value (lldb.eByteOrderLittle, lldb.eByteOrderBig, lldb.eByteOrderInvalid) that represents the byte order for this target.''')
     addr_size = property(GetAddressByteSize, None, doc='''A read only property that returns the size in bytes of an address for this target.''')
@@ -11689,7 +11954,6 @@ class SBThreadPlan(object):
         r"""
         __init__(SBThreadPlan self) -> SBThreadPlan
         __init__(SBThreadPlan self, SBThreadPlan threadPlan) -> SBThreadPlan
-        __init__(SBThreadPlan self, lldb::ThreadPlanSP const & lldb_object_sp) -> SBThreadPlan
         __init__(SBThreadPlan self, SBThread thread, char const * class_name) -> SBThreadPlan
         __init__(SBThreadPlan self, SBThread thread, char const * class_name, SBStructuredData args_data) -> SBThreadPlan
         """
@@ -11884,12 +12148,9 @@ class SBTraceCursor(object):
     thisown = property(lambda x: x.this.own(), lambda x, v: x.this.own(v), doc="The membership flag")
     __repr__ = _swig_repr
 
-    def __init__(self, *args):
-        r"""
-        __init__(SBTraceCursor self) -> SBTraceCursor
-        __init__(SBTraceCursor self, lldb::TraceCursorSP trace_cursor_sp) -> SBTraceCursor
-        """
-        _lldb.SBTraceCursor_swiginit(self, _lldb.new_SBTraceCursor(*args))
+    def __init__(self):
+        r"""__init__(SBTraceCursor self) -> SBTraceCursor"""
+        _lldb.SBTraceCursor_swiginit(self, _lldb.new_SBTraceCursor())
 
     def SetForwards(self, forwards):
         r"""SetForwards(SBTraceCursor self, bool forwards)"""
