@@ -8165,6 +8165,83 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   EXPECT_TRUE(ToX->getInClassInitializer());
 }
 
+TEST_P(ASTImporterOptionSpecificTestBase, ImportRecursiveFieldInitializer) {
+  const char *Code =
+      R"(
+      struct AP_TECS;
+
+      struct AP_Landing {
+        AP_TECS *TECS_controller;
+      };
+
+      struct AP_TECS {
+        AP_Landing landing;
+      };
+
+      class Plane {
+        AP_TECS TECS_controller{landing};
+        AP_Landing landing{&TECS_controller};
+      };
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+
+  auto *FromR = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("Plane")));
+  for (FieldDecl *F : FromR->fields())
+    EXPECT_TRUE(F->getInClassInitializer());
+  auto *ToR = Import(FromR, Lang_CXX11);
+  for (FieldDecl *F : ToR->fields())
+    EXPECT_TRUE(F->getInClassInitializer());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportFieldInitializerWithItself) {
+  const char *Code =
+      R"(
+      class A {
+        int a{a};
+      };
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromA = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("A")));
+  EXPECT_TRUE(FromA->field_begin()->getInClassInitializer());
+  auto *ToA = Import(FromA, Lang_CXX11);
+  EXPECT_TRUE(ToA->field_begin()->getInClassInitializer());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportRecursiveFieldInitializer1) {
+  // FIXME: This is a example of recursive field initialization that is not
+  // supported.
+  // The following import chain occurs (not complete):
+  // import of A => A.a => in-class initializer of A.a => ref_B() => B => B.b
+  // => in-class initializer of B.b => ref_A() => CXXConstructExpr for A =>
+  // CXXDefaultInitExpr for A.a => in-class initializer of A.a
+  // in-class initializer of A.a is created in two different instances in this
+  // case (import of FieldDecl and CXXDefaultInitExpr). Probably not a big
+  // problem because it is an Expr (the second construction can be ignored
+  // instead of assert). But such recursive init code should not occur in
+  // practice.
+  const char *Code =
+      R"(
+      static int ref_A();
+      static int ref_B();
+      struct A {
+        int a = ref_B();
+      };
+      struct B {
+        int b = ref_A();
+      };
+      int ref_B() { B b; return b.b; }
+      int ref_A() { A a; return a.a; }
+      )";
+  Decl *FromTU = getTuDecl(Code, Lang_CXX11);
+  auto *FromA = FirstDeclMatcher<CXXRecordDecl>().match(
+      FromTU, cxxRecordDecl(hasName("A")));
+  EXPECT_TRUE(FromA->field_begin()->getInClassInitializer());
+  // auto *ToA = Import(FromA, Lang_CXX11);
+  // EXPECT_TRUE(ToA->field_begin()->getInClassInitializer());
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, isNewDecl) {
   Decl *FromTU = getTuDecl(
       R"(
