@@ -2391,6 +2391,46 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
                                   dataClause);
 }
 
+static void
+genDeclareInModule(Fortran::lower::AbstractConverter &converter,
+                   mlir::ModuleOp &moduleOp,
+                   const Fortran::parser::AccClauseList &accClauseList) {
+  mlir::OpBuilder modBuilder(moduleOp.getBodyRegion());
+  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+    if (const auto *createClause =
+            std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
+      genGlobalCtorsWithModifier<Fortran::parser::AccClause::Create,
+                                 mlir::acc::CreateOp, mlir::acc::DeleteOp>(
+          converter, modBuilder, createClause,
+          Fortran::parser::AccDataModifier::Modifier::Zero,
+          mlir::acc::DataClause::acc_create,
+          mlir::acc::DataClause::acc_create_zero);
+    } else if (const auto *copyinClause =
+                   std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
+      genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,
+                                 mlir::acc::CopyinOp, mlir::acc::CopyinOp>(
+          converter, modBuilder, copyinClause,
+          Fortran::parser::AccDataModifier::Modifier::ReadOnly,
+          mlir::acc::DataClause::acc_copyin,
+          mlir::acc::DataClause::acc_copyin_readonly);
+    } else if (const auto *deviceResidentClause =
+                   std::get_if<Fortran::parser::AccClause::DeviceResident>(
+                       &clause.u)) {
+      genGlobalCtors<mlir::acc::DeclareDeviceResidentOp,
+                     mlir::acc::DeclareDeviceResidentOp>(
+          converter, modBuilder, deviceResidentClause->v,
+          mlir::acc::DataClause::acc_declare_device_resident);
+    } else if (const auto *linkClause =
+                   std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
+      genGlobalCtors<mlir::acc::DeclareLinkOp, mlir::acc::DeclareLinkOp>(
+          converter, modBuilder, linkClause->v,
+          mlir::acc::DataClause::acc_declare_link);
+    } else {
+      llvm::report_fatal_error("unsupported clause on DECLARE directive");
+    }
+  }
+}
+
 static void genACC(Fortran::lower::AbstractConverter &converter,
                    Fortran::semantics::SemanticsContext &semanticsContext,
                    Fortran::lower::pft::Evaluation &eval,
@@ -2411,46 +2451,10 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
         builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
     auto funcOp =
         builder.getBlock()->getParent()->getParentOfType<mlir::func::FuncOp>();
-    if (funcOp) {
+    if (funcOp)
       TODO(funcOp.getLoc(), "OpenACC declare in function/subroutine");
-    } else if (moduleOp) {
-      mlir::OpBuilder modBuilder(moduleOp.getBodyRegion());
-      for (const Fortran::parser::AccClause &clause : accClauseList.v) {
-        if (const auto *createClause =
-                std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
-          genGlobalCtorsWithModifier<Fortran::parser::AccClause::Create,
-                                     mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-              converter, modBuilder, createClause,
-              Fortran::parser::AccDataModifier::Modifier::Zero,
-              mlir::acc::DataClause::acc_create,
-              mlir::acc::DataClause::acc_create_zero);
-        } else if (const auto *copyinClause =
-                       std::get_if<Fortran::parser::AccClause::Copyin>(
-                           &clause.u)) {
-          genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,
-                                     mlir::acc::CopyinOp, mlir::acc::CopyinOp>(
-              converter, modBuilder, copyinClause,
-              Fortran::parser::AccDataModifier::Modifier::ReadOnly,
-              mlir::acc::DataClause::acc_copyin,
-              mlir::acc::DataClause::acc_copyin_readonly);
-        } else if (const auto *deviceResidentClause =
-                       std::get_if<Fortran::parser::AccClause::DeviceResident>(
-                           &clause.u)) {
-          genGlobalCtors<mlir::acc::DeclareDeviceResidentOp,
-                         mlir::acc::DeclareDeviceResidentOp>(
-              converter, modBuilder, deviceResidentClause->v,
-              mlir::acc::DataClause::acc_declare_device_resident);
-        } else if (const auto *linkClause =
-                       std::get_if<Fortran::parser::AccClause::Link>(
-                           &clause.u)) {
-          genGlobalCtors<mlir::acc::DeclareLinkOp, mlir::acc::DeclareLinkOp>(
-              converter, modBuilder, linkClause->v,
-              mlir::acc::DataClause::acc_declare_link);
-        } else {
-          llvm::report_fatal_error("unsupported clause on DECLARE directive");
-        }
-      }
-    }
+    else if (moduleOp)
+      genDeclareInModule(converter, moduleOp, accClauseList);
     return;
   }
   llvm_unreachable("unsupported declarative directive");
