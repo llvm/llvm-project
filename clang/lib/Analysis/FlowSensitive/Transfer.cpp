@@ -500,9 +500,14 @@ public:
       return;
     }
 
-    auto &InitialVal = *cast<StructValue>(Env.createValue(S->getType()));
-    copyRecord(InitialVal.getAggregateLoc(), Env.getResultObjectLocation(*S),
-               Env);
+    // `CXXConstructExpr` can have array type if default-initializing an array
+    // of records, and we currently can't create values for arrays. So check if
+    // we've got a record type.
+    if (S->getType()->isRecordType()) {
+      auto &InitialVal = *cast<StructValue>(Env.createValue(S->getType()));
+      copyRecord(InitialVal.getAggregateLoc(), Env.getResultObjectLocation(*S),
+                 Env);
+    }
 
     transferInlineCall(S, ConstructorDecl);
   }
