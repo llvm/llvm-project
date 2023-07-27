@@ -111,6 +111,8 @@ Improvements to clang-tidy
 - Remove configuration option `AnalyzeTemporaryDestructors`, which was deprecated since
   :program:`clang-tidy` 16.
 
+- Improved `--dump-config` to print check options in alphabetical order.
+
 New checks
 ^^^^^^^^^^
 
