@@ -54,8 +54,16 @@
 ! HELP-NEXT: -fopenmp-version=<value>
 ! HELP-NEXT:                        Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
 ! HELP-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! HELP-NEXT: -foptimization-record-file=<file>
+! HELP-NEXT:                        Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.
+! HELP-NEXT: -foptimization-record-passes=<regex>
+! HELP-NEXT:                        Only include passes which match a specified regular expression in the generated optimization record (by default, include all passes)
 ! HELP-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! HELP-NEXT: -freciprocal-math      Allow division operations to be reassociated
+! HELP-NEXT: -fsave-optimization-record=<format>
+! HELP-NEXT:                        Generate an optimization record file in a specific format
+! HELP-NEXT: -fsave-optimization-record
+! HELP-NEXT:                        Generate a YAML optimization record file
 ! HELP-NEXT: -fstack-arrays         Attempt to allocate array temporaries on the stack, no matter their size
 ! HELP-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! HELP-NEXT: -funderscoring         Appends one trailing underscore to external names
@@ -186,6 +194,12 @@
 ! HELP-FC1-NEXT: -mrelocation-model <value>
 ! HELP-FC1-NEXT:                        The relocation model to use
 ! HELP-FC1-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
+! HELP-FC1-NEXT: -opt-record-file <value>
+! HELP-FC1-NEXT:                        File name to use for YAML optimization record output
+! HELP-FC1-NEXT: -opt-record-format <value>
+! HELP-FC1-NEXT:                        The format used for serializing remarks (default: YAML)
+! HELP-FC1-NEXT: -opt-record-passes <value>
+! HELP-FC1-NEXT:                        Only record remark information for passes whose names match the given regular expression
 ! HELP-FC1-NEXT: -o <file>              Write output to <file>
 ! HELP-FC1-NEXT: -pedantic              Warn on language extensions
 ! HELP-FC1-NEXT: -pic-is-pie             File is for a position independent executable
