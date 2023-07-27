@@ -12,7 +12,7 @@ ADDs r1, r0, #0xFFFFFFF5
 ADDs r0, #0xFFFFFEFF
 # CHECK: error: invalid instruction, any one of the following would fix this:
 # CHECK-DAG: note: invalid operand for instruction
-# CHECK-DAG: note: operand must be an immediate in the range [0,255]
+# CHECK-DAG: note: operand must be an immediate in the range [0,255] or a relocatable expression
 
 SUBs r1, r0, #0xFFFFFFF5
 # CHECK: error: invalid instruction, any one of the following would fix this:

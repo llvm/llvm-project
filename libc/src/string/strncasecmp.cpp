@@ -10,7 +10,7 @@
 
 #include "src/__support/common.h"
 #include "src/__support/ctype_utils.h"
-#include "src/string/memory_utils/strcmp_implementations.h"
+#include "src/string/memory_utils/inline_strcmp.h"
 
 namespace __llvm_libc {
 
@@ -20,7 +20,7 @@ LLVM_LIBC_FUNCTION(int, strncasecmp,
     return __llvm_libc::internal::tolower(a) -
            __llvm_libc::internal::tolower(b);
   };
-  return strncmp_implementation(left, right, n, case_cmp);
+  return inline_strncmp(left, right, n, case_cmp);
 }
 
 } // namespace __llvm_libc

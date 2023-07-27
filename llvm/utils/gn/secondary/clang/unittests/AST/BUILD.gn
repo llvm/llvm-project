@@ -45,5 +45,6 @@ unittest("ASTTests") {
     "StructuralEquivalenceTest.cpp",
     "TemplateNameTest.cpp",
     "TypePrinterTest.cpp",
+    "UnresolvedSetTest.cpp",
   ]
 }

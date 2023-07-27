@@ -98,9 +98,13 @@ def LLVM_SDivOp : LLVM_IntArithmeticOp<"sdiv", "SDiv">;
 def LLVM_URemOp : LLVM_IntArithmeticOp<"urem", "URem">;
 def LLVM_SRemOp : LLVM_IntArithmeticOp<"srem", "SRem">;
 def LLVM_AndOp : LLVM_IntArithmeticOp<"and", "And">;
-def LLVM_OrOp : LLVM_IntArithmeticOp<"or", "Or">;
+def LLVM_OrOp : LLVM_IntArithmeticOp<"or", "Or"> {
+  let hasFolder = 1;
+}
 def LLVM_XOrOp : LLVM_IntArithmeticOp<"xor", "Xor">;
-def LLVM_ShlOp : LLVM_IntArithmeticOp<"shl", "Shl">;
+def LLVM_ShlOp : LLVM_IntArithmeticOp<"shl", "Shl"> {
+  let hasFolder = 1;
+}
 def LLVM_LShrOp : LLVM_IntArithmeticOp<"lshr", "LShr">;
 def LLVM_AShrOp : LLVM_IntArithmeticOp<"ashr", "AShr">;
 
@@ -174,7 +178,8 @@ def LLVM_FNegOp : LLVM_UnaryFloatArithmeticOp<
 // Memory-related operations.
 def LLVM_AllocaOp : LLVM_Op<"alloca",
     [DeclareOpInterfaceMethods<PromotableAllocationOpInterface>,
-     DeclareOpInterfaceMethods<DestructurableAllocationOpInterface>]>,
+     DeclareOpInterfaceMethods<DestructurableAllocationOpInterface>,
+     DeclareOpInterfaceMethods<GetResultPtrElementType>]>,
   LLVM_MemOpPatterns {
   let arguments = (ins AnyInteger:$arraySize,
                    OptionalAttr<I64Attr>:$alignment,
@@ -235,7 +240,8 @@ def LLVM_AllocaOp : LLVM_Op<"alloca",
 def LLVM_GEPOp : LLVM_Op<"getelementptr", [Pure,
     DeclareOpInterfaceMethods<PromotableOpInterface>,
     DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>,
-    DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>]> {
+    DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
+    DeclareOpInterfaceMethods<GetResultPtrElementType>]> {
   let arguments = (ins LLVM_ScalarOrVectorOf<LLVM_AnyPointer>:$base,
                    Variadic<LLVM_ScalarOrVectorOf<AnyInteger>>:$dynamicIndices,
                    DenseI32ArrayAttr:$rawConstantIndices,
@@ -495,10 +501,15 @@ def LLVM_PtrToIntOp : LLVM_CastOp<"ptrtoint", "PtrToInt",
                                   LLVM_ScalarOrVectorOf<AnyInteger>>;
 def LLVM_SExtOp : LLVM_CastOp<"sext", "SExt",
                               LLVM_ScalarOrVectorOf<AnyInteger>,
-                              LLVM_ScalarOrVectorOf<AnyInteger>>;
+                              LLVM_ScalarOrVectorOf<AnyInteger>> {
+  let hasVerifier = 1;
+}
 def LLVM_ZExtOp : LLVM_CastOp<"zext", "ZExt",
                               LLVM_ScalarOrVectorOf<AnyInteger>,
-                              LLVM_ScalarOrVectorOf<AnyInteger>>;
+                              LLVM_ScalarOrVectorOf<AnyInteger>> {
+  let hasFolder = 1;
+  let hasVerifier = 1;
+}
 def LLVM_TruncOp : LLVM_CastOp<"trunc", "Trunc",
                                LLVM_ScalarOrVectorOf<AnyInteger>,
                                LLVM_ScalarOrVectorOf<AnyInteger>>;
@@ -525,12 +536,14 @@ def LLVM_FPTruncOp : LLVM_CastOp<"fptrunc", "FPTrunc",
 def LLVM_InvokeOp : LLVM_Op<"invoke", [
                       AttrSizedOperandSegments,
                       DeclareOpInterfaceMethods<BranchOpInterface>,
-                      DeclareOpInterfaceMethods<CallOpInterface>, Terminator]> {
+                      DeclareOpInterfaceMethods<CallOpInterface>,
+                      DeclareOpInterfaceMethods<BranchWeightOpInterface>,
+                      Terminator]> {
   let arguments = (ins OptionalAttr<FlatSymbolRefAttr>:$callee,
                    Variadic<LLVM_Type>:$callee_operands,
                    Variadic<LLVM_Type>:$normalDestOperands,
                    Variadic<LLVM_Type>:$unwindDestOperands,
-                   OptionalAttr<ElementsAttr>:$branch_weights);
+                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights);
   let results = (outs Variadic<LLVM_Type>);
   let successors = (successor AnySuccessor:$normalDest,
                               AnySuccessor:$unwindDest);
@@ -571,7 +584,8 @@ def LLVM_LandingpadOp : LLVM_Op<"landingpad"> {
 def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                     [DeclareOpInterfaceMethods<FastmathFlagsInterface>,
                      DeclareOpInterfaceMethods<CallOpInterface>,
-                     DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+                     DeclareOpInterfaceMethods<SymbolUserOpInterface>,
+                     DeclareOpInterfaceMethods<BranchWeightOpInterface>]> {
   let summary = "Call to an LLVM function.";
   let description = [{
     In LLVM IR, functions may return either 0 or 1 value. LLVM IR dialect
@@ -605,7 +619,7 @@ def LLVM_CallOp : LLVM_MemAccessOpBase<"call",
                   Variadic<LLVM_Type>,
                   DefaultValuedAttr<LLVM_FastmathFlagsAttr,
                                    "{}">:$fastmathFlags,
-                  OptionalAttr<ElementsAttr>:$branch_weights);
+                  OptionalAttr<DenseI32ArrayAttr>:$branch_weights);
   // Append the aliasing related attributes defined in LLVM_MemAccessOpBase.
   let arguments = !con(args, aliasAttrs);
   let results = (outs Optional<LLVM_Type>:$result);
@@ -834,15 +848,16 @@ def LLVM_BrOp : LLVM_TerminatorOp<"br",
     }]>,
     LLVM_TerminatorPassthroughOpBuilder
   ];
-  let hasVerifier = 1;
 }
 def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
-    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
+    [AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<BranchOpInterface>,
+     DeclareOpInterfaceMethods<BranchWeightOpInterface>,
      Pure]> {
   let arguments = (ins I1:$condition,
                    Variadic<LLVM_Type>:$trueDestOperands,
                    Variadic<LLVM_Type>:$falseDestOperands,
-                   OptionalAttr<ElementsAttr>:$branch_weights,
+                   OptionalAttr<DenseI32ArrayAttr>:$branch_weights,
                    OptionalAttr<LoopAnnotationAttr>:$loop_annotation);
   let successors = (successor AnySuccessor:$trueDest, AnySuccessor:$falseDest);
   let assemblyFormat = [{
@@ -864,12 +879,11 @@ def LLVM_CondBrOp : LLVM_TerminatorOp<"cond_br",
             falseOperands);
   }]>,
   OpBuilder<(ins "Value":$condition, "ValueRange":$trueOperands, "ValueRange":$falseOperands,
-    "ElementsAttr":$branchWeights, "Block *":$trueDest, "Block *":$falseDest),
+    "DenseI32ArrayAttr":$branchWeights, "Block *":$trueDest, "Block *":$falseDest),
   [{
       build($_builder, $_state, condition, trueOperands, falseOperands, branchWeights,
       {}, trueDest, falseDest);
   }]>, LLVM_TerminatorPassthroughOpBuilder];
-  let hasVerifier = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -925,15 +939,17 @@ def LLVM_UnreachableOp : LLVM_TerminatorOp<"unreachable"> {
 }
 
 def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
-    [AttrSizedOperandSegments, DeclareOpInterfaceMethods<BranchOpInterface>,
+    [AttrSizedOperandSegments,
+     DeclareOpInterfaceMethods<BranchOpInterface>,
+     DeclareOpInterfaceMethods<BranchWeightOpInterface>,
      Pure]> {
   let arguments = (ins
     AnyInteger:$value,
     Variadic<AnyType>:$defaultOperands,
     VariadicOfVariadic<AnyType, "case_operand_segments">:$caseOperands,
-    OptionalAttr<ElementsAttr>:$case_values,
+    OptionalAttr<AnyIntElementsAttr>:$case_values,
     DenseI32ArrayAttr:$case_operand_segments,
-    OptionalAttr<ElementsAttr>:$branch_weights
+    OptionalAttr<DenseI32ArrayAttr>:$branch_weights
   );
   let successors = (successor
     AnySuccessor:$defaultDestination,
@@ -943,8 +959,8 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
   let assemblyFormat = [{
     $value `:` type($value) `,`
     $defaultDestination (`(` $defaultOperands^ `:` type($defaultOperands) `)`)?
-    `[` `\n` custom<SwitchOpCases>(ref(type($value)), $case_values, $caseDestinations,
-                                   $caseOperands, type($caseOperands)) `]`
+    custom<SwitchOpCases>(ref(type($value)), $case_values, $caseDestinations,
+                                   $caseOperands, type($caseOperands))
     attr-dict
   }];
   let hasVerifier = 1;
@@ -953,7 +969,21 @@ def LLVM_SwitchOp : LLVM_TerminatorOp<"switch",
     OpBuilder<(ins "Value":$value,
       "Block *":$defaultDestination,
       "ValueRange":$defaultOperands,
+      CArg<"ArrayRef<APInt>", "{}">:$caseValues,
+      CArg<"BlockRange", "{}">:$caseDestinations,
+      CArg<"ArrayRef<ValueRange>", "{}">:$caseOperands,
+      CArg<"ArrayRef<int32_t>", "{}">:$branchWeights)>,
+    OpBuilder<(ins "Value":$value,
+      "Block *":$defaultDestination,
+      "ValueRange":$defaultOperands,
       CArg<"ArrayRef<int32_t>", "{}">:$caseValues,
+      CArg<"BlockRange", "{}">:$caseDestinations,
+      CArg<"ArrayRef<ValueRange>", "{}">:$caseOperands,
+      CArg<"ArrayRef<int32_t>", "{}">:$branchWeights)>,
+    OpBuilder<(ins "Value":$value,
+      "Block *":$defaultDestination,
+      "ValueRange":$defaultOperands,
+      CArg<"DenseIntElementsAttr", "{}">:$caseValues,
       CArg<"BlockRange", "{}">:$caseDestinations,
       CArg<"ArrayRef<ValueRange>", "{}">:$caseOperands,
       CArg<"ArrayRef<int32_t>", "{}">:$branchWeights)>,
@@ -1042,269 +1072,6 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
   }];
 
   let assemblyFormat = "$global_name attr-dict `:` qualified(type($res))";
-}
-
-def LLVM_MetadataOp : LLVM_Op<"metadata", [
-   NoRegionArguments, NoTerminator, SymbolTable, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name
-  );
-  let summary = "LLVM dialect metadata.";
-  let description = [{
-    llvm.metadata op defines one or more metadata nodes.
-
-    Example:
-    ```mlir
-    llvm.metadata @metadata {
-      llvm.access_group @group1
-      llvm.access_group @group2
-    }
-    ```
-  }];
-  let regions = (region SizedRegion<1>:$body);
-
-  let skipDefaultBuilders = 1;
-
-  let builders = [
-    OpBuilder<(ins "StringRef":$symName,
-        CArg<"bool", "true">:$createBodyBlock,
-        CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
-  ];
-
-  let hasCustomAssemblyFormat = 1;
-  let hasRegionVerifier = 1;
-}
-
-def LLVM_AliasScopeDomainMetadataOp : LLVM_Op<"alias_scope_domain", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    OptionalAttr<StrAttr>:$description
-  );
-  let summary = "LLVM dialect alias.scope domain metadata.";
-  let description = [{
-    Defines a domain that may be associated with an alias scope.
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
-  }];
-  let assemblyFormat = "$sym_name attr-dict";
-}
-
-def LLVM_AliasScopeMetadataOp : LLVM_Op<"alias_scope", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    FlatSymbolRefAttr:$domain,
-    OptionalAttr<StrAttr>:$description
-  );
-  let summary = "LLVM dialect alias.scope metadata.";
-  let description = [{
-    Defines an alias scope that can be attached to a memory-accessing operation.
-    Such scopes can be used in combination with `noalias` metadata to indicate
-    that sets of memory-affecting operations in one scope do not alias with
-    memory-affecting operations in another scope.
-
-    Example:
-    ```mlir
-    module {
-      llvm.func @foo(%ptr1 : !llvm.ptr<i32>) {
-          %c0 = llvm.mlir.constant(0 : i32) : i32
-          %c4 = llvm.mlir.constant(4 : i32) : i32
-          %1 = llvm.ptrtoint %ptr1 : !llvm.ptr<i32> to i32
-          %2 = llvm.add %1, %c1 : i32
-          %ptr2 = llvm.inttoptr %2 : i32 to !llvm.ptr<i32>
-          llvm.store %c0, %ptr1 { alias_scopes = [@metadata::@scope1], llvm.noalias = [@metadata::@scope2] } : !llvm.ptr<i32>
-          llvm.store %c4, %ptr2 { alias_scopes = [@metadata::@scope2], llvm.noalias = [@metadata::@scope1] } : !llvm.ptr<i32>
-          llvm.return
-      }
-
-      llvm.metadata @metadata {
-        llvm.alias_scope_domain @unused_domain
-        llvm.alias_scope_domain @domain { description = "Optional domain description"}
-        llvm.alias_scope @scope1 { domain = @domain }
-        llvm.alias_scope @scope2 { domain = @domain, description = "Optional scope description" }
-      }
-    }
-    ```
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#noalias-and-alias-scope-metadata
-  }];
-  let assemblyFormat = "$sym_name attr-dict";
-  let hasVerifier = 1;
-}
-
-def LLVM_AccessGroupMetadataOp : LLVM_Op<"access_group", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name
-  );
-  let summary = "LLVM dialect access group metadata.";
-  let description = [{
-    Defines an access group metadata that can be attached to any instruction
-    that potentially accesses memory. The access group may be attached to a
-    memory accessing instruction via the `llvm.access.group` metadata and
-    a branch instruction in the loop latch block via the
-    `llvm.loop.parallel_accesses` metadata.
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#llvm-access-group-metadata
-  }];
-  let assemblyFormat = "$sym_name attr-dict";
-}
-
-def LLVM_TBAARootMetadataOp : LLVM_Op<"tbaa_root", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    StrAttr:$identity
-  );
-  let summary = "LLVM dialect TBAA root node metadata.";
-  let description = [{
-    Defines a TBAA root node.
-
-    Example:
-    ```mlir
-    llvm.metadata @tbaa {
-      llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
-    }
-    ```
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#tbaa-metadata
-  }];
-  let assemblyFormat = [{
-    $sym_name ` ` `{` `id` `=` $identity `}` attr-dict
-  }];
-  let hasVerifier = 1;
-}
-
-def LLVM_TBAATypeDescriptorOp : LLVM_Op<"tbaa_type_desc", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    OptionalAttr<StrAttr>:$identity,
-    FlatSymbolRefArrayAttr:$members,
-    DenseI64ArrayAttr:$offsets
-  );
-  let summary = "LLVM dialect TBAA node describing a type.";
-  let description = [{
-    Defines a TBAA node describing a type.
-
-    Example:
-    ```mlir
-    llvm.metadata @tbaa {
-      llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
-      llvm.tbaa_type_desc @tbaa_type_desc_1 {
-          identity = "omnipotent char",
-          members = [@tbaa_root_0],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_2 {
-          identity = "long long",
-          members = [@tbaa_type_desc_1],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_3 {
-          identity = "agg2_t",
-          members = [@tbaa_type_desc_2, @tbaa_type_desc_2],
-          offsets = array<i64: 0, 8>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_5 {
-          identity = "int",
-          members = [@tbaa_type_desc_1],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_6 {
-          identity = "agg1_t",
-          members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
-          offsets = array<i64: 0, 4>
-      }
-    }
-    ```
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#tbaa-metadata
-  }];
-
-  // Interleave member types and offsets for better matching
-  // LLVM IR text representation.
-  let assemblyFormat = [{
-    $sym_name ` ` `{`
-      ( `id` `=` $identity^ )? `,`
-      `members` `=` `{` custom<TBAAMembers>($members, $offsets) `}`
-    `}` attr-dict
-  }];
-  let hasVerifier = 1;
-}
-
-def LLVM_TBAATagOp : LLVM_Op<"tbaa_tag", [
-  HasParent<"MetadataOp">, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name,
-    FlatSymbolRefAttr:$base_type,
-    FlatSymbolRefAttr:$access_type,
-    I64Attr:$offset,
-    UnitAttr:$constant
-  );
-  let summary = "LLVM dialect TBAA node describing a memory access.";
-  let description = [{
-    Defines a TBAA node describing a memory access.
-
-    Example:
-    ```mlir
-    llvm.metadata @tbaa {
-      llvm.tbaa_root @tbaa_root_0 {identity = "Simple C/C++ TBAA"}
-      llvm.tbaa_type_desc @tbaa_type_desc_1 {
-          identity = "omnipotent char",
-          members = [@tbaa_root_0],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_2 {
-          identity = "long long",
-          members = [@tbaa_type_desc_1],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_3 {
-          identity = "agg2_t",
-          members = [@tbaa_type_desc_2, @tbaa_type_desc_2],
-          offsets = array<i64: 0, 8>
-      }
-      llvm.tbaa_tag @tbaa_tag_4 {
-          access_type = @tbaa_type_desc_2,
-          base_type = @tbaa_type_desc_3,
-          offset = 8 : i64
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_5 {
-          identity = "int",
-          members = [@tbaa_type_desc_1],
-          offsets = array<i64: 0>
-      }
-      llvm.tbaa_type_desc @tbaa_type_desc_6 {
-          identity = "agg1_t",
-          members = [@tbaa_type_desc_5, @tbaa_type_desc_5],
-          offsets = array<i64: 0, 4>
-      }
-      llvm.tbaa_tag @tbaa_tag_7 {
-          access_type = @tbaa_type_desc_5,
-          base_type = @tbaa_type_desc_6,
-          offset = 0 : i64
-      }
-    }
-    ```
-
-    See the following link for more details:
-    https://llvm.org/docs/LangRef.html#tbaa-metadata
-  }];
-  let assemblyFormat = "$sym_name attr-dict";
 }
 
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
@@ -1611,6 +1378,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     DefaultValuedAttr<Linkage, "Linkage::External">:$linkage,
     UnitAttr:$dso_local,
     DefaultValuedAttr<CConv, "CConv::C">:$CConv,
+    OptionalAttr<SymbolRefAttr>:$comdat,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     OptionalAttr<StrAttr>:$garbageCollector,
     OptionalAttr<ArrayAttr>:$passthrough,
@@ -1620,7 +1388,10 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<LLVM_MemoryEffectsAttr>:$memory,
     DefaultValuedAttr<Visibility, "mlir::LLVM::Visibility::Default">:$visibility_,
     OptionalAttr<UnitAttr>:$arm_streaming,
-    OptionalAttr<UnitAttr>:$arm_locally_streaming
+    OptionalAttr<UnitAttr>:$arm_locally_streaming,
+    OptionalAttr<StrAttr>:$section,
+    OptionalAttr<UnnamedAddr>:$unnamed_addr,
+    OptionalAttr<I64Attr>:$alignment
   );
 
   let regions = (region AnyRegion:$body);
@@ -1632,6 +1403,7 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
       CArg<"Linkage", "Linkage::External">:$linkage,
       CArg<"bool", "false">:$dsoLocal,
       CArg<"CConv", "CConv::C">:$cconv,
+      CArg<"SymbolRefAttr", "{}">:$comdat,
       CArg<"ArrayRef<NamedAttribute>", "{}">:$attrs,
       CArg<"ArrayRef<DictionaryAttr>", "{}">:$argAttrs,
       CArg<"std::optional<uint64_t>", "{}">:$functionEntryCount)>
@@ -1818,7 +1590,7 @@ def LLVM_ConstantOp
 // Atomic operations.
 //
 
-def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, AnyInteger]>;
+def LLVM_AtomicRMWType : AnyTypeOf<[LLVM_AnyFloat, LLVM_AnyPointer, AnyInteger]>;
 
 def LLVM_AtomicRMWOp : LLVM_MemAccessOpBase<"atomicrmw", [
       TypesMatchWith<"result #0 and operand #1 have the same type",

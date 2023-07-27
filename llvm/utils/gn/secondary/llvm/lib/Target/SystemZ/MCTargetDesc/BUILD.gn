@@ -55,6 +55,7 @@ static_library("MCTargetDesc") {
     "SystemZMCAsmBackend.cpp",
     "SystemZMCAsmInfo.cpp",
     "SystemZMCCodeEmitter.cpp",
+    "SystemZMCExpr.cpp",
     "SystemZMCObjectWriter.cpp",
     "SystemZMCTargetDesc.cpp",
   ]

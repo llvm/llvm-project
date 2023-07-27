@@ -138,13 +138,15 @@
     __cpp_lib_out_ptr                                202106L [C++23]
     __cpp_lib_parallel_algorithm                     201603L [C++17]
     __cpp_lib_polymorphic_allocator                  201902L [C++20]
+    __cpp_lib_print                                  202207L [C++23]
     __cpp_lib_quoted_string_io                       201304L [C++14]
-    __cpp_lib_ranges                                 202106L [C++20]
+    __cpp_lib_ranges                                 202207L [C++20]
     __cpp_lib_ranges_as_rvalue                       202207L [C++23]
     __cpp_lib_ranges_chunk                           202202L [C++23]
     __cpp_lib_ranges_chunk_by                        202202L [C++23]
     __cpp_lib_ranges_iota                            202202L [C++23]
     __cpp_lib_ranges_join_with                       202202L [C++23]
+    __cpp_lib_ranges_repeat                          202207L [C++23]
     __cpp_lib_ranges_slide                           202202L [C++23]
     __cpp_lib_ranges_starts_ends_with                202106L [C++23]
     __cpp_lib_ranges_to_container                    202202L [C++23]
@@ -674,6 +676,10 @@
 #   error "__cpp_lib_polymorphic_allocator should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_print
+#   error "__cpp_lib_print should not be defined before c++23"
+# endif
+
 # ifdef __cpp_lib_quoted_string_io
 #   error "__cpp_lib_quoted_string_io should not be defined before c++14"
 # endif
@@ -700,6 +706,10 @@
 
 # ifdef __cpp_lib_ranges_join_with
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_slide
@@ -1421,6 +1431,10 @@
 #   error "__cpp_lib_polymorphic_allocator should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_print
+#   error "__cpp_lib_print should not be defined before c++23"
+# endif
+
 # ifndef __cpp_lib_quoted_string_io
 #   error "__cpp_lib_quoted_string_io should be defined in c++14"
 # endif
@@ -1450,6 +1464,10 @@
 
 # ifdef __cpp_lib_ranges_join_with
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_slide
@@ -2342,6 +2360,10 @@
 #   error "__cpp_lib_polymorphic_allocator should not be defined before c++20"
 # endif
 
+# ifdef __cpp_lib_print
+#   error "__cpp_lib_print should not be defined before c++23"
+# endif
+
 # ifndef __cpp_lib_quoted_string_io
 #   error "__cpp_lib_quoted_string_io should be defined in c++17"
 # endif
@@ -2371,6 +2393,10 @@
 
 # ifdef __cpp_lib_ranges_join_with
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_slide
@@ -3530,6 +3556,10 @@
 #   endif
 # endif
 
+# ifdef __cpp_lib_print
+#   error "__cpp_lib_print should not be defined before c++23"
+# endif
+
 # ifndef __cpp_lib_quoted_string_io
 #   error "__cpp_lib_quoted_string_io should be defined in c++20"
 # endif
@@ -3540,8 +3570,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++20"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++20"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++20"
 # endif
 
 # ifdef __cpp_lib_ranges_as_rvalue
@@ -3562,6 +3592,10 @@
 
 # ifdef __cpp_lib_ranges_join_with
 #   error "__cpp_lib_ranges_join_with should not be defined before c++23"
+# endif
+
+# ifdef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should not be defined before c++23"
 # endif
 
 # ifdef __cpp_lib_ranges_slide
@@ -4889,6 +4923,19 @@
 #   endif
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_print
+#     error "__cpp_lib_print should be defined in c++23"
+#   endif
+#   if __cpp_lib_print != 202207L
+#     error "__cpp_lib_print should have the value 202207L in c++23"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_print
+#     error "__cpp_lib_print should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_quoted_string_io
 #   error "__cpp_lib_quoted_string_io should be defined in c++23"
 # endif
@@ -4899,8 +4946,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++23"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++23"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++23"
 # endif
 
 # ifndef __cpp_lib_ranges_as_rvalue
@@ -4962,6 +5009,13 @@
 #   endif
 # endif
 
+# ifndef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_repeat != 202207L
+#   error "__cpp_lib_ranges_repeat should have the value 202207L in c++23"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_ranges_slide
 #     error "__cpp_lib_ranges_slide should be defined in c++23"
@@ -4988,17 +5042,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_to_container
-#     error "__cpp_lib_ranges_to_container should be defined in c++23"
-#   endif
-#   if __cpp_lib_ranges_to_container != 202202L
-#     error "__cpp_lib_ranges_to_container should have the value 202202L in c++23"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_to_container
-#     error "__cpp_lib_ranges_to_container should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should be defined in c++23"
+# endif
+# if __cpp_lib_ranges_to_container != 202202L
+#   error "__cpp_lib_ranges_to_container should have the value 202202L in c++23"
 # endif
 
 # if !defined(_LIBCPP_VERSION)
@@ -6428,6 +6476,19 @@
 #   endif
 # endif
 
+# if !defined(_LIBCPP_VERSION)
+#   ifndef __cpp_lib_print
+#     error "__cpp_lib_print should be defined in c++26"
+#   endif
+#   if __cpp_lib_print != 202207L
+#     error "__cpp_lib_print should have the value 202207L in c++26"
+#   endif
+# else // _LIBCPP_VERSION
+#   ifdef __cpp_lib_print
+#     error "__cpp_lib_print should not be defined because it is unimplemented in libc++!"
+#   endif
+# endif
+
 # ifndef __cpp_lib_quoted_string_io
 #   error "__cpp_lib_quoted_string_io should be defined in c++26"
 # endif
@@ -6438,8 +6499,8 @@
 # ifndef __cpp_lib_ranges
 #   error "__cpp_lib_ranges should be defined in c++26"
 # endif
-# if __cpp_lib_ranges != 202106L
-#   error "__cpp_lib_ranges should have the value 202106L in c++26"
+# if __cpp_lib_ranges != 202207L
+#   error "__cpp_lib_ranges should have the value 202207L in c++26"
 # endif
 
 # ifndef __cpp_lib_ranges_as_rvalue
@@ -6501,6 +6562,13 @@
 #   endif
 # endif
 
+# ifndef __cpp_lib_ranges_repeat
+#   error "__cpp_lib_ranges_repeat should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_repeat != 202207L
+#   error "__cpp_lib_ranges_repeat should have the value 202207L in c++26"
+# endif
+
 # if !defined(_LIBCPP_VERSION)
 #   ifndef __cpp_lib_ranges_slide
 #     error "__cpp_lib_ranges_slide should be defined in c++26"
@@ -6527,17 +6595,11 @@
 #   endif
 # endif
 
-# if !defined(_LIBCPP_VERSION)
-#   ifndef __cpp_lib_ranges_to_container
-#     error "__cpp_lib_ranges_to_container should be defined in c++26"
-#   endif
-#   if __cpp_lib_ranges_to_container != 202202L
-#     error "__cpp_lib_ranges_to_container should have the value 202202L in c++26"
-#   endif
-# else // _LIBCPP_VERSION
-#   ifdef __cpp_lib_ranges_to_container
-#     error "__cpp_lib_ranges_to_container should not be defined because it is unimplemented in libc++!"
-#   endif
+# ifndef __cpp_lib_ranges_to_container
+#   error "__cpp_lib_ranges_to_container should be defined in c++26"
+# endif
+# if __cpp_lib_ranges_to_container != 202202L
+#   error "__cpp_lib_ranges_to_container should have the value 202202L in c++26"
 # endif
 
 # if !defined(_LIBCPP_VERSION)

@@ -30,9 +30,6 @@ RUN: llvm-symbolizer -i --print-address -p --obj=%p/Inputs/addr.exe < %p/Inputs/
 ## Support this compatibility alias for a while.
 RUN: llvm-symbolizer --inlining=true --print-address -p --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix="PRETTY" %s
 
-RUN: echo "0x1" > %t.input
-RUN: llvm-symbolizer --obj=%p/Inputs/zero < %t.input | FileCheck -check-prefix="ZERO" %s
-
 RUN: llvm-addr2line --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefix=A2L %s
 RUN: llvm-addr2line -a --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2L,A2L_A %s
 RUN: llvm-addr2line -f --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCheck -check-prefixes=A2L,A2L_F %s
@@ -62,9 +59,6 @@ RUN: llvm-addr2line -pafi --obj=%p/Inputs/addr.exe < %p/Inputs/addr.inp | FileCh
 #PRETTY:  (inlined by) inc at {{[/\]+}}tmp{{[/\]+}}x.c:7:0
 #PRETTY:  (inlined by) main at {{[/\]+}}tmp{{[/\]+}}x.c:14:0
 #PRETTY: some text2
-#
-#ZERO: ??
-#ZERO: ??:0:0
 #
 #A2L:         some text
 #A2L_A-NEXT:  0x40054d

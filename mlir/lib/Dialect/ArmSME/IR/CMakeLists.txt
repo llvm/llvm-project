@@ -10,5 +10,7 @@ add_mlir_dialect_library(MLIRArmSMEDialect
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRLLVMDialect
+  MLIRSCFDialect
   MLIRSideEffectInterfaces
+  MLIRVectorDialect
 )

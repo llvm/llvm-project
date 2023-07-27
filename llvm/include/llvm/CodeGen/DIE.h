@@ -566,6 +566,7 @@ public:
 
   void push_back(T &N) { IntrusiveBackListBase::push_back(N); }
   void push_front(T &N) { IntrusiveBackListBase::push_front(N); }
+
   T &back() { return *static_cast<T *>(Last); }
   const T &back() const { return *static_cast<T *>(Last); }
   T &front() {
@@ -592,6 +593,25 @@ public:
     } while (IterNode != FirstNode);
 
     Other.Last = nullptr;
+  }
+
+  bool deleteNode(T &N) {
+    if (Last == &N) {
+      Last = Last->Next.getPointer();
+      Last->Next.setInt(true);
+      return true;
+    }
+
+    Node *cur = Last;
+    while (cur && cur->Next.getPointer()) {
+      if (cur->Next.getPointer() == &N) {
+        cur->Next.setPointer(cur->Next.getPointer()->Next.getPointer());
+        return true;
+      }
+      cur = cur->Next.getPointer();
+    }
+
+    return false;
   }
 
   class const_iterator;
@@ -723,9 +743,62 @@ public:
   }
   template <class T>
   value_iterator addValue(BumpPtrAllocator &Alloc, dwarf::Attribute Attribute,
-                    dwarf::Form Form, T &&Value) {
+                          dwarf::Form Form, T &&Value) {
     return addValue(Alloc, DIEValue(Attribute, Form, std::forward<T>(Value)));
   }
+
+  /* zr33: add method here */
+  template <class T>
+  bool replaceValue(BumpPtrAllocator &Alloc, dwarf::Attribute Attribute,
+                    dwarf::Attribute NewAttribute, dwarf::Form Form,
+                    T &&NewValue) {
+    for (llvm::DIEValue &val : values()) {
+      if (val.getAttribute() == Attribute) {
+        val = *new (Alloc)
+                  DIEValue(NewAttribute, Form, std::forward<T>(NewValue));
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  template <class T>
+  bool replaceValue(BumpPtrAllocator &Alloc, dwarf::Attribute Attribute,
+                    dwarf::Form Form, T &&NewValue) {
+    for (llvm::DIEValue &val : values()) {
+      if (val.getAttribute() == Attribute) {
+        val = *new (Alloc) DIEValue(Attribute, Form, std::forward<T>(NewValue));
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool replaceValue(BumpPtrAllocator &Alloc, dwarf::Attribute Attribute,
+                    dwarf::Form Form, DIEValue &NewValue) {
+    for (llvm::DIEValue &val : values()) {
+      if (val.getAttribute() == Attribute) {
+        val = NewValue;
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  bool deleteValue(dwarf::Attribute Attribute) {
+
+    for (auto &node : List) {
+      if (node.V.getAttribute() == Attribute) {
+        return List.deleteNode(node);
+      }
+    }
+
+    return false;
+  }
+  /* end */
 
   /// Take ownership of the nodes in \p Other, and append them to the back of
   /// the list.

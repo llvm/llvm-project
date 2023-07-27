@@ -9,7 +9,6 @@
 namespace llvm {
 class Function;
 class Instruction;
-class Value;
 class raw_ostream;
 } // namespace llvm
 class FunctionVarLocsBuilder;

@@ -31,8 +31,8 @@ class RISCVAsmBackend : public MCAsmBackend {
 public:
   RISCVAsmBackend(const MCSubtargetInfo &STI, uint8_t OSABI, bool Is64Bit,
                   const MCTargetOptions &Options)
-      : MCAsmBackend(support::little), STI(STI), OSABI(OSABI), Is64Bit(Is64Bit),
-        TargetOptions(Options) {
+      : MCAsmBackend(support::little, RISCV::fixup_riscv_relax), STI(STI),
+        OSABI(OSABI), Is64Bit(Is64Bit), TargetOptions(Options) {
     RISCVFeatures::validate(STI.getTargetTriple(), STI.getFeatureBits());
   }
   ~RISCVAsmBackend() override = default;
@@ -52,6 +52,10 @@ public:
                            const MCFixup &Fixup, const MCFragment *DF,
                            const MCValue &Target, uint64_t &Value,
                            bool &WasForced) override;
+
+  bool handleAddSubRelocations(const MCAsmLayout &Layout, const MCFragment &F,
+                               const MCFixup &Fixup, const MCValue &Target,
+                               uint64_t &FixedValue) const override;
 
   void applyFixup(const MCAssembler &Asm, const MCFixup &Fixup,
                   const MCValue &Target, MutableArrayRef<char> Data,

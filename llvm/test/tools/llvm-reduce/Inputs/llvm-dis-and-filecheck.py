@@ -25,7 +25,7 @@ filecheck_args.extend(sys.argv[3:-1])
 bitcode_file = sys.argv[-1]
 ir_file = bitcode_file + ".ll"
 
-disassemble = subprocess.Popen([llvm_dis, "-o", ir_file, bitcode_file])
+disassemble = subprocess.Popen([llvm_dis, "--preserve-ll-uselistorder", "-o", ir_file, bitcode_file])
 if os.path.exists(ir_file + ".0"):
     ir_file = ir_file + ".0"
 

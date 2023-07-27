@@ -438,6 +438,31 @@ void test_builtin_elementwise_log2(int i, float f, double d, float4 v, int3 iv, 
   // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
 }
 
+void test_builtin_elementwise_pow(int i, short s, double d, float4 v, int3 iv, unsigned3 uv, int *p) {
+  i = __builtin_elementwise_pow(p, d);
+  // expected-error@-1 {{arguments are of different types ('int *' vs 'double')}}
+
+  struct Foo foo = __builtin_elementwise_pow(i, i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_pow(i);
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 1}}
+
+  i = __builtin_elementwise_pow();
+  // expected-error@-1 {{too few arguments to function call, expected 2, have 0}}
+
+  i = __builtin_elementwise_pow(i, i, i);
+  // expected-error@-1 {{too many arguments to function call, expected 2, have 3}}
+
+  i = __builtin_elementwise_pow(v, iv);
+  // expected-error@-1 {{arguments are of different types ('float4' (vector of 4 'float' values) vs 'int3' (vector of 3 'int' values))}}
+
+  i = __builtin_elementwise_pow(uv, iv);
+  // expected-error@-1 {{arguments are of different types ('unsigned3' (vector of 3 'unsigned int' values) vs 'int3' (vector of 3 'int' values))}}
+  
+}
+
+
 void test_builtin_elementwise_roundeven(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
 
   struct Foo s = __builtin_elementwise_roundeven(f);
@@ -460,7 +485,6 @@ void test_builtin_elementwise_roundeven(int i, float f, double d, float4 v, int3
 }
 
 void test_builtin_elementwise_round(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
-
   struct Foo s = __builtin_elementwise_round(f);
   // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
 
@@ -482,6 +506,56 @@ void test_builtin_elementwise_round(int i, float f, double d, float4 v, int3 iv,
   // FIXME: Error should not mention integer
   _Complex float c1, c2;
   c1 = __builtin_elementwise_round(c1);
+  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
+}
+
+void test_builtin_elementwise_rint(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+  struct Foo s = __builtin_elementwise_rint(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_rint();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_rint(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_rint(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_rint(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_rint(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+
+  // FIXME: Error should not mention integer
+  _Complex float c1, c2;
+  c1 = __builtin_elementwise_rint(c1);
+  // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
+}
+
+void test_builtin_elementwise_nearbyint(int i, float f, double d, float4 v, int3 iv, unsigned u, unsigned4 uv) {
+  struct Foo s = __builtin_elementwise_nearbyint(f);
+  // expected-error@-1 {{initializing 'struct Foo' with an expression of incompatible type 'float'}}
+
+  i = __builtin_elementwise_nearbyint();
+  // expected-error@-1 {{too few arguments to function call, expected 1, have 0}}
+
+  i = __builtin_elementwise_nearbyint(i);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'int')}}
+
+  i = __builtin_elementwise_nearbyint(f, f);
+  // expected-error@-1 {{too many arguments to function call, expected 1, have 2}}
+
+  u = __builtin_elementwise_nearbyint(u);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned int')}}
+
+  uv = __builtin_elementwise_nearbyint(uv);
+  // expected-error@-1 {{1st argument must be a floating point type (was 'unsigned4' (vector of 4 'unsigned int' values))}}
+
+  // FIXME: Error should not mention integer
+  _Complex float c1, c2;
+  c1 = __builtin_elementwise_nearbyint(c1);
   // expected-error@-1 {{1st argument must be a vector, integer or floating point type (was '_Complex float')}}
 }
 

@@ -5,7 +5,7 @@
 ; Sign-extend
 ;
 
-define i32 @vscale_SExt_i8toi32() vscale_range(1, 127) {
+define i32 @vscale_SExt_i8toi32() vscale_range(1, 64) {
 ; CHECK-LABEL: @vscale_SExt_i8toi32(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.vscale.i32()

@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/string/memmove.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
-#include "src/string/memory_utils/memmove_implementations.h"
+#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/memory_utils/inline_memmove.h"
 #include <stddef.h> // size_t
 
 namespace __llvm_libc {

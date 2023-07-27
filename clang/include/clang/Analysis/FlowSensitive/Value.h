@@ -15,11 +15,11 @@
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE_VALUE_H
 
 #include "clang/AST/Decl.h"
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <utility>
 
@@ -34,18 +34,13 @@ class Value {
 public:
   enum class Kind {
     Integer,
-    Reference,
     Pointer,
     Struct,
 
-    // Synthetic boolean values are either atomic values or logical connectives.
+    // TODO: Top values should not be need to be type-specific.
     TopBool,
     AtomicBool,
-    Conjunction,
-    Disjunction,
-    Negation,
-    Implication,
-    Biconditional,
+    FormulaBool,
   };
 
   explicit Value(Kind ValKind) : ValKind(ValKind) {}
@@ -95,151 +90,68 @@ bool areEquivalentValues(const Value &Val1, const Value &Val2);
 
 /// Models a boolean.
 class BoolValue : public Value {
+  const Formula *F;
+
 public:
-  explicit BoolValue(Kind ValueKind) : Value(ValueKind) {}
+  explicit BoolValue(Kind ValueKind, const Formula &F)
+      : Value(ValueKind), F(&F) {}
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::TopBool ||
            Val->getKind() == Kind::AtomicBool ||
-           Val->getKind() == Kind::Conjunction ||
-           Val->getKind() == Kind::Disjunction ||
-           Val->getKind() == Kind::Negation ||
-           Val->getKind() == Kind::Implication ||
-           Val->getKind() == Kind::Biconditional;
+           Val->getKind() == Kind::FormulaBool;
   }
+
+  const Formula &formula() const { return *F; }
 };
 
-/// Models the trivially true formula, which is Top in the lattice of boolean
-/// formulas.
+/// A TopBoolValue represents a boolean that is explicitly unconstrained.
+///
+/// This is equivalent to an AtomicBoolValue that does not appear anywhere
+/// else in a system of formula.
+/// Knowing the value is unconstrained is useful when e.g. reasoning about
+/// convergence.
 class TopBoolValue final : public BoolValue {
 public:
-  TopBoolValue() : BoolValue(Kind::TopBool) {}
+  TopBoolValue(const Formula &F) : BoolValue(Kind::TopBool, F) {
+    assert(F.kind() == Formula::AtomRef);
+  }
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::TopBool;
   }
+
+  Atom getAtom() const { return formula().getAtom(); }
 };
 
 /// Models an atomic boolean.
-class AtomicBoolValue : public BoolValue {
+///
+/// FIXME: Merge this class into FormulaBoolValue.
+///        When we want to specify atom identity, use Atom.
+class AtomicBoolValue final : public BoolValue {
 public:
-  explicit AtomicBoolValue() : BoolValue(Kind::AtomicBool) {}
+  explicit AtomicBoolValue(const Formula &F) : BoolValue(Kind::AtomicBool, F) {
+    assert(F.kind() == Formula::AtomRef);
+  }
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::AtomicBool;
   }
+
+  Atom getAtom() const { return formula().getAtom(); }
 };
 
-/// Models a boolean conjunction.
-// FIXME: Consider representing binary and unary boolean operations similar
-// to how they are represented in the AST. This might become more pressing
-// when such operations need to be added for other data types.
-class ConjunctionValue : public BoolValue {
+/// Models a compound boolean formula.
+class FormulaBoolValue final : public BoolValue {
 public:
-  explicit ConjunctionValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
-      : BoolValue(Kind::Conjunction), LeftSubVal(LeftSubVal),
-        RightSubVal(RightSubVal) {}
-
-  static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Conjunction;
+  explicit FormulaBoolValue(const Formula &F)
+      : BoolValue(Kind::FormulaBool, F) {
+    assert(F.kind() != Formula::AtomRef && "For now, use AtomicBoolValue");
   }
 
-  /// Returns the left sub-value of the conjunction.
-  BoolValue &getLeftSubValue() const { return LeftSubVal; }
-
-  /// Returns the right sub-value of the conjunction.
-  BoolValue &getRightSubValue() const { return RightSubVal; }
-
-private:
-  BoolValue &LeftSubVal;
-  BoolValue &RightSubVal;
-};
-
-/// Models a boolean disjunction.
-class DisjunctionValue : public BoolValue {
-public:
-  explicit DisjunctionValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
-      : BoolValue(Kind::Disjunction), LeftSubVal(LeftSubVal),
-        RightSubVal(RightSubVal) {}
-
   static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Disjunction;
+    return Val->getKind() == Kind::FormulaBool;
   }
-
-  /// Returns the left sub-value of the disjunction.
-  BoolValue &getLeftSubValue() const { return LeftSubVal; }
-
-  /// Returns the right sub-value of the disjunction.
-  BoolValue &getRightSubValue() const { return RightSubVal; }
-
-private:
-  BoolValue &LeftSubVal;
-  BoolValue &RightSubVal;
-};
-
-/// Models a boolean negation.
-class NegationValue : public BoolValue {
-public:
-  explicit NegationValue(BoolValue &SubVal)
-      : BoolValue(Kind::Negation), SubVal(SubVal) {}
-
-  static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Negation;
-  }
-
-  /// Returns the sub-value of the negation.
-  BoolValue &getSubVal() const { return SubVal; }
-
-private:
-  BoolValue &SubVal;
-};
-
-/// Models a boolean implication.
-///
-/// Equivalent to `!LHS v RHS`.
-class ImplicationValue : public BoolValue {
-public:
-  explicit ImplicationValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
-      : BoolValue(Kind::Implication), LeftSubVal(LeftSubVal),
-        RightSubVal(RightSubVal) {}
-
-  static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Implication;
-  }
-
-  /// Returns the left sub-value of the implication.
-  BoolValue &getLeftSubValue() const { return LeftSubVal; }
-
-  /// Returns the right sub-value of the implication.
-  BoolValue &getRightSubValue() const { return RightSubVal; }
-
-private:
-  BoolValue &LeftSubVal;
-  BoolValue &RightSubVal;
-};
-
-/// Models a boolean biconditional.
-///
-/// Equivalent to `(LHS ^ RHS) v (!LHS ^ !RHS)`.
-class BiconditionalValue : public BoolValue {
-public:
-  explicit BiconditionalValue(BoolValue &LeftSubVal, BoolValue &RightSubVal)
-      : BoolValue(Kind::Biconditional), LeftSubVal(LeftSubVal),
-        RightSubVal(RightSubVal) {}
-
-  static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Biconditional;
-  }
-
-  /// Returns the left sub-value of the biconditional.
-  BoolValue &getLeftSubValue() const { return LeftSubVal; }
-
-  /// Returns the right sub-value of the biconditional.
-  BoolValue &getRightSubValue() const { return RightSubVal; }
-
-private:
-  BoolValue &LeftSubVal;
-  BoolValue &RightSubVal;
 };
 
 /// Models an integer.
@@ -250,23 +162,6 @@ public:
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::Integer;
   }
-};
-
-/// Models a dereferenced pointer. For example, a reference in C++ or an lvalue
-/// in C.
-class ReferenceValue final : public Value {
-public:
-  explicit ReferenceValue(StorageLocation &ReferentLoc)
-      : Value(Kind::Reference), ReferentLoc(ReferentLoc) {}
-
-  static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Reference;
-  }
-
-  StorageLocation &getReferentLoc() const { return ReferentLoc; }
-
-private:
-  StorageLocation &ReferentLoc;
 };
 
 /// Models a symbolic pointer. Specifically, any value of type `T*`.
@@ -285,35 +180,59 @@ private:
   StorageLocation &PointeeLoc;
 };
 
-/// Models a value of `struct` or `class` type, with a flat map of fields to
-/// child storage locations, containing all accessible members of base struct
-/// and class types.
+/// Models a value of `struct` or `class` type.
+/// In C++, prvalues of class type serve only a limited purpose: They can only
+/// be used to initialize a result object. It is not possible to access member
+/// variables or call member functions on a prvalue of class type.
+/// Correspondingly, `StructValue` also serves only two limited purposes:
+/// - It conveys a prvalue of class type from the place where the object is
+///   constructed to the result object that it initializes.
+///
+///   When creating a prvalue of class type, we already need a storage location
+///   for `this`, even though prvalues are otherwise not associated with storage
+///   locations. `StructValue` is therefore essentially a wrapper for a storage
+///   location, which is then used to set the storage location for the result
+///   object when we process the AST node for that result object.
+///
+///   For example:
+///      MyStruct S = MyStruct(3);
+///
+///   In this example, `MyStruct(3) is a prvalue, which is modeled as a
+///   `StructValue` that wraps an `AbstractStorageLocation`. This
+//    `AbstractStorageLocation` is then used as the storage location for `S`.
+///
+/// - It allows properties to be associated with an object of class type.
+///   Note that when doing so, you should avoid mutating the properties of an
+///   existing `StructValue` in place, as these changes would be visible to
+///   other `Environment`s that share the same `StructValue`. Instead, associate
+///   a new `StructValue` with the `AggregateStorageLocation` and set the
+///   properties on this new `StructValue`. (See also `refreshStructValue()` in
+///   DataflowEnvironment.h, which makes this easy.)
+///   Note also that this implies that it is common for the same
+///   `AggregateStorageLocation` to be associated with different `StructValue`s
+///   in different environments.
+/// Over time, we may eliminate `StructValue` entirely. See also the discussion
+/// here: https://reviews.llvm.org/D155204#inline-1503204
 class StructValue final : public Value {
 public:
-  StructValue() : StructValue(llvm::DenseMap<const ValueDecl *, Value *>()) {}
-
-  explicit StructValue(llvm::DenseMap<const ValueDecl *, Value *> Children)
-      : Value(Kind::Struct), Children(std::move(Children)) {}
+  explicit StructValue(AggregateStorageLocation &Loc)
+      : Value(Kind::Struct), Loc(Loc) {}
 
   static bool classof(const Value *Val) {
     return Val->getKind() == Kind::Struct;
   }
 
-  /// Returns the child value that is assigned for `D` or null if the child is
-  /// not initialized.
-  Value *getChild(const ValueDecl &D) const { return Children.lookup(&D); }
+  /// Returns the storage location that this `StructValue` is associated with.
+  AggregateStorageLocation &getAggregateLoc() const { return Loc; }
 
-  /// Assigns `Val` as the child value for `D`.
-  void setChild(const ValueDecl &D, Value &Val) { Children[&D] = &Val; }
-
-  llvm::iterator_range<
-      llvm::DenseMap<const ValueDecl *, Value *>::const_iterator>
-  children() const {
-    return {Children.begin(), Children.end()};
+  /// Convenience function that returns the child storage location for `Field`.
+  /// See also the documentation for `AggregateStorageLocation::getChild()`.
+  StorageLocation *getChild(const ValueDecl &Field) const {
+    return Loc.getChild(Field);
   }
 
 private:
-  llvm::DenseMap<const ValueDecl *, Value *> Children;
+  AggregateStorageLocation &Loc;
 };
 
 raw_ostream &operator<<(raw_ostream &OS, const Value &Val);

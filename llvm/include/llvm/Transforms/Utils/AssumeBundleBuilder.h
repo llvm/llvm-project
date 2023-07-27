@@ -22,7 +22,6 @@
 namespace llvm {
 class AssumeInst;
 class Function;
-class FunctionPass;
 class Instruction;
 class AssumptionCache;
 class DominatorTree;

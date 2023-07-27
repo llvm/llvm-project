@@ -69,8 +69,8 @@ llvm.comdat @__llvm_comdat {
   // CHECK: llvm.comdat_selector @any any
   llvm.comdat_selector @any any
 }
-// CHECK: llvm.mlir.global external @any() comdat(@__llvm_comdat::@any) {addr_space = 0 : i32} : i64
-llvm.mlir.global @any() comdat(@__llvm_comdat::@any) : i64
+// CHECK: llvm.mlir.global external @any() comdat(@__llvm_comdat::@any) {addr_space = 1 : i32} : i64
+llvm.mlir.global @any() comdat(@__llvm_comdat::@any) {addr_space = 1 : i32} : i64
 
 // CHECK-LABEL: references
 func.func @references() {

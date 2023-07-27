@@ -12,6 +12,7 @@
 
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/LiveVariables.h"
@@ -569,6 +570,11 @@ void MachineBasicBlock::printName(raw_ostream &os, unsigned printNameFlags,
       os << "bb_id " << *getBBID();
       hasAttributes = true;
     }
+    if (CallFrameSize != 0) {
+      os << (hasAttributes ? ", " : " (");
+      os << "call-frame-size " << CallFrameSize;
+      hasAttributes = true;
+    }
   }
 
   if (hasAttributes)
@@ -1098,6 +1104,7 @@ MachineBasicBlock *MachineBasicBlock::SplitCriticalEdge(
   DebugLoc DL;  // FIXME: this is nowhere
 
   MachineBasicBlock *NMBB = MF->CreateMachineBasicBlock();
+  NMBB->setCallFrameSize(Succ->getCallFrameSize());
 
   // Is there an indirect jump with jump table?
   bool ChangedIndirectJump = false;

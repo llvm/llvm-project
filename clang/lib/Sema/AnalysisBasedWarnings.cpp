@@ -2231,7 +2231,7 @@ public:
       unsigned FixItStrategy = 0; // For now we only have 'std::span' strategy
       const auto &FD = S.Diag(Variable->getLocation(),
                               diag::note_unsafe_buffer_variable_fixit_group);
-      
+
       FD << Variable << FixItStrategy;
       std::string AllVars = "";
       if (VarGroupForVD.size() > 1) {
@@ -2276,10 +2276,41 @@ public:
       for (const auto &F : Fixes)
         FD << F;
     }
+
+#ifndef NDEBUG
+    if (areDebugNotesRequested())
+      for (const DebugNote &Note: DebugNotesByVar[Variable])
+        S.Diag(Note.first, diag::note_safe_buffer_debug_mode) << Note.second;
+#endif
   }
 
   bool isSafeBufferOptOut(const SourceLocation &Loc) const override {
     return S.PP.isSafeBufferOptOut(S.getSourceManager(), Loc);
+  }
+
+  // Returns the text representation of clang::unsafe_buffer_usage attribute.
+  // `WSSuffix` holds customized "white-space"s, e.g., newline or whilespace
+  // characters.
+  std::string
+  getUnsafeBufferUsageAttributeTextAt(SourceLocation Loc,
+                                      StringRef WSSuffix = "") const override {
+    Preprocessor &PP = S.getPreprocessor();
+    TokenValue ClangUnsafeBufferUsageTokens[] = {
+        tok::l_square,
+        tok::l_square,
+        PP.getIdentifierInfo("clang"),
+        tok::coloncolon,
+        PP.getIdentifierInfo("unsafe_buffer_usage"),
+        tok::r_square,
+        tok::r_square};
+
+    StringRef MacroName;
+
+    // The returned macro (it returns) is guaranteed not to be function-like:
+    MacroName = PP.getLastMacroWithSpelling(Loc, ClangUnsafeBufferUsageTokens);
+    if (MacroName.empty())
+      MacroName = "[[clang::unsafe_buffer_usage]]";
+    return MacroName.str() + WSSuffix.str();
   }
 };
 } // namespace

@@ -62,7 +62,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
 //
 // RUN: %clang -### %s -fsyntax-only 2>&1       \
-// RUN:     --target=aarch64-none-none-eabi \
+// RUN:     --target=aarch64-none-elf \
 // RUN:   | FileCheck --check-prefix=CHECK-INIT-ARRAY %s
 
 // RUN: %clang -### %s -fsyntax-only 2>&1       \

@@ -50,7 +50,7 @@ define void @shuffle_ext_byone_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @shuffle_ext_byone_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: shuffle_ext_byone_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x1, x8]
@@ -93,7 +93,7 @@ define void @shuffle_ext_byone_v128i8(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v128i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl128
-; CHECK-NEXT:    mov w8, #127
+; CHECK-NEXT:    mov w8, #127 // =0x7f
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.b, xzr, x8
@@ -127,7 +127,7 @@ define void @shuffle_ext_byone_v256i8(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v256i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.b, vl256
-; CHECK-NEXT:    mov w8, #255
+; CHECK-NEXT:    mov w8, #255 // =0xff
 ; CHECK-NEXT:    ld1b { z0.b }, p0/z, [x0]
 ; CHECK-NEXT:    ld1b { z1.b }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.b, xzr, x8
@@ -215,7 +215,7 @@ define void @shuffle_ext_byone_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @shuffle_ext_byone_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: shuffle_ext_byone_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
@@ -254,7 +254,7 @@ define void @shuffle_ext_byone_v64i16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v64i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.h, xzr, x8
@@ -280,7 +280,7 @@ define void @shuffle_ext_byone_v128i16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v128i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
-; CHECK-NEXT:    mov w8, #127
+; CHECK-NEXT:    mov w8, #127 // =0x7f
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.h, xzr, x8
@@ -351,7 +351,7 @@ define void @shuffle_ext_byone_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @shuffle_ext_byone_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: shuffle_ext_byone_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
@@ -388,7 +388,7 @@ define void @shuffle_ext_byone_v32i32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v32i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.s, xzr, x8
@@ -410,7 +410,7 @@ define void @shuffle_ext_byone_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v64i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.s, xzr, x8
@@ -463,7 +463,7 @@ define void @shuffle_ext_byone_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @shuffle_ext_byone_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: shuffle_ext_byone_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
@@ -499,7 +499,7 @@ define void @shuffle_ext_byone_v16i64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v16i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
-; CHECK-NEXT:    mov w8, #15
+; CHECK-NEXT:    mov w8, #15 // =0xf
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.d, xzr, x8
@@ -519,7 +519,7 @@ define void @shuffle_ext_byone_v32i64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v32i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.d, xzr, x8
@@ -578,7 +578,7 @@ define void @shuffle_ext_byone_v16f16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @shuffle_ext_byone_v32f16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: shuffle_ext_byone_v32f16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x1, x8, lsl #1]
@@ -614,7 +614,7 @@ define void @shuffle_ext_byone_v64f16(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v64f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl64
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.h, xzr, x8
@@ -640,7 +640,7 @@ define void @shuffle_ext_byone_v128f16(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v128f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.h, vl128
-; CHECK-NEXT:    mov w8, #127
+; CHECK-NEXT:    mov w8, #127 // =0x7f
 ; CHECK-NEXT:    ld1h { z0.h }, p0/z, [x0]
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.h, xzr, x8
@@ -710,7 +710,7 @@ define void @shuffle_ext_byone_v8f32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @shuffle_ext_byone_v16f32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: shuffle_ext_byone_v16f32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x1, x8, lsl #2]
@@ -744,7 +744,7 @@ define void @shuffle_ext_byone_v32f32(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v32f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl32
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.s, xzr, x8
@@ -766,7 +766,7 @@ define void @shuffle_ext_byone_v64f32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v64f32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s, vl64
-; CHECK-NEXT:    mov w8, #63
+; CHECK-NEXT:    mov w8, #63 // =0x3f
 ; CHECK-NEXT:    ld1w { z0.s }, p0/z, [x0]
 ; CHECK-NEXT:    ld1w { z1.s }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.s, xzr, x8
@@ -818,7 +818,7 @@ define void @shuffle_ext_byone_v4f64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @shuffle_ext_byone_v8f64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: shuffle_ext_byone_v8f64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x1, x8, lsl #3]
@@ -851,7 +851,7 @@ define void @shuffle_ext_byone_v16f64(ptr %a, ptr %b) vscale_range(8,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v16f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl16
-; CHECK-NEXT:    mov w8, #15
+; CHECK-NEXT:    mov w8, #15 // =0xf
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.d, xzr, x8
@@ -871,7 +871,7 @@ define void @shuffle_ext_byone_v32f64(ptr %a, ptr %b) vscale_range(16,0) #0 {
 ; CHECK-LABEL: shuffle_ext_byone_v32f64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.d, vl32
-; CHECK-NEXT:    mov w8, #31
+; CHECK-NEXT:    mov w8, #31 // =0x1f
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x1]
 ; CHECK-NEXT:    whilels p1.d, xzr, x8
@@ -910,13 +910,12 @@ define void @shuffle_ext_invalid(ptr %a, ptr %b) vscale_range(2,0) #0 {
 ; CHECK-LABEL: shuffle_ext_invalid:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    stp x29, x30, [sp, #-16]! // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    sub x9, sp, #48
 ; CHECK-NEXT:    mov x29, sp
+; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    .cfi_def_cfa w29, 16
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
-; CHECK-NEXT:    sub x9, sp, #48
-; CHECK-NEXT:    and sp, x9, #0xffffffffffffffe0
 ; CHECK-NEXT:    ptrue p0.d, vl4
 ; CHECK-NEXT:    mov x8, sp
 ; CHECK-NEXT:    ld1d { z0.d }, p0/z, [x0]

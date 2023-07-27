@@ -30,6 +30,21 @@ GenericProgramPoint::~GenericProgramPoint() = default;
 
 AnalysisState::~AnalysisState() = default;
 
+void AnalysisState::addDependency(ProgramPoint dependent,
+                                  DataFlowAnalysis *analysis) {
+  auto inserted = dependents.insert({dependent, analysis});
+  (void)inserted;
+  DATAFLOW_DEBUG({
+    if (inserted) {
+      llvm::dbgs() << "Creating dependency between " << debugName << " of "
+                   << point << "\nand " << debugName << " on " << dependent
+                   << "\n";
+    }
+  });
+}
+
+void AnalysisState::dump() const { print(llvm::errs()); }
+
 //===----------------------------------------------------------------------===//
 // ProgramPoint
 //===----------------------------------------------------------------------===//
@@ -42,9 +57,9 @@ void ProgramPoint::print(raw_ostream &os) const {
   if (auto *programPoint = llvm::dyn_cast<GenericProgramPoint *>(*this))
     return programPoint->print(os);
   if (auto *op = llvm::dyn_cast<Operation *>(*this))
-    return op->print(os);
+    return op->print(os, OpPrintingFlags().skipRegions());
   if (auto value = llvm::dyn_cast<Value>(*this))
-    return value.print(os);
+    return value.print(os, OpPrintingFlags().skipRegions());
   return get<Block *>()->print(os);
 }
 
@@ -97,24 +112,8 @@ void DataFlowSolver::propagateIfChanged(AnalysisState *state,
     DATAFLOW_DEBUG(llvm::dbgs() << "Propagating update to " << state->debugName
                                 << " of " << state->point << "\n"
                                 << "Value: " << *state << "\n");
-    for (const WorkItem &item : state->dependents)
-      enqueue(item);
     state->onUpdate(this);
   }
-}
-
-void DataFlowSolver::addDependency(AnalysisState *state,
-                                   DataFlowAnalysis *analysis,
-                                   ProgramPoint point) {
-  auto inserted = state->dependents.insert({point, analysis});
-  (void)inserted;
-  DATAFLOW_DEBUG({
-    if (inserted) {
-      llvm::dbgs() << "Creating dependency between " << state->debugName
-                   << " of " << state->point << "\nand " << analysis->debugName
-                   << " on " << point << "\n";
-    }
-  });
 }
 
 //===----------------------------------------------------------------------===//
@@ -126,7 +125,7 @@ DataFlowAnalysis::~DataFlowAnalysis() = default;
 DataFlowAnalysis::DataFlowAnalysis(DataFlowSolver &solver) : solver(solver) {}
 
 void DataFlowAnalysis::addDependency(AnalysisState *state, ProgramPoint point) {
-  solver.addDependency(state, this, point);
+  state->addDependency(point, this);
 }
 
 void DataFlowAnalysis::propagateIfChanged(AnalysisState *state,

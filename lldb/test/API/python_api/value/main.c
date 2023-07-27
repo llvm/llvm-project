@@ -29,6 +29,13 @@ struct MyStruct
   int b;
 };
 
+struct MyBiggerStruct
+{
+  int a;
+  int b;
+  int c;
+};
+
 int main (int argc, char const *argv[])
 {
     uint32_t uinthex = 0xE0A35F10;
@@ -37,6 +44,7 @@ int main (int argc, char const *argv[])
     int i;
     MyInt a = 12345;
     struct MyStruct s = { 11, 22 };
+    struct MyBiggerStruct f = { 33, 44, 55 }; 
     int *my_int_ptr = &g_my_int;
     printf("my_int_ptr points to location %p\n", my_int_ptr);
     const char **str_ptr = days_of_week;

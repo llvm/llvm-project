@@ -487,6 +487,10 @@ public:
   /// forward slash (/) elsewhere.
   bool UseTargetPathSeparator = false;
 
+  // Indicates whether we should keep all nullptr checks for pointers
+  // received as a result of a standard operator new (-fcheck-new)
+  bool CheckNew = false;
+
   LangOptions();
 
   /// Set language defaults for the given input language and

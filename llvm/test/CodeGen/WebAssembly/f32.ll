@@ -13,6 +13,7 @@ declare float @llvm.floor.f32(float)
 declare float @llvm.trunc.f32(float)
 declare float @llvm.nearbyint.f32(float)
 declare float @llvm.rint.f32(float)
+declare float @llvm.roundeven.f32(float)
 declare float @llvm.fma.f32(float, float, float)
 
 define float @fadd32(float %x, float %y) {
@@ -160,6 +161,17 @@ define float @nearest32_via_rint(float %x) {
 ; CHECK-NEXT:    f32.nearest $push0=, $pop1
 ; CHECK-NEXT:    return $pop0
   %a = call float @llvm.rint.f32(float %x)
+  ret float %a
+}
+
+define float @nearest32_via_roundeven(float %x) {
+; CHECK-LABEL: nearest32_via_roundeven:
+; CHECK:         .functype nearest32_via_roundeven (f32) -> (f32)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push1=, 0
+; CHECK-NEXT:    f32.nearest $push0=, $pop1
+; CHECK-NEXT:    return $pop0
+  %a = call float @llvm.roundeven.f32(float %x)
   ret float %a
 }
 

@@ -16,6 +16,7 @@
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Stmt.h"
+#include "llvm/Support/Debug.h"
 
 namespace clang {
 
@@ -24,6 +25,18 @@ using DefMapTy = llvm::DenseMap<const VarDecl *, std::vector<const VarDecl *>>;
 /// The interface that lets the caller handle unsafe buffer usage analysis
 /// results by overriding this class's handle... methods.
 class UnsafeBufferUsageHandler {
+#ifndef NDEBUG
+public:
+  // A self-debugging facility that you can use to notify the user when
+  // suggestions or fixits are incomplete.
+  // Uses std::function to avoid computing the message when it won't
+  // actually be displayed.
+  using DebugNote = std::pair<SourceLocation, std::string>;
+  using DebugNoteList = std::vector<DebugNote>;
+  using DebugNoteByVar = std::map<const VarDecl *, DebugNoteList>;
+  DebugNoteByVar DebugNotesByVar;
+#endif
+
 public:
   UnsafeBufferUsageHandler() = default;
   virtual ~UnsafeBufferUsageHandler() = default;
@@ -43,17 +56,32 @@ public:
                                          const DefMapTy &VarGrpMap,
                                          FixItList &&Fixes) = 0;
 
+#ifndef NDEBUG
+public:
+  bool areDebugNotesRequested() {
+    DEBUG_WITH_TYPE("SafeBuffers", return true);
+    return false;
+  }
+
+  void addDebugNoteForVar(const VarDecl *VD, SourceLocation Loc,
+                          std::string Text) {
+    if (areDebugNotesRequested())
+      DebugNotesByVar[VD].push_back(std::make_pair(Loc, Text));
+  }
+
+  void clearDebugNotes() {
+    if (areDebugNotesRequested())
+      DebugNotesByVar.clear();
+  }
+#endif
+
+public:
   /// Returns a reference to the `Preprocessor`:
   virtual bool isSafeBufferOptOut(const SourceLocation &Loc) const = 0;
 
-  /// Returns the text indicating that the user needs to provide input there:
   virtual std::string
-  getUserFillPlaceHolder(StringRef HintTextToUser = "placeholder") const {
-    std::string s = std::string("<# ");
-    s += HintTextToUser;
-    s += " #>";
-    return s;
-  }
+  getUnsafeBufferUsageAttributeTextAt(SourceLocation Loc,
+                                      StringRef WSSuffix = "") const = 0;
 };
 
 // This function invokes the analysis and allows the caller to react to it

@@ -11,6 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 #include "mlir/Target/LLVMIR/Dialect/OpenMP/OpenMPToLLVMIRTranslation.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/OpenMP/OpenMPInterfaces.h"
 #include "mlir/IR/IRMapping.h"
@@ -1126,27 +1127,28 @@ convertOmpAtomicUpdate(omp::AtomicUpdateOp &opInst,
 
   // Convert values and types.
   auto &innerOpList = opInst.getRegion().front().getOperations();
-  if (innerOpList.size() != 2)
-    return opInst.emitError("exactly two operations are allowed inside an "
-                            "atomic update region while lowering to LLVM IR");
+  bool isRegionArgUsed{false}, isXBinopExpr{false};
+  llvm::AtomicRMWInst::BinOp binop;
+  mlir::Value mlirExpr;
+  // Find the binary update operation that uses the region argument
+  // and get the expression to update
+  for (Operation &innerOp : innerOpList) {
+    if (innerOp.getNumOperands() == 2) {
+      binop = convertBinOpToAtomic(innerOp);
+      if (!llvm::is_contained(innerOp.getOperands(),
+                              opInst.getRegion().getArgument(0)))
+        continue;
+      isRegionArgUsed = true;
+      isXBinopExpr = innerOp.getNumOperands() > 0 &&
+                     innerOp.getOperand(0) == opInst.getRegion().getArgument(0);
+      mlirExpr = (isXBinopExpr ? innerOp.getOperand(1) : innerOp.getOperand(0));
+      break;
+    }
+  }
+  if (!isRegionArgUsed)
+    return opInst.emitError("no atomic update operation with region argument"
+                            " as operand found inside atomic.update region");
 
-  Operation &innerUpdateOp = innerOpList.front();
-
-  if (innerUpdateOp.getNumOperands() != 2 ||
-      !llvm::is_contained(innerUpdateOp.getOperands(),
-                          opInst.getRegion().getArgument(0)))
-    return opInst.emitError(
-        "the update operation inside the region must be a binary operation and "
-        "that update operation must have the region argument as an operand");
-
-  llvm::AtomicRMWInst::BinOp binop = convertBinOpToAtomic(innerUpdateOp);
-
-  bool isXBinopExpr =
-      innerUpdateOp.getNumOperands() > 0 &&
-      innerUpdateOp.getOperand(0) == opInst.getRegion().getArgument(0);
-
-  mlir::Value mlirExpr = (isXBinopExpr ? innerUpdateOp.getOperand(1)
-                                       : innerUpdateOp.getOperand(0));
   llvm::Value *llvmExpr = moduleTranslation.lookupValue(mlirExpr);
   llvm::Value *llvmX = moduleTranslation.lookupValue(opInst.getX());
   llvm::Type *llvmXElementType = moduleTranslation.convertType(
@@ -1209,25 +1211,28 @@ convertOmpAtomicCapture(omp::AtomicCaptureOp atomicCaptureOp,
     isPostfixUpdate = atomicCaptureOp.getSecondOp() ==
                       atomicCaptureOp.getAtomicUpdateOp().getOperation();
     auto &innerOpList = atomicUpdateOp.getRegion().front().getOperations();
-    if (innerOpList.size() != 2)
+    bool isRegionArgUsed{false};
+    // Find the binary update operation that uses the region argument
+    // and get the expression to update
+    for (Operation &innerOp : innerOpList) {
+      if (innerOp.getNumOperands() == 2) {
+        binop = convertBinOpToAtomic(innerOp);
+        if (!llvm::is_contained(innerOp.getOperands(),
+                                atomicUpdateOp.getRegion().getArgument(0)))
+          continue;
+        isRegionArgUsed = true;
+        isXBinopExpr =
+            innerOp.getNumOperands() > 0 &&
+            innerOp.getOperand(0) == atomicUpdateOp.getRegion().getArgument(0);
+        mlirExpr =
+            (isXBinopExpr ? innerOp.getOperand(1) : innerOp.getOperand(0));
+        break;
+      }
+    }
+    if (!isRegionArgUsed)
       return atomicUpdateOp.emitError(
-          "exactly two operations are allowed inside an "
-          "atomic update region while lowering to LLVM IR");
-    Operation *innerUpdateOp = atomicUpdateOp.getFirstOp();
-    if (innerUpdateOp->getNumOperands() != 2 ||
-        !llvm::is_contained(innerUpdateOp->getOperands(),
-                            atomicUpdateOp.getRegion().getArgument(0)))
-      return atomicUpdateOp.emitError(
-          "the update operation inside the region must be a binary operation "
-          "and that update operation must have the region argument as an "
-          "operand");
-    binop = convertBinOpToAtomic(*innerUpdateOp);
-
-    isXBinopExpr = innerUpdateOp->getOperand(0) ==
-                   atomicUpdateOp.getRegion().getArgument(0);
-
-    mlirExpr = (isXBinopExpr ? innerUpdateOp->getOperand(1)
-                             : innerUpdateOp->getOperand(0));
+          "no atomic update operation with region argument"
+          " as operand found inside atomic.update region");
   }
 
   llvm::Value *llvmExpr = moduleTranslation.lookupValue(mlirExpr);
@@ -1644,6 +1649,14 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
 
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   StringRef parentName = opInst.getParentOfType<LLVM::LLVMFuncOp>().getName();
+
+  // Override parent name if early outlining function
+  if (auto earlyOutlineOp = llvm::dyn_cast<mlir::omp::EarlyOutliningInterface>(
+          opInst.getParentOfType<LLVM::LLVMFuncOp>().getOperation())) {
+    llvm::StringRef outlineParentName = earlyOutlineOp.getParentName();
+    parentName = outlineParentName.empty() ? parentName : outlineParentName;
+  }
+
   llvm::TargetRegionEntryInfo entryInfo;
 
   if (!getTargetEntryUniqueInfo(entryInfo, targetOp, parentName))
@@ -1657,6 +1670,43 @@ convertOmpTarget(Operation &opInst, llvm::IRBuilderBase &builder,
       inputs, bodyCB));
 
   return bodyGenStatus;
+}
+
+static LogicalResult
+convertDeclareTargetAttr(Operation *op,
+                         omp::DeclareTargetAttr declareTargetAttr,
+                         LLVM::ModuleTranslation &moduleTranslation) {
+  // Amend omp.declare_target by deleting the IR of the outlined functions
+  // created for target regions. They cannot be filtered out from MLIR earlier
+  // because the omp.target operation inside must be translated to LLVM, but the
+  // wrapper functions themselves must not remain at the end of the process.
+  // We know that functions where omp.declare_target does not match
+  // omp.is_target_device at this stage can only be wrapper functions because
+  // those that aren't are removed earlier as an MLIR transformation pass.
+  if (FunctionOpInterface funcOp = dyn_cast<FunctionOpInterface>(op)) {
+    if (auto offloadMod = dyn_cast<omp::OffloadModuleInterface>(
+            op->getParentOfType<ModuleOp>().getOperation())) {
+      bool isDeviceCompilation = offloadMod.getIsTargetDevice();
+      // FIXME: Temporarily disabled for host as it causes some issues when
+      // lowering while removing functions at the current time.
+      if (!isDeviceCompilation)
+        return success();
+      
+      omp::DeclareTargetDeviceType declareType =
+          declareTargetAttr.getDeviceType().getValue();
+
+      if ((isDeviceCompilation &&
+           declareType == omp::DeclareTargetDeviceType::host) ||
+          (!isDeviceCompilation &&
+           declareType == omp::DeclareTargetDeviceType::nohost)) {
+        llvm::Function *llvmFunc =
+            moduleTranslation.lookupFunction(funcOp.getName());
+        llvmFunc->dropAllReferences();
+        llvmFunc->eraseFromParent();
+      }
+    }
+  }
+  return success();
 }
 
 namespace {
@@ -1686,7 +1736,6 @@ public:
 LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
     Operation *op, NamedAttribute attribute,
     LLVM::ModuleTranslation &moduleTranslation) const {
-
   return llvm::TypeSwitch<Attribute, LogicalResult>(attribute.getValue())
       .Case([&](mlir::omp::FlagsAttr rtlAttr) {
         return convertFlagsAttr(op, rtlAttr, moduleTranslation);
@@ -1697,6 +1746,10 @@ LogicalResult OpenMPDialectLLVMIRTranslationInterface::amendOperation(
         ompBuilder->M.addModuleFlag(llvm::Module::Max, "openmp",
                                     versionAttr.getVersion());
         return success();
+      })
+      .Case([&](mlir::omp::DeclareTargetAttr declareTargetAttr) {
+        return convertDeclareTargetAttr(op, declareTargetAttr,
+                                        moduleTranslation);
       })
       .Default([&](Attribute attr) {
         // fall through for omp attributes that do not require lowering and/or

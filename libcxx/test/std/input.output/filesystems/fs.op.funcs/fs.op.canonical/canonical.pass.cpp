@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -20,6 +22,7 @@
 #include "assert_macros.h"
 #include "test_macros.h"
 #include "filesystem_test_helper.h"
+#include "../../class.path/path_helper.h"
 
 using namespace fs;
 

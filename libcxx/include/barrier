@@ -138,6 +138,9 @@ public:
     [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     arrival_token arrive(ptrdiff_t __update)
     {
+        _LIBCPP_ASSERT_UNCATEGORIZED(
+            __update <= __expected_, "update is greater than the expected count for the current barrier phase");
+
         auto const __old_phase = __phase_.load(memory_order_relaxed);
         for(; __update; --__update)
             if(__arrive_barrier_algorithm_base(__base_.get(), __old_phase)) {
@@ -205,7 +208,11 @@ public:
         auto const __old_phase = __phase.load(memory_order_relaxed);
         auto const __result = __arrived.fetch_sub(update, memory_order_acq_rel) - update;
         auto const new_expected = __expected.load(memory_order_relaxed);
-        if(0 == __result) {
+
+        _LIBCPP_ASSERT_UNCATEGORIZED(
+            update <= new_expected, "update is greater than the expected count for the current barrier phase");
+
+        if (0 == __result) {
             __completion();
             __arrived.store(new_expected, memory_order_relaxed);
             __phase.store(!__old_phase, memory_order_release);
@@ -261,7 +268,11 @@ public:
     {
         auto const __inc = __arrived_unit * update;
         auto const __old = __phase_arrived_expected.fetch_add(__inc, memory_order_acq_rel);
-        if((__old ^ (__old + __inc)) & __phase_bit) {
+
+        _LIBCPP_ASSERT_UNCATEGORIZED(
+            update <= __old, "update is greater than the expected count for the current barrier phase");
+
+        if ((__old ^ (__old + __inc)) & __phase_bit) {
             __phase_arrived_expected.fetch_add((__old & __expected_mask) << 32, memory_order_relaxed);
             __phase_arrived_expected.notify_all();
         }
@@ -298,8 +309,15 @@ public:
     }
 
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
-    barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
+    explicit barrier(ptrdiff_t __count, _CompletionF __completion = _CompletionF())
         : __b_(__count, _VSTD::move(__completion)) {
+        _LIBCPP_ASSERT_UNCATEGORIZED(
+            __count >= 0,
+            "barrier::barrier(ptrdiff_t, CompletionFunction): barrier cannot be initialized with a negative value");
+        _LIBCPP_ASSERT_UNCATEGORIZED(
+            __count <= max(),
+            "barrier::barrier(ptrdiff_t, CompletionFunction): barrier cannot be initialized with "
+            "a value greater than max()");
     }
 
     barrier(barrier const&) = delete;
@@ -308,6 +326,7 @@ public:
     [[__nodiscard__]] _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY
     arrival_token arrive(ptrdiff_t __update = 1)
     {
+        _LIBCPP_ASSERT_UNCATEGORIZED(__update > 0, "barrier:arrive must be called with a value greater than 0");
         return __b_.arrive(__update);
     }
     _LIBCPP_AVAILABILITY_SYNC _LIBCPP_INLINE_VISIBILITY

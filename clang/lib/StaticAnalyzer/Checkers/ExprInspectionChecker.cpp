@@ -393,8 +393,7 @@ void ExprInspectionChecker::checkDeadSymbols(SymbolReaper &SymReaper,
   ProgramStateRef State = C.getState();
   const MarkedSymbolsTy &Syms = State->get<MarkedSymbols>();
   ExplodedNode *N = C.getPredecessor();
-  for (auto I = Syms.begin(), E = Syms.end(); I != E; ++I) {
-    SymbolRef Sym = *I;
+  for (SymbolRef Sym : Syms) {
     if (!SymReaper.isDead(Sym))
       continue;
 

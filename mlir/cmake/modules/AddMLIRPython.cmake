@@ -174,12 +174,13 @@ function(_mlir_python_install_sources name source_root_dir destination)
     install(
       FILES "${source_root_dir}/${source_relative_path}"
       DESTINATION "${destination}/${dest_relative_dir}"
-      COMPONENT "${name}"
+      COMPONENT mlir-python-sources
     )
   endforeach()
-  get_target_export_arg(${name} MLIR export_to_mlirtargets UMBRELLA mlir-libraries)
+  get_target_export_arg(${name} MLIR export_to_mlirtargets
+    UMBRELLA mlir-python-sources)
   install(TARGETS ${name}
-    COMPONENT ${name}
+    COMPONENT mlir-python-sources
     ${export_to_mlirtargets}
   )
 endfunction()
@@ -271,6 +272,11 @@ endfunction()
 #   SOURCES: Same as declare_mlir_python_sources().
 #   SOURCES_GLOB: Same as declare_mlir_python_sources().
 #   DEPENDS: Additional dependency targets.
+#
+# TODO: Right now `TD_FILE` can't be the actual dialect tablegen file, since we
+#       use its path to determine where to place the generated python file. If
+#       we made the output path an additional argument here we could remove the
+#       need for the separate "wrapper" .td files
 function(declare_mlir_dialect_python_bindings)
   cmake_parse_arguments(ARG
     ""

@@ -33,7 +33,6 @@ class AAResults;
 class AllocaInst;
 class BasicBlock;
 class BlockFrequencyInfo;
-class CallGraph;
 class DebugInfoFinder;
 class DominatorTree;
 class Function;

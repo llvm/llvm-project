@@ -15,10 +15,9 @@ define void @passing2(i64 %str.0, i64 %str.1, i16 signext  %s, i32 %j, i8 signex
 ; CHECK-NEXT:    movq %rdi, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %ah, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    shrq $16, %rsi
-; CHECK-NEXT:    movb %sil, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    shrq $24, %rax
+; CHECK-NEXT:    shrq $16, %rax
 ; CHECK-NEXT:    movb %al, {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movb %ah, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movw %dx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movl %ecx, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    movb %r8b, {{[0-9]+}}(%rsp)

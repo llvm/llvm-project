@@ -10,7 +10,7 @@
 #define LLDB_SOURCE_PLUGINS_SYMBOLFILE_DWARF_APPLEDWARFINDEX_H
 
 #include "Plugins/SymbolFile/DWARF/DWARFIndex.h"
-#include "Plugins/SymbolFile/DWARF/HashedNameToDIE.h"
+#include "llvm/DebugInfo/DWARF/DWARFAcceleratorTable.h"
 
 namespace lldb_private {
 class AppleDWARFIndex : public DWARFIndex {
@@ -20,11 +20,11 @@ public:
          DWARFDataExtractor apple_namespaces, DWARFDataExtractor apple_types,
          DWARFDataExtractor apple_objc, DWARFDataExtractor debug_str);
 
-  AppleDWARFIndex(
-      Module &module, std::unique_ptr<DWARFMappedHash::MemoryTable> apple_names,
-      std::unique_ptr<DWARFMappedHash::MemoryTable> apple_namespaces,
-      std::unique_ptr<DWARFMappedHash::MemoryTable> apple_types,
-      std::unique_ptr<DWARFMappedHash::MemoryTable> apple_objc)
+  AppleDWARFIndex(Module &module,
+                  std::unique_ptr<llvm::AppleAcceleratorTable> apple_names,
+                  std::unique_ptr<llvm::AppleAcceleratorTable> apple_namespaces,
+                  std::unique_ptr<llvm::AppleAcceleratorTable> apple_types,
+                  std::unique_ptr<llvm::AppleAcceleratorTable> apple_objc)
       : DWARFIndex(module), m_apple_names_up(std::move(apple_names)),
         m_apple_namespaces_up(std::move(apple_namespaces)),
         m_apple_types_up(std::move(apple_types)),
@@ -62,10 +62,20 @@ public:
   void Dump(Stream &s) override;
 
 private:
-  std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_names_up;
-  std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_namespaces_up;
-  std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_types_up;
-  std::unique_ptr<DWARFMappedHash::MemoryTable> m_apple_objc_up;
+  std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_names_up;
+  std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_namespaces_up;
+  std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_types_up;
+  std::unique_ptr<llvm::AppleAcceleratorTable> m_apple_objc_up;
+
+  /// Search for entries whose name is `name` in `table`, calling `callback` for
+  /// each match. If `search_for_tag` is provided, ignore entries whose tag is
+  /// not `search_for_tag`. If `search_for_qualhash` is provided, ignore entries
+  /// whose qualified name hash does not match `search_for_qualhash`.
+  /// If `callback` returns false for an entry, the search is interrupted.
+  void SearchFor(const llvm::AppleAcceleratorTable &table, llvm::StringRef name,
+                 llvm::function_ref<bool(DWARFDIE die)> callback,
+                 std::optional<dw_tag_t> search_for_tag = std::nullopt,
+                 std::optional<uint32_t> search_for_qualhash = std::nullopt);
 };
 } // namespace lldb_private
 

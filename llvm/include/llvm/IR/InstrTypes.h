@@ -245,7 +245,7 @@ public:
 #include "llvm/IR/Instruction.def"
 
   static BinaryOperator *
-  CreateWithCopiedFlags(BinaryOps Opc, Value *V1, Value *V2, Instruction *CopyO,
+  CreateWithCopiedFlags(BinaryOps Opc, Value *V1, Value *V2, Value *CopyO,
                         const Twine &Name = "",
                         Instruction *InsertBefore = nullptr) {
     BinaryOperator *BO = Create(Opc, V1, V2, Name, InsertBefore);
@@ -1461,7 +1461,6 @@ public:
   /// type.
   void setCalledFunction(FunctionType *FTy, Value *Fn) {
     this->FTy = FTy;
-    assert(cast<PointerType>(Fn->getType())->isOpaqueOrPointeeTypeMatches(FTy));
     // This function doesn't mutate the return type, only the function
     // type. Seems broken, but I'm just gonna stick an assert in for now.
     assert(getType() == FTy->getReturnType());

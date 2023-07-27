@@ -18,7 +18,7 @@ for.cond:                                         ; preds = %for.cond, %entry
   %exitcond = icmp ne i32 %inc, 3, !dbg !23
   br i1 %exitcond, label %for.cond, label %for.end, !dbg !24, !llvm.loop !25
 
-; CHECK: call void @llvm.dbg.value(metadata i32 poison, metadata !16, metadata !DIExpression()), !dbg !17
+; CHECK: call void @llvm.dbg.value(metadata i32 undef, metadata !16, metadata !DIExpression()), !dbg !17
 ; CHECK-NEXT: %call = tail call i32 {{.*}} @patatino()
 for.end:                                          ; preds = %for.cond
   %call = tail call i32 (...) @patatino() #3, !dbg !27

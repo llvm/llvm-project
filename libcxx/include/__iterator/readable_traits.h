@@ -74,17 +74,6 @@ template<__has_member_value_type _Tp>
 struct indirectly_readable_traits<_Tp>
   : __cond_value_type<typename _Tp::value_type> {};
 
-template <class>
-struct iterator_traits;
-
-// Let `RI` be `remove_cvref_t<I>`. The type `iter_value_t<I>` denotes
-// `indirectly_readable_traits<RI>::value_type` if `iterator_traits<RI>` names a specialization
-// generated from the primary template, and `iterator_traits<RI>::value_type` otherwise.
-template <class _Ip>
-using iter_value_t = typename conditional_t<__is_primary_template<iterator_traits<remove_cvref_t<_Ip> > >::value,
-                                            indirectly_readable_traits<remove_cvref_t<_Ip> >,
-                                            iterator_traits<remove_cvref_t<_Ip> > >::value_type;
-
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD

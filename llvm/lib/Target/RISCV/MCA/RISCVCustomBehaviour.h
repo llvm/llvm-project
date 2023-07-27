@@ -31,11 +31,23 @@ public:
   static const StringRef DESC_NAME;
   static bool isDataValid(StringRef Data);
 
-  RISCVLMULInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {}
+  explicit RISCVLMULInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {}
 
   ~RISCVLMULInstrument() = default;
 
   uint8_t getLMUL() const;
+};
+
+class RISCVSEWInstrument : public Instrument {
+public:
+  static const StringRef DESC_NAME;
+  static bool isDataValid(StringRef Data);
+
+  explicit RISCVSEWInstrument(StringRef Data) : Instrument(DESC_NAME, Data) {}
+
+  ~RISCVSEWInstrument() = default;
+
+  uint8_t getSEW() const;
 };
 
 class RISCVInstrumentManager : public InstrumentManager {
@@ -48,6 +60,8 @@ public:
 
   /// Create a Instrument for RISC-V target
   UniqueInstrument createInstrument(StringRef Desc, StringRef Data) override;
+
+  SmallVector<UniqueInstrument> createInstruments(const MCInst &Inst) override;
 
   /// Using the Instrument, returns a SchedClassID to use instead of
   /// the SchedClassID that belongs to the MCI or the original SchedClassID.

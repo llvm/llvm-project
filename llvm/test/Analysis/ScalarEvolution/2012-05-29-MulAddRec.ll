@@ -18,7 +18,7 @@ declare void @use(i8 %x)
 ; CHECK: br label %for.body
 
 ; CHECK: for.body:
-; CHECK: %inc.9 = add i8 %inc.8, 1
+; CHECK: %inc.9 = add i8 %inc1, 10
 ; CHECK: %0 = add i8 %inc1, 10
 ; CHECK: br label %for.cond
 

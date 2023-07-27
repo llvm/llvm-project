@@ -31,6 +31,7 @@ namespace hlfir {
 
 class AssociateOp;
 class ElementalOp;
+class ElementalOpInterface;
 class ElementalAddrOp;
 class YieldElementOp;
 
@@ -197,6 +198,11 @@ public:
     return varIface ? varIface.isParameter() : false;
   }
 
+  bool isAllocatable() const {
+    auto varIface = getIfVariableInterface();
+    return varIface ? varIface.isAllocatable() : false;
+  }
+
   // Get the entity as an mlir SSA value containing all the shape, type
   // parameters and dynamic shape information.
   mlir::Value getBase() const { return *this; }
@@ -358,6 +364,11 @@ std::pair<mlir::Value, mlir::Value> genVariableFirBaseShapeAndParams(
 /// input entity type if it is scalar. Will crash if the entity is not a
 /// variable.
 mlir::Type getVariableElementType(hlfir::Entity variable);
+/// Get the entity type for an element of an array entity. Returns the
+/// input type if it is a scalar. If the entity is a variable, this
+/// is like getVariableElementType, otherwise, this will return a value
+/// type (that may be an hlfir.expr type).
+mlir::Type getEntityElementType(hlfir::Entity entity);
 
 using ElementalKernelGenerator = std::function<hlfir::Entity(
     mlir::Location, fir::FirOpBuilder &, mlir::ValueRange)>;
@@ -369,6 +380,7 @@ hlfir::ElementalOp genElementalOp(mlir::Location loc,
                                   mlir::Type elementType, mlir::Value shape,
                                   mlir::ValueRange typeParams,
                                   const ElementalKernelGenerator &genKernel,
+                                  bool isUnordered = false,
                                   mlir::Type exprType = mlir::Type{});
 
 /// Structure to describe a loop nest.
@@ -379,11 +391,14 @@ struct LoopNest {
 };
 
 /// Generate a fir.do_loop nest looping from 1 to extents[i].
+/// \p isUnordered specifies whether the loops in the loop nest
+/// are unordered.
 LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                     mlir::ValueRange extents);
+                     mlir::ValueRange extents, bool isUnordered = false);
 inline LoopNest genLoopNest(mlir::Location loc, fir::FirOpBuilder &builder,
-                            mlir::Value shape) {
-  return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape));
+                            mlir::Value shape, bool isUnordered = false) {
+  return genLoopNest(loc, builder, getIndexExtents(loc, builder, shape),
+                     isUnordered);
 }
 
 /// Inline the body of an hlfir.elemental at the current insertion point
@@ -396,17 +411,16 @@ hlfir::YieldElementOp inlineElementalOp(mlir::Location loc,
                                         hlfir::ElementalOp elemental,
                                         mlir::ValueRange oneBasedIndices);
 
-/// Inline the body of an hlfir.elemental without cloning the resulting
-/// hlfir.yield_element, and return the cloned operand of the
-/// hlfir.yield_element. The mapper must be provided to cover complex cases
-/// where the inlined elemental is not defined in the current context and uses
-/// values that have been cloned already.
-/// A callback is provided to indicate if an hlfir.apply inside the
-/// hlfir.elemental must be immediately replaced by the inlining of the
-/// applied hlfir.elemental.
+/// Inline the body of an hlfir.elemental or hlfir.elemental_addr without
+/// cloning the resulting hlfir.yield_element/hlfir.yield, and return the cloned
+/// operand of the hlfir.yield_element/hlfir.yield. The mapper must be provided
+/// to cover complex cases where the inlined elemental is not defined in the
+/// current context and uses values that have been cloned already. A callback is
+/// provided to indicate if an hlfir.apply inside the hlfir.elemental must be
+/// immediately replaced by the inlining of the applied hlfir.elemental.
 mlir::Value inlineElementalOp(
     mlir::Location loc, fir::FirOpBuilder &builder,
-    hlfir::ElementalOp elemental, mlir::ValueRange oneBasedIndices,
+    hlfir::ElementalOpInterface elemental, mlir::ValueRange oneBasedIndices,
     mlir::IRMapping &mapper,
     const std::function<bool(hlfir::ElementalOp)> &mustRecursivelyInline);
 

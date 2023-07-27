@@ -59,18 +59,26 @@ public:
     for (std::unique_ptr<DWARFUnit> &CU : Context.compile_units()) {
       Expected<llvm::DWARFAddressRangesVector> ARanges =
           CU->getUnitDIE().getAddressRanges();
-      if (ARanges) {
-        for (auto &Range : *ARanges) {
-          if (!isDeadAddressRange(Range.LowPC, Range.HighPC, CU->getVersion(),
-                                  Options.Tombstone, CU->getAddressByteSize()))
-            DWARFAddressRanges.insert({Range.LowPC, Range.HighPC}, 0);
+      if (!ARanges) {
+        llvm::consumeError(ARanges.takeError());
+        continue;
+      }
+
+      for (auto &Range : *ARanges) {
+        if (!isDeadAddressRange(Range.LowPC, Range.HighPC, CU->getVersion(),
+                                Options.Tombstone, CU->getAddressByteSize())) {
+          HasValidAddressRanges = true;
+          break;
         }
       }
+
+      if (HasValidAddressRanges)
+        break;
     }
   }
 
   // should be renamed into has valid address ranges
-  bool hasValidRelocs() override { return !DWARFAddressRanges.empty(); }
+  bool hasValidRelocs() override { return HasValidAddressRanges; }
 
   std::optional<int64_t>
   getSubprogramRelocAdjustment(const DWARFDie &DIE) override {
@@ -127,9 +135,7 @@ public:
     return false;
   }
 
-  RangesTy &getValidAddressRanges() override { return DWARFAddressRanges; };
-
-  void clear() override { DWARFAddressRanges.clear(); }
+  void clear() override {}
 
 protected:
   // returns true if specified address range is inside address ranges
@@ -197,9 +203,9 @@ protected:
   }
 
 private:
-  RangesTy DWARFAddressRanges;
   AddressRanges TextAddressRanges;
   const Options &Opts;
+  bool HasValidAddressRanges = false;
 };
 
 static bool knownByDWARFUtil(StringRef SecName) {

@@ -53,6 +53,18 @@ public:
         kindMap{getKindMapping(mod)} {
     setListener(this);
   }
+  explicit FirOpBuilder(mlir::OpBuilder &builder, fir::KindMapping kindMap,
+                        mlir::Operation *op)
+      : OpBuilder(builder), OpBuilder::Listener(), kindMap{std::move(kindMap)} {
+    setListener(this);
+    auto fmi = mlir::dyn_cast<mlir::arith::ArithFastMathInterface>(*op);
+    if (fmi) {
+      // Set the builder with FastMathFlags attached to the operation.
+      setFastMathFlags(fmi.getFastMathFlagsAttr().getValue());
+    }
+  }
+  FirOpBuilder(mlir::OpBuilder &builder, mlir::Operation *op)
+      : FirOpBuilder(builder, fir::getKindMapping(op), op) {}
 
   // The listener self-reference has to be updated in case of copy-construction.
   FirOpBuilder(const FirOpBuilder &other)
@@ -456,6 +468,20 @@ public:
   /// Get current FastMathFlags value.
   mlir::arith::FastMathFlags getFastMathFlags() const { return fastMathFlags; }
 
+  /// Stringify FastMathFlags set in a way
+  /// that the string may be used for mangling a function name.
+  /// If FastMathFlags are set to 'none', then the result is an empty
+  /// string.
+  std::string getFastMathFlagsString() {
+    mlir::arith::FastMathFlags flags = getFastMathFlags();
+    if (flags == mlir::arith::FastMathFlags::none)
+      return {};
+
+    std::string fmfString{mlir::arith::stringifyFastMathFlags(flags)};
+    std::replace(fmfString.begin(), fmfString.end(), ',', '_');
+    return fmfString;
+  }
+
   /// Dump the current function. (debug)
   LLVM_DUMP_METHOD void dumpFunc();
 
@@ -588,14 +614,18 @@ fir::ExtendedValue arraySectionElementToExtendedValue(
 /// assignment follows Fortran intrinsic assignment semantic (10.2.1.3).
 void genScalarAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
-                         const fir::ExtendedValue &rhs);
+                         const fir::ExtendedValue &rhs,
+                         bool needFinalization = false,
+                         bool isTemporaryLHS = false);
+
 /// Assign \p rhs to \p lhs. Both \p rhs and \p lhs must be scalar derived
 /// types. The assignment follows Fortran intrinsic assignment semantic for
 /// derived types (10.2.1.3 point 13).
 void genRecordAssignment(fir::FirOpBuilder &builder, mlir::Location loc,
                          const fir::ExtendedValue &lhs,
                          const fir::ExtendedValue &rhs,
-                         bool needFinalization = false);
+                         bool needFinalization = false,
+                         bool isTemporaryLHS = false);
 
 /// Builds and returns the type of a ragged array header used to cache mask
 /// evaluations. RaggedArrayHeader is defined in

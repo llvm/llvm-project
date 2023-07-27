@@ -507,8 +507,8 @@ func.func @omp_target_data (%if_cond : i1, %device : si32, %device_ptr: memref<i
     // CHECK: omp.target_data if(%[[VAL_0:.*]] : i1) device(%[[VAL_1:.*]] : si32) map((always, from -> %[[VAL_2:.*]] : memref<?xi32>))
     omp.target_data if(%if_cond : i1) device(%device : si32) map((always, from -> %map1 : memref<?xi32>)){}
 
-    // CHECK: omp.target_data use_device_ptr(%[[VAL_3:.*]] : memref<i32>) use_device_addr(%[[VAL_4:.*]] : memref<?xi32>) map((close, present, to -> %[[VAL_2:.*]] : memref<?xi32>))
-    omp.target_data use_device_ptr(%device_ptr : memref<i32>) use_device_addr(%device_addr : memref<?xi32>) map((close, present, to -> %map1 : memref<?xi32>)){}
+    // CHECK: omp.target_data map((close, present, to -> %[[VAL_2:.*]] : memref<?xi32>)) use_device_ptr(%[[VAL_3:.*]] : memref<i32>) use_device_addr(%[[VAL_4:.*]] : memref<?xi32>)
+    omp.target_data map((close, present, to -> %map1 : memref<?xi32>)) use_device_ptr(%device_ptr : memref<i32>) use_device_addr(%device_addr : memref<?xi32>) {}
 
     // CHECK: omp.target_data map((tofrom -> %[[VAL_2]] : memref<?xi32>), (alloc -> %[[VAL_5:.*]] : memref<?xi32>))
     omp.target_data map((tofrom -> %map1 : memref<?xi32>), (alloc -> %map2 : memref<?xi32>)){}
@@ -613,6 +613,76 @@ func.func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
     // CHECK: omp.terminator
     omp.terminator
   }
+  return
+}
+
+// CHECK-LABEL: omp_teams
+func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
+                     %data_var : memref<i32>) -> () {
+  // Test nesting inside of omp.target
+  omp.target {
+    // CHECK: omp.teams
+    omp.teams {
+      // CHECK: omp.terminator
+      omp.terminator
+    }
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.teams
+  omp.teams {
+    %0 = arith.constant 1 : i32
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test num teams.
+  // CHECK: omp.teams num_teams(%{{.+}} : i32 to %{{.+}} : i32)
+  omp.teams num_teams(%lb : i32 to %ub : i32) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // CHECK: omp.teams num_teams( to %{{.+}} : i32)
+  omp.teams num_teams(to %ub : i32) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test if.
+  // CHECK: omp.teams if(%{{.+}})
+  omp.teams if(%if_cond) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test thread limit.
+  // CHECK: omp.teams thread_limit(%{{.+}} : i32)
+  omp.teams thread_limit(%num_threads : i32) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test reduction.
+  %c1 = arith.constant 1 : i32
+  %0 = llvm.alloca %c1 x i32 : (i32) -> !llvm.ptr<f32>
+  // CHECK: omp.teams reduction(@add_f32 -> %{{.+}} : !llvm.ptr<f32>) {
+  omp.teams reduction(@add_f32 -> %0 : !llvm.ptr<f32>) {
+    %1 = arith.constant 2.0 : f32
+    // CHECK: omp.reduction %{{.+}}, %{{.+}}
+    omp.reduction %1, %0 : f32, !llvm.ptr<f32>
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
+  // Test allocate.
+  // CHECK: omp.teams allocate(%{{.+}} : memref<i32> -> %{{.+}} : memref<i32>)
+  omp.teams allocate(%data_var : memref<i32> -> %data_var : memref<i32>) {
+    // CHECK: omp.terminator
+    omp.terminator
+  }
+
   return
 }
 

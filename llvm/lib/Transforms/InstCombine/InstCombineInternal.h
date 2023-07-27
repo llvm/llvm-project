@@ -329,8 +329,7 @@ private:
   Instruction *optimizeBitCastFromPhi(CastInst &CI, PHINode *PN);
   Instruction *matchSAddSubSat(IntrinsicInst &MinMax1);
   Instruction *foldNot(BinaryOperator &I);
-
-  void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
+  Instruction *foldBinOpOfDisplacedShifts(BinaryOperator &I);
 
   /// Determine if a pair of casts can be replaced by a single cast.
   ///
@@ -393,11 +392,11 @@ public:
   /// without having to rewrite the CFG from within InstCombine.
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
     auto &Ctx = InsertAt->getContext();
-    new StoreInst(ConstantInt::getTrue(Ctx),
-                  PoisonValue::get(Type::getInt1PtrTy(Ctx)),
-                  InsertAt);
+    auto *SI = new StoreInst(ConstantInt::getTrue(Ctx),
+                             PoisonValue::get(Type::getInt1PtrTy(Ctx)),
+                             /*isVolatile*/ false, Align(1));
+    InsertNewInstBefore(SI, *InsertAt);
   }
-
 
   /// Combiner aware instruction erasure.
   ///
@@ -454,6 +453,12 @@ public:
   // (Binop1 (Binop2 (logic_shift X, Amt), Mask), (logic_shift Y, Amt))
   //    -> (BinOp (logic_shift (BinOp X, Y)), Mask)
   Instruction *foldBinOpShiftWithShift(BinaryOperator &I);
+
+  /// Tries to simplify binops of select and cast of the select condition.
+  ///
+  /// (Binop (cast C), (select C, T, F))
+  ///    -> (select C, C0, C1)
+  Instruction *foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I);
 
   /// This tries to simplify binary operations by factorizing out common terms
   /// (e. g. "(A*B)+(A*C)" -> "A*(B+C)").
@@ -660,6 +665,13 @@ public:
   Value *EvaluateInDifferentType(Value *V, Type *Ty, bool isSigned);
 
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
+
+  bool removeInstructionsBeforeUnreachable(Instruction &I);
+  bool handleUnreachableFrom(Instruction *I,
+                             SmallVectorImpl<BasicBlock *> &Worklist);
+  bool handlePotentiallyDeadBlocks(SmallVectorImpl<BasicBlock *> &Worklist);
+  bool handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
+  void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
 };
 
 class Negator final {

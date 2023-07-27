@@ -331,11 +331,6 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   //   |AABB| Address contents
   //   |AABB0000| Register contents [on little-endian hardware]
   //   |0000AABB| Register contents [on big-endian hardware]
-  if (src_len > RegisterValue::kMaxRegisterByteSize) {
-    error.SetErrorString("register too small to receive memory data");
-    return error;
-  }
-
   const size_t dst_len = reg_info->byte_size;
 
   if (src_len > dst_len) {
@@ -348,11 +343,11 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   }
 
   NativeProcessProtocol &process = m_thread.GetProcess();
-  uint8_t src[RegisterValue::kMaxRegisterByteSize];
+  RegisterValue::BytesContainer src(src_len);
 
   // Read the memory
   size_t bytes_read;
-  error = process.ReadMemory(src_addr, src, src_len, bytes_read);
+  error = process.ReadMemory(src_addr, src.data(), src_len, bytes_read);
   if (error.Fail())
     return error;
 
@@ -370,8 +365,8 @@ Status NativeRegisterContext::ReadRegisterValueFromMemory(
   // TODO: we might need to add a parameter to this function in case the byte
   // order of the memory data doesn't match the process. For now we are
   // assuming they are the same.
-  reg_value.SetFromMemoryData(*reg_info, src, src_len, process.GetByteOrder(),
-                              error);
+  reg_value.SetFromMemoryData(*reg_info, src.data(), src_len,
+                              process.GetByteOrder(), error);
 
   return error;
 }
@@ -385,21 +380,22 @@ Status NativeRegisterContext::WriteRegisterValueToMemory(
     return error;
   }
 
-  uint8_t dst[RegisterValue::kMaxRegisterByteSize];
+  RegisterValue::BytesContainer dst(dst_len);
   NativeProcessProtocol &process = m_thread.GetProcess();
 
   // TODO: we might need to add a parameter to this function in case the byte
   // order of the memory data doesn't match the process. For now we are
   // assuming they are the same.
   const size_t bytes_copied = reg_value.GetAsMemoryData(
-      *reg_info, dst, dst_len, process.GetByteOrder(), error);
+      *reg_info, dst.data(), dst_len, process.GetByteOrder(), error);
 
   if (error.Success()) {
     if (bytes_copied == 0) {
       error.SetErrorString("byte copy failed.");
     } else {
       size_t bytes_written;
-      error = process.WriteMemory(dst_addr, dst, bytes_copied, bytes_written);
+      error = process.WriteMemory(dst_addr, dst.data(), bytes_copied,
+                                  bytes_written);
       if (error.Fail())
         return error;
 

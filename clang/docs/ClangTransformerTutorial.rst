@@ -48,7 +48,7 @@ worthwhile somewhere between 100 and 500 files.
 Getting Started
 ---------------
 
-Patterns in Transformer are expressed with :doc:`clang's AST matchers <LibASTMatchers>`. 
+Patterns in Transformer are expressed with :doc:`clang's AST matchers <LibASTMatchers>`.
 Matchers are a language of combinators for describing portions of a clang
 Abstract Syntax Tree (AST). Since clang's AST includes complete type information
 (within the limits of single `Translation Unit (TU)`_,
@@ -69,7 +69,7 @@ Assume you have a style-guide rule which forbids functions from being named
 can express this a Transformer rewrite rule:
 
 .. code-block:: c++
-		
+
    makeRule(functionDecl(hasName("MkX").bind("fun"),
 	    noopEdit(node("fun")),
 	    cat("The name ``MkX`` is not allowed for functions; please rename"));
@@ -96,7 +96,7 @@ Now, let's extend this example to a *transformation*; specifically, the second
 example above:
 
 .. code-block:: c++
-		
+
    makeRule(declRefExpr(to(functionDecl(hasName("MkX")))),
 	    changeTo(cat("MakeX")),
 	    cat("MkX has been renamed MakeX"));
@@ -129,7 +129,7 @@ change that ignores the type of ``s``. That is, it will modify *any* method call
 where the method is named "size":
 
 .. code-block:: c++
-		
+
    llvm::StringRef s = "str";
    makeRule(
      cxxMemberCallExpr(
@@ -152,7 +152,7 @@ those on ``std::string``\ s. We can achieve this change simply by refining our
 matcher. The rest of the rule remains unchanged:
 
 .. code-block:: c++
-		
+
    llvm::StringRef s = "str";
    makeRule(
      cxxMemberCallExpr(
@@ -170,7 +170,7 @@ invocations. This scenario can arise, for example, if you want to collapse a
 substructure into its parent.
 
 .. code-block:: c++
-		
+
    llvm::StringRef e = "expr", m = "member";
    auto child_call = cxxMemberCallExpr(on(expr().bind(e)),
 				       callee(cxxMethodDecl(hasName("child"))));
@@ -190,7 +190,7 @@ construct a field/method access. In our example, the member access is expressed
 as:
 
 .. code-block:: c++
-		
+
    access(e, cat(member(m)))
 
 The first argument specifies the object being accessed and the second, a
@@ -199,7 +199,7 @@ name should be copied from the source -- specifically, the source range of ``m``
 member. To construct the method call, we would use this expression in ``cat``:
 
 .. code-block:: c++
-		
+
    cat(access(e, cat(member(m))), "()")
 
 Reference: ranges, stencils, edits, rules
@@ -280,7 +280,7 @@ specify the particular portion of code to be replaced, using the same
 in a function declaration with:
 
 .. code-block:: c++
-		
+
    makeRule(functionDecl(hasName("bad")).bind(f),
 	    changeTo(name(f), cat("good")),
 	    cat("bad is now good"));
@@ -298,7 +298,7 @@ For this, we provide an overload of ``makeRule`` that takes a list of edits,
 rather than just a single one. Our example might look like:
 
 .. code-block:: c++
-		
+
    makeRule(callExpr(...),
 	   {changeTo(node(arg0), cat(node(arg2))),
 	    changeTo(node(arg2), cat(node(arg0)))},
@@ -312,7 +312,7 @@ or a list of such. But, not all edits can be expressed as ``ASTEdit``\ s. So, we
 also support a very general signature for edit generators:
 
 .. code-block:: c++
-		
+
    using EditGenerator = MatchConsumer<llvm::SmallVector<Edit, 1>>;
 
 That is, an ``EditGenerator`` is function that maps a ``MatchResult`` to a set
@@ -340,7 +340,7 @@ empty compound statement and the other handles non-empty compound statements.
 With ``applyFirst``, these rules can be expressed compactly as:
 
 .. code-block:: c++
-		
+
    applyFirst({
      makeRule(compoundStmt(statementCountIs(0)).bind("empty"), ...),
      makeRule(compoundStmt().bind("non-empty"),...)

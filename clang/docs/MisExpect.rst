@@ -13,7 +13,7 @@ be incorrect for a variety of reasons: changes to the code base invalidate them
 silently, the developer mis-annotated them (e.g., using ``LIKELY`` instead of
 ``UNLIKELY``), or perhaps they assumed something incorrectly when they wrote
 the annotation. Regardless of why, it is useful to detect these situations so
-that the optimizer can make more useful decisions about the code. 
+that the optimizer can make more useful decisions about the code.
 
 MisExpect diagnostics are intended to help developers identify and address
 these situations, by comparing the branch weights added by the ``llvm.expect``
@@ -54,7 +54,7 @@ scripts in LLVM.
 
 .. option:: -fdiagnostic-misexpect-tolerance=N
 
-   Relaxes misexpect checking to tolerate profiling values within N% of the 
+   Relaxes misexpect checking to tolerate profiling values within N% of the
    expected branch weight. e.g., a value of ``N=5`` allows misexpect to check against
    ``0.95 * Threshold``
 
@@ -72,4 +72,3 @@ Sampling. MisExpect Diagnostics are compatible with all Profiling formats.
 +----------------+--------------------------------------------------------------------------------------+
 | Sampling       | Profiles collected through sampling with external tools, such as ``perf`` on Linux   |
 +----------------+--------------------------------------------------------------------------------------+
-

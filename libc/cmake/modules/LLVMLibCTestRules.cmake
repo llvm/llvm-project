@@ -148,8 +148,7 @@ function(create_libc_unittest fq_target_name)
     ${fq_build_target_name}
     PRIVATE
       ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-      ${LIBC_BUILD_DIR}/include
+      ${LIBC_INCLUDE_DIR}
   )
   target_compile_options(
     ${fq_build_target_name}
@@ -381,8 +380,7 @@ function(add_libc_fuzzer target_name)
     ${fq_target_name}
     PRIVATE
       ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-      ${LIBC_BUILD_DIR}/include
+      ${LIBC_INCLUDE_DIR}
   )
 
   target_link_libraries(${fq_target_name} PRIVATE 
@@ -512,20 +510,19 @@ function(add_integration_test test_name)
     ${fq_build_target_name}
     PRIVATE
       ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-      ${LIBC_BUILD_DIR}/include
+      ${LIBC_INCLUDE_DIR}
   )
   target_compile_options(${fq_build_target_name}
       PRIVATE -fpie -ffreestanding -fno-exceptions -fno-rtti ${INTEGRATION_TEST_COMPILE_OPTIONS})
   # The GPU build requires overriding the default CMake triple and architecture.
   if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
     target_compile_options(${fq_build_target_name} PRIVATE
-                           -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}
+                           -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE}
                            -flto --target=${LIBC_GPU_TARGET_TRIPLE})
   elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
     get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
     target_compile_options(${fq_build_target_name} PRIVATE
-                           ${nvptx_options} -fno-use-cxa-atexit
+                           -nogpulib ${nvptx_options} -fno-use-cxa-atexit
                            --target=${LIBC_GPU_TARGET_TRIPLE})
   endif()
 
@@ -571,11 +568,11 @@ set(LIBC_HERMETIC_TEST_COMPILE_OPTIONS ${LIBC_COMPILE_OPTIONS_DEFAULT}
 # The GPU build requires overriding the default CMake triple and architecture.
 if(LIBC_GPU_TARGET_ARCHITECTURE_IS_AMDGPU)
   list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto --target=${LIBC_GPU_TARGET_TRIPLE})
+       -nogpulib -mcpu=${LIBC_GPU_TARGET_ARCHITECTURE} -flto --target=${LIBC_GPU_TARGET_TRIPLE})
 elseif(LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
   get_nvptx_compile_options(nvptx_options ${LIBC_GPU_TARGET_ARCHITECTURE})
   list(APPEND LIBC_HERMETIC_TEST_COMPILE_OPTIONS
-       ${nvptx_options} -fno-use-cxa-atexit --target=${LIBC_GPU_TARGET_TRIPLE})
+       -nogpulib ${nvptx_options} -fno-use-cxa-atexit --target=${LIBC_GPU_TARGET_TRIPLE})
 endif()
 
 # Rule to add a hermetic test. A hermetic test is one whose executable is fully
@@ -677,8 +674,7 @@ function(add_libc_hermetic_test test_name)
     ${fq_build_target_name}
     PRIVATE
       ${LIBC_SOURCE_DIR}
-      ${LIBC_BUILD_DIR}
-      ${LIBC_BUILD_DIR}/include
+      ${LIBC_INCLUDE_DIR}
   )
   target_compile_options(${fq_build_target_name}
       PRIVATE ${LIBC_HERMETIC_TEST_COMPILE_OPTIONS} ${HERMETIC_TEST_COMPILE_OPTIONS})
@@ -747,7 +743,7 @@ function(add_libc_test test_name)
   if(LIBC_ENABLE_HERMETIC_TESTS AND NOT LIBC_TEST_UNIT_TEST_ONLY)
     add_libc_hermetic_test(${test_name}.__hermetic__ ${LIBC_TEST_UNPARSED_ARGUMENTS})
     get_fq_target_name(${test_name} fq_test_name)
-    if(TARGET ${fq_test_name}.__unit__)
+    if(TARGET ${fq_test_name}.__hermetic__ AND TARGET ${fq_test_name}.__unit__)
       # Tests like the file tests perform file operations on disk file. If we
       # don't chain up the unit test and hermetic test, then those tests will
       # step on each other's files.

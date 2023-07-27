@@ -43,7 +43,7 @@ protected:
     const std::vector<MCInst> Instructions = {MCInstBuilder(X86::NOOP)};
     FunctionFiller Sink(*MF, {X86::EAX});
     const auto Fill =
-        Repetitor->Repeat(Instructions, kMinInstructions, kLoopBodySize);
+        Repetitor->Repeat(Instructions, kMinInstructions, kLoopBodySize, false);
     Fill(Sink);
   }
 

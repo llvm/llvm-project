@@ -14,37 +14,6 @@ exit:
 }
 
 ; CHECK-LABEL: @unroll_default
-; CHECK:      add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
-; CHECK-NEXT: add
+; CHECK: add{{.*}}, 32
 ; CHECK-NEXT: icmp
 

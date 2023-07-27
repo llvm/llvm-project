@@ -47,8 +47,6 @@ class BPFAsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken DirectiveID) override;
-
   // "=" is used as assignment operator for assembly statment, so can't be used
   // for symbol assignment.
   bool equalIsAsmAssignment() override { return false; }
@@ -229,6 +227,7 @@ public:
         .Case("if", true)
         .Case("call", true)
         .Case("goto", true)
+        .Case("gotol", true)
         .Case("*", true)
         .Case("exit", true)
         .Case("lock", true)
@@ -243,13 +242,20 @@ public:
         .Case("u32", true)
         .Case("u16", true)
         .Case("u8", true)
+        .Case("s32", true)
+        .Case("s16", true)
+        .Case("s8", true)
         .Case("be64", true)
         .Case("be32", true)
         .Case("be16", true)
         .Case("le64", true)
         .Case("le32", true)
         .Case("le16", true)
+        .Case("bswap16", true)
+        .Case("bswap32", true)
+        .Case("bswap64", true)
         .Case("goto", true)
+        .Case("gotol", true)
         .Case("ll", true)
         .Case("skb", true)
         .Case("s", true)
@@ -515,8 +521,6 @@ bool BPFAsmParser::ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
   getParser().Lex();
   return false;
 }
-
-bool BPFAsmParser::ParseDirective(AsmToken DirectiveID) { return true; }
 
 extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFAsmParser() {
   RegisterMCAsmParser<BPFAsmParser> X(getTheBPFTarget());

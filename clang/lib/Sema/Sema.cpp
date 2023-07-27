@@ -1365,12 +1365,12 @@ void Sema::ActOnEndOfTranslationUnit() {
                   << DiagD << DiagRange;
             else
               Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
-                  << /*function*/ 0 << DiagD << DiagRange;
+                  << /*function=*/0 << DiagD << DiagRange;
           }
         } else {
           if (FD->getDescribedFunctionTemplate())
             Diag(DiagD->getLocation(), diag::warn_unused_template)
-                << /*function*/ 0 << DiagD << DiagRange;
+                << /*function=*/0 << DiagD << DiagRange;
           else
             Diag(DiagD->getLocation(), isa<CXXMethodDecl>(DiagD)
                                            ? diag::warn_unused_member_function
@@ -1389,10 +1389,10 @@ void Sema::ActOnEndOfTranslationUnit() {
         }
         if (DiagD->isReferenced()) {
           Diag(DiagD->getLocation(), diag::warn_unneeded_internal_decl)
-              << /*variable*/ 1 << DiagD << DiagRange;
+              << /*variable=*/1 << DiagD << DiagRange;
         } else if (DiagD->getDescribedVarTemplate()) {
           Diag(DiagD->getLocation(), diag::warn_unused_template)
-              << /*variable*/ 1 << DiagD << DiagRange;
+              << /*variable=*/1 << DiagD << DiagRange;
         } else if (DiagD->getType().isConstQualified()) {
           const SourceManager &SM = SourceMgr;
           if (SM.getMainFileID() != SM.getFileID(DiagD->getLocation()) ||
@@ -1880,8 +1880,9 @@ Sema::SemaDiagnosticBuilder
 Sema::targetDiag(SourceLocation Loc, unsigned DiagID, const FunctionDecl *FD) {
   FD = FD ? FD : getCurFunctionDecl();
   if (LangOpts.OpenMP)
-    return LangOpts.OpenMPIsDevice ? diagIfOpenMPDeviceCode(Loc, DiagID, FD)
-                                   : diagIfOpenMPHostCode(Loc, DiagID, FD);
+    return LangOpts.OpenMPIsTargetDevice
+               ? diagIfOpenMPDeviceCode(Loc, DiagID, FD)
+               : diagIfOpenMPHostCode(Loc, DiagID, FD);
   if (getLangOpts().CUDA)
     return getLangOpts().CUDAIsDevice ? CUDADiagIfDeviceCode(Loc, DiagID)
                                       : CUDADiagIfHostCode(Loc, DiagID);
@@ -2006,7 +2007,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
   };
 
   auto CheckType = [&](QualType Ty, bool IsRetTy = false) {
-    if (LangOpts.SYCLIsDevice || (LangOpts.OpenMP && LangOpts.OpenMPIsDevice) ||
+    if (LangOpts.SYCLIsDevice ||
+        (LangOpts.OpenMP && LangOpts.OpenMPIsTargetDevice) ||
         LangOpts.CUDAIsDevice)
       CheckDeviceType(Ty);
 
@@ -2048,20 +2050,8 @@ void Sema::checkTypeSupport(QualType Ty, SourceLocation Loc, ValueDecl *D) {
         targetDiag(D->getLocation(), diag::note_defined_here, FD) << D;
     }
 
-    // RISC-V vector builtin types (RISCVVTypes.def)
-    if (Ty->isRVVType(/* Bitwidth */ 64, /* IsFloat */ false) &&
-        !TI.hasFeature("zve64x"))
-      Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve64x";
-    if (Ty->isRVVType(/* Bitwidth */ 16, /* IsFloat */ true) &&
-        !TI.hasFeature("experimental-zvfh"))
-      Diag(Loc, diag::err_riscv_type_requires_extension, FD)
-          << Ty << "zvfh";
-    if (Ty->isRVVType(/* Bitwidth */ 32, /* IsFloat */ true) &&
-        !TI.hasFeature("zve32f"))
-      Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve32f";
-    if (Ty->isRVVType(/* Bitwidth */ 64, /* IsFloat */ true) &&
-        !TI.hasFeature("zve64d"))
-      Diag(Loc, diag::err_riscv_type_requires_extension, FD) << Ty << "zve64d";
+    if (Ty->isRVVType())
+      checkRVVTypeSupport(Ty, Loc, D);
 
     // Don't allow SVE types in functions without a SVE target.
     if (Ty->isSVESizelessBuiltinType() && FD && FD->hasBody()) {

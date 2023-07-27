@@ -8,10 +8,10 @@ define dso_local ptr @get_addr() nounwind {
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    suba.l #4, %sp
 ; CHECK-NEXT:    lea (_GLOBAL_OFFSET_TABLE_@GOTPCREL,%pc), %a0
-; CHECK-NEXT:    adda.l myvar@TLSLDM, %a0
+; CHECK-NEXT:    lea (myvar@TLSLDM,%a0), %a0
 ; CHECK-NEXT:    move.l %a0, (%sp)
 ; CHECK-NEXT:    jsr (__tls_get_addr@PLT,%pc)
-; CHECK-NEXT:    adda.l myvar@TLSLD, %a0
+; CHECK-NEXT:    lea (myvar@TLSLD,%a0), %a0
 ; CHECK-NEXT:    adda.l #4, %sp
 ; CHECK-NEXT:    rts
 entry:

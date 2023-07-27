@@ -78,14 +78,6 @@ ProgramStateRef clearErrnoState(ProgramStateRef State);
 /// declaration.
 bool isErrno(const Decl *D);
 
-/// Produce a textual description about how \c errno is allowed to be used
-/// (in a \c ErrnoCheckState).
-/// The returned string is insertable into a longer warning message in the form
-/// "the value 'errno' <...>".
-/// Currently only the \c errno_modeling::MustNotBeChecked state is supported,
-/// others are not used by the clients.
-const char *describeErrnoCheckState(ErrnoCheckState CS);
-
 /// Create a NoteTag that displays the message if the 'errno' memory region is
 /// marked as interesting, and resets the interestingness.
 const NoteTag *getErrnoNoteTag(CheckerContext &C, const std::string &Message);

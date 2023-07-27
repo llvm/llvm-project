@@ -17,9 +17,8 @@
 //
 // RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -emit-module-interface -o %t/N.pcm -DMODULE_INTERFACE -DNO_ERRORS
 // RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -fmodule-file=N=%t/N.pcm -verify
-// FIXME: Once we start importing "import" declarations properly, this should
-// be rejected (-verify should be added to the following line).
-// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -fmodule-file=N=%t/N.pcm -DNO_IMPORT
+//
+// RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -fmodule-file=N=%t/N.pcm -DNO_IMPORT -verify
 //
 // RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -emit-module-interface -o %t/N-no-M.pcm -DMODULE_INTERFACE -DNO_ERRORS -DNO_IMPORT
 // RUN: %clang_cc1 -std=c++20 %t/module-vs-module.cpp -fmodule-file=M=%t/M.pcm -fmodule-file=N=%t/N-no-M.pcm -verify

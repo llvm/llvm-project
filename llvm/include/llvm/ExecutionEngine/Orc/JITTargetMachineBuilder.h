@@ -13,11 +13,11 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_JITTARGETMACHINEBUILDER_H
 #define LLVM_EXECUTIONENGINE_ORC_JITTARGETMACHINEBUILDER_H
 
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/CodeGen.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Target/TargetOptions.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <memory>
 #include <optional>

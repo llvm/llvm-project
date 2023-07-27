@@ -51,8 +51,7 @@ static void insertCopyLoops(ImplicitLocOpBuilder &b, Value from, Value to) {
   ubs.reserve(lbs.size());
   steps.reserve(lbs.size());
   for (auto idx = 0; idx < rank; ++idx) {
-    ubs.push_back(b.createOrFold<memref::DimOp>(
-        from, b.create<arith::ConstantIndexOp>(idx)));
+    ubs.push_back(b.createOrFold<memref::DimOp>(from, idx));
     steps.push_back(one);
   }
 

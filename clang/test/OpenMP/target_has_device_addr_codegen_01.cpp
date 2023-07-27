@@ -144,7 +144,7 @@ int main() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1SC1Ev
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] comdat {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -154,7 +154,7 @@ int main() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1S3fooEv
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) #[[ATTR3:[0-9]+]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) #[[ATTR3:[0-9]+]] comdat {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[DOTOFFLOAD_BASEPTRS:%.*]] = alloca [5 x ptr], align 8
@@ -291,7 +291,7 @@ int main() {
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@_ZN1SC2Ev
-// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// CHECK-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) unnamed_addr #[[ATTR2]] comdat {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -399,7 +399,7 @@ int main() {
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_ZN1SC1Ev
-// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] comdat align 2 {
+// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) unnamed_addr #[[ATTR2:[0-9]+]] comdat {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -409,7 +409,7 @@ int main() {
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_ZN1S3fooEv
-// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) #[[ATTR3:[0-9]+]] comdat align 2 {
+// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) #[[ATTR3:[0-9]+]] comdat {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8
@@ -437,7 +437,7 @@ int main() {
 //
 //
 // SIMD-ONLY0-LABEL: define {{[^@]+}}@_ZN1SC2Ev
-// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) unnamed_addr #[[ATTR2]] comdat align 2 {
+// SIMD-ONLY0-SAME: (ptr noundef nonnull align 8 dereferenceable(40) [[THIS:%.*]]) unnamed_addr #[[ATTR2]] comdat {
 // SIMD-ONLY0-NEXT:  entry:
 // SIMD-ONLY0-NEXT:    [[THIS_ADDR:%.*]] = alloca ptr, align 8
 // SIMD-ONLY0-NEXT:    store ptr [[THIS]], ptr [[THIS_ADDR]], align 8

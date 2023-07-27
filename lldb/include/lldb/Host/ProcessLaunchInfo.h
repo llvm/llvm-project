@@ -68,7 +68,7 @@ public:
 
   void SetWorkingDirectory(const FileSpec &working_dir);
 
-  const char *GetProcessPluginName() const;
+  llvm::StringRef GetProcessPluginName() const;
 
   void SetProcessPluginName(llvm::StringRef plugin);
 

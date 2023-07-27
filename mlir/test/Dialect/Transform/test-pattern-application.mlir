@@ -131,7 +131,43 @@ transform.sequence failures(propagate) {
   transform.apply_patterns to %0 {
     transform.apply_patterns.transform.test_patterns
   } : !transform.any_op
+  // No marker should be printed.
   transform.test_print_remark_at_operand %1, "op was deleted" : !transform.any_op
+}
+
+// -----
+
+// CHECK-LABEL: func @erase_tracked_op_in_named_sequence()
+//       CHECK:   "test.container"() ({
+//  CHECK-NEXT:   ^bb0:
+//  CHECK-NEXT:   }) : () -> ()
+module {
+  func.func @erase_tracked_op_in_named_sequence() {
+    "test.container"() ({
+      // expected-remark @below {{matched op}}
+      %0 = "test.erase_op"() {replace_with_new_op = "test.foo"} : () -> (i32)
+    }) : () -> ()
+    return
+  }
+
+  module attributes { transform.with_named_sequence } {
+    transform.named_sequence @foo(%arg0: !transform.any_op {transform.readonly}) -> () {
+      transform.apply_patterns to %arg0 {
+        transform.apply_patterns.transform.test_patterns
+      } : !transform.any_op
+      transform.yield
+    }
+
+    transform.sequence failures(propagate) {
+    ^bb1(%arg1: !transform.any_op):
+      %0 = transform.structured.match ops{["test.container"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      %1 = transform.structured.match ops{["test.erase_op"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+      transform.test_print_remark_at_operand %1, "matched op" : !transform.any_op
+      include @foo failures(propagate) (%0) : (!transform.any_op) -> ()
+      // No marker should be printed.
+      transform.test_print_remark_at_operand %1, "op was deleted" : !transform.any_op
+    }
+  }
 }
 
 // -----
@@ -173,4 +209,25 @@ module {
       } : !transform.any_op
     }
   }
+}
+
+// -----
+
+// CHECK-LABEL: func @canonicalization_and_cse(
+//   CHECK-NOT:   memref.subview
+//   CHECK-NOT:   memref.copy
+func.func @canonicalization_and_cse(%m: memref<5xf32>) {
+  %c2 = arith.constant 2 : index
+  %s0 = memref.subview %m[1] [2] [1] : memref<5xf32> to memref<2xf32, strided<[1], offset: 1>>
+  %s1 = memref.subview %m[1] [%c2] [1] : memref<5xf32> to memref<?xf32, strided<[1], offset: 1>>
+  memref.copy %s0, %s1 : memref<2xf32, strided<[1], offset: 1>> to memref<?xf32, strided<[1], offset: 1>>
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %1 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.apply_patterns to %1 {
+    transform.apply_patterns.canonicalization
+  } {apply_cse} : !transform.any_op
 }

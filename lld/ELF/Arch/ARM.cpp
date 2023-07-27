@@ -49,7 +49,10 @@ public:
   void relocate(uint8_t *loc, const Relocation &rel,
                 uint64_t val) const override;
 };
+enum class CodeState { Data = 0, Thumb = 2, Arm = 4 };
 } // namespace
+
+static DenseMap<InputSection *, SmallVector<const Defined *, 0>> sectionMap{};
 
 ARM::ARM() {
   copyRel = R_ARM_COPY;
@@ -73,16 +76,24 @@ uint32_t ARM::calcEFlags() const {
   // The ABIFloatType is used by loaders to detect the floating point calling
   // convention.
   uint32_t abiFloatType = 0;
+
+  // Set the EF_ARM_BE8 flag in the ELF header, if ELF file is big-endian
+  // with BE-8 code.
+  uint32_t armBE8 = 0;
+
   if (config->armVFPArgs == ARMVFPArgKind::Base ||
       config->armVFPArgs == ARMVFPArgKind::Default)
     abiFloatType = EF_ARM_ABI_FLOAT_SOFT;
   else if (config->armVFPArgs == ARMVFPArgKind::VFP)
     abiFloatType = EF_ARM_ABI_FLOAT_HARD;
 
+  if (!config->isLE && config->armBe8)
+    armBE8 = EF_ARM_BE8;
+
   // We don't currently use any features incompatible with EF_ARM_EABI_VER5,
   // but we don't have any firm guarantees of conformance. Linux AArch64
   // kernels (as of 2016) require an EABI version to be set.
-  return EF_ARM_EABI_VER5 | abiFloatType;
+  return EF_ARM_EABI_VER5 | abiFloatType | armBE8;
 }
 
 RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
@@ -93,6 +104,10 @@ RelExpr ARM::getRelExpr(RelType type, const Symbol &s,
   case R_ARM_MOVT_ABS:
   case R_ARM_THM_MOVW_ABS_NC:
   case R_ARM_THM_MOVT_ABS:
+  case R_ARM_THM_ALU_ABS_G0_NC:
+  case R_ARM_THM_ALU_ABS_G1_NC:
+  case R_ARM_THM_ALU_ABS_G2_NC:
+  case R_ARM_THM_ALU_ABS_G3:
     return R_ABS;
   case R_ARM_THM_JUMP8:
   case R_ARM_THM_JUMP11:
@@ -674,6 +689,18 @@ void ARM::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
                   ((val << 4) & 0x7000) |    // imm3
                   (val & 0x00ff));           // imm8
     break;
+  case R_ARM_THM_ALU_ABS_G3:
+    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 24) & 0x00ff));
+    break;
+  case R_ARM_THM_ALU_ABS_G2_NC:
+    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 16) & 0x00ff));
+    break;
+  case R_ARM_THM_ALU_ABS_G1_NC:
+    write16(loc, (read16(loc) &~ 0x00ff) | ((val >> 8) & 0x00ff));
+    break;
+  case R_ARM_THM_ALU_ABS_G0_NC:
+    write16(loc, (read16(loc) &~ 0x00ff) | (val & 0x00ff));
+    break;
   case R_ARM_ALU_PC_G0:
     encodeAluGroup(loc, rel, val, 0, true);
     break;
@@ -851,6 +878,11 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
                             ((lo & 0x7000) >> 4) |  // imm3
                             (lo & 0x00ff));         // imm8
   }
+  case R_ARM_THM_ALU_ABS_G0_NC:
+  case R_ARM_THM_ALU_ABS_G1_NC:
+  case R_ARM_THM_ALU_ABS_G2_NC:
+  case R_ARM_THM_ALU_ABS_G3:
+    return read16(buf) & 0xff;
   case R_ARM_ALU_PC_G0:
   case R_ARM_ALU_PC_G0_NC:
   case R_ARM_ALU_PC_G1:
@@ -912,6 +944,117 @@ int64_t ARM::getImplicitAddend(const uint8_t *buf, RelType type) const {
   case R_ARM_JUMP_SLOT:
     // These relocations are defined as not having an implicit addend.
     return 0;
+  }
+}
+
+static bool isArmMapSymbol(const Symbol *b) {
+  return b->getName() == "$a" || b->getName().startswith("$a.");
+}
+
+static bool isThumbMapSymbol(const Symbol *s) {
+  return s->getName() == "$t" || s->getName().startswith("$t.");
+}
+
+static bool isDataMapSymbol(const Symbol *b) {
+  return b->getName() == "$d" || b->getName().startswith("$d.");
+}
+
+void elf::sortArmMappingSymbols() {
+  // For each input section make sure the mapping symbols are sorted in
+  // ascending order.
+  for (auto &kv : sectionMap) {
+    SmallVector<const Defined *, 0> &mapSyms = kv.second;
+    llvm::stable_sort(mapSyms, [](const Defined *a, const Defined *b) {
+      return a->value < b->value;
+    });
+  }
+}
+
+void elf::addArmInputSectionMappingSymbols() {
+  // Collect mapping symbols for every executable input sections.
+  // The linker generated mapping symbols for all the synthetic
+  // sections are adding into the sectionmap through the function
+  // addArmSyntheitcSectionMappingSymbol.
+  for (ELFFileBase *file : ctx.objectFiles) {
+    for (Symbol *sym : file->getLocalSymbols()) {
+      auto *def = dyn_cast<Defined>(sym);
+      if (!def)
+        continue;
+      if (!isArmMapSymbol(def) && !isDataMapSymbol(def) &&
+          !isThumbMapSymbol(def))
+        continue;
+      if (auto *sec = cast_if_present<InputSection>(def->section))
+        if (sec->flags & SHF_EXECINSTR)
+          sectionMap[sec].push_back(def);
+    }
+  }
+}
+
+// Synthetic sections are not backed by an ELF file where we can access the
+// symbol table, instead mapping symbols added to synthetic sections are stored
+// in the synthetic symbol table. Due to the presence of strip (--strip-all),
+// we can not rely on the synthetic symbol table retaining the mapping symbols.
+// Instead we record the mapping symbols locally.
+void elf::addArmSyntheticSectionMappingSymbol(Defined *sym) {
+  if (!isArmMapSymbol(sym) && !isDataMapSymbol(sym) && !isThumbMapSymbol(sym))
+    return;
+  if (auto *sec = cast_if_present<InputSection>(sym->section))
+    if (sec->flags & SHF_EXECINSTR)
+      sectionMap[sec].push_back(sym);
+}
+
+static void toLittleEndianInstructions(uint8_t *buf, uint64_t start,
+                                       uint64_t end, uint64_t width) {
+  CodeState curState = static_cast<CodeState>(width);
+  if (curState == CodeState::Arm)
+    for (uint64_t i = start; i < end; i += width)
+      write32le(buf + i, read32(buf + i));
+
+  if (curState == CodeState::Thumb)
+    for (uint64_t i = start; i < end; i += width)
+      write16le(buf + i, read16(buf + i));
+}
+
+// Arm BE8 big endian format requires instructions to be little endian, with
+// the initial contents big-endian. Convert the big-endian instructions to
+// little endian leaving literal data untouched. We use mapping symbols to
+// identify half open intervals of Arm code [$a, non $a) and Thumb code
+// [$t, non $t) and convert these to little endian a word or half word at a
+// time respectively.
+void elf::convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf) {
+  if (!sectionMap.contains(sec))
+    return;
+
+  SmallVector<const Defined *, 0> &mapSyms = sectionMap[sec];
+
+  if (mapSyms.empty())
+    return;
+
+  CodeState curState = CodeState::Data;
+  uint64_t start = 0, width = 0, size = sec->getSize();
+  for (auto &msym : mapSyms) {
+    CodeState newState = CodeState::Data;
+    if (isThumbMapSymbol(msym))
+      newState = CodeState::Thumb;
+    else if (isArmMapSymbol(msym))
+      newState = CodeState::Arm;
+
+    if (newState == curState)
+      continue;
+
+    if (curState != CodeState::Data) {
+      width = static_cast<uint64_t>(curState);
+      toLittleEndianInstructions(buf, start, msym->value, width);
+    }
+    start = msym->value;
+    curState = newState;
+  }
+
+  // Passed last mapping symbol, may need to reverse
+  // up to end of section.
+  if (curState != CodeState::Data) {
+    width = static_cast<uint64_t>(curState);
+    toLittleEndianInstructions(buf, start, size, width);
   }
 }
 
@@ -1090,6 +1233,22 @@ void elf::processArmCmseSymbols() {
   });
 }
 
+class elf::ArmCmseSGVeneer {
+public:
+  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
+                  std::optional<uint64_t> addr = std::nullopt)
+      : sym(sym), acleSeSym(acleSeSym), entAddr{addr} {}
+  static const size_t size{ACLESESYM_SIZE};
+  const std::optional<uint64_t> getAddr() const { return entAddr; };
+
+  Symbol *sym;
+  Symbol *acleSeSym;
+  uint64_t offset = 0;
+
+private:
+  const std::optional<uint64_t> entAddr;
+};
+
 ArmCmseSGSection::ArmCmseSGSection()
     : SyntheticSection(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
                        llvm::ELF::SHT_PROGBITS,
@@ -1140,13 +1299,20 @@ void ArmCmseSGSection::addSGVeneer(Symbol *acleSeSym, Symbol *sym) {
     ss = make<ArmCmseSGVeneer>(sym, acleSeSym);
     ++newEntries;
   }
-  ss->parent = this;
-  sgSections.emplace_back(ss);
+  sgVeneers.emplace_back(ss);
 }
 
 void ArmCmseSGSection::writeTo(uint8_t *buf) {
-  for (ArmCmseSGVeneer *s : sgSections)
-    s->writeTo(buf + s->outSecOff - getVA());
+  for (ArmCmseSGVeneer *s : sgVeneers) {
+    uint8_t *p = buf + s->offset;
+    write16(p + 0, 0xe97f); // SG
+    write16(p + 2, 0xe97f);
+    write16(p + 4, 0xf000); // B.W S
+    write16(p + 6, 0xb000);
+    target->relocateNoSym(p + 4, R_ARM_THM_JUMP24,
+                          s->acleSeSym->getVA() -
+                              (getVA() + s->offset + s->size));
+  }
 }
 
 void ArmCmseSGSection::addMappingSymbol() {
@@ -1154,26 +1320,25 @@ void ArmCmseSGSection::addMappingSymbol() {
 }
 
 size_t ArmCmseSGSection::getSize() const {
-  if (sgSections.empty())
+  if (sgVeneers.empty())
     return (impLibMaxAddr ? impLibMaxAddr - getVA() : 0) + newEntries * entsize;
 
   return entries.size() * entsize;
 }
 
 void ArmCmseSGSection::finalizeContents() {
-  if (sgSections.empty())
+  if (sgVeneers.empty())
     return;
 
   auto it =
-      std::stable_partition(sgSections.begin(), sgSections.end(),
+      std::stable_partition(sgVeneers.begin(), sgVeneers.end(),
                             [](auto *i) { return i->getAddr().has_value(); });
-  std::sort(sgSections.begin(), it, [](auto *a, auto *b) {
+  std::sort(sgVeneers.begin(), it, [](auto *a, auto *b) {
     return a->getAddr().value() < b->getAddr().value();
   });
-
   // This is the partition of the veneers with fixed addresses.
-  uint64_t addr = (*sgSections.begin())->getAddr().has_value()
-                      ? (*sgSections.begin())->getAddr().value()
+  uint64_t addr = (*sgVeneers.begin())->getAddr().has_value()
+                      ? (*sgVeneers.begin())->getAddr().value()
                       : getVA();
   // Check if the start address of '.gnu.sgstubs' correspond to the
   // linker-synthesized veneer with the lowest address.
@@ -1182,34 +1347,13 @@ void ArmCmseSGSection::finalizeContents() {
     return;
   }
 
-  for (ArmCmseSGVeneer *s : sgSections) {
-    if (!s->getAddr().has_value())
-      break;
-    s->outSecOff = s->getAddr().value() & ~1;
-    Defined(s->file, StringRef(), s->sym->binding, s->sym->stOther,
-            s->sym->type, (s->outSecOff - getVA()) | 1, entsize, this)
+  for (size_t i = 0; i < sgVeneers.size(); ++i) {
+    ArmCmseSGVeneer *s = sgVeneers[i];
+    s->offset = i * s->size;
+    Defined(file, StringRef(), s->sym->binding, s->sym->stOther, s->sym->type,
+            s->offset | 1, s->size, this)
         .overwrite(*s->sym);
   }
-  // This is the partition of veneers newly synthesized by the linker.
-  size_t off = std::max(getVA(), impLibMaxAddr);
-  for (ArmCmseSGVeneer *s : llvm::reverse(sgSections)) {
-    if (s->getAddr().has_value())
-      break;
-    s->outSecOff = off & ~1;
-    Defined(s->file, StringRef(), s->sym->binding, s->sym->stOther,
-            s->sym->type, (s->outSecOff - getVA()) | 1, entsize, this)
-        .overwrite(*s->sym);
-    off += s->entsize;
-  }
-}
-
-void ArmCmseSGVeneer::writeTo(uint8_t *buf) {
-  write16(buf + 0, 0xe97f); // SG
-  write16(buf + 2, 0xe97f);
-  write16(buf + 4, 0xf000); // B.W S
-  write16(buf + 6, 0xb000);
-  target->relocateNoSym(buf + 4, R_ARM_THM_JUMP24,
-                        acleSeSym->getVA() - getVA() - 8);
 }
 
 // Write the CMSE import library to disk.

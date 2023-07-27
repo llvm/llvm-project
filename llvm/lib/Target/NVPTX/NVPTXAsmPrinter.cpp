@@ -272,6 +272,10 @@ bool NVPTXAsmPrinter::lowerOperand(const MachineOperand &MO,
       MCOp = MCOperand::createExpr(
         NVPTXFloatMCExpr::createConstantFPHalf(Val, OutContext));
       break;
+    case Type::BFloatTyID:
+      MCOp = MCOperand::createExpr(
+          NVPTXFloatMCExpr::createConstantBFPHalf(Val, OutContext));
+      break;
     case Type::FloatTyID:
       MCOp = MCOperand::createExpr(
         NVPTXFloatMCExpr::createConstantFPSingle(Val, OutContext));
@@ -330,6 +334,11 @@ MCOperand NVPTXAsmPrinter::GetSymbolRef(const MCSymbol *Symbol) {
   return MCOperand::createExpr(Expr);
 }
 
+static bool ShouldPassAsArray(Type *Ty) {
+  return Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128) ||
+         Ty->isHalfTy() || Ty->isBFloatTy();
+}
+
 void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
   const DataLayout &DL = getDataLayout();
   const NVPTXSubtarget &STI = TM.getSubtarget<NVPTXSubtarget>(*F);
@@ -341,11 +350,11 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
 
   if (Ty->getTypeID() == Type::VoidTyID)
     return;
-
   O << " (";
 
   if (isABI) {
-    if (Ty->isFloatingPointTy() || (Ty->isIntegerTy() && !Ty->isIntegerTy(128))) {
+    if ((Ty->isFloatingPointTy() || Ty->isIntegerTy()) &&
+        !ShouldPassAsArray(Ty)) {
       unsigned size = 0;
       if (auto *ITy = dyn_cast<IntegerType>(Ty)) {
         size = ITy->getBitWidth();
@@ -353,16 +362,12 @@ void NVPTXAsmPrinter::printReturnValStr(const Function *F, raw_ostream &O) {
         assert(Ty->isFloatingPointTy() && "Floating point type expected here");
         size = Ty->getPrimitiveSizeInBits();
       }
-      // PTX ABI requires all scalar return values to be at least 32
-      // bits in size.  fp16 normally uses .b16 as its storage type in
-      // PTX, so its size must be adjusted here, too.
       size = promoteScalarArgumentSize(size);
-
       O << ".param .b" << size << " func_retval0";
     } else if (isa<PointerType>(Ty)) {
       O << ".param .b" << TLI->getPointerTy(DL).getSizeInBits()
         << " func_retval0";
-    } else if (Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128)) {
+    } else if (ShouldPassAsArray(Ty)) {
       unsigned totalsz = DL.getTypeAllocSize(Ty);
       unsigned retAlignment = 0;
       if (!getAlign(*F, 0, retAlignment))
@@ -468,6 +473,7 @@ void NVPTXAsmPrinter::emitFunctionEntryLabel() {
   CurrentFnSym->print(O, MAI);
 
   emitFunctionParamList(F, O);
+  O << "\n";
 
   if (isKernelFunction(*F))
     emitKernelFunctionDirectives(*F, O);
@@ -618,6 +624,7 @@ void NVPTXAsmPrinter::emitDeclaration(const Function *F, raw_ostream &O) {
   getSymbol(F)->print(O, MAI);
   O << "\n";
   emitFunctionParamList(F, O);
+  O << "\n";
   if (shouldEmitPTXNoReturn(F, TM))
     O << ".noreturn";
   O << ";\n";
@@ -785,10 +792,12 @@ void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
 }
 
 bool NVPTXAsmPrinter::doInitialization(Module &M) {
-  if (M.alias_size()) {
-    report_fatal_error("Module has aliases, which NVPTX does not support.");
-    return true; // error
-  }
+  const NVPTXTargetMachine &NTM = static_cast<const NVPTXTargetMachine &>(TM);
+  const NVPTXSubtarget &STI =
+      *static_cast<const NVPTXSubtarget *>(NTM.getSubtargetImpl());
+  if (M.alias_size() && (STI.getPTXVersion() < 63 || STI.getSmVersion() < 30))
+    report_fatal_error(".alias requires PTX version >= 6.3 and sm_30");
+
   if (!isEmptyXXStructor(M.getNamedGlobal("llvm.global_ctors")) &&
       !LowerCtorDtor) {
     report_fatal_error(
@@ -843,6 +852,34 @@ void NVPTXAsmPrinter::emitGlobals(const Module &M) {
   OS2 << '\n';
 
   OutStreamer->emitRawText(OS2.str());
+}
+
+void NVPTXAsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
+  SmallString<128> Str;
+  raw_svector_ostream OS(Str);
+
+  MCSymbol *Name = getSymbol(&GA);
+  const Function *F = dyn_cast<Function>(GA.getAliasee());
+  if (!F || isKernelFunction(*F))
+    report_fatal_error("NVPTX aliasee must be a non-kernel function");
+
+  if (GA.hasLinkOnceLinkage() || GA.hasWeakLinkage() ||
+      GA.hasAvailableExternallyLinkage() || GA.hasCommonLinkage())
+    report_fatal_error("NVPTX aliasee must not be '.weak'");
+
+  OS << "\n";
+  emitLinkageDirective(F, OS);
+  OS << ".func ";
+  printReturnValStr(F, OS);
+  OS << Name->getName();
+  emitFunctionParamList(F, OS);
+  if (shouldEmitPTXNoReturn(F, TM))
+    OS << "\n.noreturn";
+  OS << ";\n";
+
+  OS << ".alias " << Name->getName() << ", " << F->getName() << ";\n";
+
+  OutStreamer->emitRawText(OS.str());
 }
 
 void NVPTXAsmPrinter::emitHeader(Module &M, raw_ostream &O,
@@ -900,6 +937,16 @@ bool NVPTXAsmPrinter::doFinalization(Module &M) {
     emitGlobals(M);
     GlobalsEmitted = true;
   }
+
+  // If we have any aliases we emit them at the end.
+  SmallVector<GlobalAlias *> AliasesToRemove;
+  for (GlobalAlias &Alias : M.aliases()) {
+    emitGlobalAlias(M, Alias);
+    AliasesToRemove.push_back(&Alias);
+  }
+
+  for (GlobalAlias *A : AliasesToRemove)
+    A->eraseFromParent();
 
   // call doFinalization
   bool ret = AsmPrinter::doFinalization(M);
@@ -1355,8 +1402,10 @@ NVPTXAsmPrinter::getPTXFundamentalTypeStr(Type *Ty, bool useB4PTR) const {
     }
     break;
   }
+  case Type::BFloatTyID:
   case Type::HalfTyID:
-    // fp16 is stored as .b16 for compatibility with pre-sm_53 PTX assembly.
+    // fp16 and bf16 are stored as .b16 for compatibility with pre-sm_53
+    // PTX assembly.
     return "b16";
   case Type::FloatTyID:
     return "f32";
@@ -1458,7 +1507,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
   bool hasImageHandles = STI.hasImageHandles();
 
   if (F->arg_empty() && !F->isVarArg()) {
-    O << "()\n";
+    O << "()";
     return;
   }
 
@@ -1510,7 +1559,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     };
 
     if (!PAL.hasParamAttr(paramIndex, Attribute::ByVal)) {
-      if (Ty->isAggregateType() || Ty->isVectorTy() || Ty->isIntegerTy(128)) {
+      if (ShouldPassAsArray(Ty)) {
         // Just print .param .align <a> .b8 .param[size];
         // <a>  = optimal alignment for the element type; always multiple of
         //        PAL.getParamAlignment
@@ -1581,12 +1630,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
       } else if (PTy) {
         assert(PTySizeInBits && "Invalid pointer size");
         sz = PTySizeInBits;
-      } else if (Ty->isHalfTy())
-        // PTX ABI requires all scalar parameters to be at least 32
-        // bits in size.  fp16 normally uses .b16 as its storage type
-        // in PTX, so its size must be adjusted here, too.
-        sz = 32;
-      else
+      } else
         sz = Ty->getPrimitiveSizeInBits();
       if (isABI)
         O << "\t.param .b" << sz << " ";
@@ -1657,7 +1701,7 @@ void NVPTXAsmPrinter::emitFunctionParamList(const Function *F, raw_ostream &O) {
     O << TLI->getParamName(F, /* vararg */ -1) << "[]";
   }
 
-  O << "\n)\n";
+  O << "\n)";
 }
 
 void NVPTXAsmPrinter::setAndEmitFunctionVirtualRegisters(

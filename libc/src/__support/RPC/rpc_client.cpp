@@ -16,8 +16,10 @@ namespace rpc {
 Client client;
 
 /// Externally visible symbol to signify the usage of an RPC client to
-/// whomever needs to run the server.
-extern "C" [[gnu::visibility("protected")]] const bool __llvm_libc_rpc = false;
+/// whomever needs to run the server as well as provide a way to initialize
+/// the client with a copy..
+extern "C" [[gnu::visibility("protected")]] void *__llvm_libc_rpc_client =
+    &client;
 
 } // namespace rpc
 } // namespace __llvm_libc

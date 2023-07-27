@@ -76,27 +76,6 @@ lldb_private::formatters::GetSecondValueOfLibCXXCompressedPair(
   return value;
 }
 
-bool lldb_private::formatters::LibcxxOptionalSummaryProvider(
-    ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  ValueObjectSP valobj_sp(valobj.GetNonSyntheticValue());
-  if (!valobj_sp)
-    return false;
-
-  // An optional either contains a value or not, the member __engaged_ is
-  // a bool flag, it is true if the optional has a value and false otherwise.
-  ValueObjectSP engaged_sp(valobj_sp->GetChildMemberWithName("__engaged_"));
-
-  if (!engaged_sp)
-    return false;
-
-  llvm::StringRef engaged_as_cstring(
-      engaged_sp->GetValueAsUnsigned(0) == 1 ? "true" : "false");
-
-  stream.Printf(" Has Value=%s ", engaged_as_cstring.data());
-
-  return true;
-}
-
 bool lldb_private::formatters::LibcxxFunctionSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
 
@@ -338,7 +317,7 @@ bool lldb_private::formatters::LibCxxMapIteratorSyntheticFrontEnd::Update() {
         //        +-----------------------------+
         //
         CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
-            ConstString(),
+            llvm::StringRef(),
             {{"ptr0",
               ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
              {"ptr1",
@@ -503,7 +482,7 @@ bool lldb_private::formatters::LibCxxUnorderedMapIteratorSyntheticFrontEnd::
     //         +-----------------------------+
     //
     CompilerType tree_node_type = ast_ctx->CreateStructForIdentifier(
-        ConstString(),
+        llvm::StringRef(),
         {{"__next_",
           ast_ctx->GetBasicType(lldb::eBasicTypeVoid).GetPointerType()},
          {"__hash_", ast_ctx->GetBasicType(lldb::eBasicTypeUnsignedLongLong)},
@@ -607,11 +586,13 @@ lldb_private::formatters::LibcxxSharedPtrSyntheticFrontEnd::GetChildAtIndex(
   if (idx == 1) {
     if (auto ptr_sp = valobj_sp->GetChildMemberWithName("__ptr_")) {
       Status status;
-      auto value_sp = ptr_sp->Dereference(status);
+      auto value_type_sp =
+            valobj_sp->GetCompilerType()
+              .GetTypeTemplateArgument(0).GetPointerType();
+      ValueObjectSP cast_ptr_sp = ptr_sp->Cast(value_type_sp);
+      ValueObjectSP value_sp = cast_ptr_sp->Dereference(status);
       if (status.Success()) {
-        auto value_type_sp =
-            valobj_sp->GetCompilerType().GetTypeTemplateArgument(0);
-        return value_sp->Cast(value_type_sp);
+        return value_sp;
       }
     }
   }

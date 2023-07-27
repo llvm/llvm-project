@@ -66,13 +66,9 @@ getOrCreateOperandsMatchingResultTypes(OpBuilder &b, Operation *op) {
       continue;
 
     // Extract static / dynamic shape mix from the first operand.
-    Value firstOperand = operands.front();
-    auto rankedTensorType = cast<RankedTensorType>(t);
-    auto staticShape = llvm::to_vector<4>(rankedTensorType.getShape());
-    auto dynamicShape = linalg::createDynamicDimensions(b, loc, firstOperand);
-
     res.push_back(b.create<tensor::EmptyOp>(
-        loc, staticShape, rankedTensorType.getElementType(), dynamicShape));
+        loc, tensor::getMixedSizes(b, loc, operands.front()),
+        cast<RankedTensorType>(t).getElementType()));
   }
   return res;
 }

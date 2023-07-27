@@ -155,7 +155,7 @@ static llvm::StringRef filenameWithoutExtension(llvm::StringRef Path) {
 
 BackgroundQueue::Task BackgroundIndex::indexFileTask(std::string Path) {
   std::string Tag = filenameWithoutExtension(Path).str();
-  uint64_t Key = llvm::xxHash64(Path);
+  uint64_t Key = llvm::xxh3_64bits(Path);
   BackgroundQueue::Task T([this, Path(std::move(Path))] {
     std::optional<WithContext> WithProvidedContext;
     if (ContextProvider)

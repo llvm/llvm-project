@@ -15,6 +15,7 @@
 #include <__filesystem/directory_entry.h>
 #include <__filesystem/directory_options.h>
 #include <__filesystem/path.h>
+#include <__iterator/default_sentinel.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/shared_ptr.h>
 #include <__ranges/enable_borrowed_range.h>
@@ -27,7 +28,7 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+#if !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -114,6 +115,14 @@ public:
   _LIBCPP_INLINE_VISIBILITY
   void disable_recursion_pending() { __rec_ = false; }
 
+#  if _LIBCPP_STD_VER >= 20
+
+  _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const noexcept {
+    return *this == recursive_directory_iterator();
+  }
+
+#  endif
+
 private:
   _LIBCPP_EXPORTED_FROM_ABI recursive_directory_iterator(const path& __p, directory_options __opt, error_code* __ec);
   _LIBCPP_EXPORTED_FROM_ABI const directory_entry& __dereference() const;
@@ -169,6 +178,6 @@ inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::recursive_directory_i
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 #endif // _LIBCPP___FILESYSTEM_RECURSIVE_DIRECTORY_ITERATOR_H

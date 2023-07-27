@@ -998,6 +998,18 @@ multiclass FMA_INST {
     FMA_TUPLE<"_rn_ftz_relu_f16", int_nvvm_fma_rn_ftz_relu_f16, Int16Regs,
       [hasPTX<70>, hasSM<80>]>,
 
+    FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, Int16Regs, [hasPTX<70>, hasSM<80>]>,
+    FMA_TUPLE<"_rn_ftz_bf16", int_nvvm_fma_rn_ftz_bf16, Int16Regs,
+      [hasPTX<70>, hasSM<80>]>,
+    FMA_TUPLE<"_rn_sat_bf16", int_nvvm_fma_rn_sat_bf16, Int16Regs,
+      [hasPTX<70>, hasSM<80>]>,
+    FMA_TUPLE<"_rn_ftz_sat_bf16", int_nvvm_fma_rn_ftz_sat_bf16, Int16Regs,
+      [hasPTX<70>, hasSM<80>]>,
+    FMA_TUPLE<"_rn_relu_bf16", int_nvvm_fma_rn_relu_bf16, Int16Regs,
+      [hasPTX<70>, hasSM<80>]>,
+    FMA_TUPLE<"_rn_ftz_relu_bf16", int_nvvm_fma_rn_ftz_relu_bf16, Int16Regs,
+      [hasPTX<70>, hasSM<80>]>,
+
     FMA_TUPLE<"_rn_f16x2", int_nvvm_fma_rn_f16x2, Int32Regs,
       [hasPTX<42>, hasSM<53>]>,
     FMA_TUPLE<"_rn_ftz_f16x2", int_nvvm_fma_rn_ftz_f16x2, Int32Regs,
@@ -1010,11 +1022,6 @@ multiclass FMA_INST {
       [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_ftz_relu_f16x2", int_nvvm_fma_rn_ftz_relu_f16x2,
       Int32Regs, [hasPTX<70>, hasSM<80>]>,
-
-    FMA_TUPLE<"_rn_bf16", int_nvvm_fma_rn_bf16, Int16Regs, [hasPTX<70>, hasSM<80>]>,
-    FMA_TUPLE<"_rn_relu_bf16", int_nvvm_fma_rn_relu_bf16, Int16Regs,
-      [hasPTX<70>, hasSM<80>]>,
-
     FMA_TUPLE<"_rn_bf16x2", int_nvvm_fma_rn_bf16x2, Int32Regs,
       [hasPTX<70>, hasSM<80>]>,
     FMA_TUPLE<"_rn_relu_bf16x2", int_nvvm_fma_rn_relu_bf16x2, Int32Regs,
@@ -2207,10 +2214,6 @@ defm INT_PTX_LDU_G_v2i16_ELE
   : VLDU_G_ELE_V2<"v2.u16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
 defm INT_PTX_LDU_G_v2i32_ELE
   : VLDU_G_ELE_V2<"v2.u32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
-defm INT_PTX_LDU_G_v2f16_ELE
-  : VLDU_G_ELE_V2<"v2.b16 \t{{$dst1, $dst2}}, [$src];", Int16Regs>;
-defm INT_PTX_LDU_G_v2f16x2_ELE
-  : VLDU_G_ELE_V2<"v2.b32 \t{{$dst1, $dst2}}, [$src];", Int32Regs>;
 defm INT_PTX_LDU_G_v2f32_ELE
   : VLDU_G_ELE_V2<"v2.f32 \t{{$dst1, $dst2}}, [$src];", Float32Regs>;
 defm INT_PTX_LDU_G_v2i64_ELE

@@ -280,17 +280,13 @@ void MallocOverflowSecurityChecker::OutputPossibleOverflows(
   c.Visit(mgr.getAnalysisDeclContext(D)->getBody());
 
   // Output warnings for all overflows that are left.
-  for (CheckOverflowOps::theVecType::iterator
-       i = PossibleMallocOverflows.begin(),
-       e = PossibleMallocOverflows.end();
-       i != e;
-       ++i) {
+  for (const MallocOverflowCheck &Check : PossibleMallocOverflows) {
     BR.EmitBasicReport(
         D, this, "malloc() size overflow", categories::UnixAPI,
         "the computation of the size of the memory allocation may overflow",
-        PathDiagnosticLocation::createOperatorLoc(i->mulop,
+        PathDiagnosticLocation::createOperatorLoc(Check.mulop,
                                                   BR.getSourceManager()),
-        i->mulop->getSourceRange());
+        Check.mulop->getSourceRange());
   }
 }
 

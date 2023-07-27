@@ -339,6 +339,9 @@ private:
   bool HasPseudoProbe{BC.getUniqueSectionByName(".pseudo_probe_desc") &&
                       BC.getUniqueSectionByName(".pseudo_probe")};
 
+  /// True if the function uses ORC format for stack unwinding.
+  bool HasORC{false};
+
   /// True if the original entry point was patched.
   bool IsPatched{false};
 
@@ -378,7 +381,7 @@ private:
   /// Profile match ratio.
   float ProfileMatchRatio{0.0f};
 
-  /// Raw branch count for this function in the profile
+  /// Raw branch count for this function in the profile.
   uint64_t RawBranchCount{0};
 
   /// Indicates the type of profile the function is using.
@@ -421,21 +424,6 @@ private:
   unsigned getIndex(const BinaryBasicBlock *BB) const {
     assert(BB->getIndex() < BasicBlocks.size());
     return BB->getIndex();
-  }
-
-  /// Return basic block that originally contained offset \p Offset
-  /// from the function start.
-  BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset);
-
-  const BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset) const {
-    return const_cast<BinaryFunction *>(this)->getBasicBlockContainingOffset(
-        Offset);
-  }
-
-  /// Return basic block that started at offset \p Offset.
-  BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) {
-    BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
-    return BB && BB->getOffset() == Offset ? BB : nullptr;
   }
 
   /// Release memory taken by the list.
@@ -618,10 +606,6 @@ private:
       Islands = std::make_unique<IslandInfo>();
     Islands->CodeOffsets.emplace(Offset);
   }
-
-  /// Register secondary entry point at a given \p Offset into the function.
-  /// Return global symbol for use by extern function references.
-  MCSymbol *addEntryPointAtOffset(uint64_t Offset);
 
   /// Register an internal offset in a function referenced from outside.
   void registerReferencedOffset(uint64_t Offset) {
@@ -898,6 +882,21 @@ public:
 
   const BinaryBasicBlock *getBasicBlockForLabel(const MCSymbol *Label) const {
     return LabelToBB.lookup(Label);
+  }
+
+  /// Return basic block that originally contained offset \p Offset
+  /// from the function start.
+  BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset);
+
+  const BinaryBasicBlock *getBasicBlockContainingOffset(uint64_t Offset) const {
+    return const_cast<BinaryFunction *>(this)->getBasicBlockContainingOffset(
+        Offset);
+  }
+
+  /// Return basic block that started at offset \p Offset.
+  BinaryBasicBlock *getBasicBlockAtOffset(uint64_t Offset) {
+    BinaryBasicBlock *BB = getBasicBlockContainingOffset(Offset);
+    return BB && BB->getOffset() == Offset ? BB : nullptr;
   }
 
   /// Retrieve the landing pad BB associated with invoke instruction \p Invoke
@@ -1344,6 +1343,9 @@ public:
   /// Return true if the function has Pseudo Probe
   bool hasPseudoProbe() const { return HasPseudoProbe; }
 
+  /// Return true if the function uses ORC format for stack unwinding.
+  bool hasORC() const { return HasORC; }
+
   /// Return true if the original entry point was patched.
   bool isPatched() const { return IsPatched; }
 
@@ -1444,6 +1446,10 @@ public:
   /// Add basic block \BB as an entry point to the function. Return global
   /// symbol associated with the entry.
   MCSymbol *addEntryPoint(const BinaryBasicBlock &BB);
+
+  /// Register secondary entry point at a given \p Offset into the function.
+  /// Return global symbol for use by extern function references.
+  MCSymbol *addEntryPointAtOffset(uint64_t Offset);
 
   /// Mark all blocks that are unreachable from a root (entry point
   /// or landing pad) as invalid.
@@ -1701,6 +1707,11 @@ public:
 
   /// Indicate that another function body was merged with this function.
   void setHasFunctionsFoldedInto() { HasFunctionsFoldedInto = true; }
+
+  void setHasSDTMarker(bool V) { HasSDTMarker = V; }
+
+  /// Mark the function as using ORC format for stack unwinding.
+  void setHasORC(bool V) { HasORC = V; }
 
   BinaryFunction &setPersonalityFunction(uint64_t Addr) {
     assert(!PersonalityFunction && "can't set personality function twice");

@@ -285,16 +285,31 @@ static void Assign(
       newFrom.raw().attribute = CFI_attribute_allocatable;
       auto stat{ReturnError(terminator, newFrom.Allocate())};
       if (stat == StatOk) {
-        char *toAt{newFrom.OffsetElement()};
-        std::size_t fromElements{from.Elements()};
-        if (from.IsContiguous()) {
-          std::memcpy(
-              toAt, from.OffsetElement(), fromElements * fromElementBytes);
+        if (HasDynamicComponent(from)) {
+          // If 'from' has allocatable/automatic component, we cannot
+          // just make a shallow copy of the descriptor member.
+          // This will still leave data overlap in 'to' and 'newFrom'.
+          // For example:
+          //   type t
+          //     character, allocatable :: c(:)
+          //   end type t
+          //   type(t) :: x(3)
+          //   x(2:3) = x(1:2)
+          // We have to make a deep copy into 'newFrom' in this case.
+          RTNAME(AssignTemporary)
+          (newFrom, from, terminator.sourceFileName(), terminator.sourceLine());
         } else {
-          SubscriptValue fromAt[maxRank];
-          for (from.GetLowerBounds(fromAt); fromElements-- > 0;
-               toAt += fromElementBytes, from.IncrementSubscripts(fromAt)) {
-            std::memcpy(toAt, from.Element<char>(fromAt), fromElementBytes);
+          char *toAt{newFrom.OffsetElement()};
+          std::size_t fromElements{from.Elements()};
+          if (from.IsContiguous()) {
+            std::memcpy(
+                toAt, from.OffsetElement(), fromElements * fromElementBytes);
+          } else {
+            SubscriptValue fromAt[maxRank];
+            for (from.GetLowerBounds(fromAt); fromElements-- > 0;
+                 toAt += fromElementBytes, from.IncrementSubscripts(fromAt)) {
+              std::memcpy(toAt, from.Element<char>(fromAt), fromElementBytes);
+            }
           }
         }
         Assign(to, newFrom, terminator,
@@ -560,7 +575,18 @@ void RTNAME(AssignTemporary)(Descriptor &to, const Descriptor &from,
   // Initialize the "to" if it is of derived type that needs initialization.
   if (const DescriptorAddendum * addendum{to.Addendum()}) {
     if (const auto *derived{addendum->derivedType()}) {
-      if (!derived->noInitializationNeeded()) {
+      // Do not invoke the initialization, if the descriptor is unallocated.
+      // AssignTemporary() is used for component-by-component assignments,
+      // for example, for structure constructors. This means that the LHS
+      // may be an allocatable component with unallocated status.
+      // The initialization will just fail in this case. By skipping
+      // the initialization we let Assign() automatically allocate
+      // and initialize the component according to the RHS.
+      // So we only need to initialize the LHS here if it is allocated.
+      // Note that initializing already initialized entity has no visible
+      // effect, though, it is assumed that the compiler does not initialize
+      // the temporary and leaves the initialization to this runtime code.
+      if (!derived->noInitializationNeeded() && to.IsAllocated()) {
         if (ReturnError(terminator, Initialize(to, *derived, terminator)) !=
             StatOk) {
           return;

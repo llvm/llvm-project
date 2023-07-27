@@ -9,7 +9,6 @@
 #ifndef PYTHON_BINDINGS_TRANSFORM_OPS
 #define PYTHON_BINDINGS_TRANSFORM_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/Transform/IR/TransformOps.td"
 
 #endif // PYTHON_BINDINGS_TRANSFORM_OPS

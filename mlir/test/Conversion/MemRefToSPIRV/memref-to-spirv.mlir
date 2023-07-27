@@ -297,7 +297,8 @@ func.func @load_i8(%arg0: memref<i8, #spirv.storage_class<StorageBuffer>>) -> i8
   //     CHECK: %[[T1:.+]] = spirv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
   //     CHECK: %[[T2:.+]] = spirv.Constant 24 : i32
   //     CHECK: %[[T3:.+]] = spirv.ShiftLeftLogical %[[T1]], %[[T2]] : i32, i32
-  //     CHECK: spirv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
+  //     CHECK: %[[SR:.+]] = spirv.ShiftRightArithmetic %[[T3]], %[[T2]] : i32, i32
+  //     CHECK: builtin.unrealized_conversion_cast %[[SR]]
   %0 = memref.load %arg0[] : memref<i8, #spirv.storage_class<StorageBuffer>>
   return %0 : i8
 }
@@ -321,7 +322,8 @@ func.func @load_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>, 
   //     CHECK: %[[MASK:.+]] = spirv.Constant 65535 : i32
   //     CHECK: %[[T1:.+]] = spirv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
   //     CHECK: %[[T3:.+]] = spirv.ShiftLeftLogical %[[T1]], %[[SIXTEEN]] : i32, i32
-  //     CHECK: spirv.ShiftRightArithmetic %[[T3]], %[[SIXTEEN]] : i32, i32
+  //     CHECK: %[[SR:.+]] = spirv.ShiftRightArithmetic %[[T3]], %[[SIXTEEN]] : i32, i32
+  //     CHECK: builtin.unrealized_conversion_cast %[[SR]]
   %0 = memref.load %arg0[%index] : memref<10xi16, #spirv.storage_class<StorageBuffer>>
   return %0: i16
 }
@@ -448,7 +450,8 @@ func.func @load_i4(%arg0: memref<?xi4, #spirv.storage_class<StorageBuffer>>, %i:
   // CHECK: %[[AND:.+]] = spirv.BitwiseAnd %[[VALUE]], %[[MASK]] : i32
   // CHECK: %[[C28:.+]] = spirv.Constant 28 : i32
   // CHECK: %[[SL:.+]] = spirv.ShiftLeftLogical %[[AND]], %[[C28]] : i32, i32
-  // CHECK: spirv.ShiftRightArithmetic %[[SL]], %[[C28]] : i32, i32
+  // CHECK: %[[SR:.+]] = spirv.ShiftRightArithmetic %[[SL]], %[[C28]] : i32, i32
+  // CHECK: builtin.unrealized_conversion_cast %[[SR]]
   %0 = memref.load %arg0[%i] : memref<?xi4, #spirv.storage_class<StorageBuffer>>
   return %0 : i4
 }
@@ -479,3 +482,130 @@ func.func @store_i4(%arg0: memref<?xi4, #spirv.storage_class<StorageBuffer>>, %v
 }
 
 } // end module
+
+// -----
+
+// Check that casts are properly inserted if the corresponding **compute**
+// capability is allowed.
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader, Int8, Int16], [
+      SPV_KHR_8bit_storage, SPV_KHR_16bit_storage, SPV_KHR_storage_buffer_storage_class
+      ]>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: @load_i1
+func.func @load_i1(%arg0: memref<i1, #spirv.storage_class<StorageBuffer>>) -> i1 {
+  //     CHECK: %[[ONE:.+]] = spirv.Constant 1 : i32
+  //     CHECK: %[[RES:.+]]  = spirv.IEqual %{{.+}}, %[[ONE]] : i32
+  //     CHECK: return %[[RES]]
+  %0 = memref.load %arg0[] : memref<i1, #spirv.storage_class<StorageBuffer>>
+  return %0 : i1
+}
+
+// CHECK-LABEL: @load_i8
+func.func @load_i8(%arg0: memref<i8, #spirv.storage_class<StorageBuffer>>) -> i8 {
+  //     CHECK: %[[RES:.+]] = spirv.UConvert %{{.+}} : i32 to i8
+  //     CHECK: return %[[RES]]
+  %0 = memref.load %arg0[] : memref<i8, #spirv.storage_class<StorageBuffer>>
+  return %0 : i8
+}
+
+// CHECK-LABEL: @load_i16
+func.func @load_i16(%arg0: memref<10xi16, #spirv.storage_class<StorageBuffer>>, %index : index) -> i16 {
+  //     CHECK: %[[RES:.+]] = spirv.UConvert %{{.+}} : i32 to i16
+  //     CHECK: return %[[RES]]
+  %0 = memref.load %arg0[%index] : memref<10xi16, #spirv.storage_class<StorageBuffer>>
+  return %0: i16
+}
+
+} // end module
+
+// -----
+
+// Check reinterpret_casts
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0,
+      [Kernel, Addresses, GenericPointer], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func.func @reinterpret_cast
+//  CHECK-SAME:  (%[[MEM:.*]]: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>, %[[OFF:.*]]: index)
+func.func @reinterpret_cast(%arg: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>, %arg1: index) -> memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>> {
+//       CHECK:  %[[MEM1:.*]] = builtin.unrealized_conversion_cast %[[MEM]] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<f32, CrossWorkgroup>
+//       CHECK:  %[[OFF1:.*]] = builtin.unrealized_conversion_cast %[[OFF]] : index to i32
+//       CHECK:  %[[RET:.*]] = spirv.InBoundsPtrAccessChain %[[MEM1]][%[[OFF1]]] : !spirv.ptr<f32, CrossWorkgroup>, i32
+//       CHECK:  %[[RET1:.*]] = builtin.unrealized_conversion_cast %[[RET]] : !spirv.ptr<f32, CrossWorkgroup> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+//       CHECK:  return %[[RET1]]
+  %ret = memref.reinterpret_cast %arg to offset: [%arg1], sizes: [10], strides: [1] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+  return %ret : memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+}
+
+// CHECK-LABEL: func.func @reinterpret_cast_0
+//  CHECK-SAME:  (%[[MEM:.*]]: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>)
+func.func @reinterpret_cast_0(%arg: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>) -> memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>> {
+//       CHECK:  %[[MEM1:.*]] = builtin.unrealized_conversion_cast %[[MEM]] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<f32, CrossWorkgroup>
+//       CHECK:  %[[RET:.*]] = builtin.unrealized_conversion_cast %[[MEM1]] : !spirv.ptr<f32, CrossWorkgroup> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+//       CHECK:  return %[[RET]]
+  %ret = memref.reinterpret_cast %arg to offset: [0], sizes: [10], strides: [1] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+  return %ret : memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+}
+
+// CHECK-LABEL: func.func @reinterpret_cast_5
+//  CHECK-SAME:  (%[[MEM:.*]]: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>)
+func.func @reinterpret_cast_5(%arg: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>) -> memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>> {
+//       CHECK:  %[[MEM1:.*]] = builtin.unrealized_conversion_cast %[[MEM]] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<f32, CrossWorkgroup>
+//       CHECK:  %[[OFF:.*]] = spirv.Constant 5 : i32
+//       CHECK:  %[[RET:.*]] = spirv.InBoundsPtrAccessChain %[[MEM1]][%[[OFF]]] : !spirv.ptr<f32, CrossWorkgroup>, i32
+//       CHECK:  %[[RET1:.*]] = builtin.unrealized_conversion_cast %[[RET]] : !spirv.ptr<f32, CrossWorkgroup> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+//       CHECK:  return %[[RET1]]
+  %ret = memref.reinterpret_cast %arg to offset: [5], sizes: [10], strides: [1] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+  return %ret : memref<?xf32, strided<[1], offset: ?>, #spirv.storage_class<CrossWorkgroup>>
+}
+
+} // end module
+
+
+// -----
+
+// Check casts
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0,
+      [Kernel, Addresses, GenericPointer], []>, #spirv.resource_limits<>>
+} {
+
+// CHECK-LABEL: func.func @cast
+//  CHECK-SAME:  (%[[MEM:.*]]: memref<4x?xf32, #spirv.storage_class<CrossWorkgroup>>)
+func.func @cast(%arg: memref<4x?xf32, #spirv.storage_class<CrossWorkgroup>>) -> memref<?x4xf32, #spirv.storage_class<CrossWorkgroup>> {
+//       CHECK:  %[[MEM1:.*]] = builtin.unrealized_conversion_cast %[[MEM]] : memref<4x?xf32, #spirv.storage_class<CrossWorkgroup>> to !spirv.ptr<f32, CrossWorkgroup>
+//       CHECK:  %[[MEM2:.*]] = builtin.unrealized_conversion_cast %[[MEM1]] : !spirv.ptr<f32, CrossWorkgroup> to memref<?x4xf32, #spirv.storage_class<CrossWorkgroup>>
+//       CHECK:  return %[[MEM2]]
+  %ret = memref.cast %arg : memref<4x?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?x4xf32, #spirv.storage_class<CrossWorkgroup>>
+  return %ret : memref<?x4xf32, #spirv.storage_class<CrossWorkgroup>>
+}
+
+// TODO: Not supported yet
+// CHECK-LABEL: func.func @cast_from_static
+//  CHECK-SAME:  (%[[MEM:.*]]: memref<4x4xf32, #spirv.storage_class<CrossWorkgroup>>)
+func.func @cast_from_static(%arg: memref<4x4xf32, #spirv.storage_class<CrossWorkgroup>>) -> memref<?x4xf32, #spirv.storage_class<CrossWorkgroup>> {
+//       CHECK:  %[[MEM1:.*]] =  memref.cast %[[MEM]] : memref<4x4xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?x4xf32, #spirv.storage_class<CrossWorkgroup>>
+//       CHECK:  return %[[MEM1]]
+  %ret = memref.cast %arg : memref<4x4xf32, #spirv.storage_class<CrossWorkgroup>> to memref<?x4xf32, #spirv.storage_class<CrossWorkgroup>>
+  return %ret : memref<?x4xf32, #spirv.storage_class<CrossWorkgroup>>
+}
+
+// TODO: Not supported yet
+// CHECK-LABEL: func.func @cast_to_static
+//  CHECK-SAME:  (%[[MEM:.*]]: memref<4x?xf32, #spirv.storage_class<CrossWorkgroup>>)
+func.func @cast_to_static(%arg: memref<4x?xf32, #spirv.storage_class<CrossWorkgroup>>) -> memref<4x4xf32, #spirv.storage_class<CrossWorkgroup>> {
+//       CHECK:  %[[MEM1:.*]] =  memref.cast %[[MEM]] : memref<4x?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<4x4xf32, #spirv.storage_class<CrossWorkgroup>>
+//       CHECK:  return %[[MEM1]]
+  %ret = memref.cast %arg : memref<4x?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<4x4xf32, #spirv.storage_class<CrossWorkgroup>>
+  return %ret : memref<4x4xf32, #spirv.storage_class<CrossWorkgroup>>
+}
+
+}

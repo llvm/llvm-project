@@ -46,6 +46,7 @@
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/InitializePasses.h"

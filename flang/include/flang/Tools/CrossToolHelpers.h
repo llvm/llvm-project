@@ -23,15 +23,15 @@ struct OffloadModuleOpts {
   OffloadModuleOpts() {}
   OffloadModuleOpts(uint32_t OpenMPTargetDebug, bool OpenMPTeamSubscription,
       bool OpenMPThreadSubscription, bool OpenMPNoThreadState,
-      bool OpenMPNoNestedParallelism, bool OpenMPIsDevice,
-      uint32_t OpenMPVersion, std::string OMPHostIRFile = {})
+      bool OpenMPNoNestedParallelism, bool OpenMPIsTargetDevice,
+      bool OpenMPIsGPU, uint32_t OpenMPVersion, std::string OMPHostIRFile = {})
       : OpenMPTargetDebug(OpenMPTargetDebug),
         OpenMPTeamSubscription(OpenMPTeamSubscription),
         OpenMPThreadSubscription(OpenMPThreadSubscription),
         OpenMPNoThreadState(OpenMPNoThreadState),
         OpenMPNoNestedParallelism(OpenMPNoNestedParallelism),
-        OpenMPIsDevice(OpenMPIsDevice), OpenMPVersion(OpenMPVersion),
-        OMPHostIRFile(OMPHostIRFile) {}
+        OpenMPIsTargetDevice(OpenMPIsTargetDevice), OpenMPIsGPU(OpenMPIsGPU),
+        OpenMPVersion(OpenMPVersion), OMPHostIRFile(OMPHostIRFile) {}
 
   OffloadModuleOpts(Fortran::frontend::LangOptions &Opts)
       : OpenMPTargetDebug(Opts.OpenMPTargetDebug),
@@ -39,7 +39,8 @@ struct OffloadModuleOpts {
         OpenMPThreadSubscription(Opts.OpenMPThreadSubscription),
         OpenMPNoThreadState(Opts.OpenMPNoThreadState),
         OpenMPNoNestedParallelism(Opts.OpenMPNoNestedParallelism),
-        OpenMPIsDevice(Opts.OpenMPIsDevice), OpenMPVersion(Opts.OpenMPVersion),
+        OpenMPIsTargetDevice(Opts.OpenMPIsTargetDevice),
+        OpenMPIsGPU(Opts.OpenMPIsGPU), OpenMPVersion(Opts.OpenMPVersion),
         OMPHostIRFile(Opts.OMPHostIRFile) {}
 
   uint32_t OpenMPTargetDebug = 0;
@@ -47,7 +48,8 @@ struct OffloadModuleOpts {
   bool OpenMPThreadSubscription = false;
   bool OpenMPNoThreadState = false;
   bool OpenMPNoNestedParallelism = false;
-  bool OpenMPIsDevice = false;
+  bool OpenMPIsTargetDevice = false;
+  bool OpenMPIsGPU = false;
   uint32_t OpenMPVersion = 11;
   std::string OMPHostIRFile = {};
 };
@@ -59,8 +61,9 @@ void setOffloadModuleInterfaceAttributes(
   // Should be registered by the OpenMPDialect
   if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
           module.getOperation())) {
-    offloadMod.setIsDevice(Opts.OpenMPIsDevice);
-    if (Opts.OpenMPIsDevice) {
+    offloadMod.setIsTargetDevice(Opts.OpenMPIsTargetDevice);
+    offloadMod.setIsGPU(Opts.OpenMPIsGPU);
+    if (Opts.OpenMPIsTargetDevice) {
       offloadMod.setFlags(Opts.OpenMPTargetDebug, Opts.OpenMPTeamSubscription,
           Opts.OpenMPThreadSubscription, Opts.OpenMPNoThreadState,
           Opts.OpenMPNoNestedParallelism, Opts.OpenMPVersion);

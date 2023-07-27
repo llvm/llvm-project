@@ -21,7 +21,7 @@ define <2 x double> @test(<4 x double> %a, <2 x double> %b, i1 %c) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <1 x double> [[BLOCK3]], [[SPLAT_SPLAT5]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <1 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <1 x double> [[TMP4]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> undef, <2 x double> [[TMP5]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> poison, <2 x double> [[TMP5]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[BLOCK6:%.*]] = shufflevector <2 x double> [[SPLIT]], <2 x double> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[SPLIT2]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT7:%.*]] = insertelement <1 x double> poison, double [[TMP7]], i64 0

@@ -14,6 +14,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm-c/Remarks.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Remarks/Remark.h"
 #include "llvm/Remarks/RemarkFormat.h"

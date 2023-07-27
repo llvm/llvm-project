@@ -2793,7 +2793,6 @@ define i64 @v_test_udiv64_mulhi_fold(i64 %arg) {
 ; GFX1030-LABEL: v_test_udiv64_mulhi_fold:
 ; GFX1030:       ; %bb.0:
 ; GFX1030-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1030-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1030-NEXT:    s_mov_b32 s4, 0x346d900
 ; GFX1030-NEXT:    s_add_u32 s4, 0x4237, s4
 ; GFX1030-NEXT:    s_addc_u32 s5, 0, 0

@@ -26,6 +26,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/TinyPtrVector.h"
 #include "llvm/ADT/Twine.h"
@@ -485,6 +486,11 @@ bool AsmPrinter::doInitialization(Module &M) {
     }
   }
 
+  // On AIX, emit bytes for llvm.commandline metadata after .file so that the
+  // C_INFO symbol is preserved if any csect is kept by the linker.
+  if (TM.getTargetTriple().isOSBinFormatXCOFF())
+    emitModuleCommandLines(M);
+
   GCModuleInfo *MI = getAnalysisIfAvailable<GCModuleInfo>();
   assert(MI && "AsmPrinter didn't require GCModuleInfo?");
   for (const auto &I : *MI)
@@ -724,8 +730,8 @@ void AsmPrinter::emitGlobalVariable(const GlobalVariable *GV) {
 
     if (T.getArch() != Triple::aarch64 || !T.isAndroid())
       OutContext.reportError(SMLoc(),
-                             "Tagged symbols (-fsanitize=memtag-globals) are "
-                             "only supported on aarch64 + Android.");
+                             "tagged symbols (-fsanitize=memtag-globals) are "
+                             "only supported on AArch64 Android");
     OutStreamer->emitSymbolAttribute(EmittedSym, MAI->getMemtagAttr());
   }
 
@@ -2329,7 +2335,9 @@ bool AsmPrinter::doFinalization(Module &M) {
   emitModuleIdents(M);
 
   // Emit bytes for llvm.commandline metadata.
-  emitModuleCommandLines(M);
+  // The command line metadata is emitted earlier on XCOFF.
+  if (!TM.getTargetTriple().isOSBinFormatXCOFF())
+    emitModuleCommandLines(M);
 
   // Emit .note.GNU-split-stack and .note.GNU-no-split-stack sections if
   // split-stack is used.
@@ -4033,7 +4041,8 @@ void AsmPrinter::emitXRayTable() {
   // per-function, we are able to create an index entry that will represent the
   // range of sleds associated with a function.
   auto &Ctx = OutContext;
-  MCSymbol *SledsStart = OutContext.createTempSymbol("xray_sleds_start", true);
+  MCSymbol *SledsStart =
+      OutContext.createLinkerPrivateSymbol("xray_sleds_start");
   OutStreamer->switchSection(InstMap);
   OutStreamer->emitLabel(SledsStart);
   for (const auto &Sled : Sleds) {

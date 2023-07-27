@@ -371,8 +371,8 @@ public:
                             unsigned Opc_rr, unsigned Opc_ri,
                             bool IsIntr = false);
   void SelectContiguousMultiVectorLoad(SDNode *N, unsigned NumVecs,
-                                       unsigned Scale, unsigned Opc_rr,
-                                       unsigned Opc_ri);
+                                       unsigned Scale, unsigned Opc_ri,
+                                       unsigned Opc_rr);
   void SelectDestructiveMultiIntrinsic(SDNode *N, unsigned NumVecs,
                                        bool IsZmMulti, unsigned Opcode,
                                        bool HasPred = false);
@@ -420,7 +420,6 @@ public:
   bool tryBitfieldInsertOp(SDNode *N);
   bool tryBitfieldInsertInZeroOp(SDNode *N);
   bool tryShiftAmountMod(SDNode *N);
-  bool tryHighFPExt(SDNode *N);
 
   bool tryReadRegister(SDNode *N);
   bool tryWriteRegister(SDNode *N);
@@ -1792,10 +1791,12 @@ void AArch64DAGToDAGISel::SelectContiguousMultiVectorLoad(SDNode *N,
   EVT VT = N->getValueType(0);
   SDValue Chain = N->getOperand(0);
 
-  // Use simplest addressing mode for now - base + 0 offset
   SDValue PNg = N->getOperand(2);
   SDValue Base = N->getOperand(3);
   SDValue Offset = CurDAG->getTargetConstant(0, DL, MVT::i64);
+  unsigned Opc;
+  std::tie(Opc, Base, Offset) =
+      findAddrModeSVELoadStore(N, Opc_rr, Opc_ri, Base, Offset, Scale);
 
   SDValue Ops[] = {PNg,            // Predicate-as-counter
                    Base,           // Memory operand
@@ -1803,7 +1804,7 @@ void AArch64DAGToDAGISel::SelectContiguousMultiVectorLoad(SDNode *N,
 
   const EVT ResTys[] = {MVT::Untyped, MVT::Other};
 
-  SDNode *Load = CurDAG->getMachineNode(Opc_ri, DL, ResTys, Ops);
+  SDNode *Load = CurDAG->getMachineNode(Opc, DL, ResTys, Ops);
   SDValue SuperReg = SDValue(Load, 0);
   for (unsigned i = 0; i < NumVecs; ++i)
     ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
@@ -2465,35 +2466,6 @@ bool AArch64DAGToDAGISel::tryBitfieldExtractOpFromSExt(SDNode *N) {
   SDValue Ops[] = {Opd0, CurDAG->getTargetConstant(Immr, dl, VT),
                    CurDAG->getTargetConstant(Imms, dl, VT)};
   CurDAG->SelectNodeTo(N, AArch64::SBFMXri, VT, Ops);
-  return true;
-}
-
-/// Try to form fcvtl2 instructions from a floating-point extend of a high-half
-/// extract of a subvector.
-bool AArch64DAGToDAGISel::tryHighFPExt(SDNode *N) {
-  assert(N->getOpcode() == ISD::FP_EXTEND);
-
-  // There are 2 forms of fcvtl2 - extend to double or extend to float.
-  SDValue Extract = N->getOperand(0);
-  EVT VT = N->getValueType(0);
-  EVT NarrowVT = Extract.getValueType();
-  if ((VT != MVT::v2f64 || NarrowVT != MVT::v2f32) &&
-      (VT != MVT::v4f32 || NarrowVT != MVT::v4f16))
-    return false;
-
-  // Optionally look past a bitcast.
-  Extract = peekThroughBitcasts(Extract);
-  if (Extract.getOpcode() != ISD::EXTRACT_SUBVECTOR)
-    return false;
-
-  // Match extract from start of high half index.
-  // Example: v8i16 -> v4i16 means the extract must begin at index 4.
-  unsigned ExtractIndex = Extract.getConstantOperandVal(1);
-  if (ExtractIndex != Extract.getValueType().getVectorNumElements())
-    return false;
-
-  auto Opcode = VT == MVT::v2f64 ? AArch64::FCVTLv4i32 : AArch64::FCVTLv8i16;
-  CurDAG->SelectNodeTo(N, Opcode, VT, Extract.getOperand(0));
   return true;
 }
 
@@ -4267,11 +4239,6 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
 
   case ISD::SIGN_EXTEND:
     if (tryBitfieldExtractOpFromSExt(Node))
-      return;
-    break;
-
-  case ISD::FP_EXTEND:
-    if (tryHighFPExt(Node))
       return;
     break;
 

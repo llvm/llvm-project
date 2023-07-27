@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: availability-filesystem-missing
+// UNSUPPORTED: no-filesystem
 // ADDITIONAL_COMPILE_FLAGS: -I %S/../../../../../../src
 
 // This test relies on calling functions from the libcxx internal headers

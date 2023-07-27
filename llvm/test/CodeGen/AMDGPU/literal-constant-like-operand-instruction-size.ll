@@ -1,4 +1,4 @@
-; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs -amdgpu-s-branch-bits=6 < %s | FileCheck -check-prefix=GCN %s
+; RUN: llc -march=amdgcn -mcpu=gfx906 -verify-machineinstrs -amdgpu-s-branch-bits=6 -amdgpu-long-branch-factor=0 < %s | FileCheck -check-prefix=GCN %s
 
 
 ; Restrict maximum branch to between +31 and -32 dwords

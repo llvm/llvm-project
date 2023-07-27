@@ -106,6 +106,10 @@ MachineFunction &MachineModuleInfo::getOrCreateMachineFunction(Function &F) {
     const TargetSubtargetInfo &STI = *TM.getSubtargetImpl(F);
     MF = new MachineFunction(F, TM, STI, NextFnNum++, *this);
     MF->initTargetMachineFunctionInfo(STI);
+
+    // MRI callback for target specific initializations.
+    TM.registerMachineRegisterInfoCallback(*MF);
+
     // Update the set entry.
     I.first->second.reset(MF);
   } else {

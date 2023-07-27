@@ -89,3 +89,12 @@ func.func @_QPcaller() {
 
 // LLVMIR-NOUNDER: llvm.call @callee() : () -> ()
 // LLVMIR-NOUNDER: llvm.call @callee() : () -> ()
+
+// -----
+
+func.func @_QPwriteindex_omp_outline_0() attributes {omp.outline_parent_name = "_QPwriteindex"} {
+   return
+}
+
+// CHECK-UNDER: attributes {omp.outline_parent_name = "writeindex_"}
+// CHECK-NOUNDER: attributes {omp.outline_parent_name = "writeindex"}

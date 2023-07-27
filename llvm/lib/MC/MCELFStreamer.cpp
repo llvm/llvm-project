@@ -628,6 +628,9 @@ void MCELFStreamer::emitInstToData(const MCInst &Inst,
   }
 
   DF->setHasInstructions(STI);
+  if (!Fixups.empty() && Fixups.back().getTargetKind() ==
+                             getAssembler().getBackend().RelaxFixupKind)
+    DF->setLinkerRelaxable();
   DF->getContents().append(Code.begin(), Code.end());
 
   if (Assembler.isBundlingEnabled() && Assembler.getRelaxAll()) {

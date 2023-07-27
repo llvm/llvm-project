@@ -14,6 +14,7 @@
 
 #include "LLDBUtils.h"
 #include "VSCode.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
 #if defined(_WIN32)
@@ -41,10 +42,11 @@ VSCode::VSCode()
       focus_tid(LLDB_INVALID_THREAD_ID), sent_terminated_event(false),
       stop_at_entry(false), is_attach(false),
       restarting_process_id(LLDB_INVALID_PROCESS_ID),
-      configuration_done_sent(false), reverse_request_seq(0),
-      waiting_for_run_in_terminal(false),
+      configuration_done_sent(false), waiting_for_run_in_terminal(false),
       progress_event_reporter(
-          [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }) {
+          [&](const ProgressEvent &event) { SendJSON(event.ToJSON()); }),
+      reverse_request_seq(0), repl_mode(ReplMode::Auto),
+      auto_repl_mode_collision_warning(false) {
   const char *log_file_path = getenv("LLDBVSCODE_LOG");
 #if defined(_WIN32)
   // Windows opens stdout and stdin in text mode which converts \n to 13,10
@@ -392,6 +394,57 @@ llvm::json::Value VSCode::CreateTopLevelScopes() {
   return llvm::json::Value(std::move(scopes));
 }
 
+ExpressionContext VSCode::DetectExpressionContext(lldb::SBFrame &frame,
+                                                  std::string &text) {
+  // Include ` as an escape hatch.
+  if (!text.empty() && text[0] == '`') {
+    text = text.substr(1);
+    return ExpressionContext::Command;
+  }
+
+  switch (repl_mode) {
+  case ReplMode::Variable:
+    return ExpressionContext::Variable;
+  case ReplMode::Command:
+    return ExpressionContext::Command;
+  case ReplMode::Auto:
+    // If the frame is invalid then there is no variables to complete, assume
+    // this is an lldb command instead.
+    if (!frame.IsValid()) {
+      return ExpressionContext::Command;
+    }
+
+    lldb::SBCommandReturnObject result;
+    debugger.GetCommandInterpreter().ResolveCommand(text.data(), result);
+
+    // If this command is a simple expression like `var + 1` check if there is
+    // a local variable name that is in the current expression. If so, ensure
+    // the expression runs in the variable context.
+    lldb::SBValueList variables = frame.GetVariables(true, true, true, true);
+    llvm::StringRef input = text;
+    for (uint32_t i = 0; i < variables.GetSize(); i++) {
+      llvm::StringRef name = variables.GetValueAtIndex(i).GetName();
+      // Check both directions in case the input is a partial of a variable
+      // (e.g. input = `va` and local variable = `var1`).
+      if (input.contains(name) || name.contains(input)) {
+        if (!auto_repl_mode_collision_warning) {
+          llvm::errs() << "Variable expression '" << text
+                       << "' is hiding an lldb command, prefix an expression "
+                          "with ` to ensure it runs as a lldb command.\n";
+          auto_repl_mode_collision_warning = true;
+        }
+        return ExpressionContext::Variable;
+      }
+    }
+
+    if (result.Succeeded()) {
+      return ExpressionContext::Command;
+    }
+  }
+
+  return ExpressionContext::Variable;
+}
+
 void VSCode::RunLLDBCommands(llvm::StringRef prefix,
                              const std::vector<std::string> &commands) {
   SendOutput(OutputType::Console,
@@ -501,28 +554,88 @@ bool VSCode::HandleObject(const llvm::json::Object &object) {
       return true; // Success
     } else {
       if (log)
-        *log << "error: unhandled command \"" << command.data() << std::endl;
+        *log << "error: unhandled command \"" << command.data() << "\""
+             << std::endl;
       return false; // Fail
     }
   }
+
+  if (packet_type == "response") {
+    auto id = GetSigned(object, "request_seq", 0);
+    ResponseCallback response_handler = [](llvm::Expected<llvm::json::Value>) {
+      llvm::errs() << "Unhandled response\n";
+    };
+
+    {
+      std::lock_guard<std::mutex> locker(call_mutex);
+      auto inflight = inflight_reverse_requests.find(id);
+      if (inflight != inflight_reverse_requests.end()) {
+        response_handler = std::move(inflight->second);
+        inflight_reverse_requests.erase(inflight);
+      }
+    }
+
+    // Result should be given, use null if not.
+    if (GetBoolean(object, "success", false)) {
+      llvm::json::Value Result = nullptr;
+      if (auto *B = object.get("body")) {
+        Result = std::move(*B);
+      }
+      response_handler(Result);
+    } else {
+      llvm::StringRef message = GetString(object, "message");
+      if (message.empty()) {
+        message = "Unknown error, response failed";
+      }
+      response_handler(llvm::createStringError(
+          std::error_code(-1, std::generic_category()), message));
+    }
+
+    return true;
+  }
+
   return false;
 }
 
-PacketStatus VSCode::SendReverseRequest(llvm::json::Object request,
-                                        llvm::json::Object &response) {
-  request.try_emplace("seq", ++reverse_request_seq);
-  SendJSON(llvm::json::Value(std::move(request)));
-  while (true) {
-    PacketStatus status = GetNextObject(response);
-    const auto packet_type = GetString(response, "type");
-    if (packet_type == "response")
-      return status;
-    else {
-      // Not our response, we got another packet
-      HandleObject(response);
+llvm::Error VSCode::Loop() {
+  while (!sent_terminated_event) {
+    llvm::json::Object object;
+    lldb_vscode::PacketStatus status = GetNextObject(object);
+
+    if (status == lldb_vscode::PacketStatus::EndOfFile) {
+      break;
+    }
+
+    if (status != lldb_vscode::PacketStatus::Success) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "failed to send packet");
+    }
+
+    if (!HandleObject(object)) {
+      return llvm::createStringError(llvm::inconvertibleErrorCode(),
+                                     "unhandled packet");
     }
   }
-  return PacketStatus::EndOfFile;
+
+  return llvm::Error::success();
+}
+
+void VSCode::SendReverseRequest(llvm::StringRef command,
+                                llvm::json::Value arguments,
+                                ResponseCallback callback) {
+  int64_t id;
+  {
+    std::lock_guard<std::mutex> locker(call_mutex);
+    id = ++reverse_request_seq;
+    inflight_reverse_requests.emplace(id, std::move(callback));
+  }
+
+  SendJSON(llvm::json::Object{
+      {"type", "request"},
+      {"seq", id},
+      {"command", command},
+      {"arguments", std::move(arguments)},
+  });
 }
 
 void VSCode::RegisterRequestCallback(std::string request,
@@ -577,7 +690,7 @@ void Variables::Clear() {
   expandable_variables.clear();
 }
 
-int64_t Variables::GetNewVariableRefence(bool is_permanent) {
+int64_t Variables::GetNewVariableReference(bool is_permanent) {
   if (is_permanent)
     return next_permanent_var_ref++;
   return next_temporary_var_ref++;
@@ -602,12 +715,118 @@ lldb::SBValue Variables::GetVariable(int64_t var_ref) const {
 
 int64_t Variables::InsertExpandableVariable(lldb::SBValue variable,
                                             bool is_permanent) {
-  int64_t var_ref = GetNewVariableRefence(is_permanent);
+  int64_t var_ref = GetNewVariableReference(is_permanent);
   if (is_permanent)
     expandable_permanent_variables.insert(std::make_pair(var_ref, variable));
   else
     expandable_variables.insert(std::make_pair(var_ref, variable));
   return var_ref;
+}
+
+bool StartDebuggingRequestHandler::DoExecute(
+    lldb::SBDebugger debugger, char **command,
+    lldb::SBCommandReturnObject &result) {
+  // Command format like: `startDebugging <launch|attach> <configuration>`
+  if (!command) {
+    result.SetError("Invalid use of startDebugging");
+    result.SetStatus(lldb::eReturnStatusFailed);
+    return false;
+  }
+
+  if (!command[0] || llvm::StringRef(command[0]).empty()) {
+    result.SetError("startDebugging request type missing.");
+    result.SetStatus(lldb::eReturnStatusFailed);
+    return false;
+  }
+
+  if (!command[1] || llvm::StringRef(command[1]).empty()) {
+    result.SetError("configuration missing.");
+    result.SetStatus(lldb::eReturnStatusFailed);
+    return false;
+  }
+
+  llvm::StringRef request{command[0]};
+  std::string raw_configuration{command[1]};
+
+  int i = 2;
+  while (command[i]) {
+    raw_configuration.append(" ").append(command[i]);
+  }
+
+  llvm::Expected<llvm::json::Value> configuration =
+      llvm::json::parse(raw_configuration);
+
+  if (!configuration) {
+    llvm::Error err = configuration.takeError();
+    std::string msg =
+        "Failed to parse json configuration: " + llvm::toString(std::move(err));
+    result.SetError(msg.c_str());
+    result.SetStatus(lldb::eReturnStatusFailed);
+    return false;
+  }
+
+  g_vsc.SendReverseRequest(
+      "startDebugging",
+      llvm::json::Object{{"request", request},
+                         {"configuration", std::move(*configuration)}},
+      [](llvm::Expected<llvm::json::Value> value) {
+        if (!value) {
+          llvm::Error err = value.takeError();
+          llvm::errs() << "reverse start debugging request failed: "
+                       << llvm::toString(std::move(err)) << "\n";
+        }
+      });
+
+  result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
+
+  return true;
+}
+
+bool ReplModeRequestHandler::DoExecute(lldb::SBDebugger debugger,
+                                       char **command,
+                                       lldb::SBCommandReturnObject &result) {
+  // Command format like: `repl-mode <variable|command|auto>?`
+  // If a new mode is not specified report the current mode.
+  if (!command || llvm::StringRef(command[0]).empty()) {
+    std::string mode;
+    switch (g_vsc.repl_mode) {
+    case ReplMode::Variable:
+      mode = "variable";
+      break;
+    case ReplMode::Command:
+      mode = "command";
+      break;
+    case ReplMode::Auto:
+      mode = "auto";
+      break;
+    }
+
+    result.Printf("lldb-vscode repl-mode %s.\n", mode.c_str());
+    result.SetStatus(lldb::eReturnStatusSuccessFinishResult);
+
+    return true;
+  }
+
+  llvm::StringRef new_mode{command[0]};
+
+  if (new_mode == "variable") {
+    g_vsc.repl_mode = ReplMode::Variable;
+  } else if (new_mode == "command") {
+    g_vsc.repl_mode = ReplMode::Command;
+  } else if (new_mode == "auto") {
+    g_vsc.repl_mode = ReplMode::Auto;
+  } else {
+    lldb::SBStream error_message;
+    error_message.Printf("Invalid repl-mode '%s'. Expected one of 'variable', "
+                         "'command' or 'auto'.\n",
+                         new_mode.data());
+    result.SetError(error_message.GetData());
+    return false;
+  }
+
+  result.Printf("lldb-vscode repl-mode %s set.\n", new_mode.data());
+  result.SetStatus(lldb::eReturnStatusSuccessFinishNoResult);
+  return true;
 }
 
 } // namespace lldb_vscode

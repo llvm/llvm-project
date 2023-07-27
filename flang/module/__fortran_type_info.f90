@@ -13,7 +13,7 @@
 
 module __Fortran_type_info
 
-  use __Fortran_builtins, only: __builtin_c_ptr, __builtin_c_funptr
+  use, intrinsic :: __Fortran_builtins, only: __builtin_c_ptr, __builtin_c_funptr
 
   private
 

@@ -20,6 +20,35 @@ def Transform_EmptyOp : Transform_ConcreteOpType<"tensor.empty">;
 def Transform_AllocTensorOp : Transform_ConcreteOpType<"bufferization.alloc_tensor">;
 
 //===----------------------------------------------------------------------===//
+// BufferLoopHoistingOp
+//===----------------------------------------------------------------------===//
+
+def BufferLoopHoistingOp
+    : Op<Transform_Dialect, "bufferization.buffer_loop_hoisting",
+        [DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+         TransformEachOpTrait, TransformOpInterface]> {
+  let description = [{
+    Hoist buffer allocations ("memref.alloc" and "memref.alloca") from loops
+    within the targeted op. This transform assumes that there are no buffer
+    deallocation ops in the IR.
+
+    This transform reads the `target` handle and modifies the payload.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+  let assemblyFormat = "$target attr-dict `:` type($target)";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure applyToOne(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::Operation *target,
+        ::mlir::transform::ApplyToEachResultList &results,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // OneShotBufferizeOp
 //===----------------------------------------------------------------------===//
 
@@ -58,10 +87,12 @@ def OneShotBufferizeOp
       DefaultValuedAttr<BoolAttr, "false">:$bufferize_function_boundaries,
       DefaultValuedAttr<BoolAttr, "true">:$create_deallocs,
       DefaultValuedAttr<BoolAttr, "false">:$test_analysis_only,
-      DefaultValuedAttr<BoolAttr, "false">:$print_conflicts);
+      DefaultValuedAttr<BoolAttr, "false">:$print_conflicts,
+      DefaultValuedAttr<StrAttr, "\"memref.copy\"">:$memcpy_op);
 
   let results = (outs TransformHandleTypeInterface:$transformed);
 
+  let hasVerifier = 1;
   let assemblyFormat = [{
     (`layout` `{` $function_boundary_type_conversion^ `}`)?
     $target attr-dict `:` functional-type($target, results)

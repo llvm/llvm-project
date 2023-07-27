@@ -178,4 +178,13 @@ program openacc_data_validity
   !ERROR: Unmatched PARALLEL directive
   !$acc end parallel
 
+  !$acc data copy(aa) async
+  !$acc end data
+
+  !$acc data copy(aa) wait
+  !$acc end data
+
+  !$acc data copy(aa) device_type(1) wait
+  !$acc end data
+
 end program openacc_data_validity

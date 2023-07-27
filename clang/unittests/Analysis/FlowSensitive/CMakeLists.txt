@@ -10,10 +10,12 @@ add_clang_unittest(ClangAnalysisFlowSensitiveTests
   DataflowAnalysisContextTest.cpp
   DataflowEnvironmentTest.cpp
   DebugSupportTest.cpp
+  DeterminismTest.cpp
   LoggerTest.cpp
   MapLatticeTest.cpp
   MatchSwitchTest.cpp
   MultiVarConstantPropagationTest.cpp
+  RecordOpsTest.cpp
   SignAnalysisTest.cpp
   SingleVarConstantPropagationTest.cpp
   SolverTest.cpp

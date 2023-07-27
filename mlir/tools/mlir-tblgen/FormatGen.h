@@ -235,7 +235,15 @@ private:
 class VariableElement : public FormatElementBase<FormatElement::Variable> {
 public:
   /// These are the kinds of variables.
-  enum Kind { Attribute, Operand, Region, Result, Successor, Parameter };
+  enum Kind {
+    Attribute,
+    Operand,
+    Region,
+    Result,
+    Successor,
+    Parameter,
+    Property
+  };
 
   /// Get the kind of variable.
   Kind getKind() const { return kind; }

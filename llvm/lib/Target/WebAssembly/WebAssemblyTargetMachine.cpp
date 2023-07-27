@@ -99,13 +99,6 @@ static Reloc::Model getEffectiveRelocModel(std::optional<Reloc::Model> RM,
     return Reloc::Static;
   }
 
-  if (!TT.isOSEmscripten()) {
-    // Relocation modes other than static are currently implemented in a way
-    // that only works for Emscripten, so disable them if we aren't targeting
-    // Emscripten.
-    return Reloc::Static;
-  }
-
   return *RM;
 }
 

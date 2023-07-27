@@ -20,6 +20,7 @@
 //                      T init, BinaryOperation binary_op, UnaryOperation unary_op);
 
 #include <numeric>
+#include <string>
 #include <vector>
 
 #include "MoveOnly.h"
@@ -42,8 +43,14 @@ struct Test {
           Iter1(std::data(a)),
           Iter1(std::data(a) + std::size(a)),
           ValueT(34),
-          [](ValueT i, ValueT j) { return i + j; },
-          [](ValueT i) { return i + 1; });
+          [check = std::string("Banane")](ValueT i, ValueT j) {
+            assert(check == "Banane"); // ensure that no double-moves happen
+            return i + j;
+          },
+          [check = std::string("Banane")](ValueT i) {
+            assert(check == "Banane"); // ensure that no double-moves happen
+            return i + 1;
+          });
       static_assert(std::is_same_v<decltype(ret), ValueT>);
       assert(ret == expected);
     }

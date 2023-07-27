@@ -140,16 +140,29 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
     Otherwise, the left hand side will be allocated or reallocated to match the
     right hand side length if they differ. This covers the case of deferred
     length character allocatables.
+    The optional "temporary_lhs" flag indicates that the LHS is a compiler
+    generated temporary. In this case the temporary is initialized if needed
+    (e.g. the LHS is of derived type with allocatable/pointer components),
+    and the assignment is done without LHS (or its subobjects) finalization
+    and with automatic allocation.
+    If "temporary_lhs" and "keep_lhs_length_if_realloc" are both set,
+    this assign operation denotes special case of character allocatable
+    LHS with explicit length. The LHS that must preserve its length
+    during the assignment regardless of the the RHS's length or/and
+    allocation status. This assign operation will be lowered into a call
+    to AssignExplicitLengthCharacter().
   }];
 
   let arguments = (ins AnyFortranEntity:$rhs,
                    Arg<AnyFortranVariable, "", [MemWrite]>:$lhs,
                    UnitAttr:$realloc,
-                   UnitAttr:$keep_lhs_length_if_realloc);
+                   UnitAttr:$keep_lhs_length_if_realloc,
+                   UnitAttr:$temporary_lhs);
 
   let assemblyFormat = [{
     $rhs `to` $lhs (`realloc` $realloc^)?
     (`keep_lhs_len` $keep_lhs_length_if_realloc^)?
+    (`temporary_lhs` $temporary_lhs^)?
     attr-dict `:` type(operands)
   }];
 
@@ -163,6 +176,10 @@ def fir_AssignOp : hlfir_Op<"assign", [MemoryEffects<[MemWrite]>]> {
     /// that should retain its length after the assignment?
     bool mustKeepLhsLengthInAllocatableAssignment() {
       return getKeepLhsLengthIfRealloc();
+    }
+    /// Is the assignment's left hand side a compiler generated temporary?
+    bool isTemporaryLHS() {
+      return getTemporaryLhs();
     }
   }];
 
@@ -426,6 +443,24 @@ def hlfir_SetLengthOp : hlfir_Op<"set_length", []> {
   let builders = [OpBuilder<(ins "mlir::Value":$string,"mlir::Value":$len)>];
 }
 
+def hlfir_GetLengthOp : hlfir_Op<"get_length", [Pure]> {
+  let summary = "get the length of a character entity";
+  let description = [{
+    Get the length of character entity represented as hlfir.expr.
+  }];
+
+  let arguments = (ins AnyScalarOrArrayCharacterExpr:$expr);
+  let results = (outs Index);
+
+  let assemblyFormat = [{
+    $expr attr-dict `:` functional-type(operands, results)
+  }];
+
+  // If character length is know via the type, then the operation
+  // may be immediately canonicalized into arith::ConstantOp.
+  let hasCanonicalizeMethod = 1;
+}
+
 def hlfir_SumOp : hlfir_Op<"sum", [AttrSizedOperandSegments,
     DeclareOpInterfaceMethods<ArithFastMathInterface>]> {
   let summary = "SUM transformational intrinsic";
@@ -658,7 +693,54 @@ def hlfir_NoReassocOp : hlfir_Op<"no_reassoc", [NoMemoryEffect, SameOperandsAndR
   let assemblyFormat = "$val attr-dict `:` type($val)";
 }
 
-def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects]> {
+def hlfir_ElementalOpInterface : OpInterface<"ElementalOpInterface"> {
+  let description = [{
+    Interface for the operation holding a region with elemental computation.
+    It is used as a common interface bewteen hlfir.elemental and hlfir.elemental_addr.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/"Return the one based elemental indices.",
+      /*retTy=*/"mlir::Block::BlockArgListType",
+      /*methodName=*/"getIndices",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Return the element entity being computed",
+      /*retTy=*/"mlir::Value",
+      /*methodName=*/"getElementEntity",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Get element cleanup region, if any.",
+      /*retTy=*/"mlir::Region*",
+      /*methodName=*/"getElementCleanup",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Get elemental region.",
+      /*retTy=*/"mlir::Region&",
+      /*methodName=*/"getElementalRegion",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+    InterfaceMethod<
+      /*desc=*/"Must this elemental operation be evaluated in order?",
+      /*retTy=*/"bool",
+      /*methodName=*/"isOrdered",
+      /*args=*/(ins),
+      /*methodBody=*/[{}]
+    >,
+  ];
+
+  let cppNamespace = "hlfir";
+}
+
+def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects, hlfir_ElementalOpInterface]> {
   let summary = "elemental expression";
   let description = [{
     Represent an elemental expression as a function of the indices.
@@ -671,10 +753,9 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects]> {
     The shape and typeparams operands represent the extents and type
     parameters of the resulting array value.
 
-    Currently there is no way to control the iteration order of a hlfir
-    elemental operation and so operations in the body of the elemental must
-    not have side effects. If this is changed, an attribute must be added so
-    that the elemental inlining pass can skip these impure elementals.
+    The unordered attribute can be set to allow out of order processing
+    of the indices. This is safe only if the operations in the body
+    of the elemental do not have side effects.
 
 
     Example: Y + X,  with Integer :: X(10, 20), Y(10,20)
@@ -694,14 +775,15 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects]> {
 
   let arguments = (ins
     AnyShapeType:$shape,
-    Variadic<AnyIntegerType>:$typeparams
+    Variadic<AnyIntegerType>:$typeparams,
+    OptionalAttr<UnitAttr>:$unordered
   );
 
   let results = (outs hlfir_ExprType);
   let regions = (region SizedRegion<1>:$region);
 
   let assemblyFormat = [{
-    $shape (`typeparams` $typeparams^)?
+    $shape (`typeparams` $typeparams^)? (`unordered` $unordered^)?
     attr-dict `:` functional-type(operands, results)
     $region
     }];
@@ -713,16 +795,22 @@ def hlfir_ElementalOp : hlfir_Op<"elemental", [RecursiveMemoryEffects]> {
       mlir::Block::BlockArgListType getIndices() {
        return getBody()->getArguments();
       }
+      /// ElementalOpInterface implementation.
+
+      mlir::Region& getElementalRegion() { return getRegion(); }
+      mlir::Value getElementEntity();
+      mlir::Region* getElementCleanup() { return nullptr; }
 
       /// Must this elemental be evaluated in order?
-      /// TODO: add attribute and set it in lowering.
-      bool isOrdered() {return true;}
+      bool isOrdered() { return !getUnordered(); }
   }];
 
   let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "mlir::Type":$result_type, "mlir::Value":$shape,
-      CArg<"mlir::ValueRange", "{}">:$typeparams)>];
+      CArg<"mlir::ValueRange", "{}">:$typeparams,
+      CArg<"bool", "false">:$isUnordered)>
+  ];
 
 }
 
@@ -806,7 +894,7 @@ def hlfir_DestroyOp : hlfir_Op<"destroy", [MemoryEffects<[MemFree]>]> {
     buffer of an hlfir.expr, if any, will be deallocated if it was heap
     allocated.
     It is not required to create an hlfir.destroy operation for and hlfir.expr
-    created inside an hlfir.elemental an returned in the hlfir.yield_element.
+    created inside an hlfir.elemental and returned in the hlfir.yield_element.
     The last use of such expression is implicit and an hlfir.destroy could
     not be emitted after the hlfir.yield_element since it is a terminator.
 
@@ -1104,7 +1192,7 @@ def hlfir_YieldOp : hlfir_Op<"yield", [Terminator, ParentOneOf<["RegionAssignOp"
   let assemblyFormat = "$entity attr-dict `:` type($entity) custom<YieldOpCleanup>($cleanup)";
 }
 
-def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"RegionAssignOp">, RecursiveMemoryEffects, RecursivelySpeculatable]> {
+def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"RegionAssignOp">, RecursiveMemoryEffects, RecursivelySpeculatable, hlfir_ElementalOpInterface]> {
   let summary = "Yield the address of a vector subscripted variable inside an hlfir.region_assign";
   let description = [{
     Special terminator node for the left-hand side region of an hlfir.region_assign
@@ -1144,17 +1232,19 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
 
   let arguments = (ins
     fir_ShapeType:$shape,
-    Variadic<AnyIntegerType>:$typeparams);
+    Variadic<AnyIntegerType>:$typeparams,
+    OptionalAttr<UnitAttr>:$unordered
+  );
 
   let regions = (region  SizedRegion<1>:$body,
                          MaxSizedRegion<1>:$cleanup);
 
   let builders = [
-    OpBuilder<(ins "mlir::Value":$shape)>
+    OpBuilder<(ins "mlir::Value":$shape, CArg<"bool", "false">:$isUnordered)>
   ];
 
   let assemblyFormat = [{
-    $shape (`typeparams` $typeparams^)?
+    $shape (`typeparams` $typeparams^)? (`unordered` $unordered^)?
     attr-dict `:` type(operands) $body
     custom<YieldOpCleanup>($cleanup)}];
 
@@ -1162,6 +1252,20 @@ def hlfir_ElementalAddrOp : hlfir_Op<"elemental_addr", [Terminator, HasParent<"R
     mlir::Region::BlockArgListType getIndices() {
       return getBody().getArguments();
     }
+
+    /// Return the hlfir::YieldOp terminator of the operation
+    /// body. It yields the variable element address.
+    /// This should only be called once the ElementalAddrOp has been built.
+    hlfir::YieldOp getYieldOp();
+
+    /// ElementalOpInterface implementation.
+
+    mlir::Region& getElementalRegion() { return getBody(); }
+    mlir::Value getElementEntity();
+    mlir::Region* getElementCleanup();
+
+    /// Must this elemental be evaluated in order?
+    bool isOrdered() { return !getUnordered(); }
   }];
 
   let hasVerifier = 1;
@@ -1418,6 +1522,31 @@ def hlfir_ForallIndexOp : hlfir_Op<"forall_index", [fir_FortranVariableOpInterfa
   }];
 
   let hasCanonicalizeMethod = 1;
+}
+
+def hlfir_CharExtremumOp : hlfir_Op<"char_extremum", []> {
+  let summary = "Find max/min from given character strings";
+  let description = [{
+    Find the lexicographical minimum or maximum of two or more character 
+    strings of the same character kind and return the string with the lexicographical 
+    minimum or maximum number of characters. Example:
+
+    %0 = hlfir.char_extremum min, %arg0, %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,20>>) -> !hlfir.expr<!fir.char<1,10>>
+  }];
+
+  let arguments = (ins hlfir_CharExtremumPredicateAttr:$predicate,
+                  Variadic<AnyScalarCharacterEntity>:$strings
+  );
+
+  let results = (outs AnyScalarCharacterExpr);
+
+  let assemblyFormat = [{
+    $predicate `,` $strings attr-dict `:` functional-type(operands, results)
+  }];
+
+  let builders = [OpBuilder<(ins "hlfir::CharExtremumPredicate":$predicate, "mlir::ValueRange":$strings)>];
+
+  let hasVerifier = 1;
 }
 
 #endif // FORTRAN_DIALECT_HLFIR_OPS

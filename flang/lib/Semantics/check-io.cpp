@@ -424,8 +424,12 @@ void IoChecker::Enter(const parser::InquireSpec::CharVar &spec) {
     specKind = IoSpecKind::Dispose;
     break;
   }
-  CheckForDefinableVariable(std::get<parser::ScalarDefaultCharVariable>(spec.t),
-      parser::ToUpperCaseLetters(common::EnumToString(specKind)));
+  const parser::Variable &var{
+      std::get<parser::ScalarDefaultCharVariable>(spec.t).thing.thing};
+  std::string what{parser::ToUpperCaseLetters(common::EnumToString(specKind))};
+  CheckForDefinableVariable(var, what);
+  WarnOnDeferredLengthCharacterScalar(
+      context_, GetExpr(context_, var), var.GetSource(), what.c_str());
   SetSpecifier(specKind);
 }
 
@@ -583,6 +587,8 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
     } else { // CHARACTER variable (internal I/O)
       if (stmt_ == IoStmtKind::Write) {
         CheckForDefinableVariable(*var, "Internal file");
+        WarnOnDeferredLengthCharacterScalar(
+            context_, expr, var->GetSource(), "Internal file");
       }
       if (HasVectorSubscript(*expr)) {
         context_.Say(parser::FindSourceLocation(*var), // C1201
@@ -597,14 +603,19 @@ void IoChecker::Enter(const parser::IoUnit &spec) {
   }
 }
 
-void IoChecker::Enter(const parser::MsgVariable &var) {
+void IoChecker::Enter(const parser::MsgVariable &msgVar) {
+  const parser::Variable &var{msgVar.v.thing.thing};
   if (stmt_ == IoStmtKind::None) {
     // allocate, deallocate, image control
     CheckForDefinableVariable(var, "ERRMSG");
-    return;
+    WarnOnDeferredLengthCharacterScalar(
+        context_, GetExpr(context_, var), var.GetSource(), "ERRMSG=");
+  } else {
+    CheckForDefinableVariable(var, "IOMSG");
+    WarnOnDeferredLengthCharacterScalar(
+        context_, GetExpr(context_, var), var.GetSource(), "IOMSG=");
+    SetSpecifier(IoSpecKind::Iomsg);
   }
-  CheckForDefinableVariable(var, "IOMSG");
-  SetSpecifier(IoSpecKind::Iomsg);
 }
 
 void IoChecker::Enter(const parser::OutputItem &item) {
@@ -654,10 +665,10 @@ void IoChecker::Enter(const parser::StatVariable &var) {
   if (stmt_ == IoStmtKind::None) {
     // allocate, deallocate, image control
     CheckForDefinableVariable(var, "STAT");
-    return;
+  } else {
+    CheckForDefinableVariable(var, "IOSTAT");
+    SetSpecifier(IoSpecKind::Iostat);
   }
-  CheckForDefinableVariable(var, "IOSTAT");
-  SetSpecifier(IoSpecKind::Iostat);
 }
 
 void IoChecker::Leave(const parser::BackspaceStmt &) {

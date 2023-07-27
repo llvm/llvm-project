@@ -745,7 +745,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
 
     for (i = 0; i < ndeps; i++) {
       ompt_deps[i].variable.ptr = (void *)dep_list[i].base_addr;
-      if (dep_list[i].flags.in && dep_list[i].flags.out)
+      if (dep_list[i].base_addr == KMP_SIZE_T_MAX)
+        ompt_deps[i].dependence_type = ompt_dependence_type_out_all_memory;
+      else if (dep_list[i].flags.in && dep_list[i].flags.out)
         ompt_deps[i].dependence_type = ompt_dependence_type_inout;
       else if (dep_list[i].flags.out)
         ompt_deps[i].dependence_type = ompt_dependence_type_out;
@@ -755,10 +757,15 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
         ompt_deps[i].dependence_type = ompt_dependence_type_mutexinoutset;
       else if (dep_list[i].flags.set)
         ompt_deps[i].dependence_type = ompt_dependence_type_inoutset;
+      else if (dep_list[i].flags.all)
+        ompt_deps[i].dependence_type = ompt_dependence_type_out_all_memory;
     }
     for (i = 0; i < ndeps_noalias; i++) {
       ompt_deps[ndeps + i].variable.ptr = (void *)noalias_dep_list[i].base_addr;
-      if (noalias_dep_list[i].flags.in && noalias_dep_list[i].flags.out)
+      if (noalias_dep_list[i].base_addr == KMP_SIZE_T_MAX)
+        ompt_deps[ndeps + i].dependence_type =
+            ompt_dependence_type_out_all_memory;
+      else if (noalias_dep_list[i].flags.in && noalias_dep_list[i].flags.out)
         ompt_deps[ndeps + i].dependence_type = ompt_dependence_type_inout;
       else if (noalias_dep_list[i].flags.out)
         ompt_deps[ndeps + i].dependence_type = ompt_dependence_type_out;
@@ -769,6 +776,9 @@ kmp_int32 __kmpc_omp_task_with_deps(ident_t *loc_ref, kmp_int32 gtid,
             ompt_dependence_type_mutexinoutset;
       else if (noalias_dep_list[i].flags.set)
         ompt_deps[ndeps + i].dependence_type = ompt_dependence_type_inoutset;
+      else if (noalias_dep_list[i].flags.all)
+        ompt_deps[ndeps + i].dependence_type =
+            ompt_dependence_type_out_all_memory;
     }
     ompt_callbacks.ompt_callback(ompt_callback_dependences)(
         &(new_taskdata->ompt_task_info.task_data), ompt_deps, ompt_ndeps);

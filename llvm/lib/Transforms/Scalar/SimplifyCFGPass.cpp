@@ -348,7 +348,7 @@ void SimplifyCFGPass::printPipeline(
   OS << (Options.NeedCanonicalLoop ? "" : "no-") << "keep-loops;";
   OS << (Options.HoistCommonInsts ? "" : "no-") << "hoist-common-insts;";
   OS << (Options.SinkCommonInsts ? "" : "no-") << "sink-common-insts;";
-  OS << (Options.FoldTwoEntryPHINode ? "" : "no-") << "fold-two-entry-phi;";
+  OS << (Options.SpeculateBlocks ? "" : "no-") << "speculate-blocks;";
   OS << (Options.SimplifyCondBranch ? "" : "no-") << "simplify-cond-branch";
   OS << '>';
 }

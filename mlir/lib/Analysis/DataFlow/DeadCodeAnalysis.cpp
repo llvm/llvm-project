@@ -8,6 +8,7 @@
 
 #include "mlir/Analysis/DataFlow/DeadCodeAnalysis.h"
 #include "mlir/Analysis/DataFlow/ConstantPropagationAnalysis.h"
+#include "mlir/Analysis/DataFlowFramework.h"
 #include "mlir/Interfaces/CallInterfaces.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include <optional>
@@ -31,6 +32,8 @@ void Executable::print(raw_ostream &os) const {
 }
 
 void Executable::onUpdate(DataFlowSolver *solver) const {
+  AnalysisState::onUpdate(solver);
+
   if (auto *block = llvm::dyn_cast_if_present<Block *>(point)) {
     // Re-invoke the analyses on the block itself.
     for (DataFlowAnalysis *analysis : subscribers)

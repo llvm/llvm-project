@@ -24,6 +24,7 @@
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/OperationSupport.h"
+#include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/AsmParser/Parser.h"
 #include "llvm/IR/Attributes.h"
@@ -32,6 +33,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/SourceMgr.h"
 #include <optional>
+#include <string>
 
 using namespace mlir;
 using namespace NVVM;
@@ -67,11 +69,20 @@ ParseResult VoteBallotOp::parse(OpAsmParser &parser, OperationState &result) {
 
 void VoteBallotOp::print(OpAsmPrinter &p) { printNVVMIntrinsicOp(p, *this); }
 
+LogicalResult CpAsyncBulkTensorGlobalToSharedClusterOp::verify() {
+  if (getCoordinates().size() > 5)
+    return emitError("Maximum 5 coordinates and dimension is supported.");
+  return success();
+}
+
 LogicalResult CpAsyncOp::verify() {
+  if (getModifier() != LoadCacheModifierKind::CG &&
+      getModifier() != LoadCacheModifierKind::CA)
+    return emitError("Only CG and CA cache modifiers are supported.");
   if (getSize() != 4 && getSize() != 8 && getSize() != 16)
     return emitError("expected byte size to be either 4, 8 or 16.");
-  if (getBypassL1() && getSize() != 16)
-    return emitError("bypass l1 is only support for 16 bytes copy.");
+  if (getModifier() == LoadCacheModifierKind::CG && getSize() != 16)
+    return emitError("CG cache modifier is only support for 16 bytes copy.");
   return success();
 }
 

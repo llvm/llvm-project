@@ -14,8 +14,6 @@
 #define LLVM_SUPPORT_ERROR_H
 
 #include "llvm-c/Error.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/abi-breaking.h"
 #include "llvm/Support/AlignOf.h"
@@ -1025,13 +1023,7 @@ void logAllUnhandledErrors(Error E, raw_ostream &OS, Twine ErrorBanner = {});
 
 /// Write all error messages (if any) in E to a string. The newline character
 /// is used to separate error messages.
-inline std::string toString(Error E) {
-  SmallVector<std::string, 2> Errors;
-  handleAllErrors(std::move(E), [&Errors](const ErrorInfoBase &EI) {
-    Errors.push_back(EI.message());
-  });
-  return join(Errors.begin(), Errors.end(), "\n");
-}
+std::string toString(Error E);
 
 /// Consume a Error without doing anything. This method should be used
 /// only where an error can be considered a reasonable and expected return

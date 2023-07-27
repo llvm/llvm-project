@@ -24,6 +24,7 @@
 #include <array>
 #include <cassert>
 #include <deque>
+#include <iterator>
 #include <ranges>
 #include <vector>
 
@@ -203,6 +204,7 @@ constexpr bool test() {
   test_proxy_in_iterators<ProxyIterator>();
 
   { // check that a move-only type works
+    // When non-trivial
     {
       MoveOnly a[] = {1, 2, 3};
       MoveOnly b[3];
@@ -214,6 +216,24 @@ constexpr bool test() {
     {
       MoveOnly a[] = {1, 2, 3};
       MoveOnly b[3];
+      std::ranges::move(std::begin(a), std::end(a), std::begin(b));
+      assert(b[0].get() == 1);
+      assert(b[1].get() == 2);
+      assert(b[2].get() == 3);
+    }
+
+    // When trivial
+    {
+      TrivialMoveOnly a[] = {1, 2, 3};
+      TrivialMoveOnly b[3];
+      std::ranges::move(a, std::begin(b));
+      assert(b[0].get() == 1);
+      assert(b[1].get() == 2);
+      assert(b[2].get() == 3);
+    }
+    {
+      TrivialMoveOnly a[] = {1, 2, 3};
+      TrivialMoveOnly b[3];
       std::ranges::move(std::begin(a), std::end(a), std::begin(b));
       assert(b[0].get() == 1);
       assert(b[1].get() == 2);

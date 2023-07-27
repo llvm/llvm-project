@@ -29,8 +29,7 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
     : StoppointSite(0, addr, size, hardware), m_target(target),
       m_enabled(false), m_is_hardware(hardware), m_is_watch_variable(false),
       m_is_ephemeral(false), m_disabled_count(0), m_watch_read(0),
-      m_watch_write(0), m_watch_was_read(0), m_watch_was_written(0),
-      m_ignore_count(0), m_false_alarms(0), m_being_created(true) {
+      m_watch_write(0), m_ignore_count(0), m_being_created(true) {
 
   if (type && type->IsValid())
     m_type = *type;
@@ -41,14 +40,14 @@ Watchpoint::Watchpoint(Target &target, lldb::addr_t addr, uint32_t size,
         target.GetScratchTypeSystemForLanguage(eLanguageTypeC);
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
-                     "Failed to set type.");
+                     "Failed to set type: {0}");
     } else {
       if (auto ts = *type_system_or_err)
         m_type =
             ts->GetBuiltinTypeForEncodingAndBitSize(eEncodingUint, 8 * size);
       else
         LLDB_LOG_ERROR(GetLog(LLDBLog::Watchpoints), std::move(err),
-                       "Failed to set type. Typesystem is no longer live.");
+                       "Failed to set type: Typesystem is no longer live: {0}");
     }
   }
 
@@ -210,19 +209,6 @@ bool Watchpoint::CaptureWatchedValue(const ExecutionContext &exe_ctx) {
       watch_address, m_type);
   m_new_value_sp = m_new_value_sp->CreateConstantValue(watch_name);
   return (m_new_value_sp && m_new_value_sp->GetError().Success());
-}
-
-void Watchpoint::IncrementFalseAlarmsAndReviseHitCount() {
-  ++m_false_alarms;
-  if (m_false_alarms) {
-    if (m_hit_counter.GetValue() >= m_false_alarms) {
-      m_hit_counter.Decrement(m_false_alarms);
-      m_false_alarms = 0;
-    } else {
-      m_false_alarms -= m_hit_counter.GetValue();
-      m_hit_counter.Reset();
-    }
-  }
 }
 
 // RETURNS - true if we should stop at this breakpoint, false if we

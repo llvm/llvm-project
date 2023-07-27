@@ -16,9 +16,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constants.h"
@@ -43,7 +45,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/IPO.h"
-#include "llvm/Transforms/IPO/DeadArgumentElimination.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include <cassert>
 #include <utility>

@@ -1028,7 +1028,7 @@ bool ModuleList::RemoveSharedModuleIfOrphaned(const Module *module_ptr) {
 
 bool ModuleList::LoadScriptingResourcesInTarget(Target *target,
                                                 std::list<Status> &errors,
-                                                Stream *feedback_stream,
+                                                Stream &feedback_stream,
                                                 bool continue_on_error) {
   if (!target)
     return false;

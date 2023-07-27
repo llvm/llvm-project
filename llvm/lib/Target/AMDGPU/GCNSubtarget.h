@@ -65,7 +65,6 @@ protected:
   unsigned MaxPrivateElementSize = 0;
 
   // Possibly statically set by tablegen, but may want to be overridden.
-  bool FastFMAF32 = false;
   bool FastDenormalF32 = false;
   bool HalfRate64Ops = false;
   bool FullRate64Ops = false;
@@ -326,10 +325,6 @@ public:
 
   bool hasHWFP64() const {
     return FP64;
-  }
-
-  bool hasFastFMAF32() const {
-    return FastFMAF32;
   }
 
   bool hasHalfRate64Ops() const {
@@ -1357,6 +1352,14 @@ public:
   // \returns the number of address arguments from which to enable MIMG NSA
   // on supported architectures.
   unsigned getNSAThreshold(const MachineFunction &MF) const;
+
+  // \returns true if the subtarget has a hazard requiring an "s_nop 0"
+  // instruction before "s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)".
+  bool requiresNopBeforeDeallocVGPRs() const {
+    // Currently all targets that support the dealloc VGPRs message also require
+    // the nop.
+    return true;
+  }
 };
 
 } // end namespace llvm

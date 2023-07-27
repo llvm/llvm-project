@@ -188,34 +188,7 @@ private:
 };
 
 std::map<std::string, GlobalVariable *> BPFAbstractMemberAccess::GEPGlobals;
-
-class BPFAbstractMemberAccessLegacyPass final : public FunctionPass {
-  BPFTargetMachine *TM;
-
-  bool runOnFunction(Function &F) override {
-    return BPFAbstractMemberAccess(TM).run(F);
-  }
-
-public:
-  static char ID;
-
-  // Add optional BPFTargetMachine parameter so that BPF backend can add the
-  // phase with target machine to find out the endianness. The default
-  // constructor (without parameters) is used by the pass manager for managing
-  // purposes.
-  BPFAbstractMemberAccessLegacyPass(BPFTargetMachine *TM = nullptr)
-      : FunctionPass(ID), TM(TM) {}
-};
-
 } // End anonymous namespace
-
-char BPFAbstractMemberAccessLegacyPass::ID = 0;
-INITIALIZE_PASS(BPFAbstractMemberAccessLegacyPass, DEBUG_TYPE,
-                "BPF Abstract Member Access", false, false)
-
-FunctionPass *llvm::createBPFAbstractMemberAccess(BPFTargetMachine *TM) {
-  return new BPFAbstractMemberAccessLegacyPass(TM);
-}
 
 bool BPFAbstractMemberAccess::run(Function &F) {
   LLVM_DEBUG(dbgs() << "********** Abstract Member Accesses **********\n");

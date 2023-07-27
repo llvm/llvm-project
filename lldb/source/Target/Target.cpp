@@ -1393,8 +1393,8 @@ static void LoadScriptingResourceForModule(const ModuleSP &module_sp,
                                            Target *target) {
   Status error;
   StreamString feedback_stream;
-  if (module_sp && !module_sp->LoadScriptingResourceInTarget(
-                       target, error, &feedback_stream)) {
+  if (module_sp && !module_sp->LoadScriptingResourceInTarget(target, error,
+                                                             feedback_stream)) {
     if (error.AsCString())
       target->GetDebugger().GetErrorStream().Printf(
           "unable to load scripting data for module %s - error reported was "
@@ -2129,19 +2129,48 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
                      // of the library
     bool did_create_module = false;
     FileSpecList search_paths = GetExecutableSearchPaths();
-    // If there are image search path entries, try to use them first to acquire
-    // a suitable image.
-    if (m_image_search_paths.GetSize()) {
-      ModuleSpec transformed_spec(module_spec);
-      ConstString transformed_dir;
-      if (m_image_search_paths.RemapPath(
-              module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
-        transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
-        transformed_spec.GetFileSpec().SetFilename(
-              module_spec.GetFileSpec().GetFilename());
-        error = ModuleList::GetSharedModule(transformed_spec, module_sp,
-                                            &search_paths, &old_modules,
-                                            &did_create_module);
+    FileSpec symbol_file_spec;
+
+    // Call locate module callback if set. This allows users to implement their
+    // own module cache system. For example, to leverage build system artifacts,
+    // to bypass pulling files from remote platform, or to search symbol files
+    // from symbol servers.
+    if (m_platform_sp)
+      m_platform_sp->CallLocateModuleCallbackIfSet(
+          module_spec, module_sp, symbol_file_spec, &did_create_module);
+
+    // The result of this CallLocateModuleCallbackIfSet is one of the following.
+    // 1. module_sp:loaded, symbol_file_spec:set
+    //      The callback found a module file and a symbol file for the
+    //      module_spec. We will call module_sp->SetSymbolFileFileSpec with
+    //      the symbol_file_spec later.
+    // 2. module_sp:loaded, symbol_file_spec:empty
+    //      The callback only found a module file for the module_spec.
+    // 3. module_sp:empty, symbol_file_spec:set
+    //      The callback only found a symbol file for the module. We continue
+    //      to find a module file for this module_spec and we will call
+    //      module_sp->SetSymbolFileFileSpec with the symbol_file_spec later.
+    // 4. module_sp:empty, symbol_file_spec:empty
+    //      Platform does not exist, the callback is not set, the callback did
+    //      not find any module files nor any symbol files, the callback failed,
+    //      or something went wrong. We continue to find a module file for this
+    //      module_spec.
+
+    if (!module_sp) {
+      // If there are image search path entries, try to use them to acquire a
+      // suitable image.
+      if (m_image_search_paths.GetSize()) {
+        ModuleSpec transformed_spec(module_spec);
+        ConstString transformed_dir;
+        if (m_image_search_paths.RemapPath(
+                module_spec.GetFileSpec().GetDirectory(), transformed_dir)) {
+          transformed_spec.GetFileSpec().SetDirectory(transformed_dir);
+          transformed_spec.GetFileSpec().SetFilename(
+                module_spec.GetFileSpec().GetFilename());
+          error = ModuleList::GetSharedModule(transformed_spec, module_sp,
+                                              &search_paths, &old_modules,
+                                              &did_create_module);
+        }
       }
     }
 
@@ -2232,11 +2261,15 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
           });
         }
 
+        // If the locate module callback had found a symbol file, set it to the
+        // module_sp before preloading symbols.
+        if (symbol_file_spec)
+          module_sp->SetSymbolFileFileSpec(symbol_file_spec);
+
         // Preload symbols outside of any lock, so hopefully we can do this for
         // each library in parallel.
         if (GetPreloadSymbols())
           module_sp->PreloadSymbols();
-
         llvm::SmallVector<ModuleSP, 1> replaced_modules;
         for (ModuleSP &old_module_sp : old_modules) {
           if (m_images.GetIndexForModule(old_module_sp.get()) !=
@@ -2271,7 +2304,7 @@ ModuleSP Target::GetOrCreateModule(const ModuleSpec &module_spec, bool notify,
               message << " (uuid ";
 
               if (dump_uuid.IsValid())
-                dump_uuid.Dump(&message);
+                dump_uuid.Dump(message);
               else
                 message << "not specified";
 
@@ -2387,10 +2420,11 @@ Target::GetScratchTypeSystems(bool create_on_demand) {
     auto type_system_or_err =
         GetScratchTypeSystemForLanguage(language, create_on_demand);
     if (!type_system_or_err)
-      LLDB_LOG_ERROR(GetLog(LLDBLog::Target), type_system_or_err.takeError(),
-                     "Language '{}' has expression support but no scratch type "
-                     "system available",
-                     Language::GetNameForLanguageType(language));
+      LLDB_LOG_ERROR(
+          GetLog(LLDBLog::Target), type_system_or_err.takeError(),
+          "Language '{1}' has expression support but no scratch type "
+          "system available: {0}",
+          Language::GetNameForLanguageType(language));
     else
       if (auto ts = *type_system_or_err)
         scratch_type_systems.push_back(ts);
@@ -2408,9 +2442,10 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
   auto type_system_or_err = GetScratchTypeSystemForLanguage(language, true);
 
   if (auto err = type_system_or_err.takeError()) {
-    LLDB_LOG_ERROR(GetLog(LLDBLog::Target), std::move(err),
-                   "Unable to get persistent expression state for language {}",
-                   Language::GetNameForLanguageType(language));
+    LLDB_LOG_ERROR(
+        GetLog(LLDBLog::Target), std::move(err),
+        "Unable to get persistent expression state for language {1}: {0}",
+        Language::GetNameForLanguageType(language));
     return nullptr;
   }
 
@@ -2418,7 +2453,7 @@ Target::GetPersistentExpressionStateForLanguage(lldb::LanguageType language) {
     return ts->GetPersistentExpressionState();
 
   LLDB_LOG(GetLog(LLDBLog::Target),
-           "Unable to get persistent expression state for language {}",
+           "Unable to get persistent expression state for language {1}: {0}",
            Language::GetNameForLanguageType(language));
   return nullptr;
 }
@@ -2617,7 +2652,7 @@ ExpressionResults Target::EvaluateExpression(
       auto ts = *type_system_or_err;
       if (!ts)
         LLDB_LOG_ERROR(GetLog(LLDBLog::Target), std::move(err),
-                       "Scratch type system is no longer live");
+                       "Scratch type system is no longer live: {0}");
       else
         persistent_var_sp =
             ts->GetPersistentExpressionState()->GetVariable(expr);
@@ -2892,7 +2927,7 @@ bool Target::RunStopHooks() {
 
       if (print_hook_header && !any_thread_matched) {
         StreamString s;
-        cur_hook_sp->GetDescription(&s, eDescriptionLevelBrief);
+        cur_hook_sp->GetDescription(s, eDescriptionLevelBrief);
         if (s.GetSize() != 0)
           output_sp->Printf("\n- Hook %" PRIu64 " (%s)\n", cur_hook_sp->GetID(),
                             s.GetData());
@@ -3209,8 +3244,8 @@ Status Target::Launch(ProcessLaunchInfo &launch_info, Stream *stream) {
       assert(m_process_sp);
     } else {
       // Use a Process plugin to construct the process.
-      const char *plugin_name = launch_info.GetProcessPluginName();
-      CreateProcess(launch_info.GetListener(), plugin_name, nullptr, false);
+      CreateProcess(launch_info.GetListener(),
+                    launch_info.GetProcessPluginName(), nullptr, false);
     }
 
     // Since we didn't have a platform launch the process, launch it here.
@@ -3371,14 +3406,14 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
   } else {
     if (state != eStateConnected) {
       SaveScriptedLaunchInfo(attach_info);
-      const char *plugin_name = attach_info.GetProcessPluginName();
+      llvm::StringRef plugin_name = attach_info.GetProcessPluginName();
       process_sp =
           CreateProcess(attach_info.GetListenerForProcess(GetDebugger()),
                         plugin_name, nullptr, false);
-      if (process_sp == nullptr) {
-        error.SetErrorStringWithFormat(
-            "failed to create process using plugin %s",
-            (plugin_name) ? plugin_name : "null");
+      if (!process_sp) {
+        error.SetErrorStringWithFormatv(
+            "failed to create process using plugin '{0}'",
+            plugin_name.empty() ? "<empty>" : plugin_name);
         return error;
       }
     }
@@ -3651,7 +3686,7 @@ bool Target::StopHook::ExecutionContextPasses(const ExecutionContext &exc_ctx) {
   return will_run;
 }
 
-void Target::StopHook::GetDescription(Stream *s,
+void Target::StopHook::GetDescription(Stream &s,
                                       lldb::DescriptionLevel level) const {
 
   // For brief descriptions, only print the subclass description:
@@ -3660,55 +3695,55 @@ void Target::StopHook::GetDescription(Stream *s,
     return;
   }
 
-  unsigned indent_level = s->GetIndentLevel();
+  unsigned indent_level = s.GetIndentLevel();
 
-  s->SetIndentLevel(indent_level + 2);
+  s.SetIndentLevel(indent_level + 2);
 
-  s->Printf("Hook: %" PRIu64 "\n", GetID());
+  s.Printf("Hook: %" PRIu64 "\n", GetID());
   if (m_active)
-    s->Indent("State: enabled\n");
+    s.Indent("State: enabled\n");
   else
-    s->Indent("State: disabled\n");
+    s.Indent("State: disabled\n");
 
   if (m_auto_continue)
-    s->Indent("AutoContinue on\n");
+    s.Indent("AutoContinue on\n");
 
   if (m_specifier_sp) {
-    s->Indent();
-    s->PutCString("Specifier:\n");
-    s->SetIndentLevel(indent_level + 4);
-    m_specifier_sp->GetDescription(s, level);
-    s->SetIndentLevel(indent_level + 2);
+    s.Indent();
+    s.PutCString("Specifier:\n");
+    s.SetIndentLevel(indent_level + 4);
+    m_specifier_sp->GetDescription(&s, level);
+    s.SetIndentLevel(indent_level + 2);
   }
 
   if (m_thread_spec_up) {
     StreamString tmp;
-    s->Indent("Thread:\n");
+    s.Indent("Thread:\n");
     m_thread_spec_up->GetDescription(&tmp, level);
-    s->SetIndentLevel(indent_level + 4);
-    s->Indent(tmp.GetString());
-    s->PutCString("\n");
-    s->SetIndentLevel(indent_level + 2);
+    s.SetIndentLevel(indent_level + 4);
+    s.Indent(tmp.GetString());
+    s.PutCString("\n");
+    s.SetIndentLevel(indent_level + 2);
   }
   GetSubclassDescription(s, level);
 }
 
 void Target::StopHookCommandLine::GetSubclassDescription(
-    Stream *s, lldb::DescriptionLevel level) const {
+    Stream &s, lldb::DescriptionLevel level) const {
   // The brief description just prints the first command.
   if (level == eDescriptionLevelBrief) {
     if (m_commands.GetSize() == 1)
-      s->PutCString(m_commands.GetStringAtIndex(0));
+      s.PutCString(m_commands.GetStringAtIndex(0));
     return;
   }
-  s->Indent("Commands: \n");
-  s->SetIndentLevel(s->GetIndentLevel() + 4);
+  s.Indent("Commands: \n");
+  s.SetIndentLevel(s.GetIndentLevel() + 4);
   uint32_t num_commands = m_commands.GetSize();
   for (uint32_t i = 0; i < num_commands; i++) {
-    s->Indent(m_commands.GetStringAtIndex(i));
-    s->PutCString("\n");
+    s.Indent(m_commands.GetStringAtIndex(i));
+    s.PutCString("\n");
   }
-  s->SetIndentLevel(s->GetIndentLevel() - 4);
+  s.SetIndentLevel(s.GetIndentLevel() - 4);
 }
 
 // Target::StopHookCommandLine
@@ -3796,13 +3831,13 @@ Target::StopHookScripted::HandleStop(ExecutionContext &exc_ctx,
 }
 
 void Target::StopHookScripted::GetSubclassDescription(
-    Stream *s, lldb::DescriptionLevel level) const {
+    Stream &s, lldb::DescriptionLevel level) const {
   if (level == eDescriptionLevelBrief) {
-    s->PutCString(m_class_name);
+    s.PutCString(m_class_name);
     return;
   }
-  s->Indent("Class:");
-  s->Printf("%s\n", m_class_name.c_str());
+  s.Indent("Class:");
+  s.Printf("%s\n", m_class_name.c_str());
 
   // Now print the extra args:
   // FIXME: We should use StructuredData.GetDescription on the m_extra_args
@@ -3821,20 +3856,20 @@ void Target::StopHookScripted::GetSubclassDescription(
   if (num_keys == 0)
     return;
 
-  s->Indent("Args:\n");
-  s->SetIndentLevel(s->GetIndentLevel() + 4);
+  s.Indent("Args:\n");
+  s.SetIndentLevel(s.GetIndentLevel() + 4);
 
   auto print_one_element = [&s](ConstString key,
                                 StructuredData::Object *object) {
-    s->Indent();
-    s->Printf("%s : %s\n", key.GetCString(),
+    s.Indent();
+    s.Printf("%s : %s\n", key.GetCString(),
               object->GetStringValue().str().c_str());
     return true;
   };
 
   as_dict->ForEach(print_one_element);
 
-  s->SetIndentLevel(s->GetIndentLevel() - 4);
+  s.SetIndentLevel(s.GetIndentLevel() - 4);
 }
 
 static constexpr OptionEnumValueElement g_dynamic_value_types[] = {
@@ -4112,7 +4147,7 @@ TargetProperties::TargetProperties(Target *target)
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();
     m_collection_sp->AppendProperty(
-        ConstString(Properties::GetExperimentalSettingsName()),
+        Properties::GetExperimentalSettingsName(),
         "Experimental settings - setting these won't produce "
         "errors if the setting is not present.",
         true, m_experimental_properties_up->GetValueProperties());
@@ -4123,12 +4158,12 @@ TargetProperties::TargetProperties(Target *target)
     m_experimental_properties_up =
         std::make_unique<TargetExperimentalProperties>();
     m_collection_sp->AppendProperty(
-        ConstString(Properties::GetExperimentalSettingsName()),
+        Properties::GetExperimentalSettingsName(),
         "Experimental settings - setting these won't produce "
         "errors if the setting is not present.",
         true, m_experimental_properties_up->GetValueProperties());
     m_collection_sp->AppendProperty(
-        ConstString("process"), "Settings specific to processes.", true,
+        "process", "Settings specific to processes.", true,
         Process::GetGlobalProperties().GetValueProperties());
     m_collection_sp->SetValueChangedCallback(
         ePropertySaveObjectsDir, [this] { CheckJITObjectsDir(); });
@@ -4203,6 +4238,10 @@ bool TargetProperties::SetPreferDynamicValue(lldb::DynamicValueType d) {
 }
 
 bool TargetProperties::GetPreloadSymbols() const {
+  if (INTERRUPT_REQUESTED(m_target->GetDebugger(), 
+      "Interrupted checking preload symbols")) {
+    return false;
+  }
   const uint32_t idx = ePropertyPreloadSymbols;
   return GetPropertyAtIndexAs<bool>(
       idx, g_target_properties[idx].default_uint_value != 0);

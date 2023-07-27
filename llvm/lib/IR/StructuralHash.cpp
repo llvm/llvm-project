@@ -58,8 +58,10 @@ public:
   }
 
   void update(const GlobalVariable &GV) {
-    // used/compiler.used don't affect analyses.
-    if (GV.getName() == "llvm.compiler.used" || GV.getName() == "llvm.used")
+    // Declarations and used/compiler.used don't affect analyses.
+    // Since there are several `llvm.*` metadata, like `llvm.embedded.object`,
+    // we ignore anything with the `.llvm` prefix
+    if (GV.isDeclaration() || GV.getName().starts_with("llvm."))
       return;
     hash(23456); // Global header
     hash(GV.getValueType()->getTypeID());

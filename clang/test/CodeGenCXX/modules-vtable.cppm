@@ -68,7 +68,7 @@ int use() {
 
 // Check the case that the declaration of the key function comes from another
 // module unit but the definition of the key function comes from the current
-// mdoule unit.
+// module unit.
 
 //--- M-A.cppm
 export module M:A;

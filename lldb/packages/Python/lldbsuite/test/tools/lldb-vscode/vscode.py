@@ -126,6 +126,7 @@ class DebugCommunication(object):
         self.thread_stop_reasons = {}
         self.breakpoint_events = []
         self.progress_events = []
+        self.reverse_requests = []
         self.sequence = 1
         self.threads = None
         self.recv_thread.start()
@@ -324,6 +325,7 @@ class DebugCommunication(object):
                 self.validate_response(command, response_or_request)
                 return response_or_request
             else:
+                self.reverse_requests.append(response_or_request)
                 if response_or_request["command"] == "runInTerminal":
                     subprocess.Popen(
                         response_or_request["arguments"]["args"],
@@ -340,8 +342,20 @@ class DebugCommunication(object):
                         },
                         set_sequence=False,
                     )
+                elif response_or_request["command"] == "startDebugging":
+                    self.send_packet(
+                        {
+                            "type": "response",
+                            "seq": -1,
+                            "request_seq": response_or_request["seq"],
+                            "success": True,
+                            "command": "startDebugging",
+                            "body": {},
+                        },
+                        set_sequence=False,
+                    )
                 else:
-                    desc = 'unkonwn reverse request "%s"' % (
+                    desc = 'unknown reverse request "%s"' % (
                         response_or_request["command"]
                     )
                     raise ValueError(desc)
@@ -426,8 +440,11 @@ class DebugCommunication(object):
         print("invalid response")
         return None
 
-    def get_completions(self, text):
-        response = self.request_completions(text)
+    def get_completions(self, text, frameId=None):
+        if frameId is None:
+            stackFrame = self.get_stackFrame()
+            frameId = stackFrame["id"]
+        response = self.request_completions(text, frameId)
         return response["body"]["targets"]
 
     def get_scope_variables(self, scope_name, frameIndex=0, threadId=None):
@@ -661,6 +678,7 @@ class DebugCommunication(object):
                 "supportsRunInTerminalRequest": True,
                 "supportsVariablePaging": True,
                 "supportsVariableType": True,
+                "supportsStartDebuggingRequest": True,
                 "sourceInitFile": sourceInitFile,
             },
         }
@@ -855,8 +873,10 @@ class DebugCommunication(object):
         response = self.send_recv(command_dict)
         return response
 
-    def request_completions(self, text):
+    def request_completions(self, text, frameId=None):
         args_dict = {"text": text, "column": len(text)}
+        if frameId:
+            args_dict["frameId"] = frameId
         command_dict = {
             "command": "completions",
             "type": "request",

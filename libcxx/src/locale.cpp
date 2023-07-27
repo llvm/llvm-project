@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <__utility/unreachable.h>
+#include <__verbose_abort>
 #include <algorithm>
 #include <clocale>
 #include <codecvt>
@@ -115,11 +116,22 @@ _LIBCPP_NORETURN static void __throw_runtime_error(const string &msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw runtime_error(msg);
 #else
-    (void)msg;
-    _VSTD::abort();
+    _LIBCPP_VERBOSE_ABORT("runtime_error was thrown in -fno-exceptions mode with message \"%s\"", msg.c_str());
 #endif
 }
 
+}
+
+string
+build_name(const string& other, const string& one, locale::category c) {
+    if (other == "*" || one == "*")
+        return "*";
+    if (c == locale::none || other == one)
+        return other;
+
+    // FIXME: Handle the more complicated cases, such as when the locale has
+    // different names for different categories.
+    return "*";
 }
 
 const locale::category locale::none;
@@ -303,8 +315,7 @@ locale::__imp::__imp(const __imp& other)
 }
 
 locale::__imp::__imp(const __imp& other, const string& name, locale::category c)
-    : facets_(N),
-      name_("*")
+    : facets_(N), name_(build_name(other.name_, name, c))
 {
     facets_ = other.facets_;
     for (unsigned i = 0; i < facets_.size(); ++i)
@@ -396,8 +407,7 @@ locale::__imp::install_from(const locale::__imp& one)
 }
 
 locale::__imp::__imp(const __imp& other, const __imp& one, locale::category c)
-    : facets_(N),
-      name_("*")
+    : facets_(N), name_(build_name(other.name_, one.name_, c))
 {
     facets_ = other.facets_;
     for (unsigned i = 0; i < facets_.size(); ++i)
@@ -6522,8 +6532,7 @@ void __throw_runtime_error(const char* msg)
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
     throw runtime_error(msg);
 #else
-    (void)msg;
-    _VSTD::abort();
+    _LIBCPP_VERBOSE_ABORT("runtime_error was thrown in -fno-exceptions mode with message \"%s\"", msg);
 #endif
 }
 

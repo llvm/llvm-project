@@ -394,8 +394,9 @@ cc_library(
 
 cc_library(
     name = "DebugInfo",
-    hdrs = glob(["include/llvm/DebugInfo/*.h"]),
+    hdrs = glob(["include/llvm/DebugInfo/**/*.h"]),
     copts = llvm_copts,
+    textual_hdrs = glob(["include/llvm/DebugInfo/**/*.def"]),
     deps = [
         ":Object",
         ":Support",
@@ -411,6 +412,23 @@ cc_library(
     hdrs = glob(["include/llvm/DebugInfo/MSF/*.h"]),
     copts = llvm_copts,
     deps = [":Support"],
+)
+
+cc_library(
+    name = "DebugInfoBTF",
+    srcs = glob([
+        "lib/DebugInfo/BTF/*.cpp",
+        "lib/DebugInfo/BTF/*.h",
+    ]),
+    hdrs = glob(["include/llvm/DebugInfo/BTF/*.h"]) + [
+        "include/llvm/DebugInfo/BTF/BTF.def",
+    ],
+    copts = llvm_copts,
+    deps = [
+        ":DebugInfo",
+        ":Object",
+        ":Support",
+    ],
 )
 
 cc_library(
@@ -472,6 +490,7 @@ cc_library(
     deps = [
         ":BinaryFormat",
         ":DebugInfo",
+        ":DebugInfoBTF",
         ":DebugInfoCodeView",
         ":DebugInfoMSF",
         ":Object",
@@ -644,6 +663,7 @@ cc_binary(
         # listed here. MC uses headers produced by tablegen, so it cannot be a
         # regular dependency.
         "include/llvm/MC/*.h",
+        "include/llvm/TargetParser/SubtargetFeature.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
@@ -652,6 +672,7 @@ cc_binary(
         ":Support",
         ":TableGen",
         ":TableGenGlobalISel",
+        ":TargetParser",
         ":config",
         ":llvm-tblgen-headers",
     ],
@@ -1791,10 +1812,10 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-dag-isel", "lib/Target/AArch64/AArch64GenDAGISel.inc"),
             ("-gen-fast-isel", "lib/Target/AArch64/AArch64GenFastISel.inc"),
             ("-gen-global-isel", "lib/Target/AArch64/AArch64GenGlobalISel.inc"),
-            ("-gen-global-isel-combiner -combiners=AArch64O0PreLegalizerCombinerHelper", "lib/Target/AArch64/AArch64GenO0PreLegalizeGICombiner.inc"),
-            ("-gen-global-isel-combiner -combiners=AArch64PreLegalizerCombinerHelper", "lib/Target/AArch64/AArch64GenPreLegalizeGICombiner.inc"),
-            ("-gen-global-isel-combiner -combiners=AArch64PostLegalizerCombinerHelper", "lib/Target/AArch64/AArch64GenPostLegalizeGICombiner.inc"),
-            ("-gen-global-isel-combiner -combiners=AArch64PostLegalizerLoweringHelper", "lib/Target/AArch64/AArch64GenPostLegalizeGILowering.inc"),
+            ("-gen-global-isel-combiner-matchtable -combiners=AArch64O0PreLegalizerCombiner", "lib/Target/AArch64/AArch64GenO0PreLegalizeGICombiner.inc"),
+            ("-gen-global-isel-combiner-matchtable -combiners=AArch64PreLegalizerCombiner", "lib/Target/AArch64/AArch64GenPreLegalizeGICombiner.inc"),
+            ("-gen-global-isel-combiner-matchtable -combiners=AArch64PostLegalizerCombiner", "lib/Target/AArch64/AArch64GenPostLegalizeGICombiner.inc"),
+            ("-gen-global-isel-combiner-matchtable -combiners=AArch64PostLegalizerLowering", "lib/Target/AArch64/AArch64GenPostLegalizeGILowering.inc"),
             ("-gen-callingconv", "lib/Target/AArch64/AArch64GenCallingConv.inc"),
             ("-gen-subtarget", "lib/Target/AArch64/AArch64GenSubtargetInfo.inc"),
             ("-gen-disassembler", "lib/Target/AArch64/AArch64GenDisassemblerTables.inc"),
@@ -1934,7 +1955,7 @@ llvm_target_lib_list = [lib for lib in [
             ("-gen-exegesis", "lib/Target/Mips/MipsGenExegesis.inc"),
             ("-gen-fast-isel", "lib/Target/Mips/MipsGenFastISel.inc"),
             ("-gen-global-isel", "lib/Target/Mips/MipsGenGlobalISel.inc"),
-            ("-gen-global-isel-combiner -combiners=MipsPostLegalizerCombinerHelper", "lib/Target/Mips/MipsGenPostLegalizeGICombiner.inc"),
+            ("-gen-global-isel-combiner-matchtable -combiners=MipsPostLegalizerCombiner", "lib/Target/Mips/MipsGenPostLegalizeGICombiner.inc"),
             ("-gen-instr-info", "lib/Target/Mips/MipsGenInstrInfo.inc"),
             ("-gen-pseudo-lowering", "lib/Target/Mips/MipsGenMCPseudoLowering.inc"),
             ("-gen-register-bank", "lib/Target/Mips/MipsGenRegisterBank.inc"),
@@ -2125,9 +2146,9 @@ gentbl(
     strip_include_prefix = "lib/Target/AMDGPU",
     tbl_outs = [
         ("-gen-global-isel", "lib/Target/AMDGPU/AMDGPUGenGlobalISel.inc"),
-        ("-gen-global-isel-combiner -combiners=AMDGPUPreLegalizerCombinerHelper", "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc"),
-        ("-gen-global-isel-combiner -combiners=AMDGPUPostLegalizerCombinerHelper", "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc"),
-        ("-gen-global-isel-combiner -combiners=AMDGPURegBankCombinerHelper", "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc"),
+        ("-gen-global-isel-combiner-matchtable -combiners=AMDGPUPreLegalizerCombiner", "lib/Target/AMDGPU/AMDGPUGenPreLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner-matchtable -combiners=AMDGPUPostLegalizerCombiner", "lib/Target/AMDGPU/AMDGPUGenPostLegalizeGICombiner.inc"),
+        ("-gen-global-isel-combiner-matchtable -combiners=AMDGPURegBankCombiner", "lib/Target/AMDGPU/AMDGPUGenRegBankGICombiner.inc"),
     ],
     tblgen = ":llvm-tblgen",
     td_file = "lib/Target/AMDGPU/AMDGPUGISel.td",
@@ -2776,6 +2797,7 @@ cc_library(
         ":DebugInfoDWARF",
         ":MC",
         ":Support",
+        ":Target",
         ":TargetParser",
     ],
 )
@@ -3488,6 +3510,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "DwpOptionsTableGen",
+    strip_include_prefix = "tools/llvm-dwp",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-dwp/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-dwp/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-dwp",
     srcs = glob([
@@ -3499,7 +3533,9 @@ cc_binary(
     deps = [
         ":AllTargetsCodeGens",
         ":DWP",
+        ":DwpOptionsTableGen",
         ":MC",
+        ":Option",
         ":Support",
     ],
 )
@@ -3677,6 +3713,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "LibtoolDarwinOptionsTableGen",
+    strip_include_prefix = "tools/llvm-libtool-darwin",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/llvm-libtool-darwin/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/llvm-libtool-darwin/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "llvm-libtool-darwin",
     srcs = glob([
@@ -3690,7 +3738,9 @@ cc_binary(
         ":AllTargetsCodeGens",
         ":BinaryFormat",
         ":Core",
+        ":LibtoolDarwinOptionsTableGen",
         ":Object",
+        ":Option",
         ":Support",
         ":TextAPI",
     ],
@@ -4189,6 +4239,7 @@ cc_binary(
     stamp = 0,
     deps = [
         ":BinaryFormat",
+        ":DebugInfoBTF",
         ":DebugInfoCodeView",
         ":DebugInfoMSF",
         ":DebugInfoPDB",
@@ -4623,6 +4674,18 @@ cc_binary(
     ],
 )
 
+gentbl(
+    name = "SancovOptsTableGen",
+    strip_include_prefix = "tools/sancov",
+    tbl_outs = [(
+        "-gen-opt-parser-defs",
+        "tools/sancov/Opts.inc",
+    )],
+    tblgen = ":llvm-tblgen",
+    td_file = "tools/sancov/Opts.td",
+    td_srcs = ["include/llvm/Option/OptParser.td"],
+)
+
 cc_binary(
     name = "sancov",
     srcs = glob([
@@ -4639,6 +4702,8 @@ cc_binary(
         ":MC",
         ":MCDisassembler",
         ":Object",
+        ":Option",
+        ":SancovOptsTableGen",
         ":Support",
         ":Symbolize",
     ],

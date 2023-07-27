@@ -28,11 +28,11 @@ llvm.func @_QPopenmp_target_data() {
 // CHECK:         store ptr null, ptr %[[VAL_8]], align 8
 // CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         store i32 99, ptr %[[VAL_3]], align 4
 // CHECK:         %[[VAL_11:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_12:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_11]], ptr %[[VAL_12]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_11]], ptr %[[VAL_12]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         ret void
 
 // -----
@@ -67,12 +67,12 @@ llvm.func @_QPopenmp_target_data_region(%1 : !llvm.ptr<array<1024 x i32>>) {
 // CHECK:         store ptr null, ptr %[[VAL_8]], align 8
 // CHECK:         %[[VAL_9:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_10:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_9]], ptr %[[VAL_10]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         %[[VAL_11:.*]] = getelementptr [1024 x i32], ptr %[[VAL_6]], i32 0, i64 0
 // CHECK:         store i32 99, ptr %[[VAL_11]], align 4
 // CHECK:         %[[VAL_12:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_13:.*]] = getelementptr inbounds [1 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_12]], ptr %[[VAL_13]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @2, i64 -1, i32 1, ptr %[[VAL_12]], ptr %[[VAL_13]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         ret void
 
 // -----
@@ -136,7 +136,7 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr<array<1024 x i32>>, %3 : !llv
 // CHECK:         store ptr null, ptr %[[VAL_22]], align 8
 // CHECK:         %[[VAL_23:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_3]], i32 0, i32 0
 // CHECK:         %[[VAL_24:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_4]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_23]], ptr %[[VAL_24]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr null, ptr null)
+// CHECK:         call void @__tgt_target_data_begin_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_23]], ptr %[[VAL_24]], ptr @.offload_sizes, ptr @.offload_maptypes, ptr @.offload_mapnames, ptr null)
 // CHECK:         br label %[[VAL_25:.*]]
 // CHECK:       omp_if.else:                                      ; preds = %[[VAL_11]]
 // CHECK:         br label %[[VAL_25]]
@@ -160,7 +160,7 @@ llvm.func @_QPomp_target_enter_exit(%1 : !llvm.ptr<array<1024 x i32>>, %3 : !llv
 // CHECK:         store ptr null, ptr %[[VAL_36]], align 8
 // CHECK:         %[[VAL_37:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_0]], i32 0, i32 0
 // CHECK:         %[[VAL_38:.*]] = getelementptr inbounds [2 x ptr], ptr %[[VAL_1]], i32 0, i32 0
-// CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr null, ptr null)
+// CHECK:         call void @__tgt_target_data_end_mapper(ptr @3, i64 -1, i32 2, ptr %[[VAL_37]], ptr %[[VAL_38]], ptr @.offload_sizes.1, ptr @.offload_maptypes.2, ptr @.offload_mapnames.3, ptr null)
 // CHECK:         br label %[[VAL_39:.*]]
 // CHECK:       omp_if.else5:                                     ; preds = %[[VAL_25]]
 // CHECK:         br label %[[VAL_39]]

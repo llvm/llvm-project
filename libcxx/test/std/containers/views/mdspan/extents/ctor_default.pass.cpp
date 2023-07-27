@@ -20,7 +20,7 @@
 #include <cassert>
 #include <array>
 
-#include "ConvertibleToIntegral.h"
+#include "../ConvertibleToIntegral.h"
 #include "CtorTestCombinations.h"
 #include "test_macros.h"
 

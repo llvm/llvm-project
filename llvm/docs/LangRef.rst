@@ -1751,27 +1751,22 @@ example:
     computing edge weights, basic blocks post-dominated by a cold
     function call are also considered to be cold; and, thus, given low
     weight.
+
+.. _attr_convergent:
+
 ``convergent``
-    In some parallel execution models, there exist operations that cannot be
-    made control-dependent on any additional values.  We call such operations
-    ``convergent``, and mark them with this attribute.
+    This attribute indicates that this function is convergent.
+    When it appears on a call/invoke, the convergent attribute
+    indicates that we should treat the call as though we’re calling a
+    convergent function. This is particularly useful on indirect
+    calls; without this we may treat such calls as though the target
+    is non-convergent.
 
-    The ``convergent`` attribute may appear on functions or call/invoke
-    instructions.  When it appears on a function, it indicates that calls to
-    this function should not be made control-dependent on additional values.
-    For example, the intrinsic ``llvm.nvvm.barrier0`` is ``convergent``, so
-    calls to this intrinsic cannot be made control-dependent on additional
-    values.
+    See :doc:`ConvergentOperations` for further details.
 
-    When it appears on a call/invoke, the ``convergent`` attribute indicates
-    that we should treat the call as though we're calling a convergent
-    function.  This is particularly useful on indirect calls; without this we
-    may treat such calls as though the target is non-convergent.
-
-    The optimizer may remove the ``convergent`` attribute on functions when it
-    can prove that the function does not execute any convergent operations.
-    Similarly, the optimizer may remove ``convergent`` on calls/invokes when it
-    can prove that the call/invoke cannot call a convergent function.
+    It is an error to call :ref:`llvm.experimental.convergence.entry
+    <llvm.experimental.convergence.entry>` from a function that
+    does not have this attribute.
 ``disable_sanitizer_instrumentation``
     When instrumenting code with sanitizers, it can be important to skip certain
     functions to ensure no instrumentation is applied to them.
@@ -1999,10 +1994,14 @@ example:
     (synchronize) with another thread through memory or other well-defined means.
     Synchronization is considered possible in the presence of `atomic` accesses
     that enforce an order, thus not "unordered" and "monotonic", `volatile` accesses,
-    as well as `convergent` function calls. Note that through `convergent` function calls
-    non-memory communication, e.g., cross-lane operations, are possible and are also
-    considered synchronization. However `convergent` does not contradict `nosync`.
-    If an annotated function does ever synchronize with another thread,
+    as well as `convergent` function calls.
+
+    Note that `convergent` operations can involve communication that is
+    considered to be not through memory and does not necessarily imply an
+    ordering between threads for the purposes of the memory model. Therefore,
+    an operation can be both `convergent` and `nosync`.
+
+    If a `nosync` function does ever synchronize with another thread,
     the behavior is undefined.
 ``nounwind``
     This function attribute indicates that the function never raises an
@@ -2332,11 +2331,12 @@ example:
     than `UINT_MAX`.  It's unspecified which threshold will be used when
     duplicate definitions are linked together with differing values.
 ``vscale_range(<min>[, <max>])``
-    This attribute indicates the minimum and maximum vscale value for the given
-    function. The min must be greater than 0. A maximum value of 0 means
-    unbounded. If the optional max value is omitted then max is set to the
-    value of min. If the attribute is not present, no assumptions are made
-    about the range of vscale.
+    This function attribute indicates `vscale` is a power-of-two within a
+    specified range. `min` must be a power-of-two that is greater than 0. When
+    specified, `max` must be a power-of-two greater-than-or-equal to `min` or 0
+    to signify an unbounded maximum. The syntax `vscale_range(<val>)` can be
+    used to set both `min` and `max` to the same value. Functions that don't
+    include this attribute make no assumptions about the value of `vscale`.
 ``"nooutline"``
     This attribute indicates that outlining passes should not modify the
     function.
@@ -2782,6 +2782,15 @@ bundle attribute. For example:
 
 Clang emits KCFI operand bundles and the necessary metadata with
 ``-fsanitize=kcfi``.
+
+.. _convergencectrl:
+
+Convergence Control Operand Bundles
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+A "convergencectrl" operand bundle is only valid on a ``convergent`` operation.
+When present, the operand bundle must contain exactly one value of token type.
+See the :doc:`ConvergentOperations` document for details.
 
 .. _moduleasm:
 
@@ -3431,6 +3440,8 @@ floating-point transformations.
    to form arbitrary contractions. For example, ``(a*b) + (c*d) + e`` can not
    be transformed into ``(a*b) + ((c*d) + e)`` to create two fma operations.
 
+.. _fastmath_afn:
+
 ``afn``
    Approximate functions - Allow substitution of approximate calculations for
    functions (sin, log, sqrt, etc). See floating-point intrinsic definitions
@@ -3846,8 +3857,8 @@ The same example for little endian:
 
       ; In memory the content will be (8-bit addressing):
       ;
-      ;    [%ptr + 0]: 01010011  (0x53)
-      ;    [%ptr + 1]: 00100001  (0x21)
+      ;    [%ptr + 0]: 00100001  (0x21)
+      ;    [%ptr + 1]: 01010011  (0x53)
 
 When ``<N*M>`` isn't evenly divisible by the byte size the exact memory layout
 is unspecified (just like it is for an integral type of the same size). This
@@ -7611,9 +7622,10 @@ The following behaviors are supported:
    * - 2
      - **Warning**
            Emits a warning if two values disagree. The result value will be the
-           operand for the flag from the first module being linked, or the max
-           if the other module uses **Max** (in which case the resulting flag
-           will be **Max**).
+           operand for the flag from the first module being linked, unless the
+           other module uses **Min** or **Max**, in which case the result will
+           be **Min** (with the min value) or **Max** (with the max value),
+           respectively.
 
    * - 3
      - **Require**
@@ -10920,14 +10932,12 @@ for the given testcase is equivalent to:
       ret ptr %t5
     }
 
-If the ``inbounds`` keyword is present, the result value of the
-``getelementptr`` is a :ref:`poison value <poisonvalues>` if one of the
-following rules is violated:
+If the ``inbounds`` keyword is present, the result value of a
+``getelementptr`` with any non-zero indices is a
+:ref:`poison value <poisonvalues>` if one of the following rules is violated:
 
 *  The base pointer has an *in bounds* address of an allocated object, which
-   means that it points into an allocated object, or to its end. The only
-   *in bounds* address for a null pointer in the default address-space is the
-   null pointer itself.
+   means that it points into an allocated object, or to its end.
 *  If the type of an index is larger than the pointer index type, the
    truncation to the pointer index type preserves the signed value.
 *  The multiplication of an index by the type size does not wrap the pointer
@@ -10941,6 +10951,11 @@ following rules is violated:
    wrap in an unsigned sense (``nuw``).
 *  In cases where the base is a vector of pointers, the ``inbounds`` keyword
    applies to each of the computations element-wise.
+
+Note that ``getelementptr`` with all-zero indices is always considered to be
+``inbounds``, even if the base pointer does not point to an allocated object.
+As a corollary, the only pointer in bounds of the null pointer in the default
+address space is the null pointer itself.
 
 These rules are based on the assumption that no allocated object may cross
 the unsigned address space boundary, and no allocated object may be larger
@@ -14637,6 +14652,8 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+.. _int_exp:
+
 '``llvm.exp.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -14674,6 +14691,8 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+.. _int_exp2:
 
 '``llvm.exp2.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -14754,6 +14773,64 @@ value is returned. If the result underflows a zero with the same sign
 is returned. If the result overflows, the result is an infinity with
 the same sign.
 
+.. _int_frexp:
+
+'``llvm.frexp.*``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+This is an overloaded intrinsic. You can use ``llvm.frexp`` on any
+floating point or vector of floating point type. Not all targets support
+all types however.
+
+::
+
+      declare { float, i32 }     @llvm.frexp.f32.i32(float %Val)
+      declare { double, i32 }    @llvm.frexp.f64.i32(double %Val)
+      declare { x86_fp80, i32 }  @llvm.frexp.f80.i32(x86_fp80 %Val)
+      declare { fp128, i32 }     @llvm.frexp.f128.i32(fp128 %Val)
+      declare { ppc_fp128, i32 } @llvm.frexp.ppcf128.i32(ppc_fp128 %Val)
+      declare { <2 x float>, <2 x i32> }  @llvm.frexp.v2f32.v2i32(<2 x float> %Val)
+
+Overview:
+"""""""""
+
+The '``llvm.frexp.*``' intrinsics perform the frexp function.
+
+Arguments:
+""""""""""
+
+The argument is a :ref:`floating-point <t_floating>` or
+:ref:`vector <t_vector>` of floating-point values. Returns two values
+in a struct. The first struct field matches the argument type, and the
+second field is an integer or a vector of integer values with the same
+number of elements as the argument.
+
+Semantics:
+""""""""""
+
+This intrinsic splits a floating point value into a normalized
+fractional component and integral exponent.
+
+For a non-zero argument, returns the argument multiplied by some power
+of two such that the absolute value of the returned value is in the
+range [0.5, 1.0), with the same sign as the argument. The second
+result is an integer such that the first result raised to the power of
+the second result is the input argument.
+
+If the argument is a zero, returns a zero with the same sign and a 0
+exponent.
+
+If the argument is a NaN, a NaN is returned and the returned exponent
+is unspecified.
+
+If the argument is an infinity, returns an infinity with the same sign
+and an unspecified exponent.
+
+.. _int_log:
+
 '``llvm.log.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -14792,6 +14869,8 @@ trapping or setting ``errno``.
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
 
+.. _int_log10:
+
 '``llvm.log10.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
@@ -14829,6 +14908,9 @@ trapping or setting ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
 using a less accurate calculation.
+
+
+.. _int_log2:
 
 '``llvm.log2.*``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -18576,6 +18658,13 @@ Example:
       %b = call i8 @llvm.fptosi.sat.i8.f32(float -130.8)             ; yields i8: -128
       %c = call i8 @llvm.fptosi.sat.i8.f32(float 999.0)              ; yields i8:  127
       %d = call i8 @llvm.fptosi.sat.i8.f32(float 0xFFF8000000000000) ; yields i8:    0
+
+Convergence Intrinsics
+----------------------
+
+The LLVM convergence intrinsics for controlling the semantics of ``convergent``
+operations, which all start with the ``llvm.experimental.convergence.``
+prefix, are described in the :doc:`ConvergentOperations` document.
 
 .. _dbg_intrinsics:
 
@@ -26100,6 +26189,28 @@ element is true, the following rules apply to the first element:
 If the function's return value's second element is false, the value of the
 first element is undefined.
 
+.. _type.checked.load.relative:
+
+'``llvm.type.checked.load.relative``' Intrinsic
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Syntax:
+"""""""
+
+::
+
+      declare {ptr, i1} @llvm.type.checked.load.relative(ptr %ptr, i32 %offset, metadata %type) argmemonly nounwind readonly
+
+Overview:
+"""""""""
+
+The ``llvm.type.checked.load.relative`` intrinsic loads a relative pointer to a
+function from a virtual table pointer using metadata. Otherwise, its semantic is
+identical to the ``llvm.type.checked.load`` intrinsic.
+
+A relative pointer is a pointer to an offset to the pointed to value. The
+address of the underlying pointer of the relative pointer is obtained by adding
+the offset to the address of the offset value.
 
 '``llvm.arithmetic.fence``' Intrinsic
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

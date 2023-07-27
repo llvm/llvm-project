@@ -116,3 +116,68 @@ func.func @while_tuple_ops(%arg0: tuple<tuple<>, i1>, %arg1: i1) -> tuple<tuple<
   }
   return %0 : tuple<tuple<>, i1>
 }
+
+// -----
+
+// Test case: Nested 1:N type conversion is carried through scf.for and scf.yield.
+
+// CHECK-LABEL: func.func @for_operands_results(
+// CHECK-SAME:                                    %[[ARG0:.*]]: i1,
+// CHECK-SAME:                                    %[[ARG1:.*]]: i2) -> (i1, i2) {
+// CHECK-NEXT:    %[[C0:.+]] = arith.constant 0 : index
+// CHECK-NEXT:    %[[C1:.+]] = arith.constant 1 : index
+// CHECK-NEXT:    %[[C10:.+]] = arith.constant 10 : index
+// CHECK-NEXT:    %[[OUT:.+]]:2 = scf.for %arg2 = %[[C0]] to %[[C10]] step %[[C1]] iter_args(%[[ITER0:.+]] = %[[ARG0]], %[[ITER1:.+]] = %[[ARG1]]) -> (i1, i2) {
+// CHECK-NEXT:     scf.yield %[[ITER0]], %[[ITER1]] : i1, i2
+// CHECK-NEXT:    }
+// CHECK-NEXT:    return %[[OUT]]#0, %[[OUT]]#1 : i1, i2
+
+func.func @for_operands_results(%arg0: tuple<tuple<>, i1, tuple<i2>>) -> tuple<tuple<>, i1, tuple<i2>> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+
+  %0 = scf.for %i = %c0 to %c10 step %c1 iter_args(%acc = %arg0) -> tuple<tuple<>, i1, tuple<i2>> {
+    scf.yield %acc : tuple<tuple<>, i1, tuple<i2>>
+  }
+
+  return %0 : tuple<tuple<>, i1, tuple<i2>>
+}
+
+// -----
+
+// Test case: Nested 1:N type conversion is carried through scf.for and scf.yield
+
+// CHECK-LABEL: func.func @for_tuple_ops(
+// CHECK-SAME:                             %[[ARG0:.+]]: i1) -> i1 {
+// CHECK-NEXT: %[[C0:.+]] = arith.constant 0 : index
+// CHECK-NEXT: %[[C1:.+]] = arith.constant 1 : index
+// CHECK-NEXT: %[[C10:.+]] = arith.constant 10 : index
+// CHECK-NEXT: %[[FOR:.+]] = scf.for %arg1 = %[[C0]] to %[[C10]] step %[[C1]] iter_args(%[[ITER:.+]] = %[[ARG0]]) -> (i1) {
+// CHECK-NEXT:   %[[V1:.+]] = "test.make_tuple"() : () -> tuple<>
+// CHECK-NEXT:   %[[V2:.+]] = "test.make_tuple"(%[[V1]], %[[ITER]]) : (tuple<>, i1) -> tuple<tuple<>, i1>
+// CHECK-NEXT:   %[[V3:.+]] = "test.op"(%[[V2]]) : (tuple<tuple<>, i1>) -> tuple<tuple<>, i1>
+// CHECK-NEXT:   %[[V4:.+]] = "test.get_tuple_element"(%[[V3]]) <{index = 0 : i32}> : (tuple<tuple<>, i1>) -> tuple<>
+// CHECK-NEXT:   %[[V5:.+]] = "test.get_tuple_element"(%[[V3]]) <{index = 1 : i32}> : (tuple<tuple<>, i1>) -> i1
+// CHECK-NEXT:   scf.yield %[[V5]] : i1
+// CHECK-NEXT: }
+// CHECK-NEXT: %[[V6:.+]] = "test.make_tuple"() : () -> tuple<>
+// CHECK-NEXT: %[[V7:.+]] = "test.make_tuple"(%[[V6]], %[[FOR]]) : (tuple<>, i1) -> tuple<tuple<>, i1>
+// CHECK-NEXT: %[[V8:.+]] = "test.op"(%[[V7]]) : (tuple<tuple<>, i1>) -> tuple<tuple<>, i1>
+// CHECK-NEXT: %[[V9:.+]] = "test.get_tuple_element"(%[[V8]]) <{index = 0 : i32}> : (tuple<tuple<>, i1>) -> tuple<>
+// CHECK-NEXT: %[[V10:.+]] = "test.get_tuple_element"(%[[V8]]) <{index = 1 : i32}> : (tuple<tuple<>, i1>) -> i1
+// CHECK-NEXT: return %[[V10]] : i1
+
+func.func @for_tuple_ops(%arg0: tuple<tuple<>, i1>) -> tuple<tuple<>, i1> {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+
+  %0 = scf.for %i = %c0 to %c10 step %c1 iter_args(%acc = %arg0) -> tuple<tuple<>, i1> {
+    %1 = "test.op"(%acc) : (tuple<tuple<>, i1>) -> tuple<tuple<>, i1>
+    scf.yield %1 : tuple<tuple<>, i1>
+  } 
+
+  %1 = "test.op"(%0) : (tuple<tuple<>, i1>) -> tuple<tuple<>, i1>
+  return %1 : tuple<tuple<>, i1>
+}

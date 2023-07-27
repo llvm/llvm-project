@@ -171,13 +171,6 @@ struct AffineLoopToGpuConverter {
 };
 } // namespace
 
-// Return true if the value is obviously a constant "one".
-static bool isConstantOne(Value value) {
-  if (auto def = value.getDefiningOp<arith::ConstantIndexOp>())
-    return def.value() == 1;
-  return false;
-}
-
 // Collect ranges, bounds, steps and induction variables in preparation for
 // mapping a loop nest of depth "numLoops" rooted at "forOp" to a GPU kernel.
 // This may fail if the IR for computing loop bounds cannot be constructed, for
@@ -201,7 +194,7 @@ AffineLoopToGpuConverter::collectBounds(AffineForOp forOp, unsigned numLoops) {
     Value range = builder.create<arith::SubIOp>(currentLoop.getLoc(),
                                                 upperBound, lowerBound);
     Value step = getOrCreateStep(currentLoop, builder);
-    if (!isConstantOne(step))
+    if (getConstantIntValue(step) != static_cast<int64_t>(1))
       range = builder.create<arith::DivSIOp>(currentLoop.getLoc(), range, step);
     dims.push_back(range);
 
@@ -269,7 +262,7 @@ void AffineLoopToGpuConverter::createLaunch(AffineForOp rootForOp,
             ? getDim3Value(launchOp.getBlockIds(), en.index())
             : getDim3Value(launchOp.getThreadIds(), en.index() - numBlockDims);
     Value step = steps[en.index()];
-    if (!isConstantOne(step))
+    if (getConstantIntValue(step) != static_cast<int64_t>(1))
       id = builder.create<arith::MulIOp>(rootForOp.getLoc(), step, id);
 
     Value ivReplacement =

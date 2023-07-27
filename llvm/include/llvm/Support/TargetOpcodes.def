@@ -619,6 +619,9 @@ HANDLE_TARGET_OPCODE(G_FLOG10)
 /// Floating point x * 2^n
 HANDLE_TARGET_OPCODE(G_FLDEXP)
 
+/// Floating point extract fraction and exponent.
+HANDLE_TARGET_OPCODE(G_FFREXP)
+
 /// Generic FP negation.
 HANDLE_TARGET_OPCODE(G_FNEG)
 

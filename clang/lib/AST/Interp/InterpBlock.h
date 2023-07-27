@@ -48,7 +48,7 @@ enum PrimType : unsigned;
 ///
 class Block final {
 public:
-  // Creates a new block.
+  /// Creates a new block.
   Block(const std::optional<unsigned> &DeclID, Descriptor *Desc,
         bool IsStatic = false, bool IsExtern = false)
       : DeclID(DeclID), IsStatic(IsStatic), IsExtern(IsExtern), Desc(Desc) {}
@@ -58,7 +58,7 @@ public:
         Desc(Desc) {}
 
   /// Returns the block's descriptor.
-  Descriptor *getDescriptor() const { return Desc; }
+  const Descriptor *getDescriptor() const { return Desc; }
   /// Checks if the block has any live pointers.
   bool hasPointers() const { return Pointers; }
   /// Checks if the block is extern.
@@ -104,7 +104,7 @@ public:
                    /*isActive=*/true, Desc);
   }
 
-  // Invokes the Destructor.
+  /// Invokes the Destructor.
   void invokeDtor() {
     if (Desc->DtorFn)
       Desc->DtorFn(this, data(), Desc);
@@ -118,13 +118,16 @@ protected:
   Block(Descriptor *Desc, bool IsExtern, bool IsStatic, bool IsDead)
     : IsStatic(IsStatic), IsExtern(IsExtern), IsDead(true), Desc(Desc) {}
 
-  // Deletes a dead block at the end of its lifetime.
+  /// Deletes a dead block at the end of its lifetime.
   void cleanup();
 
-  // Pointer chain management.
+  /// Pointer chain management.
   void addPointer(Pointer *P);
   void removePointer(Pointer *P);
-  void movePointer(Pointer *From, Pointer *To);
+  void replacePointer(Pointer *Old, Pointer *New);
+#ifndef NDEBUG
+  bool hasPointer(const Pointer *P) const;
+#endif
 
   /// Start of the chain of pointers.
   Pointer *Pointers = nullptr;

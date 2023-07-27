@@ -12,6 +12,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Support/LLVM.h"
+#include "llvm/ADT/DenseMapInfoVariant.h"
 #include "llvm/ADT/SetVector.h"
 #include <optional>
 
@@ -546,6 +547,21 @@ public:
 
   TypeID getType() const { return type; }
 
+  /// Return the closest enclosing repetitive region around the given op.
+  Region *getEnclosingRepetitiveRegion(Operation *op,
+                                       const BufferizationOptions &options);
+
+  /// Return the closest enclosing repetitive region around the place where the
+  /// given value is defined.
+  Region *getEnclosingRepetitiveRegion(Value value,
+                                       const BufferizationOptions &options);
+
+  /// Return the closest enclosing repetitive region around the given block.
+  Region *getEnclosingRepetitiveRegion(Block *block,
+                                       const BufferizationOptions &options);
+
+  virtual void resetCache();
+
 protected:
   AnalysisState(const BufferizationOptions &options, TypeID type);
 
@@ -555,6 +571,10 @@ private:
 
   /// The type of analysis.
   TypeID type;
+
+  /// Cache containing closest ancestor repetitive Region.
+  DenseMap<std::variant<Operation *, Block *, Region *, Value>, Region *>
+      enclosingRepetitiveRegionCache;
 };
 
 /// Create an AllocTensorOp for the given shaped value (memref or tensor).
@@ -651,19 +671,6 @@ getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
 /// Return the owner of the given value. In case of a BlockArgument that is the
 /// owner of the block. In case of an OpResult that is the defining op.
 Operation *getOwnerOfValue(Value value);
-
-/// Return the closest enclosing repetitive region around the given op.
-Region *getEnclosingRepetitiveRegion(Operation *op,
-                                     const BufferizationOptions &options);
-
-/// Return the closest enclosing repetitive region around the place where the
-/// given value is defined.
-Region *getEnclosingRepetitiveRegion(Value value,
-                                     const BufferizationOptions &options);
-
-/// Return the closest enclosing repetitive region around the given block.
-Region *getEnclosingRepetitiveRegion(Block *block,
-                                     const BufferizationOptions &options);
 
 /// Assuming that the given region is repetitive, find the next enclosing
 /// repetitive region.

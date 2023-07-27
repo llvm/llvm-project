@@ -101,8 +101,6 @@ public:
     return llvm::DenormalMode::getPreserveSign();
   }
 
-  bool useRelaxRelocations() const override { return true; }
-
   // Helper methods for PS4/PS5.
   virtual const char *getLinkerBaseName() const = 0;
   virtual std::string qualifyPSCmdName(StringRef CmdName) const = 0;

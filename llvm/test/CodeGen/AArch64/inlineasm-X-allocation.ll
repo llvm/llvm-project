@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-none-eabi -mattr=-fp-armv8 %s -o - | FileCheck %s  -check-prefix=nofp
+; RUN: llc -mtriple=aarch64 -mattr=-fp-armv8 %s -o - | FileCheck %s  -check-prefix=nofp
 
 ; In the novfp case, the compiler is forced to assign a core register,
 ; even if the input is a float.

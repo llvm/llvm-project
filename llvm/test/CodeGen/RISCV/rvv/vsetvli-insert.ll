@@ -8,7 +8,7 @@ declare <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
   <vscale x 1 x double>,
   <vscale x 1 x double>,
   <vscale x 1 x double>,
-  i64)
+  i64, i64)
 declare <vscale x 1 x i64> @llvm.riscv.vle.mask.nxv1i64(
   <vscale x 1 x i64>,
   <vscale x 1 x i64>*,
@@ -27,7 +27,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 %0)
+    i64 7, i64 %0)
   ret <vscale x 1 x double> %1
 }
 
@@ -43,7 +43,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 %avl)
+    i64 7, i64 %avl)
   ret <vscale x 1 x double> %1
 }
 
@@ -232,6 +232,7 @@ entry:
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %a,
     <vscale x 1 x i1> %mask,
+    i64 7,
     i64 9,
     i64 0)
   %y = call <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64(
@@ -250,7 +251,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 -1)
+    i64 7, i64 -1)
   ret <vscale x 1 x double> %0
 }
 
@@ -269,12 +270,12 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 1)
+    i64 7, i64 1)
   %f2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %f1,
     <vscale x 1 x double> %b,
-    i64 %vsetvli)
+    i64 7, i64 %vsetvli)
   ret <vscale x 1 x double> %f2
 }
 
@@ -291,12 +292,12 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 %avl)
+    i64 7, i64 %avl)
   %f2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %f1,
     <vscale x 1 x double> %b,
-    i64 %vsetvli)
+    i64 7, i64 %vsetvli)
   ret <vscale x 1 x double> %f2
 }
 
@@ -321,7 +322,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %splat,
     <vscale x 1 x double> %b,
-    i64 %vsetvli)
+    i64 7, i64 %vsetvli)
   ret <vscale x 1 x double> %f2
 }
 
@@ -342,7 +343,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %b,
-    i64 %vsetvli)
+    i64 7, i64 %vsetvli)
   %c2 = extractelement <vscale x 1 x double> %f2, i32 0
   %c3 = fadd double %c1, %c2
   ret double %c3
@@ -370,7 +371,7 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %a,
     <vscale x 1 x double> %a,
-    i64 %x)
+    i64 7, i64 %x)
   %y2 = call <vscale x 1 x double> @llvm.riscv.vfmv.s.f.nxv1f64(
     <vscale x 1 x double> %f2, double %b, i64 1)
   %res = fadd <vscale x 1 x double> %y, %y2
@@ -553,7 +554,7 @@ define <vscale x 2 x i32> @avl_forward5(<vscale x 2 x i32>* %addr) {
   ret <vscale x 2 x i32> %ret
 }
 
-declare <vscale x 1 x double> @llvm.riscv.vfwadd.nxv1f64.nxv1f32.nxv1f32(<vscale x 1 x double>, <vscale x 1 x float>, <vscale x 1 x float>, i64)
+declare <vscale x 1 x double> @llvm.riscv.vfwadd.nxv1f64.nxv1f32.nxv1f32(<vscale x 1 x double>, <vscale x 1 x float>, <vscale x 1 x float>, i64, i64)
 
 define <vscale x 1 x double> @test20(i64 %avl, <vscale x 1 x float> %a, <vscale x 1 x float> %b, <vscale x 1 x double> %c) nounwind {
 ; CHECK-LABEL: test20:
@@ -569,12 +570,12 @@ entry:
     <vscale x 1 x double> undef,
     <vscale x 1 x float> %a,
     <vscale x 1 x float> %b,
-    i64 %0)
+    i64 7, i64 %0)
   %2 = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64(
     <vscale x 1 x double> undef,
     <vscale x 1 x double> %1,
     <vscale x 1 x double> %c,
-    i64 %0)
+    i64 7, i64 %0)
   ret <vscale x 1 x double> %2
 }
 
@@ -614,6 +615,7 @@ declare <vscale x 1 x double> @llvm.riscv.vfadd.mask.nxv1f64.f64(
   <vscale x 1 x double>,
   <vscale x 1 x double>,
   <vscale x 1 x i1>,
+  i64,
   i64,
   i64);
 

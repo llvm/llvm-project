@@ -36,6 +36,7 @@ CODEGENOPT(Dwarf64           , 1, 0) ///< -gdwarf64.
 CODEGENOPT(Dwarf32           , 1, 1) ///< -gdwarf32.
 CODEGENOPT(PreserveAsmComments, 1, 1) ///< -dA, -fno-preserve-as-comments.
 CODEGENOPT(AssumeSaneOperatorNew , 1, 1) ///< implicit __attribute__((malloc)) operator new
+CODEGENOPT(AssumeUniqueVTables , 1, 1) ///< Assume a class has only one vtable.
 CODEGENOPT(Autolink          , 1, 1) ///< -fno-autolink
 CODEGENOPT(ObjCAutoRefCountExceptions , 1, 0) ///< Whether ARC should be EH-safe.
 CODEGENOPT(Backchain         , 1, 0) ///< -mbackchain
@@ -164,10 +165,12 @@ CODEGENOPT(PrepareForThinLTO , 1, 0) ///< Set when -flto=thin is enabled on the
                                      ///< compile step.
 CODEGENOPT(LTOUnit, 1, 0) ///< Emit IR to support LTO unit features (CFI, whole
                           ///< program vtable opt).
+CODEGENOPT(FatLTO, 1, 0) ///< Set when -ffat-lto-objects is enabled.
 CODEGENOPT(EnableSplitLTOUnit, 1, 0) ///< Enable LTO unit splitting to support
 				     /// CFI and traditional whole program
 				     /// devirtualization that require whole
 				     /// program IR support.
+CODEGENOPT(UnifiedLTO, 1, 0) ///< Use the unified LTO pipeline.
 CODEGENOPT(IncrementalLinkerCompatible, 1, 0) ///< Emit an object file which can
                                               ///< be used with an incremental
                                               ///< linker.
@@ -199,7 +202,6 @@ CODEGENOPT(SplitMachineFunctions, 1, 0) ///< Split machine functions using profi
 /// float-to-int conversion instructions.
 CODEGENOPT(StrictFloatCastOverflow, 1, 1)
 
-CODEGENOPT(UniformWGSize     , 1, 0) ///< -cl-uniform-work-group-size
 CODEGENOPT(NoZeroInitializedInBSS , 1, 0) ///< -fno-zero-initialized-in-bss.
 /// Method of Objective-C dispatch to use.
 ENUM_CODEGENOPT(ObjCDispatchMethod, ObjCDispatchMethodKind, 2, Legacy)
@@ -322,6 +324,8 @@ CODEGENOPT(UseRegisterSizedBitfieldAccess , 1, 0)
 
 CODEGENOPT(VerifyModule      , 1, 1) ///< Control whether the module should be run
                                      ///< through the LLVM Verifier.
+CODEGENOPT(VerifyEach        , 1, 1) ///< Control whether the LLVM verifier
+                                     ///< should run after every pass.
 
 CODEGENOPT(StackRealignment  , 1, 0) ///< Control whether to force stack
                                      ///< realignment.
@@ -473,6 +477,10 @@ CODEGENOPT(Addrsig, 1, 0)
 
 /// Whether to emit unused static constants.
 CODEGENOPT(KeepStaticConsts, 1, 0)
+
+/// Whether to emit all variables that have a persistent storage duration,
+/// including global, static and thread local variables.
+CODEGENOPT(KeepPersistentStorageVariables, 1, 0)
 
 /// Whether to follow the AAPCS enforcing at least one read before storing to a volatile bitfield
 CODEGENOPT(ForceAAPCSBitfieldLoad, 1, 0)

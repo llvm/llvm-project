@@ -1042,6 +1042,7 @@ bool llvm::peelLoop(Loop *L, unsigned PeelCount, LoopInfo *LI,
 
   // We modified the loop, update SE.
   SE->forgetTopmostLoop(L);
+  SE->forgetBlockAndLoopDispositions();
 
 #ifdef EXPENSIVE_CHECKS
   // Finally DomtTree must be correct.

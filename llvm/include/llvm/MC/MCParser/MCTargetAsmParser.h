@@ -14,8 +14,8 @@
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCTargetOptions.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <cstdint>
 #include <memory>
 
@@ -126,6 +126,43 @@ enum OperandMatchResultTy {
   MatchOperand_Success,  // operand matched successfully
   MatchOperand_NoMatch,  // operand did not match
   MatchOperand_ParseFail // operand matched but had errors
+};
+
+/// Ternary parse status returned by various parse* methods.
+class ParseStatus {
+  enum class StatusTy { Success, Failure, NoMatch } Status;
+
+public:
+#if __cplusplus >= 202002L
+  using enum StatusTy;
+#else
+  static constexpr StatusTy Success = StatusTy::Success;
+  static constexpr StatusTy Failure = StatusTy::Failure;
+  static constexpr StatusTy NoMatch = StatusTy::NoMatch;
+#endif
+
+  constexpr ParseStatus() : Status(NoMatch) {}
+
+  constexpr ParseStatus(StatusTy Status) : Status(Status) {}
+
+  constexpr ParseStatus(bool Error) : Status(Error ? Failure : Success) {}
+
+  template <typename T> constexpr ParseStatus(T) = delete;
+
+  constexpr bool isSuccess() const { return Status == StatusTy::Success; }
+  constexpr bool isFailure() const { return Status == StatusTy::Failure; }
+  constexpr bool isNoMatch() const { return Status == StatusTy::NoMatch; }
+
+  // Allow implicit conversions to / from OperandMatchResultTy.
+  constexpr ParseStatus(OperandMatchResultTy R)
+      : Status(R == MatchOperand_Success     ? Success
+               : R == MatchOperand_ParseFail ? Failure
+                                             : NoMatch) {}
+  constexpr operator OperandMatchResultTy() const {
+    return isSuccess()   ? MatchOperand_Success
+           : isFailure() ? MatchOperand_ParseFail
+                         : MatchOperand_NoMatch;
+  }
 };
 
 enum class DiagnosticPredicateTy {
@@ -408,6 +445,7 @@ public:
   }
 
   /// ParseDirective - Parse a target specific assembler directive
+  /// This method is deprecated, use 'parseDirective' instead.
   ///
   /// The parser is positioned following the directive name.  The target
   /// specific directive parser should parse the entire directive doing or
@@ -417,7 +455,19 @@ public:
   /// end-of-statement token and false is returned.
   ///
   /// \param DirectiveID - the identifier token of the directive.
-  virtual bool ParseDirective(AsmToken DirectiveID) = 0;
+  virtual bool ParseDirective(AsmToken DirectiveID) { return true; }
+
+  /// Parses a target-specific assembler directive.
+  ///
+  /// The parser is positioned following the directive name. The target-specific
+  /// directive parser should parse the entire directive doing or recording any
+  /// target-specific work, or emit an error. On success, the entire line should
+  /// be parsed up to and including the end-of-statement token. On failure, the
+  /// parser is not required to read to the end of the line. If the directive is
+  /// not target-specific, no tokens should be consumed and NoMatch is returned.
+  ///
+  /// \param DirectiveID - The token identifying the directive.
+  virtual ParseStatus parseDirective(AsmToken DirectiveID);
 
   /// MatchAndEmitInstruction - Recognize a series of operands of a parsed
   /// instruction as an actual MCInst and emit it to the specified MCStreamer.

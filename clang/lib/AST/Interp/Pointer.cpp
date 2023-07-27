@@ -24,7 +24,7 @@ Pointer::Pointer(const Pointer &P) : Pointer(P.Pointee, P.Base, P.Offset) {}
 Pointer::Pointer(Pointer &&P)
     : Pointee(P.Pointee), Base(P.Base), Offset(P.Offset) {
   if (Pointee)
-    Pointee->movePointer(&P, this);
+    Pointee->replacePointer(&P, this);
 }
 
 Pointer::Pointer(Block *Pointee, unsigned Base, unsigned Offset)
@@ -69,7 +69,7 @@ void Pointer::operator=(Pointer &&P) {
 
   Pointee = P.Pointee;
   if (Pointee)
-    Pointee->movePointer(&P, this);
+    Pointee->replacePointer(&P, this);
 
   if (Old)
     Old->cleanup();
@@ -159,10 +159,10 @@ bool Pointer::isInitialized() const {
     if (Map == (InitMap *)-1)
       return true;
     return Map->isInitialized(getIndex());
-  } else {
-    // Field has its bit in an inline descriptor.
-    return Base == 0 || getInlineDesc()->IsInitialized;
   }
+
+  // Field has its bit in an inline descriptor.
+  return Base == 0 || getInlineDesc()->IsInitialized;
 }
 
 void Pointer::initialize() const {
@@ -185,11 +185,12 @@ void Pointer::initialize() const {
       free(Map);
       Map = (InitMap *)-1;
     }
-  } else {
-    // Field has its bit in an inline descriptor.
-    assert(Base != 0 && "Only composite fields can be initialised");
-    getInlineDesc()->IsInitialized = true;
+    return;
   }
+
+  // Field has its bit in an inline descriptor.
+  assert(Base != 0 && "Only composite fields can be initialised");
+  getInlineDesc()->IsInitialized = true;
 }
 
 void Pointer::activate() const {

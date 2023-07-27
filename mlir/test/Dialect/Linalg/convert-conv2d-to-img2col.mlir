@@ -314,3 +314,119 @@ transform.sequence failures(propagate) {
   transform.print %img2col_tensor_producer {name = "tensor_producer"}: !transform.any_op
   transform.print %transformed {name = "transformed"}: !transform.any_op
 }
+
+// -----
+
+// Check for compatible complex case.
+
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+// CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+//      CHECK: @conv_complex
+//      CHECK: %[[MATMUL_RESULT:.+]] = linalg.generic {indexing_maps = [#[[MAP1]], #[[MAP2]], #[[MAP3]]]
+//           CHECK-SAME: ins(%{{.*}}, %{{.*}} : tensor<1x196x36xcomplex<f32>>, tensor<36x16xcomplex<f32>>)
+//           CHECK-SAME: outs(%[[COLLAPSED_OUT]] : tensor<1x196x16xcomplex<f32>>)
+//                CHECK: ^bb0(%[[ARG0:.+]]: complex<f32>, %[[ARG1:.+]]: complex<f32>, %[[ARG2:.+]]: complex<f32>)
+//                CHECK:     %[[MUL:.+]] = complex.mul %[[ARG0]], %[[ARG1]] : complex<f32>
+//                CHECK:     %[[ADD:.+]] = complex.add %[[MUL]], %[[ARG2]] : complex<f32>
+//                CHECK:     linalg.yield %[[ADD]] : complex<f32>
+//                CHECK: } -> tensor<1x196x16xcomplex<f32>>
+//      CHECK: %[[RESULT:.+]] = tensor.expand_shape %[[MATMUL_RESULT]] {{\[}}[0], [1, 2], [3]] : tensor<1x196x16xcomplex<f32>> into tensor<1x14x14x16xcomplex<f32>>
+//      CHECK: return %[[RESULT]]
+
+func.func @conv_complex(%arg0: tensor<1x16x16x4xcomplex<f32>>, %arg1: tensor<3x3x4x16xcomplex<f32>>, %arg2: tensor<1x14x14x16xcomplex<f32>>) -> tensor<1x14x14x16xcomplex<f32>> {
+    %0 = linalg.conv_2d_nhwc_hwcf
+      {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
+       ins(%arg0, %arg1: tensor<1x16x16x4xcomplex<f32>>, tensor<3x3x4x16xcomplex<f32>>)
+      outs(%arg2: tensor<1x14x14x16xcomplex<f32>>) -> tensor<1x14x14x16xcomplex<f32>>
+    return %0 : tensor<1x14x14x16xcomplex<f32>>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %img2col_tensor_producer, %transformed = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  transform.print %img2col_tensor_producer {name = "tensor_producer"}: !transform.any_op
+  transform.print %transformed {name = "transformed"}: !transform.any_op
+}
+
+// -----
+
+// Check for compatible complex extended case.
+
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+// CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+//      CHECK: @conv_complex_extended
+//      CHECK: %[[MATMUL_RESULT:.+]] = linalg.generic {indexing_maps = [#[[MAP1]], #[[MAP2]], #[[MAP3]]]
+//           CHECK-SAME: ins(%{{.*}}, %{{.*}} : tensor<1x196x36xcomplex<f32>>, tensor<36x16xcomplex<f16>>)
+//           CHECK-SAME: outs(%[[COLLAPSED_OUT]] : tensor<1x196x16xcomplex<f32>>)
+//                CHECK: ^bb0(%[[ARG0:.+]]: complex<f32>, %[[ARG1:.+]]: complex<f16>, %[[ARG2:.+]]: complex<f32>)
+//                CHECK:     %[[REAL:.+]] = complex.re %[[ARG1]] : complex<f16>
+//                CHECK:     %[[IMAG:.+]] = complex.im %[[ARG1]] : complex<f16>
+//                CHECK:     %[[REEXT:.+]] = arith.extf %[[REAL]] : f16 to f32
+//                CHECK:     %[[IMEXT:.+]] = arith.extf %[[IMAG]] : f16 to f32
+//                CHECK:     %[[COMPLEX:.+]] = complex.create %[[REEXT]], %[[IMEXT]] : complex<f32>
+//                CHECK:     %[[MUL:.+]] = complex.mul %[[ARG0]], %[[COMPLEX]] : complex<f32>
+//                CHECK:     %[[ADD:.+]] = complex.add %[[MUL]], %[[ARG2]] : complex<f32>
+//                CHECK:     linalg.yield %[[ADD]] : complex<f32>
+//                CHECK: } -> tensor<1x196x16xcomplex<f32>>
+//      CHECK: %[[RESULT:.+]] = tensor.expand_shape %[[MATMUL_RESULT]] {{\[}}[0], [1, 2], [3]] : tensor<1x196x16xcomplex<f32>> into tensor<1x14x14x16xcomplex<f32>>
+//      CHECK: return %[[RESULT]]
+
+func.func @conv_complex_extended(%arg0: tensor<1x16x16x4xcomplex<f32>>, %arg1: tensor<3x3x4x16xcomplex<f16>>, %arg2: tensor<1x14x14x16xcomplex<f32>>) -> tensor<1x14x14x16xcomplex<f32>> {
+    %0 = linalg.conv_2d_nhwc_hwcf
+      {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
+       ins(%arg0, %arg1: tensor<1x16x16x4xcomplex<f32>>, tensor<3x3x4x16xcomplex<f16>>)
+      outs(%arg2: tensor<1x14x14x16xcomplex<f32>>) -> tensor<1x14x14x16xcomplex<f32>>
+    return %0 : tensor<1x14x14x16xcomplex<f32>>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %img2col_tensor_producer, %transformed = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  transform.print %img2col_tensor_producer {name = "tensor_producer"}: !transform.any_op
+  transform.print %transformed {name = "transformed"}: !transform.any_op
+}
+
+// -----
+
+// Check for compatible complex extended case.
+
+// CHECK-DAG: #[[MAP0:.+]] = affine_map<(d0, d1, d2) -> (d0, d1, d2)>
+// CHECK-DAG: #[[MAP1:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d3)>
+// CHECK-DAG: #[[MAP2:.+]] = affine_map<(d0, d1, d2, d3) -> (d3, d2)>
+// CHECK-DAG: #[[MAP3:.+]] = affine_map<(d0, d1, d2, d3) -> (d0, d1, d2)>
+//      CHECK: @conv_complex_f16_extended
+//      CHECK: %[[MATMUL_RESULT:.+]] = linalg.generic {indexing_maps = [#[[MAP1]], #[[MAP2]], #[[MAP3]]]
+//           CHECK-SAME: ins(%{{.*}}, %{{.*}} : tensor<1x196x36xcomplex<f32>>, tensor<36x16xf16>)
+//           CHECK-SAME: outs(%[[COLLAPSED_OUT]] : tensor<1x196x16xcomplex<f32>>)
+//                CHECK: ^bb0(%[[ARG0:.+]]: complex<f32>, %[[ARG1:.+]]: f16, %[[ARG2:.+]]: complex<f32>)
+//                CHECK:     %[[EXT:.+]] = arith.extf %[[ARG1]] : f16 to f32
+//                CHECK:     %[[ZERO:.+]] = arith.constant 0.000000e+00 : f32
+//                CHECK:     %[[COMPLEX:.+]] = complex.create %[[EXT]], %[[ZERO]]
+//                CHECK:     %[[MUL:.+]] = complex.mul %[[ARG0]], %[[COMPLEX]] : complex<f32>
+//                CHECK:     %[[ADD:.+]] = complex.add %[[MUL]], %[[ARG2]] : complex<f32>
+//                CHECK:     linalg.yield %[[ADD]] : complex<f32>
+//                CHECK: } -> tensor<1x196x16xcomplex<f32>>
+//      CHECK: %[[RESULT:.+]] = tensor.expand_shape %[[MATMUL_RESULT]] {{\[}}[0], [1, 2], [3]] : tensor<1x196x16xcomplex<f32>> into tensor<1x14x14x16xcomplex<f32>>
+//      CHECK: return %[[RESULT]]
+
+func.func @conv_complex_f16_extended(%arg0: tensor<1x16x16x4xcomplex<f32>>, %arg1: tensor<3x3x4x16xf16>, %arg2: tensor<1x14x14x16xcomplex<f32>>) -> tensor<1x14x14x16xcomplex<f32>> {
+    %0 = linalg.conv_2d_nhwc_hwcf
+      {dilations = dense<1> : tensor<2xi64>, strides = dense<1> : tensor<2xi64> }
+       ins(%arg0, %arg1: tensor<1x16x16x4xcomplex<f32>>, tensor<3x3x4x16xf16>)
+      outs(%arg2: tensor<1x14x14x16xcomplex<f32>>) -> tensor<1x14x14x16xcomplex<f32>>
+    return %0 : tensor<1x14x14x16xcomplex<f32>>
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["linalg.conv_2d_nhwc_hwcf"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  %img2col_tensor_producer, %transformed = transform.structured.convert_conv2d_to_img2col %0 : (!transform.any_op) -> (!transform.any_op, !transform.any_op)
+  transform.print %img2col_tensor_producer {name = "tensor_producer"}: !transform.any_op
+  transform.print %transformed {name = "transformed"}: !transform.any_op
+}

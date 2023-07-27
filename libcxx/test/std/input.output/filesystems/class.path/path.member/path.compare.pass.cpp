@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -28,15 +29,16 @@
 // template<> struct hash<filesystem::path>;
 
 #include "filesystem_include.h"
+#include <cassert>
+#include <string>
 #include <type_traits>
 #include <vector>
-#include <cassert>
 
-#include "test_macros.h"
+#include "assert_macros.h"
+#include "count_new.h"
 #include "test_comparisons.h"
 #include "test_iterators.h"
-#include "count_new.h"
-#include "filesystem_test_helper.h"
+#include "test_macros.h"
 
 struct PathCompareTest {
   const char* LHS;

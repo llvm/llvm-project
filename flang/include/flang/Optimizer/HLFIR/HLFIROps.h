@@ -19,6 +19,7 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
+#include <variant>
 
 #include "flang/Optimizer/HLFIR/HLFIROpInterfaces.h.inc"
 #define GET_OP_CLASSES

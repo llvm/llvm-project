@@ -117,7 +117,9 @@ mlir::raw_indented_ostream::printReindented(StringRef str,
   // Skip empty lines.
   while (!output.empty()) {
     auto split = output.split('\n');
-    size_t indent = split.first.find_first_not_of(" \t");
+    // Trim Windows \r characters from \r\n line endings.
+    auto firstTrimmed = split.first.rtrim('\r');
+    size_t indent = firstTrimmed.find_first_not_of(" \t");
     if (indent != StringRef::npos) {
       // Set an initial value.
       leadingWs = indent;
@@ -129,7 +131,8 @@ mlir::raw_indented_ostream::printReindented(StringRef str,
   StringRef remaining = output;
   while (!remaining.empty()) {
     auto split = remaining.split('\n');
-    size_t indent = split.first.find_first_not_of(" \t");
+    auto firstTrimmed = split.first.rtrim('\r');
+    size_t indent = firstTrimmed.find_first_not_of(" \t");
     if (indent != StringRef::npos)
       leadingWs = std::min(leadingWs, static_cast<int>(indent));
     remaining = split.second;

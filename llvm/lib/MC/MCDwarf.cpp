@@ -350,10 +350,14 @@ SmallString<0> MCDwarfLineStr::getFinalizedData() {
   return Data;
 }
 
+size_t MCDwarfLineStr::addString(StringRef Path) {
+  return LineStrings.add(Path);
+}
+
 void MCDwarfLineStr::emitRef(MCStreamer *MCOS, StringRef Path) {
   int RefSize =
       dwarf::getDwarfOffsetByteSize(MCOS->getContext().getDwarfFormat());
-  size_t Offset = LineStrings.add(Path);
+  size_t Offset = addString(Path);
   if (UseRelocs) {
     MCContext &Ctx = MCOS->getContext();
     MCOS->emitValue(makeStartPlusIntExpr(Ctx, *LineStrLabel, Offset), RefSize);
@@ -1476,7 +1480,7 @@ void FrameEmitterImpl::emitCFIInstructions(ArrayRef<MCCFIInstruction> Instrs,
     if (BaseLabel && Label) {
       MCSymbol *ThisSym = Label;
       if (ThisSym != BaseLabel) {
-        Streamer.emitDwarfAdvanceFrameAddr(BaseLabel, ThisSym);
+        Streamer.emitDwarfAdvanceFrameAddr(BaseLabel, ThisSym, Instr.getLoc());
         BaseLabel = ThisSym;
       }
     }

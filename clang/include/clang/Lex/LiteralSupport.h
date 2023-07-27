@@ -212,6 +212,11 @@ public:
   }
 };
 
+enum class StringLiteralEvalMethod {
+  Evaluated,
+  Unevaluated,
+};
+
 /// StringLiteralParser - This decodes string escape characters and performs
 /// wide string analysis and Translation Phase #6 (concatenation of string
 /// literals) (C99 5.1.1.2p1).
@@ -230,19 +235,22 @@ class StringLiteralParser {
   SmallString<32> UDSuffixBuf;
   unsigned UDSuffixToken;
   unsigned UDSuffixOffset;
+  StringLiteralEvalMethod EvalMethod;
+
 public:
-  StringLiteralParser(ArrayRef<Token> StringToks,
-                      Preprocessor &PP);
-  StringLiteralParser(ArrayRef<Token> StringToks,
-                      const SourceManager &sm, const LangOptions &features,
-                      const TargetInfo &target,
+  StringLiteralParser(ArrayRef<Token> StringToks, Preprocessor &PP,
+                      StringLiteralEvalMethod StringMethod =
+                          StringLiteralEvalMethod::Evaluated);
+  StringLiteralParser(ArrayRef<Token> StringToks, const SourceManager &sm,
+                      const LangOptions &features, const TargetInfo &target,
                       DiagnosticsEngine *diags = nullptr)
-    : SM(sm), Features(features), Target(target), Diags(diags),
-      MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
-      ResultPtr(ResultBuf.data()), hadError(false), Pascal(false) {
+      : SM(sm), Features(features), Target(target), Diags(diags),
+        MaxTokenLength(0), SizeBound(0), CharByteWidth(0), Kind(tok::unknown),
+        ResultPtr(ResultBuf.data()),
+        EvalMethod(StringLiteralEvalMethod::Evaluated), hadError(false),
+        Pascal(false) {
     init(StringToks);
   }
-
 
   bool hadError;
   bool Pascal;
@@ -269,6 +277,9 @@ public:
   bool isUTF16() const { return Kind == tok::utf16_string_literal; }
   bool isUTF32() const { return Kind == tok::utf32_string_literal; }
   bool isPascal() const { return Pascal; }
+  bool isUnevaluated() const {
+    return EvalMethod == StringLiteralEvalMethod::Unevaluated;
+  }
 
   StringRef getUDSuffix() const { return UDSuffixBuf; }
 

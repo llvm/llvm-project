@@ -969,8 +969,6 @@ public:
                                    Instruction *InsertBefore = nullptr) {
     unsigned Values = 1 + unsigned(IdxList.size());
     assert(PointeeType && "Must specify element type");
-    assert(cast<PointerType>(Ptr->getType()->getScalarType())
-               ->isOpaqueOrPointeeTypeMatches(PointeeType));
     return new (Values) GetElementPtrInst(PointeeType, Ptr, IdxList, Values,
                                           NameStr, InsertBefore);
   }
@@ -981,8 +979,6 @@ public:
                                    BasicBlock *InsertAtEnd) {
     unsigned Values = 1 + unsigned(IdxList.size());
     assert(PointeeType && "Must specify element type");
-    assert(cast<PointerType>(Ptr->getType()->getScalarType())
-               ->isOpaqueOrPointeeTypeMatches(PointeeType));
     return new (Values) GetElementPtrInst(PointeeType, Ptr, IdxList, Values,
                                           NameStr, InsertAtEnd);
   }
@@ -1018,8 +1014,6 @@ public:
   void setResultElementType(Type *Ty) { ResultElementType = Ty; }
 
   Type *getResultElementType() const {
-    assert(cast<PointerType>(getType()->getScalarType())
-               ->isOpaqueOrPointeeTypeMatches(ResultElementType));
     return ResultElementType;
   }
 
@@ -1083,26 +1077,19 @@ public:
 
   /// Returns the pointer type returned by the GEP
   /// instruction, which may be a vector of pointers.
-  static Type *getGEPReturnType(Type *ElTy, Value *Ptr,
-                                ArrayRef<Value *> IdxList) {
-    PointerType *OrigPtrTy = cast<PointerType>(Ptr->getType()->getScalarType());
-    unsigned AddrSpace = OrigPtrTy->getAddressSpace();
-    Type *ResultElemTy = checkGEPType(getIndexedType(ElTy, IdxList));
-    Type *PtrTy = OrigPtrTy->isOpaque()
-      ? PointerType::get(OrigPtrTy->getContext(), AddrSpace)
-      : PointerType::get(ResultElemTy, AddrSpace);
+  static Type *getGEPReturnType(Value *Ptr, ArrayRef<Value *> IdxList) {
     // Vector GEP
-    if (auto *PtrVTy = dyn_cast<VectorType>(Ptr->getType())) {
-      ElementCount EltCount = PtrVTy->getElementCount();
-      return VectorType::get(PtrTy, EltCount);
-    }
+    Type *Ty = Ptr->getType();
+    if (Ty->isVectorTy())
+      return Ty;
+
     for (Value *Index : IdxList)
       if (auto *IndexVTy = dyn_cast<VectorType>(Index->getType())) {
         ElementCount EltCount = IndexVTy->getElementCount();
-        return VectorType::get(PtrTy, EltCount);
+        return VectorType::get(Ty, EltCount);
       }
     // Scalar GEP
-    return PtrTy;
+    return Ty;
   }
 
   unsigned getNumIndices() const {  // Note: always non-negative
@@ -1160,13 +1147,11 @@ GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
                                      ArrayRef<Value *> IdxList, unsigned Values,
                                      const Twine &NameStr,
                                      Instruction *InsertBefore)
-    : Instruction(getGEPReturnType(PointeeType, Ptr, IdxList), GetElementPtr,
+    : Instruction(getGEPReturnType(Ptr, IdxList), GetElementPtr,
                   OperandTraits<GetElementPtrInst>::op_end(this) - Values,
                   Values, InsertBefore),
       SourceElementType(PointeeType),
       ResultElementType(getIndexedType(PointeeType, IdxList)) {
-  assert(cast<PointerType>(getType()->getScalarType())
-             ->isOpaqueOrPointeeTypeMatches(ResultElementType));
   init(Ptr, IdxList, NameStr);
 }
 
@@ -1174,13 +1159,11 @@ GetElementPtrInst::GetElementPtrInst(Type *PointeeType, Value *Ptr,
                                      ArrayRef<Value *> IdxList, unsigned Values,
                                      const Twine &NameStr,
                                      BasicBlock *InsertAtEnd)
-    : Instruction(getGEPReturnType(PointeeType, Ptr, IdxList), GetElementPtr,
+    : Instruction(getGEPReturnType(Ptr, IdxList), GetElementPtr,
                   OperandTraits<GetElementPtrInst>::op_end(this) - Values,
                   Values, InsertAtEnd),
       SourceElementType(PointeeType),
       ResultElementType(getIndexedType(PointeeType, IdxList)) {
-  assert(cast<PointerType>(getType()->getScalarType())
-             ->isOpaqueOrPointeeTypeMatches(ResultElementType));
   init(Ptr, IdxList, NameStr);
 }
 

@@ -64,9 +64,11 @@ ReservedRegsForRA("reserve-regs-for-regalloc", cl::desc("Reserve physical "
                   "Should only be used for testing register allocator."),
                   cl::CommaSeparated, cl::Hidden);
 
-static cl::opt<bool>
-    ForceStreamingCompatibleSVE("force-streaming-compatible-sve",
-                                cl::init(false), cl::Hidden);
+static cl::opt<bool> ForceStreamingCompatibleSVE(
+    "force-streaming-compatible-sve",
+    cl::desc(
+        "Force the use of streaming-compatible SVE code for all functions"),
+    cl::Hidden);
 
 unsigned AArch64Subtarget::getVectorInsertExtractBaseCost() const {
   if (OverrideVectorInsertExtractBaseCost.getNumOccurrences() > 0)
@@ -290,13 +292,15 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    const TargetMachine &TM, bool LittleEndian,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
-                                   bool StreamingSVEModeDisabled)
+                                   bool StreamingSVEMode,
+                                   bool StreamingCompatibleSVEMode)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
       CustomCallSavedXRegs(AArch64::GPR64commonRegClass.getNumRegs()),
       IsLittle(LittleEndian),
-      StreamingSVEModeDisabled(StreamingSVEModeDisabled),
+      StreamingSVEMode(StreamingSVEMode),
+      StreamingCompatibleSVEMode(StreamingCompatibleSVEMode),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
       MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU)),
@@ -473,10 +477,14 @@ void AArch64Subtarget::mirFileLoaded(MachineFunction &MF) const {
 
 bool AArch64Subtarget::useAA() const { return UseAA; }
 
-bool AArch64Subtarget::forceStreamingCompatibleSVE() const {
-  if (ForceStreamingCompatibleSVE) {
-    assert(hasSVEorSME() && "Expected SVE to be available");
-    return hasSVEorSME();
-  }
-  return false;
+bool AArch64Subtarget::isNeonAvailable() const {
+  if (!hasNEON())
+    return false;
+
+  // The 'force-streaming-comaptible-sve' flag overrides the streaming
+  // function attributes.
+  if (ForceStreamingCompatibleSVE.getNumOccurrences() > 0)
+    return !ForceStreamingCompatibleSVE;
+
+  return !isStreaming() && !isStreamingCompatible();
 }

@@ -1,6 +1,6 @@
 # This testing configuration handles running the test suite against LLVM's libc++
 # using a DLL, with Clang-cl on Windows. This variant sets _HAS_EXCEPTIONS = 0
-# which removes exception class definitions  from the vcruntime.
+# which removes exception class definitions from the vcruntime.
 
 lit_config.load_config(config, '@CMAKE_CURRENT_BINARY_DIR@/cmake-bridge.cfg')
 

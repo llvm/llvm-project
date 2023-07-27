@@ -4679,6 +4679,7 @@ define amdgpu_kernel void @test_call_external_i32_func_i32_imm(ptr addrspace(1) 
 ; GFX11-NEXT:    s_swappc_b64 s[30:31], s[2:3]
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[36:39], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -5102,6 +5103,7 @@ define amdgpu_kernel void @test_call_external_void_func_sret_struct_i8_i32_byval
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    buffer_store_b32 v1, off, s[0:3], 0 dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ;
@@ -5692,7 +5694,6 @@ define void @tail_call_byval_align16(<32 x i32> %val, double %tmp) #0 {
 ; GFX11-LABEL: tail_call_byval_align16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v31, off, s32
 ; GFX11-NEXT:    s_getpc_b64 s[0:1]
 ; GFX11-NEXT:    s_add_u32 s0, s0, byval_align16_f64_arg@rel32@lo+4
@@ -5781,7 +5782,6 @@ define void @tail_call_stack_passed_arg_alignment_v32i32_f64(<32 x i32> %val, do
 ; GFX11-LABEL: tail_call_stack_passed_arg_alignment_v32i32_f64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_clause 0x1
 ; GFX11-NEXT:    scratch_load_b32 v33, off, s32
 ; GFX11-NEXT:    scratch_load_b64 v[31:32], off, s32 offset:4
@@ -6029,7 +6029,6 @@ define void @stack_12xv3i32() #0 {
 ; GFX11-LABEL: stack_12xv3i32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6381,7 +6380,6 @@ define void @stack_12xv3f32() #0 {
 ; GFX11-LABEL: stack_12xv3f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -6761,7 +6759,6 @@ define void @stack_8xv5i32() #0 {
 ; GFX11-LABEL: stack_8xv5i32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1
@@ -7146,7 +7143,6 @@ define void @stack_8xv5f32() #0 {
 ; GFX11-LABEL: stack_8xv5f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, s33
 ; GFX11-NEXT:    s_mov_b32 s33, s32
 ; GFX11-NEXT:    s_or_saveexec_b32 s1, -1

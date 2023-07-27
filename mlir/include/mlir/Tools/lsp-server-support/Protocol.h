@@ -168,6 +168,22 @@ bool fromJSON(const llvm::json::Value &value, ClientCapabilities &result,
               llvm::json::Path path);
 
 //===----------------------------------------------------------------------===//
+// ClientInfo
+//===----------------------------------------------------------------------===//
+
+struct ClientInfo {
+  /// The name of the client as defined by the client.
+  std::string name;
+
+  /// The client's version as defined by the client.
+  std::optional<std::string> version;
+};
+
+/// Add support for JSON serialization.
+bool fromJSON(const llvm::json::Value &value, ClientInfo &result,
+              llvm::json::Path path);
+
+//===----------------------------------------------------------------------===//
 // InitializeParams
 //===----------------------------------------------------------------------===//
 
@@ -184,6 +200,9 @@ bool fromJSON(const llvm::json::Value &value, TraceLevel &result,
 struct InitializeParams {
   /// The capabilities provided by the client (editor or tool).
   ClientCapabilities capabilities;
+
+  /// Information about the client.
+  std::optional<ClientInfo> clientInfo;
 
   /// The initial trace setting. If omitted trace is disabled ('off').
   std::optional<TraceLevel> trace;

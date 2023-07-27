@@ -125,6 +125,7 @@ typedef enum {
   LLVMDWARFSourceLanguageFortran18,
   LLVMDWARFSourceLanguageAda2005,
   LLVMDWARFSourceLanguageAda2012,
+  LLVMDWARFSourceLanguageMojo,
   // Vendor extensions:
   LLVMDWARFSourceLanguageMips_Assembler,
   LLVMDWARFSourceLanguageGOOGLE_RenderScript,

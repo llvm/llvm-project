@@ -639,6 +639,7 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_log(T x)            return the natural logarithm of x                                floating point types
  T __builtin_elementwise_log2(T x)           return the base 2 logarithm of x                                 floating point types
  T __builtin_elementwise_log10(T x)          return the base 10 logarithm of x                                floating point types
+ T __builtin_elementwise_pow(T x, T y)       return x raised to the power of y                                floating point types
  T __builtin_elementwise_exp(T x)            returns the base-e exponential, e^x, of the specified value      floating point types
  T __builtin_elementwise_exp2(T x)           returns the base-2 exponential, 2^x, of the specified value      floating point types
  T __builtin_elementwise_roundeven(T x)      round x to the nearest integer value in floating point format,   floating point types
@@ -651,6 +652,19 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
                                              exceptions.
  T __builtin_elementwise_trunc(T x)          return the integral value nearest to but no larger in            floating point types
                                              magnitude than x
+
+  T __builtin_elementwise_nearbyint(T x)     round x to the nearest  integer value in floating point format,      floating point types
+                                             rounding according to the current rounding direction.
+                                             May not raise the inexact floating-point exception. This is
+                                             treated the same as ``__builtin_elementwise_rint`` unless
+                                             :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+
+ T __builtin_elementwise_rint(T x)           round x to the nearest  integer value in floating point format,      floating point types
+                                             rounding according to the current rounding
+                                             direction. May raise floating-point exceptions. This is treated
+                                             the same as ``__builtin_elementwise_nearbyint`` unless
+                                             :ref:`FENV_ACCESS is enabled <floating-point-environment>`.
+
  T __builtin_elementwise_canonicalize(T x)   return the platform specific canonical encoding                  floating point types
                                              of a floating-point number
  T __builtin_elementwise_copysign(T x, T y)  return the magnitude of x with the sign of y.                    floating point types
@@ -1416,15 +1430,15 @@ More information could be found `here <https://clang.llvm.org/docs/Modules.html>
 Language Extensions Back-ported to Previous Standards
 =====================================================
 
-====================================== ================================ ============= ============= ==================================
-Feature                                Feature Test Macro               Introduced In Backported To Required Flags
-====================================== ================================ ============= ============= ==================================
+====================================== ================================ ============= =============
+Feature                                Feature Test Macro               Introduced In Backported To
+====================================== ================================ ============= =============
 variadic templates                     __cpp_variadic_templates         C++11         C++03
 Alias templates                        __cpp_alias_templates            C++11         C++03
 Non-static data member initializers    __cpp_nsdmi                      C++11         C++03
 Range-based ``for`` loop               __cpp_range_based_for            C++11         C++03
 RValue references                      __cpp_rvalue_references          C++11         C++03
-Attributes                             __cpp_attributes                 C++11         C++03         -fdouble-square-bracket-attributes
+Attributes                             __cpp_attributes                 C++11         C++03
 variable templates                     __cpp_variable_templates         C++14         C++03
 Binary literals                        __cpp_binary_literals            C++14         C++03
 Relaxed constexpr                      __cpp_constexpr                  C++14         C++11
@@ -1444,10 +1458,11 @@ Conditional ``explicit``               __cpp_conditional_explicit       C++20   
 ``using enum``                         __cpp_using_enum                 C++20         C++03
 ``if consteval``                       __cpp_if_consteval               C++23         C++20
 ``static operator()``                  __cpp_static_call_operator       C++23         C++03
--------------------------------------- -------------------------------- ------------- ------------- ----------------------------------
+-------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                          C99           C89
 Array & element qualification (N2607)                                   C2x           C89
-====================================== ================================ ============= ============= ==================================
+Attributes (N2335)                                                      C2x           C89
+====================================== ================================ ============= =============
 
 Type Trait Primitives
 =====================
@@ -2320,18 +2335,18 @@ targets.
 WebAssembly Features
 ====================
 
-Clang supports the WebAssembly features documented below. For further 
+Clang supports the WebAssembly features documented below. For further
 information related to the semantics of the builtins, please refer to the `WebAssembly Specification <https://webassembly.github.io/spec/core/>`_.
-In this section, when we refer to reference types, we are referring to 
+In this section, when we refer to reference types, we are referring to
 WebAssembly reference types, not C++ reference types unless stated
 otherwise.
 
 ``__builtin_wasm_table_set``
 ----------------------------
 
-This builtin function stores a value in a WebAssembly table. 
+This builtin function stores a value in a WebAssembly table.
 It takes three arguments.
-The first argument is the table to store a value into, the second 
+The first argument is the table to store a value into, the second
 argument is the index to which to store the value into, and the
 third argument is a value of reference type to store in the table.
 It returns nothing.
@@ -2343,7 +2358,7 @@ It returns nothing.
 
   void store(int index) {
     __builtin_wasm_table_set(table, index, JSObj);
-  } 
+  }
 
 ``__builtin_wasm_table_get``
 ----------------------------
@@ -2351,14 +2366,14 @@ It returns nothing.
 This builtin function is the counterpart to ``__builtin_wasm_table_set``
 and loads a value from a WebAssembly table of reference typed values.
 It takes 2 arguments.
-The first argument is a table of reference typed values and the 
+The first argument is a table of reference typed values and the
 second argument is an index from which to load the value. It returns
 the loaded reference typed value.
 
 .. code-block:: c++
 
   static __externref_t table[0];
-  
+
   __externref_t load(int index) {
     __externref_t Obj = __builtin_wasm_table_get(table, index);
     return Obj;
@@ -2384,11 +2399,11 @@ with the current table size.
 -----------------------------
 
 This builtin function grows the WebAssembly table by a certain amount.
-Currently, as all WebAssembly tables created in C/C++ are zero-sized, 
-this always needs to be called to grow the table. 
+Currently, as all WebAssembly tables created in C/C++ are zero-sized,
+this always needs to be called to grow the table.
 
-It takes three arguments. The first argument is the WebAssembly table 
-to grow. The second argument is the reference typed value to store in 
+It takes three arguments. The first argument is the WebAssembly table
+to grow. The second argument is the reference typed value to store in
 the new table entries (the initialization value), and the third argument
 is the amound to grow the table by. It returns the previous table size
 or -1. It will return -1 if not enough space could be allocated.
@@ -2409,11 +2424,11 @@ or -1. It will return -1 if not enough space could be allocated.
 ``__builtin_wasm_table_fill``
 -----------------------------
 
-This builtin function sets all the entries of a WebAssembly table to a given 
-reference typed value. It takes four arguments. The first argument is 
-the WebAssembly table, the second argument is the index that starts the 
-range, the third argument is the value to set in the new entries, and 
-the fourth and the last argument is the size of the range. It returns 
+This builtin function sets all the entries of a WebAssembly table to a given
+reference typed value. It takes four arguments. The first argument is
+the WebAssembly table, the second argument is the index that starts the
+range, the third argument is the value to set in the new entries, and
+the fourth and the last argument is the size of the range. It returns
 nothing.
 
 .. code-block:: c++
@@ -2429,11 +2444,11 @@ nothing.
 ``__builtin_wasm_table_copy``
 -----------------------------
 
-This builtin function copies elements from a source WebAssembly table 
+This builtin function copies elements from a source WebAssembly table
 to a possibly overlapping destination region. It takes five arguments.
 The first argument is the destination WebAssembly table, and the second
-argument is the source WebAssembly table. The third argument is the 
-destination index from where the copy starts, the fourth argument is the 
+argument is the source WebAssembly table. The third argument is the
+destination index from where the copy starts, the fourth argument is the
 source index from there the copy starts, and the fifth and last argument
 is the number of elements to copy. It returns nothing.
 
@@ -4660,6 +4675,13 @@ The full syntax this pragma supports is
     #pragma clang fp eval_method(extended)
     a = b[i] * c[i] + e;
   }
+
+Note: ``math.h`` defines the typedefs ``float_t`` and ``double_t`` based on the active
+evaluation method at the point where the header is included, not where the
+typedefs are used.  Because of this, it is unwise to combine these typedefs with
+``#pragma clang fp eval_method``.  To catch obvious bugs, Clang will emit an
+error for any references to these typedefs within the scope of this pragma;
+however, this is not a fool-proof protection, and programmers must take care.
 
 The ``#pragma float_control`` pragma allows precise floating-point
 semantics and floating-point exception behavior to be specified

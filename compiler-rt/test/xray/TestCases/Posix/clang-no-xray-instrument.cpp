@@ -3,7 +3,6 @@
 //
 // RUN: %clangxx -fno-xray-instrument -c %s -o %t.o
 // RUN: not %llvm_xray extract -symbolize %t.o 2>&1 | FileCheck %s
-// REQUIRES: x86_64-target-arch
 // REQUIRES: built-in-llvm-tree
 
 // CHECK: llvm-xray: Cannot extract instrumentation map

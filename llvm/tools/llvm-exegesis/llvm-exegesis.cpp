@@ -15,6 +15,7 @@
 #include "lib/BenchmarkResult.h"
 #include "lib/BenchmarkRunner.h"
 #include "lib/Clustering.h"
+#include "lib/CodeTemplate.h"
 #include "lib/Error.h"
 #include "lib/LlvmState.h"
 #include "lib/PerfHelper.h"
@@ -521,6 +522,13 @@ void benchmarkMain() {
     }
   } else {
     Configurations = ExitOnErr(readSnippets(State, SnippetsFile));
+    for (const auto &Configuration : Configurations) {
+      if (ExecutionMode != BenchmarkRunner::ExecutionModeE::SubProcess &&
+          (Configuration.Key.MemoryMappings.size() != 0 ||
+           Configuration.Key.MemoryValues.size() != 0))
+        ExitWithError("Memory annotations are only supported in subprocess "
+                      "execution mode");
+    }
   }
 
   if (NumRepetitions == 0) {

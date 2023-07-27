@@ -93,7 +93,7 @@ private:
   /// Location of label relocations.
   llvm::DenseMap<LabelTy, llvm::SmallVector<unsigned, 5>> LabelRelocs;
   /// Program code.
-  std::vector<char> Code;
+  std::vector<std::byte> Code;
   /// Opcode to expression mapping.
   SourceMap SrcMap;
 

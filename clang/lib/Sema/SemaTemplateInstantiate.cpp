@@ -36,6 +36,7 @@
 #include "clang/Sema/TemplateDeduction.h"
 #include "clang/Sema/TemplateInstCallback.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <optional>
@@ -257,6 +258,11 @@ Response HandleRecordDecl(const CXXRecordDecl *Rec,
                                        /*Final=*/false);
   }
 
+  if (const MemberSpecializationInfo *MSInfo =
+          Rec->getMemberSpecializationInfo())
+    if (MSInfo->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+      return Response::Done();
+
   bool IsFriend = Rec->getFriendObjectKind() ||
                   (Rec->getDescribedClassTemplate() &&
                    Rec->getDescribedClassTemplate()->getFriendObjectKind());
@@ -403,6 +409,7 @@ bool Sema::CodeSynthesisContext::isInstantiationRecord() const {
   case MarkingClassDllexported:
   case BuildingBuiltinDumpStructCall:
   case LambdaExpressionSubstitution:
+  case BuildingDeductionGuides:
     return false;
 
   // This function should never be called when Kind's value is Memoization.
@@ -618,6 +625,13 @@ Sema::InstantiatingTemplate::InstantiatingTemplate(
     : InstantiatingTemplate(
           SemaRef, CodeSynthesisContext::ParameterMappingSubstitution,
           PointOfInstantiation, InstantiationRange, Template) {}
+
+Sema::InstantiatingTemplate::InstantiatingTemplate(
+    Sema &SemaRef, SourceLocation PointOfInstantiation, TemplateDecl *Entity,
+    BuildingDeductionGuidesTag, SourceRange InstantiationRange)
+    : InstantiatingTemplate(
+          SemaRef, CodeSynthesisContext::BuildingDeductionGuides,
+          PointOfInstantiation, InstantiationRange, Entity) {}
 
 
 void Sema::pushCodeSynthesisContext(CodeSynthesisContext Ctx) {
@@ -1050,6 +1064,8 @@ void Sema::PrintInstantiationStack() {
                    diag::note_parameter_mapping_substitution_here)
           << Active->InstantiationRange;
       break;
+    case CodeSynthesisContext::BuildingDeductionGuides:
+      llvm_unreachable("unexpected deduction guide in instantiation stack");
     }
   }
 }
@@ -1121,6 +1137,7 @@ std::optional<TemplateDeductionInfo *> Sema::isSFINAEContext() const {
     case CodeSynthesisContext::InitializingStructuredBinding:
     case CodeSynthesisContext::MarkingClassDllexported:
     case CodeSynthesisContext::BuildingBuiltinDumpStructCall:
+    case CodeSynthesisContext::BuildingDeductionGuides:
       // This happens in a context unrelated to template instantiation, so
       // there is no SFINAE.
       return std::nullopt;

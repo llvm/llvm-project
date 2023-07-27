@@ -103,6 +103,11 @@ void transform::ApplyFoldTensorSubsetOpsPatternsOp::populatePatterns(
   tensor::populateFoldTensorSubsetOpPatterns(patterns);
 }
 
+void transform::ApplyFoldTensorSubsetOpsIntoVectorTransfersPatternsOp::
+    populatePatterns(RewritePatternSet &patterns) {
+  tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
+}
+
 void transform::ApplyMergeConsecutiveInsertExtractSlicePatternsOp::
     populatePatterns(RewritePatternSet &patterns) {
   tensor::populateMergeConsecutiveInsertExtractSlicePatterns(patterns);

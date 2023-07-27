@@ -280,7 +280,7 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI
     friend constexpr bool operator==(const __outer_iterator& __x, default_sentinel_t) {
-      _LIBCPP_ASSERT(__x.__parent_, "Cannot call comparison on a default-constructed iterator.");
+      _LIBCPP_ASSERT_UNCATEGORIZED(__x.__parent_, "Cannot call comparison on a default-constructed iterator.");
       return __x.__current() == ranges::end(__x.__parent_base()) && !__x.__trailing_empty_;
     }
   };
@@ -311,7 +311,7 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI
     constexpr bool __is_done() const {
-      _LIBCPP_ASSERT(__i_.__parent_, "Cannot call comparison on a default-constructed iterator.");
+      _LIBCPP_ASSERT_UNCATEGORIZED(__i_.__parent_, "Cannot call comparison on a default-constructed iterator.");
 
       auto [__pcur, __pend] = ranges::subrange{__i_.__parent_->__pattern_};
       auto __end = ranges::end(__i_.__parent_->__base_);

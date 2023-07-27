@@ -498,6 +498,11 @@ public:
   /// function for this subtarget.
   Align getStackAlignment() const { return stackAlignment; }
 
+  // Returns the required alignment for LDRD/STRD instructions
+  Align getDualLoadStoreAlignment() const {
+    return Align(hasV7Ops() || allowsUnalignedMem() ? 4 : 8);
+  }
+
   unsigned getMaxInterleaveFactor() const { return MaxInterleaveFactor; }
 
   unsigned getPartialUpdateClearance() const { return PartialUpdateClearance; }

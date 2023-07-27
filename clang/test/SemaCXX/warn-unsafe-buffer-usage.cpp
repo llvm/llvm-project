@@ -166,7 +166,6 @@ int garray[10];     // expected-warning{{'garray' is an unsafe buffer that does 
 int * gp = garray;  // expected-warning{{'gp' is an unsafe pointer used for buffer access}}
 int gvar = gp[1];   // FIXME: file scope unsafe buffer access is not warned
 
-// FIXME: Add test for lambda capture with initializer. E. g. auto Lam = [new_p = p]() {...
 void testLambdaCaptureAndGlobal(int * p) {
   // expected-warning@-1{{'p' is an unsafe pointer used for buffer access}}
   int a[10];              // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}}
@@ -175,6 +174,44 @@ void testLambdaCaptureAndGlobal(int * p) {
     return p[1]           // expected-note{{used in buffer access here}}
       + a[1] + garray[1]  // expected-note2{{used in buffer access here}}
       + gp[1];            // expected-note{{used in buffer access here}}
+
+  };
+}
+
+auto file_scope_lambda = [](int *ptr) {
+  // expected-warning@-1{{'ptr' is an unsafe pointer used for buffer access}}
+  
+  ptr[5] = 10;  // expected-note{{used in buffer access here}}
+};
+
+void testLambdaCapture() {
+  int a[10];              // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}}
+  int b[10];              // expected-warning{{'b' is an unsafe buffer that does not perform bounds checks}}
+  int c[10];
+
+  auto Lam1 = [a]() {
+    return a[1];           // expected-note{{used in buffer access here}}
+  };
+
+  auto Lam2 = [x = b[3]]() { // expected-note{{used in buffer access here}}
+    return x;
+  };
+
+  auto Lam = [x = c]() { // expected-warning{{'x' is an unsafe pointer used for buffer access}}
+    return x[3]; // expected-note{{used in buffer access here}}
+  };
+}
+
+void testLambdaImplicitCapture() {
+  int a[10];              // expected-warning{{'a' is an unsafe buffer that does not perform bounds checks}}
+  int b[10];              // expected-warning{{'b' is an unsafe buffer that does not perform bounds checks}}
+  
+  auto Lam1 = [=]() {
+    return a[1];           // expected-note{{used in buffer access here}}
+  };
+  
+  auto Lam2 = [&]() {
+    return b[1];           // expected-note{{used in buffer access here}}
   };
 }
 

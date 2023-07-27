@@ -12,6 +12,7 @@
 
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/ADT/EquivalenceClasses.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/Analysis/DemandedBits.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
@@ -658,13 +659,32 @@ llvm::computeMinimumValueSizes(ArrayRef<BasicBlock *> Blocks, DemandedBits &DB,
       continue;
 
     for (Value *M : llvm::make_range(ECs.member_begin(I), ECs.member_end())) {
-      if (!isa<Instruction>(M))
+      auto *MI = dyn_cast<Instruction>(M);
+      if (!MI)
         continue;
       Type *Ty = M->getType();
       if (Roots.count(M))
-        Ty = cast<Instruction>(M)->getOperand(0)->getType();
-      if (MinBW < Ty->getScalarSizeInBits())
-        MinBWs[cast<Instruction>(M)] = MinBW;
+        Ty = MI->getOperand(0)->getType();
+
+      if (MinBW >= Ty->getScalarSizeInBits())
+        continue;
+
+      // If any of M's operands demand more bits than MinBW then M cannot be
+      // performed safely in MinBW.
+      if (any_of(MI->operands(), [&DB, MinBW](Use &U) {
+            auto *CI = dyn_cast<ConstantInt>(U);
+            // For constants shift amounts, check if the shift would result in
+            // poison.
+            if (CI &&
+                isa<ShlOperator, LShrOperator, AShrOperator>(U.getUser()) &&
+                U.getOperandNo() == 1)
+              return CI->uge(MinBW);
+            uint64_t BW = bit_width(DB.getDemandedBits(&U).getZExtValue());
+            return bit_ceil(BW) > MinBW;
+          }))
+        continue;
+
+      MinBWs[MI] = MinBW;
     }
   }
 
@@ -1107,6 +1127,8 @@ void InterleavedAccessInfo::analyzeInterleaving(
   SmallSetVector<InterleaveGroup<Instruction> *, 4> StoreGroups;
   // Holds all interleaved load groups temporarily.
   SmallSetVector<InterleaveGroup<Instruction> *, 4> LoadGroups;
+  // Groups added to this set cannot have new members added.
+  SmallPtrSet<InterleaveGroup<Instruction> *, 4> CompletedLoadGroups;
 
   // Search in bottom-up program order for pairs of accesses (A and B) that can
   // form interleaved load or store groups. In the algorithm below, access A
@@ -1128,19 +1150,22 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Initialize a group for B if it has an allowable stride. Even if we don't
     // create a group for B, we continue with the bottom-up algorithm to ensure
     // we don't break any of B's dependences.
-    InterleaveGroup<Instruction> *Group = nullptr;
+    InterleaveGroup<Instruction> *GroupB = nullptr;
     if (isStrided(DesB.Stride) &&
         (!isPredicated(B->getParent()) || EnablePredicatedInterleavedMemAccesses)) {
-      Group = getInterleaveGroup(B);
-      if (!Group) {
+      GroupB = getInterleaveGroup(B);
+      if (!GroupB) {
         LLVM_DEBUG(dbgs() << "LV: Creating an interleave group with:" << *B
                           << '\n');
-        Group = createInterleaveGroup(B, DesB.Stride, DesB.Alignment);
+        GroupB = createInterleaveGroup(B, DesB.Stride, DesB.Alignment);
+      } else if (CompletedLoadGroups.contains(GroupB)) {
+        // Skip B if no new instructions can be added to its load group.
+        continue;
       }
       if (B->mayWriteToMemory())
-        StoreGroups.insert(Group);
+        StoreGroups.insert(GroupB);
       else
-        LoadGroups.insert(Group);
+        LoadGroups.insert(GroupB);
     }
 
     for (auto AI = std::next(BI); AI != E; ++AI) {
@@ -1180,6 +1205,16 @@ void InterleavedAccessInfo::analyzeInterleaving(
 
           StoreGroups.remove(StoreGroup);
           releaseGroup(StoreGroup);
+        }
+        // If B is a load and part of an interleave group, no earlier loads can
+        // be added to B's interleave group, because this would mean the load B
+        // would need to be moved across store A. Mark the interleave group as
+        // complete.
+        if (GroupB && isa<LoadInst>(B)) {
+          LLVM_DEBUG(dbgs() << "LV: Marking interleave group for " << *B
+                            << " as complete.\n");
+
+          CompletedLoadGroups.insert(GroupB);
         }
 
         // If a dependence exists and A is not already in a group (or it was
@@ -1239,18 +1274,18 @@ void InterleavedAccessInfo::analyzeInterleaving(
       // The index of A is the index of B plus A's distance to B in multiples
       // of the size.
       int IndexA =
-          Group->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
+          GroupB->getIndex(B) + DistanceToB / static_cast<int64_t>(DesB.Size);
 
       // Try to insert A into B's group.
-      if (Group->insertMember(A, IndexA, DesA.Alignment)) {
+      if (GroupB->insertMember(A, IndexA, DesA.Alignment)) {
         LLVM_DEBUG(dbgs() << "LV: Inserted:" << *A << '\n'
                           << "    into the interleave group with" << *B
                           << '\n');
-        InterleaveGroupMap[A] = Group;
+        InterleaveGroupMap[A] = GroupB;
 
         // Set the first load in program order as the insert position.
         if (A->mayReadFromMemory())
-          Group->setInsertPos(A);
+          GroupB->setInsertPos(A);
       }
     } // Iteration over A accesses.
   }   // Iteration over B accesses.

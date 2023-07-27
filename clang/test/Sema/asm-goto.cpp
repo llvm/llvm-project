@@ -50,12 +50,37 @@ int test3(int n)
   // expected-error@+2 {{cannot jump from this asm goto statement to one of its possible targets}}
   // expected-error@+1 {{cannot jump from this asm goto statement to one of its possible targets}}
   asm volatile goto("testl %0, %0; jne %l1;" :: "r"(n)::label_true, loop);
-  // expected-note@+2 {{jump bypasses initialization of variable length array}}
-  // expected-note@+1 {{possible target of asm goto statement}}
+  // expected-note@+3 {{jump bypasses initialization of variable length array}}
+  // expected-note@+2 {{possible target of asm goto statement}}
+  // expected-note@+1 {{jump enters a statement expression}}
   return ({int a[n];label_true: 2;});
   // expected-note@+1 {{jump bypasses initialization of variable length array}}
   int b[n];
 // expected-note@+1 {{possible target of asm goto statement}}
 loop:
   return 0;
+}
+
+void test4cleanup(int*);
+// No errors expected.
+void test4(void) {
+  asm goto(""::::l0);
+l0:;
+  int x __attribute__((cleanup(test4cleanup)));
+  asm goto(""::::l1);
+l1:;
+}
+
+void statement_expressions() {
+  ({
+    __label__ label;
+    asm goto("" : : : : label);
+    label:;
+  });
+
+  ({
+    __label__ label;
+    asm goto("" : : : : label);
+    label:;
+  });
 }

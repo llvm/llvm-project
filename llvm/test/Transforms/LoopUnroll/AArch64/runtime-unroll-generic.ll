@@ -7,85 +7,121 @@ define void @runtime_unroll_generic(i32 %arg_0, ptr %arg_1, ptr %arg_2, ptr %arg
 ; CHECK-A55-LABEL: @runtime_unroll_generic(
 ; CHECK-A55-NEXT:  entry:
 ; CHECK-A55-NEXT:    [[CMP52_NOT:%.*]] = icmp eq i32 [[ARG_0:%.*]], 0
-; CHECK-A55-NEXT:    br i1 [[CMP52_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY6_LR_PH:%.*]]
-; CHECK-A55:       for.body6.lr.ph:
-; CHECK-A55-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, ptr [[ARG_2:%.*]], i64 undef
-; CHECK-A55-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i16, ptr [[ARG_3:%.*]], i64 undef
-; CHECK-A55-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, ptr [[ARG_1:%.*]], i64 undef
+; CHECK-A55-NEXT:    br i1 [[CMP52_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY6_PREHEADER:%.*]]
+; CHECK-A55:       for.body6.preheader:
 ; CHECK-A55-NEXT:    [[XTRAITER:%.*]] = and i32 [[ARG_0]], 3
 ; CHECK-A55-NEXT:    [[TMP0:%.*]] = icmp ult i32 [[ARG_0]], 4
-; CHECK-A55-NEXT:    br i1 [[TMP0]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY6_LR_PH_NEW:%.*]]
-; CHECK-A55:       for.body6.lr.ph.new:
+; CHECK-A55-NEXT:    br i1 [[TMP0]], label [[FOR_END_LOOPEXIT_UNR_LCSSA:%.*]], label [[FOR_BODY6_PREHEADER_NEW:%.*]]
+; CHECK-A55:       for.body6.preheader.new:
 ; CHECK-A55-NEXT:    [[UNROLL_ITER:%.*]] = and i32 [[ARG_0]], -4
 ; CHECK-A55-NEXT:    br label [[FOR_BODY6:%.*]]
 ; CHECK-A55:       for.body6:
-; CHECK-A55-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY6_LR_PH_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_BODY6]] ]
+; CHECK-A55-NEXT:    [[K_03:%.*]] = phi i32 [ 0, [[FOR_BODY6_PREHEADER_NEW]] ], [ [[INC_3:%.*]], [[FOR_BODY6]] ]
+; CHECK-A55-NEXT:    [[NITER:%.*]] = phi i32 [ 0, [[FOR_BODY6_PREHEADER_NEW]] ], [ [[NITER_NEXT_3:%.*]], [[FOR_BODY6]] ]
+; CHECK-A55-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[K_03]] to i64
+; CHECK-A55-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, ptr [[ARG_2:%.*]], i64 [[IDX_EXT]]
 ; CHECK-A55-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
 ; CHECK-A55-NEXT:    [[CONV:%.*]] = sext i16 [[TMP1]] to i32
+; CHECK-A55-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i16, ptr [[ARG_3:%.*]], i64 [[IDX_EXT]]
 ; CHECK-A55-NEXT:    [[TMP2:%.*]] = load i16, ptr [[ARRAYIDX14]], align 2
 ; CHECK-A55-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP2]] to i32
 ; CHECK-A55-NEXT:    [[MUL16:%.*]] = mul nsw i32 [[CONV15]], [[CONV]]
+; CHECK-A55-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, ptr [[ARG_1:%.*]], i64 [[IDX_EXT]]
 ; CHECK-A55-NEXT:    [[TMP3:%.*]] = load i32, ptr [[ARRAYIDX20]], align 4
 ; CHECK-A55-NEXT:    [[ADD21:%.*]] = add nsw i32 [[MUL16]], [[TMP3]]
 ; CHECK-A55-NEXT:    store i32 [[ADD21]], ptr [[ARRAYIDX20]], align 4
-; CHECK-A55-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
+; CHECK-A55-NEXT:    [[INC:%.*]] = or i32 [[K_03]], 1
+; CHECK-A55-NEXT:    [[IDX_EXT_1:%.*]] = zext i32 [[INC]] to i64
+; CHECK-A55-NEXT:    [[ARRAYIDX10_1:%.*]] = getelementptr inbounds i16, ptr [[ARG_2]], i64 [[IDX_EXT_1]]
+; CHECK-A55-NEXT:    [[TMP4:%.*]] = load i16, ptr [[ARRAYIDX10_1]], align 2
 ; CHECK-A55-NEXT:    [[CONV_1:%.*]] = sext i16 [[TMP4]] to i32
-; CHECK-A55-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX14]], align 2
+; CHECK-A55-NEXT:    [[ARRAYIDX14_1:%.*]] = getelementptr inbounds i16, ptr [[ARG_3]], i64 [[IDX_EXT_1]]
+; CHECK-A55-NEXT:    [[TMP5:%.*]] = load i16, ptr [[ARRAYIDX14_1]], align 2
 ; CHECK-A55-NEXT:    [[CONV15_1:%.*]] = sext i16 [[TMP5]] to i32
 ; CHECK-A55-NEXT:    [[MUL16_1:%.*]] = mul nsw i32 [[CONV15_1]], [[CONV_1]]
-; CHECK-A55-NEXT:    [[ADD21_1:%.*]] = add nsw i32 [[MUL16_1]], [[ADD21]]
-; CHECK-A55-NEXT:    store i32 [[ADD21_1]], ptr [[ARRAYIDX20]], align 4
-; CHECK-A55-NEXT:    [[TMP6:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
-; CHECK-A55-NEXT:    [[CONV_2:%.*]] = sext i16 [[TMP6]] to i32
-; CHECK-A55-NEXT:    [[TMP7:%.*]] = load i16, ptr [[ARRAYIDX14]], align 2
-; CHECK-A55-NEXT:    [[CONV15_2:%.*]] = sext i16 [[TMP7]] to i32
+; CHECK-A55-NEXT:    [[ARRAYIDX20_1:%.*]] = getelementptr inbounds i32, ptr [[ARG_1]], i64 [[IDX_EXT_1]]
+; CHECK-A55-NEXT:    [[TMP6:%.*]] = load i32, ptr [[ARRAYIDX20_1]], align 4
+; CHECK-A55-NEXT:    [[ADD21_1:%.*]] = add nsw i32 [[MUL16_1]], [[TMP6]]
+; CHECK-A55-NEXT:    store i32 [[ADD21_1]], ptr [[ARRAYIDX20_1]], align 4
+; CHECK-A55-NEXT:    [[INC_1:%.*]] = or i32 [[K_03]], 2
+; CHECK-A55-NEXT:    [[IDX_EXT_2:%.*]] = zext i32 [[INC_1]] to i64
+; CHECK-A55-NEXT:    [[ARRAYIDX10_2:%.*]] = getelementptr inbounds i16, ptr [[ARG_2]], i64 [[IDX_EXT_2]]
+; CHECK-A55-NEXT:    [[TMP7:%.*]] = load i16, ptr [[ARRAYIDX10_2]], align 2
+; CHECK-A55-NEXT:    [[CONV_2:%.*]] = sext i16 [[TMP7]] to i32
+; CHECK-A55-NEXT:    [[ARRAYIDX14_2:%.*]] = getelementptr inbounds i16, ptr [[ARG_3]], i64 [[IDX_EXT_2]]
+; CHECK-A55-NEXT:    [[TMP8:%.*]] = load i16, ptr [[ARRAYIDX14_2]], align 2
+; CHECK-A55-NEXT:    [[CONV15_2:%.*]] = sext i16 [[TMP8]] to i32
 ; CHECK-A55-NEXT:    [[MUL16_2:%.*]] = mul nsw i32 [[CONV15_2]], [[CONV_2]]
-; CHECK-A55-NEXT:    [[ADD21_2:%.*]] = add nsw i32 [[MUL16_2]], [[ADD21_1]]
-; CHECK-A55-NEXT:    store i32 [[ADD21_2]], ptr [[ARRAYIDX20]], align 4
-; CHECK-A55-NEXT:    [[TMP8:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
-; CHECK-A55-NEXT:    [[CONV_3:%.*]] = sext i16 [[TMP8]] to i32
-; CHECK-A55-NEXT:    [[TMP9:%.*]] = load i16, ptr [[ARRAYIDX14]], align 2
-; CHECK-A55-NEXT:    [[CONV15_3:%.*]] = sext i16 [[TMP9]] to i32
+; CHECK-A55-NEXT:    [[ARRAYIDX20_2:%.*]] = getelementptr inbounds i32, ptr [[ARG_1]], i64 [[IDX_EXT_2]]
+; CHECK-A55-NEXT:    [[TMP9:%.*]] = load i32, ptr [[ARRAYIDX20_2]], align 4
+; CHECK-A55-NEXT:    [[ADD21_2:%.*]] = add nsw i32 [[MUL16_2]], [[TMP9]]
+; CHECK-A55-NEXT:    store i32 [[ADD21_2]], ptr [[ARRAYIDX20_2]], align 4
+; CHECK-A55-NEXT:    [[INC_2:%.*]] = or i32 [[K_03]], 3
+; CHECK-A55-NEXT:    [[IDX_EXT_3:%.*]] = zext i32 [[INC_2]] to i64
+; CHECK-A55-NEXT:    [[ARRAYIDX10_3:%.*]] = getelementptr inbounds i16, ptr [[ARG_2]], i64 [[IDX_EXT_3]]
+; CHECK-A55-NEXT:    [[TMP10:%.*]] = load i16, ptr [[ARRAYIDX10_3]], align 2
+; CHECK-A55-NEXT:    [[CONV_3:%.*]] = sext i16 [[TMP10]] to i32
+; CHECK-A55-NEXT:    [[ARRAYIDX14_3:%.*]] = getelementptr inbounds i16, ptr [[ARG_3]], i64 [[IDX_EXT_3]]
+; CHECK-A55-NEXT:    [[TMP11:%.*]] = load i16, ptr [[ARRAYIDX14_3]], align 2
+; CHECK-A55-NEXT:    [[CONV15_3:%.*]] = sext i16 [[TMP11]] to i32
 ; CHECK-A55-NEXT:    [[MUL16_3:%.*]] = mul nsw i32 [[CONV15_3]], [[CONV_3]]
-; CHECK-A55-NEXT:    [[ADD21_3:%.*]] = add nsw i32 [[MUL16_3]], [[ADD21_2]]
-; CHECK-A55-NEXT:    store i32 [[ADD21_3]], ptr [[ARRAYIDX20]], align 4
+; CHECK-A55-NEXT:    [[ARRAYIDX20_3:%.*]] = getelementptr inbounds i32, ptr [[ARG_1]], i64 [[IDX_EXT_3]]
+; CHECK-A55-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX20_3]], align 4
+; CHECK-A55-NEXT:    [[ADD21_3:%.*]] = add nsw i32 [[MUL16_3]], [[TMP12]]
+; CHECK-A55-NEXT:    store i32 [[ADD21_3]], ptr [[ARRAYIDX20_3]], align 4
+; CHECK-A55-NEXT:    [[INC_3]] = add nuw i32 [[K_03]], 4
 ; CHECK-A55-NEXT:    [[NITER_NEXT_3]] = add i32 [[NITER]], 4
 ; CHECK-A55-NEXT:    [[NITER_NCMP_3_NOT:%.*]] = icmp eq i32 [[NITER_NEXT_3]], [[UNROLL_ITER]]
 ; CHECK-A55-NEXT:    br i1 [[NITER_NCMP_3_NOT]], label [[FOR_END_LOOPEXIT_UNR_LCSSA]], label [[FOR_BODY6]], !llvm.loop [[LOOP0:![0-9]+]]
 ; CHECK-A55:       for.end.loopexit.unr-lcssa:
+; CHECK-A55-NEXT:    [[K_03_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY6_PREHEADER]] ], [ [[INC_3]], [[FOR_BODY6]] ]
 ; CHECK-A55-NEXT:    [[LCMP_MOD_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 0
 ; CHECK-A55-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_END]], label [[FOR_BODY6_EPIL:%.*]]
 ; CHECK-A55:       for.body6.epil:
-; CHECK-A55-NEXT:    [[TMP10:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
-; CHECK-A55-NEXT:    [[CONV_EPIL:%.*]] = sext i16 [[TMP10]] to i32
-; CHECK-A55-NEXT:    [[TMP11:%.*]] = load i16, ptr [[ARRAYIDX14]], align 2
-; CHECK-A55-NEXT:    [[CONV15_EPIL:%.*]] = sext i16 [[TMP11]] to i32
+; CHECK-A55-NEXT:    [[IDX_EXT_EPIL:%.*]] = zext i32 [[K_03_UNR]] to i64
+; CHECK-A55-NEXT:    [[ARRAYIDX10_EPIL:%.*]] = getelementptr inbounds i16, ptr [[ARG_2]], i64 [[IDX_EXT_EPIL]]
+; CHECK-A55-NEXT:    [[TMP13:%.*]] = load i16, ptr [[ARRAYIDX10_EPIL]], align 2
+; CHECK-A55-NEXT:    [[CONV_EPIL:%.*]] = sext i16 [[TMP13]] to i32
+; CHECK-A55-NEXT:    [[ARRAYIDX14_EPIL:%.*]] = getelementptr inbounds i16, ptr [[ARG_3]], i64 [[IDX_EXT_EPIL]]
+; CHECK-A55-NEXT:    [[TMP14:%.*]] = load i16, ptr [[ARRAYIDX14_EPIL]], align 2
+; CHECK-A55-NEXT:    [[CONV15_EPIL:%.*]] = sext i16 [[TMP14]] to i32
 ; CHECK-A55-NEXT:    [[MUL16_EPIL:%.*]] = mul nsw i32 [[CONV15_EPIL]], [[CONV_EPIL]]
-; CHECK-A55-NEXT:    [[TMP12:%.*]] = load i32, ptr [[ARRAYIDX20]], align 4
-; CHECK-A55-NEXT:    [[ADD21_EPIL:%.*]] = add nsw i32 [[MUL16_EPIL]], [[TMP12]]
-; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL]], ptr [[ARRAYIDX20]], align 4
+; CHECK-A55-NEXT:    [[ARRAYIDX20_EPIL:%.*]] = getelementptr inbounds i32, ptr [[ARG_1]], i64 [[IDX_EXT_EPIL]]
+; CHECK-A55-NEXT:    [[TMP15:%.*]] = load i32, ptr [[ARRAYIDX20_EPIL]], align 4
+; CHECK-A55-NEXT:    [[ADD21_EPIL:%.*]] = add nsw i32 [[MUL16_EPIL]], [[TMP15]]
+; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL]], ptr [[ARRAYIDX20_EPIL]], align 4
 ; CHECK-A55-NEXT:    [[EPIL_ITER_CMP_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 1
 ; CHECK-A55-NEXT:    br i1 [[EPIL_ITER_CMP_NOT]], label [[FOR_END]], label [[FOR_BODY6_EPIL_1:%.*]]
 ; CHECK-A55:       for.body6.epil.1:
-; CHECK-A55-NEXT:    [[TMP13:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
-; CHECK-A55-NEXT:    [[CONV_EPIL_1:%.*]] = sext i16 [[TMP13]] to i32
-; CHECK-A55-NEXT:    [[TMP14:%.*]] = load i16, ptr [[ARRAYIDX14]], align 2
-; CHECK-A55-NEXT:    [[CONV15_EPIL_1:%.*]] = sext i16 [[TMP14]] to i32
+; CHECK-A55-NEXT:    [[INC_EPIL:%.*]] = add nuw i32 [[K_03_UNR]], 1
+; CHECK-A55-NEXT:    [[IDX_EXT_EPIL_1:%.*]] = zext i32 [[INC_EPIL]] to i64
+; CHECK-A55-NEXT:    [[ARRAYIDX10_EPIL_1:%.*]] = getelementptr inbounds i16, ptr [[ARG_2]], i64 [[IDX_EXT_EPIL_1]]
+; CHECK-A55-NEXT:    [[TMP16:%.*]] = load i16, ptr [[ARRAYIDX10_EPIL_1]], align 2
+; CHECK-A55-NEXT:    [[CONV_EPIL_1:%.*]] = sext i16 [[TMP16]] to i32
+; CHECK-A55-NEXT:    [[ARRAYIDX14_EPIL_1:%.*]] = getelementptr inbounds i16, ptr [[ARG_3]], i64 [[IDX_EXT_EPIL_1]]
+; CHECK-A55-NEXT:    [[TMP17:%.*]] = load i16, ptr [[ARRAYIDX14_EPIL_1]], align 2
+; CHECK-A55-NEXT:    [[CONV15_EPIL_1:%.*]] = sext i16 [[TMP17]] to i32
 ; CHECK-A55-NEXT:    [[MUL16_EPIL_1:%.*]] = mul nsw i32 [[CONV15_EPIL_1]], [[CONV_EPIL_1]]
-; CHECK-A55-NEXT:    [[TMP15:%.*]] = load i32, ptr [[ARRAYIDX20]], align 4
-; CHECK-A55-NEXT:    [[ADD21_EPIL_1:%.*]] = add nsw i32 [[MUL16_EPIL_1]], [[TMP15]]
-; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL_1]], ptr [[ARRAYIDX20]], align 4
+; CHECK-A55-NEXT:    [[ARRAYIDX20_EPIL_1:%.*]] = getelementptr inbounds i32, ptr [[ARG_1]], i64 [[IDX_EXT_EPIL_1]]
+; CHECK-A55-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX20_EPIL_1]], align 4
+; CHECK-A55-NEXT:    [[ADD21_EPIL_1:%.*]] = add nsw i32 [[MUL16_EPIL_1]], [[TMP18]]
+; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL_1]], ptr [[ARRAYIDX20_EPIL_1]], align 4
 ; CHECK-A55-NEXT:    [[EPIL_ITER_CMP_1_NOT:%.*]] = icmp eq i32 [[XTRAITER]], 2
 ; CHECK-A55-NEXT:    br i1 [[EPIL_ITER_CMP_1_NOT]], label [[FOR_END]], label [[FOR_BODY6_EPIL_2:%.*]]
 ; CHECK-A55:       for.body6.epil.2:
-; CHECK-A55-NEXT:    [[TMP16:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
-; CHECK-A55-NEXT:    [[CONV_EPIL_2:%.*]] = sext i16 [[TMP16]] to i32
-; CHECK-A55-NEXT:    [[TMP17:%.*]] = load i16, ptr [[ARRAYIDX14]], align 2
-; CHECK-A55-NEXT:    [[CONV15_EPIL_2:%.*]] = sext i16 [[TMP17]] to i32
+; CHECK-A55-NEXT:    [[INC_EPIL_1:%.*]] = add nuw i32 [[K_03_UNR]], 2
+; CHECK-A55-NEXT:    [[IDX_EXT_EPIL_2:%.*]] = zext i32 [[INC_EPIL_1]] to i64
+; CHECK-A55-NEXT:    [[ARRAYIDX10_EPIL_2:%.*]] = getelementptr inbounds i16, ptr [[ARG_2]], i64 [[IDX_EXT_EPIL_2]]
+; CHECK-A55-NEXT:    [[TMP19:%.*]] = load i16, ptr [[ARRAYIDX10_EPIL_2]], align 2
+; CHECK-A55-NEXT:    [[CONV_EPIL_2:%.*]] = sext i16 [[TMP19]] to i32
+; CHECK-A55-NEXT:    [[ARRAYIDX14_EPIL_2:%.*]] = getelementptr inbounds i16, ptr [[ARG_3]], i64 [[IDX_EXT_EPIL_2]]
+; CHECK-A55-NEXT:    [[TMP20:%.*]] = load i16, ptr [[ARRAYIDX14_EPIL_2]], align 2
+; CHECK-A55-NEXT:    [[CONV15_EPIL_2:%.*]] = sext i16 [[TMP20]] to i32
 ; CHECK-A55-NEXT:    [[MUL16_EPIL_2:%.*]] = mul nsw i32 [[CONV15_EPIL_2]], [[CONV_EPIL_2]]
-; CHECK-A55-NEXT:    [[TMP18:%.*]] = load i32, ptr [[ARRAYIDX20]], align 4
-; CHECK-A55-NEXT:    [[ADD21_EPIL_2:%.*]] = add nsw i32 [[MUL16_EPIL_2]], [[TMP18]]
-; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL_2]], ptr [[ARRAYIDX20]], align 4
+; CHECK-A55-NEXT:    [[ARRAYIDX20_EPIL_2:%.*]] = getelementptr inbounds i32, ptr [[ARG_1]], i64 [[IDX_EXT_EPIL_2]]
+; CHECK-A55-NEXT:    [[TMP21:%.*]] = load i32, ptr [[ARRAYIDX20_EPIL_2]], align 4
+; CHECK-A55-NEXT:    [[ADD21_EPIL_2:%.*]] = add nsw i32 [[MUL16_EPIL_2]], [[TMP21]]
+; CHECK-A55-NEXT:    store i32 [[ADD21_EPIL_2]], ptr [[ARRAYIDX20_EPIL_2]], align 4
 ; CHECK-A55-NEXT:    br label [[FOR_END]]
 ; CHECK-A55:       for.end:
 ; CHECK-A55-NEXT:    ret void
@@ -93,19 +129,18 @@ define void @runtime_unroll_generic(i32 %arg_0, ptr %arg_1, ptr %arg_2, ptr %arg
 ; CHECK-GENERIC-LABEL: @runtime_unroll_generic(
 ; CHECK-GENERIC-NEXT:  entry:
 ; CHECK-GENERIC-NEXT:    [[CMP52_NOT:%.*]] = icmp eq i32 [[ARG_0:%.*]], 0
-; CHECK-GENERIC-NEXT:    br i1 [[CMP52_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY6_LR_PH:%.*]]
-; CHECK-GENERIC:       for.body6.lr.ph:
-; CHECK-GENERIC-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, ptr [[ARG_2:%.*]], i64 undef
-; CHECK-GENERIC-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i16, ptr [[ARG_3:%.*]], i64 undef
-; CHECK-GENERIC-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, ptr [[ARG_1:%.*]], i64 undef
-; CHECK-GENERIC-NEXT:    br label [[FOR_BODY6:%.*]]
+; CHECK-GENERIC-NEXT:    br i1 [[CMP52_NOT]], label [[FOR_END:%.*]], label [[FOR_BODY6:%.*]]
 ; CHECK-GENERIC:       for.body6:
-; CHECK-GENERIC-NEXT:    [[K_03:%.*]] = phi i32 [ 0, [[FOR_BODY6_LR_PH]] ], [ [[INC:%.*]], [[FOR_BODY6]] ]
+; CHECK-GENERIC-NEXT:    [[K_03:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY6]] ], [ 0, [[ENTRY:%.*]] ]
+; CHECK-GENERIC-NEXT:    [[IDX_EXT:%.*]] = zext i32 [[K_03]] to i64
+; CHECK-GENERIC-NEXT:    [[ARRAYIDX10:%.*]] = getelementptr inbounds i16, ptr [[ARG_2:%.*]], i64 [[IDX_EXT]]
 ; CHECK-GENERIC-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX10]], align 2
 ; CHECK-GENERIC-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
+; CHECK-GENERIC-NEXT:    [[ARRAYIDX14:%.*]] = getelementptr inbounds i16, ptr [[ARG_3:%.*]], i64 [[IDX_EXT]]
 ; CHECK-GENERIC-NEXT:    [[TMP1:%.*]] = load i16, ptr [[ARRAYIDX14]], align 2
 ; CHECK-GENERIC-NEXT:    [[CONV15:%.*]] = sext i16 [[TMP1]] to i32
 ; CHECK-GENERIC-NEXT:    [[MUL16:%.*]] = mul nsw i32 [[CONV15]], [[CONV]]
+; CHECK-GENERIC-NEXT:    [[ARRAYIDX20:%.*]] = getelementptr inbounds i32, ptr [[ARG_1:%.*]], i64 [[IDX_EXT]]
 ; CHECK-GENERIC-NEXT:    [[TMP2:%.*]] = load i32, ptr [[ARRAYIDX20]], align 4
 ; CHECK-GENERIC-NEXT:    [[ADD21:%.*]] = add nsw i32 [[MUL16]], [[TMP2]]
 ; CHECK-GENERIC-NEXT:    store i32 [[ADD21]], ptr [[ARRAYIDX20]], align 4
@@ -148,16 +183,17 @@ for.cond4:                                        ; preds = %for.inc, %for.body3
 
 for.body6:                                        ; preds = %for.cond4
   %2 = load ptr, ptr %arg_2.addr, align 8
-  %arrayidx10 = getelementptr inbounds i16, ptr %2, i64 undef
+  %idx.ext = zext i32 %0 to i64
+  %arrayidx10 = getelementptr inbounds i16, ptr %2, i64 %idx.ext
   %3 = load i16, ptr %arrayidx10, align 2
   %conv = sext i16 %3 to i32
   %4 = load ptr, ptr %arg_3.addr, align 8
-  %arrayidx14 = getelementptr inbounds i16, ptr %4, i64 undef
+  %arrayidx14 = getelementptr inbounds i16, ptr %4, i64 %idx.ext
   %5 = load i16, ptr %arrayidx14, align 2
   %conv15 = sext i16 %5 to i32
   %mul16 = mul nsw i32 %conv, %conv15
   %6 = load ptr, ptr %arg_1.addr, align 8
-  %arrayidx20 = getelementptr inbounds i32, ptr %6, i64 undef
+  %arrayidx20 = getelementptr inbounds i32, ptr %6, i64 %idx.ext
   %7 = load i32, ptr %arrayidx20, align 4
   %add21 = add nsw i32 %7, %mul16
   store i32 %add21, ptr %arrayidx20, align 4

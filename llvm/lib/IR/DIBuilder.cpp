@@ -12,6 +12,8 @@
 
 #include "llvm/IR/DIBuilder.h"
 #include "LLVMContextImpl.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfo.h"
@@ -138,7 +140,7 @@ DICompileUnit *DIBuilder::createCompileUnit(
     DICompileUnit::DebugNameTableKind NameTableKind, bool RangesBaseAddress,
     StringRef SysRoot, StringRef SDK) {
 
-  assert(((Lang <= dwarf::DW_LANG_Ada2012 && Lang >= dwarf::DW_LANG_C89) ||
+  assert(((Lang <= dwarf::DW_LANG_Mojo && Lang >= dwarf::DW_LANG_C89) ||
           (Lang <= dwarf::DW_LANG_hi_user && Lang >= dwarf::DW_LANG_lo_user)) &&
          "Invalid Language tag");
 

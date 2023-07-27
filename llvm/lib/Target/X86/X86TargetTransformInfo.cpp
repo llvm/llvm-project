@@ -3945,6 +3945,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  2, 3, 1, 3 } },
     { ISD::ROTR,       MVT::i64,     {  2, 3, 1, 3 } },
+    { X86ISD::VROTLI,  MVT::i64,     {  1, 1, 1, 1 } },
     { ISD::FSHL,       MVT::i64,     {  4, 4, 1, 4 } },
     { ISD::SMAX,       MVT::i64,     {  1,  3,  2,  3 } },
     { ISD::SMIN,       MVT::i64,     {  1,  3,  2,  3 } },
@@ -3984,6 +3985,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::i32,     {  2,  3,  1,  3 } },
     { ISD::ROTR,       MVT::i16,     {  2,  3,  1,  3 } },
     { ISD::ROTR,       MVT::i8,      {  2,  3,  1,  3 } },
+    { X86ISD::VROTLI,  MVT::i32,     {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::i16,     {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::i8,      {  1,  1,  1,  1 } },
     { ISD::FSHL,       MVT::i32,     {  4,  4,  1,  4 } },
     { ISD::FSHL,       MVT::i16,     {  4,  4,  2,  5 } },
     { ISD::FSHL,       MVT::i8,      {  4,  4,  2,  5 } },
@@ -4039,8 +4043,13 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::FSHL;
     if (!ICA.isTypeBasedOnly()) {
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
-      if (Args[0] == Args[1])
+      if (Args[0] == Args[1]) {
         ISD = ISD::ROTL;
+        // Handle scalar constant rotation amounts.
+        // TODO: Handle vector + funnel-shift cases.
+        if (isa_and_nonnull<ConstantInt>(Args[2]))
+          ISD = X86ISD::VROTLI;
+      }
     }
     break;
   case Intrinsic::fshr:
@@ -4048,8 +4057,13 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::FSHL;
     if (!ICA.isTypeBasedOnly()) {
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
-      if (Args[0] == Args[1])
+      if (Args[0] == Args[1]) {
+        // Handle scalar constant rotation amount.
+        // TODO: Handle vector + funnel-shift cases.
         ISD = ISD::ROTR;
+        if (isa_and_nonnull<ConstantInt>(Args[2]))
+          ISD = X86ISD::VROTLI;
+      }
     }
     break;
   case Intrinsic::maxnum:
@@ -4969,7 +4983,8 @@ X86TTIImpl::getPointersChainCost(ArrayRef<const Value *> Ptrs,
     if (const auto *BaseGEP = dyn_cast<GetElementPtrInst>(Base)) {
       SmallVector<const Value *> Indices(BaseGEP->indices());
       return getGEPCost(BaseGEP->getSourceElementType(),
-                        BaseGEP->getPointerOperand(), Indices, CostKind);
+                        BaseGEP->getPointerOperand(), Indices, nullptr,
+                        CostKind);
     }
     return TTI::TCC_Free;
   }
@@ -5255,25 +5270,16 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
                                             CostKind, 0, nullptr, nullptr);
 }
 
-InstructionCost X86TTIImpl::getMinMaxCost(Type *Ty, Type *CondTy,
+InstructionCost X86TTIImpl::getMinMaxCost(Intrinsic::ID IID, Type *Ty,
                                           TTI::TargetCostKind CostKind,
-                                          bool IsUnsigned, FastMathFlags FMF) {
-  Intrinsic::ID Id;
-  if (Ty->isIntOrIntVectorTy()) {
-    Id = IsUnsigned ? Intrinsic::umin : Intrinsic::smin;
-  } else {
-    assert(Ty->isFPOrFPVectorTy() &&
-           "Expected float point or integer vector type.");
-    Id = Intrinsic::minnum;
-  }
-
-  IntrinsicCostAttributes ICA(Id, Ty, {Ty, Ty}, FMF);
+                                          FastMathFlags FMF) {
+  IntrinsicCostAttributes ICA(IID, Ty, {Ty, Ty}, FMF);
   return getIntrinsicInstrCost(ICA, CostKind);
 }
 
 InstructionCost
-X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
-                                   bool IsUnsigned, FastMathFlags FMF,
+X86TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *ValTy,
+                                   FastMathFlags FMF,
                                    TTI::TargetCostKind CostKind) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(ValTy);
 
@@ -5281,11 +5287,14 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
 
   int ISD;
   if (ValTy->isIntOrIntVectorTy()) {
-    ISD = IsUnsigned ? ISD::UMIN : ISD::SMIN;
+    ISD = (IID == Intrinsic::umin || IID == Intrinsic::umax) ? ISD::UMIN
+                                                             : ISD::SMIN;
   } else {
     assert(ValTy->isFPOrFPVectorTy() &&
            "Expected float point or integer vector type.");
-    ISD = ISD::FMINNUM;
+    ISD = (IID == Intrinsic::minnum || IID == Intrinsic::maxnum)
+              ? ISD::FMINNUM
+              : ISD::FMINIMUM;
   }
 
   // We use the Intel Architecture Code Analyzer(IACA) to measure the throughput
@@ -5361,9 +5370,7 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
     // Type needs to be split. We need LT.first - 1 operations ops.
     Ty = FixedVectorType::get(ValVTy->getElementType(),
                               MTy.getVectorNumElements());
-    auto *SubCondTy = FixedVectorType::get(CondTy->getElementType(),
-                                           MTy.getVectorNumElements());
-    MinMaxCost = getMinMaxCost(Ty, SubCondTy, CostKind, IsUnsigned, FMF);
+    MinMaxCost = getMinMaxCost(IID, Ty, CostKind, FMF);
     MinMaxCost *= LT.first - 1;
     NumVecElts = MTy.getVectorNumElements();
   }
@@ -5390,8 +5397,7 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
   // by type legalization.
   if (!isPowerOf2_32(ValVTy->getNumElements()) ||
       ScalarSize != MTy.getScalarSizeInBits())
-    return BaseT::getMinMaxReductionCost(ValTy, CondTy, IsUnsigned, FMF,
-                                         CostKind);
+    return BaseT::getMinMaxReductionCost(IID, ValTy, FMF, CostKind);
 
   // Now handle reduction with the legal type, taking into account size changes
   // at each level.
@@ -5435,9 +5441,7 @@ X86TTIImpl::getMinMaxReductionCost(VectorType *ValTy, VectorType *CondTy,
     }
 
     // Add the arithmetic op for this level.
-    auto *SubCondTy =
-        FixedVectorType::get(CondTy->getElementType(), Ty->getNumElements());
-    MinMaxCost += getMinMaxCost(Ty, SubCondTy, CostKind, IsUnsigned, FMF);
+    MinMaxCost += getMinMaxCost(IID, Ty, CostKind, FMF);
   }
 
   // Add the final extract element to the cost.
@@ -5582,7 +5586,7 @@ InstructionCost X86TTIImpl::getIntImmCostInst(unsigned Opcode, unsigned Idx,
   }
 
   if (Idx == ImmIdx) {
-    int NumConstants = divideCeil(BitSize, 64);
+    uint64_t NumConstants = divideCeil(BitSize, 64);
     InstructionCost Cost = X86TTIImpl::getIntImmCost(Imm, Ty, CostKind);
     return (Cost <= NumConstants * TTI::TCC_Basic)
                ? static_cast<int>(TTI::TCC_Free)
@@ -5681,15 +5685,15 @@ InstructionCost X86TTIImpl::getGSVectorCost(unsigned Opcode, Type *SrcVTy,
     const Value *Ptrs = GEP->getPointerOperand();
     if (Ptrs->getType()->isVectorTy() && !getSplatValue(Ptrs))
       return IndexSize;
-    for (unsigned i = 1; i < GEP->getNumOperands(); ++i) {
-      if (isa<Constant>(GEP->getOperand(i)))
+    for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I) {
+      if (isa<Constant>(GEP->getOperand(I)))
         continue;
-      Type *IndxTy = GEP->getOperand(i)->getType();
+      Type *IndxTy = GEP->getOperand(I)->getType();
       if (auto *IndexVTy = dyn_cast<VectorType>(IndxTy))
         IndxTy = IndexVTy->getElementType();
       if ((IndxTy->getPrimitiveSizeInBits() == 64 &&
-          !isa<SExtInst>(GEP->getOperand(i))) ||
-         ++NumOfVarIndices > 1)
+           !isa<SExtInst>(GEP->getOperand(I))) ||
+          ++NumOfVarIndices > 1)
         return IndexSize; // 64
     }
     return (unsigned)32;
@@ -5847,6 +5851,9 @@ bool X86TTIImpl::isLegalMaskedLoad(Type *DataTy, Align Alignment) {
     return true;
 
   if (ScalarTy->isHalfTy() && ST->hasBWI())
+    return true;
+
+  if (ScalarTy->isBFloatTy() && ST->hasBF16())
     return true;
 
   if (!ScalarTy->isIntegerTy())
@@ -6304,16 +6311,18 @@ InstructionCost X86TTIImpl::getInterleavedMemoryOpCost(
     bool UseMaskForCond, bool UseMaskForGaps) {
   auto *VecTy = cast<FixedVectorType>(BaseTy);
 
-  auto isSupportedOnAVX512 = [&](Type *VecTy, bool HasBW) {
+  auto isSupportedOnAVX512 = [&](Type *VecTy) {
     Type *EltTy = cast<VectorType>(VecTy)->getElementType();
     if (EltTy->isFloatTy() || EltTy->isDoubleTy() || EltTy->isIntegerTy(64) ||
         EltTy->isIntegerTy(32) || EltTy->isPointerTy())
       return true;
     if (EltTy->isIntegerTy(16) || EltTy->isIntegerTy(8) || EltTy->isHalfTy())
-      return HasBW;
+      return ST->hasBWI();
+    if (EltTy->isBFloatTy())
+      return ST->hasBF16();
     return false;
   };
-  if (ST->hasAVX512() && isSupportedOnAVX512(VecTy, ST->hasBWI()))
+  if (ST->hasAVX512() && isSupportedOnAVX512(VecTy))
     return getInterleavedMemoryOpCostAVX512(
         Opcode, VecTy, Factor, Indices, Alignment,
         AddressSpace, CostKind, UseMaskForCond, UseMaskForGaps);

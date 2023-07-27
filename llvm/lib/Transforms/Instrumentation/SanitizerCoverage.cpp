@@ -803,7 +803,7 @@ void ModuleSanitizerCoverage::InjectCoverageForIndirectCalls(
   assert(Options.TracePC || Options.TracePCGuard ||
          Options.Inline8bitCounters || Options.InlineBoolFlag);
   for (auto *I : IndirCalls) {
-    IRBuilder<> IRB(I);
+    InstrumentationIRBuilder IRB(I);
     CallBase &CB = cast<CallBase>(*I);
     Value *Callee = CB.getCalledOperand();
     if (isa<InlineAsm>(Callee))
@@ -820,7 +820,7 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
     Function &, ArrayRef<Instruction *> SwitchTraceTargets) {
   for (auto *I : SwitchTraceTargets) {
     if (SwitchInst *SI = dyn_cast<SwitchInst>(I)) {
-      IRBuilder<> IRB(I);
+      InstrumentationIRBuilder IRB(I);
       SmallVector<Constant *, 16> Initializers;
       Value *Cond = SI->getCondition();
       if (Cond->getType()->getScalarSizeInBits() >
@@ -858,7 +858,7 @@ void ModuleSanitizerCoverage::InjectTraceForSwitch(
 void ModuleSanitizerCoverage::InjectTraceForDiv(
     Function &, ArrayRef<BinaryOperator *> DivTraceTargets) {
   for (auto *BO : DivTraceTargets) {
-    IRBuilder<> IRB(BO);
+    InstrumentationIRBuilder IRB(BO);
     Value *A1 = BO->getOperand(1);
     if (isa<ConstantInt>(A1)) continue;
     if (!A1->getType()->isIntegerTy())
@@ -876,7 +876,7 @@ void ModuleSanitizerCoverage::InjectTraceForDiv(
 void ModuleSanitizerCoverage::InjectTraceForGep(
     Function &, ArrayRef<GetElementPtrInst *> GepTraceTargets) {
   for (auto *GEP : GepTraceTargets) {
-    IRBuilder<> IRB(GEP);
+    InstrumentationIRBuilder IRB(GEP);
     for (Use &Idx : GEP->indices())
       if (!isa<ConstantInt>(Idx) && Idx->getType()->isIntegerTy())
         IRB.CreateCall(SanCovTraceGepFunction,
@@ -898,7 +898,7 @@ void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
   Type *PointerType[5] = {Int8PtrTy, Int16PtrTy, Int32PtrTy, Int64PtrTy,
                           Int128PtrTy};
   for (auto *LI : Loads) {
-    IRBuilder<> IRB(LI);
+    InstrumentationIRBuilder IRB(LI);
     auto Ptr = LI->getPointerOperand();
     int Idx = CallbackIdx(LI->getType());
     if (Idx < 0)
@@ -907,7 +907,7 @@ void ModuleSanitizerCoverage::InjectTraceForLoadsAndStores(
                    IRB.CreatePointerCast(Ptr, PointerType[Idx]));
   }
   for (auto *SI : Stores) {
-    IRBuilder<> IRB(SI);
+    InstrumentationIRBuilder IRB(SI);
     auto Ptr = SI->getPointerOperand();
     int Idx = CallbackIdx(SI->getValueOperand()->getType());
     if (Idx < 0)
@@ -921,7 +921,7 @@ void ModuleSanitizerCoverage::InjectTraceForCmp(
     Function &, ArrayRef<Instruction *> CmpTraceTargets) {
   for (auto *I : CmpTraceTargets) {
     if (ICmpInst *ICMP = dyn_cast<ICmpInst>(I)) {
-      IRBuilder<> IRB(ICMP);
+      InstrumentationIRBuilder IRB(ICMP);
       Value *A0 = ICMP->getOperand(0);
       Value *A1 = ICMP->getOperand(1);
       if (!A0->getType()->isIntegerTy())

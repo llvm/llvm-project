@@ -78,8 +78,8 @@ createAMDGPUAsmPrinterPass(TargetMachine &tm,
   return new AMDGPUAsmPrinter(tm, std::move(Streamer));
 }
 
-extern "C" void LLVM_EXTERNAL_VISIBILITY LLVMInitializeAMDGPUAsmPrinter() {
-  TargetRegistry::RegisterAsmPrinter(getTheAMDGPUTarget(),
+extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUAsmPrinter() {
+  TargetRegistry::RegisterAsmPrinter(getTheR600Target(),
                                      llvm::createR600AsmPrinterPass);
   TargetRegistry::RegisterAsmPrinter(getTheGCNTarget(),
                                      createAMDGPUAsmPrinterPass);
@@ -1113,7 +1113,8 @@ void AMDGPUAsmPrinter::EmitPALMetadata(const MachineFunction &MF,
 void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   auto *MD = getTargetStreamer()->getPALMetadata();
   const MachineFrameInfo &MFI = MF.getFrameInfo();
-  MD->setFunctionScratchSize(MF, MFI.getStackSize());
+  StringRef FnName = MF.getFunction().getName();
+  MD->setFunctionScratchSize(FnName, MFI.getStackSize());
 
   // Set compute registers
   MD->setRsrc1(CallingConv::AMDGPU_CS,
@@ -1121,9 +1122,9 @@ void AMDGPUAsmPrinter::emitPALFunctionMetadata(const MachineFunction &MF) {
   MD->setRsrc2(CallingConv::AMDGPU_CS, CurrentProgramInfo.getComputePGMRSrc2());
 
   // Set optional info
-  MD->setFunctionLdsSize(MF, CurrentProgramInfo.LDSSize);
-  MD->setFunctionNumUsedVgprs(MF, CurrentProgramInfo.NumVGPRsForWavesPerEU);
-  MD->setFunctionNumUsedSgprs(MF, CurrentProgramInfo.NumSGPRsForWavesPerEU);
+  MD->setFunctionLdsSize(FnName, CurrentProgramInfo.LDSSize);
+  MD->setFunctionNumUsedVgprs(FnName, CurrentProgramInfo.NumVGPRsForWavesPerEU);
+  MD->setFunctionNumUsedSgprs(FnName, CurrentProgramInfo.NumSGPRsForWavesPerEU);
 }
 
 // This is supposed to be log2(Size)
@@ -1293,6 +1294,9 @@ void AMDGPUAsmPrinter::emitResourceUsageRemarks(
     EmitResourceUsageRemark("NumAGPR", "AGPRs", CurrentProgramInfo.NumAccVGPR);
   EmitResourceUsageRemark("ScratchSize", "ScratchSize [bytes/lane]",
                           CurrentProgramInfo.ScratchSize);
+  StringRef DynamicStackStr =
+      CurrentProgramInfo.DynamicCallStack ? "True" : "False";
+  EmitResourceUsageRemark("DynamicStack", "Dynamic Stack", DynamicStackStr);
   EmitResourceUsageRemark("Occupancy", "Occupancy [waves/SIMD]",
                           CurrentProgramInfo.Occupancy);
   EmitResourceUsageRemark("SGPRSpill", "SGPRs Spill",

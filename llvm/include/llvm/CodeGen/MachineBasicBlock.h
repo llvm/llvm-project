@@ -111,6 +111,15 @@ private:
 
   const BasicBlock *BB;
   int Number;
+
+  /// The call frame size on entry to this basic block due to call frame setup
+  /// instructions in a predecessor. This is usually zero, unless basic blocks
+  /// are split in the middle of a call sequence.
+  ///
+  /// This information is only maintained until PrologEpilogInserter eliminates
+  /// call frame pseudos.
+  unsigned CallFrameSize = 0;
+
   MachineFunction *xParent;
   Instructions Insts;
 
@@ -816,6 +825,9 @@ public:
   /// the first instruction, which might be PHI.
   /// Returns end() is there's no non-PHI instruction.
   iterator getFirstNonPHI();
+  const_iterator getFirstNonPHI() const {
+    return const_cast<MachineBasicBlock *>(this)->getFirstNonPHI();
+  }
 
   /// Return the first instruction in MBB after I that is not a PHI or a label.
   /// This is the correct point to insert lowered copies at the beginning of a
@@ -1144,6 +1156,11 @@ public:
   /// they're not in a MachineFunction yet, in which case this will return -1.
   int getNumber() const { return Number; }
   void setNumber(int N) { Number = N; }
+
+  /// Return the call frame size on entry to this basic block.
+  unsigned getCallFrameSize() const { return CallFrameSize; }
+  /// Set the call frame size on entry to this basic block.
+  void setCallFrameSize(unsigned N) { CallFrameSize = N; }
 
   /// Return the MCSymbol for this basic block.
   MCSymbol *getSymbol() const;

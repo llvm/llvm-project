@@ -57,7 +57,6 @@ define i16 @popcount256(ptr nocapture nonnull readonly %0) {
 ; CHECK-NEXT:    // kill: def $x10 killed $w10
 ; CHECK-NEXT:    bfi x8, x10, #32, #32
 ; CHECK-NEXT:    adds x8, x8, x9
-; CHECK-NEXT:    cset w9, hs
 ; CHECK-NEXT:    mov w0, w8
 ; CHECK-NEXT:    ret
 Entry:

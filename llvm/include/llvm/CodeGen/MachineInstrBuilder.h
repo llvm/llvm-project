@@ -9,7 +9,8 @@
 // This file exposes a function named BuildMI, which is useful for dramatically
 // simplifying how MachineInstr's are created.  It allows use of code like this:
 //
-//   M = BuildMI(MBB, MI, DL, TII.get(X86::ADD8rr), Dst)
+//   MIMetadata MIMD(MI);  // Propagates DebugLoc and other metadata
+//   M = BuildMI(MBB, MI, MIMD, TII.get(X86::ADD8rr), Dst)
 //           .addReg(argVal1)
 //           .addReg(argVal2);
 //

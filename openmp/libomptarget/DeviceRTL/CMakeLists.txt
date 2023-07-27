@@ -57,9 +57,9 @@ set(source_directory ${devicertl_base_directory}/src)
 set(all_amdgpu_architectures "gfx700;gfx701;gfx801;gfx803;gfx900;gfx902;gfx906"
                              "gfx908;gfx90a;gfx90c;gfx940;gfx1010;gfx1030"
                              "gfx1031;gfx1032;gfx1033;gfx1034;gfx1035;gfx1036"
-                             "gfx1100;gfx1101;gfx1102;gfx1103")
+                             "gfx1100;gfx1101;gfx1102;gfx1103;gfx1150;gfx1151")
 set(all_nvptx_architectures "sm_35;sm_37;sm_50;sm_52;sm_53;sm_60;sm_61;sm_62"
-                            "sm_70;sm_72;sm_75;sm_80;sm_86;sm_89;sm_90")
+                            "sm_70;sm_72;sm_75;sm_80;sm_86;sm_87;sm_89;sm_90")
 set(all_gpu_architectures
     "${all_amdgpu_architectures};${all_nvptx_architectures}")
 
@@ -123,6 +123,7 @@ set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
              -nocudalib -nogpulib -nostdinc
              -fopenmp -fopenmp-cuda-mode
              -Wno-unknown-cuda-version
+             -DOMPTARGET_DEVICE_RUNTIME
              -I${include_directory}
              -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}
@@ -138,19 +139,21 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
     get_filename_component(infile ${src} ABSOLUTE)
     get_filename_component(outfile ${src} NAME)
     set(outfile "${outfile}-${target_cpu}.bc")
+    set(depfile "${outfile}.d")
 
     add_custom_command(OUTPUT ${outfile}
       COMMAND ${CLANG_TOOL}
       ${bc_flags}
       --offload-arch=${target_cpu}
       ${target_bc_flags}
+      -MD -MF ${depfile}
       ${infile} -o ${outfile}
-      DEPENDS ${infile} ${include_files}
-      IMPLICIT_DEPENDS CXX ${infile}
+      DEPENDS ${infile}
+      DEPFILE ${depfile}
       COMMENT "Building LLVM bitcode ${outfile}"
       VERBATIM
     )
-    if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
+    if(TARGET clang)
       # Add a file-level dependency to ensure that clang is up-to-date.
       # By default, add_custom_command only builds clang if the
       # executable is missing.
@@ -173,7 +176,8 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       DEPENDS ${bc_files}
       COMMENT "Linking LLVM bitcode ${bclib_name}"
   )
-  if("${LINK_TOOL}" STREQUAL "$<TARGET_FILE:llvm-link>")
+
+  if(TARGET llvm-link)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
       DEPENDS llvm-link
       APPEND)
@@ -185,7 +189,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       DEPENDS ${source_directory}/exports ${CMAKE_CURRENT_BINARY_DIR}/linked_${bclib_name}
       COMMENT "Internalizing LLVM bitcode ${bclib_name}"
   )
-  if("${OPT_TOOL}" STREQUAL "$<TARGET_FILE:opt>")
+  if(TARGET opt)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/internalized_${bclib_name}
       DEPENDS opt
       APPEND)
@@ -197,7 +201,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/internalized_${bclib_name}
       COMMENT "Optimizing LLVM bitcode ${bclib_name}"
   )
-  if("${OPT_TOOL}" STREQUAL "$<TARGET_FILE:opt>")
+  if(TARGET opt)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
       DEPENDS opt
       APPEND)
@@ -229,7 +233,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
       DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/${bclib_name}
       COMMENT "Packaging LLVM offloading binary ${bclib_name}.out"
   )
-  if("${PACKAGER_TOOL}" STREQUAL "$<TARGET_FILE:clang-offload-packager>")
+  if(TARGET clang-offload-packager)
     add_custom_command(OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/packaged_${bclib_name}
       DEPENDS clang-offload-packager
       APPEND)
@@ -245,7 +249,7 @@ function(compileDeviceRTLLibrary target_cpu target_name target_triple)
     COMMENT "Embedding LLVM offloading binary in devicertl-${target_name}-${target_cpu}.o"
     VERBATIM
   )
-  if("${CLANG_TOOL}" STREQUAL "$<TARGET_FILE:clang>")
+  if(TARGET clang)
     add_custom_command(OUTPUT ${output_name}
       DEPENDS clang
       APPEND)

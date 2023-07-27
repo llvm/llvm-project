@@ -24,6 +24,7 @@
 #include "PPCTargetMachine.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
@@ -120,11 +121,6 @@ cl::desc("don't always align innermost loop to 32 bytes on ppc"), cl::Hidden);
 
 static cl::opt<bool> UseAbsoluteJumpTables("ppc-use-absolute-jumptables",
 cl::desc("use absolute jump tables on ppc"), cl::Hidden);
-
-static cl::opt<bool> EnableQuadwordAtomics(
-    "ppc-quadword-atomics",
-    cl::desc("enable quadword lock-free atomic operations"), cl::init(false),
-    cl::Hidden);
 
 static cl::opt<bool>
     DisablePerfectShuffle("ppc-disable-perfect-shuffle",
@@ -1370,18 +1366,18 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
     setLibcallName(RTLIB::MULO_I64, nullptr);
   }
 
-  if (!isPPC64)
-    setMaxAtomicSizeInBitsSupported(32);
-  else if (shouldInlineQuadwordAtomics())
+  if (shouldInlineQuadwordAtomics())
     setMaxAtomicSizeInBitsSupported(128);
-  else
+  else if (isPPC64)
     setMaxAtomicSizeInBitsSupported(64);
+  else
+    setMaxAtomicSizeInBitsSupported(32);
 
   setStackPointerRegisterToSaveRestore(isPPC64 ? PPC::X1 : PPC::R1);
 
   // We have target-specific dag combine patterns for the following nodes:
-  setTargetDAGCombine({ISD::ADD, ISD::SHL, ISD::SRA, ISD::SRL, ISD::MUL,
-                       ISD::FMA, ISD::SINT_TO_FP, ISD::BUILD_VECTOR});
+  setTargetDAGCombine({ISD::AND, ISD::ADD, ISD::SHL, ISD::SRA, ISD::SRL,
+                       ISD::MUL, ISD::FMA, ISD::SINT_TO_FP, ISD::BUILD_VECTOR});
   if (Subtarget.hasFPCVT())
     setTargetDAGCombine(ISD::UINT_TO_FP);
   setTargetDAGCombine({ISD::LOAD, ISD::STORE, ISD::BR_CC});
@@ -10740,6 +10736,20 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getMergeValues(RetOps, dl);
   }
 
+  case Intrinsic::ppc_mma_xxmfacc:
+  case Intrinsic::ppc_mma_xxmtacc: {
+    // Allow pre-isa-future subtargets to lower as normal.
+    if (!Subtarget.isISAFuture())
+      return SDValue();
+    // The intrinsics for xxmtacc and xxmfacc take one argument of
+    // type v512i1, for future cpu the corresponding wacc instruction
+    // dmxx[inst|extf]dmr512 is always generated for type v512i1, negating
+    // the need to produce the xxm[t|f]acc.
+    SDValue WideVec = Op.getOperand(1);
+    DAG.ReplaceAllUsesWith(Op, WideVec);
+    return SDValue();
+  }
+
   case Intrinsic::ppc_unpack_longdouble: {
     auto *Idx = dyn_cast<ConstantSDNode>(Op.getOperand(2));
     assert(Idx && (Idx->getSExtValue() == 0 || Idx->getSExtValue() == 1) &&
@@ -15495,6 +15505,30 @@ SDValue PPCTargetLowering::PerformDAGCombine(SDNode *N,
   default: break;
   case ISD::ADD:
     return combineADD(N, DCI);
+  case ISD::AND: {
+    // We don't want (and (zext (shift...)), C) if C fits in the width of the
+    // original input as that will prevent us from selecting optimal rotates.
+    // This only matters if the input to the extend is i32 widened to i64.
+    SDValue Op1 = N->getOperand(0);
+    SDValue Op2 = N->getOperand(1);
+    if ((Op1.getOpcode() != ISD::ZERO_EXTEND &&
+         Op1.getOpcode() != ISD::ANY_EXTEND) ||
+        !isa<ConstantSDNode>(Op2) || N->getValueType(0) != MVT::i64 ||
+        Op1.getOperand(0).getValueType() != MVT::i32)
+      break;
+    SDValue NarrowOp = Op1.getOperand(0);
+    if (NarrowOp.getOpcode() != ISD::SHL && NarrowOp.getOpcode() != ISD::SRL &&
+        NarrowOp.getOpcode() != ISD::ROTL && NarrowOp.getOpcode() != ISD::ROTR)
+      break;
+
+    uint64_t Imm = cast<ConstantSDNode>(Op2)->getZExtValue();
+    // Make sure that the constant is narrow enough to fit in the narrow type.
+    if (!isUInt<32>(Imm))
+      break;
+    SDValue ConstOp = DAG.getConstant(Imm, dl, MVT::i32);
+    SDValue NarrowAnd = DAG.getNode(ISD::AND, dl, MVT::i32, NarrowOp, ConstOp);
+    return DAG.getAnyExtOrTrunc(NarrowAnd, dl, N->getValueType(0));
+  }
   case ISD::SHL:
     return combineSHL(N, DCI);
   case ISD::SRA:
@@ -18440,11 +18474,7 @@ CCAssignFn *PPCTargetLowering::ccAssignFnForCall(CallingConv::ID CC,
 }
 
 bool PPCTargetLowering::shouldInlineQuadwordAtomics() const {
-  // TODO: 16-byte atomic type support for AIX is in progress; we should be able
-  // to inline 16-byte atomic ops on AIX too in the future.
-  return Subtarget.isPPC64() &&
-         (EnableQuadwordAtomics || !Subtarget.getTargetTriple().isOSAIX()) &&
-         Subtarget.hasQuadwordAtomics();
+  return Subtarget.isPPC64() && Subtarget.hasQuadwordAtomics();
 }
 
 TargetLowering::AtomicExpansionKind

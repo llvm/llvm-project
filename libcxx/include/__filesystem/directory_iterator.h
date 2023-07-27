@@ -16,6 +16,7 @@
 #include <__filesystem/directory_entry.h>
 #include <__filesystem/directory_options.h>
 #include <__filesystem/path.h>
+#include <__iterator/default_sentinel.h>
 #include <__iterator/iterator_traits.h>
 #include <__memory/shared_ptr.h>
 #include <__ranges/enable_borrowed_range.h>
@@ -28,7 +29,7 @@
 #  pragma GCC system_header
 #endif
 
-#ifndef _LIBCPP_CXX03_LANG
+#if !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
@@ -82,7 +83,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI
   const directory_entry& operator*() const {
-    _LIBCPP_ASSERT(__imp_, "The end iterator cannot be dereferenced");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__imp_, "The end iterator cannot be dereferenced");
     return __dereference();
   }
 
@@ -101,6 +102,12 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI
   directory_iterator& increment(error_code& __ec) { return __increment(&__ec); }
+
+#  if _LIBCPP_STD_VER >= 20
+
+  _LIBCPP_HIDE_FROM_ABI bool operator==(default_sentinel_t) const noexcept { return *this == directory_iterator(); }
+
+#  endif
 
 private:
   inline _LIBCPP_HIDE_FROM_ABI friend bool
@@ -157,6 +164,6 @@ inline constexpr bool _VSTD::ranges::enable_view<_VSTD_FS::directory_iterator> =
 
 #endif // _LIBCPP_STD_VER >= 20
 
-#endif // _LIBCPP_CXX03_LANG
+#endif // !defined(_LIBCPP_CXX03_LANG) && !defined(_LIBCPP_HAS_NO_FILESYSTEM)
 
 #endif // _LIBCPP___FILESYSTEM_DIRECTORY_ITERATOR_H

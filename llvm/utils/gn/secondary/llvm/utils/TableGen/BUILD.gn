@@ -9,13 +9,12 @@ source_set("llvm-min-tblgen-sources") {
     "TableGen.cpp",
     "VTEmitter.cpp",
   ]
+  deps = [ "//llvm/lib/Support" ]
 }
 
 executable("llvm-min-tblgen") {
   deps = [
     ":llvm-min-tblgen-sources",
-    "//llvm/include/llvm/Config:llvm-config",
-    "//llvm/lib/Support",
     "//llvm/lib/TableGen",
   ]
 }
@@ -60,6 +59,8 @@ executable("llvm-tblgen") {
     "GICombinerEmitter.cpp",
     "GlobalISelEmitter.cpp",
     "GlobalISelMatchTable.cpp",
+    "GlobalISelCombinerMatchTableEmitter.cpp",
+    "GlobalISelMatchTableExecutorEmitter.cpp",
     "InfoByHwMode.cpp",
     "InstrDocsEmitter.cpp",
     "InstrInfoEmitter.cpp",

@@ -553,7 +553,7 @@ def err_invalid_operator_on_type : Error<
 def err_expected_unqualified_id : Error<
   "expected %select{identifier|unqualified-id}0">;
 def err_while_loop_outside_of_a_function : Error<
-  "while loop outside of a function">; 
+  "while loop outside of a function">;
 def err_brackets_go_after_unqualified_id : Error<
   "brackets are not allowed here; to declare an array, "
   "place the brackets after the %select{identifier|name}0">;
@@ -719,8 +719,17 @@ def warn_cxx14_compat_ns_enum_attribute : Warning<
 def warn_cxx98_compat_alignas : Warning<"'alignas' is incompatible with C++98">,
   InGroup<CXX98Compat>, DefaultIgnore;
 def warn_cxx98_compat_attribute : Warning<
-  "C++11 attribute syntax is incompatible with C++98">,
+  "[[]] attributes are incompatible with C++ standards before C++11">,
   InGroup<CXX98Compat>, DefaultIgnore;
+def warn_ext_cxx11_attributes : Extension<
+  "[[]] attributes are a C++11 extension">,
+  InGroup<CXX11>;
+def warn_pre_c2x_compat_attributes : Warning<
+  "[[]] attributes are incompatible with C standards before C2x">,
+  DefaultIgnore, InGroup<CPre2xCompat>;
+def warn_ext_c2x_attributes : Extension<
+  "[[]] attributes are a C2x extension">,
+  InGroup<C2x>;
 def err_cxx11_attribute_forbids_arguments : Error<
   "attribute %0 cannot have an argument list">;
 def err_attribute_requires_arguments : Error<
@@ -1363,6 +1372,7 @@ def err_omp_expected_punc_after_iterator : Error<
   "expected ',' or ')' after iterator specifier">;
 def err_omp_decl_in_declare_simd_variant : Error<
   "function declaration is expected after 'declare %select{simd|variant}0' directive">;
+def err_omp_sink_and_source_iteration_not_allowd: Error<" '%0 %select{sink:|source:}1' must be with '%select{omp_cur_iteration - 1|omp_cur_iteration}1'">;
 def err_omp_unknown_map_type : Error<
   "incorrect map type, expected one of 'to', 'from', 'tofrom', 'alloc', 'release', or 'delete'">;
 def err_omp_unknown_map_type_modifier : Error<
@@ -1528,6 +1538,11 @@ def err_omp_requires_out_inout_depend_type : Error<
 def warn_omp_more_one_omp_all_memory : Warning<
   "reserved locator 'omp_all_memory' cannot be specified more than once">,
   InGroup<OpenMPClauses>;
+def warn_omp_depend_in_ordered_deprecated : Warning<"'depend' clause for"
+  " 'ordered' is deprecated; use 'doacross' instead">, InGroup<Deprecated>;
+def warn_omp_invalid_attribute_for_ompx_attributes : Warning<"'ompx_attribute' clause only allows "
+  "'amdgpu_flat_work_group_size', 'amdgpu_waves_per_eu', and 'launch_bounds'; "
+  "%0 is ignored">, InGroup<OpenMPExtensions>;
 
 // Pragma loop support.
 def err_pragma_loop_missing_argument : Error<

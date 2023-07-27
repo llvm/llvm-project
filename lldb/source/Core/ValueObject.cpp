@@ -2779,8 +2779,30 @@ ValueObjectSP ValueObject::AddressOf(Status &error) {
   return m_addr_of_valobj_sp;
 }
 
+ValueObjectSP ValueObject::DoCast(const CompilerType &compiler_type) {
+    return ValueObjectCast::Create(*this, GetName(), compiler_type);
+}
+
 ValueObjectSP ValueObject::Cast(const CompilerType &compiler_type) {
-  return ValueObjectCast::Create(*this, GetName(), compiler_type);
+  // Only allow casts if the original type is equal or larger than the cast
+  // type.  We don't know how to fetch more data for all the ConstResult types, 
+  // so we can't guarantee this will work:
+  Status error;
+  CompilerType my_type = GetCompilerType();
+
+  ExecutionContextScope *exe_scope 
+      = ExecutionContext(GetExecutionContextRef())
+          .GetBestExecutionContextScope();
+  if (compiler_type.GetByteSize(exe_scope) 
+      <= GetCompilerType().GetByteSize(exe_scope)) {
+        return DoCast(compiler_type);
+  }
+  error.SetErrorString("Can only cast to a type that is equal to or smaller "
+                       "than the orignal type.");
+
+  return ValueObjectConstResult::Create(
+      ExecutionContext(GetExecutionContextRef()).GetBestExecutionContextScope(),
+                       error);
 }
 
 lldb::ValueObjectSP ValueObject::Clone(ConstString new_name) {

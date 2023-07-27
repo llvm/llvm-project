@@ -103,6 +103,7 @@ entry:
 define void @csrrd_w_noret() {
 ; CHECK-LABEL: csrrd_w_noret:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrrd $a0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i32 @llvm.loongarch.csrrd.w(i32 1)
@@ -184,6 +185,7 @@ entry:
 define void @iocsrrd_b_noret(i32 %a) {
 ; CHECK-LABEL: iocsrrd_b_noret:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrrd.b $a0, $a0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i32 @llvm.loongarch.iocsrrd.b(i32 %a)
@@ -193,6 +195,7 @@ entry:
 define void @iocsrrd_h_noret(i32 %a) {
 ; CHECK-LABEL: iocsrrd_h_noret:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrrd.h $a0, $a0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i32 @llvm.loongarch.iocsrrd.h(i32 %a)
@@ -202,6 +205,7 @@ entry:
 define void @iocsrrd_w_noret(i32 %a) {
 ; CHECK-LABEL: iocsrrd_w_noret:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrrd.w $a0, $a0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i32 @llvm.loongarch.iocsrrd.w(i32 %a)

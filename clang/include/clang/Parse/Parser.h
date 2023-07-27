@@ -1188,7 +1188,7 @@ private:
   /// RAII object used to modify the scope flags for the current scope.
   class ParseScopeFlags {
     Scope *CurScope;
-    unsigned OldFlags;
+    unsigned OldFlags = 0;
     ParseScopeFlags(const ParseScopeFlags &) = delete;
     void operator=(const ParseScopeFlags &) = delete;
 
@@ -1788,8 +1788,12 @@ public:
                                   bool IsUnevaluated);
 
   ExprResult ParseStringLiteralExpression(bool AllowUserDefinedLiteral = false);
+  ExprResult ParseUnevaluatedStringLiteralExpression();
 
 private:
+  ExprResult ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
+                                          bool Unevaluated);
+
   ExprResult ParseExpressionWithLeadingAt(SourceLocation AtLoc);
 
   ExprResult ParseExpressionWithLeadingExtension(SourceLocation ExtLoc);
@@ -2217,7 +2221,8 @@ private:
     DSC_objc_method_result, // ObjC method result context, enables
                             // 'instancetype'
     DSC_condition,          // condition declaration context
-    DSC_association // A _Generic selection expression's type association
+    DSC_association, // A _Generic selection expression's type association
+    DSC_new,         // C++ new expression
   };
 
   /// Is this a context in which we are parsing just a type-specifier (or
@@ -2239,6 +2244,7 @@ private:
     case DeclSpecContext::DSC_trailing:
     case DeclSpecContext::DSC_alias_declaration:
     case DeclSpecContext::DSC_association:
+    case DeclSpecContext::DSC_new:
       return true;
     }
     llvm_unreachable("Missing DeclSpecContext case");
@@ -2287,6 +2293,7 @@ private:
     case DeclSpecContext::DSC_trailing:
     case DeclSpecContext::DSC_conv_operator:
     case DeclSpecContext::DSC_template_arg:
+    case DeclSpecContext::DSC_new:
       return AllowDefiningTypeSpec::No;
     }
     llvm_unreachable("Missing DeclSpecContext case");
@@ -2310,6 +2317,7 @@ private:
     case DeclSpecContext::DSC_association:
     case DeclSpecContext::DSC_conv_operator:
     case DeclSpecContext::DSC_template_arg:
+    case DeclSpecContext::DSC_new:
 
       return false;
     }
@@ -2329,6 +2337,7 @@ private:
     case DeclSpecContext::DSC_type_specifier:
     case DeclSpecContext::DSC_association:
     case DeclSpecContext::DSC_conv_operator:
+    case DeclSpecContext::DSC_new:
       return true;
 
     case DeclSpecContext::DSC_objc_method_result:
@@ -2351,6 +2360,7 @@ private:
     case DeclSpecContext::DSC_trailing:
     case DeclSpecContext::DSC_alias_declaration:
     case DeclSpecContext::DSC_template_param:
+    case DeclSpecContext::DSC_new:
       return ImplicitTypenameContext::Yes;
 
     case DeclSpecContext::DSC_normal:
@@ -2702,12 +2712,6 @@ public:
 private:
   void ParseBlockId(SourceLocation CaretLoc);
 
-  /// Are [[]] attributes enabled?
-  bool standardAttributesAllowed() const {
-    const LangOptions &LO = getLangOpts();
-    return LO.DoubleSquareBracketAttributes;
-  }
-
   /// Return true if the next token should be treated as a [[]] attribute,
   /// or as a keyword that behaves like one.  The former is only true if
   /// [[]] attributes are enabled, whereas the latter is true whenever
@@ -2716,15 +2720,14 @@ private:
   bool isAllowedCXX11AttributeSpecifier(bool Disambiguate = false,
                                         bool OuterMightBeMessageSend = false) {
     return (Tok.isRegularKeywordAttribute() ||
-            (standardAttributesAllowed() &&
-             isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend)));
+            isCXX11AttributeSpecifier(Disambiguate, OuterMightBeMessageSend));
   }
 
   // Check for the start of an attribute-specifier-seq in a context where an
   // attribute is not allowed.
   bool CheckProhibitedCXX11Attribute() {
     assert(Tok.is(tok::l_square));
-    if (!standardAttributesAllowed() || NextToken().isNot(tok::l_square))
+    if (NextToken().isNot(tok::l_square))
       return false;
     return DiagnoseProhibitedCXX11Attribute();
   }
@@ -2732,13 +2735,10 @@ private:
   bool DiagnoseProhibitedCXX11Attribute();
   void CheckMisplacedCXX11Attribute(ParsedAttributes &Attrs,
                                     SourceLocation CorrectLocation) {
-    if (!Tok.isRegularKeywordAttribute()) {
-      if (!standardAttributesAllowed())
-        return;
-      if ((Tok.isNot(tok::l_square) || NextToken().isNot(tok::l_square)) &&
-          Tok.isNot(tok::kw_alignas))
-        return;
-    }
+    if (!Tok.isRegularKeywordAttribute() &&
+        (Tok.isNot(tok::l_square) || NextToken().isNot(tok::l_square)) &&
+        Tok.isNot(tok::kw_alignas))
+      return;
     DiagnoseMisplacedCXX11Attribute(Attrs, CorrectLocation);
   }
   void DiagnoseMisplacedCXX11Attribute(ParsedAttributes &Attrs,
@@ -3489,6 +3489,13 @@ private:
   /// nullptr.
   //
   OMPClause *ParseOpenMPInteropClause(OpenMPClauseKind Kind, bool ParseOnly);
+
+  /// Parses a ompx_attribute clause
+  ///
+  /// \param ParseOnly true to skip the clause's semantic actions and return
+  /// nullptr.
+  //
+  OMPClause *ParseOpenMPOMPXAttributesClause(bool ParseOnly);
 
 public:
   /// Parses simple expression in parens for single-expression clauses of OpenMP

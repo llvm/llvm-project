@@ -212,7 +212,7 @@ static void DumpCharacter(Stream &s, const char c) {
     s.PutChar(c);
     return;
   }
-  s.Printf("\\x%2.2x", c);
+  s.Printf("\\x%2.2hhx", c);
 }
 
 /// Dump a floating point type.

@@ -1094,7 +1094,7 @@ TEST(SanitizerCommon, LargeMmapAllocatorBlockBegin) {
 
 // Don't test OOM conditions on Win64 because it causes other tests on the same
 // machine to OOM.
-#if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64
+#if SANITIZER_CAN_USE_ALLOCATOR64 && !SANITIZER_WINDOWS64 && !ALLOCATOR64_SMALL_SIZE
 typedef __sanitizer::SizeClassMap<2, 22, 22, 34, 128, 16> SpecialSizeClassMap;
 template <typename AddressSpaceViewTy = LocalAddressSpaceView>
 struct AP64_SpecialSizeClassMap {
@@ -1122,7 +1122,7 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   // ...one man is on a mission to overflow a region with a series of
   // successive allocations.
 
-  const uptr kClassID = ALLOCATOR64_SMALL_SIZE ? 18 : 24;
+  const uptr kClassID = 24;
   const uptr kAllocationSize = SpecialSizeClassMap::Size(kClassID);
   ASSERT_LT(2 * kAllocationSize, kRegionSize);
   ASSERT_GT(3 * kAllocationSize, kRegionSize);
@@ -1130,7 +1130,7 @@ TEST(SanitizerCommon, SizeClassAllocator64PopulateFreeListOOM) {
   EXPECT_NE(cache.Allocate(a, kClassID), nullptr);
   EXPECT_EQ(cache.Allocate(a, kClassID), nullptr);
 
-  const uptr Class2 = ALLOCATOR64_SMALL_SIZE ? 15 : 21;
+  const uptr Class2 = 21;
   const uptr Size2 = SpecialSizeClassMap::Size(Class2);
   ASSERT_EQ(Size2 * 8, kRegionSize);
   char *p[7];

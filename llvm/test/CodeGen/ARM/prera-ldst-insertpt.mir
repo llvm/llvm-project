@@ -41,8 +41,7 @@ body:             |
 
     ; Make sure we move the paired stores next to each other, and
     ; insert them in an appropriate location.
-    ; CHECK: t2STRi12 %1,
-    ; CHECK-NEXT: t2STRi12 killed %10,
+    ; CHECK: t2STRDi8 %1, %10,
     ; CHECK-NEXT: t2MOVi
     ; CHECK-NEXT: t2ADDrs
 
@@ -53,8 +52,7 @@ body:             |
     t2STRi12 killed %13, %0, 20, 14, $noreg :: (store (s32))
 
     ; Make sure we move the paired stores next to each other.
-    ; CHECK: t2STRi12 killed %12,
-    ; CHECK-NEXT: t2STRi12 killed %13,
+    ; CHECK: t2STRDi8 %12, %13,
 
     tBX_RET 14, $noreg
 ---
@@ -88,8 +86,7 @@ body:             |
     ; CHECK-NEXT: t2MOVi32imm
 
     ; CHECK-LIMIT-LABEL: name: b
-    ; CHECK-LIMIT:      t2STRi12 {{.*}}, 0
-    ; CHECK-LIMIT-NEXT: t2STRi12 {{.*}}, 4
+    ; CHECK-LIMIT:      t2STRDi8 {{.*}}, {{.*}}, {{.*}}, 0
     ; CHECK-LIMIT-NEXT: t2MUL
     ; CHECK-LIMIT-NEXT: t2STRi12 {{.*}}, 8
 
@@ -105,8 +102,7 @@ body:             |
     t2STRi12 killed %13, %0, 20, 14, $noreg :: (store (s32))
 
     ; Make sure we move the paired stores next to each other.
-    ; CHECK: t2STRi12 {{.*}}, 16
-    ; CHECK-NEXT: t2STRi12 {{.*}}, 20
+    ; CHECK: t2STRDi8 %12, %13, %0, 16
 
     tBX_RET 14, $noreg
 

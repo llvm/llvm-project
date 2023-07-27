@@ -33,7 +33,7 @@ unreachable:                                      ; preds = %entry
 
 ; CHECK-LABEL: define void @test1(
 ; CHECK: %[[cpad:.*]] = catchpad within {{.*}} [ptr null, i32 64, ptr null]
-; CHECK: call <8 x double> @llvm.floor.v8f64(<8 x double> {{.*}}) [ "funclet"(token %[[cpad]]) ]
+; CHECK: call <16 x double> @llvm.floor.v16f64(<16 x double> {{.*}}) [ "funclet"(token %[[cpad]]) ]
 
 declare x86_stdcallcc void @_CxxThrowException(ptr, ptr)
 

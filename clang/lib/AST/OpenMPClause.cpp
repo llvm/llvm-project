@@ -1669,6 +1669,52 @@ OMPBindClause::Create(const ASTContext &C, OpenMPBindClauseKind K,
 OMPBindClause *OMPBindClause::CreateEmpty(const ASTContext &C) {
   return new (C) OMPBindClause();
 }
+
+OMPDoacrossClause *
+OMPDoacrossClause::Create(const ASTContext &C, SourceLocation StartLoc,
+                          SourceLocation LParenLoc, SourceLocation EndLoc,
+                          OpenMPDoacrossClauseModifier DepType,
+                          SourceLocation DepLoc, SourceLocation ColonLoc,
+                          ArrayRef<Expr *> VL, unsigned NumLoops) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(VL.size() + NumLoops),
+                         alignof(OMPDoacrossClause));
+  OMPDoacrossClause *Clause = new (Mem)
+      OMPDoacrossClause(StartLoc, LParenLoc, EndLoc, VL.size(), NumLoops);
+  Clause->setDependenceType(DepType);
+  Clause->setDependenceLoc(DepLoc);
+  Clause->setColonLoc(ColonLoc);
+  Clause->setVarRefs(VL);
+  for (unsigned I = 0; I < NumLoops; ++I)
+    Clause->setLoopData(I, nullptr);
+  return Clause;
+}
+
+OMPDoacrossClause *OMPDoacrossClause::CreateEmpty(const ASTContext &C,
+                                                  unsigned N,
+                                                  unsigned NumLoops) {
+  void *Mem = C.Allocate(totalSizeToAlloc<Expr *>(N + NumLoops),
+                         alignof(OMPDoacrossClause));
+  return new (Mem) OMPDoacrossClause(N, NumLoops);
+}
+
+void OMPDoacrossClause::setLoopData(unsigned NumLoop, Expr *Cnt) {
+  assert(NumLoop < NumLoops && "Loop index must be less number of loops.");
+  auto *It = std::next(getVarRefs().end(), NumLoop);
+  *It = Cnt;
+}
+
+Expr *OMPDoacrossClause::getLoopData(unsigned NumLoop) {
+  assert(NumLoop < NumLoops && "Loop index must be less number of loops.");
+  auto *It = std::next(getVarRefs().end(), NumLoop);
+  return *It;
+}
+
+const Expr *OMPDoacrossClause::getLoopData(unsigned NumLoop) const {
+  assert(NumLoop < NumLoops && "Loop index must be less number of loops.");
+  const auto *It = std::next(getVarRefs().end(), NumLoop);
+  return *It;
+}
+
 //===----------------------------------------------------------------------===//
 //  OpenMP clauses printing methods
 //===----------------------------------------------------------------------===//
@@ -2464,6 +2510,42 @@ void OMPClausePrinter::VisitOMPXDynCGroupMemClause(
   OS << ")";
 }
 
+void OMPClausePrinter::VisitOMPDoacrossClause(OMPDoacrossClause *Node) {
+  OS << "doacross(";
+  OpenMPDoacrossClauseModifier DepType = Node->getDependenceType();
+
+  switch (DepType) {
+  case OMPC_DOACROSS_source:
+    OS << "source:";
+    break;
+  case OMPC_DOACROSS_sink:
+    OS << "sink:";
+    break;
+  case OMPC_DOACROSS_source_omp_cur_iteration:
+    OS << "source: omp_cur_iteration";
+    break;
+  case OMPC_DOACROSS_sink_omp_cur_iteration:
+    OS << "sink: omp_cur_iteration - 1";
+    break;
+  default:
+    llvm_unreachable("unknown docaross modifier");
+  }
+  VisitOMPClauseList(Node, ' ');
+  OS << ")";
+}
+
+void OMPClausePrinter::VisitOMPXAttributeClause(OMPXAttributeClause *Node) {
+  OS << "ompx_attribute(";
+  bool IsFirst = true;
+  for (auto &Attr : Node->getAttrs()) {
+    if (!IsFirst)
+      OS << ", ";
+    Attr->printPretty(OS, Policy);
+    IsFirst = false;
+  }
+  OS << ")";
+}
+
 void OMPTraitInfo::getAsVariantMatchInfo(ASTContext &ASTCtx,
                                          VariantMatchInfo &VMI) const {
   for (const OMPTraitSet &Set : Sets) {
@@ -2642,7 +2724,7 @@ TargetOMPContext::TargetOMPContext(
     ASTContext &ASTCtx, std::function<void(StringRef)> &&DiagUnknownTrait,
     const FunctionDecl *CurrentFunctionDecl,
     ArrayRef<llvm::omp::TraitProperty> ConstructTraits)
-    : OMPContext(ASTCtx.getLangOpts().OpenMPIsDevice,
+    : OMPContext(ASTCtx.getLangOpts().OpenMPIsTargetDevice,
                  ASTCtx.getTargetInfo().getTriple()),
       FeatureValidityCheck([&](StringRef FeatureName) {
         return ASTCtx.getTargetInfo().isValidFeatureName(FeatureName);

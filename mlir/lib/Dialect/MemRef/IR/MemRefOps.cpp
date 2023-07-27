@@ -9,7 +9,6 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
@@ -108,18 +107,22 @@ Type mlir::memref::getTensorTypeFromMemRefType(Type type) {
   return NoneType::get(type.getContext());
 }
 
+OpFoldResult memref::getMixedSize(OpBuilder &builder, Location loc, Value value,
+                                  int64_t dim) {
+  auto memrefType = llvm::cast<MemRefType>(value.getType());
+  SmallVector<OpFoldResult> result;
+  if (memrefType.isDynamicDim(dim))
+    return builder.createOrFold<memref::DimOp>(loc, value, dim);
+
+  return builder.getIndexAttr(memrefType.getDimSize(dim));
+}
+
 SmallVector<OpFoldResult> memref::getMixedSizes(OpBuilder &builder,
                                                 Location loc, Value value) {
   auto memrefType = llvm::cast<MemRefType>(value.getType());
   SmallVector<OpFoldResult> result;
-  for (int64_t i = 0; i < memrefType.getRank(); ++i) {
-    if (memrefType.isDynamicDim(i)) {
-      Value size = builder.create<memref::DimOp>(loc, value, i);
-      result.push_back(size);
-    } else {
-      result.push_back(builder.getIndexAttr(memrefType.getDimSize(i)));
-    }
-  }
+  for (int64_t i = 0; i < memrefType.getRank(); ++i)
+    result.push_back(getMixedSize(builder, loc, value, i));
   return result;
 }
 
@@ -1352,13 +1355,10 @@ void ExtractAlignedPointerAsIndexOp::getAsmResultNames(
 /// The number and type of the results are inferred from the
 /// shape of the source.
 LogicalResult ExtractStridedMetadataOp::inferReturnTypes(
-    MLIRContext *context, std::optional<Location> location, ValueRange operands,
-    DictionaryAttr attributes, OpaqueProperties properties, RegionRange regions,
+    MLIRContext *context, std::optional<Location> location,
+    ExtractStridedMetadataOp::Adaptor adaptor,
     SmallVectorImpl<Type> &inferredReturnTypes) {
-  ExtractStridedMetadataOpAdaptor extractAdaptor(operands, attributes,
-                                                 properties);
-  auto sourceType =
-      llvm::dyn_cast<MemRefType>(extractAdaptor.getSource().getType());
+  auto sourceType = llvm::dyn_cast<MemRefType>(adaptor.getSource().getType());
   if (!sourceType)
     return failure();
 

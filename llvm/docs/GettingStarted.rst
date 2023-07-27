@@ -89,11 +89,11 @@ Getting the Source Code and Building LLVM
        you run into memory issues building LLVM, try setting this to limit the
        maximum number of compile/link jobs running at the same time.
 
-   * ``cmake --build . [--target <target>]`` or the build system specified
+   * ``cmake --build build [--target <target>]`` or the build system specified
      above directly.
 
-     * The default target (i.e. ``cmake --build .`` or ``make``) will build all of
-       LLVM.
+     * The default target (i.e. ``cmake --build build`` or ``make -C build``)
+       will build all of LLVM.
 
      * The ``check-all`` target (i.e. ``ninja check-all``) will run the
        regression tests to ensure everything is in working order.

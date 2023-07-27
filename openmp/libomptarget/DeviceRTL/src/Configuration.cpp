@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Configuration.h"
-#include "DeviceEnvironment.h"
+#include "Environment.h"
 #include "State.h"
 #include "Types.h"
 
@@ -46,6 +46,10 @@ uint64_t config::getDynamicMemorySize() {
   return __omp_rtl_device_environment.DynamicMemSize;
 }
 
+uint64_t config::getClockFrequency() {
+  return __omp_rtl_device_environment.ClockFrequency;
+}
+
 bool config::isDebugMode(config::DebugKind Kind) {
   return config::getDebugKind() & Kind;
 }
@@ -53,7 +57,9 @@ bool config::isDebugMode(config::DebugKind Kind) {
 bool config::mayUseThreadStates() { return !__omp_rtl_assume_no_thread_state; }
 
 bool config::mayUseNestedParallelism() {
-  return !__omp_rtl_assume_no_nested_parallelism;
+  if (__omp_rtl_assume_no_nested_parallelism)
+    return false;
+  return state::getKernelEnvironment().Configuration.MayUseNestedParallelism;
 }
 
 #pragma omp end declare target

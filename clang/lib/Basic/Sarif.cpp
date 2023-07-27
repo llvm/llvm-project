@@ -19,6 +19,7 @@
 #include "clang/Basic/SourceManager.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ConvertUTF.h"
@@ -293,8 +294,11 @@ void SarifDocumentWriter::endRun() {
   // Flush all the artifacts.
   json::Object &Run = getCurrentRun();
   json::Array *Artifacts = Run.getArray("artifacts");
-  for (const auto &Pair : CurrentArtifacts) {
-    const SarifArtifact &A = Pair.getValue();
+  SmallVector<std::pair<StringRef, SarifArtifact>, 0> Vec;
+  for (const auto &[K, V] : CurrentArtifacts)
+    Vec.emplace_back(K, V);
+  llvm::sort(Vec, llvm::less_first());
+  for (const auto &[_, A] : Vec) {
     json::Object Loc{{"uri", A.Location.URI}};
     if (A.Location.Index.has_value()) {
       Loc["index"] = static_cast<int64_t>(*A.Location.Index);

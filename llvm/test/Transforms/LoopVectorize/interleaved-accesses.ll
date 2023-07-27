@@ -1505,11 +1505,11 @@ define void @PR34743(ptr %a, ptr %b, i64 %n) {
 ; CHECK-NEXT:    [[WIDE_VEC:%.*]] = load <8 x i16>, ptr [[TMP7]], align 4
 ; CHECK-NEXT:    [[STRIDED_VEC:%.*]] = shufflevector <8 x i16> [[WIDE_VEC]], <8 x i16> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
 ; CHECK-NEXT:    [[STRIDED_VEC4]] = shufflevector <8 x i16> [[WIDE_VEC]], <8 x i16> poison, <4 x i32> <i32 1, i32 3, i32 5, i32 7>
-; CHECK-NEXT:    [[TMP8:%.*]] = sext <4 x i16> [[STRIDED_VEC]] to <4 x i32>
-; CHECK-NEXT:    [[TMP9:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[STRIDED_VEC4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
-; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i16> [[TMP9]] to <4 x i32>
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <4 x i16> [[VECTOR_RECUR]], <4 x i16> [[STRIDED_VEC4]], <4 x i32> <i32 3, i32 4, i32 5, i32 6>
+; CHECK-NEXT:    [[TMP9:%.*]] = sext <4 x i16> [[TMP8]] to <4 x i32>
+; CHECK-NEXT:    [[TMP10:%.*]] = sext <4 x i16> [[STRIDED_VEC]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP11:%.*]] = sext <4 x i16> [[STRIDED_VEC4]] to <4 x i32>
-; CHECK-NEXT:    [[TMP12:%.*]] = mul nsw <4 x i32> [[TMP10]], [[TMP8]]
+; CHECK-NEXT:    [[TMP12:%.*]] = mul nsw <4 x i32> [[TMP9]], [[TMP10]]
 ; CHECK-NEXT:    [[TMP13:%.*]] = mul nsw <4 x i32> [[TMP12]], [[TMP11]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    store <4 x i32> [[TMP13]], ptr [[TMP14]], align 4, !alias.scope !36, !noalias !39

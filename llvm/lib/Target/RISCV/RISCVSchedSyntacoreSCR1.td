@@ -41,7 +41,6 @@ def SCR1_CFU : ProcResource<1>;
 def : WriteRes<WriteJmp, [SCR1_CFU]>;
 def : WriteRes<WriteJal, [SCR1_CFU]>;
 def : WriteRes<WriteJalr, [SCR1_CFU]>;
-def : WriteRes<WriteJmpReg, [SCR1_CFU]>;
 
 // Integer arithmetic and logic
 def : WriteRes<WriteIALU32, [SCR1_ALU]>;
@@ -192,7 +191,8 @@ def : ReadAdvance<ReadFMovF64ToI64, 0>;
 def : ReadAdvance<ReadFMovI64ToF64, 0>;
 def : ReadAdvance<ReadFClass32, 0>;
 def : ReadAdvance<ReadFClass64, 0>;
-def : ReadAdvance<ReadSFB, 0>;
+def : ReadAdvance<ReadSFBJmp, 0>;
+def : ReadAdvance<ReadSFBALU, 0>;
 
 //===----------------------------------------------------------------------===//
 // Unsupported extensions

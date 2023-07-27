@@ -19,7 +19,6 @@ define amdgpu_ps <4 x float> @test1(<8 x i32> inreg %rsrc, i32 %c) {
 ; GFX10-W32-NEXT:    image_load v[0:3], v0, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    image_store v[0:3], v4, s[0:7] dmask:0xf dim:SQ_RSRC_IMG_1D unorm
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %tex = call <4 x float> @llvm.amdgcn.image.load.1d.v4f32.i32(i32 15, i32 %c, <8 x i32> %rsrc, i32 0, i32 0)
@@ -89,7 +88,6 @@ define amdgpu_ps <4 x float> @test3(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    buffer_store_dwordx4 v[0:3], v0, s[0:3], 0 idxen
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
@@ -121,7 +119,6 @@ define amdgpu_ps <4 x float> @test3_ptr_buf(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    buffer_store_dwordx4 v[0:3], v0, s[0:3], 0 idxen
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %tex = call <4 x float> @llvm.amdgcn.image.sample.1d.v4f32.f32(i32 15, float %c, <8 x i32> %rsrc, <4 x i32> %sampler, i1 false, i32 0, i32 0) #0
@@ -208,7 +205,6 @@ define amdgpu_ps <4 x float> @test4(<8 x i32> inreg %rsrc, <4 x i32> inreg %samp
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[0:3], 0 idxen
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %c.1 = mul i32 %c, %d
@@ -247,7 +243,6 @@ define amdgpu_ps <4 x float> @test4_ptr_buf(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    buffer_store_dwordx4 v[0:3], v4, s[0:3], 0 idxen
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %c.1 = mul i32 %c, %d
@@ -669,7 +664,6 @@ define amdgpu_ps float @test_wwm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v0
 ; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
@@ -1137,7 +1131,6 @@ define amdgpu_ps float @test_strict_wqm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v0
 ; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
@@ -1419,7 +1412,6 @@ define amdgpu_ps float @test_control_flow_0(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v2
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %cmp = icmp eq i32 %z, 0
@@ -1498,7 +1490,6 @@ define amdgpu_ps float @test_control_flow_1(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v0, v2
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %cmp = icmp eq i32 %z, 0
@@ -1581,7 +1572,6 @@ define amdgpu_ps <4 x float> @test_control_flow_2(<8 x i32> inreg %rsrc, <4 x i3
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s12
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %idx.1 = extractelement <3 x i32> %idx, i32 0
@@ -1671,7 +1661,6 @@ define amdgpu_ps float @test_control_flow_3(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:    s_cbranch_execnz .LBB30_4
 ; GFX10-W32-NEXT:  .LBB30_2: ; %END
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    s_branch .LBB30_5
 ; GFX10-W32-NEXT:  .LBB30_3: ; %ELSE
 ; GFX10-W32-NEXT:    v_mul_f32_e32 v0, 4.0, v1
@@ -1681,7 +1670,6 @@ define amdgpu_ps float @test_control_flow_3(<8 x i32> inreg %rsrc, <4 x i32> inr
 ; GFX10-W32-NEXT:  .LBB30_4: ; %IF
 ; GFX10-W32-NEXT:    v_mul_f32_e32 v0, 0x40400000, v1
 ; GFX10-W32-NEXT:    s_or_b32 exec_lo, exec_lo, s0
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    s_branch .LBB30_5
 ; GFX10-W32-NEXT:  .LBB30_5:
 main_body:
@@ -1753,7 +1741,6 @@ define amdgpu_ps <4 x float> @test_control_flow_4(<8 x i32> inreg %rsrc, <4 x i3
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-W32-NEXT:    image_sample v[0:3], v0, s[0:7], s[8:11] dmask:0xf dim:SQ_RSRC_IMG_1D
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %cond = icmp eq i32 %y, 0
@@ -1830,7 +1817,6 @@ define amdgpu_ps <4 x float> @test_kill_0(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX10-W32-NEXT:    v_add_f32_e32 v2, v9, v13
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v1, v4
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v3, v5
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    s_branch .LBB32_3
 ; GFX10-W32-NEXT:  .LBB32_2:
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, 0
@@ -1900,7 +1886,6 @@ define amdgpu_ps <4 x float> @test_kill_1(<8 x i32> inreg %rsrc, <4 x i32> inreg
 ; GFX10-W32-NEXT:  ; %bb.1: ; %main_body
 ; GFX10-W32-NEXT:    s_andn2_b32 exec_lo, exec_lo, vcc_lo
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    s_branch .LBB33_3
 ; GFX10-W32-NEXT:  .LBB33_2:
 ; GFX10-W32-NEXT:    s_mov_b32 exec_lo, 0
@@ -2013,7 +1998,6 @@ define amdgpu_ps <4 x float> @test_loop_vcc(<4 x float> %in) nounwind {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v1, v5
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v2, v6
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v3, v7
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 entry:
   call void @llvm.amdgcn.image.store.1d.v4f32.i32(<4 x float> %in, i32 15, i32 undef, <8 x i32> undef, i32 0, i32 0)
@@ -2243,7 +2227,6 @@ define amdgpu_ps <4 x float> @test_scc(i32 inreg %sel, i32 %idx) #1 {
 ; GFX10-W32-NEXT:    v_mov_b32_e32 v5, 1.0
 ; GFX10-W32-NEXT:    buffer_store_dword v5, v4, s[0:3], 0 idxen
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %cc = icmp sgt i32 %sel, 0
@@ -2594,7 +2577,6 @@ define amdgpu_ps float @test_strict_wwm5(i32 inreg %idx0, i32 inreg %idx1) {
 ; GFX10-W32-NEXT:    v_add_f32_e32 v0, v0, v0
 ; GFX10-W32-NEXT:    ; kill: def $vgpr0 killed $vgpr0 killed $exec
 ; GFX10-W32-NEXT:    s_and_b32 exec_lo, exec_lo, s2
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   %src0 = call float @llvm.amdgcn.struct.ptr.buffer.load.f32(ptr addrspace(8) undef, i32 %idx0, i32 0, i32 0, i32 0)
@@ -3056,7 +3038,6 @@ define amdgpu_ps float @test_strict_wqm_strict_wwm_wqm(i32 inreg %idx0, i32 inre
 ; GFX10-W32-NEXT:    buffer_store_dword v0, v1, s[20:23], 0 idxen
 ; GFX10-W32-NEXT:    buffer_load_dword v0, v1, s[20:23], 0 idxen
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %inp, ptr addrspace(8) %res, i32 %idx1, i32 0, i32 0, i32 0)
@@ -3168,7 +3149,6 @@ define amdgpu_ps float @test_strict_wwm_strict_wqm_wqm(i32 inreg %idx0, i32 inre
 ; GFX10-W32-NEXT:    buffer_store_dword v0, v1, s[16:19], 0 idxen
 ; GFX10-W32-NEXT:    buffer_load_dword v0, v1, s[16:19], 0 idxen
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %inp, ptr addrspace(8) %res, i32 %idx0, i32 0, i32 0, i32 0)
@@ -3271,7 +3251,6 @@ define amdgpu_ps float @test_wqm_strict_wqm_wqm(i32 inreg %idx0, i32 inreg %idx1
 ; GFX10-W32-NEXT:    buffer_store_dword v0, v1, s[16:19], 0 idxen
 ; GFX10-W32-NEXT:    buffer_load_dword v0, v1, s[16:19], 0 idxen
 ; GFX10-W32-NEXT:    s_waitcnt vmcnt(0)
-; GFX10-W32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-W32-NEXT:    ; return to shader part epilog
 main_body:
   call void @llvm.amdgcn.struct.ptr.buffer.store.f32(float %inp, ptr addrspace(8) %res, i32 %idx0, i32 0, i32 0, i32 0)

@@ -25,6 +25,7 @@
 #include "lldb/Breakpoint/BreakpointSiteList.h"
 #include "lldb/Core/LoadedModuleInfoList.h"
 #include "lldb/Core/PluginInterface.h"
+#include "lldb/Core/SourceManager.h"
 #include "lldb/Core/ThreadSafeValue.h"
 #include "lldb/Core/ThreadedCommunication.h"
 #include "lldb/Core/UserSettingsController.h"
@@ -147,8 +148,8 @@ public:
 
   void SetResumeCount(uint32_t c) { m_resume_count = c; }
 
-  const char *GetProcessPluginName() const {
-    return (m_plugin_name.empty() ? nullptr : m_plugin_name.c_str());
+  llvm::StringRef GetProcessPluginName() const {
+    return llvm::StringRef(m_plugin_name);
   }
 
   void SetProcessPluginName(llvm::StringRef plugin) {
@@ -574,6 +575,10 @@ public:
   ///     of CommandObject like CommandObjectRaw, CommandObjectParsed,
   ///     or CommandObjectMultiword.
   virtual CommandObject *GetPluginCommandObject() { return nullptr; }
+  
+  /// The underlying plugin might store the low-level communication history for
+  /// this session.  Dump it into the provided stream.
+  virtual void DumpPluginHistory(Stream &s) { return; }
 
   /// Launch a new process.
   ///
@@ -2537,7 +2542,7 @@ void PruneThreadPlans();
   /// \return
   ///     Returns the result of attempting to configure the feature.
   virtual Status
-  ConfigureStructuredData(ConstString type_name,
+  ConfigureStructuredData(llvm::StringRef type_name,
                           const StructuredData::ObjectSP &config_sp);
 
   /// Broadcasts the given structured data object from the given plugin.
@@ -2572,6 +2577,10 @@ void PruneThreadPlans();
   virtual void *GetImplementation() { return nullptr; }
 
   virtual void ForceScriptedState(lldb::StateType state) {}
+
+  SourceManager::SourceFileCache &GetSourceFileCache() {
+    return m_source_file_cache;
+  }
 
 protected:
   friend class Trace;
@@ -2833,7 +2842,7 @@ protected:
   ///
   ///     virtual void
   ///     HandleArrivalOfStructuredData(Process &process,
-  ///                                   ConstString type_name,
+  ///                                   llvm::StringRef type_name,
   ///                                   const StructuredData::ObjectSP
   ///                                   &object_sp)
   ///
@@ -3042,6 +3051,9 @@ protected:
 
   std::unique_ptr<UtilityFunction> m_dlopen_utility_func_up;
   llvm::once_flag m_dlopen_utility_func_flag_once;
+
+  /// Per process source file cache.
+  SourceManager::SourceFileCache m_source_file_cache;
 
   size_t RemoveBreakpointOpcodesFromBuffer(lldb::addr_t addr, size_t size,
                                            uint8_t *buf) const;

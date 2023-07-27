@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/ELF.h"
@@ -674,6 +675,8 @@ EndStmt:
       Type = ELF::SHT_LLVM_BB_ADDR_MAP;
     else if (TypeName == "llvm_offloading")
       Type = ELF::SHT_LLVM_OFFLOADING;
+    else if (TypeName == "llvm_lto")
+      Type = ELF::SHT_LLVM_LTO;
     else if (TypeName.getAsInteger(0, Type))
       return TokError("unknown section type");
   }

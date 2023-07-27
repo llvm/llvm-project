@@ -1,8 +1,8 @@
 // RUN: mlir-tblgen -gen-python-op-bindings -bind-dialect=test -I %S/../../include %s | FileCheck %s
 
 include "mlir/IR/OpBase.td"
+include "mlir/IR/AttrTypeBase.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
-include "mlir/Bindings/Python/Attributes.td"
 
 // CHECK: @_ods_cext.register_dialect
 // CHECK: class _Dialect(_ods_ir.Dialect):
@@ -12,6 +12,7 @@ def Test_Dialect : Dialect {
   let name = "test";
   let cppNamespace = "Test";
 }
+
 class TestOp<string mnemonic, list<Trait> traits = []> :
     Op<Test_Dialect, mnemonic, traits>;
 
@@ -130,13 +131,13 @@ def AttributedOp : TestOp<"attributed_op"> {
 
   // CHECK: @builtins.property
   // CHECK: def i32attr(self):
-  // CHECK:   return _ods_ir.IntegerAttr(self.operation.attributes["i32attr"])
+  // CHECK:   return self.operation.attributes["i32attr"]
 
   // CHECK: @builtins.property
   // CHECK: def optionalF32Attr(self):
   // CHECK:   if "optionalF32Attr" not in self.operation.attributes:
   // CHECK:     return None
-  // CHECK:   return _ods_ir.FloatAttr(self.operation.attributes["optionalF32Attr"])
+  // CHECK:   return self.operation.attributes["optionalF32Attr"]
 
   // CHECK: @builtins.property
   // CHECK: def unitAttr(self):
@@ -144,7 +145,8 @@ def AttributedOp : TestOp<"attributed_op"> {
 
   // CHECK: @builtins.property
   // CHECK: def in_(self):
-  // CHECK:   return _ods_ir.IntegerAttr(self.operation.attributes["in"])
+  // CHECK:   return self.operation.attributes["in"]
+
   let arguments = (ins I32Attr:$i32attr, OptionalAttr<F32Attr>:$optionalF32Attr,
                    UnitAttr:$unitAttr, I32Attr:$in);
 }
@@ -178,7 +180,7 @@ def AttributedOpWithOperands : TestOp<"attributed_op_with_operands"> {
   // CHECK: def is_(self):
   // CHECK:   if "is" not in self.operation.attributes:
   // CHECK:     return None
-  // CHECK:   return _ods_ir.FloatAttr(self.operation.attributes["is"])
+  // CHECK:   return self.operation.attributes["is"]
   let arguments = (ins I32, UnitAttr:$in, F32, OptionalAttr<F32Attr>:$is);
 }
 
@@ -243,14 +245,10 @@ def EmptyOp : TestOp<"empty">;
 // CHECK-LABEL: OPERATION_NAME = "test.infer_result_types_implied_op"
 def InferResultTypesImpliedOp : TestOp<"infer_result_types_implied_op"> {
   // CHECK:  def __init__(self, *, loc=None, ip=None):
-  // CHECK:    operands = []
-  // CHECK:    results = []
   // CHECK:    _ods_context = _ods_get_default_loc_context(loc)
-  // CHECK:    results = _ods_ir.InferTypeOpInterface(InferResultTypesImpliedOp).inferReturnTypes(
-  // CHECK:        operands=operands,
-  // CHECK:        attributes=_ods_ir.DictAttr.get(attributes, context=_ods_context),
-  // CHECK:        context=_ods_context,
-  // CHECK:        loc=loc)
+  // CHECK:   super().__init__(self.build_generic(
+  // CHECK:     attributes=attributes, operands=operands,
+  // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip))
   let results = (outs I32:$i32, F32:$f32);
 }
 
@@ -258,13 +256,9 @@ def InferResultTypesImpliedOp : TestOp<"infer_result_types_implied_op"> {
 def InferResultTypesOp : TestOp<"infer_result_types_op", [InferTypeOpInterface]> {
   // CHECK:  def __init__(self, *, loc=None, ip=None):
   // CHECK:    operands = []
-  // CHECK:    results = []
-  // CHECK:    _ods_context = _ods_get_default_loc_context(loc)
-  // CHECK:    results = _ods_ir.InferTypeOpInterface(InferResultTypesOp).inferReturnTypes(
-  // CHECK:        operands=operands,
-  // CHECK:        attributes=_ods_ir.DictAttr.get(attributes, context=_ods_context),
-  // CHECK:        context=_ods_context,
-  // CHECK:        loc=loc)
+  // CHECK:   super().__init__(self.build_generic(
+  // CHECK:     attributes=attributes, operands=operands,
+  // CHECK:     successors=_ods_successors, regions=regions, loc=loc, ip=ip))
   let results = (outs AnyType, AnyType, AnyType);
 }
 

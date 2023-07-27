@@ -4,9 +4,9 @@
 ## contain an array of the results for all of the given addresses.
 
 ## Show how library errors are reported in the output.
-# RUN: llvm-symbolizer --output-style=JSON -e %p/no-file.exe 0 | \
+# RUN: not llvm-symbolizer --output-style=JSON -e %p/no-file.exe 0 | \
 # RUN:   FileCheck %s -DMSG=%errc_ENOENT --check-prefix=NO-FILE --strict-whitespace --match-full-lines --implicit-check-not={{.}}
-# NO-FILE:[{"Address":"0x0","Error":{"Message":"[[MSG]]"},"ModuleName":"{{.*}}/no-file.exe"}]
+# NO-FILE:{"Address":"0x0","Error":{"Message":"[[MSG]]"},"ModuleName":"{{.*}}/no-file.exe"}
 
 ## Resolve out of range address.
 ## Expected a list with one empty object with default values.

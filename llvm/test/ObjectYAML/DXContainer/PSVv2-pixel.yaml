@@ -27,6 +27,7 @@ Parts:
       NumThreadsX:     512
       NumThreadsY:     1024
       NumThreadsZ:     2048
+      ResourceStride:       24
       Resources:
         - Type:            1
           Space:           2
@@ -69,6 +70,7 @@ Parts:
 # CHECK-NEXT: NumThreadsX:     512
 # CHECK-NEXT: NumThreadsY:     1024
 # CHECK-NEXT: NumThreadsZ:     2048
+# CHECK-NEXT: ResourceStride: 24
 # CHECK-NEXT: Resources:
 # CHECK-NEXT: - Type:            1
 # CHECK-NEXT: Space:           2

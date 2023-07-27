@@ -156,7 +156,6 @@ libcxx/include/__coroutine/trivial_awaitables.h
 libcxx/include/cstddef
 libcxx/include/ctype.h
 libcxx/include/cuchar
-libcxx/include/__debug
 libcxx/include/__debug_utils/randomize_range.h
 libcxx/include/deque
 libcxx/include/errno.h
@@ -180,7 +179,6 @@ libcxx/include/ext/__hash
 libcxx/include/ext/hash_map
 libcxx/include/ext/hash_set
 libcxx/include/fenv.h
-libcxx/include/filesystem
 libcxx/include/__filesystem/copy_options.h
 libcxx/include/__filesystem/directory_entry.h
 libcxx/include/__filesystem/directory_iterator.h
@@ -217,6 +215,7 @@ libcxx/include/__format/formatter_pointer.h
 libcxx/include/__format/formatter_string.h
 libcxx/include/__format/parser_std_format_spec.h
 libcxx/include/__format/unicode.h
+libcxx/include/__format/write_escaped.h
 libcxx/include/forward_list
 libcxx/include/fstream
 libcxx/include/__functional/binary_function.h
@@ -413,7 +412,6 @@ libcxx/include/__ranges/access.h
 libcxx/include/__ranges/all.h
 libcxx/include/__ranges/common_view.h
 libcxx/include/__ranges/concepts.h
-libcxx/include/__ranges/copyable_box.h
 libcxx/include/__ranges/counted.h
 libcxx/include/__ranges/data.h
 libcxx/include/__ranges/drop_view.h
@@ -446,7 +444,6 @@ libcxx/include/scoped_allocator
 libcxx/include/semaphore
 libcxx/include/set
 libcxx/include/setjmp.h
-libcxx/include/shared_mutex
 libcxx/include/span
 libcxx/include/__split_buffer
 libcxx/include/sstream
@@ -523,7 +520,6 @@ libcxx/src/charconv.cpp
 libcxx/src/chrono.cpp
 libcxx/src/condition_variable.cpp
 libcxx/src/condition_variable_destructor.cpp
-libcxx/src/debug.cpp
 libcxx/src/exception.cpp
 libcxx/src/experimental/memory_resource.cpp
 libcxx/src/filesystem/directory_entry.cpp
@@ -556,10 +552,10 @@ libcxx/src/mutex.cpp
 libcxx/src/mutex_destructor.cpp
 libcxx/src/new.cpp
 libcxx/src/optional.cpp
+libcxx/src/pstl/libdispatch.cpp
 libcxx/src/random.cpp
 libcxx/src/random_shuffle.cpp
 libcxx/src/regex.cpp
-libcxx/src/shared_mutex.cpp
 libcxx/src/stdexcept.cpp
 libcxx/src/std_stream.h
 libcxx/src/string.cpp

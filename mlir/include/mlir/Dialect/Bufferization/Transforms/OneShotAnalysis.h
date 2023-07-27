@@ -130,7 +130,7 @@ public:
   const SetVector<Value> &findDefinitionsCached(Value value);
 
   /// Reset cached data structures.
-  void resetCache();
+  void resetCache() override;
 
   /// Union the alias sets of `v1` and `v2`.
   void unionAliasSets(Value v1, Value v2);

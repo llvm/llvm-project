@@ -56,45 +56,45 @@ CHECK-NOT: error:
 
 DWARF: DW_TAG_compile_unit
 DWARF:   DW_AT_name [DW_FORM_strp]  {{.*}}     "dwarf5-addrx.c"
-DWARF:   DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000eb0)
+DWARF:   DW_AT_low_pc [DW_FORM_addrx]      (indexed (00000000) address = 0x0000000100000eb0)
 DWARF:   DW_AT_high_pc [DW_FORM_data4]   (0x00000103)
+DWARF:   DW_AT_addr_base [DW_FORM_sec_offset]      (0x00000008)
 DWARF:   DW_TAG_subprogram
-DWARF:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000eb0)
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000000) address = 0x0000000100000eb0)
 DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
 DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo1"
 DWARF:   DW_TAG_subprogram
-DWARF:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000ec0)
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000001) address = 0x0000000100000ec0)
 DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
 DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo2"
 DWARF:   DW_TAG_subprogram
-DWARF:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000ed0)
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000002) address = 0x0000000100000ed0)
 DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
 DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo3"
 DWARF:   DW_TAG_subprogram
-DWARF:     DW_AT_low_pc  [DW_FORM_addr]    (0x0000000100000ee0)
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000003) address = 0x0000000100000ee0)
 DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
 DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo4"
 DWARF:   DW_TAG_subprogram
-DWARF:     DW_AT_low_pc [DW_FORM_addr]     (0x0000000100000ef0)
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000004) address = 0x0000000100000ef0)
 DWARF:     DW_AT_high_pc  [DW_FORM_data4]  (0x00000010)
 DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo5"
 DWARF:   DW_TAG_subprogram
-DWARF:     DW_AT_low_pc  [DW_FORM_addr]    (0x0000000100000f00)
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000005) address = 0x0000000100000f00)
 DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
 DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo6"
 DWARF:   DW_TAG_subprogram
-DWARF:     DW_AT_low_pc  [DW_FORM_addr]    (0x0000000100000f10)
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000006) address = 0x0000000100000f10)
 DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
 DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo7"
 DWARF:   DW_TAG_subprogram
-DWARF:     DW_AT_low_pc  [DW_FORM_addr]    (0x0000000100000f20)
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000007) address = 0x0000000100000f20)
 DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000010)
 DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "foo8"
 DWARF:   DW_TAG_subprogram
-DWARF:     DW_AT_low_pc  [DW_FORM_addr]    (0x0000000100000f30)
+DWARF:     DW_AT_low_pc [DW_FORM_addrx]    (indexed (00000008) address = 0x0000000100000f30)
 DWARF:     DW_AT_high_pc [DW_FORM_data4]   (0x00000083)
 DWARF:     DW_AT_name  [DW_FORM_strp] {{.*}}   "main"
-DWARF-NOT:  .debug_addr contents
 
 UPDATE-DWARF: DW_TAG_compile_unit
 UPDATE-DWARF:   DW_AT_name [DW_FORM_strp]  {{.*}}     "dwarf5-addrx.c"

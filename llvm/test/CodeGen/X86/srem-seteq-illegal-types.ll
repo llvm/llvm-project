@@ -269,7 +269,7 @@ define <3 x i1> @test_srem_vec(<3 x i33> %X) nounwind {
 ; SSE41-NEXT:    pxor %xmm1, %xmm0
 ; SSE41-NEXT:    pcmpeqq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
 ; SSE41-NEXT:    pxor %xmm1, %xmm2
-; SSE41-NEXT:    pextrb $0, %xmm0, %eax
+; SSE41-NEXT:    movd %xmm0, %eax
 ; SSE41-NEXT:    pextrb $8, %xmm0, %edx
 ; SSE41-NEXT:    pextrb $0, %xmm2, %ecx
 ; SSE41-NEXT:    # kill: def $al killed $al killed $eax

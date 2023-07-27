@@ -153,6 +153,11 @@ Parser::ParseObjCAtClassDeclaration(SourceLocation atLoc) {
 
   while (true) {
     MaybeSkipAttributes(tok::objc_class);
+    if (Tok.is(tok::code_completion)) {
+      cutOffParsing();
+      Actions.CodeCompleteObjCClassForwardDecl(getCurScope());
+      return Actions.ConvertDeclToDeclGroup(nullptr);
+    }
     if (expectIdentifier()) {
       SkipUntil(tok::semi);
       return Actions.ConvertDeclToDeclGroup(nullptr);

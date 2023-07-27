@@ -12,10 +12,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "omptarget.h"
+#include "OmptCallback.h"
+#include "OmptInterface.h"
 #include "device.h"
 #include "private.h"
 #include "rtl.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/bit.h"
 
 #include <cassert>
@@ -23,6 +26,9 @@
 #include <vector>
 
 using llvm::SmallVector;
+#ifdef OMPT_SUPPORT
+using namespace llvm::omp::target::ompt;
+#endif
 
 int AsyncInfoTy::synchronize() {
   int Result = OFFLOAD_SUCCESS;
@@ -208,6 +214,7 @@ static int initLibrary(DeviceTy &Device) {
               (uintptr_t)CurrHostEntry->addr /*HstPtrBegin*/,
               (uintptr_t)CurrHostEntry->addr +
                   CurrHostEntry->size /*HstPtrEnd*/,
+              (uintptr_t)CurrDeviceEntry->addr /*TgtAllocBegin*/,
               (uintptr_t)CurrDeviceEntry->addr /*TgtPtrBegin*/,
               false /*UseHoldRefCount*/, CurrHostEntry->name,
               true /*IsRefCountINF*/));
@@ -602,18 +609,16 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     // Adjust for proper alignment if this is a combined entry (for structs).
     // Look at the next argument - if that is MEMBER_OF this one, then this one
     // is a combined entry.
-    int64_t Padding = 0;
+    int64_t TgtPadding = 0;
     const int NextI = I + 1;
     if (getParentIndex(ArgTypes[I]) < 0 && NextI < ArgNum &&
         getParentIndex(ArgTypes[NextI]) == I) {
       int64_t Alignment = getPartialStructRequiredAlignment(HstPtrBase);
-      Padding = (int64_t)HstPtrBegin % Alignment;
-      if (Padding) {
+      TgtPadding = (int64_t)HstPtrBegin % Alignment;
+      if (TgtPadding) {
         DP("Using a padding of %" PRId64 " bytes for begin address " DPxMOD
            "\n",
-           Padding, DPxPTR(HstPtrBegin));
-        HstPtrBegin = (char *)HstPtrBegin - Padding;
-        DataSize += Padding;
+           TgtPadding, DPxPTR(HstPtrBegin));
       }
     }
 
@@ -653,7 +658,7 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
       // PTR_AND_OBJ entry is handled below, and so the allocation might fail
       // when HasPresentModifier.
       PointerTpr = Device.getTargetPointer(
-          HDTTMap, HstPtrBase, HstPtrBase, sizeof(void *),
+          HDTTMap, HstPtrBase, HstPtrBase, /*TgtPadding=*/0, sizeof(void *),
           /*HstPtrName=*/nullptr,
           /*HasFlagTo=*/false, /*HasFlagAlways=*/false, IsImplicit, UpdateRef,
           HasCloseModifier, HasPresentModifier, HasHoldModifier, AsyncInfo,
@@ -683,8 +688,8 @@ int targetDataBegin(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     const bool HasFlagAlways = ArgTypes[I] & OMP_TGT_MAPTYPE_ALWAYS;
     // Note that HDTTMap will be released in getTargetPointer.
     auto TPR = Device.getTargetPointer(
-        HDTTMap, HstPtrBegin, HstPtrBase, DataSize, HstPtrName, HasFlagTo,
-        HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
+        HDTTMap, HstPtrBegin, HstPtrBase, TgtPadding, DataSize, HstPtrName,
+        HasFlagTo, HasFlagAlways, IsImplicit, UpdateRef, HasCloseModifier,
         HasPresentModifier, HasHoldModifier, AsyncInfo, PointerTpr.getEntry());
     void *TgtPtrBegin = TPR.TargetPointer;
     IsHostPtr = TPR.Flags.IsHostPointer;
@@ -890,25 +895,7 @@ int targetDataEnd(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
     }
 
     void *HstPtrBegin = Args[I];
-    void *HstPtrBase = ArgBases[I];
     int64_t DataSize = ArgSizes[I];
-    // Adjust for proper alignment if this is a combined entry (for structs).
-    // Look at the next argument - if that is MEMBER_OF this one, then this one
-    // is a combined entry.
-    const int NextI = I + 1;
-    if (getParentIndex(ArgTypes[I]) < 0 && NextI < ArgNum &&
-        getParentIndex(ArgTypes[NextI]) == I) {
-      int64_t Alignment = getPartialStructRequiredAlignment(HstPtrBase);
-      int64_t Padding = (int64_t)HstPtrBegin % Alignment;
-      if (Padding) {
-        DP("Using a Padding of %" PRId64 " bytes for begin address " DPxMOD
-           "\n",
-           Padding, DPxPTR(HstPtrBegin));
-        HstPtrBegin = (char *)HstPtrBegin - Padding;
-        DataSize += Padding;
-      }
-    }
-
     bool IsImplicit = ArgTypes[I] & OMP_TGT_MAPTYPE_IMPLICIT;
     bool UpdateRef = (!(ArgTypes[I] & OMP_TGT_MAPTYPE_MEMBER_OF) ||
                       (ArgTypes[I] & OMP_TGT_MAPTYPE_PTR_AND_OBJ)) &&
@@ -1688,6 +1675,17 @@ int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
   {
     assert(KernelArgs.NumArgs == TgtArgs.size() && "Argument count mismatch!");
     TIMESCOPE_WITH_NAME_AND_IDENT("Initiate Kernel Launch", Loc);
+
+#ifdef OMPT_SUPPORT
+    assert(KernelArgs.NumTeams[1] == 0 && KernelArgs.NumTeams[2] == 0 &&
+           "Multi dimensional launch not supported yet.");
+    /// RAII to establish tool anchors before and after kernel launch
+    int32_t NumTeams = KernelArgs.NumTeams[0];
+    // No need to guard this with OMPT_IF_BUILT
+    InterfaceRAII TargetSubmitRAII(
+        RegionInterface.getCallbacks<ompt_callback_target_submit>(), NumTeams);
+#endif
+
     Ret = Device.launchKernel(TgtEntryPtr, TgtArgs.data(), TgtOffsets.data(),
                               KernelArgs, AsyncInfo);
   }

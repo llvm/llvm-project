@@ -171,8 +171,11 @@ Instruction *InstCombinerImpl::scalarizePHI(ExtractElementInst &EI,
     }
   }
 
-  for (auto *E : Extracts)
+  for (auto *E : Extracts) {
     replaceInstUsesWith(*E, scalarPHI);
+    // Add old extract to worklist for DCE.
+    addToWorklist(E);
+  }
 
   return &EI;
 }
@@ -543,7 +546,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
                                 ->getNumElements();
 
         if (SrcIdx < 0)
-          return replaceInstUsesWith(EI, UndefValue::get(EI.getType()));
+          return replaceInstUsesWith(EI, PoisonValue::get(EI.getType()));
         if (SrcIdx < (int)LHSWidth)
           Src = SVI->getOperand(0);
         else {
@@ -748,7 +751,7 @@ static bool replaceExtractElements(InsertElementInst *InsElt,
     if (!OldExt || OldExt->getParent() != WideVec->getParent())
       continue;
     auto *NewExt = ExtractElementInst::Create(WideVec, OldExt->getOperand(1));
-    NewExt->insertAfter(OldExt);
+    IC.InsertNewInstWith(NewExt, *OldExt);
     IC.replaceInstUsesWith(*OldExt, NewExt);
     // Add the old extracts to the worklist for DCE. We can't remove the
     // extracts directly, because they may still be used by the calling code.
@@ -1477,10 +1480,10 @@ static Instruction *foldConstantInsEltIntoShuffle(InsertElementInst &InsElt) {
       }
       ++ValI;
     }
-    // Remaining values are filled with 'undef' values.
+    // Remaining values are filled with 'poison' values.
     for (unsigned I = 0; I < NumElts; ++I) {
       if (!Values[I]) {
-        Values[I] = UndefValue::get(InsElt.getType()->getElementType());
+        Values[I] = PoisonValue::get(InsElt.getType()->getElementType());
         Mask[I] = I;
       }
     }
@@ -1701,7 +1704,7 @@ Instruction *InstCombinerImpl::visitInsertElementInst(InsertElementInst &IE) {
         if (LR.first != &IE && LR.second != &IE) {
           // We now have a shuffle of LHS, RHS, Mask.
           if (LR.second == nullptr)
-            LR.second = UndefValue::get(LR.first->getType());
+            LR.second = PoisonValue::get(LR.first->getType());
           return new ShuffleVectorInst(LR.first, LR.second, Mask);
         }
       }

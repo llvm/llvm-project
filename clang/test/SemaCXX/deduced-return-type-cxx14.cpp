@@ -296,7 +296,7 @@ namespace Constexpr {
   void f() {
     X<int>().f();
     Y<void>().f();
-    constexpr int q = Y<int>().f(); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to '&Y<int>()->f()'}}
+    constexpr int q = Y<int>().f(); // expected-error {{must be initialized by a constant expression}} expected-note {{in call to 'Y<int>().f()'}}
   }
   struct NonLiteral { ~NonLiteral(); } nl; // cxx14-note {{user-provided destructor}}
   // cxx20_23-note@-1 {{'NonLiteral' is not literal because its destructor is not constexpr}}

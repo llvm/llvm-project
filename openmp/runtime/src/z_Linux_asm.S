@@ -2091,7 +2091,7 @@ KMP_PREFIX_UNDERSCORE(__kmp_unnamed_critical_addr):
           KMP_ARCH_RISCV64 || KMP_ARCH_LOONGARCH64 */
 
 #if KMP_OS_LINUX
-# if KMP_ARCH_ARM
+# if KMP_ARCH_ARM || KMP_ARCH_AARCH64
 .section .note.GNU-stack,"",%progbits
 # else
 .section .note.GNU-stack,"",@progbits

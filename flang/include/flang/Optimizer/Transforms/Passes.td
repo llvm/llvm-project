@@ -172,7 +172,7 @@ def ExternalNameConversion : Pass<"external-name-interop", "mlir::ModuleOp"> {
   }];
   let constructor = "::fir::createExternalNameConversionPass()";
   let options = [
-    Option<"appendUnderscore", "append-underscore",
+    Option<"appendUnderscoreOpt", "append-underscore",
            "bool", /*default=*/"true",
            "Append trailing underscore to external names.">
   ];
@@ -296,6 +296,34 @@ def LoopVersioning : Pass<"loop-versioning", "mlir::func::FuncOp"> {
   }];
   let constructor = "::fir::createLoopVersioningPass()";
   let dependentDialects = [ "fir::FIROpsDialect" ];
+}
+
+def OMPEarlyOutliningPass
+    : Pass<"omp-early-target-outlining", "mlir::ModuleOp"> {
+  let summary = "Outlines all target ops into separate functions";
+  let description = [{
+    This pass outlines all omp.target operations into individual functions.
+    It is invoked in the front end after the initial FIR has been constructed.
+    This pass is only needed when compiling for the target device to prevent
+    the optimizer to perform transforms across target region boundaries.
+  }];
+  let constructor = "::fir::createOMPEarlyOutliningPass()";
+}
+
+def OMPMarkDeclareTargetPass
+    : Pass<"omp-mark-declare-target", "mlir::ModuleOp"> {
+  let summary = "Marks all functions called by an OpenMP declare target function as declare target";
+  let constructor = "::fir::createOMPMarkDeclareTargetPass()";
+  let dependentDialects = ["mlir::omp::OpenMPDialect"];
+}
+
+def OMPFunctionFiltering : Pass<"omp-function-filtering"> {
+  let summary = "Filters out functions intended for the host when compiling "
+                "for the device and vice versa.";
+  let constructor = "::fir::createOMPFunctionFilteringPass()";
+  let dependentDialects = [
+    "mlir::func::FuncDialect"
+  ];
 }
 
 #endif // FLANG_OPTIMIZER_TRANSFORMS_PASSES

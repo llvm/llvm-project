@@ -360,7 +360,11 @@ static bool simplifyAssocCastAssoc(BinaryOperator *BinOp1,
   // (op (cast (op X, C2)), C1) --> (op (cast X), FoldedC)
   Type *DestTy = C1->getType();
   Constant *CastC2 = ConstantExpr::getCast(CastOpcode, C2, DestTy);
-  Constant *FoldedC = ConstantExpr::get(AssocOpcode, C1, CastC2);
+  Constant *FoldedC =
+      ConstantFoldBinaryOpOperands(AssocOpcode, C1, CastC2, IC.getDataLayout());
+  if (!FoldedC)
+    return false;
+
   IC.replaceOperand(*Cast, 0, BinOp2->getOperand(0));
   IC.replaceOperand(*BinOp1, 1, FoldedC);
   return true;
@@ -866,6 +870,71 @@ Instruction *InstCombinerImpl::foldBinOpShiftWithShift(BinaryOperator &I) {
   return MatchBinOp(1);
 }
 
+// (Binop (zext C), (select C, T, F))
+//    -> (select C, (binop 1, T), (binop 0, F))
+//
+// (Binop (sext C), (select C, T, F))
+//    -> (select C, (binop -1, T), (binop 0, F))
+//
+// Attempt to simplify binary operations into a select with folded args, when
+// one operand of the binop is a select instruction and the other operand is a
+// zext/sext extension, whose value is the select condition.
+Instruction *
+InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
+  // TODO: this simplification may be extended to any speculatable instruction,
+  // not just binops, and would possibly be handled better in FoldOpIntoSelect.
+  Instruction::BinaryOps Opc = I.getOpcode();
+  Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
+  Value *A, *CondVal, *TrueVal, *FalseVal;
+  Value *CastOp;
+
+  auto MatchSelectAndCast = [&](Value *CastOp, Value *SelectOp) {
+    return match(CastOp, m_ZExtOrSExt(m_Value(A))) &&
+           A->getType()->getScalarSizeInBits() == 1 &&
+           match(SelectOp, m_Select(m_Value(CondVal), m_Value(TrueVal),
+                                    m_Value(FalseVal)));
+  };
+
+  // Make sure one side of the binop is a select instruction, and the other is a
+  // zero/sign extension operating on a i1.
+  if (MatchSelectAndCast(LHS, RHS))
+    CastOp = LHS;
+  else if (MatchSelectAndCast(RHS, LHS))
+    CastOp = RHS;
+  else
+    return nullptr;
+
+  auto NewFoldedConst = [&](bool IsTrueArm, Value *V) {
+    bool IsCastOpRHS = (CastOp == RHS);
+    bool IsZExt = isa<ZExtInst>(CastOp);
+    Constant *C;
+
+    if (IsTrueArm) {
+      C = Constant::getNullValue(V->getType());
+    } else if (IsZExt) {
+      unsigned BitWidth = V->getType()->getScalarSizeInBits();
+      C = Constant::getIntegerValue(V->getType(), APInt(BitWidth, 1));
+    } else {
+      C = Constant::getAllOnesValue(V->getType());
+    }
+
+    return IsCastOpRHS ? Builder.CreateBinOp(Opc, V, C)
+                       : Builder.CreateBinOp(Opc, C, V);
+  };
+
+  // If the value used in the zext/sext is the select condition, or the negated
+  // of the select condition, the binop can be simplified.
+  if (CondVal == A)
+    return SelectInst::Create(CondVal, NewFoldedConst(false, TrueVal),
+                              NewFoldedConst(true, FalseVal));
+
+  if (match(A, m_Not(m_Specific(CondVal))))
+    return SelectInst::Create(CondVal, NewFoldedConst(true, TrueVal),
+                              NewFoldedConst(false, FalseVal));
+
+  return nullptr;
+}
+
 Value *InstCombinerImpl::tryFactorizationFolds(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   BinaryOperator *Op0 = dyn_cast<BinaryOperator>(LHS);
@@ -1082,6 +1151,7 @@ Value *InstCombinerImpl::SimplifySelectsFeedingBinaryOp(BinaryOperator &I,
 /// Freely adapt every user of V as-if V was changed to !V.
 /// WARNING: only if canFreelyInvertAllUsersOf() said this can be done.
 void InstCombinerImpl::freelyInvertAllUsersOf(Value *I, Value *IgnoredUser) {
+  assert(!isa<Constant>(I) && "Shouldn't invert users of constant");
   for (User *U : make_early_inc_range(I->users())) {
     if (U == IgnoredUser)
       continue; // Don't consider this user.
@@ -2206,12 +2276,13 @@ Instruction *InstCombinerImpl::visitGetElementPtrInst(GetElementPtrInst &GEP) {
     Value *UnderlyingPtrOp =
             PtrOp->stripAndAccumulateInBoundsConstantOffsets(DL,
                                                              BasePtrOffset);
-    if (auto *AI = dyn_cast<AllocaInst>(UnderlyingPtrOp)) {
+    bool CanBeNull, CanBeFreed;
+    uint64_t DerefBytes = UnderlyingPtrOp->getPointerDereferenceableBytes(
+        DL, CanBeNull, CanBeFreed);
+    if (!CanBeNull && !CanBeFreed && DerefBytes != 0) {
       if (GEP.accumulateConstantOffset(DL, BasePtrOffset) &&
           BasePtrOffset.isNonNegative()) {
-        APInt AllocSize(
-            IdxWidth,
-            DL.getTypeAllocSize(AI->getAllocatedType()).getKnownMinValue());
+        APInt AllocSize(IdxWidth, DerefBytes);
         if (BasePtrOffset.ule(AllocSize)) {
           return GetElementPtrInst::CreateInBounds(
               GEP.getSourceElementType(), PtrOp, Indices, GEP.getName());
@@ -2397,8 +2468,11 @@ Instruction *InstCombinerImpl::visitAllocSite(Instruction &MI) {
 
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(I)) {
         if (II->getIntrinsicID() == Intrinsic::objectsize) {
-          Value *Result =
-              lowerObjectSizeCall(II, DL, &TLI, AA, /*MustSucceed=*/true);
+          SmallVector<Instruction *> InsertedInstructions;
+          Value *Result = lowerObjectSizeCall(
+              II, DL, &TLI, AA, /*MustSucceed=*/true, &InsertedInstructions);
+          for (Instruction *Inserted : InsertedInstructions)
+            Worklist.add(Inserted);
           replaceInstUsesWith(*I, Result);
           eraseInstFromFunction(*I);
           Users[i] = nullptr; // Skip examining in the next loop.
@@ -2611,20 +2685,21 @@ Instruction *InstCombinerImpl::visitReturnInst(ReturnInst &RI) {
 }
 
 // WARNING: keep in sync with SimplifyCFGOpt::simplifyUnreachable()!
-Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
+bool InstCombinerImpl::removeInstructionsBeforeUnreachable(Instruction &I) {
   // Try to remove the previous instruction if it must lead to unreachable.
   // This includes instructions like stores and "llvm.assume" that may not get
   // removed by simple dead code elimination.
+  bool Changed = false;
   while (Instruction *Prev = I.getPrevNonDebugInstruction()) {
     // While we theoretically can erase EH, that would result in a block that
     // used to start with an EH no longer starting with EH, which is invalid.
     // To make it valid, we'd need to fixup predecessors to no longer refer to
     // this block, but that changes CFG, which is not allowed in InstCombine.
     if (Prev->isEHPad())
-      return nullptr; // Can not drop any more instructions. We're done here.
+      break; // Can not drop any more instructions. We're done here.
 
     if (!isGuaranteedToTransferExecutionToSuccessor(Prev))
-      return nullptr; // Can not drop any more instructions. We're done here.
+      break; // Can not drop any more instructions. We're done here.
     // Otherwise, this instruction can be freely erased,
     // even if it is not side-effect free.
 
@@ -2632,9 +2707,13 @@ Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
     // another unreachable block), so convert those to poison.
     replaceInstUsesWith(*Prev, PoisonValue::get(Prev->getType()));
     eraseInstFromFunction(*Prev);
+    Changed = true;
   }
-  assert(I.getParent()->sizeWithoutDebug() == 1 && "The block is now empty.");
-  // FIXME: recurse into unconditional predecessors?
+  return Changed;
+}
+
+Instruction *InstCombinerImpl::visitUnreachableInst(UnreachableInst &I) {
+  removeInstructionsBeforeUnreachable(I);
   return nullptr;
 }
 
@@ -2667,24 +2746,22 @@ Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
   return nullptr;
 }
 
-/// If a block is dead due to a known branch condition, remove instructions
-/// in it.
-static bool handlePotentiallyDeadBlock(BasicBlock *BB, InstCombiner &IC) {
-  // We only know one edge to this block is dead, but there may be others.
-  // TODO: We could track dead edges globally.
-  if (!BB->getSinglePredecessor())
-    return false;
-
+// Under the assumption that I is unreachable, remove it and following
+// instructions.
+bool InstCombinerImpl::handleUnreachableFrom(
+    Instruction *I, SmallVectorImpl<BasicBlock *> &Worklist) {
   bool Changed = false;
-  for (Instruction &Inst : make_early_inc_range(make_range(
-           std::next(BB->getTerminator()->getReverseIterator()), BB->rend()))) {
+  BasicBlock *BB = I->getParent();
+  for (Instruction &Inst : make_early_inc_range(
+           make_range(std::next(BB->getTerminator()->getReverseIterator()),
+                      std::next(I->getReverseIterator())))) {
     if (!Inst.use_empty() && !Inst.getType()->isTokenTy()) {
-      IC.replaceInstUsesWith(Inst, PoisonValue::get(Inst.getType()));
+      replaceInstUsesWith(Inst, PoisonValue::get(Inst.getType()));
       Changed = true;
     }
     if (Inst.isEHPad() || Inst.getType()->isTokenTy())
       continue;
-    IC.eraseInstFromFunction(Inst);
+    eraseInstFromFunction(Inst);
     Changed = true;
   }
 
@@ -2693,23 +2770,46 @@ static bool handlePotentiallyDeadBlock(BasicBlock *BB, InstCombiner &IC) {
     for (PHINode &PN : Succ->phis())
       for (Use &U : PN.incoming_values())
         if (PN.getIncomingBlock(U) == BB && !isa<PoisonValue>(U)) {
-          IC.replaceUse(U, PoisonValue::get(PN.getType()));
-          IC.addToWorklist(&PN);
+          replaceUse(U, PoisonValue::get(PN.getType()));
+          addToWorklist(&PN);
           Changed = true;
         }
 
-  // TODO: Successor blocks may also be dead.
+  // Handle potentially dead successors.
+  for (BasicBlock *Succ : successors(BB))
+    if (DeadEdges.insert({BB, Succ}).second)
+      Worklist.push_back(Succ);
   return Changed;
 }
 
-static bool handlePotentiallyDeadSuccessors(BasicBlock *BB,
-                                            BasicBlock *LiveSucc,
-                                            InstCombiner &IC) {
+bool InstCombinerImpl::handlePotentiallyDeadBlocks(
+    SmallVectorImpl<BasicBlock *> &Worklist) {
   bool Changed = false;
-  for (BasicBlock *Succ : successors(BB))
-    if (Succ != LiveSucc)
-      Changed |= handlePotentiallyDeadBlock(Succ, IC);
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (!all_of(predecessors(BB), [&](BasicBlock *Pred) {
+          return DeadEdges.contains({Pred, BB}) || DT.dominates(BB, Pred);
+        }))
+      continue;
+
+    Changed |= handleUnreachableFrom(&BB->front(), Worklist);
+  }
   return Changed;
+}
+
+bool InstCombinerImpl::handlePotentiallyDeadSuccessors(BasicBlock *BB,
+                                                       BasicBlock *LiveSucc) {
+  SmallVector<BasicBlock *> Worklist;
+  for (BasicBlock *Succ : successors(BB)) {
+    // The live successor isn't dead.
+    if (Succ == LiveSucc)
+      continue;
+
+    if (DeadEdges.insert({BB, Succ}).second)
+      Worklist.push_back(Succ);
+  }
+
+  return handlePotentiallyDeadBlocks(Worklist);
 }
 
 Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
@@ -2755,12 +2855,12 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return &BI;
   }
 
-  if (isa<UndefValue>(Cond) && handlePotentiallyDeadSuccessors(
-                                   BI.getParent(), /*LiveSucc*/ nullptr, *this))
+  if (isa<UndefValue>(Cond) &&
+      handlePotentiallyDeadSuccessors(BI.getParent(), /*LiveSucc*/ nullptr))
     return &BI;
   if (auto *CI = dyn_cast<ConstantInt>(Cond))
-    if (handlePotentiallyDeadSuccessors(
-            BI.getParent(), BI.getSuccessor(!CI->getZExtValue()), *this))
+    if (handlePotentiallyDeadSuccessors(BI.getParent(),
+                                        BI.getSuccessor(!CI->getZExtValue())))
       return &BI;
 
   return nullptr;
@@ -2781,12 +2881,12 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     return replaceOperand(SI, 0, Op0);
   }
 
-  if (isa<UndefValue>(Cond) && handlePotentiallyDeadSuccessors(
-                                   SI.getParent(), /*LiveSucc*/ nullptr, *this))
+  if (isa<UndefValue>(Cond) &&
+      handlePotentiallyDeadSuccessors(SI.getParent(), /*LiveSucc*/ nullptr))
     return &SI;
   if (auto *CI = dyn_cast<ConstantInt>(Cond))
     if (handlePotentiallyDeadSuccessors(
-            SI.getParent(), SI.findCaseValue(CI)->getCaseSuccessor(), *this))
+            SI.getParent(), SI.findCaseValue(CI)->getCaseSuccessor()))
       return &SI;
 
   KnownBits Known = computeKnownBits(Cond, 0, &SI);

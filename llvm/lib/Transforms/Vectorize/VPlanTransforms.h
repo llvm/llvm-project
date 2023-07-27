@@ -81,6 +81,9 @@ struct VPlanTransforms {
   /// not valid.
   static bool adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
 
+  /// Clear NSW/NUW flags from reduction instructions if necessary.
+  static void clearReductionWrapFlags(VPlan &Plan);
+
   /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
   /// resulting plan to \p BestVF and \p BestUF.
   static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,

@@ -353,9 +353,9 @@ define <2 x i64> @utest_f64i64(<2 x double> %x) {
 ; CHECK-LABEL: utest_f64i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -390,9 +390,9 @@ define <2 x i64> @ustest_f64i64(<2 x double> %x) {
 ; CHECK-LABEL: ustest_f64i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -457,9 +457,9 @@ define <2 x i64> @utest_f32i64(<2 x float> %x) {
 ; CHECK-LABEL: utest_f32i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -495,9 +495,9 @@ define <2 x i64> @ustest_f32i64(<2 x float> %x) {
 ; CHECK-LABEL: ustest_f32i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -575,9 +575,9 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-LABEL: utesth_f16i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -613,9 +613,9 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-LABEL: ustest_f16i64:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -978,9 +978,9 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-LABEL: utest_f64i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -995,12 +995,8 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    csel x8, x0, xzr, eq
-; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csel x8, xzr, x8, eq
 ; CHECK-NEXT:    cmp x20, #0
 ; CHECK-NEXT:    csel x9, x19, xzr, eq
-; CHECK-NEXT:    cmp x20, #1
-; CHECK-NEXT:    csel x9, xzr, x9, eq
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    fmov d1, x9
@@ -1018,9 +1014,9 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-LABEL: ustest_f64i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -1036,13 +1032,11 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    csel x8, x0, xzr, lt
 ; CHECK-NEXT:    csinc x9, x1, xzr, lt
-; CHECK-NEXT:    csel x8, xzr, x8, eq
 ; CHECK-NEXT:    cmp x20, #1
-; CHECK-NEXT:    csel x10, x19, xzr, lt
-; CHECK-NEXT:    csinc x11, x20, xzr, lt
-; CHECK-NEXT:    csel x10, xzr, x10, eq
-; CHECK-NEXT:    cmp x11, #0
-; CHECK-NEXT:    csel x10, xzr, x10, lt
+; CHECK-NEXT:    csinc x10, x20, xzr, lt
+; CHECK-NEXT:    csel x11, x19, xzr, lt
+; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    csel x10, xzr, x11, lt
 ; CHECK-NEXT:    cmp x9, #0
 ; CHECK-NEXT:    csel x8, xzr, x8, lt
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -1081,9 +1075,9 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-LABEL: utest_f32i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -1099,12 +1093,8 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    csel x8, x0, xzr, eq
-; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csel x8, xzr, x8, eq
 ; CHECK-NEXT:    cmp x20, #0
 ; CHECK-NEXT:    csel x9, x19, xzr, eq
-; CHECK-NEXT:    cmp x20, #1
-; CHECK-NEXT:    csel x9, xzr, x9, eq
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    fmov d1, x9
@@ -1122,9 +1112,9 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-LABEL: ustest_f32i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -1141,13 +1131,11 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    csel x8, x0, xzr, lt
 ; CHECK-NEXT:    csinc x9, x1, xzr, lt
-; CHECK-NEXT:    csel x8, xzr, x8, eq
 ; CHECK-NEXT:    cmp x20, #1
-; CHECK-NEXT:    csel x10, x19, xzr, lt
-; CHECK-NEXT:    csinc x11, x20, xzr, lt
-; CHECK-NEXT:    csel x10, xzr, x10, eq
-; CHECK-NEXT:    cmp x11, #0
-; CHECK-NEXT:    csel x10, xzr, x10, lt
+; CHECK-NEXT:    csinc x10, x20, xzr, lt
+; CHECK-NEXT:    csel x11, x19, xzr, lt
+; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    csel x10, xzr, x11, lt
 ; CHECK-NEXT:    cmp x9, #0
 ; CHECK-NEXT:    csel x8, xzr, x8, lt
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
@@ -1198,9 +1186,9 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-LABEL: utesth_f16i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -1216,12 +1204,8 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    cmp x1, #0
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    csel x8, x0, xzr, eq
-; CHECK-NEXT:    cmp x1, #1
-; CHECK-NEXT:    csel x8, xzr, x8, eq
 ; CHECK-NEXT:    cmp x20, #0
 ; CHECK-NEXT:    csel x9, x19, xzr, eq
-; CHECK-NEXT:    cmp x20, #1
-; CHECK-NEXT:    csel x9, xzr, x9, eq
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload
 ; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    fmov d1, x9
@@ -1239,9 +1223,9 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-LABEL: ustest_f16i64_mm:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    str x30, [sp, #16] // 8-byte Folded Spill
 ; CHECK-NEXT:    stp x20, x19, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w19, -8
 ; CHECK-NEXT:    .cfi_offset w20, -16
 ; CHECK-NEXT:    .cfi_offset w30, -32
@@ -1258,13 +1242,11 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NEXT:    ldr x30, [sp, #16] // 8-byte Folded Reload
 ; CHECK-NEXT:    csel x8, x0, xzr, lt
 ; CHECK-NEXT:    csinc x9, x1, xzr, lt
-; CHECK-NEXT:    csel x8, xzr, x8, eq
 ; CHECK-NEXT:    cmp x20, #1
-; CHECK-NEXT:    csel x10, x19, xzr, lt
-; CHECK-NEXT:    csinc x11, x20, xzr, lt
-; CHECK-NEXT:    csel x10, xzr, x10, eq
-; CHECK-NEXT:    cmp x11, #0
-; CHECK-NEXT:    csel x10, xzr, x10, lt
+; CHECK-NEXT:    csinc x10, x20, xzr, lt
+; CHECK-NEXT:    csel x11, x19, xzr, lt
+; CHECK-NEXT:    cmp x10, #0
+; CHECK-NEXT:    csel x10, xzr, x11, lt
 ; CHECK-NEXT:    cmp x9, #0
 ; CHECK-NEXT:    csel x8, xzr, x8, lt
 ; CHECK-NEXT:    ldp x20, x19, [sp, #32] // 16-byte Folded Reload

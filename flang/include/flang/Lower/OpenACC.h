@@ -16,6 +16,8 @@
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 
 namespace llvm {
+template <typename T, unsigned N>
+class SmallVector;
 class StringRef;
 }
 
@@ -23,6 +25,7 @@ namespace mlir {
 class Location;
 class Type;
 class OpBuilder;
+class Value;
 } // namespace mlir
 
 namespace fir {
@@ -51,8 +54,8 @@ void genOpenACCConstruct(AbstractConverter &,
                          Fortran::semantics::SemanticsContext &,
                          pft::Evaluation &, const parser::OpenACCConstruct &);
 void genOpenACCDeclarativeConstruct(
-    AbstractConverter &, pft::Evaluation &,
-    const parser::OpenACCDeclarativeConstruct &);
+    AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    pft::Evaluation &, const parser::OpenACCDeclarativeConstruct &);
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
 /// exist yet.
@@ -64,7 +67,8 @@ mlir::acc::PrivateRecipeOp createOrGetPrivateRecipe(mlir::OpBuilder &,
 /// exist yet.
 mlir::acc::ReductionRecipeOp
 createOrGetReductionRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
-                           mlir::Type, mlir::acc::ReductionOperator);
+                           mlir::Type, mlir::acc::ReductionOperator,
+                           llvm::SmallVector<mlir::Value> &);
 
 /// Get a acc.firstprivate.recipe op for the given type or create it if it does
 /// not exist yet.

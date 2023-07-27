@@ -231,3 +231,127 @@ void fir::factory::AnyValueStack::destroy(mlir::Location loc,
                                           fir::FirOpBuilder &builder) {
   fir::runtime::genDestroyValueStack(loc, builder, opaquePtr);
 }
+
+//===----------------------------------------------------------------------===//
+// fir::factory::AnyVariableStack implementation.
+//===----------------------------------------------------------------------===//
+
+fir::factory::AnyVariableStack::AnyVariableStack(mlir::Location loc,
+                                                 fir::FirOpBuilder &builder,
+                                                 mlir::Type variableStaticType)
+    : variableStaticType{variableStaticType},
+      counter{loc, builder,
+              builder.createIntegerConstant(loc, builder.getI64Type(), 0),
+              /*stackThroughLoops=*/true} {
+  opaquePtr = fir::runtime::genCreateDescriptorStack(loc, builder);
+  mlir::Type storageType =
+      hlfir::getFortranElementOrSequenceType(variableStaticType);
+  mlir::Type ptrType = fir::PointerType::get(storageType);
+  mlir::Type boxType;
+  if (hlfir::isPolymorphicType(variableStaticType))
+    boxType = fir::ClassType::get(ptrType);
+  else
+    boxType = fir::BoxType::get(ptrType);
+  retValueBox = builder.createTemporary(loc, boxType);
+}
+
+void fir::factory::AnyVariableStack::pushValue(mlir::Location loc,
+                                               fir::FirOpBuilder &builder,
+                                               mlir::Value variable) {
+  hlfir::Entity entity{variable};
+  mlir::Type storageElementType =
+      hlfir::getFortranElementType(retValueBox.getType());
+  auto [box, maybeCleanUp] =
+      hlfir::convertToBox(loc, builder, entity, storageElementType);
+  fir::runtime::genPushDescriptor(loc, builder, opaquePtr, fir::getBase(box));
+  if (maybeCleanUp)
+    (*maybeCleanUp)();
+}
+
+void fir::factory::AnyVariableStack::resetFetchPosition(
+    mlir::Location loc, fir::FirOpBuilder &builder) {
+  counter.reset(loc, builder);
+}
+
+mlir::Value fir::factory::AnyVariableStack::fetch(mlir::Location loc,
+                                                  fir::FirOpBuilder &builder) {
+  mlir::Value indexValue = counter.getAndIncrementIndex(loc, builder);
+  fir::runtime::genDescriptorAt(loc, builder, opaquePtr, indexValue,
+                                retValueBox);
+  hlfir::Entity retBox{builder.create<fir::LoadOp>(loc, retValueBox)};
+  // The runtime always tracks variable as address, but the form of the variable
+  // that was saved may be different (raw address, fir.boxchar), ensure
+  // the returned variable has the same form of the one that was saved.
+  if (mlir::isa<fir::BaseBoxType>(variableStaticType))
+    return builder.createConvert(loc, variableStaticType, retBox);
+  if (mlir::isa<fir::BoxCharType>(variableStaticType))
+    return hlfir::genVariableBoxChar(loc, builder, retBox);
+  mlir::Value rawAddr = genVariableRawAddress(loc, builder, retBox);
+  return builder.createConvert(loc, variableStaticType, rawAddr);
+}
+
+void fir::factory::AnyVariableStack::destroy(mlir::Location loc,
+                                             fir::FirOpBuilder &builder) {
+  fir::runtime::genDestroyDescriptorStack(loc, builder, opaquePtr);
+}
+
+//===----------------------------------------------------------------------===//
+// fir::factory::AnyVectorSubscriptStack implementation.
+//===----------------------------------------------------------------------===//
+
+fir::factory::AnyVectorSubscriptStack::AnyVectorSubscriptStack(
+    mlir::Location loc, fir::FirOpBuilder &builder,
+    mlir::Type variableStaticType, bool shapeCanBeSavedAsRegister, int rank)
+    : AnyVariableStack{loc, builder, variableStaticType} {
+  if (shapeCanBeSavedAsRegister) {
+    shapeTemp =
+        std::unique_ptr<TemporaryStorage>(new TemporaryStorage{SSARegister{}});
+    return;
+  }
+  // The shape will be tracked as the dimension inside a descriptor because
+  // that is the easiest from a lowering point of view, and this is an
+  // edge case situation that will probably not very well be exercised.
+  mlir::Type type =
+      fir::BoxType::get(builder.getVarLenSeqTy(builder.getI32Type(), rank));
+  boxType = type;
+  shapeTemp = std::unique_ptr<TemporaryStorage>(
+      new TemporaryStorage{AnyVariableStack{loc, builder, type}});
+}
+
+void fir::factory::AnyVectorSubscriptStack::pushShape(
+    mlir::Location loc, fir::FirOpBuilder &builder, mlir::Value shape) {
+  if (boxType) {
+    // The shape is saved as a dimensions inside a descriptors.
+    mlir::Type refType = fir::ReferenceType::get(
+        hlfir::getFortranElementOrSequenceType(*boxType));
+    mlir::Value null = builder.createNullConstant(loc, refType);
+    mlir::Value descriptor =
+        builder.create<fir::EmboxOp>(loc, *boxType, null, shape);
+    shapeTemp->pushValue(loc, builder, descriptor);
+    return;
+  }
+  // Otherwise, simply keep track of the fir.shape itself, it is invariant.
+  shapeTemp->cast<SSARegister>().pushValue(loc, builder, shape);
+}
+
+void fir::factory::AnyVectorSubscriptStack::resetFetchPosition(
+    mlir::Location loc, fir::FirOpBuilder &builder) {
+  static_cast<AnyVariableStack *>(this)->resetFetchPosition(loc, builder);
+  shapeTemp->resetFetchPosition(loc, builder);
+}
+
+mlir::Value
+fir::factory::AnyVectorSubscriptStack::fetchShape(mlir::Location loc,
+                                                  fir::FirOpBuilder &builder) {
+  if (boxType) {
+    hlfir::Entity descriptor{shapeTemp->fetch(loc, builder)};
+    return hlfir::genShape(loc, builder, descriptor);
+  }
+  return shapeTemp->cast<SSARegister>().fetch(loc, builder);
+}
+
+void fir::factory::AnyVectorSubscriptStack::destroy(
+    mlir::Location loc, fir::FirOpBuilder &builder) {
+  static_cast<AnyVariableStack *>(this)->destroy(loc, builder);
+  shapeTemp->destroy(loc, builder);
+}

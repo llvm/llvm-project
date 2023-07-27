@@ -1480,8 +1480,6 @@ static Value *HandleByValArgument(Type *ByValType, Value *Arg,
                                   const Function *CalledFunc,
                                   InlineFunctionInfo &IFI,
                                   MaybeAlign ByValAlignment) {
-  assert(cast<PointerType>(Arg->getType())
-             ->isOpaqueOrPointeeTypeMatches(ByValType));
   Function *Caller = TheCall->getFunction();
   const DataLayout &DL = Caller->getParent()->getDataLayout();
 
@@ -2659,7 +2657,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     if (!CB.use_empty()) {
       ReturnInst *R = Returns[0];
       if (&CB == R->getReturnValue())
-        CB.replaceAllUsesWith(UndefValue::get(CB.getType()));
+        CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
       else
         CB.replaceAllUsesWith(R->getReturnValue());
     }
@@ -2771,7 +2769,7 @@ llvm::InlineResult llvm::InlineFunction(CallBase &CB, InlineFunctionInfo &IFI,
     // using the return value of the call with the computed value.
     if (!CB.use_empty()) {
       if (&CB == Returns[0]->getReturnValue())
-        CB.replaceAllUsesWith(UndefValue::get(CB.getType()));
+        CB.replaceAllUsesWith(PoisonValue::get(CB.getType()));
       else
         CB.replaceAllUsesWith(Returns[0]->getReturnValue());
     }

@@ -8,7 +8,7 @@
 
 #include "src/string/bcmp.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/bcmp_implementations.h"
+#include "src/string/memory_utils/inline_bcmp.h"
 
 namespace __llvm_libc {
 

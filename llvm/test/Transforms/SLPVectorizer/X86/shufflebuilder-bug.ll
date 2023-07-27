@@ -10,9 +10,8 @@ define void @foo(<4 x float> %vec, float %val, ptr %ptr) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x float> [[TMP2]], float [[VAL]], i32 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    [[TMP5:%.*]] = fadd <4 x float> [[TMP1]], [[TMP4]]
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP7:%.*]] = fmul <4 x float> [[TMP5]], [[TMP6]]
-; CHECK-NEXT:    store <4 x float> [[TMP7]], ptr [[GEP0]], align 4
+; CHECK-NEXT:    [[TMP6:%.*]] = fmul <4 x float> [[TMP5]], [[TMP4]]
+; CHECK-NEXT:    store <4 x float> [[TMP6]], ptr [[GEP0]], align 4
 ; CHECK-NEXT:    ret void
 ;
   %vec_3 = extractelement <4 x float> %vec, i32 3

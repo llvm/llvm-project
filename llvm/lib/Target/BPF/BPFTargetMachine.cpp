@@ -40,10 +40,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeBPFTarget() {
   RegisterTargetMachine<BPFTargetMachine> Z(getTheBPFTarget());
 
   PassRegistry &PR = *PassRegistry::getPassRegistry();
-  initializeBPFAbstractMemberAccessLegacyPassPass(PR);
-  initializeBPFPreserveDITypePass(PR);
-  initializeBPFIRPeepholePass(PR);
-  initializeBPFAdjustOptPass(PR);
   initializeBPFCheckAndAdjustIRPass(PR);
   initializeBPFMIPeepholePass(PR);
   initializeBPFMIPeepholeTruncElimPass(PR);
@@ -103,6 +99,15 @@ TargetPassConfig *BPFTargetMachine::createPassConfig(PassManagerBase &PM) {
 }
 
 void BPFTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
+  PB.registerPipelineParsingCallback(
+      [](StringRef PassName, FunctionPassManager &FPM,
+         ArrayRef<PassBuilder::PipelineElement>) {
+        if (PassName == "bpf-ir-peephole") {
+          FPM.addPass(BPFIRPeepholePass());
+          return true;
+        }
+        return false;
+      });
   PB.registerPipelineStartEPCallback(
       [=](ModulePassManager &MPM, OptimizationLevel) {
         FunctionPassManager FPM;

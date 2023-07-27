@@ -29,11 +29,19 @@ for adding this configuration.
 2. Install Bazel at the version indicated by [.bazelversion](./.bazelversion),
    following the official instructions, if you don't have it installed yet:
    https://docs.bazel.build/versions/main/install.html.
+   * You can also install and use
+     [bazelisk](https://github.com/bazelbuild/bazelisk) which automates
+     downloading the proper bazel version
 3. `cd utils/bazel`
-4. `bazel build --config=generic_clang @llvm-project//...` (if building on Unix
-   with Clang/LLD). `--config=generic_gcc` and `--config=msvc` are also
-   available.
-
+4. `bazel build --config=generic_clang @llvm-project//...`
+   * If you're using clang, it's expected that lld is also available
+   * If you're using MSVC or gcc, instead of `--config=generic_clang`, pass
+   `--config=generic_gcc` or `--config=msvc`
+   * To specify a specific local compiler to use, add the following bazel
+     flag: `--repo_env=CC=/usr/bin/clang`
+     * `--config=generic_clang`/`--config=generic_gcc` by default set
+       `--repo_env=CC=clang`/`--repo_env=CC=gcc`, using `clang`/`gcc` on the
+       `PATH`
 
 # Configuration
 
@@ -65,12 +73,6 @@ build --sandbox_base=/dev/shm
 
 Bear in mind that this requires that your ramdisk is of sufficient size to hold
 any temporary files. Anecdotally, 1GB should be sufficient.
-
-To specify a specific local compiler to use, add the following bazel flag:
-
-```.bazelrc
-build --repo_env=CC=$PATH_TO_CC
-```
 
 # Coverage
 

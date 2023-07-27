@@ -15,16 +15,21 @@
 #include "clang/Analysis/FlowSensitive/DataflowAnalysisContext.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/FlowSensitive/DebugSupport.h"
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/Logger.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SetVector.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
+#include <string>
 #include <utility>
+#include <vector>
 
 static llvm::cl::opt<std::string> DataflowLog(
     "dataflow-log", llvm::cl::Hidden, llvm::cl::ValueOptional,
@@ -35,32 +40,33 @@ static llvm::cl::opt<std::string> DataflowLog(
 namespace clang {
 namespace dataflow {
 
-void DataflowAnalysisContext::addModeledFields(
-    const llvm::DenseSet<const FieldDecl *> &Fields) {
-  llvm::set_union(ModeledFields, Fields);
+FieldSet DataflowAnalysisContext::getModeledFields(QualType Type) {
+  // During context-sensitive analysis, a struct may be allocated in one
+  // function, but its field accessed in a function lower in the stack than
+  // the allocation. Since we only collect fields used in the function where
+  // the allocation occurs, we can't apply that filter when performing
+  // context-sensitive analysis. But, this only applies to storage locations,
+  // since field access it not allowed to fail. In contrast, field *values*
+  // don't need this allowance, since the API allows for uninitialized fields.
+  if (Opts.ContextSensitiveOpts)
+    return getObjectFields(Type);
+
+  return llvm::set_intersection(getObjectFields(Type), ModeledFields);
 }
 
-llvm::DenseSet<const FieldDecl *>
-DataflowAnalysisContext::getReferencedFields(QualType Type) {
-  llvm::DenseSet<const FieldDecl *> Fields = getObjectFields(Type);
-  llvm::set_intersect(Fields, ModeledFields);
-  return Fields;
+void DataflowAnalysisContext::addModeledFields(const FieldSet &Fields) {
+  ModeledFields.set_union(Fields);
 }
 
 StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
   if (!Type.isNull() && Type->isRecordType()) {
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
-    // During context-sensitive analysis, a struct may be allocated in one
-    // function, but its field accessed in a function lower in the stack than
-    // the allocation. Since we only collect fields used in the function where
-    // the allocation occurs, we can't apply that filter when performing
-    // context-sensitive analysis. But, this only applies to storage locations,
-    // since field access it not allowed to fail. In contrast, field *values*
-    // don't need this allowance, since the API allows for uninitialized fields.
-    auto Fields = Opts.ContextSensitiveOpts ? getObjectFields(Type)
-                                            : getReferencedFields(Type);
-    for (const FieldDecl *Field : Fields)
-      FieldLocs.insert({Field, &createStorageLocation(Field->getType())});
+    for (const FieldDecl *Field : getModeledFields(Type))
+      if (Field->getType()->isReferenceType())
+        FieldLocs.insert({Field, nullptr});
+      else
+        FieldLocs.insert({Field, &createStorageLocation(
+                                     Field->getType().getNonReferenceType())});
     return arena().create<AggregateStorageLocation>(Type, std::move(FieldLocs));
   }
   return arena().create<ScalarStorageLocation>(Type);
@@ -70,7 +76,7 @@ StorageLocation &
 DataflowAnalysisContext::getStableStorageLocation(const VarDecl &D) {
   if (auto *Loc = getStorageLocation(D))
     return *Loc;
-  auto &Loc = createStorageLocation(D.getType());
+  auto &Loc = createStorageLocation(D.getType().getNonReferenceType());
   setStorageLocation(D, Loc);
   return Loc;
 }
@@ -97,107 +103,114 @@ DataflowAnalysisContext::getOrCreateNullPointerValue(QualType PointeeType) {
 }
 
 void DataflowAnalysisContext::addFlowConditionConstraint(
-    AtomicBoolValue &Token, BoolValue &Constraint) {
-  auto Res = FlowConditionConstraints.try_emplace(&Token, &Constraint);
+    Atom Token, const Formula &Constraint) {
+  auto Res = FlowConditionConstraints.try_emplace(Token, &Constraint);
   if (!Res.second) {
     Res.first->second =
         &arena().makeAnd(*Res.first->second, Constraint);
   }
 }
 
-AtomicBoolValue &
-DataflowAnalysisContext::forkFlowCondition(AtomicBoolValue &Token) {
-  auto &ForkToken = arena().makeFlowConditionToken();
-  FlowConditionDeps[&ForkToken].insert(&Token);
-  addFlowConditionConstraint(ForkToken, Token);
+Atom DataflowAnalysisContext::forkFlowCondition(Atom Token) {
+  Atom ForkToken = arena().makeFlowConditionToken();
+  FlowConditionDeps[ForkToken].insert(Token);
+  addFlowConditionConstraint(ForkToken, arena().makeAtomRef(Token));
   return ForkToken;
 }
 
-AtomicBoolValue &
-DataflowAnalysisContext::joinFlowConditions(AtomicBoolValue &FirstToken,
-                                            AtomicBoolValue &SecondToken) {
-  auto &Token = arena().makeFlowConditionToken();
-  FlowConditionDeps[&Token].insert(&FirstToken);
-  FlowConditionDeps[&Token].insert(&SecondToken);
-  addFlowConditionConstraint(
-      Token, arena().makeOr(FirstToken, SecondToken));
+Atom
+DataflowAnalysisContext::joinFlowConditions(Atom FirstToken,
+                                            Atom SecondToken) {
+  Atom Token = arena().makeFlowConditionToken();
+  FlowConditionDeps[Token].insert(FirstToken);
+  FlowConditionDeps[Token].insert(SecondToken);
+  addFlowConditionConstraint(Token,
+                             arena().makeOr(arena().makeAtomRef(FirstToken),
+                                            arena().makeAtomRef(SecondToken)));
   return Token;
 }
 
-Solver::Result
-DataflowAnalysisContext::querySolver(llvm::DenseSet<BoolValue *> Constraints) {
+Solver::Result DataflowAnalysisContext::querySolver(
+    llvm::SetVector<const Formula *> Constraints) {
   Constraints.insert(&arena().makeLiteral(true));
-  Constraints.insert(
-      &arena().makeNot(arena().makeLiteral(false)));
-  return S->solve(std::move(Constraints));
+  Constraints.insert(&arena().makeNot(arena().makeLiteral(false)));
+  return S->solve(Constraints.getArrayRef());
 }
 
-bool DataflowAnalysisContext::flowConditionImplies(AtomicBoolValue &Token,
-                                                   BoolValue &Val) {
+bool DataflowAnalysisContext::flowConditionImplies(Atom Token,
+                                                   const Formula &Val) {
   // Returns true if and only if truth assignment of the flow condition implies
   // that `Val` is also true. We prove whether or not this property holds by
   // reducing the problem to satisfiability checking. In other words, we attempt
   // to show that assuming `Val` is false makes the constraints induced by the
   // flow condition unsatisfiable.
-  llvm::DenseSet<BoolValue *> Constraints = {&Token,
-                                             &arena().makeNot(Val)};
-  llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
+  llvm::SetVector<const Formula *> Constraints;
+  Constraints.insert(&arena().makeAtomRef(Token));
+  Constraints.insert(&arena().makeNot(Val));
+  llvm::DenseSet<Atom> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
   return isUnsatisfiable(std::move(Constraints));
 }
 
-bool DataflowAnalysisContext::flowConditionIsTautology(AtomicBoolValue &Token) {
+bool DataflowAnalysisContext::flowConditionIsTautology(Atom Token) {
   // Returns true if and only if we cannot prove that the flow condition can
   // ever be false.
-  llvm::DenseSet<BoolValue *> Constraints = {
-      &arena().makeNot(Token)};
-  llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
+  llvm::SetVector<const Formula *> Constraints;
+  Constraints.insert(&arena().makeNot(arena().makeAtomRef(Token)));
+  llvm::DenseSet<Atom> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
   return isUnsatisfiable(std::move(Constraints));
 }
 
-bool DataflowAnalysisContext::equivalentBoolValues(BoolValue &Val1,
-                                                   BoolValue &Val2) {
-  llvm::DenseSet<BoolValue *> Constraints = {
-      &arena().makeNot(arena().makeEquals(Val1, Val2))};
-  return isUnsatisfiable(Constraints);
+bool DataflowAnalysisContext::equivalentFormulas(const Formula &Val1,
+                                                 const Formula &Val2) {
+  llvm::SetVector<const Formula *> Constraints;
+  Constraints.insert(&arena().makeNot(arena().makeEquals(Val1, Val2)));
+  return isUnsatisfiable(std::move(Constraints));
 }
 
 void DataflowAnalysisContext::addTransitiveFlowConditionConstraints(
-    AtomicBoolValue &Token, llvm::DenseSet<BoolValue *> &Constraints,
-    llvm::DenseSet<AtomicBoolValue *> &VisitedTokens) {
-  auto Res = VisitedTokens.insert(&Token);
+    Atom Token, llvm::SetVector<const Formula *> &Constraints,
+    llvm::DenseSet<Atom> &VisitedTokens) {
+  auto Res = VisitedTokens.insert(Token);
   if (!Res.second)
     return;
 
-  auto ConstraintsIt = FlowConditionConstraints.find(&Token);
+  auto ConstraintsIt = FlowConditionConstraints.find(Token);
   if (ConstraintsIt == FlowConditionConstraints.end()) {
-    Constraints.insert(&Token);
+    Constraints.insert(&arena().makeAtomRef(Token));
   } else {
     // Bind flow condition token via `iff` to its set of constraints:
     // FC <=> (C1 ^ C2 ^ ...), where Ci are constraints
-    Constraints.insert(&arena().makeEquals(Token, *ConstraintsIt->second));
+    Constraints.insert(&arena().makeEquals(arena().makeAtomRef(Token),
+                                           *ConstraintsIt->second));
   }
 
-  auto DepsIt = FlowConditionDeps.find(&Token);
+  auto DepsIt = FlowConditionDeps.find(Token);
   if (DepsIt != FlowConditionDeps.end()) {
-    for (AtomicBoolValue *DepToken : DepsIt->second) {
-      addTransitiveFlowConditionConstraints(*DepToken, Constraints,
+    for (Atom DepToken : DepsIt->second) {
+      addTransitiveFlowConditionConstraints(DepToken, Constraints,
                                             VisitedTokens);
     }
   }
 }
 
-void DataflowAnalysisContext::dumpFlowCondition(AtomicBoolValue &Token,
+void DataflowAnalysisContext::dumpFlowCondition(Atom Token,
                                                 llvm::raw_ostream &OS) {
-  llvm::DenseSet<BoolValue *> Constraints = {&Token};
-  llvm::DenseSet<AtomicBoolValue *> VisitedTokens;
+  llvm::SetVector<const Formula *> Constraints;
+  Constraints.insert(&arena().makeAtomRef(Token));
+  llvm::DenseSet<Atom> VisitedTokens;
   addTransitiveFlowConditionConstraints(Token, Constraints, VisitedTokens);
 
-  llvm::DenseMap<const AtomicBoolValue *, std::string> AtomNames = {
-      {&arena().makeLiteral(false), "False"},
-      {&arena().makeLiteral(true), "True"}};
-  OS << debugString(Constraints, AtomNames);
+  // TODO: have formulas know about true/false directly instead
+  Atom True = arena().makeLiteral(true).getAtom();
+  Atom False = arena().makeLiteral(false).getAtom();
+  Formula::AtomNames Names = {{False, "false"}, {True, "true"}};
+
+  for (const auto *Constraint : Constraints) {
+    Constraint->print(OS, &Names);
+    OS << "\n";
+  }
 }
 
 const ControlFlowContext *
@@ -293,9 +306,8 @@ const Stmt &clang::dataflow::ignoreCFGOmittedNodes(const Stmt &S) {
 
 // FIXME: Does not precisely handle non-virtual diamond inheritance. A single
 // field decl will be modeled for all instances of the inherited field.
-static void
-getFieldsFromClassHierarchy(QualType Type,
-                            llvm::DenseSet<const FieldDecl *> &Fields) {
+static void getFieldsFromClassHierarchy(QualType Type,
+                                        clang::dataflow::FieldSet &Fields) {
   if (Type->isIncompleteType() || Type->isDependentType() ||
       !Type->isRecordType())
     return;
@@ -308,9 +320,8 @@ getFieldsFromClassHierarchy(QualType Type,
 }
 
 /// Gets the set of all fields in the type.
-llvm::DenseSet<const FieldDecl *>
-clang::dataflow::getObjectFields(QualType Type) {
-  llvm::DenseSet<const FieldDecl *> Fields;
+clang::dataflow::FieldSet clang::dataflow::getObjectFields(QualType Type) {
+  FieldSet Fields;
   getFieldsFromClassHierarchy(Type, Fields);
   return Fields;
 }

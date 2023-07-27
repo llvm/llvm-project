@@ -1,9 +1,9 @@
 ; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-none-linux-gnu -mcpu=cyclone | FileCheck %s
 ; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-none-linux-gnu -code-model=large -mcpu=cyclone | FileCheck --check-prefix=CHECK-LARGE %s
-; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-none-none-eabi -code-model=tiny -mcpu=cyclone | FileCheck --check-prefix=CHECK-TINY %s
+; RUN: llc -verify-machineinstrs -o - %s -mtriple=aarch64-none-elf -code-model=tiny -mcpu=cyclone | FileCheck --check-prefix=CHECK-TINY %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP %s
 ; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-linux-gnu -code-model=large -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP-LARGE %s
-; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-none-eabi -code-model=tiny -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP-TINY %s
+; RUN: llc -verify-machineinstrs < %s -mtriple=aarch64-none-elf -code-model=tiny -mattr=-fp-armv8 | FileCheck --check-prefix=CHECK-NOFP-TINY %s
 
 @varfloat = dso_local global float 0.0
 @vardouble = dso_local global double 0.0

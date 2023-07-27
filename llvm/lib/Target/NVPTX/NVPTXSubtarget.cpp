@@ -26,7 +26,6 @@ static cl::opt<bool>
     NoF16Math("nvptx-no-f16-math", cl::Hidden,
               cl::desc("NVPTX Specific: Disable generation of f16 math ops."),
               cl::init(false));
-
 // Pin the vtable to this file.
 void NVPTXSubtarget::anchor() {}
 

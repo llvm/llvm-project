@@ -345,7 +345,8 @@ static void HwasanDeallocate(StackTrace *stack, void *tagged_ptr) {
     internal_memset(aligned_ptr, flags()->free_fill_byte, fill_size);
   }
   if (in_taggable_region && flags()->tag_in_free && malloc_bisect(stack, 0) &&
-      atomic_load_relaxed(&hwasan_allocator_tagging_enabled)) {
+      atomic_load_relaxed(&hwasan_allocator_tagging_enabled) &&
+      allocator.FromPrimary(untagged_ptr) /* Secondary 0-tag and unmap.*/) {
     // Always store full 8-bit tags on free to maximize UAF detection.
     tag_t tag;
     if (t) {

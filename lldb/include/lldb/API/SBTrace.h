@@ -48,7 +48,7 @@ public:
   /// \param[out] error
   ///   This will be set with an error in case of failures.
   ///
-  /// \param[in] directory
+  /// \param[in] bundle_dir
   ///   The directory where the trace files will be saved.
   ///
   /// \param[in] compact

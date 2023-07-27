@@ -26,6 +26,8 @@
 namespace mlir {
 namespace NVVM {
 
+#include "mlir/Dialect/LLVMIR/NVVMOpsInterface.h.inc"
+
 /// NVVM memory space identifiers.
 enum NVVMMemorySpace {
   /// Global memory space identifier.

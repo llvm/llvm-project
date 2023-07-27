@@ -1,9 +1,9 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp45 -fopenmp -fopenmp-version=45 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp -fopenmp-version=50 -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,dev5 -fopenmp -fopenmp-version=50 -fopenmp-is-device -fopenmp-targets=x86_64-apple-macos10.7.0 -aux-triple x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,dev5 -fopenmp -fopenmp-version=50 -fopenmp-is-target-device -fopenmp-targets=x86_64-apple-macos10.7.0 -aux-triple x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-version=50 -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
-// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-version=50 -fopenmp-is-device -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
+// RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp5,host5 -fopenmp-simd -fopenmp-version=50 -fopenmp-is-target-device -fopenmp-targets=x86_64-apple-macos10.7.0 -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp45 -fopenmp-version=45 -fopenmp-simd -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -o - %s
 // RUN: %clang_cc1 -triple x86_64-apple-macos10.7.0 -verify=expected,omp51 -fopenmp -fnoopenmp-use-tls -ferror-limit 100 -DTESTEND=1 -o - %s

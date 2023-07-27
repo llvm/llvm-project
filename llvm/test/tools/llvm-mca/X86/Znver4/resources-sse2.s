@@ -417,7 +417,7 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   andpd	(%rax), %xmm2
 # CHECK-NEXT:  1      5     0.33    *      *      U     clflush	(%rax)
 # CHECK-NEXT:  1      2     1.00                        cmpeqpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   cmpeqpd	(%rax), %xmm2
+# CHECK-NEXT:  1      9     0.50    *                   cmpeqpd	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                        cmpeqsd	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   cmpeqsd	(%rax), %xmm2
 # CHECK-NEXT:  2      4     1.00                        comisd	%xmm0, %xmm1
@@ -466,13 +466,13 @@ xorpd       (%rax), %xmm2
 # CHECK-NEXT:  1      20    5.00    *                   divsd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     10.00   *      *      U     lfence
 # CHECK-NEXT:  1      1     1.00    *      *      U     maskmovdqu	%xmm0, %xmm1
-# CHECK-NEXT:  1      1     0.50                        maxpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   maxpd	(%rax), %xmm2
+# CHECK-NEXT:  1      2     0.50                        maxpd	%xmm0, %xmm2
+# CHECK-NEXT:  1      9     0.50    *                   maxpd	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                        maxsd	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   maxsd	(%rax), %xmm2
 # CHECK-NEXT:  1      1     25.00   *      *      U     mfence
-# CHECK-NEXT:  1      1     0.50                        minpd	%xmm0, %xmm2
-# CHECK-NEXT:  1      8     0.50    *                   minpd	(%rax), %xmm2
+# CHECK-NEXT:  1      2     0.50                        minpd	%xmm0, %xmm2
+# CHECK-NEXT:  1      9     0.50    *                   minpd	(%rax), %xmm2
 # CHECK-NEXT:  1      2     1.00                        minsd	%xmm0, %xmm2
 # CHECK-NEXT:  1      8     0.50    *                   minsd	(%rax), %xmm2
 # CHECK-NEXT:  1      0     0.17                        movapd	%xmm0, %xmm2

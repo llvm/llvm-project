@@ -162,12 +162,10 @@ define i24 @test_v4i24(<4 x i24> %a) nounwind {
 define i128 @test_v2i128(<2 x i128> %a) nounwind {
 ; CHECK-LABEL: test_v2i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    csel x8, x0, x2, hi
-; CHECK-NEXT:    cmp x1, x3
-; CHECK-NEXT:    csel x9, x0, x2, hi
-; CHECK-NEXT:    csel x1, x1, x3, hi
-; CHECK-NEXT:    csel x0, x8, x9, eq
+; CHECK-NEXT:    cmp x2, x0
+; CHECK-NEXT:    sbcs xzr, x3, x1
+; CHECK-NEXT:    csel x0, x0, x2, lo
+; CHECK-NEXT:    csel x1, x1, x3, lo
 ; CHECK-NEXT:    ret
   %b = call i128 @llvm.vector.reduce.umax.v2i128(<2 x i128> %a)
   ret i128 %b

@@ -114,9 +114,17 @@ public:
     I.I->set(New, AS);
   }
 
-  void erase(unsigned I) { decls()[I] = decls().pop_back_val(); }
+  void erase(unsigned I) {
+    auto val = decls().pop_back_val();
+    if (I < size())
+      decls()[I] = val;
+  }
 
-  void erase(iterator I) { *I.I = decls().pop_back_val(); }
+  void erase(iterator I) {
+    auto val = decls().pop_back_val();
+    if (I != end())
+      *I.I = val;
+  }
 
   void setAccess(iterator I, AccessSpecifier AS) { I.I->setAccess(AS); }
 

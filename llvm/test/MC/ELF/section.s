@@ -326,3 +326,14 @@ bar:
 // CHECK-NEXT:   Flags [
 // CHECK-NEXT:   ]
 // CHECK: }
+
+.section .llvm.lto,"e",@llvm_lto
+// ASM: .section .llvm.lto,"e",@llvm_lto
+
+// CHECK:      Section {
+// CHECK:        Name: .llvm.lto
+// CHECK-NEXT:   Type: SHT_LLVM_LTO
+// CHECK-NEXT:   Flags [
+// CHECK-NEXT:     SHF_EXCLUDE
+// CHECK-NEXT:   ]
+// CHECK:      }

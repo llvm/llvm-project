@@ -277,6 +277,12 @@ void CheckHelper::Check(const Symbol &symbol) {
     CheckContiguous(symbol);
   }
   CheckGlobalName(symbol);
+  if (symbol.attrs().test(Attr::ASYNCHRONOUS) &&
+      !evaluate::IsVariable(symbol)) {
+    messages_.Say(
+        "An entity may not have the ASYNCHRONOUS attribute unless it is a variable"_err_en_US);
+  }
+
   if (isDone) {
     return; // following checks do not apply
   }
@@ -391,7 +397,8 @@ void CheckHelper::Check(const Symbol &symbol) {
         messages_.Say(
             "An assumed-length CHARACTER(*) function cannot return a POINTER"_err_en_US);
       }
-    } else if (IsProcedurePointer(symbol) && IsDummy(symbol)) {
+    }
+    if (IsProcedurePointer(symbol) && IsDummy(symbol)) {
       messages_.Say(
           "A dummy procedure pointer should not have assumed-length CHARACTER(*) result type"_port_en_US);
       // The non-dummy case is a hard error that's caught elsewhere.
@@ -428,11 +435,6 @@ void CheckHelper::Check(const Symbol &symbol) {
           "Procedure '%s' may not be an array without an explicit interface"_err_en_US,
           symbol.name());
     }
-  }
-  if (symbol.attrs().test(Attr::ASYNCHRONOUS) &&
-      !evaluate::IsVariable(symbol)) {
-    messages_.Say(
-        "An entity may not have the ASYNCHRONOUS attribute unless it is a variable"_err_en_US);
   }
 }
 
@@ -823,13 +825,6 @@ void CheckHelper::CheckObjectEntity(
       messages_.Say(
           "An initialized variable in BLOCK DATA must be in a COMMON block"_err_en_US);
     }
-  }
-  if (type && type->IsPolymorphic() &&
-      !(type->IsAssumedType() || IsAllocatableOrPointer(symbol) ||
-          IsDummy(symbol))) { // C708
-    messages_.Say("CLASS entity '%s' must be a dummy argument or have "
-                  "ALLOCATABLE or POINTER attribute"_err_en_US,
-        symbol.name());
   }
   if (derived && InPure() && !InInterface() &&
       IsAutomaticallyDestroyed(symbol) &&
@@ -2552,7 +2547,8 @@ static std::optional<std::string> DefinesGlobalName(const Symbol &symbol) {
   } else {
     const std::string *bindC{symbol.GetBindName()};
     if (symbol.has<CommonBlockDetails>() ||
-        IsExternalProcedureDefinition(symbol)) {
+        IsExternalProcedureDefinition(symbol) ||
+        (symbol.owner().IsGlobal() && IsExternal(symbol))) {
       return bindC ? *bindC : symbol.name().ToString();
     } else if (bindC &&
         (symbol.has<ObjectEntityDetails>() || IsModuleProcedure(symbol))) {
@@ -2712,12 +2708,17 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
           "An interoperable procedure with an OPTIONAL dummy argument might not be portable"_port_en_US);
     }
   } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
-    if (!proc->isDummy() &&
-        (!proc->procInterface() ||
-            !proc->procInterface()->attrs().test(Attr::BIND_C))) {
-      messages_.Say(symbol.name(),
-          "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
-      context_.SetError(symbol);
+    if (!proc->procInterface() ||
+        !proc->procInterface()->attrs().test(Attr::BIND_C)) {
+      if (proc->isDummy()) {
+        messages_.Say(symbol.name(),
+            "A dummy procedure to an interoperable procedure must also be interoperable"_err_en_US);
+        context_.SetError(symbol);
+      } else {
+        messages_.Say(symbol.name(),
+            "An interface name with BIND attribute must be specified if the BIND attribute is specified in a procedure declaration statement"_err_en_US);
+        context_.SetError(symbol);
+      }
     }
   } else if (const auto *subp{symbol.detailsIf<SubprogramDetails>()}) {
     for (const Symbol *dummy : subp->dummyArgs()) {
@@ -3087,15 +3088,22 @@ void CheckHelper::CheckDefinedIoProc(const Symbol &symbol,
 }
 
 void CheckHelper::CheckSymbolType(const Symbol &symbol) {
-  if (!IsAllocatable(symbol) &&
-      (!IsPointer(symbol) ||
-          (IsProcedure(symbol) && !symbol.HasExplicitInterface()))) { // C702
-    if (auto dyType{evaluate::DynamicType::From(symbol)}) {
-      if (dyType->HasDeferredTypeParameter()) {
-        messages_.Say(
-            "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
-            symbol.name(), dyType->AsFortran());
-      }
+  const Symbol *result{FindFunctionResult(symbol)};
+  const Symbol &relevant{result ? *result : symbol};
+  if (IsAllocatable(relevant)) { // always ok
+  } else if (IsPointer(relevant) && !IsProcedure(relevant)) {
+    // object pointers are always ok
+  } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {
+    if (dyType->IsPolymorphic() && !dyType->IsAssumedType() &&
+        !(IsDummy(symbol) && !IsProcedure(relevant))) { // C708
+      messages_.Say(
+          "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
+          symbol.name());
+    }
+    if (dyType->HasDeferredTypeParameter()) { // C702
+      messages_.Say(
+          "'%s' has a type %s with a deferred type parameter but is neither an allocatable nor an object pointer"_err_en_US,
+          symbol.name(), dyType->AsFortran());
     }
   }
 }

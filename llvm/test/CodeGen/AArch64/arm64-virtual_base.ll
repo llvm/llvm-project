@@ -36,8 +36,8 @@ define void @Precompute_Patch_Values(ptr %Shape) {
 ; CHECK-LABEL: Precompute_Patch_Values:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    sub sp, sp, #400
-; CHECK-NEXT:    .cfi_def_cfa_offset 400
 ; CHECK-NEXT:    stp x28, x27, [sp, #384] ; 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 400
 ; CHECK-NEXT:    .cfi_offset w27, -8
 ; CHECK-NEXT:    .cfi_offset w28, -16
 ; CHECK-NEXT:    ldr q0, [x0, #272]

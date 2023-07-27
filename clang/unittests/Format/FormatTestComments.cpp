@@ -652,6 +652,11 @@ TEST_F(FormatTestComments, SplitsLongCxxComments) {
             "//: one line",
             format("//: A comment that doesn't fit on one line",
                    getLLVMStyleWithColumns(20)));
+
+  verifyFormat(
+      "//\t\t\t\tofMap(message.velocity, 0, 127, 0, ofGetWidth()\n"
+      "//* 0.2)",
+      "//\t\t\t\tofMap(message.velocity, 0, 127, 0, ofGetWidth() * 0.2)");
 }
 
 TEST_F(FormatTestComments, PreservesHangingIndentInCxxComments) {
@@ -3037,6 +3042,16 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                    "\n"
                    "// comment",
                    Style));
+
+  verifyFormat("namespace ns {\n"
+               "int i;\n"
+               "int j;\n"
+               "} // namespace ns",
+               "namespace ns {\n"
+               "int i;\n"
+               "int j;\n"
+               "}",
+               Style);
 
   // Allow to keep 2 empty lines
   Style.MaxEmptyLinesToKeep = 2;

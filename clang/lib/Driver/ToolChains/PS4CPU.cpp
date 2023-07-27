@@ -204,9 +204,15 @@ void tools::PScpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs))
     TC.addSanitizerArgs(Args, CmdArgs, "-l", "");
 
+  if (D.isUsingLTO() && Args.hasArg(options::OPT_funified_lto)) {
+    if (D.getLTOMode() == LTOK_Thin)
+      CmdArgs.push_back("--lto=thin");
+    else if (D.getLTOMode() == LTOK_Full)
+      CmdArgs.push_back("--lto=full");
+  }
+
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   Args.AddAllArgs(CmdArgs, options::OPT_T_Group);
-  Args.AddAllArgs(CmdArgs, options::OPT_e);
   Args.AddAllArgs(CmdArgs, options::OPT_s);
   Args.AddAllArgs(CmdArgs, options::OPT_t);
   Args.AddAllArgs(CmdArgs, options::OPT_r);
@@ -250,30 +256,23 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
     D.Diag(clang::diag::err_drv_unsupported_opt_for_target)
         << "-static" << Platform;
 
-  // Determine where to find the PS4/PS5 libraries. We use the EnvVar
-  // if it exists; otherwise use the driver's installation path, which
-  // should be <SDK_DIR>/host_tools/bin.
-
-  SmallString<512> SDKDir;
-  if (const char *EnvValue = getenv(EnvVar)) {
-    if (!llvm::sys::fs::exists(EnvValue))
-      D.Diag(clang::diag::warn_drv_ps_sdk_dir) << EnvVar << EnvValue;
-    SDKDir = EnvValue;
-  } else {
-    SDKDir = D.Dir;
-    llvm::sys::path::append(SDKDir, "/../../");
-  }
-
-  // By default, the driver won't report a warning if it can't find the
-  // SDK include or lib directories. This behavior could be changed if
-  // -Weverything or -Winvalid-or-nonexistent-directory options are passed.
+  // Determine where to find the PS4/PS5 libraries.
   // If -isysroot was passed, use that as the SDK base path.
+  // If not, we use the EnvVar if it exists; otherwise use the driver's
+  // installation path, which should be <SDK_DIR>/host_tools/bin.
+  SmallString<80> Whence;
   if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
     SDKRootDir = A->getValue();
     if (!llvm::sys::fs::exists(SDKRootDir))
       D.Diag(clang::diag::warn_missing_sysroot) << SDKRootDir;
-  } else
-    SDKRootDir = std::string(SDKDir.str());
+    Whence = A->getSpelling();
+  } else if (const char *EnvValue = getenv(EnvVar)) {
+    SDKRootDir = EnvValue;
+    Whence = { "environment variable '", EnvVar, "'" };
+  } else {
+    SDKRootDir = D.Dir + "/../../";
+    Whence = "compiler's location";
+  }
 
   SmallString<512> SDKIncludeDir(SDKRootDir);
   llvm::sys::path::append(SDKIncludeDir, "target/include");
@@ -283,7 +282,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
       !Args.hasArg(options::OPT__sysroot_EQ) &&
       !llvm::sys::fs::exists(SDKIncludeDir)) {
     D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
-        << Twine(Platform, " system headers").str() << SDKIncludeDir;
+        << Twine(Platform, " system headers").str() << SDKIncludeDir << Whence;
   }
 
   SmallString<512> SDKLibDir(SDKRootDir);
@@ -295,7 +294,7 @@ toolchains::PS4PS5Base::PS4PS5Base(const Driver &D, const llvm::Triple &Triple,
       !Args.hasArg(options::OPT_emit_ast) &&
       !llvm::sys::fs::exists(SDKLibDir)) {
     D.Diag(clang::diag::warn_drv_unable_to_find_directory_expected)
-        << Twine(Platform, " system libraries").str() << SDKLibDir;
+        << Twine(Platform, " system libraries").str() << SDKLibDir << Whence;
     return;
   }
   getFilePaths().push_back(std::string(SDKLibDir.str()));

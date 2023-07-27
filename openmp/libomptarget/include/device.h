@@ -68,7 +68,8 @@ struct HostDataToTargetTy {
   const uintptr_t HstPtrEnd;       // non-inclusive.
   const map_var_info_t HstPtrName; // Optional source name of mapped variable.
 
-  const uintptr_t TgtPtrBegin; // target info.
+  const uintptr_t TgtAllocBegin; // allocated target memory
+  const uintptr_t TgtPtrBegin; // mapped target memory = TgtAllocBegin + padding
 
 private:
   static const uint64_t INFRefCount = ~(uint64_t)0;
@@ -120,16 +121,18 @@ private:
   const std::unique_ptr<StatesTy> States;
 
 public:
-  HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E, uintptr_t TB,
+  HostDataToTargetTy(uintptr_t BP, uintptr_t B, uintptr_t E,
+                     uintptr_t TgtAllocBegin, uintptr_t TgtPtrBegin,
                      bool UseHoldRefCount, map_var_info_t Name = nullptr,
                      bool IsINF = false)
       : HstPtrBase(BP), HstPtrBegin(B), HstPtrEnd(E), HstPtrName(Name),
-        TgtPtrBegin(TB), States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
-                                                           : IsINF ? INFRefCount
-                                                                   : 1,
-                                                           !UseHoldRefCount ? 0
-                                                           : IsINF ? INFRefCount
-                                                                   : 1)) {}
+        TgtAllocBegin(TgtAllocBegin), TgtPtrBegin(TgtPtrBegin),
+        States(std::make_unique<StatesTy>(UseHoldRefCount ? 0
+                                          : IsINF         ? INFRefCount
+                                                          : 1,
+                                          !UseHoldRefCount ? 0
+                                          : IsINF          ? INFRefCount
+                                                           : 1)) {}
 
   /// Get the total reference count.  This is smarter than just getDynRefCount()
   /// + getHoldRefCount() because it handles the case where at least one is
@@ -446,8 +449,8 @@ struct DeviceTy {
   /// - Data transfer issue fails.
   TargetPointerResultTy getTargetPointer(
       HDTTMapAccessorTy &HDTTMap, void *HstPtrBegin, void *HstPtrBase,
-      int64_t Size, map_var_info_t HstPtrName, bool HasFlagTo,
-      bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
+      int64_t TgtPadding, int64_t Size, map_var_info_t HstPtrName,
+      bool HasFlagTo, bool HasFlagAlways, bool IsImplicit, bool UpdateRefCount,
       bool HasCloseModifier, bool HasPresentModifier, bool HasHoldModifier,
       AsyncInfoTy &AsyncInfo, HostDataToTargetTy *OwnedTPR = nullptr,
       bool ReleaseHDTTMap = true);

@@ -53,3 +53,13 @@
 // RUN:   --image=file=%t-gfx908.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908
 // RUN: diff %t-sm_70.o %t.elf.o
 // RUN: diff %t-gfx908.o %t.elf.o
+
+// Check that we can extract from an archive file to an archive file.
+// RUN: clang-offload-packager -o %t.out \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=amdgcn-amd-amdhsa,arch=gfx908 \
+// RUN:   --image=file=%t.elf.o,kind=openmp,triple=nvptx64-nvidia-cuda,arch=sm_70
+// RUN: %clang -cc1 %s -triple x86_64-unknown-linux-gnu -emit-obj -o %t.o -fembed-offload-object=%t.out
+// RUN: llvm-ar rcs %t.a %t.o
+// RUN: clang-offload-packager %t.a --archive --image=file=%t-gfx908.a,arch=gfx908
+// RUN: llvm-ar t %t-gfx908.a 2>&1 | FileCheck %s
+// CHECK: {{.*}}.o

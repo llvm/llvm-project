@@ -28,18 +28,11 @@ using namespace mlir;
 // Interfaces for AllocaOp
 //===----------------------------------------------------------------------===//
 
-static Type getAllocaElementType(LLVM::AllocaOp alloca) {
-  // This will become trivial once non-opaque pointers are gone.
-  return alloca.getElemType().has_value()
-             ? *alloca.getElemType()
-             : alloca.getResult().getType().getElementType();
-}
-
 llvm::SmallVector<MemorySlot> LLVM::AllocaOp::getPromotableSlots() {
   if (!getOperation()->getBlock()->isEntryBlock())
     return {};
 
-  return {MemorySlot{getResult(), getAllocaElementType(*this)}};
+  return {MemorySlot{getResult(), getResultPtrElementType()}};
 }
 
 Value LLVM::AllocaOp::getDefaultValue(const MemorySlot &slot,
@@ -68,7 +61,7 @@ SmallVector<DestructurableMemorySlot> LLVM::AllocaOp::getDestructurableSlots() {
   if (!mlir::matchPattern(getArraySize(), m_One()))
     return {};
 
-  Type elemType = getAllocaElementType(*this);
+  Type elemType = getResultPtrElementType();
   auto destructurable = dyn_cast<DestructurableTypeInterface>(elemType);
   if (!destructurable)
     return {};
@@ -267,6 +260,30 @@ DeletionKind LLVM::DbgDeclareOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
+bool LLVM::DbgValueOp::canUsesBeRemoved(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses,
+    SmallVectorImpl<OpOperand *> &newBlockingUses) {
+  // There is only one operand that we can remove the use of.
+  if (blockingUses.size() != 1)
+    return false;
+
+  return (*blockingUses.begin())->get() == getValue();
+}
+
+DeletionKind LLVM::DbgValueOp::removeBlockingUses(
+    const SmallPtrSetImpl<OpOperand *> &blockingUses, RewriterBase &rewriter) {
+  // Rewriter by default is after '*this', but we need it before '*this'.
+  rewriter.setInsertionPoint(*this);
+
+  // Rather than dropping the debug value, replace it with undef to preserve the
+  // debug local variable info. This allows the debugger to inform the user that
+  // the variable has been optimized out.
+  auto undef =
+      rewriter.create<UndefOp>(getValue().getLoc(), getValue().getType());
+  rewriter.updateRootInPlace(*this, [&] { getValueMutable().assign(undef); });
+  return DeletionKind::Keep;
+}
+
 //===----------------------------------------------------------------------===//
 // Interfaces for GEPOp
 //===----------------------------------------------------------------------===//
@@ -292,52 +309,10 @@ DeletionKind LLVM::GEPOp::removeBlockingUses(
   return DeletionKind::Delete;
 }
 
-/// Returns the type the resulting pointer of the GEP points to. If such a type
-/// is not clear, returns null type.
-static Type computeReachedGEPType(LLVM::GEPOp gep) {
-  if (gep.getIndices().empty())
-    return {};
-
-  // Ensures all indices are static and fetches them.
-  SmallVector<IntegerAttr> indices;
-  for (auto index : gep.getIndices()) {
-    IntegerAttr indexInt = llvm::dyn_cast_if_present<IntegerAttr>(index);
-    if (!indexInt)
-      return {};
-    indices.push_back(indexInt);
-  }
-
-  // Check the pointer indexing only targets the first element.
-  if (indices[0].getInt() != 0)
-    return {};
-
-  // Set the initial type currently being used for indexing. This will be
-  // updated as the indices get walked over.
-  std::optional<Type> maybeSelectedType = gep.getElemType();
-  if (!maybeSelectedType)
-    return {};
-  Type selectedType = *maybeSelectedType;
-
-  // Follow the indexed elements in the gep.
-  for (IntegerAttr index : llvm::drop_begin(indices)) {
-    // Ensure the structure of the type being indexed can be reasoned about.
-    // This includes rejecting any potential typed pointer.
-    auto destructurable =
-        llvm::dyn_cast<DestructurableTypeInterface>(selectedType);
-    if (!destructurable)
-      return {};
-
-    // Follow the type at the index the gep is accessing, making it the new type
-    // used for indexing.
-    Type field = destructurable.getTypeAtIndex(index);
-    if (!field)
-      return {};
-    selectedType = field;
-  }
-
-  // When there are no more indices, the type currently being used for indexing
-  // is the type of the value pointed at by the returned indexed pointer.
-  return selectedType;
+static bool isFirstIndexZero(LLVM::GEPOp gep) {
+  IntegerAttr index =
+      llvm::dyn_cast_if_present<IntegerAttr>(gep.getIndices()[0]);
+  return index && index.getInt() == 0;
 }
 
 LogicalResult LLVM::GEPOp::ensureOnlySafeAccesses(
@@ -346,7 +321,9 @@ LogicalResult LLVM::GEPOp::ensureOnlySafeAccesses(
     return success();
   if (slot.elemType != getElemType())
     return failure();
-  Type reachedType = computeReachedGEPType(*this);
+  if (!isFirstIndexZero(*this))
+    return failure();
+  Type reachedType = getResultPtrElementType();
   if (!reachedType)
     return failure();
   mustBeSafelyUsed.emplace_back<MemorySlot>({getResult(), reachedType});
@@ -367,10 +344,14 @@ bool LLVM::GEPOp::canRewire(const DestructurableMemorySlot &slot,
 
   if (getBase() != slot.ptr || slot.elemType != getElemType())
     return false;
-  Type reachedType = computeReachedGEPType(*this);
+  if (!isFirstIndexZero(*this))
+    return false;
+  Type reachedType = getResultPtrElementType();
   if (!reachedType || getIndices().size() < 2)
     return false;
-  auto firstLevelIndex = cast<IntegerAttr>(getIndices()[1]);
+  auto firstLevelIndex = dyn_cast<IntegerAttr>(getIndices()[1]);
+  if (!firstLevelIndex)
+    return false;
   assert(slot.elementPtrs.contains(firstLevelIndex));
   if (!llvm::isa<LLVM::LLVMPointerType>(slot.elementPtrs.at(firstLevelIndex)))
     return false;

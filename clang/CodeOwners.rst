@@ -58,6 +58,12 @@ Analysis & CFG
 | sgatev\@google.com (email), sgatev (Phabricator), sgatev (GitHub)
 
 
+Experimental new constant interpreter
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+| Timm Bäder
+| tbaeder@redhat.com (email), tbaeder (Phabricator), tbaederr (GitHub)
+
+
 Modules & serialization
 ~~~~~~~~~~~~~~~~~~~~~~~
 | Chuanqi Xu
@@ -75,6 +81,12 @@ Templates
 
 Debug information
 ~~~~~~~~~~~~~~~~~
+| Adrian Prantl
+| aprantl\@apple.com (email), aprantl (Phabricator), adrian-prantl (GitHub)
+
+| David Blaikie
+| dblaikie\@gmail.com (email), dblaikie (Phabricator), dwblaikie (GitHub)
+
 | Eric Christopher
 | echristo\@gmail.com (email), echristo (Phabricator), echristo (GitHub)
 

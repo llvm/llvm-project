@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Object/ELF.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Support/DataExtractor.h"
 
@@ -312,6 +313,7 @@ StringRef llvm::object::getELFSectionTypeName(uint32_t Machine, unsigned Type) {
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP_V0);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_BB_ADDR_MAP);
     STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_OFFLOADING);
+    STRINGIFY_ENUM_CASE(ELF, SHT_LLVM_LTO);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_ATTRIBUTES);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_HASH);
     STRINGIFY_ENUM_CASE(ELF, SHT_GNU_verdef);

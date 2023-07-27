@@ -20,6 +20,7 @@
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Support/CommandLine.h"
@@ -190,8 +191,8 @@ static bool runIPSCCP(
           if (ME == MemoryEffects::unknown())
             return AL;
 
-          ME |= MemoryEffects(MemoryEffects::Other,
-                              ME.getModRef(MemoryEffects::ArgMem));
+          ME |= MemoryEffects(IRMemLocation::Other,
+                              ME.getModRef(IRMemLocation::ArgMem));
           return AL.addFnAttribute(
               F.getContext(),
               Attribute::getWithMemoryEffects(F.getContext(), ME));

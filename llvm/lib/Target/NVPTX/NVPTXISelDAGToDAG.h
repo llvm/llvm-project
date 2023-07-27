@@ -71,7 +71,7 @@ private:
   bool tryTextureIntrinsic(SDNode *N);
   bool trySurfaceIntrinsic(SDNode *N);
   bool tryBFE(SDNode *N);
-  bool tryConstantFP16(SDNode *N);
+  bool tryConstantFP(SDNode *N);
   bool SelectSETP_F16X2(SDNode *N);
   bool tryEXTRACT_VECTOR_ELEMENT(SDNode *N);
 
@@ -97,7 +97,7 @@ private:
 
   bool ChkMemSDNodeAddressSpace(SDNode *N, unsigned int spN) const;
 
-  static unsigned GetConvertOpcode(MVT DestTy, MVT SrcTy, bool IsSigned);
+  static unsigned GetConvertOpcode(MVT DestTy, MVT SrcTy, LoadSDNode *N);
 };
 } // end namespace llvm
 

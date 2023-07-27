@@ -61,7 +61,7 @@ std::string UUID::GetAsString(llvm::StringRef separator) const {
   return result;
 }
 
-void UUID::Dump(Stream *s) const { s->PutCString(GetAsString()); }
+void UUID::Dump(Stream &s) const { s.PutCString(GetAsString()); }
 
 static inline int xdigit_to_int(char ch) {
   ch = tolower(ch);

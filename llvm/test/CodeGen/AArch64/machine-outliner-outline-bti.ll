@@ -1,4 +1,4 @@
-; RUN: llc -mtriple aarch64--none-eabi < %s | FileCheck %s
+; RUN: llc -mtriple aarch64 < %s | FileCheck %s
 
 ; The BTI instruction cannot be outlined, because it needs to be the very first
 ; instruction executed after an indirect call.

@@ -36,8 +36,10 @@ using namespace mlir;
 using namespace mlir::linalg;
 
 static LogicalResult generalizeNamedOpPrecondition(LinalgOp linalgOp) {
-  // Check if the operation is a LinalgOp but not a GenericOp.
-  if (isa<GenericOp>(linalgOp))
+  // Bailout if `linalgOp` is already a generic or a linalg.map. We cannot
+  // trivially generalize a `linalg.map`, as it does not use the output as
+  // region arguments in the block.
+  if (isa<GenericOp>(linalgOp) || isa<MapOp>(linalgOp))
     return failure();
   // Check if the operation has exactly one region.
   if (linalgOp->getNumRegions() != 1) {
@@ -82,10 +84,9 @@ struct LinalgGeneralizationPass
 } // namespace
 
 void LinalgGeneralizationPass::runOnOperation() {
-  func::FuncOp func = getOperation();
   RewritePatternSet patterns(&getContext());
   populateLinalgNamedOpsGeneralizationPatterns(patterns);
-  (void)applyPatternsAndFoldGreedily(func.getBody(), std::move(patterns));
+  (void)applyPatternsAndFoldGreedily(getOperation(), std::move(patterns));
 }
 
 void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
@@ -93,7 +94,6 @@ void mlir::linalg::populateLinalgNamedOpsGeneralizationPatterns(
   patterns.add<LinalgGeneralizationPattern>(patterns.getContext());
 }
 
-std::unique_ptr<OperationPass<func::FuncOp>>
-mlir::createLinalgGeneralizationPass() {
+std::unique_ptr<Pass> mlir::createLinalgGeneralizationPass() {
   return std::make_unique<LinalgGeneralizationPass>();
 }

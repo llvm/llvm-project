@@ -33,7 +33,9 @@ static cl::opt<TargetLibraryInfoImpl::VectorLibrary> ClVectorLibrary(
                clEnumValN(TargetLibraryInfoImpl::SVML, "SVML",
                           "Intel SVML library"),
                clEnumValN(TargetLibraryInfoImpl::SLEEFGNUABI, "sleefgnuabi",
-                          "SIMD Library for Evaluating Elementary Functions")));
+                          "SIMD Library for Evaluating Elementary Functions"),
+               clEnumValN(TargetLibraryInfoImpl::ArmPL, "ArmPL",
+                          "Arm Performance Libraries")));
 
 StringLiteral const TargetLibraryInfoImpl::StandardNames[LibFunc::NumLibFuncs] =
     {
@@ -1211,6 +1213,23 @@ void TargetLibraryInfoImpl::addVectorizableFunctionsFromVecLib(
       addVectorizableFunctions(VecFuncs_VF2);
       addVectorizableFunctions(VecFuncs_VF4);
       addVectorizableFunctions(VecFuncs_VFScalable);
+      break;
+    }
+    break;
+  }
+  case ArmPL: {
+    const VecDesc VecFuncs[] = {
+#define TLI_DEFINE_ARMPL_VECFUNCS
+#define TLI_DEFINE_VECFUNC(SCAL, VEC, VF, MASK) {SCAL, VEC, VF, MASK},
+#include "llvm/Analysis/VecFuncs.def"
+    };
+
+    switch (TargetTriple.getArch()) {
+    default:
+      break;
+    case llvm::Triple::aarch64:
+    case llvm::Triple::aarch64_be:
+      addVectorizableFunctions(VecFuncs);
       break;
     }
     break;

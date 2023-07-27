@@ -35,5 +35,6 @@ Example:
     f(1, 2); // Incorrect - may not invoke the desired qualified function operator
   }
 
-This check implements
-`CppCoreGuideline F.19 <http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rf-forward>`_.
+This check implements `F.19
+<http://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#Rf-forward>`_
+from the C++ Core Guidelines.

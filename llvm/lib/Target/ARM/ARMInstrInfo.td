@@ -965,6 +965,19 @@ def imm0_255 : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 256; }]> {
   let ParserMatchClass = Imm0_255AsmOperand;
 }
 
+// imm0_255_expr - For Thumb1 movs/adds - 8-bit immediate that can also reference
+// a relocatable expression.
+def Imm0_255ExprAsmOperand: AsmOperandClass {
+  let Name = "Imm0_255Expr";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticString = "operand must be an immediate in the range [0,255] or a relocatable expression";
+}
+
+def imm0_255_expr : Operand<i32>, ImmLeaf<i32, [{ return Imm >= 0 && Imm < 256; }]> {
+  let EncoderMethod = "getHiLoImmOpValue";
+  let ParserMatchClass = Imm0_255ExprAsmOperand;
+}
+
 /// imm0_65535 - An immediate is in the range [0,65535].
 def Imm0_65535AsmOperand: ImmAsmOperand<0,65535> { let Name = "Imm0_65535"; }
 def imm0_65535 : Operand<i32>, ImmLeaf<i32, [{
@@ -990,8 +1003,10 @@ def Imm0_65535ExprAsmOperand: AsmOperandClass {
   let DiagnosticString = "operand must be an immediate in the range [0,0xffff] or a relocatable expression";
 }
 
-def imm0_65535_expr : Operand<i32> {
-  let EncoderMethod = "getHiLo16ImmOpValue";
+def imm0_65535_expr : Operand<i32>, ImmLeaf<i32, [{
+  return Imm >= 0 && Imm < 65536;
+}]> {
+  let EncoderMethod = "getHiLoImmOpValue";
   let ParserMatchClass = Imm0_65535ExprAsmOperand;
 }
 

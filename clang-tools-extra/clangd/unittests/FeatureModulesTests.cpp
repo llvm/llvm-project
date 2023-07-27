@@ -76,13 +76,13 @@ TEST(FeatureModulesTest, SuppressDiags) {
 
   {
     auto AST = TU.build();
-    EXPECT_THAT(*AST.getDiagnostics(), testing::Not(testing::IsEmpty()));
+    EXPECT_THAT(AST.getDiagnostics(), testing::Not(testing::IsEmpty()));
   }
 
   TU.FeatureModules = &FMS;
   {
     auto AST = TU.build();
-    EXPECT_THAT(*AST.getDiagnostics(), testing::IsEmpty());
+    EXPECT_THAT(AST.getDiagnostics(), testing::IsEmpty());
   }
 }
 
@@ -111,13 +111,13 @@ TEST(FeatureModulesTest, BeforeExecute) {
 
   {
     auto AST = TU.build();
-    EXPECT_THAT(*AST.getDiagnostics(), testing::Not(testing::IsEmpty()));
+    EXPECT_THAT(AST.getDiagnostics(), testing::Not(testing::IsEmpty()));
   }
 
   TU.FeatureModules = &FMS;
   {
     auto AST = TU.build();
-    EXPECT_THAT(*AST.getDiagnostics(), testing::IsEmpty());
+    EXPECT_THAT(AST.getDiagnostics(), testing::IsEmpty());
   }
 }
 

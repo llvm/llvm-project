@@ -8,6 +8,7 @@
 #ifndef LLVM_CLANG_ANALYSIS_FLOWSENSITIVE__ARENA_H
 #define LLVM_CLANG_ANALYSIS_FLOWSENSITIVE__ARENA_H
 
+#include "clang/Analysis/FlowSensitive/Formula.h"
 #include "clang/Analysis/FlowSensitive/StorageLocation.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
 #include <vector>
@@ -15,12 +16,10 @@
 namespace clang::dataflow {
 
 /// The Arena owns the objects that model data within an analysis.
-/// For example, `Value` and `StorageLocation`.
+/// For example, `Value`, `StorageLocation`, `Atom`, and `Formula`.
 class Arena {
 public:
-  Arena()
-      : TrueVal(create<AtomicBoolValue>()),
-        FalseVal(create<AtomicBoolValue>()) {}
+  Arena() : True(makeAtom()), False(makeAtom()) {}
   Arena(const Arena &) = delete;
   Arena &operator=(const Arena &) = delete;
 
@@ -56,33 +55,25 @@ public:
             .get());
   }
 
-  /// Returns a boolean value that represents the conjunction of `LHS` and
-  /// `RHS`. Subsequent calls with the same arguments, regardless of their
-  /// order, will return the same result. If the given boolean values represent
-  /// the same value, the result will be the value itself.
-  BoolValue &makeAnd(BoolValue &LHS, BoolValue &RHS);
+  /// Creates a BoolValue wrapping a particular formula.
+  ///
+  /// Passing in the same formula will result in the same BoolValue.
+  /// FIXME: Interning BoolValues but not other Values is inconsistent.
+  ///        Decide whether we want Value interning or not.
+  BoolValue &makeBoolValue(const Formula &);
 
-  /// Returns a boolean value that represents the disjunction of `LHS` and
-  /// `RHS`. Subsequent calls with the same arguments, regardless of their
-  /// order, will return the same result. If the given boolean values represent
-  /// the same value, the result will be the value itself.
-  BoolValue &makeOr(BoolValue &LHS, BoolValue &RHS);
+  /// Creates a fresh atom and wraps in in an AtomicBoolValue.
+  /// FIXME: For now, identical-address AtomicBoolValue <=> identical atom.
+  ///        Stop relying on pointer identity and remove this guarantee.
+  AtomicBoolValue &makeAtomValue() {
+    return cast<AtomicBoolValue>(makeBoolValue(makeAtomRef(makeAtom())));
+  }
 
-  /// Returns a boolean value that represents the negation of `Val`. Subsequent
-  /// calls with the same argument will return the same result.
-  BoolValue &makeNot(BoolValue &Val);
-
-  /// Returns a boolean value that represents `LHS => RHS`. Subsequent calls
-  /// with the same arguments, will return the same result. If the given boolean
-  /// values represent the same value, the result will be a value that
-  /// represents the true boolean literal.
-  BoolValue &makeImplies(BoolValue &LHS, BoolValue &RHS);
-
-  /// Returns a boolean value that represents `LHS <=> RHS`. Subsequent calls
-  /// with the same arguments, regardless of their order, will return the same
-  /// result. If the given boolean values represent the same value, the result
-  /// will be a value that represents the true boolean literal.
-  BoolValue &makeEquals(BoolValue &LHS, BoolValue &RHS);
+  /// Creates a fresh Top boolean value.
+  TopBoolValue &makeTopValue() {
+    // No need for deduplicating: there's no way to create aliasing Tops.
+    return create<TopBoolValue>(makeAtomRef(makeAtom()));
+  }
 
   /// Returns a symbolic integer value that models an integer literal equal to
   /// `Value`. These literals are the same every time.
@@ -90,21 +81,46 @@ public:
   /// an integer literal is associated with.
   IntegerValue &makeIntLiteral(llvm::APInt Value);
 
-  /// Returns a symbolic boolean value that models a boolean literal equal to
-  /// `Value`. These literals are the same every time.
-  AtomicBoolValue &makeLiteral(bool Value) const {
-    return Value ? TrueVal : FalseVal;
+  // Factories for boolean formulas.
+  // Formulas are interned: passing the same arguments return the same result.
+  // For commutative operations like And/Or, interning ignores order.
+  // Simplifications are applied: makeOr(X, X) => X, etc.
+
+  /// Returns a formula for the conjunction of `LHS` and `RHS`.
+  const Formula &makeAnd(const Formula &LHS, const Formula &RHS);
+
+  /// Returns a formula for the disjunction of `LHS` and `RHS`.
+  const Formula &makeOr(const Formula &LHS, const Formula &RHS);
+
+  /// Returns a formula for the negation of `Val`.
+  const Formula &makeNot(const Formula &Val);
+
+  /// Returns a formula for `LHS => RHS`.
+  const Formula &makeImplies(const Formula &LHS, const Formula &RHS);
+
+  /// Returns a formula for `LHS <=> RHS`.
+  const Formula &makeEquals(const Formula &LHS, const Formula &RHS);
+
+  /// Returns a formula for the variable A.
+  const Formula &makeAtomRef(Atom A);
+
+  /// Returns a formula for a literal true/false.
+  const Formula &makeLiteral(bool Value) {
+    return makeAtomRef(Value ? True : False);
   }
+
+  /// Returns a new atomic boolean variable, distinct from any other.
+  Atom makeAtom() { return static_cast<Atom>(NextAtom++); };
 
   /// Creates a fresh flow condition and returns a token that identifies it. The
   /// token can be used to perform various operations on the flow condition such
   /// as adding constraints to it, forking it, joining it with another flow
   /// condition, or checking implications.
-  AtomicBoolValue &makeFlowConditionToken() {
-    return create<AtomicBoolValue>();
-  }
+  Atom makeFlowConditionToken() { return makeAtom(); }
 
 private:
+  llvm::BumpPtrAllocator Alloc;
+
   // Storage for the state of a program.
   std::vector<std::unique_ptr<StorageLocation>> Locs;
   std::vector<std::unique_ptr<Value>> Vals;
@@ -112,18 +128,18 @@ private:
   // Indices that are used to avoid recreating the same integer literals and
   // composite boolean values.
   llvm::DenseMap<llvm::APInt, IntegerValue *> IntegerLiterals;
-  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, ConjunctionValue *>
-      ConjunctionVals;
-  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, DisjunctionValue *>
-      DisjunctionVals;
-  llvm::DenseMap<BoolValue *, NegationValue *> NegationVals;
-  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, ImplicationValue *>
-      ImplicationVals;
-  llvm::DenseMap<std::pair<BoolValue *, BoolValue *>, BiconditionalValue *>
-      BiconditionalVals;
+  using FormulaPair = std::pair<const Formula *, const Formula *>;
+  llvm::DenseMap<FormulaPair, const Formula *> Ands;
+  llvm::DenseMap<FormulaPair, const Formula *> Ors;
+  llvm::DenseMap<const Formula *, const Formula *> Nots;
+  llvm::DenseMap<FormulaPair, const Formula *> Implies;
+  llvm::DenseMap<FormulaPair, const Formula *> Equals;
+  llvm::DenseMap<Atom, const Formula *> AtomRefs;
 
-  AtomicBoolValue &TrueVal;
-  AtomicBoolValue &FalseVal;
+  llvm::DenseMap<const Formula *, BoolValue *> FormulaValues;
+  unsigned NextAtom = 0;
+
+  Atom True, False;
 };
 
 } // namespace clang::dataflow

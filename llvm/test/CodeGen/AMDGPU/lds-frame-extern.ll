@@ -17,7 +17,6 @@ define void @use_module() #0 {
 ; CHECK-LABEL: use_module:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
 ; CHECK-NEXT:    ds_write_b16 v0, v0
 ; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
@@ -40,7 +39,6 @@ define void @use_extern_normal() #0 {
 ; CHECK-LABEL: use_extern_normal:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
 ; CHECK-NEXT:    s_add_u32 s6, s6, llvm.amdgcn.dynlds.offset.table@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s7, s7, llvm.amdgcn.dynlds.offset.table@rel32@hi+12
@@ -65,7 +63,6 @@ define void @use_extern_overalign() #0 {
 ; CHECK-LABEL: use_extern_overalign:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_waitcnt_vscnt null, 0x0
 ; CHECK-NEXT:    s_getpc_b64 s[6:7]
 ; CHECK-NEXT:    s_add_u32 s6, s6, llvm.amdgcn.dynlds.offset.table@rel32@lo+4
 ; CHECK-NEXT:    s_addc_u32 s7, s7, llvm.amdgcn.dynlds.offset.table@rel32@hi+12
@@ -93,7 +90,7 @@ define void @use_extern_overalign() #0 {
 ; kernel variable normal/overaligned
 ; extern variable normal/overaligned
 
-define amdgpu_kernel void @module_0_kernel_normal_extern_normal(i32 %idx) #1 {
+define amdgpu_kernel void @module_0_kernel_normal_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_normal_extern_normal:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -151,7 +148,7 @@ define amdgpu_kernel void @module_1_kernel_normal_extern_normal(i32 %idx) {
   ret void
 }
 
-define amdgpu_kernel void @module_0_kernel_overalign_extern_normal(i32 %idx) #1 {
+define amdgpu_kernel void @module_0_kernel_overalign_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_overalign_extern_normal:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -209,7 +206,7 @@ define amdgpu_kernel void @module_1_kernel_overalign_extern_normal(i32 %idx) {
   ret void
 }
 
-define amdgpu_kernel void @module_0_kernel_normal_extern_overalign(i32 %idx) #1 {
+define amdgpu_kernel void @module_0_kernel_normal_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_normal_extern_overalign:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -267,7 +264,7 @@ define amdgpu_kernel void @module_1_kernel_normal_extern_overalign(i32 %idx) {
   ret void
 }
 
-define amdgpu_kernel void @module_0_kernel_overalign_extern_overalign(i32 %idx) #1 {
+define amdgpu_kernel void @module_0_kernel_overalign_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_overalign_extern_overalign:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_load_dword s0, s[4:5], 0x0
@@ -332,7 +329,7 @@ define amdgpu_kernel void @module_1_kernel_overalign_extern_overalign(i32 %idx) 
 ; kernel variable normal/overaligned
 ; extern variable normal/overaligned
 
-define amdgpu_kernel void @module_0_kernel_normal_indirect_extern_normal(i32 %idx) #1 {
+define amdgpu_kernel void @module_0_kernel_normal_indirect_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_normal_indirect_extern_normal:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 s8, s8, s11
@@ -399,7 +396,7 @@ define amdgpu_kernel void @module_1_kernel_normal_indirect_extern_normal(i32 %id
   ret void
 }
 
-define amdgpu_kernel void @module_0_kernel_overalign_indirect_extern_normal(i32 %idx) #1 {
+define amdgpu_kernel void @module_0_kernel_overalign_indirect_extern_normal(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_overalign_indirect_extern_normal:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 s8, s8, s11
@@ -466,7 +463,7 @@ define amdgpu_kernel void @module_1_kernel_overalign_indirect_extern_normal(i32 
   ret void
 }
 
-define amdgpu_kernel void @module_0_kernel_normal_indirect_extern_overalign(i32 %idx) #1 {
+define amdgpu_kernel void @module_0_kernel_normal_indirect_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_normal_indirect_extern_overalign:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 s8, s8, s11
@@ -533,7 +530,7 @@ define amdgpu_kernel void @module_1_kernel_normal_indirect_extern_overalign(i32 
   ret void
 }
 
-define amdgpu_kernel void @module_0_kernel_overalign_indirect_extern_overalign(i32 %idx) #1 {
+define amdgpu_kernel void @module_0_kernel_overalign_indirect_extern_overalign(i32 %idx) {
 ; CHECK-LABEL: module_0_kernel_overalign_indirect_extern_overalign:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_add_u32 s8, s8, s11
@@ -602,4 +599,3 @@ define amdgpu_kernel void @module_1_kernel_overalign_indirect_extern_overalign(i
 
 
 attributes #0 = { noinline }
-attributes #1 = { "amdgpu-elide-module-lds" }

@@ -71,6 +71,9 @@ FormatTokenLexer::FormatTokenLexer(
     auto Identifier = &IdentTable.get(StatementAttributeLikeMacro);
     Macros.insert({Identifier, TT_StatementAttributeLikeMacro});
   }
+
+  for (const auto &TypeName : Style.TypeNames)
+    TypeNames.insert(&IdentTable.get(TypeName));
 }
 
 ArrayRef<FormatToken *> FormatTokenLexer::lex() {
@@ -1222,7 +1225,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
   }
 
   if (Style.isCpp()) {
-    auto it = Macros.find(FormatTok->Tok.getIdentifierInfo());
+    auto *Identifier = FormatTok->Tok.getIdentifierInfo();
+    auto it = Macros.find(Identifier);
     if (!(Tokens.size() > 0 && Tokens.back()->Tok.getIdentifierInfo() &&
           Tokens.back()->Tok.getIdentifierInfo()->getPPKeywordID() ==
               tok::pp_define) &&
@@ -1240,6 +1244,8 @@ FormatToken *FormatTokenLexer::getNextToken() {
         FormatTok->setType(TT_MacroBlockBegin);
       else if (MacroBlockEndRegex.match(Text))
         FormatTok->setType(TT_MacroBlockEnd);
+      else if (TypeNames.contains(Identifier))
+        FormatTok->setFinalizedType(TT_TypeName);
     }
   }
 

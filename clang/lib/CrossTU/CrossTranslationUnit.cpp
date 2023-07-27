@@ -609,10 +609,10 @@ CrossTranslationUnitContext::ASTLoader::loadFromSource(
   IntrusiveRefCntPtr<DiagnosticsEngine> Diags(
       new DiagnosticsEngine{DiagID, &*DiagOpts, DiagClient});
 
-  return std::unique_ptr<ASTUnit>(ASTUnit::LoadFromCommandLine(
-      CommandLineArgs.begin(), (CommandLineArgs.end()),
-      CI.getPCHContainerOperations(), Diags,
-      CI.getHeaderSearchOpts().ResourceDir));
+  return ASTUnit::LoadFromCommandLine(CommandLineArgs.begin(),
+                                      (CommandLineArgs.end()),
+                                      CI.getPCHContainerOperations(), Diags,
+                                      CI.getHeaderSearchOpts().ResourceDir);
 }
 
 llvm::Expected<InvocationListTy>

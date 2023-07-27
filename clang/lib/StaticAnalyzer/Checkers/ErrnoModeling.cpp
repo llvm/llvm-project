@@ -28,6 +28,7 @@
 #include "clang/StaticAnalyzer/Core/PathSensitive/ProgramState.h"
 #include "clang/StaticAnalyzer/Core/PathSensitive/SVals.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/Support/FormatVariadic.h"
 #include <optional>
 
 using namespace clang;
@@ -269,12 +270,6 @@ bool isErrno(const Decl *D) {
   return false;
 }
 
-const char *describeErrnoCheckState(ErrnoCheckState CS) {
-  assert(CS == errno_modeling::MustNotBeChecked &&
-         "Errno description not applicable.");
-  return "may be undefined after the call and should not be used";
-}
-
 const NoteTag *getErrnoNoteTag(CheckerContext &C, const std::string &Message) {
   return C.getNoteTag([Message](PathSensitiveBugReport &BR) -> std::string {
     const MemRegion *ErrnoR = BR.getErrorNode()->getState()->get<ErrnoRegion>();
@@ -319,18 +314,14 @@ ProgramStateRef setErrnoStdMustBeChecked(ProgramStateRef State,
 
 const NoteTag *getNoteTagForStdSuccess(CheckerContext &C, llvm::StringRef Fn) {
   return getErrnoNoteTag(
-      C, (Twine("Assuming that function '") + Twine(Fn) +
-          Twine("' is successful, in this case the value 'errno' ") +
-          Twine(describeErrnoCheckState(MustNotBeChecked)))
-             .str());
+      C, llvm::formatv(
+             "'errno' may be undefined after successful call to '{0}'", Fn));
 }
 
 const NoteTag *getNoteTagForStdMustBeChecked(CheckerContext &C,
                                              llvm::StringRef Fn) {
   return getErrnoNoteTag(
-      C, (Twine("Function '") + Twine(Fn) +
-          Twine("' indicates failure only by setting of 'errno'"))
-             .str());
+      C, llvm::formatv("'{0}' indicates failure only by setting 'errno'", Fn));
 }
 
 } // namespace errno_modeling

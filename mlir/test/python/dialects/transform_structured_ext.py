@@ -31,6 +31,45 @@ def testDecompose():
 
 
 @run
+def testFuseIntoContainingOpTypes():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        fused = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
+        containing = structured.MatchOp.match_op_names(
+            sequence.bodyTarget, ["test.dummy"]
+        )
+        structured.FuseIntoContainingOp(
+            transform.OperationType.get("test.dummy"),
+            transform.OperationType.get("test.dummy"),
+            fused,
+            containing,
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testFuseIntoContainingOpTypes
+    # CHECK: = transform.structured.fuse_into_containing_op
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.op<"test.dummy">, !transform.op<"test.dummy">)
+
+
+@run
+def testFuseIntoContainingOpCompact():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        fused = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
+        containing = structured.MatchOp.match_op_names(
+            sequence.bodyTarget, ["test.dummy"]
+        )
+        structured.FuseIntoContainingOp(fused, containing)
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testFuseIntoContainingOpCompact
+    # CHECK: = transform.structured.fuse_into_containing_op
+    # CHECK-SAME: (!transform.any_op, !transform.any_op) -> (!transform.any_op, !transform.any_op)
+
+
+@run
 def testGeneralize():
     sequence = transform.SequenceOp(
         transform.FailurePropagationMode.PROPAGATE, [], pdl.OperationType.get()
@@ -55,6 +94,52 @@ def testInterchange():
     # CHECK: transform.sequence
     # CHECK: transform.structured.interchange
     # CHECK: iterator_interchange = [1, 0]
+
+
+@run
+def testMatchOpNamesString():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MatchOp.match_op_names(sequence.bodyTarget, "test.dummy")
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMatchOpNamesString
+    # CHECK: transform.structured.match ops
+    # CHECK-SAME: ["test.dummy"]
+    # CHECK-SAME: (!transform.any_op) -> !transform.any_op
+
+
+@run
+def testMatchOpNamesList():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMatchOpNamesList
+    # CHECK: transform.structured.match ops
+    # CHECK-SAME: ["test.dummy"]
+    # CHECK-SAME: (!transform.any_op) -> !transform.any_op
+
+
+@run
+def testMatchOpNamesTyped():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.MatchOp.match_op_names(
+            transform.OperationType.get("test.dummy"),
+            sequence.bodyTarget,
+            ["test.dummy"],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testMatchOpNamesTyped
+    # CHECK: transform.structured.match ops
+    # CHECK-SAME: ["test.dummy"]
+    # CHECK-SAME: (!transform.any_op) -> !transform.op<"test.dummy">
 
 
 @run
@@ -221,6 +306,98 @@ def testTileExplicitLoopTypeAll():
     # CHECK: = transform.structured.tile
     # CHECK-SAME : (!transform.any_op) -> (!transform.any_op, !transform.op<"scf.for">,
     # CHECK-SAME: !transform.op<"scf.parallel">, !transform.op<"scf.forall">
+
+
+@run
+def testTileToForallCompact():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE,
+        [],
+        transform.OperationType.get("linalg.matmul"),
+    )
+    with InsertionPoint(sequence.body):
+        structured.TileToForallOp(sequence.bodyTarget, num_threads=[2, 3, 4])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallCompact
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: num_threads [2, 3, 4] tile_sizes []
+    # CHECK-SAME: (!transform.op<"linalg.matmul">) -> (!transform.any_op, !transform.any_op)
+
+
+@run
+def testTileToForallLoopsAndTileOpTypes():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.TileToForallOp(
+            transform.OperationType.get("scf.forall"),  # loops_type
+            transform.OperationType.get("linalg.matmul"),  # tiled_op_type
+            sequence.bodyTarget,
+            num_threads=[2, 3, 4],
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallLoopsAndTileOpTypes
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: num_threads [2, 3, 4] tile_sizes []
+    # CHECK-SAME: (!transform.any_op) -> (!transform.op<"scf.forall">, !transform.op<"linalg.matmul">)
+
+
+@run
+def testTileToForallTileSizes():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        structured.TileToForallOp(sequence.bodyTarget, tile_sizes=[2, 3, 4])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallTileSizes
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: num_threads [] tile_sizes [2, 3, 4]
+
+
+@run
+def testTileToForallMixedDynamic():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        n = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
+        structured.TileToForallOp(sequence.bodyTarget, num_threads=[n, 3, 4])
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallMixedDynamic
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: num_threads [%{{.*}} : !transform.any_op, 3, 4]
+
+
+@run
+def testTileToForallPackedDynamic():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        n = structured.MatchOp.match_op_names(sequence.bodyTarget, ["test.dummy"])
+        structured.TileToForallOp(sequence.bodyTarget, num_threads=n)
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallPackedDynamic
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: num_threads *(%0 : !transform.any_op)
+
+
+@run
+def testTileToForallMapping():
+    sequence = transform.SequenceOp(
+        transform.FailurePropagationMode.PROPAGATE, [], transform.AnyOpType.get()
+    )
+    with InsertionPoint(sequence.body):
+        mapping = Attribute.parse("[ #gpu.thread<y>, #gpu.thread<x> ]")
+        structured.TileToForallOp(
+            sequence.bodyTarget, num_threads=[2, 3], mapping=mapping
+        )
+        transform.YieldOp()
+    # CHECK-LABEL: TEST: testTileToForallMapping
+    # CHECK: = transform.structured.tile_to_forall_op
+    # CHECK-SAME: mapping = [#gpu.thread<y>, #gpu.thread<x>]
 
 
 @run

@@ -215,7 +215,8 @@ public:
     mlir::Value one =
         builder.createIntegerConstant(loc, builder.getIndexType(), 1);
     elementalOp =
-        builder.create<hlfir::ElementalOp>(loc, exprType, shape, lengthParams);
+        builder.create<hlfir::ElementalOp>(loc, exprType, shape, lengthParams,
+                                           /*isUnordered=*/true);
     builder.setInsertionPointToStart(elementalOp.getBody());
     // implied-do-index = lower+((i-1)*stride)
     mlir::Value diff = builder.create<mlir::arith::SubIOp>(
@@ -239,6 +240,26 @@ public:
     // must be initiated before the YieldElementOp, so we have to pop the scope
     // right now.
     stmtCtx.finalizeAndPop();
+
+    // This is a hacky way to get rid of the DestroyOp clean-up
+    // associated with the final ac-value result if it is hlfir.expr.
+    // Example:
+    //   ... = (/(REPEAT(REPEAT(CHAR(i),2),2),i=1,n)/)
+    // Each intrinsic call lowering will produce hlfir.expr result
+    // with the associated clean-up, but only the last of them
+    // is wrong. It is wrong because the value is used in hlfir.yield_element,
+    // so it cannot be destroyed.
+    mlir::Operation *destroyOp = nullptr;
+    for (mlir::Operation *useOp : elementResult.getUsers())
+      if (mlir::isa<hlfir::DestroyOp>(useOp)) {
+        if (destroyOp)
+          fir::emitFatalError(loc,
+                              "multiple DestroyOp's for ac-value expression");
+        destroyOp = useOp;
+      }
+
+    if (destroyOp)
+      destroyOp->erase();
 
     builder.create<hlfir::YieldElementOp>(loc, elementResult);
   }
@@ -686,9 +707,10 @@ static ArrayCtorLoweringStrategy selectArrayCtorLoweringStrategy(
         loc, builder, stmtCtx, symMap, declaredType,
         extent ? std::optional<mlir::Value>(extent) : std::nullopt, lengths,
         needToEvaluateOneExprToGetLengthParameters);
-  // Note: array constructors containing impure ac-value expr are currently not
-  // rewritten to hlfir.elemental because impure expressions should be evaluated
-  // in order, and hlfir.elemental currently misses a way to indicate that.
+  // Note: the generated hlfir.elemental is always unordered, thus,
+  // AsElementalStrategy can only be used for array constructors without
+  // impure ac-value expressions. If/when this changes, make sure
+  // the 'unordered' attribute is set accordingly for the hlfir.elemental.
   if (analysis.isSingleImpliedDoWithOneScalarPureExpr())
     return AsElementalStrategy(loc, builder, stmtCtx, symMap, declaredType,
                                extent, lengths);

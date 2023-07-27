@@ -171,10 +171,9 @@ func.func @materialize_write(%M: index, %N: index, %O: index, %P: index) {
   // CHECK:                      %[[S1:.*]] = affine.apply #[[$ADD]](%[[I1]], %[[I5]])
   // CHECK:                      %[[VECTOR_VIEW3:.*]] = vector.type_cast %[[VECTOR_VIEW2]] : memref<3x4xvector<1x5xf32>> to memref<3x4x1xvector<5xf32>>
   // CHECK:                      scf.for %[[I6:.*]] = %[[C0]] to %[[C1]] step %[[C1]] {
-  // CHECK:                        scf.if
-  // CHECK:                          %[[S0:.*]] = affine.apply #[[$ADD]](%[[I2]], %[[I6]])
-  // CHECK:                          %[[VEC:.*]] = memref.load %[[VECTOR_VIEW3]][%[[I4]], %[[I5]], %[[I6]]] : memref<3x4x1xvector<5xf32>>
-  // CHECK:                          vector.transfer_write %[[VEC]], %{{.*}}[%[[S3]], %[[S1]], %[[S0]], %[[I3]]] : vector<5xf32>, memref<?x?x?x?xf32>
+  // CHECK:                        %[[S0:.*]] = affine.apply #[[$ADD]](%[[I2]], %[[I6]])
+  // CHECK:                        %[[VEC:.*]] = memref.load %[[VECTOR_VIEW3]][%[[I4]], %[[I5]], %[[I6]]] : memref<3x4x1xvector<5xf32>>
+  // CHECK:                        vector.transfer_write %[[VEC]], %{{.*}}[%[[S3]], %[[S1]], %[[S0]], %[[I3]]] : vector<5xf32>, memref<?x?x?x?xf32>
   // CHECK:                      }
   // CHECK:                    }
   // CHECK:                  }
@@ -511,3 +510,39 @@ func.func @transfer_read_with_tensor(%arg: tensor<f32>) -> vector<1xf32> {
       tensor<f32>, vector<1xf32>
     return %0: vector<1xf32>
 }
+
+// -----
+
+// CHECK-LABEL: transfer_write_scalable
+func.func @transfer_write_scalable(%arg0: memref<?xf32, strided<[?], offset: ?>>, %arg1: f32) {
+  %0 = llvm.mlir.constant(0 : i32) : i32
+  %c0 = arith.constant 0 : index
+  %dim = memref.dim %arg0, %c0 : memref<?xf32, strided<[?], offset: ?>>
+  %1 = llvm.intr.experimental.stepvector : vector<[16]xi32>
+  %2 = arith.index_cast %dim : index to i32
+  %3 = llvm.mlir.undef : vector<[16]xi32>
+  %4 = llvm.insertelement %2, %3[%0 : i32] : vector<[16]xi32>
+  %5 = llvm.shufflevector %4, %3 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<[16]xi32>
+  %6 = arith.cmpi slt, %1, %5 : vector<[16]xi32>
+  %7 = llvm.mlir.undef : vector<[16]xf32>
+  %8 = llvm.insertelement %arg1, %7[%0 : i32] : vector<[16]xf32>
+  %9 = llvm.shufflevector %8, %7 [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0] : vector<[16]xf32>
+  vector.transfer_write %9, %arg0[%c0], %6 {in_bounds = [true]} : vector<[16]xf32>, memref<?xf32, strided<[?], offset: ?>>
+  return
+}
+
+// CHECK-SAME:      %[[ARG_0:.*]]: memref<?xf32, strided<[?], offset: ?>>,
+// CHECK:           %[[C_0:.*]] = arith.constant 0 : index
+// CHECK:           %[[C_16:.*]] = arith.constant 16 : index
+// CHECK:           %[[STEP:.*]] = arith.constant 1 : index
+// CHECK:           %[[MASK_VEC:.*]] = arith.cmpi slt, %{{.*}}, %{{.*}} : vector<[16]xi32>
+// CHECK:           %[[VSCALE:.*]] = vector.vscale
+// CHECK:           %[[UB:.*]] = arith.muli %[[VSCALE]], %[[C_16]] : index
+// CHECK:           scf.for %[[IDX:.*]] = %[[C_0]] to %[[UB]] step %[[STEP]] {
+// CHECK:             %[[MASK_VAL:.*]] = vector.extractelement %[[MASK_VEC]][%[[IDX]] : index] : vector<[16]xi1>
+// CHECK:             scf.if %[[MASK_VAL]] {
+// CHECK:               %[[VAL_TO_STORE:.*]] = vector.extractelement %{{.*}}[%[[IDX]] : index] : vector<[16]xf32>
+// CHECK:               memref.store %[[VAL_TO_STORE]], %[[ARG_0]][%[[IDX]]] : memref<?xf32, strided<[?], offset: ?>>
+// CHECK:             } else {
+// CHECK:             }
+// CHECK:           }

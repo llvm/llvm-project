@@ -49,6 +49,9 @@ std::optional<Operation *> mlir::memref::findDealloc(Value allocValue) {
   for (Operation *user : allocValue.getUsers()) {
     if (!hasEffect<MemoryEffects::Free>(user, allocValue))
       continue;
+    // If we found a realloc instead of dealloc, return std::nullopt.
+    if (isa<memref::ReallocOp>(user))
+      return std::nullopt;
     // If we found > 1 dealloc, return std::nullopt.
     if (dealloc)
       return std::nullopt;

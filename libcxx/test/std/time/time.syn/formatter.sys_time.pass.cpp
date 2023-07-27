@@ -14,9 +14,6 @@
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
 
@@ -45,9 +42,29 @@ static void test_no_chrono_specs() {
   std::locale::global(std::locale(LOCALE_fr_FR_UTF_8));
 
   // Non localized output
+
+  // [time.syn]
+  //   using nanoseconds  = duration<signed integer type of at least 64 bits, nano>;
+  //   using microseconds = duration<signed integer type of at least 55 bits, micro>;
+  //   using milliseconds = duration<signed integer type of at least 45 bits, milli>;
+  //   using seconds      = duration<signed integer type of at least 35 bits>;
+  //   using minutes      = duration<signed integer type of at least 29 bits, ratio<  60>>;
+  //   using hours        = duration<signed integer type of at least 23 bits, ratio<3600>>;
+  check(SV("1425-08-04 22:06:56"), SV("{}"), std::chrono::sys_seconds(-17'179'869'184s)); // Minimum value for 35 bits.
+  check(SV("1901-12-13 20:45:52"), SV("{}"), std::chrono::sys_seconds(-2'147'483'648s));
+
+  check(SV("1969-12-31 00:00:00"), SV("{}"), std::chrono::sys_seconds(-24h));
+  check(SV("1969-12-31 06:00:00"), SV("{}"), std::chrono::sys_seconds(-18h));
+  check(SV("1969-12-31 12:00:00"), SV("{}"), std::chrono::sys_seconds(-12h));
+  check(SV("1969-12-31 18:00:00"), SV("{}"), std::chrono::sys_seconds(-6h));
+  check(SV("1969-12-31 23:59:59"), SV("{}"), std::chrono::sys_seconds(-1s));
+
   check(SV("1970-01-01 00:00:00"), SV("{}"), std::chrono::sys_seconds(0s));
   check(SV("2000-01-01 00:00:00"), SV("{}"), std::chrono::sys_seconds(946'684'800s));
   check(SV("2000-01-01 01:02:03"), SV("{}"), std::chrono::sys_seconds(946'688'523s));
+
+  check(SV("2038-01-19 03:14:07"), SV("{}"), std::chrono::sys_seconds(2'147'483'647s));
+  check(SV("2514-05-30 01:53:03"), SV("{}"), std::chrono::sys_seconds(17'179'869'183s)); // Maximum value for 35 bits.
 
   check(SV("2000-01-01 01:02:03.123"), SV("{}"), std::chrono::sys_time<std::chrono::milliseconds>(946'688'523'123ms));
 
@@ -240,7 +257,7 @@ static void test_valid_values_day() {
         lfmt,
         std::chrono::sys_seconds(1'234'567'890s)); // 23:31:30 UTC on Friday, 13 February 2009
 
-#endif                                             // _WIN32
+#endif // _WIN32
 
   std::locale::global(std::locale::classic());
 }
@@ -651,8 +668,8 @@ static void test_valid_values_time() {
         std::chrono::sys_time<std::chrono::milliseconds>(
             1'234'567'890'123ms)); // 23:31:30 UTC on Friday, 13 February 2009
 
-  // Use supplied locale (ja_JP). This locale has a different alternate.a
-#if defined(__APPLE__) || defined(_AIX)
+  // Use supplied locale (ja_JP). This locale has a different alternate.
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='00'\t"
@@ -673,6 +690,10 @@ static void test_valid_values_time() {
            "%r='12:00:00 AM'\t"
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
+#  elif defined(_WIN32)
+           "%r='0:00:00'\t"
+           "%X='0:00:00'\t"
+           "%EX='0:00:00'\t"
 #  else
            "%r='午前12:00:00'\t"
            "%X='00:00:00'\t"
@@ -702,6 +723,10 @@ static void test_valid_values_time() {
            "%r='11:31:30 PM'\t"
            "%X='23時31分30秒'\t"
            "%EX='23時31分30秒'\t"
+#  elif defined(_WIN32)
+           "%r='23:31:30'\t"
+           "%X='23:31:30'\t"
+           "%EX='23:31:30'\t"
 #  else
            "%r='午後11:31:30'\t"
            "%X='23:31:30'\t"
@@ -710,7 +735,7 @@ static void test_valid_values_time() {
            "\n"),
         lfmt,
         std::chrono::hh_mm_ss(23h + 31min + 30s + 123ms));
-#else  // defined(__APPLE__) || defined(_AIX)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='〇'\t"
@@ -749,7 +774,7 @@ static void test_valid_values_time() {
         lfmt,
         std::chrono::sys_time<std::chrono::milliseconds>(
             1'234'567'890'123ms)); // 23:31:30 UTC on Friday, 13 February 2009
-#endif // defined(__APPLE__) || defined(_AIX)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
 
   std::locale::global(std::locale::classic());
 }
@@ -782,6 +807,8 @@ static void test_valid_values_date_time() {
       SV("%c=' 1 janvier 1970 à 00:00:00 UTC'\t%Ec=' 1 janvier 1970 à 00:00:00 UTC'\n"),
 #elif defined(__APPLE__)
       SV("%c='Jeu  1 jan 00:00:00 1970'\t%Ec='Jeu  1 jan 00:00:00 1970'\n"),
+#elif defined(_WIN32)
+      SV("%c='01/01/1970 00:00:00'\t%Ec='01/01/1970 00:00:00'\n"),
 #else
       SV("%c='jeu. 01 janv. 1970 00:00:00'\t%Ec='jeu. 01 janv. 1970 00:00:00'\n"),
 #endif
@@ -796,6 +823,8 @@ static void test_valid_values_date_time() {
       SV("%c='13 février 2009 à 23:31:30 UTC'\t%Ec='13 février 2009 à 23:31:30 UTC'\n"),
 #elif defined(__APPLE__)
       SV("%c='Ven 13 fév 23:31:30 2009'\t%Ec='Ven 13 fév 23:31:30 2009'\n"),
+#elif defined(_WIN32)
+      SV("%c='13/02/2009 23:31:30'\t%Ec='13/02/2009 23:31:30'\n"),
 #else
       SV("%c='ven. 13 févr. 2009 23:31:30'\t%Ec='ven. 13 févr. 2009 23:31:30'\n"),
 #endif
@@ -821,6 +850,15 @@ static void test_valid_values_date_time() {
         SV("%c='2009年02月13日 23:31:30 UTC'\t%Ec='2009年02月13日 23:31:30 UTC'\n"),
         lfmt,
         std::chrono::sys_seconds(1'234'567'890s)); // 23:31:30 UTC on Friday, 13 February 2009
+#elif defined(_WIN32)                              // __APPLE__
+  check(loc,
+        SV("%c='1970/01/01 0:00:00'\t%Ec='1970/01/01 0:00:00'\n"),
+        lfmt,
+        std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
+  check(loc,
+        SV("%c='2009/02/13 23:31:30'\t%Ec='2009/02/13 23:31:30'\n"),
+        lfmt,
+        std::chrono::sys_seconds(1'234'567'890s)); // 23:31:30 UTC on Friday, 13 February 2009
 #else                                              // __APPLE__
   check(loc,
         SV("%c='1970年01月01日 00時00分00秒'\t%Ec='昭和45年01月01日 00時00分00秒'\n"),
@@ -841,7 +879,9 @@ static void test_valid_values_time_zone() {
 // The Apple CI gives %z='-0700'	%Ez='-0700'	%Oz='-0700'	%Z='UTC'
 // -0700 looks like the local time where the CI happens to recide, therefore
 // omit this test on Apple.
-#if !defined(__APPLE__)
+// The Windows CI gives %z='-0000', but on local machines set to a different
+// timezone, it gives e.g. %z='+0200'.
+#if !defined(__APPLE__) && !defined(_WIN32)
   using namespace std::literals::chrono_literals;
 
   constexpr std::basic_string_view<CharT> fmt  = SV("{:%%z='%z'%t%%Ez='%Ez'%t%%Oz='%Oz'%t%%Z='%Z'%n}");
@@ -884,7 +924,7 @@ static void test_valid_values_time_zone() {
         std::chrono::sys_seconds(0s)); // 00:00:00 UTC Thursday, 1 January 1970
 #  endif                               // defined(_AIX)
   std::locale::global(std::locale::classic());
-#endif                                 // !defined(__APPLE__)
+#endif // !defined(__APPLE__) && !defined(_WIN32)
 }
 
 template <class CharT>
@@ -916,15 +956,14 @@ static void test() {
        SV("OI"), SV("Om"), SV("OM"), SV("OS"), SV("Ou"), SV("OU"), SV("OV"), SV("Ow"), SV("OW"), SV("Oy"), SV("Oz")},
       std::chrono::sys_seconds(0s));
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), std::chrono::sys_seconds(0s));
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::sys_seconds(0s));
-  check_exception(
-      "End of input while parsing the modifier chrono conversion-spec", SV("{:%"), std::chrono::sys_seconds(0s));
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), std::chrono::sys_seconds(0s));
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::sys_seconds(0s));
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), std::chrono::sys_seconds(0s));
   check_exception("End of input while parsing the modifier E", SV("{:%E"), std::chrono::sys_seconds(0s));
   check_exception("End of input while parsing the modifier O", SV("{:%O"), std::chrono::sys_seconds(0s));
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), std::chrono::sys_seconds(0s));
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), std::chrono::sys_seconds(0s));
 }
 
 int main(int, char**) {

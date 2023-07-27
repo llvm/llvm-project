@@ -53,8 +53,6 @@ def generate_map(include):
             continue
         elif i == "__config":
             continue
-        elif i == "__debug":
-            continue
         elif i == "__errc":
             continue
         elif i == "__hash_table":
@@ -79,6 +77,8 @@ def generate_map(include):
             continue
         elif i == "__split_buffer":
             public = ["deque", "vector"]
+        elif i == "__std_clang_module":
+            continue
         elif i == "__std_mbstate_t.h":
             continue
         elif i == "__threading_support":

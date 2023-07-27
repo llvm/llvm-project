@@ -342,6 +342,12 @@ static void PrintCallingConv(unsigned cc, raw_ostream &Out) {
   case CallingConv::AMDGPU_GS:     Out << "amdgpu_gs"; break;
   case CallingConv::AMDGPU_PS:     Out << "amdgpu_ps"; break;
   case CallingConv::AMDGPU_CS:     Out << "amdgpu_cs"; break;
+  case CallingConv::AMDGPU_CS_Chain:
+    Out << "amdgpu_cs_chain";
+    break;
+  case CallingConv::AMDGPU_CS_ChainPreserve:
+    Out << "amdgpu_cs_chain_preserve";
+    break;
   case CallingConv::AMDGPU_KERNEL: Out << "amdgpu_kernel"; break;
   case CallingConv::AMDGPU_Gfx:    Out << "amdgpu_gfx"; break;
   }
@@ -589,16 +595,9 @@ void TypePrinting::print(Type *Ty, raw_ostream &OS) {
   }
   case Type::PointerTyID: {
     PointerType *PTy = cast<PointerType>(Ty);
-    if (PTy->isOpaque()) {
-      OS << "ptr";
-      if (unsigned AddressSpace = PTy->getAddressSpace())
-        OS << " addrspace(" << AddressSpace << ')';
-      return;
-    }
-    print(PTy->getNonOpaquePointerElementType(), OS);
+    OS << "ptr";
     if (unsigned AddressSpace = PTy->getAddressSpace())
       OS << " addrspace(" << AddressSpace << ')';
-    OS << '*';
     return;
   }
   case Type::ArrayTyID: {

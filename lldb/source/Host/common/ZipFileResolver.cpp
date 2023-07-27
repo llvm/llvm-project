@@ -25,6 +25,15 @@ bool ZipFileResolver::ResolveSharedLibraryPath(const FileSpec &file_spec,
   static constexpr llvm::StringLiteral k_zip_separator("!/");
   std::string path(file_spec.GetPath());
   size_t pos = path.find(k_zip_separator);
+
+#if defined(_WIN32)
+  // When the file_spec is resolved as a Windows path, the zip .so path will be
+  // "zip_path!\so_path". Support both patterns on Windows.
+  static constexpr llvm::StringLiteral k_zip_separator_win("!\\");
+  if (pos == std::string::npos)
+    pos = path.find(k_zip_separator_win);
+#endif
+
   if (pos == std::string::npos) {
     // This file_spec does not contain the zip separator.
     // Treat this file_spec as a normal file.
@@ -39,6 +48,12 @@ bool ZipFileResolver::ResolveSharedLibraryPath(const FileSpec &file_spec,
   // This file_spec is a zip .so path. Extract the zip path and the .so path.
   std::string zip_path(path.substr(0, pos));
   std::string so_path(path.substr(pos + k_zip_separator.size()));
+
+#if defined(_WIN32)
+  // Replace the .so path to use POSIX file separator for file searching inside
+  // the zip file.
+  std::replace(so_path.begin(), so_path.end(), '\\', '/');
+#endif
 
   // Try to find the .so file from the zip file.
   FileSpec zip_file_spec(zip_path);

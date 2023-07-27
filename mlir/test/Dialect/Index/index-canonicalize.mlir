@@ -510,3 +510,40 @@ func.func @cmp_edge() -> i1 {
   // CHECK: return %[[TRUE]]
   return %0 : i1
 }
+
+// CHECK-LABEL: @cmp_maxs
+func.func @cmp_maxs(%arg0: index) -> (i1, i1) {
+  %idx0 = index.constant 0
+  %idx1 = index.constant 1
+  %0 = index.maxs %arg0, %idx1
+  %1 = index.cmp sgt(%0, %idx0)
+  %2 = index.cmp eq(%0, %idx0)
+  // CHECK: return %true, %false
+  return %1, %2 : i1, i1
+}
+
+// CHECK-LABEL: @mul_identity
+func.func @mul_identity(%arg0: index) -> (index, index) {
+  %idx0 = index.constant 0
+  %idx1 = index.constant 1
+  %0 = index.mul %arg0, %idx0
+  %1 = index.mul %arg0, %idx1
+  // CHECK: return %idx0, %arg0
+  return %0, %1 : index, index
+}
+
+// CHECK-LABEL: @add_identity
+func.func @add_identity(%arg0: index) -> index {
+  %idx0 = index.constant 0
+  %0 = index.add %arg0, %idx0
+  // CHECK-NEXT: return %arg0
+  return %0 : index
+}
+
+// CHECK-LABEL: @sub_identity
+func.func @sub_identity(%arg0: index) -> index {
+  %idx0 = index.constant 0
+  %0 = index.sub %arg0, %idx0
+  // CHECK-NEXT: return %arg0
+  return %0 : index
+}

@@ -1136,6 +1136,8 @@ unsigned StringLiteral::mapCharByteWidth(TargetInfo const &Target,
   case UTF32:
     CharByteWidth = Target.getChar32Width();
     break;
+  case Unevaluated:
+    return sizeof(char); // Host;
   }
   assert((CharByteWidth & 7) == 0 && "Assumes character size is byte multiple");
   CharByteWidth /= 8;
@@ -1149,35 +1151,45 @@ StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
                              const SourceLocation *Loc,
                              unsigned NumConcatenated)
     : Expr(StringLiteralClass, Ty, VK_LValue, OK_Ordinary) {
-  assert(Ctx.getAsConstantArrayType(Ty) &&
-         "StringLiteral must be of constant array type!");
-  unsigned CharByteWidth = mapCharByteWidth(Ctx.getTargetInfo(), Kind);
-  unsigned ByteLength = Str.size();
-  assert((ByteLength % CharByteWidth == 0) &&
-         "The size of the data must be a multiple of CharByteWidth!");
 
-  // Avoid the expensive division. The compiler should be able to figure it
-  // out by itself. However as of clang 7, even with the appropriate
-  // llvm_unreachable added just here, it is not able to do so.
-  unsigned Length;
-  switch (CharByteWidth) {
-  case 1:
-    Length = ByteLength;
-    break;
-  case 2:
-    Length = ByteLength / 2;
-    break;
-  case 4:
-    Length = ByteLength / 4;
-    break;
-  default:
-    llvm_unreachable("Unsupported character width!");
-  }
+  unsigned Length = Str.size();
 
   StringLiteralBits.Kind = Kind;
-  StringLiteralBits.CharByteWidth = CharByteWidth;
-  StringLiteralBits.IsPascal = Pascal;
   StringLiteralBits.NumConcatenated = NumConcatenated;
+
+  if (Kind != StringKind::Unevaluated) {
+    assert(Ctx.getAsConstantArrayType(Ty) &&
+           "StringLiteral must be of constant array type!");
+    unsigned CharByteWidth = mapCharByteWidth(Ctx.getTargetInfo(), Kind);
+    unsigned ByteLength = Str.size();
+    assert((ByteLength % CharByteWidth == 0) &&
+           "The size of the data must be a multiple of CharByteWidth!");
+
+    // Avoid the expensive division. The compiler should be able to figure it
+    // out by itself. However as of clang 7, even with the appropriate
+    // llvm_unreachable added just here, it is not able to do so.
+    switch (CharByteWidth) {
+    case 1:
+      Length = ByteLength;
+      break;
+    case 2:
+      Length = ByteLength / 2;
+      break;
+    case 4:
+      Length = ByteLength / 4;
+      break;
+    default:
+      llvm_unreachable("Unsupported character width!");
+    }
+
+    StringLiteralBits.CharByteWidth = CharByteWidth;
+    StringLiteralBits.IsPascal = Pascal;
+  } else {
+    assert(!Pascal && "Can't make an unevaluated Pascal string");
+    StringLiteralBits.CharByteWidth = 1;
+    StringLiteralBits.IsPascal = false;
+  }
+
   *getTrailingObjects<unsigned>() = Length;
 
   // Initialize the trailing array of SourceLocation.
@@ -1186,7 +1198,7 @@ StringLiteral::StringLiteral(const ASTContext &Ctx, StringRef Str,
               NumConcatenated * sizeof(SourceLocation));
 
   // Initialize the trailing array of char holding the string data.
-  std::memcpy(getTrailingObjects<char>(), Str.data(), ByteLength);
+  std::memcpy(getTrailingObjects<char>(), Str.data(), Str.size());
 
   setDependence(ExprDependence::None);
 }
@@ -1223,6 +1235,7 @@ StringLiteral *StringLiteral::CreateEmpty(const ASTContext &Ctx,
 
 void StringLiteral::outputString(raw_ostream &OS) const {
   switch (getKind()) {
+  case Unevaluated:
   case Ordinary:
     break; // no prefix.
   case Wide:  OS << 'L'; break;
@@ -1333,7 +1346,8 @@ StringLiteral::getLocationOfByte(unsigned ByteNo, const SourceManager &SM,
                                  const TargetInfo &Target, unsigned *StartToken,
                                  unsigned *StartTokenByteOffset) const {
   assert((getKind() == StringLiteral::Ordinary ||
-          getKind() == StringLiteral::UTF8) &&
+          getKind() == StringLiteral::UTF8 ||
+          getKind() == StringLiteral::Unevaluated) &&
          "Only narrow string literals are currently supported");
 
   // Loop over all of the tokens in this string until we find the one that
@@ -1745,16 +1759,7 @@ MemberExpr *MemberExpr::Create(
   MemberExpr *E = new (Mem) MemberExpr(Base, IsArrow, OperatorLoc, MemberDecl,
                                        NameInfo, T, VK, OK, NOUR);
 
-  // FIXME: remove remaining dependence computation to computeDependence().
-  auto Deps = E->getDependence();
   if (HasQualOrFound) {
-    // FIXME: Wrong. We should be looking at the member declaration we found.
-    if (QualifierLoc && QualifierLoc.getNestedNameSpecifier()->isDependent())
-      Deps |= ExprDependence::TypeValueInstantiation;
-    else if (QualifierLoc &&
-             QualifierLoc.getNestedNameSpecifier()->isInstantiationDependent())
-      Deps |= ExprDependence::Instantiation;
-
     E->MemberExprBits.HasQualifierOrFoundDecl = true;
 
     MemberExprNameQualifier *NQ =
@@ -1766,13 +1771,16 @@ MemberExpr *MemberExpr::Create(
   E->MemberExprBits.HasTemplateKWAndArgsInfo =
       TemplateArgs || TemplateKWLoc.isValid();
 
+  // FIXME: remove remaining dependence computation to computeDependence().
+  auto Deps = E->getDependence();
   if (TemplateArgs) {
     auto TemplateArgDeps = TemplateArgumentDependence::None;
     E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc, *TemplateArgs,
         E->getTrailingObjects<TemplateArgumentLoc>(), TemplateArgDeps);
-    if (TemplateArgDeps & TemplateArgumentDependence::Instantiation)
-      Deps |= ExprDependence::Instantiation;
+    for (const TemplateArgumentLoc &ArgLoc : TemplateArgs->arguments()) {
+      Deps |= toExprDependence(ArgLoc.getArgument().getDependence());
+    }
   } else if (TemplateKWLoc.isValid()) {
     E->getTrailingObjects<ASTTemplateKWAndArgsInfo>()->initializeFrom(
         TemplateKWLoc);
@@ -2280,14 +2288,17 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
   SourceLocation Loc;
   const DeclContext *Context;
 
-  std::tie(Loc,
-           Context) = [&]() -> std::pair<SourceLocation, const DeclContext *> {
-    if (auto *DIE = dyn_cast_or_null<CXXDefaultInitExpr>(DefaultExpr))
-      return {DIE->getUsedLocation(), DIE->getUsedContext()};
-    if (auto *DAE = dyn_cast_or_null<CXXDefaultArgExpr>(DefaultExpr))
-      return {DAE->getUsedLocation(), DAE->getUsedContext()};
-    return {this->getLocation(), this->getParentContext()};
-  }();
+  if (const auto *DIE = dyn_cast_if_present<CXXDefaultInitExpr>(DefaultExpr)) {
+    Loc = DIE->getUsedLocation();
+    Context = DIE->getUsedContext();
+  } else if (const auto *DAE =
+                 dyn_cast_if_present<CXXDefaultArgExpr>(DefaultExpr)) {
+    Loc = DAE->getUsedLocation();
+    Context = DAE->getUsedContext();
+  } else {
+    Loc = getLocation();
+    Context = getParentContext();
+  }
 
   PresumedLoc PLoc = Ctx.getSourceManager().getPresumedLoc(
       Ctx.getSourceManager().getExpansionRange(Loc).getEnd());
@@ -2325,13 +2336,9 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
         CurDecl ? PredefinedExpr::ComputeName(Kind, CurDecl) : std::string(""));
   }
   case SourceLocExpr::Line:
-  case SourceLocExpr::Column: {
-    llvm::APSInt IntVal(Ctx.getIntWidth(Ctx.UnsignedIntTy),
-                        /*isUnsigned=*/true);
-    IntVal = getIdentKind() == SourceLocExpr::Line ? PLoc.getLine()
-                                                   : PLoc.getColumn();
-    return APValue(IntVal);
-  }
+    return APValue(Ctx.MakeIntValue(PLoc.getLine(), Ctx.UnsignedIntTy));
+  case SourceLocExpr::Column:
+    return APValue(Ctx.MakeIntValue(PLoc.getColumn(), Ctx.UnsignedIntTy));
   case SourceLocExpr::SourceLocStruct: {
     // Fill in a std::source_location::__impl structure, by creating an
     // artificial file-scoped CompoundLiteralExpr, and returning a pointer to
@@ -2344,7 +2351,7 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
     // the ImplDecl type is as expected.
 
     APValue Value(APValue::UninitStruct(), 0, 4);
-    for (FieldDecl *F : ImplDecl->fields()) {
+    for (const FieldDecl *F : ImplDecl->fields()) {
       StringRef Name = F->getName();
       if (Name == "_M_file_name") {
         SmallString<256> Path(PLoc.getFilename());
@@ -2361,16 +2368,10 @@ APValue SourceLocExpr::EvaluateInContext(const ASTContext &Ctx,
                       PredefinedExpr::PrettyFunction, CurDecl))
                 : "");
       } else if (Name == "_M_line") {
-        QualType Ty = F->getType();
-        llvm::APSInt IntVal(Ctx.getIntWidth(Ty),
-                            Ty->hasUnsignedIntegerRepresentation());
-        IntVal = PLoc.getLine();
+        llvm::APSInt IntVal = Ctx.MakeIntValue(PLoc.getLine(), F->getType());
         Value.getStructField(F->getFieldIndex()) = APValue(IntVal);
       } else if (Name == "_M_column") {
-        QualType Ty = F->getType();
-        llvm::APSInt IntVal(Ctx.getIntWidth(Ty),
-                            Ty->hasUnsignedIntegerRepresentation());
-        IntVal = PLoc.getColumn();
+        llvm::APSInt IntVal = Ctx.MakeIntValue(PLoc.getColumn(), F->getType());
         Value.getStructField(F->getFieldIndex()) = APValue(IntVal);
       }
     }
@@ -3311,6 +3312,10 @@ bool Expr::isConstantInitializer(ASTContext &Ctx, bool IsForRef,
   // kill the second parameter.
 
   if (IsForRef) {
+    if (auto *EWC = dyn_cast<ExprWithCleanups>(this))
+      return EWC->getSubExpr()->isConstantInitializer(Ctx, true, Culprit);
+    if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(this))
+      return MTE->getSubExpr()->isConstantInitializer(Ctx, false, Culprit);
     EvalResult Result;
     if (EvaluateAsLValue(Result, Ctx) && !Result.HasSideEffects)
       return true;

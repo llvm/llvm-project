@@ -58,8 +58,8 @@ class AArch64TTIImpl : public BasicTTIImplBase<AArch64TTIImpl> {
   };
 
   bool isWideningInstruction(Type *DstTy, unsigned Opcode,
-                             ArrayRef<Type *> SrcTys,
-                             ArrayRef<const Value *> Args);
+                             ArrayRef<const Value *> Args,
+                             Type *SrcOverrideTy = nullptr);
 
   // A helper function called by 'getVectorInstrCost'.
   //
@@ -99,6 +99,8 @@ public:
   /// @{
 
   bool enableInterleavedAccessVectorization() { return true; }
+
+  bool enableMaskedInterleavedAccessVectorization() { return ST->hasSVE(); }
 
   unsigned getNumberOfRegisters(unsigned ClassID) const {
     bool Vector = (ClassID == 1);
@@ -179,8 +181,8 @@ public:
                                      TTI::TargetCostKind CostKind,
                                      unsigned Index);
 
-  InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                         bool IsUnsigned, FastMathFlags FMF,
+  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                         FastMathFlags FMF,
                                          TTI::TargetCostKind CostKind);
 
   InstructionCost getArithmeticReductionCostSVE(unsigned Opcode,
@@ -265,7 +267,7 @@ public:
   }
 
   bool isLegalMaskedGatherScatter(Type *DataType) const {
-    if (!ST->hasSVE() || ST->forceStreamingCompatibleSVE())
+    if (!ST->hasSVE() || !ST->isNeonAvailable())
       return false;
 
     // For fixed vectors, scalarize if not using SVE for them.

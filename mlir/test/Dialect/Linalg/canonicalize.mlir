@@ -47,6 +47,16 @@ func.func @dce_zero_memref(%arg0 : memref<0xf32>, %arg1: tensor<0xf32>) -> tenso
 
 // -----
 
+func.func @dce_self_linalg_copy(%arg0 : memref<?xf32>) {
+  linalg.copy ins(%arg0: memref<?xf32>) outs(%arg0: memref<?xf32>)
+  return
+}
+
+// CHECK-LABEL: @dce_self_linalg_copy
+//   CHECK-NOT:   copy
+
+// -----
+
 // CHECK-LABEL: func @tensor.cast(
 func.func @tensor.cast(%a : tensor<3x4xf32>, %b : tensor<4x?xf32>, %c : tensor<3x?xf32>)
   -> tensor<3x?xf32>

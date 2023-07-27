@@ -704,6 +704,7 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
     res.getDefaultKinds().set_defaultIntegerKind(8);
     res.getDefaultKinds().set_subscriptIntegerKind(8);
     res.getDefaultKinds().set_sizeIntegerKind(8);
+    res.getDefaultKinds().set_defaultLogicalKind(8);
   }
   if (args.hasArg(clang::driver::options::OPT_fdefault_double_8)) {
     if (!args.hasArg(clang::driver::options::OPT_fdefault_real_8)) {
@@ -735,8 +736,8 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             res.getLangOpts().OpenMPVersion, diags)) {
       res.getLangOpts().OpenMPVersion = Version;
     }
-    if (args.hasArg(clang::driver::options::OPT_fopenmp_is_device)) {
-      res.getLangOpts().OpenMPIsDevice = 1;
+    if (args.hasArg(clang::driver::options::OPT_fopenmp_is_target_device)) {
+      res.getLangOpts().OpenMPIsTargetDevice = 1;
 
       // Get OpenMP host file path if any and report if a non existent file is
       // found
@@ -780,6 +781,23 @@ static bool parseDialectArgs(CompilerInvocation &res, llvm::opt::ArgList &args,
             args.hasArg(clang::driver::options::OPT_fopenmp_target_debug))
           res.getLangOpts().OpenMPTargetDebug = 1;
       }
+    }
+
+    switch (llvm::Triple(res.getTargetOpts().triple).getArch()) {
+    case llvm::Triple::nvptx:
+    case llvm::Triple::nvptx64:
+    case llvm::Triple::amdgcn:
+      if (!res.getLangOpts().OpenMPIsTargetDevice) {
+        const unsigned diagID = diags.getCustomDiagID(
+            clang::DiagnosticsEngine::Error,
+            "OpenMP AMDGPU/NVPTX is only prepared to deal with device code.");
+        diags.Report(diagID);
+      }
+      res.getLangOpts().OpenMPIsGPU = 1;
+      break;
+    default:
+      res.getLangOpts().OpenMPIsGPU = 0;
+      break;
     }
   }
 
@@ -920,6 +938,10 @@ bool CompilerInvocation::createFromArgs(
     res.loweringOpts.setLowerToHighLevelFIR(true);
   }
 
+  if (args.hasArg(clang::driver::options::OPT_flang_experimental_polymorphism)) {
+    res.loweringOpts.setPolymorphicTypeImpl(true);
+  }
+
   success &= parseFrontendArgs(res.getFrontendOpts(), args, diags);
   parseTargetArgs(res.getTargetOpts(), args);
   parsePreprocessorArgs(res.getPreprocessorOpts(), args);
@@ -928,9 +950,14 @@ bool CompilerInvocation::createFromArgs(
   success &= parseSemaArgs(res, args, diags);
   success &= parseDialectArgs(res, args, diags);
   success &= parseDiagArgs(res, args, diags);
+
+  // Collect LLVM (-mllvm) and MLIR (-mmlir) options.
+  // NOTE: Try to avoid adding any options directly to `llvmArgs` or
+  // `mlirArgs`. Instead, you can use
+  //    * `-mllvm <your-llvm-option>`, or
+  //    * `-mmlir <your-mlir-option>`.
   res.frontendOpts.llvmArgs =
       args.getAllArgValues(clang::driver::options::OPT_mllvm);
-
   res.frontendOpts.mlirArgs =
       args.getAllArgValues(clang::driver::options::OPT_mmlir);
 
@@ -1018,7 +1045,7 @@ void CompilerInvocation::setDefaultPredefinitions() {
   // Add predefinitions based on extensions enabled
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenACC)) {
-    fortranOptions.predefinitions.emplace_back("_OPENACC", "202011");
+    fortranOptions.predefinitions.emplace_back("_OPENACC", "202211");
   }
   if (frontendOptions.features.IsEnabled(
           Fortran::common::LanguageFeature::OpenMP)) {

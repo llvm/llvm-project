@@ -633,7 +633,7 @@ for llvm users and not imposing a big burden on llvm developers:
   expected, but no promises are made.
 
 C API Changes
-----------------
+-------------
 
 * Stability Guarantees: The C API is, in general, a "best effort" for stability.
   This means that we make every attempt to keep the C API stable, but that
@@ -1150,18 +1150,6 @@ is great for contributors and users of the project.  For more information about
 the Apache 2.0 License, please see the `Apache License FAQ
 <http://www.apache.org/foundation/license-faq.html>`_, maintained by the
 Apache Project.
-
-
-.. note::
-
-   The LLVM Project includes some really old subprojects (dragonegg,
-   llvm-gcc-4.0, and llvm-gcc-4.2), which are licensed under **GPL
-   licenses**.  This code is not actively maintained - it does not even
-   build successfully.  This code is cleanly separated into distinct SVN
-   repositories from the rest of LLVM, and the LICENSE.txt files specifically
-   indicate that they contain GPL code.  When LLVM transitions from SVN to Git,
-   we plan to drop these code bases from the new repository structure.
-
 
 .. _patent license:
 

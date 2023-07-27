@@ -643,7 +643,7 @@ void CodeGenModule::EmitCXXThreadLocalInitFunc() {
    This is arranged to be run only once regardless of how many times the module
    might be included transitively.  This arranged by using a guard variable.
 
-   If there are no initalizers at all (and also no imported modules) we reduce
+   If there are no initializers at all (and also no imported modules) we reduce
    this to an empty function (since the Itanium ABI requires that this function
    be available to a caller, which might be produced by a different
    implementation).

@@ -31,7 +31,6 @@ class MCRegisterClass;
 class MCRegisterInfo;
 class MCSubtargetInfo;
 class StringRef;
-class TargetRegisterClass;
 class Triple;
 class raw_ostream;
 
@@ -355,6 +354,7 @@ struct MIMGBaseOpcodeInfo {
   bool HasD16;
   bool MSAA;
   bool BVH;
+  bool A16;
 };
 
 LLVM_READONLY
@@ -572,7 +572,7 @@ constexpr unsigned COMPONENTS_NUM = 2;
 class ComponentProps {
 private:
   unsigned SrcOperandsNum = 0;
-  std::optional<unsigned> MandatoryLiteralIdx;
+  unsigned MandatoryLiteralIdx = ~0u;
   bool HasSrc2Acc = false;
 
 public:
@@ -588,13 +588,13 @@ public:
   }
 
   // Return true iif this component has a mandatory literal.
-  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx.has_value(); }
+  bool hasMandatoryLiteral() const { return MandatoryLiteralIdx != ~0u; }
 
   // If this component has a mandatory literal, return component operand
   // index of this literal (i.e. either Component::SRC1 or Component::SRC2).
   unsigned getMandatoryLiteralCompOperandIndex() const {
     assert(hasMandatoryLiteral());
-    return *MandatoryLiteralIdx;
+    return MandatoryLiteralIdx;
   }
 
   // Return true iif this component has operand
@@ -610,8 +610,7 @@ public:
 private:
   bool hasMandatoryLiteralAt(unsigned CompSrcIdx) const {
     assert(CompSrcIdx < Component::MAX_SRC_NUM);
-    return hasMandatoryLiteral() &&
-           *MandatoryLiteralIdx == Component::DST_NUM + CompSrcIdx;
+    return MandatoryLiteralIdx == Component::DST_NUM + CompSrcIdx;
   }
 };
 
@@ -828,10 +827,10 @@ int getIntegerAttribute(const Function &F, StringRef Name, int Default);
 /// \returns \p Default and emits error if one of the requested values cannot be
 /// converted to integer, or \p OnlyFirstRequired is false and "second" value is
 /// not present.
-std::pair<int, int> getIntegerPairAttribute(const Function &F,
-                                            StringRef Name,
-                                            std::pair<int, int> Default,
-                                            bool OnlyFirstRequired = false);
+std::pair<unsigned, unsigned>
+getIntegerPairAttribute(const Function &F, StringRef Name,
+                        std::pair<unsigned, unsigned> Default,
+                        bool OnlyFirstRequired = false);
 
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
@@ -976,6 +975,33 @@ bool isSymbolicDepCtrEncoding(unsigned Code, bool &HasNonDefaultVal,
                               const MCSubtargetInfo &STI);
 bool decodeDepCtr(unsigned Code, int &Id, StringRef &Name, unsigned &Val,
                   bool &IsDefault, const MCSubtargetInfo &STI);
+
+/// \returns Decoded VaVdst from given immediate \p Encoded.
+unsigned decodeFieldVaVdst(unsigned Encoded);
+
+/// \returns Decoded VmVsrc from given immediate \p Encoded.
+unsigned decodeFieldVmVsrc(unsigned Encoded);
+
+/// \returns Decoded SaSdst from given immediate \p Encoded.
+unsigned decodeFieldSaSdst(unsigned Encoded);
+
+/// \returns \p VmVsrc as an encoded Depctr immediate.
+unsigned encodeFieldVmVsrc(unsigned VmVsrc);
+
+/// \returns \p Encoded combined with encoded \p VmVsrc.
+unsigned encodeFieldVmVsrc(unsigned Encoded, unsigned VmVsrc);
+
+/// \returns \p VaVdst as an encoded Depctr immediate.
+unsigned encodeFieldVaVdst(unsigned VaVdst);
+
+/// \returns \p Encoded combined with encoded \p VaVdst.
+unsigned encodeFieldVaVdst(unsigned Encoded, unsigned VaVdst);
+
+/// \returns \p SaSdst as an encoded Depctr immediate.
+unsigned encodeFieldSaSdst(unsigned SaSdst);
+
+/// \returns \p Encoded combined with encoded \p SaSdst.
+unsigned encodeFieldSaSdst(unsigned Encoded, unsigned SaSdst);
 
 } // namespace DepCtr
 
@@ -1174,9 +1200,6 @@ unsigned getRegBitWidth(unsigned RCID);
 
 /// Get the size in bits of a register from the register class \p RC.
 unsigned getRegBitWidth(const MCRegisterClass &RC);
-
-/// Get the size in bits of a register from the register class \p RC.
-unsigned getRegBitWidth(const TargetRegisterClass &RC);
 
 /// Get size of register operand
 unsigned getRegOperandSize(const MCRegisterInfo *MRI, const MCInstrDesc &Desc,

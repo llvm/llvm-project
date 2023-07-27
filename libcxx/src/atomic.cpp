@@ -15,6 +15,8 @@
 #include <functional>
 #include <thread>
 
+#include "include/apple_availability.h"
+
 #ifdef __linux__
 
 #include <unistd.h>

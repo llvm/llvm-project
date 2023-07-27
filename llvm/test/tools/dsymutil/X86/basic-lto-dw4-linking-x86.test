@@ -141,43 +141,43 @@ CHECK: .debug_line contents:
 CHECK: file_names[  1]:
 CHECK-NEXT: name: "basic1.c"
 CHECK-NEXT: dir_index: 0
-CHECK: Address            Line   Column File   ISA Discriminator Flags
-CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-CHECK-NEXT: 0x0000000100000f40     26      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f44     27     10      1   0             0  is_stmt prologue_end
-CHECK-NEXT: 0x0000000100000f49     27      3      1   0             0
-CHECK-NEXT: 0x0000000100000f4b     27      3      1   0             0  end_sequence
+CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT: 0x0000000100000f40     26      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f44     27     10      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000f49     27      3      1   0             0       0
+CHECK-NEXT: 0x0000000100000f4b     27      3      1   0             0       0  end_sequence
 
 CHECK: file_names[  1]:
 CHECK-NEXT: name: "basic2.c"
 CHECK-NEXT: dir_index: 0
-CHECK: Address            Line   Column File   ISA Discriminator Flags
-CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-CHECK-NEXT: 0x0000000100000f50     19      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f54     20     18      1   0             0  is_stmt prologue_end
-CHECK-NEXT: 0x0000000100000f5a     20     17      1   0             0
-CHECK-NEXT: 0x0000000100000f5c     20     10      1   0             0
-CHECK-NEXT: 0x0000000100000f61     15     10      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f70     20     23      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f74     20     36      1   0             0
-CHECK-NEXT: 0x0000000100000f83     20     31      1   0             0
-CHECK-NEXT: 0x0000000100000f85     20      3      1   0             0
-CHECK-NEXT: 0x0000000100000f87     20      3      1   0             0  end_sequence
+CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT: 0x0000000100000f50     19      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f54     20     18      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000f5a     20     17      1   0             0       0
+CHECK-NEXT: 0x0000000100000f5c     20     10      1   0             0       0
+CHECK-NEXT: 0x0000000100000f61     15     10      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f70     20     23      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f74     20     36      1   0             0       0
+CHECK-NEXT: 0x0000000100000f83     20     31      1   0             0       0
+CHECK-NEXT: 0x0000000100000f85     20      3      1   0             0       0
+CHECK-NEXT: 0x0000000100000f87     20      3      1   0             0       0  end_sequence
 
 CHECK: file_names[  1]:
 CHECK-NEXT: name: "basic3.c"
 CHECK-NEXT: dir_index: 0
-CHECK: Address            Line   Column File   ISA Discriminator Flags
-CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- -------------
-CHECK-NEXT: 0x0000000100000f90     16      0      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f94     12     10      1   0             0  is_stmt prologue_end
-CHECK-NEXT: 0x0000000100000f9a     17      7      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000f9f     12     10      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000fa7     20      1      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000fa9     19     18      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000fab     19     10      1   0             0
-CHECK-NEXT: 0x0000000100000fb2     20      1      1   0             0  is_stmt
-CHECK-NEXT: 0x0000000100000fb4     20      1      1   0             0  is_stmt end_sequence
+CHECK: Address            Line   Column File   ISA Discriminator OpIndex Flags
+CHECK-NEXT: ------------------ ------ ------ ------ --- ------------- ------- -------------
+CHECK-NEXT: 0x0000000100000f90     16      0      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f94     12     10      1   0             0       0  is_stmt prologue_end
+CHECK-NEXT: 0x0000000100000f9a     17      7      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000f9f     12     10      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000fa7     20      1      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000fa9     19     18      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000fab     19     10      1   0             0       0
+CHECK-NEXT: 0x0000000100000fb2     20      1      1   0             0       0  is_stmt
+CHECK-NEXT: 0x0000000100000fb4     20      1      1   0             0       0  is_stmt end_sequence
 
 CHECK-NOT: .debug_pubnames contents:
 CHECK-NOT: .debug_pubtypes contents:

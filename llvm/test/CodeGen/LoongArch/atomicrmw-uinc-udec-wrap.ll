@@ -13,6 +13,7 @@ define i8 @atomicrmw_uinc_wrap_i8(ptr %ptr, i8 %val) {
 ; LA64-NEXT:    andi $a0, $a0, 24
 ; LA64-NEXT:    nor $a4, $a4, $zero
 ; LA64-NEXT:    andi $a1, $a1, 255
+; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB0_1: # %atomicrmw.start
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB0_3 Depth 2
@@ -66,6 +67,7 @@ define i16 @atomicrmw_uinc_wrap_i16(ptr %ptr, i16 %val) {
 ; LA64-NEXT:    andi $a0, $a0, 24
 ; LA64-NEXT:    nor $a4, $a4, $zero
 ; LA64-NEXT:    bstrpick.d $a1, $a1, 15, 0
+; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB1_1: # %atomicrmw.start
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB1_3 Depth 2
@@ -110,15 +112,16 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; LA64-LABEL: atomicrmw_uinc_wrap_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.w $a3, $a0, 0
-; LA64-NEXT:    bstrpick.d $a2, $a1, 31, 0
+; LA64-NEXT:    addi.w $a2, $a1, 0
+; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB2_1: # %atomicrmw.start
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB2_3 Depth 2
-; LA64-NEXT:    bstrpick.d $a1, $a3, 31, 0
-; LA64-NEXT:    sltu $a1, $a1, $a2
+; LA64-NEXT:    addi.w $a4, $a3, 0
+; LA64-NEXT:    sltu $a1, $a4, $a2
 ; LA64-NEXT:    xori $a1, $a1, 1
-; LA64-NEXT:    addi.d $a4, $a3, 1
-; LA64-NEXT:    masknez $a4, $a4, $a1
+; LA64-NEXT:    addi.d $a5, $a3, 1
+; LA64-NEXT:    masknez $a5, $a5, $a1
 ; LA64-NEXT:  .LBB2_3: # %atomicrmw.start
 ; LA64-NEXT:    # Parent Loop BB2_1 Depth=1
 ; LA64-NEXT:    # => This Inner Loop Header: Depth=2
@@ -127,16 +130,15 @@ define i32 @atomicrmw_uinc_wrap_i32(ptr %ptr, i32 %val) {
 ; LA64-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB2_3 Depth=2
 ; LA64-NEXT:    dbar 0
-; LA64-NEXT:    move $a5, $a4
-; LA64-NEXT:    sc.w $a5, $a0, 0
-; LA64-NEXT:    beqz $a5, .LBB2_3
+; LA64-NEXT:    move $a6, $a5
+; LA64-NEXT:    sc.w $a6, $a0, 0
+; LA64-NEXT:    beqz $a6, .LBB2_3
 ; LA64-NEXT:    b .LBB2_6
 ; LA64-NEXT:  .LBB2_5: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB2_1 Depth=1
 ; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB2_6: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB2_1 Depth=1
-; LA64-NEXT:    addi.w $a4, $a3, 0
 ; LA64-NEXT:    move $a3, $a1
 ; LA64-NEXT:    bne $a1, $a4, .LBB2_1
 ; LA64-NEXT:  # %bb.2: # %atomicrmw.end
@@ -150,6 +152,7 @@ define i64 @atomicrmw_uinc_wrap_i64(ptr %ptr, i64 %val) {
 ; LA64-LABEL: atomicrmw_uinc_wrap_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a2, $a0, 0
+; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB3_1: # %atomicrmw.start
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB3_3 Depth 2
@@ -195,6 +198,7 @@ define i8 @atomicrmw_udec_wrap_i8(ptr %ptr, i8 %val) {
 ; LA64-NEXT:    andi $a0, $a0, 24
 ; LA64-NEXT:    nor $a4, $a4, $zero
 ; LA64-NEXT:    andi $a5, $a1, 255
+; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB4_1: # %atomicrmw.start
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB4_3 Depth 2
@@ -253,6 +257,7 @@ define i16 @atomicrmw_udec_wrap_i16(ptr %ptr, i16 %val) {
 ; LA64-NEXT:    andi $a0, $a0, 24
 ; LA64-NEXT:    nor $a4, $a4, $zero
 ; LA64-NEXT:    bstrpick.d $a5, $a1, 15, 0
+; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB5_1: # %atomicrmw.start
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB5_3 Depth 2
@@ -302,20 +307,21 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; LA64-LABEL: atomicrmw_udec_wrap_i32:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.w $a4, $a0, 0
-; LA64-NEXT:    bstrpick.d $a3, $a1, 31, 0
+; LA64-NEXT:    addi.w $a3, $a1, 0
+; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB6_1: # %atomicrmw.start
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB6_3 Depth 2
-; LA64-NEXT:    bstrpick.d $a2, $a4, 31, 0
-; LA64-NEXT:    sltu $a5, $a3, $a2
+; LA64-NEXT:    addi.w $a5, $a4, 0
+; LA64-NEXT:    sltu $a2, $a3, $a5
 ; LA64-NEXT:    addi.d $a6, $a4, -1
-; LA64-NEXT:    masknez $a6, $a6, $a5
-; LA64-NEXT:    maskeqz $a5, $a1, $a5
-; LA64-NEXT:    or $a5, $a5, $a6
-; LA64-NEXT:    sltui $a2, $a2, 1
-; LA64-NEXT:    masknez $a5, $a5, $a2
+; LA64-NEXT:    masknez $a6, $a6, $a2
 ; LA64-NEXT:    maskeqz $a2, $a1, $a2
-; LA64-NEXT:    or $a5, $a2, $a5
+; LA64-NEXT:    or $a2, $a2, $a6
+; LA64-NEXT:    sltui $a6, $a5, 1
+; LA64-NEXT:    masknez $a2, $a2, $a6
+; LA64-NEXT:    maskeqz $a6, $a1, $a6
+; LA64-NEXT:    or $a6, $a6, $a2
 ; LA64-NEXT:  .LBB6_3: # %atomicrmw.start
 ; LA64-NEXT:    # Parent Loop BB6_1 Depth=1
 ; LA64-NEXT:    # => This Inner Loop Header: Depth=2
@@ -324,16 +330,15 @@ define i32 @atomicrmw_udec_wrap_i32(ptr %ptr, i32 %val) {
 ; LA64-NEXT:  # %bb.4: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB6_3 Depth=2
 ; LA64-NEXT:    dbar 0
-; LA64-NEXT:    move $a6, $a5
-; LA64-NEXT:    sc.w $a6, $a0, 0
-; LA64-NEXT:    beqz $a6, .LBB6_3
+; LA64-NEXT:    move $a7, $a6
+; LA64-NEXT:    sc.w $a7, $a0, 0
+; LA64-NEXT:    beqz $a7, .LBB6_3
 ; LA64-NEXT:    b .LBB6_6
 ; LA64-NEXT:  .LBB6_5: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB6_1 Depth=1
 ; LA64-NEXT:    dbar 1792
 ; LA64-NEXT:  .LBB6_6: # %atomicrmw.start
 ; LA64-NEXT:    # in Loop: Header=BB6_1 Depth=1
-; LA64-NEXT:    addi.w $a5, $a4, 0
 ; LA64-NEXT:    move $a4, $a2
 ; LA64-NEXT:    bne $a2, $a5, .LBB6_1
 ; LA64-NEXT:  # %bb.2: # %atomicrmw.end
@@ -347,6 +352,7 @@ define i64 @atomicrmw_udec_wrap_i64(ptr %ptr, i64 %val) {
 ; LA64-LABEL: atomicrmw_udec_wrap_i64:
 ; LA64:       # %bb.0:
 ; LA64-NEXT:    ld.d $a2, $a0, 0
+; LA64-NEXT:    .p2align 4, , 16
 ; LA64-NEXT:  .LBB7_1: # %atomicrmw.start
 ; LA64-NEXT:    # =>This Loop Header: Depth=1
 ; LA64-NEXT:    # Child Loop BB7_3 Depth 2

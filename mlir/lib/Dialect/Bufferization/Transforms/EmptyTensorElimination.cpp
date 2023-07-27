@@ -39,7 +39,7 @@ neededValuesDominateInsertionPoint(const DominanceInfo &domInfo,
         return false;
     } else {
       auto opResult = cast<OpResult>(val);
-      if (!domInfo.dominates(opResult.getOwner(), insertionPoint))
+      if (!domInfo.properlyDominates(opResult.getOwner(), insertionPoint))
         return false;
     }
   }

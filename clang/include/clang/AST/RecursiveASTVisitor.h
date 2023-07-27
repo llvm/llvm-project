@@ -2727,7 +2727,11 @@ DEF_TRAVERSE_STMT(CXXDefaultArgExpr, {
     TRY_TO(TraverseStmt(S->getExpr()));
 })
 
-DEF_TRAVERSE_STMT(CXXDefaultInitExpr, {})
+DEF_TRAVERSE_STMT(CXXDefaultInitExpr, {
+  if (getDerived().shouldVisitImplicitCode())
+    TRY_TO(TraverseStmt(S->getExpr()));
+})
+
 DEF_TRAVERSE_STMT(CXXDeleteExpr, {})
 DEF_TRAVERSE_STMT(ExprWithCleanups, {})
 DEF_TRAVERSE_STMT(CXXInheritedCtorInitExpr, {})
@@ -3861,6 +3865,19 @@ bool RecursiveASTVisitor<Derived>::VisitOMPXDynCGroupMemClause(
     OMPXDynCGroupMemClause *C) {
   TRY_TO(VisitOMPClauseWithPreInit(C));
   TRY_TO(TraverseStmt(C->getSize()));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPDoacrossClause(
+    OMPDoacrossClause *C) {
+  TRY_TO(VisitOMPClauseList(C));
+  return true;
+}
+
+template <typename Derived>
+bool RecursiveASTVisitor<Derived>::VisitOMPXAttributeClause(
+    OMPXAttributeClause *C) {
   return true;
 }
 

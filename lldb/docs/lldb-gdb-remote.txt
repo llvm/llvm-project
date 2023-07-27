@@ -806,7 +806,7 @@ generic     If the register is a generic register that most CPUs have, classify
                    ABI) would include a "generic=fp;" key value pair)
              ra  (a return address register. for example "name=lr;" (32 bit ARM)
                   would include a "generic=ra;" key value pair)
-             fp  (a CPU flags register. for example "name=eflags;" (i386),
+             flags  (a CPU flags register. for example "name=eflags;" (i386),
                   "name=rflags;" (x86_64), "name=cpsr;" (32 bit ARM)
                   would include a "generic=flags;" key value pair)
              arg1 - arg8 (specified for registers that contain function

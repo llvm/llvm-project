@@ -258,3 +258,25 @@ transform.sequence failures(propagate) {
   transform.test_print_remark_at_operand %1, "affine for loop" : !transform.op<"affine.for">
   transform.loop.unroll %1 { factor = 4 } : !transform.op<"affine.for">
 }
+
+// -----
+
+// CHECK-LABEL: func @test_promote_if_one_iteration(
+//   CHECK-NOT:   scf.for
+//       CHECK:   %[[r:.*]] = "test.foo"
+//       CHECK:   return %[[r]]
+func.func @test_promote_if_one_iteration(%a: index) -> index {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %0 = scf.for %j = %c0 to %c1 step %c1 iter_args(%arg0 = %a) -> index {
+    %1 = "test.foo"(%a) : (index) -> (index)
+    scf.yield %1 : index
+  }
+  return %0 : index
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["scf.for"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.loop.promote_if_one_iteration %0 : !transform.any_op
+}

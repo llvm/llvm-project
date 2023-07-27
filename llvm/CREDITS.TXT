@@ -271,6 +271,10 @@ N: Benjamin Kramer
 E: benny.kra@gmail.com
 D: Miscellaneous bug fixes
 
+N: Michael Kuperstein
+E: mkuper@google.com
+D: Loop Vectorizer
+
 N: Sundeep Kushwaha
 E: sundeepk@codeaurora.org
 D: Implemented DFA-based target independent VLIW packetizer

@@ -1615,39 +1615,6 @@ void BinaryFunction::postProcessJumpTables() {
                 "detected in function "
              << *this << '\n';
     }
-    if (JT.Entries.empty()) {
-      bool HasOneParent = (JT.Parents.size() == 1);
-      for (unsigned I = 0; I < JT.EntriesAsAddress.size(); ++I) {
-        uint64_t EntryAddress = JT.EntriesAsAddress[I];
-        // builtin_unreachable does not belong to any function
-        // Need to handle separately
-        bool IsBuiltIn = false;
-        for (BinaryFunction *Parent : JT.Parents) {
-          if (EntryAddress == Parent->getAddress() + Parent->getSize()) {
-            IsBuiltIn = true;
-            // Specify second parameter as true to accept builtin_unreachable
-            MCSymbol *Label = getOrCreateLocalLabel(EntryAddress, true);
-            JT.Entries.push_back(Label);
-            break;
-          }
-        }
-        if (IsBuiltIn)
-          continue;
-        // Create local label for targets cannot be reached by other fragments
-        // Otherwise, secondary entry point to target function
-        BinaryFunction *TargetBF =
-            BC.getBinaryFunctionContainingAddress(EntryAddress);
-        if (TargetBF->getAddress() != EntryAddress) {
-          MCSymbol *Label =
-              (HasOneParent && TargetBF == this)
-                  ? getOrCreateLocalLabel(JT.EntriesAsAddress[I], true)
-                  : TargetBF->addEntryPointAtOffset(EntryAddress -
-                                                    TargetBF->getAddress());
-          JT.Entries.push_back(Label);
-        }
-      }
-    }
-
     const uint64_t BDSize =
         BC.getBinaryDataAtAddress(JT.getAddress())->getSize();
     if (!BDSize) {
@@ -1655,6 +1622,37 @@ void BinaryFunction::postProcessJumpTables() {
     } else {
       assert(BDSize >= JT.getSize() &&
              "jump table cannot be larger than the containing object");
+    }
+    if (!JT.Entries.empty())
+      continue;
+
+    bool HasOneParent = (JT.Parents.size() == 1);
+    for (uint64_t EntryAddress : JT.EntriesAsAddress) {
+      // builtin_unreachable does not belong to any function
+      // Need to handle separately
+      bool IsBuiltinUnreachable =
+          llvm::any_of(JT.Parents, [&](const BinaryFunction *Parent) {
+            return EntryAddress == Parent->getAddress() + Parent->getSize();
+          });
+      if (IsBuiltinUnreachable) {
+        MCSymbol *Label = getOrCreateLocalLabel(EntryAddress, true);
+        JT.Entries.push_back(Label);
+        continue;
+      }
+      // Create a local label for targets that cannot be reached by other
+      // fragments. Otherwise, create a secondary entry point in the target
+      // function.
+      BinaryFunction *TargetBF =
+          BC.getBinaryFunctionContainingAddress(EntryAddress);
+      MCSymbol *Label;
+      if (HasOneParent && TargetBF == this) {
+        Label = getOrCreateLocalLabel(EntryAddress, true);
+      } else {
+        const uint64_t Offset = EntryAddress - TargetBF->getAddress();
+        Label = Offset ? TargetBF->addEntryPointAtOffset(Offset)
+                       : TargetBF->getSymbol();
+      }
+      JT.Entries.push_back(Label);
     }
   }
 
@@ -1994,19 +1992,13 @@ bool BinaryFunction::buildCFG(MCPlusBuilder::AllocatorIdTy AllocatorId) {
         updateOffset(LastInstrOffset);
     }
 
-    const uint64_t InstrInputAddr = I->first + Address;
-    bool IsSDTMarker =
-        MIB->isNoop(Instr) && BC.SDTMarkers.count(InstrInputAddr);
-    bool IsLKMarker = BC.LKMarkers.count(InstrInputAddr);
     // Mark all nops with Offset for profile tracking purposes.
-    if (MIB->isNoop(Instr) || IsLKMarker) {
-      if (!MIB->getOffset(Instr))
-        MIB->setOffset(Instr, static_cast<uint32_t>(Offset), AllocatorId);
-      if (IsSDTMarker || IsLKMarker)
-        HasSDTMarker = true;
-      else
-        // Annotate ordinary nops, so we can safely delete them if required.
-        MIB->addAnnotation(Instr, "NOP", static_cast<uint32_t>(1), AllocatorId);
+    if (MIB->isNoop(Instr) && !MIB->getOffset(Instr)) {
+      // If "Offset" annotation is not present, set it and mark the nop for
+      // deletion.
+      MIB->setOffset(Instr, static_cast<uint32_t>(Offset), AllocatorId);
+      // Annotate ordinary nops, so we can safely delete them if required.
+      MIB->addAnnotation(Instr, "NOP", static_cast<uint32_t>(1), AllocatorId);
     }
 
     if (!InsertBB) {
@@ -2229,8 +2221,8 @@ void BinaryFunction::calculateMacroOpFusionStats() {
                       << Twine::utohexstr(getAddress() + Offset)
                       << " in function " << *this << "; executed "
                       << BB.getKnownExecutionCount() << " times.\n");
-    ++BC.MissedMacroFusionPairs;
-    BC.MissedMacroFusionExecCount += BB.getKnownExecutionCount();
+    ++BC.Stats.MissedMacroFusionPairs;
+    BC.Stats.MissedMacroFusionExecCount += BB.getKnownExecutionCount();
   }
 }
 

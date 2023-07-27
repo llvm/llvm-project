@@ -48,6 +48,10 @@ static bool useCompactUnwind(const Triple &T) {
   if (T.isiOS() && T.isX86())
     return true;
 
+  // The rest of the simulators always have it.
+  if (T.isSimulatorEnvironment())
+    return true;
+
   return false;
 }
 
@@ -62,7 +66,8 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
       SectionKind::getReadOnly());
 
   if (T.isOSDarwin() &&
-      (T.getArch() == Triple::aarch64 || T.getArch() == Triple::aarch64_32))
+      (T.getArch() == Triple::aarch64 || T.getArch() == Triple::aarch64_32 ||
+      T.isSimulatorEnvironment()))
     SupportsCompactUnwindWithoutEHFrame = true;
 
   switch (Ctx->emitDwarfUnwindInfo()) {
@@ -249,7 +254,7 @@ void MCObjectFileInfo::initMachOMCObjectFileInfo(const Triple &T) {
                            SectionKind::getMetadata(), "section_line_str");
   DwarfFrameSection =
       Ctx->getMachOSection("__DWARF", "__debug_frame", MachO::S_ATTR_DEBUG,
-                           SectionKind::getMetadata());
+                           SectionKind::getMetadata(), "section_frame");
   DwarfPubNamesSection =
       Ctx->getMachOSection("__DWARF", "__debug_pubnames", MachO::S_ATTR_DEBUG,
                            SectionKind::getMetadata());
@@ -542,6 +547,8 @@ void MCObjectFileInfo::initGOFFMCObjectFileInfo(const Triple &T) {
   PPA1Section =
       Ctx->getGOFFSection(".ppa1", SectionKind::getMetadata(), TextSection,
                           MCConstantExpr::create(GOFF::SK_PPA1, *Ctx));
+  ADASection =
+      Ctx->getGOFFSection(".ada", SectionKind::getData(), nullptr, nullptr);
 }
 
 void MCObjectFileInfo::initCOFFMCObjectFileInfo(const Triple &T) {
@@ -918,10 +925,10 @@ void MCObjectFileInfo::initWasmMCObjectFileInfo(const Triple &T) {
 void MCObjectFileInfo::initXCOFFMCObjectFileInfo(const Triple &T) {
   // The default csect for program code. Functions without a specified section
   // get placed into this csect. The choice of csect name is not a property of
-  // the ABI or object file format. For example, the XL compiler uses an unnamed
-  // csect for program code.
+  // the ABI or object file format, but various tools rely on the section
+  // name being empty (considering named symbols to be "user symbol names").
   TextSection = Ctx->getXCOFFSection(
-      ".text", SectionKind::getText(),
+      "", SectionKind::getText(),
       XCOFF::CsectProperties(XCOFF::StorageMappingClass::XMC_PR, XCOFF::XTY_SD),
       /* MultiSymbolsAllowed*/ true);
 

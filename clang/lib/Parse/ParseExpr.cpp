@@ -3256,6 +3256,17 @@ Parser::ParseCompoundLiteralExpression(ParsedType Ty,
 ///         string-literal
 /// \verbatim
 ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral) {
+  return ParseStringLiteralExpression(AllowUserDefinedLiteral,
+                                      /*Unevaluated=*/false);
+}
+
+ExprResult Parser::ParseUnevaluatedStringLiteralExpression() {
+  return ParseStringLiteralExpression(/*AllowUserDefinedLiteral=*/false,
+                                      /*Unevaluated=*/true);
+}
+
+ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
+                                                bool Unevaluated) {
   assert(isTokenStringLiteral() && "Not a string literal!");
 
   // String concat.  Note that keywords like __func__ and __FUNCTION__ are not
@@ -3266,6 +3277,11 @@ ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral) {
     StringToks.push_back(Tok);
     ConsumeStringToken();
   } while (isTokenStringLiteral());
+
+  if (Unevaluated) {
+    assert(!AllowUserDefinedLiteral && "UDL are always evaluated");
+    return Actions.ActOnUnevaluatedStringLiteral(StringToks);
+  }
 
   // Pass the set of string tokens, ready for concatenation, to the actions.
   return Actions.ActOnStringLiteral(StringToks,

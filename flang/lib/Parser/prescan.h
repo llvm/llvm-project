@@ -204,7 +204,7 @@ private:
   const char *nextLine_{nullptr}; // next line to process; <= limit_
   const char *directiveSentinel_{nullptr}; // current compiler directive
 
-  // This data members are state for processing the source line containing
+  // These data members are state for processing the source line containing
   // "at_", which goes to up to the newline character before "nextLine_".
   const char *at_{nullptr}; // next character to process; < nextLine_
   int column_{1}; // card image column position of next character

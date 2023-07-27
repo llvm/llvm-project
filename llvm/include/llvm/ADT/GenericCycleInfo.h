@@ -256,7 +256,7 @@ public:
   void clear();
   void compute(FunctionT &F);
 
-  FunctionT *getFunction() const { return Context.getFunction(); }
+  const FunctionT *getFunction() const { return Context.getFunction(); }
   const ContextT &getSSAContext() const { return Context; }
 
   CycleT *getCycle(const BlockT *Block) const;
@@ -270,6 +270,7 @@ public:
 #endif
   void print(raw_ostream &Out) const;
   void dump() const { print(dbgs()); }
+  Printable print(const CycleT *Cycle) { return Cycle->print(Context); }
   //@}
 
   /// Iteration over top-level cycles.

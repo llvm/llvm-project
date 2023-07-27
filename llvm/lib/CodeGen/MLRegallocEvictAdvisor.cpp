@@ -39,6 +39,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #include <array>
+#include <bitset>
 #include <memory>
 
 using namespace llvm;

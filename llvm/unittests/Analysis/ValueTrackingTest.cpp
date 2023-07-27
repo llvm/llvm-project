@@ -2254,7 +2254,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownUSubSatZerosPreserved) {
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntTrunc) {
-  // ptrtoint truncates the pointer type.
+  // ptrtoint truncates the pointer type. Make sure we don't crash.
   parseAssembly(
       "define void @test(ptr %p) {\n"
       "  %A = load ptr, ptr %p\n"
@@ -2268,12 +2268,11 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntTrunc) {
   AssumptionCache AC(*F);
   KnownBits Known = computeKnownBits(
       A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
-  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
-  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+  EXPECT_TRUE(Known.isUnknown());
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntZext) {
-  // ptrtoint zero extends the pointer type.
+  // ptrtoint zero extends the pointer type. Make sure we don't crash.
   parseAssembly(
       "define void @test(ptr %p) {\n"
       "  %A = load ptr, ptr %p\n"
@@ -2287,8 +2286,7 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsPtrToIntZext) {
   AssumptionCache AC(*F);
   KnownBits Known = computeKnownBits(
       A, M->getDataLayout(), /* Depth */ 0, &AC, F->front().getTerminator());
-  EXPECT_EQ(Known.Zero.getZExtValue(), 31u);
-  EXPECT_EQ(Known.One.getZExtValue(), 0u);
+  EXPECT_TRUE(Known.isUnknown());
 }
 
 TEST_F(ComputeKnownBitsTest, ComputeKnownBitsFreeze) {
@@ -2447,6 +2445,94 @@ TEST_F(ComputeKnownBitsTest, ComputeKnownBitsGEPWithRangeNoOverlap) {
   // with the masks of zeros and ones, not the ranges.
   EXPECT_EQ(Known.getMinValue(), 544);
   EXPECT_EQ(Known.getMaxValue(), 575);
+}
+
+TEST_F(ComputeKnownBitsTest, ComputeKnownBitsAbsoluteSymbol) {
+  auto M = parseModule(R"(
+    @absolute_0_255 = external global [128 x i32], align 1, !absolute_symbol !0
+    @absolute_0_256 = external global [128 x i32], align 1, !absolute_symbol !1
+    @absolute_256_512 = external global [128 x i32], align 1, !absolute_symbol !2
+    @absolute_0_neg1 = external global [128 x i32], align 1, !absolute_symbol !3
+    @absolute_neg32_32 = external global [128 x i32], align 1, !absolute_symbol !4
+    @absolute_neg32_33 = external global [128 x i32], align 1, !absolute_symbol !5
+    @absolute_neg64_neg32 = external global [128 x i32], align 1, !absolute_symbol !6
+    @absolute_0_256_align8 = external global [128 x i32], align 8, !absolute_symbol !1
+
+    !0 = !{i64 0, i64 255}
+    !1 = !{i64 0, i64 256}
+    !2 = !{i64 256, i64 512}
+    !3 = !{i64 0, i64 -1}
+    !4 = !{i64 -32, i64 32}
+    !5 = !{i64 -32, i64 33}
+    !6 = !{i64 -64, i64 -32}
+  )");
+
+  GlobalValue *Absolute_0_255 = M->getNamedValue("absolute_0_255");
+  GlobalValue *Absolute_0_256 = M->getNamedValue("absolute_0_256");
+  GlobalValue *Absolute_256_512 = M->getNamedValue("absolute_256_512");
+  GlobalValue *Absolute_0_Neg1 = M->getNamedValue("absolute_0_neg1");
+  GlobalValue *Absolute_Neg32_32 = M->getNamedValue("absolute_neg32_32");
+  GlobalValue *Absolute_Neg32_33 = M->getNamedValue("absolute_neg32_33");
+  GlobalValue *Absolute_Neg64_Neg32 = M->getNamedValue("absolute_neg64_neg32");
+  GlobalValue *Absolute_0_256_Align8 =
+      M->getNamedValue("absolute_0_256_align8");
+
+  KnownBits Known_0_255 = computeKnownBits(Absolute_0_255, M->getDataLayout());
+  EXPECT_EQ(64u - 8u, Known_0_255.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_0_255.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_0_255.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_0_255.countMinTrailingOnes());
+
+  KnownBits Known_0_256 = computeKnownBits(Absolute_0_256, M->getDataLayout());
+  EXPECT_EQ(64u - 8u, Known_0_256.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_0_256.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_0_256.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_0_256.countMinTrailingOnes());
+
+  KnownBits Known_256_512 =
+      computeKnownBits(Absolute_256_512, M->getDataLayout());
+  EXPECT_EQ(64u - 8u, Known_0_255.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_0_255.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_0_255.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_0_255.countMinTrailingOnes());
+
+  KnownBits Known_0_Neg1 =
+      computeKnownBits(Absolute_0_Neg1, M->getDataLayout());
+  EXPECT_EQ(0u, Known_0_Neg1.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_0_Neg1.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_0_Neg1.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_0_Neg1.countMinTrailingOnes());
+
+  KnownBits Known_Neg32_32 =
+      computeKnownBits(Absolute_Neg32_32, M->getDataLayout());
+  EXPECT_EQ(0u, Known_Neg32_32.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_Neg32_32.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_Neg32_32.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_Neg32_32.countMinTrailingOnes());
+  EXPECT_EQ(1u, Known_Neg32_32.countMinSignBits());
+
+  KnownBits Known_Neg32_33 =
+      computeKnownBits(Absolute_Neg32_33, M->getDataLayout());
+  EXPECT_EQ(0u, Known_Neg32_33.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_Neg32_33.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_Neg32_33.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_Neg32_33.countMinTrailingOnes());
+  EXPECT_EQ(1u, Known_Neg32_33.countMinSignBits());
+
+  KnownBits Known_Neg32_Neg32 =
+      computeKnownBits(Absolute_Neg64_Neg32, M->getDataLayout());
+  EXPECT_EQ(0u, Known_Neg32_Neg32.countMinLeadingZeros());
+  EXPECT_EQ(0u, Known_Neg32_Neg32.countMinTrailingZeros());
+  EXPECT_EQ(58u, Known_Neg32_Neg32.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_Neg32_Neg32.countMinTrailingOnes());
+  EXPECT_EQ(58u, Known_Neg32_Neg32.countMinSignBits());
+
+  KnownBits Known_0_256_Align8 =
+      computeKnownBits(Absolute_0_256_Align8, M->getDataLayout());
+  EXPECT_EQ(64u - 8u, Known_0_256_Align8.countMinLeadingZeros());
+  EXPECT_EQ(3u, Known_0_256_Align8.countMinTrailingZeros());
+  EXPECT_EQ(0u, Known_0_256_Align8.countMinLeadingOnes());
+  EXPECT_EQ(0u, Known_0_256_Align8.countMinTrailingOnes());
 }
 
 TEST_F(ValueTrackingTest, HaveNoCommonBitsSet) {

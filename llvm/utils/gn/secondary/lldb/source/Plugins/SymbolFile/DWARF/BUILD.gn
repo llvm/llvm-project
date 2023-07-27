@@ -64,7 +64,6 @@ static_library("DWARF") {
     "DWARFTypeUnit.cpp",
     "DWARFUnit.cpp",
     "DebugNamesDWARFIndex.cpp",
-    "HashedNameToDIE.cpp",
     "LogChannelDWARF.cpp",
     "ManualDWARFIndex.cpp",
     "NameToDIE.cpp",

@@ -2584,6 +2584,19 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
 
     return UnableToLegalize;
   }
+  case TargetOpcode::G_FFREXP: {
+    Observer.changingInstr(MI);
+
+    if (TypeIdx == 0) {
+      widenScalarSrc(MI, WideTy, 2, TargetOpcode::G_FPEXT);
+      widenScalarDst(MI, WideTy, 0, TargetOpcode::G_FPTRUNC);
+    } else {
+      widenScalarDst(MI, WideTy, 1);
+    }
+
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
   case TargetOpcode::G_INTTOPTR:
     if (TypeIdx != 1)
       return UnableToLegalize;
@@ -4235,6 +4248,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_STRICT_FMUL:
   case G_STRICT_FMA:
   case G_STRICT_FLDEXP:
+  case G_FFREXP:
     return fewerElementsVectorMultiEltType(GMI, NumElts);
   case G_ICMP:
   case G_FCMP:
@@ -4932,6 +4946,19 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_TRUNC: {
     Observer.changingInstr(MI);
     moreElementsVectorSrc(MI, MoreTy, 1);
+    moreElementsVectorDst(MI, MoreTy, 0);
+    Observer.changedInstr(MI);
+    return Legalized;
+  }
+  case TargetOpcode::G_FPTRUNC:
+  case TargetOpcode::G_FPEXT: {
+    if (TypeIdx != 0)
+      return UnableToLegalize;
+    Observer.changingInstr(MI);
+    LLT SrcTy = LLT::fixed_vector(
+        MoreTy.getNumElements(),
+        MRI.getType(MI.getOperand(1).getReg()).getElementType());
+    moreElementsVectorSrc(MI, SrcTy, 1);
     moreElementsVectorDst(MI, MoreTy, 0);
     Observer.changedInstr(MI);
     return Legalized;
@@ -6241,15 +6268,27 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFPTOSI(MachineInstr &MI) {
 // f64 -> f16 conversion using round-to-nearest-even rounding mode.
 LegalizerHelper::LegalizeResult
 LegalizerHelper::lowerFPTRUNC_F64_TO_F16(MachineInstr &MI) {
+  const LLT S1 = LLT::scalar(1);
+  const LLT S32 = LLT::scalar(32);
+
   auto [Dst, Src] = MI.getFirst2Regs();
+  assert(MRI.getType(Dst).getScalarType() == LLT::scalar(16) &&
+         MRI.getType(Src).getScalarType() == LLT::scalar(64));
+
   if (MRI.getType(Src).isVector()) // TODO: Handle vectors directly.
     return UnableToLegalize;
+
+  if (MIRBuilder.getMF().getTarget().Options.UnsafeFPMath) {
+    unsigned Flags = MI.getFlags();
+    auto Src32 = MIRBuilder.buildFPTrunc(S32, Src, Flags);
+    MIRBuilder.buildFPTrunc(Dst, Src32, Flags);
+    MI.eraseFromParent();
+    return Legalized;
+  }
 
   const unsigned ExpMask = 0x7ff;
   const unsigned ExpBiasf64 = 1023;
   const unsigned ExpBiasf16 = 15;
-  const LLT S32 = LLT::scalar(32);
-  const LLT S1 = LLT::scalar(1);
 
   auto Unmerge = MIRBuilder.buildUnmerge(S32, Src);
   Register U = Unmerge.getReg(0);
@@ -7260,6 +7299,9 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
     return Legalized;
   }
 
+  // TODO: Try inverting the test with getInvertedFPClassTest like the DAG
+  // version
+
   unsigned BitSize = SrcTy.getScalarSizeInBits();
   const fltSemantics &Semantics = getFltSemanticForLLT(SrcTy.getScalarType());
 
@@ -7313,6 +7355,18 @@ LegalizerHelper::lowerISFPCLASS(MachineInstr &MI) {
     auto And = MIRBuilder.buildAnd(DstTy, Cmp, Sign);
     appendToRes(And);
     Mask &= ~fcNegFinite;
+  }
+
+  if (FPClassTest PartialCheck = Mask & (fcZero | fcSubnormal)) {
+    // fcZero | fcSubnormal => test all exponent bits are 0
+    // TODO: Handle sign bit specific cases
+    // TODO: Handle inverted case
+    if (PartialCheck == (fcZero | fcSubnormal)) {
+      auto ExpBits = MIRBuilder.buildAnd(IntTy, AsInt, ExpMaskC);
+      appendToRes(MIRBuilder.buildICmp(CmpInst::Predicate::ICMP_EQ, DstTy,
+                                       ExpBits, ZeroC));
+      Mask &= ~PartialCheck;
+    }
   }
 
   // Check for individual classes.

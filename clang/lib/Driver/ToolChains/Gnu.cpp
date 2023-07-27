@@ -220,30 +220,6 @@ void tools::gcc::Linker::RenderExtraToolArgs(const JobAction &JA,
   // The types are (hopefully) good enough.
 }
 
-// On Arm the endianness of the output file is determined by the target and
-// can be overridden by the pseudo-target flags '-mlittle-endian'/'-EL' and
-// '-mbig-endian'/'-EB'. Unlike other targets the flag does not result in a
-// normalized triple so we must handle the flag here.
-static bool isArmBigEndian(const llvm::Triple &Triple,
-                           const ArgList &Args) {
-  bool IsBigEndian = false;
-  switch (Triple.getArch()) {
-  case llvm::Triple::armeb:
-  case llvm::Triple::thumbeb:
-    IsBigEndian = true;
-    [[fallthrough]];
-  case llvm::Triple::arm:
-  case llvm::Triple::thumb:
-    if (Arg *A = Args.getLastArg(options::OPT_mlittle_endian,
-                               options::OPT_mbig_endian))
-      IsBigEndian = !A->getOption().matches(options::OPT_mlittle_endian);
-    break;
-  default:
-    break;
-  }
-  return IsBigEndian;
-}
-
 static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   switch (T.getArch()) {
   case llvm::Triple::x86:
@@ -258,7 +234,8 @@ static const char *getLDMOption(const llvm::Triple &T, const ArgList &Args) {
   case llvm::Triple::thumb:
   case llvm::Triple::armeb:
   case llvm::Triple::thumbeb:
-    return isArmBigEndian(T, Args) ? "armelfb_linux_eabi" : "armelf_linux_eabi";
+    return tools::arm::isARMBigEndian(T, Args) ? "armelfb_linux_eabi"
+                                               : "armelf_linux_eabi";
   case llvm::Triple::m68k:
     return "m68kelf";
   case llvm::Triple::ppc:
@@ -447,12 +424,13 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   if (Args.hasArg(options::OPT_s))
     CmdArgs.push_back("-s");
 
-  if (Triple.isARM() || Triple.isThumb() || Triple.isAArch64()) {
-    bool IsBigEndian = isArmBigEndian(Triple, Args);
+  if (Triple.isARM() || Triple.isThumb()) {
+    bool IsBigEndian = arm::isARMBigEndian(Triple, Args);
     if (IsBigEndian)
       arm::appendBE8LinkFlag(Args, CmdArgs, Triple);
-    IsBigEndian = IsBigEndian || Arch == llvm::Triple::aarch64_be;
     CmdArgs.push_back(IsBigEndian ? "-EB" : "-EL");
+  } else if (Triple.isAArch64()) {
+    CmdArgs.push_back(Arch == llvm::Triple::aarch64_be ? "-EB" : "-EL");
   }
 
   // Most Android ARM64 targets should enable the linker fix for erratum
@@ -820,7 +798,7 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
   case llvm::Triple::thumb:
   case llvm::Triple::thumbeb: {
     const llvm::Triple &Triple2 = getToolChain().getTriple();
-    CmdArgs.push_back(isArmBigEndian(Triple2, Args) ? "-EB" : "-EL");
+    CmdArgs.push_back(arm::isARMBigEndian(Triple2, Args) ? "-EB" : "-EL");
     switch (Triple2.getSubArch()) {
     case llvm::Triple::ARMSubArch_v7:
       CmdArgs.push_back("-mfpu=neon");
@@ -849,6 +827,11 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
     normalizeCPUNamesForAssembler(Args, CmdArgs);
 
     Args.AddLastArg(CmdArgs, options::OPT_mfpu_EQ);
+    // The integrated assembler doesn't implement e_flags setting behavior for
+    // -meabi=gnu (gcc -mabi={apcs-gnu,atpcs} passes -meabi=gnu to gas). For
+    // compatibility we accept but warn.
+    if (Arg *A = Args.getLastArgNoClaim(options::OPT_mabi_EQ))
+      A->ignoreTargetSpecific();
     break;
   }
   case llvm::Triple::aarch64:

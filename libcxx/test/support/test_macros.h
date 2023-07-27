@@ -23,8 +23,8 @@
 #include <ciso646>
 #endif
 
-#define TEST_STRINGIZE_IMPL(x) #x
-#define TEST_STRINGIZE(x) TEST_STRINGIZE_IMPL(x)
+#define TEST_STRINGIZE_IMPL(...) #__VA_ARGS__
+#define TEST_STRINGIZE(...) TEST_STRINGIZE_IMPL(__VA_ARGS__)
 
 #define TEST_CONCAT1(X, Y) X##Y
 #define TEST_CONCAT(X, Y) TEST_CONCAT1(X, Y)
@@ -396,6 +396,10 @@ inline void DoNotOptimize(Tp const& value) {
 
 #if defined(_LIBCPP_HAS_NO_C8RTOMB_MBRTOC8)
 #  define TEST_HAS_NO_C8RTOMB_MBRTOC8
+#endif
+
+#if defined(_LIBCPP_HAS_NO_RANDOM_DEVICE)
+#  define TEST_HAS_NO_RANDOM_DEVICE
 #endif
 
 #if defined(TEST_COMPILER_CLANG)

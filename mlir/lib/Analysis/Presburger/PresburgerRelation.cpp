@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
+#include "mlir/Analysis/Presburger/IntegerRelation.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "llvm/ADT/STLExtras.h"
@@ -27,6 +28,13 @@ void PresburgerRelation::setSpace(const PresburgerSpace &oSpace) {
   space = oSpace;
   for (IntegerRelation &disjunct : disjuncts)
     disjunct.setSpaceExceptLocals(space);
+}
+
+void PresburgerRelation::insertVarInPlace(VarKind kind, unsigned pos,
+                                          unsigned num) {
+  for (IntegerRelation &cs : disjuncts)
+    cs.insertVar(kind, pos, num);
+  space.insertVar(kind, pos, num);
 }
 
 unsigned PresburgerRelation::getNumDisjuncts() const {
@@ -97,6 +105,14 @@ PresburgerRelation
 PresburgerRelation::intersect(const PresburgerRelation &set) const {
   assert(space.isCompatible(set.getSpace()) && "Spaces should match");
 
+  // If the set is empty or the other set is universe,
+  // directly return the set
+  if (isPlainEmpty() || set.isPlainUniverse())
+    return *this;
+
+  if (set.isPlainEmpty() || isPlainUniverse())
+    return set;
+
   PresburgerRelation result(getSpace());
   for (const IntegerRelation &csA : disjuncts) {
     for (const IntegerRelation &csB : set.disjuncts) {
@@ -106,6 +122,67 @@ PresburgerRelation::intersect(const PresburgerRelation &set) const {
     }
   }
   return result;
+}
+
+PresburgerRelation PresburgerRelation::intersectRange(PresburgerSet &set) {
+  assert(space.getRangeSpace().isCompatible(set.getSpace()) &&
+         "Range of `this` must be compatible with range of `set`");
+
+  PresburgerRelation other = set;
+  other.insertVarInPlace(VarKind::Domain, 0, getNumDomainVars());
+  return intersect(other);
+}
+
+PresburgerRelation
+PresburgerRelation::intersectDomain(const PresburgerSet &set) {
+  assert(space.getDomainSpace().isCompatible(set.getSpace()) &&
+         "Domain of `this` must be compatible with range of `set`");
+
+  PresburgerRelation other = set;
+  other.insertVarInPlace(VarKind::Domain, 0, getNumDomainVars());
+  other.inverse();
+  return intersect(other);
+}
+
+void PresburgerRelation::inverse() {
+  for (IntegerRelation &cs : disjuncts)
+    cs.inverse();
+
+  if (getNumDisjuncts())
+    setSpace(getDisjunct(0).getSpaceWithoutLocals());
+}
+
+void PresburgerRelation::compose(const PresburgerRelation &rel) {
+  assert(getSpace().getRangeSpace().isCompatible(
+             rel.getSpace().getDomainSpace()) &&
+         "Range of `this` should be compatible with domain of `rel`");
+
+  PresburgerRelation result =
+      PresburgerRelation::getEmpty(PresburgerSpace::getRelationSpace(
+          getNumDomainVars(), rel.getNumRangeVars(), getNumSymbolVars()));
+  for (const IntegerRelation &csA : disjuncts) {
+    for (const IntegerRelation &csB : rel.disjuncts) {
+      IntegerRelation composition = csA;
+      composition.compose(csB);
+      if (!composition.isEmpty())
+        result.unionInPlace(composition);
+    }
+  }
+  *this = result;
+}
+
+void PresburgerRelation::applyDomain(const PresburgerRelation &rel) {
+  assert(getSpace().getDomainSpace().isCompatible(
+             rel.getSpace().getDomainSpace()) &&
+         "Domain of `this` should be compatible with domain of `rel`");
+
+  inverse();
+  compose(rel);
+  inverse();
+}
+
+void PresburgerRelation::applyRange(const PresburgerRelation &rel) {
+  compose(rel);
 }
 
 /// Return the coefficients of the ineq in `rel` specified by  `idx`.
@@ -452,6 +529,27 @@ bool PresburgerRelation::isEqual(const PresburgerRelation &set) const {
   assert(space.isCompatible(set.getSpace()) && "Spaces should match");
   return this->isSubsetOf(set) && set.isSubsetOf(*this);
 }
+
+/// Return true if the Presburger relation represents the universe set, false
+/// otherwise. It is a simple check that only check if the relation has at least
+/// one unconstrained disjunct, indicating the absence of constraints or
+/// conditions.
+bool PresburgerRelation::isPlainUniverse() const {
+  for (auto &disjunct : getAllDisjuncts()) {
+    if (disjunct.getNumConstraints() == 0)
+      return true;
+  }
+  return false;
+}
+
+bool PresburgerRelation::isConvexNoLocals() const {
+  if (getNumDisjuncts() == 1 && getSpace().getNumLocalVars() == 0)
+    return true;
+  return false;
+}
+
+/// Return true if there is no disjunct, false otherwise.
+bool PresburgerRelation::isPlainEmpty() const { return getNumDisjuncts() == 0; }
 
 /// Return true if all the sets in the union are known to be integer empty,
 /// false otherwise.

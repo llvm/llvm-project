@@ -59,19 +59,17 @@ define void @t3() {
 ; X86-LABEL: t3:
 ; X86:       ## %bb.0:
 ; X86-NEXT:    movl L_g0$non_lazy_ptr, %eax
+; X86-NEXT:    movzwl (%eax), %eax
 ; X86-NEXT:    movl L_g1$non_lazy_ptr, %ecx
-; X86-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X86-NEXT:    pinsrw $0, (%eax), %xmm0
-; X86-NEXT:    movq %xmm0, (%ecx)
+; X86-NEXT:    movw %ax, (%ecx)
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t3:
 ; X64:       ## %bb.0:
 ; X64-NEXT:    movq _g0@GOTPCREL(%rip), %rax
+; X64-NEXT:    movzwl (%rax), %eax
 ; X64-NEXT:    movq _g1@GOTPCREL(%rip), %rcx
-; X64-NEXT:    movq {{.*#+}} xmm0 = mem[0],zero
-; X64-NEXT:    pinsrw $0, (%rax), %xmm0
-; X64-NEXT:    movq %xmm0, (%rcx)
+; X64-NEXT:    movw %ax, (%rcx)
 ; X64-NEXT:    retq
   load i16, ptr @g0
   load <4 x i16>, ptr @g1

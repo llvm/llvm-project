@@ -21,9 +21,7 @@
 #include <__format/format_arg.h>
 #include <__type_traits/conditional.h>
 #include <__type_traits/extent.h>
-#include <__type_traits/is_same.h>
 #include <__type_traits/remove_const.h>
-#include <__utility/forward.h>
 #include <string>
 #include <string_view>
 
@@ -229,7 +227,7 @@ _LIBCPP_HIDE_FROM_ABI void __store_basic_format_arg(basic_format_arg<_Context>* 
 template <class _Context, size_t N>
 struct __packed_format_arg_store {
   __basic_format_arg_value<_Context> __values_[N];
-  uint64_t __types_;
+  uint64_t __types_ = 0;
 };
 
 template <class _Context, size_t N>

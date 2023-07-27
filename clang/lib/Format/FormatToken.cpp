@@ -75,6 +75,21 @@ bool FormatToken::isTypeOrIdentifier() const {
   return isSimpleTypeSpecifier() || Tok.isOneOf(tok::kw_auto, tok::identifier);
 }
 
+bool FormatToken::isBlockIndentedInitRBrace(const FormatStyle &Style) const {
+  assert(is(tok::r_brace));
+  if (!Style.Cpp11BracedListStyle ||
+      Style.AlignAfterOpenBracket != FormatStyle::BAS_BlockIndent) {
+    return false;
+  }
+  const auto *LBrace = MatchingParen;
+  assert(LBrace && LBrace->is(tok::l_brace));
+  if (LBrace->is(BK_BracedInit))
+    return true;
+  if (LBrace->Previous && LBrace->Previous->is(tok::equal))
+    return true;
+  return false;
+}
+
 bool FormatToken::opensBlockOrBlockTypeList(const FormatStyle &Style) const {
   // C# Does not indent object initialisers as continuations.
   if (is(tok::l_brace) && getBlockKind() == BK_BracedInit && Style.isCSharp())

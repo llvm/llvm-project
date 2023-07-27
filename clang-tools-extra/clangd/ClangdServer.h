@@ -30,14 +30,14 @@
 #include "support/Path.h"
 #include "support/ThreadsafeFS.h"
 #include "clang/Tooling/Core/Replacement.h"
+#include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
 #include <memory>
 #include <optional>
 #include <string>
-#include <type_traits>
-#include <utility>
+#include <tuple>
 #include <vector>
 
 namespace clang {
@@ -67,7 +67,7 @@ public:
     /// file, they do not interfere with "pull-based" ClangdServer::diagnostics.
     /// May be called concurrently for separate files, not for a single file.
     virtual void onDiagnosticsReady(PathRef File, llvm::StringRef Version,
-                                    std::vector<Diag> Diagnostics) {}
+                                    llvm::ArrayRef<Diag> Diagnostics) {}
     /// Called whenever the file status is updated.
     /// May be called concurrently for separate files, not for a single file.
     virtual void onFileUpdated(PathRef File, const TUStatus &Status) {}
@@ -184,10 +184,6 @@ public:
     /// Whether to collect and publish information about inactive preprocessor
     /// regions in the document.
     bool PublishInactiveRegions = false;
-
-    /// Whether to run preamble indexing asynchronously in an independent
-    /// thread.
-    bool AsyncPreambleIndexing = false;
 
     explicit operator TUScheduler::Options() const;
   };
@@ -350,8 +346,49 @@ public:
     std::string Title; /// A single-line message to show in the UI.
     llvm::StringLiteral Kind;
   };
+
+  // Ref to the clangd::Diag.
+  struct DiagRef {
+    clangd::Range Range;
+    std::string Message;
+    bool operator==(const DiagRef &Other) const {
+      return std::tie(Range, Message) == std::tie(Other.Range, Other.Message);
+    }
+    bool operator<(const DiagRef &Other) const {
+      return std::tie(Range, Message) < std::tie(Other.Range, Other.Message);
+    }
+  };
+
+  struct CodeActionInputs {
+    std::string File;
+    Range Selection;
+
+    /// Requested kind of actions to return.
+    std::vector<std::string> RequestedActionKinds;
+
+    /// Diagnostics attached to the code action request.
+    std::vector<DiagRef> Diagnostics;
+
+    /// Tweaks where Filter returns false will not be checked or included.
+    std::function<bool(const Tweak &)> TweakFilter;
+  };
+  struct CodeActionResult {
+    std::string Version;
+    struct QuickFix {
+      DiagRef Diag;
+      Fix F;
+    };
+    std::vector<QuickFix> QuickFixes;
+    std::vector<TweakRef> TweakRefs;
+  };
+  /// Surface code actions (quick-fixes for diagnostics, or available code
+  /// tweaks) for a given range in a file.
+  void codeAction(const CodeActionInputs &Inputs,
+                  Callback<CodeActionResult> CB);
+
   /// Enumerate the code tweaks available to the user at a specified point.
   /// Tweaks where Filter returns false will not be checked or included.
+  /// Deprecated, use codeAction instead.
   void enumerateTweaks(PathRef File, Range Sel,
                        llvm::unique_function<bool(const Tweak &)> Filter,
                        Callback<std::vector<TweakRef>> CB);

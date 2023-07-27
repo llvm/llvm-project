@@ -223,9 +223,7 @@ struct VectorizationState {
     assert(areValidScalableVecDims(scalableDims) &&
            "Permuted scalable vector dimensions are not supported");
 
-    // TODO: Extend scalable vector type to support a bit map.
-    bool numScalableDims = !scalableVecDims.empty() && scalableVecDims.back();
-    return VectorType::get(vectorShape, elementType, numScalableDims);
+    return VectorType::get(vectorShape, elementType, scalableDims);
   }
 
   /// Masks an operation with the canonical vector mask if the operation needs
@@ -605,8 +603,18 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
   Location loc = value.getLoc();
   auto linalgOp = cast<LinalgOp>(outputOperand->getOwner());
   AffineMap opOperandMap = linalgOp.getMatchingIndexingMap(outputOperand);
+
+  // Compute the vector type of the value to store. This type should be an
+  // identity or projection of the canonical vector type without any permutation
+  // applied, given that any permutation in a transfer write happens as part of
+  // the write itself.
+  AffineMap vectorTypeMap = AffineMap::getFilteredIdentityMap(
+      opOperandMap.getContext(), opOperandMap.getNumInputs(),
+      [&](AffineDimExpr dimExpr) -> bool {
+        return llvm::is_contained(opOperandMap.getResults(), dimExpr);
+      });
   auto vectorType = state.getCanonicalVecType(
-      getElementTypeOrSelf(outputOperand->get().getType()), opOperandMap);
+      getElementTypeOrSelf(outputOperand->get().getType()), vectorTypeMap);
 
   Operation *write;
   if (vectorType.getRank() > 0) {
@@ -614,13 +622,14 @@ static Value buildVectorWrite(RewriterBase &rewriter, Value value,
     SmallVector<Value> indices(linalgOp.getRank(outputOperand),
                                rewriter.create<arith::ConstantIndexOp>(loc, 0));
     value = broadcastIfNeeded(rewriter, value, vectorType);
+    assert(value.getType() == vectorType && "Incorrect type");
     write = rewriter.create<vector::TransferWriteOp>(
         loc, value, outputOperand->get(), indices, writeMap);
   } else {
     // 0-d case is still special: do not invert the reindexing writeMap.
     if (!isa<VectorType>(value.getType()))
       value = rewriter.create<vector::BroadcastOp>(loc, vectorType, value);
-    assert(value.getType() == vectorType && "incorrect type");
+    assert(value.getType() == vectorType && "Incorrect type");
     write = rewriter.create<vector::TransferWriteOp>(
         loc, value, outputOperand->get(), ValueRange{});
   }
@@ -736,8 +745,12 @@ tensorExtractVectorizationPrecondition(Operation *op, bool vectorizeNDExtract) {
   if (extractOp.getIndices().size() != 1 && !vectorizeNDExtract)
     return failure();
 
-  if (!VectorType::isValidElementType(extractOp.getIndices()[0].getType()))
-    return failure();
+  // Check the index type, but only for non 0-d tensors (for which we do need
+  // access indices).
+  if (not extractOp.getIndices().empty()) {
+    if (!VectorType::isValidElementType(extractOp.getIndices()[0].getType()))
+      return failure();
+  }
 
   if (llvm::any_of(extractOp->getResultTypes(), [](Type type) {
         return !VectorType::isValidElementType(type);
@@ -910,17 +923,28 @@ getTensorExtractMemoryAccessPattern(tensor::ExtractOp extractOp,
                                     LinalgOp &linalgOp) {
 
   auto targetShape = linalgOp.getStaticLoopRanges();
+  auto inputShape = cast<ShapedType>(extractOp.getTensor().getType());
+
+  // 0.1 Is this a 0-D vector? If yes then this is a scalar broadcast.
+  if (inputShape.getShape().empty())
+    return VectorMemoryAccessKind::ScalarBroadcast;
+
+  // 0.2 In the case of dynamic shapes just bail-out and assume that it's a
+  // gather load.
+  // TODO: Relax this condition.
+  if (linalgOp.hasDynamicShape())
+    return VectorMemoryAccessKind::Gather;
 
   // 1. Assume that it's a gather load when reading _into_:
   //    * an n-D vector, like`tensor<1x2x4xi32` or`tensor<2x1x4xi32>`, or
   //    * a 1-D vector with the trailing dim equal 1, e.g. `tensor<1x4x1xi32`.
   // TODO: Relax these conditions.
+  // FIXME: This condition assumes non-dynamic sizes.
   if ((llvm::count_if(targetShape,
                       [](int64_t dimSize) { return dimSize > 1; }) != 1) ||
       targetShape.back() == 1)
     return VectorMemoryAccessKind::Gather;
 
-  auto inputShape = cast<ShapedType>(extractOp.getTensor().getType());
 
   // 2. Assume that it's a gather load when reading _from_ a tensor for which
   // the trailing dimension is 1, e.g. `tensor<1x4x1xi32>`.
@@ -1216,7 +1240,7 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
     if (firstMaxRankedType) {
       auto vecType = VectorType::get(firstMaxRankedType.getShape(),
                                      getElementTypeOrSelf(vecOperand.getType()),
-                                     firstMaxRankedType.getNumScalableDims());
+                                     firstMaxRankedType.getScalableDims());
       vecOperands.push_back(broadcastIfNeeded(rewriter, vecOperand, vecType));
     } else {
       vecOperands.push_back(vecOperand);
@@ -1228,7 +1252,7 @@ vectorizeOneOp(RewriterBase &rewriter, VectorizationState &state,
     resultTypes.push_back(
         firstMaxRankedType
             ? VectorType::get(firstMaxRankedType.getShape(), resultType,
-                              firstMaxRankedType.getNumScalableDims())
+                              firstMaxRankedType.getScalableDims())
             : resultType);
   }
   //   d. Build and return the new op.
@@ -1410,7 +1434,7 @@ vectorizeAsTensorPadOp(RewriterBase &rewriter, tensor::PadOp padOp,
   auto emptyOp = rewriter.create<tensor::EmptyOp>(loc, reifiedReturnShapes[0],
                                                   padValue.getType());
   SmallVector<OpFoldResult> mixedSourceDims =
-      getMixedDimensions(rewriter, loc, padOp.getSource());
+      tensor::getMixedSizes(rewriter, loc, padOp.getSource());
   Value mask =
       rewriter.create<vector::CreateMaskOp>(loc, maskType, mixedSourceDims);
   auto zero = rewriter.create<arith::ConstantIndexOp>(loc, 0);

@@ -15,6 +15,12 @@ extern "C" int main(int argc, char **argv, char **envp);
 
 namespace __llvm_libc {
 
+// The AMDGPU architecture provides a fixed frequency clock used for obtaining
+// real time. However, the frequency of this clock varies between cards and can
+// only be obtained via the driver. The loader will set this so we can use it.
+extern "C" [[gnu::visibility("protected")]] uint64_t
+    [[clang::address_space(4)]] __llvm_libc_clock_freq = 0;
+
 extern "C" uintptr_t __init_array_start[];
 extern "C" uintptr_t __init_array_end[];
 extern "C" uintptr_t __fini_array_start[];
@@ -41,7 +47,7 @@ extern "C" [[gnu::visibility("protected"), clang::amdgpu_kernel]] void
 _begin(int argc, char **argv, char **env, void *rpc_shared_buffer) {
   // We need to set up the RPC client first in case any of the constructors
   // require it.
-  __llvm_libc::rpc::client.reset(__llvm_libc::rpc::DEFAULT_PORT_COUNT,
+  __llvm_libc::rpc::client.reset(__llvm_libc::rpc::MAX_PORT_COUNT,
                                  rpc_shared_buffer);
 
   // We want the fini array callbacks to be run after other atexit

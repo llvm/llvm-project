@@ -12,12 +12,16 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Arith/Utils/Utils.h"
 #include "mlir/Dialect/Complex/IR/Complex.h"
+#include "mlir/Dialect/Linalg/IR/Linalg.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/TypeUtilities.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVector.h"
+#include <algorithm>
 
 using namespace mlir;
 using namespace mlir::linalg;
@@ -48,70 +52,198 @@ bool linalg::detail::canOpOperandsBeDroppedImpl(
 // ContractionOpInterface implementation
 //===----------------------------------------------------------------------===//
 
-/// Return true if the use-def chain from `v` to `from` consists of 0 or more
-/// unary single-operand operations.
+/// If the value is defined by a chain of unary side effect-free, go up the
+/// use-def chain until the first value that isn't defined by such an op.
 // TODO: relax to multi-operands with constants, which are technically unary ops
 // as needed (e.g. add5).
-static bool isChainOfUnaryOpsFrom(Value v, Value from) {
-  while (true) {
-    if (v == from)
-      return true;
-    Operation *op = v.getDefiningOp();
-    if (!op || op->getNumOperands() != 1)
-      return false;
-    v = op->getOperand(0);
-  };
+static Value getSourceSkipUnary(Value value) {
+  Operation *op = value.getDefiningOp();
+  while (op && op->getNumOperands() == 1) {
+    auto iface = dyn_cast<MemoryEffectOpInterface>(op);
+    if (!iface || !iface.hasNoEffect())
+      break;
+    value = op->getOperand(0);
+    op = value.getDefiningOp();
+  }
+  return value;
 }
 
-/// Return the unique instance of OpType in `block` if it is indeed unique.
-/// Return null if none or more than 1 instances exist.
-template <typename OpType>
-static OpType getSingleOpOfType(Block &block) {
-  OpType res = nullptr;
-  block.walk([&](OpType op) {
-    if (res) {
-      res = nullptr;
-      return WalkResult::interrupt();
+bool mlir::linalg::detail::isContractionBody(
+    Block &block, function_ref<bool(Operation *, Operation *)> isaPair,
+    llvm::raw_ostream &errs) {
+  if (block.empty() || !block.back().mightHaveTrait<OpTrait::IsTerminator>()) {
+    errs << "no terminator in the block";
+    return false;
+  }
+
+  if (block.getNumArguments() != 3) {
+    errs << "expected block with 3 arguments";
+    return false;
+  }
+
+  Operation *terminator = block.getTerminator();
+  if (terminator->getNumOperands() != 1) {
+    errs << "expected terminator with 1 operand";
+    return false;
+  }
+
+  Value yielded = getSourceSkipUnary(terminator->getOperand(0));
+  Operation *reductionOp = yielded.getDefiningOp();
+  if (reductionOp->getNumResults() != 1 || reductionOp->getNumOperands() != 2) {
+    errs << "expected reduction op to be binary";
+    return false;
+  }
+
+  Value reductionLHS = getSourceSkipUnary(reductionOp->getOperand(0));
+  Value reductionRHS = getSourceSkipUnary(reductionOp->getOperand(1));
+
+  if (reductionLHS != block.getArgument(2) &&
+      reductionRHS != block.getArgument(2)) {
+    errs << "expected reduction to take block argument #2 as one of the "
+            "operands (modulo unary casts)";
+    return false;
+  }
+
+  Value contributed = getSourceSkipUnary(
+      isa<BlockArgument>(reductionLHS) ? reductionRHS : reductionLHS);
+  Operation *elementwiseOp = contributed.getDefiningOp();
+  if (elementwiseOp->getNumResults() != 1 ||
+      elementwiseOp->getNumOperands() != 2) {
+    errs << "expected elementwise op to be binary";
+    return false;
+  }
+
+  if (!isaPair(elementwiseOp, reductionOp)) {
+    errs << "expected reduction/elementwise op kind not satisfied";
+    return false;
+  }
+
+  Value elementwiseLHS = getSourceSkipUnary(elementwiseOp->getOperand(0));
+  Value elementwiseRHS = getSourceSkipUnary(elementwiseOp->getOperand(1));
+  if ((elementwiseLHS == block.getArgument(0) &&
+       elementwiseRHS == block.getArgument(1)) ||
+      (elementwiseLHS == block.getArgument(1) &&
+       elementwiseRHS == block.getArgument(0))) {
+    return true;
+  }
+
+  errs << "expected elementwise op to apply to block arguments (modulo unary "
+          "casts)";
+  return false;
+}
+
+/// Returns true if the two operations are of the kinds specified by a pair of
+/// consecutive template arguments.
+template <typename AddOpTy, typename MulOpTy, typename... Args>
+static bool isPairTemplateImpl(Operation *add, Operation *mul) {
+  static_assert(sizeof...(Args) % 2 == 0,
+                "expected an even number of template arguments");
+  if (isa<AddOpTy>(add) && isa<MulOpTy>(mul))
+    return true;
+
+  if constexpr (sizeof...(Args) > 0)
+    return isPairTemplateImpl<Args...>(add, mul);
+  else
+    return false;
+}
+
+/// Returns true if the block is a body of a contraction with the kinds of
+/// operations given pairwise by template arguments.
+template <typename... Args>
+static bool isContractionBody(Block &block) {
+  return linalg::detail::isContractionBody(block, &isPairTemplateImpl<Args...>);
+}
+
+/// Given a `linalgOp` and one of its `opOperand`, returns the positions of the
+/// iterators of type `iter` that index the `opOperand` as a permutation.
+/// This is useful to infer various subcomputations on a given `linalgOp`.
+/// This is performed by looking up each result in the matching indexing map and
+/// determining whether:
+///   - It is a single AffineDimExpr.
+///   - It is the only result involving this AffineDimExpr.
+static DenseSet<int64_t>
+findPermutationsIndexingOperand(LinalgOp linalgOp, OpOperand *opOperand,
+                                utils::IteratorType iter) {
+  DenseSet<int64_t> res;
+  assert(linalgOp == opOperand->getOwner() && "expected linalgOp owner");
+  AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
+  for (AffineExpr e : indexingMap.getResults()) {
+    if (auto d = e.dyn_cast<AffineDimExpr>()) {
+      if (linalgOp.getIteratorTypesArray()[d.getPosition()] == iter &&
+          llvm::count_if(indexingMap.getResults(), [d](AffineExpr e) {
+            return e.isFunctionOfDim(d.getPosition());
+          }) == 1)
+        res.insert(d.getPosition());
     }
-    res = op;
-    return WalkResult::advance();
-  });
+  }
   return res;
 }
 
-/// Detect whether res is any permutation of `u5(u1(c) + u2(u3(a) * u4(b)))`
-/// on the field (AddOpType, MulOpType), where u1, u2, u3, u4 and u5 represent
-/// unary operations that may change the type.
-template <typename AddOpType, typename MulOpType>
-static bool isAddMul(Block &block) {
-  if (block.getNumArguments() != 3)
-    return false;
-  Operation *yieldOp = block.getTerminator();
-  if (yieldOp->getNumOperands() != 1)
-    return false;
+namespace {
+auto par = utils::IteratorType::parallel;
+auto red = utils::IteratorType::reduction;
+} // namespace
 
-  AddOpType addOp = getSingleOpOfType<AddOpType>(block);
-  MulOpType mulOp = getSingleOpOfType<MulOpType>(block);
-  if (!addOp || !mulOp)
-    return false;
+/// Find 2 parallel (m and n) and 1 reduction (k) dimension candidates that form
+/// a matmul subcomputation within `linalgOp`. These dimensions are such that:
+///   1. The m dimension is involved in an outer-product along LHS
+///      (i.e. it is a permutation on RES and LHS and does not appear in RHS).
+///   2. The n dimension is involved in an outer-product along RHS
+///      (i.e. it is a permutation on RES and RHS and does not appear in LHS).
+///   3. The k dimension appears as a permutation on LHS and RHS.
+///   4. m, n and k appear only once in any given indexing.
+///   5. Optional batch dimensions that appear in all operands are captured.
+/// This allows e.g. detecting that some contraction is embedded within
+/// `linalgOp` with some orthogonal heuristic.
+FailureOr<ContractionDimensions>
+mlir::linalg::inferContractionDims(LinalgOp linalgOp) {
+  if (linalgOp.getNumDpsInits() != 1 || linalgOp.getNumDpsInputs() != 2)
+    return failure();
 
-  Value argA = block.getArgument(0), argB = block.getArgument(1);
-  Value a = mulOp->getOperand(0), b = mulOp->getOperand(1);
-  Value mul = mulOp->getResult(0);
-  Value argC = block.getArgument(2);
-  Value c1 = addOp->getOperand(0), c2 = addOp->getOperand(1);
-  Value add = addOp->getResult(0);
-  Value res = yieldOp->getOperand(0);
-  // Result traces back to add.
-  auto un = isChainOfUnaryOpsFrom;
-  bool success = un(res, add);
-  // One of the operands of add traces back to argC, the other to the mul.
-  success |= (un(c1, argC) && un(c2, mul)) || ((un(c1, mul)) && un(c2, argC));
-  // One of the operands of mul traces back to argA, the other to argB.
-  success |= (un(a, argA) && un(b, argB)) || ((un(a, argB)) && un(b, argA));
-  return success;
+  DenseSet<int64_t> a = findPermutationsIndexingOperand(
+      linalgOp, linalgOp.getDpsInputOperand(0), par);
+  DenseSet<int64_t> b = findPermutationsIndexingOperand(
+      linalgOp, linalgOp.getDpsInputOperand(1), par);
+  DenseSet<int64_t> c = findPermutationsIndexingOperand(
+      linalgOp, linalgOp.getDpsInitOperand(0), par);
+
+  // A & C - B are the iterators involved in an outer-product along A (the LHS).
+  DenseSet<int64_t> ac = a;
+  llvm::set_intersect(ac, c);
+  llvm::set_subtract(ac, b);
+  // B & C - A are the iterators involved in an outer-product along B (the RHS).
+  DenseSet<int64_t> bc = b;
+  llvm::set_intersect(bc, c);
+  llvm::set_subtract(bc, a);
+  // A & B & C are the "batch" dimensions.
+  DenseSet<int64_t> batches = a;
+  llvm::set_intersect(batches, b);
+  llvm::set_intersect(batches, c);
+
+  // A & B red are the reduction dimensions.
+  DenseSet<int64_t> ra = findPermutationsIndexingOperand(
+      linalgOp, linalgOp.getDpsInputOperand(0), red);
+  DenseSet<int64_t> rb = findPermutationsIndexingOperand(
+      linalgOp, linalgOp.getDpsInputOperand(1), red);
+  llvm::set_intersect(ra, rb);
+
+  if (ac.empty() || bc.empty() || ra.empty())
+    return failure();
+
+  // Return each set in sorted order.
+  ContractionDimensions dimensions{
+      SmallVector<unsigned, 2>(batches.begin(), batches.end()),
+      SmallVector<unsigned, 2>(ac.begin(), ac.end()),
+      SmallVector<unsigned, 2>(bc.begin(), bc.end()),
+      SmallVector<unsigned, 2>(ra.begin(), ra.end())};
+  std::sort(dimensions.batch.begin(), dimensions.batch.end());
+  std::sort(dimensions.m.begin(), dimensions.m.end());
+  std::sort(dimensions.n.begin(), dimensions.n.end());
+  std::sort(dimensions.k.begin(), dimensions.k.end());
+  return dimensions;
 }
 
+namespace mlir::linalg::detail {
 enum class MatchContractionResult {
   Success = 0,
   NotLinalgOp,
@@ -120,7 +252,11 @@ enum class MatchContractionResult {
   NotProjectedPermutations,
   NotAddMul
 };
-static MatchContractionResult isContractionInterfaceImpl(Operation *op) {
+} // namespace mlir::linalg::detail
+
+mlir::linalg::detail::MatchContractionResult
+mlir::linalg::detail::isContractionInterfaceImpl(
+    Operation *op, mlir::linalg::ContractionDimensions *dimensions) {
   auto linalgOp = dyn_cast<linalg::LinalgOp>(op);
   if (!linalgOp)
     return MatchContractionResult::NotLinalgOp;
@@ -133,13 +269,42 @@ static MatchContractionResult isContractionInterfaceImpl(Operation *op) {
                    [](AffineMap m) { return !m.isProjectedPermutation(); }))
     return MatchContractionResult::NotProjectedPermutations;
   // TODO: more fields than add/mul.
-  if (!isAddMul<arith::AddFOp, arith::MulFOp>(linalgOp->getRegion(0).front()) &&
-      !isAddMul<arith::AddIOp, arith::MulIOp>(linalgOp->getRegion(0).front()) &&
-      !isAddMul<complex::AddOp, complex::MulOp>(
-          linalgOp->getRegion(0).front()) &&
-      !isAddMul<arith::OrIOp, arith::AndIOp>(linalgOp->getRegion(0).front()))
+  // clang-format off
+  if (!::isContractionBody<
+        arith::MulFOp, arith::AddFOp,
+        arith::MulIOp, arith::AddIOp,
+        complex::MulOp, complex::AddOp,
+        arith::AndIOp, arith::OrIOp>(
+      *linalgOp.getBlock())) {
     return MatchContractionResult::NotAddMul;
+  }
+  // clang-format on
+
+  if (dimensions) {
+    FailureOr<ContractionDimensions> res = inferContractionDims(linalgOp);
+    assert(succeeded(res) && "unexpected failure to infer contraction dims");
+    *dimensions = *res;
+  }
   return MatchContractionResult::Success;
+}
+
+StringRef
+mlir::linalg::detail::getMatchContractionMessage(MatchContractionResult res) {
+  switch (res) {
+  case MatchContractionResult::NotLinalgOp:
+    return "expected a LinalgOp";
+  case MatchContractionResult::WrongNumOperands:
+    return "expected op with 2 inputs and 1 output";
+  case MatchContractionResult::NoReduction:
+    return "expected at least 1 reduction";
+  case MatchContractionResult::NotProjectedPermutations:
+    return "expected indexing maps to be projected permutations";
+  case MatchContractionResult::NotAddMul:
+    return "expected add/mul op in the body";
+  case MatchContractionResult::Success:
+    return "";
+  }
+  llvm_unreachable("unhandled MatchContractionResult case");
 }
 
 bool mlir::linalg::isaContractionOpInterface(LinalgOp linalgOp) {
@@ -147,7 +312,8 @@ bool mlir::linalg::isaContractionOpInterface(LinalgOp linalgOp) {
     return false;
   Operation *op = linalgOp.getOperation();
   return isa<ContractionOpInterface>(op) ||
-         (isContractionInterfaceImpl(op) == MatchContractionResult::Success);
+         (mlir::linalg::detail::isContractionInterfaceImpl(op) ==
+          mlir::linalg::detail::MatchContractionResult::Success);
 }
 
 /// Verify that a LinalgOp `op` is a contraction.
@@ -165,16 +331,8 @@ bool mlir::linalg::isaContractionOpInterface(LinalgOp linalgOp) {
 /// constant operations that do not involve the reduction dimension(s).
 LogicalResult mlir::linalg::detail::verifyContractionInterface(Operation *op) {
   auto res = isContractionInterfaceImpl(op);
-  if (res == MatchContractionResult::NotLinalgOp)
-    return op->emitError("expected a LinalgOp");
-  if (res == MatchContractionResult::WrongNumOperands)
-    return op->emitError("expected op with 2 inputs and 1 outputs");
-  if (res == MatchContractionResult::NoReduction)
-    return op->emitError("expected at least a reduction loop");
-  if (res == MatchContractionResult::NotProjectedPermutations)
-    return op->emitError("expected all indexings to be projected permutations");
-  if (res == MatchContractionResult::NotAddMul)
-    return op->emitError("(add, mul) operations not found");
+  if (res != MatchContractionResult::Success)
+    return op->emitError(getMatchContractionMessage(res));
   return success();
 }
 
@@ -454,6 +612,11 @@ mlir::linalg::detail::getMatchConvolutionMessage(MatchConvolutionResult res) {
   llvm_unreachable("unhandled MatchConvolutionResult case");
 }
 
+bool mlir::linalg::isaConvolutionOpInterface(LinalgOp linalgOp) {
+  return linalg::detail::isConvolutionInterfaceImpl(linalgOp.getOperation()) ==
+         linalg::detail::MatchConvolutionResult::Success;
+}
+
 LogicalResult mlir::linalg::detail::verifyConvolutionInterface(Operation *op) {
   MatchConvolutionResult res = isConvolutionInterfaceImpl(op);
   if (res != MatchConvolutionResult::Success)
@@ -501,24 +664,6 @@ LogicalResult mlir::linalg::detail::verifyFillInterface(Operation *op) {
 //===----------------------------------------------------------------------===//
 // StructuredOpInterface implementation
 //===----------------------------------------------------------------------===//
-
-/// Helper function that creates a memref::DimOp or tensor::DimOp depending on
-/// the type of `source`.
-static Value createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
-                               int64_t dim) {
-  if (llvm::isa<UnrankedMemRefType, MemRefType>(source.getType()))
-    return b.createOrFold<memref::DimOp>(loc, source, dim);
-  if (llvm::isa<UnrankedTensorType, RankedTensorType>(source.getType()))
-    return b.createOrFold<tensor::DimOp>(loc, source, dim);
-  llvm_unreachable("Expected MemRefType or TensorType");
-}
-static OpFoldResult createFoldedDimOp(OpBuilder &b, Location loc, Value source,
-                                      int64_t dim) {
-  auto shapedType = llvm::cast<ShapedType>(source.getType());
-  if (!shapedType.hasRank() || shapedType.isDynamicDim(dim))
-    return createOrFoldDimOp(b, loc, source, dim);
-  return b.getIndexAttr(shapedType.getDimSize(dim));
-}
 
 SmallVector<OpFoldResult> LinalgOp::createFlatListOfOperandDims(OpBuilder &b,
                                                                 Location loc) {

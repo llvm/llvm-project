@@ -50,7 +50,7 @@ public:
   void popArgs();
 
   /// Describes the frame with arguments for diagnostic purposes.
-  void describe(llvm::raw_ostream &OS) override;
+  void describe(llvm::raw_ostream &OS) const override;
 
   /// Returns the parent frame object.
   Frame *getCaller() const override;
@@ -118,6 +118,7 @@ public:
   virtual SourceInfo getSource(CodePtr PC) const;
   const Expr *getExpr(CodePtr PC) const;
   SourceLocation getLocation(CodePtr PC) const;
+  SourceRange getRange(CodePtr PC) const;
 
   unsigned getDepth() const { return Depth; }
 

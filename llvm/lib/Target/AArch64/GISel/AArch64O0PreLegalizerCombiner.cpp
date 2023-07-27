@@ -16,6 +16,8 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
+#include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
@@ -27,33 +29,67 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/Support/Debug.h"
 
+#define GET_GICOMBINER_DEPS
+#include "AArch64GenO0PreLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_DEPS
+
 #define DEBUG_TYPE "aarch64-O0-prelegalizer-combiner"
 
 using namespace llvm;
 using namespace MIPatternMatch;
+namespace {
+#define GET_GICOMBINER_TYPES
+#include "AArch64GenO0PreLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_TYPES
 
-class AArch64O0PreLegalizerCombinerHelperState {
+class AArch64O0PreLegalizerCombinerImpl : public GIMatchTableExecutor {
 protected:
   CombinerHelper &Helper;
+  const AArch64O0PreLegalizerCombinerImplRuleConfig &RuleConfig;
+
+  const AArch64Subtarget &STI;
+  GISelChangeObserver &Observer;
+  MachineIRBuilder &B;
+  MachineFunction &MF;
+
+  MachineRegisterInfo &MRI;
 
 public:
-  AArch64O0PreLegalizerCombinerHelperState(CombinerHelper &Helper)
-      : Helper(Helper) {}
+  AArch64O0PreLegalizerCombinerImpl(
+      const AArch64O0PreLegalizerCombinerImplRuleConfig &RuleConfig,
+      GISelChangeObserver &Observer, MachineIRBuilder &B,
+      CombinerHelper &Helper);
+
+  static const char *getName() { return "AArch64O0PreLegalizerCombiner"; }
+
+  bool tryCombineAll(MachineInstr &I) const;
+
+private:
+#define GET_GICOMBINER_CLASS_MEMBERS
+#include "AArch64GenO0PreLegalizeGICombiner.inc"
+#undef GET_GICOMBINER_CLASS_MEMBERS
 };
 
-#define AARCH64O0PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
+#define GET_GICOMBINER_IMPL
 #include "AArch64GenO0PreLegalizeGICombiner.inc"
-#undef AARCH64O0PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_DEPS
+#undef GET_GICOMBINER_IMPL
 
-namespace {
-#define AARCH64O0PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
+AArch64O0PreLegalizerCombinerImpl::AArch64O0PreLegalizerCombinerImpl(
+    const AArch64O0PreLegalizerCombinerImplRuleConfig &RuleConfig,
+    GISelChangeObserver &Observer, MachineIRBuilder &B, CombinerHelper &Helper)
+    : Helper(Helper), RuleConfig(RuleConfig),
+      STI(B.getMF().getSubtarget<AArch64Subtarget>()), Observer(Observer), B(B),
+      MF(B.getMF()), MRI(*B.getMRI()),
+#define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "AArch64GenO0PreLegalizeGICombiner.inc"
-#undef AARCH64O0PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_H
+#undef GET_GICOMBINER_CONSTRUCTOR_INITS
+{
+}
 
 class AArch64O0PreLegalizerCombinerInfo : public CombinerInfo {
   GISelKnownBits *KB;
   MachineDominatorTree *MDT;
-  AArch64GenO0PreLegalizerCombinerHelperRuleConfig GeneratedRuleCfg;
+  AArch64O0PreLegalizerCombinerImplRuleConfig RuleConfig;
 
 public:
   AArch64O0PreLegalizerCombinerInfo(bool EnableOpt, bool OptSize, bool MinSize,
@@ -62,7 +98,7 @@ public:
       : CombinerInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, OptSize, MinSize),
         KB(KB), MDT(MDT) {
-    if (!GeneratedRuleCfg.parseCommandLineOption())
+    if (!RuleConfig.parseCommandLineOption())
       report_fatal_error("Invalid rule identifier");
   }
 
@@ -74,9 +110,10 @@ bool AArch64O0PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
                                                 MachineInstr &MI,
                                                 MachineIRBuilder &B) const {
   CombinerHelper Helper(Observer, B, /*IsPreLegalize*/ true, KB, MDT);
-  AArch64GenO0PreLegalizerCombinerHelper Generated(GeneratedRuleCfg, Helper);
+  AArch64O0PreLegalizerCombinerImpl Impl(RuleConfig, Observer, B, Helper);
+  Impl.setupMF(*MI.getMF(), KB);
 
-  if (Generated.tryCombineAll(Observer, MI, B))
+  if (Impl.tryCombineAll(MI))
     return true;
 
   unsigned Opc = MI.getOpcode();
@@ -103,10 +140,6 @@ bool AArch64O0PreLegalizerCombinerInfo::combine(GISelChangeObserver &Observer,
 
   return false;
 }
-
-#define AARCH64O0PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
-#include "AArch64GenO0PreLegalizeGICombiner.inc"
-#undef AARCH64O0PRELEGALIZERCOMBINERHELPER_GENCOMBINERHELPER_CPP
 
 // Pass boilerplate
 // ================

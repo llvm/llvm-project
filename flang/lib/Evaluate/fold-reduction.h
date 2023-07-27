@@ -260,12 +260,12 @@ static Expr<T> FoldProduct(
         element = prod.value;
       }
     }};
+    auto result{Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)}};
     if (overflow) {
       context.messages().Say(
           "PRODUCT() of %s data overflowed"_warn_en_US, T::AsFortran());
-    } else {
-      return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
     }
+    return result;
   }
   return Expr<T>{std::move(ref)};
 }
@@ -301,12 +301,12 @@ static Expr<T> FoldSum(FoldingContext &context, FunctionRef<T> &&ref) {
         element = sum.value;
       }
     }};
+    auto result{Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)}};
     if (overflow) {
       context.messages().Say(
           "SUM() of %s data overflowed"_warn_en_US, T::AsFortran());
-    } else {
-      return Expr<T>{DoReduction<T>(*array, dim, identity, accumulator)};
     }
+    return result;
   }
   return Expr<T>{std::move(ref)};
 }

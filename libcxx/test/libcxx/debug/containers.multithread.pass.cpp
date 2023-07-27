@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++11, c++14
 // UNSUPPORTED: no-threads
 
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 // test multithreaded container debugging
 

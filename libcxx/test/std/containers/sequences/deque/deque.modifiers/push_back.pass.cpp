@@ -12,6 +12,7 @@
 // void pop_back();
 // void pop_front();
 
+#include "asan_testing.h"
 #include <deque>
 #include <cassert>
 
@@ -49,6 +50,7 @@ void test(int size)
     {
         C c = make<C>(size, rng[j]);
         typename C::const_iterator it = c.begin();
+        LIBCPP_ASSERT(is_double_ended_contiguous_container_asan_correct(c));
         for (int i = 0; i < size; ++i, ++it)
             assert(*it == i);
     }

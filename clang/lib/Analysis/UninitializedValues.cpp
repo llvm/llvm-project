@@ -896,7 +896,7 @@ struct PruneBlocksHandler : public UninitVariablesHandler {
     hadUse[currentBlock] = true;
     hadAnyUse = true;
   }
-  
+
   /// Called when the uninitialized variable analysis detects the
   /// idiom 'int x = x'.  All other uses of 'x' within the initializer
   /// are handled by handleUseOfUninitVariable.

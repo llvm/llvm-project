@@ -181,11 +181,6 @@ static cl::opt<std::string> ShowLinkGraphs(
              "matching that regex after fixups have been applied"),
     cl::Optional, cl::cat(JITLinkCategory));
 
-static cl::opt<bool> ShowSizes(
-    "show-sizes",
-    cl::desc("Show sizes pre- and post-dead stripping, and allocations"),
-    cl::init(false), cl::cat(JITLinkCategory));
-
 static cl::opt<bool> ShowTimes("show-times",
                                cl::desc("Show times for llvm-jitlink phases"),
                                cl::init(false), cl::cat(JITLinkCategory));
@@ -386,13 +381,6 @@ static Error applyHarnessPromotions(Session &S, LinkGraph &G) {
     G.makeExternal(*Sym);
 
   return Error::success();
-}
-
-static uint64_t computeTotalBlockSizes(LinkGraph &G) {
-  uint64_t TotalSize = 0;
-  for (auto *B : G.blocks())
-    TotalSize += B->getSize();
-  return TotalSize;
 }
 
 static void dumpSectionContents(raw_ostream &OS, LinkGraph &G) {
@@ -1105,17 +1093,6 @@ void Session::modifyPassConfig(const Triple &TT,
 
   PassConfig.PrePrunePasses.push_back(
       [this](LinkGraph &G) { return applyHarnessPromotions(*this, G); });
-
-  if (ShowSizes) {
-    PassConfig.PrePrunePasses.push_back([this](LinkGraph &G) -> Error {
-      SizeBeforePruning += computeTotalBlockSizes(G);
-      return Error::success();
-    });
-    PassConfig.PostFixupPasses.push_back([this](LinkGraph &G) -> Error {
-      SizeAfterFixups += computeTotalBlockSizes(G);
-      return Error::success();
-    });
-  }
 
   if (ShowRelocatedSectionContents)
     PassConfig.PostFixupPasses.push_back([](LinkGraph &G) -> Error {
@@ -1934,19 +1911,6 @@ static Error addSelfRelocations(LinkGraph &G) {
   return Error::success();
 }
 
-static void dumpSessionStats(Session &S) {
-  if (!ShowSizes)
-    return;
-  if (!OrcRuntime.empty())
-    outs() << "Note: Session stats include runtime and entry point lookup, but "
-              "not JITDylib initialization/deinitialization.\n";
-  if (ShowSizes)
-    outs() << "  Total size of all blocks before pruning: "
-           << S.SizeBeforePruning
-           << "\n  Total size of all blocks after fixups: " << S.SizeAfterFixups
-           << "\n";
-}
-
 static Expected<ExecutorSymbolDef> getMainEntryPoint(Session &S) {
   return S.ES.lookup(S.JDSearchOrder, S.ES.intern(EntryPointName));
 }
@@ -2038,6 +2002,8 @@ int main(int argc, char *argv[]) {
 
   auto S = ExitOnErr(Session::Create(std::move(TT), std::move(Features)));
 
+  enableStatistics(*S, !OrcRuntime.empty());
+
   {
     TimeRegion TR(Timers ? &Timers->LoadObjectsTimer : nullptr);
     ExitOnErr(addSessionInputs(*S));
@@ -2063,8 +2029,6 @@ int main(int argc, char *argv[]) {
   if (ShowAddrs)
     S->dumpSessionInfo(outs());
 
-  dumpSessionStats(*S);
-
   if (!EntryPoint) {
     if (Timers)
       Timers->JITLinkTG.printAll(errs());
@@ -2074,11 +2038,8 @@ int main(int argc, char *argv[]) {
 
   ExitOnErr(runChecks(*S));
 
-  if (NoExec)
-    return 0;
-
   int Result = 0;
-  {
+  if (!NoExec) {
     LLVM_DEBUG(dbgs() << "Running \"" << EntryPointName << "\"...\n");
     TimeRegion TR(Timers ? &Timers->RunTimer : nullptr);
     if (!OrcRuntime.empty())

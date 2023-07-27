@@ -227,7 +227,7 @@ from_chars(const char* __first, const char* __last, _Tp& __value) {
 template <typename _Tp, typename enable_if<is_integral<_Tp>::value, int>::type = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI from_chars_result
 from_chars(const char* __first, const char* __last, _Tp& __value, int __base) {
-  _LIBCPP_ASSERT(2 <= __base && __base <= 36, "base not in [2, 36]");
+  _LIBCPP_ASSERT_UNCATEGORIZED(2 <= __base && __base <= 36, "base not in [2, 36]");
   return std::__from_chars_integral(__first, __last, __value, __base);
 }
 #endif // _LIBCPP_STD_VER >= 17

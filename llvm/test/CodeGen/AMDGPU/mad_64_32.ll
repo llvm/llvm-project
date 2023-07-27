@@ -31,7 +31,6 @@ define i64 @mad_i64_i32_sextops(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX11-LABEL: mad_i64_i32_sextops:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_i64_i32 v[0:1], null, v5, v4, v[2:3]
@@ -68,7 +67,6 @@ define i64 @mad_i64_i32_sextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX11-LABEL: mad_i64_i32_sextops_commute:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_i64_i32 v[0:1], null, v5, v4, v[2:3]
@@ -105,7 +103,6 @@ define i64 @mad_u64_u32_zextops(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX11-LABEL: mad_u64_u32_zextops:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v5, v4, v[2:3]
@@ -142,7 +139,6 @@ define i64 @mad_u64_u32_zextops_commute(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX11-LABEL: mad_u64_u32_zextops_commute:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v5, v4, v[2:3]
@@ -243,7 +239,6 @@ define i128 @mad_i64_i32_sextops_i32_i128(i32 %arg0, i32 %arg1, i128 %arg2) #0 {
 ; GFX11-LABEL: mad_i64_i32_sextops_i32_i128:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mad_u64_u32 v[6:7], null, v0, v1, 0
 ; GFX11-NEXT:    v_mov_b32_e32 v8, 0
 ; GFX11-NEXT:    v_ashrrev_i32_e32 v14, 31, v0
@@ -304,7 +299,6 @@ define i63 @mad_i64_i32_sextops_i32_i63(i32 %arg0, i32 %arg1, i63 %arg2) #0 {
 ; GFX11-LABEL: mad_i64_i32_sextops_i32_i63:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_i64_i32 v[0:1], null, v5, v4, v[2:3]
@@ -349,7 +343,6 @@ define i63 @mad_i64_i32_sextops_i31_i63(i31 %arg0, i31 %arg1, i63 %arg2) #0 {
 ; GFX11-LABEL: mad_i64_i32_sextops_i31_i63:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_bfe_i32 v4, v1, 0, 31
 ; GFX11-NEXT:    v_bfe_i32 v5, v0, 0, 31
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
@@ -398,7 +391,6 @@ define i64 @mad_i64_i32_extops_i32_i64(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX11-LABEL: mad_i64_i32_extops_i32_i64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v4, v1 :: v_dual_mov_b32 v5, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v5, v4, v[2:3]
@@ -439,7 +431,6 @@ define i64 @mad_u64_u32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
 ; GFX11-LABEL: mad_u64_u32_bitops:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v3, v2, v[4:5]
@@ -486,7 +477,6 @@ define i64 @mad_u64_u32_bitops_lhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
 ; GFX11-LABEL: mad_u64_u32_bitops_lhs_mask_small:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v3, v2 :: v_dual_mov_b32 v2, v0
 ; GFX11-NEXT:    v_mov_b32_e32 v6, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -539,7 +529,6 @@ define i64 @mad_u64_u32_bitops_rhs_mask_small(i64 %arg0, i64 %arg1, i64 %arg2) #
 ; GFX11-LABEL: mad_u64_u32_bitops_rhs_mask_small:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v6, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v6, v2, v[4:5]
@@ -579,7 +568,6 @@ define i64 @mad_i64_i32_bitops(i64 %arg0, i64 %arg1, i64 %arg2) #0 {
 ; GFX11-LABEL: mad_i64_i32_bitops:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v3, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mad_i64_i32 v[0:1], null, v3, v2, v[4:5]
@@ -619,7 +607,6 @@ define i64 @mad_i64_i32_unpack_i64ops(i64 %arg0) #0 {
 ; GFX11-LABEL: mad_i64_i32_unpack_i64ops:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mad_u64_u32 v[2:3], null, v1, v0, v[0:1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_dual_mov_b32 v0, v2 :: v_dual_mov_b32 v1, v3
@@ -694,6 +681,7 @@ define amdgpu_kernel void @mad_i64_i32_uniform(ptr addrspace(1) %out, i32 %arg0,
 ; GFX11-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 0 :: v_dual_mov_b32 v1, s1
 ; GFX11-NEXT:    global_store_b64 v2, v[0:1], s[4:5]
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %ext0 = zext i32 %arg0 to i64
@@ -739,7 +727,6 @@ define i64 @mad_i64_i32_twice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3) #0 {
 ; GFX11-LABEL: mad_i64_i32_twice:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mad_i64_i32 v[6:7], null, v0, v1, v[2:3]
 ; GFX11-NEXT:    v_mad_i64_i32 v[2:3], null, v0, v1, v[4:5]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -804,7 +791,6 @@ define i64 @mad_i64_i32_thrice(i32 %arg0, i32 %arg1, i64 %arg2, i64 %arg3, i64 %
 ; GFX11-LABEL: mad_i64_i32_thrice:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mad_i64_i32 v[8:9], null, v0, v1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v8, v2
@@ -865,7 +851,6 @@ define i64 @mad_i64_i32_secondary_use(i32 %arg0, i32 %arg1, i64 %arg2) #0 {
 ; GFX11-LABEL: mad_i64_i32_secondary_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mad_i64_i32 v[4:5], null, v0, v1, 0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_add_co_u32 v0, vcc_lo, v4, v2
@@ -922,7 +907,6 @@ define i48 @mad_i48_i48(i48 %arg0, i48 %arg1, i48 %arg2) #0 {
 ; GFX11-LABEL: mad_i48_i48:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v6, v1 :: v_dual_mov_b32 v7, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-NEXT:    v_mad_u64_u32 v[0:1], null, v7, v2, v[4:5]

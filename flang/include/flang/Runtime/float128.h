@@ -33,7 +33,7 @@
 
 #undef HAS_FLOAT128
 #if (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)) && \
-    !defined(_LIBCPP_VERSION)
+    !defined(_LIBCPP_VERSION) && !defined(__CUDA_ARCH__)
 /*
  * It may still be worth checking for compiler versions,
  * since earlier versions may define the macros above, but
@@ -47,6 +47,6 @@
 #define HAS_FLOAT128 1
 #endif
 #endif /* (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)) && \
-          !defined(_LIBCPP_VERSION) */
+          !defined(_LIBCPP_VERSION)  && !defined(__CUDA_ARCH__) */
 
 #endif /* FORTRAN_RUNTIME_FLOAT128_H_ */

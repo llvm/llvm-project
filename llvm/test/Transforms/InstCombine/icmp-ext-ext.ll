@@ -380,3 +380,40 @@ define i1 @sext_zext_uge_known_nonneg_op0_wide(i16 %x, i8 %y) {
   %c = icmp uge i32 %a, %b
   ret i1 %c
 }
+
+
+define i1 @zext_eq_sext(i1 %a, i1 %b) {
+; CHECK-LABEL: @zext_eq_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = or i1 [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TOBOOL4:%.*]] = xor i1 [[TMP1]], true
+; CHECK-NEXT:    ret i1 [[TOBOOL4]]
+;
+  %conv = zext i1 %a to i32
+  %conv3.neg = sext i1 %b to i32
+  %tobool4 = icmp eq i32 %conv, %conv3.neg
+  ret i1 %tobool4
+}
+
+define i1 @zext_eq_sext_fail_not_i1(i1 %a, i8 %b) {
+; CHECK-LABEL: @zext_eq_sext_fail_not_i1(
+; CHECK-NEXT:    [[CONV:%.*]] = zext i1 [[A:%.*]] to i32
+; CHECK-NEXT:    [[CONV3_NEG:%.*]] = sext i8 [[B:%.*]] to i32
+; CHECK-NEXT:    [[TOBOOL4:%.*]] = icmp eq i32 [[CONV]], [[CONV3_NEG]]
+; CHECK-NEXT:    ret i1 [[TOBOOL4]]
+;
+  %conv = zext i1 %a to i32
+  %conv3.neg = sext i8 %b to i32
+  %tobool4 = icmp eq i32 %conv, %conv3.neg
+  ret i1 %tobool4
+}
+
+define <2 x i1> @zext_ne_sext(<2 x i1> %a, <2 x i1> %b) {
+; CHECK-LABEL: @zext_ne_sext(
+; CHECK-NEXT:    [[TMP1:%.*]] = or <2 x i1> [[B:%.*]], [[A:%.*]]
+; CHECK-NEXT:    ret <2 x i1> [[TMP1]]
+;
+  %conv = zext <2 x i1> %a to <2 x i8>
+  %conv3.neg = sext <2 x i1> %b to <2 x i8>
+  %tobool4 = icmp ne <2 x i8> %conv3.neg, %conv
+  ret <2 x i1> %tobool4
+}

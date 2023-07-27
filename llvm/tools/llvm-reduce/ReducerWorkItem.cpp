@@ -225,6 +225,8 @@ static std::unique_ptr<MachineFunction> cloneMF(MachineFunction *SrcMF,
         DstMF->CreateMachineBasicBlock(SrcMBB.getBasicBlock());
     Src2DstMBB[&SrcMBB] = DstMBB;
 
+    DstMBB->setCallFrameSize(SrcMBB.getCallFrameSize());
+
     if (SrcMBB.isIRBlockAddressTaken())
       DstMBB->setAddressTakenIRBlock(SrcMBB.getAddressTakenIRBlock());
     if (SrcMBB.isMachineBlockAddressTaken())
@@ -734,7 +736,8 @@ void ReducerWorkItem::writeBitcode(raw_ostream &OutStream) const {
       Index = std::make_unique<ModuleSummaryIndex>(
           buildModuleSummaryIndex(*M, nullptr, &PSI));
     }
-    WriteBitcodeToFile(getModule(), OutStream, Index.get());
+    WriteBitcodeToFile(getModule(), OutStream,
+                       /*ShouldPreserveUseListOrder=*/true, Index.get());
   }
 }
 

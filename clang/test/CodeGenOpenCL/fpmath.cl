@@ -8,7 +8,7 @@ typedef __attribute__(( ext_vector_type(4) )) float float4;
 float spscalardiv(float a, float b) {
   // CHECK: @spscalardiv
   // CHECK: fdiv{{.*}},
-  // NODIVOPT: !fpmath ![[MD:[0-9]+]]
+  // NODIVOPT: !fpmath ![[MD_FDIV:[0-9]+]]
   // DIVOPT-NOT: !fpmath !{{[0-9]+}}
   return a / b;
 }
@@ -16,9 +16,16 @@ float spscalardiv(float a, float b) {
 float4 spvectordiv(float4 a, float4 b) {
   // CHECK: @spvectordiv
   // CHECK: fdiv{{.*}},
-  // NODIVOPT: !fpmath ![[MD]]
+  // NODIVOPT: !fpmath ![[MD_FDIV]]
   // DIVOPT-NOT: !fpmath !{{[0-9]+}}
   return a / b;
+}
+
+float spscalarsqrt(float a) {
+  // CHECK-LABEL: @spscalarsqrt
+  // NODIVOPT: call float @llvm.sqrt.f32(float %{{.+}}), !fpmath ![[MD_SQRT:[0-9]+]]
+  // DIVOPT: call float @llvm.sqrt.f32(float %{{.+}}){{$}}
+  return __builtin_sqrtf(a);
 }
 
 #if __OPENCL_C_VERSION__ >=120
@@ -34,11 +41,27 @@ void testdbllit(long *val) {
 
 #ifndef NOFP64
 #pragma OPENCL EXTENSION cl_khr_fp64 : enable
+typedef __attribute__(( ext_vector_type(4) )) double double4;
+
 double dpscalardiv(double a, double b) {
   // CHECK: @dpscalardiv
   // CHECK-NOT: !fpmath
   return a / b;
 }
+
+double4 dpvectordiv(double4 a, double4 b) {
+  // CHECK: @dpvectordiv
+  // CHECK-NOT: !fpmath
+  return a / b;
+}
+
+double dpscalarsqrt(double a) {
+  // CHECK-LABEL: @dpscalarsqrt
+  // CHECK: call double @llvm.sqrt.f64(double %{{.+}}){{$}}
+  return __builtin_sqrt(a);
+}
+
 #endif
 
-// NODIVOPT: ![[MD]] = !{float 2.500000e+00}
+// NODIVOPT: ![[MD_FDIV]] = !{float 2.500000e+00}
+// NODIVOPT: ![[MD_SQRT]] = !{float 3.000000e+00}

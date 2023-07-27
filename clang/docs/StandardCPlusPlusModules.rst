@@ -227,7 +227,7 @@ We can generate a BMI for an importable module unit by either ``--precompile``
 or ``-fmodule-output`` flags.
 
 The ``--precompile`` option generates the BMI as the output of the compilation and the output path
-can be specified using the ``-o`` option. 
+can be specified using the ``-o`` option.
 
 The ``-fmodule-output`` option generates the BMI as a by-product of the compilation.
 If ``-fmodule-output=`` is specified, the BMI will be emitted the specified location. Then if
@@ -390,7 +390,7 @@ For example, the traditional compilation processes for headers are like:
 
 .. code-block:: text
 
-  src1.cpp -+> clang++ src1.cpp --> src1.o ---, 
+  src1.cpp -+> clang++ src1.cpp --> src1.o ---,
   hdr1.h  --'                                 +-> clang++ src1.o src2.o ->  executable
   hdr2.h  --,                                 |
   src2.cpp -+> clang++ src2.cpp --> src2.o ---'
@@ -399,7 +399,7 @@ And the compilation process for module units are like:
 
 .. code-block:: text
 
-                src1.cpp ----------------------------------------+> clang++ src1.cpp -------> src1.o -, 
+                src1.cpp ----------------------------------------+> clang++ src1.cpp -------> src1.o -,
   (header unit) hdr1.h    -> clang++ hdr1.h ...    -> hdr1.pcm --'                                    +-> clang++ src1.o mod1.o src2.o ->  executable
                 mod1.cppm -> clang++ mod1.cppm ... -> mod1.pcm --,--> clang++ mod1.pcm ... -> mod1.o -+
                 src2.cpp ----------------------------------------+> clang++ src2.cpp -------> src2.o -'
@@ -427,7 +427,7 @@ The following example is not allowed:
 
   // M.cppm
   export module M;
-  
+
   // Use.cpp
   import M;
 
@@ -446,7 +446,7 @@ For example, the following example is allowed:
   # Inconsistent optimization level.
   $ clang++ -std=c++20 -O3 Use.cpp -fprebuilt-module-path=.
   # Inconsistent debugging level.
-  $ clang++ -std=c++20 -g Use.cpp -fprebuilt-module-path=. 
+  $ clang++ -std=c++20 -g Use.cpp -fprebuilt-module-path=.
 
 Although the two examples have inconsistent optimization and debugging level, both of them are accepted.
 
@@ -500,6 +500,96 @@ is attached to the global module fragments. For example:
   }
 
 Now the linkage name of ``NS::foo()`` will be ``_ZN2NS3fooEv``.
+
+Performance Tips
+----------------
+
+Reduce duplications
+~~~~~~~~~~~~~~~~~~~
+
+While it is legal to have duplicated declarations in the global module fragments
+of different module units, it is not free for clang to deal with the duplicated
+declarations. In other word, for a translation unit, it will compile slower if the
+translation unit itself and its importing module units contains a lot duplicated
+declarations.
+
+For example,
+
+.. code-block:: c++
+
+  // M-partA.cppm
+  module;
+  #include "big.header.h"
+  export module M:partA;
+  ...
+
+  // M-partB.cppm
+  module;
+  #include "big.header.h"
+  export module M:partB;
+  ...
+
+  // other partitions
+  ...
+
+  // M-partZ.cppm
+  module;
+  #include "big.header.h"
+  export module M:partZ;
+  ...
+
+  // M.cppm
+  export module M;
+  export import :partA;
+  export import :partB;
+  ...
+  export import :partZ;
+
+  // use.cpp
+  import M;
+  ... // use declarations from module M.
+
+When ``big.header.h`` is big enough and there are a lot of partitions,
+the compilation of ``use.cpp`` may be slower than
+the following style significantly:
+
+.. code-block:: c++
+
+  module;
+  #include "big.header.h"
+  export module m:big.header.wrapper;
+  export ... // export the needed declarations
+
+  // M-partA.cppm
+  export module M:partA;
+  import :big.header.wrapper;
+  ...
+
+  // M-partB.cppm
+  export module M:partB;
+  import :big.header.wrapper;
+  ...
+
+  // other partitions
+  ...
+
+  // M-partZ.cppm
+  export module M:partZ;
+  import :big.header.wrapper;
+  ...
+
+  // M.cppm
+  export module M;
+  export import :partA;
+  export import :partB;
+  ...
+  export import :partZ;
+
+  // use.cpp
+  import M;
+  ... // use declarations from module M.
+
+The key part of the tip is to reduce the duplications from the text includes.
 
 Known Problems
 --------------
@@ -597,6 +687,14 @@ Currently, clang requires the file name of an ``importable module unit`` should 
 (or ``.ccm``, ``.cxxm``, ``.c++m``). However, the behavior is inconsistent with other compilers.
 
 This is tracked in: https://github.com/llvm/llvm-project/issues/57416
+
+clang-cl is not compatible with the standard C++ modules
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Now we can't use the `/clang:-fmodule-file` or `/clang:-fprebuilt-module-path` to specify
+the BMI within ``clang-cl.exe``.
+
+This is tracked in: https://github.com/llvm/llvm-project/issues/64118
 
 Header Units
 ============
@@ -766,7 +864,7 @@ It would be simpler if we are using libcxx:
 
 .. code-block:: console
 
-  $ clang++ -std=c++20 main.cpp -fimplicit-modules -fimplicit-module-maps 
+  $ clang++ -std=c++20 main.cpp -fimplicit-modules -fimplicit-module-maps
 
 Since there is already one
 `module map <https://github.com/llvm/llvm-project/blob/main/libcxx/include/module.modulemap.in>`_
@@ -1085,14 +1183,14 @@ So we could get a big win for the compilation time in O0.
 
 But with optimizations, things are different:
 
-(we omit ``code generation`` part for each end due to the limited space) 
+(we omit ``code generation`` part for each end due to the limited space)
 
 .. code-block:: none
 
   ├-------- frontend ---------┼--------------- middle end --------------------┼------ backend ----┤
   │                           │                                               │                   │
   └--- parsing ---- sema -----┴--- optimizations --- IPO ---- optimizations---┴--- optimizations -┘
-                                                                                                            
+
   ┌-----------------------------------------------------------------------------------------------┐
   │                                                                                               │
   │                                         source file                                           │
@@ -1120,7 +1218,7 @@ But we could still save the time for optimizations after IPO and the whole backe
 Overall, at ``O0`` the implementations of functions defined in a module will not impact module users,
 but at higher optimization levels the definitions of such functions are provided to user compilations for the
 purposes of optimization (but definitions of these functions are still not included in the use's object file)-
-this means the build speedup at higher optimization levels may be lower than expected given ``O0`` experience, 
+this means the build speedup at higher optimization levels may be lower than expected given ``O0`` experience,
 but does provide by more optimization opportunities.
 
 Interoperability with Clang Modules

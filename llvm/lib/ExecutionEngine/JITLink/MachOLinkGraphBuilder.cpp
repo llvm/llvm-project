@@ -47,8 +47,7 @@ Expected<std::unique_ptr<LinkGraph>> MachOLinkGraphBuilder::buildGraph() {
 }
 
 MachOLinkGraphBuilder::MachOLinkGraphBuilder(
-    const object::MachOObjectFile &Obj, Triple TT,
-    LinkGraph::FeatureVector Features,
+    const object::MachOObjectFile &Obj, Triple TT, SubtargetFeatures Features,
     LinkGraph::GetEdgeKindNameFunction GetEdgeKindName)
     : Obj(Obj),
       G(std::make_unique<LinkGraph>(std::string(Obj.getFileName()),

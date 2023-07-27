@@ -24,8 +24,18 @@
 // template<class Key, class Allocator>
 // multimap(initializer_list<Key>, Allocator)
 //   -> multimap<Key, less<Key>, Allocator>;
+//
+// template<ranges::input_range R, class Compare = less<range-key-type<R>>,
+//           class Allocator = allocator<range-to-alloc-type<R>>>
+//   multimap(from_range_t, R&&, Compare = Compare(), Allocator = Allocator())
+//     -> multimap<range-key-type<R>, range-mapped-type<R>, Compare, Allocator>; // C++23
+//
+// template<ranges::input_range R, class Allocator>
+//   multimap(from_range_t, R&&, Allocator)
+//     -> multimap<range-key-type<R>, range-mapped-type<R>, less<range-key-type<R>>, Allocator>; // C++23
 
 #include <algorithm> // std::equal
+#include <array>
 #include <cassert>
 #include <climits> // INT_MAX
 #include <functional>
@@ -151,6 +161,35 @@ int main(int, char**)
     std::multimap m2{{value_type{1, 2}, {3, 4}}, std::less<int>()};
     ASSERT_SAME_TYPE(decltype(m2), std::multimap<int, int>);
     }
+
+#if TEST_STD_VER >= 23
+    {
+      using Range = std::array<P, 0>;
+      using Comp = std::greater<int>;
+      using DefaultComp = std::less<int>;
+      using Alloc = test_allocator<PC>;
+
+      { // (from_range, range)
+        std::multimap c(std::from_range, Range());
+        static_assert(std::is_same_v<decltype(c), std::multimap<int, long>>);
+      }
+
+      { // (from_range, range, comp)
+        std::multimap c(std::from_range, Range(), Comp());
+        static_assert(std::is_same_v<decltype(c), std::multimap<int, long, Comp>>);
+      }
+
+      { // (from_range, range, comp, alloc)
+        std::multimap c(std::from_range, Range(), Comp(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::multimap<int, long, Comp, Alloc>>);
+      }
+
+      { // (from_range, range, alloc)
+        std::multimap c(std::from_range, Range(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::multimap<int, long, DefaultComp, Alloc>>);
+      }
+    }
+#endif
 
     AssociativeContainerDeductionGuidesSfinaeAway<std::multimap, std::multimap<int, long>>();
 

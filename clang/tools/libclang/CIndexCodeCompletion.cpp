@@ -537,6 +537,7 @@ static unsigned long long getContextsForContextKind(
     case CodeCompletionContext::CCC_Other:
     case CodeCompletionContext::CCC_ObjCInterface:
     case CodeCompletionContext::CCC_ObjCImplementation:
+    case CodeCompletionContext::CCC_ObjCClassForwardDecl:
     case CodeCompletionContext::CCC_NewName:
     case CodeCompletionContext::CCC_MacroName:
     case CodeCompletionContext::CCC_PreprocessorExpression:

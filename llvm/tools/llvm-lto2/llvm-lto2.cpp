@@ -178,6 +178,10 @@ static cl::list<std::string>
     PassPlugins("load-pass-plugin",
                 cl::desc("Load passes from plugin library"));
 
+static cl::opt<std::string> UnifiedLTOMode("unified-lto", cl::Optional,
+                                           cl::desc("Set LTO mode"),
+                                           cl::value_desc("mode"));
+
 static cl::opt<bool> EnableFreestanding(
     "lto-freestanding",
     cl::desc("Enable Freestanding (disable builtins / TLI) during LTO"),
@@ -348,7 +352,20 @@ static int run(int argc, char **argv) {
       HasErrors = true;
   };
 
-  LTO Lto(std::move(Conf), std::move(Backend));
+  LTO::LTOKind LTOMode = LTO::LTOK_Default;
+
+  if (UnifiedLTOMode == "full") {
+    LTOMode = LTO::LTOK_UnifiedRegular;
+  } else if (UnifiedLTOMode == "thin") {
+    LTOMode = LTO::LTOK_UnifiedThin;
+  } else if (UnifiedLTOMode == "default") {
+    LTOMode = LTO::LTOK_Default;
+  } else if (!UnifiedLTOMode.empty()) {
+    llvm::errs() << "invalid LTO mode\n";
+    return 1;
+  }
+
+  LTO Lto(std::move(Conf), std::move(Backend), 1, LTOMode);
 
   for (std::string F : InputFilenames) {
     std::unique_ptr<MemoryBuffer> MB = check(MemoryBuffer::getFile(F), F);

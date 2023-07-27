@@ -1000,7 +1000,7 @@ SDValue DAGTypeLegalizer::JoinIntegers(SDValue Lo, SDValue Hi) {
   EVT NVT = EVT::getIntegerVT(*DAG.getContext(),
                               LVT.getSizeInBits() + HVT.getSizeInBits());
 
-  EVT ShiftAmtVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout(), false);
+  EVT ShiftAmtVT = TLI.getShiftAmountTy(NVT, DAG.getDataLayout());
   Lo = DAG.getNode(ISD::ZERO_EXTEND, dlLo, NVT, Lo);
   Hi = DAG.getNode(ISD::ANY_EXTEND, dlHi, NVT, Hi);
   Hi = DAG.getNode(ISD::SHL, dlHi, NVT, Hi,

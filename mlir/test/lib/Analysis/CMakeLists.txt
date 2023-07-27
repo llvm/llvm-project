@@ -12,8 +12,10 @@ add_mlir_library(MLIRTestAnalysis
   TestSlice.cpp
 
   DataFlow/TestDeadCodeAnalysis.cpp
-  DataFlow/TestDenseDataFlowAnalysis.cpp
-  DataFlow/TestBackwardDataFlowAnalysis.cpp
+  DataFlow/TestDenseBackwardDataFlowAnalysis.cpp
+  DataFlow/TestDenseForwardDataFlowAnalysis.cpp
+  DataFlow/TestLivenessAnalysis.cpp
+  DataFlow/TestSparseBackwardDataFlowAnalysis.cpp
 
   EXCLUDE_FROM_LIBMLIR
 

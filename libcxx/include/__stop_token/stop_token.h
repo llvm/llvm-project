@@ -21,7 +21,7 @@
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
-#if _LIBCPP_STD_VER >= 20
+#if _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
 
 class _LIBCPP_AVAILABILITY_SYNC stop_token {
 public:
@@ -57,7 +57,7 @@ private:
   _LIBCPP_HIDE_FROM_ABI explicit stop_token(const __intrusive_shared_ptr<__stop_state>& __state) : __state_(__state) {}
 };
 
-#endif // _LIBCPP_STD_VER >= 20
+#endif // _LIBCPP_STD_VER >= 20 && !defined(_LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN)
 
 _LIBCPP_END_NAMESPACE_STD
 

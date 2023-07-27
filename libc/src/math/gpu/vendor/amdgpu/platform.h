@@ -25,7 +25,7 @@ extern const uint8_t __oclc_unsafe_math_opt = 0;
 extern const uint8_t __oclc_daz_opt = 0;
 
 // Disable rounding optimizations for 32-bit square roots.
-extern const uint8_t __oclc_correctly_rounded_sqrt32 = 0;
+extern const uint8_t __oclc_correctly_rounded_sqrt32 = 1;
 
 // Disable finite math optimizations.
 extern const uint8_t __oclc_finite_only_opt = 0;
@@ -100,6 +100,10 @@ extern const uint32_t __oclc_ISA_version = 11001;
 extern const uint32_t __oclc_ISA_version = 11002;
 #elif defined(__gfx1103__)
 extern const uint32_t __oclc_ISA_version = 11003;
+#elif defined(__gfx1150__)
+extern const uint32_t __oclc_ISA_version = 11500;
+#elif defined(__gfx1151__)
+extern const uint32_t __oclc_ISA_version = 11501;
 #else
 #error "Unknown AMDGPU architecture"
 #endif

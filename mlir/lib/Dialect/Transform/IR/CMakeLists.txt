@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRTransformDialect
   LINK_LIBS PUBLIC
   MLIRCastInterfaces
   MLIRIR
+  MLIRLoopLikeInterface
   MLIRParser
   MLIRPass
   MLIRRewrite

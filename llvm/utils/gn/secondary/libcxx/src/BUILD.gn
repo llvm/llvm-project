@@ -151,6 +151,7 @@ cxx_sources = [
   "new_handler.cpp",
   "new_helpers.cpp",
   "optional.cpp",
+  "print.cpp",
   "random.cpp",
   "random_shuffle.cpp",
   "regex.cpp",
@@ -195,12 +196,6 @@ if (target_os == "zos") {
     "support/ibm/xlocale_zos.cpp",
   ]
 }
-if (libcxx_enable_debug_mode) {
-  cxx_sources += [
-    "debug.cpp",
-    "legacy_debug_handler.cpp",
-  ]
-}
 if (libcxx_enable_filesystem) {
   cxx_sources += [
     "filesystem/directory_entry.cpp",
@@ -217,6 +212,11 @@ if (libcxx_enable_filesystem) {
   if (libcxx_use_compiler_rt) {
     cxx_sources += [ "filesystem/int128_builtins.cpp" ]
   }
+}
+
+# FIXME: Put this behind an arg, or enable it by default on macOS.
+if (false) {
+  cxx_sources += [ "pstl/libdispatch.cpp" ]
 }
 
 if (libcxx_enable_shared) {

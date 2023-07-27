@@ -13,6 +13,7 @@
 #include "llvm/ObjCopy/COFF/COFFConfig.h"
 #include "llvm/ObjCopy/CommonConfig.h"
 
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/COFF.h"
 #include "llvm/Support/CRC.h"

@@ -14,45 +14,37 @@
 # RUN: ld.lld %t1changed.o -o %t4 --icf=safe 2>&1 | FileCheck --check-prefix=SH_LINK_0 %s
 # RUN: ld.lld %t1reloc.o -o %t4 --icf=safe 2>&1 | FileCheck --check-prefix=SH_LINK_0 %s
 
-# CHECK-NOT: selected section {{.*}}:(.text.f1)
-# CHECK: selected section {{.*}}:(.text.f3)
-# CHECK:   removing identical section {{.*}}:(.text.f4)
-
-# CHECK-NOT: selected section {{.*}}:(.rodata.h1)
-# CHECK: selected section {{.*}}:(.rodata.h3)
-# CHECK:   removing identical section {{.*}}:(.rodata.h4)
-
-# CHECK-NOT: selected section {{.*}}:(.rodata.l1)
-# CHECK: selected section {{.*}}:(.rodata.l3)
-# CHECK:   removing identical section {{.*}}:(.rodata.l4)
-
-# CHECK-NOT: selected section {{.*}}:(.rodata.g1)
-# CHECK: selected section {{.*}}:(.rodata.g3)
-# CHECK:   removing identical section {{.*}}:(.rodata.g4)
-
-# CHECK-NOT: selected section {{.*}}:(.text.non_addrsig{{.}})
+# CHECK-NOT:  {{.}}
+# CHECK:      selected section {{.*}}:(.rodata.h3)
+# CHECK-NEXT:   removing identical section {{.*}}:(.rodata.h4)
+# CHECK-NEXT: selected section {{.*}}:(.text.f3)
+# CHECK-NEXT:   removing identical section {{.*}}:(.text.f4)
+# CHECK-NEXT: selected section {{.*}}:(.rodata.g3)
+# CHECK-NEXT:   removing identical section {{.*}}:(.rodata.g4)
+# CHECK-NEXT: selected section {{.*}}:(.rodata.l3)
+# CHECK-NEXT:   removing identical section {{.*}}:(.rodata.l4)
+# CHECK-NEXT: selected section {{.*}}:(.text)
+# CHECK-NEXT:   removing identical section {{.*}}:(.text)
+# CHECK-NOT:  {{.}}
 
 # With --icf=all address-significance implies keep-unique only for rodata, not
 # text.
-# ALL: selected section {{.*}}:(.text.f3)
-# ALL:   removing identical section {{.*}}:(.text.f4)
-
-# ALL-NOT: selected section {{.*}}:(.rodata.h1)
-# ALL: selected section {{.*}}:(.rodata.h3)
-# ALL:   removing identical section {{.*}}:(.rodata.h4)
-
-# ALL-NOT: selected section {{.*}}:(.rodata.l1)
-# ALL: selected section {{.*}}:(.rodata.l3)
-# ALL:   removing identical section {{.*}}:(.rodata.l4)
-
-# ALL-NOT: selected section {{.*}}:(.rodata.g1)
-# ALL: selected section {{.*}}:(.rodata.g3)
-# ALL:   removing identical section {{.*}}:(.rodata.g4)
-
-# ALL: selected section {{.*}}:(.text.f1)
-# ALL:   removing identical section {{.*}}:(.text.f2)
-# ALL:   removing identical section {{.*}}:(.text.non_addrsig1)
-# ALL:   removing identical section {{.*}}:(.text.non_addrsig2)
+# ALL-NOT:  {{.}}
+# ALL:      selected section {{.*}}:(.rodata.h3)
+# ALL-NEXT:   removing identical section {{.*}}:(.rodata.h4)
+# ALL-NEXT: selected section {{.*}}:(.text.f3)
+# ALL-NEXT:   removing identical section {{.*}}:(.text.f4)
+# ALL-NEXT: selected section {{.*}}:(.text.f1)
+# ALL-NEXT:   removing identical section {{.*}}:(.text.f2)
+# ALL-NEXT:   removing identical section {{.*}}:(.text.non_addrsig1)
+# ALL-NEXT:   removing identical section {{.*}}:(.text.non_addrsig2)
+# ALL-NEXT: selected section {{.*}}:(.rodata.g3)
+# ALL-NEXT:   removing identical section {{.*}}:(.rodata.g4)
+# ALL-NEXT: selected section {{.*}}:(.rodata.l3)
+# ALL-NEXT:   removing identical section {{.*}}:(.rodata.l4)
+# ALL-NEXT: selected section {{.*}}:(.text)
+# ALL-NEXT:   removing identical section {{.*}}:(.text)
+# ALL-NOT:  {{.}}
 
 # llvm-mc normally emits an empty .text section into every object file. Since
 # nothing actually refers to it via a relocation, it doesn't have any associated
@@ -61,39 +53,34 @@
 # only two sections merged are the two empty sections and the sections with only
 # STB_LOCAL or STV_HIDDEN symbols. The dynsym entries should have prevented
 # anything else from being merged.
-# EXPORT-NOT: selected section
-# EXPORT: selected section {{.*}}:(.rodata.h3)
-# EXPORT:   removing identical section {{.*}}:(.rodata.h4)
-# EXPORT-NOT: selected section
-# EXPORT: selected section {{.*}}:(.text)
-# EXPORT:   removing identical section {{.*}}:(.text)
-# EXPORT-NOT: selected section
-# EXPORT: selected section {{.*}}:(.rodata.l3)
-# EXPORT:   removing identical section {{.*}}:(.rodata.l4)
-# EXPORT-NOT: selected section
+# EXPORT-NOT:  {{.}}
+# EXPORT:      selected section {{.*}}:(.rodata.h3)
+# EXPORT-NEXT:   removing identical section {{.*}}:(.rodata.h4)
+# EXPORT-NEXT: selected section {{.*}}:(.rodata.l3)
+# EXPORT-NEXT:   removing identical section {{.*}}:(.rodata.l4)
+# EXPORT-NOT:  {{.}}
 
 # If --icf=all is specified when exporting we can also merge the exported text
 # sections, but not the exported rodata.
-# ALL-EXPORT-NOT: selected section
-# ALL-EXPORT: selected section {{.*}}:(.text.f3)
-# ALL-EXPORT:   removing identical section {{.*}}:(.text.f4)
-# ALL-EXPORT-NOT: selected section
-# ALL-EXPORT: selected section {{.*}}:(.rodata.h3)
-# ALL-EXPORT:   removing identical section {{.*}}:(.rodata.h4)
-# ALL-EXPORT-NOT: selected section
-# ALL-EXPORT: selected section {{.*}}:(.text)
-# ALL-EXPORT:   removing identical section {{.*}}:(.text)
-# ALL-EXPORT-NOT: selected section
-# ALL-EXPORT: selected section {{.*}}:(.rodata.l3)
-# ALL-EXPORT:   removing identical section {{.*}}:(.rodata.l4)
-# ALL-EXPORT-NOT: selected section
-# ALL-EXPORT: selected section {{.*}}:(.text.f1)
-# ALL-EXPORT:   removing identical section {{.*}}:(.text.f2)
-# ALL-EXPORT:   removing identical section {{.*}}:(.text.non_addrsig1)
-# ALL-EXPORT:   removing identical section {{.*}}:(.text.non_addrsig2)
-# ALL-EXPORT-NOT: selected section
+# ALL-EXPORT-NOT:  {{.}}
+# ALL-EXPORT:      selected section {{.*}}:(.rodata.h3)
+# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.rodata.h4)
+# ALL-EXPORT-NEXT: selected section {{.*}}:(.text.f3)
+# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text.f4)
+# ALL-EXPORT-NEXT: selected section {{.*}}:(.text.f1)
+# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text.f2)
+# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text.non_addrsig1)
+# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text.non_addrsig2)
+# ALL-EXPORT-NEXT: selected section {{.*}}:(.rodata.l3)
+# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.rodata.l4)
+# ALL-EXPORT-NEXT: selected section {{.*}}:(.text)
+# ALL-EXPORT-NEXT:   removing identical section {{.*}}:(.text)
+# ALL-EXPORT-NOT:  {{.}}
 
 # SH_LINK_0: --icf=safe conservatively ignores SHT_LLVM_ADDRSIG [index [[#]]] with sh_link=0 (likely created using objcopy or ld -r)
+
+.globl _start
+_start:
 
 .section .text.f1,"ax",@progbits
 .globl f1

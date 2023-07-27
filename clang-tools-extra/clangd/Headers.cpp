@@ -12,6 +12,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Frontend/CompilerInstance.h"
+#include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/PPCallbacks.h"
 #include "clang/Lex/Preprocessor.h"
@@ -21,6 +22,7 @@
 #include "llvm/Support/Path.h"
 #include <cstring>
 #include <optional>
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -53,8 +55,9 @@ public:
       auto &Inc = Out->MainFileIncludes.back();
       Inc.Written =
           (IsAngled ? "<" + FileName + ">" : "\"" + FileName + "\"").str();
-      Inc.Resolved =
-          std::string(File ? File->getFileEntry().tryGetRealPathName() : "");
+      Inc.Resolved = std::string(
+          File ? getCanonicalPath(*File, SM.getFileManager()).value_or("")
+               : "");
       Inc.HashOffset = SM.getFileOffset(HashLoc);
       Inc.HashLine =
           SM.getLineNumber(SM.getFileID(HashLoc), Inc.HashOffset) - 1;
@@ -176,6 +179,17 @@ void IncludeStructure::collect(const CompilerInstance &CI) {
   MainFileEntry = SM.getFileEntryForID(SM.getMainFileID());
   auto Collector = std::make_unique<RecordHeaders>(CI, this);
   CI.getPreprocessor().addPPCallbacks(std::move(Collector));
+
+  // If we're reusing a preamble, don't repopulate SearchPathsCanonical.
+  // The entries will be the same, but canonicalizing to find out is expensive!
+  if (SearchPathsCanonical.empty()) {
+    for (const auto &Dir :
+         CI.getPreprocessor().getHeaderSearchInfo().search_dir_range()) {
+      if (Dir.getLookupType() == DirectoryLookup::LT_NormalDir)
+        SearchPathsCanonical.emplace_back(
+            SM.getFileManager().getCanonicalName(*Dir.getDirRef()));
+    }
+  }
 }
 
 std::optional<IncludeStructure::HeaderID>

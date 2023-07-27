@@ -34,11 +34,27 @@
 #define GET_OP_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOps.h.inc"
 
+#define ACC_DATA_ENTRY_OPS                                                     \
+  mlir::acc::CopyinOp, mlir::acc::CreateOp, mlir::acc::PresentOp,              \
+      mlir::acc::NoCreateOp, mlir::acc::AttachOp, mlir::acc::DevicePtrOp,      \
+      mlir::acc::GetDevicePtrOp, mlir::acc::PrivateOp,                         \
+      mlir::acc::FirstprivateOp, mlir::acc::UpdateDeviceOp,                    \
+      mlir::acc::UseDeviceOp, mlir::acc::ReductionOp,                          \
+      mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeclareLinkOp
+#define ACC_COMPUTE_CONSTRUCT_OPS                                              \
+  mlir::acc::ParallelOp, mlir::acc::KernelsOp, mlir::acc::SerialOp
+#define ACC_DATA_CONSTRUCT_OPS                                                 \
+  mlir::acc::DataOp, mlir::acc::EnterDataOp, mlir::acc::ExitDataOp,            \
+      mlir::acc::UpdateOp, mlir::acc::HostDataOp, mlir::acc::DeclareEnterOp,   \
+      mlir::acc::DeclareExitOp
+#define ACC_COMPUTE_AND_DATA_CONSTRUCT_OPS                                     \
+  ACC_COMPUTE_CONSTRUCT_OPS, ACC_DATA_CONSTRUCT_OPS
+
 namespace mlir {
 namespace acc {
 
 /// Enumeration used to encode the execution mapping on a loop construct.
-/// They refer directly to the OpenACC 3.1 standard:
+/// They refer directly to the OpenACC 3.3 standard:
 /// 2.9.2. gang
 /// 2.9.3. worker
 /// 2.9.4. vector
@@ -47,6 +63,20 @@ namespace acc {
 /// construct. e.g. `acc.loop gang vector`, the `gang` and `vector` could be
 /// combined and the final mapping value would be 5 (4 | 1).
 enum OpenACCExecMapping { NONE = 0, VECTOR = 1, WORKER = 2, GANG = 4 };
+
+/// Used to obtain the `varPtr` from a data entry operation.
+/// Returns empty value if not a data entry operation.
+mlir::Value getVarPtr(mlir::Operation *accDataEntryOp);
+
+/// Used to obtain the `dataClause` from a data entry operation.
+/// Returns empty optional if not a data entry operation.
+std::optional<mlir::acc::DataClause>
+getDataClause(mlir::Operation *accDataEntryOp);
+
+/// Used to obtain the attribute name for declare.
+static constexpr StringLiteral getDeclareAttrName() {
+  return StringLiteral("acc.declare");
+}
 
 } // namespace acc
 } // namespace mlir

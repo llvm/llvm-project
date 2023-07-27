@@ -128,7 +128,7 @@ std::optional<HighlightingKind> kindForDecl(const NamedDecl *D,
     return HighlightingKind::Class;
   if (isa<ObjCProtocolDecl>(D))
     return HighlightingKind::Interface;
-  if (isa<ObjCCategoryDecl>(D))
+  if (isa<ObjCCategoryDecl, ObjCCategoryImplDecl>(D))
     return HighlightingKind::Namespace;
   if (auto *MD = dyn_cast<CXXMethodDecl>(D))
     return MD->isStatic() ? HighlightingKind::StaticMethod
@@ -737,8 +737,10 @@ public:
   }
 
   bool VisitAutoTypeLoc(AutoTypeLoc L) {
-    if (L.isConstrained())
+    if (L.isConstrained()) {
       H.addAngleBracketTokens(L.getLAngleLoc(), L.getRAngleLoc());
+      H.addToken(L.getConceptNameInfo().getLoc(), HighlightingKind::Concept);
+    }
     return true;
   }
 
@@ -953,13 +955,18 @@ public:
         kindForType(AT->getDeducedType().getTypePtrOrNull(), H.getResolver());
     if (!K)
       return true;
-    SourceLocation StartLoc = D->getTypeSpecStartLoc();
+    auto *TSI = D->getTypeSourceInfo();
+    if (!TSI)
+      return true;
+    SourceLocation StartLoc =
+        TSI->getTypeLoc().getContainedAutoTypeLoc().getNameLoc();
     // The AutoType may not have a corresponding token, e.g. in the case of
     // init-captures. In this case, StartLoc overlaps with the location
     // of the decl itself, and producing a token for the type here would result
     // in both it and the token for the decl being dropped due to conflict.
     if (StartLoc == D->getLocation())
       return true;
+
     auto &Tok =
         H.addToken(StartLoc, *K).addModifier(HighlightingModifier::Deduced);
     const Type *Deduced = AT->getDeducedType().getTypePtrOrNull();
@@ -1211,7 +1218,8 @@ getSemanticHighlightings(ParsedAST &AST, bool IncludeInactiveRegionTokens) {
       AST.getHeuristicResolver());
   // Add highlightings for macro references.
   auto AddMacro = [&](const MacroOccurrence &M) {
-    auto &T = Builder.addToken(M.Rng, HighlightingKind::Macro);
+    auto &T = Builder.addToken(M.toRange(C.getSourceManager()),
+                               HighlightingKind::Macro);
     T.addModifier(HighlightingModifier::GlobalScope);
     if (M.IsDefinition)
       T.addModifier(HighlightingModifier::Declaration);

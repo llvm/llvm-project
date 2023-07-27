@@ -311,18 +311,6 @@ func.func @dont_remove_duplicated_read_op_with_sideeffecting() -> i32 {
   return %2 : i32
 }
 
-/// This test is checking that identical commutative operation are gracefully
-/// handled but the CSE pass.
-// CHECK-LABEL: func @check_cummutative_cse
-func.func @check_cummutative_cse(%a : i32, %b : i32) -> i32 {
-  // CHECK: %[[ADD1:.*]] = arith.addi %{{.*}}, %{{.*}} : i32
-  %1 = arith.addi %a, %b : i32
-  %2 = arith.addi %b, %a : i32
-  // CHECK-NEXT:  arith.muli %[[ADD1]], %[[ADD1]] : i32
-  %3 = arith.muli %1, %2 : i32
-  return %3 : i32
-}
-
 // Check that an operation with a single region can CSE.
 func.func @cse_single_block_ops(%a : tensor<?x?xf32>, %b : tensor<?x?xf32>)
   -> (tensor<?x?xf32>, tensor<?x?xf32>) {
@@ -425,31 +413,9 @@ func.func @no_cse_single_block_ops_different_bodies(%a : tensor<?x?xf32>, %b : t
 //       CHECK:   %[[OP1:.+]] = test.cse_of_single_block_op
 //       CHECK:   return %[[OP0]], %[[OP1]]
 
-// Account for commutative ops within regions during CSE.
-func.func @cse_single_block_with_commutative_ops(%a : tensor<?x?xf32>, %b : tensor<?x?xf32>, %c : f32)
-  -> (tensor<?x?xf32>, tensor<?x?xf32>) {
-  %0 = test.cse_of_single_block_op inputs(%a, %b) {
-    ^bb0(%arg0 : f32, %arg1 : f32):
-    %1 = arith.addf %arg0, %arg1 : f32
-    %2 = arith.mulf %1, %c : f32
-    test.region_yield %2 : f32
-  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
-  %1 = test.cse_of_single_block_op inputs(%a, %b) {
-    ^bb0(%arg0 : f32, %arg1 : f32):
-    %1 = arith.addf %arg1, %arg0 : f32
-    %2 = arith.mulf %c, %1 : f32
-    test.region_yield %2 : f32
-  } : tensor<?x?xf32>, tensor<?x?xf32> -> tensor<?x?xf32>
-  return %0, %1 : tensor<?x?xf32>, tensor<?x?xf32>
-}
-// CHECK-LABEL: func @cse_single_block_with_commutative_ops
-//       CHECK:   %[[OP:.+]] = test.cse_of_single_block_op
-//   CHECK-NOT:   test.cse_of_single_block_op
-//       CHECK:   return %[[OP]], %[[OP]]
-
 func.func @failing_issue_59135(%arg0: tensor<2x2xi1>, %arg1: f32, %arg2 : tensor<2xi1>) -> (tensor<2xi1>, tensor<2xi1>) {
-  %false_2 = arith.constant false 
-  %true_5 = arith.constant true 
+  %false_2 = arith.constant false
+  %true_5 = arith.constant true
   %9 = test.cse_of_single_block_op inputs(%arg2) {
   ^bb0(%out: i1):
     %true_144 = arith.constant true

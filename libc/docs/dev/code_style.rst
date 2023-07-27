@@ -46,7 +46,7 @@ We define two kinds of macros: **code defined** and **build defined** macros.
      ``LIBC_LIKELY``, ``LIBC_INLINE_ASM``.
 
 Inline functions and variables defined in header files
-========================================
+======================================================
 
 When defining functions and variables inline in header files, we follow certain
 rules:

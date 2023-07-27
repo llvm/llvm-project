@@ -170,6 +170,7 @@ cond.end:
 define void @pr50370(i32 %x) {
 ; CHECK-LABEL: @pr50370(
 ; CHECK-NEXT:  entry:
+; CHECK-NEXT:    store i32 poison, ptr undef, align 4
 ; CHECK-NEXT:    ret void
 ;
 entry:

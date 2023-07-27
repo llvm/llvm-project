@@ -3630,14 +3630,8 @@ static bool attach_failed_due_to_uid_mismatch (nub_process_t pid,
 // processes and step through to find the one we're looking for
 // (as process_does_not_exist() does).
 static bool process_is_already_being_debugged (nub_process_t pid) {
-  struct kinfo_proc kinfo;
-  int mib[] = {CTL_KERN, KERN_PROC, KERN_PROC_PID, pid};
-  size_t len = sizeof(struct kinfo_proc);
-  if (sysctl(mib, sizeof(mib) / sizeof(mib[0]), &kinfo, &len, NULL, 0) != 0) {
-    return false; // pid doesn't exist? well, it's not being debugged...
-  }
-  if (kinfo.kp_proc.p_flag & P_TRACED)
-    return true; // is being debugged already
+  if (DNBProcessIsBeingDebugged(pid) && DNBGetParentProcessID(pid) != getpid())
+    return true;
   else
     return false;
 }

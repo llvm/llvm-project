@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Endian.h"
 #include <cstddef>
 #include <cstdint>
 #include <cstring>
@@ -395,6 +396,8 @@ public:
         reinterpret_cast<const uint8_t *>(blob.data()), blob.size()));
   }
 
+  void writeOwnedBool(bool value) override { emitter.emitByte(value); }
+
   int64_t getBytecodeVersion() const override { return bytecodeVersion; }
 
 private:
@@ -538,7 +541,8 @@ void EncodingEmitter::emitMultiByteVarInt(uint64_t value) {
     if (LLVM_LIKELY(it >>= 7) == 0) {
       uint64_t encodedValue = (value << 1) | 0x1;
       encodedValue <<= (numBytes - 1);
-      emitBytes({reinterpret_cast<uint8_t *>(&encodedValue), numBytes});
+      llvm::support::ulittle64_t encodedValueLE(encodedValue);
+      emitBytes({reinterpret_cast<uint8_t *>(&encodedValueLE), numBytes});
       return;
     }
   }
@@ -546,7 +550,8 @@ void EncodingEmitter::emitMultiByteVarInt(uint64_t value) {
   // If the value is too large to encode in a single byte, emit a special all
   // zero marker byte and splat the value directly.
   emitByte(0);
-  emitBytes({reinterpret_cast<uint8_t *>(&value), sizeof(value)});
+  llvm::support::ulittle64_t valueLE(value);
+  emitBytes({reinterpret_cast<uint8_t *>(&valueLE), sizeof(valueLE)});
 }
 
 //===----------------------------------------------------------------------===//
@@ -581,6 +586,13 @@ private:
   LogicalResult writeOp(EncodingEmitter &emitter, Operation *op);
   LogicalResult writeRegion(EncodingEmitter &emitter, Region *region);
   LogicalResult writeIRSection(EncodingEmitter &emitter, Operation *op);
+
+  LogicalResult writeRegions(EncodingEmitter &emitter,
+                             MutableArrayRef<Region> regions) {
+    return success(llvm::all_of(regions, [&](Region &region) {
+      return succeeded(writeRegion(emitter, &region));
+    }));
+  }
 
   //===--------------------------------------------------------------------===//
   // Resources
@@ -930,23 +942,20 @@ LogicalResult BytecodeWriter::writeOp(EncodingEmitter &emitter, Operation *op) {
   // emitting the regions first (e.g. if the regions are huge, backpatching the
   // op encoding mask is more annoying).
   if (numRegions) {
-    bool isIsolatedFromAbove = op->hasTrait<OpTrait::IsIsolatedFromAbove>();
+    bool isIsolatedFromAbove = numberingState.isIsolatedFromAbove(op);
     emitter.emitVarIntWithFlag(numRegions, isIsolatedFromAbove);
 
-    for (Region &region : op->getRegions()) {
-      // If the region is not isolated from above, or we are emitting bytecode
-      // targeting version <kLazyLoading, we don't use a section.
-      if (!isIsolatedFromAbove ||
-          config.bytecodeVersion < bytecode::kLazyLoading) {
-        if (failed(writeRegion(emitter, &region)))
-          return failure();
-        continue;
-      }
-
+    // If the region is not isolated from above, or we are emitting bytecode
+    // targeting version <kLazyLoading, we don't use a section.
+    if (isIsolatedFromAbove &&
+        config.bytecodeVersion >= bytecode::kLazyLoading) {
       EncodingEmitter regionEmitter;
-      if (failed(writeRegion(regionEmitter, &region)))
+      if (failed(writeRegions(regionEmitter, op->getRegions())))
         return failure();
       emitter.emitSection(bytecode::Section::kIR, std::move(regionEmitter));
+
+    } else if (failed(writeRegions(emitter, op->getRegions()))) {
+      return failure();
     }
   }
   return success();

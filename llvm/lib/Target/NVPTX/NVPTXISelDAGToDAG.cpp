@@ -500,7 +500,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     SelectAddrSpaceCast(N);
     return;
   case ISD::ConstantFP:
-    if (tryConstantFP16(N))
+    if (tryConstantFP(N))
       return;
     break;
   default:
@@ -524,15 +524,17 @@ bool NVPTXDAGToDAGISel::tryIntrinsicChain(SDNode *N) {
   }
 }
 
-// There's no way to specify FP16 immediates in .f16 ops, so we have to
-// load them into an .f16 register first.
-bool NVPTXDAGToDAGISel::tryConstantFP16(SDNode *N) {
-  if (N->getValueType(0) != MVT::f16)
+// There's no way to specify FP16 and BF16 immediates in .(b)f16 ops, so we
+// have to load them into an .(b)f16 register first.
+bool NVPTXDAGToDAGISel::tryConstantFP(SDNode *N) {
+  if (N->getValueType(0) != MVT::f16 && N->getValueType(0) != MVT::bf16)
     return false;
   SDValue Val = CurDAG->getTargetConstantFP(
-      cast<ConstantFPSDNode>(N)->getValueAPF(), SDLoc(N), MVT::f16);
-  SDNode *LoadConstF16 =
-      CurDAG->getMachineNode(NVPTX::LOAD_CONST_F16, SDLoc(N), MVT::f16, Val);
+      cast<ConstantFPSDNode>(N)->getValueAPF(), SDLoc(N), N->getValueType(0));
+  SDNode *LoadConstF16 = CurDAG->getMachineNode(
+      (N->getValueType(0) == MVT::f16 ? NVPTX::LOAD_CONST_F16
+                                      : NVPTX::LOAD_CONST_BF16),
+      SDLoc(N), N->getValueType(0), Val);
   ReplaceNode(N, LoadConstF16);
   return true;
 }
@@ -612,9 +614,9 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
 
   // We only care about f16x2 as it's the only real vector type we
   // need to deal with.
-  if (Vector.getSimpleValueType() != MVT::v2f16)
+  MVT VT = Vector.getSimpleValueType();
+  if (!(VT == MVT::v2f16 || VT == MVT::v2bf16))
     return false;
-
   // Find and record all uses of this vector that extract element 0 or 1.
   SmallVector<SDNode *, 4> E0, E1;
   for (auto *U : Vector.getNode()->uses()) {
@@ -640,8 +642,9 @@ bool NVPTXDAGToDAGISel::tryEXTRACT_VECTOR_ELEMENT(SDNode *N) {
 
   // Merge (f16 extractelt(V, 0), f16 extractelt(V,1))
   // into f16,f16 SplitF16x2(V)
-  SDNode *ScatterOp = CurDAG->getMachineNode(NVPTX::I32toV2I16, SDLoc(N),
-                                             MVT::f16, MVT::f16, Vector);
+  MVT EltVT = VT.getVectorElementType();
+  SDNode *ScatterOp =
+      CurDAG->getMachineNode(NVPTX::I32toV2I16, SDLoc(N), EltVT, EltVT, Vector);
   for (auto *Node : E0)
     ReplaceUses(SDValue(Node, 0), SDValue(ScatterOp, 0));
   for (auto *Node : E1)
@@ -1258,10 +1261,11 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
     NumElts = EltVT.getVectorNumElements();
     EltVT = EltVT.getVectorElementType();
     // vectors of f16 are loaded/stored as multiples of v2f16 elements.
-    if (EltVT == MVT::f16 && N->getValueType(0) == MVT::v2f16) {
-      assert(NumElts % 2 == 0 && "Vector must have even number of elements");
-      EltVT = MVT::v2f16;
-      NumElts /= 2;
+    if ((EltVT == MVT::f16 && N->getValueType(0) == MVT::v2f16) ||
+        (EltVT == MVT::bf16 && N->getValueType(0) == MVT::v2bf16)) {
+          assert(NumElts % 2 == 0 && "Vector must have even number of elements");
+          EltVT = N->getValueType(0);
+          NumElts /= 2;
     }
   }
 
@@ -1599,13 +1603,13 @@ bool NVPTXDAGToDAGISel::tryLDGLDU(SDNode *N) {
   EVT OrigType = N->getValueType(0);
   LoadSDNode *LdNode = dyn_cast<LoadSDNode>(N);
 
-  if (OrigType != EltVT && LdNode) {
+  if (OrigType != EltVT &&
+      (LdNode || (OrigType.isFloatingPoint() && EltVT.isFloatingPoint()))) {
     // We have an extending-load. The instruction we selected operates on the
     // smaller type, but the SDNode we are replacing has the larger type. We
     // need to emit a CVT to make the types match.
-    bool IsSigned = LdNode->getExtensionType() == ISD::SEXTLOAD;
-    unsigned CvtOpc = GetConvertOpcode(OrigType.getSimpleVT(),
-                                       EltVT.getSimpleVT(), IsSigned);
+    unsigned CvtOpc =
+        GetConvertOpcode(OrigType.getSimpleVT(), EltVT.getSimpleVT(), LdNode);
 
     // For each output value, apply the manual sign/zero-extension and make sure
     // all users of the load go through that CVT.
@@ -3293,7 +3297,7 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
     }
 
     // How many bits are in our mask?
-    uint64_t NumBits = llvm::countr_one(MaskVal);
+    int64_t NumBits = countr_one(MaskVal);
     Len = CurDAG->getTargetConstant(NumBits, DL, MVT::i32);
 
     if (LHS.getOpcode() == ISD::SRL || LHS.getOpcode() == ISD::SRA) {
@@ -3305,7 +3309,7 @@ bool NVPTXDAGToDAGISel::tryBFE(SDNode *N) {
         uint64_t StartVal = StartConst->getZExtValue();
         // How many "good" bits do we have left?  "good" is defined here as bits
         // that exist in the original value, not shifted in.
-        uint64_t GoodBits = Start.getValueSizeInBits() - StartVal;
+        int64_t GoodBits = Start.getValueSizeInBits() - StartVal;
         if (NumBits > GoodBits) {
           // Do not handle the case where bits have been shifted in. In theory
           // we could handle this, but the cost is likely higher than just
@@ -3601,7 +3605,8 @@ bool NVPTXDAGToDAGISel::SelectInlineAsmMemoryOperand(
 /// GetConvertOpcode - Returns the CVT_ instruction opcode that implements a
 /// conversion from \p SrcTy to \p DestTy.
 unsigned NVPTXDAGToDAGISel::GetConvertOpcode(MVT DestTy, MVT SrcTy,
-                                             bool IsSigned) {
+                                             LoadSDNode *LdNode) {
+  bool IsSigned = LdNode && LdNode->getExtensionType() == ISD::SEXTLOAD;
   switch (SrcTy.SimpleTy) {
   default:
     llvm_unreachable("Unhandled source type");
@@ -3648,6 +3653,15 @@ unsigned NVPTXDAGToDAGISel::GetConvertOpcode(MVT DestTy, MVT SrcTy,
       return IsSigned ? NVPTX::CVT_s16_s64 : NVPTX::CVT_u16_u64;
     case MVT::i32:
       return IsSigned ? NVPTX::CVT_s32_s64 : NVPTX::CVT_u32_u64;
+    }
+  case MVT::f16:
+    switch (DestTy.SimpleTy) {
+    default:
+      llvm_unreachable("Unhandled dest type");
+    case MVT::f32:
+      return NVPTX::CVT_f32_f16;
+    case MVT::f64:
+      return NVPTX::CVT_f64_f16;
     }
   }
 }

@@ -381,13 +381,13 @@ define <5 x i16> @test_v5i16(<5 x i16> %a) {
        ret <5 x i16> %r;
 }
 
-; CHECK: .func  (.param .b32 func_retval0)
+; CHECK: .func  (.param .align 2 .b8 func_retval0[2])
 ; CHECK-LABEL: test_f16(
-; CHECK-NEXT: .param .b32 test_f16_param_0
+; CHECK-NEXT: .param .align 2 .b8 test_f16_param_0[2]
 ; CHECK:      ld.param.b16    [[E:%rs[0-9]+]], [test_f16_param_0];
-; CHECK:      .param .b32 param0;
+; CHECK:      .param .align 2 .b8 param0[2];
 ; CHECK:      st.param.b16    [param0+0], [[E]];
-; CHECK:      .param .b32 retval0;
+; CHECK:      .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT: test_f16,
 ; CHECK:      ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
@@ -414,6 +414,41 @@ define <2 x half> @test_v2f16(<2 x half> %a) {
        %r = tail call <2 x half> @test_v2f16(<2 x half> %a);
        ret <2 x half> %r;
 }
+
+; CHECK: .func  (.param .align 2 .b8 func_retval0[2])
+; CHECK-LABEL: test_bf16(
+; CHECK-NEXT: .param .align 2 .b8 test_bf16_param_0[2]
+; CHECK:      ld.param.b16    [[E:%rs[0-9]+]], [test_bf16_param_0];
+; CHECK:      .param .align 2 .b8 param0[2];
+; CHECK:      st.param.b16    [param0+0], [[E]];
+; CHECK:      .param .align 2 .b8 retval0[2];
+; CHECK:      call.uni (retval0),
+; CHECK-NEXT: test_bf16,
+; CHECK:      ld.param.b16    [[R:%rs[0-9]+]], [retval0+0];
+; CHECK:      st.param.b16    [func_retval0+0], [[R]]
+; CHECK-NEXT: ret;
+define bfloat @test_bf16(bfloat %a) {
+       %r = tail call bfloat @test_bf16(bfloat %a);
+       ret bfloat %r;
+}
+
+; CHECK: .func  (.param .align 4 .b8 func_retval0[4])
+; CHECK-LABEL: test_v2bf16(
+; CHECK-NEXT: .param .align 4 .b8 test_v2bf16_param_0[4]
+; CHECK:      ld.param.b32    [[E:%r[0-9]+]], [test_v2bf16_param_0];
+; CHECK:      .param .align 4 .b8 param0[4];
+; CHECK:      st.param.b32    [param0+0], [[E]];
+; CHECK:      .param .align 4 .b8 retval0[4];
+; CHECK:      call.uni (retval0),
+; CHECK-NEXT: test_v2bf16,
+; CHECK:      ld.param.b32    [[R:%r[0-9]+]], [retval0+0];
+; CHECK:      st.param.b32    [func_retval0+0], [[R]]
+; CHECK-NEXT: ret;
+define <2 x bfloat> @test_v2bf16(<2 x bfloat> %a) {
+       %r = tail call <2 x bfloat> @test_v2bf16(<2 x bfloat> %a);
+       ret <2 x bfloat> %r;
+}
+
 
 ; CHECK:.func  (.param .align 8 .b8 func_retval0[8])
 ; CHECK-LABEL: test_v3f16(

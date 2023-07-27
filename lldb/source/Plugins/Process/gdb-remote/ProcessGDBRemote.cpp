@@ -113,7 +113,7 @@ void DumpProcessGDBRemotePacketHistory(void *p, const char *path) {
     return;
   }
   StreamFile stream(std::move(file.get()));
-  ((ProcessGDBRemote *)p)->GetGDBRemote().DumpHistory(stream);
+  ((Process *)p)->DumpPluginHistory(stream);
 }
 } // namespace lldb
 
@@ -203,6 +203,11 @@ lldb::ProcessSP ProcessGDBRemote::CreateInstance(
     process_sp = std::shared_ptr<ProcessGDBRemote>(
         new ProcessGDBRemote(target_sp, listener_sp));
   return process_sp;
+}
+
+void ProcessGDBRemote::DumpPluginHistory(Stream &s) {
+  GDBRemoteCommunicationClient &gdb_comm(GetGDBRemote());
+  gdb_comm.DumpHistory(s);
 }
 
 std::chrono::seconds ProcessGDBRemote::GetPacketTimeout() {
@@ -3430,7 +3435,7 @@ bool ProcessGDBRemote::StartAsyncThread() {
         });
     if (!async_thread) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::Host), async_thread.takeError(),
-                     "failed to launch host thread: {}");
+                     "failed to launch host thread: {0}");
       return false;
     }
     m_async_thread = *async_thread;
@@ -3922,7 +3927,7 @@ StructuredData::ObjectSP ProcessGDBRemote::GetSharedCacheInfo() {
 }
 
 Status ProcessGDBRemote::ConfigureStructuredData(
-    ConstString type_name, const StructuredData::ObjectSP &config_sp) {
+    llvm::StringRef type_name, const StructuredData::ObjectSP &config_sp) {
   return m_gdb_comm.ConfigureRemoteStructuredData(type_name, config_sp);
 }
 
@@ -5217,7 +5222,7 @@ public:
     ProcessGDBRemote *process =
         (ProcessGDBRemote *)m_interpreter.GetExecutionContext().GetProcessPtr();
     if (process) {
-      process->GetGDBRemote().DumpHistory(result.GetOutputStream());
+      process->DumpPluginHistory(result.GetOutputStream());
       result.SetStatus(eReturnStatusSuccessFinishResult);
       return true;
     }

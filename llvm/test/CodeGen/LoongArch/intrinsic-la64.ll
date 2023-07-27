@@ -178,6 +178,7 @@ entry:
 define void @csrrd_d_noret() {
 ; CHECK-LABEL: csrrd_d_noret:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    csrrd $a0, 1
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.loongarch.csrrd.d(i32 1)
@@ -239,6 +240,7 @@ entry:
 define void @iocsrrd_d_noret(i32 %a) {
 ; CHECK-LABEL: iocsrrd_d_noret:
 ; CHECK:       # %bb.0: # %entry
+; CHECK-NEXT:    iocsrrd.d $a0, $a0
 ; CHECK-NEXT:    ret
 entry:
   %0 = tail call i64 @llvm.loongarch.iocsrrd.d(i32 %a)

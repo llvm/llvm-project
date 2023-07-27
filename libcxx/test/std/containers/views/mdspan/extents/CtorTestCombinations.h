@@ -14,7 +14,7 @@
 #include <array>
 #include <span>
 
-#include "ConvertibleToIntegral.h"
+#include "../ConvertibleToIntegral.h"
 #include "test_macros.h"
 
 // Helper file to implement combinatorical testing of extents constructor
@@ -94,6 +94,6 @@ constexpr bool test_index_type_combo() {
   test<size_t, int, Test>();
   test<size_t, size_t, Test>();
   test<int, IntType, Test>();
-  test<unsigned char, IntType, Test>();
+  test<char, IntType, Test>();
   return true;
 }

@@ -7992,28 +7992,25 @@ multiclass Lengthen_HalfDouble_Big_Endian<string DestLanes, string DestTy, strin
                    (!cast<PatFrag>("extloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn1Lanes # Insn1Ty)
-            (!cast<Instruction>("VREV16d8")
-             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
+             (VREV16d8 (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
              dsub_0)),
-          dsub_0)>,
+           dsub_0)>,
              Requires<[HasNEON]>;
   def _Z   : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
                    (!cast<PatFrag>("zextloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLuv" # Insn1Lanes # Insn1Ty)
-            (!cast<Instruction>("VREV16d8")
-             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
+             (VREV16d8 (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
              dsub_0)),
-          dsub_0)>,
+           dsub_0)>,
              Requires<[HasNEON]>;
   def _S   : Pat<(!cast<ValueType>("v" # DestLanes # DestTy)
                    (!cast<PatFrag>("sextloadv" # SrcTy) addrmode6:$addr)),
          (EXTRACT_SUBREG (!cast<Instruction>("VMOVLsv" # Insn2Lanes # Insn2Ty)
            (EXTRACT_SUBREG (!cast<Instruction>("VMOVLsv" # Insn1Lanes # Insn1Ty)
-            (!cast<Instruction>("VREV16d8")
-             (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
+             (VREV16d8 (VLD1LNd16 addrmode6:$addr, (f64 (IMPLICIT_DEF)), (i32 0)))),
              dsub_0)),
-          dsub_0)>,
+           dsub_0)>,
              Requires<[HasNEON]>;
 }
 
@@ -8066,17 +8063,17 @@ let Predicates = [HasNEON,IsLE] in {
 let Predicates = [HasNEON,IsBE] in {
   def : Pat<(v2i64 (extloadvi8 addrmode6:$addr)),
         (VMOVLuv2i64 (EXTRACT_SUBREG (VMOVLuv4i32 (EXTRACT_SUBREG (VMOVLuv8i16
-           (!cast<Instruction>("VREV16d8")
+           (VREV16d8
              (VLD1LNd16 addrmode6:$addr,
                         (f64 (IMPLICIT_DEF)), (i32 0)))), dsub_0)), dsub_0))>;
   def : Pat<(v2i64 (zextloadvi8 addrmode6:$addr)),
         (VMOVLuv2i64 (EXTRACT_SUBREG (VMOVLuv4i32 (EXTRACT_SUBREG (VMOVLuv8i16
-           (!cast<Instruction>("VREV16d8")
+           (VREV16d8
              (VLD1LNd16 addrmode6:$addr,
                         (f64 (IMPLICIT_DEF)), (i32 0)))), dsub_0)), dsub_0))>;
   def : Pat<(v2i64 (sextloadvi8 addrmode6:$addr)),
         (VMOVLsv2i64 (EXTRACT_SUBREG (VMOVLsv4i32 (EXTRACT_SUBREG (VMOVLsv8i16
-           (!cast<Instruction>("VREV16d8")
+           (VREV16d8
              (VLD1LNd16 addrmode6:$addr,
                         (f64 (IMPLICIT_DEF)), (i32 0)))), dsub_0)), dsub_0))>;
 }

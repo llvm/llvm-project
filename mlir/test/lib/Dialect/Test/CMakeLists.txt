@@ -36,6 +36,11 @@ mlir_tablegen(TestOpsDialect.cpp.inc -gen-dialect-defs -dialect=test)
 mlir_tablegen(TestPatterns.inc -gen-rewriters)
 add_public_tablegen_target(MLIRTestOpsIncGen)
 
+set(LLVM_TARGET_DEFINITIONS TestOpsSyntax.td)
+mlir_tablegen(TestOpsSyntax.h.inc -gen-op-decls)
+mlir_tablegen(TestOpsSyntax.cpp.inc -gen-op-defs)
+add_public_tablegen_target(MLIRTestOpsSyntaxIncGen)
+
 # Exclude tests from libMLIR.so
 add_mlir_library(MLIRTestDialect
   TestAttributes.cpp
@@ -44,6 +49,8 @@ add_mlir_library(MLIRTestDialect
   TestPatterns.cpp
   TestTraits.cpp
   TestTypes.cpp
+  TestOpsSyntax.cpp
+  TestDialectInterfaces.cpp
 
   EXCLUDE_FROM_LIBMLIR
 
@@ -53,6 +60,7 @@ add_mlir_library(MLIRTestDialect
   MLIRTestInterfaceIncGen
   MLIRTestTypeDefIncGen
   MLIRTestOpsIncGen
+  MLIRTestOpsSyntaxIncGen
 
   LINK_LIBS PUBLIC
   MLIRControlFlowInterfaces

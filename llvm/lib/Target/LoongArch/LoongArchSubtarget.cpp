@@ -35,6 +35,7 @@ LoongArchSubtarget &LoongArchSubtarget::initializeSubtargetDependencies(
     TuneCPU = CPU;
 
   ParseSubtargetFeatures(CPU, TuneCPU, FS);
+  initializeProperties(TuneCPU);
   if (Is64Bit) {
     GRLenVT = MVT::i64;
     GRLen = 64;
@@ -52,6 +53,32 @@ LoongArchSubtarget &LoongArchSubtarget::initializeSubtargetDependencies(
   TargetABI = LoongArchABI::computeTargetABI(TT, ABIName);
 
   return *this;
+}
+
+void LoongArchSubtarget::initializeProperties(StringRef TuneCPU) {
+  // Initialize CPU specific properties. We should add a tablegen feature for
+  // this in the future so we can specify it together with the subtarget
+  // features.
+
+  // TODO: Check TuneCPU and override defaults (that are for LA464) once we
+  // support optimizing for more uarchs.
+
+  // Default to the alignment settings empirically confirmed to perform best
+  // on LA464, with 4-wide instruction fetch and decode stages. These settings
+  // can also be overridden in initializeProperties.
+  //
+  // We default to such higher-than-minimum alignments because we assume that:
+  //
+  // * these settings should benefit most existing uarchs/users,
+  // * future general-purpose LoongArch cores are likely to have issue widths
+  //   equal to or wider than 4,
+  // * instruction sequences best for LA464 should not pessimize other future
+  //   uarchs, and
+  // * narrower cores would not suffer much (aside from slightly increased
+  //   ICache footprint maybe), compared to the gains everywhere else.
+  PrefFunctionAlignment = Align(32);
+  PrefLoopAlignment = Align(16);
+  MaxBytesForAlignment = 16;
 }
 
 LoongArchSubtarget::LoongArchSubtarget(const Triple &TT, StringRef CPU,

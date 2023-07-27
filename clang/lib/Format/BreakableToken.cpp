@@ -82,9 +82,9 @@ getCommentSplit(StringRef Text, unsigned ContentStartColumn,
        NumChars < MaxSplit && MaxSplitBytes < Text.size();) {
     unsigned BytesInChar =
         encoding::getCodePointNumBytes(Text[MaxSplitBytes], Encoding);
-    NumChars +=
-        encoding::columnWidthWithTabs(Text.substr(MaxSplitBytes, BytesInChar),
-                                      ContentStartColumn, TabWidth, Encoding);
+    NumChars += encoding::columnWidthWithTabs(
+        Text.substr(MaxSplitBytes, BytesInChar), ContentStartColumn + NumChars,
+        TabWidth, Encoding);
     MaxSplitBytes += BytesInChar;
   }
 

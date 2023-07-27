@@ -29,6 +29,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIter>
@@ -63,8 +66,8 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17
 void advance(_InputIter& __i, _Distance __orig_n) {
   typedef typename iterator_traits<_InputIter>::difference_type _Difference;
   _Difference __n = static_cast<_Difference>(_VSTD::__convert_to_integral(__orig_n));
-  _LIBCPP_ASSERT(__n >= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
-                 "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0 || __has_bidirectional_iterator_category<_InputIter>::value,
+                               "Attempt to advance(it, n) with negative n on a non-bidirectional iterator");
   _VSTD::__advance(__i, __n, typename iterator_traits<_InputIter>::iterator_category());
 }
 
@@ -100,8 +103,8 @@ public:
   template <input_or_output_iterator _Ip>
   _LIBCPP_HIDE_FROM_ABI
   constexpr void operator()(_Ip& __i, iter_difference_t<_Ip> __n) const {
-    _LIBCPP_ASSERT(__n >= 0 || bidirectional_iterator<_Ip>,
-                   "If `n < 0`, then `bidirectional_iterator<I>` must be true.");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__n >= 0 || bidirectional_iterator<_Ip>,
+                                 "If `n < 0`, then `bidirectional_iterator<I>` must be true.");
 
     // If `I` models `random_access_iterator`, equivalent to `i += n`.
     if constexpr (random_access_iterator<_Ip>) {
@@ -147,8 +150,8 @@ public:
   template <input_or_output_iterator _Ip, sentinel_for<_Ip> _Sp>
   _LIBCPP_HIDE_FROM_ABI constexpr iter_difference_t<_Ip> operator()(_Ip& __i, iter_difference_t<_Ip> __n,
                                                                     _Sp __bound_sentinel) const {
-    _LIBCPP_ASSERT((__n >= 0) || (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>),
-                   "If `n < 0`, then `bidirectional_iterator<I> && same_as<I, S>` must be true.");
+    _LIBCPP_ASSERT_UNCATEGORIZED((__n >= 0) || (bidirectional_iterator<_Ip> && same_as<_Ip, _Sp>),
+                                 "If `n < 0`, then `bidirectional_iterator<I> && same_as<I, S>` must be true.");
     // If `S` and `I` model `sized_sentinel_for<S, I>`:
     if constexpr (sized_sentinel_for<_Sp, _Ip>) {
       // If |n| >= |bound_sentinel - i|, equivalent to `ranges::advance(i, bound_sentinel)`.
@@ -198,5 +201,7 @@ inline namespace __cpo {
 #endif // _LIBCPP_STD_VER >= 20
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ITERATOR_ADVANCE_H

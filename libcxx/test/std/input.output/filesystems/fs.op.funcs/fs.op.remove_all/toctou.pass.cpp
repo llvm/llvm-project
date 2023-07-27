@@ -9,6 +9,8 @@
 // UNSUPPORTED: c++03
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: no-threads
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 

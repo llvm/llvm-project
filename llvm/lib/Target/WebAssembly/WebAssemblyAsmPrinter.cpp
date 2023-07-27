@@ -25,8 +25,10 @@
 #include "WebAssemblyRegisterInfo.h"
 #include "WebAssemblyRuntimeLibcallSignatures.h"
 #include "WebAssemblyTargetMachine.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/BinaryFormat/Wasm.h"
 #include "llvm/CodeGen/Analysis.h"
 #include "llvm/CodeGen/AsmPrinter.h"
@@ -301,8 +303,8 @@ void WebAssemblyAsmPrinter::emitDecls(const Module &M) {
   // only find symbols that have been used. Unused symbols from globals will
   // not be found here.
   MachineModuleInfoWasm &MMIW = MMI->getObjFileInfo<MachineModuleInfoWasm>();
-  for (const auto &Name : MMIW.MachineSymbolsUsed) {
-    auto *WasmSym = cast<MCSymbolWasm>(getOrCreateWasmSymbol(Name.getKey()));
+  for (StringRef Name : MMIW.MachineSymbolsUsed) {
+    auto *WasmSym = cast<MCSymbolWasm>(getOrCreateWasmSymbol(Name));
     if (WasmSym->isFunction()) {
       // TODO(wvo): is there any case where this overlaps with the call to
       // emitFunctionType in the loop below?
@@ -438,6 +440,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
 
   EmitProducerInfo(M);
   EmitTargetFeatures(M);
+  EmitFunctionAttributes(M);
 }
 
 void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
@@ -554,6 +557,48 @@ void WebAssemblyAsmPrinter::EmitTargetFeatures(Module &M) {
   }
 
   OutStreamer->popSection();
+}
+
+void WebAssemblyAsmPrinter::EmitFunctionAttributes(Module &M) {
+  auto V = M.getNamedGlobal("llvm.global.annotations");
+  if (!V)
+    return;
+
+  // Group all the custom attributes by name.
+  MapVector<StringRef, SmallVector<MCSymbol *, 4>> CustomSections;
+  const ConstantArray *CA = cast<ConstantArray>(V->getOperand(0));
+  for (Value *Op : CA->operands()) {
+    auto *CS = cast<ConstantStruct>(Op);
+    // The first field is a pointer to the annotated variable.
+    Value *AnnotatedVar = CS->getOperand(0)->stripPointerCasts();
+    // Only annotated functions are supported for now.
+    if (!isa<Function>(AnnotatedVar))
+      continue;
+    auto *F = cast<Function>(AnnotatedVar);
+
+    // The second field is a pointer to a global annotation string.
+    auto *GV = cast<GlobalVariable>(CS->getOperand(1)->stripPointerCasts());
+    StringRef AnnotationString;
+    getConstantStringInfo(GV, AnnotationString);
+    auto *Sym = cast<MCSymbolWasm>(getSymbol(F));
+    CustomSections[AnnotationString].push_back(Sym);
+  }
+
+  // Emit a custom section for each unique attribute.
+  for (const auto &[Name, Symbols] : CustomSections) {
+    MCSectionWasm *CustomSection = OutContext.getWasmSection(
+        ".custom_section.llvm.func_attr.annotate." + Name, SectionKind::getMetadata());
+    OutStreamer->pushSection();
+    OutStreamer->switchSection(CustomSection);
+
+    for (auto &Sym : Symbols) {
+      OutStreamer->emitValue(
+          MCSymbolRefExpr::create(Sym, MCSymbolRefExpr::VK_WASM_FUNCINDEX,
+                                  OutContext),
+          4);
+    }
+    OutStreamer->popSection();
+  }
 }
 
 void WebAssemblyAsmPrinter::emitConstantPool() {

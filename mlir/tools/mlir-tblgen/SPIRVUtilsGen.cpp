@@ -857,7 +857,7 @@ static void emitAttributeDeserialization(const Attribute &attr,
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "opBuilder.getI32IntegerAttr({2}[{3}++])));\n",
                   attrList, attrName, words, wordIndex);
-  } else if (attr.isEnumAttr() || attr.getAttrDefName() == "TypeAttr") {
+  } else if (attr.isEnumAttr() || attr.isTypeAttr()) {
     os << tabs
        << formatv("{0}.push_back(opBuilder.getNamedAttr(\"{1}\", "
                   "TypeAttr::get(getType({2}[{3}++]))));\n",
@@ -866,7 +866,7 @@ static void emitAttributeDeserialization(const Attribute &attr,
     PrintFatalError(
         loc, llvm::Twine(
                  "unhandled attribute type in deserialization generation : '") +
-                 attr.getAttrDefName() + llvm::Twine("'"));
+                 attrName + llvm::Twine("'"));
   }
 }
 

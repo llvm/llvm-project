@@ -2055,7 +2055,8 @@ public:
     Walk(std::get<ScalarIntExpr>(x.t));
   }
   void Unparse(const OmpAlignedClause &x) {
-    Walk(std::get<std::list<Name>>(x.t), ",");
+    Walk(std::get<OmpObjectList>(x.t));
+    Put(",");
     Walk(std::get<std::optional<ScalarIntConstantExpr>>(x.t));
   }
   void Unparse(const OmpIfClause &x) {

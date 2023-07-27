@@ -210,7 +210,7 @@ private:
 
 public:
   ELFLinkGraphBuilder_i386(StringRef FileName, const object::ELFFile<ELFT> &Obj,
-                           Triple TT, LinkGraph::FeatureVector Features)
+                           Triple TT, SubtargetFeatures Features)
       : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
                                   FileName, i386::getEdgeKindName) {}
 };
@@ -236,7 +236,7 @@ createLinkGraphFromELFObject_i386(MemoryBufferRef ObjectBuffer) {
   auto &ELFObjFile = cast<object::ELFObjectFile<object::ELF32LE>>(**ELFObj);
   return ELFLinkGraphBuilder_i386<object::ELF32LE>(
              (*ELFObj)->getFileName(), ELFObjFile.getELFFile(),
-             (*ELFObj)->makeTriple(), Features->getFeatures())
+             (*ELFObj)->makeTriple(), std::move(*Features))
       .buildGraph();
 }
 

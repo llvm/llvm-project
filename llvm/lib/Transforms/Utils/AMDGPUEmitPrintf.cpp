@@ -16,6 +16,7 @@
 
 #include "llvm/Transforms/Utils/AMDGPUEmitPrintf.h"
 #include "llvm/ADT/SparseBitVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/MD5.h"

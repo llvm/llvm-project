@@ -222,12 +222,18 @@ struct InsertSliceOfInsertSliceFolder : public OpRewritePattern<OpTy> {
 };
 
 void tensor::populateFoldTensorSubsetOpPatterns(RewritePatternSet &patterns) {
-  patterns.add<TransferReadOfExtractSliceOpFolder,
-               InsertSliceOfTransferWriteOpFolder,
-               InsertSliceOfInsertSliceFolder<tensor::InsertSliceOp>,
+  populateFoldTensorSubsetIntoVectorTransferPatterns(patterns);
+  patterns.add<InsertSliceOfInsertSliceFolder<tensor::InsertSliceOp>,
                InsertSliceOfInsertSliceFolder<tensor::ParallelInsertSliceOp>>(
       patterns.getContext());
 }
+
+void tensor::populateFoldTensorSubsetIntoVectorTransferPatterns(
+    RewritePatternSet &patterns) {
+  patterns.add<TransferReadOfExtractSliceOpFolder,
+               InsertSliceOfTransferWriteOpFolder>(patterns.getContext());
+}
+
 //===----------------------------------------------------------------------===//
 // Pass registration
 //===----------------------------------------------------------------------===//

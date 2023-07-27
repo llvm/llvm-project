@@ -1116,24 +1116,24 @@ int printBuiltinAttributes(MlirContext ctx) {
       fabs(mlirDenseElementsAttrGetDoubleSplatValue(splatDouble) - 1.0) > 1E-6)
     return 17;
 
-  uint8_t *uint8RawData =
-      (uint8_t *)mlirDenseElementsAttrGetRawData(uint8Elements);
-  int8_t *int8RawData = (int8_t *)mlirDenseElementsAttrGetRawData(int8Elements);
-  uint32_t *uint32RawData =
-      (uint32_t *)mlirDenseElementsAttrGetRawData(uint32Elements);
-  int32_t *int32RawData =
-      (int32_t *)mlirDenseElementsAttrGetRawData(int32Elements);
-  uint64_t *uint64RawData =
-      (uint64_t *)mlirDenseElementsAttrGetRawData(uint64Elements);
-  int64_t *int64RawData =
-      (int64_t *)mlirDenseElementsAttrGetRawData(int64Elements);
-  float *floatRawData = (float *)mlirDenseElementsAttrGetRawData(floatElements);
-  double *doubleRawData =
-      (double *)mlirDenseElementsAttrGetRawData(doubleElements);
-  uint16_t *bf16RawData =
-      (uint16_t *)mlirDenseElementsAttrGetRawData(bf16Elements);
-  uint16_t *f16RawData =
-      (uint16_t *)mlirDenseElementsAttrGetRawData(f16Elements);
+  const uint8_t *uint8RawData =
+      (const uint8_t *)mlirDenseElementsAttrGetRawData(uint8Elements);
+  const int8_t *int8RawData = (const int8_t *)mlirDenseElementsAttrGetRawData(int8Elements);
+  const uint32_t *uint32RawData =
+      (const uint32_t *)mlirDenseElementsAttrGetRawData(uint32Elements);
+  const int32_t *int32RawData =
+      (const int32_t *)mlirDenseElementsAttrGetRawData(int32Elements);
+  const uint64_t *uint64RawData =
+      (const uint64_t *)mlirDenseElementsAttrGetRawData(uint64Elements);
+  const int64_t *int64RawData =
+      (const int64_t *)mlirDenseElementsAttrGetRawData(int64Elements);
+  const float *floatRawData = (const float *)mlirDenseElementsAttrGetRawData(floatElements);
+  const double *doubleRawData =
+      (const double *)mlirDenseElementsAttrGetRawData(doubleElements);
+  const uint16_t *bf16RawData =
+      (const uint16_t *)mlirDenseElementsAttrGetRawData(bf16Elements);
+  const uint16_t *f16RawData =
+      (const uint16_t *)mlirDenseElementsAttrGetRawData(f16Elements);
   if (uint8RawData[0] != 0u || uint8RawData[1] != 1u || int8RawData[0] != 0 ||
       int8RawData[1] != 1 || uint32RawData[0] != 0u || uint32RawData[1] != 1u ||
       int32RawData[0] != 0 || int32RawData[1] != 1 || uint64RawData[0] != 0u ||
@@ -2210,6 +2210,18 @@ int testDialectRegistry(void) {
   return 0;
 }
 
+void testExplicitThreadPools(void) {
+  MlirLlvmThreadPool threadPool = mlirLlvmThreadPoolCreate();
+  MlirDialectRegistry registry = mlirDialectRegistryCreate();
+  mlirRegisterAllDialects(registry);
+  MlirContext context =
+      mlirContextCreateWithRegistry(registry, /*threadingEnabled=*/false);
+  mlirContextSetThreadPool(context, threadPool);
+  mlirContextDestroy(context);
+  mlirDialectRegistryDestroy(registry);
+  mlirLlvmThreadPoolDestroy(threadPool);
+}
+
 void testDiagnostics(void) {
   MlirContext ctx = mlirContextCreate();
   MlirDiagnosticHandlerID id = mlirContextAttachDiagnosticHandler(
@@ -2310,6 +2322,7 @@ int main(void) {
 
   mlirContextDestroy(ctx);
 
+  testExplicitThreadPools();
   testDiagnostics();
   return 0;
 }

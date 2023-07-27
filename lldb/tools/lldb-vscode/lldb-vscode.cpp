@@ -191,6 +191,28 @@ void SendThreadExitedEvent(lldb::tid_t tid) {
   g_vsc.SendJSON(llvm::json::Value(std::move(event)));
 }
 
+// Send a "continued" event to indicate the process is in the running state.
+void SendContinuedEvent() {
+  lldb::SBProcess process = g_vsc.target.GetProcess();
+  if (!process.IsValid()) {
+    return;
+  }
+
+  // If the focus thread is not set then we haven't reported any thread status
+  // to the client, so nothing to report.
+  if (!g_vsc.configuration_done_sent ||
+      g_vsc.focus_tid == LLDB_INVALID_THREAD_ID) {
+    return;
+  }
+
+  llvm::json::Object event(CreateEventObject("continued"));
+  llvm::json::Object body;
+  body.try_emplace("threadId", (int64_t)g_vsc.focus_tid);
+  body.try_emplace("allThreadsContinued", true);
+  event.try_emplace("body", std::move(body));
+  g_vsc.SendJSON(llvm::json::Value(std::move(event)));
+}
+
 // Send a "terminated" event to indicate the process is done being
 // debugged.
 void SendTerminatedEvent() {
@@ -252,7 +274,7 @@ void SendThreadStoppedEvent() {
         }
       }
 
-      // We will have cleared g_vsc.focus_tid if he focus thread doesn't have
+      // We will have cleared g_vsc.focus_tid if the focus thread doesn't have
       // a stop reason, so if it was cleared, or wasn't set, or doesn't exist,
       // then set the focus thread to the first thread with a stop reason.
       if (!focus_thread_exists || g_vsc.focus_tid == LLDB_INVALID_THREAD_ID)
@@ -262,6 +284,7 @@ void SendThreadStoppedEvent() {
       // we at least let the UI know we stopped.
       if (num_threads_with_reason == 0) {
         lldb::SBThread thread = process.GetThreadAtIndex(0);
+        g_vsc.focus_tid = thread.GetThreadID();
         g_vsc.SendJSON(CreateThreadStopped(thread, stop_id));
       } else {
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
@@ -468,6 +491,7 @@ void EventThreadFunction() {
             break;
           case lldb::eStateRunning:
             g_vsc.WillContinue();
+            SendContinuedEvent();
             break;
           case lldb::eStateExited:
             // When restarting, we can get an "exited" event for the process we
@@ -766,10 +790,6 @@ void request_continue(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   lldb::SBProcess process = g_vsc.target.GetProcess();
-  auto arguments = request.getObject("arguments");
-  // Remember the thread ID that caused the resume so we can set the
-  // "threadCausedFocus" boolean value in the "stopped" events.
-  g_vsc.focus_tid = GetUnsigned(arguments, "threadId", LLDB_INVALID_THREAD_ID);
   lldb::SBError error = process.Continue();
   llvm::json::Object body;
   body.try_emplace("allThreadsContinued", true);
@@ -1065,50 +1085,62 @@ void request_completions(const llvm::json::Object &request) {
   FillResponse(request, response);
   llvm::json::Object body;
   auto arguments = request.getObject("arguments");
-  std::string text = std::string(GetString(arguments, "text"));
-  auto original_column = GetSigned(arguments, "column", text.size());
-  auto actual_column = original_column - 1;
-  llvm::json::Array targets;
-  // NOTE: the 'line' argument is not needed, as multiline expressions
-  // work well already
-  // TODO: support frameID. Currently
-  // g_vsc.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions
-  // is frame-unaware.
 
-  if (!text.empty() && text[0] == '`') {
-    text = text.substr(1);
-    actual_column--;
-  } else {
+  // If we have a frame, try to set the context for variable completions.
+  lldb::SBFrame frame = g_vsc.GetLLDBFrame(*arguments);
+  if (frame.IsValid()) {
+    frame.GetThread().GetProcess().SetSelectedThread(frame.GetThread());
+    frame.GetThread().SetSelectedFrame(frame.GetFrameID());
+  }
+
+  std::string text = GetString(arguments, "text").str();
+  auto original_column = GetSigned(arguments, "column", text.size());
+  auto original_line = GetSigned(arguments, "line", 1);
+  auto offset = original_column - 1;
+  if (original_line > 1) {
+    llvm::SmallVector<::llvm::StringRef, 2> lines;
+    llvm::StringRef(text).split(lines, '\n');
+    for (int i = 0; i < original_line - 1; i++) {
+      offset += lines[i].size();
+    }
+  }
+  llvm::json::Array targets;
+
+  if (g_vsc.DetectExpressionContext(frame, text) ==
+      ExpressionContext::Variable) {
     char command[] = "expression -- ";
     text = command + text;
-    actual_column += strlen(command);
+    offset += strlen(command);
   }
   lldb::SBStringList matches;
   lldb::SBStringList descriptions;
-  g_vsc.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(
-      text.c_str(), actual_column, 0, -1, matches, descriptions);
-  size_t count = std::min((uint32_t)100, matches.GetSize());
-  targets.reserve(count);
-  for (size_t i = 0; i < count; i++) {
-    std::string match = matches.GetStringAtIndex(i);
-    std::string description = descriptions.GetStringAtIndex(i);
 
-    llvm::json::Object item;
+  if (g_vsc.debugger.GetCommandInterpreter().HandleCompletionWithDescriptions(
+          text.c_str(), offset, 0, 100, matches, descriptions)) {
+    // The first element is the common substring after the cursor position for
+    // all the matches. The rest of the elements are the matches so ignore the
+    // first result.
+    targets.reserve(matches.GetSize() - 1);
+    for (size_t i = 1; i < matches.GetSize(); i++) {
+      std::string match = matches.GetStringAtIndex(i);
+      std::string description = descriptions.GetStringAtIndex(i);
 
-    llvm::StringRef match_ref = match;
-    for (llvm::StringRef commit_point : {".", "->"}) {
-      if (match_ref.contains(commit_point)) {
-        match_ref = match_ref.rsplit(commit_point).second;
+      llvm::json::Object item;
+      llvm::StringRef match_ref = match;
+      for (llvm::StringRef commit_point : {".", "->"}) {
+        if (match_ref.contains(commit_point)) {
+          match_ref = match_ref.rsplit(commit_point).second;
+        }
       }
+      EmplaceSafeString(item, "text", match_ref);
+
+      if (description.empty())
+        EmplaceSafeString(item, "label", match);
+      else
+        EmplaceSafeString(item, "label", match + " -- " + description);
+
+      targets.emplace_back(std::move(item));
     }
-    EmplaceSafeString(item, "text", match_ref);
-
-    if (description.empty())
-      EmplaceSafeString(item, "label", match);
-    else
-      EmplaceSafeString(item, "label", match + " -- " + description);
-
-    targets.emplace_back(std::move(item));
   }
 
   body.try_emplace("targets", std::move(targets));
@@ -1223,12 +1255,17 @@ void request_evaluate(const llvm::json::Object &request) {
   llvm::json::Object body;
   auto arguments = request.getObject("arguments");
   lldb::SBFrame frame = g_vsc.GetLLDBFrame(*arguments);
-  const auto expression = GetString(arguments, "expression");
+  std::string expression = GetString(arguments, "expression").str();
   llvm::StringRef context = GetString(arguments, "context");
 
-  if (!expression.empty() && expression[0] == '`') {
-    auto result =
-        RunLLDBCommands(llvm::StringRef(), {std::string(expression.substr(1))});
+  if (context == "repl" && g_vsc.DetectExpressionContext(frame, expression) ==
+                               ExpressionContext::Command) {
+    // If we're evaluating a command relative to the current frame, set the
+    // focus_tid to the current frame for any thread related events.
+    if (frame.IsValid()) {
+      g_vsc.focus_tid = frame.GetThread().GetThreadID();
+    }
+    auto result = RunLLDBCommands(llvm::StringRef(), {std::string(expression)});
     EmplaceSafeString(body, "result", result);
     body.try_emplace("variablesReference", (int64_t)0);
   } else {
@@ -1471,6 +1508,18 @@ void request_initialize(const llvm::json::Object &request) {
 
   g_vsc.debugger =
       lldb::SBDebugger::Create(source_init_file, log_cb, nullptr);
+  auto cmd = g_vsc.debugger.GetCommandInterpreter().AddMultiwordCommand(
+      "lldb-vscode", "Commands for managing lldb-vscode.");
+  if (GetBoolean(arguments, "supportsStartDebuggingRequest", false)) {
+    cmd.AddCommand(
+        "startDebugging", &g_vsc.start_debugging_request_handler,
+        "Sends a startDebugging request from the debug adapter to the client "
+        "to start a child debug session of the same type as the caller.");
+  }
+  cmd.AddCommand(
+      "repl-mode", &g_vsc.repl_mode_request_handler,
+      "Get or set the repl behavior of vscode-lldb evaluation requests.");
+
   g_vsc.progress_event_thread = std::thread(ProgressEventThreadFunction);
 
   // Start our event thread so we can receive events from the debugger, target,
@@ -1512,22 +1561,16 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsGotoTargetsRequest", false);
   // The debug adapter supports the stepInTargetsRequest.
   body.try_emplace("supportsStepInTargetsRequest", false);
-  // We need to improve the current implementation of completions in order to
-  // enable it again. For some context, this is how VSCode works:
-  // - VSCode sends a completion request whenever chars are added, the user
-  //   triggers completion manually via CTRL-space or similar mechanisms, but
-  //   not when there's a deletion. Besides, VSCode doesn't let us know which
-  //   of these events we are handling. What is more, the use can paste or cut
-  //   sections of the text arbitrarily.
-  //   https://github.com/microsoft/vscode/issues/89531 tracks part of the
-  //   issue just mentioned.
-  // This behavior causes many problems with the current way completion is
-  // implemented in lldb-vscode, as these requests could be really expensive,
-  // blocking the debugger, and there could be many concurrent requests unless
-  // the user types very slowly... We need to address this specific issue, or
-  // at least trigger completion only when the user explicitly wants it, which
-  // is the behavior of LLDB CLI, that expects a TAB.
-  body.try_emplace("supportsCompletionsRequest", false);
+  // The debug adapter supports the completions request.
+  body.try_emplace("supportsCompletionsRequest", true);
+
+  llvm::json::Array completion_characters;
+  completion_characters.emplace_back(".");
+  completion_characters.emplace_back(" ");
+  completion_characters.emplace_back("\t");
+  body.try_emplace("completionTriggerCharacters",
+                   std::move(completion_characters));
+
   // The debug adapter supports the modules request.
   body.try_emplace("supportsModulesRequest", true);
   // The set of additional module information exposed by the debug adapter.
@@ -1564,7 +1607,8 @@ void request_initialize(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
 
-llvm::Error request_runInTerminal(const llvm::json::Object &launch_request) {
+llvm::Error request_runInTerminal(const llvm::json::Object &launch_request,
+                                  const uint64_t timeout_seconds) {
   g_vsc.is_attach = true;
   lldb::SBAttachInfo attach_info;
 
@@ -1582,13 +1626,15 @@ llvm::Error request_runInTerminal(const llvm::json::Object &launch_request) {
 #endif
   llvm::json::Object reverse_request = CreateRunInTerminalReverseRequest(
       launch_request, g_vsc.debug_adaptor_path, comm_file.m_path, debugger_pid);
-  llvm::json::Object reverse_response;
-  lldb_vscode::PacketStatus status =
-      g_vsc.SendReverseRequest(reverse_request, reverse_response);
-  if (status != lldb_vscode::PacketStatus::Success)
-    return llvm::createStringError(llvm::inconvertibleErrorCode(),
-                                   "Process cannot be launched by the IDE. %s",
-                                   comm_channel.GetLauncherError().c_str());
+  g_vsc.SendReverseRequest("runInTerminal", std::move(reverse_request),
+                           [](llvm::Expected<llvm::json::Value> value) {
+                             if (!value) {
+                               llvm::Error err = value.takeError();
+                               llvm::errs()
+                                   << "runInTerminal request failed: "
+                                   << llvm::toString(std::move(err)) << "\n";
+                             }
+                           });
 
   if (llvm::Expected<lldb::pid_t> pid = comm_channel.GetLauncherPid())
     attach_info.SetProcessID(*pid);
@@ -1676,7 +1722,7 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
   const uint64_t timeout_seconds = GetUnsigned(arguments, "timeout", 30);
 
   if (GetBoolean(arguments, "runInTerminal", false)) {
-    if (llvm::Error err = request_runInTerminal(request))
+    if (llvm::Error err = request_runInTerminal(request, timeout_seconds))
       error.SetErrorString(llvm::toString(std::move(err)).c_str());
   } else if (launchCommands.empty()) {
     // Disable async events so the launch will be successful when we return from
@@ -1685,6 +1731,9 @@ lldb::SBError LaunchProcess(const llvm::json::Object &request) {
     g_vsc.target.Launch(launch_info, error);
     g_vsc.debugger.SetAsync(true);
   } else {
+    // Set the launch info so that run commands can access the configured
+    // launch details.
+    g_vsc.target.SetLaunchInfo(launch_info);
     g_vsc.RunLLDBCommands("Running launchCommands:", launchCommands);
     // The custom commands might have created a new target so we should use the
     // selected target after these commands are run.
@@ -2080,6 +2129,7 @@ void request_scopes(const llvm::json::Object &request) {
     frame.GetThread().GetProcess().SetSelectedThread(frame.GetThread());
     frame.GetThread().SetSelectedFrame(frame.GetFrameID());
   }
+
   g_vsc.variables.locals = frame.GetVariables(/*arguments=*/true,
                                               /*locals=*/true,
                                               /*statics=*/false,
@@ -3393,6 +3443,23 @@ int main(int argc, char *argv[]) {
     return EXIT_SUCCESS;
   }
 
+  if (input_args.hasArg(OPT_repl_mode)) {
+    llvm::opt::Arg *repl_mode = input_args.getLastArg(OPT_repl_mode);
+    llvm::StringRef repl_mode_value = repl_mode->getValue();
+    if (repl_mode_value == "auto") {
+      g_vsc.repl_mode = ReplMode::Auto;
+    } else if (repl_mode_value == "variable") {
+      g_vsc.repl_mode = ReplMode::Variable;
+    } else if (repl_mode_value == "command") {
+      g_vsc.repl_mode = ReplMode::Command;
+    } else {
+      llvm::errs()
+          << "'" << repl_mode_value
+          << "' is not a valid option, use 'variable', 'command' or 'auto'.\n";
+      return EXIT_FAILURE;
+    }
+  }
+
   if (llvm::opt::Arg *target_arg = input_args.getLastArg(OPT_launch_target)) {
     if (llvm::opt::Arg *comm_file = input_args.getLastArg(OPT_comm_file)) {
       lldb::pid_t pid = LLDB_INVALID_PROCESS_ID;
@@ -3464,17 +3531,13 @@ int main(int argc, char *argv[]) {
     g_vsc.output.descriptor = StreamDescriptor::from_file(new_stdout_fd, false);
   }
 
-  while (!g_vsc.sent_terminated_event) {
-    llvm::json::Object object;
-    lldb_vscode::PacketStatus status = g_vsc.GetNextObject(object);
-    if (status == lldb_vscode::PacketStatus::EndOfFile)
-      break;
-    if (status != lldb_vscode::PacketStatus::Success)
-      return 1; // Fatal error
-
-    if (!g_vsc.HandleObject(object))
-      return 1;
+  bool CleanExit = true;
+  if (auto Err = g_vsc.Loop()) {
+    if (g_vsc.log)
+      *g_vsc.log << "Transport Error: " << llvm::toString(std::move(Err))
+                 << "\n";
+    CleanExit = false;
   }
 
-  return EXIT_SUCCESS;
+  return CleanExit ? EXIT_SUCCESS : EXIT_FAILURE;
 }

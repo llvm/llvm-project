@@ -319,6 +319,7 @@ public:
 protected:
   SExpr(TIL_Opcode Op) : Opcode(Op) {}
   SExpr(const SExpr &E) : Opcode(E.Opcode), Flags(E.Flags) {}
+  SExpr &operator=(const SExpr &) = delete;
 
   const TIL_Opcode Opcode;
   unsigned char Reserved = 0;

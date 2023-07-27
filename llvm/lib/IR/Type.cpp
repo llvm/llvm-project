@@ -57,12 +57,6 @@ bool Type::isIntegerTy(unsigned Bitwidth) const {
   return isIntegerTy() && cast<IntegerType>(this)->getBitWidth() == Bitwidth;
 }
 
-bool Type::isOpaquePointerTy() const {
-  if (auto *PTy = dyn_cast<PointerType>(this))
-    return PTy->isOpaque();
-  return false;
-}
-
 bool Type::isScalableTy() const {
   if (const auto *STy = dyn_cast<StructType>(this)) {
     SmallPtrSet<Type *, 4> Visited;
@@ -798,24 +792,12 @@ PointerType *PointerType::get(Type *EltTy, unsigned AddressSpace) {
   assert(EltTy && "Can't get a pointer to <null> type!");
   assert(isValidElementType(EltTy) && "Invalid type for pointer element!");
 
-  LLVMContextImpl *CImpl = EltTy->getContext().pImpl;
-
   // Automatically convert typed pointers to opaque pointers.
-  if (CImpl->getOpaquePointers())
-    return get(EltTy->getContext(), AddressSpace);
-
-  PointerType *&Entry =
-      CImpl->LegacyPointerTypes[std::make_pair(EltTy, AddressSpace)];
-
-  if (!Entry)
-    Entry = new (CImpl->Alloc) PointerType(EltTy, AddressSpace);
-  return Entry;
+  return get(EltTy->getContext(), AddressSpace);
 }
 
 PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
   LLVMContextImpl *CImpl = C.pImpl;
-  assert(CImpl->getOpaquePointers() &&
-         "Can only create opaque pointers in opaque pointer mode");
 
   // Since AddressSpace #0 is the common case, we special case it.
   PointerType *&Entry = AddressSpace == 0 ? CImpl->AS0PointerType
@@ -826,15 +808,8 @@ PointerType *PointerType::get(LLVMContext &C, unsigned AddressSpace) {
   return Entry;
 }
 
-PointerType::PointerType(Type *E, unsigned AddrSpace)
-  : Type(E->getContext(), PointerTyID), PointeeTy(E) {
-  ContainedTys = &PointeeTy;
-  NumContainedTys = 1;
-  setSubclassData(AddrSpace);
-}
-
 PointerType::PointerType(LLVMContext &C, unsigned AddrSpace)
-    : Type(C, PointerTyID), PointeeTy(nullptr) {
+    : Type(C, PointerTyID) {
   setSubclassData(AddrSpace);
 }
 

@@ -26,6 +26,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Set up argument indices.
   unsigned ParamOffset = 0;
   SmallVector<PrimType, 8> ParamTypes;
+  SmallVector<unsigned, 8> ParamOffsets;
   llvm::DenseMap<unsigned, Function::ParamDescriptor> ParamDescriptors;
 
   // If the return is not a primitive, a pointer to the storage where the
@@ -36,6 +37,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (!Ty->isVoidType() && !Ctx.classify(Ty)) {
     HasRVO = true;
     ParamTypes.push_back(PT_Ptr);
+    ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(PT_Ptr));
   }
 
@@ -47,6 +49,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
     if (MD->isInstance()) {
       HasThisPointer = true;
       ParamTypes.push_back(PT_Ptr);
+      ParamOffsets.push_back(ParamOffset);
       ParamOffset += align(primSize(PT_Ptr));
     }
 
@@ -75,6 +78,7 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
     Descriptor *Desc = P.createDescriptor(PD, Ty);
     ParamDescriptors.insert({ParamOffset, {Ty, Desc}});
     Params.insert({PD, ParamOffset});
+    ParamOffsets.push_back(ParamOffset);
     ParamOffset += align(primSize(Ty));
     ParamTypes.push_back(Ty);
   }
@@ -82,9 +86,9 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   // Create a handle over the emitted code.
   Function *Func = P.getFunction(FuncDecl);
   if (!Func)
-    Func =
-        P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
-                         std::move(ParamDescriptors), HasThisPointer, HasRVO);
+    Func = P.createFunction(FuncDecl, ParamOffset, std::move(ParamTypes),
+                            std::move(ParamDescriptors),
+                            std::move(ParamOffsets), HasThisPointer, HasRVO);
 
   assert(Func);
   // For not-yet-defined functions, we only create a Function instance and
@@ -92,8 +96,15 @@ ByteCodeEmitter::compileFunc(const FunctionDecl *FuncDecl) {
   if (!FuncDecl->isDefined())
     return Func;
 
+  // Lambda static invokers are a special case that we emit custom code for.
+  bool IsEligibleForCompilation = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(FuncDecl))
+    IsEligibleForCompilation = MD->isLambdaStaticInvoker();
+  if (!IsEligibleForCompilation)
+    IsEligibleForCompilation = FuncDecl->isConstexpr();
+
   // Compile the function body.
-  if (!FuncDecl->isConstexpr() || !visitFunc(FuncDecl)) {
+  if (!IsEligibleForCompilation || !visitFunc(FuncDecl)) {
     // Return a dummy function if compilation failed.
     if (BailLocation)
       return llvm::make_error<ByteCodeGenError>(*BailLocation);
@@ -126,12 +137,13 @@ Scope::Local ByteCodeEmitter::createLocal(Descriptor *D) {
 void ByteCodeEmitter::emitLabel(LabelTy Label) {
   const size_t Target = Code.size();
   LabelOffsets.insert({Label, Target});
-  auto It = LabelRelocs.find(Label);
-  if (It != LabelRelocs.end()) {
+
+  if (auto It = LabelRelocs.find(Label);
+      It != LabelRelocs.end()) {
     for (unsigned Reloc : It->second) {
       using namespace llvm::support;
 
-      /// Rewrite the operand of all jumps to this label.
+      // Rewrite the operand of all jumps to this label.
       void *Location = Code.data() + Reloc - align(sizeof(int32_t));
       assert(aligned(Location));
       const int32_t Offset = Target - static_cast<int64_t>(Reloc);
@@ -148,10 +160,9 @@ int32_t ByteCodeEmitter::getOffset(LabelTy Label) {
   assert(aligned(Position));
 
   // If target is known, compute jump offset.
-  auto It = LabelOffsets.find(Label);
-  if (It != LabelOffsets.end()) {
+  if (auto It = LabelOffsets.find(Label);
+      It != LabelOffsets.end())
     return It->second - Position;
-  }
 
   // Otherwise, record relocation and return dummy offset.
   LabelRelocs[Label].push_back(Position);
@@ -167,7 +178,7 @@ bool ByteCodeEmitter::bail(const SourceLocation &Loc) {
 /// Helper to write bytecode and bail out if 32-bit offsets become invalid.
 /// Pointers will be automatically marshalled as 32-bit IDs.
 template <typename T>
-static void emit(Program &P, std::vector<char> &Code, const T &Val,
+static void emit(Program &P, std::vector<std::byte> &Code, const T &Val,
                  bool &Success) {
   size_t Size;
 
@@ -199,14 +210,14 @@ template <typename... Tys>
 bool ByteCodeEmitter::emitOp(Opcode Op, const Tys &... Args, const SourceInfo &SI) {
   bool Success = true;
 
-  /// The opcode is followed by arguments. The source info is
-  /// attached to the address after the opcode.
+  // The opcode is followed by arguments. The source info is
+  // attached to the address after the opcode.
   emit(P, Code, Op, Success);
   if (SI)
     SrcMap.emplace_back(Code.size(), SI);
 
-  /// The initializer list forces the expression to be evaluated
-  /// for each argument in the variadic template, in order.
+  // The initializer list forces the expression to be evaluated
+  // for each argument in the variadic template, in order.
   (void)std::initializer_list<int>{(emit(P, Code, Args, Success), 0)...};
 
   return Success;

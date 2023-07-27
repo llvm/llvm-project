@@ -440,7 +440,7 @@ public:
   bool IsEmpty() const { return !GetSize(); }
 
   bool LoadScriptingResourcesInTarget(Target *target, std::list<Status> &errors,
-                                      Stream *feedback_stream = nullptr,
+                                      Stream &feedback_stream,
                                       bool continue_on_error = true);
 
   static ModuleListProperties &GetGlobalModuleListProperties();

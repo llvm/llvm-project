@@ -42,7 +42,7 @@ export namespace std {
   inline namespace literals {
     inline namespace string_view_literals {
       // [string.view.literals], suffix for basic_string_view literals
-      using std::literals::string_view_literals::operator"" sv;
+      using std::literals::string_view_literals::operator""sv;
     } // namespace string_view_literals
   }   // namespace literals
 } // namespace std

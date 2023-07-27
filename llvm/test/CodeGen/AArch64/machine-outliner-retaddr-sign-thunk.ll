@@ -1,6 +1,6 @@
 ; RUN: llc -mtriple aarch64-arm-linux-gnu --enable-machine-outliner \
 ; RUN: -verify-machineinstrs %s -o - | FileCheck --check-prefixes CHECK,V8A %s
-; RUN-V83A: llc -mtriple aarch64-arm-none-eabi -enable-machine-outliner \
+; RUN-V83A: llc -mtriple aarch64 -enable-machine-outliner \
 ; RUN-V83A: -verify-machineinstrs -mattr=+v8.3a %s -o - > %t
 ; RUN-V83A: FileCheck --check-prefixes CHECK,V83A < %t %s
 

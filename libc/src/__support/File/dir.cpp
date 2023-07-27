@@ -39,7 +39,7 @@ ErrorOr<struct ::dirent *> Dir::read() {
     return nullptr;
 
   struct ::dirent *d = reinterpret_cast<struct ::dirent *>(buffer + readptr);
-#ifdef __unix__
+#ifdef __linux__
   // The d_reclen field is available on Linux but not required by POSIX.
   readptr += d->d_reclen;
 #else

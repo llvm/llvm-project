@@ -1,7 +1,9 @@
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu" %s | FileCheck %s
-// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=powerpc64le-unknown-linux-gn" %s | FileCheck %s
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=i386-unknown-linux-gnu" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=powerpc64le-unknown-linux-gn" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=x86_64-pc-win32" %s | FileCheck %s --check-prefixes=CHECK,CHECK-COMDAT
+// RUN: fir-opt --split-input-file --fir-to-llvm-ir="target=aarch64-apple-darwin" %s | FileCheck %s --check-prefixes=CHECK,CHECK-NO-COMDAT
 
 //=============================================================================
 // SUMMARY: Tests for FIR --> LLVM MLIR conversion independent of the target
@@ -49,7 +51,8 @@ fir.global weak @w_i86 (86:i32) : i32
 // -----
 
 fir.global linkonce @w_i86 (86:i32) : i32
-// CHECK: llvm.mlir.global linkonce @w_i86(86 : i32) {addr_space = 0 : i32} : i32
+// CHECK-COMDAT: llvm.mlir.global linkonce @w_i86(86 : i32) comdat(@__llvm_comdat::@w_i86) {addr_space = 0 : i32} : i32
+// CHECK-NO-COMDAT: llvm.mlir.global linkonce @w_i86(86 : i32) {addr_space = 0 : i32} : i32
 
 // -----
 
@@ -1678,7 +1681,8 @@ func.func @embox1(%arg0: !fir.ref<!fir.type<_QMtest_dinitTtseq{i:i32}>>) {
   return
 }
 
-// CHECK: llvm.mlir.global linkonce constant @_QMtest_dinitE.dt.tseq() {addr_space = 0 : i32} : i8
+// CHECK-COMDAT: llvm.mlir.global linkonce constant @_QMtest_dinitE.dt.tseq() comdat(@__llvm_comdat::@_QMtest_dinitE.dt.tseq) {addr_space = 0 : i32} : i8
+// CHECK-NO-COMDAT: llvm.mlir.global linkonce constant @_QMtest_dinitE.dt.tseq() {addr_space = 0 : i32} : i8
 // CHECK-LABEL: llvm.func @embox1
 // CHECK:         %[[TYPE_CODE:.*]] = llvm.mlir.constant(42 : i32) : i32
 // CHECK:         %[[TYPE_CODE_I8:.*]] = llvm.trunc %[[TYPE_CODE]] : i32 to i8
@@ -1984,6 +1988,27 @@ func.func private @_QPtest_dt_callee(%arg0: !fir.box<!fir.array<?xi32>>)
 // CHECK:         llvm.store %[[BOX10]], %[[ALLOCA]] : !llvm.ptr<struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>>
 // CHECK:         llvm.call @_QPtest_dt_callee(%1) : (!llvm.ptr<struct<(ptr<i32>, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, i{{.*}}, array<1 x array<3 x i64>>)>>) -> ()
 
+// Conversion with a subcomponent that indexes a 2d array field in a derived type.
+
+func.func @_QPtest_dt_slice2(%arg0: !fir.ref<!fir.array<2x!fir.type<_QPtest_dt_slice2Tt{a:!fir.array<2x3xi32>}>>>) {
+  %c0 = arith.constant 0 : index
+  %c1 = arith.constant 1 : index
+  %c2 = arith.constant 2 : index
+  %1 = fir.field_index a, !fir.type<_QPtest_dt_slice2Tt{a:!fir.array<2x3xi32>}>
+  %2 = fircg.ext_embox %arg0(%c2)[%c1, %c2, %c1] path %1, %c0, %c1 : (!fir.ref<!fir.array<2x!fir.type<_QPtest_dt_slice2Tt{a:!fir.array<2x3xi32>}>>>, index, index, index, index, !fir.field, index, index) -> !fir.box<!fir.array<2xi32>>
+  return
+}
+
+// CHECK-LABEL: llvm.func @_QPtest_dt_slice2(
+// CHECK-SAME:        %[[ARG0:.*]]: !llvm.ptr<array<2 x struct<"_QPtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>>>) {
+// CHECK:         %[[C0:.*]] = llvm.mlir.constant(0 : index) : i64
+// CHECK:         %[[C1:.*]] = llvm.mlir.constant(1 : index) : i64
+// CHECK:         %[[C2:.*]] = llvm.mlir.constant(2 : index) : i64
+// CHECK:         %[[C0_2:.*]] = llvm.mlir.constant(0 : i64) : i64
+// CHECK:         %{{.*}} = llvm.getelementptr %[[ARG0]][%[[C0_2]], {{.*}}, 0, %[[C1]], %[[C0]]] : (!llvm.ptr<array<2 x struct<"_QPtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>>>, i64, i64, i64, i64) -> !llvm.ptr<i32>
+// CHECK:         return
+// CHECK:       }
+
 // -----
 
 // Test `fircg.ext_array_coor` conversion.
@@ -2184,6 +2209,21 @@ func.func @ext_array_coor_dt_slice(%arg0: !fir.ref<!fir.array<20x!fir.type<_QFte
 // CHECK:           %[[VAL_15:.*]] = llvm.mul %[[VAL_7]], %[[VAL_1]]  : i64
 // CHECK:           %[[VAL_16:.*]] = llvm.bitcast %[[VAL_0]] : !llvm.ptr<array<20 x struct<"_QFtest_dt_sliceTt", (i32, i32)>>> to !llvm.ptr<struct<"_QFtest_dt_sliceTt", (i32, i32)>>
 // CHECK:           %[[VAL_17:.*]] = llvm.getelementptr %[[VAL_16]][%[[VAL_14]], 0] : (!llvm.ptr<struct<"_QFtest_dt_sliceTt", (i32, i32)>>, i64) -> !llvm.ptr<struct<"_QFtest_dt_sliceTt", (i32, i32)>>
+// CHECK:           llvm.return
+// CHECK:         }
+
+// Conversion for derived type with an array field
+
+func.func @ext_array_coor_dt_slice2(%arg0: !fir.ref<!fir.array<2x!fir.type<_QFtest_dt_slice2Tt{a:!fir.array<2x3xi32>}>>>, %idx1 : index, %idx2 : index, %idx3 : index, %idx4 : index, %idx5 : index, %idx6 : index, %idx7 : index) {
+  %1 = fir.field_index a, !fir.type<_QFtest_dt_sliceT2t{a:!fir.array<2x3xi32>}>
+  %2 = fircg.ext_array_coor %arg0(%idx1)[%idx2, %idx3, %idx4] path %1, %idx5, %idx6 <%idx7> : (!fir.ref<!fir.array<2x!fir.type<_QFtest_dt_slice2Tt{a:!fir.array<2x3xi32>}>>>, index, index, index, index, !fir.field, index, index, index) -> !fir.ref<i32>
+  return
+}
+
+// CHECK-LABEL:   llvm.func @ext_array_coor_dt_slice2(
+// CHECK-SAME:        %[[ARG0:.*]]: !llvm.ptr<array<2 x struct<"_QFtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>>>, %[[IDX1:.*]]: i64, %[[IDX2:.*]]: i64, %[[IDX3:.*]]: i64, %[[IDX4:.*]]: i64, %[[IDX5:.*]]: i64, %[[IDX6:.*]]: i64, %[[IDX7:.*]]: i64) {
+// CHECK:           %[[PTR:.*]] = llvm.bitcast %[[ARG0]] : !llvm.ptr<array<2 x struct<"_QFtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>>> to !llvm.ptr<struct<"_QFtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>>
+// CHECK:           %{{.*}} = llvm.getelementptr %[[PTR]][%{{.*}}, 0, %[[IDX6]], %[[IDX5]]] : (!llvm.ptr<struct<"_QFtest_dt_slice2Tt", (array<3 x array<2 x i32>>)>>, i64, i64, i64) -> !llvm.ptr<i32>
 // CHECK:           llvm.return
 // CHECK:         }
 

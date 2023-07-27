@@ -1117,8 +1117,8 @@ bool SBTarget::FindBreakpointsByName(const char *name,
     llvm::Expected<std::vector<BreakpointSP>> expected_vector =
         target_sp->GetBreakpointList().FindBreakpointsByName(name);
     if (!expected_vector) {
-      LLDB_LOG(GetLog(LLDBLog::Breakpoints), "invalid breakpoint name: {}",
-               llvm::toString(expected_vector.takeError()));
+      LLDB_LOG_ERROR(GetLog(LLDBLog::Breakpoints), expected_vector.takeError(),
+                     "invalid breakpoint name: {0}");
       return false;
     }
     for (BreakpointSP bkpt_sp : *expected_vector) {
@@ -1591,7 +1591,7 @@ const char *SBTarget::GetTriple() {
 
 const char *SBTarget::GetABIName() {
   LLDB_INSTRUMENT_VA(this);
-  
+
   TargetSP target_sp(GetSP());
   if (!target_sp)
     return nullptr;

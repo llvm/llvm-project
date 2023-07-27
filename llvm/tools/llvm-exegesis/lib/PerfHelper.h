@@ -23,9 +23,11 @@
 #include <functional>
 #include <memory>
 
-#ifndef HAVE_LIBPFM
+#ifdef _MSC_VER
 typedef int pid_t;
-#endif // HAVE_LIBPFM
+#else
+#include <sys/types.h>
+#endif // _MSC_VER
 
 struct perf_event_attr;
 

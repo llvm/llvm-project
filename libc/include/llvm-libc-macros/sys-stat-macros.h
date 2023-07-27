@@ -9,7 +9,7 @@
 #ifndef __LLVM_LIBC_MACROS_SYS_STAT_MACROS_H
 #define __LLVM_LIBC_MACROS_SYS_STAT_MACROS_H
 
-#ifdef __unix__
+#ifdef __linux__
 #include "linux/sys-stat-macros.h"
 #endif
 

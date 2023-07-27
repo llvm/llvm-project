@@ -9,7 +9,9 @@ the readability of the code but also positively affects its performance.
 Class-member assignments inside a control statement or following the first
 control statement are ignored.
 
-This check implements `C.49 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#c49-prefer-initialization-to-assignment-in-constructors>`_ from the CppCoreGuidelines.
+This check implements `C.49
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c49-prefer-initialization-to-assignment-in-constructors>`_
+from the C++ Core Guidelines.
 
 If the language version is `C++ 11` or above, the constructor is the default
 constructor of the class, the field is not a bitfield (only in case of earlier
@@ -17,7 +19,9 @@ language version than `C++ 20`), furthermore the assigned value is a literal,
 negated literal or ``enum`` constant then the preferred place of the
 initialization is at the class member declaration.
 
-This latter rule is `C.48 <https://github.com/isocpp/CppCoreGuidelines/blob/master/CppCoreGuidelines.md#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_ from CppCoreGuidelines.
+This latter rule is `C.48
+<https://isocpp.github.io/CppCoreGuidelines/CppCoreGuidelines#c48-prefer-in-class-initializers-to-member-initializers-in-constructors-for-constant-initializers>`_
+from the C++ Core Guidelines.
 
 Please note, that this check does not enforce this latter rule for
 initializations already implemented as member initializers. For that purpose

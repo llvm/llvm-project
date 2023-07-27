@@ -434,7 +434,8 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     return;
   }
   if (IsDecimalDigit(dir.TokenAt(j)[0]) || dir.TokenAt(j)[0] == '"') {
-    return; // treat like #line, ignore it
+    LineDirective(dir, j, prescanner);
+    return;
   }
   std::size_t dirOffset{j};
   std::string dirName{ToLowerCaseLetters(dir.TokenAt(dirOffset).ToString())};
@@ -444,7 +445,7 @@ void Preprocessor::Directive(const TokenSequence &dir, Prescanner &prescanner) {
     nameToken = dir.TokenAt(j);
   }
   if (dirName == "line") {
-    // #line is ignored
+    LineDirective(dir, j, prescanner);
   } else if (dirName == "define") {
     if (nameToken.empty()) {
       prescanner.Say(dir.GetTokenProvenanceRange(j < tokens ? j : tokens - 1),
@@ -1121,5 +1122,58 @@ bool Preprocessor::IsIfPredicateTrue(const TokenSequence &expr,
                      : "excess characters after expression"_err_en_US);
   }
   return result;
+}
+
+void Preprocessor::LineDirective(
+    const TokenSequence &dir, std::size_t j, Prescanner &prescanner) {
+  std::size_t tokens{dir.SizeInTokens()};
+  const std::string *linePath{nullptr};
+  std::optional<int> lineNumber;
+  SourceFile *sourceFile{nullptr};
+  std::optional<SourcePosition> pos;
+  for (; j < tokens; j = dir.SkipBlanks(j + 1)) {
+    std::string tstr{dir.TokenAt(j).ToString()};
+    Provenance provenance{dir.GetTokenProvenance(j)};
+    if (!pos) {
+      pos = allSources_.GetSourcePosition(provenance);
+    }
+    if (!sourceFile && pos) {
+      sourceFile = const_cast<SourceFile *>(&*pos->sourceFile);
+    }
+    if (tstr.front() == '"' && tstr.back() == '"') {
+      tstr = tstr.substr(1, tstr.size() - 2);
+      if (!tstr.empty() && sourceFile) {
+        linePath = &sourceFile->SavePath(std::move(tstr));
+      }
+    } else if (IsDecimalDigit(tstr[0])) {
+      if (!lineNumber) { // ignore later column number
+        int ln{0};
+        for (char c : tstr) {
+          if (IsDecimalDigit(c)) {
+            int nln{10 * ln + c - '0'};
+            if (nln / 10 == ln && nln % 10 == c - '0') {
+              ln = nln;
+              continue;
+            }
+          }
+          prescanner.Say(provenance,
+              "bad line number '%s' in #line directive"_err_en_US, tstr);
+          return;
+        }
+        lineNumber = ln;
+      }
+    } else {
+      prescanner.Say(
+          provenance, "bad token '%s' in #line directive"_err_en_US, tstr);
+      return;
+    }
+  }
+  if (lineNumber && sourceFile) {
+    CHECK(pos);
+    if (!linePath) {
+      linePath = &*pos->path;
+    }
+    sourceFile->LineDirective(pos->trueLineNumber + 1, *linePath, *lineNumber);
+  }
 }
 } // namespace Fortran::parser

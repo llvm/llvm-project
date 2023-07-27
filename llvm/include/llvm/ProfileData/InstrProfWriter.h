@@ -110,6 +110,9 @@ public:
   /// Write the profile to \c OS
   Error write(raw_fd_ostream &OS);
 
+  /// Write the profile to a string output stream \c OS
+  Error write(raw_string_ostream &OS);
+
   /// Write the profile in text format to \c OS
   Error writeText(raw_fd_ostream &OS);
 

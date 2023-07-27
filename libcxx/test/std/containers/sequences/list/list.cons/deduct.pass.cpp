@@ -13,12 +13,16 @@
 //    list(InputIterator, InputIterator, Allocator = Allocator())
 //    -> list<typename iterator_traits<InputIterator>::value_type, Allocator>;
 //
+// template<ranges::input_range R, class Allocator = allocator<ranges::range_value_t<R>>>
+//   list(from_range_t, R&&, Allocator = Allocator())
+//     -> list<ranges::range_value_t<R>, Allocator>; // C++23
 
-#include <list>
-#include <iterator>
+#include <array>
 #include <cassert>
-#include <cstddef>
 #include <climits> // INT_MAX
+#include <cstddef>
+#include <iterator>
+#include <list>
 
 #include "deduction_guides_sfinae_checks.h"
 #include "test_macros.h"
@@ -126,6 +130,21 @@ int main(int, char**)
         static_assert(std::is_same_v<decltype(lst), decltype(source)>);
         }
     }
+
+#if TEST_STD_VER >= 23
+    {
+      {
+        std::list c(std::from_range, std::array<int, 0>());
+        static_assert(std::is_same_v<decltype(c), std::list<int>>);
+      }
+
+      {
+        using Alloc = test_allocator<int>;
+        std::list c(std::from_range, std::array<int, 0>(), Alloc());
+        static_assert(std::is_same_v<decltype(c), std::list<int, Alloc>>);
+      }
+    }
+#endif
 
     SequenceContainerDeductionGuidesSfinaeAway<std::list, std::list<int>>();
 

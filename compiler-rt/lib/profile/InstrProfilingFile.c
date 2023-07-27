@@ -424,13 +424,10 @@ static void createProfileDir(const char *Filename) {
  * its instrumented shared libraries dump profile data into their own data file.
 */
 static FILE *openFileForMerging(const char *ProfileFileName, int *MergeDone) {
-  FILE *ProfileFile = NULL;
+  FILE *ProfileFile = getProfileFile();
   int rc;
 
-  ProfileFile = getProfileFile();
-  if (ProfileFile) {
-    lprofLockFileHandle(ProfileFile);
-  } else {
+  if (!ProfileFile) {
     createProfileDir(ProfileFileName);
     ProfileFile = lprofOpenFileEx(ProfileFileName);
   }
@@ -481,9 +478,6 @@ static int writeFile(const char *OutputName) {
 
   if (OutputFile == getProfileFile()) {
     fflush(OutputFile);
-    if (doMerging()) {
-      lprofUnlockFileHandle(OutputFile);
-    }
   } else {
     fclose(OutputFile);
   }
@@ -655,7 +649,14 @@ static void initializeProfileForContinuousMode(void) {
 static const char *DefaultProfileName = "default.profraw";
 static void resetFilenameToDefault(void) {
   if (lprofCurFilename.FilenamePat && lprofCurFilename.OwnsFilenamePat) {
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
     free((void *)lprofCurFilename.FilenamePat);
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
   }
   memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
   lprofCurFilename.FilenamePat = DefaultProfileName;
@@ -697,6 +698,10 @@ static int parseFilenamePattern(const char *FilenamePat,
   int MergingEnabled = 0;
   int FilenamePatLen = strlen(FilenamePat);
 
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
   /* Clean up cached prefix and filename.  */
   if (lprofCurFilename.ProfilePathPrefix)
     free((void *)lprofCurFilename.ProfilePathPrefix);
@@ -704,6 +709,9 @@ static int parseFilenamePattern(const char *FilenamePat,
   if (lprofCurFilename.FilenamePat && lprofCurFilename.OwnsFilenamePat) {
     free((void *)lprofCurFilename.FilenamePat);
   }
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 
   memset(&lprofCurFilename, 0, sizeof(lprofCurFilename));
 

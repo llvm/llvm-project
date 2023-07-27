@@ -11,6 +11,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Twine.h"
+#include "llvm/Support/Alignment.h"
 #include "gtest/gtest.h"
 #include <array>
 #include <optional>
@@ -1850,6 +1851,25 @@ TEST(APIntTest, isNegatedPowerOf2) {
       EXPECT_TRUE(ShiftMaskVal.isNegatedPowerOf2());
     }
   }
+}
+
+TEST(APIntTest, isAligned) {
+  struct {
+    uint64_t alignment;
+    uint64_t offset;
+    bool isAligned;
+  } Tests[] = {
+      {1, 0, true},  {1, 1, true},  {1, 5, true},  {2, 0, true},
+      {2, 1, false}, {2, 2, true},  {2, 7, false}, {2, 16, true},
+      {4, 0, true},  {4, 1, false}, {4, 4, true},  {4, 6, false},
+  };
+  for (const auto &T : Tests)
+    EXPECT_EQ(APInt(32, T.offset).isAligned(Align(T.alignment)), T.isAligned);
+  // Tests for APInt that can't represent the alignment.
+  // Here APInt(4, I) can represent values from 0 to 15.
+  EXPECT_TRUE(APInt(4, 0).isAligned(Align(32))); // zero is always aligned.
+  for (int I = 1; I < 16; ++I)
+    EXPECT_FALSE(APInt(4, I).isAligned(Align(32)));
 }
 
 // Test that self-move works with EXPENSIVE_CHECKS. It calls std::shuffle which

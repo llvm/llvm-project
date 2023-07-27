@@ -2054,15 +2054,15 @@ StmtResult Parser::ParseForStatement(SourceLocation *TrailingElseLoc) {
       Diag(Tok, diag::warn_gcc_variable_decl_in_for_loop);
     }
     DeclGroupPtrTy DG;
+    SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
     if (Tok.is(tok::kw_using)) {
       DG = ParseAliasDeclarationInInitStatement(DeclaratorContext::ForInit,
                                                 attrs);
+      FirstPart = Actions.ActOnDeclStmt(DG, DeclStart, Tok.getLocation());
     } else {
       // In C++0x, "for (T NS:a" might not be a typo for ::
       bool MightBeForRangeStmt = getLangOpts().CPlusPlus;
       ColonProtectionRAIIObject ColonProtection(*this, MightBeForRangeStmt);
-
-      SourceLocation DeclStart = Tok.getLocation(), DeclEnd;
       ParsedAttributes DeclSpecAttrs(AttrFactory);
       DG = ParseSimpleDeclaration(
           DeclaratorContext::ForInit, DeclEnd, attrs, DeclSpecAttrs, false,

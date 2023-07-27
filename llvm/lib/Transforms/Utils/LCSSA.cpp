@@ -148,13 +148,10 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
     SSAUpdater SSAUpdate(&LocalInsertedPHIs);
     SSAUpdate.Initialize(I->getType(), I->getName());
 
-    // Force re-computation of I, as some users now need to use the new PHI
-    // node.
-    if (SE)
-      SE->forgetValue(I);
-
     // Insert the LCSSA phi's into all of the exit blocks dominated by the
     // value, and add them to the Phi's map.
+    bool HasSCEV = SE && SE->isSCEVable(I->getType()) &&
+                   SE->getExistingSCEV(I) != nullptr;
     for (BasicBlock *ExitBB : ExitBlocks) {
       if (!DT.dominates(DomNode, DT.getNode(ExitBB)))
         continue;
@@ -202,6 +199,13 @@ bool llvm::formLCSSAForInstructions(SmallVectorImpl<Instruction *> &Worklist,
       if (auto *OtherLoop = LI.getLoopFor(ExitBB))
         if (!L->contains(OtherLoop))
           PostProcessPHIs.push_back(PN);
+
+      // If we have a cached SCEV for the original instruction, make sure the
+      // new LCSSA phi node is also cached. This makes sures that BECounts
+      // based on it will be invalidated when the LCSSA phi node is invalidated,
+      // which some passes rely on.
+      if (HasSCEV)
+        SE->getSCEV(PN);
     }
 
     // Rewrite all uses outside the loop in terms of the new PHIs we just

@@ -217,8 +217,8 @@ public:
   }
 
 private:
-  FormatToken *Current;
-  FormatToken *LineEnd;
+  FormatToken *Current = nullptr;
+  FormatToken *LineEnd = nullptr;
 
   FormatToken invalidToken;
 

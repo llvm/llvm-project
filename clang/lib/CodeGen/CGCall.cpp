@@ -31,6 +31,7 @@
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/Assumptions.h"
+#include "llvm/IR/AttributeMask.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/IR/DataLayout.h"
@@ -1284,7 +1285,7 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
     //
     // FIXME: Assert that we aren't truncating non-padding bits when have access
     // to that information.
-    Src = CGF.Builder.CreateElementBitCast(Src, Ty);
+    Src = Src.withElementType(Ty);
     return CGF.Builder.CreateLoad(Src);
   }
 
@@ -1309,7 +1310,7 @@ static llvm::Value *CreateCoercedLoad(Address Src, llvm::Type *Ty,
         auto *UndefVec = llvm::UndefValue::get(ScalableDst);
         auto *Zero = llvm::Constant::getNullValue(CGF.CGM.Int64Ty);
         llvm::Value *Result = CGF.Builder.CreateInsertVector(
-            ScalableDst, UndefVec, Load, Zero, "castScalableSve");
+            ScalableDst, UndefVec, Load, Zero, "cast.scalable");
         if (NeedsBitcast)
           Result = CGF.Builder.CreateBitCast(Result, OrigType);
         return Result;
@@ -1394,7 +1395,7 @@ static void CreateCoercedStore(llvm::Value *Src,
   if (isa<llvm::ScalableVectorType>(SrcTy) ||
       isa<llvm::ScalableVectorType>(DstTy) ||
       SrcSize.getFixedValue() <= DstSize.getFixedValue()) {
-    Dst = CGF.Builder.CreateElementBitCast(Dst, SrcTy);
+    Dst = Dst.withElementType(SrcTy);
     CGF.EmitAggregateStore(Src, Dst, DstIsVolatile);
   } else {
     // Otherwise do coercion through memory. This is stupid, but
@@ -1418,10 +1419,10 @@ static void CreateCoercedStore(llvm::Value *Src,
 static Address emitAddressAtOffset(CodeGenFunction &CGF, Address addr,
                                    const ABIArgInfo &info) {
   if (unsigned offset = info.getDirectOffset()) {
-    addr = CGF.Builder.CreateElementBitCast(addr, CGF.Int8Ty);
+    addr = addr.withElementType(CGF.Int8Ty);
     addr = CGF.Builder.CreateConstInBoundsByteGEP(addr,
                                              CharUnits::fromQuantity(offset));
-    addr = CGF.Builder.CreateElementBitCast(addr, info.getCoerceToType());
+    addr = addr.withElementType(info.getCoerceToType());
   }
   return addr;
 }
@@ -2340,6 +2341,9 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
           FuncAttrs.addAttribute(llvm::Attribute::NoReturn);
         NBA = Fn->getAttr<NoBuiltinAttr>();
       }
+    }
+
+    if (isa<FunctionDecl>(TargetDecl) || isa<VarDecl>(TargetDecl)) {
       // Only place nomerge attribute on call sites, never functions. This
       // allows it to work on indirect virtual function calls.
       if (AttrOnCallSite && TargetDecl->hasAttr<NoMergeAttr>())
@@ -2393,10 +2397,15 @@ void CodeGenModule::ConstructAttributeList(StringRef Name,
         // to the compiler that the global work-size be a multiple of
         // the work-group size specified to clEnqueueNDRangeKernel
         // (i.e. work groups are uniform).
-        FuncAttrs.addAttribute("uniform-work-group-size",
-                               llvm::toStringRef(CodeGenOpts.UniformWGSize));
+        FuncAttrs.addAttribute(
+            "uniform-work-group-size",
+            llvm::toStringRef(getLangOpts().OffloadUniformBlock));
       }
     }
+
+    if (TargetDecl->hasAttr<CUDAGlobalAttr>() &&
+        getLangOpts().OffloadUniformBlock)
+      FuncAttrs.addAttribute("uniform-work-group-size", "true");
   }
 
   // Attach "no-builtins" attributes to:
@@ -3141,7 +3150,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
             assert(NumIRArgs == 1);
             Coerced->setName(Arg->getName() + ".coerce");
             ArgVals.push_back(ParamValue::forDirect(Builder.CreateExtractVector(
-                VecTyTo, Coerced, Zero, "castFixedSve")));
+                VecTyTo, Coerced, Zero, "cast.fixed")));
             break;
           }
         }
@@ -3185,7 +3194,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
 
           Address AddrToStoreInto = Address::invalid();
           if (SrcSize <= DstSize) {
-            AddrToStoreInto = Builder.CreateElementBitCast(Ptr, STy);
+            AddrToStoreInto = Ptr.withElementType(STy);
           } else {
             AddrToStoreInto =
                 CreateTempAlloca(STy, Alloca.getAlignment(), "coerce");
@@ -3230,7 +3239,7 @@ void CodeGenFunction::EmitFunctionProlog(const CGFunctionInfo &FI,
       ArgVals.push_back(ParamValue::forIndirect(alloca));
 
       auto coercionType = ArgI.getCoerceAndExpandType();
-      alloca = Builder.CreateElementBitCast(alloca, coercionType);
+      alloca = alloca.withElementType(coercionType);
 
       unsigned argIndex = FirstIRArg;
       for (unsigned i = 0, e = coercionType->getNumElements(); i != e; ++i) {
@@ -3832,7 +3841,7 @@ void CodeGenFunction::EmitFunctionEpilog(const CGFunctionInfo &FI,
 
     // Load all of the coerced elements out into results.
     llvm::SmallVector<llvm::Value*, 4> results;
-    Address addr = Builder.CreateElementBitCast(ReturnValue, coercionType);
+    Address addr = ReturnValue.withElementType(coercionType);
     for (unsigned i = 0, e = coercionType->getNumElements(); i != e; ++i) {
       auto coercedEltType = coercionType->getElementType(i);
       if (ABIArgInfo::isPaddingForCoerceAndExpand(coercedEltType))
@@ -5054,10 +5063,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         // Store the RValue into the argument struct.
         Address Addr =
             Builder.CreateStructGEP(ArgMemory, ArgInfo.getInAllocaFieldIndex());
-        // There are some cases where a trivial bitcast is not avoidable.  The
-        // definition of a type later in a translation unit may change it's type
-        // from {}* to (%struct.foo*)*.
-        Addr = Builder.CreateElementBitCast(Addr, ConvertTypeForMem(I->Ty));
+        Addr = Addr.withElementType(ConvertTypeForMem(I->Ty));
         I->copyInto(*this, Addr);
       }
       break;
@@ -5099,7 +5105,6 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
                "indirect argument must be in alloca address space");
 
         bool NeedCopy = false;
-
         if (Addr.getAlignment() < Align &&
             llvm::getOrEnforceKnownAlignment(V, Align.getAsAlign(), *TD) <
                 Align.getAsAlign()) {
@@ -5252,7 +5257,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
           Builder.CreateMemCpy(TempAlloca, Src, SrcSize);
           Src = TempAlloca;
         } else {
-          Src = Builder.CreateElementBitCast(Src, STy);
+          Src = Src.withElementType(STy);
         }
 
         assert(NumIRArgs == STy->getNumElements());
@@ -5316,7 +5321,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         Builder.CreateStore(RV.getScalarVal(), addr);
       }
 
-      addr = Builder.CreateElementBitCast(addr, coercionType);
+      addr = addr.withElementType(coercionType);
 
       unsigned IRArgPos = FirstIRArg;
       for (unsigned i = 0, e = coercionType->getNumElements(); i != e; ++i) {
@@ -5671,8 +5676,7 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
     case ABIArgInfo::CoerceAndExpand: {
       auto coercionType = RetAI.getCoerceAndExpandType();
 
-      Address addr = SRetPtr;
-      addr = Builder.CreateElementBitCast(addr, coercionType);
+      Address addr = SRetPtr.withElementType(coercionType);
 
       assert(CI->getType() == RetAI.getUnpaddedCoerceAndExpandType());
       bool requiresExtract = isa<llvm::StructType>(CI->getType());
@@ -5736,6 +5740,20 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         }
         }
         llvm_unreachable("bad evaluation kind");
+      }
+
+      // If coercing a fixed vector from a scalable vector for ABI
+      // compatibility, and the types match, use the llvm.vector.extract
+      // intrinsic to perform the conversion.
+      if (auto *FixedDst = dyn_cast<llvm::FixedVectorType>(RetIRTy)) {
+        llvm::Value *V = CI;
+        if (auto *ScalableSrc = dyn_cast<llvm::ScalableVectorType>(V->getType())) {
+          if (FixedDst->getElementType() == ScalableSrc->getElementType()) {
+            llvm::Value *Zero = llvm::Constant::getNullValue(CGM.Int64Ty);
+            V = Builder.CreateExtractVector(FixedDst, V, Zero, "cast.fixed");
+            return RValue::get(V);
+          }
+        }
       }
 
       Address DestPtr = ReturnValue.getValue();

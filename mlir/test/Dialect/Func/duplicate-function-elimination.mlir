@@ -58,10 +58,11 @@ func.func @user(%arg0: f32, %arg1: f32) -> f32 {
 
 // CHECK:     @add_lr
 // CHECK-NOT: @also_add_lr
-// CHECK-NOT: @add_rl
+// CHECK:     @add_rl
 // CHECK-NOT: @also_add_rl
 // CHECK:     @user
-// CHECK-4:     call @add_lr
+// CHECK-2:     call @add_lr
+// CHECK-2:     call @add_rl
 
 // -----
 
@@ -108,7 +109,7 @@ func.func @user(%pred : i1, %arg0: f32, %arg1: f32) -> f32 {
 
 // -----
 
-func.func @deep_tree(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %even: f32, %odd: f32) 
+func.func @deep_tree(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %even: f32, %odd: f32)
     -> f32 {
   %0 = scf.if %p0 -> f32 {
     %1 = scf.if %p1 -> f32 {
@@ -188,7 +189,7 @@ func.func @deep_tree(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %even: f32, %odd: f32)
   return %0 : f32
 }
 
-func.func @also_deep_tree(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %even: f32, 
+func.func @also_deep_tree(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %even: f32,
     %odd: f32) -> f32 {
   %0 = scf.if %p0 -> f32 {
     %1 = scf.if %p1 -> f32 {
@@ -268,7 +269,7 @@ func.func @also_deep_tree(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %even: f32,
   return %0 : f32
 }
 
-func.func @reverse_deep_tree(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %even: f32, 
+func.func @reverse_deep_tree(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %even: f32,
     %odd: f32) -> f32 {
   %0 = scf.if %p0 -> f32 {
     %1 = scf.if %p1 -> f32 {
@@ -348,13 +349,13 @@ func.func @reverse_deep_tree(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %even: f32,
   return %0 : f32
 }
 
-func.func @user(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %odd: f32, %even: f32) 
+func.func @user(%p0: i1, %p1: i1, %p2: i1, %p3: i1, %odd: f32, %even: f32)
     -> (f32, f32, f32) {
-  %0 = call @deep_tree(%p0, %p1, %p2, %p3, %odd, %even) 
+  %0 = call @deep_tree(%p0, %p1, %p2, %p3, %odd, %even)
       : (i1, i1, i1, i1, f32, f32) -> f32
-  %1 = call @also_deep_tree(%p0, %p1, %p2, %p3, %odd, %even) 
+  %1 = call @also_deep_tree(%p0, %p1, %p2, %p3, %odd, %even)
       : (i1, i1, i1, i1, f32, f32) -> f32
-  %2 = call @reverse_deep_tree(%p0, %p1, %p2, %p3, %odd, %even) 
+  %2 = call @reverse_deep_tree(%p0, %p1, %p2, %p3, %odd, %even)
       : (i1, i1, i1, i1, f32, f32) -> f32
   return %0, %1, %2 : f32, f32, f32
 }

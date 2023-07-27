@@ -34,6 +34,7 @@
 #include "URI.h"
 #include "support/Logger.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Path.h"
 #include <queue>
 

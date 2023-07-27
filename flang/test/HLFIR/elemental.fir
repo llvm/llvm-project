@@ -76,3 +76,26 @@ func.func @parametrized_derived_transpose(%x: !fir.box<!fir.array<?x?x!pdt>>, %n
 // CHECK:    %[[VAL_9:.*]] = hlfir.as_expr %[[VAL_8]] : (!fir.box<!fir.type<pdt(param:i32){field:f32}>>) -> !hlfir.expr<!fir.type<pdt(param:i32){field:f32}>>
 // CHECK:    hlfir.yield_element %[[VAL_9]] : !hlfir.expr<!fir.type<pdt(param:i32){field:f32}>>
 // CHECK:  }
+
+func.func @unordered() {
+  %c10 = arith.constant 10 : index
+  %c20 = arith.constant 20 : index
+  %0 = fir.shape %c10, %c20 : (index, index) -> !fir.shape<2>
+  %3 = hlfir.elemental %0 unordered : (!fir.shape<2>) -> !hlfir.expr<10x20xi32> {
+  ^bb0(%i: index, %j: index):
+    %c0 = arith.constant 0 : i32
+    hlfir.yield_element %c0 : i32
+  }
+  return
+}
+// CHECK-LABEL:   func.func @unordered() {
+// CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_1:.*]] = arith.constant 20 : index
+// CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]], %[[VAL_1]] : (index, index) -> !fir.shape<2>
+// CHECK:           %[[VAL_3:.*]] = hlfir.elemental %[[VAL_2]] unordered : (!fir.shape<2>) -> !hlfir.expr<10x20xi32> {
+// CHECK:           ^bb0(%[[VAL_4:.*]]: index, %[[VAL_5:.*]]: index):
+// CHECK:             %[[VAL_6:.*]] = arith.constant 0 : i32
+// CHECK:             hlfir.yield_element %[[VAL_6]] : i32
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }

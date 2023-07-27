@@ -3845,7 +3845,7 @@ static void handleInitPriorityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::warn_attribute_ignored) << AL;
     return;
   }
-  
+
   if (S.getLangOpts().HLSL) {
     S.Diag(AL.getLoc(), diag::err_hlsl_init_priority_unsupported);
     return;
@@ -5633,21 +5633,28 @@ static Expr *makeLaunchBoundsArgExpr(Sema &S, Expr *E,
   return ValArg.getAs<Expr>();
 }
 
-void Sema::AddLaunchBoundsAttr(Decl *D, const AttributeCommonInfo &CI,
-                               Expr *MaxThreads, Expr *MinBlocks) {
+CUDALaunchBoundsAttr *
+Sema::CreateLaunchBoundsAttr(const AttributeCommonInfo &CI, Expr *MaxThreads,
+                             Expr *MinBlocks) {
   CUDALaunchBoundsAttr TmpAttr(Context, CI, MaxThreads, MinBlocks);
   MaxThreads = makeLaunchBoundsArgExpr(*this, MaxThreads, TmpAttr, 0);
   if (MaxThreads == nullptr)
-    return;
+    return nullptr;
 
   if (MinBlocks) {
     MinBlocks = makeLaunchBoundsArgExpr(*this, MinBlocks, TmpAttr, 1);
     if (MinBlocks == nullptr)
-      return;
+      return nullptr;
   }
 
-  D->addAttr(::new (Context)
-                 CUDALaunchBoundsAttr(Context, CI, MaxThreads, MinBlocks));
+  return ::new (Context)
+      CUDALaunchBoundsAttr(Context, CI, MaxThreads, MinBlocks);
+}
+
+void Sema::AddLaunchBoundsAttr(Decl *D, const AttributeCommonInfo &CI,
+                               Expr *MaxThreads, Expr *MinBlocks) {
+  if (auto *Attr = CreateLaunchBoundsAttr(CI, MaxThreads, MinBlocks))
+    D->addAttr(Attr);
 }
 
 static void handleLaunchBoundsAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -7862,16 +7869,22 @@ checkAMDGPUFlatWorkGroupSizeArguments(Sema &S, Expr *MinExpr, Expr *MaxExpr,
   return false;
 }
 
-void Sema::addAMDGPUFlatWorkGroupSizeAttr(Decl *D,
-                                          const AttributeCommonInfo &CI,
-                                          Expr *MinExpr, Expr *MaxExpr) {
+AMDGPUFlatWorkGroupSizeAttr *
+Sema::CreateAMDGPUFlatWorkGroupSizeAttr(const AttributeCommonInfo &CI,
+                                        Expr *MinExpr, Expr *MaxExpr) {
   AMDGPUFlatWorkGroupSizeAttr TmpAttr(Context, CI, MinExpr, MaxExpr);
 
   if (checkAMDGPUFlatWorkGroupSizeArguments(*this, MinExpr, MaxExpr, TmpAttr))
-    return;
+    return nullptr;
+  return ::new (Context)
+      AMDGPUFlatWorkGroupSizeAttr(Context, CI, MinExpr, MaxExpr);
+}
 
-  D->addAttr(::new (Context)
-                 AMDGPUFlatWorkGroupSizeAttr(Context, CI, MinExpr, MaxExpr));
+void Sema::addAMDGPUFlatWorkGroupSizeAttr(Decl *D,
+                                          const AttributeCommonInfo &CI,
+                                          Expr *MinExpr, Expr *MaxExpr) {
+  if (auto *Attr = CreateAMDGPUFlatWorkGroupSizeAttr(CI, MinExpr, MaxExpr))
+    D->addAttr(Attr);
 }
 
 static void handleAMDGPUFlatWorkGroupSizeAttr(Sema &S, Decl *D,
@@ -7916,15 +7929,21 @@ static bool checkAMDGPUWavesPerEUArguments(Sema &S, Expr *MinExpr,
   return false;
 }
 
-void Sema::addAMDGPUWavesPerEUAttr(Decl *D, const AttributeCommonInfo &CI,
-                                   Expr *MinExpr, Expr *MaxExpr) {
+AMDGPUWavesPerEUAttr *
+Sema::CreateAMDGPUWavesPerEUAttr(const AttributeCommonInfo &CI, Expr *MinExpr,
+                                 Expr *MaxExpr) {
   AMDGPUWavesPerEUAttr TmpAttr(Context, CI, MinExpr, MaxExpr);
 
   if (checkAMDGPUWavesPerEUArguments(*this, MinExpr, MaxExpr, TmpAttr))
-    return;
+    return nullptr;
 
-  D->addAttr(::new (Context)
-                 AMDGPUWavesPerEUAttr(Context, CI, MinExpr, MaxExpr));
+  return ::new (Context) AMDGPUWavesPerEUAttr(Context, CI, MinExpr, MaxExpr);
+}
+
+void Sema::addAMDGPUWavesPerEUAttr(Decl *D, const AttributeCommonInfo &CI,
+                                   Expr *MinExpr, Expr *MaxExpr) {
+  if (auto *Attr = CreateAMDGPUWavesPerEUAttr(CI, MinExpr, MaxExpr))
+    D->addAttr(Attr);
 }
 
 static void handleAMDGPUWavesPerEUAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -8367,6 +8386,22 @@ static void handleFunctionReturnThunksAttr(Sema &S, Decl *D,
   // the expected codegen tests.
   D->dropAttr<FunctionReturnThunksAttr>();
   D->addAttr(FunctionReturnThunksAttr::Create(S.Context, Kind, AL));
+}
+
+static void handleAvailableOnlyInDefaultEvalMethod(Sema &S, Decl *D,
+                                                   const ParsedAttr &AL) {
+  assert(isa<TypedefNameDecl>(D) && "This attribute only applies to a typedef");
+  handleSimpleAttribute<AvailableOnlyInDefaultEvalMethodAttr>(S, D, AL);
+}
+
+static void handleNoMergeAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  auto *VDecl = dyn_cast<VarDecl>(D);
+  if (VDecl && !VDecl->isFunctionPointerType()) {
+    S.Diag(AL.getLoc(), diag::warn_attribute_ignored_non_function_pointer)
+        << AL << VDecl;
+    return;
+  }
+  D->addAttr(NoMergeAttr::Create(S.Context, AL));
 }
 
 static void handleSYCLKernelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
@@ -9248,6 +9283,13 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
     break;
   case ParsedAttr::AT_FunctionReturnThunks:
     handleFunctionReturnThunksAttr(S, D, AL);
+    break;
+  case ParsedAttr::AT_NoMerge:
+    handleNoMergeAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_AvailableOnlyInDefaultEvalMethod:
+    handleAvailableOnlyInDefaultEvalMethod(S, D, AL);
     break;
 
   // Microsoft attributes:

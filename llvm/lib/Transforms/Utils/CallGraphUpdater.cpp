@@ -120,6 +120,8 @@ void CallGraphUpdater::removeFunction(Function &DeadFn) {
     DeadCGN->removeAllCalledFunctions();
     CGSCC->DeleteNode(DeadCGN);
   }
+  if (FAM)
+    FAM->clear(DeadFn, DeadFn.getName());
 }
 
 void CallGraphUpdater::replaceFunctionWith(Function &OldFn, Function &NewFn) {

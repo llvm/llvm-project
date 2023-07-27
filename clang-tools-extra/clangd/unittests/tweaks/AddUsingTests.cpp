@@ -71,6 +71,13 @@ public:
   // NestedNameSpecifier, but no namespace.
   EXPECT_UNAVAILABLE(Header + "class Foo {}; class F^oo foo;");
 
+  // Nested macro case.
+  EXPECT_AVAILABLE(R"cpp(
+  #define ID2(X) X
+  #define ID(Y, X) Y;ID2(X)
+  namespace ns { struct Foo{}; }
+  ID(int xyz, ns::F^oo) f;)cpp");
+
   // Check that we do not trigger in header files.
   FileName = "test.h";
   ExtraArgs.push_back("-xc++-header"); // .h file is treated a C by default.

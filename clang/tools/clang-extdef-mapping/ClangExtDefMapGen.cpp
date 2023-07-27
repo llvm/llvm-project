@@ -23,6 +23,7 @@
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Signals.h"
+#include "llvm/Support/TargetSelect.h"
 #include <optional>
 #include <sstream>
 #include <string>
@@ -213,6 +214,10 @@ int main(int argc, const char **argv) {
     return 1;
   }
   CommonOptionsParser &OptionsParser = ExpectedParser.get();
+
+  llvm::InitializeAllTargetInfos();
+  llvm::InitializeAllTargetMCs();
+  llvm::InitializeAllAsmParsers();
 
   return HandleFiles(OptionsParser.getSourcePathList(),
                      OptionsParser.getCompilations());

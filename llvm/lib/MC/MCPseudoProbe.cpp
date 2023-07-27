@@ -584,10 +584,20 @@ MCPseudoProbeDecoder::getCallProbeForAddr(uint64_t Address) const {
   const MCDecodedPseudoProbe *CallProbe = nullptr;
   for (const auto &Probe : Probes) {
     if (Probe.isCall()) {
-      assert(!CallProbe &&
-             "There should be only one call probe corresponding to address "
-             "which is a callsite.");
+      // Disabling the assert and returning first call probe seen so far.
+      // Subsequent call probes, if any, are ignored. Due to the the way
+      // .pseudo_probe section is decoded, probes of the same-named independent
+      // static functions are merged thus multiple call probes may be seen for a
+      // callsite. This should only happen to compiler-generated statics, with
+      // -funique-internal-linkage-names where user statics get unique names.
+      //
+      // TODO: re-enable or narrow down the assert to static functions only.
+      //
+      // assert(!CallProbe &&
+      //        "There should be only one call probe corresponding to address "
+      //        "which is a callsite.");
       CallProbe = &Probe;
+      break;
     }
   }
   return CallProbe;

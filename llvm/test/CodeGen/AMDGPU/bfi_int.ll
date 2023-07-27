@@ -105,7 +105,6 @@ define i32 @v_bfi_def_i32(i32 %x, i32 %y, i32 %z) {
 ; GFX10-LABEL: v_bfi_def_i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_bfi_b32 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -118,7 +117,6 @@ define i32 @v_bfi_def_i32(i32 %x, i32 %y, i32 %z) {
 ; GFX10-GISEL-LABEL: v_bfi_def_i32:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, v1, v2
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -227,7 +225,6 @@ define i32 @v_bfi_sha256_ch(i32 %x, i32 %y, i32 %z) {
 ; GFX10-LABEL: v_bfi_sha256_ch:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_bfi_b32 v0, v0, v1, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -240,7 +237,6 @@ define i32 @v_bfi_sha256_ch(i32 %x, i32 %y, i32 %z) {
 ; GFX10-GISEL-LABEL: v_bfi_sha256_ch:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, v1, v2
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -563,7 +559,6 @@ define i32 @v_bfi_sha256_ma(i32 %x, i32 %y, i32 %z) {
 ; GFX10-LABEL: v_bfi_sha256_ma:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_xor_b32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_bfi_b32 v0, v0, v2, v1
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -578,7 +573,6 @@ define i32 @v_bfi_sha256_ma(i32 %x, i32 %y, i32 %z) {
 ; GFX10-GISEL-LABEL: v_bfi_sha256_ma:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v1
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, v2, v1
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -608,7 +602,6 @@ define <2 x i32> @v_bitselect_v2i32_pat1(<2 x i32> %a, <2 x i32> %b, <2 x i32> %
 ; GFX10-LABEL: v_bitselect_v2i32_pat1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX10-NEXT:    v_bfi_b32 v1, v3, v1, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -623,7 +616,6 @@ define <2 x i32> @v_bitselect_v2i32_pat1(<2 x i32> %a, <2 x i32> %b, <2 x i32> %
 ; GFX10-GISEL-LABEL: v_bitselect_v2i32_pat1:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v1, v3, v1, v5
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -651,7 +643,6 @@ define i64 @v_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-LABEL: v_bitselect_i64_pat_0:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_bfi_b32 v0, v0, v2, v4
 ; GFX10-NEXT:    v_bfi_b32 v1, v1, v3, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -666,7 +657,6 @@ define i64 @v_bitselect_i64_pat_0(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-GISEL-LABEL: v_bitselect_i64_pat_0:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, v2, v4
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v1, v1, v3, v5
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -955,7 +945,6 @@ define i64 @v_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-LABEL: v_bitselect_i64_pat_1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX10-NEXT:    v_bfi_b32 v1, v3, v1, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -970,7 +959,6 @@ define i64 @v_bitselect_i64_pat_1(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-GISEL-LABEL: v_bitselect_i64_pat_1:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v1, v3, v1, v5
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1131,7 +1119,6 @@ define i64 @v_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-LABEL: v_bitselect_i64_pat_2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX10-NEXT:    v_bfi_b32 v1, v3, v1, v5
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -1146,7 +1133,6 @@ define i64 @v_bitselect_i64_pat_2(i64 %a, i64 %b, i64 %mask) {
 ; GFX10-GISEL-LABEL: v_bitselect_i64_pat_2:
 ; GFX10-GISEL:       ; %bb.0:
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v2, v0, v4
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v1, v3, v1, v5
 ; GFX10-GISEL-NEXT:    s_setpc_b64 s[30:31]
@@ -1178,7 +1164,6 @@ define i64 @v_bfi_sha256_ma_i64(i64 %x, i64 %y, i64 %z) {
 ; GFX10-LABEL: v_bfi_sha256_ma_i64:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX10-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX10-NEXT:    v_bfi_b32 v0, v0, v4, v2
@@ -1197,7 +1182,6 @@ define i64 @v_bfi_sha256_ma_i64(i64 %x, i64 %y, i64 %z) {
 ; GFX10-GISEL-LABEL: v_bfi_sha256_ma_i64:
 ; GFX10-GISEL:       ; %bb.0: ; %entry
 ; GFX10-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-GISEL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-GISEL-NEXT:    v_xor_b32_e32 v0, v0, v2
 ; GFX10-GISEL-NEXT:    v_xor_b32_e32 v1, v1, v3
 ; GFX10-GISEL-NEXT:    v_bfi_b32 v0, v0, v4, v2

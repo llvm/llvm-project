@@ -131,9 +131,14 @@ static llvm::cl::opt<bool> enableOpenMP("fopenmp",
                                         llvm::cl::init(false));
 
 static llvm::cl::opt<bool>
-    enableOpenMPDevice("fopenmp-is-device",
+    enableOpenMPDevice("fopenmp-is-target-device",
                        llvm::cl::desc("enable openmp device compilation"),
                        llvm::cl::init(false));
+
+static llvm::cl::opt<bool>
+    enableOpenMPGPU("fopenmp-is-gpu",
+                    llvm::cl::desc("enable openmp GPU target codegen"),
+                    llvm::cl::init(false));
 
 // A simplified subset of the OpenMP RTL Flags from Flang, only the primary
 // positive options are available, no negative options e.g. fopen_assume* vs
@@ -288,10 +293,16 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   burnside.lower(parseTree, semanticsContext);
   mlir::ModuleOp mlirModule = burnside.getModule();
   if (enableOpenMP) {
-    auto offloadModuleOpts = OffloadModuleOpts(
-        setOpenMPTargetDebug, setOpenMPTeamSubscription,
-        setOpenMPThreadSubscription, setOpenMPNoThreadState,
-        setOpenMPNoNestedParallelism, enableOpenMPDevice, setOpenMPVersion);
+    if (enableOpenMPGPU && !enableOpenMPDevice) {
+      llvm::errs() << "FATAL: -fopenmp-is-gpu can only be set if "
+                      "-fopenmp-is-target-device is also set";
+      return mlir::failure();
+    }
+    auto offloadModuleOpts =
+        OffloadModuleOpts(setOpenMPTargetDebug, setOpenMPTeamSubscription,
+                          setOpenMPThreadSubscription, setOpenMPNoThreadState,
+                          setOpenMPNoNestedParallelism, enableOpenMPDevice,
+                          enableOpenMPGPU, setOpenMPVersion);
     setOffloadModuleInterfaceAttributes(mlirModule, offloadModuleOpts);
     setOpenMPVersionAttribute(mlirModule, setOpenMPVersion);
   }
@@ -398,7 +409,7 @@ int main(int argc, char **argv) {
   // enable parsing of OpenACC
   if (enableOpenACC) {
     options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
-    options.predefinitions.emplace_back("_OPENACC", "202011");
+    options.predefinitions.emplace_back("_OPENACC", "202211");
   }
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;

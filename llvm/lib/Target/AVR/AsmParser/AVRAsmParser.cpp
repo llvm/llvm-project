@@ -64,7 +64,7 @@ class AVRAsmParser : public MCTargetAsmParser {
   bool ParseInstruction(ParseInstructionInfo &Info, StringRef Name,
                         SMLoc NameLoc, OperandVector &Operands) override;
 
-  bool ParseDirective(AsmToken DirectiveID) override;
+  ParseStatus parseDirective(AsmToken DirectiveID) override;
 
   OperandMatchResultTy parseMemriOperand(OperandVector &Operands);
 
@@ -90,7 +90,7 @@ class AVRAsmParser : public MCTargetAsmParser {
                       uint64_t const &ErrorInfo);
   bool missingFeature(SMLoc const &Loc, uint64_t const &ErrorInfo);
 
-  bool parseLiteralValues(unsigned SizeInBytes, SMLoc L);
+  ParseStatus parseLiteralValues(unsigned SizeInBytes, SMLoc L);
 
 public:
   AVRAsmParser(const MCSubtargetInfo &STI, MCAsmParser &Parser,
@@ -674,19 +674,18 @@ bool AVRAsmParser::ParseInstruction(ParseInstructionInfo &Info,
   return false;
 }
 
-bool AVRAsmParser::ParseDirective(llvm::AsmToken DirectiveID) {
+ParseStatus AVRAsmParser::parseDirective(llvm::AsmToken DirectiveID) {
   StringRef IDVal = DirectiveID.getIdentifier();
-  if (IDVal.lower() == ".long") {
-    parseLiteralValues(SIZE_LONG, DirectiveID.getLoc());
-  } else if (IDVal.lower() == ".word" || IDVal.lower() == ".short") {
-    parseLiteralValues(SIZE_WORD, DirectiveID.getLoc());
-  } else if (IDVal.lower() == ".byte") {
-    parseLiteralValues(1, DirectiveID.getLoc());
-  }
-  return true;
+  if (IDVal.lower() == ".long")
+    return parseLiteralValues(SIZE_LONG, DirectiveID.getLoc());
+  if (IDVal.lower() == ".word" || IDVal.lower() == ".short")
+    return parseLiteralValues(SIZE_WORD, DirectiveID.getLoc());
+  if (IDVal.lower() == ".byte")
+    return parseLiteralValues(1, DirectiveID.getLoc());
+  return ParseStatus::NoMatch;
 }
 
-bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
+ParseStatus AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
   MCAsmParser &Parser = getParser();
   AVRMCELFStreamer &AVRStreamer =
       static_cast<AVRMCELFStreamer &>(Parser.getStreamer());
@@ -698,7 +697,7 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
     MCSymbol *Symbol = getContext().getOrCreateSymbol(".text");
     AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L,
                                         AVRMCExpr::VK_AVR_None);
-    return false;
+    return ParseStatus::NoMatch;
   }
 
   if (Parser.getTok().getKind() == AsmToken::Identifier &&
@@ -715,7 +714,10 @@ bool AVRAsmParser::parseLiteralValues(unsigned SizeInBytes, SMLoc L) {
     MCSymbol *Symbol =
         getContext().getOrCreateSymbol(Parser.getTok().getString());
     AVRStreamer.emitValueForModiferKind(Symbol, SizeInBytes, L, ModifierKind);
-    return false;
+    Lex(); // Eat the symbol name.
+    if (parseToken(AsmToken::RParen))
+      return ParseStatus::Failure;
+    return parseEOL();
   }
 
   auto parseOne = [&]() -> bool {

@@ -75,6 +75,7 @@ def testSymbolTableInsert():
         updated_name = symbol_table.insert(foo2)
         assert foo2.name.value != "foo"
         assert foo2.name == updated_name
+        assert isinstance(updated_name, StringAttr)
 
         # CHECK: module
         # CHECK:   func private @foo()
@@ -112,10 +113,10 @@ def testSymbolTableRAUW():
         # CHECK: call @bam()
         # CHECK: func private @bam
         print(m)
-        # CHECK: Foo symbol: "foo"
-        # CHECK: Bar symbol: "bam"
-        print(f"Foo symbol: {SymbolTable.get_symbol_name(foo)}")
-        print(f"Bar symbol: {SymbolTable.get_symbol_name(bar)}")
+        # CHECK: Foo symbol: StringAttr("foo")
+        # CHECK: Bar symbol: StringAttr("bam")
+        print(f"Foo symbol: {repr(SymbolTable.get_symbol_name(foo))}")
+        print(f"Bar symbol: {repr(SymbolTable.get_symbol_name(bar))}")
 
 
 # CHECK-LABEL: testSymbolTableVisibility
@@ -130,8 +131,8 @@ def testSymbolTableVisibility():
       """
         )
         foo = m.operation.regions[0].blocks[0].operations[0]
-        # CHECK: Existing visibility: "private"
-        print(f"Existing visibility: {SymbolTable.get_visibility(foo)}")
+        # CHECK: Existing visibility: StringAttr("private")
+        print(f"Existing visibility: {repr(SymbolTable.get_visibility(foo))}")
         SymbolTable.set_visibility(foo, "public")
         # CHECK: func public @foo
         print(m)

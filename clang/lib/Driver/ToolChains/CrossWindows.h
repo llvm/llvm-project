@@ -54,7 +54,6 @@ public:
   CrossWindowsToolChain(const Driver &D, const llvm::Triple &T,
                         const llvm::opt::ArgList &Args);
 
-  bool IsIntegratedAssemblerDefault() const override { return true; }
   UnwindTableLevel
   getDefaultUnwindTableLevel(const llvm::opt::ArgList &Args) const override;
   bool isPICDefault() const override;

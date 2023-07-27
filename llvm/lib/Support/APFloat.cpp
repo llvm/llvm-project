@@ -138,6 +138,7 @@ static constexpr fltSemantics semFloat8E4M3FNUZ = {
     7, -7, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
 static constexpr fltSemantics semFloat8E4M3B11FNUZ = {
     4, -10, 4, 8, fltNonfiniteBehavior::NanOnly, fltNanEncoding::NegativeZero};
+static constexpr fltSemantics semFloatTF32 = {127, -126, 11, 19};
 static constexpr fltSemantics semX87DoubleExtended = {16383, -16382, 64, 80};
 static constexpr fltSemantics semBogus = {0, 0, 0, 0};
 
@@ -203,6 +204,8 @@ const llvm::fltSemantics &APFloatBase::EnumToSemantics(Semantics S) {
     return Float8E4M3FNUZ();
   case S_Float8E4M3B11FNUZ:
     return Float8E4M3B11FNUZ();
+  case S_FloatTF32:
+    return FloatTF32();
   case S_x87DoubleExtended:
     return x87DoubleExtended();
   }
@@ -233,6 +236,8 @@ APFloatBase::SemanticsToEnum(const llvm::fltSemantics &Sem) {
     return S_Float8E4M3FNUZ;
   else if (&Sem == &llvm::APFloat::Float8E4M3B11FNUZ())
     return S_Float8E4M3B11FNUZ;
+  else if (&Sem == &llvm::APFloat::FloatTF32())
+    return S_FloatTF32;
   else if (&Sem == &llvm::APFloat::x87DoubleExtended())
     return S_x87DoubleExtended;
   else
@@ -254,6 +259,7 @@ const fltSemantics &APFloatBase::Float8E4M3FNUZ() { return semFloat8E4M3FNUZ; }
 const fltSemantics &APFloatBase::Float8E4M3B11FNUZ() {
   return semFloat8E4M3B11FNUZ;
 }
+const fltSemantics &APFloatBase::FloatTF32() { return semFloatTF32; }
 const fltSemantics &APFloatBase::x87DoubleExtended() {
   return semX87DoubleExtended;
 }
@@ -3599,6 +3605,11 @@ APInt IEEEFloat::convertFloat8E4M3B11FNUZAPFloatToAPInt() const {
   return convertIEEEFloatToAPInt<semFloat8E4M3B11FNUZ>();
 }
 
+APInt IEEEFloat::convertFloatTF32APFloatToAPInt() const {
+  assert(partCount() == 1);
+  return convertIEEEFloatToAPInt<semFloatTF32>();
+}
+
 // This function creates an APInt that is just a bit map of the floating
 // point constant as it would appear in memory.  It is not a conversion,
 // and treating the result as a normal integer is unlikely to be useful.
@@ -3636,6 +3647,9 @@ APInt IEEEFloat::bitcastToAPInt() const {
 
   if (semantics == (const llvm::fltSemantics *)&semFloat8E4M3B11FNUZ)
     return convertFloat8E4M3B11FNUZAPFloatToAPInt();
+
+  if (semantics == (const llvm::fltSemantics *)&semFloatTF32)
+    return convertFloatTF32APFloatToAPInt();
 
   assert(semantics == (const llvm::fltSemantics*)&semX87DoubleExtended &&
          "unknown format!");
@@ -3840,6 +3854,10 @@ void IEEEFloat::initFromFloat8E4M3B11FNUZAPInt(const APInt &api) {
   initFromIEEEAPInt<semFloat8E4M3B11FNUZ>(api);
 }
 
+void IEEEFloat::initFromFloatTF32APInt(const APInt &api) {
+  initFromIEEEAPInt<semFloatTF32>(api);
+}
+
 /// Treat api as containing the bits of a floating point number.
 void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
   assert(api.getBitWidth() == Sem->sizeInBits);
@@ -3867,6 +3885,8 @@ void IEEEFloat::initFromAPInt(const fltSemantics *Sem, const APInt &api) {
     return initFromFloat8E4M3FNUZAPInt(api);
   if (Sem == &semFloat8E4M3B11FNUZ)
     return initFromFloat8E4M3B11FNUZAPInt(api);
+  if (Sem == &semFloatTF32)
+    return initFromFloatTF32APInt(api);
 
   llvm_unreachable(nullptr);
 }

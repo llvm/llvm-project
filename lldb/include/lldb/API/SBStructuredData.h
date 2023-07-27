@@ -11,6 +11,7 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBModule.h"
+#include "lldb/API/SBScriptObject.h"
 
 namespace lldb_private {
 namespace python {
@@ -28,6 +29,9 @@ public:
   SBStructuredData();
 
   SBStructuredData(const lldb::SBStructuredData &rhs);
+
+  SBStructuredData(const lldb::SBScriptObject obj,
+                   const lldb::SBDebugger &debugger);
 
   ~SBStructuredData();
 
@@ -72,8 +76,9 @@ public:
   /// Return the integer value if this data structure is an integer type.
   int64_t GetSignedIntegerValue(int64_t fail_value = 0) const;
 
-  LLDB_DEPRECATED("Specify if the value is signed or unsigned",
-                  "uint64_t GetUnsignedIntegerValue(uint64_t fail_value = 0)")
+  LLDB_DEPRECATED_FIXME(
+      "Specify if the value is signed or unsigned",
+      "uint64_t GetUnsignedIntegerValue(uint64_t fail_value = 0)")
   uint64_t GetIntegerValue(uint64_t fail_value = 0) const;
 
   /// Return the floating point value if this data structure is a floating
@@ -99,6 +104,9 @@ public:
   ///     Returns the byte size needed to completely write the string value at
   ///     \a dst in all cases.
   size_t GetStringValue(char *dst, size_t dst_len) const;
+
+  /// Return the generic pointer if this data structure is a generic type.
+  lldb::SBScriptObject GetGenericValue() const;
 
 protected:
   friend class SBAttachInfo;

@@ -139,15 +139,14 @@ define <4 x i1> @neither_pow2_non_zero_4xv64(<4 x i64> %xin) {
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm3
 ; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm4 = xmm3[1,0,3,2]
 ; CHECK-NOBMI-NEXT:    pand %xmm3, %xmm4
-; CHECK-NOBMI-NEXT:    pxor %xmm2, %xmm4
 ; CHECK-NOBMI-NEXT:    movdqa %xmm0, %xmm3
 ; CHECK-NOBMI-NEXT:    paddq %xmm2, %xmm3
 ; CHECK-NOBMI-NEXT:    pand %xmm3, %xmm0
 ; CHECK-NOBMI-NEXT:    pcmpeqd %xmm1, %xmm0
 ; CHECK-NOBMI-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[1,0,3,2]
 ; CHECK-NOBMI-NEXT:    pand %xmm1, %xmm0
-; CHECK-NOBMI-NEXT:    pxor %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    packssdw %xmm4, %xmm0
+; CHECK-NOBMI-NEXT:    pxor %xmm2, %xmm0
 ; CHECK-NOBMI-NEXT:    retq
 ;
 ; CHECK-AVX2-LABEL: neither_pow2_non_zero_4xv64:

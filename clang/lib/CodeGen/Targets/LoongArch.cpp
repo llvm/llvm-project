@@ -410,12 +410,9 @@ Address LoongArchABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
   CharUnits SlotSize = CharUnits::fromQuantity(GRLen / 8);
 
   // Empty records are ignored for parameter passing purposes.
-  if (isEmptyRecord(getContext(), Ty, true)) {
-    Address Addr = Address(CGF.Builder.CreateLoad(VAListAddr),
-                           getVAListElementType(CGF), SlotSize);
-    Addr = CGF.Builder.CreateElementBitCast(Addr, CGF.ConvertTypeForMem(Ty));
-    return Addr;
-  }
+  if (isEmptyRecord(getContext(), Ty, true))
+    return Address(CGF.Builder.CreateLoad(VAListAddr),
+                   CGF.ConvertTypeForMem(Ty), SlotSize);
 
   auto TInfo = getContext().getTypeInfoInChars(Ty);
 

@@ -15,6 +15,7 @@
 #define FORTRAN_DIALECT_HLFIR_OP_BASE
 
 include "mlir/IR/AttrTypeBase.td"
+include "mlir/IR/EnumAttr.td"
 include "mlir/IR/OpBase.td"
 include "flang/Optimizer/Dialect/FIRTypes.td"
 
@@ -108,6 +109,16 @@ def IsFortranScalarCharacterExprPred
 def AnyScalarCharacterExpr : Type<IsFortranScalarCharacterExprPred,
     "any character scalar expression type">;
 
+def isFortranArrayCharacterExprTypePred
+        : CPred<"::hlfir::isFortranArrayCharacterExprType($_self)">;
+def AnyArrayCharacterExpr : Type<isFortranArrayCharacterExprTypePred,
+    "any character array expression type">;
+
+def AnyScalarOrArrayCharacterExpr :
+    Type<Or<[AnyScalarCharacterExpr.predicate,
+             AnyArrayCharacterExpr.predicate]>,
+    "any character scalar or array expression type">;
+
 def IsFortranNumericalArrayObjectPred
         : CPred<"::hlfir::isFortranNumericalArrayObject($_self)">;
 def AnyFortranNumericalArrayObject : Type<IsFortranNumericalArrayObjectPred,
@@ -138,4 +149,12 @@ def IsFortranLogicalArrayPred
 def AnyFortranLogicalArrayObject : Type<IsFortranLogicalArrayPred,
     "any array-like object containing logicals">;
 
+def hlfir_CharExtremumPredicateAttr : I32EnumAttr<
+    "CharExtremumPredicate", "",
+    [
+      I32EnumAttrCase<"min", 0>,
+      I32EnumAttrCase<"max", 1>
+    ]> {
+  let cppNamespace = "hlfir";
+}
 #endif // FORTRAN_DIALECT_HLFIR_OP_BASE

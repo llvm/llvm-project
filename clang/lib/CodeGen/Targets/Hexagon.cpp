@@ -213,10 +213,8 @@ Address HexagonABIInfo::EmitVAArgFromMemory(CodeGenFunction &CGF,
   // Get the type of the argument from memory and bitcast
   // overflow area pointer to the argument type.
   llvm::Type *PTy = CGF.ConvertTypeForMem(Ty);
-  Address AddrTyped = CGF.Builder.CreateElementBitCast(
-      Address(__overflow_area_pointer, CGF.Int8Ty,
-              CharUnits::fromQuantity(Align)),
-      PTy);
+  Address AddrTyped =
+      Address(__overflow_area_pointer, PTy, CharUnits::fromQuantity(Align));
 
   // Round up to the minimum stack alignment for varargs which is 4 bytes.
   uint64_t Offset = llvm::alignTo(CGF.getContext().getTypeSize(Ty) / 8, 4);
@@ -247,9 +245,8 @@ Address HexagonABIInfo::EmitVAArgForHexagon(CodeGenFunction &CGF,
     AddrAsInt = Builder.CreateAnd(AddrAsInt, Builder.getInt32(~(TyAlign - 1)));
     Addr = Builder.CreateIntToPtr(AddrAsInt, BP);
   }
-  Address AddrTyped = Builder.CreateElementBitCast(
-      Address(Addr, CGF.Int8Ty, CharUnits::fromQuantity(TyAlign)),
-      CGF.ConvertType(Ty));
+  Address AddrTyped =
+      Address(Addr, CGF.ConvertType(Ty), CharUnits::fromQuantity(TyAlign));
 
   uint64_t Offset = llvm::alignTo(CGF.getContext().getTypeSize(Ty) / 8, 4);
   llvm::Value *NextAddr = Builder.CreateGEP(

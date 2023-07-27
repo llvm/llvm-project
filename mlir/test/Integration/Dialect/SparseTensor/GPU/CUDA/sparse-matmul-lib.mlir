@@ -32,6 +32,9 @@
 }>
 
 module {
+  llvm.func @mgpuCreateSparseEnv()
+  llvm.func @mgpuDestroySparseEnv()
+
   // Computes C = A x B with A sparse COO.
   func.func @matmulCOO(%A: tensor<8x8xf32, #SortedCOO>,
                        %B: tensor<8x8xf32>,
@@ -85,6 +88,7 @@ module {
   // Main driver.
   //
   func.func @main() {
+    llvm.call @mgpuCreateSparseEnv(): () -> ()
     %f0 = arith.constant 0.0 : f32
     %f1 = arith.constant 1.0 : f32
 
@@ -172,6 +176,8 @@ module {
     // Release the resources.
     bufferization.dealloc_tensor %Acoo : tensor<8x8xf32, #SortedCOO>
     bufferization.dealloc_tensor %Acsr : tensor<8x8xf32, #CSR>
+
+    llvm.call @mgpuDestroySparseEnv(): () -> ()
 
     return
   }

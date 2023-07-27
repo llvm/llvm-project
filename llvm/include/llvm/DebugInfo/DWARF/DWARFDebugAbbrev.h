@@ -66,14 +66,14 @@ class DWARFDebugAbbrev {
 public:
   DWARFDebugAbbrev(DataExtractor Data);
 
-  const DWARFAbbreviationDeclarationSet *
+  Expected<const DWARFAbbreviationDeclarationSet *>
   getAbbreviationDeclarationSet(uint64_t CUAbbrOffset) const;
 
   void dump(raw_ostream &OS) const;
   void parse() const;
 
   DWARFAbbreviationDeclarationSetMap::const_iterator begin() const {
-    parse();
+    assert(!Data && "Must call parse before iterating over DWARFDebugAbbrev");
     return AbbrDeclSets.begin();
   }
 

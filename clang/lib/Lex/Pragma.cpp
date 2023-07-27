@@ -1088,7 +1088,8 @@ struct PragmaDebugHandler : public PragmaHandler {
       if (DiagName.is(tok::eod))
         PP.getDiagnostics().dump();
       else if (DiagName.is(tok::string_literal) && !DiagName.hasUDSuffix()) {
-        StringLiteralParser Literal(DiagName, PP);
+        StringLiteralParser Literal(DiagName, PP,
+                                    StringLiteralEvalMethod::Unevaluated);
         if (Literal.hadError)
           return;
         PP.getDiagnostics().dump(Literal.GetString());
@@ -1291,16 +1292,26 @@ public:
     IdentifierInfo *II = Tok.getIdentifierInfo();
     PPCallbacks *Callbacks = PP.getPPCallbacks();
 
+    // Get the next token, which is either an EOD or a string literal. We lex
+    // it now so that we can early return if the previous token was push or pop.
+    PP.LexUnexpandedToken(Tok);
+
     if (II->isStr("pop")) {
       if (!PP.getDiagnostics().popMappings(DiagLoc))
         PP.Diag(Tok, diag::warn_pragma_diagnostic_cannot_pop);
       else if (Callbacks)
         Callbacks->PragmaDiagnosticPop(DiagLoc, Namespace);
+
+      if (Tok.isNot(tok::eod))
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_diagnostic_invalid_token);
       return;
     } else if (II->isStr("push")) {
       PP.getDiagnostics().pushMappings(DiagLoc);
       if (Callbacks)
         Callbacks->PragmaDiagnosticPush(DiagLoc, Namespace);
+
+      if (Tok.isNot(tok::eod))
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_diagnostic_invalid_token);
       return;
     }
 
@@ -1316,9 +1327,8 @@ public:
       return;
     }
 
-    PP.LexUnexpandedToken(Tok);
+    // At this point, we expect a string literal.
     SourceLocation StringLoc = Tok.getLocation();
-
     std::string WarningName;
     if (!PP.FinishLexStringLiteral(Tok, WarningName, "pragma diagnostic",
                                    /*AllowMacroExpansion=*/false))

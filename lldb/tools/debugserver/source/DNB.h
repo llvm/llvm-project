@@ -247,4 +247,9 @@ std::string DNBGetMacCatalystVersionString();
 bool DNBDebugserverIsTranslated();
 
 bool DNBGetAddressingBits(uint32_t &addressing_bits);
+
+nub_process_t DNBGetParentProcessID(nub_process_t child_pid);
+
+bool DNBProcessIsBeingDebugged(nub_process_t pid);
+
 #endif

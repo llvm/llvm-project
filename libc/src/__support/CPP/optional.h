@@ -18,19 +18,19 @@ namespace cpp {
 
 // Trivial in_place_t struct.
 struct in_place_t {
-  LIBC_INLINE explicit in_place_t() = default;
+  LIBC_INLINE_VAR explicit in_place_t() = default;
 };
 
 // Trivial nullopt_t struct.
 struct nullopt_t {
-  LIBC_INLINE explicit nullopt_t() = default;
+  LIBC_INLINE_VAR explicit nullopt_t() = default;
 };
 
 // nullopt that can be used and returned.
-inline constexpr nullopt_t nullopt{};
+LIBC_INLINE_VAR constexpr nullopt_t nullopt{};
 
 // in_place that can be used in the constructor.
-inline constexpr in_place_t in_place{};
+LIBC_INLINE_VAR constexpr in_place_t in_place{};
 
 // This is very simple implementation of the std::optional class. It makes
 // several assumptions that the underlying type is trivially constructable,

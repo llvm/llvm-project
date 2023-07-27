@@ -65,6 +65,10 @@ func.func @float_attrs_pass() {
     float_attr = 2. : bf16
   } : () -> ()
   "test.float_attrs"() {
+    // CHECK: float_attr = 2.000000e+00 : tf32
+    float_attr = 2. : tf32
+  } : () -> ()
+  "test.float_attrs"() {
     // CHECK: float_attr = 2.000000e+00 : f32
     float_attr = 2. : f32
   } : () -> ()

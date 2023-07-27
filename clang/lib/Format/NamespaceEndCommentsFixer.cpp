@@ -360,8 +360,12 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
                               Style.SpacesInLineCommentPrefix.Minimum);
     if (!hasEndComment(EndCommentPrevTok)) {
       bool isShort = I - StartLineIndex <= Style.ShortNamespaceLines + 1;
-      if (!isShort)
-        addEndComment(EndCommentPrevTok, EndCommentText, SourceMgr, &Fixes);
+      if (!isShort) {
+        addEndComment(EndCommentPrevTok,
+                      std::string(Style.SpacesBeforeTrailingComments, ' ') +
+                          EndCommentText,
+                      SourceMgr, &Fixes);
+      }
     } else if (!validEndComment(EndCommentPrevTok, NamespaceName,
                                 NamespaceTok)) {
       updateEndComment(EndCommentPrevTok, EndCommentText, SourceMgr, &Fixes);

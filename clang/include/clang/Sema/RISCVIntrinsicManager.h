@@ -28,6 +28,8 @@ public:
 
   virtual ~RISCVIntrinsicManager() = default;
 
+  virtual void InitIntrinsicList() = 0;
+
   // Create RISC-V intrinsic and insert into symbol table and return true if
   // found, otherwise return false.
   virtual bool CreateIntrinsicIfFound(LookupResult &LR, IdentifierInfo *II,

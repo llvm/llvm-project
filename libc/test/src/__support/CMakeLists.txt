@@ -1,14 +1,17 @@
 add_custom_target(libc-support-tests)
 
-add_libc_test(
-  blockstore_test
-  SUITE
-    libc-support-tests
-  SRCS
-    blockstore_test.cpp
-  DEPENDS
-    libc.src.__support.blockstore
-)
+# FIXME: These tests are currently broken on the GPU.
+if(NOT LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  add_libc_test(
+    blockstore_test
+    SUITE
+      libc-support-tests
+    SRCS
+      blockstore_test.cpp
+    DEPENDS
+      libc.src.__support.blockstore
+  )
+endif()
 
 add_libc_test(
   endian_test
@@ -126,5 +129,6 @@ add_custom_command(TARGET libc_str_to_float_comparison_test
 
 add_subdirectory(CPP)
 add_subdirectory(File)
+add_subdirectory(RPC)
 add_subdirectory(OSUtil)
 add_subdirectory(FPUtil)

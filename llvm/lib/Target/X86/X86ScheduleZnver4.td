@@ -37,7 +37,8 @@ def Znver4Model : SchedMachineModel {
   // Ideally for znver4, we should have 6.75K. However we don't add that
   // considerting the impact compile time and prefer using default values 
   // instead.
-  // let LoopMicroOpBufferSize = 6750;
+  // Retaining minimal value to influence unrolling as we did for znver3.
+  let LoopMicroOpBufferSize = 512;
   // AMD SOG 19h, 2.6.2 L1 Data Cache
   // The L1 data cache has a 4- or 5- cycle integer load-to-use latency.
   // AMD SOG 19h, 2.12 L1 Data Cache
@@ -908,13 +909,13 @@ defm : Zn4WriteResXMMPair<WriteFAdd64X, [Zn4FPFAdd01], 3, [1], 1>; // Floating p
 defm : Zn4WriteResYMMPair<WriteFAdd64Y, [Zn4FPFAdd01], 3, [1], 1>; // Floating point double add/sub (YMM).
 defm : Zn4WriteResZMMPair<WriteFAdd64Z, [Zn4FPFAdd01], 3, [2], 1>; // Floating point double add/sub (ZMM).
 defm : Zn4WriteResXMMPair<WriteFCmp, [Zn4FPFMul01], 2, [2], 1>;  // Floating point compare.
-defm : Zn4WriteResXMMPair<WriteFCmpX, [Zn4FPFMul01], 1, [1], 1>; // Floating point compare (XMM).
-defm : Zn4WriteResYMMPair<WriteFCmpY, [Zn4FPFMul01], 2, [2], 1>; // Floating point compare (YMM).
-defm : Zn4WriteResZMMPair<WriteFCmpZ, [Zn4FPFMul01], 2, [4], 1>; // Floating point compare (ZMM).
+defm : Zn4WriteResXMMPair<WriteFCmpX, [Zn4FPFMul01], 2, [1], 1>; // Floating point compare (XMM).
+defm : Zn4WriteResYMMPair<WriteFCmpY, [Zn4FPFMul01], 2, [1], 1>; // Floating point compare (YMM).
+defm : Zn4WriteResZMMPair<WriteFCmpZ, [Zn4FPFMul01], 2, [2], 1>; // Floating point compare (ZMM).
 defm : Zn4WriteResXMMPair<WriteFCmp64, [Zn4FPFMul01], 1, [1], 1>;  // Floating point double compare.
-defm : Zn4WriteResXMMPair<WriteFCmp64X, [Zn4FPFMul01], 1, [1], 1>; // Floating point double compare (XMM).
-defm : Zn4WriteResYMMPair<WriteFCmp64Y, [Zn4FPFMul01], 2, [2], 1>; // Floating point double compare (YMM).
-defm : Zn4WriteResZMMPair<WriteFCmp64Z, [Zn4FPFMul01], 2, [4], 1>; // Floating point double compare (ZMM).
+defm : Zn4WriteResXMMPair<WriteFCmp64X, [Zn4FPFMul01], 2, [1], 1>; // Floating point double compare (XMM).
+defm : Zn4WriteResYMMPair<WriteFCmp64Y, [Zn4FPFMul01], 2, [1], 1>; // Floating point double compare (YMM).
+defm : Zn4WriteResZMMPair<WriteFCmp64Z, [Zn4FPFMul01], 2, [2], 1>; // Floating point double compare (ZMM).
 defm : Zn4WriteResXMMPair<WriteFCom, [Zn4FPFMul01], 3, [2], 1>; // FIXME: latency not from llvm-exegesis  // Floating point compare to flags (X87).
 defm : Zn4WriteResXMMPair<WriteFComX, [Zn4FPFMul01], 4, [2], 2>;  // FIXME: latency not from llvm-exegesis // Floating point compare to flags (SSE).
 defm : Zn4WriteResXMMPair<WriteFMul, [Zn4FPFMul01], 3, [1], 1>;  // Floating point multiplication.
@@ -951,9 +952,9 @@ defm : Zn4WriteResXMMPair<WriteFRsqrtX, [Zn4FPFDiv], 4, [1], 1>; // Floating poi
 defm : Zn4WriteResYMMPair<WriteFRsqrtY, [Zn4FPFDiv], 4, [1], 1>; // Floating point reciprocal square root estimate (YMM).
 defm : Zn4WriteResZMMPair<WriteFRsqrtZ, [Zn4FPFDiv], 5, [2], 1>; // Floating point reciprocal square root estimate (ZMM).
 defm : Zn4WriteResXMMPair<WriteFMA, [Zn4FPFMul01], 4, [2], 1>;  // Fused Multiply Add.
-defm : Zn4WriteResXMMPair<WriteFMAX, [Zn4FPFMul01], 4, [2], 1>; // Fused Multiply Add (XMM).
-defm : Zn4WriteResYMMPair<WriteFMAY, [Zn4FPFMul01], 4, [2], 1>; // Fused Multiply Add (YMM).
-defm : Zn4WriteResZMMPair<WriteFMAZ, [Zn4FPFMul01], 4, [4], 1>; // Fused Multiply Add (ZMM).
+defm : Zn4WriteResXMMPair<WriteFMAX, [Zn4FPFMul01], 4, [1], 1>; // Fused Multiply Add (XMM).
+defm : Zn4WriteResYMMPair<WriteFMAY, [Zn4FPFMul01], 4, [1], 1>; // Fused Multiply Add (YMM).
+defm : Zn4WriteResZMMPair<WriteFMAZ, [Zn4FPFMul01], 4, [2], 1>; // Fused Multiply Add (ZMM).
 defm : Zn4WriteResXMMPair<WriteDPPD, [Zn4FPFMul01], 7, [6], 3, /*LoadUOps=*/2>; // Floating point double dot product.
 defm : Zn4WriteResXMMPair<WriteDPPS, [Zn4FPFMul01], 11, [8], 8, /*LoadUOps=*/2>; // Floating point single dot product.
 defm : Zn4WriteResYMMPair<WriteDPPSY, [Zn4FPFMul01], 11, [8], 7, /*LoadUOps=*/1>; // Floating point single dot product (YMM).

@@ -8,11 +8,14 @@
 
 #include <utility>
 
+#include "Detail/DimLvlMapParser.h"
+
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorStorageLayout.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensorType.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Matchers.h"
@@ -209,14 +212,18 @@ std::string SparseTensorDimSliceAttr::getStaticString(int64_t v) {
   return isDynamic(v) ? "?" : std::to_string(v);
 }
 
+void SparseTensorDimSliceAttr::print(llvm::raw_ostream &os) const {
+  os << '(';
+  os << getStaticString(getOffset());
+  os << ", ";
+  os << getStaticString(getSize());
+  os << ", ";
+  os << getStaticString(getStride());
+  os << ')';
+}
+
 void SparseTensorDimSliceAttr::print(AsmPrinter &printer) const {
-  printer << "(";
-  printer << getStaticString(getOffset());
-  printer << ", ";
-  printer << getStaticString(getSize());
-  printer << ", ";
-  printer << getStaticString(getStride());
-  printer << ")";
+  print(printer.getStream());
 }
 
 static ParseResult parseOptionalStaticSlice(int64_t &result,
@@ -402,6 +409,7 @@ SparseTensorEncodingAttr::getStaticLvlSliceStride(Level lvl) const {
 }
 
 const static DimLevelType validDLTs[] = {DimLevelType::Dense,
+                                         DimLevelType::TwoOutOfFour,
                                          DimLevelType::Compressed,
                                          DimLevelType::CompressedNu,
                                          DimLevelType::CompressedNo,
@@ -445,8 +453,8 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
 
   StringRef attrName;
   // Exactly 6 keys.
-  SmallVector<StringRef, 6> keys = {"lvlTypes", "dimToLvl", "posWidth",
-                                    "crdWidth", "dimSlices"};
+  SmallVector<StringRef, 6> keys = {"lvlTypes", "dimToLvl",  "posWidth",
+                                    "crdWidth", "dimSlices", "NEW_SYNTAX"};
   while (succeeded(parser.parseOptionalKeyword(&attrName))) {
     if (!llvm::is_contained(keys, attrName)) {
       parser.emitError(parser.getNameLoc(), "unexpected key: ") << attrName;
@@ -510,6 +518,20 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
       if (!finished)
         return {};
       RETURN_ON_FAIL(parser.parseRSquare())
+    } else if (attrName == "NEW_SYNTAX") {
+      // Note that we are in the process of migrating to a new STEA surface
+      // syntax. While this is ongoing we use the temporary "NEW_SYNTAX = ...."
+      // to switch to the new parser. This allows us to gradually migrate
+      // examples over to the new surface syntax before making the complete
+      // switch once work is completed.
+      // TODO: replace everything here with new STEA surface syntax parser
+      ir_detail::DimLvlMapParser cParser(parser);
+      auto res = cParser.parseDimLvlMap();
+      RETURN_ON_FAIL(res);
+      // Proof of concept result.
+      // TODO: use DimLvlMap directly as storage representation
+      for (unsigned i = 0, e = res->getLvlRank(); i < e; i++)
+        lvlTypes.push_back(res->getDimLevelType(i));
     }
 
     // Only the last item can omit the comma
@@ -1196,7 +1218,7 @@ void PushBackOp::build(OpBuilder &builder, OperationState &result,
 
 LogicalResult PushBackOp::verify() {
   if (Value n = getN()) {
-    auto nValue = dyn_cast_or_null<arith::ConstantIndexOp>(n.getDefiningOp());
+    std::optional<int64_t> nValue = getConstantIntValue(n);
     if (nValue && nValue.value() < 1)
       return emitOpError("n must be not less than 1");
   }
@@ -1304,7 +1326,7 @@ LogicalResult SortOp::verify() {
   if (getXs().empty())
     return emitError("need at least one xs buffer.");
 
-  auto n = getN().getDefiningOp<arith::ConstantIndexOp>();
+  std::optional<int64_t> n = getConstantIntValue(getN());
 
   Type xtp = getMemRefType(getXs().front()).getElementType();
   auto checkTypes = [&](ValueRange operands,
@@ -1329,7 +1351,7 @@ LogicalResult SortOp::verify() {
 }
 
 LogicalResult SortCooOp::verify() {
-  auto cn = getN().getDefiningOp<arith::ConstantIndexOp>();
+  std::optional<int64_t> cn = getConstantIntValue(getN());
   // We can't check the size of the buffers when n or buffer dimensions aren't
   // compile-time constants.
   if (!cn)

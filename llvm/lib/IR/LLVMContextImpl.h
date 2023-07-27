@@ -1633,14 +1633,6 @@ public:
   /// The lifetime of the object must be guaranteed to extend as long as the
   /// LLVMContext is used by compilation.
   void setOptPassGate(OptPassGate &);
-
-  // TODO: clean up the following after we no longer support non-opaque pointer
-  // types.
-  bool getOpaquePointers();
-  void setOpaquePointers(bool OP);
-
-private:
-  std::optional<bool> OpaquePointers;
 };
 
 } // end namespace llvm

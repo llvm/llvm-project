@@ -204,6 +204,27 @@ module {
   llvm.func protected @protected() {
     llvm.return
   }
+
+  // CHECK-LABEL: local_unnamed_addr @local_unnamed_addr_func
+  llvm.func local_unnamed_addr @local_unnamed_addr_func() {
+    llvm.return
+  }
+
+  // CHECK-LABEL: @align_func
+  // CHECK-SAME: attributes {alignment = 2 : i64}
+  llvm.func @align_func() attributes {alignment = 2 : i64} {
+    llvm.return
+  }
+
+  // CHECK: llvm.comdat @__llvm_comdat
+  llvm.comdat @__llvm_comdat {
+    // CHECK: llvm.comdat_selector @any any
+    llvm.comdat_selector @any any
+  }
+  // CHECK: @any() comdat(@__llvm_comdat::@any) attributes
+  llvm.func @any() comdat(@__llvm_comdat::@any) attributes { dso_local } {
+    llvm.return
+  }
 }
 
 // -----

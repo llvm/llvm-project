@@ -185,7 +185,7 @@ Available checks are:
      ``-fsanitize=shift-exponent`` to check only left-hand side or
      right-hand side of shift operation, respectively.
   -  ``-fsanitize=unsigned-shift-base``: check that an unsigned left-hand side of
-     a left shift operation doesn't overflow. Issues caught by this sanitizer are 
+     a left shift operation doesn't overflow. Issues caught by this sanitizer are
      not undefined behavior, but are often unintentional.
   -  ``-fsanitize=signed-integer-overflow``: Signed integer overflow, where the
      result of a signed integer computation cannot be represented in its type.

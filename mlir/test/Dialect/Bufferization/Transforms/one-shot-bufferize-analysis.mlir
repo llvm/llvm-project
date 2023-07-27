@@ -66,3 +66,35 @@ func.func @read_of_alloc_tensor_is_not_a_conflict(%f: f32, %idx: index) -> f32 {
   %2 = tensor.extract %0[%idx] : tensor<10xf32>
   return %2 : f32
 }
+
+// -----
+
+// CHECK-LABEL: func @to_memref_not_read_only(
+func.func @to_memref_not_read_only(%idx : index, %f: f32) -> f32 {
+  %t = tensor.generate {
+  ^bb0(%i : index):
+    tensor.yield %f : f32
+  } : tensor<5xf32>
+  // Some op may write into the result of to_memref later.
+  // CHECK: bufferization.to_memref
+  // CHECK-SAME: {__inplace_operands_attr__ = ["false"]}
+  %m = bufferization.to_memref %t : memref<5xf32>
+  %2 = tensor.extract %t[%idx] : tensor<5xf32>
+  return %2 : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @to_memref_read_only(
+func.func @to_memref_read_only(%idx : index, %f: f32) -> f32 {
+  %t = tensor.generate {
+  ^bb0(%i : index):
+    tensor.yield %f : f32
+  } : tensor<5xf32>
+  // Some op may write into the result of to_memref later.
+  // CHECK: bufferization.to_memref
+  // CHECK-SAME: {__inplace_operands_attr__ = ["true"]}
+  %m = bufferization.to_memref %t {read_only} : memref<5xf32>
+  %2 = tensor.extract %t[%idx] : tensor<5xf32>
+  return %2 : f32
+}

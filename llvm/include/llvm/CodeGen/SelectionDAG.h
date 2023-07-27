@@ -2356,6 +2356,19 @@ public:
     }
   }
 
+  /// Check if the provided node is save to speculatively executed given its
+  /// current arguments. So, while `udiv` the opcode is not safe to
+  /// speculatively execute, a given `udiv` node may be if the denominator is
+  /// known nonzero.
+  bool isSafeToSpeculativelyExecuteNode(const SDNode *N) const {
+    switch (N->getOpcode()) {
+    case ISD::UDIV:
+      return isKnownNeverZero(N->getOperand(1));
+    default:
+      return isSafeToSpeculativelyExecute(N->getOpcode());
+    }
+  }
+
   SDValue makeStateFunctionCall(unsigned LibFunc, SDValue Ptr, SDValue InChain,
                                 const SDLoc &DLoc);
 

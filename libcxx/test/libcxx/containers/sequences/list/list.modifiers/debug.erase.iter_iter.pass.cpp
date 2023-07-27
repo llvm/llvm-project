@@ -11,7 +11,7 @@
 // Call erase(const_iterator first, const_iterator last); with various invalid iterators
 
 // REQUIRES: has-unix-headers
-// UNSUPPORTED: !libcpp-has-debug-mode, c++03
+// UNSUPPORTED: !libcpp-has-legacy-debug-mode, c++03
 
 #include <list>
 

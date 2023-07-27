@@ -15,6 +15,7 @@
 #include "support/Logger.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Index/IndexSymbol.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -1457,7 +1458,9 @@ llvm::json::Value toJSON(const InlayHintKind &Kind) {
     return 1;
   case InlayHintKind::Parameter:
     return 2;
-  case InlayHintKind::Designator: // This is an extension, don't serialize.
+  case InlayHintKind::Designator:
+  case InlayHintKind::BlockEnd:
+    // This is an extension, don't serialize.
     return nullptr;
   }
   llvm_unreachable("Unknown clang.clangd.InlayHintKind");
@@ -1491,6 +1494,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, InlayHintKind Kind) {
       return "type";
     case InlayHintKind::Designator:
       return "designator";
+    case InlayHintKind::BlockEnd:
+      return "block-end";
     }
     llvm_unreachable("Unknown clang.clangd.InlayHintKind");
   };

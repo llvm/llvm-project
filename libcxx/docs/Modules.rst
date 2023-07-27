@@ -218,7 +218,7 @@ Building this project is done with the following steps, assuming the files
 
              ``error: module file _deps/std-build/CMakeFiles/std.dir/std.pcm cannot be loaded due to a configuration mismatch with the current compilation [-Wmodule-file-config-mismatch]``
 
-If you have questions about modules free free to ask them in the ``#libcxx``
+If you have questions about modules feel free to ask them in the ``#libcxx``
 channel on `LLVM's Discord server <https://discord.gg/jzUbyP26tQ>`__.
 
 If you think you've found a bug please it using the `LLVM bug tracker

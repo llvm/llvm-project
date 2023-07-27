@@ -197,8 +197,14 @@ static int dummy_vnds[0] COMPILER_RT_SECTION(
 // To avoid GC'ing of the dummy variables by the linker, reference them in an
 // array and reference the array in the runtime registration code
 // (InstrProfilingRuntime.cpp)
+#ifdef __GNUC__
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wcast-qual"
+#endif
 COMPILER_RT_VISIBILITY
 void *__llvm_profile_keep[] = {(void *)&dummy_cnts, (void *)&dummy_data,
                                (void *)&dummy_name, (void *)&dummy_vnds};
-
+#ifdef __GNUC__
+#pragma GCC diagnostic pop
+#endif
 #endif

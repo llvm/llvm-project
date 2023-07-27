@@ -95,7 +95,7 @@ _LIBCPP_BEGIN_NAMESPACE_LFTS_PMR
 inline _LIBCPP_INLINE_VISIBILITY
 size_t __aligned_allocation_size(size_t __s, size_t __a) _NOEXCEPT
 {
-    _LIBCPP_ASSERT(__s + __a > __s, "aligned allocation size overflows");
+    _LIBCPP_ASSERT_UNCATEGORIZED(__s + __a > __s, "aligned allocation size overflows");
     return (__s + __a - 1) & ~(__a - 1);
 }
 
@@ -197,8 +197,8 @@ public:
 
     _LIBCPP_INLINE_VISIBILITY
     void deallocate(_ValueType * __p, size_t __n) _NOEXCEPT {
-        _LIBCPP_ASSERT(__n <= __max_size(),
-                       "deallocate called for size which exceeds max_size()");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n <= __max_size(),
+                                     "deallocate called for size which exceeds max_size()");
         __res_->deallocate(__p, __n * sizeof(_ValueType), _LIBCPP_ALIGNOF(_ValueType));
     }
 
@@ -397,7 +397,7 @@ private:
 
     _LIBCPP_HIDE_FROM_ABI_VIRTUAL void do_deallocate(void * __p, size_t __bytes, size_t) override
     {
-        _LIBCPP_ASSERT(__bytes <= __max_size(),
+        _LIBCPP_ASSERT_UNCATEGORIZED(__bytes <= __max_size(),
             "do_deallocate called for size which exceeds the maximum allocation size");
         size_t __s = __aligned_allocation_size(__bytes, _MaxAlign) / _MaxAlign;
         __alloc_.deallocate((_ValueType*)__p, __s);

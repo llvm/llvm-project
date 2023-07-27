@@ -56,7 +56,7 @@ struct __serial_move_merge
         constexpr bool __same_move_seq = std::is_same<_MoveSequenceX, _MoveSequenceY>::value;
 
         auto __n = _M_nmerge;
-        _LIBCPP_ASSERT(__n > 0, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__n > 0, "");
 
         auto __nx = __xe - __xs;
         //auto __ny = __ye - __ys;

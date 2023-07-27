@@ -1249,7 +1249,7 @@ void SelectionDAGBuilder::visitGCRelocate(const GCRelocateInst &Relocate) {
 
     // All the reloads are independent and are reading memory only modified by
     // statepoints (i.e. no other aliasing stores); informing SelectionDAG of
-    // this this let's CSE kick in for free and allows reordering of
+    // this lets CSE kick in for free and allows reordering of
     // instructions if possible.  The lowering for statepoint sets the root,
     // so this is ordering all reloads with the either
     // a) the statepoint node itself, or

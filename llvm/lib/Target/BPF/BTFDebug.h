@@ -16,11 +16,11 @@
 
 #include "llvm/ADT/StringMap.h"
 #include "llvm/CodeGen/DebugHandlerBase.h"
+#include "llvm/DebugInfo/BTF/BTF.h"
 #include <cstdint>
 #include <map>
 #include <set>
 #include <unordered_map>
-#include "BTF.h"
 
 namespace llvm {
 

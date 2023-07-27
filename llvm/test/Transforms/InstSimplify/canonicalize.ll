@@ -75,8 +75,7 @@ define <2 x float> @canonicalize_poison_vector() {
 
 define float @canonicalize_denorm() {
 ; CHECK-LABEL: @canonicalize_denorm(
-; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0x380FFFFFC0000000)
-; CHECK-NEXT:    ret float [[RET]]
+; CHECK-NEXT:    ret float 0x380FFFFFC0000000
 ;
   %ret = call float @llvm.canonicalize.f32(float bitcast (i32 8388607 to float))
   ret float %ret
@@ -225,7 +224,8 @@ define float @canonicalize_neg_denorm_dynamic_output_preserve_sign_input() "deno
 ; Output is known flushed, can fold
 define float @canonicalize_pos_preserve_sign_output_denorm_dynamic_input() "denormal-fp-math"="preserve-sign,dynamic" {
 ; CHECK-LABEL: @canonicalize_pos_preserve_sign_output_denorm_dynamic_input(
-; CHECK-NEXT:    ret float 0.000000e+00
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0x380FFFFFC0000000)
+; CHECK-NEXT:    ret float [[RET]]
 ;
   %ret = call float @llvm.canonicalize.f32(float bitcast (i32 8388607 to float))
   ret float %ret
@@ -234,7 +234,8 @@ define float @canonicalize_pos_preserve_sign_output_denorm_dynamic_input() "deno
 ; Output is known flushed, can fold
 define float @canonicalize_neg_denorm_preserve_sign_output_dynamic_input() "denormal-fp-math"="preserve-sign,dynamic" {
 ; CHECK-LABEL: @canonicalize_neg_denorm_preserve_sign_output_dynamic_input(
-; CHECK-NEXT:    ret float -0.000000e+00
+; CHECK-NEXT:    [[RET:%.*]] = call float @llvm.canonicalize.f32(float 0xB80FFFFFC0000000)
+; CHECK-NEXT:    ret float [[RET]]
 ;
   %ret = call float @llvm.canonicalize.f32(float bitcast (i32 -2139095041 to float))
   ret float %ret
@@ -368,8 +369,7 @@ define double @canonicalize_1.0_f64() {
 
 define double @canonicalize_0x00000000000001_f64() {
 ; CHECK-LABEL: @canonicalize_0x00000000000001_f64(
-; CHECK-NEXT:    [[RET:%.*]] = call double @llvm.canonicalize.f64(double 4.940660e-324)
-; CHECK-NEXT:    ret double [[RET]]
+; CHECK-NEXT:    ret double 4.940660e-324
 ;
   %ret = call double @llvm.canonicalize.f64(double 0x00000000000001)
   ret double %ret
@@ -413,8 +413,7 @@ define half @canonicalize_1.0_f16() {
 
 define half @canonicalize_0x0001_f16() {
 ; CHECK-LABEL: @canonicalize_0x0001_f16(
-; CHECK-NEXT:    [[RET:%.*]] = call half @llvm.canonicalize.f16(half 0xH0001)
-; CHECK-NEXT:    ret half [[RET]]
+; CHECK-NEXT:    ret half 0xH0001
 ;
   %ret = call half @llvm.canonicalize.f16(half 0xH0001)
   ret half %ret
@@ -458,8 +457,7 @@ define fp128 @canonicalize_1.0_fp128() {
 
 define fp128 @canonicalize_0x00000000000000000000000000000001_fp128() {
 ; CHECK-LABEL: @canonicalize_0x00000000000000000000000000000001_fp128(
-; CHECK-NEXT:    [[RET:%.*]] = call fp128 @llvm.canonicalize.f128(fp128 0xL00000000000000000000000000000001)
-; CHECK-NEXT:    ret fp128 [[RET]]
+; CHECK-NEXT:    ret fp128 0xL00000000000000000000000000000001
 ;
   %ret = call fp128 @llvm.canonicalize.fp128(fp128 0xL00000000000000000000000000000001)
   ret fp128 %ret
@@ -512,8 +510,7 @@ define bfloat @canonicalize_1.0_bf16() {
 
 define bfloat @canonicalize_0x0001_bf16() {
 ; CHECK-LABEL: @canonicalize_0x0001_bf16(
-; CHECK-NEXT:    [[RET:%.*]] = call bfloat @llvm.canonicalize.bf16(bfloat 0xR0001)
-; CHECK-NEXT:    ret bfloat [[RET]]
+; CHECK-NEXT:    ret bfloat 0xR0001
 ;
   %ret = call bfloat @llvm.canonicalize.bf16(bfloat 0xR0001)
   ret bfloat %ret
@@ -765,6 +762,243 @@ define ppc_fp128 @canonicalize_neg1.0_ppcf128() {
   ret ppc_fp128 %ret
 }
 
+; --------------------------------------------------------------------
+; Test folds of using canonicalize + is.fpclass to inspect the denormal mode.
+; --------------------------------------------------------------------
+
+define i1 @is_poszero_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" {
+; CHECK-LABEL: @is_poszero_daz_enabled_check_dynamic(
+; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0x36A0000000000000)
+; CHECK-NEXT:    [[IS_POS_ZERO:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CANONICAL]], i32 64)
+; CHECK-NEXT:    ret i1 [[IS_POS_ZERO]]
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %is.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 64)
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_preserve_sign_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" {
+; CHECK-LABEL: @is_preserve_sign_daz_enabled_check_dynamic(
+; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0xB6A0000000000000)
+; CHECK-NEXT:    [[IS_NEG_ZERO:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CANONICAL]], i32 32)
+; CHECK-NEXT:    ret i1 [[IS_NEG_ZERO]]
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.neg.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 32)
+  ret i1 %is.neg.zero
+}
+
+define i1 @is_positive_zero_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" {
+; CHECK-LABEL: @is_positive_zero_daz_enabled_check_dynamic(
+; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0xB6A0000000000000)
+; CHECK-NEXT:    [[IS_POS_ZERO:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CANONICAL]], i32 64)
+; CHECK-NEXT:    ret i1 [[IS_POS_ZERO]]
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 64)
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_any_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" {
+; CHECK-LABEL: @is_any_daz_enabled_check_dynamic(
+; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0xB6A0000000000000)
+; CHECK-NEXT:    [[IS_ANY_ZERO:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CANONICAL]], i32 96)
+; CHECK-NEXT:    ret i1 [[IS_ANY_ZERO]]
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.any.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 96)
+  ret i1 %is.any.zero
+}
+
+define i1 @is_not_daz_enabled_check_dynamic() "denormal-fp-math"="ieee,dynamic" {
+; CHECK-LABEL: @is_not_daz_enabled_check_dynamic(
+; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0x36A0000000000000)
+; CHECK-NEXT:    [[IS_NOT_POS_ZERO:%.*]] = call i1 @llvm.is.fpclass.f32(float [[CANONICAL]], i32 959)
+; CHECK-NEXT:    ret i1 [[IS_NOT_POS_ZERO]]
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %is.not.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 959)
+  ret i1 %is.not.pos.zero
+}
+
+define i1 @is_poszero_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
+; CHECK-LABEL: @is_poszero_daz_enabled_check_ieee(
+; CHECK-NEXT:    ret i1 false
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %is.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 64)
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_preserve_sign_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
+; CHECK-LABEL: @is_preserve_sign_daz_enabled_check_ieee(
+; CHECK-NEXT:    ret i1 false
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.neg.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 32)
+  ret i1 %is.neg.zero
+}
+
+define i1 @is_positive_zero_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
+; CHECK-LABEL: @is_positive_zero_daz_enabled_check_ieee(
+; CHECK-NEXT:    ret i1 false
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 64)
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_any_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
+; CHECK-LABEL: @is_any_daz_enabled_check_ieee(
+; CHECK-NEXT:    ret i1 false
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.any.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 96)
+  ret i1 %is.any.zero
+}
+
+define i1 @is_not_daz_enabled_check_ieee() "denormal-fp-math"="ieee,ieee" {
+; CHECK-LABEL: @is_not_daz_enabled_check_ieee(
+; CHECK-NEXT:    ret i1 true
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %is.not.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 959)
+  ret i1 %is.not.pos.zero
+}
+
+define i1 @is_poszero_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @is_poszero_daz_enabled_check_preserve_sign(
+; CHECK-NEXT:    ret i1 true
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %is.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 64)
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_preserve_sign_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @is_preserve_sign_daz_enabled_check_preserve_sign(
+; CHECK-NEXT:    ret i1 true
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.neg.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 32)
+  ret i1 %is.neg.zero
+}
+
+define i1 @is_positive_zero_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @is_positive_zero_daz_enabled_check_preserve_sign(
+; CHECK-NEXT:    ret i1 false
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 64)
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_any_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @is_any_daz_enabled_check_preserve_sign(
+; CHECK-NEXT:    ret i1 true
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.any.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 96)
+  ret i1 %is.any.zero
+}
+
+define i1 @is_not_daz_enabled_check_preserve_sign() "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @is_not_daz_enabled_check_preserve_sign(
+; CHECK-NEXT:    ret i1 false
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %is.not.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 959)
+  ret i1 %is.not.pos.zero
+}
+
+define i1 @is_poszero_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @is_poszero_daz_enabled_check_positive_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %is.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 64)
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_preserve_sign_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @is_preserve_sign_daz_enabled_check_positive_zero(
+; CHECK-NEXT:    ret i1 false
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.neg.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 32)
+  ret i1 %is.neg.zero
+}
+
+define i1 @is_positive_zero_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @is_positive_zero_daz_enabled_check_positive_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 64)
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_any_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @is_any_daz_enabled_check_positive_zero(
+; CHECK-NEXT:    ret i1 true
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 -2147483647 to float))
+  %is.any.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 96)
+  ret i1 %is.any.zero
+}
+
+define i1 @is_not_daz_enabled_check_positive_zero() "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @is_not_daz_enabled_check_positive_zero(
+; CHECK-NEXT:    ret i1 false
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %is.not.pos.zero = call i1 @llvm.is.fpclass.f32(float %canonical, i32 959)
+  ret i1 %is.not.pos.zero
+}
+
+define i1 @is_poszero_daz_enabled_check_dynamic_bitcast() "denormal-fp-math"="ieee,dynamic" {
+; CHECK-LABEL: @is_poszero_daz_enabled_check_dynamic_bitcast(
+; CHECK-NEXT:    [[CANONICAL:%.*]] = call float @llvm.canonicalize.f32(float 0x36A0000000000000)
+; CHECK-NEXT:    [[BITCAST:%.*]] = bitcast float [[CANONICAL]] to i32
+; CHECK-NEXT:    [[IS_POS_ZERO:%.*]] = icmp eq i32 [[BITCAST]], 0
+; CHECK-NEXT:    ret i1 [[IS_POS_ZERO]]
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %bitcast = bitcast float %canonical to i32
+  %is.pos.zero = icmp eq i32 %bitcast, 0
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_poszero_daz_enabled_check_preserve_sign_bitcast() "denormal-fp-math"="ieee,preserve-sign" {
+; CHECK-LABEL: @is_poszero_daz_enabled_check_preserve_sign_bitcast(
+; CHECK-NEXT:    ret i1 true
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %bitcast = bitcast float %canonical to i32
+  %is.pos.zero = icmp eq i32 %bitcast, 0
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_poszero_daz_enabled_check_positive_zero_bitcast() "denormal-fp-math"="ieee,positive-zero" {
+; CHECK-LABEL: @is_poszero_daz_enabled_check_positive_zero_bitcast(
+; CHECK-NEXT:    ret i1 true
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %bitcast = bitcast float %canonical to i32
+  %is.pos.zero = icmp eq i32 %bitcast, 0
+  ret i1 %is.pos.zero
+}
+
+define i1 @is_poszero_daz_enabled_check_ieee_bitcast() "denormal-fp-math"="ieee,ieee" {
+; CHECK-LABEL: @is_poszero_daz_enabled_check_ieee_bitcast(
+; CHECK-NEXT:    ret i1 false
+;
+  %canonical = call float @llvm.canonicalize.f32(float bitcast (i32 1 to float))
+  %bitcast = bitcast float %canonical to i32
+  %is.pos.zero = icmp eq i32 %bitcast, 0
+  ret i1 %is.pos.zero
+}
+
 declare bfloat @llvm.canonicalize.bf16(bfloat)
 declare half @llvm.canonicalize.f16(half)
 declare float @llvm.canonicalize.f32(float)
@@ -773,3 +1007,4 @@ declare double @llvm.canonicalize.f64(double)
 declare fp128 @llvm.canonicalize.fp128(fp128)
 declare x86_fp80 @llvm.canonicalize.f80(x86_fp80)
 declare ppc_fp128 @llvm.canonicalize.ppcf128(ppc_fp128)
+declare i1 @llvm.is.fpclass.f32(float, i32 immarg)

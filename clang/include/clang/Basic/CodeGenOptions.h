@@ -55,13 +55,14 @@ public:
   };
 
   enum VectorLibrary {
-    NoLibrary,         // Don't use any vector library.
-    Accelerate,        // Use the Accelerate framework.
-    LIBMVEC,           // GLIBC vector math library.
-    MASSV,             // IBM MASS vector library.
-    SVML,              // Intel short vector math library.
-    SLEEF,             // SLEEF SIMD Library for Evaluating Elementary Functions.
-    Darwin_libsystem_m // Use Darwin's libsytem_m vector functions.
+    NoLibrary,  // Don't use any vector library.
+    Accelerate, // Use the Accelerate framework.
+    LIBMVEC,    // GLIBC vector math library.
+    MASSV,      // IBM MASS vector library.
+    SVML,       // Intel short vector math library.
+    SLEEF,      // SLEEF SIMD Library for Evaluating Elementary Functions.
+    Darwin_libsystem_m, // Use Darwin's libsytem_m vector functions.
+    ArmPL               // Arm Performance Libraries.
   };
 
   enum ObjCDispatchMethodKind {
@@ -281,6 +282,9 @@ public:
 
   /// Name of the profile file to use as output for with -fmemory-profile.
   std::string MemoryProfileOutput;
+
+  /// Name of the profile file to use as input for -fmemory-profile-use.
+  std::string MemoryProfileUsePath;
 
   /// Name of the profile file to use as input for -fprofile-instr-use
   std::string ProfileInstrumentUsePath;

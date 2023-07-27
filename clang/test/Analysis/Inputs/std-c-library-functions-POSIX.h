@@ -47,6 +47,8 @@ int fseek(FILE *stream, long offset, int whence);
 int fileno(FILE *stream);
 long a64l(const char *str64);
 char *l64a(long value);
+int open(const char *path, int oflag, ...);
+int openat(int fd, const char *path, int oflag, ...);
 int access(const char *pathname, int amode);
 int faccessat(int dirfd, const char *pathname, int mode, int flags);
 int dup(int fildes);
@@ -135,6 +137,7 @@ typedef union {
 } __CONST_SOCKADDR_ARG __attribute__((__transparent_union__));
 #undef __SOCKADDR_ONETYPE
 
+int socket(int domain, int type, int protocol);
 int accept(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len);
 int bind(int socket, __CONST_SOCKADDR_ARG address, socklen_t address_len);
 int getpeername(int socket, __SOCKADDR_ARG address, socklen_t *restrict address_len);
@@ -150,6 +153,7 @@ int setsockopt(int socket, int level, int option_name, const void *option_value,
 int getsockopt(int socket, int level, int option_name, void *restrict option_value, socklen_t *restrict option_len);
 ssize_t send(int sockfd, const void *buf, size_t len, int flags);
 int socketpair(int domain, int type, int protocol, int sv[2]);
+int shutdown(int socket, int how);
 int getnameinfo(const struct sockaddr *restrict sa, socklen_t salen, char *restrict node, socklen_t nodelen, char *restrict service, socklen_t servicelen, int flags);
 int utime(const char *filename, struct utimbuf *buf);
 int futimens(int fd, const struct timespec times[2]);

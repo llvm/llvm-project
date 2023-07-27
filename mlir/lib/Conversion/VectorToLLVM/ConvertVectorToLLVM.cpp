@@ -31,21 +31,15 @@ using namespace mlir::vector;
 // Helper to reduce vector type by one rank at front.
 static VectorType reducedVectorTypeFront(VectorType tp) {
   assert((tp.getRank() > 1) && "unlowerable vector type");
-  unsigned numScalableDims = tp.getNumScalableDims();
-  if (tp.getShape().size() == numScalableDims)
-    --numScalableDims;
   return VectorType::get(tp.getShape().drop_front(), tp.getElementType(),
-                         numScalableDims);
+                         tp.getScalableDims().drop_front());
 }
 
 // Helper to reduce vector type by *all* but one rank at back.
 static VectorType reducedVectorTypeBack(VectorType tp) {
   assert((tp.getRank() > 1) && "unlowerable vector type");
-  unsigned numScalableDims = tp.getNumScalableDims();
-  if (numScalableDims > 0)
-    --numScalableDims;
   return VectorType::get(tp.getShape().take_back(), tp.getElementType(),
-                         numScalableDims);
+                         tp.getScalableDims().take_back());
 }
 
 // Helper that picks the proper sequence for inserting.
@@ -98,13 +92,11 @@ LogicalResult getMemRefAlignment(LLVMTypeConverter &typeConverter,
 // Check if the last stride is non-unit or the memory space is not zero.
 static LogicalResult isMemRefTypeSupported(MemRefType memRefType,
                                            LLVMTypeConverter &converter) {
-  int64_t offset;
-  SmallVector<int64_t, 4> strides;
-  auto successStrides = getStridesAndOffset(memRefType, strides, offset);
+  if (!isLastMemrefDimUnitStride(memRefType))
+    return failure();
   FailureOr<unsigned> addressSpace =
       converter.getMemRefAddressSpace(memRefType);
-  if (failed(successStrides) || strides.back() != 1 || failed(addressSpace) ||
-      *addressSpace != 0)
+  if (failed(addressSpace) || *addressSpace != 0)
     return failure();
   return success();
 }

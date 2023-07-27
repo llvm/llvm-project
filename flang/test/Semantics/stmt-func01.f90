@@ -34,7 +34,10 @@ program main
   integer :: sf9
   !ERROR: Defining expression of statement function 'sf9' cannot be converted to its result type INTEGER(4)
   sf9(n) = "bad"
-  sf10 = 1.
+  !ERROR: Statement function 'sf10' may not reference another statement function 'sf11' that is defined later
+  sf10(n) = sf11(n)
+  sf11(n) = sf10(n) ! mutual recursion, caused crash
+  sf13 = 1.
  contains
   real function explicit(x,y)
     integer, intent(in) :: x
@@ -47,6 +50,6 @@ program main
   end function
   subroutine foo
     !PORTABILITY: An implicitly typed statement function should not appear when the same symbol is available in its host scope
-    sf10(x) = 2.*x
+    sf13(x) = 2.*x
   end subroutine
 end

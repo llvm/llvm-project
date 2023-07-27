@@ -575,7 +575,6 @@ ClangExpressionParser::ClangExpressionParser(
     // FIXME: We should ask the driver for the appropriate default flags.
     lang_opts.GNUMode = true;
     lang_opts.GNUKeywords = true;
-    lang_opts.DoubleSquareBracketAttributes = true;
     lang_opts.CPlusPlus11 = true;
 
     // The Darwin libc expects this macro to be set.

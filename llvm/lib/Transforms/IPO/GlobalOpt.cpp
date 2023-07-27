@@ -663,8 +663,6 @@ static bool AllUsesOfValueWillTrapIfNull(const Value *V,
       if (II->getCalledOperand() != V) {
         return false;  // Not calling the ptr
       }
-    } else if (const BitCastInst *CI = dyn_cast<BitCastInst>(U)) {
-      if (!AllUsesOfValueWillTrapIfNull(CI, PHIs)) return false;
     } else if (const AddrSpaceCastInst *CI = dyn_cast<AddrSpaceCastInst>(U)) {
       if (!AllUsesOfValueWillTrapIfNull(CI, PHIs))
         return false;
@@ -780,10 +778,9 @@ static bool OptimizeAwayTrappingUsesOfValue(Value *V, Constant *NewV) {
           UI = V->user_begin();
         }
       }
-    } else if (CastInst *CI = dyn_cast<CastInst>(I)) {
-      Changed |= OptimizeAwayTrappingUsesOfValue(CI,
-                                ConstantExpr::getCast(CI->getOpcode(),
-                                                      NewV, CI->getType()));
+    } else if (AddrSpaceCastInst *CI = dyn_cast<AddrSpaceCastInst>(I)) {
+      Changed |= OptimizeAwayTrappingUsesOfValue(
+          CI, ConstantExpr::getAddrSpaceCast(NewV, CI->getType()));
       if (CI->use_empty()) {
         Changed = true;
         CI->eraseFromParent();

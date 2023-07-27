@@ -78,6 +78,7 @@ Args:
   ip: An InsertionPoint (defaults to resolve from context manager or set to
     False to disable insertion, even with an insertion point set in the
     context manager).
+  infer_type: Whether to infer result types.
 Returns:
   A new "detached" Operation object. Detached operations can be added
   to blocks, which causes them to become "attached."
@@ -256,6 +257,14 @@ struct PyAttrBuilderMap {
         .def_static("insert", &PyAttrBuilderMap::dundeSetItemNamed);
   }
 };
+
+//------------------------------------------------------------------------------
+// PyBlock
+//------------------------------------------------------------------------------
+
+py::object PyBlock::getCapsule() {
+  return py::reinterpret_steal<py::object>(mlirPythonBlockToCapsule(get()));
+}
 
 //------------------------------------------------------------------------------
 // Collections.
@@ -1280,7 +1289,7 @@ py::object PyOperation::create(const std::string &name,
                                std::optional<py::dict> attributes,
                                std::optional<std::vector<PyBlock *>> successors,
                                int regions, DefaultingPyLocation location,
-                               const py::object &maybeIp) {
+                               const py::object &maybeIp, bool inferType) {
   llvm::SmallVector<MlirValue, 4> mlirOperands;
   llvm::SmallVector<MlirType, 4> mlirResults;
   llvm::SmallVector<MlirBlock, 4> mlirSuccessors;
@@ -1359,6 +1368,7 @@ py::object PyOperation::create(const std::string &name,
   if (!mlirOperands.empty())
     mlirOperationStateAddOperands(&state, mlirOperands.size(),
                                   mlirOperands.data());
+  state.enableResultTypeInference = inferType;
   if (!mlirResults.empty())
     mlirOperationStateAddResults(&state, mlirResults.size(),
                                  mlirResults.data());
@@ -1390,6 +1400,8 @@ py::object PyOperation::create(const std::string &name,
 
   // Construct the operation.
   MlirOperation operation = mlirOperationCreate(&state);
+  if (!operation.ptr)
+    throw py::value_error("Operation creation failed");
   PyOperationRef created =
       PyOperation::createDetached(location->getContext(), operation);
   maybeInsertOperation(created, maybeIp);
@@ -1433,51 +1445,10 @@ void PyOperation::erase() {
 // PyOpView
 //------------------------------------------------------------------------------
 
-py::object
-PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
-                       py::list operandList, std::optional<py::dict> attributes,
-                       std::optional<std::vector<PyBlock *>> successors,
-                       std::optional<int> regions,
-                       DefaultingPyLocation location,
-                       const py::object &maybeIp) {
-  PyMlirContextRef context = location->getContext();
-  // Class level operation construction metadata.
-  std::string name = py::cast<std::string>(cls.attr("OPERATION_NAME"));
-  // Operand and result segment specs are either none, which does no
-  // variadic unpacking, or a list of ints with segment sizes, where each
-  // element is either a positive number (typically 1 for a scalar) or -1 to
-  // indicate that it is derived from the length of the same-indexed operand
-  // or result (implying that it is a list at that position).
-  py::object operandSegmentSpecObj = cls.attr("_ODS_OPERAND_SEGMENTS");
-  py::object resultSegmentSpecObj = cls.attr("_ODS_RESULT_SEGMENTS");
-
-  std::vector<int32_t> operandSegmentLengths;
-  std::vector<int32_t> resultSegmentLengths;
-
-  // Validate/determine region count.
-  auto opRegionSpec = py::cast<std::tuple<int, bool>>(cls.attr("_ODS_REGIONS"));
-  int opMinRegionCount = std::get<0>(opRegionSpec);
-  bool opHasNoVariadicRegions = std::get<1>(opRegionSpec);
-  if (!regions) {
-    regions = opMinRegionCount;
-  }
-  if (*regions < opMinRegionCount) {
-    throw py::value_error(
-        (llvm::Twine("Operation \"") + name + "\" requires a minimum of " +
-         llvm::Twine(opMinRegionCount) +
-         " regions but was built with regions=" + llvm::Twine(*regions))
-            .str());
-  }
-  if (opHasNoVariadicRegions && *regions > opMinRegionCount) {
-    throw py::value_error(
-        (llvm::Twine("Operation \"") + name + "\" requires a maximum of " +
-         llvm::Twine(opMinRegionCount) +
-         " regions but was built with regions=" + llvm::Twine(*regions))
-            .str());
-  }
-
-  // Unpack results.
-  std::vector<PyType *> resultTypes;
+static void populateResultTypes(StringRef name, py::list resultTypeList,
+                                const py::object &resultSegmentSpecObj,
+                                std::vector<int32_t> &resultSegmentLengths,
+                                std::vector<PyType *> &resultTypes) {
   resultTypes.reserve(resultTypeList.size());
   if (resultSegmentSpecObj.is_none()) {
     // Non-variadic result unpacking.
@@ -1559,6 +1530,56 @@ PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
         throw py::value_error("Unexpected segment spec");
       }
     }
+  }
+}
+
+py::object PyOpView::buildGeneric(
+    const py::object &cls, std::optional<py::list> resultTypeList,
+    py::list operandList, std::optional<py::dict> attributes,
+    std::optional<std::vector<PyBlock *>> successors,
+    std::optional<int> regions, DefaultingPyLocation location,
+    const py::object &maybeIp) {
+  PyMlirContextRef context = location->getContext();
+  // Class level operation construction metadata.
+  std::string name = py::cast<std::string>(cls.attr("OPERATION_NAME"));
+  // Operand and result segment specs are either none, which does no
+  // variadic unpacking, or a list of ints with segment sizes, where each
+  // element is either a positive number (typically 1 for a scalar) or -1 to
+  // indicate that it is derived from the length of the same-indexed operand
+  // or result (implying that it is a list at that position).
+  py::object operandSegmentSpecObj = cls.attr("_ODS_OPERAND_SEGMENTS");
+  py::object resultSegmentSpecObj = cls.attr("_ODS_RESULT_SEGMENTS");
+
+  std::vector<int32_t> operandSegmentLengths;
+  std::vector<int32_t> resultSegmentLengths;
+
+  // Validate/determine region count.
+  auto opRegionSpec = py::cast<std::tuple<int, bool>>(cls.attr("_ODS_REGIONS"));
+  int opMinRegionCount = std::get<0>(opRegionSpec);
+  bool opHasNoVariadicRegions = std::get<1>(opRegionSpec);
+  if (!regions) {
+    regions = opMinRegionCount;
+  }
+  if (*regions < opMinRegionCount) {
+    throw py::value_error(
+        (llvm::Twine("Operation \"") + name + "\" requires a minimum of " +
+         llvm::Twine(opMinRegionCount) +
+         " regions but was built with regions=" + llvm::Twine(*regions))
+            .str());
+  }
+  if (opHasNoVariadicRegions && *regions > opMinRegionCount) {
+    throw py::value_error(
+        (llvm::Twine("Operation \"") + name + "\" requires a maximum of " +
+         llvm::Twine(opMinRegionCount) +
+         " regions but was built with regions=" + llvm::Twine(*regions))
+            .str());
+  }
+
+  // Unpack results.
+  std::vector<PyType *> resultTypes;
+  if (resultTypeList.has_value()) {
+    populateResultTypes(name, *resultTypeList, resultSegmentSpecObj,
+                        resultSegmentLengths, resultTypes);
   }
 
   // Unpack operands.
@@ -1686,7 +1707,8 @@ PyOpView::buildGeneric(const py::object &cls, py::list resultTypeList,
                              /*operands=*/std::move(operands),
                              /*attributes=*/std::move(attributes),
                              /*successors=*/std::move(successors),
-                             /*regions=*/*regions, location, maybeIp);
+                             /*regions=*/*regions, location, maybeIp,
+                             !resultTypeList);
 }
 
 pybind11::object PyOpView::constructDerived(const pybind11::object &cls,
@@ -1908,19 +1930,17 @@ void PySymbolTable::dunderDel(const std::string &name) {
   erase(py::cast<PyOperationBase &>(operation));
 }
 
-PyAttribute PySymbolTable::insert(PyOperationBase &symbol) {
+MlirAttribute PySymbolTable::insert(PyOperationBase &symbol) {
   operation->checkValid();
   symbol.getOperation().checkValid();
   MlirAttribute symbolAttr = mlirOperationGetAttributeByName(
       symbol.getOperation().get(), mlirSymbolTableGetSymbolAttributeName());
   if (mlirAttributeIsNull(symbolAttr))
     throw py::value_error("Expected operation to have a symbol name.");
-  return PyAttribute(
-      symbol.getOperation().getContext(),
-      mlirSymbolTableInsert(symbolTable, symbol.getOperation().get()));
+  return mlirSymbolTableInsert(symbolTable, symbol.getOperation().get());
 }
 
-PyAttribute PySymbolTable::getSymbolName(PyOperationBase &symbol) {
+MlirAttribute PySymbolTable::getSymbolName(PyOperationBase &symbol) {
   // Op must already be a symbol.
   PyOperation &operation = symbol.getOperation();
   operation.checkValid();
@@ -1929,7 +1949,7 @@ PyAttribute PySymbolTable::getSymbolName(PyOperationBase &symbol) {
       mlirOperationGetAttributeByName(operation.get(), attrName);
   if (mlirAttributeIsNull(existingNameAttr))
     throw py::value_error("Expected operation to have a symbol name.");
-  return PyAttribute(symbol.getOperation().getContext(), existingNameAttr);
+  return existingNameAttr;
 }
 
 void PySymbolTable::setSymbolName(PyOperationBase &symbol,
@@ -1947,7 +1967,7 @@ void PySymbolTable::setSymbolName(PyOperationBase &symbol,
   mlirOperationSetAttributeByName(operation.get(), attrName, newNameAttr);
 }
 
-PyAttribute PySymbolTable::getVisibility(PyOperationBase &symbol) {
+MlirAttribute PySymbolTable::getVisibility(PyOperationBase &symbol) {
   PyOperation &operation = symbol.getOperation();
   operation.checkValid();
   MlirStringRef attrName = mlirSymbolTableGetVisibilityAttributeName();
@@ -1955,7 +1975,7 @@ PyAttribute PySymbolTable::getVisibility(PyOperationBase &symbol) {
       mlirOperationGetAttributeByName(operation.get(), attrName);
   if (mlirAttributeIsNull(existingVisAttr))
     throw py::value_error("Expected operation to have a symbol visibility.");
-  return PyAttribute(symbol.getOperation().getContext(), existingVisAttr);
+  return existingVisAttr;
 }
 
 void PySymbolTable::setVisibility(PyOperationBase &symbol,
@@ -2287,13 +2307,13 @@ public:
   PyOpAttributeMap(PyOperationRef operation)
       : operation(std::move(operation)) {}
 
-  PyAttribute dunderGetItemNamed(const std::string &name) {
+  MlirAttribute dunderGetItemNamed(const std::string &name) {
     MlirAttribute attr = mlirOperationGetAttributeByName(operation->get(),
                                                          toMlirStringRef(name));
     if (mlirAttributeIsNull(attr)) {
       throw py::key_error("attempt to access a non-existent attribute");
     }
-    return PyAttribute(operation->getContext(), attr);
+    return attr;
   }
 
   PyNamedAttribute dunderGetItemIndexed(intptr_t index) {
@@ -2848,7 +2868,7 @@ void mlir::python::populateIRCore(py::module &m) {
                   py::arg("attributes") = py::none(),
                   py::arg("successors") = py::none(), py::arg("regions") = 0,
                   py::arg("loc") = py::none(), py::arg("ip") = py::none(),
-                  kOperationCreateDocstring)
+                  py::arg("infer_type") = false, kOperationCreateDocstring)
       .def_static(
           "parse",
           [](const std::string &sourceStr, const std::string &sourceName,
@@ -2970,6 +2990,7 @@ void mlir::python::populateIRCore(py::module &m) {
   // Mapping of PyBlock.
   //----------------------------------------------------------------------------
   py::class_<PyBlock>(m, "Block", py::module_local())
+      .def_property_readonly(MLIR_PYTHON_CAPI_PTR_ATTR, &PyBlock::getCapsule)
       .def_property_readonly(
           "owner",
           [](PyBlock &self) {
@@ -3131,13 +3152,13 @@ void mlir::python::populateIRCore(py::module &m) {
       .def(MLIR_PYTHON_CAPI_FACTORY_ATTR, &PyAttribute::createFromCapsule)
       .def_static(
           "parse",
-          [](std::string attrSpec, DefaultingPyMlirContext context) {
+          [](const std::string &attrSpec, DefaultingPyMlirContext context) {
             PyMlirContext::ErrorCapture errors(context->getRef());
-            MlirAttribute type = mlirAttributeParseGet(
+            MlirAttribute attr = mlirAttributeParseGet(
                 context->get(), toMlirStringRef(attrSpec));
-            if (mlirAttributeIsNull(type))
+            if (mlirAttributeIsNull(attr))
               throw MLIRError("Unable to parse attribute", errors.take());
-            return type;
+            return attr;
           },
           py::arg("asm"), py::arg("context") = py::none(),
           "Parses an attribute from an assembly form. Raises an MLIRError on "
@@ -3410,6 +3431,12 @@ void mlir::python::populateIRCore(py::module &m) {
           py::arg("use_local_scope") = false, kGetNameAsOperand)
       .def_property_readonly(
           "type", [](PyValue &self) { return mlirValueGetType(self.get()); })
+      .def(
+          "set_type",
+          [](PyValue &self, const PyType &type) {
+            return mlirValueSetType(self.get(), type);
+          },
+          py::arg("type"))
       .def(
           "replace_all_uses_with",
           [](PyValue &self, PyValue &with) {

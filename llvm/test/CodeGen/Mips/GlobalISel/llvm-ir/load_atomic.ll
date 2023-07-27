@@ -157,10 +157,15 @@ define i32 @atomic_load_unordered_i32(ptr %ptr) {
 define i64 @atomic_load_unordered_i64(ptr %ptr) {
 ; MIPS32-LABEL: atomic_load_unordered_i64:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    ldc1 $f0, 0($4)
-; MIPS32-NEXT:    mfc1 $2, $f0
+; MIPS32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    jal __atomic_load_8
+; MIPS32-NEXT:    ori $5, $zero, 0
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    mfc1 $3, $f1
+; MIPS32-NEXT:    addiu $sp, $sp, 24
   %load = load atomic i64, ptr %ptr unordered, align 8
   ret i64 %load
 }
@@ -179,9 +184,19 @@ define float @atomic_load_unordered_f32(ptr %ptr) {
 define double @atomic_load_unordered_f64(ptr %ptr) {
 ; MIPS32-LABEL: atomic_load_unordered_f64:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    ldc1 $f0, 128($4)
+; MIPS32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    ori $5, $zero, 0
+; MIPS32-NEXT:    ori $1, $zero, 128
+; MIPS32-NEXT:    jal __atomic_load_8
+; MIPS32-NEXT:    addu $4, $4, $1
+; MIPS32-NEXT:    mtc1 $2, $f0
+; MIPS32-NEXT:    mtc1 $3, $f1
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    addiu $sp, $sp, 24
   %gep = getelementptr inbounds double, ptr %ptr, i32 16
   %load = load atomic double, ptr %gep unordered, align 8
   ret double %load
@@ -354,10 +369,15 @@ define i32 @atomic_load_monotonic_i32(ptr %ptr) {
 define i64 @atomic_load_monotonic_i64(ptr %ptr) {
 ; MIPS32-LABEL: atomic_load_monotonic_i64:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    ldc1 $f0, 0($4)
-; MIPS32-NEXT:    mfc1 $2, $f0
+; MIPS32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    jal __atomic_load_8
+; MIPS32-NEXT:    ori $5, $zero, 0
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    mfc1 $3, $f1
+; MIPS32-NEXT:    addiu $sp, $sp, 24
   %load = load atomic i64, ptr %ptr monotonic, align 8
   ret i64 %load
 }
@@ -376,9 +396,19 @@ define float @atomic_load_monotonic_f32(ptr %ptr) {
 define double @atomic_load_monotonic_f64(ptr %ptr) {
 ; MIPS32-LABEL: atomic_load_monotonic_f64:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    ldc1 $f0, 128($4)
+; MIPS32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    ori $5, $zero, 0
+; MIPS32-NEXT:    ori $1, $zero, 128
+; MIPS32-NEXT:    jal __atomic_load_8
+; MIPS32-NEXT:    addu $4, $4, $1
+; MIPS32-NEXT:    mtc1 $2, $f0
+; MIPS32-NEXT:    mtc1 $3, $f1
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    addiu $sp, $sp, 24
   %gep = getelementptr inbounds double, ptr %ptr, i32 16
   %load = load atomic double, ptr %gep monotonic, align 8
   ret double %load
@@ -564,11 +594,15 @@ define i32 @atomic_load_acquire_i32(ptr %ptr) {
 define i64 @atomic_load_acquire_i64(ptr %ptr) {
 ; MIPS32-LABEL: atomic_load_acquire_i64:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    ldc1 $f0, 0($4)
-; MIPS32-NEXT:    sync
-; MIPS32-NEXT:    mfc1 $2, $f0
+; MIPS32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    jal __atomic_load_8
+; MIPS32-NEXT:    ori $5, $zero, 2
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    mfc1 $3, $f1
+; MIPS32-NEXT:    addiu $sp, $sp, 24
   %load = load atomic i64, ptr %ptr acquire, align 8
   ret i64 %load
 }
@@ -588,10 +622,19 @@ define float @atomic_load_acquire_f32(ptr %ptr) {
 define double @atomic_load_acquire_f64(ptr %ptr) {
 ; MIPS32-LABEL: atomic_load_acquire_f64:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    ldc1 $f0, 128($4)
-; MIPS32-NEXT:    sync
+; MIPS32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    ori $5, $zero, 2
+; MIPS32-NEXT:    ori $1, $zero, 128
+; MIPS32-NEXT:    jal __atomic_load_8
+; MIPS32-NEXT:    addu $4, $4, $1
+; MIPS32-NEXT:    mtc1 $2, $f0
+; MIPS32-NEXT:    mtc1 $3, $f1
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    addiu $sp, $sp, 24
   %gep = getelementptr inbounds double, ptr %ptr, i32 16
   %load = load atomic double, ptr %gep acquire, align 8
   ret double %load
@@ -778,11 +821,15 @@ define i32 @atomic_load_seq_cst_i32(ptr %ptr) {
 define i64 @atomic_load_seq_cst_i64(ptr %ptr) {
 ; MIPS32-LABEL: atomic_load_seq_cst_i64:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    ldc1 $f0, 0($4)
-; MIPS32-NEXT:    sync
-; MIPS32-NEXT:    mfc1 $2, $f0
+; MIPS32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    jal __atomic_load_8
+; MIPS32-NEXT:    ori $5, $zero, 5
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    mfc1 $3, $f1
+; MIPS32-NEXT:    addiu $sp, $sp, 24
   %load = load atomic i64, ptr %ptr seq_cst, align 8
   ret i64 %load
 }
@@ -802,10 +849,19 @@ define float @atomic_load_seq_cst_f32(ptr %ptr) {
 define double @atomic_load_seq_cst_f64(ptr %ptr) {
 ; MIPS32-LABEL: atomic_load_seq_cst_f64:
 ; MIPS32:       # %bb.0:
-; MIPS32-NEXT:    ldc1 $f0, 128($4)
-; MIPS32-NEXT:    sync
+; MIPS32-NEXT:    addiu $sp, $sp, -24
+; MIPS32-NEXT:    .cfi_def_cfa_offset 24
+; MIPS32-NEXT:    sw $ra, 20($sp) # 4-byte Folded Spill
+; MIPS32-NEXT:    .cfi_offset 31, -4
+; MIPS32-NEXT:    ori $5, $zero, 5
+; MIPS32-NEXT:    ori $1, $zero, 128
+; MIPS32-NEXT:    jal __atomic_load_8
+; MIPS32-NEXT:    addu $4, $4, $1
+; MIPS32-NEXT:    mtc1 $2, $f0
+; MIPS32-NEXT:    mtc1 $3, $f1
+; MIPS32-NEXT:    lw $ra, 20($sp) # 4-byte Folded Reload
 ; MIPS32-NEXT:    jr $ra
-; MIPS32-NEXT:    nop
+; MIPS32-NEXT:    addiu $sp, $sp, 24
   %gep = getelementptr inbounds double, ptr %ptr, i32 16
   %load = load atomic double, ptr %gep seq_cst, align 8
   ret double %load

@@ -61,6 +61,7 @@ protected:
   bool HasFminFmaxLegacy = true;
   bool EnablePromoteAlloca = false;
   bool HasTrigReducedRange = false;
+  bool FastFMAF32 = false;
   unsigned EUsPerCU = 4;
   unsigned MaxWavesPerEU = 10;
   unsigned LocalMemorySize = 0;
@@ -198,6 +199,10 @@ public:
     return HasTrigReducedRange;
   }
 
+  bool hasFastFMAF32() const {
+    return FastFMAF32;
+  }
+
   bool isPromoteAllocaEnabled() const {
     return EnablePromoteAlloca;
   }
@@ -271,6 +276,9 @@ public:
   /// Return the maximum workitem ID value in the function, for the given (0, 1,
   /// 2) dimension.
   unsigned getMaxWorkitemID(const Function &Kernel, unsigned Dimension) const;
+
+  /// Return true if only a single workitem can be active in a wave.
+  bool isSingleLaneExecution(const Function &Kernel) const;
 
   /// Creates value range metadata on an workitemid.* intrinsic call or load.
   bool makeLIDRangeMetadata(Instruction *I) const;

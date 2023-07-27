@@ -216,6 +216,24 @@ transform::LoopPipelineOp::applyToOne(transform::TransformRewriter &rewriter,
 }
 
 //===----------------------------------------------------------------------===//
+// LoopPromoteIfOneIterationOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::LoopPromoteIfOneIterationOp::applyToOne(
+    transform::TransformRewriter &rewriter, LoopLikeOpInterface target,
+    transform::ApplyToEachResultList &results,
+    transform::TransformState &state) {
+  (void)target.promoteIfSingleIteration(rewriter);
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::LoopPromoteIfOneIterationOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  consumesHandle(getTarget(), effects);
+  modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
 // LoopUnrollOp
 //===----------------------------------------------------------------------===//
 

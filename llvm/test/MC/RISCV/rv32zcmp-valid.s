@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=experimental-zcmp -riscv-no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=zcmp -riscv-no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
-# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=experimental-zcmp < %s \
-# RUN:     | llvm-objdump --mattr=-c,experimental-zcmp -M no-aliases -d -r - \
+# RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=zcmp < %s \
+# RUN:     | llvm-objdump --mattr=-c,zcmp -M no-aliases -d -r - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: cm.mvsa01 s1, s0

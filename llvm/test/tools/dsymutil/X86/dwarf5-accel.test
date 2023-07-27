@@ -1,0 +1,35 @@
+## This test checks that DIE name with stripped template parameters
+## is stored into .debug_name section.
+
+## cat dwarf5-accel.cpp
+##
+## template<typename A> void foo() {};
+##
+## int main ( void ) {
+##   foo<char>();
+##   return 0;
+## }
+
+## $ clang -gdwarf-5 dwarf5-accel.cpp -c -o dwarf5-accel.o
+
+#RUN: dsymutil -accelerator=Dwarf -oso-prepend-path %p/Inputs -y %s -o %t.dSYM
+#COM: Uncomment next line when dwarfdump will handle stripped template names.
+#COM: llvm-dwarfdump --verify  %t.dSYM | FileCheck %s --check-prefix VERIFY
+#RUN: llvm-dwarfdump -a --verbose  %t.dSYM | FileCheck %s
+
+#COM: Uncomment next line when dwarfdump will handle stripped template names.
+#COM: #VERIFY: No errors.
+
+#CHECK: .debug_names
+#CHECK: "foo"
+#CHECK: _Z3fooIcEvv
+#CHECK: "foo<char>"
+
+---
+triple:          'x86_64-apple-darwin'
+objects:
+  - filename:        'dwarf5-accel.o'
+    timestamp:       1676048242
+    symbols:
+      - { sym: _main, objAddr: 0x0000000000000000, binAddr: 0x0000000100000AB0, size: 0x00000008 }
+      - { sym: __Z3fooIcEvv, objAddr: 0x0000000000000020, binAddr: 0x0000000100000BB0, size: 0x00000008 }

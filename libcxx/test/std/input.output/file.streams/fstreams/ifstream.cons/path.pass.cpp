@@ -7,7 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14
-// UNSUPPORTED: no-filesystem
 
 // UNSUPPORTED: availability-filesystem-missing
 
@@ -21,9 +20,10 @@
 // explicit basic_ifstream(const filesystem::path& s,
 //     ios_base::openmode mode = ios_base::in);
 
-#include <fstream>
-#include <filesystem>
 #include <cassert>
+#include <filesystem>
+#include <fstream>
+#include <type_traits>
 
 #include "test_macros.h"
 

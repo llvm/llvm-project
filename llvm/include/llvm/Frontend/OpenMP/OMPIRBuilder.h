@@ -84,11 +84,10 @@ class OpenMPIRBuilderConfig {
 public:
   /// Flag for specifying if the compilation is done for embedded device code
   /// or host code.
-  std::optional<bool> IsEmbedded;
+  std::optional<bool> IsTargetDevice;
 
-  /// Flag for specifying if the compilation is done for an offloading target,
-  /// like GPU.
-  std::optional<bool> IsTargetCodegen;
+  /// Flag for specifying if the compilation is done for an accelerator.
+  std::optional<bool> IsGPU;
 
   /// Flag for specifying weather a requires unified_shared_memory
   /// directive is present or not.
@@ -103,22 +102,22 @@ public:
   std::optional<StringRef> Separator;
 
   OpenMPIRBuilderConfig() {}
-  OpenMPIRBuilderConfig(bool IsEmbedded, bool IsTargetCodegen,
+  OpenMPIRBuilderConfig(bool IsTargetDevice, bool IsGPU,
                         bool HasRequiresUnifiedSharedMemory,
                         bool OpenMPOffloadMandatory)
-      : IsEmbedded(IsEmbedded), IsTargetCodegen(IsTargetCodegen),
+      : IsTargetDevice(IsTargetDevice), IsGPU(IsGPU),
         HasRequiresUnifiedSharedMemory(HasRequiresUnifiedSharedMemory),
         OpenMPOffloadMandatory(OpenMPOffloadMandatory) {}
 
   // Getters functions that assert if the required values are not present.
-  bool isEmbedded() const {
-    assert(IsEmbedded.has_value() && "IsEmbedded is not set");
-    return *IsEmbedded;
+  bool isTargetDevice() const {
+    assert(IsTargetDevice.has_value() && "IsTargetDevice is not set");
+    return *IsTargetDevice;
   }
 
-  bool isTargetCodegen() const {
-    assert(IsTargetCodegen.has_value() && "IsTargetCodegen is not set");
-    return *IsTargetCodegen;
+  bool isGPU() const {
+    assert(IsGPU.has_value() && "IsGPU is not set");
+    return *IsGPU;
   }
 
   bool hasRequiresUnifiedSharedMemory() const {
@@ -132,28 +131,28 @@ public:
            "OpenMPOffloadMandatory is not set");
     return *OpenMPOffloadMandatory;
   }
-  // Returns the FirstSeparator if set, otherwise use the default
-  // separator depending on isTargetCodegen
+  // Returns the FirstSeparator if set, otherwise use the default separator
+  // depending on isGPU
   StringRef firstSeparator() const {
     if (FirstSeparator.has_value())
       return *FirstSeparator;
-    if (isTargetCodegen())
+    if (isGPU())
       return "_";
     return ".";
   }
 
-  // Returns the Separator if set, otherwise use the default
-  // separator depending on isTargetCodegen
+  // Returns the Separator if set, otherwise use the default separator depending
+  // on isGPU
   StringRef separator() const {
     if (Separator.has_value())
       return *Separator;
-    if (isTargetCodegen())
+    if (isGPU())
       return "$";
     return ".";
   }
 
-  void setIsEmbedded(bool Value) { IsEmbedded = Value; }
-  void setIsTargetCodegen(bool Value) { IsTargetCodegen = Value; }
+  void setIsTargetDevice(bool Value) { IsTargetDevice = Value; }
+  void setIsGPU(bool Value) { IsGPU = Value; }
   void setHasRequiresUnifiedSharedMemory(bool Value) {
     HasRequiresUnifiedSharedMemory = Value;
   }
@@ -1189,10 +1188,7 @@ public:
                   AtomicReductionGenTy AtomicReductionGen)
         : ElementType(ElementType), Variable(Variable),
           PrivateVariable(PrivateVariable), ReductionGen(ReductionGen),
-          AtomicReductionGen(AtomicReductionGen) {
-      assert(cast<PointerType>(Variable->getType())
-          ->isOpaqueOrPointeeTypeMatches(ElementType) && "Invalid elem type");
-    }
+          AtomicReductionGen(AtomicReductionGen) {}
 
     /// Reduction element type, must match pointee type of variable.
     Type *ElementType;
@@ -1473,7 +1469,7 @@ public:
   /// <critical_section_name> + ".var" for "omp critical" directives; 2)
   /// <mangled_name_for_global_var> + ".cache." for cache for threadprivate
   /// variables.
-  StringMap<Constant*, BumpPtrAllocator> InternalVars;
+  StringMap<GlobalVariable *, BumpPtrAllocator> InternalVars;
 
   /// Computes the size of type in bytes.
   Value *getSizeInBytes(Value *BasePtr);
@@ -1533,7 +1529,6 @@ public:
 
   /// Container for the arguments used to pass data to the runtime library.
   struct TargetDataRTArgs {
-    explicit TargetDataRTArgs() {}
     /// The array of base pointer passed to the runtime library.
     Value *BasePointersArray = nullptr;
     /// The array of section pointers passed to the runtime library.
@@ -1553,7 +1548,52 @@ public:
     /// The array of original declaration names of mapped pointers sent to the
     /// runtime library for debugging
     Value *MapNamesArray = nullptr;
+
+    explicit TargetDataRTArgs() {}
+    explicit TargetDataRTArgs(Value *BasePointersArray, Value *PointersArray,
+                              Value *SizesArray, Value *MapTypesArray,
+                              Value *MapTypesArrayEnd, Value *MappersArray,
+                              Value *MapNamesArray)
+        : BasePointersArray(BasePointersArray), PointersArray(PointersArray),
+          SizesArray(SizesArray), MapTypesArray(MapTypesArray),
+          MapTypesArrayEnd(MapTypesArrayEnd), MappersArray(MappersArray),
+          MapNamesArray(MapNamesArray) {}
   };
+
+  /// Data structure that contains the needed information to construct the
+  /// kernel args vector.
+  struct TargetKernelArgs {
+    /// Number of arguments passed to the runtime library.
+    unsigned NumTargetItems;
+    /// Arguments passed to the runtime library
+    TargetDataRTArgs RTArgs;
+    /// The number of iterations
+    Value *NumIterations;
+    /// The number of teams.
+    Value *NumTeams;
+    /// The number of threads.
+    Value *NumThreads;
+    /// The size of the dynamic shared memory.
+    Value *DynCGGroupMem;
+    /// True if the kernel has 'no wait' clause.
+    bool HasNoWait;
+
+    /// Constructor for TargetKernelArgs
+    TargetKernelArgs(unsigned NumTargetItems, TargetDataRTArgs RTArgs,
+                     Value *NumIterations, Value *NumTeams, Value *NumThreads,
+                     Value *DynCGGroupMem, bool HasNoWait)
+        : NumTargetItems(NumTargetItems), RTArgs(RTArgs),
+          NumIterations(NumIterations), NumTeams(NumTeams),
+          NumThreads(NumThreads), DynCGGroupMem(DynCGGroupMem),
+          HasNoWait(HasNoWait) {}
+  };
+
+  /// Create the kernel args vector used by emitTargetKernel. This function
+  /// creates various constant values that are used in the resulting args
+  /// vector.
+  static void getKernelArgsVector(TargetKernelArgs &KernelArgs,
+                                  IRBuilderBase &Builder,
+                                  SmallVector<Value *> &ArgsVector);
 
   /// Struct that keeps the information that should be kept throughout
   /// a 'target data' region.
@@ -1566,6 +1606,9 @@ public:
 
   public:
     TargetDataRTArgs RTArgs;
+
+    SmallMapVector<const Value *, std::pair<Value *, Value *>, 4>
+        DevicePtrInfoMap;
 
     /// Indicate whether any user-defined mapper exists.
     bool HasMapper = false;
@@ -1593,7 +1636,9 @@ public:
     bool separateBeginEndCalls() { return SeparateBeginEndCalls; }
   };
 
+  enum class DeviceInfoTy { None, Pointer, Address };
   using MapValuesArrayTy = SmallVector<Value *, 4>;
+  using MapDeviceInfoArrayTy = SmallVector<DeviceInfoTy, 4>;
   using MapFlagsArrayTy = SmallVector<omp::OpenMPOffloadMappingFlags, 4>;
   using MapNamesArrayTy = SmallVector<Constant *, 4>;
   using MapDimArrayTy = SmallVector<uint64_t, 4>;
@@ -1612,6 +1657,7 @@ public:
     };
     MapValuesArrayTy BasePointers;
     MapValuesArrayTy Pointers;
+    MapDeviceInfoArrayTy DevicePointers;
     MapValuesArrayTy Sizes;
     MapFlagsArrayTy Types;
     MapNamesArrayTy Names;
@@ -1622,6 +1668,8 @@ public:
       BasePointers.append(CurInfo.BasePointers.begin(),
                           CurInfo.BasePointers.end());
       Pointers.append(CurInfo.Pointers.begin(), CurInfo.Pointers.end());
+      DevicePointers.append(CurInfo.DevicePointers.begin(),
+                            CurInfo.DevicePointers.end());
       Sizes.append(CurInfo.Sizes.begin(), CurInfo.Sizes.end());
       Types.append(CurInfo.Types.begin(), CurInfo.Types.end());
       Names.append(CurInfo.Names.begin(), CurInfo.Names.end());
@@ -1635,6 +1683,28 @@ public:
                                    CurInfo.NonContigInfo.Strides.end());
     }
   };
+
+  /// Callback function type for functions emitting the host fallback code that
+  /// is executed when the kernel launch fails. It takes an insertion point as
+  /// parameter where the code should be emitted. It returns an insertion point
+  /// that points right after after the emitted code.
+  using EmitFallbackCallbackTy = function_ref<InsertPointTy(InsertPointTy)>;
+
+  /// Generate a target region entry call and host fallback call.
+  ///
+  /// \param Loc The location at which the request originated and is fulfilled.
+  /// \param OutlinedFn The outlined kernel function.
+  /// \param OutlinedFnID The ooulined function ID.
+  /// \param EmitTargetCallFallbackCB Call back function to generate host
+  ///        fallback code.
+  /// \param Args Data structure holding information about the kernel arguments.
+  /// \param DeviceID Identifier for the device via the 'device' clause.
+  /// \param RTLoc Source location identifier
+  /// \param AllocaIP The insertion point to be used for alloca instructions.
+  InsertPointTy emitKernelLaunch(
+      const LocationDescription &Loc, Function *OutlinedFn, Value *OutlinedFnID,
+      EmitFallbackCallbackTy EmitTargetCallFallbackCB, TargetKernelArgs &Args,
+      Value *DeviceID, Value *RTLoc, InsertPointTy AllocaIP);
 
   /// Emit the arguments to be passed to the runtime library based on the
   /// arrays of base pointers, pointers, sizes, map types, and mappers.  If
@@ -1658,7 +1728,7 @@ public:
   void emitOffloadingArrays(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP, MapInfosTy &CombinedInfo,
       TargetDataInfo &Info, bool IsNonContiguous = false,
-      function_ref<void(unsigned int, Value *, Value *)> DeviceAddrCB = nullptr,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
       function_ref<Value *(unsigned int)> CustomMapperCB = nullptr);
 
   /// Creates offloading entry for the provided entry ID \a ID, address \a
@@ -1927,8 +1997,7 @@ public:
   /// Create a runtime call for kmpc_target_deinit
   ///
   /// \param Loc The insert and source location description.
-  /// \param IsSPMD Flag to indicate if the kernel is an SPMD kernel or not.
-  void createTargetDeinit(const LocationDescription &Loc, bool IsSPMD);
+  void createTargetDeinit(const LocationDescription &Loc);
 
   ///}
 
@@ -2032,6 +2101,10 @@ public:
   /// \param Info Stores all information realted to the Target Data directive.
   /// \param GenMapInfoCB Callback that populates the MapInfos and returns.
   /// \param BodyGenCB Optional Callback to generate the region code.
+  /// \param DeviceAddrCB Optional callback to generate code related to
+  /// use_device_ptr and use_device_addr.
+  /// \param CustomMapperCB Optional callback to generate code related to
+  /// custom mappers.
   OpenMPIRBuilder::InsertPointTy createTargetData(
       const LocationDescription &Loc, InsertPointTy AllocaIP,
       InsertPointTy CodeGenIP, Value *DeviceID, Value *IfCond,
@@ -2040,7 +2113,10 @@ public:
       omp::RuntimeFunction *MapperFunc = nullptr,
       function_ref<InsertPointTy(InsertPointTy CodeGenIP,
                                  BodyGenTy BodyGenType)>
-          BodyGenCB = nullptr);
+          BodyGenCB = nullptr,
+      function_ref<void(unsigned int, Value *)> DeviceAddrCB = nullptr,
+      function_ref<Value *(unsigned int)> CustomMapperCB = nullptr,
+      Value *SrcLocInfo = nullptr);
 
   using TargetBodyGenCallbackTy = function_ref<InsertPointTy(
       InsertPointTy AllocaIP, InsertPointTy CodeGenIP)>;

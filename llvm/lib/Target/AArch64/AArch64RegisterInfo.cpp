@@ -85,8 +85,16 @@ AArch64RegisterInfo::getCalleeSavedRegs(const MachineFunction *MF) const {
 
   if (MF->getFunction().getCallingConv() == CallingConv::CFGuard_Check)
     return CSR_Win_AArch64_CFGuard_Check_SaveList;
-  if (MF->getSubtarget<AArch64Subtarget>().isTargetWindows())
+  if (MF->getSubtarget<AArch64Subtarget>().isTargetWindows()) {
+    if (MF->getSubtarget<AArch64Subtarget>().getTargetLowering()
+            ->supportSwiftError() &&
+        MF->getFunction().getAttributes().hasAttrSomewhere(
+            Attribute::SwiftError))
+      return CSR_Win_AArch64_AAPCS_SwiftError_SaveList;
+    if (MF->getFunction().getCallingConv() == CallingConv::SwiftTail)
+      return CSR_Win_AArch64_AAPCS_SwiftTail_SaveList;
     return CSR_Win_AArch64_AAPCS_SaveList;
+  }
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_VectorCall)
     return CSR_AArch64_AAVPCS_SaveList;
   if (MF->getFunction().getCallingConv() == CallingConv::AArch64_SVE_VectorCall)

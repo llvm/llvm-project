@@ -258,14 +258,14 @@ func.func @async_cp(
   // CHECK-DAG: %[[FI4:.*]] = llvm.add %[[FI3]], %[[IDX1]]  : i64
   // CHECK-DAG: %[[ADDRESSSRC:.*]] = llvm.getelementptr %[[BASESRC]][%[[FI4]]] : (!llvm.ptr, i64) -> !llvm.ptr
   // CHECK-DAG: %[[CAST2:.*]] = llvm.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
-  // CHECK-DAG: nvvm.cp.async.shared.global %[[ADDRESSDST]], %[[CAST2]], 16
+  // CHECK-DAG: nvvm.cp.async.shared.global %[[ADDRESSDST]], %[[CAST2]], 16, cache = ca
   %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 4 : memref<128x128xf32> to memref<3x16x128xf32, 3>
   // CHECK: nvvm.cp.async.commit.group
   %1 = nvgpu.device_async_create_group %0
   // CHECK: nvvm.cp.async.wait.group 1
   nvgpu.device_async_wait %1 { numGroups = 1 : i32 }
 
-  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16 {bypass_l1}
+  // CHECK: nvvm.cp.async.shared.global %{{.*}}, %{{.*}}, 16, cache = cg
   %2 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 4 {bypassL1}: memref<128x128xf32> to memref<3x16x128xf32, 3>
   return
 }
@@ -288,7 +288,7 @@ func.func @async_cp_i4(
   // CHECK-DAG: %[[FI3:.*]] = llvm.add %[[FI2]], %[[IDX1]]  : i64
   // CHECK-DAG: %[[ADDRESSSRC:.*]] = llvm.getelementptr %[[BASESRC]][%[[FI3]]] : (!llvm.ptr, i64) -> !llvm.ptr
   // CHECK-DAG: %[[CAST2:.*]] = llvm.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
-  // CHECK-DAG: nvvm.cp.async.shared.global %[[ADDRESSDST]], %[[CAST2]], 16
+  // CHECK-DAG: nvvm.cp.async.shared.global %[[ADDRESSDST]], %[[CAST2]], 16, cache = ca
   %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i], 32 : memref<128x64xi4> to memref<128x128xi4, 3>
   return %0 : !nvgpu.device.async.token
 }
@@ -296,11 +296,31 @@ func.func @async_cp_i4(
 // -----
 
 // CHECK-LABEL: @async_cp_zfill_f32_align4(
-// CHECK-SAME: %[[IDX:[a-zA-Z0-9_]+]]: index, %[[SRCELEMENTS:[a-zA-Z0-9_]+]]: index)
+// CHECK-SAME: %[[IDX:[a-zA-Z0-9_]+]]: index, %[[SRCELEMENTS:[a-zA-Z0-9_]+]]: index
 func.func @async_cp_zfill_f32_align4(
   %src: memref<128x128xf32>, %dst: memref<3x16x128xf32, 3>, %i : index, %srcElements : index) {
-  // CHECK-DAG: %[[DSTBYTES:.*]] = llvm.mlir.constant(16 : i32) : i32
-  // CHECK-DAG: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.cg.shared.global [$0], [$1], $2, $3;\0A", "r,l,n,r" %[[DSTPTR:.*]], %[[SRCPTR:.*]], %[[DSTBYTES]], %[[SRCBYTES:.*]] : (!llvm.ptr<3>, !llvm.ptr<1>, i32, i32) -> !llvm.void
+  // CHECK: %[[IDX1:.*]] = builtin.unrealized_conversion_cast %[[IDX]] : index to i64
+  // CHECK: %[[SRC1:.*]] = builtin.unrealized_conversion_cast %[[SRCELEMENTS]] : index to i64
+  // CHECK-DAG: %[[BASEDST:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>                                   
+  // CHECK-DAG: %[[S2048:.*]] = llvm.mlir.constant(2048 : index) : i64
+  // CHECK-DAG: %[[LI1:.*]] = llvm.mul %[[IDX1]], %[[S2048]] : i64
+  // CHECK-DAG: %[[S0:.*]] = llvm.mlir.constant(128 : index) : i64
+  // CHECK-DAG: %[[LI:.*]] = llvm.mul %[[IDX1]], %[[S0]] : i64
+  // CHECK-DAG: %[[FI1:.*]] = llvm.add %[[LI1]], %[[LI]] : i64
+  // CHECK-DAG: %[[FI2:.*]] = llvm.add %[[FI1]], %[[IDX1]] : i64
+  // CHECK-DAG: %[[ADDRESSDST:.*]] = llvm.getelementptr %[[BASEDST]][%[[FI2]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+  // CHECK-DAG: %[[BASESRC:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> 
+  // CHECK-DAG: %[[S2:.*]] = llvm.mlir.constant(128 : index) : i64
+  // CHECK-DAG: %[[FI2:.*]] = llvm.mul %[[IDX1]], %[[S2]]  : i64
+  // CHECK-DAG: %[[FI3:.*]] = llvm.add %[[FI2]], %[[IDX1]]  : i64
+  // CHECK-DAG: %[[ADDRESSSRC:.*]] = llvm.getelementptr %[[BASESRC]][%[[FI3]]] : (!llvm.ptr, i64) -> !llvm.ptr
+  // CHECK-DAG: %[[CAST2:.*]] = llvm.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
+  // CHECK-DAG: %[[c1:.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK-DAG: %[[c2:.*]] = llvm.mlir.constant(32 : i32) : i32
+  // CHECK-DAG: %[[c3:.*]] = llvm.trunc %[[SRC1]] : i64 to i32  
+  // CHECK-DAG: %[[c4:.*]] = llvm.mul %[[c2]], %[[c3]] : i32
+  // CHECK-DAG: %[[c5:.*]] = llvm.lshr %[[c4]], %[[c1]] : i32
+  // CHECK-DAG: nvvm.cp.async.shared.global %[[ADDRESSDST]], %[[CAST2]], 16, cache = cg, %[[c5]]
   %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 4, %srcElements {bypassL1}: memref<128x128xf32> to memref<3x16x128xf32, 3>
   // CHECK: nvvm.cp.async.commit.group
   %1 = nvgpu.device_async_create_group %0
@@ -316,9 +336,29 @@ func.func @async_cp_zfill_f32_align4(
 // CHECK-SAME: %[[IDX:[a-zA-Z0-9_]+]]: index, %[[SRCELEMENTS:[a-zA-Z0-9_]+]]: index)
 func.func @async_cp_zfill_f32_align1(
   %src: memref<128x128xf32>, %dst: memref<3x16x128xf32, 3>, %i : index, %srcElements : index) {
-  // CHECK-DAG: %[[DSTBYTES:.*]] = llvm.mlir.constant(4 : i32) : i32
-  // CHECK-DAG: llvm.inline_asm has_side_effects asm_dialect = att "cp.async.ca.shared.global [$0], [$1], $2, $3;\0A", "r,l,n,r" %[[DSTPTR:.*]], %[[SRCPTR:.*]], %[[DSTBYTES]], %[[SRCBYTES:.*]] : (!llvm.ptr<3>, !llvm.ptr<1>, i32, i32) -> !llvm.void
-  %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 1, %srcElements {bypassL1}: memref<128x128xf32> to memref<3x16x128xf32, 3>
+    // CHECK: %[[IDX1:.*]] = builtin.unrealized_conversion_cast %[[IDX]] : index to i64
+  // CHECK: %[[SRC1:.*]] = builtin.unrealized_conversion_cast %[[SRCELEMENTS]] : index to i64
+  // CHECK-DAG: %[[BASEDST:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<3 x i64>, array<3 x i64>)>                                   
+  // CHECK-DAG: %[[S2048:.*]] = llvm.mlir.constant(2048 : index) : i64
+  // CHECK-DAG: %[[LI1:.*]] = llvm.mul %[[IDX1]], %[[S2048]] : i64
+  // CHECK-DAG: %[[S0:.*]] = llvm.mlir.constant(128 : index) : i64
+  // CHECK-DAG: %[[LI:.*]] = llvm.mul %[[IDX1]], %[[S0]] : i64
+  // CHECK-DAG: %[[FI1:.*]] = llvm.add %[[LI1]], %[[LI]] : i64
+  // CHECK-DAG: %[[FI2:.*]] = llvm.add %[[FI1]], %[[IDX1]] : i64
+  // CHECK-DAG: %[[ADDRESSDST:.*]] = llvm.getelementptr %[[BASEDST]][%[[FI2]]] : (!llvm.ptr<3>, i64) -> !llvm.ptr<3>, f32
+  // CHECK-DAG: %[[BASESRC:.*]] = llvm.extractvalue %{{.*}}[1] : !llvm.struct<(ptr, ptr, i64, array<2 x i64>, array<2 x i64>)> 
+  // CHECK-DAG: %[[S2:.*]] = llvm.mlir.constant(128 : index) : i64
+  // CHECK-DAG: %[[FI2:.*]] = llvm.mul %[[IDX1]], %[[S2]]  : i64
+  // CHECK-DAG: %[[FI3:.*]] = llvm.add %[[FI2]], %[[IDX1]]  : i64
+  // CHECK-DAG: %[[ADDRESSSRC:.*]] = llvm.getelementptr %[[BASESRC]][%[[FI3]]] : (!llvm.ptr, i64) -> !llvm.ptr
+  // CHECK-DAG: %[[CAST2:.*]] = llvm.addrspacecast %[[ADDRESSSRC]] : !llvm.ptr to !llvm.ptr<1>
+  // CHECK-DAG: %[[c1:.*]] = llvm.mlir.constant(3 : i32) : i32
+  // CHECK-DAG: %[[c2:.*]] = llvm.mlir.constant(32 : i32) : i32
+  // CHECK-DAG: %[[c3:.*]] = llvm.trunc %[[SRC1]] : i64 to i32  
+  // CHECK-DAG: %[[c4:.*]] = llvm.mul %[[c2]], %[[c3]] : i32
+  // CHECK-DAG: %[[c5:.*]] = llvm.lshr %[[c4]], %[[c1]] : i32
+  // CHECK-DAG: nvvm.cp.async.shared.global %[[ADDRESSDST]], %[[CAST2]], 4, cache = ca, %[[c5]]
+  %0 = nvgpu.device_async_copy %src[%i, %i], %dst[%i, %i, %i], 1, %srcElements : memref<128x128xf32> to memref<3x16x128xf32, 3>
   // CHECK: nvvm.cp.async.commit.group
   %1 = nvgpu.device_async_create_group %0
   // CHECK: nvvm.cp.async.wait.group 1
@@ -462,4 +502,148 @@ func.func @mma_sp_sync_i8_16864(%arg0: vector<4x4xi8>,
   %d = nvgpu.mma.sp.sync(%arg0, %arg1, %arg2) metadata(%arg3) {mmaShape = [16, 8, 64]} :
     (vector<4x4xi8>, vector<4x4xi8>, vector<2x2xi32>) -> vector<2x2xi32>
   return %d : vector<2x2xi32>
+}
+
+// -----
+!barrierType = !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+!tokenType = !nvgpu.mbarrier.token
+
+// CHECK-LABEL: func @mbarrier
+func.func @mbarrier() {
+  %num_threads = arith.constant 128 : index
+
+  // CHECK: %[[barMemref:.+]] = memref.get_global @__mbarrier : memref<1xi64, 3>
+  %barrier = nvgpu.mbarrier.create -> !barrierType
+
+  // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[barPtr:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: nvvm.mbarrier.init.shared %[[barPtr]]
+  nvgpu.mbarrier.init %barrier, %num_threads : !barrierType
+  
+  // CHECK: %[[barPtr2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[token:.+]] = nvvm.mbarrier.arrive.shared %[[barPtr2]]
+  %token = nvgpu.mbarrier.arrive %barrier : !barrierType -> !tokenType
+    
+  // CHECK: %[[barPtr3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: nvvm.mbarrier.test.wait.shared %[[barPtr3]], %[[token]]
+  %isDone = nvgpu.mbarrier.test.wait %barrier, %token : !barrierType, !tokenType
+
+  func.return 
+}
+
+// -----
+!barrierType = !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+!tokenType = !nvgpu.mbarrier.token
+
+// CHECK-LABEL: func @mbarrier_nocomplete
+func.func @mbarrier_nocomplete() {
+  %num_threads = arith.constant 128 : index
+  %count = arith.constant 12 : index
+
+  // CHECK: %[[barMemref:.+]] = memref.get_global @__mbarrier : memref<1xi64, 3>
+  %barrier = nvgpu.mbarrier.create -> !barrierType
+
+  // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+  // CHECK: %[[barPtr:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: nvvm.mbarrier.init.shared %[[barPtr]]
+  nvgpu.mbarrier.init %barrier, %num_threads : !barrierType
+  
+  // CHECK: %[[barPtr2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: %[[token:.+]] = nvvm.mbarrier.arrive.nocomplete.shared %[[barPtr2]]
+  %token = nvgpu.mbarrier.arrive.nocomplete %barrier, %count : !barrierType -> !tokenType
+    
+  // CHECK: %[[barPtr3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+  // CHECK: nvvm.mbarrier.test.wait.shared %[[barPtr3]], %[[token]]
+  %isDone = nvgpu.mbarrier.test.wait %barrier, %token : !barrierType, !tokenType
+
+  func.return 
+}
+
+// -----
+!barrierType = !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+!tokenType = !nvgpu.mbarrier.token
+
+// CHECK-LABEL: func @mbarrier_txcount
+func.func @mbarrier_txcount() {
+      %num_threads = arith.constant 128 : index
+
+    // CHECK: %[[barMemref:.+]] = memref.get_global @__mbarrier : memref<1xi64, 3>
+    %barrier = nvgpu.mbarrier.create -> !barrierType
+
+    // CHECK: %[[barStr:.+]] =  builtin.unrealized_conversion_cast %[[barMemref]] : memref<1xi64, 3> to !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)>
+    // CHECK: %[[barPtr:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+    // CHECK: nvvm.mbarrier.init.shared %[[barPtr]]
+    nvgpu.mbarrier.init %barrier, %num_threads : !barrierType
+    
+    %c0 = arith.constant 0 : index  
+    %tidxreg = nvvm.read.ptx.sreg.tid.x : i32
+    %tidx = arith.index_cast %tidxreg : i32 to index
+    %cnd = arith.cmpi eq, %tidx, %c0 : index  
+
+    scf.if %cnd {
+      %txcount = arith.constant 256 : index
+      // CHECK: %[[barPtr2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+      // CHECK: nvvm.mbarrier.arrive.expect_tx.shared %[[barPtr2]]
+      nvgpu.mbarrier.arrive.expect_tx %barrier, %txcount : !barrierType
+      scf.yield 
+    } else {
+      %txcount = arith.constant 0 : index
+      // CHECK: %[[barPtr2:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+      // CHECK: nvvm.mbarrier.arrive.expect_tx.shared %[[barPtr2]]
+      nvgpu.mbarrier.arrive.expect_tx %barrier, %txcount : !barrierType
+      scf.yield 
+    }
+      
+
+    %phase = arith.constant 0 : index
+    %ticks = arith.constant 10000000 : index
+    // CHECK: %[[barPtr3:.+]] = llvm.extractvalue %[[barStr]][1] : !llvm.struct<(ptr<3>, ptr<3>, i64, array<1 x i64>, array<1 x i64>)> 
+    // CHECK: nvvm.mbarrier.try_wait.parity.shared %[[barPtr3]]
+    nvgpu.mbarrier.try_wait.parity %barrier, %phase, %ticks : !barrierType
+
+    func.return 
+}
+
+// -----
+
+// CHECK-LABEL: func @async_tma_load
+!tensorMap1d = !nvgpu.tensormap.descriptor<tensor = memref<128xf32,3>,         swizzle=none,        l2promo = none,        oob = nan,  interleave = none>
+!tensorMap2d = !nvgpu.tensormap.descriptor<tensor = memref<32x32xf32,3>,       swizzle=swizzle_32b, l2promo = none,        oob = zero, interleave = none>
+!tensorMap3d = !nvgpu.tensormap.descriptor<tensor = memref<2x32x32xf32,3>,     swizzle=swizzle_64b, l2promo = l2promo_64b, oob = zero, interleave = none>
+!tensorMap4d = !nvgpu.tensormap.descriptor<tensor = memref<2x2x32x32xf32,3>,   swizzle=swizzle_128b,l2promo = l2promo_128b,oob = zero, interleave = interleave_16b>
+!tensorMap5d = !nvgpu.tensormap.descriptor<tensor = memref<2x2x2x32x32xf32,3>, swizzle=none,        l2promo = none,        oob = zero, interleave = none>
+!mbarrier = !nvgpu.mbarrier.barrier<memorySpace = #gpu.address_space<workgroup>>
+func.func @async_tma_load(%tensorMap1d: !tensorMap1d, %tensorMap2d: !tensorMap2d, %tensorMap3d: !tensorMap3d, %tensorMap4d: !tensorMap4d, %tensorMap5d: !tensorMap5d, 
+                              %buffer1d: memref<128xf32,3>,      
+                              %buffer2d: memref<32x32xf32,3>,    
+                              %buffer3d: memref<2x32x32xf32,3>,  
+                              %buffer4d: memref<2x2x32x32xf32,3>,  
+                              %buffer5d: memref<2x2x2x32x32xf32,3>,
+                              %mbarrier: !mbarrier) {
+  %crd0 = arith.constant 0 : index
+  %crd1 = arith.constant 0 : index
+  // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}}, box[%{{.*}}] 
+  nvgpu.tma.async.load %tensorMap1d[%crd0], %mbarrier to %buffer1d : !tensorMap1d, !mbarrier -> memref<128xf32,3>
+  // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}}, box[%{{.*}}, %{{.*}}] 
+  nvgpu.tma.async.load %tensorMap2d[%crd0, %crd1], %mbarrier to %buffer2d : !tensorMap2d, !mbarrier -> memref<32x32xf32,3>
+  // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}}, box[%{{.*}}, %{{.*}}, %{{.*}}] 
+  nvgpu.tma.async.load %tensorMap3d[%crd0, %crd1, %crd0], %mbarrier to %buffer3d : !tensorMap3d, !mbarrier -> memref<2x32x32xf32,3>
+  // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}}, box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] 
+  nvgpu.tma.async.load %tensorMap4d[%crd0, %crd1, %crd1, %crd0], %mbarrier to %buffer4d : !tensorMap4d, !mbarrier -> memref<2x2x32x32xf32,3>
+  // CHECK: nvvm.cp.async.bulk.tensor.shared.cluster.global %{{.*}}, %{{.*}}, %{{.*}}, box[%{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}] 
+  nvgpu.tma.async.load %tensorMap5d[%crd0, %crd1, %crd1, %crd0, %crd0], %mbarrier to %buffer5d : !tensorMap5d, !mbarrier -> memref<2x2x2x32x32xf32,3>
+  func.return 
+}
+
+func.func @create_tensor_map(%devicePtr2d : memref<64x128xf32>, %devicePtr1d : memref<128xf32>) {
+  %crd0 = arith.constant 64 : index
+  %crd1 = arith.constant 128 : index
+  %devicePtr2d_unranked = memref.cast %devicePtr2d : memref<64x128xf32> to memref<*xf32>
+  // CHECK : llvm.call @mgpuTensorMapEncodeTiledMemref
+  %tensorMap2d = nvgpu.tma.create.descriptor %devicePtr2d_unranked box[%crd0, %crd1] : memref<*xf32> -> !tensorMap2d
+
+  %devicePtr1d_unranked = memref.cast %devicePtr1d : memref<128xf32> to memref<*xf32>
+  // CHECK : llvm.call @mgpuTensorMapEncodeTiledMemref
+  %tensorMap1d = nvgpu.tma.create.descriptor %devicePtr1d_unranked box[%crd1] : memref<*xf32> -> !tensorMap1d
+  func.return
 }

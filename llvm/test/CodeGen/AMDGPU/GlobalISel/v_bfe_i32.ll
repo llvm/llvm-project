@@ -16,7 +16,6 @@ define i32 @check_v_bfe(i16 %a) {
 ; GFX10PLUS-LABEL: check_v_bfe:
 ; GFX10PLUS:       ; %bb.0: ; %entry
 ; GFX10PLUS-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10PLUS-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10PLUS-NEXT:    v_bfe_i32 v0, v0, 0, 16
 ; GFX10PLUS-NEXT:    s_setpc_b64 s[30:31]
 entry:

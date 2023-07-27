@@ -46,18 +46,22 @@ Operation *TensorDialect::materializeConstant(OpBuilder &builder,
   return nullptr;
 }
 
+OpFoldResult tensor::getMixedSize(OpBuilder &builder, Location loc, Value value,
+                                  int64_t dim) {
+  auto tensorType = llvm::cast<RankedTensorType>(value.getType());
+  SmallVector<OpFoldResult> result;
+  if (tensorType.isDynamicDim(dim))
+    return builder.createOrFold<tensor::DimOp>(loc, value, dim);
+
+  return builder.getIndexAttr(tensorType.getDimSize(dim));
+}
+
 SmallVector<OpFoldResult> tensor::getMixedSizes(OpBuilder &builder,
                                                 Location loc, Value value) {
   auto tensorType = llvm::cast<RankedTensorType>(value.getType());
   SmallVector<OpFoldResult> result;
-  for (int64_t i = 0; i < tensorType.getRank(); ++i) {
-    if (tensorType.isDynamicDim(i)) {
-      Value size = builder.create<tensor::DimOp>(loc, value, i);
-      result.push_back(size);
-    } else {
-      result.push_back(builder.getIndexAttr(tensorType.getDimSize(i)));
-    }
-  }
+  for (int64_t i = 0; i < tensorType.getRank(); ++i)
+    result.push_back(getMixedSize(builder, loc, value, i));
   return result;
 }
 
@@ -1211,6 +1215,14 @@ struct StaticTensorGenerate : public OpRewritePattern<GenerateOp> {
     SmallVector<int64_t> newShape;
     operandsAndShape(resultType, dynamicExtents, newOperands, newShape);
 
+    for (int64_t newdim : newShape) {
+      // This check also occurs in the verifier, but we need it here too
+      // since intermediate passes may have some replaced dynamic dimensions
+      // by constants.
+      if (newdim < 0 && !ShapedType::isDynamic(newdim))
+        return failure();
+    }
+
     if (newOperands.size() == tensorFromElements.getDynamicExtents().size())
       return failure();
 
@@ -2122,7 +2134,8 @@ static Value foldExtractAfterInsertSlice(ExtractSliceOp extractOp) {
 }
 
 OpFoldResult ExtractSliceOp::fold(FoldAdaptor adaptor) {
-  if (auto splat = llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
+  if (auto splat =
+          llvm::dyn_cast_if_present<SplatElementsAttr>(adaptor.getSource())) {
     auto resultType = llvm::cast<ShapedType>(getResult().getType());
     if (resultType.hasStaticShape())
       return splat.resizeSplat(resultType);
@@ -2283,15 +2296,7 @@ OpFoldResult InsertSliceOp::fold(FoldAdaptor) {
 LogicalResult InsertSliceOp::reifyResultShapes(
     OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
-  for (auto dim : llvm::seq<int64_t>(0, getType().getRank())) {
-    if (getType().isDynamicDim(dim)) {
-      reifiedReturnShapes[0][dim] =
-          builder.createOrFold<tensor::DimOp>(getLoc(), getDest(), dim);
-    } else {
-      reifiedReturnShapes[0][dim] =
-          builder.getIndexAttr(getType().getDimSize(dim));
-    }
-  }
+  reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
   return success();
 }
 
@@ -3254,16 +3259,8 @@ reifyResultShapesImpl(OpTy op, OpBuilder &builder,
                 "applies to only pack or unpack operations");
   int64_t destRank = op.getDestRank();
   reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(destRank));
-  ShapedType resultType = llvm::cast<ShapedType>(op.getResult().getType());
-  for (auto dim : llvm::seq<int64_t>(0, destRank)) {
-    if (resultType.isDynamicDim(dim)) {
-      reifiedReturnShapes[0][dim] =
-          builder.createOrFold<tensor::DimOp>(op.getLoc(), op.getDest(), dim);
-    } else {
-      reifiedReturnShapes[0][dim] =
-          builder.getIndexAttr(resultType.getDimSize(dim));
-    }
-  }
+  reifiedReturnShapes[0] =
+      tensor::getMixedSizes(builder, op.getLoc(), op.getDest());
   return success();
 }
 

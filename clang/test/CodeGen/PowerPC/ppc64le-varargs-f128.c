@@ -9,7 +9,7 @@
 // RUN:   -target-feature +float128 -mabi=ieeelongdouble -fopenmp \
 // RUN:   -fopenmp-targets=ppc64le -o %t-ppc-host.bc
 // RUN: %clang_cc1 -triple ppc64le -aux-triple ppc64le %s -target-cpu pwr9 \
-// RUN:   -target-feature +float128 -fopenmp -fopenmp-is-device -emit-llvm \
+// RUN:   -target-feature +float128 -fopenmp -fopenmp-is-target-device -emit-llvm \
 // RUN:   -fopenmp-host-ir-file-path %t-ppc-host.bc -o - | FileCheck %s \
 // RUN:   -check-prefix=OMP-TARGET
 // RUN: %clang_cc1 -triple ppc64le %t-ppc-host.bc -emit-llvm -o - | FileCheck %s \

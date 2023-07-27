@@ -193,6 +193,7 @@ uint64_t ObjFile::calcNewValue(const WasmRelocation &reloc, uint64_t tombstone,
   case R_WASM_TYPE_INDEX_LEB:
     return typeMap[reloc.Index];
   case R_WASM_FUNCTION_INDEX_LEB:
+  case R_WASM_FUNCTION_INDEX_I32:
     return getFunctionSymbol(reloc.Index)->getFunctionIndex();
   case R_WASM_GLOBAL_INDEX_LEB:
   case R_WASM_GLOBAL_INDEX_I32:

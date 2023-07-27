@@ -1593,7 +1593,6 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
                    Instruction *InsertBef)
     : UnaryInstruction(Ty, Load, Ptr, InsertBef) {
-  assert(cast<PointerType>(Ptr->getType())->isOpaqueOrPointeeTypeMatches(Ty));
   setVolatile(isVolatile);
   setAlignment(Align);
   setAtomic(Order, SSID);
@@ -1605,7 +1604,6 @@ LoadInst::LoadInst(Type *Ty, Value *Ptr, const Twine &Name, bool isVolatile,
                    Align Align, AtomicOrdering Order, SyncScope::ID SSID,
                    BasicBlock *InsertAE)
     : UnaryInstruction(Ty, Load, Ptr, InsertAE) {
-  assert(cast<PointerType>(Ptr->getType())->isOpaqueOrPointeeTypeMatches(Ty));
   setVolatile(isVolatile);
   setAlignment(Align);
   setAtomic(Order, SSID);
@@ -1621,9 +1619,6 @@ void StoreInst::AssertOK() {
   assert(getOperand(0) && getOperand(1) && "Both operands must be non-null!");
   assert(getOperand(1)->getType()->isPointerTy() &&
          "Ptr must have pointer type!");
-  assert(cast<PointerType>(getOperand(1)->getType())
-             ->isOpaqueOrPointeeTypeMatches(getOperand(0)->getType()) &&
-         "Ptr must be a pointer to Val type!");
 }
 
 StoreInst::StoreInst(Value *val, Value *addr, Instruction *InsertBefore)
@@ -1703,12 +1698,6 @@ void AtomicCmpXchgInst::Init(Value *Ptr, Value *Cmp, Value *NewVal,
          "All operands must be non-null!");
   assert(getOperand(0)->getType()->isPointerTy() &&
          "Ptr must have pointer type!");
-  assert(cast<PointerType>(getOperand(0)->getType())
-             ->isOpaqueOrPointeeTypeMatches(getOperand(1)->getType()) &&
-         "Ptr must be a pointer to Cmp type!");
-  assert(cast<PointerType>(getOperand(0)->getType())
-             ->isOpaqueOrPointeeTypeMatches(getOperand(2)->getType()) &&
-         "Ptr must be a pointer to NewVal type!");
   assert(getOperand(1)->getType() == getOperand(2)->getType() &&
          "Cmp type and NewVal type must be same!");
 }
@@ -1761,9 +1750,6 @@ void AtomicRMWInst::Init(BinOp Operation, Value *Ptr, Value *Val,
          "All operands must be non-null!");
   assert(getOperand(0)->getType()->isPointerTy() &&
          "Ptr must have pointer type!");
-  assert(cast<PointerType>(getOperand(0)->getType())
-             ->isOpaqueOrPointeeTypeMatches(getOperand(1)->getType()) &&
-         "Ptr must be a pointer to Val type!");
   assert(Ordering != AtomicOrdering::NotAtomic &&
          "AtomicRMW instructions must be atomic!");
 }
@@ -2621,7 +2607,7 @@ static bool isReplicationMaskWithParams(ArrayRef<int> Mask,
   assert(Mask.size() == (unsigned)ReplicationFactor * VF &&
          "Unexpected mask size.");
 
-  for (int CurrElt : seq(0, VF)) {
+  for (int CurrElt : seq(VF)) {
     ArrayRef<int> CurrSubMask = Mask.take_front(ReplicationFactor);
     assert(CurrSubMask.size() == (unsigned)ReplicationFactor &&
            "Run out of mask?");
@@ -3397,15 +3383,9 @@ unsigned CastInst::isEliminableCastPair(
         "Illegal addrspacecast, bitcast sequence!");
       // Allowed, use first cast's opcode
       return firstOp;
-    case 14: {
-      // bitcast, addrspacecast -> addrspacecast if the element type of
-      // bitcast's source is the same as that of addrspacecast's destination.
-      PointerType *SrcPtrTy = cast<PointerType>(SrcTy->getScalarType());
-      PointerType *DstPtrTy = cast<PointerType>(DstTy->getScalarType());
-      if (SrcPtrTy->hasSameElementTypeAs(DstPtrTy))
-        return Instruction::AddrSpaceCast;
-      return 0;
-    }
+    case 14:
+      // bitcast, addrspacecast -> addrspacecast
+      return Instruction::AddrSpaceCast;
     case 15:
       // FIXME: this state can be merged with (1), but the following assert
       // is useful to check the correcteness of the sequence due to semantic

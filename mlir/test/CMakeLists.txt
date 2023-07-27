@@ -20,6 +20,8 @@ if (MLIR_INCLUDE_INTEGRATION_TESTS)
       "If set, arch-specific Arm integration tests are run with an emulator.")
   set(ARM_EMULATOR_OPTIONS "" CACHE STRING
       "If arch-specific Arm integration tests run emulated, pass these as parameters to the emulator.")
+  set(ARM_EMULATOR_MLIR_CPU_RUNNER_EXECUTABLE "" CACHE STRING
+      "If arch-specific Arm integration tests run emulated, use this Arm native mlir-cpu-runner.")
   set(ARM_EMULATOR_LLI_EXECUTABLE "" CACHE STRING
       "If arch-specific Arm integration tests run emulated, use this Arm native lli.")
   set(ARM_EMULATOR_UTILS_LIB_DIR "" CACHE STRING
@@ -141,6 +143,7 @@ if(LLVM_BUILD_EXAMPLES)
     toyc-ch5
     transform-opt-ch2
     transform-opt-ch3
+    mlir-minimal-opt
     )
   if(MLIR_ENABLE_EXECUTION_ENGINE)
     list(APPEND MLIR_TEST_DEPENDS

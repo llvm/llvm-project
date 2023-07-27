@@ -79,6 +79,7 @@ AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
 unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
+  const Function &F = MF->getFunction();
   const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
 
   {
@@ -127,9 +128,20 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       NumBytes = 4;
     break;
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+    // If `patchable-function-entry` is set, PATCHABLE_FUNCTION_ENTER
+    // instructions are expanded to the specified number of NOPs. Otherwise,
+    // they are expanded to 36-byte XRay sleds.
+    NumBytes =
+        F.getFnAttributeAsParsedInteger("patchable-function-entry", 9) * 4;
+    break;
   case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
     // An XRay sled can be 4 bytes of alignment plus a 32-byte block.
     NumBytes = 36;
+    break;
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+    // EVENT_CALL XRay sleds are exactly 6 instructions long (no alignment).
+    NumBytes = 24;
     break;
 
   case AArch64::SPACE:
@@ -3719,16 +3731,16 @@ void AArch64InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
   if (AArch64::FPR128RegClass.contains(DestReg) &&
       AArch64::FPR128RegClass.contains(SrcReg)) {
-    if (Subtarget.forceStreamingCompatibleSVE()) {
+    if (Subtarget.hasSVEorSME() && !Subtarget.isNeonAvailable())
       BuildMI(MBB, I, DL, get(AArch64::ORR_ZZZ))
           .addReg(AArch64::Z0 + (DestReg - AArch64::Q0), RegState::Define)
           .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0))
           .addReg(AArch64::Z0 + (SrcReg - AArch64::Q0));
-    } else if (Subtarget.hasNEON()) {
+    else if (Subtarget.hasNEON())
       BuildMI(MBB, I, DL, get(AArch64::ORRv16i8), DestReg)
           .addReg(SrcReg)
           .addReg(SrcReg, getKillRegState(KillSrc));
-    } else {
+    else {
       BuildMI(MBB, I, DL, get(AArch64::STRQpre))
           .addReg(AArch64::SP, RegState::Define)
           .addReg(SrcReg, getKillRegState(KillSrc))
@@ -4255,7 +4267,7 @@ static MCCFIInstruction createDefCFAExpression(const TargetRegisterInfo &TRI,
   uint8_t buffer[16];
   DefCfaExpr.append(buffer, buffer + encodeULEB128(Expr.size(), buffer));
   DefCfaExpr.append(Expr.str());
-  return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(),
+  return MCCFIInstruction::createEscape(nullptr, DefCfaExpr.str(), SMLoc(),
                                         Comment.str());
 }
 
@@ -4303,7 +4315,8 @@ MCCFIInstruction llvm::createCFAOffset(const TargetRegisterInfo &TRI,
   CfaExpr.append(buffer, buffer + encodeULEB128(OffsetExpr.size(), buffer));
   CfaExpr.append(OffsetExpr.str());
 
-  return MCCFIInstruction::createEscape(nullptr, CfaExpr.str(), Comment.str());
+  return MCCFIInstruction::createEscape(nullptr, CfaExpr.str(), SMLoc(),
+                                        Comment.str());
 }
 
 // Helper function to emit a frame offset adjustment from a given

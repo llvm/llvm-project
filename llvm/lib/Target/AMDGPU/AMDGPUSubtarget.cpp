@@ -477,6 +477,15 @@ unsigned AMDGPUSubtarget::getMaxWorkitemID(const Function &Kernel,
   return getFlatWorkGroupSizes(Kernel).second - 1;
 }
 
+bool AMDGPUSubtarget::isSingleLaneExecution(const Function &Func) const {
+  for (int I = 0; I < 3; ++I) {
+    if (getMaxWorkitemID(Func, I) > 0)
+      return false;
+  }
+
+  return true;
+}
+
 bool AMDGPUSubtarget::makeLIDRangeMetadata(Instruction *I) const {
   Function *Kernel = I->getParent()->getParent();
   unsigned MinSize = 0;

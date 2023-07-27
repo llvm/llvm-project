@@ -5,6 +5,8 @@ set(LLVM_LINK_COMPONENTS
   MCDisassembler
   Object
   Support
+  BinaryFormat
+  AsmPrinter
   TargetParser
   )
 
@@ -17,6 +19,7 @@ add_llvm_library(LLVMBOLTCore
   BinaryFunctionProfile.cpp
   BinarySection.cpp
   DebugData.cpp
+  DIEBuilder.cpp
   DynoStats.cpp
   Exceptions.cpp
   FunctionLayout.cpp

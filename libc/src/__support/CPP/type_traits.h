@@ -9,6 +9,8 @@
 #ifndef LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H
 #define LLVM_LIBC_SRC_SUPPORT_CPP_TYPETRAITS_H
 
+#include "src/__support/macros/attributes.h"
+
 namespace __llvm_libc {
 namespace cpp {
 
@@ -23,7 +25,7 @@ using enable_if_t = typename enable_if<B, T>::type;
 
 template <typename T, T v> struct integral_constant {
   using value_type = T;
-  static constexpr T value = v;
+  LIBC_INLINE_VAR static constexpr T value = v;
 };
 using true_type = cpp::integral_constant<bool, true>;
 using false_type = cpp::integral_constant<bool, false>;
@@ -39,11 +41,12 @@ struct is_trivially_constructible
 template <typename T, typename U> struct is_same : cpp::false_type {};
 template <typename T> struct is_same<T, T> : cpp::true_type {};
 template <typename T, typename U>
-inline constexpr bool is_same_v = is_same<T, U>::value;
+LIBC_INLINE_VAR constexpr bool is_same_v = is_same<T, U>::value;
 
 template <class T> struct is_const : cpp::false_type {};
 template <class T> struct is_const<const T> : cpp::true_type {};
-template <class T> inline constexpr bool is_const_v = is_const<T>::value;
+template <class T>
+LIBC_INLINE_VAR constexpr bool is_const_v = is_const<T>::value;
 
 template <typename T> struct remove_cv : type_identity<T> {};
 template <typename T> struct remove_cv<const T> : type_identity<T> {};
@@ -71,7 +74,7 @@ template <typename T, typename... Args> constexpr bool is_unqualified_any_of() {
 } // namespace details
 
 template <typename T> struct is_integral {
-  static constexpr bool value = details::is_unqualified_any_of<
+  LIBC_INLINE_VAR static constexpr bool value = details::is_unqualified_any_of<
       T,
 #ifdef __SIZEOF_INT128__
       __int128_t, __uint128_t,
@@ -80,33 +83,36 @@ template <typename T> struct is_integral {
       unsigned int, long, unsigned long, long long, unsigned long long, bool>();
 };
 template <typename T>
-inline constexpr bool is_integral_v = is_integral<T>::value;
+LIBC_INLINE_VAR constexpr bool is_integral_v = is_integral<T>::value;
 
 template <typename T> struct is_enum {
-  static constexpr bool value = __is_enum(T);
+  LIBC_INLINE_VAR static constexpr bool value = __is_enum(T);
 };
-template <typename T> inline constexpr bool is_enum_v = is_enum<T>::value;
+template <typename T>
+LIBC_INLINE_VAR constexpr bool is_enum_v = is_enum<T>::value;
 
 template <typename T> struct is_pointer : cpp::false_type {};
 template <typename T> struct is_pointer<T *> : cpp::true_type {};
 template <typename T> struct is_pointer<T *const> : cpp::true_type {};
 template <typename T> struct is_pointer<T *volatile> : cpp::true_type {};
 template <typename T> struct is_pointer<T *const volatile> : cpp::true_type {};
-template <typename T> inline constexpr bool is_pointer_v = is_pointer<T>::value;
+template <typename T>
+LIBC_INLINE_VAR constexpr bool is_pointer_v = is_pointer<T>::value;
 
 template <typename T> struct is_floating_point {
-  static constexpr bool value =
+  LIBC_INLINE_VAR static constexpr bool value =
       details::is_unqualified_any_of<T, float, double, long double>();
 };
 template <typename T>
-inline constexpr bool is_floating_point_v = is_floating_point<T>::value;
+LIBC_INLINE_VAR constexpr bool is_floating_point_v =
+    is_floating_point<T>::value;
 
 template <typename T> struct is_arithmetic {
-  static constexpr bool value =
+  LIBC_INLINE_VAR static constexpr bool value =
       is_integral<T>::value || is_floating_point<T>::value;
 };
 template <typename T>
-inline constexpr bool is_arithmetic_v = is_arithmetic<T>::value;
+LIBC_INLINE_VAR constexpr bool is_arithmetic_v = is_arithmetic<T>::value;
 
 namespace details {
 template <typename T, bool = is_arithmetic<T>::value>
@@ -119,19 +125,20 @@ template <typename T> struct is_unsigned<T, false> : false_type {};
 } // namespace details
 
 template <typename T> struct is_signed {
-  static constexpr bool value = details::is_signed<T>::value;
-  constexpr operator bool() const { return value; }
-  constexpr bool operator()() const { return value; }
-};
-template <typename T> inline constexpr bool is_signed_v = is_signed<T>::value;
-
-template <typename T> struct is_unsigned {
-  static constexpr bool value = details::is_unsigned<T>::value;
-  constexpr operator bool() const { return value; }
-  constexpr bool operator()() const { return value; }
+  LIBC_INLINE_VAR static constexpr bool value = details::is_signed<T>::value;
+  LIBC_INLINE constexpr operator bool() const { return value; }
+  LIBC_INLINE constexpr bool operator()() const { return value; }
 };
 template <typename T>
-inline constexpr bool is_unsigned_v = is_unsigned<T>::value;
+LIBC_INLINE_VAR constexpr bool is_signed_v = is_signed<T>::value;
+
+template <typename T> struct is_unsigned {
+  LIBC_INLINE_VAR static constexpr bool value = details::is_unsigned<T>::value;
+  LIBC_INLINE constexpr operator bool() const { return value; }
+  LIBC_INLINE constexpr bool operator()() const { return value; }
+};
+template <typename T>
+LIBC_INLINE_VAR constexpr bool is_unsigned_v = is_unsigned<T>::value;
 
 template <typename T> struct make_unsigned;
 template <> struct make_unsigned<char> : type_identity<unsigned char> {};
@@ -166,7 +173,8 @@ using conditional_t = typename conditional<B, T, F>::type;
 
 template <typename T>
 struct is_void : is_same<void, typename remove_cv<T>::type> {};
-template <typename T> inline constexpr bool is_void_v = is_void<T>::value;
+template <typename T>
+LIBC_INLINE_VAR constexpr bool is_void_v = is_void<T>::value;
 template <class T> T declval();
 
 // Compile time checks on implicit conversions.
@@ -176,10 +184,12 @@ template <typename T> void convertible_to_helper(T);
 } // namespace details
 
 template <typename F, typename T, typename = void>
-inline constexpr bool is_convertible_v = false;
+LIBC_INLINE_VAR constexpr bool is_convertible_v = false;
 
+// FIXME: This should use LIBC_INLINE_VAR, but clang buggily complains about
+// this when LIBC_INLINE_VAR uses [[clang::internal_linkage]].
 template <typename F, typename T>
-inline constexpr bool
+constexpr bool
     is_convertible_v<F, T,
                      details::void_t<decltype(details::convertible_to_helper<T>(
                          declval<F>()))>> = true;

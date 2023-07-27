@@ -468,8 +468,8 @@ steps:
           limit: 2
     timeout_in_minutes: 120
 
-  - label: "Assertions enabled"
-    command: "libcxx/utils/ci/run-buildbot generic-assertions"
+  - label: "Hardened mode"
+    command: "libcxx/utils/ci/run-buildbot generic-hardened-mode"
     artifact_paths:
       - "**/test-results.xml"
       - "**/*.abilist"
@@ -803,7 +803,7 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-  - group: ":apple: Apple"
+  - group: ":mac: Apple"
     steps:
     - label: "MacOS x86_64"
       command: "libcxx/utils/ci/run-buildbot generic-cxx20"
@@ -866,8 +866,8 @@ steps:
       timeout_in_minutes: 120
 
     # Test back-deployment to older Apple platforms
-    - label: "Apple back-deployment macosx10.9"
-      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.9"
+    - label: "Apple back-deployment macosx10.13"
+      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-10.13"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
@@ -896,29 +896,31 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-    - label: "Apple back-deployment macosx11.0 arm64"
-      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-11.0"
-      artifact_paths:
-        - "**/test-results.xml"
-        - "**/*.abilist"
-      agents:
-        queue: "libcxx-builders"
-        os: "macos"
-        arch: "arm64"
-      retry:
-        automatic:
-          - exit_status: -1  # Agent was lost
-            limit: 2
-      timeout_in_minutes: 120
+    # TODO: Re-enable this once we've figured out how to run back-deployment testing on arm64 on recent OSes
+    # - label: "Apple back-deployment macosx11.0 arm64"
+    #   command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-11.0"
+    #   artifact_paths:
+    #     - "**/test-results.xml"
+    #     - "**/*.abilist"
+    #   agents:
+    #     queue: "libcxx-builders"
+    #     os: "macos"
+    #     arch: "arm64"
+    #   retry:
+    #     automatic:
+    #       - exit_status: -1  # Agent was lost
+    #         limit: 2
+    #   timeout_in_minutes: 120
 
-    - label: "Apple back-deployment with assertions enabled"
-      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-assertions-11.0"
+    - label: "Apple back-deployment with hardening enabled"
+      command: "libcxx/utils/ci/run-buildbot apple-system-backdeployment-hardened-11.0"
       artifact_paths:
         - "**/test-results.xml"
         - "**/*.abilist"
       agents:
         queue: "libcxx-builders"
         os: "macos"
+        arch: "x86_64" # TODO: Remove this once we are able to run back-deployment on arm64 again, since this isn't x86_64 specific
       retry:
         automatic:
           - exit_status: -1  # Agent was lost
@@ -1049,7 +1051,7 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
-  - group: "FreeBSD"
+  - group: ":freebsd: FreeBSD"
     steps:
     - label: "FreeBSD 13 amd64"
       command: "libcxx/utils/ci/run-buildbot generic-cxx23"

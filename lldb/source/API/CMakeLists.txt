@@ -64,6 +64,7 @@ add_lldb_library(liblldb SHARED ${option_framework}
   SBQueue.cpp
   SBQueueItem.cpp
   SBReproducer.cpp
+  SBScriptObject.cpp
   SBSection.cpp
   SBSourceManager.cpp
   SBStream.cpp

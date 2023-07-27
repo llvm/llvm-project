@@ -512,9 +512,10 @@ define void @trunc_v8i32_to_v8i8(ptr %L, ptr %S) nounwind {
   ret void
 }
 
-define <2 x i64> @trunc_v8i32_to_v8i8_return_v2i64(<8 x i32> %vec) nounwind {
 ; IR generated from:
 ; return (__m128i) {(long long)__builtin_convertvector((__v8si)__A, __v8qi), 0};
+
+define <2 x i64> @trunc_v8i32_to_v8i8_return_v2i64(<8 x i32> %vec) nounwind {
 ; AVX1-LABEL: trunc_v8i32_to_v8i8_return_v2i64:
 ; AVX1:       # %bb.0:
 ; AVX1-NEXT:    vextractf128 $1, %ymm0, %xmm1

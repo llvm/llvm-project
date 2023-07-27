@@ -466,111 +466,6 @@ struct CWDGuard {
   CWDGuard& operator=(CWDGuard const&) = delete;
 };
 
-// Misc test types
-
-const MultiStringType PathList[] = {
-        MKSTR(""),
-        MKSTR(" "),
-        MKSTR("//"),
-        MKSTR("."),
-        MKSTR(".."),
-        MKSTR("foo"),
-        MKSTR("/"),
-        MKSTR("/foo"),
-        MKSTR("foo/"),
-        MKSTR("/foo/"),
-        MKSTR("foo/bar"),
-        MKSTR("/foo/bar"),
-        MKSTR("//net"),
-        MKSTR("//net/foo"),
-        MKSTR("///foo///"),
-        MKSTR("///foo///bar"),
-        MKSTR("/."),
-        MKSTR("./"),
-        MKSTR("/.."),
-        MKSTR("../"),
-        MKSTR("foo/."),
-        MKSTR("foo/.."),
-        MKSTR("foo/./"),
-        MKSTR("foo/./bar"),
-        MKSTR("foo/../"),
-        MKSTR("foo/../bar"),
-        MKSTR("c:"),
-        MKSTR("c:/"),
-        MKSTR("c:foo"),
-        MKSTR("c:/foo"),
-        MKSTR("c:foo/"),
-        MKSTR("c:/foo/"),
-        MKSTR("c:/foo/bar"),
-        MKSTR("prn:"),
-        MKSTR("c:\\"),
-        MKSTR("c:\\foo"),
-        MKSTR("c:foo\\"),
-        MKSTR("c:\\foo\\"),
-        MKSTR("c:\\foo/"),
-        MKSTR("c:/foo\\bar"),
-        MKSTR("//"),
-        MKSTR("/finally/we/need/one/really/really/really/really/really/really/really/long/string")
-};
-const unsigned PathListSize = sizeof(PathList) / sizeof(MultiStringType);
-
-template <class Iter>
-Iter IterEnd(Iter B) {
-  using VT = typename std::iterator_traits<Iter>::value_type;
-  for (; *B != VT{}; ++B)
-    ;
-  return B;
-}
-
-template <class CharT>
-const CharT* StrEnd(CharT const* P) {
-    return IterEnd(P);
-}
-
-template <class CharT>
-std::size_t StrLen(CharT const* P) {
-    return StrEnd(P) - P;
-}
-
-// Testing the allocation behavior of the code_cvt functions requires
-// *knowing* that the allocation was not done by "path::__str_".
-// This hack forces path to allocate enough memory.
-inline void PathReserve(fs::path& p, std::size_t N) {
-  auto const& native_ref = p.native();
-  const_cast<fs::path::string_type&>(native_ref).reserve(N);
-}
-
-template <class Iter1, class Iter2>
-bool checkCollectionsEqual(
-    Iter1 start1, Iter1 const end1
-  , Iter2 start2, Iter2 const end2
-  )
-{
-    while (start1 != end1 && start2 != end2) {
-        if (*start1 != *start2) {
-            return false;
-        }
-        ++start1; ++start2;
-    }
-    return (start1 == end1 && start2 == end2);
-}
-
-
-template <class Iter1, class Iter2>
-bool checkCollectionsEqualBackwards(
-    Iter1 const start1, Iter1 end1
-  , Iter2 const start2, Iter2 end2
-  )
-{
-    while (start1 != end1 && start2 != end2) {
-        --end1; --end2;
-        if (*end1 != *end2) {
-            return false;
-        }
-    }
-    return (start1 == end1 && start2 == end2);
-}
-
 // We often need to test that the error_code was cleared if no error occurs
 // this function returns an error_code which is set to an error that will
 // never be returned by the filesystem functions.
@@ -622,16 +517,6 @@ template <class Dur> void SleepFor(Dur dur) {
     const auto wake_time = Clock::now() + dur;
     while (Clock::now() < wake_time)
         ;
-}
-
-inline bool PathEq(fs::path const& LHS, fs::path const& RHS) {
-  return LHS.native() == RHS.native();
-}
-
-inline bool PathEqIgnoreSep(fs::path LHS, fs::path RHS) {
-  LHS.make_preferred();
-  RHS.make_preferred();
-  return LHS.native() == RHS.native();
 }
 
 inline fs::perms NormalizeExpectedPerms(fs::perms P) {

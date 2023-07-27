@@ -20,6 +20,7 @@
 
 #include <array>
 #include <deque>
+#include <filesystem>
 #include <format>
 #include <forward_list>
 #include <iterator>
@@ -28,16 +29,12 @@
 #include <ranges>
 #include <set>
 #include <span>
-#include <vector>
 #include <unordered_map>
 #include <unordered_set>
 #include <valarray>
+#include <vector>
 
 #include "test_macros.h"
-
-#ifndef TEST_HAS_NO_FILESYSTEM
-#  include <filesystem>
-#endif
 
 // [format.range.fmtkind]
 // If same_as<remove_cvref_t<ranges::range_reference_t<R>>, R> is true,
@@ -67,9 +64,7 @@ struct recursive_range {
 static_assert(std::ranges::input_range<recursive_range>, "format_kind requires an input range");
 static_assert(std::format_kind<recursive_range> == std::range_format::disabled);
 
-#ifndef TEST_HAS_NO_FILESYSTEM
 static_assert(std::format_kind<std::filesystem::path> == std::range_format::disabled);
-#endif
 
 static_assert(std::format_kind<std::map<int, int>> == std::range_format::map);
 static_assert(std::format_kind<std::multimap<int, int>> == std::range_format::map);

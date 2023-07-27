@@ -17,6 +17,7 @@ body:             |
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GFX10-NEXT:   [[S_MOV_B32_:%[0-9]+]]:sreg_32 = S_MOV_B32 8
+  ; GFX10-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[S_MOV_B32_]], [[DEF]], implicit $exec
   ; GFX10-NEXT:   [[V_BFE_U32_e64_:%[0-9]+]]:vgpr_32 = V_BFE_U32_e64 [[DEF]], 8, 5, implicit $exec
   ; GFX10-NEXT:   [[S_MOV_B32_1:%[0-9]+]]:sreg_32 = S_MOV_B32 5
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[V_BFE_U32_e64_]], killed [[S_MOV_B32_1]], implicit $exec
@@ -37,7 +38,6 @@ body:             |
   ; GFX10-NEXT:   successors: %bb.3(0x40000000), %bb.4(0x40000000)
   ; GFX10-NEXT: {{  $}}
   ; GFX10-NEXT:   $exec_lo = S_OR_B32 $exec_lo, [[S_XOR_B32_1]], implicit-def $scc
-  ; GFX10-NEXT:   [[V_LSHRREV_B32_e64_:%[0-9]+]]:vgpr_32 = V_LSHRREV_B32_e64 [[S_MOV_B32_]], [[DEF]], implicit $exec
   ; GFX10-NEXT:   [[S_MOV_B32_2:%[0-9]+]]:sreg_32 = S_MOV_B32 31
   ; GFX10-NEXT:   [[V_CMP_NE_U32_e64_1:%[0-9]+]]:sreg_32 = V_CMP_NE_U32_e64 [[V_BFE_U32_e64_]], killed [[S_MOV_B32_2]], implicit $exec
   ; GFX10-NEXT:   [[S_XOR_B32_2:%[0-9]+]]:sreg_32 = S_XOR_B32 [[V_CMP_NE_U32_e64_1]], -1, implicit-def $scc

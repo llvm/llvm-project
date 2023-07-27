@@ -648,6 +648,15 @@ sizeof...($TemplateParameter[[Elements]]);
       void $Function_def[[bar]]($TemplateParameter[[T]] $Parameter_def[[F]]) {
         $Parameter[[F]].$Unknown_dependentName[[foo]]();
       }
+
+      struct $Class_def[[F]] {
+        void $Method_def[[foo]]() {};
+      };
+      $Concept[[Fooable]] $Class_deduced[[auto]] $Variable_def[[f]] = $Class[[F]]();
+
+      void $Function_def[[Bar]]($Concept[[Fooable]] $TemplateParameter[[auto]] $Parameter_def[[x]]) {}
+
+      template$Bracket[[<]]$Concept[[Fooable]] auto $TemplateParameter_def_readonly[[x]]$Bracket[[>]] void $Function_def[[Boo]]() {}
     )cpp",
       // Dependent template name
       R"cpp(

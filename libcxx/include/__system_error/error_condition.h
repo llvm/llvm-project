@@ -12,6 +12,7 @@
 
 #include <__compare/ordering.h>
 #include <__config>
+#include <__functional/hash.h>
 #include <__functional/unary_function.h>
 #include <__system_error/errc.h>
 #include <__system_error/error_category.h>

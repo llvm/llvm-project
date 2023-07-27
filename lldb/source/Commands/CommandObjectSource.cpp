@@ -22,6 +22,7 @@
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/Function.h"
 #include "lldb/Symbol/Symbol.h"
+#include "lldb/Target/Process.h"
 #include "lldb/Target/SectionLoadList.h"
 #include "lldb/Target/StackFrame.h"
 #include "lldb/Utility/FileSpec.h"
@@ -1201,6 +1202,78 @@ protected:
   std::string m_reverse_name;
 };
 
+class CommandObjectSourceCacheDump : public CommandObjectParsed {
+public:
+  CommandObjectSourceCacheDump(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "source cache dump",
+                            "Dump the state of the source code cache. Intended "
+                            "to be used for debugging LLDB itself.",
+                            nullptr) {}
+
+  ~CommandObjectSourceCacheDump() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    // Dump the debugger source cache.
+    result.GetOutputStream() << "Debugger Source File Cache\n";
+    SourceManager::SourceFileCache &cache = GetDebugger().GetSourceFileCache();
+    cache.Dump(result.GetOutputStream());
+
+    // Dump the process source cache.
+    if (ProcessSP process_sp = m_exe_ctx.GetProcessSP()) {
+      result.GetOutputStream() << "\nProcess Source File Cache\n";
+      SourceManager::SourceFileCache &cache = process_sp->GetSourceFileCache();
+      cache.Dump(result.GetOutputStream());
+    }
+
+    result.SetStatus(eReturnStatusSuccessFinishResult);
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectSourceCacheClear : public CommandObjectParsed {
+public:
+  CommandObjectSourceCacheClear(CommandInterpreter &interpreter)
+      : CommandObjectParsed(interpreter, "source cache clear",
+                            "Clear the source code cache.\n", nullptr) {}
+
+  ~CommandObjectSourceCacheClear() override = default;
+
+protected:
+  bool DoExecute(Args &command, CommandReturnObject &result) override {
+    // Clear the debugger cache.
+    SourceManager::SourceFileCache &cache = GetDebugger().GetSourceFileCache();
+    cache.Clear();
+
+    // Clear the process cache.
+    if (ProcessSP process_sp = m_exe_ctx.GetProcessSP())
+      process_sp->GetSourceFileCache().Clear();
+
+    result.SetStatus(eReturnStatusSuccessFinishNoResult);
+    return result.Succeeded();
+  }
+};
+
+class CommandObjectSourceCache : public CommandObjectMultiword {
+public:
+  CommandObjectSourceCache(CommandInterpreter &interpreter)
+      : CommandObjectMultiword(interpreter, "source cache",
+                               "Commands for managing the source code cache.",
+                               "source cache <sub-command>") {
+    LoadSubCommand(
+        "dump", CommandObjectSP(new CommandObjectSourceCacheDump(interpreter)));
+    LoadSubCommand("clear", CommandObjectSP(new CommandObjectSourceCacheClear(
+                                interpreter)));
+  }
+
+  ~CommandObjectSourceCache() override = default;
+
+private:
+  CommandObjectSourceCache(const CommandObjectSourceCache &) = delete;
+  const CommandObjectSourceCache &
+  operator=(const CommandObjectSourceCache &) = delete;
+};
+
 #pragma mark CommandObjectMultiwordSource
 // CommandObjectMultiwordSource
 
@@ -1216,6 +1289,8 @@ CommandObjectMultiwordSource::CommandObjectMultiwordSource(
                  CommandObjectSP(new CommandObjectSourceInfo(interpreter)));
   LoadSubCommand("list",
                  CommandObjectSP(new CommandObjectSourceList(interpreter)));
+  LoadSubCommand("cache",
+                 CommandObjectSP(new CommandObjectSourceCache(interpreter)));
 }
 
 CommandObjectMultiwordSource::~CommandObjectMultiwordSource() = default;

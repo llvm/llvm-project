@@ -518,8 +518,11 @@ bool Semantics::Perform() {
                     .statement.v.source == "__ppc_types")) {
       // Don't try to read the builtins module when we're actually building it.
     } else if (frontModule &&
-        std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
-                .statement.v.source == "__fortran_ppc_intrinsics") {
+        (std::get<parser::Statement<parser::ModuleStmt>>(frontModule->value().t)
+                    .statement.v.source == "__ppc_intrinsics" ||
+            std::get<parser::Statement<parser::ModuleStmt>>(
+                frontModule->value().t)
+                    .statement.v.source == "mma")) {
       // The derived type definition for the vectors is needed.
       context_.UsePPCBuiltinTypesModule();
     } else {
@@ -557,9 +560,9 @@ void Semantics::DumpSymbolsSources(llvm::raw_ostream &os) const {
   for (const auto &pair : symbols) {
     const Symbol &symbol{pair.second};
     if (auto sourceInfo{allCooked.GetSourcePositionRange(symbol.name())}) {
-      os << symbol.name().ToString() << ": " << sourceInfo->first.file.path()
-         << ", " << sourceInfo->first.line << ", " << sourceInfo->first.column
-         << "-" << sourceInfo->second.column << "\n";
+      os << symbol.name().ToString() << ": " << sourceInfo->first.path << ", "
+         << sourceInfo->first.line << ", " << sourceInfo->first.column << "-"
+         << sourceInfo->second.column << "\n";
     } else if (symbol.has<semantics::UseDetails>()) {
       os << symbol.name().ToString() << ": "
          << symbol.GetUltimate().owner().symbol()->name().ToString() << "\n";

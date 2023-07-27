@@ -19,10 +19,9 @@ define void @PR57402() {
 ; CHECK-NEXT:    testb %al, %al
 ; CHECK-NEXT:    jne .LBB0_4
 ; CHECK-NEXT:  # %bb.2: # %entry
+; CHECK-NEXT:    andl %ecx, %edx
 ; CHECK-NEXT:    movswl %dx, %eax
-; CHECK-NEXT:    movswl %cx, %ecx
-; CHECK-NEXT:    andl %eax, %ecx
-; CHECK-NEXT:    imull %ecx, %eax
+; CHECK-NEXT:    imull %eax, %eax
 ; CHECK-NEXT:    testq %rax, %rax
 ; CHECK-NEXT:    jne .LBB0_3
 ; CHECK-NEXT:  .LBB0_4: # %if.end

@@ -280,7 +280,6 @@ void msp430::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("--gc-sections");
 
   Args.AddAllArgs(CmdArgs, {
-                               options::OPT_e,
                                options::OPT_n,
                                options::OPT_s,
                                options::OPT_t,

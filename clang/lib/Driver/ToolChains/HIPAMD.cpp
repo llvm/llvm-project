@@ -142,11 +142,6 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   if (IsThinLTO)
     LldArgs.push_back(Args.MakeArgString("-plugin-opt=-force-import-all"));
 
-  for (const Arg *A : Args.filtered(options::OPT_mllvm)) {
-    LldArgs.push_back(
-        Args.MakeArgString(Twine("-plugin-opt=") + A->getValue(0)));
-  }
-
   if (C.getDriver().isSaveTempsEnabled())
     LldArgs.push_back("-save-temps");
 
@@ -165,7 +160,14 @@ void AMDGCN::Linker::constructLldCommand(Compilation &C, const JobAction &JA,
   LldArgs.push_back("--whole-archive");
 
   for (auto *Arg : Args.filtered(options::OPT_Xoffload_linker)) {
-    LldArgs.push_back(Arg->getValue(1));
+    StringRef ArgVal = Arg->getValue(1);
+    auto SplitArg = ArgVal.split("-mllvm=");
+    if (!SplitArg.second.empty()) {
+      LldArgs.push_back(
+          Args.MakeArgString(Twine("-plugin-opt=") + SplitArg.second));
+    } else {
+      LldArgs.push_back(Args.MakeArgString(ArgVal));
+    }
     Arg->claim();
   }
 
@@ -240,10 +242,6 @@ void HIPAMDToolChain::addClangTargetOptions(
          "Only HIP offloading kinds are supported for GPUs.");
 
   CC1Args.push_back("-fcuda-is-device");
-
-  if (DriverArgs.hasFlag(options::OPT_fcuda_approx_transcendentals,
-                         options::OPT_fno_cuda_approx_transcendentals, false))
-    CC1Args.push_back("-fcuda-approx-transcendentals");
 
   if (!DriverArgs.hasFlag(options::OPT_fgpu_rdc, options::OPT_fno_gpu_rdc,
                           false))

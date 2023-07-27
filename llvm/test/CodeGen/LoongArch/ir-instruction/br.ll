@@ -5,6 +5,7 @@
 define void @foo() noreturn nounwind {
 ; ALL-LABEL: foo:
 ; ALL:       # %bb.0: # %entry
+; ALL-NEXT:    .p2align 4, , 16
 ; ALL-NEXT:  .LBB0_1: # %loop
 ; ALL-NEXT:    # =>This Inner Loop Header: Depth=1
 ; ALL-NEXT:    b .LBB0_1
@@ -26,8 +27,8 @@ define void @foo_br_eq(i32 %a, ptr %b) nounwind {
 ;
 ; LA64-LABEL: foo_br_eq:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.wu $a2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    ld.w $a2, $a1, 0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    beq $a2, $a0, .LBB1_2
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
@@ -56,8 +57,8 @@ define void @foo_br_ne(i32 %a, ptr %b) nounwind {
 ;
 ; LA64-LABEL: foo_br_ne:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.wu $a2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    ld.w $a2, $a1, 0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    bne $a2, $a0, .LBB2_2
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
@@ -146,8 +147,8 @@ define void @foo_br_ult(i32 %a, ptr %b) nounwind {
 ;
 ; LA64-LABEL: foo_br_ult:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.wu $a2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    ld.w $a2, $a1, 0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    bltu $a2, $a0, .LBB5_2
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
@@ -176,8 +177,8 @@ define void @foo_br_uge(i32 %a, ptr %b) nounwind {
 ;
 ; LA64-LABEL: foo_br_uge:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.wu $a2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    ld.w $a2, $a1, 0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    bgeu $a2, $a0, .LBB6_2
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
@@ -267,8 +268,8 @@ define void @foo_br_ugt(i32 %a, ptr %b) nounwind {
 ;
 ; LA64-LABEL: foo_br_ugt:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.wu $a2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    ld.w $a2, $a1, 0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    bltu $a0, $a2, .LBB9_2
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0
@@ -297,8 +298,8 @@ define void @foo_br_ule(i32 %a, ptr %b) nounwind {
 ;
 ; LA64-LABEL: foo_br_ule:
 ; LA64:       # %bb.0:
-; LA64-NEXT:    ld.wu $a2, $a1, 0
-; LA64-NEXT:    bstrpick.d $a0, $a0, 31, 0
+; LA64-NEXT:    ld.w $a2, $a1, 0
+; LA64-NEXT:    addi.w $a0, $a0, 0
 ; LA64-NEXT:    bgeu $a0, $a2, .LBB10_2
 ; LA64-NEXT:  # %bb.1: # %test
 ; LA64-NEXT:    ld.w $a0, $a1, 0

@@ -55,6 +55,7 @@
 #include "mlir/Dialect/MemRef/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/MemRef/Transforms/RuntimeOpVerification.h"
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
+#include "mlir/Dialect/NVGPU/TransformOps/NVGPUTransformOps.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
 #include "mlir/Dialect/PDL/IR/PDL.h"
@@ -78,6 +79,7 @@
 #include "mlir/Dialect/Tosa/IR/TosaOps.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/PDLExtension/PDLExtension.h"
+#include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/Dialect/Vector/TransformOps/VectorTransformOps.h"
 #include "mlir/Dialect/Vector/Transforms/BufferizableOpInterfaceImpl.h"
@@ -92,10 +94,12 @@ inline void registerAllDialects(DialectRegistry &registry) {
   // clang-format off
   registry.insert<acc::OpenACCDialect,
                   affine::AffineDialect,
-                  arith::ArithDialect,
                   amdgpu::AMDGPUDialect,
                   amx::AMXDialect,
+                  arith::ArithDialect,
                   arm_neon::ArmNeonDialect,
+                  arm_sme::ArmSMEDialect,
+                  arm_sve::ArmSVEDialect,
                   async::AsyncDialect,
                   bufferization::BufferizationDialect,
                   cf::ControlFlowDialect,
@@ -106,28 +110,27 @@ inline void registerAllDialects(DialectRegistry &registry) {
                   gpu::GPUDialect,
                   index::IndexDialect,
                   irdl::IRDLDialect,
-                  LLVM::LLVMDialect,
                   linalg::LinalgDialect,
+                  LLVM::LLVMDialect,
                   math::MathDialect,
                   memref::MemRefDialect,
                   ml_program::MLProgramDialect,
                   nvgpu::NVGPUDialect,
-                  scf::SCFDialect,
+                  NVVM::NVVMDialect,
                   omp::OpenMPDialect,
                   pdl::PDLDialect,
                   pdl_interp::PDLInterpDialect,
                   quant::QuantizationDialect,
-                  spirv::SPIRVDialect,
-                  arm_sme::ArmSMEDialect,
-                  arm_sve::ArmSVEDialect,
-                  vector::VectorDialect,
-                  NVVM::NVVMDialect,
                   ROCDL::ROCDLDialect,
+                  scf::SCFDialect,
                   shape::ShapeDialect,
                   sparse_tensor::SparseTensorDialect,
+                  spirv::SPIRVDialect,
                   tensor::TensorDialect,
-                  transform::TransformDialect,
                   tosa::TosaDialect,
+                  transform::TransformDialect,
+                  ub::UBDialect,
+                  vector::VectorDialect,
                   x86vector::X86VectorDialect>();
   // clang-format on
 
@@ -137,6 +140,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   gpu::registerTransformDialectExtension(registry);
   linalg::registerTransformDialectExtension(registry);
   memref::registerTransformDialectExtension(registry);
+  nvgpu::registerTransformDialectExtension(registry);
   scf::registerTransformDialectExtension(registry);
   tensor::registerTransformDialectExtension(registry);
   transform::registerPDLExtension(registry);

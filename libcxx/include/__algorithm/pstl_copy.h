@@ -14,9 +14,11 @@
 #include <__config>
 #include <__functional/identity.h>
 #include <__iterator/iterator_traits.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/is_trivially_copyable.h>
+#include <__type_traits/remove_cvref.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

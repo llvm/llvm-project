@@ -18,6 +18,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <exception>
 #include <functional>
 #include <utility>
 
@@ -79,7 +80,7 @@ struct DumpVisitor {
 
   void printStr(const char *S) { fprintf(stderr, "%s", S); }
   void print(std::string_view SV) {
-    fprintf(stderr, "\"%.*s\"", (int)SV.size(), &*SV.begin());
+    fprintf(stderr, "\"%.*s\"", (int)SV.size(), SV.data());
   }
   void print(const Node *N) {
     if (N)

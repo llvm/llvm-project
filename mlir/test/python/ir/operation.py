@@ -532,9 +532,9 @@ def testOperationAttributes():
     )
     op = module.body.operations[0]
     assert len(op.attributes) == 3
-    iattr = IntegerAttr(op.attributes["some.attribute"])
-    fattr = FloatAttr(op.attributes["other.attribute"])
-    sattr = StringAttr(op.attributes["dependent"])
+    iattr = op.attributes["some.attribute"]
+    fattr = op.attributes["other.attribute"]
+    sattr = op.attributes["dependent"]
     # CHECK: Attribute type i8, value 1
     print(f"Attribute type {iattr.type}, value {iattr.value}")
     # CHECK: Attribute type f64, value 3.0

@@ -18,9 +18,21 @@
 #ifndef LLVM_ADT_ITERATOR_RANGE_H
 #define LLVM_ADT_ITERATOR_RANGE_H
 
+#include "llvm/ADT/ADL.h"
+#include <type_traits>
 #include <utility>
 
 namespace llvm {
+
+template <typename From, typename To, typename = void>
+struct explicitly_convertible : std::false_type {};
+
+template <typename From, typename To>
+struct explicitly_convertible<
+    From, To,
+    std::void_t<decltype(static_cast<To>(
+        std::declval<std::add_rvalue_reference_t<From>>()))>> : std::true_type {
+};
 
 /// A range adaptor for a pair of iterators.
 ///
@@ -31,12 +43,19 @@ class iterator_range {
   IteratorT begin_iterator, end_iterator;
 
 public:
-  //TODO: Add SFINAE to test that the Container's iterators match the range's
-  //      iterators.
+#if __GNUC__ == 7
+  // Be careful no to break gcc-7 on the mlir target.
+  // See https://github.com/llvm/llvm-project/issues/63843
   template <typename Container>
+#else
+  template <typename Container,
+            std::enable_if_t<explicitly_convertible<
+                detail::IterOfRange<Container>, IteratorT>::value> * = nullptr>
+#endif
   iterator_range(Container &&c)
-  //TODO: Consider ADL/non-member begin/end calls.
-      : begin_iterator(c.begin()), end_iterator(c.end()) {}
+      : begin_iterator(adl_begin(std::forward<Container>(c))),
+        end_iterator(adl_end(std::forward<Container>(c))) {
+  }
   iterator_range(IteratorT begin_iterator, IteratorT end_iterator)
       : begin_iterator(std::move(begin_iterator)),
         end_iterator(std::move(end_iterator)) {}
@@ -45,6 +64,9 @@ public:
   IteratorT end() const { return end_iterator; }
   bool empty() const { return begin_iterator == end_iterator; }
 };
+
+template <typename Container>
+iterator_range(Container &&) -> iterator_range<detail::IterOfRange<Container>>;
 
 /// Convenience function for iterating over sub-ranges.
 ///

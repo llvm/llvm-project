@@ -13,6 +13,7 @@ declare double @llvm.floor.f64(double)
 declare double @llvm.trunc.f64(double)
 declare double @llvm.nearbyint.f64(double)
 declare double @llvm.rint.f64(double)
+declare double @llvm.roundeven.f64(double)
 declare double @llvm.fma.f64(double, double, double)
 
 define double @fadd64(double %x, double %y) {
@@ -160,6 +161,17 @@ define double @nearest64_via_rint(double %x) {
 ; CHECK-NEXT:    f64.nearest $push0=, $pop1
 ; CHECK-NEXT:    return $pop0
   %a = call double @llvm.rint.f64(double %x)
+  ret double %a
+}
+
+define double @nearest64_via_roundeven(double %x) {
+; CHECK-LABEL: nearest64_via_roundeven:
+; CHECK:         .functype nearest64_via_roundeven (f64) -> (f64)
+; CHECK-NEXT:  # %bb.0:
+; CHECK-NEXT:    local.get $push1=, 0
+; CHECK-NEXT:    f64.nearest $push0=, $pop1
+; CHECK-NEXT:    return $pop0
+  %a = call double @llvm.roundeven.f64(double %x)
   ret double %a
 }
 

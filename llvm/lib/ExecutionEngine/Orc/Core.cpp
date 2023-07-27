@@ -689,10 +689,13 @@ void JITDylib::removeGenerator(DefinitionGenerator &G) {
 }
 
 Expected<SymbolFlagsMap>
-JITDylib::defineMaterializing(SymbolFlagsMap SymbolFlags) {
-  // TODO: Should we bail out early here if MR is defunct?
+JITDylib::defineMaterializing(MaterializationResponsibility &FromMR,
+                              SymbolFlagsMap SymbolFlags) {
 
   return ES.runSessionLocked([&]() -> Expected<SymbolFlagsMap> {
+    if (FromMR.RT->isDefunct())
+      return make_error<ResourceTrackerDefunct>(FromMR.RT);
+
     std::vector<NonOwningSymbolStringPtr> AddedSyms;
     std::vector<NonOwningSymbolStringPtr> RejectedWeakDefs;
 
@@ -1960,6 +1963,7 @@ JITDylib *ExecutionSession::getJITDylibByName(StringRef Name) {
 JITDylib &ExecutionSession::createBareJITDylib(std::string Name) {
   assert(!getJITDylibByName(Name) && "JITDylib with that name already exists");
   return runSessionLocked([&, this]() -> JITDylib & {
+    assert(SessionOpen && "Cannot create JITDylib after session is closed");
     JDs.push_back(new JITDylib(*this, std::move(Name)));
     return *JDs.back();
   });
@@ -2966,7 +2970,7 @@ Error ExecutionSession::OL_defineMaterializing(
            << NewSymbolFlags << "\n";
   });
   if (auto AcceptedDefs =
-          MR.JD.defineMaterializing(std::move(NewSymbolFlags))) {
+          MR.JD.defineMaterializing(MR, std::move(NewSymbolFlags))) {
     // Add all newly accepted symbols to this responsibility object.
     for (auto &KV : *AcceptedDefs)
       MR.SymbolFlags.insert(KV);

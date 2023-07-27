@@ -1,7 +1,7 @@
 ; RUN: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
-; RUN: aarch64-arm-none-eabi %s -o - | FileCheck %s --check-prefixes CHECK,V8A
+; RUN: aarch64 %s -o - | FileCheck %s --check-prefixes CHECK,V8A
 ; RUN-V83A: llc -verify-machineinstrs -enable-machine-outliner -mtriple \
-; RUN-V83A: aarch64-arm-none-eabi -mattr=+v8.3a %s -o - > %t
+; RUN-V83A: aarch64 -mattr=+v8.3a %s -o - > %t
 ; RUN-V83A: FileCheck --check-prefixes CHECK,V83A < %t %s
 
 define void @a() "sign-return-address"="all" "sign-return-address-key"="b_key" nounwind {

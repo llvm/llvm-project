@@ -367,6 +367,16 @@ TEST(ToolChainTest, PostCallback) {
   EXPECT_TRUE(CallbackHasCalled);
 }
 
+TEST(CompilerInvocation, SplitSwarfSingleCrash) {
+  static constexpr const char *Args[] = {
+      "clang",     "--target=arm-linux-gnueabi",
+      "-gdwarf-4", "-gsplit-dwarf=single",
+      "-c",        "foo.cpp"};
+  CreateInvocationOptions CIOpts;
+  std::unique_ptr<CompilerInvocation> CI = createInvocation(Args, CIOpts);
+  EXPECT_TRUE(CI); // no-crash
+}
+
 TEST(GetDriverMode, PrefersLastDriverMode) {
   static constexpr const char *Args[] = {"clang-cl", "--driver-mode=foo",
                                          "--driver-mode=bar", "foo.cpp"};

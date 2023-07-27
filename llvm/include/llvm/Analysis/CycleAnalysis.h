@@ -15,7 +15,7 @@
 #ifndef LLVM_ANALYSIS_CYCLEANALYSIS_H
 #define LLVM_ANALYSIS_CYCLEANALYSIS_H
 
-#include "llvm/ADT/GenericCycleInfo.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/SSAContext.h"
 #include "llvm/Pass.h"

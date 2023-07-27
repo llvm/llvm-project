@@ -226,9 +226,29 @@ multiclass MadFmaMixPats<SDPatternOperator fma_like,
                                    DSTCLAMP.ENABLE,
                                    (i32 (IMPLICIT_DEF)))))
   >;
+
+  def : GCNPat <
+    (f16 (fpround (fmul (f32 (VOP3PMadMixMods f32:$src0, i32:$src0_modifiers)),
+                        (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_modifiers))))),
+    (mixlo_inst $src0_modifiers, $src0,
+                $src1_modifiers, $src1,
+                (i32 0), (i32 0),
+                DSTCLAMP.NONE,
+                (i32 (IMPLICIT_DEF)))
+  >;
+
+  def : GCNPat <
+    (build_vector f16:$elt0, (fpround (fmul (f32 (VOP3PMadMixMods f32:$src0, i32:$src0_modifiers)),
+                                            (f32 (VOP3PMadMixMods f32:$src1, i32:$src1_modifiers))))),
+    (v2f16 (mixhi_inst $src0_modifiers, $src0,
+                       $src1_modifiers, $src1,
+                       (i32 0), (i32 0),
+                       DSTCLAMP.NONE,
+                       VGPR_32:$elt0))
+  >;
 }
 
-let SubtargetPredicate = HasMadMixInsts in {
+let SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals] in {
 
 // These are VOP3a-like opcodes which accept no omod.
 // Size of src arguments (16/32) is controlled by op_sel.
@@ -248,7 +268,7 @@ defm V_MAD_MIXHI_F16 : VOP3_VOP3PInst<"v_mad_mixhi_f16", VOP3P_Mix_Profile<VOP_F
 }
 
 defm : MadFmaMixPats<fmad, V_MAD_MIX_F32, V_MAD_MIXLO_F16, V_MAD_MIXHI_F16>;
-} // End SubtargetPredicate = HasMadMixInsts
+} // End SubtargetPredicate = HasMadMixInsts, OtherPredicates = [NoFP32Denormals]
 
 
 // Essentially the same as the mad_mix versions

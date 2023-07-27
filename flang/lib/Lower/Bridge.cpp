@@ -569,18 +569,23 @@ public:
     const auto *details = sym.detailsIf<Fortran::semantics::HostAssocDetails>();
     assert(details && "No host-association found");
     const Fortran::semantics::Symbol &hsym = details->symbol();
+    mlir::Type hSymType = genType(hsym);
     Fortran::lower::SymbolBox hsb = lookupSymbol(hsym);
 
     auto allocate = [&](llvm::ArrayRef<mlir::Value> shape,
                         llvm::ArrayRef<mlir::Value> typeParams) -> mlir::Value {
       mlir::Value allocVal = builder->allocateLocal(
-          loc, symType, mangleName(sym), toStringRef(sym.GetUltimate().name()),
+          loc,
+          Fortran::semantics::IsAllocatableOrPointer(hsym.GetUltimate())
+              ? hSymType
+              : symType,
+          mangleName(sym), toStringRef(sym.GetUltimate().name()),
           /*pinned=*/true, shape, typeParams,
           sym.GetUltimate().attrs().test(Fortran::semantics::Attr::TARGET));
       return allocVal;
     };
 
-    fir::ExtendedValue hexv = getExtendedValue(hsb);
+    fir::ExtendedValue hexv = symBoxToExtendedValue(hsb);
     fir::ExtendedValue exv = hexv.match(
         [&](const fir::BoxValue &box) -> fir::ExtendedValue {
           const Fortran::semantics::DeclTypeSpec *type = sym.GetType();
@@ -602,8 +607,7 @@ public:
         [&](const fir::MutableBoxValue &box) -> fir::ExtendedValue {
           // Allocate storage for a pointer/allocatble descriptor.
           // No shape/lengths to be passed to the alloca.
-          return fir::MutableBoxValue(allocate({}, {}),
-                                      box.nonDeferredLenParams(), {});
+          return fir::MutableBoxValue(allocate({}, {}), {}, {});
         },
         [&](const auto &) -> fir::ExtendedValue {
           mlir::Value temp =
@@ -612,7 +616,82 @@ public:
           return fir::substBase(hexv, temp);
         });
 
+    // Initialise cloned allocatable
+    hexv.match(
+        [&](const fir::MutableBoxValue &box) -> void {
+          // Do not process pointers
+          if (Fortran::semantics::IsPointer(sym.GetUltimate())) {
+            return;
+          }
+          // Allocate storage for a pointer/allocatble descriptor.
+          // No shape/lengths to be passed to the alloca.
+          const auto new_box = exv.getBoxOf<fir::MutableBoxValue>();
+
+          // allocate if allocated
+          mlir::Value isAllocated =
+              fir::factory::genIsAllocatedOrAssociatedTest(*builder, loc, box);
+          auto if_builder = builder->genIfThenElse(loc, isAllocated);
+          if_builder.genThen([&]() {
+            std::string name = mangleName(sym) + ".alloc";
+            if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
+              fir::ExtendedValue read = fir::factory::genMutableBoxRead(
+                  *builder, loc, box, /*mayBePolymorphic=*/false);
+              auto read_box = read.getBoxOf<fir::ArrayBoxValue>();
+              fir::factory::genInlinedAllocation(
+                  *builder, loc, *new_box, read_box->getLBounds(),
+                  read_box->getExtents(),
+                  /*lenParams=*/std::nullopt, name,
+                  /*mustBeHeap=*/true);
+            } else {
+              fir::factory::genInlinedAllocation(
+                  *builder, loc, *new_box,
+                  new_box->getMutableProperties().lbounds,
+                  new_box->getMutableProperties().extents,
+                  /*lenParams=*/std::nullopt, name,
+                  /*mustBeHeap=*/true);
+            }
+          });
+          if_builder.genElse([&]() {
+            // nullify box
+            auto empty = fir::factory::createUnallocatedBox(
+                *builder, loc, new_box->getBoxTy(),
+                new_box->nonDeferredLenParams(), {});
+            builder->create<fir::StoreOp>(loc, empty, new_box->getAddr());
+          });
+          if_builder.end();
+        },
+        [&](const auto &) -> void {
+          // Do nothing
+        });
+
     return bindIfNewSymbol(sym, exv);
+  }
+
+  void createHostAssociateVarCloneDealloc(
+      const Fortran::semantics::Symbol &sym) override final {
+    mlir::Location loc = genLocation(sym.name());
+    Fortran::lower::SymbolBox hsb = lookupSymbol(sym);
+
+    fir::ExtendedValue hexv = symBoxToExtendedValue(hsb);
+    hexv.match(
+        [&](const fir::MutableBoxValue &new_box) -> void {
+          // Do not process pointers
+          if (Fortran::semantics::IsPointer(sym.GetUltimate())) {
+            return;
+          }
+          // deallocate allocated in createHostAssociateVarClone value
+          mlir::Value needs_dealloc =
+              fir::factory::genIsAllocatedOrAssociatedTest(*builder, loc,
+                                                           new_box);
+          builder->genIfThen(loc, needs_dealloc)
+              .genThen([&]() {
+                Fortran::lower::genDeallocateBox(*this, new_box, loc);
+              })
+              .end();
+        },
+        [&](const auto &) -> void {
+          // Do nothing
+        });
   }
 
   void copyHostAssociateVar(
@@ -624,14 +703,14 @@ public:
     const Fortran::semantics::Symbol &hsym = sym.GetUltimate();
     Fortran::lower::SymbolBox hsb = lookupOneLevelUpSymbol(hsym);
     assert(hsb && "Host symbol box not found");
-    fir::ExtendedValue hexv = getExtendedValue(hsb);
+    fir::ExtendedValue hexv = symBoxToExtendedValue(hsb);
 
     // 2) Fetch the copied one that will mask the original.
     Fortran::lower::SymbolBox sb = shallowLookupSymbol(sym);
     assert(sb && "Host-associated symbol box not found");
     assert(hsb.getAddr() != sb.getAddr() &&
            "Host and associated symbol boxes are the same");
-    fir::ExtendedValue exv = getExtendedValue(sb);
+    fir::ExtendedValue exv = symBoxToExtendedValue(sb);
 
     // 3) Perform the assignment.
     mlir::OpBuilder::InsertPoint insPt = builder->saveInsertionPoint();
@@ -653,6 +732,7 @@ public:
 
     mlir::Location loc = genLocation(sym.name());
     mlir::Type symType = genType(sym);
+
     if (auto seqTy = symType.dyn_cast<fir::SequenceType>()) {
       Fortran::lower::StatementContext stmtCtx;
       Fortran::lower::createSomeArrayAssignment(*this, lhs, rhs, localSymbols,
@@ -660,16 +740,15 @@ public:
       stmtCtx.finalizeAndReset();
     } else if (hexv.getBoxOf<fir::CharBoxValue>()) {
       fir::factory::CharacterExprHelper{*builder, loc}.createAssign(lhs, rhs);
-    } else if (hexv.getBoxOf<fir::MutableBoxValue>()) {
-      TODO(loc, "firstprivatisation of allocatable variables");
     } else {
       auto loadVal = builder->create<fir::LoadOp>(loc, fir::getBase(rhs));
       builder->create<fir::StoreOp>(loc, loadVal, fir::getBase(lhs));
     }
 
     if (copyAssignIP && copyAssignIP->isSet() &&
-        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate))
+        sym.test(Fortran::semantics::Symbol::Flag::OmpLastPrivate)) {
       builder->restoreInsertionPoint(insPt);
+    }
   }
 
   //===--------------------------------------------------------------------===//
@@ -716,7 +795,7 @@ public:
               loc = cooked->GetSourcePositionRange(block)) {
         // loc is a pair (begin, end); use the beginning position
         Fortran::parser::SourcePosition &filePos = loc->first;
-        llvm::SmallString<256> filePath(filePos.file.path());
+        llvm::SmallString<256> filePath(*filePos.path);
         llvm::sys::fs::make_absolute(filePath);
         llvm::sys::path::remove_dots(filePath);
         return mlir::FileLineColLoc::get(&getMLIRContext(), filePath.str(),
@@ -916,15 +995,6 @@ private:
       return false;
     localSymbols.addSymbol(sym, val, forced);
     return true;
-  }
-
-  fir::ExtendedValue getExtendedValue(Fortran::lower::SymbolBox sb) {
-    fir::ExtendedValue exv = symBoxToExtendedValue(sb);
-    // Dereference pointers and allocatables.
-    if (const auto *box = exv.getBoxOf<fir::MutableBoxValue>())
-      return fir::factory::genMutableBoxRead(*builder, getCurrentLocation(),
-                                             *box);
-    return exv;
   }
 
   /// Generate the address of loop variable \p sym.
@@ -2159,7 +2229,8 @@ private:
 
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
-    genOpenACCDeclarativeConstruct(*this, getEval(), accDecl);
+    genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
+                                   getEval(), accDecl);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
     builder->restoreInsertionPoint(insertPt);
@@ -2172,6 +2243,8 @@ private:
 
     const Fortran::parser::OpenMPLoopConstruct *ompLoop =
         std::get_if<Fortran::parser::OpenMPLoopConstruct>(&omp.u);
+    const Fortran::parser::OpenMPBlockConstruct *ompBlock =
+        std::get_if<Fortran::parser::OpenMPBlockConstruct>(&omp.u);
 
     // If loop is part of an OpenMP Construct then the OpenMP dialect
     // workshare loop operation has already been created. Only the
@@ -2196,8 +2269,15 @@ private:
     for (Fortran::lower::pft::Evaluation &e : curEval->getNestedEvaluations())
       genFIR(e);
 
-    if (ompLoop)
+    if (ompLoop) {
       genOpenMPReduction(*this, *loopOpClauseList);
+    } else if (ompBlock) {
+      const auto &blockStart =
+          std::get<Fortran::parser::OmpBeginBlockDirective>(ompBlock->t);
+      const auto &blockClauses =
+          std::get<Fortran::parser::OmpClauseList>(blockStart.t);
+      genOpenMPReduction(*this, blockClauses);
+    }
 
     localSymbols.popScope();
     builder->restoreInsertionPoint(insertPt);
@@ -3165,7 +3245,8 @@ private:
       return hlfir::EntityWithAttributes{builder.createConvert(loc, toTy, val)};
     };
     mlir::Value convertedRhs = hlfir::genElementalOp(
-        loc, builder, toTy, shape, /*typeParams=*/{}, genKernel);
+        loc, builder, toTy, shape, /*typeParams=*/{}, genKernel,
+        /*isUnordered=*/true);
     fir::FirOpBuilder *bldr = &builder;
     stmtCtx.attachCleanup([loc, bldr, convertedRhs]() {
       bldr->create<hlfir::DestroyOp>(loc, convertedRhs);
@@ -3189,6 +3270,21 @@ private:
     builder.restoreInsertionPoint(insertPt);
   }
 
+  bool firstDummyIsPointerOrAllocatable(
+      const Fortran::evaluate::ProcedureRef &userDefinedAssignment) {
+    using DummyAttr = Fortran::evaluate::characteristics::DummyDataObject::Attr;
+    if (auto procedure =
+            Fortran::evaluate::characteristics::Procedure::Characterize(
+                userDefinedAssignment.proc(), getFoldingContext()))
+      if (!procedure->dummyArguments.empty())
+        if (const auto *dataArg = std::get_if<
+                Fortran::evaluate::characteristics::DummyDataObject>(
+                &procedure->dummyArguments[0].u))
+          return dataArg->attrs.test(DummyAttr::Pointer) ||
+                 dataArg->attrs.test(DummyAttr::Allocatable);
+    return false;
+  }
+
   void genDataAssignment(
       const Fortran::evaluate::Assignment &assign,
       const Fortran::evaluate::ProcedureRef *userDefinedAssignment) {
@@ -3199,6 +3295,9 @@ private:
     const bool isWholeAllocatableAssignment =
         !userDefinedAssignment && !isInsideHlfirWhere() &&
         Fortran::lower::isWholeAllocatable(assign.lhs);
+    const bool isUserDefAssignToPointerOrAllocatable =
+        userDefinedAssignment &&
+        firstDummyIsPointerOrAllocatable(*userDefinedAssignment);
     std::optional<Fortran::evaluate::DynamicType> lhsType =
         assign.lhs.GetType();
     const bool keepLhsLengthInAllocatableAssignment =
@@ -3233,7 +3332,8 @@ private:
           loc, *this, assign.lhs, localSymbols, stmtCtx);
       // Dereference pointer LHS: the target is being assigned to.
       // Same for allocatables outside of whole allocatable assignments.
-      if (!isWholeAllocatableAssignment)
+      if (!isWholeAllocatableAssignment &&
+          !isUserDefAssignToPointerOrAllocatable)
         lhs = hlfir::derefPointersAndAllocatables(loc, builder, lhs);
       return lhs;
     };
@@ -3263,26 +3363,46 @@ private:
     // Lower LHS in its own region.
     builder.createBlock(&regionAssignOp.getLhsRegion());
     Fortran::lower::StatementContext lhsContext;
+    mlir::Value lhsYield = nullptr;
     if (!lhsHasVectorSubscripts) {
       hlfir::Entity lhs = evaluateLhs(lhsContext);
       auto lhsYieldOp = builder.create<hlfir::YieldOp>(loc, lhs);
       genCleanUpInRegionIfAny(loc, builder, lhsYieldOp.getCleanup(),
                               lhsContext);
+      lhsYield = lhs;
     } else {
       hlfir::ElementalAddrOp elementalAddr =
           Fortran::lower::convertVectorSubscriptedExprToElementalAddr(
               loc, *this, assign.lhs, localSymbols, lhsContext);
       genCleanUpInRegionIfAny(loc, builder, elementalAddr.getCleanup(),
                               lhsContext);
+      lhsYield = elementalAddr.getYieldOp().getEntity();
     }
+    assert(lhsYield && "must have been set");
 
     // Add "realloc" flag to hlfir.region_assign.
     if (isWholeAllocatableAssignment)
       TODO(loc, "assignment to a whole allocatable inside FORALL");
-    // Generate the hlfir.region_assign userDefinedAssignment region.
-    if (userDefinedAssignment)
-      TODO(loc, "HLFIR user defined assignment");
 
+    // Generate the hlfir.region_assign userDefinedAssignment region.
+    if (userDefinedAssignment) {
+      mlir::Type rhsType = rhs.getType();
+      mlir::Type lhsType = lhsYield.getType();
+      if (userDefinedAssignment->IsElemental()) {
+        rhsType = hlfir::getEntityElementType(rhs);
+        lhsType = hlfir::getEntityElementType(hlfir::Entity{lhsYield});
+      }
+      builder.createBlock(&regionAssignOp.getUserDefinedAssignment(),
+                          mlir::Region::iterator{}, {rhsType, lhsType},
+                          {loc, loc});
+      auto end = builder.create<fir::FirEndOp>(loc);
+      builder.setInsertionPoint(end);
+      hlfir::Entity lhsBlockArg{regionAssignOp.getUserAssignmentLhs()};
+      hlfir::Entity rhsBlockArg{regionAssignOp.getUserAssignmentRhs()};
+      Fortran::lower::convertUserDefinedAssignmentToHLFIR(
+          loc, *this, *userDefinedAssignment, lhsBlockArg, rhsBlockArg,
+          localSymbols);
+    }
     builder.setInsertionPointAfter(regionAssignOp);
   }
 
@@ -3894,10 +4014,15 @@ private:
   void instantiateVar(const Fortran::lower::pft::Variable &var,
                       Fortran::lower::AggregateStoreMap &storeMap) {
     Fortran::lower::instantiateVariable(*this, var, localSymbols, storeMap);
-    if (var.hasSymbol() &&
-        var.getSymbol().test(
-            Fortran::semantics::Symbol::Flag::OmpThreadprivate))
-      Fortran::lower::genThreadprivateOp(*this, var);
+    if (var.hasSymbol()) {
+      if (var.getSymbol().test(
+              Fortran::semantics::Symbol::Flag::OmpThreadprivate))
+        Fortran::lower::genThreadprivateOp(*this, var);
+
+      if (var.getSymbol().test(
+              Fortran::semantics::Symbol::Flag::OmpDeclareTarget))
+        Fortran::lower::genDeclareTargetIntGlobal(*this, var);
+    }
   }
 
   /// Start translation of a function.
@@ -3917,6 +4042,19 @@ private:
     func.setVisibility(mlir::SymbolTable::Visibility::Public);
     assert(blockId == 0 && "invalid blockId");
     assert(activeConstructStack.empty() && "invalid construct stack state");
+
+    // Get the rounding mode at function entry, and arrange for it to be
+    // restored at all function exits.
+    if (!funit.isMainProgram() && funit.mayModifyRoundingMode) {
+      mlir::func::FuncOp getRound = fir::factory::getLlvmGetRounding(*builder);
+      mlir::func::FuncOp setRound = fir::factory::getLlvmSetRounding(*builder);
+      mlir::Value roundMode =
+          builder->create<fir::CallOp>(toLocation(), getRound).getResult(0);
+      mlir::Location endLoc =
+          toLocation(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
+      bridge.fctCtx().attachCleanup(
+          [=]() { builder->create<fir::CallOp>(endLoc, setRound, roundMode); });
+    }
 
     mapDummiesAndResults(funit, callee);
 
@@ -4117,6 +4255,16 @@ private:
       startBlock(newBlock);
   }
 
+  void eraseDeadCodeAndBlocks(mlir::RewriterBase &rewriter,
+                              llvm::MutableArrayRef<mlir::Region> regions) {
+    // WARNING: Do not add passes that can do folding or code motion here
+    // because they might cross omp.target region boundaries, which can result
+    // in incorrect code. Optimization passes like these must be added after
+    // OMP early outlining has been done.
+    (void)mlir::eraseUnreachableBlocks(rewriter, regions);
+    (void)mlir::runRegionDCE(rewriter, regions);
+  }
+
   /// Finish translation of a function.
   void endNewFunction(Fortran::lower::pft::FunctionLikeUnit &funit) {
     setCurrentPosition(Fortran::lower::pft::stmtSourceLoc(funit.endStmt));
@@ -4135,7 +4283,7 @@ private:
     // Eliminate dead code as a prerequisite to calling other IR passes.
     // FIXME: This simplification should happen in a normal pass, not here.
     mlir::IRRewriter rewriter(*builder);
-    (void)mlir::simplifyRegions(rewriter, {builder->getRegion()});
+    (void)eraseDeadCodeAndBlocks(rewriter, {builder->getRegion()});
     delete builder;
     builder = nullptr;
     hostAssocTuple = mlir::Value{};

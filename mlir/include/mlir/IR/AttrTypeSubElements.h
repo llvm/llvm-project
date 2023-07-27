@@ -400,6 +400,12 @@ template <typename T>
 struct is_tuple : public std::false_type {};
 template <typename... Ts>
 struct is_tuple<std::tuple<Ts...>> : public std::true_type {};
+
+template <typename T>
+struct is_pair : public std::false_type {};
+template <typename... Ts>
+struct is_pair<std::pair<Ts...>> : public std::true_type {};
+
 template <typename T, typename... Ts>
 using has_get_method = decltype(T::get(std::declval<Ts>()...));
 template <typename T, typename... Ts>
@@ -462,7 +468,8 @@ auto replaceImmediateSubElementsImpl(T derived, ArrayRef<Attribute> &replAttrs,
     } else {
       // Functor used to build the replacement on success.
       auto buildReplacement = [&](auto newKey, MLIRContext *ctx) {
-        if constexpr (is_tuple<decltype(key)>::value) {
+        if constexpr (is_tuple<decltype(key)>::value ||
+                      is_pair<decltype(key)>::value) {
           return std::apply(
               [&](auto &&...params) {
                 return constructSubElementReplacement<T>(

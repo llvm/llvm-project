@@ -9,29 +9,29 @@
 
 // CHECK: Disassembly of section .gnu.sgstubs:
 
-// CHECK-LABEL: <weak_qux>:
+// CHECK-LABEL: <global_foo>:
 // CHECK-NEXT:    20000: sg
-// CHECK-NEXT:           b.w {{.*}} <__acle_se_weak_qux>
-// CHECK-EMPTY:
-// CHECK-LABEL: <global_baz>:
-// CHECK-NEXT:    20008: sg
-// CHECK-NEXT:           b.w {{.*}} <__acle_se_global_baz>
+// CHECK-NEXT:           b.w {{.*}} <__acle_se_global_foo>
 // CHECK-EMPTY:
 // CHECK-LABEL: <weak_bar>:
-// CHECK-NEXT:    20010: sg
+// CHECK-NEXT:    20008: sg
 // CHECK-NEXT:           b.w {{.*}} <__acle_se_weak_bar>
 // CHECK-EMPTY:
-// CHECK-LABEL: <global_foo>:
+// CHECK-LABEL: <global_baz>:
+// CHECK-NEXT:    20010: sg
+// CHECK-NEXT:           b.w {{.*}} <__acle_se_global_baz>
+// CHECK-EMPTY:
+// CHECK-LABEL: <weak_qux>:
 // CHECK-NEXT:    20018: sg
-// CHECK-NEXT:           b.w {{.*}} <__acle_se_global_foo>
+// CHECK-NEXT:           b.w {{.*}} <__acle_se_weak_qux>
 
-// SYM: 00020019 {{.*}} GLOBAL {{.*}}           global_foo
+// SYM: 00020001 {{.*}} GLOBAL {{.*}}           global_foo
 // SYM: 00008001 {{.*}} GLOBAL {{.*}} __acle_se_global_foo
-// SYM: 00020011 {{.*}} WEAK   {{.*}}           weak_bar
+// SYM: 00020009 {{.*}} WEAK   {{.*}}           weak_bar
 // SYM: 00008005 {{.*}} WEAK   {{.*}} __acle_se_weak_bar
-// SYM: 00020009 {{.*}} GLOBAL {{.*}}           global_baz
+// SYM: 00020011 {{.*}} GLOBAL {{.*}}           global_baz
 // SYM: 00008009 {{.*}} WEAK   {{.*}} __acle_se_global_baz
-// SYM: 00020001 {{.*}} WEAK   {{.*}}           weak_qux
+// SYM: 00020019 {{.*}} WEAK   {{.*}}           weak_qux
 // SYM: 0000800d {{.*}} GLOBAL {{.*}} __acle_se_weak_qux
 
   .include "arm-cmse-macros.s"

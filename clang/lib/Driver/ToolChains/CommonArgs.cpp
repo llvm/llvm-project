@@ -262,11 +262,9 @@ void tools::AddLinkerInputs(const ToolChain &TC, const InputInfoList &Inputs,
   Args.AddAllArgValues(CmdArgs, options::OPT_Zlinker_input);
 
   // LIBRARY_PATH are included before user inputs and only supported on native
-  // toolchains. Otherwise only add the '-L' arguments requested by the user.
+  // toolchains.
   if (!TC.isCrossCompiling())
     addDirectoryList(Args, CmdArgs, "-L", "LIBRARY_PATH");
-  else
-    Args.AddAllArgs(CmdArgs, options::OPT_L);
 
   for (const auto &II : Inputs) {
     // If the current tool chain refers to an OpenMP offloading host, we
@@ -619,6 +617,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
                                 PluginName + Suffix,
                             Plugin);
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginPrefix) + Plugin));
+  } else {
+    // Tell LLD to find and use .llvm.lto section in regular relocatable object
+    // files
+    if (Args.hasArg(options::OPT_ffat_lto_objects))
+      CmdArgs.push_back("--fat-lto-objects");
   }
 
   const char *PluginOptPrefix = IsOSAIX ? "-bplugin_opt:" : "-plugin-opt=";
@@ -668,8 +671,11 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(Args.MakeArgString(
         Twine(PluginOptPrefix) + "dwo_dir=" + Output.getFilename() + "_dwo"));
 
-  if (IsThinLTO)
+  if (IsThinLTO && !IsOSAIX)
     CmdArgs.push_back(Args.MakeArgString(Twine(PluginOptPrefix) + "thinlto"));
+  else if (IsThinLTO && IsOSAIX)
+    CmdArgs.push_back(Args.MakeArgString(Twine("-bdbg:thinlto")));
+
 
   StringRef Parallelism = getLTOParallelism(Args, D);
   if (!Parallelism.empty())
@@ -694,6 +700,10 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
   }
 
   if (IsOSAIX) {
+    if (!ToolChain.useIntegratedAs())
+      CmdArgs.push_back(
+          Args.MakeArgString(Twine(PluginOptPrefix) + "-no-integrated-as=1"));
+
     // On AIX, clang assumes strict-dwarf is true if any debug option is
     // specified, unless it is told explicitly not to assume so.
     Arg *A = Args.getLastArg(options::OPT_g_Group);
@@ -727,13 +737,16 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-function-sections=0"));
 
+  bool DataSectionsTurnedOff = false;
   if (Args.hasFlag(options::OPT_fdata_sections, options::OPT_fno_data_sections,
-                   UseSeparateSections))
+                   UseSeparateSections)) {
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-data-sections=1"));
-  else if (Args.hasArg(options::OPT_fno_data_sections))
+  } else if (Args.hasArg(options::OPT_fno_data_sections)) {
+    DataSectionsTurnedOff = true;
     CmdArgs.push_back(
         Args.MakeArgString(Twine(PluginOptPrefix) + "-data-sections=0"));
+  }
 
   if (Args.hasArg(options::OPT_mxcoff_roptr) ||
       Args.hasArg(options::OPT_mno_xcoff_roptr)) {
@@ -746,8 +759,10 @@ void tools::addLTOOptions(const ToolChain &ToolChain, const ArgList &Args,
           << OptStr << ToolChain.getTriple().str();
 
     if (HasRoptr) {
-      if (!Args.hasFlag(options::OPT_fdata_sections,
-                        options::OPT_fno_data_sections, UseSeparateSections))
+      // The data sections option is on by default on AIX. We only need to error
+      // out when -fno-data-sections is specified explicitly to turn off data
+      // sections.
+      if (DataSectionsTurnedOff)
         D.Diag(diag::err_roptr_requires_data_sections);
 
       CmdArgs.push_back(
@@ -1271,14 +1286,14 @@ const char *tools::SplitDebugName(const JobAction &JA, const ArgList &Args,
     F += ".dwo";
   };
   if (Arg *A = Args.getLastArg(options::OPT_gsplit_dwarf_EQ))
-    if (StringRef(A->getValue()) == "single")
+    if (StringRef(A->getValue()) == "single" && Output.isFilename())
       return Args.MakeArgString(Output.getFilename());
 
   SmallString<128> T;
   if (const Arg *A = Args.getLastArg(options::OPT_dumpdir)) {
     T = A->getValue();
   } else {
-    Arg *FinalOutput = Args.getLastArg(options::OPT_o);
+    Arg *FinalOutput = Args.getLastArg(options::OPT_o, options::OPT__SLASH_o);
     if (FinalOutput && Args.hasArg(options::OPT_c)) {
       T = FinalOutput->getValue();
       llvm::sys::path::remove_filename(T);

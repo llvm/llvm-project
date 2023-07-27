@@ -1,21 +1,5 @@
 // RUN: mlir-translate -mlir-to-llvmir -split-input-file %s | FileCheck %s
 
-
-// Comdat sections
-llvm.comdat @__llvm_comdat {
-  // CHECK: $any = comdat any
-  llvm.comdat_selector @any any
-  // CHECK: $exactmatch = comdat exactmatch
-  llvm.comdat_selector @exactmatch exactmatch
-  // CHECK: $largest = comdat largest
-  llvm.comdat_selector @largest largest
-  // CHECK: $nodeduplicate = comdat nodeduplicate
-  llvm.comdat_selector @nodeduplicate nodeduplicate
-  // CHECK: $samesize = comdat samesize
-  llvm.comdat_selector @samesize samesize
-}
-
-
 // CHECK: @global_aligned32 = private global i64 42, align 32
 "llvm.mlir.global"() ({}) {sym_name = "global_aligned32", global_type = i64, value = 42 : i64, linkage = #llvm.linkage<private>, alignment = 32} : () -> ()
 
@@ -54,6 +38,21 @@ llvm.mlir.global internal constant @string_const("foobar") : !llvm.array<6 x i8>
 
 // CHECK: @int_global_undef = internal global i64 undef
 llvm.mlir.global internal @int_global_undef() : i64
+
+// CHECK: @f8E4M3FN_global_as_i8 = internal global i8 60
+llvm.mlir.global internal @f8E4M3FN_global_as_i8(1.5 : f8E4M3FN) : i8
+
+// CHECK: @f8E5M2_global_as_i8 = internal global i8 62
+llvm.mlir.global internal @f8E5M2_global_as_i8(1.5 : f8E5M2) : i8
+
+// CHECK: @f8E4M3FNUZ_global_as_i8 = internal global i8 68
+llvm.mlir.global internal @f8E4M3FNUZ_global_as_i8(1.5 : f8E4M3FNUZ) : i8
+
+// CHECK: @f8E5M2FNUZ_global_as_i8 = internal global i8 66
+llvm.mlir.global internal @f8E5M2FNUZ_global_as_i8(1.5 : f8E5M2FNUZ) : i8
+
+// CHECK: @f8E4M3B11FNUZ_global_as_i8 = internal global i8 92
+llvm.mlir.global internal @f8E4M3B11FNUZ_global_as_i8(1.5 : f8E4M3B11FNUZ) : i8
 
 // CHECK: @explicit_undef = global i32 undef
 llvm.mlir.global external @explicit_undef() : i32 {
@@ -168,20 +167,6 @@ llvm.mlir.global thread_local @has_thr_local(42 : i64) : i64
 
 // CHECK: @sectionvar = internal constant [10 x i8] c"teststring", section ".mysection"
 llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysection"}: !llvm.array<10 x i8>
-
-//
-// Comdat attribute.
-//
-// CHECK: @has_any_comdat = internal constant i64 1, comdat($any)
-llvm.mlir.global internal constant @has_any_comdat(1 : i64) comdat(@__llvm_comdat::@any) : i64
-// CHECK: @has_exactmatch_comdat = internal constant i64 1, comdat($exactmatch)
-llvm.mlir.global internal constant @has_exactmatch_comdat(1 : i64) comdat(@__llvm_comdat::@exactmatch) : i64
-// CHECK: @has_largest_comdat = internal constant i64 1, comdat($largest)
-llvm.mlir.global internal constant @has_largest_comdat(1 : i64) comdat(@__llvm_comdat::@largest) : i64
-// CHECK: @has_nodeduplicate_comdat = internal constant i64 1, comdat($nodeduplicate)
-llvm.mlir.global internal constant @has_nodeduplicate_comdat(1 : i64) comdat(@__llvm_comdat::@nodeduplicate) : i64
-// CHECK: @has_samesize_comdat = internal constant i64 1, comdat($samesize)
-llvm.mlir.global internal constant @has_samesize_comdat(1 : i64) comdat(@__llvm_comdat::@samesize) : i64
 
 //
 // Declarations of the allocation functions to be linked against. These are
@@ -1641,6 +1626,50 @@ llvm.func @hasGCFunction() attributes { garbageCollector = "statepoint-example" 
     llvm.return
 }
 
+// -----
+
+// CHECK-LABEL: @gc_decl
+// CHECK-SAME: gc "statepoint-example"
+llvm.func @gc_decl() attributes { garbageCollector = "statepoint-example" }
+
+// -----
+
+// CHECK-LABEL: @section_func
+// CHECK-SAME: section ".section.name"
+llvm.func @section_func() attributes { section = ".section.name" } {
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @local_unnamed_addr_func
+// CHECK-SAME: local_unnamed_addr
+llvm.func local_unnamed_addr @local_unnamed_addr_func() {
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @unnamed_addr_func
+// CHECK-SAME: unnamed_addr
+llvm.func unnamed_addr @unnamed_addr_func()
+
+// -----
+
+// CHECK-LABEL: @align_func
+// CHECK-SAME: align 2
+llvm.func @align_func() attributes {alignment = 2 : i64} {
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @align_decl
+// CHECK-SAME: align 64
+llvm.func @align_decl() attributes {alignment = 64 : i64}
+
+// -----
+
 // CHECK-LABEL: @callFreezeOp
 llvm.func @callFreezeOp(%x : i32) {
   // CHECK: freeze i32 %{{[0-9]+}}
@@ -1773,7 +1802,7 @@ llvm.func @foo() {
 // Check that branch weight attributes are exported properly as metadata.
 llvm.func @cond_br_weights(%cond : i1, %arg0 : i32,  %arg1 : i32) -> i32 {
   // CHECK: !prof ![[NODE:[0-9]+]]
-  llvm.cond_br %cond weights(dense<[5, 10]> : vector<2xi32>), ^bb1, ^bb2
+  llvm.cond_br %cond weights([5, 10]), ^bb1, ^bb2
 ^bb1:  // pred: ^bb0
   llvm.return %arg0 : i32
 ^bb2:  // pred: ^bb0
@@ -1789,7 +1818,7 @@ llvm.func @fn()
 // CHECK-LABEL: @call_branch_weights
 llvm.func @call_branch_weights() {
   // CHECK: !prof ![[NODE:[0-9]+]]
-  llvm.call @fn() {branch_weights = dense<42> : vector<1xi32>} : () -> ()
+  llvm.call @fn() {branch_weights = array<i32 : 42>} : () -> ()
   llvm.return
 }
 
@@ -1804,7 +1833,7 @@ llvm.func @__gxx_personality_v0(...) -> i32
 llvm.func @invoke_branch_weights() -> i32 attributes {personality = @__gxx_personality_v0} {
   %0 = llvm.mlir.constant(1 : i32) : i32
   // CHECK: !prof ![[NODE:[0-9]+]]
-  llvm.invoke @foo() to ^bb2 unwind ^bb1 {branch_weights = dense<[42, 99]> : vector<2xi32>} : () -> ()
+  llvm.invoke @foo() to ^bb2 unwind ^bb1 {branch_weights = array<i32 : 42, 99>} : () -> ()
 ^bb1:  // pred: ^bb0
   %1 = llvm.landingpad cleanup : !llvm.struct<(ptr<i8>, i32)>
   llvm.br ^bb2
@@ -1982,10 +2011,14 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
   %21 = llvm.intr.vector.reduce.fmax(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
   %22 = llvm.intr.vector.reduce.fmin(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
 
+// CHECK: call nnan float @llvm.vector.reduce.fmaximum.v2f32(<2 x float> {{.*}})
+// CHECK: call nnan float @llvm.vector.reduce.fminimum.v2f32(<2 x float> {{.*}})
+  %23 = llvm.intr.vector.reduce.fmaximum(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
+  %24 = llvm.intr.vector.reduce.fminimum(%arg1) {fastmathFlags = #llvm.fastmath<nnan>} : (vector<2xf32>) -> f32
 
-  %23 = llvm.mlir.constant(true) : i1
+  %25 = llvm.mlir.constant(true) : i1
 // CHECK: select contract i1
-  %24 = llvm.select %23, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
+  %26 = llvm.select %25, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
   llvm.return
 }
 
@@ -2033,7 +2066,7 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
   llvm.switch %arg0 : i32, ^bb1(%0 : i32) [
     9: ^bb2(%1, %2 : i32, i32),
     99: ^bb3
-  ] {branch_weights = dense<[13, 17, 19]> : vector<3xi32>}
+  ] {branch_weights = array<i32 : 13, 17, 19>}
 
 ^bb1(%3: i32):  // pred: ^bb0
   llvm.return %3 : i32
@@ -2051,36 +2084,34 @@ llvm.func @switch_weights(%arg0: i32) -> i32 {
 
 llvm.func @foo(%arg0: !llvm.ptr)
 
+#alias_scope_domain = #llvm.alias_scope_domain<id = distinct[0]<>, description = "The domain">
+#alias_scope1 = #llvm.alias_scope<id = distinct[1]<>, domain = #alias_scope_domain, description = "The first scope">
+#alias_scope2 = #llvm.alias_scope<id = distinct[2]<>, domain = #alias_scope_domain>
+#alias_scope3 = #llvm.alias_scope<id = distinct[3]<>, domain = #alias_scope_domain>
+
 // CHECK-LABEL: aliasScope
 llvm.func @aliasScope(%arg1 : !llvm.ptr) {
   %0 = llvm.mlir.constant(0 : i32) : i32
   // CHECK:  call void @llvm.experimental.noalias.scope.decl(metadata ![[SCOPES1:[0-9]+]])
-  llvm.intr.experimental.noalias.scope.decl @metadata::@scope1
+  llvm.intr.experimental.noalias.scope.decl #alias_scope1
   // CHECK:  store {{.*}}, !alias.scope ![[SCOPES1]], !noalias ![[SCOPES23:[0-9]+]]
-  llvm.store %0, %arg1 {alias_scopes = [@metadata::@scope1], noalias_scopes = [@metadata::@scope2, @metadata::@scope3]} : i32, !llvm.ptr
+  llvm.store %0, %arg1 {alias_scopes = [#alias_scope1], noalias_scopes = [#alias_scope2, #alias_scope3]} : i32, !llvm.ptr
   // CHECK:  load {{.*}}, !alias.scope ![[SCOPES2:[0-9]+]], !noalias ![[SCOPES13:[0-9]+]]
-  %1 = llvm.load %arg1 {alias_scopes = [@metadata::@scope2], noalias_scopes = [@metadata::@scope1, @metadata::@scope3]} : !llvm.ptr -> i32
+  %1 = llvm.load %arg1 {alias_scopes = [#alias_scope2], noalias_scopes = [#alias_scope1, #alias_scope3]} : !llvm.ptr -> i32
   // CHECK:  atomicrmw {{.*}}, !alias.scope ![[SCOPES3:[0-9]+]], !noalias ![[SCOPES12:[0-9]+]]
-  %2 = llvm.atomicrmw add %arg1, %0 monotonic {alias_scopes = [@metadata::@scope3], noalias_scopes = [@metadata::@scope1, @metadata::@scope2]} : !llvm.ptr, i32
+  %2 = llvm.atomicrmw add %arg1, %0 monotonic {alias_scopes = [#alias_scope3], noalias_scopes = [#alias_scope1, #alias_scope2]} : !llvm.ptr, i32
   // CHECK:  cmpxchg {{.*}}, !alias.scope ![[SCOPES3]]
-  %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic {alias_scopes = [@metadata::@scope3]} : !llvm.ptr, i32
+  %3 = llvm.cmpxchg %arg1, %1, %2 acq_rel monotonic {alias_scopes = [#alias_scope3]} : !llvm.ptr, i32
   %5 = llvm.mlir.constant(42 : i8) : i8
   // CHECK:  llvm.memcpy{{.*}}, !alias.scope ![[SCOPES3]]
-  "llvm.intr.memcpy"(%arg1, %arg1, %0) <{isVolatile = false}> {alias_scopes = [@metadata::@scope3]} : (!llvm.ptr, !llvm.ptr, i32) -> ()
+  "llvm.intr.memcpy"(%arg1, %arg1, %0) <{isVolatile = false}> {alias_scopes = [#alias_scope3]} : (!llvm.ptr, !llvm.ptr, i32) -> ()
   // CHECK:  llvm.memset{{.*}}, !noalias ![[SCOPES3]]
-  "llvm.intr.memset"(%arg1, %5, %0) <{isVolatile = false}> {noalias_scopes = [@metadata::@scope3]} : (!llvm.ptr, i8, i32) -> ()
+  "llvm.intr.memset"(%arg1, %5, %0) <{isVolatile = false}> {noalias_scopes = [#alias_scope3]} : (!llvm.ptr, i8, i32) -> ()
   // CHECK: call void @foo({{.*}} !alias.scope ![[SCOPES3]]
-  llvm.call @foo(%arg1) {alias_scopes = [@metadata::@scope3]} : (!llvm.ptr) -> ()
+  llvm.call @foo(%arg1) {alias_scopes = [#alias_scope3]} : (!llvm.ptr) -> ()
   // CHECK: call void @foo({{.*}} !noalias ![[SCOPES3]]
-  llvm.call @foo(%arg1) {noalias_scopes = [@metadata::@scope3]} : (!llvm.ptr) -> ()
+  llvm.call @foo(%arg1) {noalias_scopes = [#alias_scope3]} : (!llvm.ptr) -> ()
   llvm.return
-}
-
-llvm.metadata @metadata {
-  llvm.alias_scope_domain @domain {description = "The domain"}
-  llvm.alias_scope @scope1 {domain = @domain, description = "The first scope"}
-  llvm.alias_scope @scope2 {domain = @domain}
-  llvm.alias_scope @scope3 {domain = @domain}
 }
 
 // Check the intrinsic declarations.

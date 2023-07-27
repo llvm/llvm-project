@@ -35,7 +35,9 @@
 // padding for s, libomptarget reported an array extension error.  collidePost
 // is never fully contained within that padding (which would avoid the extension
 // error) because collidePost is 16 bytes while the padding is always less than
-// 16 bytes due to the modulo operations.
+// 16 bytes due to the modulo operations.  (Later, libomptarget was changed not
+// to consider padding to be mapped to the host, so it cannot be involved in
+// array extension errors.)
 
 #include <stdint.h>
 #include <stdio.h>

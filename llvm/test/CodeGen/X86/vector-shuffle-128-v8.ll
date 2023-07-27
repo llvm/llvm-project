@@ -2526,13 +2526,11 @@ define <8 x i16> @shuffle_v8i16_04040404(<8 x i16> %a) {
 define <8 x i16> @shuffle_v8i16_02468ACE(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: shuffle_v8i16_02468ACE:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,6,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    psrad $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    psrad $16, %xmm0
+; SSE2-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v8i16_02468ACE:
@@ -2898,13 +2896,11 @@ define <8 x i16> @shuffle_v8i16_8012345u(<8 x i16> %a) {
 define <8 x i16> @shuffle_v8i16_02468ace(<8 x i16> %a, <8 x i16> %b) {
 ; SSE2-LABEL: shuffle_v8i16_02468ace:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm1 = xmm1[0,2,2,3,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm1 = xmm1[0,1,2,3,4,6,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[0,2,2,3]
-; SSE2-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE2-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; SSE2-NEXT:    pslld $16, %xmm1
+; SSE2-NEXT:    psrad $16, %xmm1
+; SSE2-NEXT:    pslld $16, %xmm0
+; SSE2-NEXT:    psrad $16, %xmm0
+; SSE2-NEXT:    packssdw %xmm1, %xmm0
 ; SSE2-NEXT:    retq
 ;
 ; SSSE3-LABEL: shuffle_v8i16_02468ace:

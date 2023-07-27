@@ -70,6 +70,7 @@ struct RecordKeeperImpl {
   BitInit TrueBitInit;
   BitInit FalseBitInit;
 
+  FoldingSet<ArgumentInit> TheArgumentInitPool;
   FoldingSet<BitsInit> TheBitsInitPool;
   std::map<int64_t, IntInit *> TheIntInitPool;
   StringMap<StringInit *, BumpPtrAllocator &> StringInitStringPool;
@@ -349,6 +350,8 @@ LLVM_DUMP_METHOD void Init::dump() const { return print(errs()); }
 RecordKeeper &Init::getRecordKeeper() const {
   if (auto *TyInit = dyn_cast<TypedInit>(this))
     return TyInit->getType()->getRecordKeeper();
+  if (auto *ArgInit = dyn_cast<ArgumentInit>(this))
+    return ArgInit->getRecordKeeper();
   return cast<UnsetInit>(this)->getRecordKeeper();
 }
 
@@ -362,6 +365,44 @@ Init *UnsetInit::getCastTo(RecTy *Ty) const {
 
 Init *UnsetInit::convertInitializerTo(RecTy *Ty) const {
   return const_cast<UnsetInit *>(this);
+}
+
+static void ProfileArgumentInit(FoldingSetNodeID &ID, Init *Value,
+                                ArgAuxType Aux) {
+  auto I = Aux.index();
+  ID.AddInteger(I);
+  if (I == ArgumentInit::Positional)
+    ID.AddInteger(std::get<ArgumentInit::Positional>(Aux));
+  if (I == ArgumentInit::Named)
+    ID.AddPointer(std::get<ArgumentInit::Named>(Aux));
+  ID.AddPointer(Value);
+}
+
+void ArgumentInit::Profile(FoldingSetNodeID &ID) const {
+  ProfileArgumentInit(ID, Value, Aux);
+}
+
+ArgumentInit *ArgumentInit::get(Init *Value, ArgAuxType Aux) {
+  FoldingSetNodeID ID;
+  ProfileArgumentInit(ID, Value, Aux);
+
+  RecordKeeper &RK = Value->getRecordKeeper();
+  detail::RecordKeeperImpl &RKImpl = RK.getImpl();
+  void *IP = nullptr;
+  if (ArgumentInit *I = RKImpl.TheArgumentInitPool.FindNodeOrInsertPos(ID, IP))
+    return I;
+
+  ArgumentInit *I = new (RKImpl.Allocator) ArgumentInit(Value, Aux);
+  RKImpl.TheArgumentInitPool.InsertNode(I, IP);
+  return I;
+}
+
+Init *ArgumentInit::resolveReferences(Resolver &R) const {
+  Init *NewValue = Value->resolveReferences(R);
+  if (NewValue != Value)
+    return cloneWithValue(NewValue);
+
+  return const_cast<ArgumentInit *>(this);
 }
 
 BitInit *BitInit::get(RecordKeeper &RK, bool V) {
@@ -2131,9 +2172,8 @@ RecTy *DefInit::getFieldType(StringInit *FieldName) const {
 
 std::string DefInit::getAsString() const { return std::string(Def->getName()); }
 
-static void ProfileVarDefInit(FoldingSetNodeID &ID,
-                              Record *Class,
-                              ArrayRef<Init *> Args) {
+static void ProfileVarDefInit(FoldingSetNodeID &ID, Record *Class,
+                              ArrayRef<ArgumentInit *> Args) {
   ID.AddInteger(Args.size());
   ID.AddPointer(Class);
 
@@ -2145,7 +2185,7 @@ VarDefInit::VarDefInit(Record *Class, unsigned N)
     : TypedInit(IK_VarDefInit, RecordRecTy::get(Class)), Class(Class),
       NumArgs(N) {}
 
-VarDefInit *VarDefInit::get(Record *Class, ArrayRef<Init *> Args) {
+VarDefInit *VarDefInit::get(Record *Class, ArrayRef<ArgumentInit *> Args) {
   FoldingSetNodeID ID;
   ProfileVarDefInit(ID, Class, Args);
 
@@ -2154,11 +2194,11 @@ VarDefInit *VarDefInit::get(Record *Class, ArrayRef<Init *> Args) {
   if (VarDefInit *I = RK.TheVarDefInitPool.FindNodeOrInsertPos(ID, IP))
     return I;
 
-  void *Mem = RK.Allocator.Allocate(totalSizeToAlloc<Init *>(Args.size()),
-                                    alignof(VarDefInit));
+  void *Mem = RK.Allocator.Allocate(
+      totalSizeToAlloc<ArgumentInit *>(Args.size()), alignof(VarDefInit));
   VarDefInit *I = new (Mem) VarDefInit(Class, Args.size());
   std::uninitialized_copy(Args.begin(), Args.end(),
-                          I->getTrailingObjects<Init *>());
+                          I->getTrailingObjects<ArgumentInit *>());
   RK.TheVarDefInitPool.InsertNode(I, IP);
   return I;
 }
@@ -2186,13 +2226,16 @@ DefInit *VarDefInit::instantiate() {
     ArrayRef<Init *> TArgs = Class->getTemplateArgs();
     MapResolver R(NewRec);
 
-    for (unsigned i = 0, e = TArgs.size(); i != e; ++i) {
-      if (i < args_size())
-        R.set(TArgs[i], getArg(i));
-      else
-        R.set(TArgs[i], NewRec->getValue(TArgs[i])->getValue());
+    for (unsigned I = 0, E = TArgs.size(); I != E; ++I) {
+      R.set(TArgs[I], NewRec->getValue(TArgs[I])->getValue());
+      NewRec->removeValue(TArgs[I]);
+    }
 
-      NewRec->removeValue(TArgs[i]);
+    for (auto *Arg : args()) {
+      if (Arg->isPositional())
+        R.set(TArgs[Arg->getIndex()], Arg->getValue());
+      if (Arg->isNamed())
+        R.set(Arg->getName(), Arg->getValue());
     }
 
     NewRec->resolveReferences(R);
@@ -2222,11 +2265,11 @@ DefInit *VarDefInit::instantiate() {
 Init *VarDefInit::resolveReferences(Resolver &R) const {
   TrackUnresolvedResolver UR(&R);
   bool Changed = false;
-  SmallVector<Init *, 8> NewArgs;
+  SmallVector<ArgumentInit *, 8> NewArgs;
   NewArgs.reserve(args_size());
 
-  for (Init *Arg : args()) {
-    Init *NewArg = Arg->resolveReferences(UR);
+  for (ArgumentInit *Arg : args()) {
+    auto *NewArg = cast<ArgumentInit>(Arg->resolveReferences(UR));
     NewArgs.push_back(NewArg);
     Changed |= NewArg != Arg;
   }

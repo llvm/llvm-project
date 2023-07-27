@@ -147,12 +147,12 @@
 
 // DEBUG_DIRECTIVES-NOT: warning: debug
 // NO_DEBUG-NOT: warning: debug
-// NO_DEBUG: "-fopenmp-is-device"
+// NO_DEBUG: "-fopenmp-is-target-device"
 // NO_DEBUG-NOT: "-debug-info-kind=
 // NO_DEBUG: ptxas
 // DEBUG_DIRECTIVES: "-triple" "nvptx64-nvidia-cuda"
 // DEBUG_DIRECTIVES-SAME: "-debug-info-kind=line-directives-only"
-// DEBUG_DIRECTIVES-SAME: "-fopenmp-is-device"
+// DEBUG_DIRECTIVES-SAME: "-fopenmp-is-target-device"
 // DEBUG_DIRECTIVES: ptxas
 // DEBUG_DIRECTIVES: "-lineinfo"
 
@@ -181,7 +181,7 @@
 // HAS_DEBUG: "-triple" "nvptx64-nvidia-cuda"
 // HAS_DEBUG-SAME: "-debug-info-kind={{constructor|line-tables-only}}"
 // HAS_DEBUG-SAME: "-dwarf-version=2"
-// HAS_DEBUG-SAME: "-fopenmp-is-device"
+// HAS_DEBUG-SAME: "-fopenmp-is-target-device"
 // HAS_DEBUG: ptxas
 // HAS_DEBUG-SAME: "-g"
 // HAS_DEBUG-SAME: "--dont-merge-basicblocks"
@@ -292,10 +292,10 @@
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-NVIDIA-AMDGPU
 
 // CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[HOST_BC:.+]]"
+// CHECK-NVIDIA-AMDGPU: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[AMD_BC:.+]]"
 // CHECK-NVIDIA-AMDGPU: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[NVIDIA_PTX:.+]]"
 // CHECK-NVIDIA-AMDGPU: "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[NVIDIA_PTX]]"], output: "[[NVIDIA_CUBIN:.+]]"
-// CHECK-NVIDIA-AMDGPU: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]", "[[HOST_BC]]"], output: "[[AMD_BC:.+]]"
-// CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[NVIDIA_CUBIN]]", "[[AMD_BC]]"], output: "[[BINARY:.*]]"
+// CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[AMD_BC]]", "[[NVIDIA_CUBIN]]"], output: "[[BINARY:.*]]"
 // CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[BINARY]]"], output: "[[HOST_OBJ:.+]]"
 // CHECK-NVIDIA-AMDGPU: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
 

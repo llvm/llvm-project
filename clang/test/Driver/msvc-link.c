@@ -35,4 +35,4 @@
 // VFSOVERLAY: -cc1"
 // VFSOVERLAY: "--vfsoverlay"
 // VFSOVERLAY: lld-link
-// VFSOVERLAY: "/vfsoverlay:
+// VFSOVERLAY: "/vfsoverlay:{{.*}}" "{{.*}}.obj"

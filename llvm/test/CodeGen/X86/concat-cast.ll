@@ -459,19 +459,17 @@ define <4 x float> @PR45794(<2 x i64> %x, <2 x i64> %y) {
 ; AVX512F-NEXT:    # kill: def $xmm0 killed $xmm0 def $zmm0
 ; AVX512F-NEXT:    vpsraq $48, %zmm0, %zmm0
 ; AVX512F-NEXT:    vpsraq $48, %zmm1, %zmm1
-; AVX512F-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[0,2],xmm1[0,2]
+; AVX512F-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX512F-NEXT:    vcvtdq2ps %xmm0, %xmm0
 ; AVX512F-NEXT:    vzeroupper
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512VL-LABEL: PR45794:
 ; AVX512VL:       # %bb.0:
-; AVX512VL-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
-; AVX512VL-NEXT:    vinserti128 $1, %xmm1, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpsraq $48, %ymm0, %ymm0
-; AVX512VL-NEXT:    vpmovqd %ymm0, %xmm0
+; AVX512VL-NEXT:    vpsraq $48, %xmm0, %xmm0
+; AVX512VL-NEXT:    vpsraq $48, %xmm1, %xmm1
+; AVX512VL-NEXT:    vpackssdw %xmm1, %xmm0, %xmm0
 ; AVX512VL-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; AVX512VL-NEXT:    vzeroupper
 ; AVX512VL-NEXT:    retq
   %a0 = ashr <2 x i64> %x, <i64 48, i64 48>
   %s0 = sitofp <2 x i64> %a0 to <2 x float>

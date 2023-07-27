@@ -27,7 +27,7 @@ define void @test(i32 %r, i32 %c) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = fmul <1 x double> [[BLOCK2]], [[SPLAT_SPLAT4]]
 ; CHECK-NEXT:    [[TMP4:%.*]] = fadd <1 x double> [[TMP1]], [[TMP3]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <1 x double> [[TMP4]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> undef, <2 x double> [[TMP5]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x double> poison, <2 x double> [[TMP5]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[BLOCK5:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP7:%.*]] = extractelement <2 x double> [[COL_LOAD]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT6:%.*]] = insertelement <1 x double> poison, double [[TMP7]], i64 0
@@ -53,7 +53,7 @@ define void @test(i32 %r, i32 %c) {
 ; CHECK-NEXT:    [[TMP17:%.*]] = fmul <1 x double> [[BLOCK14]], [[SPLAT_SPLAT16]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = fadd <1 x double> [[TMP15]], [[TMP17]]
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <1 x double> [[TMP18]], <1 x double> poison, <2 x i32> <i32 0, i32 poison>
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x double> undef, <2 x double> [[TMP19]], <2 x i32> <i32 2, i32 1>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <2 x double> poison, <2 x double> [[TMP19]], <2 x i32> <i32 2, i32 1>
 ; CHECK-NEXT:    [[BLOCK17:%.*]] = shufflevector <2 x double> [[COL_LOAD]], <2 x double> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    [[TMP21:%.*]] = extractelement <2 x double> [[COL_LOAD1]], i64 0
 ; CHECK-NEXT:    [[SPLAT_SPLATINSERT18:%.*]] = insertelement <1 x double> poison, double [[TMP21]], i64 0

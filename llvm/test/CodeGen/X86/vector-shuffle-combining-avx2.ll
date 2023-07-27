@@ -639,9 +639,8 @@ declare <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32>, <8 x i32>) nounwind readno
 define <8 x i16> @shuffle_combine_packusdw_permq_extract(<8 x i32> %a0) {
 ; CHECK-LABEL: shuffle_combine_packusdw_permq_extract:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vpackusdw %ymm0, %ymm0, %ymm0
-; CHECK-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,2,3]
-; CHECK-NEXT:    # kill: def $xmm0 killed $xmm0 killed $ymm0
+; CHECK-NEXT:    vextracti128 $1, %ymm0, %xmm1
+; CHECK-NEXT:    vpackusdw %xmm1, %xmm0, %xmm0
 ; CHECK-NEXT:    vzeroupper
 ; CHECK-NEXT:    ret{{[l|q]}}
   %1 = tail call <16 x i16> @llvm.x86.avx2.packusdw(<8 x i32> %a0, <8 x i32> poison)

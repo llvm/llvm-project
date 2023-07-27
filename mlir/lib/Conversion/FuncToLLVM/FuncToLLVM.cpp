@@ -134,8 +134,8 @@ static void wrapForExternalCallers(OpBuilder &rewriter, Location loc,
       attributes);
   auto wrapperFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
-      wrapperFuncType, LLVM::Linkage::External, /*dsoLocal*/ false,
-      /*cconv*/ LLVM::CConv::C, attributes);
+      wrapperFuncType, LLVM::Linkage::External, /*dsoLocal=*/false,
+      /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr, attributes);
 
   OpBuilder::InsertionGuard guard(rewriter);
   rewriter.setInsertionPointToStart(wrapperFuncOp.addEntryBlock());
@@ -205,8 +205,8 @@ static void wrapExternalFunction(OpBuilder &builder, Location loc,
   // Create the auxiliary function.
   auto wrapperFunc = builder.create<LLVM::LLVMFuncOp>(
       loc, llvm::formatv("_mlir_ciface_{0}", funcOp.getName()).str(),
-      wrapperType, LLVM::Linkage::External, /*dsoLocal*/ false,
-      /*cconv*/ LLVM::CConv::C, attributes);
+      wrapperType, LLVM::Linkage::External, /*dsoLocal=*/false,
+      /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr, attributes);
 
   // The wrapper that we synthetize here should only be visible in this module.
   newFuncOp.setLinkage(LLVM::Linkage::Private);
@@ -445,7 +445,8 @@ protected:
     }
     auto newFuncOp = rewriter.create<LLVM::LLVMFuncOp>(
         funcOp.getLoc(), funcOp.getName(), llvmType, linkage,
-        /*dsoLocal*/ false, /*cconv*/ LLVM::CConv::C, attributes);
+        /*dsoLocal=*/false, /*cconv=*/LLVM::CConv::C, /*comdat=*/nullptr,
+        attributes);
     // If the memory attribute was created, add it to the function.
     if (memoryAttr)
       newFuncOp.setMemoryAttr(memoryAttr);

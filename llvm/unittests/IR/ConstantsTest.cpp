@@ -467,9 +467,8 @@ TEST(ConstantsTest, BuildConstantDataVectors) {
   }
 }
 
-void bitcastToGEPHelper(bool useOpaquePointers) {
+TEST(ConstantsTest, BitcastToGEP) {
   LLVMContext Context;
-  Context.setOpaquePointers(useOpaquePointers);
   std::unique_ptr<Module> M(new Module("MyModule", Context));
 
   auto *i32 = Type::getInt32Ty(Context);
@@ -481,17 +480,8 @@ void bitcastToGEPHelper(bool useOpaquePointers) {
       new GlobalVariable(*M, S, false, GlobalValue::ExternalLinkage, nullptr);
   auto *PtrTy = PointerType::get(i32, 0);
   auto *C = ConstantExpr::getBitCast(G, PtrTy);
-  if (Context.supportsTypedPointers()) {
-    EXPECT_EQ(cast<ConstantExpr>(C)->getOpcode(), Instruction::BitCast);
-  } else {
-    /* With opaque pointers, no cast is necessary. */
-    EXPECT_EQ(C, G);
-  }
-}
-
-TEST(ConstantsTest, BitcastToGEP) {
-  bitcastToGEPHelper(true);
-  bitcastToGEPHelper(false);
+  /* With opaque pointers, no cast is necessary. */
+  EXPECT_EQ(C, G);
 }
 
 bool foldFuncPtrAndConstToNull(LLVMContext &Context, Module *TheModule,

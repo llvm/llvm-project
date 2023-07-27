@@ -26,6 +26,7 @@ void dumpDebugAbbrev(DWARFContext &DCtx, DWARFYAML::Data &Y) {
   auto AbbrevSetPtr = DCtx.getDebugAbbrev();
   if (AbbrevSetPtr) {
     uint64_t AbbrevTableID = 0;
+    AbbrevSetPtr->parse();
     for (auto AbbrvDeclSet : *AbbrevSetPtr) {
       Y.DebugAbbrev.emplace_back();
       Y.DebugAbbrev.back().ID = AbbrevTableID++;
@@ -219,6 +220,7 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     if (NewUnit.Version >= 5)
       NewUnit.Type = (dwarf::UnitType)CU->getUnitType();
     const DWARFDebugAbbrev *DebugAbbrev = DCtx.getDebugAbbrev();
+    DebugAbbrev->parse();
     NewUnit.AbbrevTableID = std::distance(
         DebugAbbrev->begin(),
         llvm::find_if(

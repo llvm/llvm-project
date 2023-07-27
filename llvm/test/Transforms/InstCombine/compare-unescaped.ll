@@ -382,8 +382,8 @@ define i1 @two_nonnull_mallocs_hidden() {
 ; CHECK-LABEL: @two_nonnull_mallocs_hidden(
 ; CHECK-NEXT:    [[M:%.*]] = call nonnull dereferenceable(4) ptr @malloc(i64 4)
 ; CHECK-NEXT:    [[N:%.*]] = call nonnull dereferenceable(4) ptr @malloc(i64 4)
-; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i8, ptr [[M]], i64 1
-; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i8, ptr [[N]], i64 2
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr inbounds i8, ptr [[M]], i64 1
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr inbounds i8, ptr [[N]], i64 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[GEP1]], [[GEP2]]
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;

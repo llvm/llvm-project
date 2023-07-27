@@ -78,6 +78,20 @@ public:
   static AffineMap getMinorIdentityMap(unsigned dims, unsigned results,
                                        MLIRContext *context);
 
+  /// Returns an identity affine map witn `numDims` input dimensions and
+  /// filtered results using `keepDimFilter`. If `keepDimFilter` returns true
+  /// for a dimension, the dimension is kept in the affine map results.
+  /// Otherwise, the dimension is dropped from the results.
+  ///
+  /// Examples:
+  ///   * getFilteredIdentityMap(4, [false, true, false, true])
+  ///       -> affine_map<(d0, d1, d2, d3) -> (d1, d3)>
+  ///   * getFilteredIdentityMap(3, [false, false, true])
+  ///       -> affine_map<(d0, d1, d2) -> (d2)>
+  static AffineMap
+  getFilteredIdentityMap(MLIRContext *ctx, unsigned numDims,
+                         llvm::function_ref<bool(AffineDimExpr)> keepDimFilter);
+
   /// Returns an AffineMap representing a permutation.
   /// The permutation is expressed as a non-empty vector of integers.
   /// E.g. the permutation `(i,j,k) -> (j,k,i)` will be expressed with

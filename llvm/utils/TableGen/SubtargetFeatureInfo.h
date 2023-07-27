@@ -69,8 +69,8 @@ struct SubtargetFeatureInfo {
   ///
   /// \param TargetName The name of the target as used in class prefixes (e.g.
   ///                   <TargetName>Subtarget)
-  /// \param ClassName  The name of the class (without the <Target> prefix)
-  ///                   that will contain the generated functions.
+  /// \param ClassName  The name of the class that will contain the generated
+  ///                   functions (including the target prefix.)
   /// \param FuncName   The name of the function to emit.
   /// \param SubtargetFeatures A map of TableGen records to the
   ///                          SubtargetFeatureInfo equivalent.

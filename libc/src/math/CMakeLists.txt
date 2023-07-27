@@ -73,7 +73,10 @@ add_math_entrypoint_object(copysignl)
 
 add_math_entrypoint_object(cos)
 add_math_entrypoint_object(cosf)
+add_math_entrypoint_object(cosh)
 add_math_entrypoint_object(coshf)
+
+add_math_entrypoint_object(erff)
 
 add_math_entrypoint_object(expf)
 
@@ -167,6 +170,9 @@ add_math_entrypoint_object(nearbyintl)
 add_math_entrypoint_object(nextafter)
 add_math_entrypoint_object(nextafterf)
 add_math_entrypoint_object(nextafterl)
+
+add_math_entrypoint_object(pow)
+add_math_entrypoint_object(powf)
 
 add_math_entrypoint_object(remainder)
 add_math_entrypoint_object(remainderf)

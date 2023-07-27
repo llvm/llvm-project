@@ -15,6 +15,8 @@
 #include "lldb/Utility/StreamString.h"
 #include "lldb/lldb-enumerations.h"
 
+#include "llvm/ADT/StringExtras.h"
+
 #include <algorithm>
 
 #include <cctype>

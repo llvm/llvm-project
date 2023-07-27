@@ -4,7 +4,7 @@
 .\"
 .\" This man page documents only lld's ELF linking support, obtained originally
 .\" from FreeBSD.
-.Dd Feb 9, 2023
+.Dd Jul 25, 2023
 .Dt LD.LLD 1
 .Os
 .Sh NAME
@@ -27,8 +27,8 @@ It accepts most of the same command line arguments and linker scripts
 as GNU linkers.
 .Pp
 .Nm
-currently supports i386, x86-64, ARM, AArch64, PowerPC32, PowerPC64,
-MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
+currently supports i386, x86-64, ARM, AArch64, LoongArch, PowerPC32,
+PowerPC64, MIPS32, MIPS64, RISC-V, AMDGPU, Hexagon and SPARC V9 targets.
 .Nm
 acts as a Microsoft link.exe-compatible linker if invoked as
 .Nm lld-link
@@ -88,6 +88,8 @@ Bind default visibility defined function symbols locally for
 .It Fl Bsymbolic-non-weak-functions
 Bind default visibility defined STB_GLOBAL function symbols locally for
 .Fl shared.
+.It Fl --be8
+Write a Big Endian ELF File using BE8 format(AArch32 only)
 .It Fl -build-id Ns = Ns Ar value
 Generate a build ID note.
 .Ar value

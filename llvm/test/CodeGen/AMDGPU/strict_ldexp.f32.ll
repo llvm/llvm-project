@@ -36,7 +36,6 @@ define float @test_ldexp_f32_i32(ptr addrspace(1) %out, float %a, i32 %b) #0 {
 ; GFX11-LABEL: test_ldexp_f32_i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, v3
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %result = call float @llvm.experimental.constrained.ldexp.f32.i32(float %a, i32 %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
@@ -73,7 +72,6 @@ define <2 x float> @test_ldexp_v2f32_v2i32(ptr addrspace(1) %out, <2 x float> %a
 ; GFX11-LABEL: test_ldexp_v2f32_v2i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, v4
 ; GFX11-NEXT:    v_ldexp_f32 v1, v3, v5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -133,7 +131,6 @@ define <3 x float> @test_ldexp_v3f32_v3i32(ptr addrspace(1) %out, <3 x float> %a
 ; GFX11-LABEL: test_ldexp_v3f32_v3i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, v5
 ; GFX11-NEXT:    v_ldexp_f32 v1, v3, v6
 ; GFX11-NEXT:    v_ldexp_f32 v2, v4, v7
@@ -203,7 +200,6 @@ define <4 x float> @test_ldexp_v4f32_v4i32(ptr addrspace(1) %out, <4 x float> %a
 ; GFX11-LABEL: test_ldexp_v4f32_v4i32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, v6
 ; GFX11-NEXT:    v_ldexp_f32 v1, v3, v7
 ; GFX11-NEXT:    v_ldexp_f32 v2, v4, v8

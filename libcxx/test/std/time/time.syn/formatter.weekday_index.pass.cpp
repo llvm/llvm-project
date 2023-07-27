@@ -11,11 +11,11 @@
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-
 // TODO FMT This test should not require std::to_chars(floating-point)
 // XFAIL: availability-fp_to_chars-missing
+
+// TODO FMT Investigate Windows issues.
+// XFAIL: msvc
 
 // REQUIRES: locale.fr_FR.UTF-8
 // REQUIRES: locale.ja_JP.UTF-8
@@ -231,16 +231,16 @@ static void test_valid_values() {
 template <class CharT>
 static void test_invalid_values() {
   // Test that %a and %A throw an exception.
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%a}"),
                   std::chrono::weekday_indexed{std::chrono::weekday(8), 1});
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%a}"),
                   std::chrono::weekday_indexed{std::chrono::weekday(255), 1});
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%A}"),
                   std::chrono::weekday_indexed{std::chrono::weekday(8), 1});
-  check_exception("formatting a weekday name needs a valid weekday",
+  check_exception("Formatting a weekday name needs a valid weekday",
                   SV("{:%A}"),
                   std::chrono::weekday_indexed{std::chrono::weekday(255), 1});
 
@@ -284,6 +284,24 @@ static void test_invalid_values() {
           SV("%u='255'\t%Ou='255'\t%w='255'\t%Ow='255'\n"),
           lfmt,
           std::chrono::weekday_indexed{std::chrono::weekday(255), 1});
+#elif defined(_WIN32) //  defined(__APPLE__)
+    // Non localized output using C-locale
+    check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), fmt, std::chrono::weekday_indexed{std::chrono::weekday(8), 0});
+    check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), fmt, std::chrono::weekday_indexed{std::chrono::weekday(8), 1});
+    check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), fmt, std::chrono::weekday_indexed{std::chrono::weekday(255), 0});
+    check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), fmt, std::chrono::weekday_indexed{std::chrono::weekday(255), 1});
+
+    // Use the global locale (fr_FR)
+    check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_indexed{std::chrono::weekday(8), 0});
+    check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_indexed{std::chrono::weekday(8), 1});
+    check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_indexed{std::chrono::weekday(255), 0});
+    check(SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_indexed{std::chrono::weekday(255), 1});
+
+    // Use supplied locale (ja_JP). This locale has a different alternate.
+    check(loc, SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_indexed{std::chrono::weekday(8), 0});
+    check(loc, SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_indexed{std::chrono::weekday(8), 1});
+    check(loc, SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_indexed{std::chrono::weekday(255), 0});
+    check(loc, SV("%u=''\t%Ou=''\t%w=''\t%Ow=''\n"), lfmt, std::chrono::weekday_indexed{std::chrono::weekday(255), 1});
 #elif defined(_AIX) //  defined(__APPLE__)
     // Non localized output using C-locale
     check(SV("%u='8'\t%Ou='8'\t%w='8'\t%Ow='8'\n"), fmt, std::chrono::weekday_indexed{std::chrono::weekday(8), 0});
@@ -380,12 +398,12 @@ static void test() {
   check_invalid_types<CharT>({SV("a"), SV("A"), SV("t"), SV("u"), SV("w"), SV("Ou"), SV("Ow")},
                              std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
 
-  check_exception("Expected '%' or '}' in the chrono format-string",
+  check_exception("The format specifier expects a '%' or a '}'",
                   SV("{:A"),
                   std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
   check_exception(
-      "The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
-  check_exception("End of input while parsing the modifier chrono conversion-spec",
+      "The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
+  check_exception("End of input while parsing a conversion specifier",
                   SV("{:%"),
                   std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
   check_exception("End of input while parsing the modifier E",
@@ -396,7 +414,7 @@ static void test() {
                   std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
 
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string",
+  check_exception("The format specifier expects a '%' or a '}'",
                   SV("{:.3}"),
                   std::chrono::weekday_indexed{std::chrono::weekday(0), 1});
 }

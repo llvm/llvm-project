@@ -11,7 +11,7 @@
 #define _LIBCPP___FORMAT_FORMAT_ERROR_H
 
 #include <__config>
-#include <cstdlib>
+#include <__verbose_abort>
 #include <stdexcept>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -40,8 +40,7 @@ __throw_format_error(const char* __s) {
 #ifndef _LIBCPP_HAS_NO_EXCEPTIONS
   throw format_error(__s);
 #else
-  (void)__s;
-  _VSTD::abort();
+  _LIBCPP_VERBOSE_ABORT("format_error was thrown in -fno-exceptions mode with message \"%s\"", __s);
 #endif
 }
 

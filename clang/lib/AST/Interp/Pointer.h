@@ -77,6 +77,13 @@ public:
   /// Converts the pointer to an APValue.
   APValue toAPValue() const;
 
+  /// Converts the pointer to a string usable in diagnostics.
+  std::string toDiagnosticString(const ASTContext &Ctx) const;
+
+  unsigned getIntegerRepresentation() const {
+    return reinterpret_cast<uintptr_t>(Pointee) + Offset;
+  }
+
   /// Offsets a pointer inside an array.
   Pointer atIndex(unsigned Idx) const {
     if (Base == RootPtrMark)
@@ -247,9 +254,11 @@ public:
   }
 
   /// Returns the record descriptor of a class.
-  Record *getRecord() const { return getFieldDesc()->ElemRecord; }
+  const Record *getRecord() const { return getFieldDesc()->ElemRecord; }
   /// Returns the element record type, if this is a non-primive array.
-  Record *getElemRecord() const { return getFieldDesc()->ElemDesc->ElemRecord; }
+  const Record *getElemRecord() const {
+    return getFieldDesc()->ElemDesc->ElemRecord;
+  }
   /// Returns the field information.
   const FieldDecl *getField() const { return getFieldDesc()->asFieldDecl(); }
 
@@ -323,7 +332,8 @@ public:
 
   /// Dereferences a primitive element.
   template <typename T> T &elem(unsigned I) const {
-    return reinterpret_cast<T *>(Pointee->rawData())[I];
+    assert(I < getNumElems());
+    return reinterpret_cast<T *>(Pointee->data() + sizeof(InitMap *))[I];
   }
 
   /// Initializes a field.

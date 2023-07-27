@@ -10,6 +10,10 @@
 #ifndef __CLANG_HIP_LIBDEVICE_DECLARES_H__
 #define __CLANG_HIP_LIBDEVICE_DECLARES_H__
 
+#if !defined(__HIPCC_RTC__) && __has_include("hip/hip_version.h")
+#include "hip/hip_version.h"
+#endif // __has_include("hip/hip_version.h")
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -289,8 +293,15 @@ __device__ __attribute__((pure)) _Float16 __ocml_pown_f16(_Float16, int);
 typedef _Float16 __2f16 __attribute__((ext_vector_type(2)));
 typedef short __2i16 __attribute__((ext_vector_type(2)));
 
+// We need to match C99's bool and get an i1 in the IR.
+#ifdef __cplusplus
+typedef bool __ockl_bool;
+#else
+typedef _Bool __ockl_bool;
+#endif
+
 __device__ __attribute__((const)) float __ockl_fdot2(__2f16 a, __2f16 b,
-                                                     float c, bool s);
+                                                     float c, __ockl_bool s);
 __device__ __attribute__((const)) __2f16 __ocml_ceil_2f16(__2f16);
 __device__ __attribute__((const)) __2f16 __ocml_fabs_2f16(__2f16);
 __device__ __2f16 __ocml_cos_2f16(__2f16);
@@ -305,6 +316,29 @@ __device__ __attribute__((const)) __2i16 __ocml_isnan_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log10_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log2_2f16(__2f16);
+
+#if HIP_VERSION_MAJOR * 100 + HIP_VERSION_MINOR >= 560
+#define __DEPRECATED_SINCE_HIP_560(X) __attribute__((deprecated(X)))
+#else
+#define __DEPRECATED_SINCE_HIP_560(X)
+#endif
+
+// Deprecated, should be removed when rocm releases using it are no longer
+// relevant.
+__DEPRECATED_SINCE_HIP_560("use ((_Float16)1.0) / ")
+__device__ inline _Float16 __llvm_amdgcn_rcp_f16(_Float16 x) {
+  return ((_Float16)1.0f) / x;
+}
+
+__DEPRECATED_SINCE_HIP_560("use ((__2f16)1.0) / ")
+__device__ inline __2f16
+__llvm_amdgcn_rcp_2f16(__2f16 __x)
+{
+  return ((__2f16)1.0f) / __x;
+}
+
+#undef __DEPRECATED_SINCE_HIP_560
+
 __device__ __attribute__((const)) __2f16 __ocml_rint_2f16(__2f16);
 __device__ __attribute__((const)) __2f16 __ocml_rsqrt_2f16(__2f16);
 __device__ __2f16 __ocml_sin_2f16(__2f16);

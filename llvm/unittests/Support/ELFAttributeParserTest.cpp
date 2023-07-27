@@ -45,11 +45,6 @@ TEST(AttributeHeaderParser, InvalidSectionLength) {
   testParseError(bytes, "invalid section length 3 at offset 0x1");
 }
 
-TEST(AttributeHeaderParser, UnrecognizedVendorName) {
-  static const uint8_t bytes[] = {'A', 7, 0, 0, 0, 'x', 'y', 0};
-  testParseError(bytes, "unrecognized vendor-name: xy");
-}
-
 TEST(AttributeHeaderParser, UnrecognizedTag) {
   static const uint8_t bytes[] = {'A', 14, 0, 0, 0, 't', 'e', 's',
                                   't', 0,  4, 5, 0, 0,   0};

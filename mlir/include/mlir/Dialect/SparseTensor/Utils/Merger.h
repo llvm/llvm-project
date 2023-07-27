@@ -70,6 +70,9 @@ struct TensorExp final {
   /// and kSelect, this holds the original operation with all regions. For
   /// kBinaryBranch, this holds the YieldOp for the left or right half
   /// to be merged into a nested scf loop.
+  ///
+  /// Or the actual operation that we can not sparsify but having all dense
+  /// operands for kDenseOp.
   Operation *op;
 
   /// An optional attribute that is required to determine the semantics of the
@@ -157,8 +160,9 @@ enum class TensorExp::Kind {
   kShrS, // signed
   kShrU, // unsigned
   kShlI,
-  kBinary, // semiring binary op
-  kReduce, // semiring reduction op
+  kBinary,  // semiring binary op
+  kReduce,  // semiring reduction op
+  kDenseOp, // special category of operations requiring all dense operands
 };
 
 //===----------------------------------------------------------------------===//
@@ -645,7 +649,11 @@ private:
   Type inferType(ExprId e, Value src) const;
 
   /// Traverses the SSA tree (possibly a DAG) to build a tensor expression.
-  std::optional<ExprId> buildTensorExp(linalg::GenericOp op, Value v);
+  /// The boolean value returned indicates whether the result of the current
+  /// operation being built depends on any value that is loaded from a sparse
+  /// tensor.
+  std::pair<std::optional<ExprId>, bool> buildTensorExp(linalg::GenericOp op,
+                                                        Value v);
 
   /// Merger data structures.
   const TensorId outTensor;

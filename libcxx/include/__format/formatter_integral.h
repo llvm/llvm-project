@@ -85,9 +85,9 @@ _LIBCPP_HIDE_FROM_ABI inline char* __insert_sign(char* __buf, bool __negative, _
  * regardless whether the @c std::numpunct's type is @c char or @c wchar_t.
  */
 _LIBCPP_HIDE_FROM_ABI inline string __determine_grouping(ptrdiff_t __size, const string& __grouping) {
-  _LIBCPP_ASSERT(!__grouping.empty() && __size > __grouping[0],
-                 "The slow grouping formatting is used while there will be no "
-                 "separators written");
+  _LIBCPP_ASSERT_UNCATEGORIZED(!__grouping.empty() && __size > __grouping[0],
+                               "The slow grouping formatting is used while there will be no "
+                               "separators written");
   string __r;
   auto __end = __grouping.end() - 1;
   auto __ptr = __grouping.begin();
@@ -154,7 +154,7 @@ _LIBCPP_HIDE_FROM_ABI char* __to_buffer(char* __first, char* __last, _Tp __value
   // TODO FMT Evaluate code overhead due to not calling the internal function
   // directly. (Should be zero overhead.)
   to_chars_result __r = _VSTD::to_chars(__first, __last, __value, __base);
-  _LIBCPP_ASSERT(__r.ec == errc(0), "Internal buffer too small");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__r.ec == errc(0), "Internal buffer too small");
   return __r.ptr;
 }
 
@@ -202,6 +202,72 @@ consteval size_t __buffer_size() noexcept
        + 2                           // Reserve space for the '0[Xx]' prefix.
        + 1;                          // Reserve space for the sign.
 }
+
+template <class _OutIt, class _CharT>
+_LIBCPP_HIDE_FROM_ABI _OutIt __write_using_decimal_separators(_OutIt __out_it, const char* __begin, const char* __first,
+                                                              const char* __last, string&& __grouping, _CharT __sep,
+                                                              __format_spec::__parsed_specifications<_CharT> __specs) {
+  int __size = (__first - __begin) +    // [sign][prefix]
+               (__last - __first) +     // data
+               (__grouping.size() - 1); // number of separator characters
+
+  __padding_size_result __padding = {0, 0};
+  if (__specs.__alignment_ == __format_spec::__alignment::__zero_padding) {
+    // Write [sign][prefix].
+    __out_it = __formatter::__copy(__begin, __first, _VSTD::move(__out_it));
+
+    if (__specs.__width_ > __size) {
+      // Write zero padding.
+      __padding.__before_ = __specs.__width_ - __size;
+      __out_it            = __formatter::__fill(_VSTD::move(__out_it), __specs.__width_ - __size, _CharT('0'));
+    }
+  } else {
+    if (__specs.__width_ > __size) {
+      // Determine padding and write padding.
+      __padding = __formatter::__padding_size(__size, __specs.__width_, __specs.__alignment_);
+
+      __out_it = __formatter::__fill(_VSTD::move(__out_it), __padding.__before_, __specs.__fill_);
+    }
+    // Write [sign][prefix].
+    __out_it = __formatter::__copy(__begin, __first, _VSTD::move(__out_it));
+  }
+
+  auto __r = __grouping.rbegin();
+  auto __e = __grouping.rend() - 1;
+  _LIBCPP_ASSERT_UNCATEGORIZED(__r != __e, "The slow grouping formatting is used while "
+                                           "there will be no separators written.");
+  // The output is divided in small groups of numbers to write:
+  // - A group before the first separator.
+  // - A separator and a group, repeated for the number of separators.
+  // - A group after the last separator.
+  // This loop achieves that process by testing the termination condition
+  // midway in the loop.
+  //
+  // TODO FMT This loop evaluates the loop invariant `__parser.__type !=
+  // _Flags::_Type::__hexadecimal_upper_case` for every iteration. (This test
+  // happens in the __write call.) Benchmark whether making two loops and
+  // hoisting the invariant is worth the effort.
+  while (true) {
+    if (__specs.__std_.__type_ == __format_spec::__type::__hexadecimal_upper_case) {
+      __last = __first + *__r;
+      __out_it = __formatter::__transform(__first, __last, _VSTD::move(__out_it), __hex_to_upper);
+      __first = __last;
+    } else {
+      __out_it = __formatter::__copy(__first, *__r, _VSTD::move(__out_it));
+      __first += *__r;
+    }
+
+    if (__r == __e)
+      break;
+
+    ++__r;
+    *__out_it++ = __sep;
+  }
+
+  return __formatter::__fill(_VSTD::move(__out_it), __padding.__after_, __specs.__fill_);
+}
+
+
 
 template <unsigned_integral _Tp, class _CharT, class _FormatContext>
 _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator __format_integer(
@@ -299,7 +365,7 @@ __format_integer(_Tp __value,
     return __formatter::__format_integer(__value, __ctx, __specs, __negative, __array.begin(), __array.end(), "0X", 16);
   }
   default:
-    _LIBCPP_ASSERT(false, "The parse function should have validated the type");
+    _LIBCPP_ASSERT_UNCATEGORIZED(false, "The parse function should have validated the type");
     __libcpp_unreachable();
   }
 }

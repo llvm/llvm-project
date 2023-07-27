@@ -121,6 +121,8 @@ using ValueObjectProviderTy =
 
 typedef void (*DebuggerDestroyCallback)(lldb::user_id_t debugger_id,
                                         void *baton);
+typedef bool (*CommandOverrideCallbackWithResult)(
+    void *baton, const char **argv, lldb_private::CommandReturnObject &result);
 } // namespace lldb_private
 
 #endif // #if defined(__cplusplus)

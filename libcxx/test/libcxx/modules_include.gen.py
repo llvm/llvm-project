@@ -31,6 +31,9 @@ for header in public_headers:
 // UNSUPPORTED{BLOCKLIT}: windows
 // UNSUPPORTED{BLOCKLIT}: buildhost=windows
 
+// The AIX headers don't appear to be compatible with modules
+// UNSUPPORTED{BLOCKLIT}: LIBCXX-AIX-FIXME
+
 // The Android headers don't appear to be compatible with modules yet
 // XFAIL{BLOCKLIT}: LIBCXX-ANDROID-FIXME
 
@@ -40,4 +43,35 @@ for header in public_headers:
 {lit_header_restrictions.get(header, '')}
 
 #include <{header}>
+""")
+
+print(f"""
+//--- __std_clang_module.compile.pass.mm
+// RUN{BLOCKLIT}: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
+
+// REQUIRES{BLOCKLIT}: modules-build
+// UNSUPPORTED{BLOCKLIT}: use_module_std
+
+// GCC doesn't support -fcxx-modules
+// UNSUPPORTED{BLOCKLIT}: gcc
+
+// The Windows headers don't appear to be compatible with modules
+// UNSUPPORTED{BLOCKLIT}: windows
+// UNSUPPORTED{BLOCKLIT}: buildhost=windows
+
+// The AIX headers don't appear to be compatible with modules
+// UNSUPPORTED{BLOCKLIT}: LIBCXX-AIX-FIXME
+
+// The Android headers don't appear to be compatible with modules yet
+// XFAIL{BLOCKLIT}: LIBCXX-ANDROID-FIXME
+
+// TODO: Investigate this failure
+// UNSUPPORTED{BLOCKLIT}: LIBCXX-FREEBSD-FIXME
+
+// Lit seems to compile this twice: once with the default flags and once with with
+// the flags specified in the RUN directive. Guard the first compile from failing.
+#if __has_feature(modules)
+@import std;
+#endif
+
 """)

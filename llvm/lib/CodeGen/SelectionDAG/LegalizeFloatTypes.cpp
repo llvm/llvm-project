@@ -59,7 +59,8 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     dbgs() << "SoftenFloatResult #" << ResNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
 #endif
-    llvm_unreachable("Do not know how to soften the result of this operator!");
+    report_fatal_error("Do not know how to soften the result of this "
+                       "operator!");
 
     case ISD::ARITH_FENCE: R = SoftenFloatRes_ARITH_FENCE(N); break;
     case ISD::MERGE_VALUES:R = SoftenFloatRes_MERGE_VALUES(N, ResNo); break;
@@ -114,6 +115,9 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FPOWI:
     case ISD::FLDEXP:
     case ISD::STRICT_FLDEXP: R = SoftenFloatRes_ExpOp(N); break;
+    case ISD::FFREXP:
+      R = SoftenFloatRes_FFREXP(N);
+      break;
     case ISD::STRICT_FREM:
     case ISD::FREM:        R = SoftenFloatRes_FREM(N); break;
     case ISD::STRICT_FRINT:
@@ -650,6 +654,45 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_ExpOp(SDNode *N) {
   return Tmp.first;
 }
 
+SDValue DAGTypeLegalizer::SoftenFloatRes_FFREXP(SDNode *N) {
+  assert(!N->isStrictFPOpcode() && "strictfp not implemented for frexp");
+  EVT VT0 = N->getValueType(0);
+  EVT VT1 = N->getValueType(1);
+  RTLIB::Libcall LC = RTLIB::getFREXP(VT0);
+
+  if (DAG.getLibInfo().getIntSize() != VT1.getSizeInBits()) {
+    // If the exponent does not match with sizeof(int) a libcall would use the
+    // wrong type for the argument.
+    // TODO: Should be able to handle mismatches.
+    DAG.getContext()->emitError("ffrexp exponent does not match sizeof(int)");
+    return DAG.getUNDEF(N->getValueType(0));
+  }
+
+  EVT NVT0 = TLI.getTypeToTransformTo(*DAG.getContext(), VT0);
+  SDValue StackSlot = DAG.CreateStackTemporary(VT1);
+
+  SDLoc DL(N);
+
+  TargetLowering::MakeLibCallOptions CallOptions;
+  SDValue Ops[2] = {GetSoftenedFloat(N->getOperand(0)), StackSlot};
+  EVT OpsVT[2] = {VT0, StackSlot.getValueType()};
+
+  // TODO: setTypeListBeforeSoften can't properly express multiple return types,
+  // but we only really need to handle the 0th one for softening anyway.
+  CallOptions.setTypeListBeforeSoften({OpsVT}, VT0, true);
+
+  auto [ReturnVal, Chain] = TLI.makeLibCall(DAG, LC, NVT0, Ops, CallOptions, DL,
+                                            /*Chain=*/SDValue());
+  int FrameIdx = cast<FrameIndexSDNode>(StackSlot)->getIndex();
+  auto PtrInfo =
+      MachinePointerInfo::getFixedStack(DAG.getMachineFunction(), FrameIdx);
+
+  SDValue LoadExp = DAG.getLoad(VT1, DL, Chain, StackSlot, PtrInfo);
+
+  ReplaceValueWith(SDValue(N, 1), LoadExp);
+  return ReturnVal;
+}
+
 SDValue DAGTypeLegalizer::SoftenFloatRes_FREM(SDNode *N) {
   return SoftenFloatRes_Binary(N, GetFPLibCall(N->getValueType(0),
                                                RTLIB::REM_F32,
@@ -857,7 +900,7 @@ bool DAGTypeLegalizer::SoftenFloatOperand(SDNode *N, unsigned OpNo) {
     dbgs() << "SoftenFloatOperand Op #" << OpNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
 #endif
-    llvm_unreachable("Do not know how to soften this operator's operand!");
+    report_fatal_error("Do not know how to soften this operator's operand!");
 
   case ISD::BITCAST:     Res = SoftenFloatOp_BITCAST(N); break;
   case ISD::BR_CC:       Res = SoftenFloatOp_BR_CC(N); break;
@@ -1228,7 +1271,8 @@ void DAGTypeLegalizer::ExpandFloatResult(SDNode *N, unsigned ResNo) {
     dbgs() << "ExpandFloatResult #" << ResNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
 #endif
-    llvm_unreachable("Do not know how to expand the result of this operator!");
+    report_fatal_error("Do not know how to expand the result of this "
+                       "operator!");
 
   case ISD::UNDEF:        SplitRes_UNDEF(N, Lo, Hi); break;
   case ISD::SELECT:       SplitRes_Select(N, Lo, Hi); break;
@@ -1821,7 +1865,7 @@ bool DAGTypeLegalizer::ExpandFloatOperand(SDNode *N, unsigned OpNo) {
     dbgs() << "ExpandFloatOperand Op #" << OpNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
 #endif
-    llvm_unreachable("Do not know how to expand this operator's operand!");
+    report_fatal_error("Do not know how to expand this operator's operand!");
 
   case ISD::BITCAST:         Res = ExpandOp_BITCAST(N); break;
   case ISD::BUILD_VECTOR:    Res = ExpandOp_BUILD_VECTOR(N); break;
@@ -2142,7 +2186,7 @@ bool DAGTypeLegalizer::PromoteFloatOperand(SDNode *N, unsigned OpNo) {
       dbgs() << "PromoteFloatOperand Op #" << OpNo << ": ";
       N->dump(&DAG); dbgs() << "\n";
   #endif
-      llvm_unreachable("Do not know how to promote this operator's operand!");
+      report_fatal_error("Do not know how to promote this operator's operand!");
 
     case ISD::BITCAST:    R = PromoteFloatOp_BITCAST(N, OpNo); break;
     case ISD::FCOPYSIGN:  R = PromoteFloatOp_FCOPYSIGN(N, OpNo); break;
@@ -2281,7 +2325,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
       dbgs() << "PromoteFloatResult #" << ResNo << ": ";
       N->dump(&DAG); dbgs() << "\n";
 #endif
-      llvm_unreachable("Do not know how to promote this operator's result!");
+      report_fatal_error("Do not know how to promote this operator's result!");
 
     case ISD::BITCAST:    R = PromoteFloatRes_BITCAST(N); break;
     case ISD::ConstantFP: R = PromoteFloatRes_ConstantFP(N); break;
@@ -2327,6 +2371,7 @@ void DAGTypeLegalizer::PromoteFloatResult(SDNode *N, unsigned ResNo) {
 
     case ISD::FPOWI:
     case ISD::FLDEXP:     R = PromoteFloatRes_ExpOp(N); break;
+    case ISD::FFREXP:     R = PromoteFloatRes_FFREXP(N); break;
 
     case ISD::FP_ROUND:   R = PromoteFloatRes_FP_ROUND(N); break;
     case ISD::LOAD:       R = PromoteFloatRes_LOAD(N); break;
@@ -2506,6 +2551,17 @@ SDValue DAGTypeLegalizer::PromoteFloatRes_ExpOp(SDNode *N) {
   return DAG.getNode(N->getOpcode(), SDLoc(N), NVT, Op0, Op1);
 }
 
+SDValue DAGTypeLegalizer::PromoteFloatRes_FFREXP(SDNode *N) {
+  EVT VT = N->getValueType(0);
+  EVT NVT = TLI.getTypeToTransformTo(*DAG.getContext(), VT);
+  SDValue Op = GetPromotedFloat(N->getOperand(0));
+  SDValue Res =
+      DAG.getNode(N->getOpcode(), SDLoc(N), {NVT, N->getValueType(1)}, Op);
+
+  ReplaceValueWith(SDValue(N, 1), Res.getValue(1));
+  return Res;
+}
+
 // Explicit operation to reduce precision.  Reduce the value to half precision
 // and promote it back to the legal type.
 SDValue DAGTypeLegalizer::PromoteFloatRes_FP_ROUND(SDNode *N) {
@@ -2647,7 +2703,8 @@ void DAGTypeLegalizer::SoftPromoteHalfResult(SDNode *N, unsigned ResNo) {
     dbgs() << "SoftPromoteHalfResult #" << ResNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
 #endif
-    llvm_unreachable("Do not know how to soft promote this operator's result!");
+    report_fatal_error("Do not know how to soft promote this operator's "
+                       "result!");
 
   case ISD::BITCAST:    R = SoftPromoteHalfRes_BITCAST(N); break;
   case ISD::ConstantFP: R = SoftPromoteHalfRes_ConstantFP(N); break;
@@ -2958,7 +3015,8 @@ bool DAGTypeLegalizer::SoftPromoteHalfOperand(SDNode *N, unsigned OpNo) {
     dbgs() << "SoftPromoteHalfOperand Op #" << OpNo << ": ";
     N->dump(&DAG); dbgs() << "\n";
   #endif
-    llvm_unreachable("Do not know how to soft promote this operator's operand!");
+    report_fatal_error("Do not know how to soft promote this operator's "
+                       "operand!");
 
   case ISD::BITCAST:    Res = SoftPromoteHalfOp_BITCAST(N); break;
   case ISD::FCOPYSIGN:  Res = SoftPromoteHalfOp_FCOPYSIGN(N, OpNo); break;

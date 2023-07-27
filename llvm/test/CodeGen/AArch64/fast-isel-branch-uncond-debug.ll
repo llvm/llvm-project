@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=aarch64-arm-none-eabi -O1 -opt-bisect-limit=2 -o - %s  2> /dev/null | FileCheck %s
+; RUN: llc -mtriple=aarch64 -O1 -opt-bisect-limit=2 -o - %s  2> /dev/null | FileCheck %s
 
 define dso_local i32 @a() #0 !dbg !7 {
 entry:

@@ -25,6 +25,7 @@ def SDTX86Fist      : SDTypeProfile<0, 2, [SDTCisFP<0>, SDTCisPtrTy<1>]>;
 
 def SDTX86CwdStore  : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 def SDTX86CwdLoad   : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
+def SDTX86FPEnv     : SDTypeProfile<0, 1, [SDTCisPtrTy<0>]>;
 
 def X86fp80_add     : SDNode<"X86ISD::FP80_ADD", SDTFPBinOp, [SDNPCommutative]>;
 def X86strict_fp80_add : SDNode<"X86ISD::STRICT_FP80_ADD", SDTFPBinOp,
@@ -47,6 +48,12 @@ def X86fp_cwd_get16 : SDNode<"X86ISD::FNSTCW16m",          SDTX86CwdStore,
                              [SDNPHasChain, SDNPMayStore, SDNPSideEffect,
                               SDNPMemOperand]>;
 def X86fp_cwd_set16 : SDNode<"X86ISD::FLDCW16m",           SDTX86CwdLoad,
+                             [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
+                              SDNPMemOperand]>;
+def X86fpenv_get    : SDNode<"X86ISD::FNSTENVm",           SDTX86FPEnv,
+                             [SDNPHasChain, SDNPMayStore, SDNPSideEffect,
+                              SDNPMemOperand]>;
+def X86fpenv_set    : SDNode<"X86ISD::FLDENVm",            SDTX86FPEnv,
                              [SDNPHasChain, SDNPMayLoad, SDNPSideEffect,
                               SDNPMemOperand]>;
 
@@ -418,13 +425,17 @@ def FICOMP32m: FPI<0xDA, MRM3m, (outs), (ins i32mem:$src), "ficomp{l}\t$src">;
 
 let SchedRW = [WriteMicrocoded] in {
 let Defs = [FPSW, FPCW], mayLoad = 1 in {
-def FLDENVm  : FPI<0xD9, MRM4m, (outs), (ins anymem:$src), "fldenv\t$src">;
 def FRSTORm  : FPI<0xDD, MRM4m, (outs), (ins anymem:$src), "frstor\t$src">;
+let Predicates = [HasX87] in
+def FLDENVm  : I<0xD9, MRM4m, (outs), (ins anymem:$src), "fldenv\t$src",
+                 [(X86fpenv_set addr:$src)]>;
 }
 
 let Defs = [FPSW, FPCW], Uses = [FPSW, FPCW], mayStore = 1 in {
-def FSTENVm  : FPI<0xD9, MRM6m, (outs), (ins anymem:$dst), "fnstenv\t$dst">;
 def FSAVEm   : FPI<0xDD, MRM6m, (outs), (ins anymem:$dst), "fnsave\t$dst">;
+let Predicates = [HasX87] in
+def FSTENVm  : I<0xD9, MRM6m, (outs), (ins anymem:$dst), "fnstenv\t$dst",
+                 [(X86fpenv_get addr:$dst)]>;
 }
 
 let Uses = [FPSW], mayStore = 1 in

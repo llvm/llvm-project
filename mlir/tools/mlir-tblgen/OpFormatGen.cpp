@@ -94,6 +94,10 @@ using RegionVariable = OpVariableElement<NamedRegion, VariableElement::Region>;
 /// This class represents a variable that refers to a successor.
 using SuccessorVariable =
     OpVariableElement<NamedSuccessor, VariableElement::Successor>;
+
+/// This class represents a variable that refers to a property argument.
+using PropertyVariable =
+    OpVariableElement<NamedProperty, VariableElement::Property>;
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -939,6 +943,9 @@ static void genCustomParameterParser(FormatElement *param, MethodBody &body) {
     ctx.addSubst("_ctxt", "parser.getContext()");
     body << tgfmt(string->getValue(), &ctx);
 
+  } else if (auto *property = dyn_cast<PropertyVariable>(param)) {
+    body << llvm::formatv("result.getOrAddProperties<Properties>().{0}",
+                          property->getVar()->name);
   } else {
     llvm_unreachable("unknown custom directive parameter");
   }
@@ -1647,16 +1654,6 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
                                                          MethodBody &body) {
   if (!allOperands) {
     if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
-      if (op.getDialect().usePropertiesForAttributes()) {
-        body << formatv("  "
-                        "result.getOrAddProperties<{0}::Properties>().operand_"
-                        "segment_sizes = "
-                        "(parser.getBuilder().getDenseI32ArrayAttr({{",
-                        op.getCppClassName());
-      } else {
-        body << "  result.addAttribute(\"operand_segment_sizes\", "
-             << "parser.getBuilder().getDenseI32ArrayAttr({";
-      }
       auto interleaveFn = [&](const NamedTypeConstraint &operand) {
         // If the operand is variadic emit the parsed size.
         if (operand.isVariableLength())
@@ -1664,8 +1661,19 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
         else
           body << "1";
       };
-      llvm::interleaveComma(op.getOperands(), body, interleaveFn);
-      body << "}));\n";
+      if (op.getDialect().usePropertiesForAttributes()) {
+        body << "llvm::copy(ArrayRef<int32_t>({";
+        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
+        body << formatv("}), "
+                        "result.getOrAddProperties<{0}::Properties>()."
+                        "odsOperandSegmentSizes);\n",
+                        op.getCppClassName());
+      } else {
+        body << "  result.addAttribute(\"operand_segment_sizes\", "
+             << "parser.getBuilder().getDenseI32ArrayAttr({";
+        llvm::interleaveComma(op.getOperands(), body, interleaveFn);
+        body << "}));\n";
+      }
     }
     for (const NamedTypeConstraint &operand : op.getOperands()) {
       if (!operand.isVariadicOfVariadic())
@@ -1690,16 +1698,6 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
 
   if (!allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
-    if (op.getDialect().usePropertiesForAttributes()) {
-      body << formatv(
-          "  "
-          "result.getOrAddProperties<{0}::Properties>().result_segment_sizes = "
-          "(parser.getBuilder().getDenseI32ArrayAttr({{",
-          op.getCppClassName());
-    } else {
-      body << "  result.addAttribute(\"result_segment_sizes\", "
-           << "parser.getBuilder().getDenseI32ArrayAttr({";
-    }
     auto interleaveFn = [&](const NamedTypeConstraint &result) {
       // If the result is variadic emit the parsed size.
       if (result.isVariableLength())
@@ -1707,8 +1705,20 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
       else
         body << "1";
     };
-    llvm::interleaveComma(op.getResults(), body, interleaveFn);
-    body << "}));\n";
+    if (op.getDialect().usePropertiesForAttributes()) {
+      body << "llvm::copy(ArrayRef<int32_t>({";
+      llvm::interleaveComma(op.getResults(), body, interleaveFn);
+      body << formatv(
+          "}), "
+          "result.getOrAddProperties<{0}::Properties>().odsResultSegmentSizes"
+          ");\n",
+          op.getCppClassName());
+    } else {
+      body << "  result.addAttribute(\"result_segment_sizes\", "
+           << "parser.getBuilder().getDenseI32ArrayAttr({";
+      llvm::interleaveComma(op.getResults(), body, interleaveFn);
+      body << "}));\n";
+    }
   }
 }
 
@@ -1862,6 +1872,12 @@ static void genCustomDirectiveParameterPrinter(FormatElement *element,
     ctx.addSubst("_ctxt", "getContext()");
     body << tgfmt(string->getValue(), &ctx);
 
+  } else if (auto *property = dyn_cast<PropertyVariable>(element)) {
+    FmtContext ctx;
+    ctx.addSubst("_ctxt", "getContext()");
+    const NamedProperty *namedProperty = property->getVar();
+    ctx.addSubst("_storage", "getProperties()." + namedProperty->name);
+    body << tgfmt(namedProperty->prop.getConvertFromStorageCall(), &ctx);
   } else {
     llvm_unreachable("unknown custom directive parameter");
   }
@@ -2457,6 +2473,7 @@ private:
   llvm::DenseSet<const NamedTypeConstraint *> seenOperands;
   llvm::DenseSet<const NamedRegion *> seenRegions;
   llvm::DenseSet<const NamedSuccessor *> seenSuccessors;
+  llvm::DenseSet<const NamedProperty *> seenProperties;
 };
 } // namespace
 
@@ -2941,6 +2958,24 @@ OpFormatParser::parseVariableImpl(SMLoc loc, StringRef name, Context ctx) {
 
     return create<AttributeVariable>(attr);
   }
+
+  if (const NamedProperty *property = findArg(op.getProperties(), name)) {
+    if (ctx != CustomDirectiveContext && ctx != RefDirectiveContext)
+      return emitError(
+          loc, "properties currently only supported in `custom` directive");
+
+    if (ctx == RefDirectiveContext) {
+      if (!seenProperties.count(property))
+        return emitError(loc, "property '" + name +
+                                  "' must be bound before it is referenced");
+    } else {
+      if (!seenProperties.insert(property).second)
+        return emitError(loc, "property '" + name + "' is already bound");
+    }
+
+    return create<PropertyVariable>(property);
+  }
+
   // Operands
   if (const NamedTypeConstraint *operand = findArg(op.getOperands(), name)) {
     if (ctx == TopLevelContext || ctx == CustomDirectiveContext) {
@@ -3068,9 +3103,9 @@ OpFormatParser::parsePropDictDirective(SMLoc loc, Context context) {
 LogicalResult OpFormatParser::verifyCustomDirectiveArguments(
     SMLoc loc, ArrayRef<FormatElement *> arguments) {
   for (FormatElement *argument : arguments) {
-    if (!isa<StringElement, RefDirective, TypeDirective, AttrDictDirective,
-             AttributeVariable, OperandVariable, RegionVariable,
-             SuccessorVariable>(argument)) {
+    if (!isa<AttrDictDirective, AttributeVariable, OperandVariable,
+             PropertyVariable, RefDirective, RegionVariable, SuccessorVariable,
+             StringElement, TypeDirective>(argument)) {
       // TODO: FormatElement should have location info attached.
       return emitError(loc, "only variables and types may be used as "
                             "parameters to a custom directive");

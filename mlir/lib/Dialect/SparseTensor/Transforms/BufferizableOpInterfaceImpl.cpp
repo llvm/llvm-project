@@ -166,13 +166,13 @@ struct UnpackOpInterface
   bool bufferizesToMemoryWrite(Operation *op, OpOperand &opOperand,
                                const AnalysisState &state) const {
     // We write into the output operand.
-    assert(op->getNumOperands() == op->getNumResults() + 1);
+    assert(2 * (op->getNumOperands() - 1) == op->getNumResults());
     return opOperand.getOperandNumber() > 0;
   }
 
   AliasingOpResultList getAliasingOpResults(Operation *op, OpOperand &opOperand,
                                             const AnalysisState &state) const {
-    assert(op->getNumOperands() == op->getNumResults() + 1);
+    assert(2 * (op->getNumOperands() - 1) == op->getNumResults());
 
     if (opOperand.getOperandNumber() == 0)
       return {};

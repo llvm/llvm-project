@@ -8,7 +8,7 @@
 
 #include "TestDialect.h"
 #include "mlir/Dialect/Func/Transforms/OneToNFuncConversions.h"
-#include "mlir/Dialect/SCF/Transforms/Transforms.h"
+#include "mlir/Dialect/SCF/Transforms/Patterns.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Transforms/OneToNTypeConversion.h"
 

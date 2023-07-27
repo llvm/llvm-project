@@ -252,10 +252,18 @@ class OptionsReader:
 
         match = re.match(r"^/// \\warning$", line)
         if match:
-            return "\n.. warning:: \n\n"
+            return "\n.. warning::\n\n"
 
         endwarning_match = re.match(r"^/// +\\endwarning$", line)
         if endwarning_match:
+            return ""
+
+        match = re.match(r"^/// \\note$", line)
+        if match:
+            return "\n.. note::\n\n"
+
+        endnote_match = re.match(r"^/// +\\endnote$", line)
+        if endnote_match:
             return ""
         return line[4:] + "\n"
 

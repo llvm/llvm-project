@@ -31,8 +31,9 @@ __check_strict_weak_ordering_sorted(_RandomAccessIterator __first, _RandomAccess
   using _Comp_ref = __comp_ref_type<_Comp>;
   if (!__libcpp_is_constant_evaluated()) {
     // Check if the range is actually sorted.
-    _LIBCPP_ASSERT((std::is_sorted<_RandomAccessIterator, _Comp_ref>(__first, __last, _Comp_ref(__comp))),
-                   "The range is not sorted after the sort, your comparator is not a valid strict-weak ordering");
+    _LIBCPP_ASSERT_UNCATEGORIZED(
+        (std::is_sorted<_RandomAccessIterator, _Comp_ref>(__first, __last, _Comp_ref(__comp))),
+        "The range is not sorted after the sort, your comparator is not a valid strict-weak ordering");
     // Limit the number of elements we need to check.
     __diff_t __size = __last - __first > __diff_t(100) ? __diff_t(100) : __last - __first;
     __diff_t __p    = 0;
@@ -45,18 +46,18 @@ __check_strict_weak_ordering_sorted(_RandomAccessIterator __first, _RandomAccess
       // Check that the elements from __p to __q are equal between each other.
       for (__diff_t __b = __p; __b < __q; ++__b) {
         for (__diff_t __a = __p; __a <= __b; ++__a) {
-          _LIBCPP_ASSERT(
+          _LIBCPP_ASSERT_UNCATEGORIZED(
               !__comp(*(__first + __a), *(__first + __b)), "Your comparator is not a valid strict-weak ordering");
-          _LIBCPP_ASSERT(
+          _LIBCPP_ASSERT_UNCATEGORIZED(
               !__comp(*(__first + __b), *(__first + __a)), "Your comparator is not a valid strict-weak ordering");
         }
       }
       // Check that elements between __p and __q are less than between __q and __size.
       for (__diff_t __a = __p; __a < __q; ++__a) {
         for (__diff_t __b = __q; __b < __size; ++__b) {
-          _LIBCPP_ASSERT(
+          _LIBCPP_ASSERT_UNCATEGORIZED(
               __comp(*(__first + __a), *(__first + __b)), "Your comparator is not a valid strict-weak ordering");
-          _LIBCPP_ASSERT(
+          _LIBCPP_ASSERT_UNCATEGORIZED(
               !__comp(*(__first + __b), *(__first + __a)), "Your comparator is not a valid strict-weak ordering");
         }
       }

@@ -119,11 +119,24 @@ public:
   explicit CGOpenMPRuntimeGPU(CodeGenModule &CGM);
   void clear() override;
 
-  bool isTargetCodegen() const override { return true; };
+  bool isGPU() const override { return true; };
 
   /// Declare generalized virtual functions which need to be defined
   /// by all specializations of OpenMPGPURuntime Targets like AMDGCN
   /// and NVPTX.
+
+  /// Check if the variable length declaration is delayed:
+  bool isDelayedVariableLengthDecl(CodeGenFunction &CGF,
+                                   const VarDecl *VD) const override;
+
+  /// Get call to __kmpc_alloc_shared
+  std::pair<llvm::Value *, llvm::Value *>
+  getKmpcAllocShared(CodeGenFunction &CGF, const VarDecl *VD) override;
+
+  /// Get call to __kmpc_free_shared
+  void getKmpcFreeShared(
+      CodeGenFunction &CGF,
+      const std::pair<llvm::Value *, llvm::Value *> &AddrSizePair) override;
 
   /// Get the GPU warp size.
   llvm::Value *getGPUWarpSize(CodeGenFunction &CGF);
@@ -359,6 +372,7 @@ private:
     DeclToAddrMapTy LocalVarData;
     EscapedParamsTy EscapedParameters;
     llvm::SmallVector<const ValueDecl*, 4> EscapedVariableLengthDecls;
+    llvm::SmallVector<const ValueDecl *, 4> DelayedVariableLengthDecls;
     llvm::SmallVector<std::pair<llvm::Value *, llvm::Value *>, 4>
         EscapedVariableLengthDeclsAddrs;
     std::unique_ptr<CodeGenFunction::OMPMapVars> MappedParams;

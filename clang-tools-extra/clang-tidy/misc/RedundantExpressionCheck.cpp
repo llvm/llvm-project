@@ -144,8 +144,9 @@ static bool areEquivalentExpr(const Expr *Left, const Expr *Right) {
     const auto *RightUnaryExpr =
         cast<UnaryExprOrTypeTraitExpr>(Right);
     if (LeftUnaryExpr->isArgumentType() && RightUnaryExpr->isArgumentType())
-      return LeftUnaryExpr->getArgumentType() ==
-             RightUnaryExpr->getArgumentType();
+      return LeftUnaryExpr->getKind() == RightUnaryExpr->getKind() &&
+             LeftUnaryExpr->getArgumentType() ==
+                 RightUnaryExpr->getArgumentType();
     if (!LeftUnaryExpr->isArgumentType() && !RightUnaryExpr->isArgumentType())
       return areEquivalentExpr(LeftUnaryExpr->getArgumentExpr(),
                                RightUnaryExpr->getArgumentExpr());

@@ -197,6 +197,14 @@ def warn_cxx98_compat_literal_ucn_escape_basic_scs : Warning<
 def warn_cxx98_compat_literal_ucn_control_character : Warning<
   "universal character name referring to a control character "
   "is incompatible with C++98">, InGroup<CXX98Compat>, DefaultIgnore;
+def warn_c2x_compat_literal_ucn_escape_basic_scs : Warning<
+  "specifying character '%0' with a universal character name is "
+  "incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
+def warn_c2x_compat_literal_ucn_control_character : Warning<
+  "universal character name referring to a control character "
+  "is incompatible with C standards before C2x">,
+  InGroup<CPre2xCompat>, DefaultIgnore;
 def warn_ucn_not_valid_in_c89 : Warning<
   "universal character names are only valid in C99 or C++; "
   "treating as '\\' followed by identifier">, InGroup<Unicode>;
@@ -276,6 +284,13 @@ def ext_ms_reserved_user_defined_literal : ExtWarn<
   "identifier">, InGroup<ReservedUserDefinedLiteral>;
 def err_unsupported_string_concat : Error<
   "unsupported non-standard concatenation of string literals">;
+
+def err_unevaluated_string_prefix : Error<
+  "an unevaluated string literal cannot have an encoding prefix">;
+def err_unevaluated_string_udl : Error<
+  "an unevaluated string literal cannot be a user-defined literal">;
+def err_unevaluated_string_invalid_escape_sequence : Error<
+  "invalid escape sequence '%0' in an unevaluated string literal">;
 def err_string_concat_mixed_suffix : Error<
   "differing user-defined suffixes ('%0' and '%1') in string literal "
   "concatenation">;

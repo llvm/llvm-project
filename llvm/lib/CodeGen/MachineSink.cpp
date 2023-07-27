@@ -268,6 +268,44 @@ INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(MachineSinking, DEBUG_TYPE,
                     "Machine code sinking", false, false)
 
+/// Return true if a target defined block prologue instruction interferes
+/// with a sink candidate.
+static bool blockPrologueInterferes(const MachineBasicBlock *BB,
+                                    MachineBasicBlock::const_iterator End,
+                                    const MachineInstr &MI,
+                                    const TargetRegisterInfo *TRI,
+                                    const TargetInstrInfo *TII,
+                                    const MachineRegisterInfo *MRI) {
+  for (MachineBasicBlock::const_iterator PI = BB->getFirstNonPHI(); PI != End;
+       ++PI) {
+    // Only check target defined prologue instructions
+    if (!TII->isBasicBlockPrologue(*PI))
+      continue;
+    for (auto &MO : MI.operands()) {
+      if (!MO.isReg())
+        continue;
+      Register Reg = MO.getReg();
+      if (!Reg)
+        continue;
+      if (MO.isUse()) {
+        if (Reg.isPhysical() && MRI && MRI->isConstantPhysReg(Reg))
+          continue;
+        if (PI->modifiesRegister(Reg, TRI))
+          return true;
+      } else {
+        if (PI->readsRegister(Reg, TRI))
+          return true;
+        // Check for interference with non-dead defs
+        auto *DefOp = PI->findRegisterDefOperand(Reg, false, true, TRI);
+        if (DefOp && !DefOp->isDead())
+          return true;
+      }
+    }
+  }
+
+  return false;
+}
+
 bool MachineSinking::PerformTrivialForwardCoalescing(MachineInstr &MI,
                                                      MachineBasicBlock *MBB) {
   if (!MI.isCopy())
@@ -968,16 +1006,24 @@ MachineSinking::FindSuccToSinkTo(MachineInstr &MI, MachineBasicBlock *MBB,
   if (MBB == SuccToSinkTo)
     return nullptr;
 
+  if (!SuccToSinkTo)
+    return nullptr;
+
   // It's not safe to sink instructions to EH landing pad. Control flow into
   // landing pad is implicitly defined.
-  if (SuccToSinkTo && SuccToSinkTo->isEHPad())
+  if (SuccToSinkTo->isEHPad())
     return nullptr;
 
   // It ought to be okay to sink instructions into an INLINEASM_BR target, but
   // only if we make sure that MI occurs _before_ an INLINEASM_BR instruction in
   // the source block (which this code does not yet do). So for now, forbid
   // doing so.
-  if (SuccToSinkTo && SuccToSinkTo->isInlineAsmBrIndirectTarget())
+  if (SuccToSinkTo->isInlineAsmBrIndirectTarget())
+    return nullptr;
+
+  MachineBasicBlock::const_iterator InsertPos =
+      SuccToSinkTo->SkipPHIsAndLabels(SuccToSinkTo->begin());
+  if (blockPrologueInterferes(SuccToSinkTo, InsertPos, MI, TRI, TII, MRI))
     return nullptr;
 
   return SuccToSinkTo;
@@ -1296,45 +1342,6 @@ bool MachineSinking::SinkIntoCycle(MachineCycle *Cycle, MachineInstr &I) {
   assert(!I.isDebugInstr() && "Should not sink debug inst");
   I.setDebugLoc(DebugLoc());
   return true;
-}
-
-/// Return true if a target defined block prologue instruction interferes
-/// with a sink candidate.
-static bool blockPrologueInterferes(MachineBasicBlock *BB,
-                                    MachineBasicBlock::iterator End,
-                                    MachineInstr &MI,
-                                    const TargetRegisterInfo *TRI,
-                                    const TargetInstrInfo *TII,
-                                    const MachineRegisterInfo *MRI) {
-  if (BB->begin() == End)
-    return false; // no prologue
-  for (MachineBasicBlock::iterator PI = BB->getFirstNonPHI(); PI != End; ++PI) {
-    // Only check target defined prologue instructions
-    if (!TII->isBasicBlockPrologue(*PI))
-      continue;
-    for (auto &MO : MI.operands()) {
-      if (!MO.isReg())
-        continue;
-      Register Reg = MO.getReg();
-      if (!Reg)
-        continue;
-      if (MO.isUse()) {
-        if (Reg.isPhysical() &&
-            (TII->isIgnorableUse(MO) || (MRI && MRI->isConstantPhysReg(Reg))))
-          continue;
-        if (PI->modifiesRegister(Reg, TRI))
-          return true;
-      } else {
-        if (PI->readsRegister(Reg, TRI))
-          return true;
-        // Check for interference with non-dead defs
-        auto *DefOp = PI->findRegisterDefOperand(Reg, false, true, TRI);
-        if (DefOp && !DefOp->isDead())
-          return true;
-      }
-    }
-  }
-  return false;
 }
 
 /// SinkInstruction - Determine whether it is safe to sink the specified machine

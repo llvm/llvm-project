@@ -42,6 +42,9 @@ public:
                              const char *ExtraCode, raw_ostream &OS) override;
 
   void LowerPATCHABLE_FUNCTION_ENTER(const MachineInstr &MI);
+  void LowerPATCHABLE_FUNCTION_EXIT(const MachineInstr &MI);
+  void LowerPATCHABLE_TAIL_CALL(const MachineInstr &MI);
+  void emitSled(const MachineInstr &MI, SledKind Kind);
 
   // tblgen'erated function.
   bool emitPseudoExpansionLowering(MCStreamer &OutStreamer,

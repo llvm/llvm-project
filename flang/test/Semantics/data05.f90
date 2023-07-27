@@ -89,4 +89,8 @@ module m
     procedure(rfunc), pointer :: pp ! CHECK: pp, EXTERNAL, POINTER (Function, InDataStmt) size=8 offset=0: ProcEntity rfunc => rfunc2
     data pp/rfunc2/
   end subroutine
+  subroutine s13
+    integer j(2)
+    data j(2:1), j(1:2) /1,2/ ! CHECK: j (InDataStmt) size=8 offset=0: ObjectEntity type: INTEGER(4) shape: 1_8:2_8 init:[INTEGER(4)::1_4,2_4]
+  end subroutine
 end module

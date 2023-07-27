@@ -225,7 +225,8 @@ define ptr @post_inc_ldrd(ptr %base, ptr %addr.3) {
 ;
 ; CHECK-V8A-LABEL: post_inc_ldrd:
 ; CHECK-V8A:       @ %bb.0:
-; CHECK-V8A-NEXT:    ldm r0!, {r2, r3}
+; CHECK-V8A-NEXT:    ldrd r2, r3, [r0]
+; CHECK-V8A-NEXT:    add r0, r0, #8
 ; CHECK-V8A-NEXT:    add r2, r2, r3
 ; CHECK-V8A-NEXT:    str r2, [r1]
 ; CHECK-V8A-NEXT:    bx lr
@@ -248,8 +249,8 @@ define ptr @pre_inc_str_multi(ptr %base) {
 ;
 ; CHECK-V8A-LABEL: pre_inc_str_multi:
 ; CHECK-V8A:       @ %bb.0:
-; CHECK-V8A-NEXT:    ldm r0, {r1, r2}
-; CHECK-V8A-NEXT:    add r1, r1, r2
+; CHECK-V8A-NEXT:    ldrd r2, r3, [r0]
+; CHECK-V8A-NEXT:    add r1, r2, r3
 ; CHECK-V8A-NEXT:    str r1, [r0, #8]!
 ; CHECK-V8A-NEXT:    bx lr
   %addr.1 = getelementptr i32, ptr %base, i32 1
@@ -271,8 +272,8 @@ define ptr @pre_dec_str_multi(ptr %base) {
 ;
 ; CHECK-V8A-LABEL: pre_dec_str_multi:
 ; CHECK-V8A:       @ %bb.0:
-; CHECK-V8A-NEXT:    ldm r0, {r1, r2}
-; CHECK-V8A-NEXT:    add r1, r1, r2
+; CHECK-V8A-NEXT:    ldrd r2, r3, [r0]
+; CHECK-V8A-NEXT:    add r1, r2, r3
 ; CHECK-V8A-NEXT:    str r1, [r0, #-4]!
 ; CHECK-V8A-NEXT:    bx lr
   %addr.1 = getelementptr i32, ptr %base, i32 1

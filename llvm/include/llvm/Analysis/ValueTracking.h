@@ -124,6 +124,10 @@ bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                             const DominatorTree *DT = nullptr,
                             bool UseInstrInfo = true);
 
+/// Return true if the given instruction is only used in zero comparison
+bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
+
+/// Return true if the given instruction is only used in zero equality comparison
 bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
 
 /// Return true if the given value is known to be non-zero when defined. For
@@ -293,7 +297,8 @@ struct KnownFPClass {
     return isKnownNever(fcPosZero);
   }
 
-  /// Return true if it's known this can never be a literal negative zero.
+  /// Return true if it's known this can never be a negative zero. This means a
+  /// literal -0 and does not include denormal inputs implicitly treated as -0.
   bool isKnownNeverNegZero() const {
     return isKnownNever(fcNegZero);
   }
@@ -416,6 +421,23 @@ struct KnownFPClass {
       knownNot(fcSNan);
   }
 
+  /// Propagate knowledge from a source value that could be a denormal or
+  /// zero. We have to be conservative since output flushing is not guaranteed,
+  /// so known-never-zero may not hold.
+  ///
+  /// This assumes a copy-like operation and will replace any currently known
+  /// information.
+  void propagateDenormal(const KnownFPClass &Src, const Function &F, Type *Ty);
+
+  /// Report known classes if \p Src is evaluated through a potentially
+  /// canonicalizing operation. We can assume signaling nans will not be
+  /// introduced, but cannot assume a denormal will be flushed under FTZ/DAZ.
+  ///
+  /// This assumes a copy-like operation and will replace any currently known
+  /// information.
+  void propagateCanonicalizingSrc(const KnownFPClass &Src, const Function &F,
+                                  Type *Ty);
+
   void resetAll() { *this = KnownFPClass(); }
 };
 
@@ -454,9 +476,22 @@ KnownFPClass computeKnownFPClass(
     bool UseInstrInfo = true);
 
 /// Return true if we can prove that the specified FP value is never equal to
-/// -0.0.
-bool CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
-                          unsigned Depth = 0);
+/// -0.0. Users should use caution when considering PreserveSign
+/// denormal-fp-math.
+inline bool cannotBeNegativeZero(const Value *V, const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI = nullptr,
+                                 unsigned Depth = 0,
+                                 AssumptionCache *AC = nullptr,
+                                 const Instruction *CtxI = nullptr,
+                                 const DominatorTree *DT = nullptr,
+                                 bool UseInstrInfo = true) {
+  KnownFPClass Known = computeKnownFPClass(V, DL, fcNegZero, Depth, TLI, AC,
+                                           CtxI, DT, UseInstrInfo);
+  return Known.isKnownNeverNegZero();
+}
+
+bool CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
+                                 const TargetLibraryInfo *TLI);
 
 /// Return true if we can prove that the specified FP value is either NaN or
 /// never less than -0.0.
@@ -466,8 +501,18 @@ bool CannotBeNegativeZero(const Value *V, const TargetLibraryInfo *TLI,
 ///       -0 --> true
 ///   x > +0 --> true
 ///   x < -0 --> false
-bool CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI);
+inline bool cannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
+                                        const TargetLibraryInfo *TLI = nullptr,
+                                        unsigned Depth = 0,
+                                        AssumptionCache *AC = nullptr,
+                                        const Instruction *CtxI = nullptr,
+                                        const DominatorTree *DT = nullptr,
+                                        bool UseInstrInfo = true) {
+  KnownFPClass Known =
+      computeKnownFPClass(V, DL, KnownFPClass::OrderedLessThanZeroMask, Depth,
+                          TLI, AC, CtxI, DT, UseInstrInfo);
+  return Known.cannotBeOrderedLessThanZero();
+}
 
 /// Return true if the floating-point scalar value is not an infinity or if
 /// the floating-point vector value has no infinities. Return false if a value

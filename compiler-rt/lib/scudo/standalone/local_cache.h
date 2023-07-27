@@ -35,6 +35,15 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
       // u16 will be promoted to int by arithmetic type conversion.
       Count = static_cast<u16>(Count + N);
     }
+    void appendFromTransferBatch(TransferBatch *B, u16 N) {
+      DCHECK_LE(N, MaxNumCached - Count);
+      DCHECK_GE(B->Count, N);
+      // Append from the back of `B`.
+      memcpy(Batch + Count, B->Batch + (B->Count - N), sizeof(Batch[0]) * N);
+      // u16 will be promoted to int by arithmetic type conversion.
+      Count = static_cast<u16>(Count + N);
+      B->Count = static_cast<u16>(B->Count - N);
+    }
     void clear() { Count = 0; }
     void add(CompactPtrT P) {
       DCHECK_LT(Count, MaxNumCached);
@@ -44,6 +53,7 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
       memcpy(Array, Batch, sizeof(Batch[0]) * Count);
     }
     u16 getCount() const { return Count; }
+    bool isEmpty() const { return Count == 0U; }
     CompactPtrT get(u16 I) const {
       DCHECK_LE(I, Count);
       return Batch[I];
@@ -112,13 +122,16 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
     return Allocator->decompactPtr(ClassId, CompactP);
   }
 
-  void deallocate(uptr ClassId, void *P) {
+  bool deallocate(uptr ClassId, void *P) {
     CHECK_LT(ClassId, NumClasses);
     PerClass *C = &PerClassArray[ClassId];
     // We still have to initialize the cache in the event that the first heap
     // operation in a thread is a deallocation.
     initCacheMaybe(C);
-    if (C->Count == C->MaxCount)
+
+    // If the cache is full, drain half of blocks back to the main allocator.
+    const bool NeedToDrainCache = C->Count == C->MaxCount;
+    if (NeedToDrainCache)
       drain(C, ClassId);
     // See comment in allocate() about memory accesses.
     const uptr ClassSize = C->ClassSize;
@@ -126,6 +139,8 @@ template <class SizeClassAllocator> struct SizeClassAllocatorLocalCache {
         Allocator->compactPtr(ClassId, reinterpret_cast<uptr>(P));
     Stats.sub(StatAllocated, ClassSize);
     Stats.add(StatFree, ClassSize);
+
+    return NeedToDrainCache;
   }
 
   bool isEmpty() const {

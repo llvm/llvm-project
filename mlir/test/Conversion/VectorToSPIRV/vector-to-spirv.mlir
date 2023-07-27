@@ -568,3 +568,25 @@ func.func @reduction_minui(%v : vector<3xi32>, %s: i32) -> i32 {
   %reduce = vector.reduction <minui>, %v, %s : vector<3xi32> into i32
   return %reduce : i32
 }
+
+// -----
+
+// CHECK-LABEL: @shape_cast_same_type
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<2xf32>)
+//       CHECK:   return %[[ARG0]]
+func.func @shape_cast_same_type(%arg0 : vector<2xf32>) -> vector<2xf32> {
+  %1 = vector.shape_cast %arg0 : vector<2xf32> to vector<2xf32>
+  return %arg0 : vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: @shape_cast_size1_vector
+//  CHECK-SAME: (%[[ARG0:.*]]: vector<f32>)
+//       CHECK:   %[[R0:.+]] = builtin.unrealized_conversion_cast %[[ARG0]] : vector<f32> to f32
+//       CHECK:   %[[R1:.+]] = builtin.unrealized_conversion_cast %[[R0]] : f32 to vector<1xf32>
+//       CHECK:   return %[[R1]]
+func.func @shape_cast_size1_vector(%arg0 : vector<f32>) -> vector<1xf32> {
+  %1 = vector.shape_cast %arg0 : vector<f32> to vector<1xf32>
+  return %1 : vector<1xf32>
+}

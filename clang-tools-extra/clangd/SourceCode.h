@@ -337,6 +337,10 @@ inline bool isReservedName(llvm::StringRef Name) {
 /// using presumed locations. Returns \p Loc if it isn't inside preamble patch.
 SourceLocation translatePreamblePatchLocation(SourceLocation Loc,
                                               const SourceManager &SM);
+
+/// Returns the range starting at offset and spanning the whole line. Escaped
+/// newlines are not handled.
+clangd::Range rangeTillEOL(llvm::StringRef Code, unsigned HashOffset);
 } // namespace clangd
 } // namespace clang
 #endif

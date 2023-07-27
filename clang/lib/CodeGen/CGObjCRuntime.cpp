@@ -107,10 +107,10 @@ LValue CGObjCRuntime::EmitValueForIvarAtOffset(CodeGen::CodeGenFunction &CGF,
                              CGF.CGM.getContext().toBits(StorageSize),
                              CharUnits::fromQuantity(0)));
 
-  Address Addr = Address(V, CGF.Int8Ty, Alignment);
-  Addr = CGF.Builder.CreateElementBitCast(Addr,
-                                   llvm::Type::getIntNTy(CGF.getLLVMContext(),
-                                                         Info->StorageSize));
+  Address Addr =
+      Address(V, llvm::Type::getIntNTy(CGF.getLLVMContext(), Info->StorageSize),
+              Alignment);
+
   return LValue::MakeBitfield(Addr, *Info, IvarTy,
                               LValueBaseInfo(AlignmentSource::Decl),
                               TBAAAccessInfo());

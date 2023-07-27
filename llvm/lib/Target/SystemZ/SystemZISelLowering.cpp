@@ -1642,8 +1642,15 @@ SDValue SystemZTargetLowering::LowerFormalArguments(
     }
   }
 
-  // FIXME: For XPLINK64, Add in support for handling incoming "ADA" special
-  // register (R5)
+  if (Subtarget.isTargetXPLINK64()) {
+    // Create virual register  for handling incoming "ADA" special register (R5)
+    const TargetRegisterClass *RC = &SystemZ::ADDR64BitRegClass;
+    Register ADAvReg = MRI.createVirtualRegister(RC);
+    auto *Regs = static_cast<SystemZXPLINK64Registers *>(
+        Subtarget.getSpecialRegisters());
+    MRI.addLiveIn(Regs->getADARegister(), ADAvReg);
+    FuncInfo->setADAVirtualRegister(ADAvReg);
+  }
   return Chain;
 }
 
@@ -1666,6 +1673,94 @@ static bool canUseSiblingCall(const CCState &ArgCCInfo,
       return false;
   }
   return true;
+}
+
+static SDValue getADAEntry(SelectionDAG &DAG, SDValue Val, SDLoc DL,
+                           unsigned Offset, bool LoadAdr = false) {
+  MachineFunction &MF = DAG.getMachineFunction();
+  SystemZMachineFunctionInfo *MFI = MF.getInfo<SystemZMachineFunctionInfo>();
+  unsigned ADAvReg = MFI->getADAVirtualRegister();
+  EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+
+  SDValue Reg = DAG.getRegister(ADAvReg, PtrVT);
+  SDValue Ofs = DAG.getTargetConstant(Offset, DL, PtrVT);
+
+  SDValue Result = DAG.getNode(SystemZISD::ADA_ENTRY, DL, PtrVT, Val, Reg, Ofs);
+  if (!LoadAdr)
+    Result = DAG.getLoad(
+        PtrVT, DL, DAG.getEntryNode(), Result, MachinePointerInfo(), Align(8),
+        MachineMemOperand::MODereferenceable | MachineMemOperand::MOInvariant);
+
+  return Result;
+}
+
+// ADA access using Global value
+// Note: for functions, address of descriptor is returned
+static SDValue getADAEntry(SelectionDAG &DAG, const GlobalValue *GV, SDLoc DL,
+                           EVT PtrVT) {
+  unsigned ADAtype;
+  bool LoadAddr = false;
+  const GlobalAlias *GA = dyn_cast<GlobalAlias>(GV);
+  bool IsFunction =
+      (isa<Function>(GV)) || (GA && isa<Function>(GA->getAliaseeObject()));
+  bool IsInternal = (GV->hasInternalLinkage() || GV->hasPrivateLinkage());
+
+  if (IsFunction) {
+    if (IsInternal) {
+      ADAtype = SystemZII::MO_ADA_DIRECT_FUNC_DESC;
+      LoadAddr = true;
+    } else
+      ADAtype = SystemZII::MO_ADA_INDIRECT_FUNC_DESC;
+  } else {
+    ADAtype = SystemZII::MO_ADA_DATA_SYMBOL_ADDR;
+  }
+  SDValue Val = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, ADAtype);
+
+  return getADAEntry(DAG, Val, DL, 0, LoadAddr);
+}
+
+static bool getzOSCalleeAndADA(SelectionDAG &DAG, SDValue &Callee, SDValue &ADA,
+                               SDLoc &DL, SDValue &Chain) {
+  unsigned ADADelta = 0; // ADA offset in desc.
+  unsigned EPADelta = 8; // EPA offset in desc.
+  MachineFunction &MF = DAG.getMachineFunction();
+  EVT PtrVT = DAG.getTargetLoweringInfo().getPointerTy(DAG.getDataLayout());
+
+  // XPLink calling convention.
+  if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+    bool IsInternal = (G->getGlobal()->hasInternalLinkage() ||
+                       G->getGlobal()->hasPrivateLinkage());
+    if (IsInternal) {
+      SystemZMachineFunctionInfo *MFI =
+          MF.getInfo<SystemZMachineFunctionInfo>();
+      unsigned ADAvReg = MFI->getADAVirtualRegister();
+      ADA = DAG.getCopyFromReg(Chain, DL, ADAvReg, PtrVT);
+      Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT);
+      Callee = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Callee);
+      return true;
+    } else {
+      SDValue GA = DAG.getTargetGlobalAddress(
+          G->getGlobal(), DL, PtrVT, 0, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
+      ADA = getADAEntry(DAG, GA, DL, ADADelta);
+      Callee = getADAEntry(DAG, GA, DL, EPADelta);
+    }
+  } else if (auto *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+    SDValue ES = DAG.getTargetExternalSymbol(
+        E->getSymbol(), PtrVT, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
+    ADA = getADAEntry(DAG, ES, DL, ADADelta);
+    Callee = getADAEntry(DAG, ES, DL, EPADelta);
+  } else {
+    // Function pointer case
+    ADA = DAG.getNode(ISD::ADD, DL, PtrVT, Callee,
+                      DAG.getConstant(ADADelta, DL, PtrVT));
+    ADA = DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), ADA,
+                      MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+    Callee = DAG.getNode(ISD::ADD, DL, PtrVT, Callee,
+                         DAG.getConstant(EPADelta, DL, PtrVT));
+    Callee = DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Callee,
+                         MachinePointerInfo::getGOT(DAG.getMachineFunction()));
+  }
+  return false;
 }
 
 SDValue
@@ -1814,17 +1909,31 @@ SystemZTargetLowering::LowerCall(CallLoweringInfo &CLI,
   // associated Target* opcodes.  Force %r1 to be used for indirect
   // tail calls.
   SDValue Glue;
-  // FIXME: Add support for XPLINK using the ADA register.
-  if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
-    Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT);
-    Callee = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Callee);
-  } else if (auto *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
-    Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT);
-    Callee = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Callee);
-  } else if (IsTailCall) {
-    Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R1D, Callee, Glue);
-    Glue = Chain.getValue(1);
-    Callee = DAG.getRegister(SystemZ::R1D, Callee.getValueType());
+
+  if (Subtarget.isTargetXPLINK64()) {
+    SDValue ADA;
+    bool IsBRASL = getzOSCalleeAndADA(DAG, Callee, ADA, DL, Chain);
+    if (!IsBRASL) {
+      unsigned CalleeReg = static_cast<SystemZXPLINK64Registers *>(Regs)
+                               ->getAddressOfCalleeRegister();
+      Chain = DAG.getCopyToReg(Chain, DL, CalleeReg, Callee, Glue);
+      Glue = Chain.getValue(1);
+      Callee = DAG.getRegister(CalleeReg, Callee.getValueType());
+    }
+    RegsToPass.push_back(std::make_pair(
+        static_cast<SystemZXPLINK64Registers *>(Regs)->getADARegister(), ADA));
+  } else {
+    if (auto *G = dyn_cast<GlobalAddressSDNode>(Callee)) {
+      Callee = DAG.getTargetGlobalAddress(G->getGlobal(), DL, PtrVT);
+      Callee = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Callee);
+    } else if (auto *E = dyn_cast<ExternalSymbolSDNode>(Callee)) {
+      Callee = DAG.getTargetExternalSymbol(E->getSymbol(), PtrVT);
+      Callee = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Callee);
+    } else if (IsTailCall) {
+      Chain = DAG.getCopyToReg(Chain, DL, SystemZ::R1D, Callee, Glue);
+      Glue = Chain.getValue(1);
+      Callee = DAG.getRegister(SystemZ::R1D, Callee.getValueType());
+    }
   }
 
   // Build a sequence of copy-to-reg nodes, chained and glued together.
@@ -3251,12 +3360,15 @@ SDValue SystemZTargetLowering::lowerGlobalAddress(GlobalAddressSDNode *Node,
       Result = DAG.getTargetGlobalAddress(GV, DL, PtrVT);
       Result = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Result);
     }
-  } else {
+  } else if (Subtarget.isTargetELF()) {
     Result = DAG.getTargetGlobalAddress(GV, DL, PtrVT, 0, SystemZII::MO_GOT);
     Result = DAG.getNode(SystemZISD::PCREL_WRAPPER, DL, PtrVT, Result);
     Result = DAG.getLoad(PtrVT, DL, DAG.getEntryNode(), Result,
                          MachinePointerInfo::getGOT(DAG.getMachineFunction()));
-  }
+  } else if (Subtarget.isTargetzOS()) {
+    Result = getADAEntry(DAG, GV, DL, PtrVT);
+  } else
+    llvm_unreachable("Unexpected Subtarget");
 
   // If there was a non-zero offset that we didn't fold, create an explicit
   // addition for it.
@@ -6042,6 +6154,7 @@ const char *SystemZTargetLowering::getTargetNodeName(unsigned Opcode) const {
     OPCODE(VLER);
     OPCODE(VSTER);
     OPCODE(PREFETCH);
+    OPCODE(ADA_ENTRY);
   }
   return nullptr;
 #undef OPCODE

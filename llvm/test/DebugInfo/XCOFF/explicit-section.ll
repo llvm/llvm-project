@@ -42,7 +42,7 @@ entry:
 !15 = !DILocation(line: 3, column: 10, scope: !14)
 !16 = !DILocation(line: 3, column: 3, scope: !14)
 
-; CHECK:               .csect .text[PR],5
+; CHECK:               .csect [PR],5
 ; CHECK-NEXT:          .file   "2.c"
 ; CHECK-NEXT:          .globl  bar[DS]                         # -- Begin function bar
 ; CHECK-NEXT:          .globl  .bar
@@ -51,7 +51,7 @@ entry:
 ; CHECK-NEXT:          .vbyte  4, .bar                         # @bar
 ; CHECK-NEXT:          .vbyte  4, TOC[TC0]
 ; CHECK-NEXT:          .vbyte  4, 0
-; CHECK-NEXT:          .csect .text[PR],5
+; CHECK-NEXT:          .csect [PR],5
 ; CHECK-NEXT:  .bar:
 ; CHECK-NEXT:  L..func_begin0:
 ; CHECK-NEXT:  # %bb.0:                                # %entry

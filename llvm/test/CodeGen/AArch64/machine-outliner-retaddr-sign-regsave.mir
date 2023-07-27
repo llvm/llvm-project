@@ -1,4 +1,4 @@
-# RUN: llc -mtriple=aarch64-arm-none-eabi -run-pass=prologepilog \
+# RUN: llc -mtriple=aarch64 -run-pass=prologepilog \
 # RUN: -run-pass=machine-outliner -verify-machineinstrs %s -o - | FileCheck %s
 
 # Check that we save LR to a callee-saved register when possible.

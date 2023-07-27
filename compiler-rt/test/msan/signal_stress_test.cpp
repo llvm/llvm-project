@@ -5,6 +5,9 @@
 // Reported deadly signal due to stack-overflow
 // XFAIL: target={{.*netbsd.*}}
 
+// VarArg implementation on LoongArch isn't supported yet.
+// UNSUPPORTED: target=loongarch{{.*}}
+
 #include <signal.h>
 #include <stdarg.h>
 #include <sanitizer/msan_interface.h>

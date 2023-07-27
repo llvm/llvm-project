@@ -2475,16 +2475,14 @@ define <8 x i16> @fptoui_8f64_to_8i16(<8 x double> %a) {
 ; SSE-NEXT:    cvttpd2dq %xmm3, %xmm3
 ; SSE-NEXT:    cvttpd2dq %xmm2, %xmm2
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm2 = xmm2[0],xmm3[0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm2 = xmm2[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm2 = xmm2[0,1,2,3,4,6,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm2[0,2,2,3]
+; SSE-NEXT:    pslld $16, %xmm2
+; SSE-NEXT:    psrad $16, %xmm2
 ; SSE-NEXT:    cvttpd2dq %xmm1, %xmm1
 ; SSE-NEXT:    cvttpd2dq %xmm0, %xmm0
 ; SSE-NEXT:    unpcklpd {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,2,2,3,4,5,6,7]
-; SSE-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,4,6,6,7]
-; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[0,2,2,3]
-; SSE-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm2[0]
+; SSE-NEXT:    pslld $16, %xmm0
+; SSE-NEXT:    psrad $16, %xmm0
+; SSE-NEXT:    packssdw %xmm2, %xmm0
 ; SSE-NEXT:    retq
 ;
 ; VEX-LABEL: fptoui_8f64_to_8i16:

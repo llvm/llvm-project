@@ -35,7 +35,6 @@
 #include "llvm/InitializePasses.h"
 #include "llvm/LinkAllIR.h"
 #include "llvm/LinkAllPasses.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Passes/PassPlugin.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
@@ -50,6 +49,7 @@
 #include "llvm/Support/YAMLTraits.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/IPO/WholeProgramDevirt.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -115,6 +115,12 @@ static cl::opt<bool>
 static cl::opt<bool>
     SplitLTOUnit("thinlto-split-lto-unit",
                  cl::desc("Enable splitting of a ThinLTO LTOUnit"));
+
+static cl::opt<bool>
+    UnifiedLTO("unified-lto",
+               cl::desc("Use unified LTO piplines. Ignored unless -thinlto-bc "
+                        "is also specified."),
+               cl::Hidden, cl::init(false));
 
 static cl::opt<std::string> ThinLinkBitcodeFile(
     "thin-link-bitcode-file", cl::value_desc("filename"),
@@ -434,7 +440,6 @@ int main(int argc, char **argv) {
   initializeCallBrPreparePass(Registry);
   initializeCodeGenPreparePass(Registry);
   initializeAtomicExpandPass(Registry);
-  initializeRewriteSymbolsLegacyPassPass(Registry);
   initializeWinEHPreparePass(Registry);
   initializeDwarfEHPrepareLegacyPassPass(Registry);
   initializeSafeStackLegacyPassPass(Registry);
@@ -630,8 +635,11 @@ int main(int argc, char **argv) {
     if (CheckBitcodeOutputToConsole(Out->os()))
       NoOutput = true;
 
-  if (OutputThinLTOBC)
+  if (OutputThinLTOBC) {
     M->addModuleFlag(Module::Error, "EnableSplitLTOUnit", SplitLTOUnit);
+    if (UnifiedLTO)
+      M->addModuleFlag(Module::Error, "UnifiedLTO", 1);
+  }
 
   // Add an appropriate TargetLibraryInfo pass for the module's triple.
   TargetLibraryInfoImpl TLII(ModuleTriple);
@@ -703,7 +711,7 @@ int main(int argc, char **argv) {
                            PluginList, OK, VK, PreserveAssemblyUseListOrder,
                            PreserveBitcodeUseListOrder, EmitSummaryIndex,
                            EmitModuleHash, EnableDebugify,
-                           VerifyDebugInfoPreserve)
+                           VerifyDebugInfoPreserve, UnifiedLTO)
                ? 0
                : 1;
   }

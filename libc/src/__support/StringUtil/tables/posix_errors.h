@@ -15,7 +15,7 @@
 
 namespace __llvm_libc {
 
-inline constexpr MsgTable<76> POSIX_ERRORS = {
+LIBC_INLINE_VAR constexpr MsgTable<76> POSIX_ERRORS = {
     MsgMapping(EPERM, "Operation not permitted"),
     MsgMapping(ENOENT, "No such file or directory"),
     MsgMapping(ESRCH, "No such process"),

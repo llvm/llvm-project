@@ -11,7 +11,6 @@
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
-#include "mlir/Dialect/MemRef/Utils/MemRefUtils.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/IR/Matchers.h"
@@ -71,8 +70,7 @@ mlir::bufferization::castOrReallocMemRefValue(OpBuilder &b, Value value,
   for (int i = 0; i < destType.getRank(); ++i) {
     if (destType.getShape()[i] != ShapedType::kDynamic)
       continue;
-    auto index = b.createOrFold<arith::ConstantIndexOp>(loc, i);
-    Value size = b.create<memref::DimOp>(loc, value, index);
+    Value size = b.create<memref::DimOp>(loc, value, i);
     dynamicOperands.push_back(size);
   }
   // TODO: Use alloc/memcpy callback from BufferizationOptions if called via
@@ -445,6 +443,49 @@ Value AllocTensorOp::getDynamicSize(OpBuilder &b, unsigned idx) {
 }
 
 //===----------------------------------------------------------------------===//
+// CopyTensorOp
+//===----------------------------------------------------------------------===//
+
+bool CopyTensorOp::bufferizesToMemoryRead(OpOperand &opOperand,
+                                          const AnalysisState &state) {
+  if (&opOperand == &getOperation()->getOpOperand(0) /*source*/)
+    return true;
+  return false;
+}
+
+bool CopyTensorOp::bufferizesToMemoryWrite(OpOperand &opOperand,
+                                           const AnalysisState &state) {
+  if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
+    return true;
+  return false;
+}
+
+AliasingOpResultList
+CopyTensorOp::getAliasingOpResults(OpOperand &opOperand,
+                                   const AnalysisState &state) {
+  if (&opOperand == &getOperation()->getOpOperand(1) /*dest*/)
+    return {{getOperation()->getResult(0), BufferRelation::Equivalent}};
+  return {};
+}
+
+LogicalResult CopyTensorOp::bufferize(RewriterBase &rewriter,
+                                      const BufferizationOptions &options) {
+  FailureOr<Value> buffer = getBuffer(rewriter, getDest(), options);
+  if (failed(buffer))
+    return failure();
+  rewriter.create<memref::TensorStoreOp>(getLoc(), getSource(), *buffer);
+  replaceOpWithBufferizedValues(rewriter, getOperation(), *buffer);
+  return success();
+}
+
+LogicalResult CopyTensorOp::reifyResultShapes(
+    OpBuilder &builder, ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  reifiedReturnShapes.resize(1, SmallVector<OpFoldResult>(getType().getRank()));
+  reifiedReturnShapes[0] = tensor::getMixedSizes(builder, getLoc(), getDest());
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // CloneOp
 //===----------------------------------------------------------------------===//
 
@@ -703,6 +744,26 @@ std::optional<Operation *> CloneOp::buildDealloc(OpBuilder &builder,
 
 std::optional<Value> CloneOp::buildClone(OpBuilder &builder, Value alloc) {
   return builder.create<CloneOp>(alloc.getLoc(), alloc).getResult();
+}
+
+//===----------------------------------------------------------------------===//
+// DeallocOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult DeallocOp::inferReturnTypes(
+    MLIRContext *context, std::optional<::mlir::Location> location,
+    ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
+    RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
+  DeallocOpAdaptor adaptor(operands, attributes, properties, regions);
+  inferredReturnTypes = SmallVector<Type>(adaptor.getConditions().getTypes());
+  return success();
+}
+
+LogicalResult DeallocOp::verify() {
+  if (getMemrefs().size() != getConditions().size())
+    return emitOpError(
+        "must have the same number of conditions as memrefs to deallocate");
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

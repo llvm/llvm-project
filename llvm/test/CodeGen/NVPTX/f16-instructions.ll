@@ -246,11 +246,11 @@ declare half @test_callee(half %a, half %b) #0
 ; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_call_param_0];
 ; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_call_param_1];
 ; CHECK:      {
-; CHECK-DAG:  .param .b32 param0;
-; CHECK-DAG:  .param .b32 param1;
+; CHECK-DAG:  .param .align 2 .b8 param0[2];
+; CHECK-DAG:  .param .align 2 .b8 param1[2];
 ; CHECK-DAG:  st.param.b16    [param0+0], [[A]];
 ; CHECK-DAG:  st.param.b16    [param1+0], [[B]];
-; CHECK-DAG:  .param .b32 retval0;
+; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
 ; CHECK:      );
@@ -267,11 +267,11 @@ define half @test_call(half %a, half %b) #0 {
 ; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_call_flipped_param_0];
 ; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_call_flipped_param_1];
 ; CHECK:      {
-; CHECK-DAG:  .param .b32 param0;
-; CHECK-DAG:  .param .b32 param1;
+; CHECK-DAG:  .param .align 2 .b8 param0[2];
+; CHECK-DAG:  .param .align 2 .b8 param1[2];
 ; CHECK-DAG:  st.param.b16    [param0+0], [[B]];
 ; CHECK-DAG:  st.param.b16    [param1+0], [[A]];
-; CHECK-DAG:  .param .b32 retval0;
+; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
 ; CHECK:      );
@@ -288,11 +288,11 @@ define half @test_call_flipped(half %a, half %b) #0 {
 ; CHECK-DAG:  ld.param.b16    [[A:%rs[0-9]+]], [test_tailcall_flipped_param_0];
 ; CHECK-DAG:  ld.param.b16    [[B:%rs[0-9]+]], [test_tailcall_flipped_param_1];
 ; CHECK:      {
-; CHECK-DAG:  .param .b32 param0;
-; CHECK-DAG:  .param .b32 param1;
+; CHECK-DAG:  .param .align 2 .b8 param0[2];
+; CHECK-DAG:  .param .align 2 .b8 param1[2];
 ; CHECK-DAG:  st.param.b16    [param0+0], [[B]];
 ; CHECK-DAG:  st.param.b16    [param1+0], [[A]];
-; CHECK-DAG:  .param .b32 retval0;
+; CHECK-DAG:  .param .align 2 .b8 retval0[2];
 ; CHECK:      call.uni (retval0),
 ; CHECK-NEXT:        test_callee,
 ; CHECK:      );

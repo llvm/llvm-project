@@ -54,6 +54,10 @@ class ROCDL_Op<string mnemonic, list<Trait> traits = []> :
   LLVM_OpBase<ROCDL_Dialect, mnemonic, traits> {
 }
 
+class ROCDL_IntrPure1Op<string mnemonic> :
+  LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
+  "amdgcn_" # !subst(".", "_", mnemonic), [], [], [Pure], 1>;
+
 //===----------------------------------------------------------------------===//
 // ROCDL special register op definitions
 //===----------------------------------------------------------------------===//
@@ -76,6 +80,20 @@ class ROCDL_DeviceFunctionOp<string mnemonic, string device_function,
   # device_function # "\", " # parameter # ");";
   let assemblyFormat = "attr-dict `:` type($res)";
 }
+
+//===----------------------------------------------------------------------===//
+// Wave-level primitives
+
+class ROCDL_MbcntOp<string mnemonic> :
+    ROCDL_IntrPure1Op<"mbcnt." # mnemonic>,
+  Arguments<(ins I32:$in0, I32:$in1)> {
+  let assemblyFormat = [{
+    $in0 `,` $in1  attr-dict `:` `(` type($in0) `,` type($in1) `)` `->` type($res)
+   }];
+}
+
+def ROCDL_MbcntLoOp : ROCDL_MbcntOp<"lo">;
+def ROCDL_MbcntHiOp : ROCDL_MbcntOp<"hi">;
 
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
@@ -101,13 +119,13 @@ def ROCDL_BlockDimZOp : ROCDL_DeviceFunctionOp<"workgroup.dim.z",
                                                "__ockl_get_local_size", 2>;
 
 def ROCDL_GridDimXOp : ROCDL_DeviceFunctionOp<"grid.dim.x",
-                                               "__ockl_get_global_size", 0>;
+                                               "__ockl_get_num_groups", 0>;
 
 def ROCDL_GridDimYOp : ROCDL_DeviceFunctionOp<"grid.dim.y",
-                                               "__ockl_get_global_size", 1>;
+                                               "__ockl_get_num_groups", 1>;
 
 def ROCDL_GridDimZOp : ROCDL_DeviceFunctionOp<"grid.dim.z",
-                                               "__ockl_get_global_size", 2>;
+                                               "__ockl_get_num_groups", 2>;
 
 //===----------------------------------------------------------------------===//
 // Synchronization primitives
@@ -123,6 +141,7 @@ def ROCDL_BarrierOp : ROCDL_Op<"barrier"> {
   }];
   let assemblyFormat = "attr-dict";
 }
+
 
 //===---------------------------------------------------------------------===//
 // Xdlops intrinsics
@@ -181,6 +200,26 @@ def ROCDL_mfma_f32_32x32x16_bf8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.b
 def ROCDL_mfma_f32_32x32x16_bf8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.bf8.fp8">;
 def ROCDL_mfma_f32_32x32x16_fp8_bf8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.bf8">;
 def ROCDL_mfma_f32_32x32x16_fp8_fp8 : ROCDL_Mfma_IntrOp<"mfma.f32.32x32x16.fp8.fp8">;
+
+//===---------------------------------------------------------------------===//
+// WMMA intrinsics
+class ROCDL_Wmma_IntrOp<string mnemonic, list<Trait> traits = []> :
+  LLVM_IntrOpBase<ROCDL_Dialect, mnemonic,
+                  "amdgcn_" # !subst(".","_", mnemonic),
+                  [0], [], traits, 1>,
+  Arguments<(ins Variadic<LLVM_Type>:$args)> {
+  let assemblyFormat =
+    "$args attr-dict `:` functional-type($args, $res)";
+}
+
+// Available on RDNA3
+def ROCDL_wmma_f32_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.f16">;
+def ROCDL_wmma_f32_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.f32.16x16x16.bf16">;
+def ROCDL_wmma_f16_16x16x16_f16 : ROCDL_Wmma_IntrOp<"wmma.f16.16x16x16.f16">;
+def ROCDL_wmma_bf16_16x16x16_bf16 : ROCDL_Wmma_IntrOp<"wmma.bf16.16x16x16.bf16">;
+def ROCDL_wmma_i32_16x16x16_iu8 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu8">;
+def ROCDL_wmma_i32_16x16x16_iu4 : ROCDL_Wmma_IntrOp<"wmma.i32.16x16x16.iu4">;
+
 
 //===---------------------------------------------------------------------===//
 // Vector buffer load/store intrinsics

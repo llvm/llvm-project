@@ -239,7 +239,7 @@ class StructurizeCFG {
   Type *Boolean;
   ConstantInt *BoolTrue;
   ConstantInt *BoolFalse;
-  UndefValue *BoolUndef;
+  Value *BoolPoison;
 
   Function *Func;
   Region *ParentRegion;
@@ -956,7 +956,7 @@ void StructurizeCFG::wireFlow(bool ExitUseAllowed,
     BasicBlock *Next = needPostfix(Flow, ExitUseAllowed);
 
     // let it point to entry and next block
-    BranchInst *Br = BranchInst::Create(Entry, Next, BoolUndef, Flow);
+    BranchInst *Br = BranchInst::Create(Entry, Next, BoolPoison, Flow);
     Br->setDebugLoc(TermDL[Flow]);
     Conditions.push_back(Br);
     addPhiValues(Flow, Entry);
@@ -997,7 +997,7 @@ void StructurizeCFG::handleLoops(bool ExitUseAllowed,
   // Create an extra loop end node
   LoopEnd = needPrefix(false);
   BasicBlock *Next = needPostfix(LoopEnd, ExitUseAllowed);
-  BranchInst *Br = BranchInst::Create(Next, LoopStart, BoolUndef, LoopEnd);
+  BranchInst *Br = BranchInst::Create(Next, LoopStart, BoolPoison, LoopEnd);
   Br->setDebugLoc(TermDL[LoopEnd]);
   LoopConds.push_back(Br);
   addPhiValues(LoopEnd, LoopStart);
@@ -1125,7 +1125,7 @@ void StructurizeCFG::init(Region *R) {
   Boolean = Type::getInt1Ty(Context);
   BoolTrue = ConstantInt::getTrue(Context);
   BoolFalse = ConstantInt::getFalse(Context);
-  BoolUndef = UndefValue::get(Boolean);
+  BoolPoison = PoisonValue::get(Boolean);
 
   this->UA = nullptr;
 }

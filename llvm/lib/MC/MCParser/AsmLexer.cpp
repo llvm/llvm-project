@@ -776,9 +776,11 @@ AsmToken AsmLexer::LexToken() {
   IsAtStartOfStatement = false;
   switch (CurChar) {
   default:
-    // Handle identifier: [a-zA-Z_.?][a-zA-Z0-9_$.@#?]*
-    if (isalpha(CurChar) || CurChar == '_' || CurChar == '.' ||
-        (MAI.doesAllowQuestionAtStartOfIdentifier() && CurChar == '?'))
+    // Handle identifier: [a-zA-Z_.$@#?][a-zA-Z0-9_.$@#?]*
+    // Whether or not the lexer accepts '$', '@', '#' and '?' at the start of
+    // an identifier is target-dependent. These characters are handled in the
+    // respective switch cases.
+    if (isalpha(CurChar) || CurChar == '_' || CurChar == '.')
       return LexIdentifier();
 
     // Unknown character, emit an error.
@@ -830,11 +832,18 @@ AsmToken AsmLexer::LexToken() {
       return LexIdentifier();
     return AsmToken(AsmToken::Dollar, StringRef(TokStart, 1));
   }
-  case '@': {
+  case '@':
     if (MAI.doesAllowAtAtStartOfIdentifier())
       return LexIdentifier();
     return AsmToken(AsmToken::At, StringRef(TokStart, 1));
-  }
+  case '#':
+    if (MAI.doesAllowHashAtStartOfIdentifier())
+      return LexIdentifier();
+    return AsmToken(AsmToken::Hash, StringRef(TokStart, 1));
+  case '?':
+    if (MAI.doesAllowQuestionAtStartOfIdentifier())
+      return LexIdentifier();
+    return AsmToken(AsmToken::Question, StringRef(TokStart, 1));
   case '\\': return AsmToken(AsmToken::BackSlash, StringRef(TokStart, 1));
   case '=':
     if (*CurPtr == '=') {
@@ -914,11 +923,6 @@ AsmToken AsmLexer::LexToken() {
   case '/':
     IsAtStartOfStatement = OldIsAtStartOfStatement;
     return LexSlash();
-  case '#': {
-    if (MAI.doesAllowHashAtStartOfIdentifier())
-      return LexIdentifier();
-    return AsmToken(AsmToken::Hash, StringRef(TokStart, 1));
-  }
   case '\'': return LexSingleQuote();
   case '"': return LexQuote();
   case '0': case '1': case '2': case '3': case '4':

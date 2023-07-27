@@ -21,6 +21,9 @@ int main(void) {
 #elif defined(__x86_64__)
   uintptr_t hint = 0x4f0000000000ULL;
   const uintptr_t app_start = 0x600000000000ULL;
+#elif defined(__loongarch_lp64)
+  uintptr_t hint = 0x4f0000000000ULL;
+  const uintptr_t app_start = 0x600000000000ULL;
 #elif defined (__mips64)
   uintptr_t hint = 0x4f00000000ULL;
   const uintptr_t app_start = 0x6000000000ULL;

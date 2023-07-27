@@ -502,10 +502,10 @@ bool AppleObjCDeclVendor::FinishDecl(clang::ObjCInterfaceDecl *interface_decl) {
     return false;
   };
 
-  LLDB_LOG(log,
-           "[AppleObjCDeclVendor::FinishDecl] Finishing Objective-C "
-           "interface for %s",
-           descriptor->GetClassName().AsCString());
+  LLDB_LOGF(log,
+            "[AppleObjCDeclVendor::FinishDecl] Finishing Objective-C "
+            "interface for %s",
+            descriptor->GetClassName().AsCString());
 
   if (!descriptor->Describe(superclass_func, instance_method_func,
                             class_method_func, ivar_func))
@@ -563,9 +563,9 @@ uint32_t AppleObjCDeclVendor::FindDecls(ConstString name, bool append,
           if (metadata)
             isa_value = metadata->GetISAPtr();
 
-          LLDB_LOG(log,
-                   "AOCTV::FT Found %s (isa 0x%" PRIx64 ") in the ASTContext",
-                   result_iface_type.getAsString(), isa_value);
+          LLDB_LOGF(log,
+                    "AOCTV::FT Found %s (isa 0x%" PRIx64 ") in the ASTContext",
+                    result_iface_type.getAsString().data(), isa_value);
         }
 
         decls.push_back(m_ast_ctx->GetCompilerDecl(result_iface_decl));

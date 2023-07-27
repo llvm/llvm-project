@@ -3231,7 +3231,7 @@ Parser::ParseCXXNewExpression(bool UseGlobal, SourceLocation Start) {
     // A new-type-id is a simplified type-id, where essentially the
     // direct-declarator is replaced by a direct-new-declarator.
     MaybeParseGNUAttributes(DeclaratorInfo);
-    if (ParseCXXTypeSpecifierSeq(DS))
+    if (ParseCXXTypeSpecifierSeq(DS, DeclaratorContext::CXXNew))
       DeclaratorInfo.setInvalidType(true);
     else {
       DeclaratorInfo.SetSourceRange(DS.getSourceRange());

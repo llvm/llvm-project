@@ -246,6 +246,50 @@ static LogicalResult printOperation(CppEmitter &emitter,
   return printConstantOp(emitter, operation, value);
 }
 
+static LogicalResult printBinaryArithOperation(CppEmitter &emitter,
+                                               Operation *operation,
+                                               StringRef binaryArithOperator) {
+  raw_ostream &os = emitter.ostream();
+
+  if (failed(emitter.emitAssignPrefix(*operation)))
+    return failure();
+  os << emitter.getOrCreateName(operation->getOperand(0));
+  os << " " << binaryArithOperator;
+  os << " " << emitter.getOrCreateName(operation->getOperand(1));
+
+  return success();
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::AddOp addOp) {
+  Operation *operation = addOp.getOperation();
+
+  return printBinaryArithOperation(emitter, operation, "+");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::DivOp divOp) {
+  Operation *operation = divOp.getOperation();
+
+  return printBinaryArithOperation(emitter, operation, "/");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::MulOp mulOp) {
+  Operation *operation = mulOp.getOperation();
+
+  return printBinaryArithOperation(emitter, operation, "*");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::RemOp remOp) {
+  Operation *operation = remOp.getOperation();
+
+  return printBinaryArithOperation(emitter, operation, "%");
+}
+
+static LogicalResult printOperation(CppEmitter &emitter, emitc::SubOp subOp) {
+  Operation *operation = subOp.getOperation();
+
+  return printBinaryArithOperation(emitter, operation, "-");
+}
+
 static LogicalResult printOperation(CppEmitter &emitter,
                                     cf::BranchOp branchOp) {
   raw_ostream &os = emitter.ostream();
@@ -930,8 +974,9 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           .Case<cf::BranchOp, cf::CondBranchOp>(
               [&](auto op) { return printOperation(*this, op); })
           // EmitC ops.
-          .Case<emitc::ApplyOp, emitc::CallOp, emitc::CastOp, emitc::ConstantOp,
-                emitc::IncludeOp, emitc::VariableOp>(
+          .Case<emitc::AddOp, emitc::ApplyOp, emitc::CallOp, emitc::CastOp,
+                emitc::ConstantOp, emitc::DivOp, emitc::IncludeOp, emitc::MulOp,
+                emitc::RemOp, emitc::SubOp, emitc::VariableOp>(
               [&](auto op) { return printOperation(*this, op); })
           // Func ops.
           .Case<func::CallOp, func::ConstantOp, func::FuncOp, func::ReturnOp>(

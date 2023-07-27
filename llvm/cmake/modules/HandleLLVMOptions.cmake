@@ -85,8 +85,8 @@ if( LLVM_ENABLE_ASSERTIONS )
   endif()
   # Enable assertions in libstdc++.
   add_compile_definitions(_GLIBCXX_ASSERTIONS)
-  # Enable assertions in libc++.
-  add_compile_definitions(_LIBCPP_ENABLE_ASSERTIONS)
+  # Enable the hardened mode in libc++.
+  add_compile_definitions(_LIBCPP_ENABLE_HARDENED_MODE)
 endif()
 
 if(LLVM_ENABLE_EXPENSIVE_CHECKS)
@@ -494,6 +494,11 @@ if( MSVC )
       message(ERROR "LLVM_WINSYSROOT requires clang-cl")
     endif()
     append("/winsysroot${LLVM_WINSYSROOT}" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    if (LINKER_IS_LLD_LINK)
+      append("/winsysroot:${LLVM_WINSYSROOT}"
+          CMAKE_EXE_LINKER_FLAGS CMAKE_MODULE_LINKER_FLAGS
+          CMAKE_SHARED_LINKER_FLAGS)
+    endif()
   endif()
 
   if (LLVM_ENABLE_WERROR)
@@ -736,7 +741,7 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   endif()
 
   append("-Wextra -Wno-unused-parameter -Wwrite-strings" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-  append("-Wcast-qual" CMAKE_CXX_FLAGS)
+  append("-Wcast-qual" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
 
   # Turn off missing field initializer warnings for gcc to avoid noise from
   # false positives with empty {}. Turn them on otherwise (they're off by
@@ -764,6 +769,11 @@ if (LLVM_ENABLE_WARNINGS AND (LLVM_COMPILER_IS_GCC_COMPATIBLE OR CLANG_CL))
   add_flag_if_supported("-Wcovered-switch-default" COVERED_SWITCH_DEFAULT_FLAG)
   append_if(USE_NO_UNINITIALIZED "-Wno-uninitialized" CMAKE_CXX_FLAGS)
   append_if(USE_NO_MAYBE_UNINITIALIZED "-Wno-maybe-uninitialized" CMAKE_CXX_FLAGS)
+
+  # Disable -Wnonnull for GCC warning as it is emitting a lot of false positives.
+  if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    append("-Wno-nonnull" CMAKE_CXX_FLAGS)
+  endif()
 
   # Disable -Wclass-memaccess, a C++-only warning from GCC 8 that fires on
   # LLVM's ADT classes.
@@ -1150,6 +1160,7 @@ if(LLVM_PROFDATA_FILE AND EXISTS ${LLVM_PROFDATA_FILE})
 endif()
 
 option(LLVM_BUILD_INSTRUMENTED_COVERAGE "Build LLVM and tools with Code Coverage instrumentation" Off)
+option(LLVM_INDIVIDUAL_TEST_COVERAGE "Emit individual coverage file for each test case." OFF)
 mark_as_advanced(LLVM_BUILD_INSTRUMENTED_COVERAGE)
 append_if(LLVM_BUILD_INSTRUMENTED_COVERAGE "-fprofile-instr-generate=\"${LLVM_PROFILE_FILE_PATTERN}\" -fcoverage-mapping"
   CMAKE_CXX_FLAGS
@@ -1316,6 +1327,9 @@ endif()
 
 set(LLVM_THIRD_PARTY_DIR  ${CMAKE_CURRENT_SOURCE_DIR}/../third-party CACHE STRING
     "Directory containing third party software used by LLVM (e.g. googletest)")
+
+set(LLVM_UNITTEST_LINK_FLAGS "" CACHE STRING
+    "Additional linker flags for unit tests")
 
 if(LLVM_ENABLE_LLVM_LIBC)
   check_library_exists(llvmlibc printf "" HAVE_LLVM_LIBC)

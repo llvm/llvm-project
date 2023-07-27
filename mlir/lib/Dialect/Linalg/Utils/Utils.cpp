@@ -33,7 +33,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Pass/Pass.h"
-#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include <optional>
@@ -138,84 +137,6 @@ static void unpackRanges(OpBuilder &builder, Location loc,
     steps.emplace_back(
         getValueOrCreateConstantIndexOp(builder, loc, range.stride));
   }
-}
-
-//===----------------------------------------------------------------------===//
-// Utilities for inferring various semantics properties of Linalg ops.
-//===----------------------------------------------------------------------===//
-
-DenseSet<int64_t> mlir::linalg::findPermutationsIndexingOperand(
-    LinalgOp linalgOp, OpOperand *opOperand, utils::IteratorType iter) {
-  DenseSet<int64_t> res;
-  assert(linalgOp == opOperand->getOwner() && "expected linalgOp owner");
-  AffineMap indexingMap = linalgOp.getMatchingIndexingMap(opOperand);
-  for (AffineExpr e : indexingMap.getResults()) {
-    if (auto d = e.dyn_cast<AffineDimExpr>()) {
-      if (linalgOp.getIteratorTypesArray()[d.getPosition()] == iter &&
-          llvm::count_if(indexingMap.getResults(), [d](AffineExpr e) {
-            return e.isFunctionOfDim(d.getPosition());
-          }) == 1)
-        res.insert(d.getPosition());
-    }
-  }
-  return res;
-}
-
-namespace {
-auto par = utils::IteratorType::parallel;
-auto red = utils::IteratorType::reduction;
-} // namespace
-
-bool mlir::linalg::containsMostMinorMatmul(LinalgOp linalgOp) {
-  FailureOr<EmbeddedMatmulDimsCandidates> res = inferMatmulDims(linalgOp);
-  if (failed(res))
-    return false;
-  int64_t numLoops = linalgOp.getNumLoops();
-  for (const DenseSet<int64_t> &s : {res->mPos, res->nPos, res->kPos}) {
-    if (s.contains(numLoops - 3) || s.contains(numLoops - 2) ||
-        s.contains(numLoops - 1))
-      continue;
-    return false;
-  }
-  return true;
-}
-
-FailureOr<EmbeddedMatmulDimsCandidates>
-mlir::linalg::inferMatmulDims(LinalgOp linalgOp) {
-  if (linalgOp.getNumDpsInits() != 1 || linalgOp.getNumDpsInputs() != 2)
-    return failure();
-
-  DenseSet<int64_t> a = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(0), par);
-  DenseSet<int64_t> b = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(1), par);
-  DenseSet<int64_t> c = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInitOperand(0), par);
-
-  // A & C - B are the iterators involved in an outer-product along A (the LHS).
-  DenseSet<int64_t> ac = a;
-  llvm::set_intersect(ac, c);
-  llvm::set_subtract(ac, b);
-  // B & C - A are the iterators involved in an outer-product along B (the RHS).
-  DenseSet<int64_t> bc = b;
-  llvm::set_intersect(bc, c);
-  llvm::set_subtract(bc, a);
-
-  // Note: if we ever need them, A & B & C would be "batch" dimensions.
-
-  // A & B red are the reduction dimensions.
-  DenseSet<int64_t> ra = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(0), red);
-  DenseSet<int64_t> rb = findPermutationsIndexingOperand(
-      linalgOp, linalgOp.getDpsInputOperand(1), red);
-  llvm::set_intersect(ra, rb);
-
-  if (ac.empty() || bc.empty() || ra.empty())
-    return failure();
-
-  // Pick the first one in each set.
-  // TODO: Better heuristic (e.g pick dims based on packing-based metric).
-  return EmbeddedMatmulDimsCandidates{ac, bc, ra};
 }
 
 //===----------------------------------------------------------------------===//
@@ -452,9 +373,9 @@ void GenerateLoopNest<AffineForOp>::doit(
   SmallVector<int64_t, 4> constantSteps;
   constantSteps.reserve(steps.size());
   for (Value v : steps) {
-    auto op = v.getDefiningOp<arith::ConstantIndexOp>();
-    assert(op && "Affine loops require constant steps");
-    constantSteps.push_back(op.value());
+    auto constVal = getConstantIntValue(v);
+    assert(constVal.has_value() && "Affine loops require constant steps");
+    constantSteps.push_back(constVal.value());
   }
 
   affine::buildAffineLoopNest(b, loc, lbs, ubs, constantSteps,
@@ -982,38 +903,6 @@ getReassociationMapForFoldingUnitDims(ArrayRef<OpFoldResult> mixedSizes) {
   if (!curr.empty() && !reassociation.empty())
     reassociation.back().append(curr.begin(), curr.end());
   return reassociation;
-}
-
-/// Return the identity numeric value associated to the give op.
-std::optional<TypedAttr> getNeutralElement(Operation *op) {
-  // Builder only used as helper for attribute creation.
-  OpBuilder b(op->getContext());
-  Type resultType = op->getResult(0).getType();
-  if (auto floatType = dyn_cast<FloatType>(resultType)) {
-    const llvm::fltSemantics &semantic = floatType.getFloatSemantics();
-    if (isa<arith::AddFOp>(op))
-      return b.getFloatAttr(resultType, llvm::APFloat::getZero(semantic));
-    if (isa<arith::MulFOp>(op))
-      return b.getFloatAttr(resultType, llvm::APFloat(semantic, 1));
-    if (isa<arith::MaxFOp>(op))
-      return b.getFloatAttr(resultType,
-                            llvm::APFloat::getInf(semantic, /*Negative=*/true));
-    if (isa<arith::MinFOp>(op))
-      return b.getFloatAttr(
-          resultType, llvm::APFloat::getInf(semantic, /*Negative=*/false));
-    return std::nullopt;
-  }
-  if (isa<arith::AddIOp, arith::OrIOp, arith::XOrIOp>(op))
-    return b.getIntegerAttr(resultType, 0);
-  if (isa<arith::AndIOp>(op))
-    return b.getIntegerAttr(resultType, -1);
-  if (isa<arith::MaxSIOp>(op))
-    return b.getIntegerAttr(resultType, std::numeric_limits<int64_t>::min());
-  if (isa<arith::MinSIOp>(op))
-    return b.getIntegerAttr(resultType, std::numeric_limits<int64_t>::max());
-  if (isa<arith::MulIOp>(op))
-    return b.getIntegerAttr(resultType, 1);
-  return std::nullopt;
 }
 
 } // namespace linalg

@@ -44,6 +44,14 @@ enum ObjCKeywordKind {
   NUM_OBJC_KEYWORDS
 };
 
+/// Provides a namespace for interesting identifers such as float_t and
+/// double_t.
+enum InterestingIdentifierKind {
+#define INTERESTING_IDENTIFIER(X) X,
+#include "clang/Basic/TokenKinds.def"
+  NUM_INTERESTING_IDENTIFIERS
+};
+
 /// Defines the possible values of an on-off-switch (C99 6.10.6p2).
 enum OnOffSwitch {
   OOS_ON, OOS_OFF, OOS_DEFAULT

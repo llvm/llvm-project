@@ -309,22 +309,22 @@ ExprInspection checks
       clang_analyzer_dumpExtent(a);       // expected-warning {{8 S64b}}
       clang_analyzer_dumpElementCount(a); // expected-warning {{2 S64b}}
     }
-    
+
 - ``clang_analyzer_value(a single argument of integer or pointer type)``
 
   Prints an associated value for the given argument.
   Supported argument types are integers, enums and pointers.
   The value can be represented either as a range set or as a concrete integer.
   For the rest of the types function prints ``n/a`` (aka not available).
-  
+
   **Note:** This function will print nothing for clang built with Z3 constraint manager.
   This may cause crashes of your tests. To manage this use one of the test constraining
   techniques:
-  
+
   * llvm-lit commands ``REQUIRES no-z3`` or ``UNSUPPORTED z3`` `See for details. <https://llvm.org/docs/TestingGuide.html#constraining-test-execution>`_
-  
+
   * a preprocessor directive ``#ifndef ANALYZER_CM_Z3``
-  
+
   * a clang command argument ``-analyzer-constraints=range``
 
   Example usage::

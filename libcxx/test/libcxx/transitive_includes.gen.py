@@ -63,8 +63,8 @@ else:
 //--- {header}.sh.cpp
 {lit_header_restrictions.get(header, '')}
 
-// TODO: Fix this test to make it work with filesystem, localization or wide characters disabled
-// UNSUPPORTED{BLOCKLIT}: no-filesystem, no-localization, no-wide-characters
+// TODO: Fix this test to make it work with localization or wide characters disabled
+// UNSUPPORTED{BLOCKLIT}: no-localization, no-wide-characters
 
 // When built with modules, this test doesn't work because --trace-includes doesn't
 // report the stack of includes correctly.

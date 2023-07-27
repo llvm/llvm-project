@@ -70,6 +70,12 @@ public:
     return SpillSGPRToVGPR;
   }
 
+  /// Return the largest available SGPR aligned to \p Align for the register
+  /// class \p RC.
+  MCRegister getAlignedHighSGPRForRC(const MachineFunction &MF,
+                                     const unsigned Align,
+                                     const TargetRegisterClass *RC) const;
+
   /// Return the end register initially reserved for the scratch buffer in case
   /// spilling is needed.
   MCRegister reservedPrivateSegmentBufferReg(const MachineFunction &MF) const;
@@ -438,6 +444,11 @@ public:
   unsigned getSubRegAlignmentNumBits(const TargetRegisterClass *RC,
                                      unsigned SubReg) const;
 };
+
+namespace AMDGPU {
+/// Get the size in bits of a register from the register class \p RC.
+unsigned getRegBitWidth(const TargetRegisterClass &RC);
+} // namespace AMDGPU
 
 } // End namespace llvm
 

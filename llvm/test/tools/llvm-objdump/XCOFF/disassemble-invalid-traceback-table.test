@@ -1,0 +1,36 @@
+## Test that parsing of an invalid XCOFF traceback table with a too
+## big function name length causes an out of range error.
+
+# RUN: yaml2obj %s -o %t.o
+# RUN: llvm-objdump -d --traceback-table --symbol-description %t.o 2>&1 | \
+# RUN:   FileCheck -DFILE=%t.o --implicit-check-not="warning:" --check-prefixes=WARN %s
+
+--- !XCOFF
+FileHeader:
+  MagicNumber:       0x1DF
+Sections:
+  - Name:            .text
+    Flags:           [ STYP_TEXT ]
+    SectionData:     "4e8000200000000000002240800102075a000000000000880073666f6f0000000000000000000000"
+Symbols:
+  - Name:            .AddNum
+    Value:           0
+    Section:         .text
+    Type:            0x20
+    StorageClass:    C_EXT
+    AuxEntries:
+      - Type:                   AUX_CSECT
+        SectionOrLength: 0x28
+        SymbolAlignmentAndType: 0x21
+        StorageMappingClass:    XMC_PR
+
+# WARN:      warning: '[[FILE]]': failure parsing traceback table with address: 0x4
+# WARN-NEXT: >>> unexpected end of data at offset 0x24 while reading [0x12, 0x85)
+# WARN-NEXT: >>> Raw traceback table data is:
+# WARN-NEXT:       8: 00 00 22 40
+# WARN-NEXT:       c: 80 01 02 07
+# WARN-NEXT:      10: 5a 00 00 00
+# WARN-NEXT:      14: 00 00 00 88
+# WARN-NEXT:      18: 00 73 66 6f
+# WARN-NEXT:      1c: 6f 00 00 00
+# WARN-NEXT:         ...

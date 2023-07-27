@@ -62,6 +62,7 @@
   MAKE_MLIR_PYTHON_QUALNAME("ir.AffineMap._CAPIPtr")
 #define MLIR_PYTHON_CAPSULE_ATTRIBUTE                                          \
   MAKE_MLIR_PYTHON_QUALNAME("ir.Attribute._CAPIPtr")
+#define MLIR_PYTHON_CAPSULE_BLOCK MAKE_MLIR_PYTHON_QUALNAME("ir.Block._CAPIPtr")
 #define MLIR_PYTHON_CAPSULE_CONTEXT                                            \
   MAKE_MLIR_PYTHON_QUALNAME("ir.Context._CAPIPtr")
 #define MLIR_PYTHON_CAPSULE_DIALECT_REGISTRY                                   \
@@ -173,6 +174,23 @@ static inline MlirAttribute mlirPythonCapsuleToAttribute(PyObject *capsule) {
   void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_ATTRIBUTE);
   MlirAttribute attr = {ptr};
   return attr;
+}
+
+/** Creates a capsule object encapsulating the raw C-API MlirBlock.
+ * The returned capsule does not extend or affect ownership of any Python
+ * objects that reference the module in any way. */
+static inline PyObject *mlirPythonBlockToCapsule(MlirBlock block) {
+  return PyCapsule_New(MLIR_PYTHON_GET_WRAPPED_POINTER(block),
+                       MLIR_PYTHON_CAPSULE_BLOCK, NULL);
+}
+
+/** Extracts an MlirBlock from a capsule as produced from
+ * mlirPythonBlockToCapsule. If the capsule is not of the right type, then
+ * a null pass manager is returned (as checked via mlirBlockIsNull). */
+static inline MlirBlock mlirPythonCapsuleToBlock(PyObject *capsule) {
+  void *ptr = PyCapsule_GetPointer(capsule, MLIR_PYTHON_CAPSULE_BLOCK);
+  MlirBlock block = {ptr};
+  return block;
 }
 
 /** Creates a capsule object encapsulating the raw C-API MlirContext.

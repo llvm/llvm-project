@@ -134,19 +134,15 @@
 # CHECK-ASEXEC-DIRECT-TEST: -- Available Tests --
 # CHECK-ASEXEC-DIRECT-TEST: top-level-suite :: subdir/test-three
 
-# Check an error is emitted when the directly named test would not be run
-# indirectly (e.g. when the directory containing the test is specified).
+# Check that an error is emitted when the directly named test does not satisfy
+# the test config's requirements.
 #
 # RUN: not %{lit} \
 # RUN:     %{inputs}/discovery/test.not-txt 2>%t.err
-# RUN: FileCheck --check-prefix=CHECK-ERROR-INDIRECT-RUN-CHECK < %t.err %s
+# RUN: FileCheck --check-prefix=CHECK-ERROR-INPUT-CONTAINED-NO-TESTS < %t.err %s
 #
-# CHECK-ERROR-INDIRECT-RUN-CHECK: error: 'top-level-suite :: test.not-txt' would not be run indirectly
-
-# Check that no error is emitted with --no-indirectly-run-check.
-#
-# RUN: %{lit} \
-# RUN:     %{inputs}/discovery/test.not-txt --no-indirectly-run-check
+# CHECK-ERROR-INPUT-CONTAINED-NO-TESTS: warning: input 'Inputs/discovery/test.not-txt' contained no tests
+# CHECK-ERROR-INPUT-CONTAINED-NO-TESTS: error: did not discover any tests for provided path(s)
 
 # Check that a standalone test with no suffixes set is run without any errors.
 #
@@ -177,6 +173,15 @@
 # RUN: FileCheck --check-prefix=CHECK-STANDALONE-DISCOVERY < %t.err %s
 #
 # CHECK-STANDALONE-DISCOVERY: error: did not discover any tests for provided path(s)
+
+# Check that a single file path can result in multiple tests being discovered if
+# the test format implements those semantics.
+#
+# RUN: %{lit} %{inputs}/discovery-getTestsForPath/x.test > %t.out
+# RUN: FileCheck --check-prefix=CHECK-getTestsForPath < %t.out %s
+#
+# CHECK-getTestsForPath: PASS: discovery-getTestsForPath-suite :: {{.+}}one.test
+# CHECK-getTestsForPath: PASS: discovery-getTestsForPath-suite :: {{.+}}two.test
 
 # Check that we don't recurse infinitely when loading an site specific test
 # suite located inside the test source root.

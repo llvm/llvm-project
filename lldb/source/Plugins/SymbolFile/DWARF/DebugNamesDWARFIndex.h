@@ -80,8 +80,7 @@ private:
 
   std::optional<DIERef> ToDIERef(const DebugNames::Entry &entry);
   bool ProcessEntry(const DebugNames::Entry &entry,
-                    llvm::function_ref<bool(DWARFDIE die)> callback,
-                    llvm::StringRef name);
+                    llvm::function_ref<bool(DWARFDIE die)> callback);
 
   static void MaybeLogLookupError(llvm::Error error,
                                   const DebugNames::NameIndex &ni,

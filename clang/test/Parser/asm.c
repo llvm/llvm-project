@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -fsyntax-only -fdouble-square-bracket-attributes -verify %s
+// RUN: %clang_cc1 -fsyntax-only -verify %s
 
 #if !__has_extension(gnu_asm)
 #error Extension 'gnu_asm' should be available by default

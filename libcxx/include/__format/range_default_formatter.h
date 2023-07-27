@@ -15,7 +15,6 @@
 #endif
 
 #include <__algorithm/ranges_copy.h>
-#include <__availability>
 #include <__chrono/statically_widen.h>
 #include <__concepts/same_as.h>
 #include <__config>
@@ -26,10 +25,10 @@
 #include <__ranges/concepts.h>
 #include <__ranges/data.h>
 #include <__ranges/size.h>
+#include <__type_traits/conditional.h>
 #include <__type_traits/remove_cvref.h>
 #include <__utility/pair.h>
 #include <string_view>
-#include <tuple>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -112,8 +111,9 @@ public:
     return __underlying_.parse(__ctx);
   }
 
-  template <class FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename FormatContext::iterator format(__maybe_const_r& __range, FormatContext& __ctx) const {
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  format(__maybe_const_r& __range, _FormatContext& __ctx) const {
     return __underlying_.format(__range, __ctx);
   }
 };

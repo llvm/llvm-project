@@ -3020,10 +3020,13 @@ private:
 };
 } // namespace
 
+#define CONCAT(x, y) CONCAT2(x, y)
+#define CONCAT2(x, y) x##y
+
 // Helper for changing the semantics in a given context. Preserves the current
 // semantics which is resumed when the "push" goes out of scope.
 #define PushSemantics(PushVal)                                                 \
-  [[maybe_unused]] auto pushSemanticsLocalVariable##__LINE__ =                 \
+  [[maybe_unused]] auto CONCAT(pushSemanticsLocalVariable, __LINE__) =         \
       Fortran::common::ScopedSet(semant, PushVal);
 
 static bool isAdjustedArrayElementType(mlir::Type t) {
@@ -4564,6 +4567,14 @@ private:
         return [=](IterSpace iters) -> ExtValue {
           return placeScalarValueInMemory(builder, loc, cc(iters), storageType);
         };
+      } else if (isArray(x)) {
+        // An array reference is needed, but the indices used in its path must
+        // still be retrieved by value.
+        assert(!nextPathSemant && "Next path semantics already set!");
+        nextPathSemant = ConstituentSemantics::RefTransparent;
+        CC cc = genarr(x);
+        assert(!nextPathSemant && "Next path semantics wasn't used!");
+        return cc;
       }
     }
     return genarr(x);
@@ -6617,9 +6628,9 @@ private:
     mlir::IndexType idxTy = builder.getIndexType();
     mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
     bool atBase = true;
-    auto saveSemant = semant;
-    if (isProjectedCopyInCopyOut())
-      semant = ConstituentSemantics::RefTransparent;
+    PushSemantics(isProjectedCopyInCopyOut()
+                      ? ConstituentSemantics::RefTransparent
+                      : nextPathSemantics());
     unsigned index = 0;
     for (const auto &v : llvm::reverse(revPath)) {
       std::visit(
@@ -6728,7 +6739,6 @@ private:
       atBase = false;
       ++index;
     }
-    semant = saveSemant;
     ty = fir::unwrapSequenceType(ty);
     components.applied = true;
     return ty;
@@ -7131,6 +7141,18 @@ private:
     return semant == ConstituentSemantics::ByValueArg;
   }
 
+  /// Semantics to use when lowering the next array path.
+  /// If no value was set, the path uses the same semantics as the array.
+  inline ConstituentSemantics nextPathSemantics() {
+    if (nextPathSemant) {
+      ConstituentSemantics sema = nextPathSemant.value();
+      nextPathSemant.reset();
+      return sema;
+    }
+
+    return semant;
+  }
+
   /// Can the loops over the expression be unordered?
   inline bool isUnordered() const { return unordered; }
 
@@ -7179,6 +7201,7 @@ private:
   Fortran::lower::ExplicitIterSpace *explicitSpace = nullptr;
   Fortran::lower::ImplicitIterSpace *implicitSpace = nullptr;
   ConstituentSemantics semant = ConstituentSemantics::RefTransparent;
+  std::optional<ConstituentSemantics> nextPathSemant;
   /// `lbounds`, `ubounds` are used in POINTER value assignments, which may only
   /// occur in an explicit iteration space.
   std::optional<llvm::SmallVector<mlir::Value>> lbounds;

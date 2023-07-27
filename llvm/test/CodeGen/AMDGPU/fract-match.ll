@@ -96,14 +96,12 @@ define float @safe_math_fract_f32(float %x, ptr addrspace(1) nocapture writeonly
 ; GFX11-LABEL: safe_math_fract_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX11-NEXT:    v_floor_f32_e32 v4, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b32 v[1:2], v4, off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -179,11 +177,9 @@ define float @safe_math_fract_f32_noinf_check(float %x, ptr addrspace(1) nocaptu
 ; GFX11-LABEL: safe_math_fract_f32_noinf_check:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -259,7 +255,6 @@ define float @no_nan_check_math_fract_f32(float %x, ptr addrspace(1) nocapture w
 ; GFX11-LABEL: no_nan_check_math_fract_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
@@ -267,7 +262,6 @@ define float @no_nan_check_math_fract_f32(float %x, ptr addrspace(1) nocapture w
 ; GFX11-NEXT:    global_store_b32 v[1:2], v3, off
 ; GFX11-NEXT:    v_min_f32_e32 v4, 0x3f7fffff, v4
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v4, vcc_lo
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -318,7 +312,6 @@ define float @basic_fract_f32_nonans(float nofpclass(nan) %x) {
 ; GFX11-LABEL: basic_fract_f32_nonans:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -364,7 +357,6 @@ define float @basic_fract_f32_flags_minnum(float %x) {
 ; GFX11-LABEL: basic_fract_f32_flags_minnum:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -415,7 +407,6 @@ define float @basic_fract_f32_flags_fsub(float nofpclass(nan) %x) {
 ; GFX11-LABEL: basic_fract_f32_flags_fsub:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -473,7 +464,6 @@ define <2 x float> @basic_fract_v2f32_nonans(<2 x float> nofpclass(nan) %x) {
 ; GFX11-LABEL: basic_fract_v2f32_nonans:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    v_fract_f32_e32 v1, v1
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -544,13 +534,11 @@ define float @basic_fract_f32_multi_use_fsub_nonans(float nofpclass(nan) %x, ptr
 ; GFX11-LABEL: basic_fract_f32_multi_use_fsub_nonans:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v3, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_f32_e32 v3, v0, v3
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    global_store_b32 v[1:2], v3, off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
@@ -598,7 +586,6 @@ define float @nnan_minnum_fract_f32(float %x) {
 ; GFX11-LABEL: nnan_minnum_fract_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -646,7 +633,6 @@ define float @nnan_fsub_fract_f32(float %x) {
 ; GFX11-LABEL: nnan_fsub_fract_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -695,7 +681,6 @@ define float @nnan_floor_fract_f32(float %x) {
 ; GFX11-LABEL: nnan_floor_fract_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -746,7 +731,6 @@ define float @nnan_src_fract_f32(float nofpclass(nan) %x) {
 ; GFX11-LABEL: nnan_src_fract_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -793,7 +777,6 @@ define float @not_fract_f32_wrong_const(float nofpclass(nan) %x) {
 ; GFX11-LABEL: not_fract_f32_wrong_const:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -843,7 +826,6 @@ define float @not_fract_f32_swapped_fsub(float nofpclass(nan) %x) {
 ; GFX11-LABEL: not_fract_f32_swapped_fsub:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_f32_e32 v0, v1, v0
@@ -893,7 +875,6 @@ define float @not_fract_f32_not_floor(float nofpclass(nan) %x) {
 ; GFX11-LABEL: not_fract_f32_not_floor:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_trunc_f32_e32 v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -943,7 +924,6 @@ define float @not_fract_f32_different_floor(float %x, float %y) {
 ; GFX11-LABEL: not_fract_f32_different_floor:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v1, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -993,7 +973,6 @@ define float @not_fract_f32_maxnum(float nofpclass(nan) %x) {
 ; GFX11-LABEL: not_fract_f32_maxnum:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_sub_f32_e32 v0, v0, v1
@@ -1017,26 +996,10 @@ define float @fcmp_uno_check_is_nan_f32(float %x) {
 ; IR-NEXT:    [[COND:%.*]] = select i1 [[UNO]], float [[X]], float [[MIN]]
 ; IR-NEXT:    ret float [[COND]]
 ;
-; GFX6-LABEL: fcmp_uno_check_is_nan_f32:
-; GFX6:       ; %bb.0: ; %entry
-; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX7-LABEL: fcmp_uno_check_is_nan_f32:
-; GFX7:       ; %bb.0: ; %entry
-; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX7-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-LABEL: fcmp_uno_check_is_nan_f32:
-; GFX8:       ; %bb.0: ; %entry
-; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX11-LABEL: fcmp_uno_check_is_nan_f32:
-; GFX11:       ; %bb.0: ; %entry
-; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX11-NEXT:    s_setpc_b64 s[30:31]
+; GCN-LABEL: fcmp_uno_check_is_nan_f32:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GCN-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call float @llvm.floor.f32(float %x)
   %sub = fsub float %x, %floor
@@ -1089,7 +1052,6 @@ define float @select_nan_fract_f32(float %x) {
 ; GFX11-LABEL: select_nan_fract_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1143,7 +1105,6 @@ define float @commuted_select_nan_fract_f32(float %x) {
 ; GFX11-LABEL: commuted_select_nan_fract_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1199,7 +1160,6 @@ define float @wrong_commuted_nan_select_f32(float %x) {
 ; GFX11-LABEL: wrong_commuted_nan_select_f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f32_e32 v1, v0
 ; GFX11-NEXT:    v_cmp_u_f32_e32 vcc_lo, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1269,7 +1229,6 @@ define half @basic_fract_f16_nonan(half nofpclass(nan) %x) {
 ; GFX11-LABEL: basic_fract_f16_nonan:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f16_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1348,7 +1307,6 @@ define <2 x half> @basic_fract_v2f16_nonan(<2 x half> nofpclass(nan) %x) {
 ; GFX11-LABEL: basic_fract_v2f16_nonan:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
 ; GFX11-NEXT:    v_fract_f16_e32 v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
@@ -1409,7 +1367,6 @@ define double @basic_fract_f64_nanans(double nofpclass(nan) %x) {
 ; GFX11-LABEL: basic_fract_f64_nanans:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f64_e32 v[0:1], v[0:1]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1500,11 +1457,9 @@ define half @safe_math_fract_f16_noinf_check(half %x, ptr addrspace(1) nocapture
 ; GFX11-LABEL: safe_math_fract_f16_noinf_check:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f16_e32 v3, v0
 ; GFX11-NEXT:    v_fract_f16_e32 v0, v0
 ; GFX11-NEXT:    global_store_b16 v[1:2], v3, off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call half @llvm.floor.f16(half %x)
@@ -1587,11 +1542,9 @@ define double @safe_math_fract_f64_noinf_check(double %x, ptr addrspace(1) nocap
 ; GFX11-LABEL: safe_math_fract_f64_noinf_check:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_floor_f64_e32 v[4:5], v[0:1]
 ; GFX11-NEXT:    v_fract_f64_e32 v[0:1], v[0:1]
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[4:5], off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call double @llvm.floor.f64(double %x)
@@ -1645,7 +1598,6 @@ define float @select_nan_fract_f32_flags_select(float %x) {
 ; GFX11-LABEL: select_nan_fract_f32_flags_select:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1699,7 +1651,6 @@ define float @select_nan_fract_f32_flags_minnum(float %x) {
 ; GFX11-LABEL: select_nan_fract_f32_flags_minnum:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
@@ -1807,7 +1758,6 @@ define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) nocap
 ; GFX11-LABEL: safe_math_fract_v2f32:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f32_e32 v6, v0
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v0|
 ; GFX11-NEXT:    v_fract_f32_e32 v7, v1
@@ -1817,7 +1767,6 @@ define <2 x float> @safe_math_fract_v2f32(<2 x float> %x, ptr addrspace(1) nocap
 ; GFX11-NEXT:    v_cmp_neq_f32_e64 vcc_lo, 0x7f800000, |v1|
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[4:5], off
 ; GFX11-NEXT:    v_cndmask_b32_e32 v1, 0, v7, vcc_lo
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call <2 x float> @llvm.floor.v2f32(<2 x float> %x)
@@ -1923,7 +1872,6 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) nocapture writeon
 ; GFX11-LABEL: safe_math_fract_f64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_mov_b32 s1, 0x7ff00000
 ; GFX11-NEXT:    v_fract_f64_e32 v[4:5], v[0:1]
@@ -1932,7 +1880,6 @@ define double @safe_math_fract_f64(double %x, ptr addrspace(1) nocapture writeon
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_dual_cndmask_b32 v0, 0, v4 :: v_dual_cndmask_b32 v1, 0, v5
 ; GFX11-NEXT:    global_store_b64 v[2:3], v[6:7], off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call double @llvm.floor.f64(double %x)
@@ -2046,14 +1993,12 @@ define half @safe_math_fract_f16(half %x, ptr addrspace(1) nocapture writeonly %
 ; GFX11-LABEL: safe_math_fract_f16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f16_e32 v3, v0
 ; GFX11-NEXT:    v_cmp_neq_f16_e64 vcc_lo, 0x7c00, |v0|
 ; GFX11-NEXT:    v_floor_f16_e32 v4, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-NEXT:    v_cndmask_b32_e32 v0, 0, v3, vcc_lo
 ; GFX11-NEXT:    global_store_b16 v[1:2], v4, off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call half @llvm.floor.f16(half %x)
@@ -2207,7 +2152,6 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) nocaptu
 ; GFX11-LABEL: safe_math_fract_v2f16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 16, v0
 ; GFX11-NEXT:    v_fract_f16_e32 v6, v0
 ; GFX11-NEXT:    v_floor_f16_e32 v5, v0
@@ -2222,7 +2166,6 @@ define <2 x half> @safe_math_fract_v2f16(<2 x half> %x, ptr addrspace(1) nocaptu
 ; GFX11-NEXT:    v_cndmask_b32_e64 v0, v6, 0, s0
 ; GFX11-NEXT:    global_store_b32 v[1:2], v4, off
 ; GFX11-NEXT:    v_pack_b32_f16 v0, v0, v3
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call <2 x half> @llvm.floor.v2f16(<2 x half> %x)
@@ -2355,7 +2298,6 @@ define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) noc
 ; GFX11-LABEL: safe_math_fract_v2f64:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fract_f64_e32 v[10:11], v[0:1]
 ; GFX11-NEXT:    v_cmp_class_f64_e64 s0, v[0:1], 0x204
 ; GFX11-NEXT:    v_fract_f64_e32 v[12:13], v[2:3]
@@ -2367,7 +2309,6 @@ define <2 x double> @safe_math_fract_v2f64(<2 x double> %x, ptr addrspace(1) noc
 ; GFX11-NEXT:    v_cndmask_b32_e64 v2, v12, 0, s1
 ; GFX11-NEXT:    v_cndmask_b32_e64 v3, v13, 0, s1
 ; GFX11-NEXT:    global_store_b128 v[4:5], v[6:9], off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %floor = tail call <2 x double> @llvm.floor.v2f64(<2 x double> %x)
@@ -2404,5 +2345,3 @@ declare <2 x half> @llvm.fabs.v2f16(<2 x half>) #0
 declare <2 x double> @llvm.fabs.v2f64(<2 x double>) #0
 
 attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
-; GCN: {{.*}}

@@ -1,9 +1,6 @@
 // This file contains a test case representative of a dialect parsing an
 // attribute with versioned custom encoding.
 
-// Bytecode currently does not support big-endian platforms
-// UNSUPPORTED: target=s390x-{{.*}}
-
 //===--------------------------------------------------------------------===//
 // Test attribute upgrade
 //===--------------------------------------------------------------------===//

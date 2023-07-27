@@ -18,9 +18,16 @@
 #include <__memory/unique_ptr.h>
 #include <__mutex/mutex.h>
 #include <__system_error/system_error.h>
+#include <__thread/id.h>
 #include <__threading_support>
 #include <__utility/forward.h>
+#include <iosfwd>
 #include <tuple>
+
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  include <locale>
+#  include <sstream>
+#endif
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -108,7 +115,7 @@ template <class _Tp>
 void
 __thread_specific_ptr<_Tp>::set_pointer(pointer __p)
 {
-    _LIBCPP_ASSERT(get() == nullptr,
+    _LIBCPP_ASSERT_UNCATEGORIZED(get() == nullptr,
                    "Attempting to overwrite thread local data");
     std::__libcpp_tls_set(__key_, __p);
 }
@@ -124,11 +131,32 @@ struct _LIBCPP_TEMPLATE_VIS hash<__thread_id>
     }
 };
 
-template<class _CharT, class _Traits>
-_LIBCPP_INLINE_VISIBILITY
-basic_ostream<_CharT, _Traits>&
-operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id)
-{return __os << __id.__id_;}
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+template <class _CharT, class _Traits>
+_LIBCPP_INLINE_VISIBILITY basic_ostream<_CharT, _Traits>&
+operator<<(basic_ostream<_CharT, _Traits>& __os, __thread_id __id) {
+    // [thread.thread.id]/9
+    //   Effects: Inserts the text representation for charT of id into out.
+    //
+    // [thread.thread.id]/2
+    //   The text representation for the character type charT of an
+    //   object of type thread::id is an unspecified sequence of charT
+    //   such that, for two objects of type thread::id x and y, if
+    //   x == y is true, the thread::id objects have the same text
+    //   representation, and if x != y is true, the thread::id objects
+    //   have distinct text representations.
+    //
+    // Since various flags in the output stream can affect how the
+    // thread id is represented (e.g. numpunct or showbase), we
+    // use a temporary stream instead and just output the thread
+    // id representation as a string.
+
+    basic_ostringstream<_CharT, _Traits> __sstr;
+    __sstr.imbue(locale::classic());
+    __sstr << __id.__id_;
+    return __os << __sstr.str();
+}
+#endif // _LIBCPP_HAS_NO_LOCALIZATION
 
 class _LIBCPP_EXPORTED_FROM_ABI thread
 {

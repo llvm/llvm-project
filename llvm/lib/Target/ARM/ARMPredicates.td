@@ -224,6 +224,10 @@ let RecomputePerFunction = 1 in {
 }
 
 def GenExecuteOnly : Predicate<"Subtarget->genExecuteOnly()">;
+def DontGenExecuteOnly : Predicate<"!Subtarget->genExecuteOnly()">;
+def GenT1ExecuteOnly : Predicate<"Subtarget->genExecuteOnly() && "
+                                 "Subtarget->isThumb1Only() && "
+                                 "!Subtarget->hasV8MBaselineOps()">;
 
 // Armv8.5-A extensions
 def HasSB            : Predicate<"Subtarget->hasSB()">,

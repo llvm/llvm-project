@@ -150,8 +150,15 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
     AddrSize = DebugInfoData.getU8(Offset);
   }
 
-  if (!DCtx.getDebugAbbrev()->getAbbreviationDeclarationSet(AbbrOffset))
+  Expected<const DWARFAbbreviationDeclarationSet *> AbbrevSetOrErr =
+      DCtx.getDebugAbbrev()->getAbbreviationDeclarationSet(AbbrOffset);
+  if (!AbbrevSetOrErr) {
     ValidAbbrevOffset = false;
+    // FIXME: A problematic debug_abbrev section is reported below in the form
+    // of a `note:`. We should propagate this error there (or elsewhere) to
+    // avoid losing the specific problem with the debug_abbrev section.
+    consumeError(AbbrevSetOrErr.takeError());
+  }
 
   ValidLength = DebugInfoData.isValidOffset(OffsetStart + Length + 3);
   ValidVersion = DWARFContext::isSupportedVersion(Version);
@@ -302,14 +309,14 @@ unsigned DWARFVerifier::verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev) {
   if (!Abbrev)
     return 0;
 
-  const DWARFAbbreviationDeclarationSet *AbbrDecls =
+  Expected<const DWARFAbbreviationDeclarationSet *> AbbrDeclsOrErr =
       Abbrev->getAbbreviationDeclarationSet(0);
-  // FIXME: If we failed to get a DWARFAbbreviationDeclarationSet, it's possible
-  // that there are errors. We need to propagate the error from
-  // getAbbreviationDeclarationSet.
-  if (!AbbrDecls)
-    return 0;
+  if (!AbbrDeclsOrErr) {
+    error() << toString(AbbrDeclsOrErr.takeError()) << "\n";
+    return 1;
+  }
 
+  const auto *AbbrDecls = *AbbrDeclsOrErr;
   unsigned NumErrors = 0;
   for (auto AbbrDecl : *AbbrDecls) {
     SmallDenseSet<uint16_t> AttributeSet;

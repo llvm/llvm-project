@@ -45,7 +45,8 @@ transform::TransformState::TransformState(
   for (ArrayRef<MappedValue> mapping : extraMappings)
     topLevelMappedValues.push_back(mapping);
 
-  auto result = mappings.try_emplace(region);
+  auto result =
+      mappings.insert(std::make_pair(region, std::make_unique<Mappings>()));
   assert(result.second && "the region scope is already present");
   (void)result;
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -83,28 +84,38 @@ transform::TransformState::getPayloadValues(Value handleValue) const {
 }
 
 LogicalResult transform::TransformState::getHandlesForPayloadOp(
-    Operation *op, SmallVectorImpl<Value> &handles) const {
+    Operation *op, SmallVectorImpl<Value> &handles,
+    bool includeOutOfScope) const {
   bool found = false;
-  for (const Mappings &mapping : llvm::make_second_range(mappings)) {
-    auto iterator = mapping.reverse.find(op);
-    if (iterator != mapping.reverse.end()) {
+  for (const auto &[region, mapping] : llvm::reverse(mappings)) {
+    auto iterator = mapping->reverse.find(op);
+    if (iterator != mapping->reverse.end()) {
       llvm::append_range(handles, iterator->getSecond());
       found = true;
     }
+    // Stop looking when reaching a region that is isolated from above.
+    if (!includeOutOfScope &&
+        region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      break;
   }
 
   return success(found);
 }
 
 LogicalResult transform::TransformState::getHandlesForPayloadValue(
-    Value payloadValue, SmallVectorImpl<Value> &handles) const {
+    Value payloadValue, SmallVectorImpl<Value> &handles,
+    bool includeOutOfScope) const {
   bool found = false;
-  for (const Mappings &mapping : llvm::make_second_range(mappings)) {
-    auto iterator = mapping.reverseValues.find(payloadValue);
-    if (iterator != mapping.reverseValues.end()) {
+  for (const auto &[region, mapping] : llvm::reverse(mappings)) {
+    auto iterator = mapping->reverseValues.find(payloadValue);
+    if (iterator != mapping->reverseValues.end()) {
       llvm::append_range(handles, iterator->getSecond());
       found = true;
     }
+    // Stop looking when reaching a region that is isolated from above.
+    if (!includeOutOfScope &&
+        region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      break;
   }
 
   return success(found);
@@ -332,22 +343,26 @@ void transform::TransformState::forgetValueMapping(
 LogicalResult
 transform::TransformState::replacePayloadOp(Operation *op,
                                             Operation *replacement) {
-  // Drop the mapping between the op and all handles that point to it. Don't
-  // care if there are on such handles.
-  SmallVector<Value> opHandles;
-  (void)getHandlesForPayloadOp(op, opHandles);
-  for (Value handle : opHandles) {
-    Mappings &mappings = getMapping(handle);
-    dropMappingEntry(mappings.reverse, op, handle);
-  }
+  // TODO: consider invalidating the handles to nested objects here.
 
 #ifndef NDEBUG
   for (Value opResult : op->getResults()) {
     SmallVector<Value> valueHandles;
-    (void)getHandlesForPayloadValue(opResult, valueHandles);
+    (void)getHandlesForPayloadValue(opResult, valueHandles,
+                                    /*includeOutOfScope=*/true);
     assert(valueHandles.empty() && "expected no mapping to old results");
   }
 #endif // NDEBUG
+
+  // Drop the mapping between the op and all handles that point to it. Fail if
+  // there are no handles.
+  SmallVector<Value> opHandles;
+  if (failed(getHandlesForPayloadOp(op, opHandles, /*includeOutOfScope=*/true)))
+    return failure();
+  for (Value handle : opHandles) {
+    Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
+    dropMappingEntry(mappings.reverse, op, handle);
+  }
 
 #if LLVM_ENABLE_ABI_BREAKING_CHECKS
   if (options.getExpensiveChecksEnabled()) {
@@ -355,17 +370,13 @@ transform::TransformState::replacePayloadOp(Operation *op,
     assert(it != cachedNames.end() && "entry not found");
     assert(it->second == op->getName() && "operation name mismatch");
     cachedNames.erase(it);
-  }
-#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
-
-  // TODO: consider invalidating the handles to nested objects here.
-
-#if LLVM_ENABLE_ABI_BREAKING_CHECKS
-  if (replacement && options.getExpensiveChecksEnabled()) {
-    auto insertion = cachedNames.insert({replacement, replacement->getName()});
-    if (!insertion.second) {
-      assert(insertion.first->second == replacement->getName() &&
-             "operation is already cached with a different name");
+    if (replacement) {
+      auto insertion =
+          cachedNames.insert({replacement, replacement->getName()});
+      if (!insertion.second) {
+        assert(insertion.first->second == replacement->getName() &&
+               "operation is already cached with a different name");
+      }
     }
   }
 #endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
@@ -380,7 +391,7 @@ transform::TransformState::replacePayloadOp(Operation *op,
   // element from an array invalidates iterators; merely changing the value of
   // elements does not.
   for (Value handle : opHandles) {
-    Mappings &mappings = getMapping(handle);
+    Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
     auto it = mappings.direct.find(handle);
     if (it == mappings.direct.end())
       continue;
@@ -405,10 +416,12 @@ transform::TransformState::replacePayloadOp(Operation *op,
 LogicalResult
 transform::TransformState::replacePayloadValue(Value value, Value replacement) {
   SmallVector<Value> valueHandles;
-  (void)getHandlesForPayloadValue(value, valueHandles);
+  if (failed(getHandlesForPayloadValue(value, valueHandles,
+                                       /*includeOutOfScope=*/true)))
+    return failure();
 
   for (Value handle : valueHandles) {
-    Mappings &mappings = getMapping(handle);
+    Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
     dropMappingEntry(mappings.reverseValues, value, handle);
 
     // If replacing with null, that is erasing the mapping, drop the mapping
@@ -509,7 +522,9 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
   for (Operation *ancestor : potentialAncestors) {
     Operation *definingOp;
     std::optional<unsigned> resultNo;
-    unsigned argumentNo, blockNo, regionNo;
+    unsigned argumentNo = std::numeric_limits<unsigned>::max();
+    unsigned blockNo = std::numeric_limits<unsigned>::max();
+    unsigned regionNo = std::numeric_limits<unsigned>::max();
     if (auto opResult = llvm::dyn_cast<OpResult>(payloadValue)) {
       definingOp = opResult.getOwner();
       resultNo = opResult.getResultNumber();
@@ -531,30 +546,30 @@ void transform::TransformState::recordValueHandleInvalidationByOpHandleOne(
     Location ancestorLoc = ancestor->getLoc();
     Location opLoc = definingOp->getLoc();
     Location valueLoc = payloadValue.getLoc();
-    newlyInvalidated[valueHandle] =
-        [valueHandle, owner, operandNo, resultNo, argumentNo, blockNo, regionNo,
-         ancestorLoc, opLoc, valueLoc](Location currentLoc) {
-          InFlightDiagnostic diag = emitError(currentLoc)
-                                    << "op uses a handle invalidated by a "
-                                       "previously executed transform op";
-          diag.attachNote(valueHandle.getLoc()) << "invalidated handle";
-          diag.attachNote(owner->getLoc())
-              << "invalidated by this transform op that consumes its operand #"
-              << operandNo
-              << " and invalidates all handles to payload IR entities "
-                 "associated with this operand and entities nested in them";
-          diag.attachNote(ancestorLoc)
-              << "ancestor op associated with the consumed handle";
-          if (resultNo) {
-            diag.attachNote(opLoc)
-                << "op defining the value as result #" << *resultNo;
-          } else {
-            diag.attachNote(opLoc)
-                << "op defining the value as block argument #" << argumentNo
-                << " of block #" << blockNo << " in region #" << regionNo;
-          }
-          diag.attachNote(valueLoc) << "payload value";
-        };
+    newlyInvalidated[valueHandle] = [valueHandle, owner, operandNo, resultNo,
+                                     argumentNo, blockNo, regionNo, ancestorLoc,
+                                     opLoc, valueLoc](Location currentLoc) {
+      InFlightDiagnostic diag = emitError(currentLoc)
+                                << "op uses a handle invalidated by a "
+                                   "previously executed transform op";
+      diag.attachNote(valueHandle.getLoc()) << "invalidated handle";
+      diag.attachNote(owner->getLoc())
+          << "invalidated by this transform op that consumes its operand #"
+          << operandNo
+          << " and invalidates all handles to payload IR entities "
+             "associated with this operand and entities nested in them";
+      diag.attachNote(ancestorLoc)
+          << "ancestor op associated with the consumed handle";
+      if (resultNo) {
+        diag.attachNote(opLoc)
+            << "op defining the value as result #" << *resultNo;
+      } else {
+        diag.attachNote(opLoc)
+            << "op defining the value as block argument #" << argumentNo
+            << " of block #" << blockNo << " in region #" << regionNo;
+      }
+      diag.attachNote(valueLoc) << "payload value";
+    };
   }
 }
 
@@ -590,12 +605,14 @@ void transform::TransformState::recordOpHandleInvalidation(
   // number of IR objects (operations and values). Alternatively, we could walk
   // the IR nested in each payload op associated with the given handle and look
   // for handles associated with each operation and value.
-  for (const transform::TransformState::Mappings &mapping :
-       llvm::make_second_range(mappings)) {
+  for (const auto &[region, mapping] : llvm::reverse(mappings)) {
+    // Stop lookup when reaching a region that is isolated from above.
+    if (region->getParentOp()->hasTrait<OpTrait::IsIsolatedFromAbove>())
+      break;
     // Go over all op handle mappings and mark as invalidated any handle
     // pointing to any of the payload ops associated with the given handle or
     // any op nested in them.
-    for (const auto &[payloadOp, otherHandles] : mapping.reverse) {
+    for (const auto &[payloadOp, otherHandles] : mapping->reverse) {
       for (Value otherHandle : otherHandles)
         recordOpHandleInvalidationOne(handle, potentialAncestors, payloadOp,
                                       otherHandle, throughValue,
@@ -606,7 +623,7 @@ void transform::TransformState::recordOpHandleInvalidation(
     // or any op nested in them. Similarly invalidate handles to argument of
     // blocks belonging to any region of any payload op associated with the
     // given handle or any op nested in them.
-    for (const auto &[payloadValue, valueHandles] : mapping.reverseValues) {
+    for (const auto &[payloadValue, valueHandles] : mapping->reverseValues) {
       for (Value valueHandle : valueHandles)
         recordValueHandleInvalidationByOpHandleOne(handle, potentialAncestors,
                                                    payloadValue, valueHandle,
@@ -756,7 +773,7 @@ checkRepeatedConsumptionInOperand(ArrayRef<T> payload,
 
 void transform::TransformState::compactOpHandles() {
   for (Value handle : opHandlesToCompact) {
-    Mappings &mappings = getMapping(handle);
+    Mappings &mappings = getMapping(handle, /*allowOutOfScope=*/true);
     llvm::erase_value(mappings.direct[handle], nullptr);
   }
   opHandlesToCompact.clear();
@@ -826,8 +843,9 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     // Cache Operation* -> OperationName mappings. These will be checked after
     // the transform has been applied to detect incorrect memory side effects
     // and missing op tracking.
-    for (Mappings &mapping : llvm::make_second_range(mappings)) {
-      for (Operation *op : llvm::make_first_range(mapping.reverse)) {
+    for (std::unique_ptr<Mappings> &mapping :
+         llvm::make_second_range(mappings)) {
+      for (Operation *op : llvm::make_first_range(mapping->reverse)) {
         auto insertion = cachedNames.insert({op, op->getName()});
         if (!insertion.second) {
           if (insertion.first->second != op->getName()) {
@@ -977,8 +995,9 @@ transform::TransformState::applyTransform(TransformOpInterface transform) {
     }
 
     // Check cached operation names.
-    for (Mappings &mapping : llvm::make_second_range(mappings)) {
-      for (Operation *op : llvm::make_first_range(mapping.reverse)) {
+    for (std::unique_ptr<Mappings> &mapping :
+         llvm::make_second_range(mappings)) {
+      for (Operation *op : llvm::make_first_range(mapping->reverse)) {
         // Make sure that the name of the op has not changed. If it has changed,
         // the op was removed and a new op was allocated at the same memory
         // location. This means that we are missing op tracking somewhere.
@@ -1056,10 +1075,6 @@ transform::TransformState::Extension::~Extension() = default;
 LogicalResult
 transform::TransformState::Extension::replacePayloadOp(Operation *op,
                                                        Operation *replacement) {
-  SmallVector<Value> handles;
-  if (failed(state.getHandlesForPayloadOp(op, handles)))
-    return failure();
-
   // TODO: we may need to invalidate handles to operations and values nested in
   // the operation being replaced.
   return state.replacePayloadOp(op, replacement);
@@ -1068,11 +1083,50 @@ transform::TransformState::Extension::replacePayloadOp(Operation *op,
 LogicalResult
 transform::TransformState::Extension::replacePayloadValue(Value value,
                                                           Value replacement) {
-  SmallVector<Value> handles;
-  if (failed(state.getHandlesForPayloadValue(value, handles)))
-    return failure();
-
   return state.replacePayloadValue(value, replacement);
+}
+
+//===----------------------------------------------------------------------===//
+// TransformState::RegionScope
+//===----------------------------------------------------------------------===//
+
+transform::TransformState::RegionScope::~RegionScope() {
+  // Remove handle invalidation notices as handles are going out of scope.
+  // The same region may be re-entered leading to incorrect invalidation
+  // errors.
+  for (Block &block : *region) {
+    for (Value handle : block.getArguments()) {
+      state.invalidatedHandles.erase(handle);
+    }
+    for (Operation &op : block) {
+      for (Value handle : op.getResults()) {
+        state.invalidatedHandles.erase(handle);
+      }
+    }
+  }
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  // Remember pointers to payload ops referenced by the handles going out of
+  // scope.
+  SmallVector<Operation *> referencedOps =
+      llvm::to_vector(llvm::make_first_range(state.mappings[region]->reverse));
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
+
+  state.mappings.erase(region);
+
+#if LLVM_ENABLE_ABI_BREAKING_CHECKS
+  // If the last handle to a payload op has gone out of scope, we no longer
+  // need to store the cached name. Pointers may get reused, leading to
+  // incorrect associations in the cache.
+  for (Operation *op : referencedOps) {
+    SmallVector<Value> handles;
+    if (succeeded(state.getHandlesForPayloadOp(op, handles)))
+      continue;
+    state.cachedNames.erase(op);
+  }
+
+  state.regionStack.pop_back();
+#endif // LLVM_ENABLE_ABI_BREAKING_CHECKS
 }
 
 //===----------------------------------------------------------------------===//
@@ -1303,7 +1357,8 @@ void transform::TrackingListener::notifyOperationReplaced(
 
   // Replace op handle.
   SmallVector<Value> opHandles;
-  if (failed(getTransformState().getHandlesForPayloadOp(op, opHandles))) {
+  if (failed(getTransformState().getHandlesForPayloadOp(
+          op, opHandles, /*includeOutOfScope=*/true))) {
     // Op is not tracked.
     return;
   }
@@ -1405,6 +1460,11 @@ void transform::TransformRewriter::silenceTrackingFailure() {
     DiagnosedSilenceableFailure status = listener->checkAndResetError();
     (void)status.silence();
   }
+}
+
+LogicalResult transform::TransformRewriter::notifyPayloadOperationReplaced(
+    Operation *op, Operation *replacement) {
+  return listener->replacePayloadOp(op, replacement);
 }
 
 //===----------------------------------------------------------------------===//

@@ -15,8 +15,8 @@
 ///
 /// This file should only be included by files that implement a
 /// specialization of the relevant templates. Currently these are:
-/// - CycleAnalysis.cpp
-/// - MachineCycleAnalysis.cpp
+/// - llvm/lib/IR/CycleInfo.cpp
+/// - llvm/lib/CodeGen/MachineCycleAnalysis.cpp
 ///
 //===----------------------------------------------------------------------===//
 
@@ -354,11 +354,11 @@ template <typename ContextT> void GenericCycleInfo<ContextT>::clear() {
 template <typename ContextT>
 void GenericCycleInfo<ContextT>::compute(FunctionT &F) {
   GenericCycleInfoCompute<ContextT> Compute(*this);
-  Context.setFunction(F);
+  Context = ContextT(&F);
 
   LLVM_DEBUG(errs() << "Computing cycles for function: " << F.getName()
                     << "\n");
-  Compute.run(ContextT::getEntryBlock(F));
+  Compute.run(&F.front());
 
   assert(validateTree());
 }

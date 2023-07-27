@@ -26,11 +26,9 @@ define i8 @test_big_stack_frame() {
 ; CHECK-MOVW-MOVT-ADD:       add sp, [[REG1]]
 ; CHECK-MOVW-MOVT-ADD-NOT:   ldr {{r[0-9]+}}, .{{.*}}
 ; CHECK-MOVW-MOVT-ADD:       movw [[REG2:r[0-9]+]], #65532
-; CHECK-MOVW-MOVT-ADD:       movt [[REG2]], #0
 ; CHECK-MOVW-MOVT-ADD:       add [[REG2]], sp
 ; CHECK-MOVW-MOVT-ADD-NOT:   ldr {{r[0-9]+}}, .{{.*}}
 ; CHECK-MOVW-MOVT-ADD:       movw [[REG3:r[0-9]+]], #65532
-; CHECK-MOVW-MOVT-ADD:       movt [[REG3]], #0
 ; CHECK-MOVW-MOVT-ADD:       add [[REG3]], sp
 ; CHECK-MOVW-MOVT-ADD-NOT:   ldr {{r[0-9]+}}, .{{.*}}
 ; CHECK-MOVW-MOVT-ADD:       movw [[REG4:r[0-9]+]], #0

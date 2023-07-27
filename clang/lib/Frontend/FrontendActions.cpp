@@ -412,6 +412,8 @@ private:
       return "MarkingClassDllexported";
     case CodeSynthesisContext::BuildingBuiltinDumpStructCall:
       return "BuildingBuiltinDumpStructCall";
+    case CodeSynthesisContext::BuildingDeductionGuides:
+      return "BuildingDeductionGuides";
     }
     return "";
   }

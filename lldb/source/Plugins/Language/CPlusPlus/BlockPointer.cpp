@@ -45,7 +45,7 @@ public:
         lldb::eLanguageTypeC_plus_plus);
     if (auto err = type_system_or_err.takeError()) {
       LLDB_LOG_ERROR(GetLog(LLDBLog::DataFormatters), std::move(err),
-                     "Failed to get scratch TypeSystemClang");
+                     "Failed to get scratch TypeSystemClang: {0}");
       return;
     }
 
@@ -78,10 +78,10 @@ public:
     const char *const FuncPtr_name("__FuncPtr");
 
     m_block_struct_type = clang_ast_context->CreateStructForIdentifier(
-        ConstString(), {{isa_name, isa_type},
-                        {flags_name, flags_type},
-                        {reserved_name, reserved_type},
-                        {FuncPtr_name, function_pointer_type}});
+        llvm::StringRef(), {{isa_name, isa_type},
+                            {flags_name, flags_type},
+                            {reserved_name, reserved_type},
+                            {FuncPtr_name, function_pointer_type}});
   }
 
   ~BlockPointerSyntheticFrontEnd() override = default;

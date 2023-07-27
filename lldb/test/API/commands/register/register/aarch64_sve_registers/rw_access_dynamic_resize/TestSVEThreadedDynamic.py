@@ -1,14 +1,60 @@
 """
-Test the AArch64 SVE registers dynamic resize with multiple threads.
+Test the AArch64 SVE and Streaming SVE (SSVE) registers dynamic resize with
+multiple threads.
+
+This test assumes a minimum supported vector length (VL) of 256 bits
+and will test 512 bits if possible. We refer to "vg" which is the
+register shown in lldb. This is in units of 64 bits. 256 bit VL is
+the same as a vg of 4.
 """
 
+from enum import Enum
 import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+class Mode(Enum):
+    SVE = 0
+    SSVE = 1
 
 class RegisterCommandsTestCase(TestBase):
+    def get_supported_vg(self):
+        # Changing VL trashes the register state, so we need to run the program
+        # just to test this. Then run it again for the test.
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        main_thread_stop_line = line_number("main.c", "// Break in main thread")
+        lldbutil.run_break_set_by_file_and_line(self, "main.c", main_thread_stop_line)
+
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        self.expect(
+            "thread info 1",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stop reason = breakpoint"],
+        )
+
+        # Write back the current vg to confirm read/write works at all.
+        current_vg = self.match("register read vg", ["(0x[0-9]+)"])
+        self.assertTrue(current_vg is not None)
+        self.expect("register write vg {}".format(current_vg.group()))
+
+        # Aka 128, 256 and 512 bit.
+        supported_vg = []
+        for vg in [2, 4, 8]:
+            # This could mask other errors but writing vg is tested elsewhere
+            # so we assume the hardware rejected the value.
+            self.runCmd("register write vg {}".format(vg), check=False)
+            if not self.res.GetError():
+                supported_vg.append(vg)
+
+        self.runCmd("breakpoint delete 1")
+        self.runCmd("continue")
+
+        return supported_vg
+
     def check_sve_registers(self, vg_test_value):
         z_reg_size = vg_test_value * 8
         p_reg_size = int(z_reg_size / 8)
@@ -50,18 +96,23 @@ class RegisterCommandsTestCase(TestBase):
 
         self.expect("register read ffr", substrs=[p_regs_value])
 
-    @no_debug_info_test
-    @skipIf(archs=no_match(["aarch64"]))
-    @skipIf(oslist=no_match(["linux"]))
-    def test_sve_registers_dynamic_config(self):
-        """Test AArch64 SVE registers multi-threaded dynamic resize."""
+    def run_sve_test(self, mode):
+        if (mode == Mode.SVE) and not self.isAArch64SVE():
+            self.skipTest("SVE registers must be supported.")
+
+        if (mode == Mode.SSVE) and not self.isAArch64SME():
+            self.skipTest("Streaming SVE registers must be supported.")
+
+        cflags = "-march=armv8-a+sve -lpthread"
+        if mode == Mode.SSVE:
+            cflags += " -DUSE_SSVE"
+        self.build(dictionary={"CFLAGS_EXTRAS": cflags})
 
         self.build()
-        exe = self.getBuildArtifact("a.out")
-        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+        supported_vg = self.get_supported_vg()
 
-        if not self.isAArch64SVE():
-            self.skipTest("SVE registers must be supported.")
+        if not (2 in supported_vg and 4 in supported_vg):
+            self.skipTest("Not all required SVE vector lengths are supported.")
 
         main_thread_stop_line = line_number("main.c", "// Break in main thread")
         lldbutil.run_break_set_by_file_and_line(self, "main.c", main_thread_stop_line)
@@ -82,17 +133,22 @@ class RegisterCommandsTestCase(TestBase):
 
         process = self.dbg.GetSelectedTarget().GetProcess()
 
-        thread1 = process.GetThreadAtIndex(0)
-
         self.expect(
             "thread info 1",
             STOPPED_DUE_TO_BREAKPOINT,
             substrs=["stop reason = breakpoint"],
         )
 
-        self.check_sve_registers(8)
+        if 8 in supported_vg:
+            self.check_sve_registers(8)
+        else:
+            self.check_sve_registers(4)
 
         self.runCmd("process continue", RUN_SUCCEEDED)
+
+        # If we start the checks too quickly, thread 3 may not have started.
+        while (process.GetNumThreads() < 3):
+            pass
 
         for idx in range(1, process.GetNumThreads()):
             thread = process.GetThreadAtIndex(idx)
@@ -128,3 +184,17 @@ class RegisterCommandsTestCase(TestBase):
             elif stopped_at_line_number == thY_break_line2:
                 self.runCmd("thread select %d" % (idx + 1))
                 self.check_sve_registers(4)
+
+    @no_debug_info_test
+    @skipIf(archs=no_match(["aarch64"]))
+    @skipIf(oslist=no_match(["linux"]))
+    def test_sve_registers_dynamic_config(self):
+        """Test AArch64 SVE registers multi-threaded dynamic resize."""
+        self.run_sve_test(Mode.SVE)
+
+    @no_debug_info_test
+    @skipIf(archs=no_match(["aarch64"]))
+    @skipIf(oslist=no_match(["linux"]))
+    def test_ssve_registers_dynamic_config(self):
+        """Test AArch64 SSVE registers multi-threaded dynamic resize."""
+        self.run_sve_test(Mode.SSVE)

@@ -61,7 +61,7 @@ protected:
     mlir::Type desiredType;
   };
 
-  /// Lower the arguments to the intrinsic: adding nesecarry boxing and
+  /// Lower the arguments to the intrinsic: adding necessary boxing and
   /// conversion to match the signature of the intrinsic in the runtime library.
   llvm::SmallVector<fir::ExtendedValue, 3>
   lowerArguments(mlir::Operation *op,
@@ -69,8 +69,7 @@ protected:
                  mlir::PatternRewriter &rewriter,
                  const fir::IntrinsicArgumentLoweringRules *argLowering) const {
     mlir::Location loc = op->getLoc();
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, op};
 
     llvm::SmallVector<fir::ExtendedValue, 3> ret;
     llvm::SmallVector<std::function<void()>, 2> cleanupFns;
@@ -154,6 +153,9 @@ protected:
 
     std::optional<hlfir::EntityWithAttributes> resultEntity;
     if (fir::isa_trivial(firBaseTy)) {
+      // Some intrinsics return i1 when the original operation
+      // produces fir.logical<>, so we may need to cast it.
+      firBase = builder.createConvert(loc, op->getResult(0).getType(), firBase);
       resultEntity = hlfir::EntityWithAttributes{firBase};
     } else {
       resultEntity =
@@ -226,8 +228,7 @@ public:
       return mlir::failure();
     }
 
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, operation.getOperation()};
     const mlir::Location &loc = operation->getLoc();
 
     mlir::Type i32 = builder.getI32Type();
@@ -268,8 +269,7 @@ struct CountOpConversion : public HlfirIntrinsicConversion<hlfir::CountOp> {
   mlir::LogicalResult
   matchAndRewrite(hlfir::CountOp count,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, count.getOperation()};
     const mlir::Location &loc = count->getLoc();
 
     mlir::Type i32 = builder.getI32Type();
@@ -301,8 +301,7 @@ struct MatmulOpConversion : public HlfirIntrinsicConversion<hlfir::MatmulOp> {
   mlir::LogicalResult
   matchAndRewrite(hlfir::MatmulOp matmul,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, matmul.getOperation()};
     const mlir::Location &loc = matmul->getLoc();
 
     mlir::Value lhs = matmul.getLhs();
@@ -333,8 +332,7 @@ struct DotProductOpConversion
   mlir::LogicalResult
   matchAndRewrite(hlfir::DotProductOp dotProduct,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, dotProduct.getOperation()};
     const mlir::Location &loc = dotProduct->getLoc();
 
     mlir::Value lhs = dotProduct.getLhs();
@@ -365,8 +363,7 @@ class TransposeOpConversion
   mlir::LogicalResult
   matchAndRewrite(hlfir::TransposeOp transpose,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, transpose.getOperation()};
     const mlir::Location &loc = transpose->getLoc();
 
     mlir::Value arg = transpose.getArray();
@@ -396,8 +393,7 @@ struct MatmulTransposeOpConversion
   mlir::LogicalResult
   matchAndRewrite(hlfir::MatmulTransposeOp multranspose,
                   mlir::PatternRewriter &rewriter) const override {
-    fir::KindMapping kindMapping{rewriter.getContext()};
-    fir::FirOpBuilder builder{rewriter, kindMapping};
+    fir::FirOpBuilder builder{rewriter, multranspose.getOperation()};
     const mlir::Location &loc = multranspose->getLoc();
 
     mlir::Value lhs = multranspose.getLhs();

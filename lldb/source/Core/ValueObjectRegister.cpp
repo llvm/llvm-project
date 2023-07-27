@@ -202,7 +202,7 @@ CompilerType ValueObjectRegister::GetCompilerTypeImpl() {
             exe_module->GetTypeSystemForLanguage(eLanguageTypeC);
         if (auto err = type_system_or_err.takeError()) {
           LLDB_LOG_ERROR(GetLog(LLDBLog::Types), std::move(err),
-                         "Unable to get CompilerType from TypeSystem");
+                         "Unable to get CompilerType from TypeSystem: {0}");
         } else {
           if (auto ts = *type_system_or_err)
             m_compiler_type = ts->GetBuiltinTypeForEncodingAndBitSize(

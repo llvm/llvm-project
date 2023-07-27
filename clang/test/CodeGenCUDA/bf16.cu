@@ -8,7 +8,7 @@
 
 // CHECK-LABEL: .visible .func _Z8test_argPDF16bDF16b(
 // CHECK:        .param .b64 _Z8test_argPDF16bDF16b_param_0,
-// CHECK:        .param .b16 _Z8test_argPDF16bDF16b_param_1
+// CHECK:        .param .align 2 .b8 _Z8test_argPDF16bDF16b_param_1[2]
 //
 __device__ void test_arg(__bf16 *out, __bf16 in) {
 // CHECK-DAG:     ld.param.u64  %[[A:rd[0-9]+]], [_Z8test_argPDF16bDF16b_param_0];
@@ -20,8 +20,8 @@ __device__ void test_arg(__bf16 *out, __bf16 in) {
 }
 
 
-// CHECK-LABEL: .visible .func (.param .b32 func_retval0) _Z8test_retDF16b(
-// CHECK:         .param .b16 _Z8test_retDF16b_param_0
+// CHECK-LABEL: .visible .func (.param .align 2 .b8 func_retval0[2]) _Z8test_retDF16b(
+// CHECK:        .param .align 2 .b8 _Z8test_retDF16b_param_0[2]
 __device__ __bf16 test_ret( __bf16 in) {
 // CHECK:        ld.param.b16    %[[R:rs[0-9]+]], [_Z8test_retDF16b_param_0];
   return in;
@@ -31,12 +31,12 @@ __device__ __bf16 test_ret( __bf16 in) {
 
 __device__ __bf16 external_func( __bf16 in);
 
-// CHECK-LABEL: .visible .func  (.param .b32 func_retval0) _Z9test_callDF16b(
-// CHECK:        .param .b16 _Z9test_callDF16b_param_0
+// CHECK-LABEL: .visible .func  (.param .align 2 .b8 func_retval0[2]) _Z9test_callDF16b(
+// CHECK:        .param .align 2 .b8 _Z9test_callDF16b_param_0[2]
 __device__ __bf16 test_call( __bf16 in) {
 // CHECK:        ld.param.b16    %[[R:rs[0-9]+]], [_Z9test_callDF16b_param_0];
 // CHECK:        st.param.b16    [param0+0], %[[R]];
-// CHECK:        .param .b32 retval0;
+// CHECK:        .param .align 2 .b8 retval0[2];
 // CHECK:        call.uni (retval0),
 // CHECK-NEXT:   _Z13external_funcDF16b,
 // CHECK-NEXT:   (

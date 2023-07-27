@@ -69,6 +69,7 @@ def IRDL_Dialect : Dialect {
     attribute. The rationale of this is to simplify the dialect.
   }];
 
+  let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
   let usePropertiesForAttributes = 1;
 

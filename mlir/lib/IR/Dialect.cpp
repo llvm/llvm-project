@@ -122,8 +122,11 @@ MLIRContext *DialectInterface::getContext() const {
 }
 
 DialectInterfaceCollectionBase::DialectInterfaceCollectionBase(
-    MLIRContext *ctx, TypeID interfaceKind) {
+    MLIRContext *ctx, TypeID interfaceKind, StringRef interfaceName) {
   for (auto *dialect : ctx->getLoadedDialects()) {
+#ifndef NDEBUG
+  dialect->handleUseOfUndefinedPromisedInterface(interfaceKind, interfaceName);
+#endif
     if (auto *interface = dialect->getRegisteredInterface(interfaceKind)) {
       interfaces.insert(interface);
       orderedInterfaces.push_back(interface);

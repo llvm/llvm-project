@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/bit.h"
 #include "llvm/Config/llvm-config.h"
+#include "llvm/Support/Alignment.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -162,6 +163,14 @@ void APInt::Profile(FoldingSetNodeID& ID) const {
   unsigned NumWords = getNumWords();
   for (unsigned i = 0; i < NumWords; ++i)
     ID.AddInteger(U.pVal[i]);
+}
+
+bool APInt::isAligned(Align A) const {
+  if (isZero())
+    return true;
+  const unsigned TrailingZeroes = countr_zero();
+  const unsigned MinimumTrailingZeroes = Log2(A);
+  return TrailingZeroes >= MinimumTrailingZeroes;
 }
 
 /// Prefix increment operator. Increments the APInt by one.

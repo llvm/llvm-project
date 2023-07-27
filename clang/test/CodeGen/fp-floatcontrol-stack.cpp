@@ -284,3 +284,6 @@ MyComplex useAdd() {
 // CHECK-FAST: Function Attrs: noinline nounwind{{$$}}
 // CHECK-NOHONOR: Function Attrs: noinline nounwind{{$$}}
 // CHECK-LABEL: define{{.*}} @_GLOBAL__sub_I_fp_floatcontrol_stack
+
+// CHECK-DEBSTRICT: {{[ ]}}strictfp{{[ ]}}
+// CHECK-DEBSTRICT-NOT: "strictfp"

@@ -21,3 +21,11 @@ func.func @complex_constant_two_different_element_types() {
   %0 = complex.constant [1.0 : f32, -1.0 : f64] : complex<f64>
   return
 }
+
+// -----
+
+func.func @complex_bitcast_i64(%arg0 : i64) {
+  // expected-error @+1 {{op requires input or output is a complex type}}
+  %0 = complex.bitcast %arg0: i64 to f64
+  return
+}

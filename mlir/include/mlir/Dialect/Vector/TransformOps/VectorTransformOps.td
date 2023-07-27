@@ -306,16 +306,4 @@ def ApplyTransferToScfPatternsOp : Op<Transform_Dialect,
   }];
 }
 
-def ApplyFoldTensorSliceIntoTransferPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.vector.fold_tensor_slice_into_transfer",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Indicates that tensor.extract_slice -> vector.transfer_read and
-    vector.transfer_write -> tensor.insert_slice op chains should be folded into
-    vector tranfer read and write ops
-  }];
-
-  let assemblyFormat = "attr-dict";
-}
-
 #endif // VECTOR_TRANSFORM_OPS

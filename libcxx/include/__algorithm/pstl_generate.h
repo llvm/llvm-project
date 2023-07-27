@@ -14,8 +14,10 @@
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
 #include <__iterator/cpp17_iterator_concepts.h>
+#include <__type_traits/enable_if.h>
 #include <__type_traits/is_execution_policy.h>
 #include <__type_traits/remove_cvref.h>
+#include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header

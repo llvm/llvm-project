@@ -26,6 +26,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/Matchers.h"
+#include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/SmallPtrSet.h"
@@ -49,7 +50,6 @@ namespace {
 
 /// Loop invariant code motion (LICM) pass.
 /// TODO: The pass is missing zero-trip tests.
-/// TODO: Check for the presence of side effects before hoisting.
 /// TODO: This code should be removed once the new LICM pass can handle its
 ///       uses.
 struct LoopInvariantCodeMotion
@@ -92,13 +92,11 @@ static bool isOpLoopInvariant(Operation &op, Value indVar, ValueRange iterArgs,
     if (!areAllOpsInTheBlockListInvariant(parOp.getLoopBody(), indVar, iterArgs,
                                           opsWithUsers, opsToHoist))
       return false;
-  } else if (isa<AffineDmaStartOp, AffineDmaWaitOp>(op)) {
-    // TODO: Support DMA ops.
-    // FIXME: This should be fixed to not special-case these affine DMA ops but
-    // instead rely on side effects.
-    return false;
-  } else if (op.getNumRegions() > 0) {
-    // We can't handle region-holding ops we don't know about.
+  } else if (!isMemoryEffectFree(&op) &&
+             !isa<AffineReadOpInterface, AffineWriteOpInterface,
+                  AffinePrefetchOp>(&op)) {
+    // Check for side-effecting ops. Affine read/write ops are handled
+    // separately below.
     return false;
   } else if (!matchPattern(&op, m_Constant())) {
     // Register op in the set of ops that have users.

@@ -9,6 +9,9 @@
 #define MLIR_CONVERSION_GPUCOMMON_GPUCOMMONPASS_H_
 
 #include "mlir/Dialect/GPU/Transforms/Utils.h"
+#include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "mlir/IR/Builders.h"
+#include "mlir/IR/Types.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/StringRef.h"
 #include <functional>
@@ -46,6 +49,18 @@ using BlobGenerator =
     std::function<OwnedBlob(const std::string &, Location, StringRef)>;
 using LoweringCallback = std::function<std::unique_ptr<llvm::Module>(
     Operation *, llvm::LLVMContext &, StringRef)>;
+
+struct FunctionCallBuilder {
+  FunctionCallBuilder(StringRef functionName, Type returnType,
+                      ArrayRef<Type> argumentTypes)
+      : functionName(functionName),
+        functionType(LLVM::LLVMFunctionType::get(returnType, argumentTypes)) {}
+  LLVM::CallOp create(Location loc, OpBuilder &builder,
+                      ArrayRef<Value> arguments) const;
+
+  StringRef functionName;
+  LLVM::LLVMFunctionType functionType;
+};
 
 /// Collect a set of patterns to convert from the GPU dialect to LLVM and
 /// populate converter for gpu types.

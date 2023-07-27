@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "common.h"
 #include "memtag.h"
 #include "scudo/interface.h"
 #include "tests/scudo_unit_test.h"
@@ -15,6 +16,7 @@
 #include <malloc.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <vector>
 
 #ifndef __GLIBC_PREREQ
 #define __GLIBC_PREREQ(x, y) 0
@@ -115,15 +117,24 @@ TEST(ScudoWrappersCTest, Calloc) {
 }
 
 TEST(ScudoWrappersCTest, SmallAlign) {
-  void *P;
-  for (size_t Size = 1; Size <= 0x10000; Size <<= 1) {
-    for (size_t Align = 1; Align <= 0x10000; Align <<= 1) {
+  // Allocating pointers by the powers of 2 from 1 to 0x10000
+  // Using powers of 2 due to memalign using powers of 2 and test more sizes
+  constexpr size_t MaxSize = 0x10000;
+  std::vector<void *> ptrs;
+  // Reserving space to prevent further allocation during the test
+  ptrs.reserve((scudo::getLeastSignificantSetBitIndex(MaxSize) + 1) *
+               (scudo::getLeastSignificantSetBitIndex(MaxSize) + 1) * 3);
+  for (size_t Size = 1; Size <= MaxSize; Size <<= 1) {
+    for (size_t Align = 1; Align <= MaxSize; Align <<= 1) {
       for (size_t Count = 0; Count < 3; ++Count) {
-        P = memalign(Align, Size);
+        void *P = memalign(Align, Size);
         EXPECT_TRUE(reinterpret_cast<uintptr_t>(P) % Align == 0);
+        ptrs.push_back(P);
       }
     }
   }
+  for (void *ptr : ptrs)
+    free(ptr);
 }
 
 TEST(ScudoWrappersCTest, Memalign) {
@@ -256,7 +267,7 @@ TEST(ScudoWrappersCTest, MallOpt) {
 
 TEST(ScudoWrappersCTest, OtherAlloc) {
 #if HAVE_PVALLOC
-  const size_t PageSize = sysconf(_SC_PAGESIZE);
+  const size_t PageSize = static_cast<size_t>(sysconf(_SC_PAGESIZE));
 
   void *P = pvalloc(Size);
   EXPECT_NE(P, nullptr);
@@ -318,7 +329,7 @@ TEST(ScudoWrappersCTest, MallInfo2) {
 static uintptr_t BoundaryP;
 static size_t Count;
 
-static void callback(uintptr_t Base, size_t Size, void *Arg) {
+static void callback(uintptr_t Base, UNUSED size_t Size, UNUSED void *Arg) {
   if (scudo::archSupportsMemoryTagging()) {
     Base = scudo::untagPointer(Base);
     BoundaryP = scudo::untagPointer(BoundaryP);
@@ -332,7 +343,7 @@ static void callback(uintptr_t Base, size_t Size, void *Arg) {
 // aligned on a page, then run the malloc_iterate on both the pages that the
 // block is a boundary for. It must only be seen once by the callback function.
 TEST(ScudoWrappersCTest, MallocIterateBoundary) {
-  const size_t PageSize = sysconf(_SC_PAGESIZE);
+  const size_t PageSize = static_cast<size_t>(sysconf(_SC_PAGESIZE));
 #if SCUDO_ANDROID
   // Android uses a 16 byte alignment for both 32 bit and 64 bit.
   const size_t BlockDelta = 16U;
@@ -450,7 +461,7 @@ static pthread_mutex_t Mutex;
 static pthread_cond_t Conditional = PTHREAD_COND_INITIALIZER;
 static bool Ready;
 
-static void *enableMalloc(void *Unused) {
+static void *enableMalloc(UNUSED void *Unused) {
   // Initialize the allocator for this thread.
   void *P = malloc(Size);
   EXPECT_NE(P, nullptr);

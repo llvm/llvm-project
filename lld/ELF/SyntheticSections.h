@@ -1148,29 +1148,9 @@ private:
 const char ACLESESYM_PREFIX[] = "__acle_se_";
 const int ACLESESYM_SIZE = 8;
 
-class ArmCmseSGVeneer : public SyntheticSection {
-public:
-  ArmCmseSGVeneer(Symbol *sym, Symbol *acleSeSym,
-                  std::optional<uint64_t> addr = std::nullopt)
-      : SyntheticSection(llvm::ELF::SHF_ALLOC | llvm::ELF::SHF_EXECINSTR,
-                         llvm::ELF::SHT_PROGBITS,
-                         /*alignment=*/32, ".gnu.sgstubs"),
-        sym(sym), acleSeSym(acleSeSym), entAddr{addr} {
-    entsize = ACLESESYM_SIZE;
-  }
+class ArmCmseSGVeneer;
 
-  void writeTo(uint8_t *buf) override;
-  size_t getSize() const override { return entsize; };
-  const std::optional<uint64_t> getAddr() const { return entAddr; };
-
-  Symbol *sym;
-  Symbol *acleSeSym;
-
-private:
-  const std::optional<uint64_t> entAddr;
-};
-
-class ArmCmseSGSection : public SyntheticSection {
+class ArmCmseSGSection final : public SyntheticSection {
 public:
   ArmCmseSGSection();
   bool isNeeded() const override { return !entries.empty(); }
@@ -1184,7 +1164,7 @@ public:
 
 private:
   SmallVector<std::pair<Symbol *, Symbol *>, 0> entries;
-  SmallVector<ArmCmseSGVeneer *, 0> sgSections;
+  SmallVector<ArmCmseSGVeneer *, 0> sgVeneers;
   uint64_t newEntries = 0;
 };
 

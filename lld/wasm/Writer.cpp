@@ -22,6 +22,7 @@
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
@@ -112,7 +113,7 @@ private:
   uint64_t fileSize = 0;
 
   std::vector<WasmInitEntry> initFunctions;
-  llvm::StringMap<std::vector<InputChunk *>> customSectionMapping;
+  llvm::MapVector<StringRef, std::vector<InputChunk *>> customSectionMapping;
 
   // Stable storage for command export wrapper function name strings.
   std::list<std::string> commandExportWrapperNames;
@@ -162,7 +163,7 @@ void Writer::calculateCustomSections() {
 void Writer::createCustomSections() {
   log("createCustomSections");
   for (auto &pair : customSectionMapping) {
-    StringRef name = pair.first();
+    StringRef name = pair.first;
     LLVM_DEBUG(dbgs() << "createCustomSection: " << name << "\n");
 
     OutputSection *sec = make<CustomSection>(std::string(name), pair.second);
@@ -290,7 +291,7 @@ void Writer::writeBuildId() {
   case BuildIdKind::Fast: {
     std::vector<uint8_t> fileHash(8);
     computeHash(fileHash, buf, [](uint8_t *dest, ArrayRef<uint8_t> arr) {
-      support::endian::write64le(dest, xxHash64(arr));
+      support::endian::write64le(dest, xxh3_64bits(arr));
     });
     makeUUID(5, fileHash, buildId);
     break;

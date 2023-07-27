@@ -363,9 +363,8 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
 
     CmdArgs.push_back(
         Args.MakeArgString(StringRef("-L") + D.SysRoot + "/usr/lib"));
-    Args.AddAllArgs(CmdArgs,
-                    {options::OPT_T_Group, options::OPT_e, options::OPT_s,
-                     options::OPT_t, options::OPT_u_Group});
+    Args.AddAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
+                              options::OPT_t, options::OPT_u_Group});
     AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 
     if (!Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
@@ -384,7 +383,6 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
       if (HTC.ShouldLinkCXXStdlib(Args))
         HTC.AddCXXStdlibLibArgs(Args, CmdArgs);
     }
-    return;
   }
 
   //----------------------------------------------------------------------------
@@ -442,13 +440,13 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   const ToolChain::path_list &LibPaths = HTC.getFilePaths();
   for (const auto &LibPath : LibPaths)
     CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
+  Args.ClaimAllArgs(options::OPT_L);
 
   //----------------------------------------------------------------------------
   //
   //----------------------------------------------------------------------------
-  Args.AddAllArgs(CmdArgs,
-                  {options::OPT_T_Group, options::OPT_e, options::OPT_s,
-                   options::OPT_t, options::OPT_u_Group});
+  Args.AddAllArgs(CmdArgs, {options::OPT_T_Group, options::OPT_s,
+                            options::OPT_t, options::OPT_u_Group});
 
   AddLinkerInputs(HTC, Inputs, Args, CmdArgs, JA);
 

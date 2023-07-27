@@ -11,9 +11,6 @@
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-
 // XFAIL: availability-fp_to_chars-missing
 
 // REQUIRES: locale.fr_FR.UTF-8
@@ -247,7 +244,7 @@ static void test_valid_positive_integral_values() {
            "%R='00:00'\t"
            "%T='00:00:00'\t"
 #ifdef _WIN32
-           "%r='12:00:00'\t"
+           "%r='00:00:00'\t"
 #elif defined(_AIX)
            "%r='12:00:00 AM'\t"
 #elif defined(__APPLE__)
@@ -313,7 +310,7 @@ static void test_valid_positive_integral_values() {
            "%R='12:00'\t"
            "%T='12:00:00'\t"
 #ifdef _WIN32
-           "%r='00:00:00'\t"
+           "%r='12:00:00'\t"
 #elif defined(_AIX)
            "%r='12:00:00 PM'\t"
 #elif defined(__APPLE__)
@@ -349,6 +346,8 @@ static void test_valid_positive_integral_values() {
            "%r='11:59:59 PM'\t"
 #elif defined(__APPLE__)
            "%r=''\t"
+#elif defined(_WIN32)
+           "%r='23:59:59'\t"
 #else
            "%r='11:59:59 '\t"
 #endif
@@ -377,11 +376,13 @@ static void test_valid_positive_integral_values() {
            "%R='00:00'\t"
            "%T='00:00:00'\t"
 #ifdef _WIN32
-           "%r='12:00:00'\t"
+           "%r='00:00:00'\t"
 #elif defined(_AIX)
            "%r='12:00:00 AM'\t"
 #elif defined(__APPLE__)
            "%r=''\t"
+#elif defined(_WIN32)
+           "%r='12:00:00'\t"
 #else
            "%r='12:00:00 '\t"
 #endif
@@ -395,7 +396,7 @@ static void test_valid_positive_integral_values() {
         std::chrono::duration<int, std::ratio<86400>>(7));
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
-#if defined(__APPLE__) || defined(_AIX)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='00'\t"
@@ -416,6 +417,10 @@ static void test_valid_positive_integral_values() {
            "%r='12:00:00 AM'\t"
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
+#  elif defined(_WIN32)
+           "%r='0:00:00'\t"
+           "%X='0:00:00'\t"
+           "%EX='0:00:00'\t"
 #  else
            "%r='午前12:00:00'\t"
            "%X='00:00:00'\t"
@@ -448,6 +453,10 @@ static void test_valid_positive_integral_values() {
            "%r='11:59:59 AM'\t"
            "%X='11時59分59秒'\t"
            "%EX='11時59分59秒'\t"
+#  elif defined(_WIN32)
+           "%r='11:59:59'\t"
+           "%X='11:59:59'\t"
+           "%EX='11:59:59'\t"
 #  else
            "%r='午前11:59:59'\t"
            "%X='11:59:59'\t"
@@ -481,7 +490,11 @@ static void test_valid_positive_integral_values() {
            "%X='12時00分00秒'\t"
            "%EX='12時00分00秒'\t"
 #  else
+#    ifdef _WIN32
+           "%r='12:00:00'\t"
+#    else
            "%r='午後12:00:00'\t"
+#    endif
            "%X='12:00:00'\t"
            "%EX='12:00:00'\t"
 #  endif
@@ -513,7 +526,11 @@ static void test_valid_positive_integral_values() {
            "%X='23時59分59秒'\t"
            "%EX='23時59分59秒'\t"
 #  else
+#    ifdef _WIN32
+           "%r='23:59:59'\t"
+#    else
            "%r='午後11:59:59'\t"
+#    endif
            "%X='23:59:59'\t"
            "%EX='23:59:59'\t"
 #  endif
@@ -544,6 +561,10 @@ static void test_valid_positive_integral_values() {
            "%r='12:00:00 AM'\t"
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
+#  elif defined(_WIN32)
+           "%r='0:00:00'\t"
+           "%X='0:00:00'\t"
+           "%EX='0:00:00'\t"
 #  else
            "%r='午前12:00:00'\t"
            "%X='00:00:00'\t"
@@ -555,7 +576,7 @@ static void test_valid_positive_integral_values() {
            "\n"),
         lfmt,
         std::chrono::duration<int, std::ratio<86400>>(7));
-#else // defined(__APPLE__) || defined(_AIX)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='〇'\t"
@@ -665,8 +686,8 @@ static void test_valid_positive_integral_values() {
            "\n"),
         lfmt,
         std::chrono::duration<int, std::ratio<86400>>(7));
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
 
-#endif // defined(__APPLE__) || defined(_AIX)
   std::locale::global(std::locale::classic());
 }
 
@@ -767,6 +788,8 @@ static void test_valid_negative_integral_values() {
            "%r='11:59:59 PM'\t"
 #elif defined(__APPLE__)
            "%r=''\t"
+#elif defined(_WIN32)
+           "%r='23:59:59'\t"
 #else
            "%r='11:59:59 '\t"
 #endif
@@ -780,7 +803,7 @@ static void test_valid_negative_integral_values() {
         -(23h + 59min + 59s));
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
-#if defined(__APPLE__) || defined(_AIX)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("-%H='23'\t"
            "%OH='23'\t"
@@ -801,6 +824,10 @@ static void test_valid_negative_integral_values() {
            "%r='11:59:59 PM'\t"
            "%X='23時59分59秒'\t"
            "%EX='23時59分59秒'\t"
+#  elif defined(_WIN32)
+           "%r='23:59:59'\t"
+           "%X='23:59:59'\t"
+           "%EX='23:59:59'\t"
 #  else
            "%r='午後11:59:59'\t"
            "%X='23:59:59'\t"
@@ -812,7 +839,7 @@ static void test_valid_negative_integral_values() {
            "\n"),
         lfmt,
         -(23h + 59min + 59s));
-#else  // defined(__APPLE__) || defined(_AIX)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("-%H='23'\t"
            "%OH='二十三'\t"
@@ -834,7 +861,7 @@ static void test_valid_negative_integral_values() {
            "\n"),
         lfmt,
         -(23h + 59min + 59s));
-#endif // defined(__APPLE__) || defined(_AIX)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   std::locale::global(std::locale::classic());
 }
 
@@ -987,7 +1014,7 @@ static void test_valid_fractional_values() {
   check(loc, SV("00.011"), SV("{:L%S}"), std::chrono::duration<double, std::milli>(11.123456789));
   check(loc, SV("01"), SV("{:L%S}"), std::chrono::duration<long double>(61.123456789));
 
-#if defined(__APPLE__) || defined(_AIX)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(SV("00.000000001"), SV("{:%OS}"), 1ns);
   check(SV("00.000000501"), SV("{:%OS}"), 501ns);
   check(SV("00.000001000"), SV("{:%OS}"), 1000ns);
@@ -1003,7 +1030,7 @@ static void test_valid_fractional_values() {
   check(SV("00.001"), SV("{:%OS}"), std::chrono::duration<float, std::milli>(1.123456789));
   check(SV("00.011"), SV("{:%OS}"), std::chrono::duration<double, std::milli>(11.123456789));
   check(SV("01"), SV("{:%OS}"), std::chrono::duration<long double>(61.123456789));
-#else  // defined(__APPLE__) || defined(_AIX)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc, SV("〇.000000001"), SV("{:L%OS}"), 1ns);
   check(loc, SV("〇.000000501"), SV("{:L%OS}"), 501ns);
   check(loc, SV("〇.000001000"), SV("{:L%OS}"), 1000ns);
@@ -1019,7 +1046,7 @@ static void test_valid_fractional_values() {
   check(loc, SV("〇.001"), SV("{:L%OS}"), std::chrono::duration<float, std::milli>(1.123456789));
   check(loc, SV("〇.011"), SV("{:L%OS}"), std::chrono::duration<double, std::milli>(11.123456789));
   check(loc, SV("一"), SV("{:L%OS}"), std::chrono::duration<long double>(61.123456789));
-#endif // defined(__APPLE__) || defined(_AIX)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
 
   check(loc, SV("01:05:06.000000001"), SV("{:L%T}"), 1h + 5min + 6s + 1ns);
   check(loc, SV("01:05:06.000000501"), SV("{:L%T}"), 1h + 5min + 6s + 501ns);
@@ -1065,24 +1092,84 @@ static void test_valid_values() {
 }
 
 template <class CharT>
+static void test_pr62082() {
+  // Examples in https://llvm.org/PR62082
+  check(SV("39.223300"), SV("{:%S}"), std::chrono::duration<int, std::ratio<101, 103>>{40});
+  check(SV("01.4755859375"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 1024>>{1511});
+
+  // Test with all possible number of decimals [0, 18]. When it does not
+  // fit in 18 decimals it uses 6.
+  check(SV("05"), SV("{:%S}"), std::chrono::duration<float, std::ratio<1, 1>>{5}); // 0
+
+  check(SV("05.0"), SV("{:%S}"), std::chrono::duration<float, std::ratio<1, 2>>{10}); // 1
+  check(SV("05.5"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 2>>{11});   // 1
+
+  check(SV("01.00"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 4>>{4});         // 2
+  check(SV("01.50"), SV("{:%S}"), std::chrono::duration<double, std::ratio<1, 4>>{6});      // 2
+  check(SV("01.75"), SV("{:%S}"), std::chrono::duration<long double, std::ratio<1, 4>>{7}); // 2
+
+  check(SV("01.000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 8>>{8});                          // 3
+  check(SV("01.0000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 16>>{16});                       // 4
+  check(SV("01.00000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 32>>{32});                      // 5
+  check(SV("01.000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 64>>{64});                     // 6
+  check(SV("01.0000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 128>>{128});                  // 7
+  check(SV("01.00000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 256>>{256});                 // 8
+  check(SV("01.000000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 512>>{512});                // 9
+  check(SV("01.0000000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 1024>>{1024});             // 10
+  check(SV("01.00000000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 2048>>{2048});            // 11
+  check(SV("01.000000000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 4096>>{4096});           // 12
+  check(SV("01.0000000000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 8192>>{8192});          // 13
+  check(SV("01.00000000000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 16384>>{16384});       // 14
+  check(SV("01.000000000000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 32768>>{32768});      // 15
+  check(SV("01.0000000000000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 65536>>{65536});     // 16
+  check(SV("01.00000000000000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 131072>>{131072});  // 17
+  check(SV("01.000000000000000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 262144>>{262144}); // 18
+  check(SV("01.000000"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 524288>>{524288});             // 19 -> 6
+
+  // Infinite number of decimals will use 6 decimals.
+  check(SV("00.111111"), SV("{:%S}"), std::chrono::duration<int, std::ratio<1, 9>>{1});
+  check(SV("00.111111"), SV("{:%S}"), std::chrono::duration<float, std::ratio<1, 9>>{1});
+  check(SV("00.111111"), SV("{:%S}"), std::chrono::duration<double, std::ratio<1, 9>>{1});
+  check(SV("00.111111"), SV("{:%S}"), std::chrono::duration<long double, std::ratio<1, 9>>{1});
+}
+
+template <class CharT>
 static void test() {
   using namespace std::literals::chrono_literals;
 
   test_no_chrono_specs<CharT>();
   test_valid_values<CharT>();
+  test_pr62082<CharT>();
+
   check_invalid_types<CharT>(
       {SV("H"), SV("I"), SV("j"), SV("M"), SV("n"), SV("O"),  SV("p"),  SV("q"),  SV("Q"),  SV("r"),
        SV("R"), SV("S"), SV("t"), SV("T"), SV("X"), SV("EX"), SV("OH"), SV("OI"), SV("OM"), SV("OS")},
       0ms);
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), 0ms);
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), 0ms);
-  check_exception("End of input while parsing the modifier chrono conversion-spec", SV("{:%"), 0ms);
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), 0ms);
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), 0ms);
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), 0ms);
   check_exception("End of input while parsing the modifier E", SV("{:%E"), 0ms);
   check_exception("End of input while parsing the modifier O", SV("{:%O"), 0ms);
 
+  // Make sure the the required values work, based on their minimum number of required bits per [time.syn].
+  check(SV("23:47:16.854775807"),
+        SV("{:%T}"),
+        std::chrono::nanoseconds{0x7fff'ffff'ffff'ffffll}); // 64 bit signed value max
+  check(SV("23:35:09.481983"),
+        SV("{:%T}"),
+        std::chrono::microseconds{0x003f'ffff'ffff'ffffll});                                 // 55 bit signed value max
+  check(SV("06:20:44.415"), SV("{:%T}"), std::chrono::milliseconds{0x0000'fff'ffff'ffffll}); // 45 bit signed value max
+  check(SV("01:53:03"), SV("{:%T}"), std::chrono::seconds{0x0000'0003'ffff'ffffll});         // 35 bit signed value max
+  check(SV("12:15:00"), SV("{:%T}"), std::chrono::minutes{0x0fff'ffff});                     // 29 bit signed value max
+  check(SV("15:00:00"), SV("{:%T}"), std::chrono::hours{0x003f'ffff});                       // 23 bit signed value max
+  check(SV("00:00:00"), SV("{:%T}"), std::chrono::days{0x0ff'ffff});                         // 25 bit signed value max
+  check(SV("00:00:00"), SV("{:%T}"), std::chrono::weeks{0x003f'ffff});                       // 22 bit signed value max
+  check(SV("21:11:42"), SV("{:%T}"), std::chrono::months{0x0007'ffff});                      // 20 bit signed value max
+  check(SV("05:42:00"), SV("{:%T}"), std::chrono::years{0xffff});                            // 17 bit signed value max
+
   // Precision not allowed
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), 0ms);
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), 0ms);
 }
 
 int main(int, char**) {

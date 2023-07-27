@@ -10,6 +10,7 @@
 #define LLVM_LIB_DWARFLINKERPARALLEL_DWARFLINKERUNIT_H
 
 #include "OutputSections.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/CodeGen/DIE.h"
 #include "llvm/DWARFLinkerParallel/StringPool.h"
 #include "llvm/DebugInfo/DWARF/DWARFUnit.h"

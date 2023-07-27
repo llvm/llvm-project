@@ -546,8 +546,9 @@ bool Type::ResolveCompilerType(ResolveState compiler_type_resolve_state) {
       auto type_system_or_err =
           m_symbol_file->GetTypeSystemForLanguage(eLanguageTypeC);
       if (auto err = type_system_or_err.takeError()) {
-        LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                       "Unable to construct void type from TypeSystemClang");
+        LLDB_LOG_ERROR(
+            GetLog(LLDBLog::Symbols), std::move(err),
+            "Unable to construct void type from TypeSystemClang: {0}");
       } else {
         CompilerType void_compiler_type;
         auto ts = *type_system_or_err;

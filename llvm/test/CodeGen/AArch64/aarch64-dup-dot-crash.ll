@@ -5,7 +5,7 @@
 ; generated. Where it tries to generate a ZextOrTrunc node with floating point
 ; type resulting in a crash.
 ; See https://reviews.llvm.org/D128144#4280024 for context
-define void @dot_product(double %a) {
+define double @dot_product(double %a) {
 ; CHECK-LABEL: dot_product:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    fmov d1, #1.00000000
@@ -14,7 +14,9 @@ define void @dot_product(double %a) {
 ; CHECK-NEXT:    movi d1, #0000000000000000
 ; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    fsqrt d0, d0
+; CHECK-NEXT:    fmul d2, d0, d1
 ; CHECK-NEXT:    fcmp d0, #0.0
+; CHECK-NEXT:    fcsel d0, d1, d2, gt
 ; CHECK-NEXT:    ret
 entry:
   %fadd = call double @llvm.vector.reduce.fadd.v3f64(double %a, <3 x double> <double 1.000000e+00, double 1.000000e+00, double 0.000000e+00>)
@@ -29,10 +31,10 @@ entry:
 
 bb.1:
   %mul.2 = fmul double %shuffle.1, 0.000000e+00
-  br label %exit
+  ret double %mul.2
 
 exit:
-  ret void
+  ret double 0.0
 }
 
 declare double @llvm.sqrt.f64(double)

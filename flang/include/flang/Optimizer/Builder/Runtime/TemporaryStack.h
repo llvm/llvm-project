@@ -30,5 +30,16 @@ void genValueAt(mlir::Location loc, fir::FirOpBuilder &builder,
 void genDestroyValueStack(mlir::Location loc, fir::FirOpBuilder &builder,
                           mlir::Value opaquePtr);
 
+mlir::Value genCreateDescriptorStack(mlir::Location loc,
+                                     fir::FirOpBuilder &builder);
+
+void genPushDescriptor(mlir::Location loc, fir::FirOpBuilder &builder,
+                       mlir::Value opaquePtr, mlir::Value boxValue);
+void genDescriptorAt(mlir::Location loc, fir::FirOpBuilder &builder,
+                     mlir::Value opaquePtr, mlir::Value i,
+                     mlir::Value retValueBox);
+
+void genDestroyDescriptorStack(mlir::Location loc, fir::FirOpBuilder &builder,
+                               mlir::Value opaquePtr);
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_TEMPORARYSTACK_H

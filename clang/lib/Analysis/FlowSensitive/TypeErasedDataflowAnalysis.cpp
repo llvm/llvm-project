@@ -18,6 +18,7 @@
 #include <utility>
 #include <vector>
 
+#include "clang/AST/ASTDumper.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/OperationKinds.h"
 #include "clang/AST/StmtVisitor.h"
@@ -26,6 +27,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -123,10 +125,10 @@ public:
 private:
   TerminatorVisitorRetTy extendFlowCondition(const Expr &Cond) {
     // The terminator sub-expression might not be evaluated.
-    if (Env.getValueStrict(Cond) == nullptr)
+    if (Env.getValue(Cond) == nullptr)
       transfer(StmtToEnv, Cond, Env);
 
-    auto *Val = cast_or_null<BoolValue>(Env.getValueStrict(Cond));
+    auto *Val = cast_or_null<BoolValue>(Env.getValue(Cond));
     // Value merging depends on flow conditions from different environments
     // being mutually exclusive -- that is, they cannot both be true in their
     // entirety (even if they may share some clauses). So, we need *some* value
@@ -144,7 +146,7 @@ private:
       ConditionValue = false;
     }
 
-    Env.addToFlowCondition(*Val);
+    Env.addToFlowCondition(Val->formula());
     return {&Cond, ConditionValue};
   }
 
@@ -179,6 +181,89 @@ struct AnalysisContext {
   llvm::ArrayRef<std::optional<TypeErasedDataflowAnalysisState>> BlockStates;
 };
 
+class PrettyStackTraceAnalysis : public llvm::PrettyStackTraceEntry {
+public:
+  PrettyStackTraceAnalysis(const ControlFlowContext &CFCtx, const char *Message)
+      : CFCtx(CFCtx), Message(Message) {}
+
+  void print(raw_ostream &OS) const override {
+    OS << Message << "\n";
+    OS << "Decl:\n";
+    CFCtx.getDecl()->dump(OS);
+    OS << "CFG:\n";
+    CFCtx.getCFG().print(OS, LangOptions(), false);
+  }
+
+private:
+  const ControlFlowContext &CFCtx;
+  const char *Message;
+};
+
+class PrettyStackTraceCFGElement : public llvm::PrettyStackTraceEntry {
+public:
+  PrettyStackTraceCFGElement(const CFGElement &Element, int BlockIdx,
+                             int ElementIdx, const char *Message)
+      : Element(Element), BlockIdx(BlockIdx), ElementIdx(ElementIdx),
+        Message(Message) {}
+
+  void print(raw_ostream &OS) const override {
+    OS << Message << ": Element [B" << BlockIdx << "." << ElementIdx << "]\n";
+    if (auto Stmt = Element.getAs<CFGStmt>()) {
+      OS << "Stmt:\n";
+      ASTDumper Dumper(OS, false);
+      Dumper.Visit(Stmt->getStmt());
+    }
+  }
+
+private:
+  const CFGElement &Element;
+  int BlockIdx;
+  int ElementIdx;
+  const char *Message;
+};
+
+// Builds a joined TypeErasedDataflowAnalysisState from 0 or more sources,
+// each of which may be owned (built as part of the join) or external (a
+// reference to an Environment that will outlive the builder).
+// Avoids unneccesary copies of the environment.
+class JoinedStateBuilder {
+  AnalysisContext &AC;
+  std::vector<const TypeErasedDataflowAnalysisState *> All;
+  std::deque<TypeErasedDataflowAnalysisState> Owned;
+
+  TypeErasedDataflowAnalysisState
+  join(const TypeErasedDataflowAnalysisState &L,
+       const TypeErasedDataflowAnalysisState &R) {
+    return {AC.Analysis.joinTypeErased(L.Lattice, R.Lattice),
+            Environment::join(L.Env, R.Env, AC.Analysis)};
+  }
+
+public:
+  JoinedStateBuilder(AnalysisContext &AC) : AC(AC) {}
+
+  void addOwned(TypeErasedDataflowAnalysisState State) {
+    Owned.push_back(std::move(State));
+    All.push_back(&Owned.back());
+  }
+  void addUnowned(const TypeErasedDataflowAnalysisState &State) {
+    All.push_back(&State);
+  }
+  TypeErasedDataflowAnalysisState take() && {
+    if (All.empty())
+      // FIXME: Consider passing `Block` to Analysis.typeErasedInitialElement
+      // to enable building analyses like computation of dominators that
+      // initialize the state of each basic block differently.
+      return {AC.Analysis.typeErasedInitialElement(), AC.InitEnv.fork()};
+    if (All.size() == 1)
+      return Owned.empty() ? All.front()->fork() : std::move(Owned.front());
+
+    auto Result = join(*All[0], *All[1]);
+    for (unsigned I = 2; I < All.size(); ++I)
+      Result = join(Result, *All[I]);
+    return Result;
+  }
+};
+
 } // namespace
 
 /// Computes the input state for a given basic block by joining the output
@@ -191,8 +276,7 @@ struct AnalysisContext {
 ///   `std::nullopt` represent basic blocks that are not evaluated yet.
 static TypeErasedDataflowAnalysisState
 computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
-  llvm::DenseSet<const CFGBlock *> Preds;
-  Preds.insert(Block.pred_begin(), Block.pred_end());
+  std::vector<const CFGBlock *> Preds(Block.pred_begin(), Block.pred_end());
   if (Block.getTerminator().isTemporaryDtorsBranch()) {
     // This handles a special case where the code that produced the CFG includes
     // a conditional operator with a branch that constructs a temporary and
@@ -221,13 +305,11 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
       auto &StmtToBlock = AC.CFCtx.getStmtToBlock();
       auto StmtBlock = StmtToBlock.find(Block.getTerminatorStmt());
       assert(StmtBlock != StmtToBlock.end());
-      Preds.erase(StmtBlock->getSecond());
+      llvm::erase_value(Preds, StmtBlock->getSecond());
     }
   }
 
-  std::optional<TypeErasedDataflowAnalysisState> MaybeState;
-
-  auto &Analysis = AC.Analysis;
+  JoinedStateBuilder Builder(AC);
   for (const CFGBlock *Pred : Preds) {
     // Skip if the `Block` is unreachable or control flow cannot get past it.
     if (!Pred || Pred->hasNoReturnElement())
@@ -240,36 +322,30 @@ computeBlockInputState(const CFGBlock &Block, AnalysisContext &AC) {
     if (!MaybePredState)
       continue;
 
-    TypeErasedDataflowAnalysisState PredState = *MaybePredState;
-    if (Analysis.builtinOptions()) {
+    if (AC.Analysis.builtinOptions()) {
       if (const Stmt *PredTerminatorStmt = Pred->getTerminatorStmt()) {
+        // We have a terminator: we need to mutate an environment to describe
+        // when the terminator is taken. Copy now.
+        TypeErasedDataflowAnalysisState Copy = MaybePredState->fork();
+
         const StmtToEnvMap StmtToEnv(AC.CFCtx, AC.BlockStates);
         auto [Cond, CondValue] =
-            TerminatorVisitor(StmtToEnv, PredState.Env,
+            TerminatorVisitor(StmtToEnv, Copy.Env,
                               blockIndexInPredecessor(*Pred, Block))
                 .Visit(PredTerminatorStmt);
         if (Cond != nullptr)
           // FIXME: Call transferBranchTypeErased even if BuiltinTransferOpts
           // are not set.
-          Analysis.transferBranchTypeErased(CondValue, Cond, PredState.Lattice,
-                                            PredState.Env);
+          AC.Analysis.transferBranchTypeErased(CondValue, Cond, Copy.Lattice,
+                                               Copy.Env);
+        Builder.addOwned(std::move(Copy));
+        continue;
       }
     }
-
-    if (MaybeState) {
-      Analysis.joinTypeErased(MaybeState->Lattice, PredState.Lattice);
-      MaybeState->Env.join(PredState.Env, Analysis);
-    } else {
-      MaybeState = std::move(PredState);
-    }
+    Builder.addUnowned(*MaybePredState);
+    continue;
   }
-  if (!MaybeState) {
-    // FIXME: Consider passing `Block` to `Analysis.typeErasedInitialElement()`
-    // to enable building analyses like computation of dominators that
-    // initialize the state of each basic block differently.
-    MaybeState.emplace(Analysis.typeErasedInitialElement(), AC.InitEnv);
-  }
-  return *MaybeState;
+  return std::move(Builder).take();
 }
 
 /// Built-in transfer function for `CFGStmt`.
@@ -290,27 +366,59 @@ builtinTransferInitializer(const CFGInitializer &Elt,
   assert(Init != nullptr);
 
   auto &Env = InputState.Env;
-  const auto &ThisLoc =
-      *cast<AggregateStorageLocation>(Env.getThisPointeeStorageLocation());
+  auto &ThisLoc = *Env.getThisPointeeStorageLocation();
 
-  const FieldDecl *Member = Init->getMember();
-  if (Member == nullptr)
-    // Not a field initializer.
+  if (!Init->isAnyMemberInitializer())
+    // FIXME: Handle base initialization
     return;
 
-  auto *InitStmt = Init->getInit();
-  assert(InitStmt != nullptr);
+  auto *InitExpr = Init->getInit();
+  assert(InitExpr != nullptr);
 
+  const FieldDecl *Member = nullptr;
+  AggregateStorageLocation *ParentLoc = &ThisLoc;
+  StorageLocation *MemberLoc = nullptr;
+  if (Init->isMemberInitializer()) {
+    Member = Init->getMember();
+    MemberLoc = ThisLoc.getChild(*Member);
+  } else {
+    IndirectFieldDecl *IndirectField = Init->getIndirectMember();
+    assert(IndirectField != nullptr);
+    MemberLoc = &ThisLoc;
+    for (const auto *I : IndirectField->chain()) {
+      Member = cast<FieldDecl>(I);
+      ParentLoc = cast<AggregateStorageLocation>(MemberLoc);
+      MemberLoc = ParentLoc->getChild(*Member);
+    }
+  }
+  assert(Member != nullptr);
+  assert(MemberLoc != nullptr);
+
+  // FIXME: Instead of these case distinctions, we would ideally want to be able
+  // to simply use `Environment::createObject()` here, the same way that we do
+  // this in `TransferVisitor::VisitInitListExpr()`. However, this would require
+  // us to be able to build a list of fields that we then use to initialize an
+  // `AggregateStorageLocation` -- and the problem is that, when we get here,
+  // the `AggregateStorageLocation` already exists. We should explore if there's
+  // anything that we can do to change this.
   if (Member->getType()->isReferenceType()) {
-    auto *InitStmtLoc = Env.getStorageLocationStrict(*InitStmt);
-    if (InitStmtLoc == nullptr)
+    auto *InitExprLoc = Env.getStorageLocationStrict(*InitExpr);
+    if (InitExprLoc == nullptr)
       return;
 
-    auto &MemberLoc = ThisLoc.getChild(*Member);
-    Env.setValue(MemberLoc, Env.create<ReferenceValue>(*InitStmtLoc));
-  } else if (auto *InitStmtVal = Env.getValueStrict(*InitStmt)) {
-    auto &MemberLoc = ThisLoc.getChild(*Member);
-    Env.setValue(MemberLoc, *InitStmtVal);
+    ParentLoc->setChild(*Member, InitExprLoc);
+  } else if (auto *InitExprVal = Env.getValue(*InitExpr)) {
+    if (Member->getType()->isRecordType()) {
+      auto *InitValStruct = cast<StructValue>(InitExprVal);
+      // FIXME: Rather than performing a copy here, we should really be
+      // initializing the field in place. This would require us to propagate the
+      // storage location of the field to the AST node that creates the
+      // `StructValue`.
+      copyRecord(InitValStruct->getAggregateLoc(),
+                 *cast<AggregateStorageLocation>(MemberLoc), Env);
+    } else {
+      Env.setValue(*MemberLoc, *InitExprVal);
+    }
   }
 }
 
@@ -357,7 +465,11 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
   AC.Log.enterBlock(Block);
   auto State = computeBlockInputState(Block, AC);
   AC.Log.recordState(State);
+  int ElementIdx = 1;
   for (const auto &Element : Block) {
+    PrettyStackTraceCFGElement CrashInfo(Element, Block.getBlockID(),
+                                         ElementIdx++, "transferCFGBlock");
+
     AC.Log.enterElement(Element);
     // Built-in analysis
     if (AC.Analysis.builtinOptions()) {
@@ -395,16 +507,18 @@ runTypeErasedDataflowAnalysis(
     std::function<void(const CFGElement &,
                        const TypeErasedDataflowAnalysisState &)>
         PostVisitCFG) {
+  PrettyStackTraceAnalysis CrashInfo(CFCtx, "runTypeErasedDataflowAnalysis");
+
   PostOrderCFGView POV(&CFCtx.getCFG());
   ForwardDataflowWorklist Worklist(CFCtx.getCFG(), &POV);
 
   std::vector<std::optional<TypeErasedDataflowAnalysisState>> BlockStates(
-      CFCtx.getCFG().size(), std::nullopt);
+      CFCtx.getCFG().size());
 
   // The entry basic block doesn't contain statements so it can be skipped.
   const CFGBlock &Entry = CFCtx.getCFG().getEntry();
   BlockStates[Entry.getBlockID()] = {Analysis.typeErasedInitialElement(),
-                                     InitEnv};
+                                     InitEnv.fork()};
   Worklist.enqueueSuccessors(&Entry);
 
   AnalysisContext AC(CFCtx, Analysis, InitEnv, BlockStates);
@@ -488,7 +602,7 @@ runTypeErasedDataflowAnalysis(
     }
   }
 
-  return BlockStates;
+  return std::move(BlockStates);
 }
 
 } // namespace dataflow

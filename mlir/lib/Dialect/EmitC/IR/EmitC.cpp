@@ -45,6 +45,27 @@ Operation *EmitCDialect::materializeConstant(OpBuilder &builder,
 }
 
 //===----------------------------------------------------------------------===//
+// AddOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult AddOp::verify() {
+  Type lhsType = getLhs().getType();
+  Type rhsType = getRhs().getType();
+
+  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>())
+    return emitOpError("requires that at most one operand is a pointer");
+
+  if ((lhsType.isa<emitc::PointerType>() &&
+       !rhsType.isa<IntegerType, emitc::OpaqueType>()) ||
+      (rhsType.isa<emitc::PointerType>() &&
+       !lhsType.isa<IntegerType, emitc::OpaqueType>()))
+    return emitOpError("requires that one operand is an integer or of opaque "
+                       "type if the other is a pointer");
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // ApplyOp
 //===----------------------------------------------------------------------===//
 
@@ -174,6 +195,31 @@ ParseResult IncludeOp::parse(OpAsmParser &parser, OperationState &result) {
   if (standardInclude)
     result.addAttribute("is_standard_include",
                         UnitAttr::get(parser.getContext()));
+
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// SubOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SubOp::verify() {
+  Type lhsType = getLhs().getType();
+  Type rhsType = getRhs().getType();
+  Type resultType = getResult().getType();
+
+  if (rhsType.isa<emitc::PointerType>() && !lhsType.isa<emitc::PointerType>())
+    return emitOpError("rhs can only be a pointer if lhs is a pointer");
+
+  if (lhsType.isa<emitc::PointerType>() &&
+      !rhsType.isa<IntegerType, emitc::OpaqueType, emitc::PointerType>())
+    return emitOpError("requires that rhs is an integer, pointer or of opaque "
+                       "type if lhs is a pointer");
+
+  if (lhsType.isa<emitc::PointerType>() && rhsType.isa<emitc::PointerType>() &&
+      !resultType.isa<IntegerType, emitc::OpaqueType>())
+    return emitOpError("requires that the result is an integer or of opaque "
+                       "type if lhs and rhs are pointers");
 
   return success();
 }

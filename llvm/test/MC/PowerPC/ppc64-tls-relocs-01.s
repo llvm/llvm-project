@@ -7,7 +7,9 @@
         addis 3, 2, t@got@tprel@ha
         ld 3, t@got@tprel@l(3)
         lwzx 4, 3, t@tls
+        lwax 4, 3, t@tls
         lhzx 4, 3, t@tls
+        lhax 4, 3, t@tls
         lbzx 4, 3, t@tls
         ldx 4, 3, t@tls
         stbx 4, 3, t@tls
@@ -30,6 +32,8 @@ t:
 # CHECK-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TPREL16_LO t
 # CHECK-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_GOT_TPREL16_HA t 0x0
 # CHECK-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_GOT_TPREL16_LO_DS t 0x0
+# CHECK-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TLS t 0x0
+# CHECK-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TLS t 0x0
 # CHECK-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TLS t 0x0
 # CHECK-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TLS t 0x0
 # CHECK-NEXT:     0x{{[0-9,A-F]+}} R_PPC64_TLS t 0x0

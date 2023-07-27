@@ -485,7 +485,7 @@ class CommandLineCompletionTestCase(TestBase):
             "target create " + root_dir,
             list(
                 filter(
-                    lambda x: os.path.exists(x),
+                    lambda x: os.path.exists(x) and os.path.isdir(x),
                     map(lambda x: root_dir + x + os.sep, os.listdir(root_dir)),
                 )
             ),
@@ -736,13 +736,25 @@ class CommandLineCompletionTestCase(TestBase):
         self.runCmd("type synthetic add -x Hoo -l test")
         self.complete_from_to("type synthetic delete ", ["Hoo"])
 
-    @skipIf(archs=no_match(["x86_64"]))
-    def test_register_read_and_write_on_x86(self):
-        """Test the completion of the commands register read and write on x86"""
-
+    def test_register_no_complete(self):
         # The tab completion for "register read/write"  won't work without a running process.
         self.complete_from_to("register read ", "register read ")
         self.complete_from_to("register write ", "register write ")
+        self.complete_from_to("register info ", "register info ")
+
+        self.build()
+        self.runCmd("target create {}".format(self.getBuildArtifact("a.out")))
+        self.runCmd("run")
+
+        # Once a program has finished you have an execution context but no register
+        # context so completion cannot work.
+        self.complete_from_to("register read ", "register read ")
+        self.complete_from_to("register write ", "register write ")
+        self.complete_from_to("register info ", "register info ")
+
+    @skipIf(archs=no_match(["x86_64"]))
+    def test_register_read_and_write_on_x86(self):
+        """Test the completion of the commands register read and write on x86"""
 
         self.build()
         self.main_source_spec = lldb.SBFileSpec("main.cpp")
@@ -868,3 +880,11 @@ class CommandLineCompletionTestCase(TestBase):
         self.complete_from_to("breakpoint set -N n", "breakpoint set -N n")
         self.assertTrue(bp1.AddNameWithErrorHandling("nn"))
         self.complete_from_to("breakpoint set -N ", "breakpoint set -N nn")
+
+    def test_ambiguous_command(self):
+        """Test completing an ambiguous commands"""
+        self.complete_from_to("settings s", ['set', 'show'])
+
+    def test_ambiguous_subcommand(self):
+        """Test completing a subcommand of an ambiguous command"""
+        self.complete_from_to("settings s ta", [])

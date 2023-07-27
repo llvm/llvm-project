@@ -112,7 +112,8 @@
 // MCPU-SIFIVE-S76: "-nostdsysteminc" "-target-cpu" "sifive-s76"
 // MCPU-SIFIVE-S76: "-target-feature" "+m" "-target-feature" "+a" "-target-feature" "+f" "-target-feature" "+d"
 // MCPU-SIFIVE-S76: "-target-feature" "+c"
-// MCPU-SIFIVE-S76: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
+// MCPU-SIFIVE-S76: "-target-feature" "+zicsr" "-target-feature" "+zifencei" "-target-feature" "+zihintpause"
+// MCPU-SIFIVE-S76: "-target-feature" "+xsfcie"
 // MCPU-SIFIVE-S76: "-target-abi" "lp64d"
 
 // mcpu with default march
@@ -175,7 +176,7 @@
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+zicsr" "-target-feature" "+zifencei"
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+zfh"
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+zba" "-target-feature" "+zbb"
-// MCPU-SIFIVE-X280-SAME: "-target-feature" "+experimental-zvfh"
+// MCPU-SIFIVE-X280-SAME: "-target-feature" "+zvfh"
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+zvl128b"
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+zvl256b" "-target-feature" "+zvl32b"
 // MCPU-SIFIVE-X280-SAME: "-target-feature" "+zvl512b" "-target-feature" "+zvl64b"

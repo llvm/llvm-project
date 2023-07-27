@@ -19,11 +19,11 @@
 ! CHECK:           %[[VAL_11:.*]]:2 = hlfir.declare %[[VAL_0]] {uniq_name = "_QFtestEpi"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
 ! CHECK:           %[[VAL_12:.*]] = arith.constant 2 : index
 ! CHECK:           %[[VAL_13:.*]] = fir.shape %[[VAL_12]] : (index) -> !fir.shape<1>
-! CHECK:           %[[VAL_14:.*]] = hlfir.elemental %[[VAL_13]] : (!fir.shape<1>) -> !hlfir.expr<2xf32> {
+! CHECK:           %[[VAL_14:.*]] = hlfir.elemental %[[VAL_13]] unordered : (!fir.shape<1>) -> !hlfir.expr<2xf32> {
 ! CHECK:           ^bb0(%[[VAL_15:.*]]: index):
 ! CHECK:             %[[VAL_16:.*]] = arith.constant 2 : index
 ! CHECK:             %[[VAL_17:.*]] = fir.shape %[[VAL_16]] : (index) -> !fir.shape<1>
-! CHECK:             %[[VAL_18:.*]] = hlfir.elemental %[[VAL_17]] : (!fir.shape<1>) -> !hlfir.expr<2xf32> {
+! CHECK:             %[[VAL_18:.*]] = hlfir.elemental %[[VAL_17]] unordered : (!fir.shape<1>) -> !hlfir.expr<2xf32> {
 ! CHECK:             ^bb0(%[[VAL_19:.*]]: index):
 ! CHECK:               %[[VAL_20:.*]] = fir.load %[[VAL_11]]#0 : !fir.ref<f32>
 ! CHECK:               hlfir.yield_element %[[VAL_20]] : f32

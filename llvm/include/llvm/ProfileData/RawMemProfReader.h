@@ -51,10 +51,12 @@ public:
   static bool hasFormat(const StringRef Path);
 
   // Create a RawMemProfReader after sanity checking the contents of the file at
-  // \p Path. The binary from which the profile has been collected is specified
-  // via a path in \p ProfiledBinary.
+  // \p Path or the \p Buffer. The binary from which the profile has been
+  // collected is specified via a path in \p ProfiledBinary.
   static Expected<std::unique_ptr<RawMemProfReader>>
-  create(const Twine &Path, const StringRef ProfiledBinary,
+  create(const Twine &Path, StringRef ProfiledBinary, bool KeepName = false);
+  static Expected<std::unique_ptr<RawMemProfReader>>
+  create(std::unique_ptr<MemoryBuffer> Buffer, StringRef ProfiledBinary,
          bool KeepName = false);
 
   // Returns a list of build ids recorded in the segment information.

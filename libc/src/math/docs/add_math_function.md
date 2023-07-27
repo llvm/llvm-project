@@ -111,11 +111,11 @@ order to find exceptional cases for your function's implementation.
 ```
   libc/test/src/math/exhaustive/CMakeLists.txt
 ```
-- The template class `LlvmLibcExhaustiveTest` located at:
+- The template class `LlvmLibcExhaustiveMathTest` located at:
 ```
   libc/test/src/math/exhaustive/exhaustive_test.h
 ```
-can be inherited for conveniently parallelizing the exhaustive tests.
+can be used for conveniently parallelizing the exhaustive tests.
 
 ### Performance tests
 

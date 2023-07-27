@@ -550,6 +550,7 @@ void mlir::affine::normalizeAffineParallel(AffineParallelOp op) {
                                     ubExprs, op.getContext());
   op.setUpperBounds(ranges.getOperands(), newUpperMap);
 }
+
 LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
                                                bool promoteSingleIter) {
   if (promoteSingleIter && succeeded(promoteIfSingleIteration(op)))
@@ -571,86 +572,54 @@ LogicalResult mlir::affine::normalizeAffineFor(AffineForOp op,
   OpBuilder opBuilder(op);
   int64_t origLoopStep = op.getStep();
 
-  AffineBound lb = op.getLowerBound();
-  AffineMap originalLbMap = lb.getMap();
-  SmallVector<Value, 4> origLbOperands;
-  llvm::append_range(origLbOperands, lb.getOperands());
+  // Construct the new upper bound value map.
+  AffineMap oldLbMap = op.getLowerBoundMap();
+  // The upper bound can have multiple results. To use
+  // AffineValueMap::difference, we need to have the same number of results in
+  // both lower and upper bound maps. So, we just create a value map for the
+  // lower bound with the only available lower bound result repeated to pad up
+  // to the number of upper bound results.
+  SmallVector<AffineExpr> lbExprs(op.getUpperBoundMap().getNumResults(),
+                                  op.getLowerBoundMap().getResult(0));
+  AffineValueMap lbMap(oldLbMap, op.getLowerBoundOperands());
+  AffineMap paddedLbMap =
+      AffineMap::get(oldLbMap.getNumDims(), oldLbMap.getNumSymbols(), lbExprs,
+                     op.getContext());
+  AffineValueMap paddedLbValueMap(paddedLbMap, op.getLowerBoundOperands());
+  AffineValueMap ubValueMap(op.getUpperBoundMap(), op.getUpperBoundOperands());
+  AffineValueMap newUbValueMap;
+  // Compute the `upper bound - lower bound`.
+  AffineValueMap::difference(ubValueMap, paddedLbValueMap, &newUbValueMap);
+  (void)newUbValueMap.canonicalize();
 
-  AffineBound ub = op.getUpperBound();
-  AffineMap originalUbMap = ub.getMap();
-  SmallVector<Value, 4> origUbOperands;
-  llvm::append_range(origUbOperands, ub.getOperands());
+  // Scale down the upper bound value map by the loop step.
+  unsigned numResult = newUbValueMap.getNumResults();
+  SmallVector<AffineExpr> scaleDownExprs(numResult);
+  for (unsigned i = 0; i < numResult; ++i)
+    scaleDownExprs[i] = opBuilder.getAffineDimExpr(i).ceilDiv(origLoopStep);
+  // `scaleDownMap` is (d0, d1, ..., d_n) -> (d0 / step, d1 / step, ..., d_n /
+  // step). Where `n` is the number of results in the upper bound map.
+  AffineMap scaleDownMap =
+      AffineMap::get(numResult, 0, scaleDownExprs, op.getContext());
+  AffineMap newUbMap = scaleDownMap.compose(newUbValueMap.getAffineMap());
 
-  // Calculate upperBound for normalized loop.
-  SmallVector<Value, 4> ubOperands;
-  ubOperands.reserve(ub.getNumOperands() + lb.getNumOperands());
-
-  // Add dimension operands from upper/lower bound.
-  for (unsigned j = 0, e = originalUbMap.getNumDims(); j < e; ++j)
-    ubOperands.push_back(ub.getOperand(j));
-  for (unsigned j = 0, e = originalLbMap.getNumDims(); j < e; ++j)
-    ubOperands.push_back(lb.getOperand(j));
-
-  // Add symbol operands from upper/lower bound.
-  for (unsigned j = 0, e = originalUbMap.getNumSymbols(); j < e; ++j)
-    ubOperands.push_back(ub.getOperand(originalUbMap.getNumDims() + j));
-  for (unsigned j = 0, e = originalLbMap.getNumSymbols(); j < e; ++j)
-    ubOperands.push_back(lb.getOperand(originalLbMap.getNumDims() + j));
-
-  // Add original result expressions from lower/upper bound map.
-  SmallVector<AffineExpr, 1> origLbExprs(originalLbMap.getResults().begin(),
-                                         originalLbMap.getResults().end());
-  SmallVector<AffineExpr, 2> origUbExprs(originalUbMap.getResults().begin(),
-                                         originalUbMap.getResults().end());
-  SmallVector<AffineExpr, 4> newUbExprs;
-
-  // The original upperBound can have more than one result. For the new
-  // upperBound of this loop, take difference of all possible combinations of
-  // the ub results and lb result and ceildiv with the loop step. For e.g.,
-  //
-  //  affine.for %i1 = 0 to min affine_map<(d0)[] -> (d0 + 32, 1024)>(%i0)
-  //  will have an upperBound map as,
-  //  affine_map<(d0)[] -> (((d0 + 32) - 0) ceildiv 1, (1024 - 0) ceildiv
-  //  1)>(%i0)
-  //
-  // Insert all combinations of upper/lower bound results.
-  for (unsigned i = 0, e = origUbExprs.size(); i < e; ++i) {
-    newUbExprs.push_back(
-        (origUbExprs[i] - origLbExprs[0]).ceilDiv(origLoopStep));
-  }
-
-  // Construct newUbMap.
-  AffineMap newUbMap = AffineMap::get(
-      originalLbMap.getNumDims() + originalUbMap.getNumDims(),
-      originalLbMap.getNumSymbols() + originalUbMap.getNumSymbols(), newUbExprs,
-      opBuilder.getContext());
-  canonicalizeMapAndOperands(&newUbMap, &ubOperands);
-
-  SmallVector<Value, 4> lbOperands(lb.getOperands().begin(),
-                                   lb.getOperands().begin() +
-                                       originalLbMap.getNumDims());
-
-  // Normalize the loop.
-  op.setUpperBound(ubOperands, newUbMap);
+  // Set the newly create upper bound map and operands.
+  op.setUpperBound(newUbValueMap.getOperands(), newUbMap);
   op.setLowerBound({}, opBuilder.getConstantAffineMap(0));
   op.setStep(1);
 
   // Calculate the Value of new loopIV. Create affine.apply for the value of
   // the loopIV in normalized loop.
   opBuilder.setInsertionPointToStart(op.getBody());
-  // Add an extra dim operand for loopIV.
-  lbOperands.push_back(op.getInductionVar());
-  // Add symbol operands from lower bound.
-  for (unsigned j = 0, e = originalLbMap.getNumSymbols(); j < e; ++j)
-    lbOperands.push_back(origLbOperands[originalLbMap.getNumDims() + j]);
-
-  AffineExpr origIVExpr =
-      opBuilder.getAffineDimExpr(originalLbMap.getNumDims());
-  AffineExpr newIVExpr = origIVExpr * origLoopStep + originalLbMap.getResult(0);
-  AffineMap ivMap = AffineMap::get(originalLbMap.getNumDims() + 1,
-                                   originalLbMap.getNumSymbols(), newIVExpr);
-  canonicalizeMapAndOperands(&ivMap, &lbOperands);
-  Operation *newIV = opBuilder.create<AffineApplyOp>(loc, ivMap, lbOperands);
+  // Construct an affine.apply op mapping the new IV to the old IV.
+  AffineMap scaleIvMap =
+      AffineMap::get(1, 0, -opBuilder.getAffineDimExpr(0) * origLoopStep);
+  AffineValueMap scaleIvValueMap(scaleIvMap, ValueRange{op.getInductionVar()});
+  AffineValueMap newIvToOldIvMap;
+  AffineValueMap::difference(lbMap, scaleIvValueMap, &newIvToOldIvMap);
+  (void)newIvToOldIvMap.canonicalize();
+  auto newIV = opBuilder.create<AffineApplyOp>(
+      loc, newIvToOldIvMap.getAffineMap(), newIvToOldIvMap.getOperands());
   op.getInductionVar().replaceAllUsesExcept(newIV->getResult(0), newIV);
   return success();
 }
@@ -862,9 +831,10 @@ bool mlir::affine::hasNoInterveningEffect(Operation *start, T memOp) {
 /// other operations will overwrite the memory loaded between the given load
 /// and store.  If such a value exists, the replaced `loadOp` will be added to
 /// `loadOpsToErase` and its memref will be added to `memrefsToErase`.
-static LogicalResult forwardStoreToLoad(
-    AffineReadOpInterface loadOp, SmallVectorImpl<Operation *> &loadOpsToErase,
-    SmallPtrSetImpl<Value> &memrefsToErase, DominanceInfo &domInfo) {
+static void forwardStoreToLoad(AffineReadOpInterface loadOp,
+                               SmallVectorImpl<Operation *> &loadOpsToErase,
+                               SmallPtrSetImpl<Value> &memrefsToErase,
+                               DominanceInfo &domInfo) {
 
   // The store op candidate for forwarding that satisfies all conditions
   // to replace the load, if any.
@@ -911,7 +881,7 @@ static LogicalResult forwardStoreToLoad(
   }
 
   if (!lastWriteStoreOp)
-    return failure();
+    return;
 
   // Perform the actual store to load forwarding.
   Value storeVal =
@@ -919,13 +889,12 @@ static LogicalResult forwardStoreToLoad(
   // Check if 2 values have the same shape. This is needed for affine vector
   // loads and stores.
   if (storeVal.getType() != loadOp.getValue().getType())
-    return failure();
+    return;
   loadOp.getValue().replaceAllUsesWith(storeVal);
   // Record the memref for a later sweep to optimize away.
   memrefsToErase.insert(loadOp.getMemRef());
   // Record this to erase later.
   loadOpsToErase.push_back(loadOp);
-  return success();
 }
 
 template bool
@@ -995,16 +964,16 @@ static void loadCSE(AffineReadOpInterface loadA,
     MemRefAccess srcAccess(loadB);
     MemRefAccess destAccess(loadA);
 
-    // 1. The accesses have to be to the same location.
+    // 1. The accesses should be to be to the same location.
     if (srcAccess != destAccess) {
       continue;
     }
 
-    // 2. The store has to dominate the load op to be candidate.
+    // 2. loadB should dominate loadA.
     if (!domInfo.dominates(loadB, loadA))
       continue;
 
-    // 3. There is no write between loadA and loadB.
+    // 3. There should not be a write between loadA and loadB.
     if (!affine::hasNoInterveningEffect<MemoryEffects::Write>(
             loadB.getOperation(), loadA))
       continue;
@@ -1073,13 +1042,8 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
 
   // Walk all load's and perform store to load forwarding.
   f.walk([&](AffineReadOpInterface loadOp) {
-    if (failed(
-            forwardStoreToLoad(loadOp, opsToErase, memrefsToErase, domInfo))) {
-      loadCSE(loadOp, opsToErase, domInfo);
-    }
+    forwardStoreToLoad(loadOp, opsToErase, memrefsToErase, domInfo);
   });
-
-  // Erase all load op's whose results were replaced with store fwd'ed ones.
   for (auto *op : opsToErase)
     op->erase();
   opsToErase.clear();
@@ -1088,9 +1052,9 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
   f.walk([&](AffineWriteOpInterface storeOp) {
     findUnusedStore(storeOp, opsToErase, postDomInfo);
   });
-  // Erase all store op's which don't impact the program
   for (auto *op : opsToErase)
     op->erase();
+  opsToErase.clear();
 
   // Check if the store fwd'ed memrefs are now left with only stores and
   // deallocs and can thus be completely deleted. Note: the canonicalize pass
@@ -1114,6 +1078,15 @@ void mlir::affine::affineScalarReplace(func::FuncOp f, DominanceInfo &domInfo,
       user->erase();
     defOp->erase();
   }
+
+  // To eliminate as many loads as possible, run load CSE after eliminating
+  // stores. Otherwise, some stores are wrongly seen as having an intervening
+  // effect.
+  f.walk([&](AffineReadOpInterface loadOp) {
+    loadCSE(loadOp, opsToErase, domInfo);
+  });
+  for (auto *op : opsToErase)
+    op->erase();
 }
 
 // Perform the replacement in `op`.
@@ -1720,8 +1693,7 @@ LogicalResult mlir::affine::normalizeMemRef(memref::AllocOp *allocOp) {
 
   // Fetch a new memref type after normalizing the old memref to have an
   // identity map layout.
-  MemRefType newMemRefType =
-      normalizeMemRefType(memrefType, allocOp->getSymbolOperands().size());
+  MemRefType newMemRefType = normalizeMemRefType(memrefType);
   if (newMemRefType == memrefType)
     // Either memrefType already had an identity map or the map couldn't be
     // transformed to an identity map.
@@ -1772,8 +1744,7 @@ LogicalResult mlir::affine::normalizeMemRef(memref::AllocOp *allocOp) {
   return success();
 }
 
-MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType,
-                                             unsigned numSymbolicOperands) {
+MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType) {
   unsigned rank = memrefType.getRank();
   if (rank == 0)
     return memrefType;
@@ -1784,6 +1755,7 @@ MemRefType mlir::affine::normalizeMemRefType(MemRefType memrefType,
     return memrefType;
   }
   AffineMap layoutMap = memrefType.getLayout().getAffineMap();
+  unsigned numSymbolicOperands = layoutMap.getNumSymbols();
 
   // We don't do any checks for one-to-one'ness; we assume that it is
   // one-to-one.

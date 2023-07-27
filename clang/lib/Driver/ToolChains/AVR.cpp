@@ -14,10 +14,10 @@
 #include "clang/Driver/Options.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/MC/MCSubtargetInfo.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/Path.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 using namespace clang::driver;
 using namespace clang::driver::toolchains;

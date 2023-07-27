@@ -10,7 +10,7 @@ define i64 @ptrtoint_align_2_size_4_add_5() {
 ; CHECK-LABEL: 'ptrtoint_align_2_size_4_add_5'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoint_align_2_size_4_add_5
 ; CHECK-NEXT:    %add = add i64 ptrtoint (ptr @glob.i32.align2 to i64), 5
-; CHECK-NEXT:    --> (5 + (ptrtoint ptr @glob.i32.align2 to i64))<nuw> U: [5,0) S: [5,0)
+; CHECK-NEXT:    --> (5 + (ptrtoint ptr @glob.i32.align2 to i64))<nuw> U: [7,0) S: [5,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_align_2_size_4_add_5
 ;
 entry:
@@ -34,7 +34,7 @@ define i64 @ptrtoint_align_8_size_4_add_7() {
 ; CHECK-LABEL: 'ptrtoint_align_8_size_4_add_7'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoint_align_8_size_4_add_7
 ; CHECK-NEXT:    %add = add i64 ptrtoint (ptr @glob.i32.align8 to i64), 7
-; CHECK-NEXT:    --> (7 + (ptrtoint ptr @glob.i32.align8 to i64))<nuw><nsw> U: [7,0) S: [-9223372036854775801,-9223372036854775808)
+; CHECK-NEXT:    --> (7 + (ptrtoint ptr @glob.i32.align8 to i64))<nuw><nsw> U: [15,0) S: [-9223372036854775801,-9223372036854775808)
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_align_8_size_4_add_7
 ;
 entry:
@@ -58,7 +58,7 @@ define i64 @ptrtoint_align_16_size_4_add_15() {
 ; CHECK-LABEL: 'ptrtoint_align_16_size_4_add_15'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoint_align_16_size_4_add_15
 ; CHECK-NEXT:    %add = add i64 ptrtoint (ptr @glob.i32.align16 to i64), 15
-; CHECK-NEXT:    --> (15 + (ptrtoint ptr @glob.i32.align16 to i64))<nuw><nsw> U: [15,0) S: [-9223372036854775793,-9223372036854775808)
+; CHECK-NEXT:    --> (15 + (ptrtoint ptr @glob.i32.align16 to i64))<nuw><nsw> U: [31,0) S: [-9223372036854775793,-9223372036854775808)
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_align_16_size_4_add_15
 ;
 entry:
@@ -82,7 +82,7 @@ define i64 @ptrtoint_align_16_size_16_add_16() {
 ; CHECK-LABEL: 'ptrtoint_align_16_size_16_add_16'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoint_align_16_size_16_add_16
 ; CHECK-NEXT:    %add = add i64 ptrtoint (ptr @array4xi32 to i64), 16
-; CHECK-NEXT:    --> (16 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [16,-15) S: [-9223372036854775808,9223372036854775793)
+; CHECK-NEXT:    --> (16 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [32,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_align_16_size_16_add_16
 ;
 entry:
@@ -94,7 +94,7 @@ define i64 @ptrtoint_align_16_size_16_add_31() {
 ; CHECK-LABEL: 'ptrtoint_align_16_size_16_add_31'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoint_align_16_size_16_add_31
 ; CHECK-NEXT:    %add = add i64 ptrtoint (ptr @array4xi32 to i64), 31
-; CHECK-NEXT:    --> (31 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [31,0) S: [31,0)
+; CHECK-NEXT:    --> (31 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [47,0) S: [31,0)
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_align_16_size_16_add_31
 ;
 entry:
@@ -118,7 +118,7 @@ define i64 @ptrtoint_align_16_size_16_add_33() {
 ; CHECK-LABEL: 'ptrtoint_align_16_size_16_add_33'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoint_align_16_size_16_add_33
 ; CHECK-NEXT:    %add = add i64 ptrtoint (ptr @array4xi32 to i64), 33
-; CHECK-NEXT:    --> (33 + (ptrtoint ptr @array4xi32 to i64)) U: [33,2) S: [-9223372036854775775,-9223372036854775790)
+; CHECK-NEXT:    --> (33 + (ptrtoint ptr @array4xi32 to i64)) U: [49,2) S: [-9223372036854775775,-9223372036854775790)
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_align_16_size_16_add_33
 ;
 entry:
@@ -130,9 +130,9 @@ define i64 @ptrtoint_align_16_size_16_add_16_umax_sub() {
 ; CHECK-LABEL: 'ptrtoint_align_16_size_16_add_16_umax_sub'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoint_align_16_size_16_add_16_umax_sub
 ; CHECK-NEXT:    %add.16 = add i64 ptrtoint (ptr @array4xi32 to i64), 16
-; CHECK-NEXT:    --> (16 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [16,-15) S: [-9223372036854775808,9223372036854775793)
+; CHECK-NEXT:    --> (16 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [32,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:    %umax = call i64 @llvm.umax.i64(i64 ptrtoint (ptr @array4xi32 to i64), i64 %add.16)
-; CHECK-NEXT:    --> (16 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [16,-15) S: [-9223372036854775808,9223372036854775793)
+; CHECK-NEXT:    --> (16 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [32,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:    %add = add i64 %umax, 16
 ; CHECK-NEXT:    --> (32 + (ptrtoint ptr @array4xi32 to i64)) U: [0,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:    %sub = sub i64 %add, ptrtoint (ptr @array4xi32 to i64)
@@ -151,11 +151,11 @@ define i64 @ptrtoint_align_16_size_16_add_31_umax_sub() {
 ; CHECK-LABEL: 'ptrtoint_align_16_size_16_add_31_umax_sub'
 ; CHECK-NEXT:  Classifying expressions for: @ptrtoint_align_16_size_16_add_31_umax_sub
 ; CHECK-NEXT:    %add.31 = add i64 ptrtoint (ptr @array4xi32 to i64), 31
-; CHECK-NEXT:    --> (31 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [31,0) S: [31,0)
+; CHECK-NEXT:    --> (31 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [47,0) S: [31,0)
 ; CHECK-NEXT:    %umax = call i64 @llvm.umax.i64(i64 ptrtoint (ptr @array4xi32 to i64), i64 %add.31)
-; CHECK-NEXT:    --> (31 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [31,0) S: [31,0)
+; CHECK-NEXT:    --> (31 + (ptrtoint ptr @array4xi32 to i64))<nuw> U: [47,0) S: [31,0)
 ; CHECK-NEXT:    %add = add i64 %umax, 16
-; CHECK-NEXT:    --> (47 + (ptrtoint ptr @array4xi32 to i64)) U: [47,16) S: [-9223372036854775761,-9223372036854775776)
+; CHECK-NEXT:    --> (47 + (ptrtoint ptr @array4xi32 to i64)) U: [63,16) S: [-9223372036854775761,-9223372036854775776)
 ; CHECK-NEXT:    %sub = sub i64 %add, ptrtoint (ptr @array4xi32 to i64)
 ; CHECK-NEXT:    --> 47 U: [47,48) S: [47,48)
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoint_align_16_size_16_add_31_umax_sub
@@ -174,7 +174,7 @@ define i64 @ptrtoint_align_16_size_16_add_32_umax_sub() {
 ; CHECK-NEXT:    %add.32 = add i64 ptrtoint (ptr @array4xi32 to i64), 32
 ; CHECK-NEXT:    --> (32 + (ptrtoint ptr @array4xi32 to i64)) U: [0,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:    %umax = call i64 @llvm.umax.i64(i64 ptrtoint (ptr @array4xi32 to i64), i64 %add.32)
-; CHECK-NEXT:    --> ((32 + (ptrtoint ptr @array4xi32 to i64)) umax (ptrtoint ptr @array4xi32 to i64)) U: [0,-15) S: [-9223372036854775808,9223372036854775793)
+; CHECK-NEXT:    --> ((32 + (ptrtoint ptr @array4xi32 to i64)) umax (ptrtoint ptr @array4xi32 to i64)) U: [16,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:    %add = add i64 %umax, 16
 ; CHECK-NEXT:    --> (16 + ((32 + (ptrtoint ptr @array4xi32 to i64)) umax (ptrtoint ptr @array4xi32 to i64))) U: [0,-15) S: [-9223372036854775808,9223372036854775793)
 ; CHECK-NEXT:    %sub = sub i64 %add, ptrtoint (ptr @array4xi32 to i64)

@@ -59,7 +59,7 @@ public:
   static const char *getName();
 
   void setupMF(MachineFunction &MF, GISelKnownBits *KB,
-               CodeGenCoverage &CoverageInfo, ProfileSummaryInfo *PSI,
+               CodeGenCoverage *CoverageInfo, ProfileSummaryInfo *PSI,
                BlockFrequencyInfo *BFI) override;
 
 private:
@@ -148,9 +148,10 @@ private:
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectWaveAddress(MachineInstr &I) const;
 
-  std::pair<Register, unsigned>
-  selectVOP3ModsImpl(MachineOperand &Root, bool AllowAbs = true,
-                     bool OpSel = false) const;
+  std::pair<Register, unsigned> selectVOP3ModsImpl(MachineOperand &Root,
+                                                   bool IsCanonicalizing = true,
+                                                   bool AllowAbs = true,
+                                                   bool OpSel = false) const;
 
   Register copyToVGPRIfSrcFolded(Register Src, unsigned Mods,
                                  MachineOperand Root, MachineInstr *InsertPt,
@@ -170,6 +171,8 @@ private:
   selectVOP3OMods(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3Mods(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectVOP3ModsNonCanonicalizing(MachineOperand &Root) const;
   InstructionSelector::ComplexRendererFns
   selectVOP3BMods(MachineOperand &Root) const;
 

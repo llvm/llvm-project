@@ -350,6 +350,12 @@ def TestTypeCustomString : Test_Type<"TestTypeCustomString"> {
                               custom<BarString>(ref($foo)) `>` }];
 }
 
+def TestTypeOptionalString : Test_Type<"TestTypeOptionalString"> {
+  let parameters = (ins StringRefParameter<"description", [{"default"}]>:$str);
+  let mnemonic = "optional_type_string";
+  let assemblyFormat = [{ (`<` $str^ `>`)? }];
+}
+
 def TestTypeElseAnchor : Test_Type<"TestTypeElseAnchor"> {
   let parameters = (ins OptionalParameter<"std::optional<int>">:$a);
   let mnemonic = "else_anchor";

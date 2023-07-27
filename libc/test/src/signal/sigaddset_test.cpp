@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "include/signal.h"
 #include "src/signal/sigaddset.h"
 
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <errno.h>
+#include <signal.h>
 
 // This tests invalid inputs and ensures errno is properly set.
 TEST(LlvmLibcSignalTest, SigaddsetInvalid) {

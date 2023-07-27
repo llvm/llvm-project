@@ -105,6 +105,13 @@ public:
       } else if constexpr (std::is_same_v<T, parser::ActionStmt>) {
         return std::visit(
             common::visitors{
+                [&](const common::Indirection<parser::CallStmt> &x) {
+                  addEvaluation(lower::pft::Evaluation{
+                      removeIndirection(x), pftParentStack.back(),
+                      stmt.position, stmt.label});
+                  checkForRoundingModeCall(x.value());
+                  return true;
+                },
                 [&](const common::Indirection<parser::IfStmt> &x) {
                   convertIfStmt(x.value(), stmt.position, stmt.label);
                   return false;
@@ -120,6 +127,24 @@ public:
       }
     }
     return true;
+  }
+
+  /// Check for a call statement that could modify the fp rounding mode.
+  void checkForRoundingModeCall(const parser::CallStmt &callStmt) {
+    const auto &pd = std::get<parser::ProcedureDesignator>(callStmt.call.t);
+    const auto *callName = std::get_if<parser::Name>(&pd.u);
+    if (!callName)
+      return;
+    const Fortran::semantics::Symbol &procSym = callName->symbol->GetUltimate();
+    llvm::StringRef procName = toStringRef(procSym.name());
+    if (!procName.startswith("ieee_set_"))
+      return;
+    if (procName == "ieee_set_rounding_mode_0" ||
+        procName == "ieee_set_modes_0" || procName == "ieee_set_status_0")
+      evaluationListStack.back()
+          ->back()
+          .getOwningProcedure()
+          ->mayModifyRoundingMode = true;
   }
 
   /// Convert an IfStmt into an IfConstruct, retaining the IfStmt as the

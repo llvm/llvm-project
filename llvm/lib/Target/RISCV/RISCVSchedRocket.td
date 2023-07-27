@@ -51,7 +51,6 @@ let SchedModel = RocketModel in {
 def : WriteRes<WriteJmp, [RocketUnitB]>;
 def : WriteRes<WriteJal, [RocketUnitB]>;
 def : WriteRes<WriteJalr, [RocketUnitB]>;
-def : WriteRes<WriteJmpReg, [RocketUnitB]>;
 
 // Integer arithmetic and logic
 def : WriteRes<WriteIALU32, [RocketUnitALU]>;

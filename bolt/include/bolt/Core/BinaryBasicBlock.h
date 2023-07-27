@@ -103,7 +103,7 @@ private:
   /// After output/codegen, map output offsets of instructions in this basic
   /// block to instruction offsets in the original function. Note that the
   /// output basic block could be different from the input basic block.
-  /// We only map instruction of interest, such as calls, and sdt markers.
+  /// We only map instruction of interest, such as calls and markers.
   ///
   /// We store the offset array in a basic block to facilitate BAT tables
   /// generation. Otherwise, the mapping could be done at function level.

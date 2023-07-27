@@ -831,7 +831,7 @@ class getVOPCClassPat64 <VOPProfile P> {
   list<dag> ret =
     [(set i1:$sdst,
       (AMDGPUfp_class
-        (P.Src0VT (VOP3Mods P.Src0VT:$src0, i32:$src0_modifiers)),
+        (P.Src0VT (VOP3ModsNonCanonicalizing P.Src0VT:$src0, i32:$src0_modifiers)),
         i32:$src1))];
 }
 
@@ -992,11 +992,18 @@ multiclass ICMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
     (i64 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_64))
   >;
 
-  let WaveSizePredicate = isWave32 in
-  def : GCNPat <
-    (i32 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
-    (i32 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_32))
-  >;
+  let WaveSizePredicate = isWave32 in {
+    def : GCNPat <
+      (i32 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
+      (i32 (COPY_TO_REGCLASS (inst $src0, $src1), SReg_32))
+    >;
+
+    // Support codegen of i64 setcc in wave32 mode.
+    def : GCNPat <
+      (i64 (AMDGPUsetcc vt:$src0, vt:$src1, cond)),
+      (i64 (REG_SEQUENCE SReg_64, (inst $src0, $src1), sub0, (S_MOV_B32 (i32 0)), sub1))
+    >;
+  }
 }
 
 defm : ICMP_Pattern <COND_EQ, V_CMP_EQ_U32_e64, i32>;
@@ -1056,13 +1063,22 @@ multiclass FCMP_Pattern <PatFrags cond, Instruction inst, ValueType vt> {
                            DSTCLAMP.NONE), SReg_64))
   >;
 
-  let WaveSizePredicate = isWave32 in
-  def : GCNPat <
-    (i32 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
-                 (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
-    (i32 (COPY_TO_REGCLASS (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
-                           DSTCLAMP.NONE), SReg_32))
-  >;
+  let WaveSizePredicate = isWave32 in {
+    def : GCNPat <
+      (i32 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
+                        (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
+      (i32 (COPY_TO_REGCLASS (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+                              DSTCLAMP.NONE), SReg_32))
+    >;
+
+    def : GCNPat <
+      (i64 (AMDGPUsetcc (vt (VOP3Mods vt:$src0, i32:$src0_modifiers)),
+                        (vt (VOP3Mods vt:$src1, i32:$src1_modifiers)), cond)),
+      (i64 (REG_SEQUENCE SReg_64, (inst $src0_modifiers, $src0, $src1_modifiers, $src1,
+                                   DSTCLAMP.NONE), sub0,
+                                  (S_MOV_B32 (i32 0)), sub1))
+    >;
+  }
 }
 
 defm : FCMP_Pattern <COND_OEQ, V_CMP_EQ_F32_e64, f32>;

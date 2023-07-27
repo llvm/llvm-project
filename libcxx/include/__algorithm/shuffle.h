@@ -11,7 +11,6 @@
 
 #include <__algorithm/iterator_operations.h>
 #include <__config>
-#include <__debug>
 #include <__iterator/iterator_traits.h>
 #include <__random/uniform_int_distribution.h>
 #include <__utility/forward.h>

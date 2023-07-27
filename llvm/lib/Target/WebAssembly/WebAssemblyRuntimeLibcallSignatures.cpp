@@ -248,6 +248,9 @@ struct RuntimeLibcallSignatureTable {
     Table[RTLIB::LDEXP_F32] = f32_func_f32_i32;
     Table[RTLIB::LDEXP_F64] = f64_func_f64_i32;
     Table[RTLIB::LDEXP_F128] = i64_i64_func_i64_i64_i32;
+    Table[RTLIB::FREXP_F32] = f32_func_f32_i32;
+    Table[RTLIB::FREXP_F64] = f64_func_f64_i32;
+    Table[RTLIB::FREXP_F128] = i64_i64_func_i64_i64_i32;
 
     // Conversion
     // All F80 and PPCF128 routines are unsupported.

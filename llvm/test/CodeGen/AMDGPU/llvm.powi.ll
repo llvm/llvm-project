@@ -18,7 +18,6 @@ define i16 @v_powi_f16(i16 %l, i32 %r) {
 ; GFX11-LABEL: v_powi_f16:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_1)
@@ -48,7 +47,6 @@ define float @v_powi_f32(float %l, i32 %r) {
 ; GFX11-LABEL: v_powi_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_log_f32_e32 v0, v0
 ; GFX11-NEXT:    v_cvt_f32_i32_e32 v1, v1
 ; GFX11-NEXT:    s_waitcnt_depctr 0xfff
@@ -70,7 +68,6 @@ define float @v_powi_0_f32(float %l) {
 ; GFX11-LABEL: v_powi_0_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 1.0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 0)
@@ -86,7 +83,6 @@ define float @v_powi_1_f32(float %l) {
 ; GFX11-LABEL: v_powi_1_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 1)
   ret float %res
@@ -128,7 +124,6 @@ define float @v_powi_neg1_f32(float %l) {
 ; GFX11-LABEL: v_powi_neg1_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_div_scale_f32 v1, null, v0, v0, 1.0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_rcp_f32_e32 v2, v1
@@ -160,7 +155,6 @@ define float @v_powi_2_f32(float %l) {
 ; GFX11-LABEL: v_powi_2_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
   %res = call float @llvm.powi.f32.i32(float %l, i32 2)
@@ -205,7 +199,6 @@ define float @v_powi_neg2_f32(float %l) {
 ; GFX11-LABEL: v_powi_neg2_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_div_scale_f32 v1, null, v0, v0, 1.0
@@ -240,7 +233,6 @@ define float @v_powi_4_f32(float %l) {
 ; GFX11-LABEL: v_powi_4_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
@@ -261,7 +253,6 @@ define float @v_powi_8_f32(float %l) {
 ; GFX11-LABEL: v_powi_8_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
@@ -284,7 +275,6 @@ define float @v_powi_16_f32(float %l) {
 ; GFX11-LABEL: v_powi_16_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
@@ -312,7 +302,6 @@ define float @v_powi_128_f32(float %l) {
 ; GFX11-LABEL: v_powi_128_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
@@ -378,7 +367,6 @@ define float @v_powi_neg128_f32(float %l) {
 ; GFX11-LABEL: v_powi_neg128_f32:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_mul_f32_e32 v0, v0, v0

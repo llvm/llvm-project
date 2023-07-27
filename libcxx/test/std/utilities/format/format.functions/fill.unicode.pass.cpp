@@ -6,7 +6,6 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03, c++11, c++14, c++17
-// UNSUPPORTED: libcpp-has-no-incomplete-format
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
 // This version runs the test when the platform has Unicode support.
@@ -75,53 +74,55 @@ void test() {
 
   // Invalid Unicode Scalar Values
   if constexpr (std::same_as<CharT, char>) {
-    check_exception("The format-spec contains malformed Unicode characters", SV("{:\xed\xa0\x80^}"), 42); // U+D800
-    check_exception("The format-spec contains malformed Unicode characters", SV("{:\xed\xa0\xbf^}"), 42); // U+DBFF
-    check_exception("The format-spec contains malformed Unicode characters", SV("{:\xed\xbf\x80^}"), 42); // U+DC00
-    check_exception("The format-spec contains malformed Unicode characters", SV("{:\xed\xbf\xbf^}"), 42); // U+DFFF
+    check_exception("The format specifier contains malformed Unicode characters", SV("{:\xed\xa0\x80^}"), 42); // U+D800
+    check_exception("The format specifier contains malformed Unicode characters", SV("{:\xed\xa0\xbf^}"), 42); // U+DBFF
+    check_exception("The format specifier contains malformed Unicode characters", SV("{:\xed\xbf\x80^}"), 42); // U+DC00
+    check_exception("The format specifier contains malformed Unicode characters", SV("{:\xed\xbf\xbf^}"), 42); // U+DFFF
 
     check_exception(
-        "The format-spec contains malformed Unicode characters", SV("{:\xf4\x90\x80\x80^}"), 42); // U+110000
+        "The format specifier contains malformed Unicode characters", SV("{:\xf4\x90\x80\x80^}"), 42); // U+110000
     check_exception(
-        "The format-spec contains malformed Unicode characters", SV("{:\xf4\x90\xbf\xbf^}"), 42); // U+11FFFF
+        "The format specifier contains malformed Unicode characters", SV("{:\xf4\x90\xbf\xbf^}"), 42); // U+11FFFF
 
-    check_exception("The format-spec contains malformed Unicode characters",
+    check_exception("The format specifier contains malformed Unicode characters",
                     SV("{:\x80^}"),
                     42); // Trailing code unit with no leading one.
-    check_exception(
-        "The format-spec contains malformed Unicode characters", SV("{:\xc0^}"), 42); // Missing trailing code unit.
-    check_exception(
-        "The format-spec contains malformed Unicode characters", SV("{:\xe0\x80^}"), 42); // Missing trailing code unit.
-    check_exception("The format-spec contains malformed Unicode characters",
+    check_exception("The format specifier contains malformed Unicode characters",
+                    SV("{:\xc0^}"),
+                    42); // Missing trailing code unit.
+    check_exception("The format specifier contains malformed Unicode characters",
+                    SV("{:\xe0\x80^}"),
+                    42); // Missing trailing code unit.
+    check_exception("The format specifier contains malformed Unicode characters",
                     SV("{:\xf0\x80^}"),
                     42); // Missing two trailing code units.
-    check_exception("The format-spec contains malformed Unicode characters",
+    check_exception("The format specifier contains malformed Unicode characters",
                     SV("{:\xf0\x80\x80^}"),
                     42); // Missing trailing code unit.
 
 #ifndef TEST_HAS_NO_WIDE_CHARACTERS
   } else {
 #  ifdef TEST_SHORT_WCHAR
-    check_exception("The format-spec contains malformed Unicode characters", std::wstring_view{L"{:\xd800^}"}, 42);
-    check_exception("The format-spec contains malformed Unicode characters", std::wstring_view{L"{:\xdbff^}"}, 42);
-    check_exception("The format-spec contains malformed Unicode characters", std::wstring_view{L"{:\xdc00^}"}, 42);
-    check_exception("The format-spec contains malformed Unicode characters", std::wstring_view{L"{:\xddff^}"}, 42);
+    check_exception("The format specifier contains malformed Unicode characters", std::wstring_view{L"{:\xd800^}"}, 42);
+    check_exception("The format specifier contains malformed Unicode characters", std::wstring_view{L"{:\xdbff^}"}, 42);
+    check_exception("The format specifier contains malformed Unicode characters", std::wstring_view{L"{:\xdc00^}"}, 42);
+    check_exception("The format specifier contains malformed Unicode characters", std::wstring_view{L"{:\xddff^}"}, 42);
 
-    check_exception("The format-spec contains malformed Unicode characters",
+    check_exception("The format specifier contains malformed Unicode characters",
                     std::wstring_view{L"{:\xdc00\xd800^}"},
                     42); // Reverted surrogates.
 
 #  else  // TEST_SHORT_WCHAR
-    check_exception("The fill character contains an invalid value", std::wstring_view{L"{:\xd800^}"}, 42);
-    check_exception("The fill character contains an invalid value", std::wstring_view{L"{:\xdbff^}"}, 42);
-    check_exception("The fill character contains an invalid value", std::wstring_view{L"{:\xdc00^}"}, 42);
-    check_exception("The fill character contains an invalid value", std::wstring_view{L"{:\xddff^}"}, 42);
+    check_exception("The fill option contains an invalid value", std::wstring_view{L"{:\xd800^}"}, 42);
+    check_exception("The fill option contains an invalid value", std::wstring_view{L"{:\xdbff^}"}, 42);
+    check_exception("The fill option contains an invalid value", std::wstring_view{L"{:\xdc00^}"}, 42);
+    check_exception("The fill option contains an invalid value", std::wstring_view{L"{:\xddff^}"}, 42);
 
     check_exception(
-        "The format-spec should consume the input or end with a '}'", std::wstring_view{L"{:\xdc00\xd800^}"}, 42);
+        "The format specifier should consume the input or end with a '}'", std::wstring_view{L"{:\xdc00\xd800^}"}, 42);
 
-    check_exception("The fill character contains an invalid value", std::wstring_view{L"{:\x00110000^}"}, 42);
-    check_exception("The fill character contains an invalid value", std::wstring_view{L"{:\x0011ffff^}"}, 42);
+    check_exception("The fill option contains an invalid value", std::wstring_view{L"{:\x00110000^}"}, 42);
+    check_exception("The fill option contains an invalid value", std::wstring_view{L"{:\x0011ffff^}"}, 42);
 #  endif // TEST_SHORT_WCHAR
 #endif   // TEST_HAS_NO_WIDE_CHARACTERS
   }

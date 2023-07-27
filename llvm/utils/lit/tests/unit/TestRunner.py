@@ -45,7 +45,7 @@ class TestIntegratedTestKeywordParser(unittest.TestCase):
         test_path = os.path.dirname(os.path.dirname(__file__))
         inputs = [os.path.join(test_path, "Inputs/testrunner-custom-parsers/")]
         assert os.path.isdir(inputs[0])
-        tests = lit.discovery.find_tests_for_inputs(lit_config, inputs, False)
+        tests = lit.discovery.find_tests_for_inputs(lit_config, inputs)
         assert len(tests) == 1 and "there should only be one test"
         TestIntegratedTestKeywordParser.inputTestCase = tests[0]
 

@@ -164,7 +164,7 @@ public:
   /// Whether this precompiled header is a relocatable PCH file.
   bool RelocatablePCH = false;
 
-  /// Whether this mdoule file is a standard c++ module.
+  /// Whether this module file is a standard C++ module.
   bool StandardCXXModule = false;
 
   /// Whether timestamps are included in this module file.
@@ -196,7 +196,7 @@ public:
 
   /// The memory buffer that stores the data associated with
   /// this AST file, owned by the InMemoryModuleCache.
-  llvm::MemoryBuffer *Buffer;
+  llvm::MemoryBuffer *Buffer = nullptr;
 
   /// The size of this file, in bits.
   uint64_t SizeInBits = 0;

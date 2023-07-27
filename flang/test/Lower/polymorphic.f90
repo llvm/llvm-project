@@ -310,9 +310,9 @@ module polymorphic_test
 ! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>> {fir.bindc_name = "a"}) {
 ! CHECK: %[[FIELD_P:.*]] = fir.field_index p, !fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>
 ! CHECK: %[[COORD_P:.*]] = fir.coordinate_of %[[ARG0]], %[[FIELD_P]] : (!fir.ref<!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>>, !fir.field) -> !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>>>>>
-! CHECK: %[[TYPE_DESC_ADDR:.*]] = fir.address_of(@_QMpolymorphic_testE.dt.p3) : !fir.ref<!fir.type<{{.*}}>>
+! CHECK: %[[TYPE_DESC:.*]] = fir.type_desc !fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}> 
 ! CHECK: %[[CONV_P:.*]] = fir.convert %[[COORD_P]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK: %[[CONV_TDESC:.*]] = fir.convert %[[TYPE_DESC_ADDR]] : (!fir.ref<!fir.type<{{.*}}>>) -> !fir.ref<none>
+! CHECK: %[[CONV_TDESC:.*]] = fir.convert %[[TYPE_DESC]] : (!fir.tdesc<!fir.type<_QMpolymorphic_testTp3{p:!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QMpolymorphic_testTp3>>>>}>>) -> !fir.ref<none>
 ! CHECK: %[[C1:.*]] = arith.constant 1 : i32
 ! CHECK: %[[C0:.*]] = arith.constant 0 : i32
 ! CHECK: %{{.*}} = fir.call @_FortranAPointerNullifyDerived(%[[CONV_P]], %[[CONV_TDESC]], %[[C1]], %[[C0]]) {{.*}} : (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none

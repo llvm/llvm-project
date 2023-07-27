@@ -1,8 +1,8 @@
 ; RUN: llvm-mc -triple arm64-apple-darwin10 %s -filetype=obj -o - | llvm-readobj -r --expand-relocs - | FileCheck %s
 
-; Test that we produce an external relocation. This is a known and temporary bug
-; in ld64, where it mishandles pointer-sized internal relocations. We should be
-; able to remove this entirely soon.
+/// To work around an ld64 arm64 bug before 2015, we used to disable local
+/// relocations for many pointer-sized relocations. Test that the workaround
+/// is dropped and the behavior now matches x86-64.
 
 // CHECK:      Relocations [
 // CHECK-NEXT:   Section __data {
@@ -11,21 +11,21 @@
 // CHECK-NEXT:       PCRel: 0
 // CHECK-NEXT:       Length: 3
 // CHECK-NEXT:       Type: ARM64_RELOC_UNSIGNED (0)
-// CHECK-NEXT:       Symbol: Llit16
+// CHECK-NEXT:       Section: __literal16
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
 // CHECK-NEXT:       Offset: 0x10
 // CHECK-NEXT:       PCRel: 0
 // CHECK-NEXT:       Length: 3
 // CHECK-NEXT:       Type: ARM64_RELOC_UNSIGNED (0)
-// CHECK-NEXT:       Symbol: Llit8
+// CHECK-NEXT:       Section: __literal8
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
 // CHECK-NEXT:       Offset: 0x8
 // CHECK-NEXT:       PCRel: 0
 // CHECK-NEXT:       Length: 3
 // CHECK-NEXT:       Type: ARM64_RELOC_UNSIGNED (0)
-// CHECK-NEXT:       Symbol: Llit4
+// CHECK-NEXT:       Section: __literal4
 // CHECK-NEXT:     }
 // CHECK-NEXT:     Relocation {
 // CHECK-NEXT:       Offset: 0x0

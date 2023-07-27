@@ -18,6 +18,7 @@
 #include "DwarfUnit.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/AsmPrinter.h"
 #include "llvm/CodeGen/DIE.h"
@@ -2548,10 +2549,13 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
   Asm->emitDwarfLengthOrOffset(TheU->getLength());
 
   // Emit the pubnames for this compilation unit.
-  for (const auto &GI : Globals) {
-    const char *Name = GI.getKeyData();
-    const DIE *Entity = GI.second;
-
+  SmallVector<std::pair<StringRef, const DIE *>, 0> Vec;
+  for (const auto &GI : Globals)
+    Vec.emplace_back(GI.first(), GI.second);
+  llvm::sort(Vec, [](auto &A, auto &B) {
+    return A.second->getOffset() < B.second->getOffset();
+  });
+  for (const auto &[Name, Entity] : Vec) {
     Asm->OutStreamer->AddComment("DIE offset");
     Asm->emitDwarfLengthOrOffset(Entity->getOffset());
 
@@ -2564,7 +2568,7 @@ void DwarfDebug::emitDebugPubSection(bool GnuStyle, StringRef Name,
     }
 
     Asm->OutStreamer->AddComment("External Name");
-    Asm->OutStreamer->emitBytes(StringRef(Name, GI.getKeyLength() + 1));
+    Asm->OutStreamer->emitBytes(StringRef(Name.data(), Name.size() + 1));
   }
 
   Asm->OutStreamer->AddComment("End Mark");
@@ -3535,7 +3539,7 @@ template <typename DataT>
 void DwarfDebug::addAccelNameImpl(const DICompileUnit &CU,
                                   AccelTable<DataT> &AppleAccel, StringRef Name,
                                   const DIE &Die) {
-  if (getAccelTableKind() == AccelTableKind::None)
+  if (getAccelTableKind() == AccelTableKind::None || Name.empty())
     return;
 
   if (getAccelTableKind() != AccelTableKind::Apple &&

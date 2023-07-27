@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "../../test/lib/Dialect/Test/TestDialect.h"
+#include "../../test/lib/Dialect/Test/TestOpsSyntax.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -39,7 +40,7 @@ TEST(Adaptor, GenericAdaptorsOperandAccess) {
     // value from the value 0.
     SmallVector<std::optional<int>> v = {0, 4};
     OIListSimple::Properties prop;
-    prop.operand_segment_sizes = builder.getDenseI32ArrayAttr({1, 0, 1});
+    llvm::copy(ArrayRef{1, 0, 1}, prop.odsOperandSegmentSizes);
     OIListSimple::GenericAdaptor<ArrayRef<std::optional<int>>> d(v, {}, prop,
                                                                  {});
     EXPECT_EQ(d.getArg0(), 0);

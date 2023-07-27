@@ -208,14 +208,20 @@ namespace dr313 { // dr313: dup 299 c++11
 #endif
 }
 
-namespace dr314 { // FIXME 314: dup 1710
-  template<typename T> struct A {
-    template<typename U> struct B {};
-  };
-  template<typename T> struct C : public A<T>::template B<T> {
-    C() : A<T>::template B<T>() {}
-  };
-}
+namespace dr314 { // dr314: no
+                  // NB: dup 1710
+template <typename T> struct A {
+  template <typename U> struct B {};
+};
+template <typename T> struct C : public A<T>::template B<T> {
+  C() : A<T>::template B<T>() {}
+};
+template <typename T> struct C2 : public A<T>::B<T> {
+  // expected-error@-1 {{use 'template' keyword to treat 'B' as a dependent template name}}
+  C2() : A<T>::B<T>() {}
+  // expected-error@-1 {{use 'template' keyword to treat 'B' as a dependent template name}}
+};
+} // namespace dr314
 
 // dr315: na
 // dr316: sup 1004
@@ -591,7 +597,7 @@ namespace dr341 {
 
 // dr342: na
 
-namespace dr343 { // FIXME 343: no
+namespace dr343 { // dr343: no
   // FIXME: dup 1710
   template<typename T> struct A {
     template<typename U> struct B {};

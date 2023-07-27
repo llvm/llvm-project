@@ -125,20 +125,6 @@ getSimplificationBuilder(mlir::Operation *op, const fir::KindMapping &kindMap) {
   return builder;
 }
 
-/// Stringify FastMathFlags set for the given \p builder in a way
-/// that the string may be used for mangling a function name.
-/// If FastMathFlags are set to 'none', then the result is an empty
-/// string.
-static std::string getFastMathFlagsString(const fir::FirOpBuilder &builder) {
-  mlir::arith::FastMathFlags flags = builder.getFastMathFlags();
-  if (flags == mlir::arith::FastMathFlags::none)
-    return {};
-
-  std::string fmfString{mlir::arith::stringifyFastMathFlags(flags)};
-  std::replace(fmfString.begin(), fmfString.end(), ',', '_');
-  return fmfString;
-}
-
 /// Generate function type for the simplified version of RTNAME(Sum) and
 /// similar functions with a fir.box<none> type returning \p elementType.
 static mlir::FunctionType genNoneBoxType(fir::FirOpBuilder &builder,
@@ -1071,7 +1057,7 @@ void SimplifyIntrinsicsPass::simplifyIntOrFloatReduction(
   mlir::SymbolRefAttr callee = call.getCalleeAttr();
 
   fir::FirOpBuilder builder{getSimplificationBuilder(call, kindMap)};
-  std::string fmfString{getFastMathFlagsString(builder)};
+  std::string fmfString{builder.getFastMathFlagsString()};
   std::string funcName =
       (mlir::Twine{callee.getLeafReference().getValue(), "x"} +
        mlir::Twine{rank} +
@@ -1204,7 +1190,7 @@ void SimplifyIntrinsicsPass::simplifyMinlocReduction(
   mlir::Value outputAlloc = outputDef->getOperand(0);
   mlir::Type outType = hlfir::getFortranElementType(outputAlloc.getType());
 
-  std::string fmfString{getFastMathFlagsString(builder)};
+  std::string fmfString{builder.getFastMathFlagsString()};
   std::string funcName =
       (mlir::Twine{callee.getLeafReference().getValue(), "x"} +
        mlir::Twine{rank} +
@@ -1298,7 +1284,7 @@ void SimplifyIntrinsicsPass::runOnOperation() {
           fir::FirOpBuilder builder{getSimplificationBuilder(op, kindMap)};
           // Stringize the builder's FastMathFlags flags for mangling
           // the generated function name.
-          std::string fmfString{getFastMathFlagsString(builder)};
+          std::string fmfString{builder.getFastMathFlagsString()};
 
           mlir::Type type = call.getResult(0).getType();
           if (!type.isa<mlir::FloatType>() && !type.isa<mlir::IntegerType>())

@@ -120,5 +120,15 @@ ScopedPythonObject<lldb::SBEvent> SWIGBridge::ToSWIGWrapper(Event *event) {
                                            SWIGTYPE_p_lldb__SBEvent);
 }
 
+PythonObject SWIGBridge::ToSWIGWrapper(
+    std::unique_ptr<lldb::SBFileSpec> file_spec_sb) {
+  return ToSWIGHelper(file_spec_sb.release(), SWIGTYPE_p_lldb__SBFileSpec);
+}
+
+PythonObject SWIGBridge::ToSWIGWrapper(
+    std::unique_ptr<lldb::SBModuleSpec> module_spec_sb) {
+  return ToSWIGHelper(module_spec_sb.release(), SWIGTYPE_p_lldb__SBModuleSpec);
+}
+
 } // namespace python
 } // namespace lldb_private

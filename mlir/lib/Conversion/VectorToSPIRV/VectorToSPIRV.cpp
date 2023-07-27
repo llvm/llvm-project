@@ -50,6 +50,29 @@ static int getNumBits(Type type) {
 
 namespace {
 
+struct VectorShapeCast final : public OpConversionPattern<vector::ShapeCastOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ShapeCastOp shapeCastOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type dstType = getTypeConverter()->convertType(shapeCastOp.getType());
+    if (!dstType)
+      return failure();
+
+    // If dstType is same as the source type or the vector size is 1, it can be
+    // directly replaced by the source.
+    if (dstType == adaptor.getSource().getType() ||
+        shapeCastOp.getResultVectorType().getNumElements() == 1) {
+      rewriter.replaceOp(shapeCastOp, adaptor.getSource());
+      return success();
+    }
+
+    // Lowering for size-n vectors when n > 1 hasn't been implemented.
+    return failure();
+  }
+};
+
 struct VectorBitcastConvert final
     : public OpConversionPattern<vector::BitCastOp> {
   using OpConversionPattern::OpConversionPattern;
@@ -551,15 +574,15 @@ private:
 
 void mlir::populateVectorToSPIRVPatterns(SPIRVTypeConverter &typeConverter,
                                          RewritePatternSet &patterns) {
-  patterns.add<
-      VectorBitcastConvert, VectorBroadcastConvert,
-      VectorExtractElementOpConvert, VectorExtractOpConvert,
-      VectorExtractStridedSliceOpConvert, VectorFmaOpConvert<spirv::GLFmaOp>,
-      VectorFmaOpConvert<spirv::CLFmaOp>, VectorInsertElementOpConvert,
-      VectorInsertOpConvert, VectorReductionPattern<GL_MAX_MIN_OPS>,
-      VectorReductionPattern<CL_MAX_MIN_OPS>, VectorInsertStridedSliceOpConvert,
-      VectorShuffleOpConvert, VectorSplatPattern>(typeConverter,
-                                                  patterns.getContext());
+  patterns.add<VectorBitcastConvert, VectorBroadcastConvert,
+               VectorExtractElementOpConvert, VectorExtractOpConvert,
+               VectorExtractStridedSliceOpConvert,
+               VectorFmaOpConvert<spirv::GLFmaOp>,
+               VectorFmaOpConvert<spirv::CLFmaOp>, VectorInsertElementOpConvert,
+               VectorInsertOpConvert, VectorReductionPattern<GL_MAX_MIN_OPS>,
+               VectorReductionPattern<CL_MAX_MIN_OPS>, VectorShapeCast,
+               VectorInsertStridedSliceOpConvert, VectorShuffleOpConvert,
+               VectorSplatPattern>(typeConverter, patterns.getContext());
 }
 
 void mlir::populateVectorReductionToSPIRVDotProductPatterns(

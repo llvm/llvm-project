@@ -81,3 +81,36 @@ func.func @test_element_addr_cleanup(%x: !fir.box<!fir.array<?x!fir.char<1,?>>>,
 // CHECK:               fir.freemem %[[VAL_11]] : !fir.heap<!fir.array<?xi32>>
 // CHECK:             }
 // CHECK:           }
+
+func.func @unordered() {
+  %c10 = arith.constant 10 : index
+  %c20 = arith.constant 20 : index
+  %0 = fir.shape %c10, %c20 : (index, index) -> !fir.shape<2>
+  hlfir.region_assign {
+    %addr = fir.undefined !fir.ref<!fir.array<10x20xf32>>
+    hlfir.yield %addr : !fir.ref<!fir.array<10x20xf32>>
+  } to {
+    hlfir.elemental_addr %0 unordered : !fir.shape<2> {
+    ^bb0(%i: index, %j: index):
+      %addr = fir.undefined !fir.ref<f32>
+      hlfir.yield %addr : !fir.ref<f32>
+    }
+  }
+  return
+}
+// CHECK-LABEL:   func.func @unordered() {
+// CHECK:           %[[VAL_0:.*]] = arith.constant 10 : index
+// CHECK:           %[[VAL_1:.*]] = arith.constant 20 : index
+// CHECK:           %[[VAL_2:.*]] = fir.shape %[[VAL_0]], %[[VAL_1]] : (index, index) -> !fir.shape<2>
+// CHECK:           hlfir.region_assign {
+// CHECK:             %[[VAL_3:.*]] = fir.undefined !fir.ref<!fir.array<10x20xf32>>
+// CHECK:             hlfir.yield %[[VAL_3]] : !fir.ref<!fir.array<10x20xf32>>
+// CHECK:           } to {
+// CHECK:             hlfir.elemental_addr %[[VAL_2]] unordered : !fir.shape<2> {
+// CHECK:             ^bb0(%[[VAL_4:.*]]: index, %[[VAL_5:.*]]: index):
+// CHECK:               %[[VAL_6:.*]] = fir.undefined !fir.ref<f32>
+// CHECK:               hlfir.yield %[[VAL_6]] : !fir.ref<f32>
+// CHECK:             }
+// CHECK:           }
+// CHECK:           return
+// CHECK:         }

@@ -123,6 +123,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    s_mov_b32 s9, s1
 ; GFX11-NEXT:    v_max3_f32 v0, v0, v1, v2
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[8:11], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %a = load volatile  float, ptr addrspace(1) %aptr, align 4
@@ -254,6 +255,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f32(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    s_mov_b32 s9, s1
 ; GFX11-NEXT:    v_max3_f32 v0, v2, v0, v1
 ; GFX11-NEXT:    buffer_store_b32 v0, off, s[8:11], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %a = load volatile float, ptr addrspace(1) %aptr, align 4
@@ -392,6 +394,7 @@ define amdgpu_kernel void @test_fmax3_olt_0_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    s_mov_b32 s9, s1
 ; GFX11-NEXT:    v_max3_f16 v0, v0, v1, v2
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
@@ -531,6 +534,7 @@ define amdgpu_kernel void @test_fmax3_olt_1_f16(ptr addrspace(1) %out, ptr addrs
 ; GFX11-NEXT:    s_mov_b32 s9, s1
 ; GFX11-NEXT:    v_max3_f16 v0, v2, v0, v1
 ; GFX11-NEXT:    buffer_store_b16 v0, off, s[8:11], 0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   %a = load volatile half, ptr addrspace(1) %aptr, align 2
@@ -593,7 +597,6 @@ define <2 x half> @no_fmax3_v2f16(<2 x half> %a, <2 x half> %b, <2 x half> %c, <
 ; GFX11-LABEL: no_fmax3_v2f16:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_pk_max_f16 v0, v0, v1
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_pk_max_f16 v0, v2, v0

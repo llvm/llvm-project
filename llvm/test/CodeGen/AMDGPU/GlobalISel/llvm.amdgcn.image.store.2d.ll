@@ -55,6 +55,7 @@ define amdgpu_ps void @image_store_f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t, fl
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v2, v[0:1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.f32.i32(float %data, i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -112,6 +113,7 @@ define amdgpu_ps void @image_store_v2f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v[2:3], v[0:1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v2f32.i32(<2 x float> %in, i32 3, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -169,6 +171,7 @@ define amdgpu_ps void @image_store_v3f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v[2:4], v[0:1], s[0:7] dmask:0x7 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v3f32.i32(<3 x float> %in, i32 7, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -226,6 +229,7 @@ define amdgpu_ps void @image_store_v4f32(<8 x i32> inreg %rsrc, i32 %s, i32 %t, 
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -283,6 +287,7 @@ define amdgpu_ps void @image_store_v4f32_dmask_0001(<8 x i32> inreg %rsrc, i32 %
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x1 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 1, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -340,6 +345,7 @@ define amdgpu_ps void @image_store_v4f32_dmask_0010(<8 x i32> inreg %rsrc, i32 %
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x2 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 2, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -397,6 +403,7 @@ define amdgpu_ps void @image_store_v4f32_dmask_0100(<8 x i32> inreg %rsrc, i32 %
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x4 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 4, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -454,6 +461,7 @@ define amdgpu_ps void @image_store_v4f32_dmask_1000(<8 x i32> inreg %rsrc, i32 %
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x8 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 8, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -511,6 +519,7 @@ define amdgpu_ps void @image_store_v4f32_dmask_0011(<8 x i32> inreg %rsrc, i32 %
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x3 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 3, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -568,6 +577,7 @@ define amdgpu_ps void @image_store_v4f32_dmask_0110(<8 x i32> inreg %rsrc, i32 %
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v[2:5], v[0:1], s[0:7] dmask:0x6 dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   call void @llvm.amdgcn.image.store.2d.v4f32.i32(<4 x float> %in, i32 6, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
@@ -632,6 +642,7 @@ define amdgpu_ps void @image_store_f32_dmask_1111(<8 x i32> inreg %rsrc, i32 inr
 ; GFX11-NEXT:    s_mov_b32 s6, s8
 ; GFX11-NEXT:    s_mov_b32 s7, s9
 ; GFX11-NEXT:    image_store v0, v[1:2], s[0:7] dmask:0xf dim:SQ_RSRC_IMG_2D unorm
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
   tail call void @llvm.amdgcn.image.store.2d.f32.i32(float %in, i32 15, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)

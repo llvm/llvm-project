@@ -1,5 +1,6 @@
 add_mlir_dialect_library(MLIRLinalgTransformOps
   DialectExtension.cpp
+  GPUHeuristics.cpp
   LinalgMatchOps.cpp
   LinalgTransformOps.cpp
   Syntax.cpp
@@ -15,6 +16,7 @@ add_mlir_dialect_library(MLIRLinalgTransformOps
   LINK_LIBS PUBLIC
   MLIRAffineDialect
   MLIRArithDialect
+  MLIRBufferizationTransforms
   MLIRFuncDialect
   MLIRIR
   MLIRLinalgDialect

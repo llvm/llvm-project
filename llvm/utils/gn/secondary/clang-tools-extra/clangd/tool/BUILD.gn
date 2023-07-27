@@ -34,5 +34,6 @@ executable("clangd") {
   sources = [
     "Check.cpp",
     "ClangdMain.cpp",
+    "ClangdToolMain.cpp",
   ]
 }

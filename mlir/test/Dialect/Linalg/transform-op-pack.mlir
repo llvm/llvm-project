@@ -593,3 +593,36 @@ transform.sequence failures(propagate) {
       : (!transform.op<"tensor.unpack">, !transform.op<"linalg.generic">) 
       -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.op<"tensor.unpack">)
 }
+
+// -----
+
+func.func @no_padding_on_packs(%A: tensor<32x32xf32>, %B: tensor<32x32xf32>, %C: tensor<32x32xf32>)
+    -> tensor<32x32xf32> {
+  %0 = linalg.matmul  ins(%A, %B: tensor<32x32xf32>, tensor<32x32xf32>)
+                     outs(%C: tensor<32x32xf32>)
+    -> tensor<32x32xf32>
+  return %0 : tensor<32x32xf32>
+}
+
+// CHECK-LABEL: no_padding_on_packs
+// CHECK: tensor.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [4, 8] 
+// CHECK-SAME:  into %{{.+}} : tensor<32x32xf32> -> tensor<8x4x4x8xf32>
+// CHECK: tensor.pack %{{.+}} outer_dims_perm = [1, 0] 
+// CHECK-SAME:  inner_dims_pos = [0, 1] inner_tiles = [8, 8] 
+// CHECK-SAME:  into %{{.+}} : tensor<32x32xf32> -> tensor<4x4x8x8xf32>
+// CHECK: tensor.pack %{{.+}} inner_dims_pos = [0, 1] inner_tiles = [4, 8] 
+// CHECK-SAME:  into %{{.+}} : tensor<32x32xf32> -> tensor<8x4x4x8xf32>
+
+transform.sequence failures(propagate) {
+  ^bb0(%arg1: !transform.any_op):
+    %0 = transform.structured.match ops{["linalg.matmul"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+    %1 = transform.structured.pack %0 packed_sizes = [4, 8, 8]
+      : (!transform.any_op) -> (!transform.op<"linalg.generic">)
+    %pack = transform.get_producer_of_operand %1[1]
+    : (!transform.op<"linalg.generic">) -> (!transform.op<"tensor.pack">)
+    %2, %pack_2, %empty_unpack_2 =
+    transform.structured.pack_transpose %pack with_compute_op(%1)
+    outer_perm = [1, 0] inner_perm = [1, 0]
+     : (!transform.op<"tensor.pack">, !transform.op<"linalg.generic">)
+    -> (!transform.op<"linalg.generic">, !transform.op<"tensor.pack">, !transform.any_op) 
+}

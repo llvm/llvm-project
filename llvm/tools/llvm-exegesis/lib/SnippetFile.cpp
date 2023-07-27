@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SnippetFile.h"
+#include "BenchmarkRunner.h"
 #include "Error.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstPrinter.h"
@@ -80,6 +81,54 @@ public:
                << "' in 'LLVM-EXEGESIS-LIVEIN " << CommentText << "'\n";
         ++InvalidComments;
       }
+      return;
+    }
+    if (CommentText.consume_front("MEM-DEF")) {
+      // LLVM-EXEGESIS-MEM-DEF <name> <size> <value>
+      SmallVector<StringRef, 3> Parts;
+      CommentText.split(Parts, ' ', -1, false);
+      if (Parts.size() != 3) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-MEM-DEF " << CommentText
+               << "', expected three parameters <NAME> <SIZE> <VALUE>";
+        ++InvalidComments;
+        return;
+      }
+      const StringRef HexValue = Parts[2].trim();
+      MemoryValue MemVal;
+      MemVal.SizeBytes = std::stol(Parts[1].trim().str());
+      if (HexValue.size() % 2 != 0) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-MEM-DEF " << CommentText
+               << "', expected <VALUE> to contain a whole number of bytes";
+      }
+      MemVal.Value = APInt(HexValue.size() * 4, HexValue, 16);
+      MemVal.Index = Result->Key.MemoryValues.size();
+      Result->Key.MemoryValues[Parts[0].trim().str()] = MemVal;
+      return;
+    }
+    if (CommentText.consume_front("MEM-MAP")) {
+      // LLVM-EXEGESIS-MEM-MAP <value name> <address>
+      SmallVector<StringRef, 2> Parts;
+      CommentText.split(Parts, ' ', -1, false);
+      if (Parts.size() != 2) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-MEM-MAP " << CommentText
+               << "', expected two parameters <VALUE NAME> <ADDRESS>";
+        ++InvalidComments;
+        return;
+      }
+      MemoryMapping MemMap;
+      MemMap.MemoryValueName = Parts[0].trim().str();
+      MemMap.Address = std::stol(Parts[1].trim().str());
+      // validate that the annotation refers to an already existing memory
+      // definition
+      auto MemValIT = Result->Key.MemoryValues.find(Parts[0].trim().str());
+      if (MemValIT == Result->Key.MemoryValues.end()) {
+        errs() << "invalid comment 'LLVM-EXEGESIS-MEM-MAP " << CommentText
+               << "', expected <VALUE NAME> to contain the name of an already "
+                  "specified memory definition";
+        ++InvalidComments;
+        return;
+      }
+      Result->Key.MemoryMappings.push_back(std::move(MemMap));
       return;
     }
   }

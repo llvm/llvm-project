@@ -305,6 +305,12 @@ protected:
     case TensorExp::Kind::kReduce:
       return compareExpression(tensorExp.children.e0, pattern.children.e0) &&
              compareExpression(tensorExp.children.e1, pattern.children.e1);
+    case TensorExp::Kind::kDenseOp: {
+      bool eq = compareExpression(tensorExp.children.e0, pattern.children.e0);
+      if (eq && tensorExp.children.e1 != sparse_tensor::detail::kInvalidId)
+        return compareExpression(tensorExp.children.e1, pattern.children.e1);
+      return eq;
+    }
     }
     llvm_unreachable("unexpected kind");
   }

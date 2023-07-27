@@ -74,6 +74,14 @@ def TosaProfileType : I32EnumAttr<"TosaProfileEnum", "Tosa profile",
   let cppNamespace = "mlir::tosa";
 }
 
+def TosaLevelType : I32EnumAttr<"TosaLevelEnum", "Tosa level",
+    [
+      I32EnumAttrCase<"None", 0, "none">,
+      I32EnumAttrCase<"EightK", 1, "8k">,
+    ]>{
+  let cppNamespace = "mlir::tosa";
+}
+
 def TosaValidation : Pass<"tosa-validate", "func::FuncOp"> {
   let summary = "Validates TOSA dialect";
   let description = [{
@@ -89,6 +97,9 @@ def TosaValidation : Pass<"tosa-validate", "func::FuncOp"> {
       Option<"StrictOperationSpecAlignment", "strict-op-spec-alignment", "bool",
              /*default=*/"false",
              "Verify if the properties of certain operations align the spec requirement">,
+      Option<"levelName", "level", "std::string",
+             /*default=*/"\"8k\"",
+             "Validate if operator parameters are within specfication for the given level">,
    ];
 }
 

@@ -37,11 +37,11 @@
 // few global locks. So, to avoid static initialization order fiasco, we
 // want the constructors of the Mutex classes to be constexprs.
 
-#if defined(__unix__)
+#if defined(__linux__)
 #include "linux/mutex.h"
 #elif defined(LIBC_TARGET_ARCH_IS_GPU)
 #include "gpu/mutex.h"
-#endif // __unix__
+#endif // __linux__
 
 namespace __llvm_libc {
 

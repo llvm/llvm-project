@@ -15,6 +15,10 @@
 
 #include "mlir/IR/OpDefinition.h"
 
+namespace mlir {
+class RewriterBase;
+} // namespace mlir
+
 /// Include the generated interface declarations.
 #include "mlir/Interfaces/LoopLikeInterface.h.inc"
 

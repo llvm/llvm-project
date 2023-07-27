@@ -34,7 +34,6 @@ define float @test_f32_sub_mul(float %x, float %y, float %z) {
 ; GFX10-LABEL: test_f32_sub_mul:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_sub_f32_e32 v0, v0, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -42,28 +41,24 @@ define float @test_f32_sub_mul(float %x, float %y, float %z) {
 ; GFX10-CONTRACT-LABEL: test_f32_sub_mul:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_fma_f32 v0, v0, v1, -v2
 ; GFX10-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-DENORM-LABEL: test_f32_sub_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_mad_f32 v0, v0, v1, -v2
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-CONTRACT-LABEL: test_f32_sub_mul:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_fma_f32 v0, v0, v1, -v2
 ; GFX11-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-DENORM-LABEL: test_f32_sub_mul:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DENORM-NEXT:    v_sub_f32_e32 v0, v0, v2
@@ -97,7 +92,6 @@ define float @test_f32_sub_mul_rhs(float %x, float %y, float %z) {
 ; GFX10-LABEL: test_f32_sub_mul_rhs:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    v_sub_f32_e32 v0, v2, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -105,28 +99,24 @@ define float @test_f32_sub_mul_rhs(float %x, float %y, float %z) {
 ; GFX10-CONTRACT-LABEL: test_f32_sub_mul_rhs:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_fma_f32 v0, -v0, v1, v2
 ; GFX10-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-DENORM-LABEL: test_f32_sub_mul_rhs:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_mad_f32 v0, -v0, v1, v2
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-CONTRACT-LABEL: test_f32_sub_mul_rhs:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_fma_f32 v0, -v0, v1, v2
 ; GFX11-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-DENORM-LABEL: test_f32_sub_mul_rhs:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_mul_f32_e32 v0, v0, v1
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DENORM-NEXT:    v_sub_f32_e32 v0, v2, v0
@@ -160,7 +150,6 @@ define half @test_half_sub_mul(half %x, half %y, half %z) {
 ; GFX10-LABEL: test_half_sub_mul:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX10-NEXT:    v_sub_f16_e32 v0, v0, v2
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -168,14 +157,12 @@ define half @test_half_sub_mul(half %x, half %y, half %z) {
 ; GFX10-CONTRACT-LABEL: test_half_sub_mul:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_fma_f16 v0, v0, v1, -v2
 ; GFX10-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-DENORM-LABEL: test_half_sub_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX10-DENORM-NEXT:    v_sub_f16_e32 v0, v0, v2
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
@@ -183,14 +170,12 @@ define half @test_half_sub_mul(half %x, half %y, half %z) {
 ; GFX11-CONTRACT-LABEL: test_half_sub_mul:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_fma_f16 v0, v0, v1, -v2
 ; GFX11-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-DENORM-LABEL: test_half_sub_mul:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DENORM-NEXT:    v_sub_f16_e32 v0, v0, v2
@@ -224,7 +209,6 @@ define half @test_half_sub_mul_rhs(half %x, half %y, half %z) {
 ; GFX10-LABEL: test_half_sub_mul_rhs:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX10-NEXT:    v_sub_f16_e32 v0, v2, v0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -232,14 +216,12 @@ define half @test_half_sub_mul_rhs(half %x, half %y, half %z) {
 ; GFX10-CONTRACT-LABEL: test_half_sub_mul_rhs:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_fma_f16 v0, -v0, v1, v2
 ; GFX10-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-DENORM-LABEL: test_half_sub_mul_rhs:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX10-DENORM-NEXT:    v_sub_f16_e32 v0, v2, v0
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
@@ -247,14 +229,12 @@ define half @test_half_sub_mul_rhs(half %x, half %y, half %z) {
 ; GFX11-CONTRACT-LABEL: test_half_sub_mul_rhs:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_fma_f16 v0, -v0, v1, v2
 ; GFX11-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-DENORM-LABEL: test_half_sub_mul_rhs:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_mul_f16_e32 v0, v0, v1
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DENORM-NEXT:    v_sub_f16_e32 v0, v2, v0
@@ -289,7 +269,6 @@ define double @test_double_sub_mul(double %x, double %y, double %z) {
 ; GFX10-LABEL: test_double_sub_mul:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX10-NEXT:    v_add_f64 v[0:1], v[0:1], -v[4:5]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -297,14 +276,12 @@ define double @test_double_sub_mul(double %x, double %y, double %z) {
 ; GFX10-CONTRACT-LABEL: test_double_sub_mul:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[4:5]
 ; GFX10-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-DENORM-LABEL: test_double_sub_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX10-DENORM-NEXT:    v_add_f64 v[0:1], v[0:1], -v[4:5]
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
@@ -312,14 +289,12 @@ define double @test_double_sub_mul(double %x, double %y, double %z) {
 ; GFX11-CONTRACT-LABEL: test_double_sub_mul:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_fma_f64 v[0:1], v[0:1], v[2:3], -v[4:5]
 ; GFX11-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-DENORM-LABEL: test_double_sub_mul:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DENORM-NEXT:    v_add_f64 v[0:1], v[0:1], -v[4:5]
@@ -354,7 +329,6 @@ define double @test_double_sub_mul_rhs(double %x, double %y, double %z) {
 ; GFX10-LABEL: test_double_sub_mul_rhs:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX10-NEXT:    v_add_f64 v[0:1], v[4:5], -v[0:1]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -362,14 +336,12 @@ define double @test_double_sub_mul_rhs(double %x, double %y, double %z) {
 ; GFX10-CONTRACT-LABEL: test_double_sub_mul_rhs:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], v[4:5]
 ; GFX10-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-DENORM-LABEL: test_double_sub_mul_rhs:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX10-DENORM-NEXT:    v_add_f64 v[0:1], v[4:5], -v[0:1]
 ; GFX10-DENORM-NEXT:    s_setpc_b64 s[30:31]
@@ -377,14 +349,12 @@ define double @test_double_sub_mul_rhs(double %x, double %y, double %z) {
 ; GFX11-CONTRACT-LABEL: test_double_sub_mul_rhs:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[2:3], v[4:5]
 ; GFX11-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-DENORM-LABEL: test_double_sub_mul_rhs:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_mul_f64 v[0:1], v[0:1], v[2:3]
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-DENORM-NEXT:    v_add_f64 v[0:1], v[4:5], -v[0:1]
@@ -430,7 +400,6 @@ define <4 x float> @test_v4f32_sub_mul(<4 x float> %x, <4 x float> %y, <4 x floa
 ; GFX10-LABEL: test_v4f32_sub_mul:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v5
 ; GFX10-NEXT:    v_mul_f32_e32 v2, v2, v6
@@ -444,7 +413,6 @@ define <4 x float> @test_v4f32_sub_mul(<4 x float> %x, <4 x float> %y, <4 x floa
 ; GFX10-CONTRACT-LABEL: test_v4f32_sub_mul:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_fma_f32 v0, v0, v4, -v8
 ; GFX10-CONTRACT-NEXT:    v_fma_f32 v1, v1, v5, -v9
 ; GFX10-CONTRACT-NEXT:    v_fma_f32 v2, v2, v6, -v10
@@ -454,7 +422,6 @@ define <4 x float> @test_v4f32_sub_mul(<4 x float> %x, <4 x float> %y, <4 x floa
 ; GFX10-DENORM-LABEL: test_v4f32_sub_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_mad_f32 v0, v0, v4, -v8
 ; GFX10-DENORM-NEXT:    v_mad_f32 v1, v1, v5, -v9
 ; GFX10-DENORM-NEXT:    v_mad_f32 v2, v2, v6, -v10
@@ -464,7 +431,6 @@ define <4 x float> @test_v4f32_sub_mul(<4 x float> %x, <4 x float> %y, <4 x floa
 ; GFX11-CONTRACT-LABEL: test_v4f32_sub_mul:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_fma_f32 v0, v0, v4, -v8
 ; GFX11-CONTRACT-NEXT:    v_fma_f32 v1, v1, v5, -v9
 ; GFX11-CONTRACT-NEXT:    v_fma_f32 v2, v2, v6, -v10
@@ -474,7 +440,6 @@ define <4 x float> @test_v4f32_sub_mul(<4 x float> %x, <4 x float> %y, <4 x floa
 ; GFX11-DENORM-LABEL: test_v4f32_sub_mul:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_dual_mul_f32 v0, v0, v4 :: v_dual_mul_f32 v1, v1, v5
 ; GFX11-DENORM-NEXT:    v_dual_mul_f32 v2, v2, v6 :: v_dual_mul_f32 v3, v3, v7
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -522,7 +487,6 @@ define <4 x float> @test_v4f32_sub_mul_rhs(<4 x float> %x, <4 x float> %y, <4 x 
 ; GFX10-LABEL: test_v4f32_sub_mul_rhs:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f32_e32 v0, v0, v4
 ; GFX10-NEXT:    v_mul_f32_e32 v1, v1, v5
 ; GFX10-NEXT:    v_mul_f32_e32 v2, v2, v6
@@ -536,7 +500,6 @@ define <4 x float> @test_v4f32_sub_mul_rhs(<4 x float> %x, <4 x float> %y, <4 x 
 ; GFX10-CONTRACT-LABEL: test_v4f32_sub_mul_rhs:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_fma_f32 v0, -v0, v4, v8
 ; GFX10-CONTRACT-NEXT:    v_fma_f32 v1, -v1, v5, v9
 ; GFX10-CONTRACT-NEXT:    v_fma_f32 v2, -v2, v6, v10
@@ -546,7 +509,6 @@ define <4 x float> @test_v4f32_sub_mul_rhs(<4 x float> %x, <4 x float> %y, <4 x 
 ; GFX10-DENORM-LABEL: test_v4f32_sub_mul_rhs:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_mad_f32 v0, -v0, v4, v8
 ; GFX10-DENORM-NEXT:    v_mad_f32 v1, -v1, v5, v9
 ; GFX10-DENORM-NEXT:    v_mad_f32 v2, -v2, v6, v10
@@ -556,7 +518,6 @@ define <4 x float> @test_v4f32_sub_mul_rhs(<4 x float> %x, <4 x float> %y, <4 x 
 ; GFX11-CONTRACT-LABEL: test_v4f32_sub_mul_rhs:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_fma_f32 v0, -v0, v4, v8
 ; GFX11-CONTRACT-NEXT:    v_fma_f32 v1, -v1, v5, v9
 ; GFX11-CONTRACT-NEXT:    v_fma_f32 v2, -v2, v6, v10
@@ -566,7 +527,6 @@ define <4 x float> @test_v4f32_sub_mul_rhs(<4 x float> %x, <4 x float> %y, <4 x 
 ; GFX11-DENORM-LABEL: test_v4f32_sub_mul_rhs:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_dual_mul_f32 v0, v0, v4 :: v_dual_mul_f32 v1, v1, v5
 ; GFX11-DENORM-NEXT:    v_dual_mul_f32 v2, v2, v6 :: v_dual_mul_f32 v3, v3, v7
 ; GFX11-DENORM-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
@@ -616,7 +576,6 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX10-LABEL: test_v4f16_sub_mul:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_mul_f16 v0, v0, v2
 ; GFX10-NEXT:    v_pk_mul_f16 v1, v1, v3
 ; GFX10-NEXT:    v_sub_f16_e32 v2, v0, v4
@@ -630,7 +589,6 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX10-CONTRACT-LABEL: test_v4f16_sub_mul:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_pk_fma_f16 v0, v0, v2, v4 neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX10-CONTRACT-NEXT:    v_pk_fma_f16 v1, v1, v3, v5 neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX10-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
@@ -638,7 +596,6 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX10-DENORM-LABEL: test_v4f16_sub_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_pk_mul_f16 v0, v0, v2
 ; GFX10-DENORM-NEXT:    v_pk_mul_f16 v1, v1, v3
 ; GFX10-DENORM-NEXT:    v_sub_f16_e32 v2, v0, v4
@@ -652,7 +609,6 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX11-CONTRACT-LABEL: test_v4f16_sub_mul:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_pk_fma_f16 v0, v0, v2, v4 neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX11-CONTRACT-NEXT:    v_pk_fma_f16 v1, v1, v3, v5 neg_lo:[0,0,1] neg_hi:[0,0,1]
 ; GFX11-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
@@ -660,7 +616,6 @@ define <4 x half> @test_v4f16_sub_mul(<4 x half> %x, <4 x half> %y, <4 x half> %
 ; GFX11-DENORM-LABEL: test_v4f16_sub_mul:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_pk_mul_f16 v0, v0, v2
 ; GFX11-DENORM-NEXT:    v_pk_mul_f16 v1, v1, v3
 ; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
@@ -720,7 +675,6 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX10-LABEL: test_v4f16_sub_mul_rhs:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_pk_mul_f16 v0, v0, v2
 ; GFX10-NEXT:    v_pk_mul_f16 v1, v1, v3
 ; GFX10-NEXT:    v_sub_f16_e32 v2, v4, v0
@@ -734,7 +688,6 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX10-CONTRACT-LABEL: test_v4f16_sub_mul_rhs:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_pk_fma_f16 v0, v0, v2, v4 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX10-CONTRACT-NEXT:    v_pk_fma_f16 v1, v1, v3, v5 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX10-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
@@ -742,7 +695,6 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX10-DENORM-LABEL: test_v4f16_sub_mul_rhs:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_pk_mul_f16 v0, v0, v2
 ; GFX10-DENORM-NEXT:    v_pk_mul_f16 v1, v1, v3
 ; GFX10-DENORM-NEXT:    v_sub_f16_e32 v2, v4, v0
@@ -756,7 +708,6 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX11-CONTRACT-LABEL: test_v4f16_sub_mul_rhs:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_pk_fma_f16 v0, v0, v2, v4 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX11-CONTRACT-NEXT:    v_pk_fma_f16 v1, v1, v3, v5 neg_lo:[1,0,0] neg_hi:[1,0,0]
 ; GFX11-CONTRACT-NEXT:    s_setpc_b64 s[30:31]
@@ -764,7 +715,6 @@ define <4 x half> @test_v4f16_sub_mul_rhs(<4 x half> %x, <4 x half> %y, <4 x hal
 ; GFX11-DENORM-LABEL: test_v4f16_sub_mul_rhs:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_pk_mul_f16 v0, v0, v2
 ; GFX11-DENORM-NEXT:    v_pk_mul_f16 v1, v1, v3
 ; GFX11-DENORM-NEXT:    v_lshrrev_b32_e32 v2, 16, v4
@@ -826,7 +776,6 @@ define <4 x double> @test_v4f64_sub_mul(<4 x double> %x, <4 x double> %y, <4 x d
 ; GFX10-LABEL: test_v4f64_sub_mul:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], v[8:9]
 ; GFX10-NEXT:    v_mul_f64 v[2:3], v[2:3], v[10:11]
 ; GFX10-NEXT:    v_mul_f64 v[4:5], v[4:5], v[12:13]
@@ -840,7 +789,6 @@ define <4 x double> @test_v4f64_sub_mul(<4 x double> %x, <4 x double> %y, <4 x d
 ; GFX10-CONTRACT-LABEL: test_v4f64_sub_mul:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_fma_f64 v[0:1], v[0:1], v[8:9], -v[16:17]
 ; GFX10-CONTRACT-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], -v[18:19]
 ; GFX10-CONTRACT-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], -v[20:21]
@@ -850,7 +798,6 @@ define <4 x double> @test_v4f64_sub_mul(<4 x double> %x, <4 x double> %y, <4 x d
 ; GFX10-DENORM-LABEL: test_v4f64_sub_mul:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_mul_f64 v[0:1], v[0:1], v[8:9]
 ; GFX10-DENORM-NEXT:    v_mul_f64 v[2:3], v[2:3], v[10:11]
 ; GFX10-DENORM-NEXT:    v_mul_f64 v[4:5], v[4:5], v[12:13]
@@ -864,7 +811,6 @@ define <4 x double> @test_v4f64_sub_mul(<4 x double> %x, <4 x double> %y, <4 x d
 ; GFX11-CONTRACT-LABEL: test_v4f64_sub_mul:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_fma_f64 v[0:1], v[0:1], v[8:9], -v[16:17]
 ; GFX11-CONTRACT-NEXT:    v_fma_f64 v[2:3], v[2:3], v[10:11], -v[18:19]
 ; GFX11-CONTRACT-NEXT:    v_fma_f64 v[4:5], v[4:5], v[12:13], -v[20:21]
@@ -874,7 +820,6 @@ define <4 x double> @test_v4f64_sub_mul(<4 x double> %x, <4 x double> %y, <4 x d
 ; GFX11-DENORM-LABEL: test_v4f64_sub_mul:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_mul_f64 v[0:1], v[0:1], v[8:9]
 ; GFX11-DENORM-NEXT:    v_mul_f64 v[2:3], v[2:3], v[10:11]
 ; GFX11-DENORM-NEXT:    v_mul_f64 v[4:5], v[4:5], v[12:13]
@@ -931,7 +876,6 @@ define <4 x double> @test_v4f64_sub_mul_rhs(<4 x double> %x, <4 x double> %y, <4
 ; GFX10-LABEL: test_v4f64_sub_mul_rhs:
 ; GFX10:       ; %bb.0: ; %.entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mul_f64 v[0:1], v[0:1], v[8:9]
 ; GFX10-NEXT:    v_mul_f64 v[2:3], v[2:3], v[10:11]
 ; GFX10-NEXT:    v_mul_f64 v[4:5], v[4:5], v[12:13]
@@ -945,7 +889,6 @@ define <4 x double> @test_v4f64_sub_mul_rhs(<4 x double> %x, <4 x double> %y, <4
 ; GFX10-CONTRACT-LABEL: test_v4f64_sub_mul_rhs:
 ; GFX10-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX10-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-CONTRACT-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[8:9], v[16:17]
 ; GFX10-CONTRACT-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[10:11], v[18:19]
 ; GFX10-CONTRACT-NEXT:    v_fma_f64 v[4:5], -v[4:5], v[12:13], v[20:21]
@@ -955,7 +898,6 @@ define <4 x double> @test_v4f64_sub_mul_rhs(<4 x double> %x, <4 x double> %y, <4
 ; GFX10-DENORM-LABEL: test_v4f64_sub_mul_rhs:
 ; GFX10-DENORM:       ; %bb.0: ; %.entry
 ; GFX10-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-DENORM-NEXT:    v_mul_f64 v[0:1], v[0:1], v[8:9]
 ; GFX10-DENORM-NEXT:    v_mul_f64 v[2:3], v[2:3], v[10:11]
 ; GFX10-DENORM-NEXT:    v_mul_f64 v[4:5], v[4:5], v[12:13]
@@ -969,7 +911,6 @@ define <4 x double> @test_v4f64_sub_mul_rhs(<4 x double> %x, <4 x double> %y, <4
 ; GFX11-CONTRACT-LABEL: test_v4f64_sub_mul_rhs:
 ; GFX11-CONTRACT:       ; %bb.0: ; %.entry
 ; GFX11-CONTRACT-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-CONTRACT-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-CONTRACT-NEXT:    v_fma_f64 v[0:1], -v[0:1], v[8:9], v[16:17]
 ; GFX11-CONTRACT-NEXT:    v_fma_f64 v[2:3], -v[2:3], v[10:11], v[18:19]
 ; GFX11-CONTRACT-NEXT:    v_fma_f64 v[4:5], -v[4:5], v[12:13], v[20:21]
@@ -979,7 +920,6 @@ define <4 x double> @test_v4f64_sub_mul_rhs(<4 x double> %x, <4 x double> %y, <4
 ; GFX11-DENORM-LABEL: test_v4f64_sub_mul_rhs:
 ; GFX11-DENORM:       ; %bb.0: ; %.entry
 ; GFX11-DENORM-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-DENORM-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-DENORM-NEXT:    v_mul_f64 v[0:1], v[0:1], v[8:9]
 ; GFX11-DENORM-NEXT:    v_mul_f64 v[2:3], v[2:3], v[10:11]
 ; GFX11-DENORM-NEXT:    v_mul_f64 v[4:5], v[4:5], v[12:13]

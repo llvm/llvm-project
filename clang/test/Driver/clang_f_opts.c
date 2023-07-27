@@ -302,7 +302,6 @@
 // RUN:     -fno-reorder-blocks -freorder-blocks                              \
 // RUN:     -fno-schedule-insns2 -fschedule-insns2                            \
 // RUN:     -fno-stack-check                                                  \
-// RUN:     -fno-check-new -fcheck-new                                        \
 // RUN:     -ffriend-injection                                                \
 // RUN:     -fno-implement-inlines -fimplement-inlines                        \
 // RUN:     -fstack-check                                                     \
@@ -425,7 +424,6 @@
 // CHECK-WARNING-DAG: optimization flag '-fwhole-program' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fcaller-saves' is not supported
 // CHECK-WARNING-DAG: optimization flag '-freorder-blocks' is not supported
-// CHECK-WARNING-DAG: optimization flag '-ffat-lto-objects' is not supported
 // CHECK-WARNING-DAG: optimization flag '-fmerge-constants' is not supported
 // CHECK-WARNING-DAG: optimization flag '-finline-small-functions' is not supported
 // CHECK-WARNING-DAG: optimization flag '-ftree-dce' is not supported
@@ -543,7 +541,7 @@
 // RUN: %clang -### -S -target x86_64-unknown-linux -fno-record-command-line -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
 // RUN: %clang -### -S -target x86_64-unknown-linux -frecord-command-line -fno-record-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
 // Test with a couple examples of non-ELF object file formats
-// RUN: %clang -### -S -target x86_64-unknown-macosx -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ERROR %s
+// RUN: %clang -### -S -target x86_64-unknown-macosx -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
 // RUN: %clang -### -S -target x86_64-unknown-windows -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ERROR %s
 // CHECK-RECORD-GCC-SWITCHES: "-record-command-line"
 // CHECK-NO-RECORD-GCC-SWITCHES-NOT: "-record-command-line"

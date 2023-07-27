@@ -9,9 +9,6 @@
 // UNSUPPORTED: no-localization
 // UNSUPPORTED: GCC-ALWAYS_INLINE-FIXME
 
-// TODO FMT Investigate Windows issues.
-// UNSUPPORTED: msvc, target={{.+}}-windows-gnu
-
 // XFAIL: LIBCXX-FREEBSD-FIXME
 
 // XFAIL: availability-fp_to_chars-missing
@@ -293,7 +290,7 @@ static void test_valid_values() {
         std::chrono::hh_mm_ss(std::chrono::duration<double>(3661.123456)));
 
   // Use supplied locale (ja_JP). This locale has a different alternate.
-#if defined(__APPLE__) || defined(_AIX)
+#if defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='00'\t"
@@ -314,6 +311,10 @@ static void test_valid_values() {
            "%r='12:00:00 AM'\t"
            "%X='00時00分00秒'\t"
            "%EX='00時00分00秒'\t"
+#  elif defined(_WIN32)
+           "%r='0:00:00'\t"
+           "%X='0:00:00'\t"
+           "%EX='0:00:00'\t"
 #  else
            "%r='午前12:00:00'\t"
            "%X='00:00:00'\t"
@@ -343,6 +344,10 @@ static void test_valid_values() {
            "%r='11:31:30 PM'\t"
            "%X='23時31分30秒'\t"
            "%EX='23時31分30秒'\t"
+#  elif defined(_WIN32)
+           "%r='23:31:30'\t"
+           "%X='23:31:30'\t"
+           "%EX='23:31:30'\t"
 #  else
            "%r='午後11:31:30'\t"
            "%X='23:31:30'\t"
@@ -372,6 +377,10 @@ static void test_valid_values() {
            "%r='03:02:01 AM'\t"
            "%X='03時02分01秒'\t"
            "%EX='03時02分01秒'\t"
+#  elif defined(_WIN32)
+           "%r='3:02:01'\t"
+           "%X='3:02:01'\t"
+           "%EX='3:02:01'\t"
 #  else
            "%r='午前03:02:01'\t"
            "%X='03:02:01'\t"
@@ -401,6 +410,10 @@ static void test_valid_values() {
            "%r='01:01:01 AM'\t"
            "%X='01時01分01秒'\t"
            "%EX='01時01分01秒'\t"
+#  elif defined(_WIN32)
+           "%r='1:01:01'\t"
+           "%X='1:01:01'\t"
+           "%EX='1:01:01'\t"
 #  else
            "%r='午前01:01:01'\t"
            "%X='01:01:01'\t"
@@ -409,7 +422,7 @@ static void test_valid_values() {
            "\n"),
         lfmt,
         std::chrono::hh_mm_ss(std::chrono::duration<double>(3661.123456)));
-#else  // defined(__APPLE__) || defined(_AIX)
+#else  // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
   check(loc,
         SV("%H='00'\t"
            "%OH='〇'\t"
@@ -486,7 +499,7 @@ static void test_valid_values() {
            "\n"),
         lfmt,
         std::chrono::hh_mm_ss(std::chrono::duration<double>(3661.123456)));
-#endif // defined(__APPLE__) || defined(_AIX)
+#endif // defined(__APPLE__) || defined(_AIX) || defined(_WIN32)
 
   std::locale::global(std::locale::classic());
 }
@@ -497,20 +510,20 @@ static void test_invalid_values() {
 
   // This looks odd, however the 24 hours is not valid for a 24 hour clock.
   // TODO FMT discuss what the "proper" behaviour is.
-  check_exception("formatting a hour needs a valid value", SV("{:%H"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%OH"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%I"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%OI"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%H"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%OH"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%I"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%OI"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%M}"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%OM}"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%S}"), std::chrono::hh_mm_ss{24h});
   check(SV("00"), SV("{:%OS}"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%p"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%R"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%T"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%r"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%X"), std::chrono::hh_mm_ss{24h});
-  check_exception("formatting a hour needs a valid value", SV("{:%EX"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%p"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%R"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%T"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%r"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%X"), std::chrono::hh_mm_ss{24h});
+  check_exception("Formatting a hour needs a valid value", SV("{:%EX"), std::chrono::hh_mm_ss{24h});
 }
 
 template <class CharT>
@@ -537,14 +550,13 @@ static void test() {
        SV("EX")},
       std::chrono::hh_mm_ss{0ms});
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:A"), std::chrono::hh_mm_ss{0ms});
-  check_exception("The chrono-specs contains a '{'", SV("{:%%{"), std::chrono::hh_mm_ss{0ms});
-  check_exception(
-      "End of input while parsing the modifier chrono conversion-spec", SV("{:%"), std::chrono::hh_mm_ss{0ms});
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:A"), std::chrono::hh_mm_ss{0ms});
+  check_exception("The chrono specifiers contain a '{'", SV("{:%%{"), std::chrono::hh_mm_ss{0ms});
+  check_exception("End of input while parsing a conversion specifier", SV("{:%"), std::chrono::hh_mm_ss{0ms});
   check_exception("End of input while parsing the modifier E", SV("{:%E"), std::chrono::hh_mm_ss{0ms});
   check_exception("End of input while parsing the modifier O", SV("{:%O"), std::chrono::hh_mm_ss{0ms});
 
-  check_exception("Expected '%' or '}' in the chrono format-string", SV("{:.3}"), std::chrono::hh_mm_ss{0ms});
+  check_exception("The format specifier expects a '%' or a '}'", SV("{:.3}"), std::chrono::hh_mm_ss{0ms});
 }
 
 int main(int, char**) {

@@ -123,7 +123,7 @@ private:
   bool checkTag(const MarkupNode &Node) const;
   bool checkNumFields(const MarkupNode &Element, size_t Size) const;
   bool checkNumFieldsAtLeast(const MarkupNode &Element, size_t Size) const;
-  bool checkNumFieldsAtMost(const MarkupNode &Element, size_t Size) const;
+  void warnNumFieldsAtMost(const MarkupNode &Element, size_t Size) const;
 
   void reportTypeError(StringRef Str, StringRef TypeName) const;
   void reportLocation(StringRef::iterator Loc) const;

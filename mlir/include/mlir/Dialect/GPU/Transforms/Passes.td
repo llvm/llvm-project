@@ -20,7 +20,7 @@ def GpuLaunchSinkIndexComputations : Pass<"gpu-launch-sink-index-computations"> 
 def GpuKernelOutlining : Pass<"gpu-kernel-outlining", "ModuleOp"> {
   let summary = "Outline gpu.launch bodies to kernel functions";
   let constructor = "mlir::createGpuKernelOutliningPass()";
-  let dependentDialects = ["mlir::DLTIDialect"];
+  let dependentDialects = ["mlir::DLTIDialect", "cf::ControlFlowDialect"];
 }
 
 def GpuAsyncRegionPass : Pass<"gpu-async-region", "func::FuncOp"> {

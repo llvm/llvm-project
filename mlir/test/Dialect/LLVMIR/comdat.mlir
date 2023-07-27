@@ -13,4 +13,3 @@ llvm.comdat @__llvm_comdat {
   // CHECK: llvm.comdat_selector @samesize_comdat samesize
   llvm.comdat_selector @samesize_comdat samesize
 }
-

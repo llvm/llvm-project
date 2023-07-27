@@ -306,3 +306,22 @@ namespace DependentCTAD {
     f<B>(A<B(0)>()); // OK
   }
 }
+
+namespace GH48731 {
+template <int> using N = int;
+struct X { template<typename T> void f(); };
+template<int ...Is> decltype((X().f<N<Is>>(), ...)) x;
+template<int ...Is> decltype(((new X())->f<N<Is>>(), ...)) y;
+
+struct A {};
+template<int> using Tfoo = A;
+template<int ...Ns> void foo(A a) {
+  (a.~Tfoo<Ns>(), ...);
+}
+
+struct B { operator int(); };
+template<int> using Tbar = int;
+template<int ...Ns> void bar(B b) {
+  (b.operator Tbar<Ns>(), ...);
+}
+}

@@ -2969,48 +2969,48 @@ define i32 @test_widening_instr_mull_64(ptr %p1, ptr %p2, i32 %h) {
 ; CHECK-BE-NEXT:    ld1 { v6.4s }, [x8]
 ; CHECK-BE-NEXT:    add x8, x0, #96
 ; CHECK-BE-NEXT:    tbl v7.16b, { v4.16b }, v3.16b
-; CHECK-BE-NEXT:    tbl v18.16b, { v4.16b }, v1.16b
-; CHECK-BE-NEXT:    ld1 { v17.4s }, [x1]
+; CHECK-BE-NEXT:    tbl v17.16b, { v4.16b }, v1.16b
+; CHECK-BE-NEXT:    ld1 { v20.4s }, [x1]
 ; CHECK-BE-NEXT:    tbl v16.16b, { v4.16b }, v0.16b
 ; CHECK-BE-NEXT:    tbl v4.16b, { v4.16b }, v2.16b
-; CHECK-BE-NEXT:    ld1 { v19.4s }, [x9]
-; CHECK-BE-NEXT:    rev32 v20.8b, v7.8b
+; CHECK-BE-NEXT:    ld1 { v18.4s }, [x9]
+; CHECK-BE-NEXT:    rev32 v19.8b, v7.8b
 ; CHECK-BE-NEXT:    add x9, x0, #32
 ; CHECK-BE-NEXT:    ext v23.16b, v6.16b, v6.16b, #8
-; CHECK-BE-NEXT:    rev32 v22.8b, v18.8b
+; CHECK-BE-NEXT:    rev32 v22.8b, v17.8b
 ; CHECK-BE-NEXT:    ext v7.16b, v7.16b, v7.16b, #8
 ; CHECK-BE-NEXT:    ext v24.16b, v4.16b, v4.16b, #8
-; CHECK-BE-NEXT:    umull v6.2d, v20.2s, v6.2s
-; CHECK-BE-NEXT:    umull v20.2d, v22.2s, v17.2s
-; CHECK-BE-NEXT:    ext v22.16b, v19.16b, v19.16b, #8
+; CHECK-BE-NEXT:    umull v6.2d, v19.2s, v6.2s
+; CHECK-BE-NEXT:    umull v19.2d, v22.2s, v20.2s
+; CHECK-BE-NEXT:    ext v22.16b, v18.16b, v18.16b, #8
 ; CHECK-BE-NEXT:    ext v21.16b, v5.16b, v5.16b, #8
 ; CHECK-BE-NEXT:    st1 { v6.2d }, [x8]
 ; CHECK-BE-NEXT:    rev32 v6.8b, v7.8b
-; CHECK-BE-NEXT:    ext v7.16b, v18.16b, v18.16b, #8
-; CHECK-BE-NEXT:    rev32 v18.8b, v16.8b
+; CHECK-BE-NEXT:    ext v7.16b, v17.16b, v17.16b, #8
+; CHECK-BE-NEXT:    rev32 v17.8b, v16.8b
 ; CHECK-BE-NEXT:    ext v16.16b, v16.16b, v16.16b, #8
 ; CHECK-BE-NEXT:    add x8, x0, #112
-; CHECK-BE-NEXT:    st1 { v20.2d }, [x9]
-; CHECK-BE-NEXT:    rev32 v20.8b, v24.8b
+; CHECK-BE-NEXT:    st1 { v19.2d }, [x9]
+; CHECK-BE-NEXT:    rev32 v19.8b, v24.8b
 ; CHECK-BE-NEXT:    umull v6.2d, v6.2s, v23.2s
 ; CHECK-BE-NEXT:    rev32 v4.8b, v4.8b
-; CHECK-BE-NEXT:    umull v5.2d, v18.2s, v5.2s
+; CHECK-BE-NEXT:    umull v5.2d, v17.2s, v5.2s
 ; CHECK-BE-NEXT:    add x9, x0, #80
-; CHECK-BE-NEXT:    ext v17.16b, v17.16b, v17.16b, #8
-; CHECK-BE-NEXT:    umull v18.2d, v20.2s, v22.2s
+; CHECK-BE-NEXT:    rev32 v7.8b, v7.8b
+; CHECK-BE-NEXT:    rev32 v16.8b, v16.8b
 ; CHECK-BE-NEXT:    st1 { v6.2d }, [x8]
-; CHECK-BE-NEXT:    rev32 v6.8b, v7.8b
-; CHECK-BE-NEXT:    rev32 v7.8b, v16.8b
-; CHECK-BE-NEXT:    st1 { v5.2d }, [x0]
-; CHECK-BE-NEXT:    umull v4.2d, v4.2s, v19.2s
 ; CHECK-BE-NEXT:    add x8, x0, #48
-; CHECK-BE-NEXT:    st1 { v18.2d }, [x9]
+; CHECK-BE-NEXT:    ext v6.16b, v20.16b, v20.16b, #8
+; CHECK-BE-NEXT:    st1 { v5.2d }, [x0]
+; CHECK-BE-NEXT:    umull v17.2d, v19.2s, v22.2s
+; CHECK-BE-NEXT:    umull v4.2d, v4.2s, v18.2s
+; CHECK-BE-NEXT:    umull v5.2d, v7.2s, v6.2s
+; CHECK-BE-NEXT:    umull v6.2d, v16.2s, v21.2s
+; CHECK-BE-NEXT:    st1 { v17.2d }, [x9]
 ; CHECK-BE-NEXT:    add x9, x0, #16
-; CHECK-BE-NEXT:    umull v5.2d, v6.2s, v17.2s
 ; CHECK-BE-NEXT:    add x0, x0, #64
-; CHECK-BE-NEXT:    umull v6.2d, v7.2s, v21.2s
-; CHECK-BE-NEXT:    st1 { v4.2d }, [x0]
 ; CHECK-BE-NEXT:    st1 { v5.2d }, [x8]
+; CHECK-BE-NEXT:    st1 { v4.2d }, [x0]
 ; CHECK-BE-NEXT:    st1 { v6.2d }, [x9]
 ; CHECK-BE-NEXT:    b.ne .LBB25_1
 ; CHECK-BE-NEXT:  // %bb.2: // %exit

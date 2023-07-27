@@ -22,11 +22,16 @@ else:
   ret i1 0
 }
 
-; FIXME: At the moment, the function is incorrectly simplified to unreachable.
 define i32 @test() {
 ; CHECK-LABEL: define i32 @test() {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    unreachable
+; CHECK-NEXT:    br label [[THEN_I:%.*]]
+; CHECK:       then.i:
+; CHECK-NEXT:    [[RES_I:%.*]] = call i1 @cond()
+; CHECK-NEXT:    br label [[CHECK_COND_EXIT:%.*]]
+; CHECK:       check_cond.exit:
+; CHECK-NEXT:    call void @llvm.assume(i1 [[RES_I]])
+; CHECK-NEXT:    ret i32 0
 ;
 entry:
   %a = alloca i32, align 4

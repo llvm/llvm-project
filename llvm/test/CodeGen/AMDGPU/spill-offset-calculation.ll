@@ -117,16 +117,16 @@ define void @test_sgpr_offset_function_scavenge_fail_func() #2 {
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x1004
-; MUBUF-NEXT:    buffer_store_dword v0, v1, s[0:3], s32 offen ; 4-byte Folded Spill
+; MUBUF-NEXT:    s_add_i32 s10, s32, 0x40100
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s10 ; 4-byte Folded Spill
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x1004
-; MUBUF-NEXT:    buffer_load_dword v0, v1, s[0:3], s32 offen ; 4-byte Folded Reload
+; MUBUF-NEXT:    s_add_i32 s10, s32, 0x40100
+; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s10 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
@@ -199,16 +199,15 @@ define amdgpu_kernel void @test_sgpr_offset_function_scavenge_fail_kernel() #3 {
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], 0 offset:8 glc
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x1004
-; MUBUF-NEXT:    buffer_store_dword v0, v1, s[0:3], 0 offen ; 4-byte Folded Spill
+; MUBUF-NEXT:    s_mov_b32 s10, 0x40100
+; MUBUF-NEXT:    buffer_store_dword v0, off, s[0:3], s10 ; 4-byte Folded Spill
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
-; MUBUF-NEXT:    v_mov_b32_e32 v1, 0x1004
-; MUBUF-NEXT:    buffer_load_dword v0, v1, s[0:3], 0 offen ; 4-byte Folded Reload
+; MUBUF-NEXT:    buffer_load_dword v0, off, s[0:3], s10 ; 4-byte Folded Reload
 ; MUBUF-NEXT:    s_waitcnt vmcnt(0)
 ; MUBUF-NEXT:    ;;#ASMSTART
 ; MUBUF-NEXT:    ;;#ASMEND
@@ -637,5 +636,5 @@ entry:
 
 attributes #0 = { nounwind }
 attributes #1 = { nounwind "amdgpu-num-sgpr"="17" "amdgpu-num-vgpr"="8" }
-attributes #2 = { nounwind "amdgpu-num-sgpr"="14" "amdgpu-num-vgpr"="8" }
-attributes #3 = { nounwind "amdgpu-num-sgpr"="16" "amdgpu-num-vgpr"="8" }
+attributes #2 = { nounwind "amdgpu-num-sgpr"="16" "amdgpu-num-vgpr"="8" }
+attributes #3 = { nounwind "amdgpu-num-sgpr"="18" "amdgpu-num-vgpr"="8" }

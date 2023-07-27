@@ -36,7 +36,6 @@ public:
         HasTransactionalExecution(false), HasVector(false), SoftFloat(false) {
     IntMaxType = SignedLong;
     Int64Type = SignedLong;
-    TLSSupported = true;
     IntWidth = IntAlign = 32;
     LongWidth = LongLongWidth = LongAlign = LongLongAlign = 64;
     Int128Align = 64;
@@ -47,16 +46,20 @@ public:
     DefaultAlignForAttributeAligned = 64;
     MinGlobalAlign = 16;
     if (Triple.isOSzOS()) {
+      TLSSupported = false;
       // All vector types are default aligned on an 8-byte boundary, even if the
       // vector facility is not available. That is different from Linux.
       MaxVectorAlign = 64;
-      // Compared to Linux/ELF, the data layout differs only in that name
-      // mangling is GOFF.
-      resetDataLayout(
-          "E-m:l-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-a:8:16-n32:64");
-    } else
+      // Compared to Linux/ELF, the data layout differs only in some details:
+      // - name mangling is GOFF.
+      // - 32 bit pointers, either as default or special address space
+      resetDataLayout("E-m:l-i1:8:16-i8:8:16-i64:64-f128:64-v128:64-"
+                      "a:8:16-n32:64");
+    } else {
+      TLSSupported = true;
       resetDataLayout("E-m:e-i1:8:16-i8:8:16-i64:64-f128:64"
                       "-v128:64-a:8:16-n32:64");
+    }
     MaxAtomicPromoteWidth = MaxAtomicInlineWidth = 64;
     HasStrictFP = true;
   }

@@ -15,7 +15,7 @@
 
 namespace __llvm_libc {
 
-inline constexpr const MsgTable<6> STDC_SIGNALS = {
+LIBC_INLINE_VAR constexpr const MsgTable<6> STDC_SIGNALS = {
     MsgMapping(SIGINT, "Interrupt"),
     MsgMapping(SIGILL, "Illegal instruction"),
     MsgMapping(SIGABRT, "Aborted"),

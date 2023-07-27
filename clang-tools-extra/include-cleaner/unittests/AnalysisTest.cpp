@@ -274,7 +274,7 @@ TEST_F(AnalyzeTest, NoCrashWhenUnresolved) {
 }
 
 TEST(FixIncludes, Basic) {
-  llvm::StringRef Code = R"cpp(
+  llvm::StringRef Code = R"cpp(#include "d.h"
 #include "a.h"
 #include "b.h"
 #include <c.h>
@@ -300,12 +300,20 @@ TEST(FixIncludes, Basic) {
   Results.Unused.push_back(Inc.atLine(3));
   Results.Unused.push_back(Inc.atLine(4));
 
-  EXPECT_EQ(fixIncludes(Results, Code, format::getLLVMStyle()), R"cpp(
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
+R"cpp(#include "d.h"
 #include "a.h"
 #include "aa.h"
 #include "ab.h"
 #include <e.h>
 )cpp");
+
+  Results = {};
+  Results.Missing.push_back("\"d.h\"");
+  Code = R"cpp(#include "a.h")cpp";
+  EXPECT_EQ(fixIncludes(Results, "d.cc", Code, format::getLLVMStyle()),
+R"cpp(#include "d.h"
+#include "a.h")cpp");
 }
 
 MATCHER_P3(expandedAt, FileID, Offset, SM, "") {
@@ -422,8 +430,12 @@ TEST(WalkUsed, FilterRefsNotSpelledInMainFile) {
   }
 }
 
+struct Tag {
+  friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Tag &T) {
+    return OS << "Anon Tag";
+  }
+};
 TEST(Hints, Ordering) {
-  struct Tag {};
   auto Hinted = [](Hints Hints) {
     return clang::include_cleaner::Hinted<Tag>({}, Hints);
   };

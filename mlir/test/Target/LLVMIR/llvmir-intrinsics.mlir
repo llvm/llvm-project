@@ -354,6 +354,10 @@ llvm.func @vector_reductions(%arg0: f32, %arg1: vector<8xf32>, %arg2: vector<8xi
   llvm.intr.vector.reduce.fmax(%arg1) : (vector<8xf32>) -> f32
   // CHECK: call float @llvm.vector.reduce.fmin.v8f32
   llvm.intr.vector.reduce.fmin(%arg1) : (vector<8xf32>) -> f32
+  // CHECK: call float @llvm.vector.reduce.fmaximum.v8f32
+  llvm.intr.vector.reduce.fmaximum(%arg1) : (vector<8xf32>) -> f32
+  // CHECK: call float @llvm.vector.reduce.fminimum.v8f32
+  llvm.intr.vector.reduce.fminimum(%arg1) : (vector<8xf32>) -> f32
   // CHECK: call i32 @llvm.vector.reduce.mul.v8i32
   "llvm.intr.vector.reduce.mul"(%arg2) : (vector<8xi32>) -> i32
   // CHECK: call i32 @llvm.vector.reduce.or.v8i32
@@ -444,6 +448,17 @@ llvm.func @masked_expand_compress_intrinsics(%ptr: !llvm.ptr<f32>, %mask: vector
   // CHECK: call void @llvm.masked.compressstore.v7f32(<7 x float> %{{.*}}, ptr %{{.*}}, <7 x i1> %{{.*}})
   "llvm.intr.masked.compressstore"(%0, %ptr, %mask)
     : (vector<7xf32>, !llvm.ptr<f32>, vector<7xi1>) -> ()
+  llvm.return
+}
+
+// CHECK-LABEL: @annotate_intrinsics
+llvm.func @annotate_intrinsics(%var: !llvm.ptr, %int: i16, %ptr: !llvm.ptr, %annotation: !llvm.ptr, %fileName: !llvm.ptr, %line: i32, %attr: !llvm.ptr) {
+  // CHECK: call void @llvm.var.annotation.p0.p0(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, ptr %{{.*}})
+  "llvm.intr.var.annotation"(%var, %annotation, %fileName, %line, %attr) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> ()
+  // CHECK: call ptr @llvm.ptr.annotation.p0.p0(ptr %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}}, ptr %{{.*}})
+  %res0 = "llvm.intr.ptr.annotation"(%ptr, %annotation, %fileName, %line, %attr) : (!llvm.ptr, !llvm.ptr, !llvm.ptr, i32, !llvm.ptr) -> (!llvm.ptr)
+  // CHECK: call i16 @llvm.annotation.i16.p0(i16 %{{.*}}, ptr %{{.*}}, ptr %{{.*}}, i32 %{{.*}})
+  %res1 = "llvm.intr.annotation"(%int, %annotation, %fileName, %line) : (i16, !llvm.ptr, !llvm.ptr, i32) -> (i16)
   llvm.return
 }
 
@@ -921,6 +936,13 @@ llvm.func @lifetime(%p: !llvm.ptr) {
   llvm.return
 }
 
+// CHECK-LABEL: @ssa_copy
+llvm.func @ssa_copy(%arg: f32) -> f32 {
+  // CHECK: call float @llvm.ssa.copy
+  %0 = llvm.intr.ssa.copy %arg : f32
+  llvm.return %0 : f32
+}
+
 // Check that intrinsics are declared with appropriate types.
 // CHECK-DAG: declare float @llvm.fma.f32(float, float, float)
 // CHECK-DAG: declare <8 x float> @llvm.fma.v8f32(<8 x float>, <8 x float>, <8 x float>) #0
@@ -976,6 +998,9 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare void @llvm.masked.scatter.v7f32.v7p0(<7 x float>, <7 x ptr>, i32 immarg, <7 x i1>)
 // CHECK-DAG: declare <7 x float> @llvm.masked.expandload.v7f32(ptr nocapture, <7 x i1>, <7 x float>)
 // CHECK-DAG: declare void @llvm.masked.compressstore.v7f32(<7 x float>, ptr nocapture, <7 x i1>)
+// CHECK-DAG: declare void @llvm.var.annotation.p0.p0(ptr, ptr, ptr, i32, ptr)
+// CHECK-DAG: declare ptr @llvm.ptr.annotation.p0.p0(ptr, ptr, ptr, i32, ptr)
+// CHECK-DAG: declare i16 @llvm.annotation.i16.p0(i16, ptr, ptr, i32)
 // CHECK-DAG: declare void @llvm.trap()
 // CHECK-DAG: declare void @llvm.debugtrap()
 // CHECK-DAG: declare void @llvm.ubsantrap(i8 immarg)
@@ -1071,3 +1096,4 @@ llvm.func @lifetime(%p: !llvm.ptr) {
 // CHECK-DAG: declare <2 x i32> @llvm.vector.extract.v2i32.v8i32(<8 x i32>, i64 immarg)
 // CHECK-DAG: declare void @llvm.lifetime.start.p0(i64 immarg, ptr nocapture)
 // CHECK-DAG: declare void @llvm.lifetime.end.p0(i64 immarg, ptr nocapture)
+// CHECK-DAG: declare float @llvm.ssa.copy.f32(float returned)

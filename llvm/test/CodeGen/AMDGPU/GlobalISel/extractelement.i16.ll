@@ -163,7 +163,6 @@ define i16 @extractelement_vgpr_v4i16_vgpr_idx(ptr addrspace(1) %ptr, i32 %idx) 
 ; GFX10-LABEL: extractelement_vgpr_v4i16_vgpr_idx:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v3, 1, v2
 ; GFX10-NEXT:    v_and_b32_e32 v2, 1, v2
@@ -177,7 +176,6 @@ define i16 @extractelement_vgpr_v4i16_vgpr_idx(ptr addrspace(1) %ptr, i32 %idx) 
 ; GFX11-LABEL: extractelement_vgpr_v4i16_vgpr_idx:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v3, 1, v2
 ; GFX11-NEXT:    v_and_b32_e32 v2, 1, v2
@@ -369,7 +367,6 @@ define i16 @extractelement_vgpr_v4i16_idx0(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v4i16_idx0:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -377,7 +374,6 @@ define i16 @extractelement_vgpr_v4i16_idx0(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v4i16_idx0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -414,7 +410,6 @@ define i16 @extractelement_vgpr_v4i16_idx1(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v4i16_idx1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
@@ -423,7 +418,6 @@ define i16 @extractelement_vgpr_v4i16_idx1(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v4i16_idx1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
@@ -461,7 +455,6 @@ define i16 @extractelement_vgpr_v4i16_idx2(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v4i16_idx2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v1
@@ -470,7 +463,6 @@ define i16 @extractelement_vgpr_v4i16_idx2(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v4i16_idx2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v1
@@ -508,7 +500,6 @@ define i16 @extractelement_vgpr_v4i16_idx3(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v4i16_idx3:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx2 v[0:1], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
@@ -517,7 +508,6 @@ define i16 @extractelement_vgpr_v4i16_idx3(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v4i16_idx3:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b64 v[0:1], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
@@ -736,7 +726,6 @@ define i16 @extractelement_vgpr_v8i16_vgpr_idx(ptr addrspace(1) %ptr, i32 %idx) 
 ; GFX10-LABEL: extractelement_vgpr_v8i16_vgpr_idx:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[3:6], v[0:1], off
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 1, v2
 ; GFX10-NEXT:    v_and_b32_e32 v2, 1, v2
@@ -754,7 +743,6 @@ define i16 @extractelement_vgpr_v8i16_vgpr_idx(ptr addrspace(1) %ptr, i32 %idx) 
 ; GFX11-LABEL: extractelement_vgpr_v8i16_vgpr_idx:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[3:6], v[0:1], off
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 1, v2
 ; GFX11-NEXT:    v_and_b32_e32 v2, 1, v2
@@ -1074,7 +1062,6 @@ define i16 @extractelement_vgpr_v8i16_idx0(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v8i16_idx0:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
@@ -1082,7 +1069,6 @@ define i16 @extractelement_vgpr_v8i16_idx0(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v8i16_idx0:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
@@ -1122,7 +1108,6 @@ define i16 @extractelement_vgpr_v8i16_idx1(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v8i16_idx1:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
@@ -1131,7 +1116,6 @@ define i16 @extractelement_vgpr_v8i16_idx1(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v8i16_idx1:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
@@ -1172,7 +1156,6 @@ define i16 @extractelement_vgpr_v8i16_idx2(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v8i16_idx2:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v1
@@ -1181,7 +1164,6 @@ define i16 @extractelement_vgpr_v8i16_idx2(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v8i16_idx2:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v1
@@ -1222,7 +1204,6 @@ define i16 @extractelement_vgpr_v8i16_idx3(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v8i16_idx3:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
@@ -1231,7 +1212,6 @@ define i16 @extractelement_vgpr_v8i16_idx3(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v8i16_idx3:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v1
@@ -1272,7 +1252,6 @@ define i16 @extractelement_vgpr_v8i16_idx4(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v8i16_idx4:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
@@ -1281,7 +1260,6 @@ define i16 @extractelement_vgpr_v8i16_idx4(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v8i16_idx4:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
@@ -1322,7 +1300,6 @@ define i16 @extractelement_vgpr_v8i16_idx5(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v8i16_idx5:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
@@ -1331,7 +1308,6 @@ define i16 @extractelement_vgpr_v8i16_idx5(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v8i16_idx5:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v2
@@ -1372,7 +1348,6 @@ define i16 @extractelement_vgpr_v8i16_idx6(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v8i16_idx6:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v3
@@ -1381,7 +1356,6 @@ define i16 @extractelement_vgpr_v8i16_idx6(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v8i16_idx6:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v3
@@ -1422,7 +1396,6 @@ define i16 @extractelement_vgpr_v8i16_idx7(ptr addrspace(1) %ptr) {
 ; GFX10-LABEL: extractelement_vgpr_v8i16_idx7:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    global_load_dwordx4 v[0:3], v[0:1], off
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_lshrrev_b32_e32 v0, 16, v3
@@ -1431,7 +1404,6 @@ define i16 @extractelement_vgpr_v8i16_idx7(ptr addrspace(1) %ptr) {
 ; GFX11-LABEL: extractelement_vgpr_v8i16_idx7:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    global_load_b128 v[0:3], v[0:1], off
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_lshrrev_b32_e32 v0, 16, v3

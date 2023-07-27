@@ -208,7 +208,8 @@ private:
   }
 
   /// Get the constant access bitmap for \p C.
-  uint8_t getConstantAccess(const Constant *C) {
+  uint8_t getConstantAccess(const Constant *C,
+                            SmallPtrSetImpl<const Constant *> &Visited) {
     auto It = ConstantStatus.find(C);
     if (It != ConstantStatus.end())
       return It->second;
@@ -223,10 +224,10 @@ private:
 
     for (const Use &U : C->operands()) {
       const auto *OpC = dyn_cast<Constant>(U);
-      if (!OpC)
+      if (!OpC || !Visited.insert(OpC).second)
         continue;
 
-      Result |= getConstantAccess(OpC);
+      Result |= getConstantAccess(OpC, Visited);
     }
     return Result;
   }
@@ -241,7 +242,8 @@ public:
     if (!IsNonEntryFunc && HasAperture)
       return false;
 
-    uint8_t Access = getConstantAccess(C);
+    SmallPtrSet<const Constant *, 8> Visited;
+    uint8_t Access = getConstantAccess(C, Visited);
 
     // We need to trap on DS globals in non-entry functions.
     if (IsNonEntryFunc && (Access & DS_GLOBAL))
@@ -344,11 +346,13 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
       LLVM_DEBUG(dbgs() << "[AAUniformWorkGroupSize] Call " << Caller->getName()
                         << "->" << getAssociatedFunction()->getName() << "\n");
 
-      const auto &CallerInfo = A.getAAFor<AAUniformWorkGroupSize>(
+      const auto *CallerInfo = A.getAAFor<AAUniformWorkGroupSize>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+      if (!CallerInfo)
+        return false;
 
       Change = Change | clampStateAndIndicateChange(this->getState(),
-                                                    CallerInfo.getState());
+                                                    CallerInfo->getState());
 
       return true;
     };
@@ -366,8 +370,8 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
 
     AttrList.push_back(Attribute::get(Ctx, "uniform-work-group-size",
                                       getAssumed() ? "true" : "false"));
-    return IRAttributeManifest::manifestAttrs(A, getIRPosition(), AttrList,
-                                              /* ForceReplace */ true);
+    return A.manifestAttrs(getIRPosition(), AttrList,
+                           /* ForceReplace */ true);
   }
 
   bool isValidState() const override {
@@ -375,7 +379,7 @@ struct AAUniformWorkGroupSizeFunction : public AAUniformWorkGroupSize {
     return true;
   }
 
-  const std::string getAsStr() const override {
+  const std::string getAsStr(Attributor *) const override {
     return "AMDWorkGroupSize[" + std::to_string(getAssumed()) + "]";
   }
 
@@ -433,9 +437,9 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     auto OrigAssumed = getAssumed();
 
     // Check for Intrinsics and propagate attributes.
-    const AACallEdges &AAEdges = A.getAAFor<AACallEdges>(
+    const AACallEdges *AAEdges = A.getAAFor<AACallEdges>(
         *this, this->getIRPosition(), DepClassTy::REQUIRED);
-    if (AAEdges.hasNonAsmUnknownCallee())
+    if (!AAEdges || AAEdges->hasNonAsmUnknownCallee())
       return indicatePessimisticFixpoint();
 
     bool IsNonEntryFunc = !AMDGPU::isEntryFunctionCC(F->getCallingConv());
@@ -446,12 +450,14 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
     bool SupportsGetDoorbellID = InfoCache.supportsGetDoorbellID(*F);
     unsigned COV = InfoCache.getCodeObjectVersion();
 
-    for (Function *Callee : AAEdges.getOptimisticEdges()) {
+    for (Function *Callee : AAEdges->getOptimisticEdges()) {
       Intrinsic::ID IID = Callee->getIntrinsicID();
       if (IID == Intrinsic::not_intrinsic) {
-        const AAAMDAttributes &AAAMD = A.getAAFor<AAAMDAttributes>(
-          *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
-        *this &= AAAMD;
+        const AAAMDAttributes *AAAMD = A.getAAFor<AAAMDAttributes>(
+            *this, IRPosition::function(*Callee), DepClassTy::REQUIRED);
+        if (!AAAMD)
+          return indicatePessimisticFixpoint();
+        *this &= *AAAMD;
         continue;
       }
 
@@ -522,16 +528,17 @@ struct AAAMDAttributesFunction : public AAAMDAttributes {
         AttrList.push_back(Attribute::get(Ctx, Attr.second));
     }
 
-    return IRAttributeManifest::manifestAttrs(A, getIRPosition(), AttrList,
-                                              /* ForceReplace */ true);
+    return A.manifestAttrs(getIRPosition(), AttrList,
+                           /* ForceReplace */ true);
   }
 
-  const std::string getAsStr() const override {
+  const std::string getAsStr(Attributor *) const override {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << "AMDInfo[";
     for (auto Attr : ImplicitAttrs)
-      OS << ' ' << Attr.second;
+      if (isAssumed(Attr.first))
+        OS << ' ' << Attr.second;
     OS << " ]";
     return OS.str();
   }
@@ -641,10 +648,12 @@ private:
       if (Call.getIntrinsicID() != Intrinsic::amdgcn_implicitarg_ptr)
         return true;
 
-      const auto &PointerInfoAA = A.getAAFor<AAPointerInfo>(
+      const auto *PointerInfoAA = A.getAAFor<AAPointerInfo>(
           *this, IRPosition::callsite_returned(Call), DepClassTy::REQUIRED);
+      if (!PointerInfoAA)
+        return false;
 
-      return PointerInfoAA.forallInterferingAccesses(
+      return PointerInfoAA->forallInterferingAccesses(
           Range, [](const AAPointerInfo::Access &Acc, bool IsExact) {
             return Acc.getRemoteInst()->isDroppable();
           });
@@ -696,11 +705,13 @@ struct AAAMDSizeRangeAttribute
       LLVM_DEBUG(dbgs() << '[' << getName() << "] Call " << Caller->getName()
                         << "->" << getAssociatedFunction()->getName() << '\n');
 
-      const auto &CallerInfo = A.getAAFor<AttributeImpl>(
+      const auto *CallerInfo = A.getAAFor<AttributeImpl>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
+      if (!CallerInfo)
+        return false;
 
       Change |=
-          clampStateAndIndicateChange(this->getState(), CallerInfo.getState());
+          clampStateAndIndicateChange(this->getState(), CallerInfo->getState());
 
       return true;
     };
@@ -723,12 +734,12 @@ struct AAAMDSizeRangeAttribute
     SmallString<10> Buffer;
     raw_svector_ostream OS(Buffer);
     OS << getAssumed().getLower() << ',' << getAssumed().getUpper() - 1;
-    return IRAttributeManifest::manifestAttrs(
-        A, getIRPosition(), {Attribute::get(Ctx, AttrName, OS.str())},
-        /* ForceReplace */ true);
+    return A.manifestAttrs(getIRPosition(),
+                           {Attribute::get(Ctx, AttrName, OS.str())},
+                           /* ForceReplace */ true);
   }
 
-  const std::string getAsStr() const override {
+  const std::string getAsStr(Attributor *) const override {
     std::string Str;
     raw_string_ostream OS(Str);
     OS << getName() << '[';
@@ -813,15 +824,17 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
     Function *F = getAssociatedFunction();
     auto &InfoCache = static_cast<AMDGPUInformationCache &>(A.getInfoCache());
 
-    const auto &AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
-        *this, IRPosition::function(*F), DepClassTy::REQUIRED);
-    unsigned Min, Max;
-    std::tie(Min, Max) = InfoCache.getWavesPerEU(
-        *F, {AssumedGroupSize.getAssumed().getLower().getZExtValue(),
-             AssumedGroupSize.getAssumed().getUpper().getZExtValue() - 1});
+    if (const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
+            *this, IRPosition::function(*F), DepClassTy::REQUIRED)) {
 
-    ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
-    intersectKnown(Range);
+      unsigned Min, Max;
+      std::tie(Min, Max) = InfoCache.getWavesPerEU(
+          *F, {AssumedGroupSize->getAssumed().getLower().getZExtValue(),
+               AssumedGroupSize->getAssumed().getUpper().getZExtValue() - 1});
+
+      ConstantRange Range(APInt(32, Min), APInt(32, Max + 1));
+      intersectKnown(Range);
+    }
 
     if (AMDGPU::isEntryFunctionCC(F->getCallingConv()))
       indicatePessimisticFixpoint();
@@ -837,18 +850,20 @@ struct AAAMDWavesPerEU : public AAAMDSizeRangeAttribute {
       LLVM_DEBUG(dbgs() << '[' << getName() << "] Call " << Caller->getName()
                         << "->" << Func->getName() << '\n');
 
-      const auto &CallerInfo = A.getAAFor<AAAMDWavesPerEU>(
+      const auto *CallerInfo = A.getAAFor<AAAMDWavesPerEU>(
           *this, IRPosition::function(*Caller), DepClassTy::REQUIRED);
-      const auto &AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
+      const auto *AssumedGroupSize = A.getAAFor<AAAMDFlatWorkGroupSize>(
           *this, IRPosition::function(*Func), DepClassTy::REQUIRED);
+      if (!CallerInfo || !AssumedGroupSize)
+        return false;
 
       unsigned Min, Max;
       std::tie(Min, Max) = InfoCache.getEffectiveWavesPerEU(
           *Caller,
-          {CallerInfo.getAssumed().getLower().getZExtValue(),
-           CallerInfo.getAssumed().getUpper().getZExtValue() - 1},
-          {AssumedGroupSize.getAssumed().getLower().getZExtValue(),
-           AssumedGroupSize.getAssumed().getUpper().getZExtValue() - 1});
+          {CallerInfo->getAssumed().getLower().getZExtValue(),
+           CallerInfo->getAssumed().getUpper().getZExtValue() - 1},
+          {AssumedGroupSize->getAssumed().getLower().getZExtValue(),
+           AssumedGroupSize->getAssumed().getUpper().getZExtValue() - 1});
       ConstantRange CallerRange(APInt(32, Min), APInt(32, Max + 1));
       IntegerRangeState CallerRangeState(CallerRange);
       Change |= clampStateAndIndicateChange(this->getState(), CallerRangeState);
@@ -929,12 +944,15 @@ public:
         {&AAAMDAttributes::ID, &AAUniformWorkGroupSize::ID,
          &AAPotentialValues::ID, &AAAMDFlatWorkGroupSize::ID,
          &AAAMDWavesPerEU::ID, &AACallEdges::ID, &AAPointerInfo::ID,
-         &AAPotentialConstantValues::ID});
+         &AAPotentialConstantValues::ID, &AAUnderlyingObjects::ID});
 
     AttributorConfig AC(CGUpdater);
     AC.Allowed = &Allowed;
     AC.IsModulePass = true;
     AC.DefaultInitializeLiveInternals = false;
+    AC.IPOAmendableCB = [](const Function &F) {
+      return F.getCallingConv() == CallingConv::AMDGPU_KERNEL;
+    };
 
     Attributor A(Functions, InfoCache, AC);
 

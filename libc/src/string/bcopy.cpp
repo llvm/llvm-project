@@ -8,7 +8,7 @@
 
 #include "src/string/bcopy.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/memmove_implementations.h"
+#include "src/string/memory_utils/inline_memmove.h"
 
 namespace __llvm_libc {
 

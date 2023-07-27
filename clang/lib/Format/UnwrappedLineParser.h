@@ -156,7 +156,7 @@ private:
   bool tryToParseBracedList();
   bool parseBracedList(bool ContinueOnSemicolons = false, bool IsEnum = false,
                        tok::TokenKind ClosingBraceKind = tok::r_brace);
-  void parseParens(TokenType AmpAmpTokenType = TT_Unknown);
+  bool parseParens(TokenType AmpAmpTokenType = TT_Unknown);
   void parseSquare(bool LambdaIntroducer = false);
   void keepAncestorBraces();
   void parseUnbracedBody(bool CheckEOF = false);
@@ -306,7 +306,7 @@ private:
   // Since the next token might already be in a new unwrapped line, we need to
   // store the comments belonging to that token.
   SmallVector<FormatToken *, 1> CommentsBeforeNextToken;
-  FormatToken *FormatTok;
+  FormatToken *FormatTok = nullptr;
   bool MustBreakBeforeNextToken;
 
   // The parsed lines. Only added to through \c CurrentLines.

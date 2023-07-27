@@ -83,8 +83,8 @@ def err_typecheck_converted_constant_expression_indirect : Error<
   "bind reference to a temporary">;
 def err_expr_not_cce : Error<
   "%select{case value|enumerator value|non-type template argument|"
-  "array size|explicit specifier argument|noexcept specifier argument}0 "
-  "is not a constant expression">;
+  "array size|explicit specifier argument|noexcept specifier argument|"
+  "call to 'size()'|call to 'data()'}0 is not a constant expression">;
 def ext_cce_narrowing : ExtWarn<
   "%select{case value|enumerator value|non-type template argument|"
   "array size|explicit specifier argument|noexcept specifier argument}0 "
@@ -406,6 +406,9 @@ def warn_reserved_extern_symbol: Warning<
   "it starts with '_' followed by a capital letter|"
   "it contains '__'}1">,
   InGroup<ReservedIdentifier>, DefaultIgnore;
+def warn_deprecated_literal_operator_id: Warning<
+  "identifier %0 preceded by whitespace in a literal operator declaration "
+  "is deprecated">, InGroup<DeprecatedLiteralOperator>, DefaultIgnore;
 def warn_reserved_module_name : Warning<
   "%0 is a reserved name for a module">, InGroup<ReservedModuleIdentifier>;
 
@@ -433,9 +436,6 @@ def err_ellipsis_first_param : Error<
   "ISO C requires a named parameter before '...'">;
 def err_declarator_need_ident : Error<"declarator requires an identifier">;
 def err_language_linkage_spec_unknown : Error<"unknown linkage language">;
-def err_language_linkage_spec_not_ascii : Error<
-  "string literal in language linkage specifier cannot have an "
-  "encoding-prefix">;
 def ext_use_out_of_scope_declaration : ExtWarn<
   "use of out-of-scope declaration of %0%select{| whose type is not "
   "compatible with that of an implicit declaration}1">,
@@ -450,7 +450,7 @@ def warn_qual_return_type : Warning<
 def warn_deprecated_redundant_constexpr_static_def : Warning<
   "out-of-line definition of constexpr static data member is redundant "
   "in C++17 and is deprecated">,
-  InGroup<Deprecated>, DefaultIgnore;
+  InGroup<DeprecatedRedundantConstexprStaticDef>, DefaultIgnore;
 
 def warn_decl_shadow :
   Warning<"declaration shadows a %select{"
@@ -1545,6 +1545,24 @@ def err_static_assert_requirement_failed : Error<
   "static assertion failed due to requirement '%0'%select{: %2|}1">;
 def note_expr_evaluates_to : Note<
   "expression evaluates to '%0 %1 %2'">;
+def err_static_assert_invalid_message : Error<
+  "the message in a static assertion must be a string literal or an "
+  "object with 'data()' and 'size()' member functions">;
+def err_static_assert_missing_member_function : Error<
+  "the message object in this static assertion is missing %select{"
+  "a 'size()' member function|"
+  "a 'data()' member function|"
+  "'data()' and 'size()' member functions}0">;
+def err_static_assert_invalid_mem_fn_ret_ty : Error<
+  "the message in a static assertion must have a '%select{size|data}0()' member "
+  "function returning an object convertible to '%select{std::size_t|const char *}0'">;
+def warn_static_assert_message_constexpr : Warning<
+  "the message in this static assertion is not a "
+  "constant expression">,
+  DefaultError, InGroup<DiagGroup<"invalid-static-assert-message">>;
+def err_static_assert_message_constexpr : Error<
+  "the message in a static assertion must be produced by a "
+  "constant expression">;
 
 def warn_consteval_if_always_true : Warning<
   "consteval if is always true in an %select{unevaluated|immediate}0 context">,
@@ -1561,6 +1579,8 @@ def warn_inline_namespace_reopened_noninline : Warning<
   InGroup<InlineNamespaceReopenedNoninline>;
 def err_inline_namespace_mismatch : Error<
   "non-inline namespace cannot be reopened as inline">;
+def err_inline_namespace_std : Error<
+  "cannot declare the namespace 'std' to be inline">;
 
 def err_unexpected_friend : Error<
   "friends can only be classes or functions">;
@@ -2667,14 +2687,15 @@ def err_immediate_function_used_before_definition : Error<
   "immediate function %0 used before it is defined">;
 
 def note_immediate_function_reason : Note<
-  "%0 is an immediate function because its body "
+  "%0 is an immediate %select{function|constructor}5 because "
+  "%select{its body|the%select{| default}7 initializer of %8}6 "
   "%select{evaluates the address of %select{an immediate|a consteval}2 "
   "function %1|contains a call to %select{an immediate|a consteval}2 "
   "%select{function|constructor}4 %1 and that call is not a constant "
   "expression}3">;
 
 def note_invalid_consteval_initializer : Note<
-  "in the default initalizer of %0">;
+  "in the default initializer of %0">;
 def note_invalid_consteval_initializer_here : Note<
   "initialized here %0">;
 def err_invalid_consteval_decl_kind : Error<
@@ -2979,6 +3000,10 @@ def warn_auto_var_is_id : Warning<
 def warn_attribute_ignored_no_calls_in_stmt: Warning<
   "%0 attribute is ignored because there exists no call expression inside the "
   "statement">,
+  InGroup<IgnoredAttributes>;
+
+def warn_attribute_ignored_non_function_pointer: Warning<
+  "%0 attribute is ignored because %1 is not a function pointer">,
   InGroup<IgnoredAttributes>;
 
 def warn_function_attribute_ignored_in_stmt : Warning<
@@ -4696,9 +4721,6 @@ def note_ovl_candidate_bad_cvr : Note<
     "%select{const|restrict|const and restrict|volatile|const and volatile|"
     "volatile and restrict|const, volatile, and restrict}4 qualifier"
     "%select{||s||s|s|s}4">;
-def note_ovl_candidate_bad_unaligned : Note<
-    "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
-    "%ordinal5 argument (%3) would lose __unaligned qualifier">;
 def note_ovl_candidate_bad_base_to_derived_conv : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: "
     "cannot %select{convert from|convert from|bind}3 "
@@ -4713,6 +4735,8 @@ def note_ovl_candidate_bad_target : Note<
 def note_ovl_candidate_constraints_not_satisfied : Note<
     "candidate %sub{select_ovl_candidate_kind}0,1,2 not viable: constraints "
     "not satisfied">;
+def note_ovl_surrogate_constraints_not_satisfied : Note<
+    "conversion candidate %0 not viable: constraints not satisfied">;
 def note_implicit_member_target_infer_collision : Note<
     "implicit %sub{select_special_member_kind}0 inferred target collision: call to both "
     "%select{__device__|__global__|__host__|__host__ __device__}1 and "
@@ -6198,6 +6222,8 @@ def note_enters_block_captures_non_trivial_c_struct : Note<
   "to destroy">;
 def note_enters_compound_literal_scope : Note<
   "jump enters lifetime of a compound literal that is non-trivial to destruct">;
+def note_enters_statement_expression : Note<
+  "jump enters a statement expression">;
 
 def note_exits_cleanup : Note<
   "jump exits scope of variable with __attribute__((cleanup))">;
@@ -9263,8 +9289,8 @@ def ext_string_literal_operator_template : ExtWarn<
   "string literal operator templates are a GNU extension">,
   InGroup<GNUStringLiteralOperatorTemplate>;
 def warn_user_literal_reserved : Warning<
-  "user-defined literal suffixes not starting with '_' are reserved"
-  "%select{; no literal will invoke this operator|}0">,
+  "user-defined literal suffixes %select{<ERROR>|not starting with '_'|containing '__'}0 are reserved"
+  "%select{; no literal will invoke this operator|}1">,
   InGroup<UserDefinedLiterals>;
 
 // C++ conversion functions
@@ -9662,7 +9688,7 @@ def note_lambda_capture_initializer : Note<
   "%select{implicitly |}2captured%select{| by reference}3"
   "%select{%select{ due to use|}2 here|"
   " via initialization of lambda capture %0}1">;
-def note_init_with_default_member_initalizer : Note<
+def note_init_with_default_member_initializer : Note<
   "initializing field %0 with default member initializer">;
 
 // Check for initializing a member variable with the address or a reference to
@@ -10681,8 +10707,11 @@ def err_omp_simd_region_cannot_use_stmt : Error<
 def warn_omp_loop_64_bit_var : Warning<
   "OpenMP loop iteration variable cannot have more than 64 bits size and will be narrowed">,
   InGroup<OpenMPLoopForm>;
-def err_omp_unknown_reduction_identifier : Error<
+def err_omp_unknown_reduction_identifier_prior_omp_6_0 : Error<
   "incorrect reduction identifier, expected one of '+', '-', '*', '&', '|', '^', "
+  "'&&', '||', 'min' or 'max' or declare reduction for type %0">;
+def err_omp_unknown_reduction_identifier_since_omp_6_0 : Error<
+  "incorrect reduction identifier, expected one of '+', '*', '&', '|', '^', "
   "'&&', '||', 'min' or 'max' or declare reduction for type %0">;
 def err_omp_not_resolved_reduction_identifier : Error<
   "unable to resolve declare reduction construct for type %0">;
@@ -10867,7 +10896,7 @@ def note_omp_previous_named_if_clause : Note<
 def err_omp_ordered_directive_with_param : Error<
   "'ordered' directive %select{without any clauses|with 'threads' clause}0 cannot be closely nested inside ordered region with specified parameter">;
 def err_omp_ordered_directive_without_param : Error<
-  "'ordered' directive with 'depend' clause cannot be closely nested inside ordered region without specified parameter">;
+  "'ordered' directive with '%0' clause cannot be closely nested inside ordered region without specified parameter">;
 def note_omp_ordered_param : Note<
   "'ordered' clause%select{| with specified parameter}0">;
 def err_omp_expected_base_var_name : Error<
@@ -10899,7 +10928,7 @@ def note_omp_critical_hint_here : Note<
 def note_omp_critical_no_hint : Note<
   "%select{|previous }0directive with no 'hint' clause specified">;
 def err_omp_depend_clause_thread_simd : Error<
-  "'depend' clauses cannot be mixed with '%0' clause">;
+  "'%0' clauses cannot be mixed with '%1' clause">;
 def err_omp_depend_sink_expected_loop_iteration : Error<
   "expected%select{| %1}0 loop iteration variable">;
 def err_omp_depend_sink_unexpected_expr : Error<
@@ -10908,8 +10937,8 @@ def err_omp_depend_sink_expected_plus_minus : Error<
   "expected '+' or '-' operation">;
 def err_omp_taskwait_depend_mutexinoutset_not_allowed : Error<
   "'mutexinoutset' modifier not allowed in 'depend' clause on 'taskwait' directive">;
-def err_omp_depend_sink_source_not_allowed : Error<
-  "'depend(%select{source|sink:vec}0)' clause%select{|s}0 cannot be mixed with 'depend(%select{sink:vec|source}0)' clause%select{s|}0">;
+def err_omp_sink_and_source_not_allowed : Error<
+  "'%0(%select{source|sink:vec}1)' clause%select{|s}1 cannot be mixed with '%0(%select{sink:vec|source}1)' clause%select{s|}1">;
 def err_omp_depend_zero_length_array_section_not_allowed : Error<
   "zero-length array section is not allowed in 'depend' clause">;
 def err_omp_depend_sink_source_with_modifier : Error<
@@ -11262,22 +11291,11 @@ def note_global_module_introducer_missing : Note<
 def err_export_within_anonymous_namespace : Error<
   "export declaration appears within anonymous namespace">;
 def note_anonymous_namespace : Note<"anonymous namespace begins here">;
-def ext_export_no_name_block : ExtWarn<
-  "ISO C++20 does not permit %select{an empty|a static_assert}0 declaration "
-  "to appear in an export block">, InGroup<ExportUnnamed>;
-def ext_export_no_names : ExtWarn<
-  "ISO C++20 does not permit a declaration that does not introduce any names "
-  "to be exported">, InGroup<ExportUnnamed>;
-def introduces_no_names : Error<
-  "declaration does not introduce any names to be exported">;
 def note_export : Note<"export block begins here">;
-def err_export_no_name : Error<
-  "%select{empty|static_assert|asm}0 declaration cannot be exported">;
-def ext_export_using_directive : ExtWarn<
-  "ISO C++20 does not permit using directive to be exported">,
-  InGroup<DiagGroup<"export-using-directive">>;
 def err_export_within_export : Error<
   "export declaration appears within another export declaration">;
+def err_export_anon_ns_internal : Error<
+  "anonymous namespaces cannot be exported">;
 def err_export_internal : Error<
   "declaration of %0 with internal linkage cannot be exported">;
 def err_export_using_internal : Error<
@@ -11557,6 +11575,10 @@ def err_objc_type_args_specialized_class : Error<
 def err_objc_type_args_wrong_arity : Error<
   "too %select{many|few}0 type arguments for class %1 (have %2, expected %3)">;
 }
+
+def err_type_available_only_in_default_eval_method : Error<
+  "cannot use type '%0' within '#pragma clang fp eval_method'; type is set "
+  "according to the default eval method for the translation unit">;
 
 def err_objc_type_arg_not_id_compatible : Error<
   "type argument %0 is neither an Objective-C object nor a block type">;
@@ -11850,6 +11872,12 @@ def note_unsafe_buffer_variable_fixit_group : Note<
   "change type of %0 to '%select{std::span|std::array|std::span::iterator}1' to preserve bounds information%select{|, and change %2 to '%select{std::span|std::array|std::span::iterator}1' to propagate bounds information between them}3">;
 def note_safe_buffer_usage_suggestions_disabled : Note<
   "pass -fsafe-buffer-usage-suggestions to receive code hardening suggestions">;
+#ifndef NDEBUG
+// Not a user-facing diagnostic. Useful for debugging false negatives in
+// -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
+def note_safe_buffer_debug_mode : Note<"safe buffers debug: %0">;
+#endif
+
 def err_loongarch_builtin_requires_la32 : Error<
   "this builtin requires target: loongarch32">;
 

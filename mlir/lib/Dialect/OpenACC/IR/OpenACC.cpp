@@ -82,6 +82,16 @@ LogicalResult acc::FirstprivateOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// ReductionOp
+//===----------------------------------------------------------------------===//
+LogicalResult acc::ReductionOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_reduction)
+    return emitError("data clause associated with reduction operation must "
+                     "match its intent");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
 // DevicePtrOp
 //===----------------------------------------------------------------------===//
 LogicalResult acc::DevicePtrOp::verify() {
@@ -161,19 +171,24 @@ LogicalResult acc::AttachOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
-// GetDevicePtrOp
+// DeclareDeviceResidentOp
 //===----------------------------------------------------------------------===//
-LogicalResult acc::GetDevicePtrOp::verify() {
-  // This operation is also created for use in unstructured constructs
-  // when we need an "accPtr" to feed to exit operation. Thus we test
-  // for those cases as well:
-  if (getDataClause() != acc::DataClause::acc_getdeviceptr &&
-      getDataClause() != acc::DataClause::acc_copyout &&
-      getDataClause() != acc::DataClause::acc_delete &&
-      getDataClause() != acc::DataClause::acc_detach &&
-      getDataClause() != acc::DataClause::acc_update_host &&
-      getDataClause() != acc::DataClause::acc_update_self)
-    return emitError("getDevicePtr mismatch");
+
+LogicalResult acc::DeclareDeviceResidentOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_declare_device_resident)
+    return emitError("data clause associated with device_resident operation "
+                     "must match its intent");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareLinkOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::DeclareLinkOp::verify() {
+  if (getDataClause() != acc::DataClause::acc_declare_link)
+    return emitError(
+        "data clause associated with link operation must match its intent");
   return success();
 }
 
@@ -204,7 +219,12 @@ LogicalResult acc::DeleteOp::verify() {
   // Test for all clauses this operation can be decomposed from:
   if (getDataClause() != acc::DataClause::acc_delete &&
       getDataClause() != acc::DataClause::acc_create &&
-      getDataClause() != acc::DataClause::acc_create_zero)
+      getDataClause() != acc::DataClause::acc_create_zero &&
+      getDataClause() != acc::DataClause::acc_copyin &&
+      getDataClause() != acc::DataClause::acc_copyin_readonly &&
+      getDataClause() != acc::DataClause::acc_present &&
+      getDataClause() != acc::DataClause::acc_declare_device_resident &&
+      getDataClause() != acc::DataClause::acc_declare_link)
     return emitError(
         "data clause associated with delete operation must match its intent"
         " or specify original clause this operation was decomposed from");
@@ -367,10 +387,10 @@ static LogicalResult verifyInitLikeSingleArgRegion(
   if (region.empty())
     return op->emitOpError() << "expects non-empty " << regionName << " region";
   Block &firstBlock = region.front();
-  if (firstBlock.getNumArguments() != 1 ||
+  if (firstBlock.getNumArguments() < 1 ||
       firstBlock.getArgument(0).getType() != type)
     return op->emitOpError() << "expects " << regionName
-                             << " region with one "
+                             << " region first "
                                 "argument of the "
                              << regionType << " type";
 
@@ -436,18 +456,18 @@ LogicalResult acc::FirstprivateRecipeOp::verifyRegions() {
 LogicalResult acc::ReductionRecipeOp::verifyRegions() {
   if (failed(verifyInitLikeSingleArgRegion(*this, getInitRegion(), "reduction",
                                            "init", getType(),
-                                           /*verifyYield=*/true)))
+                                           /*verifyYield=*/false)))
     return failure();
 
   if (getCombinerRegion().empty())
     return emitOpError() << "expects non-empty combiner region";
 
   Block &reductionBlock = getCombinerRegion().front();
-  if (reductionBlock.getNumArguments() != 2 ||
+  if (reductionBlock.getNumArguments() < 2 ||
       reductionBlock.getArgument(0).getType() != getType() ||
       reductionBlock.getArgument(1).getType() != getType())
-    return emitOpError() << "expects combiner region with two arguments of "
-                         << "the reduction type";
+    return emitOpError() << "expects combiner region with the first two "
+                         << "arguments of the reduction type";
 
   for (YieldOp yieldOp : getCombinerRegion().getOps<YieldOp>()) {
     if (yieldOp.getOperands().size() != 1 ||
@@ -563,7 +583,7 @@ unsigned ParallelOp::getNumDataOperands() {
 
 Value ParallelOp::getDataOperand(unsigned i) {
   unsigned numOptional = getAsync() ? 1 : 0;
-  numOptional += getNumGangs() ? 1 : 0;
+  numOptional += getNumGangs().size();
   numOptional += getNumWorkers() ? 1 : 0;
   numOptional += getVectorLength() ? 1 : 0;
   numOptional += getIfCond() ? 1 : 0;
@@ -580,6 +600,8 @@ LogicalResult acc::ParallelOp::verify() {
           *this, getReductionRecipes(), getReductionOperands(), "reduction",
           "reductions", false)))
     return failure();
+  if (getNumGangs().size() > 3)
+    return emitOpError() << "num_gangs expects a maximum of 3 values";
   return checkDataOperands<acc::ParallelOp>(*this, getDataClauseOperands());
 }
 
@@ -621,12 +643,18 @@ unsigned KernelsOp::getNumDataOperands() {
 
 Value KernelsOp::getDataOperand(unsigned i) {
   unsigned numOptional = getAsync() ? 1 : 0;
+  numOptional += getWaitOperands().size();
+  numOptional += getNumGangs().size();
+  numOptional += getNumWorkers() ? 1 : 0;
+  numOptional += getVectorLength() ? 1 : 0;
   numOptional += getIfCond() ? 1 : 0;
   numOptional += getSelfCond() ? 1 : 0;
-  return getOperand(getWaitOperands().size() + numOptional + i);
+  return getOperand(numOptional + i);
 }
 
 LogicalResult acc::KernelsOp::verify() {
+  if (getNumGangs().size() > 3)
+    return emitOpError() << "num_gangs expects a maximum of 3 values";
   return checkDataOperands<acc::KernelsOp>(*this, getDataClauseOperands());
 }
 
@@ -849,6 +877,8 @@ unsigned DataOp::getNumDataOperands() { return getDataClauseOperands().size(); }
 
 Value DataOp::getDataOperand(unsigned i) {
   unsigned numOptional = getIfCond() ? 1 : 0;
+  numOptional += getAsync() ? 1 : 0;
+  numOptional += getWaitOperands().size();
   return getOperand(numOptional + i);
 }
 
@@ -943,6 +973,123 @@ Value EnterDataOp::getDataOperand(unsigned i) {
 void EnterDataOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                               MLIRContext *context) {
   results.add<RemoveConstantIfCondition<EnterDataOp>>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareEnterOp
+//===----------------------------------------------------------------------===//
+
+template <typename Op>
+static LogicalResult checkDeclareOperands(Op &op,
+                                          const mlir::ValueRange &operands) {
+  if (operands.empty())
+    return emitError(
+        op->getLoc(),
+        "at least one operand must appear on the declare operation");
+
+  for (mlir::Value operand : operands) {
+    if (!mlir::isa<acc::CopyinOp, acc::CopyoutOp, acc::CreateOp,
+                   acc::DevicePtrOp, acc::GetDevicePtrOp, acc::PresentOp,
+                   acc::DeclareDeviceResidentOp, acc::DeclareLinkOp>(
+            operand.getDefiningOp()))
+      return op.emitError(
+          "expect valid declare data entry operation or acc.getdeviceptr "
+          "as defining op");
+
+    mlir::Value varPtr{getVarPtr(operand.getDefiningOp())};
+    assert(varPtr && "declare operands can only be data entry operations which "
+                     "must have varPtr");
+    std::optional<mlir::acc::DataClause> dataClauseOptional{
+        getDataClause(operand.getDefiningOp())};
+    assert(dataClauseOptional.has_value() &&
+           "declare operands can only be data entry operations which must have "
+           "dataClause");
+
+    // If varPtr has no defining op - there is nothing to check further.
+    if (!varPtr.getDefiningOp())
+      continue;
+
+    // Check that the varPtr has a declare attribute.
+    auto declareAttribute{
+        varPtr.getDefiningOp()->getAttr(mlir::acc::getDeclareAttrName())};
+    if (!declareAttribute)
+      return op.emitError(
+          "expect declare attribute on variable in declare operation");
+    if (mlir::cast<mlir::acc::DeclareAttr>(declareAttribute)
+            .getDataClause()
+            .getValue() != dataClauseOptional.value())
+      return op.emitError(
+          "expect matching declare attribute on variable in declare operation");
+  }
+
+  return success();
+}
+
+LogicalResult acc::DeclareEnterOp::verify() {
+  return checkDeclareOperands(*this, this->getDataClauseOperands());
+}
+
+//===----------------------------------------------------------------------===//
+// DeclareExitOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::DeclareExitOp::verify() {
+  return checkDeclareOperands(*this, this->getDataClauseOperands());
+}
+
+//===----------------------------------------------------------------------===//
+// RoutineOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult acc::RoutineOp::verify() {
+  int parallelism = 0;
+  parallelism += getGang() ? 1 : 0;
+  parallelism += getWorker() ? 1 : 0;
+  parallelism += getVector() ? 1 : 0;
+  parallelism += getSeq() ? 1 : 0;
+
+  if (parallelism > 1)
+    return emitError() << "only one of `gang`, `worker`, `vector`, `seq` can "
+                          "be present at the same time";
+
+  return success();
+}
+
+static ParseResult parseRoutineGangClause(OpAsmParser &parser, UnitAttr &gang,
+                                          IntegerAttr &gangDim) {
+  // Since gang clause exists, ensure that unit attribute is set.
+  gang = UnitAttr::get(parser.getBuilder().getContext());
+
+  // Next, look for dim on gang. Don't initialize `gangDim` yet since
+  // we leave it without attribute if there is no `dim` specifier.
+  if (succeeded(parser.parseOptionalLParen())) {
+    // Look for syntax that looks like `dim = 1 : i32`.
+    // Thus first look for `dim =`
+    if (failed(parser.parseKeyword(RoutineOp::getGangDimKeyword())) ||
+        failed(parser.parseEqual()))
+      return failure();
+
+    int64_t dimValue;
+    Type valueType;
+    // Now look for `1 : i32`
+    if (failed(parser.parseInteger(dimValue)) ||
+        failed(parser.parseColonType(valueType)))
+      return failure();
+
+    gangDim = IntegerAttr::get(valueType, dimValue);
+
+    if (failed(parser.parseRParen()))
+      return failure();
+  }
+
+  return success();
+}
+
+void printRoutineGangClause(OpAsmPrinter &p, Operation *op, UnitAttr gang,
+                            IntegerAttr gangDim) {
+  if (gangDim)
+    p << "(" << RoutineOp::getGangDimKeyword() << " = " << gangDim.getValue()
+      << " : " << gangDim.getType() << ")";
 }
 
 //===----------------------------------------------------------------------===//
@@ -1041,3 +1188,26 @@ LogicalResult acc::WaitOp::verify() {
 
 #define GET_TYPEDEF_CLASSES
 #include "mlir/Dialect/OpenACC/OpenACCOpsTypes.cpp.inc"
+
+//===----------------------------------------------------------------------===//
+// acc dialect utilities
+//===----------------------------------------------------------------------===//
+
+mlir::Value mlir::acc::getVarPtr(mlir::Operation *accDataEntryOp) {
+  auto varPtr{llvm::TypeSwitch<mlir::Operation *, mlir::Value>(accDataEntryOp)
+                  .Case<ACC_DATA_ENTRY_OPS>(
+                      [&](auto entry) { return entry.getVarPtr(); })
+                  .Default([&](mlir::Operation *) { return mlir::Value(); })};
+  return varPtr;
+}
+
+std::optional<mlir::acc::DataClause>
+mlir::acc::getDataClause(mlir::Operation *accDataEntryOp) {
+  auto dataClause{
+      llvm::TypeSwitch<mlir::Operation *, std::optional<mlir::acc::DataClause>>(
+          accDataEntryOp)
+          .Case<ACC_DATA_ENTRY_OPS>(
+              [&](auto entry) { return entry.getDataClause(); })
+          .Default([&](mlir::Operation *) { return std::nullopt; })};
+  return dataClause;
+}

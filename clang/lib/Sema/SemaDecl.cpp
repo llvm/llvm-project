@@ -46,6 +46,7 @@
 #include "clang/Sema/SemaInternal.h"
 #include "clang/Sema/Template.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cstring>
@@ -3695,10 +3696,10 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
       !canRedefineFunction(Old, getLangOpts())) {
     if (getLangOpts().MicrosoftExt) {
       Diag(New->getLocation(), diag::ext_static_non_static) << New;
-      Diag(OldLocation, PrevDiag);
+      Diag(OldLocation, PrevDiag) << Old << Old->getType();
     } else {
       Diag(New->getLocation(), diag::err_static_non_static) << New;
-      Diag(OldLocation, PrevDiag);
+      Diag(OldLocation, PrevDiag) << Old << Old->getType();
       return true;
     }
   }
@@ -4385,7 +4386,7 @@ static void diagnoseVarDeclTypeMismatch(Sema &S, VarDecl *New, VarDecl* Old) {
   SourceLocation OldLocation;
   std::tie(PrevDiag, OldLocation)
     = getNoteDiagForInvalidRedeclaration(Old, New);
-  S.Diag(OldLocation, PrevDiag);
+  S.Diag(OldLocation, PrevDiag) << Old << Old->getType();
   New->setInvalidDecl();
 }
 
@@ -5716,10 +5717,10 @@ Decl *Sema::BuildAnonymousStructOrUnion(Scope *S, DeclSpec &DS,
       SC = SC_None;
     }
 
-    assert(DS.getAttributes().empty() && "No attribute expected");
     Anon = VarDecl::Create(Context, Owner, DS.getBeginLoc(),
                            Record->getLocation(), /*IdentifierInfo=*/nullptr,
                            Context.getTypeDeclType(Record), TInfo, SC);
+    ProcessDeclAttributes(S, Anon, Dc);
 
     // Default-initialize the implicit variable. This initialization will be
     // trivial in almost all cases, except if a union member has an in-class
@@ -6764,14 +6765,26 @@ Sema::ActOnTypedefNameDecl(Scope *S, DeclContext *DC, TypedefNameDecl *NewTD,
   if (IdentifierInfo *II = NewTD->getIdentifier())
     if (!NewTD->isInvalidDecl() &&
         NewTD->getDeclContext()->getRedeclContext()->isTranslationUnit()) {
-      if (II->isStr("FILE"))
+      switch (II->getInterestingIdentifierID()) {
+      case tok::InterestingIdentifierKind::FILE:
         Context.setFILEDecl(NewTD);
-      else if (II->isStr("jmp_buf"))
+        break;
+      case tok::InterestingIdentifierKind::jmp_buf:
         Context.setjmp_bufDecl(NewTD);
-      else if (II->isStr("sigjmp_buf"))
+        break;
+      case tok::InterestingIdentifierKind::sigjmp_buf:
         Context.setsigjmp_bufDecl(NewTD);
-      else if (II->isStr("ucontext_t"))
+        break;
+      case tok::InterestingIdentifierKind::ucontext_t:
         Context.setucontext_tDecl(NewTD);
+        break;
+      case tok::InterestingIdentifierKind::float_t:
+      case tok::InterestingIdentifierKind::double_t:
+        NewTD->addAttr(AvailableOnlyInDefaultEvalMethodAttr::Create(Context));
+        break;
+      default:
+        break;
+      }
     }
 
   return NewTD;
@@ -7750,7 +7763,7 @@ NamedDecl *Sema::ActOnVariableDeclarator(
            diag::err_thread_non_global)
         << DeclSpec::getSpecifierName(TSCS);
     else if (!Context.getTargetInfo().isTLSSupported()) {
-      if (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
+      if (getLangOpts().CUDA || getLangOpts().OpenMPIsTargetDevice ||
           getLangOpts().SYCLIsDevice) {
         // Postpone error emission until we've collected attributes required to
         // figure out whether it's a host or device variable and whether the
@@ -7879,17 +7892,18 @@ NamedDecl *Sema::ActOnVariableDeclarator(
     if (const auto *TT = R->getAs<TypedefType>())
       copyAttrFromTypedefToDecl<AllocSizeAttr>(*this, NewVD, TT);
 
-  if (getLangOpts().CUDA || getLangOpts().OpenMPIsDevice ||
+  if (getLangOpts().CUDA || getLangOpts().OpenMPIsTargetDevice ||
       getLangOpts().SYCLIsDevice) {
     if (EmitTLSUnsupportedError &&
         ((getLangOpts().CUDA && DeclAttrsMatchCUDAMode(getLangOpts(), NewVD)) ||
-         (getLangOpts().OpenMPIsDevice &&
+         (getLangOpts().OpenMPIsTargetDevice &&
           OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(NewVD))))
       Diag(D.getDeclSpec().getThreadStorageClassSpecLoc(),
            diag::err_thread_unsupported);
 
     if (EmitTLSUnsupportedError &&
-        (LangOpts.SYCLIsDevice || (LangOpts.OpenMP && LangOpts.OpenMPIsDevice)))
+        (LangOpts.SYCLIsDevice ||
+         (LangOpts.OpenMP && LangOpts.OpenMPIsTargetDevice)))
       targetDiag(D.getIdentifierLoc(), diag::err_thread_unsupported);
     // CUDA B.2.5: "__shared__ and __constant__ variables have implied static
     // storage [duration]."
@@ -8769,6 +8783,9 @@ void Sema::CheckVariableDeclarationType(VarDecl *NewVD) {
       return;
     }
   }
+
+  if (T->isRVVType())
+    checkRVVTypeSupport(T, NewVD->getLocation(), cast<ValueDecl>(CurContext));
 }
 
 /// Perform semantic checking on a newly-created variable
@@ -12684,10 +12701,9 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
   if (Init)
     DeduceInits = Init;
 
-  if (DirectInit) {
-    if (auto *PL = dyn_cast_or_null<ParenListExpr>(Init))
-      DeduceInits = PL->exprs();
-  }
+  auto *PL = dyn_cast_if_present<ParenListExpr>(Init);
+  if (DirectInit && PL)
+    DeduceInits = PL->exprs();
 
   if (isa<DeducedTemplateSpecializationType>(Deduced)) {
     assert(VDecl && "non-auto type for init capture deduction?");
@@ -12697,7 +12713,7 @@ QualType Sema::deduceVarTypeFromInitializer(VarDecl *VDecl,
     // FIXME: Initialization should not be taking a mutable list of inits.
     SmallVector<Expr*, 8> InitsCopy(DeduceInits.begin(), DeduceInits.end());
     return DeduceTemplateSpecializationFromInitializer(TSI, Entity, Kind,
-                                                       InitsCopy);
+                                                       InitsCopy, PL);
   }
 
   if (DirectInit) {
@@ -13580,7 +13596,7 @@ void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   }
 
   if (LangOpts.OpenMP &&
-      (LangOpts.OpenMPIsDevice || !LangOpts.OMPTargetTriples.empty()) &&
+      (LangOpts.OpenMPIsTargetDevice || !LangOpts.OMPTargetTriples.empty()) &&
       VDecl->isFileVarDecl())
     DeclsToCheckForDeferredDiags.insert(VDecl);
   CheckCompleteVariableDeclaration(VDecl);
@@ -13765,7 +13781,7 @@ void Sema::ActOnUninitializedDecl(Decl *RealDecl) {
       }
 
       if (Context.getTargetInfo().allowDebugInfoForExternalRef() &&
-          !Var->isInvalidDecl() && !getLangOpts().CPlusPlus)
+          !Var->isInvalidDecl())
         ExternalDeclarations.push_back(Var);
 
       return;
@@ -15559,8 +15575,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     if (FD) {
       FD->setBody(Body);
       FD->setWillHaveBody(false);
-      CheckImmediateEscalatingFunctionDefinition(
-          FD, FSI->FoundImmediateEscalatingExpression);
+      CheckImmediateEscalatingFunctionDefinition(FD, FSI);
 
       if (getLangOpts().CPlusPlus14) {
         if (!FD->isInvalidDecl() && Body && !FD->isDependentContext() &&
@@ -15946,7 +15961,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
     DiscardCleanupsInEvaluationContext();
   }
 
-  if (FD && ((LangOpts.OpenMP && (LangOpts.OpenMPIsDevice ||
+  if (FD && ((LangOpts.OpenMP && (LangOpts.OpenMPIsTargetDevice ||
                                   !LangOpts.OMPTargetTriples.empty())) ||
              LangOpts.CUDA || LangOpts.SYCLIsDevice)) {
     auto ES = getEmissionStatus(FD);
@@ -15992,8 +16007,14 @@ NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
   while (!BlockScope->isCompoundStmtScope() && BlockScope->getParent())
     BlockScope = BlockScope->getParent();
 
+  // Loop until we find a DeclContext that is either a function/method or the
+  // translation unit, which are the only two valid places to implicitly define
+  // a function. This avoids accidentally defining the function within a tag
+  // declaration, for example.
   Scope *ContextScope = BlockScope;
-  while (!ContextScope->getEntity())
+  while (!ContextScope->getEntity() ||
+         (!ContextScope->getEntity()->isFunctionOrMethod() &&
+          !ContextScope->getEntity()->isTranslationUnit()))
     ContextScope = ContextScope->getParent();
   ContextRAII SavedContext(*this, ContextScope->getEntity());
 
@@ -16128,7 +16149,11 @@ void Sema::AddKnownFunctionAttributesForReplaceableGlobalAllocationFunction(
   //   indicates failure by returning a null pointer value. Any other allocation
   //   function never returns a null pointer value and indicates failure only by
   //   throwing an exception [...]
-  if (!IsNothrow && !FD->hasAttr<ReturnsNonNullAttr>())
+  //
+  // However, -fcheck-new invalidates this possible assumption, so don't add
+  // NonNull when that is enabled.
+  if (!IsNothrow && !FD->hasAttr<ReturnsNonNullAttr>() &&
+      !getLangOpts().CheckNew)
     FD->addAttr(ReturnsNonNullAttr::CreateImplicit(Context, FD->getLocation()));
 
   // C++2a [basic.stc.dynamic.allocation]p2:
@@ -19576,7 +19601,7 @@ static void CheckForDuplicateEnumValues(Sema &S, ArrayRef<Decl *> Elements,
       return;
     }
 
-    // Constants with initalizers are handled in the next loop.
+    // Constants with initializers are handled in the next loop.
     if (ECD->getInitExpr())
       continue;
 
@@ -20014,7 +20039,7 @@ Sema::FunctionEmissionStatus Sema::getEmissionStatus(const FunctionDecl *FD,
                       getASTContext().GetGVALinkageForFunction(Def));
   };
 
-  if (LangOpts.OpenMPIsDevice) {
+  if (LangOpts.OpenMPIsTargetDevice) {
     // In OpenMP device mode we will not emit host only functions, or functions
     // we don't need due to their linkage.
     std::optional<OMPDeclareTargetDeclAttr::DevTypeTy> DevTy =

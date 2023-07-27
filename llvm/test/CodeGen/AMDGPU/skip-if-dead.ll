@@ -688,6 +688,7 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ; GFX11-NEXT:    s_cbranch_scc0 .LBB8_2
 ; GFX11-NEXT:  ; %bb.1: ; %exit
 ; GFX11-NEXT:    global_store_b32 v[0:1], v9, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB8_2: ; %bb
@@ -720,6 +721,7 @@ define amdgpu_ps void @test_kill_control_flow_remainder(i32 inreg %arg) #0 {
 ; GFX11-NEXT:    v_mov_b32_e64 v9, -2
 ; GFX11-NEXT:    ;;#ASMEND
 ; GFX11-NEXT:    global_store_b32 v[0:1], v9, off
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB8_4:
@@ -1103,6 +1105,7 @@ define amdgpu_ps void @test_kill_divergent_loop(i32 %arg) #0 {
 ; GFX11-NEXT:    v_mov_b32_e32 v0, 8
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB10_4:
@@ -1257,6 +1260,7 @@ define amdgpu_ps void @phi_use_def_before_kill(float inreg %x) #0 {
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB11_5: ; %end
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB11_6:
@@ -1521,6 +1525,7 @@ define amdgpu_ps void @if_after_kill_block(float %arg, float %arg1, float %arg2,
 ; GFX11-NEXT:    global_store_b32 v[0:1], v0, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:  .LBB13_5: ; %UnifiedReturnBlock
+; GFX11-NEXT:    s_nop 0
 ; GFX11-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11-NEXT:    s_endpgm
 ; GFX11-NEXT:  .LBB13_6:
@@ -1911,35 +1916,21 @@ latch:
 }
 
 define void @skip_mode_switch(i32 %arg) {
-; SI-LABEL: skip_mode_switch:
-; SI:       ; %bb.0: ; %entry
-; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; SI-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; SI-NEXT:    s_cbranch_execz .LBB16_2
-; SI-NEXT:  ; %bb.1: ; %bb.0
-; SI-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 2), 3
-; SI-NEXT:  .LBB16_2: ; %bb.1
-; SI-NEXT:    s_or_b64 exec, exec, s[4:5]
-; SI-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX10-WAVE64-LABEL: skip_mode_switch:
-; GFX10-WAVE64:       ; %bb.0: ; %entry
-; GFX10-WAVE64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-WAVE64-NEXT:    s_waitcnt_vscnt null, 0x0
-; GFX10-WAVE64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; GFX10-WAVE64-NEXT:    s_and_saveexec_b64 s[4:5], vcc
-; GFX10-WAVE64-NEXT:    s_cbranch_execz .LBB16_2
-; GFX10-WAVE64-NEXT:  ; %bb.1: ; %bb.0
-; GFX10-WAVE64-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 2), 3
-; GFX10-WAVE64-NEXT:  .LBB16_2: ; %bb.1
-; GFX10-WAVE64-NEXT:    s_or_b64 exec, exec, s[4:5]
-; GFX10-WAVE64-NEXT:    s_setpc_b64 s[30:31]
+; WAVE64-LABEL: skip_mode_switch:
+; WAVE64:       ; %bb.0: ; %entry
+; WAVE64-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; WAVE64-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
+; WAVE64-NEXT:    s_and_saveexec_b64 s[4:5], vcc
+; WAVE64-NEXT:    s_cbranch_execz .LBB16_2
+; WAVE64-NEXT:  ; %bb.1: ; %bb.0
+; WAVE64-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_MODE, 0, 2), 3
+; WAVE64-NEXT:  .LBB16_2: ; %bb.1
+; WAVE64-NEXT:    s_or_b64 exec, exec, s[4:5]
+; WAVE64-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-WAVE32-LABEL: skip_mode_switch:
 ; GFX10-WAVE32:       ; %bb.0: ; %entry
 ; GFX10-WAVE32-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-WAVE32-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-WAVE32-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 0, v0
 ; GFX10-WAVE32-NEXT:    s_and_saveexec_b32 s4, vcc_lo
 ; GFX10-WAVE32-NEXT:    s_cbranch_execz .LBB16_2
@@ -1952,7 +1943,6 @@ define void @skip_mode_switch(i32 %arg) {
 ; GFX11-LABEL: skip_mode_switch:
 ; GFX11:       ; %bb.0: ; %entry
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b64 s[0:1], exec
 ; GFX11-NEXT:    v_cmpx_eq_u32_e32 0, v0
 ; GFX11-NEXT:    s_cbranch_execz .LBB16_2

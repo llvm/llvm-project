@@ -405,7 +405,7 @@ transform.sequence failures(propagate) {
 
 // -----
 
-//       CHECK: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s1 + s0)>
+//       CHECK: #[[MAP:.+]] = affine_map<()[s0, s1] -> (s0 + s1)>
 //       CHECK: func @test_masked_vectorize_dynamic_pad
 func.func @test_masked_vectorize_dynamic_pad(
   %0 : tensor<?x?xf32>, %h0 : index, %h1 : index)

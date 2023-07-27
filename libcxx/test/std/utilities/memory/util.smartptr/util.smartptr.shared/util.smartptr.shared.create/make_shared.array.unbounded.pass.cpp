@@ -11,6 +11,9 @@
 // This test requires support for aligned allocation to test overaligned types.
 // XFAIL: availability-aligned_allocation-missing
 
+// https://reviews.llvm.org/D129198 is not in AppleClang 14
+// XFAIL: stdlib=apple-libc++ && target={{.+}}-apple-macosx10.13{{(.0)?}} && apple-clang-14
+
 // <memory>
 
 // shared_ptr

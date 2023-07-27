@@ -202,8 +202,7 @@ define <16 x float> @fadd_v16f32_swap(<16 x i1> %b, <16 x float> noundef %x, <16
 ;
 ; AVX2-LABEL: fadd_v16f32_swap:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm5 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm5 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm6 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX2-NEXT:    vblendvps %ymm5, %ymm6, %ymm3, %ymm3
@@ -301,8 +300,7 @@ define <16 x float> @fadd_v16f32_commute_swap(<16 x i1> %b, <16 x float> noundef
 ;
 ; AVX2-LABEL: fadd_v16f32_commute_swap:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm5 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm5 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm6 = [-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0,-0.0E+0]
 ; AVX2-NEXT:    vblendvps %ymm5, %ymm6, %ymm3, %ymm3
@@ -506,8 +504,7 @@ define <16 x float> @fsub_v16f32_swap(<16 x i1> %b, <16 x float> noundef %x, <16
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpsrad $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpandn %ymm4, %ymm5, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpandn %ymm3, %ymm0, %ymm0
@@ -601,8 +598,7 @@ define <16 x float> @fsub_v16f32_commute_swap(<16 x i1> %b, <16 x float> noundef
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpsrad $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpandn %ymm4, %ymm5, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpandn %ymm3, %ymm0, %ymm0
@@ -824,8 +820,7 @@ define <16 x float> @fmul_v16f32_swap(<16 x i1> %b, <16 x float> noundef %x, <16
 ;
 ; AVX2-LABEL: fmul_v16f32_swap:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm5 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm5 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm6 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX2-NEXT:    vblendvps %ymm5, %ymm6, %ymm3, %ymm3
@@ -927,8 +922,7 @@ define <16 x float> @fmul_v16f32_commute_swap(<16 x i1> %b, <16 x float> noundef
 ;
 ; AVX2-LABEL: fmul_v16f32_commute_swap:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm5 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm5 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm6 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX2-NEXT:    vblendvps %ymm5, %ymm6, %ymm3, %ymm3
@@ -1157,8 +1151,7 @@ define <16 x float> @fdiv_v16f32_swap(<16 x i1> %b, <16 x float> noundef %x, <16
 ;
 ; AVX2-LABEL: fdiv_v16f32_swap:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm5 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm5 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm6 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX2-NEXT:    vblendvps %ymm5, %ymm6, %ymm3, %ymm3
@@ -1260,8 +1253,7 @@ define <16 x float> @fdiv_v16f32_commute_swap(<16 x i1> %b, <16 x float> noundef
 ;
 ; AVX2-LABEL: fdiv_v16f32_commute_swap:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm5 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm5 = xmm5[0],zero,xmm5[1],zero,xmm5[2],zero,xmm5[3],zero,xmm5[4],zero,xmm5[5],zero,xmm5[6],zero,xmm5[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm5 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vbroadcastss {{.*#+}} ymm6 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX2-NEXT:    vblendvps %ymm5, %ymm6, %ymm3, %ymm3
@@ -2417,8 +2409,7 @@ define <16 x i32> @sub_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i3
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpsrad $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpandn %ymm4, %ymm5, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpandn %ymm3, %ymm0, %ymm0
@@ -2512,8 +2503,7 @@ define <16 x i32> @sub_v16i32_commute_swap(<16 x i1> %b, <16 x i32> noundef %x, 
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpsrad $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpandn %ymm4, %ymm5, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpandn %ymm3, %ymm0, %ymm0
@@ -3375,8 +3365,7 @@ define <16 x i32> @shl_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i3
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpsrad $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpandn %ymm4, %ymm5, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpandn %ymm3, %ymm0, %ymm0
@@ -3513,8 +3502,7 @@ define <16 x i32> @shl_v16i32_commute_swap(<16 x i1> %b, <16 x i32> noundef %x, 
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpsrad $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpandn %ymm4, %ymm5, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpandn %ymm3, %ymm0, %ymm0
@@ -4127,8 +4115,7 @@ define <16 x i32> @lshr_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpsrad $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpandn %ymm4, %ymm5, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpandn %ymm3, %ymm0, %ymm0
@@ -4334,8 +4321,7 @@ define <16 x i32> @lshr_v16i32_commute_swap(<16 x i1> %b, <16 x i32> noundef %x,
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpsrad $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpandn %ymm4, %ymm5, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpandn %ymm3, %ymm0, %ymm0
@@ -4980,8 +4966,7 @@ define <16 x i32> @ashr_v16i32_swap(<16 x i1> %b, <16 x i32> noundef %x, <16 x i
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpsrad $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpandn %ymm4, %ymm5, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpandn %ymm3, %ymm0, %ymm0
@@ -5187,8 +5172,7 @@ define <16 x i32> @ashr_v16i32_commute_swap(<16 x i1> %b, <16 x i32> noundef %x,
 ; AVX2-NEXT:    vpslld $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpsrad $31, %ymm5, %ymm5
 ; AVX2-NEXT:    vpandn %ymm4, %ymm5, %ymm4
-; AVX2-NEXT:    vpmovzxbw {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
-; AVX2-NEXT:    vpmovzxwd {{.*#+}} ymm0 = xmm0[0],zero,xmm0[1],zero,xmm0[2],zero,xmm0[3],zero,xmm0[4],zero,xmm0[5],zero,xmm0[6],zero,xmm0[7],zero
+; AVX2-NEXT:    vpmovzxbd {{.*#+}} ymm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero,xmm0[4],zero,zero,zero,xmm0[5],zero,zero,zero,xmm0[6],zero,zero,zero,xmm0[7],zero,zero,zero
 ; AVX2-NEXT:    vpslld $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpsrad $31, %ymm0, %ymm0
 ; AVX2-NEXT:    vpandn %ymm3, %ymm0, %ymm0
@@ -5526,8 +5510,8 @@ define <8 x i64> @select_sdiv_neutral_constant_v8i64(<8 x i1> %b, <8 x i64> %x, 
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm0[2,2,2,2]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm8 = xmm8[0,1,2,3,5,5,5,5]
-; SSE2-NEXT:    psllq $63, %xmm8
-; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm8 = xmm8[0,0,2,2]
+; SSE2-NEXT:    pslld $31, %xmm8
 ; SSE2-NEXT:    psrad $31, %xmm8
 ; SSE2-NEXT:    movdqa %xmm8, %xmm10
 ; SSE2-NEXT:    pandn %xmm7, %xmm10
@@ -5536,8 +5520,8 @@ define <8 x i64> @select_sdiv_neutral_constant_v8i64(<8 x i1> %b, <8 x i64> %x, 
 ; SSE2-NEXT:    por %xmm10, %xmm8
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm0[1,1,1,1]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm7 = xmm7[0,1,2,3,5,5,5,5]
-; SSE2-NEXT:    psllq $63, %xmm7
-; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm7 = xmm7[0,0,2,2]
+; SSE2-NEXT:    pslld $31, %xmm7
 ; SSE2-NEXT:    psrad $31, %xmm7
 ; SSE2-NEXT:    movdqa %xmm7, %xmm10
 ; SSE2-NEXT:    pandn %xmm6, %xmm10
@@ -5545,8 +5529,8 @@ define <8 x i64> @select_sdiv_neutral_constant_v8i64(<8 x i1> %b, <8 x i64> %x, 
 ; SSE2-NEXT:    por %xmm10, %xmm7
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm0[0,0,0,0]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm6 = xmm6[0,1,2,3,5,5,5,5]
-; SSE2-NEXT:    psllq $63, %xmm6
-; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm6 = xmm6[0,0,2,2]
+; SSE2-NEXT:    pslld $31, %xmm6
 ; SSE2-NEXT:    psrad $31, %xmm6
 ; SSE2-NEXT:    movdqa %xmm6, %xmm10
 ; SSE2-NEXT:    pandn %xmm5, %xmm10
@@ -5554,8 +5538,8 @@ define <8 x i64> @select_sdiv_neutral_constant_v8i64(<8 x i1> %b, <8 x i64> %x, 
 ; SSE2-NEXT:    por %xmm10, %xmm6
 ; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[3,3,3,3]
 ; SSE2-NEXT:    pshufhw {{.*#+}} xmm0 = xmm0[0,1,2,3,5,5,5,5]
-; SSE2-NEXT:    psllq $63, %xmm0
-; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[1,1,3,3]
+; SSE2-NEXT:    pshufd {{.*#+}} xmm5 = xmm0[0,0,2,2]
+; SSE2-NEXT:    pslld $31, %xmm5
 ; SSE2-NEXT:    psrad $31, %xmm5
 ; SSE2-NEXT:    pand %xmm5, %xmm9
 ; SSE2-NEXT:    pandn {{[0-9]+}}(%rsp), %xmm5

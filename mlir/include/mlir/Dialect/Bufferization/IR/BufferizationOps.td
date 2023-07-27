@@ -76,6 +76,9 @@ def Bufferization_AllocTensorOp : Bufferization_Op<"alloc_tensor",
     %c = bufferization.alloc_tensor(%d1, %d2) size_hint = %noe
       : tensor<?x?xf32, #SparseMatrix>
     ```
+
+    Note: An `alloc_tensor` with a `copy` should also be expressed as an
+    `alloc_tensor` without `copy`, followed by a `copy_tensor`.
   }];
 
   let arguments = (ins Variadic<Index>:$dynamic_sizes,
@@ -200,6 +203,46 @@ def Bufferization_CloneOp : Bufferization_Op<"clone", [
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// CopyTensorOp
+//===----------------------------------------------------------------------===//
+
+def Bufferization_CopyTensorOp : Bufferization_Op<"copy_tensor",
+    [BufferizableOpInterface, SameOperandsAndResultType,
+     DeclareOpInterfaceMethods<ReifyRankedShapedTypeOpInterface>]> {
+  let summary = "copy a tensor";
+
+  let description = [{
+    Copy the contents of the source tensor into the destination tensor. This
+    operation is guaranteed to bufferize to a memory copy.
+  }];
+
+  let arguments = (ins AnyTensor:$source,
+                       AnyTensor:$dest);
+
+  let results = (outs AnyTensor:$result);
+
+  let extraClassDeclaration = [{
+    LogicalResult bufferize(RewriterBase &rewriter,
+                            const BufferizationOptions &options);
+
+    bool bufferizesToMemoryRead(OpOperand &opOperand,
+                                const AnalysisState &state);
+
+    bool bufferizesToMemoryWrite(OpOperand &opOperand,
+                                 const AnalysisState &state);
+
+    AliasingOpResultList getAliasingOpResults(
+        OpOperand &opOperand, const AnalysisState &state);
+
+    RankedTensorType getType() {
+      return ::llvm::cast<RankedTensorType>(getResult().getType());
+    }
+  }];
+
+  let assemblyFormat = "$source `,` $dest attr-dict `:` type($source)";
 }
 
 //===----------------------------------------------------------------------===//
@@ -383,11 +426,12 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     `unrealized_conversion_cast` and is used to make sure that the IR stays
     valid at any point during the bufferization.
 
-    IR that contains `to_memref` ops cannot be bufferized with One-Shot
-    Bufferize.
+    The `read_only` attribute can optionally be set, indicating to the
+    bufferization that the buffer returned by this op (or an alias created from
+    the returned buffer) will not be written to.
   }];
 
-  let arguments = (ins AnyTensor:$tensor);
+  let arguments = (ins AnyTensor:$tensor, UnitAttr:$read_only);
   let results = (outs AnyRankedOrUnrankedMemRef:$memref);
 
   let extraClassDeclaration = [{
@@ -408,9 +452,8 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
     }
 
     bool bufferizesToMemoryWrite(OpOperand &opOperand,
-                                 const AnalysisState &state) const {
-      // It is unknown whether the resulting MemRef will be written or not.
-      return true;
+                                 const AnalysisState &state) {
+      return !getReadOnly();
     }
 
     AliasingOpResultList getAliasingOpResults(
@@ -422,10 +465,55 @@ def Bufferization_ToMemrefOp : Bufferization_Op<"to_memref", [
                             const BufferizationOptions &options);
   }];
 
-  let assemblyFormat = "$tensor attr-dict `:` type($memref)";
+  let assemblyFormat = [{
+    $tensor (`read_only` $read_only^)? attr-dict `:` type($memref)
+  }];
 
   let hasFolder = 1;
   let hasCanonicalizer = 1;
+}
+
+def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
+    AttrSizedOperandSegments, DeclareOpInterfaceMethods<InferTypeOpInterface>
+  ]> {
+  let summary = "deallocates the given memrefs if no alias is retained";
+  let description = [{
+    This operation deallocates each of the given memrefs if there is no alias
+    to that memref in the list of retained memrefs and the corresponding
+    condition value is set. This condition can be used to indicate and pass on
+    ownership of memref values (or in other words, the responsibility of
+    deallocating that memref). If two memrefs alias each other, only one will be
+    deallocated to avoid double free situations.
+
+    The memrefs to be deallocated must be the originally allocated memrefs,
+    however, the memrefs to be retained may be arbitrary memrefs.
+
+    Returns a list of conditions corresponding to the list of memrefs which
+    indicates the new ownerships, i.e., if the memref was deallocated the
+    ownership was dropped (set to 'false') and otherwise will be the same as the
+    input condition.
+
+    Example:
+    ```mlir
+    %0:2 = bufferization.dealloc %a0, %a1 if %cond0, %cond1 retain %r0, %r1 :
+      memref<2xf32>, memref<4xi32> retain memref<?xf32>, memref<f64>
+    ```
+    Deallocation will be called on `%a0` if `%cond0` is 'true' and neither `%r0`
+    or `%r1` are aliases of `%a0`. `%a1` will be deallocated when `%cond1` is
+    set to 'true' and none of `%r0`, %r1` and `%a0` are aliases.
+  }];
+
+  let arguments = (ins Variadic<AnyRankedOrUnrankedMemRef>:$memrefs,
+                       Variadic<I1>:$conditions,
+                       Variadic<AnyRankedOrUnrankedMemRef>:$retained);
+  let results = (outs Variadic<I1>:$updatedConditions);
+
+  let assemblyFormat = [{
+    (` ``(` $memrefs^ `:` type($memrefs) `)` `if` ` ` `(` $conditions `)` )?
+    (`retain` ` ` `(` $retained^ `:` type($retained) `)` )? attr-dict
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // BUFFERIZATION_OPS

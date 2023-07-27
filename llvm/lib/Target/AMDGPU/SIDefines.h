@@ -29,6 +29,24 @@ enum SIRCFlags : uint8_t {
   RegKindMask = (HasVGPR | HasAGPR | HasSGPR)
 }; // enum SIRCFlagsr
 
+namespace SIEncodingFamily {
+// This must be kept in sync with the SIEncodingFamily class in SIInstrInfo.td
+// and the columns of the getMCOpcodeGen table.
+enum {
+  SI = 0,
+  VI = 1,
+  SDWA = 2,
+  SDWA9 = 3,
+  GFX80 = 4,
+  GFX9 = 5,
+  GFX10 = 6,
+  SDWA10 = 7,
+  GFX90A = 8,
+  GFX940 = 9,
+  GFX11 = 10,
+};
+}
+
 namespace SIInstrFlags {
 // This needs to be kept in sync with the field bits in InstSI.
 enum : uint64_t {
@@ -232,6 +250,7 @@ enum OperandType : unsigned {
 // NEG and SEXT share same bit-mask because they can't be set simultaneously.
 namespace SISrcMods {
   enum : unsigned {
+   NONE = 0,
    NEG = 1 << 0,   // Floating-point negate modifier
    ABS = 1 << 1,   // Floating-point absolute modifier
    SEXT = 1 << 0,  // Integer sign-extend modifier
@@ -926,6 +945,17 @@ enum Offset_COV5 : unsigned {
 };
 
 } // namespace ImplicitArg
+
+namespace VirtRegFlag {
+// Virtual register flags used for various target specific handlings during
+// codegen.
+enum Register_Flag : uint8_t {
+  // Register operand in a whole-wave mode operation.
+  WWM_REG = 1 << 0,
+};
+
+} // namespace VirtRegFlag
+
 } // namespace AMDGPU
 
 #define R_00B028_SPI_SHADER_PGM_RSRC1_PS                                0x00B028

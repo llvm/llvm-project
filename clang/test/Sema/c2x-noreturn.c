@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -verify=all,c2x -std=c2x -fsyntax-only %s
-// RUN: %clang_cc1 -verify=all -std=c17 -fdouble-square-bracket-attributes -fsyntax-only %s
+// RUN: %clang_cc1 -verify=all -std=c17 -fsyntax-only %s
 // RUN: %clang_cc1 -verify=none -Wno-deprecated-attributes -D_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS -std=c2x -fsyntax-only %s
-// RUN: %clang_cc1 -verify=none -Wno-deprecated-attributes -D_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS -std=c17 -fdouble-square-bracket-attributes -fsyntax-only %s
+// RUN: %clang_cc1 -verify=none -Wno-deprecated-attributes -D_CLANG_DISABLE_CRT_DEPRECATION_WARNINGS -std=c17 -fsyntax-only %s
 // none-no-diagnostics
 
 // Test preprocessor functionality.

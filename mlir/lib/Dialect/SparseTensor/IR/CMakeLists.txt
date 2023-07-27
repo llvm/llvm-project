@@ -52,6 +52,10 @@ endif()
 
 add_mlir_dialect_library(MLIRSparseTensorDialect
   SparseTensorDialect.cpp
+  Detail/Var.cpp
+  Detail/DimLvlMap.cpp
+  Detail/LvlTypeParser.cpp
+  Detail/DimLvlMapParser.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/SparseTensor
@@ -64,6 +68,7 @@ add_mlir_dialect_library(MLIRSparseTensorDialect
   LINK_LIBS PUBLIC
   MLIRArithDialect
   MLIRDialect
+  MLIRDialectUtils
   MLIRIR
   MLIRInferTypeOpInterface
   MLIRSupport

@@ -971,3 +971,11 @@ class SettingsCommandTestCase(TestBase):
 
         # Test OptionValueLanguage
         self.verify_setting_value_json("repl-lang", "c++")
+        
+    def test_global_option(self):
+        # This command used to crash the settings because -g was signaled by a
+        # NULL execution context (not one with an empty Target...) and in the
+        # special handling for load-script-from-symbol-file this wasn't checked.
+        self.runCmd("settings set -g target.load-script-from-symbol-file true")
+
+          

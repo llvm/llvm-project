@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple aarch64-arm-none-eabi -target-feature +neon -target-feature +bf16 \
+// RUN: %clang_cc1 -triple aarch64 -target-feature +neon -target-feature +bf16 \
 // RUN:  -O2 -verify -fsyntax-only %s
 
 // REQUIRES: aarch64-registered-target || arm-registered-target

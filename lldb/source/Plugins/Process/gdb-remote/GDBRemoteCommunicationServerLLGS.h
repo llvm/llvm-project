@@ -16,6 +16,7 @@
 #include "lldb/Core/Communication.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/common/NativeProcessProtocol.h"
+#include "lldb/Utility/RegisterValue.h"
 #include "lldb/lldb-private-forward.h"
 
 #include "GDBRemoteCommunicationServerCommon.h"
@@ -122,6 +123,11 @@ protected:
   std::deque<std::string> m_stop_notification_queue;
 
   NativeProcessProtocol::Extension m_extensions_supported = {};
+
+  // Typically we would use a SmallVector for this data but in this context we
+  // don't know how much data we're recieving so we would have to heap allocate
+  // a lot, or have a very large stack frame. So it's a member instead.
+  uint8_t m_reg_bytes[RegisterValue::kMaxRegisterByteSize];
 
   PacketResult SendONotification(const char *buffer, uint32_t len);
 

@@ -113,6 +113,10 @@ bool canFoldIntoProducerOp(CastOp castOp);
 /// that can be folded.
 LogicalResult foldTensorCast(Operation *op);
 
+/// Return the dimension of the given tensor value.
+OpFoldResult getMixedSize(OpBuilder &builder, Location loc, Value value,
+                          int64_t dim);
+
 /// Return the dimensions of the given tensor value.
 SmallVector<OpFoldResult> getMixedSizes(OpBuilder &builder, Location loc,
                                         Value value);

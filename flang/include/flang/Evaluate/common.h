@@ -260,6 +260,9 @@ public:
       const semantics::DerivedTypeSpec &spec) {
     return common::ScopedSet(pdtInstance_, &spec);
   }
+  common::Restorer<const semantics::DerivedTypeSpec *> WithoutPDTInstance() {
+    return common::ScopedSet(pdtInstance_, nullptr);
+  }
 
 private:
   parser::ContextualMessages messages_;

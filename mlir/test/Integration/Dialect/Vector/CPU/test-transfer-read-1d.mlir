@@ -54,9 +54,10 @@ func.func @transfer_read_1d_unit_stride(%A : memref<?x?xf32>) {
 func.func @transfer_read_1d_non_static_unit_stride(%A : memref<?x?xf32>) {
   %c1 = arith.constant 1 : index
   %c2 = arith.constant 2 : index
+  %c4 = arith.constant 4 : index
   %c6 = arith.constant 6 : index
   %fm42 = arith.constant -42.0: f32
-  %1 = memref.reinterpret_cast %A to offset: [%c6], sizes: [%c1, %c2],  strides: [%c6, %c1]
+  %1 = memref.reinterpret_cast %A to offset: [%c6], sizes: [%c4, %c6],  strides: [%c6, %c1]
       : memref<?x?xf32> to memref<?x?xf32, strided<[?, ?], offset: ?>>
   %2 = vector.transfer_read %1[%c2, %c1], %fm42 {in_bounds=[true]}
       : memref<?x?xf32, strided<[?, ?], offset: ?>>, vector<4xf32>

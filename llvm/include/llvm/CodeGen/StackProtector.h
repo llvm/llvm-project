@@ -26,13 +26,10 @@
 namespace llvm {
 
 class BasicBlock;
-class DominatorTree;
 class Function;
-class Instruction;
 class Module;
 class TargetLoweringBase;
 class TargetMachine;
-class Type;
 
 class StackProtector : public FunctionPass {
 private:

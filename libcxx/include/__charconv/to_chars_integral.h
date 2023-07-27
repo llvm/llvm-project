@@ -246,7 +246,7 @@ __to_chars_integral(char* __first, char* __last, _Tp __value) {
 
 template <typename _Tp>
 _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI int __to_chars_integral_width(_Tp __value, unsigned __base) {
-  _LIBCPP_ASSERT(__value >= 0, "The function requires a non-negative value.");
+  _LIBCPP_ASSERT_UNCATEGORIZED(__value >= 0, "The function requires a non-negative value.");
 
   unsigned __base_2 = __base * __base;
   unsigned __base_3 = __base_2 * __base;
@@ -311,7 +311,7 @@ to_chars(char* __first, char* __last, _Tp __value) {
 template <typename _Tp, typename enable_if<is_integral<_Tp>::value, int>::type = 0>
 inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI to_chars_result
 to_chars(char* __first, char* __last, _Tp __value, int __base) {
-  _LIBCPP_ASSERT(2 <= __base && __base <= 36, "base not in [2, 36]");
+  _LIBCPP_ASSERT_UNCATEGORIZED(2 <= __base && __base <= 36, "base not in [2, 36]");
 
   using _Type = __make_32_64_or_128_bit_t<_Tp>;
   return std::__to_chars_integral(__first, __last, static_cast<_Type>(__value), __base, is_signed<_Tp>());

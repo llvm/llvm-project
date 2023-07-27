@@ -180,6 +180,116 @@ directory:
 ninja check-flang
 ```
 
+### Building flang runtime for accelerators
+Flang runtime can be built for accelerators in experimental mode, i.e.
+complete enabling is WIP.  CUDA and OpenMP target offload builds
+are currently supported.
+
+#### Building out-of-tree
+
+##### CUDA build
+Clang with NVPTX backend and NVCC compilers are supported.
+
+```bash
+cd llvm-project/flang
+rm -rf build_flang_runtime
+mkdir build_flang_runtime
+cd build_flang_runtime
+
+cmake \
+  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DCMAKE_CUDA_ARCHITECTURES=80 \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CUDA_COMPILER=clang \
+  -DCMAKE_CUDA_HOST_COMPILER=clang++ \
+  ../runtime/
+make -j FortranRuntime
+```
+
+Note that the used version of `clang` must [support](https://releases.llvm.org/16.0.0/tools/clang/docs/ReleaseNotes.html#cuda-support)
+CUDA toolkit version installed on the build machine.  If there are multiple
+CUDA toolkit installations, please use `-DCUDAToolkit_ROOT=/some/path`
+to specify the compatible version.
+
+```bash
+cd llvm-project/flang
+rm -rf build_flang_runtime
+mkdir build_flang_runtime
+cd build_flang_runtime
+
+cmake \
+  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DCMAKE_CUDA_ARCHITECTURES=80 \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CUDA_COMPILER=nvcc \
+  -DCMAKE_CUDA_HOST_COMPILER=clang++ \
+  ../runtime/
+make -j FortranRuntime
+```
+
+Note that `nvcc` might limit support to certain
+[versions](https://docs.nvidia.com/cuda/cuda-installation-guide-linux/index.html#host-compiler-support-policy) of `CMAKE_CUDA_HOST_COMPILER`,
+so please use compatible versions.
+
+The result of the build is a "fat" library with the host and device
+code.  Note that the packaging of the libraries is different
+between [Clang](https://clang.llvm.org/docs/OffloadingDesign.html#linking-target-device-code) and NVCC, so the library must be linked using
+compatible compiler drivers.
+
+### Bulding in-tree
+One may build Flang runtime library along with building Flang itself
+by providing these additional CMake variables on top of the Flang in-tree
+build config:
+
+For example:
+```bash
+  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DCMAKE_CUDA_ARCHITECTURES=80 \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DCMAKE_CUDA_COMPILER=clang \
+  -DCMAKE_CUDA_HOST_COMPILER=clang++ \
+```
+
+Or:
+```bash
+  -DFLANG_EXPERIMENTAL_CUDA_RUNTIME=ON \
+  -DCMAKE_CUDA_ARCHITECTURES=80 \
+  -DCMAKE_C_COMPILER=gcc \
+  -DCMAKE_CXX_COMPILER=g++ \
+  -DCMAKE_CUDA_COMPILER=nvcc \
+  -DCMAKE_CUDA_HOST_COMPILER=g++ \
+```
+
+Normal `make -j check-flang` will work with such CMake configuration.
+
+##### OpenMP target offload build
+Only Clang compiler is currently supported.
+
+```
+cd llvm-project/flang
+rm -rf build_flang_runtime
+mkdir build_flang_runtime
+cd build_flang_runtime
+
+cmake \
+  -DFLANG_EXPERIMENTAL_OMP_OFFLOAD_BUILD="host_device" \
+  -DCMAKE_C_COMPILER=clang \
+  -DCMAKE_CXX_COMPILER=clang++ \
+  -DFLANG_OMP_DEVICE_ARCHITECTURES="all" \
+  ../runtime/
+make -j FortranRuntime
+```
+
+The result of the build is a "device-only" library, i.e. the host
+part of the library is just a container for the device code.
+The resulting library may be linked to user programs using
+Clang-like device linking pipeline.
+
+The same set of CMake variables works for Flang in-tree build.
+
 ## Supported C++ compilers
 
 Flang is written in C++17.

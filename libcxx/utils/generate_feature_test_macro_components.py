@@ -462,7 +462,7 @@ feature_test_macros = [
                 # "c++23": 202207, Not implemented P2419R2 Clarify handling of encodings in localized formatting of chrono types
             },
             # Note these three papers are adopted at the June 2023 meeting and have sequential numbering
-            # 202304 P2510R3 Formatting pointers
+            # 202304 P2510R3 Formatting pointers (Implemented)
             # 202305 P2757R3 Type-checking format args
             # 202306 P2637R3 Member Visit
             "headers": ["format"],
@@ -772,13 +772,19 @@ feature_test_macros = [
             "libcxx_guard": "!defined(_LIBCPP_AVAILABILITY_HAS_NO_PMR)",
         },
         {
+            "name": "__cpp_lib_print",
+            "values": {"c++23": 202207},
+            "headers": ["ostream", "print"],
+            "unimplemented": True,
+        },
+        {
             "name": "__cpp_lib_quoted_string_io",
             "values": {"c++14": 201304},
             "headers": ["iomanip"],
         },
         {
             "name": "__cpp_lib_ranges",
-            "values": {"c++20": 202106},
+            "values": {"c++20": 202207},
             "headers": ["algorithm", "functional", "iterator", "memory", "ranges"],
         },
         {
@@ -811,6 +817,11 @@ feature_test_macros = [
             "unimplemented": True,
         },
         {
+            "name": "__cpp_lib_ranges_repeat",
+            "values": { "c++23": 202207},
+            "headers": ["ranges"],
+        },
+        {
             "name": "__cpp_lib_ranges_slide",
             "values": {"c++23": 202202},
             "headers": ["ranges"],
@@ -830,8 +841,8 @@ feature_test_macros = [
                 "forward_list",
                 "list",
                 "map",
-                "priority_queue",
                 "queue",
+                "ranges",
                 "set",
                 "stack",
                 "string",
@@ -839,7 +850,6 @@ feature_test_macros = [
                 "unordered_set",
                 "vector",
             ],
-            "unimplemented": True,
         },
         {
             "name": "__cpp_lib_ranges_zip",

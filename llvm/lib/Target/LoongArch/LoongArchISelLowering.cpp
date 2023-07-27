@@ -20,6 +20,7 @@
 #include "MCTargetDesc/LoongArchBaseInfo.h"
 #include "MCTargetDesc/LoongArchMCTargetDesc.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/RuntimeLibcalls.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
@@ -52,6 +53,14 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
     addRegisterClass(MVT::f32, &LoongArch::FPR32RegClass);
   if (Subtarget.hasBasicD())
     addRegisterClass(MVT::f64, &LoongArch::FPR64RegClass);
+  if (Subtarget.hasExtLSX())
+    for (auto VT : {MVT::v4f32, MVT::v2f64, MVT::v16i8, MVT::v8i16, MVT::v4i32,
+                    MVT::v2i64})
+      addRegisterClass(VT, &LoongArch::LSX128RegClass);
+  if (Subtarget.hasExtLASX())
+    for (auto VT : {MVT::v8f32, MVT::v4f64, MVT::v32i8, MVT::v16i16, MVT::v8i32,
+                    MVT::v4i64})
+      addRegisterClass(VT, &LoongArch::LASX256RegClass);
 
   setLoadExtAction({ISD::EXTLOAD, ISD::SEXTLOAD, ISD::ZEXTLOAD}, GRLenVT,
                    MVT::i1, Promote);
@@ -198,6 +207,10 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
 
   // Function alignments.
   setMinFunctionAlignment(Align(4));
+  // Set preferred alignments.
+  setPrefFunctionAlignment(Subtarget.getPrefFunctionAlignment());
+  setPrefLoopAlignment(Subtarget.getPrefLoopAlignment());
+  setMaxBytesForAlignment(Subtarget.getMaxBytesForAlignment());
 
   setTargetDAGCombine(ISD::AND);
   setTargetDAGCombine(ISD::OR);
@@ -3043,6 +3056,12 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
         return std::make_pair(0U, &LoongArch::FPR32RegClass);
       if (Subtarget.hasBasicD() && VT == MVT::f64)
         return std::make_pair(0U, &LoongArch::FPR64RegClass);
+      if (Subtarget.hasExtLSX() &&
+          TRI->isTypeLegalForClass(LoongArch::LSX128RegClass, VT))
+        return std::make_pair(0U, &LoongArch::LSX128RegClass);
+      if (Subtarget.hasExtLASX() &&
+          TRI->isTypeLegalForClass(LoongArch::LASX256RegClass, VT))
+        return std::make_pair(0U, &LoongArch::LASX256RegClass);
       break;
     default:
       break;
@@ -3060,7 +3079,8 @@ LoongArchTargetLowering::getRegForInlineAsmConstraint(
   // decode the usage of register name aliases into their official names. And
   // AFAIK, the not yet upstreamed `rustc` for LoongArch will always use
   // official register names.
-  if (Constraint.startswith("{$r") || Constraint.startswith("{$f")) {
+  if (Constraint.startswith("{$r") || Constraint.startswith("{$f") ||
+      Constraint.startswith("{$vr") || Constraint.startswith("{$xr")) {
     bool IsFP = Constraint[2] == 'f';
     std::pair<StringRef, StringRef> Temp = Constraint.split('$');
     std::pair<unsigned, const TargetRegisterClass *> R;
@@ -3240,6 +3260,33 @@ bool LoongArchTargetLowering::isLegalAddressingMode(const DataLayout &DL,
   }
 
   return true;
+}
+
+bool LoongArchTargetLowering::isLegalICmpImmediate(int64_t Imm) const {
+  return isInt<12>(Imm);
+}
+
+bool LoongArchTargetLowering::isLegalAddImmediate(int64_t Imm) const {
+  return isInt<12>(Imm);
+}
+
+bool LoongArchTargetLowering::isZExtFree(SDValue Val, EVT VT2) const {
+  // Zexts are free if they can be combined with a load.
+  // Don't advertise i32->i64 zextload as being free for LA64. It interacts
+  // poorly with type legalization of compares preferring sext.
+  if (auto *LD = dyn_cast<LoadSDNode>(Val)) {
+    EVT MemVT = LD->getMemoryVT();
+    if ((MemVT == MVT::i8 || MemVT == MVT::i16) &&
+        (LD->getExtensionType() == ISD::NON_EXTLOAD ||
+         LD->getExtensionType() == ISD::ZEXTLOAD))
+      return true;
+  }
+
+  return TargetLowering::isZExtFree(Val, VT2);
+}
+
+bool LoongArchTargetLowering::isSExtCheaperThanZExt(EVT SrcVT, EVT DstVT) const {
+  return Subtarget.is64Bit() && SrcVT == MVT::i32 && DstVT == MVT::i64;
 }
 
 bool LoongArchTargetLowering::hasAndNotCompare(SDValue Y) const {

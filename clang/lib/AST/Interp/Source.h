@@ -56,14 +56,11 @@ public:
   }
 
 private:
-  /// Constructor used by Function to generate pointers.
-  CodePtr(const char *Ptr) : Ptr(Ptr) {}
-
-private:
   friend class Function;
-
+  /// Constructor used by Function to generate pointers.
+  CodePtr(const std::byte *Ptr) : Ptr(Ptr) {}
   /// Pointer into the code owned by a function.
-  const char *Ptr;
+  const std::byte *Ptr;
 };
 
 /// Describes the statement/declaration an opcode was generated from.
@@ -74,6 +71,7 @@ public:
   SourceInfo(const Decl *D) : Source(D) {}
 
   SourceLocation getLoc() const;
+  SourceRange getRange() const;
 
   const Stmt *asStmt() const { return Source.dyn_cast<const Stmt *>(); }
   const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
@@ -99,6 +97,7 @@ public:
   const Expr *getExpr(const Function *F, CodePtr PC) const;
   /// Returns the location from which an opcode originates.
   SourceLocation getLocation(const Function *F, CodePtr PC) const;
+  SourceRange getRange(const Function *F, CodePtr PC) const;
 };
 
 } // namespace interp

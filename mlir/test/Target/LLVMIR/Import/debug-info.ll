@@ -1,17 +1,17 @@
 ; RUN: mlir-translate -import-llvm -mlir-print-debuginfo -split-input-file %s | FileCheck %s
 
-; CHECK: #[[$MODULELOC:.+]] = loc({{.*}}debug-info.ll{{.*}}:0:0)
+; CHECK: #[[$UNKNOWN_LOC:.+]] = loc(unknown)
 
 ; CHECK-LABEL: @module_loc(
 define i32 @module_loc(i32 %0) {
 entry:
   br label %next
 end:
-  ; CHECK: ^{{.*}}(%{{.+}}: i32 loc({{.*}}debug-info.ll{{.*}}:0:0)):
+  ; CHECK: ^{{.*}}(%{{.+}}: i32 loc(unknown)):
   %1 = phi i32 [ %2, %next ]
   ret i32 %1
 next:
-  ; CHECK: = llvm.mul %{{.+}}, %{{.+}} : i32 loc(#[[$MODULELOC]])
+  ; CHECK: = llvm.mul %{{.+}}, %{{.+}} : i32 loc(#[[$UNKNOWN_LOC]])
   %2 = mul i32 %0, %0
   br label %end
 }
@@ -233,26 +233,34 @@ source_filename = "debug-info.ll"
 
 ; // -----
 
+; NOTE: The debug intrinsics are reordered as a side-effect of the dominance-
+;       preserving measures needed to import LLVM IR.
+
+; CHECK: #[[FILE:.+]] = #llvm.di_file<
 ; CHECK: #[[$SP:.+]] = #llvm.di_subprogram<
-; CHECK: #[[$VAR0:.+]] = #llvm.di_local_variable<scope = #[[$SP]], name = "arg", file = #{{.*}}, line = 1, arg = 1, alignInBits = 32, type = #{{.*}}>
+; CHECK: #[[$LABEL:.+]] = #llvm.di_label<scope = #[[$SP]], name = "label", file = #[[FILE]], line = 42>
 ; CHECK: #[[$VAR1:.+]] = #llvm.di_local_variable<scope = #[[$SP]], name = "arg">
+; CHECK: #[[$VAR0:.+]] = #llvm.di_local_variable<scope = #[[$SP]], name = "arg", file = #[[FILE]], line = 1, arg = 1, alignInBits = 32, type = #{{.*}}>
 
 ; CHECK-LABEL: @intrinsic
 ; CHECK-SAME:  %[[ARG0:[a-zA-Z0-9]+]]
 ; CHECK-SAME:  %[[ARG1:[a-zA-Z0-9]+]]
 define void @intrinsic(i64 %0, ptr %1) {
+  ; CHECK: llvm.intr.dbg.declare #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
   ; CHECK: llvm.intr.dbg.value #[[$VAR0]] = %[[ARG0]] : i64 loc(#[[LOC0:.+]])
   call void @llvm.dbg.value(metadata i64 %0, metadata !5, metadata !DIExpression()), !dbg !7
-  ; CHECK: llvm.intr.dbg.declare #[[$VAR1]] = %[[ARG1]] : !llvm.ptr loc(#[[LOC1:.+]])
   call void @llvm.dbg.declare(metadata ptr %1, metadata !6, metadata !DIExpression()), !dbg !9
+  ; CHECK: llvm.intr.dbg.label #[[$LABEL]] loc(#[[LOC1:.+]])
+  call void @llvm.dbg.label(metadata !10), !dbg !9
   ret void
 }
 
-; CHECK: #[[LOC0]] = loc(fused<#[[$SP]]>[{{.*}}])
 ; CHECK: #[[LOC1]] = loc(fused<#[[$SP]]>[{{.*}}])
+; CHECK: #[[LOC0]] = loc(fused<#[[$SP]]>[{{.*}}])
 
 declare void @llvm.dbg.value(metadata, metadata, metadata)
 declare void @llvm.dbg.declare(metadata, metadata, metadata)
+declare void @llvm.dbg.label(metadata)
 
 !llvm.dbg.cu = !{!1}
 !llvm.module.flags = !{!0}
@@ -266,6 +274,7 @@ declare void @llvm.dbg.declare(metadata, metadata, metadata)
 !7 = !DILocation(line: 1, column: 2, scope: !3)
 !8 = !DILocation(line: 2, column: 2, scope: !3)
 !9 = !DILocation(line: 3, column: 2, scope: !3)
+!10 = !DILabel(scope: !3, name: "label", file: !2, line: 42)
 
 ; // -----
 
@@ -346,6 +355,40 @@ declare !dbg !3 void @variadic_func()
 define void @dbg_use_before_def(ptr %arg) {
   call void @llvm.dbg.value(metadata ptr %dbg_arg, metadata !7, metadata !DIExpression()), !dbg !9
   %dbg_arg = getelementptr double, ptr %arg, i64 16
+  ret void
+}
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!3 = !DICompositeType(tag: DW_TAG_class_type, name: "class_field", file: !2, line: 42, flags: DIFlagTypePassByReference | DIFlagNonTrivial, elements: !4)
+!4 = !{!6}
+!5 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !3, flags: DIFlagArtificial | DIFlagObjectPointer)
+!6 = !DIDerivedType(tag: DW_TAG_member, name: "call_field", file: !2, baseType: !5)
+!7 = !DILocalVariable(scope: !8, name: "var", file: !2, type: !5);
+!8 = distinct !DISubprogram(name: "dbg_use_before_def", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!9 = !DILocation(line: 1, column: 2, scope: !8)
+
+; // -----
+
+; This test checks that broken dominance doesn't break the metadata import.
+
+; CHECK-LABEL: @dbg_broken_dominance
+define void @dbg_broken_dominance(ptr %arg, i1 %cond) {
+  br i1 %cond, label %b1, label %b2
+b1:
+  br label %b3
+b2:
+  %dbg_arg = getelementptr double, ptr %arg, i64 16
+  ; CHECK: llvm.getelementptr
+  ; CHECK-NEXT: llvm.intr.dbg.value
+  br label %b3
+b3:
+  call void @llvm.dbg.value(metadata ptr %dbg_arg, metadata !7, metadata !DIExpression()), !dbg !9
   ret void
 }
 

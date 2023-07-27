@@ -547,7 +547,7 @@ func.func @tensor.reshape(%t1: tensor<?x10xf32>) -> tensor<2x2x5xf32> {
 
 // -----
 
-// CHECK:       #[[$sum_map_1:.+]] = affine_map<()[s0, s1] -> (s1 + s0 + 5)>
+// CHECK:       #[[$sum_map_1:.+]] = affine_map<()[s0, s1] -> (s0 + s1 + 5)>
 // CHECK:       #[[$sum_map_2:.+]] = affine_map<()[s0, s1] -> (s0 + s1 + 10)>
 // CHECK-LABEL: func @tensor.pad(
 //  CHECK-SAME:   %[[t1:.*]]: tensor<?x10xindex>, %[[l2:.*]]: index, %[[h1:.*]]: index, %[[h2:.*]]: index

@@ -2086,12 +2086,13 @@ void NeonEmitter::genOverloadTypeCheckCode(raw_ostream &OS,
 
     std::string Name = Def->getName();
     // Omit type checking for the pointer arguments of vld1_lane, vld1_dup,
-    // and vst1_lane intrinsics.  Using a pointer to the vector element
-    // type with one of those operations causes codegen to select an aligned
-    // load/store instruction.  If you want an unaligned operation,
-    // the pointer argument needs to have less alignment than element type,
-    // so just accept any pointer type.
-    if (Name == "vld1_lane" || Name == "vld1_dup" || Name == "vst1_lane") {
+    // vst1_lane, vldap1_lane, and vstl1_lane intrinsics.  Using a pointer to
+    // the vector element type with one of those operations causes codegen to
+    // select an aligned load/store instruction.  If you want an unaligned
+    // operation, the pointer argument needs to have less alignment than element
+    // type, so just accept any pointer type.
+    if (Name == "vld1_lane" || Name == "vld1_dup" || Name == "vst1_lane" ||
+        Name == "vldap1_lane" || Name == "vstl1_lane") {
       PtrArgNum = -1;
       HasConstPtr = false;
     }

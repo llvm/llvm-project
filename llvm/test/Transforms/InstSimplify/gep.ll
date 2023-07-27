@@ -160,7 +160,7 @@ define ptr @test7(ptr %b, ptr %e) {
 
 define ptr @undef_inbounds_var_idx(i64 %idx) {
 ; CHECK-LABEL: @undef_inbounds_var_idx(
-; CHECK-NEXT:    ret ptr poison
+; CHECK-NEXT:    ret ptr undef
 ;
   %el = getelementptr inbounds i64, ptr undef, i64 %idx
   ret ptr %el
@@ -176,7 +176,7 @@ define ptr @undef_no_inbounds_var_idx(i64 %idx) {
 
 define <8 x ptr> @undef_vec1() {
 ; CHECK-LABEL: @undef_vec1(
-; CHECK-NEXT:    ret <8 x ptr> poison
+; CHECK-NEXT:    ret <8 x ptr> undef
 ;
   %el = getelementptr inbounds i64, ptr undef, <8 x i64> undef
   ret <8 x ptr> %el

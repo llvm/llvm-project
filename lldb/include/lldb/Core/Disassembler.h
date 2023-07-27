@@ -176,14 +176,14 @@ public:
   virtual void SetDescription(llvm::StringRef) {
   } // May be overridden in sub-classes that have descriptions.
 
-  lldb::OptionValueSP ReadArray(FILE *in_file, Stream *out_stream,
+  lldb::OptionValueSP ReadArray(FILE *in_file, Stream &out_stream,
                                 OptionValue::Type data_type);
 
-  lldb::OptionValueSP ReadDictionary(FILE *in_file, Stream *out_stream);
+  lldb::OptionValueSP ReadDictionary(FILE *in_file, Stream &out_stream);
 
   bool DumpEmulation(const ArchSpec &arch);
 
-  virtual bool TestEmulation(Stream *stream, const char *test_file_name);
+  virtual bool TestEmulation(Stream &stream, const char *test_file_name);
 
   bool Emulate(const ArchSpec &arch, uint32_t evaluate_options, void *baton,
                EmulateInstruction::ReadMemoryCallback read_mem_callback,

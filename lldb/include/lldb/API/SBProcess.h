@@ -48,7 +48,7 @@ public:
 
   const char *GetPluginName();
 
-  // DEPRECATED: use GetPluginName()
+  LLDB_DEPRECATED_FIXME("Use GetPluginName()", "GetPluginName()")
   const char *GetShortPluginName();
 
   void Clear();
@@ -437,7 +437,7 @@ public:
   ///
   lldb::SBError DeallocateMemory(lldb::addr_t ptr);
 
-  lldb::ScriptedObject GetScriptedImplementation();
+  lldb::SBScriptObject GetScriptedImplementation();
 
 protected:
   friend class SBAddress;

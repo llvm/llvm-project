@@ -2377,6 +2377,18 @@ public:
                                                     EndLoc);
   }
 
+  /// Build a new OpenMP 'ompx_attribute' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *RebuildOMPXAttributeClause(ArrayRef<const Attr *> Attrs,
+                                        SourceLocation StartLoc,
+                                        SourceLocation LParenLoc,
+                                        SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPXAttributeClause(Attrs, StartLoc, LParenLoc,
+                                                 EndLoc);
+  }
+
   /// Build a new OpenMP 'align' clause.
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
@@ -2420,6 +2432,19 @@ public:
                                      SourceLocation LParenLoc,
                                      SourceLocation EndLoc) {
     return getSema().ActOnOpenMPMessageClause(MS, StartLoc, LParenLoc, EndLoc);
+  }
+
+  /// Build a new OpenMP 'doacross' clause.
+  ///
+  /// By default, performs semantic analysis to build the new OpenMP clause.
+  /// Subclasses may override this routine to provide different behavior.
+  OMPClause *
+  RebuildOMPDoacrossClause(OpenMPDoacrossClauseModifier DepType,
+                           SourceLocation DepLoc, SourceLocation ColonLoc,
+                           ArrayRef<Expr *> VarList, SourceLocation StartLoc,
+                           SourceLocation LParenLoc, SourceLocation EndLoc) {
+    return getSema().ActOnOpenMPDoacrossClause(
+        DepType, DepLoc, ColonLoc, VarList, StartLoc, LParenLoc, EndLoc);
   }
 
   /// Rebuild the operand to an Objective-C \@synchronized statement.
@@ -10725,6 +10750,32 @@ OMPClause *TreeTransform<Derived>::TransformOMPXDynCGroupMemClause(
     return nullptr;
   return getDerived().RebuildOMPXDynCGroupMemClause(
       Size.get(), C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPDoacrossClause(OMPDoacrossClause *C) {
+  llvm::SmallVector<Expr *, 16> Vars;
+  Vars.reserve(C->varlist_size());
+  for (auto *VE : C->varlists()) {
+    ExprResult EVar = getDerived().TransformExpr(cast<Expr>(VE));
+    if (EVar.isInvalid())
+      return nullptr;
+    Vars.push_back(EVar.get());
+  }
+  return getDerived().RebuildOMPDoacrossClause(
+      C->getDependenceType(), C->getDependenceLoc(), C->getColonLoc(), Vars,
+      C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
+TreeTransform<Derived>::TransformOMPXAttributeClause(OMPXAttributeClause *C) {
+  SmallVector<const Attr *> NewAttrs;
+  for (auto *A : C->getAttrs())
+    NewAttrs.push_back(getDerived().TransformAttr(A));
+  return getDerived().RebuildOMPXAttributeClause(
+      NewAttrs, C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
 }
 
 //===----------------------------------------------------------------------===//

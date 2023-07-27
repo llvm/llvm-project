@@ -237,8 +237,6 @@ def : SourceOfDivergence<int_amdgcn_mbcnt_lo>;
 def : SourceOfDivergence<int_r600_read_tidig_x>;
 def : SourceOfDivergence<int_r600_read_tidig_y>;
 def : SourceOfDivergence<int_r600_read_tidig_z>;
-def : SourceOfDivergence<int_amdgcn_atomic_inc>;
-def : SourceOfDivergence<int_amdgcn_atomic_dec>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_csub>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_fadd>;
 def : SourceOfDivergence<int_amdgcn_global_atomic_fmin>;

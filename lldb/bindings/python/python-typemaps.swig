@@ -59,9 +59,78 @@ AND call SWIG_fail at the same time, because it will result in a double free.
   free((char *) $1);
 }
 
-%typemap(out) lldb::ScriptedObject {
+%typecheck(SWIG_TYPECHECK_POINTER) lldb::ScriptObjectPtr {
+  PythonObject obj(PyRefType::Borrowed, $input);
+  if (!obj.IsValid()) {
+    PyErr_Clear();
+    $1 = 0;
+  } else {
+    $1 = 1;
+  }
+}
+
+%typemap(in) lldb::ScriptObjectPtr {
+  if ($input == Py_None) {
+    $1 = nullptr;
+  } else {
+    PythonObject obj(PyRefType::Borrowed, $input);
+    if (!obj.IsValid()) {
+      PyErr_SetString(PyExc_TypeError, "Script object is not valid");
+      SWIG_fail;
+    }
+
+    auto lldb_module = PythonModule::Import("lldb");
+    if (!lldb_module) {
+      std::string err_msg = llvm::toString(lldb_module.takeError());
+      PyErr_SetString(PyExc_TypeError, err_msg.c_str());
+      SWIG_fail;
+    }
+
+    auto sb_structured_data_class = lldb_module.get().Get("SBStructuredData");
+    if (!sb_structured_data_class) {
+      std::string err_msg = llvm::toString(sb_structured_data_class.takeError());
+      PyErr_SetString(PyExc_TypeError, err_msg.c_str());
+      SWIG_fail;
+    }
+
+    if (obj.IsInstance(sb_structured_data_class.get())) {
+      $1 = obj.get();
+    } else {
+      auto type = obj.GetType();
+      if (!type) {
+        std::string err_msg = llvm::toString(type.takeError());
+        PyErr_SetString(PyExc_TypeError, err_msg.c_str());
+        SWIG_fail;
+      }
+
+      auto type_name = As<std::string>(type.get().GetAttribute("__name__"));
+      if (!type_name) {
+        std::string err_msg = llvm::toString(type_name.takeError());
+        PyErr_SetString(PyExc_TypeError, err_msg.c_str());
+        SWIG_fail;
+      }
+
+      if (llvm::StringRef(type_name.get()).startswith("SB")) {
+        std::string error_msg = "Input type is invalid: " + type_name.get();
+        PyErr_SetString(PyExc_TypeError, error_msg.c_str());
+        SWIG_fail;
+      } else {
+        $1 = obj.get();
+      }
+    }
+  }
+}
+
+%typemap(out) lldb::ScriptObjectPtr {
+  $result = (PyObject*) $1;
+  if (!$result)
+    $result = Py_None;
+  Py_INCREF($result);
+}
+
+%typemap(out) lldb::SBScriptObject {
   $result = nullptr;
-  if (const void* impl = $1)
+  if (const void* impl = $1.GetPointer())
     $result = (PyObject*) impl;
   if (!$result) {
     $result = Py_None;
@@ -575,4 +644,55 @@ template <> bool SetNumberFromPyObject<double>(double &number, PyObject *obj) {
     PyErr_SetString(PyExc_TypeError,"not a list");
     return NULL;
   }
+}
+
+// For lldb::SBPlatformLocateModuleCallback
+%typemap(in) (lldb::SBPlatformLocateModuleCallback callback,
+              void *callback_baton) {
+  if (!($input == Py_None ||
+        PyCallable_Check(reinterpret_cast<PyObject *>($input)))) {
+    PyErr_SetString(PyExc_TypeError, "Need a callable object or None!");
+    SWIG_fail;
+  }
+
+  if ($input == Py_None) {
+    $1 = nullptr;
+    $2 = nullptr;
+  } else {
+    PythonCallable callable = Retain<PythonCallable>($input);
+    if (!callable.IsValid()) {
+      PyErr_SetString(PyExc_TypeError, "Need a valid callable object");
+      SWIG_fail;
+    }
+
+    llvm::Expected<PythonCallable::ArgInfo> arg_info = callable.GetArgInfo();
+    if (!arg_info) {
+      PyErr_SetString(PyExc_TypeError,
+                      ("Could not get arguments: " +
+                          llvm::toString(arg_info.takeError())).c_str());
+      SWIG_fail;
+    }
+
+    if (arg_info.get().max_positional_args != 3) {
+      PyErr_SetString(PyExc_TypeError, "Expected 3 argument callable object");
+      SWIG_fail;
+    }
+
+    // NOTE: When this is called multiple times, this will leak the Python
+    // callable object as other callbacks, because this does not call Py_DECREF
+    // the object. But it should be almost zero impact since this method is
+    // expected to be called only once.
+
+    // Don't lose the callback reference
+    Py_INCREF($input);
+
+    $1 = LLDBSwigPythonCallLocateModuleCallback;
+    $2 = $input;
+  }
+}
+
+%typemap(typecheck) (lldb::SBPlatformLocateModuleCallback callback,
+                     void *callback_baton) {
+  $1 = $input == Py_None;
+  $1 = $1 || PyCallable_Check(reinterpret_cast<PyObject *>($input));
 }

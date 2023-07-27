@@ -472,38 +472,21 @@ define i32 @min_i32(i32 %a, i32 %b) nounwind {
 ; extensions introduce instructions suitable for this pattern.
 
 define i64 @min_i64(i64 %a, i64 %b) nounwind {
-; RV32I-LABEL: min_i64:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    beq a1, a3, .LBB11_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    slt a4, a1, a3
-; RV32I-NEXT:    beqz a4, .LBB11_3
-; RV32I-NEXT:    j .LBB11_4
-; RV32I-NEXT:  .LBB11_2:
-; RV32I-NEXT:    sltu a4, a0, a2
-; RV32I-NEXT:    bnez a4, .LBB11_4
-; RV32I-NEXT:  .LBB11_3:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:    mv a1, a3
-; RV32I-NEXT:  .LBB11_4:
-; RV32I-NEXT:    ret
-;
-; RV32ZBB-LABEL: min_i64:
-; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    mv a4, a0
-; RV32ZBB-NEXT:    bge a1, a3, .LBB11_3
-; RV32ZBB-NEXT:  # %bb.1:
-; RV32ZBB-NEXT:    beq a1, a3, .LBB11_4
-; RV32ZBB-NEXT:  .LBB11_2:
-; RV32ZBB-NEXT:    min a1, a1, a3
-; RV32ZBB-NEXT:    ret
-; RV32ZBB-NEXT:  .LBB11_3:
-; RV32ZBB-NEXT:    mv a0, a2
-; RV32ZBB-NEXT:    bne a1, a3, .LBB11_2
-; RV32ZBB-NEXT:  .LBB11_4:
-; RV32ZBB-NEXT:    minu a0, a4, a2
-; RV32ZBB-NEXT:    min a1, a1, a3
-; RV32ZBB-NEXT:    ret
+; CHECK-LABEL: min_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beq a1, a3, .LBB11_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    slt a4, a1, a3
+; CHECK-NEXT:    beqz a4, .LBB11_3
+; CHECK-NEXT:    j .LBB11_4
+; CHECK-NEXT:  .LBB11_2:
+; CHECK-NEXT:    sltu a4, a0, a2
+; CHECK-NEXT:    bnez a4, .LBB11_4
+; CHECK-NEXT:  .LBB11_3:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:  .LBB11_4:
+; CHECK-NEXT:    ret
   %cmp = icmp slt i64 %a, %b
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond
@@ -533,38 +516,21 @@ define i32 @max_i32(i32 %a, i32 %b) nounwind {
 ; extensions introduce instructions suitable for this pattern.
 
 define i64 @max_i64(i64 %a, i64 %b) nounwind {
-; RV32I-LABEL: max_i64:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    beq a1, a3, .LBB13_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    slt a4, a3, a1
-; RV32I-NEXT:    beqz a4, .LBB13_3
-; RV32I-NEXT:    j .LBB13_4
-; RV32I-NEXT:  .LBB13_2:
-; RV32I-NEXT:    sltu a4, a2, a0
-; RV32I-NEXT:    bnez a4, .LBB13_4
-; RV32I-NEXT:  .LBB13_3:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:    mv a1, a3
-; RV32I-NEXT:  .LBB13_4:
-; RV32I-NEXT:    ret
-;
-; RV32ZBB-LABEL: max_i64:
-; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    mv a4, a0
-; RV32ZBB-NEXT:    bge a3, a1, .LBB13_3
-; RV32ZBB-NEXT:  # %bb.1:
-; RV32ZBB-NEXT:    beq a1, a3, .LBB13_4
-; RV32ZBB-NEXT:  .LBB13_2:
-; RV32ZBB-NEXT:    max a1, a1, a3
-; RV32ZBB-NEXT:    ret
-; RV32ZBB-NEXT:  .LBB13_3:
-; RV32ZBB-NEXT:    mv a0, a2
-; RV32ZBB-NEXT:    bne a1, a3, .LBB13_2
-; RV32ZBB-NEXT:  .LBB13_4:
-; RV32ZBB-NEXT:    maxu a0, a4, a2
-; RV32ZBB-NEXT:    max a1, a1, a3
-; RV32ZBB-NEXT:    ret
+; CHECK-LABEL: max_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beq a1, a3, .LBB13_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    slt a4, a3, a1
+; CHECK-NEXT:    beqz a4, .LBB13_3
+; CHECK-NEXT:    j .LBB13_4
+; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:    sltu a4, a2, a0
+; CHECK-NEXT:    bnez a4, .LBB13_4
+; CHECK-NEXT:  .LBB13_3:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:  .LBB13_4:
+; CHECK-NEXT:    ret
   %cmp = icmp sgt i64 %a, %b
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond
@@ -594,38 +560,21 @@ define i32 @minu_i32(i32 %a, i32 %b) nounwind {
 ; extensions introduce instructions suitable for this pattern.
 
 define i64 @minu_i64(i64 %a, i64 %b) nounwind {
-; RV32I-LABEL: minu_i64:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    beq a1, a3, .LBB15_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sltu a4, a1, a3
-; RV32I-NEXT:    beqz a4, .LBB15_3
-; RV32I-NEXT:    j .LBB15_4
-; RV32I-NEXT:  .LBB15_2:
-; RV32I-NEXT:    sltu a4, a0, a2
-; RV32I-NEXT:    bnez a4, .LBB15_4
-; RV32I-NEXT:  .LBB15_3:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:    mv a1, a3
-; RV32I-NEXT:  .LBB15_4:
-; RV32I-NEXT:    ret
-;
-; RV32ZBB-LABEL: minu_i64:
-; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    mv a4, a0
-; RV32ZBB-NEXT:    bgeu a1, a3, .LBB15_3
-; RV32ZBB-NEXT:  # %bb.1:
-; RV32ZBB-NEXT:    beq a1, a3, .LBB15_4
-; RV32ZBB-NEXT:  .LBB15_2:
-; RV32ZBB-NEXT:    minu a1, a1, a3
-; RV32ZBB-NEXT:    ret
-; RV32ZBB-NEXT:  .LBB15_3:
-; RV32ZBB-NEXT:    mv a0, a2
-; RV32ZBB-NEXT:    bne a1, a3, .LBB15_2
-; RV32ZBB-NEXT:  .LBB15_4:
-; RV32ZBB-NEXT:    minu a0, a4, a2
-; RV32ZBB-NEXT:    minu a1, a1, a3
-; RV32ZBB-NEXT:    ret
+; CHECK-LABEL: minu_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beq a1, a3, .LBB15_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    sltu a4, a1, a3
+; CHECK-NEXT:    beqz a4, .LBB15_3
+; CHECK-NEXT:    j .LBB15_4
+; CHECK-NEXT:  .LBB15_2:
+; CHECK-NEXT:    sltu a4, a0, a2
+; CHECK-NEXT:    bnez a4, .LBB15_4
+; CHECK-NEXT:  .LBB15_3:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:  .LBB15_4:
+; CHECK-NEXT:    ret
   %cmp = icmp ult i64 %a, %b
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond
@@ -655,38 +604,21 @@ define i32 @maxu_i32(i32 %a, i32 %b) nounwind {
 ; extensions introduce instructions suitable for this pattern.
 
 define i64 @maxu_i64(i64 %a, i64 %b) nounwind {
-; RV32I-LABEL: maxu_i64:
-; RV32I:       # %bb.0:
-; RV32I-NEXT:    beq a1, a3, .LBB17_2
-; RV32I-NEXT:  # %bb.1:
-; RV32I-NEXT:    sltu a4, a3, a1
-; RV32I-NEXT:    beqz a4, .LBB17_3
-; RV32I-NEXT:    j .LBB17_4
-; RV32I-NEXT:  .LBB17_2:
-; RV32I-NEXT:    sltu a4, a2, a0
-; RV32I-NEXT:    bnez a4, .LBB17_4
-; RV32I-NEXT:  .LBB17_3:
-; RV32I-NEXT:    mv a0, a2
-; RV32I-NEXT:    mv a1, a3
-; RV32I-NEXT:  .LBB17_4:
-; RV32I-NEXT:    ret
-;
-; RV32ZBB-LABEL: maxu_i64:
-; RV32ZBB:       # %bb.0:
-; RV32ZBB-NEXT:    mv a4, a0
-; RV32ZBB-NEXT:    bgeu a3, a1, .LBB17_3
-; RV32ZBB-NEXT:  # %bb.1:
-; RV32ZBB-NEXT:    beq a1, a3, .LBB17_4
-; RV32ZBB-NEXT:  .LBB17_2:
-; RV32ZBB-NEXT:    maxu a1, a1, a3
-; RV32ZBB-NEXT:    ret
-; RV32ZBB-NEXT:  .LBB17_3:
-; RV32ZBB-NEXT:    mv a0, a2
-; RV32ZBB-NEXT:    bne a1, a3, .LBB17_2
-; RV32ZBB-NEXT:  .LBB17_4:
-; RV32ZBB-NEXT:    maxu a0, a4, a2
-; RV32ZBB-NEXT:    maxu a1, a1, a3
-; RV32ZBB-NEXT:    ret
+; CHECK-LABEL: maxu_i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    beq a1, a3, .LBB17_2
+; CHECK-NEXT:  # %bb.1:
+; CHECK-NEXT:    sltu a4, a3, a1
+; CHECK-NEXT:    beqz a4, .LBB17_3
+; CHECK-NEXT:    j .LBB17_4
+; CHECK-NEXT:  .LBB17_2:
+; CHECK-NEXT:    sltu a4, a2, a0
+; CHECK-NEXT:    bnez a4, .LBB17_4
+; CHECK-NEXT:  .LBB17_3:
+; CHECK-NEXT:    mv a0, a2
+; CHECK-NEXT:    mv a1, a3
+; CHECK-NEXT:  .LBB17_4:
+; CHECK-NEXT:    ret
   %cmp = icmp ugt i64 %a, %b
   %cond = select i1 %cmp, i64 %a, i64 %b
   ret i64 %cond

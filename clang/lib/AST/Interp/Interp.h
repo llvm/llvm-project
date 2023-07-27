@@ -104,9 +104,14 @@ bool CheckPure(InterpState &S, CodePtr OpPC, const CXXMethodDecl *MD);
 /// Checks that all fields are initialized after a constructor call.
 bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This);
 
+/// Checks if reinterpret casts are legal in the current context.
+bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
+                                   const Pointer &Ptr);
+
 /// Checks if the shift operation is legal.
-template <typename RT>
-bool CheckShift(InterpState &S, CodePtr OpPC, const RT &RHS, unsigned Bits) {
+template <typename LT, typename RT>
+bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
+                unsigned Bits) {
   if (RHS.isNegative()) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
     S.CCEDiag(Loc, diag::note_constexpr_negative_shift) << RHS.toAPSInt();
@@ -122,6 +127,20 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const RT &RHS, unsigned Bits) {
     S.CCEDiag(E, diag::note_constexpr_large_shift) << Val << Ty << Bits;
     return false;
   }
+
+  if (LHS.isSigned() && !S.getLangOpts().CPlusPlus20) {
+    const Expr *E = S.Current->getExpr(OpPC);
+    // C++11 [expr.shift]p2: A signed left shift must have a non-negative
+    // operand, and must not overflow the corresponding unsigned type.
+    if (LHS.isNegative())
+      S.CCEDiag(E, diag::note_constexpr_lshift_of_negative) << LHS.toAPSInt();
+    else if (LHS.toUnsigned().countLeadingZeros() < static_cast<unsigned>(RHS))
+      S.CCEDiag(E, diag::note_constexpr_lshift_discards);
+  }
+
+  // C++2a [expr.shift]p2: [P0907R4]:
+  //    E1 << E2 is the unique value congruent to
+  //    E1 x 2^E2 module 2^N.
   return true;
 }
 
@@ -154,7 +173,7 @@ bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
 bool Interpret(InterpState &S, APValue &Result);
 
 /// Interpret a builtin function.
-bool InterpretBuiltin(InterpState &S, CodePtr &PC, unsigned BuiltinID);
+bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F);
 
 enum class ArithOp { Add, Sub };
 
@@ -162,13 +181,23 @@ enum class ArithOp { Add, Sub };
 // Returning values
 //===----------------------------------------------------------------------===//
 
-template <PrimType Name, bool Builtin = false,
-          class T = typename PrimConv<Name>::T>
+template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   const T &Ret = S.Stk.pop<T>();
 
+  // Make sure returned pointers are live. We might be trying to return a
+  // pointer or reference to a local variable.
+  // Just return false, since a diagnostic has already been emitted in Sema.
+  if constexpr (std::is_same_v<T, Pointer>) {
+    // FIXME: We could be calling isLive() here, but the emitted diagnostics
+    // seem a little weird, at least if the returned expression is of
+    // pointer type.
+    if (!Ret.isLive())
+      return false;
+  }
+
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (Builtin || !S.checkingPotentialConstantExpression())
+  if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
     S.Current->popArgs();
 
   if (InterpFrame *Caller = S.Current->Caller) {
@@ -185,10 +214,9 @@ bool Ret(InterpState &S, CodePtr &PC, APValue &Result) {
   return true;
 }
 
-template <bool Builtin = false>
 inline bool RetVoid(InterpState &S, CodePtr &PC, APValue &Result) {
   assert(S.Current->getFrameOffset() == S.Stk.size() && "Invalid frame");
-  if (Builtin || !S.checkingPotentialConstantExpression())
+  if (!S.checkingPotentialConstantExpression() || S.Current->Caller)
     S.Current->popArgs();
 
   if (InterpFrame *Caller = S.Current->Caller) {
@@ -1421,9 +1449,13 @@ template <PrimType TIn, PrimType TOut> bool Cast(InterpState &S, CodePtr OpPC) {
 
 /// 1) Pops a Floating from the stack.
 /// 2) Pushes a new floating on the stack that uses the given semantics.
-/// Not templated, so implemented in Interp.cpp.
-bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
-            llvm::RoundingMode RM);
+inline bool CastFP(InterpState &S, CodePtr OpPC, const llvm::fltSemantics *Sem,
+            llvm::RoundingMode RM) {
+  Floating F = S.Stk.pop<Floating>();
+  Floating Result = F.toSemantics(Sem, RM);
+  S.Stk.push<Floating>(Result);
+  return true;
+}
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
 bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
@@ -1463,6 +1495,17 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
     S.Stk.push<T>(T(Result));
     return CheckFloatResult(S, OpPC, Status);
   }
+}
+
+template <PrimType Name, class T = typename PrimConv<Name>::T>
+bool CastPointerIntegral(InterpState &S, CodePtr OpPC) {
+  const Pointer &Ptr = S.Stk.pop<Pointer>();
+
+  if (!CheckPotentialReinterpretCast(S, OpPC, Ptr))
+    return false;
+
+  S.Stk.push<T>(T::from(Ptr.getIntegerRepresentation()));
+  return true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1519,7 +1562,7 @@ inline bool Shr(InterpState &S, CodePtr OpPC) {
   const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
 
-  if (!CheckShift<RT>(S, OpPC, RHS, Bits))
+  if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
   Integral<LT::bitWidth(), false> R;
@@ -1536,7 +1579,7 @@ inline bool Shl(InterpState &S, CodePtr OpPC) {
   const auto &LHS = S.Stk.pop<LT>();
   const unsigned Bits = LHS.bitWidth();
 
-  if (!CheckShift<RT>(S, OpPC, RHS, Bits))
+  if (!CheckShift(S, OpPC, LHS, RHS, Bits))
     return false;
 
   Integral<LT::bitWidth(), false> R;
@@ -1613,8 +1656,16 @@ inline bool Call(InterpState &S, CodePtr OpPC, const Function *Func) {
 
     const Pointer &ThisPtr = S.Stk.peek<Pointer>(ThisOffset);
 
-    if (!CheckInvoke(S, OpPC, ThisPtr))
-      return false;
+    // If the current function is a lambda static invoker and
+    // the function we're about to call is a lambda call operator,
+    // skip the CheckInvoke, since the ThisPtr is a null pointer
+    // anyway.
+    if (!(S.Current->getFunction() &&
+          S.Current->getFunction()->isLambdaStaticInvoker() &&
+          Func->isLambdaCallOperator())) {
+      if (!CheckInvoke(S, OpPC, ThisPtr))
+        return false;
+    }
 
     if (S.checkingPotentialConstantExpression())
       return false;
@@ -1682,7 +1733,7 @@ inline bool CallBI(InterpState &S, CodePtr &PC, const Function *Func) {
   InterpFrame *FrameBefore = S.Current;
   S.Current = NewFrame.get();
 
-  if (InterpretBuiltin(S, PC, Func->getBuiltinID())) {
+  if (InterpretBuiltin(S, PC, Func)) {
     NewFrame.release();
     return true;
   }
@@ -1697,13 +1748,33 @@ inline bool CallPtr(InterpState &S, CodePtr OpPC) {
   if (!F || !F->isConstexpr())
     return false;
 
+  if (F->isVirtual())
+    return CallVirt(S, OpPC, F);
+
   return Call(S, OpPC, F);
 }
 
-inline bool GetFnPtr(InterpState &S, CodePtr &PC, const Function *Func) {
+inline bool GetFnPtr(InterpState &S, CodePtr OpPC, const Function *Func) {
   assert(Func);
   S.Stk.push<FunctionPointer>(Func);
   return true;
+}
+
+/// Just emit a diagnostic. The expression that caused emission of this
+/// op is not valid in a constant context.
+inline bool Invalid(InterpState &S, CodePtr OpPC) {
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr)
+      << S.Current->getRange(OpPC);
+  return false;
+}
+
+/// Same here, but only for casts.
+inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
+  const SourceLocation &Loc = S.Current->getLocation(OpPC);
+  S.FFDiag(Loc, diag::note_constexpr_invalid_cast)
+      << static_cast<uint8_t>(Kind) << S.Current->getRange(OpPC);
+  return false;
 }
 
 //===----------------------------------------------------------------------===//

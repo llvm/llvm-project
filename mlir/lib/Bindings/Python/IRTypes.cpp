@@ -247,6 +247,26 @@ public:
   }
 };
 
+/// Floating Point Type subclass - TF32Type.
+class PyTF32Type : public PyConcreteType<PyTF32Type> {
+public:
+  static constexpr IsAFunctionTy isaFunction = mlirTypeIsATF32;
+  static constexpr GetTypeIDFunctionTy getTypeIdFunction =
+      mlirFloatTF32TypeGetTypeID;
+  static constexpr const char *pyClassName = "FloatTF32Type";
+  using PyConcreteType::PyConcreteType;
+
+  static void bindDerived(ClassTy &c) {
+    c.def_static(
+        "get",
+        [](DefaultingPyMlirContext context) {
+          MlirType t = mlirTF32TypeGet(context->get());
+          return PyTF32Type(context->getRef(), t);
+        },
+        py::arg("context") = py::none(), "Create a tf32 type.");
+  }
+};
+
 /// Floating Point Type subclass - F32Type.
 class PyF32Type : public PyConcreteType<PyF32Type> {
 public:
@@ -485,11 +505,12 @@ public:
         py::arg("encoding") = py::none(), py::arg("loc") = py::none(),
         "Create a ranked tensor type");
     c.def_property_readonly(
-        "encoding", [](PyRankedTensorType &self) -> std::optional<PyAttribute> {
+        "encoding",
+        [](PyRankedTensorType &self) -> std::optional<MlirAttribute> {
           MlirAttribute encoding = mlirRankedTensorTypeGetEncoding(self.get());
           if (mlirAttributeIsNull(encoding))
             return std::nullopt;
-          return PyAttribute(self.getContext(), encoding);
+          return encoding;
         });
   }
 };
@@ -550,9 +571,8 @@ public:
          py::arg("loc") = py::none(), "Create a memref type")
         .def_property_readonly(
             "layout",
-            [](PyMemRefType &self) -> PyAttribute {
-              MlirAttribute layout = mlirMemRefTypeGetLayout(self);
-              return PyAttribute(self.getContext(), layout);
+            [](PyMemRefType &self) -> MlirAttribute {
+              return mlirMemRefTypeGetLayout(self);
             },
             "The layout of the MemRef type.")
         .def_property_readonly(
@@ -564,9 +584,11 @@ public:
             "The layout of the MemRef type as an affine map.")
         .def_property_readonly(
             "memory_space",
-            [](PyMemRefType &self) -> PyAttribute {
+            [](PyMemRefType &self) -> std::optional<MlirAttribute> {
               MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
-              return PyAttribute(self.getContext(), a);
+              if (mlirAttributeIsNull(a))
+                return std::nullopt;
+              return a;
             },
             "Returns the memory space of the given MemRef type.");
   }
@@ -602,9 +624,11 @@ public:
          py::arg("loc") = py::none(), "Create a unranked memref type")
         .def_property_readonly(
             "memory_space",
-            [](PyUnrankedMemRefType &self) -> PyAttribute {
-              MlirAttribute a = mlirMemRefTypeGetMemorySpace(self);
-              return PyAttribute(self.getContext(), a);
+            [](PyUnrankedMemRefType &self) -> std::optional<MlirAttribute> {
+              MlirAttribute a = mlirUnrankedMemrefGetMemorySpace(self);
+              if (mlirAttributeIsNull(a))
+                return std::nullopt;
+              return a;
             },
             "Returns the memory space of the given Unranked MemRef type.");
   }
@@ -754,6 +778,7 @@ void mlir::python::populateIRTypes(py::module &m) {
   PyFloat8E5M2FNUZType::bind(m);
   PyBF16Type::bind(m);
   PyF16Type::bind(m);
+  PyTF32Type::bind(m);
   PyF32Type::bind(m);
   PyF64Type::bind(m);
   PyNoneType::bind(m);

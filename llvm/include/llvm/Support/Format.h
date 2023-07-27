@@ -28,6 +28,7 @@
 #include "llvm/Support/DataTypes.h"
 #include <cassert>
 #include <cstdio>
+#include <optional>
 #include <tuple>
 #include <utility>
 

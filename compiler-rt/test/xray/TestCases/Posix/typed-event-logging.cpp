@@ -1,7 +1,7 @@
 // RUN: %clangxx_xray %s -o %t
 // RUN: XRAY_OPTIONS=patch_premain=false:verbosity=1 %run %t 2>&1 | FileCheck %s
 
-// REQUIRES: target={{x86_64-.*linux.*}}
+// REQUIRES: target={{(aarch64|x86_64)-.*linux.*}}
 
 #include <assert.h>
 #include <stdio.h>

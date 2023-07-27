@@ -20,13 +20,13 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/MC/MCSchedule.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TableGen/Error.h"
 #include "llvm/TableGen/Record.h"
 #include "llvm/TableGen/TableGenBackend.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include <algorithm>
 #include <cassert>
 #include <cstdint>
@@ -40,6 +40,15 @@ using namespace llvm;
 #define DEBUG_TYPE "subtarget-emitter"
 
 namespace {
+
+/// Sorting predicate to sort record pointers by their
+/// FieldName field.
+struct LessRecordFieldFieldName {
+  bool operator()(const Record *Rec1, const Record *Rec2) const {
+    return Rec1->getValueAsString("FieldName") <
+           Rec2->getValueAsString("FieldName");
+  }
+};
 
 class SubtargetEmitter {
   // Each processor has a SchedClassDesc table with an entry for each SchedClass.
@@ -202,7 +211,7 @@ void SubtargetEmitter::EmitSubtargetInfoMacroCalls(raw_ostream &OS) {
 
   std::vector<Record *> FeatureList =
       Records.getAllDerivedDefinitions("SubtargetFeature");
-  llvm::sort(FeatureList, LessRecordFieldName());
+  llvm::sort(FeatureList, LessRecordFieldFieldName());
 
   for (const Record *Feature : FeatureList) {
     const StringRef FieldName = Feature->getValueAsString("FieldName");

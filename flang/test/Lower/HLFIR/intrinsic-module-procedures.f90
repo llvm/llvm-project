@@ -21,3 +21,14 @@ end subroutine
 ! CHECK:         %[[VAL_8:.*]] = fir.box_addr %[[VAL_4]] : (!fir.box<i32>) -> !fir.ref<i32>
 ! CHECK:         %[[VAL_9:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<i32>) -> i64
 ! CHECK:         fir.store %[[VAL_9]] to %[[VAL_7]] : !fir.ref<i64>
+
+subroutine test_renaming(p)
+  use iso_c_binding, only: c_associated_alias => c_associated, c_ptr
+  type(c_ptr) p
+  print *, c_associated_alias(p)
+end subroutine
+
+! CHECK-LABEL: func.func @_QPtest_renaming
+! CHECK:  %[[C_PTR_TARG:.*]] = fir.load %{{.*}} : !fir.ref<i64>
+! CHECK:  %[[NULL:.*]] = arith.constant 0 : i64
+! CHECK:  arith.cmpi ne, %[[C_PTR_TARG]], %[[NULL]] : i64

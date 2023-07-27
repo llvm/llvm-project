@@ -96,11 +96,6 @@ if(WIN32)
       )
     endforeach()
   endforeach()
-else()
-  # It is difficult to create a dummy assembly file that compiles into an
-  # executable for every architecture and then check the C compiler to
-  # see if -x assembler-with-cpp exists and works, so we assume it does for non-Windows.
-  set(LIBOMP_HAVE_X_ASSEMBLER_WITH_CPP_FLAG TRUE)
 endif()
 if(${LIBOMP_FORTRAN_MODULES})
   libomp_check_fortran_flag(-m32 LIBOMP_HAVE_M32_FORTRAN_FLAG)

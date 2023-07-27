@@ -199,13 +199,12 @@ LaneMaskTy mapping::lanemaskGT() { return impl::lanemaskGT(); }
 
 uint32_t mapping::getThreadIdInWarp() {
   uint32_t ThreadIdInWarp = impl::getThreadIdInWarp();
-  ASSERT(ThreadIdInWarp < impl::getWarpSize());
+  ASSERT(ThreadIdInWarp < impl::getWarpSize(), nullptr);
   return ThreadIdInWarp;
 }
 
 uint32_t mapping::getThreadIdInBlock() {
   uint32_t ThreadIdInBlock = impl::getThreadIdInBlock();
-  ASSERT(ThreadIdInBlock < impl::getNumHardwareThreadsInBlock());
   return ThreadIdInBlock;
 }
 
@@ -224,31 +223,31 @@ uint32_t mapping::getKernelSize() { return impl::getKernelSize(); }
 
 uint32_t mapping::getWarpId() {
   uint32_t WarpID = impl::getWarpId();
-  ASSERT(WarpID < impl::getNumberOfWarpsInBlock());
+  ASSERT(WarpID < impl::getNumberOfWarpsInBlock(), nullptr);
   return WarpID;
 }
 
 uint32_t mapping::getBlockId() {
   uint32_t BlockId = impl::getBlockId();
-  ASSERT(BlockId < impl::getNumberOfBlocks());
+  ASSERT(BlockId < impl::getNumberOfBlocks(), nullptr);
   return BlockId;
 }
 
 uint32_t mapping::getNumberOfWarpsInBlock() {
   uint32_t NumberOfWarpsInBlocks = impl::getNumberOfWarpsInBlock();
-  ASSERT(impl::getWarpId() < NumberOfWarpsInBlocks);
+  ASSERT(impl::getWarpId() < NumberOfWarpsInBlocks, nullptr);
   return NumberOfWarpsInBlocks;
 }
 
 uint32_t mapping::getNumberOfBlocks() {
   uint32_t NumberOfBlocks = impl::getNumberOfBlocks();
-  ASSERT(impl::getBlockId() < NumberOfBlocks);
+  ASSERT(impl::getBlockId() < NumberOfBlocks, nullptr);
   return NumberOfBlocks;
 }
 
 uint32_t mapping::getNumberOfProcessorElements() {
   uint32_t NumberOfProcessorElements = impl::getNumHardwareThreadsInBlock();
-  ASSERT(impl::getThreadIdInBlock() < NumberOfProcessorElements);
+  ASSERT(impl::getThreadIdInBlock() < NumberOfProcessorElements, nullptr);
   return NumberOfProcessorElements;
 }
 

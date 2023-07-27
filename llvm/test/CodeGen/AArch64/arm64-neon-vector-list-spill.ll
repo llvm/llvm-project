@@ -15,8 +15,8 @@ define i32 @spill.DPairReg(ptr %arg1, i32 %arg2) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB0_2: // %if.then
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
@@ -53,8 +53,8 @@ define i16 @spill.DTripleReg(ptr %arg1, i32 %arg2) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB1_2: // %if.then
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    stp x29, x30, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
@@ -91,8 +91,8 @@ define i16 @spill.DQuadReg(ptr %arg1, i32 %arg2) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB2_2: // %if.then
 ; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
@@ -129,8 +129,8 @@ define i32 @spill.QPairReg(ptr %arg1, i32 %arg2) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB3_2: // %if.then
 ; CHECK-NEXT:    sub sp, sp, #48
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    stp x29, x30, [sp, #32] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 48
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
@@ -167,8 +167,8 @@ define float @spill.QTripleReg(ptr %arg1, i32 %arg2) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB4_2: // %if.then
 ; CHECK-NEXT:    sub sp, sp, #64
-; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    stp x29, x30, [sp, #48] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 64
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp
@@ -205,8 +205,8 @@ define i8 @spill.QQuadReg(ptr %arg1, i32 %arg2) {
 ; CHECK-NEXT:    ret
 ; CHECK-NEXT:  .LBB5_2: // %if.then
 ; CHECK-NEXT:    sub sp, sp, #80
-; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    stp x29, x30, [sp, #64] // 16-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 80
 ; CHECK-NEXT:    .cfi_offset w30, -8
 ; CHECK-NEXT:    .cfi_offset w29, -16
 ; CHECK-NEXT:    mov x8, sp

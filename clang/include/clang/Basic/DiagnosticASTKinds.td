@@ -15,6 +15,10 @@ def note_constexpr_invalid_cast : Note<
   " performs the conversions of a reinterpret_cast}1|cast from %1}0"
   " is not allowed in a constant expression"
   "%select{| in C++ standards before C++20||}0">;
+def note_constexpr_invalid_void_star_cast : Note<
+  "cast from %0 is not allowed in a constant expression "
+  "%select{in C++ standards before C++2c|because the pointed object "
+  "type %2 is not similar to the target type %3}1">;
 def note_constexpr_invalid_downcast : Note<
   "cannot cast object of dynamic type %0 to type %1">;
 def note_constexpr_overflow : Note<
@@ -777,7 +781,7 @@ def err_module_odr_violation_field : Error<
   "%select{non-|}5bitfield %4|"
   "bitfield %4 with one width expression|"
   "%select{non-|}5mutable field %4|"
-  "field %4 with %select{no|an}5 initalizer|"
+  "field %4 with %select{no|an}5 initializer|"
   "field %4 with an initializer"
   "}3">;
 def note_module_odr_violation_field : Note<

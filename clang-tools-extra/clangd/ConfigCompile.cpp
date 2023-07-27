@@ -35,6 +35,7 @@
 #include "support/Trace.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -450,13 +451,6 @@ struct FragmentCompiler {
       }
     }
 
-    if (F.AllowStalePreamble) {
-      if (auto Val = F.AllowStalePreamble)
-        Out.Apply.push_back([Val](const Params &, Config &C) {
-          C.Diagnostics.AllowStalePreamble = **Val;
-        });
-    }
-
     if (F.MissingIncludes)
       if (auto Val = compileEnum<Config::IncludesPolicy>("MissingIncludes",
                                                          **F.MissingIncludes)
@@ -611,6 +605,10 @@ struct FragmentCompiler {
     if (F.Designators)
       Out.Apply.push_back([Value(**F.Designators)](const Params &, Config &C) {
         C.InlayHints.Designators = Value;
+      });
+    if (F.BlockEnd)
+      Out.Apply.push_back([Value(**F.BlockEnd)](const Params &, Config &C) {
+        C.InlayHints.BlockEnd = Value;
       });
     if (F.TypeNameLimit)
       Out.Apply.push_back(

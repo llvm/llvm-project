@@ -842,6 +842,93 @@ void COFFDumper::printCOFFLoadConfig() {
   else
     printCOFFLoadConfig(Obj->getLoadConfig32(), Tables);
 
+  if (auto CHPE = Obj->getCHPEMetadata()) {
+    ListScope LS(W, "CHPEMetadata");
+    W.printHex("Version", CHPE->Version);
+
+    if (CHPE->CodeMapCount) {
+      ListScope CMLS(W, "CodeMap");
+
+      uintptr_t CodeMapInt;
+      if (Error E = Obj->getRvaPtr(CHPE->CodeMap, CodeMapInt))
+        reportError(std::move(E), Obj->getFileName());
+      auto CodeMap = reinterpret_cast<const chpe_range_entry *>(CodeMapInt);
+      for (uint32_t i = 0; i < CHPE->CodeMapCount; i++) {
+        uint32_t Start = CodeMap[i].StartOffset & ~3;
+        W.startLine() << W.hex(Start) << " - "
+                      << W.hex(Start + CodeMap[i].Length) << "  ";
+        switch (CodeMap[i].StartOffset & 3) {
+        case CHPE_RANGE_ARM64:
+          W.getOStream() << "ARM64\n";
+          break;
+        case CHPE_RANGE_ARM64EC:
+          W.getOStream() << "ARM64EC\n";
+          break;
+        case CHPE_RANGE_AMD64:
+          W.getOStream() << "X64\n";
+          break;
+        default:
+          W.getOStream() << W.hex(CodeMap[i].StartOffset & 3) << "\n";
+          break;
+        }
+      }
+    } else {
+      W.printNumber("CodeMap", CHPE->CodeMap);
+    }
+
+    if (CHPE->CodeRangesToEntryPointsCount) {
+      ListScope CRLS(W, "CodeRangesToEntryPoints");
+
+      uintptr_t CodeRangesInt;
+      if (Error E =
+              Obj->getRvaPtr(CHPE->CodeRangesToEntryPoints, CodeRangesInt))
+        reportError(std::move(E), Obj->getFileName());
+      auto CodeRanges =
+          reinterpret_cast<const chpe_code_range_entry *>(CodeRangesInt);
+      for (uint32_t i = 0; i < CHPE->CodeRangesToEntryPointsCount; i++) {
+        W.startLine() << W.hex(CodeRanges[i].StartRva) << " - "
+                      << W.hex(CodeRanges[i].EndRva) << " -> "
+                      << W.hex(CodeRanges[i].EntryPoint) << "\n";
+      }
+    } else {
+      W.printNumber("CodeRangesToEntryPoints", CHPE->CodeRangesToEntryPoints);
+    }
+
+    if (CHPE->RedirectionMetadataCount) {
+      ListScope RMLS(W, "RedirectionMetadata");
+
+      uintptr_t RedirMetadataInt;
+      if (Error E = Obj->getRvaPtr(CHPE->RedirectionMetadata, RedirMetadataInt))
+        reportError(std::move(E), Obj->getFileName());
+      auto RedirMetadata =
+          reinterpret_cast<const chpe_redirection_entry *>(RedirMetadataInt);
+      for (uint32_t i = 0; i < CHPE->RedirectionMetadataCount; i++) {
+        W.startLine() << W.hex(RedirMetadata[i].Source) << " -> "
+                      << W.hex(RedirMetadata[i].Destination) << "\n";
+      }
+    } else {
+      W.printNumber("RedirectionMetadata", CHPE->RedirectionMetadata);
+    }
+
+    W.printHex("__os_arm64x_dispatch_call_no_redirect",
+               CHPE->__os_arm64x_dispatch_call_no_redirect);
+    W.printHex("__os_arm64x_dispatch_ret", CHPE->__os_arm64x_dispatch_ret);
+    W.printHex("__os_arm64x_dispatch_call", CHPE->__os_arm64x_dispatch_call);
+    W.printHex("__os_arm64x_dispatch_icall", CHPE->__os_arm64x_dispatch_icall);
+    W.printHex("__os_arm64x_dispatch_icall_cfg",
+               CHPE->__os_arm64x_dispatch_icall_cfg);
+    W.printHex("AlternateEntryPoint", CHPE->AlternateEntryPoint);
+    W.printHex("AuxiliaryIAT", CHPE->AuxiliaryIAT);
+    W.printHex("GetX64InformationFunctionPointer",
+               CHPE->GetX64InformationFunctionPointer);
+    W.printHex("SetX64InformationFunctionPointer",
+               CHPE->SetX64InformationFunctionPointer);
+    W.printHex("ExtraRFETable", CHPE->ExtraRFETable);
+    W.printHex("ExtraRFETableSize", CHPE->ExtraRFETableSize);
+    W.printHex("__os_arm64x_dispatch_fptr", CHPE->__os_arm64x_dispatch_fptr);
+    W.printHex("AuxiliaryIATCopy", CHPE->AuxiliaryIATCopy);
+  }
+
   if (Tables.SEHTableVA) {
     ListScope LS(W, "SEHTable");
     printRVATable(Tables.SEHTableVA, Tables.SEHTableCount, 4);
@@ -921,7 +1008,7 @@ void COFFDumper::printCOFFLoadConfig(const T *Conf, LoadConfigTables &Tables) {
   W.printHex("SecurityCookie", Conf->SecurityCookie);
 
   // Print the safe SEH table if present.
-  if (Conf->Size < offsetof(coff_load_configuration32, GuardCFCheckFunction))
+  if (Conf->Size < offsetof(T, GuardCFCheckFunction))
     return;
   W.printHex("SEHandlerTable", Conf->SEHandlerTable);
   W.printNumber("SEHandlerCount", Conf->SEHandlerCount);

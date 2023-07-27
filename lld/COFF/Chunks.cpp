@@ -13,6 +13,7 @@
 #include "Symbols.h"
 #include "Writer.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/BinaryFormat/COFF.h"
 #include "llvm/Object/COFF.h"
@@ -659,6 +660,13 @@ void SectionChunk::getRuntimePseudoRelocs(
             file->getCOFFObj()->getRelocationTypeName(rel.Type) + " in " +
             toString(file));
       continue;
+    }
+    int addressSizeInBits = file->ctx.config.is64() ? 64 : 32;
+    if (sizeInBits < addressSizeInBits) {
+      warn("runtime pseudo relocation in " + toString(file) + " against " +
+           "symbol " + target->getName() + " is too narrow (only " +
+           Twine(sizeInBits) + " bits wide); this can fail at runtime " +
+           "depending on memory layout");
     }
     // sizeInBits is used to initialize the Flags field; currently no
     // other flags are defined.

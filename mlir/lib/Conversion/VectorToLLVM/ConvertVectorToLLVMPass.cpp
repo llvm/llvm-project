@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmNeon/ArmNeonDialect.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
+#include "mlir/Dialect/ArmSME/Transforms/Passes.h"
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
 #include "mlir/Dialect/ArmSVE/ArmSVEDialect.h"
 #include "mlir/Dialect/ArmSVE/Transforms.h"
@@ -96,6 +97,8 @@ void LowerVectorToLLVMPass::runOnOperation() {
   target.addLegalDialect<arith::ArithDialect>();
   target.addLegalDialect<memref::MemRefDialect>();
   target.addLegalOp<UnrealizedConversionCastOp>();
+  arm_sme::ArmSMETypeConverter armSMEConverter(&getContext(), options);
+
   if (armNeon) {
     // TODO: we may or may not want to include in-dialect lowering to
     // LLVM-compatible operations here. So far, all operations in the dialect
@@ -108,7 +111,7 @@ void LowerVectorToLLVMPass::runOnOperation() {
   }
   if (armSME) {
     configureArmSMELegalizeForExportTarget(target);
-    populateArmSMELegalizeForLLVMExportPatterns(converter, patterns);
+    populateArmSMELegalizeForLLVMExportPatterns(armSMEConverter, patterns);
   }
   if (amx) {
     configureAMXLegalizeForExportTarget(target);

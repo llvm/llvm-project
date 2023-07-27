@@ -146,7 +146,7 @@ Usage
 
 This tool can be used with the following arguments. Generally information is
 passed as a key-value pair to the ``image=`` argument. The ``file`` and ``triple``,
-arguments are considered mandatory to make a valid image. The ``arch`` argument 
+arguments are considered mandatory to make a valid image. The ``arch`` argument
 is suggested.
 
 .. code-block:: console
@@ -154,19 +154,19 @@ is suggested.
   OVERVIEW: A utility for bundling several object files into a single binary.
   The output binary can then be embedded into the host section table
   to create a fatbinary containing offloading code.
-  
+
   USAGE: clang-offload-packager [options]
-  
+
   OPTIONS:
-  
+
   Generic Options:
-  
+
     --help                      - Display available options (--help-hidden for more)
     --help-list                 - Display list of available options (--help-list-hidden for more)
     --version                   - Display the version of this program
-  
+
   clang-offload-packager options:
-  
+
     --image=<<key>=<value>,...> - List of key and value arguments. Required
                                   keywords are 'file' and 'triple'.
     -o <file>                   - Write output to <file>.
@@ -181,9 +181,9 @@ single output file with all the images combined.
 
   clang-offload-packager -o out.bin --image=file=input.o,triple=nvptx64,arch=sm_70
 
-The inverse operation can be performed instead by passing the packaged binary as 
-input. In this mode the matching images will either be placed in the output 
-specified by the ``file`` option. If no ``file`` argument is provided a name 
+The inverse operation can be performed instead by passing the packaged binary as
+input. In this mode the matching images will either be placed in the output
+specified by the ``file`` option. If no ``file`` argument is provided a name
 will be generated for each matching image.
 
 .. code-block:: console

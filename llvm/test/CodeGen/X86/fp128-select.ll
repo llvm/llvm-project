@@ -13,7 +13,7 @@ define void @test_select(ptr %p, ptr %q, i1 zeroext %c) {
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    testl %edx, %edx
 ; SSE-NEXT:    jne .LBB0_1
-; SSE-NEXT:  # %bb.2:
+; SSE-NEXT:  # %bb.3:
 ; SSE-NEXT:    movaps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
 ; SSE-NEXT:    movaps %xmm0, (%rsi)
 ; SSE-NEXT:    retq

@@ -259,21 +259,19 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
     return TaintedSymbols;
 
   // Traverse all the symbols this symbol depends on to see if any are tainted.
-  for (SymExpr::symbol_iterator SI = Sym->symbol_begin(),
-                                SE = Sym->symbol_end();
-       SI != SE; ++SI) {
-    if (!isa<SymbolData>(*SI))
+  for (SymbolRef SubSym : Sym->symbols()) {
+    if (!isa<SymbolData>(SubSym))
       continue;
 
-    if (const TaintTagType *Tag = State->get<TaintMap>(*SI)) {
+    if (const TaintTagType *Tag = State->get<TaintMap>(SubSym)) {
       if (*Tag == Kind) {
-        TaintedSymbols.push_back(*SI);
+        TaintedSymbols.push_back(SubSym);
         if (returnFirstOnly)
           return TaintedSymbols; // return early if needed
       }
     }
 
-    if (const auto *SD = dyn_cast<SymbolDerived>(*SI)) {
+    if (const auto *SD = dyn_cast<SymbolDerived>(SubSym)) {
       // If this is a SymbolDerived with a tainted parent, it's also tainted.
       std::vector<SymbolRef> TaintedParents = getTaintedSymbolsImpl(
           State, SD->getParentSymbol(), Kind, returnFirstOnly);
@@ -302,7 +300,7 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
     }
 
     // If memory region is tainted, data is also tainted.
-    if (const auto *SRV = dyn_cast<SymbolRegionValue>(*SI)) {
+    if (const auto *SRV = dyn_cast<SymbolRegionValue>(SubSym)) {
       std::vector<SymbolRef> TaintedRegions =
           getTaintedSymbolsImpl(State, SRV->getRegion(), Kind, returnFirstOnly);
       llvm::append_range(TaintedSymbols, TaintedRegions);
@@ -311,7 +309,7 @@ std::vector<SymbolRef> taint::getTaintedSymbolsImpl(ProgramStateRef State,
     }
 
     // If this is a SymbolCast from a tainted value, it's also tainted.
-    if (const auto *SC = dyn_cast<SymbolCast>(*SI)) {
+    if (const auto *SC = dyn_cast<SymbolCast>(SubSym)) {
       std::vector<SymbolRef> TaintedCasts =
           getTaintedSymbolsImpl(State, SC->getOperand(), Kind, returnFirstOnly);
       llvm::append_range(TaintedSymbols, TaintedCasts);

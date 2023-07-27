@@ -833,6 +833,12 @@ namespace llvm {
     // Load FP control word from i16 memory.
     FLDCW16m,
 
+    // Store x87 FPU environment into memory.
+    FNSTENVm,
+
+    // Load x87 FPU environment from memory.
+    FLDENVm,
+
     /// This instruction implements FP_TO_SINT with the
     /// integer destination in memory and a FP reg source.  This corresponds
     /// to the X86::FIST*m instructions and the rounding mode change stuff. It
@@ -1663,6 +1669,9 @@ namespace llvm {
     SDValue LowerINIT_TRAMPOLINE(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerGET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerSET_ROUNDING(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerGET_FPENV_MEM(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerSET_FPENV_MEM(SDValue Op, SelectionDAG &DAG) const;
+    SDValue LowerRESET_FPENV(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerWin64_i128OP(SDValue Op, SelectionDAG &DAG) const;
     SDValue LowerWin64_FP_TO_INT128(SDValue Op, SelectionDAG &DAG,
                                     SDValue &Chain) const;

@@ -37,22 +37,8 @@ define i32 @f(i1 %cond1) #0 !prof !0 {
 ; CHECK:       loop2:
 ; CHECK-NEXT:    [[PHI:%.*]] = phi i64 [ 0, [[ENTRY2_NEW]] ], [ [[INC_7:%.*]], [[LOOP2]] ]
 ; CHECK-NEXT:    [[NITER:%.*]] = phi i64 [ 0, [[ENTRY2_NEW]] ], [ [[NITER_NEXT_7:%.*]], [[LOOP2]] ]
-; CHECK-NEXT:    [[INC:%.*]] = add nuw nsw i64 [[PHI]], 1
-; CHECK-NEXT:    [[NITER_NEXT:%.*]] = add nuw nsw i64 [[NITER]], 1
-; CHECK-NEXT:    [[INC_1:%.*]] = add nuw nsw i64 [[INC]], 1
-; CHECK-NEXT:    [[NITER_NEXT_1:%.*]] = add nuw nsw i64 [[NITER_NEXT]], 1
-; CHECK-NEXT:    [[INC_2:%.*]] = add nuw nsw i64 [[INC_1]], 1
-; CHECK-NEXT:    [[NITER_NEXT_2:%.*]] = add nuw nsw i64 [[NITER_NEXT_1]], 1
-; CHECK-NEXT:    [[INC_3:%.*]] = add nuw nsw i64 [[INC_2]], 1
-; CHECK-NEXT:    [[NITER_NEXT_3:%.*]] = add nuw nsw i64 [[NITER_NEXT_2]], 1
-; CHECK-NEXT:    [[INC_4:%.*]] = add nuw nsw i64 [[INC_3]], 1
-; CHECK-NEXT:    [[NITER_NEXT_4:%.*]] = add nuw nsw i64 [[NITER_NEXT_3]], 1
-; CHECK-NEXT:    [[INC_5:%.*]] = add nuw nsw i64 [[INC_4]], 1
-; CHECK-NEXT:    [[NITER_NEXT_5:%.*]] = add nuw nsw i64 [[NITER_NEXT_4]], 1
-; CHECK-NEXT:    [[INC_6:%.*]] = add nuw nsw i64 [[INC_5]], 1
-; CHECK-NEXT:    [[NITER_NEXT_6:%.*]] = add nuw nsw i64 [[NITER_NEXT_5]], 1
-; CHECK-NEXT:    [[INC_7]] = add i64 [[INC_6]], 1
-; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER_NEXT_6]], 1
+; CHECK-NEXT:    [[INC_7]] = add i64 [[PHI]], 8
+; CHECK-NEXT:    [[NITER_NEXT_7]] = add i64 [[NITER]], 8
 ; CHECK-NEXT:    [[NITER_NCMP_7:%.*]] = icmp eq i64 [[NITER_NEXT_7]], [[UNROLL_ITER]]
 ; CHECK-NEXT:    br i1 [[NITER_NCMP_7]], label [[EXIT2_UNR_LCSSA_LOOPEXIT:%.*]], label [[LOOP2]]
 ; CHECK:       exit2.unr-lcssa.loopexit:

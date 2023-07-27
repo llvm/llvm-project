@@ -16,6 +16,7 @@
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 
 #include <cinttypes>
 #include <cstdio>

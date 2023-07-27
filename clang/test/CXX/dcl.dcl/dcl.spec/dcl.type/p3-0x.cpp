@@ -21,8 +21,8 @@ void f() {
   for (struct S { S(int) {} } s : Undeclared); // expected-error{{types may not be defined in a for range declaration}}
                                                // expected-error@-1{{use of undeclared identifier 'Undeclared'}}
 
-  new struct T {}; // expected-error {{'T' cannot be defined in a type specifier}}
-  new struct A {}; // expected-error {{'A' cannot be defined in a type specifier}}
+  new struct T {}; // expected-error {{allocation of incomplete type 'struct T'}} //expected-note{{forward declaration of 'T'}}
+  new struct A {};
 
   try {} catch (struct U {}) {} // expected-error {{'U' cannot be defined in a type specifier}}
 

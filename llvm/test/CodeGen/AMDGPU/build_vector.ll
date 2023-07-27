@@ -71,10 +71,7 @@ entry:
 ; R600-NOT: MOV
 ; GFX6: s_mov_b32 s3, 0xf000
 ; GFX6: s_waitcnt lgkmcnt(0)
-; GFX6: s_lshr_b32 s2, s2, 16
-; GFX6: s_or_b32 s4, s2, 0x50000
-; GFX6: s_mov_b32 s2, -1
-; GFX6: v_mov_b32_e32 v0, s4
+; GFX6: v_alignbit_b32 v0, 5, s4, 16
 ; GFX6: buffer_store_dword v0, off, s[0:3], 0
 ; GFX8: s_mov_b32 s3, 0xf000
 ; GFX8: s_mov_b32 s2, -1

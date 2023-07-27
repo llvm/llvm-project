@@ -191,6 +191,10 @@ def FeatureAVXVNNIINT8  : SubtargetFeature<"avxvnniint8",
                              "HasAVXVNNIINT8", "true",
                              "Enable AVX-VNNI-INT8",
                              [FeatureAVX2]>;
+def FeatureAVXVNNIINT16 : SubtargetFeature<"avxvnniint16",
+                             "HasAVXVNNIINT16", "true",
+                             "Enable AVX-VNNI-INT16",
+                             [FeatureAVX2]>;
 def FeaturePCLMUL  : SubtargetFeature<"pclmul", "HasPCLMUL", "true",
                          "Enable packed carry-less multiplication instructions",
                                [FeatureSSE2]>;
@@ -238,10 +242,19 @@ def FeatureADX     : SubtargetFeature<"adx", "HasADX", "true",
 def FeatureSHA     : SubtargetFeature<"sha", "HasSHA", "true",
                                       "Enable SHA instructions",
                                       [FeatureSSE2]>;
+def FeatureSHA512  : SubtargetFeature<"sha512", "HasSHA512", "true",
+                                      "Support SHA512 instructions",
+                                      [FeatureAVX]>;
 // Processor supports CET SHSTK - Control-Flow Enforcement Technology
 // using Shadow Stack
 def FeatureSHSTK   : SubtargetFeature<"shstk", "HasSHSTK", "true",
                        "Support CET Shadow-Stack instructions">;
+def FeatureSM3     : SubtargetFeature<"sm3", "HasSM3", "true",
+                                      "Support SM3 instructions",
+                                      [FeatureAVX]>;
+def FeatureSM4     : SubtargetFeature<"sm4", "HasSM4", "true",
+                                      "Support SM4 instructions",
+                                      [FeatureAVX]>;
 def FeaturePRFCHW  : SubtargetFeature<"prfchw", "HasPRFCHW", "true",
                                       "Support PRFCHW instructions">;
 def FeatureRDSEED  : SubtargetFeature<"rdseed", "HasRDSEED", "true",
@@ -1065,10 +1078,14 @@ def ProcessorFeatures {
 
   // Graniterapids
   list<SubtargetFeature> GNRAdditionalFeatures = [FeatureAMXFP16,
-                                                  FeaturePREFETCHI,
-                                                  FeatureAMXCOMPLEX];
+                                                  FeaturePREFETCHI];
   list<SubtargetFeature> GNRFeatures =
     !listconcat(SPRFeatures, GNRAdditionalFeatures);
+
+  // Graniterapids D
+  list<SubtargetFeature> GNRDAdditionalFeatures = [FeatureAMXCOMPLEX];
+  list<SubtargetFeature> GNRDFeatures =
+    !listconcat(GNRFeatures, GNRDAdditionalFeatures);
 
   // Atom
   list<SubtargetFeature> AtomFeatures = [FeatureX87,
@@ -1187,6 +1204,8 @@ def ProcessorFeatures {
   list<SubtargetFeature> SRFAdditionalFeatures = [FeatureCMPCCXADD,
                                                   FeatureAVXIFMA,
                                                   FeatureAVXNECONVERT,
+                                                  FeatureENQCMD,
+                                                  FeatureUINTR,
                                                   FeatureAVXVNNIINT8];
   list<SubtargetFeature> SRFFeatures =
     !listconcat(ADLFeatures, SRFAdditionalFeatures);
@@ -1480,20 +1499,22 @@ def : Proc<"i586",            [FeatureX87, FeatureCX8],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 def : Proc<"pentium",         [FeatureX87, FeatureCX8],
                               [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"pentium-mmx",     [FeatureX87, FeatureCX8, FeatureMMX],
-                              [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-
+foreach P = ["pentium-mmx", "pentium_mmx"] in {
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureMMX],
+                [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
+}
 def : Proc<"i686", [FeatureX87, FeatureCX8, FeatureCMOV],
                    [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-def : Proc<"pentiumpro", [FeatureX87, FeatureCX8, FeatureCMOV,
-                          FeatureNOPL],
-                         [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-
-def : Proc<"pentium2", [FeatureX87, FeatureCX8, FeatureMMX, FeatureCMOV,
-                        FeatureFXSR, FeatureNOPL],
-                       [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
-
-foreach P = ["pentium3", "pentium3m"] in {
+foreach P = ["pentiumpro", "pentium_pro"] in {
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureCMOV, FeatureNOPL],
+                [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
+}
+foreach P = ["pentium2", "pentium_ii"] in {
+  def : Proc<P, [FeatureX87, FeatureCX8, FeatureMMX, FeatureCMOV,
+                          FeatureFXSR, FeatureNOPL],
+                        [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
+}
+foreach P = ["pentium3", "pentium3m", "pentium_iii_no_xmm_regs", "pentium_iii"] in {
   def : Proc<P, [FeatureX87, FeatureCX8, FeatureMMX,
                  FeatureSSE1, FeatureFXSR, FeatureNOPL, FeatureCMOV],
                 [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
@@ -1509,12 +1530,14 @@ foreach P = ["pentium3", "pentium3m"] in {
 // measure to avoid performance surprises, in case clang's default cpu
 // changes slightly.
 
-def : ProcModel<"pentium-m", GenericPostRAModel,
+foreach P = ["pentium_m", "pentium-m"] in {
+def : ProcModel<P, GenericPostRAModel,
                 [FeatureX87, FeatureCX8, FeatureMMX, FeatureSSE2,
                 FeatureFXSR, FeatureNOPL, FeatureCMOV],
                 [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
+}
 
-foreach P = ["pentium4", "pentium4m"] in {
+foreach P = ["pentium4", "pentium4m", "pentium_4"] in {
   def : ProcModel<P, GenericPostRAModel,
                   [FeatureX87, FeatureCX8, FeatureMMX, FeatureSSE2,
                    FeatureFXSR, FeatureNOPL, FeatureCMOV],
@@ -1532,10 +1555,12 @@ def : ProcModel<"yonah", SandyBridgeModel,
                 [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
 
 // NetBurst.
-def : ProcModel<"prescott", GenericPostRAModel,
-                [FeatureX87, FeatureCX8, FeatureMMX, FeatureSSE3,
-                 FeatureFXSR, FeatureNOPL, FeatureCMOV],
-                [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
+foreach P = ["prescott", "pentium_4_sse3"] in {
+  def : ProcModel<P, GenericPostRAModel,
+                  [FeatureX87, FeatureCX8, FeatureMMX, FeatureSSE3,
+                  FeatureFXSR, FeatureNOPL, FeatureCMOV],
+                  [TuningSlowUAMem16, TuningInsertVZEROUPPER]>;
+}
 def : ProcModel<"nocona", GenericPostRAModel, [
   FeatureX87,
   FeatureCX8,
@@ -1553,7 +1578,8 @@ def : ProcModel<"nocona", GenericPostRAModel, [
 ]>;
 
 // Intel Core 2 Solo/Duo.
-def : ProcModel<"core2", SandyBridgeModel, [
+foreach P = ["core2", "core_2_duo_ssse3"] in {
+def : ProcModel<P, SandyBridgeModel, [
   FeatureX87,
   FeatureCX8,
   FeatureCMOV,
@@ -1570,7 +1596,9 @@ def : ProcModel<"core2", SandyBridgeModel, [
   TuningSlowUAMem16,
   TuningInsertVZEROUPPER
 ]>;
-def : ProcModel<"penryn", SandyBridgeModel, [
+}
+foreach P = ["penryn", "core_2_duo_sse4_1"] in {
+def : ProcModel<P, SandyBridgeModel, [
   FeatureX87,
   FeatureCX8,
   FeatureCMOV,
@@ -1587,6 +1615,7 @@ def : ProcModel<"penryn", SandyBridgeModel, [
   TuningSlowUAMem16,
   TuningInsertVZEROUPPER
 ]>;
+}
 
 // Atom CPUs.
 foreach P = ["bonnell", "atom"] in {
@@ -1594,15 +1623,19 @@ foreach P = ["bonnell", "atom"] in {
                   ProcessorFeatures.AtomTuning>;
 }
 
-foreach P = ["silvermont", "slm"] in {
+foreach P = ["silvermont", "slm", "atom_sse4_2"] in {
   def : ProcModel<P, SLMModel, ProcessorFeatures.SLMFeatures,
                   ProcessorFeatures.SLMTuning>;
 }
 
+def : ProcModel<"atom_sse4_2_movbe", SLMModel, ProcessorFeatures.GLMFeatures,
+                ProcessorFeatures.SLMTuning>;
 def : ProcModel<"goldmont", SLMModel, ProcessorFeatures.GLMFeatures,
                 ProcessorFeatures.GLMTuning>;
-def : ProcModel<"goldmont-plus", SLMModel, ProcessorFeatures.GLPFeatures,
-                ProcessorFeatures.GLPTuning>;
+foreach P = ["goldmont_plus", "goldmont-plus"] in {
+  def : ProcModel<P, SLMModel, ProcessorFeatures.GLPFeatures,
+                  ProcessorFeatures.GLPTuning>;
+}
 def : ProcModel<"tremont", SLMModel, ProcessorFeatures.TRMFeatures,
                 ProcessorFeatures.TRMTuning>;
 def : ProcModel<"sierraforest", AlderlakePModel, ProcessorFeatures.SRFFeatures,
@@ -1611,43 +1644,49 @@ def : ProcModel<"grandridge", AlderlakePModel, ProcessorFeatures.GRRFeatures,
                 ProcessorFeatures.TRMTuning>;
 
 // "Arrandale" along with corei3 and corei5
-foreach P = ["nehalem", "corei7"] in {
+foreach P = ["nehalem", "corei7", "core_i7_sse4_2"] in {
   def : ProcModel<P, SandyBridgeModel, ProcessorFeatures.NHMFeatures,
                   ProcessorFeatures.NHMTuning>;
 }
 
 // Westmere is the corei3/i5/i7 path from nehalem to sandybridge
-def : ProcModel<"westmere", SandyBridgeModel, ProcessorFeatures.WSMFeatures,
-                ProcessorFeatures.WSMTuning>;
+foreach P = ["westmere", "core_aes_pclmulqdq"] in {
+  def : ProcModel<P, SandyBridgeModel, ProcessorFeatures.WSMFeatures,
+                  ProcessorFeatures.WSMTuning>;
+}
 
-foreach P = ["sandybridge", "corei7-avx"] in {
+foreach P = ["sandybridge", "corei7-avx", "core_2nd_gen_avx"] in {
   def : ProcModel<P, SandyBridgeModel, ProcessorFeatures.SNBFeatures,
                   ProcessorFeatures.SNBTuning>;
 }
 
-foreach P = ["ivybridge", "core-avx-i"] in {
+foreach P = ["ivybridge", "core-avx-i", "core_3rd_gen_avx"] in {
   def : ProcModel<P, SandyBridgeModel, ProcessorFeatures.IVBFeatures,
                   ProcessorFeatures.IVBTuning>;
 }
 
-foreach P = ["haswell", "core-avx2"] in {
+foreach P = ["haswell", "core-avx2", "core_4th_gen_avx", "core_4th_gen_avx_tsx"] in {
   def : ProcModel<P, HaswellModel, ProcessorFeatures.HSWFeatures,
                   ProcessorFeatures.HSWTuning>;
 }
 
-def : ProcModel<"broadwell", BroadwellModel, ProcessorFeatures.BDWFeatures,
-                ProcessorFeatures.BDWTuning>;
+foreach P = ["broadwell", "core_5th_gen_avx", "core_5th_gen_avx_tsx"] in {
+  def : ProcModel<P, BroadwellModel, ProcessorFeatures.BDWFeatures,
+                  ProcessorFeatures.BDWTuning>;
+}
 
 def : ProcModel<"skylake", SkylakeClientModel, ProcessorFeatures.SKLFeatures,
                 ProcessorFeatures.SKLTuning>;
 
 // FIXME: define KNL scheduler model
-def : ProcModel<"knl", HaswellModel, ProcessorFeatures.KNLFeatures,
-                ProcessorFeatures.KNLTuning>;
+foreach P = ["knl", "mic_avx512"] in {
+  def : ProcModel<P, HaswellModel, ProcessorFeatures.KNLFeatures,
+                  ProcessorFeatures.KNLTuning>;
+}
 def : ProcModel<"knm", HaswellModel, ProcessorFeatures.KNMFeatures,
                 ProcessorFeatures.KNLTuning>;
 
-foreach P = ["skylake-avx512", "skx"] in {
+foreach P = ["skylake-avx512", "skx", "skylake_avx512"] in {
   def : ProcModel<P, SkylakeServerModel, ProcessorFeatures.SKXFeatures,
                   ProcessorFeatures.SKXTuning>;
 }
@@ -1658,12 +1697,16 @@ def : ProcModel<"cooperlake", SkylakeServerModel,
                 ProcessorFeatures.CPXFeatures, ProcessorFeatures.CPXTuning>;
 def : ProcModel<"cannonlake", SkylakeServerModel,
                 ProcessorFeatures.CNLFeatures, ProcessorFeatures.CNLTuning>;
-def : ProcModel<"icelake-client", IceLakeModel,
+foreach P = ["icelake-client", "icelake_client"] in {
+def : ProcModel<P, IceLakeModel,
                 ProcessorFeatures.ICLFeatures, ProcessorFeatures.ICLTuning>;
+}
 def : ProcModel<"rocketlake", IceLakeModel,
                 ProcessorFeatures.ICLFeatures, ProcessorFeatures.ICLTuning>;
-def : ProcModel<"icelake-server", IceLakeModel,
+foreach P = ["icelake-server", "icelake_server"] in {
+def : ProcModel<P, IceLakeModel,
                 ProcessorFeatures.ICXFeatures, ProcessorFeatures.ICXTuning>;
+}
 def : ProcModel<"tigerlake", IceLakeModel,
                 ProcessorFeatures.TGLFeatures, ProcessorFeatures.TGLTuning>;
 def : ProcModel<"sapphirerapids", SapphireRapidsModel,
@@ -1678,6 +1721,10 @@ def : ProcModel<"graniterapids", SapphireRapidsModel,
                 ProcessorFeatures.GNRFeatures, ProcessorFeatures.SPRTuning>;
 def : ProcModel<"emeraldrapids", SapphireRapidsModel,
                 ProcessorFeatures.SPRFeatures, ProcessorFeatures.SPRTuning>;
+foreach P = ["graniterapids-d", "graniterapids_d"] in {
+def : ProcModel<P, SapphireRapidsModel,
+                ProcessorFeatures.GNRDFeatures, ProcessorFeatures.SPRTuning>;
+}
 
 // AMD CPUs.
 

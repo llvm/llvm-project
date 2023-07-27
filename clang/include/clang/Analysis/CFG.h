@@ -1122,17 +1122,8 @@ public:
     Elements.push_back(CFGScopeBegin(VD, S), C);
   }
 
-  void prependScopeBegin(const VarDecl *VD, const Stmt *S,
-                         BumpVectorContext &C) {
-    Elements.insert(Elements.rbegin(), 1, CFGScopeBegin(VD, S), C);
-  }
-
   void appendScopeEnd(const VarDecl *VD, const Stmt *S, BumpVectorContext &C) {
     Elements.push_back(CFGScopeEnd(VD, S), C);
-  }
-
-  void prependScopeEnd(const VarDecl *VD, const Stmt *S, BumpVectorContext &C) {
-    Elements.insert(Elements.rbegin(), 1, CFGScopeEnd(VD, S), C);
   }
 
   void appendBaseDtor(const CXXBaseSpecifier *BS, BumpVectorContext &C) {
@@ -1161,44 +1152,6 @@ public:
 
   void appendDeleteDtor(CXXRecordDecl *RD, CXXDeleteExpr *DE, BumpVectorContext &C) {
     Elements.push_back(CFGDeleteDtor(RD, DE), C);
-  }
-
-  // Destructors must be inserted in reversed order. So insertion is in two
-  // steps. First we prepare space for some number of elements, then we insert
-  // the elements beginning at the last position in prepared space.
-  iterator beginAutomaticObjDtorsInsert(iterator I, size_t Cnt,
-      BumpVectorContext &C) {
-    return iterator(Elements.insert(I.base(), Cnt,
-                                    CFGAutomaticObjDtor(nullptr, nullptr), C));
-  }
-  iterator insertAutomaticObjDtor(iterator I, VarDecl *VD, Stmt *S) {
-    *I = CFGAutomaticObjDtor(VD, S);
-    return ++I;
-  }
-
-  // Scope leaving must be performed in reversed order. So insertion is in two
-  // steps. First we prepare space for some number of elements, then we insert
-  // the elements beginning at the last position in prepared space.
-  iterator beginLifetimeEndsInsert(iterator I, size_t Cnt,
-                                   BumpVectorContext &C) {
-    return iterator(
-        Elements.insert(I.base(), Cnt, CFGLifetimeEnds(nullptr, nullptr), C));
-  }
-  iterator insertLifetimeEnds(iterator I, VarDecl *VD, Stmt *S) {
-    *I = CFGLifetimeEnds(VD, S);
-    return ++I;
-  }
-
-  // Scope leaving must be performed in reversed order. So insertion is in two
-  // steps. First we prepare space for some number of elements, then we insert
-  // the elements beginning at the last position in prepared space.
-  iterator beginScopeEndInsert(iterator I, size_t Cnt, BumpVectorContext &C) {
-    return iterator(
-        Elements.insert(I.base(), Cnt, CFGScopeEnd(nullptr, nullptr), C));
-  }
-  iterator insertScopeEnd(iterator I, VarDecl *VD, Stmt *S) {
-    *I = CFGScopeEnd(VD, S);
-    return ++I;
   }
 };
 

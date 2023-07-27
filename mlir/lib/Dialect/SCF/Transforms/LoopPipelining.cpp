@@ -77,7 +77,7 @@ public:
       llvm::DenseMap<std::pair<Value, unsigned>, unsigned> &loopArgMap);
   /// Emits the pipelined kernel. This clones loop operations following user
   /// order and remaps operands defined in a different stage as their use.
-  void createKernel(
+  LogicalResult createKernel(
       scf::ForOp newForOp,
       const llvm::MapVector<Value, LiverangeInfo> &crossStageValues,
       const llvm::DenseMap<std::pair<Value, unsigned>, unsigned> &loopArgMap,
@@ -314,7 +314,7 @@ scf::ForOp LoopPipelinerInternal::createKernelLoop(
   return newForOp;
 }
 
-void LoopPipelinerInternal::createKernel(
+LogicalResult LoopPipelinerInternal::createKernel(
     scf::ForOp newForOp,
     const llvm::MapVector<Value, LoopPipelinerInternal::LiverangeInfo>
         &crossStageValues,
@@ -401,6 +401,8 @@ void LoopPipelinerInternal::createKernel(
 
     if (predicates[useStage]) {
       newOp = predicateFn(rewriter, newOp, predicates[useStage]);
+      if (!newOp)
+        return failure();
       // Remap the results to the new predicated one.
       for (auto values : llvm::zip(op->getResults(), newOp->getResults()))
         mapping.map(std::get<0>(values), std::get<1>(values));
@@ -422,9 +424,9 @@ void LoopPipelinerInternal::createKernel(
   for (auto &it : crossStageValues) {
     int64_t version = maxStage - it.second.lastUseStage + 1;
     unsigned numVersionReturned = it.second.lastUseStage - it.second.defStage;
-    // add the original verstion to yield ops.
-    // If there is a liverange spanning across more than 2 stages we need to add
-    // extra arg.
+    // add the original version to yield ops.
+    // If there is a live range spanning across more than 2 stages we need to
+    // add extra arg.
     for (unsigned i = 1; i < numVersionReturned; i++) {
       setValueMapping(it.first, newForOp->getResult(yieldOperands.size()),
                       version++);
@@ -447,6 +449,7 @@ void LoopPipelinerInternal::createKernel(
                     maxStage - defStage + 1);
   }
   rewriter.create<scf::YieldOp>(forOp.getLoc(), yieldOperands);
+  return success();
 }
 
 llvm::SmallVector<Value>
@@ -516,10 +519,16 @@ void LoopPipelinerInternal::setValueMapping(Value key, Value el, int64_t idx) {
 } // namespace
 
 FailureOr<ForOp> mlir::scf::pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
-                                            const PipeliningOption &options) {
+                                            const PipeliningOption &options,
+                                            bool *modifiedIR) {
+  if (modifiedIR)
+    *modifiedIR = false;
   LoopPipelinerInternal pipeliner;
   if (!pipeliner.initializeLoopInfo(forOp, options))
     return failure();
+
+  if (modifiedIR)
+    *modifiedIR = true;
 
   // 1. Emit prologue.
   pipeliner.emitPrologue(rewriter);
@@ -540,7 +549,9 @@ FailureOr<ForOp> mlir::scf::pipelineForLoop(RewriterBase &rewriter, ForOp forOp,
       pipeliner.createKernelLoop(crossStageValues, rewriter, loopArgMap);
   // Create the kernel block, order ops based on user choice and remap
   // operands.
-  pipeliner.createKernel(newForOp, crossStageValues, loopArgMap, rewriter);
+  if (failed(pipeliner.createKernel(newForOp, crossStageValues, loopArgMap,
+                                    rewriter)))
+    return failure();
 
   llvm::SmallVector<Value> returnValues =
       newForOp.getResults().take_front(forOp->getNumResults());

@@ -663,34 +663,35 @@ for.cond.cleanup:                                 ; preds = %vector.body, %entry
 define dso_local void @test_nested(ptr noalias nocapture %pInT1, ptr noalias nocapture readonly %pOutT1, ptr noalias nocapture readonly %pPRT_in, ptr noalias nocapture readnone %pPRT_pDst, i32 %numRows, i32 %numCols, i32 %l) local_unnamed_addr {
 ; CHECK-LABEL: test_nested:
 ; CHECK:       @ %bb.0: @ %for.body.us.preheader
-; CHECK-NEXT:    .save {r4, r5, r7, lr}
-; CHECK-NEXT:    push {r4, r5, r7, lr}
+; CHECK-NEXT:    .save {r4, r5, r6, lr}
+; CHECK-NEXT:    push {r4, r5, r6, lr}
 ; CHECK-NEXT:    ldrd lr, r12, [sp, #16]
+; CHECK-NEXT:    lsl.w r3, r12, #1
 ; CHECK-NEXT:  .LBB14_1: @ %for.body.us
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB14_2 Depth 2
-; CHECK-NEXT:    ldrh r3, [r1]
+; CHECK-NEXT:    ldrh r4, [r1]
+; CHECK-NEXT:    mov r5, r2
+; CHECK-NEXT:    mov r6, r12
+; CHECK-NEXT:    vdup.16 q0, r4
 ; CHECK-NEXT:    mov r4, r0
-; CHECK-NEXT:    mov r5, r12
-; CHECK-NEXT:    vdup.16 q0, r3
-; CHECK-NEXT:    add.w r3, r2, r12, lsl #1
 ; CHECK-NEXT:  .LBB14_2: @ %vector.body
 ; CHECK-NEXT:    @ Parent Loop BB14_1 Depth=1
 ; CHECK-NEXT:    @ => This Inner Loop Header: Depth=2
-; CHECK-NEXT:    vldrw.u32 q1, [r2], #16
+; CHECK-NEXT:    vldrw.u32 q1, [r5], #16
 ; CHECK-NEXT:    vldrw.u32 q2, [r4]
-; CHECK-NEXT:    subs r5, #8
+; CHECK-NEXT:    subs r6, #8
 ; CHECK-NEXT:    vfms.f16 q2, q1, q0
 ; CHECK-NEXT:    vstrb.8 q2, [r4], #16
 ; CHECK-NEXT:    bne .LBB14_2
 ; CHECK-NEXT:  @ %bb.3: @ %for.cond6.for.end_crit_edge.us
 ; CHECK-NEXT:    @ in Loop: Header=BB14_1 Depth=1
-; CHECK-NEXT:    add.w r0, r0, r12, lsl #1
+; CHECK-NEXT:    add r0, r3
+; CHECK-NEXT:    add r2, r3
 ; CHECK-NEXT:    adds r1, #2
-; CHECK-NEXT:    mov r2, r3
 ; CHECK-NEXT:    le lr, .LBB14_1
 ; CHECK-NEXT:  @ %bb.4: @ %for.end14
-; CHECK-NEXT:    pop {r4, r5, r7, pc}
+; CHECK-NEXT:    pop {r4, r5, r6, pc}
 for.body.us.preheader:
   %cmp = icmp sgt i32 %numRows, 0
   tail call void @llvm.assume(i1 %cmp)
@@ -1350,7 +1351,7 @@ define void @arm_biquad_cascade_df2T_f16(ptr nocapture readonly %S, ptr nocaptur
 ; CHECK-NEXT:    .vsave {d8, d9, d10, d11}
 ; CHECK-NEXT:    vpush {d8, d9, d10, d11}
 ; CHECK-NEXT:    vmov.i32 q0, #0x0
-; CHECK-NEXT:    ldrd r12, r6, [r0, #4]
+; CHECK-NEXT:    ldrd r6, r12, [r0, #4]
 ; CHECK-NEXT:    ldrb.w r9, [r0]
 ; CHECK-NEXT:    vldr.16 s0, .LCPI17_0
 ; CHECK-NEXT:    lsr.w r8, r3, #1
@@ -1358,26 +1359,26 @@ define void @arm_biquad_cascade_df2T_f16(ptr nocapture readonly %S, ptr nocaptur
 ; CHECK-NEXT:  .LBB17_1: @ %if.else
 ; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
 ; CHECK-NEXT:    vmovx.f16 s5, s4
-; CHECK-NEXT:    vstr.16 s4, [r12]
+; CHECK-NEXT:    vstr.16 s4, [r6]
 ; CHECK-NEXT:  .LBB17_2: @ %if.end
 ; CHECK-NEXT:    @ in Loop: Header=BB17_3 Depth=1
-; CHECK-NEXT:    vstr.16 s5, [r12, #2]
-; CHECK-NEXT:    adds r6, #10
+; CHECK-NEXT:    vstr.16 s5, [r6, #2]
+; CHECK-NEXT:    add.w r12, r12, #10
 ; CHECK-NEXT:    subs.w r9, r9, #1
-; CHECK-NEXT:    add.w r12, r12, #4
+; CHECK-NEXT:    add.w r6, r6, #4
 ; CHECK-NEXT:    mov r1, r2
 ; CHECK-NEXT:    beq .LBB17_8
 ; CHECK-NEXT:  .LBB17_3: @ %do.body
 ; CHECK-NEXT:    @ =>This Loop Header: Depth=1
 ; CHECK-NEXT:    @ Child Loop BB17_5 Depth 2
-; CHECK-NEXT:    vldrh.u16 q2, [r6]
+; CHECK-NEXT:    vldrh.u16 q2, [r12]
 ; CHECK-NEXT:    movs r5, #0
 ; CHECK-NEXT:    vmov q4, q2
 ; CHECK-NEXT:    vshlc q4, r5, #16
-; CHECK-NEXT:    vldrh.u16 q3, [r6, #4]
+; CHECK-NEXT:    vldrh.u16 q3, [r12, #4]
 ; CHECK-NEXT:    vmov q5, q3
 ; CHECK-NEXT:    vshlc q5, r5, #16
-; CHECK-NEXT:    vldrh.u16 q1, [r12]
+; CHECK-NEXT:    vldrh.u16 q1, [r6]
 ; CHECK-NEXT:    vmov.f32 s5, s1
 ; CHECK-NEXT:    mov r5, r2
 ; CHECK-NEXT:    wls lr, r8, .LBB17_6
@@ -1414,7 +1415,7 @@ define void @arm_biquad_cascade_df2T_f16(ptr nocapture readonly %S, ptr nocaptur
 ; CHECK-NEXT:    vfma.f16 q1, q3, r0
 ; CHECK-NEXT:    strh r0, [r5]
 ; CHECK-NEXT:    vmovx.f16 s2, s4
-; CHECK-NEXT:    vstr.16 s2, [r12]
+; CHECK-NEXT:    vstr.16 s2, [r6]
 ; CHECK-NEXT:    b .LBB17_2
 ; CHECK-NEXT:  .LBB17_8: @ %do.end
 ; CHECK-NEXT:    vpop {d8, d9, d10, d11}

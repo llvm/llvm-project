@@ -5,7 +5,6 @@ define float @fold_abs_in_branch(float %arg1, float %arg2) {
 ; GFX10-LABEL: fold_abs_in_branch:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-NEXT:    v_add_f32_e32 v1, v0, v1
@@ -37,7 +36,6 @@ define float @fold_abs_in_branch_multiple_users(float %arg1, float %arg2) {
 ; GFX10-LABEL: fold_abs_in_branch_multiple_users:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -73,7 +71,6 @@ define float @fold_abs_in_branch_undef(float %arg1, float %arg2) {
 ; GFX10-LABEL: fold_abs_in_branch_undef:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e64 v0, |s4|, |s4|
 ; GFX10-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 1.0, v0
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB2_2
@@ -102,7 +99,6 @@ define float @fold_abs_in_branch_poison(float %arg1, float %arg2) {
 ; GFX10-LABEL: fold_abs_in_branch_poison:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e64 v0, |s4|, |s4|
 ; GFX10-NEXT:    v_cmp_lt_f32_e32 vcc_lo, 1.0, v0
 ; GFX10-NEXT:    s_cbranch_vccnz .LBB3_2
@@ -131,7 +127,6 @@ define float @fold_abs_in_branch_fabs(float %arg1, float %arg2) {
 ; GFX10-LABEL: fold_abs_in_branch_fabs:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-NEXT:    v_add_f32_e32 v1, v0, v1
@@ -164,7 +159,6 @@ define float @fold_abs_in_branch_phi(float %arg1, float %arg2) {
 ; GFX10-LABEL: fold_abs_in_branch_phi:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
@@ -210,7 +204,6 @@ define float @fold_neg_in_branch(float %arg1, float %arg2) {
 ; GFX10-LABEL: fold_neg_in_branch:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1
 ; GFX10-NEXT:    s_mov_b32 s4, exec_lo
 ; GFX10-NEXT:    v_add_f32_e32 v0, v0, v1

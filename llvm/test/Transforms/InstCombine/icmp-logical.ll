@@ -129,8 +129,8 @@ define i1 @masked_or_allones_logical(i32 %A) {
 
 define i1 @masked_and_notA(i32 %A) {
 ; CHECK-LABEL: @masked_and_notA(
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A:%.*]], 78
-; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[MASK2]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -79
+; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[TST2]]
 ;
   %mask1 = and i32 %A, 14
@@ -143,8 +143,8 @@ define i1 @masked_and_notA(i32 %A) {
 
 define i1 @masked_and_notA_logical(i32 %A) {
 ; CHECK-LABEL: @masked_and_notA_logical(
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A:%.*]], 78
-; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[MASK2]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -79
+; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[TST2]]
 ;
   %mask1 = and i32 %A, 14
@@ -157,11 +157,9 @@ define i1 @masked_and_notA_logical(i32 %A) {
 
 define i1 @masked_and_notA_slightly_optimized(i32 %A) {
 ; CHECK-LABEL: @masked_and_notA_slightly_optimized(
-; CHECK-NEXT:    [[T0:%.*]] = icmp ugt i32 [[A:%.*]], 7
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A]], 39
-; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[MASK2]], [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[T0]], [[TST2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -40
+; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TST2]]
 ;
   %t0 = icmp uge i32 %A, 8
   %mask2 = and i32 %A, 39
@@ -172,11 +170,9 @@ define i1 @masked_and_notA_slightly_optimized(i32 %A) {
 
 define i1 @masked_and_notA_slightly_optimized_logical(i32 %A) {
 ; CHECK-LABEL: @masked_and_notA_slightly_optimized_logical(
-; CHECK-NEXT:    [[T0:%.*]] = icmp ugt i32 [[A:%.*]], 7
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A]], 39
-; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[MASK2]], [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = and i1 [[T0]], [[TST2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -40
+; CHECK-NEXT:    [[TST2:%.*]] = icmp ne i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TST2]]
 ;
   %t0 = icmp uge i32 %A, 8
   %mask2 = and i32 %A, 39
@@ -187,8 +183,8 @@ define i1 @masked_and_notA_slightly_optimized_logical(i32 %A) {
 
 define i1 @masked_or_A(i32 %A) {
 ; CHECK-LABEL: @masked_or_A(
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A:%.*]], 78
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[MASK2]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -79
+; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[TST2]]
 ;
   %mask1 = and i32 %A, 14
@@ -201,8 +197,8 @@ define i1 @masked_or_A(i32 %A) {
 
 define i1 @masked_or_A_logical(i32 %A) {
 ; CHECK-LABEL: @masked_or_A_logical(
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A:%.*]], 78
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[MASK2]], [[A]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -79
+; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    ret i1 [[TST2]]
 ;
   %mask1 = and i32 %A, 14
@@ -215,11 +211,9 @@ define i1 @masked_or_A_logical(i32 %A) {
 
 define i1 @masked_or_A_slightly_optimized(i32 %A) {
 ; CHECK-LABEL: @masked_or_A_slightly_optimized(
-; CHECK-NEXT:    [[T0:%.*]] = icmp ult i32 [[A:%.*]], 8
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A]], 39
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[MASK2]], [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[T0]], [[TST2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -40
+; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TST2]]
 ;
   %t0 = icmp ult i32 %A, 8
   %mask2 = and i32 %A, 39
@@ -230,11 +224,9 @@ define i1 @masked_or_A_slightly_optimized(i32 %A) {
 
 define i1 @masked_or_A_slightly_optimized_logical(i32 %A) {
 ; CHECK-LABEL: @masked_or_A_slightly_optimized_logical(
-; CHECK-NEXT:    [[T0:%.*]] = icmp ult i32 [[A:%.*]], 8
-; CHECK-NEXT:    [[MASK2:%.*]] = and i32 [[A]], 39
-; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[MASK2]], [[A]]
-; CHECK-NEXT:    [[RES:%.*]] = or i1 [[T0]], [[TST2]]
-; CHECK-NEXT:    ret i1 [[RES]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[A:%.*]], -40
+; CHECK-NEXT:    [[TST2:%.*]] = icmp eq i32 [[TMP1]], 0
+; CHECK-NEXT:    ret i1 [[TST2]]
 ;
   %t0 = icmp ult i32 %A, 8
   %mask2 = and i32 %A, 39

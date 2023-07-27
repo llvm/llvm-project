@@ -51,5 +51,9 @@ std::optional<hlfir::EntityWithAttributes> convertCallToHLFIR(
     const evaluate::ProcedureRef &procRef, std::optional<mlir::Type> resultType,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx);
 
+void convertUserDefinedAssignmentToHLFIR(
+    mlir::Location loc, Fortran::lower::AbstractConverter &converter,
+    const evaluate::ProcedureRef &procRef, hlfir::Entity lhs, hlfir::Entity rhs,
+    Fortran::lower::SymMap &symMap);
 } // namespace Fortran::lower
 #endif // FORTRAN_LOWER_CONVERTCALL_H

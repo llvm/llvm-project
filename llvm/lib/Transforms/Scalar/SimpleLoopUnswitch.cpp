@@ -3552,6 +3552,8 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
     return true;
   }
 
+  const Function *F = L.getHeader()->getParent();
+
   // Check whether we should continue with non-trivial conditions.
   // EnableNonTrivialUnswitch: Global variable that forces non-trivial
   //                           unswitching for testing and debugging.
@@ -3564,12 +3566,12 @@ unswitchLoop(Loop &L, DominatorTree &DT, LoopInfo &LI, AssumptionCache &AC,
   // branches even on targets that have divergence.
   // https://bugs.llvm.org/show_bug.cgi?id=48819
   bool ContinueWithNonTrivial =
-      EnableNonTrivialUnswitch || (NonTrivial && !TTI.hasBranchDivergence());
+      EnableNonTrivialUnswitch || (NonTrivial && !TTI.hasBranchDivergence(F));
   if (!ContinueWithNonTrivial)
     return false;
 
   // Skip non-trivial unswitching for optsize functions.
-  if (L.getHeader()->getParent()->hasOptSize())
+  if (F->hasOptSize())
     return false;
 
   // Returns true if Loop L's loop nest is cold, i.e. if the headers of L,

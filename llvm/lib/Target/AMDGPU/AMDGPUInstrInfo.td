@@ -392,14 +392,12 @@ def AMDGPUcos : PatFrags<(ops node:$src), [(int_amdgcn_cos node:$src),
 def AMDGPUfract : PatFrags<(ops node:$src), [(int_amdgcn_fract node:$src),
                                              (AMDGPUfract_impl node:$src)]>;
 def AMDGPUlog : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
-                                           (AMDGPUlog_impl node:$src),
-                                           (flog2 node:$src)]>;
+                                           (AMDGPUlog_impl node:$src)]>;
 def AMDGPUlogf16 : PatFrags<(ops node:$src), [(int_amdgcn_log node:$src),
                                               (flog2 node:$src)]>;
 
 def AMDGPUexp : PatFrags<(ops node:$src), [(int_amdgcn_exp2 node:$src),
-                                           (AMDGPUexp_impl node:$src),
-                                           (fexp2 node:$src)]>; // FIXME: Remove me
+                                           (AMDGPUexp_impl node:$src)]>;
 def AMDGPUexpf16 : PatFrags<(ops node:$src), [(int_amdgcn_exp2 node:$src),
                                               (fexp2 node:$src)]>;
 

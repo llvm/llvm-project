@@ -9,6 +9,10 @@
 // RUN: llvm-objdump -s --triple=armv7aeb-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-EB %s
 // RUN: llvm-readelf --relocs %t2 | FileCheck -check-prefix=CHECK-RELOCS %s
 
+// RUN: ld.lld --be8 --emit-relocs %t -o %t2
+// RUN: llvm-objdump -s --triple=armv7aeb-none-linux-gnueabi %t2 | FileCheck -check-prefix=CHECK-EB %s
+// RUN: llvm-readelf --relocs %t2 | FileCheck -check-prefix=CHECK-RELOCS %s
+
 /// LLD does not support --emit-relocs for .ARM.exidx sections as the relocations
 /// from synthetic table entries won't be represented. Given the known use cases
 /// of --emit-relocs, relocating kernels, and binary analysis, the former doesn't

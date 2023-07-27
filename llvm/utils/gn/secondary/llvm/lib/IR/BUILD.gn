@@ -25,6 +25,7 @@ static_library("IR") {
     "ConstantRange.cpp",
     "Constants.cpp",
     "Core.cpp",
+    "CycleInfo.cpp",
     "DIBuilder.cpp",
     "DataLayout.cpp",
     "DebugInfo.cpp",

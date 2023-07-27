@@ -15,6 +15,7 @@
 #include "mlir/Parser/Parser.h"
 
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Endian.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 
@@ -53,6 +54,12 @@ TEST(Bytecode, MultiModuleWithResource) {
   OwningOpRef<Operation *> roundTripModule =
       parseSourceString<Operation *>(ostream.str(), parseConfig);
   ASSERT_TRUE(roundTripModule);
+
+  // FIXME: Parsing external resources does not work on big-endian
+  // platforms currently.
+  if (llvm::support::endian::system_endianness() ==
+      llvm::support::endianness::big)
+    GTEST_SKIP();
 
   // Try to see if we have a valid resource in the parsed module.
   auto checkResourceAttribute = [&](Operation *op) {

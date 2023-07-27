@@ -37,9 +37,9 @@ define <2 x i64> @vec_v2i64(<2 x i64> %x, <2 x i64> %y) nounwind {
 ; X64-NEXT:    pand %xmm2, %xmm0
 ; X64-NEXT:    pxor %xmm5, %xmm5
 ; X64-NEXT:    pcmpgtd %xmm4, %xmm5
-; X64-NEXT:    pcmpeqd %xmm4, %xmm4
-; X64-NEXT:    pxor %xmm5, %xmm4
-; X64-NEXT:    pandn %xmm4, %xmm2
+; X64-NEXT:    por %xmm2, %xmm5
+; X64-NEXT:    pcmpeqd %xmm2, %xmm2
+; X64-NEXT:    pxor %xmm5, %xmm2
 ; X64-NEXT:    por %xmm0, %xmm2
 ; X64-NEXT:    pandn %xmm2, %xmm1
 ; X64-NEXT:    por %xmm3, %xmm1

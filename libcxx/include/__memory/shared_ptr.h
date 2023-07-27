@@ -644,6 +644,18 @@ public:
             __cntrl_->__add_shared();
     }
 
+// LWG-2996
+// We don't backport because it is an evolutionary change.
+#if _LIBCPP_STD_VER >= 20
+    template <class _Yp>
+    _LIBCPP_HIDE_FROM_ABI shared_ptr(shared_ptr<_Yp>&& __r, element_type* __p) noexcept
+        : __ptr_(__p),
+          __cntrl_(__r.__cntrl_) {
+      __r.__ptr_   = nullptr;
+      __r.__cntrl_ = nullptr;
+    }
+#endif
+
     _LIBCPP_HIDE_FROM_ABI
     shared_ptr(const shared_ptr& __r) _NOEXCEPT
         : __ptr_(__r.__ptr_),
@@ -1519,6 +1531,15 @@ static_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT
                                typename shared_ptr<_Tp>::element_type*>(__r.get()));
 }
 
+// LWG-2996
+// We don't backport because it is an evolutionary change.
+#if _LIBCPP_STD_VER >= 20
+template <class _Tp, class _Up>
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> static_pointer_cast(shared_ptr<_Up>&& __r) noexcept {
+  return shared_ptr<_Tp>(std::move(__r), static_cast<typename shared_ptr<_Tp>::element_type*>(__r.get()));
+}
+#endif
+
 template<class _Tp, class _Up>
 inline _LIBCPP_INLINE_VISIBILITY
 shared_ptr<_Tp>
@@ -1529,6 +1550,16 @@ dynamic_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT
     return __p ? shared_ptr<_Tp>(__r, __p) : shared_ptr<_Tp>();
 }
 
+// LWG-2996
+// We don't backport because it is an evolutionary change.
+#if _LIBCPP_STD_VER >= 20
+template <class _Tp, class _Up>
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> dynamic_pointer_cast(shared_ptr<_Up>&& __r) noexcept {
+  auto* __p = dynamic_cast<typename shared_ptr<_Tp>::element_type*>(__r.get());
+  return __p ? shared_ptr<_Tp>(std::move(__r), __p) : shared_ptr<_Tp>();
+}
+#endif
+
 template<class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
 const_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT
@@ -1536,6 +1567,15 @@ const_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT
     typedef typename shared_ptr<_Tp>::element_type _RTp;
     return shared_ptr<_Tp>(__r, const_cast<_RTp*>(__r.get()));
 }
+
+// LWG-2996
+// We don't backport because it is an evolutionary change.
+#if _LIBCPP_STD_VER >= 20
+template <class _Tp, class _Up>
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> const_pointer_cast(shared_ptr<_Up>&& __r) noexcept {
+  return shared_ptr<_Tp>(std::move(__r), const_cast<typename shared_ptr<_Tp>::element_type*>(__r.get()));
+}
+#endif
 
 template<class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp>
@@ -1545,6 +1585,15 @@ reinterpret_pointer_cast(const shared_ptr<_Up>& __r) _NOEXCEPT
                            reinterpret_cast<
                                typename shared_ptr<_Tp>::element_type*>(__r.get()));
 }
+
+// LWG-2996
+// We don't backport because it is an evolutionary change.
+#if _LIBCPP_STD_VER >= 20
+template <class _Tp, class _Up>
+_LIBCPP_HIDE_FROM_ABI shared_ptr<_Tp> reinterpret_pointer_cast(shared_ptr<_Up>&& __r) noexcept {
+  return shared_ptr<_Tp>(std::move(__r), reinterpret_cast<typename shared_ptr<_Tp>::element_type*>(__r.get()));
+}
+#endif
 
 #ifndef _LIBCPP_HAS_NO_RTTI
 

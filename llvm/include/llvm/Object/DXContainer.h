@@ -21,6 +21,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/TargetParser/Triple.h"
+#include <variant>
 
 namespace llvm {
 namespace object {
@@ -34,16 +35,19 @@ class PSVRuntimeInfo {
   // swaps it as appropriate.
   struct ResourceArray {
     StringRef Data;
-    size_t Stride; // size of each element in the list.
+    uint32_t Stride; // size of each element in the list.
 
     ResourceArray() = default;
     ResourceArray(StringRef D, size_t S) : Data(D), Stride(S) {}
 
     using value_type = dxbc::PSV::v2::ResourceBindInfo;
+    static constexpr uint32_t MaxStride() {
+      return static_cast<uint32_t>(sizeof(value_type));
+    }
 
     struct iterator {
       StringRef Data;
-      size_t Stride; // size of each element in the list.
+      uint32_t Stride; // size of each element in the list.
       const char *Current;
 
       iterator(const ResourceArray &A, const char *C)
@@ -57,7 +61,8 @@ class PSVRuntimeInfo {
         value_type Val = {{0, 0, 0, 0}, 0, 0};
         if (Current >= Data.end())
           return Val;
-        memcpy(static_cast<void *>(&Val), Current, Stride);
+        memcpy(static_cast<void *>(&Val), Current,
+               std::min(Stride, MaxStride()));
         if (sys::IsBigEndianHost)
           Val.swapBytes();
         return Val;
@@ -121,6 +126,8 @@ public:
                ? 2
                : (Size >= sizeof(dxbc::PSV::v1::RuntimeInfo) ? 1 : 0);
   }
+
+  uint32_t getResourceStride() const { return Resources.Stride; }
 
   const InfoStruct &getInfo() const { return BasicInfo; }
 };

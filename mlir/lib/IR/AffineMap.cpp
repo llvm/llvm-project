@@ -113,6 +113,19 @@ AffineMap AffineMap::getMinorIdentityMap(unsigned dims, unsigned results,
   return AffineMap::get(dims, 0, id.getResults().take_back(results), context);
 }
 
+AffineMap AffineMap::getFilteredIdentityMap(
+    MLIRContext *ctx, unsigned numDims,
+    llvm::function_ref<bool(AffineDimExpr)> keepDimFilter) {
+  auto identityMap = getMultiDimIdentityMap(numDims, ctx);
+
+  // Apply filter to results.
+  llvm::SmallBitVector dropDimResults(numDims);
+  for (auto [idx, resultExpr] : llvm::enumerate(identityMap.getResults()))
+    dropDimResults[idx] = !keepDimFilter(resultExpr.cast<AffineDimExpr>());
+
+  return identityMap.dropResults(dropDimResults);
+}
+
 bool AffineMap::isMinorIdentity() const {
   return getNumDims() >= getNumResults() &&
          *this ==

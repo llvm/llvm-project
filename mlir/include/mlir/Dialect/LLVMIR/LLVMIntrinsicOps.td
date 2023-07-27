@@ -287,7 +287,7 @@ def LLVM_MemcpyInlineOp :
       # setAliasAnalysisMetadataCode;
 }
 
-def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2], 
+def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2],
     [DeclareOpInterfaceMethods<PromotableMemOpInterface>,
      DeclareOpInterfaceMethods<DestructurableAccessorOpInterface>,
      DeclareOpInterfaceMethods<SafeMemorySlotAccessOpInterface>],
@@ -325,15 +325,15 @@ def LLVM_MemsetOp : LLVM_ZeroResultIntrOp<"memset", [0, 2],
 
 def LLVM_NoAliasScopeDeclOp
     : LLVM_ZeroResultIntrOp<"experimental.noalias.scope.decl"> {
-  let arguments = (ins SymbolRefAttr:$scope);
+  let arguments = (ins LLVM_AliasScopeAttr:$scope);
   string llvmBuilder = [{
     // Wrap the scope argument into a list since the LLVM IR intrinsic takes
     // a list containing exactly one scope rather than a scope itself.
-    llvm::MDNode* node = moduleTranslation.getAliasScopes(op, {$scope});
+    llvm::MDNode* node = moduleTranslation.getAliasScopes({$scope});
     builder.CreateNoAliasScopeDeclaration(node);
   }];
   string mlirBuilder = [{
-    FailureOr<SmallVector<SymbolRefAttr>> scopeAttrs =
+    FailureOr<SmallVector<LLVM::AliasScopeAttr>> scopeAttrs =
       moduleImport.matchAliasScopeAttrs(llvmOperands[0]);
     // Drop the intrinsic if the alias scope translation fails since the scope
     // is not used by an aliasing operation, such as a load or store, that is
@@ -418,6 +418,13 @@ def LLVM_USHLSat : LLVM_BinarySameArgsIntrOpI<"ushl.sat">;
 
 def LLVM_AssumeOp
   : LLVM_ZeroResultIntrOp<"assume", []>, Arguments<(ins I1:$cond)>;
+
+def LLVM_SSACopyOp : LLVM_OneResultIntrOp<"ssa.copy", [], [0],
+                                            [Pure, SameOperandsAndResultType]> {
+  let arguments = (ins AnyType:$operand);
+
+  let assemblyFormat = "$operand attr-dict `:` type($operand)";
+}
 
 def LLVM_IsConstantOp : LLVM_IntrOp<"is.constant", [], [0], [Pure], 1> {
   let arguments = (ins LLVM_Type:$val);
@@ -546,8 +553,16 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
     // Drop the intrinsic when its operand could not be converted. This can
     // happen for use before definition cases that are allowed for debug
     // intrinsics.
+    // TODO: Implement a two pass solution that translates the debug intrinsics
+    // after the entire function as been translated.
     if (failed(argOperand))
       return success();
+
+    // Ensure that the debug instrinsic is inserted right after its operand is
+    // defined. Otherwise, the operand might not necessarily dominate the
+    // intrinsic.
+    OpBuilder::InsertionGuard guard($_builder);
+    $_builder.setInsertionPointAfterValue(*argOperand);
     $_op = $_builder.create<$_qualCppClassName>($_location,
         *argOperand, $_var_attr($varInfo));
   }];
@@ -557,15 +572,34 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
   }];
 }
 
-def LLVM_DbgDeclareOp : LLVM_DbgIntrOp< "dbg.declare", "addr",
+def LLVM_DbgDeclareOp : LLVM_DbgIntrOp<"dbg.declare", "addr",
     [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
-  let summary = "Declare the address of a local debug info variable.";
+  let summary = "Describes how the address relates to a source language variable.";
   let arguments = (ins LLVM_AnyPointer:$addr, LLVM_DILocalVariableAttr:$varInfo);
 }
 
-def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value"> {
-  let summary = "Describe the current value of a local debug info variable.";
+def LLVM_DbgValueOp : LLVM_DbgIntrOp<"dbg.value", "value",
+    [DeclareOpInterfaceMethods<PromotableOpInterface>]> {
+  let summary = "Describes how the value relates to a source language variable.";
   let arguments = (ins LLVM_Type:$value, LLVM_DILocalVariableAttr:$varInfo);
+}
+
+def LLVM_DbgLabelOp : LLVM_IntrOp<"dbg.label", [], [], [], 0> {
+  let summary = "Relates the program to a debug information label.";
+  let arguments = (ins LLVM_DILabelAttr:$label);
+  let llvmBuilder = [{
+    llvm::Module *module = builder.GetInsertBlock()->getModule();
+    llvm::LLVMContext &ctx = module->getContext();
+    llvm::Function *fn =
+      llvm::Intrinsic::getDeclaration(module, llvm::Intrinsic::dbg_label);
+    builder.CreateCall(fn, {
+        llvm::MetadataAsValue::get(ctx, moduleTranslation.translateDebugInfo($label))
+      });
+  }];
+  let mlirBuilder = [{
+    $_op = $_builder.create<$_qualCppClassName>($_location, $_label_attr($label));
+  }];
+  let assemblyFormat = "$label attr-dict";
 }
 
 //
@@ -684,6 +718,8 @@ def LLVM_vector_reduce_xor : LLVM_VecReductionI<"xor">;
 
 def LLVM_vector_reduce_fmax : LLVM_VecReductionF<"fmax">;
 def LLVM_vector_reduce_fmin : LLVM_VecReductionF<"fmin">;
+def LLVM_vector_reduce_fmaximum : LLVM_VecReductionF<"fmaximum">;
+def LLVM_vector_reduce_fminimum : LLVM_VecReductionF<"fminimum">;
 
 def LLVM_vector_reduce_fadd : LLVM_VecReductionAccF<"fadd">;
 def LLVM_vector_reduce_fmul : LLVM_VecReductionAccF<"fmul">;
@@ -905,6 +941,43 @@ def LLVM_masked_expandload : LLVM_IntrOp<"masked.expandload", [0], [], [], 1> {
 def LLVM_masked_compressstore
     : LLVM_IntrOp<"masked.compressstore", [], [0], [], 0> {
   let arguments = (ins LLVM_AnyVector, LLVM_AnyPointer, LLVM_VectorOf<I1>);
+}
+
+//
+// Annotate intrinsics.
+//
+
+def LLVM_VarAnnotation
+    : LLVM_ZeroResultIntrOp<"var.annotation", [0, 1],
+        [AllTypesMatch<["annotation", "fileName", "attr"]>]> {
+  let arguments = (ins LLVM_AnyPointer:$val,
+                       LLVM_AnyPointer:$annotation,
+                       LLVM_AnyPointer:$fileName,
+                       I32:$line,
+                       LLVM_AnyPointer:$attr);
+}
+
+def LLVM_PtrAnnotation
+    : LLVM_OneResultIntrOp<"ptr.annotation", [0], [2],
+        [AllTypesMatch<["res", "ptr"]>,
+         AllTypesMatch<["annotation", "fileName", "attr"]>]> {
+  let arguments = (ins LLVM_PointerTo<AnySignlessInteger>:$ptr,
+                       LLVM_AnyPointer:$annotation,
+                       LLVM_AnyPointer:$fileName,
+                       I32:$line,
+                       LLVM_AnyPointer:$attr);
+  let results = (outs LLVM_PointerTo<AnySignlessInteger>:$res);
+}
+
+def LLVM_Annotation
+    : LLVM_OneResultIntrOp<"annotation", [0], [2],
+        [AllTypesMatch<["res", "integer"]>,
+         AllTypesMatch<["annotation", "fileName"]>]> {
+  let arguments = (ins AnySignlessInteger:$integer,
+                       LLVM_AnyPointer:$annotation,
+                       LLVM_AnyPointer:$fileName,
+                       I32:$line);
+  let results = (outs AnySignlessInteger:$res);
 }
 
 //

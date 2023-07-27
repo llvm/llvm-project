@@ -685,8 +685,7 @@ label2:
 define i32 @brR0_sgt(i32 %x) {
 ; CHECK-LABEL: brR0_sgt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cmplti16 a0, 1
-; CHECK-NEXT:    bt32 .LBB18_2
+; CHECK-NEXT:    blsz32 a0, .LBB18_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -917,10 +916,7 @@ label2:
 define i32 @brR0_slt(i32 %x) {
 ; CHECK-LABEL: brR0_slt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65535
-; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    bf32 .LBB24_2
+; CHECK-NEXT:    blz32 a0, .LBB24_2
 ; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
@@ -2574,10 +2570,7 @@ label2:
 define i64 @brR0_i64_slt(i64 %x) {
 ; CHECK-LABEL: brR0_i64_slt:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    movih32 a0, 65535
-; CHECK-NEXT:    ori32 a0, a0, 65535
-; CHECK-NEXT:    cmplt16 a0, a1
-; CHECK-NEXT:    bf32 .LBB53_2
+; CHECK-NEXT:    blz32 a1, .LBB53_2
 ; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    movi16 a1, 0
@@ -3787,8 +3780,7 @@ define i16 @brR0_i16_sgt(i16 %x) {
 ; CHECK-LABEL: brR0_i16_sgt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sexth16 a0, a0
-; CHECK-NEXT:    cmplti16 a0, 1
-; CHECK-NEXT:    bt32 .LBB76_2
+; CHECK-NEXT:    blsz32 a0, .LBB76_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -4035,10 +4027,7 @@ define i16 @brR0_i16_slt(i16 %x) {
 ; CHECK-LABEL: brR0_i16_slt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sexth16 a0, a0
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65535
-; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    bf32 .LBB82_2
+; CHECK-NEXT:    blz32 a0, .LBB82_2
 ; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16
@@ -4994,8 +4983,7 @@ define i8 @brR0_i8_sgt(i8 %x) {
 ; CHECK-LABEL: brR0_i8_sgt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sextb16 a0, a0
-; CHECK-NEXT:    cmplti16 a0, 1
-; CHECK-NEXT:    bt32 .LBB105_2
+; CHECK-NEXT:    blsz32 a0, .LBB105_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -5242,10 +5230,7 @@ define i8 @brR0_i8_slt(i8 %x) {
 ; CHECK-LABEL: brR0_i8_slt:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    sextb16 a0, a0
-; CHECK-NEXT:    movih32 a1, 65535
-; CHECK-NEXT:    ori32 a1, a1, 65535
-; CHECK-NEXT:    cmplt16 a1, a0
-; CHECK-NEXT:    bf32 .LBB111_2
+; CHECK-NEXT:    blz32 a0, .LBB111_2
 ; CHECK-NEXT:  # %bb.1: # %label2
 ; CHECK-NEXT:    movi16 a0, 0
 ; CHECK-NEXT:    rts16

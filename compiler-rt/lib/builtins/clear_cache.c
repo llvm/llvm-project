@@ -110,10 +110,14 @@ void __clear_cache(void *start, void *end) {
                      "jr.hb $at\n"
                      "move $at, $0\n"
                      ".set at");
-#else
+#elif defined(__linux__) || defined(__OpenBSD__)
     // Pre-R6 may not be globalized. And some implementations may give strange
     // synci_step. So, let's use libc call for it.
     cacheflush(start, end_int - start_int, BCACHE);
+#else
+    (void)start_int;
+    (void)end_int;
+    compilerrt_abort();
 #endif
   }
 #elif defined(__aarch64__) && !defined(__APPLE__)

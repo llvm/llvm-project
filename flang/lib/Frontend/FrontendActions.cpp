@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/Support/InitFIR.h"
 #include "flang/Optimizer/Support/Utils.h"
+#include "flang/Optimizer/Transforms/Passes.h"
 #include "flang/Parser/dump-parse-tree.h"
 #include "flang/Parser/parsing.h"
 #include "flang/Parser/provenance.h"
@@ -164,7 +165,7 @@ getExplicitAndImplicitAMDGPUTargetFeatures(CompilerInstance &ci,
                            implicitFeatureItem.first().str())
                               .str());
   }
-
+  llvm::sort(featuresVec);
   return llvm::join(featuresVec, ",");
 }
 
@@ -299,6 +300,27 @@ bool CodeGenAction::beginSourceFileAction() {
   // run the default passes.
   mlir::PassManager pm((*mlirModule)->getName(),
                        mlir::OpPassManager::Nesting::Implicit);
+  // Add OpenMP-related passes
+  // WARNING: These passes must be run immediately after the lowering to ensure
+  // that the FIR is correct with respect to OpenMP operations/attributes.
+  if (ci.getInvocation().getFrontendOpts().features.IsEnabled(
+          Fortran::common::LanguageFeature::OpenMP)) {
+    bool isDevice = false;
+    if (auto offloadMod = llvm::dyn_cast<mlir::omp::OffloadModuleInterface>(
+            mlirModule->getOperation()))
+      isDevice = offloadMod.getIsTargetDevice();
+
+    pm.addPass(fir::createOMPMarkDeclareTargetPass());
+    if (isDevice) {
+      pm.addPass(fir::createOMPEarlyOutliningPass());
+      // FIXME: This should eventually be moved out of the
+      // if, so that it also functions for host, however,
+      // we must fix the filtering to function reasonably
+      // for host first.  
+      pm.addPass(fir::createOMPFunctionFilteringPass());
+    }
+  }
+
   pm.enableVerifier(/*verifyPasses=*/true);
   pm.addPass(std::make_unique<Fortran::lower::VerifierPass>());
 
@@ -606,10 +628,10 @@ void GetDefinitionAction::executeAction() {
   }
 
   llvm::outs() << "Found symbol name: " << symbol->name().ToString() << "\n";
-  llvm::outs() << symbol->name().ToString() << ": "
-               << sourceInfo->first.file.path() << ", "
-               << sourceInfo->first.line << ", " << sourceInfo->first.column
-               << "-" << sourceInfo->second.column << "\n";
+  llvm::outs() << symbol->name().ToString() << ": " << sourceInfo->first.path
+               << ", " << sourceInfo->first.line << ", "
+               << sourceInfo->first.column << "-" << sourceInfo->second.column
+               << "\n";
 }
 
 void GetSymbolsSourcesAction::executeAction() {

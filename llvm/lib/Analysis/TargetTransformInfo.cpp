@@ -217,15 +217,19 @@ TargetTransformInfo::adjustInliningThreshold(const CallBase *CB) const {
   return TTIImpl->adjustInliningThreshold(CB);
 }
 
+unsigned TargetTransformInfo::getCallerAllocaCost(const CallBase *CB,
+                                                  const AllocaInst *AI) const {
+  return TTIImpl->getCallerAllocaCost(CB, AI);
+}
+
 int TargetTransformInfo::getInlinerVectorBonusPercent() const {
   return TTIImpl->getInlinerVectorBonusPercent();
 }
 
-InstructionCost
-TargetTransformInfo::getGEPCost(Type *PointeeType, const Value *Ptr,
-                                ArrayRef<const Value *> Operands,
-                                TTI::TargetCostKind CostKind) const {
-  return TTIImpl->getGEPCost(PointeeType, Ptr, Operands, CostKind);
+InstructionCost TargetTransformInfo::getGEPCost(
+    Type *PointeeType, const Value *Ptr, ArrayRef<const Value *> Operands,
+    Type *AccessType, TTI::TargetCostKind CostKind) const {
+  return TTIImpl->getGEPCost(PointeeType, Ptr, Operands, AccessType, CostKind);
 }
 
 InstructionCost TargetTransformInfo::getPointersChainCost(
@@ -1054,10 +1058,10 @@ InstructionCost TargetTransformInfo::getArithmeticReductionCost(
 }
 
 InstructionCost TargetTransformInfo::getMinMaxReductionCost(
-    VectorType *Ty, VectorType *CondTy, bool IsUnsigned, FastMathFlags FMF,
+    Intrinsic::ID IID, VectorType *Ty, FastMathFlags FMF,
     TTI::TargetCostKind CostKind) const {
   InstructionCost Cost =
-      TTIImpl->getMinMaxReductionCost(Ty, CondTy, IsUnsigned, FMF, CostKind);
+      TTIImpl->getMinMaxReductionCost(IID, Ty, FMF, CostKind);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }

@@ -13,7 +13,6 @@
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/BinaryFormat/Wasm.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/Object/Binary.h"
 #include "llvm/Object/Error.h"
 #include "llvm/Object/ObjectFile.h"
@@ -24,6 +23,7 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/LEB128.h"
 #include "llvm/Support/ScopedPrinter.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
 #include <cassert>
@@ -268,7 +268,11 @@ static Error readSection(WasmSection &Section, WasmObjectFile::ReadContext &Ctx,
   Section.Offset = Ctx.Ptr - Ctx.Start;
   Section.Type = readUint8(Ctx);
   LLVM_DEBUG(dbgs() << "readSection type=" << Section.Type << "\n");
+  // When reading the section's size, store the size of the LEB used to encode
+  // it. This allows objcopy/strip to reproduce the binary identically.
+  const uint8_t *PreSizePtr = Ctx.Ptr;
   uint32_t Size = readVaruint32(Ctx);
+  Section.HeaderSecSizeEncodingLen = Ctx.Ptr - PreSizePtr;
   if (Size == 0)
     return make_error<StringError>("zero length section",
                                    object_error::parse_failed);
@@ -948,6 +952,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
     Reloc.Index = readVaruint32(Ctx);
     switch (type) {
     case wasm::R_WASM_FUNCTION_INDEX_LEB:
+    case wasm::R_WASM_FUNCTION_INDEX_I32:
     case wasm::R_WASM_TABLE_INDEX_SLEB:
     case wasm::R_WASM_TABLE_INDEX_SLEB64:
     case wasm::R_WASM_TABLE_INDEX_I32:
@@ -1045,6 +1050,7 @@ Error WasmObjectFile::parseRelocSection(StringRef Name, ReadContext &Ctx) {
         Reloc.Type == wasm::R_WASM_MEMORY_ADDR_LOCREL_I32 ||
         Reloc.Type == wasm::R_WASM_SECTION_OFFSET_I32 ||
         Reloc.Type == wasm::R_WASM_FUNCTION_OFFSET_I32 ||
+        Reloc.Type == wasm::R_WASM_FUNCTION_INDEX_I32 ||
         Reloc.Type == wasm::R_WASM_GLOBAL_INDEX_I32)
       Size = 4;
     if (Reloc.Type == wasm::R_WASM_TABLE_INDEX_I64 ||

@@ -10,6 +10,7 @@ set(MODULES
   "__fortran_type_info"
   "__ppc_types"
   "__ppc_intrinsics"
+  "mma"
   "__cuda_builtins"
   "ieee_arithmetic"
   "ieee_exceptions"
@@ -32,7 +33,8 @@ if (NOT CMAKE_CROSSCOMPILING)
       set(depends "")
     elseif(${filename} STREQUAL "__ppc_types")
       set(depends "")
-    elseif(${filename} STREQUAL "__ppc_intrinsics")
+    elseif(${filename} STREQUAL "__ppc_intrinsics" OR
+           ${filename} STREQUAL "mma")
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__ppc_types.mod)
     else()
       set(depends ${FLANG_INTRINSIC_MODULES_DIR}/__fortran_builtins.mod)
@@ -47,7 +49,8 @@ if (NOT CMAKE_CROSSCOMPILING)
 
     # The module contains PPC vector types that needs the PPC target.
     set(opts "")
-    if(${filename} STREQUAL "__ppc_intrinsics")
+    if(${filename} STREQUAL "__ppc_intrinsics" OR
+       ${filename} STREQUAL "mma")
       set(opts "--target=ppc64le")
     endif()
 
@@ -80,3 +83,4 @@ endif()
 
 # TODO Move this to a more suitable location
 file(COPY ${FLANG_SOURCE_DIR}/module/omp_lib.h DESTINATION "${CMAKE_BINARY_DIR}/include/flang/OpenMP/" FILE_PERMISSIONS OWNER_READ OWNER_WRITE)
+install(FILES ${CMAKE_BINARY_DIR}/include/flang/OpenMP/omp_lib.h DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/flang/OpenMP")

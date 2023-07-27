@@ -6,7 +6,8 @@ gpu.module @test_module {
   // CHECK32-LABEL: func @gpu_index_ops()
   func.func @gpu_index_ops()
       -> (index, index, index, index, index, index,
-          index, index, index, index, index, index) {
+          index, index, index, index, index, index,
+          index) {
     // CHECK32-NOT: = llvm.sext %{{.*}} : i32 to i64
 
     // CHECK: rocdl.workitem.id.x : i32
@@ -49,10 +50,17 @@ gpu.module @test_module {
     // CHECK: = llvm.sext %{{.*}} : i32 to i64
     %gDimZ = gpu.grid_dim z
 
+    // CHECK: = rocdl.mbcnt.lo %{{.*}}, %{{.*}} : (i32, i32) -> i32
+    // CHECK: = rocdl.mbcnt.hi %{{.*}}, %{{.*}} : (i32, i32) -> i32
+    // CHECK: = llvm.sext %{{.*}} : i32 to i64
+    %laneId = gpu.lane_id
+
     func.return %tIdX, %tIdY, %tIdZ, %bDimX, %bDimY, %bDimZ,
-               %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ
+               %bIdX, %bIdY, %bIdZ, %gDimX, %gDimY, %gDimZ,
+               %laneId
         : index, index, index, index, index, index,
-          index, index, index, index, index, index
+          index, index, index, index, index, index,
+          index
   }
 }
 
@@ -456,10 +464,16 @@ gpu.module @test_module {
   // CHECK-LABEL: func @gpu_unroll
   func.func @gpu_unroll(%arg0 : vector<4xf32>) -> vector<4xf32> {
     %result = math.exp %arg0 : vector<4xf32>
-    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
-    // CHECK: llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[V0:.+]] = llvm.mlir.undef : vector<4xf32>
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[V1:.+]] = llvm.insertelement %[[CL]], %[[V0]]
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[V2:.+]] = llvm.insertelement %[[CL]], %[[V1]]
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[V3:.+]] = llvm.insertelement %[[CL]], %[[V2]]
+    // CHECK: %[[CL:.+]] = llvm.call @__ocml_exp_f32(%{{.*}}) : (f32) -> f32
+    // CHECK: %[[V4:.+]] = llvm.insertelement %[[CL]], %[[V3]]
+    // CHECK: return %[[V4]]
     func.return %result : vector<4xf32>
   }
 }

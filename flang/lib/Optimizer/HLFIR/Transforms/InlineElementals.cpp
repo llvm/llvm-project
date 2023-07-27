@@ -14,7 +14,6 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
-#include "flang/Optimizer/Dialect/Support/KindMapping.h"
 #include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Optimizer/HLFIR/Passes.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -74,17 +73,24 @@ public:
                   mlir::PatternRewriter &rewriter) const override {
     std::optional<std::pair<hlfir::ApplyOp, hlfir::DestroyOp>> maybeTuple =
         getTwoUses(elemental);
-    if (!maybeTuple) {
-      return rewriter.notifyMatchFailure(elemental.getLoc(),
-                                         [](mlir::Diagnostic &) {});
+    if (!maybeTuple)
+      return rewriter.notifyMatchFailure(
+          elemental, "hlfir.elemental does not have two uses");
+
+    if (elemental.isOrdered()) {
+      // We can only inline the ordered elemental into a loop-like
+      // construct that processes the indices in-order and does not
+      // have the side effects itself. Adhere to conservative behavior
+      // for the time being.
+      return rewriter.notifyMatchFailure(elemental,
+                                         "hlfir.elemental is ordered");
     }
     auto [apply, destroy] = *maybeTuple;
 
     assert(elemental.getRegion().hasOneBlock() &&
            "expect elemental region to have one block");
 
-    fir::FirOpBuilder builder{rewriter,
-                              fir::KindMapping{rewriter.getContext()}};
+    fir::FirOpBuilder builder{rewriter, elemental.getOperation()};
     builder.setInsertionPointAfter(apply);
     hlfir::YieldElementOp yield = hlfir::inlineElementalOp(
         elemental.getLoc(), builder, elemental, apply.getIndices());

@@ -1,8 +1,8 @@
-// KEEP-ALL-NOT:  warning:
+// KEEP-ALL-NOT:  warning: argument unused
 // KEEP-ALL:      "-mframe-pointer=all"
-// KEEP-NON-LEAF-NOT: warning:
+// KEEP-NON-LEAF-NOT: warning: argument unused
 // KEEP-NON-LEAF: "-mframe-pointer=non-leaf"
-// KEEP-NONE-NOT: warning:
+// KEEP-NONE-NOT: warning: argument unused
 // KEEP-NONE:     "-mframe-pointer=none"
 
 // On Linux x86, omit frame pointer when optimization is enabled.

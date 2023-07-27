@@ -319,7 +319,7 @@ SymbolFilePDB::ParseCompileUnitFunctionForPDBFunc(const PDBSymbolFunc &pdb_func,
   auto type_system_or_err = GetTypeSystemForLanguage(lang);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to parse PDBFunc");
+                   "Unable to parse PDBFunc: {0}");
     return nullptr;
   }
 
@@ -570,7 +570,7 @@ lldb_private::Type *SymbolFilePDB::ResolveTypeUID(lldb::user_id_t type_uid) {
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to ResolveTypeUID");
+                   "Unable to ResolveTypeUID: {0}");
     return nullptr;
   }
 
@@ -607,7 +607,7 @@ bool SymbolFilePDB::CompleteType(lldb_private::CompilerType &compiler_type) {
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to get dynamic array info for UID");
+                   "Unable to get dynamic array info for UID: {0}");
     return false;
   }
   auto ts = *type_system_or_err;
@@ -629,7 +629,7 @@ lldb_private::CompilerDecl SymbolFilePDB::GetDeclForUID(lldb::user_id_t uid) {
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to get decl for UID");
+                   "Unable to get decl for UID: {0}");
     return CompilerDecl();
   }
   auto ts = *type_system_or_err;
@@ -659,7 +659,7 @@ SymbolFilePDB::GetDeclContextForUID(lldb::user_id_t uid) {
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to get DeclContext for UID");
+                   "Unable to get DeclContext for UID: {0}");
     return CompilerDeclContext();
   }
 
@@ -690,7 +690,7 @@ SymbolFilePDB::GetDeclContextContainingUID(lldb::user_id_t uid) {
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to get DeclContext containing UID");
+                   "Unable to get DeclContext containing UID: {0}");
     return CompilerDeclContext();
   }
 
@@ -720,7 +720,7 @@ void SymbolFilePDB::ParseDeclsForContext(
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to parse decls for context");
+                   "Unable to parse decls for context: {0}");
     return;
   }
 
@@ -1469,7 +1469,7 @@ void SymbolFilePDB::DumpClangAST(Stream &s) {
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to dump ClangAST");
+                   "Unable to dump ClangAST: {0}");
     return;
   }
 
@@ -1682,7 +1682,7 @@ PDBASTParser *SymbolFilePDB::GetPDBAstParser() {
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to get PDB AST parser");
+                   "Unable to get PDB AST parser: {0}");
     return nullptr;
   }
 
@@ -1703,7 +1703,7 @@ SymbolFilePDB::FindNamespace(lldb_private::ConstString name,
       GetTypeSystemForLanguage(lldb::eLanguageTypeC_plus_plus);
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(GetLog(LLDBLog::Symbols), std::move(err),
-                   "Unable to find namespace {}", name.AsCString());
+                   "Unable to find namespace {1}: {0}", name.AsCString());
     return CompilerDeclContext();
   }
   auto ts = *type_system_or_err;
@@ -1998,7 +1998,7 @@ bool SymbolFilePDB::DeclContextMatchesThisSymbolFile(
   if (auto err = type_system_or_err.takeError()) {
     LLDB_LOG_ERROR(
         GetLog(LLDBLog::Symbols), std::move(err),
-        "Unable to determine if DeclContext matches this symbol file");
+        "Unable to determine if DeclContext matches this symbol file: {0}");
     return false;
   }
 

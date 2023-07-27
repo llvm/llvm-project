@@ -931,6 +931,12 @@ enum NodeType {
   FPOWI,
   /// FLDEXP - ldexp, inspired by libm (op0 * 2**op1).
   FLDEXP,
+
+  /// FFREXP - frexp, extract fractional and exponent component of a
+  /// floating-point value. Returns the two components as separate return
+  /// values.
+  FFREXP,
+
   FLOG,
   FLOG2,
   FLOG10,

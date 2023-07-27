@@ -1032,8 +1032,14 @@ public:
   /// Parse an affine map instance into 'map'.
   virtual ParseResult parseAffineMap(AffineMap &map) = 0;
 
+  /// Parse an affine expr instance into 'expr' using the already computed
+  /// mapping from symbols to affine expressions in 'symbolSet'.
+  virtual ParseResult
+  parseAffineExpr(ArrayRef<std::pair<StringRef, AffineExpr>> symbolSet,
+                  AffineExpr &expr) = 0;
+
   /// Parse an integer set instance into 'set'.
-  virtual ParseResult printIntegerSet(IntegerSet &set) = 0;
+  virtual ParseResult parseIntegerSet(IntegerSet &set) = 0;
 
   //===--------------------------------------------------------------------===//
   // Identifier Parsing
@@ -1439,13 +1445,13 @@ public:
   std::enable_if_t<!std::is_convertible<Types, Type>::value, ParseResult>
   resolveOperands(Operands &&operands, Types &&types, SMLoc loc,
                   SmallVectorImpl<Value> &result) {
-    size_t operandSize = std::distance(operands.begin(), operands.end());
-    size_t typeSize = std::distance(types.begin(), types.end());
+    size_t operandSize = llvm::range_size(operands);
+    size_t typeSize = llvm::range_size(types);
     if (operandSize != typeSize)
       return emitError(loc)
              << operandSize << " operands present, but expected " << typeSize;
 
-    for (auto [operand, type] : llvm::zip(operands, types))
+    for (auto [operand, type] : llvm::zip_equal(operands, types))
       if (resolveOperand(operand, type, result))
         return failure();
     return success();

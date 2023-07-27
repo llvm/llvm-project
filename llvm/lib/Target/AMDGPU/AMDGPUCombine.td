@@ -10,31 +10,31 @@ include "llvm/Target/GlobalISel/Combine.td"
 
 // TODO: This really belongs after legalization after scalarization.
 
-def fmin_fmax_legacy_matchdata : GIDefMatchData<"AMDGPUPostLegalizerCombinerHelper::FMinFMaxLegacyInfo">;
+def fmin_fmax_legacy_matchdata : GIDefMatchData<"FMinFMaxLegacyInfo">;
 
 let Predicates = [HasFminFmaxLegacy] in
 def fcmp_select_to_fmin_fmax_legacy : GICombineRule<
   (defs root:$select, fmin_fmax_legacy_matchdata:$matchinfo),
   (match (wip_match_opcode G_SELECT):$select,
-         [{ return PostLegalizerHelper.matchFMinFMaxLegacy(*${select}, ${matchinfo}); }]),
-  (apply [{ PostLegalizerHelper.applySelectFCmpToFMinToFMaxLegacy(*${select}, ${matchinfo}); }])>;
+         [{ return matchFMinFMaxLegacy(*${select}, ${matchinfo}); }]),
+  (apply [{ applySelectFCmpToFMinToFMaxLegacy(*${select}, ${matchinfo}); }])>;
 
 
 def uchar_to_float : GICombineRule<
   (defs root:$itofp),
   (match (wip_match_opcode G_UITOFP, G_SITOFP):$itofp,
-         [{ return PostLegalizerHelper.matchUCharToFloat(*${itofp}); }]),
-  (apply [{ PostLegalizerHelper.applyUCharToFloat(*${itofp}); }])>;
+         [{ return matchUCharToFloat(*${itofp}); }]),
+  (apply [{ applyUCharToFloat(*${itofp}); }])>;
 
 
 def rcp_sqrt_to_rsq : GICombineRule<
   (defs root:$rcp, build_fn_matchinfo:$matchinfo),
   (match (wip_match_opcode G_INTRINSIC, G_FSQRT):$rcp,
-         [{ return PostLegalizerHelper.matchRcpSqrtToRsq(*${rcp}, ${matchinfo}); }]),
+         [{ return matchRcpSqrtToRsq(*${rcp}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${rcp}, ${matchinfo}); }])>;
 
 
-def cvt_f32_ubyteN_matchdata : GIDefMatchData<"AMDGPUPostLegalizerCombinerHelper::CvtF32UByteMatchInfo">;
+def cvt_f32_ubyteN_matchdata : GIDefMatchData<"CvtF32UByteMatchInfo">;
 
 def cvt_f32_ubyteN : GICombineRule<
   (defs root:$cvt_f32_ubyteN, cvt_f32_ubyteN_matchdata:$matchinfo),
@@ -42,18 +42,18 @@ def cvt_f32_ubyteN : GICombineRule<
                            G_AMDGPU_CVT_F32_UBYTE1,
                            G_AMDGPU_CVT_F32_UBYTE2,
                            G_AMDGPU_CVT_F32_UBYTE3):$cvt_f32_ubyteN,
-         [{ return PostLegalizerHelper.matchCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }]),
-  (apply [{ PostLegalizerHelper.applyCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }])>;
+         [{ return matchCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }]),
+  (apply [{ applyCvtF32UByteN(*${cvt_f32_ubyteN}, ${matchinfo}); }])>;
 
-def clamp_i64_to_i16_matchdata : GIDefMatchData<"AMDGPUPreLegalizerCombinerHelper::ClampI64ToI16MatchInfo">;
+def clamp_i64_to_i16_matchdata : GIDefMatchData<"ClampI64ToI16MatchInfo">;
 
 def clamp_i64_to_i16 : GICombineRule<
   (defs root:$clamp_i64_to_i16, clamp_i64_to_i16_matchdata:$matchinfo),
   (match (wip_match_opcode G_TRUNC):$clamp_i64_to_i16,
-      [{ return PreLegalizerHelper.matchClampI64ToI16(*${clamp_i64_to_i16}, MRI, *MF, ${matchinfo}); }]),
-  (apply [{ PreLegalizerHelper.applyClampI64ToI16(*${clamp_i64_to_i16}, ${matchinfo}); }])>;
+      [{ return matchClampI64ToI16(*${clamp_i64_to_i16}, MRI, MF, ${matchinfo}); }]),
+  (apply [{ applyClampI64ToI16(*${clamp_i64_to_i16}, ${matchinfo}); }])>;
 
-def med3_matchdata : GIDefMatchData<"AMDGPURegBankCombinerHelper::Med3MatchInfo">;
+def med3_matchdata : GIDefMatchData<"Med3MatchInfo">;
 
 def int_minmax_to_med3 : GICombineRule<
   (defs root:$min_or_max, med3_matchdata:$matchinfo),
@@ -61,8 +61,8 @@ def int_minmax_to_med3 : GICombineRule<
                            G_SMIN,
                            G_UMAX,
                            G_UMIN):$min_or_max,
-         [{ return RegBankHelper.matchIntMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
-  (apply [{ RegBankHelper.applyMed3(*${min_or_max}, ${matchinfo}); }])>;
+         [{ return matchIntMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
+  (apply [{ applyMed3(*${min_or_max}, ${matchinfo}); }])>;
 
 def fp_minmax_to_med3 : GICombineRule<
   (defs root:$min_or_max, med3_matchdata:$matchinfo),
@@ -70,8 +70,8 @@ def fp_minmax_to_med3 : GICombineRule<
                            G_FMINNUM,
                            G_FMAXNUM_IEEE,
                            G_FMINNUM_IEEE):$min_or_max,
-         [{ return RegBankHelper.matchFPMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
-  (apply [{ RegBankHelper.applyMed3(*${min_or_max}, ${matchinfo}); }])>;
+         [{ return matchFPMinMaxToMed3(*${min_or_max}, ${matchinfo}); }]),
+  (apply [{ applyMed3(*${min_or_max}, ${matchinfo}); }])>;
 
 def fp_minmax_to_clamp : GICombineRule<
   (defs root:$min_or_max, register_matchinfo:$matchinfo),
@@ -79,21 +79,21 @@ def fp_minmax_to_clamp : GICombineRule<
                            G_FMINNUM,
                            G_FMAXNUM_IEEE,
                            G_FMINNUM_IEEE):$min_or_max,
-         [{ return RegBankHelper.matchFPMinMaxToClamp(*${min_or_max}, ${matchinfo}); }]),
-  (apply [{ RegBankHelper.applyClamp(*${min_or_max}, ${matchinfo}); }])>;
+         [{ return matchFPMinMaxToClamp(*${min_or_max}, ${matchinfo}); }]),
+  (apply [{ applyClamp(*${min_or_max}, ${matchinfo}); }])>;
 
 def fmed3_intrinsic_to_clamp : GICombineRule<
   (defs root:$fmed3, register_matchinfo:$matchinfo),
   (match (wip_match_opcode G_AMDGPU_FMED3):$fmed3,
-         [{ return RegBankHelper.matchFPMed3ToClamp(*${fmed3}, ${matchinfo}); }]),
-  (apply [{ RegBankHelper.applyClamp(*${fmed3}, ${matchinfo}); }])>;
+         [{ return matchFPMed3ToClamp(*${fmed3}, ${matchinfo}); }]),
+  (apply [{ applyClamp(*${fmed3}, ${matchinfo}); }])>;
 
 def remove_fcanonicalize_matchinfo : GIDefMatchData<"Register">;
 
 def remove_fcanonicalize : GICombineRule<
   (defs root:$fcanonicalize, remove_fcanonicalize_matchinfo:$matchinfo),
   (match (wip_match_opcode G_FCANONICALIZE):$fcanonicalize,
-         [{ return PostLegalizerHelper.matchRemoveFcanonicalize(*${fcanonicalize}, ${matchinfo}); }]),
+         [{ return matchRemoveFcanonicalize(*${fcanonicalize}, ${matchinfo}); }]),
   (apply [{ Helper.replaceSingleDefInstWithReg(*${fcanonicalize}, ${matchinfo}); }])>;
 
 def foldable_fneg_matchdata : GIDefMatchData<"MachineInstr *">;
@@ -109,8 +109,8 @@ def sign_exension_in_reg_matchdata : GIDefMatchData<"MachineInstr *">;
 def sign_extension_in_reg : GICombineRule<
   (defs root:$sign_inreg, sign_exension_in_reg_matchdata:$matchinfo),
   (match (wip_match_opcode G_SEXT_INREG):$sign_inreg,
-         [{ return PostLegalizerHelper.matchCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }]),
-  (apply [{ PostLegalizerHelper.applyCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }])>;
+         [{ return matchCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }]),
+  (apply [{ applyCombineSignExtendInReg(*${sign_inreg}, ${matchinfo}); }])>;
 
 
 let Predicates = [Has16BitInsts, NotHasMed3_16] in {
@@ -139,30 +139,21 @@ def gfx6gfx7_combines : GICombineGroup<[fcmp_select_to_fmin_fmax_legacy]>;
 // Combines which should only apply on VI
 def gfx8_combines : GICombineGroup<[expand_promoted_fmed3]>;
 
-def AMDGPUPreLegalizerCombinerHelper: GICombinerHelper<
-  "AMDGPUGenPreLegalizerCombinerHelper",
+def AMDGPUPreLegalizerCombiner: GICombinerHelper<
+  "AMDGPUPreLegalizerCombinerImpl",
   [all_combines, clamp_i64_to_i16, foldable_fneg]> {
-  let DisableRuleOption = "amdgpuprelegalizercombiner-disable-rule";
-  let StateClass = "AMDGPUPreLegalizerCombinerHelperState";
-  let AdditionalArguments = [];
 }
 
-def AMDGPUPostLegalizerCombinerHelper: GICombinerHelper<
-  "AMDGPUGenPostLegalizerCombinerHelper",
+def AMDGPUPostLegalizerCombiner: GICombinerHelper<
+  "AMDGPUPostLegalizerCombinerImpl",
   [all_combines, gfx6gfx7_combines, gfx8_combines,
    uchar_to_float, cvt_f32_ubyteN, remove_fcanonicalize, foldable_fneg,
    rcp_sqrt_to_rsq, sign_extension_in_reg]> {
-  let DisableRuleOption = "amdgpupostlegalizercombiner-disable-rule";
-  let StateClass = "AMDGPUPostLegalizerCombinerHelperState";
-  let AdditionalArguments = [];
 }
 
-def AMDGPURegBankCombinerHelper : GICombinerHelper<
-  "AMDGPUGenRegBankCombinerHelper",
+def AMDGPURegBankCombiner : GICombinerHelper<
+  "AMDGPURegBankCombinerImpl",
   [unmerge_merge, unmerge_cst, unmerge_undef,
    zext_trunc_fold, int_minmax_to_med3, ptr_add_immed_chain,
    fp_minmax_to_clamp, fp_minmax_to_med3, fmed3_intrinsic_to_clamp]> {
-  let DisableRuleOption = "amdgpuregbankcombiner-disable-rule";
-  let StateClass = "AMDGPURegBankCombinerHelperState";
-  let AdditionalArguments = [];
 }

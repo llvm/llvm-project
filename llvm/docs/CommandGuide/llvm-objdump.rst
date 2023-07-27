@@ -28,7 +28,7 @@ combined with other commands:
 .. option:: -d, --disassemble
 
   Disassemble all executable sections found in the input files. On some
-  architectures (AArch64, PPC64, x86), all known instructions are disassembled by
+  architectures (AArch64, PowerPC, x86), all known instructions are disassembled by
   default. On the others, :option:`--mcpu` or :option:`--mattr` is needed to
   enable some instruction sets. Disabled instructions are displayed as
   ``<unknown>``.
@@ -439,6 +439,10 @@ XCOFF ONLY OPTIONS AND COMMANDS
 .. option:: --symbol-description
 
   Add symbol description to disassembly output.
+
+.. option:: --traceback-table
+
+  Decode traceback table in disassembly output. Implies :option:`--disassemble`.
 
 BUGS
 ----

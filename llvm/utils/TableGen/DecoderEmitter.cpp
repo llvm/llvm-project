@@ -2417,11 +2417,11 @@ void DecoderEmitter::run(raw_ostream &o) {
   formatted_raw_ostream OS(o);
   OS << "#include \"llvm/MC/MCInst.h\"\n";
   OS << "#include \"llvm/MC/MCSubtargetInfo.h\"\n";
-  OS << "#include \"llvm/MC/SubtargetFeature.h\"\n";
   OS << "#include \"llvm/Support/DataTypes.h\"\n";
   OS << "#include \"llvm/Support/Debug.h\"\n";
   OS << "#include \"llvm/Support/LEB128.h\"\n";
   OS << "#include \"llvm/Support/raw_ostream.h\"\n";
+  OS << "#include \"llvm/TargetParser/SubtargetFeature.h\"\n";
   OS << "#include <assert.h>\n";
   OS << '\n';
   OS << "namespace llvm {\n\n";

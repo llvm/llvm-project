@@ -114,8 +114,8 @@
 // RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv2.o --in-implib=libv1.lib --out-implib=libv2.lib -o /dev/null 2>&1 | FileCheck %s --check-prefixes=WARN_MISSING
 // RUN: ld.lld -Ttext=0x8000 --section-start .gnu.sgstubs=0x20000 --cmse-implib libv1.o --in-implib=libv2.lib -o /dev/null 2>&1 | FileCheck %s --check-prefixes=WARN_NEWENTRY
 
-// WARN_MISSING: warning: entry function 'foo' from CMSE import library is not present in secure application
-// WARN_NEWENTRY: warning: new entry function 'foo' introduced but no output import library specified
+// WARN_MISSING: warning: entry function 'bar' from CMSE import library is not present in secure application
+// WARN_NEWENTRY: warning: new entry function 'bar' introduced but no output import library specified
 
 //--- with_sgstubs.script
 SECTIONS {
@@ -278,4 +278,4 @@ __acle_se_invalid_12:
   .thumb
 
 /// Import library version 2 with bar missing.
-  cmse_veneer bar, function,   weak, function,   weak
+  cmse_veneer foo, function, global, function, global

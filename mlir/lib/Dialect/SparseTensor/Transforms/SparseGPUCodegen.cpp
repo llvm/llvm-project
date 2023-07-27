@@ -301,12 +301,25 @@ static void genGPUCode(PatternRewriter &rewriter, gpu::GPUFuncOp gpuFunc,
 // Library helper methods.
 //===----------------------------------------------------------------------===//
 
-/// Helper to detect a * b.
-static bool matchMulOfArgs(linalg::GenericOp op, Value val) {
+/// Helper to detect a + b with arguments taken from given block.
+static bool matchAddOfArgs(Block *block, Value val) {
   if (auto *def = val.getDefiningOp()) {
-    if (isa<arith::MulFOp>(def) || isa<arith::MulIOp>(def)) {
-      Value a = op.getBlock()->getArguments()[0];
-      Value b = op.getBlock()->getArguments()[1];
+    if (isa<arith::AddFOp, arith::AddIOp>(def)) {
+      Value a = block->getArguments()[0];
+      Value b = block->getArguments()[1];
+      return (def->getOperand(0) == a && def->getOperand(1) == b) ||
+             (def->getOperand(0) == b && def->getOperand(1) == a);
+    }
+  }
+  return false;
+}
+
+/// Helper to detect a * b with arguments taken from given block.
+static bool matchMulOfArgs(Block *block, Value val) {
+  if (auto *def = val.getDefiningOp()) {
+    if (isa<arith::MulFOp, arith::MulIOp>(def)) {
+      Value a = block->getArguments()[0];
+      Value b = block->getArguments()[1];
       return (def->getOperand(0) == a && def->getOperand(1) == b) ||
              (def->getOperand(0) == b && def->getOperand(1) == a);
     }
@@ -318,67 +331,52 @@ static bool matchMulOfArgs(linalg::GenericOp op, Value val) {
 static bool matchSumOfMultOfArgs(linalg::GenericOp op) {
   auto yieldOp = cast<linalg::YieldOp>(op.getRegion().front().getTerminator());
   if (auto *def = yieldOp.getOperand(0).getDefiningOp()) {
-    if (isa<arith::AddFOp>(def) || isa<arith::AddIOp>(def)) {
+    if (isa<arith::AddFOp, arith::AddIOp>(def)) {
       Value x = op.getBlock()->getArguments()[2];
       return (def->getOperand(0) == x &&
-              matchMulOfArgs(op, def->getOperand(1))) ||
+              matchMulOfArgs(op.getBlock(), def->getOperand(1))) ||
              (def->getOperand(1) == x &&
-              matchMulOfArgs(op, def->getOperand(0)));
+              matchMulOfArgs(op.getBlock(), def->getOperand(0)));
     }
   }
   return false;
 }
 
-// Helper to detect c = c \spy (a * b)
+// Helper to detect c += spy(s) x (a * b)
 static bool matchSumReductionOfMulUnary(linalg::GenericOp op) {
   auto yieldOp = cast<linalg::YieldOp>(op.getRegion().front().getTerminator());
-  auto def = yieldOp.getOperand(0).getDefiningOp<sparse_tensor::ReduceOp>();
-  if (!def)
-    return false;
+  // The linalg yields a custom reduce result.
   Value s_out = op.getBlock()->getArguments()[2];
-  for (auto *use : s_out.getUsers()) {
-    if (!(isa<sparse_tensor::ReduceOp>(use) ||
-          isa<sparse_tensor::UnaryOp>(use)))
+  if (auto redOp =
+          yieldOp.getOperand(0).getDefiningOp<sparse_tensor::ReduceOp>()) {
+    // The reduce consumes the output.
+    Value other;
+    if (s_out == redOp->getOperand(0))
+      other = redOp->getOperand(1);
+    else if (s_out == redOp->getOperand(1))
+      other = redOp->getOperand(0);
+    else
       return false;
-    // The sparse matrix should be specified as the pattern in the two
-    // operators.
-    if (s_out != use->getOperand(0))
-      return false;
-
-    // the above logic makes sure the pattern involves reduction and unary,
-    // i.e.,
-    // %1 = sparse_tensor.unary
-    // %2 = sparse_tensor.reduce
-    // we need to make sure %1 produces A*B and %2 uses summation as the
-    // reduction operator.
-    if (isa<sparse_tensor::ReduceOp>(use)) {
-      auto reduceSpOp = cast<sparse_tensor::ReduceOp>(use);
-      auto yieldSpOp = cast<sparse_tensor::YieldOp>(
-          reduceSpOp.getRegion().front().getTerminator());
-      auto *reduce = yieldSpOp.getOperand(0).getDefiningOp();
-      if (!isa_and_nonnull<arith::AddFOp>(reduce) &&
-          !isa_and_nonnull<arith::AddIOp>(reduce))
+    // The reduce op also consumes an unary which also consumes the output
+    // and does not define an absent value.
+    if (auto unOp = other.getDefiningOp<sparse_tensor::UnaryOp>()) {
+      if (s_out != unOp->getOperand(0) || !unOp.getAbsentRegion().empty())
         return false;
-    }
-    if (isa<sparse_tensor::UnaryOp>(use)) {
-      auto unarySpOp = cast<sparse_tensor::UnaryOp>(use);
-      auto yieldSpOp = cast<sparse_tensor::YieldOp>(
-          unarySpOp.getRegion(0).front().getTerminator());
-      auto *unary = yieldSpOp.getOperand(0).getDefiningOp();
-      if (!isa_and_nonnull<arith::MulIOp>(unary) &&
-          !isa_and_nonnull<arith::MulFOp>(unary))
-        return false;
-
-      // we also need to make sure the unary operation is used by the reduction
-      // operation.
-      for (auto *useUnary : unarySpOp->getUsers()) {
-        if (!isa<sparse_tensor::ReduceOp>(useUnary)) {
-          return false;
-        }
-      }
+      // And the bodies are as expected.
+      auto yieldUn = cast<sparse_tensor::YieldOp>(
+          unOp.getRegion(0).front().getTerminator());
+      auto yieldRed = cast<sparse_tensor::YieldOp>(
+          redOp.getRegion().front().getTerminator());
+      return matchMulOfArgs(op.getBlock(), yieldUn.getOperand(0)) &&
+             matchAddOfArgs(&redOp.getRegion().front(), yieldRed.getOperand(0));
     }
   }
-  return true;
+  return false;
+}
+
+/// Determines if the given value is a dense tensor instead of a sparse one.
+static bool isDenseTensor(Value v) {
+  return (sparse_tensor::getSparseTensorType(v).isAllDense());
 }
 
 /// Test for sorted COO with suitable data and coordinates types.
@@ -501,26 +499,21 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
 
   // Create sparse environment and sparse matrix/dense vector handles.
   Type indexTp = rewriter.getIndexType();
-  Type envHandleTp = rewriter.getType<gpu::SparseEnvHandleType>();
   Type dnTensorHandleTp = rewriter.getType<gpu::SparseDnTensorHandleType>();
   Type spmatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
-  auto env =
-      rewriter.create<gpu::CreateSparseEnvOp>(loc, envHandleTp, tokenTp, token);
-  Value handle = env.getResult(0);
-  token = env.getAsyncToken();
   Operation *spGenA =
       genSpMat(rewriter, loc, spmatHandleTp, tokenTp, token, szY, szX, nseA,
                rowA, colA, valA, isCOO, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
   auto dvecX = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnTensorHandleTp, tokenTp, token, handle, vecX, szX);
+      loc, dnTensorHandleTp, tokenTp, token, vecX, szX);
   Value dnX = dvecX.getResult(0);
   token = dvecX.getAsyncToken();
   auto dvecY = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnTensorHandleTp, tokenTp, token, handle, vecY, szY);
+      loc, dnTensorHandleTp, tokenTp, token, vecY, szY);
   Value dnY = dvecY.getResult(0);
   token = dvecY.getAsyncToken();
 
@@ -528,7 +521,7 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
 
   // Precompute buffersize for SpMV.
   auto bufferComp = rewriter.create<gpu::SpMVBufferSizeOp>(
-      loc, indexTp, tokenTp, token, handle, spMatA, dnX, dnY,
+      loc, indexTp, tokenTp, token, spMatA, dnX, dnY,
       /*computeType=*/dnYType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
@@ -537,9 +530,8 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   token = buf.getAsyncToken();
 
   // Perform the SpMV.
-  auto spmvComp =
-      rewriter.create<gpu::SpMVOp>(loc, tokenTp, token, handle, spMatA, dnX,
-                                   dnY, /*computeType=*/dnYType, buffer);
+  auto spmvComp = rewriter.create<gpu::SpMVOp>(
+      loc, tokenTp, token, spMatA, dnX, dnY, /*computeType=*/dnYType, buffer);
   token = spmvComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -548,8 +540,6 @@ static LogicalResult rewriteSpMV(PatternRewriter &rewriter,
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnX)
               .getAsyncToken();
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnY)
-              .getAsyncToken();
-  token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
               .getAsyncToken();
   token = genDeallocMemRef(rewriter, loc, rowA, token);
   if (colA)
@@ -608,27 +598,22 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
 
   // Create sparse environment and sparse matrix/dense matrix handles.
   Type indexTp = rewriter.getIndexType();
-  Type envHandleTp = rewriter.getType<gpu::SparseEnvHandleType>();
   Type dnTensorHandleTp = rewriter.getType<gpu::SparseDnTensorHandleType>();
   Type spMatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
-  auto env =
-      rewriter.create<gpu::CreateSparseEnvOp>(loc, envHandleTp, tokenTp, token);
-  Value handle = env.getResult(0);
-  token = env.getAsyncToken();
   Operation *spGenA =
       genSpMat(rewriter, loc, spMatHandleTp, tokenTp, token, szm, szk, nseA,
                rowA, colA, valA, isCOO, enableRT);
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);
   auto dmatB = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnTensorHandleTp, tokenTp, token, handle, matB,
+      loc, dnTensorHandleTp, tokenTp, token, matB,
       SmallVector<Value>{szk, szn});
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
   auto dmatC = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnTensorHandleTp, tokenTp, token, handle, matC,
+      loc, dnTensorHandleTp, tokenTp, token, matC,
       SmallVector<Value>{szm, szn});
   Value dnC = dmatC.getResult(0);
   token = dmatC.getAsyncToken();
@@ -637,7 +622,7 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
 
   // Precompute buffersize for SpMM.
   auto bufferComp = rewriter.create<gpu::SpMMBufferSizeOp>(
-      loc, indexTp, tokenTp, token, handle, spMatA, dnB, dnC,
+      loc, indexTp, tokenTp, token, spMatA, dnB, dnC,
       /*computeType=*/dmatCType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
@@ -648,9 +633,8 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();
 
   // Perform the SpMM.
-  auto spmmComp =
-      rewriter.create<gpu::SpMMOp>(loc, tokenTp, token, handle, spMatA, dnB,
-                                   dnC, /*computeType=*/dnCType, buffer);
+  auto spmmComp = rewriter.create<gpu::SpMMOp>(
+      loc, tokenTp, token, spMatA, dnB, dnC, /*computeType=*/dnCType, buffer);
   token = spmmComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -659,8 +643,6 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnB)
               .getAsyncToken();
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnC)
-              .getAsyncToken();
-  token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
               .getAsyncToken();
   token = genDeallocMemRef(rewriter, loc, rowA, token);
   if (colA)
@@ -679,37 +661,127 @@ static LogicalResult rewriteSpMM(PatternRewriter &rewriter,
   return success();
 }
 
-// TODO: identify alpha and beta and pass them to the CUDA calls
+// Match and rewrite 2:4 SpMM kernels.
+static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
+                                     linalg::GenericOp op) {
+  Location loc = op.getLoc();
+  Value A = op.getOperand(0);
+  Value B = op.getOperand(1);
+  Value C = op.getOperand(2); // we have C = AB
+  SmallVector<Value> tokens;
+
+  // All input should be dense tensors.
+  if (!isDenseTensor(A) || !isDenseTensor(B) || !isDenseTensor(C))
+    return failure();
+
+  Value bufA = genTensorToMemref(rewriter, loc, A);
+  Value matA = genAllocCopy(rewriter, loc, bufA, tokens);
+  Value bufB = genTensorToMemref(rewriter, loc, B);
+  Value matB = genAllocCopy(rewriter, loc, bufB, tokens);
+  Value bufC = genTensorToMemref(rewriter, loc, C);
+  Value matC = genAllocCopy(rewriter, loc, bufC, tokens);
+  genBlockingWait(rewriter, loc, tokens);
+  tokens.clear();
+  Value szm = linalg::createOrFoldDimOp(rewriter, loc, matA, 0);
+  Value szk = linalg::createOrFoldDimOp(rewriter, loc, matB, 0);
+  Value szn = linalg::createOrFoldDimOp(rewriter, loc, matC, 1);
+
+  Type indexTp = rewriter.getIndexType();
+  Type dnTensorHandleTp = rewriter.getType<gpu::SparseDnTensorHandleType>();
+  Type spMatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
+  Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
+  Value token = genFirstWait(rewriter, loc);
+  Operation *spGenA = rewriter.create<gpu::Create2To4SpMatOp>(
+      loc, spMatHandleTp, tokenTp, token, szm, szk, matA);
+
+  Value spMatA = spGenA->getResult(0);
+  token = spGenA->getResult(1);
+  auto dmatB = rewriter.create<gpu::CreateDnTensorOp>(
+      loc, dnTensorHandleTp, tokenTp, token, matB,
+      SmallVector<Value>{szk, szn});
+  Value dnB = dmatB.getResult(0);
+  token = dmatB.getAsyncToken();
+  auto dmatC = rewriter.create<gpu::CreateDnTensorOp>(
+      loc, dnTensorHandleTp, tokenTp, token, matC,
+      SmallVector<Value>{szm, szn});
+  Value dnC = dmatC.getResult(0);
+  token = dmatC.getAsyncToken();
+
+  auto dmatCType = llvm::cast<ShapedType>(matC.getType()).getElementType();
+
+  // Precompute buffersize for SpMM.
+  SmallVector<Type> bufferTypes_{indexTp, indexTp, indexTp};
+  TypeRange bufferTypes(bufferTypes_);
+  auto bufferComp = rewriter.create<gpu::SpMMBufferSizeOp>(
+      loc, bufferTypes, tokenTp, token, gpu::TransposeMode::NON_TRANSPOSE,
+      gpu::TransposeMode::NON_TRANSPOSE, spMatA, dnB, dnC,
+      /*computeType=*/dmatCType);
+
+  token = bufferComp.getAsyncToken();
+  Value bufferSz = bufferComp.getResult(0);
+  auto buf = genAllocBuffer(rewriter, loc, bufferSz, token);
+  Value buffer = buf.getResult(0);
+  token = buf.getAsyncToken();
+
+  Value bufferSz2 = bufferComp.getResult(1);
+  auto buf2 = genAllocBuffer(rewriter, loc, bufferSz2, token);
+  Value buffer2 = buf2.getResult(0);
+  token = buf2.getAsyncToken();
+
+  Value bufferSz3 = bufferComp.getResult(2);
+  auto buf3 = genAllocBuffer(rewriter, loc, bufferSz3, token);
+  Value buffer3 = buf3.getResult(0);
+  token = buf3.getAsyncToken();
+
+  auto dnCType = llvm::cast<ShapedType>(matC.getType()).getElementType();
+
+  // Perform the SpMM.
+  auto spmmComp = rewriter.create<gpu::SpMMOp>(
+      loc, tokenTp, token, spMatA, dnB, dnC, /*computeType=*/dnCType,
+      SmallVector<Value>{buffer, buffer2, buffer3});
+  token = spmmComp.getAsyncToken();
+
+  // Copy data back to host and free all the resources.
+  token = rewriter.create<gpu::DestroySpMatOp>(loc, tokenTp, token, spMatA)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnB)
+              .getAsyncToken();
+  token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnC)
+              .getAsyncToken();
+  SmallVector<Value> newDynamicSizes;
+
+  token = genDeallocMemRef(rewriter, loc, buffer, token);
+  token = genDeallocMemRef(rewriter, loc, buffer2, token);
+  token = genDeallocMemRef(rewriter, loc, buffer3, token);
+  token = genDeallocMemRef(rewriter, loc, matA, token);
+  token = genDeallocMemRef(rewriter, loc, matB, token);
+  token = genCopyMemRef(rewriter, loc, bufC, matC, token);
+  token = genDeallocMemRef(rewriter, loc, matC, token);
+  tokens.push_back(token);
+  genBlockingWait(rewriter, loc, tokens);
+  tokens.clear();
+  rewriter.replaceOpWithNewOp<bufferization::ToTensorOp>(op, bufC);
+  return success();
+}
+
 /// Match and rewrite SDDMM kernel.
 static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
                                   linalg::GenericOp op, bool enableRT) {
-
-  // For now, this pass reuses C and copies the result non-zero elements to
-  // overwrite C's.
-  // As an ad hoc solution, this pass also assumes the linalg takes a,b,c as
-  // input argument, and c as the output. It recognizes this pattern and rewrite
-  // it.
-
   Location loc = op.getLoc();
   Value a = op.getOperand(0);
   Value b = op.getOperand(1);
   Value c = op.getOperand(2);
-
   SmallVector<Value> tokens;
 
-  // Only admissible sparse matrix format and dense matrices.
+  // Only admissible sparse matrix format and dense matrices, no COO.
   bool isCOO = false;
   SparseTensorType aTp = getSparseTensorType(a);
   SparseTensorType bTp = getSparseTensorType(b);
   SparseTensorType cTp = getSparseTensorType(c);
-
   if (!areAdmissibleTypes(cTp, bTp, aTp, enableRT, false, isCOO))
     return failure();
-
-  // cusparse currently does not support COO in its SDDMM kernel.
-  if (isCOO) {
+  if (isCOO)
     return failure();
-  }
 
   // The SDDMM does the in-place operation.
   // Start sparse kernel and copy data from host to device.
@@ -735,24 +807,16 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
 
   // Create sparse environment and sparse matrix/dense matrix handles.
   Type indexTp = rewriter.getIndexType();
-  Type envHandleTp = rewriter.getType<gpu::SparseEnvHandleType>();
   Type dnMatHandleTp = rewriter.getType<gpu::SparseDnTensorHandleType>();
   Type spMatHandleTp = rewriter.getType<gpu::SparseSpMatHandleType>();
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
-  auto env =
-      rewriter.create<gpu::CreateSparseEnvOp>(loc, envHandleTp, tokenTp, token);
-  Value handle = env.getResult(0);
-  token = env.getAsyncToken();
-
   auto dmatA = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnMatHandleTp, tokenTp, token, handle, matA,
-      SmallVector<Value>{szm, szk});
+      loc, dnMatHandleTp, tokenTp, token, matA, SmallVector<Value>{szm, szk});
   Value dnA = dmatA.getResult(0);
   token = dmatA.getAsyncToken();
   auto dmatB = rewriter.create<gpu::CreateDnTensorOp>(
-      loc, dnMatHandleTp, tokenTp, token, handle, matB,
-      SmallVector<Value>{szk, szn});
+      loc, dnMatHandleTp, tokenTp, token, matB, SmallVector<Value>{szk, szn});
   Value dnB = dmatB.getResult(0);
   token = dmatB.getAsyncToken();
 
@@ -765,7 +829,7 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
   auto dnCType = llvm::cast<ShapedType>(c.getType()).getElementType();
   // Precompute buffersize for SDDMM.
   auto bufferComp = rewriter.create<gpu::SDDMMBufferSizeOp>(
-      loc, indexTp, tokenTp, token, handle, dnA, dnB, spMatC, dnCType);
+      loc, indexTp, tokenTp, token, dnA, dnB, spMatC, dnCType);
   Value bufferSz = bufferComp.getResult(0);
   token = bufferComp.getAsyncToken();
   auto buf = genAllocBuffer(rewriter, loc, bufferSz, token);
@@ -773,8 +837,8 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
   token = buf.getAsyncToken();
 
   // Perform the SDDMM.
-  auto sddmmComp = rewriter.create<gpu::SDDMMOp>(
-      loc, tokenTp, token, handle, dnA, dnB, spMatC, dnCType, buffer);
+  auto sddmmComp = rewriter.create<gpu::SDDMMOp>(loc, tokenTp, token, dnA, dnB,
+                                                 spMatC, dnCType, buffer);
   token = sddmmComp.getAsyncToken();
 
   // Copy data back to host and free all the resoures.
@@ -783,8 +847,6 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
   token = rewriter.create<gpu::DestroyDnTensorOp>(loc, tokenTp, token, dnB)
               .getAsyncToken();
   token = rewriter.create<gpu::DestroySpMatOp>(loc, tokenTp, token, spMatC)
-              .getAsyncToken();
-  token = rewriter.create<gpu::DestroySparseEnvOp>(loc, tokenTp, token, handle)
               .getAsyncToken();
   token = genDeallocMemRef(rewriter, loc, buffer, token);
   token = genDeallocMemRef(rewriter, loc, matA, token);
@@ -798,8 +860,8 @@ static LogicalResult rewriteSDDMM(PatternRewriter &rewriter,
   genBlockingWait(rewriter, loc, tokens);
   tokens.clear();
 
+  // Done.
   rewriter.replaceOpWithNewOp<sparse_tensor::LoadOp>(op, c);
-
   return success();
 }
 
@@ -933,6 +995,7 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
     bindDims(getContext(), i, j, k);
 
     // TODO: more robust patterns, tranposed versions, more kernels...
+    // TODO: identify alpha and beta and pass them to the CUDA calls
 
     // Recognize a SpMV kernel.
     if (numLoops == 2 && numTensors == 3 &&
@@ -951,6 +1014,9 @@ struct LinalgOpRewriter : public OpRewritePattern<linalg::GenericOp> {
         // TODO: add transposed {i, k}, {k, j}
         // TODO: maybe add transposed {i, j} in future
         maps == infer({{i, k}, {k, j}, {i, j}}) && matchSumOfMultOfArgs(op)) {
+      if (op->getAttr("DENSE24"))
+        return rewrite2To4SpMM(rewriter, op);
+
       return rewriteSpMM(rewriter, op, enableRT);
     }
 

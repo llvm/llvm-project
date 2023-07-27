@@ -364,7 +364,8 @@ struct UpwardsMemoryQuery {
 
 } // end anonymous namespace
 
-static bool isUseTriviallyOptimizableToLiveOnEntry(BatchAAResults &AA,
+template <typename AliasAnalysisType>
+static bool isUseTriviallyOptimizableToLiveOnEntry(AliasAnalysisType &AA,
                                                    const Instruction *I) {
   // If the memory can't be changed, then loads of the memory can't be
   // clobbered.
@@ -1361,11 +1362,6 @@ void MemorySSA::OptimizeUses::optimizeUsesInBlock(
     if (MU->isOptimized())
       continue;
 
-    if (isUseTriviallyOptimizableToLiveOnEntry(*AA, MU->getMemoryInst())) {
-      MU->setDefiningAccess(MSSA->getLiveOnEntryDef(), true);
-      continue;
-    }
-
     MemoryLocOrCall UseMLOC(MU);
     auto &LocInfo = LocStackInfo[UseMLOC];
     // If the pop epoch changed, it means we've removed stuff from top of
@@ -1781,10 +1777,15 @@ MemoryUseOrDef *MemorySSA::createNewAccess(Instruction *I,
     return nullptr;
 
   MemoryUseOrDef *MUD;
-  if (Def)
+  if (Def) {
     MUD = new MemoryDef(I->getContext(), nullptr, I, I->getParent(), NextID++);
-  else
+  } else {
     MUD = new MemoryUse(I->getContext(), nullptr, I, I->getParent());
+    if (isUseTriviallyOptimizableToLiveOnEntry(*AAP, I)) {
+      MemoryAccess *LiveOnEntry = getLiveOnEntryDef();
+      MUD->setOptimized(LiveOnEntry);
+    }
+  }
   ValueToMemoryAccess[I] = MUD;
   return MUD;
 }
@@ -2318,7 +2319,8 @@ bool MemorySSAAnalysis::Result::invalidate(
 PreservedAnalyses MemorySSAPrinterPass::run(Function &F,
                                             FunctionAnalysisManager &AM) {
   auto &MSSA = AM.getResult<MemorySSAAnalysis>(F).getMSSA();
-  MSSA.ensureOptimizedUses();
+  if (EnsureOptimizedUses)
+    MSSA.ensureOptimizedUses();
   if (DotCFGMSSA != "") {
     DOTFuncMSSAInfo CFGInfo(F, MSSA);
     WriteGraph(&CFGInfo, "", false, "MSSA", DotCFGMSSA);

@@ -11,7 +11,7 @@
 #include "src/__support/threads/thread.h"
 #include "src/stdlib/atexit.h"
 #include "src/stdlib/exit.h"
-#include "src/string/memory_utils/memcpy_implementations.h"
+#include "src/string/memory_utils/inline_memcpy.h"
 
 #include <asm/prctl.h>
 #include <linux/auxvec.h>
@@ -89,9 +89,7 @@ void cleanup_tls(uintptr_t addr, uintptr_t size) {
 
 // Sets the thread pointer to |val|. Returns true on success, false on failure.
 static bool set_thread_ptr(uintptr_t val) {
-  return __llvm_libc::syscall_impl(SYS_arch_prctl, ARCH_SET_FS, val) == -1
-             ? false
-             : true;
+  return __llvm_libc::syscall_impl(SYS_arch_prctl, ARCH_SET_FS, val) != -1;
 }
 
 using InitCallback = void(int, char **, char **);

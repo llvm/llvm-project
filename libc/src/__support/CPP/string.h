@@ -11,8 +11,8 @@
 
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/integer_to_string.h" // IntegerToString
-#include "src/string/memory_utils/memcpy_implementations.h"
-#include "src/string/memory_utils/memset_implementations.h"
+#include "src/string/memory_utils/inline_memcpy.h"
+#include "src/string/memory_utils/inline_memset.h"
 #include "src/string/string_utils.h" // string_length
 
 #include <stddef.h> // size_t
@@ -56,7 +56,7 @@ public:
   }
   LIBC_INLINE string(const char *cstr, size_t count) {
     resize(count);
-    inline_memcpy((void *)buffer_, (const void *)cstr, count);
+    inline_memcpy(buffer_, cstr, count);
   }
   LIBC_INLINE string(const char *cstr)
       : string(cstr, ::__llvm_libc::internal::string_length(cstr)) {}

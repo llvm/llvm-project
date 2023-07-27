@@ -15,9 +15,10 @@ using namespace mlir::tblgen;
 // OpClass definitions
 //===----------------------------------------------------------------------===//
 
-OpClass::OpClass(StringRef name, StringRef extraClassDeclaration,
+OpClass::OpClass(StringRef name, std::string extraClassDeclaration,
                  std::string extraClassDefinition)
-    : Class(name.str()), extraClassDeclaration(extraClassDeclaration),
+    : Class(name.str()),
+      extraClassDeclaration(std::move(extraClassDeclaration)),
       extraClassDefinition(std::move(extraClassDefinition)),
       parent(addParent("::mlir::Op")) {
   parent.addTemplateParam(getClassName().str());
@@ -37,6 +38,5 @@ OpClass::OpClass(StringRef name, StringRef extraClassDeclaration,
 void OpClass::finalize() {
   Class::finalize();
   declare<VisibilityDeclaration>(Visibility::Public);
-  declare<ExtraClassDeclaration>(extraClassDeclaration.str(),
-                                 extraClassDefinition);
+  declare<ExtraClassDeclaration>(extraClassDeclaration, extraClassDefinition);
 }

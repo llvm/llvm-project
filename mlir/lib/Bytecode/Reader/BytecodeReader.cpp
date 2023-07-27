@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-// TODO: Support for big-endian architectures.
-
 #include "mlir/Bytecode/BytecodeReader.h"
 #include "mlir/AsmParser/AsmParser.h"
 #include "mlir/Bytecode/BytecodeImplementation.h"
@@ -27,6 +25,7 @@
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Endian.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/SourceMgr.h"
@@ -203,8 +202,14 @@ public:
     // Handle the overwhelming uncommon case where the value required all 8
     // bytes (i.e. a really really big number). In this case, the marker byte is
     // all zeros: `00000000`.
-    if (LLVM_UNLIKELY(result == 0))
-      return parseBytes(sizeof(result), reinterpret_cast<uint8_t *>(&result));
+    if (LLVM_UNLIKELY(result == 0)) {
+      llvm::support::ulittle64_t resultLE;
+      if (failed(parseBytes(sizeof(resultLE),
+                            reinterpret_cast<uint8_t *>(&resultLE))))
+        return failure();
+      result = resultLE;
+      return success();
+    }
     return parseMultiByteVarInt(result);
   }
 
@@ -305,12 +310,13 @@ private:
            "unexpected number of trailing zeros in varint encoding");
 
     // Parse in the remaining bytes of the value.
-    if (failed(parseBytes(numBytes, reinterpret_cast<uint8_t *>(&result) + 1)))
+    llvm::support::ulittle64_t resultLE(result);
+    if (failed(parseBytes(numBytes, reinterpret_cast<uint8_t *>(&resultLE) + 1)))
       return failure();
 
     // Shift out the low-order bits that were used to mark how the value was
     // encoded.
-    result >>= (numBytes + 1);
+    result = resultLE >> (numBytes + 1);
     return success();
   }
 
@@ -790,9 +796,10 @@ class AttrTypeReader {
 
 public:
   AttrTypeReader(StringSectionReader &stringReader,
-                 ResourceSectionReader &resourceReader, Location fileLoc)
+                 ResourceSectionReader &resourceReader, Location fileLoc,
+                 uint64_t &bytecodeVersion)
       : stringReader(stringReader), resourceReader(resourceReader),
-        fileLoc(fileLoc) {}
+        fileLoc(fileLoc), bytecodeVersion(bytecodeVersion) {}
 
   /// Initialize the attribute and type information within the reader.
   LogicalResult initialize(MutableArrayRef<BytecodeDialect> dialects,
@@ -877,23 +884,30 @@ private:
 
   /// A location used for error emission.
   Location fileLoc;
+
+  /// Current bytecode version being used.
+  uint64_t &bytecodeVersion;
 };
 
 class DialectReader : public DialectBytecodeReader {
 public:
   DialectReader(AttrTypeReader &attrTypeReader,
                 StringSectionReader &stringReader,
-                ResourceSectionReader &resourceReader, EncodingReader &reader)
+                ResourceSectionReader &resourceReader, EncodingReader &reader,
+                uint64_t &bytecodeVersion)
       : attrTypeReader(attrTypeReader), stringReader(stringReader),
-        resourceReader(resourceReader), reader(reader) {}
+        resourceReader(resourceReader), reader(reader),
+        bytecodeVersion(bytecodeVersion) {}
 
   InFlightDiagnostic emitError(const Twine &msg) override {
     return reader.emitError(msg);
   }
 
+  uint64_t getBytecodeVersion() const override { return bytecodeVersion; }
+
   DialectReader withEncodingReader(EncodingReader &encReader) {
     return DialectReader(attrTypeReader, stringReader, resourceReader,
-                         encReader);
+                         encReader, bytecodeVersion);
   }
 
   Location getLoc() const { return reader.getLoc(); }
@@ -988,11 +1002,16 @@ public:
     return success();
   }
 
+  LogicalResult readBool(bool &result) override {
+    return reader.parseByte(result);
+  }
+
 private:
   AttrTypeReader &attrTypeReader;
   StringSectionReader &stringReader;
   ResourceSectionReader &resourceReader;
   EncodingReader &reader;
+  uint64_t &bytecodeVersion;
 };
 
 /// Wraps the properties section and handles reading properties out of it.
@@ -1197,7 +1216,8 @@ template <typename T>
 LogicalResult AttrTypeReader::parseCustomEntry(Entry<T> &entry,
                                                EncodingReader &reader,
                                                StringRef entryType) {
-  DialectReader dialectReader(*this, stringReader, resourceReader, reader);
+  DialectReader dialectReader(*this, stringReader, resourceReader, reader,
+                              bytecodeVersion);
   if (failed(entry.dialect->load(dialectReader, fileLoc.getContext())))
     return failure();
   // Ensure that the dialect implements the bytecode interface.
@@ -1242,7 +1262,7 @@ public:
        llvm::MemoryBufferRef buffer,
        const std::shared_ptr<llvm::SourceMgr> &bufferOwnerRef)
       : config(config), fileLoc(fileLoc), lazyLoading(lazyLoading),
-        attrTypeReader(stringReader, resourceReader, fileLoc),
+        attrTypeReader(stringReader, resourceReader, fileLoc, version),
         // Use the builtin unrealized conversion cast operation to represent
         // forward references to values that aren't yet defined.
         forwardRefOpState(UnknownLoc::get(config.getContext()),
@@ -1311,11 +1331,11 @@ private:
     regionStack.push_back(std::move(it->getSecond()->second));
     lazyLoadableOps.erase(it->getSecond());
     lazyLoadableOpsMap.erase(it);
-    auto result = parseRegions(regionStack, regionStack.back());
-    assert((regionStack.empty() || failed(result)) &&
-           "broken invariant: regionStack should be empty when parseRegions "
-           "succeeds");
-    return result;
+
+    while (!regionStack.empty())
+      if (failed(parseRegions(regionStack, regionStack.back())))
+        return failure();
+    return success();
   }
 
   /// Return the context for this config.
@@ -1772,7 +1792,7 @@ BytecodeReader::Impl::parseOpName(EncodingReader &reader,
   if (!opName->opName) {
     // Load the dialect and its version.
     DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
-                                reader);
+                                reader, version);
     if (failed(opName->dialect->load(dialectReader, getContext())))
       return failure();
     // If the opName is empty, this is because we use to accept names such as
@@ -1815,7 +1835,7 @@ LogicalResult BytecodeReader::Impl::parseResourceSection(
 
   // Initialize the resource reader with the resource sections.
   DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
-                              reader);
+                              reader, version);
   return resourceReader.initialize(fileLoc, config, dialects, stringReader,
                                    *resourceData, *resourceOffsetData,
                                    dialectReader, bufferOwnerRef);
@@ -2088,14 +2108,11 @@ BytecodeReader::Impl::parseRegions(std::vector<RegionReadState> &regionStack,
             childState.owningReader =
                 std::make_unique<EncodingReader>(sectionData, fileLoc);
             childState.reader = childState.owningReader.get();
-          }
 
-          if (lazyLoading) {
-            // If the user has a callback set, they have the opportunity
-            // to control lazyloading as we go.
-            if (!lazyOpsCallback || !lazyOpsCallback(*op)) {
-              lazyLoadableOps.push_back(
-                  std::make_pair(*op, std::move(childState)));
+            // If the user has a callback set, they have the opportunity to
+            // control lazyloading as we go.
+            if (lazyLoading && (!lazyOpsCallback || !lazyOpsCallback(*op))) {
+              lazyLoadableOps.emplace_back(*op, std::move(childState));
               lazyLoadableOpsMap.try_emplace(*op,
                                              std::prev(lazyLoadableOps.end()));
               continue;
@@ -2179,7 +2196,7 @@ BytecodeReader::Impl::parseOpWithoutRegions(EncodingReader &reader,
     // interface and control the serialization.
     if (wasRegistered) {
       DialectReader dialectReader(attrTypeReader, stringReader, resourceReader,
-                                  reader);
+                                  reader, version);
       if (failed(
               propertiesReader.read(fileLoc, dialectReader, &*opName, opState)))
         return failure();

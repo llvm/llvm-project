@@ -209,9 +209,12 @@ struct language_name_pair language_names[] = {
     {"fortran18", eLanguageTypeFortran18},
     {"ada2005", eLanguageTypeAda2005},
     {"ada2012", eLanguageTypeAda2012},
+    {"HIP", eLanguageTypeHIP},
+    {"assembly", eLanguageTypeAssembly},
+    {"c-sharp", eLanguageTypeC_sharp},
+    {"mojo", eLanguageTypeMojo},
     // Vendor Extensions
     {"assembler", eLanguageTypeMipsAssembler},
-    {"mojo", eLanguageTypeMojo},
     // Now synonyms, in arbitrary order
     {"objc", eLanguageTypeObjC},
     {"objc++", eLanguageTypeObjC_plus_plus},
@@ -457,12 +460,12 @@ Language::GetFormatterPrefixSuffix(llvm::StringRef type_hint) {
   return std::pair<llvm::StringRef, llvm::StringRef>();
 }
 
-bool Language::DemangledNameContainsPath(llvm::StringRef path, 
+bool Language::DemangledNameContainsPath(llvm::StringRef path,
                                          ConstString demangled) const {
   // The base implementation does a simple contains comparision:
   if (path.empty())
     return false;
-  return demangled.GetStringRef().contains(path);                                         
+  return demangled.GetStringRef().contains(path);
 }
 
 DumpValueObjectOptions::DeclPrintingHelper Language::GetDeclPrintingHelper() {

@@ -733,7 +733,9 @@ mlir::LogicalResult hlfir::DotProductOp::verify() {
   int64_t lhsSize = lhsShape[0];
   int64_t rhsSize = rhsShape[0];
 
-  if (lhsSize != rhsSize)
+  constexpr int64_t unknownExtent = fir::SequenceType::getUnknownExtent();
+  if ((lhsSize != unknownExtent) && (rhsSize != unknownExtent) &&
+      (lhsSize != rhsSize))
     return emitOpError("both arrays must have the same size");
 
   if (mlir::isa<fir::LogicalType>(lhsEleTy) !=
@@ -979,9 +981,16 @@ void hlfir::AssociateOp::build(mlir::OpBuilder &builder,
                                mlir::ValueRange typeparams,
                                fir::FortranVariableFlagsAttr fortran_attrs) {
   auto nameAttr = builder.getStringAttr(uniq_name);
-  // TODO: preserve polymorphism of polymorphic expr.
-  mlir::Type firVarType = fir::ReferenceType::get(
-      getFortranElementOrSequenceType(source.getType()));
+  mlir::Type dataType = getFortranElementOrSequenceType(source.getType());
+
+  // Preserve polymorphism of polymorphic expr.
+  mlir::Type firVarType;
+  auto sourceExprType = mlir::dyn_cast<hlfir::ExprType>(source.getType());
+  if (sourceExprType && sourceExprType.isPolymorphic())
+    firVarType = fir::ClassType::get(fir::HeapType::get(dataType));
+  else
+    firVarType = fir::ReferenceType::get(dataType);
+
   mlir::Type hlfirVariableType =
       DeclareOp::getHLFIRVariableType(firVarType, /*hasExplicitLbs=*/false);
   mlir::Type i1Type = builder.getI1Type();
@@ -1008,6 +1017,7 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
                             mlir::OperationState &result, mlir::Value var,
                             mlir::Value mustFree) {
   hlfir::ExprType::Shape typeShape;
+  bool isPolymorphic = fir::isPolymorphicType(var.getType());
   mlir::Type type = getFortranElementOrSequenceType(var.getType());
   if (auto seqType = type.dyn_cast<fir::SequenceType>()) {
     typeShape.append(seqType.getShape().begin(), seqType.getShape().end());
@@ -1015,7 +1025,7 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
   }
 
   auto resultType = hlfir::ExprType::get(builder.getContext(), typeShape, type,
-                                         /*isPolymorphic: TODO*/ false);
+                                         isPolymorphic);
   return build(builder, result, resultType, var, mustFree);
 }
 
@@ -1026,10 +1036,13 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
 void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
                                mlir::OperationState &odsState,
                                mlir::Type resultType, mlir::Value shape,
-                               mlir::ValueRange typeparams) {
+                               mlir::ValueRange typeparams, bool isUnordered) {
   odsState.addOperands(shape);
   odsState.addOperands(typeparams);
   odsState.addTypes(resultType);
+  if (isUnordered)
+    odsState.addAttribute(getUnorderedAttrName(odsState.name),
+                          isUnordered ? builder.getUnitAttr() : nullptr);
   mlir::Region *bodyRegion = odsState.addRegion();
   bodyRegion->push_back(new mlir::Block{});
   if (auto exprType = resultType.dyn_cast<hlfir::ExprType>()) {
@@ -1038,6 +1051,10 @@ void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
     for (unsigned d = 0; d < dim; ++d)
       bodyRegion->front().addArgument(indexType, odsState.location);
   }
+}
+
+mlir::Value hlfir::ElementalOp::getElementEntity() {
+  return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
 }
 
 //===----------------------------------------------------------------------===//
@@ -1257,8 +1274,11 @@ static void printYieldOpCleanup(mlir::OpAsmPrinter &p, YieldOp yieldOp,
 
 void hlfir::ElementalAddrOp::build(mlir::OpBuilder &builder,
                                    mlir::OperationState &odsState,
-                                   mlir::Value shape) {
+                                   mlir::Value shape, bool isUnordered) {
   odsState.addOperands(shape);
+  if (isUnordered)
+    odsState.addAttribute(getUnorderedAttrName(odsState.name),
+                          isUnordered ? builder.getUnitAttr() : nullptr);
   mlir::Region *bodyRegion = odsState.addRegion();
   bodyRegion->push_back(new mlir::Block{});
   if (auto shapeType = shape.getType().dyn_cast<fir::ShapeType>()) {
@@ -1285,6 +1305,22 @@ mlir::LogicalResult hlfir::ElementalAddrOp::verify() {
   if (shapeRank != getIndices().size())
     return emitOpError("body number of indices must match shape rank");
   return mlir::success();
+}
+
+hlfir::YieldOp hlfir::ElementalAddrOp::getYieldOp() {
+  hlfir::YieldOp yieldOp =
+      mlir::dyn_cast_or_null<hlfir::YieldOp>(getTerminator(getBody()));
+  assert(yieldOp && "element_addr is ill-formed");
+  return yieldOp;
+}
+
+mlir::Value hlfir::ElementalAddrOp::getElementEntity() {
+  return getYieldOp().getEntity();
+}
+
+mlir::Region *hlfir::ElementalAddrOp::getElementCleanup() {
+  mlir::Region *cleanup = &getYieldOp().getCleanup();
+  return cleanup->empty() ? nullptr : cleanup;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1435,6 +1471,64 @@ hlfir::ForallIndexOp::canonicalize(hlfir::ForallIndexOp indexOp,
   return mlir::success();
 }
 
+//===----------------------------------------------------------------------===//
+// CharExtremumOp
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult hlfir::CharExtremumOp::verify() {
+  if (getStrings().size() < 2)
+    return emitOpError("must be provided at least two string operands");
+  unsigned kind = getCharacterKind(getResult().getType());
+  for (auto string : getStrings())
+    if (kind != getCharacterKind(string.getType()))
+      return emitOpError("strings must have the same KIND as the result type");
+  return mlir::success();
+}
+
+void hlfir::CharExtremumOp::build(mlir::OpBuilder &builder,
+                                  mlir::OperationState &result,
+                                  hlfir::CharExtremumPredicate predicate,
+                                  mlir::ValueRange strings) {
+
+  fir::CharacterType::LenType resultTypeLen = 0;
+  assert(!strings.empty() && "must contain operands");
+  unsigned kind = getCharacterKind(strings[0].getType());
+  for (auto string : strings)
+    if (auto cstLen = getCharacterLengthIfStatic(string.getType())) {
+      resultTypeLen = std::max(resultTypeLen, *cstLen);
+    } else {
+      resultTypeLen = fir::CharacterType::unknownLen();
+      break;
+    }
+  auto resultType = hlfir::ExprType::get(
+      builder.getContext(), hlfir::ExprType::Shape{},
+      fir::CharacterType::get(builder.getContext(), kind, resultTypeLen),
+      false);
+
+  build(builder, result, resultType, predicate, strings);
+}
+
+//===----------------------------------------------------------------------===//
+// GetLength
+//===----------------------------------------------------------------------===//
+
+mlir::LogicalResult
+hlfir::GetLengthOp::canonicalize(GetLengthOp getLength,
+                                 mlir::PatternRewriter &rewriter) {
+  mlir::Location loc = getLength.getLoc();
+  auto exprTy = mlir::cast<hlfir::ExprType>(getLength.getExpr().getType());
+  auto charTy = mlir::cast<fir::CharacterType>(exprTy.getElementType());
+  if (!charTy.hasConstantLen())
+    return mlir::failure();
+
+  mlir::Type indexTy = rewriter.getIndexType();
+  auto cstLen = rewriter.create<mlir::arith::ConstantOp>(
+      loc, indexTy, mlir::IntegerAttr::get(indexTy, charTy.getLen()));
+  rewriter.replaceOp(getLength, cstLen);
+  return mlir::success();
+}
+
 #include "flang/Optimizer/HLFIR/HLFIROpInterfaces.cpp.inc"
 #define GET_OP_CLASSES
+#include "flang/Optimizer/HLFIR/HLFIREnums.cpp.inc"
 #include "flang/Optimizer/HLFIR/HLFIROps.cpp.inc"

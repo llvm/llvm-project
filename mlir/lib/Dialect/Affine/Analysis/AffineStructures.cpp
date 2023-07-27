@@ -16,7 +16,7 @@
 #include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Affine/IR/AffineValueMap.h"
-#include "mlir/Dialect/Arith/IR/Arith.h"
+#include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/AffineExprVisitor.h"
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Support/LLVM.h"
@@ -61,7 +61,7 @@ void FlatAffineValueConstraints::addInductionVarOrTerminalSymbol(Value val) {
   // Add top level symbol.
   appendSymbolVar(val);
   // Check if the symbol is a constant.
-  if (auto constOp = val.getDefiningOp<arith::ConstantIndexOp>())
+  if (std::optional<int64_t> constOp = getConstantIntValue(val))
     addBound(BoundType::EQ, val, constOp.value());
 }
 

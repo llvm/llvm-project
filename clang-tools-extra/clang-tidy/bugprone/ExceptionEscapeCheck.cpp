@@ -15,15 +15,21 @@
 
 using namespace clang::ast_matchers;
 
-namespace clang {
+namespace clang::tidy::bugprone {
 namespace {
+
 AST_MATCHER_P(FunctionDecl, isEnabled, llvm::StringSet<>,
               FunctionsThatShouldNotThrow) {
   return FunctionsThatShouldNotThrow.count(Node.getNameAsString()) > 0;
 }
+
+AST_MATCHER(FunctionDecl, isExplicitThrow) {
+  return isExplicitThrowExceptionSpec(Node.getExceptionSpecType()) &&
+         Node.getExceptionSpecSourceRange().isValid();
+}
+
 } // namespace
 
-namespace tidy::bugprone {
 ExceptionEscapeCheck::ExceptionEscapeCheck(StringRef Name,
                                            ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context), RawFunctionsThatShouldNotThrow(Options.get(
@@ -53,10 +59,12 @@ void ExceptionEscapeCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
 void ExceptionEscapeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       functionDecl(isDefinition(),
-                   anyOf(isNoThrow(), cxxDestructorDecl(),
-                         cxxConstructorDecl(isMoveConstructor()),
-                         cxxMethodDecl(isMoveAssignmentOperator()),
-                         hasName("main"), hasName("swap"),
+                   anyOf(isNoThrow(),
+                         allOf(anyOf(cxxDestructorDecl(),
+                                     cxxConstructorDecl(isMoveConstructor()),
+                                     cxxMethodDecl(isMoveAssignmentOperator()),
+                                     isMain(), hasName("swap")),
+                               unless(isExplicitThrow())),
                          isEnabled(FunctionsThatShouldNotThrow)))
           .bind("thrower"),
       this);
@@ -77,5 +85,4 @@ void ExceptionEscapeCheck::check(const MatchFinder::MatchResult &Result) {
         << MatchedDecl;
 }
 
-} // namespace tidy::bugprone
-} // namespace clang
+} // namespace clang::tidy::bugprone

@@ -26,6 +26,9 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Iter1, class _Sent1, class _Iter2, class _Sent2, class = void>
@@ -234,5 +237,7 @@ is_permutation(_ForwardIterator1 __first1, _ForwardIterator1 __last1, _ForwardIt
 #endif // _LIBCPP_STD_VER >= 14
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_IS_PERMUTATION_H

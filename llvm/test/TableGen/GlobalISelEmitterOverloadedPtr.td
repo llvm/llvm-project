@@ -17,7 +17,7 @@ let TargetPrefix = "mytarget" in {
 // CHECK-NEXT: // MIs[0] src
 // CHECK-NEXT: GIM_CheckPointerToAny, /*MI*/0, /*Op*/2, /*SizeInBits*/32,
 // CHECK-NEXT: GIM_CheckRegBankForClass, /*MI*/0, /*Op*/2, /*RC*/MyTarget::GPR32RegClassID,
-// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GIPFP_MI_Predicate_frag_anyptr,
+// CHECK-NEXT: GIM_CheckCxxInsnPredicate, /*MI*/0, /*FnId*/GICXXPred_MI_Predicate_frag_anyptr,
 // CHECK-NEXT: // (intrinsic_w_chain:{ *:[i32] } {{[0-9]+}}:{ *:[iPTR] }, GPR32:{ *:[i32] }:$src)<<P:Predicate_frag_anyptr>>  =>  (ANYLOAD:{ *:[i32] } GPR32:{ *:[i32] }:$src)
 // CHECK-NEXT: GIR_BuildMI, /*InsnID*/0, /*Opcode*/MyTarget::ANYLOAD,
 let hasSideEffects = 1 in {

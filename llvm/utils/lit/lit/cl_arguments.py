@@ -185,18 +185,16 @@ def parse_args():
         action="store_true",
     )
     execution_group.add_argument(
+        "--per-test-coverage",
+        dest="per_test_coverage",
+        action="store_true",
+        help="Enable individual test case coverage",
+    )
+    execution_group.add_argument(
         "--ignore-fail",
         dest="ignoreFail",
         action="store_true",
         help="Exit with status zero even if some tests fail",
-    )
-    execution_group.add_argument(
-        "--no-indirectly-run-check",
-        dest="indirectlyRunCheck",
-        help="Do not error if a test would not be run if the user had "
-        "specified the containing directory instead of naming the "
-        "test directly.",
-        action="store_false",
     )
 
     selection_group = parser.add_argument_group("Test Selection")

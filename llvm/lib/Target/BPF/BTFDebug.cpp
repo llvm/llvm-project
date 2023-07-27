@@ -30,7 +30,7 @@ using namespace llvm;
 
 static const char *BTFKindStr[] = {
 #define HANDLE_BTF_KIND(ID, NAME) "BTF_KIND_" #NAME,
-#include "BTF.def"
+#include "llvm/DebugInfo/BTF/BTF.def"
 };
 
 /// Emit a BTF common type.

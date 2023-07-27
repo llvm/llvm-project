@@ -74,7 +74,7 @@ void format_provider<TimePoint<>>::format(const TimePoint<> &T, raw_ostream &OS,
           continue;
         case 'N':  // Nanoseconds, from date(1).
           FStream << llvm::format(
-              "%.6lu", (long)duration_cast<nanoseconds>(Fractional).count());
+              "%.9lu", (long)duration_cast<nanoseconds>(Fractional).count());
           ++I;
           continue;
         case '%':  // Consume %%, so %%f parses as (%%)f not %(%f)

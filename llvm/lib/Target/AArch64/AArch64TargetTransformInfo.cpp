@@ -216,7 +216,7 @@ bool AArch64TTIImpl::shouldMaximizeVectorBandwidth(
     TargetTransformInfo::RegisterKind K) const {
   assert(K != TargetTransformInfo::RGK_Scalar);
   return (K == TargetTransformInfo::RGK_FixedWidthVector &&
-          !ST->forceStreamingCompatibleSVE());
+          ST->isNeonAvailable());
 }
 
 /// Calculate the cost of materializing a 64-bit value. This helper
@@ -401,7 +401,9 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
   case Intrinsic::smin:
   case Intrinsic::smax: {
     static const auto ValidMinMaxTys = {MVT::v8i8,  MVT::v16i8, MVT::v4i16,
-                                        MVT::v8i16, MVT::v2i32, MVT::v4i32};
+                                        MVT::v8i16, MVT::v2i32, MVT::v4i32,
+                                        MVT::nxv16i8, MVT::nxv8i16, MVT::nxv4i32,
+                                        MVT::nxv2i64};
     auto LT = getTypeLegalizationCost(RetTy);
     // v2i64 types get converted to cmp+bif hence the cost of 2
     if (LT.second == MVT::v2i64)
@@ -432,6 +434,15 @@ AArch64TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                      MVT::v2i64};
     auto LT = getTypeLegalizationCost(RetTy);
     if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }))
+      return LT.first;
+    break;
+  }
+  case Intrinsic::bswap: {
+    static const auto ValidAbsTys = {MVT::v4i16, MVT::v8i16, MVT::v2i32,
+                                     MVT::v4i32, MVT::v2i64};
+    auto LT = getTypeLegalizationCost(RetTy);
+    if (any_of(ValidAbsTys, [&LT](MVT M) { return M == LT.second; }) &&
+        LT.second.getScalarSizeInBits() == RetTy->getScalarSizeInBits())
       return LT.first;
     break;
   }
@@ -1210,16 +1221,15 @@ instCombineSVELD1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *Pred = II.getOperand(0);
   Value *PtrOp = II.getOperand(1);
   Type *VecTy = II.getType();
-  Value *VecPtr = IC.Builder.CreateBitCast(PtrOp, VecTy->getPointerTo());
 
   if (isAllActivePredicate(Pred)) {
-    LoadInst *Load = IC.Builder.CreateLoad(VecTy, VecPtr);
+    LoadInst *Load = IC.Builder.CreateLoad(VecTy, PtrOp);
     Load->copyMetadata(II);
     return IC.replaceInstUsesWith(II, Load);
   }
 
   CallInst *MaskedLoad =
-      IC.Builder.CreateMaskedLoad(VecTy, VecPtr, PtrOp->getPointerAlignment(DL),
+      IC.Builder.CreateMaskedLoad(VecTy, PtrOp, PtrOp->getPointerAlignment(DL),
                                   Pred, ConstantAggregateZero::get(VecTy));
   MaskedLoad->copyMetadata(II);
   return IC.replaceInstUsesWith(II, MaskedLoad);
@@ -1230,30 +1240,25 @@ instCombineSVEST1(InstCombiner &IC, IntrinsicInst &II, const DataLayout &DL) {
   Value *VecOp = II.getOperand(0);
   Value *Pred = II.getOperand(1);
   Value *PtrOp = II.getOperand(2);
-  Value *VecPtr =
-      IC.Builder.CreateBitCast(PtrOp, VecOp->getType()->getPointerTo());
 
   if (isAllActivePredicate(Pred)) {
-    StoreInst *Store = IC.Builder.CreateStore(VecOp, VecPtr);
+    StoreInst *Store = IC.Builder.CreateStore(VecOp, PtrOp);
     Store->copyMetadata(II);
     return IC.eraseInstFromFunction(II);
   }
 
   CallInst *MaskedStore = IC.Builder.CreateMaskedStore(
-      VecOp, VecPtr, PtrOp->getPointerAlignment(DL), Pred);
+      VecOp, PtrOp, PtrOp->getPointerAlignment(DL), Pred);
   MaskedStore->copyMetadata(II);
   return IC.eraseInstFromFunction(II);
 }
 
 static Instruction::BinaryOps intrinsicIDToBinOpCode(unsigned Intrinsic) {
   switch (Intrinsic) {
-  case Intrinsic::aarch64_sve_fmul:
   case Intrinsic::aarch64_sve_fmul_u:
     return Instruction::BinaryOps::FMul;
-  case Intrinsic::aarch64_sve_fadd:
   case Intrinsic::aarch64_sve_fadd_u:
     return Instruction::BinaryOps::FAdd;
-  case Intrinsic::aarch64_sve_fsub:
   case Intrinsic::aarch64_sve_fsub_u:
     return Instruction::BinaryOps::FSub;
   default:
@@ -1330,7 +1335,7 @@ instCombineSVEVectorFAdd(InstCombiner &IC, IntrinsicInst &II) {
                                             Intrinsic::aarch64_sve_fmla>(IC, II,
                                                                          true))
     return FMLA;
-  return instCombineSVEVectorBinOp(IC, II);
+  return std::nullopt;
 }
 
 static std::optional<Instruction *>
@@ -1372,7 +1377,7 @@ instCombineSVEVectorFSub(InstCombiner &IC, IntrinsicInst &II) {
                                             Intrinsic::aarch64_sve_fmls>(IC, II,
                                                                          true))
     return FMLS;
-  return instCombineSVEVectorBinOp(IC, II);
+  return std::nullopt;
 }
 
 static std::optional<Instruction *>
@@ -1929,8 +1934,7 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
   case TargetTransformInfo::RGK_Scalar:
     return TypeSize::getFixed(64);
   case TargetTransformInfo::RGK_FixedWidthVector:
-    if (!ST->isStreamingSVEModeDisabled() &&
-        !EnableFixedwidthAutovecInStreamingMode)
+    if (!ST->isNeonAvailable() && !EnableFixedwidthAutovecInStreamingMode)
       return TypeSize::getFixed(0);
 
     if (ST->hasSVE())
@@ -1939,7 +1943,8 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 
     return TypeSize::getFixed(ST->hasNEON() ? 128 : 0);
   case TargetTransformInfo::RGK_ScalableVector:
-    if (!ST->isStreamingSVEModeDisabled() && !EnableScalableAutovecInStreamingMode)
+    if ((ST->isStreaming() || ST->isStreamingCompatible()) &&
+        !EnableScalableAutovecInStreamingMode)
       return TypeSize::getScalable(0);
 
     return TypeSize::getScalable(ST->hasSVE() ? 128 : 0);
@@ -1948,9 +1953,8 @@ AArch64TTIImpl::getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const {
 }
 
 bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
-                                           ArrayRef<Type *> SrcTys,
-                                           ArrayRef<const Value *> Args) {
-
+                                           ArrayRef<const Value *> Args,
+                                           Type *SrcOverrideTy) {
   // A helper that returns a vector type from the given type. The number of
   // elements in type Ty determines the vector width.
   auto toVectorTy = [&](Type *ArgTy) {
@@ -1958,12 +1962,14 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
                            cast<VectorType>(DstTy)->getElementCount());
   };
 
-  // Exit early if DstTy is not a vector type whose elements are at least
-  // 16-bits wide. SVE doesn't generally have the same set of instructions to
+  // Exit early if DstTy is not a vector type whose elements are one of [i16,
+  // i32, i64]. SVE doesn't generally have the same set of instructions to
   // perform an extend with the add/sub/mul. There are SMULLB style
   // instructions, but they operate on top/bottom, requiring some sort of lane
   // interleaving to be used with zext/sext.
-  if (!useNeonVector(DstTy) || DstTy->getScalarSizeInBits() < 16)
+  unsigned DstEltSize = DstTy->getScalarSizeInBits();
+  if (!useNeonVector(DstTy) || Args.size() != 2 ||
+      (DstEltSize != 16 && DstEltSize != 32 && DstEltSize != 64))
     return false;
 
   // Determine if the operation has a widening variant. We consider both the
@@ -1973,42 +1979,55 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
   // TODO: Add additional widening operations (e.g., shl, etc.) once we
   //       verify that their extending operands are eliminated during code
   //       generation.
+  Type *SrcTy = SrcOverrideTy;
   switch (Opcode) {
   case Instruction::Add: // UADDL(2), SADDL(2), UADDW(2), SADDW(2).
   case Instruction::Sub: // USUBL(2), SSUBL(2), USUBW(2), SSUBW(2).
-  case Instruction::Mul: // SMULL(2), UMULL(2)
+    // The second operand needs to be an extend
+    if (isa<SExtInst>(Args[1]) || isa<ZExtInst>(Args[1])) {
+      if (!SrcTy)
+        SrcTy =
+            toVectorTy(cast<Instruction>(Args[1])->getOperand(0)->getType());
+    } else
+      return false;
     break;
+  case Instruction::Mul: { // SMULL(2), UMULL(2)
+    // Both operands need to be extends of the same type.
+    if ((isa<SExtInst>(Args[0]) && isa<SExtInst>(Args[1])) ||
+        (isa<ZExtInst>(Args[0]) && isa<ZExtInst>(Args[1]))) {
+      if (!SrcTy)
+        SrcTy =
+            toVectorTy(cast<Instruction>(Args[0])->getOperand(0)->getType());
+    } else if (isa<ZExtInst>(Args[0]) || isa<ZExtInst>(Args[1])) {
+      // If one of the operands is a Zext and the other has enough zero bits to
+      // be treated as unsigned, we can still general a umull, meaning the zext
+      // is free.
+      KnownBits Known =
+          computeKnownBits(isa<ZExtInst>(Args[0]) ? Args[1] : Args[0], DL);
+      if (Args[0]->getType()->getScalarSizeInBits() -
+              Known.Zero.countLeadingOnes() >
+          DstTy->getScalarSizeInBits() / 2)
+        return false;
+      if (!SrcTy)
+        SrcTy = toVectorTy(Type::getIntNTy(DstTy->getContext(),
+                                           DstTy->getScalarSizeInBits() / 2));
+    } else
+      return false;
+    break;
+  }
   default:
     return false;
   }
 
-  // To be a widening instruction (either the "wide" or "long" versions), the
-  // second operand must be a sign- or zero extend.
-  if (Args.size() != 2 ||
-      (!isa<SExtInst>(Args[1]) && !isa<ZExtInst>(Args[1])))
-    return false;
-  auto *Extend = cast<CastInst>(Args[1]);
-  auto *Arg0 = dyn_cast<CastInst>(Args[0]);
-
-  // A mul only has a mull version (not like addw). Both operands need to be
-  // extending and the same type.
-  if (Opcode == Instruction::Mul &&
-      (!Arg0 || Arg0->getOpcode() != Extend->getOpcode() ||
-       (SrcTys.size() == 2 && SrcTys[0] != SrcTys[1])))
-    return false;
-
   // Legalize the destination type and ensure it can be used in a widening
   // operation.
   auto DstTyL = getTypeLegalizationCost(DstTy);
-  unsigned DstElTySize = DstTyL.second.getScalarSizeInBits();
-  if (!DstTyL.second.isVector() || DstElTySize != DstTy->getScalarSizeInBits())
+  if (!DstTyL.second.isVector() || DstEltSize != DstTy->getScalarSizeInBits())
     return false;
 
   // Legalize the source type and ensure it can be used in a widening
   // operation.
-  Type *SrcTy =
-      SrcTys.size() > 0 ? SrcTys.back() : toVectorTy(Extend->getSrcTy());
-
+  assert(SrcTy && "Expected some SrcTy");
   auto SrcTyL = getTypeLegalizationCost(SrcTy);
   unsigned SrcElTySize = SrcTyL.second.getScalarSizeInBits();
   if (!SrcTyL.second.isVector() || SrcElTySize != SrcTy->getScalarSizeInBits())
@@ -2022,7 +2041,7 @@ bool AArch64TTIImpl::isWideningInstruction(Type *DstTy, unsigned Opcode,
 
   // Return true if the legalized types have the same number of vector elements
   // and the destination element type size is twice that of the source type.
-  return NumDstEls == NumSrcEls && 2 * SrcElTySize == DstElTySize;
+  return NumDstEls == NumSrcEls && 2 * SrcElTySize == DstEltSize;
 }
 
 InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
@@ -2037,31 +2056,17 @@ InstructionCost AArch64TTIImpl::getCastInstrCost(unsigned Opcode, Type *Dst,
   if (I && I->hasOneUser()) {
     auto *SingleUser = cast<Instruction>(*I->user_begin());
     SmallVector<const Value *, 4> Operands(SingleUser->operand_values());
-    SmallVector<Type *, 2> SrcTys;
-    for (const Value *Op : Operands) {
-      auto *Cast = dyn_cast<CastInst>(Op);
-      if (!Cast)
-        continue;
-      // Use provided Src type for I and other casts that have the same source
-      // type.
-      if (Op == I || cast<CastInst>(I)->getSrcTy() == Cast->getSrcTy())
-        SrcTys.push_back(Src);
-      else
-        SrcTys.push_back(Cast->getSrcTy());
-    }
-    if (isWideningInstruction(Dst, SingleUser->getOpcode(), SrcTys, Operands)) {
-      // If the cast is the second operand, it is free. We will generate either
-      // a "wide" or "long" version of the widening instruction.
-      if (I == SingleUser->getOperand(1))
-        return 0;
-      // If the cast is not the second operand, it will be free if it looks the
-      // same as the second operand. In this case, we will generate a "long"
-      // version of the widening instruction.
-      if (auto *Cast = dyn_cast<CastInst>(SingleUser->getOperand(1)))
-        if (I->getOpcode() == unsigned(Cast->getOpcode()) &&
-            (Src == Cast->getSrcTy() ||
-             cast<CastInst>(I)->getSrcTy() == Cast->getSrcTy()))
+    if (isWideningInstruction(Dst, SingleUser->getOpcode(), Operands, Src)) {
+      // For adds only count the second operand as free if both operands are
+      // extends but not the same operation. (i.e both operands are not free in
+      // add(sext, zext)).
+      if (SingleUser->getOpcode() == Instruction::Add) {
+        if (I == SingleUser->getOperand(1) ||
+            (isa<CastInst>(SingleUser->getOperand(1)) &&
+             cast<CastInst>(SingleUser->getOperand(1))->getOpcode() == Opcode))
           return 0;
+      } else // Others are free so long as isWideningInstruction returned true.
+        return 0;
     }
   }
 
@@ -2684,7 +2689,7 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     // LT.first = 2 the cost is 28. If both operands are extensions it will not
     // need to scalarize so the cost can be cheaper (smull or umull).
     // so the cost can be cheaper (smull or umull).
-    if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, {}, Args))
+    if (LT.second != MVT::v2i64 || isWideningInstruction(Ty, Opcode, Args))
       return LT.first;
     return LT.first * 14;
   case ISD::ADD:
@@ -2814,6 +2819,16 @@ InstructionCost AArch64TTIImpl::getCmpSelInstrCost(unsigned Opcode, Type *ValTy,
     if (LT.second == MVT::v4f16 && !ST->hasFullFP16())
       return LT.first * 4; // fcvtl + fcvtl + fcmp + xtn
   }
+
+  // Treat the icmp in icmp(and, 0) as free, as we can make use of ands.
+  // FIXME: This can apply to more conditions and add/sub if it can be shown to
+  // be profitable.
+  if (ValTy->isIntegerTy() && ISD == ISD::SETCC && I &&
+      ICmpInst::isEquality(VecPred) &&
+      TLI->isTypeLegal(TLI->getValueType(DL, ValTy)) &&
+      match(I->getOperand(1), m_Zero()) &&
+      match(I->getOperand(0), m_And(m_Value(), m_Value())))
+    return 0;
 
   // The base case handles scalable vectors fine for now, since it treats the
   // cost as 1 * legalization cost.
@@ -2971,8 +2986,12 @@ InstructionCost AArch64TTIImpl::getInterleavedMemoryOpCost(
   if (VecTy->isScalableTy() && (!ST->hasSVE() || Factor != 2))
     return InstructionCost::getInvalid();
 
-  if (!UseMaskForCond && !UseMaskForGaps &&
-      Factor <= TLI->getMaxSupportedInterleaveFactor()) {
+  // Vectorization for masked interleaved accesses is only enabled for scalable
+  // VF.
+  if (!VecTy->isScalableTy() && (UseMaskForCond || UseMaskForGaps))
+    return InstructionCost::getInvalid();
+
+  if (!UseMaskForGaps && Factor <= TLI->getMaxSupportedInterleaveFactor()) {
     unsigned MinElts = VecVTy->getElementCount().getKnownMinValue();
     auto *SubVecTy =
         VectorType::get(VecVTy->getElementType(),
@@ -3263,26 +3282,18 @@ bool AArch64TTIImpl::isLegalToVectorizeReduction(
 }
 
 InstructionCost
-AArch64TTIImpl::getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                       bool IsUnsigned, FastMathFlags FMF,
+AArch64TTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                       FastMathFlags FMF,
                                        TTI::TargetCostKind CostKind) {
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
 
   if (LT.second.getScalarType() == MVT::f16 && !ST->hasFullFP16())
-    return BaseT::getMinMaxReductionCost(Ty, CondTy, IsUnsigned, FMF, CostKind);
-
-  assert((isa<ScalableVectorType>(Ty) == isa<ScalableVectorType>(CondTy)) &&
-         "Both vector needs to be equally scalable");
+    return BaseT::getMinMaxReductionCost(IID, Ty, FMF, CostKind);
 
   InstructionCost LegalizationCost = 0;
   if (LT.first > 1) {
     Type *LegalVTy = EVT(LT.second).getTypeForEVT(Ty->getContext());
-    Intrinsic::ID MinMaxOpcode =
-        Ty->isFPOrFPVectorTy()
-            ? Intrinsic::maxnum
-            : (IsUnsigned ? Intrinsic::umin : Intrinsic::smin);
-    IntrinsicCostAttributes Attrs(MinMaxOpcode, LegalVTy, {LegalVTy, LegalVTy},
-                                  FMF);
+    IntrinsicCostAttributes Attrs(IID, LegalVTy, {LegalVTy, LegalVTy}, FMF);
     LegalizationCost = getIntrinsicInstrCost(Attrs, CostKind) * (LT.first - 1);
   }
 

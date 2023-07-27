@@ -2390,7 +2390,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
   // intrinsic/shift we'll use are not cheap. Note that we are okay with *just*
   // making the loop countable, even if nothing else changes.
   IntrinsicCostAttributes Attrs(
-      IntrID, Ty, {UndefValue::get(Ty), /*is_zero_undef=*/Builder.getTrue()});
+      IntrID, Ty, {PoisonValue::get(Ty), /*is_zero_poison=*/Builder.getTrue()});
   InstructionCost Cost = TTI->getIntrinsicInstrCost(Attrs, CostKind);
   if (Cost > TargetTransformInfo::TCC_Basic) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
@@ -2432,7 +2432,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilBitTest() {
       Builder.CreateOr(LowBitMask, BitMask, BitPos->getName() + ".mask");
   Value *XMasked = Builder.CreateAnd(X, Mask, X->getName() + ".masked");
   CallInst *XMaskedNumLeadingZeros = Builder.CreateIntrinsic(
-      IntrID, Ty, {XMasked, /*is_zero_undef=*/Builder.getTrue()},
+      IntrID, Ty, {XMasked, /*is_zero_poison=*/Builder.getTrue()},
       /*FMFSource=*/nullptr, XMasked->getName() + ".numleadingzeros");
   Value *XMaskedNumActiveBits = Builder.CreateSub(
       ConstantInt::get(Ty, Ty->getScalarSizeInBits()), XMaskedNumLeadingZeros,
@@ -2762,7 +2762,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   // intrinsic we'll use are not cheap. Note that we are okay with *just*
   // making the loop countable, even if nothing else changes.
   IntrinsicCostAttributes Attrs(
-      IntrID, Ty, {UndefValue::get(Ty), /*is_zero_undef=*/Builder.getFalse()});
+      IntrID, Ty, {PoisonValue::get(Ty), /*is_zero_poison=*/Builder.getFalse()});
   InstructionCost Cost = TTI->getIntrinsicInstrCost(Attrs, CostKind);
   if (Cost > TargetTransformInfo::TCC_Basic) {
     LLVM_DEBUG(dbgs() << DEBUG_TYPE
@@ -2780,7 +2780,7 @@ bool LoopIdiomRecognize::recognizeShiftUntilZero() {
   // Step 1: Compute the loop's final IV value / trip count.
 
   CallInst *ValNumLeadingZeros = Builder.CreateIntrinsic(
-      IntrID, Ty, {Val, /*is_zero_undef=*/Builder.getFalse()},
+      IntrID, Ty, {Val, /*is_zero_poison=*/Builder.getFalse()},
       /*FMFSource=*/nullptr, Val->getName() + ".numleadingzeros");
   Value *ValNumActiveBits = Builder.CreateSub(
       ConstantInt::get(Ty, Ty->getScalarSizeInBits()), ValNumLeadingZeros,

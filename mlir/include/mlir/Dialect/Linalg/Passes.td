@@ -28,10 +28,6 @@ def LinalgFoldUnitExtentDims : Pass<"linalg-fold-unit-extent-dims", ""> {
   let summary = "Remove unit-extent dimension in Linalg ops on tensors";
   let constructor = "mlir::createLinalgFoldUnitExtentDimsPass()";
   let options = [
-    Option<"foldOneTripLoopsOnly", "fold-one-trip-loops-only", "bool",
-            /*default=*/"false",
-           "Only folds the one-trip loops from Linalg ops on tensors "
-           "(for testing purposes only)">,
     Option<"useRankReducingSlices", "use-rank-reducing-slices", "bool",
            /*default=*/"false",
            "Generate rank-reducing slices instead of reassociative reshapes">
@@ -55,7 +51,7 @@ def LinalgNamedOpConversion: Pass<"linalg-named-op-conversion"> {
   let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect"];
 }
 
-def LinalgInlineScalarOperands : Pass<"linalg-inline-scalar-operands", "func::FuncOp"> {
+def LinalgInlineScalarOperands : Pass<"linalg-inline-scalar-operands"> {
   let summary = "Inline scalar operands into linalg generic ops";
   let constructor = "mlir::createLinalgInlineScalarOperandsPass()";
   let dependentDialects = [
@@ -63,7 +59,7 @@ def LinalgInlineScalarOperands : Pass<"linalg-inline-scalar-operands", "func::Fu
   ];
 }
 
-def LinalgLowerToAffineLoops : Pass<"convert-linalg-to-affine-loops", "func::FuncOp"> {
+def LinalgLowerToAffineLoops : Pass<"convert-linalg-to-affine-loops"> {
   let summary = "Lower the operations from the linalg dialect into affine "
                 "loops";
   let constructor = "mlir::createConvertLinalgToAffineLoopsPass()";
@@ -71,7 +67,7 @@ def LinalgLowerToAffineLoops : Pass<"convert-linalg-to-affine-loops", "func::Fun
     "affine::AffineDialect", "linalg::LinalgDialect", "memref::MemRefDialect"];
 }
 
-def LinalgLowerToLoops : Pass<"convert-linalg-to-loops", "func::FuncOp"> {
+def LinalgLowerToLoops : Pass<"convert-linalg-to-loops"> {
   let summary = "Lower the operations from the linalg dialect into loops";
   let constructor = "mlir::createConvertLinalgToLoopsPass()";
   let dependentDialects = [
@@ -82,7 +78,7 @@ def LinalgLowerToLoops : Pass<"convert-linalg-to-loops", "func::FuncOp"> {
 }
 
 def LinalgLowerToParallelLoops
-    : Pass<"convert-linalg-to-parallel-loops", "func::FuncOp"> {
+    : Pass<"convert-linalg-to-parallel-loops"> {
   let summary = "Lower the operations from the linalg dialect into parallel "
                 "loops";
   let constructor = "mlir::createConvertLinalgToParallelLoopsPass()";
@@ -94,7 +90,7 @@ def LinalgLowerToParallelLoops
   ];
 }
 
-def LinalgBufferize : Pass<"linalg-bufferize", "func::FuncOp"> {
+def LinalgBufferize : Pass<"linalg-bufferize"> {
   let summary = "Bufferize the linalg dialect";
   let constructor = "mlir::createLinalgBufferizePass()";
   let dependentDialects = [
@@ -105,7 +101,7 @@ def LinalgBufferize : Pass<"linalg-bufferize", "func::FuncOp"> {
   ];
 }
 
-def LinalgGeneralization : Pass<"linalg-generalize-named-ops", "func::FuncOp"> {
+def LinalgGeneralization : Pass<"linalg-generalize-named-ops"> {
   let summary = "Convert named ops into generic ops";
   let constructor = "mlir::createLinalgGeneralizationPass()";
   let dependentDialects = ["linalg::LinalgDialect"];

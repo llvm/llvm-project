@@ -55,7 +55,6 @@
 #include "llvm/Analysis/ValueLattice.h"
 #include "llvm/Analysis/ValueLatticeUtils.h"
 #include "llvm/Analysis/ValueTracking.h"
-#include "llvm/IR/ConstantFold.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/Transforms/Scalar/SCCP.h"
 #include "llvm/Transforms/Utils/Cloning.h"
@@ -146,6 +145,8 @@ static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
 }
 
 static Constant *findConstantFor(Value *V, ConstMap &KnownConstants) {
+  if (auto *C = dyn_cast<Constant>(V))
+    return C;
   if (auto It = KnownConstants.find(V); It != KnownConstants.end())
     return It->second;
   return nullptr;
@@ -190,7 +191,10 @@ Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
   if (I.getCondition() != LastVisited->first)
     return 0;
 
-  auto *C = cast<ConstantInt>(LastVisited->second);
+  auto *C = dyn_cast<ConstantInt>(LastVisited->second);
+  if (!C)
+    return 0;
+
   BasicBlock *Succ = I.findCaseValue(C)->getCaseSuccessor();
   // Initialize the worklist with the dead basic blocks. These are the
   // destination labels which are different from the one corresponding
@@ -238,9 +242,7 @@ Constant *InstCostVisitor::visitCallBase(CallBase &I) {
 
   for (unsigned Idx = 0, E = I.getNumOperands() - 1; Idx != E; ++Idx) {
     Value *V = I.getOperand(Idx);
-    auto *C = dyn_cast<Constant>(V);
-    if (!C)
-      C = findConstantFor(V, KnownConstants);
+    Constant *C = findConstantFor(V, KnownConstants);
     if (!C)
       return nullptr;
     Operands.push_back(C);
@@ -257,23 +259,19 @@ Constant *InstCostVisitor::visitLoadInst(LoadInst &I) {
 }
 
 Constant *InstCostVisitor::visitGetElementPtrInst(GetElementPtrInst &I) {
-  SmallVector<Value *, 8> Operands;
+  SmallVector<Constant *, 8> Operands;
   Operands.reserve(I.getNumOperands());
 
   for (unsigned Idx = 0, E = I.getNumOperands(); Idx != E; ++Idx) {
     Value *V = I.getOperand(Idx);
-    auto *C = dyn_cast<Constant>(V);
-    if (!C)
-      C = findConstantFor(V, KnownConstants);
+    Constant *C = findConstantFor(V, KnownConstants);
     if (!C)
       return nullptr;
     Operands.push_back(C);
   }
 
-  auto *Ptr = cast<Constant>(Operands[0]);
-  auto Ops = ArrayRef(Operands.begin() + 1, Operands.end());
-  return ConstantFoldGetElementPtr(I.getSourceElementType(), Ptr,
-                                   I.isInBounds(), std::nullopt, Ops);
+  auto Ops = ArrayRef(Operands.begin(), Operands.end());
+  return ConstantFoldInstOperands(&I, Ops, DL);
 }
 
 Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
@@ -282,9 +280,7 @@ Constant *InstCostVisitor::visitSelectInst(SelectInst &I) {
 
   Value *V = LastVisited->second->isZeroValue() ? I.getFalseValue()
                                                 : I.getTrueValue();
-  auto *C = dyn_cast<Constant>(V);
-  if (!C)
-    C = findConstantFor(V, KnownConstants);
+  Constant *C = findConstantFor(V, KnownConstants);
   return C;
 }
 
@@ -296,10 +292,7 @@ Constant *InstCostVisitor::visitCastInst(CastInst &I) {
 Constant *InstCostVisitor::visitCmpInst(CmpInst &I) {
   bool Swap = I.getOperand(1) == LastVisited->first;
   Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
-  auto *Other = dyn_cast<Constant>(V);
-  if (!Other)
-    Other = findConstantFor(V, KnownConstants);
-
+  Constant *Other = findConstantFor(V, KnownConstants);
   if (!Other)
     return nullptr;
 
@@ -316,10 +309,7 @@ Constant *InstCostVisitor::visitUnaryOperator(UnaryOperator &I) {
 Constant *InstCostVisitor::visitBinaryOperator(BinaryOperator &I) {
   bool Swap = I.getOperand(1) == LastVisited->first;
   Value *V = Swap ? I.getOperand(0) : I.getOperand(1);
-  auto *Other = dyn_cast<Constant>(V);
-  if (!Other)
-    Other = findConstantFor(V, KnownConstants);
-
+  Constant *Other = findConstantFor(V, KnownConstants);
   if (!Other)
     return nullptr;
 
@@ -817,6 +807,9 @@ Cost FunctionSpecializer::getSpecializationBonus(Argument *A, Constant *C,
   // The below heuristic is only concerned with exposing inlining
   // opportunities via indirect call promotion. If the argument is not a
   // (potentially casted) function pointer, give up.
+  //
+  // TODO: Perhaps we should consider checking such inlining opportunities
+  // while traversing the users of the specialization arguments ?
   Function *CalledFunction = dyn_cast<Function>(C->stripPointerCasts());
   if (!CalledFunction)
     return TotalCost;

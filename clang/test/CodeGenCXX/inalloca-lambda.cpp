@@ -16,11 +16,11 @@ void test() {
   ld(A{});
 }
 
-// CHECK: define internal x86_thiscallcc noundef i32 
+// CHECK: define internal x86_thiscallcc noundef i32
 // CHECK-SAME: @"??R<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
 // CHECK-SAME: (ptr noundef %this, ptr inalloca(<{ %struct.A }>) %[[ARG:.*]])
 // CHECK: %[[V:.*]] = getelementptr inbounds <{ %struct.A }>, ptr %[[ARG]], i32 0, i32 0
-// CHECK: %call = call x86_thiscallcc noundef i32 
+// CHECK: %call = call x86_thiscallcc noundef i32
 // CHECK-SAME: @"?__impl@<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
 // CHECK-SAME: (ptr noundef %this, ptr noundef %[[V]])
 
@@ -32,7 +32,7 @@ void test() {
 // CHECK: %call = call x86_thiscallcc noundef i32
 // CHECK-SAME: @"?__impl@<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
 // CHECK-SAME: (ptr noundef %unused.capture, ptr noundef %[[VAR]])
-// CHECK: ret i32 %call 
+// CHECK: ret i32 %call
 
 // CHECK: define internal x86_thiscallcc noundef i32
 // CHECK-SAME: @"?__impl@<lambda_0>@?0??test@@YAXXZ@QBE?A?<auto>@@UA@@@Z"
@@ -48,3 +48,16 @@ void test() {
 // CHECK: %{{.*}} = load i32, ptr @"?calls@?1???R<lambda_0>
 // CHECK: %add = add nsw i32 %{{.*}}, %{{.*}}
 // CHECK: ret i32 %add
+
+// Make sure we don't try to copy an uncopyable type.
+struct B {
+  B();
+  B(B &);
+  void operator=(B);
+  long long x;
+} b;
+
+void f() {
+  [](B) {}(b);
+}
+

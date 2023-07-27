@@ -137,6 +137,26 @@ declare_mlir_dialect_python_bindings(
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/BufferizationTransformOps.td
+  SOURCES
+    dialects/_bufferization_transform_ops_ext.py
+    dialects/transform/bufferization.py
+  DIALECT_NAME transform
+  EXTENSION_NAME bufferization_transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/GPUTransformOps.td
+  SOURCES
+    dialects/_gpu_transform_ops_ext.py
+    dialects/transform/gpu.py
+  DIALECT_NAME transform
+  EXTENSION_NAME gpu_transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/SCFLoopTransformOps.td
   SOURCES
     dialects/_loop_transform_ops_ext.py
@@ -507,6 +527,19 @@ add_mlir_python_common_capi_library(MLIRPythonCAPI
     MLIRPythonExtension.RegisterEverything
     ${_ADDL_TEST_SOURCES}
 )
+
+################################################################################
+# Custom targets.
+################################################################################
+
+_flatten_mlir_python_targets(mlir_python_sources_deps MLIRPythonSources)
+add_custom_target("mlir-python-sources" DEPENDS ${mlir_python_sources_deps})
+if(NOT LLVM_ENABLE_IDE)
+  add_llvm_install_targets(install-mlir-python-sources
+    DEPENDS mlir-python-sources
+    COMPONENT mlir-python-sources
+  )
+endif()
 
 ################################################################################
 # The fully assembled package of modules.

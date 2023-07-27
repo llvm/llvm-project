@@ -38,11 +38,7 @@ fixed_int32m1_t fixed_callee(fixed_int32m1_t x) {
 
 // CHECK-LABEL: @sizeless_caller(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[COERCE1:%.*]] = alloca <8 x i32>, align 8
-// CHECK-NEXT:    store <vscale x 2 x i32> [[X:%.*]], ptr [[COERCE1]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = load <8 x i32>, ptr [[COERCE1]], align 8, !tbaa [[TBAA4:![0-9]+]]
-// CHECK-NEXT:    [[CASTSCALABLESVE2:%.*]] = tail call <vscale x 2 x i32> @llvm.vector.insert.nxv2i32.v8i32(<vscale x 2 x i32> undef, <8 x i32> [[TMP0]], i64 0)
-// CHECK-NEXT:    ret <vscale x 2 x i32> [[CASTSCALABLESVE2]]
+// CHECK-NEXT:    ret <vscale x 2 x i32> [[X:%.*]]
 //
 vint32m1_t sizeless_caller(vint32m1_t x) {
   return fixed_callee(x);
@@ -63,7 +59,7 @@ fixed_int32m1_t call_int32_ff(fixed_int32m1_t op1, fixed_int32m1_t op2) {
 
 // CHECK-LABEL: @call_float64_ff(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double> poison, <vscale x 1 x double> [[OP1_COERCE:%.*]], <vscale x 1 x double> [[OP2_COERCE:%.*]], i64 4)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double> poison, <vscale x 1 x double> [[OP1_COERCE:%.*]], <vscale x 1 x double> [[OP2_COERCE:%.*]], i64 7, i64 4)
 // CHECK-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 fixed_float64m1_t call_float64_ff(fixed_float64m1_t op1, fixed_float64m1_t op2) {
@@ -85,7 +81,7 @@ fixed_int32m1_t call_int32_fs(fixed_int32m1_t op1, vint32m1_t op2) {
 
 // CHECK-LABEL: @call_float64_fs(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double> poison, <vscale x 1 x double> [[OP1_COERCE:%.*]], <vscale x 1 x double> [[OP2:%.*]], i64 4)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double> poison, <vscale x 1 x double> [[OP1_COERCE:%.*]], <vscale x 1 x double> [[OP2:%.*]], i64 7, i64 4)
 // CHECK-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 fixed_float64m1_t call_float64_fs(fixed_float64m1_t op1, vfloat64m1_t op2) {
@@ -107,7 +103,7 @@ fixed_int32m1_t call_int32_ss(vint32m1_t op1, vint32m1_t op2) {
 
 // CHECK-LABEL: @call_float64_ss(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double> poison, <vscale x 1 x double> [[OP1:%.*]], <vscale x 1 x double> [[OP2:%.*]], i64 4)
+// CHECK-NEXT:    [[TMP0:%.*]] = tail call <vscale x 1 x double> @llvm.riscv.vfadd.nxv1f64.nxv1f64.i64(<vscale x 1 x double> poison, <vscale x 1 x double> [[OP1:%.*]], <vscale x 1 x double> [[OP2:%.*]], i64 7, i64 4)
 // CHECK-NEXT:    ret <vscale x 1 x double> [[TMP0]]
 //
 fixed_float64m1_t call_float64_ss(vfloat64m1_t op1, vfloat64m1_t op2) {

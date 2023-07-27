@@ -276,6 +276,12 @@ public:
     return IsPPC64 ? PPC::X2 : PPC::R2;
   }
 
+  MCRegister getThreadPointerRegister() const {
+    assert((is64BitELFABI() || isAIXABI()) &&
+           "Should only be called for targets with a thread pointer register.");
+    return IsPPC64 ? PPC::X13 : PPC::R13;
+  }
+
   MCRegister getStackPointerRegister() const {
     return IsPPC64 ? PPC::X1 : PPC::R1;
   }

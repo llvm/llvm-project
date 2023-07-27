@@ -18,27 +18,27 @@
 # RUN:    | llvm-objdump -d - | FileCheck %s --check-prefix=CHECK-UNKNOWN
 
 # CHECK-INST: vfwmaccbf16.vv v8, v20, v4, v0.t
-# CHECK-ENCODING: [0x57,0x14,0x4a,0x8c]
+# CHECK-ENCODING: [0x57,0x14,0x4a,0xec]
 # CHECK-ERROR: instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add){{$}}
-# CHECK-UNKNOWN: 57 14 4a 8c <unknown>
+# CHECK-UNKNOWN: 57 14 4a ec <unknown>
 vfwmaccbf16.vv v8, v20, v4, v0.t
 
 # CHECK-INST: vfwmaccbf16.vv v8, v20, v4
-# CHECK-ENCODING: [0x57,0x14,0x4a,0x8e]
+# CHECK-ENCODING: [0x57,0x14,0x4a,0xee]
 # CHECK-ERROR: instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add){{$}}
-# CHECK-UNKNOWN: 57 14 4a 8e <unknown>
+# CHECK-UNKNOWN: 57 14 4a ee <unknown>
 vfwmaccbf16.vv v8, v20, v4
 
 # CHECK-INST: vfwmaccbf16.vf v8, fa0, v4, v0.t
-# CHECK-ENCODING: [0x57,0x54,0x45,0x8c]
+# CHECK-ENCODING: [0x57,0x54,0x45,0xec]
 # CHECK-ERROR: instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add){{$}}
-# CHECK-UNKNOWN: 57 54 45 8c <unknown>
+# CHECK-UNKNOWN: 57 54 45 ec <unknown>
 vfwmaccbf16.vf v8, fa0, v4, v0.t
 
 # CHECK-INST: vfwmaccbf16.vf v8, fa0, v4
-# CHECK-ENCODING: [0x57,0x54,0x45,0x8e]
+# CHECK-ENCODING: [0x57,0x54,0x45,0xee]
 # CHECK-ERROR: instruction requires the following: 'Zvfbfwma' (Vector BF16 widening mul-add){{$}}
-# CHECK-UNKNOWN: 57 54 45 8e <unknown>
+# CHECK-UNKNOWN: 57 54 45 ee <unknown>
 vfwmaccbf16.vf v8, fa0, v4
 
 # Check scalar half FP load/store/move included in this extension.

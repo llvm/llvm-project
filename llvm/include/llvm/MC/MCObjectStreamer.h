@@ -168,7 +168,7 @@ public:
                                 unsigned PointerSize) override;
   void emitDwarfLineEndEntry(MCSection *Section, MCSymbol *LastLabel) override;
   void emitDwarfAdvanceFrameAddr(const MCSymbol *LastLabel,
-                                 const MCSymbol *Label);
+                                 const MCSymbol *Label, SMLoc Loc);
   void emitCVLocDirective(unsigned FunctionId, unsigned FileNo, unsigned Line,
                           unsigned Column, bool PrologueEnd, bool IsStmt,
                           StringRef FileName, SMLoc Loc) override;

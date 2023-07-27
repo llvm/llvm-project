@@ -244,6 +244,47 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
   return WhyNotDefinableLast(at, scope, flags, original);
 }
 
+class DuplicatedSubscriptFinder
+    : public evaluate::AnyTraverse<DuplicatedSubscriptFinder, bool> {
+  using Base = evaluate::AnyTraverse<DuplicatedSubscriptFinder, bool>;
+
+public:
+  explicit DuplicatedSubscriptFinder(evaluate::FoldingContext &foldingContext)
+      : Base{*this}, foldingContext_{foldingContext} {}
+  using Base::operator();
+  bool operator()(const evaluate::ActualArgument &) {
+    return false; // don't descend into argument expressions
+  }
+  bool operator()(const evaluate::ArrayRef &aRef) {
+    bool anyVector{false};
+    for (const auto &ss : aRef.subscript()) {
+      if (ss.Rank() > 0) {
+        anyVector = true;
+        if (const auto *vecExpr{
+                std::get_if<evaluate::IndirectSubscriptIntegerExpr>(&ss.u)}) {
+          auto folded{evaluate::Fold(foldingContext_,
+              evaluate::Expr<evaluate::SubscriptInteger>{vecExpr->value()})};
+          if (const auto *con{
+                  evaluate::UnwrapConstantValue<evaluate::SubscriptInteger>(
+                      folded)}) {
+            std::set<std::int64_t> values;
+            for (const auto &j : con->values()) {
+              if (auto pair{values.emplace(j.ToInt64())}; !pair.second) {
+                return true; // duplicate
+              }
+            }
+          }
+          return false;
+        }
+      }
+    }
+    return anyVector ? false : (*this)(aRef.base());
+  }
+
+private:
+  evaluate::FoldingContext &foldingContext_;
+};
+
 std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
     const Scope &scope, DefinabilityFlags flags,
     const evaluate::Expr<evaluate::SomeType> &expr) {
@@ -287,6 +328,11 @@ std::optional<parser::Message> WhyNotDefinable(parser::CharBlock at,
               spec = parent ? parent->AsDerived() : nullptr;
             }
           }
+        }
+        if (!flags.test(DefinabilityFlag::DuplicatesAreOk) &&
+            DuplicatedSubscriptFinder{scope.context().foldingContext()}(expr)) {
+          return parser::Message{at,
+              "Variable has a vector subscript with a duplicated element"_because_en_US};
         }
       } else {
         return parser::Message{at,

@@ -1073,8 +1073,8 @@ void SampleProfileLoader::findExternalInlineCandidate(
     DenseSet<GlobalValue::GUID> &InlinedGUIDs,
     const StringMap<Function *> &SymbolMap, uint64_t Threshold) {
 
-  // If ExternalInlineAdvisor wants to inline an external function
-  // make sure it's imported
+  // If ExternalInlineAdvisor(ReplayInlineAdvisor) wants to inline an external
+  // function make sure it's imported
   if (CB && getExternalInlineAdvisorShouldInline(*CB)) {
     // Samples may not exist for replayed function, if so
     // just add the direct GUID and move on
@@ -1087,7 +1087,13 @@ void SampleProfileLoader::findExternalInlineCandidate(
     Threshold = 0;
   }
 
-  assert(Samples && "expect non-null caller profile");
+  // In some rare cases, call instruction could be changed after being pushed
+  // into inline candidate queue, this is because earlier inlining may expose
+  // constant propagation which can change indirect call to direct call. When
+  // this happens, we may fail to find matching function samples for the
+  // candidate later, even if a match was found when the candidate was enqueued.
+  if (!Samples)
+    return;
 
   // For AutoFDO profile, retrieve candidate profiles by walking over
   // the nested inlinee profiles.
@@ -2046,6 +2052,16 @@ bool SampleProfileLoader::doInitialization(Module &M,
     if (Reader->profileIsPreInlined()) {
       if (!UsePreInlinerDecision.getNumOccurrences())
         UsePreInlinerDecision = true;
+    }
+
+    // Enable stale profile matching by default for probe-based profile.
+    // Currently the matching relies on if the checksum mismatch is detected,
+    // which is currently only available for pseudo-probe mode. Removing the
+    // checksum check could cause regressions for some cases, so further tuning
+    // might be needed if we want to enable it for all cases.
+    if (Reader->profileIsProbeBased() &&
+        !SalvageStaleProfile.getNumOccurrences()) {
+      SalvageStaleProfile = true;
     }
 
     if (!Reader->profileIsCS()) {

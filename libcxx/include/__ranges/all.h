@@ -11,6 +11,8 @@
 #define _LIBCPP___RANGES_ALL_H
 
 #include <__config>
+#include <__functional/compose.h>         // TODO(modules): Those should not be required
+#include <__functional/perfect_forward.h> //
 #include <__iterator/concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__ranges/access.h>

@@ -302,7 +302,7 @@ fooVar:
                                         # DW_AT_call_all_calls
 	.long	74                              # DW_AT_abstract_origin
 	.byte	5                               # Abbrev [5] 0x42:0x7 DW_TAG_formal_parameter
-	.long	79                              # DW_AT_abstract_origin
+	.long	74                              # DW_AT_abstract_origin
 	.byte	0                               # End Of Children Mark
 	.byte	6                               # Abbrev [6] 0x4a:0xe DW_TAG_subprogram
 	.byte	5                               # DW_AT_linkage_name

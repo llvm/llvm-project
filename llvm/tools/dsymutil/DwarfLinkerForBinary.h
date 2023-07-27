@@ -92,8 +92,6 @@ private:
     std::vector<ValidReloc> ValidDebugAddrRelocs;
     /// }
 
-    RangesTy AddressRanges;
-
     StringRef SrcFileName;
 
     /// Returns list of valid relocations from \p Relocs,
@@ -120,31 +118,6 @@ private:
                    const DebugMapObject &DMO)
         : Linker(Linker), SrcFileName(DMO.getObjectFilename()) {
       findValidRelocsInDebugSections(Obj, DMO);
-
-      // Iterate over the debug map entries and put all the ones that are
-      // functions (because they have a size) into the Ranges map. This map is
-      // very similar to the FunctionRanges that are stored in each unit, with 2
-      // notable differences:
-      //
-      //  1. Obviously this one is global, while the other ones are per-unit.
-      //
-      //  2. This one contains not only the functions described in the DIE
-      //     tree, but also the ones that are only in the debug map.
-      //
-      // The latter information is required to reproduce dsymutil's logic while
-      // linking line tables. The cases where this information matters look like
-      // bugs that need to be investigated, but for now we need to reproduce
-      // dsymutil's behavior.
-      // FIXME: Once we understood exactly if that information is needed,
-      // maybe totally remove this (or try to use it to do a real
-      // -gline-tables-only on Darwin.
-      for (const auto &Entry : DMO.symbols()) {
-        const auto &Mapping = Entry.getValue();
-        if (Mapping.Size && Mapping.ObjectAddress)
-          AddressRanges.insert(
-              {*Mapping.ObjectAddress, *Mapping.ObjectAddress + Mapping.Size},
-              int64_t(Mapping.BinaryAddress) - *Mapping.ObjectAddress);
-      }
     }
     ~AddressManager() override { clear(); }
 
@@ -188,10 +161,7 @@ private:
     bool applyValidRelocs(MutableArrayRef<char> Data, uint64_t BaseOffset,
                           bool IsLittleEndian) override;
 
-    RangesTy &getValidAddressRanges() override { return AddressRanges; }
-
     void clear() override {
-      AddressRanges.clear();
       ValidDebugInfoRelocs.clear();
       ValidDebugAddrRelocs.clear();
     }

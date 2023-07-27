@@ -1932,14 +1932,16 @@ static bool foldMaskAndShiftToExtract(SelectionDAG &DAG, SDValue N,
       Mask != (0xffu << ScaleLog))
     return true;
 
+  MVT XVT = X.getSimpleValueType();
   MVT VT = N.getSimpleValueType();
   SDLoc DL(N);
   SDValue Eight = DAG.getConstant(8, DL, MVT::i8);
-  SDValue NewMask = DAG.getConstant(0xff, DL, VT);
-  SDValue Srl = DAG.getNode(ISD::SRL, DL, VT, X, Eight);
-  SDValue And = DAG.getNode(ISD::AND, DL, VT, Srl, NewMask);
+  SDValue NewMask = DAG.getConstant(0xff, DL, XVT);
+  SDValue Srl = DAG.getNode(ISD::SRL, DL, XVT, X, Eight);
+  SDValue And = DAG.getNode(ISD::AND, DL, XVT, Srl, NewMask);
   SDValue ShlCount = DAG.getConstant(ScaleLog, DL, MVT::i8);
-  SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, And, ShlCount);
+  SDValue Ext = DAG.getZExtOrTrunc(And, DL, VT);
+  SDValue Shl = DAG.getNode(ISD::SHL, DL, VT, Ext, ShlCount);
 
   // Insert the new nodes into the topological ordering. We must do this in
   // a valid topological ordering as nothing is going to go back and re-sort
@@ -1951,10 +1953,12 @@ static bool foldMaskAndShiftToExtract(SelectionDAG &DAG, SDValue N,
   insertDAGNode(DAG, N, NewMask);
   insertDAGNode(DAG, N, And);
   insertDAGNode(DAG, N, ShlCount);
+  if (Ext != And)
+    insertDAGNode(DAG, N, Ext);
   insertDAGNode(DAG, N, Shl);
   DAG.ReplaceAllUsesWith(N, Shl);
   DAG.RemoveDeadNode(N.getNode());
-  AM.IndexReg = And;
+  AM.IndexReg = Ext;
   AM.Scale = (1 << ScaleLog);
   return false;
 }
@@ -2508,53 +2512,60 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
         Src = Src.getOperand(0);
       }
 
-    if (Src.getOpcode() != ISD::SHL || !Src.hasOneUse())
-      break;
+    if (Src.getOpcode() == ISD::SHL && Src.hasOneUse()) {
+      // Give up if the shift is not a valid scale factor [1,2,3].
+      SDValue ShlSrc = Src.getOperand(0);
+      SDValue ShlAmt = Src.getOperand(1);
+      auto *ShAmtC = dyn_cast<ConstantSDNode>(ShlAmt);
+      if (!ShAmtC)
+        break;
+      unsigned ShAmtV = ShAmtC->getZExtValue();
+      if (ShAmtV > 3)
+        break;
 
-    // Give up if the shift is not a valid scale factor [1,2,3].
-    SDValue ShlSrc = Src.getOperand(0);
-    SDValue ShlAmt = Src.getOperand(1);
-    auto *ShAmtC = dyn_cast<ConstantSDNode>(ShlAmt);
-    if (!ShAmtC)
-      break;
-    unsigned ShAmtV = ShAmtC->getZExtValue();
-    if (ShAmtV > 3)
-      break;
+      // The narrow shift must only shift out zero bits (it must be 'nuw').
+      // That makes it safe to widen to the destination type.
+      APInt HighZeros =
+          APInt::getHighBitsSet(ShlSrc.getValueSizeInBits(), ShAmtV);
+      if (!CurDAG->MaskedValueIsZero(ShlSrc, HighZeros & Mask))
+        break;
 
-    // The narrow shift must only shift out zero bits (it must be 'nuw').
-    // That makes it safe to widen to the destination type.
-    APInt HighZeros =
-        APInt::getHighBitsSet(ShlSrc.getValueSizeInBits(), ShAmtV);
-    if (!CurDAG->MaskedValueIsZero(ShlSrc, HighZeros & Mask))
-      break;
+      // zext (shl nuw i8 %x, C1) to i32
+      // --> shl (zext i8 %x to i32), (zext C1)
+      // zext (and (shl nuw i8 %x, C1), C2) to i32
+      // --> shl (zext i8 (and %x, C2 >> C1) to i32), (zext C1)
+      MVT SrcVT = ShlSrc.getSimpleValueType();
+      MVT VT = N.getSimpleValueType();
+      SDLoc DL(N);
 
-    // zext (shl nuw i8 %x, C1) to i32
-    // --> shl (zext i8 %x to i32), (zext C1)
-    // zext (and (shl nuw i8 %x, C1), C2) to i32
-    // --> shl (zext i8 (and %x, C2 >> C1) to i32), (zext C1)
-    MVT SrcVT = ShlSrc.getSimpleValueType();
-    MVT VT = N.getSimpleValueType();
-    SDLoc DL(N);
+      SDValue Res = ShlSrc;
+      if (!Mask.isAllOnes()) {
+        Res = CurDAG->getConstant(Mask.lshr(ShAmtV), DL, SrcVT);
+        insertDAGNode(*CurDAG, N, Res);
+        Res = CurDAG->getNode(ISD::AND, DL, SrcVT, ShlSrc, Res);
+        insertDAGNode(*CurDAG, N, Res);
+      }
+      SDValue Zext = CurDAG->getNode(ISD::ZERO_EXTEND, DL, VT, Res);
+      insertDAGNode(*CurDAG, N, Zext);
+      SDValue NewShl = CurDAG->getNode(ISD::SHL, DL, VT, Zext, ShlAmt);
+      insertDAGNode(*CurDAG, N, NewShl);
 
-    SDValue Res = ShlSrc;
-    if (!Mask.isAllOnes()) {
-      Res = CurDAG->getConstant(Mask.lshr(ShAmtV), DL, SrcVT);
-      insertDAGNode(*CurDAG, N, Res);
-      Res = CurDAG->getNode(ISD::AND, DL, SrcVT, ShlSrc, Res);
-      insertDAGNode(*CurDAG, N, Res);
+      // Convert the shift to scale factor.
+      AM.Scale = 1 << ShAmtV;
+      AM.IndexReg = Zext;
+
+      CurDAG->ReplaceAllUsesWith(N, NewShl);
+      CurDAG->RemoveDeadNode(N.getNode());
+      return false;
     }
-    SDValue Zext = CurDAG->getNode(ISD::ZERO_EXTEND, DL, VT, Res);
-    insertDAGNode(*CurDAG, N, Zext);
-    SDValue NewShl = CurDAG->getNode(ISD::SHL, DL, VT, Zext, ShlAmt);
-    insertDAGNode(*CurDAG, N, NewShl);
 
-    // Convert the shift to scale factor.
-    AM.Scale = 1 << ShAmtV;
-    AM.IndexReg = Zext;
+    // Try to fold the mask and shift into an extract and scale.
+    if (Src.getOpcode() == ISD::SRL && !Mask.isAllOnes() &&
+        !foldMaskAndShiftToExtract(*CurDAG, N, Mask.getZExtValue(), Src,
+                                   Src.getOperand(0), AM))
+      return false;
 
-    CurDAG->ReplaceAllUsesWith(N, NewShl);
-    CurDAG->RemoveDeadNode(N.getNode());
-    return false;
+    break;
   }
   }
 
@@ -3493,9 +3504,11 @@ bool X86DAGToDAGISel::foldLoadStoreIntoMemOperand(SDNode *Node) {
 //   b) x & ~(-1 << nbits)
 //   c) x &  (-1 >> (32 - y))
 //   d) x << (32 - y) >> (32 - y)
+//   e) (1 << nbits) - 1
 bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
   assert(
-      (Node->getOpcode() == ISD::AND || Node->getOpcode() == ISD::SRL) &&
+      (Node->getOpcode() == ISD::ADD || Node->getOpcode() == ISD::AND ||
+       Node->getOpcode() == ISD::SRL) &&
       "Should be either an and-mask, or right-shift after clearing high bits.");
 
   // BEXTR is BMI instruction, BZHI is BMI2 instruction. We need at least one.
@@ -3681,6 +3694,8 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
       if (!matchLowBitMask(Mask))
         return false;
     }
+  } else if (matchLowBitMask(SDValue(Node, 0))) {
+    X = CurDAG->getAllOnesConstant(SDLoc(Node), NVT);
   } else if (!matchPatternD(Node))
     return false;
 
@@ -5056,6 +5071,9 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
 
     [[fallthrough]];
   case ISD::ADD:
+    if (Opcode == ISD::ADD && matchBitExtract(Node))
+      return;
+    [[fallthrough]];
   case ISD::SUB: {
     // Try to avoid folding immediates with multiple uses for optsize.
     // This code tries to select to register form directly to avoid going

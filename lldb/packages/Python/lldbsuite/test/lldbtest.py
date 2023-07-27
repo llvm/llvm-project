@@ -1271,6 +1271,9 @@ class Base(unittest2.TestCase):
     def isAArch64SVE(self):
         return self.isAArch64() and "sve" in self.getCPUInfo()
 
+    def isAArch64SME(self):
+        return self.isAArch64() and "sme" in self.getCPUInfo()
+
     def isAArch64MTE(self):
         return self.isAArch64() and "mte" in self.getCPUInfo()
 
@@ -2059,12 +2062,14 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
         running = cmd.startswith("run") or cmd.startswith("process launch")
 
         for i in range(self.maxLaunchCount if running else 1):
-            self.ci.HandleCommand(cmd, self.res, inHistory)
-
             with recording(self, trace) as sbuf:
                 print("runCmd:", cmd, file=sbuf)
                 if not check:
                     print("check of return status not required", file=sbuf)
+
+            self.ci.HandleCommand(cmd, self.res, inHistory)
+
+            with recording(self, trace) as sbuf:
                 if self.res.Succeeded():
                     print("output:", self.res.GetOutput(), file=sbuf)
                 else:
@@ -2604,6 +2609,17 @@ FileCheck output:
         if not obj.Success():
             error = obj.GetCString()
             self.fail(self._formatMessage(msg, "'{}' is not success".format(error)))
+    """Assert that an lldb.SBError is in the "failure" state."""
+
+    def assertFailure(self, obj, error_str = None, msg=None):
+        if obj.Success():
+            self.fail(self._formatMessage(msg, "Error not in a fail state"))
+
+        if error_str == None:
+            return
+                      
+        error = obj.GetCString()
+        self.assertEqual(error, error_str, msg)
 
     """Assert that a command return object is successful"""
 

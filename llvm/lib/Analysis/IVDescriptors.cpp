@@ -1236,10 +1236,8 @@ RecurrenceDescriptor::getReductionOpChain(PHINode *Phi, Loop *L) const {
 
 InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
                                          const SCEV *Step, BinaryOperator *BOp,
-                                         Type *ElementType,
                                          SmallVectorImpl<Instruction *> *Casts)
-    : StartValue(Start), IK(K), Step(Step), InductionBinOp(BOp),
-      ElementType(ElementType) {
+    : StartValue(Start), IK(K), Step(Step), InductionBinOp(BOp) {
   assert(IK != IK_NoInduction && "Not an induction");
 
   // Start value type should match the induction kind and the value
@@ -1264,11 +1262,6 @@ InductionDescriptor::InductionDescriptor(Value *Start, InductionKind K,
            (InductionBinOp->getOpcode() == Instruction::FAdd ||
             InductionBinOp->getOpcode() == Instruction::FSub))) &&
          "Binary opcode should be specified for FP induction");
-
-  if (IK == IK_PtrInduction)
-    assert(ElementType && "Pointer induction must have element type");
-  else
-    assert(!ElementType && "Non-pointer induction cannot have element type");
 
   if (Casts) {
     for (auto &Inst : *Casts) {
@@ -1535,49 +1528,13 @@ bool InductionDescriptor::isInductionPHI(
     BinaryOperator *BOp =
         dyn_cast<BinaryOperator>(Phi->getIncomingValueForBlock(Latch));
     D = InductionDescriptor(StartValue, IK_IntInduction, Step, BOp,
-                            /* ElementType */ nullptr, CastsToIgnore);
+                            CastsToIgnore);
     return true;
   }
 
   assert(PhiTy->isPointerTy() && "The PHI must be a pointer");
-  PointerType *PtrTy = cast<PointerType>(PhiTy);
 
-  // Always use i8 element type for opaque pointer inductions.
   // This allows induction variables w/non-constant steps.
-  if (PtrTy->isOpaque()) {
-    D = InductionDescriptor(StartValue, IK_PtrInduction, Step,
-                            /* BinOp */ nullptr,
-                            Type::getInt8Ty(PtrTy->getContext()));
-    return true;
-  }
-
-  // Pointer induction should be a constant.
-  // TODO: This could be generalized, but should probably just
-  // be dropped instead once the migration to opaque ptrs is
-  // complete.
-  if (!ConstStep)
-    return false;
-
-  Type *ElementType = PtrTy->getNonOpaquePointerElementType();
-  if (!ElementType->isSized())
-    return false;
-
-  ConstantInt *CV = ConstStep->getValue();
-  const DataLayout &DL = Phi->getModule()->getDataLayout();
-  TypeSize TySize = DL.getTypeAllocSize(ElementType);
-  // TODO: We could potentially support this for scalable vectors if we can
-  // prove at compile time that the constant step is always a multiple of
-  // the scalable type.
-  if (TySize.isZero() || TySize.isScalable())
-    return false;
-
-  int64_t Size = static_cast<int64_t>(TySize.getFixedValue());
-  int64_t CVSize = CV->getSExtValue();
-  if (CVSize % Size)
-    return false;
-  auto *StepValue =
-      SE->getConstant(CV->getType(), CVSize / Size, true /* signed */);
-  D = InductionDescriptor(StartValue, IK_PtrInduction, StepValue,
-                          /* BinOp */ nullptr, ElementType);
+  D = InductionDescriptor(StartValue, IK_PtrInduction, Step);
   return true;
 }

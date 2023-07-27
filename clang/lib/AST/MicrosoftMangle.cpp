@@ -485,7 +485,7 @@ MicrosoftMangleContextImpl::MicrosoftMangleContextImpl(ASTContext &Context,
   SourceManager &SM = Context.getSourceManager();
   if (const FileEntry *FE = SM.getFileEntryForID(SM.getMainFileID())) {
     // Truncate the hash so we get 8 characters of hexadecimal.
-    uint32_t TruncatedHash = uint32_t(xxHash64(FE->getName()));
+    uint32_t TruncatedHash = uint32_t(xxh3_64bits(FE->getName()));
     AnonymousNamespaceHash = llvm::utohexstr(TruncatedHash);
   } else {
     // If we don't have a path to the main file, we'll just use 0.
@@ -898,6 +898,7 @@ void MicrosoftCXXNameMangler::mangleFloat(llvm::APFloat Number) {
   case APFloat::S_Float8E5M2FNUZ:
   case APFloat::S_Float8E4M3FNUZ:
   case APFloat::S_Float8E4M3B11FNUZ:
+  case APFloat::S_FloatTF32:
     llvm_unreachable("Tried to mangle unexpected APFloat semantics");
   }
 
@@ -2689,7 +2690,7 @@ void MicrosoftCXXNameMangler::mangleFunctionType(const FunctionType *T,
         // Copy constructor closure always takes an unqualified reference.
         mangleFunctionArgumentType(getASTContext().getLValueReferenceType(
                                        Proto->getParamType(0)
-                                           ->getAs<LValueReferenceType>()
+                                           ->castAs<LValueReferenceType>()
                                            ->getPointeeType(),
                                        /*SpelledAsLValue=*/true),
                                    Range);

@@ -1656,7 +1656,10 @@ Parser::isCXXDeclarationSpecifier(ImplicitTypenameContext AllowImplicitTypename,
             if (getLangOpts().CPlusPlus17) {
               if (TryAnnotateTypeOrScopeToken())
                 return TPResult::Error;
-              if (Tok.isNot(tok::identifier))
+              // If we annotated then the current token should not still be ::
+              // FIXME we may want to also check for tok::annot_typename but
+              // currently don't have a test case.
+              if (Tok.isNot(tok::annot_cxxscope))
                 break;
             }
 

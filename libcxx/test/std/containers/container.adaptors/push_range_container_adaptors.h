@@ -18,6 +18,7 @@
 #include <type_traits>
 #include <vector>
 
+#include "../exception_safety_helpers.h"
 #include "../from_range_helpers.h"
 #include "../insert_range_helpers.h"
 #include "MoveOnly.h"
@@ -263,19 +264,12 @@ void test_push_range_inserter_choice(bool is_result_heapified = false) {
 template <template <class ...> class Container>
 void test_push_range_exception_safety_throwing_copy() {
 #if !defined(TEST_HAS_NO_EXCEPTIONS)
-  using T = ThrowingCopy<3>;
-  T::reset();
-  T in[5];
-
-  try {
+  constexpr int ThrowOn = 3;
+  using T = ThrowingCopy<ThrowOn>;
+  test_exception_safety_throwing_copy<ThrowOn, /*Size=*/5>([](auto* from, auto* to) {
     Container<T> c;
-    c.push_range(in);
-    assert(false); // The function call above should throw.
-
-  } catch (int) {
-    assert(T::created_by_copying == 3);
-    assert(T::destroyed == 2); // No destructor call for the partially-constructed element.
-  }
+    c.push_range(std::ranges::subrange(from, to));
+  });
 #endif
 }
 

@@ -13,7 +13,7 @@
 // defining _LIBCPP_VERBOSE_ABORT ourselves. Note that this does not have any
 // deployment target requirements.
 
-// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_ENABLE_ASSERTIONS=1 -D_LIBCPP_VERBOSE_ABORT(...)=my_abort(__VA_ARGS__)
+// ADDITIONAL_COMPILE_FLAGS: -D_LIBCPP_VERBOSE_ABORT(...)=my_abort(__VA_ARGS__)
 
 #include <cstdlib>
 

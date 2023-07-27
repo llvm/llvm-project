@@ -478,6 +478,20 @@ int main(int argc, char **argv) {
   else
     Printer = std::make_unique<LLVMPrinter>(outs(), printError, Config);
 
+  // When an input file is specified, exit immediately if the file cannot be
+  // read. If getOrCreateModuleInfo succeeds, symbolizeInput will reuse the
+  // cached file handle.
+  if (auto *Arg = Args.getLastArg(OPT_obj_EQ); Arg) {
+    auto Status = Symbolizer.getOrCreateModuleInfo(Arg->getValue());
+    if (!Status) {
+      Request SymRequest = {Arg->getValue(), 0};
+      handleAllErrors(Status.takeError(), [&](const ErrorInfoBase &EI) {
+        Printer->printError(SymRequest, EI);
+      });
+      return EXIT_FAILURE;
+    }
+  }
+
   std::vector<std::string> InputAddresses = Args.getAllArgValues(OPT_INPUT);
   if (InputAddresses.empty()) {
     const int kMaxInputStringLength = 1024;

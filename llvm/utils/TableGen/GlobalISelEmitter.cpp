@@ -35,6 +35,7 @@
 #include "CodeGenRegisters.h"
 #include "CodeGenTarget.h"
 #include "GlobalISelMatchTable.h"
+#include "GlobalISelMatchTableExecutorEmitter.h"
 #include "InfoByHwMode.h"
 #include "SubtargetFeatureInfo.h"
 #include "llvm/ADT/Statistic.h"
@@ -290,8 +291,7 @@ static Expected<LLTCodeGen> getInstResultType(const TreePatternNode *Dst) {
 
   std::optional<LLTCodeGen> MaybeOpTy;
   if (ChildTypes.front().isMachineValueType()) {
-    MaybeOpTy =
-      MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy);
+    MaybeOpTy = MVTToLLT(ChildTypes.front().getMachineValueType().SimpleTy);
   }
 
   if (!MaybeOpTy)
@@ -299,16 +299,33 @@ static Expected<LLTCodeGen> getInstResultType(const TreePatternNode *Dst) {
   return *MaybeOpTy;
 }
 
-class GlobalISelEmitter {
+class GlobalISelEmitter final : public GlobalISelMatchTableExecutorEmitter {
 public:
   explicit GlobalISelEmitter(RecordKeeper &RK);
+
+  void emitAdditionalImpl(raw_ostream &OS) override;
+
+  void emitMIPredicateFns(raw_ostream &OS) override;
+  void emitI64ImmPredicateFns(raw_ostream &OS) override;
+  void emitAPFloatImmPredicateFns(raw_ostream &OS) override;
+  void emitAPIntImmPredicateFns(raw_ostream &OS) override;
+  void emitTestSimplePredicate(raw_ostream &OS) override;
+  void emitRunCustomAction(raw_ostream &OS) override;
+
+  const CodeGenTarget &getTarget() const override { return Target; }
+  StringRef getClassName() const override { return ClassName; }
+
   void run(raw_ostream &OS);
 
 private:
+  std::string ClassName;
+
   const RecordKeeper &RK;
   const CodeGenDAGPatterns CGP;
   const CodeGenTarget &Target;
   CodeGenRegBank &CGRegs;
+
+  std::vector<Record *> AllPatFrags;
 
   /// Keep track of the equivalence between SDNodes and Instruction by mapping
   /// SDNodes to the GINodeEquiv mapping. We need to map to the GINodeEquiv to
@@ -329,9 +346,6 @@ private:
   /// Keep track of Scores of PatternsToMatch similar to how the DAG does.
   /// This adds compatibility for RuleMatchers to use this for ordering rules.
   DenseMap<uint64_t, int> RuleMatcherScores;
-
-  // Map of predicates to their subtarget features.
-  SubtargetFeatureInfoMap SubtargetFeatures;
 
   // Rule coverage information.
   std::optional<CodeGenCoverage> RuleCoverage;
@@ -393,16 +407,6 @@ private:
   importImplicitDefRenderers(BuildMIAction &DstMIBuilder,
                              const std::vector<Record *> &ImplicitDefs) const;
 
-  void emitCxxPredicateFns(raw_ostream &OS, StringRef CodeFieldName,
-                           StringRef TypeIdentifier, StringRef ArgType,
-                           StringRef ArgName, StringRef AdditionalArgs,
-                           StringRef AdditionalDeclarations,
-                           std::function<bool(const Record *R)> Filter);
-  void emitImmPredicateFns(raw_ostream &OS, StringRef TypeIdentifier,
-                           StringRef ArgType,
-                           std::function<bool(const Record *R)> Filter);
-  void emitMIPredicateFns(raw_ostream &OS);
-
   /// Analyze pattern \p P, returning a matcher for it if possible.
   /// Otherwise, return an Error explaining why we don't support it.
   Expected<RuleMatcher> runOnPattern(const PatternToMatch &P);
@@ -449,6 +453,8 @@ private:
                        InstructionMatcher &InsnMatcher, bool &HasAddedMatcher);
 };
 
+StringRef getPatFragPredicateEnumName(Record *R) { return R->getName(); }
+
 void GlobalISelEmitter::gatherOpcodeValues() {
   InstructionOpcodeMatcher::initOpcodeValuesMap(Target);
 }
@@ -468,15 +474,15 @@ void GlobalISelEmitter::gatherNodeEquivs() {
     if (!SelDAGEquiv)
       continue;
     ComplexPatternEquivs[SelDAGEquiv] = Equiv;
- }
+  }
 
- assert(SDNodeXFormEquivs.empty());
- for (Record *Equiv : RK.getAllDerivedDefinitions("GISDNodeXFormEquiv")) {
-   Record *SelDAGEquiv = Equiv->getValueAsDef("SelDAGEquivalent");
-   if (!SelDAGEquiv)
-     continue;
-   SDNodeXFormEquivs[SelDAGEquiv] = Equiv;
- }
+  assert(SDNodeXFormEquivs.empty());
+  for (Record *Equiv : RK.getAllDerivedDefinitions("GISDNodeXFormEquiv")) {
+    Record *SelDAGEquiv = Equiv->getValueAsDef("SelDAGEquivalent");
+    if (!SelDAGEquiv)
+      continue;
+    SDNodeXFormEquivs[SelDAGEquiv] = Equiv;
+  }
 }
 
 Record *GlobalISelEmitter::findNodeEquiv(Record *N) const {
@@ -508,8 +514,10 @@ GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode *N) const {
 }
 
 GlobalISelEmitter::GlobalISelEmitter(RecordKeeper &RK)
-    : RK(RK), CGP(RK), Target(CGP.getTargetInfo()),
-      CGRegs(Target.getRegBank()) {}
+    : GlobalISelMatchTableExecutorEmitter(), RK(RK), CGP(RK),
+      Target(CGP.getTargetInfo()), CGRegs(Target.getRegBank()) {
+  ClassName = Target.getName().str() + "InstructionSelector";
+}
 
 //===- Emitter ------------------------------------------------------------===//
 
@@ -772,12 +780,14 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
   }
 
   bool IsAtomic = false;
-  if (SrcGIEquivOrNull && SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
+  if (SrcGIEquivOrNull &&
+      SrcGIEquivOrNull->getValueAsBit("CheckMMOIsNonAtomic"))
     InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>("NotAtomic");
-  else if (SrcGIEquivOrNull && SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
+  else if (SrcGIEquivOrNull &&
+           SrcGIEquivOrNull->getValueAsBit("CheckMMOIsAtomic")) {
     IsAtomic = true;
     InsnMatcher.addPredicate<AtomicOrderingMMOPredicateMatcher>(
-      "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
+        "Unordered", AtomicOrderingMMOPredicateMatcher::AO_OrStronger);
   }
 
   if (Src->isLeaf()) {
@@ -817,9 +827,9 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
           return failedImport("Unable to handle CondCode");
 
         OperandMatcher &OM =
-          InsnMatcher.addOperand(OpIdx++, SrcChild->getName(), TempOpIdx);
-        StringRef PredType = IsFCmp ? CCDef->getValueAsString("FCmpPredicate") :
-                                      CCDef->getValueAsString("ICmpPredicate");
+            InsnMatcher.addOperand(OpIdx++, SrcChild->getName(), TempOpIdx);
+        StringRef PredType = IsFCmp ? CCDef->getValueAsString("FCmpPredicate")
+                                    : CCDef->getValueAsString("ICmpPredicate");
 
         if (!PredType.empty()) {
           OM.addPredicate<CmpPredicateOperandMatcher>(std::string(PredType));
@@ -871,8 +881,9 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
       bool OperandIsImmArg = SrcGIOrNull->isInOperandImmArg(i);
 
       // SelectionDAG allows pointers to be represented with iN since it doesn't
-      // distinguish between pointers and integers but they are different types in GlobalISel.
-      // Coerce integers to pointers to address space 0 if the context indicates a pointer.
+      // distinguish between pointers and integers but they are different types
+      // in GlobalISel. Coerce integers to pointers to address space 0 if the
+      // context indicates a pointer.
       //
       bool OperandIsAPointer = SrcGIOrNull->isInOperandAPointer(i);
 
@@ -1029,7 +1040,8 @@ Error GlobalISelEmitter::importChildMatcher(
       // This isn't strictly true. If the user were to provide exactly the same
       // matchers as the original operand then we could allow it. However, it's
       // simpler to not permit the redundant specification.
-      return failedImport("Nested instruction cannot be the same as another operand");
+      return failedImport(
+          "Nested instruction cannot be the same as another operand");
     }
 
     // Map the node to a gMIR instruction.
@@ -1079,11 +1091,11 @@ Error GlobalISelEmitter::importChildMatcher(
     if (ChildRec->isSubClassOf("Register")) {
       // This just be emitted as a copy to the specific register.
       ValueTypeByHwMode VT = ChildTypes.front().getValueTypeByHwMode();
-      const CodeGenRegisterClass *RC
-        = CGRegs.getMinimalPhysRegClass(ChildRec, &VT);
+      const CodeGenRegisterClass *RC =
+          CGRegs.getMinimalPhysRegClass(ChildRec, &VT);
       if (!RC) {
         return failedImport(
-          "Could not determine physical register class of pattern source");
+            "Could not determine physical register class of pattern source");
       }
 
       OM.addPredicate<RegisterBankOperandMatcher>(*RC);
@@ -1118,10 +1130,10 @@ Error GlobalISelEmitter::importChildMatcher(
 
       ValueTypeByHwMode VTy = ChildTypes.front().getValueTypeByHwMode();
 
-      const CodeGenInstruction &BuildVector
-        = Target.getInstruction(RK.getDef("G_BUILD_VECTOR"));
-      const CodeGenInstruction &BuildVectorTrunc
-        = Target.getInstruction(RK.getDef("G_BUILD_VECTOR_TRUNC"));
+      const CodeGenInstruction &BuildVector =
+          Target.getInstruction(RK.getDef("G_BUILD_VECTOR"));
+      const CodeGenInstruction &BuildVectorTrunc =
+          Target.getInstruction(RK.getDef("G_BUILD_VECTOR_TRUNC"));
 
       // Treat G_BUILD_VECTOR as the canonical opcode, and G_BUILD_VECTOR_TRUNC
       // as an alternative.
@@ -1218,8 +1230,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
         return OpTy.takeError();
 
       unsigned TempRegID = Rule.allocateTempRegID();
-      InsertPt = Rule.insertAction<MakeTempRegisterAction>(
-          InsertPt, *OpTy, TempRegID);
+      InsertPt =
+          Rule.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
       DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
 
       auto InsertPtOrError = createAndImportSubInstructionRenderer(
@@ -1229,7 +1241,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderer(
       return InsertPtOrError.get();
     }
 
-    return failedImport("Dst pattern child isn't a leaf node or an MBB" + llvm::to_string(*DstChild));
+    return failedImport("Dst pattern child isn't a leaf node or an MBB" +
+                        llvm::to_string(*DstChild));
   }
 
   // It could be a specific immediate in which case we should just check for
@@ -1324,9 +1337,8 @@ Expected<BuildMIAction &> GlobalISelEmitter::createAndImportInstructionRenderer(
         &Target.getInstruction(RK.getDef("COPY")));
     BuildMIAction &CopyToPhysRegMIBuilder =
         *static_cast<BuildMIAction *>(InsertPt->get());
-    CopyToPhysRegMIBuilder.addRenderer<AddRegisterRenderer>(Target,
-                                                            PhysInput.first,
-                                                            true);
+    CopyToPhysRegMIBuilder.addRenderer<AddRegisterRenderer>(
+        Target, PhysInput.first, true);
     CopyToPhysRegMIBuilder.addRenderer<CopyPhysRegRenderer>(PhysInput.first);
   }
 
@@ -1399,19 +1411,19 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
     auto SuperClass = inferRegClassFromPattern(Dst->getChild(0));
     if (!SuperClass)
       return failedImport(
-        "Cannot infer register class from EXTRACT_SUBREG operand #0");
+          "Cannot infer register class from EXTRACT_SUBREG operand #0");
 
     auto SubIdx = inferSubRegIndexForNode(Dst->getChild(1));
     if (!SubIdx)
       return failedImport("EXTRACT_SUBREG child #1 is not a subreg index");
 
     const auto SrcRCDstRCPair =
-      (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
     assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
     M.insertAction<ConstrainOperandToRegClassAction>(
-      InsertPt, DstMIBuilder.getInsnID(), 0, *SrcRCDstRCPair->second);
+        InsertPt, DstMIBuilder.getInsnID(), 0, *SrcRCDstRCPair->second);
     M.insertAction<ConstrainOperandToRegClassAction>(
-      InsertPt, DstMIBuilder.getInsnID(), 1, *SrcRCDstRCPair->first);
+        InsertPt, DstMIBuilder.getInsnID(), 1, *SrcRCDstRCPair->first);
 
     // We're done with this pattern!  It's eligible for GISel emission; return
     // it.
@@ -1424,23 +1436,23 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
     auto SubClass = inferRegClassFromPattern(Dst->getChild(1));
     if (!SubClass)
       return failedImport(
-        "Cannot infer register class from SUBREG_TO_REG child #1");
-    auto SuperClass = inferSuperRegisterClass(Dst->getExtType(0),
-                                              Dst->getChild(2));
+          "Cannot infer register class from SUBREG_TO_REG child #1");
+    auto SuperClass =
+        inferSuperRegisterClass(Dst->getExtType(0), Dst->getChild(2));
     if (!SuperClass)
       return failedImport(
-        "Cannot infer register class for SUBREG_TO_REG operand #0");
+          "Cannot infer register class for SUBREG_TO_REG operand #0");
     M.insertAction<ConstrainOperandToRegClassAction>(
-      InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
+        InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
     M.insertAction<ConstrainOperandToRegClassAction>(
-      InsertPt, DstMIBuilder.getInsnID(), 2, **SubClass);
+        InsertPt, DstMIBuilder.getInsnID(), 2, **SubClass);
     return InsertPtOrError.get();
   }
 
   if (OpName == "REG_SEQUENCE") {
     auto SuperClass = inferRegClassFromPattern(Dst->getChild(0));
     M.insertAction<ConstrainOperandToRegClassAction>(
-      InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
+        InsertPt, DstMIBuilder.getInsnID(), 0, **SuperClass);
 
     unsigned Num = Dst->getNumChildren();
     for (unsigned I = 1; I != Num; I += 2) {
@@ -1451,10 +1463,10 @@ GlobalISelEmitter::createAndImportSubInstructionRenderer(
         return failedImport("REG_SEQUENCE child is not a subreg index");
 
       const auto SrcRCDstRCPair =
-        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+          (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
       assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
       M.insertAction<ConstrainOperandToRegClassAction>(
-        InsertPt, DstMIBuilder.getInsnID(), I, *SrcRCDstRCPair->second);
+          InsertPt, DstMIBuilder.getInsnID(), I, *SrcRCDstRCPair->second);
     }
 
     return InsertPtOrError.get();
@@ -1514,7 +1526,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitDefRenderers(
 
     unsigned TempRegID = M.allocateTempRegID();
     InsertPt =
-      M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
+        M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTy, TempRegID);
     DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID, true, nullptr, true);
   }
 
@@ -1548,11 +1560,11 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
         return ExtractSrcTy.takeError();
 
       unsigned TempRegID = M.allocateTempRegID();
-      InsertPt = M.insertAction<MakeTempRegisterAction>(
-        InsertPt, *ExtractSrcTy, TempRegID);
+      InsertPt = M.insertAction<MakeTempRegisterAction>(InsertPt, *ExtractSrcTy,
+                                                        TempRegID);
 
       auto InsertPtOrError = createAndImportSubInstructionRenderer(
-        ++InsertPt, M, ValChild, Src, TempRegID);
+          ++InsertPt, M, ValChild, Src, TempRegID);
       if (auto Error = InsertPtOrError.takeError())
         return std::move(Error);
 
@@ -1569,7 +1581,7 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
     CodeGenRegisterClass *RC = CGRegs.getRegClass(RCDef);
 
     const auto SrcRCDstRCPair =
-      RC->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
+        RC->getMatchingSubClassWithSubRegs(CGRegs, SubIdx);
     if (SrcRCDstRCPair) {
       assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
       if (SrcRCDstRCPair->first != RC)
@@ -1670,8 +1682,8 @@ Expected<action_iterator> GlobalISelEmitter::importExplicitUseRenderers(
 
       const CGIOperandList::OperandInfo &DstIOperand = DstI->Operands[InstOpNo];
       DagInit *DefaultOps = DstIOperand.Rec->getValueAsDag("DefaultOps");
-      if (auto Error = importDefaultOperandRenderers(
-            InsertPt, M, DstMIBuilder, DefaultOps))
+      if (auto Error = importDefaultOperandRenderers(InsertPt, M, DstMIBuilder,
+                                                     DefaultOps))
         return std::move(Error);
       ++NumDefaultOps;
       continue;
@@ -1706,8 +1718,7 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
       if (const DefInit *DefaultDagOperator =
               dyn_cast<DefInit>(DefaultDagOp->getOperator())) {
         if (DefaultDagOperator->getDef()->isSubClassOf("ValueType")) {
-          OpTyOrNone = MVTToLLT(getValueType(
-                                  DefaultDagOperator->getDef()));
+          OpTyOrNone = MVTToLLT(getValueType(DefaultDagOperator->getDef()));
           DefaultOp = DefaultDagOp->getArg(0);
         }
       }
@@ -1720,10 +1731,10 @@ Error GlobalISelEmitter::importDefaultOperandRenderers(
         M.insertAction<MakeTempRegisterAction>(InsertPt, *OpTyOrNone,
                                                TempRegID);
         InsertPt = M.insertAction<BuildMIAction>(
-          InsertPt, M.allocateOutputInsnID(),
-          &Target.getInstruction(RK.getDef("IMPLICIT_DEF")));
-        BuildMIAction &IDMIBuilder = *static_cast<BuildMIAction *>(
-          InsertPt->get());
+            InsertPt, M.allocateOutputInsnID(),
+            &Target.getInstruction(RK.getDef("IMPLICIT_DEF")));
+        BuildMIAction &IDMIBuilder =
+            *static_cast<BuildMIAction *>(InsertPt->get());
         IDMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
         DstMIBuilder.addRenderer<TempRegRenderer>(TempRegID);
       } else {
@@ -2021,7 +2032,8 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     } else if (DstIName == "EXTRACT_SUBREG") {
       auto InferredClass = inferRegClassFromPattern(Dst->getChild(0));
       if (!InferredClass)
-        return failedImport("Could not infer class for EXTRACT_SUBREG operand #0");
+        return failedImport(
+            "Could not infer class for EXTRACT_SUBREG operand #0");
 
       // We can assume that a subregister is in the same bank as it's super
       // register.
@@ -2103,7 +2115,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     auto SuperClass = inferRegClassFromPattern(Dst->getChild(0));
     if (!SuperClass)
       return failedImport(
-        "Cannot infer register class from EXTRACT_SUBREG operand #0");
+          "Cannot infer register class from EXTRACT_SUBREG operand #0");
 
     auto SubIdx = inferSubRegIndexForNode(Dst->getChild(1));
     if (!SubIdx)
@@ -2116,17 +2128,18 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
     // FIXME: This may introduce an extra copy if the chosen class doesn't
     //        actually contain the subregisters.
     assert(Src->getExtTypes().size() == 1 &&
-             "Expected Src of EXTRACT_SUBREG to have one result type");
+           "Expected Src of EXTRACT_SUBREG to have one result type");
 
     const auto SrcRCDstRCPair =
-      (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
     if (!SrcRCDstRCPair) {
       return failedImport("subreg index is incompatible "
                           "with inferred reg class");
     }
 
     assert(SrcRCDstRCPair->second && "Couldn't find a matching subclass");
-    M.addAction<ConstrainOperandToRegClassAction>(0, 0, *SrcRCDstRCPair->second);
+    M.addAction<ConstrainOperandToRegClassAction>(0, 0,
+                                                  *SrcRCDstRCPair->second);
     M.addAction<ConstrainOperandToRegClassAction>(0, 1, *SrcRCDstRCPair->first);
 
     // We're done with this pattern!  It's eligible for GISel emission; return
@@ -2194,7 +2207,7 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
         return failedImport("REG_SEQUENCE child is not a subreg index");
 
       const auto SrcRCDstRCPair =
-        (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
+          (*SuperClass)->getMatchingSubClassWithSubRegs(CGRegs, *SubIdx);
 
       M.addAction<ConstrainOperandToRegClassAction>(0, I,
                                                     *SrcRCDstRCPair->second);
@@ -2209,76 +2222,6 @@ Expected<RuleMatcher> GlobalISelEmitter::runOnPattern(const PatternToMatch &P) {
   // We're done with this pattern!  It's eligible for GISel emission; return it.
   ++NumPatternImported;
   return std::move(M);
-}
-
-// Emit imm predicate table and an enum to reference them with.
-// The 'Predicate_' part of the name is redundant but eliminating it is more
-// trouble than it's worth.
-void GlobalISelEmitter::emitCxxPredicateFns(
-    raw_ostream &OS, StringRef CodeFieldName, StringRef TypeIdentifier,
-    StringRef ArgType, StringRef ArgName, StringRef AdditionalArgs,
-    StringRef AdditionalDeclarations,
-    std::function<bool(const Record *R)> Filter) {
-  std::vector<const Record *> MatchedRecords;
-  const auto &Defs = RK.getAllDerivedDefinitions("PatFrags");
-  std::copy_if(Defs.begin(), Defs.end(), std::back_inserter(MatchedRecords),
-               [&](Record *Record) {
-                 return !Record->getValueAsString(CodeFieldName).empty() &&
-                        Filter(Record);
-               });
-
-  if (!MatchedRecords.empty()) {
-    OS << "// PatFrag predicates.\n"
-       << "enum {\n";
-    std::string EnumeratorSeparator =
-        (" = GIPFP_" + TypeIdentifier + "_Invalid + 1,\n").str();
-    for (const auto *Record : MatchedRecords) {
-      OS << "  GIPFP_" << TypeIdentifier << "_Predicate_" << Record->getName()
-         << EnumeratorSeparator;
-      EnumeratorSeparator = ",\n";
-    }
-    OS << "};\n";
-  }
-
-  OS << "bool " << Target.getName() << "InstructionSelector::test" << ArgName
-     << "Predicate_" << TypeIdentifier << "(unsigned PredicateID, " << ArgType << " "
-     << ArgName << AdditionalArgs <<") const {\n"
-     << AdditionalDeclarations;
-  if (!AdditionalDeclarations.empty())
-    OS << "\n";
-  if (!MatchedRecords.empty())
-    OS << "  switch (PredicateID) {\n";
-  for (const auto *Record : MatchedRecords) {
-    OS << "  case GIPFP_" << TypeIdentifier << "_Predicate_"
-       << Record->getName() << ": {\n"
-       << "    " << Record->getValueAsString(CodeFieldName) << "\n"
-       << "    llvm_unreachable(\"" << CodeFieldName
-       << " should have returned\");\n"
-       << "    return false;\n"
-       << "  }\n";
-  }
-  if (!MatchedRecords.empty())
-    OS << "  }\n";
-  OS << "  llvm_unreachable(\"Unknown predicate\");\n"
-     << "  return false;\n"
-     << "}\n";
-}
-
-void GlobalISelEmitter::emitImmPredicateFns(
-    raw_ostream &OS, StringRef TypeIdentifier, StringRef ArgType,
-    std::function<bool(const Record *R)> Filter) {
-  return emitCxxPredicateFns(OS, "ImmediateCode", TypeIdentifier, ArgType,
-                             "Imm", "", "", Filter);
-}
-
-void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
-  return emitCxxPredicateFns(
-      OS, "GISelPredicateCode", "MI", "const MachineInstr &", "MI",
-      ", const std::array<const MachineOperand *, 3> &Operands",
-      "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
-      "  const MachineRegisterInfo &MRI = MF.getRegInfo();\n"
-      "  (void)MRI;",
-      [](const Record *R) { return true; });
 }
 
 MatchTable
@@ -2323,6 +2266,103 @@ GlobalISelEmitter::buildMatchTable(MutableArrayRef<RuleMatcher> Rules,
   return MatchTable::buildTable(OptRules, WithCoverage);
 }
 
+void GlobalISelEmitter::emitAdditionalImpl(raw_ostream &OS) {
+  OS << "bool " << getClassName()
+     << "::selectImpl(MachineInstr &I, CodeGenCoverage "
+        "&CoverageInfo) const {\n"
+     << "  const PredicateBitset AvailableFeatures = "
+        "getAvailableFeatures();\n"
+     << "  NewMIVector OutMIs;\n"
+     << "  State.MIs.clear();\n"
+     << "  State.MIs.push_back(&I);\n\n"
+     << "  if (executeMatchTable(*this, OutMIs, State, ExecInfo"
+     << ", getMatchTable(), TII, MF->getRegInfo(), TRI, RBI, AvailableFeatures"
+     << ", &CoverageInfo)) {\n"
+     << "    return true;\n"
+     << "  }\n\n"
+     << "  return false;\n"
+     << "}\n\n";
+}
+
+void GlobalISelEmitter::emitMIPredicateFns(raw_ostream &OS) {
+  std::vector<Record *> MatchedRecords;
+  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
+               std::back_inserter(MatchedRecords), [&](Record *R) {
+                 return !R->getValueAsString("GISelPredicateCode").empty();
+               });
+  emitMIPredicateFnsImpl<Record *>(
+      OS,
+      "  const MachineFunction &MF = *MI.getParent()->getParent();\n"
+      "  const MachineRegisterInfo &MRI = MF.getRegInfo();\n"
+      "  const auto &Operands = State.RecordedOperands;\n"
+      "  (void)Operands;\n"
+      "  (void)MRI;",
+      ArrayRef<Record *>(MatchedRecords), &getPatFragPredicateEnumName,
+      [&](Record *R) { return R->getValueAsString("GISelPredicateCode"); },
+      "PatFrag predicates.");
+}
+
+void GlobalISelEmitter::emitI64ImmPredicateFns(raw_ostream &OS) {
+  std::vector<Record *> MatchedRecords;
+  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
+               std::back_inserter(MatchedRecords), [&](Record *R) {
+                 bool Unset;
+                 return !R->getValueAsString("ImmediateCode").empty() &&
+                        !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
+                        !R->getValueAsBit("IsAPInt");
+               });
+  emitImmPredicateFnsImpl<Record *>(
+      OS, "I64", "int64_t", ArrayRef<Record *>(MatchedRecords),
+      &getPatFragPredicateEnumName,
+      [&](Record *R) { return R->getValueAsString("ImmediateCode"); },
+      "PatFrag predicates.");
+}
+
+void GlobalISelEmitter::emitAPFloatImmPredicateFns(raw_ostream &OS) {
+  std::vector<Record *> MatchedRecords;
+  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
+               std::back_inserter(MatchedRecords), [&](Record *R) {
+                 bool Unset;
+                 return !R->getValueAsString("ImmediateCode").empty() &&
+                        R->getValueAsBitOrUnset("IsAPFloat", Unset);
+               });
+  emitImmPredicateFnsImpl<Record *>(
+      OS, "APFloat", "const APFloat &", ArrayRef<Record *>(MatchedRecords),
+      &getPatFragPredicateEnumName,
+      [&](Record *R) { return R->getValueAsString("ImmediateCode"); },
+      "PatFrag predicates.");
+}
+
+void GlobalISelEmitter::emitAPIntImmPredicateFns(raw_ostream &OS) {
+  std::vector<Record *> MatchedRecords;
+  std::copy_if(AllPatFrags.begin(), AllPatFrags.end(),
+               std::back_inserter(MatchedRecords), [&](Record *R) {
+                 return !R->getValueAsString("ImmediateCode").empty() &&
+                        R->getValueAsBit("IsAPInt");
+               });
+  emitImmPredicateFnsImpl<Record *>(
+      OS, "APInt", "const APInt &", ArrayRef<Record *>(MatchedRecords),
+      &getPatFragPredicateEnumName,
+      [&](Record *R) { return R->getValueAsString("ImmediateCode"); },
+      "PatFrag predicates.");
+}
+
+void GlobalISelEmitter::emitTestSimplePredicate(raw_ostream &OS) {
+  OS << "bool " << getClassName() << "::testSimplePredicate(unsigned) const {\n"
+     << "    llvm_unreachable(\"" + getClassName() +
+            " does not support simple predicates!\");\n"
+     << "  return false;\n"
+     << "}\n";
+}
+
+void GlobalISelEmitter::emitRunCustomAction(raw_ostream &OS) {
+  OS << "void " << getClassName()
+     << "::runCustomAction(unsigned, const MatcherState&) const {\n"
+     << "    llvm_unreachable(\"" + getClassName() +
+            " does not support custom C++ actions!\");\n"
+     << "}\n";
+}
+
 void GlobalISelEmitter::run(raw_ostream &OS) {
   if (!UseCoverageFile.empty()) {
     RuleCoverage = CodeGenCoverage();
@@ -2346,8 +2386,12 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
   // Track the GINodeEquiv definitions.
   gatherNodeEquivs();
 
-  emitSourceFileHeader(("Global Instruction Selector for the " +
-                       Target.getName() + " target").str(), OS);
+  AllPatFrags = RK.getAllDerivedDefinitions("PatFrags");
+
+  emitSourceFileHeader(
+      ("Global Instruction Selector for the " + Target.getName() + " target")
+          .str(),
+      OS);
   std::vector<RuleMatcher> Rules;
   // Look through the SelectionDAG patterns we found, possibly emitting some.
   for (const PatternToMatch &Pat : CGP.ptms()) {
@@ -2399,203 +2443,13 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
       std::unique(CustomRendererFns.begin(), CustomRendererFns.end()),
       CustomRendererFns.end());
 
-  unsigned MaxTemporaries = 0;
-  for (const auto &Rule : Rules)
-    MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
-
-  OS << "#ifdef GET_GLOBALISEL_PREDICATE_BITSET\n"
-     << "const unsigned MAX_SUBTARGET_PREDICATES = " << SubtargetFeatures.size()
-     << ";\n"
-     << "using PredicateBitset = "
-        "llvm::PredicateBitsetImpl<MAX_SUBTARGET_PREDICATES>;\n"
-     << "#endif // ifdef GET_GLOBALISEL_PREDICATE_BITSET\n\n";
-
-  OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n"
-     << "  mutable MatcherState State;\n"
-     << "  typedef "
-        "ComplexRendererFns("
-     << Target.getName()
-     << "InstructionSelector::*ComplexMatcherMemFn)(MachineOperand &) const;\n"
-
-     << "  typedef void(" << Target.getName()
-     << "InstructionSelector::*CustomRendererFn)(MachineInstrBuilder &, const "
-        "MachineInstr &, int) "
-        "const;\n"
-     << "  const ISelInfoTy<PredicateBitset, ComplexMatcherMemFn, "
-        "CustomRendererFn> "
-        "ISelInfo;\n";
-  OS << "  static " << Target.getName()
-     << "InstructionSelector::ComplexMatcherMemFn ComplexPredicateFns[];\n"
-     << "  static " << Target.getName()
-     << "InstructionSelector::CustomRendererFn CustomRenderers[];\n"
-     << "  bool testImmPredicate_I64(unsigned PredicateID, int64_t Imm) const "
-        "override;\n"
-     << "  bool testImmPredicate_APInt(unsigned PredicateID, const APInt &Imm) "
-        "const override;\n"
-     << "  bool testImmPredicate_APFloat(unsigned PredicateID, const APFloat "
-        "&Imm) const override;\n"
-     << "  const int64_t *getMatchTable() const override;\n"
-     << "  bool testMIPredicate_MI(unsigned PredicateID, const MachineInstr &MI"
-        ", const std::array<const MachineOperand *, 3> &Operands) "
-        "const override;\n"
-     << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_DECL\n\n";
-
-  OS << "#ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n"
-     << ", State(" << MaxTemporaries << "),\n"
-     << "ISelInfo(TypeObjects, NumTypeObjects, FeatureBitsets"
-     << ", ComplexPredicateFns, CustomRenderers)\n"
-     << "#endif // ifdef GET_GLOBALISEL_TEMPORARIES_INIT\n\n";
-
-  OS << "#ifdef GET_GLOBALISEL_IMPL\n";
-  SubtargetFeatureInfo::emitSubtargetFeatureBitEnumeration(SubtargetFeatures,
-                                                           OS);
-
-  // Separate subtarget features by how often they must be recomputed.
-  SubtargetFeatureInfoMap ModuleFeatures;
-  std::copy_if(SubtargetFeatures.begin(), SubtargetFeatures.end(),
-               std::inserter(ModuleFeatures, ModuleFeatures.end()),
-               [](const SubtargetFeatureInfoMap::value_type &X) {
-                 return !X.second.mustRecomputePerFunction();
-               });
-  SubtargetFeatureInfoMap FunctionFeatures;
-  std::copy_if(SubtargetFeatures.begin(), SubtargetFeatures.end(),
-               std::inserter(FunctionFeatures, FunctionFeatures.end()),
-               [](const SubtargetFeatureInfoMap::value_type &X) {
-                 return X.second.mustRecomputePerFunction();
-               });
-
-  SubtargetFeatureInfo::emitComputeAvailableFeatures(
-    Target.getName(), "InstructionSelector", "computeAvailableModuleFeatures",
-      ModuleFeatures, OS);
-
-
-  OS << "void " << Target.getName() << "InstructionSelector"
-    "::setupGeneratedPerFunctionState(MachineFunction &MF) {\n"
-    "  AvailableFunctionFeatures = computeAvailableFunctionFeatures("
-    "(const " << Target.getName() << "Subtarget *)&MF.getSubtarget(), &MF);\n"
-    "}\n";
-
-  SubtargetFeatureInfo::emitComputeAvailableFeatures(
-      Target.getName(), "InstructionSelector",
-      "computeAvailableFunctionFeatures", FunctionFeatures, OS,
-      "const MachineFunction *MF");
-
-  // Emit a table containing the LLT objects needed by the matcher and an enum
+  // Create a table containing the LLT objects needed by the matcher and an enum
   // for the matcher to reference them with.
   std::vector<LLTCodeGen> TypeObjects;
   append_range(TypeObjects, KnownTypes);
   llvm::sort(TypeObjects);
-  OS << "// LLT Objects.\n"
-     << "enum {\n";
-  for (const auto &TypeObject : TypeObjects) {
-    OS << "  ";
-    TypeObject.emitCxxEnumValue(OS);
-    OS << ",\n";
-  }
-  OS << "};\n";
-  OS << "const static size_t NumTypeObjects = " << TypeObjects.size() << ";\n"
-     << "const static LLT TypeObjects[] = {\n";
-  for (const auto &TypeObject : TypeObjects) {
-    OS << "  ";
-    TypeObject.emitCxxConstructorCall(OS);
-    OS << ",\n";
-  }
-  OS << "};\n\n";
 
-  // Emit a table containing the PredicateBitsets objects needed by the matcher
-  // and an enum for the matcher to reference them with.
-  std::vector<std::vector<Record *>> FeatureBitsets;
-  FeatureBitsets.reserve(Rules.size());
-  for (auto &Rule : Rules)
-    FeatureBitsets.push_back(Rule.getRequiredFeatures());
-  llvm::sort(FeatureBitsets, [&](const std::vector<Record *> &A,
-                                 const std::vector<Record *> &B) {
-    if (A.size() < B.size())
-      return true;
-    if (A.size() > B.size())
-      return false;
-    for (auto Pair : zip(A, B)) {
-      if (std::get<0>(Pair)->getName() < std::get<1>(Pair)->getName())
-        return true;
-      if (std::get<0>(Pair)->getName() > std::get<1>(Pair)->getName())
-        return false;
-    }
-    return false;
-  });
-  FeatureBitsets.erase(
-      std::unique(FeatureBitsets.begin(), FeatureBitsets.end()),
-      FeatureBitsets.end());
-  OS << "// Feature bitsets.\n"
-     << "enum {\n"
-     << "  GIFBS_Invalid,\n";
-  for (const auto &FeatureBitset : FeatureBitsets) {
-    if (FeatureBitset.empty())
-      continue;
-    OS << "  " << getNameForFeatureBitset(FeatureBitset) << ",\n";
-  }
-  OS << "};\n"
-     << "const static PredicateBitset FeatureBitsets[] {\n"
-     << "  {}, // GIFBS_Invalid\n";
-  for (const auto &FeatureBitset : FeatureBitsets) {
-    if (FeatureBitset.empty())
-      continue;
-    OS << "  {";
-    for (const auto &Feature : FeatureBitset) {
-      const auto &I = SubtargetFeatures.find(Feature);
-      assert(I != SubtargetFeatures.end() && "Didn't import predicate?");
-      OS << I->second.getEnumBitName() << ", ";
-    }
-    OS << "},\n";
-  }
-  OS << "};\n\n";
-
-  // Emit complex predicate table and an enum to reference them with.
-  OS << "// ComplexPattern predicates.\n"
-     << "enum {\n"
-     << "  GICP_Invalid,\n";
-  for (const auto &Record : ComplexPredicates)
-    OS << "  GICP_" << Record->getName() << ",\n";
-  OS << "};\n"
-     << "// See constructor for table contents\n\n";
-
-  emitImmPredicateFns(OS, "I64", "int64_t", [](const Record *R) {
-    bool Unset;
-    return !R->getValueAsBitOrUnset("IsAPFloat", Unset) &&
-           !R->getValueAsBit("IsAPInt");
-  });
-  emitImmPredicateFns(OS, "APFloat", "const APFloat &", [](const Record *R) {
-    bool Unset;
-    return R->getValueAsBitOrUnset("IsAPFloat", Unset);
-  });
-  emitImmPredicateFns(OS, "APInt", "const APInt &", [](const Record *R) {
-    return R->getValueAsBit("IsAPInt");
-  });
-  emitMIPredicateFns(OS);
-  OS << "\n";
-
-  OS << Target.getName() << "InstructionSelector::ComplexMatcherMemFn\n"
-     << Target.getName() << "InstructionSelector::ComplexPredicateFns[] = {\n"
-     << "  nullptr, // GICP_Invalid\n";
-  for (const auto &Record : ComplexPredicates)
-    OS << "  &" << Target.getName()
-       << "InstructionSelector::" << Record->getValueAsString("MatcherFn")
-       << ", // " << Record->getName() << "\n";
-  OS << "};\n\n";
-
-  OS << "// Custom renderers.\n"
-     << "enum {\n"
-     << "  GICR_Invalid,\n";
-  for (const auto &Fn : CustomRendererFns)
-    OS << "  GICR_" << Fn << ",\n";
-  OS << "};\n";
-
-  OS << Target.getName() << "InstructionSelector::CustomRendererFn\n"
-     << Target.getName() << "InstructionSelector::CustomRenderers[] = {\n"
-     << "  nullptr, // GICR_Invalid\n";
-  for (const auto &Fn : CustomRendererFns)
-    OS << "  &" << Target.getName() << "InstructionSelector::" << Fn << ",\n";
-  OS << "};\n\n";
-
+  // Sort rules.
   llvm::stable_sort(Rules, [&](const RuleMatcher &A, const RuleMatcher &B) {
     int ScoreA = RuleMatcherScores[A.getRuleID()];
     int ScoreB = RuleMatcherScores[B.getRuleID()];
@@ -2612,53 +2466,21 @@ void GlobalISelEmitter::run(raw_ostream &OS) {
     return false;
   });
 
-  OS << "bool " << Target.getName()
-     << "InstructionSelector::selectImpl(MachineInstr &I, CodeGenCoverage "
-        "&CoverageInfo) const {\n"
-     << "  MachineFunction &MF = *I.getParent()->getParent();\n"
-     << "  MachineRegisterInfo &MRI = MF.getRegInfo();\n"
-     << "  const PredicateBitset AvailableFeatures = getAvailableFeatures();\n"
-     << "  NewMIVector OutMIs;\n"
-     << "  State.MIs.clear();\n"
-     << "  State.MIs.push_back(&I);\n\n"
-     << "  if (executeMatchTable(*this, OutMIs, State, ISelInfo"
-     << ", getMatchTable(), TII, MRI, TRI, RBI, AvailableFeatures"
-     << ", CoverageInfo)) {\n"
-     << "    return true;\n"
-     << "  }\n\n"
-     << "  return false;\n"
-     << "}\n\n";
+  unsigned MaxTemporaries = 0;
+  for (const auto &Rule : Rules)
+    MaxTemporaries = std::max(MaxTemporaries, Rule.countRendererFns());
 
+  // Build match table
   const MatchTable Table =
       buildMatchTable(Rules, OptimizeMatchTable, GenerateCoverage);
-  OS << "const int64_t *" << Target.getName()
-     << "InstructionSelector::getMatchTable() const {\n";
-  Table.emitDeclaration(OS);
-  OS << "  return ";
-  Table.emitUse(OS);
-  OS << ";\n}\n";
-  OS << "#endif // ifdef GET_GLOBALISEL_IMPL\n";
 
-  OS << "#ifdef GET_GLOBALISEL_PREDICATES_DECL\n"
-     << "PredicateBitset AvailableModuleFeatures;\n"
-     << "mutable PredicateBitset AvailableFunctionFeatures;\n"
-     << "PredicateBitset getAvailableFeatures() const {\n"
-     << "  return AvailableModuleFeatures | AvailableFunctionFeatures;\n"
-     << "}\n"
-     << "PredicateBitset\n"
-     << "computeAvailableModuleFeatures(const " << Target.getName()
-     << "Subtarget *Subtarget) const;\n"
-     << "PredicateBitset\n"
-     << "computeAvailableFunctionFeatures(const " << Target.getName()
-     << "Subtarget *Subtarget,\n"
-     << "                                 const MachineFunction *MF) const;\n"
-     << "void setupGeneratedPerFunctionState(MachineFunction &MF) override;\n"
-     << "#endif // ifdef GET_GLOBALISEL_PREDICATES_DECL\n";
-
-  OS << "#ifdef GET_GLOBALISEL_PREDICATES_INIT\n"
-     << "AvailableModuleFeatures(computeAvailableModuleFeatures(&STI)),\n"
-     << "AvailableFunctionFeatures()\n"
-     << "#endif // ifdef GET_GLOBALISEL_PREDICATES_INIT\n";
+  emitPredicateBitset(OS, "GET_GLOBALISEL_PREDICATE_BITSET");
+  emitTemporariesDecl(OS, "GET_GLOBALISEL_TEMPORARIES_DECL");
+  emitTemporariesInit(OS, MaxTemporaries, "GET_GLOBALISEL_TEMPORARIES_INIT");
+  emitExecutorImpl(OS, Table, TypeObjects, Rules, ComplexPredicates,
+                   CustomRendererFns, "GET_GLOBALISEL_IMPL");
+  emitPredicatesDecl(OS, "GET_GLOBALISEL_PREDICATES_DECL");
+  emitPredicatesInit(OS, "GET_GLOBALISEL_PREDICATES_INIT");
 }
 
 void GlobalISelEmitter::declareSubtargetFeature(Record *Predicate) {

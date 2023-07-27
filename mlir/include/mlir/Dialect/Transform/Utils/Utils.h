@@ -36,7 +36,7 @@ class TransformState;
 void printPackedOrDynamicIndexList(OpAsmPrinter &printer, Operation *op,
                                    Value packed, Type packedType,
                                    OperandRange values, TypeRange valueTypes,
-                                   ArrayRef<int64_t> integers);
+                                   DenseI64ArrayAttr integers);
 
 /// Parser hook for custom directive in assemblyFormat.
 ///

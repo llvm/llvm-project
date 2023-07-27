@@ -48,8 +48,7 @@ subroutine do_concurrent_test2(i,j,n,flag)
     change team (j)
 !ERROR: An image control statement is not allowed in DO CONCURRENT
       critical
-!ERROR: Call to an impure procedure is not allowed in DO CONCURRENT
-        call ieee_get_status(status)
+        call ieee_get_status(status) ! ok
 !ERROR: IEEE_SET_HALTING_MODE is not allowed in DO CONCURRENT
         call ieee_set_halting_mode(flag, halting)
       end critical
@@ -193,6 +192,10 @@ subroutine s7()
     pure integer function pf()
     end function pf
   end interface
+  interface generic
+    impure integer function ipf()
+    end function ipf
+  end interface
 
   type :: procTypeNotPure
     procedure(notPureFunc), pointer, nopass :: notPureProcComponent
@@ -223,8 +226,14 @@ subroutine s7()
 
   ! This should generate an error
   do concurrent (i = 1:10)
-!ERROR: Call to an impure procedure component is not allowed in DO CONCURRENT
+!ERROR: Impure procedure 'notpureproccomponent' may not be referenced in DO CONCURRENT
     ivar = procVarNotPure%notPureProcComponent()
+  end do
+
+  ! This should generate an error
+  do concurrent (i = 1:10)
+!ERROR: Impure procedure 'ipf' may not be referenced in DO CONCURRENT
+    ivar = generic()
   end do
 
   contains

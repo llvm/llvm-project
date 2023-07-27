@@ -1,8 +1,12 @@
+// DEFINE: %{option_vec} = 
 // DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{run_option} =
+// DEFINE: %{cpu_runner} = mlir-cpu-runner
+
 // DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE: %{run} = %{cpu_runner} \
 // DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils %{run_option} | \
 // DEFINE: FileCheck %s
 //
 // RUN: %{compile} | %{run}
@@ -12,19 +16,15 @@
 // RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// REDEFINE: %{option_vec} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// REDEFINE: %{option} = "%{option_vec}"
 // RUN: %{compile} | %{run}
 
-// Do the same run, but now with direct IR generation and, if available, VLA
-// vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=4 enable-buffer-initialization=true reassociate-fp-reductions=true enable-index-optimizations=true enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = %lli_host_or_aarch64_cmd \
-// REDEFINE:   --entry-function=entry_lli \
-// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
-// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
-// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
-// REDEFINE: FileCheck %s
-// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
+// Do the same run, but with VLA vectorization.
+// REDEFINE: %{option} = "enable-arm-sve=true %{option_vec}"
+// REDEFINE: %{cpu_runner} = %mcr_aarch64_cmd
+// REDEFINE: %{run_option} = %VLA_ARCH_ATTR_OPTIONS
+// RUN: %if mlir_arm_sve_tests %{ %{compile} | %{run} %}
 
 #SparseVector = #sparse_tensor.encoding<{lvlTypes = ["compressed"]}>
 #DCSR = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>

@@ -350,7 +350,7 @@ Decl *Parser::ParseNamespaceAlias(SourceLocation NamespaceLoc,
 ///
 Decl *Parser::ParseLinkage(ParsingDeclSpec &DS, DeclaratorContext Context) {
   assert(isTokenStringLiteral() && "Not a string literal!");
-  ExprResult Lang = ParseStringLiteralExpression(false);
+  ExprResult Lang = ParseUnevaluatedStringLiteralExpression();
 
   ParseScope LinkageScope(this, Scope::DeclScope);
   Decl *LinkageSpec =
@@ -1016,14 +1016,17 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
       return nullptr;
     }
 
-    if (!isTokenStringLiteral()) {
+    if (isTokenStringLiteral())
+      AssertMessage = ParseUnevaluatedStringLiteralExpression();
+    else if (getLangOpts().CPlusPlus26)
+      AssertMessage = ParseConstantExpressionInExprEvalContext();
+    else {
       Diag(Tok, diag::err_expected_string_literal)
           << /*Source='static_assert'*/ 1;
       SkipMalformedDecl();
       return nullptr;
     }
 
-    AssertMessage = ParseStringLiteralExpression();
     if (AssertMessage.isInvalid()) {
       SkipMalformedDecl();
       return nullptr;
@@ -4503,7 +4506,13 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
          "Not a double square bracket attribute list");
 
   SourceLocation OpenLoc = Tok.getLocation();
-  Diag(OpenLoc, diag::warn_cxx98_compat_attribute);
+  if (getLangOpts().CPlusPlus) {
+    Diag(OpenLoc, getLangOpts().CPlusPlus11 ? diag::warn_cxx98_compat_attribute
+                                            : diag::warn_ext_cxx11_attributes);
+  } else {
+    Diag(OpenLoc, getLangOpts().C2x ? diag::warn_pre_c2x_compat_attributes
+                                    : diag::warn_ext_c2x_attributes);
+  }
 
   ConsumeBracket();
   checkCompoundToken(OpenLoc, tok::l_square, CompoundToken::AttrBegin);
@@ -4618,8 +4627,6 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
 /// attribute-specifier-seq:
 ///       attribute-specifier-seq[opt] attribute-specifier
 void Parser::ParseCXX11Attributes(ParsedAttributes &Attrs) {
-  assert(standardAttributesAllowed() || Tok.isRegularKeywordAttribute());
-
   SourceLocation StartLoc = Tok.getLocation();
   SourceLocation EndLoc = StartLoc;
 

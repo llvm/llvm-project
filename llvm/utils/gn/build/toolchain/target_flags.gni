@@ -1,4 +1,5 @@
 import("//llvm/triples.gni")
+import("//llvm/utils/gn/build/mac_sdk.gni")
 import("//llvm/utils/gn/build/toolchain/compiler.gni")
 
 # Flags in this file are passed both to the compiler that's building
@@ -23,7 +24,7 @@ if (current_os == "android") {
   if (current_cpu == "arm") {
     target_flags += [ "-march=armv7-a" ]
   }
-} else if (current_os == "ios") {
+} else if (current_os == "ios" || current_os == "mac") {
   if (current_cpu == "arm64") {
     target_flags += [
       "-arch",
@@ -41,6 +42,15 @@ if (current_os == "android") {
     target_ldflags += [
       "-arch",
       "x86_64",
+    ]
+  }
+  if (current_os == "mac") {
+    target_flags += [
+      "-isysroot",
+      mac_sdk_path,
+      # TODO(lgrey): We should be getting this from `compiler_defaults`. Why
+      # aren't we?
+    "-mmacos-version-min=10.10",
     ]
   }
 } else if (current_os == "baremetal") {

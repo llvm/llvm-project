@@ -2159,6 +2159,11 @@ template <class ELFT> void Writer<ELFT>::finalizeSections() {
     sec->finalize();
 
   script->checkMemoryRegions();
+
+  if (config->emachine == EM_ARM && !config->isLE && config->armBe8) {
+    addArmInputSectionMappingSymbols();
+    sortArmMappingSymbols();
+  }
 }
 
 // Ensure data sections are not mixed with executable sections when
@@ -2988,7 +2993,7 @@ template <class ELFT> void Writer<ELFT>::writeBuildId() {
   switch (config->buildId) {
   case BuildIdKind::Fast:
     computeHash(output, input, [](uint8_t *dest, ArrayRef<uint8_t> arr) {
-      write64le(dest, xxHash64(arr));
+      write64le(dest, xxh3_64bits(arr));
     });
     break;
   case BuildIdKind::Md5:

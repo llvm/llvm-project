@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=aarch64_be-none-eabi -fast-isel=false < %s | FileCheck %s
-; RUN: llc -mtriple=aarch64_be-none-eabi -fast-isel=true < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64_be -fast-isel=false < %s | FileCheck %s
+; RUN: llc -mtriple=aarch64_be -fast-isel=true < %s | FileCheck %s
 
 ; Check narrow argument passing via stack - callee end
 define i32 @test_narrow_args_callee(i64 %x0, i64 %x1, i64 %x2, i64 %x3, i64 %x4, i64 %x5, i64 %x6, i64 %x7, i8 %c, i16 %s) #0 {

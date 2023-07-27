@@ -114,7 +114,7 @@ entry:
 ; XCOFF32-NEXT: 00000000      df *DEBUG*	00000000 (idx: 0) <stdin>
 ; XCOFF32-NEXT: 00000000         *UND*	00000000 (idx: 1) .extern_foo[PR]
 ; XCOFF32-NEXT: 00000000         *UND*	00000000 (idx: 3) extern_foo[DS]
-; XCOFF32-NEXT: 00000000 l       .text	00000000 (idx: 5) .text[PR]
+; XCOFF32-NEXT: 00000000 l       .text	00000000 (idx: 5) [PR]
 ; XCOFF32-NEXT: 00000000 g       .text	00000019 (idx: 7) .foo[PR]
 ; XCOFF32-NEXT: 00000000 g     F .text (csect: (idx: 7) .foo[PR]) 	00000000 (idx: 9) .alias_foo
 ; XCOFF32-NEXT: 00000020 g       .text	00000020 .hidden (idx: 11) .hidden_foo[PR]
@@ -149,7 +149,7 @@ entry:
 ; XCOFF64-NEXT: 0000000000000000      df *DEBUG*	0000000000000000 (idx: 0) <stdin>
 ; XCOFF64-NEXT: 0000000000000000         *UND*	0000000000000000 (idx: 1) .extern_foo[PR]
 ; XCOFF64-NEXT: 0000000000000000         *UND*	0000000000000000 (idx: 3) extern_foo[DS]
-; XCOFF64-NEXT: 0000000000000000 l       .text	0000000000000000 (idx: 5) .text[PR]
+; XCOFF64-NEXT: 0000000000000000 l       .text	0000000000000000 (idx: 5) [PR]
 ; XCOFF64-NEXT: 0000000000000000 g       .text	0000000000000019 (idx: 7) .foo[PR]
 ; XCOFF64-NEXT: 0000000000000000 g     F .text (csect: (idx: 7) .foo[PR]) 	0000000000000000 (idx: 9) .alias_foo
 ; XCOFF64-NEXT: 0000000000000020 g       .text	0000000000000020 .hidden (idx: 11) .hidden_foo[PR]

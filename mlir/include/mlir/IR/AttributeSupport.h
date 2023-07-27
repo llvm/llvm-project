@@ -149,12 +149,14 @@ private:
 
 namespace detail {
 class AttributeUniquer;
+class DistinctAttributeUniquer;
 } // namespace detail
 
 /// Base storage class appearing in an attribute. Derived storage classes should
 /// only be constructed within the context of the AttributeUniquer.
 class alignas(8) AttributeStorage : public StorageUniquer::BaseStorage {
   friend detail::AttributeUniquer;
+  friend detail::DistinctAttributeUniquer;
   friend StorageUniquer;
 
 public:

@@ -8460,6 +8460,24 @@ void Sema::CodeCompleteObjCInterfaceDecl(Scope *S) {
                             Results.data(), Results.size());
 }
 
+void Sema::CodeCompleteObjCClassForwardDecl(Scope *S) {
+  ResultBuilder Results(*this, CodeCompleter->getAllocator(),
+                        CodeCompleter->getCodeCompletionTUInfo(),
+                        CodeCompletionContext::CCC_ObjCClassForwardDecl);
+  Results.EnterNewScope();
+
+  if (CodeCompleter->includeGlobals()) {
+    // Add all classes.
+    AddInterfaceResults(Context.getTranslationUnitDecl(), CurContext, false,
+                        false, Results);
+  }
+
+  Results.ExitScope();
+
+  HandleCodeCompleteResults(this, CodeCompleter, Results.getCompletionContext(),
+                            Results.data(), Results.size());
+}
+
 void Sema::CodeCompleteObjCSuperclass(Scope *S, IdentifierInfo *ClassName,
                                       SourceLocation ClassNameLoc) {
   ResultBuilder Results(*this, CodeCompleter->getAllocator(),

@@ -317,7 +317,7 @@ static LogicalResult testTrackingListenerReplacements(Operation *rootOp) {
   if (status.wasInterrupted())
     return failure();
   if (!replaced) {
-    replaced->emitError("could not find 'replaced' op");
+    rootOp->emitError("could not find 'replaced' op");
     return failure();
   }
 

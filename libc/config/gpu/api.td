@@ -9,6 +9,9 @@ def StringAPI : PublicAPI<"string.h"> {
 
 def StdlibAPI : PublicAPI<"stdlib.h"> {
   let Types = [
+    "div_t",
+    "ldiv_t",
+    "lldiv_t",
     "size_t",
     "__atexithandler_t",
   ];
@@ -26,4 +29,8 @@ def StdIOAPI : PublicAPI<"stdio.h"> {
     SimpleMacroDef<"EOF", "-1">,
   ];
   let Types = ["size_t", "FILE"];
+}
+
+def IntTypesAPI : PublicAPI<"inttypes.h"> {
+  let Types = ["imaxdiv_t"];
 }

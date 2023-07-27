@@ -212,7 +212,7 @@ template <class ELFT> void MarkLive<ELFT>::run() {
   // Add GC root symbols.
 
   // Preserve externally-visible symbols if the symbols defined by this
-  // file can interrupt other ELF file's symbols at runtime.
+  // file can interpose other ELF file's symbols at runtime.
   for (Symbol *sym : symtab.getSymbols())
     if (sym->includeInDynsym() && sym->partition == partition)
       markSymbol(sym);

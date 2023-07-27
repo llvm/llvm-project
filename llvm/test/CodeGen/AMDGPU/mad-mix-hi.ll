@@ -13,7 +13,6 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo(half %src0, half %s
 ; GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -63,7 +62,6 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo(half %src0, half %s
 ; GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_constlo:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 0x3c00
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
@@ -121,7 +119,6 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo(half %src0, half %src
 ; GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_reglo:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fma_mixhi_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v3
@@ -178,7 +175,6 @@ define i32 @v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack(half %src0, half %src1, ha
 ; SDAG-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; SDAG-GFX11-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -212,7 +208,6 @@ define i32 @v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack(half %src0, half %src1, ha
 ; GISEL-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX11-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX11-NEXT:    v_and_b32_e32 v0, 0xffff, v0
@@ -252,7 +247,6 @@ define i32 @v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext(half %src0, half %src
 ; SDAG-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext:
 ; SDAG-GFX11:       ; %bb.0:
 ; SDAG-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SDAG-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; SDAG-GFX11-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; SDAG-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; SDAG-GFX11-NEXT:    v_lshlrev_b32_e32 v0, 16, v0
@@ -286,7 +280,6 @@ define i32 @v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext(half %src0, half %src
 ; GISEL-GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_intpack_sext:
 ; GISEL-GFX11:       ; %bb.0:
 ; GISEL-GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GISEL-GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GISEL-GFX11-NEXT:    v_fma_mixlo_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GISEL-GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GISEL-GFX11-NEXT:    v_bfe_i32 v0, v0, 0, 16
@@ -339,7 +332,6 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt(half %
 ; GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_precvt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fma_mix_f32 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-NEXT:    v_cvt_f16_f32_e32 v0, v0
@@ -395,7 +387,6 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt(half 
 ; GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -455,7 +446,6 @@ define <2 x half> @v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi
 ; GFX11-LABEL: v_mad_mixhi_f16_f16lo_f16lo_f16lo_undeflo_clamp_postcvt_multi_use:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_fma_mixlo_f16 v3, v0, v1, v2 op_sel_hi:[1,1,1]
 ; GFX11-NEXT:    v_fma_mixhi_f16 v0, v0, v1, v2 op_sel_hi:[1,1,1] clamp
 ; GFX11-NEXT:    global_store_b16 v[0:1], v3, off dlc

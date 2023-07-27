@@ -627,6 +627,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(amdgpu_gs);
   KEYWORD(amdgpu_ps);
   KEYWORD(amdgpu_cs);
+  KEYWORD(amdgpu_cs_chain);
+  KEYWORD(amdgpu_cs_chain_preserve);
   KEYWORD(amdgpu_kernel);
   KEYWORD(amdgpu_gfx);
   KEYWORD(tailcc);
@@ -823,15 +825,7 @@ lltok::Kind LLLexer::LexIdentifier() {
   TYPEKEYWORD("x86_mmx",   Type::getX86_MMXTy(Context));
   TYPEKEYWORD("x86_amx",   Type::getX86_AMXTy(Context));
   TYPEKEYWORD("token",     Type::getTokenTy(Context));
-
-  if (Keyword == "ptr") {
-    if (Context.supportsTypedPointers()) {
-      Warning("ptr type is only supported in -opaque-pointers mode");
-      return lltok::Error;
-    }
-    TyVal = PointerType::getUnqual(Context);
-    return lltok::Type;
-  }
+  TYPEKEYWORD("ptr",       PointerType::getUnqual(Context));
 
 #undef TYPEKEYWORD
 

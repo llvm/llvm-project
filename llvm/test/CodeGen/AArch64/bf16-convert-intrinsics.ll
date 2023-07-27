@@ -1,4 +1,4 @@
-; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64-arm-none-eabi -mattr=+neon -mattr=+bf16 | FileCheck %s
+; RUN: llc < %s -verify-machineinstrs -mtriple=aarch64 -mattr=+neon -mattr=+bf16 | FileCheck %s
 
 declare bfloat @llvm.aarch64.neon.bfcvt(float)
 declare <8 x bfloat> @llvm.aarch64.neon.bfcvtn(<4 x float>)

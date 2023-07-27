@@ -191,7 +191,7 @@ protected:
 public:
   ELFLinkGraphBuilder_aarch32(StringRef FileName,
                               const llvm::object::ELFFile<ELFT> &Obj, Triple TT,
-                              LinkGraph::FeatureVector Features,
+                              SubtargetFeatures Features,
                               aarch32::ArmConfig ArmCfg)
       : ELFLinkGraphBuilder<ELFT>(Obj, std::move(TT), std::move(Features),
                                   FileName, getELFAArch32EdgeKindName),
@@ -254,7 +254,7 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   case Triple::thumb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32LE>>(**ELFObj).getELFFile();
     return ELFLinkGraphBuilder_aarch32<support::little>(
-               (*ELFObj)->getFileName(), ELFFile, TT, Features->getFeatures(),
+               (*ELFObj)->getFileName(), ELFFile, TT, std::move(*Features),
                ArmCfg)
         .buildGraph();
   }
@@ -262,7 +262,7 @@ createLinkGraphFromELFObject_aarch32(MemoryBufferRef ObjectBuffer) {
   case Triple::thumbeb: {
     auto &ELFFile = cast<ELFObjectFile<ELF32BE>>(**ELFObj).getELFFile();
     return ELFLinkGraphBuilder_aarch32<support::big>(
-               (*ELFObj)->getFileName(), ELFFile, TT, Features->getFeatures(),
+               (*ELFObj)->getFileName(), ELFFile, TT, std::move(*Features),
                ArmCfg)
         .buildGraph();
   }

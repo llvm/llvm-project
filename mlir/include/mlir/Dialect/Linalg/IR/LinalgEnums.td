@@ -31,10 +31,12 @@ def BinaryFn : I32EnumAttr<"BinaryFn", "", [
   I32EnumAttrCase<"add", 0>,
   I32EnumAttrCase<"sub", 1>,
   I32EnumAttrCase<"mul", 2>,
-  I32EnumAttrCase<"max_signed", 3>,
-  I32EnumAttrCase<"min_signed", 4>,
-  I32EnumAttrCase<"max_unsigned", 5>,
-  I32EnumAttrCase<"min_unsigned", 6>
+  I32EnumAttrCase<"div", 3>,
+  I32EnumAttrCase<"div_unsigned", 4>,
+  I32EnumAttrCase<"max_signed", 5>,
+  I32EnumAttrCase<"min_signed", 6>,
+  I32EnumAttrCase<"max_unsigned", 7>,
+  I32EnumAttrCase<"min_unsigned", 8>
 ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::linalg";

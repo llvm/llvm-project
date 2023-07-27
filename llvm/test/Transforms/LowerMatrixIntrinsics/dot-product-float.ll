@@ -43,7 +43,7 @@ define <1 x float> @dotproduct_float_v6(<6 x float> %a, <6 x float> %b) {
 ; CHECK-NEXT:    [[SPLAT_SPLAT21:%.*]] = shufflevector <1 x float> [[SPLAT_SPLATINSERT20]], <1 x float> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast <1 x float> @llvm.fmuladd.v1f32(<1 x float> [[BLOCK19]], <1 x float> [[SPLAT_SPLAT21]], <1 x float> [[TMP9]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <1 x float> [[TMP11]], <1 x float> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <1 x float> undef, <1 x float> [[TMP12]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <1 x float> poison, <1 x float> [[TMP12]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    ret <1 x float> [[TMP13]]
 ;
 entry:
@@ -162,7 +162,7 @@ define <1 x double> @dotproduct_double_v6(<6 x double> %a, <6 x double> %b) {
 ; CHECK-NEXT:    [[SPLAT_SPLAT21:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT20]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK19]], <1 x double> [[SPLAT_SPLAT21]], <1 x double> [[TMP9]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <1 x double> [[TMP11]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <1 x double> undef, <1 x double> [[TMP12]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <1 x double> poison, <1 x double> [[TMP12]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    ret <1 x double> [[TMP13]]
 ;
 entry:
@@ -218,7 +218,7 @@ define <1 x double> @intrinsic_column_major_load_dot_product_double_v6(ptr %lhs_
 ; CHECK-NEXT:    [[SPLAT_SPLAT25:%.*]] = shufflevector <1 x double> [[SPLAT_SPLATINSERT24]], <1 x double> poison, <1 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP11:%.*]] = call fast <1 x double> @llvm.fmuladd.v1f64(<1 x double> [[BLOCK23]], <1 x double> [[SPLAT_SPLAT25]], <1 x double> [[TMP9]])
 ; CHECK-NEXT:    [[TMP12:%.*]] = shufflevector <1 x double> [[TMP11]], <1 x double> poison, <1 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <1 x double> undef, <1 x double> [[TMP12]], <1 x i32> <i32 1>
+; CHECK-NEXT:    [[TMP13:%.*]] = shufflevector <1 x double> poison, <1 x double> [[TMP12]], <1 x i32> <i32 1>
 ; CHECK-NEXT:    ret <1 x double> [[TMP13]]
 ;
 entry:

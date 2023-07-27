@@ -278,15 +278,15 @@ llvm.func @wmmald_matrix(%arg0: !llvm.ptr<i32, 3>) {
 
 func.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
   // expected-error @below {{expected byte size to be either 4, 8 or 16.}}
-  nvvm.cp.async.shared.global %arg0, %arg1, 32 : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
+  nvvm.cp.async.shared.global %arg0, %arg1, 32, cache = ca : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
   return
 }
 
 // -----
 
 func.func @cp_async(%arg0: !llvm.ptr<i8, 3>, %arg1: !llvm.ptr<i8, 1>) {
-  // expected-error @below {{bypass l1 is only support for 16 bytes copy.}}
-  nvvm.cp.async.shared.global %arg0, %arg1, 8 {bypass_l1} : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
+  // expected-error @below {{CG cache modifier is only support for 16 bytes copy.}}
+  nvvm.cp.async.shared.global %arg0, %arg1, 8, cache = cg : !llvm.ptr<i8, 3>, !llvm.ptr<i8, 1>
   return
 }
 

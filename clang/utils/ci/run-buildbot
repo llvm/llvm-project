@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+#===----------------------------------------------------------------------===##
+#
+# Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+# See https://llvm.org/LICENSE.txt for license information.
+# SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+#
+#===----------------------------------------------------------------------===##
+
+set -ex
+set -o pipefail
+unset LANG
+unset LC_ALL
+unset LC_COLLATE
+
+PROGNAME="$(basename "${0}")"
+
+function usage() {
+cat <<EOF
+Usage:
+${PROGNAME} [options] <BUILDER>
+
+[-h|--help]         Display this help and exit.
+
+--llvm-root <DIR>   Path to the root of the LLVM monorepo. By default, we try
+                    to figure it out based on the current working directory.
+
+--build-dir <DIR>   The directory to use for building the library. By default,
+                    this is '<llvm-root>/build/<builder>'.
+EOF
+}
+
+if [[ $# == 0 ]]; then
+   usage
+   exit 0
+fi
+
+while [[ $# -gt 0 ]]; do
+    case ${1} in
+        -h|--help)
+            usage
+            exit 0
+            ;;
+        --llvm-root)
+            MONOREPO_ROOT="${2}"
+            shift; shift
+            ;;
+        --build-dir)
+            BUILD_DIR="${2}"
+            shift; shift
+            ;;
+        *)
+            BUILDER="${1}"
+            shift
+            ;;
+    esac
+done
+
+MONOREPO_ROOT="${MONOREPO_ROOT:="$(git rev-parse --show-toplevel)"}"
+BUILD_DIR="${BUILD_DIR:=${MONOREPO_ROOT}/build/${BUILDER}}"
+INSTALL_DIR="${BUILD_DIR}/install"
+
+# Print the version of a few tools to aid diagnostics in some cases
+cmake --version
+ninja --version
+
+case "${BUILDER}" in
+check-format)
+    ! grep -rnI '[[:blank:]]$' clang/lib clang/include clang/docs
+;;
+build-clang)
+    mkdir install
+    # We use Release here to avoid including debug information. Otherwise, the
+    # clang binary is very large, which is problematic because we need to upload
+    # the artifacts for other jobs to use. This may seem like nothing, but with
+    # the number of jobs we run daily, this can result in thousands of GB of
+    # network I/O.
+    cmake                                                                      \
+        -S llvm                                                                \
+        -B build                                                               \
+        -G Ninja                                                               \
+        -DCMAKE_CXX_COMPILER_LAUNCHER="ccache"                                 \
+        -DCMAKE_BUILD_TYPE=Release                                             \
+        -DCMAKE_INSTALL_PREFIX=install                                         \
+        -DLLVM_ENABLE_PROJECTS="clang;compiler-rt"                             \
+
+    ninja -C build install-clang install-clang-resource-headers
+    ccache -s
+    tar -cJvf install.tar.xz install/
+    buildkite-agent artifact upload --debug install.tar.xz
+;;
+generic-cxx03)
+    buildkite-agent artifact download install.tar.xz .
+    tar -xvf install.tar.xz
+    export CC=$(pwd)/install/bin/clang
+    export CXX=$(pwd)/install/bin/clang++
+    chmod +x install/bin/clang install/bin/clang++
+    libcxx/utils/ci/run-buildbot generic-cxx03
+;;
+generic-cxx26)
+    buildkite-agent artifact download install.tar.xz .
+    tar -xvf install.tar.xz
+    export CC=$(pwd)/install/bin/clang
+    export CXX=$(pwd)/install/bin/clang++
+    chmod +x install/bin/clang install/bin/clang++
+    libcxx/utils/ci/run-buildbot generic-cxx26
+;;
+generic-modules)
+    buildkite-agent artifact download install.tar.xz .
+    tar -xvf install.tar.xz
+    export CC=$(pwd)/install/bin/clang
+    export CXX=$(pwd)/install/bin/clang++
+    chmod +x install/bin/clang install/bin/clang++
+    libcxx/utils/ci/run-buildbot generic-modules
+;;
+#################################################################
+# Insert vendor-specific internal configurations below.
+#
+# This allows vendors to extend this file with their own internal
+# configurations without running into merge conflicts with upstream.
+#################################################################
+
+#################################################################
+*)
+    echo "${BUILDER} is not a known configuration"
+    exit 1
+;;
+esac

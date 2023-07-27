@@ -504,7 +504,7 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    Timer::DumpCategoryTimes(&result.GetOutputStream());
+    Timer::DumpCategoryTimes(result.GetOutputStream());
     Timer::SetDisplayDepth(0);
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
@@ -527,7 +527,7 @@ public:
 
 protected:
   bool DoExecute(Args &args, CommandReturnObject &result) override {
-    Timer::DumpCategoryTimes(&result.GetOutputStream());
+    Timer::DumpCategoryTimes(result.GetOutputStream());
     result.SetStatus(eReturnStatusSuccessFinishResult);
 
     if (!result.Succeeded()) {

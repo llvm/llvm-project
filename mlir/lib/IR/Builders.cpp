@@ -58,6 +58,8 @@ FloatType Builder::getBF16Type() { return FloatType::getBF16(context); }
 
 FloatType Builder::getF16Type() { return FloatType::getF16(context); }
 
+FloatType Builder::getTF32Type() { return FloatType::getTF32(context); }
+
 FloatType Builder::getF32Type() { return FloatType::getF32(context); }
 
 FloatType Builder::getF64Type() { return FloatType::getF64(context); }
@@ -148,6 +150,17 @@ DenseIntElementsAttr Builder::getI64VectorAttr(ArrayRef<int64_t> values) {
 DenseIntElementsAttr Builder::getIndexVectorAttr(ArrayRef<int64_t> values) {
   return DenseIntElementsAttr::get(
       VectorType::get(static_cast<int64_t>(values.size()), getIndexType()),
+      values);
+}
+
+DenseFPElementsAttr Builder::getF32VectorAttr(ArrayRef<float> values) {
+  return DenseFPElementsAttr::get(
+      VectorType::get(static_cast<float>(values.size()), getF32Type()), values);
+}
+
+DenseFPElementsAttr Builder::getF64VectorAttr(ArrayRef<double> values) {
+  return DenseFPElementsAttr::get(
+      VectorType::get(static_cast<double>(values.size()), getF64Type()),
       values);
 }
 
@@ -462,15 +475,9 @@ LogicalResult OpBuilder::tryFold(Operation *op,
   if (matchPattern(op, m_Constant()))
     return cleanupFailure();
 
-  // Check to see if any operands to the operation is constant and whether
-  // the operation knows how to constant fold itself.
-  SmallVector<Attribute, 4> constOperands(op->getNumOperands());
-  for (unsigned i = 0, e = constOperands.size(); i != e; ++i)
-    matchPattern(op->getOperand(i), m_Constant(&constOperands[i]));
-
   // Try to fold the operation.
   SmallVector<OpFoldResult, 4> foldResults;
-  if (failed(op->fold(constOperands, foldResults)) || foldResults.empty())
+  if (failed(op->fold(foldResults)) || foldResults.empty())
     return cleanupFailure();
 
   // A temporary builder used for creating constants during folding.

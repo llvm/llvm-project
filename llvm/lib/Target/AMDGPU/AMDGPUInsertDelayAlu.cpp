@@ -51,7 +51,7 @@ public:
         MI.getOpcode() == AMDGPU::S_SENDMSG_RTN_B64)
       return true;
     if (MI.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR &&
-        (MI.getOperand(0).getImm() & 0xf000) == 0)
+        AMDGPU::DepCtr::decodeFieldVaVdst(MI.getOperand(0).getImm()) == 0)
       return true;
     return false;
   }

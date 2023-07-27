@@ -86,6 +86,8 @@ protected:
                       lldb_private::StoppointCallbackContext *context,
                       lldb::user_id_t break_id, lldb::user_id_t break_loc_id);
 
+  lldb::addr_t GetNotificationFuncAddrFromImageInfos();
+
   bool SetNotificationBreakpoint() override;
 
   void ClearNotificationBreakpoint() override;

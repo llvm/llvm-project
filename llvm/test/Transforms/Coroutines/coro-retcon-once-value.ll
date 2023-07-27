@@ -12,7 +12,7 @@ define {ptr, i32} @f(ptr %buffer, ptr %array) {
 ; CHECK-NEXT:    [[LOAD_POS:%.*]] = icmp sgt i32 [[LOAD]], 0
 ; CHECK-NEXT:    [[SPEC_SELECT:%.*]] = select i1 [[LOAD_POS]], ptr @f.resume.0, ptr @f.resume.1
 ; CHECK-NEXT:    [[SPEC_SELECT4:%.*]] = tail call i32 @llvm.smax.i32(i32 [[LOAD]], i32 0)
-; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } undef, ptr [[SPEC_SELECT]], 0
+; CHECK-NEXT:    [[TMP0:%.*]] = insertvalue { ptr, i32 } poison, ptr [[SPEC_SELECT]], 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertvalue { ptr, i32 } [[TMP0]], i32 [[SPEC_SELECT4]], 1
 ; CHECK-NEXT:    ret { ptr, i32 } [[TMP1]]
 ;

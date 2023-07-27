@@ -141,10 +141,6 @@ LogicalResult coalesceLoops(MutableArrayRef<scf::ForOp> loops);
 void collapseParallelLoops(scf::ParallelOp loops,
                            ArrayRef<std::vector<unsigned>> combinedDimensions);
 
-/// Promotes the loop body of a scf::ForOp to its containing block if the loop
-/// was known to have a single iteration.
-LogicalResult promoteIfSingleIteration(scf::ForOp forOp);
-
 /// Unrolls this for operation by the specified unroll factor. Returns failure
 /// if the loop cannot be unrolled either due to restrictions or due to invalid
 /// unroll factors. Requires positive loop bounds and step. If specified,

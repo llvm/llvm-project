@@ -29,5 +29,13 @@ mlir::Value genMoveAlloc(fir::FirOpBuilder &builder, mlir::Location loc,
                          mlir::Value to, mlir::Value from, mlir::Value hasStat,
                          mlir::Value errMsg);
 
+/// Generate runtime call to apply bounds, cobounds, length type
+/// parameters and derived type information from \p mold descriptor
+/// to \p desc descriptor. The resulting rank of \p desc descriptor
+/// is set to \p rank. The resulting descriptor must be initialized
+/// and deallocated before the call.
+void genAllocatableApplyMold(fir::FirOpBuilder &builder, mlir::Location loc,
+                             mlir::Value desc, mlir::Value mold, int rank);
+
 } // namespace fir::runtime
 #endif // FORTRAN_OPTIMIZER_BUILDER_RUNTIME_ALLOCATABLE_H

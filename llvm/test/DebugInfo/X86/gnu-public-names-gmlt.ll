@@ -17,8 +17,8 @@
 ; GPUB: .debug_gnu_pubnames contents:
 ; GPUB-NEXT: unit_offset = 0x00000000
 ; GPUB-NEXT: Name
-; GPUB-NEXT: "f3"
 ; GPUB-NEXT: "f2"
+; GPUB-NEXT: "f3"
 
 ; GPUB: .debug_gnu_pubtypes contents:
 ; GPUB-NEXT: length = 0x0000000e, format = DWARF32, version = 0x0002, unit_offset = 0x00000000

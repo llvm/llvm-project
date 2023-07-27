@@ -18,7 +18,7 @@
 #include <mdspan>
 #include <cassert>
 
-#include "ConvertibleToIntegral.h"
+#include "../ConvertibleToIntegral.h"
 #include "test_macros.h"
 
 template <class E, class Expected>

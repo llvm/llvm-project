@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 // UNSUPPORTED: c++03
+// UNSUPPORTED: no-filesystem
+// UNSUPPORTED: availability-filesystem-missing
 
 // <filesystem>
 
@@ -14,17 +16,17 @@
 // path weakly_canonical(const path& p, error_code& ec);
 
 #include "filesystem_include.h"
-#include <cstdio>
 #include <string>
 
+#include "assert_macros.h"
+#include "concat_macros.h"
 #include "test_macros.h"
 #include "test_iterators.h"
 #include "count_new.h"
 #include "filesystem_test_helper.h"
-
+#include "../../class.path/path_helper.h"
 
 int main(int, char**) {
-
   static_test_env static_env;
 
   fs::path root = fs::current_path().root_path();
@@ -66,23 +68,15 @@ int main(int, char**) {
       {static_env.Dir / "DNE/../foo", static_env.Dir / "foo"}
   };
   // clang-format on
-  int ID = 0;
-  bool Failed = false;
   for (auto& TC : TestCases) {
-    ++ID;
-    fs::path p = TC.input;
+    fs::path p      = TC.input;
     fs::path expect = TC.expect;
     expect.make_preferred();
     const fs::path output = fs::weakly_canonical(p);
-    if (!PathEq(output, expect)) {
-      Failed = true;
-      std::fprintf(stderr, "TEST CASE #%d FAILED:\n"
-                  "  Input: '%s'\n"
-                  "  Expected: '%s'\n"
-                  "  Output: '%s'\n",
-        ID, TC.input.string().c_str(), expect.string().c_str(),
-        output.string().c_str());
-    }
+
+    TEST_REQUIRE(PathEq(output, expect),
+                 TEST_WRITE_CONCATENATED(
+                     "Input: ", TC.input.string(), "\nExpected: ", expect.string(), "\nOutput: ", output.string()));
   }
-  return Failed;
+  return 0;
 }

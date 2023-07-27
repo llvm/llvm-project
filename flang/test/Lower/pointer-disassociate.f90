@@ -113,9 +113,9 @@ subroutine test_polymorphic_null(p)
 end subroutine
 ! CHECK-LABEL:   func.func @_QPtest_polymorphic_null(
 ! CHECK-SAME:  %[[VAL_0:.*]]: !fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFtest_polymorphic_nullTt>>>>>
-! CHECK:  %[[VAL_1:.*]] = fir.address_of(@_QFtest_polymorphic_nullE.dt.t)
+! CHECK:  %[[VAL_1:.*]] = fir.type_desc !fir.type<_QFtest_polymorphic_nullTt> 
 ! CHECK:  %[[VAL_2:.*]] = fir.convert %[[VAL_0]] : (!fir.ref<!fir.class<!fir.ptr<!fir.array<?x!fir.type<_QFtest_polymorphic_nullTt>>>>>) -> !fir.ref<!fir.box<none>>
-! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]] : (!fir.ref<{{.*}}>) -> !fir.ref<none>
+! CHECK:  %[[VAL_3:.*]] = fir.convert %[[VAL_1]] : (!fir.tdesc<!fir.type<_QFtest_polymorphic_nullTt>>) -> !fir.ref<none> 
 ! CHECK:  %[[VAL_4:.*]] = arith.constant 1 : i32
 ! CHECK:  %[[VAL_5:.*]] = arith.constant 0 : i32
 ! CHECK:  %[[VAL_6:.*]] = fir.call @_FortranAPointerNullifyDerived(%[[VAL_2]], %[[VAL_3]], %[[VAL_4]], %[[VAL_5]]) {{.*}}: (!fir.ref<!fir.box<none>>, !fir.ref<none>, i32, i32) -> none

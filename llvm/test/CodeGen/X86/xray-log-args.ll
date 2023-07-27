@@ -25,7 +25,7 @@ define i32 @callee(i32 %arg) nounwind noinline uwtable "function-instrument"="xr
 ; CHECK-LINUX-NEXT:    .byte 0x02
 ; CHECK-LINUX:         .zero 13
 
-; CHECK-MACOS-LABEL: Lxray_sleds_start0:
+; CHECK-MACOS-LABEL: lxray_sleds_start0:
 ; CHECK-MACOS-NEXT:  [[TMP:Ltmp[0-9]+]]:
 ; CHECK-MACOS-NEXT:    .quad Lxray_sled_0-[[TMP]]
 ; CHECK-MACOS-NEXT:    .quad Lfunc_begin0-([[TMP]]+8)
@@ -62,7 +62,7 @@ define i32 @caller(i32 %arg) nounwind noinline uwtable "function-instrument"="xr
 ; CHECK-LINUX-NEXT:    .byte 0x02
 ; CHECK-LINUX:         .zero 13
 
-; CHECK-MACOS-LABEL: Lxray_sleds_start1:
+; CHECK-MACOS-LABEL: lxray_sleds_start1:
 ; CHECK-MACOS-NEXT:  [[TMP:Ltmp[0-9]+]]:
 ; CHECK-MACOS-NEXT:    .quad Lxray_sled_2-[[TMP]]
 ; CHECK-MACOS-NEXT:    .quad Lfunc_begin1-([[TMP]]+8)

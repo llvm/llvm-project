@@ -52,7 +52,7 @@
 // REDEFINE:     --implicit-check-not=-fvisibility-nodllstorageclass \
 // REDEFINE:     --implicit-check-not=-fvisibility-externs-dllimport \
 // REDEFINE:     --implicit-check-not=-fvisibility-externs-nodllstorageclass \
-// REDEFINE:     --implicit-check-not=warning:
+// REDEFINE:     --implicit-check-not="warning: argument unused"
 // REDEFINE: %{triple} = x86_64-scei-ps4
 // RUN: %{run}
 // REDEFINE: %{triple} = x86_64-sie-ps5

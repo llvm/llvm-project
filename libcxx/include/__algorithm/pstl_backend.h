@@ -150,6 +150,9 @@ implemented, all the algorithms will eventually forward to the basis algorithms 
                               _Pred __pred,
                               const _Tp& __new_value);
 
+  template <class _ExecutionPolicy, class _Iterator, class _Comp>
+  void __pstl_sort(_Backend, _Iterator __first, _Iterator __last, _Comp __comp);
+
 // TODO: Complete this list
 
 */
@@ -169,7 +172,8 @@ struct __select_backend<std::execution::unsequenced_policy> {
 };
 #  endif
 
-#  if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL) || defined(_LIBCPP_PSTL_CPU_BACKEND_THREAD)
+#  if defined(_LIBCPP_PSTL_CPU_BACKEND_SERIAL) || defined(_LIBCPP_PSTL_CPU_BACKEND_THREAD) ||                          \
+      defined(_LIBCPP_PSTL_CPU_BACKEND_LIBDISPATCH)
 template <>
 struct __select_backend<std::execution::parallel_policy> {
   using type = __cpu_backend_tag;

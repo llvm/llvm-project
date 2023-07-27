@@ -35,7 +35,6 @@
 #include "llvm/IRReader/IRReader.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/MC/MCTargetOptionsCommandFlags.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Pass.h"
 #include "llvm/Remarks/HotnessThresholdParser.h"
@@ -53,6 +52,7 @@
 #include "llvm/Target/TargetLoweringObjectFile.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/TargetParser/Host.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/Triple.h"
 #include "llvm/Transforms/Utils/Cloning.h"
 #include <memory>
@@ -105,10 +105,6 @@ static cl::opt<std::string>
                              "assembly will consider GNU as support."
                              "'none' means that all ELF features can be used, "
                              "regardless of binutils support"));
-
-static cl::opt<bool>
-NoIntegratedAssembler("no-integrated-as", cl::Hidden,
-                      cl::desc("Disable integrated assembler"));
 
 static cl::opt<bool>
     PreserveComments("preserve-as-comments", cl::Hidden,
@@ -517,7 +513,6 @@ static int compileModule(char **argv, LLVMContext &Context) {
 
     Options.BinutilsVersion =
         TargetMachine::parseBinutilsVersion(BinutilsVersion);
-    Options.DisableIntegratedAS = NoIntegratedAssembler;
     Options.MCOptions.ShowMCEncoding = ShowMCEncoding;
     Options.MCOptions.AsmVerbose = AsmVerbose;
     Options.MCOptions.PreserveAsmComments = PreserveComments;

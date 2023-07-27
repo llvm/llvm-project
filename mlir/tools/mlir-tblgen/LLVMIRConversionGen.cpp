@@ -270,6 +270,8 @@ static LogicalResult emitOneMLIRBuilder(const Record &record, raw_ostream &os,
       bs << "moduleImport.matchFloatAttr";
     } else if (name == "_var_attr") {
       bs << "moduleImport.matchLocalVariableAttr";
+    } else if (name == "_label_attr") {
+      bs << "moduleImport.matchLabelAttr";
     } else if (name == "_resultType") {
       bs << "moduleImport.convertType(inst->getType())";
     } else if (name == "_location") {

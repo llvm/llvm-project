@@ -527,7 +527,7 @@ class __task : public tbb::detail::d1::task
     __task*
     allocate_func_task(_Fn&& __f)
     {
-        _LIBCPP_ASSERT(_M_execute_data != nullptr, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(_M_execute_data != nullptr, "");
         tbb::detail::d1::small_object_allocator __alloc{};
         auto __t =
             __alloc.new_object<__func_task<typename std::decay<_Fn>::type>>(*_M_execute_data, std::forward<_Fn>(__f));
@@ -572,7 +572,7 @@ class __task : public tbb::detail::d1::task
     make_additional_child_of(__task* __parent, _Fn&& __f)
     {
         auto __t = make_child_of(__parent, std::forward<_Fn>(__f));
-        _LIBCPP_ASSERT(__parent->_M_refcount.load(std::memory_order_relaxed) > 0, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__parent->_M_refcount.load(std::memory_order_relaxed) > 0, "");
         ++__parent->_M_refcount;
         return __t;
     }
@@ -593,7 +593,7 @@ class __task : public tbb::detail::d1::task
     inline void
     spawn(__task* __t)
     {
-        _LIBCPP_ASSERT(_M_execute_data != nullptr, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(_M_execute_data != nullptr, "");
         tbb::detail::d1::spawn(*__t, *_M_execute_data->context);
     }
 
@@ -646,11 +646,11 @@ class __func_task : public __task
 
         this->~__func_task();
 
-        _LIBCPP_ASSERT(__parent != nullptr, "");
-        _LIBCPP_ASSERT(__parent->_M_refcount.load(std::memory_order_relaxed) > 0, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__parent != nullptr, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__parent->_M_refcount.load(std::memory_order_relaxed) > 0, "");
         if (--__parent->_M_refcount == 0)
         {
-            _LIBCPP_ASSERT(__next == nullptr, "");
+            _LIBCPP_ASSERT_UNCATEGORIZED(__next == nullptr, "");
             __alloc.deallocate(this, *__ed);
             return __parent;
         }
@@ -862,20 +862,20 @@ class __merge_func
     {
         const auto __nx = (_M_xe - _M_xs);
         const auto __ny = (_M_ye - _M_ys);
-        _LIBCPP_ASSERT(__nx > 0 && __ny > 0, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__nx > 0 && __ny > 0, "");
 
-        _LIBCPP_ASSERT(_x_orig == _y_orig, "");
-        _LIBCPP_ASSERT(!is_partial(), "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(_x_orig == _y_orig, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!is_partial(), "");
 
         if (_x_orig)
         {
-            _LIBCPP_ASSERT(std::is_sorted(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_comp), "");
-            _LIBCPP_ASSERT(std::is_sorted(_M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_comp), "");
+            _LIBCPP_ASSERT_UNCATEGORIZED(std::is_sorted(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_comp), "");
+            _LIBCPP_ASSERT_UNCATEGORIZED(std::is_sorted(_M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_comp), "");
             return !_M_comp(*(_M_x_beg + _M_ys), *(_M_x_beg + _M_xe - 1));
         }
 
-        _LIBCPP_ASSERT(std::is_sorted(_M_z_beg + _M_xs, _M_z_beg + _M_xe, _M_comp), "");
-        _LIBCPP_ASSERT(std::is_sorted(_M_z_beg + _M_ys, _M_z_beg + _M_ye, _M_comp), "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(std::is_sorted(_M_z_beg + _M_xs, _M_z_beg + _M_xe, _M_comp), "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(std::is_sorted(_M_z_beg + _M_ys, _M_z_beg + _M_ye, _M_comp), "");
         return !_M_comp(*(_M_z_beg + _M_zs + __nx), *(_M_z_beg + _M_zs + __nx - 1));
     }
     void
@@ -883,7 +883,7 @@ class __merge_func
     {
         const auto __nx = (_M_xe - _M_xs);
         const auto __ny = (_M_ye - _M_ys);
-        _LIBCPP_ASSERT(__nx > 0 && __ny > 0, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__nx > 0 && __ny > 0, "");
 
         if (_x_orig)
             __move_range_construct()(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_z_beg + _M_zs);
@@ -914,7 +914,7 @@ class __merge_func
     __task*
     merge_ranges(__task* __self)
     {
-        _LIBCPP_ASSERT(_x_orig == _y_orig, ""); //two merged subrange must be lie into the same buffer
+        _LIBCPP_ASSERT_UNCATEGORIZED(_x_orig == _y_orig, ""); // two merged subrange must be lie into the same buffer
 
         const auto __nx = (_M_xe - _M_xs);
         const auto __ny = (_M_ye - _M_ys);
@@ -930,15 +930,17 @@ class __merge_func
             _M_leaf_merge(_M_x_beg + _M_xs, _M_x_beg + _M_xe, _M_x_beg + _M_ys, _M_x_beg + _M_ye, _M_z_beg + _M_zs,
                           _M_comp, __move_value_construct(), __move_value_construct(), __move_range_construct(),
                           __move_range_construct());
-            _LIBCPP_ASSERT(parent_merge(__self), ""); //not root merging task
+            _LIBCPP_ASSERT_UNCATEGORIZED(parent_merge(__self), ""); //not root merging task
         }
         //merge to "origin"
         else
         {
-            _LIBCPP_ASSERT(_x_orig == _y_orig, "");
+            _LIBCPP_ASSERT_UNCATEGORIZED(_x_orig == _y_orig, "");
 
-            _LIBCPP_ASSERT(is_partial() || std::is_sorted(_M_z_beg + _M_xs, _M_z_beg + _M_xe, _M_comp), "");
-            _LIBCPP_ASSERT(is_partial() || std::is_sorted(_M_z_beg + _M_ys, _M_z_beg + _M_ye, _M_comp), "");
+            _LIBCPP_ASSERT_UNCATEGORIZED(
+                is_partial() || std::is_sorted(_M_z_beg + _M_xs, _M_z_beg + _M_xe, _M_comp), "");
+            _LIBCPP_ASSERT_UNCATEGORIZED(
+                is_partial() || std::is_sorted(_M_z_beg + _M_ys, _M_z_beg + _M_ye, _M_comp), "");
 
             const auto __nx = (_M_xe - _M_xs);
             const auto __ny = (_M_ye - _M_ys);
@@ -955,8 +957,8 @@ class __merge_func
     __task*
     process_ranges(__task* __self)
     {
-        _LIBCPP_ASSERT(_x_orig == _y_orig, "");
-        _LIBCPP_ASSERT(!_split, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(_x_orig == _y_orig, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!_split, "");
 
         auto p = parent_merge(__self);
 
@@ -1002,7 +1004,7 @@ class __merge_func
     __task*
     split_merging(__task* __self)
     {
-        _LIBCPP_ASSERT(_x_orig == _y_orig, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(_x_orig == _y_orig, "");
         const auto __nx = (_M_xe - _M_xs);
         const auto __ny = (_M_ye - _M_ys);
 
@@ -1074,8 +1076,8 @@ operator()(__task* __self)
     {
         const _SizeType __nx = (_M_xe - _M_xs);
         const _SizeType __ny = (_M_ye - _M_ys);
-        _LIBCPP_ASSERT(__nx > 0, "");
-        _LIBCPP_ASSERT(__nx > 0, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__nx > 0, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(__nx > 0, "");
 
         if (__nx < __ny)
             move_x_range();
@@ -1131,7 +1133,7 @@ __stable_sort_func<_RandomAccessIterator1, _RandomAccessIterator2, _Compare, _Le
     if (__n <= __sort_cut_off)
     {
         _M_leaf_sort(_M_xs, _M_xe, _M_comp);
-        _LIBCPP_ASSERT(!_M_root, "");
+        _LIBCPP_ASSERT_UNCATEGORIZED(!_M_root, "");
         return nullptr;
     }
 

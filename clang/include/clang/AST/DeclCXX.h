@@ -1450,7 +1450,7 @@ public:
   }
 
   /// Notify the class that this destructor is now selected.
-  /// 
+  ///
   /// Important properties of the class depend on destructor properties. Since
   /// C++20, it is possible to have multiple destructor declarations in a class
   /// out of which one will be selected at the end.
@@ -1942,13 +1942,13 @@ private:
                         ExplicitSpecifier ES,
                         const DeclarationNameInfo &NameInfo, QualType T,
                         TypeSourceInfo *TInfo, SourceLocation EndLocation,
-                        CXXConstructorDecl *Ctor)
+                        CXXConstructorDecl *Ctor, DeductionCandidate Kind)
       : FunctionDecl(CXXDeductionGuide, C, DC, StartLoc, NameInfo, T, TInfo,
                      SC_None, false, false, ConstexprSpecKind::Unspecified),
         Ctor(Ctor), ExplicitSpec(ES) {
     if (EndLocation.isValid())
       setRangeEnd(EndLocation);
-    setIsCopyDeductionCandidate(false);
+    setDeductionCandidateKind(Kind);
   }
 
   CXXConstructorDecl *Ctor;
@@ -1963,7 +1963,8 @@ public:
   Create(ASTContext &C, DeclContext *DC, SourceLocation StartLoc,
          ExplicitSpecifier ES, const DeclarationNameInfo &NameInfo, QualType T,
          TypeSourceInfo *TInfo, SourceLocation EndLocation,
-         CXXConstructorDecl *Ctor = nullptr);
+         CXXConstructorDecl *Ctor = nullptr,
+         DeductionCandidate Kind = DeductionCandidate::Normal);
 
   static CXXDeductionGuideDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
@@ -1980,16 +1981,15 @@ public:
 
   /// Get the constructor from which this deduction guide was generated, if
   /// this is an implicit deduction guide.
-  CXXConstructorDecl *getCorrespondingConstructor() const {
-    return Ctor;
+  CXXConstructorDecl *getCorrespondingConstructor() const { return Ctor; }
+
+  void setDeductionCandidateKind(DeductionCandidate K) {
+    FunctionDeclBits.DeductionCandidateKind = static_cast<unsigned char>(K);
   }
 
-  void setIsCopyDeductionCandidate(bool isCDC = true) {
-    FunctionDeclBits.IsCopyDeductionCandidate = isCDC;
-  }
-
-  bool isCopyDeductionCandidate() const {
-    return FunctionDeclBits.IsCopyDeductionCandidate;
+  DeductionCandidate getDeductionCandidateKind() const {
+    return static_cast<DeductionCandidate>(
+        FunctionDeclBits.DeductionCandidateKind);
   }
 
   // Implement isa/cast/dyncast/etc.
@@ -4010,12 +4010,12 @@ public:
 /// Represents a C++11 static_assert declaration.
 class StaticAssertDecl : public Decl {
   llvm::PointerIntPair<Expr *, 1, bool> AssertExprAndFailed;
-  StringLiteral *Message;
+  Expr *Message;
   SourceLocation RParenLoc;
 
   StaticAssertDecl(DeclContext *DC, SourceLocation StaticAssertLoc,
-                   Expr *AssertExpr, StringLiteral *Message,
-                   SourceLocation RParenLoc, bool Failed)
+                   Expr *AssertExpr, Expr *Message, SourceLocation RParenLoc,
+                   bool Failed)
       : Decl(StaticAssert, DC, StaticAssertLoc),
         AssertExprAndFailed(AssertExpr, Failed), Message(Message),
         RParenLoc(RParenLoc) {}
@@ -4027,15 +4027,15 @@ public:
 
   static StaticAssertDecl *Create(ASTContext &C, DeclContext *DC,
                                   SourceLocation StaticAssertLoc,
-                                  Expr *AssertExpr, StringLiteral *Message,
+                                  Expr *AssertExpr, Expr *Message,
                                   SourceLocation RParenLoc, bool Failed);
   static StaticAssertDecl *CreateDeserialized(ASTContext &C, unsigned ID);
 
   Expr *getAssertExpr() { return AssertExprAndFailed.getPointer(); }
   const Expr *getAssertExpr() const { return AssertExprAndFailed.getPointer(); }
 
-  StringLiteral *getMessage() { return Message; }
-  const StringLiteral *getMessage() const { return Message; }
+  Expr *getMessage() { return Message; }
+  const Expr *getMessage() const { return Message; }
 
   bool isFailed() const { return AssertExprAndFailed.getInt(); }
 

@@ -20,12 +20,17 @@
 #include <vector>
 
 #include "Debug.h"
-#include "DeviceEnvironment.h"
+#include "Environment.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
+#include "RPC.h"
 #include "Utilities.h"
 #include "omptarget.h"
+
+#ifdef OMPT_SUPPORT
+#include "omp-tools.h"
+#endif
 
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -62,15 +67,23 @@ struct AsyncInfoWrapperTy {
   /// Get the raw __tgt_async_info pointer.
   operator __tgt_async_info *() const { return AsyncInfoPtr; }
 
-  /// Get a reference to the underlying plugin-specific queue type.
-  template <typename Ty> Ty &getQueueAs() const {
-    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
-                  "Queue is not of the same size as target type");
-    return reinterpret_cast<Ty &>(AsyncInfoPtr->Queue);
-  }
-
   /// Indicate whether there is queue.
   bool hasQueue() const { return (AsyncInfoPtr->Queue != nullptr); }
+
+  /// Get the queue.
+  template <typename Ty> Ty getQueueAs() {
+    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
+                  "Queue is not of the same size as target type");
+    return static_cast<Ty>(AsyncInfoPtr->Queue);
+  }
+
+  /// Set the queue.
+  template <typename Ty> void setQueueAs(Ty Queue) {
+    static_assert(sizeof(Ty) == sizeof(AsyncInfoPtr->Queue),
+                  "Queue is not of the same size as target type");
+    assert(!AsyncInfoPtr->Queue && "Overwriting queue");
+    AsyncInfoPtr->Queue = Queue;
+  }
 
   /// Synchronize with the __tgt_async_info's pending operations if it's the
   /// internal async info. The error associated to the aysnchronous operations
@@ -238,8 +251,8 @@ public:
 struct GenericKernelTy {
   /// Construct a kernel with a name and a execution mode.
   GenericKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode)
-      : Name(Name), ExecutionMode(ExecutionMode),
-        PreferredNumThreads(0), MaxNumThreads(0) {}
+      : Name(Name), ExecutionMode(ExecutionMode), PreferredNumThreads(0),
+        MaxNumThreads(0) {}
 
   virtual ~GenericKernelTy() {}
 
@@ -254,8 +267,8 @@ struct GenericKernelTy {
                ptrdiff_t *ArgOffsets, KernelArgsTy &KernelArgs,
                AsyncInfoWrapperTy &AsyncInfoWrapper) const;
   virtual Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
-                           uint64_t NumBlocks,
-                           KernelArgsTy &KernelArgs, void *Args,
+                           uint64_t NumBlocks, KernelArgsTy &KernelArgs,
+                           void *Args,
                            AsyncInfoWrapperTy &AsyncInfoWrapper) const = 0;
 
   /// Get the kernel name.
@@ -600,6 +613,11 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// this behavior by overriding the shouldSetupDeviceEnvironment function.
   Error setupDeviceEnvironment(GenericPluginTy &Plugin, DeviceImageTy &Image);
 
+  // Setup the RPC server for this device if needed. This may not run on some
+  // plugins like the CPU targets. By default, it will not be executed so it is
+  // up to the target to override this using the shouldSetupRPCServer function.
+  Error setupRPCServer(GenericPluginTy &Plugin, DeviceImageTy &Image);
+
   /// Register the offload entries for a specific image on the device.
   Error registerOffloadEntries(DeviceImageTy &Image);
 
@@ -732,6 +750,7 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
     return GridValues.GV_Default_Num_Teams;
   }
   uint32_t getDynamicMemorySize() const { return OMPX_SharedMemorySize; }
+  virtual uint64_t getClockFrequency() const { return CLOCKS_PER_SEC; }
 
   /// Get target compute unit kind (e.g., sm_80, or gfx908).
   virtual std::string getComputeUnitKind() const { return "unknown"; }
@@ -749,6 +768,9 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   virtual uint32_t getMinThreadsForLowTripCountLoop() {
     return OMPX_MinThreadsForLowTripCount;
   }
+
+  /// Get the RPC server running on this device.
+  RPCServerTy *getRPCServer() const { return RPCServer; }
 
 private:
   /// Register offload entry for global variable.
@@ -778,6 +800,10 @@ private:
   /// that returning false in this function will change the behavior of the
   /// setupDeviceEnvironment() function.
   virtual bool shouldSetupDeviceEnvironment() const { return true; }
+
+  /// Indicate whether or not the device should setup the RPC server. This is
+  /// only necessary for unhosted targets like the GPU.
+  virtual bool shouldSetupRPCServer() const { return false; }
 
   /// Pointer to the memory manager or nullptr if not available.
   MemoryManagerTy *MemoryManager;
@@ -836,6 +862,26 @@ protected:
 
   /// Map of host pinned allocations used for optimize device transfers.
   PinnedAllocationMapTy PinnedAllocs;
+
+  /// A pointer to an RPC server instance attached to this device if present.
+  /// This is used to run the RPC server during task synchronization.
+  RPCServerTy *RPCServer;
+
+#ifdef OMPT_SUPPORT
+  /// OMPT callback functions
+#define defineOmptCallback(Name, Type, Code) Name##_t Name##_fn = nullptr;
+  FOREACH_OMPT_DEVICE_EVENT(defineOmptCallback)
+#undef defineOmptCallback
+
+  /// Internal representation for OMPT device (initialize & finalize)
+  std::atomic<bool> OmptInitialized;
+#endif
+
+private:
+
+  /// Return the kernel environment object for kernel \p Name.
+  Expected<KernelEnvironmentTy>
+  getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
@@ -845,7 +891,8 @@ struct GenericPluginTy {
 
   /// Construct a plugin instance.
   GenericPluginTy(Triple::ArchType TA)
-      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA) {}
+      : RequiresFlags(OMP_REQ_UNDEFINED), GlobalHandler(nullptr), JIT(TA),
+        RPCServer(nullptr) {}
 
   virtual ~GenericPluginTy() {}
 
@@ -890,6 +937,12 @@ struct GenericPluginTy {
   /// Get the reference to the JIT used for all devices connected to this
   /// plugin.
   JITEngine &getJIT() { return JIT; }
+
+  /// Get a reference to the RPC server used to provide host services.
+  RPCServerTy &getRPCServer() {
+    assert(RPCServer && "RPC server not initialized");
+    return *RPCServer;
+  }
 
   /// Get the OpenMP requires flags set for this plugin.
   int64_t getRequiresFlags() const { return RequiresFlags; }
@@ -945,6 +998,9 @@ private:
 
   /// The JIT engine shared by all devices connected to this plugin.
   JITEngine JIT;
+
+  /// The interface between the plugin and the GPU for host services.
+  RPCServerTy *RPCServer;
 };
 
 /// Class for simplifying the getter operation of the plugin. Anywhere on the
@@ -1070,6 +1126,10 @@ public:
 /// some basic functions to be implemented. The derived class should define an
 /// empty constructor that creates an empty and invalid resource reference. Do
 /// not create a new resource on the ctor, but on the create() function instead.
+///
+/// The derived class should also define the type HandleTy as the underlying
+/// resource handle type. For instance, in a CUDA stream it would be:
+///   using HandleTy = CUstream;
 struct GenericDeviceResourceRef {
   /// Create a new resource and stores a reference.
   virtual Error create(GenericDeviceTy &Device) = 0;
@@ -1087,6 +1147,7 @@ protected:
 /// and destroy virtual functions.
 template <typename ResourceRef> class GenericDeviceResourceManagerTy {
   using ResourcePoolTy = GenericDeviceResourceManagerTy<ResourceRef>;
+  using ResourceHandleTy = typename ResourceRef::HandleTy;
 
 public:
   /// Create an empty resource pool for a specific device.
@@ -1121,31 +1182,74 @@ public:
     return Plugin::success();
   }
 
-  /// Get resource from the pool or create new resources.
-  ResourceRef getResource() {
+  /// Get a resource from the pool or create new ones. If the function
+  /// succeeeds, the handle to the resource is saved in \p Handle.
+  virtual Error getResource(ResourceHandleTy &Handle) {
+    // Get a resource with an empty resource processor.
+    return getResourcesImpl(1, &Handle,
+                            [](ResourceHandleTy) { return Plugin::success(); });
+  }
+
+  /// Get multiple resources from the pool or create new ones. If the function
+  /// succeeeds, the handles to the resources are saved in \p Handles.
+  virtual Error getResources(uint32_t Num, ResourceHandleTy *Handles) {
+    // Get resources with an empty resource processor.
+    return getResourcesImpl(Num, Handles,
+                            [](ResourceHandleTy) { return Plugin::success(); });
+  }
+
+  /// Return resource to the pool.
+  virtual Error returnResource(ResourceHandleTy Handle) {
+    // Return a resource with an empty resource processor.
+    return returnResourceImpl(
+        Handle, [](ResourceHandleTy) { return Plugin::success(); });
+  }
+
+protected:
+  /// Get multiple resources from the pool or create new ones. If the function
+  /// succeeeds, the handles to the resources are saved in \p Handles. Also
+  /// process each of the obtained resources with \p Processor.
+  template <typename FuncTy>
+  Error getResourcesImpl(uint32_t Num, ResourceHandleTy *Handles,
+                         FuncTy Processor) {
     const std::lock_guard<std::mutex> Lock(Mutex);
 
     assert(NextAvailable <= ResourcePool.size() &&
            "Resource pool is corrupted");
 
-    if (NextAvailable == ResourcePool.size()) {
-      // By default we double the resource pool every time.
-      if (auto Err = ResourcePoolTy::resizeResourcePool(NextAvailable * 2)) {
-        REPORT("Failure to resize the resource pool: %s",
-               toString(std::move(Err)).data());
-        // Return an empty reference.
-        return ResourceRef();
-      }
-    }
-    return ResourcePool[NextAvailable++];
+    if (NextAvailable + Num > ResourcePool.size())
+      // Double the resource pool or resize it to provide the requested ones.
+      if (auto Err = ResourcePoolTy::resizeResourcePool(
+              std::max(NextAvailable * 2, NextAvailable + Num)))
+        return Err;
+
+    // Save the handles in the output array parameter.
+    for (uint32_t r = 0; r < Num; ++r)
+      Handles[r] = ResourcePool[NextAvailable + r];
+
+    // Process all obtained resources.
+    for (uint32_t r = 0; r < Num; ++r)
+      if (auto Err = Processor(Handles[r]))
+        return Err;
+
+    NextAvailable += Num;
+
+    return Plugin::success();
   }
 
-  /// Return resource to the pool.
-  void returnResource(ResourceRef Resource) {
+  /// Return resource to the pool and process the resource with \p Processor.
+  template <typename FuncTy>
+  Error returnResourceImpl(ResourceHandleTy Handle, FuncTy Processor) {
     const std::lock_guard<std::mutex> Lock(Mutex);
 
+    // Process the returned resource.
+    if (auto Err = Processor(Handle))
+      return Err;
+
     assert(NextAvailable > 0 && "Resource pool is corrupted");
-    ResourcePool[--NextAvailable] = Resource;
+    ResourcePool[--NextAvailable] = Handle;
+
+    return Plugin::success();
   }
 
 private:
@@ -1207,6 +1311,9 @@ private:
   /// The actual resource pool.
   std::deque<ResourceRef> ResourcePool;
 };
+
+/// A static check on whether or not we support RPC in libomptarget.
+const bool libomptargetSupportsRPC();
 
 } // namespace plugin
 } // namespace target

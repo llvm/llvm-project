@@ -151,14 +151,16 @@ void OMPDeclareTargetDeclAttr::printPrettyPragma(
 
 std::optional<OMPDeclareTargetDeclAttr *>
 OMPDeclareTargetDeclAttr::getActiveAttr(const ValueDecl *VD) {
-  if (!VD->hasAttrs())
+  if (llvm::all_of(VD->redecls(), [](const Decl *D) { return !D->hasAttrs(); }))
     return std::nullopt;
   unsigned Level = 0;
   OMPDeclareTargetDeclAttr *FoundAttr = nullptr;
-  for (auto *Attr : VD->specific_attrs<OMPDeclareTargetDeclAttr>()) {
-    if (Level <= Attr->getLevel()) {
-      Level = Attr->getLevel();
-      FoundAttr = Attr;
+  for (const Decl *D : VD->redecls()) {
+    for (auto *Attr : D->specific_attrs<OMPDeclareTargetDeclAttr>()) {
+      if (Level <= Attr->getLevel()) {
+        Level = Attr->getLevel();
+        FoundAttr = Attr;
+      }
     }
   }
   if (FoundAttr)

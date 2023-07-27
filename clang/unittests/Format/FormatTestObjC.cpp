@@ -1019,6 +1019,20 @@ TEST_F(FormatTestObjC, ObjCBlockTypesAndVariables) {
   verifyFormat("int (^foo[kNumEntries])(char, float);");
   verifyFormat("int (^foo[kNumEntries + 10])(char, float);");
   verifyFormat("int (^foo[(kNumEntries + 10)])(char, float);");
+
+  verifyFormat("int *p = ^int *() { //\n"
+               "  return nullptr;\n"
+               "}();");
+
+  verifyFormat("int * (^p)(void) = ^int *(void) { //\n"
+               "  return nullptr;\n"
+               "};");
+
+  // WebKit forces function braces onto a newline, but blocks should not.
+  verifyFormat("int* p = ^int*() { //\n"
+               "    return nullptr;\n"
+               "}();",
+               getWebKitStyle());
 }
 
 TEST_F(FormatTestObjC, ObjCSnippets) {

@@ -97,49 +97,21 @@ public:
     case Value::Kind::Integer:
     case Value::Kind::TopBool:
     case Value::Kind::AtomicBool:
-      break;
-    case Value::Kind::Reference:
-      JOS.attributeObject(
-          "referent", [&] { dump(cast<ReferenceValue>(V).getReferentLoc()); });
+    case Value::Kind::FormulaBool:
       break;
     case Value::Kind::Pointer:
       JOS.attributeObject(
           "pointee", [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
       break;
     case Value::Kind::Struct:
-      for (const auto &Child : cast<StructValue>(V).children())
-        JOS.attributeObject("f:" + Child.first->getNameAsString(),
-                            [&] { dump(*Child.second); });
+      for (const auto &Child :
+           cast<StructValue>(V).getAggregateLoc().children())
+        JOS.attributeObject("f:" + Child.first->getNameAsString(), [&] {
+          if (Child.second)
+            if (Value *Val = Env.getValue(*Child.second))
+              dump(*Val);
+        });
       break;
-    case Value::Kind::Disjunction: {
-      auto &VV = cast<DisjunctionValue>(V);
-      JOS.attributeObject("lhs", [&] { dump(VV.getLeftSubValue()); });
-      JOS.attributeObject("rhs", [&] { dump(VV.getRightSubValue()); });
-      break;
-    }
-    case Value::Kind::Conjunction: {
-      auto &VV = cast<ConjunctionValue>(V);
-      JOS.attributeObject("lhs", [&] { dump(VV.getLeftSubValue()); });
-      JOS.attributeObject("rhs", [&] { dump(VV.getRightSubValue()); });
-      break;
-    }
-    case Value::Kind::Negation: {
-      auto &VV = cast<NegationValue>(V);
-      JOS.attributeObject("not", [&] { dump(VV.getSubVal()); });
-      break;
-    }
-    case Value::Kind::Implication: {
-      auto &VV = cast<ImplicationValue>(V);
-      JOS.attributeObject("if", [&] { dump(VV.getLeftSubValue()); });
-      JOS.attributeObject("then", [&] { dump(VV.getRightSubValue()); });
-      break;
-    }
-    case Value::Kind::Biconditional: {
-      auto &VV = cast<BiconditionalValue>(V);
-      JOS.attributeObject("lhs", [&] { dump(VV.getLeftSubValue()); });
-      JOS.attributeObject("rhs", [&] { dump(VV.getRightSubValue()); });
-      break;
-    }
     }
 
     for (const auto& Prop : V.properties())
@@ -149,10 +121,12 @@ public:
     // Running the SAT solver is expensive, but knowing which booleans are
     // guaranteed true/false here is valuable and hard to determine by hand.
     if (auto *B = llvm::dyn_cast<BoolValue>(&V)) {
-      JOS.attribute("truth", Env.flowConditionImplies(*B) ? "true"
-                             : Env.flowConditionImplies(Env.makeNot(*B))
-                                 ? "false"
-                                 : "unknown");
+      JOS.attribute("formula", llvm::to_string(B->formula()));
+      JOS.attribute(
+          "truth", Env.flowConditionImplies(B->formula()) ? "true"
+                   : Env.flowConditionImplies(Env.arena().makeNot(B->formula()))
+                       ? "false"
+                       : "unknown");
     }
   }
   void dump(const StorageLocation &L) {
@@ -484,8 +458,9 @@ private:
       GraphS << "  " << blockID(I) << " [id=" << blockID(I) << "]\n";
     for (const auto *Block : CFG) {
       for (const auto &Succ : Block->succs()) {
-        GraphS << "  " << blockID(Block->getBlockID()) << " -> "
-               << blockID(Succ.getReachableBlock()->getBlockID()) << "\n";
+        if (Succ.getReachableBlock())
+          GraphS << "  " << blockID(Block->getBlockID()) << " -> "
+                 << blockID(Succ.getReachableBlock()->getBlockID()) << "\n";
       }
     }
     GraphS << "}\n";

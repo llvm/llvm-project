@@ -16,8 +16,8 @@
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
-// GPU targets do not support aliasing.
-#if defined(LIBC_COPT_PUBLIC_PACKAGING) && defined(LIBC_TARGET_ARCH_IS_GPU)
+// The NVPTX target does not support aliasing.
+#if defined(LIBC_COPT_PUBLIC_PACKAGING) && defined(LIBC_TARGET_ARCH_IS_NVPTX)
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
   LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
       __##name##_impl__ __asm__(#name);                                        \

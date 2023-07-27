@@ -56,7 +56,7 @@ public:
   void getPeelingPreferences(Loop *L, ScalarEvolution &SE,
                              TTI::PeelingPreferences &PP);
 
-  int64_t getMaxInlineSizeThreshold() const;
+  int64_t getMaxMemIntrinsicInlineSizeThreshold() const;
 };
 
 class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
@@ -71,6 +71,7 @@ class GCNTTIImpl final : public BasicTTIImplBase<GCNTTIImpl> {
   bool IsGraphics;
   bool HasFP32Denormals;
   bool HasFP64FP16Denormals;
+  static constexpr bool InlinerVectorBonusPercent = 0;
 
   static const FeatureBitset InlineFeatureIgnoreList;
 
@@ -135,7 +136,7 @@ public:
   bool isLegalToVectorizeStoreChain(unsigned ChainSizeInBytes, Align Alignment,
                                     unsigned AddrSpace) const;
 
-  int64_t getMaxInlineSizeThreshold() const;
+  int64_t getMaxMemIntrinsicInlineSizeThreshold() const;
   Type *getMemcpyLoopLoweringType(
       LLVMContext & Context, Value * Length, unsigned SrcAddrSpace,
       unsigned DestAddrSpace, unsigned SrcAlign, unsigned DestAlign,
@@ -240,8 +241,9 @@ public:
 
   unsigned getInliningThresholdMultiplier() const { return 11; }
   unsigned adjustInliningThreshold(const CallBase *CB) const;
+  unsigned getCallerAllocaCost(const CallBase *CB, const AllocaInst *AI) const;
 
-  int getInlinerVectorBonusPercent() const { return 0; }
+  int getInlinerVectorBonusPercent() const { return InlinerVectorBonusPercent; }
 
   InstructionCost getArithmeticReductionCost(
       unsigned Opcode, VectorType *Ty, std::optional<FastMathFlags> FMF,
@@ -249,8 +251,8 @@ public:
 
   InstructionCost getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
                                         TTI::TargetCostKind CostKind);
-  InstructionCost getMinMaxReductionCost(VectorType *Ty, VectorType *CondTy,
-                                         bool IsUnsigned, FastMathFlags FMF,
+  InstructionCost getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
+                                         FastMathFlags FMF,
                                          TTI::TargetCostKind CostKind);
 };
 

@@ -38,31 +38,11 @@
 using namespace mlir;
 using namespace mlir::vector;
 
-static std::optional<int64_t> extractConstantIndex(Value v) {
-  if (auto cstOp = v.getDefiningOp<arith::ConstantIndexOp>())
-    return cstOp.value();
-  if (auto affineApplyOp = v.getDefiningOp<affine::AffineApplyOp>())
-    if (affineApplyOp.getAffineMap().isSingleConstant())
-      return affineApplyOp.getAffineMap().getSingleConstantResult();
-  return std::nullopt;
-}
-
-// Missing foldings of scf.if make it necessary to perform poor man's folding
-// eagerly, especially in the case of unrolling. In the future, this should go
-// away once scf.if folds properly.
-static Value createFoldedSLE(RewriterBase &b, Value v, Value ub) {
-  auto maybeCstV = extractConstantIndex(v);
-  auto maybeCstUb = extractConstantIndex(ub);
-  if (maybeCstV && maybeCstUb && *maybeCstV < *maybeCstUb)
-    return Value();
-  return b.create<arith::CmpIOp>(v.getLoc(), arith::CmpIPredicate::sle, v, ub);
-}
-
 /// Build the condition to ensure that a particular VectorTransferOpInterface
 /// is in-bounds.
 static Value createInBoundsCond(RewriterBase &b,
                                 VectorTransferOpInterface xferOp) {
-  assert(xferOp.permutation_map().isMinorIdentity() &&
+  assert(xferOp.getPermutationMap().isMinorIdentity() &&
          "Expected minor identity map");
   Value inBoundsCond;
   xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
@@ -74,14 +54,19 @@ static Value createInBoundsCond(RewriterBase &b,
     // Fold or create the check that `index + vector_size` <= `memref_size`.
     Location loc = xferOp.getLoc();
     int64_t vectorSize = xferOp.getVectorType().getDimSize(resultIdx);
-    auto d0 = getAffineDimExpr(0, xferOp.getContext());
-    auto vs = getAffineConstantExpr(vectorSize, xferOp.getContext());
-    Value sum = affine::makeComposedAffineApply(b, loc, d0 + vs,
-                                                xferOp.indices()[indicesIdx]);
-    Value cond = createFoldedSLE(
-        b, sum, vector::createOrFoldDimOp(b, loc, xferOp.source(), indicesIdx));
-    if (!cond)
+    OpFoldResult sum = affine::makeComposedFoldedAffineApply(
+        b, loc, b.getAffineDimExpr(0) + b.getAffineConstantExpr(vectorSize),
+        {xferOp.indices()[indicesIdx]});
+    OpFoldResult dimSz =
+        memref::getMixedSize(b, loc, xferOp.source(), indicesIdx);
+    auto maybeCstSum = getConstantIntValue(sum);
+    auto maybeCstDimSz = getConstantIntValue(dimSz);
+    if (maybeCstSum && maybeCstDimSz && *maybeCstSum <= *maybeCstDimSz)
       return;
+    Value cond =
+        b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::sle,
+                                getValueOrCreateConstantIndexOp(b, loc, sum),
+                                getValueOrCreateConstantIndexOp(b, loc, dimSz));
     // Conjunction over all dims for which we are in-bounds.
     if (inBoundsCond)
       inBoundsCond = b.create<arith::AndIOp>(loc, inBoundsCond, cond);
@@ -120,7 +105,7 @@ static Value createInBoundsCond(RewriterBase &b,
 /// where `alloc` is a top of the function alloca'ed buffer of one vector.
 ///
 /// Preconditions:
-///  1. `xferOp.permutation_map()` must be a minor identity map
+///  1. `xferOp.getPermutationMap()` must be a minor identity map
 ///  2. the rank of the `xferOp.memref()` and the rank of the `xferOp.vector()`
 ///  must be equal. This will be relaxed in the future but requires
 ///  rank-reducing subviews.
@@ -131,7 +116,7 @@ splitFullAndPartialTransferPrecondition(VectorTransferOpInterface xferOp) {
     return failure();
 
   // TODO: expand support to these 2 cases.
-  if (!xferOp.permutation_map().isMinorIdentity())
+  if (!xferOp.getPermutationMap().isMinorIdentity())
     return failure();
   // Must have some out-of-bounds dimension to be a candidate for splitting.
   if (!xferOp.hasOutOfBoundsDim())
@@ -181,6 +166,24 @@ static MemRefType getCastCompatibleMemRefType(MemRefType aT, MemRefType bT) {
       StridedLayoutAttr::get(aT.getContext(), resOffset, resStrides));
 }
 
+/// Casts the given memref to a compatible memref type. If the source memref has
+/// a different address space than the target type, a `memref.memory_space_cast`
+/// is first inserted, followed by a `memref.cast`.
+static Value castToCompatibleMemRefType(OpBuilder &b, Value memref,
+                                        MemRefType compatibleMemRefType) {
+  MemRefType sourceType = memref.getType().cast<MemRefType>();
+  Value res = memref;
+  if (sourceType.getMemorySpace() != compatibleMemRefType.getMemorySpace()) {
+    sourceType = MemRefType::get(
+        sourceType.getShape(), sourceType.getElementType(),
+        sourceType.getLayout(), compatibleMemRefType.getMemorySpace());
+    res = b.create<memref::MemorySpaceCastOp>(memref.getLoc(), sourceType, res);
+  }
+  if (sourceType == compatibleMemRefType)
+    return res;
+  return b.create<memref::CastOp>(memref.getLoc(), compatibleMemRefType, res);
+}
+
 /// Operates under a scoped context to build the intersection between the
 /// view `xferOp.source()` @ `xferOp.indices()` and the view `alloc`.
 // TODO: view intersection/union/differences should be a proper std op.
@@ -199,8 +202,8 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
   auto isaWrite = isa<vector::TransferWriteOp>(xferOp);
   xferOp.zipResultAndIndexing([&](int64_t resultIdx, int64_t indicesIdx) {
     using MapList = ArrayRef<ArrayRef<AffineExpr>>;
-    Value dimMemRef = vector::createOrFoldDimOp(b, xferOp.getLoc(),
-                                                xferOp.source(), indicesIdx);
+    Value dimMemRef =
+        b.create<memref::DimOp>(xferOp.getLoc(), xferOp.source(), indicesIdx);
     Value dimAlloc = b.create<memref::DimOp>(loc, alloc, resultIdx);
     Value index = xferOp.indices()[indicesIdx];
     AffineExpr i, j, k;
@@ -230,6 +233,7 @@ createSubViewIntersection(RewriterBase &b, VectorTransferOpInterface xferOp,
 /// Produce IR resembling:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
+///      (memref.memory_space_cast %A: memref<A..., addr_space> to memref<A...>)
 ///      %view = memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
@@ -252,9 +256,7 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
   return b.create<scf::IfOp>(
       loc, inBoundsCond,
       [&](OpBuilder &b, Location loc) {
-        Value res = memref;
-        if (compatibleMemRefType != xferOp.getShapedType())
-          res = b.create<memref::CastOp>(loc, compatibleMemRefType, memref);
+        Value res = castToCompatibleMemRefType(b, memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getIndices().begin(),
                               xferOp.getIndices().end());
@@ -271,7 +273,7 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
             alloc);
         b.create<memref::CopyOp>(loc, copyArgs.first, copyArgs.second);
         Value casted =
-            b.create<memref::CastOp>(loc, compatibleMemRefType, alloc);
+            castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
                               zero);
@@ -285,6 +287,7 @@ createFullPartialLinalgCopy(RewriterBase &b, vector::TransferReadOp xferOp,
 /// Produce IR resembling:
 /// ```
 ///    %1:3 = scf.if (%inBounds) {
+///      (memref.memory_space_cast %A: memref<A..., addr_space> to memref<A...>)
 ///      memref.cast %A: memref<A...> to compatibleMemRefType
 ///      scf.yield %view, ... : compatibleMemRefType, index, index
 ///    } else {
@@ -307,9 +310,7 @@ static scf::IfOp createFullPartialVectorTransferRead(
   return b.create<scf::IfOp>(
       loc, inBoundsCond,
       [&](OpBuilder &b, Location loc) {
-        Value res = memref;
-        if (compatibleMemRefType != xferOp.getShapedType())
-          res = b.create<memref::CastOp>(loc, compatibleMemRefType, memref);
+        Value res = castToCompatibleMemRefType(b, memref, compatibleMemRefType);
         scf::ValueVector viewAndIndices{res};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getIndices().begin(),
                               xferOp.getIndices().end());
@@ -324,7 +325,7 @@ static scf::IfOp createFullPartialVectorTransferRead(
                 loc, MemRefType::get({}, vector.getType()), alloc));
 
         Value casted =
-            b.create<memref::CastOp>(loc, compatibleMemRefType, alloc);
+            castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
         scf::ValueVector viewAndIndices{casted};
         viewAndIndices.insert(viewAndIndices.end(), xferOp.getTransferRank(),
                               zero);
@@ -358,9 +359,8 @@ getLocationToWriteFullVec(RewriterBase &b, vector::TransferWriteOp xferOp,
       .create<scf::IfOp>(
           loc, inBoundsCond,
           [&](OpBuilder &b, Location loc) {
-            Value res = memref;
-            if (compatibleMemRefType != xferOp.getShapedType())
-              res = b.create<memref::CastOp>(loc, compatibleMemRefType, memref);
+            Value res =
+                castToCompatibleMemRefType(b, memref, compatibleMemRefType);
             scf::ValueVector viewAndIndices{res};
             viewAndIndices.insert(viewAndIndices.end(),
                                   xferOp.getIndices().begin(),
@@ -369,7 +369,7 @@ getLocationToWriteFullVec(RewriterBase &b, vector::TransferWriteOp xferOp,
           },
           [&](OpBuilder &b, Location loc) {
             Value casted =
-                b.create<memref::CastOp>(loc, compatibleMemRefType, alloc);
+                castToCompatibleMemRefType(b, alloc, compatibleMemRefType);
             scf::ValueVector viewAndIndices{casted};
             viewAndIndices.insert(viewAndIndices.end(),
                                   xferOp.getTransferRank(), zero);
@@ -512,7 +512,7 @@ static Operation *getAutomaticAllocationScope(Operation *op) {
 /// where `alloc` is a top of the function alloca'ed buffer of one vector.
 ///
 /// Preconditions:
-///  1. `xferOp.permutation_map()` must be a minor identity map
+///  1. `xferOp.getPermutationMap()` must be a minor identity map
 ///  2. the rank of the `xferOp.source()` and the rank of the `xferOp.vector()`
 ///  must be equal. This will be relaxed in the future but requires
 ///  rank-reducing subviews.

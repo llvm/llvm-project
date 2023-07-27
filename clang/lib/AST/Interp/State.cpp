@@ -126,9 +126,9 @@ void State::addCallStack(unsigned Limit) {
 
   // Walk the call stack and add the diagnostics.
   unsigned CallIdx = 0;
-  Frame *Top = getCurrentFrame();
+  const Frame *Top = getCurrentFrame();
   const Frame *Bottom = getBottomFrame();
-  for (Frame *F = Top; F != Bottom; F = F->getCaller(), ++CallIdx) {
+  for (const Frame *F = Top; F != Bottom; F = F->getCaller(), ++CallIdx) {
     SourceLocation CallLocation = F->getCallLocation();
 
     // Skip this call?

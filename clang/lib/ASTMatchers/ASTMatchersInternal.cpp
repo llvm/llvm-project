@@ -800,6 +800,7 @@ const internal::VariadicDynCastAllOfMatcher<Decl, TagDecl> tagDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXMethodDecl> cxxMethodDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, CXXConversionDecl>
     cxxConversionDecl;
+const internal::VariadicDynCastAllOfMatcher<Decl, ConceptDecl> conceptDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, VarDecl> varDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, FieldDecl> fieldDecl;
 const internal::VariadicDynCastAllOfMatcher<Decl, IndirectFieldDecl>
@@ -882,6 +883,10 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNoexceptExpr>
     cxxNoexceptExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ArraySubscriptExpr>
     arraySubscriptExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitIndexExpr>
+    arrayInitIndexExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ArrayInitLoopExpr>
+    arrayInitLoopExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDefaultArgExpr>
     cxxDefaultArgExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXOperatorCallExpr>

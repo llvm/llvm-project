@@ -4,6 +4,7 @@ add_header_library(
     FEnvImpl.h
   DEPENDS
     libc.include.fenv
+    libc.include.math
     libc.src.__support.macros.attributes
 )
 

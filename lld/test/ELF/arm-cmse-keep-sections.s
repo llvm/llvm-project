@@ -14,13 +14,13 @@
 // DISS-LABEL: <__acle_se_entry1>:
 // DISS-NEXT:  10: nop
 
-// DISS-LABEL: <entry2>:
-// DISS-NEXT: 1000000: sg
-// DISS-LABEL:         b.w {{.*}} <__acle_se_entry2>
-
 // DISS-LABEL: <entry1>:
-// DISS-NEXT: 1000008: sg
+// DISS-NEXT: 1000000: sg
 // DISS-LABEL:         b.w {{.*}} <__acle_se_entry1>
+
+// DISS-LABEL: <entry2>:
+// DISS-NEXT: 1000008: sg
+// DISS-LABEL:         b.w {{.*}} <__acle_se_entry2>
 
 // DISS-LABEL: <__acle_se_entry2>:
 // DISS-NEXT:  2000000: nop
@@ -28,8 +28,8 @@
 // CHECK:    Symbol table '.symtab' contains {{.*}} entries:
 // CHECK-NEXT:  Num:  Value  Size Type  Bind   Vis     Ndx Name
 // CHECK-NEXT:    0: 00000000   0 NOTYPE  LOCAL  DEFAULT   UND
-// CHECK-NEXT:    1: 01000001   8 FUNC  GLOBAL DEFAULT   ABS entry2
-// CHECK-NEXT:    2: 01000009   8 FUNC  GLOBAL DEFAULT   ABS entry1
+// CHECK-NEXT:    1: 01000001   8 FUNC  GLOBAL DEFAULT   ABS entry1
+// CHECK-NEXT:    2: 01000009   8 FUNC  GLOBAL DEFAULT   ABS entry2
 
 //--- cmse-implib.s
   .include "arm-cmse-macros.s"

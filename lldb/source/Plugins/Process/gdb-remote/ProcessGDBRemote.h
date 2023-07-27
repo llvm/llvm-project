@@ -77,6 +77,8 @@ public:
                 bool plugin_specified_by_name) override;
 
   CommandObject *GetPluginCommandObject() override;
+  
+  void DumpPluginHistory(Stream &s) override;
 
   // Creating a new process, or attaching to an existing one
   Status DoWillLaunch(Module *module) override;
@@ -211,7 +213,7 @@ public:
                                  lldb::addr_t image_count) override;
 
   Status
-  ConfigureStructuredData(ConstString type_name,
+  ConfigureStructuredData(llvm::StringRef type_name,
                           const StructuredData::ObjectSP &config_sp) override;
 
   StructuredData::ObjectSP GetLoadedDynamicLibrariesInfos() override;

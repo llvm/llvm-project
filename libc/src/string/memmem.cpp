@@ -8,7 +8,7 @@
 
 #include "src/string/memmem.h"
 #include "src/__support/common.h"
-#include "src/string/memory_utils/memmem_implementations.h"
+#include "src/string/memory_utils/inline_memmem.h"
 
 namespace __llvm_libc {
 
@@ -18,8 +18,7 @@ LLVM_LIBC_FUNCTION(void *, memmem,
   constexpr auto comp = [](unsigned char l, unsigned char r) -> int {
     return l - r;
   };
-  return memmem_implementation(haystack, haystack_len, needle, needle_len,
-                               comp);
+  return inline_memmem(haystack, haystack_len, needle, needle_len, comp);
 }
 
 } // namespace __llvm_libc

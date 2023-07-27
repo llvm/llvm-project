@@ -40,6 +40,7 @@ public:
   void emitXCOFFExceptDirective(const MCSymbol *Symbol, const MCSymbol *Trap,
                                 unsigned Lang, unsigned Reason,
                                 unsigned FunctionSize, bool hasDebug) override;
+  void emitXCOFFCInfoSym(StringRef Name, StringRef Metadata) override;
 };
 
 } // end namespace llvm

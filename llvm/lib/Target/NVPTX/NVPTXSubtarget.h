@@ -76,6 +76,7 @@ public:
   inline bool hasHWROT32() const { return SmVersion >= 32; }
   bool hasImageHandles() const;
   bool hasFP16Math() const { return SmVersion >= 53; }
+  bool hasBF16Math() const { return SmVersion >= 80; }
   bool allowFP16Math() const;
   bool hasMaskOperator() const { return PTXVersion >= 71; }
   bool hasNoReturn() const { return SmVersion >= 30 && PTXVersion >= 64; }

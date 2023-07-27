@@ -290,4 +290,26 @@ TEST(OperandStorageTest, PopulateDefaultAttrs) {
 
   op->destroy();
 }
+
+TEST(OperationEquivalenceTest, HashWorksWithFlags) {
+  MLIRContext context;
+  context.getOrLoadDialect<test::TestDialect>();
+
+  auto op1 = createOp(&context);
+  // `op1` has an unknown loc.
+  auto op2 = createOp(&context);
+  op2->setLoc(NameLoc::get(StringAttr::get(&context, "foo")));
+  auto getHash = [](Operation *op, OperationEquivalence::Flags flags) {
+    return OperationEquivalence::computeHash(
+        op, OperationEquivalence::ignoreHashValue,
+        OperationEquivalence::ignoreHashValue, flags);
+  };
+  EXPECT_EQ(getHash(op1, OperationEquivalence::IgnoreLocations),
+            getHash(op2, OperationEquivalence::IgnoreLocations));
+  EXPECT_NE(getHash(op1, OperationEquivalence::None),
+            getHash(op2, OperationEquivalence::None));
+  op1->destroy();
+  op2->destroy();
+}
+
 } // namespace

@@ -131,7 +131,6 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; GFX10-LABEL: test_sinkable_flat_small_offset_i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
@@ -145,7 +144,6 @@ define void @test_sinkable_flat_small_offset_i32(ptr %out, ptr %in, i32 %cond) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v4 offset:252
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %out.gep = getelementptr i32, ptr %out, i64 999999
@@ -290,7 +288,6 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ; GFX10-LABEL: test_sink_noop_addrspacecast_flat_to_global_i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
@@ -304,7 +301,6 @@ define void @test_sink_noop_addrspacecast_flat_to_global_i32(ptr %out, ptr %in, 
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v4 offset:252
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %out.gep = getelementptr i32, ptr %out, i64 999999
@@ -405,7 +401,6 @@ define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in
 ; GFX10-LABEL: test_sink_noop_addrspacecast_flat_to_constant_i32:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
 ; GFX10-NEXT:    s_and_saveexec_b32 s4, vcc_lo
@@ -419,7 +414,6 @@ define void @test_sink_noop_addrspacecast_flat_to_constant_i32(ptr %out, ptr %in
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v4 offset:252
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %out.gep = getelementptr i32, ptr %out, i64 999999
@@ -576,7 +570,6 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-LABEL: test_sink_flat_small_max_flat_offset:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v4, -1, 0
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
@@ -593,7 +586,6 @@ define void @test_sink_flat_small_max_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v4
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %out.gep = getelementptr i32, ptr %out, i32 1024
@@ -701,7 +693,6 @@ define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-LABEL: test_sink_flat_small_max_plus_1_flat_offset:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v4, -1, 0
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v4
 ; GFX10-NEXT:    v_mov_b32_e32 v4, 0
@@ -718,7 +709,6 @@ define void @test_sink_flat_small_max_plus_1_flat_offset(ptr %out, ptr %in) #1 {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v4 offset:636
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %out.gep = getelementptr i32, ptr %out, i64 99999
@@ -826,7 +816,6 @@ define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; GFX10-LABEL: test_sinkable_flat_reg_offset:
 ; GFX10:       ; %bb.0: ; %entry
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mbcnt_lo_u32_b32 v6, -1, 0
 ; GFX10-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v6
 ; GFX10-NEXT:    v_mov_b32_e32 v6, 0
@@ -843,7 +832,6 @@ define void @test_sinkable_flat_reg_offset(ptr %out, ptr %in, i64 %reg) #1 {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    flat_store_dword v[0:1], v6
 ; GFX10-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 entry:
   %out.gep = getelementptr i32, ptr %out, i32 1024

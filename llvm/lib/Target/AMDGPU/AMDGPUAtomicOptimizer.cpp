@@ -160,6 +160,11 @@ PreservedAnalyses AMDGPUAtomicOptimizerPass::run(Function &F,
 
 bool AMDGPUAtomicOptimizerImpl::run(Function &F) {
 
+  // Scan option None disables the Pass
+  if (ScanImpl == ScanOptions::None) {
+    return false;
+  }
+
   visit(F);
 
   const bool Changed = !ToReplace.empty();
@@ -718,12 +723,14 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       }
       // Finally mark the readlanes in the WWM section.
       NewV = B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, NewV);
-    } else {
+    } else if (ScanImpl == ScanOptions::Iterative) {
       // Alternative implementation for scan
       ComputeLoop = BasicBlock::Create(C, "ComputeLoop", F);
       ComputeEnd = BasicBlock::Create(C, "ComputeEnd", F);
       std::tie(ExclScan, NewV) = buildScanIteratively(B, ScanOp, Identity, V, I,
                                                       ComputeLoop, ComputeEnd);
+    } else {
+      llvm_unreachable("Atomic Optimzer is disabled for None strategy");
     }
   } else {
     switch (Op) {
@@ -861,8 +868,10 @@ void AMDGPUAtomicOptimizerImpl::optimizeAtomic(Instruction &I,
       if (ScanImpl == ScanOptions::DPP) {
         LaneOffset =
             B.CreateIntrinsic(Intrinsic::amdgcn_strict_wwm, Ty, ExclScan);
-      } else {
+      } else if (ScanImpl == ScanOptions::Iterative) {
         LaneOffset = ExclScan;
+      } else {
+        llvm_unreachable("Atomic Optimzer is disabled for None strategy");
       }
     } else {
       switch (Op) {

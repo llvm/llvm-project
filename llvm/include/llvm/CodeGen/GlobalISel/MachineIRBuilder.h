@@ -1181,6 +1181,13 @@ public:
                                 const SrcOp &Op0, const SrcOp &Op1,
                                 std::optional<unsigned> Flags = std::nullopt);
 
+  /// Build and insert a \p Res = G_IS_FPCLASS \p Pred, \p Src, \p Mask
+  MachineInstrBuilder buildIsFPClass(const DstOp &Res, const SrcOp &Src,
+                                     unsigned Mask) {
+    return buildInstr(TargetOpcode::G_IS_FPCLASS, {Res},
+                      {Src, SrcOp(static_cast<int64_t>(Mask))});
+  }
+
   /// Build and insert a \p Res = G_SELECT \p Tst, \p Op0, \p Op1
   ///
   /// \pre setBasicBlock or setMI must have been called.
@@ -1832,6 +1839,13 @@ public:
     return buildInstr(TargetOpcode::G_FLDEXP, {Dst}, {Src0, Src1}, Flags);
   }
 
+  /// Build and insert \p Fract, \p Exp = G_FFREXP \p Src
+  MachineInstrBuilder
+  buildFFrexp(const DstOp &Fract, const DstOp &Exp, const SrcOp &Src,
+              std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FFREXP, {Fract, Exp}, {Src}, Flags);
+  }
+
   /// Build and insert \p Res = G_FCOPYSIGN \p Op0, \p Op1
   MachineInstrBuilder buildFCopysign(const DstOp &Dst, const SrcOp &Src0,
                                      const SrcOp &Src1) {
@@ -1856,6 +1870,12 @@ public:
   /// Build and insert \p Res = G_FPTOSI \p Src0
   MachineInstrBuilder buildFPTOSI(const DstOp &Dst, const SrcOp &Src0) {
     return buildInstr(TargetOpcode::G_FPTOSI, {Dst}, {Src0});
+  }
+
+  /// Build and insert \p Dst = G_FRINT \p Src0, \p Src1
+  MachineInstrBuilder buildFRint(const DstOp &Dst, const SrcOp &Src0,
+                                 std::optional<unsigned> Flags = std::nullopt) {
+    return buildInstr(TargetOpcode::G_FRINT, {Dst}, {Src0}, Flags);
   }
 
   /// Build and insert \p Res = G_SMIN \p Op0, \p Op1

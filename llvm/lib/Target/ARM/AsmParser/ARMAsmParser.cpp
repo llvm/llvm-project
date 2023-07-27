@@ -41,7 +41,6 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
-#include "llvm/MC/SubtargetFeature.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/ARMBuildAttributes.h"
 #include "llvm/Support/ARMEHABI.h"
@@ -52,6 +51,7 @@
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/SMLoc.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 #include "llvm/TargetParser/TargetParser.h"
 #include "llvm/TargetParser/Triple.h"
 #include <algorithm>
@@ -623,35 +623,34 @@ class ARMAsmParser : public MCTargetAsmParser {
 
   /// }
 
-  OperandMatchResultTy parseITCondCode(OperandVector &);
-  OperandMatchResultTy parseCoprocNumOperand(OperandVector &);
-  OperandMatchResultTy parseCoprocRegOperand(OperandVector &);
-  OperandMatchResultTy parseCoprocOptionOperand(OperandVector &);
-  OperandMatchResultTy parseMemBarrierOptOperand(OperandVector &);
-  OperandMatchResultTy parseTraceSyncBarrierOptOperand(OperandVector &);
-  OperandMatchResultTy parseInstSyncBarrierOptOperand(OperandVector &);
-  OperandMatchResultTy parseProcIFlagsOperand(OperandVector &);
-  OperandMatchResultTy parseMSRMaskOperand(OperandVector &);
-  OperandMatchResultTy parseBankedRegOperand(OperandVector &);
-  OperandMatchResultTy parsePKHImm(OperandVector &O, StringRef Op, int Low,
-                                   int High);
-  OperandMatchResultTy parsePKHLSLImm(OperandVector &O) {
+  ParseStatus parseITCondCode(OperandVector &);
+  ParseStatus parseCoprocNumOperand(OperandVector &);
+  ParseStatus parseCoprocRegOperand(OperandVector &);
+  ParseStatus parseCoprocOptionOperand(OperandVector &);
+  ParseStatus parseMemBarrierOptOperand(OperandVector &);
+  ParseStatus parseTraceSyncBarrierOptOperand(OperandVector &);
+  ParseStatus parseInstSyncBarrierOptOperand(OperandVector &);
+  ParseStatus parseProcIFlagsOperand(OperandVector &);
+  ParseStatus parseMSRMaskOperand(OperandVector &);
+  ParseStatus parseBankedRegOperand(OperandVector &);
+  ParseStatus parsePKHImm(OperandVector &O, StringRef Op, int Low, int High);
+  ParseStatus parsePKHLSLImm(OperandVector &O) {
     return parsePKHImm(O, "lsl", 0, 31);
   }
-  OperandMatchResultTy parsePKHASRImm(OperandVector &O) {
+  ParseStatus parsePKHASRImm(OperandVector &O) {
     return parsePKHImm(O, "asr", 1, 32);
   }
-  OperandMatchResultTy parseSetEndImm(OperandVector &);
-  OperandMatchResultTy parseShifterImm(OperandVector &);
-  OperandMatchResultTy parseRotImm(OperandVector &);
-  OperandMatchResultTy parseModImm(OperandVector &);
-  OperandMatchResultTy parseBitfield(OperandVector &);
-  OperandMatchResultTy parsePostIdxReg(OperandVector &);
-  OperandMatchResultTy parseAM3Offset(OperandVector &);
-  OperandMatchResultTy parseFPImm(OperandVector &);
-  OperandMatchResultTy parseVectorList(OperandVector &);
-  OperandMatchResultTy parseVectorLane(VectorLaneTy &LaneKind, unsigned &Index,
-                                       SMLoc &EndLoc);
+  ParseStatus parseSetEndImm(OperandVector &);
+  ParseStatus parseShifterImm(OperandVector &);
+  ParseStatus parseRotImm(OperandVector &);
+  ParseStatus parseModImm(OperandVector &);
+  ParseStatus parseBitfield(OperandVector &);
+  ParseStatus parsePostIdxReg(OperandVector &);
+  ParseStatus parseAM3Offset(OperandVector &);
+  ParseStatus parseFPImm(OperandVector &);
+  ParseStatus parseVectorList(OperandVector &);
+  ParseStatus parseVectorLane(VectorLaneTy &LaneKind, unsigned &Index,
+                              SMLoc &EndLoc);
 
   // Asm Match Converter Methods
   void cvtThumbMultiply(MCInst &Inst, const OperandVector &);
@@ -1230,6 +1229,18 @@ public:
 
   bool isImm8_255() const {
     return isImmediate<8, 255>();
+  }
+
+  bool isImm0_255Expr() const {
+    if (!isImm())
+      return false;
+    const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(getImm());
+    // If it's not a constant expression, it'll generate a fixup and be
+    // handled later.
+    if (!CE)
+      return true;
+    int64_t Value = CE->getValue();
+    return isUInt<8>(Value);
   }
 
   bool isImm256_65535Expr() const {
@@ -4315,98 +4326,91 @@ static int MatchCoprocessorOperandName(StringRef Name, char CoprocOp) {
 }
 
 /// parseITCondCode - Try to parse a condition code for an IT instruction.
-OperandMatchResultTy
-ARMAsmParser::parseITCondCode(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseITCondCode(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
   if (!Tok.is(AsmToken::Identifier))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   unsigned CC = ARMCondCodeFromString(Tok.getString());
   if (CC == ~0U)
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   Parser.Lex(); // Eat the token.
 
   Operands.push_back(ARMOperand::CreateCondCode(ARMCC::CondCodes(CC), S));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 /// parseCoprocNumOperand - Try to parse an coprocessor number operand. The
 /// token must be an Identifier when called, and if it is a coprocessor
 /// number, the token is eaten and the operand is added to the operand list.
-OperandMatchResultTy
-ARMAsmParser::parseCoprocNumOperand(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseCoprocNumOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
   if (Tok.isNot(AsmToken::Identifier))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   int Num = MatchCoprocessorOperandName(Tok.getString().lower(), 'p');
   if (Num == -1)
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   if (!isValidCoprocessorNumber(Num, getSTI().getFeatureBits()))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   Parser.Lex(); // Eat identifier token.
   Operands.push_back(ARMOperand::CreateCoprocNum(Num, S));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 /// parseCoprocRegOperand - Try to parse an coprocessor register operand. The
 /// token must be an Identifier when called, and if it is a coprocessor
 /// number, the token is eaten and the operand is added to the operand list.
-OperandMatchResultTy
-ARMAsmParser::parseCoprocRegOperand(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseCoprocRegOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
   if (Tok.isNot(AsmToken::Identifier))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   int Reg = MatchCoprocessorOperandName(Tok.getString().lower(), 'c');
   if (Reg == -1)
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   Parser.Lex(); // Eat identifier token.
   Operands.push_back(ARMOperand::CreateCoprocReg(Reg, S));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 /// parseCoprocOptionOperand - Try to parse an coprocessor option operand.
 /// coproc_option : '{' imm0_255 '}'
-OperandMatchResultTy
-ARMAsmParser::parseCoprocOptionOperand(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseCoprocOptionOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
 
   // If this isn't a '{', this isn't a coprocessor immediate operand.
   if (Parser.getTok().isNot(AsmToken::LCurly))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   Parser.Lex(); // Eat the '{'
 
   const MCExpr *Expr;
   SMLoc Loc = Parser.getTok().getLoc();
-  if (getParser().parseExpression(Expr)) {
-    Error(Loc, "illegal expression");
-    return MatchOperand_ParseFail;
-  }
+  if (getParser().parseExpression(Expr))
+    return Error(Loc, "illegal expression");
   const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Expr);
-  if (!CE || CE->getValue() < 0 || CE->getValue() > 255) {
-    Error(Loc, "coprocessor option must be an immediate in range [0, 255]");
-    return MatchOperand_ParseFail;
-  }
+  if (!CE || CE->getValue() < 0 || CE->getValue() > 255)
+    return Error(Loc,
+                 "coprocessor option must be an immediate in range [0, 255]");
   int Val = CE->getValue();
 
   // Check for and consume the closing '}'
   if (Parser.getTok().isNot(AsmToken::RCurly))
-    return MatchOperand_ParseFail;
+    return ParseStatus::Failure;
   SMLoc E = Parser.getTok().getEndLoc();
   Parser.Lex(); // Eat the '}'
 
   Operands.push_back(ARMOperand::CreateCoprocOption(Val, S, E));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 // For register list parsing, we need to map from raw GPR register numbering
@@ -4620,8 +4624,8 @@ bool ARMAsmParser::parseRegisterList(OperandVector &Operands, bool EnforceOrder,
 }
 
 // Helper function to parse the lane index for vector lists.
-OperandMatchResultTy ARMAsmParser::
-parseVectorLane(VectorLaneTy &LaneKind, unsigned &Index, SMLoc &EndLoc) {
+ParseStatus ARMAsmParser::parseVectorLane(VectorLaneTy &LaneKind,
+                                          unsigned &Index, SMLoc &EndLoc) {
   MCAsmParser &Parser = getParser();
   Index = 0; // Always return a defined index value.
   if (Parser.getTok().is(AsmToken::LBrac)) {
@@ -4631,7 +4635,7 @@ parseVectorLane(VectorLaneTy &LaneKind, unsigned &Index, SMLoc &EndLoc) {
       LaneKind = AllLanes;
       EndLoc = Parser.getTok().getEndLoc();
       Parser.Lex(); // Eat the ']'.
-      return MatchOperand_Success;
+      return ParseStatus::Success;
     }
 
     // There's an optional '#' token here. Normally there wouldn't be, but
@@ -4641,39 +4645,30 @@ parseVectorLane(VectorLaneTy &LaneKind, unsigned &Index, SMLoc &EndLoc) {
 
     const MCExpr *LaneIndex;
     SMLoc Loc = Parser.getTok().getLoc();
-    if (getParser().parseExpression(LaneIndex)) {
-      Error(Loc, "illegal expression");
-      return MatchOperand_ParseFail;
-    }
+    if (getParser().parseExpression(LaneIndex))
+      return Error(Loc, "illegal expression");
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(LaneIndex);
-    if (!CE) {
-      Error(Loc, "lane index must be empty or an integer");
-      return MatchOperand_ParseFail;
-    }
-    if (Parser.getTok().isNot(AsmToken::RBrac)) {
-      Error(Parser.getTok().getLoc(), "']' expected");
-      return MatchOperand_ParseFail;
-    }
+    if (!CE)
+      return Error(Loc, "lane index must be empty or an integer");
+    if (Parser.getTok().isNot(AsmToken::RBrac))
+      return Error(Parser.getTok().getLoc(), "']' expected");
     EndLoc = Parser.getTok().getEndLoc();
     Parser.Lex(); // Eat the ']'.
     int64_t Val = CE->getValue();
 
     // FIXME: Make this range check context sensitive for .8, .16, .32.
-    if (Val < 0 || Val > 7) {
-      Error(Parser.getTok().getLoc(), "lane index out of range");
-      return MatchOperand_ParseFail;
-    }
+    if (Val < 0 || Val > 7)
+      return Error(Parser.getTok().getLoc(), "lane index out of range");
     Index = Val;
     LaneKind = IndexedLane;
-    return MatchOperand_Success;
+    return ParseStatus::Success;
   }
   LaneKind = NoLanes;
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 // parse a vector register list
-OperandMatchResultTy
-ARMAsmParser::parseVectorList(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseVectorList(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   VectorLaneTy LaneKind;
   unsigned LaneIndex;
@@ -4685,10 +4680,10 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
     SMLoc E = Parser.getTok().getEndLoc();
     int Reg = tryParseRegister();
     if (Reg == -1)
-      return MatchOperand_NoMatch;
+      return ParseStatus::NoMatch;
     if (ARMMCRegisterClasses[ARM::DPRRegClassID].contains(Reg)) {
-      OperandMatchResultTy Res = parseVectorLane(LaneKind, LaneIndex, E);
-      if (Res != MatchOperand_Success)
+      ParseStatus Res = parseVectorLane(LaneKind, LaneIndex, E);
+      if (!Res.isSuccess())
         return Res;
       switch (LaneKind) {
       case NoLanes:
@@ -4704,12 +4699,12 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
                                                                false, S, E));
         break;
       }
-      return MatchOperand_Success;
+      return ParseStatus::Success;
     }
     if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
       Reg = getDRegFromQReg(Reg);
-      OperandMatchResultTy Res = parseVectorLane(LaneKind, LaneIndex, E);
-      if (Res != MatchOperand_Success)
+      ParseStatus Res = parseVectorLane(LaneKind, LaneIndex, E);
+      if (!Res.isSuccess())
         return Res;
       switch (LaneKind) {
       case NoLanes:
@@ -4729,31 +4724,27 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
                                                                false, S, E));
         break;
       }
-      return MatchOperand_Success;
+      return ParseStatus::Success;
     }
-    Error(S, "vector register expected");
-    return MatchOperand_ParseFail;
+    return Error(S, "vector register expected");
   }
 
   if (Parser.getTok().isNot(AsmToken::LCurly))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   Parser.Lex(); // Eat '{' token.
   SMLoc RegLoc = Parser.getTok().getLoc();
 
   int Reg = tryParseRegister();
-  if (Reg == -1) {
-    Error(RegLoc, "register expected");
-    return MatchOperand_ParseFail;
-  }
+  if (Reg == -1)
+    return Error(RegLoc, "register expected");
   unsigned Count = 1;
   int Spacing = 0;
   unsigned FirstReg = Reg;
 
-  if (hasMVE() && !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(Reg)) {
-      Error(Parser.getTok().getLoc(), "vector register in range Q0-Q7 expected");
-      return MatchOperand_ParseFail;
-  }
+  if (hasMVE() && !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(Reg))
+    return Error(Parser.getTok().getLoc(),
+                 "vector register in range Q0-Q7 expected");
   // The list is of D registers, but we also allow Q regs and just interpret
   // them as the two D sub-registers.
   else if (!hasMVE() && ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
@@ -4765,26 +4756,22 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
   }
 
   SMLoc E;
-  if (parseVectorLane(LaneKind, LaneIndex, E) != MatchOperand_Success)
-    return MatchOperand_ParseFail;
+  if (!parseVectorLane(LaneKind, LaneIndex, E).isSuccess())
+    return ParseStatus::Failure;
 
   while (Parser.getTok().is(AsmToken::Comma) ||
          Parser.getTok().is(AsmToken::Minus)) {
     if (Parser.getTok().is(AsmToken::Minus)) {
       if (!Spacing)
         Spacing = 1; // Register range implies a single spaced list.
-      else if (Spacing == 2) {
-        Error(Parser.getTok().getLoc(),
-              "sequential registers in double spaced list");
-        return MatchOperand_ParseFail;
-      }
+      else if (Spacing == 2)
+        return Error(Parser.getTok().getLoc(),
+                     "sequential registers in double spaced list");
       Parser.Lex(); // Eat the minus.
       SMLoc AfterMinusLoc = Parser.getTok().getLoc();
       int EndReg = tryParseRegister();
-      if (EndReg == -1) {
-        Error(AfterMinusLoc, "register expected");
-        return MatchOperand_ParseFail;
-      }
+      if (EndReg == -1)
+        return Error(AfterMinusLoc, "register expected");
       // Allow Q regs and just interpret them as the two D sub-registers.
       if (!hasMVE() && ARMMCRegisterClasses[ARM::QPRRegClassID].contains(EndReg))
         EndReg = getDRegFromQReg(EndReg) + 1;
@@ -4796,25 +4783,18 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
       if ((hasMVE() &&
            !ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(EndReg)) ||
           (!hasMVE() &&
-           !ARMMCRegisterClasses[ARM::DPRRegClassID].contains(EndReg))) {
-        Error(AfterMinusLoc, "invalid register in register list");
-        return MatchOperand_ParseFail;
-      }
+           !ARMMCRegisterClasses[ARM::DPRRegClassID].contains(EndReg)))
+        return Error(AfterMinusLoc, "invalid register in register list");
       // Ranges must go from low to high.
-      if (Reg > EndReg) {
-        Error(AfterMinusLoc, "bad range in register list");
-        return MatchOperand_ParseFail;
-      }
+      if (Reg > EndReg)
+        return Error(AfterMinusLoc, "bad range in register list");
       // Parse the lane specifier if present.
       VectorLaneTy NextLaneKind;
       unsigned NextLaneIndex;
-      if (parseVectorLane(NextLaneKind, NextLaneIndex, E) !=
-          MatchOperand_Success)
-        return MatchOperand_ParseFail;
-      if (NextLaneKind != LaneKind || LaneIndex != NextLaneIndex) {
-        Error(AfterMinusLoc, "mismatched lane index in register list");
-        return MatchOperand_ParseFail;
-      }
+      if (!parseVectorLane(NextLaneKind, NextLaneIndex, E).isSuccess())
+        return ParseStatus::Failure;
+      if (NextLaneKind != LaneKind || LaneIndex != NextLaneIndex)
+        return Error(AfterMinusLoc, "mismatched lane index in register list");
 
       // Add all the registers in the range to the register list.
       Count += EndReg - Reg;
@@ -4825,16 +4805,12 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
     RegLoc = Parser.getTok().getLoc();
     int OldReg = Reg;
     Reg = tryParseRegister();
-    if (Reg == -1) {
-      Error(RegLoc, "register expected");
-      return MatchOperand_ParseFail;
-    }
+    if (Reg == -1)
+      return Error(RegLoc, "register expected");
 
     if (hasMVE()) {
-      if (!ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(Reg)) {
-        Error(RegLoc, "vector register in range Q0-Q7 expected");
-        return MatchOperand_ParseFail;
-      }
+      if (!ARMMCRegisterClasses[ARM::MQPRRegClassID].contains(Reg))
+        return Error(RegLoc, "vector register in range Q0-Q7 expected");
       Spacing = 1;
     }
     // vector register lists must be contiguous.
@@ -4846,29 +4822,23 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
     else if (ARMMCRegisterClasses[ARM::QPRRegClassID].contains(Reg)) {
       if (!Spacing)
         Spacing = 1; // Register range implies a single spaced list.
-      else if (Spacing == 2) {
-        Error(RegLoc,
-              "invalid register in double-spaced list (must be 'D' register')");
-        return MatchOperand_ParseFail;
-      }
+      else if (Spacing == 2)
+        return Error(
+            RegLoc,
+            "invalid register in double-spaced list (must be 'D' register')");
       Reg = getDRegFromQReg(Reg);
-      if (Reg != OldReg + 1) {
-        Error(RegLoc, "non-contiguous register range");
-        return MatchOperand_ParseFail;
-      }
+      if (Reg != OldReg + 1)
+        return Error(RegLoc, "non-contiguous register range");
       ++Reg;
       Count += 2;
       // Parse the lane specifier if present.
       VectorLaneTy NextLaneKind;
       unsigned NextLaneIndex;
       SMLoc LaneLoc = Parser.getTok().getLoc();
-      if (parseVectorLane(NextLaneKind, NextLaneIndex, E) !=
-          MatchOperand_Success)
-        return MatchOperand_ParseFail;
-      if (NextLaneKind != LaneKind || LaneIndex != NextLaneIndex) {
-        Error(LaneLoc, "mismatched lane index in register list");
-        return MatchOperand_ParseFail;
-      }
+      if (!parseVectorLane(NextLaneKind, NextLaneIndex, E).isSuccess())
+        return ParseStatus::Failure;
+      if (NextLaneKind != LaneKind || LaneIndex != NextLaneIndex)
+        return Error(LaneLoc, "mismatched lane index in register list");
       continue;
     }
     // Normal D register.
@@ -4878,27 +4848,21 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
       Spacing = 1 + (Reg == OldReg + 2);
 
     // Just check that it's contiguous and keep going.
-    if (Reg != OldReg + Spacing) {
-      Error(RegLoc, "non-contiguous register range");
-      return MatchOperand_ParseFail;
-    }
+    if (Reg != OldReg + Spacing)
+      return Error(RegLoc, "non-contiguous register range");
     ++Count;
     // Parse the lane specifier if present.
     VectorLaneTy NextLaneKind;
     unsigned NextLaneIndex;
     SMLoc EndLoc = Parser.getTok().getLoc();
-    if (parseVectorLane(NextLaneKind, NextLaneIndex, E) != MatchOperand_Success)
-      return MatchOperand_ParseFail;
-    if (NextLaneKind != LaneKind || LaneIndex != NextLaneIndex) {
-      Error(EndLoc, "mismatched lane index in register list");
-      return MatchOperand_ParseFail;
-    }
+    if (!parseVectorLane(NextLaneKind, NextLaneIndex, E).isSuccess())
+      return ParseStatus::Failure;
+    if (NextLaneKind != LaneKind || LaneIndex != NextLaneIndex)
+      return Error(EndLoc, "mismatched lane index in register list");
   }
 
-  if (Parser.getTok().isNot(AsmToken::RCurly)) {
-    Error(Parser.getTok().getLoc(), "'}' expected");
-    return MatchOperand_ParseFail;
-  }
+  if (Parser.getTok().isNot(AsmToken::RCurly))
+    return Error(Parser.getTok().getLoc(), "'}' expected");
   E = Parser.getTok().getEndLoc();
   Parser.Lex(); // Eat '}' token.
 
@@ -4925,12 +4889,11 @@ ARMAsmParser::parseVectorList(OperandVector &Operands) {
                                                            S, E));
     break;
   }
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 /// parseMemBarrierOptOperand - Try to parse DSB/DMB data barrier options.
-OperandMatchResultTy
-ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
@@ -4964,7 +4927,7 @@ ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
       Opt = ~0U;
 
     if (Opt == ~0U)
-      return MatchOperand_NoMatch;
+      return ParseStatus::NoMatch;
 
     Parser.Lex(); // Eat identifier token.
   } else if (Tok.is(AsmToken::Hash) ||
@@ -4975,51 +4938,45 @@ ARMAsmParser::parseMemBarrierOptOperand(OperandVector &Operands) {
     SMLoc Loc = Parser.getTok().getLoc();
 
     const MCExpr *MemBarrierID;
-    if (getParser().parseExpression(MemBarrierID)) {
-      Error(Loc, "illegal expression");
-      return MatchOperand_ParseFail;
-    }
+    if (getParser().parseExpression(MemBarrierID))
+      return Error(Loc, "illegal expression");
 
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(MemBarrierID);
-    if (!CE) {
-      Error(Loc, "constant expression expected");
-      return MatchOperand_ParseFail;
-    }
+    if (!CE)
+      return Error(Loc, "constant expression expected");
 
     int Val = CE->getValue();
-    if (Val & ~0xf) {
-      Error(Loc, "immediate value out of range");
-      return MatchOperand_ParseFail;
-    }
+    if (Val & ~0xf)
+      return Error(Loc, "immediate value out of range");
 
     Opt = ARM_MB::RESERVED_0 + Val;
   } else
-    return MatchOperand_ParseFail;
+    return ParseStatus::Failure;
 
   Operands.push_back(ARMOperand::CreateMemBarrierOpt((ARM_MB::MemBOpt)Opt, S));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
+ParseStatus
 ARMAsmParser::parseTraceSyncBarrierOptOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
 
   if (Tok.isNot(AsmToken::Identifier))
-     return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   if (!Tok.getString().equals_insensitive("csync"))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   Parser.Lex(); // Eat identifier token.
 
   Operands.push_back(ARMOperand::CreateTraceSyncBarrierOpt(ARM_TSB::CSYNC, S));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 /// parseInstSyncBarrierOptOperand - Try to parse ISB inst sync barrier options.
-OperandMatchResultTy
+ParseStatus
 ARMAsmParser::parseInstSyncBarrierOptOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
@@ -5032,7 +4989,7 @@ ARMAsmParser::parseInstSyncBarrierOptOperand(OperandVector &Operands) {
     if (OptStr.equals_insensitive("sy"))
       Opt = ARM_ISB::SY;
     else
-      return MatchOperand_NoMatch;
+      return ParseStatus::NoMatch;
 
     Parser.Lex(); // Eat identifier token.
   } else if (Tok.is(AsmToken::Hash) ||
@@ -5043,41 +5000,33 @@ ARMAsmParser::parseInstSyncBarrierOptOperand(OperandVector &Operands) {
     SMLoc Loc = Parser.getTok().getLoc();
 
     const MCExpr *ISBarrierID;
-    if (getParser().parseExpression(ISBarrierID)) {
-      Error(Loc, "illegal expression");
-      return MatchOperand_ParseFail;
-    }
+    if (getParser().parseExpression(ISBarrierID))
+      return Error(Loc, "illegal expression");
 
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(ISBarrierID);
-    if (!CE) {
-      Error(Loc, "constant expression expected");
-      return MatchOperand_ParseFail;
-    }
+    if (!CE)
+      return Error(Loc, "constant expression expected");
 
     int Val = CE->getValue();
-    if (Val & ~0xf) {
-      Error(Loc, "immediate value out of range");
-      return MatchOperand_ParseFail;
-    }
+    if (Val & ~0xf)
+      return Error(Loc, "immediate value out of range");
 
     Opt = ARM_ISB::RESERVED_0 + Val;
   } else
-    return MatchOperand_ParseFail;
+    return ParseStatus::Failure;
 
   Operands.push_back(ARMOperand::CreateInstSyncBarrierOpt(
           (ARM_ISB::InstSyncBOpt)Opt, S));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-
 /// parseProcIFlagsOperand - Try to parse iflags from CPS instruction.
-OperandMatchResultTy
-ARMAsmParser::parseProcIFlagsOperand(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseProcIFlagsOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
   if (!Tok.is(AsmToken::Identifier))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   StringRef IFlagsStr = Tok.getString();
 
   // An iflags string of "none" is interpreted to mean that none of the AIF
@@ -5094,7 +5043,7 @@ ARMAsmParser::parseProcIFlagsOperand(OperandVector &Operands) {
       // If some specific iflag is already set, it means that some letter is
       // present more than once, this is not acceptable.
       if (Flag == ~0U || (IFlags & Flag))
-        return MatchOperand_NoMatch;
+        return ParseStatus::NoMatch;
 
       IFlags |= Flag;
     }
@@ -5102,12 +5051,11 @@ ARMAsmParser::parseProcIFlagsOperand(OperandVector &Operands) {
 
   Parser.Lex(); // Eat identifier token.
   Operands.push_back(ARMOperand::CreateProcIFlags((ARM_PROC::IFlags)IFlags, S));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 /// parseMSRMaskOperand - Try to parse mask flags from MSR instruction.
-OperandMatchResultTy
-ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
@@ -5115,28 +5063,28 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
   if (Tok.is(AsmToken::Integer)) {
     int64_t Val = Tok.getIntVal();
     if (Val > 255 || Val < 0) {
-      return MatchOperand_NoMatch;
+      return ParseStatus::NoMatch;
     }
     unsigned SYSmvalue = Val & 0xFF;
     Parser.Lex();
     Operands.push_back(ARMOperand::CreateMSRMask(SYSmvalue, S));
-    return MatchOperand_Success;
+    return ParseStatus::Success;
   }
 
   if (!Tok.is(AsmToken::Identifier))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   StringRef Mask = Tok.getString();
 
   if (isMClass()) {
     auto TheReg = ARMSysReg::lookupMClassSysRegByName(Mask.lower());
     if (!TheReg || !TheReg->hasRequiredFeatures(getSTI().getFeatureBits()))
-      return MatchOperand_NoMatch;
+      return ParseStatus::NoMatch;
 
     unsigned SYSmvalue = TheReg->Encoding & 0xFFF;
 
     Parser.Lex(); // Eat identifier token.
     Operands.push_back(ARMOperand::CreateMSRMask(SYSmvalue, S));
-    return MatchOperand_Success;
+    return ParseStatus::Success;
   }
 
   // Split spec_reg from flag, example: CPSR_sxf => "CPSR" and "sxf"
@@ -5160,7 +5108,7 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
 
     if (FlagsVal == ~0U) {
       if (!Flags.empty())
-        return MatchOperand_NoMatch;
+        return ParseStatus::NoMatch;
       else
         FlagsVal = 8; // No flag
     }
@@ -5179,11 +5127,11 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
       // If some specific flag is already set, it means that some letter is
       // present more than once, this is not acceptable.
       if (Flag == ~0U || (FlagsVal & Flag))
-        return MatchOperand_NoMatch;
+        return ParseStatus::NoMatch;
       FlagsVal |= Flag;
     }
   } else // No match for special register.
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   // Special register without flags is NOT equivalent to "fc" flags.
   // NOTE: This is a divergence from gas' behavior.  Uncommenting the following
@@ -5199,102 +5147,83 @@ ARMAsmParser::parseMSRMaskOperand(OperandVector &Operands) {
 
   Parser.Lex(); // Eat identifier token.
   Operands.push_back(ARMOperand::CreateMSRMask(FlagsVal, S));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 /// parseBankedRegOperand - Try to parse a banked register (e.g. "lr_irq") for
 /// use in the MRS/MSR instructions added to support virtualization.
-OperandMatchResultTy
-ARMAsmParser::parseBankedRegOperand(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseBankedRegOperand(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   const AsmToken &Tok = Parser.getTok();
   if (!Tok.is(AsmToken::Identifier))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   StringRef RegName = Tok.getString();
 
   auto TheReg = ARMBankedReg::lookupBankedRegByName(RegName.lower());
   if (!TheReg)
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   unsigned Encoding = TheReg->Encoding;
 
   Parser.Lex(); // Eat identifier token.
   Operands.push_back(ARMOperand::CreateBankedReg(Encoding, S));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-ARMAsmParser::parsePKHImm(OperandVector &Operands, StringRef Op, int Low,
-                          int High) {
+ParseStatus ARMAsmParser::parsePKHImm(OperandVector &Operands, StringRef Op,
+                                      int Low, int High) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
-  if (Tok.isNot(AsmToken::Identifier)) {
-    Error(Parser.getTok().getLoc(), Op + " operand expected.");
-    return MatchOperand_ParseFail;
-  }
+  if (Tok.isNot(AsmToken::Identifier))
+    return Error(Parser.getTok().getLoc(), Op + " operand expected.");
   StringRef ShiftName = Tok.getString();
   std::string LowerOp = Op.lower();
   std::string UpperOp = Op.upper();
-  if (ShiftName != LowerOp && ShiftName != UpperOp) {
-    Error(Parser.getTok().getLoc(), Op + " operand expected.");
-    return MatchOperand_ParseFail;
-  }
+  if (ShiftName != LowerOp && ShiftName != UpperOp)
+    return Error(Parser.getTok().getLoc(), Op + " operand expected.");
   Parser.Lex(); // Eat shift type token.
 
   // There must be a '#' and a shift amount.
   if (Parser.getTok().isNot(AsmToken::Hash) &&
-      Parser.getTok().isNot(AsmToken::Dollar)) {
-    Error(Parser.getTok().getLoc(), "'#' expected");
-    return MatchOperand_ParseFail;
-  }
+      Parser.getTok().isNot(AsmToken::Dollar))
+    return Error(Parser.getTok().getLoc(), "'#' expected");
   Parser.Lex(); // Eat hash token.
 
   const MCExpr *ShiftAmount;
   SMLoc Loc = Parser.getTok().getLoc();
   SMLoc EndLoc;
-  if (getParser().parseExpression(ShiftAmount, EndLoc)) {
-    Error(Loc, "illegal expression");
-    return MatchOperand_ParseFail;
-  }
+  if (getParser().parseExpression(ShiftAmount, EndLoc))
+    return Error(Loc, "illegal expression");
   const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(ShiftAmount);
-  if (!CE) {
-    Error(Loc, "constant expression expected");
-    return MatchOperand_ParseFail;
-  }
+  if (!CE)
+    return Error(Loc, "constant expression expected");
   int Val = CE->getValue();
-  if (Val < Low || Val > High) {
-    Error(Loc, "immediate value out of range");
-    return MatchOperand_ParseFail;
-  }
+  if (Val < Low || Val > High)
+    return Error(Loc, "immediate value out of range");
 
   Operands.push_back(ARMOperand::CreateImm(CE, Loc, EndLoc));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-ARMAsmParser::parseSetEndImm(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseSetEndImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   SMLoc S = Tok.getLoc();
-  if (Tok.isNot(AsmToken::Identifier)) {
-    Error(S, "'be' or 'le' operand expected");
-    return MatchOperand_ParseFail;
-  }
+  if (Tok.isNot(AsmToken::Identifier))
+    return Error(S, "'be' or 'le' operand expected");
   int Val = StringSwitch<int>(Tok.getString().lower())
     .Case("be", 1)
     .Case("le", 0)
     .Default(-1);
   Parser.Lex(); // Eat the token.
 
-  if (Val == -1) {
-    Error(S, "'be' or 'le' operand expected");
-    return MatchOperand_ParseFail;
-  }
+  if (Val == -1)
+    return Error(S, "'be' or 'le' operand expected");
   Operands.push_back(ARMOperand::CreateImm(MCConstantExpr::create(Val,
                                                                   getContext()),
                                            S, Tok.getEndLoc()));
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 /// parseShifterImm - Parse the shifter immediate operand for SSAT/USAT
@@ -5302,126 +5231,99 @@ ARMAsmParser::parseSetEndImm(OperandVector &Operands) {
 ///     lsl #n  'n' in [0,31]
 ///     asr #n  'n' in [1,32]
 ///             n == 32 encoded as n == 0.
-OperandMatchResultTy
-ARMAsmParser::parseShifterImm(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseShifterImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   SMLoc S = Tok.getLoc();
-  if (Tok.isNot(AsmToken::Identifier)) {
-    Error(S, "shift operator 'asr' or 'lsl' expected");
-    return MatchOperand_ParseFail;
-  }
+  if (Tok.isNot(AsmToken::Identifier))
+    return Error(S, "shift operator 'asr' or 'lsl' expected");
   StringRef ShiftName = Tok.getString();
   bool isASR;
   if (ShiftName == "lsl" || ShiftName == "LSL")
     isASR = false;
   else if (ShiftName == "asr" || ShiftName == "ASR")
     isASR = true;
-  else {
-    Error(S, "shift operator 'asr' or 'lsl' expected");
-    return MatchOperand_ParseFail;
-  }
+  else
+    return Error(S, "shift operator 'asr' or 'lsl' expected");
   Parser.Lex(); // Eat the operator.
 
   // A '#' and a shift amount.
   if (Parser.getTok().isNot(AsmToken::Hash) &&
-      Parser.getTok().isNot(AsmToken::Dollar)) {
-    Error(Parser.getTok().getLoc(), "'#' expected");
-    return MatchOperand_ParseFail;
-  }
+      Parser.getTok().isNot(AsmToken::Dollar))
+    return Error(Parser.getTok().getLoc(), "'#' expected");
   Parser.Lex(); // Eat hash token.
   SMLoc ExLoc = Parser.getTok().getLoc();
 
   const MCExpr *ShiftAmount;
   SMLoc EndLoc;
-  if (getParser().parseExpression(ShiftAmount, EndLoc)) {
-    Error(ExLoc, "malformed shift expression");
-    return MatchOperand_ParseFail;
-  }
+  if (getParser().parseExpression(ShiftAmount, EndLoc))
+    return Error(ExLoc, "malformed shift expression");
   const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(ShiftAmount);
-  if (!CE) {
-    Error(ExLoc, "shift amount must be an immediate");
-    return MatchOperand_ParseFail;
-  }
+  if (!CE)
+    return Error(ExLoc, "shift amount must be an immediate");
 
   int64_t Val = CE->getValue();
   if (isASR) {
     // Shift amount must be in [1,32]
-    if (Val < 1 || Val > 32) {
-      Error(ExLoc, "'asr' shift amount must be in range [1,32]");
-      return MatchOperand_ParseFail;
-    }
+    if (Val < 1 || Val > 32)
+      return Error(ExLoc, "'asr' shift amount must be in range [1,32]");
     // asr #32 encoded as asr #0, but is not allowed in Thumb2 mode.
-    if (isThumb() && Val == 32) {
-      Error(ExLoc, "'asr #32' shift amount not allowed in Thumb mode");
-      return MatchOperand_ParseFail;
-    }
+    if (isThumb() && Val == 32)
+      return Error(ExLoc, "'asr #32' shift amount not allowed in Thumb mode");
     if (Val == 32) Val = 0;
   } else {
     // Shift amount must be in [1,32]
-    if (Val < 0 || Val > 31) {
-      Error(ExLoc, "'lsr' shift amount must be in range [0,31]");
-      return MatchOperand_ParseFail;
-    }
+    if (Val < 0 || Val > 31)
+      return Error(ExLoc, "'lsr' shift amount must be in range [0,31]");
   }
 
   Operands.push_back(ARMOperand::CreateShifterImm(isASR, Val, S, EndLoc));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 /// parseRotImm - Parse the shifter immediate operand for SXTB/UXTB family
 /// of instructions. Legal values are:
 ///     ror #n  'n' in {0, 8, 16, 24}
-OperandMatchResultTy
-ARMAsmParser::parseRotImm(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseRotImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   const AsmToken &Tok = Parser.getTok();
   SMLoc S = Tok.getLoc();
   if (Tok.isNot(AsmToken::Identifier))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   StringRef ShiftName = Tok.getString();
   if (ShiftName != "ror" && ShiftName != "ROR")
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
   Parser.Lex(); // Eat the operator.
 
   // A '#' and a rotate amount.
   if (Parser.getTok().isNot(AsmToken::Hash) &&
-      Parser.getTok().isNot(AsmToken::Dollar)) {
-    Error(Parser.getTok().getLoc(), "'#' expected");
-    return MatchOperand_ParseFail;
-  }
+      Parser.getTok().isNot(AsmToken::Dollar))
+    return Error(Parser.getTok().getLoc(), "'#' expected");
   Parser.Lex(); // Eat hash token.
   SMLoc ExLoc = Parser.getTok().getLoc();
 
   const MCExpr *ShiftAmount;
   SMLoc EndLoc;
-  if (getParser().parseExpression(ShiftAmount, EndLoc)) {
-    Error(ExLoc, "malformed rotate expression");
-    return MatchOperand_ParseFail;
-  }
+  if (getParser().parseExpression(ShiftAmount, EndLoc))
+    return Error(ExLoc, "malformed rotate expression");
   const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(ShiftAmount);
-  if (!CE) {
-    Error(ExLoc, "rotate amount must be an immediate");
-    return MatchOperand_ParseFail;
-  }
+  if (!CE)
+    return Error(ExLoc, "rotate amount must be an immediate");
 
   int64_t Val = CE->getValue();
   // Shift amount must be in {0, 8, 16, 24} (0 is undocumented extension)
   // normally, zero is represented in asm by omitting the rotate operand
   // entirely.
-  if (Val != 8 && Val != 16 && Val != 24 && Val != 0) {
-    Error(ExLoc, "'ror' rotate amount must be 8, 16, or 24");
-    return MatchOperand_ParseFail;
-  }
+  if (Val != 8 && Val != 16 && Val != 24 && Val != 0)
+    return Error(ExLoc, "'ror' rotate amount must be 8, 16, or 24");
 
   Operands.push_back(ARMOperand::CreateRotImm(Val, S, EndLoc));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-ARMAsmParser::parseModImm(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseModImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   MCAsmLexer &Lexer = getLexer();
   int64_t Imm1, Imm2;
@@ -5439,14 +5341,14 @@ ARMAsmParser::parseModImm(OperandVector &Operands) {
   //   mov r0, :lower16:(_foo)
   if (Parser.getTok().is(AsmToken::Identifier) ||
       Parser.getTok().is(AsmToken::Colon))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   // Hash (dollar) is optional as per the ARMARM
   if (Parser.getTok().is(AsmToken::Hash) ||
       Parser.getTok().is(AsmToken::Dollar)) {
     // Avoid parsing into complex operands (#:)
     if (Lexer.peekTok().is(AsmToken::Colon))
-      return MatchOperand_NoMatch;
+      return ParseStatus::NoMatch;
 
     // Eat the hash (dollar)
     Parser.Lex();
@@ -5455,10 +5357,8 @@ ARMAsmParser::parseModImm(OperandVector &Operands) {
   SMLoc Sx1, Ex1;
   Sx1 = Parser.getTok().getLoc();
   const MCExpr *Imm1Exp;
-  if (getParser().parseExpression(Imm1Exp, Ex1)) {
-    Error(Sx1, "malformed expression");
-    return MatchOperand_ParseFail;
-  }
+  if (getParser().parseExpression(Imm1Exp, Ex1))
+    return Error(Sx1, "malformed expression");
 
   const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Imm1Exp);
 
@@ -5471,7 +5371,7 @@ ARMAsmParser::parseModImm(OperandVector &Operands) {
       Operands.push_back(ARMOperand::CreateModImm((Enc & 0xFF),
                                                   (Enc & 0xF00) >> 7,
                                                   Sx1, Ex1));
-      return MatchOperand_Success;
+      return ParseStatus::Success;
     }
 
     // We have parsed an immediate which is not for us, fallback to a plain
@@ -5482,25 +5382,22 @@ ARMAsmParser::parseModImm(OperandVector &Operands) {
     // parser method is shared, that's why we have to do this here.
     if (Parser.getTok().is(AsmToken::EndOfStatement)) {
       Operands.push_back(ARMOperand::CreateImm(Imm1Exp, Sx1, Ex1));
-      return MatchOperand_Success;
+      return ParseStatus::Success;
     }
   } else {
     // Operands like #(l1 - l2) can only be evaluated at a later stage (via an
     // MCFixup). Fallback to a plain immediate.
     Operands.push_back(ARMOperand::CreateImm(Imm1Exp, Sx1, Ex1));
-    return MatchOperand_Success;
+    return ParseStatus::Success;
   }
 
   // From this point onward, we expect the input to be a (#bits, #rot) pair
-  if (Parser.getTok().isNot(AsmToken::Comma)) {
-    Error(Sx1, "expected modified immediate operand: #[0, 255], #even[0-30]");
-    return MatchOperand_ParseFail;
-  }
+  if (Parser.getTok().isNot(AsmToken::Comma))
+    return Error(Sx1,
+                 "expected modified immediate operand: #[0, 255], #even[0-30]");
 
-  if (Imm1 & ~0xFF) {
-    Error(Sx1, "immediate operand must a number in the range [0, 255]");
-    return MatchOperand_ParseFail;
-  }
+  if (Imm1 & ~0xFF)
+    return Error(Sx1, "immediate operand must a number in the range [0, 255]");
 
   // Eat the comma
   Parser.Lex();
@@ -5515,10 +5412,8 @@ ARMAsmParser::parseModImm(OperandVector &Operands) {
     Parser.Lex();
 
   const MCExpr *Imm2Exp;
-  if (getParser().parseExpression(Imm2Exp, Ex2)) {
-    Error(Sx2, "malformed expression");
-    return MatchOperand_ParseFail;
-  }
+  if (getParser().parseExpression(Imm2Exp, Ex2))
+    return Error(Sx2, "malformed expression");
 
   CE = dyn_cast<MCConstantExpr>(Imm2Exp);
 
@@ -5527,93 +5422,72 @@ ARMAsmParser::parseModImm(OperandVector &Operands) {
     if (!(Imm2 & ~0x1E)) {
       // We have a match!
       Operands.push_back(ARMOperand::CreateModImm(Imm1, Imm2, S, Ex2));
-      return MatchOperand_Success;
+      return ParseStatus::Success;
     }
-    Error(Sx2, "immediate operand must an even number in the range [0, 30]");
-    return MatchOperand_ParseFail;
+    return Error(Sx2,
+                 "immediate operand must an even number in the range [0, 30]");
   } else {
-    Error(Sx2, "constant expression expected");
-    return MatchOperand_ParseFail;
+    return Error(Sx2, "constant expression expected");
   }
 }
 
-OperandMatchResultTy
-ARMAsmParser::parseBitfield(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseBitfield(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   SMLoc S = Parser.getTok().getLoc();
   // The bitfield descriptor is really two operands, the LSB and the width.
   if (Parser.getTok().isNot(AsmToken::Hash) &&
-      Parser.getTok().isNot(AsmToken::Dollar)) {
-    Error(Parser.getTok().getLoc(), "'#' expected");
-    return MatchOperand_ParseFail;
-  }
+      Parser.getTok().isNot(AsmToken::Dollar))
+    return Error(Parser.getTok().getLoc(), "'#' expected");
   Parser.Lex(); // Eat hash token.
 
   const MCExpr *LSBExpr;
   SMLoc E = Parser.getTok().getLoc();
-  if (getParser().parseExpression(LSBExpr)) {
-    Error(E, "malformed immediate expression");
-    return MatchOperand_ParseFail;
-  }
+  if (getParser().parseExpression(LSBExpr))
+    return Error(E, "malformed immediate expression");
   const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(LSBExpr);
-  if (!CE) {
-    Error(E, "'lsb' operand must be an immediate");
-    return MatchOperand_ParseFail;
-  }
+  if (!CE)
+    return Error(E, "'lsb' operand must be an immediate");
 
   int64_t LSB = CE->getValue();
   // The LSB must be in the range [0,31]
-  if (LSB < 0 || LSB > 31) {
-    Error(E, "'lsb' operand must be in the range [0,31]");
-    return MatchOperand_ParseFail;
-  }
+  if (LSB < 0 || LSB > 31)
+    return Error(E, "'lsb' operand must be in the range [0,31]");
   E = Parser.getTok().getLoc();
 
   // Expect another immediate operand.
-  if (Parser.getTok().isNot(AsmToken::Comma)) {
-    Error(Parser.getTok().getLoc(), "too few operands");
-    return MatchOperand_ParseFail;
-  }
+  if (Parser.getTok().isNot(AsmToken::Comma))
+    return Error(Parser.getTok().getLoc(), "too few operands");
   Parser.Lex(); // Eat hash token.
   if (Parser.getTok().isNot(AsmToken::Hash) &&
-      Parser.getTok().isNot(AsmToken::Dollar)) {
-    Error(Parser.getTok().getLoc(), "'#' expected");
-    return MatchOperand_ParseFail;
-  }
+      Parser.getTok().isNot(AsmToken::Dollar))
+    return Error(Parser.getTok().getLoc(), "'#' expected");
   Parser.Lex(); // Eat hash token.
 
   const MCExpr *WidthExpr;
   SMLoc EndLoc;
-  if (getParser().parseExpression(WidthExpr, EndLoc)) {
-    Error(E, "malformed immediate expression");
-    return MatchOperand_ParseFail;
-  }
+  if (getParser().parseExpression(WidthExpr, EndLoc))
+    return Error(E, "malformed immediate expression");
   CE = dyn_cast<MCConstantExpr>(WidthExpr);
-  if (!CE) {
-    Error(E, "'width' operand must be an immediate");
-    return MatchOperand_ParseFail;
-  }
+  if (!CE)
+    return Error(E, "'width' operand must be an immediate");
 
   int64_t Width = CE->getValue();
   // The LSB must be in the range [1,32-lsb]
-  if (Width < 1 || Width > 32 - LSB) {
-    Error(E, "'width' operand must be in the range [1,32-lsb]");
-    return MatchOperand_ParseFail;
-  }
+  if (Width < 1 || Width > 32 - LSB)
+    return Error(E, "'width' operand must be in the range [1,32-lsb]");
 
   Operands.push_back(ARMOperand::CreateBitfield(LSB, Width, S, EndLoc));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-ARMAsmParser::parsePostIdxReg(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parsePostIdxReg(OperandVector &Operands) {
   // Check for a post-index addressing register operand. Specifically:
   // postidx_reg := '+' register {, shift}
   //              | '-' register {, shift}
   //              | register {, shift}
 
-  // This method must return MatchOperand_NoMatch without consuming any tokens
+  // This method must return ParseStatus::NoMatch without consuming any tokens
   // in the case where there is no match, as other alternatives take other
   // parse methods.
   MCAsmParser &Parser = getParser();
@@ -5634,9 +5508,8 @@ ARMAsmParser::parsePostIdxReg(OperandVector &Operands) {
   int Reg = tryParseRegister();
   if (Reg == -1) {
     if (!haveEaten)
-      return MatchOperand_NoMatch;
-    Error(Parser.getTok().getLoc(), "register expected");
-    return MatchOperand_ParseFail;
+      return ParseStatus::NoMatch;
+    return Error(Parser.getTok().getLoc(), "register expected");
   }
 
   ARM_AM::ShiftOpc ShiftTy = ARM_AM::no_shift;
@@ -5644,7 +5517,7 @@ ARMAsmParser::parsePostIdxReg(OperandVector &Operands) {
   if (Parser.getTok().is(AsmToken::Comma)) {
     Parser.Lex(); // Eat the ','.
     if (parseMemRegOffsetShift(ShiftTy, ShiftImm))
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
 
     // FIXME: Only approximates end...may include intervening whitespace.
     E = Parser.getTok().getLoc();
@@ -5653,11 +5526,10 @@ ARMAsmParser::parsePostIdxReg(OperandVector &Operands) {
   Operands.push_back(ARMOperand::CreatePostIdxReg(Reg, isAdd, ShiftTy,
                                                   ShiftImm, S, E));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
-OperandMatchResultTy
-ARMAsmParser::parseAM3Offset(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseAM3Offset(OperandVector &Operands) {
   // Check for a post-index addressing register operand. Specifically:
   // am3offset := '+' register
   //              | '-' register
@@ -5666,7 +5538,7 @@ ARMAsmParser::parseAM3Offset(OperandVector &Operands) {
   //              | # + imm
   //              | # - imm
 
-  // This method must return MatchOperand_NoMatch without consuming any tokens
+  // This method must return ParseStatus::NoMatch without consuming any tokens
   // in the case where there is no match, as other alternatives take other
   // parse methods.
   MCAsmParser &Parser = getParser();
@@ -5683,12 +5555,10 @@ ARMAsmParser::parseAM3Offset(OperandVector &Operands) {
     const MCExpr *Offset;
     SMLoc E;
     if (getParser().parseExpression(Offset, E))
-      return MatchOperand_ParseFail;
+      return ParseStatus::Failure;
     const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Offset);
-    if (!CE) {
-      Error(S, "constant expression expected");
-      return MatchOperand_ParseFail;
-    }
+    if (!CE)
+      return Error(S, "constant expression expected");
     // Negative zero is encoded as the flag value
     // std::numeric_limits<int32_t>::min().
     int32_t Val = CE->getValue();
@@ -5698,7 +5568,7 @@ ARMAsmParser::parseAM3Offset(OperandVector &Operands) {
     Operands.push_back(
       ARMOperand::CreateImm(MCConstantExpr::create(Val, getContext()), S, E));
 
-    return MatchOperand_Success;
+    return ParseStatus::Success;
   }
 
   bool haveEaten = false;
@@ -5716,15 +5586,14 @@ ARMAsmParser::parseAM3Offset(OperandVector &Operands) {
   int Reg = tryParseRegister();
   if (Reg == -1) {
     if (!haveEaten)
-      return MatchOperand_NoMatch;
-    Error(Tok.getLoc(), "register expected");
-    return MatchOperand_ParseFail;
+      return ParseStatus::NoMatch;
+    return Error(Tok.getLoc(), "register expected");
   }
 
   Operands.push_back(ARMOperand::CreatePostIdxReg(Reg, isAdd, ARM_AM::no_shift,
                                                   0, S, Tok.getEndLoc()));
 
-  return MatchOperand_Success;
+  return ParseStatus::Success;
 }
 
 /// Convert parsed operands to MCInst.  Needed here because this instruction
@@ -6074,8 +5943,7 @@ bool ARMAsmParser::parseMemRegOffsetShift(ARM_AM::ShiftOpc &St,
 }
 
 /// parseFPImm - A floating point immediate expression operand.
-OperandMatchResultTy
-ARMAsmParser::parseFPImm(OperandVector &Operands) {
+ParseStatus ARMAsmParser::parseFPImm(OperandVector &Operands) {
   MCAsmParser &Parser = getParser();
   // Anything that can accept a floating point constant as an operand
   // needs to go through here, as the regular parseExpression is
@@ -6090,7 +5958,7 @@ ARMAsmParser::parseFPImm(OperandVector &Operands) {
 
   if (Parser.getTok().isNot(AsmToken::Hash) &&
       Parser.getTok().isNot(AsmToken::Dollar))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   // Disambiguate the VMOV forms that can accept an FP immediate.
   // vmov.f32 <sreg>, #imm
@@ -6110,7 +5978,7 @@ ARMAsmParser::parseFPImm(OperandVector &Operands) {
   bool isFconst = Mnemonic.isToken() && (Mnemonic.getToken() == "fconstd" ||
                                          Mnemonic.getToken() == "fconsts");
   if (!(isVmovf || isFconst))
-    return MatchOperand_NoMatch;
+    return ParseStatus::NoMatch;
 
   Parser.Lex(); // Eat '#' or '$'.
 
@@ -6131,28 +5999,25 @@ ARMAsmParser::parseFPImm(OperandVector &Operands) {
     Operands.push_back(ARMOperand::CreateImm(
           MCConstantExpr::create(IntVal, getContext()),
           S, Parser.getTok().getLoc()));
-    return MatchOperand_Success;
+    return ParseStatus::Success;
   }
   // Also handle plain integers. Instructions which allow floating point
   // immediates also allow a raw encoded 8-bit value.
   if (Tok.is(AsmToken::Integer) && isFconst) {
     int64_t Val = Tok.getIntVal();
     Parser.Lex(); // Eat the token.
-    if (Val > 255 || Val < 0) {
-      Error(Loc, "encoded floating point value out of range");
-      return MatchOperand_ParseFail;
-    }
+    if (Val > 255 || Val < 0)
+      return Error(Loc, "encoded floating point value out of range");
     float RealVal = ARM_AM::getFPImmFloat(Val);
     Val = APFloat(RealVal).bitcastToAPInt().getZExtValue();
 
     Operands.push_back(ARMOperand::CreateImm(
         MCConstantExpr::create(Val, getContext()), S,
         Parser.getTok().getLoc()));
-    return MatchOperand_Success;
+    return ParseStatus::Success;
   }
 
-  Error(Loc, "invalid floating point immediate");
-  return MatchOperand_ParseFail;
+  return Error(Loc, "invalid floating point immediate");
 }
 
 /// Parse a arm instruction operand.  For now this parses the operand regardless
@@ -6163,13 +6028,13 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
 
   // Check if the current operand has a custom associated parser, if so, try to
   // custom parse the operand, or fallback to the general approach.
-  OperandMatchResultTy ResTy = MatchOperandParserImpl(Operands, Mnemonic);
-  if (ResTy == MatchOperand_Success)
+  ParseStatus ResTy = MatchOperandParserImpl(Operands, Mnemonic);
+  if (ResTy.isSuccess())
     return false;
   // If there wasn't a custom match, try the generic matcher below. Otherwise,
   // there was a match, but an error occurred, in which case, just return that
   // the operand parsing failed.
-  if (ResTy == MatchOperand_ParseFail)
+  if (ResTy.isFailure())
     return true;
 
   switch (getLexer().getKind()) {
@@ -6272,7 +6137,8 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
   }
   case AsmToken::Colon: {
     S = Parser.getTok().getLoc();
-    // ":lower16:" and ":upper16:" expression prefixes
+    // ":lower16:", ":upper16:", ":lower0_7:", ":lower8_15:", ":upper0_7:" and
+    // ":upper8_15:", expression prefixes
     // FIXME: Check it's an expression prefix,
     // e.g. (FOO - :lower16:BAR) isn't legal.
     ARMMCExpr::VariantKind RefKind;
@@ -6319,8 +6185,9 @@ bool ARMAsmParser::parseImmExpr(int64_t &Out) {
   return false;
 }
 
-// parsePrefix - Parse ARM 16-bit relocations expression prefix, i.e.
-//  :lower16: and :upper16:.
+// parsePrefix - Parse ARM 16-bit relocations expression prefixes, i.e.
+// :lower16: and :upper16: and Thumb 8-bit relocation expression prefixes, i.e.
+// :upper8_15:, :upper0_7:, :lower8_15: and :lower0_7:
 bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
   MCAsmParser &Parser = getParser();
   RefKind = ARMMCExpr::VK_ARM_None;
@@ -6329,7 +6196,6 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
   if (getLexer().is(AsmToken::Hash))
     Parser.Lex();
 
-  // :lower16: and :upper16: modifiers
   assert(getLexer().is(AsmToken::Colon) && "expected a :");
   Parser.Lex(); // Eat ':'
 
@@ -6349,8 +6215,12 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
     ARMMCExpr::VariantKind VariantKind;
     uint8_t SupportedFormats;
   } PrefixEntries[] = {
-    { "lower16", ARMMCExpr::VK_ARM_LO16, COFF | ELF | MACHO },
-    { "upper16", ARMMCExpr::VK_ARM_HI16, COFF | ELF | MACHO },
+      {"upper16", ARMMCExpr::VK_ARM_HI16, COFF | ELF | MACHO},
+      {"lower16", ARMMCExpr::VK_ARM_LO16, COFF | ELF | MACHO},
+      {"upper8_15", ARMMCExpr::VK_ARM_HI_8_15, ELF},
+      {"upper0_7", ARMMCExpr::VK_ARM_HI_0_7, ELF},
+      {"lower8_15", ARMMCExpr::VK_ARM_LO_8_15, ELF},
+      {"lower0_7", ARMMCExpr::VK_ARM_LO_0_7, ELF},
   };
 
   StringRef IDVal = Parser.getTok().getIdentifier();
@@ -6400,6 +6270,9 @@ bool ARMAsmParser::parsePrefix(ARMMCExpr::VariantKind &RefKind) {
     return true;
   }
   Parser.Lex(); // Eat the last ':'
+
+  // consume an optional trailing '#' (GNU compatibility) bla
+  parseOptionalToken(AsmToken::Hash);
 
   return false;
 }
@@ -6711,6 +6584,27 @@ void ARMAsmParser::tryConvertingToTwoOperandForm(StringRef Mnemonic,
   }
 }
 
+// this function returns true if the operand is one of the following
+// relocations: :upper8_15:, :upper0_7:, :lower8_15: or :lower0_7:
+static bool isThumbI8Relocation(MCParsedAsmOperand &MCOp) {
+  ARMOperand &Op = static_cast<ARMOperand &>(MCOp);
+  if (!Op.isImm())
+    return false;
+  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
+  if (CE)
+    return false;
+  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
+  if (!E)
+    return false;
+  const ARMMCExpr *ARM16Expr = dyn_cast<ARMMCExpr>(E);
+  if (ARM16Expr && (ARM16Expr->getKind() == ARMMCExpr::VK_ARM_HI_8_15 ||
+                    ARM16Expr->getKind() == ARMMCExpr::VK_ARM_HI_0_7 ||
+                    ARM16Expr->getKind() == ARMMCExpr::VK_ARM_LO_8_15 ||
+                    ARM16Expr->getKind() == ARMMCExpr::VK_ARM_LO_0_7))
+    return true;
+  return false;
+}
+
 bool ARMAsmParser::shouldOmitCCOutOperand(StringRef Mnemonic,
                                           OperandVector &Operands) {
   // FIXME: This is all horribly hacky. We really need a better way to deal
@@ -6728,6 +6622,10 @@ bool ARMAsmParser::shouldOmitCCOutOperand(StringRef Mnemonic,
       !static_cast<ARMOperand &>(*Operands[4]).isModImm() &&
       static_cast<ARMOperand &>(*Operands[4]).isImm0_65535Expr() &&
       static_cast<ARMOperand &>(*Operands[1]).getReg() == 0)
+    return true;
+
+  if (Mnemonic == "movs" && Operands.size() > 3 && isThumb() &&
+      isThumbI8Relocation(*Operands[3]))
     return true;
 
   // Register-register 'add' for thumb does not have a cc_out operand
@@ -7614,6 +7512,19 @@ static bool isVectorPredicable(const MCInstrDesc &MCID) {
   return findFirstVectorPredOperandIdx(MCID) != -1;
 }
 
+static bool isARMMCExpr(MCParsedAsmOperand &MCOp) {
+  ARMOperand &Op = static_cast<ARMOperand &>(MCOp);
+  if (!Op.isImm())
+    return false;
+  const MCConstantExpr *CE = dyn_cast<MCConstantExpr>(Op.getImm());
+  if (CE)
+    return false;
+  const MCExpr *E = dyn_cast<MCExpr>(Op.getImm());
+  if (!E)
+    return false;
+  return true;
+}
+
 // FIXME: We would really like to be able to tablegen'erate this.
 bool ARMAsmParser::validateInstruction(MCInst &Inst,
                                        const OperandVector &Operands) {
@@ -8221,6 +8132,22 @@ bool ARMAsmParser::validateInstruction(MCInst &Inst,
       return Error(
           Op.getStartLoc(),
           "immediate expression for mov requires :lower16: or :upper16");
+    break;
+  }
+  case ARM::tADDi8: {
+    MCParsedAsmOperand &Op = *Operands[4];
+    if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
+      return Error(Op.getStartLoc(),
+                   "Immediate expression for Thumb adds requires :lower0_7:,"
+                   " :lower8_15:, :upper0_7: or :upper8_15:");
+    break;
+  }
+  case ARM::tMOVi8: {
+    MCParsedAsmOperand &Op = *Operands[2];
+    if (isARMMCExpr(Op) && !isThumbI8Relocation(Op))
+      return Error(Op.getStartLoc(),
+                   "Immediate expression for Thumb movs requires :lower0_7:,"
+                   " :lower8_15:, :upper0_7: or :upper8_15:");
     break;
   }
   case ARM::HINT:
@@ -10541,7 +10468,8 @@ bool ARMAsmParser::processInstruction(MCInst &Inst,
     // explicitly specified. From the ARM ARM: "Encoding T1 is preferred
     // to encoding T2 if <Rd> is specified and encoding T2 is preferred
     // to encoding T1 if <Rd> is omitted."
-    if ((unsigned)Inst.getOperand(3).getImm() < 8 && Operands.size() == 6) {
+    if (Inst.getOperand(3).isImm() &&
+        (unsigned)Inst.getOperand(3).getImm() < 8 && Operands.size() == 6) {
       Inst.setOpcode(ARM::tADDi3);
       return true;
     }

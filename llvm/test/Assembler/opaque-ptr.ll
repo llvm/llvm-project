@@ -1,5 +1,5 @@
-; RUN: llvm-as -opaque-pointers < %s | llvm-dis -opaque-pointers | llvm-as -opaque-pointers | llvm-dis -opaque-pointers | FileCheck %s
-; RUN: verify-uselistorder -opaque-pointers %s
+; RUN: llvm-as < %s | llvm-dis | llvm-as | llvm-dis | FileCheck %s
+; RUN: verify-uselistorder %s
 
 ; CHECK: @global = external global ptr
 @global = external global ptr

@@ -215,10 +215,12 @@ LIBC_INLINE int clear_except(int excepts) {
 }
 
 LIBC_INLINE int test_except(int excepts) {
-  uint16_t status_value = internal::get_status_value_for_except(excepts);
+  uint16_t status_word = internal::get_x87_status_word();
+  uint32_t mxcsr = internal::get_mxcsr();
   // Check both x87 status word and MXCSR.
+  uint16_t status_value = internal::get_status_value_for_except(excepts);
   return internal::exception_status_to_macro(
-      static_cast<uint16_t>(status_value & internal::get_mxcsr()));
+      static_cast<uint16_t>(status_value & (status_word | mxcsr)));
 }
 
 // Sets the exception flags but does not trigger the exception handler.
@@ -347,12 +349,19 @@ LIBC_INLINE int set_round(int mode) {
 
 namespace internal {
 
-#ifdef _WIN32
+#if defined(_WIN32)
 // MSVC fenv.h defines a very simple representation of the floating point state
 // which just consists of control and status words of the x87 unit.
 struct FPState {
   uint32_t control_word;
   uint32_t status_word;
+};
+#elif defined(__APPLE__)
+struct FPState {
+  uint16_t control_word;
+  uint16_t status_word;
+  uint32_t mxcsr;
+  uint8_t reserved[8];
 };
 #else
 struct FPState {
@@ -557,7 +566,14 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 #else
 LIBC_INLINE int get_env(fenv_t *envp) {
   internal::FPState *state = reinterpret_cast<internal::FPState *>(envp);
+#ifdef __APPLE__
+  internal::X87StateDescriptor x87_status;
+  internal::get_x87_state_descriptor(x87_status);
+  state->control_word = x87_status.control_word;
+  state->status_word = x87_status.status_word;
+#else
   internal::get_x87_state_descriptor(state->x87_status);
+#endif // __APPLE__
   state->mxcsr = internal::get_mxcsr();
   return 0;
 }
@@ -605,12 +621,18 @@ LIBC_INLINE int set_env(const fenv_t *envp) {
 
   // Copy the exception status flags from envp.
   x87_status.status_word &= ~uint16_t(0x3F);
+#ifdef __APPLE__
+  x87_status.status_word |= (fpstate->status_word & 0x3F);
+  // We can set the x87 control word as is as there no sensitive bits.
+  x87_status.control_word = fpstate->control_word;
+#else
   x87_status.status_word |= (fpstate->x87_status.status_word & 0x3F);
   // Copy other non-sensitive parts of the status word.
   for (int i = 0; i < 5; i++)
     x87_status._[i] = fpstate->x87_status._[i];
   // We can set the x87 control word as is as there no sensitive bits.
   x87_status.control_word = fpstate->x87_status.control_word;
+#endif // __APPLE__
   internal::write_x87_state_descriptor(x87_status);
 
   // We can write the MXCSR state as is as there are no sensitive bits.

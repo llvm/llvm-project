@@ -94,6 +94,9 @@ def OpenACC_UpdateHost            : I64EnumAttrCase<"acc_update_host", 17>;
 def OpenACC_UpdateSelf            : I64EnumAttrCase<"acc_update_self", 18>;
 def OpenACC_UpdateDevice          : I64EnumAttrCase<"acc_update_device", 19>;
 def OpenACC_UseDevice             : I64EnumAttrCase<"acc_use_device", 20>;
+def OpenACC_Reduction             : I64EnumAttrCase<"acc_reduction", 21>;
+def OpenACC_DeclareDeviceResident : I64EnumAttrCase<"acc_declare_device_resident", 22>;
+def OpenACC_DeclareLink           : I64EnumAttrCase<"acc_declare_link", 23>;
 
 def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
     "data clauses supported by OpenACC",
@@ -104,8 +107,32 @@ def OpenACC_DataClauseEnum : I64EnumAttr<"DataClause",
      OpenACC_PrivateClause, OpenACC_FirstPrivateClause,
      OpenACC_IsDevicePtrClause, OpenACC_GetDevicePtrClause, OpenACC_UpdateHost,
      OpenACC_UpdateSelf, OpenACC_UpdateDevice, OpenACC_UseDevice,
+     OpenACC_Reduction, OpenACC_DeclareDeviceResident, OpenACC_DeclareLink,
     ]> {
   let cppNamespace = "::mlir::acc";
+  let genSpecializedAttr = 0;
+}
+
+def OpenACC_DataClauseAttr : EnumAttr<OpenACC_Dialect, OpenACC_DataClauseEnum,
+                                      "data_clause">;
+
+class OpenACC_Attr<string name, string attrMnemonic,
+                   list<Trait> traits = [],
+                   string baseCppClass = "::mlir::Attribute">
+    : AttrDef<OpenACC_Dialect, name, traits, baseCppClass> {
+  let mnemonic = attrMnemonic;
+}
+
+// Attribute to describe the declare data clause used on variable.
+// Intended to be used at the variable creation site (on the global op or the
+// corresponding allocation operation). This is used in conjunction with the
+// declare operations (`acc.declare_enter` and `acc.declare_exit`) since those
+// describe how the data action is performed. The attribute itself makes it
+// easier to find out whether the variable is in a declare clause and what kind
+// of clause it is.
+def DeclareAttr : OpenACC_Attr<"Declare", "declare"> {
+  let parameters = (ins "DataClauseAttr":$dataClause);
+  let assemblyFormat = "`<` struct(params) `>`";
 }
 
 // Used for data specification in data clauses (2.7.1).
@@ -179,19 +206,21 @@ def OpenACC_DataBoundsOp : OpenACC_Op<"bounds",
 //
 // The bounds are represented in rank order. Rank 0 (inner-most dimension) is
 // the first.
-class OpenACC_DataEntryOp<string mnemonic, string clause, list<Trait> traits = []> :
+class OpenACC_DataEntryOp<string mnemonic, string clause, string extraDescription,
+                          list<Trait> traits = []> :
     OpenACC_Op<mnemonic, !listconcat(traits,
         [AttrSizedOperandSegments])> {
   let arguments = (ins OpenACC_PointerLikeTypeInterface:$varPtr,
                        Optional<OpenACC_PointerLikeTypeInterface>:$varPtrPtr,
                        Variadic<OpenACC_DataBoundsType>:$bounds, /* rank-0 to rank-{n-1} */
-                       DefaultValuedAttr<OpenACC_DataClauseEnum,clause>:$dataClause,
+                       DefaultValuedAttr<OpenACC_DataClauseAttr,clause>:$dataClause,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
                        OptionalAttr<StrAttr>:$name);
   let results = (outs OpenACC_PointerLikeTypeInterface:$accPtr);
 
-  let description = [{
+  let description = !strconcat(extraDescription, [{
+    Description of arguments:
     - `varPtr`: The address of variable to copy.
     - `varPtrPtr`: Specifies the address of varPtr - only used when the variable
     copied is a field in a struct. This is important for OpenACC due to implicit
@@ -209,7 +238,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, list<Trait> traits = [
     - `implicit`: Whether this is an implicitly generated operation, such as copies
     done to satisfy "Variables with Implicitly Determined Data Attributes" in 2.6.2.
     - `name`: Holds the name of variable as specified in user clause (including bounds).
-  }];
+  }]);
 
   let assemblyFormat = [{
     `varPtr` `(` $varPtr `:` type($varPtr) `)`
@@ -226,7 +255,7 @@ class OpenACC_DataEntryOp<string mnemonic, string clause, list<Trait> traits = [
 // 2.5.13 private clause
 //===----------------------------------------------------------------------===//
 def OpenACC_PrivateOp : OpenACC_DataEntryOp<"private",
-    "mlir::acc::DataClause::acc_private"> {
+    "mlir::acc::DataClause::acc_private", ""> {
   let summary = "Represents private semantics for acc private clause.";
 }
 
@@ -234,16 +263,24 @@ def OpenACC_PrivateOp : OpenACC_DataEntryOp<"private",
 // 2.5.14 firstprivate clause
 //===----------------------------------------------------------------------===//
 def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
-    "mlir::acc::DataClause::acc_firstprivate"> {
+    "mlir::acc::DataClause::acc_firstprivate", ""> {
   let summary = "Represents firstprivate semantic for the acc firstprivate "
                 "clause.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.5.15 reduction clause
+//===----------------------------------------------------------------------===//
+def OpenACC_ReductionOp : OpenACC_DataEntryOp<"reduction",
+    "mlir::acc::DataClause::acc_reduction", ""> {
+  let summary = "Represents reduction semantics for acc reduction clause.";
 }
 
 //===----------------------------------------------------------------------===//
 // 2.7.4 deviceptr clause
 //===----------------------------------------------------------------------===//
 def OpenACC_DevicePtrOp : OpenACC_DataEntryOp<"deviceptr",
-    "mlir::acc::DataClause::acc_deviceptr"> {
+    "mlir::acc::DataClause::acc_deviceptr", ""> {
   let summary = "Specifies that the variable pointer is a device pointer.";
 }
 
@@ -251,7 +288,7 @@ def OpenACC_DevicePtrOp : OpenACC_DataEntryOp<"deviceptr",
 // 2.7.5 present clause
 //===----------------------------------------------------------------------===//
 def OpenACC_PresentOp : OpenACC_DataEntryOp<"present",
-    "mlir::acc::DataClause::acc_present"> {
+    "mlir::acc::DataClause::acc_present", ""> {
   let summary = "Specifies that the variable is already present on device.";
 }
 
@@ -259,7 +296,7 @@ def OpenACC_PresentOp : OpenACC_DataEntryOp<"present",
 // 2.7.7 copyin clause
 //===----------------------------------------------------------------------===//
 def OpenACC_CopyinOp : OpenACC_DataEntryOp<"copyin",
-    "mlir::acc::DataClause::acc_copyin"> {
+    "mlir::acc::DataClause::acc_copyin", ""> {
   let summary = "Represents copyin semantics for acc data clauses like acc "
                 "copyin and acc copy.";
 
@@ -273,7 +310,7 @@ def OpenACC_CopyinOp : OpenACC_DataEntryOp<"copyin",
 // 2.7.9 create clause
 //===----------------------------------------------------------------------===//
 def OpenACC_CreateOp : OpenACC_DataEntryOp<"create",
-    "mlir::acc::DataClause::acc_create"> {
+    "mlir::acc::DataClause::acc_create", ""> {
   let summary = "Represents create semantics for acc data clauses like acc "
                 "create and acc copyout.";
 
@@ -287,7 +324,7 @@ def OpenACC_CreateOp : OpenACC_DataEntryOp<"create",
 // 2.7.10 no_create clause
 //===----------------------------------------------------------------------===//
 def OpenACC_NoCreateOp : OpenACC_DataEntryOp<"nocreate",
-    "mlir::acc::DataClause::acc_no_create"> {
+    "mlir::acc::DataClause::acc_no_create", ""> {
   let summary = "Represents acc no_create semantics.";
 }
 
@@ -295,7 +332,7 @@ def OpenACC_NoCreateOp : OpenACC_DataEntryOp<"nocreate",
 // 2.7.12 attach clause
 //===----------------------------------------------------------------------===//
 def OpenACC_AttachOp : OpenACC_DataEntryOp<"attach",
-    "mlir::acc::DataClause::acc_attach"> {
+    "mlir::acc::DataClause::acc_attach", ""> {
   let summary = "Represents acc attach semantics which updates a pointer in "
                 "device memory with the corresponding device address of the "
                 "pointee.";
@@ -305,20 +342,27 @@ def OpenACC_AttachOp : OpenACC_DataEntryOp<"attach",
 // 3.2.23 acc_deviceptr
 //===----------------------------------------------------------------------===//
 // This is needed to get device address without the additional semantics in
-// acc present.
+// acc present. Effectively, it can be used to get "accPtr" for any variable.
 // It is also useful for providing the device address for unstructured construct
 // exit_data since unlike structured constructs, there is no matching data entry
 // operation.
 def OpenACC_GetDevicePtrOp : OpenACC_DataEntryOp<"getdeviceptr",
-    "mlir::acc::DataClause::acc_getdeviceptr"> {
-  let summary = "Gets device address from host address if it exists on device.";
+    "mlir::acc::DataClause::acc_getdeviceptr", [{
+      This operation is used to get the `accPtr` for a variable. This is often
+      used in conjunction with data exit operations when the data entry
+      operation is not visible. This operation can have a `dataClause` argument
+      that is any of the valid `mlir::acc::DataClause` entries.
+      \
+    }]> {
+  let summary = "Gets device address if variable exists on device.";
+  let hasVerifier = 0;
 }
 
 //===----------------------------------------------------------------------===//
 // 2.14.4 device clause
 //===----------------------------------------------------------------------===//
 def OpenACC_UpdateDeviceOp : OpenACC_DataEntryOp<"update_device",
-    "mlir::acc::DataClause::acc_update_device"> {
+    "mlir::acc::DataClause::acc_update_device", ""> {
   let summary = "Represents acc update device semantics.";
 }
 
@@ -326,8 +370,24 @@ def OpenACC_UpdateDeviceOp : OpenACC_DataEntryOp<"update_device",
 // 2.8 use_device clause
 //===----------------------------------------------------------------------===//
 def OpenACC_UseDeviceOp : OpenACC_DataEntryOp<"use_device",
-    "mlir::acc::DataClause::acc_use_device"> {
+    "mlir::acc::DataClause::acc_use_device", ""> {
   let summary = "Represents acc use_device semantics.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.13.1 device_resident clause
+//===----------------------------------------------------------------------===//
+def OpenACC_DeclareDeviceResidentOp : OpenACC_DataEntryOp<"declare_device_resident",
+    "mlir::acc::DataClause::acc_declare_device_resident", ""> {
+  let summary = "Represents acc declare device_resident semantics.";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.13.3 link clause
+//===----------------------------------------------------------------------===//
+def OpenACC_DeclareLinkOp : OpenACC_DataEntryOp<"declare_link",
+    "mlir::acc::DataClause::acc_declare_link", ""> {
+  let summary = "Represents acc declare link semantics.";
 }
 
 // Data exit operation does not refer to OpenACC spec terminology, but to
@@ -340,7 +400,7 @@ class OpenACC_DataExitOp<string mnemonic, string clause, list<Trait> traits = []
   let arguments = (ins OpenACC_PointerLikeTypeInterface:$accPtr,
                        Optional<OpenACC_PointerLikeTypeInterface>:$varPtr,
                        Variadic<OpenACC_DataBoundsType>:$bounds,
-                       DefaultValuedAttr<OpenACC_DataClauseEnum,clause>:$dataClause,
+                       DefaultValuedAttr<OpenACC_DataClauseAttr,clause>:$dataClause,
                        DefaultValuedAttr<BoolAttr, "true">:$structured,
                        DefaultValuedAttr<BoolAttr, "false">:$implicit,
                        OptionalAttr<StrAttr>:$name);
@@ -555,12 +615,14 @@ def OpenACC_ReductionRecipeOp : OpenACC_Op<"reduction.recipe",
     mandatory regions.
 
       1. The initializer region specifies how to initialize the local reduction
-         value. The region has an argument that contains the value of the
+         value. The region has a first argument that contains the value of the
          reduction accumulator at the start of the reduction. It is expected to
-         `acc.yield` the new value.
+         `acc.yield` the new value. Extra arguments can be added to deal with
+         dynamic arrays.
       2. The reduction region contains a sequences of operations to combine two
-         values of the reduction type into one. It has two arguments and it is
-         expected to `acc.yield` the combined value.
+         values of the reduction type into one. It has at least two arguments
+         and it is expected to `acc.yield` the combined value. Extra arguments
+         can be added to deal with dynamic arrays.
 
     Example:
 
@@ -646,7 +708,7 @@ def OpenACC_ParallelOp : OpenACC_Op<"parallel",
                        UnitAttr:$asyncAttr,
                        Variadic<IntOrIndex>:$waitOperands,
                        UnitAttr:$waitAttr,
-                       Optional<IntOrIndex>:$numGangs,
+                       Variadic<IntOrIndex>:$numGangs,
                        Optional<IntOrIndex>:$numWorkers,
                        Optional<IntOrIndex>:$vectorLength,
                        Optional<I1>:$ifCond,
@@ -792,7 +854,7 @@ def OpenACC_KernelsOp : OpenACC_Op<"kernels",
                        UnitAttr:$asyncAttr,
                        Variadic<IntOrIndex>:$waitOperands,
                        UnitAttr:$waitAttr,
-                       Optional<IntOrIndex>:$numGangs,
+                       Variadic<IntOrIndex>:$numGangs,
                        Optional<IntOrIndex>:$numWorkers,
                        Optional<IntOrIndex>:$vectorLength,
                        Optional<I1>:$ifCond,
@@ -855,6 +917,11 @@ def OpenACC_DataOp : OpenACC_Op<"data",
 
 
   let arguments = (ins Optional<I1>:$ifCond,
+                       Optional<IntOrIndex>:$async,
+                       UnitAttr:$asyncAttr,
+                       Optional<IntOrIndex>:$waitDevnum,
+                       Variadic<IntOrIndex>:$waitOperands,
+                       UnitAttr:$waitAttr,
                        Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands,
                        OptionalAttr<DefaultValueAttr>:$defaultAttr);
 
@@ -871,7 +938,10 @@ def OpenACC_DataOp : OpenACC_Op<"data",
   let assemblyFormat = [{
     oilist(
         `if` `(` $ifCond `)`
+      | `async` `(` $async `:` type($async) `)`
       | `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+      | `wait_devnum` `(` $waitDevnum `:` type($waitDevnum) `)`
+      | `wait` `(` $waitOperands `:` type($waitOperands) `)`
     )
     $region attr-dict-with-keyword
   }];
@@ -1120,6 +1190,203 @@ def OpenACC_YieldOp : OpenACC_Op<"yield", [ReturnLike, Terminator,
   let builders = [OpBuilder<(ins), [{ /* nothing to do */ }]>];
 
   let assemblyFormat = "attr-dict ($operands^ `:` type($operands))?";
+}
+
+//===----------------------------------------------------------------------===//
+// 2.13 Declare Directive
+//===----------------------------------------------------------------------===//
+
+def OpenACC_DeclareEnterOp : OpenACC_Op<"declare_enter", []> {
+  let summary = "declare directive - entry to implicit data region";
+
+  let description = [{
+    The "acc.declare_enter" operation represents the OpenACC declare directive
+    and captures the entry semantics to the implicit data region.
+    This operation is modeled similarly to "acc.enter_data".
+
+    Example showing `acc declare create(a)`:
+
+    ```mlir
+    %0 = acc.create varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32>
+    acc.declare_enter dataOperands(%0 : !llvm.ptr<f32>)
+    ```
+  }];
+
+  let arguments = (ins Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
+
+  let assemblyFormat = [{
+    oilist(
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+    )
+    attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 1;
+}
+
+def OpenACC_DeclareExitOp : OpenACC_Op<"declare_exit", []> {
+  let summary = "declare directive - exit from implicit data region";
+
+  let description = [{
+    The "acc.declare_exit" operation represents the OpenACC declare directive
+    and captures the exit semantics from the implicit data region.
+    This operation is modeled similarly to "acc.exit_data".
+
+    Example showing `acc declare device_resident(a)`:
+
+    ```mlir
+    %0 = acc.getdeviceptr varPtr(%a : !llvm.ptr<f32>) -> !llvm.ptr<f32> {dataClause = #acc<data_clause declare_device_resident>}
+    acc.declare_exit dataOperands(%0 : !llvm.ptr<f32>)
+    acc.delete accPtr(%0 : !llvm.ptr<f32>) {dataClause = #acc<data_clause declare_device_resident>}
+    ```
+  }];
+
+  let arguments = (ins Variadic<OpenACC_PointerLikeTypeInterface>:$dataClauseOperands);
+
+  let assemblyFormat = [{
+    oilist(
+        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
+    )
+    attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 1;
+}
+
+def OpenACC_GlobalConstructorOp : OpenACC_Op<"global_ctor",
+                                             [IsolatedFromAbove, Symbol]> {
+  let summary = "Used to hold construction operations associated with globals such as declare";
+
+  let description = [{
+    The "acc.global_ctor" operation is used to capture OpenACC actions to apply
+    on globals (such as `acc declare`) at the entry to the implicit data region.
+    This operation is isolated and intended to be used in a module.
+
+    Example showing `declare create` of global:
+
+    ```mlir
+    llvm.mlir.global external @globalvar() : i32 {
+      %0 = llvm.mlir.constant(0 : i32) : i32
+      llvm.return %0 : i32
+    }
+    acc.global_ctor @acc_constructor {
+      %0 = llvm.mlir.addressof @globalvar : !llvm.ptr<i32>
+      %1 = acc.create varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32>
+      acc.declare_enter dataOperands(%1 : !llvm.ptr<i32>)
+    }
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name);
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    $sym_name $region attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 0;
+}
+
+def OpenACC_GlobalDestructorOp : OpenACC_Op<"global_dtor",
+                                            [IsolatedFromAbove, Symbol]> {
+  let summary = "Used to hold destruction operations associated with globals such as declare";
+
+  let description = [{
+    The "acc.global_dtor" operation is used to capture OpenACC actions to apply
+    on globals (such as `acc declare`) at the exit from the implicit data
+    region. This operation is isolated and intended to be used in a module.
+
+    Example showing delete associated with `declare create` of global:
+
+    ```mlir
+    llvm.mlir.global external @globalvar() : i32 {
+      %0 = llvm.mlir.constant(0 : i32) : i32
+      llvm.return %0 : i32
+    }
+    acc.global_dtor @acc_destructor {
+      %0 = llvm.mlir.addressof @globalvar : !llvm.ptr<i32>
+      %1 = acc.getdeviceptr varPtr(%0 : !llvm.ptr<i32>) -> !llvm.ptr<i32> {dataClause = #acc<data_clause create>}
+      acc.declare_exit dataOperands(%1 : !llvm.ptr<i32>)
+      acc.delete accPtr(%1 : !llvm.ptr<i32>) {dataClause = #acc<data_clause create>}
+    }
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name);
+  let regions = (region AnyRegion:$region);
+
+  let assemblyFormat = [{
+    $sym_name $region attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 0;
+}
+
+//===----------------------------------------------------------------------===//
+// 2.15.1 Routine Directive
+//===----------------------------------------------------------------------===//
+
+def OpenACC_RoutineOp : OpenACC_Op<"routine", [IsolatedFromAbove]> {
+  let summary = "acc routine operation";
+
+  let description = [{
+    The `acc.routine` operation is used to capture the clauses of acc
+    routine directive, including the associated function name. The associated
+    function keeps track of its corresponding routine declaration through
+    the `RoutineInfoAttr`.
+
+    Example:
+
+    ```mlir
+    func.func @acc_func(%a : i64) -> () attributes {acc.routine_info = #acc.routine_info<[@acc_func_rout1]>} {
+      return
+    }
+    acc.routine @acc_func_rout1 func(@acc_func) gang
+    ```
+  }];
+
+  let arguments = (ins SymbolNameAttr:$sym_name,
+                       SymbolNameAttr:$func_name,
+                       OptionalAttr<StrAttr>:$bind_name,
+                       OptionalAttr<UnitAttr>:$gang,
+                       OptionalAttr<UnitAttr>:$worker,
+                       OptionalAttr<UnitAttr>:$vector,
+                       OptionalAttr<UnitAttr>:$seq,
+                       OptionalAttr<UnitAttr>:$nohost,
+                       OptionalAttr<UnitAttr>:$implicit,
+                       OptionalAttr<APIntAttr>:$gangDim);
+
+  let extraClassDeclaration = [{
+    static StringRef getGangDimKeyword() { return "dim"; }
+  }];
+
+  let assemblyFormat = [{
+    $sym_name `func` `(` $func_name `)`
+    oilist (
+        `bind` `(` $bind_name `)`
+      | `gang` `` custom<RoutineGangClause>($gang, $gangDim)
+      | `worker` $worker
+      | `vector` $vector
+      | `seq` $seq
+      | `nohost` $nohost
+      | `implicit` $implicit
+    ) attr-dict-with-keyword
+  }];
+
+  let hasVerifier = 1;
+}
+
+def RoutineInfoAttr : OpenACC_Attr<"RoutineInfo", "routine_info"> {
+  let summary = "Keeps track of associated acc routine information";
+
+  let description = [{
+    This attribute is used to create the association between a function and
+    its `acc.routine` operation. A `func.func` uses this if its name
+    was referenced in an `acc routine` directive.
+  }];
+
+  let parameters = (ins ArrayRefParameter<"SymbolRefAttr", "">:$accRoutines);
+  let assemblyFormat = "`<` `[` `` $accRoutines `]` `>`";
 }
 
 //===----------------------------------------------------------------------===//

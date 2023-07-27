@@ -83,7 +83,9 @@ void initializeAMDGPUAttributorPass(PassRegistry &);
 void initializeAMDGPUAnnotateKernelFeaturesPass(PassRegistry &);
 extern char &AMDGPUAnnotateKernelFeaturesID;
 
-enum class ScanOptions : bool { DPP, Iterative };
+// DPP/Iterative option enables the atomic optimizer with given strategy
+// whereas None disables the atomic optimizer.
+enum class ScanOptions { DPP, Iterative, None };
 FunctionPass *createAMDGPUAtomicOptimizerPass(ScanOptions ScanStrategy);
 void initializeAMDGPUAtomicOptimizerPass(PassRegistry &);
 extern char &AMDGPUAtomicOptimizerID;
@@ -324,6 +326,9 @@ extern char &AMDGPUOpenCLEnqueuedBlockLoweringID;
 
 void initializeGCNNSAReassignPass(PassRegistry &);
 extern char &GCNNSAReassignID;
+
+void initializeGCNPreRALongBranchRegPass(PassRegistry &);
+extern char &GCNPreRALongBranchRegID;
 
 void initializeGCNPreRAOptimizationsPass(PassRegistry &);
 extern char &GCNPreRAOptimizationsID;

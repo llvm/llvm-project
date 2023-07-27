@@ -46,6 +46,62 @@
 using namespace mlir;
 using namespace mlir::linalg;
 
+/// Return a `memref.dim` or `tensor.dim` for the shape of `v` at `dim`.
+static OpFoldResult getDimValue(OpBuilder &builder, Location loc, Value v,
+                                int64_t dim) {
+  auto type = cast<ShapedType>(v.getType());
+  if (!type.isDynamicDim(dim))
+    return builder.getIndexAttr(type.getDimSize(dim));
+
+  return getAsOpFoldResult(
+      TypeSwitch<Type, Value>(v.getType())
+          .Case<RankedTensorType>([&](RankedTensorType t) -> Value {
+            return builder.create<tensor::DimOp>(loc, v, dim);
+          })
+          .Case<MemRefType>([&](MemRefType t) -> Value {
+            return builder.create<memref::DimOp>(loc, v, dim);
+          }));
+}
+
+/// Returns a memref.subview or a tensor.extract_slice based on the type of the
+/// `source`.
+static Value getSlice(OpBuilder &b, Location loc, Value source,
+                      ArrayRef<OpFoldResult> offsets,
+                      ArrayRef<OpFoldResult> sizes,
+                      ArrayRef<OpFoldResult> strides) {
+  return TypeSwitch<Type, Value>(source.getType())
+      .Case<RankedTensorType>([&](RankedTensorType t) -> Value {
+        return b.create<tensor::ExtractSliceOp>(loc, source, offsets, sizes,
+                                                strides);
+      })
+      .Case<MemRefType>([&](MemRefType type) -> Value {
+        return b.create<memref::SubViewOp>(loc, source, offsets, sizes,
+                                           strides);
+      })
+      .Default([&](Type t) { return nullptr; });
+}
+
+//===----------------------------------------------------------------------===//
+// Helper functions
+//===----------------------------------------------------------------------===//
+
+Value linalg::createOrFoldDimOp(OpBuilder &b, Location loc, Value source,
+                                int64_t dim) {
+  if (llvm::isa<UnrankedMemRefType, MemRefType>(source.getType()))
+    return b.createOrFold<memref::DimOp>(loc, source, dim);
+  if (llvm::isa<UnrankedTensorType, RankedTensorType>(source.getType()))
+    return b.createOrFold<tensor::DimOp>(loc, source, dim);
+  llvm_unreachable("Expected MemRefType or TensorType");
+}
+
+OpFoldResult linalg::createFoldedDimOp(OpBuilder &b, Location loc, Value source,
+                                       int64_t dim) {
+  auto shapedType = llvm::cast<ShapedType>(source.getType());
+  if (!shapedType.hasRank() || shapedType.isDynamicDim(dim))
+    return createOrFoldDimOp(b, loc, source, dim);
+  return b.getIndexAttr(shapedType.getDimSize(dim));
+}
+
 //===----------------------------------------------------------------------===//
 // Support for named Linalg ops defined in ods-gen.
 //===----------------------------------------------------------------------===//
@@ -168,11 +224,11 @@ parseCommonStructuredOpParts(OpAsmParser &parser, OperationState &result,
 
   if (addOperandSegmentSizes) {
     // This is a bit complex because we're trying to be backward compatible with
-    // operation syntax that mix the inherent attributes and the discardable ones
-    // in the same dictionary.
-    // If the properties are used, we append the operand_segment_sizes there directly.
-    // Otherwise we append it to the discardable attributes dictionary where it is
-    // handled by the generic Operation::create(...) method.
+    // operation syntax that mix the inherent attributes and the discardable
+    // ones in the same dictionary. If the properties are used, we append the
+    // operand_segment_sizes there directly. Otherwise we append it to the
+    // discardable attributes dictionary where it is handled by the generic
+    // Operation::create(...) method.
     if (result.propertiesAttr) {
       NamedAttrList attrs = llvm::cast<DictionaryAttr>(result.propertiesAttr);
       attrs.append("operand_segment_sizes",
@@ -378,6 +434,18 @@ public:
       if (allBool)
         return builder.create<arith::AndIOp>(arg0.getLoc(), arg0, arg1);
       return builder.create<arith::MulIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::div:
+      if (allComplex)
+        return builder.create<complex::DivOp>(arg0.getLoc(), arg0, arg1);
+      if (allFloatingPoint)
+        return builder.create<arith::DivFOp>(arg0.getLoc(), arg0, arg1);
+      if (allBool)
+        llvm_unreachable("unsupported operation: div with bools");
+      return builder.create<arith::DivSIOp>(arg0.getLoc(), arg0, arg1);
+    case BinaryFn::div_unsigned:
+      if (!allInteger || allBool)
+        llvm_unreachable("unsupported operation: unsigned div not on uint");
+      return builder.create<arith::DivUIOp>(arg0.getLoc(), arg0, arg1);
     case BinaryFn::max_signed:
       assert(!allComplex);
       if (allFloatingPoint)
@@ -470,6 +538,33 @@ private:
 };
 
 } // namespace
+
+//===----------------------------------------------------------------------===//
+// CopyOp
+//===----------------------------------------------------------------------===//
+
+namespace {
+
+struct EraseSelfCopyOnBuffers : OpRewritePattern<CopyOp> {
+  using OpRewritePattern<CopyOp>::OpRewritePattern;
+  LogicalResult matchAndRewrite(CopyOp copyOp,
+                                PatternRewriter &rewriter) const override {
+    if (!copyOp.hasBufferSemantics())
+      return rewriter.notifyMatchFailure(copyOp,
+                                         "does not have buffer semantics");
+    if (copyOp.getInputs().front() != copyOp.getOutputs().front())
+      return rewriter.notifyMatchFailure(copyOp, "not a self copy");
+    rewriter.eraseOp(copyOp);
+    return success();
+  }
+};
+
+} // namespace
+
+void CopyOp::getCanonicalizationPatterns(RewritePatternSet &results,
+                                         MLIRContext *context) {
+  results.add<EraseSelfCopyOnBuffers>(context);
+}
 
 //===----------------------------------------------------------------------===//
 // FillOp
@@ -2046,8 +2141,7 @@ static void createNewOperandWithStaticSizes(
   for (unsigned i = 0; i < sourceShape.size(); i++) {
     int64_t dimShape = sourceShape[i];
     AffineExpr dimExpr = sourceMap.getResult(i);
-    if (!affineExprToSize.contains(dimExpr) ||
-        !sourceType.isDynamicDim(i)) {
+    if (!affineExprToSize.contains(dimExpr) || !sourceType.isDynamicDim(i)) {
       newShape.push_back(dimShape);
       continue;
     }
@@ -2139,6 +2233,266 @@ struct InferStaticShapeOfOperands : public OpInterfaceRewritePattern<LinalgOp> {
 
 // All named ops canonicalizers and folders are auto-generated in the
 // .cpp.inc.
+
+//===----------------------------------------------------------------------===//
+// SoftmaxOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult SoftmaxOp::verify() {
+  ShapedType inputType = getInputOperandType();
+  ShapedType outputType = getOutputOperandType();
+
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  ArrayRef<int64_t> outputShape = outputType.getShape();
+  if (failed(verifyCompatibleShape(inputShape, outputShape)))
+    return emitOpError("incompatible output shape");
+
+  int64_t inputRank = getInputOperandRank();
+  int64_t dimension = getDimension();
+  if ((dimension < 0) || (dimension >= inputRank))
+    return emitOpError("incorrect dimension specified");
+
+  return success();
+}
+
+SmallVector<Range> SoftmaxOp::getIterationDomain(OpBuilder &builder) {
+  int64_t operandRank = getInputOperandRank();
+  SmallVector<Range> loopBounds(operandRank);
+  Location loc = getLoc();
+  Value zero = builder.create<arith::ConstantIndexOp>(loc, 0);
+  Value one = builder.create<arith::ConstantIndexOp>(loc, 1);
+  Value source = getInput();
+  for (auto dim : llvm::seq<int64_t>(0, operandRank)) {
+    loopBounds[dim].offset = zero;
+    loopBounds[dim].size = getDimValue(builder, loc, source, dim);
+    loopBounds[dim].stride = one;
+  }
+  return loopBounds;
+}
+
+SmallVector<utils::IteratorType> SoftmaxOp::getLoopIteratorTypes() {
+  SmallVector<utils::IteratorType> iteratorTypes(getInputOperandRank(),
+                                                 utils::IteratorType::parallel);
+  iteratorTypes[getDimension()] = utils::IteratorType::reduction;
+  return iteratorTypes;
+}
+
+FailureOr<TilingResult>
+SoftmaxOp::getTiledImplementation(OpBuilder &builder,
+                                  ArrayRef<OpFoldResult> offsets,
+                                  ArrayRef<OpFoldResult> sizes) {
+  int64_t rank = getInputOperandRank();
+  auto oneAttr = builder.getI64IntegerAttr(1);
+  SmallVector<OpFoldResult> strides(rank, oneAttr);
+  SmallVector<Value> tiledOperands;
+  tiledOperands.emplace_back(
+      getSlice(builder, getLoc(), getInput(), offsets, sizes, strides));
+  tiledOperands.emplace_back(
+      getSlice(builder, getLoc(), getOutput(), offsets, sizes, strides));
+
+  SmallVector<Type, 4> resultTypes;
+  if (hasTensorSemantics())
+    resultTypes.push_back(tiledOperands[1].getType());
+  Operation *tiledOp =
+      mlir::clone(builder, getOperation(), resultTypes, tiledOperands);
+
+  return TilingResult{{tiledOp}, SmallVector<Value>(tiledOp->getResults())};
+}
+
+LogicalResult SoftmaxOp::getResultTilePosition(
+    OpBuilder &builder, unsigned resultNumber, ArrayRef<OpFoldResult> offsets,
+    ArrayRef<OpFoldResult> sizes, SmallVector<OpFoldResult> &resultOffsets,
+    SmallVector<OpFoldResult> &resultSizes) {
+  if (resultNumber == 0) {
+    resultOffsets.assign(offsets.begin(), offsets.end());
+    resultSizes.assign(sizes.begin(), sizes.end());
+    return success();
+  }
+  return failure();
+}
+
+// cast(dynamic) -> static.
+LogicalResult SoftmaxOp::fold(FoldAdaptor, SmallVectorImpl<OpFoldResult> &) {
+  return memref::foldMemRefCast(*this);
+}
+
+LogicalResult
+SoftmaxOp::reifyResultShapes(OpBuilder &b,
+                             ReifiedRankedShapedTypeDims &reifiedReturnShapes) {
+  return cast<LinalgOp>(getOperation())
+      .reifyResultShapes(b, reifiedReturnShapes);
+}
+
+// Helper functions for softmax decomposition.
+// @{
+
+// Helper function to produce the iterator types (reduction or parallel) and
+// affine maps for the iterators used in the decomposition of softmax.
+// This method creates:
+// If allParallel == true:
+// - iterator type: {parallel, ..., parallel}
+// - affine maps:
+// -- identity with inputRank dimensions.
+// -- (d0, ..., dN) -> (d0, ..., d_dim-1, d_dim+1, ..., dN),
+//    where N == inputRank.
+//
+// If allParallel == false:
+// - iterator type at dim(i) == parallel for i != \p dim and
+//   dim(dim) == reduction.
+// - affine map:
+// -- identity with inputRank dimensions.
+// -- (d0, ..., dN) -> (d0, ..., d_dim-1, d_dim+1, ..., dN),
+//    where N == inputRank.
+static std::tuple<SmallVector<utils::IteratorType>, SmallVector<AffineMap>>
+computeIteratorTypesAndIndexingMaps(OpBuilder &builder, int64_t inputRank,
+                                    int64_t dim, bool allParallel = false) {
+  SmallVector<utils::IteratorType> iteratorTypes(inputRank,
+                                                 utils::IteratorType::parallel);
+  if (!allParallel)
+    iteratorTypes[dim] = utils::IteratorType::reduction;
+  MLIRContext *ctxt = builder.getContext();
+  auto identityMap = AffineMap::getMultiDimIdentityMap(inputRank, ctxt);
+  SmallVector<AffineExpr, 2> affineExprs;
+  for (int i = 0; i < inputRank; i++) {
+    if (i != dim)
+      affineExprs.push_back(mlir::getAffineDimExpr(i, ctxt));
+  }
+  auto reductionMap =
+      AffineMap::get(inputRank, /*symbols=*/0, affineExprs, ctxt);
+  SmallVector<AffineMap> indexingMaps{identityMap, reductionMap};
+  return std::make_tuple(iteratorTypes, indexingMaps);
+}
+
+// Helper function to produce a linalg.generic that computes a reduction on
+// dimension \p dim with the operation type \p T.
+template <typename T>
+static Value reduce(OpBuilder &builder, Location loc, Value input, Value output,
+                    int64_t dim) {
+  auto inputType = cast<ShapedType>(input.getType());
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputRank = inputShape.size();
+  auto [iteratorTypes, indexingMaps] =
+      computeIteratorTypesAndIndexingMaps(builder, inputRank, dim);
+  assert(indexingMaps.size() == 2 &&
+         "We should have two maps: 1 for the input, 1 for the output");
+  assert(indexingMaps[0].isIdentity() && "input map should be identity");
+
+  auto genericOp = builder.create<linalg::GenericOp>(
+      loc, output.getType(), input, output, indexingMaps, iteratorTypes,
+      [&](OpBuilder &b, Location loc, ValueRange args) {
+        Value result = b.create<T>(loc, args[0], args[1]);
+        b.create<linalg::YieldOp>(loc, result);
+      });
+  return genericOp.getResult(0);
+}
+
+/// Produce a linalg generic that computes the second step of the softmax
+/// decomposition: res = exp(input - max), where \p max is the max of \p input
+/// on dimension \p dim.
+static Value buildSubAndExpOp(OpBuilder &builder, Location loc, Value input,
+                              Value max, Value output, int64_t dim) {
+  auto inputType = cast<ShapedType>(input.getType());
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputRank = inputShape.size();
+  auto [iteratorTypes, indexingMaps] = computeIteratorTypesAndIndexingMaps(
+      builder, inputRank, dim, /*allParallel=*/true);
+  assert(indexingMaps.size() == 2 && "We should have one map for each input");
+  assert(indexingMaps[0].isIdentity() && "input map should be identity");
+  // Add the affine map for the output argument.
+  indexingMaps.push_back(indexingMaps[0]);
+  auto genericOp = builder.create<linalg::GenericOp>(
+      loc, input.getType(), ValueRange{input, max}, output, indexingMaps,
+      iteratorTypes, [&](OpBuilder &b, Location loc, ValueRange args) {
+        Value diff = b.create<arith::SubFOp>(loc, args[0], args[1]);
+        Value result = b.create<math::ExpOp>(loc, diff);
+        b.create<linalg::YieldOp>(loc, result);
+      });
+  return genericOp.getResult(0);
+}
+
+/// Produce a linalg generic that computes the final step of the softmax
+/// decomposition.
+/// \returns  linalg.generic ins(\p numerator, \p denominator) outs(\p output) {
+///   yield  n / d
+/// }
+static Value buildDivOp(OpBuilder &builder, Location loc, Value numerator,
+                        Value denominator, Value output, int64_t dim) {
+  auto inputType = cast<ShapedType>(numerator.getType());
+  ArrayRef<int64_t> inputShape = inputType.getShape();
+  int64_t inputRank = inputShape.size();
+  auto [iteratorTypes, indexingMaps] = computeIteratorTypesAndIndexingMaps(
+      builder, inputRank, dim, /*allParallel=*/true);
+  assert(indexingMaps.size() == 2 &&
+         "We should have one map for each input (2)");
+  assert(indexingMaps[0].isIdentity() && "Numerator map should be identity");
+  // Add the affine map for the output tensor.
+  indexingMaps.push_back(indexingMaps[0]);
+  auto genericOp = builder.create<linalg::GenericOp>(
+      loc, numerator.getType(), ValueRange{numerator, denominator}, output,
+      indexingMaps, iteratorTypes,
+      [&](OpBuilder &b, Location loc, ValueRange args) {
+        Value result = b.create<arith::DivFOp>(loc, args[0], args[1]);
+        b.create<linalg::YieldOp>(loc, result);
+      });
+  return genericOp.getResult(0);
+}
+// @} End helper functions for softmax decomposition.
+
+/// Given an N-dimensional tensor x, this method converts
+/// softmax(x) to the following sequence of operations:
+///
+/// 1. Compute the max of x along dimension d. This results
+///    in a N-1 dimensional tensor m.
+///    m = max(x, dim = d)
+///
+/// 2. Subtract a broadcasted m from x and exponentiate. This results in
+///    a N dimensional tensor z.
+///    z = exp(x - m)
+///
+/// 3. Compute the sum of z along dimension d. This results in
+///    a N-1 dimensional tensor l.
+///    l = sum(z, dim = d)
+///
+/// 4. Divide z and l. This gives the N-dimensional softmax.
+///    softmax = z / l
+///
+FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
+  OpBuilder::InsertionGuard guard(b);
+  b.setInsertionPoint(*this);
+  Location loc = getLoc();
+  Value input = getInput();
+  ShapedType inputType = getInputOperandType();
+  Type elementType = inputType.getElementType();
+  int64_t reductionDim = getDimension();
+  SmallVector<OpFoldResult> dims = tensor::getMixedSizes(b, loc, input);
+  Value output = getOutput();
+  dims.erase(dims.begin() + reductionDim);
+  // Step 1: Compute max along dim.
+  Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
+  Value neutralForMaxF =
+      arith::getIdentityValue(arith::AtomicRMWKind::maxf, elementType, b, loc);
+  Value neutralForMaxFInit =
+      b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
+          .result();
+  Value max =
+      reduce<arith::MaxFOp>(b, loc, input, neutralForMaxFInit, reductionDim);
+
+  // Step 2: Subtract max from input and exponentiate.
+  Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);
+
+  // Step 3: Compute sum along dim.
+  Value zero =
+      arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType, b, loc);
+  Value zeroInit =
+      b.create<linalg::FillOp>(loc, Value{zero}, outputReduce).result();
+  Value denominator =
+      reduce<arith::AddFOp>(b, loc, numerator, zeroInit, reductionDim);
+
+  // Step 4: Compute softmax.
+  Value result =
+      buildDivOp(b, loc, numerator, denominator, output, reductionDim);
+  return SmallVector<Value>{result};
+}
 
 //===----------------------------------------------------------------------===//
 // LinalgDialect

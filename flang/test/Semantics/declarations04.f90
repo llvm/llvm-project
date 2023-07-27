@@ -23,3 +23,9 @@ block data ext3
   !PORTABILITY: Global name 'ext4' conflicts with a module
   common /ext4/ x
 end
+
+subroutine s
+  !ERROR: Two entities have the same global name 'foo'
+  common /foo/n
+  call foo
+end

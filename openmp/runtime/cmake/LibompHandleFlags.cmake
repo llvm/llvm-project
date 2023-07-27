@@ -80,7 +80,6 @@ endfunction()
 # Assembler flags
 function(libomp_get_asmflags asmflags)
   set(asmflags_local)
-  libomp_append(asmflags_local "-x assembler-with-cpp" LIBOMP_HAVE_X_ASSEMBLER_WITH_CPP_FLAG)
   # Architectural assembler flags
   if(${IA32})
     if(CMAKE_SIZEOF_VOID_P EQUAL 8)

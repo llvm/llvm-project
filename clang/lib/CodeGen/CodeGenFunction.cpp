@@ -577,8 +577,8 @@ CodeGenFunction::getUBSanFunctionTypeHash(QualType Ty) const {
   std::string Mangled;
   llvm::raw_string_ostream Out(Mangled);
   CGM.getCXXABI().getMangleContext().mangleTypeName(Ty, Out, false);
-  return llvm::ConstantInt::get(CGM.Int32Ty,
-                                static_cast<uint32_t>(llvm::xxHash64(Mangled)));
+  return llvm::ConstantInt::get(
+      CGM.Int32Ty, static_cast<uint32_t>(llvm::xxh3_64bits(Mangled)));
 }
 
 void CodeGenFunction::EmitKernelMetadata(const FunctionDecl *FD,
@@ -1460,16 +1460,16 @@ void CodeGenFunction::GenerateCode(GlobalDecl GD, llvm::Function *Fn,
     // The lambda static invoker function is special, because it forwards or
     // clones the body of the function call operator (but is actually static).
     EmitLambdaStaticInvokeBody(cast<CXXMethodDecl>(FD));
-
   } else if (isa<CXXMethodDecl>(FD) &&
              isLambdaCallOperator(cast<CXXMethodDecl>(FD)) &&
+             !FnInfo.isDelegateCall() &&
              cast<CXXMethodDecl>(FD)->getParent()->getLambdaStaticInvoker() &&
-             hasInAllocaArg(cast<CXXMethodDecl>(FD)
-                                ->getParent()
-                                ->getLambdaStaticInvoker()) &&
-             !FnInfo.isDelegateCall()) {
+             hasInAllocaArg(cast<CXXMethodDecl>(FD))) {
     // If emitting a lambda with static invoker on X86 Windows, change
     // the call operator body.
+    // Make sure that this is a call operator with an inalloca arg and check
+    // for delegate call to make sure this is the original call op and not the
+    // new forwarding function for the static invoker.
     EmitLambdaInAllocaCallOpBody(cast<CXXMethodDecl>(FD));
   } else if (FD->isDefaulted() && isa<CXXMethodDecl>(FD) &&
              (cast<CXXMethodDecl>(FD)->isCopyAssignmentOperator() ||

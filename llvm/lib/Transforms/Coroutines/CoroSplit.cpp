@@ -576,7 +576,7 @@ void CoroCloner::replaceRetconOrAsyncSuspendUses() {
   if (NewS->use_empty()) return;
 
   // Otherwise, we need to create an aggregate.
-  Value *Agg = UndefValue::get(NewS->getType());
+  Value *Agg = PoisonValue::get(NewS->getType());
   for (size_t I = 0, E = Args.size(); I != E; ++I)
     Agg = Builder.CreateInsertValue(Agg, Args[I], I);
 
@@ -634,20 +634,13 @@ static void replaceSwiftErrorOps(Function &F, coro::Shape &Shape,
     return;
   Value *CachedSlot = nullptr;
   auto getSwiftErrorSlot = [&](Type *ValueTy) -> Value * {
-    if (CachedSlot) {
-      assert(cast<PointerType>(CachedSlot->getType())
-                 ->isOpaqueOrPointeeTypeMatches(ValueTy) &&
-             "multiple swifterror slots in function with different types");
+    if (CachedSlot)
       return CachedSlot;
-    }
 
     // Check if the function has a swifterror argument.
     for (auto &Arg : F.args()) {
       if (Arg.isSwiftError()) {
         CachedSlot = &Arg;
-        assert(cast<PointerType>(Arg.getType())
-                   ->isOpaqueOrPointeeTypeMatches(ValueTy) &&
-               "swifterror argument does not have expected type");
         return &Arg;
       }
     }
@@ -904,7 +897,7 @@ void CoroCloner::create() {
   // frame.
   SmallVector<Instruction *> DummyArgs;
   for (Argument &A : OrigF.args()) {
-    DummyArgs.push_back(new FreezeInst(UndefValue::get(A.getType())));
+    DummyArgs.push_back(new FreezeInst(PoisonValue::get(A.getType())));
     VMap[&A] = DummyArgs.back();
   }
 
@@ -1062,7 +1055,7 @@ void CoroCloner::create() {
   // All uses of the arguments should have been resolved by this point,
   // so we can safely remove the dummy values.
   for (Instruction *DummyArg : DummyArgs) {
-    DummyArg->replaceAllUsesWith(UndefValue::get(DummyArg->getType()));
+    DummyArg->replaceAllUsesWith(PoisonValue::get(DummyArg->getType()));
     DummyArg->deleteValue();
   }
 
@@ -1249,8 +1242,11 @@ scanPHIsAndUpdateValueMap(Instruction *Prev, BasicBlock *NewBlock,
 // instruction. Suspend instruction represented by a switch, track the PHI
 // values and select the correct case successor when possible.
 static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
+  // There is nothing to simplify.
+  if (isa<ReturnInst>(InitialInst))
+    return false;
+
   DenseMap<Value *, Value *> ResolvedValues;
-  BasicBlock *UnconditionalSucc = nullptr;
   assert(InitialInst->getModule());
   const DataLayout &DL = InitialInst->getModule()->getDataLayout();
 
@@ -1280,39 +1276,35 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
   Instruction *I = InitialInst;
   while (I->isTerminator() || isa<CmpInst>(I)) {
     if (isa<ReturnInst>(I)) {
-      if (I != InitialInst) {
-        // If InitialInst is an unconditional branch,
-        // remove PHI values that come from basic block of InitialInst
-        if (UnconditionalSucc)
-          UnconditionalSucc->removePredecessor(InitialInst->getParent(), true);
-        ReplaceInstWithInst(InitialInst, I->clone());
-      }
+      ReplaceInstWithInst(InitialInst, I->clone());
       return true;
     }
+
     if (auto *BR = dyn_cast<BranchInst>(I)) {
-      if (BR->isUnconditional()) {
-        BasicBlock *Succ = BR->getSuccessor(0);
-        if (I == InitialInst)
-          UnconditionalSucc = Succ;
-        scanPHIsAndUpdateValueMap(I, Succ, ResolvedValues);
-        I = GetFirstValidInstruction(Succ->getFirstNonPHIOrDbgOrLifetime());
-        continue;
+      unsigned SuccIndex = 0;
+      if (BR->isConditional()) {
+        // Handle the case the condition of the conditional branch is constant.
+        // e.g.,
+        //
+        //     br i1 false, label %cleanup, label %CoroEnd
+        //
+        // It is possible during the transformation. We could continue the
+        // simplifying in this case.
+        ConstantInt *Cond = TryResolveConstant(BR->getCondition());
+        if (!Cond)
+          return false;
+
+        SuccIndex = Cond->isOne() ? 0 : 1;
       }
 
-      BasicBlock *BB = BR->getParent();
-      // Handle the case the condition of the conditional branch is constant.
-      // e.g.,
-      //
-      //     br i1 false, label %cleanup, label %CoroEnd
-      //
-      // It is possible during the transformation. We could continue the
-      // simplifying in this case.
-      if (ConstantFoldTerminator(BB, /*DeleteDeadConditions=*/true)) {
-        // Handle this branch in next iteration.
-        I = BB->getTerminator();
-        continue;
-      }
-    } else if (auto *CondCmp = dyn_cast<CmpInst>(I)) {
+      BasicBlock *Succ = BR->getSuccessor(SuccIndex);
+      scanPHIsAndUpdateValueMap(I, Succ, ResolvedValues);
+      I = GetFirstValidInstruction(Succ->getFirstNonPHIOrDbgOrLifetime());
+
+      continue;
+    }
+
+    if (auto *CondCmp = dyn_cast<CmpInst>(I)) {
       // If the case number of suspended switch instruction is reduced to
       // 1, then it is simplified to CmpInst in llvm::ConstantFoldTerminator.
       auto *BR = dyn_cast<BranchInst>(
@@ -1336,13 +1328,14 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
       if (!ConstResult)
         return false;
 
-      CondCmp->replaceAllUsesWith(ConstResult);
-      CondCmp->eraseFromParent();
+      ResolvedValues[BR->getCondition()] = ConstResult;
 
       // Handle this branch in next iteration.
       I = BR;
       continue;
-    } else if (auto *SI = dyn_cast<SwitchInst>(I)) {
+    }
+
+    if (auto *SI = dyn_cast<SwitchInst>(I)) {
       ConstantInt *Cond = TryResolveConstant(SI->getCondition());
       if (!Cond)
         return false;
@@ -1355,6 +1348,7 @@ static bool simplifyTerminatorLeadingToRet(Instruction *InitialInst) {
 
     return false;
   }
+
   return false;
 }
 
@@ -1907,7 +1901,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
       if (ReturnPHIs.size() == 1) {
         RetV = CastedContinuation;
       } else {
-        RetV = UndefValue::get(RetTy);
+        RetV = PoisonValue::get(RetTy);
         RetV = Builder.CreateInsertValue(RetV, CastedContinuation, 0);
         for (size_t I = 1, E = ReturnPHIs.size(); I != E; ++I)
           RetV = Builder.CreateInsertValue(RetV, ReturnPHIs[I], I);

@@ -192,7 +192,6 @@ define void @zero_init_foo() {
 ; GFX10-LABEL: zero_init_foo:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_mov_b32 s0, 0
 ; GFX10-NEXT:    s_mov_b32 s1, s0
 ; GFX10-NEXT:    s_mov_b32 s2, s0
@@ -205,13 +204,11 @@ define void @zero_init_foo() {
 ; GFX10-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 offset:32
 ; GFX10-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 offset:16
 ; GFX10-NEXT:    scratch_store_dwordx4 off, v[0:3], s32
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: zero_init_foo:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_mov_b32 s0, 0
 ; GFX11-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-NEXT:    s_mov_b32 s1, s0
@@ -224,7 +221,6 @@ define void @zero_init_foo() {
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:32
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:16
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: zero_init_foo:
@@ -264,7 +260,6 @@ define void @zero_init_foo() {
 ; GFX10-PAL-LABEL: zero_init_foo:
 ; GFX10-PAL:       ; %bb.0:
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX10-PAL-NEXT:    s_mov_b32 s1, s0
 ; GFX10-PAL-NEXT:    s_mov_b32 s2, s0
@@ -277,13 +272,11 @@ define void @zero_init_foo() {
 ; GFX10-PAL-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 offset:32
 ; GFX10-PAL-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 offset:16
 ; GFX10-PAL-NEXT:    scratch_store_dwordx4 off, v[0:3], s32
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-PAL-LABEL: zero_init_foo:
 ; GFX11-PAL:       ; %bb.0:
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    s_mov_b32 s0, 0
 ; GFX11-PAL-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
 ; GFX11-PAL-NEXT:    s_mov_b32 s1, s0
@@ -296,7 +289,6 @@ define void @zero_init_foo() {
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:32
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:16
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], s32
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca [32 x i16], align 2, addrspace(5)
   call void @llvm.memset.p5.i64(ptr addrspace(5) align 2 dereferenceable(64) %alloca, i8 0, i64 64, i1 false)
@@ -716,7 +708,6 @@ define void @store_load_vindex_foo(i32 %idx) {
 ; GFX10-LABEL: store_load_vindex_foo:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_and_b32_e32 v1, 15, v0
 ; GFX10-NEXT:    v_lshl_add_u32 v0, v0, 2, s32
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 15
@@ -730,7 +721,6 @@ define void @store_load_vindex_foo(i32 %idx) {
 ; GFX11-LABEL: store_load_vindex_foo:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
 ; GFX11-NEXT:    v_lshl_add_u32 v0, v0, 2, s32
 ; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -772,7 +762,6 @@ define void @store_load_vindex_foo(i32 %idx) {
 ; GFX10-PAL-LABEL: store_load_vindex_foo:
 ; GFX10-PAL:       ; %bb.0: ; %bb
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_and_b32_e32 v1, 15, v0
 ; GFX10-PAL-NEXT:    v_lshl_add_u32 v0, v0, 2, s32
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v2, 15
@@ -786,7 +775,6 @@ define void @store_load_vindex_foo(i32 %idx) {
 ; GFX11-PAL-LABEL: store_load_vindex_foo:
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
 ; GFX11-PAL-NEXT:    v_lshl_add_u32 v0, v0, 2, s32
 ; GFX11-PAL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
@@ -819,20 +807,16 @@ define void @private_ptr_foo(ptr addrspace(5) nocapture %arg) {
 ; GFX10-LABEL: private_ptr_foo:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, 4, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 0x41200000
 ; GFX10-NEXT:    scratch_store_dword v0, v1, off
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: private_ptr_foo:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 0x41200000 :: v_dual_add_nc_u32 v0, 4, v0
 ; GFX11-NEXT:    scratch_store_b32 v0, v1, off
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: private_ptr_foo:
@@ -856,20 +840,16 @@ define void @private_ptr_foo(ptr addrspace(5) nocapture %arg) {
 ; GFX10-PAL-LABEL: private_ptr_foo:
 ; GFX10-PAL:       ; %bb.0:
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_add_nc_u32_e32 v0, 4, v0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v1, 0x41200000
 ; GFX10-PAL-NEXT:    scratch_store_dword v0, v1, off
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-PAL-LABEL: private_ptr_foo:
 ; GFX11-PAL:       ; %bb.0:
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v1, 0x41200000 :: v_dual_add_nc_u32 v0, 4, v0
 ; GFX11-PAL-NEXT:    scratch_store_b32 v0, v1, off
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    s_setpc_b64 s[30:31]
   %gep = getelementptr inbounds float, ptr addrspace(5) %arg, i32 1
   store float 1.000000e+01, ptr addrspace(5) %gep, align 4
@@ -1081,7 +1061,6 @@ define void @zero_init_small_offset_foo() {
 ; GFX10-LABEL: zero_init_small_offset_foo:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    scratch_load_dword v0, off, s32 glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_mov_b32 s0, 0
@@ -1096,13 +1075,11 @@ define void @zero_init_small_offset_foo() {
 ; GFX10-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 offset:272
 ; GFX10-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 offset:288
 ; GFX10-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 offset:304
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: zero_init_small_offset_foo:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, off, s32 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s0, 0
@@ -1117,7 +1094,6 @@ define void @zero_init_small_offset_foo() {
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:272
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:288
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:304
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: zero_init_small_offset_foo:
@@ -1161,7 +1137,6 @@ define void @zero_init_small_offset_foo() {
 ; GFX10-PAL-LABEL: zero_init_small_offset_foo:
 ; GFX10-PAL:       ; %bb.0:
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    scratch_load_dword v0, off, s32 glc dlc
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-PAL-NEXT:    s_mov_b32 s0, 0
@@ -1176,13 +1151,11 @@ define void @zero_init_small_offset_foo() {
 ; GFX10-PAL-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 offset:272
 ; GFX10-PAL-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 offset:288
 ; GFX10-PAL-NEXT:    scratch_store_dwordx4 off, v[0:3], s32 offset:304
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-PAL-LABEL: zero_init_small_offset_foo:
 ; GFX11-PAL:       ; %bb.0:
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    scratch_load_b32 v0, off, s32 glc dlc
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PAL-NEXT:    s_mov_b32 s0, 0
@@ -1197,7 +1170,6 @@ define void @zero_init_small_offset_foo() {
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:272
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:288
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], s32 offset:304
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    s_setpc_b64 s[30:31]
   %padding = alloca [64 x i32], align 4, addrspace(5)
   %alloca = alloca [32 x i16], align 2, addrspace(5)
@@ -1758,7 +1730,6 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ; GFX10-LABEL: store_load_vindex_small_offset_foo:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_and_b32_e32 v1, 15, v0
 ; GFX10-NEXT:    s_add_i32 s0, s32, 0x100
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 15
@@ -1776,7 +1747,6 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ; GFX11-LABEL: store_load_vindex_small_offset_foo:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
 ; GFX11-NEXT:    s_add_i32 s0, s32, 0x100
 ; GFX11-NEXT:    scratch_load_b32 v3, off, s32 glc dlc
@@ -1826,7 +1796,6 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ; GFX10-PAL-LABEL: store_load_vindex_small_offset_foo:
 ; GFX10-PAL:       ; %bb.0: ; %bb
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_and_b32_e32 v1, 15, v0
 ; GFX10-PAL-NEXT:    s_add_i32 s0, s32, 0x100
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v2, 15
@@ -1844,7 +1813,6 @@ define void @store_load_vindex_small_offset_foo(i32 %idx) {
 ; GFX11-PAL-LABEL: store_load_vindex_small_offset_foo:
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
 ; GFX11-PAL-NEXT:    s_add_i32 s0, s32, 0x100
 ; GFX11-PAL-NEXT:    scratch_load_b32 v3, off, s32 glc dlc
@@ -2086,7 +2054,6 @@ define void @zero_init_large_offset_foo() {
 ; GFX10-LABEL: zero_init_large_offset_foo:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    scratch_load_dword v0, off, s32 offset:4 glc dlc
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    s_mov_b32 s0, 0
@@ -2105,13 +2072,11 @@ define void @zero_init_large_offset_foo() {
 ; GFX10-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:32
 ; GFX10-NEXT:    s_add_i32 s0, s32, 0x4004
 ; GFX10-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:48
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: zero_init_large_offset_foo:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    scratch_load_b32 v0, off, s32 offset:4 glc dlc
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    s_mov_b32 s0, 0
@@ -2129,7 +2094,6 @@ define void @zero_init_large_offset_foo() {
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s0 offset:32
 ; GFX11-NEXT:    s_add_i32 s0, s32, 0x4004
 ; GFX11-NEXT:    scratch_store_b128 off, v[0:3], s0 offset:48
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX9-PAL-LABEL: zero_init_large_offset_foo:
@@ -2181,7 +2145,6 @@ define void @zero_init_large_offset_foo() {
 ; GFX1010-PAL-LABEL: zero_init_large_offset_foo:
 ; GFX1010-PAL:       ; %bb.0:
 ; GFX1010-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1010-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1010-PAL-NEXT:    scratch_load_dword v0, off, s32 offset:4 glc dlc
 ; GFX1010-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1010-PAL-NEXT:    s_mov_b32 s0, 0
@@ -2203,13 +2166,11 @@ define void @zero_init_large_offset_foo() {
 ; GFX1010-PAL-NEXT:    s_waitcnt_depctr 0xffe3
 ; GFX1010-PAL-NEXT:    s_add_i32 s0, s32, 0x4004
 ; GFX1010-PAL-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:48
-; GFX1010-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1010-PAL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX1030-PAL-LABEL: zero_init_large_offset_foo:
 ; GFX1030-PAL:       ; %bb.0:
 ; GFX1030-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX1030-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1030-PAL-NEXT:    scratch_load_dword v0, off, s32 offset:4 glc dlc
 ; GFX1030-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX1030-PAL-NEXT:    s_mov_b32 s0, 0
@@ -2228,13 +2189,11 @@ define void @zero_init_large_offset_foo() {
 ; GFX1030-PAL-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:32
 ; GFX1030-PAL-NEXT:    s_add_i32 s0, s32, 0x4004
 ; GFX1030-PAL-NEXT:    scratch_store_dwordx4 off, v[0:3], s0 offset:48
-; GFX1030-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX1030-PAL-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-PAL-LABEL: zero_init_large_offset_foo:
 ; GFX11-PAL:       ; %bb.0:
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    scratch_load_b32 v0, off, s32 offset:4 glc dlc
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-PAL-NEXT:    s_mov_b32 s0, 0
@@ -2252,7 +2211,6 @@ define void @zero_init_large_offset_foo() {
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], s0 offset:32
 ; GFX11-PAL-NEXT:    s_add_i32 s0, s32, 0x4004
 ; GFX11-PAL-NEXT:    scratch_store_b128 off, v[0:3], s0 offset:48
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    s_setpc_b64 s[30:31]
   %padding = alloca [4096 x i32], align 4, addrspace(5)
   %alloca = alloca [32 x i16], align 2, addrspace(5)
@@ -2816,7 +2774,6 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX10-LABEL: store_load_vindex_large_offset_foo:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_and_b32_e32 v1, 15, v0
 ; GFX10-NEXT:    s_add_i32 s0, s32, 0x4004
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 15
@@ -2834,7 +2791,6 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX11-LABEL: store_load_vindex_large_offset_foo:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
 ; GFX11-NEXT:    s_add_i32 s0, s32, 0x4004
 ; GFX11-NEXT:    scratch_load_b32 v3, off, s32 offset:4 glc dlc
@@ -2886,7 +2842,6 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX10-PAL-LABEL: store_load_vindex_large_offset_foo:
 ; GFX10-PAL:       ; %bb.0: ; %bb
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_and_b32_e32 v1, 15, v0
 ; GFX10-PAL-NEXT:    s_add_i32 s0, s32, 0x4004
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v2, 15
@@ -2904,7 +2859,6 @@ define void @store_load_vindex_large_offset_foo(i32 %idx) {
 ; GFX11-PAL-LABEL: store_load_vindex_large_offset_foo:
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v2, 15 :: v_dual_and_b32 v1, 15, v0
 ; GFX11-PAL-NEXT:    s_add_i32 s0, s32, 0x4004
 ; GFX11-PAL-NEXT:    scratch_load_b32 v3, off, s32 offset:4 glc dlc
@@ -3107,7 +3061,6 @@ define void @store_load_large_imm_offset_foo() {
 ; GFX10-LABEL: store_load_large_imm_offset_foo:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v0, 13
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX10-NEXT:    s_movk_i32 s0, 0x3800
@@ -3124,7 +3077,6 @@ define void @store_load_large_imm_offset_foo() {
 ; GFX11-LABEL: store_load_large_imm_offset_foo:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v0, 13 :: v_dual_mov_b32 v1, 15
 ; GFX11-NEXT:    s_movk_i32 s0, 0x3000
 ; GFX11-NEXT:    s_add_i32 s1, s32, 4
@@ -3173,7 +3125,6 @@ define void @store_load_large_imm_offset_foo() {
 ; GFX10-PAL-LABEL: store_load_large_imm_offset_foo:
 ; GFX10-PAL:       ; %bb.0: ; %bb
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v0, 13
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX10-PAL-NEXT:    s_movk_i32 s0, 0x3800
@@ -3190,7 +3141,6 @@ define void @store_load_large_imm_offset_foo() {
 ; GFX11-PAL-LABEL: store_load_large_imm_offset_foo:
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v0, 13 :: v_dual_mov_b32 v1, 15
 ; GFX11-PAL-NEXT:    s_movk_i32 s0, 0x3000
 ; GFX11-PAL-NEXT:    s_add_i32 s1, s32, 4
@@ -3364,7 +3314,6 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; GFX10-LABEL: store_load_i64_aligned:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    scratch_store_dwordx2 v0, v[1:2], off
@@ -3376,7 +3325,6 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-LABEL: store_load_i64_aligned:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    scratch_store_b64 v0, v[1:2], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -3409,7 +3357,6 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; GFX10-PAL-LABEL: store_load_i64_aligned:
 ; GFX10-PAL:       ; %bb.0: ; %bb
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-PAL-NEXT:    scratch_store_dwordx2 v0, v[1:2], off
@@ -3421,7 +3368,6 @@ define void @store_load_i64_aligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-PAL-LABEL: store_load_i64_aligned:
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
 ; GFX11-PAL-NEXT:    scratch_store_b64 v0, v[1:2], off dlc
 ; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -3449,7 +3395,6 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX10-LABEL: store_load_i64_unaligned:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-NEXT:    scratch_store_dwordx2 v0, v[1:2], off
@@ -3461,7 +3406,6 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-LABEL: store_load_i64_unaligned:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
 ; GFX11-NEXT:    scratch_store_b64 v0, v[1:2], off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -3494,7 +3438,6 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX10-PAL-LABEL: store_load_i64_unaligned:
 ; GFX10-PAL:       ; %bb.0: ; %bb
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v1, 15
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v2, 0
 ; GFX10-PAL-NEXT:    scratch_store_dwordx2 v0, v[1:2], off
@@ -3506,7 +3449,6 @@ define void @store_load_i64_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-PAL-LABEL: store_load_i64_unaligned:
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v1, 15 :: v_dual_mov_b32 v2, 0
 ; GFX11-PAL-NEXT:    scratch_store_b64 v0, v[1:2], off dlc
 ; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -3535,7 +3477,6 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX10-LABEL: store_load_v3i32_unaligned:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 3
@@ -3548,7 +3489,6 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-LABEL: store_load_v3i32_unaligned:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 2
 ; GFX11-NEXT:    v_mov_b32_e32 v3, 3
 ; GFX11-NEXT:    scratch_store_b96 v0, v[1:3], off dlc
@@ -3584,7 +3524,6 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX10-PAL-LABEL: store_load_v3i32_unaligned:
 ; GFX10-PAL:       ; %bb.0: ; %bb
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v3, 3
@@ -3597,7 +3536,6 @@ define void @store_load_v3i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-PAL-LABEL: store_load_v3i32_unaligned:
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 2
 ; GFX11-PAL-NEXT:    v_mov_b32_e32 v3, 3
 ; GFX11-PAL-NEXT:    scratch_store_b96 v0, v[1:3], off dlc
@@ -3628,7 +3566,6 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX10-LABEL: store_load_v4i32_unaligned:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX10-NEXT:    v_mov_b32_e32 v3, 3
@@ -3642,7 +3579,6 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-LABEL: store_load_v4i32_unaligned:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 2
 ; GFX11-NEXT:    v_dual_mov_b32 v3, 3 :: v_dual_mov_b32 v4, 4
 ; GFX11-NEXT:    scratch_store_b128 v0, v[1:4], off dlc
@@ -3680,7 +3616,6 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX10-PAL-LABEL: store_load_v4i32_unaligned:
 ; GFX10-PAL:       ; %bb.0: ; %bb
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v2, 2
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v3, 3
@@ -3694,7 +3629,6 @@ define void @store_load_v4i32_unaligned(ptr addrspace(5) nocapture %arg) {
 ; GFX11-PAL-LABEL: store_load_v4i32_unaligned:
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_mov_b32 v2, 2
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v3, 3 :: v_dual_mov_b32 v4, 4
 ; GFX11-PAL-NEXT:    scratch_store_b128 v0, v[1:4], off dlc
@@ -3723,7 +3657,6 @@ define void @store_load_i32_negative_unaligned(ptr addrspace(5) nocapture %arg) 
 ; GFX10-LABEL: store_load_i32_negative_unaligned:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, -1, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-NEXT:    scratch_store_byte v0, v1, off
@@ -3735,7 +3668,6 @@ define void @store_load_i32_negative_unaligned(ptr addrspace(5) nocapture %arg) 
 ; GFX11-LABEL: store_load_i32_negative_unaligned:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_add_nc_u32 v0, -1, v0
 ; GFX11-NEXT:    scratch_store_b8 v0, v1, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -3768,7 +3700,6 @@ define void @store_load_i32_negative_unaligned(ptr addrspace(5) nocapture %arg) 
 ; GFX10-PAL-LABEL: store_load_i32_negative_unaligned:
 ; GFX10-PAL:       ; %bb.0: ; %bb
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_add_nc_u32_e32 v0, -1, v0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-PAL-NEXT:    scratch_store_byte v0, v1, off
@@ -3780,7 +3711,6 @@ define void @store_load_i32_negative_unaligned(ptr addrspace(5) nocapture %arg) 
 ; GFX11-PAL-LABEL: store_load_i32_negative_unaligned:
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_add_nc_u32 v0, -1, v0
 ; GFX11-PAL-NEXT:    scratch_store_b8 v0, v1, off dlc
 ; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -3809,7 +3739,6 @@ define void @store_load_i32_large_negative_unaligned(ptr addrspace(5) nocapture 
 ; GFX10-LABEL: store_load_i32_large_negative_unaligned:
 ; GFX10:       ; %bb.0: ; %bb
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    v_add_nc_u32_e32 v0, 0xffffef7f, v0
 ; GFX10-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-NEXT:    scratch_store_byte v0, v1, off
@@ -3821,7 +3750,6 @@ define void @store_load_i32_large_negative_unaligned(ptr addrspace(5) nocapture 
 ; GFX11-LABEL: store_load_i32_large_negative_unaligned:
 ; GFX11:       ; %bb.0: ; %bb
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_add_nc_u32 v0, 0xffffef7f, v0
 ; GFX11-NEXT:    scratch_store_b8 v0, v1, off dlc
 ; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
@@ -3854,7 +3782,6 @@ define void @store_load_i32_large_negative_unaligned(ptr addrspace(5) nocapture 
 ; GFX10-PAL-LABEL: store_load_i32_large_negative_unaligned:
 ; GFX10-PAL:       ; %bb.0: ; %bb
 ; GFX10-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-PAL-NEXT:    v_add_nc_u32_e32 v0, 0xffffef7f, v0
 ; GFX10-PAL-NEXT:    v_mov_b32_e32 v1, 1
 ; GFX10-PAL-NEXT:    scratch_store_byte v0, v1, off
@@ -3866,7 +3793,6 @@ define void @store_load_i32_large_negative_unaligned(ptr addrspace(5) nocapture 
 ; GFX11-PAL-LABEL: store_load_i32_large_negative_unaligned:
 ; GFX11-PAL:       ; %bb.0: ; %bb
 ; GFX11-PAL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-PAL-NEXT:    v_dual_mov_b32 v1, 1 :: v_dual_add_nc_u32 v0, 0xffffef7f, v0
 ; GFX11-PAL-NEXT:    scratch_store_b8 v0, v1, off dlc
 ; GFX11-PAL-NEXT:    s_waitcnt_vscnt null, 0x0

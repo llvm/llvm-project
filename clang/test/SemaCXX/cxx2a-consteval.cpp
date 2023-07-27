@@ -840,13 +840,13 @@ void func() {
   copy<foo> fail1{good0}; // expected-error {{call to consteval function 'defaulted_special_member_template::copy<defaulted_special_member_template::foo>::copy' is not a constant expression}} \
                              expected-note {{in call to 'copy(good0)'}}
   fail1 = good0;          // expected-error {{call to consteval function 'defaulted_special_member_template::copy<defaulted_special_member_template::foo>::operator=' is not a constant expression}} \
-                             expected-note {{in call to '&fail1->operator=(good0)'}}
+                             expected-note {{in call to 'fail1.operator=(good0)'}}
 
   move<foo> good1;
   move<foo> fail2{static_cast<move<foo>&&>(good1)}; // expected-error {{call to consteval function 'defaulted_special_member_template::move<defaulted_special_member_template::foo>::move' is not a constant expression}} \
                                                        expected-note {{in call to 'move(good1)'}}
   fail2 = static_cast<move<foo>&&>(good1);          // expected-error {{call to consteval function 'defaulted_special_member_template::move<defaulted_special_member_template::foo>::operator=' is not a constant expression}} \
-                                                       expected-note {{in call to '&fail2->operator=(good1)'}}
+                                                       expected-note {{in call to 'fail2.operator=(good1)'}}
 }
 } // namespace defaulted_special_member_template
 

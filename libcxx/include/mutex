@@ -196,9 +196,11 @@ template<class Callable, class ...Args>
 #include <__mutex/mutex.h>
 #include <__mutex/tag_types.h>
 #include <__mutex/unique_lock.h>
+#include <__thread/id.h>
 #include <__threading_support>
 #include <__utility/forward.h>
 #include <cstdint>
+#include <limits>
 #ifndef _LIBCPP_CXX03_LANG
 # include <tuple>
 #endif

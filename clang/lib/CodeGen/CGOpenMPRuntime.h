@@ -232,7 +232,7 @@ public:
   /// as those marked as `omp declare target`.
   class DisableAutoDeclareTargetRAII {
     CodeGenModule &CGM;
-    bool SavedShouldMarkAsGlobal;
+    bool SavedShouldMarkAsGlobal = false;
 
   public:
     DisableAutoDeclareTargetRAII(CodeGenModule &CGM);
@@ -326,42 +326,6 @@ protected:
                                                 llvm::Constant *&OutlinedFnID,
                                                 bool IsOffloadEntry,
                                                 const RegionCodeGenTy &CodeGen);
-
-  /// Emits object of ident_t type with info for source location.
-  /// \param Flags Flags for OpenMP location.
-  /// \param EmitLoc emit source location with debug-info is off.
-  ///
-  llvm::Value *emitUpdateLocation(CodeGenFunction &CGF, SourceLocation Loc,
-                                  unsigned Flags = 0, bool EmitLoc = false);
-
-  /// Emit the number of teams for a target directive.  Inspect the num_teams
-  /// clause associated with a teams construct combined or closely nested
-  /// with the target directive.
-  ///
-  /// Emit a team of size one for directives such as 'target parallel' that
-  /// have no associated teams construct.
-  ///
-  /// Otherwise, return nullptr.
-  const Expr *getNumTeamsExprForTargetDirective(CodeGenFunction &CGF,
-                                                const OMPExecutableDirective &D,
-                                                int32_t &DefaultVal);
-  llvm::Value *emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
-                                              const OMPExecutableDirective &D);
-  /// Emit the number of threads for a target directive.  Inspect the
-  /// thread_limit clause associated with a teams construct combined or closely
-  /// nested with the target directive.
-  ///
-  /// Emit the num_threads clause for directives such as 'target parallel' that
-  /// have no associated teams construct.
-  ///
-  /// Otherwise, return nullptr.
-  const Expr *
-  getNumThreadsExprForTargetDirective(CodeGenFunction &CGF,
-                                      const OMPExecutableDirective &D,
-                                      int32_t &DefaultVal);
-  llvm::Value *
-  emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
-                                   const OMPExecutableDirective &D);
 
   /// Returns pointer to ident_t type.
   llvm::Type *getIdentTyPointerTy();
@@ -652,15 +616,6 @@ protected:
                             llvm::Function *TaskFunction, QualType SharedsTy,
                             Address Shareds, const OMPTaskDataTy &Data);
 
-  /// Return the trip count of loops associated with constructs / 'target teams
-  /// distribute' and 'teams distribute parallel for'. \param SizeEmitter Emits
-  /// the int64 value for the number of iterations of the associated loop.
-  llvm::Value *emitTargetNumIterationsCall(
-      CodeGenFunction &CGF, const OMPExecutableDirective &D,
-      llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
-                                       const OMPLoopDirective &D)>
-          SizeEmitter);
-
   /// Emit update for lastprivate conditional data.
   void emitLastprivateConditionalUpdate(CodeGenFunction &CGF, LValue IVLVal,
                                         StringRef UniqueDeclName, LValue LVal,
@@ -687,8 +642,72 @@ public:
   virtual ~CGOpenMPRuntime() {}
   virtual void clear();
 
+  /// Emits object of ident_t type with info for source location.
+  /// \param Flags Flags for OpenMP location.
+  /// \param EmitLoc emit source location with debug-info is off.
+  ///
+  llvm::Value *emitUpdateLocation(CodeGenFunction &CGF, SourceLocation Loc,
+                                  unsigned Flags = 0, bool EmitLoc = false);
+
+  /// Emit the number of teams for a target directive.  Inspect the num_teams
+  /// clause associated with a teams construct combined or closely nested
+  /// with the target directive.
+  ///
+  /// Emit a team of size one for directives such as 'target parallel' that
+  /// have no associated teams construct.
+  ///
+  /// Otherwise, return nullptr.
+  const Expr *getNumTeamsExprForTargetDirective(CodeGenFunction &CGF,
+                                                const OMPExecutableDirective &D,
+                                                int32_t &DefaultVal);
+  llvm::Value *emitNumTeamsForTargetDirective(CodeGenFunction &CGF,
+                                              const OMPExecutableDirective &D);
+  /// Emit the number of threads for a target directive.  Inspect the
+  /// thread_limit clause associated with a teams construct combined or closely
+  /// nested with the target directive.
+  ///
+  /// Emit the num_threads clause for directives such as 'target parallel' that
+  /// have no associated teams construct.
+  ///
+  /// Otherwise, return nullptr.
+  const Expr *
+  getNumThreadsExprForTargetDirective(CodeGenFunction &CGF,
+                                      const OMPExecutableDirective &D,
+                                      int32_t &DefaultVal);
+  llvm::Value *
+  emitNumThreadsForTargetDirective(CodeGenFunction &CGF,
+                                   const OMPExecutableDirective &D);
+
+  /// Return the trip count of loops associated with constructs / 'target teams
+  /// distribute' and 'teams distribute parallel for'. \param SizeEmitter Emits
+  /// the int64 value for the number of iterations of the associated loop.
+  llvm::Value *emitTargetNumIterationsCall(
+      CodeGenFunction &CGF, const OMPExecutableDirective &D,
+      llvm::function_ref<llvm::Value *(CodeGenFunction &CGF,
+                                       const OMPLoopDirective &D)>
+          SizeEmitter);
+
   /// Returns true if the current target is a GPU.
-  virtual bool isTargetCodegen() const { return false; }
+  virtual bool isGPU() const { return false; }
+
+  /// Check if the variable length declaration is delayed:
+  virtual bool isDelayedVariableLengthDecl(CodeGenFunction &CGF,
+                                           const VarDecl *VD) const {
+    return false;
+  };
+
+  /// Get call to __kmpc_alloc_shared
+  virtual std::pair<llvm::Value *, llvm::Value *>
+  getKmpcAllocShared(CodeGenFunction &CGF, const VarDecl *VD) {
+    llvm_unreachable("not implemented");
+  }
+
+  /// Get call to __kmpc_free_shared
+  virtual void getKmpcFreeShared(
+      CodeGenFunction &CGF,
+      const std::pair<llvm::Value *, llvm::Value *> &AddrSizePair) {
+    llvm_unreachable("not implemented");
+  }
 
   /// Emits code for OpenMP 'if' clause using specified \a CodeGen
   /// function. Here is the logic:
@@ -1439,9 +1458,9 @@ public:
                             bool SeparateBeginEndCalls)
         : llvm::OpenMPIRBuilder::TargetDataInfo(RequiresDevicePointerInfo,
                                                 SeparateBeginEndCalls) {}
-    /// Map between the a declaration of a capture and the corresponding base
-    /// pointer address where the runtime returns the device pointers.
-    llvm::DenseMap<const ValueDecl *, Address> CaptureDeviceAddrMap;
+    /// Map between the a declaration of a capture and the corresponding new
+    /// llvm address where the runtime returns the device pointers.
+    llvm::DenseMap<const ValueDecl *, llvm::Value *> CaptureDeviceAddrMap;
   };
 
   /// Emit the target data mapping code associated with \a D.
@@ -1486,6 +1505,11 @@ public:
   /// \param C 'depend' clause with 'sink|source' dependency kind.
   virtual void emitDoacrossOrdered(CodeGenFunction &CGF,
                                    const OMPDependClause *C);
+
+  /// Emit code for doacross ordered directive with 'doacross' clause.
+  /// \param C 'doacross' clause with 'sink|source' dependence type.
+  virtual void emitDoacrossOrdered(CodeGenFunction &CGF,
+                                   const OMPDoacrossClause *C);
 
   /// Translates the native parameter of outlined function if this is required
   /// for target.
@@ -2240,6 +2264,11 @@ public:
   void emitDoacrossOrdered(CodeGenFunction &CGF,
                            const OMPDependClause *C) override;
 
+  /// Emit code for doacross ordered directive with 'doacross' clause.
+  /// \param C 'doacross' clause with 'sink|source' dependence type.
+  void emitDoacrossOrdered(CodeGenFunction &CGF,
+                           const OMPDoacrossClause *C) override;
+
   /// Translates the native parameter of outlined function if this is required
   /// for target.
   /// \param FD Field decl from captured record for the parameter.
@@ -2262,6 +2291,34 @@ public:
 };
 
 } // namespace CodeGen
+// Utility for openmp doacross clause kind
+namespace {
+template <typename T> class OMPDoacrossKind {
+public:
+  bool isSink(const T *) { return false; }
+  bool isSource(const T *) { return false; }
+};
+template <> class OMPDoacrossKind<OMPDependClause> {
+public:
+  bool isSink(const OMPDependClause *C) {
+    return C->getDependencyKind() == OMPC_DEPEND_sink;
+  }
+  bool isSource(const OMPDependClause *C) {
+    return C->getDependencyKind() == OMPC_DEPEND_source;
+  }
+};
+template <> class OMPDoacrossKind<OMPDoacrossClause> {
+public:
+  bool isSource(const OMPDoacrossClause *C) {
+    return C->getDependenceType() == OMPC_DOACROSS_source ||
+           C->getDependenceType() == OMPC_DOACROSS_source_omp_cur_iteration;
+  }
+  bool isSink(const OMPDoacrossClause *C) {
+    return C->getDependenceType() == OMPC_DOACROSS_sink ||
+           C->getDependenceType() == OMPC_DOACROSS_sink_omp_cur_iteration;
+  }
+};
+} // namespace
 } // namespace clang
 
 #endif

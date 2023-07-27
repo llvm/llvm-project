@@ -308,7 +308,8 @@ llvm::json::Value CreateScope(const llvm::StringRef name,
 // }
 llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
                                    std::optional<llvm::StringRef> request_path,
-                                   std::optional<uint32_t> request_line) {
+                                   std::optional<uint32_t> request_line,
+                                   std::optional<uint32_t> request_column) {
   // Each breakpoint location is treated as a separate breakpoint for VS code.
   // They don't have the notion of a single breakpoint with multiple locations.
   llvm::json::Object object;
@@ -345,11 +346,16 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
     const auto line = line_entry.GetLine();
     if (line != UINT32_MAX)
       object.try_emplace("line", line);
+    const auto column = line_entry.GetColumn();
+    if (column != 0)
+      object.try_emplace("column", column);
     object.try_emplace("source", CreateSource(line_entry));
   }
   // We try to add request_line as a fallback
   if (request_line)
     object.try_emplace("line", *request_line);
+  if (request_column)
+    object.try_emplace("column", *request_column);
   return llvm::json::Value(std::move(object));
 }
 
@@ -613,7 +619,9 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
 llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
   disasm_line = 0;
   auto line_entry = frame.GetLineEntry();
-  if (line_entry.GetFileSpec().IsValid())
+  // A line entry of 0 indicates the line is compiler generated i.e. no source
+  // file so don't return early with the line entry.
+  if (line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0)
     return CreateSource(line_entry);
 
   llvm::json::Object object;
@@ -650,7 +658,11 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
   }
   const auto num_insts = insts.GetSize();
   if (low_pc != LLDB_INVALID_ADDRESS && num_insts > 0) {
-    EmplaceSafeString(object, "name", frame.GetFunctionName());
+    if (line_entry.GetLine() == 0) {
+      EmplaceSafeString(object, "name", "<compiler-generated>");
+    } else {
+      EmplaceSafeString(object, "name", frame.GetDisplayFunctionName());
+    }
     SourceReference source;
     llvm::raw_string_ostream src_strm(source.content);
     std::string line;
@@ -895,6 +907,8 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       uint64_t bp_loc_id = thread.GetStopReasonDataAtIndex(1);
       snprintf(desc_str, sizeof(desc_str), "breakpoint %" PRIu64 ".%" PRIu64,
                bp_id, bp_loc_id);
+      body.try_emplace("hitBreakpointIds",
+                       llvm::json::Array{llvm::json::Value(bp_id)});
       EmplaceSafeString(body, "description", desc_str);
     }
   } break;
@@ -939,6 +953,7 @@ llvm::json::Value CreateThreadStopped(lldb::SBThread &thread,
       EmplaceSafeString(body, "description", std::string(description));
     }
   }
+  // "threadCausedFocus" is used in tests to validate breaking behavior.
   if (tid == g_vsc.focus_tid) {
     body.try_emplace("threadCausedFocus", true);
   }
@@ -1104,10 +1119,6 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
                                   llvm::StringRef debug_adaptor_path,
                                   llvm::StringRef comm_file,
                                   lldb::pid_t debugger_pid) {
-  llvm::json::Object reverse_request;
-  reverse_request.try_emplace("type", "request");
-  reverse_request.try_emplace("command", "runInTerminal");
-
   llvm::json::Object run_in_terminal_args;
   // This indicates the IDE to open an embedded terminal, instead of opening the
   // terminal in a new window.
@@ -1143,9 +1154,7 @@ CreateRunInTerminalReverseRequest(const llvm::json::Object &launch_request,
   run_in_terminal_args.try_emplace("env",
                                    llvm::json::Value(std::move(environment)));
 
-  reverse_request.try_emplace(
-      "arguments", llvm::json::Value(std::move(run_in_terminal_args)));
-  return reverse_request;
+  return run_in_terminal_args;
 }
 
 // Keep all the top level items from the statistics dump, except for the

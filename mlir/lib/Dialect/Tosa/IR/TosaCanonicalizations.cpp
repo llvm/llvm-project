@@ -62,62 +62,6 @@ void ConcatOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<ConcatOptimization>(context);
 }
 
-struct ReshapeReshapeOptimization : public OpRewritePattern<tosa::ReshapeOp> {
-  using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::ReshapeOp op,
-                                PatternRewriter &rewriter) const override {
-    Value input = op.getInput1();
-    Operation *definingOp = input.getDefiningOp();
-    if (!definingOp)
-      return failure();
-
-    if (tosa::ReshapeOp reshapeOp = dyn_cast<tosa::ReshapeOp>(definingOp)) {
-      rewriter.replaceOpWithNewOp<tosa::ReshapeOp>(
-          op, op.getType(), reshapeOp.getInput1(), op.getNewShape());
-      return success();
-    }
-
-    return failure();
-  }
-};
-
-struct ReshapeConstOptimization : public OpRewritePattern<tosa::ReshapeOp> {
-  using OpRewritePattern<tosa::ReshapeOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(tosa::ReshapeOp op,
-                                PatternRewriter &rewriter) const override {
-    Value input = op.getInput1();
-    ShapedType inputTy = llvm::cast<ShapedType>(input.getType());
-    ShapedType resultTy = llvm::cast<ShapedType>(op.getType());
-
-    if (inputTy.getElementType() != resultTy.getElementType())
-      return rewriter.notifyMatchFailure(op, "element type does not match.");
-
-    // Check if input is constant
-    DenseElementsAttr inputAttr;
-    if (!matchPattern(input, m_Constant(&inputAttr)))
-      return rewriter.notifyMatchFailure(op, "Non-constant input.");
-
-    // Check if has >1 consumer and is not splat
-    if (!input.hasOneUse() && !inputAttr.isSplat())
-      return rewriter.notifyMatchFailure(op,
-                                         "Used more than once or not-splat");
-
-    // Build new const op with correct output shape
-    DenseElementsAttr outputAttr = inputAttr.reshape(
-        llvm::cast<ShapedType>(inputAttr.getType()).clone(op.getNewShape()));
-    rewriter.replaceOpWithNewOp<tosa::ConstOp>(op, resultTy, outputAttr);
-    return success();
-  }
-};
-
-void ReshapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
-                                            MLIRContext *context) {
-  results.add<ReshapeReshapeOptimization>(context);
-  results.add<ReshapeConstOptimization>(context);
-}
-
 LogicalResult SelectOp::canonicalize(SelectOp op, PatternRewriter &rewriter) {
   auto notOp = op.getPred().getDefiningOp<tosa::LogicalNotOp>();
   if (!notOp)
@@ -851,9 +795,29 @@ OpFoldResult ReshapeOp::fold(FoldAdaptor adaptor) {
   if (inputTy == outputTy)
     return getInput1();
 
-  auto operand = llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1());
-  if (operand && outputTy.hasStaticShape() && operand.isSplat()) {
-    return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
+  // reshape(reshape(x)) -> reshape(x)
+  if (auto reshapeOp = llvm::dyn_cast_if_present<tosa::ReshapeOp>(
+          getInput1().getDefiningOp())) {
+    getInput1Mutable().assign(reshapeOp.getInput1());
+    return getResult();
+  }
+
+  // reshape(const(x)) -> const(reshape-attr(x))
+  if (auto operand = llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getInput1())) {
+    // Constants must have static shape.
+    if (!outputTy.hasStaticShape())
+      return {};
+
+    // Okay to duplicate splat constants.
+    if (operand.isSplat())
+      return SplatElementsAttr::get(outputTy, operand.getSplatValue<Attribute>());
+
+    // Don't duplicate other constants.
+    if (!getInput1().hasOneUse())
+      return {};
+
+    return operand.reshape(
+        llvm::cast<ShapedType>(operand.getType()).clone(getNewShape()));
   }
 
   return {};

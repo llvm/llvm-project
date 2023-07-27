@@ -521,7 +521,8 @@ RcOptions parseRcOptions(ArrayRef<const char *> ArgsArr,
 
   // The tool prints nothing when invoked with no command-line arguments.
   if (InputArgs.hasArg(OPT_help)) {
-    T.printHelp(outs(), "rc [options] file...", "Resource Converter", false);
+    T.printHelp(outs(), "llvm-rc [options] file...", "LLVM Resource Converter",
+                false);
     exit(0);
   }
 

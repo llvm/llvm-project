@@ -84,6 +84,10 @@ public:
   CallEventRef(const T *Call) : IntrusiveRefCntPtr<const T>(Call) {}
   CallEventRef(const CallEventRef &Orig) : IntrusiveRefCntPtr<const T>(Orig) {}
 
+  // The copy assignment operator is defined as deleted pending further
+  // motivation.
+  CallEventRef &operator=(const CallEventRef &) = delete;
+
   CallEventRef<T> cloneWithState(ProgramStateRef State) const {
     return this->get()->template cloneWithState<T>(State);
   }
@@ -616,10 +620,9 @@ public:
     const BlockDataRegion *BR = getBlockRegion();
     assert(BR && "Block converted from lambda must have a block region");
 
-    auto I = BR->referenced_vars_begin();
-    assert(I != BR->referenced_vars_end());
-
-    return I.getCapturedRegion();
+    auto ReferencedVars = BR->referenced_vars();
+    assert(!ReferencedVars.empty());
+    return ReferencedVars.begin().getCapturedRegion();
   }
 
   RuntimeDefinition getRuntimeDefinition() const override {

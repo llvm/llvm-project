@@ -29,6 +29,47 @@ Expr<T> PackageConstantBounds(
   }
 }
 
+// If a DIM= argument to LBOUND(), UBOUND(), or SIZE() exists and has a valid
+// constant value, return in "dimVal" that value, less 1 (to make it suitable
+// for use as a C++ vector<> index).  Also check for erroneous constant values
+// and returns false on error.
+static bool CheckDimArg(const std::optional<ActualArgument> &dimArg,
+    const Expr<SomeType> &array, parser::ContextualMessages &messages,
+    bool isLBound, std::optional<int> &dimVal) {
+  dimVal.reset();
+  if (int rank{array.Rank()}; rank > 0 || IsAssumedRank(array)) {
+    auto named{ExtractNamedEntity(array)};
+    if (auto dim64{ToInt64(dimArg)}) {
+      if (*dim64 < 1) {
+        messages.Say("DIM=%jd dimension must be positive"_err_en_US, *dim64);
+        return false;
+      } else if (!IsAssumedRank(array) && *dim64 > rank) {
+        messages.Say(
+            "DIM=%jd dimension is out of range for rank-%d array"_err_en_US,
+            *dim64, rank);
+        return false;
+      } else if (!isLBound && named &&
+          semantics::IsAssumedSizeArray(named->GetLastSymbol()) &&
+          *dim64 == rank) {
+        messages.Say(
+            "DIM=%jd dimension is out of range for rank-%d assumed-size array"_err_en_US,
+            *dim64, rank);
+        return false;
+      } else if (IsAssumedRank(array)) {
+        if (*dim64 > common::maxRank) {
+          messages.Say(
+              "DIM=%jd dimension is too large for any array (maximum rank %d)"_err_en_US,
+              *dim64, common::maxRank);
+          return false;
+        }
+      } else {
+        dimVal = static_cast<int>(*dim64 - 1); // 1-based to 0-based
+      }
+    }
+  }
+  return true;
+}
+
 // Class to retrieve the constant bound of an expression which is an
 // array that devolves to a type of Constant<T>
 class GetConstantArrayBoundHelper {
@@ -115,21 +156,14 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
   using T = Type<TypeCategory::Integer, KIND>;
   ActualArguments &args{funcRef.arguments()};
   if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-    if (int rank{array->Rank()}; rank > 0) {
+    if (int rank{array->Rank()}; rank > 0 || IsAssumedRank(*array)) {
       std::optional<int> dim;
       if (funcRef.Rank() == 0) {
         // Optional DIM= argument is present: result is scalar.
-        if (auto dim64{ToInt64(args[1])}) {
-          if (*dim64 < 1 || *dim64 > rank) {
-            context.messages().Say("DIM=%jd dimension is out of range for "
-                                   "rank-%d array"_err_en_US,
-                *dim64, rank);
-            return MakeInvalidIntrinsic<T>(std::move(funcRef));
-          } else {
-            dim = *dim64 - 1; // 1-based to 0-based
-          }
-        } else {
-          // DIM= is present but not constant
+        if (!CheckDimArg(args[1], *array, context.messages(), true, dim)) {
+          return MakeInvalidIntrinsic<T>(std::move(funcRef));
+        } else if (!dim) {
+          // DIM= is present but not constant, or error
           return Expr<T>{std::move(funcRef)};
         }
       }
@@ -169,20 +203,13 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
   using T = Type<TypeCategory::Integer, KIND>;
   ActualArguments &args{funcRef.arguments()};
   if (auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-    if (int rank{array->Rank()}; rank > 0) {
+    if (int rank{array->Rank()}; rank > 0 || IsAssumedRank(*array)) {
       std::optional<int> dim;
       if (funcRef.Rank() == 0) {
         // Optional DIM= argument is present: result is scalar.
-        if (auto dim64{ToInt64(args[1])}) {
-          if (*dim64 < 1 || *dim64 > rank) {
-            context.messages().Say("DIM=%jd dimension is out of range for "
-                                   "rank-%d array"_err_en_US,
-                *dim64, rank);
-            return MakeInvalidIntrinsic<T>(std::move(funcRef));
-          } else {
-            dim = *dim64 - 1; // 1-based to 0-based
-          }
-        } else {
+        if (!CheckDimArg(args[1], *array, context.messages(), false, dim)) {
+          return MakeInvalidIntrinsic<T>(std::move(funcRef));
+        } else if (!dim) {
           // DIM= is present but not constant
           return Expr<T>{std::move(funcRef)};
         }
@@ -193,12 +220,7 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
         if (symbol.Rank() == rank) {
           takeBoundsFromShape = false;
           if (dim) {
-            if (semantics::IsAssumedSizeArray(symbol) && *dim == rank - 1) {
-              context.messages().Say("DIM=%jd dimension is out of range for "
-                                     "rank-%d assumed-size array"_err_en_US,
-                  rank, rank);
-              return MakeInvalidIntrinsic<T>(std::move(funcRef));
-            } else if (auto ub{GetUBOUND(context, *named, *dim)}) {
+            if (auto ub{GetUBOUND(context, *named, *dim)}) {
               return Fold(context, ConvertToType<T>(std::move(*ub)));
             }
           } else {
@@ -726,34 +748,31 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
     const auto *lenCon{Folder<Int4>(context).Folding(args[2])};
     if (const auto *argCon{Folder<T>(context).Folding(args[0])};
         argCon && argCon->empty()) {
-    } else if (posCon && lenCon &&
-        (posCon->size() == 1 || lenCon->size() == 1 ||
-            posCon->size() == lenCon->size())) {
-      auto posIter{posCon->values().begin()};
-      auto lenIter{lenCon->values().begin()};
-      for (; posIter != posCon->values().end() &&
-           lenIter != lenCon->values().end();
-           ++posIter, ++lenIter) {
-        posIter = posIter == posCon->values().end() ? posCon->values().begin()
-                                                    : posIter;
-        lenIter = lenIter == lenCon->values().end() ? lenCon->values().begin()
-                                                    : lenIter;
-        auto posVal{static_cast<int>(posIter->ToInt64())};
-        auto lenVal{static_cast<int>(lenIter->ToInt64())};
+    } else {
+      std::size_t posCt{posCon ? posCon->size() : 0};
+      std::size_t lenCt{lenCon ? lenCon->size() : 0};
+      std::size_t n{std::max(posCt, lenCt)};
+      for (std::size_t j{0}; j < n; ++j) {
+        int posVal{j < posCt || posCt == 1
+                ? static_cast<int>(posCon->values()[j % posCt].ToInt64())
+                : 0};
+        int lenVal{j < lenCt || lenCt == 1
+                ? static_cast<int>(lenCon->values()[j % lenCt].ToInt64())
+                : 0};
         if (posVal < 0) {
           context.messages().Say(
-              "bit position for IBITS(POS=%jd,LEN=%jd) is negative"_err_en_US,
-              std::intmax_t{posVal}, std::intmax_t{lenVal});
+              "bit position for IBITS(POS=%jd) is negative"_err_en_US,
+              std::intmax_t{posVal});
           break;
         } else if (lenVal < 0) {
           context.messages().Say(
-              "bit length for IBITS(POS=%jd,LEN=%jd) is negative"_err_en_US,
-              std::intmax_t{posVal}, std::intmax_t{lenVal});
+              "bit length for IBITS(LEN=%jd) is negative"_err_en_US,
+              std::intmax_t{lenVal});
           break;
         } else if (posVal + lenVal > T::Scalar::bits) {
           context.messages().Say(
-              "IBITS(POS=%jd,LEN=%jd) must have POS+LEN no greater than %d"_err_en_US,
-              std::intmax_t{posVal}, std::intmax_t{lenVal}, T::Scalar::bits);
+              "IBITS() must have POS+LEN (>=%jd) no greater than %d"_err_en_US,
+              std::intmax_t{posVal + lenVal}, T::Scalar::bits);
           break;
         }
       }
@@ -1192,23 +1211,14 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
         }));
   } else if (name == "size") {
     if (auto shape{GetContextFreeShape(context, args[0])}) {
-      if (auto &dimArg{args[1]}) { // DIM= is present, get one extent
-        if (auto dim{ToInt64(args[1])}) {
-          int rank{GetRank(*shape)};
-          if (*dim >= 1 && *dim <= rank) {
-            const Symbol *symbol{UnwrapWholeSymbolDataRef(args[0])};
-            if (symbol && IsAssumedSizeArray(*symbol) && *dim == rank) {
-              context.messages().Say(
-                  "size(array,dim=%jd) of last dimension is not available for rank-%d assumed-size array dummy argument"_err_en_US,
-                  *dim, rank);
-              return MakeInvalidIntrinsic<T>(std::move(funcRef));
-            } else if (auto &extent{shape->at(*dim - 1)}) {
-              return Fold(context, ConvertToType<T>(std::move(*extent)));
-            }
-          } else {
-            context.messages().Say(
-                "size(array,dim=%jd) dimension is out of range for rank-%d array"_warn_en_US,
-                *dim, rank);
+      if (args[1]) { // DIM= is present, get one extent
+        std::optional<int> dim;
+        if (const auto *array{args[0].value().UnwrapExpr()}; array &&
+            !CheckDimArg(args[1], *array, context.messages(), false, dim)) {
+          return MakeInvalidIntrinsic<T>(std::move(funcRef));
+        } else if (dim) {
+          if (auto &extent{shape->at(*dim)}) {
+            return Fold(context, ConvertToType<T>(std::move(*extent)));
           }
         }
       } else if (auto extents{common::AllElementsPresent(std::move(*shape))}) {
@@ -1269,10 +1279,11 @@ Expr<TypeParamInquiry::Result> FoldOperation(
     }
   } else {
     // A "bare" type parameter: replace with its value, if that's now known
-    // in a current derived type instantiation, for KIND type parameters.
+    // in a current derived type instantiation.
     if (const auto *pdt{context.pdtInstance()}) {
+      auto restorer{context.WithoutPDTInstance()}; // don't loop
       bool isLen{false};
-      if (const semantics::Scope * scope{context.pdtInstance()->scope()}) {
+      if (const semantics::Scope * scope{pdt->scope()}) {
         auto iter{scope->find(parameterName)};
         if (iter != scope->end()) {
           const Symbol &symbol{*iter->second};

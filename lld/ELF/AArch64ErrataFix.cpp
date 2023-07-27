@@ -35,6 +35,7 @@
 #include "Target.h"
 #include "lld/Common/CommonLinkerContext.h"
 #include "lld/Common/Strings.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
 

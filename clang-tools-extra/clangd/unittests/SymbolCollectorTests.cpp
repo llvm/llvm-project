@@ -9,6 +9,8 @@
 #include "Annotations.h"
 #include "TestFS.h"
 #include "TestTU.h"
+#include "URI.h"
+#include "clang-include-cleaner/Record.h"
 #include "index/SymbolCollector.h"
 #include "clang/Basic/FileManager.h"
 #include "clang/Basic/FileSystemOptions.h"
@@ -20,7 +22,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/VirtualFileSystem.h"
-#include "llvm/Testing/Support/Error.h"
 #include "gmock/gmock-matchers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -28,6 +29,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <utility>
 
 namespace clang {
 namespace clangd {
@@ -226,23 +228,21 @@ TEST_F(ShouldCollectSymbolTest, DoubleCheckProtoHeaderComment) {
 
 class SymbolIndexActionFactory : public tooling::FrontendActionFactory {
 public:
-  SymbolIndexActionFactory(SymbolCollector::Options COpts,
-                           CommentHandler *PragmaHandler)
-      : COpts(std::move(COpts)), PragmaHandler(PragmaHandler) {}
+  SymbolIndexActionFactory(SymbolCollector::Options COpts)
+      : COpts(std::move(COpts)) {}
 
   std::unique_ptr<FrontendAction> create() override {
     class IndexAction : public ASTFrontendAction {
     public:
       IndexAction(std::shared_ptr<index::IndexDataConsumer> DataConsumer,
                   const index::IndexingOptions &Opts,
-                  CommentHandler *PragmaHandler)
+                  std::shared_ptr<include_cleaner::PragmaIncludes> PI)
           : DataConsumer(std::move(DataConsumer)), Opts(Opts),
-            PragmaHandler(PragmaHandler) {}
+            PI(std::move(PI)) {}
 
       std::unique_ptr<ASTConsumer>
       CreateASTConsumer(CompilerInstance &CI, llvm::StringRef InFile) override {
-        if (PragmaHandler)
-          CI.getPreprocessor().addCommentHandler(PragmaHandler);
+        PI->record(CI);
         return createIndexingASTConsumer(DataConsumer, Opts,
                                          CI.getPreprocessorPtr());
       }
@@ -256,20 +256,22 @@ public:
     private:
       std::shared_ptr<index::IndexDataConsumer> DataConsumer;
       index::IndexingOptions Opts;
-      CommentHandler *PragmaHandler;
+      std::shared_ptr<include_cleaner::PragmaIncludes> PI;
     };
     index::IndexingOptions IndexOpts;
     IndexOpts.SystemSymbolFilter =
         index::IndexingOptions::SystemSymbolFilterKind::All;
     IndexOpts.IndexFunctionLocals = true;
+    std::shared_ptr<include_cleaner::PragmaIncludes> PI =
+        std::make_shared<include_cleaner::PragmaIncludes>();
+    COpts.PragmaIncludes = PI.get();
     Collector = std::make_shared<SymbolCollector>(COpts);
     return std::make_unique<IndexAction>(Collector, std::move(IndexOpts),
-                                         PragmaHandler);
+                                         std::move(PI));
   }
 
   std::shared_ptr<SymbolCollector> Collector;
   SymbolCollector::Options COpts;
-  CommentHandler *PragmaHandler;
 };
 
 class SymbolCollectorTest : public ::testing::Test {
@@ -289,8 +291,7 @@ public:
     llvm::IntrusiveRefCntPtr<FileManager> Files(
         new FileManager(FileSystemOptions(), InMemoryFileSystem));
 
-    auto Factory = std::make_unique<SymbolIndexActionFactory>(
-        CollectorOpts, PragmaHandler.get());
+    auto Factory = std::make_unique<SymbolIndexActionFactory>(CollectorOpts);
 
     std::vector<std::string> Args = {"symbol_collector", "-fsyntax-only",
                                      "-xc++", "-include", TestHeaderName};
@@ -303,10 +304,12 @@ public:
         Args, Factory->create(), Files.get(),
         std::make_shared<PCHContainerOperations>());
 
-    InMemoryFileSystem->addFile(TestHeaderName, 0,
-                                llvm::MemoryBuffer::getMemBuffer(HeaderCode));
-    InMemoryFileSystem->addFile(TestFileName, 0,
-                                llvm::MemoryBuffer::getMemBuffer(MainCode));
+    // Multiple calls to runSymbolCollector with different contents will fail
+    // to update the filesystem! Why are we sharing one across tests, anyway?
+    EXPECT_TRUE(InMemoryFileSystem->addFile(
+        TestHeaderName, 0, llvm::MemoryBuffer::getMemBuffer(HeaderCode)));
+    EXPECT_TRUE(InMemoryFileSystem->addFile(
+        TestFileName, 0, llvm::MemoryBuffer::getMemBuffer(MainCode)));
     Invocation.run();
     Symbols = Factory->Collector->takeSymbols();
     Refs = Factory->Collector->takeRefs();
@@ -324,7 +327,6 @@ protected:
   RefSlab Refs;
   RelationSlab Relations;
   SymbolCollector::Options CollectorOpts;
-  std::unique_ptr<CommentHandler> PragmaHandler;
 };
 
 TEST_F(SymbolCollectorTest, CollectSymbols) {
@@ -1545,11 +1547,6 @@ TEST_F(SymbolCollectorTest, IncludeHeaderSameAsFileURI) {
 
 TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
   CollectorOpts.CollectIncludePath = true;
-  CanonicalIncludes Includes;
-  auto Language = LangOptions();
-  Language.CPlusPlus = true;
-  Includes.addSystemHeadersMapping(Language);
-  CollectorOpts.Includes = &Includes;
   runSymbolCollector(
       R"cpp(
       namespace std {
@@ -1573,9 +1570,6 @@ TEST_F(SymbolCollectorTest, CanonicalSTLHeader) {
 
 TEST_F(SymbolCollectorTest, IWYUPragma) {
   CollectorOpts.CollectIncludePath = true;
-  CanonicalIncludes Includes;
-  PragmaHandler = collectIWYUHeaderMaps(&Includes);
-  CollectorOpts.Includes = &Includes;
   const std::string Header = R"(
     // IWYU pragma: private, include the/good/header.h
     class Foo {};
@@ -1588,9 +1582,6 @@ TEST_F(SymbolCollectorTest, IWYUPragma) {
 
 TEST_F(SymbolCollectorTest, IWYUPragmaWithDoubleQuotes) {
   CollectorOpts.CollectIncludePath = true;
-  CanonicalIncludes Includes;
-  PragmaHandler = collectIWYUHeaderMaps(&Includes);
-  CollectorOpts.Includes = &Includes;
   const std::string Header = R"(
     // IWYU pragma: private, include "the/good/header.h"
     class Foo {};
@@ -1601,29 +1592,25 @@ TEST_F(SymbolCollectorTest, IWYUPragmaWithDoubleQuotes) {
                                  includeHeader("\"the/good/header.h\""))));
 }
 
-TEST_F(SymbolCollectorTest, SkipIncFileWhenCanonicalizeHeaders) {
-  auto IncFile = testPath("test.inc");
-  auto IncURI = URI::create(IncFile).toString();
-  InMemoryFileSystem->addFile(IncFile, 0,
-                              llvm::MemoryBuffer::getMemBuffer("class X {};"));
-  llvm::IntrusiveRefCntPtr<FileManager> Files(
-      new FileManager(FileSystemOptions(), InMemoryFileSystem));
-  std::string HeaderCode = "#include \"test.inc\"\nclass Y {};";
-  InMemoryFileSystem->addFile(TestHeaderName, 0,
-                              llvm::MemoryBuffer::getMemBuffer(HeaderCode));
-  auto File = Files->getFileRef(TestHeaderName);
-  ASSERT_THAT_EXPECTED(File, llvm::Succeeded());
-  CanonicalIncludes Includes;
-  Includes.addMapping(*File, "<canonical>");
+TEST_F(SymbolCollectorTest, DISABLED_IWYUPragmaExport) {
   CollectorOpts.CollectIncludePath = true;
-  CollectorOpts.Includes = &Includes;
-  runSymbolCollector(HeaderCode, /*Main=*/"",
+  const std::string Header = R"cpp(#pragma once
+    #include "exporter.h"
+  )cpp";
+  auto ExporterFile = testPath("exporter.h");
+  InMemoryFileSystem->addFile(
+      ExporterFile, 0, llvm::MemoryBuffer::getMemBuffer(R"cpp(#pragma once
+    #include "private.h" // IWYU pragma: export
+  )cpp"));
+  auto PrivateFile = testPath("private.h");
+  InMemoryFileSystem->addFile(
+      PrivateFile, 0, llvm::MemoryBuffer::getMemBuffer("class Foo {};"));
+  runSymbolCollector(Header, /*Main=*/"",
                      /*ExtraArgs=*/{"-I", testRoot()});
-  EXPECT_THAT(Symbols,
-              UnorderedElementsAre(AllOf(qName("X"), declURI(IncURI),
-                                         includeHeader("<canonical>")),
-                                   AllOf(qName("Y"), declURI(TestHeaderURI),
-                                         includeHeader("<canonical>"))));
+  EXPECT_THAT(Symbols, UnorderedElementsAre(AllOf(
+                           qName("Foo"),
+                           includeHeader(URI::create(ExporterFile).toString()),
+                           declURI(URI::create(PrivateFile).toString()))));
 }
 
 TEST_F(SymbolCollectorTest, MainFileIsHeaderWhenSkipIncFile) {
@@ -1803,6 +1790,8 @@ TEST_F(SymbolCollectorTest, Origin) {
   runSymbolCollector("class Foo {};", /*Main=*/"");
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            Field(&Symbol::Origin, SymbolOrigin::Static)));
+  InMemoryFileSystem = new llvm::vfs::InMemoryFileSystem;
+  CollectorOpts.CollectMacro = true;
   runSymbolCollector("#define FOO", /*Main=*/"");
   EXPECT_THAT(Symbols, UnorderedElementsAre(
                            Field(&Symbol::Origin, SymbolOrigin::Static)));
@@ -1956,17 +1945,25 @@ TEST_F(SymbolCollectorTest, NoCrashOnObjCMethodCStyleParam) {
 
 TEST_F(SymbolCollectorTest, Reserved) {
   const char *Header = R"cpp(
+    #pragma once
     void __foo();
     namespace _X { int secret; }
   )cpp";
 
   CollectorOpts.CollectReserved = true;
-  runSymbolCollector("", Header);
+  runSymbolCollector(Header, "");
   EXPECT_THAT(Symbols, UnorderedElementsAre(qName("__foo"), qName("_X"),
                                             qName("_X::secret")));
 
   CollectorOpts.CollectReserved = false;
-  runSymbolCollector("", Header); //
+  runSymbolCollector(Header, "");
+  EXPECT_THAT(Symbols, UnorderedElementsAre(qName("__foo"), qName("_X"),
+                                            qName("_X::secret")));
+
+  // Ugly: for some reason we reuse the test filesystem across tests.
+  // You can't overwrite the same filename with new content!
+  InMemoryFileSystem = new llvm::vfs::InMemoryFileSystem;
+  runSymbolCollector("#pragma GCC system_header\n" + std::string(Header), "");
   EXPECT_THAT(Symbols, IsEmpty());
 }
 

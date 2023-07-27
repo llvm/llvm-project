@@ -14,7 +14,6 @@
 #ifndef PYTHON_BINDINGS_FUNC
 #define PYTHON_BINDINGS_FUNC
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/Func/IR/FuncOps.td"
 
 #endif

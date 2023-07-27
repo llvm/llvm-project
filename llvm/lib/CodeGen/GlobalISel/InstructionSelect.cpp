@@ -105,7 +105,7 @@ bool InstructionSelect::runOnMachineFunction(MachineFunction &MF) {
 
   CodeGenCoverage CoverageInfo;
   assert(ISel && "Cannot work without InstructionSelector");
-  ISel->setupMF(MF, KB, CoverageInfo, PSI, BFI);
+  ISel->setupMF(MF, KB, &CoverageInfo, PSI, BFI);
 
   // An optimization remark emitter. Used to report failures.
   MachineOptimizationRemarkEmitter MORE(MF, /*MBFI=*/nullptr);

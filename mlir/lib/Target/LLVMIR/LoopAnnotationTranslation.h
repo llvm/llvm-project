@@ -21,29 +21,23 @@ namespace mlir {
 namespace LLVM {
 namespace detail {
 
-/// A helper class that converts LoopAnnotationAttrs and AccessGroupMetadataOps
-/// into a corresponding llvm::MDNodes.
+/// A helper class that converts LoopAnnotationAttrs and AccessGroupAttrs into
+/// corresponding llvm::MDNodes.
 class LoopAnnotationTranslation {
 public:
   LoopAnnotationTranslation(ModuleTranslation &moduleTranslation,
-                            Operation *mlirModule, llvm::Module &llvmModule)
-      : moduleTranslation(moduleTranslation), mlirModule(mlirModule),
-        llvmModule(llvmModule) {}
+                            llvm::Module &llvmModule)
+      : moduleTranslation(moduleTranslation), llvmModule(llvmModule) {}
 
   llvm::MDNode *translateLoopAnnotation(LoopAnnotationAttr attr, Operation *op);
 
-  /// Traverses the global access group metadata operation in the `mlirModule`
-  /// and creates corresponding LLVM metadata nodes.
-  LogicalResult createAccessGroupMetadata();
+  /// Returns the LLVM metadata corresponding to an mlir LLVM dialect access
+  /// group attribute.
+  llvm::MDNode *getAccessGroup(AccessGroupAttr accessGroupAttr);
 
-  /// Returns the LLVM metadata corresponding to a symbol reference to an mlir
-  /// LLVM dialect access group operation.
-  llvm::MDNode *getAccessGroup(Operation *op,
-                               SymbolRefAttr accessGroupRef) const;
-
-  /// Returns the LLVM metadata corresponding to the access group operations
+  /// Returns the LLVM metadata corresponding to the access group attribute
   /// referenced by the AccessGroupOpInterface or null if there are none.
-  llvm::MDNode *getAccessGroups(AccessGroupOpInterface op) const;
+  llvm::MDNode *getAccessGroups(AccessGroupOpInterface op);
 
   /// The ModuleTranslation owning this instance.
   ModuleTranslation &moduleTranslation;
@@ -65,12 +59,11 @@ private:
   /// The metadata is attached to Latch block branches with this attribute.
   DenseMap<Attribute, llvm::MDNode *> loopMetadataMapping;
 
-  /// Mapping from an access group metadata operation to its LLVM metadata.
+  /// Mapping from an access group attribute to its LLVM metadata.
   /// This map is populated on module entry and is used to annotate loops (as
   /// identified via their branches) and contained memory accesses.
-  DenseMap<Operation *, llvm::MDNode *> accessGroupMetadataMapping;
+  DenseMap<AccessGroupAttr, llvm::MDNode *> accessGroupMetadataMapping;
 
-  Operation *mlirModule;
   llvm::Module &llvmModule;
 };
 

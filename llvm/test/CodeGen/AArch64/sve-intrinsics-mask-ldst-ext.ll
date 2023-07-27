@@ -21,6 +21,18 @@ define <vscale x 16 x i32> @masked_ld1b_i8_sext_i32(<vscale x 16 x i8> *%base, <
   ret <vscale x 16 x i32> %res
 }
 
+define <vscale x 8 x i32> @masked_ld1b_nxv8i8_sext_i32(<vscale x 8 x i8> *%a, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: masked_ld1b_nxv8i8_sext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1sb { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    sunpklo z0.s, z1.h
+; CHECK-NEXT:    sunpkhi z1.s, z1.h
+; CHECK-NEXT:    ret
+  %wide.masked.load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(ptr %a, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i8> poison)
+  %res = sext <vscale x 8 x i8> %wide.masked.load to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %res
+}
+
 define <vscale x 16 x i32> @masked_ld1b_i8_zext_i32(<vscale x 16 x i8> *%base, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: masked_ld1b_i8_zext_i32:
 ; CHECK:       // %bb.0:
@@ -35,6 +47,18 @@ define <vscale x 16 x i32> @masked_ld1b_i8_zext_i32(<vscale x 16 x i8> *%base, <
   %wide.masked.load = call <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(<vscale x 16 x i8>* %base, i32 2, <vscale x 16 x i1> %mask, <vscale x 16 x i8> undef)
   %res = zext <vscale x 16 x i8> %wide.masked.load to <vscale x 16 x i32>
   ret <vscale x 16 x i32> %res
+}
+
+define <vscale x 8 x i32> @masked_ld1b_nxv8i8_zext_i32(<vscale x 8 x i8> *%a, <vscale x 8 x i1> %mask) {
+; CHECK-LABEL: masked_ld1b_nxv8i8_zext_i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z1.h }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.s, z1.h
+; CHECK-NEXT:    uunpkhi z1.s, z1.h
+; CHECK-NEXT:    ret
+  %wide.masked.load = call <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(ptr %a, i32 1, <vscale x 8 x i1> %mask, <vscale x 8 x i8> poison)
+  %res = zext <vscale x 8 x i8> %wide.masked.load to <vscale x 8 x i32>
+  ret <vscale x 8 x i32> %res
 }
 
 define <vscale x 16 x i64> @masked_ld1b_i8_sext(<vscale x 16 x i8> *%base, <vscale x 16 x i1> %mask) {
@@ -61,6 +85,18 @@ define <vscale x 16 x i64> @masked_ld1b_i8_sext(<vscale x 16 x i8> *%base, <vsca
   ret <vscale x 16 x i64> %res
 }
 
+define <vscale x 4 x i64> @masked_ld1b_nxv4i8_sext_i64(<vscale x 4 x i8> *%a, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: masked_ld1b_nxv4i8_sext_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1sb { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    sunpklo z0.d, z1.s
+; CHECK-NEXT:    sunpkhi z1.d, z1.s
+; CHECK-NEXT:    ret
+  %wide.masked.load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8.p0(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> poison)
+  %res = sext <vscale x 4 x i8> %wide.masked.load to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %res
+}
+
 define <vscale x 16 x i64> @masked_ld1b_i8_zext(<vscale x 16 x i8> *%base, <vscale x 16 x i1> %mask) {
 ; CHECK-LABEL: masked_ld1b_i8_zext:
 ; CHECK:       // %bb.0:
@@ -85,6 +121,18 @@ define <vscale x 16 x i64> @masked_ld1b_i8_zext(<vscale x 16 x i8> *%base, <vsca
   ret <vscale x 16 x i64> %res
 }
 
+define <vscale x 4 x i64> @masked_ld1b_nxv4i8_zext_i64(<vscale x 4 x i8> *%a, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: masked_ld1b_nxv4i8_zext_i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1b { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    ret
+  %wide.masked.load = call <vscale x 4 x i8> @llvm.masked.load.nxv4i8.p0(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i8> poison)
+  %res = zext <vscale x 4 x i8> %wide.masked.load to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %res
+}
+
 ;
 ; LD1H
 ;
@@ -105,6 +153,18 @@ define <vscale x 8 x i64> @masked_ld1h_i16_sext(<vscale x 8 x i16> *%base, <vsca
   ret <vscale x 8 x i64> %res
 }
 
+define <vscale x 4 x i64> @masked_ld1h_nxv4i16_sext(<vscale x 4 x i16> *%a, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: masked_ld1h_nxv4i16_sext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1sh { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    sunpklo z0.d, z1.s
+; CHECK-NEXT:    sunpkhi z1.d, z1.s
+; CHECK-NEXT:    ret
+  %wide.masked.load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16.p0(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i16> poison)
+  %res = sext <vscale x 4 x i16> %wide.masked.load to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %res
+}
+
 define <vscale x 8 x i64> @masked_ld1h_i16_zext(<vscale x 8 x i16> *%base, <vscale x 8 x i1> %mask) {
 ; CHECK-LABEL: masked_ld1h_i16_zext:
 ; CHECK:       // %bb.0:
@@ -119,6 +179,18 @@ define <vscale x 8 x i64> @masked_ld1h_i16_zext(<vscale x 8 x i16> *%base, <vsca
   %wide.masked.load = call <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(<vscale x 8 x i16>* %base, i32 2, <vscale x 8 x i1> %mask, <vscale x 8 x i16> undef)
   %res = zext <vscale x 8 x i16> %wide.masked.load to <vscale x 8 x i64>
   ret <vscale x 8 x i64> %res
+}
+
+define <vscale x 4 x i64> @masked_ld1h_nxv4i16_zext(<vscale x 4 x i16> *%a, <vscale x 4 x i1> %mask) {
+; CHECK-LABEL: masked_ld1h_nxv4i16_zext:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ld1h { z1.s }, p0/z, [x0]
+; CHECK-NEXT:    uunpklo z0.d, z1.s
+; CHECK-NEXT:    uunpkhi z1.d, z1.s
+; CHECK-NEXT:    ret
+  %wide.masked.load = call <vscale x 4 x i16> @llvm.masked.load.nxv4i16.p0(ptr %a, i32 1, <vscale x 4 x i1> %mask, <vscale x 4 x i16> poison)
+  %res = zext <vscale x 4 x i16> %wide.masked.load to <vscale x 4 x i64>
+  ret <vscale x 4 x i64> %res
 }
 
 ;
@@ -150,6 +222,8 @@ define <vscale x 4 x i64> @masked_ld1w_i32_zext(<vscale x 4 x i32> *%base, <vsca
 }
 
 declare <vscale x 16 x i8> @llvm.masked.load.nxv16i8.p0(<vscale x 16 x i8>*, i32 immarg, <vscale x 16 x i1>, <vscale x 16 x i8>)
+declare <vscale x 8 x i8> @llvm.masked.load.nxv8i8.p0(<vscale x 8 x i8>*, i32 immarg, <vscale x 8 x i1>, <vscale x 8 x i8>)
+declare <vscale x 4 x i8> @llvm.masked.load.nxv4i8.p0(<vscale x 4 x i8>*, i32 immarg, <vscale x 4 x i1>, <vscale x 4 x i8>)
 declare <vscale x 8 x i16> @llvm.masked.load.nxv8i16.p0(<vscale x 8 x i16>*, i32 immarg, <vscale x 8 x i1>, <vscale x 8 x i16>)
+declare <vscale x 4 x i16> @llvm.masked.load.nxv4i16.p0(<vscale x 4 x i16>*, i32 immarg, <vscale x 4 x i1>, <vscale x 4 x i16>)
 declare <vscale x 4 x i32> @llvm.masked.load.nxv4i32.p0(<vscale x 4 x i32>*, i32 immarg, <vscale x 4 x i1>, <vscale x 4 x i32>)
-

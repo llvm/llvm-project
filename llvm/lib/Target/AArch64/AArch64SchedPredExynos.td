@@ -125,12 +125,7 @@ def ExynosResetFn   : TIIPredicate<
                              MCReturnStatement<TruePred>>,
                            MCOpcodeSwitchCase<
                              [ORRWri, ORRXri],
-                             MCReturnStatement<
-                               CheckAll<
-                                 [CheckIsRegOperand<1>,
-                                  CheckAny<
-                                    [CheckRegOperand<1, WZR>,
-                                     CheckRegOperand<1, XZR>]>]>>>],
+                             MCReturnStatement<CheckIsReg1Zero>>],
                           MCReturnStatement<
                             CheckAny<
                               [IsCopyIdiomFn,

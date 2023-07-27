@@ -18,12 +18,14 @@ function(add_header target_name)
     message(FATAL_ERROR "'add_header' rules requires the HDR argument specifying a headef file.")
   endif()
 
-  set(dest_file ${CMAKE_CURRENT_BINARY_DIR}/${ADD_HEADER_HDR})
+  set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
+  file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
+  set(dest_file ${LIBC_INCLUDE_DIR}/${relative_path})
   set(src_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_HEADER_HDR})
 
   add_custom_command(
     OUTPUT ${dest_file}
-    COMMAND cp ${src_file} ${dest_file}
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different ${src_file} ${dest_file}
     DEPENDS ${src_file}
   )
 
@@ -86,7 +88,9 @@ function(add_gen_header target_name)
     message(FATAL_ERROR "`add_gen_hdr` rule requires GEN_HDR to be specified.")
   endif()
 
-  set(out_file ${CMAKE_CURRENT_BINARY_DIR}/${ADD_GEN_HDR_GEN_HDR})
+  set(absolute_path ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_GEN_HDR_GEN_HDR})
+  file(RELATIVE_PATH relative_path ${LIBC_INCLUDE_SOURCE_DIR} ${absolute_path})
+  set(out_file ${LIBC_INCLUDE_DIR}/${relative_path})
   set(in_file ${CMAKE_CURRENT_SOURCE_DIR}/${ADD_GEN_HDR_DEF_FILE})
 
   set(fq_data_files "")
@@ -127,6 +131,23 @@ function(add_gen_header target_name)
             ${hdrgen_deps}
   )
 
+  if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+    file(MAKE_DIRECTORY ${LIBC_INCLUDE_DIR}/llvm-libc-decls)
+    set(decl_out_file ${LIBC_INCLUDE_DIR}/llvm-libc-decls/${relative_path})
+    add_custom_command(
+      OUTPUT ${decl_out_file}
+      COMMAND ${hdrgen_exe} -o ${decl_out_file}
+              --header ${ADD_GEN_HDR_GEN_HDR} --def ${in_file} --export-decls
+              ${replacement_params} -I ${LIBC_SOURCE_DIR} ${ENTRYPOINT_NAME_LIST_ARG}
+              ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+
+      WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
+      DEPENDS ${in_file} ${fq_data_files} ${td_includes}
+              ${LIBC_SOURCE_DIR}/config/${LIBC_TARGET_OS}/api.td
+              ${hdrgen_deps}
+    )
+  endif()
+
   if(ADD_GEN_HDR_DEPENDS)
     get_fq_deps_list(fq_deps_list ${ADD_GEN_HDR_DEPENDS})
     # Dependencies of a add_header target can only be another add_gen_header target
@@ -140,13 +161,14 @@ function(add_gen_header target_name)
   endif()
   add_custom_target(
     ${fq_target_name}
-    DEPENDS ${out_file} ${fq_deps_list}
+    DEPENDS ${out_file} ${fq_deps_list} ${decl_out_file}
   )
 
   set_target_properties(
     ${fq_target_name}
     PROPERTIES
       HEADER_FILE_PATH ${out_file}
+      DECLS_FILE_PATH "${decl_out_file}"
       DEPS "${fq_deps_list}"
   )
 endfunction(add_gen_header)

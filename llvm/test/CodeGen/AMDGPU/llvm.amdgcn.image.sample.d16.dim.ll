@@ -108,7 +108,6 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX10-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX10-NEXT:    global_store_dword v4, v3, s[12:13]
-; GFX10-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX10-NEXT:    ; return to shader part epilog
 ;
 ; GFX11-LABEL: image_sample_2d_f16_tfe:
@@ -123,7 +122,6 @@ define amdgpu_ps half @image_sample_2d_f16_tfe(<8 x i32> inreg %rsrc, <4 x i32> 
 ; GFX11-NEXT:    s_waitcnt vmcnt(0)
 ; GFX11-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX11-NEXT:    global_store_b32 v4, v3, s[12:13]
-; GFX11-NEXT:    s_waitcnt_vscnt null, 0x0
 ; GFX11-NEXT:    ; return to shader part epilog
 main_body:
   %tex = call {half,i32} @llvm.amdgcn.image.sample.2d.f16i32.f32(i32 1, float %s, float %t, <8 x i32> %rsrc, <4 x i32> %samp, i1 false, i32 1, i32 0)

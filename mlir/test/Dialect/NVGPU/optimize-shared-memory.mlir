@@ -74,7 +74,7 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: [[xorBits:%.+]] = arith.shli [[src_bits]], [[c1]]
   // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]]
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stColPerm]]]
-  %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
+  %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 4
       : memref<128x128xf32> to memref<64x16xf32, 3>
   %1 = nvgpu.device_async_create_group %0
   nvgpu.device_async_wait %1 { numGroups = 1 : i32}
@@ -130,7 +130,7 @@ func.func @optimize_64x16xf32_16x64xf32(%arg0: memref<128x128xf32>,
   // CHECK: [[xorBits:%.+]] = arith.shli [[src_bits]], [[c2]]
   // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]]
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shmB]][[[stRow]], [[stColPerm]]]
-  %2 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shmB[%stRow, %stCol], 8
+  %2 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shmB[%stRow, %stCol], 4
       : memref<128x128xf32> to memref<16x64xf32, 3>
   %3 = nvgpu.device_async_create_group %0
   nvgpu.device_async_wait %1 { numGroups = 1 : i32}
@@ -175,7 +175,7 @@ func.func @small_column_size_f64(%arg0: memref<32x32xf64>,
   // CHECK: [[xorBits:%.+]] = arith.shrui [[src_bits]], [[c1]]
   // CHECK: [[stColPerm:%.+]] = arith.xori [[stCol]], [[xorBits]]
   // CHECK: nvgpu.device_async_copy [[arg0]][[[ldRow]], [[ldCol]]], [[shm]][[[stRow]], [[stColPerm]]]
-  %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 8
+  %0 = nvgpu.device_async_copy %arg0[%ldRow, %ldCol], %shm[%stRow, %stCol], 2
       : memref<32x32xf64> to memref<32x4xf64, 3>
   %1 = nvgpu.device_async_create_group %0
   nvgpu.device_async_wait %1 { numGroups = 1 : i32}

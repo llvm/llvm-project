@@ -9,7 +9,6 @@
 #ifndef PYTHON_BINDINGS_LINALG_OPS
 #define PYTHON_BINDINGS_LINALG_OPS
 
-include "mlir/Bindings/Python/Attributes.td"
 include "mlir/Dialect/Linalg/IR/LinalgOps.td"
 include "mlir/Dialect/Linalg/IR/LinalgStructuredOps.td"
 

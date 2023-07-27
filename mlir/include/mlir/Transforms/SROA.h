@@ -13,6 +13,7 @@
 #include "mlir/Interfaces/MemorySlotInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
 #include "llvm/ADT/Statistic.h"
+#include <variant>
 
 namespace mlir {
 

@@ -154,7 +154,6 @@ namespace {
       (void) llvm::createSeparateConstOffsetFromGEPPass();
       (void) llvm::createSpeculativeExecutionPass();
       (void) llvm::createSpeculativeExecutionIfHasBranchDivergencePass();
-      (void) llvm::createRewriteSymbolsPass();
       (void) llvm::createStraightLineStrengthReducePass();
       (void)llvm::createScalarizeMaskedMemIntrinLegacyPass();
       (void) llvm::createHardwareLoopsLegacyPass();

@@ -33,8 +33,8 @@ b:
 
 
 // DWARF: .debug_line contents:
-// DWARF:      0x0000000000000000      7      0      1   0   0  is_stmt
-// DWARF-NEXT: 0x0000000000000004      7      0      1   0   0  is_stmt end_sequence
+// DWARF:      0x0000000000000000      7      0      1   0   0       0  is_stmt
+// DWARF-NEXT: 0x0000000000000004      7      0      1   0   0       0  is_stmt end_sequence
 
 
 // DWARF-NOT: .debug_ranges contents:

@@ -846,8 +846,8 @@ define i32 @test52(i32 %n, i32 %m) {
 
 define i32 @test53(i32 %x) {
 ; CHECK-LABEL: @test53(
-; CHECK-NEXT:    [[AND:%.*]] = and i32 [[X:%.*]], 2
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[AND]], [[X]]
+; CHECK-NEXT:    [[TMP1:%.*]] = and i32 [[X:%.*]], -3
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP1]], 0
 ; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[CMP]], i32 2, i32 1
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
@@ -2892,10 +2892,9 @@ define i32 @select_replacement_loop2(i32 %arg, i32 %arg2) {
   ret i32 %sel
 }
 
-; TODO: Dropping the inbounds flag should not be necessary for this fold.
 define ptr @select_replacement_gep_inbounds(ptr %base, i64 %offset) {
 ; CHECK-LABEL: @select_replacement_gep_inbounds(
-; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i8, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i8, ptr [[BASE:%.*]], i64 [[OFFSET:%.*]]
 ; CHECK-NEXT:    ret ptr [[GEP]]
 ;
   %cmp = icmp eq i64 %offset, 0

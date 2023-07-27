@@ -192,7 +192,6 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   } else
     CmdArgs.push_back(OutputFile);
 
-  Args.AddAllArgs(CmdArgs, options::OPT_e);
   // FIXME: add -N, -n flags
   Args.AddLastArg(CmdArgs, options::OPT_r);
   Args.AddLastArg(CmdArgs, options::OPT_s);
@@ -518,8 +517,6 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
       Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
           .equals_insensitive("lld");
 }
-
-bool toolchains::MinGW::IsIntegratedAssemblerDefault() const { return true; }
 
 Tool *toolchains::MinGW::getTool(Action::ActionClass AC) const {
   switch (AC) {

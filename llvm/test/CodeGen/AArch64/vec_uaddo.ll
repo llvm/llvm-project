@@ -145,17 +145,17 @@ define <16 x i32> @uaddo_v16i8(<16 x i8> %a0, <16 x i8> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    zip2 v2.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
 ; CHECK-NEXT:    ushll v1.4s, v1.4h, #0
-; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
 ; CHECK-NEXT:    zip1 v3.8b, v0.8b, v0.8b
 ; CHECK-NEXT:    zip2 v5.8b, v0.8b, v0.8b
-; CHECK-NEXT:    shl v1.4s, v1.4s, #31
-; CHECK-NEXT:    shl v2.4s, v2.4s, #31
-; CHECK-NEXT:    cmlt v0.4s, v1.4s, #0
-; CHECK-NEXT:    cmlt v1.4s, v2.4s, #0
+; CHECK-NEXT:    shl v0.4s, v1.4s, #31
+; CHECK-NEXT:    ushll v2.4s, v2.4h, #0
+; CHECK-NEXT:    cmlt v0.4s, v0.4s, #0
+; CHECK-NEXT:    shl v1.4s, v2.4s, #31
 ; CHECK-NEXT:    ushll v2.4s, v3.4h, #0
 ; CHECK-NEXT:    ushll v3.4s, v5.4h, #0
 ; CHECK-NEXT:    shl v2.4s, v2.4s, #31
 ; CHECK-NEXT:    shl v3.4s, v3.4s, #31
+; CHECK-NEXT:    cmlt v1.4s, v1.4s, #0
 ; CHECK-NEXT:    cmlt v2.4s, v2.4s, #0
 ; CHECK-NEXT:    cmlt v3.4s, v3.4s, #0
 ; CHECK-NEXT:    ret
@@ -218,7 +218,7 @@ define <4 x i32> @uaddo_v4i24(<4 x i24> %a0, <4 x i24> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    mov w10, v0.s[1]
 ; CHECK-NEXT:    fmov w11, s0
 ; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    bic v1.4s, #255, lsl #24
+; CHECK-NEXT:    bic v1.4s, #1, lsl #24
 ; CHECK-NEXT:    sturh w8, [x0, #9]
 ; CHECK-NEXT:    lsr w8, w8, #16
 ; CHECK-NEXT:    cmeq v1.4s, v1.4s, v0.4s
@@ -251,12 +251,13 @@ define <4 x i32> @uaddo_v4i1(<4 x i1> %a0, <4 x i1> %a1, ptr %p2) nounwind {
 ; CHECK-NEXT:    and v1.8b, v1.8b, v2.8b
 ; CHECK-NEXT:    and v0.8b, v0.8b, v2.8b
 ; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
-; CHECK-NEXT:    shl v1.4h, v0.4h, #15
-; CHECK-NEXT:    and v2.8b, v0.8b, v2.8b
-; CHECK-NEXT:    cmeq v0.4h, v2.4h, v0.4h
-; CHECK-NEXT:    cmlt v1.4h, v1.4h, #0
-; CHECK-NEXT:    mvn v0.8b, v0.8b
+; CHECK-NEXT:    fmov d1, d0
+; CHECK-NEXT:    shl v2.4h, v0.4h, #15
+; CHECK-NEXT:    bic v1.4h, #2
+; CHECK-NEXT:    cmeq v0.4h, v1.4h, v0.4h
+; CHECK-NEXT:    cmlt v1.4h, v2.4h, #0
 ; CHECK-NEXT:    and v1.8b, v1.8b, v3.8b
+; CHECK-NEXT:    mvn v0.8b, v0.8b
 ; CHECK-NEXT:    addv h1, v1.4h
 ; CHECK-NEXT:    sshll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    fmov w8, s1

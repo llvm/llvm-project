@@ -262,3 +262,16 @@ define <8 x half> @test_shuf15(<8 x half> %a, <8 x half> %b)
   %r = shufflevector <8 x half> %a, <8 x half> %b, <8 x i32> <i32 1, i32 2, i32 7, i32 2, i32 0, i32 3, i32 2, i32 15>
   ret <8 x half> %r
 }
+
+define <4 x i32> @extract_shuffle(<8 x i16> %j, <4 x i16> %k) {
+; CHECK-LABEL: extract_shuffle:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ushll2 v0.4s, v0.8h, #3
+; CHECK-NEXT:    ret
+  %a = shufflevector <8 x i16> %j, <8 x i16> poison, <8 x i32> <i32 4, i32 5, i32 6, i32 7, i32 poison, i32 poison, i32 poison, i32 poison>
+  %b = shufflevector <8 x i16> %a, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %c = zext <4 x i16> %b to <4 x i32>
+  %d = shl <4 x i32> %c, <i32 3, i32 3, i32 3, i32 3>
+  ret <4 x i32> %d
+}
+

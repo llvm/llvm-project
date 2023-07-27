@@ -66,7 +66,7 @@
 // CHECK:             %[[VAL_54:.*]] = fir.insert_value %[[VAL_53]], %[[VAL_48]], [1 : index] : (tuple<!fir.boxchar<1>, i1>, i1) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:             %[[VAL_55:.*]] = fir.insert_value %[[VAL_54]], %[[VAL_52]], [0 : index] : (tuple<!fir.boxchar<1>, i1>, !fir.boxchar<1>) -> tuple<!fir.boxchar<1>, i1>
 // CHECK:             %[[VAL_56:.*]] = hlfir.designate %[[VAL_42]]#0 (%[[VAL_45]])  typeparams %[[VAL_39]] : (!fir.box<!fir.array<1x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
-// CHECK:             hlfir.assign %[[VAL_52]] to %[[VAL_56]] : !fir.boxchar<1>, !fir.boxchar<1>
+// CHECK:             hlfir.assign %[[VAL_52]] to %[[VAL_56]] temporary_lhs : !fir.boxchar<1>, !fir.boxchar<1>
 // CHECK:           }
 // CHECK:           %[[VAL_57:.*]] = fir.undefined tuple<!fir.box<!fir.array<1x!fir.char<1,?>>>, i1>
 // CHECK:           %[[VAL_58:.*]] = fir.insert_value %[[VAL_57]], %[[VAL_43]], [1 : index] : (tuple<!fir.box<!fir.array<1x!fir.char<1,?>>>, i1>, i1) -> tuple<!fir.box<!fir.array<1x!fir.char<1,?>>>, i1>

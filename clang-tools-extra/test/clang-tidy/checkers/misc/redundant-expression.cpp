@@ -843,3 +843,15 @@ int TestAssignSideEffect(int i) {
 
   return 2;
 }
+
+namespace PR63096 {
+
+struct alignas(sizeof(int)) X {
+  int x;
+};
+
+static_assert(alignof(X) == sizeof(X));
+static_assert(sizeof(X) == sizeof(X));
+// CHECK-MESSAGES: :[[@LINE-1]]:25: warning: both sides of operator are equivalent
+
+}

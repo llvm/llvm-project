@@ -8,6 +8,7 @@
 
 #include "ObjcopyOptions.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/BinaryFormat/COFF.h"
@@ -204,6 +205,7 @@ static SectionFlag parseSectionRenameFlag(StringRef SectionName) {
       .CaseLower("contents", SectionFlag::SecContents)
       .CaseLower("share", SectionFlag::SecShare)
       .CaseLower("exclude", SectionFlag::SecExclude)
+      .CaseLower("large", SectionFlag::SecLarge)
       .Default(SectionFlag::SecNone);
 }
 
@@ -217,7 +219,7 @@ parseSectionFlagSet(ArrayRef<StringRef> SectionFlags) {
           errc::invalid_argument,
           "unrecognized section flag '%s'. Flags supported for GNU "
           "compatibility: alloc, load, noload, readonly, exclude, debug, "
-          "code, data, rom, share, contents, merge, strings",
+          "code, data, rom, share, contents, merge, strings, large",
           Flag.str().c_str());
     ParsedFlags |= ParsedFlag;
   }
@@ -331,7 +333,11 @@ static const StringMap<MachineInfo> TargetMap{
     // SPARC
     {"elf32-sparc", {ELF::EM_SPARC, false, false}},
     {"elf32-sparcel", {ELF::EM_SPARC, false, true}},
+    // Hexagon
     {"elf32-hexagon", {ELF::EM_HEXAGON, false, true}},
+    // LoongArch
+    {"elf32-loongarch", {ELF::EM_LOONGARCH, false, true}},
+    {"elf64-loongarch", {ELF::EM_LOONGARCH, true, true}},
 };
 
 static Expected<TargetInfo>

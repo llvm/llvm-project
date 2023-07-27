@@ -16,6 +16,7 @@
 
 #include "../WebAssemblySubtarget.h"
 #include "llvm/BinaryFormat/Wasm.h"
+#include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/Support/DataTypes.h"
 #include <memory>
@@ -28,7 +29,8 @@ class MCInstrInfo;
 class MCObjectTargetWriter;
 class Triple;
 
-MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII);
+MCCodeEmitter *createWebAssemblyMCCodeEmitter(const MCInstrInfo &MCII,
+                                              MCContext &Ctx);
 
 MCAsmBackend *createWebAssemblyAsmBackend(const Triple &TT);
 

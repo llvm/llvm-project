@@ -84,6 +84,8 @@ public:
   // config->machine has been set.
   void addWinSysRootLibSearchPaths();
 
+  void addClangLibSearchPaths(const std::string &argv0);
+
   // Used by the resolver to parse .drectve section contents.
   void parseDirectives(InputFile *file);
 

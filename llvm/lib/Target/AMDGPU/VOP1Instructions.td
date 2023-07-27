@@ -266,7 +266,7 @@ defm V_CVT_F64_I32 : VOP1Inst <"v_cvt_f64_i32", VOP1_F64_I32, sint_to_fp>;
 }
 
 defm V_CVT_F32_F64 : VOP1Inst <"v_cvt_f32_f64", VOP_F32_F64,  fpround>;
-defm V_CVT_F64_F32 : VOP1Inst <"v_cvt_f64_f32", VOP_F64_F32,  fpextend>;
+defm V_CVT_F64_F32 : VOP1Inst <"v_cvt_f64_f32", VOP_F64_F32,  any_fpextend>;
 // OMod clears exceptions when set in this instruction
 defm V_CVT_U32_F64 : VOP1Inst <"v_cvt_u32_f64", VOP_I32_F64_SPECIAL_OMOD,  fp_to_uint>;
 
@@ -290,15 +290,15 @@ defm V_CVT_U32_F32 : VOP1Inst <"v_cvt_u32_f32", VOP_I32_F32_SPECIAL_OMOD, fp_to_
 defm V_CVT_I32_F32 : VOP1Inst <"v_cvt_i32_f32", VOP_I32_F32_SPECIAL_OMOD, fp_to_sint>;
 let FPDPRounding = 1, isReMaterializable = 0 in {
   let OtherPredicates = [NotHasTrue16BitInsts] in
-  defm V_CVT_F16_F32 : VOP1Inst <"v_cvt_f16_f32", VOP_F16_F32, fpround>;
+  defm V_CVT_F16_F32 : VOP1Inst <"v_cvt_f16_f32", VOP_F16_F32, any_fpround>;
   let OtherPredicates = [HasTrue16BitInsts] in
-  defm V_CVT_F16_F32_t16 : VOP1Inst <"v_cvt_f16_f32_t16", VOPProfile_True16<VOP_F16_F32>, fpround>;
+  defm V_CVT_F16_F32_t16 : VOP1Inst <"v_cvt_f16_f32_t16", VOPProfile_True16<VOP_F16_F32>, any_fpround>;
 } // End FPDPRounding = 1, isReMaterializable = 0
 
 let OtherPredicates = [NotHasTrue16BitInsts] in
-defm V_CVT_F32_F16 : VOP1Inst <"v_cvt_f32_f16", VOP_F32_F16, fpextend>;
+defm V_CVT_F32_F16 : VOP1Inst <"v_cvt_f32_f16", VOP_F32_F16, any_fpextend>;
 let OtherPredicates = [HasTrue16BitInsts] in
-defm V_CVT_F32_F16_t16 : VOP1Inst <"v_cvt_f32_f16_t16", VOPProfile_True16<VOP_F32_F16>, fpextend>;
+defm V_CVT_F32_F16_t16 : VOP1Inst <"v_cvt_f32_f16_t16", VOPProfile_True16<VOP_F32_F16>, any_fpextend>;
 
 let ReadsModeReg = 0, mayRaiseFPException = 0 in {
 defm V_CVT_RPI_I32_F32 : VOP1Inst <"v_cvt_rpi_i32_f32", VOP_I32_F32, cvt_rpi_i32_f32>;
@@ -332,7 +332,7 @@ defm V_SQRT_F32 : VOP1Inst <"v_sqrt_f32", VOP_F32_F32, any_amdgcn_sqrt>;
 let TRANS = 1, SchedRW = [WriteTrans64] in {
 defm V_RCP_F64 : VOP1Inst <"v_rcp_f64", VOP_F64_F64, AMDGPUrcp>;
 defm V_RSQ_F64 : VOP1Inst <"v_rsq_f64", VOP_F64_F64, AMDGPUrsq>;
-defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64, any_amdgcn_sqrt>;
+defm V_SQRT_F64 : VOP1Inst <"v_sqrt_f64", VOP_F64_F64, int_amdgcn_sqrt>;
 } // End TRANS = 1, SchedRW = [WriteTrans64]
 
 let TRANS = 1, SchedRW = [WriteTrans32] in {

@@ -78,6 +78,7 @@ set(files
   __algorithm/pstl_backends/cpu_backends/fill.h
   __algorithm/pstl_backends/cpu_backends/find_if.h
   __algorithm/pstl_backends/cpu_backends/for_each.h
+  __algorithm/pstl_backends/cpu_backends/libdispatch.h
   __algorithm/pstl_backends/cpu_backends/merge.h
   __algorithm/pstl_backends/cpu_backends/serial.h
   __algorithm/pstl_backends/cpu_backends/stable_sort.h
@@ -94,6 +95,7 @@ set(files
   __algorithm/pstl_is_partitioned.h
   __algorithm/pstl_merge.h
   __algorithm/pstl_replace.h
+  __algorithm/pstl_sort.h
   __algorithm/pstl_stable_sort.h
   __algorithm/pstl_transform.h
   __algorithm/push_heap.h
@@ -326,7 +328,6 @@ set(files
   __coroutine/coroutine_traits.h
   __coroutine/noop_coroutine_handle.h
   __coroutine/trivial_awaitables.h
-  __debug
   __debug_utils/randomize_range.h
   __debug_utils/strict_weak_ordering_check.h
   __exception/exception.h
@@ -385,6 +386,7 @@ set(files
   __format/range_formatter.h
   __format/unicode.h
   __format/width_estimation_table.h
+  __format/write_escaped.h
   __functional/binary_function.h
   __functional/binary_negate.h
   __functional/bind.h
@@ -418,6 +420,7 @@ set(files
   __fwd/hash.h
   __fwd/ios.h
   __fwd/istream.h
+  __fwd/mdspan.h
   __fwd/memory_resource.h
   __fwd/ostream.h
   __fwd/pair.h
@@ -463,6 +466,7 @@ set(files
   __iterator/permutable.h
   __iterator/prev.h
   __iterator/projected.h
+  __iterator/ranges_iterator_traits.h
   __iterator/readable_traits.h
   __iterator/reverse_access.h
   __iterator/reverse_iterator.h
@@ -476,7 +480,11 @@ set(files
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/locale_guard.h
   __mbstate_t.h
+  __mdspan/default_accessor.h
   __mdspan/extents.h
+  __mdspan/layout_left.h
+  __mdspan/layout_right.h
+  __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h
   __memory/aligned_alloc.h
@@ -502,7 +510,6 @@ set(files
   __memory/temp_value.h
   __memory/temporary_buffer.h
   __memory/uninitialized_algorithms.h
-  __memory/uninitialized_buffer.h
   __memory/unique_ptr.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
@@ -609,7 +616,6 @@ set(files
   __ranges/common_view.h
   __ranges/concepts.h
   __ranges/container_compatible_range.h
-  __ranges/copyable_box.h
   __ranges/counted.h
   __ranges/dangling.h
   __ranges/data.h
@@ -626,12 +632,14 @@ set(files
   __ranges/istream_view.h
   __ranges/join_view.h
   __ranges/lazy_split_view.h
+  __ranges/movable_box.h
   __ranges/non_propagating_cache.h
   __ranges/owning_view.h
   __ranges/range_adaptor.h
   __ranges/rbegin.h
   __ranges/ref_view.h
   __ranges/rend.h
+  __ranges/repeat_view.h
   __ranges/reverse_view.h
   __ranges/single_view.h
   __ranges/size.h
@@ -639,11 +647,13 @@ set(files
   __ranges/subrange.h
   __ranges/take_view.h
   __ranges/take_while_view.h
+  __ranges/to.h
   __ranges/transform_view.h
   __ranges/view_interface.h
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
+  __std_clang_module
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h
@@ -674,6 +684,7 @@ set(files
   __system_error/error_condition.h
   __system_error/system_error.h
   __thread/formatter.h
+  __thread/id.h
   __thread/poll_with_backoff.h
   __thread/this_thread.h
   __thread/thread.h
@@ -706,6 +717,7 @@ set(files
   __type_traits/conjunction.h
   __type_traits/copy_cv.h
   __type_traits/copy_cvref.h
+  __type_traits/datasizeof.h
   __type_traits/decay.h
   __type_traits/dependent_type.h
   __type_traits/disjunction.h
@@ -952,6 +964,7 @@ set(files
   numeric
   optional
   ostream
+  print
   queue
   random
   ranges

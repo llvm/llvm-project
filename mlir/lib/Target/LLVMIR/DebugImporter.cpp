@@ -23,14 +23,14 @@ using namespace mlir;
 using namespace mlir::LLVM;
 using namespace mlir::LLVM::detail;
 
-void DebugImporter::translate(llvm::Function *func, LLVMFuncOp funcOp) {
+Location DebugImporter::translateFuncLocation(llvm::Function *func) {
   if (!func->getSubprogram())
-    return;
+    return UnknownLoc::get(context);
 
   // Add a fused location to link the subprogram information.
   StringAttr name = StringAttr::get(context, func->getSubprogram()->getName());
-  funcOp->setLoc(FusedLocWith<DISubprogramAttr>::get(
-      {NameLoc::get(name)}, translate(func->getSubprogram()), context));
+  return FusedLocWith<DISubprogramAttr>::get(
+      {NameLoc::get(name)}, translate(func->getSubprogram()), context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -85,6 +85,12 @@ DIDerivedTypeAttr DebugImporter::translateImpl(llvm::DIDerivedType *node) {
 
 DIFileAttr DebugImporter::translateImpl(llvm::DIFile *node) {
   return DIFileAttr::get(context, node->getFilename(), node->getDirectory());
+}
+
+DILabelAttr DebugImporter::translateImpl(llvm::DILabel *node) {
+  return DILabelAttr::get(context, translate(node->getScope()),
+                          getStringAttrOrNull(node->getRawName()),
+                          translate(node->getFile()), node->getLine());
 }
 
 DILexicalBlockAttr DebugImporter::translateImpl(llvm::DILexicalBlock *node) {
@@ -200,6 +206,8 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DIFile>(node))
       return translateImpl(casted);
+    if (auto *casted = dyn_cast<llvm::DILabel>(node))
+      return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DILexicalBlock>(node))
       return translateImpl(casted);
     if (auto *casted = dyn_cast<llvm::DILexicalBlockFile>(node))
@@ -229,7 +237,7 @@ DINodeAttr DebugImporter::translate(llvm::DINode *node) {
 
 Location DebugImporter::translateLoc(llvm::DILocation *loc) {
   if (!loc)
-    return mlirModule.getLoc();
+    return UnknownLoc::get(context);
 
   // Get the file location of the instruction.
   Location result = FileLineColLoc::get(context, loc->getFilename(),

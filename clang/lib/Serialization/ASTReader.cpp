@@ -1875,6 +1875,21 @@ ASTReader::getGlobalPreprocessedEntityID(ModuleFile &M,
   return LocalID + I->second;
 }
 
+const FileEntry *HeaderFileInfoTrait::getFile(const internal_key_type &Key) {
+  FileManager &FileMgr = Reader.getFileManager();
+  if (!Key.Imported) {
+    if (auto File = FileMgr.getFile(Key.Filename))
+      return *File;
+    return nullptr;
+  }
+
+  std::string Resolved = std::string(Key.Filename);
+  Reader.ResolveImportedPath(M, Resolved);
+  if (auto File = FileMgr.getFile(Resolved))
+    return *File;
+  return nullptr;
+}
+
 unsigned HeaderFileInfoTrait::ComputeHash(internal_key_ref ikey) {
   return llvm::hash_combine(ikey.Size, ikey.ModTime);
 }
@@ -1895,23 +1910,8 @@ bool HeaderFileInfoTrait::EqualKey(internal_key_ref a, internal_key_ref b) {
     return true;
 
   // Determine whether the actual files are equivalent.
-  FileManager &FileMgr = Reader.getFileManager();
-  auto GetFile = [&](const internal_key_type &Key) -> const FileEntry* {
-    if (!Key.Imported) {
-      if (auto File = FileMgr.getFile(Key.Filename))
-        return *File;
-      return nullptr;
-    }
-
-    std::string Resolved = std::string(Key.Filename);
-    Reader.ResolveImportedPath(M, Resolved);
-    if (auto File = FileMgr.getFile(Resolved))
-      return *File;
-    return nullptr;
-  };
-
-  const FileEntry *FEA = GetFile(a);
-  const FileEntry *FEB = GetFile(b);
+  const FileEntry *FEA = getFile(a);
+  const FileEntry *FEB = getFile(b);
   return FEA && FEA == FEB;
 }
 
@@ -1940,6 +1940,14 @@ HeaderFileInfoTrait::ReadData(internal_key_ref key, const unsigned char *d,
   const unsigned char *End = d + DataLen;
   HeaderFileInfo HFI;
   unsigned Flags = *d++;
+
+  bool Included = (Flags >> 6) & 0x01;
+  if (Included)
+    if (const FileEntry *FE = getFile(key))
+      // Not using \c Preprocessor::markIncluded(), since that would attempt to
+      // deserialize this header file info again.
+      Reader.getPreprocessor().getIncludedFiles().insert(FE);
+
   // FIXME: Refactor with mergeHeaderFileInfo in HeaderSearch.cpp.
   HFI.isImport |= (Flags >> 5) & 0x01;
   HFI.isPragmaOnce |= (Flags >> 4) & 0x01;
@@ -2982,6 +2990,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       BaseDirectoryAsWritten = Blob;
       assert(!F.ModuleName.empty() &&
              "MODULE_DIRECTORY found before MODULE_NAME");
+      F.BaseDirectory = std::string(Blob);
+      if (!PP.getPreprocessorOpts().ModulesCheckRelocated)
+        break;
       // If we've already loaded a module map file covering this module, we may
       // have a better path for it (relative to the current build).
       Module *M = PP.getHeaderSearchInfo().lookupModule(
@@ -3003,8 +3014,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
           }
         }
         F.BaseDirectory = std::string(M->Directory->getName());
-      } else {
-        F.BaseDirectory = std::string(Blob);
       }
       break;
     }
@@ -3025,22 +3034,6 @@ ASTReader::ReadControlBlock(ModuleFile &F,
       F.NumUserInputFiles = NumUserInputs;
       break;
     }
-  }
-}
-
-void ASTReader::readIncludedFiles(ModuleFile &F, StringRef Blob,
-                                  Preprocessor &PP) {
-  using namespace llvm::support;
-
-  const unsigned char *D = (const unsigned char *)Blob.data();
-  unsigned FileCount = endian::readNext<uint32_t, little, unaligned>(D);
-
-  for (unsigned I = 0; I < FileCount; ++I) {
-    size_t ID = endian::readNext<uint32_t, little, unaligned>(D);
-    InputFileInfo IFI = getInputFileInfo(F, ID);
-    if (llvm::ErrorOr<const FileEntry *> File =
-            PP.getFileManager().getFile(IFI.Filename))
-      PP.getIncludedFiles().insert(*File);
   }
 }
 
@@ -3795,10 +3788,6 @@ llvm::Error ASTReader::ReadASTBlock(ModuleFile &F,
       break;
     }
 
-    case PP_INCLUDED_FILES:
-      readIncludedFiles(F, Blob, PP);
-      break;
-
     case LATE_PARSED_TEMPLATE:
       LateParsedTemplates.emplace_back(
           std::piecewise_construct, std::forward_as_tuple(&F),
@@ -4002,7 +3991,8 @@ ASTReader::ReadModuleMapFileBlock(RecordData &Record, ModuleFile &F,
   // usable header search context.
   assert(!F.ModuleName.empty() &&
          "MODULE_NAME should come before MODULE_MAP_FILE");
-  if (F.Kind == MK_ImplicitModule && ModuleMgr.begin()->Kind != MK_MainFile) {
+  if (PP.getPreprocessorOpts().ModulesCheckRelocated &&
+      F.Kind == MK_ImplicitModule && ModuleMgr.begin()->Kind != MK_MainFile) {
     // An implicitly-loaded module file should have its module listed in some
     // module map file that we've already loaded.
     Module *M =
@@ -4386,26 +4376,55 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     if (F.OriginalSourceFileID.isValid())
       F.OriginalSourceFileID = TranslateFileID(F, F.OriginalSourceFileID);
 
-    // Preload all the pending interesting identifiers by marking them out of
-    // date.
     for (auto Offset : F.PreloadIdentifierOffsets) {
       const unsigned char *Data = F.IdentifierTableData + Offset;
 
       ASTIdentifierLookupTrait Trait(*this, F);
       auto KeyDataLen = Trait.ReadKeyDataLength(Data);
       auto Key = Trait.ReadKey(Data, KeyDataLen.first);
-      auto &II = PP.getIdentifierTable().getOwn(Key);
-      II.setOutOfDate(true);
+
+      IdentifierInfo *II;
+      if (!PP.getLangOpts().CPlusPlus) {
+        // Identifiers present in both the module file and the importing
+        // instance are marked out-of-date so that they can be deserialized
+        // on next use via ASTReader::updateOutOfDateIdentifier().
+        // Identifiers present in the module file but not in the importing
+        // instance are ignored for now, preventing growth of the identifier
+        // table. They will be deserialized on first use via ASTReader::get().
+        auto It = PP.getIdentifierTable().find(Key);
+        if (It == PP.getIdentifierTable().end())
+          continue;
+        II = It->second;
+      } else {
+        // With C++ modules, not many identifiers are considered interesting.
+        // All identifiers in the module file can be placed into the identifier
+        // table of the importing instance and marked as out-of-date. This makes
+        // ASTReader::get() a no-op, and deserialization will take place on
+        // first/next use via ASTReader::updateOutOfDateIdentifier().
+        II = &PP.getIdentifierTable().getOwn(Key);
+      }
+
+      II->setOutOfDate(true);
 
       // Mark this identifier as being from an AST file so that we can track
       // whether we need to serialize it.
-      markIdentifierFromAST(*this, II);
+      markIdentifierFromAST(*this, *II);
 
       // Associate the ID with the identifier so that the writer can reuse it.
       auto ID = Trait.ReadIdentifierID(Data + KeyDataLen.first);
-      SetIdentifierInfo(ID, &II);
+      SetIdentifierInfo(ID, II);
     }
   }
+
+  // Builtins and library builtins have already been initialized. Mark all
+  // identifiers as out-of-date, so that they are deserialized on first use.
+  if (Type == MK_PCH || Type == MK_Preamble || Type == MK_MainFile)
+    for (auto &Id : PP.getIdentifierTable())
+      Id.second->setOutOfDate(true);
+
+  // Mark selectors as out of date.
+  for (const auto &Sel : SelectorGeneration)
+    SelectorOutOfDate[Sel.first] = true;
 
   // Setup the import locations and notify the module manager that we've
   // committed to these module files.
@@ -4423,25 +4442,6 @@ ASTReader::ASTReadResult ASTReader::ReadAST(StringRef FileName,
     else
       F.ImportLoc = TranslateSourceLocation(*M.ImportedBy, M.ImportLoc);
   }
-
-  if (!PP.getLangOpts().CPlusPlus ||
-      (Type != MK_ImplicitModule && Type != MK_ExplicitModule &&
-       Type != MK_PrebuiltModule)) {
-    // Mark all of the identifiers in the identifier table as being out of date,
-    // so that various accessors know to check the loaded modules when the
-    // identifier is used.
-    //
-    // For C++ modules, we don't need information on many identifiers (just
-    // those that provide macros or are poisoned), so we mark all of
-    // the interesting ones via PreloadIdentifierOffsets.
-    for (IdentifierTable::iterator Id = PP.getIdentifierTable().begin(),
-                                IdEnd = PP.getIdentifierTable().end();
-         Id != IdEnd; ++Id)
-      Id->second->setOutOfDate(true);
-  }
-  // Mark selectors as out of date.
-  for (const auto &Sel : SelectorGeneration)
-    SelectorOutOfDate[Sel.first] = true;
 
   // Resolve any unresolved module exports.
   for (unsigned I = 0, N = UnresolvedModuleRefs.size(); I != N; ++I) {
@@ -5609,7 +5609,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       break;
 
     case SUBMODULE_DEFINITION: {
-      if (Record.size() < 12)
+      if (Record.size() < 13)
         return llvm::createStringError(std::errc::illegal_byte_sequence,
                                        "malformed module definition");
 
@@ -5618,6 +5618,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       SubmoduleID GlobalID = getGlobalSubmoduleID(F, Record[Idx++]);
       SubmoduleID Parent = getGlobalSubmoduleID(F, Record[Idx++]);
       Module::ModuleKind Kind = (Module::ModuleKind)Record[Idx++];
+      SourceLocation DefinitionLoc = ReadSourceLocation(F, Record[Idx++]);
       bool IsFramework = Record[Idx++];
       bool IsExplicit = Record[Idx++];
       bool IsSystem = Record[Idx++];
@@ -5638,8 +5639,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
           ModMap.findOrCreateModule(Name, ParentModule, IsFramework, IsExplicit)
               .first;
 
-      // FIXME: set the definition loc for CurrentModule, or call
-      // ModMap.setInferredModuleAllowedBy()
+      // FIXME: Call ModMap.setInferredModuleAllowedBy()
 
       SubmoduleID GlobalIndex = GlobalID - NUM_PREDEF_SUBMODULE_IDS;
       if (GlobalIndex >= SubmodulesLoaded.size() ||
@@ -5668,6 +5668,7 @@ llvm::Error ASTReader::ReadSubmoduleBlock(ModuleFile &F,
       }
 
       CurrentModule->Kind = Kind;
+      CurrentModule->DefinitionLoc = DefinitionLoc;
       CurrentModule->Signature = F.Signature;
       CurrentModule->IsFromModuleFile = true;
       CurrentModule->IsSystem = IsSystem || CurrentModule->IsSystem;
@@ -8596,6 +8597,7 @@ void ASTReader::ReadLateParsedTemplates(
 
       auto LT = std::make_unique<LateParsedTemplate>();
       LT->D = GetLocalDecl(*FMod, LateParsed[Idx++]);
+      LT->FPO = FPOptions::getFromOpaqueInt(LateParsed[Idx++]);
 
       ModuleFile *F = getOwningModuleFile(LT->D);
       assert(F && "No module");
@@ -10362,6 +10364,15 @@ OMPClause *OMPClauseReader::readClause() {
   case llvm::omp::OMPC_ompx_dyn_cgroup_mem:
     C = new (Context) OMPXDynCGroupMemClause();
     break;
+  case llvm::omp::OMPC_doacross: {
+    unsigned NumVars = Record.readInt();
+    unsigned NumLoops = Record.readInt();
+    C = OMPDoacrossClause::CreateEmpty(Context, NumVars, NumLoops);
+    break;
+  }
+  case llvm::omp::OMPC_ompx_attribute:
+    C = new (Context) OMPXAttributeClause();
+    break;
 #define OMP_CLAUSE_NO_CLASS(Enum, Str)                                         \
   case llvm::omp::Enum:                                                        \
     break;
@@ -11436,6 +11447,31 @@ void OMPClauseReader::VisitOMPXDynCGroupMemClause(OMPXDynCGroupMemClause *C) {
   VisitOMPClauseWithPreInit(C);
   C->setSize(Record.readSubExpr());
   C->setLParenLoc(Record.readSourceLocation());
+}
+
+void OMPClauseReader::VisitOMPDoacrossClause(OMPDoacrossClause *C) {
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setDependenceType(
+      static_cast<OpenMPDoacrossClauseModifier>(Record.readInt()));
+  C->setDependenceLoc(Record.readSourceLocation());
+  C->setColonLoc(Record.readSourceLocation());
+  unsigned NumVars = C->varlist_size();
+  SmallVector<Expr *, 16> Vars;
+  Vars.reserve(NumVars);
+  for (unsigned I = 0; I != NumVars; ++I)
+    Vars.push_back(Record.readSubExpr());
+  C->setVarRefs(Vars);
+  for (unsigned I = 0, E = C->getNumLoops(); I < E; ++I)
+    C->setLoopData(I, Record.readSubExpr());
+}
+
+void OMPClauseReader::VisitOMPXAttributeClause(OMPXAttributeClause *C) {
+  AttrVec Attrs;
+  Record.readAttributes(Attrs);
+  C->setAttrs(Attrs);
+  C->setLocStart(Record.readSourceLocation());
+  C->setLParenLoc(Record.readSourceLocation());
+  C->setLocEnd(Record.readSourceLocation());
 }
 
 OMPTraitInfo *ASTRecordReader::readOMPTraitInfo() {

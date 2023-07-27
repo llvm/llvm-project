@@ -12,6 +12,7 @@
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Dialect.h"
 #include "mlir/IR/IRMapping.h"
+#include "mlir/IR/Matchers.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/IR/OperationSupport.h"
 #include "mlir/IR/PatternMatch.h"
@@ -360,7 +361,8 @@ Operation::setPropertiesFromAttribute(Attribute attr,
     *getPropertiesStorage().as<Attribute *>() = attr;
     return success();
   }
-  return info->setOpPropertiesFromAttribute(this, attr, diagnostic);
+  return info->setOpPropertiesFromAttribute(
+      this->getName(), this->getPropertiesStorage(), attr, diagnostic);
 }
 
 void Operation::copyProperties(OpaqueProperties rhs) {
@@ -627,6 +629,15 @@ LogicalResult Operation::fold(ArrayRef<Attribute> operands,
   return interface->fold(this, operands, results);
 }
 
+LogicalResult Operation::fold(SmallVectorImpl<OpFoldResult> &results) {
+  // Check if any operands are constants.
+  SmallVector<Attribute> constants;
+  constants.assign(getNumOperands(), Attribute());
+  for (unsigned i = 0, e = getNumOperands(); i != e; ++i)
+    matchPattern(getOperand(i), m_Constant(&constants[i]));
+  return fold(constants, results);
+}
+
 /// Emit an error with the op name prefixed, like "'dim' op " which is
 /// convenient for verifiers.
 InFlightDiagnostic Operation::emitOpError(const Twine &message) {
@@ -789,6 +800,24 @@ InFlightDiagnostic OpState::emitRemark(const Twine &message) {
 //===----------------------------------------------------------------------===//
 // Op Trait implementations
 //===----------------------------------------------------------------------===//
+
+LogicalResult
+OpTrait::impl::foldCommutative(Operation *op, ArrayRef<Attribute> operands,
+                               SmallVectorImpl<OpFoldResult> &results) {
+  // Nothing to fold if there are not at least 2 operands.
+  if (op->getNumOperands() < 2)
+    return failure();
+  // Move all constant operands to the end.
+  OpOperand *operandsBegin = op->getOpOperands().begin();
+  auto isNonConstant = [&](OpOperand &o) {
+    return !static_cast<bool>(operands[std::distance(operandsBegin, &o)]);
+  };
+  auto *firstConstantIt = llvm::find_if_not(op->getOpOperands(), isNonConstant);
+  auto *newConstantIt = std::stable_partition(
+      firstConstantIt, op->getOpOperands().end(), isNonConstant);
+  // Return success if the op was modified.
+  return success(firstConstantIt != newConstantIt);
+}
 
 OpFoldResult OpTrait::impl::foldIdempotent(Operation *op) {
   if (op->getNumOperands() == 1) {

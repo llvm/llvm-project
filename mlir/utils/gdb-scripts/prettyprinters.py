@@ -166,6 +166,7 @@ for name in [
     "IndexType",
     "IntegerType",
     "Float16Type",
+    "FloatTF32Type",
     "Float32Type",
     "Float64Type",
     "Float80Type",

@@ -482,7 +482,11 @@ public:
   //- auto* i = &a;
   bool VisitDeclaratorDecl(DeclaratorDecl *D) {
     if (!D->getTypeSourceInfo() ||
-        D->getTypeSourceInfo()->getTypeLoc().getBeginLoc() != SearchedLocation)
+        !D->getTypeSourceInfo()->getTypeLoc().getContainedAutoTypeLoc() ||
+        D->getTypeSourceInfo()
+                ->getTypeLoc()
+                .getContainedAutoTypeLoc()
+                .getNameLoc() != SearchedLocation)
       return true;
 
     if (auto *AT = D->getType()->getContainedAutoType()) {

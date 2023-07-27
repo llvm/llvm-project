@@ -438,22 +438,22 @@ public:
   bool matchConstantSelectCmp(MachineInstr &MI, unsigned &OpIdx);
 
   /// Replace an instruction with a G_FCONSTANT with value \p C.
-  bool replaceInstWithFConstant(MachineInstr &MI, double C);
+  void replaceInstWithFConstant(MachineInstr &MI, double C);
 
   /// Replace an instruction with a G_CONSTANT with value \p C.
-  bool replaceInstWithConstant(MachineInstr &MI, int64_t C);
+  void replaceInstWithConstant(MachineInstr &MI, int64_t C);
 
   /// Replace an instruction with a G_CONSTANT with value \p C.
-  bool replaceInstWithConstant(MachineInstr &MI, APInt C);
+  void replaceInstWithConstant(MachineInstr &MI, APInt C);
 
   /// Replace an instruction with a G_IMPLICIT_DEF.
-  bool replaceInstWithUndef(MachineInstr &MI);
+  void replaceInstWithUndef(MachineInstr &MI);
 
   /// Delete \p MI and replace all of its uses with its \p OpIdx-th operand.
-  bool replaceSingleDefInstWithOperand(MachineInstr &MI, unsigned OpIdx);
+  void replaceSingleDefInstWithOperand(MachineInstr &MI, unsigned OpIdx);
 
   /// Delete \p MI and replace all of its uses with \p Replacement.
-  bool replaceSingleDefInstWithReg(MachineInstr &MI, Register Replacement);
+  void replaceSingleDefInstWithReg(MachineInstr &MI, Register Replacement);
 
   /// Return true if \p MOP1 and \p MOP2 are register operands are defined by
   /// equivalent instructions.
@@ -479,7 +479,7 @@ public:
   bool matchOperandIsKnownToBeAPowerOfTwo(MachineInstr &MI, unsigned OpIdx);
 
   /// Erase \p MI
-  bool eraseInst(MachineInstr &MI);
+  void eraseInst(MachineInstr &MI);
 
   /// Return true if MI is a G_ADD which can be simplified to a G_SUB.
   bool matchSimplifyAddToSub(MachineInstr &MI,
@@ -550,7 +550,7 @@ public:
   /// binop (select cond, K0, K1), K2 ->
   ///   select cond, (binop K0, K2), (binop K1, K2)
   bool matchFoldBinOpIntoSelect(MachineInstr &MI, unsigned &SelectOpNo);
-  bool applyFoldBinOpIntoSelect(MachineInstr &MI, const unsigned &SelectOpNo);
+  void applyFoldBinOpIntoSelect(MachineInstr &MI, const unsigned &SelectOpNo);
 
   bool matchCombineInsertVecElts(MachineInstr &MI,
                                  SmallVectorImpl<Register> &MatchInfo);

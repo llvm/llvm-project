@@ -872,6 +872,9 @@ public:
 
   /// Represents the result of a path lookup into the RedirectingFileSystem.
   struct LookupResult {
+    /// Chain of parent directory entries for \c E.
+    llvm::SmallVector<Entry *, 32> Parents;
+
     /// The entry the looked-up path corresponds to.
     Entry *E;
 
@@ -895,6 +898,10 @@ public:
         return FE->getExternalContentsPath();
       return std::nullopt;
     }
+
+    /// Get the (canonical) path of the found entry. This uses the as-written
+    /// path components from the VFS specification.
+    void getPath(llvm::SmallVectorImpl<char> &Path) const;
   };
 
 private:
@@ -984,9 +991,10 @@ private:
   /// into the contents of \p From if it is a directory. Returns a LookupResult
   /// giving the matched entry and, if that entry is a FileEntry or
   /// DirectoryRemapEntry, the path it redirects to in the external file system.
-  ErrorOr<LookupResult> lookupPathImpl(llvm::sys::path::const_iterator Start,
-                                       llvm::sys::path::const_iterator End,
-                                       Entry *From) const;
+  ErrorOr<LookupResult>
+  lookupPathImpl(llvm::sys::path::const_iterator Start,
+                 llvm::sys::path::const_iterator End, Entry *From,
+                 llvm::SmallVectorImpl<Entry *> &Entries) const;
 
   /// Get the status for a path with the provided \c LookupResult.
   ErrorOr<Status> status(const Twine &CanonicalPath, const Twine &OriginalPath,

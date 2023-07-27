@@ -46,6 +46,21 @@ static Value extendVectorRank(OpBuilder &builder, Location loc, Value vec,
   return builder.create<vector::BroadcastOp>(loc, newVecType, vec);
 }
 
+/// Extend the rank of a vector Value by `addedRanks` by adding inner unit
+/// dimensions.
+static Value extendMaskRank(OpBuilder &builder, Location loc, Value vec,
+                            int64_t addedRank) {
+  Value broadcasted = extendVectorRank(builder, loc, vec, addedRank);
+  SmallVector<int64_t> permutation;
+  for (int64_t i = addedRank,
+               e = broadcasted.getType().cast<VectorType>().getRank();
+       i < e; ++i)
+    permutation.push_back(i);
+  for (int64_t i = 0; i < addedRank; ++i)
+    permutation.push_back(i);
+  return builder.create<vector::TransposeOp>(loc, broadcasted, permutation);
+}
+
 //===----------------------------------------------------------------------===//
 // populateVectorTransferPermutationMapLoweringPatterns
 //===----------------------------------------------------------------------===//
@@ -246,24 +261,26 @@ struct TransferWriteNonPermutationLowering
       missingInnerDim.push_back(i);
       exprs.push_back(rewriter.getAffineDimExpr(i));
     }
-    // Add unit dims at the beginning of the shape.
+    // Vector: add unit dims at the beginning of the shape.
     Value newVec = extendVectorRank(rewriter, op.getLoc(), op.getVector(),
                                     missingInnerDim.size());
+    // Mask: add unit dims at the end of the shape.
+    Value newMask;
+    if (op.getMask())
+      newMask = extendMaskRank(rewriter, op.getLoc(), op.getMask(),
+                               missingInnerDim.size());
     exprs.append(map.getResults().begin(), map.getResults().end());
     AffineMap newMap =
         AffineMap::get(map.getNumDims(), 0, exprs, op.getContext());
-    ArrayAttr newInBoundsAttr;
-    if (op.getInBounds()) {
-      // All the new dimensions added are inbound.
-      SmallVector<bool> newInBoundsValues(missingInnerDim.size(), true);
-      for (Attribute attr : op.getInBounds().value().getValue()) {
-        newInBoundsValues.push_back(cast<BoolAttr>(attr).getValue());
-      }
-      newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
+    // All the new dimensions added are inbound.
+    SmallVector<bool> newInBoundsValues(missingInnerDim.size(), true);
+    for (int64_t i = 0, e = op.getVectorType().getRank(); i < e; ++i) {
+      newInBoundsValues.push_back(op.isDimInBounds(i));
     }
+    ArrayAttr newInBoundsAttr = rewriter.getBoolArrayAttr(newInBoundsValues);
     rewriter.replaceOpWithNewOp<vector::TransferWriteOp>(
         op, newVec, op.getSource(), op.getIndices(), AffineMapAttr::get(newMap),
-        op.getMask(), newInBoundsAttr);
+        newMask, newInBoundsAttr);
     return success();
   }
 };
@@ -402,7 +419,7 @@ struct TransferReadToVectorLoadLowering
       return rewriter.notifyMatchFailure(read, "not a memref source");
 
     // Non-unit strides are handled by VectorToSCF.
-    if (!vector::isLastMemrefDimUnitStride(memRefType))
+    if (!isLastMemrefDimUnitStride(memRefType))
       return rewriter.notifyMatchFailure(read, "!= 1 stride needs VectorToSCF");
 
     // If there is broadcasting involved then we first load the unbroadcasted
@@ -550,7 +567,7 @@ struct TransferWriteToVectorStoreLowering
       });
 
     // Non-unit strides are handled by VectorToSCF.
-    if (!vector::isLastMemrefDimUnitStride(memRefType))
+    if (!isLastMemrefDimUnitStride(memRefType))
       return rewriter.notifyMatchFailure(write.getLoc(), [=](Diagnostic &diag) {
         diag << "most minor stride is not 1: " << write;
       });

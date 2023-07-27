@@ -219,4 +219,11 @@ TEST(FloatingPointModeTest, DenormalModeMerge) {
       DenormalMode::getIEEE(),
       DenormalMode::getPreserveSign().mergeCalleeMode(DenormalMode::getIEEE()));
 }
+
+TEST(FloatingPointModeTest, DenormalModePredicates) {
+  EXPECT_TRUE(DenormalMode::getPreserveSign().inputsAreZero());
+  EXPECT_TRUE(DenormalMode::getPositiveZero().inputsAreZero());
+  EXPECT_FALSE(DenormalMode::getIEEE().inputsAreZero());
+  EXPECT_FALSE(DenormalMode::getDynamic().inputsAreZero());
+}
 }

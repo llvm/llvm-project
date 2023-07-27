@@ -19,7 +19,7 @@ transform.with_pdl_patterns {
   ^bb1(%arg1: !transform.any_op):
     // expected-note @below {{handle to invalidated ops}}
     %0 = pdl_match @return in %arg1 : (!transform.any_op) -> !transform.any_op
-    %1 = get_closest_isolated_parent %0 : (!transform.any_op) -> !transform.any_op
+    %1 = get_parent_op %0 {isolated_from_above} : (!transform.any_op) -> !transform.any_op
     // expected-note @below {{invalidated by this transform op that consumes its operand #0}}
     test_consume_operand %1 : !transform.any_op
     // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
@@ -362,5 +362,51 @@ module {
     transform.test_consume_operand %arg0 : !transform.any_op
     // expected-error @below {{uses a handle invalidated by a previously executed transform op}}
     transform.test_consume_operand %0 { allow_repeated_handles } : !transform.any_op
+  }
+}
+
+// -----
+
+// Re-entering the region should not trigger the consumption error from previous
+// execution of the region.
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  transform.test_re_enter_region {
+    %0 = transform.test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+    transform.test_consume_operand %0 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Re-entering the region should not trigger the consumption error from previous
+// execution of the region.
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %0 = transform.test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  transform.test_re_enter_region %0 : !transform.any_op {
+  ^bb0(%arg1: !transform.any_op):
+    transform.test_consume_operand %arg1 : !transform.any_op
+    transform.yield
+  }
+}
+
+// -----
+
+// Consuming the same handle repeatedly in the region should trigger an error.
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  // expected-note @below {{payload op}}
+  // expected-note @below {{handle to invalidated ops}}
+  %0 = transform.test_produce_self_handle_or_forward_operand : () -> !transform.any_op
+  transform.test_re_enter_region {
+    // expected-error @below {{op uses a handle invalidated by a previously executed transform op}}
+    // expected-note @below {{invalidated by this transform op}}
+    transform.test_consume_operand %0 : !transform.any_op
+    transform.yield
   }
 }

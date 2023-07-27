@@ -33,7 +33,7 @@ end subroutine
 ! CHECK:  %[[VAL_7:.*]] = arith.constant 3 : i64
 ! CHECK:  %[[VAL_8:.*]] = fir.convert %[[VAL_7]] : (i64) -> index
 ! CHECK:  %[[VAL_10:.*]]:2 = hlfir.declare %{{.*}}(%{{.*}})  {{.*}}Ex
-! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_4]]#1 : !fir.ref<i32>
+! CHECK:  %[[VAL_11:.*]] = fir.load %[[VAL_4]]#0 : !fir.ref<i32>
 ! CHECK:  %[[VAL_12:.*]] = fir.shift %[[VAL_6]], %[[VAL_8]] : (index, index) -> !fir.shift<2>
 ! CHECK:  %[[VAL_13:.*]] = fir.rebox %[[VAL_10]]#1(%[[VAL_12]]) : (!fir.box<!fir.array<?x?xf32>>, !fir.shift<2>) -> !fir.box<!fir.array<?x?xf32>>
 ! CHECK:  %[[VAL_16:.*]] = fir.convert %[[VAL_13]] : (!fir.box<!fir.array<?x?xf32>>) -> !fir.box<none>

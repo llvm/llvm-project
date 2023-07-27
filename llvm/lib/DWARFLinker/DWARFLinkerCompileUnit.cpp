@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/DWARFLinker/DWARFLinkerCompileUnit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/DWARFLinker/DWARFLinkerDeclContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFContext.h"
 #include "llvm/DebugInfo/DWARF/DWARFExpression.h"

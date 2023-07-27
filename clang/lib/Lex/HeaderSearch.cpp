@@ -1008,7 +1008,8 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
   ConstSearchDirIterator NextIt = std::next(It);
 
   if (!SkipCache) {
-    if (CacheLookup.StartIt == NextIt) {
+    if (CacheLookup.StartIt == NextIt &&
+        CacheLookup.RequestingModule == RequestingModule) {
       // HIT: Skip querying potentially lots of directories for this lookup.
       if (CacheLookup.HitIt)
         It = CacheLookup.HitIt;
@@ -1021,7 +1022,7 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
       // MISS: This is the first query, or the previous query didn't match
       // our search start.  We will fill in our found location below, so prime
       // the start point value.
-      CacheLookup.reset(/*NewStartIt=*/NextIt);
+      CacheLookup.reset(RequestingModule, /*NewStartIt=*/NextIt);
 
       if (It == search_dir_begin() && FirstNonHeaderMapSearchDirIdx > 0) {
         // Handle cold misses of user includes in the presence of many header
@@ -1036,8 +1037,9 @@ OptionalFileEntryRef HeaderSearch::LookupFile(
           It = search_dir_nth(Iter->second);
       }
     }
-  } else
-    CacheLookup.reset(/*NewStartIt=*/NextIt);
+  } else {
+    CacheLookup.reset(RequestingModule, /*NewStartIt=*/NextIt);
+  }
 
   SmallString<64> MappedName;
 
@@ -1783,9 +1785,6 @@ HeaderSearch::lookupModuleMapFile(DirectoryEntryRef Dir, bool IsFramework) {
 
 Module *HeaderSearch::loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
                                           bool IsSystem) {
-  if (Module *Module = ModMap.findModule(Name))
-    return Module;
-
   // Try to load a module map file.
   switch (loadModuleMapFile(Dir, IsSystem, /*IsFramework*/true)) {
   case LMM_InvalidModuleMap:
@@ -1794,10 +1793,10 @@ Module *HeaderSearch::loadFrameworkModule(StringRef Name, DirectoryEntryRef Dir,
       ModMap.inferFrameworkModule(Dir, IsSystem, /*Parent=*/nullptr);
     break;
 
-  case LMM_AlreadyLoaded:
   case LMM_NoDirectory:
     return nullptr;
 
+  case LMM_AlreadyLoaded:
   case LMM_NewlyLoaded:
     break;
   }
@@ -1917,6 +1916,8 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
   llvm::vfs::FileSystem &FS = FileMgr.getVirtualFileSystem();
   for (llvm::vfs::directory_iterator Dir = FS.dir_begin(DirNative, EC), DirEnd;
        Dir != DirEnd && !EC; Dir.increment(EC)) {
+    if (Dir->type() == llvm::sys::fs::file_type::regular_file)
+      continue;
     bool IsFramework = llvm::sys::path::extension(Dir->path()) == ".framework";
     if (IsFramework == SearchDir.isFramework())
       loadModuleMapFile(Dir->path(), SearchDir.isSystemHeaderDirectory(),

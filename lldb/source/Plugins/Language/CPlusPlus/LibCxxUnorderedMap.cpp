@@ -157,7 +157,11 @@ lldb::ValueObjectSP lldb_private::formatters::
       }
       if (!m_node_type)
         return nullptr;
-      node_sp = node_sp->Cast(m_node_type);
+      node_sp = m_next_element->Cast(m_node_type.GetPointerType())
+              ->Dereference(error);
+      if (!node_sp || error.Fail())
+          return nullptr;
+
       value_sp = node_sp->GetChildMemberWithName("__value_");
       hash_sp = node_sp->GetChildMemberWithName("__hash_");
       if (!value_sp || !hash_sp)

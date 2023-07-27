@@ -280,14 +280,16 @@ function f1(n1) result(res1)
   ! CHECK:   %[[V_17:[0-9]+]] = fir.load %arg2 : !fir.ref<i32>
   ! CHECK:   %[[V_18:[0-9]+]] = arith.cmpi eq, %[[V_17]], %c1{{.*}}_i32_4 : i32
   ! CHECK:   cond_br %[[V_18]], ^bb2, ^bb3
-  ! CHECK: ^bb2:  // 2 preds: ^bb1, ^bb3
-  ! CHECK:   br ^bb5
+  ! CHECK: ^bb2:  // pred: ^bb1
+  ! CHECK:   br ^bb6
   ! CHECK: ^bb3:  // pred: ^bb1
   ! CHECK:   fir.call @_QFf1Ps2(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
   ! CHECK:   %[[V_19:[0-9]+]] = fir.load %[[V_1]] : !fir.ref<i32>
   ! CHECK:   %[[V_20:[0-9]+]] = arith.cmpi eq, %[[V_19]], %c2{{.*}}_i32 : i32
-  ! CHECK:   cond_br %[[V_20]], ^bb2, ^bb4
+  ! CHECK:   cond_br %[[V_20]], ^bb4, ^bb5
   ! CHECK: ^bb4:  // pred: ^bb3
+  ! CHECK:   cf.br ^bb6
+  ! CHECK: ^bb5:  // pred: ^bb3
   ! CHECK:   %[[V_21:[0-9]+]] = fir.address_of(@_QQcl.4320432043) : !fir.ref<!fir.char<1,5>>
   ! CHECK:   %[[V_22:[0-9]+]] = arith.cmpi slt, %c5{{.*}}, %c5{{.*}} : index
   ! CHECK:   %[[V_23:[0-9]+]] = arith.select %[[V_22]], %c5{{.*}}, %c5{{.*}} : index
@@ -305,8 +307,8 @@ function f1(n1) result(res1)
   ! CHECK:     fir.store %[[V_30]] to %[[V_33]] : !fir.ref<!fir.char<1>>
   ! CHECK:   }
   ! CHECK:   fir.call @_QFf1Ps3(%[[V_2]]) {{.*}}: (!fir.ref<tuple<!fir.boxchar<1>, !fir.boxchar<1>>>) -> ()
-  ! CHECK:   br ^bb5
-  ! CHECK: ^bb5:  // 2 preds: ^bb2, ^bb4
+  ! CHECK:   br ^bb6
+  ! CHECK: ^bb6:  //  3 preds: ^bb2, ^bb4, ^bb5
   ! CHECK:   %[[V_31:[0-9]+]] = fir.emboxchar %[[V_0]], %c5{{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
   ! CHECK:   return %[[V_31]] : !fir.boxchar<1>
   ! CHECK: }

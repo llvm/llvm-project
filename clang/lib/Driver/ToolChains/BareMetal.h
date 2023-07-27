@@ -32,6 +32,7 @@ public:
 
 protected:
   Tool *buildLinker() const override;
+  Tool *buildStaticLibTool() const override;
 
 public:
   bool useIntegratedAs() const override { return true; }
@@ -82,6 +83,20 @@ private:
 
 namespace tools {
 namespace baremetal {
+
+class LLVM_LIBRARY_VISIBILITY StaticLibTool : public Tool {
+public:
+  StaticLibTool(const ToolChain &TC)
+      : Tool("baremetal::StaticLibTool", "llvm-ar", TC) {}
+
+  bool hasIntegratedCPP() const override { return false; }
+  bool isLinkJob() const override { return true; }
+
+  void ConstructJob(Compilation &C, const JobAction &JA,
+                    const InputInfo &Output, const InputInfoList &Inputs,
+                    const llvm::opt::ArgList &TCArgs,
+                    const char *LinkingOutput) const override;
+};
 
 class LLVM_LIBRARY_VISIBILITY Linker : public Tool {
 public:

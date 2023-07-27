@@ -19,18 +19,6 @@ set(LIBC_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
 
 set(LIBC_ENABLE_USE_BY_CLANG OFF CACHE BOOL "Whether or not to place libc in a build directory findable by a just built clang")
 
-if(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND LIBC_ENABLE_USE_BY_CLANG)
-  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
-else()
-  if(NOT LIBC_ENABLE_USE_BY_CLANG)
-    set(LIBC_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR})
-  elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
-    set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
-  else()
-    set(LIBC_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
-  endif()
-endif()
-
 if(LLVM_LIBC_FULL_BUILD OR LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
   if(NOT LIBC_HDRGEN_EXE)
     # We need to set up hdrgen first since other targets depend on it.
@@ -47,6 +35,11 @@ if(("libc" IN_LIST LLVM_ENABLE_RUNTIMES AND NOT LLVM_RUNTIMES_BUILD) OR
   # When libc is build as part of the runtimes/bootstrap build's CMake run, we
   # only need to build the host tools to build the libc. So, we just do enough
   # to build libc-hdrgen and return.
+
+  # Always make the RPC server availible to other projects for GPU mode.
+  if(LIBC_GPU_BUILD OR LIBC_GPU_ARCHITECTURES)
+    add_subdirectory(utils/gpu/server)
+  endif()
   return()
 endif()
 
@@ -95,6 +88,28 @@ set(LIBC_ENABLE_HERMETIC_TESTS ${LLVM_LIBC_FULL_BUILD})
 
 # Defines LIBC_TARGET_ARCHITECTURE and associated macros.
 include(LLVMLibCArchitectures)
+
+if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
+  set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+  set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/gpu-none-llvm)
+  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+elseif(LLVM_ENABLE_PER_TARGET_RUNTIME_DIR AND LIBC_ENABLE_USE_BY_CLANG)
+  set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+  set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR}/${LLVM_DEFAULT_TARGET_TRIPLE})
+else()
+  if(NOT LIBC_ENABLE_USE_BY_CLANG)
+    set(LIBC_INCLUDE_DIR ${CMAKE_CURRENT_BINARY_DIR}/include)
+    set(LIBC_LIBRARY_DIR ${CMAKE_CURRENT_BINARY_DIR}/lib)
+  elseif(LLVM_LIBRARY_OUTPUT_INTDIR)
+    set(LIBC_INCLUDE_DIR ${LLVM_BINARY_DIR}/include)
+    set(LIBC_LIBRARY_DIR ${LLVM_LIBRARY_OUTPUT_INTDIR})
+  else()
+    set(LIBC_INCLUDE_DIR ${CMAKE_BINARY_DIR}/include)
+    set(LIBC_LIBRARY_DIR ${CMAKE_BINARY_DIR}/lib${LLVM_LIBDIR_SUFFIX})
+  endif()
+  set(LIBC_INSTALL_INCLUDE_DIR ${CMAKE_INSTALL_INCLUDEDIR})
+endif()
 
 if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
   include(prepare_libc_gpu_build)
@@ -149,8 +164,8 @@ endif()
 
 option(LLVM_LIBC_INCLUDE_SCUDO "Include the SCUDO standalone as the allocator for LLVM libc" OFF)
 if(LLVM_LIBC_INCLUDE_SCUDO)
-  if (NOT "compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS)
-    message(FATAL_ERROR "SCUDO cannot be included without adding compiler-rt to LLVM_ENABLE_PROJECTS")
+  if (NOT ("compiler-rt" IN_LIST LLVM_ENABLE_PROJECTS OR "compiler-rt" IN_LIST LLVM_ENABLE_RUNTIMES))
+    message(FATAL_ERROR "SCUDO cannot be included without adding compiler-rt to LLVM_ENABLE_PROJECTS or LLVM_ENABLE_RUNTIMES")
   endif()
 endif()
 

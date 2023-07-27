@@ -16,6 +16,7 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/FormatVariadic.h"
+#include "llvm/Support/ThreadPool.h"
 
 using namespace llvm;
 #define DEBUG_TYPE "balanced-partitioning"
@@ -82,8 +83,9 @@ void BalancedPartitioning::run(std::vector<BPFunctionNode> &Nodes) const {
           Nodes.size(), Config.SplitDepth, Config.IterationsPerSplit));
   std::optional<BPThreadPool> TP;
 #if LLVM_ENABLE_THREADS
+  ThreadPool TheThreadPool;
   if (Config.TaskSplitDepth > 1)
-    TP.emplace();
+    TP.emplace(TheThreadPool);
 #endif
 
   // Record the input order

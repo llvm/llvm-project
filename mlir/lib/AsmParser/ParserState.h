@@ -36,6 +36,9 @@ struct SymbolState {
   DenseMap<const OpAsmDialectInterface *,
            llvm::StringMap<std::pair<std::string, AsmDialectResourceHandle>>>
       dialectResources;
+
+  /// A map from unique integer identifier to DistinctAttr.
+  DenseMap<uint64_t, DistinctAttr> distinctAttributes;
 };
 
 //===----------------------------------------------------------------------===//

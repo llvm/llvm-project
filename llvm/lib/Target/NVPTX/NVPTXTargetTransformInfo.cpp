@@ -204,6 +204,14 @@ static Instruction *simplifyNvvmIntrinsic(IntrinsicInst *II, InstCombiner &IC) {
       return {Intrinsic::fma, FTZ_MustBeOff, true};
     case Intrinsic::nvvm_fma_rn_ftz_f16x2:
       return {Intrinsic::fma, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fma_rn_bf16:
+      return {Intrinsic::fma, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fma_rn_ftz_bf16:
+      return {Intrinsic::fma, FTZ_MustBeOn, true};
+    case Intrinsic::nvvm_fma_rn_bf16x2:
+      return {Intrinsic::fma, FTZ_MustBeOff, true};
+    case Intrinsic::nvvm_fma_rn_ftz_bf16x2:
+      return {Intrinsic::fma, FTZ_MustBeOn, true};
     case Intrinsic::nvvm_fmax_d:
       return {Intrinsic::maxnum, FTZ_Any};
     case Intrinsic::nvvm_fmax_f:

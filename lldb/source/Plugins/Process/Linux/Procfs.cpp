@@ -8,6 +8,7 @@
 
 #include "Procfs.h"
 #include "lldb/Host/linux/Support.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Threading.h"

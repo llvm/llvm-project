@@ -374,8 +374,7 @@ define i64 @rotl_64_mask_and_127_and_63(i64 %x, i64 %y) nounwind {
 define i64 @rotl_64_mask_or_128_or_64(i64 %x, i64 %y) nounwind {
 ; LA32-LABEL: rotl_64_mask_or_128_or_64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    sub.w $a0, $zero, $a2
-; LA32-NEXT:    srl.w $a0, $a1, $a0
+; LA32-NEXT:    move $a0, $zero
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;
@@ -498,7 +497,7 @@ define i64 @rotr_64_mask_and_127_and_63(i64 %x, i64 %y) nounwind {
 define i64 @rotr_64_mask_or_128_or_64(i64 %x, i64 %y) nounwind {
 ; LA32-LABEL: rotr_64_mask_or_128_or_64:
 ; LA32:       # %bb.0:
-; LA32-NEXT:    srl.w $a0, $a1, $a2
+; LA32-NEXT:    move $a0, $zero
 ; LA32-NEXT:    move $a1, $zero
 ; LA32-NEXT:    ret
 ;

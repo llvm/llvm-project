@@ -38,6 +38,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <bitset>
@@ -1501,7 +1502,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_int128:
     if (!S.Context.getTargetInfo().hasInt128Type() &&
         !(S.getLangOpts().SYCLIsDevice || S.getLangOpts().CUDAIsDevice ||
-          (S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice)))
+          (S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice)))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__int128";
     if (DS.getTypeSpecSign() == TypeSpecifierSign::Unsigned)
@@ -1514,7 +1515,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
     // do not diagnose _Float16 usage to avoid false alarm.
     // ToDo: more precise diagnostics for CUDA.
     if (!S.Context.getTargetInfo().hasFloat16Type() && !S.getLangOpts().CUDA &&
-        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "_Float16";
     Result = Context.Float16Ty;
@@ -1522,7 +1523,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_half:    Result = Context.HalfTy; break;
   case DeclSpec::TST_BFloat16:
     if (!S.Context.getTargetInfo().hasBFloat16Type() &&
-        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice) &&
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice) &&
         !S.getLangOpts().SYCLIsDevice)
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__bf16";
     Result = Context.BFloat16Ty;
@@ -1547,7 +1548,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_float128:
     if (!S.Context.getTargetInfo().hasFloat128Type() &&
         !S.getLangOpts().SYCLIsDevice &&
-        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported)
         << "__float128";
     Result = Context.Float128Ty;
@@ -1555,7 +1556,7 @@ static QualType ConvertDeclSpecToType(TypeProcessingState &state) {
   case DeclSpec::TST_ibm128:
     if (!S.Context.getTargetInfo().hasIbm128Type() &&
         !S.getLangOpts().SYCLIsDevice &&
-        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsDevice))
+        !(S.getLangOpts().OpenMP && S.getLangOpts().OpenMPIsTargetDevice))
       S.Diag(DS.getTypeSpecTypeLoc(), diag::err_type_unsupported) << "__ibm128";
     Result = Context.Ibm128Ty;
     break;
@@ -2708,8 +2709,8 @@ QualType Sema::BuildVectorType(QualType CurType, Expr *SizeExpr,
     return QualType();
   }
   // Only support _BitInt elements with byte-sized power of 2 NumBits.
-  if (CurType->isBitIntType()) {
-    unsigned NumBits = CurType->getAs<BitIntType>()->getNumBits();
+  if (const auto *BIT = CurType->getAs<BitIntType>()) {
+    unsigned NumBits = BIT->getNumBits();
     if (!llvm::isPowerOf2_32(NumBits) || NumBits < 8) {
       Diag(AttrLoc, diag::err_attribute_invalid_bitint_vector_type)
           << (NumBits < 8);

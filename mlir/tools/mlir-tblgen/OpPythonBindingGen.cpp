@@ -182,24 +182,22 @@ constexpr const char *opVariadicSegmentOptionalTrailingTemplate =
 
 /// Template for an operation attribute getter:
 ///   {0} is the name of the attribute sanitized for Python;
-///   {1} is the Python type of the attribute;
-///   {2} os the original name of the attribute.
+///   {1} is the original name of the attribute.
 constexpr const char *attributeGetterTemplate = R"Py(
   @builtins.property
   def {0}(self):
-    return {1}(self.operation.attributes["{2}"])
+    return self.operation.attributes["{1}"]
 )Py";
 
 /// Template for an optional operation attribute getter:
 ///   {0} is the name of the attribute sanitized for Python;
-///   {1} is the Python type of the attribute;
-///   {2} is the original name of the attribute.
+///   {1} is the original name of the attribute.
 constexpr const char *optionalAttributeGetterTemplate = R"Py(
   @builtins.property
   def {0}(self):
-    if "{2}" not in self.operation.attributes:
+    if "{1}" not in self.operation.attributes:
       return None
-    return {1}(self.operation.attributes["{2}"])
+    return self.operation.attributes["{1}"]
 )Py";
 
 /// Template for a getter of a unit operation attribute, returns True of the
@@ -443,9 +441,7 @@ static void emitResultAccessors(const Operator &op, raw_ostream &os) {
 }
 
 /// Emits accessors to Op attributes.
-static void emitAttributeAccessors(const Operator &op,
-                                   const AttributeClasses &attributeClasses,
-                                   raw_ostream &os) {
+static void emitAttributeAccessors(const Operator &op, raw_ostream &os) {
   for (const auto &namedAttr : op.getAttributes()) {
     // Skip "derived" attributes because they are just C++ functions that we
     // don't currently expose.
@@ -468,21 +464,15 @@ static void emitAttributeAccessors(const Operator &op,
       continue;
     }
 
-    // Other kinds of attributes need a mapping to a Python type.
-    if (!attributeClasses.count(namedAttr.attr.getStorageType().trim()))
-      continue;
-
-    StringRef pythonType =
-        attributeClasses.lookup(namedAttr.attr.getStorageType());
     if (namedAttr.attr.isOptional()) {
       os << llvm::formatv(optionalAttributeGetterTemplate, sanitizedName,
-                          pythonType, namedAttr.name);
+                          namedAttr.name);
       os << llvm::formatv(optionalAttributeSetterTemplate, sanitizedName,
                           namedAttr.name);
       os << llvm::formatv(attributeDeleterTemplate, sanitizedName,
                           namedAttr.name);
     } else {
-      os << llvm::formatv(attributeGetterTemplate, sanitizedName, pythonType,
+      os << llvm::formatv(attributeGetterTemplate, sanitizedName,
                           namedAttr.name);
       os << llvm::formatv(attributeSetterTemplate, sanitizedName,
                           namedAttr.name);
@@ -503,9 +493,7 @@ constexpr const char *initTemplate = R"Py(
     attributes = {{}
     regions = None
     {1}
-    super().__init__(self.build_generic(
-      attributes=attributes, results=results, operands=operands,
-      successors=_ods_successors, regions=regions, loc=loc, ip=ip))
+    super().__init__(self.build_generic({2}))
 )Py";
 
 /// Template for appending a single element to the operand/result list.
@@ -765,17 +753,6 @@ _ods_derived_result_type = (
 /// Python code template appending {0} type {1} times to the results list.
 constexpr const char *appendSameResultsTemplate = "results.extend([{0}] * {1})";
 
-/// Python code template for inferring the operation results using the
-/// corresponding interface:
-///   - {0} is the name of the class for which the types are inferred.
-constexpr const char *inferTypeInterfaceTemplate =
-    R"PY(results = _ods_ir.InferTypeOpInterface({0}).inferReturnTypes(
-    operands=operands,
-    attributes=_ods_ir.DictAttr.get(attributes, context=_ods_context),
-    context=_ods_context,
-    loc=loc)
-)PY";
-
 /// Appends the given multiline string as individual strings into
 /// `builderLines`.
 static void appendLineByLine(StringRef string,
@@ -815,12 +792,8 @@ populateBuilderLinesResult(const Operator &op,
     return;
   }
 
-  if (hasInferTypeInterface(op)) {
-    appendLineByLine(
-        llvm::formatv(inferTypeInterfaceTemplate, op.getCppClassName()).str(),
-        builderLines);
+  if (hasInferTypeInterface(op))
     return;
-  }
 
   // For each element, find or generate a name.
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
@@ -944,17 +917,20 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
   }
   functionArgs.push_back("loc=None");
   functionArgs.push_back("ip=None");
-  os << llvm::formatv(initTemplate, llvm::join(functionArgs, ", "),
-                      llvm::join(builderLines, "\n    "));
-}
 
-static void constructAttributeMapping(const llvm::RecordKeeper &records,
-                                      AttributeClasses &attributeClasses) {
-  for (const llvm::Record *rec :
-       records.getAllDerivedDefinitions("PythonAttr")) {
-    attributeClasses.try_emplace(rec->getValueAsString("cppStorageType").trim(),
-                                 rec->getValueAsString("pythonType").trim());
-  }
+  SmallVector<std::string> initArgs;
+  initArgs.push_back("attributes=attributes");
+  if (!hasInferTypeInterface(op))
+    initArgs.push_back("results=results");
+  initArgs.push_back("operands=operands");
+  initArgs.push_back("successors=_ods_successors");
+  initArgs.push_back("regions=regions");
+  initArgs.push_back("loc=loc");
+  initArgs.push_back("ip=ip");
+
+  os << llvm::formatv(initTemplate, llvm::join(functionArgs, ", "),
+                      llvm::join(builderLines, "\n    "),
+                      llvm::join(initArgs, ", "));
 }
 
 static void emitSegmentSpec(
@@ -1003,9 +979,7 @@ static void emitRegionAccessors(const Operator &op, raw_ostream &os) {
 }
 
 /// Emits bindings for a specific Op to the given output stream.
-static void emitOpBindings(const Operator &op,
-                           const AttributeClasses &attributeClasses,
-                           raw_ostream &os) {
+static void emitOpBindings(const Operator &op, raw_ostream &os) {
   os << llvm::formatv(opClassTemplate, op.getCppClassName(),
                       op.getOperationName());
 
@@ -1020,7 +994,7 @@ static void emitOpBindings(const Operator &op,
   emitRegionAttributes(op, os);
   emitDefaultOpBuilder(op, os);
   emitOperandAccessors(op, os);
-  emitAttributeAccessors(op, attributeClasses, os);
+  emitAttributeAccessors(op, os);
   emitResultAccessors(op, os);
   emitRegionAccessors(op, os);
 }
@@ -1031,9 +1005,6 @@ static void emitOpBindings(const Operator &op,
 static bool emitAllOps(const llvm::RecordKeeper &records, raw_ostream &os) {
   if (clDialectName.empty())
     llvm::PrintFatalError("dialect name not provided");
-
-  AttributeClasses attributeClasses;
-  constructAttributeMapping(records, attributeClasses);
 
   bool isExtension = !clDialectExtensionName.empty();
   os << llvm::formatv(fileHeader, isExtension
@@ -1047,7 +1018,7 @@ static bool emitAllOps(const llvm::RecordKeeper &records, raw_ostream &os) {
   for (const llvm::Record *rec : records.getAllDerivedDefinitions("Op")) {
     Operator op(rec);
     if (op.getDialectName() == clDialectName.getValue())
-      emitOpBindings(op, attributeClasses, os);
+      emitOpBindings(op, os);
   }
   return false;
 }

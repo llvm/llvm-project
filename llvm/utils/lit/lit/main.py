@@ -41,10 +41,11 @@ def main(builtin_params={}):
         params=params,
         config_prefix=opts.configPrefix,
         echo_all_commands=opts.echoAllCommands,
+        per_test_coverage=opts.per_test_coverage,
     )
 
     discovered_tests = lit.discovery.find_tests_for_inputs(
-        lit_config, opts.test_paths, opts.indirectlyRunCheck
+        lit_config, opts.test_paths
     )
     if not discovered_tests:
         sys.stderr.write("error: did not discover any tests for provided path(s)\n")

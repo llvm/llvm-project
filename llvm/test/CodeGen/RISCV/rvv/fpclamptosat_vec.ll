@@ -369,17 +369,17 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s3, 8(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 16(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.l.s s2, fs2, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.l.s s1, fs2, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    lui a1, 524288
@@ -387,7 +387,7 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    bge a0, a4, .LBB6_10
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs1, rtz
-; CHECK-NOV-NEXT:    bge s2, a4, .LBB6_11
+; CHECK-NOV-NEXT:    bge s1, a4, .LBB6_11
 ; CHECK-NOV-NEXT:  .LBB6_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    bge a2, a4, .LBB6_12
@@ -398,14 +398,14 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB6_5: # %entry
 ; CHECK-NOV-NEXT:    bge a1, a2, .LBB6_15
 ; CHECK-NOV-NEXT:  .LBB6_6: # %entry
-; CHECK-NOV-NEXT:    bge a1, s2, .LBB6_16
+; CHECK-NOV-NEXT:    bge a1, s1, .LBB6_16
 ; CHECK-NOV-NEXT:  .LBB6_7: # %entry
 ; CHECK-NOV-NEXT:    blt a1, a0, .LBB6_9
 ; CHECK-NOV-NEXT:  .LBB6_8: # %entry
 ; CHECK-NOV-NEXT:    lui a0, 524288
 ; CHECK-NOV-NEXT:  .LBB6_9: # %entry
 ; CHECK-NOV-NEXT:    sw a0, 12(s0)
-; CHECK-NOV-NEXT:    sw s2, 8(s0)
+; CHECK-NOV-NEXT:    sw s1, 8(s0)
 ; CHECK-NOV-NEXT:    sw a2, 4(s0)
 ; CHECK-NOV-NEXT:    sw a3, 0(s0)
 ; CHECK-NOV-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
@@ -421,9 +421,9 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB6_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a4
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs1, rtz
-; CHECK-NOV-NEXT:    blt s2, a4, .LBB6_2
+; CHECK-NOV-NEXT:    blt s1, a4, .LBB6_2
 ; CHECK-NOV-NEXT:  .LBB6_11: # %entry
-; CHECK-NOV-NEXT:    mv s2, a4
+; CHECK-NOV-NEXT:    mv s1, a4
 ; CHECK-NOV-NEXT:    fcvt.l.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    blt a2, a4, .LBB6_3
 ; CHECK-NOV-NEXT:  .LBB6_12: # %entry
@@ -437,9 +437,9 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    blt a1, a2, .LBB6_6
 ; CHECK-NOV-NEXT:  .LBB6_15: # %entry
 ; CHECK-NOV-NEXT:    lui a2, 524288
-; CHECK-NOV-NEXT:    blt a1, s2, .LBB6_7
+; CHECK-NOV-NEXT:    blt a1, s1, .LBB6_7
 ; CHECK-NOV-NEXT:  .LBB6_16: # %entry
-; CHECK-NOV-NEXT:    lui s2, 524288
+; CHECK-NOV-NEXT:    lui s1, 524288
 ; CHECK-NOV-NEXT:    bge a1, a0, .LBB6_8
 ; CHECK-NOV-NEXT:    j .LBB6_9
 ;
@@ -463,13 +463,14 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    lhu s1, 16(a0)
 ; CHECK-V-NEXT:    lhu s2, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m2, tu, ma
@@ -478,7 +479,7 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
@@ -487,7 +488,7 @@ define <4 x i32> @stest_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -546,17 +547,17 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s3, 16(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 8(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.lu.s s2, fs2, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.lu.s s1, fs2, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    li a1, -1
@@ -564,7 +565,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    bgeu a0, a1, .LBB7_6
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.lu.s a2, fs1, rtz
-; CHECK-NOV-NEXT:    bgeu s2, a1, .LBB7_7
+; CHECK-NOV-NEXT:    bgeu s1, a1, .LBB7_7
 ; CHECK-NOV-NEXT:  .LBB7_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.lu.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    bgeu a2, a1, .LBB7_8
@@ -575,7 +576,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB7_5: # %entry
 ; CHECK-NOV-NEXT:    sw a3, 12(s0)
 ; CHECK-NOV-NEXT:    sw a2, 8(s0)
-; CHECK-NOV-NEXT:    sw s2, 4(s0)
+; CHECK-NOV-NEXT:    sw s1, 4(s0)
 ; CHECK-NOV-NEXT:    sw a0, 0(s0)
 ; CHECK-NOV-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
@@ -590,9 +591,9 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB7_6: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a1
 ; CHECK-NOV-NEXT:    fcvt.lu.s a2, fs1, rtz
-; CHECK-NOV-NEXT:    bltu s2, a1, .LBB7_2
+; CHECK-NOV-NEXT:    bltu s1, a1, .LBB7_2
 ; CHECK-NOV-NEXT:  .LBB7_7: # %entry
-; CHECK-NOV-NEXT:    mv s2, a1
+; CHECK-NOV-NEXT:    mv s1, a1
 ; CHECK-NOV-NEXT:    fcvt.lu.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    bltu a2, a1, .LBB7_3
 ; CHECK-NOV-NEXT:  .LBB7_8: # %entry
@@ -620,13 +621,14 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    lhu s1, 16(a0)
 ; CHECK-V-NEXT:    lhu s2, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m2, tu, ma
@@ -635,7 +637,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
@@ -644,7 +646,7 @@ define <4 x i32> @utesth_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -700,17 +702,17 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s3, 16(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 8(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.l.s s2, fs2, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.l.s s1, fs2, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    li a2, -1
@@ -718,7 +720,7 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    bge a0, a2, .LBB8_6
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs1, rtz
-; CHECK-NOV-NEXT:    bge s2, a2, .LBB8_7
+; CHECK-NOV-NEXT:    bge s1, a2, .LBB8_7
 ; CHECK-NOV-NEXT:  .LBB8_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    bge a1, a2, .LBB8_8
@@ -729,12 +731,12 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB8_5: # %entry
 ; CHECK-NOV-NEXT:    sgtz a2, a3
 ; CHECK-NOV-NEXT:    sgtz a4, a1
-; CHECK-NOV-NEXT:    sgtz a5, s2
+; CHECK-NOV-NEXT:    sgtz a5, s1
 ; CHECK-NOV-NEXT:    sgtz a6, a0
 ; CHECK-NOV-NEXT:    negw a6, a6
 ; CHECK-NOV-NEXT:    and a0, a6, a0
 ; CHECK-NOV-NEXT:    negw a5, a5
-; CHECK-NOV-NEXT:    and a5, a5, s2
+; CHECK-NOV-NEXT:    and a5, a5, s1
 ; CHECK-NOV-NEXT:    negw a4, a4
 ; CHECK-NOV-NEXT:    and a1, a4, a1
 ; CHECK-NOV-NEXT:    negw a2, a2
@@ -756,9 +758,9 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB8_6: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a2
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs1, rtz
-; CHECK-NOV-NEXT:    blt s2, a2, .LBB8_2
+; CHECK-NOV-NEXT:    blt s1, a2, .LBB8_2
 ; CHECK-NOV-NEXT:  .LBB8_7: # %entry
-; CHECK-NOV-NEXT:    mv s2, a2
+; CHECK-NOV-NEXT:    mv s1, a2
 ; CHECK-NOV-NEXT:    fcvt.l.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    blt a1, a2, .LBB8_3
 ; CHECK-NOV-NEXT:  .LBB8_8: # %entry
@@ -786,13 +788,14 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    lhu s1, 16(a0)
 ; CHECK-V-NEXT:    lhu s2, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m2, tu, ma
@@ -801,7 +804,7 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
@@ -810,7 +813,7 @@ define <4 x i32> @ustest_f16i32(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -1231,29 +1234,29 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s7, 40(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 48(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs6, fa0
-; CHECK-NOV-NEXT:    mv a0, s7
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s7
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs5, fa0
-; CHECK-NOV-NEXT:    mv a0, s6
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s6
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs4, fa0
-; CHECK-NOV-NEXT:    mv a0, s5
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s5
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs3, fa0
-; CHECK-NOV-NEXT:    mv a0, s4
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s4
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.l.s s2, fs6, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.l.s s1, fs6, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    lui a7, 8
@@ -1261,7 +1264,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    bge a0, a7, .LBB15_18
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
-; CHECK-NOV-NEXT:    bge s2, a7, .LBB15_19
+; CHECK-NOV-NEXT:    bge s1, a7, .LBB15_19
 ; CHECK-NOV-NEXT:  .LBB15_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs4, rtz
 ; CHECK-NOV-NEXT:    bge a1, a7, .LBB15_20
@@ -1293,14 +1296,14 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB15_13: # %entry
 ; CHECK-NOV-NEXT:    bge a7, a1, .LBB15_31
 ; CHECK-NOV-NEXT:  .LBB15_14: # %entry
-; CHECK-NOV-NEXT:    bge a7, s2, .LBB15_32
+; CHECK-NOV-NEXT:    bge a7, s1, .LBB15_32
 ; CHECK-NOV-NEXT:  .LBB15_15: # %entry
 ; CHECK-NOV-NEXT:    blt a7, a0, .LBB15_17
 ; CHECK-NOV-NEXT:  .LBB15_16: # %entry
 ; CHECK-NOV-NEXT:    lui a0, 1048568
 ; CHECK-NOV-NEXT:  .LBB15_17: # %entry
 ; CHECK-NOV-NEXT:    sh a0, 14(s0)
-; CHECK-NOV-NEXT:    sh s2, 12(s0)
+; CHECK-NOV-NEXT:    sh s1, 12(s0)
 ; CHECK-NOV-NEXT:    sh a1, 10(s0)
 ; CHECK-NOV-NEXT:    sh a2, 8(s0)
 ; CHECK-NOV-NEXT:    sh a3, 6(s0)
@@ -1328,9 +1331,9 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB15_18: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a7
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
-; CHECK-NOV-NEXT:    blt s2, a7, .LBB15_2
+; CHECK-NOV-NEXT:    blt s1, a7, .LBB15_2
 ; CHECK-NOV-NEXT:  .LBB15_19: # %entry
-; CHECK-NOV-NEXT:    mv s2, a7
+; CHECK-NOV-NEXT:    mv s1, a7
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs4, rtz
 ; CHECK-NOV-NEXT:    blt a1, a7, .LBB15_3
 ; CHECK-NOV-NEXT:  .LBB15_20: # %entry
@@ -1373,9 +1376,9 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    blt a7, a1, .LBB15_14
 ; CHECK-NOV-NEXT:  .LBB15_31: # %entry
 ; CHECK-NOV-NEXT:    lui a1, 1048568
-; CHECK-NOV-NEXT:    blt a7, s2, .LBB15_15
+; CHECK-NOV-NEXT:    blt a7, s1, .LBB15_15
 ; CHECK-NOV-NEXT:  .LBB15_32: # %entry
-; CHECK-NOV-NEXT:    lui s2, 1048568
+; CHECK-NOV-NEXT:    lui s1, 1048568
 ; CHECK-NOV-NEXT:    bge a7, a0, .LBB15_16
 ; CHECK-NOV-NEXT:    j .LBB15_17
 ;
@@ -1411,13 +1414,14 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    lhu s5, 16(a0)
 ; CHECK-V-NEXT:    lhu s6, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s6
+; CHECK-V-NEXT:    fmv.w.x fa0, s6
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
@@ -1426,7 +1430,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s5
+; CHECK-V-NEXT:    fmv.w.x fa0, s5
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
@@ -1435,7 +1439,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s4
+; CHECK-V-NEXT:    fmv.w.x fa0, s4
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
@@ -1444,7 +1448,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 3
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s3
+; CHECK-V-NEXT:    fmv.w.x fa0, s3
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
@@ -1453,7 +1457,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 4
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
@@ -1462,7 +1466,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 5
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
@@ -1471,7 +1475,7 @@ define <8 x i16> @stest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 6
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -1555,29 +1559,29 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s7, 16(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 8(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs6, fa0
-; CHECK-NOV-NEXT:    mv a0, s7
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s7
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs5, fa0
-; CHECK-NOV-NEXT:    mv a0, s6
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s6
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs4, fa0
-; CHECK-NOV-NEXT:    mv a0, s5
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s5
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs3, fa0
-; CHECK-NOV-NEXT:    mv a0, s4
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s4
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.lu.s s2, fs6, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.lu.s s1, fs6, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    lui a1, 16
@@ -1585,7 +1589,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    bgeu a0, a1, .LBB16_10
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.lu.s a2, fs5, rtz
-; CHECK-NOV-NEXT:    bgeu s2, a1, .LBB16_11
+; CHECK-NOV-NEXT:    bgeu s1, a1, .LBB16_11
 ; CHECK-NOV-NEXT:  .LBB16_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.lu.s a3, fs4, rtz
 ; CHECK-NOV-NEXT:    bgeu a2, a1, .LBB16_12
@@ -1612,7 +1616,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    sh a4, 8(s0)
 ; CHECK-NOV-NEXT:    sh a3, 6(s0)
 ; CHECK-NOV-NEXT:    sh a2, 4(s0)
-; CHECK-NOV-NEXT:    sh s2, 2(s0)
+; CHECK-NOV-NEXT:    sh s1, 2(s0)
 ; CHECK-NOV-NEXT:    sh a0, 0(s0)
 ; CHECK-NOV-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
@@ -1635,9 +1639,9 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB16_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a1
 ; CHECK-NOV-NEXT:    fcvt.lu.s a2, fs5, rtz
-; CHECK-NOV-NEXT:    bltu s2, a1, .LBB16_2
+; CHECK-NOV-NEXT:    bltu s1, a1, .LBB16_2
 ; CHECK-NOV-NEXT:  .LBB16_11: # %entry
-; CHECK-NOV-NEXT:    mv s2, a1
+; CHECK-NOV-NEXT:    mv s1, a1
 ; CHECK-NOV-NEXT:    fcvt.lu.s a3, fs4, rtz
 ; CHECK-NOV-NEXT:    bltu a2, a1, .LBB16_3
 ; CHECK-NOV-NEXT:  .LBB16_12: # %entry
@@ -1693,13 +1697,14 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    lhu s5, 16(a0)
 ; CHECK-V-NEXT:    lhu s6, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s6
+; CHECK-V-NEXT:    fmv.w.x fa0, s6
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
@@ -1708,7 +1713,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s5
+; CHECK-V-NEXT:    fmv.w.x fa0, s5
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
@@ -1717,7 +1722,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s4
+; CHECK-V-NEXT:    fmv.w.x fa0, s4
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
@@ -1726,7 +1731,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 3
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s3
+; CHECK-V-NEXT:    fmv.w.x fa0, s3
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
@@ -1735,7 +1740,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 4
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
@@ -1744,7 +1749,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 5
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
@@ -1753,7 +1758,7 @@ define <8 x i16> @utesth_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 6
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -1833,29 +1838,29 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s7, 16(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 8(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs6, fa0
-; CHECK-NOV-NEXT:    mv a0, s7
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s7
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs5, fa0
-; CHECK-NOV-NEXT:    mv a0, s6
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s6
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs4, fa0
-; CHECK-NOV-NEXT:    mv a0, s5
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s5
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs3, fa0
-; CHECK-NOV-NEXT:    mv a0, s4
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s4
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.l.s s2, fs6, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.l.s s1, fs6, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    lui a3, 16
@@ -1863,7 +1868,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    bge a0, a3, .LBB17_10
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
-; CHECK-NOV-NEXT:    bge s2, a3, .LBB17_11
+; CHECK-NOV-NEXT:    bge s1, a3, .LBB17_11
 ; CHECK-NOV-NEXT:  .LBB17_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs4, rtz
 ; CHECK-NOV-NEXT:    bge a1, a3, .LBB17_12
@@ -1890,12 +1895,12 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    sgtz t2, a4
 ; CHECK-NOV-NEXT:    sgtz t3, a2
 ; CHECK-NOV-NEXT:    sgtz t4, a1
-; CHECK-NOV-NEXT:    sgtz t5, s2
+; CHECK-NOV-NEXT:    sgtz t5, s1
 ; CHECK-NOV-NEXT:    sgtz t6, a0
 ; CHECK-NOV-NEXT:    negw t6, t6
 ; CHECK-NOV-NEXT:    and a0, t6, a0
 ; CHECK-NOV-NEXT:    negw t5, t5
-; CHECK-NOV-NEXT:    and t5, t5, s2
+; CHECK-NOV-NEXT:    and t5, t5, s1
 ; CHECK-NOV-NEXT:    negw t4, t4
 ; CHECK-NOV-NEXT:    and a1, t4, a1
 ; CHECK-NOV-NEXT:    negw t3, t3
@@ -1937,9 +1942,9 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB17_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a3
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
-; CHECK-NOV-NEXT:    blt s2, a3, .LBB17_2
+; CHECK-NOV-NEXT:    blt s1, a3, .LBB17_2
 ; CHECK-NOV-NEXT:  .LBB17_11: # %entry
-; CHECK-NOV-NEXT:    mv s2, a3
+; CHECK-NOV-NEXT:    mv s1, a3
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs4, rtz
 ; CHECK-NOV-NEXT:    blt a1, a3, .LBB17_3
 ; CHECK-NOV-NEXT:  .LBB17_12: # %entry
@@ -1995,13 +2000,14 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    lhu s5, 16(a0)
 ; CHECK-V-NEXT:    lhu s6, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s6
+; CHECK-V-NEXT:    fmv.w.x fa0, s6
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
@@ -2010,7 +2016,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s5
+; CHECK-V-NEXT:    fmv.w.x fa0, s5
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
@@ -2019,7 +2025,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s4
+; CHECK-V-NEXT:    fmv.w.x fa0, s4
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
@@ -2028,7 +2034,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 3
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s3
+; CHECK-V-NEXT:    fmv.w.x fa0, s3
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
@@ -2037,7 +2043,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 4
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
@@ -2046,7 +2052,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 5
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
@@ -2055,7 +2061,7 @@ define <8 x i16> @ustest_f16i16(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 6
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -2924,11 +2930,12 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset s1, -24
 ; CHECK-NOV-NEXT:    .cfi_offset s2, -32
 ; CHECK-NOV-NEXT:    mv s2, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixsfti@plt
 ; CHECK-NOV-NEXT:    mv s0, a0
 ; CHECK-NOV-NEXT:    mv s1, a1
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixsfti@plt
 ; CHECK-NOV-NEXT:    mv a2, a0
@@ -3005,11 +3012,12 @@ define <2 x i64> @stest_f16i64(<2 x half> %x) {
 ; CHECK-V-NEXT:    .cfi_offset s1, -24
 ; CHECK-V-NEXT:    .cfi_offset s2, -32
 ; CHECK-V-NEXT:    mv s2, a1
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixsfti@plt
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixsfti@plt
 ; CHECK-V-NEXT:    li a2, -1
@@ -3097,11 +3105,12 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset s1, -24
 ; CHECK-NOV-NEXT:    .cfi_offset s2, -32
 ; CHECK-NOV-NEXT:    mv s0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixunssfti@plt
 ; CHECK-NOV-NEXT:    mv s1, a0
 ; CHECK-NOV-NEXT:    mv s2, a1
-; CHECK-NOV-NEXT:    mv a0, s0
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s0
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixunssfti@plt
 ; CHECK-NOV-NEXT:    snez a1, a1
@@ -3131,11 +3140,12 @@ define <2 x i64> @utesth_f16i64(<2 x half> %x) {
 ; CHECK-V-NEXT:    .cfi_offset s1, -24
 ; CHECK-V-NEXT:    .cfi_offset s2, -32
 ; CHECK-V-NEXT:    mv s0, a1
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixunssfti@plt
 ; CHECK-V-NEXT:    mv s1, a0
 ; CHECK-V-NEXT:    mv s2, a1
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixunssfti@plt
 ; CHECK-V-NEXT:    snez a1, a1
@@ -3176,11 +3186,12 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset s1, -24
 ; CHECK-NOV-NEXT:    .cfi_offset s2, -32
 ; CHECK-NOV-NEXT:    mv s2, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixsfti@plt
 ; CHECK-NOV-NEXT:    mv s0, a0
 ; CHECK-NOV-NEXT:    mv s1, a1
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixsfti@plt
 ; CHECK-NOV-NEXT:    mv a2, s1
@@ -3236,11 +3247,12 @@ define <2 x i64> @ustest_f16i64(<2 x half> %x) {
 ; CHECK-V-NEXT:    .cfi_offset s1, -24
 ; CHECK-V-NEXT:    .cfi_offset s2, -32
 ; CHECK-V-NEXT:    mv s2, a1
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixsfti@plt
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixsfti@plt
 ; CHECK-V-NEXT:    mv a2, s1
@@ -3653,17 +3665,17 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s3, 8(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 16(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.l.s s2, fs2, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.l.s s1, fs2, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    lui a1, 524288
@@ -3671,7 +3683,7 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    bge a0, a4, .LBB33_10
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs1, rtz
-; CHECK-NOV-NEXT:    bge s2, a4, .LBB33_11
+; CHECK-NOV-NEXT:    bge s1, a4, .LBB33_11
 ; CHECK-NOV-NEXT:  .LBB33_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    bge a2, a4, .LBB33_12
@@ -3682,14 +3694,14 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB33_5: # %entry
 ; CHECK-NOV-NEXT:    bge a1, a2, .LBB33_15
 ; CHECK-NOV-NEXT:  .LBB33_6: # %entry
-; CHECK-NOV-NEXT:    bge a1, s2, .LBB33_16
+; CHECK-NOV-NEXT:    bge a1, s1, .LBB33_16
 ; CHECK-NOV-NEXT:  .LBB33_7: # %entry
 ; CHECK-NOV-NEXT:    blt a1, a0, .LBB33_9
 ; CHECK-NOV-NEXT:  .LBB33_8: # %entry
 ; CHECK-NOV-NEXT:    lui a0, 524288
 ; CHECK-NOV-NEXT:  .LBB33_9: # %entry
 ; CHECK-NOV-NEXT:    sw a0, 12(s0)
-; CHECK-NOV-NEXT:    sw s2, 8(s0)
+; CHECK-NOV-NEXT:    sw s1, 8(s0)
 ; CHECK-NOV-NEXT:    sw a2, 4(s0)
 ; CHECK-NOV-NEXT:    sw a3, 0(s0)
 ; CHECK-NOV-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
@@ -3705,9 +3717,9 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB33_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a4
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs1, rtz
-; CHECK-NOV-NEXT:    blt s2, a4, .LBB33_2
+; CHECK-NOV-NEXT:    blt s1, a4, .LBB33_2
 ; CHECK-NOV-NEXT:  .LBB33_11: # %entry
-; CHECK-NOV-NEXT:    mv s2, a4
+; CHECK-NOV-NEXT:    mv s1, a4
 ; CHECK-NOV-NEXT:    fcvt.l.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    blt a2, a4, .LBB33_3
 ; CHECK-NOV-NEXT:  .LBB33_12: # %entry
@@ -3721,9 +3733,9 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    blt a1, a2, .LBB33_6
 ; CHECK-NOV-NEXT:  .LBB33_15: # %entry
 ; CHECK-NOV-NEXT:    lui a2, 524288
-; CHECK-NOV-NEXT:    blt a1, s2, .LBB33_7
+; CHECK-NOV-NEXT:    blt a1, s1, .LBB33_7
 ; CHECK-NOV-NEXT:  .LBB33_16: # %entry
-; CHECK-NOV-NEXT:    lui s2, 524288
+; CHECK-NOV-NEXT:    lui s1, 524288
 ; CHECK-NOV-NEXT:    bge a1, a0, .LBB33_8
 ; CHECK-NOV-NEXT:    j .LBB33_9
 ;
@@ -3747,13 +3759,14 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    lhu s1, 16(a0)
 ; CHECK-V-NEXT:    lhu s2, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m2, tu, ma
@@ -3762,7 +3775,7 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
@@ -3771,7 +3784,7 @@ define <4 x i32> @stest_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -3828,17 +3841,17 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s3, 16(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 8(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.lu.s s2, fs2, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.lu.s s1, fs2, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    li a1, -1
@@ -3846,7 +3859,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    bgeu a0, a1, .LBB34_6
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.lu.s a2, fs1, rtz
-; CHECK-NOV-NEXT:    bgeu s2, a1, .LBB34_7
+; CHECK-NOV-NEXT:    bgeu s1, a1, .LBB34_7
 ; CHECK-NOV-NEXT:  .LBB34_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.lu.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    bgeu a2, a1, .LBB34_8
@@ -3857,7 +3870,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB34_5: # %entry
 ; CHECK-NOV-NEXT:    sw a3, 12(s0)
 ; CHECK-NOV-NEXT:    sw a2, 8(s0)
-; CHECK-NOV-NEXT:    sw s2, 4(s0)
+; CHECK-NOV-NEXT:    sw s1, 4(s0)
 ; CHECK-NOV-NEXT:    sw a0, 0(s0)
 ; CHECK-NOV-NEXT:    ld ra, 56(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s0, 48(sp) # 8-byte Folded Reload
@@ -3872,9 +3885,9 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB34_6: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a1
 ; CHECK-NOV-NEXT:    fcvt.lu.s a2, fs1, rtz
-; CHECK-NOV-NEXT:    bltu s2, a1, .LBB34_2
+; CHECK-NOV-NEXT:    bltu s1, a1, .LBB34_2
 ; CHECK-NOV-NEXT:  .LBB34_7: # %entry
-; CHECK-NOV-NEXT:    mv s2, a1
+; CHECK-NOV-NEXT:    mv s1, a1
 ; CHECK-NOV-NEXT:    fcvt.lu.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    bltu a2, a1, .LBB34_3
 ; CHECK-NOV-NEXT:  .LBB34_8: # %entry
@@ -3902,13 +3915,14 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    lhu s1, 16(a0)
 ; CHECK-V-NEXT:    lhu s2, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m2, tu, ma
@@ -3917,7 +3931,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
@@ -3926,7 +3940,7 @@ define <4 x i32> @utesth_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -3981,17 +3995,17 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s3, 8(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 16(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.l.s s2, fs2, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.l.s s1, fs2, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    li a2, -1
@@ -3999,7 +4013,7 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    bge a0, a2, .LBB35_6
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs1, rtz
-; CHECK-NOV-NEXT:    bge s2, a2, .LBB35_7
+; CHECK-NOV-NEXT:    bge s1, a2, .LBB35_7
 ; CHECK-NOV-NEXT:  .LBB35_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    bge a1, a2, .LBB35_8
@@ -4014,9 +4028,9 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:    sgtz a3, a1
 ; CHECK-NOV-NEXT:    negw a3, a3
 ; CHECK-NOV-NEXT:    and a1, a3, a1
-; CHECK-NOV-NEXT:    sgtz a3, s2
+; CHECK-NOV-NEXT:    sgtz a3, s1
 ; CHECK-NOV-NEXT:    negw a3, a3
-; CHECK-NOV-NEXT:    and a3, a3, s2
+; CHECK-NOV-NEXT:    and a3, a3, s1
 ; CHECK-NOV-NEXT:    sgtz a4, a0
 ; CHECK-NOV-NEXT:    negw a4, a4
 ; CHECK-NOV-NEXT:    and a0, a4, a0
@@ -4037,9 +4051,9 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB35_6: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a2
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs1, rtz
-; CHECK-NOV-NEXT:    blt s2, a2, .LBB35_2
+; CHECK-NOV-NEXT:    blt s1, a2, .LBB35_2
 ; CHECK-NOV-NEXT:  .LBB35_7: # %entry
-; CHECK-NOV-NEXT:    mv s2, a2
+; CHECK-NOV-NEXT:    mv s1, a2
 ; CHECK-NOV-NEXT:    fcvt.l.s a3, fs0, rtz
 ; CHECK-NOV-NEXT:    blt a1, a2, .LBB35_3
 ; CHECK-NOV-NEXT:  .LBB35_8: # %entry
@@ -4067,13 +4081,14 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    lhu s1, 16(a0)
 ; CHECK-V-NEXT:    lhu s2, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e64, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m2, tu, ma
@@ -4082,7 +4097,7 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e64, m2, tu, ma
@@ -4091,7 +4106,7 @@ define <4 x i32> @ustest_f16i32_mm(<4 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
@@ -4500,29 +4515,29 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s7, 40(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 48(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs6, fa0
-; CHECK-NOV-NEXT:    mv a0, s7
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s7
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs5, fa0
-; CHECK-NOV-NEXT:    mv a0, s6
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s6
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs4, fa0
-; CHECK-NOV-NEXT:    mv a0, s5
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s5
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs3, fa0
-; CHECK-NOV-NEXT:    mv a0, s4
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s4
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.l.s s2, fs6, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.l.s s1, fs6, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    lui a7, 8
@@ -4530,7 +4545,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    bge a0, a7, .LBB42_18
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
-; CHECK-NOV-NEXT:    bge s2, a7, .LBB42_19
+; CHECK-NOV-NEXT:    bge s1, a7, .LBB42_19
 ; CHECK-NOV-NEXT:  .LBB42_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs4, rtz
 ; CHECK-NOV-NEXT:    bge a1, a7, .LBB42_20
@@ -4562,14 +4577,14 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB42_13: # %entry
 ; CHECK-NOV-NEXT:    bge a7, a1, .LBB42_31
 ; CHECK-NOV-NEXT:  .LBB42_14: # %entry
-; CHECK-NOV-NEXT:    bge a7, s2, .LBB42_32
+; CHECK-NOV-NEXT:    bge a7, s1, .LBB42_32
 ; CHECK-NOV-NEXT:  .LBB42_15: # %entry
 ; CHECK-NOV-NEXT:    blt a7, a0, .LBB42_17
 ; CHECK-NOV-NEXT:  .LBB42_16: # %entry
 ; CHECK-NOV-NEXT:    lui a0, 1048568
 ; CHECK-NOV-NEXT:  .LBB42_17: # %entry
 ; CHECK-NOV-NEXT:    sh a0, 14(s0)
-; CHECK-NOV-NEXT:    sh s2, 12(s0)
+; CHECK-NOV-NEXT:    sh s1, 12(s0)
 ; CHECK-NOV-NEXT:    sh a1, 10(s0)
 ; CHECK-NOV-NEXT:    sh a2, 8(s0)
 ; CHECK-NOV-NEXT:    sh a3, 6(s0)
@@ -4597,9 +4612,9 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB42_18: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a7
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
-; CHECK-NOV-NEXT:    blt s2, a7, .LBB42_2
+; CHECK-NOV-NEXT:    blt s1, a7, .LBB42_2
 ; CHECK-NOV-NEXT:  .LBB42_19: # %entry
-; CHECK-NOV-NEXT:    mv s2, a7
+; CHECK-NOV-NEXT:    mv s1, a7
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs4, rtz
 ; CHECK-NOV-NEXT:    blt a1, a7, .LBB42_3
 ; CHECK-NOV-NEXT:  .LBB42_20: # %entry
@@ -4642,9 +4657,9 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    blt a7, a1, .LBB42_14
 ; CHECK-NOV-NEXT:  .LBB42_31: # %entry
 ; CHECK-NOV-NEXT:    lui a1, 1048568
-; CHECK-NOV-NEXT:    blt a7, s2, .LBB42_15
+; CHECK-NOV-NEXT:    blt a7, s1, .LBB42_15
 ; CHECK-NOV-NEXT:  .LBB42_32: # %entry
-; CHECK-NOV-NEXT:    lui s2, 1048568
+; CHECK-NOV-NEXT:    lui s1, 1048568
 ; CHECK-NOV-NEXT:    bge a7, a0, .LBB42_16
 ; CHECK-NOV-NEXT:    j .LBB42_17
 ;
@@ -4680,13 +4695,14 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    lhu s5, 16(a0)
 ; CHECK-V-NEXT:    lhu s6, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s6
+; CHECK-V-NEXT:    fmv.w.x fa0, s6
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
@@ -4695,7 +4711,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s5
+; CHECK-V-NEXT:    fmv.w.x fa0, s5
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
@@ -4704,7 +4720,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s4
+; CHECK-V-NEXT:    fmv.w.x fa0, s4
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
@@ -4713,7 +4729,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 3
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s3
+; CHECK-V-NEXT:    fmv.w.x fa0, s3
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
@@ -4722,7 +4738,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 4
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
@@ -4731,7 +4747,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 5
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
@@ -4740,7 +4756,7 @@ define <8 x i16> @stest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 6
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -4822,31 +4838,31 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s7, 16(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 8(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs5, fa0
-; CHECK-NOV-NEXT:    mv a0, s7
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s7
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs6, fa0
-; CHECK-NOV-NEXT:    mv a0, s6
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s6
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs4, fa0
-; CHECK-NOV-NEXT:    mv a0, s5
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s5
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs3, fa0
-; CHECK-NOV-NEXT:    mv a0, s4
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s4
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.lu.s s3, fs6, rtz
-; CHECK-NOV-NEXT:    fcvt.lu.s s2, fs5, rtz
-; CHECK-NOV-NEXT:    sext.w s2, s2
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fcvt.lu.s s2, fs6, rtz
+; CHECK-NOV-NEXT:    fcvt.lu.s a0, fs5, rtz
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    sext.w s1, a0
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    sext.w a0, a0
@@ -4857,10 +4873,10 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    mv a0, a1
 ; CHECK-NOV-NEXT:  .LBB43_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.lu.s a3, fs4, rtz
-; CHECK-NOV-NEXT:    sext.w a2, s3
-; CHECK-NOV-NEXT:    bltu s2, a1, .LBB43_4
+; CHECK-NOV-NEXT:    sext.w a2, s2
+; CHECK-NOV-NEXT:    bltu s1, a1, .LBB43_4
 ; CHECK-NOV-NEXT:  # %bb.3: # %entry
-; CHECK-NOV-NEXT:    mv s2, a1
+; CHECK-NOV-NEXT:    mv s1, a1
 ; CHECK-NOV-NEXT:  .LBB43_4: # %entry
 ; CHECK-NOV-NEXT:    fcvt.lu.s a4, fs3, rtz
 ; CHECK-NOV-NEXT:    sext.w a3, a3
@@ -4897,7 +4913,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    sh a4, 8(s0)
 ; CHECK-NOV-NEXT:    sh a3, 6(s0)
 ; CHECK-NOV-NEXT:    sh a2, 4(s0)
-; CHECK-NOV-NEXT:    sh s2, 2(s0)
+; CHECK-NOV-NEXT:    sh s1, 2(s0)
 ; CHECK-NOV-NEXT:    sh a0, 0(s0)
 ; CHECK-NOV-NEXT:    ld ra, 120(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s0, 112(sp) # 8-byte Folded Reload
@@ -4958,13 +4974,14 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    lhu s5, 16(a0)
 ; CHECK-V-NEXT:    lhu s6, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s6
+; CHECK-V-NEXT:    fmv.w.x fa0, s6
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
@@ -4973,7 +4990,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s5
+; CHECK-V-NEXT:    fmv.w.x fa0, s5
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
@@ -4982,7 +4999,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s4
+; CHECK-V-NEXT:    fmv.w.x fa0, s4
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
@@ -4991,7 +5008,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 3
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s3
+; CHECK-V-NEXT:    fmv.w.x fa0, s3
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
@@ -5000,7 +5017,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 4
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
@@ -5009,7 +5026,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 5
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
@@ -5018,7 +5035,7 @@ define <8 x i16> @utesth_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 6
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.lu.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -5097,29 +5114,29 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    lhu s7, 40(a1)
 ; CHECK-NOV-NEXT:    lhu a1, 48(a1)
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs6, fa0
-; CHECK-NOV-NEXT:    mv a0, s7
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s7
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs5, fa0
-; CHECK-NOV-NEXT:    mv a0, s6
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s6
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs4, fa0
-; CHECK-NOV-NEXT:    mv a0, s5
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s5
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs3, fa0
-; CHECK-NOV-NEXT:    mv a0, s4
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s4
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs2, fa0
-; CHECK-NOV-NEXT:    mv a0, s3
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s3
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs1, fa0
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fmv.s fs0, fa0
-; CHECK-NOV-NEXT:    fcvt.l.s s2, fs6, rtz
-; CHECK-NOV-NEXT:    mv a0, s1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s1
+; CHECK-NOV-NEXT:    fcvt.l.s s1, fs6, rtz
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-NOV-NEXT:    lui a3, 16
@@ -5127,7 +5144,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    bge a0, a3, .LBB44_10
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
-; CHECK-NOV-NEXT:    bge s2, a3, .LBB44_11
+; CHECK-NOV-NEXT:    bge s1, a3, .LBB44_11
 ; CHECK-NOV-NEXT:  .LBB44_2: # %entry
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs4, rtz
 ; CHECK-NOV-NEXT:    bge a1, a3, .LBB44_12
@@ -5166,9 +5183,9 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:    sgtz a7, a1
 ; CHECK-NOV-NEXT:    negw a7, a7
 ; CHECK-NOV-NEXT:    and a1, a7, a1
-; CHECK-NOV-NEXT:    sgtz a7, s2
+; CHECK-NOV-NEXT:    sgtz a7, s1
 ; CHECK-NOV-NEXT:    negw a7, a7
-; CHECK-NOV-NEXT:    and a7, a7, s2
+; CHECK-NOV-NEXT:    and a7, a7, s1
 ; CHECK-NOV-NEXT:    sgtz t0, a0
 ; CHECK-NOV-NEXT:    negw t0, t0
 ; CHECK-NOV-NEXT:    and a0, t0, a0
@@ -5201,9 +5218,9 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-NOV-NEXT:  .LBB44_10: # %entry
 ; CHECK-NOV-NEXT:    mv a0, a3
 ; CHECK-NOV-NEXT:    fcvt.l.s a1, fs5, rtz
-; CHECK-NOV-NEXT:    blt s2, a3, .LBB44_2
+; CHECK-NOV-NEXT:    blt s1, a3, .LBB44_2
 ; CHECK-NOV-NEXT:  .LBB44_11: # %entry
-; CHECK-NOV-NEXT:    mv s2, a3
+; CHECK-NOV-NEXT:    mv s1, a3
 ; CHECK-NOV-NEXT:    fcvt.l.s a2, fs4, rtz
 ; CHECK-NOV-NEXT:    blt a1, a3, .LBB44_3
 ; CHECK-NOV-NEXT:  .LBB44_12: # %entry
@@ -5259,13 +5276,14 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    lhu s5, 16(a0)
 ; CHECK-V-NEXT:    lhu s6, 0(a0)
 ; CHECK-V-NEXT:    lhu a0, 8(a0)
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 1, e32, mf2, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
 ; CHECK-V-NEXT:    addi a0, sp, 16
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s6
+; CHECK-V-NEXT:    fmv.w.x fa0, s6
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 2, e32, m2, tu, ma
@@ -5274,7 +5292,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v8, v10, 1
 ; CHECK-V-NEXT:    vs2r.v v8, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s5
+; CHECK-V-NEXT:    fmv.w.x fa0, s5
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 3, e32, m2, tu, ma
@@ -5283,7 +5301,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 2
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s4
+; CHECK-V-NEXT:    fmv.w.x fa0, s4
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 4, e32, m2, tu, ma
@@ -5292,7 +5310,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 3
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s3
+; CHECK-V-NEXT:    fmv.w.x fa0, s3
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 5, e32, m2, tu, ma
@@ -5301,7 +5319,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 4
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 6, e32, m2, tu, ma
@@ -5310,7 +5328,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 5
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s1
+; CHECK-V-NEXT:    fmv.w.x fa0, s1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 7, e32, m2, tu, ma
@@ -5319,7 +5337,7 @@ define <8 x i16> @ustest_f16i16_mm(<8 x half> %x) {
 ; CHECK-V-NEXT:    vl2r.v v10, (a0) # Unknown-size Folded Reload
 ; CHECK-V-NEXT:    vslideup.vi v10, v8, 6
 ; CHECK-V-NEXT:    vs2r.v v10, (a0) # Unknown-size Folded Spill
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    fcvt.l.s a0, fa0, rtz
 ; CHECK-V-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
@@ -5378,43 +5396,58 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    mv a2, a0
 ; CHECK-NOV-NEXT:    li a0, -1
 ; CHECK-NOV-NEXT:    srli a3, a0, 1
-; CHECK-NOV-NEXT:    mv a4, a2
-; CHECK-NOV-NEXT:    bgez a1, .LBB45_15
+; CHECK-NOV-NEXT:    beqz a1, .LBB45_2
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
-; CHECK-NOV-NEXT:    bgeu a2, a3, .LBB45_16
-; CHECK-NOV-NEXT:  .LBB45_2: # %entry
-; CHECK-NOV-NEXT:    bnez a1, .LBB45_17
+; CHECK-NOV-NEXT:    slti a4, a1, 0
+; CHECK-NOV-NEXT:    beqz a4, .LBB45_3
+; CHECK-NOV-NEXT:    j .LBB45_4
+; CHECK-NOV-NEXT:  .LBB45_2:
+; CHECK-NOV-NEXT:    sltu a4, a2, a3
+; CHECK-NOV-NEXT:    bnez a4, .LBB45_4
 ; CHECK-NOV-NEXT:  .LBB45_3: # %entry
-; CHECK-NOV-NEXT:    mv a4, s0
-; CHECK-NOV-NEXT:    bgez s1, .LBB45_18
+; CHECK-NOV-NEXT:    mv a2, a3
 ; CHECK-NOV-NEXT:  .LBB45_4: # %entry
-; CHECK-NOV-NEXT:    bgeu s0, a3, .LBB45_19
-; CHECK-NOV-NEXT:  .LBB45_5: # %entry
-; CHECK-NOV-NEXT:    beqz s1, .LBB45_7
-; CHECK-NOV-NEXT:  .LBB45_6: # %entry
-; CHECK-NOV-NEXT:    mv s0, a4
+; CHECK-NOV-NEXT:    beqz s1, .LBB45_6
+; CHECK-NOV-NEXT:  # %bb.5: # %entry
+; CHECK-NOV-NEXT:    slti a6, s1, 0
+; CHECK-NOV-NEXT:    j .LBB45_7
+; CHECK-NOV-NEXT:  .LBB45_6:
+; CHECK-NOV-NEXT:    sltu a6, s0, a3
 ; CHECK-NOV-NEXT:  .LBB45_7: # %entry
-; CHECK-NOV-NEXT:    srai a4, s1, 63
-; CHECK-NOV-NEXT:    and a4, a4, s1
-; CHECK-NOV-NEXT:    slli a3, a0, 63
-; CHECK-NOV-NEXT:    mv a5, s0
-; CHECK-NOV-NEXT:    bltz a4, .LBB45_20
+; CHECK-NOV-NEXT:    neg a5, a6
+; CHECK-NOV-NEXT:    and a5, a5, s1
+; CHECK-NOV-NEXT:    bnez a6, .LBB45_9
 ; CHECK-NOV-NEXT:  # %bb.8: # %entry
-; CHECK-NOV-NEXT:    srai a6, a1, 63
-; CHECK-NOV-NEXT:    bgeu a3, s0, .LBB45_21
+; CHECK-NOV-NEXT:    mv s0, a3
 ; CHECK-NOV-NEXT:  .LBB45_9: # %entry
-; CHECK-NOV-NEXT:    and a1, a6, a1
-; CHECK-NOV-NEXT:    bne a4, a0, .LBB45_22
-; CHECK-NOV-NEXT:  .LBB45_10: # %entry
-; CHECK-NOV-NEXT:    mv a4, a2
-; CHECK-NOV-NEXT:    bltz a1, .LBB45_23
-; CHECK-NOV-NEXT:  .LBB45_11: # %entry
-; CHECK-NOV-NEXT:    bgeu a3, a2, .LBB45_24
+; CHECK-NOV-NEXT:    neg a4, a4
+; CHECK-NOV-NEXT:    slli a3, a0, 63
+; CHECK-NOV-NEXT:    beq a5, a0, .LBB45_11
+; CHECK-NOV-NEXT:  # %bb.10: # %entry
+; CHECK-NOV-NEXT:    slti a5, a5, 0
+; CHECK-NOV-NEXT:    xori a5, a5, 1
+; CHECK-NOV-NEXT:    and a1, a4, a1
+; CHECK-NOV-NEXT:    beqz a5, .LBB45_12
+; CHECK-NOV-NEXT:    j .LBB45_13
+; CHECK-NOV-NEXT:  .LBB45_11:
+; CHECK-NOV-NEXT:    sltu a5, a3, s0
+; CHECK-NOV-NEXT:    and a1, a4, a1
+; CHECK-NOV-NEXT:    bnez a5, .LBB45_13
 ; CHECK-NOV-NEXT:  .LBB45_12: # %entry
-; CHECK-NOV-NEXT:    beq a1, a0, .LBB45_14
+; CHECK-NOV-NEXT:    mv s0, a3
 ; CHECK-NOV-NEXT:  .LBB45_13: # %entry
-; CHECK-NOV-NEXT:    mv a2, a4
-; CHECK-NOV-NEXT:  .LBB45_14: # %entry
+; CHECK-NOV-NEXT:    beq a1, a0, .LBB45_15
+; CHECK-NOV-NEXT:  # %bb.14: # %entry
+; CHECK-NOV-NEXT:    slti a0, a1, 0
+; CHECK-NOV-NEXT:    xori a0, a0, 1
+; CHECK-NOV-NEXT:    beqz a0, .LBB45_16
+; CHECK-NOV-NEXT:    j .LBB45_17
+; CHECK-NOV-NEXT:  .LBB45_15:
+; CHECK-NOV-NEXT:    sltu a0, a3, a2
+; CHECK-NOV-NEXT:    bnez a0, .LBB45_17
+; CHECK-NOV-NEXT:  .LBB45_16: # %entry
+; CHECK-NOV-NEXT:    mv a2, a3
+; CHECK-NOV-NEXT:  .LBB45_17: # %entry
 ; CHECK-NOV-NEXT:    mv a0, s0
 ; CHECK-NOV-NEXT:    mv a1, a2
 ; CHECK-NOV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -5423,42 +5456,6 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
 ; CHECK-NOV-NEXT:    ret
-; CHECK-NOV-NEXT:  .LBB45_15: # %entry
-; CHECK-NOV-NEXT:    mv a4, a3
-; CHECK-NOV-NEXT:    bltu a2, a3, .LBB45_2
-; CHECK-NOV-NEXT:  .LBB45_16: # %entry
-; CHECK-NOV-NEXT:    mv a2, a3
-; CHECK-NOV-NEXT:    beqz a1, .LBB45_3
-; CHECK-NOV-NEXT:  .LBB45_17: # %entry
-; CHECK-NOV-NEXT:    mv a2, a4
-; CHECK-NOV-NEXT:    mv a4, s0
-; CHECK-NOV-NEXT:    bltz s1, .LBB45_4
-; CHECK-NOV-NEXT:  .LBB45_18: # %entry
-; CHECK-NOV-NEXT:    mv a4, a3
-; CHECK-NOV-NEXT:    bltu s0, a3, .LBB45_5
-; CHECK-NOV-NEXT:  .LBB45_19: # %entry
-; CHECK-NOV-NEXT:    mv s0, a3
-; CHECK-NOV-NEXT:    bnez s1, .LBB45_6
-; CHECK-NOV-NEXT:    j .LBB45_7
-; CHECK-NOV-NEXT:  .LBB45_20: # %entry
-; CHECK-NOV-NEXT:    mv a5, a3
-; CHECK-NOV-NEXT:    srai a6, a1, 63
-; CHECK-NOV-NEXT:    bltu a3, s0, .LBB45_9
-; CHECK-NOV-NEXT:  .LBB45_21: # %entry
-; CHECK-NOV-NEXT:    mv s0, a3
-; CHECK-NOV-NEXT:    and a1, a6, a1
-; CHECK-NOV-NEXT:    beq a4, a0, .LBB45_10
-; CHECK-NOV-NEXT:  .LBB45_22: # %entry
-; CHECK-NOV-NEXT:    mv s0, a5
-; CHECK-NOV-NEXT:    mv a4, a2
-; CHECK-NOV-NEXT:    bgez a1, .LBB45_11
-; CHECK-NOV-NEXT:  .LBB45_23: # %entry
-; CHECK-NOV-NEXT:    mv a4, a3
-; CHECK-NOV-NEXT:    bltu a3, a2, .LBB45_12
-; CHECK-NOV-NEXT:  .LBB45_24: # %entry
-; CHECK-NOV-NEXT:    mv a2, a3
-; CHECK-NOV-NEXT:    bne a1, a0, .LBB45_13
-; CHECK-NOV-NEXT:    j .LBB45_14
 ;
 ; CHECK-V-LABEL: stest_f64i64_mm:
 ; CHECK-V:       # %bb.0: # %entry
@@ -5489,43 +5486,59 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-V-NEXT:    call __fixdfti@plt
 ; CHECK-V-NEXT:    li a2, -1
 ; CHECK-V-NEXT:    srli a3, a2, 1
-; CHECK-V-NEXT:    mv a4, s0
-; CHECK-V-NEXT:    bgez s1, .LBB45_15
+; CHECK-V-NEXT:    beqz s1, .LBB45_2
 ; CHECK-V-NEXT:  # %bb.1: # %entry
-; CHECK-V-NEXT:    bgeu s0, a3, .LBB45_16
-; CHECK-V-NEXT:  .LBB45_2: # %entry
-; CHECK-V-NEXT:    bnez s1, .LBB45_17
+; CHECK-V-NEXT:    slti a4, s1, 0
+; CHECK-V-NEXT:    beqz a4, .LBB45_3
+; CHECK-V-NEXT:    j .LBB45_4
+; CHECK-V-NEXT:  .LBB45_2:
+; CHECK-V-NEXT:    sltu a4, s0, a3
+; CHECK-V-NEXT:    bnez a4, .LBB45_4
 ; CHECK-V-NEXT:  .LBB45_3: # %entry
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bgez a1, .LBB45_18
+; CHECK-V-NEXT:    mv s0, a3
 ; CHECK-V-NEXT:  .LBB45_4: # %entry
-; CHECK-V-NEXT:    bgeu a0, a3, .LBB45_19
-; CHECK-V-NEXT:  .LBB45_5: # %entry
-; CHECK-V-NEXT:    beqz a1, .LBB45_7
-; CHECK-V-NEXT:  .LBB45_6: # %entry
-; CHECK-V-NEXT:    mv a0, a4
+; CHECK-V-NEXT:    neg a5, a4
+; CHECK-V-NEXT:    beqz a1, .LBB45_6
+; CHECK-V-NEXT:  # %bb.5: # %entry
+; CHECK-V-NEXT:    slti a4, a1, 0
+; CHECK-V-NEXT:    and a5, a5, s1
+; CHECK-V-NEXT:    beqz a4, .LBB45_7
+; CHECK-V-NEXT:    j .LBB45_8
+; CHECK-V-NEXT:  .LBB45_6:
+; CHECK-V-NEXT:    sltu a4, a0, a3
+; CHECK-V-NEXT:    and a5, a5, s1
+; CHECK-V-NEXT:    bnez a4, .LBB45_8
 ; CHECK-V-NEXT:  .LBB45_7: # %entry
-; CHECK-V-NEXT:    srai a4, s1, 63
-; CHECK-V-NEXT:    and a4, a4, s1
+; CHECK-V-NEXT:    mv a0, a3
+; CHECK-V-NEXT:  .LBB45_8: # %entry
+; CHECK-V-NEXT:    neg a4, a4
 ; CHECK-V-NEXT:    slli a3, a2, 63
-; CHECK-V-NEXT:    mv a5, s0
-; CHECK-V-NEXT:    bltz a4, .LBB45_20
-; CHECK-V-NEXT:  # %bb.8: # %entry
-; CHECK-V-NEXT:    srai a6, a1, 63
-; CHECK-V-NEXT:    bgeu a3, s0, .LBB45_21
-; CHECK-V-NEXT:  .LBB45_9: # %entry
-; CHECK-V-NEXT:    and a1, a6, a1
-; CHECK-V-NEXT:    bne a4, a2, .LBB45_22
-; CHECK-V-NEXT:  .LBB45_10: # %entry
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bltz a1, .LBB45_23
+; CHECK-V-NEXT:    beq a5, a2, .LBB45_10
+; CHECK-V-NEXT:  # %bb.9: # %entry
+; CHECK-V-NEXT:    slti a5, a5, 0
+; CHECK-V-NEXT:    xori a5, a5, 1
+; CHECK-V-NEXT:    and a1, a4, a1
+; CHECK-V-NEXT:    beqz a5, .LBB45_11
+; CHECK-V-NEXT:    j .LBB45_12
+; CHECK-V-NEXT:  .LBB45_10:
+; CHECK-V-NEXT:    sltu a5, a3, s0
+; CHECK-V-NEXT:    and a1, a4, a1
+; CHECK-V-NEXT:    bnez a5, .LBB45_12
 ; CHECK-V-NEXT:  .LBB45_11: # %entry
-; CHECK-V-NEXT:    bgeu a3, a0, .LBB45_24
+; CHECK-V-NEXT:    mv s0, a3
 ; CHECK-V-NEXT:  .LBB45_12: # %entry
 ; CHECK-V-NEXT:    beq a1, a2, .LBB45_14
-; CHECK-V-NEXT:  .LBB45_13: # %entry
-; CHECK-V-NEXT:    mv a0, a4
-; CHECK-V-NEXT:  .LBB45_14: # %entry
+; CHECK-V-NEXT:  # %bb.13: # %entry
+; CHECK-V-NEXT:    slti a1, a1, 0
+; CHECK-V-NEXT:    xori a1, a1, 1
+; CHECK-V-NEXT:    beqz a1, .LBB45_15
+; CHECK-V-NEXT:    j .LBB45_16
+; CHECK-V-NEXT:  .LBB45_14:
+; CHECK-V-NEXT:    sltu a1, a3, a0
+; CHECK-V-NEXT:    bnez a1, .LBB45_16
+; CHECK-V-NEXT:  .LBB45_15: # %entry
+; CHECK-V-NEXT:    mv a0, a3
+; CHECK-V-NEXT:  .LBB45_16: # %entry
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v9, s0
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
@@ -5538,42 +5551,6 @@ define <2 x i64> @stest_f64i64_mm(<2 x double> %x) {
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    addi sp, sp, 64
 ; CHECK-V-NEXT:    ret
-; CHECK-V-NEXT:  .LBB45_15: # %entry
-; CHECK-V-NEXT:    mv a4, a3
-; CHECK-V-NEXT:    bltu s0, a3, .LBB45_2
-; CHECK-V-NEXT:  .LBB45_16: # %entry
-; CHECK-V-NEXT:    mv s0, a3
-; CHECK-V-NEXT:    beqz s1, .LBB45_3
-; CHECK-V-NEXT:  .LBB45_17: # %entry
-; CHECK-V-NEXT:    mv s0, a4
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bltz a1, .LBB45_4
-; CHECK-V-NEXT:  .LBB45_18: # %entry
-; CHECK-V-NEXT:    mv a4, a3
-; CHECK-V-NEXT:    bltu a0, a3, .LBB45_5
-; CHECK-V-NEXT:  .LBB45_19: # %entry
-; CHECK-V-NEXT:    mv a0, a3
-; CHECK-V-NEXT:    bnez a1, .LBB45_6
-; CHECK-V-NEXT:    j .LBB45_7
-; CHECK-V-NEXT:  .LBB45_20: # %entry
-; CHECK-V-NEXT:    mv a5, a3
-; CHECK-V-NEXT:    srai a6, a1, 63
-; CHECK-V-NEXT:    bltu a3, s0, .LBB45_9
-; CHECK-V-NEXT:  .LBB45_21: # %entry
-; CHECK-V-NEXT:    mv s0, a3
-; CHECK-V-NEXT:    and a1, a6, a1
-; CHECK-V-NEXT:    beq a4, a2, .LBB45_10
-; CHECK-V-NEXT:  .LBB45_22: # %entry
-; CHECK-V-NEXT:    mv s0, a5
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bgez a1, .LBB45_11
-; CHECK-V-NEXT:  .LBB45_23: # %entry
-; CHECK-V-NEXT:    mv a4, a3
-; CHECK-V-NEXT:    bltu a3, a0, .LBB45_12
-; CHECK-V-NEXT:  .LBB45_24: # %entry
-; CHECK-V-NEXT:    mv a0, a3
-; CHECK-V-NEXT:    bne a1, a2, .LBB45_13
-; CHECK-V-NEXT:    j .LBB45_14
 entry:
   %conv = fptosi <2 x double> %x to <2 x i128>
   %spec.store.select = call <2 x i128> @llvm.smin.v2i128(<2 x i128> %conv, <2 x i128> <i128 9223372036854775807, i128 9223372036854775807>)
@@ -5602,20 +5579,12 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NOV-NEXT:    mv s1, a1
 ; CHECK-NOV-NEXT:    fmv.d fa0, fs0
 ; CHECK-NOV-NEXT:    call __fixunsdfti@plt
-; CHECK-NOV-NEXT:    snez a2, a1
-; CHECK-NOV-NEXT:    addi a2, a2, -1
-; CHECK-NOV-NEXT:    and a0, a2, a0
-; CHECK-NOV-NEXT:    addi a1, a1, -1
-; CHECK-NOV-NEXT:    seqz a1, a1
+; CHECK-NOV-NEXT:    snez a1, a1
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    and a0, a1, a0
 ; CHECK-NOV-NEXT:    snez a1, s1
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    and a1, a1, s0
-; CHECK-NOV-NEXT:    addi s1, s1, -1
-; CHECK-NOV-NEXT:    seqz a2, s1
-; CHECK-NOV-NEXT:    addi a2, a2, -1
-; CHECK-NOV-NEXT:    and a1, a2, a1
 ; CHECK-NOV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -5653,15 +5622,7 @@ define <2 x i64> @utest_f64i64_mm(<2 x double> %x) {
 ; CHECK-V-NEXT:    snez a2, s1
 ; CHECK-V-NEXT:    addi a2, a2, -1
 ; CHECK-V-NEXT:    and a2, a2, s0
-; CHECK-V-NEXT:    addi s1, s1, -1
-; CHECK-V-NEXT:    seqz a3, s1
-; CHECK-V-NEXT:    addi a3, a3, -1
-; CHECK-V-NEXT:    and a2, a3, a2
-; CHECK-V-NEXT:    snez a3, a1
-; CHECK-V-NEXT:    addi a3, a3, -1
-; CHECK-V-NEXT:    and a0, a3, a0
-; CHECK-V-NEXT:    addi a1, a1, -1
-; CHECK-V-NEXT:    seqz a1, a1
+; CHECK-V-NEXT:    snez a1, a1
 ; CHECK-V-NEXT:    addi a1, a1, -1
 ; CHECK-V-NEXT:    and a0, a1, a0
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -5712,20 +5673,12 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-NOV-NEXT:  # %bb.3: # %entry
 ; CHECK-NOV-NEXT:    li a3, 1
 ; CHECK-NOV-NEXT:  .LBB47_4: # %entry
-; CHECK-NOV-NEXT:    slti a4, a1, 1
-; CHECK-NOV-NEXT:    neg a4, a4
-; CHECK-NOV-NEXT:    and a0, a4, a0
-; CHECK-NOV-NEXT:    addi a1, a1, -1
-; CHECK-NOV-NEXT:    seqz a1, a1
-; CHECK-NOV-NEXT:    addi a1, a1, -1
+; CHECK-NOV-NEXT:    slti a1, a1, 1
+; CHECK-NOV-NEXT:    neg a1, a1
 ; CHECK-NOV-NEXT:    and a1, a1, a0
 ; CHECK-NOV-NEXT:    slti a0, s1, 1
 ; CHECK-NOV-NEXT:    neg a0, a0
 ; CHECK-NOV-NEXT:    and a0, a0, s0
-; CHECK-NOV-NEXT:    addi s1, s1, -1
-; CHECK-NOV-NEXT:    seqz a4, s1
-; CHECK-NOV-NEXT:    addi a4, a4, -1
-; CHECK-NOV-NEXT:    and a0, a4, a0
 ; CHECK-NOV-NEXT:    slti a3, a3, 0
 ; CHECK-NOV-NEXT:    addi a3, a3, -1
 ; CHECK-NOV-NEXT:    and a0, a3, a0
@@ -5774,16 +5727,8 @@ define <2 x i64> @ustest_f64i64_mm(<2 x double> %x) {
 ; CHECK-V-NEXT:    slti a3, s0, 1
 ; CHECK-V-NEXT:    neg a3, a3
 ; CHECK-V-NEXT:    and a3, a3, s1
-; CHECK-V-NEXT:    addi a4, s0, -1
-; CHECK-V-NEXT:    seqz a4, a4
-; CHECK-V-NEXT:    addi a4, a4, -1
-; CHECK-V-NEXT:    and a3, a4, a3
-; CHECK-V-NEXT:    slti a4, a1, 1
-; CHECK-V-NEXT:    neg a4, a4
-; CHECK-V-NEXT:    and a0, a4, a0
-; CHECK-V-NEXT:    addi a1, a1, -1
-; CHECK-V-NEXT:    seqz a1, a1
-; CHECK-V-NEXT:    addi a1, a1, -1
+; CHECK-V-NEXT:    slti a1, a1, 1
+; CHECK-V-NEXT:    neg a1, a1
 ; CHECK-V-NEXT:    and a0, a1, a0
 ; CHECK-V-NEXT:    blez s0, .LBB47_4
 ; CHECK-V-NEXT:  # %bb.3: # %entry
@@ -5837,43 +5782,58 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    mv a2, a0
 ; CHECK-NOV-NEXT:    li a0, -1
 ; CHECK-NOV-NEXT:    srli a3, a0, 1
-; CHECK-NOV-NEXT:    mv a4, a2
-; CHECK-NOV-NEXT:    bgez a1, .LBB48_15
+; CHECK-NOV-NEXT:    beqz a1, .LBB48_2
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
-; CHECK-NOV-NEXT:    bgeu a2, a3, .LBB48_16
-; CHECK-NOV-NEXT:  .LBB48_2: # %entry
-; CHECK-NOV-NEXT:    bnez a1, .LBB48_17
+; CHECK-NOV-NEXT:    slti a4, a1, 0
+; CHECK-NOV-NEXT:    beqz a4, .LBB48_3
+; CHECK-NOV-NEXT:    j .LBB48_4
+; CHECK-NOV-NEXT:  .LBB48_2:
+; CHECK-NOV-NEXT:    sltu a4, a2, a3
+; CHECK-NOV-NEXT:    bnez a4, .LBB48_4
 ; CHECK-NOV-NEXT:  .LBB48_3: # %entry
-; CHECK-NOV-NEXT:    mv a4, s0
-; CHECK-NOV-NEXT:    bgez s1, .LBB48_18
+; CHECK-NOV-NEXT:    mv a2, a3
 ; CHECK-NOV-NEXT:  .LBB48_4: # %entry
-; CHECK-NOV-NEXT:    bgeu s0, a3, .LBB48_19
-; CHECK-NOV-NEXT:  .LBB48_5: # %entry
-; CHECK-NOV-NEXT:    beqz s1, .LBB48_7
-; CHECK-NOV-NEXT:  .LBB48_6: # %entry
-; CHECK-NOV-NEXT:    mv s0, a4
+; CHECK-NOV-NEXT:    beqz s1, .LBB48_6
+; CHECK-NOV-NEXT:  # %bb.5: # %entry
+; CHECK-NOV-NEXT:    slti a6, s1, 0
+; CHECK-NOV-NEXT:    j .LBB48_7
+; CHECK-NOV-NEXT:  .LBB48_6:
+; CHECK-NOV-NEXT:    sltu a6, s0, a3
 ; CHECK-NOV-NEXT:  .LBB48_7: # %entry
-; CHECK-NOV-NEXT:    srai a4, s1, 63
-; CHECK-NOV-NEXT:    and a4, a4, s1
-; CHECK-NOV-NEXT:    slli a3, a0, 63
-; CHECK-NOV-NEXT:    mv a5, s0
-; CHECK-NOV-NEXT:    bltz a4, .LBB48_20
+; CHECK-NOV-NEXT:    neg a5, a6
+; CHECK-NOV-NEXT:    and a5, a5, s1
+; CHECK-NOV-NEXT:    bnez a6, .LBB48_9
 ; CHECK-NOV-NEXT:  # %bb.8: # %entry
-; CHECK-NOV-NEXT:    srai a6, a1, 63
-; CHECK-NOV-NEXT:    bgeu a3, s0, .LBB48_21
+; CHECK-NOV-NEXT:    mv s0, a3
 ; CHECK-NOV-NEXT:  .LBB48_9: # %entry
-; CHECK-NOV-NEXT:    and a1, a6, a1
-; CHECK-NOV-NEXT:    bne a4, a0, .LBB48_22
-; CHECK-NOV-NEXT:  .LBB48_10: # %entry
-; CHECK-NOV-NEXT:    mv a4, a2
-; CHECK-NOV-NEXT:    bltz a1, .LBB48_23
-; CHECK-NOV-NEXT:  .LBB48_11: # %entry
-; CHECK-NOV-NEXT:    bgeu a3, a2, .LBB48_24
+; CHECK-NOV-NEXT:    neg a4, a4
+; CHECK-NOV-NEXT:    slli a3, a0, 63
+; CHECK-NOV-NEXT:    beq a5, a0, .LBB48_11
+; CHECK-NOV-NEXT:  # %bb.10: # %entry
+; CHECK-NOV-NEXT:    slti a5, a5, 0
+; CHECK-NOV-NEXT:    xori a5, a5, 1
+; CHECK-NOV-NEXT:    and a1, a4, a1
+; CHECK-NOV-NEXT:    beqz a5, .LBB48_12
+; CHECK-NOV-NEXT:    j .LBB48_13
+; CHECK-NOV-NEXT:  .LBB48_11:
+; CHECK-NOV-NEXT:    sltu a5, a3, s0
+; CHECK-NOV-NEXT:    and a1, a4, a1
+; CHECK-NOV-NEXT:    bnez a5, .LBB48_13
 ; CHECK-NOV-NEXT:  .LBB48_12: # %entry
-; CHECK-NOV-NEXT:    beq a1, a0, .LBB48_14
+; CHECK-NOV-NEXT:    mv s0, a3
 ; CHECK-NOV-NEXT:  .LBB48_13: # %entry
-; CHECK-NOV-NEXT:    mv a2, a4
-; CHECK-NOV-NEXT:  .LBB48_14: # %entry
+; CHECK-NOV-NEXT:    beq a1, a0, .LBB48_15
+; CHECK-NOV-NEXT:  # %bb.14: # %entry
+; CHECK-NOV-NEXT:    slti a0, a1, 0
+; CHECK-NOV-NEXT:    xori a0, a0, 1
+; CHECK-NOV-NEXT:    beqz a0, .LBB48_16
+; CHECK-NOV-NEXT:    j .LBB48_17
+; CHECK-NOV-NEXT:  .LBB48_15:
+; CHECK-NOV-NEXT:    sltu a0, a3, a2
+; CHECK-NOV-NEXT:    bnez a0, .LBB48_17
+; CHECK-NOV-NEXT:  .LBB48_16: # %entry
+; CHECK-NOV-NEXT:    mv a2, a3
+; CHECK-NOV-NEXT:  .LBB48_17: # %entry
 ; CHECK-NOV-NEXT:    mv a0, s0
 ; CHECK-NOV-NEXT:    mv a1, a2
 ; CHECK-NOV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -5882,42 +5842,6 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    fld fs0, 0(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
 ; CHECK-NOV-NEXT:    ret
-; CHECK-NOV-NEXT:  .LBB48_15: # %entry
-; CHECK-NOV-NEXT:    mv a4, a3
-; CHECK-NOV-NEXT:    bltu a2, a3, .LBB48_2
-; CHECK-NOV-NEXT:  .LBB48_16: # %entry
-; CHECK-NOV-NEXT:    mv a2, a3
-; CHECK-NOV-NEXT:    beqz a1, .LBB48_3
-; CHECK-NOV-NEXT:  .LBB48_17: # %entry
-; CHECK-NOV-NEXT:    mv a2, a4
-; CHECK-NOV-NEXT:    mv a4, s0
-; CHECK-NOV-NEXT:    bltz s1, .LBB48_4
-; CHECK-NOV-NEXT:  .LBB48_18: # %entry
-; CHECK-NOV-NEXT:    mv a4, a3
-; CHECK-NOV-NEXT:    bltu s0, a3, .LBB48_5
-; CHECK-NOV-NEXT:  .LBB48_19: # %entry
-; CHECK-NOV-NEXT:    mv s0, a3
-; CHECK-NOV-NEXT:    bnez s1, .LBB48_6
-; CHECK-NOV-NEXT:    j .LBB48_7
-; CHECK-NOV-NEXT:  .LBB48_20: # %entry
-; CHECK-NOV-NEXT:    mv a5, a3
-; CHECK-NOV-NEXT:    srai a6, a1, 63
-; CHECK-NOV-NEXT:    bltu a3, s0, .LBB48_9
-; CHECK-NOV-NEXT:  .LBB48_21: # %entry
-; CHECK-NOV-NEXT:    mv s0, a3
-; CHECK-NOV-NEXT:    and a1, a6, a1
-; CHECK-NOV-NEXT:    beq a4, a0, .LBB48_10
-; CHECK-NOV-NEXT:  .LBB48_22: # %entry
-; CHECK-NOV-NEXT:    mv s0, a5
-; CHECK-NOV-NEXT:    mv a4, a2
-; CHECK-NOV-NEXT:    bgez a1, .LBB48_11
-; CHECK-NOV-NEXT:  .LBB48_23: # %entry
-; CHECK-NOV-NEXT:    mv a4, a3
-; CHECK-NOV-NEXT:    bltu a3, a2, .LBB48_12
-; CHECK-NOV-NEXT:  .LBB48_24: # %entry
-; CHECK-NOV-NEXT:    mv a2, a3
-; CHECK-NOV-NEXT:    bne a1, a0, .LBB48_13
-; CHECK-NOV-NEXT:    j .LBB48_14
 ;
 ; CHECK-V-LABEL: stest_f32i64_mm:
 ; CHECK-V:       # %bb.0: # %entry
@@ -5948,43 +5872,59 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-V-NEXT:    call __fixsfti@plt
 ; CHECK-V-NEXT:    li a2, -1
 ; CHECK-V-NEXT:    srli a3, a2, 1
-; CHECK-V-NEXT:    mv a4, s0
-; CHECK-V-NEXT:    bgez s1, .LBB48_15
+; CHECK-V-NEXT:    beqz s1, .LBB48_2
 ; CHECK-V-NEXT:  # %bb.1: # %entry
-; CHECK-V-NEXT:    bgeu s0, a3, .LBB48_16
-; CHECK-V-NEXT:  .LBB48_2: # %entry
-; CHECK-V-NEXT:    bnez s1, .LBB48_17
+; CHECK-V-NEXT:    slti a4, s1, 0
+; CHECK-V-NEXT:    beqz a4, .LBB48_3
+; CHECK-V-NEXT:    j .LBB48_4
+; CHECK-V-NEXT:  .LBB48_2:
+; CHECK-V-NEXT:    sltu a4, s0, a3
+; CHECK-V-NEXT:    bnez a4, .LBB48_4
 ; CHECK-V-NEXT:  .LBB48_3: # %entry
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bgez a1, .LBB48_18
+; CHECK-V-NEXT:    mv s0, a3
 ; CHECK-V-NEXT:  .LBB48_4: # %entry
-; CHECK-V-NEXT:    bgeu a0, a3, .LBB48_19
-; CHECK-V-NEXT:  .LBB48_5: # %entry
-; CHECK-V-NEXT:    beqz a1, .LBB48_7
-; CHECK-V-NEXT:  .LBB48_6: # %entry
-; CHECK-V-NEXT:    mv a0, a4
+; CHECK-V-NEXT:    neg a5, a4
+; CHECK-V-NEXT:    beqz a1, .LBB48_6
+; CHECK-V-NEXT:  # %bb.5: # %entry
+; CHECK-V-NEXT:    slti a4, a1, 0
+; CHECK-V-NEXT:    and a5, a5, s1
+; CHECK-V-NEXT:    beqz a4, .LBB48_7
+; CHECK-V-NEXT:    j .LBB48_8
+; CHECK-V-NEXT:  .LBB48_6:
+; CHECK-V-NEXT:    sltu a4, a0, a3
+; CHECK-V-NEXT:    and a5, a5, s1
+; CHECK-V-NEXT:    bnez a4, .LBB48_8
 ; CHECK-V-NEXT:  .LBB48_7: # %entry
-; CHECK-V-NEXT:    srai a4, s1, 63
-; CHECK-V-NEXT:    and a4, a4, s1
+; CHECK-V-NEXT:    mv a0, a3
+; CHECK-V-NEXT:  .LBB48_8: # %entry
+; CHECK-V-NEXT:    neg a4, a4
 ; CHECK-V-NEXT:    slli a3, a2, 63
-; CHECK-V-NEXT:    mv a5, s0
-; CHECK-V-NEXT:    bltz a4, .LBB48_20
-; CHECK-V-NEXT:  # %bb.8: # %entry
-; CHECK-V-NEXT:    srai a6, a1, 63
-; CHECK-V-NEXT:    bgeu a3, s0, .LBB48_21
-; CHECK-V-NEXT:  .LBB48_9: # %entry
-; CHECK-V-NEXT:    and a1, a6, a1
-; CHECK-V-NEXT:    bne a4, a2, .LBB48_22
-; CHECK-V-NEXT:  .LBB48_10: # %entry
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bltz a1, .LBB48_23
+; CHECK-V-NEXT:    beq a5, a2, .LBB48_10
+; CHECK-V-NEXT:  # %bb.9: # %entry
+; CHECK-V-NEXT:    slti a5, a5, 0
+; CHECK-V-NEXT:    xori a5, a5, 1
+; CHECK-V-NEXT:    and a1, a4, a1
+; CHECK-V-NEXT:    beqz a5, .LBB48_11
+; CHECK-V-NEXT:    j .LBB48_12
+; CHECK-V-NEXT:  .LBB48_10:
+; CHECK-V-NEXT:    sltu a5, a3, s0
+; CHECK-V-NEXT:    and a1, a4, a1
+; CHECK-V-NEXT:    bnez a5, .LBB48_12
 ; CHECK-V-NEXT:  .LBB48_11: # %entry
-; CHECK-V-NEXT:    bgeu a3, a0, .LBB48_24
+; CHECK-V-NEXT:    mv s0, a3
 ; CHECK-V-NEXT:  .LBB48_12: # %entry
 ; CHECK-V-NEXT:    beq a1, a2, .LBB48_14
-; CHECK-V-NEXT:  .LBB48_13: # %entry
-; CHECK-V-NEXT:    mv a0, a4
-; CHECK-V-NEXT:  .LBB48_14: # %entry
+; CHECK-V-NEXT:  # %bb.13: # %entry
+; CHECK-V-NEXT:    slti a1, a1, 0
+; CHECK-V-NEXT:    xori a1, a1, 1
+; CHECK-V-NEXT:    beqz a1, .LBB48_15
+; CHECK-V-NEXT:    j .LBB48_16
+; CHECK-V-NEXT:  .LBB48_14:
+; CHECK-V-NEXT:    sltu a1, a3, a0
+; CHECK-V-NEXT:    bnez a1, .LBB48_16
+; CHECK-V-NEXT:  .LBB48_15: # %entry
+; CHECK-V-NEXT:    mv a0, a3
+; CHECK-V-NEXT:  .LBB48_16: # %entry
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v9, s0
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
@@ -5997,42 +5937,6 @@ define <2 x i64> @stest_f32i64_mm(<2 x float> %x) {
 ; CHECK-V-NEXT:    ld s1, 40(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    addi sp, sp, 64
 ; CHECK-V-NEXT:    ret
-; CHECK-V-NEXT:  .LBB48_15: # %entry
-; CHECK-V-NEXT:    mv a4, a3
-; CHECK-V-NEXT:    bltu s0, a3, .LBB48_2
-; CHECK-V-NEXT:  .LBB48_16: # %entry
-; CHECK-V-NEXT:    mv s0, a3
-; CHECK-V-NEXT:    beqz s1, .LBB48_3
-; CHECK-V-NEXT:  .LBB48_17: # %entry
-; CHECK-V-NEXT:    mv s0, a4
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bltz a1, .LBB48_4
-; CHECK-V-NEXT:  .LBB48_18: # %entry
-; CHECK-V-NEXT:    mv a4, a3
-; CHECK-V-NEXT:    bltu a0, a3, .LBB48_5
-; CHECK-V-NEXT:  .LBB48_19: # %entry
-; CHECK-V-NEXT:    mv a0, a3
-; CHECK-V-NEXT:    bnez a1, .LBB48_6
-; CHECK-V-NEXT:    j .LBB48_7
-; CHECK-V-NEXT:  .LBB48_20: # %entry
-; CHECK-V-NEXT:    mv a5, a3
-; CHECK-V-NEXT:    srai a6, a1, 63
-; CHECK-V-NEXT:    bltu a3, s0, .LBB48_9
-; CHECK-V-NEXT:  .LBB48_21: # %entry
-; CHECK-V-NEXT:    mv s0, a3
-; CHECK-V-NEXT:    and a1, a6, a1
-; CHECK-V-NEXT:    beq a4, a2, .LBB48_10
-; CHECK-V-NEXT:  .LBB48_22: # %entry
-; CHECK-V-NEXT:    mv s0, a5
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bgez a1, .LBB48_11
-; CHECK-V-NEXT:  .LBB48_23: # %entry
-; CHECK-V-NEXT:    mv a4, a3
-; CHECK-V-NEXT:    bltu a3, a0, .LBB48_12
-; CHECK-V-NEXT:  .LBB48_24: # %entry
-; CHECK-V-NEXT:    mv a0, a3
-; CHECK-V-NEXT:    bne a1, a2, .LBB48_13
-; CHECK-V-NEXT:    j .LBB48_14
 entry:
   %conv = fptosi <2 x float> %x to <2 x i128>
   %spec.store.select = call <2 x i128> @llvm.smin.v2i128(<2 x i128> %conv, <2 x i128> <i128 9223372036854775807, i128 9223372036854775807>)
@@ -6061,20 +5965,12 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NOV-NEXT:    mv s1, a1
 ; CHECK-NOV-NEXT:    fmv.s fa0, fs0
 ; CHECK-NOV-NEXT:    call __fixunssfti@plt
-; CHECK-NOV-NEXT:    snez a2, a1
-; CHECK-NOV-NEXT:    addi a2, a2, -1
-; CHECK-NOV-NEXT:    and a0, a2, a0
-; CHECK-NOV-NEXT:    addi a1, a1, -1
-; CHECK-NOV-NEXT:    seqz a1, a1
+; CHECK-NOV-NEXT:    snez a1, a1
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    and a0, a1, a0
 ; CHECK-NOV-NEXT:    snez a1, s1
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    and a1, a1, s0
-; CHECK-NOV-NEXT:    addi s1, s1, -1
-; CHECK-NOV-NEXT:    seqz a2, s1
-; CHECK-NOV-NEXT:    addi a2, a2, -1
-; CHECK-NOV-NEXT:    and a1, a2, a1
 ; CHECK-NOV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -6112,15 +6008,7 @@ define <2 x i64> @utest_f32i64_mm(<2 x float> %x) {
 ; CHECK-V-NEXT:    snez a2, s1
 ; CHECK-V-NEXT:    addi a2, a2, -1
 ; CHECK-V-NEXT:    and a2, a2, s0
-; CHECK-V-NEXT:    addi s1, s1, -1
-; CHECK-V-NEXT:    seqz a3, s1
-; CHECK-V-NEXT:    addi a3, a3, -1
-; CHECK-V-NEXT:    and a2, a3, a2
-; CHECK-V-NEXT:    snez a3, a1
-; CHECK-V-NEXT:    addi a3, a3, -1
-; CHECK-V-NEXT:    and a0, a3, a0
-; CHECK-V-NEXT:    addi a1, a1, -1
-; CHECK-V-NEXT:    seqz a1, a1
+; CHECK-V-NEXT:    snez a1, a1
 ; CHECK-V-NEXT:    addi a1, a1, -1
 ; CHECK-V-NEXT:    and a0, a1, a0
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
@@ -6171,20 +6059,12 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-NOV-NEXT:  # %bb.3: # %entry
 ; CHECK-NOV-NEXT:    li a3, 1
 ; CHECK-NOV-NEXT:  .LBB50_4: # %entry
-; CHECK-NOV-NEXT:    slti a4, a1, 1
-; CHECK-NOV-NEXT:    neg a4, a4
-; CHECK-NOV-NEXT:    and a0, a4, a0
-; CHECK-NOV-NEXT:    addi a1, a1, -1
-; CHECK-NOV-NEXT:    seqz a1, a1
-; CHECK-NOV-NEXT:    addi a1, a1, -1
+; CHECK-NOV-NEXT:    slti a1, a1, 1
+; CHECK-NOV-NEXT:    neg a1, a1
 ; CHECK-NOV-NEXT:    and a1, a1, a0
 ; CHECK-NOV-NEXT:    slti a0, s1, 1
 ; CHECK-NOV-NEXT:    neg a0, a0
 ; CHECK-NOV-NEXT:    and a0, a0, s0
-; CHECK-NOV-NEXT:    addi s1, s1, -1
-; CHECK-NOV-NEXT:    seqz a4, s1
-; CHECK-NOV-NEXT:    addi a4, a4, -1
-; CHECK-NOV-NEXT:    and a0, a4, a0
 ; CHECK-NOV-NEXT:    slti a3, a3, 0
 ; CHECK-NOV-NEXT:    addi a3, a3, -1
 ; CHECK-NOV-NEXT:    and a0, a3, a0
@@ -6233,16 +6113,8 @@ define <2 x i64> @ustest_f32i64_mm(<2 x float> %x) {
 ; CHECK-V-NEXT:    slti a3, s0, 1
 ; CHECK-V-NEXT:    neg a3, a3
 ; CHECK-V-NEXT:    and a3, a3, s1
-; CHECK-V-NEXT:    addi a4, s0, -1
-; CHECK-V-NEXT:    seqz a4, a4
-; CHECK-V-NEXT:    addi a4, a4, -1
-; CHECK-V-NEXT:    and a3, a4, a3
-; CHECK-V-NEXT:    slti a4, a1, 1
-; CHECK-V-NEXT:    neg a4, a4
-; CHECK-V-NEXT:    and a0, a4, a0
-; CHECK-V-NEXT:    addi a1, a1, -1
-; CHECK-V-NEXT:    seqz a1, a1
-; CHECK-V-NEXT:    addi a1, a1, -1
+; CHECK-V-NEXT:    slti a1, a1, 1
+; CHECK-V-NEXT:    neg a1, a1
 ; CHECK-V-NEXT:    and a0, a1, a0
 ; CHECK-V-NEXT:    blez s0, .LBB50_4
 ; CHECK-V-NEXT:  # %bb.3: # %entry
@@ -6288,53 +6160,69 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset s1, -24
 ; CHECK-NOV-NEXT:    .cfi_offset s2, -32
 ; CHECK-NOV-NEXT:    mv s2, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixsfti@plt
 ; CHECK-NOV-NEXT:    mv s0, a0
 ; CHECK-NOV-NEXT:    mv s1, a1
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixsfti@plt
 ; CHECK-NOV-NEXT:    mv a2, a0
 ; CHECK-NOV-NEXT:    li a0, -1
 ; CHECK-NOV-NEXT:    srli a3, a0, 1
-; CHECK-NOV-NEXT:    mv a4, a2
-; CHECK-NOV-NEXT:    bgez a1, .LBB51_15
+; CHECK-NOV-NEXT:    beqz a1, .LBB51_2
 ; CHECK-NOV-NEXT:  # %bb.1: # %entry
-; CHECK-NOV-NEXT:    bgeu a2, a3, .LBB51_16
-; CHECK-NOV-NEXT:  .LBB51_2: # %entry
-; CHECK-NOV-NEXT:    bnez a1, .LBB51_17
+; CHECK-NOV-NEXT:    slti a4, a1, 0
+; CHECK-NOV-NEXT:    beqz a4, .LBB51_3
+; CHECK-NOV-NEXT:    j .LBB51_4
+; CHECK-NOV-NEXT:  .LBB51_2:
+; CHECK-NOV-NEXT:    sltu a4, a2, a3
+; CHECK-NOV-NEXT:    bnez a4, .LBB51_4
 ; CHECK-NOV-NEXT:  .LBB51_3: # %entry
-; CHECK-NOV-NEXT:    mv a4, s0
-; CHECK-NOV-NEXT:    bgez s1, .LBB51_18
+; CHECK-NOV-NEXT:    mv a2, a3
 ; CHECK-NOV-NEXT:  .LBB51_4: # %entry
-; CHECK-NOV-NEXT:    bgeu s0, a3, .LBB51_19
-; CHECK-NOV-NEXT:  .LBB51_5: # %entry
-; CHECK-NOV-NEXT:    beqz s1, .LBB51_7
-; CHECK-NOV-NEXT:  .LBB51_6: # %entry
-; CHECK-NOV-NEXT:    mv s0, a4
+; CHECK-NOV-NEXT:    beqz s1, .LBB51_6
+; CHECK-NOV-NEXT:  # %bb.5: # %entry
+; CHECK-NOV-NEXT:    slti a6, s1, 0
+; CHECK-NOV-NEXT:    j .LBB51_7
+; CHECK-NOV-NEXT:  .LBB51_6:
+; CHECK-NOV-NEXT:    sltu a6, s0, a3
 ; CHECK-NOV-NEXT:  .LBB51_7: # %entry
-; CHECK-NOV-NEXT:    srai a4, s1, 63
-; CHECK-NOV-NEXT:    and a4, a4, s1
-; CHECK-NOV-NEXT:    slli a3, a0, 63
-; CHECK-NOV-NEXT:    mv a5, s0
-; CHECK-NOV-NEXT:    bltz a4, .LBB51_20
+; CHECK-NOV-NEXT:    neg a5, a6
+; CHECK-NOV-NEXT:    and a5, a5, s1
+; CHECK-NOV-NEXT:    bnez a6, .LBB51_9
 ; CHECK-NOV-NEXT:  # %bb.8: # %entry
-; CHECK-NOV-NEXT:    srai a6, a1, 63
-; CHECK-NOV-NEXT:    bgeu a3, s0, .LBB51_21
+; CHECK-NOV-NEXT:    mv s0, a3
 ; CHECK-NOV-NEXT:  .LBB51_9: # %entry
-; CHECK-NOV-NEXT:    and a1, a6, a1
-; CHECK-NOV-NEXT:    bne a4, a0, .LBB51_22
-; CHECK-NOV-NEXT:  .LBB51_10: # %entry
-; CHECK-NOV-NEXT:    mv a4, a2
-; CHECK-NOV-NEXT:    bltz a1, .LBB51_23
-; CHECK-NOV-NEXT:  .LBB51_11: # %entry
-; CHECK-NOV-NEXT:    bgeu a3, a2, .LBB51_24
+; CHECK-NOV-NEXT:    neg a4, a4
+; CHECK-NOV-NEXT:    slli a3, a0, 63
+; CHECK-NOV-NEXT:    beq a5, a0, .LBB51_11
+; CHECK-NOV-NEXT:  # %bb.10: # %entry
+; CHECK-NOV-NEXT:    slti a5, a5, 0
+; CHECK-NOV-NEXT:    xori a5, a5, 1
+; CHECK-NOV-NEXT:    and a1, a4, a1
+; CHECK-NOV-NEXT:    beqz a5, .LBB51_12
+; CHECK-NOV-NEXT:    j .LBB51_13
+; CHECK-NOV-NEXT:  .LBB51_11:
+; CHECK-NOV-NEXT:    sltu a5, a3, s0
+; CHECK-NOV-NEXT:    and a1, a4, a1
+; CHECK-NOV-NEXT:    bnez a5, .LBB51_13
 ; CHECK-NOV-NEXT:  .LBB51_12: # %entry
-; CHECK-NOV-NEXT:    beq a1, a0, .LBB51_14
+; CHECK-NOV-NEXT:    mv s0, a3
 ; CHECK-NOV-NEXT:  .LBB51_13: # %entry
-; CHECK-NOV-NEXT:    mv a2, a4
-; CHECK-NOV-NEXT:  .LBB51_14: # %entry
+; CHECK-NOV-NEXT:    beq a1, a0, .LBB51_15
+; CHECK-NOV-NEXT:  # %bb.14: # %entry
+; CHECK-NOV-NEXT:    slti a0, a1, 0
+; CHECK-NOV-NEXT:    xori a0, a0, 1
+; CHECK-NOV-NEXT:    beqz a0, .LBB51_16
+; CHECK-NOV-NEXT:    j .LBB51_17
+; CHECK-NOV-NEXT:  .LBB51_15:
+; CHECK-NOV-NEXT:    sltu a0, a3, a2
+; CHECK-NOV-NEXT:    bnez a0, .LBB51_17
+; CHECK-NOV-NEXT:  .LBB51_16: # %entry
+; CHECK-NOV-NEXT:    mv a2, a3
+; CHECK-NOV-NEXT:  .LBB51_17: # %entry
 ; CHECK-NOV-NEXT:    mv a0, s0
 ; CHECK-NOV-NEXT:    mv a1, a2
 ; CHECK-NOV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
@@ -6343,42 +6231,6 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    addi sp, sp, 32
 ; CHECK-NOV-NEXT:    ret
-; CHECK-NOV-NEXT:  .LBB51_15: # %entry
-; CHECK-NOV-NEXT:    mv a4, a3
-; CHECK-NOV-NEXT:    bltu a2, a3, .LBB51_2
-; CHECK-NOV-NEXT:  .LBB51_16: # %entry
-; CHECK-NOV-NEXT:    mv a2, a3
-; CHECK-NOV-NEXT:    beqz a1, .LBB51_3
-; CHECK-NOV-NEXT:  .LBB51_17: # %entry
-; CHECK-NOV-NEXT:    mv a2, a4
-; CHECK-NOV-NEXT:    mv a4, s0
-; CHECK-NOV-NEXT:    bltz s1, .LBB51_4
-; CHECK-NOV-NEXT:  .LBB51_18: # %entry
-; CHECK-NOV-NEXT:    mv a4, a3
-; CHECK-NOV-NEXT:    bltu s0, a3, .LBB51_5
-; CHECK-NOV-NEXT:  .LBB51_19: # %entry
-; CHECK-NOV-NEXT:    mv s0, a3
-; CHECK-NOV-NEXT:    bnez s1, .LBB51_6
-; CHECK-NOV-NEXT:    j .LBB51_7
-; CHECK-NOV-NEXT:  .LBB51_20: # %entry
-; CHECK-NOV-NEXT:    mv a5, a3
-; CHECK-NOV-NEXT:    srai a6, a1, 63
-; CHECK-NOV-NEXT:    bltu a3, s0, .LBB51_9
-; CHECK-NOV-NEXT:  .LBB51_21: # %entry
-; CHECK-NOV-NEXT:    mv s0, a3
-; CHECK-NOV-NEXT:    and a1, a6, a1
-; CHECK-NOV-NEXT:    beq a4, a0, .LBB51_10
-; CHECK-NOV-NEXT:  .LBB51_22: # %entry
-; CHECK-NOV-NEXT:    mv s0, a5
-; CHECK-NOV-NEXT:    mv a4, a2
-; CHECK-NOV-NEXT:    bgez a1, .LBB51_11
-; CHECK-NOV-NEXT:  .LBB51_23: # %entry
-; CHECK-NOV-NEXT:    mv a4, a3
-; CHECK-NOV-NEXT:    bltu a3, a2, .LBB51_12
-; CHECK-NOV-NEXT:  .LBB51_24: # %entry
-; CHECK-NOV-NEXT:    mv a2, a3
-; CHECK-NOV-NEXT:    bne a1, a0, .LBB51_13
-; CHECK-NOV-NEXT:    j .LBB51_14
 ;
 ; CHECK-V-LABEL: stest_f16i64_mm:
 ; CHECK-V:       # %bb.0: # %entry
@@ -6393,52 +6245,68 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-V-NEXT:    .cfi_offset s1, -24
 ; CHECK-V-NEXT:    .cfi_offset s2, -32
 ; CHECK-V-NEXT:    mv s2, a1
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixsfti@plt
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixsfti@plt
 ; CHECK-V-NEXT:    li a2, -1
 ; CHECK-V-NEXT:    srli a3, a2, 1
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bgez a1, .LBB51_15
+; CHECK-V-NEXT:    beqz a1, .LBB51_2
 ; CHECK-V-NEXT:  # %bb.1: # %entry
-; CHECK-V-NEXT:    bgeu a0, a3, .LBB51_16
-; CHECK-V-NEXT:  .LBB51_2: # %entry
-; CHECK-V-NEXT:    bnez a1, .LBB51_17
+; CHECK-V-NEXT:    slti a4, a1, 0
+; CHECK-V-NEXT:    beqz a4, .LBB51_3
+; CHECK-V-NEXT:    j .LBB51_4
+; CHECK-V-NEXT:  .LBB51_2:
+; CHECK-V-NEXT:    sltu a4, a0, a3
+; CHECK-V-NEXT:    bnez a4, .LBB51_4
 ; CHECK-V-NEXT:  .LBB51_3: # %entry
-; CHECK-V-NEXT:    mv a4, s0
-; CHECK-V-NEXT:    bgez s1, .LBB51_18
+; CHECK-V-NEXT:    mv a0, a3
 ; CHECK-V-NEXT:  .LBB51_4: # %entry
-; CHECK-V-NEXT:    bgeu s0, a3, .LBB51_19
-; CHECK-V-NEXT:  .LBB51_5: # %entry
-; CHECK-V-NEXT:    beqz s1, .LBB51_7
-; CHECK-V-NEXT:  .LBB51_6: # %entry
-; CHECK-V-NEXT:    mv s0, a4
+; CHECK-V-NEXT:    beqz s1, .LBB51_6
+; CHECK-V-NEXT:  # %bb.5: # %entry
+; CHECK-V-NEXT:    slti a6, s1, 0
+; CHECK-V-NEXT:    j .LBB51_7
+; CHECK-V-NEXT:  .LBB51_6:
+; CHECK-V-NEXT:    sltu a6, s0, a3
 ; CHECK-V-NEXT:  .LBB51_7: # %entry
-; CHECK-V-NEXT:    srai a4, s1, 63
-; CHECK-V-NEXT:    and a4, a4, s1
-; CHECK-V-NEXT:    slli a3, a2, 63
-; CHECK-V-NEXT:    mv a5, s0
-; CHECK-V-NEXT:    bltz a4, .LBB51_20
+; CHECK-V-NEXT:    neg a5, a6
+; CHECK-V-NEXT:    and a5, a5, s1
+; CHECK-V-NEXT:    bnez a6, .LBB51_9
 ; CHECK-V-NEXT:  # %bb.8: # %entry
-; CHECK-V-NEXT:    srai a6, a1, 63
-; CHECK-V-NEXT:    bgeu a3, s0, .LBB51_21
+; CHECK-V-NEXT:    mv s0, a3
 ; CHECK-V-NEXT:  .LBB51_9: # %entry
-; CHECK-V-NEXT:    and a1, a6, a1
-; CHECK-V-NEXT:    bne a4, a2, .LBB51_22
-; CHECK-V-NEXT:  .LBB51_10: # %entry
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bltz a1, .LBB51_23
-; CHECK-V-NEXT:  .LBB51_11: # %entry
-; CHECK-V-NEXT:    bgeu a3, a0, .LBB51_24
+; CHECK-V-NEXT:    neg a4, a4
+; CHECK-V-NEXT:    slli a3, a2, 63
+; CHECK-V-NEXT:    beq a5, a2, .LBB51_11
+; CHECK-V-NEXT:  # %bb.10: # %entry
+; CHECK-V-NEXT:    slti a5, a5, 0
+; CHECK-V-NEXT:    xori a5, a5, 1
+; CHECK-V-NEXT:    and a1, a4, a1
+; CHECK-V-NEXT:    beqz a5, .LBB51_12
+; CHECK-V-NEXT:    j .LBB51_13
+; CHECK-V-NEXT:  .LBB51_11:
+; CHECK-V-NEXT:    sltu a5, a3, s0
+; CHECK-V-NEXT:    and a1, a4, a1
+; CHECK-V-NEXT:    bnez a5, .LBB51_13
 ; CHECK-V-NEXT:  .LBB51_12: # %entry
-; CHECK-V-NEXT:    beq a1, a2, .LBB51_14
+; CHECK-V-NEXT:    mv s0, a3
 ; CHECK-V-NEXT:  .LBB51_13: # %entry
-; CHECK-V-NEXT:    mv a0, a4
-; CHECK-V-NEXT:  .LBB51_14: # %entry
+; CHECK-V-NEXT:    beq a1, a2, .LBB51_15
+; CHECK-V-NEXT:  # %bb.14: # %entry
+; CHECK-V-NEXT:    slti a1, a1, 0
+; CHECK-V-NEXT:    xori a1, a1, 1
+; CHECK-V-NEXT:    beqz a1, .LBB51_16
+; CHECK-V-NEXT:    j .LBB51_17
+; CHECK-V-NEXT:  .LBB51_15:
+; CHECK-V-NEXT:    sltu a1, a3, a0
+; CHECK-V-NEXT:    bnez a1, .LBB51_17
+; CHECK-V-NEXT:  .LBB51_16: # %entry
+; CHECK-V-NEXT:    mv a0, a3
+; CHECK-V-NEXT:  .LBB51_17: # %entry
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v9, a0
 ; CHECK-V-NEXT:    vmv.s.x v8, s0
@@ -6449,42 +6317,6 @@ define <2 x i64> @stest_f16i64_mm(<2 x half> %x) {
 ; CHECK-V-NEXT:    ld s2, 0(sp) # 8-byte Folded Reload
 ; CHECK-V-NEXT:    addi sp, sp, 32
 ; CHECK-V-NEXT:    ret
-; CHECK-V-NEXT:  .LBB51_15: # %entry
-; CHECK-V-NEXT:    mv a4, a3
-; CHECK-V-NEXT:    bltu a0, a3, .LBB51_2
-; CHECK-V-NEXT:  .LBB51_16: # %entry
-; CHECK-V-NEXT:    mv a0, a3
-; CHECK-V-NEXT:    beqz a1, .LBB51_3
-; CHECK-V-NEXT:  .LBB51_17: # %entry
-; CHECK-V-NEXT:    mv a0, a4
-; CHECK-V-NEXT:    mv a4, s0
-; CHECK-V-NEXT:    bltz s1, .LBB51_4
-; CHECK-V-NEXT:  .LBB51_18: # %entry
-; CHECK-V-NEXT:    mv a4, a3
-; CHECK-V-NEXT:    bltu s0, a3, .LBB51_5
-; CHECK-V-NEXT:  .LBB51_19: # %entry
-; CHECK-V-NEXT:    mv s0, a3
-; CHECK-V-NEXT:    bnez s1, .LBB51_6
-; CHECK-V-NEXT:    j .LBB51_7
-; CHECK-V-NEXT:  .LBB51_20: # %entry
-; CHECK-V-NEXT:    mv a5, a3
-; CHECK-V-NEXT:    srai a6, a1, 63
-; CHECK-V-NEXT:    bltu a3, s0, .LBB51_9
-; CHECK-V-NEXT:  .LBB51_21: # %entry
-; CHECK-V-NEXT:    mv s0, a3
-; CHECK-V-NEXT:    and a1, a6, a1
-; CHECK-V-NEXT:    beq a4, a2, .LBB51_10
-; CHECK-V-NEXT:  .LBB51_22: # %entry
-; CHECK-V-NEXT:    mv s0, a5
-; CHECK-V-NEXT:    mv a4, a0
-; CHECK-V-NEXT:    bgez a1, .LBB51_11
-; CHECK-V-NEXT:  .LBB51_23: # %entry
-; CHECK-V-NEXT:    mv a4, a3
-; CHECK-V-NEXT:    bltu a3, a0, .LBB51_12
-; CHECK-V-NEXT:  .LBB51_24: # %entry
-; CHECK-V-NEXT:    mv a0, a3
-; CHECK-V-NEXT:    bne a1, a2, .LBB51_13
-; CHECK-V-NEXT:    j .LBB51_14
 entry:
   %conv = fptosi <2 x half> %x to <2 x i128>
   %spec.store.select = call <2 x i128> @llvm.smin.v2i128(<2 x i128> %conv, <2 x i128> <i128 9223372036854775807, i128 9223372036854775807>)
@@ -6507,28 +6339,20 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset s1, -24
 ; CHECK-NOV-NEXT:    .cfi_offset s2, -32
 ; CHECK-NOV-NEXT:    mv s0, a0
-; CHECK-NOV-NEXT:    mv a0, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a1
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixunssfti@plt
 ; CHECK-NOV-NEXT:    mv s1, a0
 ; CHECK-NOV-NEXT:    mv s2, a1
-; CHECK-NOV-NEXT:    mv a0, s0
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s0
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixunssfti@plt
-; CHECK-NOV-NEXT:    snez a2, a1
-; CHECK-NOV-NEXT:    addi a2, a2, -1
-; CHECK-NOV-NEXT:    and a0, a2, a0
-; CHECK-NOV-NEXT:    addi a1, a1, -1
-; CHECK-NOV-NEXT:    seqz a1, a1
+; CHECK-NOV-NEXT:    snez a1, a1
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    and a0, a1, a0
 ; CHECK-NOV-NEXT:    snez a1, s2
 ; CHECK-NOV-NEXT:    addi a1, a1, -1
 ; CHECK-NOV-NEXT:    and a1, a1, s1
-; CHECK-NOV-NEXT:    addi s2, s2, -1
-; CHECK-NOV-NEXT:    seqz a2, s2
-; CHECK-NOV-NEXT:    addi a2, a2, -1
-; CHECK-NOV-NEXT:    and a1, a2, a1
 ; CHECK-NOV-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
 ; CHECK-NOV-NEXT:    ld s1, 8(sp) # 8-byte Folded Reload
@@ -6549,28 +6373,20 @@ define <2 x i64> @utesth_f16i64_mm(<2 x half> %x) {
 ; CHECK-V-NEXT:    .cfi_offset s1, -24
 ; CHECK-V-NEXT:    .cfi_offset s2, -32
 ; CHECK-V-NEXT:    mv s0, a0
-; CHECK-V-NEXT:    mv a0, a1
+; CHECK-V-NEXT:    fmv.w.x fa0, a1
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixunssfti@plt
 ; CHECK-V-NEXT:    mv s1, a0
 ; CHECK-V-NEXT:    mv s2, a1
-; CHECK-V-NEXT:    mv a0, s0
+; CHECK-V-NEXT:    fmv.w.x fa0, s0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixunssfti@plt
-; CHECK-V-NEXT:    snez a2, a1
-; CHECK-V-NEXT:    addi a2, a2, -1
-; CHECK-V-NEXT:    and a0, a2, a0
-; CHECK-V-NEXT:    addi a1, a1, -1
-; CHECK-V-NEXT:    seqz a1, a1
+; CHECK-V-NEXT:    snez a1, a1
 ; CHECK-V-NEXT:    addi a1, a1, -1
 ; CHECK-V-NEXT:    and a0, a1, a0
 ; CHECK-V-NEXT:    snez a1, s2
 ; CHECK-V-NEXT:    addi a1, a1, -1
 ; CHECK-V-NEXT:    and a1, a1, s1
-; CHECK-V-NEXT:    addi s2, s2, -1
-; CHECK-V-NEXT:    seqz a2, s2
-; CHECK-V-NEXT:    addi a2, a2, -1
-; CHECK-V-NEXT:    and a1, a2, a1
 ; CHECK-V-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
 ; CHECK-V-NEXT:    vmv.s.x v9, a1
 ; CHECK-V-NEXT:    vmv.s.x v8, a0
@@ -6602,11 +6418,12 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NOV-NEXT:    .cfi_offset s1, -24
 ; CHECK-NOV-NEXT:    .cfi_offset s2, -32
 ; CHECK-NOV-NEXT:    mv s2, a1
+; CHECK-NOV-NEXT:    fmv.w.x fa0, a0
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixsfti@plt
 ; CHECK-NOV-NEXT:    mv s0, a0
 ; CHECK-NOV-NEXT:    mv s1, a1
-; CHECK-NOV-NEXT:    mv a0, s2
+; CHECK-NOV-NEXT:    fmv.w.x fa0, s2
 ; CHECK-NOV-NEXT:    call __extendhfsf2@plt
 ; CHECK-NOV-NEXT:    call __fixsfti@plt
 ; CHECK-NOV-NEXT:    mv a2, a1
@@ -6619,20 +6436,12 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-NOV-NEXT:  # %bb.3: # %entry
 ; CHECK-NOV-NEXT:    li a3, 1
 ; CHECK-NOV-NEXT:  .LBB53_4: # %entry
-; CHECK-NOV-NEXT:    slti a4, a1, 1
-; CHECK-NOV-NEXT:    neg a4, a4
-; CHECK-NOV-NEXT:    and a0, a4, a0
-; CHECK-NOV-NEXT:    addi a1, a1, -1
-; CHECK-NOV-NEXT:    seqz a1, a1
-; CHECK-NOV-NEXT:    addi a1, a1, -1
+; CHECK-NOV-NEXT:    slti a1, a1, 1
+; CHECK-NOV-NEXT:    neg a1, a1
 ; CHECK-NOV-NEXT:    and a1, a1, a0
 ; CHECK-NOV-NEXT:    slti a0, s1, 1
 ; CHECK-NOV-NEXT:    neg a0, a0
 ; CHECK-NOV-NEXT:    and a0, a0, s0
-; CHECK-NOV-NEXT:    addi s1, s1, -1
-; CHECK-NOV-NEXT:    seqz a4, s1
-; CHECK-NOV-NEXT:    addi a4, a4, -1
-; CHECK-NOV-NEXT:    and a0, a4, a0
 ; CHECK-NOV-NEXT:    slti a3, a3, 0
 ; CHECK-NOV-NEXT:    addi a3, a3, -1
 ; CHECK-NOV-NEXT:    and a0, a3, a0
@@ -6659,11 +6468,12 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-V-NEXT:    .cfi_offset s1, -24
 ; CHECK-V-NEXT:    .cfi_offset s2, -32
 ; CHECK-V-NEXT:    mv s2, a1
+; CHECK-V-NEXT:    fmv.w.x fa0, a0
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixsfti@plt
 ; CHECK-V-NEXT:    mv s0, a0
 ; CHECK-V-NEXT:    mv s1, a1
-; CHECK-V-NEXT:    mv a0, s2
+; CHECK-V-NEXT:    fmv.w.x fa0, s2
 ; CHECK-V-NEXT:    call __extendhfsf2@plt
 ; CHECK-V-NEXT:    call __fixsfti@plt
 ; CHECK-V-NEXT:    mv a2, a1
@@ -6676,20 +6486,12 @@ define <2 x i64> @ustest_f16i64_mm(<2 x half> %x) {
 ; CHECK-V-NEXT:  # %bb.3: # %entry
 ; CHECK-V-NEXT:    li a3, 1
 ; CHECK-V-NEXT:  .LBB53_4: # %entry
-; CHECK-V-NEXT:    slti a4, a1, 1
-; CHECK-V-NEXT:    neg a4, a4
-; CHECK-V-NEXT:    and a0, a4, a0
-; CHECK-V-NEXT:    addi a1, a1, -1
-; CHECK-V-NEXT:    seqz a1, a1
-; CHECK-V-NEXT:    addi a1, a1, -1
+; CHECK-V-NEXT:    slti a1, a1, 1
+; CHECK-V-NEXT:    neg a1, a1
 ; CHECK-V-NEXT:    and a0, a1, a0
 ; CHECK-V-NEXT:    slti a1, s1, 1
 ; CHECK-V-NEXT:    neg a1, a1
 ; CHECK-V-NEXT:    and a1, a1, s0
-; CHECK-V-NEXT:    addi s1, s1, -1
-; CHECK-V-NEXT:    seqz a4, s1
-; CHECK-V-NEXT:    addi a4, a4, -1
-; CHECK-V-NEXT:    and a1, a4, a1
 ; CHECK-V-NEXT:    slti a3, a3, 0
 ; CHECK-V-NEXT:    addi a3, a3, -1
 ; CHECK-V-NEXT:    and a1, a3, a1

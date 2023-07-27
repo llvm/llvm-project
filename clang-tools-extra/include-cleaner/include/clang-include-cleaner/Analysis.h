@@ -65,15 +65,22 @@ struct AnalysisResults {
 
 /// Determine which headers should be inserted or removed from the main file.
 /// This exposes conclusions but not reasons: use lower-level walkUsed for that.
-AnalysisResults analyze(llvm::ArrayRef<Decl *> ASTRoots,
-                        llvm::ArrayRef<SymbolReference> MacroRefs,
-                        const Includes &I, const PragmaIncludes *PI,
-                        const SourceManager &SM, const HeaderSearch &HS);
+///
+/// The HeaderFilter is a predicate that receives absolute path or spelling
+/// without quotes/brackets, when a phyiscal file doesn't exist.
+/// No analysis will be performed for headers that satisfy the predicate.
+AnalysisResults
+analyze(llvm::ArrayRef<Decl *> ASTRoots,
+        llvm::ArrayRef<SymbolReference> MacroRefs, const Includes &I,
+        const PragmaIncludes *PI, const SourceManager &SM,
+        const HeaderSearch &HS,
+        llvm::function_ref<bool(llvm::StringRef)> HeaderFilter = nullptr);
 
 /// Removes unused includes and inserts missing ones in the main file.
 /// Returns the modified main-file code.
 /// The FormatStyle must be C++ or ObjC (to support include ordering).
-std::string fixIncludes(const AnalysisResults &Results, llvm::StringRef Code,
+std::string fixIncludes(const AnalysisResults &Results,
+                        llvm::StringRef FileName, llvm::StringRef Code,
                         const format::FormatStyle &IncludeStyle);
 
 /// Gets all the providers for a symbol by traversing each location.
