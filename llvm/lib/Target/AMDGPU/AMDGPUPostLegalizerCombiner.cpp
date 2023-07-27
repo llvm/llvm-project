@@ -22,7 +22,6 @@
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -269,10 +268,10 @@ bool AMDGPUPostLegalizerCombinerImpl::matchRcpSqrtToRsq(
 
   auto getRcpSrc = [=](const MachineInstr &MI) {
     MachineInstr *ResMI = nullptr;
-    if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
-      if (GI->is(Intrinsic::amdgcn_rcp))
-        ResMI = MRI.getVRegDef(MI.getOperand(2).getReg());
-    }
+    if (MI.getOpcode() == TargetOpcode::G_INTRINSIC &&
+        MI.getIntrinsicID() == Intrinsic::amdgcn_rcp)
+      ResMI = MRI.getVRegDef(MI.getOperand(2).getReg());
+
     return ResMI;
   };
 
