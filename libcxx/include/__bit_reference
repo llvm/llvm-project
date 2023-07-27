@@ -179,47 +179,18 @@ private:
     __bit_const_reference& operator=(const __bit_const_reference&) = delete;
 };
 
-// find
-
-template <class _Cp, bool _IsConst>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
-__find_bool_true(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
-{
-    typedef __bit_iterator<_Cp, _IsConst> _It;
-    typedef typename _It::__storage_type __storage_type;
-    const int __bits_per_word = _It::__bits_per_word;
-    // do first partial word
-    if (__first.__ctz_ != 0)
-    {
-        __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
-        __storage_type __dn = _VSTD::min(__clz_f, __n);
-        __storage_type __m = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-        __storage_type __b = *__first.__seg_ & __m;
-        if (__b)
-            return _It(__first.__seg_, static_cast<unsigned>(_VSTD::__libcpp_ctz(__b)));
-        if (__n == __dn)
-            return __first + __n;
-        __n -= __dn;
-        ++__first.__seg_;
-    }
-    // do middle whole words
-    for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word)
-        if (*__first.__seg_)
-            return _It(__first.__seg_, static_cast<unsigned>(_VSTD::__libcpp_ctz(*__first.__seg_)));
-    // do last partial word
-    if (__n > 0)
-    {
-        __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-        __storage_type __b = *__first.__seg_ & __m;
-        if (__b)
-            return _It(__first.__seg_, static_cast<unsigned>(_VSTD::__libcpp_ctz(__b)));
-    }
-    return _It(__first.__seg_, static_cast<unsigned>(__n));
+template <bool _Invert, class _Tp>
+_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp __invert_if(_Tp __v) {
+    if (_Invert)
+        return ~__v;
+    return __v;
 }
 
-template <class _Cp, bool _IsConst>
+// find
+
+template <bool _ToFind, class _Cp, bool _IsConst>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
-__find_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
+__find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, _IsConst> _It;
     typedef typename _It::__storage_type __storage_type;
@@ -230,7 +201,7 @@ __find_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type
         __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
         __storage_type __dn = _VSTD::min(__clz_f, __n);
         __storage_type __m = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-        __storage_type __b = ~*__first.__seg_ & __m;
+        __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
         if (__b)
             return _It(__first.__seg_, static_cast<unsigned>(_VSTD::__libcpp_ctz(__b)));
         if (__n == __dn)
@@ -239,9 +210,8 @@ __find_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type
         ++__first.__seg_;
     }
     // do middle whole words
-    for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word)
-    {
-        __storage_type __b = ~*__first.__seg_;
+    for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word) {
+        __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_);
         if (__b)
             return _It(__first.__seg_, static_cast<unsigned>(_VSTD::__libcpp_ctz(__b)));
     }
@@ -249,7 +219,7 @@ __find_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type
     if (__n > 0)
     {
         __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-        __storage_type __b = ~*__first.__seg_ & __m;
+        __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
         if (__b)
             return _It(__first.__seg_, static_cast<unsigned>(_VSTD::__libcpp_ctz(__b)));
     }
@@ -262,15 +232,15 @@ __bit_iterator<_Cp, _IsConst>
 find(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value)
 {
     if (static_cast<bool>(__value))
-        return _VSTD::__find_bool_true(__first, static_cast<typename _Cp::size_type>(__last - __first));
-    return _VSTD::__find_bool_false(__first, static_cast<typename _Cp::size_type>(__last - __first));
+        return _VSTD::__find_bool<true>(__first, static_cast<typename _Cp::size_type>(__last - __first));
+    return _VSTD::__find_bool<false>(__first, static_cast<typename _Cp::size_type>(__last - __first));
 }
 
 // count
 
-template <class _Cp, bool _IsConst>
+template <bool _ToCount, class _Cp, bool _IsConst>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __bit_iterator<_Cp, _IsConst>::difference_type
-__count_bool_true(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
+__count_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, _IsConst> _It;
     typedef typename _It::__storage_type __storage_type;
@@ -283,49 +253,18 @@ __count_bool_true(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type
         __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
         __storage_type __dn = _VSTD::min(__clz_f, __n);
         __storage_type __m = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-        __r = _VSTD::__libcpp_popcount(*__first.__seg_ & __m);
+        __r = _VSTD::__libcpp_popcount(std::__invert_if<!_ToCount>(*__first.__seg_) & __m);
         __n -= __dn;
         ++__first.__seg_;
     }
     // do middle whole words
     for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word)
-        __r += _VSTD::__libcpp_popcount(*__first.__seg_);
+        __r += _VSTD::__libcpp_popcount(std::__invert_if<!_ToCount>(*__first.__seg_));
     // do last partial word
     if (__n > 0)
     {
         __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-        __r += _VSTD::__libcpp_popcount(*__first.__seg_ & __m);
-    }
-    return __r;
-}
-
-template <class _Cp, bool _IsConst>
-_LIBCPP_HIDE_FROM_ABI typename __bit_iterator<_Cp, _IsConst>::difference_type
-__count_bool_false(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
-{
-    typedef __bit_iterator<_Cp, _IsConst> _It;
-    typedef typename _It::__storage_type __storage_type;
-    typedef typename _It::difference_type difference_type;
-    const int __bits_per_word = _It::__bits_per_word;
-    difference_type __r = 0;
-    // do first partial word
-    if (__first.__ctz_ != 0)
-    {
-        __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
-        __storage_type __dn = _VSTD::min(__clz_f, __n);
-        __storage_type __m = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-        __r = _VSTD::__libcpp_popcount(~*__first.__seg_ & __m);
-        __n -= __dn;
-        ++__first.__seg_;
-    }
-    // do middle whole words
-    for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word)
-        __r += _VSTD::__libcpp_popcount(~*__first.__seg_);
-    // do last partial word
-    if (__n > 0)
-    {
-        __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-        __r += _VSTD::__libcpp_popcount(~*__first.__seg_ & __m);
+        __r += _VSTD::__libcpp_popcount(std::__invert_if<!_ToCount>(*__first.__seg_) & __m);
     }
     return __r;
 }
@@ -336,15 +275,15 @@ typename __bit_iterator<_Cp, _IsConst>::difference_type
 count(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value)
 {
     if (static_cast<bool>(__value))
-        return _VSTD::__count_bool_true(__first, static_cast<typename _Cp::size_type>(__last - __first));
-    return _VSTD::__count_bool_false(__first, static_cast<typename _Cp::size_type>(__last - __first));
+        return _VSTD::__count_bool<true>(__first, static_cast<typename _Cp::size_type>(__last - __first));
+    return _VSTD::__count_bool<false>(__first, static_cast<typename _Cp::size_type>(__last - __first));
 }
 
 // fill_n
 
-template <class _Cp>
+template <bool _FillValue, class _Cp>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-__fill_n_false(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
+__fill_n(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
 {
     typedef __bit_iterator<_Cp, false> _It;
     typedef typename _It::__storage_type __storage_type;
@@ -355,51 +294,26 @@ __fill_n_false(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
         __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
         __storage_type __dn = _VSTD::min(__clz_f, __n);
         __storage_type __m = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-        *__first.__seg_ &= ~__m;
+        if (_FillValue)
+            *__first.__seg_ |= __m;
+        else
+            *__first.__seg_ &= ~__m;
         __n -= __dn;
         ++__first.__seg_;
     }
     // do middle whole words
     __storage_type __nw = __n / __bits_per_word;
-    std::fill_n(std::__to_address(__first.__seg_), __nw, 0);
+    std::fill_n(std::__to_address(__first.__seg_), __nw, _FillValue ? static_cast<__storage_type>(-1) : 0);
     __n -= __nw * __bits_per_word;
     // do last partial word
     if (__n > 0)
     {
         __first.__seg_ += __nw;
         __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-        *__first.__seg_ &= ~__m;
-    }
-}
-
-template <class _Cp>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-__fill_n_true(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
-{
-    typedef __bit_iterator<_Cp, false> _It;
-    typedef typename _It::__storage_type __storage_type;
-    const int __bits_per_word = _It::__bits_per_word;
-    // do first partial word
-    if (__first.__ctz_ != 0)
-    {
-        __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
-        __storage_type __dn = _VSTD::min(__clz_f, __n);
-        __storage_type __m = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
-        *__first.__seg_ |= __m;
-        __n -= __dn;
-        ++__first.__seg_;
-    }
-    // do middle whole words
-    __storage_type __nw = __n / __bits_per_word;
-    // __storage_type is always an unsigned type, so -1 sets all bits
-    std::fill_n(std::__to_address(__first.__seg_), __nw, static_cast<__storage_type>(-1));
-    __n -= __nw * __bits_per_word;
-    // do last partial word
-    if (__n > 0)
-    {
-        __first.__seg_ += __nw;
-        __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
-        *__first.__seg_ |= __m;
+        if (_FillValue)
+            *__first.__seg_ |= __m;
+        else
+            *__first.__seg_ &= ~__m;
     }
 }
 
@@ -411,9 +325,9 @@ fill_n(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n, bool __v
     if (__n > 0)
     {
         if (__value)
-            _VSTD::__fill_n_true(__first, __n);
+            _VSTD::__fill_n<true>(__first, __n);
         else
-            _VSTD::__fill_n_false(__first, __n);
+            _VSTD::__fill_n<false>(__first, __n);
     }
 }
 
@@ -1276,13 +1190,9 @@ private:
     friend class __bit_const_reference<_Cp>;
     friend class __bit_iterator<_Cp, true>;
     template <class _Dp> friend struct __bit_array;
-    template <class _Dp>
+    template <bool _FillValue, class _Dp>
     _LIBCPP_CONSTEXPR_SINCE_CXX20
-    friend void __fill_n_false(__bit_iterator<_Dp, false> __first, typename _Dp::size_type __n);
-
-    template <class _Dp>
-    _LIBCPP_CONSTEXPR_SINCE_CXX20
-    friend void __fill_n_true(__bit_iterator<_Dp, false> __first, typename _Dp::size_type __n);
+    friend void __fill_n(__bit_iterator<_Dp, false> __first, typename _Dp::size_type __n);
 
     template <class _Dp, bool _IC>
     _LIBCPP_CONSTEXPR_SINCE_CXX20
@@ -1343,17 +1253,12 @@ private:
     friend bool equal(__bit_iterator<_Dp, _IC1>,
                       __bit_iterator<_Dp, _IC1>,
                       __bit_iterator<_Dp, _IC2>);
-    template <class _Dp, bool _IC>
+    template <bool _ToFind, class _Dp, bool _IC>
     _LIBCPP_CONSTEXPR_SINCE_CXX20
-    friend __bit_iterator<_Dp, _IC> __find_bool_true(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
-    template <class _Dp, bool _IC>
-    _LIBCPP_CONSTEXPR_SINCE_CXX20
-    friend __bit_iterator<_Dp, _IC> __find_bool_false(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
-    template <class _Dp, bool _IC> friend typename __bit_iterator<_Dp, _IC>::difference_type
+    friend __bit_iterator<_Dp, _IC> __find_bool(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
+    template <bool _ToCount, class _Dp, bool _IC> friend typename __bit_iterator<_Dp, _IC>::difference_type
     _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23
-                   __count_bool_true(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
-    template <class _Dp, bool _IC> friend typename __bit_iterator<_Dp, _IC>::difference_type
-                   __count_bool_false(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
+                   __count_bool(__bit_iterator<_Dp, _IC>, typename _Dp::size_type);
 };
 
 _LIBCPP_END_NAMESPACE_STD
