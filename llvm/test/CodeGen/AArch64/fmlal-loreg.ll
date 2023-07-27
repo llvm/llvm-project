@@ -7,9 +7,12 @@
 define <4 x float> @test(ptr %lhs_panel, ptr %rhs_panel, <4 x float> %a) {
 ; CHECK-LABEL: test:
 ; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    str d8, [sp, #-16]! // 8-byte Folded Spill
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    .cfi_offset b8, -16
 ; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    ldr q16, [x0]
-; CHECK-NEXT:    ldr q17, [x1]
+; CHECK-NEXT:    ldr q8, [x0]
+; CHECK-NEXT:    ldr q16, [x1]
 ; CHECK-NEXT:    lsr x9, x8, #32
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    nop
@@ -17,10 +20,11 @@ define <4 x float> @test(ptr %lhs_panel, ptr %rhs_panel, <4 x float> %a) {
 ; CHECK-NEXT:    mov w8, w8
 ; CHECK-NEXT:    orr x8, x8, x9, lsl #32
 ; CHECK-NEXT:    fmov d0, x8
-; CHECK-NEXT:    fmlal v0.4s, v17.4h, v16.h[0]
+; CHECK-NEXT:    fmlal v0.4s, v16.4h, v8.h[0]
 ; CHECK-NEXT:    mov v1.16b, v0.16b
-; CHECK-NEXT:    fmlal2 v1.4s, v17.4h, v16.h[0]
+; CHECK-NEXT:    fmlal2 v1.4s, v16.4h, v8.h[0]
 ; CHECK-NEXT:    fadd v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldr d8, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NEXT:    ret
 entry:
   %0 = load <8 x half>, ptr %lhs_panel, align 2
