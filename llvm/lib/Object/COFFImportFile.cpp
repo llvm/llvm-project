@@ -611,7 +611,7 @@ Error writeImportLibrary(StringRef ImportName, StringRef Path,
   }
 
   return writeArchive(Path, Members, /*WriteSymtab*/ true,
-                      object::Archive::K_GNU,
+                      MinGW ? object::Archive::K_GNU : object::Archive::K_COFF,
                       /*Deterministic*/ true, /*Thin*/ false);
 }
 
