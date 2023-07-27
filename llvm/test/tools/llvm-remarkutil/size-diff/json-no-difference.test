@@ -1,4 +1,4 @@
-RUN: llvm-remark-size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml --parser=yaml --report_style=json --pretty | FileCheck -strict-whitespace %s
+RUN: llvm-remarkutil size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml --parser=yaml --report_style=json --pretty | FileCheck -strict-whitespace %s
 
 ; CHECK-LABEL: "Files":
 ; CHECK: "A":{{.*}}1-func-1-instr-1-stack.yaml

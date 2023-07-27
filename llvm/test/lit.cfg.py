@@ -216,7 +216,6 @@ tools.extend(
         "llvm-rc",
         "llvm-readelf",
         "llvm-readobj",
-        "llvm-remark-size-diff",
         "llvm-rtdyld",
         "llvm-sim",
         "llvm-size",

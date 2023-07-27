@@ -5,9 +5,6 @@ Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
 Rana: HipCatch2 and olcTest conformance fails
 Revert "[AMDGPU] __builtin_amdgcn_read_exec_* should be implemented with llvm.amdgcn.ballot"
 
-missing executable in build:
-Revert "[RemarkUtil] Refactor llvm-remarkutil to include size-diff "
-
 Johannes: breakage
 Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime " 
   asserts in  snap and MI-Teams
