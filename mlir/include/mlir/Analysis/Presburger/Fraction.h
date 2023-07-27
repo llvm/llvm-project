@@ -99,6 +99,14 @@ inline Fraction operator*(const Fraction &x, const Fraction &y) {
   return Fraction(x.num * y.num, x.den * y.den);
 }
 
+inline Fraction operator+(const Fraction &x, const Fraction &y) {
+  return Fraction(x.num * y.den + x.den * y.num, x.den * y.den);
+}
+
+inline Fraction operator-(const Fraction &x, const Fraction &y) {
+  return Fraction(x.num * y.den - x.den * y.num, x.den * y.den);
+}
+
 } // namespace presburger
 } // namespace mlir
 
