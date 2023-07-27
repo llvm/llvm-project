@@ -2416,7 +2416,6 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
     } else if (moduleOp) {
       mlir::OpBuilder modBuilder(moduleOp.getBodyRegion());
       for (const Fortran::parser::AccClause &clause : accClauseList.v) {
-        mlir::Location clauseLocation = converter.genLocation(clause.source);
         if (const auto *createClause =
                 std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
           genGlobalCtorsWithModifier<Fortran::parser::AccClause::Create,
@@ -2441,8 +2440,14 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
                          mlir::acc::DeclareDeviceResidentOp>(
               converter, modBuilder, deviceResidentClause->v,
               mlir::acc::DataClause::acc_declare_device_resident);
+        } else if (const auto *linkClause =
+                       std::get_if<Fortran::parser::AccClause::Link>(
+                           &clause.u)) {
+          genGlobalCtors<mlir::acc::DeclareLinkOp, mlir::acc::DeclareLinkOp>(
+              converter, modBuilder, linkClause->v,
+              mlir::acc::DataClause::acc_declare_link);
         } else {
-          TODO(clauseLocation, "OpenACC declare clause");
+          llvm::report_fatal_error("unsupported clause on DECLARE directive");
         }
       }
     }
