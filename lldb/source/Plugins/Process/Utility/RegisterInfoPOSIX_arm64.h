@@ -104,7 +104,7 @@ public:
 
   void AddRegSetMTE();
 
-  void AddRegSetTLS();
+  void AddRegSetTLS(bool has_tpidr2);
 
   uint32_t ConfigureVectorLength(uint32_t sve_vq);
 

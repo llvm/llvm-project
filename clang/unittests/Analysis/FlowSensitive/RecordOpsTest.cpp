@@ -194,6 +194,40 @@ TEST(RecordOpsTest, RecordsEqual) {
       });
 }
 
+TEST(TransferTest, CopyRecordFromDerivedToBase) {
+  std::string Code = R"(
+    struct A {
+      int i;
+    };
+
+    struct B : public A {
+    };
+
+    void target(A a, B b) {
+      (void)a.i;
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        Environment Env = getEnvironmentAtAnnotation(Results, "p").fork();
+
+        const ValueDecl *IDecl = findValueDecl(ASTCtx, "i");
+        auto &A = getLocForDecl<AggregateStorageLocation>(ASTCtx, Env, "a");
+        auto &B = getLocForDecl<AggregateStorageLocation>(ASTCtx, Env, "b");
+
+        EXPECT_NE(Env.getValue(*A.getChild(*IDecl)),
+                  Env.getValue(*B.getChild(*IDecl)));
+
+        copyRecord(B, A, Env);
+
+        EXPECT_EQ(Env.getValue(*A.getChild(*IDecl)),
+                  Env.getValue(*B.getChild(*IDecl)));
+      });
+}
+
 } // namespace
 } // namespace test
 } // namespace dataflow
