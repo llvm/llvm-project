@@ -372,4 +372,12 @@ __attribute__((noinline)) uint32_t __kmpc_get_warp_size() {
 }
 }
 
+#define _TGT_KERNEL_LANGUAGE(NAME, MAPPER_NAME)                                \
+  extern "C" int ompx_##NAME(int Dim) { return mapping::MAPPER_NAME(Dim); }
+
+_TGT_KERNEL_LANGUAGE(thread_id, getThreadIdInBlock)
+_TGT_KERNEL_LANGUAGE(thread_dim, getNumberOfThreadsInBlock)
+_TGT_KERNEL_LANGUAGE(block_id, getBlockIdInKernel)
+_TGT_KERNEL_LANGUAGE(block_dim, getNumberOfBlocksInKernel)
+
 #pragma omp end declare target
