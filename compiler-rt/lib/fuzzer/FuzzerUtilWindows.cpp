@@ -24,7 +24,9 @@
 #include <windows.h>
 
 // This must be included after windows.h.
+#include <processthreadsapi.h>
 #include <psapi.h>
+#include <stringapiset.h>
 
 namespace fuzzer {
 
@@ -234,8 +236,9 @@ size_t PageSize() {
 }
 
 void SetThreadName(std::thread &thread, const std::string &name) {
-  // TODO ?
-  // to UTF-8 then SetThreadDescription ?
+  wchar_t wname[16];
+  if (MultiByteToWideChar(CP_UTF8, 0, name.c_str(), -1, wname, 16) > 0)
+    (void)SetThreadDescription(thread.native_handle(), wname);
 }
 
 } // namespace fuzzer
