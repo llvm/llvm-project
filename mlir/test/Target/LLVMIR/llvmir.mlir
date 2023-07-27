@@ -2024,6 +2024,21 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
 
 // -----
 
+// CHECK-LABEL: @switch_empty
+llvm.func @switch_empty(%arg0 : i32) -> i32 {
+  // CHECK:      switch i32 %[[SWITCH_arg0:[0-9]+]], label %[[SWITCHDEFAULT_bb1:[0-9]+]] [
+  // CHECK-NEXT: ]
+  llvm.switch %arg0 : i32, ^bb1 [
+  ]
+
+  // CHECK:      [[SWITCHDEFAULT_bb1]]:
+  // CHECK-NEXT:   ret i32 %[[SWITCH_arg0]]
+^bb1:
+  llvm.return %arg0 : i32
+}
+
+// -----
+
 // CHECK-LABEL: @switch_args
 llvm.func @switch_args(%arg0: i32) -> i32 {
   %0 = llvm.mlir.constant(5 : i32) : i32
