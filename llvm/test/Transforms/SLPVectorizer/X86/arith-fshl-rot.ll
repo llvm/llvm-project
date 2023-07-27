@@ -826,21 +826,30 @@ define void @fshl_v2i32() {
 ; PR63980
 define void @fshl_v2i32_uniformconst() {
 ; SSE-LABEL: @fshl_v2i32_uniformconst(
-; SSE-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @a32, align 4
-; SSE-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>)
-; SSE-NEXT:    store <2 x i32> [[TMP2]], ptr @d32, align 4
+; SSE-NEXT:    [[A0:%.*]] = load i32, ptr @a32, align 4
+; SSE-NEXT:    [[A1:%.*]] = load i32, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 1), align 4
+; SSE-NEXT:    [[R0:%.*]] = call i32 @llvm.fshl.i32(i32 [[A0]], i32 [[A0]], i32 1)
+; SSE-NEXT:    [[R1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A1]], i32 [[A1]], i32 1)
+; SSE-NEXT:    store i32 [[R0]], ptr @d32, align 4
+; SSE-NEXT:    store i32 [[R1]], ptr getelementptr inbounds ([16 x i32], ptr @d32, i32 0, i64 1), align 4
 ; SSE-NEXT:    ret void
 ;
 ; AVX-LABEL: @fshl_v2i32_uniformconst(
-; AVX-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @a32, align 4
-; AVX-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>)
-; AVX-NEXT:    store <2 x i32> [[TMP2]], ptr @d32, align 4
+; AVX-NEXT:    [[A0:%.*]] = load i32, ptr @a32, align 4
+; AVX-NEXT:    [[A1:%.*]] = load i32, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 1), align 4
+; AVX-NEXT:    [[R0:%.*]] = call i32 @llvm.fshl.i32(i32 [[A0]], i32 [[A0]], i32 1)
+; AVX-NEXT:    [[R1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A1]], i32 [[A1]], i32 1)
+; AVX-NEXT:    store i32 [[R0]], ptr @d32, align 4
+; AVX-NEXT:    store i32 [[R1]], ptr getelementptr inbounds ([16 x i32], ptr @d32, i32 0, i64 1), align 4
 ; AVX-NEXT:    ret void
 ;
 ; AVX512-LABEL: @fshl_v2i32_uniformconst(
-; AVX512-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr @a32, align 4
-; AVX512-NEXT:    [[TMP2:%.*]] = call <2 x i32> @llvm.fshl.v2i32(<2 x i32> [[TMP1]], <2 x i32> [[TMP1]], <2 x i32> <i32 1, i32 1>)
-; AVX512-NEXT:    store <2 x i32> [[TMP2]], ptr @d32, align 4
+; AVX512-NEXT:    [[A0:%.*]] = load i32, ptr @a32, align 4
+; AVX512-NEXT:    [[A1:%.*]] = load i32, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 1), align 4
+; AVX512-NEXT:    [[R0:%.*]] = call i32 @llvm.fshl.i32(i32 [[A0]], i32 [[A0]], i32 1)
+; AVX512-NEXT:    [[R1:%.*]] = call i32 @llvm.fshl.i32(i32 [[A1]], i32 [[A1]], i32 1)
+; AVX512-NEXT:    store i32 [[R0]], ptr @d32, align 4
+; AVX512-NEXT:    store i32 [[R1]], ptr getelementptr inbounds ([16 x i32], ptr @d32, i32 0, i64 1), align 4
 ; AVX512-NEXT:    ret void
 ;
   %a0  = load i32, ptr getelementptr inbounds ([16 x i32], ptr @a32, i32 0, i64 0 ), align 4
