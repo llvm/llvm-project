@@ -129,11 +129,11 @@ private:
   const ContextT &Context;
 
   void computeCyclePO(const CycleInfoT &CI, const CycleT *Cycle,
-                      SmallPtrSetImpl<BlockT *> &Finalized);
+                      SmallPtrSetImpl<const BlockT *> &Finalized);
 
-  void computeStackPO(SmallVectorImpl<BlockT *> &Stack, const CycleInfoT &CI,
-                      const CycleT *Cycle,
-                      SmallPtrSetImpl<BlockT *> &Finalized);
+  void computeStackPO(SmallVectorImpl<const BlockT *> &Stack,
+                      const CycleInfoT &CI, const CycleT *Cycle,
+                      SmallPtrSetImpl<const BlockT *> &Finalized);
 };
 
 template <typename> class DivergencePropagator;
@@ -342,11 +342,10 @@ public:
       typename SyncDependenceAnalysisT::DivergenceDescriptor;
   using BlockLabelMapT = typename SyncDependenceAnalysisT::BlockLabelMap;
 
-  GenericUniformityAnalysisImpl(const FunctionT &F, const DominatorTreeT &DT,
-                                const CycleInfoT &CI,
+  GenericUniformityAnalysisImpl(const DominatorTreeT &DT, const CycleInfoT &CI,
                                 const TargetTransformInfo *TTI)
-      : Context(CI.getSSAContext()), F(F), CI(CI), TTI(TTI), DT(DT),
-        SDA(Context, DT, CI) {}
+      : Context(CI.getSSAContext()), F(*Context.getFunction()), CI(CI),
+        TTI(TTI), DT(DT), SDA(Context, DT, CI) {}
 
   void initialize();
 
@@ -1135,10 +1134,9 @@ bool GenericUniformityAnalysisImpl<ContextT>::isAlwaysUniform(
 
 template <typename ContextT>
 GenericUniformityInfo<ContextT>::GenericUniformityInfo(
-    FunctionT &Func, const DominatorTreeT &DT, const CycleInfoT &CI,
-    const TargetTransformInfo *TTI)
-    : F(&Func) {
-  DA.reset(new ImplT{Func, DT, CI, TTI});
+    const DominatorTreeT &DT, const CycleInfoT &CI,
+    const TargetTransformInfo *TTI) {
+  DA.reset(new ImplT{DT, CI, TTI});
 }
 
 template <typename ContextT>
@@ -1214,6 +1212,12 @@ bool GenericUniformityInfo<ContextT>::hasDivergence() const {
   return DA->hasDivergence();
 }
 
+template <typename ContextT>
+const typename ContextT::FunctionT &
+GenericUniformityInfo<ContextT>::getFunction() const {
+  return DA->getFunction();
+}
+
 /// Whether \p V is divergent at its definition.
 template <typename ContextT>
 bool GenericUniformityInfo<ContextT>::isDivergent(ConstValueRefT V) const {
@@ -1243,8 +1247,8 @@ void GenericUniformityInfo<ContextT>::print(raw_ostream &out) const {
 
 template <typename ContextT>
 void llvm::ModifiedPostOrder<ContextT>::computeStackPO(
-    SmallVectorImpl<BlockT *> &Stack, const CycleInfoT &CI, const CycleT *Cycle,
-    SmallPtrSetImpl<BlockT *> &Finalized) {
+    SmallVectorImpl<const BlockT *> &Stack, const CycleInfoT &CI,
+    const CycleT *Cycle, SmallPtrSetImpl<const BlockT *> &Finalized) {
   LLVM_DEBUG(dbgs() << "inside computeStackPO\n");
   while (!Stack.empty()) {
     auto *NextBB = Stack.back();
@@ -1313,9 +1317,9 @@ void llvm::ModifiedPostOrder<ContextT>::computeStackPO(
 template <typename ContextT>
 void ModifiedPostOrder<ContextT>::computeCyclePO(
     const CycleInfoT &CI, const CycleT *Cycle,
-    SmallPtrSetImpl<BlockT *> &Finalized) {
+    SmallPtrSetImpl<const BlockT *> &Finalized) {
   LLVM_DEBUG(dbgs() << "inside computeCyclePO\n");
-  SmallVector<BlockT *> Stack;
+  SmallVector<const BlockT *> Stack;
   auto *CycleHeader = Cycle->getHeader();
 
   LLVM_DEBUG(dbgs() << "  noted header: "
@@ -1352,11 +1356,11 @@ void ModifiedPostOrder<ContextT>::computeCyclePO(
 /// \brief Generically compute the modified post order.
 template <typename ContextT>
 void llvm::ModifiedPostOrder<ContextT>::compute(const CycleInfoT &CI) {
-  SmallPtrSet<BlockT *, 32> Finalized;
-  SmallVector<BlockT *> Stack;
+  SmallPtrSet<const BlockT *, 32> Finalized;
+  SmallVector<const BlockT *> Stack;
   auto *F = CI.getFunction();
   Stack.reserve(24); // FIXME made-up number
-  Stack.push_back(GraphTraits<FunctionT *>::getEntryNode(F));
+  Stack.push_back(&F->front());
   computeStackPO(Stack, CI, nullptr, Finalized);
 }
 
