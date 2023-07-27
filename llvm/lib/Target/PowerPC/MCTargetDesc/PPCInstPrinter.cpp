@@ -13,14 +13,13 @@
 #include "MCTargetDesc/PPCInstPrinter.h"
 #include "MCTargetDesc/PPCMCTargetDesc.h"
 #include "MCTargetDesc/PPCPredicates.h"
-#include "PPCInstrInfo.h"
-#include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
 #include "llvm/MC/MCInstrInfo.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/MCSymbol.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/raw_ostream.h"
 using namespace llvm;
@@ -646,8 +645,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   if (Op.isReg()) {
     unsigned Reg = Op.getReg();
     if (!ShowVSRNumsAsVR)
-      Reg = PPCInstrInfo::getRegNumForOperand(MII.get(MI->getOpcode()),
-                                              Reg, OpNo);
+      Reg = PPC::getRegNumForOperand(MII.get(MI->getOpcode()), Reg, OpNo);
 
     const char *RegName;
     RegName = getVerboseConditionRegName(Reg, MRI.getEncodingValue(Reg));
@@ -656,7 +654,7 @@ void PPCInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
     if (showRegistersWithPercentPrefix(RegName))
       O << "%";
     if (!showRegistersWithPrefix())
-      RegName = PPCRegisterInfo::stripRegisterPrefix(RegName);
+      RegName = PPC::stripRegisterPrefix(RegName);
 
     O << RegName;
     return;
