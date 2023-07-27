@@ -811,12 +811,23 @@ auto GetShapeHelper::operator()(const ProcedureRef &call) const -> Result {
       if (auto chars{characteristics::Procedure::FromActuals(
               call.proc(), call.arguments(), *context_)}) {
         std::size_t j{0};
+        std::size_t anyArrayArgRank{0};
         for (const auto &arg : call.arguments()) {
-          if (arg && arg->Rank() > 0 && j < chars->dummyArguments.size() &&
-              !chars->dummyArguments[j].IsOptional()) {
-            return (*this)(*arg);
+          if (arg && arg->Rank() > 0 && j < chars->dummyArguments.size()) {
+            anyArrayArgRank = arg->Rank();
+            if (!chars->dummyArguments[j].IsOptional()) {
+              return (*this)(*arg);
+            }
           }
           ++j;
+        }
+        if (anyArrayArgRank) {
+          // All dummy array arguments of the procedure are OPTIONAL.
+          // We cannot take the shape from just any array argument,
+          // because all of them might be OPTIONAL dummy arguments
+          // of the caller. Return unknown shape ranked according
+          // to the last actual array argument.
+          return Shape(anyArrayArgRank, MaybeExtentExpr{});
         }
       }
     }
