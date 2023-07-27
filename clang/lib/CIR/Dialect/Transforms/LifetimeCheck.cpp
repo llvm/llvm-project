@@ -59,6 +59,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void updatePointsToForConstStruct(mlir::Value addr,
                                     mlir::cir::ConstStructAttr value,
                                     mlir::Location loc);
+  void updatePointsToForZeroStruct(mlir::Value addr, StructType sTy,
+                                   mlir::Location loc);
 
   // FIXME: classify tasks, lambdas and call args prior to check ptr deref
   // and pass down an enum.
@@ -1125,6 +1127,21 @@ void LifetimeCheckPass::updatePointsToForConstStruct(
   }
 }
 
+void LifetimeCheckPass::updatePointsToForZeroStruct(mlir::Value addr,
+                                                    StructType sTy,
+                                                    mlir::Location loc) {
+  assert(aggregates.count(addr) && "expected association with aggregate");
+  int memberIdx = 0;
+  for (auto &t : sTy.getMembers()) {
+    auto fieldAddr = aggregates[addr][memberIdx];
+    // Unseen fields are not tracked.
+    if (fieldAddr && t.isa<mlir::cir::PointerType>()) {
+      markPsetNull(fieldAddr, loc);
+    }
+    memberIdx++;
+  }
+}
+
 static mlir::Operation *ignoreBitcasts(mlir::Operation *op) {
   while (auto bitcast = dyn_cast<CastOp>(op)) {
     if (bitcast.getKind() != CastKind::bitcast)
@@ -1171,6 +1188,13 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
             cstOp.getValue().dyn_cast<mlir::cir::ConstStructAttr>()) {
       updatePointsToForConstStruct(addr, constStruct, loc);
       return;
+    }
+
+    if (auto zero = cstOp.getValue().dyn_cast<mlir::cir::ZeroAttr>()) {
+      if (auto zeroStructTy = zero.getType().dyn_cast<StructType>()) {
+        updatePointsToForZeroStruct(addr, zeroStructTy, loc);
+        return;
+      }
     }
 
     assert(cstOp.isNullPtr() && "other than null not implemented");

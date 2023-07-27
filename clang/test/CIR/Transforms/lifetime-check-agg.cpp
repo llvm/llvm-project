@@ -8,6 +8,13 @@ typedef enum SType {
 typedef struct InfoRaw {
     SType type;
     const void* __attribute__((__may_alias__)) next;
+    unsigned int fa;
+    unsigned f;
+    unsigned s;
+    unsigned w;
+    unsigned h;
+    unsigned g;
+    unsigned a;
 } InfoRaw;
 
 typedef unsigned long long FlagsPriv;
@@ -35,5 +42,22 @@ void exploded_fields(bool cond) {
 
     escape_info(&info); // expected-remark {{pset => { invalid, nullptr }}}
                         // expected-warning@-1 {{passing aggregate containing invalid pointer member 'info.next'}}
+  }
+}
+
+void exploded_fields1(bool cond, unsigned t) {
+  {
+    InfoRaw info = {INFO_ENUM_0, &t};
+    if (cond) {
+      InfoPriv privTmp = {INFO_ENUM_1};
+      privTmp.flags = PrivBit;
+      info.next = &privTmp;
+    }
+
+    // A warning is not emitted here, lack of context for inferring
+    // anything about `cond` would make it too noisy given `info.next`
+    // wasn't null initialized.
+
+    escape_info(&info); // expected-remark {{pset => { t }}}
   }
 }
