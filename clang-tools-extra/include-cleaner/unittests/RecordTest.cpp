@@ -171,7 +171,7 @@ TEST_F(RecordPPTest, CapturesIncludes) {
   EXPECT_EQ(H.HashLocation,
             AST.sourceManager().getComposedLoc(
                 AST.sourceManager().getMainFileID(), MainFile.point("H")));
-  EXPECT_EQ(H.Resolved, AST.fileManager().getFile("header.h").get());
+  EXPECT_EQ(H.Resolved, *AST.fileManager().getOptionalFileRef("header.h"));
   EXPECT_FALSE(H.Angled);
 
   auto &M = Recorded.Includes.all().back();
@@ -179,7 +179,7 @@ TEST_F(RecordPPTest, CapturesIncludes) {
   EXPECT_EQ(M.HashLocation,
             AST.sourceManager().getComposedLoc(
                 AST.sourceManager().getMainFileID(), MainFile.point("M")));
-  EXPECT_EQ(M.Resolved, nullptr);
+  EXPECT_EQ(M.Resolved, std::nullopt);
   EXPECT_TRUE(M.Angled);
 }
 

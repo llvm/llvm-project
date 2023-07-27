@@ -22,6 +22,7 @@
 #ifndef CLANG_INCLUDE_CLEANER_TYPES_H
 #define CLANG_INCLUDE_CLEANER_TYPES_H
 
+#include "clang/Basic/FileEntry.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -40,7 +41,6 @@ class raw_ostream;
 } // namespace llvm
 namespace clang {
 class Decl;
-class FileEntry;
 class IdentifierInfo;
 namespace include_cleaner {
 
@@ -154,8 +154,8 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Header &);
 /// A single #include directive written in the main file.
 struct Include {
   llvm::StringRef Spelled;             // e.g. vector
-  const FileEntry *Resolved = nullptr; // e.g. /path/to/c++/v1/vector
-                                       // nullptr if the header was not found
+  OptionalFileEntryRef Resolved;       // e.g. /path/to/c++/v1/vector
+                                       // nullopt if the header was not found
   SourceLocation HashLocation;         // of hash in #include <vector>
   unsigned Line = 0;                   // 1-based line number for #include
   bool Angled = false;                 // True if spelled with <angle> quotes.

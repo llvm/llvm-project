@@ -54,8 +54,8 @@ void genOpenACCConstruct(AbstractConverter &,
                          Fortran::semantics::SemanticsContext &,
                          pft::Evaluation &, const parser::OpenACCConstruct &);
 void genOpenACCDeclarativeConstruct(
-    AbstractConverter &, pft::Evaluation &,
-    const parser::OpenACCDeclarativeConstruct &);
+    AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    pft::Evaluation &, const parser::OpenACCDeclarativeConstruct &);
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
 /// exist yet.

@@ -96,7 +96,8 @@ void BPFMISimplifyPatchable::initialize(MachineFunction &MFParm) {
 bool BPFMISimplifyPatchable::isLoadInst(unsigned Opcode) {
   return Opcode == BPF::LDD || Opcode == BPF::LDW || Opcode == BPF::LDH ||
          Opcode == BPF::LDB || Opcode == BPF::LDW32 || Opcode == BPF::LDH32 ||
-         Opcode == BPF::LDB32;
+         Opcode == BPF::LDB32 || Opcode == BPF::LDWSX || Opcode == BPF::LDHSX ||
+         Opcode == BPF::LDBSX;
 }
 
 void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
@@ -119,7 +120,8 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
     unsigned COREOp;
     if (Opcode == BPF::LDB || Opcode == BPF::LDH || Opcode == BPF::LDW ||
         Opcode == BPF::LDD || Opcode == BPF::STB || Opcode == BPF::STH ||
-        Opcode == BPF::STW || Opcode == BPF::STD)
+        Opcode == BPF::STW || Opcode == BPF::STD || Opcode == BPF::LDWSX ||
+        Opcode == BPF::LDHSX || Opcode == BPF::LDBSX)
       COREOp = BPF::CORE_MEM;
     else if (Opcode == BPF::LDB32 || Opcode == BPF::LDH32 ||
              Opcode == BPF::LDW32 || Opcode == BPF::STB32 ||

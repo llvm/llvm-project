@@ -53,6 +53,12 @@ def BPFIsLittleEndian : Predicate<"CurDAG->getDataLayout().isLittleEndian()">;
 def BPFIsBigEndian    : Predicate<"!CurDAG->getDataLayout().isLittleEndian()">;
 def BPFHasALU32 : Predicate<"Subtarget->getHasAlu32()">;
 def BPFNoALU32 : Predicate<"!Subtarget->getHasAlu32()">;
+def BPFHasLdsx : Predicate<"Subtarget->hasLdsx()">;
+def BPFHasMovsx : Predicate<"Subtarget->hasMovsx()">;
+def BPFHasBswap : Predicate<"Subtarget->hasBswap()">;
+def BPFHasSdivSmod : Predicate<"Subtarget->hasSdivSmod()">;
+def BPFNoMovsx : Predicate<"!Subtarget->hasMovsx()">;
+def BPFNoBswap : Predicate<"!Subtarget->hasBswap()">;
 
 def brtarget : Operand<OtherVT> {
   let PrintMethod = "printBrTargetOperand";
@@ -240,18 +246,19 @@ defm JSLE : J<BPF_JSLE, "s<=", BPF_CC_LE, BPF_CC_LE_32>;
 }
 
 // ALU instructions
-class ALU_RI<BPFOpClass Class, BPFArithOp Opc,
+class ALU_RI<BPFOpClass Class, BPFArithOp Opc, int off,
              dag outs, dag ins, string asmstr, list<dag> pattern>
     : TYPE_ALU_JMP<Opc.Value, BPF_K.Value, outs, ins, asmstr, pattern> {
   bits<4> dst;
   bits<32> imm;
 
   let Inst{51-48} = dst;
+  let Inst{47-32} = off;
   let Inst{31-0} = imm;
   let BPFClass = Class;
 }
 
-class ALU_RR<BPFOpClass Class, BPFArithOp Opc,
+class ALU_RR<BPFOpClass Class, BPFArithOp Opc, int off,
              dag outs, dag ins, string asmstr, list<dag> pattern>
     : TYPE_ALU_JMP<Opc.Value, BPF_X.Value, outs, ins, asmstr, pattern> {
   bits<4> dst;
@@ -259,26 +266,27 @@ class ALU_RR<BPFOpClass Class, BPFArithOp Opc,
 
   let Inst{55-52} = src;
   let Inst{51-48} = dst;
+  let Inst{47-32} = off;
   let BPFClass = Class;
 }
 
-multiclass ALU<BPFArithOp Opc, string OpcodeStr, SDNode OpNode> {
-  def _rr : ALU_RR<BPF_ALU64, Opc,
+multiclass ALU<BPFArithOp Opc, int off, string OpcodeStr, SDNode OpNode> {
+  def _rr : ALU_RR<BPF_ALU64, Opc, off,
                    (outs GPR:$dst),
                    (ins GPR:$src2, GPR:$src),
                    "$dst "#OpcodeStr#" $src",
                    [(set GPR:$dst, (OpNode i64:$src2, i64:$src))]>;
-  def _ri : ALU_RI<BPF_ALU64, Opc,
+  def _ri : ALU_RI<BPF_ALU64, Opc, off,
                    (outs GPR:$dst),
                    (ins GPR:$src2, i64imm:$imm),
                    "$dst "#OpcodeStr#" $imm",
                    [(set GPR:$dst, (OpNode GPR:$src2, i64immSExt32:$imm))]>;
-  def _rr_32 : ALU_RR<BPF_ALU, Opc,
+  def _rr_32 : ALU_RR<BPF_ALU, Opc, off,
                    (outs GPR32:$dst),
                    (ins GPR32:$src2, GPR32:$src),
                    "$dst "#OpcodeStr#" $src",
                    [(set GPR32:$dst, (OpNode i32:$src2, i32:$src))]>;
-  def _ri_32 : ALU_RI<BPF_ALU, Opc,
+  def _ri_32 : ALU_RI<BPF_ALU, Opc, off,
                    (outs GPR32:$dst),
                    (ins GPR32:$src2, i32imm:$imm),
                    "$dst "#OpcodeStr#" $imm",
@@ -287,18 +295,23 @@ multiclass ALU<BPFArithOp Opc, string OpcodeStr, SDNode OpNode> {
 
 let Constraints = "$dst = $src2" in {
 let isAsCheapAsAMove = 1 in {
-  defm ADD : ALU<BPF_ADD, "+=", add>;
-  defm SUB : ALU<BPF_SUB, "-=", sub>;
-  defm OR  : ALU<BPF_OR, "|=", or>;
-  defm AND : ALU<BPF_AND, "&=", and>;
-  defm SLL : ALU<BPF_LSH, "<<=", shl>;
-  defm SRL : ALU<BPF_RSH, ">>=", srl>;
-  defm XOR : ALU<BPF_XOR, "^=", xor>;
-  defm SRA : ALU<BPF_ARSH, "s>>=", sra>;
+  defm ADD : ALU<BPF_ADD, 0, "+=", add>;
+  defm SUB : ALU<BPF_SUB, 0, "-=", sub>;
+  defm OR  : ALU<BPF_OR, 0, "|=", or>;
+  defm AND : ALU<BPF_AND, 0, "&=", and>;
+  defm SLL : ALU<BPF_LSH, 0, "<<=", shl>;
+  defm SRL : ALU<BPF_RSH, 0, ">>=", srl>;
+  defm XOR : ALU<BPF_XOR, 0, "^=", xor>;
+  defm SRA : ALU<BPF_ARSH, 0, "s>>=", sra>;
 }
-  defm MUL : ALU<BPF_MUL, "*=", mul>;
-  defm DIV : ALU<BPF_DIV, "/=", udiv>;
-  defm MOD : ALU<BPF_MOD, "%=", urem>;
+  defm MUL : ALU<BPF_MUL, 0, "*=", mul>;
+  defm DIV : ALU<BPF_DIV, 0, "/=", udiv>;
+  defm MOD : ALU<BPF_MOD, 0, "%=", urem>;
+
+  let Predicates = [BPFHasSdivSmod] in {
+    defm SDIV : ALU<BPF_DIV, 1, "s/=", sdiv>;
+    defm SMOD : ALU<BPF_MOD, 1, "s%=", srem>;
+  }
 }
 
 class NEG_RR<BPFOpClass Class, BPFArithOp Opc,
@@ -338,26 +351,49 @@ class LD_IMM64<bits<4> Pseudo, string OpcodeStr>
 
 let isReMaterializable = 1, isAsCheapAsAMove = 1 in {
 def LD_imm64 : LD_IMM64<0, "=">;
-def MOV_rr : ALU_RR<BPF_ALU64, BPF_MOV,
+def MOV_rr : ALU_RR<BPF_ALU64, BPF_MOV, 0,
                     (outs GPR:$dst),
                     (ins GPR:$src),
                     "$dst = $src",
                     []>;
-def MOV_ri : ALU_RI<BPF_ALU64, BPF_MOV,
+def MOV_ri : ALU_RI<BPF_ALU64, BPF_MOV, 0,
                     (outs GPR:$dst),
                     (ins i64imm:$imm),
                     "$dst = $imm",
                     [(set GPR:$dst, (i64 i64immSExt32:$imm))]>;
-def MOV_rr_32 : ALU_RR<BPF_ALU, BPF_MOV,
+def MOV_rr_32 : ALU_RR<BPF_ALU, BPF_MOV, 0,
                     (outs GPR32:$dst),
                     (ins GPR32:$src),
                     "$dst = $src",
                     []>;
-def MOV_ri_32 : ALU_RI<BPF_ALU, BPF_MOV,
+def MOV_ri_32 : ALU_RI<BPF_ALU, BPF_MOV, 0,
                     (outs GPR32:$dst),
                     (ins i32imm:$imm),
                     "$dst = $imm",
                     [(set GPR32:$dst, (i32 i32immSExt32:$imm))]>;
+
+let Predicates = [BPFHasMovsx] in {
+  def MOVSX_rr_8 : ALU_RR<BPF_ALU64, BPF_MOV, 8,
+                      (outs GPR:$dst), (ins GPR:$src),
+                      "$dst = (s8)$src",
+                      [(set GPR:$dst, (sext_inreg GPR:$src, i8))]>;
+  def MOVSX_rr_16 : ALU_RR<BPF_ALU64, BPF_MOV, 16,
+                      (outs GPR:$dst), (ins GPR:$src),
+                      "$dst = (s16)$src",
+                      [(set GPR:$dst, (sext_inreg GPR:$src, i16))]>;
+  def MOVSX_rr_32 : ALU_RR<BPF_ALU64, BPF_MOV, 32,
+                      (outs GPR:$dst), (ins GPR:$src),
+                      "$dst = (s32)$src",
+                      [(set GPR:$dst, (sext_inreg GPR:$src, i32))]>;
+  def MOVSX_rr_32_8 : ALU_RR<BPF_ALU, BPF_MOV, 8,
+                      (outs GPR32:$dst), (ins GPR32:$src),
+                      "$dst = (s8)$src",
+                      [(set GPR32:$dst, (sext_inreg GPR32:$src, i8))]>;
+  def MOVSX_rr_32_16 : ALU_RR<BPF_ALU, BPF_MOV, 16,
+                      (outs GPR32:$dst), (ins GPR32:$src),
+                      "$dst = (s16)$src",
+                      [(set GPR32:$dst, (sext_inreg GPR32:$src, i16))]>;
+}
 }
 
 def FI_ri
@@ -421,8 +457,8 @@ let Predicates = [BPFNoALU32] in {
 def STD : STOREi64<BPF_DW, "u64", store>;
 
 // LOAD instructions
-class LOAD<BPFWidthModifer SizeOp, string OpcodeStr, list<dag> Pattern>
-    : TYPE_LD_ST<BPF_MEM.Value, SizeOp.Value,
+class LOAD<BPFWidthModifer SizeOp, BPFModeModifer ModOp, string OpcodeStr, list<dag> Pattern>
+    : TYPE_LD_ST<ModOp.Value, SizeOp.Value,
                  (outs GPR:$dst),
                  (ins MEMri:$addr),
                  "$dst = *("#OpcodeStr#" *)($addr)",
@@ -436,8 +472,8 @@ class LOAD<BPFWidthModifer SizeOp, string OpcodeStr, list<dag> Pattern>
   let BPFClass = BPF_LDX;
 }
 
-class LOADi64<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
-    : LOAD<SizeOp, OpcodeStr, [(set i64:$dst, (OpNode ADDRri:$addr))]>;
+class LOADi64<BPFWidthModifer SizeOp, BPFModeModifer ModOp, string OpcodeStr, PatFrag OpNode>
+    : LOAD<SizeOp, ModOp, OpcodeStr, [(set i64:$dst, (OpNode ADDRri:$addr))]>;
 
 let isCodeGenOnly = 1 in {
   def CORE_MEM : TYPE_LD_ST<BPF_MEM.Value, BPF_W.Value,
@@ -451,7 +487,7 @@ let isCodeGenOnly = 1 in {
                                   "$dst = core_alu32_mem($opcode, $src, $offset)",
                                   []>;
   let Constraints = "$dst = $src" in {
-    def CORE_SHIFT : ALU_RR<BPF_ALU64, BPF_LSH,
+    def CORE_SHIFT : ALU_RR<BPF_ALU64, BPF_LSH, 0,
                              (outs GPR:$dst),
                              (ins u64imm:$opcode, GPR:$src, u64imm:$offset),
                              "$dst = core_shift($opcode, $src, $offset)",
@@ -460,12 +496,18 @@ let isCodeGenOnly = 1 in {
 }
 
 let Predicates = [BPFNoALU32] in {
-  def LDW : LOADi64<BPF_W, "u32", zextloadi32>;
-  def LDH : LOADi64<BPF_H, "u16", zextloadi16>;
-  def LDB : LOADi64<BPF_B, "u8", zextloadi8>;
+  def LDW : LOADi64<BPF_W, BPF_MEM, "u32", zextloadi32>;
+  def LDH : LOADi64<BPF_H, BPF_MEM, "u16", zextloadi16>;
+  def LDB : LOADi64<BPF_B, BPF_MEM, "u8", zextloadi8>;
 }
 
-def LDD : LOADi64<BPF_DW, "u64", load>;
+let Predicates = [BPFHasLdsx] in {
+  def LDWSX : LOADi64<BPF_W, BPF_MEMSX, "s32", sextloadi32>;
+  def LDHSX : LOADi64<BPF_H, BPF_MEMSX, "s16", sextloadi16>;
+  def LDBSX : LOADi64<BPF_B, BPF_MEMSX, "s8",  sextloadi8>;
+}
+
+def LDD : LOADi64<BPF_DW, BPF_MEM, "u64", load>;
 
 class BRANCH<BPFJumpOp Opc, string OpcodeStr, list<dag> Pattern>
     : TYPE_ALU_JMP<Opc.Value, BPF_K.Value,
@@ -477,6 +519,18 @@ class BRANCH<BPFJumpOp Opc, string OpcodeStr, list<dag> Pattern>
 
   let Inst{47-32} = BrDst;
   let BPFClass = BPF_JMP;
+}
+
+class BRANCH_LONG<BPFJumpOp Opc, string OpcodeStr, list<dag> Pattern>
+    : TYPE_ALU_JMP<Opc.Value, BPF_K.Value,
+                   (outs),
+                   (ins brtarget:$BrDst),
+                   !strconcat(OpcodeStr, " $BrDst"),
+                   Pattern> {
+  bits<32> BrDst;
+
+  let Inst{31-0} = BrDst;
+  let BPFClass = BPF_JMP32;
 }
 
 class CALL<string OpcodeStr>
@@ -506,6 +560,7 @@ class CALLX<string OpcodeStr>
 // Jump always
 let isBranch = 1, isTerminator = 1, hasDelaySlot=0, isBarrier = 1 in {
   def JMP : BRANCH<BPF_JA, "goto", [(br bb:$BrDst)]>;
+  def JMPL : BRANCH_LONG<BPF_JA, "gotol", []>;
 }
 
 // Jump and link
@@ -835,7 +890,7 @@ let Defs = [R0], Uses = [R0] in {
 }
 
 // bswap16, bswap32, bswap64
-class BSWAP<bits<32> SizeOp, string OpcodeStr, BPFSrcType SrcType, list<dag> Pattern>
+class BSWAP<BPFOpClass Class, bits<32> SizeOp, string OpcodeStr, BPFSrcType SrcType, list<dag> Pattern>
     : TYPE_ALU_JMP<BPF_END.Value, SrcType.Value,
                    (outs GPR:$dst),
                    (ins GPR:$src),
@@ -845,21 +900,29 @@ class BSWAP<bits<32> SizeOp, string OpcodeStr, BPFSrcType SrcType, list<dag> Pat
 
   let Inst{51-48} = dst;
   let Inst{31-0} = SizeOp;
-  let BPFClass = BPF_ALU;
+  let BPFClass = Class;
 }
 
 
 let Constraints = "$dst = $src" in {
+  let Predicates = [BPFHasBswap] in {
+    def BSWAP16 : BSWAP<BPF_ALU64, 16, "bswap16", BPF_TO_LE, [(set GPR:$dst, (srl (bswap GPR:$src), (i64 48)))]>;
+    def BSWAP32 : BSWAP<BPF_ALU64, 32, "bswap32", BPF_TO_LE, [(set GPR:$dst, (srl (bswap GPR:$src), (i64 32)))]>;
+    def BSWAP64 : BSWAP<BPF_ALU64, 64, "bswap64", BPF_TO_LE, [(set GPR:$dst, (bswap GPR:$src))]>;
+  }
+
+  let Predicates = [BPFNoBswap] in {
     let Predicates = [BPFIsLittleEndian] in {
-        def BE16 : BSWAP<16, "be16", BPF_TO_BE, [(set GPR:$dst, (srl (bswap GPR:$src), (i64 48)))]>;
-        def BE32 : BSWAP<32, "be32", BPF_TO_BE, [(set GPR:$dst, (srl (bswap GPR:$src), (i64 32)))]>;
-        def BE64 : BSWAP<64, "be64", BPF_TO_BE, [(set GPR:$dst, (bswap GPR:$src))]>;
+        def BE16 : BSWAP<BPF_ALU, 16, "be16", BPF_TO_BE, [(set GPR:$dst, (srl (bswap GPR:$src), (i64 48)))]>;
+        def BE32 : BSWAP<BPF_ALU, 32, "be32", BPF_TO_BE, [(set GPR:$dst, (srl (bswap GPR:$src), (i64 32)))]>;
+        def BE64 : BSWAP<BPF_ALU, 64, "be64", BPF_TO_BE, [(set GPR:$dst, (bswap GPR:$src))]>;
     }
     let Predicates = [BPFIsBigEndian] in {
-        def LE16 : BSWAP<16, "le16", BPF_TO_LE, [(set GPR:$dst, (srl (bswap GPR:$src), (i64 48)))]>;
-        def LE32 : BSWAP<32, "le32", BPF_TO_LE, [(set GPR:$dst, (srl (bswap GPR:$src), (i64 32)))]>;
-        def LE64 : BSWAP<64, "le64", BPF_TO_LE, [(set GPR:$dst, (bswap GPR:$src))]>;
+        def LE16 : BSWAP<BPF_ALU, 16, "le16", BPF_TO_LE, [(set GPR:$dst, (srl (bswap GPR:$src), (i64 48)))]>;
+        def LE32 : BSWAP<BPF_ALU, 32, "le32", BPF_TO_LE, [(set GPR:$dst, (srl (bswap GPR:$src), (i64 32)))]>;
+        def LE64 : BSWAP<BPF_ALU, 64, "le64", BPF_TO_LE, [(set GPR:$dst, (bswap GPR:$src))]>;
     }
+  }
 }
 
 let Defs = [R0, R1, R2, R3, R4, R5], Uses = [R6], hasSideEffects = 1,
@@ -898,13 +961,20 @@ def LD_IND_H : LOAD_IND<BPF_H, "u16", int_bpf_load_half>;
 def LD_IND_W : LOAD_IND<BPF_W, "u32", int_bpf_load_word>;
 
 let isCodeGenOnly = 1 in {
-  def MOV_32_64 : ALU_RR<BPF_ALU, BPF_MOV,
+  def MOV_32_64 : ALU_RR<BPF_ALU, BPF_MOV, 0,
                          (outs GPR:$dst), (ins GPR32:$src),
                          "$dst = $src", []>;
 }
 
-def : Pat<(i64 (sext GPR32:$src)),
-          (SRA_ri (SLL_ri (MOV_32_64 GPR32:$src), 32), 32)>;
+let Predicates = [BPFNoMovsx] in {
+  def : Pat<(i64 (sext GPR32:$src)),
+            (SRA_ri (SLL_ri (MOV_32_64 GPR32:$src), 32), 32)>;
+}
+
+let Predicates = [BPFHasMovsx] in {
+  def : Pat<(i64 (sext GPR32:$src)),
+            (MOVSX_rr_32 (MOV_32_64 GPR32:$src))>;
+}
 
 def : Pat<(i64 (zext GPR32:$src)), (MOV_32_64 GPR32:$src)>;
 
@@ -940,8 +1010,8 @@ let Predicates = [BPFHasALU32], DecoderNamespace = "BPFALU32" in {
   def STB32 : STOREi32<BPF_B, "u8", truncstorei8>;
 }
 
-class LOAD32<BPFWidthModifer SizeOp, string OpcodeStr, list<dag> Pattern>
-    : TYPE_LD_ST<BPF_MEM.Value, SizeOp.Value,
+class LOAD32<BPFWidthModifer SizeOp, BPFModeModifer ModOp, string OpcodeStr, list<dag> Pattern>
+    : TYPE_LD_ST<ModOp.Value, SizeOp.Value,
                 (outs GPR32:$dst),
                 (ins MEMri:$addr),
                 "$dst = *("#OpcodeStr#" *)($addr)",
@@ -955,13 +1025,13 @@ class LOAD32<BPFWidthModifer SizeOp, string OpcodeStr, list<dag> Pattern>
   let BPFClass = BPF_LDX;
 }
 
-class LOADi32<BPFWidthModifer SizeOp, string OpcodeStr, PatFrag OpNode>
-    : LOAD32<SizeOp, OpcodeStr, [(set i32:$dst, (OpNode ADDRri:$addr))]>;
+class LOADi32<BPFWidthModifer SizeOp, BPFModeModifer ModOp, string OpcodeStr, PatFrag OpNode>
+    : LOAD32<SizeOp, ModOp, OpcodeStr, [(set i32:$dst, (OpNode ADDRri:$addr))]>;
 
 let Predicates = [BPFHasALU32], DecoderNamespace = "BPFALU32" in {
-  def LDW32 : LOADi32<BPF_W, "u32", load>;
-  def LDH32 : LOADi32<BPF_H, "u16", zextloadi16>;
-  def LDB32 : LOADi32<BPF_B, "u8", zextloadi8>;
+  def LDW32 : LOADi32<BPF_W, BPF_MEM, "u32", load>;
+  def LDH32 : LOADi32<BPF_H, BPF_MEM, "u16", zextloadi16>;
+  def LDB32 : LOADi32<BPF_B, BPF_MEM, "u8", zextloadi8>;
 }
 
 let Predicates = [BPFHasALU32] in {
@@ -973,6 +1043,12 @@ let Predicates = [BPFHasALU32] in {
             (STW32 (EXTRACT_SUBREG GPR:$src, sub_32), ADDRri:$dst)>;
   def : Pat<(i32 (extloadi8 ADDRri:$src)), (i32 (LDB32 ADDRri:$src))>;
   def : Pat<(i32 (extloadi16 ADDRri:$src)), (i32 (LDH32 ADDRri:$src))>;
+
+  let Predicates = [BPFHasLdsx] in {
+    def : Pat<(i32 (sextloadi8 ADDRri:$src)), (EXTRACT_SUBREG (LDBSX ADDRri:$src), sub_32)>;
+    def : Pat<(i32 (sextloadi16 ADDRri:$src)), (EXTRACT_SUBREG (LDHSX ADDRri:$src), sub_32)>;
+  }
+
   def : Pat<(i64 (zextloadi8  ADDRri:$src)),
             (SUBREG_TO_REG (i64 0), (LDB32 ADDRri:$src), sub_32)>;
   def : Pat<(i64 (zextloadi16 ADDRri:$src)),

@@ -26,8 +26,8 @@ TEST(RecordedIncludesTest, Match) {
   // Ensure it doesn't do any actual IO.
   auto FS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
   FileManager FM(FileSystemOptions{});
-  const FileEntry *A = FM.getVirtualFile("/path/a", /*Size=*/0, time_t{});
-  const FileEntry *B = FM.getVirtualFile("/path/b", /*Size=*/0, time_t{});
+  FileEntryRef A = FM.getVirtualFileRef("/path/a", /*Size=*/0, time_t{});
+  FileEntryRef B = FM.getVirtualFileRef("/path/b", /*Size=*/0, time_t{});
 
   Includes Inc;
   Inc.add(Include{"a", A, SourceLocation(), 1});
@@ -35,10 +35,11 @@ TEST(RecordedIncludesTest, Match) {
   Inc.add(Include{"b", B, SourceLocation(), 3});
   Inc.add(Include{"vector", B, SourceLocation(), 4});
   Inc.add(Include{"vector", B, SourceLocation(), 5});
-  Inc.add(Include{"missing", nullptr, SourceLocation(), 6});
+  Inc.add(Include{"missing", std::nullopt, SourceLocation(), 6});
 
-  EXPECT_THAT(Inc.match(A), ElementsAre(line(1), line(2)));
-  EXPECT_THAT(Inc.match(B), ElementsAre(line(3), line(4), line(5)));
+  EXPECT_THAT(Inc.match(&A.getFileEntry()), ElementsAre(line(1), line(2)));
+  EXPECT_THAT(Inc.match(&B.getFileEntry()),
+              ElementsAre(line(3), line(4), line(5)));
   EXPECT_THAT(Inc.match(*tooling::stdlib::Header::named("<vector>")),
               ElementsAre(line(4), line(5)));
 }

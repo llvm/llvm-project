@@ -1303,7 +1303,7 @@ bool SimplifyCFGOpt::PerformValueComparisonIntoPredecessorFolding(
   }
   for (const std::pair<BasicBlock *, int /*Num*/> &NewSuccessor :
        NewSuccessors) {
-    for (auto I : seq(0, NewSuccessor.second)) {
+    for (auto I : seq(NewSuccessor.second)) {
       (void)I;
       AddPredecessorToBlock(NewSuccessor.first, Pred, BB);
     }

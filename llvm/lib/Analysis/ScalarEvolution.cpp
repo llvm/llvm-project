@@ -652,7 +652,7 @@ CompareValueComplexity(EquivalenceClasses<const Value *> &EqCacheValue,
     if (LNumOps != RNumOps)
       return (int)LNumOps - (int)RNumOps;
 
-    for (unsigned Idx : seq(0u, LNumOps)) {
+    for (unsigned Idx : seq(LNumOps)) {
       int Result =
           CompareValueComplexity(EqCacheValue, LI, LInst->getOperand(Idx),
                                  RInst->getOperand(Idx), Depth + 1);
