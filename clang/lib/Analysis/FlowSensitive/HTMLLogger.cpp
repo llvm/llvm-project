@@ -99,10 +99,6 @@ public:
     case Value::Kind::AtomicBool:
     case Value::Kind::FormulaBool:
       break;
-    case Value::Kind::Reference:
-      JOS.attributeObject(
-          "referent", [&] { dump(cast<ReferenceValue>(V).getReferentLoc()); });
-      break;
     case Value::Kind::Pointer:
       JOS.attributeObject(
           "pointee", [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
@@ -462,8 +458,9 @@ private:
       GraphS << "  " << blockID(I) << " [id=" << blockID(I) << "]\n";
     for (const auto *Block : CFG) {
       for (const auto &Succ : Block->succs()) {
-        GraphS << "  " << blockID(Block->getBlockID()) << " -> "
-               << blockID(Succ.getReachableBlock()->getBlockID()) << "\n";
+        if (Succ.getReachableBlock())
+          GraphS << "  " << blockID(Block->getBlockID()) << " -> "
+                 << blockID(Succ.getReachableBlock()->getBlockID()) << "\n";
       }
     }
     GraphS << "}\n";

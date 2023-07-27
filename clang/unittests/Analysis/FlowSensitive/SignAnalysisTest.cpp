@@ -114,7 +114,7 @@ getValueAndSignProperties(const UnaryOperator *UO,
     return {nullptr, {}, {}};
 
   // Value of the unary op.
-  auto *UnaryOpValue = State.Env.getValueStrict(*UO);
+  auto *UnaryOpValue = State.Env.getValue(*UO);
   if (!UnaryOpValue) {
     UnaryOpValue = &State.Env.makeAtomicBoolValue();
     State.Env.setValueStrict(*UO, *UnaryOpValue);
@@ -133,7 +133,7 @@ void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
                     LatticeTransferState &State) {
   auto &A = State.Env.arena();
   const Formula *Comp;
-  if (BoolValue *V = cast_or_null<BoolValue>(State.Env.getValueStrict(*BO))) {
+  if (BoolValue *V = cast_or_null<BoolValue>(State.Env.getValue(*BO))) {
     Comp = &V->formula();
   } else {
     Comp = &A.makeAtomRef(A.makeAtom());
@@ -143,8 +143,8 @@ void transferBinary(const BinaryOperator *BO, const MatchFinder::MatchResult &M,
   // FIXME Use this as well:
   // auto *NegatedComp = &State.Env.makeNot(*Comp);
 
-  auto *LHS = State.Env.getValueStrict(*BO->getLHS());
-  auto *RHS = State.Env.getValueStrict(*BO->getRHS());
+  auto *LHS = State.Env.getValue(*BO->getLHS());
+  auto *RHS = State.Env.getValue(*BO->getRHS());
 
   if (!LHS || !RHS)
     return;
@@ -271,7 +271,7 @@ Value *getOrCreateValue(const Expr *E, Environment &Env) {
       Env.setValue(*Loc, *Val);
     }
   } else {
-    Val = Env.getValueStrict(*E);
+    Val = Env.getValue(*E);
     if (!Val) {
       Val = Env.createValue(E->getType());
       Env.setValueStrict(*E, *Val);
