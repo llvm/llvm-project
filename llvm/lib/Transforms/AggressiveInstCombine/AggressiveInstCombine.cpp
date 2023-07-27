@@ -906,7 +906,7 @@ static bool foldSqrt(CallInst *Call, TargetTransformInfo &TTI,
   return false;
 }
 
-/// Try to expand strcmp(P, "x") calls.
+/// Try to expand strcmp(P, string_literal) where string_literal size is 1 or 2
 static bool expandStrcmp(CallInst *CI, DominatorTree &DT, bool &MadeCFGChange) {
   Value *Str1P = CI->getArgOperand(0), *Str2P = CI->getArgOperand(1);
 
@@ -921,13 +921,24 @@ static bool expandStrcmp(CallInst *CI, DominatorTree &DT, bool &MadeCFGChange) {
   Value *NonConstantP = nullptr;
   StringRef ConstantStr;
 
-  if (!HasStr1 && HasStr2 && Str2.size() == 1) {
+  if (!HasStr1 && HasStr2) {
     NonConstantP = Str1P;
     ConstantStr = Str2;
-  } else if (!HasStr2 && HasStr1 && Str1.size() == 1) {
+  } else if (!HasStr2 && HasStr1) {
     NonConstantP = Str2P;
     ConstantStr = Str1;
   } else {
+    return false;
+  }
+
+  size_t ConstantStrSize = ConstantStr.size();
+
+  // Trivial cases are optimized during inst combine
+  if (ConstantStrSize == 0) {
+    return false;
+  }
+
+  if (ConstantStrSize > 2) {
     return false;
   }
 
@@ -946,42 +957,76 @@ static bool expandStrcmp(CallInst *CI, DominatorTree &DT, bool &MadeCFGChange) {
   //   v1 = P[1]
   // dst = phi(v0, v1)
   //
+  // For strcmp(P, "xy") do the following transformation:
+  //
+  // (before)
+  // dst = strcmp(P, "x")
+  //
+  // (after)
+  // v0 = P[0] - 'x'
+  // [if v0 == 0]
+  //   v1 = P[1] - 'y'
+  //   [if v1 == 0]
+  //     v2 = P[2]
+  // dst = phi(v0, v1, v2)
+  //
 
   IRBuilder<> B(CI->getParent());
   DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
 
   Type *RetType = CI->getType();
 
-  B.SetInsertPoint(CI);
-  BasicBlock *InitialBB = B.GetInsertBlock();
-  Value *Str1FirstCharacterValue =
-      B.CreateZExt(B.CreateLoad(B.getInt8Ty(), NonConstantP), RetType);
-  Value *Str2FirstCharacterValue =
-      ConstantInt::get(RetType, static_cast<unsigned char>(ConstantStr[0]));
-  Value *FirstCharacterSub =
-      B.CreateNSWSub(Str1FirstCharacterValue, Str2FirstCharacterValue);
-  Value *IsFirstCharacterSubZero =
-      B.CreateICmpEQ(FirstCharacterSub, ConstantInt::get(RetType, 0));
-  Instruction *IsFirstCharacterSubZeroBBTerminator = SplitBlockAndInsertIfThen(
-      IsFirstCharacterSubZero, CI, /*Unreachable*/ false,
-      /*BranchWeights*/ nullptr, &DTU);
+  BasicBlock *InitialBB = CI->getParent();
+  BasicBlock *JoinBlock = SplitBlock(InitialBB, CI, &DTU);
+  JoinBlock->setName("strcmp_expand_sub_join");
 
-  B.SetInsertPoint(IsFirstCharacterSubZeroBBTerminator);
-  B.GetInsertBlock()->setName("strcmp_expand_sub_is_zero");
-  BasicBlock *IsFirstCharacterSubZeroBB = B.GetInsertBlock();
-  Value *Str1SecondCharacterValue = B.CreateZExt(
-      B.CreateLoad(B.getInt8Ty(), B.CreateConstInBoundsGEP1_64(
-                                      B.getInt8Ty(), NonConstantP, 1)),
+  B.SetInsertPoint(CI);
+  PHINode *ResultPHI = B.CreatePHI(RetType, ConstantStrSize + 1);
+
+  B.SetInsertPoint(InitialBB);
+  InitialBB->getTerminator()->eraseFromParent();
+
+  SmallVector<DominatorTree::UpdateType, 4> DTUpdates;
+
+  size_t CharacterIndexToCheck = 0;
+  for (; CharacterIndexToCheck < ConstantStrSize; ++CharacterIndexToCheck) {
+    Value *StrCharacterValue = B.CreateZExt(
+        B.CreateLoad(B.getInt8Ty(),
+                     B.CreateConstInBoundsGEP1_64(B.getInt8Ty(), NonConstantP,
+                                                  CharacterIndexToCheck)),
+        RetType);
+    Value *ConstantStrCharacterValue = ConstantInt::get(
+        RetType,
+        static_cast<unsigned char>(ConstantStr[CharacterIndexToCheck]));
+    Value *CharacterSub =
+        B.CreateNSWSub(StrCharacterValue, ConstantStrCharacterValue);
+    Value *IsCharacterSubZero =
+        B.CreateICmpEQ(CharacterSub, ConstantInt::get(RetType, 0));
+    BasicBlock *IsCharacterSubZeroBB =
+        BasicBlock::Create(B.getContext(), "strcmp_expand_sub_is_zero",
+                           InitialBB->getParent(), JoinBlock);
+    B.CreateCondBr(IsCharacterSubZero, IsCharacterSubZeroBB, JoinBlock);
+
+    ResultPHI->addIncoming(CharacterSub, B.GetInsertBlock());
+    DTUpdates.emplace_back(DominatorTree::Insert, B.GetInsertBlock(),
+                           IsCharacterSubZeroBB);
+
+    B.SetInsertPoint(IsCharacterSubZeroBB);
+    DTUpdates.emplace_back(DominatorTree::Insert, IsCharacterSubZeroBB,
+                           JoinBlock);
+  }
+
+  Value *StrLastCharacterValue = B.CreateZExt(
+      B.CreateLoad(B.getInt8Ty(),
+                   B.CreateConstInBoundsGEP1_64(B.getInt8Ty(), NonConstantP,
+                                                CharacterIndexToCheck)),
       RetType);
+  ResultPHI->addIncoming(StrLastCharacterValue, B.GetInsertBlock());
+  B.CreateBr(JoinBlock);
 
-  B.SetInsertPoint(CI);
-  B.GetInsertBlock()->setName("strcmp_expand_sub_join");
+  DTU.applyUpdates(DTUpdates);
 
-  PHINode *Result = B.CreatePHI(RetType, 2);
-  Result->addIncoming(FirstCharacterSub, InitialBB);
-  Result->addIncoming(Str1SecondCharacterValue, IsFirstCharacterSubZeroBB);
-
-  CI->replaceAllUsesWith(Result);
+  CI->replaceAllUsesWith(ResultPHI);
   CI->eraseFromParent();
 
   MadeCFGChange = true;
