@@ -5746,6 +5746,9 @@ getIntrinsicArgumentLowering(llvm::StringRef specificName) {
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
     if (!handler->argLoweringRules.hasDefaultRules())
       return &handler->argLoweringRules;
+  if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name))
+    if (!ppcHandler->argLoweringRules.hasDefaultRules())
+      return &ppcHandler->argLoweringRules;
   return nullptr;
 }
 
