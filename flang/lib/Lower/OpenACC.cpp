@@ -2434,6 +2434,13 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
               Fortran::parser::AccDataModifier::Modifier::ReadOnly,
               mlir::acc::DataClause::acc_copyin,
               mlir::acc::DataClause::acc_copyin_readonly);
+        } else if (const auto *deviceResidentClause =
+                       std::get_if<Fortran::parser::AccClause::DeviceResident>(
+                           &clause.u)) {
+          genGlobalCtors<mlir::acc::DeclareDeviceResidentOp,
+                         mlir::acc::DeclareDeviceResidentOp>(
+              converter, modBuilder, deviceResidentClause->v,
+              mlir::acc::DataClause::acc_declare_device_resident);
         } else {
           TODO(clauseLocation, "OpenACC declare clause");
         }
