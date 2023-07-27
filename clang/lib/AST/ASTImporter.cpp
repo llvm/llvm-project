@@ -3925,7 +3925,6 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
   auto ToTInfo = importChecked(Err, D->getTypeSourceInfo());
   auto ToBitWidth = importChecked(Err, D->getBitWidth());
   auto ToInnerLocStart = importChecked(Err, D->getInnerLocStart());
-  auto ToInitializer = importChecked(Err, D->getInClassInitializer());
   if (Err)
     return std::move(Err);
   const Type *ToCapturedVLAType = nullptr;
@@ -3948,12 +3947,24 @@ ExpectedDecl ASTNodeImporter::VisitFieldDecl(FieldDecl *D) {
     return std::move(Err);
   ToField->setAccess(D->getAccess());
   ToField->setLexicalDeclContext(LexicalDC);
-  if (ToInitializer)
-    ToField->setInClassInitializer(ToInitializer);
   ToField->setImplicit(D->isImplicit());
   if (ToCapturedVLAType)
     ToField->setCapturedVLAType(cast<VariableArrayType>(ToCapturedVLAType));
   LexicalDC->addDeclInternal(ToField);
+  // Import initializer only after the field was created, it may have recursive
+  // reference to the field.
+  auto ToInitializer = importChecked(Err, D->getInClassInitializer());
+  if (Err)
+    return std::move(Err);
+  if (ToInitializer) {
+    auto *AlreadyImported = ToField->getInClassInitializer();
+    if (AlreadyImported)
+      assert(ToInitializer == AlreadyImported &&
+             "Duplicate import of in-class initializer.");
+    else
+      ToField->setInClassInitializer(ToInitializer);
+  }
+
   return ToField;
 }
 
