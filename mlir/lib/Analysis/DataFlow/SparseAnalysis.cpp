@@ -28,16 +28,17 @@ void AbstractSparseLattice::onUpdate(DataFlowSolver *solver) const {
 }
 
 //===----------------------------------------------------------------------===//
-// AbstractSparseDataFlowAnalysis
+// AbstractSparseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
-AbstractSparseDataFlowAnalysis::AbstractSparseDataFlowAnalysis(
+AbstractSparseForwardDataFlowAnalysis::AbstractSparseForwardDataFlowAnalysis(
     DataFlowSolver &solver)
     : DataFlowAnalysis(solver) {
   registerPointKind<CFGEdge>();
 }
 
-LogicalResult AbstractSparseDataFlowAnalysis::initialize(Operation *top) {
+LogicalResult
+AbstractSparseForwardDataFlowAnalysis::initialize(Operation *top) {
   // Mark the entry block arguments as having reached their pessimistic
   // fixpoints.
   for (Region &region : top->getRegions()) {
@@ -51,7 +52,7 @@ LogicalResult AbstractSparseDataFlowAnalysis::initialize(Operation *top) {
 }
 
 LogicalResult
-AbstractSparseDataFlowAnalysis::initializeRecursively(Operation *op) {
+AbstractSparseForwardDataFlowAnalysis::initializeRecursively(Operation *op) {
   // Initialize the analysis by visiting every owner of an SSA value (all
   // operations and blocks).
   visitOperation(op);
@@ -68,7 +69,7 @@ AbstractSparseDataFlowAnalysis::initializeRecursively(Operation *op) {
   return success();
 }
 
-LogicalResult AbstractSparseDataFlowAnalysis::visit(ProgramPoint point) {
+LogicalResult AbstractSparseForwardDataFlowAnalysis::visit(ProgramPoint point) {
   if (Operation *op = llvm::dyn_cast_if_present<Operation *>(point))
     visitOperation(op);
   else if (Block *block = llvm::dyn_cast_if_present<Block *>(point))
@@ -78,7 +79,7 @@ LogicalResult AbstractSparseDataFlowAnalysis::visit(ProgramPoint point) {
   return success();
 }
 
-void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
+void AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
   // Exit early on operations with no results.
   if (op->getNumResults() == 0)
     return;
@@ -128,7 +129,7 @@ void AbstractSparseDataFlowAnalysis::visitOperation(Operation *op) {
   visitOperationImpl(op, operandLattices, resultLattices);
 }
 
-void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
+void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
   // Exit early on blocks with no arguments.
   if (block->getNumArguments() == 0)
     return;
@@ -209,7 +210,7 @@ void AbstractSparseDataFlowAnalysis::visitBlock(Block *block) {
   }
 }
 
-void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
+void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
     ProgramPoint point, RegionBranchOpInterface branch,
     std::optional<unsigned> successorIndex,
     ArrayRef<AbstractSparseLattice *> lattices) {
@@ -267,21 +268,21 @@ void AbstractSparseDataFlowAnalysis::visitRegionSuccessors(
 }
 
 const AbstractSparseLattice *
-AbstractSparseDataFlowAnalysis::getLatticeElementFor(ProgramPoint point,
-                                                     Value value) {
+AbstractSparseForwardDataFlowAnalysis::getLatticeElementFor(ProgramPoint point,
+                                                            Value value) {
   AbstractSparseLattice *state = getLatticeElement(value);
   addDependency(state, point);
   return state;
 }
 
-void AbstractSparseDataFlowAnalysis::setAllToEntryStates(
+void AbstractSparseForwardDataFlowAnalysis::setAllToEntryStates(
     ArrayRef<AbstractSparseLattice *> lattices) {
   for (AbstractSparseLattice *lattice : lattices)
     setToEntryState(lattice);
 }
 
-void AbstractSparseDataFlowAnalysis::join(AbstractSparseLattice *lhs,
-                                          const AbstractSparseLattice &rhs) {
+void AbstractSparseForwardDataFlowAnalysis::join(
+    AbstractSparseLattice *lhs, const AbstractSparseLattice &rhs) {
   propagateIfChanged(lhs, lhs->join(rhs));
 }
 
