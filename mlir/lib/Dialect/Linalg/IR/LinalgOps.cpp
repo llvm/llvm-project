@@ -2492,7 +2492,8 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   // Step 1: Compute max along dim.
   Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
   Value neutralForMaxF =
-      arith::getIdentityValue(arith::AtomicRMWKind::maxf, elementType, b, loc);
+      arith::getIdentityValue(arith::AtomicRMWKind::maxf, elementType, b, loc,
+                              /*useOnlyFiniteValue=*/true);
   Value neutralForMaxFInit =
       b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
           .result();
@@ -2503,8 +2504,8 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);
 
   // Step 3: Compute sum along dim.
-  Value zero =
-      arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType, b, loc);
+  Value zero = arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType,
+                                       b, loc, /*useOnlyFiniteValue=*/true);
   Value zeroInit =
       b.create<linalg::FillOp>(loc, Value{zero}, outputReduce).result();
   Value denominator =
