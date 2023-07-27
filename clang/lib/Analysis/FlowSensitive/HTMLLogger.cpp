@@ -99,10 +99,6 @@ public:
     case Value::Kind::AtomicBool:
     case Value::Kind::FormulaBool:
       break;
-    case Value::Kind::Reference:
-      JOS.attributeObject(
-          "referent", [&] { dump(cast<ReferenceValue>(V).getReferentLoc()); });
-      break;
     case Value::Kind::Pointer:
       JOS.attributeObject(
           "pointee", [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
