@@ -36,6 +36,7 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Lex/Token.h"
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
+#include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SmallVector.h"
@@ -836,14 +837,25 @@ void SymbolCollector::setIncludeLocation(const Symbol &S, SourceLocation DefLoc,
   // Use the expansion location to get the #include header since this is
   // where the symbol is exposed.
   IncludeFiles[S.ID] = SM.getDecomposedExpansionLoc(DefLoc).first;
+}
 
-  auto [It, Inserted] = SymbolProviders.try_emplace(S.ID);
-  if (Inserted) {
-    auto Headers =
-        include_cleaner::headersForSymbol(Sym, SM, Opts.PragmaIncludes);
-    if (!Headers.empty())
-      It->second = Headers.front();
-  }
+llvm::StringRef getStdHeader(const Symbol *S, const LangOptions &LangOpts) {
+  tooling::stdlib::Lang Lang = tooling::stdlib::Lang::CXX;
+    if (LangOpts.C11)
+      Lang = tooling::stdlib::Lang::C;
+    else if(!LangOpts.CPlusPlus)
+      return "";
+
+    if (S->Scope == "std::" && S->Name == "move") {
+      if (!S->Signature.contains(','))
+        return "<utility>";
+      return "<algorithm>";
+    }
+   
+    if (auto StdSym = tooling::stdlib::Symbol::named(S->Scope, S->Name, Lang))
+     if (auto Header = StdSym->header())
+       return Header->name();
+    return "";
 }
 
 void SymbolCollector::finish() {
@@ -869,16 +881,13 @@ void SymbolCollector::finish() {
     }
   }
   llvm::DenseMap<FileID, bool> FileToContainsImportsOrObjC;
-  llvm::DenseMap<include_cleaner::Header, std::string> HeaderSpelling;
   // Fill in IncludeHeaders.
   // We delay this until end of TU so header guards are all resolved.
-  for (const auto &[SID, OptionalProvider] : SymbolProviders) {
+  for (const auto &[SID, FID] : IncludeFiles) {
     const Symbol *S = Symbols.find(SID);
     if (!S)
       continue;
-    assert(IncludeFiles.find(SID) != IncludeFiles.end());
 
-    const auto FID = IncludeFiles.at(SID);
     // Determine if the FID is #include'd or #import'ed.
     Symbol::IncludeDirective Directives = Symbol::Invalid;
     auto CollectDirectives = shouldCollectIncludePath(S->SymInfo.Kind);
@@ -898,54 +907,20 @@ void SymbolCollector::finish() {
     if (Directives == Symbol::Invalid)
       continue;
 
-    // Use the include location-based logic for Objective-C symbols.
-    if (Directives & Symbol::Import) {
-      if (auto IncludeHeader = HeaderFileURIs->getIncludeHeader(FID);
-          !IncludeHeader.empty()) {
-        auto NewSym = *S;
-        NewSym.IncludeHeaders.push_back({IncludeHeader, 1, Directives});
-        Symbols.insert(NewSym);
-      }
-      // FIXME: use providers from include-cleaner library once it's polished
-      // for Objective-C.
-      continue;
-    }
+    // FIXME: Use the include-cleaner library instead.
+    llvm::StringRef IncludeHeader = getStdHeader(S, ASTCtx->getLangOpts());
+    if (IncludeHeader.empty())
+      IncludeHeader = HeaderFileURIs->getIncludeHeader(FID);
 
-    assert(Directives == Symbol::Include);
-    // For #include's, use the providers computed by the include-cleaner
-    // library.
-    if (!OptionalProvider)
-      continue;
-    const auto &H = *OptionalProvider;
-    const auto [SpellingIt, Inserted] = HeaderSpelling.try_emplace(H);
-    if (Inserted) {
-      auto &SM = ASTCtx->getSourceManager();
-      if (H.kind() == include_cleaner::Header::Kind::Physical) {
-        if (auto Canonical =
-                HeaderFileURIs->mapCanonical(H.physical()->getName());
-            !Canonical.empty())
-          SpellingIt->second = Canonical;
-        else if (tooling::isSelfContainedHeader(H.physical(), SM,
-                                                PP->getHeaderSearchInfo()))
-          SpellingIt->second =
-              HeaderFileURIs->toURI(H.physical()->getLastRef());
-      } else {
-        SpellingIt->second = include_cleaner::spellHeader(
-            {H, PP->getHeaderSearchInfo(),
-             SM.getFileEntryForID(SM.getMainFileID())});
-      }
-    }
-
-    if (!SpellingIt->second.empty()) {
+    if (!IncludeHeader.empty()) {
       auto NewSym = *S;
-      NewSym.IncludeHeaders.push_back({SpellingIt->second, 1, Directives});
+      NewSym.IncludeHeaders.push_back({IncludeHeader, 1, Directives});
       Symbols.insert(NewSym);
     }
   }
 
   ReferencedSymbols.clear();
   IncludeFiles.clear();
-  SymbolProviders.clear();
   FilesWithObjCConstructs.clear();
 }
 
