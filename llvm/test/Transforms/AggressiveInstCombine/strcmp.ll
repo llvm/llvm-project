@@ -9,7 +9,7 @@ declare i32 @strcmp(ptr, ptr)
 @s3 = constant [4 x i8] c"012\00"
 @s4 = constant [5 x i8] c"0123\00"
 
-; Expand strcmp(C, "x").
+; Expand strcmp(C, "x"), strcmp(C, "xy").
 
 define i1 @expand_strcmp_s0(ptr %C) {
 ; CHECK-LABEL: @expand_strcmp_s0(
@@ -207,14 +207,69 @@ define i32 @expand_strcmp_s1_fail_3(ptr %C) {
   ret i32 %call
 }
 
-define i1 @expand_strcmp_s2(ptr %C) {
-; CHECK-LABEL: @expand_strcmp_s2(
+define i1 @expand_strcmp_eq_s2(ptr %C) {
+; CHECK-LABEL: @expand_strcmp_eq_s2(
 ; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s2)
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %call = call i32 @strcmp(ptr %C, ptr @s2)
   %cmp = icmp eq i32 %call, 0
+  ret i1 %cmp
+}
+
+define i1 @expand_strcmp_ne_s2(ptr %C) {
+; CHECK-LABEL: @expand_strcmp_ne_s2(
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s2)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[CALL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %call = call i32 @strcmp(ptr %C, ptr @s2)
+  %cmp = icmp ne i32 %call, 0
+  ret i1 %cmp
+}
+
+define i1 @expand_strcmp_sgt_s2(ptr %C) {
+; CHECK-LABEL: @expand_strcmp_sgt_s2(
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s2)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %call = call i32 @strcmp(ptr %C, ptr @s2)
+  %cmp = icmp sgt i32 %call, 0
+  ret i1 %cmp
+}
+
+define i1 @expand_strcmp_sge_s2(ptr %C) {
+; CHECK-LABEL: @expand_strcmp_sge_s2(
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s2)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[CALL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %call = call i32 @strcmp(ptr %C, ptr @s2)
+  %cmp = icmp sge i32 %call, 0
+  ret i1 %cmp
+}
+
+define i1 @expand_strcmp_slt_s2(ptr %C) {
+; CHECK-LABEL: @expand_strcmp_slt_s2(
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s2)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CALL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %call = call i32 @strcmp(ptr %C, ptr @s2)
+  %cmp = icmp slt i32 %call, 0
+  ret i1 %cmp
+}
+
+define i1 @expand_strcmp_sle_s2(ptr %C) {
+; CHECK-LABEL: @expand_strcmp_sle_s2(
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s2)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[CALL]], 0
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %call = call i32 @strcmp(ptr %C, ptr @s2)
+  %cmp = icmp sle i32 %call, 0
   ret i1 %cmp
 }
 
