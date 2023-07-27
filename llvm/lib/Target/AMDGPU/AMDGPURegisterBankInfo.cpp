@@ -337,7 +337,7 @@ AMDGPURegisterBankInfo::addMappingFromTable(
 RegisterBankInfo::InstructionMappings
 AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsic(
     const MachineInstr &MI, const MachineRegisterInfo &MRI) const {
-  switch (MI.getIntrinsicID()) {
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
   case Intrinsic::amdgcn_readlane: {
     static const OpRegBankEntry<3> Table[2] = {
       // Perfectly legal.
@@ -378,7 +378,7 @@ RegisterBankInfo::InstructionMappings
 AMDGPURegisterBankInfo::getInstrAlternativeMappingsIntrinsicWSideEffects(
     const MachineInstr &MI, const MachineRegisterInfo &MRI) const {
 
-  switch (MI.getIntrinsicID()) {
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
   case Intrinsic::amdgcn_s_buffer_load: {
     static const OpRegBankEntry<2> Table[4] = {
       // Perfectly legal.
@@ -2949,7 +2949,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     return;
   }
   case AMDGPU::G_INTRINSIC: {
-    switch (MI.getIntrinsicID()) {
+    switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
     case Intrinsic::amdgcn_readlane: {
       substituteSimpleCopyRegs(OpdMapper, 2);
 
@@ -3019,8 +3019,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16: {
-    const AMDGPU::RsrcIntrinsic *RSrcIntrin
-      = AMDGPU::lookupRsrcIntrinsic(MI.getIntrinsicID());
+    const AMDGPU::RsrcIntrinsic *RSrcIntrin =
+        AMDGPU::lookupRsrcIntrinsic(AMDGPU::getIntrinsicID(MI));
     assert(RSrcIntrin && RSrcIntrin->IsImage);
     // Non-images can have complications from operands that allow both SGPR
     // and VGPR. For now it's too complicated to figure out the final opcode
@@ -3035,7 +3035,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     return;
   }
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
-    auto IntrID = MI.getIntrinsicID();
+    auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrID) {
     case Intrinsic::amdgcn_ds_ordered_add:
     case Intrinsic::amdgcn_ds_ordered_swap: {
@@ -4198,7 +4198,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case AMDGPU::G_INTRINSIC: {
-    switch (MI.getIntrinsicID()) {
+    switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
     default:
       return getInvalidInstructionMapping();
     case Intrinsic::amdgcn_div_fmas:
@@ -4531,7 +4531,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_LOAD_D16:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE:
   case AMDGPU::G_AMDGPU_INTRIN_IMAGE_STORE_D16: {
-    auto IntrID = MI.getIntrinsicID();
+    auto IntrID = AMDGPU::getIntrinsicID(MI);
     const AMDGPU::RsrcIntrinsic *RSrcIntrin = AMDGPU::lookupRsrcIntrinsic(IntrID);
     assert(RSrcIntrin && "missing RsrcIntrinsic for image intrinsic");
     // Non-images can have complications from operands that allow both SGPR
@@ -4560,7 +4560,7 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
-    auto IntrID = MI.getIntrinsicID();
+    auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrID) {
     case Intrinsic::amdgcn_s_getreg:
     case Intrinsic::amdgcn_s_memtime:

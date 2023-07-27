@@ -8440,12 +8440,12 @@ class BaseSIMDThreeSameVectorFMLIndex<bit Q, bit U, bits<4> opc, string asm,
                                       string rhs_kind, RegisterOperand RegType,
                                       ValueType AccumType, ValueType InputType,
                                       SDPatternOperator OpNode> :
-        BaseSIMDIndexedTied<Q, U, 0, 0b10, opc, RegType, RegType, V128,
+        BaseSIMDIndexedTied<Q, U, 0, 0b10, opc, RegType, RegType, V128_lo,
                             VectorIndexH, asm, "", dst_kind, lhs_kind, rhs_kind,
           [(set (AccumType RegType:$dst),
                 (AccumType (OpNode (AccumType RegType:$Rd),
                                    (InputType RegType:$Rn),
-                                   (InputType (AArch64duplane16 (v8f16 V128:$Rm),
+                                   (InputType (AArch64duplane16 (v8f16 V128_lo:$Rm),
                                                 VectorIndexH:$idx)))))]> {
   // idx = H:L:M
   bits<3> idx;

@@ -256,11 +256,11 @@ Spiller *llvm::createInlineSpiller(MachineFunctionPass &Pass,
 // This minimizes register pressure and maximizes the store-to-load distance for
 // spill slots which can be important in tight loops.
 
-/// isFullCopyOf - If MI is a COPY to or from Reg, return the other register,
-/// otherwise return 0.
-static Register isCopyOf(const MachineInstr &MI, Register Reg,
-                         const TargetInstrInfo &TII) {
-  if (!TII.isCopyInstr(MI))
+/// If MI is a COPY to or from Reg, return the other register, otherwise return
+/// 0.
+static Register isCopyOf(const MachineInstr &MI, Register Reg) {
+  assert(!MI.isBundled());
+  if (!MI.isCopy())
     return Register();
 
   const MachineOperand &DstOp = MI.getOperand(0);
@@ -277,10 +277,9 @@ static Register isCopyOf(const MachineInstr &MI, Register Reg,
 }
 
 /// Check for a copy bundle as formed by SplitKit.
-static Register isCopyOfBundle(const MachineInstr &FirstMI, Register Reg,
-                               const TargetInstrInfo &TII) {
+static Register isCopyOfBundle(const MachineInstr &FirstMI, Register Reg) {
   if (!FirstMI.isBundled())
-    return isCopyOf(FirstMI, Reg, TII);
+    return isCopyOf(FirstMI, Reg);
 
   assert(!FirstMI.isBundledWithPred() && FirstMI.isBundledWithSucc() &&
          "expected to see first instruction in bundle");
@@ -289,12 +288,11 @@ static Register isCopyOfBundle(const MachineInstr &FirstMI, Register Reg,
   MachineBasicBlock::const_instr_iterator I = FirstMI.getIterator();
   while (I->isBundledWithSucc()) {
     const MachineInstr &MI = *I;
-    auto CopyInst = TII.isCopyInstr(MI);
-    if (!CopyInst)
+    if (!MI.isCopy())
       return Register();
 
-    const MachineOperand &DstOp = *CopyInst->Destination;
-    const MachineOperand &SrcOp = *CopyInst->Source;
+    const MachineOperand &DstOp = MI.getOperand(0);
+    const MachineOperand &SrcOp = MI.getOperand(1);
     if (DstOp.getReg() == Reg) {
       if (!SnipReg)
         SnipReg = SrcOp.getReg();
@@ -360,7 +358,7 @@ bool InlineSpiller::isSnippet(const LiveInterval &SnipLI) {
     MachineInstr &MI = *RI++;
 
     // Allow copies to/from Reg.
-    if (isCopyOfBundle(MI, Reg, TII))
+    if (isCopyOfBundle(MI, Reg))
       continue;
 
     // Allow stack slot loads.
@@ -398,7 +396,7 @@ void InlineSpiller::collectRegsToSpill() {
     return;
 
   for (MachineInstr &MI : llvm::make_early_inc_range(MRI.reg_bundles(Reg))) {
-    Register SnipReg = isCopyOfBundle(MI, Reg, TII);
+    Register SnipReg = isCopyOfBundle(MI, Reg);
     if (!isSibling(SnipReg))
       continue;
     LiveInterval &SnipLI = LIS.getInterval(SnipReg);
@@ -521,14 +519,14 @@ void InlineSpiller::eliminateRedundantSpills(LiveInterval &SLI, VNInfo *VNI) {
     // Find all spills and copies of VNI.
     for (MachineInstr &MI :
          llvm::make_early_inc_range(MRI.use_nodbg_bundles(Reg))) {
-      if (!MI.mayStore() && !TII.isCopyInstr(MI))
+      if (!MI.isCopy() && !MI.mayStore())
         continue;
       SlotIndex Idx = LIS.getInstructionIndex(MI);
       if (LI->getVNInfoAt(Idx) != VNI)
         continue;
 
       // Follow sibling copies down the dominator tree.
-      if (Register DstReg = isCopyOfBundle(MI, Reg, TII)) {
+      if (Register DstReg = isCopyOfBundle(MI, Reg)) {
         if (isSibling(DstReg)) {
           LiveInterval &DstLI = LIS.getInterval(DstReg);
           VNInfo *DstVNI = DstLI.getVNInfoAt(Idx.getRegSlot());
@@ -872,7 +870,7 @@ foldMemoryOperand(ArrayRef<std::pair<MachineInstr *, unsigned>> Ops,
   if (Ops.back().first != MI || MI->isBundled())
     return false;
 
-  bool WasCopy = TII.isCopyInstr(*MI).has_value();
+  bool WasCopy = MI->isCopy();
   Register ImpReg;
 
   // TII::foldMemoryOperand will do what we need here for statepoint
@@ -1157,7 +1155,7 @@ void InlineSpiller::spillAroundUses(Register Reg) {
         Idx = VNI->def;
 
     // Check for a sibling copy.
-    Register SibReg = isCopyOfBundle(MI, Reg, TII);
+    Register SibReg = isCopyOfBundle(MI, Reg);
     if (SibReg && isSibling(SibReg)) {
       // This may actually be a copy between snippets.
       if (isRegToSpill(SibReg)) {

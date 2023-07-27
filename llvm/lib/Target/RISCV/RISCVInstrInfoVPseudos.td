@@ -3734,7 +3734,7 @@ class VPatMaskUnaryNoMask<string intrinsic_name,
                 (!cast<Instruction>(inst#"_M_"#mti.BX)
                 (mti.Mask (IMPLICIT_DEF)),
                 (mti.Mask VR:$rs2),
-                GPR:$vl, mti.Log2SEW, TU_MU)>;
+                GPR:$vl, mti.Log2SEW, TA_MA)>;
 
 class VPatMaskUnaryMask<string intrinsic_name,
                         string inst,
@@ -5893,7 +5893,7 @@ foreach vti = AllIntegerVectors in {
                                                                 vti.RegClass:$rs1,
                                                                 (NegImm simm5_plus1:$rs2),
                                                                 GPR:$vl,
-                                                                vti.Log2SEW, TU_MU)>;
+                                                                vti.Log2SEW, TA_MA)>;
     def : Pat<(vti.Vector (int_riscv_vsub_mask (vti.Vector vti.RegClass:$merge),
                                                (vti.Vector vti.RegClass:$rs1),
                                                (vti.Scalar simm5_plus1:$rs2),
@@ -6552,7 +6552,7 @@ foreach vti = AllIntegerVectors in {
                                           (XLenVT 1), VLOpFrag)),
               (!cast<Instruction>("PseudoVADD_VV_"#vti.LMul.MX)
                  (vti.Vector (IMPLICIT_DEF)), vti.RegClass:$rs1,
-                 vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
+                 vti.RegClass:$rs1, GPR:$vl, vti.Log2SEW, TA_MA)>;
     def : Pat<(vti.Vector (int_riscv_vsll_mask (vti.Vector vti.RegClass:$merge),
                                                (vti.Vector vti.RegClass:$rs1),
                                                (XLenVT 1),
