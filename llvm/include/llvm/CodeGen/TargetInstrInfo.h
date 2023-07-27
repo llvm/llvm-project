@@ -2115,6 +2115,9 @@ public:
     return false;
   }
 
+  // Get the call frame size just before MI.
+  unsigned getCallFrameSizeAt(MachineInstr &MI) const;
+
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
   unsigned CallFrameSetupOpcode, CallFrameDestroyOpcode;
