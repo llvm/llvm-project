@@ -316,7 +316,7 @@ void PPCAsmPrinter::printOperand(const MachineInstr *MI, unsigned OpNo,
 
     // Linux assembler (Others?) does not take register mnemonics.
     // FIXME - What about special registers used in mfspr/mtspr?
-    O << PPCRegisterInfo::stripRegisterPrefix(RegName);
+    O << PPC::stripRegisterPrefix(RegName);
     return;
   }
   case MachineOperand::MO_Immediate:
@@ -376,13 +376,13 @@ bool PPCAsmPrinter::PrintAsmOperand(const MachineInstr *MI, unsigned OpNo,
       // This operand uses VSX numbering.
       // If the operand is a VMX register, convert it to a VSX register.
       Register Reg = MI->getOperand(OpNo).getReg();
-      if (PPCInstrInfo::isVRRegister(Reg))
+      if (PPC::isVRRegister(Reg))
         Reg = PPC::VSX32 + (Reg - PPC::V0);
-      else if (PPCInstrInfo::isVFRegister(Reg))
+      else if (PPC::isVFRegister(Reg))
         Reg = PPC::VSX32 + (Reg - PPC::VF0);
       const char *RegName;
       RegName = PPCInstPrinter::getRegisterName(Reg);
-      RegName = PPCRegisterInfo::stripRegisterPrefix(RegName);
+      RegName = PPC::stripRegisterPrefix(RegName);
       O << RegName;
       return false;
     }
