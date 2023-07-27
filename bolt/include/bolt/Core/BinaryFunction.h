@@ -381,7 +381,7 @@ private:
   /// Profile match ratio.
   float ProfileMatchRatio{0.0f};
 
-  /// Raw branch count for this function in the profile
+  /// Raw branch count for this function in the profile.
   uint64_t RawBranchCount{0};
 
   /// Indicates the type of profile the function is using.

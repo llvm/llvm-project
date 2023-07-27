@@ -168,15 +168,15 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// AbstractSparseDataFlowAnalysis
+// AbstractSparseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
-/// Base class for sparse (forward) data-flow analyses. A sparse analysis
+/// Base class for sparse forward data-flow analyses. A sparse analysis
 /// implements a transfer function on operations from the lattices of the
 /// operands to the lattices of the results. This analysis will propagate
 /// lattices across control-flow edges and the callgraph using liveness
 /// information.
-class AbstractSparseDataFlowAnalysis : public DataFlowAnalysis {
+class AbstractSparseForwardDataFlowAnalysis : public DataFlowAnalysis {
 public:
   /// Initialize the analysis by visiting every owner of an SSA value: all
   /// operations and blocks.
@@ -190,7 +190,7 @@ public:
   LogicalResult visit(ProgramPoint point) override;
 
 protected:
-  explicit AbstractSparseDataFlowAnalysis(DataFlowSolver &solver);
+  explicit AbstractSparseForwardDataFlowAnalysis(DataFlowSolver &solver);
 
   /// The operation transfer function. Given the operand lattices, this
   /// function is expected to set the result lattices.
@@ -248,22 +248,23 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// SparseDataFlowAnalysis
+// SparseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
-/// A sparse (forward) data-flow analysis for propagating SSA value lattices
+/// A sparse forward data-flow analysis for propagating SSA value lattices
 /// across the IR by implementing transfer functions for operations.
 ///
 /// `StateT` is expected to be a subclass of `AbstractSparseLattice`.
 template <typename StateT>
-class SparseDataFlowAnalysis : public AbstractSparseDataFlowAnalysis {
+class SparseForwardDataFlowAnalysis
+    : public AbstractSparseForwardDataFlowAnalysis {
   static_assert(
       std::is_base_of<AbstractSparseLattice, StateT>::value,
       "analysis state class expected to subclass AbstractSparseLattice");
 
 public:
-  explicit SparseDataFlowAnalysis(DataFlowSolver &solver)
-      : AbstractSparseDataFlowAnalysis(solver) {}
+  explicit SparseForwardDataFlowAnalysis(DataFlowSolver &solver)
+      : AbstractSparseForwardDataFlowAnalysis(solver) {}
 
   /// Visit an operation with the lattices of its operands. This function is
   /// expected to set the lattices of the operation's results.
@@ -295,13 +296,14 @@ protected:
   /// provided program point.
   const StateT *getLatticeElementFor(ProgramPoint point, Value value) {
     return static_cast<const StateT *>(
-        AbstractSparseDataFlowAnalysis::getLatticeElementFor(point, value));
+        AbstractSparseForwardDataFlowAnalysis::getLatticeElementFor(point,
+                                                                    value));
   }
 
   /// Set the given lattice element(s) at control flow entry point(s).
   virtual void setToEntryState(StateT *lattice) = 0;
   void setAllToEntryStates(ArrayRef<StateT *> lattices) {
-    AbstractSparseDataFlowAnalysis::setAllToEntryStates(
+    AbstractSparseForwardDataFlowAnalysis::setAllToEntryStates(
         {reinterpret_cast<AbstractSparseLattice *const *>(lattices.begin()),
          lattices.size()});
   }
@@ -338,8 +340,8 @@ private:
 // AbstractSparseBackwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
-/// Base class for sparse (backward) data-flow analyses. Similar to
-/// AbstractSparseDataFlowAnalysis, but walks bottom to top.
+/// Base class for sparse backward data-flow analyses. Similar to
+/// AbstractSparseForwardDataFlowAnalysis, but walks bottom to top.
 class AbstractSparseBackwardDataFlowAnalysis : public DataFlowAnalysis {
 public:
   /// Initialize the analysis by visiting the operation and everything nested

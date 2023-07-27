@@ -627,6 +627,13 @@ module std_experimental [system] {
   }
 }
 
+// Convenience method to get all of the above modules in a single import statement.
+// Importing only the needed modules is likely to be more performant.
+module std [system] {
+  header "__std_clang_module"
+  export *
+}
+
 // Implementation detail headers that are private to libc++. These modules
 // must not be directly imported.
 module std_private_assert            [system] {

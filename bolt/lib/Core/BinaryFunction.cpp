@@ -2221,8 +2221,8 @@ void BinaryFunction::calculateMacroOpFusionStats() {
                       << Twine::utohexstr(getAddress() + Offset)
                       << " in function " << *this << "; executed "
                       << BB.getKnownExecutionCount() << " times.\n");
-    ++BC.MissedMacroFusionPairs;
-    BC.MissedMacroFusionExecCount += BB.getKnownExecutionCount();
+    ++BC.Stats.MissedMacroFusionPairs;
+    BC.Stats.MissedMacroFusionExecCount += BB.getKnownExecutionCount();
   }
 }
 

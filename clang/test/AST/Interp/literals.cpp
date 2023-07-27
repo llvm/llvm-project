@@ -943,6 +943,6 @@ namespace PointerCasts {
                                       // expected-error {{must be initialized by a constant expression}} \
                                       // expected-note {{cast that performs the conversions of a reinterpret_cast}}
 
-  int array[(long)(char*)0]; // ref-warning {{variable length array folded to constant array}} \
-                             // expected-warning {{variable length array folded to constant array}}
+  int array[(intptr_t)(char*)0]; // ref-warning {{variable length array folded to constant array}} \
+                                 // expected-warning {{variable length array folded to constant array}}
 }

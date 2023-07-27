@@ -1560,10 +1560,16 @@ Instruction *InstCombinerImpl::visitStoreInst(StoreInst &SI) {
 
   // This is a non-terminator unreachable marker. Don't remove it.
   if (isa<UndefValue>(Ptr)) {
-    // Remove all instructions after the marker and guaranteed-to-transfer
-    // instructions before the marker.
-    if (handleUnreachableFrom(SI.getNextNode()) ||
-        removeInstructionsBeforeUnreachable(SI))
+    // Remove guaranteed-to-transfer instructions before the marker.
+    if (removeInstructionsBeforeUnreachable(SI))
+      return &SI;
+
+    // Remove all instructions after the marker and handle dead blocks this
+    // implies.
+    SmallVector<BasicBlock *> Worklist;
+    bool Changed = handleUnreachableFrom(SI.getNextNode(), Worklist);
+    Changed |= handlePotentiallyDeadBlocks(Worklist);
+    if (Changed)
       return &SI;
     return nullptr;
   }

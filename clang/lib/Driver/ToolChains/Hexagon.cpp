@@ -383,7 +383,6 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
       if (HTC.ShouldLinkCXXStdlib(Args))
         HTC.AddCXXStdlibLibArgs(Args, CmdArgs);
     }
-    return;
   }
 
   //----------------------------------------------------------------------------
@@ -441,6 +440,7 @@ constructHexagonLinkArgs(Compilation &C, const JobAction &JA,
   const ToolChain::path_list &LibPaths = HTC.getFilePaths();
   for (const auto &LibPath : LibPaths)
     CmdArgs.push_back(Args.MakeArgString(StringRef("-L") + LibPath));
+  Args.ClaimAllArgs(options::OPT_L);
 
   //----------------------------------------------------------------------------
   //

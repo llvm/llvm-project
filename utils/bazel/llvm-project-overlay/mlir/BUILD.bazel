@@ -563,6 +563,19 @@ mlir_c_api_cc_library(
 )
 
 mlir_c_api_cc_library(
+    name = "CAPISCF",
+    srcs = ["lib/CAPI/Dialect/SCF.cpp"],
+    hdrs = ["include/mlir-c/Dialect/SCF.h"],
+    capi_deps = [
+        ":CAPIIR",
+    ],
+    includes = ["include"],
+    deps = [
+        ":SCFDialect",
+    ],
+)
+
+mlir_c_api_cc_library(
     name = "CAPISparseTensor",
     srcs = [
         "lib/CAPI/Dialect/SparseTensor.cpp",

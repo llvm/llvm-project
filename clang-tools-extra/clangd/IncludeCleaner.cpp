@@ -26,6 +26,7 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Format/Format.h"
+#include "clang/Lex/DirectoryLookup.h"
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Core/Replacement.h"
@@ -347,11 +348,16 @@ collectMacroReferences(ParsedAST &AST) {
   return Macros;
 }
 
-include_cleaner::Includes
-convertIncludes(const SourceManager &SM,
-                const llvm::ArrayRef<Inclusion> Includes) {
+include_cleaner::Includes convertIncludes(const ParsedAST &AST) {
+  auto &SM = AST.getSourceManager();
+
   include_cleaner::Includes ConvertedIncludes;
-  for (const Inclusion &Inc : Includes) {
+  // We satisfy Includes's contract that search dirs and included files have
+  // matching path styles: both ultimately use FileManager::getCanonicalName().
+  for (const auto &Dir : AST.getIncludeStructure().SearchPathsCanonical)
+    ConvertedIncludes.addSearchDirectory(Dir);
+
+  for (const Inclusion &Inc : AST.getIncludeStructure().MainFileIncludes) {
     include_cleaner::Include TransformedInc;
     llvm::StringRef WrittenRef = llvm::StringRef(Inc.Written);
     TransformedInc.Spelled = WrittenRef.trim("\"<>");
@@ -359,6 +365,8 @@ convertIncludes(const SourceManager &SM,
         SM.getComposedLoc(SM.getMainFileID(), Inc.HashOffset);
     TransformedInc.Line = Inc.HashLine + 1;
     TransformedInc.Angled = WrittenRef.starts_with("<");
+    // Inc.Resolved is canonicalized with clangd::getCanonicalPath(),
+    // which is based on FileManager::getCanonicalName(ParentDir).
     auto FE = SM.getFileManager().getFileRef(Inc.Resolved);
     if (!FE) {
       elog("IncludeCleaner: Failed to get an entry for resolved path {0}: {1}",
@@ -376,9 +384,7 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   if (AST.getLangOpts().ObjC)
     return {};
   const auto &SM = AST.getSourceManager();
-  const auto &Includes = AST.getIncludeStructure();
-  include_cleaner::Includes ConvertedIncludes =
-      convertIncludes(SM, Includes.MainFileIncludes);
+  include_cleaner::Includes ConvertedIncludes = convertIncludes(AST);
   const FileEntry *MainFile = SM.getFileEntryForID(SM.getMainFileID());
   auto *PreamblePatch = PreamblePatch::getPatchEntry(AST.tuPath(), SM);
 
@@ -401,7 +407,8 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
           }
           for (auto *Inc : ConvertedIncludes.match(H)) {
             Satisfied = true;
-            auto HeaderID = Includes.getID(&Inc->Resolved->getFileEntry());
+            auto HeaderID =
+                AST.getIncludeStructure().getID(&Inc->Resolved->getFileEntry());
             assert(HeaderID.has_value() &&
                    "ConvertedIncludes only contains resolved includes.");
             Used.insert(*HeaderID);
@@ -456,6 +463,20 @@ IncludeCleanerFindings computeIncludeCleanerFindings(ParsedAST &AST) {
   return {std::move(UnusedIncludes), std::move(MissingIncludes)};
 }
 
+bool isPreferredProvider(const Inclusion &Inc,
+                         const include_cleaner::Includes &Includes,
+                         llvm::ArrayRef<include_cleaner::Header> Providers) {
+  for (const auto &H : Providers) {
+    auto Matches = Includes.match(H);
+    for (const include_cleaner::Include *Match : Matches)
+      if (Match->Line == unsigned(Inc.HashLine + 1))
+        return true; // this header is (equal) best
+    if (!Matches.empty())
+      return false; // another header is better
+  }
+  return false; // no header provides the symbol
+}
+
 std::vector<Diag>
 issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
                                const IncludeCleanerFindings &Findings,
@@ -494,14 +515,4 @@ issueIncludeCleanerDiagnostics(ParsedAST &AST, llvm::StringRef Code,
   return Result;
 }
 
-std::optional<include_cleaner::Header>
-firstMatchedProvider(const include_cleaner::Includes &Includes,
-                     llvm::ArrayRef<include_cleaner::Header> Providers) {
-  for (const auto &H : Providers) {
-    if (!Includes.match(H).empty())
-      return H;
-  }
-  // No match for this provider in the includes list.
-  return std::nullopt;
-}
 } // namespace clang::clangd
