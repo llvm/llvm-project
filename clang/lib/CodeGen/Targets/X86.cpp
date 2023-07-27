@@ -140,7 +140,8 @@ class X86_32ABIInfo : public ABIInfo {
 
   Class classify(QualType Ty) const;
   ABIArgInfo classifyReturnType(QualType RetTy, CCState &State) const;
-  ABIArgInfo classifyArgumentType(QualType RetTy, CCState &State) const;
+  ABIArgInfo classifyArgumentType(QualType RetTy, CCState &State,
+                                  bool isDelegateCall) const;
 
   /// Updates the number of available free registers, returns
   /// true if any registers were allocated.
@@ -737,8 +738,8 @@ void X86_32ABIInfo::runVectorCallFirstPass(CGFunctionInfo &FI, CCState &State) c
   }
 }
 
-ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
-                                               CCState &State) const {
+ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty, CCState &State,
+                                               bool isDelegateCall) const {
   // FIXME: Set alignment on indirect arguments.
   bool IsFastCall = State.CC == llvm::CallingConv::X86_FastCall;
   bool IsRegCall = State.CC == llvm::CallingConv::X86_RegCall;
@@ -753,6 +754,12 @@ ABIArgInfo X86_32ABIInfo::classifyArgumentType(QualType Ty,
     CGCXXABI::RecordArgABI RAA = getRecordArgABI(RT, getCXXABI());
     if (RAA == CGCXXABI::RAA_Indirect) {
       return getIndirectResult(Ty, false, State);
+    } else if (isDelegateCall) {
+      // Avoid having different alignments on delegate call args by always
+      // setting the alignment to 4, which is what we do for inallocas.
+      ABIArgInfo Res = getIndirectResult(Ty, false, State);
+      Res.setIndirectAlign(CharUnits::fromQuantity(4));
+      return Res;
     } else if (RAA == CGCXXABI::RAA_DirectInMemory) {
       // The field index doesn't matter, we'll fix it up later.
       return ABIArgInfo::getInAlloca(/*FieldIndex=*/0);
@@ -940,7 +947,8 @@ void X86_32ABIInfo::computeInfo(CGFunctionInfo &FI) const {
     if (State.IsPreassigned.test(I))
       continue;
 
-    Args[I].info = classifyArgumentType(Args[I].type, State);
+    Args[I].info =
+        classifyArgumentType(Args[I].type, State, FI.isDelegateCall());
     UsedInAlloca |= (Args[I].info.getKind() == ABIArgInfo::InAlloca);
   }
 
