@@ -52,13 +52,15 @@ All patches go through the regular `LLVM review process
 Q: How to build an OpenMP GPU offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 To build an *effective* OpenMP offload capable compiler, only one extra CMake
-option, `LLVM_ENABLE_RUNTIMES="openmp"`, is needed when building LLVM (Generic
+option, ``LLVM_ENABLE_RUNTIMES="openmp"``, is needed when building LLVM (Generic
 information about building LLVM is available `here
-<https://llvm.org/docs/GettingStarted.html>`__.).  Make sure all backends that
-are targeted by OpenMP to be enabled. By default, Clang will be built with all
-backends enabled.  When building with `LLVM_ENABLE_RUNTIMES="openmp"` OpenMP
-should not be enabled in `LLVM_ENABLE_PROJECTS` because it is enabled by
-default.
+<https://llvm.org/docs/GettingStarted.html>`__.). Make sure all backends that
+are targeted by OpenMP are enabled. That can be done by adjusting the CMake 
+option ``LLVM_TARGETS_TO_BUILD``. The corresponding targets for offloading to AMD 
+and Nvidia GPUs are ``"AMDGPU"`` and ``"NVPTX"``, respectively. By default, 
+Clang will be built with all backends enabled. When building with 
+``LLVM_ENABLE_RUNTIMES="openmp"`` OpenMP should not be enabled in 
+``LLVM_ENABLE_PROJECTS`` because it is enabled by default.
 
 For Nvidia offload, please see :ref:`build_nvidia_offload_capable_compiler`.
 For AMDGPU offload, please see :ref:`build_amdgpu_offload_capable_compiler`.
@@ -72,14 +74,14 @@ For AMDGPU offload, please see :ref:`build_amdgpu_offload_capable_compiler`.
 
 .. _build_nvidia_offload_capable_compiler:
 
-Q: How to build an OpenMP NVidia offload capable compiler?
+Q: How to build an OpenMP Nvidia offload capable compiler?
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 The Cuda SDK is required on the machine that will execute the openmp application.
 
 If your build machine is not the target machine or automatic detection of the
 available GPUs failed, you should also set:
 
-- `LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES=YY` where `YY` is the numeric compute capacity of your GPU, e.g., 75.
+- ``LIBOMPTARGET_NVPTX_COMPUTE_CAPABILITIES=YY`` where ``YY`` is the numeric compute capacity of your GPU, e.g., 75.
 
 
 .. _build_amdgpu_offload_capable_compiler:
@@ -349,7 +351,7 @@ create generic libraries.
 The architecture can either be specified manually using ``--offload-arch=``. If
 ``--offload-arch=`` is present no ``-fopenmp-targets=`` flag is present then the
 targets will be inferred from the architectures. Conversely, if
-``--fopenmp-targets=`` is present with no ``--offload-arch``  then the target
+``--fopenmp-targets=`` is present with no ``--offload-arch`` then the target
 architecture will be set to a default value, usually the architecture supported
 by the system LLVM was built on.
 
@@ -451,3 +453,115 @@ with OpenMP.
 
 For more information on how this is implemented in LLVM/OpenMP's offloading 
 runtime, refer to the `runtime documentation <libomptarget_libc>`_.
+
+Q: What command line options can I use for OpenMP offloading?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+``-fopenmp-targets``
+""""""""""""""""""""
+Specify which OpenMP offloading targets should be supported. For example, you 
+may specify ``-fopenmp-targets=amdgcn-amd-amdhsa,nvptx-none``.
+
+``--offload-arch``
+""""""""""""""""""
+Specify the device architecture for OpenMP offloading. For instance 
+``--offload-arch=sm_80`` to target an Nvidia Tesla A100 or 
+``--offload-arch=gfx90a`` to target an AMD Instinct MI250X.
+
+``--offload-device-only``
+"""""""""""""""""""""""""
+Compile the target regions for the device only. All target regions will be 
+compiled for both host and device if not specified.
+
+``--offload-host-device`` or ``--offload-host-only``
+""""""""""""""""""""""""""""""""""""""""""""""""""""
+Compile the target regions for the host only. All target regions will be 
+compiled for both host and device if not specified.
+
+``-Xopenmp-target <arg>``
+"""""""""""""""""""""""""
+Pass an argument to the offloading toolchain, for instance 
+``-Xopenmp-target -march=sm_80``.
+
+``-Xopenmp-target=<triple> <arg>``
+""""""""""""""""""""""""""""""""""
+Pass an argument to the offloading toolchain for the triple. That is especially 
+useful when an argument must differ for each triple. For instance 
+``-Xopenmp-target=nvptx64 --offload-arch=sm_80 
+-Xopenmp-target=amdgcn --offload-arch=gfx90a`` to specify the device 
+architecture.
+
+``-Xoffload-linker<triple> <arg>``
+""""""""""""""""""""""""""""""""""
+Pass an argument ``<arg>`` to the offloading linker for the target specified in 
+``<triple>``.
+
+``-foffload-lto=<arg>``
+"""""""""""""""""""""""
+Enable device link time optimization (LTO) and select the LTO mode ``<arg>``. 
+Select either ``-foffload-lto=thin`` or ``-foffload-lto=full``. Thin LTO takes 
+less time while still achieving some performance gains.
+
+``-foffload-lto``
+"""""""""""""""""
+Enable ``full`` link time optimization on the device. This option is equivalent to 
+``-foffload-lto=full``. 
+
+``-fopenmp-offload-mandatory``
+""""""""""""""""""""""""""""""
+With this option enabled, a host fallback will not be created for a situation 
+when offloading to the device fails. An example use case of this option is to 
+verify that code is being offloaded to the device.
+
+``-fopenmp-target-debug``
+"""""""""""""""""""""""""
+Enable debugging in the device runtime library (RTL).
+
+``-fno-openmp-target-debug``
+""""""""""""""""""""""""""""
+Disable debugging in the device RTL.
+
+``-fopenmp-target-jit``
+"""""""""""""""""""""""
+Emit code that can be Just-in-Time (JIT) compiled for OpenMP offloading.
+
+``--offload-new-driver``
+""""""""""""""""""""""""
+Use the new driver for offloading compilation. OpenMP offloading can be 
+experimentally linked with CUDA and HIP files. That requires using the new 
+offloading driver.
+
+``--no-offload-new-driver``
+"""""""""""""""""""""""""""
+Do not use the new driver for offloading compilation.
+
+``--offload-link``
+""""""""""""""""""
+Use the new offloading linker to perform the link job. OpenMP offloading can be 
+experimentally linked with CUDA and HIP files. The new offloading linker must be
+used when linking with CUDA or HIP files.
+
+``-nogpulib``
+"""""""""""""
+Do not link the device library for CUDA or HIP device compilation.
+
+``-nogpuinc``
+"""""""""""""
+Do not include the default CUDA or HIP headers, and do not add CUDA or HIP
+include paths.
+
+Q: Why is my build taking a long time?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+When installing OpenMP and other LLVM components, the build time on multicore 
+systems can be significantly reduced with parallel build jobs. As suggested in 
+*LLVM Techniques, Tips, and Best Practices*, one could consider using `ninja` as the
+generator. This can be done with the CMake option `cmake -G Ninja`. Afterward, 
+use `ninja install` and specify the number of parallel jobs with `-j`. The build
+time can also be reduced by setting the build type to `Release ` with the 
+`CMAKE_BUILD_TYPE` option. Recompilation can also be sped up by caching previous
+compilations. Consider enabling `Ccache` with 
+`CMAKE_CXX_COMPILER_LAUNCHER=ccache`.
+
+Q: Did this FAQ not answer your question?
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Feel free to post questions or browse old threads at 
+`LLVM Discourse <https://discourse.llvm.org/c/runtimes/openmp/>`__.
