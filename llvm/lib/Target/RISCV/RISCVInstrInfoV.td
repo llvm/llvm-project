@@ -207,23 +207,23 @@ class VSSSched<int eew, string emul, bit forceMasked = 0> : SchedCommon<
 class VSSSchedMC<int eew> : VSSSched<eew, "WorstCase", forceMasked=1>;
 
 // Vector Indexed Loads and Stores
-class VLXSched<int dataEEW, string isOrdered, string dataEMUL, string idxEMUL,
+class VLXSched<int dataEEW, bit isOrdered, string dataEMUL, string idxEMUL,
                bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVLD" # isOrdered # "X" # dataEEW # "_" # dataEMUL)],
-  [ReadVLDX, !cast<SchedRead>("ReadVLD" # isOrdered # "XV_" # idxEMUL)],
+  [!cast<SchedWrite>("WriteVLD" # !if(isOrdered, "O", "U") # "X" # dataEEW # "_" # dataEMUL)],
+  [ReadVLDX, !cast<SchedRead>("ReadVLD" # !if(isOrdered, "O", "U") # "XV_" # idxEMUL)],
   dataEMUL, dataEEW, forceMasked
 >;
-class VLXSchedMC<int dataEEW, string isOrdered>:
+class VLXSchedMC<int dataEEW, bit isOrdered>:
   VLXSched<dataEEW, isOrdered, "WorstCase", "WorstCase", forceMasked=1>;
 
-class VSXSched<int dataEEW, string isOrdered, string dataEMUL, string idxEMUL,
+class VSXSched<int dataEEW, bit isOrdered, string dataEMUL, string idxEMUL,
                bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVST" # isOrdered # "X" # dataEEW # "_" # dataEMUL)],
-  [!cast<SchedRead>("ReadVST" # isOrdered #"X" # dataEEW # "_" # dataEMUL),
-   ReadVSTX, !cast<SchedRead>("ReadVST" # isOrdered # "XV_" # idxEMUL)],
+  [!cast<SchedWrite>("WriteVST" # !if(isOrdered, "O", "U") # "X" # dataEEW # "_" # dataEMUL)],
+  [!cast<SchedRead>("ReadVST" # !if(isOrdered, "O", "U") #"X" # dataEEW # "_" # dataEMUL),
+   ReadVSTX, !cast<SchedRead>("ReadVST" # !if(isOrdered, "O", "U") # "XV_" # idxEMUL)],
   dataEMUL, dataEEW, forceMasked
 >;
-class VSXSchedMC<int dataEEW, string isOrdered>:
+class VSXSchedMC<int dataEEW, bit isOrdered>:
   VSXSched<dataEEW, isOrdered, "WorstCase", "WorstCase", forceMasked=1>;
 
 // Unit-stride Fault-Only-First Loads
@@ -272,24 +272,24 @@ class VSSSEGSchedMC<int nf, int eew> : VSSSEGSched<nf, eew, "WorstCase",
                                                    forceMasked=1>;
 
 // Indexed Segment Loads and Stores
-class VLXSEGSched<int nf, int eew, string isOrdered, string emul,
+class VLXSEGSched<int nf, int eew, bit isOrdered, string emul,
                   bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVL" #isOrdered #"XSEG" #nf #"e" #eew #"_" #emul)],
-  [ReadVLDX, !cast<SchedRead>("ReadVLD" #isOrdered #"XV_" #emul)],
+  [!cast<SchedWrite>("WriteVL" #!if(isOrdered, "O", "U") #"XSEG" #nf #"e" #eew #"_" #emul)],
+  [ReadVLDX, !cast<SchedRead>("ReadVLD" #!if(isOrdered, "O", "U") #"XV_" #emul)],
   emul, eew, forceMasked
 >;
-class VLXSEGSchedMC<int nf, int eew, string isOrdered>:
+class VLXSEGSchedMC<int nf, int eew, bit isOrdered>:
   VLXSEGSched<nf, eew, isOrdered, "WorstCase", forceMasked=1>;
 
 // Passes sew=0 instead of eew=0 since this pseudo does not follow MX_E form.
-class VSXSEGSched<int nf, int eew, string isOrdered, string emul,
+class VSXSEGSched<int nf, int eew, bit isOrdered, string emul,
                   bit forceMasked = 0> : SchedCommon<
-  [!cast<SchedWrite>("WriteVS" #isOrdered #"XSEG" #nf #"e" #eew #"_" #emul)],
-  [!cast<SchedRead>("ReadVST" #isOrdered #"X" #eew #"_" #emul),
-   ReadVSTX, !cast<SchedRead>("ReadVST" #isOrdered #"XV_" #emul)],
+  [!cast<SchedWrite>("WriteVS" #!if(isOrdered, "O", "U") #"XSEG" #nf #"e" #eew #"_" #emul)],
+  [!cast<SchedRead>("ReadVST" #!if(isOrdered, "O", "U") #"X" #eew #"_" #emul),
+   ReadVSTX, !cast<SchedRead>("ReadVST" #!if(isOrdered, "O", "U") #"XV_" #emul)],
   emul, sew=0, forceMasked=forceMasked
 >;
-class VSXSEGSchedMC<int nf, int eew, string isOrdered>:
+class VSXSEGSchedMC<int nf, int eew, bit isOrdered>:
   VSXSEGSched<nf, eew, isOrdered, "WorstCase", forceMasked=1>;
 
 //===----------------------------------------------------------------------===//
@@ -539,17 +539,17 @@ multiclass VIndexLoadStore<list<int> EEWList> {
 
     def VLUXEI # n # _V :
       VIndexedLoad<MOPLDIndexedUnord, w, "vluxei" # n # ".v">,
-      VLXSchedMC<n, "U">;
+      VLXSchedMC<n, isOrdered=0>;
     def VLOXEI # n # _V :
       VIndexedLoad<MOPLDIndexedOrder, w, "vloxei" # n # ".v">,
-      VLXSchedMC<n, "O">;
+      VLXSchedMC<n, isOrdered=1>;
 
     def VSUXEI # n # _V :
       VIndexedStore<MOPSTIndexedUnord, w, "vsuxei" # n # ".v">,
-      VSXSchedMC<n, "U">;
+      VSXSchedMC<n, isOrdered=0>;
     def VSOXEI # n # _V :
       VIndexedStore<MOPSTIndexedOrder, w, "vsoxei" # n # ".v">,
-      VSXSchedMC<n, "O">;
+      VSXSchedMC<n, isOrdered=1>;
   }
 }
 
@@ -1742,19 +1742,19 @@ let Predicates = [HasVInstructions] in {
       def VLUXSEG#nf#EI#eew#_V :
         VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord, w,
                             "vluxseg"#nf#"ei"#eew#".v">,
-        VLXSEGSchedMC<nf, eew, "U">;
+        VLXSEGSchedMC<nf, eew, isOrdered=0>;
       def VLOXSEG#nf#EI#eew#_V :
         VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder, w,
                             "vloxseg"#nf#"ei"#eew#".v">,
-        VLXSEGSchedMC<nf, eew, "O">;
+        VLXSEGSchedMC<nf, eew, isOrdered=1>;
       def VSUXSEG#nf#EI#eew#_V :
         VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord, w,
                              "vsuxseg"#nf#"ei"#eew#".v">,
-        VSXSEGSchedMC<nf, eew, "U">;
+        VSXSEGSchedMC<nf, eew, isOrdered=0>;
       def VSOXSEG#nf#EI#eew#_V :
         VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, w,
                              "vsoxseg"#nf#"ei"#eew#".v">,
-        VSXSEGSchedMC<nf, eew, "O">;
+        VSXSEGSchedMC<nf, eew, isOrdered=1>;
     }
   }
 } // Predicates = [HasVInstructions]
@@ -1787,19 +1787,19 @@ let Predicates = [HasVInstructionsI64, IsRV64] in {
     def VLUXSEG #nf #EI64_V
         : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedUnord, LSWidth64,
                               "vluxseg" #nf #"ei64.v">,
-          VLXSEGSchedMC<nf, 64, "U">;
+          VLXSEGSchedMC<nf, 64, isOrdered=0>;
     def VLOXSEG #nf #EI64_V
         : VIndexedSegmentLoad<!add(nf, -1), MOPLDIndexedOrder, LSWidth64,
                               "vloxseg" #nf #"ei64.v">,
-          VLXSEGSchedMC<nf, 64, "O">;
+          VLXSEGSchedMC<nf, 64, isOrdered=1>;
     def VSUXSEG #nf #EI64_V
         : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedUnord, LSWidth64,
                                "vsuxseg" #nf #"ei64.v">,
-          VSXSEGSchedMC<nf, 64, "U">;
+          VSXSEGSchedMC<nf, 64, isOrdered=0>;
     def VSOXSEG #nf #EI64_V
         : VIndexedSegmentStore<!add(nf, -1), MOPSTIndexedOrder, LSWidth64,
                                "vsoxseg" #nf #"ei64.v">,
-          VSXSEGSchedMC<nf, 64, "O">;
+          VSXSEGSchedMC<nf, 64, isOrdered=1>;
   }
 } // Predicates = [HasVInstructionsI64, IsRV64]
 
