@@ -10254,7 +10254,57 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
         Mask[InsertIdx - Offset] = I;
       }
       if (!IsIdentity || NumElts != NumScalars) {
-        V = Builder.CreateShuffleVector(V, Mask);
+        Value *V2 = nullptr;
+        bool IsVNonPoisonous = isGuaranteedNotToBePoison(V) && !isConstant(V);
+        SmallVector<int> InsertMask(Mask);
+        if (NumElts != NumScalars && Offset == 0) {
+          // Follow all insert element instructions from the current buildvector
+          // sequence.
+          InsertElementInst *Ins = cast<InsertElementInst>(VL0);
+          do {
+            std::optional<unsigned> InsertIdx = getInsertIndex(Ins);
+            if (!InsertIdx)
+              break;
+            if (InsertMask[*InsertIdx] == PoisonMaskElem)
+              InsertMask[*InsertIdx] = *InsertIdx;
+            if (!Ins->hasOneUse())
+              break;
+            Ins = dyn_cast_or_null<InsertElementInst>(
+                Ins->getUniqueUndroppableUser());
+          } while (Ins);
+          SmallBitVector UseMask =
+              buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask);
+          SmallBitVector IsFirstPoison =
+              isUndefVector<true>(FirstInsert->getOperand(0), UseMask);
+          SmallBitVector IsFirstUndef =
+              isUndefVector(FirstInsert->getOperand(0), UseMask);
+          if (!IsFirstPoison.all()) {
+            unsigned Idx = 0;
+            for (unsigned I = 0; I < NumElts; I++) {
+              if (InsertMask[I] == PoisonMaskElem && !IsFirstPoison.test(I) &&
+                  IsFirstUndef.test(I)) {
+                if (IsVNonPoisonous) {
+                  InsertMask[I] = I < NumScalars ? I : 0;
+                  continue;
+                }
+                if (!V2)
+                  V2 = UndefValue::get(V->getType());
+                if (Idx >= NumScalars)
+                  Idx = NumScalars - 1;
+                InsertMask[I] = NumScalars + Idx;
+                ++Idx;
+              } else if (InsertMask[I] != PoisonMaskElem &&
+                         Mask[I] == PoisonMaskElem) {
+                InsertMask[I] = PoisonMaskElem;
+              }
+            }
+          } else {
+            InsertMask = Mask;
+          }
+        }
+        if (!V2)
+          V2 = PoisonValue::get(V->getType());
+        V = Builder.CreateShuffleVector(V, V2, InsertMask);
         if (auto *I = dyn_cast<Instruction>(V)) {
           GatherShuffleExtractSeq.insert(I);
           CSEBlocks.insert(I->getParent());
@@ -10274,14 +10324,14 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           NumElts != NumScalars) {
         if (IsFirstUndef.all()) {
           if (!ShuffleVectorInst::isIdentityMask(InsertMask)) {
-          SmallBitVector IsFirstPoison =
-              isUndefVector<true>(FirstInsert->getOperand(0), UseMask);
-          if (!IsFirstPoison.all()) {
-            for (unsigned I = 0; I < NumElts; I++) {
-              if (InsertMask[I] == PoisonMaskElem && !IsFirstPoison.test(I))
-                InsertMask[I] = I + NumElts;
+            SmallBitVector IsFirstPoison =
+                isUndefVector<true>(FirstInsert->getOperand(0), UseMask);
+            if (!IsFirstPoison.all()) {
+              for (unsigned I = 0; I < NumElts; I++) {
+                if (InsertMask[I] == PoisonMaskElem && !IsFirstPoison.test(I))
+                  InsertMask[I] = I + NumElts;
+              }
             }
-          }
             V = Builder.CreateShuffleVector(
                 V,
                 IsFirstPoison.all() ? PoisonValue::get(V->getType())

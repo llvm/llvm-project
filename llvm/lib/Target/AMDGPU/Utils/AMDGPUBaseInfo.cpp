@@ -12,7 +12,6 @@
 #include "AMDKernelCodeT.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/BinaryFormat/ELF.h"
-#include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/Function.h"
@@ -2420,10 +2419,6 @@ unsigned getRegBitWidth(unsigned RCID) {
 }
 
 unsigned getRegBitWidth(const MCRegisterClass &RC) {
-  return getRegBitWidth(RC.getID());
-}
-
-unsigned getRegBitWidth(const TargetRegisterClass &RC) {
   return getRegBitWidth(RC.getID());
 }
 

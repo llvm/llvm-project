@@ -3857,8 +3857,8 @@ The same example for little endian:
 
       ; In memory the content will be (8-bit addressing):
       ;
-      ;    [%ptr + 0]: 01010011  (0x53)
-      ;    [%ptr + 1]: 00100001  (0x21)
+      ;    [%ptr + 0]: 00100001  (0x21)
+      ;    [%ptr + 1]: 01010011  (0x53)
 
 When ``<N*M>`` isn't evenly divisible by the byte size the exact memory layout
 is unspecified (just like it is for an integral type of the same size). This
