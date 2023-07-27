@@ -499,20 +499,14 @@ public:
   /// Equivalent to `getValue(getStorageLocation(E, SP))` if `E` is assigned a
   /// storage location in the environment, otherwise returns null.
   ///
-  /// The `SP` parameter has no effect.
-  ///
-  /// This function is deprecated; prefer `getValueStrict()`. For details, see
-  /// https://discourse.llvm.org/t/70086.
-  Value *getValue(const Expr &E, SkipPast SP) const;
+  /// The `SP` parameter is deprecated and has no effect. New callers should
+  /// avoid passing this parameter.
+  Value *getValue(const Expr &E, SkipPast SP = SkipPast::None) const;
 
   /// Returns the `Value` assigned to the prvalue `E` in the environment, or
   /// null if `E` isn't assigned a value in the environment.
   ///
-  /// This function is the preferred alternative to
-  /// `getValue(const Expr &, SkipPast)`. Once the migration to strict handling
-  /// of value categories is complete (see https://discourse.llvm.org/t/70086),
-  /// `getValue()` will be removed and this function will be renamed to
-  /// `getValue()`.
+  /// This function is deprecated. Call `getValue(E)` instead.
   ///
   /// Requirements:
   ///

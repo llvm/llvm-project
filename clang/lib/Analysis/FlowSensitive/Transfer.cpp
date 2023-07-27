@@ -49,8 +49,8 @@ const Environment *StmtToEnvMap::getEnvironment(const Stmt &S) const {
 
 static BoolValue &evaluateBooleanEquality(const Expr &LHS, const Expr &RHS,
                                           Environment &Env) {
-  Value *LHSValue = Env.getValueStrict(LHS);
-  Value *RHSValue = Env.getValueStrict(RHS);
+  Value *LHSValue = Env.getValue(LHS);
+  Value *RHSValue = Env.getValue(RHS);
 
   if (LHSValue == RHSValue)
     return Env.getBoolLiteralValue(true);
@@ -91,7 +91,7 @@ static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
 }
 
 static void propagateValue(const Expr &From, const Expr &To, Environment &Env) {
-  if (auto *Val = Env.getValueStrict(From))
+  if (auto *Val = Env.getValue(From))
     Env.setValueStrict(To, *Val);
 }
 
@@ -133,7 +133,7 @@ public:
       if (LHSLoc == nullptr)
         break;
 
-      auto *RHSVal = Env.getValueStrict(*RHS);
+      auto *RHSVal = Env.getValue(*RHS);
       if (RHSVal == nullptr)
         break;
 
@@ -266,7 +266,7 @@ public:
       // model that with a fresh value in the environment, unless it's already a
       // boolean.
       if (auto *SubExprVal =
-              dyn_cast_or_null<BoolValue>(Env.getValueStrict(*SubExpr)))
+              dyn_cast_or_null<BoolValue>(Env.getValue(*SubExpr)))
         Env.setValueStrict(*S, *SubExprVal);
       else
         // FIXME: If integer modeling is added, then update this code to create
@@ -350,7 +350,7 @@ public:
     switch (S->getOpcode()) {
     case UO_Deref: {
       const auto *SubExprVal =
-          cast_or_null<PointerValue>(Env.getValueStrict(*SubExpr));
+          cast_or_null<PointerValue>(Env.getValue(*SubExpr));
       if (SubExprVal == nullptr)
         break;
 
@@ -367,8 +367,7 @@ public:
       break;
     }
     case UO_LNot: {
-      auto *SubExprVal =
-          dyn_cast_or_null<BoolValue>(Env.getValueStrict(*SubExpr));
+      auto *SubExprVal = dyn_cast_or_null<BoolValue>(Env.getValue(*SubExpr));
       if (SubExprVal == nullptr)
         break;
 
@@ -417,7 +416,7 @@ public:
       return;
 
     if (Ret->isPRValue()) {
-      auto *Val = Env.getValueStrict(*Ret);
+      auto *Val = Env.getValue(*Ret);
       if (Val == nullptr)
         return;
 
@@ -491,8 +490,7 @@ public:
 
       if (S->isElidable()) {
         Env.setStorageLocation(*S, *ArgLoc);
-      } else if (auto *ArgVal = cast_or_null<StructValue>(
-                     Env.getValue(*Arg, SkipPast::Reference))) {
+      } else if (auto *ArgVal = cast_or_null<StructValue>(Env.getValue(*Arg))) {
         auto &Val = *cast<StructValue>(Env.createValue(S->getType()));
         Env.setValueStrict(*S, Val);
         copyRecord(ArgVal->getAggregateLoc(), Val.getAggregateLoc(), Env);
@@ -592,7 +590,7 @@ public:
     const Expr *SubExpr = S->getSubExpr();
     assert(SubExpr != nullptr);
 
-    Value *SubExprVal = Env.getValueStrict(*SubExpr);
+    Value *SubExprVal = Env.getValue(*SubExpr);
     if (SubExprVal == nullptr)
       return;
 
@@ -707,7 +705,7 @@ private:
     // corresponding environment.
     if (const Environment *SubExprEnv = StmtToEnv.getEnvironment(SubExpr))
       if (auto *Val =
-              dyn_cast_or_null<BoolValue>(SubExprEnv->getValueStrict(SubExpr)))
+              dyn_cast_or_null<BoolValue>(SubExprEnv->getValue(SubExpr)))
         return *Val;
 
     // The sub-expression may lie within a basic block that isn't reachable,
@@ -715,9 +713,9 @@ private:
     // (see https://discourse.llvm.org/t/70775). In this case, visit `SubExpr`
     // within the current environment and then try to get the value that gets
     // assigned to it.
-    if (Env.getValueStrict(SubExpr) == nullptr)
+    if (Env.getValue(SubExpr) == nullptr)
       Visit(&SubExpr);
-    if (auto *Val = dyn_cast_or_null<BoolValue>(Env.getValueStrict(SubExpr)))
+    if (auto *Val = dyn_cast_or_null<BoolValue>(Env.getValue(SubExpr)))
       return *Val;
 
     // If the value of `SubExpr` is still unknown, we create a fresh symbolic

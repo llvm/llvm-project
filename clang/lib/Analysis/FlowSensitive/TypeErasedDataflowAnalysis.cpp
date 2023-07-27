@@ -125,10 +125,10 @@ public:
 private:
   TerminatorVisitorRetTy extendFlowCondition(const Expr &Cond) {
     // The terminator sub-expression might not be evaluated.
-    if (Env.getValueStrict(Cond) == nullptr)
+    if (Env.getValue(Cond) == nullptr)
       transfer(StmtToEnv, Cond, Env);
 
-    auto *Val = cast_or_null<BoolValue>(Env.getValueStrict(Cond));
+    auto *Val = cast_or_null<BoolValue>(Env.getValue(Cond));
     // Value merging depends on flow conditions from different environments
     // being mutually exclusive -- that is, they cannot both be true in their
     // entirety (even if they may share some clauses). So, we need *some* value
@@ -407,7 +407,7 @@ builtinTransferInitializer(const CFGInitializer &Elt,
       return;
 
     ParentLoc->setChild(*Member, InitExprLoc);
-  } else if (auto *InitExprVal = Env.getValueStrict(*InitExpr)) {
+  } else if (auto *InitExprVal = Env.getValue(*InitExpr)) {
     if (Member->getType()->isRecordType()) {
       auto *InitValStruct = cast<StructValue>(InitExprVal);
       // FIXME: Rather than performing a copy here, we should really be
