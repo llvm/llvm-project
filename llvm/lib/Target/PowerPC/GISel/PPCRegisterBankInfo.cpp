@@ -12,6 +12,7 @@
 
 #include "PPCRegisterBankInfo.h"
 #include "PPCRegisterInfo.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/Support/Debug.h"
@@ -289,8 +290,11 @@ bool PPCRegisterBankInfo::hasFPConstraints(const MachineInstr &MI,
                                            const TargetRegisterInfo &TRI,
                                            unsigned Depth) const {
   unsigned Op = MI.getOpcode();
-  if (Op == TargetOpcode::G_INTRINSIC && isFPIntrinsic(MI.getIntrinsicID()))
-    return true;
+
+  if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
+    if (isFPIntrinsic(GI->getIntrinsicID()))
+      return true;
+  }
 
   // Do we have an explicit floating point instruction?
   if (isPreISelGenericFloatingPointOpcode(Op))
