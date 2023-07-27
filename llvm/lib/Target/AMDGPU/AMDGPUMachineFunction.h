@@ -54,6 +54,9 @@ protected:
   // Entry points called by other functions instead of directly by the hardware.
   bool IsModuleEntryFunction = false;
 
+  // Functions with the amdgpu_cs_chain or amdgpu_cs_chain_preserve CC.
+  bool IsChainFunction = false;
+
   bool NoSignedZerosFPMath = false;
 
   // Function may be memory bound.
@@ -84,6 +87,8 @@ public:
   }
 
   bool isModuleEntryFunction() const { return IsModuleEntryFunction; }
+
+  bool isChainFunction() const { return IsChainFunction; }
 
   bool hasNoSignedZerosFPMath() const {
     return NoSignedZerosFPMath;
