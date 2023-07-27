@@ -1782,15 +1782,14 @@ multiclass VPseudoILoad<bit Ordered> {
           defvar Vreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
           defvar HasConstraint = !ne(dataEEW, idxEEW);
-          defvar Order = !if(Ordered, "O", "U");
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
               VPseudoILoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint>,
-              VLXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
+              VLXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
               VPseudoILoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered, HasConstraint>,
               RISCVMaskedPseudo<MaskIdx=3>,
-              VLXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
+              VLXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
           }
         }
       }
@@ -1853,14 +1852,13 @@ multiclass VPseudoIStore<bit Ordered> {
           defvar idxEMUL = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar Vreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
-          defvar Order = !if(Ordered, "O", "U");
           let VLMul = dataEMUL.value in {
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
               VPseudoIStoreNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered>,
-              VSXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
+              VSXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
             def "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
               VPseudoIStoreMask<Vreg, IdxVreg, idxEEW, idxEMUL.value, Ordered>,
-              VSXSched<dataEEW, Order, DataLInfo, IdxLInfo>;
+              VSXSched<dataEEW, Ordered, DataLInfo, IdxLInfo>;
           }
         }
       }
@@ -3539,18 +3537,17 @@ multiclass VPseudoISegLoad<bit Ordered> {
           defvar idxEMUL = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar DataVreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
-          defvar Order = !if(Ordered, "O", "U");
           let VLMul = dataEMUL.value in {
             foreach nf = NFSet<dataEMUL>.L in {
               defvar Vreg = SegRegClass<dataEMUL, nf>.RC;
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
                 VPseudoISegLoadNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                       nf, Ordered>,
-                VLXSEGSched<nf, dataEEW, Order, DataLInfo>;
+                VLXSEGSched<nf, dataEEW, Ordered, DataLInfo>;
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
                 VPseudoISegLoadMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                     nf, Ordered>,
-                VLXSEGSched<nf, dataEEW, Order, DataLInfo>;
+                VLXSEGSched<nf, dataEEW, Ordered, DataLInfo>;
             }
           }
         }
@@ -3606,18 +3603,17 @@ multiclass VPseudoISegStore<bit Ordered> {
           defvar idxEMUL = !cast<LMULInfo>("V_" # IdxLInfo);
           defvar DataVreg = dataEMUL.vrclass;
           defvar IdxVreg = idxEMUL.vrclass;
-          defvar Order = !if(Ordered, "O", "U");
           let VLMul = dataEMUL.value in {
             foreach nf = NFSet<dataEMUL>.L in {
               defvar Vreg = SegRegClass<dataEMUL, nf>.RC;
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo :
                 VPseudoISegStoreNoMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                        nf, Ordered>,
-                VSXSEGSched<nf, idxEEW, Order, DataLInfo>;
+                VSXSEGSched<nf, idxEEW, Ordered, DataLInfo>;
               def nf # "EI" # idxEEW # "_V_" # IdxLInfo # "_" # DataLInfo # "_MASK" :
                 VPseudoISegStoreMask<Vreg, IdxVreg, idxEEW, idxEMUL.value,
                                      nf, Ordered>,
-                VSXSEGSched<nf, idxEEW, Order, DataLInfo>;
+                VSXSEGSched<nf, idxEEW, Ordered, DataLInfo>;
             }
           }
         }

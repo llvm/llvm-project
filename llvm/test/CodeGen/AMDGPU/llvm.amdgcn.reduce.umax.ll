@@ -242,72 +242,34 @@ entry:
 define amdgpu_kernel void @poison_value(ptr addrspace(1) %out, i32 %in) {
 ; GFX8DAGISEL-LABEL: poison_value:
 ; GFX8DAGISEL:       ; %bb.0: ; %entry
-; GFX8DAGISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX8DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8DAGISEL-NEXT:    flat_store_dword v[0:1], v0
 ; GFX8DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX8GISEL-LABEL: poison_value:
 ; GFX8GISEL:       ; %bb.0: ; %entry
-; GFX8GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX8GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX8GISEL-NEXT:    v_mov_b32_e32 v0, s0
-; GFX8GISEL-NEXT:    v_mov_b32_e32 v1, s1
-; GFX8GISEL-NEXT:    flat_store_dword v[0:1], v0
 ; GFX8GISEL-NEXT:    s_endpgm
 ;
 ; GFX9DAGISEL-LABEL: poison_value:
 ; GFX9DAGISEL:       ; %bb.0: ; %entry
-; GFX9DAGISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9DAGISEL-NEXT:    global_store_dword v0, v0, s[0:1]
 ; GFX9DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX9GISEL-LABEL: poison_value:
 ; GFX9GISEL:       ; %bb.0: ; %entry
-; GFX9GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX9GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX9GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9GISEL-NEXT:    global_store_dword v0, v0, s[0:1]
 ; GFX9GISEL-NEXT:    s_endpgm
 ;
 ; GFX10DAGISEL-LABEL: poison_value:
 ; GFX10DAGISEL:       ; %bb.0: ; %entry
-; GFX10DAGISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX10DAGISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10DAGISEL-NEXT:    global_store_dword v0, v0, s[0:1]
 ; GFX10DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX10GISEL-LABEL: poison_value:
 ; GFX10GISEL:       ; %bb.0: ; %entry
-; GFX10GISEL-NEXT:    s_load_dwordx2 s[0:1], s[0:1], 0x24
-; GFX10GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX10GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX10GISEL-NEXT:    global_store_dword v0, v0, s[0:1]
 ; GFX10GISEL-NEXT:    s_endpgm
 ;
 ; GFX11DAGISEL-LABEL: poison_value:
 ; GFX11DAGISEL:       ; %bb.0: ; %entry
-; GFX11DAGISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11DAGISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11DAGISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11DAGISEL-NEXT:    global_store_b32 v0, v0, s[0:1]
-; GFX11DAGISEL-NEXT:    s_nop 0
-; GFX11DAGISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11DAGISEL-NEXT:    s_endpgm
 ;
 ; GFX11GISEL-LABEL: poison_value:
 ; GFX11GISEL:       ; %bb.0: ; %entry
-; GFX11GISEL-NEXT:    s_load_b64 s[0:1], s[0:1], 0x24
-; GFX11GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GFX11GISEL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX11GISEL-NEXT:    global_store_b32 v0, v0, s[0:1]
-; GFX11GISEL-NEXT:    s_nop 0
-; GFX11GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX11GISEL-NEXT:    s_endpgm
 entry:
     %result = call i32 @llvm.amdgcn.wave.reduce.umax.i32(i32 poison, i32 1)
