@@ -1930,12 +1930,6 @@ public:
   /// and point them to \p Reg instead.
   void changeDebugValuesDefReg(Register Reg);
 
-  /// Returns the Intrinsic::ID for this instruction.
-  /// \pre Must have an intrinsic ID operand.
-  unsigned getIntrinsicID() const {
-    return getOperand(getNumExplicitDefs()).getIntrinsicID();
-  }
-
   /// Sets all register debug operands in this debug value instruction to be
   /// undef.
   void setDebugValueUndef() {
