@@ -310,6 +310,28 @@ TEST(TransferTest, StructVarDeclWithInit) {
       });
 }
 
+TEST(TransferTest, StructArrayVarDecl) {
+  std::string Code = R"(
+    struct A {};
+
+    void target() {
+      A Array[2];
+      // [[p]]
+    }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *ArrayDecl = findValueDecl(ASTCtx, "Array");
+
+        // We currently don't create values for arrays.
+        ASSERT_THAT(Env.getValue(*ArrayDecl), IsNull());
+      });
+}
+
 TEST(TransferTest, ClassVarDecl) {
   std::string Code = R"(
     class A {
