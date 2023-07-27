@@ -910,3 +910,25 @@ namespace PredefinedExprs {
   static_assert(heh(2) == 'h', "");
 #endif
 }
+
+namespace NE {
+  constexpr int foo() noexcept {
+    return 1;
+  }
+  static_assert(noexcept(foo()), "");
+  constexpr int foo2() {
+    return 1;
+  }
+  static_assert(!noexcept(foo2()), "");
+
+#if __cplusplus > 201402L
+  constexpr int a() {
+    int b = 0;
+    (void)noexcept(++b); // expected-warning {{expression with side effects has no effect in an unevaluated context}} \
+                         // ref-warning {{expression with side effects has no effect in an unevaluated context}}
+
+    return b;
+  }
+  static_assert(a() == 0, "");
+#endif
+}

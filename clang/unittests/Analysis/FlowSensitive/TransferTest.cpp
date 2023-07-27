@@ -2183,6 +2183,39 @@ TEST(TransferTest, CopyConstructorWithParens) {
       });
 }
 
+TEST(TransferTest, CopyConstructorWithInitializerListAsSyntacticSugar) {
+  std::string Code = R"(
+  struct A {
+    int Baz;
+  };
+  void target() {
+    A Foo = {3};
+    (void)Foo.Baz;
+    A Bar = {A(Foo)};
+    // [[p]]
+  }
+  )";
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        const Environment &Env = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *BazDecl = findValueDecl(ASTCtx, "Baz");
+
+        const auto &FooLoc =
+            getLocForDecl<AggregateStorageLocation>(ASTCtx, Env, "Foo");
+        const auto &BarLoc =
+            getLocForDecl<AggregateStorageLocation>(ASTCtx, Env, "Bar");
+
+        const auto *FooBazVal =
+            cast<IntegerValue>(getFieldValue(&FooLoc, *BazDecl, Env));
+        const auto *BarBazVal =
+            cast<IntegerValue>(getFieldValue(&BarLoc, *BazDecl, Env));
+        EXPECT_EQ(FooBazVal, BarBazVal);
+      });
+}
+
 TEST(TransferTest, CopyConstructorArgIsRefReturnedByFunction) {
   // This is a crash repro.
   std::string Code = R"(

@@ -17,18 +17,27 @@
 void clang::dataflow::copyRecord(AggregateStorageLocation &Src,
                                  AggregateStorageLocation &Dst,
                                  Environment &Env) {
+  auto SrcType = Src.getType().getCanonicalType().getUnqualifiedType();
+  auto DstType = Dst.getType().getCanonicalType().getUnqualifiedType();
+
+  auto SrcDecl = SrcType->getAsCXXRecordDecl();
+  auto DstDecl = DstType->getAsCXXRecordDecl();
+
+  bool compatibleTypes =
+      SrcType == DstType ||
+      (SrcDecl && DstDecl && SrcDecl->isDerivedFrom(DstDecl));
+  (void)compatibleTypes;
+
   LLVM_DEBUG({
-    if (Dst.getType().getCanonicalType().getUnqualifiedType() !=
-        Src.getType().getCanonicalType().getUnqualifiedType()) {
+    if (!compatibleTypes) {
       llvm::dbgs() << "Source type " << Src.getType() << "\n";
       llvm::dbgs() << "Destination type " << Dst.getType() << "\n";
     }
   });
-  assert(Dst.getType().getCanonicalType().getUnqualifiedType() ==
-         Src.getType().getCanonicalType().getUnqualifiedType());
+  assert(compatibleTypes);
 
-  for (auto [Field, SrcFieldLoc] : Src.children()) {
-    StorageLocation *DstFieldLoc = Dst.getChild(*Field);
+  for (auto [Field, DstFieldLoc] : Dst.children()) {
+    StorageLocation *SrcFieldLoc = Src.getChild(*Field);
 
     assert(Field->getType()->isReferenceType() ||
            (SrcFieldLoc != nullptr && DstFieldLoc != nullptr));

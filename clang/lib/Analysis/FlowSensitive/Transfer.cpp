@@ -637,6 +637,13 @@ public:
       return;
     }
 
+    // In case the initializer list is transparent, we just need to propagate
+    // the value that it contains.
+    if (S->isSemanticForm() && S->isTransparent()) {
+      propagateValue(*S->getInit(0), *S, Env);
+      return;
+    }
+
     std::vector<FieldDecl *> Fields =
         getFieldsForInitListExpr(Type->getAsRecordDecl());
     llvm::DenseMap<const ValueDecl *, StorageLocation *> FieldLocs;
