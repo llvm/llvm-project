@@ -902,7 +902,7 @@ def AggregatedOpInterface : OpInterface<"AggregatedOpInterface"> {
     Interface for decomposing aggregated operations into a sequence of simpler
     ops.
   }];
-  let cppNamespace = "::mlir";
+  let cppNamespace = "::mlir::linalg";
   let methods = [
       InterfaceMethod<
         /*desc=*/[{

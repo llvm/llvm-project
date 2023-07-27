@@ -21,7 +21,9 @@ define internal void @test(ptr %X) !dbg !2 {
 %struct.pair = type { i32, i32 }
 
 define internal void @test_byval(ptr byval(%struct.pair) %P) {
-; CHECK-LABEL: define {{[^@]+}}@test_byval() {
+; CHECK: Function Attrs: memory(readwrite, argmem: none)
+; CHECK-LABEL: define {{[^@]+}}@test_byval
+; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    call void @sink(i32 noundef 0)
 ; CHECK-NEXT:    ret void
 ;
@@ -58,6 +60,8 @@ define void @caller(ptr %Y, ptr %P) {
 !3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: LineTablesOnly, file: !5)
 !5 = !DIFile(filename: "test.c", directory: "")
 !6 = !DILocation(line: 9, scope: !2)
+;.
+; CHECK: attributes #[[ATTR0]] = { memory(readwrite, argmem: none) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 2, !"Debug Info Version", i32 3}
 ; CHECK: [[META1:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 3.5.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)

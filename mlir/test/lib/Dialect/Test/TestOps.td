@@ -451,6 +451,11 @@ def IsolatedOneRegionOp : TEST_Op<"isolated_one_region_op", [IsolatedFromAbove]>
   }];
 }
 
+def IsolatedRegionsOp : TEST_Op<"isolated_regions", [IsolatedFromAbove]> {
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let assemblyFormat = "attr-dict-with-keyword $regions";
+}
+
 //===----------------------------------------------------------------------===//
 // NoTerminator Operation
 //===----------------------------------------------------------------------===//
@@ -839,8 +844,7 @@ def AttrSizedOperandOp : TEST_Op<"attr_sized_operands",
     Variadic<I32>:$a,
     Variadic<I32>:$b,
     I32:$c,
-    Variadic<I32>:$d,
-    DenseI32ArrayAttr:$operand_segment_sizes
+    Variadic<I32>:$d
   );
 }
 

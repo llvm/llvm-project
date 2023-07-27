@@ -1,5 +1,5 @@
 # Check that the environment variable is set correctly
-# RUN: python %s | FileCheck %s
+# RUN: %{python} %s | FileCheck %s
 
 # Python script to read the environment variable
 # and print its value

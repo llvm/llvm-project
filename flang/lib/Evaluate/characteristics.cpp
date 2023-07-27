@@ -303,6 +303,13 @@ bool DummyDataObject::IsCompatibleWith(
     }
     return false;
   }
+  if (type.type().IsPolymorphic() != actual.type.type().IsPolymorphic()) {
+    if (whyNot) {
+      *whyNot = "incompatible dummy data object polymorphism: "s +
+          type.type().AsFortran() + " vs " + actual.type.type().AsFortran();
+    }
+    return false;
+  }
   if (type.type().category() == TypeCategory::Character) {
     if (actual.type.type().IsAssumedLengthCharacter() !=
         type.type().IsAssumedLengthCharacter()) {
@@ -329,7 +336,7 @@ bool DummyDataObject::IsCompatibleWith(
       }
     }
   }
-  if (attrs != actual.attrs) {
+  if (attrs != actual.attrs || type.attrs() != actual.type.attrs()) {
     if (whyNot) {
       *whyNot = "incompatible dummy data object attributes";
     }

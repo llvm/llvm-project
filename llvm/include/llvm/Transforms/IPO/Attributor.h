@@ -2289,7 +2289,7 @@ public:
   /// present in \p Opcode and return true if \p Pred holds on all of them.
   bool checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                const Function *Fn,
-                               const AbstractAttribute &QueryingAA,
+                               const AbstractAttribute *QueryingAA,
                                const ArrayRef<unsigned> &Opcodes,
                                bool &UsedAssumedInformation,
                                bool CheckBBLivenessOnly = false,
@@ -3425,6 +3425,36 @@ struct AANoSync
                          StateWrapper<BooleanState, AbstractAttribute>,
                          AANoSync> {
   AANoSync(const IRPosition &IRP, Attributor &A) : IRAttribute(IRP) {}
+
+  static bool isImpliedByIR(Attributor &A, const IRPosition &IRP,
+                            Attribute::AttrKind ImpliedAttributeKind,
+                            bool IgnoreSubsumingPositions = false) {
+    // Note: This is also run for non-IPO amendable functions.
+    assert(ImpliedAttributeKind == Attribute::NoSync);
+    if (A.hasAttr(IRP, {Attribute::NoSync}, IgnoreSubsumingPositions,
+                  Attribute::NoSync))
+      return true;
+
+    // Check for readonly + non-convergent.
+    // TODO: We should be able to use hasAttr for Attributes, not only
+    // AttrKinds.
+    Function *F = IRP.getAssociatedFunction();
+    if (!F || F->isConvergent())
+      return false;
+
+    SmallVector<Attribute, 2> Attrs;
+    A.getAttrs(IRP, {Attribute::Memory}, Attrs, IgnoreSubsumingPositions);
+
+    MemoryEffects ME = MemoryEffects::unknown();
+    for (const Attribute &Attr : Attrs)
+      ME &= Attr.getMemoryEffects();
+
+    if (!ME.onlyReadsMemory())
+      return false;
+
+    A.manifestAttrs(IRP, Attribute::get(F->getContext(), Attribute::NoSync));
+    return true;
+  }
 
   /// See AbstractAttribute::isValidIRPositionForInit
   static bool isValidIRPositionForInit(Attributor &A, const IRPosition &IRP) {

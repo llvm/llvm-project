@@ -55,7 +55,7 @@ func.func @return_tensor(%A : tensor<?xf32>, %v : vector<4xf32>) -> (tensor<?xf3
   %c0 = arith.constant 0 : index
 
   // CHECK: %[[A_memref:.*]] = bufferization.to_memref %[[A]]
-  // CHECK: %[[dim:.*]] = tensor.dim %[[A]]
+  // CHECK: %[[dim:.*]] = memref.dim %[[A_memref]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: memref.copy %[[A_memref]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]
@@ -202,9 +202,12 @@ func.func @read_of_alias(%t: tensor<100xf32>, %pos1: index, %pos2: index,
 
 // -----
 
-// CHECK-LABEL: func @from_unranked_to_unranked
+// CHECK-LABEL: func @from_unranked_to_unranked(
+//  CHECK-SAME:     %[[arg0:.*]]: tensor<*xi32>
 func.func @from_unranked_to_unranked(%arg0: tensor<*xi32>) -> tensor<*xi32> {
-  // CHECK: return %arg{{.*}} : tensor<*xi32>
+  // CHECK: %[[m:.*]] = bufferization.to_memref %[[arg0]] : memref<*xi32>
+  // CHECK: %[[t:.*]] = bufferization.to_tensor %[[m]]
+  // CHECK: return %[[t]] : tensor<*xi32>
   %0 = tensor.cast %arg0 : tensor<*xi32> to tensor<*xi32>
   return %0 : tensor<*xi32>
 }

@@ -172,7 +172,7 @@ func.func @unknown_op_not_writable(
   %0 = "test.dummy_op"(%t1) : (tensor<?xf32>) -> (tensor<?xf32>)
 
   // The result of an unknown op is not writable. Always generate a copy.
-  // CHECK: %[[dim:.*]] = tensor.dim %[[dummy]]
+  // CHECK: %[[dim:.*]] = memref.dim %[[dummy_memref]]
   // CHECK: %[[alloc:.*]] = memref.alloc(%[[dim]])
   // CHECK: memref.copy %[[dummy_memref]], %[[alloc]]
   // CHECK: vector.transfer_write %{{.*}}, %[[alloc]]

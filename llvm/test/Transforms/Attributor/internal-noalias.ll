@@ -16,8 +16,8 @@ define dso_local i32 @visible(ptr noalias %A, ptr noalias %B) #0 {
 ; CGSCC-LABEL: define {{[^@]+}}@visible
 ; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A:%.*]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CGSCC-NEXT:  entry:
-; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR5:[0-9]+]]
-; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @noalias_args_argmem(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR5]]
+; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR6:[0-9]+]]
+; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @noalias_args_argmem(ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR6]]
 ; CGSCC-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
 ; CGSCC-NEXT:    ret i32 [[ADD]]
 ;
@@ -47,7 +47,7 @@ define private i32 @noalias_args(ptr %A, ptr %B) #0 {
 ; CGSCC-NEXT:    [[TMP0:%.*]] = load i32, ptr [[A]], align 4
 ; CGSCC-NEXT:    [[TMP1:%.*]] = load i32, ptr [[B]], align 4
 ; CGSCC-NEXT:    [[ADD:%.*]] = add nsw i32 [[TMP0]], [[TMP1]]
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR6:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR7:[0-9]+]]
 ; CGSCC-NEXT:    [[ADD2:%.*]] = add nsw i32 [[ADD]], [[CALL]]
 ; CGSCC-NEXT:    ret i32 [[ADD2]]
 ;
@@ -105,8 +105,8 @@ define dso_local i32 @visible_local(ptr %A) #0 {
 ; CGSCC-NEXT:  entry:
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 5, ptr [[B]], align 4
-; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR5]]
-; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @noalias_args_argmem(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR7:[0-9]+]]
+; CGSCC-NEXT:    [[CALL1:%.*]] = call i32 @noalias_args(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR6]]
+; CGSCC-NEXT:    [[CALL2:%.*]] = call i32 @noalias_args_argmem(ptr nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[A]], ptr noalias nocapture nofree noundef nonnull readonly align 4 dereferenceable(4) [[B]]) #[[ATTR8:[0-9]+]]
 ; CGSCC-NEXT:    [[ADD:%.*]] = add nsw i32 [[CALL1]], [[CALL2]]
 ; CGSCC-NEXT:    ret i32 [[ADD]]
 ;
@@ -120,9 +120,9 @@ entry:
 }
 
 define internal i32 @noalias_args_argmem_ro(ptr %A, ptr %B) #1 {
-; CGSCC: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable
+; CGSCC: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@noalias_args_argmem_ro
-; CGSCC-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR1]] {
+; CGSCC-SAME: (i32 [[TMP0:%.*]], i32 [[TMP1:%.*]]) #[[ATTR3:[0-9]+]] {
 ; CGSCC-NEXT:    [[B_PRIV:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 [[TMP1]], ptr [[B_PRIV]], align 4
 ; CGSCC-NEXT:    [[A_PRIV:%.*]] = alloca i32, align 4
@@ -147,8 +147,8 @@ define i32 @visible_local_2() {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@visible_local_2
-; CGSCC-SAME: () #[[ATTR3:[0-9]+]] {
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_ro(i32 noundef 5, i32 noundef 5) #[[ATTR8:[0-9]+]]
+; CGSCC-SAME: () #[[ATTR4:[0-9]+]] {
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_ro(i32 noundef 5, i32 noundef 5) #[[ATTR9:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CALL]]
 ;
   %B = alloca i32, align 4
@@ -165,7 +165,7 @@ define internal i32 @noalias_args_argmem_rn(ptr %A, ptr %B) #1 {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree noinline norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable
 ; CGSCC-LABEL: define {{[^@]+}}@noalias_args_argmem_rn
-; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR4:[0-9]+]] {
+; CGSCC-SAME: (ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B:%.*]]) #[[ATTR5:[0-9]+]] {
 ; CGSCC-NEXT:    [[T0:%.*]] = load i32, ptr [[B]], align 4
 ; CGSCC-NEXT:    store i32 0, ptr [[B]], align 4
 ; CGSCC-NEXT:    ret i32 [[T0]]
@@ -185,10 +185,10 @@ define i32 @visible_local_3() {
 ;
 ; CGSCC: Function Attrs: mustprogress nofree nosync nounwind willreturn memory(none)
 ; CGSCC-LABEL: define {{[^@]+}}@visible_local_3
-; CGSCC-SAME: () #[[ATTR3]] {
+; CGSCC-SAME: () #[[ATTR4]] {
 ; CGSCC-NEXT:    [[B:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    store i32 5, ptr [[B]], align 4
-; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_rn(ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B]]) #[[ATTR9:[0-9]+]]
+; CGSCC-NEXT:    [[CALL:%.*]] = call i32 @noalias_args_argmem_rn(ptr noalias nocapture nofree noundef nonnull align 4 dereferenceable(4) [[B]]) #[[ATTR10:[0-9]+]]
 ; CGSCC-NEXT:    ret i32 [[CALL]]
 ;
   %B = alloca i32, align 4
@@ -210,13 +210,14 @@ attributes #1 = { argmemonly noinline nounwind uwtable willreturn}
 ; CGSCC: attributes #[[ATTR0]] = { mustprogress nofree noinline nosync nounwind willreturn memory(argmem: read) uwtable }
 ; CGSCC: attributes #[[ATTR1]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(argmem: read) uwtable }
 ; CGSCC: attributes #[[ATTR2]] = { mustprogress nofree noinline nosync nounwind willreturn memory(argmem: readwrite) uwtable }
-; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
-; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable }
-; CGSCC: attributes #[[ATTR5]] = { nofree memory(read) }
-; CGSCC: attributes #[[ATTR6]] = { nofree nounwind memory(read) }
-; CGSCC: attributes #[[ATTR7]] = { nofree }
-; CGSCC: attributes #[[ATTR8]] = { nofree willreturn memory(read) }
-; CGSCC: attributes #[[ATTR9]] = { nofree nounwind willreturn }
+; CGSCC: attributes #[[ATTR3]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(none) uwtable }
+; CGSCC: attributes #[[ATTR4]] = { mustprogress nofree nosync nounwind willreturn memory(none) }
+; CGSCC: attributes #[[ATTR5]] = { mustprogress nofree noinline norecurse nosync nounwind willreturn memory(argmem: readwrite) uwtable }
+; CGSCC: attributes #[[ATTR6]] = { nofree memory(read) }
+; CGSCC: attributes #[[ATTR7]] = { nofree nounwind memory(read) }
+; CGSCC: attributes #[[ATTR8]] = { nofree }
+; CGSCC: attributes #[[ATTR9]] = { nofree nosync willreturn }
+; CGSCC: attributes #[[ATTR10]] = { nofree nounwind willreturn }
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK: {{.*}}

@@ -222,9 +222,14 @@ static thread_return_t THREAD_CALLING_CONV asan_thread_start(void *arg) {
   SetCurrentThread(t);
   auto self = GetThreadSelf();
   auto args = asanThreadArgRetval().GetArgs(self);
-  thread_return_t retval = t->ThreadStart(GetTid());
+  t->ThreadStart(GetTid());
+
+  __sanitizer_sigset_t sigset;
+  t->GetStartData(sigset);
+  SetSigProcMask(&sigset, nullptr);
+
+  thread_return_t retval = (*args.routine)(args.arg_retval);
   asanThreadArgRetval().Finish(self, retval);
-  CHECK_EQ(args.arg_retval, t->get_arg());
   return retval;
 }
 
@@ -242,8 +247,11 @@ INTERCEPTOR(int, pthread_create, void *thread, void *attr,
   }();
 
   u32 current_tid = GetCurrentTidOrInvalid();
-  AsanThread *t =
-      AsanThread::Create(start_routine, arg, current_tid, &stack, detached);
+
+  __sanitizer_sigset_t sigset;
+  ScopedBlockSignals block(&sigset);
+
+  AsanThread *t = AsanThread::Create(sigset, current_tid, &stack, detached);
 
   int result;
   {

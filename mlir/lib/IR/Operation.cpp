@@ -361,7 +361,8 @@ Operation::setPropertiesFromAttribute(Attribute attr,
     *getPropertiesStorage().as<Attribute *>() = attr;
     return success();
   }
-  return info->setOpPropertiesFromAttribute(this, attr, diagnostic);
+  return info->setOpPropertiesFromAttribute(
+      this->getName(), this->getPropertiesStorage(), attr, diagnostic);
 }
 
 void Operation::copyProperties(OpaqueProperties rhs) {

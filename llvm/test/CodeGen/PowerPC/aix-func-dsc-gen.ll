@@ -16,8 +16,8 @@ entry:
 ; CHECK-NEXT:     Name: <stdin>
 ; CHECK-NEXT:     Value (SymbolTableIndex): 0x0
 ; CHECK-NEXT:     Section: N_DEBUG
-; CHECK-NEXT:     Source Language ID: TB_C (0x0)
-; CHECK-NEXT:     CPU Version ID: 0x0
+; CHECK-NEXT:     Source Language ID: TB_CPLUSPLUS (0x9)
+; CHECK-NEXT:     CPU Version ID: TCPU_COM (0x3)
 ; CHECK-NEXT:     StorageClass: C_FILE (0x67)
 ; CHECK-NEXT:     NumberOfAuxEntries: 0
 ; CHECK-NEXT:   }

@@ -51,6 +51,15 @@ fir::KindMapping fir::getKindMapping(mlir::ModuleOp mod) {
   return fir::KindMapping(ctx);
 }
 
+fir::KindMapping fir::getKindMapping(mlir::Operation *op) {
+  auto moduleOp = mlir::dyn_cast<mlir::ModuleOp>(op);
+  if (moduleOp)
+    return getKindMapping(moduleOp);
+
+  moduleOp = op->getParentOfType<mlir::ModuleOp>();
+  return getKindMapping(moduleOp);
+}
+
 std::string fir::determineTargetTriple(llvm::StringRef triple) {
   // Treat "" or "default" as stand-ins for the default machine.
   if (triple.empty() || triple == "default")

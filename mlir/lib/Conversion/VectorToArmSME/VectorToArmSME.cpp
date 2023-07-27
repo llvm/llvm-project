@@ -9,6 +9,7 @@
 #include "mlir/Conversion/VectorToArmSME/VectorToArmSME.h"
 
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
+#include "mlir/Dialect/ArmSME/Utils/Utils.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "llvm/Support/Casting.h"
 
@@ -76,9 +77,42 @@ struct TransferWriteToArmSMELowering
   }
 };
 
+/// Conversion pattern for vector.load.
+struct VectorLoadToArmSMELowering : public OpRewritePattern<vector::LoadOp> {
+  using OpRewritePattern<vector::LoadOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::LoadOp load,
+                                PatternRewriter &rewriter) const override {
+    if (!arm_sme::isValidSMETileVectorType(load.getVectorType()))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<arm_sme::TileLoadOp>(
+        load, load.getVectorType(), load.getBase(), load.getIndices());
+
+    return success();
+  }
+};
+
+/// Conversion pattern for vector.store.
+struct VectorStoreToArmSMELowering : public OpRewritePattern<vector::StoreOp> {
+  using OpRewritePattern<vector::StoreOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(vector::StoreOp store,
+                                PatternRewriter &rewriter) const override {
+    if (!arm_sme::isValidSMETileVectorType(store.getVectorType()))
+      return failure();
+
+    rewriter.replaceOpWithNewOp<arm_sme::TileStoreOp>(
+        store, store.getValueToStore(), store.getBase(), store.getIndices());
+
+    return success();
+  }
+};
+
 } // namespace
 
 void mlir::populateVectorToArmSMEPatterns(RewritePatternSet &patterns,
                                           MLIRContext &ctx) {
-  patterns.add<TransferWriteToArmSMELowering>(&ctx);
+  patterns.add<TransferWriteToArmSMELowering, VectorLoadToArmSMELowering,
+               VectorStoreToArmSMELowering>(&ctx);
 }

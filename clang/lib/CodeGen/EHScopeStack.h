@@ -278,6 +278,9 @@ public:
       CGF(nullptr) {}
   ~EHScopeStack() { delete[] StartOfBuffer; }
 
+  EHScopeStack(const EHScopeStack &) = delete;
+  EHScopeStack &operator=(const EHScopeStack &) = delete;
+
   /// Push a lazily-created cleanup on the stack.
   template <class T, class... As> void pushCleanup(CleanupKind Kind, As... A) {
     static_assert(alignof(T) <= ScopeStackAlignment,

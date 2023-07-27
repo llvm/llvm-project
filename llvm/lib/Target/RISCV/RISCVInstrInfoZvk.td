@@ -11,6 +11,56 @@
 //
 //===----------------------------------------------------------------------===//
 
+//===----------------------------------------------------------------------===//
+// Operand and SDNode transformation definitions.
+//===----------------------------------------------------------------------===//
+
+def RnumArg_0_7 : AsmOperandClass {
+  let Name = "RnumArg_0_7";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidRnumArg_0_7";
+}
+
+def RnumArg_1_10 : AsmOperandClass {
+  let Name = "RnumArg_1_10";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidRnumArg_1_10";
+}
+
+def RnumArg_2_14 : AsmOperandClass {
+  let Name = "RnumArg_2_14";
+  let RenderMethod = "addImmOperands";
+  let DiagnosticType = "InvalidRnumArg_2_14";
+}
+
+def rnum_0_7 : Operand<XLenVT>, ImmLeaf<XLenVT,
+                                         [{return (0 <= Imm && Imm <= 7);}]> {
+  let ParserMatchClass = RnumArg_0_7;
+  let DecoderMethod = "decodeUImmOperand<5>";
+  let OperandType = "OPERAND_RVKRNUM_0_7";
+  let OperandNamespace = "RISCVOp";
+}
+
+def rnum_1_10 : Operand<XLenVT>, ImmLeaf<XLenVT,
+                                         [{return (1 <= Imm && Imm <= 10);}]> {
+  let ParserMatchClass = RnumArg_1_10;
+  let DecoderMethod = "decodeUImmOperand<5>";
+  let OperandType = "OPERAND_RVKRNUM_1_10";
+  let OperandNamespace = "RISCVOp";
+}
+
+def rnum_2_14 : Operand<XLenVT>, ImmLeaf<XLenVT,
+                                         [{return (2 <= Imm && Imm <= 14);}]> {
+  let ParserMatchClass = RnumArg_2_14;
+  let DecoderMethod = "decodeUImmOperand<5>";
+  let OperandType = "OPERAND_RVKRNUM_2_14";
+  let OperandNamespace = "RISCVOp";
+}
+
+//===----------------------------------------------------------------------===//
+// Instruction class templates
+//===----------------------------------------------------------------------===//
+
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 multiclass VCLMUL_MV_V_X<string opcodestr, bits<6> funct6> {
   def V  : VALUVV<funct6, OPMVV, opcodestr # "." # "vv">,
@@ -85,47 +135,9 @@ class VAESKF_MV_I<bits<6> funct6, string opcodestr, Operand optype>
 }
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-def RnumArg_0_7 : AsmOperandClass {
-  let Name = "RnumArg_0_7";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidRnumArg_0_7";
-}
-
-def RnumArg_1_10 : AsmOperandClass {
-  let Name = "RnumArg_1_10";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidRnumArg_1_10";
-}
-
-def RnumArg_2_14 : AsmOperandClass {
-  let Name = "RnumArg_2_14";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidRnumArg_2_14";
-}
-
-def rnum_0_7 : Operand<XLenVT>, ImmLeaf<XLenVT,
-                                         [{return (0 <= Imm && Imm <= 7);}]> {
-  let ParserMatchClass = RnumArg_0_7;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_RVKRNUM_0_7";
-  let OperandNamespace = "RISCVOp";
-}
-
-def rnum_1_10 : Operand<XLenVT>, ImmLeaf<XLenVT,
-                                         [{return (1 <= Imm && Imm <= 10);}]> {
-  let ParserMatchClass = RnumArg_1_10;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_RVKRNUM_1_10";
-  let OperandNamespace = "RISCVOp";
-}
-
-def rnum_2_14 : Operand<XLenVT>, ImmLeaf<XLenVT,
-                                         [{return (2 <= Imm && Imm <= 14);}]> {
-  let ParserMatchClass = RnumArg_2_14;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_RVKRNUM_2_14";
-  let OperandNamespace = "RISCVOp";
-}
+//===----------------------------------------------------------------------===//
+// Instructions
+//===----------------------------------------------------------------------===//
 
 let Predicates = [HasStdExtZvbb] in {
   defm VANDN_V  : VALU_IV_V_X<"vandn", 0b000001>;
@@ -162,13 +174,13 @@ let Predicates = [HasStdExtZvkned], RVVConstraint = NoConstraint in {
   defm VAESDM     : VAES_MV_V_S<0b101000, 0b101001, 0b00000, OPMVV, "vaesdm">;
   defm VAESEF     : VAES_MV_V_S<0b101000, 0b101001, 0b00011, OPMVV, "vaesef">;
   defm VAESEM     : VAES_MV_V_S<0b101000, 0b101001, 0b00010, OPMVV, "vaesem">;
-  def  VAESKF1_VI : VAESKF_MV_I<0b100010, "vaeskf1.vi", rnum_1_10>;
-  def  VAESKF2_VI : VAESKF_MV_I<0b101010, "vaeskf2.vi", rnum_2_14>;
+  def  VAESKF1_VI : VAESKF_MV_I<0b100010, "vaeskf1.vi", uimm5>;
+  def  VAESKF2_VI : VAESKF_MV_I<0b101010, "vaeskf2.vi", uimm5>;
   def  VAESZ_VS   : PALUVs2NoVm<0b101001, 0b00111, OPMVV, "vaesz.vs">;
 } // Predicates = [HasStdExtZvkned]
 
 let Predicates = [HasStdExtZvksed], RVVConstraint = NoConstraint in {
-  def  VSM4K_VI : PALUVINoVm<0b100001, "vsm4k.vi", rnum_0_7>;
+  def  VSM4K_VI : PALUVINoVm<0b100001, "vsm4k.vi", uimm5>;
   defm VSM4R    : VAES_MV_V_S<0b101000, 0b101001, 0b10000, OPMVV, "vsm4r">;
 } // Predicates = [HasStdExtZvksed]
 
@@ -201,6 +213,8 @@ defm PseudoVCPOP : VPseudoUnaryV_V;
 
 defm PseudoVROL : VPseudoVALU_VV_VX;
 defm PseudoVROR : VPseudoVALU_VV_VX_VI<uimm6>;
+
+defm PseudoVWSLL : VPseudoVWALU_VV_VX_VI<uimm5>;
 
 //===----------------------------------------------------------------------===//
 // SDNode patterns
@@ -275,6 +289,35 @@ foreach vti = AllIntegerVectors in {
   }
 }
 defm : VPatBinarySDNode_VV_VX_VI<rotr, "PseudoVROR", uimm6>;
+
+foreach vtiToWti = AllWidenableIntVectors in {
+  defvar vti = vtiToWti.Vti;
+  defvar wti = vtiToWti.Wti;
+  let Predicates = !listconcat([HasStdExtZvbb],
+                               GetVTypePredicates<vti>.Predicates,
+                               GetVTypePredicates<wti>.Predicates) in {
+    def : Pat<(shl (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                   (wti.Vector (ext_oneuse (vti.Vector vti.RegClass:$rs1)))),
+              (!cast<Instruction>("PseudoVWSLL_VV_"#vti.LMul.MX)
+                 (wti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2, vti.RegClass:$rs1,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
+
+    def : Pat<(shl (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                   (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1)))),
+              (!cast<Instruction>("PseudoVWSLL_VX_"#vti.LMul.MX)
+                 (wti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2, GPR:$rs1,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
+
+    def : Pat<(shl (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                   (wti.Vector (SplatPat_uimm5 uimm5:$rs1))),
+              (!cast<Instruction>("PseudoVWSLL_VI_"#vti.LMul.MX)
+                 (wti.Vector (IMPLICIT_DEF)),
+                 vti.RegClass:$rs2, uimm5:$rs1,
+                 vti.AVL, vti.Log2SEW, TA_MA)>;
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // VL patterns

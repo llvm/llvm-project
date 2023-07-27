@@ -5,11 +5,7 @@
 ;
 ; RELAX:      Section ({{.*}}) .rela.eh_frame {
 ; RELAX-NEXT:   0x1C R_RISCV_32_PCREL <null> 0x0
-; RELAX-NEXT:   0x20 R_RISCV_ADD32 <null> 0x0
-; RELAX-NEXT:   0x20 R_RISCV_SUB32 <null> 0x0
 ; RELAX-NEXT:   0x30 R_RISCV_32_PCREL <null> 0x0
-; RELAX-NEXT:   0x34 R_RISCV_ADD32 <null> 0x0
-; RELAX-NEXT:   0x34 R_RISCV_SUB32 <null> 0x0
 ; RELAX-NEXT:   0x44 R_RISCV_32_PCREL <null> 0x0
 ; RELAX-NEXT:   0x48 R_RISCV_ADD32 <null> 0x0
 ; RELAX-NEXT:   0x48 R_RISCV_SUB32 <null> 0x0

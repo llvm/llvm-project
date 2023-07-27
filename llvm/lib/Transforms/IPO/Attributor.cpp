@@ -723,7 +723,7 @@ isPotentiallyReachable(Attributor &A, const Instruction &FromI,
 
     // Check if we can reach returns.
     bool UsedAssumedInformation = false;
-    if (A.checkForAllInstructions(ReturnInstCB, FromFn, QueryingAA,
+    if (A.checkForAllInstructions(ReturnInstCB, FromFn, &QueryingAA,
                                   {Instruction::Ret}, UsedAssumedInformation)) {
       LLVM_DEBUG(dbgs() << "[AA] No return is reachable, done\n");
       continue;
@@ -1192,7 +1192,7 @@ const IRPosition
 SubsumingPositionIterator::SubsumingPositionIterator(const IRPosition &IRP) {
   IRPositions.emplace_back(IRP);
 
-  // Helper to determine if operand bundles on a call site are benin or
+  // Helper to determine if operand bundles on a call site are benign or
   // potentially problematic. We handle only llvm.assume for now.
   auto CanIgnoreOperandBundles = [](const CallBase &CB) {
     return (isa<IntrinsicInst>(CB) &&
@@ -1967,7 +1967,7 @@ static bool checkForAllInstructionsImpl(
 
 bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                          const Function *Fn,
-                                         const AbstractAttribute &QueryingAA,
+                                         const AbstractAttribute *QueryingAA,
                                          const ArrayRef<unsigned> &Opcodes,
                                          bool &UsedAssumedInformation,
                                          bool CheckBBLivenessOnly,
@@ -1978,12 +1978,12 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
 
   const IRPosition &QueryIRP = IRPosition::function(*Fn);
   const auto *LivenessAA =
-      CheckPotentiallyDead
-          ? nullptr
-          : (getAAFor<AAIsDead>(QueryingAA, QueryIRP, DepClassTy::NONE));
+      CheckPotentiallyDead && QueryingAA
+          ? (getAAFor<AAIsDead>(*QueryingAA, QueryIRP, DepClassTy::NONE))
+          : nullptr;
 
   auto &OpcodeInstMap = InfoCache.getOpcodeInstMapForFunction(*Fn);
-  if (!checkForAllInstructionsImpl(this, OpcodeInstMap, Pred, &QueryingAA,
+  if (!checkForAllInstructionsImpl(this, OpcodeInstMap, Pred, QueryingAA,
                                    LivenessAA, Opcodes, UsedAssumedInformation,
                                    CheckBBLivenessOnly, CheckPotentiallyDead))
     return false;
@@ -1999,7 +1999,7 @@ bool Attributor::checkForAllInstructions(function_ref<bool(Instruction &)> Pred,
                                          bool CheckPotentiallyDead) {
   const IRPosition &IRP = QueryingAA.getIRPosition();
   const Function *AssociatedFunction = IRP.getAssociatedFunction();
-  return checkForAllInstructions(Pred, AssociatedFunction, QueryingAA, Opcodes,
+  return checkForAllInstructions(Pred, AssociatedFunction, &QueryingAA, Opcodes,
                                  UsedAssumedInformation, CheckBBLivenessOnly,
                                  CheckPotentiallyDead);
 }
@@ -2964,6 +2964,18 @@ ChangeStatus Attributor::rewriteFunctionSignatures(
         NewArgumentAttributes));
     AttributeFuncs::updateMinLegalVectorWidthAttr(*NewFn, LargestVectorWidth);
 
+    // Remove argmem from the memory effects if we have no more pointer
+    // arguments, or they are readnone.
+    MemoryEffects ME = NewFn->getMemoryEffects();
+    int ArgNo = -1;
+    if (ME.doesAccessArgPointees() && all_of(NewArgumentTypes, [&](Type *T) {
+          ++ArgNo;
+          return !T->isPtrOrPtrVectorTy() ||
+                 NewFn->hasParamAttribute(ArgNo, Attribute::ReadNone);
+        })) {
+      NewFn->setMemoryEffects(ME - MemoryEffects::argMemOnly());
+    }
+
     // Since we have now created the new function, splice the body of the old
     // function right into the new function, leaving the old rotting hulk of the
     // function empty.
@@ -3285,6 +3297,9 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
   // Every function might be "will-return".
   checkAndQueryIRAttr<Attribute::WillReturn, AAWillReturn>(FPos, FnAttrs);
 
+  // Every function might be marked "nosync"
+  checkAndQueryIRAttr<Attribute::NoSync, AANoSync>(FPos, FnAttrs);
+
   // Everything that is visible from the outside (=function, argument, return
   // positions), cannot be changed if the function is not IPO amendable. We can
   // however analyse the code inside.
@@ -3292,9 +3307,6 @@ void Attributor::identifyDefaultAbstractAttributes(Function &F) {
 
     // Every function can be nounwind.
     checkAndQueryIRAttr<Attribute::NoUnwind, AANoUnwind>(FPos, FnAttrs);
-
-    // Every function might be marked "nosync"
-    checkAndQueryIRAttr<Attribute::NoSync, AANoSync>(FPos, FnAttrs);
 
     // Every function might be "no-return".
     checkAndQueryIRAttr<Attribute::NoReturn, AANoReturn>(FPos, FnAttrs);

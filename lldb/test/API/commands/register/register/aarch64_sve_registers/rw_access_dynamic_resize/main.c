@@ -1,6 +1,12 @@
 #include <pthread.h>
 #include <sys/prctl.h>
 
+#ifndef PR_SME_SET_VL
+#define PR_SME_SET_VL 63
+#endif
+
+#define SMSTART() asm volatile("msr  s0_3_c4_c7_3, xzr" /*smstart*/)
+
 static inline void write_sve_registers() {
   asm volatile("setffr\n\t");
   asm volatile("ptrue p0.b\n\t");
@@ -54,26 +60,41 @@ static inline void write_sve_registers() {
   asm volatile("cpy  z31.b, p15/z, #32\n\t");
 }
 
+int SET_VL_OPT = PR_SVE_SET_VL;
+
 void *threadX_func(void *x_arg) {
-  prctl(PR_SVE_SET_VL, 8 * 4);
+  prctl(SET_VL_OPT, 8 * 4);
+#ifdef USE_SSVE
+  SMSTART();
+#endif
   write_sve_registers();
   write_sve_registers(); // Thread X breakpoint 1
   return NULL;           // Thread X breakpoint 2
 }
 
 void *threadY_func(void *y_arg) {
-  prctl(PR_SVE_SET_VL, 8 * 2);
+  prctl(SET_VL_OPT, 8 * 2);
+#ifdef USE_SSVE
+  SMSTART();
+#endif
   write_sve_registers();
   write_sve_registers(); // Thread Y breakpoint 1
   return NULL;           // Thread Y breakpoint 2
 }
 
 int main() {
+#ifdef USE_SSVE
+  SET_VL_OPT = PR_SME_SET_VL;
+#endif
+
   /* this variable is our reference to the second thread */
   pthread_t x_thread, y_thread;
 
   /* Set vector length to 8 and write SVE registers values */
-  prctl(PR_SVE_SET_VL, 8 * 8);
+  prctl(SET_VL_OPT, 8 * 8);
+#ifdef USE_SSVE
+  SMSTART();
+#endif
   write_sve_registers();
 
   /* create a second thread which executes with argument x */

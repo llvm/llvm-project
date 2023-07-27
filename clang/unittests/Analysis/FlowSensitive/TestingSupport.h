@@ -457,7 +457,10 @@ inline Value *getFieldValue(const AggregateStorageLocation *Loc,
                             const ValueDecl &Field, const Environment &Env) {
   if (Loc == nullptr)
     return nullptr;
-  return Env.getValue(Loc->getChild(Field));
+  StorageLocation *FieldLoc = Loc->getChild(Field);
+  if (FieldLoc == nullptr)
+    return nullptr;
+  return Env.getValue(*FieldLoc);
 }
 
 /// Returns the value of a `Field` on a `Struct.
@@ -470,7 +473,10 @@ inline Value *getFieldValue(const StructValue *Struct, const ValueDecl &Field,
                             const Environment &Env) {
   if (Struct == nullptr)
     return nullptr;
-  return Struct->getChild(Field);
+  StorageLocation *FieldLoc = Struct->getChild(Field);
+  if (FieldLoc == nullptr)
+    return nullptr;
+  return Env.getValue(*FieldLoc);
 }
 
 /// Creates and owns constraints which are boolean values.

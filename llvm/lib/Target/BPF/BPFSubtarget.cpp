@@ -23,6 +23,17 @@ using namespace llvm;
 #define GET_SUBTARGETINFO_CTOR
 #include "BPFGenSubtargetInfo.inc"
 
+static cl::opt<bool> Disable_ldsx("disable-ldsx", cl::Hidden, cl::init(false),
+  cl::desc("Disable ldsx insns"));
+static cl::opt<bool> Disable_movsx("disable-movsx", cl::Hidden, cl::init(false),
+  cl::desc("Disable movsx insns"));
+static cl::opt<bool> Disable_bswap("disable-bswap", cl::Hidden, cl::init(false),
+  cl::desc("Disable bswap insns"));
+static cl::opt<bool> Disable_sdiv_smod("disable-sdiv-smod", cl::Hidden,
+  cl::init(false), cl::desc("Disable sdiv/smod insns"));
+static cl::opt<bool> Disable_gotol("disable-gotol", cl::Hidden, cl::init(false),
+  cl::desc("Disable gotol insn"));
+
 void BPFSubtarget::anchor() {}
 
 BPFSubtarget &BPFSubtarget::initializeSubtargetDependencies(StringRef CPU,
@@ -38,6 +49,11 @@ void BPFSubtarget::initializeEnvironment() {
   HasJmp32 = false;
   HasAlu32 = false;
   UseDwarfRIS = false;
+  HasLdsx = false;
+  HasMovsx = false;
+  HasBswap = false;
+  HasSdivSmod = false;
+  HasGotol = false;
 }
 
 void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
@@ -53,6 +69,17 @@ void BPFSubtarget::initSubtargetFeatures(StringRef CPU, StringRef FS) {
     HasJmpExt = true;
     HasJmp32 = true;
     HasAlu32 = true;
+    return;
+  }
+  if (CPU == "v4") {
+    HasJmpExt = true;
+    HasJmp32 = true;
+    HasAlu32 = true;
+    HasLdsx = !Disable_ldsx;
+    HasMovsx = !Disable_movsx;
+    HasBswap = !Disable_bswap;
+    HasSdivSmod = !Disable_sdiv_smod;
+    HasGotol = !Disable_gotol;
     return;
   }
 }

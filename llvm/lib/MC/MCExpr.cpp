@@ -628,7 +628,14 @@ static void AttemptToFoldSymbolOffsetDifference(
   if ((&SecA != &SecB) && !Addrs)
     return;
 
-  if (Layout) {
+  // When layout is available, we can generally compute the difference using the
+  // getSymbolOffset path, which also avoids the possible slow fragment walk.
+  // However, linker relaxation may cause incorrect fold of A-B if A and B are
+  // separated by a linker-relaxable instruction. If the section contains
+  // instructions and InSet is false (not expressions in directive like
+  // .size/.fill), disable the fast path.
+  if (Layout && (InSet || !SecA.hasInstructions() ||
+                 !Asm->getContext().getTargetTriple().isRISCV())) {
     // If both symbols are in the same fragment, return the difference of their
     // offsets. canGetFragmentOffset(FA) may be false.
     if (FA == FB && !SA.isVariable() && !SB.isVariable()) {

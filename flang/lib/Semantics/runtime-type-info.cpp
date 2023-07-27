@@ -572,8 +572,7 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
                     procPtrComponents.size())}));
     // Compile the "vtable" of type-bound procedure bindings
     std::uint32_t specialBitSet{0};
-    bool isAbstractType{dtSymbol->attrs().test(Attr::ABSTRACT)};
-    if (!isAbstractType) {
+    if (!dtSymbol->attrs().test(Attr::ABSTRACT)) {
       std::vector<evaluate::StructureConstructor> bindings{
           DescribeBindings(dtScope, scope)};
       AddValue(dtValues, derivedTypeSchema_, bindingDescCompName,
@@ -630,12 +629,10 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
             !derivedTypeSpec->HasDefaultInitialization(false, false)));
     // Similarly, a flag to short-circuit destruction when not needed.
     AddValue(dtValues, derivedTypeSchema_, "nodestructionneeded"s,
-        IntExpr<1>(isAbstractType ||
-            (derivedTypeSpec && !derivedTypeSpec->HasDestruction())));
+        IntExpr<1>(derivedTypeSpec && !derivedTypeSpec->HasDestruction()));
     // Similarly, a flag to short-circuit finalization when not needed.
     AddValue(dtValues, derivedTypeSchema_, "nofinalizationneeded"s,
-        IntExpr<1>(isAbstractType ||
-            (derivedTypeSpec && !IsFinalizable(*derivedTypeSpec))));
+        IntExpr<1>(derivedTypeSpec && !IsFinalizable(*derivedTypeSpec)));
   }
   dtObject.get<ObjectEntityDetails>().set_init(MaybeExpr{
       StructureExpr(Structure(derivedTypeSchema_, std::move(dtValues)))});

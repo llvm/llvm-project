@@ -232,6 +232,9 @@ private:
   /// Align consecutive declarations over all \c Changes.
   void alignChainedConditionals();
 
+  /// Align consecutive short case statements over all \c Changes.
+  void alignConsecutiveShortCaseStatements();
+
   /// Align trailing comments over all \c Changes.
   void alignTrailingComments();
 

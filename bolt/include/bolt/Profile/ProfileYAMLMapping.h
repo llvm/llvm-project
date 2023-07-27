@@ -187,6 +187,7 @@ struct BinaryProfileHeader {
   // Type of the profile.
   std::string Origin;     // How the profile was obtained.
   std::string EventNames; // Events used for sample profile.
+  bool IsDFSOrder{true};  // Whether using DFS block order in function profile
 };
 } // end namespace bolt
 
@@ -198,6 +199,7 @@ template <> struct MappingTraits<bolt::BinaryProfileHeader> {
     YamlIO.mapRequired("profile-flags", Header.Flags);
     YamlIO.mapOptional("profile-origin", Header.Origin);
     YamlIO.mapOptional("profile-events", Header.EventNames);
+    YamlIO.mapOptional("dfs-order", Header.IsDFSOrder);
   }
 };
 

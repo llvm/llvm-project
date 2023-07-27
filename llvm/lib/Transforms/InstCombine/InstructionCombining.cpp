@@ -912,8 +912,8 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
     if (IsTrueArm) {
       C = Constant::getNullValue(V->getType());
     } else if (IsZExt) {
-      C = Constant::getIntegerValue(
-          V->getType(), APInt(V->getType()->getIntegerBitWidth(), 1));
+      unsigned BitWidth = V->getType()->getScalarSizeInBits();
+      C = Constant::getIntegerValue(V->getType(), APInt(BitWidth, 1));
     } else {
       C = Constant::getAllOnesValue(V->getType());
     }

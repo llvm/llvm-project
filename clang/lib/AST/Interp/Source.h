@@ -71,6 +71,7 @@ public:
   SourceInfo(const Decl *D) : Source(D) {}
 
   SourceLocation getLoc() const;
+  SourceRange getRange() const;
 
   const Stmt *asStmt() const { return Source.dyn_cast<const Stmt *>(); }
   const Decl *asDecl() const { return Source.dyn_cast<const Decl *>(); }
@@ -96,6 +97,7 @@ public:
   const Expr *getExpr(const Function *F, CodePtr PC) const;
   /// Returns the location from which an opcode originates.
   SourceLocation getLocation(const Function *F, CodePtr PC) const;
+  SourceRange getRange(const Function *F, CodePtr PC) const;
 };
 
 } // namespace interp

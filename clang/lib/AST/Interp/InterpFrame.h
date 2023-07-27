@@ -118,6 +118,7 @@ public:
   virtual SourceInfo getSource(CodePtr PC) const;
   const Expr *getExpr(CodePtr PC) const;
   SourceLocation getLocation(CodePtr PC) const;
+  SourceRange getRange(CodePtr PC) const;
 
   unsigned getDepth() const { return Depth; }
 

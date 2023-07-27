@@ -3043,6 +3043,16 @@ TEST_F(FormatTestComments, AlignTrailingCommentsLeave) {
                    "// comment",
                    Style));
 
+  verifyFormat("namespace ns {\n"
+               "int i;\n"
+               "int j;\n"
+               "} // namespace ns",
+               "namespace ns {\n"
+               "int i;\n"
+               "int j;\n"
+               "}",
+               Style);
+
   // Allow to keep 2 empty lines
   Style.MaxEmptyLinesToKeep = 2;
   EXPECT_EQ("// do not touch\n"

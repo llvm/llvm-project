@@ -205,8 +205,8 @@ static bool hasInlineInfo(DWARFDie Die, uint32_t Depth) {
   return false;
 }
 
-static void parseInlineInfo(GsymCreator &Gsym, CUInfo &CUI, DWARFDie Die,
-                            uint32_t Depth, FunctionInfo &FI,
+static void parseInlineInfo(GsymCreator &Gsym, raw_ostream &Log, CUInfo &CUI,
+                            DWARFDie Die, uint32_t Depth, FunctionInfo &FI,
                             InlineInfo &parent) {
   if (!hasInlineInfo(Die, Depth))
     return;
@@ -220,10 +220,17 @@ static void parseInlineInfo(GsymCreator &Gsym, CUInfo &CUI, DWARFDie Die,
     Expected<DWARFAddressRangesVector> RangesOrError = Die.getAddressRanges();
     if (RangesOrError) {
       for (const DWARFAddressRange &Range : RangesOrError.get()) {
-        // Check that the inlined function is within the range of the function
-        // info, it might not be in case of split functions
-        if (FuncRange.LowPC <= Range.LowPC && Range.HighPC <= FuncRange.HighPC)
-          II.Ranges.insert(AddressRange(Range.LowPC, Range.HighPC));
+        // Check that the inlined function is within the any of the range the
+        // parent InlineInfo. If it isn't remove it!
+        AddressRange InlineRange(Range.LowPC, Range.HighPC);
+        if (parent.Ranges.contains(InlineRange)) {
+          II.Ranges.insert(InlineRange);
+        } else {
+          Log << "error: inlined function DIE at " << HEX32(Die.getOffset())
+            << " has a range [" << HEX64(Range.LowPC) << " - "
+            << HEX64(Range.HighPC) << ") that isn't contained in any parent "
+            << "address ranges, this inline range will be removed.\n";
+        }
       }
     }
     if (II.Ranges.empty())
@@ -236,14 +243,14 @@ static void parseInlineInfo(GsymCreator &Gsym, CUInfo &CUI, DWARFDie Die,
     II.CallLine = dwarf::toUnsigned(Die.find(dwarf::DW_AT_call_line), 0);
     // parse all children and append to parent
     for (DWARFDie ChildDie : Die.children())
-      parseInlineInfo(Gsym, CUI, ChildDie, Depth + 1, FI, II);
+      parseInlineInfo(Gsym, Log, CUI, ChildDie, Depth + 1, FI, II);
     parent.Children.emplace_back(std::move(II));
     return;
   }
   if (Tag == dwarf::DW_TAG_subprogram || Tag == dwarf::DW_TAG_lexical_block) {
     // skip this Die and just recurse down
     for (DWARFDie ChildDie : Die.children())
-      parseInlineInfo(Gsym, CUI, ChildDie, Depth + 1, FI, parent);
+      parseInlineInfo(Gsym, Log, CUI, ChildDie, Depth + 1, FI, parent);
   }
 }
 
@@ -413,7 +420,7 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
         FI.Inline = InlineInfo();
         FI.Inline->Name = *NameIndex;
         FI.Inline->Ranges.insert(FI.Range);
-        parseInlineInfo(Gsym, CUI, Die, 0, FI, *FI.Inline);
+        parseInlineInfo(Gsym, OS, CUI, Die, 0, FI, *FI.Inline);
       }
       Gsym.addFunctionInfo(std::move(FI));
     }

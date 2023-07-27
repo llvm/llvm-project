@@ -461,6 +461,7 @@ def VLENB  : RISCVReg<0, "vlenb">,
 def VCSR : RegisterClass<"RISCV", [XLenVT], 32,
                           (add VTYPE, VL, VLENB)> {
   let RegInfos = XLenRI;
+  let isAllocatable = 0;
 }
 
 

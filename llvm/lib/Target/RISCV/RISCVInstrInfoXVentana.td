@@ -33,4 +33,13 @@ def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, GPR:$rc)),
           (VT_MASKC GPR:$rs1, GPR:$rc)>;
 def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, GPR:$rc)),
           (VT_MASKCN GPR:$rs1, GPR:$rc)>;
+
+def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
+          (VT_MASKC GPR:$rs1, GPR:$rc)>;
+def : Pat<(XLenVT (riscv_czero_eqz GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
+          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
+def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_setne (XLenVT GPR:$rc)))),
+          (VT_MASKCN GPR:$rs1, GPR:$rc)>;
+def : Pat<(XLenVT (riscv_czero_nez GPR:$rs1, (riscv_seteq (XLenVT GPR:$rc)))),
+          (VT_MASKC GPR:$rs1, GPR:$rc)>;
 } // Predicates = [IsRV64, HasVendorXVentanaCondOps]

@@ -192,3 +192,18 @@ define bfloat @test_fadd_imm_1(bfloat %a) #0 {
   %r = fadd bfloat %a, 1.0
   ret bfloat %r
 }
+
+; CHECK-LABEL: test_select_cc_bf16_f64(
+; CHECK-DAG:      ld.param.f64    [[A:%fd[0-9]+]], [test_select_cc_bf16_f64_param_0];
+; CHECK-DAG:      ld.param.f64    [[B:%fd[0-9]+]], [test_select_cc_bf16_f64_param_1];
+; CHECK:          setp.lt.f64     [[P:%p[0-9]+]], [[A]], [[B]];
+; CHECK-DAG:      ld.param.b16    [[C:%rs[0-9]+]], [test_select_cc_bf16_f64_param_2];
+; CHECK-DAG:      ld.param.b16    [[D:%rs[0-9]+]], [test_select_cc_bf16_f64_param_3];
+; CHECK:          selp.b16        [[R:%rs[0-9]+]], [[C]], [[D]], [[P]];
+; CHECK-NEXT:     st.param.b16    [func_retval0+0], [[R]];
+; CHECK-NEXT:     ret;
+define bfloat @test_select_cc_bf16_f64(double %a, double %b, bfloat %c, bfloat %d) #0 {
+  %cc = fcmp olt double %a, %b
+  %r = select i1 %cc, bfloat %c, bfloat %d
+  ret bfloat %r
+}

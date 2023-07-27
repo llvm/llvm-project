@@ -493,9 +493,7 @@ constexpr const char *initTemplate = R"Py(
     attributes = {{}
     regions = None
     {1}
-    super().__init__(self.build_generic(
-      attributes=attributes, results=results, operands=operands,
-      successors=_ods_successors, regions=regions, loc=loc, ip=ip))
+    super().__init__(self.build_generic({2}))
 )Py";
 
 /// Template for appending a single element to the operand/result list.
@@ -755,17 +753,6 @@ _ods_derived_result_type = (
 /// Python code template appending {0} type {1} times to the results list.
 constexpr const char *appendSameResultsTemplate = "results.extend([{0}] * {1})";
 
-/// Python code template for inferring the operation results using the
-/// corresponding interface:
-///   - {0} is the name of the class for which the types are inferred.
-constexpr const char *inferTypeInterfaceTemplate =
-    R"PY(results = _ods_ir.InferTypeOpInterface({0}).inferReturnTypes(
-    operands=operands,
-    attributes=_ods_ir.DictAttr.get(attributes, context=_ods_context),
-    context=_ods_context,
-    loc=loc)
-)PY";
-
 /// Appends the given multiline string as individual strings into
 /// `builderLines`.
 static void appendLineByLine(StringRef string,
@@ -805,12 +792,8 @@ populateBuilderLinesResult(const Operator &op,
     return;
   }
 
-  if (hasInferTypeInterface(op)) {
-    appendLineByLine(
-        llvm::formatv(inferTypeInterfaceTemplate, op.getCppClassName()).str(),
-        builderLines);
+  if (hasInferTypeInterface(op))
     return;
-  }
 
   // For each element, find or generate a name.
   for (int i = 0, e = op.getNumResults(); i < e; ++i) {
@@ -934,8 +917,20 @@ static void emitDefaultOpBuilder(const Operator &op, raw_ostream &os) {
   }
   functionArgs.push_back("loc=None");
   functionArgs.push_back("ip=None");
+
+  SmallVector<std::string> initArgs;
+  initArgs.push_back("attributes=attributes");
+  if (!hasInferTypeInterface(op))
+    initArgs.push_back("results=results");
+  initArgs.push_back("operands=operands");
+  initArgs.push_back("successors=_ods_successors");
+  initArgs.push_back("regions=regions");
+  initArgs.push_back("loc=loc");
+  initArgs.push_back("ip=ip");
+
   os << llvm::formatv(initTemplate, llvm::join(functionArgs, ", "),
-                      llvm::join(builderLines, "\n    "));
+                      llvm::join(builderLines, "\n    "),
+                      llvm::join(initArgs, ", "));
 }
 
 static void emitSegmentSpec(

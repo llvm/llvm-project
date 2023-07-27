@@ -11658,7 +11658,8 @@ static void NoteSurrogateCandidate(Sema &S, OverloadCandidate *Cand) {
   if (isRValueReference) FnType = S.Context.getRValueReferenceType(FnType);
   if (isLValueReference) FnType = S.Context.getLValueReferenceType(FnType);
 
-  if (Cand->FailureKind == ovl_fail_constraints_not_satisfied) {
+  if (!Cand->Viable &&
+      Cand->FailureKind == ovl_fail_constraints_not_satisfied) {
     S.Diag(Cand->Surrogate->getLocation(),
            diag::note_ovl_surrogate_constraints_not_satisfied)
         << Cand->Surrogate;
