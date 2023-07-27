@@ -317,7 +317,7 @@ __device__ __attribute__((pure)) __2f16 __ocml_log_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log10_2f16(__2f16);
 __device__ __attribute__((pure)) __2f16 __ocml_log2_2f16(__2f16);
 
-#if HIP_VERSION_MAJOR * 100 + HIP_VERSION_MINOR >= 560 || 1
+#if HIP_VERSION_MAJOR * 100 + HIP_VERSION_MINOR >= 560
 #define __DEPRECATED_SINCE_HIP_560(X) __attribute__((deprecated(X)))
 #else
 #define __DEPRECATED_SINCE_HIP_560(X)
