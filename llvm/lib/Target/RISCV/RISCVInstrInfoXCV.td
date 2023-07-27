@@ -67,25 +67,17 @@ let Predicates = [HasVendorXCVbitmanip, IsRV32],
   def CV_CNT : CVBitManipR<0b0100100, "cv.cnt">;
 }
 
-class CVInstMac<bits<7> funct7, bits<3> funct3, dag outs, dag ins,
-                string opcodestr, string argstr, list<dag> pattern>
-    : RVInst<outs, ins, opcodestr, argstr, pattern, InstFormatOther> {
-  bits<5> rs2;
-  bits<5> rs1;
-  bits<5> rd;
-
-  let Inst{31-25} = funct7;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_CUSTOM_1.Value;
+class CVInstMac<bits<7> funct7, bits<3> funct3, string opcodestr>
+    : RVInstR<funct7, funct3, OPC_CUSTOM_1,
+              (outs GPR:$rd_wb), (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
+              opcodestr, "$rd, $rs1, $rs2"> {
   let DecoderNamespace = "XCVmac";
 }
 
-class CVInstMac16I<bits<2> funct2, bits<3> funct3, dag outs, dag ins,
-                   string opcodestr, string argstr, list<dag> pattern>
-    : RVInst<outs, ins, opcodestr, argstr, pattern, InstFormatOther> {
+class CVInstMacMulN<bits<2> funct2, bits<3> funct3, dag outs, dag ins,
+                    string opcodestr>
+    : RVInst<outs, ins, opcodestr, "$rd, $rs1, $rs2, $imm5",
+             [], InstFormatOther> {
   bits<5> imm5;
   bits<5> rs2;
   bits<5> rs1;
@@ -101,91 +93,62 @@ class CVInstMac16I<bits<2> funct2, bits<3> funct3, dag outs, dag ins,
   let DecoderNamespace = "XCVmac";
 }
 
+class CVInstMacN<bits<2> funct2, bits<3> funct3, string opcodestr>
+    : CVInstMacMulN<funct2, funct3, (outs GPR:$rd_wb),
+                    (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5), opcodestr>;
+
+class CVInstMulN<bits<2> funct2, bits<3> funct3, string opcodestr>
+    : CVInstMacMulN<funct2, funct3, (outs GPR:$rd),
+                    (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5), opcodestr>;
+
 let Predicates = [HasVendorXCVmac, IsRV32], hasSideEffects = 0, mayLoad = 0,
     mayStore = 0, Constraints = "$rd = $rd_wb" in {
   // 32x32 bit macs
-  def CV_MAC      : CVInstMac<0b1001000, 0b011, (outs GPR:$rd_wb),
-                              (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
-                              "cv.mac", "$rd, $rs1, $rs2", []>,
+  def CV_MAC      : CVInstMac<0b1001000, 0b011, "cv.mac">,
                     Sched<[]>;
-  def CV_MSU      : CVInstMac<0b1001001, 0b011, (outs GPR:$rd_wb),
-                              (ins GPR:$rd, GPR:$rs1, GPR:$rs2),
-                              "cv.msu", "$rd, $rs1, $rs2", []>,
+  def CV_MSU      : CVInstMac<0b1001001, 0b011, "cv.msu">,
                     Sched<[]>;
 
   // Signed 16x16 bit macs with imm
-  def CV_MACSN    : CVInstMac16I<0b00, 0b110, (outs GPR:$rd_wb),
-                                 (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.macsn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MACSN    : CVInstMacN<0b00, 0b110, "cv.macsn">,
                     Sched<[]>;
-  def CV_MACHHSN  : CVInstMac16I<0b01, 0b110, (outs GPR:$rd_wb),
-                                 (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.machhsn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MACHHSN  : CVInstMacN<0b01, 0b110, "cv.machhsn">,
                     Sched<[]>;
-  def CV_MACSRN   : CVInstMac16I<0b10, 0b110, (outs GPR:$rd_wb),
-                                 (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.macsrn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MACSRN   : CVInstMacN<0b10, 0b110, "cv.macsrn">,
                     Sched<[]>;
-  def CV_MACHHSRN : CVInstMac16I<0b11, 0b110, (outs GPR:$rd_wb),
-                                 (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.machhsrn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MACHHSRN : CVInstMacN<0b11, 0b110, "cv.machhsrn">,
                     Sched<[]>;
 
   // Unsigned 16x16 bit macs with imm
-  def CV_MACUN    : CVInstMac16I<0b00, 0b111, (outs GPR:$rd_wb),
-                                 (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.macun", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MACUN    : CVInstMacN<0b00, 0b111, "cv.macun">,
                     Sched<[]>;
-  def CV_MACHHUN  : CVInstMac16I<0b01, 0b111, (outs GPR:$rd_wb),
-                                 (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.machhun", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MACHHUN  : CVInstMacN<0b01, 0b111, "cv.machhun">,
                     Sched<[]>;
-  def CV_MACURN   : CVInstMac16I<0b10, 0b111, (outs GPR:$rd_wb),
-                                 (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.macurn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MACURN   : CVInstMacN<0b10, 0b111, "cv.macurn">,
                     Sched<[]>;
-  def CV_MACHHURN : CVInstMac16I<0b11, 0b111, (outs GPR:$rd_wb),
-                                 (ins GPR:$rd, GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.machhurn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MACHHURN : CVInstMacN<0b11, 0b111, "cv.machhurn">,
                     Sched<[]>;
 } // Predicates = [HasVendorXCVmac, IsRV32], hasSideEffects = 0, mayLoad = 0...
 
 let Predicates = [HasVendorXCVmac, IsRV32], hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
   // Signed 16x16 bit muls with imm
-  def CV_MULSN    : CVInstMac16I<0b00, 0b100, (outs GPR:$rd),
-                                 (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.mulsn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MULSN    : CVInstMulN<0b00, 0b100, "cv.mulsn">,
                     Sched<[]>;
-  def CV_MULHHSN  : CVInstMac16I<0b01, 0b100, (outs GPR:$rd),
-                                 (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.mulhhsn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MULHHSN  : CVInstMulN<0b01, 0b100, "cv.mulhhsn">,
                     Sched<[]>;
-  def CV_MULSRN   : CVInstMac16I<0b10, 0b100, (outs GPR:$rd),
-                                 (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.mulsrn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MULSRN   : CVInstMulN<0b10, 0b100, "cv.mulsrn">,
                     Sched<[]>;
-  def CV_MULHHSRN : CVInstMac16I<0b11, 0b100, (outs GPR:$rd),
-                                 (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.mulhhsrn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MULHHSRN : CVInstMulN<0b11, 0b100, "cv.mulhhsrn">,
                     Sched<[]>;
-
 
   // Unsigned 16x16 bit muls with imm
-  def CV_MULUN    : CVInstMac16I<0b00, 0b101, (outs GPR:$rd),
-                                 (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.mulun", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MULUN    : CVInstMulN<0b00, 0b101, "cv.mulun">,
                     Sched<[]>;
-  def CV_MULHHUN  : CVInstMac16I<0b01, 0b101, (outs GPR:$rd),
-                                 (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.mulhhun", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MULHHUN  : CVInstMulN<0b01, 0b101, "cv.mulhhun">,
                     Sched<[]>;
-  def CV_MULURN   : CVInstMac16I<0b10, 0b101, (outs GPR:$rd),
-                                 (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.mulurn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MULURN   : CVInstMulN<0b10, 0b101, "cv.mulurn">,
                     Sched<[]>;
-  def CV_MULHHURN : CVInstMac16I<0b11, 0b101, (outs GPR:$rd),
-                                 (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                                 "cv.mulhhurn", "$rd, $rs1, $rs2, $imm5", []>,
+  def CV_MULHHURN : CVInstMulN<0b11, 0b101, "cv.mulhhurn">,
                     Sched<[]>;
 } // Predicates = [HasVendorXCVmac, IsRV32], hasSideEffects = 0, mayLoad = 0...
 

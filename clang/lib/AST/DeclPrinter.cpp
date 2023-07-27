@@ -327,11 +327,12 @@ void DeclPrinter::PrintConstructorInitializers(CXXConstructorDecl *CDecl,
       Out << QualType(BMInitializer->getBaseClass(), 0).getAsString(Policy);
     }
 
-    Out << "(";
-    if (!BMInitializer->getInit()) {
-      // Nothing to print
-    } else {
-      Expr *Init = BMInitializer->getInit();
+    if (Expr *Init = BMInitializer->getInit()) {
+      bool OutParens = !isa<InitListExpr>(Init);
+
+      if (OutParens)
+        Out << "(";
+
       if (ExprWithCleanups *Tmp = dyn_cast<ExprWithCleanups>(Init))
         Init = Tmp->getSubExpr();
 
@@ -365,8 +366,13 @@ void DeclPrinter::PrintConstructorInitializers(CXXConstructorDecl *CDecl,
                                &Context);
         }
       }
+
+      if (OutParens)
+        Out << ")";
+    } else {
+      Out << "()";
     }
-    Out << ")";
+
     if (BMInitializer->isPackExpansion())
       Out << "...";
   }

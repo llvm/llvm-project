@@ -238,7 +238,7 @@ auto isComparisonOperatorCall(L lhs_arg_matcher, R rhs_arg_matcher) {
 
 /// Ensures that `Expr` is mapped to a `BoolValue` and returns its formula.
 const Formula &forceBoolValue(Environment &Env, const Expr &Expr) {
-  auto *Value = cast_or_null<BoolValue>(Env.getValue(Expr, SkipPast::None));
+  auto *Value = cast_or_null<BoolValue>(Env.getValue(Expr));
   if (Value != nullptr)
     return Value->formula();
 
@@ -403,8 +403,7 @@ StorageLocation *maybeInitializeOptionalValueMember(QualType Q,
 void initializeOptionalReference(const Expr *OptionalExpr,
                                  const MatchFinder::MatchResult &,
                                  LatticeTransferState &State) {
-  if (auto *OptionalVal =
-          State.Env.getValue(*OptionalExpr, SkipPast::Reference)) {
+  if (auto *OptionalVal = State.Env.getValue(*OptionalExpr)) {
     if (OptionalVal->getProperty("has_value") == nullptr) {
       setHasValue(*OptionalVal, State.Env.makeAtomicBoolValue());
     }
@@ -430,7 +429,7 @@ bool isNonEmptyOptional(const Value &OptionalVal, const Environment &Env) {
 }
 
 Value *getValueBehindPossiblePointer(const Expr &E, const Environment &Env) {
-  Value *Val = Env.getValue(E, SkipPast::Reference);
+  Value *Val = Env.getValue(E);
   if (auto *PointerVal = dyn_cast_or_null<PointerValue>(Val))
     return Env.getValue(PointerVal->getPointeeLoc());
   return Val;
@@ -579,8 +578,7 @@ BoolValue &valueOrConversionHasValue(const FunctionDecl &F, const Expr &E,
 
   // This is a constructor/assignment call for `optional<T>` with argument of
   // type `optional<U>` such that `T` is constructible from `U`.
-  if (auto *HasValueVal =
-          getHasValue(State.Env, State.Env.getValue(E, SkipPast::Reference)))
+  if (auto *HasValueVal = getHasValue(State.Env, State.Env.getValue(E)))
     return *HasValueVal;
   return State.Env.makeAtomicBoolValue();
 }
@@ -714,10 +712,8 @@ void transferOptionalAndOptionalCmp(const clang::CXXOperatorCallExpr *CmpExpr,
   Environment &Env = State.Env;
   auto &A = Env.arena();
   auto *CmpValue = &forceBoolValue(Env, *CmpExpr);
-  if (auto *LHasVal = getHasValue(
-          Env, Env.getValue(*CmpExpr->getArg(0), SkipPast::Reference)))
-    if (auto *RHasVal = getHasValue(
-            Env, Env.getValue(*CmpExpr->getArg(1), SkipPast::Reference))) {
+  if (auto *LHasVal = getHasValue(Env, Env.getValue(*CmpExpr->getArg(0))))
+    if (auto *RHasVal = getHasValue(Env, Env.getValue(*CmpExpr->getArg(1)))) {
       if (CmpExpr->getOperator() == clang::OO_ExclaimEqual)
         CmpValue = &A.makeNot(*CmpValue);
       Env.addToFlowCondition(evaluateEquality(A, *CmpValue, LHasVal->formula(),
@@ -729,7 +725,7 @@ void transferOptionalAndValueCmp(const clang::CXXOperatorCallExpr *CmpExpr,
                                  const clang::Expr *E, Environment &Env) {
   auto &A = Env.arena();
   auto *CmpValue = &forceBoolValue(Env, *CmpExpr);
-  if (auto *HasVal = getHasValue(Env, Env.getValue(*E, SkipPast::Reference))) {
+  if (auto *HasVal = getHasValue(Env, Env.getValue(*E))) {
     if (CmpExpr->getOperator() == clang::OO_ExclaimEqual)
       CmpValue = &A.makeNot(*CmpValue);
     Env.addToFlowCondition(

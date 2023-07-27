@@ -1,12 +1,12 @@
 // RUN: %clang_cc1 -ast-print %s -o - -std=c++20 | FileCheck %s
 
-// CHECK: struct A {
-struct A {
-  // CHECK-NEXT: A();
-  A();
+// CHECK: struct DelegatingCtor1 {
+struct DelegatingCtor1 {
+  // CHECK-NEXT: DelegatingCtor1();
+  DelegatingCtor1();
 
-  // CHECK-NEXT: A(int) : A() {
-  A(int) : A() {
+  // CHECK-NEXT: DelegatingCtor1(int) : DelegatingCtor1() {
+  DelegatingCtor1(int) : DelegatingCtor1() {
     // CHECK-NEXT: }
   }
 
@@ -14,33 +14,72 @@ struct A {
 };
 
 
-// CHECK: struct B {
-struct B {
-  // CHECK-NEXT: template <typename Ty> B(Ty);
-  template <typename Ty> B(Ty);
+// CHECK: struct DelegatingCtor2 {
+struct DelegatingCtor2 {
+  // CHECK-NEXT: template <typename Ty> DelegatingCtor2(Ty);
+  template <typename Ty> DelegatingCtor2(Ty);
 
   // FIXME: Implicitly specialized method should not be output
-  // CHECK-NEXT: template<> B<float>(float);
+  // CHECK-NEXT: template<> DelegatingCtor2<float>(float);
 
-  // CHECK-NEXT: B(int X) : B((float)X) {
-  B(int X) : B((float)X) {
+  // CHECK-NEXT: DelegatingCtor2(int X) : DelegatingCtor2((float)X) {
+  DelegatingCtor2(int X) : DelegatingCtor2((float)X) {
   // CHECK-NEXT: }
   }
 
   // CHECK-NEXT: };
 };
 
-// CHECK: struct C {
-struct C {
+// CHECK: struct DelegatingCtor3 {
+struct DelegatingCtor3 {
   // FIXME: template <> should not be output
-  // CHECK: template <> C(auto);
-  C(auto);
+  // CHECK: template <> DelegatingCtor3(auto);
+  DelegatingCtor3(auto);
 
   // FIXME: Implicitly specialized method should not be output
-  // CHECK: template<> C<const char *>(const char *);
+  // CHECK: template<> DelegatingCtor3<const char *>(const char *);
 
-  // CHECK: C(int) : C("") {
-  C(int) : C("") {
+  // CHECK: DelegatingCtor3(int) : DelegatingCtor3("") {
+  DelegatingCtor3(int) : DelegatingCtor3("") {
+  // CHECK-NEXT: }
+  }
+
+  // CHECK-NEXT: };
+};
+
+// CHECK: struct CurlyCtorInit {
+struct CurlyCtorInit {
+  // CHECK-NEXT: struct A {
+  struct A {
+    // CHECK-NEXT: int x;
+    int x;
+  // CHECK-NEXT: };
+  };
+
+  // CHECK-NEXT: A a;
+  A a;
+  // CHECK-NEXT: int i;
+  int i;
+
+  // FIXME: /*implicit*/(int)0 should not be output
+  // CHECK-NEXT: CurlyCtorInit(int *) : a(), i(/*implicit*/(int)0) {
+  CurlyCtorInit(int *) : a(), i() {
+  // CHECK-NEXT: }
+  }
+
+  // CHECK-NEXT: CurlyCtorInit(int **) : a{}, i{} {
+  CurlyCtorInit(int **) : a{}, i{} {
+  // CHECK-NEXT: }
+  }
+
+  // CHECK-NEXT: CurlyCtorInit(int ***) : a({}), i(0) {
+  CurlyCtorInit(int ***) : a({}), i(0) {
+  // CHECK-NEXT: }
+  }
+
+  // FIXME: Implicit this should not be output
+  // CHECK-NEXT: CurlyCtorInit(int ****) : a({.x = 0}), i(this->a.x) {
+  CurlyCtorInit(int ****) : a({.x = 0}), i(a.x) {
   // CHECK-NEXT: }
   }
 

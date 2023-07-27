@@ -2896,9 +2896,10 @@ static unsigned replaceDominatedUsesWith(Value *From, Value *To,
   for (Use &U : llvm::make_early_inc_range(From->uses())) {
     if (!Dominates(Root, U))
       continue;
+    LLVM_DEBUG(dbgs() << "Replace dominated use of '";
+               From->printAsOperand(dbgs());
+               dbgs() << "' with " << *To << " in " << *U.getUser() << "\n");
     U.set(To);
-    LLVM_DEBUG(dbgs() << "Replace dominated use of '" << From->getName()
-                      << "' as " << *To << " in " << *U << "\n");
     ++Count;
   }
   return Count;

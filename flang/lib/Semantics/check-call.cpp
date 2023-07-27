@@ -298,7 +298,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       actualFirstSymbol && actualFirstSymbol->attrs().test(Attr::ASYNCHRONOUS)};
   bool actualIsVolatile{
       actualFirstSymbol && actualFirstSymbol->attrs().test(Attr::VOLATILE)};
-  if (const auto *derived{evaluate::GetDerivedTypeSpec(actualType.type())}) {
+  const auto *derived{evaluate::GetDerivedTypeSpec(actualType.type())};
+  if (derived && !derived->IsVectorType()) {
     if (dummy.type.type().IsAssumedType()) {
       if (!derived->parameters().empty()) { // 15.5.2.4(2)
         messages.Say(

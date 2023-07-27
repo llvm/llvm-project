@@ -1044,16 +1044,6 @@ public:
     return isCopyInstrImpl(MI);
   }
 
-  bool isFullCopyInstr(const MachineInstr &MI) const {
-    auto DestSrc = isCopyInstr(MI);
-    if (!DestSrc)
-      return false;
-
-    const MachineOperand *DestRegOp = DestSrc->Destination;
-    const MachineOperand *SrcRegOp = DestSrc->Source;
-    return !DestRegOp->getSubReg() && !SrcRegOp->getSubReg();
-  }
-
   /// If the specific machine instruction is an instruction that adds an
   /// immediate value and a physical register, and stores the result in
   /// the given physical register \c Reg, return a pair of the source
@@ -1968,13 +1958,6 @@ public:
     return false;
   }
 
-  /// Allows targets to use appropriate copy instruction while spilitting live
-  /// range of a register in register allocation.
-  virtual unsigned getLiveRangeSplitOpcode(Register Reg,
-                                           const MachineFunction &MF) const {
-    return TargetOpcode::COPY;
-  }
-
   /// During PHI eleimination lets target to make necessary checks and
   /// insert the copy to the PHI destination register in a target specific
   /// manner.
@@ -2131,6 +2114,9 @@ public:
                                         int64_t &Offset) const {
     return false;
   }
+
+  // Get the call frame size just before MI.
+  unsigned getCallFrameSizeAt(MachineInstr &MI) const;
 
 private:
   mutable std::unique_ptr<MIRFormatter> Formatter;
