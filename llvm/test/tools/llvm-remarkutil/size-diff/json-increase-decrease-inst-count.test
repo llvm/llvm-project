@@ -1,5 +1,5 @@
-RUN: llvm-remark-size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/1-func-2-instr-2-stack.yaml --parser=yaml  --report_style=json --pretty | FileCheck -strict-whitespace %s --check-prefix=INCREASE
-RUN: llvm-remark-size-diff %p/Inputs/1-func-2-instr-2-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml --parser=yaml  --report_style=json --pretty | FileCheck -strict-whitespace %s --check-prefix=DECREASE
+RUN: llvm-remarkutil size-diff %p/Inputs/1-func-1-instr-1-stack.yaml %p/Inputs/1-func-2-instr-2-stack.yaml --parser=yaml  --report_style=json --pretty | FileCheck -strict-whitespace %s --check-prefix=INCREASE
+RUN: llvm-remarkutil size-diff %p/Inputs/1-func-2-instr-2-stack.yaml %p/Inputs/1-func-1-instr-1-stack.yaml --parser=yaml  --report_style=json --pretty | FileCheck -strict-whitespace %s --check-prefix=DECREASE
 
 ; Test a size increase/decrease of one instruction + 1 stack byte.
 
