@@ -1,6 +1,12 @@
 #include <stdbool.h>
 #include <stdint.h>
 
+const uint64_t pattern = 0x1122334455667788;
+
+void expr_func() {
+  __asm__ volatile("msr tpidr_el0, %0" ::"r"(~pattern));
+}
+
 int main() {
   // Save tpidr to restore later.
   uint64_t tpidr = 0;
