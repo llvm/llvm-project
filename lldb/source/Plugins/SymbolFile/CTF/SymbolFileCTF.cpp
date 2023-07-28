@@ -317,11 +317,11 @@ uint32_t GetVLen(uint32_t data) {
 
 static uint32_t GetBytes(uint32_t bits) { return bits / sizeof(unsigned); }
 
-static clang::TagTypeKind TranslateRecordKind(SymbolFileCTF::TypeKind type) {
+static clang::TagTypeKind TranslateRecordKind(CTFType::Kind type) {
   switch (type) {
-  case SymbolFileCTF::TypeKind::eStruct:
+  case CTFType::Kind::eStruct:
     return clang::TTK_Struct;
-  case SymbolFileCTF::TypeKind::eUnion:
+  case CTFType::Kind::eUnion:
     return clang::TTK_Union;
   default:
     lldbassert(false && "Invalid record kind!");
@@ -329,19 +329,15 @@ static clang::TagTypeKind TranslateRecordKind(SymbolFileCTF::TypeKind type) {
   }
 }
 
-llvm::Expected<TypeSP> SymbolFileCTF::ParseInteger(lldb::offset_t &offset,
-                                                   lldb::user_id_t uid,
-                                                   llvm::StringRef name) {
-  const uint32_t vdata = m_data.GetU32(&offset);
-  const uint32_t bits = GetBits(vdata);
-  const uint32_t encoding = GetEncoding(vdata);
-
-  lldb::BasicType basic_type = TypeSystemClang::GetBasicTypeEnumeration(name);
+llvm::Expected<TypeSP>
+SymbolFileCTF::CreateInteger(const CTFInteger &ctf_integer) {
+  lldb::BasicType basic_type =
+      TypeSystemClang::GetBasicTypeEnumeration(ctf_integer.name);
   if (basic_type == eBasicTypeInvalid)
     return llvm::make_error<llvm::StringError>(
         llvm::formatv("unsupported integer type: no corresponding basic clang "
                       "type for '{0}'",
-                      name),
+                      ctf_integer.name),
         llvm::inconvertibleErrorCode());
 
   CompilerType compiler_type = m_ast->GetBasicType(basic_type);
@@ -353,104 +349,98 @@ llvm::Expected<TypeSP> SymbolFileCTF::ParseInteger(lldb::offset_t &offset,
       return llvm::make_error<llvm::StringError>(
           llvm::formatv(
               "Found compiler type for '{0}' but it's not an integer type: {1}",
-              name, compiler_type.GetDisplayTypeName().GetStringRef()),
+              ctf_integer.name,
+              compiler_type.GetDisplayTypeName().GetStringRef()),
           llvm::inconvertibleErrorCode());
 
     // Make sure the signing matches between the CTF and the compiler type.
-    const bool type_is_signed = (encoding & IntEncoding::eSigned);
+    const bool type_is_signed = (ctf_integer.encoding & IntEncoding::eSigned);
     if (compiler_type_is_signed != type_is_signed)
       return llvm::make_error<llvm::StringError>(
           llvm::formatv("Found integer compiler type for {0} but compiler type "
                         "is {1} and {0} is {2}",
-                        name, compiler_type_is_signed ? "signed" : "unsigned",
+                        ctf_integer.name,
+                        compiler_type_is_signed ? "signed" : "unsigned",
                         type_is_signed ? "signed" : "unsigned"),
           llvm::inconvertibleErrorCode());
   }
 
   Declaration decl;
-  return MakeType(uid, ConstString(name), GetBytes(bits), nullptr,
-                  LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
-                  compiler_type, lldb_private::Type::ResolveState::Full);
+  return MakeType(ctf_integer.uid, ConstString(ctf_integer.name),
+                  GetBytes(ctf_integer.bits), nullptr, LLDB_INVALID_UID,
+                  lldb_private::Type::eEncodingIsUID, decl, compiler_type,
+                  lldb_private::Type::ResolveState::Full);
 }
 
 llvm::Expected<lldb::TypeSP>
-SymbolFileCTF::ParseModifierType(lldb::offset_t &offset, lldb::user_id_t uid,
-                                 uint32_t kind, uint32_t type) {
-  TypeSP ref_type = GetTypeForUID(type);
+SymbolFileCTF::CreateModifier(const CTFModifier &ctf_modifier) {
+  Type *ref_type = ResolveTypeUID(ctf_modifier.type);
   if (!ref_type)
     return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Could not find modified type: {0}", type),
+        llvm::formatv("Could not find modified type: {0}", ctf_modifier.type),
         llvm::inconvertibleErrorCode());
 
   CompilerType compiler_type;
 
-  switch (kind) {
-  case TypeKind::ePointer:
+  switch (ctf_modifier.kind) {
+  case CTFType::ePointer:
     compiler_type = ref_type->GetFullCompilerType().GetPointerType();
     break;
-  case TypeKind::eConst:
+  case CTFType::eConst:
     compiler_type = ref_type->GetFullCompilerType().AddConstModifier();
     break;
-  case TypeKind::eVolatile:
+  case CTFType::eVolatile:
     compiler_type = ref_type->GetFullCompilerType().AddVolatileModifier();
     break;
-  case TypeKind::eRestrict:
+  case CTFType::eRestrict:
     compiler_type = ref_type->GetFullCompilerType().AddRestrictModifier();
     break;
   default:
     return llvm::make_error<llvm::StringError>(
-        llvm::formatv("ParseModifierType called with unsupported kind: {0}",
-                      kind),
+        llvm::formatv("ParseModifier called with unsupported kind: {0}",
+                      ctf_modifier.kind),
         llvm::inconvertibleErrorCode());
   }
 
   Declaration decl;
-  return MakeType(uid, ConstString(), 0, nullptr, LLDB_INVALID_UID,
+  return MakeType(ctf_modifier.uid, ConstString(), 0, nullptr, LLDB_INVALID_UID,
                   Type::eEncodingIsUID, decl, compiler_type,
                   lldb_private::Type::ResolveState::Full);
 }
 
-llvm::Expected<lldb::TypeSP> SymbolFileCTF::ParseTypedef(lldb::offset_t &offset,
-                                                         lldb::user_id_t uid,
-                                                         llvm::StringRef name,
-                                                         uint32_t type) {
-  TypeSP underlying_type = GetTypeForUID(type);
+llvm::Expected<lldb::TypeSP>
+SymbolFileCTF::CreateTypedef(const CTFTypedef &ctf_typedef) {
+  Type *underlying_type = ResolveTypeUID(ctf_typedef.type);
   if (!underlying_type)
     return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Could not find typedef underlying type: {0}", type),
+        llvm::formatv("Could not find typedef underlying type: {0}",
+                      ctf_typedef.type),
         llvm::inconvertibleErrorCode());
 
   CompilerType target_ast_type = underlying_type->GetFullCompilerType();
   clang::DeclContext *decl_ctx = m_ast->GetTranslationUnitDecl();
   CompilerType ast_typedef = target_ast_type.CreateTypedef(
-      name.data(), m_ast->CreateDeclContext(decl_ctx), 0);
+      ctf_typedef.name.data(), m_ast->CreateDeclContext(decl_ctx), 0);
 
   Declaration decl;
-  return MakeType(uid, ConstString(name), 0, nullptr, LLDB_INVALID_UID,
-                  lldb_private::Type::eEncodingIsUID, decl, ast_typedef,
-                  lldb_private::Type::ResolveState::Full);
+  return MakeType(ctf_typedef.uid, ConstString(ctf_typedef.name), 0, nullptr,
+                  LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID, decl,
+                  ast_typedef, lldb_private::Type::ResolveState::Full);
 }
 
-llvm::Expected<lldb::TypeSP> SymbolFileCTF::ParseArray(lldb::offset_t &offset,
-                                                       lldb::user_id_t uid,
-                                                       llvm::StringRef name) {
-  ctf_array_t ctf_array;
-  ctf_array.contents = m_data.GetU32(&offset);
-  ctf_array.index = m_data.GetU32(&offset);
-  ctf_array.nelems = m_data.GetU32(&offset);
-
-  TypeSP element_type = GetTypeForUID(ctf_array.contents);
+llvm::Expected<lldb::TypeSP>
+SymbolFileCTF::CreateArray(const CTFArray &ctf_array) {
+  Type *element_type = ResolveTypeUID(ctf_array.type);
   if (!element_type)
     return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Could not find array element type: {0}",
-                      ctf_array.contents),
+        llvm::formatv("Could not find array element type: {0}", ctf_array.type),
         llvm::inconvertibleErrorCode());
 
   std::optional<uint64_t> element_size = element_type->GetByteSize(nullptr);
   if (!element_size)
     return llvm::make_error<llvm::StringError>(
         llvm::formatv("could not get element size of type: {0}",
-                      ctf_array.contents),
+                      ctf_array.type),
         llvm::inconvertibleErrorCode());
 
   uint64_t size = ctf_array.nelems * *element_size;
@@ -460,149 +450,203 @@ llvm::Expected<lldb::TypeSP> SymbolFileCTF::ParseArray(lldb::offset_t &offset,
       /*is_gnu_vector*/ false);
 
   Declaration decl;
-  return MakeType(uid, ConstString(), size, nullptr, LLDB_INVALID_UID,
+  return MakeType(ctf_array.uid, ConstString(), size, nullptr, LLDB_INVALID_UID,
                   Type::eEncodingIsUID, decl, compiler_type,
                   lldb_private::Type::ResolveState::Full);
 }
 
-llvm::Expected<lldb::TypeSP> SymbolFileCTF::ParseEnum(lldb::offset_t &offset,
-                                                      lldb::user_id_t uid,
-                                                      llvm::StringRef name,
-                                                      uint32_t elements,
-                                                      uint32_t size) {
+llvm::Expected<lldb::TypeSP>
+SymbolFileCTF::CreateEnum(const CTFEnum &ctf_enum) {
   Declaration decl;
   CompilerType enum_type = m_ast->CreateEnumerationType(
-      name, m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(), decl,
-      m_ast->GetBasicType(eBasicTypeInt),
+      ctf_enum.name, m_ast->GetTranslationUnitDecl(), OptionalClangModuleID(),
+      decl, m_ast->GetBasicType(eBasicTypeInt),
       /*is_scoped=*/false);
 
-  for (uint32_t i = 0; i < elements; ++i) {
-    ctf_enum_t ctf_enum;
-    ctf_enum.name = m_data.GetU32(&offset);
-    ctf_enum.value = m_data.GetU32(&offset);
-
-    llvm::StringRef value_name = ReadString(ctf_enum.name);
-    const uint32_t value = ctf_enum.value;
-
+  for (const CTFEnum::Value &value : ctf_enum.values) {
     Declaration value_decl;
-    m_ast->AddEnumerationValueToEnumerationType(enum_type, value_decl,
-                                                value_name.data(), value, size);
+    m_ast->AddEnumerationValueToEnumerationType(
+        enum_type, value_decl, value.name.data(), value.value, ctf_enum.size);
   }
+  TypeSystemClang::CompleteTagDeclarationDefinition(enum_type);
 
-  return MakeType(uid, ConstString(), 0, nullptr, LLDB_INVALID_UID,
+  return MakeType(ctf_enum.uid, ConstString(), 0, nullptr, LLDB_INVALID_UID,
                   Type::eEncodingIsUID, decl, enum_type,
                   lldb_private::Type::ResolveState::Full);
 }
 
 llvm::Expected<lldb::TypeSP>
-SymbolFileCTF::ParseFunction(lldb::offset_t &offset, lldb::user_id_t uid,
-                             llvm::StringRef name, uint32_t num_args,
-                             uint32_t type) {
+SymbolFileCTF::CreateFunction(const CTFFunction &ctf_function) {
   std::vector<CompilerType> arg_types;
-  arg_types.reserve(num_args);
-
-  bool is_variadic = false;
-  for (uint32_t i = 0; i < num_args; ++i) {
-    const uint32_t arg_uid = m_data.GetU32(&offset);
-
-    // If the last argument is 0, this is a variadic function.
-    if (arg_uid == 0) {
-      is_variadic = true;
-      break;
-    }
-
-    if (TypeSP arg_type = GetTypeForUID(arg_uid))
+  for (uint32_t arg : ctf_function.args) {
+    if (Type *arg_type = ResolveTypeUID(arg))
       arg_types.push_back(arg_type->GetFullCompilerType());
   }
 
-  // If the number of arguments is odd, a single uint32_t of padding is inserted
-  // to maintain alignment.
-  if (num_args % 2 == 1)
-    m_data.GetU32(&offset);
-
-  TypeSP ret_type = GetTypeForUID(type);
+  Type *ret_type = ResolveTypeUID(ctf_function.return_type);
   if (!ret_type)
     return llvm::make_error<llvm::StringError>(
-        llvm::formatv("Could not find function return type: {0}", type),
+        llvm::formatv("Could not find function return type: {0}",
+                      ctf_function.return_type),
         llvm::inconvertibleErrorCode());
 
   CompilerType func_type = m_ast->CreateFunctionType(
       ret_type->GetFullCompilerType(), arg_types.data(), arg_types.size(),
-      is_variadic, 0, clang::CallingConv::CC_C);
+      ctf_function.variadic, 0, clang::CallingConv::CC_C);
 
   Declaration decl;
-  return MakeType(uid, ConstString(name), 0, nullptr, LLDB_INVALID_UID,
-                  Type::eEncodingIsUID, decl, func_type,
+  return MakeType(ctf_function.uid, ConstString(ctf_function.name), 0, nullptr,
+                  LLDB_INVALID_UID, Type::eEncodingIsUID, decl, func_type,
                   lldb_private::Type::ResolveState::Full);
 }
 
 llvm::Expected<lldb::TypeSP>
-SymbolFileCTF::ParseRecord(lldb::offset_t &offset, lldb::user_id_t uid,
-                           llvm::StringRef name, uint32_t kind, uint32_t fields,
-                           uint32_t size) {
-  const clang::TagTypeKind tag_kind =
-      TranslateRecordKind(static_cast<TypeKind>(kind));
+SymbolFileCTF::CreateRecord(const CTFRecord &ctf_record) {
+  const clang::TagTypeKind tag_kind = TranslateRecordKind(ctf_record.kind);
 
-  CompilerType union_type =
+  CompilerType record_type =
       m_ast->CreateRecordType(nullptr, OptionalClangModuleID(), eAccessPublic,
-                              name.data(), tag_kind, eLanguageTypeC);
+                              ctf_record.name.data(), tag_kind, eLanguageTypeC);
 
-  m_ast->StartTagDeclarationDefinition(union_type);
-  for (uint32_t i = 0; i < fields; ++i) {
-    ctf_member_t ctf_member;
-    ctf_member.name = m_data.GetU32(&offset);
-    ctf_member.type = m_data.GetU32(&offset);
-    ctf_member.offset = m_data.GetU16(&offset);
-    ctf_member.padding = m_data.GetU16(&offset);
-
-    llvm::StringRef member_name = ReadString(ctf_member.name);
-    const uint32_t member_type_uid = ctf_member.type;
-
-    if (TypeSP member_type = GetTypeForUID(member_type_uid)) {
-      const uint32_t member_size =
-          member_type->GetByteSize(nullptr).value_or(0);
-      TypeSystemClang::AddFieldToRecordType(union_type, member_name,
-                                            member_type->GetFullCompilerType(),
-                                            eAccessPublic, member_size);
+  m_ast->StartTagDeclarationDefinition(record_type);
+  for (const CTFRecord::Field &field : ctf_record.fields) {
+    if (Type *field_type = ResolveTypeUID(field.type)) {
+      const uint32_t field_size = field_type->GetByteSize(nullptr).value_or(0);
+      TypeSystemClang::AddFieldToRecordType(record_type, field.name,
+                                            field_type->GetFullCompilerType(),
+                                            eAccessPublic, field_size);
     }
   }
-  m_ast->CompleteTagDeclarationDefinition(union_type);
+  m_ast->CompleteTagDeclarationDefinition(record_type);
 
   Declaration decl;
-  return MakeType(uid, ConstString(name), size, nullptr, LLDB_INVALID_UID,
-                  lldb_private::Type::eEncodingIsUID, decl, union_type,
-                  lldb_private::Type::ResolveState::Full);
+  return MakeType(ctf_record.uid, ConstString(ctf_record.name), ctf_record.size,
+                  nullptr, LLDB_INVALID_UID, lldb_private::Type::eEncodingIsUID,
+                  decl, record_type, lldb_private::Type::ResolveState::Full);
 }
 
-llvm::Expected<TypeSP> SymbolFileCTF::ParseType(
-    lldb::offset_t &offset, lldb::user_id_t uid, llvm::StringRef name,
-    uint32_t kind, uint32_t variable_length, uint32_t type, uint32_t size) {
+llvm::Expected<TypeSP> SymbolFileCTF::CreateType(CTFType *ctf_type) {
+  if (!ctf_type)
+    return llvm::make_error<llvm::StringError>(
+        "cannot create type for unparsed type", llvm::inconvertibleErrorCode());
+
+  switch (ctf_type->kind) {
+  case CTFType::Kind::eInteger:
+    return CreateInteger(*static_cast<CTFInteger *>(ctf_type));
+  case CTFType::Kind::eConst:
+  case CTFType::Kind::ePointer:
+  case CTFType::Kind::eRestrict:
+  case CTFType::Kind::eVolatile:
+    return CreateModifier(*static_cast<CTFModifier *>(ctf_type));
+  case CTFType::Kind::eTypedef:
+    return CreateTypedef(*static_cast<CTFTypedef *>(ctf_type));
+  case CTFType::Kind::eArray:
+    return CreateArray(*static_cast<CTFArray *>(ctf_type));
+  case CTFType::Kind::eEnum:
+    return CreateEnum(*static_cast<CTFEnum *>(ctf_type));
+  case CTFType::Kind::eFunction:
+    return CreateFunction(*static_cast<CTFFunction *>(ctf_type));
+  case CTFType::Kind::eStruct:
+  case CTFType::Kind::eUnion:
+    return CreateRecord(*static_cast<CTFRecord *>(ctf_type));
+  case CTFType::Kind::eUnknown:
+  case CTFType::Kind::eFloat:
+  case CTFType::Kind::eForward:
+  case CTFType::Kind::eSlice:
+    return llvm::make_error<llvm::StringError>(
+        llvm::formatv("unsupported type (uid = {0}, name = {1}, kind = {2})",
+                      ctf_type->uid, ctf_type->name, ctf_type->kind),
+        llvm::inconvertibleErrorCode());
+  }
+}
+
+llvm::Expected<std::unique_ptr<CTFType>>
+SymbolFileCTF::ParseType(lldb::offset_t &offset, lldb::user_id_t uid) {
+  ctf_stype_t ctf_stype;
+  ctf_stype.name = m_data.GetU32(&offset);
+  ctf_stype.info = m_data.GetU32(&offset);
+  ctf_stype.size = m_data.GetU32(&offset);
+
+  llvm::StringRef name = ReadString(ctf_stype.name);
+  const uint32_t kind = GetKind(ctf_stype.info);
+  const uint32_t variable_length = GetVLen(ctf_stype.info);
+  const uint32_t type = ctf_stype.GetType();
+  const uint32_t size = ctf_stype.GetSize();
+
   switch (kind) {
-  case TypeKind::eInteger:
-    return ParseInteger(offset, uid, name);
+  case TypeKind::eInteger: {
+    const uint32_t vdata = m_data.GetU32(&offset);
+    const uint32_t bits = GetBits(vdata);
+    const uint32_t encoding = GetEncoding(vdata);
+    return std::make_unique<CTFInteger>(uid, name, bits, encoding);
+  }
   case TypeKind::eConst:
+    return std::make_unique<CTFConst>(uid, type);
   case TypeKind::ePointer:
+    return std::make_unique<CTFPointer>(uid, type);
   case TypeKind::eRestrict:
+    return std::make_unique<CTFRestrict>(uid, type);
   case TypeKind::eVolatile:
-    return ParseModifierType(offset, uid, kind, type);
+    return std::make_unique<CTFVolatile>(uid, type);
   case TypeKind::eTypedef:
-    return ParseTypedef(offset, uid, name, type);
-  case TypeKind::eArray:
-    return ParseArray(offset, uid, name);
-  case TypeKind::eEnum:
-    return ParseEnum(offset, uid, name, variable_length, size);
-  case TypeKind::eFunction:
-    return ParseFunction(offset, uid, name, variable_length, size);
+    return std::make_unique<CTFTypedef>(uid, name, type);
+  case TypeKind::eArray: {
+    const uint32_t type = m_data.GetU32(&offset);
+    const uint32_t index = m_data.GetU32(&offset);
+    const uint32_t nelems = m_data.GetU32(&offset);
+    return std::make_unique<CTFArray>(uid, name, type, index, nelems);
+  }
+  case TypeKind::eEnum: {
+    std::vector<CTFEnum::Value> values;
+    for (uint32_t i = 0; i < variable_length; ++i) {
+      const uint32_t value_name = m_data.GetU32(&offset);
+      const uint32_t value = m_data.GetU32(&offset);
+      values.emplace_back(ReadString(value_name), value);
+    }
+    return std::make_unique<CTFEnum>(uid, name, variable_length, size, values);
+  }
+  case TypeKind::eFunction: {
+    std::vector<uint32_t> args;
+    bool variadic = false;
+    for (uint32_t i = 0; i < variable_length; ++i) {
+      const uint32_t arg_uid = m_data.GetU32(&offset);
+      // If the last argument is 0, this is a variadic function.
+      if (arg_uid == 0) {
+        variadic = true;
+        break;
+      }
+      args.push_back(arg_uid);
+    }
+    // If the number of arguments is odd, a single uint32_t of padding is
+    // inserted to maintain alignment.
+    if (variable_length % 2 == 1)
+      m_data.GetU32(&offset);
+    return std::make_unique<CTFFunction>(uid, name, variable_length, type, args,
+                                         variadic);
+  }
   case TypeKind::eStruct:
-  case TypeKind::eUnion:
-    return ParseRecord(offset, uid, name, kind, variable_length, size);
+  case TypeKind::eUnion: {
+    std::vector<CTFRecord::Field> fields;
+    for (uint32_t i = 0; i < variable_length; ++i) {
+      const uint32_t field_name = m_data.GetU32(&offset);
+      const uint32_t type = m_data.GetU32(&offset);
+      const uint16_t field_offset = m_data.GetU16(&offset);
+      const uint16_t padding = m_data.GetU16(&offset);
+      fields.emplace_back(ReadString(field_name), type, field_offset, padding);
+    }
+    return std::make_unique<CTFRecord>(static_cast<CTFType::Kind>(kind), uid,
+                                       name, variable_length, size, fields);
+  }
+  case TypeKind::eUnknown:
+    return std::make_unique<CTFType>(static_cast<CTFType::Kind>(kind), uid,
+                                     name);
   case TypeKind::eFloat:
   case TypeKind::eForward:
   case TypeKind::eSlice:
-  case TypeKind::eUnknown:
     offset += (variable_length * sizeof(uint32_t));
     break;
   }
+
   return llvm::make_error<llvm::StringError>(
       llvm::formatv("unsupported type (name = {0}, kind = {1}, vlength = {2})",
                     name, kind, variable_length),
@@ -627,46 +671,25 @@ size_t SymbolFileCTF::ParseTypes(CompileUnit &cu) {
 
   lldb::user_id_t type_uid = 1;
   while (type_offset < type_offset_end) {
-    ctf_stype_t ctf_stype;
-    ctf_stype.name = m_data.GetU32(&type_offset);
-    ctf_stype.info = m_data.GetU32(&type_offset);
-    ctf_stype.size = m_data.GetU32(&type_offset);
-
-    llvm::StringRef name = ReadString(ctf_stype.name);
-    const uint32_t kind = GetKind(ctf_stype.info);
-    const uint32_t variable_length = GetVLen(ctf_stype.info);
-    const uint32_t type = ctf_stype.GetType();
-    const uint32_t size = ctf_stype.GetSize();
-
-    TypeSP type_sp;
-    llvm::Expected<TypeSP> type_or_error = ParseType(
-        type_offset, type_uid, name, kind, variable_length, type, size);
-    if (!type_or_error) {
+    llvm::Expected<std::unique_ptr<CTFType>> type_or_error =
+        ParseType(type_offset, type_uid);
+    if (type_or_error) {
+      m_ctf_types.emplace_back(std::move(*type_or_error));
+    } else {
+      m_ctf_types.emplace_back(std::unique_ptr<CTFType>());
       LLDB_LOG_ERROR(log, type_or_error.takeError(),
                      "Failed to parse type {1} at offset {2}: {0}", type_uid,
                      type_offset);
-    } else {
-      type_sp = *type_or_error;
-      if (log) {
-        StreamString ss;
-        type_sp->Dump(&ss, true);
-        LLDB_LOGV(log, "Adding type {0}: {1}", type_uid,
-                  llvm::StringRef(ss.GetString()).rtrim());
-      }
     }
-
-    AddTypeForUID(type_uid++, type_sp);
+    type_uid++;
   }
 
-  if (log) {
-    size_t skipped_types = 0;
-    for (auto &type : m_types) {
-      if (!type)
-        skipped_types++;
-    }
-    LLDB_LOG(log, "Parsed {0} CTF types ({1} skipped)", m_types.size(),
-             skipped_types);
-  }
+  LLDB_LOG(log, "Parsed {0} CTF types", m_ctf_types.size());
+
+  for (lldb::user_id_t uid = 1; uid < type_uid; ++uid)
+    ResolveTypeUID(uid);
+
+  LLDB_LOG(log, "Created {0} CTF types", m_types.size());
 
   return m_types.size();
 }
@@ -725,12 +748,12 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
         break;
       }
 
-      TypeSP arg_type = GetTypeForUID(arg_uid);
+      Type *arg_type = ResolveTypeUID(arg_uid);
       arg_types.push_back(arg_type->GetFullCompilerType());
     }
 
     if (symbol) {
-      TypeSP ret_type = GetTypeForUID(ret_uid);
+      Type *ret_type = ResolveTypeUID(ret_uid);
       AddressRange func_range =
           AddressRange(symbol->GetFileAddress(), symbol->GetByteSize(),
                        GetObjectFile()->GetModule()->GetSectionList());
@@ -744,7 +767,7 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
           MakeType(function_type_uid, symbol->GetName(), 0, nullptr,
                    LLDB_INVALID_UID, Type::eEncodingIsUID, decl, func_type,
                    lldb_private::Type::ResolveState::Full);
-      AddTypeForUID(function_type_uid, type_sp);
+      m_types[function_type_uid] = type_sp;
 
       // Create function.
       lldb::user_id_t func_uid = m_functions.size();
@@ -906,23 +929,40 @@ void SymbolFileCTF::AddSymbols(Symtab &symtab) {
   // We rely on the existing symbol table to map symbols to type.
 }
 
-void SymbolFileCTF::AddTypeForUID(lldb::user_id_t type_uid, lldb::TypeSP type) {
-  assert(type_uid == m_types.size() + 1);
-  m_types.emplace_back(type);
-}
-
-TypeSP SymbolFileCTF::GetTypeForUID(lldb::user_id_t type_uid) {
-  if (type_uid > m_types.size())
-    return {};
-
-  if (type_uid < 1)
-    return {};
-
-  return m_types[type_uid - 1];
-}
-
 lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {
-  return GetTypeForUID(type_uid).get();
+  auto find_result = m_types.find(type_uid);
+  if (find_result != m_types.end())
+    return find_result->second.get();
+
+  if (type_uid == 0 || type_uid > m_ctf_types.size())
+    return nullptr;
+
+  CTFType *ctf_type = m_ctf_types[type_uid - 1].get();
+  if (!ctf_type)
+    return nullptr;
+
+  m_types[type_uid] = TypeSP();
+  Log *log = GetLog(LLDBLog::Symbols);
+
+  llvm::Expected<TypeSP> type_or_error = CreateType(ctf_type);
+  if (!type_or_error) {
+    LLDB_LOG_ERROR(log, type_or_error.takeError(),
+                   "Failed to create type for {1}: {0}", ctf_type->uid);
+    return {};
+  }
+
+  TypeSP type_sp = *type_or_error;
+
+  if (log) {
+    StreamString ss;
+    type_sp->Dump(&ss, true);
+    LLDB_LOGV(log, "Adding type {0}: {1}", type_sp->GetID(),
+              llvm::StringRef(ss.GetString()).rtrim());
+  }
+
+  m_types[type_uid] = type_sp;
+
+  return type_sp.get();
 }
 
 void SymbolFileCTF::FindTypes(
@@ -936,7 +976,7 @@ void SymbolFileCTF::FindTypes(
   searched_symbol_files.insert(this);
 
   size_t matches = 0;
-  for (TypeSP type_sp : m_types) {
+  for (TypeSP type_sp : GetTypeList().Types()) {
     if (matches == max_matches)
       break;
     if (type_sp && type_sp->GetName() == name) {
@@ -952,7 +992,7 @@ void SymbolFileCTF::FindTypesByRegex(
   ParseTypes(*m_comp_unit_sp);
 
   size_t matches = 0;
-  for (TypeSP type_sp : m_types) {
+  for (TypeSP type_sp : GetTypeList().Types()) {
     if (matches == max_matches)
       break;
     if (type_sp && regex.Execute(type_sp->GetName()))
