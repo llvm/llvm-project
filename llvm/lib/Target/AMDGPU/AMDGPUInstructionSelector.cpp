@@ -159,11 +159,15 @@ bool AMDGPUInstructionSelector::selectCOPY(MachineInstr &I) const {
 
         // TODO: Skip masking high bits if def is known boolean.
 
+        bool IsSGPR = TRI.isSGPRClass(SrcRC);
         unsigned AndOpc =
-            TRI.isSGPRClass(SrcRC) ? AMDGPU::S_AND_B32 : AMDGPU::V_AND_B32_e32;
-        BuildMI(*BB, &I, DL, TII.get(AndOpc), MaskedReg)
+            IsSGPR ? AMDGPU::S_AND_B32 : AMDGPU::V_AND_B32_e32;
+        auto And = BuildMI(*BB, &I, DL, TII.get(AndOpc), MaskedReg)
             .addImm(1)
             .addReg(SrcReg);
+        if (IsSGPR)
+          And.setOperandDead(3); // Dead scc
+
         BuildMI(*BB, &I, DL, TII.get(AMDGPU::V_CMP_NE_U32_e64), DstReg)
             .addImm(0)
             .addReg(MaskedReg);
@@ -323,7 +327,8 @@ bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
       MachineInstr *Add =
         BuildMI(*BB, &I, DL, TII.get(Opc), DstReg)
         .add(I.getOperand(1))
-        .add(I.getOperand(2));
+        .add(I.getOperand(2))
+        .setOperandDead(3); // Dead scc
       I.eraseFromParent();
       return constrainSelectedInstRegOperands(*Add, TII, TRI, RBI);
     }
@@ -370,7 +375,8 @@ bool AMDGPUInstructionSelector::selectG_ADD_SUB(MachineInstr &I) const {
       .add(Lo2);
     BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_ADDC_U32), DstHi)
       .add(Hi1)
-      .add(Hi2);
+      .add(Hi2)
+      .setOperandDead(3); // Dead scc
   } else {
     const TargetRegisterClass *CarryRC = TRI.getWaveMaskRegClass();
     Register CarryReg = MRI->createVirtualRegister(CarryRC);
@@ -437,14 +443,18 @@ bool AMDGPUInstructionSelector::selectG_UADDO_USUBO_UADDE_USUBE(
   unsigned NoCarryOpc = IsAdd ? AMDGPU::S_ADD_U32 : AMDGPU::S_SUB_U32;
   unsigned CarryOpc = IsAdd ? AMDGPU::S_ADDC_U32 : AMDGPU::S_SUBB_U32;
 
-  BuildMI(*BB, &I, DL, TII.get(HasCarryIn ? CarryOpc : NoCarryOpc), Dst0Reg)
+  auto CarryInst = BuildMI(*BB, &I, DL, TII.get(HasCarryIn ? CarryOpc : NoCarryOpc), Dst0Reg)
     .add(I.getOperand(2))
     .add(I.getOperand(3));
-  BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), Dst1Reg)
-    .addReg(AMDGPU::SCC);
 
-  if (!MRI->getRegClassOrNull(Dst1Reg))
-    MRI->setRegClass(Dst1Reg, &AMDGPU::SReg_32RegClass);
+  if (MRI->use_nodbg_empty(Dst1Reg)) {
+    CarryInst.setOperandDead(3); // Dead scc
+  } else {
+    BuildMI(*BB, &I, DL, TII.get(AMDGPU::COPY), Dst1Reg)
+      .addReg(AMDGPU::SCC);
+    if (!MRI->getRegClassOrNull(Dst1Reg))
+      MRI->setRegClass(Dst1Reg, &AMDGPU::SReg_32RegClass);
+  }
 
   if (!RBI.constrainGenericRegister(Dst0Reg, AMDGPU::SReg_32RegClass, *MRI) ||
       !RBI.constrainGenericRegister(Src0Reg, AMDGPU::SReg_32RegClass, *MRI) ||
@@ -741,7 +751,8 @@ bool AMDGPUInstructionSelector::selectG_BUILD_VECTOR(MachineInstr &MI) const {
       // build_vector_trunc (lshr $src0, 16), 0 -> s_lshr_b32 $src0, 16
       auto MIB = BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_LSHR_B32), Dst)
                      .addReg(ShiftSrc0)
-                     .addImm(16);
+                     .addImm(16)
+                     .setOperandDead(3); // Dead scc
 
       MI.eraseFromParent();
       return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
@@ -1630,7 +1641,8 @@ bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
     Register M0Base = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
     BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::S_LSHL_B32), M0Base)
       .addReg(BaseOffset)
-      .addImm(16);
+      .addImm(16)
+      .setOperandDead(3); // Dead scc
 
     BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), AMDGPU::M0)
       .addReg(M0Base);
@@ -2195,7 +2207,8 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
       } else {
         BuildMI(*MBB, I, DL, TII.get(AMDGPU::S_LSHL_B32), TmpReg0)
           .addReg(HiReg)
-          .addImm(16);
+          .addImm(16)
+          .setOperandDead(3); // Dead scc
       }
 
       unsigned MovOpc = IsVALU ? AMDGPU::V_MOV_B32_e32 : AMDGPU::S_MOV_B32;
@@ -2204,12 +2217,17 @@ bool AMDGPUInstructionSelector::selectG_TRUNC(MachineInstr &I) const {
 
       BuildMI(*MBB, I, DL, TII.get(MovOpc), ImmReg)
         .addImm(0xffff);
-      BuildMI(*MBB, I, DL, TII.get(AndOpc), TmpReg1)
+      auto And = BuildMI(*MBB, I, DL, TII.get(AndOpc), TmpReg1)
         .addReg(LoReg)
         .addReg(ImmReg);
-      BuildMI(*MBB, I, DL, TII.get(OrOpc), DstReg)
+      auto Or = BuildMI(*MBB, I, DL, TII.get(OrOpc), DstReg)
         .addReg(TmpReg0)
         .addReg(TmpReg1);
+
+      if (!IsVALU) {
+        And.setOperandDead(3); // Dead scc
+        Or.setOperandDead(3); // Dead scc
+      }
     }
 
     I.eraseFromParent();
@@ -2354,7 +2372,8 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
       if (Signed) {
         BuildMI(MBB, I, DL, TII.get(AMDGPU::S_ASHR_I32), HiReg)
           .addReg(SrcReg, 0, SubReg)
-          .addImm(31);
+          .addImm(31)
+          .setOperandDead(3); // Dead scc
       } else {
         BuildMI(MBB, I, DL, TII.get(AMDGPU::S_MOV_B32), HiReg)
           .addImm(0);
@@ -2398,7 +2417,8 @@ bool AMDGPUInstructionSelector::selectG_SZA_EXT(MachineInstr &I) const {
     if (!Signed && shouldUseAndMask(SrcSize, Mask)) {
       BuildMI(MBB, I, DL, TII.get(AMDGPU::S_AND_B32), DstReg)
         .addReg(SrcReg)
-        .addImm(Mask);
+        .addImm(Mask)
+        .setOperandDead(3); // Dead scc
     } else {
       BuildMI(MBB, I, DL, TII.get(BFE32), DstReg)
         .addReg(SrcReg)
@@ -2532,7 +2552,8 @@ bool AMDGPUInstructionSelector::selectG_FNEG(MachineInstr &MI) const {
   unsigned Opc = Fabs ? AMDGPU::S_OR_B32 : AMDGPU::S_XOR_B32;
   BuildMI(*BB, &MI, DL, TII.get(Opc), OpReg)
     .addReg(HiReg)
-    .addReg(ConstReg);
+    .addReg(ConstReg)
+    .setOperandDead(3); // Dead scc
   BuildMI(*BB, &MI, DL, TII.get(AMDGPU::REG_SEQUENCE), Dst)
     .addReg(LoReg)
     .addImm(AMDGPU::sub0)
@@ -2573,7 +2594,8 @@ bool AMDGPUInstructionSelector::selectG_FABS(MachineInstr &MI) const {
   // TODO: Should this used S_BITSET0_*?
   BuildMI(*BB, &MI, DL, TII.get(AMDGPU::S_AND_B32), OpReg)
     .addReg(HiReg)
-    .addReg(ConstReg);
+    .addReg(ConstReg)
+    .setOperandDead(3); // Dead scc
   BuildMI(*BB, &MI, DL, TII.get(AMDGPU::REG_SEQUENCE), Dst)
     .addReg(LoReg)
     .addImm(AMDGPU::sub0)
@@ -2731,7 +2753,8 @@ bool AMDGPUInstructionSelector::selectG_BRCOND(MachineInstr &I) const {
       Register TmpReg = MRI->createVirtualRegister(TRI.getBoolRC());
       BuildMI(*BB, &I, DL, TII.get(Opcode), TmpReg)
           .addReg(CondReg)
-          .addReg(Exec);
+          .addReg(Exec)
+          .setOperandDead(3); // Dead scc
       CondReg = TmpReg;
     }
 
@@ -2794,7 +2817,8 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
       !CanCopyLow32 && !CanCopyHi32) {
     auto MIB = BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_AND_B64), DstReg)
       .addReg(SrcReg)
-      .addReg(MaskReg);
+      .addReg(MaskReg)
+      .setOperandDead(3); // Dead scc
     I.eraseFromParent();
     return constrainSelectedInstRegOperands(*MIB, TII, TRI, RBI);
   }
@@ -2817,9 +2841,12 @@ bool AMDGPUInstructionSelector::selectG_PTRMASK(MachineInstr &I) const {
     assert(MaskTy.getSizeInBits() == 32 &&
            "ptrmask should have been narrowed during legalize");
 
-    BuildMI(*BB, &I, DL, TII.get(NewOpc), DstReg)
+    auto NewOp = BuildMI(*BB, &I, DL, TII.get(NewOpc), DstReg)
       .addReg(SrcReg)
       .addReg(MaskReg);
+
+    if (!IsVGPR)
+      NewOp.setOperandDead(3); // Dead scc
     I.eraseFromParent();
     return true;
   }
@@ -3325,7 +3352,8 @@ bool AMDGPUInstructionSelector::selectWaveAddress(MachineInstr &MI) const {
   } else {
     BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHR_B32), DstReg)
       .addReg(SrcReg)
-      .addImm(Subtarget->getWavefrontSizeLog2());
+      .addImm(Subtarget->getWavefrontSizeLog2())
+      .setOperandDead(3); // Dead scc
   }
 
   const TargetRegisterClass &RC =
@@ -4114,7 +4142,8 @@ AMDGPUInstructionSelector::selectScratchSAddr(MachineOperand &Root) const {
 
       BuildMI(*BB, &I, DL, TII.get(AMDGPU::S_ADD_I32), SAddr)
           .addFrameIndex(FI)
-          .addReg(RHSDef->Reg);
+          .addReg(RHSDef->Reg)
+          .setOperandDead(3); // Dead scc
     }
   }
 
