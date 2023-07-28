@@ -121,6 +121,15 @@ static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_inf(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *F) {
+  const llvm::fltSemantics &TargetSemantics =
+      S.getCtx().getFloatTypeSemantics(F->getDecl()->getReturnType());
+
+  S.Stk.push<Floating>(Floating::getInf(TargetSemantics));
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
@@ -149,6 +158,20 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   case Builtin::BI__builtin_nansf16:
   case Builtin::BI__builtin_nansf128:
     if (interp__builtin_nan(S, OpPC, Frame, F, /*Signaling=*/true))
+      return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_huge_val:
+  case Builtin::BI__builtin_huge_valf:
+  case Builtin::BI__builtin_huge_vall:
+  case Builtin::BI__builtin_huge_valf16:
+  case Builtin::BI__builtin_huge_valf128:
+  case Builtin::BI__builtin_inf:
+  case Builtin::BI__builtin_inff:
+  case Builtin::BI__builtin_infl:
+  case Builtin::BI__builtin_inff16:
+  case Builtin::BI__builtin_inff128:
+    if (interp__builtin_inf(S, OpPC, Frame, F))
       return Ret<PT_Float>(S, OpPC, Dummy);
     break;
 
