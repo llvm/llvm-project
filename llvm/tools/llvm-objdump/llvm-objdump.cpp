@@ -516,11 +516,6 @@ static bool hasMappingSymbols(const ObjectFile &Obj) {
   return isArmElf(Obj) || isAArch64Elf(Obj) || isCSKYElf(Obj) ;
 }
 
-static bool isMappingSymbol(const SymbolInfoTy &Sym) {
-  return Sym.Name.startswith("$d") || Sym.Name.startswith("$x") ||
-         Sym.Name.startswith("$a") || Sym.Name.startswith("$t");
-}
-
 static void printRelocation(formatted_raw_ostream &OS, StringRef FileName,
                             const RelocationRef &Rel, uint64_t Address,
                             bool Is64Bits) {
@@ -1198,7 +1193,8 @@ static void dumpELFData(uint64_t SectionAddr, uint64_t Index, uint64_t End,
 }
 
 SymbolInfoTy objdump::createSymbolInfo(const ObjectFile &Obj,
-                                       const SymbolRef &Symbol) {
+                                       const SymbolRef &Symbol,
+                                       bool IsMappingSymbol) {
   const StringRef FileName = Obj.getFileName();
   const uint64_t Addr = unwrapOrError(Symbol.getAddress(), FileName);
   const StringRef Name = unwrapOrError(Symbol.getName(), FileName);
@@ -1214,11 +1210,13 @@ SymbolInfoTy objdump::createSymbolInfo(const ObjectFile &Obj,
                         isLabel(XCOFFObj, Symbol));
   } else if (Obj.isXCOFF()) {
     const SymbolRef::Type SymType = unwrapOrError(Symbol.getType(), FileName);
-    return SymbolInfoTy(Addr, Name, SymType, true);
-  } else
-    return SymbolInfoTy(Addr, Name,
-                        Obj.isELF() ? getElfSymbolType(Obj, Symbol)
-                                    : (uint8_t)ELF::STT_NOTYPE);
+    return SymbolInfoTy(Addr, Name, SymType, /*IsMappingSymbol=*/false,
+                        /*IsXCOFF=*/true);
+  } else {
+    uint8_t Type =
+        Obj.isELF() ? getElfSymbolType(Obj, Symbol) : (uint8_t)ELF::STT_NOTYPE;
+    return SymbolInfoTy(Addr, Name, Type, IsMappingSymbol);
+  }
 }
 
 static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
@@ -1434,6 +1432,7 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
   // Create a mapping from virtual address to symbol name.  This is used to
   // pretty print the symbols while disassembling.
   std::map<SectionRef, SectionSymbolsTy> AllSymbols;
+  std::map<SectionRef, SmallVector<MappingSymbolPair, 0>> AllMappingSymbols;
   SectionSymbolsTy AbsoluteSymbols;
   const StringRef FileName = Obj.getFileName();
   const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(&Obj);
@@ -1446,8 +1445,33 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
     if (NameOrErr->empty() && !(Obj.isXCOFF() && SymbolDescription))
       continue;
 
-    if (Obj.isELF() && getElfSymbolType(Obj, Symbol) == ELF::STT_SECTION)
+    if (Obj.isELF() &&
+        (cantFail(Symbol.getFlags()) & SymbolRef::SF_FormatSpecific)) {
+      // Symbol is intended not to be displayed by default (STT_FILE,
+      // STT_SECTION, or a mapping symbol). Ignore STT_SECTION symbols. We will
+      // synthesize a section symbol if no symbol is defined at offset 0.
+      //
+      // For a mapping symbol, store it within both AllSymbols and
+      // AllMappingSymbols. If --show-all-symbols is unspecified, its label will
+      // not be printed in disassembly listing.
+      if (getElfSymbolType(Obj, Symbol) != ELF::STT_SECTION &&
+          hasMappingSymbols(Obj)) {
+        section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
+        if (SecI != Obj.section_end()) {
+          uint64_t SectionAddr = SecI->getAddress();
+          uint64_t Address = cantFail(Symbol.getAddress());
+          StringRef Name = *NameOrErr;
+          if (Name.consume_front("$") && Name.size() &&
+              strchr("adtx", Name[0])) {
+            AllMappingSymbols[*SecI].emplace_back(Address - SectionAddr,
+                                                  Name[0]);
+            AllSymbols[*SecI].push_back(
+                createSymbolInfo(Obj, Symbol, /*MappingSymbol=*/true));
+          }
+        }
+      }
       continue;
+    }
 
     if (MachO) {
       // __mh_(execute|dylib|dylinker|bundle|preload|object)_header are special
@@ -1583,22 +1607,7 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
 
     // Get the list of all the symbols in this section.
     SectionSymbolsTy &Symbols = AllSymbols[Section];
-    std::vector<MappingSymbolPair> MappingSymbols;
-    if (hasMappingSymbols(Obj)) {
-      for (const auto &Symb : Symbols) {
-        uint64_t Address = Symb.Addr;
-        StringRef Name = Symb.Name;
-        if (Name.startswith("$d"))
-          MappingSymbols.emplace_back(Address - SectionAddr, 'd');
-        if (Name.startswith("$x"))
-          MappingSymbols.emplace_back(Address - SectionAddr, 'x');
-        if (Name.startswith("$a"))
-          MappingSymbols.emplace_back(Address - SectionAddr, 'a');
-        if (Name.startswith("$t"))
-          MappingSymbols.emplace_back(Address - SectionAddr, 't');
-      }
-    }
-
+    auto &MappingSymbols = AllMappingSymbols[Section];
     llvm::sort(MappingSymbols);
 
     ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(
@@ -1614,11 +1623,26 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
     StringRef SegmentName = getSegmentName(MachO, Section);
     StringRef SectionName = unwrapOrError(Section.getName(), Obj.getFileName());
     // If the section has no symbol at the start, just insert a dummy one.
-    if (Symbols.empty() || Symbols[0].Addr != 0) {
-      Symbols.insert(Symbols.begin(),
-                     createDummySymbolInfo(Obj, SectionAddr, SectionName,
-                                           Section.isText() ? ELF::STT_FUNC
-                                                            : ELF::STT_OBJECT));
+    // Without --show-all-symbols, also insert one if all symbols at the start
+    // are mapping symbols.
+    bool CreateDummy = Symbols.empty();
+    if (!CreateDummy) {
+      CreateDummy = true;
+      for (auto &Sym : Symbols) {
+        if (Sym.Addr != SectionAddr)
+          break;
+        if (!Sym.IsMappingSymbol || ShowAllSymbols)
+          CreateDummy = false;
+      }
+    }
+    if (CreateDummy) {
+      SymbolInfoTy Sym = createDummySymbolInfo(
+          Obj, SectionAddr, SectionName,
+          Section.isText() ? ELF::STT_FUNC : ELF::STT_OBJECT);
+      if (Obj.isXCOFF())
+        Symbols.insert(Symbols.begin(), Sym);
+      else
+        Symbols.insert(llvm::lower_bound(Symbols, Sym), Sym);
     }
 
     SmallString<40> Comments;
@@ -1719,7 +1743,7 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
         // disassembling this entire chunk of code.
         if (!FoundAny)
           continue;
-      } else {
+      } else if (!SymbolsHere[DisplaySymIndex].IsMappingSymbol) {
         // Otherwise, print whichever symbol at this location is last in the
         // Symbols array, because that array is pre-sorted in a way intended to
         // correlate with priority of which symbol to display.
@@ -1763,8 +1787,7 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
         outs() << SectionName << ":\n";
       }
 
-      outs() << '\n';
-
+      bool PrintedLabel = false;
       for (size_t i = 0; i < SymbolsHere.size(); ++i) {
         if (!SymsToPrint[i])
           continue;
@@ -1772,6 +1795,10 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
         const SymbolInfoTy &Symbol = SymbolsHere[i];
         const StringRef SymbolName = SymNamesHere[i];
 
+        if (!PrintedLabel) {
+          outs() << '\n';
+          PrintedLabel = true;
+        }
         if (LeadingAddr)
           outs() << format(Is64Bits ? "%016" PRIx64 " " : "%08" PRIx64 " ",
                            SectionAddr + Start + VMAAdjustment);
@@ -2026,7 +2053,7 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
                   --It;
                   // Skip mapping symbols to avoid possible ambiguity as they
                   // do not allow uniquely identifying the target address.
-                  if (!hasMappingSymbols(Obj) || !isMappingSymbol(*It)) {
+                  if (!It->IsMappingSymbol) {
                     TargetSym = &*It;
                     break;
                   }
