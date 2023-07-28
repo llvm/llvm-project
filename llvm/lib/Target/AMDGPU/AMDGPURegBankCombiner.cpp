@@ -20,6 +20,7 @@
 #include "llvm/CodeGen/GlobalISel/Combiner.h"
 #include "llvm/CodeGen/GlobalISel/CombinerHelper.h"
 #include "llvm/CodeGen/GlobalISel/CombinerInfo.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutor.h"
 #include "llvm/CodeGen/GlobalISel/GIMatchTableExecutorImpl.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
@@ -380,7 +381,7 @@ void AMDGPURegBankCombinerImpl::applyMed3(MachineInstr &MI,
 
 bool AMDGPURegBankCombinerImpl::matchRmUniformWF(
     MachineInstr &MI, RmUniformWFMatchInfo &MatchInfo) const {
-  auto IntrID = MI.getIntrinsicID();
+  auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
   Register Dst, WFReplaceReg;
 
   switch (IntrID) {

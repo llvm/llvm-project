@@ -543,16 +543,15 @@ public:
   };
 
 private:
-  // To track virtual VGPR + lane index for each subregister of the SGPR spilled
-  // to frameindex key during SILowerSGPRSpills pass.
+  // To track VGPR + lane index for each subregister of the SGPR spilled to
+  // frameindex key during SILowerSGPRSpills pass.
+  DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>> SGPRSpillToVGPRLanes;
+  // To track VGPR + lane index for spilling special SGPRs like Frame Pointer
+  // identified during PrologEpilogInserter.
   DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>>
-      SGPRSpillsToVirtualVGPRLanes;
-  // To track physical VGPR + lane index for CSR SGPR spills and special SGPRs
-  // like Frame Pointer identified during PrologEpilogInserter.
-  DenseMap<int, std::vector<SIRegisterInfo::SpilledReg>>
-      SGPRSpillsToPhysicalVGPRLanes;
-  unsigned NumVirtualVGPRSpillLanes = 0;
-  unsigned NumPhysicalVGPRSpillLanes = 0;
+      PrologEpilogSGPRSpillToVGPRLanes;
+  unsigned NumVGPRSpillLanes = 0;
+  unsigned NumVGPRPrologEpilogSpillLanes = 0;
   SmallVector<Register, 2> SpillVGPRs;
   using WWMSpillsMap = MapVector<Register, int>;
   // To track the registers used in instructions that can potentially modify the
@@ -598,10 +597,10 @@ private:
 private:
   Register VGPRForAGPRCopy;
 
-  bool allocateVirtualVGPRForSGPRSpills(MachineFunction &MF, int FI,
-                                        unsigned LaneIndex);
-  bool allocatePhysicalVGPRForSGPRSpills(MachineFunction &MF, int FI,
-                                         unsigned LaneIndex);
+  bool allocateVGPRForSGPRSpills(MachineFunction &MF, int FI,
+                                 unsigned LaneIndex);
+  bool allocateVGPRForPrologEpilogSGPRSpills(MachineFunction &MF, int FI,
+                                             unsigned LaneIndex);
 
 public:
   Register getVGPRForAGPRCopy() const {
@@ -633,9 +632,9 @@ public:
   SIModeRegisterDefaults getMode() const { return Mode; }
 
   ArrayRef<SIRegisterInfo::SpilledReg>
-  getSGPRSpillToVirtualVGPRLanes(int FrameIndex) const {
-    auto I = SGPRSpillsToVirtualVGPRLanes.find(FrameIndex);
-    return (I == SGPRSpillsToVirtualVGPRLanes.end())
+  getSGPRSpillToVGPRLanes(int FrameIndex) const {
+    auto I = SGPRSpillToVGPRLanes.find(FrameIndex);
+    return (I == SGPRSpillToVGPRLanes.end())
                ? ArrayRef<SIRegisterInfo::SpilledReg>()
                : ArrayRef(I->second);
   }
@@ -697,9 +696,9 @@ public:
   }
 
   ArrayRef<SIRegisterInfo::SpilledReg>
-  getSGPRSpillToPhysicalVGPRLanes(int FrameIndex) const {
-    auto I = SGPRSpillsToPhysicalVGPRLanes.find(FrameIndex);
-    return (I == SGPRSpillsToPhysicalVGPRLanes.end())
+  getPrologEpilogSGPRSpillToVGPRLanes(int FrameIndex) const {
+    auto I = PrologEpilogSGPRSpillToVGPRLanes.find(FrameIndex);
+    return (I == PrologEpilogSGPRSpillToVGPRLanes.end())
                ? ArrayRef<SIRegisterInfo::SpilledReg>()
                : ArrayRef(I->second);
   }
@@ -716,8 +715,6 @@ public:
 
     return VRegFlags.inBounds(Reg) && VRegFlags[Reg] & Flag;
   }
-
-  bool hasVRegFlags() { return VRegFlags.size(); }
 
   void allocateWWMSpill(MachineFunction &MF, Register VGPR, uint64_t Size = 4,
                         Align Alignment = Align(4));

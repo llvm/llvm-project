@@ -19,6 +19,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveVariables.h"
 #include "llvm/CodeGen/MachineDominators.h"
@@ -2385,14 +2386,6 @@ SIInstrInfo::expandMovDPP64(MachineInstr &MI) const {
   return std::pair(Split[0], Split[1]);
 }
 
-std::optional<DestSourcePair>
-SIInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
-  if (MI.getOpcode() == AMDGPU::WWM_COPY)
-    return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
-
-  return std::nullopt;
-}
-
 bool SIInstrInfo::swapSourceModifiers(MachineInstr &MI,
                                       MachineOperand &Src0,
                                       unsigned Src0OpName,
@@ -3059,7 +3052,6 @@ bool SIInstrInfo::isFoldableCopy(const MachineInstr &MI) {
   case AMDGPU::S_MOV_B32:
   case AMDGPU::S_MOV_B64:
   case AMDGPU::COPY:
-  case AMDGPU::WWM_COPY:
   case AMDGPU::V_ACCVGPR_WRITE_B32_e64:
   case AMDGPU::V_ACCVGPR_READ_B32_e64:
   case AMDGPU::V_ACCVGPR_MOV_B32:
@@ -5039,8 +5031,7 @@ void SIInstrInfo::insertScratchExecCopy(MachineFunction &MF,
                                         MachineBasicBlock &MBB,
                                         MachineBasicBlock::iterator MBBI,
                                         const DebugLoc &DL, Register Reg,
-                                        bool IsSCCLive,
-                                        SlotIndexes *Indexes) const {
+                                        bool IsSCCLive) const {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   const SIInstrInfo *TII = ST.getInstrInfo();
   bool IsWave32 = ST.isWave32();
@@ -5050,34 +5041,23 @@ void SIInstrInfo::insertScratchExecCopy(MachineFunction &MF,
     // the single instruction S_OR_SAVEEXEC that clobbers SCC.
     unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
     MCRegister Exec = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-    auto StoreExecMI = BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Reg)
-                           .addReg(Exec, RegState::Kill);
-    auto FlipExecMI = BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Exec).addImm(-1);
-    if (Indexes) {
-      Indexes->insertMachineInstrInMaps(*StoreExecMI);
-      Indexes->insertMachineInstrInMaps(*FlipExecMI);
-    }
+    BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Reg).addReg(Exec, RegState::Kill);
+    BuildMI(MBB, MBBI, DL, TII->get(MovOpc), Exec).addImm(-1);
   } else {
     const unsigned OrSaveExec =
         IsWave32 ? AMDGPU::S_OR_SAVEEXEC_B32 : AMDGPU::S_OR_SAVEEXEC_B64;
     auto SaveExec =
         BuildMI(MBB, MBBI, DL, TII->get(OrSaveExec), Reg).addImm(-1);
     SaveExec->getOperand(3).setIsDead(); // Mark SCC as dead.
-    if (Indexes)
-      Indexes->insertMachineInstrInMaps(*SaveExec);
   }
 }
 
 void SIInstrInfo::restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                               MachineBasicBlock::iterator MBBI,
-                              const DebugLoc &DL, Register Reg,
-                              SlotIndexes *Indexes) const {
+                              const DebugLoc &DL, Register Reg) const {
   unsigned ExecMov = isWave32() ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
   MCRegister Exec = isWave32() ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
-  auto ExecRestoreMI =
-      BuildMI(MBB, MBBI, DL, get(ExecMov), Exec).addReg(Reg, RegState::Kill);
-  if (Indexes)
-    Indexes->insertMachineInstrInMaps(*ExecRestoreMI);
+  BuildMI(MBB, MBBI, DL, get(ExecMov), Exec).addReg(Reg, RegState::Kill);
 }
 
 static const TargetRegisterClass *
@@ -8403,16 +8383,6 @@ SIInstrInfo::getSerializableMachineMemOperandTargetFlags() const {
   return ArrayRef(TargetFlags);
 }
 
-unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
-                                              const MachineFunction &MF) const {
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-  assert(SrcReg.isVirtual());
-  if (MFI->checkFlag(SrcReg, AMDGPU::VirtRegFlag::WWM_REG))
-    return AMDGPU::WWM_COPY;
-
-  return AMDGPU::COPY;
-}
-
 bool SIInstrInfo::isBasicBlockPrologue(const MachineInstr &MI) const {
   return !MI.isTerminator() && MI.getOpcode() != AMDGPU::COPY &&
          MI.modifiesRegister(AMDGPU::EXEC, &RI);
@@ -8985,7 +8955,7 @@ MachineInstr *SIInstrInfo::foldMemoryOperandImpl(
   // A similar issue also exists with spilling and reloading $exec registers.
   //
   // To prevent that, constrain the %0 register class here.
-  if (isFullCopyInstr(MI)) {
+  if (MI.isFullCopy()) {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
     if ((DstReg.isVirtual() || SrcReg.isVirtual()) &&
@@ -9026,9 +8996,8 @@ unsigned SIInstrInfo::getInstrLatency(const InstrItineraryData *ItinData,
 InstructionUniformity
 SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   unsigned opcode = MI.getOpcode();
-  if (opcode == AMDGPU::G_INTRINSIC ||
-      opcode == AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS) {
-    auto IID = static_cast<Intrinsic::ID>(MI.getIntrinsicID());
+  if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
+    auto IID = GI->getIntrinsicID();
     if (AMDGPU::isIntrinsicSourceOfDivergence(IID))
       return InstructionUniformity::NeverUniform;
     if (AMDGPU::isIntrinsicAlwaysUniform(IID))
@@ -9082,7 +9051,7 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
   if (opcode == AMDGPU::V_READLANE_B32 || opcode == AMDGPU::V_READFIRSTLANE_B32)
     return InstructionUniformity::AlwaysUniform;
 
-  if (isCopyInstr(MI)) {
+  if (MI.isCopy()) {
     const MachineOperand &srcOp = MI.getOperand(1);
     if (srcOp.isReg() && srcOp.getReg().isPhysical()) {
       const TargetRegisterClass *regClass =

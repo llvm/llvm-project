@@ -2748,7 +2748,8 @@ Instruction *InstCombinerImpl::visitUnconditionalBranchInst(BranchInst &BI) {
 
 // Under the assumption that I is unreachable, remove it and following
 // instructions.
-bool InstCombinerImpl::handleUnreachableFrom(Instruction *I) {
+bool InstCombinerImpl::handleUnreachableFrom(
+    Instruction *I, SmallVectorImpl<BasicBlock *> &Worklist) {
   bool Changed = false;
   BasicBlock *BB = I->getParent();
   for (Instruction &Inst : make_early_inc_range(
@@ -2774,8 +2775,41 @@ bool InstCombinerImpl::handleUnreachableFrom(Instruction *I) {
           Changed = true;
         }
 
-  // TODO: Successor blocks may also be dead.
+  // Handle potentially dead successors.
+  for (BasicBlock *Succ : successors(BB))
+    if (DeadEdges.insert({BB, Succ}).second)
+      Worklist.push_back(Succ);
   return Changed;
+}
+
+bool InstCombinerImpl::handlePotentiallyDeadBlocks(
+    SmallVectorImpl<BasicBlock *> &Worklist) {
+  bool Changed = false;
+  while (!Worklist.empty()) {
+    BasicBlock *BB = Worklist.pop_back_val();
+    if (!all_of(predecessors(BB), [&](BasicBlock *Pred) {
+          return DeadEdges.contains({Pred, BB}) || DT.dominates(BB, Pred);
+        }))
+      continue;
+
+    Changed |= handleUnreachableFrom(&BB->front(), Worklist);
+  }
+  return Changed;
+}
+
+bool InstCombinerImpl::handlePotentiallyDeadSuccessors(BasicBlock *BB,
+                                                       BasicBlock *LiveSucc) {
+  SmallVector<BasicBlock *> Worklist;
+  for (BasicBlock *Succ : successors(BB)) {
+    // The live successor isn't dead.
+    if (Succ == LiveSucc)
+      continue;
+
+    if (DeadEdges.insert({BB, Succ}).second)
+      Worklist.push_back(Succ);
+  }
+
+  return handlePotentiallyDeadBlocks(Worklist);
 }
 
 Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
@@ -2821,6 +2855,14 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
     return &BI;
   }
 
+  if (isa<UndefValue>(Cond) &&
+      handlePotentiallyDeadSuccessors(BI.getParent(), /*LiveSucc*/ nullptr))
+    return &BI;
+  if (auto *CI = dyn_cast<ConstantInt>(Cond))
+    if (handlePotentiallyDeadSuccessors(BI.getParent(),
+                                        BI.getSuccessor(!CI->getZExtValue())))
+      return &BI;
+
   return nullptr;
 }
 
@@ -2838,6 +2880,14 @@ Instruction *InstCombinerImpl::visitSwitchInst(SwitchInst &SI) {
     }
     return replaceOperand(SI, 0, Op0);
   }
+
+  if (isa<UndefValue>(Cond) &&
+      handlePotentiallyDeadSuccessors(SI.getParent(), /*LiveSucc*/ nullptr))
+    return &SI;
+  if (auto *CI = dyn_cast<ConstantInt>(Cond))
+    if (handlePotentiallyDeadSuccessors(
+            SI.getParent(), SI.findCaseValue(CI)->getCaseSuccessor()))
+      return &SI;
 
   KnownBits Known = computeKnownBits(Cond, 0, &SI);
   unsigned LeadingKnownZeros = Known.countMinLeadingZeros();
@@ -4133,15 +4183,21 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
     // Recursively visit successors.  If this is a branch or switch on a
     // constant, only visit the reachable successor.
     Instruction *TI = BB->getTerminator();
-    if (BranchInst *BI = dyn_cast<BranchInst>(TI)) {
-      if (BI->isConditional() && isa<ConstantInt>(BI->getCondition())) {
-        bool CondVal = cast<ConstantInt>(BI->getCondition())->getZExtValue();
+    if (BranchInst *BI = dyn_cast<BranchInst>(TI); BI && BI->isConditional()) {
+      if (isa<UndefValue>(BI->getCondition()))
+        // Branch on undef is UB.
+        continue;
+      if (auto *Cond = dyn_cast<ConstantInt>(BI->getCondition())) {
+        bool CondVal = Cond->getZExtValue();
         BasicBlock *ReachableBB = BI->getSuccessor(!CondVal);
         Worklist.push_back(ReachableBB);
         continue;
       }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
-      if (ConstantInt *Cond = dyn_cast<ConstantInt>(SI->getCondition())) {
+      if (isa<UndefValue>(SI->getCondition()))
+        // Switch on undef is UB.
+        continue;
+      if (auto *Cond = dyn_cast<ConstantInt>(SI->getCondition())) {
         Worklist.push_back(SI->findCaseValue(Cond)->getCaseSuccessor());
         continue;
       }

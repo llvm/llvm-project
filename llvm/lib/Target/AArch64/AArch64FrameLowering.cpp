@@ -2699,7 +2699,8 @@ static void computeCalleeSaveRegisterPairs(
     // Swift's async context is directly before FP, so allocate an extra
     // 8 bytes for it.
     if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() &&
-        RPI.Reg2 == AArch64::FP)
+        ((!IsWindows && RPI.Reg2 == AArch64::FP) ||
+         (IsWindows && RPI.Reg2 == AArch64::LR)))
       ByteOffset += StackFillDir * 8;
 
     assert(!(RPI.isScalable() && RPI.isPaired()) &&
@@ -2728,7 +2729,8 @@ static void computeCalleeSaveRegisterPairs(
     // The FP, LR pair goes 8 bytes into our expanded 24-byte slot so that the
     // Swift context can directly precede FP.
     if (NeedsFrameRecord && AFI->hasSwiftAsyncContext() &&
-        RPI.Reg2 == AArch64::FP)
+        ((!IsWindows && RPI.Reg2 == AArch64::FP) ||
+         (IsWindows && RPI.Reg2 == AArch64::LR)))
       Offset += 8;
     RPI.Offset = Offset / Scale;
 

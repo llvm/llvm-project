@@ -366,13 +366,6 @@ void AMDGPUTargetCodeGenInfo::setTargetAttributes(
   if (FD)
     setFunctionDeclAttributes(FD, F, M);
 
-  const bool IsHIPKernel =
-      M.getLangOpts().HIP && FD && FD->hasAttr<CUDAGlobalAttr>();
-
-  // TODO: This should be moved to language specific attributes instead.
-  if (IsHIPKernel)
-    F->addFnAttr("uniform-work-group-size", "true");
-
   if (M.getContext().getTargetInfo().allowAMDGPUUnsafeFPAtomics())
     F->addFnAttr("amdgpu-unsafe-fp-atomics", "true");
 

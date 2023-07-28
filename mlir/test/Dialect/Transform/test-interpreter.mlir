@@ -1684,15 +1684,18 @@ transform.sequence failures(propagate) {
 
 // CHECK-LABEL: func @test_annotation()
 //  CHECK-NEXT:   "test.annotate_me"()
+//  CHECK-SAME:                        any_attr = "example"
 //  CHECK-SAME:                        broadcast_attr = 2 : i64
 //  CHECK-SAME:                        new_attr = 1 : i32
 //  CHECK-SAME:                        unit_attr
 //  CHECK-NEXT:   "test.annotate_me"()
+//  CHECK-SAME:                        any_attr = "example"
 //  CHECK-SAME:                        broadcast_attr = 2 : i64
 //  CHECK-SAME:                        existing_attr = "test"
 //  CHECK-SAME:                        new_attr = 1 : i32
 //  CHECK-SAME:                        unit_attr
 //  CHECK-NEXT:   "test.annotate_me"()
+//  CHECK-SAME:                        any_attr = "example"
 //  CHECK-SAME:                        broadcast_attr = 2 : i64
 //  CHECK-SAME:                        new_attr = 1 : i32
 //  CHECK-SAME:                        unit_attr
@@ -1711,6 +1714,9 @@ transform.sequence failures(propagate) {
   %2 = transform.param.constant 2 -> !transform.param<i64>
   transform.annotate %0 "broadcast_attr" = %2 : !transform.any_op, !transform.param<i64>
   transform.annotate %0 "unit_attr" : !transform.any_op
+
+  %3 = transform.param.constant "example" -> !transform.any_param
+  transform.annotate %0 "any_attr" = %3 : !transform.any_op, !transform.any_param
 }
 
 // -----

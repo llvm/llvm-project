@@ -638,9 +638,22 @@ public:
   /// Total hotness score according to profiling data for this binary.
   uint64_t TotalScore{0};
 
-  /// Binary-wide stats for macro-fusion.
-  uint64_t MissedMacroFusionPairs{0};
-  uint64_t MissedMacroFusionExecCount{0};
+  /// Binary-wide aggregated stats.
+  struct BinaryStats {
+    /// Stats for macro-fusion.
+    uint64_t MissedMacroFusionPairs{0};
+    uint64_t MissedMacroFusionExecCount{0};
+
+    /// Stats for stale profile matching:
+    ///   the total number of basic blocks in the profile
+    uint32_t NumStaleBlocks{0};
+    ///   the number of matched basic blocks
+    uint32_t NumMatchedBlocks{0};
+    ///   the total count of samples in the profile
+    uint64_t StaleSampleCount{0};
+    ///   the count of matched samples
+    uint64_t MatchedSampleCount{0};
+  } Stats;
 
   // Address of the first allocated segment.
   uint64_t FirstAllocAddress{std::numeric_limits<uint64_t>::max()};

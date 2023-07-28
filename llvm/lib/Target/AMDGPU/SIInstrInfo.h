@@ -176,12 +176,6 @@ private:
   Register findUsedSGPR(const MachineInstr &MI, int OpIndices[3]) const;
 
 protected:
-  /// If the specific machine instruction is a instruction that moves/copies
-  /// value from one register to another register return destination and source
-  /// registers as machine operands.
-  std::optional<DestSourcePair>
-  isCopyInstrImpl(const MachineInstr &MI) const override;
-
   bool swapSourceModifiers(MachineInstr &MI,
                            MachineOperand &Src0, unsigned Src0OpName,
                            MachineOperand &Src1, unsigned Src1OpName) const;
@@ -871,7 +865,7 @@ public:
   }
 
   bool isVGPRCopy(const MachineInstr &MI) const {
-    assert(isCopyInstr(MI));
+    assert(MI.isCopy());
     Register Dest = MI.getOperand(0).getReg();
     const MachineFunction &MF = *MI.getParent()->getParent();
     const MachineRegisterInfo &MRI = MF.getRegInfo();
@@ -941,7 +935,7 @@ public:
     if (OpIdx >= MI.getDesc().NumOperands)
       return false;
 
-    if (isCopyInstr(MI)) {
+    if (MI.isCopy()) {
       unsigned Size = getOpSize(MI, OpIdx);
       assert(Size == 8 || Size == 4);
 
@@ -990,12 +984,12 @@ public:
 
   void insertScratchExecCopy(MachineFunction &MF, MachineBasicBlock &MBB,
                              MachineBasicBlock::iterator MBBI,
-                             const DebugLoc &DL, Register Reg, bool IsSCCLive,
-                             SlotIndexes *Indexes = nullptr) const;
+                             const DebugLoc &DL, Register Reg,
+                             bool IsSCCLive) const;
 
   void restoreExec(MachineFunction &MF, MachineBasicBlock &MBB,
                    MachineBasicBlock::iterator MBBI, const DebugLoc &DL,
-                   Register Reg, SlotIndexes *Indexes = nullptr) const;
+                   Register Reg) const;
 
   /// Return the correct register class for \p OpNo.  For target-specific
   /// instructions, this will return the register class that has been defined
@@ -1186,9 +1180,6 @@ public:
   ScheduleHazardRecognizer *
   CreateTargetMIHazardRecognizer(const InstrItineraryData *II,
                                  const ScheduleDAGMI *DAG) const override;
-
-  unsigned getLiveRangeSplitOpcode(Register Reg,
-                                   const MachineFunction &MF) const override;
 
   bool isBasicBlockPrologue(const MachineInstr &MI) const override;
 
