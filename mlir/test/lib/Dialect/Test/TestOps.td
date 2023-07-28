@@ -785,7 +785,7 @@ def OpWithShapedTypeInferTypeInterfaceOp : TEST_Op<"op_with_shaped_type_infer_ty
   let results = (outs AnyTensor);
 }
 
-def OpWithShapedTypeInferTypeAdaptorInterfaceOp : 
+def OpWithShapedTypeInferTypeAdaptorInterfaceOp :
       TEST_Op<"op_with_shaped_type_infer_type_adaptor_if",
               [InferTensorTypeAdaptorWithReify]> {
   let arguments = (ins AnyTensor:$operand1, AnyTensor:$operand2);
@@ -2601,6 +2601,10 @@ def TestVersionedOpA : TEST_Op<"versionedA"> {
    AnyI64Attr:$dims,
    BoolAttr:$modifier
   );
+
+  // Since we use properties to store attributes, we need a custom encoding
+  // reader/writer to handle versioning.
+  let useCustomPropertiesEncoding = 1;
 }
 
 def TestVersionedOpB : TEST_Op<"versionedB"> {
@@ -2742,6 +2746,51 @@ def TestOpWithNiceProperties : TEST_Op<"with_nice_properties"> {
   }];
 }
 
+def VersionedProperties : Property<"VersionedProperties"> {
+  let convertToAttribute = [{
+      getPropertiesAsAttribute($_ctxt, $_storage)
+  }];
+  let convertFromAttribute = [{
+    return setPropertiesFromAttribute($_storage, $_attr, $_diag);
+  }];
+  let hashProperty = [{
+    computeHash($_storage);
+  }];
+}
+
+def TestOpWithVersionedProperties : TEST_Op<"with_versioned_properties"> {
+  let assemblyFormat = "prop-dict attr-dict";
+  let arguments = (ins
+     VersionedProperties:$prop
+  );
+  let extraClassDeclaration = [{
+    void printProperties(::mlir::MLIRContext *ctx, ::mlir::OpAsmPrinter &p,
+                         const Properties &prop);
+    static ::mlir::ParseResult  parseProperties(::mlir::OpAsmParser &parser,
+                                     ::mlir::OperationState &result);
+    static ::mlir::LogicalResult readFromMlirBytecode(
+        ::mlir::DialectBytecodeReader &,
+        test::VersionedProperties &prop);
+    static void writeToMlirBytecode(
+        ::mlir::DialectBytecodeWriter &,
+        const test::VersionedProperties &prop);
+  }];
+  let extraClassDefinition = [{
+    void TestOpWithVersionedProperties::printProperties(::mlir::MLIRContext *ctx,
+            ::mlir::OpAsmPrinter &p, const Properties &prop) {
+      customPrintProperties(p, prop.prop);
+    }
+    ::mlir::ParseResult TestOpWithVersionedProperties::parseProperties(
+        ::mlir::OpAsmParser &parser,
+        ::mlir::OperationState &result) {
+      Properties &prop = result.getOrAddProperties<Properties>();
+      if (customParseProperties(parser, prop.prop))
+        return failure();
+      return success();
+    }
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Test Dataflow
 //===----------------------------------------------------------------------===//
@@ -2765,7 +2814,7 @@ def TestCallAndStoreOp : TEST_Op<"call_and_store",
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      SingleBlock]> {
-  let arguments = (ins 
+  let arguments = (ins
     Arg<AnyMemRef, "", [MemWrite]>:$address,
     BoolAttr:$store_before_region
   );
