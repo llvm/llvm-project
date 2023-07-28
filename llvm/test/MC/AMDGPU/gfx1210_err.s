@@ -9,3 +9,18 @@ s_set_vgpr_msb 16
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: s_set_vgpr_msb accepts values in range [0..15]
 // GFX1210-ERR: s_set_vgpr_msb 16
 // GFX1210-ERR:                ^
+
+s_load_b32 s4, s[2:3], 10 th:TH_LOAD_NT th:TH_LOAD_NT
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR: s_load_b32 s4, s[2:3], 10 th:TH_LOAD_NT th:TH_LOAD_NT
+// GFX1210-ERR:                                         ^
+
+s_load_b32 s4, s[2:3], 10 scope:SCOPE_SE scope:SCOPE_SE
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR: s_load_b32 s4, s[2:3], 10 scope:SCOPE_SE scope:SCOPE_SE
+// GFX1210-ERR:                                          ^
+
+s_load_b32 s4, s[2:3], 10 nv nv
+// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: invalid operand for instruction
+// GFX1210-ERR: s_load_b32 s4, s[2:3], 10 nv nv
+// GFX1210-ERR:                              ^

@@ -6441,31 +6441,54 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
   if (isGFX12Plus()) {
     SMLoc StringLoc = getLoc();
 
-    int64_t TH;
-    ParseStatus Res1 = parseTH(Operands, TH);
-    if (Res1.isFailure())
-      return Res1;
+    int64_t CPolVal = 0;
+    ParseStatus ResTH = ParseStatus::NoMatch;
+    ParseStatus ResScope = ParseStatus::NoMatch;
+    ParseStatus ResNV = ParseStatus::NoMatch;
 
-    int64_t Scope;
-    ParseStatus Res2 = parseScope(Operands, Scope);
-    if (Res2.isFailure())
-      return Res2;
+    for (;;) {
+      if (ResTH.isNoMatch()) {
+        int64_t TH;
+        ResTH = parseTH(Operands, TH);
+        if (ResTH.isFailure())
+          return ResTH;
+        if (ResTH.isSuccess()) {
+          CPolVal |= TH;
+          continue;
+        }
+      }
 
-    // NV bit exists on GFX12+, but does something starting from GFX1210.
-    // Allow parsing on all GFX12 and fail on validation for better diagnostics.
-    bool NV = false;
-    ParseStatus Res3 = ParseStatus::NoMatch;
-    if (trySkipId("nv")) {
-      NV = true;
-      Res3 = ParseStatus::Success;
-    } else if (trySkipId("no", "nv")) {
-      Res3 = ParseStatus::Success;
+      if (ResScope.isNoMatch()) {
+        int64_t Scope;
+        ResScope = parseScope(Operands, Scope);
+        if (ResScope.isFailure())
+          return ResScope;
+        if (ResScope.isSuccess()) {
+          CPolVal |= Scope;
+          continue;
+        }
+      }
+
+      // NV bit exists on GFX12+, but does something starting from GFX1210.
+      // Allow parsing on all GFX12 and fail on validation for better
+      // diagnostics.
+      if (ResNV.isNoMatch()) {
+        if (trySkipId("nv")) {
+          ResNV = ParseStatus::Success;
+          CPolVal |= CPol::NV;
+          continue;
+        } else if (trySkipId("no", "nv")) {
+          ResNV = ParseStatus::Success;
+          continue;
+        }
+      }
+
+      break;
     }
 
-    if (Res1.isNoMatch() && Res2.isNoMatch() && Res3.isNoMatch())
+    if (ResTH.isNoMatch() && ResScope.isNoMatch() && ResNV.isNoMatch())
       return ParseStatus::NoMatch;
 
-    int64_t CPolVal = (NV ? CPol::NV : 0) | Scope | TH;
     Operands.push_back(AMDGPUOperand::CreateImm(this, CPolVal, StringLoc,
                                                 AMDGPUOperand::ImmTyCPol));
     return ParseStatus::Success;
