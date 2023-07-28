@@ -637,6 +637,12 @@ func.func @test_extf_tensor(%arg0 : tensor<8x8xf32>) -> tensor<8x8xf64> {
   return %0 : tensor<8x8xf64>
 }
 
+// CHECK-LABEL: test_extf_tensor_encoding
+func.func @test_extf_tensor_encoding(%arg0 : tensor<8x8xf32, "foo">) -> tensor<8x8xf64, "foo"> {
+  %0 = arith.extf %arg0 : tensor<8x8xf32, "foo"> to tensor<8x8xf64, "foo">
+  return %0 : tensor<8x8xf64, "foo">
+}
+
 // CHECK-LABEL: test_extf_vector
 func.func @test_extf_vector(%arg0 : vector<8xf32>) -> vector<8xf64> {
   %0 = arith.extf %arg0 : vector<8xf32> to vector<8xf64>
@@ -950,6 +956,12 @@ func.func @test_cmpi_tensor(%arg0 : tensor<8x8xi64>, %arg1 : tensor<8x8xi64>) ->
   return %0 : tensor<8x8xi1>
 }
 
+// CHECK-LABEL: test_cmpi_tensor_encoding
+func.func @test_cmpi_tensor_encoding(%arg0 : tensor<8x8xi64, "foo">, %arg1 : tensor<8x8xi64, "foo">) -> tensor<8x8xi1, "foo"> {
+  %0 = arith.cmpi slt, %arg0, %arg1 : tensor<8x8xi64, "foo">
+  return %0 : tensor<8x8xi1, "foo">
+}
+
 // CHECK-LABEL: test_cmpi_vector
 func.func @test_cmpi_vector(%arg0 : vector<8xi64>, %arg1 : vector<8xi64>) -> vector<8xi1> {
   %0 = arith.cmpi ult, %arg0, %arg1 : vector<8xi64>
@@ -1102,4 +1114,19 @@ func.func @fastmath(%arg0: f32, %arg1: f32, %arg2: i32) {
   %8 = arith.mulf %arg0, %arg1 fastmath<reassoc,nnan,ninf,nsz,arcp,contract,afn> : f32
 
   return
+}
+
+// CHECK-LABEL: @select_tensor
+func.func @select_tensor(%arg0 : tensor<8xi1>, %arg1 : tensor<8xi32>, %arg2 : tensor<8xi32>) -> tensor<8xi32> {
+  // CHECK: = arith.select %{{.*}}, %{{.*}}, %{{.*}} : tensor<8xi1>, tensor<8xi32>
+  %0 = arith.select %arg0, %arg1, %arg2 : tensor<8xi1>, tensor<8xi32>
+  return %0 : tensor<8xi32>
+}
+
+// CHECK-LABEL: @select_tensor_encoding
+func.func @select_tensor_encoding(
+  %arg0 : tensor<8xi1, "foo">, %arg1 : tensor<8xi32, "foo">, %arg2 : tensor<8xi32, "foo">) -> tensor<8xi32, "foo"> {
+  // CHECK: = arith.select %{{.*}}, %{{.*}}, %{{.*}} : tensor<8xi1, "foo">, tensor<8xi32, "foo">
+  %0 = arith.select %arg0, %arg1, %arg2 : tensor<8xi1, "foo">, tensor<8xi32, "foo">
+  return %0 : tensor<8xi32, "foo">
 }
