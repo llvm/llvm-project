@@ -6008,12 +6008,6 @@ void Process::PrintWarningOptimization(const SymbolContext &sc) {
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-void Process::PrintWarningCantLoadSwiftModule(Module &module,
-                                              std::string details) {
-  module.ReportWarningCantLoadSwiftModule(std::move(details),
-                                          GetTarget().GetDebugger().GetID());
-}
-
 void Process::PrintWarningToolchainMismatch(const SymbolContext &sc) {
   if (GetTarget().GetProcessLaunchInfo().IsScriptedProcess())
     // It's very likely that the debugger used to launch the ScriptedProcess
