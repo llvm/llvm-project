@@ -94,8 +94,11 @@ public:
 
   /// The map contains an entry for every module to import from, the key being
   /// the module identifier to pass to the ModuleLoader. The value is the set of
-  /// functions to import.
-  using ImportMapTy = StringMap<FunctionsToImportTy>;
+  /// functions to import. The module identifier strings must be owned
+  /// elsewhere, typically by the in-memory ModuleSummaryIndex the importing
+  /// decisions are made from (the module path for each summary is owned by the
+  /// index's module path string table).
+  using ImportMapTy = DenseMap<StringRef, FunctionsToImportTy>;
 
   /// The set contains an entry for every global value the module exports.
   using ExportSetTy = DenseSet<ValueInfo>;
@@ -147,13 +150,18 @@ public:
 /// \p ExportLists contains for each Module the set of globals (GUID) that will
 /// be imported by another module, or referenced by such a function. I.e. this
 /// is the set of globals that need to be promoted/renamed appropriately.
+///
+/// The module identifier strings that are the keys of the above two maps
+/// are owned by the in-memory ModuleSummaryIndex the importing decisions
+/// are made from (the module path for each summary is owned by the index's
+/// module path string table).
 void ComputeCrossModuleImport(
     const ModuleSummaryIndex &Index,
-    const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    StringMap<FunctionImporter::ImportMapTy> &ImportLists,
-    StringMap<FunctionImporter::ExportSetTy> &ExportLists);
+    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists);
 
 /// Compute all the imports for the given module using the Index.
 ///
@@ -225,7 +233,7 @@ bool convertToDeclaration(GlobalValue &GV);
 /// stable order for bitcode emission.
 void gatherImportedSummariesForModule(
     StringRef ModulePath,
-    const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex);
 
