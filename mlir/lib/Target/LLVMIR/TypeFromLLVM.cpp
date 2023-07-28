@@ -112,14 +112,13 @@ private:
     if (type->isOpaque())
       return LLVM::LLVMStructType::getOpaque(type->getName(), &context);
 
-    LLVM::LLVMStructType translated =
-        LLVM::LLVMStructType::getIdentified(&context, type->getName());
-    knownTranslations.try_emplace(type, translated);
+    // With opaque pointers, types in LLVM can't be recursive anymore. Note that
+    // using getIdentified is not possible, as type names in LLVM are not
+    // guaranteed to be unique.
     translateTypes(type->subtypes(), subtypes);
-    LogicalResult bodySet = translated.setBody(subtypes, type->isPacked());
-    assert(succeeded(bodySet) &&
-           "could not set the body of an identified struct");
-    (void)bodySet;
+    LLVM::LLVMStructType translated = LLVM::LLVMStructType::getNewIdentified(
+        &context, type->getName(), subtypes, type->isPacked());
+    knownTranslations.try_emplace(type, translated);
     return translated;
   }
 
