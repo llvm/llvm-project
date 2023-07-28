@@ -461,10 +461,18 @@ def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
 def HasVInstructionsFullMultiply : Predicate<"Subtarget->hasVInstructionsFullMultiply()">;
 
+def FeatureStdExtZfbfmin
+    : SubtargetFeature<"experimental-zfbfmin", "HasStdExtZfbfmin", "true",
+                       "'Zfbfmin' (Scalar BF16 Converts)",
+                       [FeatureStdExtF]>;
+def HasStdExtZfbfmin : Predicate<"Subtarget->hasStdExtZfbfmin()">,
+                                 AssemblerPredicate<(all_of FeatureStdExtZfbfmin),
+                                 "'Zfbfmin' (Scalar BF16 Converts)">;
+
 def FeatureStdExtZvfbfmin
     : SubtargetFeature<"experimental-zvfbfmin", "HasStdExtZvfbfmin", "true",
                        "'Zvbfmin' (Vector BF16 Converts)",
-                       [FeatureStdExtZve32f]>;
+                       [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
 def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
                                   AssemblerPredicate<(all_of FeatureStdExtZvfbfmin),
                                   "'Zvfbfmin' (Vector BF16 Converts)">;
@@ -472,7 +480,7 @@ def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
 def FeatureStdExtZvfbfwma
     : SubtargetFeature<"experimental-zvfbfwma", "HasStdExtZvfbfwma", "true",
                        "'Zvfbfwma' (Vector BF16 widening mul-add)",
-                       [FeatureStdExtZve32f]>;
+                       [FeatureStdExtZvfbfmin]>;
 def HasStdExtZvfbfwma : Predicate<"Subtarget->hasStdExtZvfbfwma()">,
                                   AssemblerPredicate<(all_of FeatureStdExtZvfbfwma),
                                   "'Zvfbfwma' (Vector BF16 widening mul-add)">;
@@ -659,22 +667,13 @@ def FeatureStdExtSsaia
                        "excluding the machine-level CSRs and behavior not "
                        "directly visible to supervisor level.)", []>;
 
-def FeatureStdExtZfbfmin
-    : SubtargetFeature<"experimental-zfbfmin", "HasStdExtZfbfmin", "true",
-                       "'Zfbfmin' (Scalar BF16 Converts)",
-                       [FeatureStdExtF]>;
-def HasStdExtZfbfmin : Predicate<"Subtarget->hasStdExtZfbfmin()">,
-                                 AssemblerPredicate<(all_of FeatureStdExtZfbfmin),
-                                 "'Zfbfmin' (Scalar BF16 Converts)">;
-
 def HasHalfFPLoadStoreMove
     : Predicate<"Subtarget->hasHalfFPLoadStoreMove()">,
                 AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZfhmin,
-                                    FeatureStdExtZfbfmin, FeatureStdExtZvfbfwma),
+                                    FeatureStdExtZfbfmin),
                                     "'Zfh' (Half-Precision Floating-Point) or "
                                     "'Zfhmin' (Half-Precision Floating-Point Minimal) or "
-                                    "'Zfbfmin' (Scalar BF16 Converts) or "
-                                    "'Zvfbfwma' (Vector BF16 widening mul-add)">;
+                                    "'Zfbfmin' (Scalar BF16 Converts)">;
 
 def FeatureStdExtZacas
     : SubtargetFeature<"experimental-zacas", "HasStdExtZacas", "true",
