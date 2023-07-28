@@ -1759,30 +1759,4 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", []> {
   }];
 }
 
-//===--------------------------------------------------------------------===//
-// CallIntrinsicOp
-//===--------------------------------------------------------------------===//
-
-def LLVM_CallIntrinsicOp
-    : LLVM_Op<"call_intrinsic",
-              [DeclareOpInterfaceMethods<FastmathFlagsInterface>]> {
-  let summary = "Call to an LLVM intrinsic function.";
-  let description = [{
-    Call the specified llvm intrinsic. If the intrinsic is overloaded, use
-    the MLIR function type of this op to determine which intrinsic to call.
-  }];
-  let arguments = (ins StrAttr:$intrin, Variadic<LLVM_Type>:$args,
-                       DefaultValuedAttr<LLVM_FastmathFlagsAttr,
-                                         "{}">:$fastmathFlags);
-  let results = (outs Optional<LLVM_Type>:$results);
-  let llvmBuilder = [{
-    return convertCallLLVMIntrinsicOp(op, builder, moduleTranslation);
-  }];
-  let assemblyFormat = [{
-    $intrin `(` $args `)` `:` functional-type($args, $results) attr-dict
-  }];
-
-  let hasVerifier = 1;
-}
-
 #endif // LLVMIR_OPS
