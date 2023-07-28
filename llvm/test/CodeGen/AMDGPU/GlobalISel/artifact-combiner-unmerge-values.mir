@@ -457,9 +457,9 @@ body:             |
     ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[COPY]](<2 x s32>)
     ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[UV]](s32)
     ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT]](s64)
-    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV2]](s32)
+    ; CHECK-NEXT: [[TRUNC:%[0-9]+]]:_(s16) = G_TRUNC [[UV]](s32)
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 16
-    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV2]], [[C]](s32)
+    ; CHECK-NEXT: [[LSHR:%[0-9]+]]:_(s32) = G_LSHR [[UV]], [[C]](s32)
     ; CHECK-NEXT: [[TRUNC1:%[0-9]+]]:_(s16) = G_TRUNC [[LSHR]](s32)
     ; CHECK-NEXT: [[TRUNC2:%[0-9]+]]:_(s16) = G_TRUNC [[UV3]](s32)
     ; CHECK-NEXT: [[LSHR1:%[0-9]+]]:_(s32) = G_LSHR [[UV3]], [[C]](s32)
@@ -1495,13 +1495,15 @@ body:             |
     ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s32) = COPY $vgpr2
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY]](s32), [[COPY2]]
     ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:_(s1) = G_ICMP intpred(eq), [[COPY1]](s32), [[COPY2]]
-    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s1)
-    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP1]](s1)
-    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT]](s64)
-    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT1]](s64)
-    ; CHECK-NEXT: $vgpr0 = COPY [[UV]](s32)
+    ; CHECK-NEXT: [[ANYEXT:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP]](s1)
+    ; CHECK-NEXT: [[ANYEXT1:%[0-9]+]]:_(s32) = G_ANYEXT [[ICMP1]](s1)
+    ; CHECK-NEXT: [[ANYEXT2:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP]](s1)
+    ; CHECK-NEXT: [[ANYEXT3:%[0-9]+]]:_(s64) = G_ANYEXT [[ICMP1]](s1)
+    ; CHECK-NEXT: [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT2]](s64)
+    ; CHECK-NEXT: [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[ANYEXT3]](s64)
+    ; CHECK-NEXT: $vgpr0 = COPY [[ANYEXT]](s32)
     ; CHECK-NEXT: $vgpr1 = COPY [[UV1]](s32)
-    ; CHECK-NEXT: $vgpr2 = COPY [[UV2]](s32)
+    ; CHECK-NEXT: $vgpr2 = COPY [[ANYEXT1]](s32)
     ; CHECK-NEXT: $vgpr3 = COPY [[UV3]](s32)
     ; CHECK-NEXT: S_SETPC_B64_return undef $sgpr30_sgpr31, implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
     %0:_(s32) = COPY $vgpr0
