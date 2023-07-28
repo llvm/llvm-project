@@ -112,6 +112,11 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Clang limits the size of arrays it will try to evaluate at compile time
+  to avoid memory exhaustion.
+  This limit can be modified by `-fconstexpr-steps`.
+  (`#63562 <https://github.com/llvm/llvm-project/issues/63562>`_)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
