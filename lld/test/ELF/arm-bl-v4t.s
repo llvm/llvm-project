@@ -56,19 +56,13 @@ thumb_start:
 // FAR-EMPTY:
 // FAR-NEXT:  <__ARMv5LongLdrPcThunk_target>:
 // FAR-NEXT:   1000010:      	ldr	pc, [pc, #-4]           @ 0x1000014 <__ARMv5LongLdrPcThunk_target+0x4>
-// FAR-EMPTY: 
-// FAR-NEXT:  <$d>:
 // FAR-NEXT:   1000014: 00 00 00 06  	.word	0x06000000
 // FAR-EMPTY:
 // FAR-NEXT:  <__Thumbv4ABSLongThunk_thumb_target>:
 // FAR-NEXT:   1000018:      	bx	pc
 // FAR-NEXT:                	b	0x1000018 <__Thumbv4ABSLongThunk_thumb_target> @ imm = #-6
-// FAR-EMPTY:
-// FAR-NEXT:  <$a>:
 // FAR-NEXT:   100001c:      	ldr	r12, [pc]               @ 0x1000024 <__Thumbv4ABSLongThunk_thumb_target+0xc>
 // FAR-NEXT:                	bx	r12
-// FAR-EMPTY:
-// FAR-NEXT:  <$d>:
 // FAR-NEXT:   1000024: 05 00 00 06  	.word	0x06000005
 
 // FAR-EB-LABEL: <_start>:
@@ -82,19 +76,13 @@ thumb_start:
 // FAR-EB-EMPTY:
 // FAR-EB-NEXT:  <__ARMv5LongLdrPcThunk_target>:
 // FAR-EB-NEXT:   1000010:      	ldr	pc, [pc, #-4]           @ 0x1000014 <__ARMv5LongLdrPcThunk_target+0x4>
-// FAR-EB-EMPTY:
-// FAR-EB-NEXT:  <$d>:
 // FAR-EB-NEXT:   1000014: 06 00 00 00  	.word	0x06000000
 // FAR-EB-EMPTY:
 // FAR-EB-NEXT:  <__Thumbv4ABSLongThunk_thumb_target>:
 // FAR-EB-NEXT:   1000018:      	bx	pc
 // FAR-EB-NEXT:                	b	0x1000018 <__Thumbv4ABSLongThunk_thumb_target> @ imm = #-6
-// FAR-EB-EMPTY:
-// FAR-EB-NEXT:  <$a>:
 // FAR-EB-NEXT:   100001c:      	ldr	r12, [pc]               @ 0x1000024 <__Thumbv4ABSLongThunk_thumb_target+0xc>
 // FAR-EB-NEXT:                	bx	r12
-// FAR-EB-EMPTY:
-// FAR-EB-NEXT:  <$d>:
 // FAR-EB-NEXT:   1000024: 06 00 00 05  	.word	0x06000005
 
 // FAR-PIE-LABEL: <_start>:
@@ -109,20 +97,14 @@ thumb_start:
 // FAR-PIE-NEXT:  <__ARMv4PILongThunk_target>:
 // FAR-PIE-NEXT:   1000010:      	ldr	r12, [pc]               @ 0x1000018 <__ARMv4PILongThunk_target+0x8>
 // FAR-PIE-NEXT:                	add	pc, pc, r12
-// FAR-PIE-EMPTY:
-// FAR-PIE-NEXT:  <$d>:
 // FAR-PIE-NEXT:   1000018: e4 ff ff 04  	.word	0x04ffffe4
 // FAR-PIE-EMPTY:
 // FAR-PIE-NEXT:  <__Thumbv4PILongThunk_thumb_target>:
 // FAR-PIE-NEXT:   100001c:      	bx	pc
 // FAR-PIE-NEXT:                	b	0x100001c <__Thumbv4PILongThunk_thumb_target> @ imm = #-6
-// FAR-PIE-EMPTY:
-// FAR-PIE-NEXT:  <$a>:
 // FAR-PIE-NEXT:   1000020:      	ldr	r12, [pc, #4]           @ 0x100002c <__Thumbv4PILongThunk_thumb_target+0x10>
 // FAR-PIE-NEXT:                	add	r12, pc, r12
 // FAR-PIE-NEXT:                	bx	r12
-// FAR-PIE-EMPTY:
-// FAR-PIE-NEXT:  <$d>:
 // FAR-PIE-NEXT:   100002c: d9 ff ff 04  	.word	0x04ffffd9
 
 // FAR-EB-PIE-LABEL: <_start>:
@@ -137,20 +119,14 @@ thumb_start:
 // FAR-EB-PIE-NEXT:  <__ARMv4PILongThunk_target>:
 // FAR-EB-PIE-NEXT:   1000010:      	ldr	r12, [pc]               @ 0x1000018 <__ARMv4PILongThunk_target+0x8>
 // FAR-EB-PIE-NEXT:                	add	pc, pc, r12
-// FAR-EB-PIE-EMPTY:
-// FAR-EB-PIE-NEXT:  <$d>:
 // FAR-EB-PIE-NEXT:   1000018: 04 ff ff e4  	.word	0x04ffffe4
 // FAR-EB-PIE-EMPTY:
 // FAR-EB-PIE-NEXT:  <__Thumbv4PILongThunk_thumb_target>:
 // FAR-EB-PIE-NEXT:   100001c:      	bx	pc
 // FAR-EB-PIE-NEXT:                	b	0x100001c <__Thumbv4PILongThunk_thumb_target> @ imm = #-6
-// FAR-EB-PIE-EMPTY:
-// FAR-EB-PIE-NEXT:  <$a>:
 // FAR-EB-PIE-NEXT:   1000020:      	ldr	r12, [pc, #4]           @ 0x100002c <__Thumbv4PILongThunk_thumb_target+0x10>
 // FAR-EB-PIE-NEXT:                	add	r12, pc, r12
 // FAR-EB-PIE-NEXT:                	bx	r12
-// FAR-EB-PIE-EMPTY:
-// FAR-EB-PIE-NEXT:  <$d>:
 // FAR-EB-PIE-NEXT:   100002c: 04 ff ff d9  	.word	0x04ffffd9
 
 // NEAR-LABEL: <_start>:
