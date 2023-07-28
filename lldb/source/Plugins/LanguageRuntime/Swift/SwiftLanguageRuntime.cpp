@@ -453,7 +453,7 @@ static bool HasReflectionInfo(ObjectFile *obj_file) {
   return hasReflectionSection;
 }
 
-SwiftLanguageRuntimeImpl::ReflectionContextInterface *
+SwiftLanguageRuntimeImpl::ThreadSafeReflectionContext 
 SwiftLanguageRuntimeImpl::GetReflectionContext() {
   m_reflection_ctx_mutex.lock();
   SetupReflection();
@@ -499,28 +499,21 @@ SwiftLanguageRuntimeImpl::GetSwiftMetadataCache() {
 
 void SwiftLanguageRuntimeImpl::SetupReflection() {
   LLDB_SCOPED_TIMER();
- 
-  // SetupABIBit() iterates of the Target's images and thus needs to
-  // acquire that ModuleList's lock. We need to acquire this before
-  // locking m_add_module_mutex, since ModulesDidLoad can also be
-  // called from a place where that lock is already held:
-  // +   lldb_private::DynamicLoaderDarwin::AddModulesUsingImageInfos()
-  // +     lldb_private::ModuleList::AppendIfNeeded()
-  // +       lldb_private::Target::NotifyModuleAdded()
-  // +         lldb_private::Target::ModulesDidLoad()
 
-  // The global ABI bit is read by the Swift runtime library.
-  SetupABIBit();
-  
-  std::lock_guard<std::recursive_mutex> lock(m_add_module_mutex);
+
+  std::lock_guard<std::recursive_mutex> lock(m_reflection_ctx_mutex);
   if (m_initialized_reflection_ctx)
     return;
+ 
+  // The global ABI bit is read by the Swift runtime library.
+  SetupABIBit();
 
   auto &target = m_process.GetTarget();
   auto exe_module = target.GetExecutableModule();
 
+  auto *log = GetLog(LLDBLog::Types);
   if (!exe_module) {
-    LLDB_LOGF(GetLog(LLDBLog::Types), "%s: Failed to get executable module",
+    LLDB_LOGF(log, "%s: Failed to get executable module",
               LLVM_PRETTY_FUNCTION);
     m_initialized_reflection_ctx = false;
     return;
@@ -532,40 +525,27 @@ void SwiftLanguageRuntimeImpl::SetupReflection() {
 
   auto &triple = exe_module->GetArchitecture().GetTriple();
   if (triple.isArch64Bit()) {
-    LLDB_LOGF(GetLog(LLDBLog::Types),
-              "Initializing a 64-bit reflection context (%s) for \"%s\"",
+    LLDB_LOGF(log, "Initializing a 64-bit reflection context (%s) for \"%s\"",
               triple.str().c_str(), objc_interop_msg);
     m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext64(
         this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
   } else if (triple.isArch32Bit()) {
-    LLDB_LOGF(GetLog(LLDBLog::Types),
+    LLDB_LOGF(log,
               "Initializing a 32-bit reflection context (%s) for \"%s\"",
               triple.str().c_str(), objc_interop_msg);
     m_reflection_ctx = ReflectionContextInterface::CreateReflectionContext32(
         this->GetMemoryReader(), objc_interop, GetSwiftMetadataCache());
   } else {
-    LLDB_LOGF(GetLog(LLDBLog::Types),
+    LLDB_LOGF(log,
               "Could not initialize reflection context for \"%s\"",
               triple.str().c_str());
   }
-
+  // We set m_initialized_reflection_ctx to true here because
+  // AddModuleToReflectionContext can potentially call into SetupReflection
+  // again (which will early exit). This is safe to do since every other thread
+  // using reflection context will have to wait until all the modules are added,
+  // since the thread performing the initialization locked the mutex.
   m_initialized_reflection_ctx = true;
-
-  Progress progress(
-      llvm::formatv("Setting up Swift reflection for '{0}'",
-                    exe_module->GetFileSpec().GetFilename().AsCString()),
-      m_modules_to_add.GetSize());
-
-  size_t completion = 0;
-
-  // Add all defered modules to reflection context that were added to
-  // the target since this SwiftLanguageRuntime was created.
-  m_modules_to_add.ForEach([&](const ModuleSP &module_sp) -> bool {
-    AddModuleToReflectionContext(module_sp);
-    progress.Increment(++completion);
-    return true;
-  });
-  m_modules_to_add.Clear();
 }
 
 bool SwiftLanguageRuntimeImpl::IsABIStable() {
@@ -952,17 +932,9 @@ bool SwiftLanguageRuntimeImpl::AddModuleToReflectionContext(
 }
 
 void SwiftLanguageRuntimeImpl::ModulesDidLoad(const ModuleList &module_list) {
-  // If the reflection context hasn't been initialized, add them to
-  // the list of deferred modules so they are added in
-  // SetupReflection(), otherwise add them directly.
-  std::lock_guard<std::recursive_mutex> lock(m_add_module_mutex);
-  if (!m_initialized_reflection_ctx)
-    m_modules_to_add.AppendIfNeeded(module_list);
-  else
-    module_list.ForEach([&](const ModuleSP &module_sp) -> bool {
-      AddModuleToReflectionContext(module_sp);
-      return true;
-    });
+  // The modules will be lazily processed on the next call to
+  // GetReflectionContext.
+  m_modules_to_add.AppendIfNeeded(module_list);
 }
 
 std::string 

@@ -260,6 +260,29 @@ public:
     stripSignedPointer(swift::remote::RemoteAbsolutePointer pointer) = 0;
   };
 
+  /// A wrapper around TargetReflectionContext, which holds a lock to ensure
+  /// exclusive access.
+  struct ThreadSafeReflectionContext {
+    ThreadSafeReflectionContext(ReflectionContextInterface *reflection_ctx,
+                             std::recursive_mutex &mutex)
+        : m_reflection_ctx(reflection_ctx), m_lock(mutex, std::adopt_lock) {}
+
+    ReflectionContextInterface *operator->() const {
+      return m_reflection_ctx;
+    }
+
+    operator bool() const {
+      return m_reflection_ctx != nullptr;
+    }
+
+  private:
+    ReflectionContextInterface *m_reflection_ctx;
+    // This lock operates on a recursive mutex because the initialization
+    // of ReflectionContext recursive calls itself (see
+    // SwiftLanguageRuntimeImpl::SetupReflection).
+    std::lock_guard<std::recursive_mutex> m_lock;
+  };
+
 protected:
   static void
   ForEachGenericParameter(swift::Demangle::NodePointer node,
@@ -388,8 +411,13 @@ private:
   /// Lazily initialize and return \p m_dynamic_exclusivity_flag_addr.
   llvm::Optional<lldb::addr_t> GetDynamicExclusivityFlagAddr();
 
-  /// Lazily initialize the reflection context. Return \p nullptr on failure.
-  ReflectionContextInterface *GetReflectionContext();
+  /// Lazily initialize the reflection context. Returns a
+  /// ThreadSafeReflectionContext with a \p nullptr on failure.
+  ThreadSafeReflectionContext GetReflectionContext();
+
+  // Add the modules in m_modules_to_add to the Reflection Context. The
+  // ModulesDidLoad() callback appends to m_modules_to_add.
+  void ProcessModulesToAdd();
 
   /// Lazily initialize and return \p m_SwiftNativeNSErrorISA.
   llvm::Optional<lldb::addr_t> GetSwiftNativeNSErrorISA();
@@ -413,12 +441,14 @@ private:
   /// \{
   std::unique_ptr<ReflectionContextInterface> m_reflection_ctx;
 
+  /// Mutex guarding accesses to the reflection context.
+  std::recursive_mutex m_reflection_ctx_mutex;
+
   SwiftMetadataCache m_swift_metadata_cache;
 
   /// Record modules added through ModulesDidLoad, which are to be
   /// added to the reflection context once it's being initialized.
   ModuleList m_modules_to_add;
-  std::recursive_mutex m_add_module_mutex;
 
   /// Add the image to the reflection context.
   /// \return true on success.
