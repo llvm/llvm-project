@@ -1,5 +1,7 @@
 #include <stdio.h>
 
+struct ForwardDecl;
+
 typedef int MyInt;
 
 void populate(MyInt i);
@@ -30,6 +32,7 @@ typedef struct MyStruct {
 } MyStructT;
 
 MyStructT foo;
+struct ForwardDecl *forward;
 
 void populate(MyInt i) {
   foo.n.i = i;
@@ -41,6 +44,7 @@ void populate(MyInt i) {
   foo.n.a[3] = 'd';
   foo.n.e = eOne;
   foo.f = NULL;
+  forward = NULL;
 }
 
 int main(int argc, char** argv) {

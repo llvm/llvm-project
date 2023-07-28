@@ -525,6 +525,17 @@ SymbolFileCTF::CreateRecord(const CTFRecord &ctf_record) {
                   decl, record_type, lldb_private::Type::ResolveState::Full);
 }
 
+llvm::Expected<lldb::TypeSP>
+SymbolFileCTF::CreateForward(const CTFForward &ctf_forward) {
+  CompilerType forward_compiler_type = m_ast->CreateRecordType(
+      nullptr, OptionalClangModuleID(), eAccessPublic, ctf_forward.name,
+      clang::TTK_Struct, eLanguageTypeC);
+  Declaration decl;
+  return MakeType(ctf_forward.uid, ConstString(ctf_forward.name), 0, nullptr,
+                  LLDB_INVALID_UID, Type::eEncodingIsUID, decl,
+                  forward_compiler_type, Type::ResolveState::Forward);
+}
+
 llvm::Expected<TypeSP> SymbolFileCTF::CreateType(CTFType *ctf_type) {
   if (!ctf_type)
     return llvm::make_error<llvm::StringError>(
@@ -549,9 +560,10 @@ llvm::Expected<TypeSP> SymbolFileCTF::CreateType(CTFType *ctf_type) {
   case CTFType::Kind::eStruct:
   case CTFType::Kind::eUnion:
     return CreateRecord(*static_cast<CTFRecord *>(ctf_type));
+  case CTFType::Kind::eForward:
+    return CreateForward(*static_cast<CTFForward *>(ctf_type));
   case CTFType::Kind::eUnknown:
   case CTFType::Kind::eFloat:
-  case CTFType::Kind::eForward:
   case CTFType::Kind::eSlice:
     return llvm::make_error<llvm::StringError>(
         llvm::formatv("unsupported type (uid = {0}, name = {1}, kind = {2})",
@@ -637,11 +649,12 @@ SymbolFileCTF::ParseType(lldb::offset_t &offset, lldb::user_id_t uid) {
     return std::make_unique<CTFRecord>(static_cast<CTFType::Kind>(kind), uid,
                                        name, variable_length, size, fields);
   }
+  case TypeKind::eForward:
+    return std::make_unique<CTFForward>(uid, name);
   case TypeKind::eUnknown:
     return std::make_unique<CTFType>(static_cast<CTFType::Kind>(kind), uid,
                                      name);
   case TypeKind::eFloat:
-  case TypeKind::eForward:
   case TypeKind::eSlice:
     offset += (variable_length * sizeof(uint32_t));
     break;
