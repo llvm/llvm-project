@@ -791,11 +791,19 @@ struct DeallocRemoveDuplicates : public OpRewritePattern<DeallocOp> {
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     // Unique memrefs to be deallocated.
+    DenseSet<Value> retained(deallocOp.getRetained().begin(),
+                             deallocOp.getRetained().end());
     DenseMap<Value, unsigned> memrefToCondition;
     SmallVector<Value> newMemrefs, newConditions, newRetained;
-    SmallVector<unsigned> resultIndices;
-    for (auto [memref, cond] :
-         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+    SmallVector<int32_t> resultIndices(deallocOp.getMemrefs().size(), -1);
+    for (auto [i, memref, cond] :
+         llvm::enumerate(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+      if (retained.contains(memref)) {
+        rewriter.replaceAllUsesWith(deallocOp.getResult(i),
+                                    deallocOp.getConditions()[i]);
+        continue;
+      }
+
       if (memrefToCondition.count(memref)) {
         // If the dealloc conditions don't match, we need to make sure that the
         // dealloc happens on the union of cases.
@@ -808,7 +816,7 @@ struct DeallocRemoveDuplicates : public OpRewritePattern<DeallocOp> {
         newMemrefs.push_back(memref);
         newConditions.push_back(cond);
       }
-      resultIndices.push_back(memrefToCondition[memref]);
+      resultIndices[i] = memrefToCondition[memref];
     }
 
     // Unique retained values
@@ -831,11 +839,30 @@ struct DeallocRemoveDuplicates : public OpRewritePattern<DeallocOp> {
     auto newDealloc = rewriter.create<DeallocOp>(deallocOp.getLoc(), newMemrefs,
                                                  newConditions, newRetained);
     for (auto [i, newIdx] : llvm::enumerate(resultIndices))
-      rewriter.replaceAllUsesWith(deallocOp.getResult(i),
-                                  newDealloc.getResult(newIdx));
+      if (newIdx != -1)
+        rewriter.replaceAllUsesWith(deallocOp.getResult(i),
+                                    newDealloc.getResult(newIdx));
 
     rewriter.eraseOp(deallocOp);
     return success();
+  }
+};
+
+/// Erase deallocation operations where the variadic list of memrefs to
+/// deallocate is emtpy. Example:
+/// ```mlir
+/// bufferization.dealloc retain (%arg0: memref<2xi32>)
+/// ```
+struct EraseEmptyDealloc : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    if (deallocOp.getMemrefs().empty()) {
+      rewriter.eraseOp(deallocOp);
+      return success();
+    }
+    return failure();
   }
 };
 
@@ -843,7 +870,7 @@ struct DeallocRemoveDuplicates : public OpRewritePattern<DeallocOp> {
 
 void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<DeallocRemoveDuplicates>(context);
+  results.add<DeallocRemoveDuplicates, EraseEmptyDealloc>(context);
 }
 
 //===----------------------------------------------------------------------===//
