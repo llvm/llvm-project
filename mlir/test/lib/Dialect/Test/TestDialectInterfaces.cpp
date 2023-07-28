@@ -122,11 +122,10 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
     // Prior version 2.0, the old op supported only a single attribute called
     // "dimensions". We can perform the upgrade.
     topLevelOp->walk([](TestVersionedOpA op) {
-      if (auto dims = op->getAttr("dimensions")) {
-        op->removeAttr("dimensions");
-        op->setAttr("dims", dims);
-      }
-      op->setAttr("modifier", BoolAttr::get(op->getContext(), false));
+      // Prior version 2.0, `readProperties` did not process the modifier
+      // attribute. Handle that according to the version here.
+      auto &prop = op.getProperties();
+      prop.modifier = BoolAttr::get(op->getContext(), false);
     });
     return success();
   }
