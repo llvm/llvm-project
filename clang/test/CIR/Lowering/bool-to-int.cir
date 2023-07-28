@@ -1,0 +1,21 @@
+// RUN: cir-translate %s -cir-to-llvmir  | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+#false = #cir.bool<false> : !cir.bool
+#true = #cir.bool<true> : !cir.bool
+
+module {
+  cir.func @foo(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+    %1 = cir.const(#true) : !cir.bool
+    %2 = cir.cast(bool_to_int, %1 : !cir.bool), !s32i
+    cir.return %2 : !s32i
+  }
+  cir.func @bar(%arg0: !s32i, %arg1: !s32i) -> !s32i {
+    %1 = cir.const(#false) : !cir.bool
+    %2 = cir.cast(bool_to_int, %1 : !cir.bool), !s32i
+    cir.return %2 : !s32i
+  }
+}
+
+// CHECK: ret i32 1
+// CHECK: ret i32 0
