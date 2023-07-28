@@ -27,16 +27,17 @@
 
 #include "bolt/Core/HashUtilities.h"
 #include "bolt/Profile/YAMLProfileReader.h"
+#include "llvm/ADT/Bitfields.h"
 #include "llvm/ADT/Hashing.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils/SampleProfileInference.h"
 
 #include <queue>
 
+using namespace llvm;
+
 #undef DEBUG_TYPE
 #define DEBUG_TYPE "bolt-prof"
-
-using namespace llvm;
 
 namespace opts {
 
@@ -141,49 +142,29 @@ namespace bolt {
 /// components are of smaller size (e.g., uint16_t or uint8_t).
 struct BlendedBlockHash {
 private:
-  static uint64_t combineHashes(uint16_t Hash1, uint16_t Hash2, uint16_t Hash3,
-                                uint16_t Hash4) {
-    uint64_t Hash = 0;
-
-    Hash |= uint64_t(Hash4);
-    Hash <<= 16;
-
-    Hash |= uint64_t(Hash3);
-    Hash <<= 16;
-
-    Hash |= uint64_t(Hash2);
-    Hash <<= 16;
-
-    Hash |= uint64_t(Hash1);
-
-    return Hash;
-  }
-
-  static void parseHashes(uint64_t Hash, uint16_t &Hash1, uint16_t &Hash2,
-                          uint16_t &Hash3, uint16_t &Hash4) {
-    Hash1 = Hash & 0xffff;
-    Hash >>= 16;
-
-    Hash2 = Hash & 0xffff;
-    Hash >>= 16;
-
-    Hash3 = Hash & 0xffff;
-    Hash >>= 16;
-
-    Hash4 = Hash & 0xffff;
-    Hash >>= 16;
-  }
+  using ValueOffset = Bitfield::Element<uint16_t, 0, 16>;
+  using ValueOpcode = Bitfield::Element<uint16_t, 16, 16>;
+  using ValueInstr = Bitfield::Element<uint16_t, 32, 16>;
+  using ValueNeighbor = Bitfield::Element<uint16_t, 48, 16>;
 
 public:
   explicit BlendedBlockHash() {}
 
-  explicit BlendedBlockHash(uint64_t CombinedHash) {
-    parseHashes(CombinedHash, Offset, OpcodeHash, InstrHash, NeighborHash);
+  explicit BlendedBlockHash(uint64_t Hash) {
+    Offset = Bitfield::get<ValueOffset>(Hash);
+    OpcodeHash = Bitfield::get<ValueOpcode>(Hash);
+    InstrHash = Bitfield::get<ValueInstr>(Hash);
+    NeighborHash = Bitfield::get<ValueNeighbor>(Hash);
   }
 
   /// Combine the blended hash into uint64_t.
   uint64_t combine() const {
-    return combineHashes(Offset, OpcodeHash, InstrHash, NeighborHash);
+    uint64_t Hash = 0;
+    Bitfield::set<ValueOffset>(Hash, Offset);
+    Bitfield::set<ValueOpcode>(Hash, OpcodeHash);
+    Bitfield::set<ValueInstr>(Hash, InstrHash);
+    Bitfield::set<ValueNeighbor>(Hash, NeighborHash);
+    return Hash;
   }
 
   /// Compute a distance between two given blended hashes. The smaller the
@@ -311,6 +292,7 @@ void BinaryFunction::computeBlockHashes() const {
     BB->setHash(BlendedHashes[I].combine());
   }
 }
+
 /// Create a wrapper flow function to use with the profile inference algorithm,
 /// and initialize its jumps and metadata.
 FlowFunction
@@ -319,7 +301,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 
   // Add a special "dummy" source so that there is always a unique entry point.
   // Because of the extra source, for all other blocks in FlowFunction it holds
-  // that Block.Index == BB->getLayoutIndex() + 1
+  // that Block.Index == BB->getIndex() + 1
   FlowBlock EntryBlock;
   EntryBlock.Index = 0;
   Func.Blocks.push_back(EntryBlock);
@@ -330,7 +312,7 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
     FlowBlock &Block = Func.Blocks.back();
     Block.Index = Func.Blocks.size() - 1;
     (void)BB;
-    assert(Block.Index == BB->getLayoutIndex() + 1 &&
+    assert(Block.Index == BB->getIndex() + 1 &&
            "incorrectly assigned basic block index");
   }
 
@@ -346,8 +328,8 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 
       Func.Jumps.emplace_back();
       FlowJump &Jump = Func.Jumps.back();
-      Jump.Source = SrcBB->getLayoutIndex() + 1;
-      Jump.Target = DstBB->getLayoutIndex() + 1;
+      Jump.Source = SrcBB->getIndex() + 1;
+      Jump.Target = DstBB->getIndex() + 1;
       InDegree[Jump.Target]++;
       UniqueSuccs.insert(DstBB);
     }
@@ -359,8 +341,8 @@ createFlowFunction(const BinaryFunction::BasicBlockOrderType &BlockOrder) {
 
       Func.Jumps.emplace_back();
       FlowJump &Jump = Func.Jumps.back();
-      Jump.Source = SrcBB->getLayoutIndex() + 1;
-      Jump.Target = DstBB->getLayoutIndex() + 1;
+      Jump.Source = SrcBB->getIndex() + 1;
+      Jump.Target = DstBB->getIndex() + 1;
       InDegree[Jump.Target]++;
       UniqueSuccs.insert(DstBB);
     }
@@ -707,31 +689,33 @@ void assignProfile(BinaryFunction &BF,
 
 bool YAMLProfileReader::inferStaleProfile(
     BinaryFunction &BF, const yaml::bolt::BinaryFunctionProfile &YamlBF) {
-  // Make sure that block indices and hashes are up to date
-  BF.getLayout().updateLayoutIndices();
+  LLVM_DEBUG(dbgs() << "BOLT-INFO: applying profile inference for "
+                    << "\"" << BF.getPrintName() << "\"\n");
+
+  // Make sure that block hashes are up to date.
   BF.computeBlockHashes();
 
   const BinaryFunction::BasicBlockOrderType BlockOrder(
       BF.getLayout().block_begin(), BF.getLayout().block_end());
 
-  // Create a wrapper flow function to use with the profile inference algorithm
+  // Create a wrapper flow function to use with the profile inference algorithm.
   FlowFunction Func = createFlowFunction(BlockOrder);
 
   // Match as many block/jump counts from the stale profile as possible
   matchWeightsByHashes(BF.getBinaryContext(), BlockOrder, YamlBF, Func);
 
   // Adjust the flow function by marking unreachable blocks Unlikely so that
-  // they don't get any counts assigned
+  // they don't get any counts assigned.
   preprocessUnreachableBlocks(Func);
 
-  // Check if profile inference can be applied for the instance
+  // Check if profile inference can be applied for the instance.
   if (!canApplyInference(Func))
     return false;
 
-  // Apply the profile inference algorithm
+  // Apply the profile inference algorithm.
   applyInference(Func);
 
-  // Collect inferred counts and update function annotations
+  // Collect inferred counts and update function annotations.
   assignProfile(BF, BlockOrder, Func);
 
   // As of now, we always mark the binary function having "correct" profile.
