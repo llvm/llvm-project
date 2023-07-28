@@ -19,6 +19,7 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/MCValue.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Endian.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
@@ -26,6 +27,9 @@
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
+
+static cl::opt<bool> RelaxBranches("riscv-asm-relax-branches", cl::init(true),
+                                   cl::Hidden);
 
 std::optional<MCFixupKind> RISCVAsmBackend::getFixupKind(StringRef Name) const {
   if (STI.getTargetTriple().isOSBinFormatELF()) {
@@ -144,14 +148,11 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
                                                    const MCRelaxableFragment *DF,
                                                    const MCAsmLayout &Layout,
                                                    const bool WasForced) const {
+  if (!RelaxBranches)
+    return false;
+
   int64_t Offset = int64_t(Value);
   unsigned Kind = Fixup.getTargetKind();
-
-  // We only do conditional branch relaxation when the symbol is resolved.
-  // For conditional branch, the immediate must be in the range
-  // [-4096, 4094].
-  if (Kind == RISCV::fixup_riscv_branch)
-    return Resolved && !isInt<13>(Offset);
 
   // Return true if the symbol is actually unresolved.
   // Resolved could be always false when shouldForceRelocation return true.
@@ -171,6 +172,10 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
     // For compressed jump instructions the immediate must be
     // in the range [-2048, 2046].
     return Offset > 2046 || Offset < -2048;
+  case RISCV::fixup_riscv_branch:
+    // For conditional branch instructions the immediate must be
+    // in the range [-4096, 4095].
+    return !isInt<13>(Offset);
   }
 }
 
@@ -483,6 +488,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     return UpperImm | ((LowerImm << 20) << 32);
   }
   case RISCV::fixup_riscv_rvc_jump: {
+    if (!isInt<12>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     // Need to produce offset[11|4|9:8|10|6|7|3:1|5] from the 11-bit Value.
     unsigned Bit11  = (Value >> 11) & 0x1;
     unsigned Bit4   = (Value >> 4) & 0x1;
@@ -497,6 +504,8 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, uint64_t Value,
     return Value;
   }
   case RISCV::fixup_riscv_rvc_branch: {
+    if (!isInt<9>(Value))
+      Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
     // Need to produce offset[8|4:3], [reg 3 bit], offset[7:6|2:1|5]
     unsigned Bit8   = (Value >> 8) & 0x1;
     unsigned Bit7_6 = (Value >> 6) & 0x3;

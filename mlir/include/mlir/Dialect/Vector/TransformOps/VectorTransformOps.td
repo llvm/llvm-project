@@ -306,4 +306,15 @@ def ApplyTransferToScfPatternsOp : Op<Transform_Dialect,
   }];
 }
 
+def ApplyFoldArithExtensionPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.fold_arith_extension",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Collect a set of patterns that fold arithmetic extension on floating point
+    into vector contract for the backends with native support.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
 #endif // VECTOR_TRANSFORM_OPS

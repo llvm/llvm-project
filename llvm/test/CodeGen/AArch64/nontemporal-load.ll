@@ -528,27 +528,25 @@ define <4 x i63> @test_ldnp_v4i63(ptr %A) {
 ; CHECK-LABEL: test_ldnp_v4i63:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    ldp x8, x9, [x0]
-; CHECK-NEXT:    ldp x10, x11, [x0, #16]
-; CHECK-NEXT:    extr x12, x9, x8, #63
+; CHECK-NEXT:    ldp x10, x12, [x0, #16]
+; CHECK-NEXT:    extr x11, x9, x8, #63
 ; CHECK-NEXT:    and x0, x8, #0x7fffffffffffffff
 ; CHECK-NEXT:    extr x9, x10, x9, #62
-; CHECK-NEXT:    extr x10, x11, x10, #61
-; CHECK-NEXT:    and x1, x12, #0x7fffffffffffffff
+; CHECK-NEXT:    extr x3, x12, x10, #61
+; CHECK-NEXT:    and x1, x11, #0x7fffffffffffffff
 ; CHECK-NEXT:    and x2, x9, #0x7fffffffffffffff
-; CHECK-NEXT:    and x3, x10, #0x7fffffffffffffff
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-BE-LABEL: test_ldnp_v4i63:
 ; CHECK-BE:       // %bb.0:
-; CHECK-BE-NEXT:    ldp x9, x8, [x0]
-; CHECK-BE-NEXT:    ldp x10, x11, [x0, #16]
-; CHECK-BE-NEXT:    extr x9, x9, x8, #61
-; CHECK-BE-NEXT:    extr x8, x8, x10, #62
-; CHECK-BE-NEXT:    extr x10, x10, x11, #63
-; CHECK-BE-NEXT:    and x3, x11, #0x7fffffffffffffff
-; CHECK-BE-NEXT:    and x0, x9, #0x7fffffffffffffff
-; CHECK-BE-NEXT:    and x1, x8, #0x7fffffffffffffff
-; CHECK-BE-NEXT:    and x2, x10, #0x7fffffffffffffff
+; CHECK-BE-NEXT:    ldp x8, x9, [x0, #16]
+; CHECK-BE-NEXT:    ldp x11, x10, [x0]
+; CHECK-BE-NEXT:    and x3, x9, #0x7fffffffffffffff
+; CHECK-BE-NEXT:    extr x12, x10, x8, #62
+; CHECK-BE-NEXT:    extr x8, x8, x9, #63
+; CHECK-BE-NEXT:    extr x0, x11, x10, #61
+; CHECK-BE-NEXT:    and x1, x12, #0x7fffffffffffffff
+; CHECK-BE-NEXT:    and x2, x8, #0x7fffffffffffffff
 ; CHECK-BE-NEXT:    ret
   %lv = load <4 x i63>, ptr %A, align 8, !nontemporal !0
   ret <4 x i63> %lv

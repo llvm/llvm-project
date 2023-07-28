@@ -76,12 +76,3 @@ H *exact_multi(A *a) {
   // CHECK: phi ptr [ %[[RESULT]], %[[LABEL_NOTNULL]] ], [ null, %[[LABEL_FAILED]] ]
   return dynamic_cast<H*>(a);
 }
-
-namespace GH64088 {
-  // Ensure we mark the B vtable as used here, because we're going to emit a
-  // reference to it.
-  // CHECK: define {{.*}} @_ZN7GH640881BD0
-  struct A { virtual ~A(); };
-  struct B final : A { virtual ~B() = default; };
-  B *cast(A *p) { return dynamic_cast<B*>(p); }
-}

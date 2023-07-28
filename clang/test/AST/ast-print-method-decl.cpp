@@ -85,3 +85,18 @@ struct CurlyCtorInit {
 
   // CHECK-NEXT: };
 };
+
+
+// CHECK: struct DefMethodsWithoutBody {
+struct DefMethodsWithoutBody {
+  // CHECK-NEXT: DefMethodsWithoutBody() = delete;
+  DefMethodsWithoutBody() = delete;
+
+  // CHECK-NEXT: DefMethodsWithoutBody() = default;
+  ~DefMethodsWithoutBody() = default;
+
+  // CHECK-NEXT: void m1() __attribute__((alias("X")));
+  void m1() __attribute__((alias("X")));
+
+  // CHECK-NEXT: };
+};

@@ -234,17 +234,17 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
 void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
   const MachineOperand &MO = SU->getInstr()->getOperand(OperIdx);
   assert(MO.isDef() && "expect physreg def");
+  Register Reg = MO.getReg();
 
   // Ask the target if address-backscheduling is desirable, and if so how much.
   const TargetSubtargetInfo &ST = MF.getSubtarget();
 
   // Only use any non-zero latency for real defs/uses, in contrast to
   // "fake" operands added by regalloc.
-  const MCInstrDesc *DefMIDesc = &SU->getInstr()->getDesc();
-  bool ImplicitPseudoDef = (OperIdx >= DefMIDesc->getNumOperands() &&
-                            !DefMIDesc->hasImplicitDefOfPhysReg(MO.getReg()));
-  for (MCRegAliasIterator Alias(MO.getReg(), TRI, true);
-       Alias.isValid(); ++Alias) {
+  const MCInstrDesc &DefMIDesc = SU->getInstr()->getDesc();
+  bool ImplicitPseudoDef = (OperIdx >= DefMIDesc.getNumOperands() &&
+                            !DefMIDesc.hasImplicitDefOfPhysReg(Reg));
+  for (MCRegAliasIterator Alias(Reg, TRI, true); Alias.isValid(); ++Alias) {
     for (Reg2SUnitsMap::iterator I = Uses.find(*Alias); I != Uses.end(); ++I) {
       SUnit *UseSU = I->SU;
       if (UseSU == SU)
@@ -252,30 +252,29 @@ void ScheduleDAGInstrs::addPhysRegDataDeps(SUnit *SU, unsigned OperIdx) {
 
       // Adjust the dependence latency using operand def/use information,
       // then allow the target to perform its own adjustments.
-      int UseOp = I->OpIdx;
-      MachineInstr *RegUse = nullptr;
+      MachineInstr *UseInstr = nullptr;
+      int UseOpIdx = I->OpIdx;
+      bool ImplicitPseudoUse = false;
       SDep Dep;
-      if (UseOp < 0)
+      if (UseOpIdx < 0) {
         Dep = SDep(SU, SDep::Artificial);
-      else {
+      } else {
         // Set the hasPhysRegDefs only for physreg defs that have a use within
         // the scheduling region.
         SU->hasPhysRegDefs = true;
+        UseInstr = UseSU->getInstr();
+        const MCInstrDesc &UseMIDesc = UseInstr->getDesc();
+        ImplicitPseudoUse = (UseOpIdx >= ((int)UseMIDesc.getNumOperands()) &&
+                             !UseMIDesc.hasImplicitUseOfPhysReg(*Alias));
         Dep = SDep(SU, SDep::Data, *Alias);
-        RegUse = UseSU->getInstr();
       }
-      const MCInstrDesc *UseMIDesc =
-          (RegUse ? &UseSU->getInstr()->getDesc() : nullptr);
-      bool ImplicitPseudoUse =
-          (UseMIDesc && UseOp >= ((int)UseMIDesc->getNumOperands()) &&
-           !UseMIDesc->hasImplicitUseOfPhysReg(*Alias));
       if (!ImplicitPseudoDef && !ImplicitPseudoUse) {
         Dep.setLatency(SchedModel.computeOperandLatency(SU->getInstr(), OperIdx,
-                                                        RegUse, UseOp));
+                                                        UseInstr, UseOpIdx));
       } else {
         Dep.setLatency(0);
       }
-      ST.adjustSchedDependency(SU, OperIdx, UseSU, UseOp, Dep);
+      ST.adjustSchedDependency(SU, OperIdx, UseSU, UseOpIdx, Dep);
       UseSU->addPred(Dep);
     }
   }
@@ -302,26 +301,25 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
   //       there's no cost for reusing registers.
   SDep::Kind Kind = MO.isUse() ? SDep::Anti : SDep::Output;
   for (MCRegAliasIterator Alias(Reg, TRI, true); Alias.isValid(); ++Alias) {
-    if (!Defs.contains(*Alias))
-      continue;
     for (Reg2SUnitsMap::iterator I = Defs.find(*Alias); I != Defs.end(); ++I) {
       SUnit *DefSU = I->SU;
       if (DefSU == &ExitSU)
         continue;
-      if (DefSU != SU &&
-          (Kind != SDep::Output || !MO.isDead() ||
-           !DefSU->getInstr()->registerDefIsDead(*Alias))) {
+      MachineInstr *DefInstr = DefSU->getInstr();
+      if (DefSU != SU && (Kind != SDep::Output || !MO.isDead() ||
+                          !DefInstr->registerDefIsDead(*Alias))) {
         SDep Dep(SU, Kind, /*Reg=*/*Alias);
-        if (Kind != SDep::Anti)
+        if (Kind != SDep::Anti) {
           Dep.setLatency(
-            SchedModel.computeOutputLatency(MI, OperIdx, DefSU->getInstr()));
+              SchedModel.computeOutputLatency(MI, OperIdx, DefInstr));
+        }
         ST.adjustSchedDependency(SU, OperIdx, DefSU, I->OpIdx, Dep);
         DefSU->addPred(Dep);
       }
     }
   }
 
-  if (!MO.isDef()) {
+  if (MO.isUse()) {
     SU->hasPhysRegUses = true;
     // Either insert a new Reg2SUnits entry with an empty SUnits list, or
     // retrieve the existing SUnits list for this register's uses.
@@ -332,10 +330,9 @@ void ScheduleDAGInstrs::addPhysRegDeps(SUnit *SU, unsigned OperIdx) {
   } else {
     addPhysRegDataDeps(SU, OperIdx);
 
-    // Clear previous uses and defs of this register and its subergisters.
+    // Clear previous uses and defs of this register and its subregisters.
     for (MCPhysReg SubReg : TRI->subregs_inclusive(Reg)) {
-      if (Uses.contains(SubReg))
-        Uses.eraseAll(SubReg);
+      Uses.eraseAll(SubReg);
       if (!MO.isDead())
         Defs.eraseAll(SubReg);
     }
