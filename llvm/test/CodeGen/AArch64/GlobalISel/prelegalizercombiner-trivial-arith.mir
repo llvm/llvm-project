@@ -308,11 +308,8 @@ body:             |
     ; CHECK-LABEL: name: look_through_zext
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}
-    ; CHECK-NEXT: %zero:_(s8) = G_CONSTANT i8 0
-    ; CHECK-NEXT: %zext_zero:_(s64) = G_ZEXT %zero(s8)
-    ; CHECK-NEXT: %c:_(s64) = G_CONSTANT i64 72340172838076673
-    ; CHECK-NEXT: %mul:_(s64) = G_MUL %zext_zero, %c
-    ; CHECK-NEXT: $x0 = COPY %mul(s64)
+    ; CHECK-NEXT: %zext_zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: $x0 = COPY %zext_zero(s64)
     ; CHECK-NEXT: RET_ReallyLR implicit $x0
     %zero:_(s8) = G_CONSTANT i8 0
     %zext_zero:_(s64) = G_ZEXT %zero(s8)
@@ -384,7 +381,9 @@ body:             |
   bb.1:
   liveins: $q0
     ; CHECK-LABEL: name: lshr_of_vec_zero
-    ; CHECK: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<8 x s16>) = COPY $q0
     ; CHECK-NEXT: $q0 = COPY [[COPY]](<8 x s16>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<8 x s16>) = COPY $q0
@@ -400,7 +399,9 @@ body:             |
   bb.1:
   liveins: $q0
     ; CHECK-LABEL: name: ptradd_of_vec_zero
-    ; CHECK: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $q0
+    ; CHECK: liveins: $q0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(<2 x p0>) = COPY $q0
     ; CHECK-NEXT: $q0 = COPY [[COPY]](<2 x p0>)
     ; CHECK-NEXT: RET_ReallyLR implicit $q0
     %0:_(<2 x p0>) = COPY $q0
@@ -419,7 +420,9 @@ body:             |
     liveins: $x0
 
     ; CHECK-LABEL: name: i128_or_cst
-    ; CHECK: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
+    ; CHECK: liveins: $x0
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(p0) = COPY $x0
     ; CHECK-NEXT: [[LOAD:%[0-9]+]]:_(s128) = G_LOAD [[COPY]](p0) :: (load (s128))
     ; CHECK-NEXT: [[C:%[0-9]+]]:_(s128) = G_CONSTANT i128 9223372036854775808
     ; CHECK-NEXT: [[OR:%[0-9]+]]:_(s128) = G_OR [[LOAD]], [[C]]
