@@ -10428,10 +10428,12 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
   if (Depth >= 6)
     return std::nullopt;
 
+  auto ValueSize = Op.getValueSizeInBits();
+  if (ValueSize != 8 && ValueSize != 16 && ValueSize != 32)
+    return std::nullopt;
+
   switch (Op->getOpcode()) {
   case ISD::TRUNCATE: {
-    if (Op->getOperand(0).getScalarValueSizeInBits() != 32)
-      return std::nullopt;
     return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
   }
 
@@ -10451,9 +10453,6 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
   }
 
   default: {
-    if (Op.getScalarValueSizeInBits() != 32)
-      return std::nullopt;
-
     return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex);
   }
   }
@@ -10595,6 +10594,17 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     return std::nullopt;
   }
 
+  case ISD::CopyFromReg: {
+    auto BitWidth = Op.getScalarValueSizeInBits();
+    if (BitWidth % 8)
+      llvm_unreachable("Invalid type in CopyFromReg");
+
+    if (BitWidth / 8 > Index)
+      return calculateSrcByte(Op, StartingIndex, Index);
+
+    return std::nullopt;
+  }
+
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
     unsigned NarrowBitWidth = L->getMemoryVT().getSizeInBits();
@@ -10631,7 +10641,8 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 }
 
 // Returns true if the Operand is a scalar and is 16 bits
-static bool is16BitScalarOp(SDValue &Operand) {
+static bool isExtendedFrom16Bits(SDValue &Operand) {
+
   switch (Operand.getOpcode()) {
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -10647,7 +10658,7 @@ static bool is16BitScalarOp(SDValue &Operand) {
       auto MemVT = L->getMemoryVT();
       return !MemVT.isVector() && MemVT.getSizeInBits() == 16;
     }
-    return false;
+    return L->getMemoryVT().getSizeInBits() == 16;
   }
   default:
     return false;
@@ -10675,29 +10686,29 @@ static bool addresses16Bits(int Mask) {
 // Do not lower into v_perm if the operands are actually 16 bit
 // and the selected bits (based on PermMask) correspond with two
 // easily addressable 16 bit operands.
-static bool hasEightBitAccesses(uint64_t PermMask, SDValue &Op,
+static bool hasNon16BitAccesses(uint64_t PermMask, SDValue &Op,
                                 SDValue &OtherOp) {
   int Low16 = PermMask & 0xffff;
   int Hi16 = (PermMask & 0xffff0000) >> 16;
 
-  // ByteProvider only accepts 32 bit operands
-  assert(Op.getValueType().getSizeInBits() == 32);
-  assert(OtherOp.getValueType().getSizeInBits() == 32);
+  assert(Op.getValueType().isByteSized());
+  assert(OtherOp.getValueType().isByteSized());
 
-  auto OpIs16Bit = is16BitScalarOp(Op);
-  auto OtherOpIs16Bit = is16BitScalarOp(Op);
+  auto TempOp = peekThroughBitcasts(Op);
+  auto TempOtherOp = peekThroughBitcasts(OtherOp);
 
-  // If there is a size mismatch, then we must use masking on at least one
-  // operand
-  if (OpIs16Bit != OtherOpIs16Bit)
+  auto OpIs16Bit =
+      TempOtherOp.getValueSizeInBits() == 16 || isExtendedFrom16Bits(TempOp);
+  if (!OpIs16Bit)
     return true;
 
-  // If both operands are 16 bit, return whether or not we cleanly address both
-  if (is16BitScalarOp(Op) && is16BitScalarOp(OtherOp))
-    return !addresses16Bits(Low16) || !addresses16Bits(Hi16);
+  auto OtherOpIs16Bit = TempOtherOp.getValueSizeInBits() == 16 ||
+                        isExtendedFrom16Bits(TempOtherOp);
+  if (!OtherOpIs16Bit)
+    return true;
 
-  // Both are 32 bit operands
-  return true;
+  // Do we cleanly address both
+  return !addresses16Bits(Low16) || !addresses16Bits(Hi16);
 }
 
 SDValue SITargetLowering::performOrCombine(SDNode *N,
@@ -10822,8 +10833,9 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
         std::optional<ByteProvider<SDValue>> P =
             calculateByteProvider(SDValue(N, 0), i, 0, /*StartingIndex = */ i);
         // TODO support constantZero
-        if (!P || P->isConstantZero())
+        if (!P || P->isConstantZero()) {
           return SDValue();
+        }
 
         PermNodes.push_back(*P);
       }
@@ -10832,7 +10844,7 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
 
       int FirstSrc = 0;
       std::optional<int> SecondSrc;
-      uint64_t permMask = 0x00000000;
+      uint64_t PermMask = 0x00000000;
       for (size_t i = 0; i < PermNodes.size(); i++) {
         auto PermOp = PermNodes[i];
         // Since the mask is applied to Src1:Src2, Src1 bytes must be offset
@@ -10843,15 +10855,15 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
           if (SecondSrc.has_value())
             if (!PermOp.hasSameSrc(PermNodes[*SecondSrc]))
               return SDValue();
+
           // Set the index of the second distinct Src node
           SecondSrc = i;
-          assert(PermNodes[*SecondSrc].Src->getValueType().getSizeInBits() ==
-                 32);
+          assert(!(PermNodes[*SecondSrc].Src->getValueSizeInBits() % 8));
           SrcByteAdjust = 0;
         }
         assert(PermOp.SrcOffset + SrcByteAdjust < 8);
         assert(!DAG.getDataLayout().isBigEndian());
-        permMask |= (PermOp.SrcOffset + SrcByteAdjust) << (i * 8);
+        PermMask |= (PermOp.SrcOffset + SrcByteAdjust) << (i * 8);
       }
 
       SDValue Op = *PermNodes[FirstSrc].Src;
@@ -10860,8 +10872,8 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
 
       // Check that we are not just extracting the bytes in order from an op
       if (Op == OtherOp) {
-        int Low16 = permMask & 0xffff;
-        int Hi16 = (permMask & 0xffff0000) >> 16;
+        int Low16 = PermMask & 0xffff;
+        int Hi16 = (PermMask & 0xffff0000) >> 16;
 
         bool WellFormedLow = (Low16 == 0x0504) || (Low16 == 0x0100);
         bool WellFormedHi = (Hi16 == 0x0706) || (Hi16 == 0x0302);
@@ -10871,10 +10883,23 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
           return Op;
       }
 
-      if (hasEightBitAccesses(permMask, Op, OtherOp)) {
+      if (hasNon16BitAccesses(PermMask, Op, OtherOp)) {
         SDLoc DL(N);
+        assert(Op.getValueType().isByteSized() &&
+               OtherOp.getValueType().isByteSized());
+        if (Op.getValueSizeInBits() < 32)
+          // If the ultimate src is less than 32 bits, then we will only be
+          // using bytes 0: Op.getValueSizeInBytes() - 1 in the or.
+          // CalculateByteProvider would not have returned Op as source if we
+          // used a byte that is outside its ValueType. Thus, we are free to
+          // ANY_EXTEND as the extended bits are dont-cares.
+          Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op);
+
+        if (OtherOp.getValueSizeInBits() < 32)
+          OtherOp = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, Op);
+
         return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Op, OtherOp,
-                           DAG.getConstant(permMask, DL, MVT::i32));
+                           DAG.getConstant(PermMask, DL, MVT::i32));
       }
     }
   }
