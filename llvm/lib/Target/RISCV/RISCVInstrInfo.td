@@ -1951,7 +1951,6 @@ include "RISCVInstrInfoZk.td"
 
 // Vector
 include "RISCVInstrInfoV.td"
-include "RISCVInstrInfoZvfbf.td"
 include "RISCVInstrInfoZvk.td"
 
 // Integer

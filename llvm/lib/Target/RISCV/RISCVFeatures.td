@@ -477,6 +477,8 @@ def HasStdExtZvfbfwma : Predicate<"Subtarget->hasStdExtZvfbfwma()">,
                                   AssemblerPredicate<(all_of FeatureStdExtZvfbfwma),
                                   "'Zvfbfwma' (Vector BF16 widening mul-add)">;
 
+def HasVInstructionsBF16 : Predicate<"Subtarget->hasVInstructionsBF16()">;
+
 def FeatureStdExtZvfh
     : SubtargetFeature<"zvfh", "HasStdExtZvfh", "true",
                        "'Zvfh' (Vector Half-Precision Floating-Point)",
