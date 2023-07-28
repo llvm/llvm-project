@@ -556,6 +556,12 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::STACKSAVE, MVT::Other, Expand);
   setOperationAction(ISD::STACKRESTORE, MVT::Other, Expand);
 
+  // Lowering Funnel Shifts to EXTR
+  setOperationAction(ISD::FSHR, MVT::i32, Custom);
+  setOperationAction(ISD::FSHR, MVT::i64, Custom);
+  setOperationAction(ISD::FSHL, MVT::i32, Custom);
+  setOperationAction(ISD::FSHL, MVT::i64, Custom);
+
   if (Subtarget->isTargetWindows())
     setOperationAction(ISD::DYNAMIC_STACKALLOC, MVT::i64, Custom);
   else
@@ -2352,7 +2358,6 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::BICi)
     MAKE_CASE(AArch64ISD::ORRi)
     MAKE_CASE(AArch64ISD::BSP)
-    MAKE_CASE(AArch64ISD::EXTR)
     MAKE_CASE(AArch64ISD::ZIP1)
     MAKE_CASE(AArch64ISD::ZIP2)
     MAKE_CASE(AArch64ISD::UZP1)
@@ -5797,6 +5802,30 @@ static SDValue LowerBRCOND(SDValue Op, SelectionDAG &DAG) {
   return SDValue();
 }
 
+// Treat FSHR with constant shifts as legal operation, otherwise it is expanded
+// FSHL is converted to FSHR before deciding what to do with it
+static SDValue LowerFunnelShift(SDValue Op, SelectionDAG &DAG) {
+  SDValue Shifts = Op.getOperand(2);
+  // Check if the shift amount is a constant
+  // If opcode is FSHL, convert it to FSHR
+  if (auto *ShiftNo = dyn_cast<ConstantSDNode>(Shifts)) {
+    SDLoc DL(Op);
+    MVT VT = Op.getSimpleValueType();
+
+    if (Op.getOpcode() == ISD::FSHL) {
+      unsigned int NewShiftNo =
+          VT.getFixedSizeInBits() - ShiftNo->getZExtValue();
+      return DAG.getNode(
+          ISD::FSHR, DL, VT, Op.getOperand(0), Op.getOperand(1),
+          DAG.getConstant(NewShiftNo, DL, Shifts.getValueType()));
+    } else if (Op.getOpcode() == ISD::FSHR) {
+      return Op;
+    }
+  }
+
+  return SDValue();
+}
+
 SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
                                               SelectionDAG &DAG) const {
   LLVM_DEBUG(dbgs() << "Custom lowering: ");
@@ -6106,6 +6135,9 @@ SDValue AArch64TargetLowering::LowerOperation(SDValue Op,
 
     return Result;
   }
+  case ISD::FSHL:
+  case ISD::FSHR:
+    return LowerFunnelShift(Op, DAG);
   }
 }
 
@@ -16678,70 +16710,6 @@ static SDValue performFDivCombine(SDNode *N, SelectionDAG &DAG,
                      DAG.getConstant(C, DL, MVT::i32));
 }
 
-/// An EXTR instruction is made up of two shifts, ORed together. This helper
-/// searches for and classifies those shifts.
-static bool findEXTRHalf(SDValue N, SDValue &Src, uint32_t &ShiftAmount,
-                         bool &FromHi) {
-  if (N.getOpcode() == ISD::SHL)
-    FromHi = false;
-  else if (N.getOpcode() == ISD::SRL)
-    FromHi = true;
-  else
-    return false;
-
-  if (!isa<ConstantSDNode>(N.getOperand(1)))
-    return false;
-
-  ShiftAmount = N->getConstantOperandVal(1);
-  Src = N->getOperand(0);
-  return true;
-}
-
-/// EXTR instruction extracts a contiguous chunk of bits from two existing
-/// registers viewed as a high/low pair. This function looks for the pattern:
-/// <tt>(or (shl VAL1, \#N), (srl VAL2, \#RegWidth-N))</tt> and replaces it
-/// with an EXTR. Can't quite be done in TableGen because the two immediates
-/// aren't independent.
-static SDValue tryCombineToEXTR(SDNode *N,
-                                TargetLowering::DAGCombinerInfo &DCI) {
-  SelectionDAG &DAG = DCI.DAG;
-  SDLoc DL(N);
-  EVT VT = N->getValueType(0);
-
-  assert(N->getOpcode() == ISD::OR && "Unexpected root");
-
-  if (VT != MVT::i32 && VT != MVT::i64)
-    return SDValue();
-
-  SDValue LHS;
-  uint32_t ShiftLHS = 0;
-  bool LHSFromHi = false;
-  if (!findEXTRHalf(N->getOperand(0), LHS, ShiftLHS, LHSFromHi))
-    return SDValue();
-
-  SDValue RHS;
-  uint32_t ShiftRHS = 0;
-  bool RHSFromHi = false;
-  if (!findEXTRHalf(N->getOperand(1), RHS, ShiftRHS, RHSFromHi))
-    return SDValue();
-
-  // If they're both trying to come from the high part of the register, they're
-  // not really an EXTR.
-  if (LHSFromHi == RHSFromHi)
-    return SDValue();
-
-  if (ShiftLHS + ShiftRHS != VT.getSizeInBits())
-    return SDValue();
-
-  if (LHSFromHi) {
-    std::swap(LHS, RHS);
-    std::swap(ShiftLHS, ShiftRHS);
-  }
-
-  return DAG.getNode(AArch64ISD::EXTR, DL, VT, LHS, RHS,
-                     DAG.getConstant(ShiftRHS, DL, MVT::i64));
-}
-
 static SDValue tryCombineToBSL(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                const AArch64TargetLowering &TLI) {
   EVT VT = N->getValueType(0);
@@ -16924,10 +16892,6 @@ static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
 
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
     return SDValue();
-
-  // Attempt to form an EXTR from (or (shl VAL1, #N), (srl VAL2, #RegWidth-N))
-  if (SDValue Res = tryCombineToEXTR(N, DCI))
-    return Res;
 
   if (SDValue Res = tryCombineToBSL(N, DCI, TLI))
     return Res;
