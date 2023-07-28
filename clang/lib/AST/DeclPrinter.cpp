@@ -463,12 +463,12 @@ void DeclPrinter::VisitDeclContext(DeclContext *DC, bool Indent) {
     else if (isa<ObjCMethodDecl>(*D) && cast<ObjCMethodDecl>(*D)->hasBody())
       Terminator = nullptr;
     else if (auto FD = dyn_cast<FunctionDecl>(*D)) {
-      if (FD->doesThisDeclarationHaveABody() && !FD->isDefaulted())
+      if (FD->isThisDeclarationADefinition())
         Terminator = nullptr;
       else
         Terminator = ";";
     } else if (auto TD = dyn_cast<FunctionTemplateDecl>(*D)) {
-      if (TD->getTemplatedDecl()->doesThisDeclarationHaveABody())
+      if (TD->getTemplatedDecl()->isThisDeclarationADefinition())
         Terminator = nullptr;
       else
         Terminator = ";";
