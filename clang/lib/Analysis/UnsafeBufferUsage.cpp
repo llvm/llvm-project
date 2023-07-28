@@ -872,7 +872,7 @@ public:
     }
     return ReturnSet;
   }
-  
+
   void discoverDecl(const DeclStmt *DS) {
     for (const Decl *D : DS->decls()) {
       if (const auto *VD = dyn_cast<VarDecl>(D)) {
@@ -1985,7 +1985,7 @@ static FixItList fixParamWithSpan(const ParmVarDecl *PVD, const ASTContext &Ctx,
     DEBUG_NOTE_DECL_FAIL(PVD, " : has default arg");
     return {};
   }
-  
+
   assert(PVD->getType()->isPointerType());
   auto *FD = dyn_cast<FunctionDecl>(PVD->getDeclContext());
 
