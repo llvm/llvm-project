@@ -259,13 +259,13 @@ Fraction mlir::presburger::dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b
 void MatrixF::gramSchmidt()
 {
     Fraction projection;
-    for (unsigned i = 0; i < getNumRows(); i++)
+    for (unsigned i = 1; i < getNumRows(); i++)
     {
-        for (unsigned j = i-1; j >= 0; j++)
+        for (unsigned j = 0; j < i; j++)
         {
             projection = dotProduct(getRow(i), getRow(j)) /
                          dotProduct(getRow(j), getRow(j));
-            addToRow(i, j, -projection);
+            addToRow(i, getRow(j), -projection);
         }
     }
 }
