@@ -8,8 +8,8 @@ target triple = "aarch64-unknown-linux-gnu"
 define <8 x i8> @sdiv_v8i8(<8 x i8> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v8i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl8
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    asrd z0.b, p0/m, z0.b, #1
 ; CHECK-NEXT:    subr z0.b, z0.b, #0 // =0x0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -21,8 +21,8 @@ define <8 x i8> @sdiv_v8i8(<8 x i8> %op1) vscale_range(2,0) #0 {
 define <16 x i8> @sdiv_v16i8(<16 x i8> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v16i8:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.b, vl16
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    asrd z0.b, p0/m, z0.b, #5
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -47,8 +47,8 @@ define void @sdiv_v32i8(ptr %a) vscale_range(2,0) #0 {
 define void @sdiv_v64i8(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sdiv_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    asrd z0.b, p0/m, z0.b, #5
@@ -102,8 +102,8 @@ define void @sdiv_v256i8(ptr %a) vscale_range(16,0) #0 {
 define <4 x i16> @sdiv_v4i16(<4 x i16> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v4i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl4
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    asrd z0.h, p0/m, z0.h, #5
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -114,8 +114,8 @@ define <4 x i16> @sdiv_v4i16(<4 x i16> %op1) vscale_range(2,0) #0 {
 define <8 x i16> @sdiv_v8i16(<8 x i16> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v8i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.h, vl8
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    asrd z0.h, p0/m, z0.h, #3
 ; CHECK-NEXT:    subr z0.h, z0.h, #0 // =0x0
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -141,8 +141,8 @@ define void @sdiv_v16i16(ptr %a) vscale_range(2,0) #0 {
 define void @sdiv_v32i16(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sdiv_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    asrd z0.h, p0/m, z0.h, #5
@@ -196,8 +196,8 @@ define void @sdiv_v128i16(ptr %a) vscale_range(16,0) #0 {
 define <2 x i32> @sdiv_v2i32(<2 x i32> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v2i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl2
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #5
 ; CHECK-NEXT:    subr z0.s, z0.s, #0 // =0x0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -209,8 +209,8 @@ define <2 x i32> @sdiv_v2i32(<2 x i32> %op1) vscale_range(2,0) #0 {
 define <4 x i32> @sdiv_v4i32(<4 x i32> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v4i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.s, vl4
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    asrd z0.s, p0/m, z0.s, #5
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -236,8 +236,8 @@ define void @sdiv_v8i32(ptr %a) vscale_range(2,0) #0 {
 define void @sdiv_v16i32(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sdiv_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    asrd z0.s, p0/m, z0.s, #5
@@ -290,8 +290,8 @@ define void @sdiv_v64i32(ptr %a) vscale_range(16,0) #0 {
 define <1 x i64> @sdiv_v1i64(<1 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    asrd z0.d, p0/m, z0.d, #7
 ; CHECK-NEXT:    subr z0.d, z0.d, #0 // =0x0
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -304,8 +304,8 @@ define <1 x i64> @sdiv_v1i64(<1 x i64> %op1) vscale_range(2,0) #0 {
 define <2 x i64> @sdiv_v2i64(<2 x i64> %op1) vscale_range(2,0) #0 {
 ; CHECK-LABEL: sdiv_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    asrd z0.d, p0/m, z0.d, #5
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -331,8 +331,8 @@ define void @sdiv_v4i64(ptr %a) vscale_range(2,0) #0 {
 define void @sdiv_v8i64(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: sdiv_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    asrd z0.d, p0/m, z0.d, #5

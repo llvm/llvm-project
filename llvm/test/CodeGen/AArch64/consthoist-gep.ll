@@ -32,44 +32,44 @@ define dso_local void @blam() local_unnamed_addr #0 {
 ; CHECK-NEXT:    ldrb w9, [x8]
 ; CHECK-NEXT:    tbnz w9, #0, .LBB0_2
 ; CHECK-NEXT:  // %bb.1: // %bb3
-; CHECK-NEXT:    mov w9, #44032
+; CHECK-NEXT:    mov w9, #44032 // =0xac00
+; CHECK-NEXT:    mov w11, #172 // =0xac
 ; CHECK-NEXT:    movk w9, #12296, lsl #16
-; CHECK-NEXT:    orr w11, w9, #0x4
 ; CHECK-NEXT:    ldr w10, [x9]
 ; CHECK-NEXT:    stur w10, [x8, #158]
-; CHECK-NEXT:    ldr w10, [x11]
-; CHECK-NEXT:    orr w11, w9, #0x8
+; CHECK-NEXT:    orr w10, w9, #0x4
+; CHECK-NEXT:    ldr w10, [x10]
 ; CHECK-NEXT:    and w10, w10, #0xffff
 ; CHECK-NEXT:    stur w10, [x8, #162]
-; CHECK-NEXT:    ldr w10, [x11]
-; CHECK-NEXT:    orr w11, w9, #0xc
+; CHECK-NEXT:    orr w10, w9, #0x8
+; CHECK-NEXT:    ldr w10, [x10]
 ; CHECK-NEXT:    and w10, w10, #0x1f1f1f1f
 ; CHECK-NEXT:    stur w10, [x8, #166]
-; CHECK-NEXT:    ldr w10, [x11]
-; CHECK-NEXT:    mov w11, #172
-; CHECK-NEXT:    orr w11, w9, w11
+; CHECK-NEXT:    orr w10, w9, #0xc
+; CHECK-NEXT:    ldr w10, [x10]
 ; CHECK-NEXT:    and w10, w10, #0x1f1f1f1f
 ; CHECK-NEXT:    stur w10, [x8, #170]
-; CHECK-NEXT:    mov w10, #176
-; CHECK-NEXT:    ldr w8, [x11]
-; CHECK-NEXT:    adrp x11, global+528
-; CHECK-NEXT:    add x11, x11, :lo12:global+528
-; CHECK-NEXT:    orr w10, w9, w10
+; CHECK-NEXT:    orr w8, w9, w11
+; CHECK-NEXT:    adrp x10, global+528
+; CHECK-NEXT:    add x10, x10, :lo12:global+528
+; CHECK-NEXT:    ldr w8, [x8]
+; CHECK-NEXT:    mov w11, #176 // =0xb0
 ; CHECK-NEXT:    and w8, w8, #0xffffff
-; CHECK-NEXT:    str w8, [x11]
-; CHECK-NEXT:    ldr w8, [x10]
-; CHECK-NEXT:    mov w10, #180
-; CHECK-NEXT:    orr w10, w9, w10
+; CHECK-NEXT:    str w8, [x10]
+; CHECK-NEXT:    orr w8, w9, w11
+; CHECK-NEXT:    mov w11, #180 // =0xb4
+; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    and w8, w8, #0xffffff
-; CHECK-NEXT:    str w8, [x11, #4]
-; CHECK-NEXT:    ldr w8, [x10]
-; CHECK-NEXT:    mov w10, #184
-; CHECK-NEXT:    orr w9, w9, w10
+; CHECK-NEXT:    str w8, [x10, #4]
+; CHECK-NEXT:    orr w8, w9, w11
+; CHECK-NEXT:    mov w11, #184 // =0xb8
+; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    and w8, w8, #0xffffff
-; CHECK-NEXT:    str w8, [x11, #8]
-; CHECK-NEXT:    ldr w8, [x9]
+; CHECK-NEXT:    str w8, [x10, #8]
+; CHECK-NEXT:    orr w8, w9, w11
+; CHECK-NEXT:    ldr w8, [x8]
 ; CHECK-NEXT:    and w8, w8, #0xffffff
-; CHECK-NEXT:    str w8, [x11, #12]
+; CHECK-NEXT:    str w8, [x10, #12]
 ; CHECK-NEXT:  .LBB0_2: // %bb19
 ; CHECK-NEXT:    ret
 bb:

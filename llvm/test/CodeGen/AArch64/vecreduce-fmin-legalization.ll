@@ -289,14 +289,14 @@ define half @test_v16f16(<16 x half> %a) nounwind {
 ; CHECK-NOFP-SD-NEXT:    fminnm s2, s2, s3
 ; CHECK-NOFP-SD-NEXT:    fcsel s3, s5, s4, lt
 ; CHECK-NOFP-SD-NEXT:    fcmp s0, s1
+; CHECK-NOFP-SD-NEXT:    fcsel s0, s0, s1, lt
 ; CHECK-NOFP-SD-NEXT:    fcvt h2, s2
 ; CHECK-NOFP-SD-NEXT:    fcvt h3, s3
-; CHECK-NOFP-SD-NEXT:    fcsel s0, s0, s1, lt
+; CHECK-NOFP-SD-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-SD-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-SD-NEXT:    fcvt s3, h3
-; CHECK-NOFP-SD-NEXT:    fcvt h0, s0
-; CHECK-NOFP-SD-NEXT:    fminnm s2, s2, s3
 ; CHECK-NOFP-SD-NEXT:    fcvt s0, h0
+; CHECK-NOFP-SD-NEXT:    fminnm s2, s2, s3
 ; CHECK-NOFP-SD-NEXT:    fcvt h1, s2
 ; CHECK-NOFP-SD-NEXT:    fcvt s1, h1
 ; CHECK-NOFP-SD-NEXT:    fminnm s0, s1, s0
@@ -418,30 +418,30 @@ define half @test_v11f16(<11 x half> %a) nounwind {
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-NEXT:    adrp x8, .LCPI14_0
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
-; CHECK-NOFP-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-NEXT:    fcvt s17, h17
+; CHECK-NOFP-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-NEXT:    fcmp s1, s16
 ; CHECK-NOFP-NEXT:    fcsel s1, s1, s16, lt
 ; CHECK-NOFP-NEXT:    fcmp s0, s17
 ; CHECK-NOFP-NEXT:    ldr h16, [sp, #16]
+; CHECK-NOFP-NEXT:    fcvt s16, h16
 ; CHECK-NOFP-NEXT:    fcsel s0, s0, s17, lt
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcvt s16, h16
+; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
-; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fminnm s0, s0, s1
 ; CHECK-NOFP-NEXT:    fcsel s1, s2, s16, lt
 ; CHECK-NOFP-NEXT:    ldr h2, [x8, :lo12:.LCPI14_0]
 ; CHECK-NOFP-NEXT:    mov w8, #2139095040 // =0x7f800000
-; CHECK-NOFP-NEXT:    fcvt h0, s0
-; CHECK-NOFP-NEXT:    fcvt h1, s1
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-NEXT:    fmov s16, w8
+; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fminnm s0, s0, s1
 ; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, lt
 ; CHECK-NOFP-NEXT:    fcvt s3, h4
@@ -491,8 +491,8 @@ define half @test_v11f16(<11 x half> %a) nounwind {
 ; CHECK-FP-NEXT:    // kill: def $h2 killed $h2 def $q2
 ; CHECK-FP-NEXT:    // kill: def $h3 killed $h3 def $q3
 ; CHECK-FP-NEXT:    // kill: def $h4 killed $h4 def $q4
-; CHECK-FP-NEXT:    mov x8, sp
 ; CHECK-FP-NEXT:    // kill: def $h5 killed $h5 def $q5
+; CHECK-FP-NEXT:    mov x8, sp
 ; CHECK-FP-NEXT:    // kill: def $h6 killed $h6 def $q6
 ; CHECK-FP-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; CHECK-FP-NEXT:    mov v0.h[1], v1.h[0]
@@ -500,11 +500,11 @@ define half @test_v11f16(<11 x half> %a) nounwind {
 ; CHECK-FP-NEXT:    mov v0.h[2], v2.h[0]
 ; CHECK-FP-NEXT:    ld1 { v1.h }[0], [x8]
 ; CHECK-FP-NEXT:    add x8, sp, #8
-; CHECK-FP-NEXT:    mov v0.h[3], v3.h[0]
 ; CHECK-FP-NEXT:    ld1 { v1.h }[1], [x8]
 ; CHECK-FP-NEXT:    add x8, sp, #16
-; CHECK-FP-NEXT:    mov v0.h[4], v4.h[0]
+; CHECK-FP-NEXT:    mov v0.h[3], v3.h[0]
 ; CHECK-FP-NEXT:    ld1 { v1.h }[2], [x8]
+; CHECK-FP-NEXT:    mov v0.h[4], v4.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[5], v5.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[6], v6.h[0]
 ; CHECK-FP-NEXT:    mov v0.h[7], v7.h[0]
@@ -525,31 +525,31 @@ define half @test_v11f16_ninf(<11 x half> %a) nounwind {
 ; CHECK-NOFP-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-NEXT:    adrp x8, .LCPI15_0
 ; CHECK-NOFP-NEXT:    fcvt s16, h16
-; CHECK-NOFP-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-NEXT:    fcvt s17, h17
+; CHECK-NOFP-NEXT:    fcvt s3, h3
 ; CHECK-NOFP-NEXT:    fcmp s1, s16
 ; CHECK-NOFP-NEXT:    fcsel s1, s1, s16, lt
 ; CHECK-NOFP-NEXT:    fcmp s0, s17
 ; CHECK-NOFP-NEXT:    ldr h16, [sp, #16]
+; CHECK-NOFP-NEXT:    fcvt s16, h16
 ; CHECK-NOFP-NEXT:    fcsel s0, s0, s17, lt
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcvt s16, h16
+; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
-; CHECK-NOFP-NEXT:    fcmp s2, s16
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fminnm s0, s0, s1
 ; CHECK-NOFP-NEXT:    fcsel s1, s2, s16, lt
 ; CHECK-NOFP-NEXT:    ldr h2, [x8, :lo12:.LCPI15_0]
 ; CHECK-NOFP-NEXT:    mov w8, #57344 // =0xe000
+; CHECK-NOFP-NEXT:    fcvt s2, h2
 ; CHECK-NOFP-NEXT:    movk w8, #18303, lsl #16
+; CHECK-NOFP-NEXT:    fmov s16, w8
 ; CHECK-NOFP-NEXT:    fcvt h0, s0
 ; CHECK-NOFP-NEXT:    fcvt h1, s1
-; CHECK-NOFP-NEXT:    fcvt s2, h2
-; CHECK-NOFP-NEXT:    fmov s16, w8
+; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fcvt s0, h0
 ; CHECK-NOFP-NEXT:    fcvt s1, h1
-; CHECK-NOFP-NEXT:    fcmp s3, s2
 ; CHECK-NOFP-NEXT:    fminnm s0, s0, s1
 ; CHECK-NOFP-NEXT:    fcsel s1, s3, s16, lt
 ; CHECK-NOFP-NEXT:    fcvt s3, h4
@@ -599,8 +599,8 @@ define half @test_v11f16_ninf(<11 x half> %a) nounwind {
 ; CHECK-FP-NEXT:    // kill: def $h2 killed $h2 def $q2
 ; CHECK-FP-NEXT:    // kill: def $h3 killed $h3 def $q3
 ; CHECK-FP-NEXT:    // kill: def $h4 killed $h4 def $q4
-; CHECK-FP-NEXT:    mov x8, sp
 ; CHECK-FP-NEXT:    // kill: def $h5 killed $h5 def $q5
+; CHECK-FP-NEXT:    mov x8, sp
 ; CHECK-FP-NEXT:    // kill: def $h6 killed $h6 def $q6
 ; CHECK-FP-NEXT:    // kill: def $h7 killed $h7 def $q7
 ; CHECK-FP-NEXT:    mov v0.h[1], v1.h[0]

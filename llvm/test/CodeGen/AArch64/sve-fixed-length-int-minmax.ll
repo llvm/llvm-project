@@ -48,8 +48,8 @@ define void @smax_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smax_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smax_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1b { z2.b }, p0/z, [x1, x8]
@@ -146,8 +146,8 @@ define void @smax_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smax_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smax_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
@@ -244,8 +244,8 @@ define void @smax_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smax_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smax_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -307,8 +307,8 @@ define void @smax_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i64> @smax_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smax_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    smax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -321,8 +321,8 @@ define <1 x i64> @smax_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #
 define <2 x i64> @smax_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smax_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    smax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -350,8 +350,8 @@ define void @smax_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smax_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smax_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
@@ -452,8 +452,8 @@ define void @smin_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smin_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smin_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1b { z2.b }, p0/z, [x1, x8]
@@ -550,8 +550,8 @@ define void @smin_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smin_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smin_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
@@ -648,8 +648,8 @@ define void @smin_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smin_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smin_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -711,8 +711,8 @@ define void @smin_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i64> @smin_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smin_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    smin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -725,8 +725,8 @@ define <1 x i64> @smin_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #
 define <2 x i64> @smin_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: smin_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    smin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -754,8 +754,8 @@ define void @smin_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @smin_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: smin_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
@@ -856,8 +856,8 @@ define void @umax_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umax_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umax_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1b { z2.b }, p0/z, [x1, x8]
@@ -954,8 +954,8 @@ define void @umax_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umax_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umax_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
@@ -1052,8 +1052,8 @@ define void @umax_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umax_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umax_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -1115,8 +1115,8 @@ define void @umax_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i64> @umax_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umax_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    umax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -1129,8 +1129,8 @@ define <1 x i64> @umax_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #
 define <2 x i64> @umax_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umax_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    umax z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -1158,8 +1158,8 @@ define void @umax_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umax_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umax_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
@@ -1260,8 +1260,8 @@ define void @umin_v32i8(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umin_v64i8(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umin_v64i8:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #32
 ; VBITS_GE_256-NEXT:    ptrue p0.b, vl32
+; VBITS_GE_256-NEXT:    mov w8, #32 // =0x20
 ; VBITS_GE_256-NEXT:    ld1b { z0.b }, p0/z, [x0, x8]
 ; VBITS_GE_256-NEXT:    ld1b { z1.b }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1b { z2.b }, p0/z, [x1, x8]
@@ -1358,8 +1358,8 @@ define void @umin_v16i16(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umin_v32i16(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umin_v32i16:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #16
 ; VBITS_GE_256-NEXT:    ptrue p0.h, vl16
+; VBITS_GE_256-NEXT:    mov x8, #16 // =0x10
 ; VBITS_GE_256-NEXT:    ld1h { z0.h }, p0/z, [x0, x8, lsl #1]
 ; VBITS_GE_256-NEXT:    ld1h { z1.h }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1h { z2.h }, p0/z, [x1, x8, lsl #1]
@@ -1456,8 +1456,8 @@ define void @umin_v8i32(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umin_v16i32(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umin_v16i32:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #8
 ; VBITS_GE_256-NEXT:    ptrue p0.s, vl8
+; VBITS_GE_256-NEXT:    mov x8, #8 // =0x8
 ; VBITS_GE_256-NEXT:    ld1w { z0.s }, p0/z, [x0, x8, lsl #2]
 ; VBITS_GE_256-NEXT:    ld1w { z1.s }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1w { z2.s }, p0/z, [x1, x8, lsl #2]
@@ -1519,8 +1519,8 @@ define void @umin_v64i32(ptr %a, ptr %b) vscale_range(16,0) #0 {
 define <1 x i64> @umin_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umin_v1i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl1
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    // kill: def $d1 killed $d1 def $z1
 ; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
@@ -1533,8 +1533,8 @@ define <1 x i64> @umin_v1i64(<1 x i64> %op1, <1 x i64> %op2) vscale_range(2,0) #
 define <2 x i64> @umin_v2i64(<2 x i64> %op1, <2 x i64> %op2) vscale_range(2,0) #0 {
 ; CHECK-LABEL: umin_v2i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    ptrue p0.d, vl2
+; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
 ; CHECK-NEXT:    // kill: def $q1 killed $q1 def $z1
 ; CHECK-NEXT:    umin z0.d, p0/m, z0.d, z1.d
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
@@ -1562,8 +1562,8 @@ define void @umin_v4i64(ptr %a, ptr %b) vscale_range(2,0) #0 {
 define void @umin_v8i64(ptr %a, ptr %b) #0 {
 ; VBITS_GE_256-LABEL: umin_v8i64:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov x8, #4
 ; VBITS_GE_256-NEXT:    ptrue p0.d, vl4
+; VBITS_GE_256-NEXT:    mov x8, #4 // =0x4
 ; VBITS_GE_256-NEXT:    ld1d { z0.d }, p0/z, [x0, x8, lsl #3]
 ; VBITS_GE_256-NEXT:    ld1d { z1.d }, p0/z, [x0]
 ; VBITS_GE_256-NEXT:    ld1d { z2.d }, p0/z, [x1, x8, lsl #3]
