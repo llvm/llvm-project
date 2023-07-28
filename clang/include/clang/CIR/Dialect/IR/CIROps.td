@@ -1644,10 +1644,11 @@ def CallOp : CIR_Op<"call",
     call must match the specified function type. The callee is encoded as a
     symbol reference attribute named "callee".
 
-    To walk the operands for this operation, use `getArgOperands()` or a combo
-    of `arg_operand_begin()` and `arg_operand_begin()`. Using `operand_begin()`
-    and friends direclty might be misleading given that the indirect call
-    version encodes the target in the first operation operand.
+    To walk the operands for this operation, use `getNumArgOperands()`,
+    `getArgOperand()`, `getArgOperands()`, `arg_operand_begin()` and
+    `arg_operand_begin()`. Avoid using `getNumOperands()`, `getOperand()`,
+    `operand_begin()`, etc, direclty - might be misleading given on indirect
+    calls the callee is encoded in the first operation operand.
     ``
 
     Example:
@@ -1693,6 +1694,20 @@ def CallOp : CIR_Op<"call",
       return arg_begin;
     }
     operand_iterator arg_operand_end() { return operand_end(); }
+
+    /// Return the operand at index 'i', accounts for indirect call.
+    Value getArgOperand(unsigned i) {
+      if (!getCallee())
+        i++;
+      return getOperand(i);
+    }
+
+    /// Return the number of operands, , accounts for indirect call.
+    unsigned getNumArgOperands() {
+      if (!getCallee())
+        return this->getOperation()->getNumOperands()-1;
+      return this->getOperation()->getNumOperands();
+    }
   }];
 
   let hasCustomAssemblyFormat = 1;
