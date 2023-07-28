@@ -58,8 +58,16 @@
 ! CHECK-NEXT: -fopenmp-version=<value>
 ! CHECK-NEXT:                        Set OpenMP version (e.g. 45 for OpenMP 4.5, 50 for OpenMP 5.0). Default value is 50 for Clang and 11 for Flang
 ! CHECK-NEXT: -fopenmp               Parse OpenMP pragmas and generate parallel code.
+! CHECK-NEXT: -foptimization-record-file=<file>
+! CHECK-NEXT:                        Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.
+! CHECK-NEXT: -foptimization-record-passes=<regex>
+! CHECK-NEXT:                        Only include passes which match a specified regular expression in the generated optimization record (by default, include all passes)
 ! CHECK-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
 ! CHECK-NEXT: -freciprocal-math      Allow division operations to be reassociated
+! CHECK-NEXT: -fsave-optimization-record=<format>
+! CHECK-NEXT:                        Generate an optimization record file in a specific format
+! CHECK-NEXT: -fsave-optimization-record
+! CHECK-NEXT:                        Generate a YAML optimization record file
 ! CHECK-NEXT: -fstack-arrays         Attempt to allocate array temporaries on the stack, no matter their size
 ! CHECK-NEXT: -fsyntax-only          Run the preprocessor, parser and semantic analysis stages
 ! CHECK-NEXT: -funderscoring         Appends one trailing underscore to external names
