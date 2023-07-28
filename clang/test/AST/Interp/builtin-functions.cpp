@@ -1,5 +1,8 @@
 // RUN: %clang_cc1 -fexperimental-new-constant-interpreter %s -verify
 // RUN: %clang_cc1 -verify=ref %s -Wno-constant-evaluated
+// RUN: %clang_cc1 -std=c++20 -fexperimental-new-constant-interpreter %s -verify
+// RUN: %clang_cc1 -std=c++20 -verify=ref %s -Wno-constant-evaluated
+
 
 namespace strcmp {
   constexpr char kFoobar[6] = {'f','o','o','b','a','r'};
@@ -33,4 +36,27 @@ namespace strcmp {
                                                                         // expected-note {{in call to}} \
                                                                         // ref-error {{not an integral constant}} \
                                                                         // ref-note {{dereferenced one-past-the-end}}
+}
+
+namespace nan {
+  constexpr double NaN1 = __builtin_nan("");
+
+  /// The current interpreter does not accept this, but it should.
+  constexpr float NaN2 = __builtin_nans([](){return "0xAE98";}()); // ref-error {{must be initialized by a constant expression}}
+
+  constexpr double NaN3 = __builtin_nan("foo"); // expected-error {{must be initialized by a constant expression}} \
+                                                // ref-error {{must be initialized by a constant expression}}
+  constexpr float NaN4 = __builtin_nanf("");
+  constexpr long double NaN5 = __builtin_nanf128("");
+
+  /// FIXME: This should be accepted by the current interpreter as well.
+  constexpr char f[] = {'0', 'x', 'A', 'E', '\0'};
+  constexpr double NaN6 = __builtin_nan(f); // ref-error {{must be initialized by a constant expression}}
+
+  /// FIXME: Current interpreter misses diagnostics.
+  constexpr char f2[] = {'0', 'x', 'A', 'E'}; /// No trailing 0 byte.
+  constexpr double NaN7 = __builtin_nan(f2); // ref-error {{must be initialized by a constant expression}} \
+                                             // expected-error {{must be initialized by a constant expression}} \
+                                             // expected-note {{read of dereferenced one-past-the-end pointer}} \
+                                             // expected-note {{in call to}}
 }
