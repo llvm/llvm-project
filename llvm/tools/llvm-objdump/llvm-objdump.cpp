@@ -1210,7 +1210,7 @@ SymbolInfoTy objdump::createSymbolInfo(const ObjectFile &Obj,
     const uint32_t SymbolIndex = XCOFFObj.getSymbolIndex(SymbolDRI.p);
     std::optional<XCOFF::StorageMappingClass> Smc =
         getXCOFFSymbolCsectSMC(XCOFFObj, Symbol);
-    return SymbolInfoTy(Addr, Name, Smc, SymbolIndex,
+    return SymbolInfoTy(Smc, Addr, Name, SymbolIndex,
                         isLabel(XCOFFObj, Symbol));
   } else if (Obj.isXCOFF()) {
     const SymbolRef::Type SymType = unwrapOrError(Symbol.getType(), FileName);
@@ -1225,7 +1225,7 @@ static SymbolInfoTy createDummySymbolInfo(const ObjectFile &Obj,
                                           const uint64_t Addr, StringRef &Name,
                                           uint8_t Type) {
   if (Obj.isXCOFF() && (SymbolDescription || TracebackTable))
-    return SymbolInfoTy(Addr, Name, std::nullopt, std::nullopt, false);
+    return SymbolInfoTy(std::nullopt, Addr, Name, std::nullopt, false);
   else
     return SymbolInfoTy(Addr, Name, Type);
 }

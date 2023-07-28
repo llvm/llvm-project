@@ -37,9 +37,8 @@ private:
   bool HasType;
 
 public:
-  SymbolInfoTy(uint64_t Addr, StringRef Name,
-               std::optional<XCOFF::StorageMappingClass> Smc,
-               std::optional<uint32_t> Idx, bool Label)
+  SymbolInfoTy(std::optional<XCOFF::StorageMappingClass> Smc, uint64_t Addr,
+               StringRef Name, std::optional<uint32_t> Idx, bool Label)
       : Addr(Addr), Name(Name), XCOFFSymInfo{Smc, Idx, Label}, Type(0),
         IsXCOFF(true), HasType(false) {}
   SymbolInfoTy(uint64_t Addr, StringRef Name, uint8_t Type,
