@@ -45,8 +45,8 @@ struct __has_storage_type
 template <class _Cp, bool = __has_storage_type<_Cp>::value>
 class __bit_reference
 {
-    typedef typename _Cp::__storage_type    __storage_type;
-    typedef typename _Cp::__storage_pointer __storage_pointer;
+    using __storage_type    = typename _Cp::__storage_type;
+    using __storage_pointer = typename _Cp::__storage_pointer;
 
     __storage_pointer __seg_;
     __storage_type    __mask_;
@@ -147,8 +147,8 @@ swap(bool& __x, __bit_reference<_Cp> __y) _NOEXCEPT
 template <class _Cp>
 class __bit_const_reference
 {
-    typedef typename _Cp::__storage_type          __storage_type;
-    typedef typename _Cp::__const_storage_pointer __storage_pointer;
+    using __storage_type    = typename _Cp::__storage_type;
+    using __storage_pointer = typename _Cp::__const_storage_pointer;
 
     __storage_pointer        __seg_;
     __storage_type __mask_;
@@ -192,8 +192,9 @@ template <bool _ToFind, class _Cp, bool _IsConst>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
 __find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 {
-    typedef __bit_iterator<_Cp, _IsConst> _It;
-    typedef typename _It::__storage_type __storage_type;
+    using _It            = __bit_iterator<_Cp, _IsConst>;
+    using __storage_type = typename _It::__storage_type;
+
     const int __bits_per_word = _It::__bits_per_word;
     // do first partial word
     if (__first.__ctz_ != 0)
@@ -242,9 +243,10 @@ template <bool _ToCount, class _Cp, bool _IsConst>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX23 typename __bit_iterator<_Cp, _IsConst>::difference_type
 __count_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n)
 {
-    typedef __bit_iterator<_Cp, _IsConst> _It;
-    typedef typename _It::__storage_type __storage_type;
-    typedef typename _It::difference_type difference_type;
+    using _It             = __bit_iterator<_Cp, _IsConst>;
+    using __storage_type  = typename _It::__storage_type;
+    using difference_type = typename _It::difference_type;
+
     const int __bits_per_word = _It::__bits_per_word;
     difference_type __r = 0;
     // do first partial word
@@ -285,8 +287,9 @@ template <bool _FillValue, class _Cp>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
 __fill_n(__bit_iterator<_Cp, false> __first, typename _Cp::size_type __n)
 {
-    typedef __bit_iterator<_Cp, false> _It;
-    typedef typename _It::__storage_type __storage_type;
+    using _It            = __bit_iterator<_Cp, false>;
+    using __storage_type = typename _It::__storage_type;
+
     const int __bits_per_word = _It::__bits_per_word;
     // do first partial word
     if (__first.__ctz_ != 0)
@@ -348,9 +351,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
 __copy_aligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last,
                                                      __bit_iterator<_Cp, false> __result)
 {
-    typedef __bit_iterator<_Cp, _IsConst> _In;
-    typedef  typename _In::difference_type difference_type;
-    typedef typename _In::__storage_type __storage_type;
+    using _In             = __bit_iterator<_Cp, _IsConst>;
+    using difference_type = typename _In::difference_type;
+    using __storage_type  = typename _In::__storage_type;
+
     const int __bits_per_word = _In::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
@@ -395,9 +399,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
 __copy_unaligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last,
                                                        __bit_iterator<_Cp, false> __result)
 {
-    typedef __bit_iterator<_Cp, _IsConst> _In;
-    typedef  typename _In::difference_type difference_type;
-    typedef typename _In::__storage_type __storage_type;
+    using _In             = __bit_iterator<_Cp, _IsConst>;
+    using difference_type = typename _In::difference_type;
+    using __storage_type  = typename _In::__storage_type;
+
     const int __bits_per_word = _In::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
@@ -485,9 +490,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
 __copy_backward_aligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last,
                                                      __bit_iterator<_Cp, false> __result)
 {
-    typedef __bit_iterator<_Cp, _IsConst> _In;
-    typedef  typename _In::difference_type difference_type;
-    typedef typename _In::__storage_type __storage_type;
+    using _In             = __bit_iterator<_Cp, _IsConst>;
+    using difference_type = typename _In::difference_type;
+    using __storage_type  = typename _In::__storage_type;
+
     const int __bits_per_word = _In::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
@@ -532,9 +538,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
 __copy_backward_unaligned(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last,
                                                        __bit_iterator<_Cp, false> __result)
 {
-    typedef __bit_iterator<_Cp, _IsConst> _In;
-    typedef  typename _In::difference_type difference_type;
-    typedef typename _In::__storage_type __storage_type;
+    using _In             = __bit_iterator<_Cp, _IsConst>;
+    using difference_type = typename _In::difference_type;
+    using __storage_type  = typename _In::__storage_type;
+
     const int __bits_per_word = _In::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
@@ -650,9 +657,10 @@ _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cr, false>
 __swap_ranges_aligned(__bit_iterator<_Cl, false> __first, __bit_iterator<_Cl, false> __last,
                       __bit_iterator<_Cr, false> __result)
 {
-    typedef __bit_iterator<_Cl, false> _I1;
-    typedef  typename _I1::difference_type difference_type;
-    typedef typename _I1::__storage_type __storage_type;
+    using _I1             = __bit_iterator<_Cl, false>;
+    using difference_type = typename _I1::difference_type;
+    using __storage_type  = typename _I1::__storage_type;
+
     const int __bits_per_word = _I1::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
@@ -700,9 +708,10 @@ _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cr, false>
 __swap_ranges_unaligned(__bit_iterator<_Cl, false> __first, __bit_iterator<_Cl, false> __last,
                         __bit_iterator<_Cr, false> __result)
 {
-    typedef __bit_iterator<_Cl, false> _I1;
-    typedef  typename _I1::difference_type difference_type;
-    typedef typename _I1::__storage_type __storage_type;
+    using _I1             = __bit_iterator<_Cl, false>;
+    using difference_type = typename _I1::difference_type;
+    using __storage_type  = typename _I1::__storage_type;
+
     const int __bits_per_word = _I1::__bits_per_word;
     difference_type __n = __last - __first;
     if (__n > 0)
@@ -811,10 +820,11 @@ swap_ranges(__bit_iterator<_Cl, false> __first1, __bit_iterator<_Cl, false> __la
 template <class _Cp>
 struct __bit_array
 {
-    typedef typename _Cp::difference_type difference_type;
-    typedef typename _Cp::__storage_type  __storage_type;
-    typedef typename _Cp::__storage_pointer __storage_pointer;
-    typedef typename _Cp::iterator        iterator;
+    using difference_type   = typename _Cp::difference_type;
+    using __storage_type    = typename _Cp::__storage_type;
+    using __storage_pointer = typename _Cp::__storage_pointer;
+    using iterator          = typename _Cp::iterator;
+
     static const unsigned __bits_per_word = _Cp::__bits_per_word;
     static const unsigned _Np = 4;
 
@@ -844,8 +854,9 @@ template <class _Cp>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, false>
 rotate(__bit_iterator<_Cp, false> __first, __bit_iterator<_Cp, false> __middle, __bit_iterator<_Cp, false> __last)
 {
-    typedef __bit_iterator<_Cp, false> _I1;
-    typedef  typename _I1::difference_type difference_type;
+    using _I1             = __bit_iterator<_Cp, false>;
+    using difference_type = typename _I1::difference_type;
+
     difference_type __d1 = __middle - __first;
     difference_type __d2 = __last - __middle;
     _I1 __r = __first + __d2;
@@ -896,9 +907,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
 __equal_unaligned(__bit_iterator<_Cp, _IC1> __first1, __bit_iterator<_Cp, _IC1> __last1,
                   __bit_iterator<_Cp, _IC2> __first2)
 {
-    typedef __bit_iterator<_Cp, _IC1> _It;
-    typedef  typename _It::difference_type difference_type;
-    typedef typename _It::__storage_type __storage_type;
+    using _It             = __bit_iterator<_Cp, _IC1>;
+    using difference_type = typename _It::difference_type;
+    using __storage_type  = typename _It::__storage_type;
+
     const int __bits_per_word = _It::__bits_per_word;
     difference_type __n = __last1 - __first1;
     if (__n > 0)
@@ -978,9 +990,10 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool
 __equal_aligned(__bit_iterator<_Cp, _IC1> __first1, __bit_iterator<_Cp, _IC1> __last1,
                 __bit_iterator<_Cp, _IC2> __first2)
 {
-    typedef __bit_iterator<_Cp, _IC1> _It;
-    typedef  typename _It::difference_type difference_type;
-    typedef typename _It::__storage_type __storage_type;
+    using _It             = __bit_iterator<_Cp, _IC1>;
+    using difference_type = typename _It::difference_type;
+    using __storage_type  = typename _It::__storage_type;
+
     const int __bits_per_word = _It::__bits_per_word;
     difference_type __n = __last1 - __first1;
     if (__n > 0)
@@ -1031,20 +1044,21 @@ template <class _Cp, bool _IsConst,
 class __bit_iterator
 {
 public:
-    typedef typename _Cp::difference_type                                                          difference_type;
-    typedef bool                                                                                  value_type;
-    typedef __bit_iterator                                                                        pointer;
+  using difference_type = typename _Cp::difference_type;
+  using value_type      = bool;
+  using pointer         = __bit_iterator;
 #ifndef _LIBCPP_ABI_BITSET_VECTOR_BOOL_CONST_SUBSCRIPT_RETURN_BOOL
-    typedef __conditional_t<_IsConst, __bit_const_reference<_Cp>, __bit_reference<_Cp> > reference;
+  using reference = __conditional_t<_IsConst, __bit_const_reference<_Cp>, __bit_reference<_Cp> >;
 #else
-    using reference = __conditional_t<_IsConst, bool, __bit_reference<_Cp> >;
+  using reference = __conditional_t<_IsConst, bool, __bit_reference<_Cp> >;
 #endif
-    typedef random_access_iterator_tag                                                            iterator_category;
+  using iterator_category = random_access_iterator_tag;
 
 private:
-    typedef typename _Cp::__storage_type                                           __storage_type;
-    typedef __conditional_t<_IsConst, typename _Cp::__const_storage_pointer, typename _Cp::__storage_pointer>
-        __storage_pointer;
+  using __storage_type = typename _Cp::__storage_type;
+  using __storage_pointer =
+      __conditional_t<_IsConst, typename _Cp::__const_storage_pointer, typename _Cp::__storage_pointer>;
+
     static const unsigned __bits_per_word = _Cp::__bits_per_word;
 
     __storage_pointer __seg_;
