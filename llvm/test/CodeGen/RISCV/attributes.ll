@@ -254,9 +254,9 @@
 ; RV32ZICOND: .attribute 5, "rv32i2p1_zicond1p0"
 ; RV32SMAIA: .attribute 5, "rv32i2p1_smaia1p0"
 ; RV32SSAIA: .attribute 5, "rv32i2p1_ssaia1p0"
-; RV32ZFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin0p6"
-; RV32ZVFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin0p6_zvl32b1p0"
-; RV32ZVFBFWMA: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfwma0p6_zvl32b1p0"
+; RV32ZFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin0p8"
+; RV32ZVFBFMIN: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin0p8_zve32f1p0_zve32x1p0_zvfbfmin0p8_zvl32b1p0"
+; RV32ZVFBFWMA: .attribute 5, "rv32i2p1_f2p2_zicsr2p0_zfbfmin0p8_zve32f1p0_zve32x1p0_zvfbfmin0p8_zvfbfwma0p8_zvl32b1p0"
 ; RV32ZACAS: .attribute 5, "rv32i2p1_a2p1_zacas1p0"
 
 ; RV64M: .attribute 5, "rv64i2p1_m2p0"
@@ -341,9 +341,9 @@
 ; RV64ZICOND: .attribute 5, "rv64i2p1_zicond1p0"
 ; RV64SMAIA: .attribute 5, "rv64i2p1_smaia1p0"
 ; RV64SSAIA: .attribute 5, "rv64i2p1_ssaia1p0"
-; RV64ZFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin0p6"
-; RV64ZVFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfmin0p6_zvl32b1p0"
-; RV64ZVFBFWMA: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zve32f1p0_zve32x1p0_zvfbfwma0p6_zvl32b1p0"
+; RV64ZFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin0p8"
+; RV64ZVFBFMIN: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin0p8_zve32f1p0_zve32x1p0_zvfbfmin0p8_zvl32b1p0"
+; RV64ZVFBFWMA: .attribute 5, "rv64i2p1_f2p2_zicsr2p0_zfbfmin0p8_zve32f1p0_zve32x1p0_zvfbfmin0p8_zvfbfwma0p8_zvl32b1p0"
 ; RV64ZACAS: .attribute 5, "rv64i2p1_a2p1_zacas1p0"
 
 define i32 @addi(i32 %a) {
