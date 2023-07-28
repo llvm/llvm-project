@@ -227,7 +227,7 @@ static CXErrorCode getFullDependencies(DependencyScanningWorker *Worker,
                                        LookupModuleOutputCallback LookupOutput,
                                        std::optional<StringRef> ModuleName,
                                        HandleTUDepsCallback HandleTUDeps) {
-  llvm::StringSet<> AlreadySeen;
+  llvm::DenseSet<ModuleID> AlreadySeen;
   FullDependencyConsumer DepConsumer(AlreadySeen);
   auto Controller = DependencyScanningTool::createActionController(
       *Worker, std::move(LookupOutput));
