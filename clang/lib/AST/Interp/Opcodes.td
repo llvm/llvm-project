@@ -54,6 +54,7 @@ def ArgLETD: ArgType { let Name = "const LifetimeExtendedTemporaryDecl *"; }
 def ArgCastKind : ArgType { let Name = "CastKind"; }
 def ArgCallExpr : ArgType { let Name = "const CallExpr *"; }
 def ArgOffsetOfExpr : ArgType { let Name = "const OffsetOfExpr *"; }
+def ArgDeclRef : ArgType { let Name = "const DeclRefExpr *"; }
 
 //===----------------------------------------------------------------------===//
 // Classes of types instructions operate on.
@@ -631,4 +632,8 @@ def Dup : Opcode {
 def Invalid : Opcode {}
 def InvalidCast : Opcode {
   let Args = [ArgCastKind];
+}
+
+def InvalidDeclRef : Opcode {
+  let Args = [ArgDeclRef];
 }

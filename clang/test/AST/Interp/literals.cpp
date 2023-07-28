@@ -1088,3 +1088,31 @@ namespace PointerCasts {
   int array[(intptr_t)(char*)0]; // ref-warning {{variable length array folded to constant array}} \
                                  // expected-warning {{variable length array folded to constant array}}
 }
+
+namespace InvalidDeclRefs {
+  bool b00; // ref-note {{declared here}} \
+            // expected-note {{declared here}}
+  static_assert(b00, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{read of non-const variable}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{read of non-const variable}}
+
+  float b01; // ref-note {{declared here}} \
+             // expected-note {{declared here}}
+  static_assert(b01, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{read of non-constexpr variable}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{read of non-constexpr variable}}
+
+  extern const int b02; // ref-note {{declared here}} \
+                        // expected-note {{declared here}}
+  static_assert(b02, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{initializer of 'b02' is unknown}} \
+                          // expected-error {{not an integral constant expression}} \
+                          // expected-note {{initializer of 'b02' is unknown}}
+
+  /// FIXME: This should also be diagnosed in the new interpreter.
+  int b03 = 3; // ref-note {{declared here}}
+  static_assert(b03, ""); // ref-error {{not an integral constant expression}} \
+                          // ref-note {{read of non-const variable}}
+}
