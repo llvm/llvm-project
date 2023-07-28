@@ -815,17 +815,30 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
 llvm::json::Value CreateThread(lldb::SBThread &thread) {
   llvm::json::Object object;
   object.try_emplace("id", (int64_t)thread.GetThreadID());
-  char thread_str[64];
-  snprintf(thread_str, sizeof(thread_str), "Thread #%u", thread.GetIndexID());
-  const char *name = thread.GetName();
-  if (name) {
-    std::string thread_with_name(thread_str);
-    thread_with_name += ' ';
-    thread_with_name += name;
-    EmplaceSafeString(object, "name", thread_with_name);
+  const char *thread_name = thread.GetName();
+  const char *queue_name = thread.GetQueueName();
+
+  std::string thread_str;
+  if (thread_name) {
+    thread_str = std::string(thread_name);
+  } else if (queue_name) {
+    auto kind = thread.GetQueue().GetKind();
+    std::string queue_kind_label = "";
+    if (kind == lldb::eQueueKindSerial) {
+      queue_kind_label = " (serial)";
+    } else if (kind == lldb::eQueueKindConcurrent) {
+      queue_kind_label = " (concurrent)";
+    }
+
+    thread_str = llvm::formatv("Thread {0} Queue: {1}{2}", thread.GetIndexID(),
+                               queue_name, queue_kind_label)
+                     .str();
   } else {
-    EmplaceSafeString(object, "name", std::string(thread_str));
+    thread_str = llvm::formatv("Thread {0}", thread.GetIndexID()).str();
   }
+
+  EmplaceSafeString(object, "name", thread_str);
+
   return llvm::json::Value(std::move(object));
 }
 
