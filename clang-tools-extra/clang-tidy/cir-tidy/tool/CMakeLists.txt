@@ -19,6 +19,7 @@ add_clang_library(CIRTidyMain
   clangTidy
   MLIRIR
   ${ALL_CLANG_TIDY_CHECKS}
+  MLIRIR
 
   DEPENDS
   omp_gen
