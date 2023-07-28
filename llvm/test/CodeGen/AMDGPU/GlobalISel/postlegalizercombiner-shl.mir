@@ -26,8 +26,7 @@ tracksRegLiveness: true
 body:             |
   bb.0:
     ; CHECK-LABEL: name: constant_fold_shl_s16_s16
-    ; CHECK: %shift:_(s16) = G_CONSTANT i16 912
-    ; CHECK-NEXT: %ext:_(s32) = G_ANYEXT %shift(s16)
+    ; CHECK: %ext:_(s32) = G_CONSTANT i32 912
     ; CHECK-NEXT: $vgpr0 = COPY %ext(s32)
     %val:_(s16) = G_CONSTANT i16 12345
     %shift_amt:_(s16) = G_CONSTANT i16 4

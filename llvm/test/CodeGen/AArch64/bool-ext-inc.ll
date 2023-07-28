@@ -117,8 +117,7 @@ define i32 @caller_signext_i1() {
 ; GISEL-NEXT:    str x30, [sp, #-16]! // 8-byte Folded Spill
 ; GISEL-NEXT:    .cfi_def_cfa_offset 16
 ; GISEL-NEXT:    .cfi_offset w30, -16
-; GISEL-NEXT:    mov w8, #1 // =0x1
-; GISEL-NEXT:    sbfx w0, w8, #0, #1
+; GISEL-NEXT:    mov w0, #-1 // =0xffffffff
 ; GISEL-NEXT:    bl callee_signext_i1
 ; GISEL-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; GISEL-NEXT:    ret
