@@ -1802,9 +1802,12 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
       // are used to repesent mapping symbols and needed to honor the
       // --special-syms option.
       auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
-      if ((!ELFObj || (ELFObj->getEMachine() != ELF::EM_ARM &&
-                       ELFObj->getEMachine() != ELF::EM_AARCH64)) &&
-          !DebugSyms && (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
+      bool HasMappingSymbol =
+          ELFObj &&
+          llvm::is_contained({ELF::EM_ARM, ELF::EM_AARCH64, ELF::EM_CSKY},
+                             ELFObj->getEMachine());
+      if (!HasMappingSymbol && !DebugSyms &&
+          (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
         continue;
       if (WithoutAliases && (*SymFlagsOrErr & SymbolRef::SF_Indirect))
         continue;

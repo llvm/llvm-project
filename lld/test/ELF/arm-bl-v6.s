@@ -59,11 +59,9 @@ thumbfunc:
  .space 0x200000
 // CHECK-ARM2: <__ARMv5LongLdrPcThunk_farthumbfunc>:
 // CHECK-ARM2-NEXT:   22100c:   e51ff004        ldr     pc, [pc, #-4]
-// CHECK-ARM2: <$d>:
 // CHECK-ARM2-NEXT:   221010:   01 20 62 00     .word   0x00622001
 // CHECK-ARM2-EB: <__ARMv5LongLdrPcThunk_farthumbfunc>:
 // CHECK-ARM2-EB-NEXT:   22100c:   e51ff004        ldr     pc, [pc, #-4]
-// CHECK-ARM2-EB: <$d>:
 // CHECK-ARM2-EB-NEXT:   221010:   00 62 20 01     .word   0x00622001
  .section .text.4, "ax", %progbits
  .space 0x200000
