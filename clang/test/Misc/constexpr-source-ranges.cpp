@@ -7,3 +7,9 @@ constexpr int f() {
 }
 
 // CHECK: constexpr-source-ranges.cpp:5:3:{5:3-5:10}
+
+
+constexpr int I = 12;
+constexpr const int *P = &I;
+constexpr long L = (long)P;
+// CHECK: constexpr-source-ranges.cpp:14:20:{14:20-14:27}

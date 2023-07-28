@@ -118,55 +118,63 @@ static unsigned getUndefInitOpcode(unsigned RegClassID) {
   }
 }
 
-static bool isEarlyClobberMI(MachineInstr &MI) {
-  return llvm::any_of(MI.defs(), [](const MachineOperand &DefMO) {
-    return DefMO.isReg() && DefMO.isEarlyClobber();
-  });
-}
-
 bool RISCVInitUndef::handleImplicitDef(MachineBasicBlock &MBB,
                                        MachineBasicBlock::iterator &Inst) {
+  const TargetRegisterInfo &TRI =
+      *MBB.getParent()->getSubtarget().getRegisterInfo();
+
   assert(Inst->getOpcode() == TargetOpcode::IMPLICIT_DEF);
 
   Register Reg = Inst->getOperand(0).getReg();
   if (!Reg.isVirtual())
     return false;
 
-  bool HasOtherUse = false;
+  bool NeedPseudoInit = false;
   SmallVector<MachineOperand *, 1> UseMOs;
   for (MachineOperand &MO : MRI->use_nodbg_operands(Reg)) {
-    if (isEarlyClobberMI(*MO.getParent())) {
-      if (MO.isUse() && !MO.isTied())
-        UseMOs.push_back(&MO);
-      else
-        HasOtherUse = true;
+    MachineInstr *UserMI = MO.getParent();
+
+    bool HasEarlyClobber = false;
+    bool TiedToDef = false;
+    for (MachineOperand &UserMO : UserMI->operands()) {
+      if (!UserMO.isReg())
+        continue;
+      if (UserMO.isEarlyClobber())
+        HasEarlyClobber = true;
+      if (UserMO.isUse() && UserMO.isTied() &&
+          TRI.regsOverlap(UserMO.getReg(), Reg))
+        TiedToDef = true;
+    }
+    if (HasEarlyClobber && !TiedToDef) {
+      NeedPseudoInit = true;
+      UseMOs.push_back(&MO);
     }
   }
 
-  if (UseMOs.empty())
+  if (!NeedPseudoInit)
     return false;
 
   LLVM_DEBUG(
       dbgs() << "Emitting PseudoRVVInitUndef for implicit vector register "
              << Reg << '\n');
 
-  const TargetRegisterClass *TargetRegClass =
-    getVRLargestSuperClass(MRI->getRegClass(Reg));
-  unsigned Opcode = getUndefInitOpcode(TargetRegClass->getID());
+  unsigned RegClassID = getVRLargestSuperClass(MRI->getRegClass(Reg))->getID();
+  unsigned Opcode = getUndefInitOpcode(RegClassID);
 
-  Register NewDest = Reg;
-  if (HasOtherUse)
-    NewDest = MRI->createVirtualRegister(TargetRegClass);
-  BuildMI(MBB, Inst, Inst->getDebugLoc(), TII->get(Opcode), NewDest);
+  BuildMI(MBB, Inst, Inst->getDebugLoc(), TII->get(Opcode), Reg);
 
-  if (!HasOtherUse)
-    Inst = MBB.erase(Inst);
+  Inst = MBB.erase(Inst);
 
-  for (auto MO : UseMOs) {
-    MO->setReg(NewDest);
+  for (auto MO : UseMOs)
     MO->setIsUndef(false);
-  }
+
   return true;
+}
+
+static bool isEarlyClobberMI(MachineInstr &MI) {
+  return llvm::any_of(MI.defs(), [](const MachineOperand &DefMO) {
+    return DefMO.isReg() && DefMO.isEarlyClobber();
+  });
 }
 
 bool RISCVInitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
