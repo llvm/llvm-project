@@ -1929,6 +1929,21 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       return &CI;
     break;
   }
+  case Intrinsic::ptrmask: {
+    Value *InnerPtr, *InnerMask;
+    if (match(II->getArgOperand(0),
+              m_OneUse(m_Intrinsic<Intrinsic::ptrmask>(m_Value(InnerPtr),
+                                                       m_Value(InnerMask))))) {
+      if (II->getArgOperand(1)->getType() == InnerMask->getType()) {
+        Value *NewMask = Builder.CreateAnd(II->getArgOperand(1), InnerMask);
+        return replaceInstUsesWith(
+            *II,
+            Builder.CreateIntrinsic(InnerPtr->getType(), Intrinsic::ptrmask,
+                                    {InnerPtr, NewMask}));
+      }
+    }
+    break;
+  }
   case Intrinsic::uadd_with_overflow:
   case Intrinsic::sadd_with_overflow: {
     if (Instruction *I = foldIntrinsicWithOverflowCommon(II))
