@@ -134,6 +134,9 @@ public:
   explicit IdentifierResolver(Preprocessor &PP);
   ~IdentifierResolver();
 
+  IdentifierResolver(const IdentifierResolver &) = delete;
+  IdentifierResolver &operator=(const IdentifierResolver &) = delete;
+
   /// Returns a range of decls with the name 'Name'.
   llvm::iterator_range<iterator> decls(DeclarationName Name);
 

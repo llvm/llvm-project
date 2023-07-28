@@ -96,6 +96,18 @@
 // RUN:   | FileCheck %s -check-prefix=meteorlake
 // meteorlake: "-target-cpu" "meteorlake"
 //
+// RUN: %clang --target=x86_64 -c -### %s -march=arrowlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=arrowlake
+// arrowlake: "-target-cpu" "arrowlake"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=arrowlake-s 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=arrowlake-s
+// arrowlake-s: "-target-cpu" "arrowlake-s"
+//
+// RUN: %clang --target=x86_64 -c -### %s -march=lunarlake 2>&1 \
+// RUN:   | FileCheck %s -check-prefix=lunarlake
+// lunarlake: "-target-cpu" "lunarlake"
+//
 // RUN: %clang -target x86_64-unknown-unknown -c -### %s -march=lakemont 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=lakemont
 // lakemont: "-target-cpu" "lakemont"

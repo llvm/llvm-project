@@ -3084,18 +3084,18 @@ def foperator_arrow_depth_EQ : Joined<["-"], "foperator-arrow-depth=">, Group<f_
   HelpText<"Maximum number of 'operator->'s to call for a member access">,
   MarshallingInfoInt<LangOpts<"ArrowDepth">, "256">;
 
-def fsave_optimization_record : Flag<["-"], "fsave-optimization-record">,
+def fsave_optimization_record : Flag<["-"], "fsave-optimization-record">, Flags<[FlangOption]>,
   Group<f_Group>, HelpText<"Generate a YAML optimization record file">;
-def fsave_optimization_record_EQ : Joined<["-"], "fsave-optimization-record=">,
+def fsave_optimization_record_EQ : Joined<["-"], "fsave-optimization-record=">, Flags<[FlangOption]>,
   Group<f_Group>, HelpText<"Generate an optimization record file in a specific format">,
   MetaVarName<"<format>">;
 def fno_save_optimization_record : Flag<["-"], "fno-save-optimization-record">,
-  Group<f_Group>, Flags<[NoArgumentUnused]>;
-def foptimization_record_file_EQ : Joined<["-"], "foptimization-record-file=">,
+  Group<f_Group>, Flags<[FlangOption, NoArgumentUnused]>;
+def foptimization_record_file_EQ : Joined<["-"], "foptimization-record-file=">, Flags<[FlangOption]>,
   Group<f_Group>,
   HelpText<"Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.">,
   MetaVarName<"<file>">;
-def foptimization_record_passes_EQ : Joined<["-"], "foptimization-record-passes=">,
+def foptimization_record_passes_EQ : Joined<["-"], "foptimization-record-passes=">, Flags<[FlangOption]>,
   Group<f_Group>,
   HelpText<"Only include passes which match a specified regular expression in the generated optimization record (by default, include all passes)">,
   MetaVarName<"<regex>">;
@@ -6390,14 +6390,6 @@ def arcmt_action_EQ : Joined<["-"], "arcmt-action=">, Flags<[CC1Option, NoDriver
   NormalizedValues<["ARCMT_Check", "ARCMT_Modify", "ARCMT_Migrate"]>,
   MarshallingInfoEnum<FrontendOpts<"ARCMTAction">, "ARCMT_None">;
 
-def opt_record_file : Separate<["-"], "opt-record-file">,
-  HelpText<"File name to use for YAML optimization record output">,
-  MarshallingInfoString<CodeGenOpts<"OptRecordFile">>;
-def opt_record_passes : Separate<["-"], "opt-record-passes">,
-  HelpText<"Only record remark information for passes whose names match the given regular expression">;
-def opt_record_format : Separate<["-"], "opt-record-format">,
-  HelpText<"The format used for serializing remarks (default: YAML)">;
-
 def print_stats : Flag<["-"], "print-stats">,
   HelpText<"Print performance metrics and statistics">,
   MarshallingInfoFlag<FrontendOpts<"ShowStats">>;
@@ -6837,6 +6829,14 @@ defm debug_pass_manager : BoolOption<"f", "debug-pass-manager",
   CodeGenOpts<"DebugPassManager">, DefaultFalse,
   PosFlag<SetTrue, [], "Prints debug information for the new pass manager">,
   NegFlag<SetFalse, [], "Disables debug printing for the new pass manager">>;
+
+def opt_record_file : Separate<["-"], "opt-record-file">,
+  HelpText<"File name to use for YAML optimization record output">,
+  MarshallingInfoString<CodeGenOpts<"OptRecordFile">>;
+def opt_record_passes : Separate<["-"], "opt-record-passes">,
+  HelpText<"Only record remark information for passes whose names match the given regular expression">;
+def opt_record_format : Separate<["-"], "opt-record-format">,
+  HelpText<"The format used for serializing remarks (default: YAML)">;
 
 } // let Flags = [CC1Option, FC1Option, NoDriverOption]
 

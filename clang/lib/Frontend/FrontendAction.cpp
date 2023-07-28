@@ -61,6 +61,11 @@ public:
       delete Previous;
   }
 
+  DelegatingDeserializationListener(const DelegatingDeserializationListener &) =
+      delete;
+  DelegatingDeserializationListener &
+  operator=(const DelegatingDeserializationListener &) = delete;
+
   void ReaderInitialized(ASTReader *Reader) override {
     if (Previous)
       Previous->ReaderInitialized(Reader);

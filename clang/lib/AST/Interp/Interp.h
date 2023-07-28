@@ -701,7 +701,9 @@ inline bool CmpHelper<Pointer>(InterpState &S, CodePtr OpPC, CompareFn Fn) {
 
   if (!Pointer::hasSameBase(LHS, RHS)) {
     const SourceInfo &Loc = S.Current->getSource(OpPC);
-    S.FFDiag(Loc, diag::note_invalid_subexpr_in_const_expr);
+    S.FFDiag(Loc, diag::note_constexpr_pointer_comparison_unspecified)
+        << LHS.toDiagnosticString(S.getCtx())
+        << RHS.toDiagnosticString(S.getCtx());
     return false;
   } else {
     unsigned VL = LHS.getByteOffset();

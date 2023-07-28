@@ -545,6 +545,9 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Alderlake:
   case CK_Raptorlake:
   case CK_Meteorlake:
+  case CK_Arrowlake:
+  case CK_ArrowlakeS:
+  case CK_Lunarlake:
   case CK_Sierraforest:
   case CK_Grandridge:
   case CK_Graniterapids:
@@ -1437,6 +1440,9 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Alderlake:
     case CK_Raptorlake:
     case CK_Meteorlake:
+    case CK_Arrowlake:
+    case CK_ArrowlakeS:
+    case CK_Lunarlake:
     case CK_Sierraforest:
     case CK_Grandridge:
     case CK_Graniterapids:

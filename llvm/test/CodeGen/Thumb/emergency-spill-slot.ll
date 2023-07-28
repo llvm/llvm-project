@@ -64,12 +64,12 @@ define void @simple_emergency_spill(i32 %n) {
 ; CHECK-NEXT:    .pad #8196
 ; CHECK-NEXT:    add sp, r7
 ; CHECK-NEXT:    add r0, sp, #4
-; CHECK-NEXT:    ldr r1, .LCPI1_2
+; CHECK-NEXT:    ldr r1, .LCPI1_3
 ; CHECK-NEXT:    add r1, sp
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
 ; CHECK-NEXT:    str r0, [sp]
-; CHECK-NEXT:    ldr r0, .LCPI1_3
+; CHECK-NEXT:    ldr r0, .LCPI1_2
 ; CHECK-NEXT:    add r0, sp
 ; CHECK-NEXT:    str r5, [r0]
 ; CHECK-NEXT:    ldr r0, [sp]
@@ -85,9 +85,9 @@ define void @simple_emergency_spill(i32 %n) {
 ; CHECK-NEXT:  .LCPI1_1:
 ; CHECK-NEXT:    .long 8196 @ 0x2004
 ; CHECK-NEXT:  .LCPI1_2:
-; CHECK-NEXT:    .long 4100 @ 0x1004
-; CHECK-NEXT:  .LCPI1_3:
 ; CHECK-NEXT:    .long 5120 @ 0x1400
+; CHECK-NEXT:  .LCPI1_3:
+; CHECK-NEXT:    .long 4100 @ 0x1004
 entry:
   %x = alloca [1024 x i32], align 4
   %y = alloca [1024 x i32], align 4
@@ -124,12 +124,12 @@ define void @simple_emergency_spill_nor7(i32 %n) {
 ; CHECK-NEXT:    .pad #8196
 ; CHECK-NEXT:    add sp, r6
 ; CHECK-NEXT:    add r0, sp, #4
-; CHECK-NEXT:    ldr r1, .LCPI2_2
+; CHECK-NEXT:    ldr r1, .LCPI2_3
 ; CHECK-NEXT:    add r1, sp
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
 ; CHECK-NEXT:    str r7, [sp]
-; CHECK-NEXT:    ldr r7, .LCPI2_3
+; CHECK-NEXT:    ldr r7, .LCPI2_2
 ; CHECK-NEXT:    add r7, sp
 ; CHECK-NEXT:    str r5, [r7]
 ; CHECK-NEXT:    ldr r7, [sp]
@@ -145,9 +145,9 @@ define void @simple_emergency_spill_nor7(i32 %n) {
 ; CHECK-NEXT:  .LCPI2_1:
 ; CHECK-NEXT:    .long 8196 @ 0x2004
 ; CHECK-NEXT:  .LCPI2_2:
-; CHECK-NEXT:    .long 4100 @ 0x1004
-; CHECK-NEXT:  .LCPI2_3:
 ; CHECK-NEXT:    .long 5120 @ 0x1400
+; CHECK-NEXT:  .LCPI2_3:
+; CHECK-NEXT:    .long 4100 @ 0x1004
 entry:
   %x = alloca [1024 x i32], align 4
   %y = alloca [1024 x i32], align 4

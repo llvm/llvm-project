@@ -90,7 +90,18 @@ public:
   bool isFinite() const { return F.isFinite(); }
 
   ComparisonCategoryResult compare(const Floating &RHS) const {
-    return Compare(F, RHS.F);
+    llvm::APFloatBase::cmpResult CmpRes = F.compare(RHS.F);
+    switch (CmpRes) {
+    case llvm::APFloatBase::cmpLessThan:
+      return ComparisonCategoryResult::Less;
+    case llvm::APFloatBase::cmpEqual:
+      return ComparisonCategoryResult::Equal;
+    case llvm::APFloatBase::cmpGreaterThan:
+      return ComparisonCategoryResult::Greater;
+    case llvm::APFloatBase::cmpUnordered:
+      return ComparisonCategoryResult::Unordered;
+    }
+    llvm_unreachable("Inavlid cmpResult value");
   }
 
   static APFloat::opStatus fromIntegral(APSInt Val,
