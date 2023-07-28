@@ -6260,20 +6260,39 @@ ParseStatus AMDGPUAsmParser::parseCPol(OperandVector &Operands) {
   if (isGFX12Plus()) {
     SMLoc StringLoc = getLoc();
 
-    int64_t TH;
-    ParseStatus Res1 = parseTH(Operands, TH);
-    if (Res1.isFailure())
-      return Res1;
+    int64_t CPolVal = 0;
+    ParseStatus ResTH = ParseStatus::NoMatch;
+    ParseStatus ResScope = ParseStatus::NoMatch;
 
-    int64_t Scope;
-    ParseStatus Res2 = parseScope(Operands, Scope);
-    if (Res2.isFailure())
-      return Res2;
+    for (;;) {
+      if (ResTH.isNoMatch()) {
+        int64_t TH;
+        ResTH = parseTH(Operands, TH);
+        if (ResTH.isFailure())
+          return ResTH;
+        if (ResTH.isSuccess()) {
+          CPolVal |= TH;
+          continue;
+        }
+      }
 
-    if (Res1.isNoMatch() && Res2.isNoMatch())
+      if (ResScope.isNoMatch()) {
+        int64_t Scope;
+        ResScope = parseScope(Operands, Scope);
+        if (ResScope.isFailure())
+          return ResScope;
+        if (ResScope.isSuccess()) {
+          CPolVal |= Scope;
+          continue;
+        }
+      }
+
+      break;
+    }
+
+    if (ResTH.isNoMatch() && ResScope.isNoMatch())
       return ParseStatus::NoMatch;
 
-    int64_t CPolVal = Scope | TH;
     Operands.push_back(AMDGPUOperand::CreateImm(this, CPolVal, StringLoc,
                                                 AMDGPUOperand::ImmTyCPol));
     return ParseStatus::Success;
