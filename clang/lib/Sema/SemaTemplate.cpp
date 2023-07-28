@@ -593,7 +593,7 @@ bool Sema::LookupTemplateName(LookupResult &Found,
       //     postfix-expression and does not name a class template, the name
       //     found in the class of the object expression is used, otherwise
       FoundOuter.clear();
-    } else if (!Found.isSuppressingDiagnostics()) {
+    } else if (!Found.isSuppressingAmbiguousDiagnostics()) {
       //   - if the name found is a class template, it must refer to the same
       //     entity as the one found in the class of the object expression,
       //     otherwise the program is ill-formed.
