@@ -136,10 +136,6 @@ struct ModuleDeps {
   /// determined that the differences are benign for this compilation.
   std::vector<ModuleID> ClangModuleDeps;
 
-  // Used to track which modules that were discovered were directly imported by
-  // the primary TU.
-  bool ImportedByMainFile = false;
-
   /// Compiler invocation that can be used to build this module. Does not
   /// include argv[0].
   std::vector<std::string> BuildArguments;
@@ -172,8 +168,6 @@ public:
 private:
   /// The parent dependency collector.
   ModuleDepCollector &MDC;
-  /// Working set of direct modular dependencies.
-  llvm::SetVector<const Module *> DirectModularDeps;
 
   void handleImport(const Module *Imported);
 
@@ -243,6 +237,8 @@ private:
   llvm::DenseMap<ModuleID, ModuleDeps *> ModuleDepsByID;
   /// Direct modular dependencies that have already been built.
   llvm::MapVector<const Module *, PrebuiltModuleDep> DirectPrebuiltModularDeps;
+  /// Working set of direct modular dependencies.
+  llvm::SetVector<const Module *> DirectModularDeps;
   /// Options that control the dependency output generation.
   std::unique_ptr<DependencyOutputOptions> Opts;
   /// The original Clang invocation passed to dependency scanner.
