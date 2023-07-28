@@ -27,6 +27,14 @@ typedef struct InfoPriv {
 static const FlagsPriv PrivBit = 0x00000001;
 
 void escape_info(InfoRaw *info);
+typedef SType ( *FnPtr)(unsigned s, const InfoRaw* i);
+struct X {
+  struct entries {
+    FnPtr wildfn = nullptr;
+  };
+  static entries e;
+};
+
 void exploded_fields(bool cond) {
   {
     InfoRaw info = {INFO_ENUM_0}; // expected-note {{invalidated here}}
@@ -42,6 +50,8 @@ void exploded_fields(bool cond) {
 
     escape_info(&info); // expected-remark {{pset => { invalid, nullptr }}}
                         // expected-warning@-1 {{passing aggregate containing invalid pointer member 'info.next'}}
+    X::e.wildfn(0, &info); // expected-remark {{pset => { invalid, nullptr }}}
+                           // expected-warning@-1 {{passing aggregate containing invalid pointer member 'info.next'}}
   }
 }
 
