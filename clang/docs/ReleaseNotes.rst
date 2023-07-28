@@ -121,6 +121,12 @@ Bug Fixes to C++ Support
   a Unicode character whose name contains a ``-``.
   (`Fixes #64161 <https://github.com/llvm/llvm-project/issues/64161>_`)
 
+- Fix cases where we ignore ambiguous name lookup when looking up memebers.
+  (`#22413 <https://github.com/llvm/llvm-project/issues/22413>_`),
+  (`#29942 <https://github.com/llvm/llvm-project/issues/29942>_`),
+  (`#35574 <https://github.com/llvm/llvm-project/issues/35574>_`) and
+  (`#27224 <https://github.com/llvm/llvm-project/issues/27224>_`).
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 

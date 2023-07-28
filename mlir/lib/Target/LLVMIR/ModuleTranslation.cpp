@@ -825,7 +825,7 @@ static LogicalResult checkedAddLLVMFnAttribute(Location loc,
     if (value.empty())
       return emitError(loc) << "LLVM attribute '" << key << "' expects a value";
 
-    int result;
+    int64_t result;
     if (!value.getAsInteger(/*Radix=*/0, result))
       llvmFunc->addFnAttr(
           llvm::Attribute::get(llvmFunc->getContext(), kind, result));
