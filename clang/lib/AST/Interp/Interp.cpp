@@ -469,7 +469,7 @@ bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
 
   const SourceInfo &E = S.Current->getSource(OpPC);
   S.CCEDiag(E, diag::note_constexpr_invalid_cast)
-      << 2 << S.getLangOpts().CPlusPlus;
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
   return false;
 }
 
