@@ -23,9 +23,6 @@ export namespace std {
   using std::memory_order_seq_cst;
 
   using std::kill_dependency;
-} // namespace std
-
-namespace std {
 
   // [atomics.ref.generic], class template atomic_ref
   // [atomics.ref.pointer], partial specialization for pointers
