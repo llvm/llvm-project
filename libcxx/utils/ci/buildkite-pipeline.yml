@@ -764,6 +764,19 @@ steps:
           - exit_status: -1  # Agent was lost
             limit: 2
 
+    - label: "Clang-cl (Debug mode)"
+      command: "bash libcxx/utils/ci/run-buildbot clang-cl-debug"
+      artifact_paths:
+        - "**/test-results.xml"
+        - "**/*.abilist"
+      agents:
+        queue: "windows"
+      retry:
+        automatic:
+          - exit_status: -1  # Agent was lost
+            limit: 2
+      timeout_in_minutes: 120
+
     - label: "MinGW (DLL, x86_64)"
       command: "bash libcxx/utils/ci/run-buildbot mingw-dll"
       artifact_paths:
