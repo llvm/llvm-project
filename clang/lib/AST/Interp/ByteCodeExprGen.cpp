@@ -1000,7 +1000,7 @@ bool ByteCodeExprGen<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXThrowExpr(const CXXThrowExpr *E) {
-  if (!this->discard(E->getSubExpr()))
+  if (E->getSubExpr() && !this->discard(E->getSubExpr()))
     return false;
 
   return this->emitInvalid(E);
