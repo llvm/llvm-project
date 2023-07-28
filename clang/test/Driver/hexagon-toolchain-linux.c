@@ -119,3 +119,9 @@
 // CHECK009:   "-resource-dir" "[[RESOURCE:[^"]+]]"
 // CHECK009-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
 // CHECK009-SAME: {{^}} "-internal-externc-isystem" "[[INSTALLED_DIR]]/../target/hexagon/include"
+
+// RUN: %clang -fdriver-only -Werror -v -L/tmp \
+// RUN:    --target=hexagon-unknown-linux-musl %s 2>&1 \
+// RUN:    | FileCheck -check-prefix=CHECK010 %s
+// CHECK010:   InstalledDir: [[INSTALLED_DIR:.+]]
+// CHECK010:   "-L/tmp"
