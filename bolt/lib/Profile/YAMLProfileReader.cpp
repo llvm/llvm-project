@@ -245,9 +245,6 @@ bool YAMLProfileReader::parseFunctionProfile(
            << " edges in profile did not match function " << BF << '\n';
 
   if (!ProfileMatched && opts::InferStaleProfile) {
-    if (opts::Verbosity >= 1)
-      outs() << "BOLT-INFO: applying profile inference for "
-             << "\"" << BF.getPrintName() << "\"\n";
     if (inferStaleProfile(BF, YamlBF)) {
       ProfileMatched = true;
       BF.markProfiled(YamlBP.Header.Flags);
