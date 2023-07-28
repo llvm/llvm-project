@@ -58,11 +58,19 @@ static SmallVector<unsigned> extractPosition(ArrayRef<int64_t> indices) {
   return position;
 }
 
+/// Convert an LLVM type to a string for printing in diagnostics.
+static std::string diagStr(const llvm::Type *type) {
+  std::string str;
+  llvm::raw_string_ostream os(str);
+  type->print(os);
+  return os.str();
+}
+
 /// Get the declaration of an overloaded llvm intrinsic. First we get the
 /// overloaded argument types and/or result type from the CallIntrinsicOp, and
 /// then use those to get the correct declaration of the overloaded intrinsic.
 static FailureOr<llvm::Function *>
-getOverloadedDeclaration(CallIntrinsicOp &op, llvm::Intrinsic::ID id,
+getOverloadedDeclaration(CallIntrinsicOp op, llvm::Intrinsic::ID id,
                          llvm::Module *module,
                          LLVM::ModuleTranslation &moduleTranslation) {
   SmallVector<llvm::Type *, 8> allArgTys;
@@ -86,7 +94,9 @@ getOverloadedDeclaration(CallIntrinsicOp &op, llvm::Intrinsic::ID id,
   if (llvm::Intrinsic::matchIntrinsicSignature(ft, tableRef,
                                                overloadedArgTys) !=
       llvm::Intrinsic::MatchIntrinsicTypesResult::MatchIntrinsicTypes_Match) {
-    return op.emitOpError("intrinsic type is not a match");
+    return mlir::emitError(op.getLoc(), "call intrinsic signature ")
+           << diagStr(ft) << " to overloaded intrinsic " << op.getIntrinAttr()
+           << " does not match any of the overloads";
   }
 
   ArrayRef<llvm::Type *> overloadedArgTysRef = overloadedArgTys;
@@ -101,8 +111,8 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
   llvm::Intrinsic::ID id =
       llvm::Function::lookupIntrinsicID(op.getIntrinAttr());
   if (!id)
-    return op.emitOpError()
-           << "couldn't find intrinsic: " << op.getIntrinAttr();
+    return mlir::emitError(op.getLoc(), "could not find LLVM intrinsic: ")
+           << op.getIntrinAttr();
 
   llvm::Function *fn = nullptr;
   if (llvm::Intrinsic::isOverloaded(id)) {
@@ -114,6 +124,44 @@ convertCallLLVMIntrinsicOp(CallIntrinsicOp op, llvm::IRBuilderBase &builder,
   } else {
     fn = llvm::Intrinsic::getDeclaration(module, id, {});
   }
+
+  // Check the result type of the call.
+  const llvm::Type *intrinType =
+      op.getNumResults() == 0
+          ? llvm::Type::getVoidTy(module->getContext())
+          : moduleTranslation.convertType(op.getResultTypes().front());
+  if (intrinType != fn->getReturnType()) {
+    return mlir::emitError(op.getLoc(), "intrinsic call returns ")
+           << diagStr(intrinType) << " but " << op.getIntrinAttr()
+           << " actually returns " << diagStr(fn->getReturnType());
+  }
+
+  // Check the argument types of the call. If the function is variadic, check
+  // the subrange of required arguments.
+  if (!fn->getFunctionType()->isVarArg() &&
+      op.getNumOperands() != fn->arg_size()) {
+    return mlir::emitError(op.getLoc(), "intrinsic call has ")
+           << op.getNumOperands() << " operands but " << op.getIntrinAttr()
+           << " expects " << fn->arg_size();
+  }
+  if (fn->getFunctionType()->isVarArg() &&
+      op.getNumOperands() < fn->arg_size()) {
+    return mlir::emitError(op.getLoc(), "intrinsic call has ")
+           << op.getNumOperands() << " operands but variadic "
+           << op.getIntrinAttr() << " expects at least " << fn->arg_size();
+  }
+  // Check the arguments up to the number the function requires.
+  for (unsigned i = 0, e = fn->arg_size(); i != e; ++i) {
+    const llvm::Type *expected = fn->getArg(i)->getType();
+    const llvm::Type *actual =
+        moduleTranslation.convertType(op.getOperandTypes()[i]);
+    if (actual != expected) {
+      return mlir::emitError(op.getLoc(), "intrinsic call operand #")
+             << i << " has type " << diagStr(actual) << " but "
+             << op.getIntrinAttr() << " expects " << diagStr(expected);
+    }
+  }
+
   FastmathFlagsInterface itf = op;
   builder.setFastMathFlags(getFastmathFlags(itf));
 
