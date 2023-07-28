@@ -1182,21 +1182,31 @@ public:
     return Plugin::success();
   }
 
-  /// Get resource from the pool or create new resources. If the function
-  /// succeeeds, the handle to the resource is saved in \p Handle.
+  /// Get a resource from the pool or create new ones. If the function succeeds,
+  /// the handle to the resource is saved in \p Handle.
   Error getResource(ResourceHandleTy &Handle) {
+    return getResources(1, &Handle);
+  }
+
+  /// Get multiple resources from the pool or create new ones. If the function
+  /// succeeeds, the handles to the resources are saved in \p Handles.
+  Error getResources(uint32_t Num, ResourceHandleTy *Handles) {
     const std::lock_guard<std::mutex> Lock(Mutex);
 
     assert(NextAvailable <= ResourcePool.size() &&
            "Resource pool is corrupted");
 
-    if (NextAvailable == ResourcePool.size())
-      // By default we double the resource pool every time.
-      if (auto Err = ResourcePoolTy::resizeResourcePool(NextAvailable * 2))
+    if (NextAvailable + Num > ResourcePool.size())
+      // Double the resource pool or resize it to provide the requested ones.
+      if (auto Err = ResourcePoolTy::resizeResourcePool(
+              std::max(NextAvailable * 2, NextAvailable + Num)))
         return Err;
 
-    // Save the handle in the output parameter.
-    Handle = ResourcePool[NextAvailable++];
+    // Save the handles in the output array parameter.
+    for (uint32_t r = 0; r < Num; ++r)
+      Handles[r] = ResourcePool[NextAvailable + r];
+
+    NextAvailable += Num;
 
     return Plugin::success();
   }
