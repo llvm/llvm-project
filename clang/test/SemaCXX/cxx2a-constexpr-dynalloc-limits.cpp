@@ -42,12 +42,15 @@ struct S {
     T* data;
 };
 
-constexpr std::size_t s = S<std::size_t>(1099511627777)[42]; // expected-error {{constexpr variable 's' must be initialized by a constant expression}} \
-                                           // expected-note@#call {{in call to 'this->alloc.allocate(1099511627777)'}} \
-                                           // expected-note@#alloc {{cannot allocate array; evaluated array bound 1099511627777 is too large}} \
-                                           // expected-note {{in call to 'S(1099511627777)'}}
+// Only run these tests on 64 bits platforms
+#if __LP64__
+constexpr std::size_t s = S<std::size_t>(~0UL)[42]; // expected-error {{constexpr variable 's' must be initialized by a constant expression}} \
+                                           // expected-note-re@#call {{in call to 'this->alloc.allocate({{.*}})'}} \
+                                           // expected-note-re@#alloc {{cannot allocate array; evaluated array bound {{.*}} is too large}} \
+                                           // expected-note-re {{in call to 'S({{.*}})'}}
+#endif
 // Check that we do not try to fold very large arrays
-std::size_t s2 = S<std::size_t>(1099511627777)[42];
+std::size_t s2 = S<std::size_t>(~0UL)[42];
 std::size_t s3 = S<std::size_t>(~0ULL)[42];
 
 // We can allocate and initialize a small array
