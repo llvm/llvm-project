@@ -1,5 +1,5 @@
 # RUN: llvm-mc -filetype=obj -triple=aarch64-unknown-freebsd %s -o %t
-# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s
+# RUN: llvm-objdump --no-print-imm-hex -d %t | FileCheck %s --check-prefixes=CHECK,NOALL
 # RUN: llvm-objdump --no-print-imm-hex -d --show-all-symbols %t | FileCheck %s --check-prefixes=CHECK,ALL
 
 # CHECK:       Disassembly of section .mysection:
@@ -17,7 +17,8 @@
 # CHECK-EMPTY:
 # CHECK-NEXT:  Disassembly of section .myothersection:
 # CHECK-EMPTY:
-# CHECK-NEXT:  <$x.2>:
+# NOALL-NEXT:  <.myothersection>:
+# ALL-NEXT:    <$x.2>:
 # CHECK-NEXT:         0:       90000001        adrp    x1, 0x0
 # CHECK-EMPTY:
 # ALL-NEXT:    <$d.3>:
