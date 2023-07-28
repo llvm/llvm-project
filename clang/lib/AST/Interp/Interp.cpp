@@ -495,13 +495,25 @@ bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
   return false;
 }
 
-bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {
+bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
+                      APFloat::opStatus Status) {
+  const SourceInfo &E = S.Current->getSource(OpPC);
+
+  // [expr.pre]p4:
+  //   If during the evaluation of an expression, the result is not
+  //   mathematically defined [...], the behavior is undefined.
+  // FIXME: C++ rules require us to not conform to IEEE 754 here.
+  if (Result.isNan()) {
+    S.CCEDiag(E, diag::note_constexpr_float_arithmetic)
+        << /*NaN=*/true << S.Current->getRange(OpPC);
+    return S.noteUndefinedBehavior();
+  }
+
   // In a constant context, assume that any dynamic rounding mode or FP
   // exception state matches the default floating-point environment.
   if (S.inConstantContext())
     return true;
 
-  const SourceInfo &E = S.Current->getSource(OpPC);
   FPOptions FPO = E.asExpr()->getFPFeaturesInEffect(S.Ctx.getLangOpts());
 
   if ((Status & APFloat::opInexact) &&
