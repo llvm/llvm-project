@@ -249,8 +249,8 @@ entry:
 define <4 x i32> @vec128_and_f(<4 x i32> %cc_dep1) {
 ; CHECK-LABEL: vec128_and_f:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vrepg %v2, %v24, 1
 ; CHECK-NEXT:    vlr %v0, %v24
+; CHECK-NEXT:    vrepg %v2, %v24, 1
 ; CHECK-NEXT:    #APP
 ; CHECK-NEXT:    #NO_APP
 ; CHECK-NEXT:    vmrhg %v24, %v0, %v2
