@@ -117,6 +117,10 @@ Bug Fixes to C++ Support
   This limit can be modified by `-fconstexpr-steps`.
   (`#63562 <https://github.com/llvm/llvm-project/issues/63562>`_)
 
+- Fix a crash caused by some named unicode escape sequences designating
+  a Unicode character whose name contains a ``-``.
+  (`Fixes #64161 <https://github.com/llvm/llvm-project/issues/64161>_`)
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
