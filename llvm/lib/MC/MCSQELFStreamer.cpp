@@ -1,5 +1,5 @@
-//===- lib/MC/MCSQELFStreamer.cpp -SQLite ELF Object Output
-//-----------------------===//
+//===- lib/MC/MCSQELFStreamer.cpp ----------------------------------------===//
+// SQLite ELF Object Output
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -20,6 +20,9 @@
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/Debug.h"
+
+#define DEBUG_TYPE "sqelf"
 
 using namespace llvm;
 
@@ -43,7 +46,9 @@ void MCSQELFStreamer::emitZerofill(MCSection *Section, MCSymbol *Symbol,
                                    SMLoc Loc) {}
 
 void MCSQELFStreamer::emitInstToData(const MCInst &Inst,
-                                     const MCSubtargetInfo &) {}
+                                     const MCSubtargetInfo &) {
+  LLVM_DEBUG(dbgs() << "I am here!\n");
+}
 
 MCStreamer *llvm::createSQELFStreamer(MCContext &Context,
                                       std::unique_ptr<MCAsmBackend> &&MAB,
