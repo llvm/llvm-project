@@ -2017,7 +2017,8 @@ The attribute may be applied to the declaration of a class, a typedef, a
 variable, a function or method, a function parameter, an enumeration, an
 enumerator, a non-static data member, or a label.
 
-.. code-block: c++
+.. code-block:: c++
+
   #include <cassert>
 
   [[maybe_unused]] void f([[maybe_unused]] bool thing1,
@@ -2046,7 +2047,8 @@ literal contents) are allowed. If there are redeclarations of the entity with
 differing string literals, it is unspecified which one will be used by Clang
 in any resulting diagnostics.
 
-.. code-block: c++
+.. code-block:: c++
+
   struct [[nodiscard]] error_info { /*...*/ };
   error_info enable_missile_safety_mode();
 
@@ -2063,7 +2065,8 @@ marked with ``[[nodiscard]]`` or a constructor of a type marked
 ``[[nodiscard]]`` will also diagnose. This also applies to type conversions that
 use the annotated ``[[nodiscard]]`` constructor or result in an annotated type.
 
-.. code-block: c++
+.. code-block:: c++
+
   struct [[nodiscard]] marked_type {/*..*/ };
   struct marked_ctor {
     [[nodiscard]] marked_ctor();
@@ -5844,12 +5847,12 @@ accessed. The following are examples of valid expressions where may not be diagn
 ``noderef`` is currently only supported for pointers and arrays and not usable
 for references or Objective-C object pointers.
 
-.. code-block: c++
+.. code-block:: c++
 
   int x = 2;
   int __attribute__((noderef)) &y = x;  // warning: 'noderef' can only be used on an array or pointer type
 
-.. code-block: objc
+.. code-block:: objc
 
   id __attribute__((noderef)) obj = [NSObject new]; // warning: 'noderef' can only be used on an array or pointer type
 }];
