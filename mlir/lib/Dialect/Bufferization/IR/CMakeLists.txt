@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRBufferizationDialect
 
   LINK_LIBS PUBLIC
   MLIRAffineDialect
+  MLIRArithDialect
   MLIRDestinationStyleOpInterface
   MLIRDialect
   MLIRFuncDialect

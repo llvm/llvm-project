@@ -15,15 +15,6 @@ using namespace mlir;
 using namespace test;
 
 //===----------------------------------------------------------------------===//
-// TestDialect version utilities
-//===----------------------------------------------------------------------===//
-
-struct TestDialectVersion : public DialectVersion {
-  uint32_t major = 2;
-  uint32_t minor = 0;
-};
-
-//===----------------------------------------------------------------------===//
 // TestDialect Interfaces
 //===----------------------------------------------------------------------===//
 
@@ -47,7 +38,7 @@ struct TestResourceBlobManagerInterface
 };
 
 namespace {
-enum test_encoding { k_attr_params = 0 };
+enum test_encoding { k_attr_params = 0, k_test_i32 = 99 };
 }
 
 // Test support for interacting with the Bytecode reader/writer.
@@ -55,6 +46,24 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
   using BytecodeDialectInterface::BytecodeDialectInterface;
   TestBytecodeDialectInterface(Dialect *dialect)
       : BytecodeDialectInterface(dialect) {}
+
+  LogicalResult writeType(Type type,
+                          DialectBytecodeWriter &writer) const final {
+    if (auto concreteType = llvm::dyn_cast<TestI32Type>(type)) {
+      writer.writeVarInt(test_encoding::k_test_i32);
+      return success();
+    }
+    return failure();
+  }
+
+  Type readType(DialectBytecodeReader &reader) const final {
+    uint64_t encoding;
+    if (failed(reader.readVarInt(encoding)))
+      return Type();
+    if (encoding == test_encoding::k_test_i32)
+      return TestI32Type::get(getContext());
+    return Type();
+  }
 
   LogicalResult writeAttribute(Attribute attr,
                                DialectBytecodeWriter &writer) const final {
@@ -67,9 +76,13 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
     return failure();
   }
 
-  Attribute readAttribute(DialectBytecodeReader &reader,
-                          const DialectVersion &version_) const final {
-    const auto &version = static_cast<const TestDialectVersion &>(version_);
+  Attribute readAttribute(DialectBytecodeReader &reader) const final {
+    auto versionOr = reader.getDialectVersion("test");
+    // Assume current version if not available through the reader.
+    const auto version =
+        (succeeded(versionOr))
+            ? *reinterpret_cast<const TestDialectVersion *>(*versionOr)
+            : TestDialectVersion();
     if (version.major < 2)
       return readAttrOldEncoding(reader);
     if (version.major == 2 && version.minor == 0)
