@@ -1104,6 +1104,53 @@ TEST(TBDv5, InvalidSymbols) {
   EXPECT_EQ("invalid exported_symbols section\n", ErrorMessage);
 }
 
+TEST(TBDv5, DefaultMinOS) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-ios-simulator"
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_TRUE(!!Result);
+  TBDFile File = std::move(Result.get());
+  EXPECT_EQ(FileType::TBD_V5, File->getFileType());
+  EXPECT_EQ(std::string("/S/L/F/Foo.framework/Foo"), File->getInstallName());
+  EXPECT_TRUE(File->targets().begin() != File->targets().end());
+  EXPECT_EQ(*File->targets().begin(),
+            Target(AK_arm64, PLATFORM_IOSSIMULATOR, VersionTuple(0, 0)));
+}
+
+TEST(TBDv5, InvalidMinOS) {
+  static const char TBDv5File[] = R"({ 
+"tapi_tbd_version": 5,
+"main_library": {
+  "target_info": [
+    {
+      "target": "arm64-ios-simulator",
+      "min_deployment": "swift-abi"
+    }
+  ],
+  "install_names":[
+    { "name":"/S/L/F/Foo.framework/Foo" }
+  ]
+}})";
+
+  Expected<TBDFile> Result =
+      TextAPIReader::get(MemoryBufferRef(TBDv5File, "Test.tbd"));
+  EXPECT_FALSE(!!Result);
+  std::string ErrorMessage = toString(Result.takeError());
+  EXPECT_EQ("invalid min_deployment section\n", ErrorMessage);
+}
+
 TEST(TBDv5, MergeIF) {
   static const char TBDv5FileA[] = R"({
 "tapi_tbd_version": 5,
