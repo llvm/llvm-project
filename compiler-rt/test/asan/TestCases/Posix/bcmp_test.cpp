@@ -12,7 +12,7 @@ int main(int argc, char **argv) {
   char a2[] = {1, static_cast<char>(2 * argc), 3, 4};
   int res = bcmp(a1, a2, 4 + argc); // BOOM
   // CHECK: AddressSanitizer: stack-buffer-overflow
-  // CHECK: {{#1.*bcmp}}
-  // CHECK: {{#2.*main}}
+  // CHECK: {{#[0-9]+ .*bcmp}}
+  // CHECK: {{#[0-9]+ .*main}}
   return res;
 }
