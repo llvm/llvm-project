@@ -1257,25 +1257,38 @@ public:
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::ShiftOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
-    assert((op.getValue().getType() == op.getResult().getType()) &&
-           "inconsistent operands' types not supported yet");
-    auto ty = op.getValue().getType().dyn_cast<mlir::cir::IntType>();
-    assert(ty && "NYI for other than mlir::cir::IntType");
-
+    auto cirAmtTy = op.getAmount().getType().dyn_cast<mlir::cir::IntType>();
+    auto cirValTy = op.getValue().getType().dyn_cast<mlir::cir::IntType>();
     auto llvmTy = getTypeConverter()->convertType(op.getType());
-    auto val = adaptor.getValue();
-    auto amt = adaptor.getAmount();
+    auto loc = op.getLoc();
+    mlir::Value amt = adaptor.getAmount();
+    mlir::Value val = adaptor.getValue();
 
+    assert(cirValTy && cirAmtTy && "non-integer shift is NYI");
+    assert(cirValTy == op.getType() && "inconsistent operands' types NYI");
+
+    // Ensure shift amount is the same type as the value. Some undefined
+    // behavior might occur in the casts below as per [C99 6.5.7.3].
+    if (cirAmtTy.getWidth() > cirValTy.getWidth()) {
+      amt = rewriter.create<mlir::LLVM::TruncOp>(loc, llvmTy, amt);
+    } else if (cirAmtTy.getWidth() < cirValTy.getWidth()) {
+      if (cirAmtTy.isSigned())
+        amt = rewriter.create<mlir::LLVM::SExtOp>(loc, llvmTy, amt);
+      else
+        amt = rewriter.create<mlir::LLVM::ZExtOp>(loc, llvmTy, amt);
+    }
+
+    // Lower to the proper LLVM shift operation.
     if (op.getIsShiftleft())
       rewriter.replaceOpWithNewOp<mlir::LLVM::ShlOp>(op, llvmTy, val, amt);
     else {
-      if (ty.isUnsigned())
+      if (cirValTy.isUnsigned())
         rewriter.replaceOpWithNewOp<mlir::LLVM::LShrOp>(op, llvmTy, val, amt);
       else
         rewriter.replaceOpWithNewOp<mlir::LLVM::AShrOp>(op, llvmTy, val, amt);
     }
 
-    return mlir::LogicalResult::success();
+    return mlir::success();
   }
 };
 
