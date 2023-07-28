@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Analysis/Presburger/Matrix.h"
+#include "mlir/Analysis/Presburger/MatrixF.h"
+#include "mlir/Analysis/Presburger/Fraction.h"
 #include "./Utils.h"
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -246,4 +248,28 @@ TEST(MatrixTest, computeHermiteNormalForm) {
         makeMatrix(3, 5, {{1, 0, 0, 0, 0}, {0, 1, 0, 0, 0}, {0, 0, 1, 0, 0}});
     checkHermiteNormalForm(mat, hermiteForm);
   }
+}
+
+TEST(MatrixTest, dotProduct) {
+    SmallVector<Fraction> a = {Fraction(1, 1), Fraction(2, 1), Fraction(3, 1)};
+    SmallVector<Fraction> b = {Fraction(4, 1), Fraction(5, 1), Fraction(6, 1)};
+
+    EXPECT_EQ(dotProduct(a, b).num, 32);
+}
+
+TEST(MatrixTest, gramSchmidt) {
+    MatrixF mat = makeMatrixF(3, 5, {{Fraction(3, 1), Fraction(4, 1), Fraction(5, 1), Fraction(12, 1), Fraction(19, 1)},
+                                     {Fraction(4, 1), Fraction(5, 1), Fraction(6, 1), Fraction(13, 1), Fraction(20, 1)},
+                                     {Fraction(7, 1), Fraction(8, 1), Fraction(9, 1), Fraction(16, 1), Fraction(24, 1)}});
+
+    MatrixF gramSchmidt = makeMatrixF(3, 5,
+           {{Fraction(3, 1),     Fraction(4, 1),     Fraction(5, 1),    Fraction(12, 1),     Fraction(19, 1)},
+            {Fraction(142, 185), Fraction(383, 555), Fraction(68, 111), Fraction(13, 185),   Fraction(-262, 555)},
+            {Fraction(53, 463),  Fraction(27, 463),  Fraction(1, 463),  Fraction(-181, 463), Fraction(100, 463)}});
+
+     mat.gramSchmidt();
+
+    for (unsigned row = 0; row < 3; row++)
+      for (unsigned col = 0; col < 5; col++)
+        EXPECT_EQ(mat(row, col), gramSchmidt(row, col));
 }
