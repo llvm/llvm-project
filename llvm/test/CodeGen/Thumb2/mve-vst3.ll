@@ -1358,8 +1358,8 @@ define void @vst3_v16f16(ptr %src, ptr %dst) {
 ; CHECK-NEXT:    vldrw.u32 q3, [r0]
 ; CHECK-NEXT:    vmov r2, s2
 ; CHECK-NEXT:    vmov.f32 s16, s12
-; CHECK-NEXT:    vins.f16 s16, s24
 ; CHECK-NEXT:    vmov.f32 s0, s13
+; CHECK-NEXT:    vins.f16 s16, s24
 ; CHECK-NEXT:    vmov.16 q4[4], r2
 ; CHECK-NEXT:    vins.f16 s0, s25
 ; CHECK-NEXT:    vmov.f32 s19, s0
