@@ -679,12 +679,12 @@ public:
     mlir::Attribute attr = op.getValue();
 
     if (op.getType().isa<mlir::cir::BoolType>()) {
-      if (op.getValue() ==
-          mlir::cir::BoolAttr::get(
-              getContext(), ::mlir::cir::BoolType::get(getContext()), true))
-        attr = mlir::BoolAttr::get(getContext(), true);
-      else
-        attr = mlir::BoolAttr::get(getContext(), false);
+      int value =
+          (op.getValue() ==
+           mlir::cir::BoolAttr::get(
+               getContext(), ::mlir::cir::BoolType::get(getContext()), true));
+      attr = rewriter.getIntegerAttr(typeConverter->convertType(op.getType()),
+                                     value);
     } else if (op.getType().isa<mlir::cir::IntType>()) {
       attr = rewriter.getIntegerAttr(
           typeConverter->convertType(op.getType()),
