@@ -1536,6 +1536,7 @@ let TargetPrefix = "riscv" in {
   defm vfnmsub : RISCVTernaryAAXARoundingMode;
 
   defm vfwmacc : RISCVTernaryWideRoundingMode;
+  defm vfwmaccbf16 : RISCVTernaryWideRoundingMode;
   defm vfwnmacc : RISCVTernaryWideRoundingMode;
   defm vfwmsac : RISCVTernaryWideRoundingMode;
   defm vfwnmsac : RISCVTernaryWideRoundingMode;
@@ -1640,6 +1641,7 @@ let TargetPrefix = "riscv" in {
   defm vfwcvt_rtz_xu_f_v : RISCVConversion;
   defm vfwcvt_rtz_x_f_v : RISCVConversion;
   defm vfwcvt_f_f_v : RISCVConversion;
+  defm vfwcvtbf16_f_f_v : RISCVConversion;
 
   defm vfncvt_f_xu_w : RISCVConversionRoundingMode;
   defm vfncvt_f_x_w : RISCVConversionRoundingMode;
@@ -1648,6 +1650,7 @@ let TargetPrefix = "riscv" in {
   defm vfncvt_rtz_xu_f_w : RISCVConversion;
   defm vfncvt_rtz_x_f_w : RISCVConversion;
   defm vfncvt_f_f_w : RISCVConversionRoundingMode;
+  defm vfncvtbf16_f_f_w : RISCVConversionRoundingMode;
   defm vfncvt_rod_f_f_w : RISCVConversion;
 
   // Output: (vector)
