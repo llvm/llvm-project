@@ -450,8 +450,9 @@ foreach $arg (@ARGV)
                 if ($HIP_PLATFORM eq "amd") {
                     $hasHIP = 1;
                     $toolArgs .= " -x hip";
-                } else {
+                } elsif ($HIP_PLATFORM eq "nvidia") {
                     $hasCU = 1;
+                    $toolArgs .= " -x cu";
                 }
             }
         }
@@ -530,10 +531,6 @@ if($HIP_PLATFORM eq "amd"){
     }
 
     $ENV{HCC_EXTRA_LIBRARIES}="\n";
-}
-
-if ($HIP_PLATFORM eq 'nvidia') {
-    $HIPCXXFLAGS .= " -x cu";
 }
 
 if ($buildDeps and $HIP_PLATFORM eq 'nvidia') {
