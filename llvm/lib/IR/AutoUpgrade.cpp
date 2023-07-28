@@ -1102,21 +1102,18 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
     // the pointer args.
-    if (Name.startswith("memcpy.") && F->arg_size() == 5) {
-      rename(F);
-      // Get the types of dest, src, and len
-      ArrayRef<Type *> ParamTypes = F->getFunctionType()->params().slice(0, 3);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::memcpy,
-                                        ParamTypes);
-      return true;
-    }
-    if (Name.startswith("memmove.") && F->arg_size() == 5) {
-      rename(F);
-      // Get the types of dest, src, and len
-      ArrayRef<Type *> ParamTypes = F->getFunctionType()->params().slice(0, 3);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::memmove,
-                                        ParamTypes);
-      return true;
+    if (unsigned ID = StringSwitch<unsigned>(Name)
+                          .StartsWith("memcpy.", Intrinsic::memcpy)
+                          .StartsWith("memmove.", Intrinsic::memmove)
+                          .Default(0)) {
+      if (F->arg_size() == 5) {
+        rename(F);
+        // Get the types of dest, src, and len
+        ArrayRef<Type *> ParamTypes =
+            F->getFunctionType()->params().slice(0, 3);
+        NewFn = Intrinsic::getDeclaration(F->getParent(), ID, ParamTypes);
+        return true;
+      }
     }
     if (Name.startswith("memset.") && F->arg_size() == 5) {
       rename(F);
