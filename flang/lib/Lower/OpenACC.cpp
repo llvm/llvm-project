@@ -2444,9 +2444,6 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
 
   if (declarativeDir.v == llvm::acc::Directive::ACCD_declare) {
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
-    llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
-        copyoutEntryOperands, createEntryOperands;
-    Fortran::lower::StatementContext stmtCtx;
     auto moduleOp =
         builder.getBlock()->getParent()->getParentOfType<mlir::ModuleOp>();
     auto funcOp =
