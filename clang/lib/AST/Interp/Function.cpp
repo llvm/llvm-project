@@ -7,11 +7,10 @@
 //===----------------------------------------------------------------------===//
 
 #include "Function.h"
-#include "Opcode.h"
 #include "Program.h"
+#include "Opcode.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/Basic/Builtins.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -47,10 +46,4 @@ bool Function::isVirtual() const {
   if (auto *M = dyn_cast<CXXMethodDecl>(F))
     return M->isVirtual();
   return false;
-}
-
-bool Function::needsRuntimeArgPop(const ASTContext &Ctx) const {
-  if (!isBuiltin())
-    return false;
-  return Ctx.BuiltinInfo.hasCustomTypechecking(getBuiltinID());
 }
