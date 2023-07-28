@@ -103,7 +103,7 @@ protected:
 #include "AArch64GenSubtargetInfo.inc"
 
   uint8_t MaxInterleaveFactor = 2;
-  uint8_t VectorInsertExtractBaseCost = 3;
+  uint8_t VectorInsertExtractBaseCost = 2;
   uint16_t CacheLineSize = 0;
   uint16_t PrefetchDistance = 0;
   uint16_t MinPrefetchStride = 1;
