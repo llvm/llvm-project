@@ -602,10 +602,10 @@ define <vscale x 4 x float> @select_f32_no_invert_2_op(<vscale x 4 x float> %a, 
 ; CHECK-LABEL: select_f32_no_invert_2_op:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p0.s
-; CHECK-NEXT:    fmul z2.s, z2.s, z3.s
+; CHECK-NEXT:    fmul z1.s, z0.s, z1.s
 ; CHECK-NEXT:    fcmeq p0.s, p0/z, z0.s, #0.0
-; CHECK-NEXT:    fmul z0.s, z0.s, z1.s
-; CHECK-NEXT:    sel z0.s, p0, z0.s, z2.s
+; CHECK-NEXT:    fmul z0.s, z2.s, z3.s
+; CHECK-NEXT:    mov z0.s, p0/m, z1.s
 ; CHECK-NEXT:    ret
   %p = fcmp oeq <vscale x 4 x float> %a, zeroinitializer
   %fmul1 = fmul <vscale x 4 x float> %a, %b

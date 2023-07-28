@@ -58,8 +58,8 @@ entry:
 define <vscale x 16 x i16> @complex_add_v16i16(<vscale x 16 x i16> %a, <vscale x 16 x i16> %b) {
 ; CHECK-LABEL: complex_add_v16i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    cadd z2.h, z2.h, z0.h, #90
 ; CHECK-NEXT:    cadd z3.h, z3.h, z1.h, #90
+; CHECK-NEXT:    cadd z2.h, z2.h, z0.h, #90
 ; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    mov z1.d, z3.d
 ; CHECK-NEXT:    ret

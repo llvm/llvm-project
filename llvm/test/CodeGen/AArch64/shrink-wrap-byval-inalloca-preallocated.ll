@@ -13,8 +13,8 @@ define void @test_regular_pointers(ptr %a, ptr %b) {
 ; CHECK-LABEL: test_regular_pointers:
 ; CHECK:       ; %bb.0: ; %entry
 ; CHECK-NEXT:    ldr d0, [x0]
-; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    ldr d1, [x1, #8]
+; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    movk x8, #2047, lsl #16
 ; CHECK-NEXT:    fadd d0, d0, d1
 ; CHECK-NEXT:    fmov d1, x8
@@ -67,8 +67,8 @@ define void @test_byval_pointers(ptr %a, ptr byval(%struct.s) %b) {
 ; CHECK-NEXT:    .cfi_offset w19, -24
 ; CHECK-NEXT:    .cfi_offset w20, -32
 ; CHECK-NEXT:    ldr d0, [sp, #40]
-; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    movk x8, #2047, lsl #16
 ; CHECK-NEXT:    fadd d0, d1, d0
 ; CHECK-NEXT:    fmov d1, x8
@@ -115,8 +115,8 @@ define void @test_inalloca_pointers(ptr %a, ptr inalloca(%struct.s) %b) {
 ; CHECK-NEXT:    .cfi_offset w19, -24
 ; CHECK-NEXT:    .cfi_offset w20, -32
 ; CHECK-NEXT:    ldr d0, [sp, #40]
-; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    movk x8, #2047, lsl #16
 ; CHECK-NEXT:    fadd d0, d1, d0
 ; CHECK-NEXT:    fmov d1, x8
@@ -163,8 +163,8 @@ define void @test_preallocated_pointers(ptr %a, ptr preallocated(%struct.s) %b) 
 ; CHECK-NEXT:    .cfi_offset w19, -24
 ; CHECK-NEXT:    .cfi_offset w20, -32
 ; CHECK-NEXT:    ldr d0, [sp, #40]
-; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    ldr d1, [x0]
+; CHECK-NEXT:    mov x8, #1 ; =0x1
 ; CHECK-NEXT:    movk x8, #2047, lsl #16
 ; CHECK-NEXT:    fadd d0, d1, d0
 ; CHECK-NEXT:    fmov d1, x8

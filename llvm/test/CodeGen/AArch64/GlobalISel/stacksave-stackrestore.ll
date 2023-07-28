@@ -17,8 +17,8 @@ define void @test_scoped_alloca(i64 %n) {
 ; CHECK-NEXT:    .cfi_offset w29, -32
 ; CHECK-NEXT:    add x9, x0, #15
 ; CHECK-NEXT:    mov x8, sp
-; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
 ; CHECK-NEXT:    mov x19, sp
+; CHECK-NEXT:    and x9, x9, #0xfffffffffffffff0
 ; CHECK-NEXT:    sub x0, x8, x9
 ; CHECK-NEXT:    mov sp, x0
 ; CHECK-NEXT:    bl use_addr
