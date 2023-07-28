@@ -130,13 +130,10 @@ namespace {
 /// Return the type of the same shape (scalar, vector or tensor) containing i1.
 static Type getI1SameShape(Type type) {
   auto i1Type = IntegerType::get(type.getContext(), 1);
-  if (auto tensorType = llvm::dyn_cast<RankedTensorType>(type))
-    return RankedTensorType::get(tensorType.getShape(), i1Type);
+  if (auto shapedType = llvm::dyn_cast<ShapedType>(type))
+    return shapedType.cloneWith(std::nullopt, i1Type);
   if (llvm::isa<UnrankedTensorType>(type))
     return UnrankedTensorType::get(i1Type);
-  if (auto vectorType = llvm::dyn_cast<VectorType>(type))
-    return VectorType::get(vectorType.getShape(), i1Type,
-                           vectorType.getScalableDims());
   return i1Type;
 }
 
@@ -1150,9 +1147,21 @@ static Type getTypeIfLikeOrMemRef(Type type) {
                            type_list<ElementTypes...>());
 }
 
+/// Return false if both types are ranked tensor with mismatching encoding.
+static bool hasSameEncoding(Type typeA, Type typeB) {
+  auto rankedTensorA = dyn_cast<RankedTensorType>(typeA);
+  auto rankedTensorB = dyn_cast<RankedTensorType>(typeB);
+  if (!rankedTensorA || !rankedTensorB)
+    return true;
+  return rankedTensorA.getEncoding() == rankedTensorB.getEncoding();
+}
+
 static bool areValidCastInputsAndOutputs(TypeRange inputs, TypeRange outputs) {
-  return inputs.size() == 1 && outputs.size() == 1 &&
-         succeeded(verifyCompatibleShapes(inputs.front(), outputs.front()));
+  if (inputs.size() != 1 || outputs.size() != 1)
+    return false;
+  if (!hasSameEncoding(inputs.front(), outputs.front()))
+    return false;
+  return succeeded(verifyCompatibleShapes(inputs.front(), outputs.front()));
 }
 
 //===----------------------------------------------------------------------===//
