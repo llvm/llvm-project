@@ -1116,22 +1116,20 @@ static bool shouldAdjustVA(const SectionRef &Section) {
 
 typedef std::pair<uint64_t, char> MappingSymbolPair;
 static char getMappingSymbolKind(ArrayRef<MappingSymbolPair> MappingSymbols,
-                                 uint64_t Address) {
-  auto It =
-      partition_point(MappingSymbols, [Address](const MappingSymbolPair &Val) {
-        return Val.first <= Address;
-      });
+                                 uint64_t SectionAddress, uint64_t Index) {
+  auto It = partition_point(MappingSymbols, [=](const MappingSymbolPair &Val) {
+    return Val.first <= SectionAddress + Index;
+  });
   // Return zero for any address before the first mapping symbol; this means
   // we should use the default disassembly mode, depending on the target.
-  if (It == MappingSymbols.begin())
+  if (It == MappingSymbols.begin() || (--It)->first < SectionAddress)
     return '\x00';
-  return (It - 1)->second;
+  return It->second;
 }
 
 static uint64_t dumpARMELFData(uint64_t SectionAddr, uint64_t Index,
                                uint64_t End, const ObjectFile &Obj,
                                ArrayRef<uint8_t> Bytes,
-                               ArrayRef<MappingSymbolPair> MappingSymbols,
                                const MCSubtargetInfo &STI, raw_ostream &OS) {
   support::endianness Endian =
       Obj.isLittleEndian() ? support::little : support::big;
@@ -1428,7 +1426,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
   // Create a mapping from virtual address to symbol name.  This is used to
   // pretty print the symbols while disassembling.
   std::map<SectionRef, SectionSymbolsTy> AllSymbols;
-  std::map<SectionRef, SmallVector<MappingSymbolPair, 0>> AllMappingSymbols;
+  std::vector<MappingSymbolPair> MappingSymbols;
   SectionSymbolsTy AbsoluteSymbols;
   const StringRef FileName = Obj.getFileName();
   const MachOObjectFile *MachO = dyn_cast<const MachOObjectFile>(&Obj);
@@ -1448,19 +1446,17 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
       // synthesize a section symbol if no symbol is defined at offset 0.
       //
       // For a mapping symbol, store it within both AllSymbols and
-      // AllMappingSymbols. If --show-all-symbols is unspecified, its label will
+      // MappingSymbols. If --show-all-symbols is unspecified, its label will
       // not be printed in disassembly listing.
       if (getElfSymbolType(Obj, Symbol) != ELF::STT_SECTION &&
           hasMappingSymbols(Obj)) {
         section_iterator SecI = unwrapOrError(Symbol.getSection(), FileName);
         if (SecI != Obj.section_end()) {
-          uint64_t SectionAddr = SecI->getAddress();
           uint64_t Address = cantFail(Symbol.getAddress());
           StringRef Name = *NameOrErr;
           if (Name.consume_front("$") && Name.size() &&
               strchr("adtx", Name[0])) {
-            AllMappingSymbols[*SecI].emplace_back(Address - SectionAddr,
-                                                  Name[0]);
+            MappingSymbols.emplace_back(Address, Name[0]);
             AllSymbols[*SecI].push_back(
                 createSymbolInfo(Obj, Symbol, /*MappingSymbol=*/true));
           }
@@ -1492,6 +1488,8 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
     else
       AbsoluteSymbols.push_back(createSymbolInfo(Obj, Symbol));
   }
+
+  llvm::sort(MappingSymbols);
 
   if (AllSymbols.empty() && Obj.isELF())
     addDynamicElfSymbols(cast<ELFObjectFileBase>(Obj), AllSymbols);
@@ -1603,8 +1601,6 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
     // Get the list of all the symbols in this section.
     SectionSymbolsTy &Symbols = AllSymbols[Section];
-    auto &MappingSymbols = AllMappingSymbols[Section];
-    llvm::sort(MappingSymbols);
 
     ArrayRef<uint8_t> Bytes = arrayRefFromStringRef(
         unwrapOrError(Section.getContents(), Obj.getFileName()));
@@ -1898,7 +1894,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
         // we need to dump. If the data marker is within a function, it is
         // denoted as a word/short etc.
         if (!MappingSymbols.empty()) {
-          char Kind = getMappingSymbolKind(MappingSymbols, Index);
+          char Kind = getMappingSymbolKind(MappingSymbols, SectionAddr, Index);
           DumpARMELFData = Kind == 'd';
           if (SecondaryTarget) {
             if (Kind == 'a') {
@@ -1911,7 +1907,7 @@ disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
 
         if (DumpARMELFData) {
           Size = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
-                                MappingSymbols, *DT->SubtargetInfo, FOS);
+                                *DT->SubtargetInfo, FOS);
         } else {
           // When -z or --disassemble-zeroes are given we always dissasemble
           // them. Otherwise we might want to skip zero bytes we see.
