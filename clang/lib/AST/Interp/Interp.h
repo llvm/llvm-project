@@ -172,7 +172,8 @@ bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
 
 /// Checks if the result of a floating-point operation is valid
 /// in the current context.
-bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status);
+bool CheckFloatResult(InterpState &S, CodePtr OpPC, const Floating &Result,
+                      APFloat::opStatus Status);
 
 /// Interpreter entry point.
 bool Interpret(InterpState &S, APValue &Result);
@@ -304,7 +305,7 @@ inline bool Addf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   Floating Result;
   auto Status = Floating::add(LHS, RHS, RM, &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -322,7 +323,7 @@ inline bool Subf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   Floating Result;
   auto Status = Floating::sub(LHS, RHS, RM, &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -340,7 +341,7 @@ inline bool Mulf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   Floating Result;
   auto Status = Floating::mul(LHS, RHS, RM, &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 /// 1) Pops the RHS from the stack.
 /// 2) Pops the LHS from the stack.
@@ -443,7 +444,7 @@ inline bool Divf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
   Floating Result;
   auto Status = Floating::div(LHS, RHS, RM, &Result);
   S.Stk.push<Floating>(Result);
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 
 //===----------------------------------------------------------------------===//
@@ -622,7 +623,7 @@ bool IncDecFloatHelper(InterpState &S, CodePtr OpPC, const Pointer &Ptr,
 
   Ptr.deref<Floating>() = Result;
 
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 
 inline bool Incf(InterpState &S, CodePtr OpPC, llvm::RoundingMode RM) {
@@ -1525,7 +1526,7 @@ bool CastIntegralFloating(InterpState &S, CodePtr OpPC,
   auto Status = Floating::fromIntegral(FromAP, *Sem, RM, Result);
   S.Stk.push<Floating>(Result);
 
-  return CheckFloatResult(S, OpPC, Status);
+  return CheckFloatResult(S, OpPC, Result, Status);
 }
 
 template <PrimType Name, class T = typename PrimConv<Name>::T>
@@ -1550,7 +1551,7 @@ bool CastFloatingIntegral(InterpState &S, CodePtr OpPC) {
     }
 
     S.Stk.push<T>(T(Result));
-    return CheckFloatResult(S, OpPC, Status);
+    return CheckFloatResult(S, OpPC, F, Status);
   }
 }
 
