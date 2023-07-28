@@ -122,6 +122,19 @@ static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 namespace clang {
 namespace interp {
 
+bool popBuiltinArgs(InterpState &S, CodePtr OpPC) {
+  assert(S.Current && S.Current->getFunction()->needsRuntimeArgPop(S.getCtx()));
+  const Expr *E = S.Current->getExpr(OpPC);
+  assert(isa<CallExpr>(E));
+  const CallExpr *CE = cast<CallExpr>(E);
+  for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
+    const Expr *A = CE->getArg(I);
+    PrimType Ty = S.getContext().classify(A->getType()).value_or(PT_Ptr);
+    TYPE_SWITCH(Ty, S.Stk.discard<T>());
+  }
+  return true;
+}
+
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
