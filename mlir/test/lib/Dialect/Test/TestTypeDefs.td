@@ -369,8 +369,4 @@ def TestTypeElseAnchorStruct : Test_Type<"TestTypeElseAnchorStruct"> {
   let assemblyFormat = "`<` (`?`) : (struct($a, $b)^)? `>`";
 }
 
-def TestI32 : Test_Type<"TestI32"> {
-  let mnemonic = "i32";
-}
-
 #endif // TEST_TYPEDEFS
