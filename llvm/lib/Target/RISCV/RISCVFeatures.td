@@ -477,6 +477,8 @@ def HasStdExtZvfbfwma : Predicate<"Subtarget->hasStdExtZvfbfwma()">,
                                   AssemblerPredicate<(all_of FeatureStdExtZvfbfwma),
                                   "'Zvfbfwma' (Vector BF16 widening mul-add)">;
 
+def HasVInstructionsBF16 : Predicate<"Subtarget->hasVInstructionsBF16()">;
+
 def FeatureStdExtZvfh
     : SubtargetFeature<"zvfh", "HasStdExtZvfh", "true",
                        "'Zvfh' (Vector Half-Precision Floating-Point)",
@@ -799,6 +801,13 @@ def FeatureVendorXCVmac
 def HasVendorXCVmac : Predicate<"Subtarget->hasVendorXCVmac()">,
                                 AssemblerPredicate<(all_of FeatureVendorXCVmac),
                                 "'XCVmac' (CORE-V Multiply-Accumulate)">;
+
+def FeatureVendorXCValu
+    : SubtargetFeature<"xcvalu", "HasVendorXCValu", "true",
+                       "'XCValu' (CORE-V ALU Operations)">;
+def HasVendorXCValu : Predicate<"Subtarget->hasVendorXCValu()">,
+                                AssemblerPredicate<(all_of FeatureVendorXCValu),
+                                "'XCValu' (CORE-V ALU Operations)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions

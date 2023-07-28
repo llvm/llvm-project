@@ -1,4 +1,4 @@
-;RUN: llc -mtriple=thumbv7-linux-gnueabi < %s | llvm-mc -triple=thumbv7-linux-gnueabi -filetype=obj | llvm-objdump --no-print-imm-hex -d - | FileCheck %s
+; RUN: llc -mtriple=thumbv7-linux-gnueabi < %s | llvm-mc -triple=thumbv7-linux-gnueabi -filetype=obj | llvm-objdump --no-print-imm-hex --show-all-symbols -d - | FileCheck %s
 
 define hidden i32 @bah(ptr %start) #0 align 2 {
   %1 = ptrtoint ptr %start to i32
