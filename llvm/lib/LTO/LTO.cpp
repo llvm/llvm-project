@@ -184,7 +184,6 @@ void llvm::computeLTOCacheKey(
     }
 
     const ModuleHash &getHash() const { return ModInfo->second.second; }
-    uint64_t getId() const { return ModInfo->second.first; }
   };
 
   std::vector<ImportModule> ImportModulesVector;
@@ -194,11 +193,11 @@ void llvm::computeLTOCacheKey(
        ++It) {
     ImportModulesVector.push_back({It, Index.getModule(It->getKey())});
   }
-  // Order using moduleId integer which is based on the order the module was
-  // added.
+  // Order using module hash, to be both independent of module name and
+  // module order.
   llvm::sort(ImportModulesVector,
              [](const ImportModule &Lhs, const ImportModule &Rhs) -> bool {
-               return Lhs.getId() < Rhs.getId();
+               return Lhs.getHash() < Rhs.getHash();
              });
   for (const ImportModule &Entry : ImportModulesVector) {
     auto ModHash = Entry.getHash();
