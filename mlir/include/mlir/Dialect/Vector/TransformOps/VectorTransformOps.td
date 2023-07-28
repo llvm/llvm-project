@@ -81,7 +81,6 @@ def ApplyLowerBroadcastPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-// TODO: evolve lowering_strategy to proper enums.
 def ApplyLowerContractionPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_contraction",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -143,7 +142,6 @@ def ApplyMaterializeMasksPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-// TODO: evolve lowering_strategy to proper enums.
 def ApplyLowerMultiReductionPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_multi_reduction",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -232,7 +230,6 @@ def ApplyLowerTransferPatternsOp : Op<Transform_Dialect,
   }];
 }
 
-// TODO: evolve lowering_strategy to proper enums.
 def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_transpose",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
@@ -259,7 +256,6 @@ def ApplyLowerTransposePatternsOp : Op<Transform_Dialect,
   }];
 }
 
-// TODO: evolve split_transfer_strategy to proper enums.
 def ApplySplitTransferFullPartialPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.split_transfer_full_partial",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
