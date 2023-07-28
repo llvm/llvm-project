@@ -118,12 +118,15 @@ class PseudoToVInst<string PseudoInst> {
                         ["_F64", "_F"],
                         ["_F32", "_F"],
                         ["_F16", "_F"],
+                        ["_BF16", "_F"],
                         ["_VF64", "_VF"],
                         ["_VF32", "_VF"],
                         ["_VF16", "_VF"],
+                        ["_VBF16", "_VF"],
                         ["_WF64", "_WF"],
                         ["_WF32", "_WF"],
                         ["_WF16", "_WF"],
+                        ["_WBF16", "_WF"],
                         ["_TU", ""],
                         ["_TIED", ""],
                         ["_MASK", ""],
@@ -210,14 +213,27 @@ class FPR_Info<int sew> {
   list<LMULInfo> MxListFW = !if(!eq(sew, 64), [], !listremove(MxList, [V_M8]));
 }
 
+class BFPR_Info<int sew> {
+  RegisterClass fprclass = !cast<RegisterClass>("FPR" # sew);
+  string FX = "BF" # sew;
+  int SEW = sew;
+  list<LMULInfo> MxList = MxSet<sew>.m;
+  list<LMULInfo> MxListFW = !if(!eq(sew, 64), [], !listremove(MxList, [V_M8]));
+}
+
 def SCALAR_F16 : FPR_Info<16>;
 def SCALAR_F32 : FPR_Info<32>;
 def SCALAR_F64 : FPR_Info<64>;
+
+def SCALAR_BF16 : BFPR_Info<16>;
 
 defvar FPList = [SCALAR_F16, SCALAR_F32, SCALAR_F64];
 
 // Used for widening instructions. It excludes F64.
 defvar FPListW = [SCALAR_F16, SCALAR_F32];
+
+// Used for widening bf16 instructions.
+defvar BFPListW = [SCALAR_BF16];
 
 class NFSet<LMULInfo m> {
   list<int> L = !cond(!eq(m.value, V_M8.value): [],
@@ -273,6 +289,7 @@ class VTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M,
 
   string ScalarSuffix = !cond(!eq(Scal, XLenVT) : "X",
                               !eq(Scal, f16) : "F16",
+                              !eq(Scal, bf16) : "BF16",
                               !eq(Scal, f32) : "F32",
                               !eq(Scal, f64) : "F64");
 }
@@ -353,6 +370,25 @@ defset list<VTypeInfo> AllVectors = {
       def VF64M8: GroupVTypeInfo<vfloat64m8_t, vfloat64m1_t, vbool8_t,  64,
                                  VRM8, V_M8, f64, FPR64>;
     }
+  }
+}
+
+defset list<VTypeInfo> AllBFloatVectors = {
+  defset list<VTypeInfo> NoGroupBFloatVectors = {
+    defset list<VTypeInfo> FractionalGroupBFloatVectors = {
+      def VBF16MF4: VTypeInfo<vbfloat16mf4_t, vbool64_t, 16, VR, V_MF4, bf16, FPR16>;
+      def VBF16MF2: VTypeInfo<vbfloat16mf2_t, vbool32_t, 16, VR, V_MF2, bf16, FPR16>;
+    }
+    def VBF16M1:  VTypeInfo<vbfloat16m1_t,  vbool16_t, 16, VR, V_M1,  bf16, FPR16>;
+  }
+ 
+  defset list<GroupVTypeInfo> GroupBFloatVectors = {
+    def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
+                                VRM2, V_M2, bf16, FPR16>;
+    def VBF16M4: GroupVTypeInfo<vbfloat16m4_t, vbfloat16m1_t, vbool4_t, 16,
+                                VRM4, V_M4, bf16, FPR16>;
+    def VBF16M8: GroupVTypeInfo<vbfloat16m8_t, vbfloat16m1_t, vbool2_t, 16,
+                                VRM8, V_M8, bf16, FPR16>;
   }
 }
 
@@ -489,6 +525,14 @@ defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
   def : VTypeInfoToWide<VI32M1, VF64M2>;
   def : VTypeInfoToWide<VI32M2, VF64M4>;
   def : VTypeInfoToWide<VI32M4, VF64M8>;
+}
+ 
+defset list<VTypeInfoToWide> AllWidenableBFloatToFloatVectors = {
+  def : VTypeInfoToWide<VBF16MF4, VF32MF2>;
+  def : VTypeInfoToWide<VBF16MF2, VF32M1>;
+  def : VTypeInfoToWide<VBF16M1, VF32M2>;
+  def : VTypeInfoToWide<VBF16M2, VF32M4>;
+  def : VTypeInfoToWide<VBF16M4, VF32M8>;
 }
 
 // This class holds the record of the RISCVVPseudoTable below.
@@ -723,6 +767,7 @@ class VPseudo<Instruction instr, LMULInfo m, dag outs, dag ins, int sew = 0> :
 
 class GetVTypePredicates<VTypeInfo vti> {
   list<Predicate> Predicates = !cond(!eq(vti.Scalar, f16) : [HasVInstructionsF16],
+                                     !eq(vti.Scalar, bf16) : [HasVInstructionsBF16],
                                      !eq(vti.Scalar, f32) : [HasVInstructionsAnyF],
                                      !eq(vti.Scalar, f64) : [HasVInstructionsF64],
                                      !eq(vti.SEW, 64) : [HasVInstructionsI64],
@@ -3047,6 +3092,12 @@ multiclass VPseudoTernaryW_VF_RM<LMULInfo m, FPR_Info f> {
                                                           m.vrclass, m, constraint>;
 }
 
+multiclass VPseudoTernaryW_VF_BF_RM<LMULInfo m, BFPR_Info f> {
+  defvar constraint = "@earlyclobber $rd";
+  defm "_V" # f.FX : VPseudoTernaryWithPolicyRoundingMode<m.wvrclass, f.fprclass,
+                                                          m.vrclass, m, constraint>;
+}
+
 multiclass VPseudoVSLDVWithPolicy<VReg RetClass,
                                   RegisterClass Op1Class,
                                   DAGOperand Op2Class,
@@ -3154,6 +3205,31 @@ multiclass VPseudoVWMAC_VV_VF_RM {
       defm "" : VPseudoTernaryW_VF_RM<m, f>,
                 SchedTernary<"WriteVFWMulAddF", "ReadVFWMulAddV",
                              "ReadVFWMulAddV", "ReadVFWMulAddF", m.MX>;
+    }
+  }
+}
+
+multiclass VPseudoVWMAC_VV_VF_BF_RM {
+  foreach m = MxListFW in {
+    defvar mx = m.MX;
+    defvar WriteVFWMulAddV_MX = !cast<SchedWrite>("WriteVFWMulAddV_" # mx);
+    defvar ReadVFWMulAddV_MX = !cast<SchedRead>("ReadVFWMulAddV_" # mx);
+ 
+    defm "" : VPseudoTernaryW_VV_RM<m>,
+              Sched<[WriteVFWMulAddV_MX, ReadVFWMulAddV_MX,
+                     ReadVFWMulAddV_MX, ReadVFWMulAddV_MX, ReadVMask]>;
+  }
+ 
+  foreach f = BFPListW in {
+    foreach m = f.MxListFW in {
+      defvar mx = m.MX;
+      defvar WriteVFWMulAddF_MX = !cast<SchedWrite>("WriteVFWMulAddF_" # mx);
+      defvar ReadVFWMulAddV_MX = !cast<SchedRead>("ReadVFWMulAddV_" # mx);
+      defvar ReadVFWMulAddF_MX = !cast<SchedRead>("ReadVFWMulAddF_" # mx);
+ 
+      defm "" : VPseudoTernaryW_VF_BF_RM<m, f>,
+                Sched<[WriteVFWMulAddF_MX, ReadVFWMulAddV_MX,
+                       ReadVFWMulAddV_MX, ReadVFWMulAddF_MX, ReadVMask]>;
     }
   }
 }
@@ -5635,6 +5711,19 @@ multiclass VPatConversionWF_VF<string intrinsic, string instruction> {
   }
 }
 
+multiclass VPatConversionWF_VF_BF <string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in
+  {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
+                                 GetVTypePredicates<fwti>.Predicates) in
+    defm : VPatConversionTA<intrinsic, instruction, "V",
+                            fwti.Vector, fvti.Vector, fwti.Mask, fvti.Log2SEW,
+                            fvti.LMul, fwti.RegClass, fvti.RegClass>;
+  }
+}
+
 multiclass VPatConversionVI_WF <string intrinsic, string instruction> {
   foreach vtiToWti = AllWidenableIntToFloatVectors in {
     defvar vti = vtiToWti.Vti;
@@ -5685,6 +5774,18 @@ multiclass VPatConversionVF_WF <string intrinsic, string instruction> {
 
 multiclass VPatConversionVF_WF_RM <string intrinsic, string instruction> {
   foreach fvtiToFWti = AllWidenableFloatVectors in {
+    defvar fvti = fvtiToFWti.Vti;
+    defvar fwti = fvtiToFWti.Wti;
+    let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
+                                 GetVTypePredicates<fwti>.Predicates) in
+    defm : VPatConversionTARoundingMode<intrinsic, instruction, "W",
+                                        fvti.Vector, fwti.Vector, fvti.Mask, fvti.Log2SEW,
+                                        fvti.LMul, fvti.RegClass, fwti.RegClass>;
+  }
+}
+
+multiclass VPatConversionVF_WF_BF_RM <string intrinsic, string instruction> {
+  foreach fvtiToFWti = AllWidenableBFloatToFloatVectors in {
     defvar fvti = fvtiToFWti.Vti;
     defvar fwti = fvtiToFWti.Wti;
     let Predicates = !listconcat(GetVTypePredicates<fvti>.Predicates,
@@ -6140,6 +6241,8 @@ defm PseudoVFWMACC  : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWNMACC : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWMSAC  : VPseudoVWMAC_VV_VF_RM;
 defm PseudoVFWNMSAC : VPseudoVWMAC_VV_VF_RM;
+let Predicates = [HasStdExtZvfbfwma] in
+defm PseudoVFWMACCBF16  : VPseudoVWMAC_VV_VF_BF_RM;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6244,6 +6347,7 @@ defm PseudoVFWCVT_F_XU     : VPseudoVWCVTF_V;
 defm PseudoVFWCVT_F_X      : VPseudoVWCVTF_V;
 
 defm PseudoVFWCVT_F_F      : VPseudoVWCVTD_V;
+defm PseudoVFWCVTBF16_F_F :  VPseudoVWCVTD_V;
 } // mayRaiseFPException = true
 
 //===----------------------------------------------------------------------===//
@@ -6269,6 +6373,7 @@ defm PseudoVFNCVT_RM_F_X   : VPseudoVNCVTF_RM_W;
 
 let hasSideEffects = 0, hasPostISelHook = 1 in
 defm PseudoVFNCVT_F_F      : VPseudoVNCVTD_W_RM;
+defm PseudoVFNCVTBF16_F_F :  VPseudoVNCVTD_W_RM;
 
 defm PseudoVFNCVT_ROD_F_F  : VPseudoVNCVTD_W;
 } // mayRaiseFPException = true
@@ -6804,7 +6909,10 @@ defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwnmacc", "PseudoVFWNMACC",
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmsac", "PseudoVFWMSAC",
                              AllWidenableFloatVectors>;
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwnmsac", "PseudoVFWNMSAC",
-                             AllWidenableFloatVectors>;
+                             AllWidenableFloatVectors>;                                                   
+let Predicates = [HasStdExtZvfbfwma] in
+defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmaccbf16", "PseudoVFWMACCBF16", 
+                              AllWidenableBFloatToFloatVectors>;
 
 //===----------------------------------------------------------------------===//
 // 13.8. Vector Floating-Point Square-Root Instruction
@@ -6909,6 +7017,8 @@ defm : VPatConversionWI_VF<"int_riscv_vfwcvt_rtz_x_f_v", "PseudoVFWCVT_RTZ_X_F">
 defm : VPatConversionWF_VI<"int_riscv_vfwcvt_f_xu_v", "PseudoVFWCVT_F_XU">;
 defm : VPatConversionWF_VI<"int_riscv_vfwcvt_f_x_v", "PseudoVFWCVT_F_X">;
 defm : VPatConversionWF_VF<"int_riscv_vfwcvt_f_f_v", "PseudoVFWCVT_F_F">;
+defm : VPatConversionWF_VF_BF<"int_riscv_vfwcvtbf16_f_f_v", 
+                              "PseudoVFWCVTBF16_F_F">;
 
 //===----------------------------------------------------------------------===//
 // 13.19. Narrowing Floating-Point/Integer Type-Convert Instructions
@@ -6920,6 +7030,8 @@ defm : VPatConversionVI_WF<"int_riscv_vfncvt_rtz_x_f_w", "PseudoVFNCVT_RTZ_X_F">
 defm : VPatConversionVF_WI_RM <"int_riscv_vfncvt_f_xu_w", "PseudoVFNCVT_F_XU">;
 defm : VPatConversionVF_WI_RM <"int_riscv_vfncvt_f_x_w", "PseudoVFNCVT_F_X">;
 defm : VPatConversionVF_WF_RM<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F">;
+defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w", 
+                                 "PseudoVFNCVTBF16_F_F">;
 defm : VPatConversionVF_WF<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_F_F">;
 
 //===----------------------------------------------------------------------===//

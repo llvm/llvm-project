@@ -133,7 +133,8 @@ void invalidArgValue(const opt::Arg *A);
 std::string getFileNameForError(const object::Archive::Child &C,
                                 unsigned Index);
 SymbolInfoTy createSymbolInfo(const object::ObjectFile &Obj,
-                              const object::SymbolRef &Symbol);
+                              const object::SymbolRef &Symbol,
+                              bool IsMappingSymbol = false);
 unsigned getInstStartColumn(const MCSubtargetInfo &STI);
 void printRawData(llvm::ArrayRef<uint8_t> Bytes, uint64_t Address,
                   llvm::formatted_raw_ostream &OS,
