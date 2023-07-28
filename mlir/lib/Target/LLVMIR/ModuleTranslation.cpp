@@ -1391,8 +1391,6 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
     return nullptr;
   if (failed(translator.createTBAAMetadata()))
     return nullptr;
-  if (failed(translator.convertFunctions()))
-    return nullptr;
 
   // Convert other top-level operations if possible.
   llvm::IRBuilder<> llvmBuilder(llvmContext);
@@ -1404,6 +1402,12 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
       return nullptr;
     }
   }
+
+  // Operations in function bodies with symbolic references must be converted
+  // after the top-level operations they refer to are declared, so we do it
+  // last.
+  if (failed(translator.convertFunctions()))
+    return nullptr;
 
   // Convert module itself.
   if (failed(translator.convertOperation(*module, llvmBuilder)))

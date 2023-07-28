@@ -308,6 +308,10 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
         moduleTranslation.lookupBlock(switchOp.getDefaultDestination()),
         switchOp.getCaseDestinations().size());
 
+    // Handle switch with zero cases.
+    if (!switchOp.getCaseValues())
+      return success();
+
     auto *ty = llvm::cast<llvm::IntegerType>(
         moduleTranslation.convertType(switchOp.getValue().getType()));
     for (auto i :
