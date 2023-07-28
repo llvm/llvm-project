@@ -30,6 +30,13 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .widenScalarToNextPow2(0)
       .clampScalar(0, XLenLLT, XLenLLT);
 
+  getActionDefinitionsBuilder(
+      {G_UADDE, G_UADDO, G_USUBE, G_USUBO, G_SADDE, G_SADDO, G_SSUBE, G_SSUBO})
+      .legalFor({{XLenLLT, XLenLLT}})
+      .clampScalar(0, XLenLLT, XLenLLT)
+      .clampScalar(1, XLenLLT, XLenLLT)
+      .widenScalarToNextPow2(0);
+
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
       .legalFor({{XLenLLT, XLenLLT}})
       .widenScalarToNextPow2(0)
