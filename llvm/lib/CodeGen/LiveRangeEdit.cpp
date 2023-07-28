@@ -352,7 +352,8 @@ void LiveRangeEdit::eliminateDeadDef(MachineInstr *MI, ToShrinkSet &ToShrink) {
     // unlikely to change anything. We typically don't want to shrink the
     // PIC base register that has lots of uses everywhere.
     // Always shrink COPY uses that probably come from live range splitting.
-    if ((MI->readsVirtualRegister(Reg) && (MI->isCopy() || MO.isDef())) ||
+    if ((MI->readsVirtualRegister(Reg) &&
+         (MO.isDef() || TII.isCopyInstr(*MI))) ||
         (MO.readsReg() && (MRI.hasOneNonDBGUse(Reg) || useIsKill(LI, MO))))
       ToShrink.insert(&LI);
     else if (MO.readsReg())
