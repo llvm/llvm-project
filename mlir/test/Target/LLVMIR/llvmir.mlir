@@ -1727,6 +1727,15 @@ llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "
 
 // -----
 
+// CHECK-LABEL: @my_allocator
+// CHECK: #[[ALLOC_ATTRS:[0-9]*]]
+llvm.func @my_allocator(i64) attributes {passthrough = [["allocsize", "4294967295"]]}
+
+// CHECK: attributes #[[ALLOC_ATTRS]] = {
+// CHECK-DAG: allocsize(0)
+
+// -----
+
 // CHECK-LABEL: @functionEntryCount
 // CHECK-SAME: !prof ![[PROF_ID:[0-9]*]]
 llvm.func @functionEntryCount() attributes {function_entry_count = 4242 : i64} {
