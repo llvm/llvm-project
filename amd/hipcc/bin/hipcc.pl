@@ -532,7 +532,7 @@ if($HIP_PLATFORM eq "amd"){
     $ENV{HCC_EXTRA_LIBRARIES}="\n";
 }
 
-if ($hasCXX and $HIP_PLATFORM eq 'nvidia') {
+if ($HIP_PLATFORM eq 'nvidia') {
     $HIPCXXFLAGS .= " -x cu";
 }
 
