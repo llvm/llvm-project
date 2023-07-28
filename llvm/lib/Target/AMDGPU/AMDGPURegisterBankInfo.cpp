@@ -193,6 +193,7 @@ public:
 };
 
 }
+
 AMDGPURegisterBankInfo::AMDGPURegisterBankInfo(const GCNSubtarget &ST)
     : Subtarget(ST), TRI(Subtarget.getRegisterInfo()),
       TII(Subtarget.getInstrInfo()) {
