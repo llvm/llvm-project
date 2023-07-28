@@ -197,7 +197,7 @@ public:
       formatted_text = !s.empty() ? std::move(s) : std::string(text);
     }
     RawDiagnostic diagnostic(
-        formatted_text, info.Kind, bufferName, bufferID, line_col.first,
+        formatted_text, info.Kind, bufferName.str(), bufferID, line_col.first,
         line_col.second,
         use_fixits ? info.FixIts : llvm::ArrayRef<swift::Diagnostic::FixIt>());
     if (info.ID == swift::diag::error_from_clang.ID ||
@@ -287,8 +287,7 @@ public:
 
       // Need to remap the error/warning to a different line.
       StreamString match;
-      match.Printf("%s:%u:", diagnostic.bufferName.str().c_str(),
-                   diagnostic.line);
+      match.Printf("%s:%u:", diagnostic.bufferName.c_str(), diagnostic.line);
       const size_t match_len = match.GetString().size();
       size_t match_pos = diagnostic.description.find(match.GetString().str());
       if (match_pos == std::string::npos)
@@ -302,7 +301,7 @@ public:
           fixed_description.Printf(
               "%s",
               diagnostic.description.substr(start_pos, match_pos).c_str());
-        fixed_description.Printf("%s:%u:", diagnostic.bufferName.str().c_str(),
+        fixed_description.Printf("%s:%u:", diagnostic.bufferName.c_str(),
                                  diagnostic.line - first_line + 1);
         start_pos = match_pos + match_len;
         match_pos =
@@ -373,30 +372,29 @@ private:
   struct RawDiagnostic {
     RawDiagnostic() = default;
     RawDiagnostic(std::string in_desc, swift::DiagnosticKind in_kind,
-                  llvm::StringRef in_bufferName, unsigned in_bufferID,
+                  std::string in_bufferName, unsigned in_bufferID,
                   uint32_t in_line, uint32_t in_column,
                   llvm::ArrayRef<swift::Diagnostic::FixIt> in_fixits)
-        : description(in_desc), kind(in_kind), bufferName(in_bufferName),
-          bufferID(in_bufferID), line(in_line), column(in_column),
-          fixits(in_fixits) {}
-    RawDiagnostic(const RawDiagnostic &other)
-        : description(other.description), kind(other.kind),
-          bufferName(other.bufferName), bufferID(other.bufferID),
-          line(other.line), column(other.column), fixits(other.fixits) {}
+        : description(in_desc), bufferName(in_bufferName), fixits(in_fixits),
+          kind(in_kind), bufferID(in_bufferID), line(in_line),
+          column(in_column) {}
+    RawDiagnostic(const RawDiagnostic &other) = default;
     bool operator==(const RawDiagnostic& other) {
-      return kind == other.kind && bufferID == other.bufferID &&
-             line == other.line && column == other.column &&
-             description == other.description;
+      return kind == other.kind && line == other.line &&
+             bufferID == other.bufferID && column == other.column &&
+             bufferName == other.bufferName && description == other.description;
     }
     bool operator!=(const RawDiagnostic &other) { return !(*this == other); }
 
     std::string description;
+    std::string bufferName;
+    std::vector<swift::DiagnosticInfo::FixIt> fixits;
     swift::DiagnosticKind kind = swift::DiagnosticKind::Error;
-    llvm::StringRef bufferName;
+    /// Only stored for comparison in HandleDiagnostic. There is no
+    /// guarantee that the SourceMgr is still alive in a stored diagnostic.
     unsigned bufferID;
     uint32_t line;
     uint32_t column;
-    std::vector<swift::DiagnosticInfo::FixIt> fixits;
   };
 
   SwiftASTContext &m_ast_context;
