@@ -140,12 +140,11 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
-  if (Args.hasArg(options::OPT_flang_experimental_hlfir))
-    CmdArgs.push_back("-flang-experimental-hlfir");
-  if (Args.hasArg(options::OPT_flang_experimental_polymorphism))
-    CmdArgs.push_back("-flang-experimental-polymorphism");
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
+
+  Args.AddAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
+                            options::OPT_flang_experimental_polymorphism});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
