@@ -1936,22 +1936,23 @@ static void resetBeforeTerminator(fir::FirOpBuilder &firOpBuilder,
 
 static mlir::Operation *
 createAndSetPrivatizedLoopVar(Fortran::lower::AbstractConverter &converter,
-                              mlir::Location loc, mlir::Type loopVarType,
-                              mlir::Value indexVal,
+                              mlir::Location loc, mlir::Value indexVal,
                               const Fortran::semantics::Symbol *sym) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
 
+  mlir::Type tempTy = converter.genType(*sym);
   mlir::Value temp = firOpBuilder.create<fir::AllocaOp>(
-      loc, loopVarType, /*pinned=*/true, /*lengthParams=*/mlir::ValueRange{},
+      loc, tempTy, /*pinned=*/true, /*lengthParams=*/mlir::ValueRange{},
       /*shapeParams*/ mlir::ValueRange{},
       llvm::ArrayRef<mlir::NamedAttribute>{
           Fortran::lower::getAdaptToByRefAttr(firOpBuilder)});
   converter.bindSymbol(*sym, temp);
   firOpBuilder.restoreInsertionPoint(insPt);
+  mlir::Value cvtVal = firOpBuilder.createConvert(loc, tempTy, indexVal);
   mlir::Operation *storeOp = firOpBuilder.create<fir::StoreOp>(
-      loc, indexVal, converter.getSymbolAddress(*sym));
+      loc, cvtVal, converter.getSymbolAddress(*sym));
   return storeOp;
 }
 
@@ -1997,8 +1998,7 @@ static void createBodyOfOp(
     for (const Fortran::semantics::Symbol *arg : args) {
       mlir::Value indexVal =
           fir::getBase(op.getRegion().front().getArgument(argIndex));
-      storeOp = createAndSetPrivatizedLoopVar(converter, loc, loopVarType,
-                                              indexVal, arg);
+      storeOp = createAndSetPrivatizedLoopVar(converter, loc, indexVal, arg);
       argIndex++;
     }
   } else {
