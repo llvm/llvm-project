@@ -2764,7 +2764,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       amt = llvm::ConstantFP::get(VMContext,
                                   llvm::APFloat(static_cast<double>(amount)));
     else {
-      // Remaining types are Half, Bfloat16, LongDouble, __ibm128 or __float128. 
+      // Remaining types are Half, Bfloat16, LongDouble, __ibm128 or __float128.
       // Convert from float.
       llvm::APFloat F(static_cast<float>(amount));
       bool ignored;
