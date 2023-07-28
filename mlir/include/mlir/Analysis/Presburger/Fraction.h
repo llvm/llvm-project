@@ -15,6 +15,7 @@
 #define MLIR_ANALYSIS_PRESBURGER_FRACTION_H
 
 #include "mlir/Analysis/Presburger/MPInt.h"
+#include "mlir/Analysis/Presburger/Utils.h"
 #include "mlir/Support/MathExtras.h"
 
 namespace mlir {
@@ -69,6 +70,11 @@ inline MPInt floor(const Fraction &f) { return floorDiv(f.num, f.den); }
 
 inline MPInt ceil(const Fraction &f) { return ceilDiv(f.num, f.den); }
 
+inline Fraction reduce(const Fraction &f) {
+  MPInt gcd = presburger::gcdRange({f.num, f.den});
+  return Fraction(f.num / gcd, f.den / gcd);
+}
+
 inline Fraction operator-(const Fraction &x) { return Fraction(-x.num, x.den); }
 
 inline bool operator<(const Fraction &x, const Fraction &y) {
@@ -96,19 +102,19 @@ inline bool operator>=(const Fraction &x, const Fraction &y) {
 }
 
 inline Fraction operator*(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.num, x.den * y.den);
+  return reduce(Fraction(x.num * y.num, x.den * y.den));
 }
 
 inline Fraction operator/(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den, x.den * y.num);
+  return reduce(Fraction(x.num * y.den, x.den * y.num));
 }
 
 inline Fraction operator+(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den + x.den * y.num, x.den * y.den);
+  return reduce(Fraction(x.num * y.den + x.den * y.num, x.den * y.den));
 }
 
 inline Fraction operator-(const Fraction &x, const Fraction &y) {
-  return Fraction(x.num * y.den - x.den * y.num, x.den * y.den);
+  return reduce(Fraction(x.num * y.den - x.den * y.num, x.den * y.den));
 }
 
 } // namespace presburger
