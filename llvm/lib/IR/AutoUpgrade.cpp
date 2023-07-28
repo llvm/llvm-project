@@ -1053,51 +1053,34 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     break;
   }
   case 'm': {
-    if (Name.startswith("masked.load.")) {
-      Type *Tys[] = { F->getReturnType(), F->arg_begin()->getType() };
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_load, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_load,
-                                          Tys);
-        return true;
+    StringRef MaskPfx = "masked.";
+    if (Name.startswith(MaskPfx)) {
+      // Renaming masked intrinsics with no address space overloading
+      // to the new overload, which includes an address space.
+      Intrinsic::ID ID =
+          StringSwitch<Intrinsic::ID>(Name.substr(MaskPfx.size()))
+              .StartsWith("load.", Intrinsic::masked_load)
+              .StartsWith("store.", Intrinsic::masked_store)
+              .StartsWith("gather.", Intrinsic::masked_gather)
+              .StartsWith("scatter.", Intrinsic::masked_scatter)
+              .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        const auto *FT = F->getFunctionType();
+        SmallVector<Type *, 2> Tys;
+        if (ID == Intrinsic::masked_load || ID == Intrinsic::masked_gather)
+          // Loading operations overload on the return type.
+          Tys.push_back(FT->getReturnType());
+        Tys.push_back(FT->getParamType(0));
+        if (ID == Intrinsic::masked_store || ID == Intrinsic::masked_scatter)
+          // Store operations overload on the stored type.
+          Tys.push_back(FT->getParamType(1));
+        if (F->getName() != Intrinsic::getName(ID, Tys, F->getParent())) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID, Tys);
+          return true;
+        }
       }
-    }
-    if (Name.startswith("masked.store.")) {
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = { Args[0], Args[1] };
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_store, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_store,
-                                          Tys);
-        return true;
-      }
-    }
-    // Renaming gather/scatter intrinsics with no address space overloading
-    // to the new overload which includes an address space
-    if (Name.startswith("masked.gather.")) {
-      Type *Tys[] = {F->getReturnType(), F->arg_begin()->getType()};
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_gather, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_gather, Tys);
-        return true;
-      }
-    }
-    if (Name.startswith("masked.scatter.")) {
-      auto Args = F->getFunctionType()->params();
-      Type *Tys[] = {Args[0], Args[1]};
-      if (F->getName() !=
-          Intrinsic::getName(Intrinsic::masked_scatter, Tys, F->getParent())) {
-        rename(F);
-        NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                          Intrinsic::masked_scatter, Tys);
-        return true;
-      }
+      break; // No other 'masked.*'
     }
     // Updating the memory intrinsics (memcpy/memmove/memset) that have an
     // alignment parameter to embedding the alignment as an attribute of
