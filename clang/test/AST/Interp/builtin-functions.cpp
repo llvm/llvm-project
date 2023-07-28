@@ -60,3 +60,15 @@ namespace nan {
                                              // expected-note {{read of dereferenced one-past-the-end pointer}} \
                                              // expected-note {{in call to}}
 }
+
+namespace fmin {
+  constexpr float f1 = __builtin_fmin(1.0, 2.0f);
+  static_assert(f1 == 1.0f, "");
+
+  constexpr float min = __builtin_fmin(__builtin_nan(""), 1);
+  static_assert(min == 1, "");
+  constexpr float min2 = __builtin_fmin(1, __builtin_nan(""));
+  static_assert(min2 == 1, "");
+  constexpr float min3 = __builtin_fmin(__builtin_inf(), __builtin_nan(""));
+  static_assert(min3 == __builtin_inf(), "");
+}
