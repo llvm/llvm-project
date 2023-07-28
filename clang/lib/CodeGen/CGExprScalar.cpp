@@ -2816,8 +2816,8 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       amt = llvm::ConstantFP::get(VMContext,
                                   llvm::APFloat(static_cast<double>(amount)));
     else {
-      // Remaining types are Half, LongDouble, __ibm128 or __float128. Convert
-      // from float.
+      // Remaining types are Half, Bfloat16, LongDouble, __ibm128 or __float128. 
+      // Convert from float.
       llvm::APFloat F(static_cast<float>(amount));
       bool ignored;
       const llvm::fltSemantics *FS;
@@ -2827,6 +2827,8 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
         FS = &CGF.getTarget().getFloat128Format();
       else if (value->getType()->isHalfTy())
         FS = &CGF.getTarget().getHalfFormat();
+      else if (value->getType()->isBFloatTy())
+        FS = &CGF.getTarget().getBFloat16Format();
       else if (value->getType()->isPPC_FP128Ty())
         FS = &CGF.getTarget().getIbm128Format();
       else
