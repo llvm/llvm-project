@@ -519,3 +519,22 @@ let Predicates = [HasVendorXCVsimd, IsRV32],
   def CV_SUB_DIV4 :    CVSIMDRR<0b01110, 1, 0, 0b100, "cv.sub.div4">;
   def CV_SUB_DIV8 :    CVSIMDRR<0b01110, 1, 0, 0b110, "cv.sub.div8">;
 }
+
+class CVInstImmBranch<bits<3> funct3, dag outs, dag ins,
+                      string opcodestr, string argstr>
+    : RVInstB<funct3, OPC_CUSTOM_0, outs, ins, opcodestr, argstr> {
+  bits<5> imm5;
+  let rs2 = imm5;
+  let DecoderNamespace = "XCVbi";
+}
+
+let Predicates = [HasVendorXCVbi, IsRV32], hasSideEffects = 0, mayLoad = 0,
+    mayStore = 0, isBranch = 1, isTerminator = 1 in {
+  // Immediate branching operations
+  def CV_BEQIMM : CVInstImmBranch<0b110, (outs),
+        (ins GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12),
+        "cv.beqimm", "$rs1, $imm5, $imm12">, Sched<[]>;
+  def CV_BNEIMM : CVInstImmBranch<0b111, (outs),
+        (ins GPR:$rs1, simm5:$imm5, simm13_lsb0:$imm12),
+        "cv.bneimm", "$rs1, $imm5, $imm12">, Sched<[]>;
+}
