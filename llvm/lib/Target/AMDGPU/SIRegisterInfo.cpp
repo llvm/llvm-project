@@ -2567,6 +2567,10 @@ StringRef SIRegisterInfo::getRegAsmName(MCRegister Reg) const {
   return AMDGPUInstPrinter::getRegisterName(Reg);
 }
 
+unsigned AMDGPU::getRegBitWidth(const TargetRegisterClass &RC) {
+  return getRegBitWidth(RC.getID());
+}
+
 static const TargetRegisterClass *
 getAnyVGPRClassForBitWidth(unsigned BitWidth) {
   if (BitWidth == 64)
