@@ -2466,12 +2466,23 @@
 // RUN: %clang -march=grandridge -m32 -E -dM %s -o - 2>&1 \
 // RUN:     --target=i386 \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32,CHECK_GRR_M32
+// RUN: %clang -march=arrowlake -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SRF_M32
+// RUN: %clang -march=arrowlake-s -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32,CHECK_ARLS_M32
+// RUN: %clang -march=lunarlake -m32 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M32,CHECK_ARLS_M32
 // CHECK_SRF_M32: #define __ADX__ 1
 // CHECK_SRF_M32: #define __AES__ 1
 // CHECK_SRF_M32: #define __AVX2__ 1
 // CHECK_SRF_M32-NOT: AVX512
 // CHECK_SRF_M32: #define __AVXIFMA__ 1
 // CHECK_SRF_M32: #define __AVXNECONVERT__ 1
+// CHECK_SRF_M32-NOT: #define __AVXVNNIINT16__ 1
+// CHECK_ARLS_M32: #define __AVXVNNIINT16__ 1
 // CHECK_SRF_M32: #define __AVXVNNIINT8__ 1
 // CHECK_SRF_M32: #define __AVXVNNI__ 1
 // CHECK_SRF_M32: #define __AVX__ 1
@@ -2508,8 +2519,14 @@
 // CHECK_SRF_M32: #define __RDSEED__ 1
 // CHECK_SRF_M32: #define __SERIALIZE__ 1
 // CHECK_SRF_M32: #define __SGX__ 1
+// CHECK_SRF_M32-NOT: #define __SHA512__ 1
+// CHECK_ARLS_M32: #define __SHA512__ 1
 // CHECK_SRF_M32: #define __SHA__ 1
 // CHECK_SRF_M32: #define __SHSTK__ 1
+// CHECK_SRF_M32-NOT: #define __SM3__ 1
+// CHECK_ARLS_M32: #define __SM3__ 1
+// CHECK_SRF_M32-NOT: #define __SM4__ 1
+// CHECK_ARLS_M32: #define __SM4__ 1
 // CHECK_SRF_M32: #define __SSE2__ 1
 // CHECK_SRF_M32: #define __SSE3__ 1
 // CHECK_SRF_M32: #define __SSE4_1__ 1
@@ -2539,12 +2556,23 @@
 // RUN: %clang -march=grandridge -m64 -E -dM %s -o - 2>&1 \
 // RUN:     --target=i386 \
 // RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M64,CHECK_GRR_M64
+// RUN: %clang -march=arrowlake -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefix=CHECK_SRF_M64
+// RUN: %clang -march=arrowlake-s -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M64,CHECK_ARLS_M64
+// RUN: %clang -march=lunarlake -m64 -E -dM %s -o - 2>&1 \
+// RUN:     -target i386-unknown-linux \
+// RUN:   | FileCheck -match-full-lines %s -check-prefixes=CHECK_SRF_M64,CHECK_ARLS_M64
 // CHECK_SRF_M64: #define __ADX__ 1
 // CHECK_SRF_M64: #define __AES__ 1
 // CHECK_SRF_M64: #define __AVX2__ 1
 // CHECK_SRF_M64-NOT: AVX512
 // CHECK_SRF_M64: #define __AVXIFMA__ 1
 // CHECK_SRF_M64: #define __AVXNECONVERT__ 1
+// CHECK_SRF_M64-NOT: #define __AVXVNNIINT16__ 1
+// CHECK_ARLS_M64: #define __AVXVNNIINT16__ 1
 // CHECK_SRF_M64: #define __AVXVNNIINT8__ 1
 // CHECK_SRF_M64: #define __AVXVNNI__ 1
 // CHECK_SRF_M64: #define __AVX__ 1
@@ -2581,8 +2609,14 @@
 // CHECK_SRF_M64: #define __RDSEED__ 1
 // CHECK_SRF_M64: #define __SERIALIZE__ 1
 // CHECK_SRF_M64: #define __SGX__ 1
+// CHECK_SRF_M64-NOT: #define __SHA512__ 1
+// CHECK_ARLS_M64: #define __SHA512__ 1
 // CHECK_SRF_M64: #define __SHA__ 1
 // CHECK_SRF_M64: #define __SHSTK__ 1
+// CHECK_SRF_M64-NOT: #define __SM3__ 1
+// CHECK_ARLS_M64: #define __SM3__ 1
+// CHECK_SRF_M64-NOT: #define __SM4__ 1
+// CHECK_ARLS_M64: #define __SM4__ 1
 // CHECK_SRF_M64: #define __SSE2_MATH__ 1
 // CHECK_SRF_M64: #define __SSE2__ 1
 // CHECK_SRF_M64: #define __SSE3__ 1
