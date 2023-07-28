@@ -18,4 +18,5 @@ run
 expression 1
 
 # The {{ }} avoids accidentally matching the input script!
-# CHECK: a.out:{{ }}{{.*}}The serialized module is corrupted.
+# CHECK: {{ }}a.out
+# CHECK: {{ }}The serialized module is corrupted.
