@@ -18,10 +18,15 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/CachedHashString.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/SmallVector.h"
-#include "llvm/Support/Endian.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/Support/Endian.h"
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
 #include <optional>
+#include <sys/types.h>
 
 #define DEBUG_TYPE "mlir-bytecode-writer"
 
@@ -42,12 +47,6 @@ struct BytecodeWriterConfig::Impl {
   /// The producer of the bytecode.
   StringRef producer;
 
-  /// Printer callbacks used to emit custom type and attribute encodings.
-  llvm::SmallVector<std::unique_ptr<AttrTypeBytecodeWriter<Attribute>>>
-      attributeWriterCallbacks;
-  llvm::SmallVector<std::unique_ptr<AttrTypeBytecodeWriter<Type>>>
-      typeWriterCallbacks;
-
   /// A collection of non-dialect resource printers.
   SmallVector<std::unique_ptr<AsmResourcePrinter>> externalResourcePrinters;
 };
@@ -60,26 +59,6 @@ BytecodeWriterConfig::BytecodeWriterConfig(FallbackAsmResourceMap &map,
   attachFallbackResourcePrinter(map);
 }
 BytecodeWriterConfig::~BytecodeWriterConfig() = default;
-
-ArrayRef<std::unique_ptr<AttrTypeBytecodeWriter<Attribute>>>
-BytecodeWriterConfig::getAttributeWriterCallbacks() const {
-  return impl->attributeWriterCallbacks;
-}
-
-ArrayRef<std::unique_ptr<AttrTypeBytecodeWriter<Type>>>
-BytecodeWriterConfig::getTypeWriterCallbacks() const {
-  return impl->typeWriterCallbacks;
-}
-
-void BytecodeWriterConfig::attachAttributeCallback(
-    std::unique_ptr<AttrTypeBytecodeWriter<Attribute>> callback) {
-  impl->attributeWriterCallbacks.emplace_back(std::move(callback));
-}
-
-void BytecodeWriterConfig::attachTypeCallback(
-    std::unique_ptr<AttrTypeBytecodeWriter<Type>> callback) {
-  impl->typeWriterCallbacks.emplace_back(std::move(callback));
-}
 
 void BytecodeWriterConfig::attachResourcePrinter(
     std::unique_ptr<AsmResourcePrinter> printer) {
@@ -795,50 +774,32 @@ void BytecodeWriter::writeAttrTypeSection(EncodingEmitter &emitter) {
   auto emitAttrOrType = [&](auto &entry) {
     auto entryValue = entry.getValue();
 
-    auto emitAttrOrTypeRawImpl = [&]() -> void {
-      RawEmitterOstream(attrTypeEmitter) << entryValue;
-      attrTypeEmitter.emitByte(0);
-    };
-    auto emitAttrOrTypeImpl = [&]() -> bool {
-      // TODO: We don't currently support custom encoded mutable types and
-      // attributes.
-      if (entryValue.template hasTrait<TypeTrait::IsMutable>() ||
-          entryValue.template hasTrait<AttributeTrait::IsMutable>()) {
-        emitAttrOrTypeRawImpl();
-        return false;
-      }
-
+    // First, try to emit this entry using the dialect bytecode interface.
+    bool hasCustomEncoding = false;
+    if (const BytecodeDialectInterface *interface = entry.dialect->interface) {
+      // The writer used when emitting using a custom bytecode encoding.
       DialectWriter dialectWriter(config.bytecodeVersion, attrTypeEmitter,
                                   numberingState, stringSection);
+
       if constexpr (std::is_same_v<std::decay_t<decltype(entryValue)>, Type>) {
-        for (const auto &callback : config.typeWriterCallbacks) {
-          if (succeeded(callback->write(entryValue, dialectWriter)))
-            return true;
-        }
-        if (const BytecodeDialectInterface *interface =
-                entry.dialect->interface) {
-          if (succeeded(interface->writeType(entryValue, dialectWriter)))
-            return true;
-        }
+        // TODO: We don't currently support custom encoded mutable types.
+        hasCustomEncoding =
+            !entryValue.template hasTrait<TypeTrait::IsMutable>() &&
+            succeeded(interface->writeType(entryValue, dialectWriter));
       } else {
-        for (const auto &callback : config.attributeWriterCallbacks) {
-          if (succeeded(callback->write(entryValue, dialectWriter)))
-            return true;
-        }
-        if (const BytecodeDialectInterface *interface =
-                entry.dialect->interface) {
-          if (succeeded(interface->writeAttribute(entryValue, dialectWriter)))
-            return true;
-        }
+        // TODO: We don't currently support custom encoded mutable attributes.
+        hasCustomEncoding =
+            !entryValue.template hasTrait<AttributeTrait::IsMutable>() &&
+            succeeded(interface->writeAttribute(entryValue, dialectWriter));
       }
+    }
 
-      // If the entry was not emitted using a callback or a dialect interface,
-      // emit it using the textual format.
-      emitAttrOrTypeRawImpl();
-      return false;
-    };
-
-    bool hasCustomEncoding = emitAttrOrTypeImpl();
+    // If the entry was not emitted using the dialect interface, emit it using
+    // the textual format.
+    if (!hasCustomEncoding) {
+      RawEmitterOstream(attrTypeEmitter) << entryValue;
+      attrTypeEmitter.emitByte(0);
+    }
 
     // Record the offset of this entry.
     uint64_t curOffset = attrTypeEmitter.size();

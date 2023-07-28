@@ -14,10 +14,9 @@
 #ifndef MLIR_TESTDIALECT_H
 #define MLIR_TESTDIALECT_H
 
+#include "TestTypes.h"
 #include "TestAttributes.h"
 #include "TestInterfaces.h"
-#include "TestTypes.h"
-#include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/DLTI/Traits.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -58,19 +57,6 @@ class RewritePatternSet;
 #include "TestOpsDialect.h.inc"
 
 namespace test {
-
-//===----------------------------------------------------------------------===//
-// TestDialect version utilities
-//===----------------------------------------------------------------------===//
-
-struct TestDialectVersion : public mlir::DialectVersion {
-  TestDialectVersion() = default;
-  TestDialectVersion(uint32_t _major, uint32_t _minor)
-      : major(_major), minor(_minor){};
-  uint32_t major = 2;
-  uint32_t minor = 0;
-};
-
 // Define some classes to exercises the Properties feature.
 
 struct PropertiesWithCustomPrint {

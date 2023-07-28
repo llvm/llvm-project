@@ -1258,9 +1258,8 @@ def TestOpWithVariadicResultsAndFolder: TEST_Op<"op_with_variadic_results_and_fo
 }
 
 def TestAddIOp : TEST_Op<"addi"> {
-  let arguments = (ins AnyTypeOf<[I32, TestI32]>:$op1,
-                       AnyTypeOf<[I32, TestI32]>:$op2);
-  let results = (outs AnyTypeOf<[I32, TestI32]>);
+  let arguments = (ins I32:$op1, I32:$op2);
+  let results = (outs I32);
 }
 
 def TestCommutativeOp : TEST_Op<"op_commutative", [Commutative]> {
@@ -2618,12 +2617,6 @@ def TestVersionedOpB : TEST_Op<"versionedB"> {
   // `readAttribute()` in `TestBytecodeDialectInterface`
   let arguments = (ins
     TestAttrParams:$attribute
-  );
-}
-
-def TestVersionedOpC : TEST_Op<"versionedC"> {
-  let arguments = (ins AnyAttrOf<[TestAttrParams,
-                                  I32ElementsAttr]>:$attribute
   );
 }
 

@@ -43,7 +43,6 @@ void registerSymbolTestPasses();
 void registerRegionTestPasses();
 void registerTestAffineDataCopyPass();
 void registerTestAffineReifyValueBoundsPass();
-void registerTestBytecodeCallbackPasses();
 void registerTestDecomposeAffineOpPass();
 void registerTestAffineLoopUnswitchingPass();
 void registerTestAllReduceLoweringPass();
@@ -168,7 +167,6 @@ void registerTestPasses() {
   registerTestDecomposeAffineOpPass();
   registerTestAffineLoopUnswitchingPass();
   registerTestAllReduceLoweringPass();
-  registerTestBytecodeCallbackPasses();
   registerTestFunc();
   registerTestGpuMemoryPromotionPass();
   registerTestLoopPermutationPass();
