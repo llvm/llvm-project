@@ -38,13 +38,13 @@ using Point = SmallVector<MPInt, 16>;
 class GeneratingFunction
 {
 public:
-    GeneratingFunction(SmallVector<int, 16> s, SmallVector<Point, 16> nums, SmallVector<SmallVector<Point, 16>, 8> dens)
+    GeneratingFunction(SmallVector<int, 16> s, std::vector<Point, 16> nums, std::vector<std::vector<Point, 16>, 8> dens)
         : signs(s), numerators(nums), denominators(dens) {};
 
 private:
-    SmallVector<int, 16> signs;
-    SmallVector<Point, 16> numerators;
-    SmallVector<SmallVector<Point, 16>, 8> denominators;
+    std::vector<int, 16> signs;
+    std::vector<Point, 16> numerators;
+    std::vector<std::vector<Point, 16>, 8> denominators;
 };
 
 // Get the index of a cone.
