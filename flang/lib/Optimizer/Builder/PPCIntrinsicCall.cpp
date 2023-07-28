@@ -14,8 +14,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/PPCIntrinsicCall.h"
+#include "flang/Evaluate/common.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
-#include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Optimizer/Builder/MutableBox.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 
@@ -25,6 +25,40 @@ using PI = PPCIntrinsicLibrary;
 
 // PPC specific intrinsic handlers.
 static constexpr IntrinsicHandler ppcHandlers[]{
+    {"__ppc_mma_assemble_acc",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::AssembleAcc, MMAHandlerOp::SubToFunc>),
+     {{{"acc", asAddr},
+       {"arg1", asValue},
+       {"arg2", asValue},
+       {"arg3", asValue},
+       {"arg4", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_assemble_pair",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::AssemblePair, MMAHandlerOp::SubToFunc>),
+     {{{"pair", asAddr}, {"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_build_acc",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::AssembleAcc,
+                         MMAHandlerOp::SubToFuncReverseArgOnLE>),
+     {{{"acc", asAddr},
+       {"arg1", asValue},
+       {"arg2", asValue},
+       {"arg3", asValue},
+       {"arg4", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_disassemble_acc",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::DisassembleAcc, MMAHandlerOp::SubToFunc>),
+     {{{"data", asAddr}, {"acc", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_mma_disassemble_pair",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genMmaIntr<MMAOp::DisassemblePair, MMAHandlerOp::SubToFunc>),
+     {{{"data", asAddr}, {"pair", asValue}}},
+     /*isElemental=*/true},
     {"__ppc_mtfsf",
      static_cast<IntrinsicLibrary::SubroutineGenerator>(&PI::genMtfsf<false>),
      {{{"mask", asValue}, {"r", asValue}}},
@@ -324,6 +358,103 @@ static_assert(ppcMathOps.Verify() && "map must be sorted");
 std::pair<const MathOperation *, const MathOperation *>
 checkPPCMathOperationsRange(llvm::StringRef name) {
   return ppcMathOps.equal_range(name);
+}
+
+static mlir::FunctionType genMmaVpFuncType(mlir::MLIRContext *context,
+                                           int quadCnt, int pairCnt, int vecCnt,
+                                           int intCnt = 0,
+                                           int vecElemBitSize = 8,
+                                           int intBitSize = 32) {
+  // Constructs a function type with the following signature:
+  // Result type: __vector_pair
+  // Arguments:
+  //   quadCnt: number of arguments that has __vector_quad type, followed by
+  //   pairCnt: number of arguments that has __vector_pair type, followed by
+  //   vecCnt: number of arguments that has vector(integer) type, followed by
+  //   intCnt: number of arguments that has integer type
+  //   vecElemBitSize: specifies the size of vector elements in bits
+  //   intBitSize: specifies the size of integer arguments in bits
+  auto vType{mlir::VectorType::get(
+      128 / vecElemBitSize, mlir::IntegerType::get(context, vecElemBitSize))};
+  auto vpType{fir::VectorType::get(256, mlir::IntegerType::get(context, 1))};
+  auto vqType{fir::VectorType::get(512, mlir::IntegerType::get(context, 1))};
+  auto iType{mlir::IntegerType::get(context, intBitSize)};
+  llvm::SmallVector<mlir::Type> argTypes;
+  for (int i = 0; i < quadCnt; ++i) {
+    argTypes.push_back(vqType);
+  }
+  for (int i = 0; i < pairCnt; ++i) {
+    argTypes.push_back(vpType);
+  }
+  for (int i = 0; i < vecCnt; ++i) {
+    argTypes.push_back(vType);
+  }
+  for (int i = 0; i < intCnt; ++i) {
+    argTypes.push_back(iType);
+  }
+
+  return mlir::FunctionType::get(context, argTypes, {vpType});
+}
+
+static mlir::FunctionType genMmaVqFuncType(mlir::MLIRContext *context,
+                                           int quadCnt, int pairCnt, int vecCnt,
+                                           int intCnt = 0,
+                                           int vecElemBitSize = 8,
+                                           int intBitSize = 32) {
+  // Constructs a function type with the following signature:
+  // Result type: __vector_quad
+  // Arguments:
+  //   quadCnt: number of arguments that has __vector_quad type, followed by
+  //   pairCnt: number of arguments that has __vector_pair type, followed by
+  //   vecCnt: number of arguments that has vector(integer) type, followed by
+  //   intCnt: number of arguments that has integer type
+  //   vecElemBitSize: specifies the size of vector elements in bits
+  //   intBitSize: specifies the size of integer arguments in bits
+  auto vType{mlir::VectorType::get(
+      128 / vecElemBitSize, mlir::IntegerType::get(context, vecElemBitSize))};
+  auto vpType{fir::VectorType::get(256, mlir::IntegerType::get(context, 1))};
+  auto vqType{fir::VectorType::get(512, mlir::IntegerType::get(context, 1))};
+  auto iType{mlir::IntegerType::get(context, intBitSize)};
+  llvm::SmallVector<mlir::Type> argTypes;
+  for (int i = 0; i < quadCnt; ++i) {
+    argTypes.push_back(vqType);
+  }
+  for (int i = 0; i < pairCnt; ++i) {
+    argTypes.push_back(vpType);
+  }
+  for (int i = 0; i < vecCnt; ++i) {
+    argTypes.push_back(vType);
+  }
+  for (int i = 0; i < intCnt; ++i) {
+    argTypes.push_back(iType);
+  }
+
+  return mlir::FunctionType::get(context, argTypes, {vqType});
+}
+
+mlir::FunctionType genMmaDisassembleFuncType(mlir::MLIRContext *context,
+                                             MMAOp mmaOp) {
+  auto vType{mlir::VectorType::get(16, mlir::IntegerType::get(context, 8))};
+  llvm::SmallVector<mlir::Type> members;
+
+  if (mmaOp == MMAOp::DisassembleAcc) {
+    auto vqType{fir::VectorType::get(512, mlir::IntegerType::get(context, 1))};
+    members.push_back(vType);
+    members.push_back(vType);
+    members.push_back(vType);
+    members.push_back(vType);
+    auto resType{mlir::LLVM::LLVMStructType::getLiteral(context, members)};
+    return mlir::FunctionType::get(context, {vqType}, {resType});
+  } else if (mmaOp == MMAOp::DisassemblePair) {
+    auto vpType{fir::VectorType::get(256, mlir::IntegerType::get(context, 1))};
+    members.push_back(vType);
+    members.push_back(vType);
+    auto resType{mlir::LLVM::LLVMStructType::getLiteral(context, members)};
+    return mlir::FunctionType::get(context, {vpType}, {resType});
+  } else {
+    llvm_unreachable(
+        "Unsupported intrinsic code for function signature generator");
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -1128,6 +1259,116 @@ PPCIntrinsicLibrary::genVecShift(mlir::Type resultType,
     llvm_unreachable("Invalid vector operation for generator");
 
   return shftRes;
+}
+
+const char *getMmaIrIntrName(MMAOp mmaOp) {
+  switch (mmaOp) {
+  case MMAOp::AssembleAcc:
+    return "llvm.ppc.mma.assemble.acc";
+  case MMAOp::AssemblePair:
+    return "llvm.ppc.vsx.assemble.pair";
+  case MMAOp::DisassembleAcc:
+    return "llvm.ppc.mma.disassemble.acc";
+  case MMAOp::DisassemblePair:
+    return "llvm.ppc.vsx.disassemble.pair";
+  }
+}
+
+mlir::FunctionType getMmaIrFuncType(mlir::MLIRContext *context, MMAOp mmaOp) {
+  switch (mmaOp) {
+  case MMAOp::AssembleAcc:
+    return genMmaVqFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 4);
+  case MMAOp::AssemblePair:
+    return genMmaVpFuncType(context, /*Quad*/ 0, /*Pair*/ 0, /*Vector*/ 2);
+  case MMAOp::DisassembleAcc:
+    return genMmaDisassembleFuncType(context, mmaOp);
+  case MMAOp::DisassemblePair:
+    return genMmaDisassembleFuncType(context, mmaOp);
+  }
+}
+
+template <MMAOp IntrId, MMAHandlerOp HandlerOp>
+void PPCIntrinsicLibrary::genMmaIntr(llvm::ArrayRef<fir::ExtendedValue> args) {
+  auto context{builder.getContext()};
+  mlir::FunctionType intrFuncType{getMmaIrFuncType(context, IntrId)};
+  mlir::func::FuncOp funcOp{
+      builder.addNamedFunction(loc, getMmaIrIntrName(IntrId), intrFuncType)};
+  llvm::SmallVector<mlir::Value> intrArgs;
+
+  // Depending on SubToFunc, change the subroutine call to a function call.
+  // First argument represents the result. Rest of the arguments
+  // are shifted one position to form the actual argument list.
+  size_t argStart{0};
+  size_t argStep{1};
+  size_t e{args.size()};
+  if (HandlerOp == MMAHandlerOp::SubToFunc) {
+    // The first argument becomes function result. Start from the second
+    // argument.
+    argStart = 1;
+  } else if (HandlerOp == MMAHandlerOp::SubToFuncReverseArgOnLE) {
+    // Reverse argument order on little-endian target only.
+    // The reversal does not depend on the setting of non-native-order option.
+    if (Fortran::evaluate::isHostLittleEndian) {
+      // Load the arguments in reverse order.
+      argStart = args.size() - 1;
+      // The first argument becomes function result. Stop at the second
+      // argument.
+      e = 0;
+      argStep = -1;
+    } else {
+      // Load the arguments in natural order.
+      // The first argument becomes function result. Start from the second
+      // argument.
+      argStart = 1;
+    }
+  }
+
+  for (size_t i = argStart, j = 0; i != e; i += argStep, ++j) {
+    auto v{fir::getBase(args[i])};
+    if (i == 0 && HandlerOp == MMAHandlerOp::FirstArgIsResult) {
+      // First argument is passed in as an address. We need to load
+      // the content to match the LLVM interface.
+      v = builder.create<fir::LoadOp>(loc, v);
+    }
+    auto vType{v.getType()};
+    mlir::Type targetType{intrFuncType.getInput(j)};
+    if (vType != targetType) {
+      if (targetType.isa<mlir::VectorType>()) {
+        // Perform vector type conversion for arguments passed by value.
+        auto eleTy{vType.dyn_cast<fir::VectorType>().getEleTy()};
+        auto len{vType.dyn_cast<fir::VectorType>().getLen()};
+        mlir::VectorType mlirType = mlir::VectorType::get(len, eleTy);
+        auto v0{builder.createConvert(loc, mlirType, v)};
+        auto v1{builder.create<mlir::vector::BitCastOp>(loc, targetType, v0)};
+        intrArgs.push_back(v1);
+      } else if (targetType.isa<mlir::IntegerType>() &&
+                 vType.isa<mlir::IntegerType>()) {
+        auto v0{builder.createConvert(loc, targetType, v)};
+        intrArgs.push_back(v0);
+      } else {
+        llvm::errs() << "\nUnexpected type conversion requested: "
+                     << " from " << vType << " to " << targetType << "\n";
+        llvm_unreachable("Unsupported type conversion for argument to PowerPC "
+                         "MMA intrinsic");
+      }
+    } else {
+      intrArgs.push_back(v);
+    }
+  }
+  auto callSt{builder.create<fir::CallOp>(loc, funcOp, intrArgs)};
+  if (HandlerOp == MMAHandlerOp::SubToFunc ||
+      HandlerOp == MMAHandlerOp::SubToFuncReverseArgOnLE ||
+      HandlerOp == MMAHandlerOp::FirstArgIsResult) {
+    // Convert pointer type if needed.
+    mlir::Value callResult{callSt.getResult(0)};
+    mlir::Value destPtr{fir::getBase(args[0])};
+    mlir::Type callResultPtrType{builder.getRefType(callResult.getType())};
+    if (destPtr.getType() != callResultPtrType) {
+      destPtr = builder.create<fir::ConvertOp>(loc, callResultPtrType, destPtr);
+    }
+    // Copy the result.
+    builder.create<fir::StoreOp>(loc, callResult, destPtr);
+  }
 }
 
 } // namespace fir

@@ -3945,6 +3945,7 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::CTPOP,      MVT::i64,     { 10,  6, 19, 19 } },
     { ISD::ROTL,       MVT::i64,     {  2, 3, 1, 3 } },
     { ISD::ROTR,       MVT::i64,     {  2, 3, 1, 3 } },
+    { X86ISD::VROTLI,  MVT::i64,     {  1, 1, 1, 1 } },
     { ISD::FSHL,       MVT::i64,     {  4, 4, 1, 4 } },
     { ISD::SMAX,       MVT::i64,     {  1,  3,  2,  3 } },
     { ISD::SMIN,       MVT::i64,     {  1,  3,  2,  3 } },
@@ -3984,6 +3985,9 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     { ISD::ROTR,       MVT::i32,     {  2,  3,  1,  3 } },
     { ISD::ROTR,       MVT::i16,     {  2,  3,  1,  3 } },
     { ISD::ROTR,       MVT::i8,      {  2,  3,  1,  3 } },
+    { X86ISD::VROTLI,  MVT::i32,     {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::i16,     {  1,  1,  1,  1 } },
+    { X86ISD::VROTLI,  MVT::i8,      {  1,  1,  1,  1 } },
     { ISD::FSHL,       MVT::i32,     {  4,  4,  1,  4 } },
     { ISD::FSHL,       MVT::i16,     {  4,  4,  2,  5 } },
     { ISD::FSHL,       MVT::i8,      {  4,  4,  2,  5 } },
@@ -4039,8 +4043,13 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::FSHL;
     if (!ICA.isTypeBasedOnly()) {
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
-      if (Args[0] == Args[1])
+      if (Args[0] == Args[1]) {
         ISD = ISD::ROTL;
+        // Handle scalar constant rotation amounts.
+        // TODO: Handle vector + funnel-shift cases.
+        if (isa_and_nonnull<ConstantInt>(Args[2]))
+          ISD = X86ISD::VROTLI;
+      }
     }
     break;
   case Intrinsic::fshr:
@@ -4048,8 +4057,13 @@ X86TTIImpl::getIntrinsicInstrCost(const IntrinsicCostAttributes &ICA,
     ISD = ISD::FSHL;
     if (!ICA.isTypeBasedOnly()) {
       const SmallVectorImpl<const Value *> &Args = ICA.getArgs();
-      if (Args[0] == Args[1])
+      if (Args[0] == Args[1]) {
+        // Handle scalar constant rotation amount.
+        // TODO: Handle vector + funnel-shift cases.
         ISD = ISD::ROTR;
+        if (isa_and_nonnull<ConstantInt>(Args[2]))
+          ISD = X86ISD::VROTLI;
+      }
     }
     break;
   case Intrinsic::maxnum:

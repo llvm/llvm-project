@@ -415,7 +415,7 @@ public:
     if (const auto *E = selectFirst<CXXConstructExpr>(
             "call", match(cxxConstructExpr(HasSpecialBoolType).bind("call"), *S,
                           getASTContext()))) {
-      cast<StructValue>(Env.getValueStrict(*E))
+      cast<StructValue>(Env.getValue(*E))
           ->setProperty("is_set", Env.getBoolLiteralValue(false));
     } else if (const auto *E = selectFirst<CXXMemberCallExpr>(
                    "call", match(cxxMemberCallExpr(callee(cxxMethodDecl(ofClass(
@@ -572,7 +572,7 @@ public:
         *S, getASTContext());
     if (const auto *E = selectFirst<CXXConstructExpr>(
             "construct", Matches)) {
-      cast<StructValue>(Env.getValueStrict(*E))
+      cast<StructValue>(Env.getValue(*E))
           ->setProperty("has_value", Env.getBoolLiteralValue(false));
     } else if (const auto *E =
                    selectFirst<CXXOperatorCallExpr>("operator", Matches)) {

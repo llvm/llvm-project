@@ -54,10 +54,10 @@ public:
 };
 
 //===----------------------------------------------------------------------===//
-// AbstractDenseDataFlowAnalysis
+// AbstractDenseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
-/// Base class for dense (forward) data-flow analyses. Dense data-flow analysis
+/// Base class for dense forward data-flow analyses. Dense data-flow analysis
 /// attaches a lattice between the execution of operations and implements a
 /// transfer function from the lattice before each operation to the lattice
 /// after. The lattice contains information about the state of the program at
@@ -67,7 +67,7 @@ public:
 /// state of the program after its execution, and a lattice attached to block
 /// represents the state of the program right before it starts executing its
 /// body.
-class AbstractDenseDataFlowAnalysis : public DataFlowAnalysis {
+class AbstractDenseForwardDataFlowAnalysis : public DataFlowAnalysis {
 public:
   using DataFlowAnalysis::DataFlowAnalysis;
 
@@ -159,22 +159,24 @@ private:
 };
 
 //===----------------------------------------------------------------------===//
-// DenseDataFlowAnalysis
+// DenseForwardDataFlowAnalysis
 //===----------------------------------------------------------------------===//
 
-/// A dense (forward) data-flow analysis for propagating lattices before and
+/// A dense forward data-flow analysis for propagating lattices before and
 /// after the execution of every operation across the IR by implementing
 /// transfer functions for operations.
 ///
 /// `LatticeT` is expected to be a subclass of `AbstractDenseLattice`.
 template <typename LatticeT>
-class DenseDataFlowAnalysis : public AbstractDenseDataFlowAnalysis {
+class DenseForwardDataFlowAnalysis
+    : public AbstractDenseForwardDataFlowAnalysis {
   static_assert(
       std::is_base_of<AbstractDenseLattice, LatticeT>::value,
       "analysis state class expected to subclass AbstractDenseLattice");
 
 public:
-  using AbstractDenseDataFlowAnalysis::AbstractDenseDataFlowAnalysis;
+  using AbstractDenseForwardDataFlowAnalysis::
+      AbstractDenseForwardDataFlowAnalysis;
 
   /// Visit an operation with the dense lattice before its execution. This
   /// function is expected to set the dense lattice after its execution and
@@ -201,8 +203,8 @@ public:
                                             CallControlFlowAction action,
                                             const LatticeT &before,
                                             LatticeT *after) {
-    AbstractDenseDataFlowAnalysis::visitCallControlFlowTransfer(call, action,
-                                                                before, after);
+    AbstractDenseForwardDataFlowAnalysis::visitCallControlFlowTransfer(
+        call, action, before, after);
   }
 
   /// Hook for customizing the behavior of lattice propagation along the control
@@ -232,7 +234,7 @@ public:
       RegionBranchOpInterface branch, std::optional<unsigned> regionFrom,
       std::optional<unsigned> regionTo, const LatticeT &before,
       LatticeT *after) {
-    AbstractDenseDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
+    AbstractDenseForwardDataFlowAnalysis::visitRegionBranchControlFlowTransfer(
         branch, regionFrom, regionTo, before, after);
   }
 

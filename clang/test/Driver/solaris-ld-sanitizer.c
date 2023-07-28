@@ -49,3 +49,19 @@
 // RUN:     --gcc-toolchain="" --sysroot=%S/Inputs/solaris_x86_tree \
 // RUN:   | FileCheck --check-prefix=CHECK-LD-X64-UBSAN %s
 // CHECK-LD-X64-UBSAN: -zrelax=transtls
+
+/// General tests that the ld -z now workaround is only applied on
+/// Solaris/i386 with shared libclang_rt.asan.. Note that we use sysroot to
+/// make these tests independent of the host system.
+
+/// Check i386-pc-solaris2.11, 32bit, shared libclang_rt.asan
+// RUN: %clang -fsanitize=address -shared-libasan --target=i386-pc-solaris2.11 %s -### 2>&1 \
+// RUN:     --gcc-toolchain="" --sysroot=%S/Inputs/solaris_x86_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-X32-ASAN-SHARED %s
+// CHECK-LD-X32-ASAN-SHARED: -znow
+
+/// Check i386-pc-solaris2.11, 32bit, static libclang_rt.asan
+// RUN: %clang -fsanitize=address --target=i386-pc-solaris2.11 %s -### 2>&1 \
+// RUN:     --gcc-toolchain="" --sysroot=%S/Inputs/solaris_x86_tree \
+// RUN:   | FileCheck --check-prefix=CHECK-LD-X32-ASAN %s
+// CHECK-LD-X32-ASAN-NOT: -znow

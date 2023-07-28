@@ -31,7 +31,9 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/StringSet.h"
 #include <memory>
+#include <string>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -167,6 +169,20 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &, const Include &);
 /// Supports efficiently hit-testing Headers against Includes.
 class Includes {
 public:
+  /// Registers a directory on the include path (-I etc) from HeaderSearch.
+  /// This allows reasoning about equivalence of e.g. "path/a/b.h" and "a/b.h".
+  /// This must be called before calling add() in order to take effect.
+  ///
+  /// The paths may be relative or absolute, but the paths passed to
+  /// addSearchDirectory() and add() (that is: Include.Resolved->getName())
+  /// should be consistent, as they are compared lexically.
+  /// Generally, this is satisfied if you obtain paths through HeaderSearch
+  /// and FileEntries through PPCallbacks::IncludeDirective().
+  void addSearchDirectory(llvm::StringRef);
+
+  /// Registers an include directive seen in the main file.
+  ///
+  /// This should only be called after all search directories are added.
   void add(const Include &);
 
   /// All #includes seen, in the order they appear.
@@ -183,9 +199,13 @@ public:
   const Include *atLine(unsigned OneBasedIndex) const;
 
 private:
+  llvm::StringSet<> SearchPath;
+
   std::vector<Include> All;
   // Lookup structures for match(), values are index into All.
   llvm::StringMap<llvm::SmallVector<unsigned>> BySpelling;
+  // Heuristic spellings that likely resolve to the given file.
+  llvm::StringMap<llvm::SmallVector<unsigned>> BySpellingAlternate;
   llvm::DenseMap<const FileEntry *, llvm::SmallVector<unsigned>> ByFile;
   llvm::DenseMap<unsigned, unsigned> ByLine;
 };

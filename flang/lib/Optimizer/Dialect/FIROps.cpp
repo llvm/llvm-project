@@ -947,20 +947,21 @@ bool fir::ConvertOp::isPointerCompatible(mlir::Type ty) {
 }
 
 static std::optional<mlir::Type> getVectorElementType(mlir::Type ty) {
-  if (mlir::isa<fir::VectorType>(ty)) {
-    auto elemTy = mlir::dyn_cast<fir::VectorType>(ty).getEleTy();
+  mlir::Type elemTy;
+  if (mlir::isa<fir::VectorType>(ty))
+    elemTy = mlir::dyn_cast<fir::VectorType>(ty).getEleTy();
+  else if (mlir::isa<mlir::VectorType>(ty))
+    elemTy = mlir::dyn_cast<mlir::VectorType>(ty).getElementType();
+  else
+    return std::nullopt;
 
-    // fir.vector<4:ui32> is converted to mlir.vector<4xi32>
-    if (elemTy.isUnsignedInteger()) {
-      elemTy = mlir::IntegerType::get(
-          ty.getContext(),
-          mlir::dyn_cast<mlir::IntegerType>(elemTy).getWidth());
-    }
-    return elemTy;
-  } else if (mlir::isa<mlir::VectorType>(ty))
-    return mlir::dyn_cast<mlir::VectorType>(ty).getElementType();
-
-  return std::nullopt;
+  // e.g. fir.vector<4:ui32> => mlir.vector<4xi32>
+  // e.g. mlir.vector<4xui32> => mlir.vector<4xi32>
+  if (elemTy.isUnsignedInteger()) {
+    elemTy = mlir::IntegerType::get(
+        ty.getContext(), mlir::dyn_cast<mlir::IntegerType>(elemTy).getWidth());
+  }
+  return elemTy;
 }
 
 static std::optional<uint64_t> getVectorLen(mlir::Type ty) {

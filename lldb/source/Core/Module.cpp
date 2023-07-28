@@ -1285,7 +1285,8 @@ ObjectFile *Module::GetObjectFile() {
           // those values that overwrite unspecified unknown values.
           m_arch.MergeFrom(m_objfile_sp->GetArchitecture());
         } else {
-          ReportError("failed to load objfile for {0}",
+          ReportError("failed to load objfile for {0}\nDebugging will be "
+                      "degraded for this module.",
                       GetFileSpec().GetPath().c_str());
         }
       }

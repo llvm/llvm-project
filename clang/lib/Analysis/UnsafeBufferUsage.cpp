@@ -322,6 +322,7 @@ public:
 #define GADGET(x) case Kind::x: return #x;
 #include "clang/Analysis/Analyses/UnsafeBufferUsageGadgets.def"
     }
+    llvm_unreachable("Unhandled Gadget::Kind enum");
   }
 #endif
 

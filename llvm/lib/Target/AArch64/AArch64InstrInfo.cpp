@@ -79,6 +79,7 @@ AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
 unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
+  const Function &F = MF->getFunction();
   const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
 
   {
@@ -127,9 +128,20 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       NumBytes = 4;
     break;
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+    // If `patchable-function-entry` is set, PATCHABLE_FUNCTION_ENTER
+    // instructions are expanded to the specified number of NOPs. Otherwise,
+    // they are expanded to 36-byte XRay sleds.
+    NumBytes =
+        F.getFnAttributeAsParsedInteger("patchable-function-entry", 9) * 4;
+    break;
   case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
     // An XRay sled can be 4 bytes of alignment plus a 32-byte block.
     NumBytes = 36;
+    break;
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+    // EVENT_CALL XRay sleds are exactly 6 instructions long (no alignment).
+    NumBytes = 24;
     break;
 
   case AArch64::SPACE:
