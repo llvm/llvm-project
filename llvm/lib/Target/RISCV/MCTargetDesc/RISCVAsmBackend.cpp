@@ -154,12 +154,6 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
   int64_t Offset = int64_t(Value);
   unsigned Kind = Fixup.getTargetKind();
 
-  // We only do conditional branch relaxation when the symbol is resolved.
-  // For conditional branch, the immediate must be in the range
-  // [-4096, 4094].
-  if (Kind == RISCV::fixup_riscv_branch)
-    return Resolved && !isInt<13>(Offset);
-
   // Return true if the symbol is actually unresolved.
   // Resolved could be always false when shouldForceRelocation return true.
   // We use !WasForced to indicate that the symbol is unresolved and not forced
@@ -178,6 +172,10 @@ bool RISCVAsmBackend::fixupNeedsRelaxationAdvanced(const MCFixup &Fixup,
     // For compressed jump instructions the immediate must be
     // in the range [-2048, 2046].
     return Offset > 2046 || Offset < -2048;
+  case RISCV::fixup_riscv_branch:
+    // For conditional branch instructions the immediate must be
+    // in the range [-4096, 4095].
+    return !isInt<13>(Offset);
   }
 }
 
