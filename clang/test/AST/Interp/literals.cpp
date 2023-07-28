@@ -122,6 +122,35 @@ namespace PointerToBool {
   static_assert(!!FP, "");
 }
 
+namespace PointerComparison {
+
+  struct S { int a, b; } s;
+  constexpr void *null = 0;
+  constexpr void *pv = (void*)&s.a;
+  constexpr void *qv = (void*)&s.b;
+  constexpr bool v1 = null < (int*)0;
+  constexpr bool v2 = null < pv; // expected-error {{must be initialized by a constant expression}} \
+                                 // expected-note {{comparison between 'nullptr' and '&s.a' has unspecified value}} \
+                                 // ref-error {{must be initialized by a constant expression}} \
+                                 // ref-note {{comparison between 'nullptr' and '&s.a' has unspecified value}} \
+
+  constexpr bool v3 = null == pv; // ok
+  constexpr bool v4 = qv == pv; // ok
+
+  /// FIXME: These two are rejected by the current interpreter, but
+  ///   accepted by GCC.
+  constexpr bool v5 = qv >= pv; // ref-error {{constant expression}} \
+                                // ref-note {{unequal pointers to void}}
+  constexpr bool v8 = qv > (void*)&s.a; // ref-error {{constant expression}} \
+                                        // ref-note {{unequal pointers to void}}
+  constexpr bool v6 = qv > null; // expected-error {{must be initialized by a constant expression}} \
+                                 // expected-note {{comparison between '&s.b' and 'nullptr' has unspecified value}} \
+                                 // ref-error {{must be initialized by a constant expression}} \
+                                 // ref-note {{comparison between '&s.b' and 'nullptr' has unspecified value}}
+
+  constexpr bool v7 = qv <= (void*)&s.b; // ok
+}
+
 namespace SizeOf {
   constexpr int soint = sizeof(int);
   constexpr int souint = sizeof(unsigned int);
