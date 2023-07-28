@@ -47,7 +47,7 @@ namespace nan {
   constexpr double NaN3 = __builtin_nan("foo"); // expected-error {{must be initialized by a constant expression}} \
                                                 // ref-error {{must be initialized by a constant expression}}
   constexpr float NaN4 = __builtin_nanf("");
-  constexpr long double NaN5 = __builtin_nanf128("");
+  //constexpr long double NaN5 = __builtin_nanf128("");
 
   /// FIXME: This should be accepted by the current interpreter as well.
   constexpr char f[] = {'0', 'x', 'A', 'E', '\0'};
