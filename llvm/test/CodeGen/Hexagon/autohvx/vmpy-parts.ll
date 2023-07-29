@@ -342,13 +342,13 @@ define <64 x i32> @f10(<32 x i32> %a0, <32 x i32> %a1) #0 {
 ; V60-NEXT:     v6.uw = vlsr(v2.uw,r2)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v31 = vmux(q1,v1,v4)
-; V60-NEXT:    }
-; V60-NEXT:    {
 ; V60-NEXT:     v5 = vdelta(v1,v5)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     if (q0) v31.w += v0.w
+; V60-NEXT:     v1 = vmux(q1,v1,v4)
+; V60-NEXT:    }
+; V60-NEXT:    {
+; V60-NEXT:     if (q0) v1.w += v0.w
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v9:8.uw = vmpy(v0.uh,v5.uh)
@@ -357,19 +357,19 @@ define <64 x i32> @f10(<32 x i32> %a0, <32 x i32> %a1) #0 {
 ; V60-NEXT:     v9:8.w = vadd(v9.uh,v8.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v30.w = vadd(v8.w,v6.w)
+; V60-NEXT:     v31.w = vadd(v8.w,v6.w)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v2.w += vasl(v8.w,r2)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v9.w += vasr(v30.w,r2)
+; V60-NEXT:     v9.w += vasr(v31.w,r2)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v0.w = vadd(v3.w,v9.w)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v3.w = vsub(v0.w,v31.w)
+; V60-NEXT:     v3.w = vsub(v0.w,v1.w)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v1:0 = vcombine(v3,v2)

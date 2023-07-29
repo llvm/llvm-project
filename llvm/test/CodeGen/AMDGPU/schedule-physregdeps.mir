@@ -4,11 +4,15 @@
 # CHECK:     SU(0):   $vgpr0 = V_MOV_B32_e32 $sgpr0, implicit $exec
 # CHECK:       Successors:
 # CHECK-NEXT:    SU(2): Out  Latency=1
+# CHECK-NEXT:    SU(4): Out  Latency=1
 # CHECK-NEXT:    SU(2): Data Latency=1 Reg=$vgpr0
+# CHECK-NEXT:    SU(4): Data Latency=1 Reg=$vgpr0_vgpr1
 # CHECK:     SU(1):   $vgpr1 = V_MOV_B32_e32 $sgpr0, implicit $exec
 # CHECK:       Successors:
 # CHECK-NEXT:    SU(3): Out  Latency=1
+# CHECK-NEXT:    SU(4): Out  Latency=1
 # CHECK-NEXT:    SU(3): Data Latency=1 Reg=$vgpr1
+# CHECK-NEXT:    SU(4): Data Latency=1 Reg=$vgpr0_vgpr1
 # CHECK:     SU(2):   $vgpr0 = V_ADD_CO_U32_e32 $sgpr2, $vgpr0, implicit-def $vcc, implicit $exec
 # CHECK:       Predecessors:
 # CHECK-NEXT:    SU(0): Out  Latency=1
@@ -18,6 +22,7 @@
 # CHECK-NEXT:    SU(4): Data Latency=1 Reg=$vgpr0_vgpr1
 # CHECK-NEXT:    SU(3): Out  Latency=1
 # CHECK-NEXT:    SU(3): Data Latency=1 Reg=$vcc
+# CHECK-NEXT:    SU(4): Anti Latency=0
 # CHECK:     SU(3):   $vgpr1 = V_ADDC_U32_e32 0, $vgpr1, implicit-def dead $vcc, implicit $vcc, implicit $exec
 # CHECK:       Predecessors:
 # CHECK-NEXT:    SU(2): Out  Latency=1
@@ -27,12 +32,19 @@
 # CHECK:       Successors:
 # CHECK-NEXT:    SU(4): Out  Latency=1
 # CHECK-NEXT:    SU(4): Data Latency=1 Reg=$vgpr0_vgpr1
+# CHECK-NEXT:    SU(4): Anti Latency=0
 # CHECK:     SU(4):   $vgpr0_vgpr1 = FLAT_LOAD_DWORDX2 renamable $vgpr0_vgpr1, 0, 0, implicit $exec, implicit $flat_scr
 # CHECK:       Predecessors:
 # CHECK-NEXT:    SU(3): Out  Latency=1
 # CHECK-NEXT:    SU(3): Data Latency=1 Reg=$vgpr0_vgpr1
+# CHECK-NEXT:    SU(3): Anti Latency=0
 # CHECK-NEXT:    SU(2): Out  Latency=1
 # CHECK-NEXT:    SU(2): Data Latency=1 Reg=$vgpr0_vgpr1
+# CHECK-NEXT:    SU(2): Anti Latency=0
+# CHECK-NEXT:    SU(1): Out  Latency=1
+# CHECK-NEXT:    SU(1): Data Latency=1 Reg=$vgpr0_vgpr1
+# CHECK-NEXT:    SU(0): Out  Latency=1
+# CHECK-NEXT:    SU(0): Data Latency=1 Reg=$vgpr0_vgpr1
 # CHECK:       Successors:
 # CHECK-NEXT:    ExitSU: Ord  Latency=3 Artificial
 
