@@ -2068,6 +2068,12 @@ void Clang::AddPPCTargetArgs(const ArgList &Args,
     } else if (V == "vec-extabi") {
       VecExtabi = true;
       A->claim();
+    } else if (V == "elfv1") {
+      ABIName = "elfv1";
+      A->claim();
+    } else if (V == "elfv2") {
+      ABIName = "elfv2";
+      A->claim();
     } else if (V != "altivec")
       // The ppc64 linux abis are all "altivec" abis by default. Accept and ignore
       // the option if given as we don't have backend support for any targets
