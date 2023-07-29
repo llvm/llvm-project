@@ -32,7 +32,7 @@
 // CHECK: clang_rt.crtend.o
 // CHECK: crtn.o
 
-// RUN: not %clang %s -### --target=arm-liteos -rtlib=libgcc -fuse-ld=lld 2>&1 \
+// RUN: %clang %s -### --target=arm-liteos -rtlib=libgcc -fuse-ld=lld 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-RTLIB
 // CHECK-RTLIB: error: invalid runtime library name in argument '-rtlib=libgcc'
 
