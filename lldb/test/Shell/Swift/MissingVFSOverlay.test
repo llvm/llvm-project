@@ -15,7 +15,8 @@ run
 expression 1
 
 # The {{ }} avoids accidentally matching the input script!
-# CHECK: a.out:{{ }}
-# CHECK-SAME: error:
+# CHECK: warning:
+# CHECK-SAME: a.out
+# CHECK: warning:
+# CHECK-SAME: Ignoring missing VFS
 # CHECK-SAME: overlay.yaml
-# CHECK-SAME: not found
