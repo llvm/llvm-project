@@ -242,9 +242,7 @@ public:
   SDValue LowerCall(CallLoweringInfo &CLI,
                     SmallVectorImpl<SDValue> &InVals) const override;
 
-  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op,
-                                  SelectionDAG &DAG) const;
-
+  SDValue LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerOperation(SDValue Op, SelectionDAG &DAG) const override;
   SDValue PerformDAGCombine(SDNode *N, DAGCombinerInfo &DCI) const override;
   void ReplaceNodeResults(SDNode * N,
@@ -409,6 +407,10 @@ enum NodeType : unsigned {
 
   // Return with values from a non-entry function.
   RET_GLUE,
+
+  // Convert a unswizzled wave uniform stack address to an address compatible
+  // with a vector offset for use in stack access.
+  WAVE_ADDRESS,
 
   DWORDADDR,
   FRACT,
