@@ -29,7 +29,7 @@
 
 // llvm-bc and llvm-ll outputs need to match regular suffixes
 // (unfortunately).
-// RUN: %clangxx %s -nocudainc -nocudalib -flto -save-temps -### 2> %t
+// RUN: not %clangxx %s -nocudainc -nocudalib -flto -save-temps -### 2> %t
 // RUN: FileCheck -check-prefix=CHECK-COMPILELINK-SUFFIXES < %t %s
 //
 // CHECK-COMPILELINK-SUFFIXES: "-o" "[[CPP:.*lto-host.*\.cui]]" "-x" "cuda" "{{.*}}lto.cu"
@@ -63,10 +63,10 @@
 // NO-LLVMGOLD-NOT: "-plugin" "{{.*}}{{[/\\]}}LLVMgold.{{dll|dylib|so}}"
 
 // -flto passes along an explicit debugger tuning argument.
-// RUN: %clangxx -nocudainc -nocudalib \
+// RUN: not %clangxx -nocudainc -nocudalib \
 // RUN:          --target=x86_64-unknown-linux -### %s -flto -glldb 2> %t
 // RUN: FileCheck -check-prefix=CHECK-TUNING-LLDB < %t %s
-// RUN: %clangxx -nocudainc -nocudalib \
+// RUN: not %clangxx -nocudainc -nocudalib \
 // RUN:          --target=x86_64-unknown-linux -### %s -flto -g 2> %t
 // RUN: FileCheck -check-prefix=CHECK-NO-TUNING < %t %s
 //
