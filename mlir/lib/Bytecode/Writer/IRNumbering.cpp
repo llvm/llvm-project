@@ -314,22 +314,9 @@ void IRNumberingState::number(Attribute attr) {
 
   // If this attribute will be emitted using the bytecode format, perform a
   // dummy writing to number any nested components.
-  // TODO: We don't allow custom encodings for mutable attributes right now.
-  if (!attr.hasTrait<AttributeTrait::IsMutable>()) {
-    // Try overriding emission with callbacks.
-    for (const auto &callback : config.getAttributeWriterCallbacks()) {
-      NumberingDialectWriter writer(*this);
-      // The client has the ability to override the group name through the
-      // callback.
-      std::optional<StringRef> groupNameOverride;
-      if (succeeded(callback->write(attr, groupNameOverride, writer))) {
-        if (groupNameOverride.has_value())
-          numbering->dialect = &numberDialect(*groupNameOverride);
-        return;
-      }
-    }
-
-    if (const auto *interface = numbering->dialect->interface) {
+  if (const auto *interface = numbering->dialect->interface) {
+    // TODO: We don't allow custom encodings for mutable attributes right now.
+    if (!attr.hasTrait<AttributeTrait::IsMutable>()) {
       NumberingDialectWriter writer(*this);
       if (succeeded(interface->writeAttribute(attr, writer)))
         return;
@@ -477,24 +464,9 @@ void IRNumberingState::number(Type type) {
 
   // If this type will be emitted using the bytecode format, perform a dummy
   // writing to number any nested components.
-  // TODO: We don't allow custom encodings for mutable types right now.
-  if (!type.hasTrait<TypeTrait::IsMutable>()) {
-    // Try overriding emission with callbacks.
-    for (const auto &callback : config.getTypeWriterCallbacks()) {
-      NumberingDialectWriter writer(*this);
-      // The client has the ability to override the group name through the
-      // callback.
-      std::optional<StringRef> groupNameOverride;
-      if (succeeded(callback->write(type, groupNameOverride, writer))) {
-        if (groupNameOverride.has_value())
-          numbering->dialect = &numberDialect(*groupNameOverride);
-        return;
-      }
-    }
-
-    // If this attribute will be emitted using the bytecode format, perform a
-    // dummy writing to number any nested components.
-    if (const auto *interface = numbering->dialect->interface) {
+  if (const auto *interface = numbering->dialect->interface) {
+    // TODO: We don't allow custom encodings for mutable types right now.
+    if (!type.hasTrait<TypeTrait::IsMutable>()) {
       NumberingDialectWriter writer(*this);
       if (succeeded(interface->writeType(type, writer)))
         return;
