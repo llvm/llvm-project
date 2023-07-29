@@ -384,7 +384,7 @@ int main() {
 // CHECK-NEXT:    [[DOTOMP_IS_LAST:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[I4:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[N:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[SAVED_STACK:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[SAVED_STACK:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
 // CHECK-NEXT:    [[__VLA_EXPR0:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[J:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[J11:%.*]] = alloca i32, align 4, addrspace(5)
@@ -462,8 +462,8 @@ int main() {
 // CHECK-NEXT:    store i32 10, ptr [[N_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP14:%.*]] = load i32, ptr [[N_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP15:%.*]] = zext i32 [[TMP14]] to i64
-// CHECK-NEXT:    [[TMP16:%.*]] = call ptr @llvm.stacksave()
-// CHECK-NEXT:    store ptr [[TMP16]], ptr [[SAVED_STACK_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP16:%.*]] = call ptr addrspace(5) @llvm.stacksave.p5()
+// CHECK-NEXT:    store ptr addrspace(5) [[TMP16]], ptr [[SAVED_STACK_ASCAST]], align 4
 // CHECK-NEXT:    [[VLA7:%.*]] = alloca i32, i64 [[TMP15]], align 4, addrspace(5)
 // CHECK-NEXT:    [[VLA7_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA7]] to ptr
 // CHECK-NEXT:    store i64 [[TMP15]], ptr [[__VLA_EXPR0_ASCAST]], align 8
@@ -517,8 +517,8 @@ int main() {
 // CHECK-NEXT:    store i32 [[INC21]], ptr [[J11_ASCAST]], align 4
 // CHECK-NEXT:    br label [[FOR_COND12]], !llvm.loop [[LOOP17:![0-9]+]]
 // CHECK:       for.end22:
-// CHECK-NEXT:    [[TMP31:%.*]] = load ptr, ptr [[SAVED_STACK_ASCAST]], align 8
-// CHECK-NEXT:    call void @llvm.stackrestore(ptr [[TMP31]])
+// CHECK-NEXT:    [[TMP31:%.*]] = load ptr addrspace(5), ptr [[SAVED_STACK_ASCAST]], align 4
+// CHECK-NEXT:    call void @llvm.stackrestore.p5(ptr addrspace(5) [[TMP31]])
 // CHECK-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK:       omp.body.continue:
 // CHECK-NEXT:    br label [[OMP_INNER_FOR_INC:%.*]]
