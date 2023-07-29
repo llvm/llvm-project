@@ -3,7 +3,7 @@
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: not %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=compute_20 -c %s 2>&1 \
+// RUN: not %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=compute_20 -c --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix BAD %s
 // RUN: not %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm20 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix BAD %s
@@ -22,7 +22,7 @@
 
 // RUN: not %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_20 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_52 -c %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm_52 -c --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s
 // RUN: not %clang -### -x hip -target x86_64-linux-gnu --cuda-gpu-arch=gfx908 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix OK %s

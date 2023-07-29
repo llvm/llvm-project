@@ -3,15 +3,15 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: nvptx-registered-target
 
-// RUN: not %clang -### -S -target x86_64-linux-gnu --cuda-gpu-arch=sm_20 %s 2>&1 \
+// RUN: %clang -### -S --target=x86_64-linux-gnu --cuda-gpu-arch=sm_20 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck -check-prefix HOST -check-prefix SM20 %s
-// RUN: %clang -### -S -target x86_64-linux-gnu --cuda-host-only -o foo.s %s 2>&1 \
+// RUN: %clang -### -S --target=x86_64-linux-gnu --cuda-host-only -o foo.s --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck -check-prefix HOST %s
-// RUN: not %clang -### -S -target x86_64-linux-gnu --cuda-gpu-arch=sm_20 \
-// RUN:   --cuda-device-only -o foo.s %s 2>&1 \
+// RUN: %clang -### -S --target=x86_64-linux-gnu --cuda-gpu-arch=sm_20 \
+// RUN:   --cuda-device-only -o foo.s --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck -check-prefix SM20 %s
-// RUN: not %clang -### -S -target x86_64-linux-gnu --cuda-gpu-arch=sm_20 \
-// RUN:   --cuda-gpu-arch=sm_30 --cuda-device-only %s 2>&1 \
+// RUN: %clang -### -S --target=x86_64-linux-gnu --cuda-gpu-arch=sm_20 \
+// RUN:   --cuda-gpu-arch=sm_30 --cuda-device-only --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck -check-prefix SM20 -check-prefix SM30 %s
 
 // HOST-DAG: "-cc1" "-triple" "x86_64-unknown-linux-gnu"

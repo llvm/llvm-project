@@ -59,8 +59,8 @@
 // CHECK-SAMPLE-PROFILE: "-fprofile-sample-use={{.*}}/file.prof"
 
 //
-// RUN: not %clang -### -x cuda -nocudainc -nocudalib \
-// RUN:    -c -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 \
+// RUN: %clang -### -x cuda -nocudainc -nocudalib \
+// RUN:    -c -fprofile-sample-use=%S/Inputs/file.prof --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:  | FileCheck -check-prefix=CHECK-CUDA-SAMPLE-PROFILE %s
 // -fprofile-sample-use should not be passed to the GPU compilation
 // CHECK-CUDA-SAMPLE-PROFILE: "-cc1"
