@@ -1016,10 +1016,23 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
       return nullptr;
     }
 
-    if (isTokenStringLiteral())
-      AssertMessage = ParseUnevaluatedStringLiteralExpression();
-    else if (getLangOpts().CPlusPlus26)
+    bool ParseAsExpression = false;
+    if (getLangOpts().CPlusPlus26) {
+      for (unsigned I = 0;; ++I) {
+        const Token &T = GetLookAheadToken(I);
+        if (T.is(tok::r_paren))
+          break;
+        if (!tok::isStringLiteral(Tok.getKind())) {
+          ParseAsExpression = true;
+          break;
+        }
+      }
+    }
+
+    if (ParseAsExpression)
       AssertMessage = ParseConstantExpressionInExprEvalContext();
+    else if (tok::isStringLiteral(Tok.getKind()))
+      AssertMessage = ParseUnevaluatedStringLiteralExpression();
     else {
       Diag(Tok, diag::err_expected_string_literal)
           << /*Source='static_assert'*/ 1;
