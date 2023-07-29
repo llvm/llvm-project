@@ -401,6 +401,8 @@ public:
   LegalizeResult lowerExtractInsertVectorElt(MachineInstr &MI);
   LegalizeResult lowerShuffleVector(MachineInstr &MI);
   LegalizeResult lowerDynStackAlloc(MachineInstr &MI);
+  LegalizeResult lowerStackSave(MachineInstr &MI);
+  LegalizeResult lowerStackRestore(MachineInstr &MI);
   LegalizeResult lowerExtract(MachineInstr &MI);
   LegalizeResult lowerInsert(MachineInstr &MI);
   LegalizeResult lowerSADDO_SSUBO(MachineInstr &MI);
