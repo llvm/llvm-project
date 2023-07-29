@@ -163,14 +163,14 @@ private:
 RuntimeTableBuilder::RuntimeTableBuilder(
     SemanticsContext &c, RuntimeDerivedTypeTables &t)
     : context_{c}, tables_{t}, derivedTypeSchema_{GetSchema("derivedtype")},
-      componentSchema_{GetSchema("component")}, procPtrSchema_{GetSchema(
-                                                    "procptrcomponent")},
-      valueSchema_{GetSchema("value")}, bindingSchema_{GetSchema(
-                                            bindingDescCompName)},
-      specialSchema_{GetSchema("specialbinding")}, deferredEnum_{GetEnumValue(
-                                                       "deferred")},
-      explicitEnum_{GetEnumValue("explicit")}, lenParameterEnum_{GetEnumValue(
-                                                   "lenparameter")},
+      componentSchema_{GetSchema("component")},
+      procPtrSchema_{GetSchema("procptrcomponent")},
+      valueSchema_{GetSchema("value")},
+      bindingSchema_{GetSchema(bindingDescCompName)},
+      specialSchema_{GetSchema("specialbinding")},
+      deferredEnum_{GetEnumValue("deferred")},
+      explicitEnum_{GetEnumValue("explicit")},
+      lenParameterEnum_{GetEnumValue("lenparameter")},
       scalarAssignmentEnum_{GetEnumValue("scalarassignment")},
       elementalAssignmentEnum_{GetEnumValue("elementalassignment")},
       readFormattedEnum_{GetEnumValue("readformatted")},
@@ -588,8 +588,9 @@ const Symbol *RuntimeTableBuilder::DescribeType(Scope &dtScope) {
           DescribeSpecialGenerics(dtScope, dtScope, derivedTypeSpec)};
       if (derivedTypeSpec) {
         for (auto &ref : FinalsForDerivedTypeInstantiation(*derivedTypeSpec)) {
-          DescribeSpecialProc(specials, *ref, false /*!isAssignment*/, true,
-              std::nullopt, nullptr, derivedTypeSpec, true);
+          DescribeSpecialProc(specials, *ref, /*isAssignment-*/ false,
+              /*isFinal=*/true, std::nullopt, nullptr, derivedTypeSpec,
+              /*isTypeBound=*/true);
         }
         IncorporateDefinedIoGenericInterfaces(specials,
             common::DefinedIo::ReadFormatted, &scope, derivedTypeSpec);
@@ -1039,8 +1040,9 @@ void RuntimeTableBuilder::DescribeSpecialGeneric(const GenericDetails &generic,
           [&](const GenericKind::OtherKind &k) {
             if (k == GenericKind::OtherKind::Assignment) {
               for (auto ref : generic.specificProcs()) {
-                DescribeSpecialProc(specials, *ref, true, false /*!final*/,
-                    std::nullopt, &dtScope, derivedTypeSpec, true);
+                DescribeSpecialProc(specials, *ref, /*isAssignment=*/true,
+                    /*isFinal=*/false, std::nullopt, &dtScope, derivedTypeSpec,
+                    /*isTypeBound=*/true);
               }
             }
           },
@@ -1051,8 +1053,9 @@ void RuntimeTableBuilder::DescribeSpecialGeneric(const GenericDetails &generic,
             case common::DefinedIo::WriteFormatted:
             case common::DefinedIo::WriteUnformatted:
               for (auto ref : generic.specificProcs()) {
-                DescribeSpecialProc(specials, *ref, false, false /*!final*/, io,
-                    &dtScope, derivedTypeSpec, true);
+                DescribeSpecialProc(specials, *ref, /*isAssignment=*/false,
+                    /*isFinal=*/false, io, &dtScope, derivedTypeSpec,
+                    /*isTypeBound=*/true);
               }
               break;
             }
@@ -1076,6 +1079,7 @@ void RuntimeTableBuilder::DescribeSpecialProc(
   if (auto proc{evaluate::characteristics::Procedure::Characterize(
           specific, context_.foldingContext())}) {
     std::uint8_t isArgDescriptorSet{0};
+    std::uint8_t isArgContiguousSet{0};
     int argThatMightBeDescriptor{0};
     MaybeExpr which;
     if (isAssignment) {
@@ -1115,10 +1119,10 @@ void RuntimeTableBuilder::DescribeSpecialProc(
       if (proc->IsElemental()) {
         which = elementalFinalEnum_;
       } else {
-        const auto &typeAndShape{
+        const auto &dummyData{
             std::get<evaluate::characteristics::DummyDataObject>(
-                proc->dummyArguments.at(0).u)
-                .type};
+                proc->dummyArguments.at(0).u)};
+        const auto &typeAndShape{dummyData.type};
         if (typeAndShape.attrs().test(
                 evaluate::characteristics::TypeAndShape::Attr::AssumedRank)) {
           which = assumedRankFinalEnum_;
@@ -1126,8 +1130,16 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         } else {
           which = scalarFinalEnum_;
           if (int rank{evaluate::GetRank(typeAndShape.shape())}; rank > 0) {
-            argThatMightBeDescriptor = 1;
             which = IntExpr<1>(ToInt64(which).value() + rank);
+            if (!proc->dummyArguments[0].CanBePassedViaImplicitInterface()) {
+              argThatMightBeDescriptor = 1;
+            }
+            if (!typeAndShape.attrs().test(evaluate::characteristics::
+                        TypeAndShape::Attr::AssumedShape) ||
+                dummyData.attrs.test(evaluate::characteristics::
+                        DummyDataObject::Attr::Contiguous)) {
+              isArgContiguousSet |= 1;
+            }
           }
         }
       }
@@ -1176,6 +1188,8 @@ void RuntimeTableBuilder::DescribeSpecialProc(
         IntExpr<1>(isArgDescriptorSet));
     AddValue(values, specialSchema_, "istypebound"s,
         IntExpr<1>(isTypeBound ? 1 : 0));
+    AddValue(values, specialSchema_, "isargcontiguousset"s,
+        IntExpr<1>(isArgContiguousSet));
     AddValue(values, specialSchema_, procCompName,
         SomeExpr{evaluate::ProcedureDesignator{specific}});
     // index might already be present in the case of an override
@@ -1219,9 +1233,7 @@ RuntimeDerivedTypeTables BuildRuntimeDerivedTypeTables(
 // dummy argument.  Returns a non-null DeclTypeSpec pointer only if that
 // dtv argument exists and is a derived type.
 static const DeclTypeSpec *GetDefinedIoSpecificArgType(const Symbol &specific) {
-  const Symbol *interface {
-    &specific.GetUltimate()
-  };
+  const Symbol *interface{&specific.GetUltimate()};
   if (const auto *procEntity{specific.detailsIf<ProcEntityDetails>()}) {
     interface = procEntity->procInterface();
   }
