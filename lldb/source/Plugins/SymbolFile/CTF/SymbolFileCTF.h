@@ -225,6 +225,7 @@ private:
   llvm::Expected<lldb::TypeSP> CreateEnum(const CTFEnum &ctf_enum);
   llvm::Expected<lldb::TypeSP> CreateFunction(const CTFFunction &ctf_function);
   llvm::Expected<lldb::TypeSP> CreateRecord(const CTFRecord &ctf_record);
+  llvm::Expected<lldb::TypeSP> CreateForward(const CTFForward &ctf_forward);
 
   llvm::StringRef ReadString(lldb::offset_t offset) const;
 

@@ -163,6 +163,11 @@ struct CTFUnion : public CTFRecord {
       : CTFRecord(eUnion, uid, name, nfields, size, std::move(fields)){};
 };
 
+struct CTFForward : public CTFType {
+  CTFForward(lldb::user_id_t uid, llvm::StringRef name)
+      : CTFType(eForward, uid, name) {}
+};
+
 } // namespace lldb_private
 
 #endif // LLDB_SOURCE_PLUGINS_SYMBOLFILE_CTF_CTFTYPES_H

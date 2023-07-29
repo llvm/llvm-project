@@ -34,7 +34,7 @@
 ! CHECK-EMIT-LLVM-IR-DAG: "-emit-llvm"
 ! CHECK-EMIT-LLVM-IR-DAG: "-o" "{{[^"]*}}.ll"
 
-! RUN: %clang --driver-mode=flang -### -emit-llvm          %s 2>&1 | FileCheck --check-prefixes=ALL,CHECK-EMIT-LLVM-BC %s
+! RUN: not %clang --driver-mode=flang -### -emit-llvm          %s 2>&1 | FileCheck --check-prefixes=ALL,CHECK-EMIT-LLVM-BC %s
 ! CHECK-EMIT-LLVM-BC-DAG: "-emit-llvm-bc"
 ! CHECK-EMIT-LLVM-BC-DAG: "-o" "{{[^"]*}}.bc"
 
