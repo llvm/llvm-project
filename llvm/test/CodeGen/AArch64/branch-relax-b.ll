@@ -6,9 +6,7 @@ define void @relax_b_nospill(i1 zeroext %0) {
 ; CHECK-NEXT:    tbnz w0,
 ; CHECK-SAME:                 LBB0_1
 ; CHECK-NEXT:  // %bb.3:                               // %entry
-; CHECK-NEXT:          adrp    [[SCAVENGED_REGISTER:x[0-9]+]], .LBB0_2
-; CHECK-NEXT:          add     [[SCAVENGED_REGISTER]], [[SCAVENGED_REGISTER]], :lo12:.LBB0_2
-; CHECK-NEXT:          br      [[SCAVENGED_REGISTER]]
+; CHECK-NEXT:          b      .LBB0_2
 ; CHECK-NEXT:  .LBB0_1:                                // %iftrue
 ; CHECK-NEXT:          //APP
 ; CHECK-NEXT:          .zero   2048
@@ -44,9 +42,7 @@ define void @relax_b_spill() {
 ; CHECK-NEXT:     // %bb.4:                               // %entry
 ; CHECK-NEXT:             str     [[SPILL_REGISTER:x[0-9]+]], [sp,
 ; CHECK-SAME:                                                       -16]!
-; CHECK-NEXT:             adrp    [[SPILL_REGISTER]], .LBB1_5
-; CHECK-NEXT:             add     [[SPILL_REGISTER]], [[SPILL_REGISTER]], :lo12:.LBB1_5
-; CHECK-NEXT:             br      [[SPILL_REGISTER]]
+; CHECK-NEXT:             b       .LBB1_5
 ; CHECK-NEXT:     .LBB1_1:                                // %iftrue
 ; CHECK-NEXT:             //APP
 ; CHECK-NEXT:             .zero   2048
@@ -137,23 +133,28 @@ iffalse:
 
 define void @relax_b_x16_taken() {
 ; CHECK-LABEL:    relax_b_x16_taken:                      // @relax_b_x16_taken
-; COM: Pre-commit to record the behavior of relaxing an unconditional
-; COM: branch across which x16 is taken.
+; COM: Since the source of the out-of-range branch is hot and x16 is
+; COM: taken, it makes sense to spill x16 and let the linker insert
+; COM: fixup code for this branch rather than inflating the hot code
+; COM: size by eagerly relaxing the unconditional branch.
 ; CHECK:          // %bb.0:                               // %entry
 ; CHECK-NEXT:             //APP
 ; CHECK-NEXT:             mov     x16, #1
 ; CHECK-NEXT:             //NO_APP
 ; CHECK-NEXT:             cbnz    x16, .LBB2_1
 ; CHECK-NEXT:     // %bb.3:                               // %entry
-; CHECK-NEXT:             adrp    [[SCAVENGED_REGISTER2:x[0-9]+]], .LBB2_2
-; CHECK-NEXT:             add     [[SCAVENGED_REGISTER2]], [[SCAVENGED_REGISTER2]], :lo12:.LBB2_2
-; CHECK-NEXT:             br      [[SCAVENGED_REGISTER2]]
+; CHECK-NEXT:             str     [[SPILL_REGISTER]], [sp,
+; CHECK-SAME:                                                       -16]!
+; CHECK-NEXT:             b       .LBB2_4
 ; CHECK-NEXT:     .LBB2_1:                                // %iftrue
 ; CHECK-NEXT:             //APP
 ; CHECK-NEXT:             .zero   2048
 ; CHECK-NEXT:             //NO_APP
 ; CHECK-NEXT:             ret
-; CHECK-NEXT:     .LBB2_2:                                // %iffalse
+; CHECK-NEXT:     .LBB2_4:                                // %iffalse
+; CHECK-NEXT:             ldr     [[SPILL_REGISTER]], [sp], 
+; CHECK-SAME:                                                        16
+; CHECK-NEXT:     // %bb.2:                               // %iffalse
 ; CHECK-NEXT:             //APP
 ; CHECK-NEXT:             // reg use x16
 ; CHECK-NEXT:             //NO_APP
