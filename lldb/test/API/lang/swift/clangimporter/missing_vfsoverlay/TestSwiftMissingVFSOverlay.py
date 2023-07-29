@@ -15,11 +15,11 @@ class TestSwiftMissingVFSOverlay(TestBase):
     @skipUnlessDarwin
     @swiftTest
     def test(self):
-        """Test that a broken Clang command line option is diagnosed
-           in the expression evaluator"""
+        """This used to be a test for a diagnostic, however,
+        this is no longer an unrecoverable error"""
         self.build()
         lldbutil.run_to_source_breakpoint(
             self, "break here", lldb.SBFileSpec("main.swift"),
             extra_images=["Foo"]
         )
-        self.expect("expr y", error=True, substrs=["IRGen", "overlay.yaml"])
+        self.expect("expr y", substrs=["42"])
