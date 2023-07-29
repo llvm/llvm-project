@@ -3482,22 +3482,21 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(
   SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
   Chain = SP.getValue(1);
   MaybeAlign Alignment = cast<ConstantSDNode>(Tmp3)->getMaybeAlignValue();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const TargetFrameLowering *TFL = ST.getFrameLowering();
+  const TargetFrameLowering *TFL = Subtarget->getFrameLowering();
   unsigned Opc =
     TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp ?
     ISD::ADD : ISD::SUB;
 
   SDValue ScaledSize = DAG.getNode(
       ISD::SHL, dl, VT, Size,
-      DAG.getConstant(ST.getWavefrontSizeLog2(), dl, MVT::i32));
+      DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
 
   Align StackAlign = TFL->getStackAlign();
   Tmp1 = DAG.getNode(Opc, dl, VT, SP, ScaledSize); // Value
   if (Alignment && *Alignment > StackAlign) {
     Tmp1 = DAG.getNode(ISD::AND, dl, VT, Tmp1,
                        DAG.getConstant(-(uint64_t)Alignment->value()
-                                           << ST.getWavefrontSizeLog2(),
+                                           << Subtarget->getWavefrontSizeLog2(),
                                        dl, VT));
   }
 
