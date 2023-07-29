@@ -231,11 +231,11 @@
 // TRIPLE: "-target-cpu" "sm_35"
 
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
-// RUN:          -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 \
+// RUN:          -Xopenmp-target=nvptx64-nvidia-cuda -march=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:          --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc %s 2>&1 \
 // RUN:   | FileCheck %s
 // RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp -fopenmp-targets=nvptx64-nvidia-cuda \
-// RUN:          --offload-arch=sm_52 \
+// RUN:          --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:          --libomptarget-nvptx-bc-path=%S/Inputs/libomptarget/libomptarget-nvptx-test.bc %s 2>&1 \
 // RUN:   | FileCheck %s
 
@@ -336,7 +336,7 @@
 // RUN:     --offload-device-only -E -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-DEVICE-ONLY-PP
 // CHECK-DEVICE-ONLY-PP: "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT:.*]]"], output: "-"
 
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp --offload-arch=sm_52 --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda \
 // RUN:     -foffload-lto %s 2>&1 | FileCheck --check-prefix=CHECK-LTO-LIBRARY %s
 
 // CHECK-LTO-LIBRARY: {{.*}}-lomptarget{{.*}}-lomptarget.devicertl
