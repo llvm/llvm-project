@@ -98,6 +98,17 @@ public:
     return content == rhs.content;
   }
 };
+struct VersionedProperties {
+  // For the sake of testing, assume that this object was associated to version
+  // 1.2 of the test dialect when having only one int value. In the current
+  // version 2.0, the property has two values. We also assume that the class is
+  // upgrade-able if value2 = 0.
+  int value1;
+  int value2;
+  bool operator==(const VersionedProperties &rhs) const {
+    return value1 == rhs.value1 && value2 == rhs.value2;
+  }
+};
 } // namespace test
 
 #define GET_OP_CLASSES

@@ -190,10 +190,10 @@
 // Ensure we output the user's specified name in device-only mode.
 //
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -### \
-// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o %s 2>&1 \
+// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix=D_ONLY %s
 // RUN: %clang -target powerpc64le-ibm-linux-gnu -### --offload-new-driver \
-// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o %s 2>&1 \
+// RUN:        --cuda-gpu-arch=sm_52 --cuda-device-only -c -o foo.o --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix=D_ONLY %s
 // D_ONLY: "foo.o"
 
@@ -219,7 +219,7 @@
 // driver.
 // 
 // RUN: %clang -### -target powerpc64le-ibm-linux-gnu --offload-new-driver \
-// RUN:        -fsyntax-only --offload-arch=sm_70 --offload-arch=sm_52 -c %s 2>&1 \
+// RUN:        -fsyntax-only --offload-arch=sm_70 --offload-arch=sm_52 -c --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix=SYNTAX-ONLY %s
 // SYNTAX-ONLY: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-fsyntax-only"
 // SYNTAX-ONLY: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-fsyntax-only"
@@ -229,7 +229,7 @@
 // Check to ensure that we can use '-save-temps' when operating in RDC-mode.
 //
 // RUN: %clang -### -target powerpc64le-ibm-linux-gnu -save-temps --offload-new-driver \
-// RUN:        -fgpu-rdc --offload-arch=sm_70 --offload-arch=sm_52 -c %s 2>&1 \
+// RUN:        -fgpu-rdc --offload-arch=sm_70 --offload-arch=sm_52 -c --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix=SAVE-TEMPS %s
 // SAVE-TEMPS: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_52"
 // SAVE-TEMPS: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"

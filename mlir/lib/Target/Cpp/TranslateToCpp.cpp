@@ -714,7 +714,7 @@ static LogicalResult printOperation(CppEmitter &emitter,
       // When generating code for an scf.for op, printing a trailing semicolon
       // is handled within the printOperation function.
       bool trailingSemicolon =
-          !isa<scf::IfOp, scf::ForOp, cf::CondBranchOp>(op);
+          !isa<cf::CondBranchOp, emitc::LiteralOp, scf::IfOp, scf::ForOp>(op);
 
       if (failed(emitter.emitOperation(
               op, /*trailingSemicolon=*/trailingSemicolon)))
@@ -733,6 +733,8 @@ CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop)
 
 /// Return the existing or a new name for a Value.
 StringRef CppEmitter::getOrCreateName(Value val) {
+  if (auto literal = dyn_cast_if_present<emitc::LiteralOp>(val.getDefiningOp()))
+    return literal.getValue();
   if (!valueMapper.count(val))
     valueMapper.insert(val, formatv("v{0}", ++valueInScopeCount.top()));
   return *valueMapper.begin(val);
@@ -987,12 +989,17 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
           // Arithmetic ops.
           .Case<arith::ConstantOp>(
               [&](auto op) { return printOperation(*this, op); })
+          .Case<emitc::LiteralOp>([&](auto op) { return success(); })
           .Default([&](Operation *) {
             return op.emitOpError("unable to find printer for op");
           });
 
   if (failed(status))
     return failure();
+
+  if (isa<emitc::LiteralOp>(op))
+    return success();
+
   os << (trailingSemicolon ? ";\n" : "\n");
   return success();
 }
