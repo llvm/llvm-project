@@ -74,10 +74,10 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVKUnary_rnum<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstI<funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1, rnum:$rnum),
               opcodestr, "$rd, $rs1, $rnum">{
-    bits<4> rnum;
-    let Inst{31-25} = funct7;
-    let Inst{24} = 1;
-    let Inst{23-20} = rnum;
+  bits<4> rnum;
+  let imm12{11-5} = funct7;
+  let imm12{4} = 0b1;
+  let imm12{3-0} = rnum;
 }
 
 //===----------------------------------------------------------------------===//
