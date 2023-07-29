@@ -55,11 +55,9 @@ def byteselect : Operand<i32>, TImmLeaf<i32, [{return isUInt<2>(Imm);}]> {
 // Instruction class templates
 //===----------------------------------------------------------------------===//
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
-class RVKUnary<bits<12> imm12_in, bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
-              opcodestr, "$rd, $rs1">{
-  let imm12 = imm12_in;
-}
+class RVKUnary<bits<12> imm12, bits<3> funct3, string opcodestr>
+    : RVInstIUnary<imm12, funct3, OPC_OP_IMM, (outs GPR:$rd), (ins GPR:$rs1),
+                   opcodestr, "$rd, $rs1">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVKByteSelect<bits<5> funct5, string opcodestr>
