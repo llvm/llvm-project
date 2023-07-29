@@ -65,6 +65,10 @@ struct string_view {
     }
 };
 
+constexpr string_view operator+(auto, string_view S) {
+    return S;
+}
+
 constexpr const char g_[] = "long string";
 
 template <typename T, int S>
@@ -79,6 +83,11 @@ struct array {
 };
 
 static_assert(false, string_view("test")); // expected-error {{static assertion failed: test}}
+static_assert(false, "Literal" + string_view("test")); // expected-error {{static assertion failed: test}}
+static_assert(false, L"Wide Literal" + string_view("test")); // expected-error {{static assertion failed: test}}
+static_assert(false, "Wild" "Literal" "Concatenation" + string_view("test")); // expected-error {{static assertion failed: test}}
+static_assert(false, "Wild" "Literal" L"Concatenation" + string_view("test")); // expected-error {{static assertion failed: test}}
+static_assert(false, "Wild" u"Literal" L"Concatenation" + string_view("test")); // expected-error {{unsupported non-standard concatenation of string literals}}
 static_assert(false, string_view("😀")); // expected-error {{static assertion failed: 😀}}
 static_assert(false, string_view(0, nullptr)); // expected-error {{static assertion failed:}}
 static_assert(false, string_view(1, "ABC")); // expected-error {{static assertion failed: A}}
