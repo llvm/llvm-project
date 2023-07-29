@@ -376,7 +376,7 @@ The ``offset`` specifier indicates the starting position for thread assignment.
     granularity down to group since that is the largest granularity allowed by the OS.
 
 KMP_HIDDEN_HELPER_AFFINITY (Windows, Linux)
-"""""""""""""""""""""""""""""
+"""""""""""""""""""""""""""""""""""""""""""
 
 Enables run-time library to bind hidden helper threads to physical processing units.
 This environment variable has the same syntax and semantics as ``KMP_AFFINIY`` but only
@@ -1058,6 +1058,7 @@ value of the ``LIBOMPTARGET_MAP_FORCE_ATOMIC`` environment variable.
 The default behavior of LLVM 14 is to force atomic maps clauses, prior versions
 of LLVM did not.
 
+.. _libomptarget_jit_opt_level:
 
 LIBOMPTARGET_JIT_OPT_LEVEL
 """"""""""""""""""""""""""
@@ -1083,6 +1084,8 @@ assembler in object format for the respective target. The JIT optimization
 pipeline and backend are skipped and only target specific post-processing is
 performed on the object file before it is loaded onto the device.
 
+.. _libomptarget_jit_replacement_module:
+
 LIBOMPTARGET_JIT_REPLACEMENT_MODULE
 """""""""""""""""""""""""""""""""""
 
@@ -1096,6 +1099,7 @@ llvm tools (llvm-objdump), or, simply, by setting the
 :ref:`LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE` or
 :ref:`LIBOMPTARGET_JIT_POST_OPT_IR_MODULE` environment variables.
 
+.. _libomptarget_jit_pre_opt_ir_module:
 
 LIBOMPTARGET_JIT_PRE_OPT_IR_MODULE
 """"""""""""""""""""""""""""""""""
@@ -1107,6 +1111,7 @@ which the LLVM-IR module is written. The module can be the analyzed, and
 transformed and loaded back into the JIT pipeline via
 :ref:`LIBOMPTARGET_JIT_REPLACEMENT_MODULE`.
 
+.. _libomptarget_jit_post_opt_ir_module:
 
 LIBOMPTARGET_JIT_POST_OPT_IR_MODULE
 """""""""""""""""""""""""""""""""""
@@ -1126,7 +1131,7 @@ This environment variable defines a lower bound for the number of threads if a
 combined kernel, e.g., `target teams distribute parallel for`, has insufficient
 parallelism. Especially if the trip count of the loops is lower than the number
 of threads possible times the number of teams (aka. blocks) the device preferes
-(see also :ref:`LIBOMPTARGET_AMDGPU_TEAMS_PER_CU), we will reduce the thread
+(see also :ref:`LIBOMPTARGET_AMDGPU_TEAMS_PER_CU`), we will reduce the thread
 count to increase outer (team/block) parallelism. The thread count will never
 be reduced below the value passed for this environment variable though.
 
@@ -1224,6 +1229,8 @@ This environment variable controls the size of each HSA queue in the AMDGPU
 plugin. The size is the number of AQL packets an HSA queue is expected to hold.
 It is also the number of AQL packets that can be pushed into each queue without
 waiting the driver to process them. The default value is ``512``.
+
+.. _libomptarget_amdgpu_teams_per_cu:
 
 LIBOMPTARGET_AMDGPU_TEAMS_PER_CU
 """"""""""""""""""""""""""""""""
