@@ -92,11 +92,8 @@ class THBitfieldExtract_rii<bits<3> funct3, string opcodestr>
 }
 
 class THRev_r<bits<5> funct5, bits<2> funct2, string opcodestr>
-    : RVInstR4<funct2, 0b001, OPC_CUSTOM_0, (outs GPR:$rd), (ins GPR:$rs1),
-               opcodestr, "$rd, $rs1"> {
-  let rs3 = funct5;
-  let rs2 = 0;
-}
+    : RVInstIUnary<{funct5, funct2, 0b00000}, 0b001, OPC_CUSTOM_0,
+                   (outs GPR:$rd), (ins GPR:$rs1), opcodestr, "$rd, $rs1">;
 }
 
 let Predicates = [HasVendorXTHeadBb, IsRV64], DecoderNamespace = "THeadBb",
