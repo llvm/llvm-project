@@ -1363,11 +1363,11 @@ define amdgpu_kernel void @v_copysign_out_f16_mag_f16_sign_f64(ptr addrspace(1) 
 ; VI-NEXT:    flat_load_dwordx2 v[1:2], v[1:2]
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_mov_b32_e32 v1, s7
-; VI-NEXT:    flat_load_ushort v3, v[0:1]
 ; VI-NEXT:    s_movk_i32 s0, 0x7fff
+; VI-NEXT:    flat_load_ushort v3, v[0:1]
+; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    v_mov_b32_e32 v0, s4
 ; VI-NEXT:    v_mov_b32_e32 v1, s5
-; VI-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; VI-NEXT:    s_waitcnt vmcnt(0)
 ; VI-NEXT:    v_bfi_b32 v2, s0, v3, v2
 ; VI-NEXT:    flat_store_short v[0:1], v2
