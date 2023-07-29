@@ -380,6 +380,7 @@ Clang-Tidy Checks
    `readability-redundant-smartptr-get <readability/redundant-smartptr-get.html>`_, "Yes"
    `readability-redundant-string-cstr <readability/redundant-string-cstr.html>`_, "Yes"
    `readability-redundant-string-init <readability/redundant-string-init.html>`_, "Yes"
+   `readability-reference-to-constructed-temporary <readability/reference-to-constructed-temporary.html>`_,
    `readability-simplify-boolean-expr <readability/simplify-boolean-expr.html>`_, "Yes"
    `readability-simplify-subscript-expr <readability/simplify-subscript-expr.html>`_, "Yes"
    `readability-static-accessed-through-instance <readability/static-accessed-through-instance.html>`_, "Yes"
