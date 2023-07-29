@@ -342,7 +342,9 @@ TYPED_TEST(OptTableTest, FindNearest) {
   EXPECT_EQ(Nearest, "--blurmp=foo");
 
   // Flags should be included and excluded as specified.
-  EXPECT_EQ(1U, T.findNearest("-doopf", Nearest, /*FlagsToInclude=*/OptFlag2));
+  EXPECT_EQ(1U, T.findNearest("-doopf", Nearest,
+                              /*FlagsToInclude=*/OptFlag2,
+                              /*FlagsToExclude=*/0));
   EXPECT_EQ(Nearest, "-doopf2");
   EXPECT_EQ(1U, T.findNearest("-doopf", Nearest,
                               /*FlagsToInclude=*/0,
