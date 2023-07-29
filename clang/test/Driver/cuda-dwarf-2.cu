@@ -1,15 +1,15 @@
 //
-// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -g -O1 --no-cuda-noopt-device-debug 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -g -O1 --no-cuda-noopt-device-debug --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 | \
 // RUN:   FileCheck %s -check-prefix DEBUG_DIRECTIVES
-// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -g -O3 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -g -O3 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 | \
 // RUN:   FileCheck %s -check-prefix DEBUG_DIRECTIVES
-// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -g -O3 --no-cuda-noopt-device-debug 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -g -O3 --no-cuda-noopt-device-debug --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 | \
 // RUN:   FileCheck %s -check-prefix DEBUG_DIRECTIVES
-// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -g0 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -g0 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 | \
 // RUN:   FileCheck %s -check-prefix NO_DEBUG
-// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -ggdb0 -O3 --cuda-noopt-device-debug 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -ggdb0 -O3 --cuda-noopt-device-debug --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 | \
 // RUN:   FileCheck %s -check-prefix NO_DEBUG
-// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -gline-directives-only -O2 --cuda-noopt-device-debug 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 %s -gline-directives-only -O2 --cuda-noopt-device-debug --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda 2>&1 | \
 // RUN:   FileCheck %s -check-prefix DEBUG_DIRECTIVES
 
 // NO_DEBUG-NOT: warning: debug
