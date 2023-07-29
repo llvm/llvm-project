@@ -4,13 +4,13 @@
 
 // Simple compilation case. Compile device-side to PTX assembly and make sure
 // we use it on the host side.
-// RUN: %clang -### -target x86_64-linux-gnu -c %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix NOLINK %s
 
 // Typical compilation + link case.
-// RUN: %clang -### -target x86_64-linux-gnu %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix LINK %s
@@ -22,7 +22,7 @@
 // RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
 
 // Verify that --cuda-device-only disables host-side compilation and linking.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix NOHOST -check-prefix NOLINK %s
 
