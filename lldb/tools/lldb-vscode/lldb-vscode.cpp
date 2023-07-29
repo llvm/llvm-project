@@ -2687,13 +2687,72 @@ void request_stackTrace(const llvm::json::Object &request) {
     const auto startFrame = GetUnsigned(arguments, "startFrame", 0);
     const auto levels = GetUnsigned(arguments, "levels", 0);
     const auto endFrame = (levels == 0) ? INT64_MAX : (startFrame + levels);
+    auto totalFrames = thread.GetNumFrames();
+
+    // This will always return an invalid thread when
+    // libBacktraceRecording.dylib is not loaded or if there is no extended
+    // backtrace.
+    lldb::SBThread queue_backtrace_thread =
+        thread.GetExtendedBacktraceThread("libdispatch");
+    if (queue_backtrace_thread.IsValid()) {
+      // One extra frame as a label to mark the enqueued thread.
+      totalFrames += queue_backtrace_thread.GetNumFrames() + 1;
+    }
+
+    // This will always return an invalid thread when there is no exception in
+    // the current thread.
+    lldb::SBThread exception_backtrace_thread =
+        thread.GetCurrentExceptionBacktrace();
+    if (exception_backtrace_thread.IsValid()) {
+      // One extra frame as a label to mark the exception thread.
+      totalFrames += exception_backtrace_thread.GetNumFrames() + 1;
+    }
+
     for (uint32_t i = startFrame; i < endFrame; ++i) {
-      auto frame = thread.GetFrameAtIndex(i);
+      lldb::SBFrame frame;
+      std::string prefix;
+      if (i < thread.GetNumFrames()) {
+        frame = thread.GetFrameAtIndex(i);
+      } else if (queue_backtrace_thread.IsValid() &&
+                 i < (thread.GetNumFrames() +
+                      queue_backtrace_thread.GetNumFrames() + 1)) {
+        if (i == thread.GetNumFrames()) {
+          const uint32_t thread_idx =
+              queue_backtrace_thread.GetExtendedBacktraceOriginatingIndexID();
+          const char *queue_name = queue_backtrace_thread.GetQueueName();
+          auto name = llvm::formatv("Enqueued from {0} (Thread {1})",
+                                    queue_name, thread_idx);
+          stackFrames.emplace_back(
+              llvm::json::Object{{"id", thread.GetThreadID() + 1},
+                                 {"name", name},
+                                 {"presentationHint", "label"}});
+          continue;
+        }
+        frame = queue_backtrace_thread.GetFrameAtIndex(
+            i - thread.GetNumFrames() - 1);
+      } else if (exception_backtrace_thread.IsValid()) {
+        if (i == thread.GetNumFrames() +
+                     (queue_backtrace_thread.IsValid()
+                          ? queue_backtrace_thread.GetNumFrames() + 1
+                          : 0)) {
+          stackFrames.emplace_back(
+              llvm::json::Object{{"id", thread.GetThreadID() + 2},
+                                 {"name", "Original Exception Backtrace"},
+                                 {"presentationHint", "label"}});
+          continue;
+        }
+
+        frame = exception_backtrace_thread.GetFrameAtIndex(
+            i - thread.GetNumFrames() -
+            (queue_backtrace_thread.IsValid()
+                 ? queue_backtrace_thread.GetNumFrames() + 1
+                 : 0));
+      }
       if (!frame.IsValid())
         break;
       stackFrames.emplace_back(CreateStackFrame(frame));
     }
-    const auto totalFrames = thread.GetNumFrames();
+
     body.try_emplace("totalFrames", totalFrames);
   }
   body.try_emplace("stackFrames", std::move(stackFrames));

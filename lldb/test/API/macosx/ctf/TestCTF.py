@@ -78,3 +78,14 @@ class TestCTF(TestBase):
             "target variable foo.f",
             substrs=["(void (*)(int)) foo.f = 0x0000000000000000"],
         )
+
+        self.expect(
+            "type lookup MyEnum",
+            substrs=[
+                "enum MyEnum {",
+                "eOne,",
+                "eTwo,",
+                "eThree",
+                "}",
+            ],
+        )

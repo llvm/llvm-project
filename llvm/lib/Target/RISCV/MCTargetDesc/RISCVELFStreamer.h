@@ -22,9 +22,9 @@ class RISCVELFStreamer : public MCELFStreamer {
 
   enum ElfMappingSymbol { EMS_None, EMS_Instructions, EMS_Data };
 
-  int64_t MappingSymbolCounter;
+  int64_t MappingSymbolCounter = 0;
   DenseMap<const MCSection *, ElfMappingSymbol> LastMappingSymbols;
-  ElfMappingSymbol LastEMS;
+  ElfMappingSymbol LastEMS = EMS_None;
 
 public:
   RISCVELFStreamer(MCContext &C, std::unique_ptr<MCAsmBackend> MAB,
