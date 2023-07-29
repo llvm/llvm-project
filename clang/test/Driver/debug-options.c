@@ -262,7 +262,7 @@
 // RUN: %clang -### -fdebug-types-section -target wasm32-unknown-unknown %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=FDTS %s
 //
-// RUN: not %clang -### -fdebug-types-section -target x86_64-apple-darwin %s 2>&1 \
+// RUN: %clang -### -fdebug-types-section -target x86_64-apple-darwin %s 2>&1 \
 // RUN:        | FileCheck -check-prefix=FDTSE %s
 //
 // RUN: %clang -### -fdebug-types-section -fno-debug-types-section -target x86_64-apple-darwin %s 2>&1 \
@@ -417,7 +417,7 @@
 // NOMACRO-NOT: "-debug-info-macro"
 //
 // RUN: %clang -### -gdwarf-5 -gembed-source %s 2>&1 | FileCheck -check-prefix=GEMBED_5 %s
-// RUN: not %clang -### -gdwarf-2 -gembed-source %s 2>&1 | FileCheck -check-prefix=GEMBED_2 %s
+// RUN: %clang -### -gdwarf-2 -gembed-source %s 2>&1 | FileCheck -check-prefix=GEMBED_2 %s
 // RUN: %clang -### -gdwarf-5 -gno-embed-source %s 2>&1 | FileCheck -check-prefix=NOGEMBED_5 %s
 // RUN: %clang -### -gdwarf-2 -gno-embed-source %s 2>&1 | FileCheck -check-prefix=NOGEMBED_2 %s
 //
@@ -440,12 +440,12 @@
 // RUN: %clang -### -c -gdwarf-5 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
 // RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
 // RUN: %clang -### -c -gdwarf-3 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
-// RUN: not %clang -### -c -gdwarf-2 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_VER %s
+// RUN: %clang -### -c -gdwarf-2 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_VER %s
 // RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64 -target x86_64 %s 2>&1 \
 // RUN:       | FileCheck -check-prefix=GDWARF64_ON %s
-// RUN: not %clang -### -c -gdwarf-4 -gdwarf64 -target i386-linux-gnu %s 2>&1 \
+// RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target i386-linux-gnu %s 2>&1 \
 // RUN:       | FileCheck -check-prefix=GDWARF64_32ARCH %s
-// RUN: not %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64-apple-darwin %s 2>&1 \
+// RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64-apple-darwin %s 2>&1 \
 // RUN:       | FileCheck -check-prefix=GDWARF64_ELF %s
 //
 // GDWARF64_ON:  "-gdwarf64"

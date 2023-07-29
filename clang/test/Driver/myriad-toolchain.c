@@ -24,7 +24,7 @@
 // NO_SLASH_INCLUDE: "-isysroot" "/yow"
 // NO_SLASH_INCLUDE-NOT: "-internal-isystem" "/yow/include"
 
-// RUN: not %clang -### --target=what-myriad %s 2>&1 | FileCheck %s -check-prefix=BAD_ARCH
+// RUN: %clang -### --target=what-myriad %s 2>&1 | FileCheck %s -check-prefix=BAD_ARCH
 // BAD_ARCH: the target architecture 'what' is not supported by the target 'myriad'
 
 // Ensure that '-target shave' picks a different compiler.

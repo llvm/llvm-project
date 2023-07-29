@@ -2,23 +2,23 @@
 // compilation.
 //
 //
-// XRUN: not %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 \
+// XRUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 \
 // XRUN:   -fprofile-generate %s 2>&1 | \
 // XRUN:   FileCheck --check-prefixes=CHECK,PROF %s
 //
-// RUN: not %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 \
 // RUN:   -fprofile-instr-generate %s 2>&1 | \
 // RUN:   FileCheck --check-prefixes=CHECK,PROF %s
 //
-// RUN: not %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 \
 // RUN:   -coverage %s 2>&1 | \
 // RUN:   FileCheck --check-prefixes=CHECK,GCOV %s
 //
-// RUN: not %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20 \
 // RUN:   -ftest-coverage %s 2>&1 | \
 // RUN:   FileCheck --check-prefixes=CHECK,GCOV %s
 //
-// RUN: not %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20   \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_20   \
 // RUN:   -fprofile-instr-generate -fcoverage-mapping %s 2>&1 | \
 // RUN:   FileCheck --check-prefixes=CHECK,PROF %s
 //
