@@ -58,7 +58,7 @@
 // NOGCC-NOT: warning: {{.*}} avr-libc
 // NOGCC-NOT: warning: {{.*}} data section address
 
-// RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s -fuse-ld=avrld 2>&1 | FileCheck --check-prefix=NOLD %s
+// RUN: not %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s -fuse-ld=avrld 2>&1 | FileCheck --check-prefix=NOLD %s
 // NOLD: error: invalid linker
 
 // RUN: %clang -### --target=avr --sysroot=%S/Inputs/basic_avr_tree -mmcu=atmega328 %s -fuse-ld=%S/Inputs/basic_avr_tree/usr/bin/ld.lld 2>&1 | FileCheck --check-prefix=LLD %s

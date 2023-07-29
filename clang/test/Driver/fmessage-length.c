@@ -5,5 +5,5 @@
 // RUN: %clang -### -c %s -fmessage-length=0 2>&1 | FileCheck --check-prefix=ZERO %s
 // ZERO-NOT: "-fmessage-length=0"
 
-// RUN: %clang -### -c %s -fmessage-length=nan 2>&1 | FileCheck --check-prefix=ERR %s
+// RUN: not %clang -### -c %s -fmessage-length=nan 2>&1 | FileCheck --check-prefix=ERR %s
 // ERR: error: invalid argument 'nan' to -fmessage-length=
