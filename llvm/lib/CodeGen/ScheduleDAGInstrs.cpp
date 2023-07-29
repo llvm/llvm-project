@@ -223,9 +223,9 @@ void ScheduleDAGInstrs::addSchedBarrierDeps() {
     // uses all the registers that are livein to the successor blocks.
     for (const MachineBasicBlock *Succ : BB->successors()) {
       for (const auto &LI : Succ->liveins()) {
-        // TODO: Use LI.LaneMask to refine this.
-        for (MCRegUnit Unit : TRI->regunits(LI.PhysReg)) {
-          if (!Uses.contains(Unit))
+        for (MCRegUnitMaskIterator U(LI.PhysReg, TRI); U.isValid(); ++U) {
+          auto [Unit, Mask] = *U;
+          if ((Mask & LI.LaneMask).any() && !Uses.contains(Unit))
             Uses.insert(PhysRegSUOper(&ExitSU, -1, Unit));
         }
       }
