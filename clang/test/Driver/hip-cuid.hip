@@ -14,7 +14,7 @@
 
 // Check random CUID generator.
 
-// RUN: not %clang -### -x hip \
+// RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
@@ -25,7 +25,7 @@
 
 // Check fixed CUID.
 
-// RUN: not %clang -### -x hip \
+// RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
@@ -36,7 +36,7 @@
 
 // Check fixed CUID override -fuse-cuid.
 
-// RUN: not %clang -### -x hip \
+// RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \
@@ -47,7 +47,7 @@
 
 // Check hash CUID generator.
 
-// RUN: not %clang -### -x hip \
+// RUN: %clang -### -x hip \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --offload-arch=gfx900 \
 // RUN:   --offload-arch=gfx906 \

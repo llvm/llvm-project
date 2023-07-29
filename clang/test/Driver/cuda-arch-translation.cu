@@ -28,7 +28,7 @@
 // RUN: | FileCheck -check-prefixes=CUDA,SM61 %s
 // RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_62 --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CUDA,SM62 %s
-// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_70 %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=sm_70 --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=CUDA,SM70 %s
 // RUN: %clang -x hip -### --target=x86_64-linux-gnu -c --cuda-gpu-arch=gfx600 -nogpuinc -nogpulib %s 2>&1 \
 // RUN: | FileCheck -check-prefixes=HIP,GFX600 %s
