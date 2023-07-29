@@ -283,30 +283,40 @@ void AArch64InstrInfo::insertIndirectBranch(MachineBasicBlock &MBB,
   };
 
   RS->enterBasicBlockEnd(MBB);
-  Register Reg = RS->FindUnusedReg(&AArch64::GPR64RegClass);
-
-  // If there's a free register, manually insert the indirect branch using it.
-  if (Reg != AArch64::NoRegister) {
-    buildIndirectBranch(Reg, NewDestBB);
+  // If X16 is unused, we can rely on the linker to insert a range extension
+  // thunk if NewDestBB is out of range of a single B instruction.
+  constexpr Register Reg = AArch64::X16;
+  if (!RS->isRegUsed(Reg)) {
+    insertUnconditionalBranch(MBB, &NewDestBB, DL);
     RS->setRegUsed(Reg);
     return;
   }
 
-  // Otherwise, spill and use X16. This briefly moves the stack pointer, making
-  // it incompatible with red zones.
+  // If there's a free register and it's worth inflating the code size,
+  // manually insert the indirect branch.
+  Register Scavenged = RS->FindUnusedReg(&AArch64::GPR64RegClass);
+  if (Scavenged != AArch64::NoRegister &&
+      MBB.getSectionID() == MBBSectionID::ColdSectionID) {
+    buildIndirectBranch(Scavenged, NewDestBB);
+    RS->setRegUsed(Scavenged);
+    return;
+  }
+
+  // Note: Spilling X16 briefly moves the stack pointer, making it incompatible
+  // with red zones.
   AArch64FunctionInfo *AFI = MBB.getParent()->getInfo<AArch64FunctionInfo>();
   if (!AFI || AFI->hasRedZone().value_or(true))
     report_fatal_error(
         "Unable to insert indirect branch inside function that has red zone");
 
-  Reg = AArch64::X16;
+  // Otherwise, spill X16 and defer range extension to the linker.
   BuildMI(MBB, MBB.end(), DL, get(AArch64::STRXpre))
       .addReg(AArch64::SP, RegState::Define)
       .addReg(Reg)
       .addReg(AArch64::SP)
       .addImm(-16);
 
-  buildIndirectBranch(Reg, RestoreBB);
+  BuildMI(MBB, MBB.end(), DL, get(AArch64::B)).addMBB(&RestoreBB);
 
   BuildMI(RestoreBB, RestoreBB.end(), DL, get(AArch64::LDRXpost))
       .addReg(AArch64::SP, RegState::Define)
