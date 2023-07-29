@@ -21,7 +21,7 @@
 // MCPU-SYNTACORE-SCR1-MAX: "-target-abi" "ilp32"
 
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=native | FileCheck -check-prefix=MCPU-NATIVE %s
+// RUN: not %clang --target=riscv64 -### -c %s 2>&1 -mcpu=native | FileCheck -check-prefix=MCPU-NATIVE %s
 // MCPU-NATIVE-NOT: "-target-cpu" "native"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=rocket-rv32 | FileCheck -check-prefix=MTUNE-ROCKET32 %s
@@ -184,8 +184,8 @@
 
 // Check failed cases
 
-// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv321 | FileCheck -check-prefix=FAIL-MCPU-NAME %s
+// RUN: not %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv321 | FileCheck -check-prefix=FAIL-MCPU-NAME %s
 // FAIL-MCPU-NAME: error: unsupported argument 'generic-rv321' to option '-mcpu='
 
-// RUN: %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv32 -march=rv64i | FileCheck -check-prefix=MISMATCH-ARCH %s
+// RUN: not %clang --target=riscv32 -### -c %s 2>&1 -mcpu=generic-rv32 -march=rv64i | FileCheck -check-prefix=MISMATCH-ARCH %s
 // MISMATCH-ARCH: cpu 'generic-rv32' does not support rv64
