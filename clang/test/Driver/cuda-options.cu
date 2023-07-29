@@ -4,25 +4,25 @@
 
 // Simple compilation case. Compile device-side to PTX assembly and make sure
 // we use it on the host side.
-// RUN: not %clang -### -target x86_64-linux-gnu -c %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu -c --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix NOLINK %s
 
 // Typical compilation + link case.
-// RUN: not %clang -### -target x86_64-linux-gnu %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix HOST -check-prefix INCLUDES-DEVICE \
 // RUN:    -check-prefix LINK %s
 
 // Verify that --cuda-host-only disables device-side compilation, but doesn't
 // disable host-side compilation/linking.
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-host-only %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-host-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
 // RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
 
 // Verify that --cuda-device-only disables host-side compilation and linking.
-// RUN: not %clang -### -target x86_64-linux-gnu --cuda-device-only %s 2>&1 \
+// RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix DEVICE -check-prefix DEVICE-NOSAVE \
 // RUN:    -check-prefix NOHOST -check-prefix NOLINK %s
 
@@ -30,12 +30,12 @@
 // --cuda-device-only wins.
 
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-device-only \
-// RUN:    --cuda-host-only %s 2>&1 \
+// RUN:    --cuda-host-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
 // RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
 
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-compile-host-device \
-// RUN:    --cuda-host-only %s 2>&1 \
+// RUN:    --cuda-host-only --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix NODEVICE -check-prefix HOST \
 // RUN:    -check-prefix NOINCLUDES-DEVICE -check-prefix LINK %s
 
@@ -132,7 +132,7 @@
 // RUN:   --cuda-gpu-arch=sm_35 --cuda-gpu-arch=sm_30 \
 // RUN:   --no-cuda-gpu-arch=all \
 // RUN:   --cuda-gpu-arch=sm_50 \
-// RUN:   -c %s 2>&1 \
+// RUN:   -c --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefixes NOARCH-SM30,NOARCH-SM35,ARCH-SM50 %s
 
 // g) There's no --cuda-gpu-arch=all
