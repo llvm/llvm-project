@@ -36,7 +36,7 @@
 // DEVICE-LINK: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[INPUT:.+]]"], output: "a.out"
 
 // RUN: %clang -### -target x86_64-linux-gnu -nocudalib --offload-new-driver \
-// RUN:   --offload-arch=sm_35 --offload-arch=sm_70 %s 2>&1 \
+// RUN:   --offload-arch=sm_35 --offload-arch=sm_70 --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix GPU-BINARY %s
 
 // GPU-BINARY: fatbinary{{.*}}"--create" "{{.*}}.fatbin"

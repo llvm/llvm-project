@@ -3,7 +3,7 @@
 // REQUIRES: nvptx-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=compute_20 -c %s 2>&1 \
+// RUN: %clang -### --target=x86_64-linux-gnu --cuda-gpu-arch=compute_20 -c --cuda-path=%S/Inputs/CUDA_80/usr/local/cuda %s 2>&1 \
 // RUN: | FileCheck -check-prefix BAD %s
 // RUN: %clang -### -target x86_64-linux-gnu --cuda-gpu-arch=sm20 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix BAD %s
