@@ -62,7 +62,7 @@
 //
 // Test the generated arguments default to a value with no architecture. 
 //
-// RUN: %clang -target nvptx64-nvidia-cuda -### %s 2>&1 \
+// RUN: %clang --target=nvptx64-nvidia-cuda -### --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck -check-prefix=DEFAULT %s
 
 //      DEFAULT: -cc1" "-triple" "nvptx64-nvidia-cuda" "-S" {{.*}} "-target-cpu" "sm_35" "-target-feature" "+ptx{{[0-9]+}}" {{.*}} "-o" "[[PTX:.+]].s"
