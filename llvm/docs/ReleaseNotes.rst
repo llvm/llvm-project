@@ -102,8 +102,11 @@ Changes to TableGen
 * Named arguments are supported. Arguments can be specified in the form of
   ``name=value``.
 
-Changes to Interprocedural Optimizations
+Changes to Optimizations
 ----------------------------------------
+
+* :ref:`llvm.assume <int_assume>` now recognizes certain
+  floating-point tests. e.g. ``__builtin_assume(!isnan(x))``
 
 Changes to the AArch64 Backend
 ------------------------------
