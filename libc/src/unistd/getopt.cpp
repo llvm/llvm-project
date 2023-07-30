@@ -22,6 +22,9 @@
 namespace __llvm_libc {
 
 template <typename T> struct RefWrapper {
+  RefWrapper() = delete;
+  constexpr RefWrapper(T *p) : ptr{p} {}
+  constexpr RefWrapper(const RefWrapper &) = default;
   RefWrapper &operator=(const RefWrapper &) = default;
   operator T &() { return *ptr; }
   T &get() { return *ptr; }
