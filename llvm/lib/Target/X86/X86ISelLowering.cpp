@@ -56194,19 +56194,19 @@ X86TargetLowering::getConstraintType(StringRef Constraint) const {
 /// This object must already have been set up with the operand type
 /// and the current alternative constraint selected.
 TargetLowering::ConstraintWeight
-  X86TargetLowering::getSingleConstraintMatchWeight(
-    AsmOperandInfo &info, const char *constraint) const {
-  ConstraintWeight weight = CW_Invalid;
-  Value *CallOperandVal = info.CallOperandVal;
-    // If we don't have a value, we can't do a match,
-    // but allow it at the lowest weight.
+X86TargetLowering::getSingleConstraintMatchWeight(
+    AsmOperandInfo &Info, const char *Constraint) const {
+  ConstraintWeight Wt = CW_Invalid;
+  Value *CallOperandVal = Info.CallOperandVal;
+  // If we don't have a value, we can't do a match,
+  // but allow it at the lowest weight.
   if (!CallOperandVal)
     return CW_Default;
-  Type *type = CallOperandVal->getType();
+  Type *Ty = CallOperandVal->getType();
   // Look at the constraint type.
-  switch (*constraint) {
+  switch (*Constraint) {
   default:
-    weight = TargetLowering::getSingleConstraintMatchWeight(info, constraint);
+    Wt = TargetLowering::getSingleConstraintMatchWeight(Info, Constraint);
     [[fallthrough]];
   case 'R':
   case 'q':
@@ -56219,121 +56219,112 @@ TargetLowering::ConstraintWeight
   case 'D':
   case 'A':
     if (CallOperandVal->getType()->isIntegerTy())
-      weight = CW_SpecificReg;
+      Wt = CW_SpecificReg;
     break;
   case 'f':
   case 't':
   case 'u':
-    if (type->isFloatingPointTy())
-      weight = CW_SpecificReg;
+    if (Ty->isFloatingPointTy())
+      Wt = CW_SpecificReg;
     break;
   case 'y':
-    if (type->isX86_MMXTy() && Subtarget.hasMMX())
-      weight = CW_SpecificReg;
+    if (Ty->isX86_MMXTy() && Subtarget.hasMMX())
+      Wt = CW_SpecificReg;
     break;
   case 'Y':
-    if (StringRef(constraint).size() != 2)
+    if (StringRef(Constraint).size() != 2)
       break;
-    switch (constraint[1]) {
-      default:
+    switch (Constraint[1]) {
+    default:
+      return CW_Invalid;
+    // XMM0
+    case 'z':
+      if (((Ty->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
+          ((Ty->getPrimitiveSizeInBits() == 256) && Subtarget.hasAVX()) ||
+          ((Ty->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512()))
+        return CW_SpecificReg;
+      return CW_Invalid;
+    // Conditional OpMask regs (AVX512)
+    case 'k':
+      if ((Ty->getPrimitiveSizeInBits() == 64) && Subtarget.hasAVX512())
+        return CW_Register;
+      return CW_Invalid;
+    // Any MMX reg
+    case 'm':
+      if (Ty->isX86_MMXTy() && Subtarget.hasMMX())
+        return Wt;
+      return CW_Invalid;
+    // Any SSE reg when ISA >= SSE2, same as 'x'
+    case 'i':
+    case 't':
+    case '2':
+      if (!Subtarget.hasSSE2())
         return CW_Invalid;
-      // XMM0
-      case 'z':
-        if (((type->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
-            ((type->getPrimitiveSizeInBits() == 256) && Subtarget.hasAVX()) ||
-            ((type->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512()))
-          return CW_SpecificReg;
-        return CW_Invalid;
-      // Conditional OpMask regs (AVX512)
-      case 'k':
-        if ((type->getPrimitiveSizeInBits() == 64) && Subtarget.hasAVX512())
-          return CW_Register;
-        return CW_Invalid;
-      // Any MMX reg
-      case 'm':
-        if (type->isX86_MMXTy() && Subtarget.hasMMX())
-          return weight;
-        return CW_Invalid;
-      // Any SSE reg when ISA >= SSE2, same as 'x'
-      case 'i':
-      case 't':
-      case '2':
-        if (!Subtarget.hasSSE2())
-          return CW_Invalid;
-        break;
+      break;
     }
     break;
   case 'v':
-    if ((type->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512())
-      weight = CW_Register;
+    if ((Ty->getPrimitiveSizeInBits() == 512) && Subtarget.hasAVX512())
+      Wt = CW_Register;
     [[fallthrough]];
   case 'x':
-    if (((type->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
-        ((type->getPrimitiveSizeInBits() == 256) && Subtarget.hasAVX()))
-      weight = CW_Register;
+    if (((Ty->getPrimitiveSizeInBits() == 128) && Subtarget.hasSSE1()) ||
+        ((Ty->getPrimitiveSizeInBits() == 256) && Subtarget.hasAVX()))
+      Wt = CW_Register;
     break;
   case 'k':
     // Enable conditional vector operations using %k<#> registers.
-    if ((type->getPrimitiveSizeInBits() == 64) && Subtarget.hasAVX512())
-      weight = CW_Register;
+    if ((Ty->getPrimitiveSizeInBits() == 64) && Subtarget.hasAVX512())
+      Wt = CW_Register;
     break;
   case 'I':
-    if (auto *C = dyn_cast<ConstantInt>(info.CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(Info.CallOperandVal))
       if (C->getZExtValue() <= 31)
-        weight = CW_Constant;
-    }
+        Wt = CW_Constant;
     break;
   case 'J':
-    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal))
       if (C->getZExtValue() <= 63)
-        weight = CW_Constant;
-    }
+        Wt = CW_Constant;
     break;
   case 'K':
-    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal))
       if ((C->getSExtValue() >= -0x80) && (C->getSExtValue() <= 0x7f))
-        weight = CW_Constant;
-    }
+        Wt = CW_Constant;
     break;
   case 'L':
-    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal))
       if ((C->getZExtValue() == 0xff) || (C->getZExtValue() == 0xffff))
-        weight = CW_Constant;
-    }
+        Wt = CW_Constant;
     break;
   case 'M':
-    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal))
       if (C->getZExtValue() <= 3)
-        weight = CW_Constant;
-    }
+        Wt = CW_Constant;
     break;
   case 'N':
-    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal))
       if (C->getZExtValue() <= 0xff)
-        weight = CW_Constant;
-    }
+        Wt = CW_Constant;
     break;
   case 'G':
   case 'C':
-    if (isa<ConstantFP>(CallOperandVal)) {
-      weight = CW_Constant;
-    }
+    if (isa<ConstantFP>(CallOperandVal))
+      Wt = CW_Constant;
     break;
   case 'e':
-    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal))
       if ((C->getSExtValue() >= -0x80000000LL) &&
           (C->getSExtValue() <= 0x7fffffffLL))
-        weight = CW_Constant;
-    }
+        Wt = CW_Constant;
     break;
   case 'Z':
-    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal)) {
+    if (auto *C = dyn_cast<ConstantInt>(CallOperandVal))
       if (C->getZExtValue() <= 0xffffffff)
-        weight = CW_Constant;
-    }
+        Wt = CW_Constant;
     break;
   }
-  return weight;
+  return Wt;
 }
 
 /// Try to replace an X constraint, which matches anything, with another that
