@@ -1,4 +1,4 @@
-//===--- LeftRightQualifierAlignmentFixer.cpp -------------------*- C++--*-===//
+//===--- QualifierAlignmentFixer.cpp ----------------------------*- C++--*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 ///
 /// \file
-/// This file implements LeftRightQualifierAlignmentFixer, a TokenAnalyzer that
+/// This file implements QualifierAlignmentFixer, a TokenAnalyzer that
 /// enforces either left or right const depending on the style.
 ///
 //===----------------------------------------------------------------------===//
@@ -625,3 +625,4 @@ bool LeftRightQualifierAlignmentFixer::isPossibleMacro(const FormatToken *Tok) {
 
 } // namespace format
 } // namespace clang
+
