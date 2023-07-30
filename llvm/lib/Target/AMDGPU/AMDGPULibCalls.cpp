@@ -500,7 +500,7 @@ bool AMDGPULibCalls::sincosUseNative(CallInst *aCI, const FuncInfo &FInfo) {
 bool AMDGPULibCalls::useNative(CallInst *aCI) {
   CI = aCI;
   Function *Callee = aCI->getCalledFunction();
-  if (!Callee)
+  if (!Callee || aCI->isNoBuiltin())
     return false;
 
   FuncInfo FInfo;
@@ -593,7 +593,7 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
   this->CI = CI;
   Function *Callee = CI->getCalledFunction();
   // Ignore indirect calls.
-  if (!Callee)
+  if (!Callee || CI->isNoBuiltin())
     return false;
 
   IRBuilder<> B(CI);
