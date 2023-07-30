@@ -42,7 +42,7 @@
 // RUN:   FileCheck --check-prefix=KEEP-NONE %s
 
 // -pg -fomit-frame-pointer => error.
-// RUN: %clang -### -S -fomit-frame-pointer -pg %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-OMIT-FP-PG %s
+// RUN: not %clang -### -S -fomit-frame-pointer -pg %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-OMIT-FP-PG %s
 // RUN: %clang -### -S -fomit-frame-pointer -fno-omit-frame-pointer -pg %s 2>&1 | FileCheck -check-prefix=CHECK-MIX-NO-OMIT-FP-PG %s
 // CHECK-NO-MIX-OMIT-FP-PG: '-fomit-frame-pointer' not allowed with '-pg'
 // CHECK-MIX-NO-OMIT-FP-PG-NOT: '-fomit-frame-pointer' not allowed with '-pg'
@@ -161,7 +161,7 @@
 // RUN:   FileCheck --check-prefix=KEEP-ALL %s
 // RUN: %clang -### --target=riscv64-linux-android -O1 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
-// RUN: %clang -### --target=riscv64-linux-android -mbig-endian -O1 -S %s 2>&1 | \
+// RUN: not %clang -### --target=riscv64-linux-android -mbig-endian -O1 -S %s 2>&1 | \
 // RUN:   FileCheck --check-prefix=KEEP-NON-LEAF %s
 void f0() {}
 void f1() { f0(); }
