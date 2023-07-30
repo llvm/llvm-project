@@ -129,6 +129,11 @@ New checks
   Detects implicit conversions between pointers of different levels of
   indirection.
 
+- New :doc:`modernize-use-constraints
+  <clang-tidy/checks/modernize/use-constraints>` check.
+
+  Replace ``enable_if`` with C++20 requires clauses.
+
 - New :doc:`performance-enum-size
   <clang-tidy/checks/performance/enum-size>` check.
 
