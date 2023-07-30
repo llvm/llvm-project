@@ -140,6 +140,24 @@ matchesAnyListedName(llvm::ArrayRef<StringRef> NameList) {
       new MatchesAnyListedNameMatcher(NameList));
 }
 
+// Predicate that verify if statement is not identical to one bound to ID node.
+struct NotIdenticalStatementsPredicate {
+  bool
+  operator()(const clang::ast_matchers::internal::BoundNodesMap &Nodes) const;
+
+  std::string ID;
+  ::clang::DynTypedNode Node;
+  ASTContext *Context;
+};
+
+// Checks if statement is identical (utils::areStatementsIdentical) to one bound
+// to ID node.
+AST_MATCHER_P(Stmt, isStatementIdenticalToBoundNode, std::string, ID) {
+  NotIdenticalStatementsPredicate Predicate{
+      ID, ::clang::DynTypedNode::create(Node), &(Finder->getASTContext())};
+  return Builder->removeBindings(Predicate);
+}
+
 } // namespace clang::tidy::matchers
 
 #endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_UTILS_MATCHERS_H
