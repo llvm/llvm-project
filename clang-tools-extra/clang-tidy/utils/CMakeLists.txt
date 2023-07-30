@@ -17,6 +17,7 @@ add_clang_library(clangTidyUtils
   IncludeInserter.cpp
   IncludeSorter.cpp
   LexerUtils.cpp
+  Matchers.cpp
   NamespaceAliaser.cpp
   OptionsUtils.cpp
   RenamerClangTidyCheck.cpp

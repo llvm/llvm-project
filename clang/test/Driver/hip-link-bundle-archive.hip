@@ -42,14 +42,14 @@
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   -nogpulib %s -fgpu-rdc -L%t -l:libNonArchive.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=NONARCHIVE %s
-// RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
+// RUN: not %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   -nogpulib %s -fgpu-rdc -L%t libNonArchive.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=NONARCHIVE %s
 
 // Check if a file does not exist, it is not unbundled.
 
-// RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
+// RUN: not %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   -nogpulib %s -fgpu-rdc %t/NoneExist.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=NONE %s
