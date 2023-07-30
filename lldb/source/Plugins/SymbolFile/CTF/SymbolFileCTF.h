@@ -93,7 +93,7 @@ public:
     return std::nullopt;
   }
 
-  bool CompleteType(CompilerType &compiler_type) override { return false; }
+  bool CompleteType(CompilerType &compiler_type) override;
 
   uint32_t ResolveSymbolContext(const lldb_private::Address &so_addr,
                                 lldb::SymbolContextItem resolve_scope,
@@ -246,6 +246,11 @@ private:
   std::optional<ctf_header_t> m_header;
 
   std::vector<std::unique_ptr<CTFType>> m_ctf_types;
+
+  /// To complete types, we need a way to map (imcomplete) compiler types back
+  /// to parsed CTF types.
+  llvm::DenseMap<lldb::opaque_compiler_type_t, const CTFType *>
+      m_compiler_types;
 
   llvm::DenseMap<lldb::user_id_t, lldb::TypeSP> m_types;
 
