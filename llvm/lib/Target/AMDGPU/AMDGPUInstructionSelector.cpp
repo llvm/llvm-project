@@ -72,6 +72,13 @@ void AMDGPUInstructionSelector::setupMF(MachineFunction &MF, GISelKnownBits *KB,
   InstructionSelector::setupMF(MF, KB, CoverageInfo, PSI, BFI);
 }
 
+// Return the wave level SGPR base address if this is a wave address.
+static Register getWaveAddress(const MachineInstr *Def) {
+  return Def->getOpcode() == AMDGPU::G_AMDGPU_WAVE_ADDRESS
+             ? Def->getOperand(1).getReg()
+             : Register();
+}
+
 bool AMDGPUInstructionSelector::isVCC(Register Reg,
                                       const MachineRegisterInfo &MRI) const {
   // The verifier is oblivious to s1 being a valid value for wavesize registers.
@@ -3365,6 +3372,33 @@ bool AMDGPUInstructionSelector::selectWaveAddress(MachineInstr &MI) const {
   return true;
 }
 
+bool AMDGPUInstructionSelector::selectStackRestore(MachineInstr &MI) const {
+  Register SrcReg = MI.getOperand(0).getReg();
+  if (!RBI.constrainGenericRegister(SrcReg, AMDGPU::SReg_32RegClass, *MRI))
+    return false;
+
+  MachineInstr *DefMI = MRI->getVRegDef(SrcReg);
+  Register SP =
+      Subtarget->getTargetLowering()->getStackPointerRegisterToSaveRestore();
+  Register WaveAddr = getWaveAddress(DefMI);
+  MachineBasicBlock *MBB = MI.getParent();
+  const DebugLoc &DL = MI.getDebugLoc();
+
+  if (!WaveAddr) {
+    WaveAddr = MRI->createVirtualRegister(&AMDGPU::SReg_32RegClass);
+    BuildMI(*MBB, MI, DL, TII.get(AMDGPU::S_LSHR_B32), WaveAddr)
+      .addReg(SrcReg)
+      .addImm(Subtarget->getWavefrontSizeLog2())
+      .setOperandDead(3); // Dead scc
+  }
+
+  BuildMI(*MBB, &MI, DL, TII.get(AMDGPU::COPY), SP)
+    .addReg(WaveAddr);
+
+  MI.eraseFromParent();
+  return true;
+}
+
 bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   if (I.isPHI())
     return selectPHI(I);
@@ -3503,6 +3537,8 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return true;
   case AMDGPU::G_AMDGPU_WAVE_ADDRESS:
     return selectWaveAddress(I);
+  case AMDGPU::G_STACKRESTORE:
+    return selectStackRestore(I);
   default:
     return selectImpl(I, *CoverageInfo);
   }
@@ -4362,13 +4398,6 @@ bool AMDGPUInstructionSelector::isUnneededShiftMask(const MachineInstr &MI,
 
   const APInt &LHSKnownZeros = KB->getKnownZeroes(MI.getOperand(1).getReg());
   return (LHSKnownZeros | *RHS).countr_one() >= ShAmtBits;
-}
-
-// Return the wave level SGPR base address if this is a wave address.
-static Register getWaveAddress(const MachineInstr *Def) {
-  return Def->getOpcode() == AMDGPU::G_AMDGPU_WAVE_ADDRESS
-             ? Def->getOperand(1).getReg()
-             : Register();
 }
 
 InstructionSelector::ComplexRendererFns
