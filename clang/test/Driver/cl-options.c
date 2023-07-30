@@ -196,20 +196,20 @@
 // PR24003: -mframe-pointer=all
 // PR24003: -Os
 
-// RUN: not %clang_cl --target=i686-pc-win32 -Werror /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_2 %s
+// RUN: %clang_cl --target=i686-pc-win32 -Werror -Wno-msvc-not-found /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_2 %s
 // Oy_2: -mframe-pointer=all
 // Oy_2: -O2
 
-// RUN: not %clang_cl --target=aarch64-pc-windows-msvc -Werror /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_aarch64 %s
+// RUN: %clang_cl --target=aarch64-pc-windows-msvc -Werror -Wno-msvc-not-found /Oy- /O2 -### -- %s 2>&1 | FileCheck -check-prefix=Oy_aarch64 %s
 // Oy_aarch64: -mframe-pointer=non-leaf
 // Oy_aarch64: -O2
 
-// RUN: not %clang_cl --target=i686-pc-win32 -Werror /O2 /O2 -### -- %s 2>&1 | FileCheck -check-prefix=O2O2 %s
+// RUN: %clang_cl --target=i686-pc-win32 -Werror -Wno-msvc-not-found /O2 /O2 -### -- %s 2>&1 | FileCheck -check-prefix=O2O2 %s
 // O2O2: "-O2"
 
 // RUN: %clang_cl /Zs -Werror /Oy -- %s 2>&1
 
-// RUN: not %clang_cl --target=i686-pc-win32 -Werror /Oy- -### -- %s 2>&1 | FileCheck -check-prefix=Oy_ %s
+// RUN: %clang_cl --target=i686-pc-win32 -Werror -Wno-msvc-not-found /Oy- -### -- %s 2>&1 | FileCheck -check-prefix=Oy_ %s
 // Oy_: -mframe-pointer=all
 
 // RUN: %clang_cl /Qvec -### -- %s 2>&1 | FileCheck -check-prefix=Qvec %s
