@@ -36,6 +36,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -4108,31 +4109,29 @@ public:
   }
 };
 
-/// Populate the IC worklist from a function, by walking it in depth-first
-/// order and adding all reachable code to the worklist.
+/// Populate the IC worklist from a function, by walking it in reverse
+/// post-order and adding all reachable code to the worklist.
 ///
 /// This has a couple of tricks to make the code faster and more powerful.  In
 /// particular, we constant fold and DCE instructions as we go, to avoid adding
 /// them to the worklist (this significantly speeds up instcombine on code where
 /// many instructions are dead or constant).  Additionally, if we find a branch
 /// whose condition is a known constant, we only visit the reachable successors.
-static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
-                                          const TargetLibraryInfo *TLI,
-                                          InstructionWorklist &ICWorklist) {
+static bool
+prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
+                              const TargetLibraryInfo *TLI,
+                              InstructionWorklist &ICWorklist,
+                              ReversePostOrderTraversal<BasicBlock *> &RPOT) {
   bool MadeIRChange = false;
-  SmallPtrSet<BasicBlock *, 32> Visited;
-  SmallVector<BasicBlock*, 256> Worklist;
-  Worklist.push_back(&F.front());
+  SmallPtrSet<BasicBlock *, 32> LiveBlocks;
+  LiveBlocks.insert(&F.front());
 
   SmallVector<Instruction *, 128> InstrsForInstructionWorklist;
   DenseMap<Constant *, Constant *> FoldedConstants;
   AliasScopeTracker SeenAliasScopes;
 
-  do {
-    BasicBlock *BB = Worklist.pop_back_val();
-
-    // We have now visited this block!  If we've already been here, ignore it.
-    if (!Visited.insert(BB).second)
+  for (BasicBlock *BB : RPOT) {
+    if (!LiveBlocks.count(BB))
       continue;
 
     for (Instruction &Inst : llvm::make_early_inc_range(*BB)) {
@@ -4178,8 +4177,8 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
       }
     }
 
-    // Recursively visit successors.  If this is a branch or switch on a
-    // constant, only visit the reachable successor.
+    // If this is a branch or switch on a constant, mark only the single
+    // live successor. Otherwise assume all successors are live.
     Instruction *TI = BB->getTerminator();
     if (BranchInst *BI = dyn_cast<BranchInst>(TI); BI && BI->isConditional()) {
       if (isa<UndefValue>(BI->getCondition()))
@@ -4188,7 +4187,7 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
       if (auto *Cond = dyn_cast<ConstantInt>(BI->getCondition())) {
         bool CondVal = Cond->getZExtValue();
         BasicBlock *ReachableBB = BI->getSuccessor(!CondVal);
-        Worklist.push_back(ReachableBB);
+        LiveBlocks.insert(ReachableBB);
         continue;
       }
     } else if (SwitchInst *SI = dyn_cast<SwitchInst>(TI)) {
@@ -4196,19 +4195,20 @@ static bool prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
         // Switch on undef is UB.
         continue;
       if (auto *Cond = dyn_cast<ConstantInt>(SI->getCondition())) {
-        Worklist.push_back(SI->findCaseValue(Cond)->getCaseSuccessor());
+        LiveBlocks.insert(SI->findCaseValue(Cond)->getCaseSuccessor());
         continue;
       }
     }
 
-    append_range(Worklist, successors(TI));
-  } while (!Worklist.empty());
+    for (BasicBlock *SuccBB : successors(TI))
+      LiveBlocks.insert(SuccBB);
+  }
 
   // Remove instructions inside unreachable blocks. This prevents the
   // instcombine code from having to deal with some bad special cases, and
   // reduces use counts of instructions.
   for (BasicBlock &BB : F) {
-    if (Visited.count(&BB))
+    if (LiveBlocks.count(&BB))
       continue;
 
     unsigned NumDeadInstInBB;
@@ -4262,6 +4262,8 @@ static bool combineInstructionsOverFunction(
           AC.registerAssumption(Assume);
       }));
 
+  ReversePostOrderTraversal<BasicBlock *> RPOT(&F.front());
+
   // Lower dbg.declare intrinsics otherwise their value may be clobbered
   // by instcombiner.
   bool MadeIRChange = false;
@@ -4290,7 +4292,7 @@ static bool combineInstructionsOverFunction(
     LLVM_DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                       << F.getName() << "\n");
 
-    MadeIRChange |= prepareICWorklistFromFunction(F, DL, &TLI, Worklist);
+    MadeIRChange |= prepareICWorklistFromFunction(F, DL, &TLI, Worklist, RPOT);
 
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
                         ORE, BFI, PSI, DL, LI);
