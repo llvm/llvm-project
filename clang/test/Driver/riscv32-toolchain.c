@@ -8,9 +8,9 @@
 
 // Test interaction with -fuse-ld=lld, if lld is available.
 // RUN: %clang -### %s --target=riscv32 \
-// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree -fuse-ld=lld 2>&1 \
+// RUN:   --gcc-toolchain=%S/Inputs/basic_riscv32_tree -fuse-ld=lld -B%S/Inputs/lld 2>&1 \
 // RUN:   | FileCheck -check-prefix=LLD %s
-// LLD: {{(error: invalid linker name in argument '-fuse-ld=lld')|(ld.lld)}}
+// LLD: ld.lld
 
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib

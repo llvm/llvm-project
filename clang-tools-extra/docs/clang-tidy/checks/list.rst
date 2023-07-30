@@ -93,6 +93,7 @@ Clang-Tidy Checks
    `bugprone-forwarding-reference-overload <bugprone/forwarding-reference-overload.html>`_,
    `bugprone-implicit-widening-of-multiplication-result <bugprone/implicit-widening-of-multiplication-result.html>`_, "Yes"
    `bugprone-inaccurate-erase <bugprone/inaccurate-erase.html>`_, "Yes"
+   `bugprone-inc-dec-in-conditions <bugprone/inc-dec-in-conditions.html>`_,
    `bugprone-incorrect-roundings <bugprone/incorrect-roundings.html>`_,
    `bugprone-infinite-loop <bugprone/infinite-loop.html>`_,
    `bugprone-integer-division <bugprone/integer-division.html>`_,
@@ -297,6 +298,7 @@ Clang-Tidy Checks
    `modernize-unary-static-assert <modernize/unary-static-assert.html>`_, "Yes"
    `modernize-use-auto <modernize/use-auto.html>`_, "Yes"
    `modernize-use-bool-literals <modernize/use-bool-literals.html>`_, "Yes"
+   `modernize-use-constraints <modernize/use-constraints.html>`_, "Yes"
    `modernize-use-default-member-init <modernize/use-default-member-init.html>`_, "Yes"
    `modernize-use-emplace <modernize/use-emplace.html>`_, "Yes"
    `modernize-use-equals-default <modernize/use-equals-default.html>`_, "Yes"

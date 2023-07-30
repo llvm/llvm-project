@@ -37,7 +37,7 @@
 // DEBIAN_X86_64_M32-SAME: {{^}}[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/32"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-L[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../lib32"
 
-// RUN: %clangxx %s -### --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
+// RUN: not %clangxx %s -### --target=x86_64-unknown-linux-gnu --sysroot=%S/Inputs/debian_multiarch_tree \
 // RUN:   -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin -resource-dir=%S/Inputs/resource_dir --stdlib=platform --rtlib=platform \
 // RUN:   --gcc-install-dir=%S/Inputs/debian_multiarch_tree/usr/lib/gcc/x86_64-linux-gnu 2>&1 | FileCheck %s --check-prefix=INVALID
 // INVALID: error: '{{.*}}/usr/lib/gcc/x86_64-linux-gnu' does not contain a GCC installation

@@ -311,7 +311,7 @@ class CVInstSIMDRR<bits<5> funct5, bit F, bit funct1, bits<3> funct3,
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
   let Inst{6-0} = opcode.Value;
-  let DecoderNamespace = "CoreVSIMD";
+  let DecoderNamespace = "XCVsimd";
 }
 
 class CVInstSIMDRI<bits<5> funct5, bit F, bits<3> funct3, RISCVOpcode opcode,
@@ -329,7 +329,7 @@ class CVInstSIMDRI<bits<5> funct5, bit F, bits<3> funct3, RISCVOpcode opcode,
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
   let Inst{6-0} = opcode.Value;
-  let DecoderNamespace = "CoreVSIMD";
+  let DecoderNamespace = "XCVsimd";
 }
 
 class CVSIMDRR<bits<5> funct5, bit F, bit funct1, bits<3> funct3,

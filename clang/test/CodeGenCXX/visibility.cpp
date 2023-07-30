@@ -123,6 +123,39 @@ namespace test72 {
   // CHECK-NEXT: @_ZN6test723fooIlE4var2IiEE = linkonce_odr global i32 0
 }
 
+namespace test73 {
+  struct HIDDEN foo {};
+  DEFAULT foo da, db, dc, dd;
+  HIDDEN foo ha, hb, hc, hd;
+  template<foo *z> DEFAULT int var;
+
+  template int var<&da>;
+  template int DEFAULT var<&db>;
+  template int HIDDEN var<&dc>;
+  template int var<&ha>;
+  template int DEFAULT var<&hb>;
+  template int HIDDEN var<&hc>;
+
+  int use() { return var<&dd> + var<&hd>; }
+  // CHECK:      @_ZN6test733varIXadL_ZNS_2daEEEEE = weak_odr hidden global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2dbEEEEE = weak_odr global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2dcEEEEE = weak_odr hidden global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2haEEEEE = weak_odr hidden global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2hbEEEEE = weak_odr global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2hcEEEEE = weak_odr hidden global i32 0
+  // CHECK:      @_ZN6test733varIXadL_ZNS_2ddEEEEE = linkonce_odr hidden global i32 0
+  // CHECK-NEXT: @_ZN6test733varIXadL_ZNS_2hdEEEEE = linkonce_odr hidden global i32 0
+
+  // CHECK-HIDDEN:      @_ZN6test733varIXadL_ZNS_2daEEEEE = weak_odr hidden global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2dbEEEEE = weak_odr global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2dcEEEEE = weak_odr hidden global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2haEEEEE = weak_odr hidden global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2hbEEEEE = weak_odr global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2hcEEEEE = weak_odr hidden global i32 0
+  // CHECK-HIDDEN:      @_ZN6test733varIXadL_ZNS_2ddEEEEE = linkonce_odr hidden global i32 0
+  // CHECK-HIDDEN-NEXT: @_ZN6test733varIXadL_ZNS_2hdEEEEE = linkonce_odr hidden global i32 0
+}
+
 // CHECK: @_ZN5Test425VariableInHiddenNamespaceE = hidden global i32 10
 // CHECK: @_ZN5Test71aE = hidden global
 // CHECK: @_ZN5Test71bE = global
@@ -977,25 +1010,44 @@ namespace test51 {
   // template. Note that is a case where we disagree with gcc, it produces
   // a default symbol.
 
-  struct HIDDEN foo {
-  };
-  DEFAULT foo x, y, z;
+  struct HIDDEN foo {};
+  DEFAULT foo da, db, dc, dd;
+  HIDDEN foo ha, hb, hc, hd;
   template<foo *z>
   void DEFAULT zed() {
   }
-  template void zed<&x>();
-  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1xEEEEEvv
-  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1xEEEEEvv
+  template void zed<&da>();
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2daEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2daEEEEEvv(
 
-  template void HIDDEN zed<&y>();
-  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1yEEEEEvv(
-  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_1yEEEEEvv(
+  template void DEFAULT zed<&db>();
+  // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2dbEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2dbEEEEEvv(
+
+  template void HIDDEN zed<&dc>();
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2dcEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2dcEEEEEvv(
+
+  template void zed<&ha>();
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2haEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2haEEEEEvv(
+
+  template void DEFAULT zed<&hb>();
+  // CHECK-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2hbEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr void @_ZN6test513zedIXadL_ZNS_2hbEEEEEvv(
+
+  template void HIDDEN zed<&hc>();
+  // CHECK-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hcEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define weak_odr hidden void @_ZN6test513zedIXadL_ZNS_2hcEEEEEvv(
 
   void use() {
-    zed<&z>();
+    zed<&dd>();
+    zed<&hd>();
   }
-  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_1zEEEEEvv(
-  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_1zEEEEEvv(
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
+  // CHECK-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2ddEEEEEvv(
+  // CHECK-HIDDEN-LABEL: define linkonce_odr hidden void @_ZN6test513zedIXadL_ZNS_2hdEEEEEvv(
 }
 
 namespace test52 {
