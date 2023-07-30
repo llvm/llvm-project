@@ -93,7 +93,8 @@ private:
   bool fold_sqrt(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
 
   // sin/cos
-  bool fold_sincos(CallInst * CI, IRBuilder<> &B, AliasAnalysis * AA);
+  bool fold_sincos(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo,
+                   AliasAnalysis *AA);
 
   // __read_pipe/__write_pipe
   bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
@@ -667,7 +668,7 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
     if ((getArgType(FInfo) == AMDGPULibFunc::F32 ||
          getArgType(FInfo) == AMDGPULibFunc::F64)
         && (FInfo.getPrefix() == AMDGPULibFunc::NOPFX))
-      return fold_sincos(CI, B, AA);
+      return fold_sincos(CI, B, FInfo, AA);
 
     break;
   case AMDGPULibFunc::EI_READ_PIPE_2:
@@ -1206,11 +1207,7 @@ bool AMDGPULibCalls::fold_sqrt(CallInst *CI, IRBuilder<> &B,
 
 // fold sin, cos -> sincos.
 bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
-                                 AliasAnalysis *AA) {
-  AMDGPULibFunc fInfo;
-  if (!AMDGPULibFunc::parse(CI->getCalledFunction()->getName(), fInfo))
-    return false;
-
+                                 const FuncInfo &fInfo, AliasAnalysis *AA) {
   assert(fInfo.getId() == AMDGPULibFunc::EI_SIN ||
          fInfo.getId() == AMDGPULibFunc::EI_COS);
   bool const isSin = fInfo.getId() == AMDGPULibFunc::EI_SIN;
@@ -1237,8 +1234,9 @@ bool AMDGPULibCalls::fold_sincos(CallInst *CI, IRBuilder<> &B,
   }
 
   Module *M = CI->getModule();
-  fInfo.setId(isSin ? AMDGPULibFunc::EI_COS : AMDGPULibFunc::EI_SIN);
-  std::string const PairName = fInfo.mangle();
+  FuncInfo PartnerInfo(isSin ? AMDGPULibFunc::EI_COS : AMDGPULibFunc::EI_SIN,
+                       fInfo);
+  const std::string PairName = PartnerInfo.mangle();
 
   CallInst *UI = nullptr;
   for (User* U : CArgVal->users()) {
