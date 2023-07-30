@@ -205,9 +205,9 @@
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
 // RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mhvx -mno-hvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx=v69 -mhvx-length=128b -mno-hvx \
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mhvx=v69 -mhvx-length=128b -mno-hvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mhvx -mhvx-qfloat -mno-hvx \
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx -mhvx-qfloat -mno-hvx \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-OFF %s
 
 // Float
@@ -239,20 +239,20 @@
 
 // CHECK-NEEDS-HVX: error: {{.*}} requires HVX, use -mhvx/-mhvx= to enable it
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv66 -mhvx-length=64b \
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mv66 -mhvx-length=64b \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-NEEDS-HVX %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv66 -mhvx-length=128b \
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mv66 -mhvx-length=128b \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-NEEDS-HVX %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mhvx-qfloat \
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx-qfloat \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-NEEDS-HVX %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mv69 -mhvx-ieee-fp \
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mv69 -mhvx-ieee-fp \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-NEEDS-HVX %s
 
 // Invalid HVX length:
 
 // CHECK-HVX-BAD-LENGTH: error: unsupported argument '{{.*}}' to option '-mhvx-length='
 
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx -mhvx-length=B \
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mhvx -mhvx-length=B \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-BAD-LENGTH %s
-// RUN: %clang -c %s -### -target hexagon-unknown-elf -mhvx -mhvx-length=128 \
+// RUN: not %clang -c %s -### --target=hexagon-unknown-elf -mhvx -mhvx-length=128 \
 // RUN:  2>&1 | FileCheck -check-prefix=CHECK-HVX-BAD-LENGTH %s

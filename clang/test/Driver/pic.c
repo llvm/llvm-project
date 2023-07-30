@@ -209,7 +209,7 @@
 // Darwin gets even more special with '-mdynamic-no-pic'. This flag is only
 // valid on Darwin, and it's behavior is very strange but needs to remain
 // consistent for compatibility.
-// RUN: %clang -c %s -target i386-unknown-unknown -mdynamic-no-pic -### 2>&1 \
+// RUN: not %clang -c %s --target=i386-unknown-unknown -mdynamic-no-pic -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NON-DARWIN-DYNAMIC-NO-PIC
 // RUN: %clang -c %s -target i386-apple-darwin -mdynamic-no-pic -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-DYNAMIC-NO-PIC-32
@@ -320,7 +320,7 @@
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL
 // RUN: %clang -fpic -c --target=s390x-linux-gnu -mpic-data-is-text-relative %s -### \
 // RUN:   2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL
-// RUN: %clang -fpic -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
+// RUN: not %clang -fpic -c --target=arm-arm-none-eabi -mno-pic-data-is-text-relative %s \
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-PIC-DATA-TEXT-REL-NON-SYSTEMZ
-// RUN: %clang -fpic -c --target=arm-arm-none-eabi -mpic-data-is-text-relative %s \
+// RUN: not %clang -fpic -c --target=arm-arm-none-eabi -mpic-data-is-text-relative %s \
 // RUN:   -### 2>&1 | FileCheck %s --check-prefix=CHECK-PIC-DATA-TEXT-REL-NON-SYSTEMZ

@@ -45,19 +45,19 @@
 // RUN: %clang -target armv7a--none-eabi -c %s -### -mharden-sls=retbr,blr,retbr 2>&1 | \
 // RUN: FileCheck %s --check-prefix=RETBR-ON --check-prefix=BLR-ON --check-prefix=NOCOMDAT-OFF
 
-// RUN: %clang -target aarch64 -c %s -### -mharden-sls=retbr,blr,r 2>&1 | \
+// RUN: not %clang --target=aarch64 -c %s -### -mharden-sls=retbr,blr,r 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
-// RUN: %clang -target armv7a--none-eabi -c %s -### -mharden-sls=retbr,blr,r 2>&1 | \
-// RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
-
-// RUN: %clang -target aarch64 -c %s -### -mharden-sls=none,blr 2>&1 | \
-// RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
-// RUN: %clang -target armv7a--none-eabi -c %s -### -mharden-sls=none,blr 2>&1 | \
+// RUN: not %clang --target=armv7a--none-eabi -c %s -### -mharden-sls=retbr,blr,r 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
 
-// RUN: %clang -target aarch64 -c %s -### -mharden-sls=all,-blr 2>&1 | \
+// RUN: not %clang --target=aarch64 -c %s -### -mharden-sls=none,blr 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
-// RUN: %clang -target armv7a--none-eabi -c %s -### -mharden-sls=all,-blr 2>&1 | \
+// RUN: not %clang --target=armv7a--none-eabi -c %s -### -mharden-sls=none,blr 2>&1 | \
+// RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
+
+// RUN: not %clang --target=aarch64 -c %s -### -mharden-sls=all,-blr 2>&1 | \
+// RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
+// RUN: not %clang --target=armv7a--none-eabi -c %s -### -mharden-sls=all,-blr 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
 
 // RUN: %clang -target aarch64 -c %s -### -mharden-sls=retbr,blr,nocomdat 2>&1 | \
@@ -75,19 +75,19 @@
 // RUN: %clang -target armv7a--none-eabi -c %s -### -mharden-sls=retbr,blr,retbr,nocomdat 2>&1 | \
 // RUN: FileCheck %s --check-prefix=RETBR-ON --check-prefix=BLR-ON --check-prefix=NOCOMDAT
 
-// RUN: %clang -target aarch64 -c %s -### -mharden-sls=retbr,comdat,r 2>&1 | \
+// RUN: not %clang --target=aarch64 -c %s -### -mharden-sls=retbr,comdat,r 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
-// RUN: %clang -target armv7a--none-eabi -c %s -### -mharden-sls=retbr,comdat,r 2>&1 | \
-// RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
-
-// RUN: %clang -target aarch64 -c %s -### -mharden-sls=none,comdat 2>&1 | \
-// RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
-// RUN: %clang -target armv7a--none-eabi -c %s -### -mharden-sls=none,comdat 2>&1 | \
+// RUN: not %clang --target=armv7a--none-eabi -c %s -### -mharden-sls=retbr,comdat,r 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
 
-// RUN: %clang -target aarch64 -c %s -### -mharden-sls=all,-comdat 2>&1 | \
+// RUN: not %clang --target=aarch64 -c %s -### -mharden-sls=none,comdat 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
-// RUN: %clang -target armv7a--none-eabi -c %s -### -mharden-sls=all,-comdat 2>&1 | \
+// RUN: not %clang --target=armv7a--none-eabi -c %s -### -mharden-sls=none,comdat 2>&1 | \
+// RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
+
+// RUN: not %clang --target=aarch64 -c %s -### -mharden-sls=all,-comdat 2>&1 | \
+// RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
+// RUN: not %clang --target=armv7a--none-eabi -c %s -### -mharden-sls=all,-comdat 2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-SLS-SPEC
 
 // RETBR-OFF-NOT: "harden-sls-retbr"
@@ -101,19 +101,19 @@
 
 // BAD-SLS-SPEC: unsupported argument '{{[^']+}}' to option '-mharden-sls='
 
-// RUN: %clang -target armv6a--none-eabi -c %s -### -mharden-sls=all 2>&1 | \
+// RUN: not %clang --target=armv6a--none-eabi -c %s -### -mharden-sls=all 2>&1 | \
 // RUN: FileCheck %s --check-prefix=SLS-NOT-SUPPORTED
 
-// RUN: %clang -target armv6a--none-eabi -c %s -### -mharden-sls=retbr 2>&1 | \
+// RUN: not %clang --target=armv6a--none-eabi -c %s -### -mharden-sls=retbr 2>&1 | \
 // RUN: FileCheck %s --check-prefix=SLS-NOT-SUPPORTED
 
-// RUN: %clang -target armv6a--none-eabi -c %s -### -mharden-sls=blr 2>&1 | \
+// RUN: not %clang --target=armv6a--none-eabi -c %s -### -mharden-sls=blr 2>&1 | \
 // RUN: FileCheck %s --check-prefix=SLS-NOT-SUPPORTED
 
-// RUN: %clang -target armv7r--none-eabi -c %s -### -mharden-sls=all 2>&1 | \
+// RUN: not %clang --target=armv7r--none-eabi -c %s -### -mharden-sls=all 2>&1 | \
 // RUN: FileCheck %s --check-prefix=SLS-NOT-SUPPORTED
 
-// RUN: %clang -target armv7m--none-eabi -c %s -### -mharden-sls=all 2>&1 | \
+// RUN: not %clang --target=armv7m--none-eabi -c %s -### -mharden-sls=all 2>&1 | \
 // RUN: FileCheck %s --check-prefix=SLS-NOT-SUPPORTED
 
 // RUN: %clang -target armv6a--none-eabi -c %s -### -mharden-sls=none 2>&1 | \
