@@ -2,7 +2,7 @@
 // RUN:   FileCheck -check-prefix=CHECK-TLS %s
 // RUN: %clang -### -target x86_64-unknown-unknown -mstack-protector-guard=global %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=CHECK-GLOBAL %s
-// RUN: %clang -### -target x86_64-unknown-unknown -mstack-protector-guard=local %s 2>&1 | \
+// RUN: not %clang -### --target=x86_64-unknown-unknown -mstack-protector-guard=local %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=INVALID-VALUE %s
 
 // CHECK-TLS: "-cc1" {{.*}}"-mstack-protector-guard=tls"
@@ -74,10 +74,10 @@
 // RUN:   -mstack-protector-guard-reg=sp_el0 \
 // RUN:   -mstack-protector-guard-offset=0 %s 2>&1 | \
 // RUN: FileCheck -check-prefix=CHECK-AARCH64 %s
-// RUN: %clang -### -target aarch64-linux-gnu \
+// RUN: not %clang -### --target=aarch64-linux-gnu \
 // RUN:   -mstack-protector-guard=tls %s 2>&1 | \
 // RUN:   FileCheck -check-prefix=INVALID-VALUE-AARCH64 %s
-// RUN: %clang -### -target aarch64-linux-gnu -mstack-protector-guard=sysreg \
+// RUN: not %clang -### --target=aarch64-linux-gnu -mstack-protector-guard=sysreg \
 // RUN:   -mstack-protector-guard-reg=foo \
 // RUN:   -mstack-protector-guard-offset=0 %s 2>&1 | \
 // RUN: FileCheck -check-prefix=INVALID-REG-AARCH64 %s

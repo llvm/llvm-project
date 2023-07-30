@@ -35,7 +35,7 @@
 // MULTIPLE-VALUES-NOT: "-target-feature" "+v8.2a
 
 /// march to compiler and assembler, we choose the one suited to the input file type
-// RUN: %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=armv8.3-a -march=armv8.4-a %s 2>&1 | \
+// RUN: not %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=armv8.3-a -march=armv8.4-a %s 2>&1 | \
 // RUN: FileCheck --check-prefix=TARGET-FEATURE-3 %s
 // RUN: %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=armv8.3-a -march=armv8.4-a \
 // RUN: %S/Inputs/wildcard1.c 2>&1 | FileCheck --check-prefix=TARGET-FEATURE-4 %s
@@ -46,9 +46,9 @@
 // TARGET-FEATURE-4-NOT: "-target-feature" "+v8.3a"
 
 // Invalid -march settings
-// RUN: %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=all %s 2>&1 | \
+// RUN: not %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=all %s 2>&1 | \
 // RUN: FileCheck --check-prefix=INVALID-ARCH-1 %s
-// RUN: %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=foobar %s 2>&1 | \
+// RUN: not %clang --target=aarch64-linux-gnueabi -### -c -Wa,-march=foobar %s 2>&1 | \
 // RUN: FileCheck --check-prefix=INVALID-ARCH-2 %s
 
 // INVALID-ARCH-1: error: unsupported argument 'all' to option '-march='

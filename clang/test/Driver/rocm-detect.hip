@@ -7,12 +7,12 @@
 // We don't include every target in the test directory, so just pick a valid
 // target not included in the test.
 
-// RUN: %clang -### -v -target x86_64-linux-gnu --cuda-gpu-arch=gfx902 \
+// RUN: not %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=gfx902 \
 // RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,GFX902-DEFAULTLIBS %s
 
 // Should not interpret -nostdlib as disabling offload libraries.
-// RUN: %clang -### -v -target x86_64-linux-gnu --cuda-gpu-arch=gfx902 -nostdlib \
+// RUN: not %clang -### -v --target=x86_64-linux-gnu --cuda-gpu-arch=gfx902 -nostdlib \
 // RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=COMMON,GFX902-DEFAULTLIBS %s
 
@@ -21,7 +21,7 @@
 // RUN:   | FileCheck -check-prefixes=COMMON,NODEFAULTLIBS %s
 
 // Test environment variable ROCM_PATH.
-// RUN: env ROCM_PATH=%S/Inputs/rocm %clang -### -target x86_64-linux-gnu \
+// RUN: env ROCM_PATH=%S/Inputs/rocm not %clang -### --target=x86_64-linux-gnu \
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-ENV %s
 
@@ -82,7 +82,7 @@
 // RUN: mkdir -p %T/opt
 // RUN: cp -r %S/Inputs/rocm %T/opt/rocm-3.9.0-1234
 // RUN: cp -r %S/Inputs/rocm %T/opt/rocm-3.10.0
-// RUN: %clang -### -target x86_64-linux-gnu --sysroot=%T \
+// RUN: not %clang -### --target=x86_64-linux-gnu --sysroot=%T \
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-REL %s
 
@@ -102,7 +102,7 @@
 // and --rocm-device-lib-path can be used to specify them.
 
 // RUN: cp -r %T/rocm-spack/hip-* %T/rocm-spack/hip-4.0.0-abcd
-// RUN: %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
+// RUN: not %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
 // RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=SPACK-MULT %s
 // RUN: %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
@@ -115,7 +115,7 @@
 
 // RUN: rm -rf %T/rocm-spack/hip-*
 // RUN: rm -rf %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn
-// RUN: %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
+// RUN: not %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
 // RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=SPACK-MISS %s
 // RUN: %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang --version 2>&1 \

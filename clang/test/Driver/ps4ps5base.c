@@ -9,9 +9,9 @@
 // RUN:   | FileCheck %s
 // RUN: %clang -c %s -target x86_64-sie-ps5 -fno-use-init-array -### 2>&1   \
 // RUN:   | FileCheck %s
-// RUN: %clang -c %s -target x86_64-scei-ps4 -fuse-init-array -### 2>&1     \
+// RUN: not %clang -c %s --target=x86_64-scei-ps4 -fuse-init-array -### 2>&1     \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
-// RUN: %clang -c %s -target x86_64-sie-ps5 -fuse-init-array -### 2>&1      \
+// RUN: not %clang -c %s --target=x86_64-sie-ps5 -fuse-init-array -### 2>&1      \
 // RUN:   | FileCheck %s --check-prefix=CHECK-ERROR
 
 // CHECK: "-fno-use-init-array"

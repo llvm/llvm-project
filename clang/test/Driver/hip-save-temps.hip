@@ -2,27 +2,27 @@
 // REQUIRES: amdgpu-registered-target
 
 // -fno-gpu-rdc without -o with -c
-// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN: not %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
 // RUN:   --cuda-gpu-arch=gfx900 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC %s
 
 // -fno-gpu-rdc without -o
-// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN: not %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
 // RUN:   --cuda-gpu-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC,NOUT %s
 
 // -fno-gpu-rdc with -o
-// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN: not %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
 // RUN:   -o executable --cuda-gpu-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC,WOUT %s
 
 // -fgpu-rdc without -o with -c
-// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN: not %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
 // RUN:   -fgpu-rdc --cuda-gpu-arch=gfx900 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDCC %s
 
 // -fgpu-rdc without -o
-// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN: not %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
 // RUN:   -fgpu-rdc --cuda-gpu-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDCL,NOUT %s
 
