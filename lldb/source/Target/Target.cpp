@@ -2864,12 +2864,12 @@ bool Target::RunStopHooks() {
   if (!any_active_hooks)
     return false;
 
-  // <rdar://problem/12027563> make sure we check that we are not stopped
-  // because of us running a user expression since in that case we do not want
-  // to run the stop-hooks.  Note, you can't just check whether the last stop
-  // was for a User Expression, because breakpoint commands get run before
-  // stop hooks, and one of them might have run an expression.  You have
-  // to ensure you run the stop hooks once per natural stop.
+  // Make sure we check that we are not stopped because of us running a user
+  // expression since in that case we do not want to run the stop-hooks. Note,
+  // you can't just check whether the last stop was for a User Expression,
+  // because breakpoint commands get run before stop hooks, and one of them
+  // might have run an expression. You have to ensure you run the stop hooks
+  // once per natural stop.
   uint32_t last_natural_stop = m_process_sp->GetModIDRef().GetLastNaturalStopID();
   if (last_natural_stop != 0 && m_latest_stop_hook_id == last_natural_stop)
     return false;
