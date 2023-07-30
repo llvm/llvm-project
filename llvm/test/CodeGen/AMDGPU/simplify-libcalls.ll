@@ -156,8 +156,10 @@ entry:
 
 declare float @_Z10half_recipf(float)
 
+; Do nothing, the underlying implementation will optimize correctly
+; after inlining.
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_native_divide
-; GCN: fmul fast float %tmp, 0x3FD5555560000000
+; GCN: %call = tail call fast float @_Z13native_divideff(float %tmp, float 3.000000e+00)
 define amdgpu_kernel void @test_native_divide(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -168,8 +170,10 @@ entry:
 
 declare float @_Z13native_divideff(float, float)
 
+; Do nothing, the optimization will naturally happen after inlining.
+
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_half_divide
-; GCN: fmul fast float %tmp, 0x3FD5555560000000
+; GCN: %call = tail call fast float @_Z11half_divideff(float %tmp, float 3.000000e+00)
 define amdgpu_kernel void @test_half_divide(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
