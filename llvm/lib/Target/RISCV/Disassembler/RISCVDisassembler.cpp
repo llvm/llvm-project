@@ -529,32 +529,32 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                           "RVZfinx table (Float in Integer)");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXVentanaCondOps,
                           DecoderTableVentana32, "Ventana custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBa, DecoderTableTHeadBa32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBa, DecoderTableXTHeadBa32,
                           "XTHeadBa custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBb, DecoderTableTHeadBb32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBb, DecoderTableXTHeadBb32,
                           "XTHeadBb custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBs, DecoderTableTHeadBs32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadBs, DecoderTableXTHeadBs32,
                           "XTHeadBs custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCondMov,
-                          DecoderTableTHeadCondMov32,
+                          DecoderTableXTHeadCondMov32,
                           "XTHeadCondMov custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCmo, DecoderTableTHeadCmo32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadCmo, DecoderTableXTHeadCmo32,
                           "XTHeadCmo custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadFMemIdx,
-                          DecoderTableTHeadFMemIdx32,
+                          DecoderTableXTHeadFMemIdx32,
                           "XTHeadFMemIdx custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMac, DecoderTableTHeadMac32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMac, DecoderTableXTHeadMac32,
                           "XTHeadMac custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMemIdx,
-                          DecoderTableTHeadMemIdx32,
+                          DecoderTableXTHeadMemIdx32,
                           "XTHeadMemIdx custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadMemPair,
-                          DecoderTableTHeadMemPair32,
+                          DecoderTableXTHeadMemPair32,
                           "XTHeadMemPair custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadSync,
-                          DecoderTableTHeadSync32,
+                          DecoderTableXTHeadSync32,
                           "XTHeadSync custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadVdot, DecoderTableTHeadV32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXTHeadVdot, DecoderTableXTHeadVdot32,
                           "XTHeadVdot custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXSfvcp, DecoderTableXSfvcp32,
                           "SiFive VCIX custom opcode table");
