@@ -254,6 +254,7 @@ private:
 
   static constexpr uint16_t g_ctf_magic = 0xcff1;
   static constexpr uint8_t g_ctf_version = 4;
+  static constexpr uint16_t g_ctf_field_threshold = 0x2000;
 };
 } // namespace lldb_private
 
