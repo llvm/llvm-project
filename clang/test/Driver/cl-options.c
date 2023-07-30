@@ -290,7 +290,7 @@
 // W4: -WCL4
 // Weverything: -Weverything
 
-// RUN: not %clang_cl /WX -### -- %s 2>&1 | FileCheck -check-prefix=WX %s
+// RUN: %clang_cl /WX -Wno-msvc-not-found -### -- %s 2>&1 | FileCheck -check-prefix=WX %s
 // WX: -Werror
 
 // RUN: %clang_cl /WX- -### -- %s 2>&1 | FileCheck -check-prefix=WX_ %s
