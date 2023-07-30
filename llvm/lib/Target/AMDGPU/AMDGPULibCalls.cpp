@@ -544,12 +544,15 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   auto NumArg = CI->arg_size();
   if (NumArg != 4 && NumArg != 6)
     return false;
-  auto *PacketSize = CI->getArgOperand(NumArg - 2);
-  auto *PacketAlign = CI->getArgOperand(NumArg - 1);
-  if (!isa<ConstantInt>(PacketSize) || !isa<ConstantInt>(PacketAlign))
+  ConstantInt *PacketSize =
+      dyn_cast<ConstantInt>(CI->getArgOperand(NumArg - 2));
+  ConstantInt *PacketAlign =
+      dyn_cast<ConstantInt>(CI->getArgOperand(NumArg - 1));
+  if (!PacketSize || !PacketAlign)
     return false;
-  unsigned Size = cast<ConstantInt>(PacketSize)->getZExtValue();
-  Align Alignment = cast<ConstantInt>(PacketAlign)->getAlignValue();
+
+  unsigned Size = PacketSize->getZExtValue();
+  Align Alignment = PacketAlign->getAlignValue();
   if (Alignment != Size)
     return false;
 
@@ -799,15 +802,14 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
           FInfo.getId() == AMDGPULibFunc::EI_POWN) &&
          "fold_pow: encounter a wrong function call");
 
-  Value *opr0, *opr1;
+  Module *M = B.GetInsertBlock()->getModule();
   ConstantFP *CF;
   ConstantInt *CINT;
-  ConstantAggregateZero *CZero;
   Type *eltType;
+  Value *opr0 = CI->getArgOperand(0);
+  Value *opr1 = CI->getArgOperand(1);
+  ConstantAggregateZero *CZero = dyn_cast<ConstantAggregateZero>(opr1);
 
-  opr0 = CI->getArgOperand(0);
-  opr1 = CI->getArgOperand(1);
-  CZero = dyn_cast<ConstantAggregateZero>(opr1);
   if (getVecSize(FInfo) == 1) {
     eltType = opr0->getType();
     CF = dyn_cast<ConstantFP>(opr1);
@@ -866,7 +868,6 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
     return true;
   }
 
-  Module *M = CI->getModule();
   if (CF && (CF->isExactlyValue(0.5) || CF->isExactlyValue(-0.5))) {
     // pow[r](x, [-]0.5) = sqrt(x)
     bool issqrt = CF->isExactlyValue(0.5);
@@ -874,8 +875,8 @@ bool AMDGPULibCalls::fold_pow(CallInst *CI, IRBuilder<> &B,
             getFunction(M, AMDGPULibFunc(issqrt ? AMDGPULibFunc::EI_SQRT
                                                 : AMDGPULibFunc::EI_RSQRT,
                                          FInfo))) {
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> "
-                        << FInfo.getName().c_str() << "(" << *opr0 << ")\n");
+      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << FInfo.getName()
+                        << '(' << *opr0 << ")\n");
       Value *nval = CreateCallEx(B,FPExpr, opr0, issqrt ? "__pow2sqrt"
                                                         : "__pow2rsqrt");
       replaceCall(nval);
