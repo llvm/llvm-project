@@ -27,6 +27,7 @@
 #include "ForwardingReferenceOverloadCheck.h"
 #include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "InaccurateEraseCheck.h"
+#include "IncDecInConditionsCheck.h"
 #include "IncorrectRoundingsCheck.h"
 #include "InfiniteLoopCheck.h"
 #include "IntegerDivisionCheck.h"
@@ -122,6 +123,8 @@ public:
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(
         "bugprone-switch-missing-default-case");
+    CheckFactories.registerCheck<IncDecInConditionsCheck>(
+        "bugprone-inc-dec-in-conditions");
     CheckFactories.registerCheck<IncorrectRoundingsCheck>(
         "bugprone-incorrect-roundings");
     CheckFactories.registerCheck<InfiniteLoopCheck>("bugprone-infinite-loop");

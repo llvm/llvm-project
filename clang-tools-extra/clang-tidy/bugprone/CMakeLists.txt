@@ -23,6 +23,7 @@ add_clang_library(clangTidyBugproneModule
   ImplicitWideningOfMultiplicationResultCheck.cpp
   InaccurateEraseCheck.cpp
   SwitchMissingDefaultCaseCheck.cpp
+  IncDecInConditionsCheck.cpp
   IncorrectRoundingsCheck.cpp
   InfiniteLoopCheck.cpp
   IntegerDivisionCheck.cpp
