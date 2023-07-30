@@ -1724,9 +1724,10 @@ bool LoopConstrainer::run() {
   /// - Max latch taken count of the loop is limited.
   /// It guarantees that induction variable will not overflow iterating in the
   /// "main loop".
-  if (auto BO = dyn_cast<BinaryOperator>(MainLoopStructure.IndVarBase))
+  if (isa<OverflowingBinaryOperator>(MainLoopStructure.IndVarBase))
     if (IsSignedPredicate)
-      BO->setHasNoSignedWrap(true);
+      cast<BinaryOperator>(MainLoopStructure.IndVarBase)
+          ->setHasNoSignedWrap(true);
   /// TODO: support unsigned predicate.
   /// To add NUW flag we need to prove that both operands of BO are
   /// non-negative. E.g:
