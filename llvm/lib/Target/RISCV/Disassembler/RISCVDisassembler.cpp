@@ -567,7 +567,7 @@ DecodeStatus RISCVDisassembler::getInstruction(MCInst &MI, uint64_t &Size,
                           "CORE-V MAC custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCValu, DecoderTableXCValu32,
                           "CORE-V ALU custom opcode table");
-    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVsimd, DecoderTableCoreVSIMD32,
+    TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVsimd, DecoderTableXCVsimd32,
                           "CORE-V SIMD extensions custom opcode table");
     TRY_TO_DECODE_FEATURE(RISCV::FeatureVendorXCVbi, DecoderTableXCVbi32,
                           "CORE-V Immediate Branching custom opcode table");
