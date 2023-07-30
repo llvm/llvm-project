@@ -48,7 +48,7 @@
 
 // Pass-through:
 // RUN: %clang --target=x86_64-linux -### -fuse-ld=lld -B%S/Inputs/lld -flto -fdiagnostics-hotness-threshold=100 -fsave-optimization-record -foptimization-record-passes=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS-A
-// RUN: %clang --target=x86_64-linux -### -o FOO -fuse-ld=gold -flto -fdiagnostics-hotness-threshold=100 -fsave-optimization-record -foptimization-record-passes=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS
+// RUN: %clang --target=x86_64-linux -### -o FOO --sysroot=%S/Inputs/basic_cross_linux_tree -fuse-ld=gold -flto -fdiagnostics-hotness-threshold=100 -fsave-optimization-record -foptimization-record-passes=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS
 // RUN: %clang --target=x86_64-linux -### -o FOO -fuse-ld=lld -B%S/Inputs/lld -flto=thin -fdiagnostics-hotness-threshold=100 -fsave-optimization-record=some-format -foptimization-record-file=FOO.txt %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS-CUSTOM
 // RUN: %clang --target=x86_64-linux -### -o FOO -fuse-ld=lld -B%S/Inputs/lld -flto=thin -fdiagnostics-hotness-threshold=100 -Rpass=inline -Rpass-missed=inline -Rpass-analysis=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS-RPASS
 // RUN: %clang --target=x86_64-linux -### -o FOO -fuse-ld=lld -B%S/Inputs/lld -flto=thin -fdiagnostics-hotness-threshold=auto -Rpass=inline -Rpass-missed=inline -Rpass-analysis=inline %s 2>&1 | FileCheck %s -check-prefix=CHECK-PASS-AUTO
