@@ -21,10 +21,10 @@
 // RUN: %clang --target=aarch64 -c %s -### -mbranch-protection=pac-ret -msign-return-address=none     2>&1 | \
 // RUN: FileCheck %s --check-prefix=CONFLICT --check-prefix=WARN
 
-// RUN: %clang --target=aarch64 -c %s -### -msign-return-address=foo     2>&1 | \
+// RUN: not %clang --target=aarch64 -c %s -### -msign-return-address=foo     2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-RA-PROTECTION --check-prefix=WARN
 
-// RUN: %clang --target=aarch64 -c %s -### -mbranch-protection=bar     2>&1 | \
+// RUN: not %clang --target=aarch64 -c %s -### -mbranch-protection=bar     2>&1 | \
 // RUN: FileCheck %s --check-prefix=BAD-BP-PROTECTION --check-prefix=WARN
 
 // RUN: %clang --target=aarch64 -### -o /dev/null -mbranch-protection=standard /dev/null 2>&1 | \

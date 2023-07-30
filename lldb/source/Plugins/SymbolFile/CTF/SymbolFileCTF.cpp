@@ -642,9 +642,16 @@ SymbolFileCTF::ParseType(lldb::offset_t &offset, lldb::user_id_t uid) {
     for (uint32_t i = 0; i < variable_length; ++i) {
       const uint32_t field_name = m_data.GetU32(&offset);
       const uint32_t type = m_data.GetU32(&offset);
-      const uint16_t field_offset = m_data.GetU16(&offset);
-      const uint16_t padding = m_data.GetU16(&offset);
-      fields.emplace_back(ReadString(field_name), type, field_offset, padding);
+      uint64_t field_offset = 0;
+      if (size < g_ctf_field_threshold) {
+        field_offset = m_data.GetU16(&offset);
+        m_data.GetU16(&offset); // Padding
+      } else {
+        const uint32_t offset_hi = m_data.GetU32(&offset);
+        const uint32_t offset_lo = m_data.GetU32(&offset);
+        field_offset = (((uint64_t)offset_hi) << 32) | ((uint64_t)offset_lo);
+      }
+      fields.emplace_back(ReadString(field_name), type, field_offset);
     }
     return std::make_unique<CTFRecord>(static_cast<CTFType::Kind>(kind), uid,
                                        name, variable_length, size, fields);
@@ -850,7 +857,6 @@ size_t SymbolFileCTF::ParseObjects(CompileUnit &comp_unit) {
     if (Symbol *symbol =
             symtab->FindSymbolWithType(eSymbolTypeData, Symtab::eDebugYes,
                                        Symtab::eVisibilityAny, symbol_idx)) {
-
       Variable::RangeList ranges;
       ranges.Append(symbol->GetFileAddress(), symbol->GetByteSize());
 

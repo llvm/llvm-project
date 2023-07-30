@@ -131,14 +131,12 @@ struct CTFFunction : public CTFType {
 struct CTFRecord : public CTFType {
 public:
   struct Field {
-    Field(llvm::StringRef name, uint32_t type, uint16_t offset,
-          uint16_t padding)
-        : name(name), type(type), offset(offset), padding(padding) {}
+    Field(llvm::StringRef name, uint32_t type, uint64_t offset)
+        : name(name), type(type), offset(offset) {}
 
     llvm::StringRef name;
     uint32_t type;
-    uint16_t offset;
-    uint16_t padding;
+    uint64_t offset;
   };
 
   CTFRecord(Kind kind, lldb::user_id_t uid, llvm::StringRef name,

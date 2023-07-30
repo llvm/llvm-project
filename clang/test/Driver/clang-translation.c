@@ -66,7 +66,7 @@
 // ARMV7_SOFTFLOAT: "-mfloat-abi" "soft"
 // ARMV7_SOFTFLOAT: "-x" "c"
 
-// RUN: %clang -target x86_64-apple-darwin10 -### -S %s -arch armv7 \
+// RUN: not %clang -target x86_64-apple-darwin10 -### -S %s -arch armv7 \
 // RUN: -mhard-float 2>&1 | FileCheck -check-prefix=ARMV7_HARDFLOAT %s
 // ARMV7_HARDFLOAT: clang
 // ARMV7_HARDFLOAT: "-cc1"
