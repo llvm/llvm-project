@@ -1991,7 +1991,6 @@ Error ExecutionSession::removeJITDylibs(std::vector<JITDylibSP> JDsToRemove) {
   // Clear JITDylibs and notify the platform.
   Error Err = Error::success();
   for (auto JD : JDsToRemove) {
-    dbgs() << "---REMOVING--- " << JD->getName() << "\n";
     Err = joinErrors(std::move(Err), JD->clear());
     if (P)
       Err = joinErrors(std::move(Err), P->teardownJITDylib(*JD));
