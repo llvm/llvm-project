@@ -225,6 +225,7 @@ private:
   llvm::Expected<lldb::TypeSP> CreateEnum(const CTFEnum &ctf_enum);
   llvm::Expected<lldb::TypeSP> CreateFunction(const CTFFunction &ctf_function);
   llvm::Expected<lldb::TypeSP> CreateRecord(const CTFRecord &ctf_record);
+  llvm::Expected<lldb::TypeSP> CreateForward(const CTFForward &ctf_forward);
 
   llvm::StringRef ReadString(lldb::offset_t offset) const;
 
@@ -253,6 +254,7 @@ private:
 
   static constexpr uint16_t g_ctf_magic = 0xcff1;
   static constexpr uint8_t g_ctf_version = 4;
+  static constexpr uint16_t g_ctf_field_threshold = 0x2000;
 };
 } // namespace lldb_private
 

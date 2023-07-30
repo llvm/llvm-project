@@ -37,6 +37,9 @@ class TestCTF(TestBase):
 
         symbol_file = self.getBuildArtifact("a.ctf")
 
+        if self.TraceOn():
+            self.runCmd("log enable -v lldb symbol")
+
         self.runCmd("target symbols add {}".format(symbol_file))
         self.expect(
             "target variable foo",
@@ -53,7 +56,6 @@ class TestCTF(TestBase):
                 "f = 0x0000000000000000",
             ],
         )
-
         self.expect("target variable foo.n.i", substrs=["(MyInt) foo.n.i = 1"])
         self.expect(
             "target variable foo.n.s", substrs=["(const char *) foo.n.s", '"foo"']

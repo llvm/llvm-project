@@ -234,6 +234,20 @@ def EmitC_IncludeOp
   let hasCustomAssemblyFormat = 1;
 }
 
+def EmitC_LiteralOp : EmitC_Op<"literal", [Pure]> {
+  let summary = "Literal operation";
+  let description = [{
+    The `literal` operation produces an SSA value equal to some constant
+    specified by an attribute.
+  }];
+
+  let arguments = (ins StrAttr:$value);
+  let results = (outs AnyType:$result);
+
+  let hasVerifier = 1;
+  let assemblyFormat = "$value attr-dict `:` type($result)";
+}
+
 def EmitC_MulOp : EmitC_BinaryArithOp<"mul", []> {
   let summary = "Multiplication operation";
   let description = [{
