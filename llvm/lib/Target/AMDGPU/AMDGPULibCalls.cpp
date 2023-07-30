@@ -500,6 +500,8 @@ bool AMDGPULibCalls::sincosUseNative(CallInst *aCI, const FuncInfo &FInfo) {
 bool AMDGPULibCalls::useNative(CallInst *aCI) {
   CI = aCI;
   Function *Callee = aCI->getCalledFunction();
+  if (!Callee)
+    return false;
 
   FuncInfo FInfo;
   if (!parseFunctionName(Callee->getName(), FInfo) || !FInfo.isMangled() ||
@@ -587,27 +589,18 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
 bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
   this->CI = CI;
   Function *Callee = CI->getCalledFunction();
-
   // Ignore indirect calls.
-  if (Callee == nullptr)
+  if (!Callee)
     return false;
 
-  BasicBlock *BB = CI->getParent();
-  LLVMContext &Context = CI->getParent()->getContext();
-  IRBuilder<> B(Context);
-
-  // Set the builder to the instruction after the call.
-  B.SetInsertPoint(BB, CI->getIterator());
-
-  // Copy fast flags from the original call.
-  if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(CI))
-    B.setFastMathFlags(FPOp->getFastMathFlags());
-
+  IRBuilder<> B(CI);
   switch (Callee->getIntrinsicID()) {
-  default:
+  case Intrinsic::not_intrinsic:
     break;
   case Intrinsic::amdgcn_wavefrontsize:
     return !EnablePreLink && fold_wavefrontsize(CI, B);
+  default:
+    return false;
   }
 
   FuncInfo FInfo;
@@ -618,6 +611,8 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
   if (CI->arg_size() != FInfo.getNumArgs())
     return false;
 
+  LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << '\n');
+
   if (TDOFold(CI, FInfo))
     return true;
 
@@ -626,6 +621,10 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
   // using host's double function calls.
   if (isUnsafeMath(CI) && evaluateCall(CI, FInfo))
     return true;
+
+  // Copy fast flags from the original call.
+  if (const FPMathOperator *FPOp = dyn_cast<const FPMathOperator>(CI))
+    B.setFastMathFlags(FPOp->getFastMathFlags());
 
   // Specialized optimizations for each function call
   switch (FInfo.getId()) {
@@ -1664,19 +1663,10 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
       // Ignore non-calls.
       CallInst *CI = dyn_cast<CallInst>(I);
       ++I;
-      // Ignore intrinsics that do not become real instructions.
-      if (!CI || isa<DbgInfoIntrinsic>(CI) || CI->isLifetimeStartOrEnd())
-        continue;
-
-      // Ignore indirect calls.
-      Function *Callee = CI->getCalledFunction();
-      if (Callee == nullptr)
-        continue;
-
-      LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << "\n";
-                 dbgs().flush());
-      if(Simplifier.fold(CI, AA))
-        Changed = true;
+      if (CI) {
+        if (Simplifier.fold(CI, AA))
+          Changed = true;
+      }
     }
   }
   return Changed;
@@ -1698,19 +1688,11 @@ PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
       // Ignore non-calls.
       CallInst *CI = dyn_cast<CallInst>(I);
       ++I;
-      // Ignore intrinsics that do not become real instructions.
-      if (!CI || isa<DbgInfoIntrinsic>(CI) || CI->isLifetimeStartOrEnd())
-        continue;
 
-      // Ignore indirect calls.
-      Function *Callee = CI->getCalledFunction();
-      if (Callee == nullptr)
-        continue;
-
-      LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << "\n";
-                 dbgs().flush());
-      if (Simplifier.fold(CI, AA))
-        Changed = true;
+      if (CI) {
+        if (Simplifier.fold(CI, AA))
+          Changed = true;
+      }
     }
   }
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
@@ -1726,14 +1708,7 @@ bool AMDGPUUseNativeCalls::runOnFunction(Function &F) {
       // Ignore non-calls.
       CallInst *CI = dyn_cast<CallInst>(I);
       ++I;
-      if (!CI) continue;
-
-      // Ignore indirect calls.
-      Function *Callee = CI->getCalledFunction();
-      if (Callee == nullptr)
-        continue;
-
-      if (Simplifier.useNative(CI))
+      if (CI && Simplifier.useNative(CI))
         Changed = true;
     }
   }
@@ -1754,15 +1729,7 @@ PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
       // Ignore non-calls.
       CallInst *CI = dyn_cast<CallInst>(I);
       ++I;
-      if (!CI)
-        continue;
-
-      // Ignore indirect calls.
-      Function *Callee = CI->getCalledFunction();
-      if (Callee == nullptr)
-        continue;
-
-      if (Simplifier.useNative(CI))
+      if (CI && Simplifier.useNative(CI))
         Changed = true;
     }
   }
