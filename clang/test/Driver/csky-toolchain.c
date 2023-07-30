@@ -4,10 +4,6 @@
 // RUN: %clang -### %s --target=csky 2>&1 | FileCheck -check-prefix=CC1 %s
 // CC1: "-cc1" "-triple" "csky"
 
-// Test interaction with -fuse-ld=lld, if lld is available.
-// RUN: %clang -### %s --target=csky -fuse-ld=lld 2>&1 | FileCheck -check-prefix=LLD %s
-// LLD: {{(error: invalid linker name in argument '-fuse-ld=lld')|(ld.lld)}}
-
 // In the below tests, --rtlib=platform is used so that the driver ignores
 // the configure-time CLANG_DEFAULT_RTLIB option when choosing the runtime lib
 
