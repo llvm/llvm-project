@@ -91,3 +91,5 @@ class TestCTF(TestBase):
                 "}",
             ],
         )
+
+        self.expect("type lookup RecursiveStruct", substrs=["RecursiveStruct *n;"])
