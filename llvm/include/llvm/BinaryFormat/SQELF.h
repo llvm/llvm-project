@@ -9,13 +9,21 @@ namespace BinaryFormat {
 class SQELF {
 
 public:
-  SQELF();
+  typedef struct Metadata {
+    std::string Type;
+    std::string Arch;
+    unsigned int Version;
+  } Metadata;
+
+public:
+  SQELF(const Metadata &M);
   virtual ~SQELF();
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SQELF &BF);
 
 private:
-  sqlite3 *db;
+  sqlite3 *DB;
+  Metadata M;
 };
 } // namespace BinaryFormat
 } // namespace llvm

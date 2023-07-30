@@ -10,7 +10,9 @@ namespace llvm {
 class MCSQELFObjectTargetWriter : public MCObjectTargetWriter {
 
 public:
-  explicit MCSQELFObjectTargetWriter();
+  explicit MCSQELFObjectTargetWriter(bool Is64Bit_, uint8_t OSABI_,
+                                     uint16_t EMachine_,
+                                     uint8_t ABIVersion_ = 0);
   virtual ~MCSQELFObjectTargetWriter();
 
   Triple::ObjectFormatType getFormat() const override { return Triple::SQELF; }
@@ -18,6 +20,21 @@ public:
   static bool classof(const MCObjectTargetWriter *W) {
     return W->getFormat() == Triple::SQELF;
   }
+
+  /// \name Accessors
+  /// @{
+  uint8_t getOSABI() const { return OSABI; }
+  uint8_t getABIVersion() const { return ABIVersion; }
+  uint16_t getEMachine() const { return EMachine; }
+  bool is64Bit() const { return Is64Bit; }
+  /// @}
+private:
+  // TODO(fzakaria): for now we are copying very similar the fields
+  // of MCELFObjectTargetWriter but they might be different later
+  const uint8_t OSABI;
+  const uint8_t ABIVersion;
+  const uint16_t EMachine;
+  const unsigned Is64Bit : 1;
 };
 
 /// Construct a new SQELF writer instance.
