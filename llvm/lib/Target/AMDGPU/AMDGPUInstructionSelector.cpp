@@ -4377,8 +4377,12 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
   Register Reg = Root.getReg();
   const SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
 
-  const MachineInstr *Def = MRI->getVRegDef(Reg);
-  if (Register WaveBase = getWaveAddress(Def)) {
+  std::optional<DefinitionAndSourceRegister> Def =
+    getDefSrcRegIgnoringCopies(Reg, *MRI);
+  assert(Def && "this shouldn't be an optional result");
+  Reg = Def->Reg;
+
+  if (Register WaveBase = getWaveAddress(Def->MI)) {
     return {{
         [=](MachineInstrBuilder &MIB) { // rsrc
           MIB.addReg(Info->getScratchRSrcReg());
@@ -4394,10 +4398,12 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
 
   // FIXME: Copy check is a hack
   Register BasePtr;
-  if (mi_match(Reg, *MRI, m_GPtrAdd(m_Reg(BasePtr), m_Copy(m_ICst(Offset))))) {
+  if (mi_match(Reg, *MRI,
+               m_GPtrAdd(m_Reg(BasePtr),
+                         m_any_of(m_ICst(Offset), m_Copy(m_ICst(Offset)))))) {
     if (!SIInstrInfo::isLegalMUBUFImmOffset(Offset))
       return {};
-    const MachineInstr *BasePtrDef = MRI->getVRegDef(BasePtr);
+    MachineInstr *BasePtrDef = getDefIgnoringCopies(BasePtr, *MRI);
     Register WaveBase = getWaveAddress(BasePtrDef);
     if (!WaveBase)
       return {};
