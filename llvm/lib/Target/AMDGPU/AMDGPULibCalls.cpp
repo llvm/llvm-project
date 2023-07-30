@@ -622,7 +622,8 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
     return false;
 
   // Further check the number of arguments to see if they match.
-  if (CI->arg_size() != FInfo.getNumArgs())
+  // TODO: Check calling convention matches too
+  if (!FInfo.isCompatibleSignature(CI->getFunctionType()))
     return false;
 
   LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << '\n');
