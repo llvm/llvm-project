@@ -1,6 +1,7 @@
 #include "llvm/BinaryFormat/SQELF.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FileSystem.h"
+#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <sqlite3.h>
 
@@ -9,11 +10,14 @@ using namespace BinaryFormat;
 
 static void writeInMemoryDatabaseToStream(llvm::raw_ostream &os, sqlite3 *db);
 
+static void initializeTables(sqlite3 *db);
+
 SQELF::SQELF() {
   int rc = sqlite3_open(":memory:", &db);
   if (rc != SQLITE_OK) {
     report_fatal_error("Could not create an in-memory sqlite database");
   }
+  initializeTables(db);
 }
 
 SQELF::~SQELF() {
@@ -32,6 +36,24 @@ llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SQELF &BF) {
 }
 } // namespace BinaryFormat
 } // namespace llvm
+
+// TODO(fzakaria): Is there a better preferred way to create large
+// text files?
+const char *CREATE_METADATA_TABLE_SQL =
+#include "./sql/create_metadata.sql"
+    ;
+
+void initializeTables(sqlite3 *db) {
+
+  char *errMsg = nullptr;
+  int rc =
+      sqlite3_exec(db, CREATE_METADATA_TABLE_SQL, nullptr, nullptr, &errMsg);
+  if (rc != SQLITE_OK) {
+    report_fatal_error(
+        formatv("failed to create sqlite3 table: {0}", std::string(errMsg)));
+    sqlite3_free(errMsg);
+  }
+}
 
 /**
  * @brief The SQELF ObjectFormat stores it's internal representation as an
