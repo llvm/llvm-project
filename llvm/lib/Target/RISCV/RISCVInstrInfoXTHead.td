@@ -38,7 +38,7 @@ class THInstVdotVV<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
     : RVInstVV<funct6, opv, outs, ins, opcodestr, argstr> {
   let Inst{26} = 0;
   let Inst{6-0} = OPC_CUSTOM_0.Value;
-  let DecoderNamespace = "THeadV";
+  let DecoderNamespace = "XTHeadVdot";
 }
 
 class THInstVdotVX<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
@@ -46,7 +46,7 @@ class THInstVdotVX<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
     : RVInstVX<funct6, opv, outs, ins, opcodestr, argstr> {
   let Inst{26} = 1;
   let Inst{6-0} = OPC_CUSTOM_0.Value;
-  let DecoderNamespace = "THeadV";
+  let DecoderNamespace = "XTHeadVdot";
 }
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
@@ -63,7 +63,7 @@ class THVdotALUrVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
                    opcodestr, "$vd, $rs1, $vs2$vm">;
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
-let Predicates = [HasVendorXTHeadBa], DecoderNamespace = "THeadBa",
+let Predicates = [HasVendorXTHeadBa], DecoderNamespace = "XTHeadBa",
   hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class THShiftALU_rri<bits<3> funct3, string opcodestr>
     : RVInstR<0, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
@@ -74,7 +74,7 @@ class THShiftALU_rri<bits<3> funct3, string opcodestr>
   let Inst{26-25} = uimm2;
 }
 
-let Predicates = [HasVendorXTHeadBb], DecoderNamespace = "THeadBb",
+let Predicates = [HasVendorXTHeadBb], DecoderNamespace = "XTHeadBb",
   hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 class THShift_ri<bits<5> funct5, bits<3> funct3, string opcodestr>
     : RVInstIShift<funct5, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
@@ -96,14 +96,14 @@ class THRev_r<bits<5> funct5, bits<2> funct2, string opcodestr>
                    (outs GPR:$rd), (ins GPR:$rs1), opcodestr, "$rd, $rs1">;
 }
 
-let Predicates = [HasVendorXTHeadBb, IsRV64], DecoderNamespace = "THeadBb",
+let Predicates = [HasVendorXTHeadBb, IsRV64], DecoderNamespace = "XTHeadBb",
   hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class THShiftW_ri<bits<7> funct7, bits<3> funct3, string opcodestr>
     : RVInstIShiftW<funct7, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
                     (ins GPR:$rs1, uimm5:$shamt),
                     opcodestr, "$rd, $rs1, $shamt">;
 
-let Predicates = [HasVendorXTHeadCondMov], DecoderNamespace = "THeadCondMov",
+let Predicates = [HasVendorXTHeadCondMov], DecoderNamespace = "XTHeadCondMov",
     hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class THCondMov_rr<bits<7> funct7, string opcodestr>
     : RVInstR<funct7, 0b001, OPC_CUSTOM_0, (outs GPR:$rd_wb),
@@ -112,7 +112,7 @@ class THCondMov_rr<bits<7> funct7, string opcodestr>
   let Constraints = "$rd_wb = $rd";
 }
 
-let Predicates = [HasVendorXTHeadMac], DecoderNamespace = "THeadMac",
+let Predicates = [HasVendorXTHeadMac], DecoderNamespace = "XTHeadMac",
     hasSideEffects = 0, mayLoad = 0, mayStore = 0, isCommutable = 1 in
 class THMulAccumulate_rr<bits<7> funct7, string opcodestr>
     : RVInstR<funct7, 0b001, OPC_CUSTOM_0, (outs GPR:$rd_wb),
@@ -121,7 +121,7 @@ class THMulAccumulate_rr<bits<7> funct7, string opcodestr>
   let Constraints = "$rd_wb = $rd";
 }
 
-let Predicates = [HasVendorXTHeadMemPair], DecoderNamespace = "THeadMemPair",
+let Predicates = [HasVendorXTHeadMemPair], DecoderNamespace = "XTHeadMemPair",
   hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class THLoadPair<bits<5> funct5, string opcodestr>
   : RVInstR<!shl(funct5, 2), 0b100, OPC_CUSTOM_0,
@@ -134,7 +134,7 @@ class THLoadPair<bits<5> funct5, string opcodestr>
   let Constraints = "@earlyclobber $rd,@earlyclobber $rs2";
 }
 
-let Predicates = [HasVendorXTHeadMemPair], DecoderNamespace = "THeadMemPair",
+let Predicates = [HasVendorXTHeadMemPair], DecoderNamespace = "XTHeadMemPair",
   hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class THStorePair<bits<5> funct5, string opcodestr>
   : RVInstR<!shl(funct5, 2), 0b101, OPC_CUSTOM_0,
@@ -249,7 +249,7 @@ def TH_SRRIW : THShiftW_ri<0b0001010, 0b001, "th.srriw">;
 def TH_REVW : THRev_r<0b10010, 0b00, "th.revw">;
 } // Predicates = [HasVendorXTHeadBb, IsRV64]
 
-let Predicates = [HasVendorXTHeadBs], DecoderNamespace = "THeadBs" in {
+let Predicates = [HasVendorXTHeadBs], DecoderNamespace = "XTHeadBs" in {
 let IsSignExtendingOpW = 1 in
 def TH_TST : RVBShift_ri<0b10001, 0b001, OPC_CUSTOM_0, "th.tst">,
              Sched<[WriteSingleBitImm, ReadSingleBitImm]>;
@@ -292,7 +292,7 @@ def TH_SDD  : THStorePair<0b11111, "th.sdd">,
               Sched<[WriteSTD, WriteSTD, ReadStoreData, ReadMemBase]>;
 }
 
-let Predicates = [HasVendorXTHeadMemIdx], DecoderNamespace = "THeadMemIdx" in {
+let Predicates = [HasVendorXTHeadMemIdx], DecoderNamespace = "XTHeadMemIdx" in {
 // T-Head Load/Store + Update instructions.
 def TH_LBIA : THLoadUpdate<0b00011, "th.lbia">,
   Sched<[WriteLDB, ReadMemBase]>;
@@ -372,7 +372,7 @@ def TH_SURW : THStoreIndexed<GPR, 0b01010, "th.surw">,
   Sched<[WriteLDB, ReadMemBase]>;
 }
 
-let Predicates = [HasVendorXTHeadMemIdx, IsRV64], DecoderNamespace = "THeadMemIdx" in {
+let Predicates = [HasVendorXTHeadMemIdx, IsRV64], DecoderNamespace = "XTHeadMemIdx" in {
 // T-Head Load/Store + Update instructions.
 def TH_LWUIA : THLoadUpdate<0b11011, "th.lwuia">,
   Sched<[WriteLDH, ReadMemBase]>;
@@ -409,7 +409,7 @@ def TH_SURD : THStoreIndexed<GPR, 0b01110, "th.surd">,
 // T-Head Load/Store Indexed instructions for floating point registers.
 
 let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF],
-    DecoderNamespace = "THeadFMemIdx" in {
+    DecoderNamespace = "XTHeadFMemIdx" in {
 def TH_FLRW : THLoadIndexed<FPR32, 0b01000, "th.flrw">,
               Sched<[WriteFLD32, ReadFMemBase]>;
 def TH_FSRW : THStoreIndexed<FPR32, 0b01000, "th.fsrw">,
@@ -417,7 +417,7 @@ def TH_FSRW : THStoreIndexed<FPR32, 0b01000, "th.fsrw">,
 }
 
 let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD],
-    DecoderNamespace = "THeadFMemIdx" in {
+    DecoderNamespace = "XTHeadFMemIdx" in {
 def TH_FLRD : THLoadIndexed<FPR64, 0b01100, "th.flrd">,
               Sched<[WriteFLD64, ReadFMemBase]>;
 def TH_FSRD : THStoreIndexed<FPR64, 0b01100, "th.fsrd">,
@@ -425,7 +425,7 @@ def TH_FSRD : THStoreIndexed<FPR64, 0b01100, "th.fsrd">,
 }
 
 let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtF, IsRV64],
-    DecoderNamespace = "THeadFMemIdx" in {
+    DecoderNamespace = "XTHeadFMemIdx" in {
 def TH_FLURW : THLoadIndexed<FPR32, 0b01010, "th.flurw">,
                Sched<[WriteFLD32, ReadFMemBase]>;
 def TH_FSURW : THStoreIndexed<FPR32, 0b01010, "th.fsurw">,
@@ -433,7 +433,7 @@ def TH_FSURW : THStoreIndexed<FPR32, 0b01010, "th.fsurw">,
 }
 
 let Predicates = [HasVendorXTHeadFMemIdx, HasStdExtD, IsRV64],
-    DecoderNamespace = "THeadFMemIdx" in {
+    DecoderNamespace = "XTHeadFMemIdx" in {
 def TH_FLURD : THLoadIndexed<FPR64, 0b01110, "th.flurd">,
                Sched<[WriteFLD64, ReadFMemBase]>;
 def TH_FSURD : THStoreIndexed<FPR64, 0b01110, "th.fsurd">,
@@ -724,7 +724,7 @@ let Predicates = [HasVendorXTHeadMemPair] in {
             (TH_SWD GPR:$rd1, GPR:$rd2, GPR:$rs1, uimm2_3:$uimm2_3, 3)>;
 }
 
-let Predicates = [HasVendorXTHeadCmo], DecoderNamespace = "THeadCmo" in {
+let Predicates = [HasVendorXTHeadCmo], DecoderNamespace = "XTHeadCmo" in {
 def TH_DCACHE_CSW    : THCacheInst_r<0b00001, "th.dcache.csw">;
 def TH_DCACHE_ISW    : THCacheInst_r<0b00010, "th.dcache.isw">;
 def TH_DCACHE_CISW   : THCacheInst_r<0b00011, "th.dcache.cisw">;
@@ -749,7 +749,7 @@ def TH_L2CACHE_IALL  : THCacheInst_void<0b10110, "th.l2cache.iall">;
 def TH_L2CACHE_CIALL : THCacheInst_void<0b10111, "th.l2cache.ciall">;
 }
 
-let Predicates = [HasVendorXTHeadSync], DecoderNamespace = "THeadSync" in {
+let Predicates = [HasVendorXTHeadSync], DecoderNamespace = "XTHeadSync" in {
 def TH_SFENCE_VMAS : THCacheInst_rr<0b0000010, "th.sfence.vmas">;
 def TH_SYNC        : THCacheInst_void<0b11000, "th.sync">;
 def TH_SYNC_S      : THCacheInst_void<0b11001, "th.sync.s">;
