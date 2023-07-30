@@ -140,6 +140,10 @@ New check aliases
 Changes in existing checks
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
+- Fixed bug in :doc:`bugprone-reserved-identifier
+  <clang-tidy/checks/bugprone/reserved-identifier>`, so that it does not warn
+  on macros starting with underscore and lowercase letter.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
