@@ -26,6 +26,7 @@
 #endif
 
 #define __OMP_TYPE(VarName) OMP_TYPE(VarName, Type::get##VarName##Ty(Ctx))
+#define __OMP_PTR_TYPE(VarName) OMP_TYPE(VarName, PointerType::get(Ctx, 0))
 
 __OMP_TYPE(Void)
 __OMP_TYPE(Int1)
@@ -33,23 +34,21 @@ __OMP_TYPE(Int8)
 __OMP_TYPE(Int16)
 __OMP_TYPE(Int32)
 __OMP_TYPE(Int64)
-__OMP_TYPE(Int8Ptr)
-__OMP_TYPE(Int16Ptr)
-__OMP_TYPE(Int32Ptr)
-__OMP_TYPE(Int64Ptr)
+__OMP_PTR_TYPE(Int8Ptr)
+__OMP_PTR_TYPE(Int16Ptr)
+__OMP_PTR_TYPE(Int32Ptr)
+__OMP_PTR_TYPE(Int64Ptr)
 __OMP_TYPE(Double)
 
 OMP_TYPE(SizeTy, M.getDataLayout().getIntPtrType(Ctx))
 OMP_TYPE(Int63, Type::getIntNTy(Ctx, 63))
 
-#define __OMP_PTR_TYPE(NAME, BASE) OMP_TYPE(NAME, BASE->getPointerTo())
+__OMP_PTR_TYPE(VoidPtr)
+__OMP_PTR_TYPE(VoidPtrPtr)
+__OMP_PTR_TYPE(VoidPtrPtrPtr)
 
-__OMP_PTR_TYPE(VoidPtr, Int8)
-__OMP_PTR_TYPE(VoidPtrPtr, VoidPtr)
-__OMP_PTR_TYPE(VoidPtrPtrPtr, VoidPtrPtr)
-
-__OMP_PTR_TYPE(Int8PtrPtr, Int8Ptr)
-__OMP_PTR_TYPE(Int8PtrPtrPtr, Int8PtrPtr)
+__OMP_PTR_TYPE(Int8PtrPtr)
+__OMP_PTR_TYPE(Int8PtrPtrPtr)
 
 #undef __OMP_PTR_TYPE
 
