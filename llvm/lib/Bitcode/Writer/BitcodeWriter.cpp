@@ -431,6 +431,10 @@ class IndexBitcodeWriter : public BitcodeWriterBase {
   /// Tracks the last value id recorded in the GUIDToValueMap.
   unsigned GlobalValueId = 0;
 
+  /// Tracks the assignment of module paths in the module path string table to
+  /// an id assigned for use in summary references to the module path.
+  DenseMap<StringRef, uint64_t> ModuleIdMap;
+
 public:
   /// Constructs a IndexBitcodeWriter object for the given combined index,
   /// writing to the provided \p Buffer. When writing a subset of the index
@@ -512,8 +516,16 @@ public:
         Callback(*MPI);
       }
     } else {
-      for (const auto &MPSE : Index.modulePaths())
-        Callback(MPSE);
+      // Since StringMap iteration order isn't guaranteed, order by path string
+      // first.
+      // FIXME: Make this a vector of StringMapEntry instead to avoid the later
+      // map lookup.
+      std::vector<StringRef> ModulePaths;
+      for (auto &[ModPath, _] : Index.modulePaths())
+        ModulePaths.push_back(ModPath);
+      llvm::sort(ModulePaths.begin(), ModulePaths.end());
+      for (auto &ModPath : ModulePaths)
+        Callback(*Index.modulePaths().find(ModPath));
     }
   }
 
@@ -3715,33 +3727,33 @@ void IndexBitcodeWriter::writeModStrings() {
   unsigned AbbrevHash = Stream.EmitAbbrev(std::move(Abbv));
 
   SmallVector<unsigned, 64> Vals;
-  forEachModule(
-      [&](const StringMapEntry<std::pair<uint64_t, ModuleHash>> &MPSE) {
-        StringRef Key = MPSE.getKey();
-        const auto &Value = MPSE.getValue();
-        StringEncoding Bits = getStringEncoding(Key);
-        unsigned AbbrevToUse = Abbrev8Bit;
-        if (Bits == SE_Char6)
-          AbbrevToUse = Abbrev6Bit;
-        else if (Bits == SE_Fixed7)
-          AbbrevToUse = Abbrev7Bit;
+  forEachModule([&](const StringMapEntry<ModuleHash> &MPSE) {
+    StringRef Key = MPSE.getKey();
+    const auto &Hash = MPSE.getValue();
+    StringEncoding Bits = getStringEncoding(Key);
+    unsigned AbbrevToUse = Abbrev8Bit;
+    if (Bits == SE_Char6)
+      AbbrevToUse = Abbrev6Bit;
+    else if (Bits == SE_Fixed7)
+      AbbrevToUse = Abbrev7Bit;
 
-        Vals.push_back(Value.first);
-        Vals.append(Key.begin(), Key.end());
+    auto ModuleId = ModuleIdMap.size();
+    ModuleIdMap[Key] = ModuleId;
+    Vals.push_back(ModuleId);
+    Vals.append(Key.begin(), Key.end());
 
-        // Emit the finished record.
-        Stream.EmitRecord(bitc::MST_CODE_ENTRY, Vals, AbbrevToUse);
+    // Emit the finished record.
+    Stream.EmitRecord(bitc::MST_CODE_ENTRY, Vals, AbbrevToUse);
 
-        // Emit an optional hash for the module now
-        const auto &Hash = Value.second;
-        if (llvm::any_of(Hash, [](uint32_t H) { return H; })) {
-          Vals.assign(Hash.begin(), Hash.end());
-          // Emit the hash record.
-          Stream.EmitRecord(bitc::MST_CODE_HASH, Vals, AbbrevHash);
-        }
+    // Emit an optional hash for the module now
+    if (llvm::any_of(Hash, [](uint32_t H) { return H; })) {
+      Vals.assign(Hash.begin(), Hash.end());
+      // Emit the hash record.
+      Stream.EmitRecord(bitc::MST_CODE_HASH, Vals, AbbrevHash);
+    }
 
-        Vals.clear();
-      });
+    Vals.clear();
+  });
   Stream.ExitBlock();
 }
 
@@ -4410,7 +4422,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
 
     if (auto *VS = dyn_cast<GlobalVarSummary>(S)) {
       NameVals.push_back(*ValueId);
-      NameVals.push_back(Index.getModuleId(VS->modulePath()));
+      assert(ModuleIdMap.count(VS->modulePath()));
+      NameVals.push_back(ModuleIdMap[VS->modulePath()]);
       NameVals.push_back(getEncodedGVSummaryFlags(VS->flags()));
       NameVals.push_back(getEncodedGVarFlags(VS->varflags()));
       for (auto &RI : VS->refs()) {
@@ -4460,7 +4473,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
         });
 
     NameVals.push_back(*ValueId);
-    NameVals.push_back(Index.getModuleId(FS->modulePath()));
+    assert(ModuleIdMap.count(FS->modulePath()));
+    NameVals.push_back(ModuleIdMap[FS->modulePath()]);
     NameVals.push_back(getEncodedGVSummaryFlags(FS->flags()));
     NameVals.push_back(FS->instCount());
     NameVals.push_back(getEncodedFFlags(FS->fflags()));
@@ -4520,7 +4534,8 @@ void IndexBitcodeWriter::writeCombinedGlobalValueSummary() {
     auto AliasValueId = SummaryToValueIdMap[AS];
     assert(AliasValueId);
     NameVals.push_back(AliasValueId);
-    NameVals.push_back(Index.getModuleId(AS->modulePath()));
+    assert(ModuleIdMap.count(AS->modulePath()));
+    NameVals.push_back(ModuleIdMap[AS->modulePath()]);
     NameVals.push_back(getEncodedGVSummaryFlags(AS->flags()));
     auto AliaseeValueId = SummaryToValueIdMap[&AS->getAliasee()];
     assert(AliaseeValueId);
