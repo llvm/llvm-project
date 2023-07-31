@@ -48,8 +48,6 @@ FunctionPass *createSIPreAllocateWWMRegsPass();
 FunctionPass *createSIFormMemoryClausesPass();
 
 FunctionPass *createSIPostRABundlerPass();
-FunctionPass *createAMDGPUSimplifyLibCallsPass();
-FunctionPass *createAMDGPUUseNativeCallsPass();
 ModulePass *createAMDGPURemoveIncompatibleFunctionsPass(const TargetMachine *);
 FunctionPass *createAMDGPUCodeGenPreparePass();
 FunctionPass *createAMDGPULateCodeGenPreparePass();
@@ -171,12 +169,6 @@ extern char &SIOptimizeExecMaskingID;
 
 void initializeSIPreAllocateWWMRegsPass(PassRegistry &);
 extern char &SIPreAllocateWWMRegsID;
-
-void initializeAMDGPUSimplifyLibCallsPass(PassRegistry &);
-extern char &AMDGPUSimplifyLibCallsID;
-
-void initializeAMDGPUUseNativeCallsPass(PassRegistry &);
-extern char &AMDGPUUseNativeCallsID;
 
 void initializeAMDGPUPerfHintAnalysisPass(PassRegistry &);
 extern char &AMDGPUPerfHintAnalysisID;

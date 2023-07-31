@@ -134,55 +134,6 @@ public:
 
 } // end llvm namespace
 
-namespace {
-
-  class AMDGPUSimplifyLibCalls : public FunctionPass {
-
-  AMDGPULibCalls Simplifier;
-
-  public:
-    static char ID; // Pass identification
-
-    AMDGPUSimplifyLibCalls() : FunctionPass(ID) {
-      initializeAMDGPUSimplifyLibCallsPass(*PassRegistry::getPassRegistry());
-    }
-
-    bool runOnFunction(Function &M) override;
-  };
-
-  class AMDGPUUseNativeCalls : public FunctionPass {
-
-  AMDGPULibCalls Simplifier;
-
-  public:
-    static char ID; // Pass identification
-
-    AMDGPUUseNativeCalls() : FunctionPass(ID) {
-      initializeAMDGPUUseNativeCallsPass(*PassRegistry::getPassRegistry());
-      Simplifier.initNativeFuncs();
-    }
-
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      // TODO: Preserves most
-    }
-
-    bool runOnFunction(Function &F) override;
-  };
-
-} // end anonymous namespace.
-
-char AMDGPUSimplifyLibCalls::ID = 0;
-char AMDGPUUseNativeCalls::ID = 0;
-
-INITIALIZE_PASS_BEGIN(AMDGPUSimplifyLibCalls, "amdgpu-simplifylib",
-                      "Simplify well-known AMD library calls", false, false)
-INITIALIZE_PASS_END(AMDGPUSimplifyLibCalls, "amdgpu-simplifylib",
-                    "Simplify well-known AMD library calls", false, false)
-
-INITIALIZE_PASS(AMDGPUUseNativeCalls, "amdgpu-usenative",
-                "Replace builtin math calls with that native versions.",
-                false, false)
-
 template <typename IRB>
 static CallInst *CreateCallEx(IRB &B, FunctionCallee Callee, Value *Arg,
                               const Twine &Name = "") {
@@ -1605,40 +1556,6 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   return true;
 }
 
-// Public interface to the Simplify LibCalls pass.
-FunctionPass *llvm::createAMDGPUSimplifyLibCallsPass() {
-  return new AMDGPUSimplifyLibCalls();
-}
-
-FunctionPass *llvm::createAMDGPUUseNativeCallsPass() {
-  return new AMDGPUUseNativeCalls();
-}
-
-bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
-  if (skipFunction(F))
-    return false;
-
-  Simplifier.initFunction(F);
-
-  bool Changed = false;
-
-  LLVM_DEBUG(dbgs() << "AMDIC: process function ";
-             F.printAsOperand(dbgs(), false, F.getParent()); dbgs() << '\n';);
-
-  for (auto &BB : F) {
-    for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ) {
-      // Ignore non-calls.
-      CallInst *CI = dyn_cast<CallInst>(I);
-      ++I;
-      if (CI) {
-        if (Simplifier.fold(CI))
-          Changed = true;
-      }
-    }
-  }
-  return Changed;
-}
-
 PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
                                                   FunctionAnalysisManager &AM) {
   AMDGPULibCalls Simplifier;
@@ -1663,25 +1580,6 @@ PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
     }
   }
   return Changed ? PreservedAnalyses::none() : PreservedAnalyses::all();
-}
-
-bool AMDGPUUseNativeCalls::runOnFunction(Function &F) {
-  if (skipFunction(F) || UseNative.empty())
-    return false;
-
-  Simplifier.initFunction(F);
-
-  bool Changed = false;
-  for (auto &BB : F) {
-    for (BasicBlock::iterator I = BB.begin(), E = BB.end(); I != E; ) {
-      // Ignore non-calls.
-      CallInst *CI = dyn_cast<CallInst>(I);
-      ++I;
-      if (CI && Simplifier.useNative(CI))
-        Changed = true;
-    }
-  }
-  return Changed;
 }
 
 PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
