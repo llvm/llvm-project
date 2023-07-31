@@ -208,6 +208,7 @@ def IntAttr : CIR_Attr<"Int", "int", [TypedAttrInterface]> {
   let extraClassDeclaration = [{
     int64_t getSInt() const { return getValue().getSExtValue(); }
     uint64_t getUInt() const { return getValue().getZExtValue(); }
+    bool isNullValue() const { return getValue() == 0; }
   }];
   let genVerifyDecl = 1;
   let hasCustomAssemblyFormat = 1;
