@@ -134,6 +134,15 @@ declare_mlir_dialect_python_bindings(
     _mlir_libs/_mlir/dialects/transform/__init__.pyi
   DIALECT_NAME transform)
 
+set(LLVM_TARGET_DEFINITIONS "${CMAKE_CURRENT_SOURCE_DIR}/mlir/dialects/TransformOps.td")
+mlir_tablegen("dialects/_transform_enum_gen.py" -gen-python-enum-bindings)
+add_public_tablegen_target(MLIRTransformDialectPyEnumGen)
+declare_mlir_python_sources(
+  MLIRPythonSources.Dialects.transform.enum_gen
+  ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
+  ADD_TO_PARENT MLIRPythonSources.Dialects.transform
+  SOURCES "dialects/_transform_enum_gen.py")
+
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
