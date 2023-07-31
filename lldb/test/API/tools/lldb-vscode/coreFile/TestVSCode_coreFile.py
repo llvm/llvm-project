@@ -25,25 +25,25 @@ class TestVSCode_coreFile(lldbvscode_testcase.VSCodeTestCaseBase):
 
         expected_frames = [
             {
-                "column": 0,
                 "id": 524288,
                 "line": 4,
                 "name": "bar",
                 "source": {"name": "main.c", "path": "/home/labath/test/main.c"},
+                "instructionPointerReference": "0x40011C",
             },
             {
-                "column": 0,
                 "id": 524289,
                 "line": 10,
                 "name": "foo",
                 "source": {"name": "main.c", "path": "/home/labath/test/main.c"},
+                "instructionPointerReference": "0x400142",
             },
             {
-                "column": 0,
                 "id": 524290,
                 "line": 16,
                 "name": "_start",
                 "source": {"name": "main.c", "path": "/home/labath/test/main.c"},
+                "instructionPointerReference": "0x40015F",
             },
         ]
 

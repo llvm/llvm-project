@@ -135,6 +135,7 @@ class DebugCommunication(object):
         self.configuration_done_sent = False
         self.frame_scopes = {}
         self.init_commands = init_commands
+        self.disassembled_instructions = {}
 
     @classmethod
     def encode_content(cls, s):
@@ -427,7 +428,7 @@ class DebugCommunication(object):
 
     def get_stackFrame(self, frameIndex=0, threadId=None):
         """Get a single "StackFrame" object from a "stackTrace" request and
-        return the "StackFrame as a python dictionary, or None on failure
+        return the "StackFrame" as a python dictionary, or None on failure
         """
         if threadId is None:
             threadId = self.get_thread_id()
@@ -647,6 +648,22 @@ class DebugCommunication(object):
             "arguments": args_dict,
         }
         return self.send_recv(command_dict)
+    
+    def request_disassemble(self, memoryReference, offset=-50, instructionCount=200, resolveSymbols=True):
+        args_dict = {
+            "memoryReference": memoryReference,
+            "offset": offset,
+            "instructionCount": instructionCount,
+            "resolveSymbols": resolveSymbols
+        }
+        command_dict = {
+            "command": "disassemble",
+            "type": "request",
+            "arguments": args_dict,
+        }
+        instructions = self.send_recv(command_dict)["body"]["instructions"]
+        for inst in instructions:
+            self.disassembled_instructions[inst["address"]] = inst
 
     def request_evaluate(self, expression, frameIndex=0, threadId=None, context=None):
         stackFrame = self.get_stackFrame(frameIndex=frameIndex, threadId=threadId)
