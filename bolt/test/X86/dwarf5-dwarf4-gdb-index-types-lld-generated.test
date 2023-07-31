@@ -10,8 +10,8 @@
 
 # POSTCHECK:          Version = 7
 # POSTCHECK:          CU list offset = 0x18, has 2 entries
-# POSTCHECK-NEXT:         0: Offset = 0x40, Length = 0x52
-# POSTCHECK-NEXT:         1: Offset = 0x92, Length = 0x72
+# POSTCHECK-NEXT:         0: Offset = 0x40, Length = 0x55
+# POSTCHECK-NEXT:         1: Offset = 0x95, Length = 0x72
 # POSTCHECK:          Types CU list offset = 0x38, has 0 entries
 # POSTCHECK:          Address area offset = 0x38, has 2 entries
 # POSTCHECK-NEXT:         Low/High address = [0x[[#%.4x,ADDR:]],
