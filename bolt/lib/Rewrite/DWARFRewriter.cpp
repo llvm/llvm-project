@@ -246,6 +246,12 @@ static cl::opt<unsigned> BatchSize(
         "Specifies the size of batches for processing CUs. Higher number has "
         "better performance, but more memory usage. Default value is 1."),
     cl::Hidden, cl::init(1), cl::cat(BoltCategory));
+
+static cl::opt<bool> AlwaysConvertToRanges(
+    "always-convert-to-ranges",
+    cl::desc("This option is for testing purposes only. It forces BOLT to "
+             "convert low_pc/high_pc to ranges always."),
+    cl::ReallyHidden, cl::init(false), cl::cat(BoltCategory));
 } // namespace opts
 
 static bool getLowAndHighPC(const DIE &Die, const DWARFUnit &DU,
@@ -693,6 +699,45 @@ void DWARFRewriter::updateUnitDebugInfo(
   const std::vector<std::unique_ptr<DIEBuilder::DIEInfo>> &DIs =
       DIEBldr.getDIEsByUnit(Unit);
 
+  // Either updates or normalizes DW_AT_range to DW_AT_low_pc and DW_AT_high_pc.
+  auto updateLowPCHighPC = [&](DIE *Die, const DIEValue &LowPCVal,
+                               const DIEValue &HighPCVal, uint64_t LowPC,
+                               const uint64_t HighPC) {
+    dwarf::Attribute AttrLowPC = dwarf::DW_AT_low_pc;
+    dwarf::Form FormLowPC = dwarf::DW_FORM_addr;
+    dwarf::Attribute AttrHighPC = dwarf::DW_AT_high_pc;
+    dwarf::Form FormHighPC = dwarf::DW_FORM_data4;
+    const uint32_t Size = HighPC - LowPC;
+    // Whatever was generated is not low_pc/high_pc, so will reset to
+    // default for size 1.
+    if (!LowPCVal || !HighPCVal) {
+      if (Unit.getVersion() >= 5)
+        FormLowPC = dwarf::DW_FORM_addrx;
+      else if (Unit.isDWOUnit())
+        FormLowPC = dwarf::DW_FORM_GNU_addr_index;
+    } else {
+      AttrLowPC = LowPCVal.getAttribute();
+      FormLowPC = LowPCVal.getForm();
+      AttrHighPC = HighPCVal.getAttribute();
+      FormHighPC = HighPCVal.getForm();
+    }
+
+    if (FormLowPC == dwarf::DW_FORM_addrx ||
+        FormLowPC == dwarf::DW_FORM_GNU_addr_index)
+      LowPC = AddrWriter->getIndexFromAddress(LowPC, Unit);
+
+    if (LowPCVal)
+      DIEBldr.replaceValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
+    else
+      DIEBldr.addValue(Die, AttrLowPC, FormLowPC, DIEInteger(LowPC));
+    if (HighPCVal) {
+      DIEBldr.replaceValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
+    } else {
+      DIEBldr.deleteValue(Die, dwarf::DW_AT_ranges);
+      DIEBldr.addValue(Die, AttrHighPC, FormHighPC, DIEInteger(Size));
+    }
+  };
+
   for (const std::unique_ptr<DIEBuilder::DIEInfo> &DI : DIs) {
     DIE *Die = DI->Die;
     switch (Die->getTag()) {
@@ -726,7 +771,7 @@ void DWARFRewriter::updateUnitDebugInfo(
         ARangesSectionWriter->addCURanges(Unit.getOffset(),
                                           std::move(OutputRanges));
       updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,
-                                     0, RangesBase);
+                                     RangesBase);
       DIEValue StmtListAttrVal = Die->findAttribute(dwarf::DW_AT_stmt_list);
       if (LineTablePatchMap.count(&Unit))
         DIEBldr.replaceValue(Die, dwarf::DW_AT_stmt_list,
@@ -737,8 +782,9 @@ void DWARFRewriter::updateUnitDebugInfo(
 
     case dwarf::DW_TAG_subprogram: {
       // Get function address either from ranges or [LowPC, HighPC) pair.
-      uint64_t Address;
+      uint64_t Address = UINT64_MAX;
       uint64_t SectionIndex, HighPC;
+      DebugAddressRangesVector FunctionRanges;
       if (!getLowAndHighPC(*Die, Unit, Address, HighPC, SectionIndex)) {
         Expected<DWARFAddressRangesVector> RangesOrError =
             getDIEAddressRanges(*Die, Unit);
@@ -751,23 +797,41 @@ void DWARFRewriter::updateUnitDebugInfo(
         if (Ranges.empty())
           break;
 
-        Address = Ranges.front().LowPC;
+        for (const DWARFAddressRange &Range : Ranges) {
+          if (const BinaryFunction *Function =
+                  BC.getBinaryFunctionAtAddress(Range.LowPC))
+            FunctionRanges.append(Function->getOutputAddressRanges());
+        }
+      } else {
+        if (const BinaryFunction *Function =
+                BC.getBinaryFunctionAtAddress(Address))
+          FunctionRanges = Function->getOutputAddressRanges();
       }
 
       // Clear cached ranges as the new function will have its own set.
       CachedRanges.clear();
+      DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
+      DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
+      if (FunctionRanges.empty()) {
+        if (LowPCVal && HighPCVal) {
+          FunctionRanges.push_back({0, HighPCVal.getDIEInteger().getValue()});
+        } else {
+          // I haven't seen this case, but who knows what other compilers
+          // generate.
+          FunctionRanges.push_back({0, 1});
+          errs() << "BOLT-WARNING: [internal-dwarf-error]: subprogram got GCed "
+                    "by the linker, DW_AT_ranges is used\n";
+        }
+      }
 
-      DebugAddressRangesVector FunctionRanges;
-      if (const BinaryFunction *Function =
-              BC.getBinaryFunctionAtAddress(Address))
-        FunctionRanges = Function->getOutputAddressRanges();
-
-      if (FunctionRanges.empty())
-        FunctionRanges.push_back({0, 0});
+      if (FunctionRanges.size() == 1 && !opts::AlwaysConvertToRanges) {
+        updateLowPCHighPC(Die, LowPCVal, HighPCVal, FunctionRanges.back().LowPC,
+                          FunctionRanges.back().HighPC);
+        break;
+      }
 
       updateDWARFObjectAddressRanges(
-          Unit, DIEBldr, *Die, RangesSectionWriter.addRanges(FunctionRanges),
-          0);
+          Unit, DIEBldr, *Die, RangesSectionWriter.addRanges(FunctionRanges));
 
       break;
     }
@@ -783,37 +847,33 @@ void DWARFRewriter::updateUnitDebugInfo(
               ? BC.getBinaryFunctionContainingAddress(
                     RangesOrError->front().LowPC)
               : nullptr;
-      bool ErrorState = false;
-      std::optional<uint64_t> NewLowPC;
+      DebugAddressRangesVector OutputRanges;
       if (Function) {
-        DebugAddressRangesVector OutputRanges =
-            Function->translateInputToOutputRanges(*RangesOrError);
+        OutputRanges = Function->translateInputToOutputRanges(*RangesOrError);
         LLVM_DEBUG(if (OutputRanges.empty() != RangesOrError->empty()) {
           dbgs() << "BOLT-DEBUG: problem with DIE at 0x"
                  << Twine::utohexstr(Die->getOffset()) << " in CU at 0x"
                  << Twine::utohexstr(Unit.getOffset()) << '\n';
         });
-        if (!OutputRanges.empty())
-          NewLowPC = OutputRanges.front().LowPC;
-        RangesSectionOffset = RangesSectionWriter.addRanges(
-            std::move(OutputRanges), CachedRanges);
+        if (opts::AlwaysConvertToRanges || OutputRanges.size() > 1) {
+          RangesSectionOffset = RangesSectionWriter.addRanges(
+              std::move(OutputRanges), CachedRanges);
+          OutputRanges.clear();
+        } else if (OutputRanges.empty()) {
+          OutputRanges.push_back({RangesOrError.get().front().LowPC,
+                                  RangesOrError.get().front().HighPC});
+        }
       } else if (!RangesOrError) {
-        ErrorState = true;
         consumeError(RangesOrError.takeError());
       }
-
-      uint64_t LowPCToUse = 0;
-      if (!ErrorState && RangesOrError.get().size() == 1 &&
-          RangesOrError.get().begin()->LowPC ==
-              RangesOrError.get().begin()->HighPC) {
-        if (NewLowPC)
-          LowPCToUse = NewLowPC.value();
-        else
-          LowPCToUse = RangesOrError.get().begin()->LowPC;
+      DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
+      DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);
+      if (OutputRanges.size() == 1) {
+        updateLowPCHighPC(Die, LowPCVal, HighPCVal, OutputRanges.back().LowPC,
+                          OutputRanges.back().HighPC);
+        break;
       }
-
-      updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset,
-                                     LowPCToUse);
+      updateDWARFObjectAddressRanges(Unit, DIEBldr, *Die, RangesSectionOffset);
       break;
     }
     case dwarf::DW_TAG_call_site: {
@@ -1147,7 +1207,7 @@ void DWARFRewriter::updateUnitDebugInfo(
 
 void DWARFRewriter::updateDWARFObjectAddressRanges(
     DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &Die, uint64_t DebugRangesOffset,
-    uint64_t LowPCToUse, std::optional<uint64_t> RangesBase) {
+    std::optional<uint64_t> RangesBase) {
 
   if (RangesBase) {
     // If DW_AT_GNU_ranges_base is present, update it. No further modifications
@@ -1195,7 +1255,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
           LowPCAttrInfo.getForm() != dwarf::DW_FORM_GNU_addr_index &&
           LowPCAttrInfo.getForm() != dwarf::DW_FORM_addrx)
         DIEBldr.replaceValue(&Die, dwarf::DW_AT_low_pc, LowPCAttrInfo.getForm(),
-                             DIEInteger(LowPCToUse));
+                             DIEInteger(0));
       return;
     }
 
@@ -1223,8 +1283,7 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
   if (LowPCAttrInfo && HighPCAttrInfo) {
 
     convertToRangesPatchDebugInfo(Unit, DIEBldr, Die, DebugRangesOffset,
-                                  LowPCAttrInfo, HighPCAttrInfo, LowPCToUse,
-                                  RangesBase);
+                                  LowPCAttrInfo, HighPCAttrInfo, RangesBase);
   } else if (!(Unit.isDWOUnit() &&
                Die.getTag() == dwarf::DW_TAG_compile_unit)) {
     if (opts::Verbosity >= 1)
@@ -2086,8 +2145,7 @@ DWARFRewriter::makeFinalLocListsSection(DWARFVersion Version) {
 void DWARFRewriter::convertToRangesPatchDebugInfo(
     DWARFUnit &Unit, DIEBuilder &DIEBldr, DIE &Die,
     uint64_t RangesSectionOffset, DIEValue &LowPCAttrInfo,
-    DIEValue &HighPCAttrInfo, uint64_t LowPCToUse,
-    std::optional<uint64_t> RangesBase) {
+    DIEValue &HighPCAttrInfo, std::optional<uint64_t> RangesBase) {
   uint32_t BaseOffset = 0;
   dwarf::Form LowForm = LowPCAttrInfo.getForm();
   dwarf::Attribute RangeBaseAttribute = dwarf::DW_AT_GNU_ranges_base;
@@ -2120,12 +2178,12 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     // DW_FORM_addrx. Former is when DW_AT_rnglists_base is present. Latter is
     // when it's absent.
     if (LowForm == dwarf::DW_FORM_addrx) {
-      const uint32_t Index = AddrWriter->getIndexFromAddress(LowPCToUse, Unit);
+      const uint32_t Index = AddrWriter->getIndexFromAddress(0, Unit);
       DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
                            LowPCAttrInfo.getForm(), DIEInteger(Index));
     } else
       DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
-                           LowPCAttrInfo.getForm(), DIEInteger(LowPCToUse));
+                           LowPCAttrInfo.getForm(), DIEInteger(0));
 
     // Original CU didn't have DW_AT_*_base. We converted it's children (or
     // dwo), so need to insert it into CU.

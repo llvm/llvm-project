@@ -1,27 +1,4 @@
-# REQUIRES: system-linux
-
-# RUN: llvm-mc -dwarf-version=4 -filetype=obj -triple x86_64-unknown-linux %s -o %tmain.o
-# RUN: %clang %cflags -dwarf-4 %tmain.o -o %t.exe -Wl,-q
-# RUN: llvm-bolt %t.exe -o %t.bolt --update-debug-sections --use-old-text
-# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.bolt > %t.txt
-# RUN: llvm-dwarfdump --show-form --verbose --debug-info %t.exe >> %t.txt
-# RUN: cat %t.txt | FileCheck --check-prefix=CHECK %s
-
-# CHECK: 		DW_TAG_inlined_subroutine
-# CHECK: 		DW_AT_low_pc [DW_FORM_addr] (0x[[#%.16x,ADDR:]])
-# CHECK:		DW_AT_high_pc [DW_FORM_data4] (0x00000000)
-
-# CHECK:		DW_TAG_inlined_subroutine
-# CHECK-NOT:	DW_AT_low_pc [DW_FORM_addr] (0x[[#ADDR]])
-# CHECK:		DW_AT_high_pc [DW_FORM_data4] (0x00000000)
-
-
-# Testing BOLT handles correctly when size of DW_AT_inlined_subroutine is 0.
-# In other words DW_AT_high_pc is 0 or DW_AT_low_pc == DW_AT_high_pc.
-
-# Modified assembly manually to set DW_AT_high_pc to 0.
-# clang++ -g2 -gdwarf-4 main.cpp -O1 -S -o main4.s
-
+# -g2 -gdwarf-4 main.cpp -O1
 # static int helper(int i) {
 #   return ++i;
 # }
@@ -33,7 +10,6 @@
 #   [[clang::always_inline]] j = helper(argc);
 #   return j;
 # }
-
 
 	.text
 	.file	"main.cpp"
@@ -77,6 +53,7 @@ main:                                   # @main
 	#DEBUG_VALUE: main:j <- $ebx
 	.loc	1 10 3                          # main.cpp:10:3
 	movl	%ebx, %eax
+	.loc	1 10 3 epilogue_begin is_stmt 0 # main.cpp:10:3
 	popq	%rbx
 .Ltmp4:
 	#DEBUG_VALUE: helper:i <- $eax
@@ -376,7 +353,7 @@ main:                                   # @main
 	.byte	8                               # Abbrev [8] 0x93:0x1c DW_TAG_inlined_subroutine
 	.long	42                              # DW_AT_abstract_origin
 	.quad	.Ltmp2                          # DW_AT_low_pc
-	.long	0			                    # DW_AT_high_pc Manually modified
+	.long	.Ltmp3-.Ltmp2                   # DW_AT_high_pc
 	.byte	1                               # DW_AT_call_file
 	.byte	9                               # DW_AT_call_line
 	.byte	32                              # DW_AT_call_column
@@ -408,7 +385,7 @@ main:                                   # @main
 .Ldebug_info_end0:
 	.section	.debug_str,"MS",@progbits,1
 .Linfo_string0:
-	.asciz	"clang version 16.0.0" # string offset=0
+	.asciz	"clang version 17.0.0 (https://github.com/llvm/llvm-project.git 640e07c49037cca41a1bfbeb916b569d8c950aea)" # string offset=0
 .Linfo_string1:
 	.asciz	"main.cpp"                      # string offset=105
 .Linfo_string2:
@@ -436,7 +413,7 @@ main:                                   # @main
 .Linfo_string13:
 	.asciz	"j"                             # string offset=230
 	.weak	_Z13may_not_existv
-	.ident	"clang version 16.0.0"
+	.ident	"clang version 17.0.0 (https://github.com/llvm/llvm-project.git 640e07c49037cca41a1bfbeb916b569d8c950aea)"
 	.section	".note.GNU-stack","",@progbits
 	.addrsig
 	.addrsig_sym _Z13may_not_existv
