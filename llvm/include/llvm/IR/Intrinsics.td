@@ -867,7 +867,7 @@ def int_readcyclecounter : DefaultAttrsIntrinsic<[llvm_i64_ty]>;
 // The assume intrinsic is marked InaccessibleMemOnly so that proper control
 // dependencies will be maintained.
 def int_assume : DefaultAttrsIntrinsic<
-    [], [llvm_i1_ty], [IntrInaccessibleMemOnly, NoUndef<ArgIndex<0>>]>;
+    [], [llvm_i1_ty], [IntrWriteMem, IntrInaccessibleMemOnly, NoUndef<ArgIndex<0>>]>;
 
 // 'llvm.experimental.noalias.scope.decl' intrinsic: Inserted at the location of
 // noalias scope declaration. Makes it possible to identify that a noalias scope
