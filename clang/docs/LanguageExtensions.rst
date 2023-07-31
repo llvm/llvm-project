@@ -631,7 +631,7 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
 =========================================== ================================================================ =========================================
  T __builtin_elementwise_abs(T x)            return the absolute value of a number x; the absolute value of   signed integer and floating point types
                                              the most negative integer remains the most negative integer
- T __builtin_elementwise_fma(T x, T y, T z)  fused multiply add, (x * y) +  z.                                              floating point types
+ T __builtin_elementwise_fma(T x, T y, T z)  fused multiply add, (x * y) +  z.                                floating point types
  T __builtin_elementwise_ceil(T x)           return the smallest integral value greater than or equal to x    floating point types
  T __builtin_elementwise_sin(T x)            return the sine of x interpreted as an angle in radians          floating point types
  T __builtin_elementwise_cos(T x)            return the cosine of x interpreted as an angle in radians        floating point types
@@ -640,6 +640,7 @@ Unless specified otherwise operation(±0) = ±0 and operation(±infinity) = ±in
  T __builtin_elementwise_log2(T x)           return the base 2 logarithm of x                                 floating point types
  T __builtin_elementwise_log10(T x)          return the base 10 logarithm of x                                floating point types
  T __builtin_elementwise_pow(T x, T y)       return x raised to the power of y                                floating point types
+ T __builtin_elementwise_bitreverse(T x)     return the integer represented after reversing the bits of x     integer types
  T __builtin_elementwise_exp(T x)            returns the base-e exponential, e^x, of the specified value      floating point types
  T __builtin_elementwise_exp2(T x)           returns the base-2 exponential, 2^x, of the specified value      floating point types
  T __builtin_elementwise_roundeven(T x)      round x to the nearest integer value in floating point format,   floating point types
