@@ -2432,7 +2432,9 @@ define i8 @negate_lowbitmask_use2(i8 %x, i8 %y) {
 
 define i64 @test_and_or_constexpr_infloop() {
 ; CHECK-LABEL: @test_and_or_constexpr_infloop(
-; CHECK-NEXT:    ret i64 or (i64 and (i64 ptrtoint (ptr @g to i64), i64 -8), i64 1)
+; CHECK-NEXT:    [[AND:%.*]] = and i64 ptrtoint (ptr @g to i64), -8
+; CHECK-NEXT:    [[OR:%.*]] = or i64 [[AND]], 1
+; CHECK-NEXT:    ret i64 [[OR]]
 ;
   %and = and i64 ptrtoint (ptr @g to i64), -8
   %or = or i64 %and, 1
