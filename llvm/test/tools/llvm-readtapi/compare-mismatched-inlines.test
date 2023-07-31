@@ -1,4 +1,4 @@
-; RUN: not llvm-tapi-diff %S/Inputs/v4B.tbd %S/Inputs/v4D.tbd 2>&1 | FileCheck %s
+; RUN: not llvm-readtapi --compare %S/Inputs/v4B.tbd %S/Inputs/v4D.tbd 2>&1 | FileCheck %s
 
 ; CHECK:< {{.*}}/Inputs/v4B.tbd
 ; CHECK:> {{.*}}/Inputs/v4D.tbd

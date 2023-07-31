@@ -4,7 +4,7 @@ set(LLVM_LINK_COMPONENTS
   TextAPI
   )
 
-add_llvm_tool(llvm-tapi-diff
-  llvm-tapi-diff.cpp
+add_llvm_tool(llvm-readtapi
+  llvm-readtapi.cpp
   DiffEngine.cpp
   )

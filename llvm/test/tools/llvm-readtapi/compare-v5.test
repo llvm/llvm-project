@@ -1,7 +1,7 @@
 ; RUN: rm -rf %t
 ; RUN: split-file %s %t  
-; RUN: llvm-tapi-diff %t/Simple_v5.tbd  %t/Simple_v5.tbd 2>&1 | FileCheck %s --allow-empty
-; RUN: llvm-tapi-diff %t/Simple_v5.tbd  %t/Simple_v4.tbd 2>&1 | FileCheck %s --allow-empty
+; RUN: llvm-readtapi --compare %t/Simple_v5.tbd  %t/Simple_v5.tbd 2>&1 | FileCheck %s --allow-empty
+; RUN: llvm-readtapi --compare %t/Simple_v5.tbd  %t/Simple_v4.tbd 2>&1 | FileCheck %s --allow-empty
 
 ; CHECK-NOT: error:
 ; CHECK-NOT: warning:
