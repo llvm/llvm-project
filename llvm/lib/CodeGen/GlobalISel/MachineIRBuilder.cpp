@@ -775,28 +775,53 @@ MachineInstrBuilder MachineIRBuilder::buildInsert(const DstOp &Res,
   return buildInstr(TargetOpcode::G_INSERT, Res, {Src, Op, uint64_t(Index)});
 }
 
-MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
-                                                     ArrayRef<Register> ResultRegs,
-                                                     bool HasSideEffects) {
-  auto MIB =
-      buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
-                                : TargetOpcode::G_INTRINSIC);
+static unsigned getIntrinsicOpcode(bool HasSideEffects, bool IsConvergent) {
+  if (HasSideEffects && IsConvergent)
+    return TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS;
+  if (HasSideEffects)
+    return TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS;
+  if (IsConvergent)
+    return TargetOpcode::G_INTRINSIC_CONVERGENT;
+  return TargetOpcode::G_INTRINSIC;
+}
+
+MachineInstrBuilder
+MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                 ArrayRef<Register> ResultRegs,
+                                 bool HasSideEffects, bool isConvergent) {
+  auto MIB = buildInstr(getIntrinsicOpcode(HasSideEffects, isConvergent));
   for (unsigned ResultReg : ResultRegs)
     MIB.addDef(ResultReg);
   MIB.addIntrinsicID(ID);
   return MIB;
 }
 
+MachineInstrBuilder
+MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                 ArrayRef<Register> ResultRegs) {
+  auto Attrs = Intrinsic::getAttributes(getContext(), ID);
+  bool HasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
+  bool isConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+  return buildIntrinsic(ID, ResultRegs, HasSideEffects, isConvergent);
+}
+
 MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
                                                      ArrayRef<DstOp> Results,
-                                                     bool HasSideEffects) {
-  auto MIB =
-      buildInstr(HasSideEffects ? TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS
-                                : TargetOpcode::G_INTRINSIC);
+                                                     bool HasSideEffects,
+                                                     bool isConvergent) {
+  auto MIB = buildInstr(getIntrinsicOpcode(HasSideEffects, isConvergent));
   for (DstOp Result : Results)
     Result.addDefToMIB(*getMRI(), MIB);
   MIB.addIntrinsicID(ID);
   return MIB;
+}
+
+MachineInstrBuilder MachineIRBuilder::buildIntrinsic(Intrinsic::ID ID,
+                                                     ArrayRef<DstOp> Results) {
+  auto Attrs = Intrinsic::getAttributes(getContext(), ID);
+  bool HasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
+  bool isConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+  return buildIntrinsic(ID, Results, HasSideEffects, isConvergent);
 }
 
 MachineInstrBuilder MachineIRBuilder::buildTrunc(const DstOp &Res,

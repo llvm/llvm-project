@@ -11328,6 +11328,7 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
         return false;
     return true;
   case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_CONVERGENT:
     switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
     case Intrinsic::amdgcn_fmul_legacy:
     case Intrinsic::amdgcn_fmad_ftz:
@@ -13761,7 +13762,8 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
     const MachineRegisterInfo &MRI, unsigned Depth) const {
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
-  case AMDGPU::G_INTRINSIC: {
+  case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_CONVERGENT: {
     switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
     case Intrinsic::amdgcn_workitem_id_x:
       knownBitsForWorkitemID(*getSubtarget(), KB, Known, 0);
@@ -13835,7 +13837,6 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
     AttributeList Attrs = Intrinsic::getAttributes(Ctx, IID);
     if (MaybeAlign RetAlign = Attrs.getRetAlignment())
       return *RetAlign;
-    return Align(1);
   }
   return Align(1);
 }

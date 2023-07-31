@@ -1497,8 +1497,7 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
     llvm_unreachable("unexpected vector shape");
   MachineInstrBuilder UADD;
   for (LLT HTy : HAddTys) {
-    UADD = MIRBuilder.buildIntrinsic(Opc, {HTy}, /*HasSideEffects =*/false)
-                     .addUse(HSum);
+    UADD = MIRBuilder.buildIntrinsic(Opc, {HTy}).addUse(HSum);
     HSum = UADD.getReg(0);
   }
 
