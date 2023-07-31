@@ -260,7 +260,7 @@ public:
               JOS->attributeObject(
                   "value", [&] { ModelDumper(*JOS, State.Env).dump(*V); });
           } else {
-            if (auto *Loc = State.Env.getStorageLocationStrict(*E))
+            if (auto *Loc = State.Env.getStorageLocation(*E))
               JOS->attributeObject(
                   "value", [&] { ModelDumper(*JOS, State.Env).dump(*Loc); });
           }

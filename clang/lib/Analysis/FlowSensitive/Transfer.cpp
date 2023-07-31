@@ -74,7 +74,7 @@ static BoolValue &unpackValue(BoolValue &V, Environment &Env) {
 // value, if any unpacking occured. Also, does the lvalue-to-rvalue conversion,
 // by skipping past the reference.
 static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
-  auto *Loc = Env.getStorageLocationStrict(E);
+  auto *Loc = Env.getStorageLocation(E);
   if (Loc == nullptr)
     return nullptr;
   auto *Val = Env.getValue(*Loc);
@@ -92,13 +92,13 @@ static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
 
 static void propagateValue(const Expr &From, const Expr &To, Environment &Env) {
   if (auto *Val = Env.getValue(From))
-    Env.setValueStrict(To, *Val);
+    Env.setValue(To, *Val);
 }
 
 static void propagateStorageLocation(const Expr &From, const Expr &To,
                                      Environment &Env) {
-  if (auto *Loc = Env.getStorageLocationStrict(From))
-    Env.setStorageLocationStrict(To, *Loc);
+  if (auto *Loc = Env.getStorageLocation(From))
+    Env.setStorageLocation(To, *Loc);
 }
 
 // Propagates the value or storage location of `From` to `To` in cases where
@@ -129,7 +129,7 @@ public:
 
     switch (S->getOpcode()) {
     case BO_Assign: {
-      auto *LHSLoc = Env.getStorageLocationStrict(*LHS);
+      auto *LHSLoc = Env.getStorageLocation(*LHS);
       if (LHSLoc == nullptr)
         break;
 
@@ -141,7 +141,7 @@ public:
       Env.setValue(*LHSLoc, *RHSVal);
 
       // Assign a storage location for the whole expression.
-      Env.setStorageLocationStrict(*S, *LHSLoc);
+      Env.setStorageLocation(*S, *LHSLoc);
       break;
     }
     case BO_LAnd:
@@ -150,17 +150,16 @@ public:
       BoolValue &RHSVal = getLogicOperatorSubExprValue(*RHS);
 
       if (S->getOpcode() == BO_LAnd)
-        Env.setValueStrict(*S, Env.makeAnd(LHSVal, RHSVal));
+        Env.setValue(*S, Env.makeAnd(LHSVal, RHSVal));
       else
-        Env.setValueStrict(*S, Env.makeOr(LHSVal, RHSVal));
+        Env.setValue(*S, Env.makeOr(LHSVal, RHSVal));
       break;
     }
     case BO_NE:
     case BO_EQ: {
       auto &LHSEqRHSValue = evaluateBooleanEquality(*LHS, *RHS, Env);
-      Env.setValueStrict(*S, S->getOpcode() == BO_EQ
-                                 ? LHSEqRHSValue
-                                 : Env.makeNot(LHSEqRHSValue));
+      Env.setValue(*S, S->getOpcode() == BO_EQ ? LHSEqRHSValue
+                                               : Env.makeNot(LHSEqRHSValue));
       break;
     }
     case BO_Comma: {
@@ -188,7 +187,7 @@ public:
     if (DeclLoc == nullptr)
       return;
 
-    Env.setStorageLocationStrict(*S, *DeclLoc);
+    Env.setStorageLocation(*S, *DeclLoc);
   }
 
   void VisitDeclStmt(const DeclStmt *S) {
@@ -234,7 +233,7 @@ public:
           VisitDeclRefExpr(DE);
           VisitMemberExpr(ME);
 
-          if (auto *Loc = Env.getStorageLocationStrict(*ME))
+          if (auto *Loc = Env.getStorageLocation(*ME))
             Env.setStorageLocation(*B, *Loc);
         } else if (auto *VD = B->getHoldingVar()) {
           // Holding vars are used to back the `BindingDecl`s of tuple-like
@@ -263,11 +262,11 @@ public:
       // boolean.
       if (auto *SubExprVal =
               dyn_cast_or_null<BoolValue>(Env.getValue(*SubExpr)))
-        Env.setValueStrict(*S, *SubExprVal);
+        Env.setValue(*S, *SubExprVal);
       else
         // FIXME: If integer modeling is added, then update this code to create
         // the boolean based on the integer model.
-        Env.setValueStrict(*S, Env.makeAtomicBoolValue());
+        Env.setValue(*S, Env.makeAtomicBoolValue());
       break;
     }
 
@@ -279,7 +278,7 @@ public:
       if (SubExprVal == nullptr)
         break;
 
-      Env.setValueStrict(*S, *SubExprVal);
+      Env.setValue(*S, *SubExprVal);
       break;
     }
 
@@ -304,7 +303,7 @@ public:
     case CK_NullToPointer: {
       auto &NullPointerVal =
           Env.getOrCreateNullPointerValue(S->getType()->getPointeeType());
-      Env.setValueStrict(*S, NullPointerVal);
+      Env.setValue(*S, NullPointerVal);
       break;
     }
     case CK_NullToMemberPointer:
@@ -312,11 +311,11 @@ public:
       // with this expression.
       break;
     case CK_FunctionToPointerDecay: {
-      StorageLocation *PointeeLoc = Env.getStorageLocationStrict(*SubExpr);
+      StorageLocation *PointeeLoc = Env.getStorageLocation(*SubExpr);
       if (PointeeLoc == nullptr)
         break;
 
-      Env.setValueStrict(*S, Env.create<PointerValue>(*PointeeLoc));
+      Env.setValue(*S, Env.create<PointerValue>(*PointeeLoc));
       break;
     }
     case CK_BuiltinFnToFnPtr:
@@ -341,7 +340,7 @@ public:
       if (SubExprVal == nullptr)
         break;
 
-      Env.setStorageLocationStrict(*S, SubExprVal->getPointeeLoc());
+      Env.setStorageLocation(*S, SubExprVal->getPointeeLoc());
       break;
     }
     case UO_AddrOf: {
@@ -349,8 +348,8 @@ public:
       if (S->getType()->isMemberPointerType())
         break;
 
-      if (StorageLocation *PointeeLoc = Env.getStorageLocationStrict(*SubExpr))
-        Env.setValueStrict(*S, Env.create<PointerValue>(*PointeeLoc));
+      if (StorageLocation *PointeeLoc = Env.getStorageLocation(*SubExpr))
+        Env.setValue(*S, Env.create<PointerValue>(*PointeeLoc));
       break;
     }
     case UO_LNot: {
@@ -358,7 +357,7 @@ public:
       if (SubExprVal == nullptr)
         break;
 
-      Env.setValueStrict(*S, Env.makeNot(*SubExprVal));
+      Env.setValue(*S, Env.makeNot(*SubExprVal));
       break;
     }
     default:
@@ -373,12 +372,12 @@ public:
       // `this` expression's pointee.
       return;
 
-    Env.setValueStrict(*S, Env.create<PointerValue>(*ThisPointeeLoc));
+    Env.setValue(*S, Env.create<PointerValue>(*ThisPointeeLoc));
   }
 
   void VisitCXXNewExpr(const CXXNewExpr *S) {
     if (Value *Val = Env.createValue(S->getType()))
-      Env.setValueStrict(*S, *Val);
+      Env.setValue(*S, *Val);
   }
 
   void VisitCXXDeleteExpr(const CXXDeleteExpr *S) {
@@ -404,7 +403,7 @@ public:
       // FIXME: Model NRVO.
       Env.setReturnValue(Val);
     } else {
-      auto *Loc = Env.getStorageLocationStrict(*Ret);
+      auto *Loc = Env.getStorageLocation(*Ret);
       if (Loc == nullptr)
         return;
 
@@ -431,7 +430,7 @@ public:
         if (VarDeclLoc == nullptr)
           return;
 
-        Env.setStorageLocationStrict(*S, *VarDeclLoc);
+        Env.setStorageLocation(*S, *VarDeclLoc);
         return;
       }
     }
@@ -443,7 +442,7 @@ public:
     auto *MemberLoc = BaseLoc->getChild(*Member);
     if (MemberLoc == nullptr)
       return;
-    Env.setStorageLocationStrict(*S, *MemberLoc);
+    Env.setStorageLocation(*S, *MemberLoc);
   }
 
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *S) {
@@ -464,17 +463,17 @@ public:
       const Expr *Arg = S->getArg(0);
       assert(Arg != nullptr);
 
-      auto *ArgLoc = cast_or_null<AggregateStorageLocation>(
-          Env.getStorageLocationStrict(*Arg));
+      auto *ArgLoc =
+          cast_or_null<AggregateStorageLocation>(Env.getStorageLocation(*Arg));
       if (ArgLoc == nullptr)
         return;
 
       if (S->isElidable()) {
         if (Value *Val = Env.getValue(*ArgLoc))
-          Env.setValueStrict(*S, *Val);
+          Env.setValue(*S, *Val);
       } else {
         auto &Val = *cast<StructValue>(Env.createValue(S->getType()));
-        Env.setValueStrict(*S, Val);
+        Env.setValue(*S, Val);
         copyRecord(*ArgLoc, Val.getAggregateLoc(), Env);
       }
       return;
@@ -511,14 +510,14 @@ public:
           !Method->isMoveAssignmentOperator())
         return;
 
-      auto *LocSrc = cast_or_null<AggregateStorageLocation>(
-          Env.getStorageLocationStrict(*Arg1));
-      auto *LocDst = cast_or_null<AggregateStorageLocation>(
-          Env.getStorageLocationStrict(*Arg0));
+      auto *LocSrc =
+          cast_or_null<AggregateStorageLocation>(Env.getStorageLocation(*Arg1));
+      auto *LocDst =
+          cast_or_null<AggregateStorageLocation>(Env.getStorageLocation(*Arg0));
 
       if (LocSrc != nullptr && LocDst != nullptr) {
         copyRecord(*LocSrc, *LocDst, Env);
-        Env.setStorageLocationStrict(*S, *LocDst);
+        Env.setStorageLocation(*S, *LocDst);
       }
     }
   }
@@ -534,7 +533,7 @@ public:
 
   void VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *S) {
     if (Value *Val = Env.createValue(S->getType()))
-      Env.setValueStrict(*S, *Val);
+      Env.setValue(*S, *Val);
   }
 
   void VisitCallExpr(const CallExpr *S) {
@@ -547,11 +546,11 @@ public:
       const Expr *Arg = S->getArg(0);
       assert(Arg != nullptr);
 
-      auto *ArgLoc = Env.getStorageLocationStrict(*Arg);
+      auto *ArgLoc = Env.getStorageLocation(*Arg);
       if (ArgLoc == nullptr)
         return;
 
-      Env.setStorageLocationStrict(*S, *ArgLoc);
+      Env.setStorageLocation(*S, *ArgLoc);
     } else if (S->getDirectCallee() != nullptr &&
                S->getDirectCallee()->getBuiltinID() ==
                    Builtin::BI__builtin_expect) {
@@ -560,7 +559,7 @@ public:
       auto *ArgVal = Env.getValue(*S->getArg(0));
       if (ArgVal == nullptr)
         return;
-      Env.setValueStrict(*S, *ArgVal);
+      Env.setValue(*S, *ArgVal);
     } else if (const FunctionDecl *F = S->getDirectCallee()) {
       transferInlineCall(S, F);
     }
@@ -575,13 +574,13 @@ public:
       return;
 
     if (StructValue *StructVal = dyn_cast<StructValue>(SubExprVal)) {
-      Env.setStorageLocationStrict(*S, StructVal->getAggregateLoc());
+      Env.setStorageLocation(*S, StructVal->getAggregateLoc());
       return;
     }
 
     StorageLocation &Loc = Env.createStorageLocation(*S);
     Env.setValue(Loc, *SubExprVal);
-    Env.setStorageLocationStrict(*S, Loc);
+    Env.setStorageLocation(*S, Loc);
   }
 
   void VisitCXXBindTemporaryExpr(const CXXBindTemporaryExpr *S) {
@@ -605,9 +604,9 @@ public:
     // `a = b ? c : d` we can add `b => a == c && !b => a == d` to the flow
     // condition.
     if (S->isGLValue())
-      Env.setStorageLocationStrict(*S, Env.createObject(S->getType()));
+      Env.setStorageLocation(*S, Env.createObject(S->getType()));
     else if (Value *Val = Env.createValue(S->getType()))
-      Env.setValueStrict(*S, *Val);
+      Env.setValue(*S, *Val);
   }
 
   void VisitInitListExpr(const InitListExpr *S) {
@@ -615,7 +614,7 @@ public:
 
     if (!Type->isStructureOrClassType()) {
       if (auto *Val = Env.createValue(Type))
-        Env.setValueStrict(*S, *Val);
+        Env.setValue(*S, *Val);
 
       return;
     }
@@ -646,17 +645,17 @@ public:
 
     Env.setValue(Loc, StructVal);
 
-    Env.setValueStrict(*S, StructVal);
+    Env.setValue(*S, StructVal);
 
     // FIXME: Implement array initialization.
   }
 
   void VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *S) {
-    Env.setValueStrict(*S, Env.getBoolLiteralValue(S->getValue()));
+    Env.setValue(*S, Env.getBoolLiteralValue(S->getValue()));
   }
 
   void VisitIntegerLiteral(const IntegerLiteral *S) {
-    Env.setValueStrict(*S, Env.getIntLiteralValue(S->getValue()));
+    Env.setValue(*S, Env.getIntLiteralValue(S->getValue()));
   }
 
   void VisitParenExpr(const ParenExpr *S) {

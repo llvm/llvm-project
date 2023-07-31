@@ -337,7 +337,7 @@ Environment Environment::pushCall(const CallExpr *Call) const {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
       if (!isa<CXXThisExpr>(Arg))
           Env.ThisPointeeLoc =
-              cast<AggregateStorageLocation>(getStorageLocationStrict(*Arg));
+              cast<AggregateStorageLocation>(getStorageLocation(*Arg));
       // Otherwise (when the argument is `this`), retain the current
       // environment's `ThisPointeeLoc`.
     }
@@ -396,10 +396,10 @@ void Environment::popCall(const CallExpr *Call, const Environment &CalleeEnv) {
 
   if (Call->isGLValue()) {
     if (CalleeEnv.ReturnLoc != nullptr)
-      setStorageLocationStrict(*Call, *CalleeEnv.ReturnLoc);
+      setStorageLocation(*Call, *CalleeEnv.ReturnLoc);
   } else if (!Call->getType()->isVoidType()) {
     if (CalleeEnv.ReturnVal != nullptr)
-      setValueStrict(*Call, *CalleeEnv.ReturnVal);
+      setValue(*Call, *CalleeEnv.ReturnVal);
   }
 }
 
@@ -410,7 +410,7 @@ void Environment::popCall(const CXXConstructExpr *Call,
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
 
   if (Value *Val = CalleeEnv.getValue(*CalleeEnv.ThisPointeeLoc)) {
-    setValueStrict(*Call, *Val);
+    setValue(*Call, *Val);
   }
 }
 
@@ -618,8 +618,7 @@ StorageLocation *Environment::getStorageLocation(const ValueDecl &D) const {
   return Loc;
 }
 
-void Environment::setStorageLocationStrict(const Expr &E,
-                                           StorageLocation &Loc) {
+void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
   // `DeclRefExpr`s to builtin function types aren't glvalues, for some reason,
   // but we still want to be able to associate a `StorageLocation` with them,
   // so allow these as an exception.
@@ -628,8 +627,8 @@ void Environment::setStorageLocationStrict(const Expr &E,
   setStorageLocationInternal(E, Loc);
 }
 
-StorageLocation *Environment::getStorageLocationStrict(const Expr &E) const {
-  // See comment in `setStorageLocationStrict()`.
+StorageLocation *Environment::getStorageLocation(const Expr &E) const {
+  // See comment in `setStorageLocation()`.
   assert(E.isGLValue() ||
          E.getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn));
   return getStorageLocationInternal(E);
@@ -663,7 +662,7 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
   LocToVal[&Loc] = &Val;
 }
 
-void Environment::setValueStrict(const Expr &E, Value &Val) {
+void Environment::setValue(const Expr &E, Value &Val) {
   assert(E.isPRValue());
 
   if (auto *StructVal = dyn_cast<StructValue>(&Val)) {
@@ -820,7 +819,7 @@ StorageLocation &Environment::createObjectInternal(const VarDecl *D,
     // can happen that we can't see the initializer, so `InitExpr` may still
     // be null.
     if (InitExpr) {
-      if (auto *InitExprLoc = getStorageLocationStrict(*InitExpr))
+      if (auto *InitExprLoc = getStorageLocation(*InitExpr))
           return *InitExprLoc;
     }
 
@@ -906,7 +905,7 @@ getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
     return nullptr;
   }
   return cast_or_null<AggregateStorageLocation>(
-      Env.getStorageLocationStrict(*ImplicitObject));
+      Env.getStorageLocation(*ImplicitObject));
 }
 
 AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
@@ -919,8 +918,7 @@ AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
       return &cast<AggregateStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
-  return cast_or_null<AggregateStorageLocation>(
-      Env.getStorageLocationStrict(*Base));
+  return cast_or_null<AggregateStorageLocation>(Env.getStorageLocation(*Base));
 }
 
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
@@ -948,24 +946,24 @@ StructValue &refreshStructValue(const Expr &Expr, Environment &Env) {
   if (Expr.isPRValue()) {
     if (auto *ExistingVal = cast_or_null<StructValue>(Env.getValue(Expr))) {
       auto &NewVal = Env.create<StructValue>(ExistingVal->getAggregateLoc());
-      Env.setValueStrict(Expr, NewVal);
+      Env.setValue(Expr, NewVal);
       return NewVal;
     }
 
     auto &NewVal = *cast<StructValue>(Env.createValue(Expr.getType()));
-    Env.setValueStrict(Expr, NewVal);
+    Env.setValue(Expr, NewVal);
     return NewVal;
   }
 
   if (auto *Loc = cast_or_null<AggregateStorageLocation>(
-          Env.getStorageLocationStrict(Expr))) {
+          Env.getStorageLocation(Expr))) {
     auto &NewVal = Env.create<StructValue>(*Loc);
     Env.setValue(*Loc, NewVal);
     return NewVal;
   }
 
   auto &NewVal = *cast<StructValue>(Env.createValue(Expr.getType()));
-  Env.setStorageLocationStrict(Expr, NewVal.getAggregateLoc());
+  Env.setStorageLocation(Expr, NewVal.getAggregateLoc());
   return NewVal;
 }
 
