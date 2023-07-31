@@ -257,6 +257,17 @@ TEST(MatrixTest, dotProduct) {
     EXPECT_EQ(dotProduct(a, b).num, 32);
 }
 
+TEST (MatrixTest, inverse) {
+    MatrixF mat = makeMatrixF(2, 2, {{Fraction(2, 1), Fraction(1, 1)}, {Fraction(7, 1), Fraction(0, 1)}});
+    MatrixF inverse = makeMatrixF(2, 2, {{Fraction(0, 1), Fraction(1, 7)}, {Fraction(1, 1), Fraction(-2, 7)}});
+
+    MatrixF inv = mat.inverse();
+
+    for (unsigned row = 0; row < 2; row++)
+      for (unsigned col = 0; col < 2; col++)
+        EXPECT_EQ(inv(row, col), inverse(row, col));
+}
+
 TEST(MatrixTest, gramSchmidt) {
     MatrixF mat = makeMatrixF(3, 5, {{Fraction(3, 1), Fraction(4, 1), Fraction(5, 1), Fraction(12, 1), Fraction(19, 1)},
                                      {Fraction(4, 1), Fraction(5, 1), Fraction(6, 1), Fraction(13, 1), Fraction(20, 1)},

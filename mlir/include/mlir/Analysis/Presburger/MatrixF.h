@@ -160,6 +160,9 @@ public:
   /// this matrix, say M, and return Mv.
   SmallVector<Fraction, 8> postMultiplyWithColumn(ArrayRef<Fraction> colVec) const;
 
+  // Invert the matrix (it must be square), leaving the calling object unmodified.
+  MatrixF inverse();
+
   // Run Gram-Schmidt orthogonalisation on the matrix, leaving the calling object
   // unmodified and returning the orthogonal (unnormalised) matrix.
   MatrixF gramSchmidt();

@@ -54,10 +54,6 @@ public:
   // form and then taking the product of the diagonal.
   MPInt determinant();
 
-  // Find the integer inverse of a square integer matrix using
-  // Gaussian elimination.
-  void integerInverse();
-
 private:
   Matrix matrix;
 };

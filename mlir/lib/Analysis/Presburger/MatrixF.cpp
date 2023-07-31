@@ -246,6 +246,56 @@ MatrixF::postMultiplyWithColumn(ArrayRef<Fraction> colVec) const {
   return result;
 }
 
+MatrixF MatrixF::inverse()
+{
+    // We use Gaussian elimination on the rows of [M | I]
+    // to find the integer inverse. We proceed left-to-right,
+    // top-to-bottom. M is assumed to be a dim x dim matrix.
+
+    unsigned dim = getNumRows();
+
+    // Construct the augmented matrix [M | I]
+    MatrixF augmented(dim, dim + dim);
+    for (unsigned i = 0; i < dim; i++)
+    {
+        augmented.fillRow(i, 0);
+        for (unsigned j = 0; j < dim; j++)
+            augmented(i, j) = at(i, j);
+        augmented(i, dim+i) = Fraction(1, 1);
+    }
+
+    Fraction a, b;
+    for (unsigned i = 0; i < dim; i++)
+    {
+        b = augmented(i, i);
+        for (unsigned j = 0; j < dim; j++)
+        {
+            if (i == j) continue;
+            a = augmented(j, i);
+            // Rj -> Rj - (b/a)Ri
+            augmented.addToRow(j, augmented.getRow(i), - a / b);
+            // Now (Rj)i = 0
+        }
+    }
+    
+    // Now only diagonal elements are nonzero, but they are
+    // not necessarily 1.
+    for (unsigned i = 0; i < dim; i++)
+    {
+        a = augmented(i, i);
+        for (unsigned j = dim; j < dim + dim; j++)
+            augmented(i, j) = augmented(i, j) / a;
+    }
+
+    // Copy the right half of the augmented matrix.
+    MatrixF inverse(dim, dim);
+    for (unsigned i = 0; i < dim; i++)
+        for (unsigned j = 0; j < dim; j++)
+            inverse(i, j) = augmented(i, j+dim);
+
+    return inverse;
+}
+
 Fraction mlir::presburger::dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b)
 {
     Fraction sum(0, 1);
