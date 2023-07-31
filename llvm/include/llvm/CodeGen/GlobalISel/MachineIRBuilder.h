@@ -1108,20 +1108,25 @@ public:
   MachineInstrBuilder buildInsert(const DstOp &Res, const SrcOp &Src,
                                   const SrcOp &Op, unsigned Index);
 
-  /// Build and insert either a G_INTRINSIC (if \p HasSideEffects is false) or
-  /// G_INTRINSIC_W_SIDE_EFFECTS instruction. Its first operand will be the
-  /// result register definition unless \p Reg is NoReg (== 0). The second
-  /// operand will be the intrinsic's ID.
+  /// Build and insert a G_INTRINSIC instruction.
   ///
-  /// Callers are expected to add the required definitions and uses afterwards.
+  /// There are four different opcodes based on combinations of whether the
+  /// intrinsic has side effects and whether it is convergent. These properties
+  /// can be specified as explicit parameters, or else they are retrieved from
+  /// the MCID for the intrinsic.
+  ///
+  /// The parameter \p Res provides the Registers or MOs that will be defined by
+  /// this instruction.
   ///
   /// \pre setBasicBlock or setMI must have been called.
   ///
   /// \return a MachineInstrBuilder for the newly created instruction.
   MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<Register> Res,
-                                     bool HasSideEffects);
+                                     bool HasSideEffects, bool isConvergent);
+  MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<Register> Res);
   MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<DstOp> Res,
-                                     bool HasSideEffects);
+                                     bool HasSideEffects, bool isConvergent);
+  MachineInstrBuilder buildIntrinsic(Intrinsic::ID ID, ArrayRef<DstOp> Res);
 
   /// Build and insert \p Res = G_FPTRUNC \p Op
   ///

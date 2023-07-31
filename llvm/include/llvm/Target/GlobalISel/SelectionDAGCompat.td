@@ -39,6 +39,10 @@ class GINodeEquiv<Instruction i, SDNode node> {
   // SelectionDAG has one setcc for all compares. This differentiates
   // for G_ICMP and G_FCMP.
   Instruction IfFloatingPoint = ?;
+
+  // SelectionDAG does not differentiate between convergent and non-convergent
+  // intrinsics. This specifies an alternate opcode for a convergent intrinsic.
+  Instruction IfConvergent = ?;
 }
 
 // These are defined in the same order as the G_* instructions.
@@ -106,10 +110,17 @@ def : GINodeEquiv<G_FLOG2, flog2>;
 def : GINodeEquiv<G_FLDEXP, fldexp>;
 def : GINodeEquiv<G_FCANONICALIZE, fcanonicalize>;
 def : GINodeEquiv<G_IS_FPCLASS, is_fpclass>;
-def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain>;
+
+def : GINodeEquiv<G_INTRINSIC, intrinsic_wo_chain> {
+  let IfConvergent = G_INTRINSIC_CONVERGENT;
+}
+
 // ISD::INTRINSIC_VOID can also be handled with G_INTRINSIC_W_SIDE_EFFECTS.
-def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_void>;
-def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_w_chain>;
+let IfConvergent = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS in {
+  def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_void>;
+  def : GINodeEquiv<G_INTRINSIC_W_SIDE_EFFECTS, intrinsic_w_chain>;
+}
+
 def : GINodeEquiv<G_BR, br>;
 def : GINodeEquiv<G_BSWAP, bswap>;
 def : GINodeEquiv<G_BITREVERSE, bitreverse>;

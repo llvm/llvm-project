@@ -633,8 +633,10 @@ AMDGPURegisterBankInfo::getInstrAlternativeMappings(
     return AltMappings;
   }
   case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_CONVERGENT:
     return getInstrAlternativeMappingsIntrinsic(MI, MRI);
   case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS:
+  case AMDGPU::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
     return getInstrAlternativeMappingsIntrinsicWSideEffects(MI, MRI);
   default:
     break;
@@ -923,8 +925,7 @@ bool AMDGPURegisterBankInfo::executeInWaterfallLoop(
 
   // The ballot becomes a no-op during instruction selection.
   CondReg = B.buildIntrinsic(Intrinsic::amdgcn_ballot,
-                             {LLT::scalar(Subtarget.isWave32() ? 32 : 64)},
-                             false)
+                             {LLT::scalar(Subtarget.isWave32() ? 32 : 64)})
                 .addReg(CondReg)
                 .getReg(0);
   MRI.setRegClass(CondReg, WaveRC);
@@ -1452,7 +1453,7 @@ bool AMDGPURegisterBankInfo::applyMappingBFE(const OperandsMapper &OpdMapper,
 
   const LLT S32 = LLT::scalar(32);
 
-  unsigned FirstOpnd = MI.getOpcode() == AMDGPU::G_INTRINSIC ? 2 : 1;
+  unsigned FirstOpnd = isa<GIntrinsic>(MI) ? 2 : 1;
   Register SrcReg = MI.getOperand(FirstOpnd).getReg();
   Register OffsetReg = MI.getOperand(FirstOpnd + 1).getReg();
   Register WidthReg = MI.getOperand(FirstOpnd + 2).getReg();
@@ -2949,7 +2950,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     applyMappingSBufferLoad(OpdMapper);
     return;
   }
-  case AMDGPU::G_INTRINSIC: {
+  case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_CONVERGENT: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
     case Intrinsic::amdgcn_readlane: {
       substituteSimpleCopyRegs(OpdMapper, 2);
@@ -3035,7 +3037,8 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     executeInWaterfallLoop(MI, MRI, { N });
     return;
   }
-  case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
+  case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS:
+  case AMDGPU::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS: {
     auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrID) {
     case Intrinsic::amdgcn_ds_ordered_add:
@@ -4198,7 +4201,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     OpdsMapping[0] = AMDGPU::getValueMapping(ResultBank, Size0);
     break;
   }
-  case AMDGPU::G_INTRINSIC: {
+  case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_CONVERGENT: {
     switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
     default:
       return getInvalidInstructionMapping();
@@ -4560,7 +4564,8 @@ AMDGPURegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     }
     break;
   }
-  case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
+  case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS:
+  case AMDGPU::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS: {
     auto IntrID = cast<GIntrinsic>(MI).getIntrinsicID();
     switch (IntrID) {
     case Intrinsic::amdgcn_s_getreg:
