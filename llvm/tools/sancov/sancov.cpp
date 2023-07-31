@@ -38,6 +38,7 @@
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
@@ -1221,7 +1222,7 @@ static void parseArgs(int Argc, char **Argv) {
   ClIgnorelist = Args.getLastArgValue(OPT_ignorelist_EQ);
 }
 
-int main(int Argc, char **Argv) {
+int sancov_main(int Argc, char **Argv, const llvm::ToolContext &) {
   llvm::InitLLVM X(Argc, Argv);
 
   llvm::InitializeAllTargetInfos();
@@ -1273,4 +1274,6 @@ int main(int Argc, char **Argv) {
   case PrintCovPointsAction:
     llvm_unreachable("unsupported action");
   }
+
+  return 0;
 }
