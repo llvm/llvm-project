@@ -415,7 +415,7 @@ void DataSharingProcessor::privatize() {
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols) {
     if (const auto *commonDet =
             sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
-      for (const auto mem : commonDet->objects()) {
+      for (const auto &mem : commonDet->objects()) {
         cloneSymbol(&*mem);
         copyFirstPrivateSymbol(&*mem);
       }
@@ -431,7 +431,7 @@ void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols)
     if (const auto *commonDet =
             sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
-      for (const auto mem : commonDet->objects()) {
+      for (const auto &mem : commonDet->objects()) {
         copyLastPrivateSymbol(&*mem, &lastPrivIP);
       }
     } else {
