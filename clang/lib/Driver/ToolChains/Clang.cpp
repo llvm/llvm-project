@@ -56,7 +56,6 @@
 #include "llvm/Support/YAMLParser.h"
 #include "llvm/TargetParser/ARMTargetParserCommon.h"
 #include "llvm/TargetParser/Host.h"
-#include "llvm/TargetParser/LoongArchTargetParser.h"
 #include "llvm/TargetParser/RISCVTargetParser.h"
 #include <cctype>
 
@@ -1854,25 +1853,10 @@ void Clang::AddAArch64TargetArgs(const ArgList &Args,
 
 void Clang::AddLoongArchTargetArgs(const ArgList &Args,
                                    ArgStringList &CmdArgs) const {
-  const llvm::Triple &Triple = getToolChain().getTriple();
-
   CmdArgs.push_back("-target-abi");
-  CmdArgs.push_back(
-      loongarch::getLoongArchABI(getToolChain().getDriver(), Args, Triple)
-          .data());
-
-  // Handle -mtune.
-  if (const Arg *A = Args.getLastArg(options::OPT_mtune_EQ)) {
-    StringRef TuneCPU = A->getValue();
-    if (TuneCPU == "native") {
-      TuneCPU = llvm::sys::getHostCPUName();
-      if (TuneCPU == "generic")
-        TuneCPU = llvm::LoongArch::getDefaultArch(Triple.isLoongArch64());
-    }
-    CmdArgs.push_back("-tune-cpu");
-    CmdArgs.push_back(Args.MakeArgString(TuneCPU));
-    llvm::LoongArch::setTuneCPU(TuneCPU);
-  }
+  CmdArgs.push_back(loongarch::getLoongArchABI(getToolChain().getDriver(), Args,
+                                               getToolChain().getTriple())
+                        .data());
 }
 
 void Clang::AddMIPSTargetArgs(const ArgList &Args,
