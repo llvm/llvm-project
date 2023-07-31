@@ -1928,17 +1928,17 @@ void HeaderSearch::loadSubdirectoryModuleMaps(DirectoryLookup &SearchDir) {
 }
 
 std::string HeaderSearch::suggestPathToFileForDiagnostics(
-    const FileEntry *File, llvm::StringRef MainFile, bool *IsSystem) const {
+    const FileEntry *File, llvm::StringRef MainFile, bool *IsAngled) const {
   // FIXME: We assume that the path name currently cached in the FileEntry is
   // the most appropriate one for this analysis (and that it's spelled the
   // same way as the corresponding header search path).
   return suggestPathToFileForDiagnostics(File->getName(), /*WorkingDir=*/"",
-                                         MainFile, IsSystem);
+                                         MainFile, IsAngled);
 }
 
 std::string HeaderSearch::suggestPathToFileForDiagnostics(
     llvm::StringRef File, llvm::StringRef WorkingDir, llvm::StringRef MainFile,
-    bool *IsSystem) const {
+    bool *IsAngled) const {
   using namespace llvm::sys;
 
   llvm::SmallString<32> FilePath = File;
@@ -1996,15 +1996,16 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
     if (DL.isNormalDir()) {
       StringRef Dir = DL.getDirRef()->getName();
       if (CheckDir(Dir)) {
-        if (IsSystem)
-          *IsSystem = BestPrefixLength && isSystem(DL.getDirCharacteristic());
+        if (IsAngled)
+          *IsAngled = BestPrefixLength && isSystem(DL.getDirCharacteristic());
         BestPrefixIsFramework = false;
       }
     } else if (DL.isFramework()) {
       StringRef Dir = DL.getFrameworkDirRef()->getName();
       if (CheckDir(Dir)) {
-        if (IsSystem)
-          *IsSystem = BestPrefixLength && isSystem(DL.getDirCharacteristic());
+        // Framework includes by convention use <>.
+        if (IsAngled)
+          *IsAngled = BestPrefixLength;
         BestPrefixIsFramework = true;
       }
     }
@@ -2013,8 +2014,8 @@ std::string HeaderSearch::suggestPathToFileForDiagnostics(
   // Try to shorten include path using TUs directory, if we couldn't find any
   // suitable prefix in include search paths.
   if (!BestPrefixLength && CheckDir(path::parent_path(MainFile))) {
-    if (IsSystem)
-      *IsSystem = false;
+    if (IsAngled)
+      *IsAngled = false;
     BestPrefixIsFramework = false;
   }
 
