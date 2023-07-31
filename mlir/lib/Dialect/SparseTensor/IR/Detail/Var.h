@@ -60,7 +60,7 @@ namespace ir_detail {
 /// representation.
 enum class VarKind { Symbol = 1, Dimension = 0, Level = 2 };
 
-constexpr bool isWF(VarKind vk) {
+[[nodiscard]] constexpr bool isWF(VarKind vk) {
   const auto vk_ = to_underlying(vk);
   return 0 <= vk_ && vk_ <= 2;
 }
@@ -145,7 +145,7 @@ public:
   //
   // This must be public for `VarInfo` to use it (whereas we don't want
   // to expose the `impl` field via friendship).
-  static constexpr bool isWF_Num(Num n) { return n <= kMaxNum; }
+  [[nodiscard]] static constexpr bool isWF_Num(Num n) { return n <= kMaxNum; }
 
 protected:
   /// The underlying implementation of `Var`.  Note that this must be kept
@@ -297,10 +297,10 @@ public:
   constexpr unsigned getDimRank() const { return getRank(VarKind::Dimension); }
   constexpr unsigned getLvlRank() const { return getRank(VarKind::Level); }
 
-  constexpr bool isValid(Var var) const {
+  [[nodiscard]] constexpr bool isValid(Var var) const {
     return var.getNum() < getRank(var.getKind());
   }
-  bool isValid(DimLvlExpr expr) const;
+  [[nodiscard]] bool isValid(DimLvlExpr expr) const;
 };
 static_assert(IsZeroCostAbstraction<Ranks>);
 
