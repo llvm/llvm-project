@@ -17,7 +17,7 @@ export namespace std {
   using std::is_execution_policy_v;
 } // namespace std
 
-namespace std::execution {
+export namespace std::execution {
   // [execpol.seq], sequenced execution policy
   using std::execution::sequenced_policy;
 
