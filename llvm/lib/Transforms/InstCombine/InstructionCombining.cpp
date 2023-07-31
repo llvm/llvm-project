@@ -36,7 +36,6 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/Statistic.h"
@@ -4119,11 +4118,8 @@ public:
 /// them to the worklist (this significantly speeds up instcombine on code where
 /// many instructions are dead or constant).  Additionally, if we find a branch
 /// whose condition is a known constant, we only visit the reachable successors.
-static bool
-prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
-                              const TargetLibraryInfo *TLI,
-                              InstructionWorklist &ICWorklist,
-                              ReversePostOrderTraversal<BasicBlock *> &RPOT) {
+bool InstCombinerImpl::prepareWorklist(
+    Function &F, ReversePostOrderTraversal<BasicBlock *> &RPOT) {
   bool MadeIRChange = false;
   SmallPtrSet<BasicBlock *, 32> LiveBlocks;
   LiveBlocks.insert(&F.front());
@@ -4140,12 +4136,12 @@ prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
       // ConstantProp instruction if trivially constant.
       if (!Inst.use_empty() &&
           (Inst.getNumOperands() == 0 || isa<Constant>(Inst.getOperand(0))))
-        if (Constant *C = ConstantFoldInstruction(&Inst, DL, TLI)) {
+        if (Constant *C = ConstantFoldInstruction(&Inst, DL, &TLI)) {
           LLVM_DEBUG(dbgs() << "IC: ConstFold to: " << *C << " from: " << Inst
                             << '\n');
           Inst.replaceAllUsesWith(C);
           ++NumConstProp;
-          if (isInstructionTriviallyDead(&Inst, TLI))
+          if (isInstructionTriviallyDead(&Inst, &TLI))
             Inst.eraseFromParent();
           MadeIRChange = true;
           continue;
@@ -4159,7 +4155,7 @@ prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
         auto *C = cast<Constant>(U);
         Constant *&FoldRes = FoldedConstants[C];
         if (!FoldRes)
-          FoldRes = ConstantFoldConstant(C, DL, TLI);
+          FoldRes = ConstantFoldConstant(C, DL, &TLI);
 
         if (FoldRes != C) {
           LLVM_DEBUG(dbgs() << "IC: ConstFold operand of: " << Inst
@@ -4227,11 +4223,11 @@ prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
   // of the function down.  This jives well with the way that it adds all uses
   // of instructions to the worklist after doing a transformation, thus avoiding
   // some N^2 behavior in pathological cases.
-  ICWorklist.reserve(InstrsForInstructionWorklist.size());
+  Worklist.reserve(InstrsForInstructionWorklist.size());
   for (Instruction *Inst : reverse(InstrsForInstructionWorklist)) {
     // DCE instruction if trivially dead. As we iterate in reverse program
     // order here, we will clean up whole chains of dead instructions.
-    if (isInstructionTriviallyDead(Inst, TLI) ||
+    if (isInstructionTriviallyDead(Inst, &TLI) ||
         SeenAliasScopes.isNoAliasScopeDeclDead(Inst)) {
       ++NumDeadInst;
       LLVM_DEBUG(dbgs() << "IC: DCE: " << *Inst << '\n');
@@ -4241,7 +4237,7 @@ prepareICWorklistFromFunction(Function &F, const DataLayout &DL,
       continue;
     }
 
-    ICWorklist.push(Inst);
+    Worklist.push(Inst);
   }
 
   return MadeIRChange;
@@ -4289,12 +4285,10 @@ static bool combineInstructionsOverFunction(
     LLVM_DEBUG(dbgs() << "\n\nINSTCOMBINE ITERATION #" << Iteration << " on "
                       << F.getName() << "\n");
 
-    bool MadeChangeInThisIteration =
-        prepareICWorklistFromFunction(F, DL, &TLI, Worklist, RPOT);
-
     InstCombinerImpl IC(Worklist, Builder, F.hasMinSize(), AA, AC, TLI, TTI, DT,
                         ORE, BFI, PSI, DL, LI);
     IC.MaxArraySizeForCombine = MaxArraySize;
+    bool MadeChangeInThisIteration = IC.prepareWorklist(F, RPOT);
     MadeChangeInThisIteration |= IC.run();
     if (!MadeChangeInThisIteration)
       break;
