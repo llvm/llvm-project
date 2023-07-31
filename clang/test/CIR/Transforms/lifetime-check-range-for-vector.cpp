@@ -20,4 +20,9 @@ void swappy(unsigned c) {
   for (auto& image : images) {
     image = {INFO_ENUM_1};
   }
+
+  std::vector<InfoRaw> images2(c);
+  for (unsigned i = 0; i < c; i++) {
+    images2[i] = {INFO_ENUM_1};
+  }
 }
