@@ -939,28 +939,14 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
                    SmallVectorImpl<mlir::TypedAttr> &Elements,
                    mlir::TypedAttr Filler) {
   auto &builder = CGM.getBuilder();
-  auto isNullValue = [&](mlir::Attribute f) {
-    // TODO(cir): introduce char type in CIR and check for that instead.
-    if (const auto intVal = f.dyn_cast_or_null<mlir::cir::IntAttr>())
-      return intVal.getValue() == 0;
-
-    if (const auto fpVal = f.dyn_cast_or_null<mlir::FloatAttr>()) {
-      bool ignored;
-      llvm::APFloat FV(+0.0);
-      FV.convert(fpVal.getValue().getSemantics(),
-                 llvm::APFloat::rmNearestTiesToEven, &ignored);
-      return FV.bitwiseIsEqual(fpVal.getValue());
-    }
-
-    llvm_unreachable("NYI");
-  };
 
   // Figure out how long the initial prefix of non-zero elements is.
   unsigned NonzeroLength = ArrayBound;
-  if (Elements.size() < NonzeroLength && isNullValue(Filler))
+  if (Elements.size() < NonzeroLength && builder.isNullValue(Filler))
     NonzeroLength = Elements.size();
   if (NonzeroLength == Elements.size()) {
-    while (NonzeroLength > 0 && isNullValue(Elements[NonzeroLength - 1]))
+    while (NonzeroLength > 0 &&
+           builder.isNullValue(Elements[NonzeroLength - 1]))
       --NonzeroLength;
   }
 

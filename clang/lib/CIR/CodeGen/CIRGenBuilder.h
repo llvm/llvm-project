@@ -169,6 +169,24 @@ public:
     llvm_unreachable("Zero initializer for given type is NYI");
   }
 
+  // TODO(cir): Once we have CIR float types, replace this by something like a
+  // NullableValueInterface to allow for type-independent queries.
+  bool isNullValue(mlir::Attribute attr) const {
+    // TODO(cir): introduce char type in CIR and check for that instead.
+    if (const auto intVal = attr.dyn_cast<mlir::cir::IntAttr>())
+      return intVal.isNullValue();
+
+    if (const auto fpVal = attr.dyn_cast<mlir::FloatAttr>()) {
+      bool ignored;
+      llvm::APFloat FV(+0.0);
+      FV.convert(fpVal.getValue().getSemantics(),
+                 llvm::APFloat::rmNearestTiesToEven, &ignored);
+      return FV.bitwiseIsEqual(fpVal.getValue());
+    }
+
+    llvm_unreachable("NYI");
+  }
+
   //
   // Type helpers
   // ------------
