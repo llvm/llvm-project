@@ -77,7 +77,7 @@ protected:
   void GetIVarInformation();
 
 private:
-  static const uint32_t RW_REALIZED = (1 << 31);
+  static const uint32_t RW_REALIZED = (1u << 31);
 
   struct objc_class_t {
     ObjCLanguageRuntime::ObjCISA m_isa = 0; // The class's metaclass.
@@ -173,7 +173,8 @@ private:
     }
 
     bool Read(Process *process, lldb::addr_t addr,
-              lldb::addr_t relative_method_lists_base_addr, bool, bool);
+              lldb::addr_t relative_selector_base_addr, bool is_small,
+              bool has_direct_sel);
   };
 
   struct ivar_list_t {
