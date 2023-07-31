@@ -3607,7 +3607,7 @@ private:
   /// where "width" indicates the minimum bit width and "signed" is True if the
   /// value must be signed-extended, rather than zero-extended, back to its
   /// original width.
-  MapVector<Value *, std::pair<uint64_t, bool>> MinBWs;
+  DenseMap<Value *, std::pair<uint64_t, bool>> MinBWs;
 };
 
 } // end namespace slpvectorizer
@@ -7290,9 +7290,10 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
   // If we have computed a smaller type for the expression, update VecTy so
   // that the costs will be accurate.
-  if (MinBWs.count(VL[0]))
+  auto It = MinBWs.find(VL.front());
+  if (It != MinBWs.end())
     VecTy = FixedVectorType::get(
-        IntegerType::get(F->getContext(), MinBWs[VL[0]].first), VL.size());
+        IntegerType::get(F->getContext(), It->second.first), VL.size());
   unsigned EntryVF = E->getVectorFactor();
   auto *FinalVecTy = FixedVectorType::get(VecTy->getElementType(), EntryVF);
 
@@ -7735,7 +7736,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       auto *SrcVecTy = FixedVectorType::get(SrcTy, VL.size());
       InstructionCost VecCost = CommonCost;
       // Check if the values are candidates to demote.
-      if (!MinBWs.count(VL0) || VecTy != SrcVecTy)
+      if (!MinBWs.contains(VL0) || VecTy != SrcVecTy)
         VecCost +=
             TTI->getCastInstrCost(E->getOpcode(), VecTy, SrcVecTy,
                                   TTI::getCastContextHint(VL0), CostKind, VL0);
@@ -8563,10 +8564,11 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     auto *VecTy = FixedVectorType::get(EU.Scalar->getType(), BundleWidth);
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     auto *ScalarRoot = VectorizableTree[0]->Scalars[0];
-    if (MinBWs.count(ScalarRoot)) {
-      auto *MinTy = IntegerType::get(F->getContext(), MinBWs[ScalarRoot].first);
-      auto Extend =
-          MinBWs[ScalarRoot].second ? Instruction::SExt : Instruction::ZExt;
+    auto It = MinBWs.find(ScalarRoot);
+    if (It != MinBWs.end()) {
+      auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
+      unsigned Extend =
+          It->second.second ? Instruction::SExt : Instruction::ZExt;
       VecTy = FixedVectorType::get(MinTy, BundleWidth);
       ExtractCost += TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
                                                    VecTy, EU.Lane);
@@ -10849,7 +10851,8 @@ Value *BoUpSLP::vectorizeTree(
   // vectorized root. InstCombine will then rewrite the entire expression. We
   // sign extend the extracted values below.
   auto *ScalarRoot = VectorizableTree[0]->Scalars[0];
-  if (MinBWs.count(ScalarRoot)) {
+  auto It = MinBWs.find(ScalarRoot);
+  if (It != MinBWs.end()) {
     if (auto *I = dyn_cast<Instruction>(VectorRoot)) {
       // If current instr is a phi and not the last phi, insert it after the
       // last phi node.
@@ -10859,7 +10862,7 @@ Value *BoUpSLP::vectorizeTree(
         Builder.SetInsertPoint(&*++BasicBlock::iterator(I));
     }
     auto BundleWidth = VectorizableTree[0]->Scalars.size();
-    auto *MinTy = IntegerType::get(F->getContext(), MinBWs[ScalarRoot].first);
+    auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
     auto *VecTy = FixedVectorType::get(MinTy, BundleWidth);
     auto *Trunc = Builder.CreateTrunc(VectorRoot, VecTy);
     VectorizableTree[0]->VectorizedValue = Trunc;
@@ -10931,9 +10934,10 @@ Value *BoUpSLP::vectorizeTree(
         }
         // If necessary, sign-extend or zero-extend ScalarRoot
         // to the larger type.
-        if (!MinBWs.count(ScalarRoot))
+        auto BWIt = MinBWs.find(ScalarRoot);
+        if (BWIt == MinBWs.end())
           return Ex;
-        if (MinBWs[ScalarRoot].second)
+        if (BWIt->second.second)
           return Builder.CreateSExt(Ex, Scalar->getType());
         return Builder.CreateZExt(Ex, Scalar->getType());
       }
@@ -10974,7 +10978,7 @@ Value *BoUpSLP::vectorizeTree(
           std::optional<unsigned> InsertIdx = getInsertIndex(VU);
           if (InsertIdx) {
             // Need to use original vector, if the root is truncated.
-            if (MinBWs.count(Scalar) &&
+            if (MinBWs.contains(Scalar) &&
                 VectorizableTree[0]->VectorizedValue == Vec)
               Vec = VectorRoot;
             auto *It =
@@ -12238,7 +12242,7 @@ void BoUpSLP::computeMinimumValueSizes() {
 
   // Finally, map the values we can demote to the maximum bit with we computed.
   for (auto *Scalar : ToDemote)
-    MinBWs[Scalar] = std::make_pair(MaxBitWidth, !IsKnownPositive);
+    MinBWs.try_emplace(Scalar, MaxBitWidth, !IsKnownPositive);
 }
 
 PreservedAnalyses SLPVectorizerPass::run(Function &F, FunctionAnalysisManager &AM) {
