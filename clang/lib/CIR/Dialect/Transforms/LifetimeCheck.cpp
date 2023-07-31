@@ -79,6 +79,19 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
                                      const clang::CXXMethodDecl *m);
   void checkForOwnerAndPointerArguments(CallOp callOp, unsigned firstArgIdx);
 
+  // TODO: merge both methods below and pass down an enum.
+  //
+  // Check if a method's 'this' pointer (first arg) is tracked as
+  // a pointer category. Assumes the CallOp in question represents a method
+  // and returns the actual value associated with the tracked 'this' or an
+  // empty value if none is found.
+  mlir::Value getThisParamPointerCategory(CallOp callOp);
+  // Check if a method's 'this' pointer (first arg) is tracked as
+  // a owner category. Assumes the CallOp in question represents a method
+  // and returns the actual value associated with the tracked 'this' or an
+  // empty value if none is found.
+  mlir::Value getThisParamOwnerCategory(CallOp callOp);
+
   // Tracks current module.
   ModuleOp theModule;
   // Track current function under analysis
@@ -87,8 +100,9 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   // Common helpers.
   bool isCtorInitPointerFromOwner(CallOp callOp,
                                   const clang::CXXConstructorDecl *ctor);
-  bool isNonConstUseOfOwner(CallOp callOp, const clang::CXXMethodDecl *m);
-  bool isOwnerOrPointerClassMethod(mlir::Value firstParam,
+  mlir::Value getNonConstUseOfOwner(CallOp callOp,
+                                    const clang::CXXMethodDecl *m);
+  bool isOwnerOrPointerClassMethod(CallOp callOp,
                                    const clang::CXXMethodDecl *m);
 
   // Diagnostic helpers.
@@ -1429,16 +1443,38 @@ static const clang::CXXMethodDecl *getMethod(ModuleOp mod, CallOp callOp) {
   return dyn_cast<clang::CXXMethodDecl>(method.getAstAttr().getAstDecl());
 }
 
+mlir::Value LifetimeCheckPass::getThisParamPointerCategory(CallOp callOp) {
+  auto thisptr = callOp.getArgOperand(0);
+  if (ptrs.count(thisptr))
+    return thisptr;
+  if (auto loadOp = dyn_cast_or_null<LoadOp>(thisptr.getDefiningOp())) {
+    if (ptrs.count(loadOp.getAddr()))
+      return loadOp.getAddr();
+  }
+  return {};
+}
+
+mlir::Value LifetimeCheckPass::getThisParamOwnerCategory(CallOp callOp) {
+  auto thisptr = callOp.getArgOperand(0);
+  if (owners.count(thisptr))
+    return thisptr;
+  if (auto loadOp = dyn_cast_or_null<LoadOp>(thisptr.getDefiningOp())) {
+    if (owners.count(loadOp.getAddr()))
+      return loadOp.getAddr();
+  }
+  return {};
+}
+
 void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
                                             const clang::CXXMethodDecl *m) {
   // MyPointer::operator=(MyPointer&&)(%dst, %src)
   // or
   // MyOwner::operator=(MyOwner&&)(%dst, %src)
-  auto dst = callOp.getArgOperand(0);
+  auto dst = getThisParamPointerCategory(callOp);
   auto src = callOp.getArgOperand(1);
 
   // Move assignments between pointer categories.
-  if (ptrs.count(dst) && ptrs.count(src)) {
+  if (dst && ptrs.count(src)) {
     // Note that the current pattern here usually comes from a xvalue in src
     // where all the initialization is done, and this move assignment is
     // where we finally materialize it back to the original pointer category.
@@ -1450,8 +1486,9 @@ void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
     return;
   }
 
-  // Copy assignments between pointer categories.
-  if (owners.count(dst) && owners.count(src)) {
+  // Copy assignments between owner categories.
+  dst = getThisParamOwnerCategory(callOp);
+  if (dst && owners.count(src)) {
     // Handle as a non const use of owner, invalidating pointers.
     checkNonConstUseOfOwner(dst, callOp.getLoc());
 
@@ -1464,15 +1501,16 @@ void LifetimeCheckPass::checkMoveAssignment(CallOp callOp,
 void LifetimeCheckPass::checkCopyAssignment(CallOp callOp,
                                             const clang::CXXMethodDecl *m) {
   // MyIntOwner::operator=(MyIntOwner&)(%dst, %src)
-  auto dst = callOp.getArgOperand(0);
+  auto dst = getThisParamOwnerCategory(callOp);
   auto src = callOp.getArgOperand(1);
 
   // Copy assignment between owner categories.
-  if (owners.count(dst) && owners.count(src))
+  if (dst && owners.count(src))
     return checkNonConstUseOfOwner(dst, callOp.getLoc());
 
   // Copy assignment between pointer categories.
-  if (ptrs.count(dst) && ptrs.count(src)) {
+  dst = getThisParamPointerCategory(callOp);
+  if (dst && ptrs.count(src)) {
     getPmap()[dst] = getPmap()[src];
     return;
   }
@@ -1490,10 +1528,10 @@ bool LifetimeCheckPass::isCtorInitPointerFromOwner(
     return false;
 
   // FIXME: should we scan all arguments past first to look for an owner?
-  auto addr = callOp.getArgOperand(0);
+  auto ptr = getThisParamPointerCategory(callOp);
   auto owner = callOp.getArgOperand(1);
 
-  if (ptrs.count(addr) && owners.count(owner))
+  if (ptr && owners.count(owner))
     return true;
 
   return false;
@@ -1511,15 +1549,16 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
   // both results in pset(p) == {null}
   if (ctor->isDefaultConstructor()) {
     // First argument passed is always the alloca for the 'this' ptr.
-    auto addr = callOp.getArgOperand(0);
 
     // Currently two possible actions:
     // 1. Skip Owner category initialization.
     // 2. Initialize Pointer categories.
-    if (owners.count(addr))
+    auto addr = getThisParamOwnerCategory(callOp);
+    if (addr)
       return;
 
-    if (!ptrs.count(addr))
+    addr = getThisParamPointerCategory(callOp);
+    if (!addr)
       return;
 
     // Not interested in block/function arguments or any indirect
@@ -1537,7 +1576,8 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
   }
 
   if (isCtorInitPointerFromOwner(callOp, ctor)) {
-    auto addr = callOp.getArgOperand(0);
+    auto addr = getThisParamPointerCategory(callOp);
+    assert(addr && "expected pointer category");
     auto owner = callOp.getArgOperand(1);
     getPmap()[addr].clear();
     getPmap()[addr].insert(State::getOwnedBy(owner));
@@ -1547,8 +1587,8 @@ void LifetimeCheckPass::checkCtor(CallOp callOp,
 
 void LifetimeCheckPass::checkOperators(CallOp callOp,
                                        const clang::CXXMethodDecl *m) {
-  auto addr = callOp.getArgOperand(0);
-  if (owners.count(addr)) {
+  auto addr = getThisParamOwnerCategory(callOp);
+  if (addr) {
     // const access to the owner is fine.
     if (m->isConst())
       return;
@@ -1561,24 +1601,24 @@ void LifetimeCheckPass::checkOperators(CallOp callOp,
     return checkNonConstUseOfOwner(addr, callOp.getLoc());
   }
 
-  if (ptrs.count(addr)) {
+  addr = getThisParamPointerCategory(callOp);
+  if (addr) {
     // The assumption is that method calls on pointer types should trigger
     // deref checking.
     checkPointerDeref(addr, callOp.getLoc());
+    return;
   }
 
   // FIXME: we also need to look at operators from non owner or pointer
   // types that could be using Owner/Pointer types as parameters.
 }
 
-bool LifetimeCheckPass::isNonConstUseOfOwner(CallOp callOp,
-                                             const clang::CXXMethodDecl *m) {
+mlir::Value
+LifetimeCheckPass::getNonConstUseOfOwner(CallOp callOp,
+                                         const clang::CXXMethodDecl *m) {
   if (m->isConst())
-    return false;
-  auto addr = callOp.getArgOperand(0);
-  if (owners.count(addr))
-    return true;
-  return false;
+    return {};
+  return getThisParamOwnerCategory(callOp);
 }
 
 void LifetimeCheckPass::checkNonConstUseOfOwner(mlir::Value ownerAddr,
@@ -1659,13 +1699,13 @@ void LifetimeCheckPass::checkOtherMethodsAndFunctions(
 }
 
 bool LifetimeCheckPass::isOwnerOrPointerClassMethod(
-    mlir::Value firstParam, const clang::CXXMethodDecl *m) {
+    CallOp callOp, const clang::CXXMethodDecl *m) {
   // For the sake of analysis, these behave like regular functions
   if (!m || m->isStatic())
     return false;
-  if (owners.count(firstParam) || ptrs.count(firstParam))
-    return true;
-  return false;
+  // Check the object for owner/pointer by looking at the 'this' pointer.
+  return getThisParamPointerCategory(callOp) ||
+         getThisParamOwnerCategory(callOp);
 }
 
 bool LifetimeCheckPass::isLambdaType(mlir::Type ty) {
@@ -1741,7 +1781,7 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
   trackCallToCoroutine(callOp);
 
   auto methodDecl = getMethod(theModule, callOp);
-  if (!isOwnerOrPointerClassMethod(callOp.getArgOperand(0), methodDecl))
+  if (!isOwnerOrPointerClassMethod(callOp, methodDecl))
     return checkOtherMethodsAndFunctions(callOp, methodDecl);
 
   // From this point on only owner and pointer class methods handling,
@@ -1758,13 +1798,14 @@ void LifetimeCheckPass::checkCall(CallOp callOp) {
   // For any other methods...
 
   // Non-const member call to a Owner invalidates any of its users.
-  if (isNonConstUseOfOwner(callOp, methodDecl))
-    return checkNonConstUseOfOwner(callOp.getArgOperand(0), callOp.getLoc());
+  if (auto owner = getNonConstUseOfOwner(callOp, methodDecl)) {
+    return checkNonConstUseOfOwner(owner, callOp.getLoc());
+  }
 
   // Take a pset(Ptr) = { Ownr' } where Own got invalidated, this will become
   // invalid access to Ptr if any of its methods are used.
-  auto addr = callOp.getArgOperand(0);
-  if (ptrs.count(addr))
+  auto addr = getThisParamPointerCategory(callOp);
+  if (addr)
     return checkPointerDeref(addr, callOp.getLoc());
 }
 
