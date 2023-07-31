@@ -886,10 +886,9 @@ struct UnrollTransferReadConversion
   /// vector::InsertOp, return that operation's indices.
   void getInsertionIndices(TransferReadOp xferOp,
                            SmallVector<int64_t, 8> &indices) const {
-    if (auto insertOp = getInsertOp(xferOp)) {
-      for (Attribute attr : insertOp.getPosition())
-        indices.push_back(dyn_cast<IntegerAttr>(attr).getInt());
-    }
+    if (auto insertOp = getInsertOp(xferOp))
+      indices.assign(insertOp.getPosition().begin(),
+                     insertOp.getPosition().end());
   }
 
   /// Rewrite the op: Unpack one dimension. Can handle masks, out-of-bounds
@@ -1013,10 +1012,9 @@ struct UnrollTransferWriteConversion
   /// indices.
   void getExtractionIndices(TransferWriteOp xferOp,
                             SmallVector<int64_t, 8> &indices) const {
-    if (auto extractOp = getExtractOp(xferOp)) {
-      for (Attribute attr : extractOp.getPosition())
-        indices.push_back(dyn_cast<IntegerAttr>(attr).getInt());
-    }
+    if (auto extractOp = getExtractOp(xferOp))
+      indices.assign(extractOp.getPosition().begin(),
+                     extractOp.getPosition().end());
   }
 
   /// Rewrite the op: Unpack one dimension. Can handle masks, out-of-bounds

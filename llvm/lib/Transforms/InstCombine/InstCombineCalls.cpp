@@ -174,14 +174,7 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
       return nullptr;
 
   // Use an integer load+store unless we can find something better.
-  unsigned SrcAddrSp =
-    cast<PointerType>(MI->getArgOperand(1)->getType())->getAddressSpace();
-  unsigned DstAddrSp =
-    cast<PointerType>(MI->getArgOperand(0)->getType())->getAddressSpace();
-
   IntegerType* IntType = IntegerType::get(MI->getContext(), Size<<3);
-  Type *NewSrcPtrTy = PointerType::get(IntType, SrcAddrSp);
-  Type *NewDstPtrTy = PointerType::get(IntType, DstAddrSp);
 
   // If the memcpy has metadata describing the members, see if we can get the
   // TBAA tag describing our copy.
@@ -200,8 +193,8 @@ Instruction *InstCombinerImpl::SimplifyAnyMemTransfer(AnyMemTransferInst *MI) {
       CopyMD = cast<MDNode>(M->getOperand(2));
   }
 
-  Value *Src = Builder.CreateBitCast(MI->getArgOperand(1), NewSrcPtrTy);
-  Value *Dest = Builder.CreateBitCast(MI->getArgOperand(0), NewDstPtrTy);
+  Value *Src = MI->getArgOperand(1);
+  Value *Dest = MI->getArgOperand(0);
   LoadInst *L = Builder.CreateLoad(IntType, Src);
   // Alignment from the mem intrinsic will be better, so use it.
   L->setAlignment(*CopySrcAlign);
@@ -291,9 +284,6 @@ Instruction *InstCombinerImpl::SimplifyAnyMemSet(AnyMemSetInst *MI) {
     Type *ITy = IntegerType::get(MI->getContext(), Len*8);  // n=1 -> i8.
 
     Value *Dest = MI->getDest();
-    unsigned DstAddrSp = cast<PointerType>(Dest->getType())->getAddressSpace();
-    Type *NewDstPtrTy = PointerType::get(ITy, DstAddrSp);
-    Dest = Builder.CreateBitCast(Dest, NewDstPtrTy);
 
     // Extract the fill value and store.
     const uint64_t Fill = FillC->getZExtValue()*0x0101010101010101ULL;
@@ -500,8 +490,6 @@ static Instruction *simplifyInvariantGroupIntrinsic(IntrinsicInst &II,
   if (Result->getType()->getPointerAddressSpace() !=
       II.getType()->getPointerAddressSpace())
     Result = IC.Builder.CreateAddrSpaceCast(Result, II.getType());
-  if (Result->getType() != II.getType())
-    Result = IC.Builder.CreateBitCast(Result, II.getType());
 
   return cast<Instruction>(Result);
 }
@@ -3987,8 +3975,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 Instruction *
 InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
                                                  IntrinsicInst &Tramp) {
-  Value *Callee = Call.getCalledOperand();
-  Type *CalleeTy = Callee->getType();
   FunctionType *FTy = Call.getFunctionType();
   AttributeList Attrs = Call.getAttributes();
 
@@ -4085,12 +4071,8 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
 
       // Replace the trampoline call with a direct call.  Let the generic
       // code sort out any function type mismatches.
-      FunctionType *NewFTy = FunctionType::get(FTy->getReturnType(), NewTypes,
-                                                FTy->isVarArg());
-      Constant *NewCallee =
-        NestF->getType() == PointerType::getUnqual(NewFTy) ?
-        NestF : ConstantExpr::getBitCast(NestF,
-                                         PointerType::getUnqual(NewFTy));
+      FunctionType *NewFTy =
+          FunctionType::get(FTy->getReturnType(), NewTypes, FTy->isVarArg());
       AttributeList NewPAL =
           AttributeList::get(FTy->getContext(), Attrs.getFnAttrs(),
                              Attrs.getRetAttrs(), NewArgAttrs);
@@ -4100,19 +4082,18 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
 
       Instruction *NewCaller;
       if (InvokeInst *II = dyn_cast<InvokeInst>(&Call)) {
-        NewCaller = InvokeInst::Create(NewFTy, NewCallee,
-                                       II->getNormalDest(), II->getUnwindDest(),
-                                       NewArgs, OpBundles);
+        NewCaller = InvokeInst::Create(NewFTy, NestF, II->getNormalDest(),
+                                       II->getUnwindDest(), NewArgs, OpBundles);
         cast<InvokeInst>(NewCaller)->setCallingConv(II->getCallingConv());
         cast<InvokeInst>(NewCaller)->setAttributes(NewPAL);
       } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(&Call)) {
         NewCaller =
-            CallBrInst::Create(NewFTy, NewCallee, CBI->getDefaultDest(),
+            CallBrInst::Create(NewFTy, NestF, CBI->getDefaultDest(),
                                CBI->getIndirectDests(), NewArgs, OpBundles);
         cast<CallBrInst>(NewCaller)->setCallingConv(CBI->getCallingConv());
         cast<CallBrInst>(NewCaller)->setAttributes(NewPAL);
       } else {
-        NewCaller = CallInst::Create(NewFTy, NewCallee, NewArgs, OpBundles);
+        NewCaller = CallInst::Create(NewFTy, NestF, NewArgs, OpBundles);
         cast<CallInst>(NewCaller)->setTailCallKind(
             cast<CallInst>(Call).getTailCallKind());
         cast<CallInst>(NewCaller)->setCallingConv(
@@ -4128,7 +4109,6 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
   // Replace the trampoline call with a direct call.  Since there is no 'nest'
   // parameter, there is no need to adjust the argument list.  Let the generic
   // code sort out any function type mismatches.
-  Constant *NewCallee = ConstantExpr::getBitCast(NestF, CalleeTy);
-  Call.setCalledFunction(FTy, NewCallee);
+  Call.setCalledFunction(FTy, NestF);
   return &Call;
 }

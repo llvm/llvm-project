@@ -322,7 +322,8 @@ define <2 x i8> @and_or_hoist_mask_commute_vec_splat(<2 x i8> %a, <2 x i8> %b) {
 
 define i32 @pr64114_and_xor_hoist_mask_constexpr() {
 ; CHECK-LABEL: @pr64114_and_xor_hoist_mask_constexpr(
-; CHECK-NEXT:    ret i32 and (i32 xor (i32 lshr (i32 ptrtoint (ptr @g to i32), i32 8), i32 ptrtoint (ptr @g to i32)), i32 1)
+; CHECK-NEXT:    [[AND:%.*]] = and i32 xor (i32 lshr (i32 ptrtoint (ptr @g to i32), i32 8), i32 ptrtoint (ptr @g to i32)), 1
+; CHECK-NEXT:    ret i32 [[AND]]
 ;
   %and = and i32 xor (i32 lshr (i32 ptrtoint (ptr @g to i32), i32 8), i32 ptrtoint (ptr @g to i32)), 1
   ret i32 %and
