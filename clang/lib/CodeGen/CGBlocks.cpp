@@ -66,28 +66,6 @@ static llvm::Constant *buildDisposeHelper(CodeGenModule &CGM,
 
 namespace {
 
-/// Represents a captured entity that requires extra operations in order for
-/// this entity to be copied or destroyed correctly.
-struct BlockCaptureManagedEntity {
-  BlockCaptureEntityKind CopyKind, DisposeKind;
-  BlockFieldFlags CopyFlags, DisposeFlags;
-  const BlockDecl::Capture *CI;
-  const CGBlockInfo::Capture *Capture;
-
-  BlockCaptureManagedEntity(BlockCaptureEntityKind CopyType,
-                            BlockCaptureEntityKind DisposeType,
-                            BlockFieldFlags CopyFlags,
-                            BlockFieldFlags DisposeFlags,
-                            const BlockDecl::Capture &CI,
-                            const CGBlockInfo::Capture &Capture)
-      : CopyKind(CopyType), DisposeKind(DisposeType), CopyFlags(CopyFlags),
-        DisposeFlags(DisposeFlags), CI(&CI), Capture(&Capture) {}
-
-  bool operator<(const BlockCaptureManagedEntity &Other) const {
-    return Capture->getOffset() < Other.Capture->getOffset();
-  }
-};
-
 enum class CaptureStrKind {
   // String for the copy helper.
   CopyHelper,
