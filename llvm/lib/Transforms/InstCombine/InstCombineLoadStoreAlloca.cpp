@@ -601,13 +601,11 @@ static StoreInst *combineStoreToNewValue(InstCombinerImpl &IC, StoreInst &SI,
          "can't fold an atomic store of requested type");
 
   Value *Ptr = SI.getPointerOperand();
-  unsigned AS = SI.getPointerAddressSpace();
   SmallVector<std::pair<unsigned, MDNode *>, 8> MD;
   SI.getAllMetadata(MD);
 
-  StoreInst *NewStore = IC.Builder.CreateAlignedStore(
-      V, IC.Builder.CreateBitCast(Ptr, V->getType()->getPointerTo(AS)),
-      SI.getAlign(), SI.isVolatile());
+  StoreInst *NewStore =
+      IC.Builder.CreateAlignedStore(V, Ptr, SI.getAlign(), SI.isVolatile());
   NewStore->setAtomic(SI.getOrdering(), SI.getSyncScopeID());
   for (const auto &MDPair : MD) {
     unsigned ID = MDPair.first;
