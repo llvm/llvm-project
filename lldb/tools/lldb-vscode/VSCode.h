@@ -55,7 +55,6 @@
 #include "ProgressEvent.h"
 #include "RunInTerminal.h"
 #include "SourceBreakpoint.h"
-#include "SourceReference.h"
 
 #define VARREF_LOCALS (int64_t)1
 #define VARREF_GLOBALS (int64_t)2
@@ -153,8 +152,6 @@ struct VSCode {
   std::thread event_thread;
   std::thread progress_event_thread;
   std::unique_ptr<std::ofstream> log;
-  llvm::DenseMap<lldb::addr_t, int64_t> addr_to_source_ref;
-  llvm::DenseMap<int64_t, SourceReference> source_map;
   llvm::StringMap<SourceBreakpointMap> source_breakpoints;
   FunctionBreakpointMap function_breakpoints;
   std::vector<ExceptionBreakpoint> exception_breakpoints;
@@ -194,7 +191,6 @@ struct VSCode {
   ~VSCode();
   VSCode(const VSCode &rhs) = delete;
   void operator=(const VSCode &rhs) = delete;
-  int64_t GetLineForPC(int64_t sourceReference, lldb::addr_t pc) const;
   ExceptionBreakpoint *GetExceptionBreakpoint(const std::string &filter);
   ExceptionBreakpoint *GetExceptionBreakpoint(const lldb::break_id_t bp_id);
 
