@@ -119,6 +119,10 @@ struct A {
 struct A simpleConstInit = {1};
 // CHECK: cir.global external @simpleConstInit = #cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2EA22
 
+// Should globally const-initialize arrays with struct members.
+struct A arrConstInit[1] = {{1}};
+// CHECK: cir.global external @arrConstInit = #cir.const_array<[#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2EA22]> : !cir.array<!ty_22struct2EA22 x 1>
+
 A get_default() { return A{2}; }
 
 struct S {
