@@ -56,8 +56,12 @@ static constexpr const VarKind everyVarKind[] = {
     VarKind::Dimension, VarKind::Symbol, VarKind::Level};
 
 VarSet::VarSet(Ranks const &ranks) {
+  // NOTE: We must not use `reserve` here, since that doesn't change
+  // the `size` of the bitvectors and therefore will result in unexpected
+  // OOB errors.  Either `resize` or copy/move-ctor work; we opt for the
+  // move-ctor since it should be (marginally) more efficient.
   for (const auto vk : everyVarKind)
-    impl[vk].reserve(ranks.getRank(vk));
+    impl[vk] = llvm::SmallBitVector(ranks.getRank(vk));
 }
 
 bool VarSet::contains(Var var) const {
@@ -67,10 +71,6 @@ bool VarSet::contains(Var var) const {
   // bugs in client code.
   const llvm::SmallBitVector &bits = impl[var.getKind()];
   const auto num = var.getNum();
-  // FIXME(wrengr): If we `assert(num < bits.size())` then
-  // "roundtrip_encoding.mlir" will fail.  So we need to figure out
-  // where exactly the OOB `var` is coming from, to determine whether
-  // that's a logic bug or not.
   return num < bits.size() && bits[num];
 }
 
