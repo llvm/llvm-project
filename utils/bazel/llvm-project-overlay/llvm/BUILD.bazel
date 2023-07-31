@@ -5042,11 +5042,11 @@ cc_binary(
 )
 
 cc_binary(
-    name = "llvm-tapi-diff",
+    name = "llvm-readtapi",
     testonly = True,
     srcs = glob([
-        "tools/llvm-tapi-diff/*.cpp",
-        "tools/llvm-tapi-diff/*.h",
+        "tools/llvm-readtapi/*.cpp",
+        "tools/llvm-readtapi/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,
