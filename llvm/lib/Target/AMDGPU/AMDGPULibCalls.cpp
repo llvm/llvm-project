@@ -1359,10 +1359,6 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
     Res0 = pow(10.0, opr0);
     return true;
 
-  case AMDGPULibFunc::EI_EXPM1:
-    Res0 = exp(opr0) - 1.0;
-    return true;
-
   case AMDGPULibFunc::EI_LOG:
     Res0 = log(opr0);
     return true;
