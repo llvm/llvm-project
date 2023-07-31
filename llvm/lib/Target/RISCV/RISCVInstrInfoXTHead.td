@@ -71,9 +71,9 @@ class THVdotALUrVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
 let Predicates = [HasVendorXTHeadBa], DecoderNamespace = "XTHeadBa",
     hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class THShiftALU_rri<bits<3> funct3, string opcodestr>
-    : RVInstR<0, funct3, OPC_CUSTOM_0, (outs GPR:$rd),
-              (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
-              opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+    : RVInstRBase<funct3, OPC_CUSTOM_0, (outs GPR:$rd),
+                  (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
+                  opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
   bits<2> uimm2;
   let Inst{31-27} = 0;
   let Inst{26-25} = uimm2;
@@ -129,11 +129,12 @@ class THMulAccumulate_rr<bits<7> funct7, string opcodestr>
 let Predicates = [HasVendorXTHeadMemPair], DecoderNamespace = "XTHeadMemPair",
     hasSideEffects = 0, mayLoad = 1, mayStore = 0 in
 class THLoadPair<bits<5> funct5, string opcodestr>
-  : RVInstR<!shl(funct5, 2), 0b100, OPC_CUSTOM_0,
-            (outs GPR:$rd, GPR:$rs2),
-            (ins GPR:$rs1, uimm2:$uimm2, uimm7:$const3or4),
-             opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
+  : RVInstRBase<0b100, OPC_CUSTOM_0,
+                (outs GPR:$rd, GPR:$rs2),
+                (ins GPR:$rs1, uimm2:$uimm2, uimm7:$const3or4),
+                 opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
   bits<2> uimm2;
+  let Inst{31-27} = funct5;
   let Inst{26-25} = uimm2;
   let DecoderMethod = "decodeXTHeadMemPair";
   let Constraints = "@earlyclobber $rd,@earlyclobber $rs2";
@@ -142,11 +143,11 @@ class THLoadPair<bits<5> funct5, string opcodestr>
 let Predicates = [HasVendorXTHeadMemPair], DecoderNamespace = "XTHeadMemPair",
     hasSideEffects = 0, mayLoad = 0, mayStore = 1 in
 class THStorePair<bits<5> funct5, string opcodestr>
-  : RVInstR<!shl(funct5, 2), 0b101, OPC_CUSTOM_0,
-            (outs),
-            (ins GPR:$rd, GPR:$rs2, GPR:$rs1, uimm2:$uimm2, uimm7:$const3or4),
-            opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
+  : RVInstRBase<0b101, OPC_CUSTOM_0, (outs),
+              (ins GPR:$rd, GPR:$rs2, GPR:$rs1, uimm2:$uimm2, uimm7:$const3or4),
+              opcodestr, "$rd, $rs2, (${rs1}), $uimm2, $const3or4"> {
   bits<2> uimm2;
+  let Inst{31-27} = funct5;
   let Inst{26-25} = uimm2;
   let DecoderMethod = "decodeXTHeadMemPair";
 }
@@ -176,10 +177,11 @@ class THCacheInst_void<bits<5> funct5, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 class THLoadIndexed<RegisterClass Ty, bits<5> funct5, string opcodestr>
-    : RVInstR<!shl(funct5, 2), !if(!eq(Ty, GPR), 0b100, 0b110), OPC_CUSTOM_0,
-              (outs Ty:$rd), (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
-              opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+    : RVInstRBase<!if(!eq(Ty, GPR), 0b100, 0b110), OPC_CUSTOM_0,
+                  (outs Ty:$rd), (ins GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
+                  opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
   bits<2> uimm2;
+  let Inst{31-27} = funct5;
   let Inst{26-25} = uimm2;
 }
 
@@ -198,10 +200,11 @@ class THLoadUpdate<bits<5> funct5, string opcodestr>
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class THStoreIndexed<RegisterClass StTy, bits<5> funct5, string opcodestr>
-    : RVInstR<!shl(funct5, 2), !if(!eq(StTy, GPR), 0b101, 0b111), OPC_CUSTOM_0,
-              (outs), (ins StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
-              opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
+    : RVInstRBase<!if(!eq(StTy, GPR), 0b101, 0b111), OPC_CUSTOM_0,
+                  (outs), (ins StTy:$rd, GPR:$rs1, GPR:$rs2, uimm2:$uimm2),
+                  opcodestr, "$rd, $rs1, $rs2, $uimm2"> {
   bits<2> uimm2;
+  let Inst{31-27} = funct5;
   let Inst{26-25} = uimm2;
 }
 
