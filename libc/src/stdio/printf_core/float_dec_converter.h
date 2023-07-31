@@ -67,7 +67,8 @@ public:
   int write_left_padding(Writer *writer, size_t total_digits) {
     // The pattern is (spaces) (sign) (zeroes), but only one of spaces and
     // zeroes can be written, and only if the padding amount is positive.
-    int padding_amount = min_width - total_digits - (sign_char > 0 ? 1 : 0);
+    int padding_amount =
+        static_cast<int>(min_width - total_digits - (sign_char > 0 ? 1 : 0));
     if (left_justified || padding_amount < 0) {
       if (sign_char > 0) {
         RET_IF_RESULT_NEGATIVE(writer->write(sign_char));
@@ -89,7 +90,8 @@ public:
   int write_right_padding(Writer *writer, size_t total_digits) {
     // If and only if the conversion is left justified, there may be trailing
     // spaces.
-    int padding_amount = min_width - total_digits - (sign_char > 0 ? 1 : 0);
+    int padding_amount =
+        static_cast<int>(min_width - total_digits - (sign_char > 0 ? 1 : 0));
     if (left_justified && padding_amount > 0) {
       RET_IF_RESULT_NEGATIVE(writer->write(' ', padding_amount));
     }
@@ -288,7 +290,7 @@ public:
 
     // copy the last block_digits characters into the start of end_buff.
     // TODO: Replace with memcpy
-    for (int count = block_digits - 1; count >= 0; --count) {
+    for (size_t count = 0; count < block_digits; ++count) {
       end_buff[count] = int_to_str[count + 1 + (BLOCK_SIZE - block_digits)];
     }
 
@@ -306,7 +308,8 @@ public:
         (round == RoundDirection::Even && low_digit % 2 != 0)) {
       bool has_carry = true;
       // handle the low block that we're adding
-      for (int count = block_digits - 1; count >= 0 && has_carry; --count) {
+      for (int count = static_cast<int>(block_digits) - 1;
+           count >= 0 && has_carry; --count) {
         if (end_buff[count] == '9') {
           end_buff[count] = '0';
         } else {
@@ -315,7 +318,8 @@ public:
         }
       }
       // handle the high block that's buffered
-      for (int count = buffered_digits - 1; count >= 0 && has_carry; --count) {
+      for (int count = static_cast<int>(buffered_digits) - 1;
+           count >= 0 && has_carry; --count) {
         if (block_buffer[count] == '9') {
           block_buffer[count] = '0';
         } else {
@@ -374,7 +378,7 @@ public:
 
       // copy the last block_digits characters into the start of end_buff.
       // TODO: Replace with memcpy
-      for (int count = block_digits - 1; count >= 0; --count) {
+      for (size_t count = 0; count < block_digits; ++count) {
         end_buff[count] = int_to_str[count + 1 + (BLOCK_SIZE - block_digits)];
       }
     }
@@ -393,7 +397,8 @@ public:
         (round == RoundDirection::Even && low_digit % 2 != 0)) {
       bool has_carry = true;
       // handle the low block that we're adding
-      for (int count = block_digits - 1; count >= 0 && has_carry; --count) {
+      for (int count = static_cast<int>(block_digits) - 1;
+           count >= 0 && has_carry; --count) {
         if (end_buff[count] == '9') {
           end_buff[count] = '0';
         } else {
@@ -402,7 +407,8 @@ public:
         }
       }
       // handle the high block that's buffered
-      for (int count = buffered_digits - 1; count >= 0 && has_carry; --count) {
+      for (int count = static_cast<int>(buffered_digits) - 1;
+           count >= 0 && has_carry; --count) {
         if (block_buffer[count] == '9') {
           block_buffer[count] = '0';
         } else {
@@ -519,7 +525,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
     sign_char = ' ';
 
   // If to_conv doesn't specify a precision, the precision defaults to 6.
-  const size_t precision = to_conv.precision < 0 ? 6 : to_conv.precision;
+  const unsigned int precision = to_conv.precision < 0 ? 6 : to_conv.precision;
   bool has_decimal_point =
       (precision > 0) || ((to_conv.flags & FormatFlags::ALTERNATE_FORM) != 0);
 
@@ -532,7 +538,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
   FloatWriter float_writer(writer, has_decimal_point, padding_writer);
   FloatToString<T> float_converter(static_cast<T>(float_bits));
 
-  const uint32_t positive_blocks = float_converter.get_positive_blocks();
+  const size_t positive_blocks = float_converter.get_positive_blocks();
 
   if (positive_blocks >= 0) {
     // This loop iterates through the number a block at a time until it finds a
@@ -571,7 +577,7 @@ LIBC_INLINE int convert_float_decimal_typed(Writer *writer,
       RET_IF_RESULT_NEGATIVE(float_writer.write_zeroes(precision));
     } else if (i < float_converter.zero_blocks_after_point()) {
       // else if there are some blocks that are zeroes
-      i = float_converter.zero_blocks_after_point();
+      i = static_cast<uint32_t>(float_converter.zero_blocks_after_point());
       // write those blocks as zeroes.
       RET_IF_RESULT_NEGATIVE(float_writer.write_zeroes(9 * i));
     }
@@ -665,7 +671,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
     sign_char = ' ';
 
   // If to_conv doesn't specify a precision, the precision defaults to 6.
-  const size_t precision = to_conv.precision < 0 ? 6 : to_conv.precision;
+  const unsigned int precision = to_conv.precision < 0 ? 6 : to_conv.precision;
   bool has_decimal_point =
       (precision > 0) || ((to_conv.flags & FormatFlags::ALTERNATE_FORM) != 0);
 
@@ -682,9 +688,9 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   int cur_block;
 
   if (exponent < 0) {
-    cur_block = -float_converter.zero_blocks_after_point();
+    cur_block = -static_cast<int>(float_converter.zero_blocks_after_point());
   } else {
-    cur_block = float_converter.get_positive_blocks();
+    cur_block = static_cast<int>(float_converter.get_positive_blocks());
   }
 
   BlockInt digits = 0;
@@ -707,7 +713,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   auto int_to_str = *IntegerToString::dec(digits, buf);
   size_t block_width = int_to_str.size();
 
-  final_exponent = (cur_block * BLOCK_SIZE) + (block_width - 1);
+  final_exponent = (cur_block * BLOCK_SIZE) + static_cast<int>(block_width - 1);
   int positive_exponent = final_exponent < 0 ? -final_exponent : final_exponent;
 
   int_to_str = *IntegerToString::dec(positive_exponent, buf);
@@ -753,7 +759,7 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
   }
 
   // This is the last block.
-  const uint32_t maximum = precision + 1 - digits_written;
+  const size_t maximum = precision + 1 - digits_written;
   uint32_t last_digit = 0;
   for (uint32_t k = 0; k < last_block_size - maximum; ++k) {
     last_digit = digits % 10;
@@ -823,9 +829,9 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
 
   // From the standard: Let P (init_precision) equal the precision if nonzero, 6
   // if the precision is omitted, or 1 if the precision is zero.
-  const size_t init_precision = to_conv.precision <= 0
-                                    ? (to_conv.precision == 0 ? 1 : 6)
-                                    : to_conv.precision;
+  const unsigned int init_precision = to_conv.precision <= 0
+                                          ? (to_conv.precision == 0 ? 1 : 6)
+                                          : to_conv.precision;
 
   //  Then, if a conversion with style E would have an exponent of X
   //  (base_10_exp):
@@ -835,7 +841,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
 
   // For calculating the base 10 exponent, we need to process the number as if
   // it has style E, so here we calculate the precision we'll use in that case.
-  const size_t exp_precision = init_precision - 1;
+  const unsigned int exp_precision = init_precision - 1;
 
   FloatToString<T> float_converter(static_cast<T>(float_bits));
 
@@ -845,9 +851,9 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   int cur_block;
 
   if (exponent < 0) {
-    cur_block = -float_converter.zero_blocks_after_point();
+    cur_block = -static_cast<int>(float_converter.zero_blocks_after_point());
   } else {
-    cur_block = float_converter.get_positive_blocks();
+    cur_block = static_cast<int>(float_converter.get_positive_blocks());
   }
 
   BlockInt digits = 0;
@@ -890,7 +896,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   size_t trailing_zeroes = 0;
   size_t trailing_nines = 0;
 
-  base_10_exp = (cur_block * BLOCK_SIZE) + (block_width - 1);
+  base_10_exp = (cur_block * BLOCK_SIZE) + static_cast<int>(block_width - 1);
 
   // If the first block is not also the last block
   if (block_width <= exp_precision + 1) {
@@ -959,7 +965,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   char buf[IntegerToString::dec_bufsize<intmax_t>()];
   auto int_to_str = *IntegerToString::dec(digits, buf);
 
-  int implicit_leading_zeroes = BLOCK_SIZE - int_to_str.size();
+  size_t implicit_leading_zeroes = BLOCK_SIZE - int_to_str.size();
 
   // if the last block is also the first block, then ignore leading zeroes.
   if (digits_checked == 0) {
@@ -967,9 +973,11 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
     implicit_leading_zeroes = 0;
   }
 
-  int digits_requested = (exp_precision + 1) - digits_checked;
+  unsigned int digits_requested =
+      (exp_precision + 1) - static_cast<unsigned int>(digits_checked);
 
-  int digits_to_check = digits_requested - implicit_leading_zeroes;
+  int digits_to_check =
+      digits_requested - static_cast<int>(implicit_leading_zeroes);
   if (digits_to_check < 0) {
     digits_to_check = 0;
   }
@@ -1003,7 +1011,8 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
 
   // Find the digit after the lowest digit that we'll actually print to
   // determine the rounding.
-  const uint32_t maximum = exp_precision + 1 - digits_checked;
+  const uint32_t maximum =
+      exp_precision + 1 - static_cast<uint32_t>(digits_checked);
   uint32_t last_digit = 0;
   for (uint32_t k = 0; k < last_block_size - maximum; ++k) {
     last_digit = digits % 10;
@@ -1100,7 +1109,7 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   //  P - (X + 1).
   if (static_cast<int>(init_precision) > base_10_exp && base_10_exp >= -4) {
     FormatSection new_conv = to_conv;
-    const size_t conv_precision = init_precision - (base_10_exp + 1);
+    const int conv_precision = init_precision - (base_10_exp + 1);
 
     if ((to_conv.flags & FormatFlags::ALTERNATE_FORM) != 0) {
       new_conv.precision = conv_precision;
@@ -1125,36 +1134,35 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
                              |   |
        base_10_exp + 1 = 2 --+   +--- trailing_zeroes = 11
       */
-      int trimmed_precision =
-          digits_checked - (base_10_exp + 1) - trailing_zeroes;
+      int trimmed_precision = static_cast<int>(
+          digits_checked - (base_10_exp + 1) - trailing_zeroes);
       if (trimmed_precision < 0) {
         trimmed_precision = 0;
       }
-      new_conv.precision =
-          (static_cast<size_t>(trimmed_precision) > conv_precision)
-              ? conv_precision
-              : trimmed_precision;
+      new_conv.precision = (trimmed_precision > conv_precision)
+                               ? conv_precision
+                               : trimmed_precision;
     }
 
     return convert_float_decimal_typed<T>(writer, new_conv, float_bits);
   } else {
     // otherwise, the conversion is with style e (or E) and precision equals
     // P - 1
-    const size_t conv_precision = init_precision - 1;
+    const int conv_precision = init_precision - 1;
     FormatSection new_conv = to_conv;
     if ((to_conv.flags & FormatFlags::ALTERNATE_FORM) != 0) {
       new_conv.precision = conv_precision;
     } else {
       // If alt form isn't set, then we need to determine the number of trailing
       // zeroes and set the precision such that they are removed.
-      int trimmed_precision = digits_checked - 1 - trailing_zeroes;
+      int trimmed_precision =
+          static_cast<int>(digits_checked - 1 - trailing_zeroes);
       if (trimmed_precision < 0) {
         trimmed_precision = 0;
       }
-      new_conv.precision =
-          (static_cast<size_t>(trimmed_precision) > conv_precision)
-              ? conv_precision
-              : trimmed_precision;
+      new_conv.precision = (trimmed_precision > conv_precision)
+                               ? conv_precision
+                               : trimmed_precision;
     }
     return convert_float_dec_exp_typed<T>(writer, new_conv, float_bits);
   }
