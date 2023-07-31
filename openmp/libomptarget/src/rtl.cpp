@@ -129,7 +129,6 @@ void RTLsTy::loadRTLs() {
   }
 
   DP("Loading RTLs...\n");
-  BoolEnvar NextGenPlugins("LIBOMPTARGET_NEXTGEN_PLUGINS", true);
   BoolEnvar UseFirstGoodRTL("LIBOMPTARGET_USE_FIRST_GOOD_RTL", false);
 
   // Attempt to open all the plugins and, if they exist, check if the interface
@@ -140,14 +139,6 @@ void RTLsTy::loadRTLs() {
     RTLInfoTy &RTL = AllRTLs.back();
 
     const std::string BaseRTLName(Name);
-    if (NextGenPlugins) {
-      if (attemptLoadRTL(BaseRTLName + ".nextgen.so", RTL)) {
-        if (UseFirstGoodRTL)
-          break;
-        continue;
-      }
-      DP("Falling back to original plugin...\n");
-    }
 
     if (!attemptLoadRTL(BaseRTLName + ".so", RTL))
       AllRTLs.pop_back();
