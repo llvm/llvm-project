@@ -120,7 +120,7 @@ MATH_PRIVATE(trigredlarge)(float x)
 
     float rh, rt;
 
-    if (HAVE_FAST_FMA32()) {
+    if (HAVE_FAST_FMA32() || !DAZ_OPT()) {
         rh = q1 * pio2h;
         rt = BUILTIN_FMA_F32(q0, pio2h, BUILTIN_FMA_F32(q1, pio2t, BUILTIN_FMA_F32(q1, pio2h, -rh)));
     } else {
