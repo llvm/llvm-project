@@ -1920,20 +1920,14 @@ public:
     if (!canFoldIntoConsumerOp(castOp))
       return failure();
 
-    /// Deduce the type of the result to use for the canonicalized operation.
+    // Create folded extract.
     Location loc = sliceOp.getLoc();
-    auto sliceOpType = sliceOp.getType();
-    RankedTensorType resultType =
-        ExtractSliceOp::inferCanonicalRankReducedResultType(
-            sliceOpType.getRank(), sliceOp.getSourceType(),
-            sliceOp.getMixedOffsets(), sliceOp.getMixedSizes(),
-            sliceOp.getMixedStrides());
     Value newResult = rewriter.create<ExtractSliceOp>(
-        loc, resultType, castOp.getSource(), sliceOp.getOffsets(),
+        loc, sliceOp.getType(), castOp.getSource(), sliceOp.getOffsets(),
         sliceOp.getSizes(), sliceOp.getStrides(), sliceOp.getStaticOffsets(),
         sliceOp.getStaticSizes(), sliceOp.getStaticStrides());
-    if (newResult.getType() != sliceOpType)
-      newResult = rewriter.create<CastOp>(loc, sliceOpType, newResult);
+    if (newResult.getType() != sliceOp.getType())
+      newResult = rewriter.create<CastOp>(loc, sliceOp.getType(), newResult);
     rewriter.replaceOp(sliceOp, newResult);
     return success();
   }
