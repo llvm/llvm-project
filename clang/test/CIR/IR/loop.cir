@@ -15,7 +15,11 @@ cir.func @l0() {
       %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
       %5 = cir.const(#cir.int<10> : !u32i) : !u32i
       %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
-      cir.yield %6 : !cir.bool
+      cir.brcond %6 ^bb1, ^bb2
+      ^bb1:
+        cir.yield continue
+      ^bb2:
+        cir.yield
     }, step :  {
       %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
       %5 = cir.const(#cir.int<1> : !u32i) : !u32i
@@ -42,7 +46,11 @@ cir.func @l0() {
       %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
       %5 = cir.const(#cir.int<10> : !u32i) : !u32i
       %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
-      cir.yield %6 : !cir.bool
+      cir.brcond %6 ^bb1, ^bb2
+      ^bb1:
+        cir.yield continue
+      ^bb2:
+        cir.yield
     }, step :  {
       cir.yield
     })  {
@@ -66,7 +74,11 @@ cir.func @l0() {
       %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
       %5 = cir.const(#cir.int<10> : !u32i) : !u32i
       %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
-      cir.yield %6 : !cir.bool
+      cir.brcond %6 ^bb1, ^bb2
+      ^bb1:
+        cir.yield continue
+      ^bb2:
+        cir.yield
     }, step :  {
       cir.yield
     })  {
@@ -85,7 +97,11 @@ cir.func @l0() {
 // CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
 // CHECK-NEXT:     %5 = cir.const(#cir.int<10> : !u32i) : !u32i
 // CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
-// CHECK-NEXT:     cir.yield %6 : !cir.bool
+// CHECK-NEXT:     cir.brcond %6 ^bb1, ^bb2
+// CHECK-NEXT:     ^bb1:
+// CHECK-NEXT:       cir.yield continue
+// CHECK-NEXT:     ^bb2:
+// CHECK-NEXT:       cir.yield
 // CHECK-NEXT:   }, step :  {
 // CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
 // CHECK-NEXT:     %5 = cir.const(#cir.int<1> : !u32i) : !u32i
@@ -108,7 +124,11 @@ cir.func @l0() {
 // CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
 // CHECK-NEXT:     %5 = cir.const(#cir.int<10> : !u32i) : !u32i
 // CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
-// CHECK-NEXT:     cir.yield %6 : !cir.bool
+// CHECK-NEXT:     cir.brcond %6 ^bb1, ^bb2
+// CHECK-NEXT:     ^bb1:
+// CHECK-NEXT:       cir.yield continue
+// CHECK-NEXT:     ^bb2:
+// CHECK-NEXT:       cir.yield
 // CHECK-NEXT:   }, step :  {
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   })  {
@@ -127,7 +147,11 @@ cir.func @l0() {
 // CHECK-NEXT:     %4 = cir.load %2 : cir.ptr <!u32i>, !u32i
 // CHECK-NEXT:     %5 = cir.const(#cir.int<10> : !u32i) : !u32i
 // CHECK-NEXT:     %6 = cir.cmp(lt, %4, %5) : !u32i, !cir.bool
-// CHECK-NEXT:     cir.yield %6 : !cir.bool
+// CHECK-NEXT:     cir.brcond %6 ^bb1, ^bb2
+// CHECK-NEXT:     ^bb1:
+// CHECK-NEXT:       cir.yield continue
+// CHECK-NEXT:     ^bb2:
+// CHECK-NEXT:       cir.yield
 // CHECK-NEXT:   }, step :  {
 // CHECK-NEXT:     cir.yield
 // CHECK-NEXT:   })  {
@@ -141,8 +165,7 @@ cir.func @l0() {
 cir.func @l1() {
   cir.scope {
     cir.loop while(cond :  {
-      %0 = cir.const(#true) : !cir.bool
-      cir.yield %0 : !cir.bool
+      cir.yield continue
     }, step :  {
       cir.yield
     })  {
@@ -155,8 +178,7 @@ cir.func @l1() {
 // CHECK: cir.func @l1
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
-// CHECK-NEXT:      %0 = cir.const(#true) : !cir.bool
-// CHECK-NEXT:      cir.yield %0 : !cir.bool
+// CHECK-NEXT:      cir.yield continue
 // CHECK-NEXT:    }, step :  {
 // CHECK-NEXT:      cir.yield
 // CHECK-NEXT:    })  {
@@ -169,8 +191,7 @@ cir.func @l1() {
 cir.func @l2() {
   cir.scope {
     cir.loop while(cond :  {
-      %0 = cir.const(#true) : !cir.bool
-      cir.yield %0 : !cir.bool
+      cir.yield
     }, step :  {
       cir.yield
     })  {
@@ -183,8 +204,7 @@ cir.func @l2() {
 // CHECK: cir.func @l2
 // CHECK-NEXT:  cir.scope {
 // CHECK-NEXT:    cir.loop while(cond :  {
-// CHECK-NEXT:      %0 = cir.const(#true) : !cir.bool
-// CHECK-NEXT:      cir.yield %0 : !cir.bool
+// CHECK-NEXT:      cir.yield
 // CHECK-NEXT:    }, step :  {
 // CHECK-NEXT:      cir.yield
 // CHECK-NEXT:    })  {

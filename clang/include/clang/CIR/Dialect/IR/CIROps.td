@@ -1114,7 +1114,8 @@ def LoopOp : CIR_Op<"loop",
   let description = [{
     `cir.loop` represents C/C++ loop forms. It defines 3 blocks:
     - `cond`: region can contain multiple blocks, terminated by regular
-    `cir.yield %x` where `%x` is the boolean value to be evaluated.
+    `cir.yield` when control should yield back to the parent, and
+    `cir.yield continue` when execution continues to another region.
     The region destination depends on the loop form specified.
     - `step`: region with one block, containing code to compute the
     loop step, must be terminated with `cir.yield`.
@@ -1129,8 +1130,7 @@ def LoopOp : CIR_Op<"loop",
       //  i = i + 1;
       // }
       cir.loop while(cond :  {
-        %2 = cir.const(#cir.bool<true>) : !cir.bool
-        cir.yield %2 : !cir.bool
+        cir.yield continue
       }, step :  {
         cir.yield
       })  {
