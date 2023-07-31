@@ -167,6 +167,15 @@ declare_mlir_dialect_extension_python_bindings(
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
+  TD_FILE dialects/MemRefTransformOps.td
+  SOURCES
+    dialects/transform/memref.py
+  DIALECT_NAME transform
+  EXTENSION_NAME memref_transform)
+
+declare_mlir_dialect_extension_python_bindings(
+  ADD_TO_PARENT MLIRPythonSources.Dialects
+  ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
   TD_FILE dialects/LinalgStructuredTransformOps.td
   SOURCES
     dialects/_structured_transform_ops_ext.py
