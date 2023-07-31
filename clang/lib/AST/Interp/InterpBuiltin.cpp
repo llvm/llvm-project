@@ -187,6 +187,15 @@ static bool interp__builtin_isinf(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_isfinite(InterpState &S, CodePtr OpPC,
+                                     const InterpFrame *Frame,
+                                     const Function *F) {
+  const Floating &Arg = S.Stk.peek<Floating>();
+
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg.isFinite()));
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
@@ -260,6 +269,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
 
   case Builtin::BI__builtin_isinf_sign:
     if (interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/true))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_isfinite:
+    if (interp__builtin_isfinite(S, OpPC, Frame, F))
       return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
 
