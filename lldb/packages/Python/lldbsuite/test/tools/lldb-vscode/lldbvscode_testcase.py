@@ -257,6 +257,19 @@ class VSCodeTestCaseBase(TestBase):
             "exitCode == %i" % (exitCode),
         )
 
+    def disassemble(self, threadId=None, frameIndex=None):
+        stackFrames = self.get_stackFrames(
+            threadId=threadId, startFrame=frameIndex, levels=1
+        )
+        self.assertIsNotNone(stackFrames)
+        memoryReference = stackFrames[0]["instructionPointerReference"]
+        self.assertIsNotNone(memoryReference)
+
+        if memoryReference not in self.vscode.disassembled_instructions:
+            self.vscode.request_disassemble(memoryReference=memoryReference)
+        
+        return self.vscode.disassembled_instructions[memoryReference]
+
     def attach(
         self,
         program=None,
