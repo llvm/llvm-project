@@ -383,6 +383,9 @@ public:
     return Impl->parseFuncName(MangledName);
   }
 
+  // Validate the call type matches the expected libfunc type.
+  bool isCompatibleSignature(const FunctionType *FuncTy) const;
+
   /// \return The mangled function name for mangled library functions
   /// and unmangled function name for unmangled library functions.
   std::string mangle() const { return Impl->mangle(); }
