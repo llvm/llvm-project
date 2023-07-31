@@ -98,6 +98,21 @@ define i32 @call() {
   ret i32 %1
 }
 
+define i32 @tailcall() {
+  %1 = tail call i32 @call()
+  ret i32 %1
+}
+
+define i32 @musttailcall() {
+  %1 = musttail call i32 @call()
+  ret i32 %1
+}
+
+define i32 @notailcall() {
+  %1 = notail call i32 @call()
+  ret i32 %1
+}
+
 define i32 @cond(i32 %a, i32 %b) {
   br label %br
 unreachable:
