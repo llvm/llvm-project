@@ -129,6 +129,13 @@ New checks
   Detects implicit conversions between pointers of different levels of
   indirection.
 
+- New :doc:`bugprone-optional-value-conversion
+  <clang-tidy/checks/bugprone/optional-value-conversion>` check.
+
+  Detects potentially unintentional and redundant conversions where a value is
+  extracted from an optional-like type and then used to create a new instance
+  of the same optional-like type.
+
 - New :doc:`modernize-use-constraints
   <clang-tidy/checks/modernize/use-constraints>` check.
 
