@@ -245,14 +245,16 @@ private:
 
   std::optional<ctf_header_t> m_header;
 
-  std::vector<std::unique_ptr<CTFType>> m_ctf_types;
+  /// Parsed CTF types.
+  llvm::DenseMap<lldb::user_id_t, std::unique_ptr<CTFType>> m_ctf_types;
+
+  /// Parsed LLDB types.
+  llvm::DenseMap<lldb::user_id_t, lldb::TypeSP> m_types;
 
   /// To complete types, we need a way to map (imcomplete) compiler types back
   /// to parsed CTF types.
   llvm::DenseMap<lldb::opaque_compiler_type_t, const CTFType *>
       m_compiler_types;
-
-  llvm::DenseMap<lldb::user_id_t, lldb::TypeSP> m_types;
 
   std::vector<lldb::FunctionSP> m_functions;
   std::vector<lldb::VariableSP> m_variables;
