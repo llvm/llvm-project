@@ -545,7 +545,7 @@ static bool shouldSkipSimulatorPlatform(bool force, const ArchSpec *arch) {
   // If the arch is known not to specify a simulator environment, skip creating
   // the simulator platform (we can create it later if there's a matching arch).
   // This avoids very slow xcrun queries for non-simulator archs (the slowness
-  // is due to xcrun not caching negative queries (rdar://74882205)).
+  // is due to xcrun not caching negative queries.
   return !force && arch && arch->IsValid() &&
          !arch->TripleEnvironmentWasSpecified();
 }

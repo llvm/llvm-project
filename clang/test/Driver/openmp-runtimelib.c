@@ -16,7 +16,7 @@
 // RUN:   %clang -### -fopenmp --offload-arch=gfx90a -fopenmp-target-fast %s -O3 2>&1 \
 // RUN:   | FileCheck -check-prefixes=Default %s
 
-// RUN: not  %clang -### -fopenmp --offload-arch=gfx90a -fopenmp-runtimelib=oopsy %s -O3 2>&1 \
+// RUN:   %clang -### -fopenmp --offload-arch=gfx90a -fopenmp-runtimelib=oopsy %s -O3 2>&1 \
 // RUN:   | FileCheck -check-prefixes=Error %s
 
 // RUN:   %clang -### -fopenmp --offload-arch=gfx90a:xnack+ -fopenmp-runtimelib=lib-debug -fsanitize=address -shared-libasan %s -O3 2>&1 \

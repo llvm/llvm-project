@@ -55,12 +55,12 @@
 // CHECK-IOMP5-LD-64: "-l[[DEFAULT_OPENMP_LIB:[^"]*]]"
 // CHECK-IOMP5-LD-64: "-lpthread" "-lc"
 //
-// RUN: not %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -fopenmp=lib -target i386-unknown-linux \
 // RUN:   | FileCheck --check-prefix=CHECK-LIB-LD-32 %s
 // CHECK-LIB-LD-32: error: unsupported argument 'lib' to option '-fopenmp='
 //
-// RUN: not %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
+// RUN: %clang -no-canonical-prefixes %s -### -o %t.o 2>&1 \
 // RUN:     -fopenmp=lib -target x86_64-unknown-linux \
 // RUN:   | FileCheck --check-prefix=CHECK-LIB-LD-64 %s
 // CHECK-LIB-LD-64: error: unsupported argument 'lib' to option '-fopenmp='

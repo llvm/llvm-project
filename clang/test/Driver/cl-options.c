@@ -7,7 +7,7 @@
 // RUN: %clang_cl /c -### -- %s 2>&1 | FileCheck -check-prefix=c %s
 // c: -c
 
-// RUN: not %clang_cl /C -### -- %s 2>&1 | FileCheck -check-prefix=C %s
+// RUN: %clang_cl /C -### -- %s 2>&1 | FileCheck -check-prefix=C %s
 // C: error: invalid argument '/C' only allowed with '/E, /P or /EP'
 
 // RUN: %clang_cl /C /P -### -- %s 2>&1 | FileCheck -check-prefix=C_P %s
@@ -80,10 +80,10 @@
 // RUN: %clang_cl -### /FAcsu -fprofile-generate -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-GENERATE %s
 // CHECK-PROFILE-GENERATE: "-fprofile-instrument=llvm" "--dependent-lib=clang_rt.profile{{[^"]*}}.lib"
 
-// RUN: not %clang_cl -### /FA -fprofile-instr-generate -fprofile-instr-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
-// RUN: not %clang_cl -### /FA -fprofile-instr-generate -fprofile-instr-use=file -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
-// RUN: not %clang_cl -### /FAcsu -fprofile-instr-generate -fprofile-instr-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
-// RUN: not %clang_cl -### /FAcsu -fprofile-instr-generate -fprofile-instr-use=file -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
+// RUN: %clang_cl -### /FA -fprofile-instr-generate -fprofile-instr-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
+// RUN: %clang_cl -### /FA -fprofile-instr-generate -fprofile-instr-use=file -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
+// RUN: %clang_cl -### /FAcsu -fprofile-instr-generate -fprofile-instr-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
+// RUN: %clang_cl -### /FAcsu -fprofile-instr-generate -fprofile-instr-use=file -- %s 2>&1 | FileCheck -check-prefix=CHECK-NO-MIX-GEN-USE %s
 // CHECK-NO-MIX-GEN-USE: '{{[a-z=-]*}}' not allowed with '{{[a-z=-]*}}'
 
 // RUN: %clang_cl -### /FA -fprofile-instr-use -- %s 2>&1 | FileCheck -check-prefix=CHECK-PROFILE-USE %s
@@ -234,11 +234,11 @@
 // showIncludes_E-NOT: warning: argument unused during compilation: '--show-includes'
 
 // /source-charset: should warn on everything except UTF-8.
-// RUN: not %clang_cl /source-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=source-charset-utf-16 %s
+// RUN: %clang_cl /source-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=source-charset-utf-16 %s
 // source-charset-utf-16: invalid value 'utf-16' in '/source-charset:utf-16'
 
 // /execution-charset: should warn on everything except UTF-8.
-// RUN: not %clang_cl /execution-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=execution-charset-utf-16 %s
+// RUN: %clang_cl /execution-charset:utf-16 -### -- %s 2>&1 | FileCheck -check-prefix=execution-charset-utf-16 %s
 // execution-charset-utf-16: invalid value 'utf-16' in '/execution-charset:utf-16'
 //
 // RUN: %clang_cl /Umymacro -### -- %s 2>&1 | FileCheck -check-prefix=U %s
@@ -266,10 +266,10 @@
 // RUN: %clang_cl /vmg /vmv -### -- %s 2>&1 | FileCheck -check-prefix=VMV %s
 // VMV: "-fms-memptr-rep=virtual"
 
-// RUN: not %clang_cl /vmg /vmb -### -- %s 2>&1 | FileCheck -check-prefix=VMB %s
+// RUN: %clang_cl /vmg /vmb -### -- %s 2>&1 | FileCheck -check-prefix=VMB %s
 // VMB: '/vmg' not allowed with '/vmb'
 
-// RUN: not %clang_cl /vmg /vmm /vms -### -- %s 2>&1 | FileCheck -check-prefix=VMX %s
+// RUN: %clang_cl /vmg /vmm /vms -### -- %s 2>&1 | FileCheck -check-prefix=VMX %s
 // VMX: '/vms' not allowed with '/vmm'
 
 // RUN: %clang_cl /volatile:iso -### -- %s 2>&1 | FileCheck -check-prefix=VOLATILE-ISO %s
@@ -412,7 +412,7 @@
 // LINKUNUSED-NOT: argument unused during compilation
 
 // Support ignoring warnings about unused arguments.
-// RUN: not %clang_cl /Abracadabra -Qunused-arguments -### -- %s 2>&1 | FileCheck -check-prefix=UNUSED %s
+// RUN: %clang_cl /Abracadabra -Qunused-arguments -### -- %s 2>&1 | FileCheck -check-prefix=UNUSED %s
 // UNUSED-NOT: argument unused during compilation
 
 // Unsupported but parsed options. Check that we don't error on them.
@@ -623,7 +623,7 @@
 // RUN: %clang_cl -### /c -flto=thin -- %s 2>&1 | FileCheck -check-prefix=LTO-THIN %s
 // LTO-THIN: -flto=thin
 
-// RUN: not %clang_cl -### -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
+// RUN: %clang_cl -### -Fe%t.exe -entry:main -flto -- %s 2>&1 | FileCheck -check-prefix=LTO-WITHOUT-LLD %s
 // LTO-WITHOUT-LLD: LTO requires -fuse-ld=lld
 
 // RUN: %clang_cl  -### -- %s 2>&1 | FileCheck -check-prefix=NOCFGUARD %s
@@ -637,7 +637,7 @@
 // RUN: %clang_cl /guard:cf,nochecks -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDNOCHECKS %s
 // CFGUARDNOCHECKS: -cfguard-no-checks
 
-// RUN: not %clang_cl /guard:nochecks -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDNOCHECKSINVALID %s
+// RUN: %clang_cl /guard:nochecks -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDNOCHECKSINVALID %s
 // CFGUARDNOCHECKSINVALID: invalid value 'nochecks' in '/guard:'
 
 // RUN: %clang_cl  -### -- %s 2>&1 | FileCheck -check-prefix=NOEHCONTGUARD %s
@@ -654,7 +654,7 @@
 // BOTHGUARD: -guard:cf
 // BOTHGUARD-SAME: -guard:ehcont
 
-// RUN: not %clang_cl /guard:foo -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDINVALID %s
+// RUN: %clang_cl /guard:foo -### -- %s 2>&1 | FileCheck -check-prefix=CFGUARDINVALID %s
 // CFGUARDINVALID: invalid value 'foo' in '/guard:'
 
 // Accept "core" clang options.

@@ -10,17 +10,19 @@
 #include "clang/AST/AST.h"
 #include "clang/Basic/SourceManager.h"
 #include <optional>
+#include <utility>
 
 namespace clang::tidy::utils::lexer {
 
-Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
-                       const LangOptions &LangOpts, bool SkipComments) {
+std::pair<Token, SourceLocation>
+getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
+                         const LangOptions &LangOpts, bool SkipComments) {
   Token Token;
   Token.setKind(tok::unknown);
 
   Location = Location.getLocWithOffset(-1);
   if (Location.isInvalid())
-    return Token;
+    return {Token, Location};
 
   auto StartOfFile = SM.getLocForStartOfFile(SM.getFileID(Location));
   while (Location != StartOfFile) {
@@ -31,6 +33,13 @@ Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
     }
     Location = Location.getLocWithOffset(-1);
   }
+  return {Token, Location};
+}
+
+Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
+                       const LangOptions &LangOpts, bool SkipComments) {
+  auto [Token, Start] =
+      getPreviousTokenAndStart(Location, SM, LangOpts, SkipComments);
   return Token;
 }
 

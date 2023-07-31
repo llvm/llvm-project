@@ -110,6 +110,7 @@ Clang-Tidy Checks
    `bugprone-no-escape <bugprone/no-escape.html>`_,
    `bugprone-non-zero-enum-to-bool-conversion <bugprone/non-zero-enum-to-bool-conversion.html>`_,
    `bugprone-not-null-terminated-result <bugprone/not-null-terminated-result.html>`_, "Yes"
+   `bugprone-optional-value-conversion <bugprone/optional-value-conversion.html>`_, "Yes"
    `bugprone-parent-virtual-call <bugprone/parent-virtual-call.html>`_, "Yes"
    `bugprone-posix-return <bugprone/posix-return.html>`_, "Yes"
    `bugprone-redundant-branch-condition <bugprone/redundant-branch-condition.html>`_, "Yes"
@@ -298,6 +299,7 @@ Clang-Tidy Checks
    `modernize-unary-static-assert <modernize/unary-static-assert.html>`_, "Yes"
    `modernize-use-auto <modernize/use-auto.html>`_, "Yes"
    `modernize-use-bool-literals <modernize/use-bool-literals.html>`_, "Yes"
+   `modernize-use-constraints <modernize/use-constraints.html>`_, "Yes"
    `modernize-use-default-member-init <modernize/use-default-member-init.html>`_, "Yes"
    `modernize-use-emplace <modernize/use-emplace.html>`_, "Yes"
    `modernize-use-equals-default <modernize/use-equals-default.html>`_, "Yes"

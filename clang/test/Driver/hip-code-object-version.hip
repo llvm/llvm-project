@@ -58,7 +58,7 @@
 
 // Check invalid code object version option.
 
-// RUN: not %clang -### --target=x86_64-linux-gnu \
+// RUN: %clang -### --target=x86_64-linux-gnu \
 // RUN:   -mcode-object-version=1 \
 // RUN:   --offload-arch=gfx906 -nogpulib \
 // RUN:   %s 2>&1 | FileCheck -check-prefix=INVALID %s

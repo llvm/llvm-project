@@ -7,7 +7,7 @@
 
 // RUN: rm -rf %t && mkdir %t
 // RUN: touch %t/dummy.bc
-// RUN: mkdir -p hipBundled
+// RUN: mkdir hipBundled
 // RUN: llvm-ar cr %t/libhipBundled.a %t/dummy.bc
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
@@ -42,14 +42,14 @@
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   -nogpulib %s -fgpu-rdc -L%t -l:libNonArchive.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=NONARCHIVE %s
-// RUN: not %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
+// RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   -nogpulib %s -fgpu-rdc -L%t libNonArchive.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=NONARCHIVE %s
 
 // Check if a file does not exist, it is not unbundled.
 
-// RUN: not %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
+// RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   -nogpulib %s -fgpu-rdc %t/NoneExist.a \
 // RUN:   2>&1 | FileCheck -check-prefixes=NONE %s

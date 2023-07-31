@@ -919,11 +919,18 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // TODO: Vector types.
   getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
 
-  // TODO: Vector types.
   getActionDefinitionsBuilder({G_FMAXNUM, G_FMINNUM})
-      .legalFor({MinFPScalar, s32, s64})
+      .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
+      .legalIf([=](const LegalityQuery &Query) {
+        const auto &Ty = Query.Types[0];
+        return (Ty == v8s16 || Ty == v4s16) && HasFP16;
+      })
       .libcallFor({s128})
-      .minScalar(0, MinFPScalar);
+      .minScalarOrElt(0, MinFPScalar)
+      .clampNumElements(0, v4s16, v8s16)
+      .clampNumElements(0, v2s32, v4s32)
+      .clampNumElements(0, v2s64, v2s64)
+      .moreElementsToNextPow2(0);
 
   getActionDefinitionsBuilder({G_FMAXIMUM, G_FMINIMUM})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
