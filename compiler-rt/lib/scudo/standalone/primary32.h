@@ -932,7 +932,7 @@ private:
     uptr TotalReleasedBytes = 0;
     const uptr Base = First * RegionSize;
     const uptr NumberOfRegions = Last - First + 1U;
-    const uptr GroupSize = (1U << GroupSizeLog);
+    const uptr GroupSize = (1UL << GroupSizeLog);
     const uptr CurGroupBase =
         compactPtrGroupBase(compactPtr(ClassId, Sci->CurrentRegion));
 
