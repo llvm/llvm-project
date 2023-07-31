@@ -313,7 +313,6 @@ static Value *constructPointer(Type *ResTy, Type *PtrElemTy, Value *Ptr,
 
     // If an offset is left we use byte-wise adjustment.
     if (IntOffset != 0) {
-      Ptr = IRB.CreateBitCast(Ptr, IRB.getInt8PtrTy());
       Ptr = IRB.CreateGEP(IRB.getInt8Ty(), Ptr, IRB.getInt(IntOffset),
                           GEPName + ".b" + Twine(IntOffset.getZExtValue()));
     }
