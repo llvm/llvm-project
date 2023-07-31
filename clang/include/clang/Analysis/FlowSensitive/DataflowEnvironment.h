@@ -274,7 +274,12 @@ public:
   ///
   ///  `E` must not be assigned a storage location in the environment.
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
-  void setStorageLocationStrict(const Expr &E, StorageLocation &Loc);
+  void setStorageLocation(const Expr &E, StorageLocation &Loc);
+
+  /// Deprecated synonym for `setStorageLocation()`.
+  void setStorageLocationStrict(const Expr &E, StorageLocation &Loc) {
+    setStorageLocation(E, Loc);
+  }
 
   /// Returns the storage location assigned to the glvalue `E` in the
   /// environment, or null if `E` isn't assigned a storage location in the
@@ -285,7 +290,12 @@ public:
   ///
   /// Requirements:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
-  StorageLocation *getStorageLocationStrict(const Expr &E) const;
+  StorageLocation *getStorageLocation(const Expr &E) const;
+
+  /// Deprecated synonym for `getStorageLocation()`.
+  StorageLocation *getStorageLocationStrict(const Expr &E) const {
+    return getStorageLocation(E);
+  }
 
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
@@ -442,7 +452,10 @@ public:
   ///  same as that of any `StructValue` that has already been associated with
   ///  `E`. This is to guarantee that the result object initialized by a prvalue
   ///  `StructValue` has a durable storage location.
-  void setValueStrict(const Expr &E, Value &Val);
+  void setValue(const Expr &E, Value &Val);
+
+  /// Deprecated synonym for `setValue()`.
+  void setValueStrict(const Expr &E, Value &Val) { setValue(E, Val); }
 
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
   /// isn't assigned a value in the environment.
@@ -585,11 +598,11 @@ private:
   // The copy-constructor is for use in fork() only.
   Environment(const Environment &) = default;
 
-  /// Internal version of `setStorageLocationStrict()` that doesn't check if the
+  /// Internal version of `setStorageLocation()` that doesn't check if the
   /// expression is a prvalue.
   void setStorageLocationInternal(const Expr &E, StorageLocation &Loc);
 
-  /// Internal version of `getStorageLocationStrict()` that doesn't check if the
+  /// Internal version of `getStorageLocation()` that doesn't check if the
   /// expression is a prvalue.
   StorageLocation *getStorageLocationInternal(const Expr &E) const;
 

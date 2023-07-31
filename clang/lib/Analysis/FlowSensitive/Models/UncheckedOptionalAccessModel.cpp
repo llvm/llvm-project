@@ -243,7 +243,7 @@ const Formula &forceBoolValue(Environment &Env, const Expr &Expr) {
     return Value->formula();
 
   Value = &Env.makeAtomicBoolValue();
-  Env.setValueStrict(Expr, *Value);
+  Env.setValue(Expr, *Value);
   return Value->formula();
 }
 
@@ -437,10 +437,10 @@ void transferUnwrapCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
                         LatticeTransferState &State) {
   if (auto *OptionalVal =
           getValueBehindPossiblePointer(*ObjectExpr, State.Env)) {
-    if (State.Env.getStorageLocationStrict(*UnwrapExpr) == nullptr)
+    if (State.Env.getStorageLocation(*UnwrapExpr) == nullptr)
       if (auto *Loc = maybeInitializeOptionalValueMember(
               UnwrapExpr->getType(), *OptionalVal, State.Env))
-        State.Env.setStorageLocationStrict(*UnwrapExpr, *Loc);
+        State.Env.setStorageLocation(*UnwrapExpr, *Loc);
   }
 }
 
@@ -450,8 +450,7 @@ void transferArrowOpCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
           getValueBehindPossiblePointer(*ObjectExpr, State.Env)) {
     if (auto *Loc = maybeInitializeOptionalValueMember(
             UnwrapExpr->getType()->getPointeeType(), *OptionalVal, State.Env)) {
-      State.Env.setValueStrict(*UnwrapExpr,
-                               State.Env.create<PointerValue>(*Loc));
+      State.Env.setValue(*UnwrapExpr, State.Env.create<PointerValue>(*Loc));
     }
   }
 }
@@ -469,7 +468,7 @@ void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
   if (auto *HasValueVal = getHasValue(
           State.Env, getValueBehindPossiblePointer(
                          *CallExpr->getImplicitObjectArgument(), State.Env))) {
-    State.Env.setValueStrict(*CallExpr, *HasValueVal);
+    State.Env.setValue(*CallExpr, *HasValueVal);
   }
 }
 
@@ -538,11 +537,11 @@ void transferCallReturningOptional(const CallExpr *E,
     Loc = &State.Env.getResultObjectLocation(*E);
   } else {
     Loc = cast_or_null<AggregateStorageLocation>(
-        State.Env.getStorageLocationStrict(*E));
+        State.Env.getStorageLocation(*E));
     if (Loc == nullptr) {
       Loc =
           &cast<AggregateStorageLocation>(State.Env.createStorageLocation(*E));
-      State.Env.setStorageLocationStrict(*E, *Loc);
+      State.Env.setStorageLocation(*E, *Loc);
     }
   }
 
@@ -552,7 +551,7 @@ void transferCallReturningOptional(const CallExpr *E,
 void constructOptionalValue(const Expr &E, Environment &Env,
                             BoolValue &HasValueVal) {
   AggregateStorageLocation &Loc = Env.getResultObjectLocation(E);
-  Env.setValueStrict(E, createOptionalValue(Loc, HasValueVal, Env));
+  Env.setValue(E, createOptionalValue(Loc, HasValueVal, Env));
 }
 
 /// Returns a symbolic value for the "has_value" property of an `optional<T>`
@@ -600,11 +599,11 @@ void transferAssignment(const CXXOperatorCallExpr *E, BoolValue &HasValueVal,
   assert(E->getNumArgs() > 0);
 
   if (auto *Loc = cast<AggregateStorageLocation>(
-          State.Env.getStorageLocationStrict(*E->getArg(0)))) {
+          State.Env.getStorageLocation(*E->getArg(0)))) {
     createOptionalValue(*Loc, HasValueVal, State.Env);
 
     // Assign a storage location for the whole expression.
-    State.Env.setStorageLocationStrict(*E, *Loc);
+    State.Env.setStorageLocation(*E, *Loc);
   }
 }
 
@@ -663,7 +662,7 @@ void transferSwapCall(const CXXMemberCallExpr *E,
                       LatticeTransferState &State) {
   assert(E->getNumArgs() == 1);
   auto *OtherLoc = cast_or_null<AggregateStorageLocation>(
-      State.Env.getStorageLocationStrict(*E->getArg(0)));
+      State.Env.getStorageLocation(*E->getArg(0)));
   transferSwap(getImplicitObjectLocation(*E, State.Env), OtherLoc, State.Env);
 }
 
@@ -671,9 +670,9 @@ void transferStdSwapCall(const CallExpr *E, const MatchFinder::MatchResult &,
                          LatticeTransferState &State) {
   assert(E->getNumArgs() == 2);
   auto *Arg0Loc = cast_or_null<AggregateStorageLocation>(
-      State.Env.getStorageLocationStrict(*E->getArg(0)));
+      State.Env.getStorageLocation(*E->getArg(0)));
   auto *Arg1Loc = cast_or_null<AggregateStorageLocation>(
-      State.Env.getStorageLocationStrict(*E->getArg(1)));
+      State.Env.getStorageLocation(*E->getArg(1)));
   transferSwap(Arg0Loc, Arg1Loc, State.Env);
 }
 
@@ -681,8 +680,8 @@ void transferStdForwardCall(const CallExpr *E, const MatchFinder::MatchResult &,
                             LatticeTransferState &State) {
   assert(E->getNumArgs() == 1);
 
-  if (auto *Loc = State.Env.getStorageLocationStrict(*E->getArg(0)))
-    State.Env.setStorageLocationStrict(*E, *Loc);
+  if (auto *Loc = State.Env.getStorageLocation(*E->getArg(0)))
+    State.Env.setStorageLocation(*E, *Loc);
 }
 
 const Formula &evaluateEquality(Arena &A, const Formula &EqVal,
