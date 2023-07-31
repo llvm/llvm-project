@@ -25,6 +25,8 @@ LIBC_INLINE int convert_write_int(Writer *writer,
   // This is an additional check added by LLVM-libc. The reason it returns -3 is
   // because printf uses negative return values for errors, and -1 and -2 are
   // already in use by the file_writer class for file errors.
+  // TODO: Remove this. It's better to crash than to provide an incorrect
+  // result.
   if (to_conv.conv_val_ptr == nullptr)
     return NULLPTR_WRITE_ERROR;
 
@@ -42,10 +44,12 @@ LIBC_INLINE int convert_write_int(Writer *writer,
     *reinterpret_cast<long long *>(to_conv.conv_val_ptr) = written;
     break;
   case LengthModifier::h:
-    *reinterpret_cast<short *>(to_conv.conv_val_ptr) = written;
+    *reinterpret_cast<short *>(to_conv.conv_val_ptr) =
+        static_cast<short>(written);
     break;
   case LengthModifier::hh:
-    *reinterpret_cast<signed char *>(to_conv.conv_val_ptr) = written;
+    *reinterpret_cast<signed char *>(to_conv.conv_val_ptr) =
+        static_cast<signed char>(written);
     break;
   case LengthModifier::z:
     *reinterpret_cast<size_t *>(to_conv.conv_val_ptr) = written;
