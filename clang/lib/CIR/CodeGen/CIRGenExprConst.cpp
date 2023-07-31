@@ -496,7 +496,7 @@ bool ConstStructBuilder::Build(InitListExpr *ILE, bool AllowOverwrite) {
 
     mlir::Attribute EltInit;
     if (Init)
-      Emitter.tryEmitPrivateForMemory(Init, Field->getType());
+      EltInit = Emitter.tryEmitPrivateForMemory(Init, Field->getType());
     else
       llvm_unreachable("NYI");
 
@@ -862,8 +862,7 @@ public:
   }
 
   mlir::Attribute EmitRecordInitialization(InitListExpr *ILE, QualType T) {
-    assert(0 && "not implemented");
-    return {};
+    return ConstStructBuilder::BuildStruct(Emitter, ILE, T);
   }
 
   mlir::Attribute VisitImplicitValueInitExpr(ImplicitValueInitExpr *E,
