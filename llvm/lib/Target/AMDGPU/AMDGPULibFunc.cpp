@@ -954,13 +954,16 @@ Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   std::string FuncName = fInfo.mangle();
   Function *F = dyn_cast_or_null<Function>(
     M->getValueSymbolTable().lookup(FuncName));
+  if (!F || F->isDeclaration())
+    return nullptr;
 
-  // check formal with actual types conformance
-  if (F && !F->isDeclaration() &&
-      fInfo.isCompatibleSignature(F->getFunctionType()))
-    return F;
+  if (F->hasFnAttribute(Attribute::NoBuiltin))
+    return nullptr;
 
-  return nullptr;
+  if (!fInfo.isCompatibleSignature(F->getFunctionType()))
+    return nullptr;
+
+  return F;
 }
 
 FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
@@ -969,10 +972,13 @@ FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
   Function *F = dyn_cast_or_null<Function>(
     M->getValueSymbolTable().lookup(FuncName));
 
-  // check formal with actual types conformance
-  if (F && !F->isDeclaration() &&
-      fInfo.isCompatibleSignature(F->getFunctionType()))
-    return F;
+  if (F) {
+    if (F->hasFnAttribute(Attribute::NoBuiltin))
+      return nullptr;
+    if (!F->isDeclaration() &&
+        fInfo.isCompatibleSignature(F->getFunctionType()))
+      return F;
+  }
 
   FunctionType *FuncTy = fInfo.getFunctionType(*M);
 
