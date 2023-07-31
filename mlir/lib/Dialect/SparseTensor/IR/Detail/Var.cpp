@@ -33,13 +33,10 @@ void Var::dump() const {
 //===----------------------------------------------------------------------===//
 
 bool Ranks::isValid(DimLvlExpr expr) const {
-  // FIXME(wrengr): we have cases without affine expr at an early point
-  if (!expr.getAffineExpr())
-    return true;
-  // Each `DimLvlExpr` only allows one kind of non-symbol variable.
+  assert(expr);
+  // Compute the maximum identifiers for symbol-vars and dim/lvl-vars
+  // (each `DimLvlExpr` only allows one kind of non-symbol variable).
   int64_t maxSym = -1, maxVar = -1;
-  // TODO(wrengr): If we run into ASan issues, that may be due to the
-  // "`{{...}}`" syntax; so we may want to try using local-variables instead.
   mlir::getMaxDimAndSymbol<ArrayRef<AffineExpr>>({{expr.getAffineExpr()}},
                                                  maxVar, maxSym);
   // TODO(wrengr): We may want to add a call to `LLVM_DEBUG` like
