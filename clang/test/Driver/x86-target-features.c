@@ -170,11 +170,11 @@
 // LVICFI: "-target-feature" "+lvi-cfi"
 // NO-LVICFI-NOT: lvi-cfi
 
-// RUN: not %clang --target=i386-linux-gnu -mlvi-cfi -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=LVICFI-SLH %s
+// RUN: %clang --target=i386-linux-gnu -mlvi-cfi -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=LVICFI-SLH %s
 // LVICFI-SLH: error: invalid argument 'mspeculative-load-hardening' not allowed with 'mlvi-cfi'
-// RUN: not %clang --target=i386-linux-gnu -mlvi-cfi -mretpoline %s -### 2>&1 | FileCheck -check-prefix=LVICFI-RETPOLINE %s
+// RUN: %clang --target=i386-linux-gnu -mlvi-cfi -mretpoline %s -### 2>&1 | FileCheck -check-prefix=LVICFI-RETPOLINE %s
 // LVICFI-RETPOLINE: error: invalid argument 'mretpoline' not allowed with 'mlvi-cfi'
-// RUN: not %clang --target=i386-linux-gnu -mlvi-cfi -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=LVICFI-RETPOLINE-EXTERNAL-THUNK %s
+// RUN: %clang --target=i386-linux-gnu -mlvi-cfi -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=LVICFI-RETPOLINE-EXTERNAL-THUNK %s
 // LVICFI-RETPOLINE-EXTERNAL-THUNK: error: invalid argument 'mretpoline-external-thunk' not allowed with 'mlvi-cfi'
 
 // RUN: %clang -target i386-linux-gnu -mlvi-hardening %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING %s
@@ -182,11 +182,11 @@
 // LVIHARDENING: "-target-feature" "+lvi-load-hardening" "-target-feature" "+lvi-cfi"
 // NO-LVIHARDENING-NOT: "+lvi-
 
-// RUN: not %clang --target=i386-linux-gnu -mlvi-hardening -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-SLH %s
+// RUN: %clang --target=i386-linux-gnu -mlvi-hardening -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-SLH %s
 // LVIHARDENING-SLH: error: invalid argument 'mspeculative-load-hardening' not allowed with 'mlvi-hardening'
-// RUN: not %clang --target=i386-linux-gnu -mlvi-hardening -mretpoline %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-RETPOLINE %s
+// RUN: %clang --target=i386-linux-gnu -mlvi-hardening -mretpoline %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-RETPOLINE %s
 // LVIHARDENING-RETPOLINE: error: invalid argument 'mretpoline' not allowed with 'mlvi-hardening'
-// RUN: not %clang --target=i386-linux-gnu -mlvi-hardening -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-RETPOLINE-EXTERNAL-THUNK %s
+// RUN: %clang --target=i386-linux-gnu -mlvi-hardening -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=LVIHARDENING-RETPOLINE-EXTERNAL-THUNK %s
 // LVIHARDENING-RETPOLINE-EXTERNAL-THUNK: error: invalid argument 'mretpoline-external-thunk' not allowed with 'mlvi-hardening'
 
 // RUN: %clang -target i386-linux-gnu -mseses %s -### 2>&1 | FileCheck -check-prefix=SESES %s
@@ -200,14 +200,14 @@
 // SESES-NOLVICFI: "-target-feature" "+seses"
 // SESES-NOLVICFI-NOT: lvi-cfi
 
-// RUN: not %clang --target=i386-linux-gnu -mseses -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=SESES-SLH %s
+// RUN: %clang --target=i386-linux-gnu -mseses -mspeculative-load-hardening %s -### 2>&1 | FileCheck -check-prefix=SESES-SLH %s
 // SESES-SLH: error: invalid argument 'mspeculative-load-hardening' not allowed with 'mseses'
-// RUN: not %clang --target=i386-linux-gnu -mseses -mretpoline %s -### 2>&1 | FileCheck -check-prefix=SESES-RETPOLINE %s
+// RUN: %clang --target=i386-linux-gnu -mseses -mretpoline %s -### 2>&1 | FileCheck -check-prefix=SESES-RETPOLINE %s
 // SESES-RETPOLINE: error: invalid argument 'mretpoline' not allowed with 'mseses'
-// RUN: not %clang --target=i386-linux-gnu -mseses -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=SESES-RETPOLINE-EXTERNAL-THUNK %s
+// RUN: %clang --target=i386-linux-gnu -mseses -mretpoline-external-thunk %s -### 2>&1 | FileCheck -check-prefix=SESES-RETPOLINE-EXTERNAL-THUNK %s
 // SESES-RETPOLINE-EXTERNAL-THUNK: error: invalid argument 'mretpoline-external-thunk' not allowed with 'mseses'
 
-// RUN: not %clang --target=i386-linux-gnu -mseses -mlvi-hardening %s -### 2>&1 | FileCheck -check-prefix=SESES-LVIHARDENING %s
+// RUN: %clang --target=i386-linux-gnu -mseses -mlvi-hardening %s -### 2>&1 | FileCheck -check-prefix=SESES-LVIHARDENING %s
 // SESES-LVIHARDENING: error: invalid argument 'mlvi-hardening' not allowed with 'mseses'
 
 // RUN: %clang -target i386-linux-gnu -mwaitpkg %s -### 2>&1 | FileCheck -check-prefix=WAITPKG %s
@@ -378,7 +378,7 @@
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,NO-SLS %s
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=none -mharden-sls=all %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-IJMP,SLS-RET %s
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=all -mharden-sls=none %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-SLS %s
-// RUN: not %clang --target=i386 -march=i386 -mharden-sls=return,indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-SLS %s
+// RUN: %clang --target=i386 -march=i386 -mharden-sls=return,indirect-jmp %s -### -o %t.o 2>&1 | FileCheck -check-prefix=BAD-SLS %s
 // NO-SLS-NOT: "+harden-sls-
 // SLS-RET-DAG: "-target-feature" "+harden-sls-ret"
 // SLS-IJMP-DAG: "-target-feature" "+harden-sls-ijmp"
