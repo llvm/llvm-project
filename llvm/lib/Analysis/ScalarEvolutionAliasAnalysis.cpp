@@ -30,7 +30,7 @@ static bool canComputePointerDiff(ScalarEvolution &SE,
       SE.getEffectiveSCEVType(B->getType()))
     return false;
 
-  return SE.instructionCouldExistWitthOperands(A, B);
+  return SE.instructionCouldExistWithOperands(A, B);
 }
 
 AliasResult SCEVAAResult::alias(const MemoryLocation &LocA,
