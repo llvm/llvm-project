@@ -107,6 +107,11 @@ COFF Improvements
 MinGW Improvements
 ------------------
 
+* A warning is now printed if the linked module contains runtime pseudo
+  relocations that are too narrow, that can end up producing runtime
+  errors if loaded too far away from the referenced DLL in the address
+  space. (`D154777 <https://reviews.llvm.org/D154777>`_)
+
 MachO Improvements
 ------------------
 
