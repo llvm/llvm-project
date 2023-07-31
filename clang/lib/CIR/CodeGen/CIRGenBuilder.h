@@ -184,6 +184,17 @@ public:
       return FV.bitwiseIsEqual(fpVal.getValue());
     }
 
+    if (const auto structVal = attr.dyn_cast<mlir::cir::ConstStructAttr>()) {
+      for (const auto elt : structVal.getMembers()) {
+        // FIXME(cir): the struct's ID should not be considered a member.
+        if (elt.isa<mlir::StringAttr>())
+          continue;
+        if (!isNullValue(elt))
+          return false;
+      }
+      return true;
+    }
+
     llvm_unreachable("NYI");
   }
 
