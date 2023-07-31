@@ -261,6 +261,7 @@ public:
   void AddExtraClangArgs(const std::vector<std::string> &ExtraArgs);
   static void AddExtraClangArgs(const std::vector<std::string>& source,
                                 std::vector<std::string>& dest);
+  static std::string GetPluginServer(llvm::StringRef plugin_library_path);
 
   /// Add the target's swift-extra-clang-flags to the ClangImporter options.
   void AddUserClangArgs(TargetProperties &props);
