@@ -630,6 +630,18 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}define amdgpu_kernel void @test_use_native_powr_nobuiltin
+; GCN: %call = tail call fast float @_Z4powrff(float %tmp, float %tmp1)
+define amdgpu_kernel void @test_use_native_powr_nobuiltin(ptr addrspace(1) nocapture %a) {
+entry:
+  %tmp = load float, ptr addrspace(1) %a, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr addrspace(1) %a, i64 1
+  %tmp1 = load float, ptr addrspace(1) %arrayidx1, align 4
+  %call = call fast float @_Z4powrff(float %tmp, float %tmp1) nobuiltin
+  store float %call, ptr addrspace(1) %a, align 4
+  ret void
+}
+
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_use_native_sqrt
 ; GCN-NATIVE: call fast float @_Z11native_sqrtf(float %tmp)
 define amdgpu_kernel void @test_use_native_sqrt(ptr addrspace(1) nocapture %a) {
