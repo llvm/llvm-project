@@ -570,14 +570,15 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
 
   ReservedMemoryT ReservedMemory;
   const uptr MapSize = RoundedSize + 2 * PageSize;
-  ReservedMemory.create(/*Addr=*/0U, MapSize, nullptr, MAP_ALLOWNOMEM);
+  if (UNLIKELY(!ReservedMemory.create(/*Addr=*/0U, MapSize, nullptr,
+                                      MAP_ALLOWNOMEM))) {
+    return nullptr;
+  }
 
   // Take the entire ownership of reserved region.
   MemMapT MemMap = ReservedMemory.dispatch(ReservedMemory.getBase(),
                                            ReservedMemory.getCapacity());
   uptr MapBase = MemMap.getBase();
-  if (UNLIKELY(!MapBase))
-    return nullptr;
   uptr CommitBase = MapBase + PageSize;
   uptr MapEnd = MapBase + MapSize;
 
