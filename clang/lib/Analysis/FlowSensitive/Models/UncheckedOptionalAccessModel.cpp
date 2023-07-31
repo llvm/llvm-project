@@ -242,10 +242,8 @@ const Formula &forceBoolValue(Environment &Env, const Expr &Expr) {
   if (Value != nullptr)
     return Value->formula();
 
-  auto &Loc = Env.createStorageLocation(Expr);
   Value = &Env.makeAtomicBoolValue();
-  Env.setValue(Loc, *Value);
-  Env.setStorageLocation(Expr, Loc);
+  Env.setValueStrict(Expr, *Value);
   return Value->formula();
 }
 
@@ -439,10 +437,10 @@ void transferUnwrapCall(const Expr *UnwrapExpr, const Expr *ObjectExpr,
                         LatticeTransferState &State) {
   if (auto *OptionalVal =
           getValueBehindPossiblePointer(*ObjectExpr, State.Env)) {
-    if (State.Env.getStorageLocation(*UnwrapExpr, SkipPast::None) == nullptr)
+    if (State.Env.getStorageLocationStrict(*UnwrapExpr) == nullptr)
       if (auto *Loc = maybeInitializeOptionalValueMember(
               UnwrapExpr->getType(), *OptionalVal, State.Env))
-        State.Env.setStorageLocation(*UnwrapExpr, *Loc);
+        State.Env.setStorageLocationStrict(*UnwrapExpr, *Loc);
   }
 }
 
@@ -471,9 +469,7 @@ void transferOptionalHasValueCall(const CXXMemberCallExpr *CallExpr,
   if (auto *HasValueVal = getHasValue(
           State.Env, getValueBehindPossiblePointer(
                          *CallExpr->getImplicitObjectArgument(), State.Env))) {
-    auto &CallExprLoc = State.Env.createStorageLocation(*CallExpr);
-    State.Env.setValue(CallExprLoc, *HasValueVal);
-    State.Env.setStorageLocation(*CallExpr, CallExprLoc);
+    State.Env.setValueStrict(*CallExpr, *HasValueVal);
   }
 }
 
@@ -534,15 +530,20 @@ void transferValueOrNotEqX(const Expr *ComparisonExpr,
 void transferCallReturningOptional(const CallExpr *E,
                                    const MatchFinder::MatchResult &Result,
                                    LatticeTransferState &State) {
-  if (State.Env.getStorageLocation(*E, SkipPast::None) != nullptr)
+  if (State.Env.getValue(*E) != nullptr)
     return;
 
   AggregateStorageLocation *Loc = nullptr;
   if (E->isPRValue()) {
     Loc = &State.Env.getResultObjectLocation(*E);
   } else {
-    Loc = &cast<AggregateStorageLocation>(State.Env.createStorageLocation(*E));
-    State.Env.setStorageLocationStrict(*E, *Loc);
+    Loc = cast_or_null<AggregateStorageLocation>(
+        State.Env.getStorageLocationStrict(*E));
+    if (Loc == nullptr) {
+      Loc =
+          &cast<AggregateStorageLocation>(State.Env.createStorageLocation(*E));
+      State.Env.setStorageLocationStrict(*E, *Loc);
+    }
   }
 
   createOptionalValue(*Loc, State.Env.makeAtomicBoolValue(), State.Env);
