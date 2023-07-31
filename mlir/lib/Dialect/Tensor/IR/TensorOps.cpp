@@ -2317,9 +2317,9 @@ public:
     SmallVector<OpFoldResult> mixedStrides(insertSliceOp.getMixedStrides());
 
     // No constant operands were folded, just return;
-    if (failed(foldDynamicIndexList(rewriter, mixedOffsets)) &&
-        failed(foldDynamicIndexList(rewriter, mixedSizes)) &&
-        failed(foldDynamicIndexList(rewriter, mixedStrides)))
+    if (failed(foldDynamicIndexList(mixedOffsets)) &&
+        failed(foldDynamicIndexList(mixedSizes)) &&
+        failed(foldDynamicIndexList(mixedStrides)))
       return failure();
 
     // Create the new op in canonical form.
