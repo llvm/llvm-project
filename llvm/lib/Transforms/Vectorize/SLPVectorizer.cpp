@@ -7319,7 +7319,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     std::optional<TargetTransformInfo::ShuffleKind> ExtractShuffle;
     std::optional<TargetTransformInfo::ShuffleKind> GatherShuffle;
     SmallVector<const TreeEntry *> Entries;
-    Type *ScalarTy = GatheredScalars.front()->getType();
     // Check for gathered extracts.
     ExtractShuffle = tryToGatherExtractElements(GatheredScalars, ExtractMask);
     SmallVector<Value *> IgnoredVals;
@@ -7394,8 +7393,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           [&](Value *&Vec, SmallVectorImpl<int> &Mask) {
             Vec = Estimator.gather(GatheredScalars,
                                    Constant::getNullValue(FixedVectorType::get(
-                                       GatheredScalars.front()->getType(),
-                                       GatheredScalars.size())));
+                                       ScalarTy, GatheredScalars.size())));
           });
     }
     if (!all_of(GatheredScalars, PoisonValue::classof)) {
@@ -7404,8 +7402,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       Value *BV = Estimator.gather(
           Gathers, SameGathers ? nullptr
                                : Constant::getNullValue(FixedVectorType::get(
-                                     GatheredScalars.front()->getType(),
-                                     GatheredScalars.size())));
+                                     ScalarTy, GatheredScalars.size())));
       SmallVector<int> ReuseMask(Gathers.size(), PoisonMaskElem);
       std::iota(ReuseMask.begin(), ReuseMask.end(), 0);
       Estimator.add(BV, ReuseMask);
@@ -7680,8 +7677,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     // need to shift the vector.
     // Do not calculate the cost if the actual size is the register size and
     // we can merge this shuffle with the following SK_Select.
-    auto *InsertVecTy =
-        FixedVectorType::get(SrcVecTy->getElementType(), InsertVecSz);
+    auto *InsertVecTy = FixedVectorType::get(ScalarTy, InsertVecSz);
     if (!IsIdentity)
       Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
                                   InsertVecTy, Mask);
@@ -7697,8 +7693,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask));
     if (!InMask.all() && NumScalars != NumElts && !IsWholeSubvector) {
       if (InsertVecSz != VecSz) {
-        auto *ActualVecTy =
-            FixedVectorType::get(SrcVecTy->getElementType(), VecSz);
+        auto *ActualVecTy = FixedVectorType::get(ScalarTy, VecSz);
         Cost += TTI->getShuffleCost(TTI::SK_InsertSubvector, ActualVecTy,
                                     std::nullopt, CostKind, OffsetBeg - Offset,
                                     InsertVecTy);
