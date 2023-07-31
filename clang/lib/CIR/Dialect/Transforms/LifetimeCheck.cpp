@@ -279,6 +279,9 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
       llvm::DenseMap<mlir::Value, std::optional<mlir::Location>>;
   PMapNullHistType pmapNullHist;
 
+  // Track emitted diagnostics, and do not repeat them.
+  llvm::SmallSet<mlir::Location, 8, LocOrdering> emittedDiagnostics;
+
   ///
   /// Pointer Map and Pointer Set
   /// ---------------------------
@@ -359,9 +362,6 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   bool isTaskType(mlir::Value taskVal);
   // Addresses of coroutine Tasks found in the current function.
   SmallPtrSet<mlir::Value, 8> tasks;
-  // Since coawait encapsulates several calls to a promise, do not emit
-  // the same warning multiple times, e.g. under the same coawait.
-  llvm::SmallSet<mlir::Location, 8, LocOrdering> emittedDanglingTasks;
 
   ///
   /// Lambdas
@@ -1350,7 +1350,6 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
         D.attachNote((*info.val).getLoc())
             << "coroutine bound to " << resource << " with expired lifetime";
         D.attachNote(info.loc) << "at the end of scope or full-expression";
-        emittedDanglingTasks.insert(warningLoc);
       } else if (derefStyle == DerefStyle::RetLambda) {
         assert(currFunc && "expected function");
         StringRef parent = currFunc->getLambda() ? "lambda" : "function";
@@ -1386,10 +1385,8 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
     emitRemark(loc) << "pset => " << Out.str();
   };
 
-  // Do not emit more than one diagonistic for the same task deref location.
-  // Since cowait hides a bunch of logic and calls to the promise type, just
-  // have one per suspend expr.
-  if (tasks.count(addr) && emittedDanglingTasks.count(loc))
+  // Do not emit the same warning twice or more.
+  if (emittedDiagnostics.count(loc))
     return;
 
   bool psetRemarkEmitted = false;
@@ -1414,6 +1411,7 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
   // deference point and diagnose it.
   auto varName = getVarNameFromValue(addr);
   auto D = emitWarning(loc);
+  emittedDiagnostics.insert(loc);
 
   if (tasks.count(addr))
     D << "use of coroutine '" << varName << "' with dangling reference";
