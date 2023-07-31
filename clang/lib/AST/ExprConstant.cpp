@@ -1950,7 +1950,8 @@ void CallStackFrame::describe(raw_ostream &Out) const {
                       cast<CXXMethodDecl>(Callee)->isInstance();
 
   if (!IsMemberCall)
-    Out << *Callee << '(';
+    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+                                 /*Qualified=*/false);
 
   if (This && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
@@ -1975,9 +1976,12 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Info.Ctx.getLValueReferenceType(This->Designator.MostDerivedType));
       Out << ".";
     }
-    Out << *Callee << '(';
+    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+                                 /*Qualified=*/false);
     IsMemberCall = false;
   }
+
+  Out << '(';
 
   for (FunctionDecl::param_const_iterator I = Callee->param_begin(),
        E = Callee->param_end(); I != E; ++I, ++ArgIndex) {
