@@ -437,15 +437,13 @@ typedef NSArray<NSObject> ArrayOfNSObjectWarning; // expected-warning{{parameter
 
 // rdar://25060179
 @interface MyMutableDictionary<KeyType, ObjectType> : NSObject
-- (void)setObject:(ObjectType)obj forKeyedSubscript:(KeyType <NSCopying>)key; // expected-note{{passing argument to parameter 'obj' here}} \
-    // expected-note{{passing argument to parameter 'key' here}}
+- (void)setObject:(ObjectType)obj forKeyedSubscript:(KeyType <NSCopying>)key; // expected-note{{passing argument to parameter 'obj' here}}
 @end
 
 void bar(MyMutableDictionary<NSString *, NSString *> *stringsByString,
                              NSNumber *n1, NSNumber *n2) {
   // We warn here when the key types do not match.
-  stringsByString[n1] = n2; // expected-warning{{incompatible pointer types sending 'NSNumber *' to parameter of type 'NSString *'}} \
-    // expected-warning{{incompatible pointer types sending 'NSNumber *' to parameter of type 'NSString<NSCopying> *'}}
+  stringsByString[n1] = n2; // expected-warning{{incompatible pointer types sending 'NSNumber *' to parameter of type 'NSString *'}}
 }
 
 @interface MyTest<K, V> : NSObject <NSCopying>
