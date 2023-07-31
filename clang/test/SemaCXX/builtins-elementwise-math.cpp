@@ -206,3 +206,10 @@ void test_builtin_elementwise_pow() {
   static_assert(!is_const<decltype(__builtin_elementwise_pow(b, a))>::value);
   static_assert(!is_const<decltype(__builtin_elementwise_pow(a, a))>::value);
 }
+
+void test_builtin_elementwise_bitreverse() {
+  const int a = 2;
+  int b = 1;
+  static_assert(!is_const<decltype(__builtin_elementwise_bitreverse(a))>::value);
+  static_assert(!is_const<decltype(__builtin_elementwise_bitreverse(b))>::value);  
+}

@@ -182,6 +182,14 @@ DWARF Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
+- Add ``__builtin_elementwise_log`` builtin for floating point types only.
+- Add ``__builtin_elementwise_log10`` builtin for floating point types only.
+- Add ``__builtin_elementwise_log2`` builtin for floating point types only.
+- Add ``__builtin_elementwise_exp`` builtin for floating point types only.
+- Add ``__builtin_elementwise_exp2`` builtin for floating point types only.
+- Add ``__builtin_set_flt_rounds`` builtin for X86, x86_64, Arm and AArch64 only.
+- Add ``__builtin_elementwise_pow`` builtin for floating point types only.
+- Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
 
 AST Matchers
 ------------
