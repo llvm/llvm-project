@@ -223,11 +223,11 @@
 // LINK_PG: -lgcrt1.o
 // LINK_PG: -no_new_main
 
-// RUN: not %clang -target i386-apple-darwin13 -pg -### %t.o 2> %t.log
+// RUN: %clang -target i386-apple-darwin13 -pg -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_PG_NO_SUPPORT_OSX %s < %t.log
 // LINK_PG_NO_SUPPORT_OSX: error: the clang compiler does not support -pg option on versions of OS X
 
-// RUN: not %clang -target x86_64-apple-ios5.0 -pg -### %t.o 2> %t.log
+// RUN: %clang -target x86_64-apple-ios5.0 -pg -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_PG_NO_SUPPORT %s < %t.log
 // LINK_PG_NO_SUPPORT: error: the clang compiler does not support -pg option on Darwin
 
@@ -315,13 +315,13 @@
 // RUN:   -fuse-ld= -mlinker-version=133.3.0 2>> %t.log
 // RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
 // RUN:   -fuse-ld= -mlinker-version=133.3.0.1 2>> %t.log
-// RUN: not %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
 // RUN:   -fuse-ld= -mlinker-version=133.3.0.1.2 2>> %t.log
-// RUN: not %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
 // RUN:   -fuse-ld= -mlinker-version=133.3.0.1.2.6 2>> %t.log
-// RUN: not %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
 // RUN:   -fuse-ld= -mlinker-version=133.3.0.1.a 2>> %t.log
-// RUN: not %clang -target x86_64-apple-darwin12 %s -### -o %t \
+// RUN: %clang -target x86_64-apple-darwin12 %s -### -o %t \
 // RUN:   -fuse-ld= -mlinker-version=133.3.0.1a 2>> %t.log
 // RUN: FileCheck -check-prefix=LINK_VERSION_DIGITS %s < %t.log
 // LINK_VERSION_DIGITS-NOT: invalid version number in '-mlinker-version=133.3'

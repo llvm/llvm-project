@@ -209,7 +209,7 @@
 // MULTI-D-ONLY-NEXT: # "nvptx64-nvidia-cuda" - "clang", inputs: ["[[INPUT]]"], output: "[[PTX_52:.+]]"
 // MULTI-D-ONLY-NEXT: # "nvptx64-nvidia-cuda" - "NVPTX::Assembler", inputs: ["[[PTX_52]]"], output: "[[CUBIN_52:.+]]"
 //
-// RUN: not %clang -### --target=powerpc64le-ibm-linux-gnu --offload-new-driver -ccc-print-bindings \
+// RUN: %clang -### --target=powerpc64le-ibm-linux-gnu --offload-new-driver -ccc-print-bindings \
 // RUN:        --offload-arch=sm_70 --offload-arch=sm_52 --offload-device-only -c -o %t %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY-O %s
 // MULTI-D-ONLY-O: error: cannot specify -o when generating multiple output files
@@ -238,7 +238,7 @@
 //
 // Check to ensure that we cannot use '-foffload' when not operating in RDC-mode.
 //
-// RUN: not %clang -### --target=powerpc64le-ibm-linux-gnu -fno-gpu-rdc --offload-new-driver \
+// RUN: %clang -### --target=powerpc64le-ibm-linux-gnu -fno-gpu-rdc --offload-new-driver \
 // RUN:        -foffload-lto --offload-arch=sm_70 --offload-arch=sm_52 -c %s 2>&1 \
 // RUN: | FileCheck -check-prefix=LTO-NO-RDC %s
 // LTO-NO-RDC: error: unsupported option '-foffload-lto' for language mode '-fno-gpu-rdc'
