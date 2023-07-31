@@ -282,6 +282,14 @@ private:
   Instruction *transformCallThroughTrampoline(CallBase &Call,
                                               IntrinsicInst &Tramp);
 
+  /// Try to optimize a call to the result of a ptrauth intrinsic, potentially
+  /// into the ptrauth call bundle:
+  /// - call(ptrauth.resign(p)), ["ptrauth"()] ->  call p, ["ptrauth"()]
+  /// - call(ptrauth.sign(p)),   ["ptrauth"()] ->  call p
+  /// as long as the key/discriminator are the same in sign and auth-bundle,
+  /// and we don't change the key in the bundle (to a potentially-invalid key.)
+  Instruction *foldPtrAuthIntrinsicCallee(CallBase &Call);
+
   // Return (a, b) if (LHS, RHS) is known to be (a, b) or (b, a).
   // Otherwise, return std::nullopt
   // Currently it matches:
