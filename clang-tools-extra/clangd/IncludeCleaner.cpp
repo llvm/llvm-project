@@ -70,6 +70,8 @@ bool isIgnored(llvm::StringRef HeaderPath, HeaderFilter IgnoreHeaders) {
 bool mayConsiderUnused(
     const Inclusion &Inc, ParsedAST &AST,
     const include_cleaner::PragmaIncludes *PI) {
+  if (PI && PI->shouldKeep(Inc.HashLine + 1))
+      return false;
   // FIXME(kirillbobyrev): We currently do not support the umbrella headers.
   // System headers are likely to be standard library headers.
   // Until we have good support for umbrella headers, don't warn about them.
@@ -81,8 +83,6 @@ bool mayConsiderUnused(
       AST.getIncludeStructure().getRealPath(HID));
   assert(FE);
   if (PI) {
-    if (PI->shouldKeep(Inc.HashLine + 1))
-      return false;
     // Check if main file is the public interface for a private header. If so we
     // shouldn't diagnose it as unused.
     if (auto PHeader = PI->getPublic(*FE); !PHeader.empty()) {
