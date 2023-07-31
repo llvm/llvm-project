@@ -225,3 +225,10 @@ print(
 
 # Compare the sum of the parts with the main module.
 print(f"// RUN{BLOCKLIT}: diff -u %t.all_partitions %t.module")
+
+# Basic smoke test. Import a module and try to compile when using all
+# exported names. This validates the clang-tidy script does not accidentally
+# add named declarations to the list that are not available.
+print(f"// RUN{BLOCKLIT}: echo 'import std;' > %t.compile.pass.cpp")
+print(f"// RUN{BLOCKLIT}: cat %t.all_partitions >> %t.compile.pass.cpp")
+print(f"// RUN{BLOCKLIT}: %{{cxx}} %{{flags}} %{{compile_flags}} -fsyntax-only %t.compile.pass.cpp")
