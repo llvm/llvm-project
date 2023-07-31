@@ -46,7 +46,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace",
+            "} // namespace",
             fixNamespaceEndComments("namespace {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -55,7 +55,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace\n",
+            "} // namespace\n",
             fixNamespaceEndComments("namespace {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -63,7 +63,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A",
+            "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -72,7 +72,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "namespace M(x) {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace M(x)",
+            "} // namespace M(x)",
             fixNamespaceEndComments("#define M(x) x##x\n"
                                     "namespace M(x) {\n"
                                     "int i;\n"
@@ -82,7 +82,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "namespace A::M(x) {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A::M(x)",
+            "} // namespace A::M(x)",
             fixNamespaceEndComments("#define M(x) x##x\n"
                                     "namespace A::M(x) {\n"
                                     "int i;\n"
@@ -92,7 +92,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "namespace M(x)::A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace M(x)::A",
+            "} // namespace M(x)::A",
             fixNamespaceEndComments("#define M(x) x##x\n"
                                     "namespace M(x)::A {\n"
                                     "int i;\n"
@@ -102,7 +102,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "namespace A::inline M(x)::B {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A::inline M(x)::B",
+            "} // namespace A::inline M(x)::B",
             fixNamespaceEndComments("#define M(x) x##x\n"
                                     "namespace A::inline M(x)::B {\n"
                                     "int i;\n"
@@ -112,7 +112,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "namespace [[deprecated(\"foo\")]] A::inline M(x)::A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A::inline M(x)::A",
+            "} // namespace A::inline M(x)::A",
             fixNamespaceEndComments(
                 "#define M(x) x##x\n"
                 "namespace [[deprecated(\"foo\")]] A::inline M(x)::A {\n"
@@ -123,7 +123,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
       "namespace /* comment */ [[deprecated(\"foo\")]] /* comment */ A {\n"
       "int i;\n"
       "int j;\n"
-      "}// namespace A",
+      "} // namespace A",
       fixNamespaceEndComments(
           "namespace /* comment */ [[deprecated(\"foo\")]] /* comment */ A {\n"
           "int i;\n"
@@ -132,7 +132,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace /* comment */ [[deprecated(\"foo\")]] A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A",
+            "} // namespace A",
             fixNamespaceEndComments(
                 "namespace /* comment */ [[deprecated(\"foo\")]] A {\n"
                 "int i;\n"
@@ -143,7 +143,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
       "namespace /* comment */ [[deprecated(\"foo\")]] /* comment */ M(x) {\n"
       "int i;\n"
       "int j;\n"
-      "}// namespace M(x)",
+      "} // namespace M(x)",
       fixNamespaceEndComments("#define M(x) x##x\n"
                               "namespace /* comment */ "
                               "[[deprecated(\"foo\")]] /* comment */ M(x) {\n"
@@ -155,7 +155,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "A::M(x) {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A::M(x)",
+            "} // namespace A::M(x)",
             fixNamespaceEndComments(
                 "#define M(x) x##x\n"
                 "namespace /* comment */ "
@@ -168,7 +168,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "M(x) /* comment */ {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace M(x)",
+            "} // namespace M(x)",
             fixNamespaceEndComments(
                 "#define M(x) x##x\n"
                 "namespace /* comment */ [[deprecated(\"foo\")]] /* comment "
@@ -181,7 +181,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "A::M(x) /* comment */ {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A::M(x)",
+            "} // namespace A::M(x)",
             fixNamespaceEndComments(
                 "#define M(x) x##x\n"
                 "namespace /* comment */ [[deprecated(\"foo\")]] /* comment "
@@ -193,7 +193,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "namespace A M(x) {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A M(x)",
+            "} // namespace A M(x)",
             fixNamespaceEndComments("#define M(x) x##x\n"
                                     "namespace A M(x) {\n"
                                     "int i;\n"
@@ -204,7 +204,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
       "namespace A B {\n"
       "int i;\n"
       "int j;\n"
-      "}// namespace A B",
+      "} // namespace A B",
       fixNamespaceEndComments(
           "#define B __attribute__((availability(macos, introduced=10.15)))\n"
           "namespace A B {\n"
@@ -215,7 +215,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "namespace A::B M(x) {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A::B",
+            "} // namespace A::B",
             fixNamespaceEndComments("#define M(x) x##x\n"
                                     "namespace A::B M(x) {\n"
                                     "int i;\n"
@@ -225,7 +225,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
       "namespace A __attribute__((availability(macos, introduced=10.15))) {\n"
       "int i;\n"
       "int j;\n"
-      "}// namespace A",
+      "} // namespace A",
       fixNamespaceEndComments(
           "namespace A __attribute__((availability(macos, introduced=10.15))) "
           "{\n"
@@ -235,7 +235,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("inline namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A",
+            "} // namespace A",
             fixNamespaceEndComments("inline namespace A {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -244,7 +244,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace [[deprecated(\"foo\")]] A::B {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A::B",
+            "} // namespace A::B",
             fixNamespaceEndComments("namespace [[deprecated(\"foo\")]] A::B {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -253,7 +253,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace [[deprecated(\"foo\")]] A::inline B::inline C {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A::inline B::inline C",
+            "} // namespace A::inline B::inline C",
             fixNamespaceEndComments(
                 "namespace [[deprecated(\"foo\")]] A::inline B::inline C {\n"
                 "int i;\n"
@@ -263,7 +263,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace DEPRECATED A::B {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A::B",
+            "} // namespace A::B",
             fixNamespaceEndComments("namespace DEPRECATED A::B {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -272,7 +272,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("inline namespace [[deprecated]] A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A",
+            "} // namespace A",
             fixNamespaceEndComments("inline namespace [[deprecated]] A {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -281,7 +281,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace ::A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace ::A",
+            "} // namespace ::A",
             fixNamespaceEndComments("namespace ::A {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -289,7 +289,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace ::A::B {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace ::A::B",
+            "} // namespace ::A::B",
             fixNamespaceEndComments("namespace ::A::B {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -297,7 +297,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace /**/::/**/A/**/::/**/B/**/ {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace ::A::B",
+            "} // namespace ::A::B",
             fixNamespaceEndComments("namespace /**/::/**/A/**/::/**/B/**/ {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -306,7 +306,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "namespace B {\n"
             "int i;\n"
             "}\n"
-            "}// namespace A",
+            "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
                                     "namespace B {\n"
                                     "int i;\n"
@@ -316,8 +316,8 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "namespace B {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace B\n"
-            "}// namespace A",
+            "} // namespace B\n"
+            "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
                                     "namespace B {\n"
                                     "int i;\n"
@@ -327,11 +327,11 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace A {\n"
             "int a;\n"
             "int b;\n"
-            "}// namespace A\n"
+            "} // namespace A\n"
             "namespace B {\n"
             "int b;\n"
             "int a;\n"
-            "}// namespace B",
+            "} // namespace B",
             fixNamespaceEndComments("namespace A {\n"
                                     "int a;\n"
                                     "int b;\n"
@@ -343,11 +343,11 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace A {\n"
             "int a1;\n"
             "int a2;\n"
-            "}// namespace A\n"
+            "} // namespace A\n"
             "namespace A {\n"
             "int a2;\n"
             "int a1;\n"
-            "}// namespace A",
+            "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
                                     "int a1;\n"
                                     "int a2;\n"
@@ -359,7 +359,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace A {\n"
             "int a;\n"
             "int b;\n"
-            "}// namespace A\n"
+            "} // namespace A\n"
             "// comment about b\n"
             "int b;",
             fixNamespaceEndComments("namespace A {\n"
@@ -374,9 +374,9 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "namespace C {\n"
             "namespace D {\n"
             "}\n"
-            "}// namespace C\n"
-            "}// namespace B\n"
-            "}// namespace A",
+            "} // namespace C\n"
+            "} // namespace B\n"
+            "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
                                     "namespace B {\n"
                                     "namespace C {\n"
@@ -392,7 +392,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace out { namespace in {\n"
             "int i;\n"
             "int j;\n"
-            "}}// namespace out::in",
+            "}} // namespace out::in",
             fixNamespaceEndComments("namespace out { namespace in {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -403,7 +403,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
             "int i;\n"
             "int j;\n"
             "}\n"
-            "}// namespace out::in",
+            "} // namespace out::in",
             fixNamespaceEndComments("namespace out {\n"
                                     "namespace in {\n"
                                     "int i;\n"
@@ -414,7 +414,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace out { namespace in {\n"
             "int i;\n"
             "int j;\n"
-            "};}// namespace out::in",
+            "};} // namespace out::in",
             fixNamespaceEndComments("namespace out { namespace in {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -423,7 +423,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace out { namespace {\n"
             "int i;\n"
             "int j;\n"
-            "}}// namespace out",
+            "}} // namespace out",
             fixNamespaceEndComments("namespace out { namespace {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -434,7 +434,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace {\n"
             "int i;\n"
             "int j;\n"
-            "};// namespace",
+            "}; // namespace",
             fixNamespaceEndComments("namespace {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -442,7 +442,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "};// namespace A",
+            "}; // namespace A",
             fixNamespaceEndComments("namespace A {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -450,7 +450,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndComment) {
   EXPECT_EQ("namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "};// namespace A\n"
+            "}; // namespace A\n"
             "// unrelated",
             fixNamespaceEndComments("namespace A {\n"
                                     "int i;\n"
@@ -465,7 +465,7 @@ TEST_F(NamespaceEndCommentsFixerTest, WorksForObjCpp) {
   EXPECT_EQ("namespace {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace",
+            "} // namespace",
             fixNamespaceEndComments("namespace {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -480,7 +480,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
   EXPECT_EQ("TESTSUITE() {\n"
             "int i;\n"
             "int j;\n"
-            "}// TESTSUITE()",
+            "} // TESTSUITE()",
             fixNamespaceEndComments("TESTSUITE() {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -490,7 +490,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
   EXPECT_EQ("TESTSUITE(A) {\n"
             "int i;\n"
             "int j;\n"
-            "}// TESTSUITE(A)",
+            "} // TESTSUITE(A)",
             fixNamespaceEndComments("TESTSUITE(A) {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -499,7 +499,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
   EXPECT_EQ("inline TESTSUITE(A) {\n"
             "int i;\n"
             "int j;\n"
-            "}// TESTSUITE(A)",
+            "} // TESTSUITE(A)",
             fixNamespaceEndComments("inline TESTSUITE(A) {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -508,7 +508,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
   EXPECT_EQ("TESTSUITE(::A) {\n"
             "int i;\n"
             "int j;\n"
-            "}// TESTSUITE(::A)",
+            "} // TESTSUITE(::A)",
             fixNamespaceEndComments("TESTSUITE(::A) {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -517,7 +517,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
   EXPECT_EQ("TESTSUITE(::A::B) {\n"
             "int i;\n"
             "int j;\n"
-            "}// TESTSUITE(::A::B)",
+            "} // TESTSUITE(::A::B)",
             fixNamespaceEndComments("TESTSUITE(::A::B) {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -526,7 +526,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
   EXPECT_EQ("TESTSUITE(/**/::/**/A/**/::/**/B/**/) {\n"
             "int i;\n"
             "int j;\n"
-            "}// TESTSUITE(::A::B)",
+            "} // TESTSUITE(::A::B)",
             fixNamespaceEndComments("TESTSUITE(/**/::/**/A/**/::/**/B/**/) {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -535,7 +535,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
   EXPECT_EQ("TESTSUITE(A, B) {\n"
             "int i;\n"
             "int j;\n"
-            "}// TESTSUITE(A)",
+            "} // TESTSUITE(A)",
             fixNamespaceEndComments("TESTSUITE(A, B) {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -544,7 +544,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsMacroEndComment) {
   EXPECT_EQ("TESTSUITE(\"Test1\") {\n"
             "int i;\n"
             "int j;\n"
-            "}// TESTSUITE(\"Test1\")",
+            "} // TESTSUITE(\"Test1\")",
             fixNamespaceEndComments("TESTSUITE(\"Test1\") {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -556,7 +556,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsNewlineIfNeeded) {
   EXPECT_EQ("namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A\n"
+            "} // namespace A\n"
             " int k;",
             fixNamespaceEndComments("namespace A {\n"
                                     "int i;\n"
@@ -565,7 +565,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsNewlineIfNeeded) {
   EXPECT_EQ("namespace {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace\n"
+            "} // namespace\n"
             " int k;",
             fixNamespaceEndComments("namespace {\n"
                                     "int i;\n"
@@ -574,11 +574,11 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsNewlineIfNeeded) {
   EXPECT_EQ("namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A\n"
+            "} // namespace A\n"
             " namespace B {\n"
             "int j;\n"
             "int k;\n"
-            "}// namespace B",
+            "} // namespace B",
             fixNamespaceEndComments("namespace A {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -589,7 +589,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsNewlineIfNeeded) {
   EXPECT_EQ("namespace {\n"
             "int i;\n"
             "int j;\n"
-            "};// namespace\n"
+            "}; // namespace\n"
             "int k;",
             fixNamespaceEndComments("namespace {\n"
                                     "int i;\n"
@@ -598,7 +598,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsNewlineIfNeeded) {
   EXPECT_EQ("namespace {\n"
             "int i;\n"
             "int j;\n"
-            "};// namespace\n"
+            "}; // namespace\n"
             ";",
             fixNamespaceEndComments("namespace {\n"
                                     "int i;\n"
@@ -1014,7 +1014,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndCommentForNamespacesAroundMacros) {
             "#if 1\n"
             "int i;\n"
             "#endif\n"
-            "}// namespace A",
+            "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
                                     "#if 1\n"
                                     "int i;\n"
@@ -1025,7 +1025,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndCommentForNamespacesAroundMacros) {
             "namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A",
+            "} // namespace A",
             fixNamespaceEndComments("#if 1\n"
                                     "#endif\n"
                                     "namespace A {\n"
@@ -1035,7 +1035,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndCommentForNamespacesAroundMacros) {
   EXPECT_EQ("namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A\n"
+            "} // namespace A\n"
             "#if 1\n"
             "#endif",
             fixNamespaceEndComments("namespace A {\n"
@@ -1048,7 +1048,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndCommentForNamespacesAroundMacros) {
             "namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A\n"
+            "} // namespace A\n"
             "#endif",
             fixNamespaceEndComments("#if 1\n"
                                     "namespace A {\n"
@@ -1061,7 +1061,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndCommentForNamespacesAroundMacros) {
   EXPECT_EQ("namespace A {\n"
             "#define FOO\n"
             "int i;\n"
-            "}// namespace A",
+            "} // namespace A",
             fixNamespaceEndComments("namespace A {\n"
                                     "#define FOO\n"
                                     "int i;\n"
@@ -1070,7 +1070,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndCommentForNamespacesAroundMacros) {
             "namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A",
+            "} // namespace A",
             fixNamespaceEndComments("#define FOO\n"
                                     "namespace A {\n"
                                     "int i;\n"
@@ -1079,7 +1079,7 @@ TEST_F(NamespaceEndCommentsFixerTest, AddsEndCommentForNamespacesAroundMacros) {
   EXPECT_EQ("namespace A {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace A\n"
+            "} // namespace A\n"
             "#define FOO\n",
             fixNamespaceEndComments("namespace A {\n"
                                     "int i;\n"
@@ -1157,7 +1157,7 @@ TEST_F(NamespaceEndCommentsFixerTest,
   EXPECT_EQ("namespace {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace\n"
+            "} // namespace\n"
             "#if A\n"
             "int i;\n"
             "#else\n"
@@ -1285,7 +1285,7 @@ TEST_F(NamespaceEndCommentsFixerTest, IgnoreUnbalanced) {
   EXPECT_EQ("namespace A {\n"
             "class Foo {\n"
             "}\n"
-            "}// namespace A\n",
+            "} // namespace A\n",
             fixNamespaceEndComments("namespace A {\n"
                                     "class Foo {\n"
                                     "}\n"
@@ -1324,7 +1324,7 @@ TEST_F(ShortNamespaceLinesTest, ZeroUnwrappedLines) {
                                     Style));
   EXPECT_EQ("namespace LongNamespace {\n"
             "int i;\n"
-            "}// namespace LongNamespace\n",
+            "} // namespace LongNamespace\n",
             fixNamespaceEndComments("namespace LongNamespace {\n"
                                     "int i;\n"
                                     "}\n",
@@ -1345,7 +1345,7 @@ TEST_F(ShortNamespaceLinesTest, OneUnwrappedLine) {
   EXPECT_EQ("namespace LongNamespace {\n"
             "int i;\n"
             "int j;\n"
-            "}// namespace LongNamespace\n",
+            "} // namespace LongNamespace\n",
             fixNamespaceEndComments("namespace LongNamespace {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -1369,7 +1369,7 @@ TEST_F(ShortNamespaceLinesTest, MultipleUnwrappedLine) {
             "int i;\n"
             "int j;\n"
             "int k;\n"
-            "}// namespace LongNamespace\n",
+            "} // namespace LongNamespace\n",
             fixNamespaceEndComments("namespace LongNamespace {\n"
                                     "int i;\n"
                                     "int j;\n"
@@ -1444,7 +1444,7 @@ TEST_F(ShortNamespaceLinesTest, NamespaceAlias) {
             "{\n"
             "  int i;\n"
             "  int j;\n"
-            "}// namespace n\n",
+            "} // namespace n\n",
             fixNamespaceEndComments("int foo;\n"
                                     "namespace n\n"
                                     "{\n"

@@ -211,3 +211,16 @@ define i6 @sub_select_zext_op_swapped_non_const_args(i1 %c, i6 %argT, i6 %argF) 
   %sub = sub i6 %ext, %sel
   ret i6 %sub
 }
+
+define <2 x i8> @vectorized_add(<2 x i1> %c, <2 x i8> %arg) {
+; CHECK-LABEL: define <2 x i8> @vectorized_add
+; CHECK-SAME: (<2 x i1> [[C:%.*]], <2 x i8> [[ARG:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[ARG]], <i8 1, i8 1>
+; CHECK-NEXT:    [[ADD:%.*]] = select <2 x i1> [[C]], <2 x i8> [[TMP1]], <2 x i8> <i8 1, i8 1>
+; CHECK-NEXT:    ret <2 x i8> [[ADD]]
+;
+  %zext = zext <2 x i1> %c to <2 x i8>
+  %sel = select <2 x i1> %c, <2 x i8> %arg, <2 x i8> <i8 1, i8 1>
+  %add = add <2 x i8> %sel, %zext
+  ret <2 x i8> %add
+}

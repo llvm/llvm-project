@@ -187,6 +187,9 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #if __opencl_c_ext_fp64_local_atomic_min_max != 1
 #error "Incorrectly defined __opencl_c_ext_fp64_local_atomic_min_max"
 #endif
+#if __opencl_c_ext_image_raw10_raw12 != 1
+#error "Incorrectly defined __opencl_c_ext_image_raw10_raw12"
+#endif
 
 #else
 
@@ -270,6 +273,9 @@ global atomic_int z = ATOMIC_VAR_INIT(99);
 #endif
 #ifdef __opencl_c_ext_fp64_local_atomic_min_max
 #error "Incorrectly __opencl_c_ext_fp64_local_atomic_min_max defined"
+#endif
+#ifdef __opencl_c_ext_image_raw10_raw12
+#error "Incorrect __opencl_c_ext_image_raw10_raw12 define"
 #endif
 
 #endif //(defined(__OPENCL_CPP_VERSION__) || __OPENCL_C_VERSION__ >= 200)

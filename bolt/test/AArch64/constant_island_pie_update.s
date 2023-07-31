@@ -8,13 +8,13 @@
 # RUN: %clang %cflags -fPIC -pie %t.o -o %t.rela.exe -nostdlib \
 # RUN:   -Wl,-q -Wl,-z,notext
 # RUN: llvm-bolt %t.rela.exe -o %t.rela.bolt --use-old-text=0 --lite=0
-# RUN: llvm-objdump -j .text -d %t.rela.bolt | FileCheck %s
+# RUN: llvm-objdump -j .text -d --show-all-symbols %t.rela.bolt | FileCheck %s
 # RUN: llvm-readelf -rsW %t.rela.bolt | FileCheck --check-prefix=ELFCHECK %s
 // .relr.dyn
 # RUN: %clang %cflags -fPIC -pie %t.o -o %t.relr.exe -nostdlib \
 # RUN:   -Wl,-q -Wl,-z,notext -Wl,--pack-dyn-relocs=relr
 # RUN: llvm-bolt %t.relr.exe -o %t.relr.bolt --use-old-text=0 --lite=0
-# RUN: llvm-objdump -j .text -d %t.relr.bolt | FileCheck %s
+# RUN: llvm-objdump -j .text -d --show-all-symbols %t.relr.bolt | FileCheck %s
 # RUN: llvm-readelf -rsW %t.relr.bolt | FileCheck --check-prefix=ELFCHECK %s
 # RUN: llvm-readelf -SW %t.relr.bolt | FileCheck --check-prefix=RELRSZCHECK %s
 

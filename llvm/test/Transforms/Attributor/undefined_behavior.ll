@@ -244,7 +244,7 @@ define void @atomicrmw_null_propagated() {
 ; CGSCC: Function Attrs: mustprogress nofree nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@atomicrmw_null_propagated
 ; CGSCC-SAME: () #[[ATTR7:[0-9]+]] {
-; CGSCC-NEXT:    [[PTR:%.*]] = call noalias ptr @ret_null() #[[ATTR10]]
+; CGSCC-NEXT:    [[PTR:%.*]] = call noalias ptr @ret_null() #[[ATTR11:[0-9]+]]
 ; CGSCC-NEXT:    [[A:%.*]] = atomicrmw add ptr [[PTR]], i32 1 acquire, align 4
 ; CGSCC-NEXT:    ret void
 ;
@@ -326,7 +326,7 @@ define void @atomiccmpxchg_null_propagated() {
 ; CGSCC: Function Attrs: mustprogress nofree nounwind willreturn
 ; CGSCC-LABEL: define {{[^@]+}}@atomiccmpxchg_null_propagated
 ; CGSCC-SAME: () #[[ATTR7]] {
-; CGSCC-NEXT:    [[PTR:%.*]] = call noalias ptr @ret_null() #[[ATTR10]]
+; CGSCC-NEXT:    [[PTR:%.*]] = call noalias ptr @ret_null() #[[ATTR11]]
 ; CGSCC-NEXT:    [[A:%.*]] = cmpxchg ptr [[PTR]], i32 2, i32 3 acq_rel monotonic, align 4
 ; CGSCC-NEXT:    ret void
 ;
@@ -479,15 +479,23 @@ e:
 ; Branch on undef that depends on propagation of
 ; undef of a previous instruction.
 define i32 @cond_br_on_undef3() {
-; CHECK: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(none)
-; CHECK-LABEL: define {{[^@]+}}@cond_br_on_undef3
-; CHECK-SAME: () #[[ATTR0]] {
-; CHECK-NEXT:    [[COND:%.*]] = icmp ne i32 1, undef
-; CHECK-NEXT:    br i1 [[COND]], label [[T:%.*]], label [[E:%.*]]
-; CHECK:       t:
-; CHECK-NEXT:    ret i32 1
-; CHECK:       e:
-; CHECK-NEXT:    ret i32 2
+; TUNIT: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none)
+; TUNIT-LABEL: define {{[^@]+}}@cond_br_on_undef3
+; TUNIT-SAME: () #[[ATTR5]] {
+; TUNIT-NEXT:    unreachable
+; TUNIT:       t:
+; TUNIT-NEXT:    unreachable
+; TUNIT:       e:
+; TUNIT-NEXT:    unreachable
+;
+; CGSCC: Function Attrs: mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none)
+; CGSCC-LABEL: define {{[^@]+}}@cond_br_on_undef3
+; CGSCC-SAME: () #[[ATTR8]] {
+; CGSCC-NEXT:    unreachable
+; CGSCC:       t:
+; CGSCC-NEXT:    unreachable
+; CGSCC:       e:
+; CGSCC-NEXT:    unreachable
 ;
   %cond = icmp ne i32 1, undef
   br i1 %cond, label %t, label %e
@@ -776,8 +784,8 @@ define void @arg_nonnull_violation3_1(i1 %c) {
 ; CGSCC-NEXT:    [[PTR:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    call void @arg_nonnull_12(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR11:[0-9]+]]
-; CGSCC-NEXT:    call void @arg_nonnull_12(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef writeonly align 4294967296 null) #[[ATTR11]]
+; CGSCC-NEXT:    call void @arg_nonnull_12(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR12:[0-9]+]]
+; CGSCC-NEXT:    call void @arg_nonnull_12(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef writeonly align 4294967296 null) #[[ATTR12]]
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       f:
 ; CGSCC-NEXT:    unreachable
@@ -823,8 +831,8 @@ define void @arg_nonnull_violation3_2(i1 %c) {
 ; CGSCC-NEXT:    [[PTR:%.*]] = alloca i32, align 4
 ; CGSCC-NEXT:    br i1 [[C]], label [[T:%.*]], label [[F:%.*]]
 ; CGSCC:       t:
-; CGSCC-NEXT:    call void @arg_nonnull_12_noundef_2(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR11]]
-; CGSCC-NEXT:    call void @arg_nonnull_12_noundef_2(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef writeonly align 4294967296 null) #[[ATTR11]]
+; CGSCC-NEXT:    call void @arg_nonnull_12_noundef_2(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]]) #[[ATTR12]]
+; CGSCC-NEXT:    call void @arg_nonnull_12_noundef_2(ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nocapture nofree noundef nonnull writeonly align 4 dereferenceable(4) [[PTR]], ptr nofree noundef writeonly align 4294967296 null) #[[ATTR12]]
 ; CGSCC-NEXT:    unreachable
 ; CGSCC:       f:
 ; CGSCC-NEXT:    unreachable
@@ -1068,6 +1076,7 @@ define noundef i32 @assumed_undef_is_ok_caller(i1 %c) {
 ; CGSCC: attributes #[[ATTR7]] = { mustprogress nofree nounwind willreturn }
 ; CGSCC: attributes #[[ATTR8]] = { mustprogress nofree norecurse noreturn nosync nounwind willreturn memory(none) }
 ; CGSCC: attributes #[[ATTR9]] = { mustprogress nofree norecurse nosync nounwind willreturn memory(argmem: write) }
-; CGSCC: attributes #[[ATTR10]] = { nofree willreturn }
-; CGSCC: attributes #[[ATTR11]] = { nofree nounwind willreturn memory(write) }
+; CGSCC: attributes #[[ATTR10]] = { nofree nosync willreturn }
+; CGSCC: attributes #[[ATTR11]] = { nofree willreturn }
+; CGSCC: attributes #[[ATTR12]] = { nofree nounwind willreturn memory(write) }
 ;.

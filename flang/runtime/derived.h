@@ -31,5 +31,9 @@ void Finalize(const Descriptor &, const typeInfo::DerivedType &derived);
 // Does not deallocate the original descriptor.
 void Destroy(const Descriptor &, bool finalize, const typeInfo::DerivedType &);
 
+// Return true if the passed descriptor is for a derived type
+// entity that has a dynamic (allocatable, automatic) component.
+bool HasDynamicComponent(const Descriptor &);
+
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_DERIVED_H_

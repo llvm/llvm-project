@@ -23,15 +23,26 @@ module __ppc_intrinsics
 ! Vector intrinsic
 !--------------------
 !! ================ 1 argument function interface ================
+! vector(i) function f(vector(i))
+#define ELEM_FUNC_VIVI(VKIND) \
+  elemental vector(integer(VKIND)) function elem_func_vi##VKIND##vi##VKIND(arg1); \
+    vector(integer(VKIND)), intent(in) :: arg1; \
+  end function ;
+
 ! vector(r) function f(vector(r))
 #define ELEM_FUNC_VRVR_2(VKIND1, VKIND2) \
   elemental vector(real(VKIND1)) function elem_func_vr##VKIND1##vr##VKIND2(arg1); \
     vector(real(VKIND2)), intent(in) :: arg1; \
   end function ;
+#define ELEM_FUNC_VRVR(VKIND) ELEM_FUNC_VRVR_2(VKIND, VKIND)
 
+  ELEM_FUNC_VIVI(1) ELEM_FUNC_VIVI(2) ELEM_FUNC_VIVI(4) ELEM_FUNC_VIVI(8)
   ELEM_FUNC_VRVR_2(4,8) ELEM_FUNC_VRVR_2(8,4)
+  ELEM_FUNC_VRVR(4) ELEM_FUNC_VRVR(8)
 
+#undef ELEM_FUNC_VRVR
 #undef ELEM_FUNC_VRVR_2
+#undef ELEM_FUNC_VIVI
 
 !! ================ 2 arguments function interface ================
 ! vector(i) function f(vector(i), vector(i))
@@ -193,6 +204,27 @@ module __ppc_intrinsics
     vector(real(VKIND)), intent(in) :: arg1, arg2, arg3; \
   end function ;
 
+! vector(i) function f(vector(i), vector(i), vector(u))
+#define ELEM_FUNC_VIVIVIVU(VKIND) \
+  elemental vector(integer(VKIND)) function elem_func_vi##VKIND##vi##VKIND##vi##VKIND##vu##VKIND(arg1, arg2, arg3); \
+    vector(integer(VKIND)), intent(in) :: arg1, arg2; \
+    vector(unsigned(VKIND)), intent(in) :: arg3; \
+  end function ;
+
+! vector(u) function f(vector(u), vector(u), vector(u))
+#define ELEM_FUNC_VUVUVUVU(VKIND) \
+  elemental vector(unsigned(VKIND)) function elem_func_vu##VKIND##vu##VKIND##vu##VKIND##vu##VKIND(arg1, arg2, arg3); \
+    vector(unsigned(VKIND)), intent(in) :: arg1, arg2, arg3; \
+  end function ;
+
+! vector(r) function f(vector(r), vector(r), vector(u))
+#define ELEM_FUNC_VRVRVRVU(VKIND) \
+  elemental vector(real(VKIND)) function elem_func_vr##VKIND##vr##VKIND##vr##VKIND##vu##VKIND(arg1, arg2, arg3); \
+    vector(real(VKIND)), intent(in) :: arg1, arg2; \
+    vector(unsigned(VKIND)), intent(in) :: arg3; \
+  end function ;
+
+
 ! vector(i) function f(vector(i), vector(i), i)
 #define ELEM_FUNC_VIVIVII(VKIND) \
   elemental vector(integer(VKIND)) function elem_func_vi##VKIND##vi##VKIND##vi##VKIND##i(arg1, arg2, arg3); \
@@ -217,6 +249,9 @@ module __ppc_intrinsics
     !dir$ ignore_tkr(k) arg3; \
   end function ;
 
+  ELEM_FUNC_VIVIVIVU(1) ELEM_FUNC_VIVIVIVU(2) ELEM_FUNC_VIVIVIVU(4) ELEM_FUNC_VIVIVIVU(8)
+  ELEM_FUNC_VUVUVUVU(1) ELEM_FUNC_VUVUVUVU(2) ELEM_FUNC_VUVUVUVU(4) ELEM_FUNC_VUVUVUVU(8)
+  ELEM_FUNC_VRVRVRVU(4) ELEM_FUNC_VRVRVRVU(8)
   ELEM_FUNC_VRVRVRVR(4) ELEM_FUNC_VRVRVRVR(8)
   ELEM_FUNC_VIVIVII(1) ELEM_FUNC_VIVIVII(2) ELEM_FUNC_VIVIVII(4) ELEM_FUNC_VIVIVII(8)
   ELEM_FUNC_VUVUVUI(1) ELEM_FUNC_VUVUVUI(2) ELEM_FUNC_VUVUVUI(4) ELEM_FUNC_VUVUVUI(8)
@@ -226,6 +261,10 @@ module __ppc_intrinsics
 #undef ELEM_FUNC_VUVUVUI
 #undef ELEM_FUNC_VRVRVRI
 #undef ELEM_FUNC_VRVRVRVR
+#undef ELEM_FUNC_VRVRVRVU
+#undef ELEM_FUNC_VRVRVRVR
+#undef ELEM_FUNC_VUVUVUVU
+#undef ELEM_FUNC_VIVIVIVU
 
   end interface
 
@@ -387,10 +426,24 @@ module __ppc_intrinsics
 !-------------------------
 ! vector function(vector)
 !-------------------------
+#define VI_VI(NAME, VKIND) __ppc_##NAME##_vi##VKIND##vi##VKIND
 #define VR_VR_2(NAME, VKIND1, VKIND2) __ppc_##NAME##_vr##VKIND1##vr##VKIND2
+#define VR_VR(NAME, VKIND) VR_VR_2(NAME, VKIND, VKIND)
 
+#define VEC_VI_VI(NAME, VKIND) \
+  procedure(elem_func_vi##VKIND##vi##VKIND) :: VI_VI(NAME, VKIND);
 #define VEC_VR_VR_2(NAME, VKIND1, VKIND2) \
   procedure(elem_func_vr##VKIND1##vr##VKIND2) :: VR_VR_2(NAME, VKIND1, VKIND2);
+#define VEC_VR_VR(NAME, VKIND) VEC_VR_VR_2(NAME, VKIND, VKIND)
+
+! vec_abs
+  VEC_VI_VI(vec_abs,1) VEC_VI_VI(vec_abs,2) VEC_VI_VI(vec_abs,4) VEC_VI_VI(vec_abs,8)
+  VEC_VR_VR(vec_abs,4) VEC_VR_VR(vec_abs,8)
+  interface vec_abs
+    procedure :: VI_VI(vec_abs,1), VI_VI(vec_abs,2), VI_VI(vec_abs,4), VI_VI(vec_abs,8)
+    procedure :: VR_VR(vec_abs,4), VR_VR(vec_abs,8)
+  end interface vec_abs
+  public :: vec_abs
 
 ! vec_cvf
   VEC_VR_VR_2(vec_cvf,4,8) VEC_VR_VR_2(vec_cvf,8,4)
@@ -399,9 +452,13 @@ module __ppc_intrinsics
   end interface vec_cvf
   public :: vec_cvf
 
+#undef VEC_VR_VR
 #undef VEC_VR_VR_2
+#undef VEC_VI_VI
+#undef VR_VR
 #undef VR_VR_2
-
+#undef VI_VI
+  
 !---------------------------------
 ! vector function(vector, vector)
 !---------------------------------
@@ -687,9 +744,18 @@ module __ppc_intrinsics
 ! vector function(vector, vector, vector)
 !-----------------------------------------
 #define VR_VR_VR_VR(NAME, VKIND) __ppc_##NAME##_vr##VKIND##vr##VKIND##vr##VKIND##vr##VKIND
+#define VI_VI_VI_VU(NAME, VKIND) __ppc_##NAME##_vi##VKIND##vi##VKIND##vi##VKIND##vu##VKIND
+#define VU_VU_VU_VU(NAME, VKIND) __ppc_##NAME##_vu##VKIND##vu##VKIND##vu##VKIND##vu##VKIND
+#define VR_VR_VR_VU(NAME, VKIND) __ppc_##NAME##_vr##VKIND##vr##VKIND##vr##VKIND##vu##VKIND
 
 #define VEC_VR_VR_VR_VR(NAME, VKIND) \
   procedure(elem_func_vr##VKIND##vr##VKIND##vr##VKIND##vr##VKIND) :: VR_VR_VR_VR(NAME, VKIND);
+#define VEC_VI_VI_VI_VU(NAME, VKIND) \
+  procedure(elem_func_vi##VKIND##vi##VKIND##vi##VKIND##vu##VKIND) :: VI_VI_VI_VU(NAME, VKIND);
+#define VEC_VU_VU_VU_VU(NAME, VKIND) \
+  procedure(elem_func_vu##VKIND##vu##VKIND##vu##VKIND##vu##VKIND) :: VU_VU_VU_VU(NAME, VKIND);
+#define VEC_VR_VR_VR_VU(NAME, VKIND) \
+  procedure(elem_func_vr##VKIND##vr##VKIND##vr##VKIND##vu##VKIND) :: VR_VR_VR_VU(NAME, VKIND);
 
 ! vec_madd
   VEC_VR_VR_VR_VR(vec_madd,4) VEC_VR_VR_VR_VR(vec_madd,8)
@@ -698,6 +764,20 @@ module __ppc_intrinsics
   end interface vec_madd
   public :: vec_madd
 
+! vec_msub
+  VEC_VR_VR_VR_VR(vec_msub,4) VEC_VR_VR_VR_VR(vec_msub,8)
+  interface vec_msub
+    procedure :: VR_VR_VR_VR(vec_msub,4), VR_VR_VR_VR(vec_msub,8)
+  end interface vec_msub
+  public :: vec_msub
+
+! vec_nmadd
+  VEC_VR_VR_VR_VR(vec_nmadd,4) VEC_VR_VR_VR_VR(vec_nmadd,8)
+  interface vec_nmadd
+    procedure :: VR_VR_VR_VR(vec_nmadd,4), VR_VR_VR_VR(vec_nmadd,8)
+  end interface vec_nmadd
+  public :: vec_nmadd
+
 ! vec_nmsub
   VEC_VR_VR_VR_VR(vec_nmsub,4) VEC_VR_VR_VR_VR(vec_nmsub,8)
   interface vec_nmsub
@@ -705,7 +785,24 @@ module __ppc_intrinsics
   end interface vec_nmsub
   public :: vec_nmsub
 
+! vec_sel
+  VEC_VI_VI_VI_VU(vec_sel,1) VEC_VI_VI_VI_VU(vec_sel,2) VEC_VI_VI_VI_VU(vec_sel,4) VEC_VI_VI_VI_VU(vec_sel,8)
+  VEC_VU_VU_VU_VU(vec_sel,1) VEC_VU_VU_VU_VU(vec_sel,2) VEC_VU_VU_VU_VU(vec_sel,4) VEC_VU_VU_VU_VU(vec_sel,8)
+  VEC_VR_VR_VR_VU(vec_sel,4) VEC_VR_VR_VR_VU(vec_sel,8)
+  interface vec_sel
+    procedure :: VI_VI_VI_VU(vec_sel,1), VI_VI_VI_VU(vec_sel,2), VI_VI_VI_VU(vec_sel,4), VI_VI_VI_VU(vec_sel,8)
+    procedure :: VU_VU_VU_VU(vec_sel,1), VU_VU_VU_VU(vec_sel,2), VU_VU_VU_VU(vec_sel,4), VU_VU_VU_VU(vec_sel,8)
+    procedure :: VR_VR_VR_VU(vec_sel,4), VR_VR_VR_VU(vec_sel,8)
+  end interface vec_sel
+  public :: vec_sel
+
+#undef VEC_VI_VI_VI_VU
+#undef VEC_VU_VU_VU_VU
+#undef VEC_VR_VR_VR_VU
 #undef VEC_VR_VR_VR_VR
+#undef VI_VI_VI_VU
+#undef VU_VU_VU_VU
+#undef VR_VR_VR_VU
 #undef VR_VR_VR_VR
 
 !----------------------------------

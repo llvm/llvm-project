@@ -1465,17 +1465,29 @@ public:
   /// If no Platform is attached this call is equivalent to createBareJITDylib.
   Expected<JITDylib &> createJITDylib(std::string Name);
 
-  /// Closes the given JITDylib.
+  /// Removes the given JITDylibs from the ExecutionSession.
   ///
-  /// This method clears all resources held for the JITDylib, puts it in the
-  /// closed state, and clears all references held by the ExecutionSession and
-  /// other JITDylibs. No further code can be added to the JITDylib, and the
-  /// object will be freed once any remaining JITDylibSPs to it are destroyed.
+  /// This method clears all resources held for the JITDylibs, puts them in the
+  /// closed state, and clears all references to them that are held by the
+  /// ExecutionSession or other JITDylibs. No further code can be added to the
+  /// removed JITDylibs, and the JITDylib objects will be freed once any
+  /// remaining JITDylibSPs pointing to them are destroyed.
   ///
-  /// This method does *not* run static destructors.
+  /// This method does *not* run static destructors for code contained in the
+  /// JITDylibs, and each JITDylib can only be removed once.
   ///
-  /// This method can only be called once for each JITDylib.
-  Error removeJITDylib(JITDylib &JD);
+  /// JITDylibs will be removed in the order given. Teardown is usually
+  /// independent for each JITDylib, but not always. In particular, where the
+  /// ORC runtime is used it is expected that teardown off all JITDylibs will
+  /// depend on it, so the JITDylib containing the ORC runtime must be removed
+  /// last. If the client has introduced any other dependencies they should be
+  /// accounted for in the removal order too.
+  Error removeJITDylibs(std::vector<JITDylibSP> JDsToRemove);
+
+  /// Calls removeJTIDylibs on the gives JITDylib.
+  Error removeJITDylib(JITDylib &JD) {
+    return removeJITDylibs(std::vector<JITDylibSP>({&JD}));
+  }
 
   /// Set the error reporter function.
   ExecutionSession &setErrorReporter(ErrorReporter ReportError) {

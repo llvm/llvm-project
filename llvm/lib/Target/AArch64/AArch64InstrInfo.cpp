@@ -79,6 +79,7 @@ AArch64InstrInfo::AArch64InstrInfo(const AArch64Subtarget &STI)
 unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
   const MachineBasicBlock &MBB = *MI.getParent();
   const MachineFunction *MF = MBB.getParent();
+  const Function &F = MF->getFunction();
   const MCAsmInfo *MAI = MF->getTarget().getMCAsmInfo();
 
   {
@@ -127,9 +128,20 @@ unsigned AArch64InstrInfo::getInstSizeInBytes(const MachineInstr &MI) const {
       NumBytes = 4;
     break;
   case TargetOpcode::PATCHABLE_FUNCTION_ENTER:
+    // If `patchable-function-entry` is set, PATCHABLE_FUNCTION_ENTER
+    // instructions are expanded to the specified number of NOPs. Otherwise,
+    // they are expanded to 36-byte XRay sleds.
+    NumBytes =
+        F.getFnAttributeAsParsedInteger("patchable-function-entry", 9) * 4;
+    break;
   case TargetOpcode::PATCHABLE_FUNCTION_EXIT:
+  case TargetOpcode::PATCHABLE_TYPED_EVENT_CALL:
     // An XRay sled can be 4 bytes of alignment plus a 32-byte block.
     NumBytes = 36;
+    break;
+  case TargetOpcode::PATCHABLE_EVENT_CALL:
+    // EVENT_CALL XRay sleds are exactly 6 instructions long (no alignment).
+    NumBytes = 24;
     break;
 
   case AArch64::SPACE:
@@ -2228,7 +2240,6 @@ bool AArch64InstrInfo::hasUnscaledLdStOffset(unsigned Opc) {
   case AArch64::LDRWpre:
   case AArch64::LDURXi:
   case AArch64::LDRXpre:
-  case AArch64::LDRSWpre:
   case AArch64::LDURSWi:
   case AArch64::LDURHHi:
   case AArch64::LDURBBi:
@@ -2438,7 +2449,6 @@ bool AArch64InstrInfo::isPairableLdStInst(const MachineInstr &MI) {
   case AArch64::LDURXi:
   case AArch64::LDRXpre:
   case AArch64::LDURSWi:
-  case AArch64::LDRSWpre:
     return true;
   }
 }
@@ -2559,8 +2569,7 @@ bool AArch64InstrInfo::isCandidateToMergeOrPair(const MachineInstr &MI) const {
   // Can't merge/pair if the instruction modifies the base register.
   // e.g., ldr x0, [x0]
   // This case will never occur with an FI base.
-  // However, if the instruction is an LDR<S,D,Q,W,X,SW>pre or
-  // STR<S,D,Q,W,X>pre, it can be merged.
+  // However, if the instruction is an LDR/STR<S,D,Q,W,X>pre, it can be merged.
   // For example:
   //   ldr q0, [x11, #32]!
   //   ldr q1, [x11, #16]
@@ -3137,7 +3146,6 @@ int AArch64InstrInfo::getMemScale(unsigned Opc) {
   case AArch64::LDRSpre:
   case AArch64::LDRSWui:
   case AArch64::LDURSWi:
-  case AArch64::LDRSWpre:
   case AArch64::LDRWpre:
   case AArch64::LDRWui:
   case AArch64::LDURWi:
@@ -3193,7 +3201,6 @@ bool AArch64InstrInfo::isPreLd(const MachineInstr &MI) {
     return false;
   case AArch64::LDRWpre:
   case AArch64::LDRXpre:
-  case AArch64::LDRSWpre:
   case AArch64::LDRSpre:
   case AArch64::LDRDpre:
   case AArch64::LDRQpre:

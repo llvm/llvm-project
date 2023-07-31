@@ -486,9 +486,8 @@ AArch64RegisterBankInfo::getSameKindOfOperandsMapping(
 /// \returns true if a given intrinsic only uses and defines FPRs.
 static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
                           const MachineInstr &MI) {
-  assert(MI.getOpcode() == TargetOpcode::G_INTRINSIC);
   // TODO: Add more intrinsics.
-  switch (MI.getIntrinsicID()) {
+  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
   default:
     return false;
   case Intrinsic::aarch64_neon_uaddlv:

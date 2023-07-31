@@ -122,6 +122,10 @@ public:
   bool Pre(const parser::OpenACCDeclarativeConstruct &);
   void Post(const parser::OpenACCDeclarativeConstruct &) { PopContext(); }
 
+  void Post(const parser::AccDeclarativeDirective &) {
+    GetContext().withinConstruct = true;
+  }
+
   bool Pre(const parser::OpenACCRoutineConstruct &);
   bool Pre(const parser::AccBindClause &);
   void Post(const parser::OpenACCStandaloneDeclarativeConstruct &);

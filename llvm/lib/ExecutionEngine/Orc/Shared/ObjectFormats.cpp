@@ -56,7 +56,19 @@ StringRef MachOInitSectionNames[19] = {
 };
 
 StringRef ELFEHFrameSectionName = ".eh_frame";
+
 StringRef ELFInitArrayFuncSectionName = ".init_array";
+StringRef ELFInitFuncSectionName = ".init";
+StringRef ELFFiniArrayFuncSectionName = ".fini_array";
+StringRef ELFFiniFuncSectionName = ".fini";
+StringRef ELFCtorArrayFuncSectionName = ".ctors";
+StringRef ELFDtorArrayFuncSectionName = ".dtors";
+
+StringRef ELFInitSectionNames[3]{
+    ELFInitArrayFuncSectionName,
+    ELFInitFuncSectionName,
+    ELFCtorArrayFuncSectionName,
+};
 
 StringRef ELFThreadBSSSectionName = ".tbss";
 StringRef ELFThreadDataSectionName = ".tdata";
@@ -80,9 +92,11 @@ bool isMachOInitializerSection(StringRef QualifiedName) {
 }
 
 bool isELFInitializerSection(StringRef SecName) {
-  if (SecName.consume_front(ELFInitArrayFuncSectionName) &&
-      (SecName.empty() || SecName[0] == '.'))
-    return true;
+  for (StringRef InitSection : ELFInitSectionNames) {
+    StringRef Name = SecName;
+    if (Name.consume_front(InitSection) && (Name.empty() || Name[0] == '.'))
+      return true;
+  }
   return false;
 }
 

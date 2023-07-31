@@ -825,7 +825,7 @@ static LogicalResult checkedAddLLVMFnAttribute(Location loc,
     if (value.empty())
       return emitError(loc) << "LLVM attribute '" << key << "' expects a value";
 
-    int result;
+    int64_t result;
     if (!value.getAsInteger(/*Radix=*/0, result))
       llvmFunc->addFnAttr(
           llvm::Attribute::get(llvmFunc->getContext(), kind, result));
@@ -1142,18 +1142,18 @@ llvm::MDNode *ModuleTranslation::getAliasScopes(
     ArrayRef<AliasScopeAttr> aliasScopeAttrs) const {
   SmallVector<llvm::Metadata *> nodes;
   nodes.reserve(aliasScopeAttrs.size());
-  for (AliasScopeAttr aliasScopeRef : aliasScopeAttrs)
-    nodes.push_back(getAliasScope(aliasScopeRef));
+  for (AliasScopeAttr aliasScopeAttr : aliasScopeAttrs)
+    nodes.push_back(getAliasScope(aliasScopeAttr));
   return llvm::MDNode::get(getLLVMContext(), nodes);
 }
 
 void ModuleTranslation::setAliasScopeMetadata(AliasAnalysisOpInterface op,
                                               llvm::Instruction *inst) {
-  auto populateScopeMetadata = [&](ArrayAttr aliasScopeRefs, unsigned kind) {
-    if (!aliasScopeRefs || aliasScopeRefs.empty())
+  auto populateScopeMetadata = [&](ArrayAttr aliasScopeAttrs, unsigned kind) {
+    if (!aliasScopeAttrs || aliasScopeAttrs.empty())
       return;
     llvm::MDNode *node = getAliasScopes(
-        llvm::to_vector(aliasScopeRefs.getAsRange<AliasScopeAttr>()));
+        llvm::to_vector(aliasScopeAttrs.getAsRange<AliasScopeAttr>()));
     inst->setMetadata(kind, node);
   };
 
@@ -1391,19 +1391,23 @@ mlir::translateModuleToLLVMIR(Operation *module, llvm::LLVMContext &llvmContext,
     return nullptr;
   if (failed(translator.createTBAAMetadata()))
     return nullptr;
-  if (failed(translator.convertFunctions()))
-    return nullptr;
 
   // Convert other top-level operations if possible.
   llvm::IRBuilder<> llvmBuilder(llvmContext);
   for (Operation &o : getModuleBody(module).getOperations()) {
     if (!isa<LLVM::LLVMFuncOp, LLVM::GlobalOp, LLVM::GlobalCtorsOp,
-             LLVM::GlobalDtorsOp, LLVM::MetadataOp, LLVM::ComdatOp>(&o) &&
+             LLVM::GlobalDtorsOp, LLVM::ComdatOp>(&o) &&
         !o.hasTrait<OpTrait::IsTerminator>() &&
         failed(translator.convertOperation(o, llvmBuilder))) {
       return nullptr;
     }
   }
+
+  // Operations in function bodies with symbolic references must be converted
+  // after the top-level operations they refer to are declared, so we do it
+  // last.
+  if (failed(translator.convertFunctions()))
+    return nullptr;
 
   // Convert module itself.
   if (failed(translator.convertOperation(*module, llvmBuilder)))

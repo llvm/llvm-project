@@ -224,21 +224,74 @@ def ZeroOp : ArmSME_Op<"zero", [Pure]> {
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
+def TileLoadOp : ArmSME_Op<"tile_load"> {
+  let summary = "Tile load operation";
+  let description = [{
+    Loads a 2D SME "virtual tile" from memory defined by a base and indices,
+    with the shape defined by the 2D scalable vector type of the result tile.
+    The slice of memory must be contiguous. The memref must be either rank 1 or
+    rank 2 with dynamic dimensions, since the operation is scalable, and the
+    element type must be a scalar that matches the element type of the result.
+
+    Example 1: Load an 8-bit element ZA tile from memory (ZA0.B).
+    ```mlir
+    %tile = arm_sme.tile_load %base[%c0, %c0] : memref<?x?xi8>, vector<[16]x[16]xi8>
+    ```
+
+    Example 2: Load a FP 32-bit element ZA tile from memory.
+    ```mlir
+    %tile = arm_sme.tile_load %base[%c0, %c0] : memref<?x?xf32>, vector<[4]x[4]xf32>
+    ```
+
+    Example 3: Load a 128-bit element ZA tile from memory.
+    ```mlir
+    %tile = arm_sme.tile_load %base[%c0, %c0] : memref<?x?xi128>, vector<[1]x[1]xi128>
+    ```
+  }];
+  let arguments = (ins
+      Arg<AnyMemRef, "the reference to load from", [MemRead]>:$base,
+      Variadic<Index>:$indices);
+  let results = (outs SMETile:$result);
+
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return ::llvm::cast<MemRefType>(getBase().getType());
+    }
+    VectorType getVectorType() {
+      return ::llvm::cast<VectorType>(getResult().getType());
+    }
+  }];
+
+  let assemblyFormat =
+      "$base `[` $indices `]` attr-dict `:` type($base) `,` type($result)";
+}
+
 def TileStoreOp : ArmSME_Op<"tile_store"> {
   let summary = "Tile store operation";
   let description = [{
-    Store a 2D SME "virtual tile" to memory.
+    Stores a 2D SME "virtual tile" to memory defined by a base and indices,
+    with the shape defined by the 2D scalable vector type of the tile being
+    stored. The slice of memory must be contiguous. The memref must be either
+    rank 1 or rank 2 with dynamic dimensions, since the operation is scalable,
+    and the element type must be a scalar that matches the element type of the
+    result.
 
-    NOTE: At the moment it is assumed that the element type is `i8` and that
-    there's only one "virtual tile".
-
-    Example:
-
+    Example 1: Store an 8-bit element ZA tile to memory (ZA0.B).
     ```mlir
-    arm_sme.tile_store %0, %arg0[%c0, %c0] : vector<[16]x[16]xi8>, memref<?x?xi8> 
+    arm_sme.tile_store %tile, %base[%c0, %c0] : vector<[16]x[16]xi8>, memref<?x?xi8>
+    ```
+
+    Example 2: Store a FP 32-bit element ZA tile to memory.
+    ```mlir
+    arm_sme.tile_store %tile, %base[%c0, %c0] : vector<[4]x[4]xf32>, memref<?x?xf32>
+    ```
+
+    Example 3: Store a 128-bit element ZA tile to memory.
+    ```mlir
+    arm_sme.tile_store %tile, %base[%c0, %c0] : vector<[1]x[1]xi128>, memref<?x?xi128>
     ```
   }];
-  let arguments = (ins nxnxv16i8:$valueToStore,
+  let arguments = (ins SMETile:$valueToStore,
       Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
       Variadic<Index>:$indices);
   let extraClassDeclaration = [{
@@ -304,7 +357,7 @@ def LLVM_aarch64_sme_usmops_wide : ArmSME_IntrMopOverloadedOp<"usmops.wide">;
 class ArmSME_IntrLoadOp<string mnemonic>
     : ArmSME_IntrOp<mnemonic>,
       Arguments<(ins Arg<LDSTPredicate, "Vector predicate">,
-                 Arg<LLVM_AnyPointer, "Load address", [MemRead]>,
+                 Arg<LLVM_AnyPointer, "Load address">,
                  Arg<I32, "Virtual tile ID">,
                  Arg<I32, "Tile slice">)>;
 

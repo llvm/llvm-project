@@ -1074,37 +1074,6 @@ def LLVM_AddressOfOp : LLVM_Op<"mlir.addressof",
   let assemblyFormat = "$global_name attr-dict `:` qualified(type($res))";
 }
 
-def LLVM_MetadataOp : LLVM_Op<"metadata", [
-   NoRegionArguments, NoTerminator, SymbolTable, Symbol
-]> {
-  let arguments = (ins
-    SymbolNameAttr:$sym_name
-  );
-  let summary = "LLVM dialect metadata.";
-  let description = [{
-    llvm.metadata op defines one or more metadata nodes.
-
-    Example:
-    ```mlir
-    llvm.metadata @metadata {
-      llvm.access_group @group1
-      llvm.access_group @group2
-    }
-    ```
-  }];
-  let regions = (region SizedRegion<1>:$body);
-
-  let skipDefaultBuilders = 1;
-
-  let builders = [
-    OpBuilder<(ins "StringRef":$symName,
-        CArg<"bool", "true">:$createBodyBlock,
-        CArg<"ArrayRef<NamedAttribute>", "{}">:$attributes)>
-  ];
-
-  let hasCustomAssemblyFormat = 1;
-}
-
 def LLVM_GlobalOp : LLVM_Op<"mlir.global",
     [IsolatedFromAbove, SingleBlockImplicitTerminator<"ReturnOp">, Symbol]> {
   let arguments = (ins
@@ -1788,6 +1757,32 @@ def LLVM_InlineAsmOp : LLVM_Op<"inline_asm", []> {
       return "elementtype";
     }
   }];
+}
+
+//===--------------------------------------------------------------------===//
+// CallIntrinsicOp
+//===--------------------------------------------------------------------===//
+
+def LLVM_CallIntrinsicOp
+    : LLVM_Op<"call_intrinsic",
+              [DeclareOpInterfaceMethods<FastmathFlagsInterface>]> {
+  let summary = "Call to an LLVM intrinsic function.";
+  let description = [{
+    Call the specified llvm intrinsic. If the intrinsic is overloaded, use
+    the MLIR function type of this op to determine which intrinsic to call.
+  }];
+  let arguments = (ins StrAttr:$intrin, Variadic<LLVM_Type>:$args,
+                       DefaultValuedAttr<LLVM_FastmathFlagsAttr,
+                                         "{}">:$fastmathFlags);
+  let results = (outs Optional<LLVM_Type>:$results);
+  let llvmBuilder = [{
+    return convertCallLLVMIntrinsicOp(op, builder, moduleTranslation);
+  }];
+  let assemblyFormat = [{
+    $intrin `(` $args `)` `:` functional-type($args, $results) attr-dict
+  }];
+
+  let hasVerifier = 1;
 }
 
 #endif // LLVMIR_OPS

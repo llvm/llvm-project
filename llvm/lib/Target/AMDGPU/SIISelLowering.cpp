@@ -28,6 +28,7 @@
 #include "llvm/CodeGen/ByteProvider.h"
 #include "llvm/CodeGen/FunctionLoweringInfo.h"
 #include "llvm/CodeGen/GlobalISel/GISelKnownBits.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -219,6 +220,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction(ISD::SELECT, MVT::f64, Promote);
   AddPromotedToType(ISD::SELECT, MVT::f64, MVT::i64);
 
+  setOperationAction(ISD::FSQRT, MVT::f64, Custom);
+
   setOperationAction(ISD::SELECT_CC,
                      {MVT::f32, MVT::i32, MVT::i64, MVT::f64, MVT::i1}, Expand);
 
@@ -276,10 +279,10 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
       case ISD::UNDEF:
       case ISD::EXTRACT_VECTOR_ELT:
       case ISD::INSERT_VECTOR_ELT:
-      case ISD::EXTRACT_SUBVECTOR:
       case ISD::SCALAR_TO_VECTOR:
       case ISD::IS_FPCLASS:
         break;
+      case ISD::EXTRACT_SUBVECTOR:
       case ISD::INSERT_SUBVECTOR:
       case ISD::CONCAT_VECTORS:
         setOperationAction(Op, VT, Custom);
@@ -1432,12 +1435,14 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
     if (AM.BaseOffs % 4 != 0)
       return isLegalMUBUFAddressingMode(AM);
 
-    // There are no SMRD extloads, so if we have to do a small type access we
-    // will use a MUBUF load.
-    // FIXME?: We also need to do this if unaligned, but we don't know the
-    // alignment here.
-    if (Ty->isSized() && DL.getTypeStoreSize(Ty) < 4)
-      return isLegalGlobalAddressingMode(AM);
+    if (!Subtarget->hasScalarSubwordLoads()) {
+      // There are no SMRD extloads, so if we have to do a small type access we
+      // will use a MUBUF load.
+      // FIXME?: We also need to do this if unaligned, but we don't know the
+      // alignment here.
+      if (Ty->isSized() && DL.getTypeStoreSize(Ty) < 4)
+        return isLegalGlobalAddressingMode(AM);
+    }
 
     if (Subtarget->getGeneration() == AMDGPUSubtarget::SOUTHERN_ISLANDS) {
       // SMRD instructions have an 8-bit, dword offset on SI.
@@ -1448,12 +1453,20 @@ bool SITargetLowering::isLegalAddressingMode(const DataLayout &DL,
       // in 8-bits, it can use a smaller encoding.
       if (!isUInt<32>(AM.BaseOffs / 4))
         return false;
-    } else if (Subtarget->getGeneration() >= AMDGPUSubtarget::VOLCANIC_ISLANDS) {
+    } else if (Subtarget->getGeneration() < AMDGPUSubtarget::GFX9) {
       // On VI, these use the SMEM format and the offset is 20-bit in bytes.
       if (!isUInt<20>(AM.BaseOffs))
         return false;
-    } else
-      llvm_unreachable("unhandled generation");
+    } else if (Subtarget->getGeneration() < AMDGPUSubtarget::GFX12) {
+      // On GFX9 the offset is signed 21-bit in bytes (but must not be negative
+      // for S_BUFFER_* instructions).
+      if (!isInt<21>(AM.BaseOffs))
+        return false;
+    } else {
+      // On GFX12, all offsets are signed 24-bit in bytes.
+      if (!isInt<24>(AM.BaseOffs))
+        return false;
+    }
 
     if (AM.Scale == 0) // r + i or just i, depending on HasBaseReg.
       return true;
@@ -4144,6 +4157,120 @@ static MachineBasicBlock *emitIndirectDst(MachineInstr &MI,
   return LoopBB;
 }
 
+static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
+                                          MachineBasicBlock &BB,
+                                          const GCNSubtarget &ST,
+                                          unsigned Opc) {
+  MachineRegisterInfo &MRI = BB.getParent()->getRegInfo();
+  const SIRegisterInfo *TRI = ST.getRegisterInfo();
+  const DebugLoc &DL = MI.getDebugLoc();
+  const SIInstrInfo *TII = ST.getInstrInfo();
+
+  // Reduction operations depend on whether the input operand is SGPR or VGPR.
+  Register SrcReg = MI.getOperand(1).getReg();
+  bool isSGPR = TRI->isSGPRClass(MRI.getRegClass(SrcReg));
+  Register DstReg = MI.getOperand(0).getReg();
+  MachineBasicBlock *RetBB = nullptr;
+  if (isSGPR) {
+    // These operations with a uniform value i.e. SGPR are idempotent.
+    // Reduced value will be same as given sgpr.
+    BuildMI(BB, MI, DL, TII->get(AMDGPU::S_MOV_B32), DstReg).addReg(SrcReg);
+    RetBB = &BB;
+  } else {
+    // TODO: Implement DPP Strategy and switch based on immediate strategy
+    // operand. For now, for all the cases (default, Iterative and DPP we use
+    // iterative approach by default.)
+
+    // To reduce the VGPR using iterative approach, we need to iterate
+    // over all the active lanes. Lowering consists of ComputeLoop,
+    // which iterate over only active lanes. We use copy of EXEC register
+    // as induction variable and every active lane modifies it using bitset0
+    // so that we will get the next active lane for next iteration.
+    MachineBasicBlock::iterator I = BB.end();
+    Register SrcReg = MI.getOperand(1).getReg();
+
+    // Create Control flow for loop
+    // Split MI's Machine Basic block into For loop
+    auto [ComputeLoop, ComputeEnd] = splitBlockForLoop(MI, BB, true);
+
+    // Create virtual registers required for lowering.
+    const TargetRegisterClass *WaveMaskRegClass = TRI->getWaveMaskRegClass();
+    const TargetRegisterClass *DstRegClass = MRI.getRegClass(DstReg);
+    Register LoopIterator = MRI.createVirtualRegister(WaveMaskRegClass);
+    Register InitalValReg = MRI.createVirtualRegister(DstRegClass);
+
+    Register AccumulatorReg = MRI.createVirtualRegister(DstRegClass);
+    Register ActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
+    Register NewActiveBitsReg = MRI.createVirtualRegister(WaveMaskRegClass);
+
+    Register FF1Reg = MRI.createVirtualRegister(DstRegClass);
+    Register LaneValueReg = MRI.createVirtualRegister(DstRegClass);
+
+    bool IsWave32 = ST.isWave32();
+    unsigned MovOpc = IsWave32 ? AMDGPU::S_MOV_B32 : AMDGPU::S_MOV_B64;
+    unsigned ExecReg = IsWave32 ? AMDGPU::EXEC_LO : AMDGPU::EXEC;
+
+    // Create initail values of induction variable from Exec, Accumulator and
+    // insert branch instr to newly created ComputeBlockk
+    uint32_t InitalValue =
+        (Opc == AMDGPU::S_MIN_U32) ? std::numeric_limits<uint32_t>::max() : 0;
+    auto TmpSReg =
+        BuildMI(BB, I, DL, TII->get(MovOpc), LoopIterator).addReg(ExecReg);
+    BuildMI(BB, I, DL, TII->get(AMDGPU::S_MOV_B32), InitalValReg)
+        .addImm(InitalValue);
+    BuildMI(BB, I, DL, TII->get(AMDGPU::S_BRANCH)).addMBB(ComputeLoop);
+
+    // Start constructing ComputeLoop
+    I = ComputeLoop->end();
+    auto Accumulator =
+        BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::PHI), AccumulatorReg)
+            .addReg(InitalValReg)
+            .addMBB(&BB);
+    auto ActiveBits =
+        BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::PHI), ActiveBitsReg)
+            .addReg(TmpSReg->getOperand(0).getReg())
+            .addMBB(&BB);
+
+    // Perform the computations
+    unsigned SFFOpc = IsWave32 ? AMDGPU::S_FF1_I32_B32 : AMDGPU::S_FF1_I32_B64;
+    auto FF1 = BuildMI(*ComputeLoop, I, DL, TII->get(SFFOpc), FF1Reg)
+                   .addReg(ActiveBits->getOperand(0).getReg());
+    auto LaneValue = BuildMI(*ComputeLoop, I, DL,
+                             TII->get(AMDGPU::V_READLANE_B32), LaneValueReg)
+                         .addReg(SrcReg)
+                         .addReg(FF1->getOperand(0).getReg());
+    auto NewAccumulator = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstReg)
+                              .addReg(Accumulator->getOperand(0).getReg())
+                              .addReg(LaneValue->getOperand(0).getReg());
+
+    // Manipulate the iterator to get the next active lane
+    unsigned BITSETOpc =
+        IsWave32 ? AMDGPU::S_BITSET0_B32 : AMDGPU::S_BITSET0_B64;
+    auto NewActiveBits =
+        BuildMI(*ComputeLoop, I, DL, TII->get(BITSETOpc), NewActiveBitsReg)
+            .addReg(FF1->getOperand(0).getReg())
+            .addReg(ActiveBits->getOperand(0).getReg());
+
+    // Add phi nodes
+    Accumulator.addReg(NewAccumulator->getOperand(0).getReg())
+        .addMBB(ComputeLoop);
+    ActiveBits.addReg(NewActiveBits->getOperand(0).getReg())
+        .addMBB(ComputeLoop);
+
+    // Creating branching
+    unsigned CMPOpc = IsWave32 ? AMDGPU::S_CMP_LG_U32 : AMDGPU::S_CMP_LG_U64;
+    BuildMI(*ComputeLoop, I, DL, TII->get(CMPOpc))
+        .addReg(NewActiveBits->getOperand(0).getReg())
+        .addImm(0);
+    BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::S_CBRANCH_SCC1))
+        .addMBB(ComputeLoop);
+
+    RetBB = ComputeEnd;
+  }
+  MI.eraseFromParent();
+  return RetBB;
+}
+
 MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   MachineInstr &MI, MachineBasicBlock *BB) const {
 
@@ -4152,6 +4279,10 @@ MachineBasicBlock *SITargetLowering::EmitInstrWithCustomInserter(
   SIMachineFunctionInfo *MFI = MF->getInfo<SIMachineFunctionInfo>();
 
   switch (MI.getOpcode()) {
+  case AMDGPU::WAVE_REDUCE_UMIN_PSEUDO_U32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MIN_U32);
+  case AMDGPU::WAVE_REDUCE_UMAX_PSEUDO_U32:
+    return lowerWaveReduce(MI, *BB, *getSubtarget(), AMDGPU::S_MAX_U32);
   case AMDGPU::S_UADDO_PSEUDO:
   case AMDGPU::S_USUBO_PSEUDO: {
     const DebugLoc &DL = MI.getDebugLoc();
@@ -4936,7 +5067,10 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
            "Load should return a value and a chain");
     return Result;
   }
-
+  case ISD::FSQRT:
+    if (Op.getValueType() == MVT::f64)
+      return lowerFSQRTF64(Op, DAG);
+    return SDValue();
   case ISD::FSIN:
   case ISD::FCOS:
     return LowerTrig(Op, DAG);
@@ -10139,6 +10273,87 @@ SDValue SITargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG) const {
   return SDValue();
 }
 
+SDValue SITargetLowering::lowerFSQRTF64(SDValue Op, SelectionDAG &DAG) const {
+  // For double type, the SQRT and RSQ instructions don't have required
+  // precision, we apply Goldschmidt's algorithm to improve the result:
+  //
+  //   y0 = rsq(x)
+  //   g0 = x * y0
+  //   h0 = 0.5 * y0
+  //
+  //   r0 = 0.5 - h0 * g0
+  //   g1 = g0 * r0 + g0
+  //   h1 = h0 * r0 + h0
+  //
+  //   r1 = 0.5 - h1 * g1 => d0 = x - g1 * g1
+  //   g2 = g1 * r1 + g1     g2 = d0 * h1 + g1
+  //   h2 = h1 * r1 + h1
+  //
+  //   r2 = 0.5 - h2 * g2 => d1 = x - g2 * g2
+  //   g3 = g2 * r2 + g2     g3 = d1 * h1 + g2
+  //
+  //   sqrt(x) = g3
+
+  SDNodeFlags Flags = Op->getFlags();
+
+  SDLoc DL(Op);
+
+  SDValue X = Op.getOperand(0);
+  SDValue ScaleConstant = DAG.getConstantFP(0x1.0p-767, DL, MVT::f64);
+
+  SDValue Scaling = DAG.getSetCC(DL, MVT::i1, X, ScaleConstant, ISD::SETOLT);
+
+  SDValue ZeroInt = DAG.getConstant(0, DL, MVT::i32);
+
+  // Scale up input if it is too small.
+  SDValue ScaleUpFactor = DAG.getConstant(256, DL, MVT::i32);
+  SDValue ScaleUp =
+      DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleUpFactor, ZeroInt);
+  SDValue SqrtX = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, X, ScaleUp, Flags);
+
+  SDValue SqrtY = DAG.getNode(AMDGPUISD::RSQ, DL, MVT::f64, SqrtX);
+
+  SDValue SqrtS0 = DAG.getNode(ISD::FMUL, DL, MVT::f64, SqrtX, SqrtY);
+
+  SDValue Half = DAG.getConstantFP(0.5, DL, MVT::f64);
+  SDValue SqrtH0 = DAG.getNode(ISD::FMUL, DL, MVT::f64, SqrtY, Half);
+
+  SDValue NegSqrtH0 = DAG.getNode(ISD::FNEG, DL, MVT::f64, SqrtH0);
+  SDValue SqrtR0 = DAG.getNode(ISD::FMA, DL, MVT::f64, NegSqrtH0, SqrtS0, Half);
+
+  SDValue SqrtH1 = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtH0, SqrtR0, SqrtH0);
+
+  SDValue SqrtS1 = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtS0, SqrtR0, SqrtS0);
+
+  SDValue NegSqrtS1 = DAG.getNode(ISD::FNEG, DL, MVT::f64, SqrtS1);
+  SDValue SqrtD0 = DAG.getNode(ISD::FMA, DL, MVT::f64, NegSqrtS1, SqrtS1, SqrtX);
+
+  SDValue SqrtS2 = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD0, SqrtH1, SqrtS1);
+
+  SDValue NegSqrtS2 = DAG.getNode(ISD::FNEG, DL, MVT::f64, SqrtS2);
+  SDValue SqrtD1 =
+      DAG.getNode(ISD::FMA, DL, MVT::f64, NegSqrtS2, SqrtS2, SqrtX);
+
+  SDValue SqrtRet = DAG.getNode(ISD::FMA, DL, MVT::f64, SqrtD1, SqrtH1, SqrtS2);
+
+  SDValue ScaleDownFactor = DAG.getConstant(-128, DL, MVT::i32);
+  SDValue ScaleDown =
+      DAG.getNode(ISD::SELECT, DL, MVT::i32, Scaling, ScaleDownFactor, ZeroInt);
+  SqrtRet = DAG.getNode(ISD::FLDEXP, DL, MVT::f64, SqrtRet, ScaleDown, Flags);
+
+  // TODO: Switch to fcmp oeq 0 for finite only. Can't fully remove this check
+  // with finite only or nsz because rsq(+/-0) = +/-inf
+
+  // TODO: Check for DAZ and expand to subnormals
+  SDValue IsZeroOrInf =
+      DAG.getNode(ISD::IS_FPCLASS, DL, MVT::i1, SqrtX,
+                  DAG.getTargetConstant(fcZero | fcPosInf, DL, MVT::i32));
+
+  // If x is +INF, +0, or -0, use its original value
+  return DAG.getNode(ISD::SELECT, DL, MVT::f64, IsZeroOrInf, SqrtX, SqrtRet,
+                     Flags);
+}
+
 SDValue SITargetLowering::LowerTrig(SDValue Op, SelectionDAG &DAG) const {
   SDLoc DL(Op);
   EVT VT = Op.getValueType();
@@ -10731,10 +10946,12 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
   if (Depth >= 6)
     return std::nullopt;
 
+  auto ValueSize = Op.getValueSizeInBits();
+  if (ValueSize != 8 && ValueSize != 16 && ValueSize != 32)
+    return std::nullopt;
+
   switch (Op->getOpcode()) {
   case ISD::TRUNCATE: {
-    if (Op->getOperand(0).getScalarValueSizeInBits() != 32)
-      return std::nullopt;
     return calculateSrcByte(Op->getOperand(0), DestByte, SrcIndex, Depth + 1);
   }
 
@@ -10754,9 +10971,6 @@ calculateSrcByte(const SDValue Op, uint64_t DestByte, uint64_t SrcIndex = 0,
   }
 
   default: {
-    if (Op.getScalarValueSizeInBits() != 32)
-      return std::nullopt;
-
     return ByteProvider<SDValue>::getSrc(Op, DestByte, SrcIndex);
   }
   }
@@ -10898,6 +11112,17 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
     return std::nullopt;
   }
 
+  case ISD::CopyFromReg: {
+    auto BitWidth = Op.getScalarValueSizeInBits();
+    if (BitWidth % 8)
+      llvm_unreachable("Invalid type in CopyFromReg");
+
+    if (BitWidth / 8 > Index)
+      return calculateSrcByte(Op, StartingIndex, Index);
+
+    return std::nullopt;
+  }
+
   case ISD::LOAD: {
     auto L = cast<LoadSDNode>(Op.getNode());
     unsigned NarrowBitWidth = L->getMemoryVT().getSizeInBits();
@@ -10934,7 +11159,8 @@ calculateByteProvider(const SDValue &Op, unsigned Index, unsigned Depth,
 }
 
 // Returns true if the Operand is a scalar and is 16 bits
-static bool is16BitScalarOp(SDValue &Operand) {
+static bool isExtendedFrom16Bits(SDValue &Operand) {
+
   switch (Operand.getOpcode()) {
   case ISD::ANY_EXTEND:
   case ISD::SIGN_EXTEND:
@@ -10950,7 +11176,7 @@ static bool is16BitScalarOp(SDValue &Operand) {
       auto MemVT = L->getMemoryVT();
       return !MemVT.isVector() && MemVT.getSizeInBits() == 16;
     }
-    return false;
+    return L->getMemoryVT().getSizeInBits() == 16;
   }
   default:
     return false;
@@ -10978,29 +11204,29 @@ static bool addresses16Bits(int Mask) {
 // Do not lower into v_perm if the operands are actually 16 bit
 // and the selected bits (based on PermMask) correspond with two
 // easily addressable 16 bit operands.
-static bool hasEightBitAccesses(uint64_t PermMask, SDValue &Op,
+static bool hasNon16BitAccesses(uint64_t PermMask, SDValue &Op,
                                 SDValue &OtherOp) {
   int Low16 = PermMask & 0xffff;
   int Hi16 = (PermMask & 0xffff0000) >> 16;
 
-  // ByteProvider only accepts 32 bit operands
-  assert(Op.getValueType().getSizeInBits() == 32);
-  assert(OtherOp.getValueType().getSizeInBits() == 32);
+  assert(Op.getValueType().isByteSized());
+  assert(OtherOp.getValueType().isByteSized());
 
-  auto OpIs16Bit = is16BitScalarOp(Op);
-  auto OtherOpIs16Bit = is16BitScalarOp(Op);
+  auto TempOp = peekThroughBitcasts(Op);
+  auto TempOtherOp = peekThroughBitcasts(OtherOp);
 
-  // If there is a size mismatch, then we must use masking on at least one
-  // operand
-  if (OpIs16Bit != OtherOpIs16Bit)
+  auto OpIs16Bit =
+      TempOtherOp.getValueSizeInBits() == 16 || isExtendedFrom16Bits(TempOp);
+  if (!OpIs16Bit)
     return true;
 
-  // If both operands are 16 bit, return whether or not we cleanly address both
-  if (is16BitScalarOp(Op) && is16BitScalarOp(OtherOp))
-    return !addresses16Bits(Low16) || !addresses16Bits(Hi16);
+  auto OtherOpIs16Bit = TempOtherOp.getValueSizeInBits() == 16 ||
+                        isExtendedFrom16Bits(TempOtherOp);
+  if (!OtherOpIs16Bit)
+    return true;
 
-  // Both are 32 bit operands
-  return true;
+  // Do we cleanly address both
+  return !addresses16Bits(Low16) || !addresses16Bits(Hi16);
 }
 
 SDValue SITargetLowering::performOrCombine(SDNode *N,
@@ -11125,8 +11351,9 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
         std::optional<ByteProvider<SDValue>> P =
             calculateByteProvider(SDValue(N, 0), i, 0, /*StartingIndex = */ i);
         // TODO support constantZero
-        if (!P || P->isConstantZero())
+        if (!P || P->isConstantZero()) {
           return SDValue();
+        }
 
         PermNodes.push_back(*P);
       }
@@ -11135,7 +11362,7 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
 
       int FirstSrc = 0;
       std::optional<int> SecondSrc;
-      uint64_t permMask = 0x00000000;
+      uint64_t PermMask = 0x00000000;
       for (size_t i = 0; i < PermNodes.size(); i++) {
         auto PermOp = PermNodes[i];
         // Since the mask is applied to Src1:Src2, Src1 bytes must be offset
@@ -11146,15 +11373,15 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
           if (SecondSrc.has_value())
             if (!PermOp.hasSameSrc(PermNodes[*SecondSrc]))
               return SDValue();
+
           // Set the index of the second distinct Src node
           SecondSrc = i;
-          assert(PermNodes[*SecondSrc].Src->getValueType().getSizeInBits() ==
-                 32);
+          assert(!(PermNodes[*SecondSrc].Src->getValueSizeInBits() % 8));
           SrcByteAdjust = 0;
         }
         assert(PermOp.SrcOffset + SrcByteAdjust < 8);
         assert(!DAG.getDataLayout().isBigEndian());
-        permMask |= (PermOp.SrcOffset + SrcByteAdjust) << (i * 8);
+        PermMask |= (PermOp.SrcOffset + SrcByteAdjust) << (i * 8);
       }
 
       SDValue Op = *PermNodes[FirstSrc].Src;
@@ -11163,8 +11390,8 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
 
       // Check that we are not just extracting the bytes in order from an op
       if (Op == OtherOp) {
-        int Low16 = permMask & 0xffff;
-        int Hi16 = (permMask & 0xffff0000) >> 16;
+        int Low16 = PermMask & 0xffff;
+        int Hi16 = (PermMask & 0xffff0000) >> 16;
 
         bool WellFormedLow = (Low16 == 0x0504) || (Low16 == 0x0100);
         bool WellFormedHi = (Hi16 == 0x0706) || (Hi16 == 0x0302);
@@ -11174,10 +11401,23 @@ SDValue SITargetLowering::performOrCombine(SDNode *N,
           return Op;
       }
 
-      if (hasEightBitAccesses(permMask, Op, OtherOp)) {
+      if (hasNon16BitAccesses(PermMask, Op, OtherOp)) {
         SDLoc DL(N);
+        assert(Op.getValueType().isByteSized() &&
+               OtherOp.getValueType().isByteSized());
+        if (Op.getValueSizeInBits() < 32)
+          // If the ultimate src is less than 32 bits, then we will only be
+          // using bytes 0: Op.getValueSizeInBytes() - 1 in the or.
+          // CalculateByteProvider would not have returned Op as source if we
+          // used a byte that is outside its ValueType. Thus, we are free to
+          // ANY_EXTEND as the extended bits are dont-cares.
+          Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Op);
+
+        if (OtherOp.getValueSizeInBits() < 32)
+          OtherOp = DAG.getNode(ISD::ZERO_EXTEND, DL, MVT::i32, Op);
+
         return DAG.getNode(AMDGPUISD::PERM, DL, MVT::i32, Op, OtherOp,
-                           DAG.getConstant(permMask, DL, MVT::i32));
+                           DAG.getConstant(PermMask, DL, MVT::i32));
       }
     }
   }
@@ -11637,7 +11877,7 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
         return false;
     return true;
   case AMDGPU::G_INTRINSIC:
-    switch (MI->getIntrinsicID()) {
+    switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
     case Intrinsic::amdgcn_fmul_legacy:
     case Intrinsic::amdgcn_fmad_ftz:
     case Intrinsic::amdgcn_sqrt:
@@ -14087,7 +14327,7 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
   case AMDGPU::G_INTRINSIC: {
-    switch (MI->getIntrinsicID()) {
+    switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
     case Intrinsic::amdgcn_workitem_id_x:
       knownBitsForWorkitemID(*getSubtarget(), KB, Known, 0);
       break;
@@ -14152,21 +14392,17 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
   GISelKnownBits &KB, Register R, const MachineRegisterInfo &MRI,
   unsigned Depth) const {
   const MachineInstr *MI = MRI.getVRegDef(R);
-  switch (MI->getOpcode()) {
-  case AMDGPU::G_INTRINSIC:
-  case AMDGPU::G_INTRINSIC_W_SIDE_EFFECTS: {
+  if (auto *GI = dyn_cast<GIntrinsic>(MI)) {
     // FIXME: Can this move to generic code? What about the case where the call
     // site specifies a lower alignment?
-    Intrinsic::ID IID = MI->getIntrinsicID();
+    Intrinsic::ID IID = GI->getIntrinsicID();
     LLVMContext &Ctx = KB.getMachineFunction().getFunction().getContext();
     AttributeList Attrs = Intrinsic::getAttributes(Ctx, IID);
     if (MaybeAlign RetAlign = Attrs.getRetAlignment())
       return *RetAlign;
     return Align(1);
   }
-  default:
-    return Align(1);
-  }
+  return Align(1);
 }
 
 Align SITargetLowering::getPrefLoopAlignment(MachineLoop *ML) const {

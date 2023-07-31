@@ -16,9 +16,9 @@
 // RUN: %clang -target arm-none-eabi -fPIC    -fropi -frwpi -### -c %s 2>&1 | FileCheck --check-prefix=PIC %s
 // RUN: %clang -target arm-none-eabi -fno-pic -fropi        -### -c %s 2>&1 | FileCheck --check-prefix=ROPI %s
 
-// RUN: %clang -target arm-none-eabi -x c++ -fropi        -### -c %s 2>&1 | FileCheck --check-prefix=CXX %s
+// RUN: %clang --target=arm-none-eabi -x c++ -fropi        -### -c %s 2>&1 | FileCheck --check-prefix=CXX %s
 // RUN: %clang -target arm-none-eabi -x c++        -frwpi -### -c %s 2>&1 | FileCheck --check-prefix=RWPI %s
-// RUN: %clang -target arm-none-eabi -x c++ -fropi -frwpi -### -c %s 2>&1 | FileCheck --check-prefix=CXX %s
+// RUN: %clang --target=arm-none-eabi -x c++ -fropi -frwpi -### -c %s 2>&1 | FileCheck --check-prefix=CXX %s
 // RUN: %clang -target arm-none-eabi -x c++ -fallow-unsupported -fropi        -### -c %s 2>&1 | FileCheck --check-prefix=ROPI %s
 
 // RUN: %clang -target arm-none-eabi -march=armv8m.main -fropi -mcmse -### -c %s 2>&1 | FileCheck --check-prefix=ROPI-CMSE   %s

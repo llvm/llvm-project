@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/ArmSME/IR/ArmSME.h"
 #include "mlir/Dialect/ArmSME/Transforms/Transforms.h"
+#include "mlir/Dialect/ArmSME/Utils/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -19,7 +20,6 @@
 using namespace mlir;
 using namespace mlir::arm_sme;
 
-static constexpr unsigned kMinNumElts = 16;
 static constexpr unsigned kZeroZAMask = 255;
 
 namespace {
@@ -50,7 +50,6 @@ struct DisableZAPattern : public OpRewritePattern<func::ReturnOp> {
     return success();
   }
 };
-} // namespace
 
 /// Lower 'arm_sme.zero'. Use 'arm_sme.cast_tile_to_vector' to model the return
 /// value. The latter is a nop, which should be folded away (e.g. during
@@ -95,68 +94,285 @@ struct ZeroOpConversion : public ConvertOpToLLVMPattern<ZeroOp> {
   }
 };
 
-/// Lower 'arm_sme.store_tile' to a loop over the rows of ZA and store each row
-/// using 'arm_sme.intr.str'.
+/// Extends or truncates `tile`, which should be an `arm_sme::GetTileID` or
+/// `arm_sme::CastVectorToTile` op returning an 8/16/32/64/128-bit scalar
+/// integer, to an i32 that can be passed as the `tile` parameter to the SME
+/// intrinsics. Or returns `tile` if already i32.
+Value castTileIDToI32(Value tile, Location loc,
+                      ConversionPatternRewriter &rewriter) {
+  assert((isa<arm_sme::GetTileID, arm_sme::CastVectorToTile>(
+             tile.getDefiningOp())) &&
+         "expected ArmSME GetTileID or CastVectorToTile op!");
+  unsigned tileElementWidth = tile.getType().getIntOrFloatBitWidth();
+  if (tileElementWidth < 32)
+    return rewriter.create<arith::ExtUIOp>(loc, rewriter.getI32Type(), tile);
+  if (tileElementWidth > 32)
+    return rewriter.create<arith::TruncIOp>(loc, rewriter.getI32Type(), tile);
+  return tile;
+}
+
+/// Returns the following
+/// * for rank 2 memrefs `tileSliceIndex`, since `getStridedElementPtr` does
+///   the arithmetic.
+/// * for rank 1 memrefs `tileSliceIndex * tileSliceNumElts`, adjusting the
+///   index by the number of elements in a vector of SVL bits.
+/// * otherwise throws an unreachable error.
+Value getTileSlicePtrIndex(unsigned rank, Value tileSliceIndex,
+                           Value tileSliceNumElts, Location loc,
+                           ConversionPatternRewriter &rewriter) {
+  assert((rank == 1 || rank == 2) && "memref has unexpected rank!");
+
+  auto tileSliceIndexI64 = rewriter.create<arith::IndexCastUIOp>(
+      loc, rewriter.getI64Type(), tileSliceIndex);
+
+  if (rank == 1) {
+    auto tileSliceNumEltsI64 = rewriter.create<arith::IndexCastUIOp>(
+        loc, rewriter.getI64Type(), tileSliceNumElts);
+    return rewriter.create<arith::MulIOp>(loc, tileSliceIndexI64,
+                                          tileSliceNumEltsI64);
+  }
+
+  if (rank == 2)
+    return tileSliceIndexI64;
+
+  llvm_unreachable("memref has unexpected rank!");
+}
+
+/// Conversion pattern for `arm_sme.tile_load` to SME intrinsics.
+///
+/// Lower `arm_sme.tile_load` to a loop over the rows of ZA and load each row
+/// using `arm_sme.intr.ld1*.horiz`.
 ///
 ///  BEFORE:
 ///  ```mlir
-///     arm_sme.tile_store %arg0[%c0, %c0], %0 : memref<?x?xi8>,
-///     vector<[16]x[16]xi8
+///  %tile = arm_sme.tile_load %base[%c0, %c0] :
+///     memref<?x?xi32>, vector<[4]x[4]xi32>
 ///  ```
 ///
 ///  AFTER:
 ///  ```mlir
-///      %vscale = "llvm.intr.vscale"() : () -> index
-///      %c0 = arith.constant 0 : index
-///      %c1 = arith.constant 1 : index
-///      %c16 = arith.constant 16 : index
-///      %vec_size = arith.muli %c16, %vscale : index
-///      scf.for %row_idx = %c0 to %vec_size step %c1 {
-///        // (...)
-///        "arm_sme.intr.str"(%row_idx, %addr) : (i32, !llvm.ptr) -> ()
+///  %tile_id = arm_sme.get_tile_id : i32
+///  %vscale = vector.vscale
+///  %c0 = arith.constant 0 : index
+///  %c1 = arith.constant 1 : index
+///  %min_svl_s = arith.constant 4 : index
+///  %svl_s = arith.muli %min_svl_s, %vscale : index
+///  scf.for %tile_slice = %c0 to %svl_s step %c1 {
+///    // (...)
+///    "arm_sme.intr.ld1w.horiz"(%ptrue_s, %ptr, %tile_id, %tile_slice) :
+///         (vector<[4]xi1>, !llvm.ptr, i32, i32) -> ()
+///  }
+///  %tile = arm_sme.cast_tile_to_vector %tile_id : i32 to vector<[4]x[4]xi32>
 ///  ```
-struct TileStoreOpConversion : public ConvertOpToLLVMPattern<TileStoreOp> {
-  using ConvertOpToLLVMPattern<TileStoreOp>::ConvertOpToLLVMPattern;
+struct TileLoadToArmSMELowering
+    : public ConvertOpToLLVMPattern<arm_sme::TileLoadOp> {
+  using ConvertOpToLLVMPattern<arm_sme::TileLoadOp>::ConvertOpToLLVMPattern;
 
   LogicalResult
-  matchAndRewrite(TileStoreOp store, OpAdaptor adaptor,
+  matchAndRewrite(arm_sme::TileLoadOp tileLoadOp,
+                  arm_sme::TileLoadOp::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto loc = store.getLoc();
+    auto loc = tileLoadOp.getLoc();
+    auto tileType = tileLoadOp.getVectorType();
+    auto tileElementType = tileType.getElementType();
+    unsigned tileElementWidth = tileElementType.getIntOrFloatBitWidth();
 
-    // Create loop that iterates from 0 to SVLB-1 inclusive (the number of
-    // vectors in ZA) and stores each ZA vector to memory.
+    // Create 'arm_sme.get_tile_id' op.
+    auto tile = rewriter.create<arm_sme::GetTileID>(
+        loc, rewriter.getIntegerType(tileElementWidth));
+
+    // Create a loop that loads each ZA tile slice from memory.
     auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
-    auto minElems = rewriter.create<arith::ConstantIndexOp>(loc, kMinNumElts);
+    auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
+        loc, arm_sme::getSMETileSliceMinNumElts(tileElementType));
     auto vscale =
         rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
     auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-    auto upperBound = rewriter.create<arith::MulIOp>(loc, minElems, vscale);
-    auto forOp = rewriter.create<scf::ForOp>(loc, lowerBound, upperBound, step);
+    // This describes both the number of ZA tile slices and the number of
+    // elements in a vector of SVL bits for a given element type (SVL_B, SVL_H,
+    // ..., SVL_Q).
+    auto numTileSlices =
+        rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
+    auto forOp =
+        rewriter.create<scf::ForOp>(loc, lowerBound, numTileSlices, step);
     rewriter.setInsertionPointToStart(forOp.getBody());
 
-    // Create 'arm_sme.intr.str' intrinsic to store ZA vector.
-    auto vnumI64 = rewriter.create<arith::IndexCastUIOp>(
-        loc, rewriter.getI64Type(), forOp.getInductionVar());
-    auto offset =
-        rewriter.create<LLVM::ConstantOp>(loc, rewriter.getI64Type(), 0);
-    Value ptr =
-        getStridedElementPtr(loc, store.getMemRefType(), adaptor.getBase(),
-                             ValueRange{vnumI64, offset}, rewriter);
-    auto vnumI32 = rewriter.create<arith::IndexCastUIOp>(
-        loc, rewriter.getI32Type(), forOp.getInductionVar());
-    rewriter.create<arm_sme::aarch64_sme_str>(loc, vnumI32, ptr);
+    // Create 'arm_sme.intr.ld1*.horiz' intrinsic to load ZA tile slice.
+    auto memRefType = tileLoadOp.getMemRefType();
+    auto tileSlice = forOp.getInductionVar();
+    // TODO: The 'indices' argument for the 'base' memref is currently ignored,
+    // 'tileSliceIndex' should be added to 'indices[0]'.
+    Value tileSliceIndex = getTileSlicePtrIndex(memRefType.getRank(), tileSlice,
+                                                numTileSlices, loc, rewriter);
+    Value ptr = this->getStridedElementPtr(loc, memRefType, adaptor.getBase(),
+                                           {tileSliceIndex}, rewriter);
 
-    rewriter.eraseOp(store);
+    // Cast tile slice to i32 for intrinsic.
+    auto tileSliceI32 = rewriter.create<arith::IndexCastUIOp>(
+        loc, rewriter.getI32Type(), tileSlice);
+
+    // Create all active predicate mask.
+    auto one = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI1Type(),
+        rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
+    auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type(),
+                                  /*scalableDims=*/{true});
+    auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
+
+    auto tileI32 = castTileIDToI32(tile, loc, rewriter);
+    switch (tileElementWidth) {
+    default:
+      llvm_unreachable("unexpected element type!");
+    case 8:
+      rewriter.create<arm_sme::aarch64_sme_ld1b_horiz>(loc, allActiveMask, ptr,
+                                                       tileI32, tileSliceI32);
+      break;
+    case 16:
+      rewriter.create<arm_sme::aarch64_sme_ld1h_horiz>(loc, allActiveMask, ptr,
+                                                       tileI32, tileSliceI32);
+      break;
+    case 32:
+      rewriter.create<arm_sme::aarch64_sme_ld1w_horiz>(loc, allActiveMask, ptr,
+                                                       tileI32, tileSliceI32);
+      break;
+    case 64:
+      rewriter.create<arm_sme::aarch64_sme_ld1d_horiz>(loc, allActiveMask, ptr,
+                                                       tileI32, tileSliceI32);
+      break;
+    }
+
+    rewriter.setInsertionPointAfter(forOp);
+
+    // The load intrinsics have no result, replace 'arm_sme.tile_load' with
+    // 'arm_sme.cast_tile_to_vector' to preserve dataflow.
+    rewriter.replaceOpWithNewOp<arm_sme::CastTileToVector>(tileLoadOp, tileType,
+                                                           tile);
+
     return success();
   }
 };
 
+/// Conversion pattern for `arm_sme.tile_store` to SME intrinsics.
+///
+/// Lower `arm_sme.tile_store` to a loop over the rows of ZA and store each row
+/// using `arm_sme.intr.st1*.horiz`.
+///
+///  BEFORE:
+///  ```mlir
+///  arm_sme.tile_store %value, %base[%c0, %c0] : memref<?x?xi32>,
+///     vector<[4]x[4]xi32
+///  ```
+///
+///  AFTER:
+///  ```mlir
+///  %tile_id = arm_sme.cast_vector_to_tile %tile : vector<[4]x[4]xi32> to i32
+///  %vscale = vector.vscale
+///  %c0 = arith.constant 0 : index
+///  %c1 = arith.constant 1 : index
+///  %min_svl_s = arith.constant 4 : index
+///  %svl_s = arith.muli %min_svl_s, %vscale : index
+///  scf.for %tile_slice = %c0 to %svl_s step %c1 {
+///    // (...)
+///    "arm_sme.intr.st1w.horiz"(%ptrue_s, %ptr, %tile_id, %tile_slice) :
+///         (vector<[4]xi1>, !llvm.ptr, i32, i32) -> ()
+///  }
+///  ```
+struct TileStoreToArmSMELowering
+    : public ConvertOpToLLVMPattern<arm_sme::TileStoreOp> {
+  using ConvertOpToLLVMPattern<arm_sme::TileStoreOp>::ConvertOpToLLVMPattern;
+
+  LogicalResult
+  matchAndRewrite(arm_sme::TileStoreOp tileStoreOp,
+                  arm_sme::TileStoreOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto loc = tileStoreOp.getLoc();
+    auto tileType = tileStoreOp.getVectorType();
+    auto tileElementType = tileType.getElementType();
+    unsigned tileElementWidth = tileElementType.getIntOrFloatBitWidth();
+
+    // Create 'arm_sme.cast_vector_to_tile' to get a tile ID for the vector
+    // being stored.
+    auto tile = rewriter.create<arm_sme::CastVectorToTile>(
+        loc, rewriter.getIntegerType(tileElementWidth),
+        tileStoreOp.getValueToStore());
+
+    // Create a loop that stores each ZA tile slice to memory.
+    auto step = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+    auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
+        loc, arm_sme::getSMETileSliceMinNumElts(tileElementType));
+    auto vscale =
+        rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
+    auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    // This describes both the number of ZA tile slices and the number of
+    // elements in a vector of SVL bits for a given element type (SVL_B, SVL_H,
+    // ..., SVL_Q).
+    auto numTileSlices =
+        rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
+    auto forOp =
+        rewriter.create<scf::ForOp>(loc, lowerBound, numTileSlices, step);
+    rewriter.setInsertionPointToStart(forOp.getBody());
+
+    // Create 'arm_sme.intr.st1*.horiz' intrinsic to store ZA tile slice.
+    auto memRefType = tileStoreOp.getMemRefType();
+    auto tileSlice = forOp.getInductionVar();
+    // TODO: The 'indices' argument for the 'base' memref is currently ignored,
+    // 'tileSliceIndex' should be added to 'indices[0]'.
+    Value tileSliceIndex = getTileSlicePtrIndex(memRefType.getRank(), tileSlice,
+                                                numTileSlices, loc, rewriter);
+    Value ptr = this->getStridedElementPtr(loc, memRefType, adaptor.getBase(),
+                                           {tileSliceIndex}, rewriter);
+
+    // Cast tile slice to i32 for intrinsic.
+    auto tileSliceI32 = rewriter.create<arith::IndexCastUIOp>(
+        loc, rewriter.getI32Type(), tileSlice);
+
+    // Create all active predicate mask.
+    auto one = rewriter.create<arith::ConstantOp>(
+        loc, rewriter.getI1Type(),
+        rewriter.getIntegerAttr(rewriter.getI1Type(), 1));
+    auto predTy = VectorType::get(tileType.getShape()[0], rewriter.getI1Type(),
+                                  /*scalableDims=*/{true});
+    auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
+
+    Value tileI32 = castTileIDToI32(tile, loc, rewriter);
+    switch (tileElementWidth) {
+    default:
+      llvm_unreachable("unexpected element type!");
+    case 8:
+      rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1b_horiz>(
+          tileStoreOp, allActiveMask, ptr, tileI32, tileSliceI32);
+      break;
+    case 16:
+      rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1h_horiz>(
+          tileStoreOp, allActiveMask, ptr, tileI32, tileSliceI32);
+      break;
+    case 32:
+      rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1w_horiz>(
+          tileStoreOp, allActiveMask, ptr, tileI32, tileSliceI32);
+      break;
+    case 64:
+      rewriter.replaceOpWithNewOp<arm_sme::aarch64_sme_st1d_horiz>(
+          tileStoreOp, allActiveMask, ptr, tileI32, tileSliceI32);
+      break;
+    }
+
+    return success();
+  }
+};
+
+} // namespace
+
 void mlir::configureArmSMELegalizeForExportTarget(
     LLVMConversionTarget &target) {
-  target.addLegalOp<scf::ForOp, scf::YieldOp, arm_sme::CastTileToVector,
-                    arm_sme::CastVectorToTile, arm_sme::aarch64_sme_zero,
-                    arm_sme::aarch64_sme_str, arm_sme::aarch64_sme_za_enable,
-                    arm_sme::aarch64_sme_za_disable>();
+  target.addLegalOp<
+      scf::ForOp, scf::YieldOp, arm_sme::CastTileToVector,
+      arm_sme::CastVectorToTile, arm_sme::aarch64_sme_zero,
+      arm_sme::aarch64_sme_str, arm_sme::aarch64_sme_ld1b_horiz,
+      arm_sme::aarch64_sme_ld1h_horiz, arm_sme::aarch64_sme_ld1w_horiz,
+      arm_sme::aarch64_sme_ld1d_horiz, arm_sme::aarch64_sme_st1b_horiz,
+      arm_sme::aarch64_sme_st1h_horiz, arm_sme::aarch64_sme_st1w_horiz,
+      arm_sme::aarch64_sme_st1d_horiz, arm_sme::aarch64_sme_za_enable,
+      arm_sme::aarch64_sme_za_disable>();
   target.addLegalOp<GetTileID>();
 
   // Mark 'func.func' ops as legal if either:
@@ -187,5 +403,6 @@ void mlir::configureArmSMELegalizeForExportTarget(
 void mlir::populateArmSMELegalizeForLLVMExportPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   patterns.add<EnableZAPattern, DisableZAPattern>(patterns.getContext());
-  patterns.add<TileStoreOpConversion, ZeroOpConversion>(converter);
+  patterns.add<ZeroOpConversion, TileLoadToArmSMELowering,
+               TileStoreToArmSMELowering>(converter);
 }

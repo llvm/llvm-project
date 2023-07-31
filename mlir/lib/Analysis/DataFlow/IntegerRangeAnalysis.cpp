@@ -200,7 +200,7 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
   if (auto loop = dyn_cast<LoopLikeOpInterface>(op)) {
     std::optional<Value> iv = loop.getSingleInductionVar();
     if (!iv) {
-      return SparseDataFlowAnalysis ::visitNonControlFlowArguments(
+      return SparseForwardDataFlowAnalysis ::visitNonControlFlowArguments(
           op, successor, argLattices, firstIndex);
     }
     std::optional<OpFoldResult> lowerBound = loop.getSingleLowerBound();
@@ -228,6 +228,6 @@ void IntegerRangeAnalysis::visitNonControlFlowArguments(
     return;
   }
 
-  return SparseDataFlowAnalysis::visitNonControlFlowArguments(
+  return SparseForwardDataFlowAnalysis::visitNonControlFlowArguments(
       op, successor, argLattices, firstIndex);
 }

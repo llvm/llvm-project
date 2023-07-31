@@ -1429,6 +1429,15 @@ void Verifier::visitDISubprogram(const DISubprogram &N) {
     CheckDI(N.isDistinct(), "subprogram definitions must be distinct", &N);
     CheckDI(Unit, "subprogram definitions must have a compile unit", &N);
     CheckDI(isa<DICompileUnit>(Unit), "invalid unit type", &N, Unit);
+    // There's no good way to cross the CU boundary to insert a nested
+    // DISubprogram definition in one CU into a type defined in another CU.
+    auto *CT = dyn_cast_or_null<DICompositeType>(N.getRawScope());
+    if (CT && CT->getRawIdentifier() &&
+        M.getContext().isODRUniquingDebugTypes())
+      CheckDI(N.getDeclaration(),
+              "definition subprograms cannot be nested within DICompositeType "
+              "when enabling ODR",
+              &N);
     if (N.getFile())
       verifySourceDebugInfo(*N.getUnit(), *N.getFile());
   } else {
@@ -2526,6 +2535,23 @@ void Verifier::verifySiblingFuncletUnwinds() {
   }
 }
 
+static bool isConvergenceControlIntrinsic(const CallBase &Call) {
+  switch (Call.getIntrinsicID()) {
+  case Intrinsic::experimental_convergence_anchor:
+  case Intrinsic::experimental_convergence_entry:
+  case Intrinsic::experimental_convergence_loop:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isControlledConvergent(const CallBase &Call) {
+  if (Call.countOperandBundlesOfType(LLVMContext::OB_convergencectrl))
+    return true;
+  return isConvergenceControlIntrinsic(Call);
+}
+
 void Verifier::verifyConvergenceControl(Function &F) {
   DenseMap<BasicBlock *, SmallVector<CallBase *, 8>> LiveTokenMap;
   DenseMap<const Cycle *, const CallBase *> CycleHearts;
@@ -2543,10 +2569,10 @@ void Verifier::verifyConvergenceControl(Function &F) {
 
     Value *Token = Bundle.Inputs[0].get();
     auto *Def = dyn_cast<CallBase>(Token);
-    Check(Def != nullptr,
-          "Convergence control tokens can only be produced by call "
-          "instructions.",
-          Token);
+    Check(Def && isConvergenceControlIntrinsic(*Def),
+          "Convergence control tokens can only be produced by calls to the "
+          "convergence control intrinsics.",
+          Token, CB);
 
     Check(llvm::is_contained(LiveTokens, Token),
           "Convergence region is not well-nested.", Token, CB);
@@ -2605,6 +2631,9 @@ void Verifier::verifyConvergenceControl(Function &F) {
       CallBase *CB = dyn_cast<CallBase>(&I);
       if (!CB)
         continue;
+
+      Check(CB->countOperandBundlesOfType(LLVMContext::OB_convergencectrl) <= 1,
+            "The 'convergencetrl' bundle can occur at most once on a call", CB);
 
       auto Bundle = CB->getOperandBundle(LLVMContext::OB_convergencectrl);
       if (Bundle)
@@ -3364,20 +3393,6 @@ void Verifier::visitPHINode(PHINode &PN) {
   // All other PHI node constraints are checked in the visitBasicBlock method.
 
   visitInstruction(PN);
-}
-
-static bool isControlledConvergent(const CallBase &Call) {
-  if (Call.getOperandBundle(LLVMContext::OB_convergencectrl))
-    return true;
-  if (const auto *F = dyn_cast<Function>(Call.getCalledOperand())) {
-    switch (F->getIntrinsicID()) {
-    case Intrinsic::experimental_convergence_anchor:
-    case Intrinsic::experimental_convergence_entry:
-    case Intrinsic::experimental_convergence_loop:
-      return true;
-    }
-  }
-  return false;
 }
 
 void Verifier::visitCallBase(CallBase &Call) {

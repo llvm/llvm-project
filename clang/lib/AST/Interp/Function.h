@@ -17,6 +17,7 @@
 
 #include "Pointer.h"
 #include "Source.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -65,7 +66,7 @@ private:
 /// the argument values need to be preceeded by a Pointer for the This object.
 ///
 /// If the function uses Return Value Optimization, the arguments (and
-/// potentially the This pointer) need to be proceeded by a Pointer pointing
+/// potentially the This pointer) need to be preceeded by a Pointer pointing
 /// to the location to construct the returned value.
 ///
 /// After the function has been called, it will remove all arguments,
@@ -127,7 +128,7 @@ public:
   SourceInfo getSource(CodePtr PC) const;
 
   /// Checks if the function is valid to call in constexpr.
-  bool isConstexpr() const { return IsValid; }
+  bool isConstexpr() const { return IsValid || isLambdaStaticInvoker(); }
 
   /// Checks if the function is virtual.
   bool isVirtual() const;
@@ -144,6 +145,22 @@ public:
     return nullptr;
   }
 
+  /// Returns whether this function is a lambda static invoker,
+  /// which we generate custom byte code for.
+  bool isLambdaStaticInvoker() const {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+      return MD->isLambdaStaticInvoker();
+    return false;
+  }
+
+  /// Returns whether this function is the call operator
+  /// of a lambda record decl.
+  bool isLambdaCallOperator() const {
+    if (const auto *MD = dyn_cast<CXXMethodDecl>(F))
+      return clang::isLambdaCallOperator(MD);
+    return false;
+  }
+
   /// Checks if the function is fully done compiling.
   bool isFullyCompiled() const { return IsFullyCompiled; }
 
@@ -153,6 +170,12 @@ public:
   bool hasBody() const { return HasBody; }
 
   unsigned getBuiltinID() const { return F->getBuiltinID(); }
+
+  bool isBuiltin() const { return F->getBuiltinID() != 0; }
+
+  /// Does this function need its arguments to be classified at runtime
+  /// rather than at bytecode-compile-time?
+  bool needsRuntimeArgPop(const ASTContext &Ctx) const;
 
   unsigned getNumParams() const { return ParamTypes.size(); }
 

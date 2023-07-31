@@ -1297,11 +1297,10 @@ static void InitializePredefinedMacros(const TargetInfo &TI,
     Builder.defineMacro("__CUDA_ARCH__");
   }
 
-  // We need to communicate this to our CUDA header wrapper, which in turn
-  // informs the proper CUDA headers of this choice.
-  if (LangOpts.CUDADeviceApproxTranscendentals || LangOpts.FastMath) {
-    Builder.defineMacro("__CLANG_CUDA_APPROX_TRANSCENDENTALS__");
-  }
+  // We need to communicate this to our CUDA/HIP header wrapper, which in turn
+  // informs the proper CUDA/HIP headers of this choice.
+  if (LangOpts.GPUDeviceApproxTranscendentals)
+    Builder.defineMacro("__CLANG_GPU_APPROX_TRANSCENDENTALS__");
 
   // Define a macro indicating that the source file is being compiled with a
   // SYCL device compiler which doesn't produce host binary.

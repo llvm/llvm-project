@@ -1,5 +1,4 @@
 // RUN: %clang_hwasan %s -o %t && %env_hwasan_opts=verbose_threads=1 %run %t 2>&1 | FileCheck %s --implicit-check-not=0x000000000000
-// REQUIRES: stable-runtime
 
 #include <pthread.h>
 #include <stdlib.h>

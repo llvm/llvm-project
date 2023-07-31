@@ -145,3 +145,12 @@ namespace ZeroInit {
 namespace LongDouble {
   constexpr long double ld = 3.1425926539;
 }
+
+namespace Compare {
+  constexpr float nan = __builtin_nan("");
+  constexpr float inf = __builtin_inf();
+  static_assert(!(nan == nan), "");
+  static_assert(nan != nan, "");
+  static_assert(!(inf < nan), "");
+  static_assert(!(inf > nan), "");
+}

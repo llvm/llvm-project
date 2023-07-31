@@ -122,82 +122,68 @@ void RISCVTargetELFStreamer::emitDirectiveVariantCC(MCSymbol &Symbol) {
   cast<MCSymbolELF>(Symbol).setOther(ELF::STO_RISCV_VARIANT_CC);
 }
 
-bool RISCVELFStreamer::requiresFixups(MCContext &C, const MCExpr *Value,
-                                      const MCExpr *&LHS, const MCExpr *&RHS) {
-  const auto *MBE = dyn_cast<MCBinaryExpr>(Value);
-  if (MBE == nullptr)
-    return false;
-
-  MCValue E;
-  if (!Value->evaluateAsRelocatable(E, nullptr, nullptr))
-    return false;
-  if (E.getSymA() == nullptr || E.getSymB() == nullptr)
-    return false;
-
-  const auto &A = E.getSymA()->getSymbol();
-  const auto &B = E.getSymB()->getSymbol();
-
-  LHS = MCBinaryExpr::create(MCBinaryExpr::Add, MCSymbolRefExpr::create(&A, C),
-                             MCConstantExpr::create(E.getConstant(), C), C);
-  RHS = E.getSymB();
-
-  // Avoid ADD/SUB if Kind is not VK_None, e.g. A@plt - B + C.
-  if (E.getSymA()->getKind() != MCSymbolRefExpr::VK_None)
-    return false;
-
-  // If either symbol is in a text section, we need to delay the relocation
-  // evaluation as relaxation may alter the size of the symbol.
-  //
-  // Unfortunately, we cannot identify if the symbol was built with relaxation
-  // as we do not track the state per symbol or section.  However, BFD will
-  // always emit the relocation and so we follow suit which avoids the need to
-  // track that information.
-  if (A.isInSection() && A.getSection().getKind().isText())
-    return true;
-  if (B.isInSection() && B.getSection().getKind().isText())
-    return true;
-
-  // If A is undefined and B is defined, we should emit ADD/SUB for A-B.
-  // Unfortunately, A may be defined later, but this requiresFixups call has to
-  // eagerly make a decision. For now, emit ADD/SUB unless A is .L*. This
-  // heuristic handles many temporary label differences for .debug_* and
-  // .apple_types sections.
-  //
-  // TODO Implement delayed relocation decision.
-  if (!A.isInSection() && !A.isTemporary() && B.isInSection())
-    return true;
-
-  // Support cross-section symbolic differences ...
-  return A.isInSection() && B.isInSection() &&
-         A.getSection().getName() != B.getSection().getName();
-}
-
 void RISCVELFStreamer::reset() {
   static_cast<RISCVTargetStreamer *>(getTargetStreamer())->reset();
   MCELFStreamer::reset();
+  MappingSymbolCounter = 0;
+  LastMappingSymbols.clear();
+  LastEMS = EMS_None;
+}
+
+void RISCVELFStreamer::emitDataMappingSymbol() {
+  if (LastEMS == EMS_Data)
+    return;
+  emitMappingSymbol("$d");
+  LastEMS = EMS_Data;
+}
+
+void RISCVELFStreamer::emitInstructionsMappingSymbol() {
+  if (LastEMS == EMS_Instructions)
+    return;
+  emitMappingSymbol("$x");
+  LastEMS = EMS_Instructions;
+}
+
+void RISCVELFStreamer::emitMappingSymbol(StringRef Name) {
+  auto *Symbol = cast<MCSymbolELF>(getContext().getOrCreateSymbol(
+      Name + "." + Twine(MappingSymbolCounter++)));
+  emitLabel(Symbol);
+  Symbol->setType(ELF::STT_NOTYPE);
+  Symbol->setBinding(ELF::STB_LOCAL);
+}
+
+void RISCVELFStreamer::changeSection(MCSection *Section,
+                                     const MCExpr *Subsection) {
+  // We have to keep track of the mapping symbol state of any sections we
+  // use. Each one should start off as EMS_None, which is provided as the
+  // default constructor by DenseMap::lookup.
+  LastMappingSymbols[getPreviousSection().first] = LastEMS;
+  LastEMS = LastMappingSymbols.lookup(Section);
+
+  MCELFStreamer::changeSection(Section, Subsection);
+}
+
+void RISCVELFStreamer::emitInstruction(const MCInst &Inst,
+                                       const MCSubtargetInfo &STI) {
+  emitInstructionsMappingSymbol();
+  MCELFStreamer::emitInstruction(Inst, STI);
+}
+
+void RISCVELFStreamer::emitBytes(StringRef Data) {
+  emitDataMappingSymbol();
+  MCELFStreamer::emitBytes(Data);
+}
+
+void RISCVELFStreamer::emitFill(const MCExpr &NumBytes, uint64_t FillValue,
+                                SMLoc Loc) {
+  emitDataMappingSymbol();
+  MCELFStreamer::emitFill(NumBytes, FillValue, Loc);
 }
 
 void RISCVELFStreamer::emitValueImpl(const MCExpr *Value, unsigned Size,
                                      SMLoc Loc) {
-  const MCExpr *A, *B;
-  if (!requiresFixups(getContext(), Value, A, B))
-    return MCELFStreamer::emitValueImpl(Value, Size, Loc);
-
-  MCStreamer::emitValueImpl(Value, Size, Loc);
-
-  MCDataFragment *DF = getOrCreateDataFragment();
-  flushPendingLabels(DF, DF->getContents().size());
-  MCDwarfLineEntry::make(this, getCurrentSectionOnly());
-
-  MCFixupKind Add, Sub;
-  std::tie(Add, Sub) = RISCV::getRelocPairForSize(Size);
-
-  DF->getFixups().push_back(
-      MCFixup::create(DF->getContents().size(), A, Add, Loc));
-  DF->getFixups().push_back(
-      MCFixup::create(DF->getContents().size(), B, Sub, Loc));
-
-  DF->getContents().resize(DF->getContents().size() + Size, 0);
+  emitDataMappingSymbol();
+  MCELFStreamer::emitValueImpl(Value, Size, Loc);
 }
 
 namespace llvm {

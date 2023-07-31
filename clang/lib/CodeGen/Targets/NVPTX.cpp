@@ -71,12 +71,12 @@ public:
     return true;
   }
 
-private:
   // Adds a NamedMDNode with GV, Name, and Operand as operands, and adds the
   // resulting MDNode to the nvvm.annotations MDNode.
   static void addNVVMMetadata(llvm::GlobalValue *GV, StringRef Name,
                               int Operand);
 
+private:
   static void emitBuiltinSurfTexDeviceCopy(CodeGenFunction &CGF, LValue Dst,
                                            LValue Src) {
     llvm::Value *Handle = nullptr;
@@ -256,24 +256,8 @@ void NVPTXTargetCodeGenInfo::setTargetAttributes(
       // Create !{<func-ref>, metadata !"kernel", i32 1} node
       addNVVMMetadata(F, "kernel", 1);
     }
-    if (CUDALaunchBoundsAttr *Attr = FD->getAttr<CUDALaunchBoundsAttr>()) {
-      // Create !{<func-ref>, metadata !"maxntidx", i32 <val>} node
-      llvm::APSInt MaxThreads(32);
-      MaxThreads = Attr->getMaxThreads()->EvaluateKnownConstInt(M.getContext());
-      if (MaxThreads > 0)
-        addNVVMMetadata(F, "maxntidx", MaxThreads.getExtValue());
-
-      // min blocks is an optional argument for CUDALaunchBoundsAttr. If it was
-      // not specified in __launch_bounds__ or if the user specified a 0 value,
-      // we don't have to add a PTX directive.
-      if (Attr->getMinBlocks()) {
-        llvm::APSInt MinBlocks(32);
-        MinBlocks = Attr->getMinBlocks()->EvaluateKnownConstInt(M.getContext());
-        if (MinBlocks > 0)
-          // Create !{<func-ref>, metadata !"minctasm", i32 <val>} node
-          addNVVMMetadata(F, "minctasm", MinBlocks.getExtValue());
-      }
-    }
+    if (CUDALaunchBoundsAttr *Attr = FD->getAttr<CUDALaunchBoundsAttr>())
+      M.handleCUDALaunchBoundsAttr(F, Attr);
   }
 
   // Attach kernel metadata directly if compiling for NVPTX.
@@ -301,6 +285,28 @@ void NVPTXTargetCodeGenInfo::addNVVMMetadata(llvm::GlobalValue *GV,
 bool NVPTXTargetCodeGenInfo::shouldEmitStaticExternCAliases() const {
   return false;
 }
+}
+
+void CodeGenModule::handleCUDALaunchBoundsAttr(
+    llvm::Function *F, const CUDALaunchBoundsAttr *Attr) {
+  // Create !{<func-ref>, metadata !"maxntidx", i32 <val>} node
+  llvm::APSInt MaxThreads(32);
+  MaxThreads = Attr->getMaxThreads()->EvaluateKnownConstInt(getContext());
+  if (MaxThreads > 0)
+    NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "maxntidx",
+                                            MaxThreads.getExtValue());
+
+  // min blocks is an optional argument for CUDALaunchBoundsAttr. If it was
+  // not specified in __launch_bounds__ or if the user specified a 0 value,
+  // we don't have to add a PTX directive.
+  if (Attr->getMinBlocks()) {
+    llvm::APSInt MinBlocks(32);
+    MinBlocks = Attr->getMinBlocks()->EvaluateKnownConstInt(getContext());
+    if (MinBlocks > 0)
+      // Create !{<func-ref>, metadata !"minctasm", i32 <val>} node
+      NVPTXTargetCodeGenInfo::addNVVMMetadata(F, "minctasm",
+                                              MinBlocks.getExtValue());
+  }
 }
 
 std::unique_ptr<TargetCodeGenInfo>

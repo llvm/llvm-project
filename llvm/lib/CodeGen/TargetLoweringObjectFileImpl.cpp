@@ -1420,6 +1420,11 @@ MCSection *TargetLoweringObjectFileMachO::getSectionForConstant(
   return ReadOnlySection;  // .const
 }
 
+MCSection *TargetLoweringObjectFileMachO::getSectionForCommandLines() const {
+  return getContext().getMachOSection("__TEXT", "__command_line", 0,
+                                      SectionKind::getReadOnly());
+}
+
 const MCExpr *TargetLoweringObjectFileMachO::getTTypeGlobalReference(
     const GlobalValue *GV, unsigned Encoding, const TargetMachine &TM,
     MachineModuleInfo *MMI, MCStreamer &Streamer) const {
@@ -2421,23 +2426,6 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
         Name, Kind, XCOFF::CsectProperties(SMC, XCOFF::XTY_CM));
   }
 
-  if (Kind.isMergeableCString()) {
-    Align Alignment = GO->getParent()->getDataLayout().getPreferredAlign(
-        cast<GlobalVariable>(GO));
-
-    unsigned EntrySize = getEntrySizeForKind(Kind);
-    std::string SizeSpec = ".rodata.str" + utostr(EntrySize) + ".";
-    SmallString<128> Name;
-    Name = SizeSpec + utostr(Alignment.value());
-
-    if (TM.getDataSections())
-      getNameWithPrefix(Name, GO, TM);
-
-    return getContext().getXCOFFSection(
-        Name, Kind, XCOFF::CsectProperties(XCOFF::XMC_RO, XCOFF::XTY_SD),
-        /* MultiSymbolsAllowed*/ !TM.getDataSections());
-  }
-
   if (Kind.isText()) {
     if (TM.getFunctionSections()) {
       return cast<MCSymbolXCOFF>(getFunctionEntryPointSymbol(GO, TM))
@@ -2623,12 +2611,12 @@ MCSymbol *TargetLoweringObjectFileXCOFF::getFunctionEntryPointSymbol(
   // function entry point csect instead. And for function delcarations, the
   // undefined symbols gets treated as csect with XTY_ER property.
   if (((TM.getFunctionSections() && !Func->hasSection()) ||
-       Func->isDeclaration()) &&
+       Func->isDeclarationForLinker()) &&
       isa<Function>(Func)) {
     return getContext()
         .getXCOFFSection(
             NameStr, SectionKind::getText(),
-            XCOFF::CsectProperties(XCOFF::XMC_PR, Func->isDeclaration()
+            XCOFF::CsectProperties(XCOFF::XMC_PR, Func->isDeclarationForLinker()
                                                       ? XCOFF::XTY_ER
                                                       : XCOFF::XTY_SD))
         ->getQualNameSymbol();

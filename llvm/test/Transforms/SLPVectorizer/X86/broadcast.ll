@@ -60,11 +60,11 @@ define void @bcast_vals2(ptr %A, ptr %B, ptr %C, ptr %D, ptr %E, ptr %S) {
 ; CHECK-LABEL: @bcast_vals2(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A0:%.*]] = load i16, ptr [[A:%.*]], align 8
-; CHECK-NEXT:    [[V1:%.*]] = sext i16 [[A0]] to i32
 ; CHECK-NEXT:    [[B0:%.*]] = load i16, ptr [[B:%.*]], align 8
 ; CHECK-NEXT:    [[C0:%.*]] = load i16, ptr [[C:%.*]], align 8
 ; CHECK-NEXT:    [[D0:%.*]] = load i16, ptr [[D:%.*]], align 8
 ; CHECK-NEXT:    [[E0:%.*]] = load i16, ptr [[E:%.*]], align 8
+; CHECK-NEXT:    [[V1:%.*]] = sext i16 [[A0]] to i32
 ; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x i16> poison, i16 [[B0]], i32 0
 ; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x i16> [[TMP0]], i16 [[C0]], i32 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <4 x i16> [[TMP1]], i16 [[E0]], i32 2

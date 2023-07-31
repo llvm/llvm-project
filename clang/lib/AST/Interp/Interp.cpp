@@ -122,6 +122,19 @@ static bool CheckGlobal(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
 namespace clang {
 namespace interp {
 
+bool popBuiltinArgs(InterpState &S, CodePtr OpPC) {
+  assert(S.Current && S.Current->getFunction()->needsRuntimeArgPop(S.getCtx()));
+  const Expr *E = S.Current->getExpr(OpPC);
+  assert(isa<CallExpr>(E));
+  const CallExpr *CE = cast<CallExpr>(E);
+  for (int32_t I = CE->getNumArgs() - 1; I >= 0; --I) {
+    const Expr *A = CE->getArg(I);
+    PrimType Ty = S.getContext().classify(A->getType()).value_or(PT_Ptr);
+    TYPE_SWITCH(Ty, S.Stk.discard<T>());
+  }
+  return true;
+}
+
 bool CheckExtern(InterpState &S, CodePtr OpPC, const Pointer &Ptr) {
   if (!Ptr.isExtern())
     return true;
@@ -460,6 +473,17 @@ bool CheckCtorCall(InterpState &S, CodePtr OpPC, const Pointer &This) {
   const auto *CAT =
       cast<ConstantArrayType>(This.getType()->getAsArrayTypeUnsafe());
   return CheckArrayInitialized(S, OpPC, This, CAT);
+}
+
+bool CheckPotentialReinterpretCast(InterpState &S, CodePtr OpPC,
+                                   const Pointer &Ptr) {
+  if (!S.inConstantContext())
+    return true;
+
+  const SourceInfo &E = S.Current->getSource(OpPC);
+  S.CCEDiag(E, diag::note_constexpr_invalid_cast)
+      << 2 << S.getLangOpts().CPlusPlus << S.Current->getRange(OpPC);
+  return false;
 }
 
 bool CheckFloatResult(InterpState &S, CodePtr OpPC, APFloat::opStatus Status) {

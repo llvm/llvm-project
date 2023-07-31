@@ -156,7 +156,7 @@ private:
 // Generic structure checker for directives/clauses language such as OpenMP
 // and OpenACC.
 // typename D is the directive enumeration.
-// tyepname C is the clause enumeration.
+// typename C is the clause enumeration.
 // typename PC is the parser class defined in parse-tree.h for the clauses.
 template <typename D, typename C, typename PC, std::size_t ClauseEnumSize>
 class DirectiveStructureChecker : public virtual BaseChecker {

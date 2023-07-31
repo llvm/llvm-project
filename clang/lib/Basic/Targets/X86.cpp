@@ -545,9 +545,13 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   case CK_Alderlake:
   case CK_Raptorlake:
   case CK_Meteorlake:
+  case CK_Arrowlake:
+  case CK_ArrowlakeS:
+  case CK_Lunarlake:
   case CK_Sierraforest:
   case CK_Grandridge:
   case CK_Graniterapids:
+  case CK_GraniterapidsD:
   case CK_Emeraldrapids:
     // FIXME: Historically, we defined this legacy name, it would be nice to
     // remove it at some point. We've never exposed fine-grained names for
@@ -1365,7 +1369,7 @@ bool X86TargetInfo::validateAsmConstraint(
 // | Sandy Bridge                       |                      64 | https://en.wikipedia.org/wiki/Sandy_Bridge and https://www.7-cpu.com/cpu/SandyBridge.html                                                                    |
 // | Ivy Bridge                         |                      64 | https://blog.stuffedcow.net/2013/01/ivb-cache-replacement/ and https://www.7-cpu.com/cpu/IvyBridge.html                                                      |
 // | Haswell                            |                      64 | https://www.7-cpu.com/cpu/Haswell.html                                                                                                                       |
-// | Boadwell                           |                      64 | https://www.7-cpu.com/cpu/Broadwell.html                                                                                                                     |
+// | Broadwell                          |                      64 | https://www.7-cpu.com/cpu/Broadwell.html                                                                                                                     |
 // | Skylake (including skylake-avx512) |                      64 | https://www.nas.nasa.gov/hecc/support/kb/skylake-processors_550.html "Cache Hierarchy"                                                                       |
 // | Cascade Lake                       |                      64 | https://www.nas.nasa.gov/hecc/support/kb/cascade-lake-processors_579.html "Cache Hierarchy"                                                                  |
 // | Skylake                            |                      64 | https://en.wikichip.org/wiki/intel/microarchitectures/kaby_lake "Memory Hierarchy"                                                                           |
@@ -1436,9 +1440,13 @@ std::optional<unsigned> X86TargetInfo::getCPUCacheLineSize() const {
     case CK_Alderlake:
     case CK_Raptorlake:
     case CK_Meteorlake:
+    case CK_Arrowlake:
+    case CK_ArrowlakeS:
+    case CK_Lunarlake:
     case CK_Sierraforest:
     case CK_Grandridge:
     case CK_Graniterapids:
+    case CK_GraniterapidsD:
     case CK_Emeraldrapids:
     case CK_KNL:
     case CK_KNM:

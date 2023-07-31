@@ -824,6 +824,8 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
     case 0x9a:
     // Raptorlake:
     case 0xb7:
+    case 0xba:
+    case 0xbf:
     // Meteorlake:
     case 0xaa:
     case 0xac:
@@ -832,12 +834,34 @@ getIntelProcessorTypeAndSubtype(unsigned Family, unsigned Model,
       *Subtype = X86::INTEL_COREI7_ALDERLAKE;
       break;
 
+    // Arrowlake:
+    case 0xc5:
+      CPU = "arrowlake";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ARROWLAKE;
+      break;
+
+    // Arrowlake S:
+    case 0xc6:
+    // Lunarlake:
+    case 0xbd:
+      CPU = "arrowlake-s";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_ARROWLAKE_S;
+      break;
+
     // Graniterapids:
-    case 0xae:
     case 0xad:
       CPU = "graniterapids";
       *Type = X86::INTEL_COREI7;
       *Subtype = X86::INTEL_COREI7_GRANITERAPIDS;
+      break;
+
+    // Granite Rapids D:
+    case 0xae:
+      CPU = "graniterapids-d";
+      *Type = X86::INTEL_COREI7;
+      *Subtype = X86::INTEL_COREI7_GRANITERAPIDS_D;
       break;
 
     // Icelake Xeon:

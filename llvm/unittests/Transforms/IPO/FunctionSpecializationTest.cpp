@@ -23,6 +23,19 @@
 
 namespace llvm {
 
+static void removeSSACopy(Function &F) {
+  for (BasicBlock &BB : F) {
+    for (Instruction &Inst : llvm::make_early_inc_range(BB)) {
+      if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+        if (II->getIntrinsicID() != Intrinsic::ssa_copy)
+          continue;
+        Inst.replaceAllUsesWith(II->getOperand(0));
+        Inst.eraseFromParent();
+      }
+    }
+  }
+}
+
 class FunctionSpecializationTest : public testing::Test {
 protected:
   LLVMContext Ctx;
@@ -76,6 +89,8 @@ protected:
     for (Argument &Arg : F->args())
       Solver->markOverdefined(&Arg);
     Solver->solveWhileResolvedUndefsIn(*M);
+
+    removeSSACopy(*F);
 
     return FunctionSpecializer(*Solver, *M, &FAM, GetBFI, GetTLI, GetTTI,
                                GetAC);

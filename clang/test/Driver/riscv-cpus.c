@@ -21,7 +21,8 @@
 // MCPU-SYNTACORE-SCR1-MAX: "-target-abi" "ilp32"
 
 // We cannot check much for -mcpu=native, but it should be replaced by a valid CPU string.
-// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=native | FileCheck -check-prefix=MCPU-NATIVE %s
+// RUN: %clang --target=riscv64 -### -c %s -mcpu=native 2> %t.err || true
+// RUN: FileCheck --input-file=%t.err -check-prefix=MCPU-NATIVE %s
 // MCPU-NATIVE-NOT: "-target-cpu" "native"
 
 // RUN: %clang --target=riscv32 -### -c %s 2>&1 -mtune=rocket-rv32 | FileCheck -check-prefix=MTUNE-ROCKET32 %s

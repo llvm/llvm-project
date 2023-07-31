@@ -51,6 +51,7 @@ expand_template(
         "@MLIR_RUN_CUDA_TENSOR_CORE_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM80_TESTS@": "0",
         "@MLIR_RUN_CUDA_SM80_LT_TESTS@": "0",
+        "@MLIR_RUN_CUDA_SM90_TESTS@": "0",
         "@MLIR_INCLUDE_INTEGRATION_TESTS@": "0",
         "@SHLIBDIR@": package_path("//llvm:BUILD"),
     },
@@ -93,6 +94,7 @@ cc_library(
         "//mlir:AffineAnalysis",
         "//mlir:AffineDialect",
         "//mlir:Analysis",
+        "//mlir:ControlFlowInterfaces",
         "//mlir:FuncDialect",
         "//mlir:IR",
         "//mlir:MemRefDialect",
@@ -120,6 +122,28 @@ td_library(
         "//mlir:SideEffectInterfacesTdFiles",
     ],
 )
+
+gentbl_cc_library(
+    name = "TestOpsSyntaxIncGen",
+    strip_include_prefix = "lib/Dialect/Test",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "lib/Dialect/Test/TestOpsSyntax.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "lib/Dialect/Test/TestOpsSyntax.cpp.inc",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "lib/Dialect/Test/TestOpsSyntax.td",
+    test = True,
+    deps = [
+        ":TestOpTdFiles",
+    ],
+)
+
 
 gentbl_cc_library(
     name = "TestOpsIncGen",
@@ -353,6 +377,7 @@ cc_library(
         ":TestEnumDefsIncGen",
         ":TestInterfacesIncGen",
         ":TestOpsIncGen",
+        ":TestOpsSyntaxIncGen",
         ":TestTypeDefsIncGen",
         "//llvm:Support",
         "//mlir:ArithDialect",
@@ -616,19 +641,19 @@ cc_library(
         "//mlir:IndexToLLVM",
         "//mlir:MathToLLVM",
         "//mlir:MemRefDialect",
-        "//mlir:MemRefTransforms",
         "//mlir:MemRefToLLVM",
+        "//mlir:MemRefTransforms",
         "//mlir:NVGPUToNVVM",
         "//mlir:NVVMToLLVMIRTranslation",
         "//mlir:Pass",
-        "//mlir:ReconcileUnrealizedCasts",
         "//mlir:ROCDLToLLVMIRTranslation",
+        "//mlir:ReconcileUnrealizedCasts",
         "//mlir:SCFDialect",
         "//mlir:SCFToControlFlow",
         "//mlir:SPIRVDialect",
         "//mlir:ToLLVMIRTranslation",
-        "//mlir:Transforms",
         "//mlir:TransformUtils",
+        "//mlir:Transforms",
         "//mlir:VectorDialect",
         "//mlir:VectorToLLVM",
         "//mlir:VectorToSCF",
@@ -681,7 +706,6 @@ cc_library(
         "//mlir:IR",
         "//mlir:IndexToLLVM",
         "//mlir:LLVMDialect",
-        "//mlir:LinalgToLLVM",
         "//mlir:LinalgTransforms",
         "//mlir:MathToLLVM",
         "//mlir:MemRefToLLVM",

@@ -972,11 +972,6 @@ struct BinaryOp_match {
              (Commutable && L.match(I->getOperand(1)) &&
               R.match(I->getOperand(0)));
     }
-    if (auto *CE = dyn_cast<ConstantExpr>(V))
-      return CE->getOpcode() == Opc &&
-             ((L.match(CE->getOperand(0)) && R.match(CE->getOperand(1))) ||
-              (Commutable && L.match(CE->getOperand(1)) &&
-               R.match(CE->getOperand(0))));
     return false;
   }
 
@@ -1258,9 +1253,6 @@ struct BinOpPred_match : Predicate {
     if (auto *I = dyn_cast<Instruction>(V))
       return this->isOpType(I->getOpcode()) && L.match(I->getOperand(0)) &&
              R.match(I->getOperand(1));
-    if (auto *CE = dyn_cast<ConstantExpr>(V))
-      return this->isOpType(CE->getOpcode()) && L.match(CE->getOperand(0)) &&
-             R.match(CE->getOperand(1));
     return false;
   }
 };

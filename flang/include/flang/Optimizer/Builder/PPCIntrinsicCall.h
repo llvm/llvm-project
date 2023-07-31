@@ -18,6 +18,7 @@ namespace fir {
 /// Enums used to templatize vector intrinsic function generators. Enum does
 /// not contain every vector intrinsic, only intrinsics that share generators.
 enum class VecOp {
+  Abs,
   Add,
   And,
   Anyge,
@@ -28,7 +29,10 @@ enum class VecOp {
   Convert,
   Ctf,
   Cvf,
+  Nmadd,
+  Msub,
   Mul,
+  Sel,
   Sl,
   Sld,
   Sldw,
@@ -39,6 +43,21 @@ enum class VecOp {
   Sro,
   Sub,
   Xor
+};
+
+/// Enums used to templatize and share lowering of PowerPC MMA intrinsics.
+enum class MMAOp {
+  AssembleAcc,
+  AssemblePair,
+  DisassembleAcc,
+  DisassemblePair,
+};
+
+enum class MMAHandlerOp {
+  NoOp,
+  SubToFunc,
+  SubToFuncReverseArgOnLE,
+  FirstArgIsResult,
 };
 
 // Wrapper struct to encapsulate information for a vector type. Preserves
@@ -94,6 +113,20 @@ convertVecArgs(fir::FirOpBuilder &builder, mlir::Location loc,
   return newArgs;
 }
 
+// This overload method is used only if arguments are of different types.
+static inline llvm::SmallVector<mlir::Value, 4>
+convertVecArgs(fir::FirOpBuilder &builder, mlir::Location loc,
+               llvm::SmallVectorImpl<VecTypeInfo> &vecTyInfo,
+               llvm::SmallVector<mlir::Value, 4> args) {
+  llvm::SmallVector<mlir::Value, 4> newArgs;
+  for (size_t i = 0; i < args.size(); i++) {
+    mlir::Type ty{vecTyInfo[i].toMlirVectorType(builder.getContext())};
+    assert(ty && "unknown mlir vector type");
+    newArgs.push_back(builder.createConvert(loc, ty, args[i]));
+  }
+  return newArgs;
+}
+
 struct PPCIntrinsicLibrary : IntrinsicLibrary {
 
   // Constructors.
@@ -102,10 +135,16 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
   PPCIntrinsicLibrary() = delete;
   PPCIntrinsicLibrary(const PPCIntrinsicLibrary &) = delete;
 
+  // PPC MMA intrinsic generic handler
+  template <MMAOp IntrId, MMAHandlerOp HandlerOp>
+  void genMmaIntr(llvm::ArrayRef<fir::ExtendedValue>);
+
   // PPC intrinsic handlers.
   template <bool isImm>
   void genMtfsf(llvm::ArrayRef<fir::ExtendedValue>);
 
+  fir::ExtendedValue genVecAbs(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args);
   template <VecOp>
   fir::ExtendedValue
   genVecAddAndMulSubXor(mlir::Type resultType,
@@ -124,8 +163,15 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
                                       llvm::ArrayRef<fir::ExtendedValue> args);
 
   template <VecOp>
+  fir::ExtendedValue genVecNmaddMsub(mlir::Type resultType,
+                                     llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
   fir::ExtendedValue genVecShift(mlir::Type,
                                  llvm::ArrayRef<fir::ExtendedValue>);
+
+  fir::ExtendedValue genVecSel(mlir::Type resultType,
+                               llvm::ArrayRef<fir::ExtendedValue> args);
 };
 
 const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name);

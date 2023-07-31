@@ -1241,6 +1241,7 @@ class ArrayProperty<string storageTypeParam = "", int n, string desc = ""> :
   let interfaceType = "::llvm::ArrayRef<" # storageTypeParam # ">";
   let convertFromStorage = "$_storage";
   let assignToStorage = "::llvm::copy($_value, $_storage)";
+  let hashProperty = "llvm::hash_combine_range(std::begin($_storage), std::end($_storage));";
 }
 
 //===----------------------------------------------------------------------===//
@@ -2574,6 +2575,10 @@ class Op<Dialect dialect, string mnemonic, list<Trait> props = []> {
 
   // Whether this op has a folder.
   bit hasFolder = 0;
+
+  // Whether to let ops implement their custom `readProperties` and
+  // `writeProperties` methods to emit bytecode.
+  bit useCustomPropertiesEncoding = 0;
 
   // Op traits.
   // Note: The list of traits will be uniqued by ODS.

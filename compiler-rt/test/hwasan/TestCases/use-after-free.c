@@ -5,8 +5,6 @@
 
 // RUN: %clang_hwasan -O0 -DISREAD=0 %s -o %t && not %run %t 2>&1 | FileCheck %s --check-prefixes=CHECK
 
-// REQUIRES: stable-runtime
-
 #include <stdlib.h>
 #include <stdio.h>
 #include <sanitizer/hwasan_interface.h>

@@ -3565,7 +3565,7 @@ IntrinsicLibrary::genIeeeCopySign(mlir::Type resultType,
 
   // Args have the same type.
   if (xRealType == yRealType)
-    return builder.create<mlir::LLVM::CopySignOp>(loc, xRealVal, yRealVal);
+    return builder.create<mlir::math::CopySignOp>(loc, xRealVal, yRealVal);
 
   // Args have different types.
   mlir::Type xIntType = builder.getIntegerType(xRealType.getWidth());
@@ -5746,6 +5746,9 @@ getIntrinsicArgumentLowering(llvm::StringRef specificName) {
   if (const IntrinsicHandler *handler = findIntrinsicHandler(name))
     if (!handler->argLoweringRules.hasDefaultRules())
       return &handler->argLoweringRules;
+  if (const IntrinsicHandler *ppcHandler = findPPCIntrinsicHandler(name))
+    if (!ppcHandler->argLoweringRules.hasDefaultRules())
+      return &ppcHandler->argLoweringRules;
   return nullptr;
 }
 

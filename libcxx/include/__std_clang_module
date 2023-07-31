@@ -1,0 +1,212 @@
+// -*- C++ -*-
+//===----------------------------------------------------------------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+// This header should not be directly included, it's exclusively to import all
+// of the libc++ public clang modules for the `std` clang module to export. In
+// other words, it's to facilitate `@import std;` in Objective-C++ and `import std`
+// in Swift to expose all of the libc++ interfaces. This is generally not
+// recommended, however there are some clients that need to import all of libc++
+// without knowing what "all" is.
+#if !__building_module(std)
+#  error "Do not include this header directly, include individual headers instead"
+#endif
+
+#include <__availability>
+#include <__config>
+
+#if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
+#  pragma GCC system_header
+#endif
+
+#include <algorithm>
+#include <any>
+#include <array>
+#include <atomic>
+#include <bit>
+#include <bitset>
+#include <charconv>
+#include <chrono>
+#include <compare>
+#include <complex>
+#include <concepts>
+#include <condition_variable>
+#include <deque>
+#include <exception>
+#include <execution>
+#include <expected>
+#include <format>
+#include <forward_list>
+#include <functional>
+#include <initializer_list>
+#include <iosfwd>
+#include <iterator>
+#include <limits>
+#include <list>
+#include <map>
+#include <mdspan>
+#include <memory>
+#include <memory_resource>
+#include <new>
+#include <numbers>
+#include <numeric>
+#include <optional>
+#include <queue>
+#include <random>
+#include <ranges>
+#include <ratio>
+#include <scoped_allocator>
+#include <set>
+#include <source_location>
+#include <span>
+#include <stack>
+#include <stdexcept>
+#include <string>
+#include <string_view>
+#include <system_error>
+#include <tuple>
+#include <type_traits>
+#include <typeindex>
+#include <typeinfo>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <valarray>
+#include <variant>
+#include <vector>
+#include <version>
+
+#include <cassert>
+#include <ccomplex>
+#include <cctype>
+#include <cerrno>
+#include <cfenv>
+#include <cfloat>
+#include <cinttypes>
+#include <ciso646>
+#include <climits>
+#include <cmath>
+#include <csetjmp>
+#include <csignal>
+#include <cstdarg>
+#include <cstdbool>
+#include <cstddef>
+#include <cstdint>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <ctgmath>
+#include <ctime>
+#include <cuchar>
+
+#include <complex.h>
+#include <ctype.h>
+#include <errno.h>
+#include <fenv.h>
+#include <float.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <math.h>
+#include <setjmp.h>
+#include <stdbool.h>
+#include <stddef.h>
+#include <stdint.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <tgmath.h>
+#include <uchar.h>
+
+#ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#  include <codecvt>
+#  ifndef _LIBCPP_HAS_NO_FILESYSTEM
+#    include <fstream>
+#  endif
+#  include <iomanip>
+#  include <ios>
+#  include <iostream>
+#  include <istream>
+#  include <locale>
+#  include <ostream>
+#  include <regex>
+#  include <sstream>
+#  include <streambuf>
+#  include <strstream>
+
+#  include <clocale>
+
+#  include <locale.h>
+#endif
+
+#ifndef _LIBCPP_HAS_NO_WIDE_CHARACTERS
+#  include <cwchar>
+#  include <cwctype>
+
+#  include <wchar.h>
+#  include <wctype.h>
+#endif
+
+#ifdef _LIBCPP_AVAILABILITY_TO_CHARS_FLOATING_POINT
+#  include <print>
+#endif
+
+#ifndef _LIBCPP_CXX03_LANG
+#  ifndef _LIBCPP_HAS_NO_THREADS
+#    include <future>
+#    include <mutex>
+#    include <thread>
+#  endif
+
+#  include <experimental/deque>
+#  include <experimental/forward_list>
+#  include <experimental/iterator>
+#  include <experimental/list>
+#  include <experimental/map>
+#  include <experimental/memory_resource>
+#  include <experimental/propagate_const>
+#  ifndef _LIBCPP_HAS_NO_LOCALIZATION
+#    include <experimental/regex>
+#  endif
+#  include <experimental/set>
+#  include <experimental/simd>
+#  include <experimental/string>
+#  include <experimental/type_traits>
+#  include <experimental/unordered_map>
+#  include <experimental/unordered_set>
+#  include <experimental/utility>
+#  include <experimental/vector>
+#endif
+
+#if _LIBCPP_STD_VER >= 14
+#  ifndef _LIBCPP_HAS_NO_THREADS
+#    include <shared_mutex>
+#  endif
+#endif
+
+#if _LIBCPP_STD_VER >= 17
+#  ifndef _LIBCPP_HAS_NO_FILESYSTEM
+#    include <filesystem>
+#  endif
+#endif
+
+#if _LIBCPP_STD_VER >= 20
+#  include <coroutine>
+
+#  ifndef _LIBCPP_HAS_NO_THREADS
+#    include <barrier>
+#    include <latch>
+#    include <semaphore>
+#    include <stop_token>
+#  endif
+#endif
+
+#if _LIBCPP_STD_VER >= 23
+#  ifndef _LIBCPP_HAS_NO_THREADS
+#    include <stdatomic.h>
+#  endif
+#endif

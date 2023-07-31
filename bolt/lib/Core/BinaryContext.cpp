@@ -503,6 +503,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
   // Is one of the targets __builtin_unreachable?
   bool HasUnreachable = false;
 
+  // Does one of the entries match function start address?
+  bool HasStartAsEntry = false;
+
   // Number of targets other than __builtin_unreachable.
   uint64_t NumRealEntries = 0;
 
@@ -567,14 +570,21 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
       continue;
     }
 
+    // Function start is another special case. It is allowed in the jump table,
+    // but we need at least one another regular entry to distinguish the table
+    // from, e.g. a function pointer array.
+    if (Value == BF.getAddress()) {
+      HasStartAsEntry = true;
+      addEntryAddress(Value);
+      continue;
+    }
+
     // Function or one of its fragments.
     const BinaryFunction *TargetBF = getBinaryFunctionContainingAddress(Value);
-
-    bool DoesBelongToFunction = BF.containsAddress(Value) ||
-                                (TargetBF && TargetBF->isParentOrChildOf(BF));
-
-    // We assume that a jump table cannot have function start as an entry.
-    if (!DoesBelongToFunction || Value == BF.getAddress()) {
+    const bool DoesBelongToFunction =
+        BF.containsAddress(Value) ||
+        (TargetBF && TargetBF->isParentOrChildOf(BF));
+    if (!DoesBelongToFunction) {
       LLVM_DEBUG({
         if (!BF.containsAddress(Value)) {
           dbgs() << "FAIL: function doesn't contain this address\n";
@@ -589,8 +599,6 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
             }
           }
         }
-        if (Value == BF.getAddress())
-          dbgs() << "FAIL: jump table cannot have function start as an entry\n";
       });
       break;
     }
@@ -611,9 +619,9 @@ bool BinaryContext::analyzeJumpTable(const uint64_t Address,
   }
 
   // It's a jump table if the number of real entries is more than 1, or there's
-  // one real entry and "unreachable" targets. If there are only multiple
-  // "unreachable" targets, then it's not a jump table.
-  return NumRealEntries + HasUnreachable >= 2;
+  // one real entry and one or more special targets. If there are only multiple
+  // special targets, then it's not a jump table.
+  return NumRealEntries + (HasUnreachable || HasStartAsEntry) >= 2;
 }
 
 void BinaryContext::populateJumpTables() {
@@ -1752,10 +1760,10 @@ void BinaryContext::printCFI(raw_ostream &OS, const MCCFIInstruction &Inst) {
 }
 
 MarkerSymType BinaryContext::getMarkerType(const SymbolRef &Symbol) const {
-  // For aarch64, the ABI defines mapping symbols so we identify data in the
-  // code section (see IHI0056B). $x identifies a symbol starting code or the
-  // end of a data chunk inside code, $d indentifies start of data.
-  if (!isAArch64() || ELFSymbolRef(Symbol).getSize())
+  // For aarch64 and riscv, the ABI defines mapping symbols so we identify data
+  // in the code section (see IHI0056B). $x identifies a symbol starting code or
+  // the end of a data chunk inside code, $d indentifies start of data.
+  if ((!isAArch64() && !isRISCV()) || ELFSymbolRef(Symbol).getSize())
     return MarkerSymType::NONE;
 
   Expected<StringRef> NameOrError = Symbol.getName();

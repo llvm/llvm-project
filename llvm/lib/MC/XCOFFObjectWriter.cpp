@@ -1104,11 +1104,36 @@ void XCOFFObjectWriter::writeRelocations() {
 
 void XCOFFObjectWriter::writeSymbolTable(const MCAsmLayout &Layout) {
   // Write C_FILE symbols.
-  // The n_name of a C_FILE symbol is the source file's name when no auxiliary
-  // entries are present.
   for (const std::pair<std::string, size_t> &F : FileNames) {
-    writeSymbolEntry(F.first, /*Value=*/0, XCOFF::ReservedSectionNum::N_DEBUG,
-                     /*SymbolType=*/0, XCOFF::C_FILE,
+    // The n_name of a C_FILE symbol is the source file's name when no auxiliary
+    // entries are present.
+    StringRef FileName = F.first;
+
+    // For C_FILE symbols, the Source Language ID overlays the high-order byte
+    // of the SymbolType field, and the CPU Version ID is defined as the
+    // low-order byte.
+    // AIX's system assembler determines the source language ID based on the
+    // source file's name suffix, and the behavior here is consistent with it.
+    uint8_t LangID;
+    if (FileName.ends_with(".c"))
+      LangID = XCOFF::TB_C;
+    else if (FileName.ends_with_insensitive(".f") ||
+             FileName.ends_with_insensitive(".f77") ||
+             FileName.ends_with_insensitive(".f90") ||
+             FileName.ends_with_insensitive(".f95") ||
+             FileName.ends_with_insensitive(".f03") ||
+             FileName.ends_with_insensitive(".f08"))
+      LangID = XCOFF::TB_Fortran;
+    else
+      LangID = XCOFF::TB_CPLUSPLUS;
+    uint8_t CpuID;
+    if (is64Bit())
+      CpuID = XCOFF::TCPU_PPC64;
+    else
+      CpuID = XCOFF::TCPU_COM;
+
+    writeSymbolEntry(FileName, /*Value=*/0, XCOFF::ReservedSectionNum::N_DEBUG,
+                     /*SymbolType=*/(LangID << 8) | CpuID, XCOFF::C_FILE,
                      /*NumberOfAuxEntries=*/0);
   }
 

@@ -238,17 +238,16 @@ check-generated-output)
     # Depends on LC_COLLATE set at the top of this script.
     ! grep -rn '[^ -~]' libcxx/include libcxx/src libcxx/test libcxx/benchmarks \
            --exclude '*.dat' \
+           --exclude '*unicode*.cpp' \
+           --exclude '*print*.sh.cpp' \
            --exclude 'escaped_output.*.pass.cpp' \
-           --exclude 'fill.unicode.pass.cpp' \
            --exclude 'format_tests.h' \
            --exclude 'format.functions.tests.h' \
            --exclude 'formatter.*.pass.cpp' \
            --exclude 'grep.pass.cpp' \
            --exclude 'locale-specific_form.pass.cpp' \
            --exclude 'ostream.pass.cpp' \
-           --exclude 'std_format_spec_string_unicode.bench.cpp' \
            --exclude 'transcoding.pass.cpp' \
-           --exclude 'vprint_unicode_windows.pass.cpp' \
            --exclude 'underflow.pass.cpp' \
            || false
 
@@ -637,6 +636,22 @@ clang-cl-no-vcruntime)
     # exceptions enabled.
     generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False" \
                               -DLIBCXX_TEST_CONFIG="llvm-libc++-shared-no-vcruntime-clangcl.cfg.in"
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
+clang-cl-debug)
+    clean
+    generate-cmake-libcxx-win -DLIBCXX_TEST_PARAMS="enable_experimental=False" \
+                              -DCMAKE_BUILD_TYPE=Debug
+    echo "+++ Running the libc++ tests"
+    ${NINJA} -vC "${BUILD_DIR}" check-cxx
+;;
+clang-cl-static-crt)
+    clean
+    # Test linking a static libc++ with the static CRT ("MultiThreaded" denotes
+    # the static CRT, as opposed to "MultiThreadedDLL" which is the default).
+    generate-cmake-libcxx-win -DLIBCXX_ENABLE_SHARED=OFF \
+                              -DCMAKE_MSVC_RUNTIME_LIBRARY=MultiThreaded
     echo "+++ Running the libc++ tests"
     ${NINJA} -vC "${BUILD_DIR}" check-cxx
 ;;

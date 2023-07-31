@@ -239,7 +239,7 @@ TEST(FileIndexTest, IncludeCollected) {
               "<the/good/header.h>");
 }
 
-TEST(FileIndexTest, IWYUPragmaExport) {
+TEST(FileIndexTest, DISABLED_IWYUPragmaExport) {
   FileIndex M;
 
   TestTU File;

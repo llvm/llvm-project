@@ -3348,7 +3348,9 @@ Controlling implementation limits
 .. option:: -fconstexpr-steps=N
 
   Sets the limit for the number of full-expressions evaluated in a single
-  constant expression evaluation.  The default is 1048576.
+  constant expression evaluation. This also controls the maximum size
+  of array and dynamic array allocation that can be constant evaluated.
+  The default is 1048576.
 
 .. option:: -ftemplate-depth=N
 

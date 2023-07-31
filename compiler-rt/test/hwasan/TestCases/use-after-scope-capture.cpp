@@ -1,9 +1,8 @@
 // This is the ASAN test of the same name ported to HWAsan.
 
-// RUN: %clangxx_hwasan -mllvm -hwasan-use-after-scope --std=c++11 -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
+// RUN: %clangxx_hwasan --std=c++11 -O1 %s -o %t && not %run %t 2>&1 | FileCheck %s
 
 // REQUIRES: aarch64-target-arch || riscv64-target-arch
-// REQUIRES: stable-runtime
 
 #include <functional>
 

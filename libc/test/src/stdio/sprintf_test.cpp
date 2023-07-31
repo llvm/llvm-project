@@ -122,13 +122,19 @@ TEST(LlvmLibcSPrintfTest, IntConv) {
   EXPECT_EQ(written, 20);
   ASSERT_STREQ(buff, "18446744073709551615"); // ull max
 
+  written = __llvm_libc::sprintf(buff, "%u", ~0);
+  if (sizeof(int) == 4) {
+    EXPECT_EQ(written, 10);
+    ASSERT_STREQ(buff, "4294967295");
+  }
+
   written = __llvm_libc::sprintf(buff, "%tu", ~ptrdiff_t(0));
   if (sizeof(ptrdiff_t) == 8) {
     EXPECT_EQ(written, 20);
     ASSERT_STREQ(buff, "18446744073709551615");
   } else if (sizeof(ptrdiff_t) == 4) {
     EXPECT_EQ(written, 10);
-    ASSERT_STREQ(buff, "4294967296");
+    ASSERT_STREQ(buff, "4294967295");
   }
 
   written = __llvm_libc::sprintf(buff, "%lld", -9223372036854775807ll - 1ll);
@@ -2430,6 +2436,10 @@ TEST_F(LlvmLibcSPrintfTest, FloatAutoConv) {
 
   written = __llvm_libc::sprintf(buff, "%.3g", 1256.0);
   ASSERT_STREQ_LEN(written, buff, "1.26e+03");
+
+  // Found through large scale testing.
+  written = __llvm_libc::sprintf(buff, "%.15g", 22.25);
+  ASSERT_STREQ_LEN(written, buff, "22.25");
 
   // Subnormal Precision Tests
 

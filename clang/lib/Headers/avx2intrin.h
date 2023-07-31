@@ -1307,6 +1307,23 @@ _mm256_min_epu32(__m256i __a, __m256i __b)
   return (__m256i)__builtin_elementwise_min((__v8su)__a, (__v8su)__b);
 }
 
+/// Creates a 32-bit integer mask from the most significant bit of each byte
+///    in the 256-bit integer vector in \a __a and returns the result.
+///
+/// \code{.operation}
+/// FOR i := 0 TO 31
+///   j := i*8
+///   result[i] := __a[j+7]
+/// ENDFOR
+/// \endcode
+///
+/// \headerfile <immintrin.h>
+///
+/// This intrinsic corresponds to the \c VPMOVMSKB instruction.
+///
+/// \param __a
+///    A 256-bit integer vector containing the source bytes.
+/// \returns The 32-bit integer mask.
 static __inline__ int __DEFAULT_FN_ATTRS256
 _mm256_movemask_epi8(__m256i __a)
 {

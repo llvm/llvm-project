@@ -484,6 +484,7 @@ set(files
   __mdspan/extents.h
   __mdspan/layout_left.h
   __mdspan/layout_right.h
+  __mdspan/mdspan.h
   __memory/addressof.h
   __memory/align.h
   __memory/aligned_alloc.h
@@ -652,6 +653,7 @@ set(files
   __ranges/views.h
   __ranges/zip_view.h
   __split_buffer
+  __std_clang_module
   __std_mbstate_t.h
   __stop_token/atomic_unique_lock.h
   __stop_token/intrusive_list_view.h

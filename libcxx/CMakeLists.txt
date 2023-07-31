@@ -377,6 +377,11 @@ if (LIBCXX_ABI_FORCE_ITANIUM AND LIBCXX_ABI_FORCE_MICROSOFT)
   message(FATAL_ERROR "Only one of LIBCXX_ABI_FORCE_ITANIUM and LIBCXX_ABI_FORCE_MICROSOFT can be specified.")
 endif ()
 
+if (LIBCXX_ENABLE_SHARED AND CMAKE_MSVC_RUNTIME_LIBRARY AND
+    (NOT CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$"))
+  message(WARNING "A static CRT linked into a shared libc++ doesn't work correctly.")
+endif()
+
 #===============================================================================
 # Configure System
 #===============================================================================
@@ -469,11 +474,6 @@ endif()
 #===============================================================================
 
 include(HandleLibCXXABI) # Setup the ABI library flags
-
-# FIXME: Remove all debug flags and flags that change which Windows
-# default libraries are linked. Currently we only support linking the
-# non-debug DLLs
-remove_flags("/D_DEBUG" "/MTd" "/MDd" "/MT" "/Md")
 
 # FIXME(EricWF): See the FIXME on LIBCXX_ENABLE_PEDANTIC.
 # Remove the -pedantic flag and -Wno-pedantic and -pedantic-errors
@@ -688,8 +688,16 @@ function(cxx_link_system_libraries target)
       set(LIB_SUFFIX "")
     endif()
 
-    target_link_libraries(${target} PRIVATE msvcrt${LIB_SUFFIX}) # C runtime startup files
-    target_link_libraries(${target} PRIVATE msvcprt${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
+    if (NOT CMAKE_MSVC_RUNTIME_LIBRARY OR CMAKE_MSVC_RUNTIME_LIBRARY MATCHES "DLL$")
+      set(CRT_LIB "msvcrt")
+      set(CXX_LIB "msvcprt")
+    else()
+      set(CRT_LIB "libcmt")
+      set(CXX_LIB "libcpmt")
+    endif()
+
+    target_link_libraries(${target} PRIVATE ${CRT_LIB}${LIB_SUFFIX}) # C runtime startup files
+    target_link_libraries(${target} PRIVATE ${CXX_LIB}${LIB_SUFFIX}) # C++ standard library. Required for exception_ptr internals.
     # Required for standards-complaint wide character formatting functions
     # (e.g. `printfw`/`scanfw`)
     target_link_libraries(${target} PRIVATE iso_stdio_wide_specifiers)

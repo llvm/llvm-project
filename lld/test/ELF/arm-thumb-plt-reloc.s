@@ -71,38 +71,31 @@ _start:
 // DSO-NEXT:     10224:     f000 e824       blx     0x10270
 // DSO: Disassembly of section .plt:
 // DSO-EMPTY:
-// DSO-NEXT: <$a>:
+// DSO-NEXT: <.plt>:
 // DSO-NEXT:     10230:       e52de004        str     lr, [sp, #-4]!
 // (0x10234 + 8) + (0 RoR 12) + (32 RoR 20 = 0x20000) + 164 = 0x302e0 = .got.plt[2]
 // DSO-NEXT:     10234:       e28fe600        add     lr, pc, #0, #12
 // DSO-NEXT:     10238:       e28eea20        add     lr, lr, #32, #20
 // DSO-NEXT:     1023c:       e5bef0a4        ldr     pc, [lr, #164]!
-// DSO: <$d>:
 
 // DSO-NEXT:     10240:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO-NEXT:     10244:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO-NEXT:     10248:       d4 d4 d4 d4     .word   0xd4d4d4d4
 // DSO-NEXT:     1024c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSO: <$a>:
 // (0x10250 + 8) + (0 RoR 12) + (32 RoR 20 = 0x20000) + 140 = 0x302e4
 // DSO-NEXT:     10250:       e28fc600        add     r12, pc, #0, #12
 // DSO-NEXT:     10254:       e28cca20        add     r12, r12, #32, #20
 // DSO-NEXT:     10258:       e5bcf08c        ldr     pc, [r12, #140]!
-// DSO: <$d>:
 // DSO-NEXT:     1025c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSO: <$a>:
 // (0x10260 + 8) + (0 RoR 12) + (32 RoR 20 = 0x20000) + 128 = 0x302e8
 // DSO-NEXT:     10260:       e28fc600        add     r12, pc, #0, #12
 // DSO-NEXT:     10264:       e28cca20        add     r12, r12, #32, #20
 // DSO-NEXT:     10268:       e5bcf080        ldr     pc, [r12, #128]!
-// DSO: <$d>:
 // DSO-NEXT:     1026c:       d4 d4 d4 d4     .word   0xd4d4d4d4
-// DSO: <$a>:
 // (0x10270 + 8) + (0 RoR 12) + (32 RoR 20 = 0x20000) + 116 = 0x302ec
 // DSO-NEXT:     10270:       e28fc600        add     r12, pc, #0, #12
 // DSO-NEXT:     10274:       e28cca20        add     r12, r12, #32, #20
 // DSO-NEXT:     10278:       e5bcf074        ldr     pc, [r12, #116]!
-// DSO: <$d>:
 // DSO-NEXT:     1027c:       d4 d4 d4 d4     .word   0xd4d4d4d4
 
 // DSOREL:    Name: .got.plt

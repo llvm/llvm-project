@@ -359,6 +359,25 @@ void testTaintedVLASize(void) {
   int vla[x]; // expected-warning{{Declared variable-length array (VLA) has tainted size}}
 }
 
+int testTaintedAllocaMem() {
+  char x;
+  void * p;
+  scanf("%c", &x);
+  p = __builtin_alloca(1);
+  __builtin_memcpy(p, &x, 1);
+  return 5 / *(char*)p; // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+int testTaintedMallocMem() {
+  char x;
+  void * p;
+  scanf("%c", &x);
+  p = malloc(1);
+  __builtin_memcpy(p, &x, 1);
+  return 5 / *(char*)p; // expected-warning {{Division by a tainted value, possibly zero}}
+}
+
+
 // This computation used to take a very long time.
 #define longcmp(a,b,c) { \
   a -= c;  a ^= c;  c += b; b -= a;  b ^= (a<<6) | (a >> (32-b));  a += c; c -= b;  c ^= b;  b += a; \
@@ -1010,7 +1029,8 @@ void mySource2(int*);
 void myScanf(const char*, ...);
 int myPropagator(int, int*);
 int mySnprintf(char*, size_t, const char*, ...);
-bool isOutOfRange(const int*);
+bool isOutOfRange(const int*); // const filter function
+void sanitizeCmd(char*); // non-const filter function
 void mySink(int, int, int);
 
 void testConfigurationSources1(void) {
@@ -1042,6 +1062,19 @@ void testConfigurationFilter(void) {
   if (isOutOfRange(&x)) // the filter function
     return;
   Buffer[x] = 1; // no-warning
+}
+
+void testConfigurationFilterNonConst(void) {
+  char buffer[1000];
+  myScanf("%s", buffer); // makes buffer tainted
+  system(buffer); // expected-warning {{Untrusted data is passed to a system call}}
+}
+
+void testConfigurationFilterNonConst2(void) {
+  char buffer[1000];
+  myScanf("%s", buffer); // makes buffer tainted
+  sanitizeCmd(buffer); // removes taintedness
+  system(buffer); // no-warning
 }
 
 void testConfigurationSinks(void) {

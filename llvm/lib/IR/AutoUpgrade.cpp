@@ -897,21 +897,20 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
         Name == "arm.cde.vcx3qa.predicated.v2i64.v4i1")
       return true;
 
-    if (Name.startswith("amdgcn."))
-      Name = Name.substr(7); // Strip off "amdgcn."
+    if (Name.consume_front("amdgcn.")) {
+      if (Name == "alignbit") {
+        // Target specific intrinsic became redundant
+        NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
+                                          {F->getReturnType()});
+        return true;
+      }
 
-    if (Name == "alignbit") {
-      // Target specific intrinsic became redundant
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::fshr,
-                                        {F->getReturnType()});
-      return true;
-    }
-
-    if (Name.startswith("atomic.inc") || Name.startswith("atomic.dec")) {
-      // This was replaced with atomicrmw uinc_wrap and udec_wrap, so there's no
-      // new declaration.
-      NewFn = nullptr;
-      return true;
+      if (Name.startswith("atomic.inc") || Name.startswith("atomic.dec")) {
+        // This was replaced with atomicrmw uinc_wrap and udec_wrap, so there's no
+        // new declaration.
+        NewFn = nullptr;
+        return true;
+      }
     }
 
     break;

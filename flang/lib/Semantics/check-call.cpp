@@ -298,7 +298,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       actualFirstSymbol && actualFirstSymbol->attrs().test(Attr::ASYNCHRONOUS)};
   bool actualIsVolatile{
       actualFirstSymbol && actualFirstSymbol->attrs().test(Attr::VOLATILE)};
-  if (const auto *derived{evaluate::GetDerivedTypeSpec(actualType.type())}) {
+  const auto *derived{evaluate::GetDerivedTypeSpec(actualType.type())};
+  if (derived && !derived->IsVectorType()) {
     if (dummy.type.type().IsAssumedType()) {
       if (!derived->parameters().empty()) { // 15.5.2.4(2)
         messages.Say(
@@ -909,13 +910,28 @@ static void CheckExplicitInterfaceArg(evaluate::ActualArgument &arg,
                   // ok
                 } else if (object.type.type().IsTypelessIntrinsicArgument() &&
                     evaluate::IsNullObjectPointer(*expr)) {
-                  // ok, ASSOCIATED(NULL())
+                  // ok, ASSOCIATED(NULL(without MOLD=))
                 } else if ((object.attrs.test(characteristics::DummyDataObject::
                                     Attr::Pointer) ||
                                object.attrs.test(characteristics::
                                        DummyDataObject::Attr::Optional)) &&
                     evaluate::IsNullObjectPointer(*expr)) {
-                  // ok, FOO(NULL())
+                  // FOO(NULL(without MOLD=))
+                  if (object.type.type().IsAssumedLengthCharacter()) {
+                    messages.Say(
+                        "Actual argument associated with %s is a NULL() pointer without a MOLD= to provide a character length"_err_en_US,
+                        dummyName);
+                  } else if (const DerivedTypeSpec *
+                      derived{GetDerivedTypeSpec(object.type.type())}) {
+                    for (const auto &[pName, pValue] : derived->parameters()) {
+                      if (pValue.isAssumed()) {
+                        messages.Say(
+                            "Actual argument associated with %s is a NULL() pointer without a MOLD= to provide a value for the assumed type parameter '%s'"_err_en_US,
+                            dummyName, pName.ToString());
+                        break;
+                      }
+                    }
+                  }
                 } else if (object.attrs.test(characteristics::DummyDataObject::
                                    Attr::Allocatable) &&
                     evaluate::IsNullPointer(*expr)) {

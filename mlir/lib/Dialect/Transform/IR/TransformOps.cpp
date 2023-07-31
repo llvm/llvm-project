@@ -288,6 +288,71 @@ void transform::ApplyCommonSubexpressionEliminationOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// ApplyDeadCodeEliminationOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure transform::ApplyDeadCodeEliminationOp::applyToOne(
+    transform::TransformRewriter &rewriter, Operation *target,
+    ApplyToEachResultList &results, transform::TransformState &state) {
+  // Make sure that this transform is not applied to itself. Modifying the
+  // transform IR while it is being interpreted is generally dangerous.
+  DiagnosedSilenceableFailure payloadCheck =
+      ensurePayloadIsSeparateFromTransform(*this, target);
+  if (!payloadCheck.succeeded())
+    return payloadCheck;
+
+  // Maintain a worklist of potentially dead ops.
+  SetVector<Operation *> worklist;
+
+  // Helper function that adds all defining ops of used values (operands and
+  // operands of nested ops).
+  auto addDefiningOpsToWorklist = [&](Operation *op) {
+    op->walk([&](Operation *op) {
+      for (Value v : op->getOperands())
+        if (Operation *defOp = v.getDefiningOp())
+          if (target->isProperAncestor(defOp))
+            worklist.insert(defOp);
+    });
+  };
+
+  // Helper function that erases an op.
+  auto eraseOp = [&](Operation *op) {
+    // Remove op and nested ops from the worklist.
+    op->walk([&](Operation *op) {
+      auto it = llvm::find(worklist, op);
+      if (it != worklist.end())
+        worklist.erase(it);
+    });
+    rewriter.eraseOp(op);
+  };
+
+  // Initial walk over the IR.
+  target->walk<WalkOrder::PostOrder>([&](Operation *op) {
+    if (op != target && isOpTriviallyDead(op)) {
+      addDefiningOpsToWorklist(op);
+      eraseOp(op);
+    }
+  });
+
+  // Erase all ops that have become dead.
+  while (!worklist.empty()) {
+    Operation *op = worklist.pop_back_val();
+    if (!isOpTriviallyDead(op))
+      continue;
+    addDefiningOpsToWorklist(op);
+    eraseOp(op);
+  }
+
+  return DiagnosedSilenceableFailure::success();
+}
+
+void transform::ApplyDeadCodeEliminationOp::getEffects(
+    SmallVectorImpl<MemoryEffects::EffectInstance> &effects) {
+  transform::onlyReadsHandle(getTarget(), effects);
+  transform::modifiesPayload(effects);
+}
+
+//===----------------------------------------------------------------------===//
 // ApplyPatternsOp
 //===----------------------------------------------------------------------===//
 
@@ -317,32 +382,52 @@ DiagnosedSilenceableFailure transform::ApplyPatternsOp::applyToOne(
   GreedyRewriteConfig config;
   config.listener =
       static_cast<RewriterBase::Listener *>(rewriter.getListener());
+  FrozenRewritePatternSet frozenPatterns(std::move(patterns));
 
-  LogicalResult result = failure();
-  if (target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
-    // Op is isolated from above. Apply patterns and also perform region
-    // simplification.
-    result = applyPatternsAndFoldGreedily(target, std::move(patterns), config);
-  } else {
-    // Manually gather list of ops because the other GreedyPatternRewriteDriver
-    // overloads only accepts ops that are isolated from above. This way,
-    // patterns can be applied to ops that are not isolated from above. Regions
-    // are not being simplified. Furthermore, only a single greedy rewrite
-    // iteration is performed.
-    SmallVector<Operation *> ops;
-    target->walk([&](Operation *nestedOp) {
-      if (target != nestedOp)
-        ops.push_back(nestedOp);
-    });
-    result = applyOpPatternsAndFold(ops, std::move(patterns), config);
-  }
+  // Apply patterns and CSE repetitively until a fixpoint is reached. If no CSE
+  // was requested, apply the greedy pattern rewrite only once. (The greedy
+  // pattern rewrite driver already iterates to a fixpoint internally.)
+  bool cseChanged = false;
+  // One or two iterations should be sufficient. Stop iterating after a certain
+  // threshold to make debugging easier.
+  static const int64_t kNumMaxIterations = 50;
+  int64_t iteration = 0;
+  do {
+    LogicalResult result = failure();
+    if (target->hasTrait<OpTrait::IsIsolatedFromAbove>()) {
+      // Op is isolated from above. Apply patterns and also perform region
+      // simplification.
+      result = applyPatternsAndFoldGreedily(target, frozenPatterns, config);
+    } else {
+      // Manually gather list of ops because the other
+      // GreedyPatternRewriteDriver overloads only accepts ops that are isolated
+      // from above. This way, patterns can be applied to ops that are not
+      // isolated from above. Regions are not being simplified. Furthermore,
+      // only a single greedy rewrite iteration is performed.
+      SmallVector<Operation *> ops;
+      target->walk([&](Operation *nestedOp) {
+        if (target != nestedOp)
+          ops.push_back(nestedOp);
+      });
+      result = applyOpPatternsAndFold(ops, frozenPatterns, config);
+    }
 
-  // A failure typically indicates that the pattern application did not
-  // converge.
-  if (failed(result)) {
-    return emitSilenceableFailure(target)
-           << "greedy pattern application failed";
-  }
+    // A failure typically indicates that the pattern application did not
+    // converge.
+    if (failed(result)) {
+      return emitSilenceableFailure(target)
+             << "greedy pattern application failed";
+    }
+
+    if (getApplyCse()) {
+      DominanceInfo domInfo;
+      mlir::eliminateCommonSubExpressions(rewriter, domInfo, target,
+                                          &cseChanged);
+    }
+  } while (cseChanged && ++iteration < kNumMaxIterations);
+
+  if (iteration == kNumMaxIterations)
+    return emitDefiniteFailure() << "fixpoint iteration did not converge";
 
   return DiagnosedSilenceableFailure::success();
 }

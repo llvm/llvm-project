@@ -1684,15 +1684,18 @@ transform.sequence failures(propagate) {
 
 // CHECK-LABEL: func @test_annotation()
 //  CHECK-NEXT:   "test.annotate_me"()
+//  CHECK-SAME:                        any_attr = "example"
 //  CHECK-SAME:                        broadcast_attr = 2 : i64
 //  CHECK-SAME:                        new_attr = 1 : i32
 //  CHECK-SAME:                        unit_attr
 //  CHECK-NEXT:   "test.annotate_me"()
+//  CHECK-SAME:                        any_attr = "example"
 //  CHECK-SAME:                        broadcast_attr = 2 : i64
 //  CHECK-SAME:                        existing_attr = "test"
 //  CHECK-SAME:                        new_attr = 1 : i32
 //  CHECK-SAME:                        unit_attr
 //  CHECK-NEXT:   "test.annotate_me"()
+//  CHECK-SAME:                        any_attr = "example"
 //  CHECK-SAME:                        broadcast_attr = 2 : i64
 //  CHECK-SAME:                        new_attr = 1 : i32
 //  CHECK-SAME:                        unit_attr
@@ -1711,6 +1714,9 @@ transform.sequence failures(propagate) {
   %2 = transform.param.constant 2 -> !transform.param<i64>
   transform.annotate %0 "broadcast_attr" = %2 : !transform.any_op, !transform.param<i64>
   transform.annotate %0 "unit_attr" : !transform.any_op
+
+  %3 = transform.param.constant "example" -> !transform.any_param
+  transform.annotate %0 "any_attr" = %3 : !transform.any_op, !transform.any_param
 }
 
 // -----
@@ -1973,4 +1979,27 @@ transform.sequence failures(propagate) {
   // Select "test.bar".
   %bar = transform.select "test.bar" in %0 : (!transform.any_op) -> !transform.any_op
   test_print_remark_at_operand %bar, "found bar" : !transform.any_op
+}
+
+// -----
+
+// CHECK-LABEL: func @apply_dce(
+//  CHECK-NEXT:   memref.store
+//  CHECK-NEXT:   return
+func.func @apply_dce(%f: f32, %m: memref<5xf32>, %idx: index) {
+  // Two dead ops, interleaved with a non-dead op.
+  %0 = tensor.empty() : tensor<5xf32>
+  memref.store %f, %m[%idx] : memref<5xf32>
+  %1 = tensor.insert %f into %0[%idx] : tensor<5xf32>
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb0(%arg0: !transform.any_op):
+  %func_op = transform.structured.match ops{["func.func"]} in %arg0 : (!transform.any_op) -> !transform.any_op
+  %empty_op = transform.structured.match ops{["tensor.empty"]} in %func_op : (!transform.any_op) -> !transform.any_op
+  transform.apply_dce to %func_op : !transform.any_op
+
+  // expected-remark @below{{0}}
+  test_print_number_of_associated_payload_ir_ops %empty_op : !transform.any_op
 }

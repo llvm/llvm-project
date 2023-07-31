@@ -1454,6 +1454,14 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
                      100.0 * NumInferredFunctions / NumAllStaleFunctions,
                      100.0 * InferredSampleCount / TotalSampleCount,
                      InferredSampleCount, TotalSampleCount);
+    outs() << format(
+        "BOLT-INFO: inference found an exact match for %.2f%% of basic blocks"
+        " (%zu out of %zu stale) responsible for %.2f%% samples"
+        " (%zu out of %zu stale)\n",
+        100.0 * BC.Stats.NumMatchedBlocks / BC.Stats.NumStaleBlocks,
+        BC.Stats.NumMatchedBlocks, BC.Stats.NumStaleBlocks,
+        100.0 * BC.Stats.MatchedSampleCount / BC.Stats.StaleSampleCount,
+        BC.Stats.MatchedSampleCount, BC.Stats.StaleSampleCount);
   }
 
   if (const uint64_t NumUnusedObjects = BC.getNumUnusedProfiledObjects()) {
@@ -1562,10 +1570,11 @@ void PrintProgramStats::runOnFunctions(BinaryContext &BC) {
   }
 
   // Print information on missed macro-fusion opportunities seen on input.
-  if (BC.MissedMacroFusionPairs) {
-    outs() << "BOLT-INFO: the input contains " << BC.MissedMacroFusionPairs
-           << " (dynamic count : " << BC.MissedMacroFusionExecCount
-           << ") opportunities for macro-fusion optimization";
+  if (BC.Stats.MissedMacroFusionPairs) {
+    outs() << format("BOLT-INFO: the input contains %zu (dynamic count : %zu)"
+                     " opportunities for macro-fusion optimization",
+                     BC.Stats.MissedMacroFusionPairs,
+                     BC.Stats.MissedMacroFusionExecCount);
     switch (opts::AlignMacroOpFusion) {
     case MFT_NONE:
       outs() << ". Use -align-macro-fusion to fix.\n";

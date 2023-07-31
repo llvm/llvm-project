@@ -47,6 +47,7 @@ enum class SkipPast {
   /// No indirections should be skipped past.
   None,
   /// An optional reference should be skipped past.
+  /// This is deprecated; it is equivalent to `None` and will be removed.
   Reference,
 };
 
@@ -304,9 +305,10 @@ public:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
   void setStorageLocationStrict(const Expr &E, StorageLocation &Loc);
 
-  /// Returns the storage location assigned to `E` in the environment, applying
-  /// the `SP` policy for skipping past indirections, or null if `E` isn't
-  /// assigned a storage location in the environment.
+  /// Returns the storage location assigned to `E` in the environment, or null
+  /// if `E` isn't assigned a storage location in the environment.
+  ///
+  /// The `SP` parameter has no effect.
   ///
   /// This function is deprecated; prefer `getStorageLocationStrict()`.
   /// For details, see https://discourse.llvm.org/t/70086.
@@ -333,6 +335,31 @@ public:
   /// environment or null if the `this` pointee has no assigned storage location
   /// in the environment.
   AggregateStorageLocation *getThisPointeeStorageLocation() const;
+
+  /// Returns the location of the result object for a record-type prvalue.
+  ///
+  /// In C++, prvalues of record type serve only a limited purpose: They can
+  /// only be used to initialize a result object (e.g. a variable or a
+  /// temporary). This function returns the location of that result object.
+  ///
+  /// When creating a prvalue of record type, we already need the storage
+  /// location of the result object to pass in `this`, even though prvalues are
+  /// otherwise not associated with storage locations.
+  ///
+  /// FIXME: Currently, this simply returns a stable storage location for `E`,
+  /// but this doesn't do the right thing in scenarios like the following:
+  /// ```
+  /// MyClass c = some_condition()? MyClass(foo) : MyClass(bar);
+  /// ```
+  /// Here, `MyClass(foo)` and `MyClass(bar)` will have two different storage
+  /// locations, when in fact their storage locations should be the same.
+  /// Eventually, we want to propagate storage locations from result objects
+  /// down to the prvalues that initialize them, similar to the way that this is
+  /// done in Clang's CodeGen.
+  ///
+  /// Requirements:
+  ///  `E` must be a prvalue of record type.
+  AggregateStorageLocation &getResultObjectLocation(const Expr &RecordPRValue);
 
   /// Returns the return value of the current function. This can be null if:
   /// - The function has a void return type
@@ -385,9 +412,15 @@ public:
   PointerValue &getOrCreateNullPointerValue(QualType PointeeType);
 
   /// Creates a value appropriate for `Type`, if `Type` is supported, otherwise
-  /// return null. If `Type` is a pointer or reference type, creates all the
-  /// necessary storage locations and values for indirections until it finds a
+  /// returns null.
+  ///
+  /// If `Type` is a pointer or reference type, creates all the necessary
+  /// storage locations and values for indirections until it finds a
   /// non-pointer/non-reference type.
+  ///
+  /// If `Type` is a class, struct, or union type, calls `setValue()` to
+  /// associate the `StructValue` with its storage location
+  /// (`StructValue::getAggregateLoc()`).
   ///
   /// If `Type` is one of the following types, this function will always return
   /// a non-null pointer:
@@ -430,7 +463,7 @@ public:
   void setValue(const StorageLocation &Loc, Value &Val);
 
   /// Clears any association between `Loc` and a value in the environment.
-  void clearValue(const StorageLocation &Loc);
+  void clearValue(const StorageLocation &Loc) { LocToVal.erase(&Loc); }
 
   /// Assigns `Val` as the value of the prvalue `E` in the environment.
   ///
@@ -449,31 +482,31 @@ public:
   ///
   ///  `E` must be a prvalue
   ///  `Val` must not be a `ReferenceValue`
+  ///  If `Val` is a `StructValue`, its `AggregateStorageLocation` must be the
+  ///  same as that of any `StructValue` that has already been associated with
+  ///  `E`. This is to guarantee that the result object initialized by a prvalue
+  ///  `StructValue` has a durable storage location.
   void setValueStrict(const Expr &E, Value &Val);
 
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
   /// isn't assigned a value in the environment.
   Value *getValue(const StorageLocation &Loc) const;
 
-  /// Equivalent to `getValue(getStorageLocation(D, SP), SkipPast::None)` if `D`
-  /// is assigned a storage location in the environment, otherwise returns null.
+  /// Equivalent to `getValue(getStorageLocation(D))` if `D` is assigned a
+  /// storage location in the environment, otherwise returns null.
   Value *getValue(const ValueDecl &D) const;
 
-  /// Equivalent to `getValue(getStorageLocation(E, SP), SkipPast::None)` if `E`
-  /// is assigned a storage location in the environment, otherwise returns null.
+  /// Equivalent to `getValue(getStorageLocation(E, SP))` if `E` is assigned a
+  /// storage location in the environment, otherwise returns null.
   ///
-  /// This function is deprecated; prefer `getValueStrict()`. For details, see
-  /// https://discourse.llvm.org/t/70086.
-  Value *getValue(const Expr &E, SkipPast SP) const;
+  /// The `SP` parameter is deprecated and has no effect. New callers should
+  /// avoid passing this parameter.
+  Value *getValue(const Expr &E, SkipPast SP = SkipPast::None) const;
 
   /// Returns the `Value` assigned to the prvalue `E` in the environment, or
   /// null if `E` isn't assigned a value in the environment.
   ///
-  /// This function is the preferred alternative to
-  /// `getValue(const Expr &, SkipPast)`. Once the migration to strict handling
-  /// of value categories is complete (see https://discourse.llvm.org/t/70086),
-  /// `getValue()` will be removed and this function will be renamed to
-  /// `getValue()`.
+  /// This function is deprecated. Call `getValue(E)` instead.
   ///
   /// Requirements:
   ///
@@ -624,13 +657,18 @@ private:
                                           llvm::DenseSet<QualType> &Visited,
                                           int Depth, int &CreatedValuesCount);
 
+  /// Creates a storage location for `Ty`. Also creates and associates a value
+  /// with the storage location, unless values of this type are not supported or
+  /// we hit one of the limits at which we stop producing values (controlled by
+  /// `Visited`, `Depth`, and `CreatedValuesCount`).
+  StorageLocation &createLocAndMaybeValue(QualType Ty,
+                                          llvm::DenseSet<QualType> &Visited,
+                                          int Depth, int &CreatedValuesCount);
+
   /// Shared implementation of `createObject()` overloads.
   /// `D` and `InitExpr` may be null.
   StorageLocation &createObjectInternal(const VarDecl *D, QualType Ty,
                                         const Expr *InitExpr);
-
-  StorageLocation &skip(StorageLocation &Loc, SkipPast SP) const;
-  const StorageLocation &skip(const StorageLocation &Loc, SkipPast SP) const;
 
   /// Shared implementation of `pushCall` overloads. Note that unlike
   /// `pushCall`, this member is invoked on the environment of the callee, not
@@ -671,12 +709,6 @@ private:
   // We preserve insertion order so that join/widen process values in
   // deterministic sequence. This in turn produces deterministic SAT formulas.
   llvm::MapVector<const StorageLocation *, Value *> LocToVal;
-
-  // Maps locations of struct members to symbolic values of the structs that own
-  // them and the decls of the struct members.
-  llvm::DenseMap<const StorageLocation *,
-                 std::pair<StructValue *, const ValueDecl *>>
-      MemberLocToStruct;
 
   Atom FlowConditionToken;
 };

@@ -82,7 +82,7 @@ define <vscale x 1 x i8> @vror_vi_rotl_nxv1i8(<vscale x 1 x i8> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv1i8:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, mf8, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 7
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 1 x i8> @llvm.fshl.nxv1i8(<vscale x 1 x i8> %a, <vscale x 1 x i8> %a, <vscale x 1 x i8> shufflevector(<vscale x 1 x i8> insertelement(<vscale x 1 x i8> poison, i8 1, i32 0), <vscale x 1 x i8> poison, <vscale x 1 x i32> zeroinitializer))
   ret <vscale x 1 x i8> %x
@@ -166,7 +166,7 @@ define <vscale x 2 x i8> @vror_vi_rotl_nxv2i8(<vscale x 2 x i8> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv2i8:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 7
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 2 x i8> @llvm.fshl.nxv2i8(<vscale x 2 x i8> %a, <vscale x 2 x i8> %a, <vscale x 2 x i8> shufflevector(<vscale x 2 x i8> insertelement(<vscale x 2 x i8> poison, i8 1, i32 0), <vscale x 2 x i8> poison, <vscale x 2 x i32> zeroinitializer))
   ret <vscale x 2 x i8> %x
@@ -250,7 +250,7 @@ define <vscale x 4 x i8> @vror_vi_rotl_nxv4i8(<vscale x 4 x i8> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv4i8:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 7
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 4 x i8> @llvm.fshl.nxv4i8(<vscale x 4 x i8> %a, <vscale x 4 x i8> %a, <vscale x 4 x i8> shufflevector(<vscale x 4 x i8> insertelement(<vscale x 4 x i8> poison, i8 1, i32 0), <vscale x 4 x i8> poison, <vscale x 4 x i32> zeroinitializer))
   ret <vscale x 4 x i8> %x
@@ -334,7 +334,7 @@ define <vscale x 8 x i8> @vror_vi_rotl_nxv8i8(<vscale x 8 x i8> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv8i8:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 7
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 8 x i8> @llvm.fshl.nxv8i8(<vscale x 8 x i8> %a, <vscale x 8 x i8> %a, <vscale x 8 x i8> shufflevector(<vscale x 8 x i8> insertelement(<vscale x 8 x i8> poison, i8 1, i32 0), <vscale x 8 x i8> poison, <vscale x 8 x i32> zeroinitializer))
   ret <vscale x 8 x i8> %x
@@ -418,7 +418,7 @@ define <vscale x 16 x i8> @vror_vi_rotl_nxv16i8(<vscale x 16 x i8> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv16i8:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 7
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 16 x i8> @llvm.fshl.nxv16i8(<vscale x 16 x i8> %a, <vscale x 16 x i8> %a, <vscale x 16 x i8> shufflevector(<vscale x 16 x i8> insertelement(<vscale x 16 x i8> poison, i8 1, i32 0), <vscale x 16 x i8> poison, <vscale x 16 x i32> zeroinitializer))
   ret <vscale x 16 x i8> %x
@@ -502,7 +502,7 @@ define <vscale x 32 x i8> @vror_vi_rotl_nxv32i8(<vscale x 32 x i8> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv32i8:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, m4, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 7
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 32 x i8> @llvm.fshl.nxv32i8(<vscale x 32 x i8> %a, <vscale x 32 x i8> %a, <vscale x 32 x i8> shufflevector(<vscale x 32 x i8> insertelement(<vscale x 32 x i8> poison, i8 1, i32 0), <vscale x 32 x i8> poison, <vscale x 32 x i32> zeroinitializer))
   ret <vscale x 32 x i8> %x
@@ -586,7 +586,7 @@ define <vscale x 64 x i8> @vror_vi_rotl_nxv64i8(<vscale x 64 x i8> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv64i8:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 7
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 64 x i8> @llvm.fshl.nxv64i8(<vscale x 64 x i8> %a, <vscale x 64 x i8> %a, <vscale x 64 x i8> shufflevector(<vscale x 64 x i8> insertelement(<vscale x 64 x i8> poison, i8 1, i32 0), <vscale x 64 x i8> poison, <vscale x 64 x i32> zeroinitializer))
   ret <vscale x 64 x i8> %x
@@ -670,7 +670,7 @@ define <vscale x 1 x i16> @vror_vi_rotl_nxv1i16(<vscale x 1 x i16> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv1i16:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, mf4, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 15
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 1 x i16> @llvm.fshl.nxv1i16(<vscale x 1 x i16> %a, <vscale x 1 x i16> %a, <vscale x 1 x i16> shufflevector(<vscale x 1 x i16> insertelement(<vscale x 1 x i16> poison, i16 1, i32 0), <vscale x 1 x i16> poison, <vscale x 1 x i32> zeroinitializer))
   ret <vscale x 1 x i16> %x
@@ -754,7 +754,7 @@ define <vscale x 2 x i16> @vror_vi_rotl_nxv2i16(<vscale x 2 x i16> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv2i16:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 15
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 2 x i16> @llvm.fshl.nxv2i16(<vscale x 2 x i16> %a, <vscale x 2 x i16> %a, <vscale x 2 x i16> shufflevector(<vscale x 2 x i16> insertelement(<vscale x 2 x i16> poison, i16 1, i32 0), <vscale x 2 x i16> poison, <vscale x 2 x i32> zeroinitializer))
   ret <vscale x 2 x i16> %x
@@ -838,7 +838,7 @@ define <vscale x 4 x i16> @vror_vi_rotl_nxv4i16(<vscale x 4 x i16> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv4i16:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 15
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 4 x i16> @llvm.fshl.nxv4i16(<vscale x 4 x i16> %a, <vscale x 4 x i16> %a, <vscale x 4 x i16> shufflevector(<vscale x 4 x i16> insertelement(<vscale x 4 x i16> poison, i16 1, i32 0), <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer))
   ret <vscale x 4 x i16> %x
@@ -922,7 +922,7 @@ define <vscale x 8 x i16> @vror_vi_rotl_nxv8i16(<vscale x 8 x i16> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv8i16:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 15
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 8 x i16> @llvm.fshl.nxv8i16(<vscale x 8 x i16> %a, <vscale x 8 x i16> %a, <vscale x 8 x i16> shufflevector(<vscale x 8 x i16> insertelement(<vscale x 8 x i16> poison, i16 1, i32 0), <vscale x 8 x i16> poison, <vscale x 8 x i32> zeroinitializer))
   ret <vscale x 8 x i16> %x
@@ -1006,7 +1006,7 @@ define <vscale x 16 x i16> @vror_vi_rotl_nxv16i16(<vscale x 16 x i16> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv16i16:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, m4, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 15
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 16 x i16> @llvm.fshl.nxv16i16(<vscale x 16 x i16> %a, <vscale x 16 x i16> %a, <vscale x 16 x i16> shufflevector(<vscale x 16 x i16> insertelement(<vscale x 16 x i16> poison, i16 1, i32 0), <vscale x 16 x i16> poison, <vscale x 16 x i32> zeroinitializer))
   ret <vscale x 16 x i16> %x
@@ -1090,7 +1090,7 @@ define <vscale x 32 x i16> @vror_vi_rotl_nxv32i16(<vscale x 32 x i16> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv32i16:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 15
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 32 x i16> @llvm.fshl.nxv32i16(<vscale x 32 x i16> %a, <vscale x 32 x i16> %a, <vscale x 32 x i16> shufflevector(<vscale x 32 x i16> insertelement(<vscale x 32 x i16> poison, i16 1, i32 0), <vscale x 32 x i16> poison, <vscale x 32 x i32> zeroinitializer))
   ret <vscale x 32 x i16> %x
@@ -1187,7 +1187,7 @@ define <vscale x 1 x i32> @vror_vi_rotl_nxv1i32(<vscale x 1 x i32> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv1i32:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, mf2, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 31
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 1 x i32> @llvm.fshl.nxv1i32(<vscale x 1 x i32> %a, <vscale x 1 x i32> %a, <vscale x 1 x i32> shufflevector(<vscale x 1 x i32> insertelement(<vscale x 1 x i32> poison, i32 1, i32 0), <vscale x 1 x i32> poison, <vscale x 1 x i32> zeroinitializer))
   ret <vscale x 1 x i32> %x
@@ -1284,7 +1284,7 @@ define <vscale x 2 x i32> @vror_vi_rotl_nxv2i32(<vscale x 2 x i32> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv2i32:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 31
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 2 x i32> @llvm.fshl.nxv2i32(<vscale x 2 x i32> %a, <vscale x 2 x i32> %a, <vscale x 2 x i32> shufflevector(<vscale x 2 x i32> insertelement(<vscale x 2 x i32> poison, i32 1, i32 0), <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer))
   ret <vscale x 2 x i32> %x
@@ -1381,7 +1381,7 @@ define <vscale x 4 x i32> @vror_vi_rotl_nxv4i32(<vscale x 4 x i32> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv4i32:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 31
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 4 x i32> @llvm.fshl.nxv4i32(<vscale x 4 x i32> %a, <vscale x 4 x i32> %a, <vscale x 4 x i32> shufflevector(<vscale x 4 x i32> insertelement(<vscale x 4 x i32> poison, i32 1, i32 0), <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer))
   ret <vscale x 4 x i32> %x
@@ -1478,7 +1478,7 @@ define <vscale x 8 x i32> @vror_vi_rotl_nxv8i32(<vscale x 8 x i32> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv8i32:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m4, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 31
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 8 x i32> @llvm.fshl.nxv8i32(<vscale x 8 x i32> %a, <vscale x 8 x i32> %a, <vscale x 8 x i32> shufflevector(<vscale x 8 x i32> insertelement(<vscale x 8 x i32> poison, i32 1, i32 0), <vscale x 8 x i32> poison, <vscale x 8 x i32> zeroinitializer))
   ret <vscale x 8 x i32> %x
@@ -1575,7 +1575,7 @@ define <vscale x 16 x i32> @vror_vi_rotl_nxv16i32(<vscale x 16 x i32> %a) {
 ; CHECK-ZVBB-LABEL: vror_vi_rotl_nxv16i32:
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m8, ta, ma
-; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 63
+; CHECK-ZVBB-NEXT:    vror.vi v8, v8, 31
 ; CHECK-ZVBB-NEXT:    ret
   %x = call <vscale x 16 x i32> @llvm.fshl.nxv16i32(<vscale x 16 x i32> %a, <vscale x 16 x i32> %a, <vscale x 16 x i32> shufflevector(<vscale x 16 x i32> insertelement(<vscale x 16 x i32> poison, i32 1, i32 0), <vscale x 16 x i32> poison, <vscale x 16 x i32> zeroinitializer))
   ret <vscale x 16 x i32> %x

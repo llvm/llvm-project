@@ -14,13 +14,26 @@
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclarationName.h"
+#include "clang/AST/Expr.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/RecursiveASTVisitor.h"
+#include "clang/AST/Stmt.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/SourceManager.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/Twine.h"
+#include "llvm/Support/Casting.h"
+#include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/ScopedPrinter.h"
+#include "llvm/Support/raw_ostream.h"
 #include <optional>
+#include <string>
 
 namespace clang {
 namespace clangd {
@@ -192,6 +205,203 @@ getDesignators(const InitListExpr *Syn) {
   return Designators;
 }
 
+void stripLeadingUnderscores(StringRef &Name) { Name = Name.ltrim('_'); }
+
+// getDeclForType() returns the decl responsible for Type's spelling.
+// This is the inverse of ASTContext::getTypeDeclType().
+template <typename Ty, typename = decltype(((Ty *)nullptr)->getDecl())>
+const NamedDecl *getDeclForTypeImpl(const Ty *T) {
+  return T->getDecl();
+}
+const NamedDecl *getDeclForTypeImpl(const void *T) { return nullptr; }
+const NamedDecl *getDeclForType(const Type *T) {
+  switch (T->getTypeClass()) {
+#define ABSTRACT_TYPE(TY, BASE)
+#define TYPE(TY, BASE)                                                         \
+  case Type::TY:                                                               \
+    return getDeclForTypeImpl(llvm::cast<TY##Type>(T));
+#include "clang/AST/TypeNodes.inc"
+  }
+  llvm_unreachable("Unknown TypeClass enum");
+}
+
+// getSimpleName() returns the plain identifier for an entity, if any.
+llvm::StringRef getSimpleName(const DeclarationName &DN) {
+  if (IdentifierInfo *Ident = DN.getAsIdentifierInfo())
+    return Ident->getName();
+  return "";
+}
+llvm::StringRef getSimpleName(const NamedDecl &D) {
+  return getSimpleName(D.getDeclName());
+}
+llvm::StringRef getSimpleName(QualType T) {
+  if (const auto *ET = llvm::dyn_cast<ElaboratedType>(T))
+    return getSimpleName(ET->getNamedType());
+  if (const auto *BT = llvm::dyn_cast<BuiltinType>(T)) {
+    PrintingPolicy PP(LangOptions{});
+    PP.adjustForCPlusPlus();
+    return BT->getName(PP);
+  }
+  if (const auto *D = getDeclForType(T.getTypePtr()))
+    return getSimpleName(D->getDeclName());
+  return "";
+}
+
+// Returns a very abbreviated form of an expression, or "" if it's too complex.
+// For example: `foo->bar()` would produce "bar".
+// This is used to summarize e.g. the condition of a while loop.
+std::string summarizeExpr(const Expr *E) {
+  struct Namer : ConstStmtVisitor<Namer, std::string> {
+    std::string Visit(const Expr *E) {
+      if (E == nullptr)
+        return "";
+      return ConstStmtVisitor::Visit(E->IgnoreImplicit());
+    }
+
+    // Any sort of decl reference, we just use the unqualified name.
+    std::string VisitMemberExpr(const MemberExpr *E) {
+      return getSimpleName(*E->getMemberDecl()).str();
+    }
+    std::string VisitDeclRefExpr(const DeclRefExpr *E) {
+      return getSimpleName(*E->getFoundDecl()).str();
+    }
+    std::string VisitCallExpr(const CallExpr *E) {
+      return Visit(E->getCallee());
+    }
+    std::string
+    VisitCXXDependentScopeMemberExpr(const CXXDependentScopeMemberExpr *E) {
+      return getSimpleName(E->getMember()).str();
+    }
+    std::string
+    VisitDependentScopeMemberExpr(const DependentScopeDeclRefExpr *E) {
+      return getSimpleName(E->getDeclName()).str();
+    }
+    std::string VisitCXXFunctionalCastExpr(const CXXFunctionalCastExpr *E) {
+      return getSimpleName(E->getType()).str();
+    }
+    std::string VisitCXXTemporaryObjectExpr(const CXXTemporaryObjectExpr *E) {
+      return getSimpleName(E->getType()).str();
+    }
+
+    // Step through implicit nodes that clang doesn't classify as such.
+    std::string VisitCXXMemberCallExpr(const CXXMemberCallExpr *E) {
+      // Call to operator bool() inside if (X): dispatch to X.
+      if (E->getNumArgs() == 0 &&
+          E->getMethodDecl()->getDeclName().getNameKind() ==
+              DeclarationName::CXXConversionFunctionName &&
+          E->getSourceRange() ==
+              E->getImplicitObjectArgument()->getSourceRange())
+        return Visit(E->getImplicitObjectArgument());
+      return ConstStmtVisitor::VisitCXXMemberCallExpr(E);
+    }
+    std::string VisitCXXConstructExpr(const CXXConstructExpr *E) {
+      if (E->getNumArgs() == 1)
+        return Visit(E->getArg(0));
+      return "";
+    }
+
+    // Literals are just printed
+    std::string VisitCXXBoolLiteralExpr(const CXXBoolLiteralExpr *E) {
+      return E->getValue() ? "true" : "false";
+    }
+    std::string VisitIntegerLiteral(const IntegerLiteral *E) {
+      return llvm::to_string(E->getValue());
+    }
+    std::string VisitFloatingLiteral(const FloatingLiteral *E) {
+      std::string Result;
+      llvm::raw_string_ostream OS(Result);
+      E->getValue().print(OS);
+      // Printer adds newlines?!
+      Result.resize(llvm::StringRef(Result).rtrim().size());
+      return Result;
+    }
+    std::string VisitStringLiteral(const StringLiteral *E) {
+      std::string Result = "\"";
+      if (E->containsNonAscii()) {
+        Result += "...";
+      } else if (E->getLength() > 10) {
+        Result += E->getString().take_front(7);
+        Result += "...";
+      } else {
+        llvm::raw_string_ostream OS(Result);
+        llvm::printEscapedString(E->getString(), OS);
+      }
+      Result.push_back('"');
+      return Result;
+    }
+
+    // Simple operators. Motivating cases are `!x` and `I < Length`.
+    std::string printUnary(llvm::StringRef Spelling, const Expr *Operand,
+                           bool Prefix) {
+      std::string Sub = Visit(Operand);
+      if (Sub.empty())
+        return "";
+      if (Prefix)
+        return (Spelling + Sub).str();
+      Sub += Spelling;
+      return Sub;
+    }
+    bool InsideBinary = false; // No recursing into binary expressions.
+    std::string printBinary(llvm::StringRef Spelling, const Expr *LHSOp,
+                            const Expr *RHSOp) {
+      if (InsideBinary)
+        return "";
+      llvm::SaveAndRestore InBinary(InsideBinary, true);
+
+      std::string LHS = Visit(LHSOp);
+      std::string RHS = Visit(RHSOp);
+      if (LHS.empty() && RHS.empty())
+        return "";
+
+      if (LHS.empty())
+        LHS = "...";
+      LHS.push_back(' ');
+      LHS += Spelling;
+      LHS.push_back(' ');
+      if (RHS.empty())
+        LHS += "...";
+      else
+        LHS += RHS;
+      return LHS;
+    }
+    std::string VisitUnaryOperator(const UnaryOperator *E) {
+      return printUnary(E->getOpcodeStr(E->getOpcode()), E->getSubExpr(),
+                        !E->isPostfix());
+    }
+    std::string VisitBinaryOperator(const BinaryOperator *E) {
+      return printBinary(E->getOpcodeStr(E->getOpcode()), E->getLHS(),
+                         E->getRHS());
+    }
+    std::string VisitCXXOperatorCallExpr(const CXXOperatorCallExpr *E) {
+      const char *Spelling = getOperatorSpelling(E->getOperator());
+      // Handle weird unary-that-look-like-binary postfix operators.
+      if ((E->getOperator() == OO_PlusPlus ||
+           E->getOperator() == OO_MinusMinus) &&
+          E->getNumArgs() == 2)
+        return printUnary(Spelling, E->getArg(0), false);
+      if (E->isInfixBinaryOp())
+        return printBinary(Spelling, E->getArg(0), E->getArg(1));
+      if (E->getNumArgs() == 1) {
+        switch (E->getOperator()) {
+        case OO_Plus:
+        case OO_Minus:
+        case OO_Star:
+        case OO_Amp:
+        case OO_Tilde:
+        case OO_Exclaim:
+        case OO_PlusPlus:
+        case OO_MinusMinus:
+          return printUnary(Spelling, E->getArg(0), true);
+        default:
+          break;
+        }
+      }
+      return "";
+    }
+  };
+  return Namer{}.Visit(E);
+}
+
 // Determines if any intermediate type in desugaring QualType QT is of
 // substituted template parameter type. Ignore pointer or reference wrappers.
 bool isSugaredTemplateParameter(QualType QT) {
@@ -334,6 +544,66 @@ public:
         addBlockEndHint(Body->getSourceRange(), "", printName(AST, *D), "");
     }
     return true;
+  }
+
+  bool VisitForStmt(ForStmt *S) {
+    if (Cfg.InlayHints.BlockEnd) {
+      std::string Name;
+      // Common case: for (int I = 0; I < N; I++). Use "I" as the name.
+      if (auto *DS = llvm::dyn_cast_or_null<DeclStmt>(S->getInit());
+          DS && DS->isSingleDecl())
+        Name = getSimpleName(llvm::cast<NamedDecl>(*DS->getSingleDecl()));
+      else
+        Name = summarizeExpr(S->getCond());
+      markBlockEnd(S->getBody(), "for", Name);
+    }
+    return true;
+  }
+
+  bool VisitCXXForRangeStmt(CXXForRangeStmt *S) {
+    if (Cfg.InlayHints.BlockEnd)
+      markBlockEnd(S->getBody(), "for", getSimpleName(*S->getLoopVariable()));
+    return true;
+  }
+
+  bool VisitWhileStmt(WhileStmt *S) {
+    if (Cfg.InlayHints.BlockEnd)
+      markBlockEnd(S->getBody(), "while", summarizeExpr(S->getCond()));
+    return true;
+  }
+
+  bool VisitSwitchStmt(SwitchStmt *S) {
+    if (Cfg.InlayHints.BlockEnd)
+      markBlockEnd(S->getBody(), "switch", summarizeExpr(S->getCond()));
+    return true;
+  }
+
+  // If/else chains are tricky.
+  //   if (cond1) {
+  //   } else if (cond2) {
+  //   } // mark as "cond1" or "cond2"?
+  // For now, the answer is neither, just mark as "if".
+  // The ElseIf is a different IfStmt that doesn't know about the outer one.
+  llvm::DenseSet<const IfStmt *> ElseIfs; // not eligible for names
+  bool VisitIfStmt(IfStmt *S) {
+    if (Cfg.InlayHints.BlockEnd) {
+      if (const auto *ElseIf = llvm::dyn_cast_or_null<IfStmt>(S->getElse()))
+        ElseIfs.insert(ElseIf);
+      // Don't use markBlockEnd: the relevant range is [then.begin, else.end].
+      if (const auto *EndCS = llvm::dyn_cast<CompoundStmt>(
+              S->getElse() ? S->getElse() : S->getThen())) {
+        addBlockEndHint(
+            {S->getThen()->getBeginLoc(), EndCS->getRBracLoc()}, "if",
+            ElseIfs.contains(S) ? "" : summarizeExpr(S->getCond()), "");
+      }
+    }
+    return true;
+  }
+
+  void markBlockEnd(const Stmt *Body, llvm::StringRef Label,
+                    llvm::StringRef Name = "") {
+    if (const auto *CS = llvm::dyn_cast_or_null<CompoundStmt>(Body))
+      addBlockEndHint(CS->getSourceRange(), Label, Name, "");
   }
 
   bool VisitTagDecl(TagDecl *D) {
@@ -681,18 +951,6 @@ private:
       }
     }
     return nullptr;
-  }
-
-  static void stripLeadingUnderscores(StringRef &Name) {
-    Name = Name.ltrim('_');
-  }
-
-  static StringRef getSimpleName(const NamedDecl &D) {
-    if (IdentifierInfo *Ident = D.getDeclName().getAsIdentifierInfo()) {
-      return Ident->getName();
-    }
-
-    return StringRef();
   }
 
   // We pass HintSide rather than SourceLocation because we want to ensure

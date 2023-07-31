@@ -16,6 +16,7 @@
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/YAMLTraits.h"
+#include <algorithm>
 #include <optional>
 #include <utility>
 
@@ -85,14 +86,21 @@ template <>
 void yamlize(IO &IO, ClangTidyOptions::OptionMap &Options, bool,
              EmptyContext &Ctx) {
   if (IO.outputting()) {
+    // Ensure check options are sorted
+    std::vector<std::pair<StringRef, StringRef>> SortedOptions;
+    SortedOptions.reserve(Options.size());
+    for (auto &Key : Options) {
+      SortedOptions.emplace_back(Key.getKey(), Key.getValue().Value);
+    }
+    std::sort(SortedOptions.begin(), SortedOptions.end());
+
     IO.beginMapping();
     // Only output as a map
-    for (auto &Key : Options) {
-      bool UseDefault;
-      void *SaveInfo;
-      IO.preflightKey(Key.getKey().data(), true, false, UseDefault, SaveInfo);
-      StringRef S = Key.getValue().Value;
-      IO.scalarString(S, needsQuotes(S));
+    for (auto &Option : SortedOptions) {
+      bool UseDefault = false;
+      void *SaveInfo = nullptr;
+      IO.preflightKey(Option.first.data(), true, false, UseDefault, SaveInfo);
+      IO.scalarString(Option.second, needsQuotes(Option.second));
       IO.postflightKey(SaveInfo);
     }
     IO.endMapping();
@@ -157,14 +165,12 @@ static void mapChecks(IO &IO, std::optional<std::string> &Checks) {
 
 template <> struct MappingTraits<ClangTidyOptions> {
   static void mapping(IO &IO, ClangTidyOptions &Options) {
-    bool Ignored = false;
     mapChecks(IO, Options.Checks);
     IO.mapOptional("WarningsAsErrors", Options.WarningsAsErrors);
     IO.mapOptional("HeaderFileExtensions", Options.HeaderFileExtensions);
     IO.mapOptional("ImplementationFileExtensions",
                    Options.ImplementationFileExtensions);
     IO.mapOptional("HeaderFilterRegex", Options.HeaderFilterRegex);
-    IO.mapOptional("AnalyzeTemporaryDtors", Ignored); // deprecated
     IO.mapOptional("FormatStyle", Options.FormatStyle);
     IO.mapOptional("User", Options.User);
     IO.mapOptional("CheckOptions", Options.CheckOptions);

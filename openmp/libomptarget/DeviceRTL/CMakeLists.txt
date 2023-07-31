@@ -123,6 +123,7 @@ set(bc_flags -c -foffload-lto -std=c++17 -fvisibility=hidden
              -nocudalib -nogpulib -nostdinc
              -fopenmp -fopenmp-cuda-mode
              -Wno-unknown-cuda-version
+             -DOMPTARGET_DEVICE_RUNTIME
              -I${include_directory}
              -I${devicertl_base_directory}/../include
              ${LIBOMPTARGET_LLVM_INCLUDE_DIRS_DEVICERTL}

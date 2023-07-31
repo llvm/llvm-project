@@ -240,6 +240,12 @@ void OpenStatementState::CompleteOperation() {
       SignalError("FILE= may not appear on OPEN with STATUS='SCRATCH'");
     }
   }
+  // F'2023 12.5.6.13 - NEWUNIT= requires either FILE= or STATUS='SCRATCH'
+  if (isNewUnit_ && !path_.get() &&
+      status_.value_or(OpenStatus::Unknown) != OpenStatus::Scratch) {
+    SignalError(IostatBadNewUnit);
+    status_ = OpenStatus::Scratch; // error recovery
+  }
   if (path_.get() || wasExtant_ ||
       (status_ && *status_ == OpenStatus::Scratch)) {
     unit().OpenUnit(status_, action_, position_.value_or(Position::AsIs),

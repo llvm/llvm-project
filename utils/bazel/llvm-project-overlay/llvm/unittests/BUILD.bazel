@@ -698,6 +698,7 @@ cc_test(
     copts = [
         "$(STACK_FRAME_UNLIMITED)",
     ],
+    features = ["-layering_check"],  # #include "AArch64GenInstrInfo.inc"
     deps = [
         "//llvm:AArch64CodeGen",
         "//llvm:AArch64UtilsAndDesc",

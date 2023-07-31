@@ -96,7 +96,7 @@ void SparseConstantPropagation::visitOperation(
     } else {
       LLVM_DEBUG(llvm::dbgs()
                  << "Folded to value: " << foldResult.get<Value>() << "\n");
-      AbstractSparseDataFlowAnalysis::join(
+      AbstractSparseForwardDataFlowAnalysis::join(
           lattice, *getLatticeElement(foldResult.get<Value>()));
     }
   }

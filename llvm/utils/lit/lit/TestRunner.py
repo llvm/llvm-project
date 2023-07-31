@@ -1083,8 +1083,6 @@ def executeScript(test, litConfig, tmpBase, commands, cwd):
                 test_case_name = test.path_in_suite[-1]
                 test_case_name = test_case_name.rsplit(".", 1)[0]  # Remove the file extension
                 llvm_profile_file = f"{test_case_name}{coverage_index}.profraw"
-                env = dict(test.config.environment)  # Create a copy of the environment
-                env["LLVM_PROFILE_FILE"] = llvm_profile_file
                 commands[j] = f"export LLVM_PROFILE_FILE={llvm_profile_file} && {commands[j]}"
                 coverage_index += 1
 

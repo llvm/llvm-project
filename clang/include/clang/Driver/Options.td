@@ -912,6 +912,12 @@ def bundle : Flag<["-"], "bundle">;
 def b : JoinedOrSeparate<["-"], "b">, Flags<[LinkerInput]>,
   HelpText<"Pass -b <arg> to the linker on AIX">, MetaVarName<"<arg>">,
   Group<Link_Group>;
+
+defm offload_uniform_block : BoolFOption<"offload-uniform-block",
+  LangOpts<"OffloadUniformBlock">, Default<"LangOpts->CUDA">,
+  PosFlag<SetTrue, [CC1Option], "Assume">, NegFlag<SetFalse, [CC1Option], "Don't assume">,
+  BothFlags<[], " that kernels are launched with uniform block sizes (default true for CUDA/HIP and false otherwise)">>;
+
 // OpenCL-only Options
 def cl_opt_disable : Flag<["-"], "cl-opt-disable">, Group<opencl_Group>, Flags<[CC1Option]>,
   HelpText<"OpenCL only. This option disables all optimizations. By default optimizations are enabled.">;
@@ -947,9 +953,8 @@ def cl_denorms_are_zero : Flag<["-"], "cl-denorms-are-zero">, Group<opencl_Group
 def cl_fp32_correctly_rounded_divide_sqrt : Flag<["-"], "cl-fp32-correctly-rounded-divide-sqrt">, Group<opencl_Group>, Flags<[CC1Option]>,
   HelpText<"OpenCL only. Specify that single precision floating-point divide and sqrt used in the program source are correctly rounded.">,
   MarshallingInfoFlag<CodeGenOpts<"OpenCLCorrectlyRoundedDivSqrt">>;
-def cl_uniform_work_group_size : Flag<["-"], "cl-uniform-work-group-size">, Group<opencl_Group>, Flags<[CC1Option]>,
-  HelpText<"OpenCL only. Defines that the global work-size be a multiple of the work-group size specified to clEnqueueNDRangeKernel">,
-  MarshallingInfoFlag<CodeGenOpts<"UniformWGSize">>;
+def cl_uniform_work_group_size : Flag<["-"], "cl-uniform-work-group-size">, Group<opencl_Group>, Flags<[CC1Option]>, Alias<foffload_uniform_block>,
+  HelpText<"OpenCL only. Defines that the global work-size be a multiple of the work-group size specified to clEnqueueNDRangeKernel">;
 def cl_no_stdinc : Flag<["-"], "cl-no-stdinc">, Group<opencl_Group>,
   HelpText<"OpenCL only. Disables all standard includes containing non-native compiler types and functions.">;
 def cl_ext_EQ : CommaJoined<["-"], "cl-ext=">, Group<opencl_Group>, Flags<[CC1Option]>,
@@ -1253,6 +1258,13 @@ def static_libsan : Flag<["-"], "static-libsan">,
 def : Flag<["-"], "shared-libasan">, Alias<shared_libsan>;
 def fasm : Flag<["-"], "fasm">, Group<f_Group>;
 
+defm assume_unique_vtables : BoolFOption<"assume-unique-vtables",
+  CodeGenOpts<"AssumeUniqueVTables">, DefaultTrue,
+  PosFlag<SetTrue>,
+  NegFlag<SetFalse, [CC1Option],
+          "Disable optimizations based on vtable pointer identity">,
+  BothFlags<[CoreOption]>>;
+
 def fassume_sane_operator_new : Flag<["-"], "fassume-sane-operator-new">, Group<f_Group>;
 def fastcp : Flag<["-"], "fastcp">, Group<f_Group>;
 def fastf : Flag<["-"], "fastf">, Group<f_Group>;
@@ -1260,9 +1272,7 @@ def fast : Flag<["-"], "fast">, Group<f_Group>;
 def fasynchronous_unwind_tables : Flag<["-"], "fasynchronous-unwind-tables">, Group<f_Group>;
 
 defm double_square_bracket_attributes : BoolFOption<"double-square-bracket-attributes",
-  LangOpts<"DoubleSquareBracketAttributes">, Default<!strconcat(cpp11.KeyPath, "||", c2x.KeyPath)>,
-  PosFlag<SetTrue, [], "Enable">, NegFlag<SetFalse, [], "Disable">,
-  BothFlags<[NoXarchOption, CC1Option], " '[[]]' attributes in all C and C++ language modes">>;
+  LangOpts<"DoubleSquareBracketAttributes">, DefaultTrue, PosFlag<SetTrue>, NegFlag<SetFalse>>;
 
 defm autolink : BoolFOption<"autolink",
   CodeGenOpts<"Autolink">, DefaultTrue,
@@ -3074,18 +3084,18 @@ def foperator_arrow_depth_EQ : Joined<["-"], "foperator-arrow-depth=">, Group<f_
   HelpText<"Maximum number of 'operator->'s to call for a member access">,
   MarshallingInfoInt<LangOpts<"ArrowDepth">, "256">;
 
-def fsave_optimization_record : Flag<["-"], "fsave-optimization-record">,
+def fsave_optimization_record : Flag<["-"], "fsave-optimization-record">, Flags<[FlangOption]>,
   Group<f_Group>, HelpText<"Generate a YAML optimization record file">;
-def fsave_optimization_record_EQ : Joined<["-"], "fsave-optimization-record=">,
+def fsave_optimization_record_EQ : Joined<["-"], "fsave-optimization-record=">, Flags<[FlangOption]>,
   Group<f_Group>, HelpText<"Generate an optimization record file in a specific format">,
   MetaVarName<"<format>">;
 def fno_save_optimization_record : Flag<["-"], "fno-save-optimization-record">,
-  Group<f_Group>, Flags<[NoArgumentUnused]>;
-def foptimization_record_file_EQ : Joined<["-"], "foptimization-record-file=">,
+  Group<f_Group>, Flags<[FlangOption, NoArgumentUnused]>;
+def foptimization_record_file_EQ : Joined<["-"], "foptimization-record-file=">, Flags<[FlangOption]>,
   Group<f_Group>,
   HelpText<"Specify the output name of the file containing the optimization remarks. Implies -fsave-optimization-record. On Darwin platforms, this cannot be used with multiple -arch <arch> options.">,
   MetaVarName<"<file>">;
-def foptimization_record_passes_EQ : Joined<["-"], "foptimization-record-passes=">,
+def foptimization_record_passes_EQ : Joined<["-"], "foptimization-record-passes=">, Flags<[FlangOption]>,
   Group<f_Group>,
   HelpText<"Only include passes which match a specified regular expression in the generated optimization record (by default, include all passes)">,
   MetaVarName<"<regex>">;
@@ -5523,7 +5533,7 @@ def triple : Separate<["-"], "triple">,
   MarshallingInfoString<TargetOpts<"Triple">, "llvm::Triple::normalize(llvm::sys::getDefaultTargetTriple())">,
   AlwaysEmit, Normalizer<"normalizeTriple">;
 
-} // let Flags = [CC1Option, CC1ASOption, FC1Option, NoDriverOption]
+} // let Flags = [CC1Option, CC1AsOption, FC1Option, NoDriverOption]
 
 //===----------------------------------------------------------------------===//
 // Target Options (other)
@@ -6380,14 +6390,6 @@ def arcmt_action_EQ : Joined<["-"], "arcmt-action=">, Flags<[CC1Option, NoDriver
   NormalizedValues<["ARCMT_Check", "ARCMT_Modify", "ARCMT_Migrate"]>,
   MarshallingInfoEnum<FrontendOpts<"ARCMTAction">, "ARCMT_None">;
 
-def opt_record_file : Separate<["-"], "opt-record-file">,
-  HelpText<"File name to use for YAML optimization record output">,
-  MarshallingInfoString<CodeGenOpts<"OptRecordFile">>;
-def opt_record_passes : Separate<["-"], "opt-record-passes">,
-  HelpText<"Only record remark information for passes whose names match the given regular expression">;
-def opt_record_format : Separate<["-"], "opt-record-format">,
-  HelpText<"The format used for serializing remarks (default: YAML)">;
-
 def print_stats : Flag<["-"], "print-stats">,
   HelpText<"Print performance metrics and statistics">,
   MarshallingInfoFlag<FrontendOpts<"ShowStats">>;
@@ -6796,11 +6798,12 @@ def sycl_std_EQ : Joined<["-"], "sycl-std=">, Group<sycl_Group>,
   MarshallingInfoEnum<LangOpts<"SYCLVersion">, "SYCL_None">,
   ShouldParseIf<!strconcat(fsycl_is_device.KeyPath, "||", fsycl_is_host.KeyPath)>;
 
-defm cuda_approx_transcendentals : BoolFOption<"cuda-approx-transcendentals",
-  LangOpts<"CUDADeviceApproxTranscendentals">, DefaultFalse,
+defm gpu_approx_transcendentals : BoolFOption<"gpu-approx-transcendentals",
+  LangOpts<"GPUDeviceApproxTranscendentals">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Use">, NegFlag<SetFalse, [], "Don't use">,
-  BothFlags<[], " approximate transcendental functions">>,
-  ShouldParseIf<fcuda_is_device.KeyPath>;
+  BothFlags<[], " approximate transcendental functions">>;
+def : Flag<["-"], "fcuda-approx-transcendentals">, Alias<fgpu_approx_transcendentals>;
+def : Flag<["-"], "fno-cuda-approx-transcendentals">, Alias<fno_gpu_approx_transcendentals>;
 
 //===----------------------------------------------------------------------===//
 // Frontend Options - cc1 + fc1
@@ -6826,6 +6829,14 @@ defm debug_pass_manager : BoolOption<"f", "debug-pass-manager",
   CodeGenOpts<"DebugPassManager">, DefaultFalse,
   PosFlag<SetTrue, [], "Prints debug information for the new pass manager">,
   NegFlag<SetFalse, [], "Disables debug printing for the new pass manager">>;
+
+def opt_record_file : Separate<["-"], "opt-record-file">,
+  HelpText<"File name to use for YAML optimization record output">,
+  MarshallingInfoString<CodeGenOpts<"OptRecordFile">>;
+def opt_record_passes : Separate<["-"], "opt-record-passes">,
+  HelpText<"Only record remark information for passes whose names match the given regular expression">;
+def opt_record_format : Separate<["-"], "opt-record-format">,
+  HelpText<"The format used for serializing remarks (default: YAML)">;
 
 } // let Flags = [CC1Option, FC1Option, NoDriverOption]
 
@@ -6858,7 +6869,7 @@ def dwarf_debug_producer : Separate<["-"], "dwarf-debug-producer">,
 def defsym : Separate<["-"], "defsym">,
   HelpText<"Define a value for a symbol">;
 
-} // let Flags = [CC1AsOption]
+} // let Flags = [CC1AsOption, NoDriverOption]
 
 //===----------------------------------------------------------------------===//
 // clang-cl Options

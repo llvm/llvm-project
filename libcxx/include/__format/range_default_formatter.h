@@ -111,8 +111,9 @@ public:
     return __underlying_.parse(__ctx);
   }
 
-  template <class FormatContext>
-  _LIBCPP_HIDE_FROM_ABI typename FormatContext::iterator format(__maybe_const_r& __range, FormatContext& __ctx) const {
+  template <class _FormatContext>
+  _LIBCPP_HIDE_FROM_ABI typename _FormatContext::iterator
+  format(__maybe_const_r& __range, _FormatContext& __ctx) const {
     return __underlying_.format(__range, __ctx);
   }
 };

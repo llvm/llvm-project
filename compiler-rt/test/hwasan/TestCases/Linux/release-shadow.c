@@ -1,6 +1,8 @@
 // Test that tagging a large region to 0 reduces RSS.
 // RUN: %clang_hwasan -mllvm -hwasan-globals=0 -mllvm -hwasan-instrument-stack=0 %s -o %t && %run %t 2>&1
 
+// REQUIRES: pointer-tagging
+
 #include <assert.h>
 #include <fcntl.h>
 #include <stdio.h>

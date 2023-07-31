@@ -81,6 +81,12 @@ Templates
 
 Debug information
 ~~~~~~~~~~~~~~~~~
+| Adrian Prantl
+| aprantl\@apple.com (email), aprantl (Phabricator), adrian-prantl (GitHub)
+
+| David Blaikie
+| dblaikie\@gmail.com (email), dblaikie (Phabricator), dwblaikie (GitHub)
+
 | Eric Christopher
 | echristo\@gmail.com (email), echristo (Phabricator), echristo (GitHub)
 

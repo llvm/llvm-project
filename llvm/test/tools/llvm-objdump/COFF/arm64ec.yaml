@@ -1,0 +1,90 @@
+# REQUIRES: aarch64-registered-target
+
+## Check that AMD64 image file with CHPE data is recognized as ARM64EC.
+# RUN: yaml2obj %s -o %t -DMACHINE=IMAGE_FILE_MACHINE_AMD64
+# RUN: llvm-objdump -d %t | FileCheck --check-prefixes=DISASM,ARM64EC %s
+# RUN: llvm-readobj --coff-load-config %t | FileCheck --check-prefix=CODEMAP %s
+
+## Check that ARM64 image file with CHPE data is recognized as ARM64X.
+# RUN: yaml2obj %s -o %t -DMACHINE=IMAGE_FILE_MACHINE_ARM64
+# RUN: llvm-objdump -d %t | FileCheck --check-prefixes=DISASM,ARM64X %s
+# RUN: llvm-readobj --coff-load-config %t | FileCheck --check-prefix=CODEMAP %s
+
+# ARM64EC: file format coff-arm64ec
+# ARM64X:  file format coff-arm64x
+
+# DISASM:      180001000: 52800040     mov     w0, #0x2
+# DISASM-NEXT: 180001004: d65f03c0     ret
+# DISASM-NEXT: ...
+# DISASM:      180002020: 528000a0     mov     w0, #0x5
+# DISASM-NEXT: 180002024: d65f03c0     ret
+
+# CODEMAP:      CodeMap [
+# CODEMAP-NEXT:   0x1000 - 0x1008  ARM64EC
+# CODEMAP-NEXT:   0x1020 - 0x2007  X64
+# CODEMAP-NEXT:   0x2020 - 0x2028  ARM64EC
+# CODEMAP-NEXT: ]
+
+--- !COFF
+OptionalHeader:
+  ImageBase:        0x180000000
+  SectionAlignment: 4096
+  FileAlignment:    512
+  DLLCharacteristics: [ ]
+  LoadConfigTable:
+    RelativeVirtualAddress: 0x3000
+    Size:                   320
+header:
+  Machine:         [[MACHINE]]
+  Characteristics: [ IMAGE_FILE_EXECUTABLE_IMAGE, IMAGE_FILE_LARGE_ADDRESS_AWARE, IMAGE_FILE_DLL ]
+sections:
+  - Name:            .text
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x1000
+    VirtualSize:     38
+    SectionData:     40008052C0035FD6000000000000000000000000000000000000000000000000B803000000C3
+  - Name:            .test
+    Characteristics: [ IMAGE_SCN_CNT_CODE, IMAGE_SCN_MEM_EXECUTE, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x2000
+    VirtualSize:     40
+    SectionData:     B806000000C3CC00000000000000000000000000000000000000000000000000A0008052C0035FD6
+  - Name:            .rdata
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ ]
+    VirtualAddress:  0x3000
+    VirtualSize:     328
+    StructuredData:
+      - LoadConfig:
+          CHPEMetadataPointer: 0x180004000
+  - Name:            .data
+    Characteristics: [ IMAGE_SCN_CNT_INITIALIZED_DATA, IMAGE_SCN_MEM_READ, IMAGE_SCN_MEM_WRITE ]
+    VirtualAddress:  0x4000
+    VirtualSize:     112
+    StructuredData:
+      - UInt32: 1       # Version
+      - UInt32: 0x4050  # CodeMap
+      - UInt32: 3       # CodeMapCount
+      - UInt32: 0       # CodeRangesToEntryPoints
+      - UInt32: 0       # RedirectionMetadata
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0       # CodeRangesToEntryPointsCount
+      - UInt32: 0       # RedirectionMetadataCount
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0
+      - UInt32: 0x1001  # CodeMap[0]
+      - UInt32: 0x8
+      - UInt32: 0x1022  # CodeMap[1]
+      - UInt32: 0x0fe7
+      - UInt32: 0x2021  # CodeMap[2]
+      - UInt32: 0x8
+symbols:         []
+...

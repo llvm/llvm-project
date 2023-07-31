@@ -191,6 +191,28 @@ void SendThreadExitedEvent(lldb::tid_t tid) {
   g_vsc.SendJSON(llvm::json::Value(std::move(event)));
 }
 
+// Send a "continued" event to indicate the process is in the running state.
+void SendContinuedEvent() {
+  lldb::SBProcess process = g_vsc.target.GetProcess();
+  if (!process.IsValid()) {
+    return;
+  }
+
+  // If the focus thread is not set then we haven't reported any thread status
+  // to the client, so nothing to report.
+  if (!g_vsc.configuration_done_sent ||
+      g_vsc.focus_tid == LLDB_INVALID_THREAD_ID) {
+    return;
+  }
+
+  llvm::json::Object event(CreateEventObject("continued"));
+  llvm::json::Object body;
+  body.try_emplace("threadId", (int64_t)g_vsc.focus_tid);
+  body.try_emplace("allThreadsContinued", true);
+  event.try_emplace("body", std::move(body));
+  g_vsc.SendJSON(llvm::json::Value(std::move(event)));
+}
+
 // Send a "terminated" event to indicate the process is done being
 // debugged.
 void SendTerminatedEvent() {
@@ -252,7 +274,7 @@ void SendThreadStoppedEvent() {
         }
       }
 
-      // We will have cleared g_vsc.focus_tid if he focus thread doesn't have
+      // We will have cleared g_vsc.focus_tid if the focus thread doesn't have
       // a stop reason, so if it was cleared, or wasn't set, or doesn't exist,
       // then set the focus thread to the first thread with a stop reason.
       if (!focus_thread_exists || g_vsc.focus_tid == LLDB_INVALID_THREAD_ID)
@@ -262,6 +284,7 @@ void SendThreadStoppedEvent() {
       // we at least let the UI know we stopped.
       if (num_threads_with_reason == 0) {
         lldb::SBThread thread = process.GetThreadAtIndex(0);
+        g_vsc.focus_tid = thread.GetThreadID();
         g_vsc.SendJSON(CreateThreadStopped(thread, stop_id));
       } else {
         for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
@@ -468,6 +491,7 @@ void EventThreadFunction() {
             break;
           case lldb::eStateRunning:
             g_vsc.WillContinue();
+            SendContinuedEvent();
             break;
           case lldb::eStateExited:
             // When restarting, we can get an "exited" event for the process we
@@ -766,10 +790,6 @@ void request_continue(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
   lldb::SBProcess process = g_vsc.target.GetProcess();
-  auto arguments = request.getObject("arguments");
-  // Remember the thread ID that caused the resume so we can set the
-  // "threadCausedFocus" boolean value in the "stopped" events.
-  g_vsc.focus_tid = GetUnsigned(arguments, "threadId", LLDB_INVALID_THREAD_ID);
   lldb::SBError error = process.Continue();
   llvm::json::Object body;
   body.try_emplace("allThreadsContinued", true);
@@ -2667,13 +2687,72 @@ void request_stackTrace(const llvm::json::Object &request) {
     const auto startFrame = GetUnsigned(arguments, "startFrame", 0);
     const auto levels = GetUnsigned(arguments, "levels", 0);
     const auto endFrame = (levels == 0) ? INT64_MAX : (startFrame + levels);
+    auto totalFrames = thread.GetNumFrames();
+
+    // This will always return an invalid thread when
+    // libBacktraceRecording.dylib is not loaded or if there is no extended
+    // backtrace.
+    lldb::SBThread queue_backtrace_thread =
+        thread.GetExtendedBacktraceThread("libdispatch");
+    if (queue_backtrace_thread.IsValid()) {
+      // One extra frame as a label to mark the enqueued thread.
+      totalFrames += queue_backtrace_thread.GetNumFrames() + 1;
+    }
+
+    // This will always return an invalid thread when there is no exception in
+    // the current thread.
+    lldb::SBThread exception_backtrace_thread =
+        thread.GetCurrentExceptionBacktrace();
+    if (exception_backtrace_thread.IsValid()) {
+      // One extra frame as a label to mark the exception thread.
+      totalFrames += exception_backtrace_thread.GetNumFrames() + 1;
+    }
+
     for (uint32_t i = startFrame; i < endFrame; ++i) {
-      auto frame = thread.GetFrameAtIndex(i);
+      lldb::SBFrame frame;
+      std::string prefix;
+      if (i < thread.GetNumFrames()) {
+        frame = thread.GetFrameAtIndex(i);
+      } else if (queue_backtrace_thread.IsValid() &&
+                 i < (thread.GetNumFrames() +
+                      queue_backtrace_thread.GetNumFrames() + 1)) {
+        if (i == thread.GetNumFrames()) {
+          const uint32_t thread_idx =
+              queue_backtrace_thread.GetExtendedBacktraceOriginatingIndexID();
+          const char *queue_name = queue_backtrace_thread.GetQueueName();
+          auto name = llvm::formatv("Enqueued from {0} (Thread {1})",
+                                    queue_name, thread_idx);
+          stackFrames.emplace_back(
+              llvm::json::Object{{"id", thread.GetThreadID() + 1},
+                                 {"name", name},
+                                 {"presentationHint", "label"}});
+          continue;
+        }
+        frame = queue_backtrace_thread.GetFrameAtIndex(
+            i - thread.GetNumFrames() - 1);
+      } else if (exception_backtrace_thread.IsValid()) {
+        if (i == thread.GetNumFrames() +
+                     (queue_backtrace_thread.IsValid()
+                          ? queue_backtrace_thread.GetNumFrames() + 1
+                          : 0)) {
+          stackFrames.emplace_back(
+              llvm::json::Object{{"id", thread.GetThreadID() + 2},
+                                 {"name", "Original Exception Backtrace"},
+                                 {"presentationHint", "label"}});
+          continue;
+        }
+
+        frame = exception_backtrace_thread.GetFrameAtIndex(
+            i - thread.GetNumFrames() -
+            (queue_backtrace_thread.IsValid()
+                 ? queue_backtrace_thread.GetNumFrames() + 1
+                 : 0));
+      }
       if (!frame.IsValid())
         break;
       stackFrames.emplace_back(CreateStackFrame(frame));
     }
-    const auto totalFrames = thread.GetNumFrames();
+
     body.try_emplace("totalFrames", totalFrames);
   }
   body.try_emplace("stackFrames", std::move(stackFrames));

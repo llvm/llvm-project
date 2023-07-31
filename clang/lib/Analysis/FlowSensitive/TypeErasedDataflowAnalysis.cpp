@@ -27,6 +27,7 @@
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
+#include "clang/Analysis/FlowSensitive/RecordOps.h"
 #include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
@@ -124,10 +125,10 @@ public:
 private:
   TerminatorVisitorRetTy extendFlowCondition(const Expr &Cond) {
     // The terminator sub-expression might not be evaluated.
-    if (Env.getValueStrict(Cond) == nullptr)
+    if (Env.getValue(Cond) == nullptr)
       transfer(StmtToEnv, Cond, Env);
 
-    auto *Val = cast_or_null<BoolValue>(Env.getValueStrict(Cond));
+    auto *Val = cast_or_null<BoolValue>(Env.getValue(Cond));
     // Value merging depends on flow conditions from different environments
     // being mutually exclusive -- that is, they cannot both be true in their
     // entirety (even if they may share some clauses). So, we need *some* value
@@ -371,34 +372,53 @@ builtinTransferInitializer(const CFGInitializer &Elt,
     // FIXME: Handle base initialization
     return;
 
-  auto *InitStmt = Init->getInit();
-  assert(InitStmt != nullptr);
+  auto *InitExpr = Init->getInit();
+  assert(InitExpr != nullptr);
 
   const FieldDecl *Member = nullptr;
+  AggregateStorageLocation *ParentLoc = &ThisLoc;
   StorageLocation *MemberLoc = nullptr;
   if (Init->isMemberInitializer()) {
     Member = Init->getMember();
-    MemberLoc = &ThisLoc.getChild(*Member);
+    MemberLoc = ThisLoc.getChild(*Member);
   } else {
     IndirectFieldDecl *IndirectField = Init->getIndirectMember();
     assert(IndirectField != nullptr);
     MemberLoc = &ThisLoc;
     for (const auto *I : IndirectField->chain()) {
       Member = cast<FieldDecl>(I);
-      MemberLoc = &cast<AggregateStorageLocation>(MemberLoc)->getChild(*Member);
+      ParentLoc = cast<AggregateStorageLocation>(MemberLoc);
+      MemberLoc = ParentLoc->getChild(*Member);
     }
   }
   assert(Member != nullptr);
   assert(MemberLoc != nullptr);
 
+  // FIXME: Instead of these case distinctions, we would ideally want to be able
+  // to simply use `Environment::createObject()` here, the same way that we do
+  // this in `TransferVisitor::VisitInitListExpr()`. However, this would require
+  // us to be able to build a list of fields that we then use to initialize an
+  // `AggregateStorageLocation` -- and the problem is that, when we get here,
+  // the `AggregateStorageLocation` already exists. We should explore if there's
+  // anything that we can do to change this.
   if (Member->getType()->isReferenceType()) {
-    auto *InitStmtLoc = Env.getStorageLocationStrict(*InitStmt);
-    if (InitStmtLoc == nullptr)
+    auto *InitExprLoc = Env.getStorageLocationStrict(*InitExpr);
+    if (InitExprLoc == nullptr)
       return;
 
-    Env.setValue(*MemberLoc, Env.create<ReferenceValue>(*InitStmtLoc));
-  } else if (auto *InitStmtVal = Env.getValueStrict(*InitStmt)) {
-    Env.setValue(*MemberLoc, *InitStmtVal);
+    ParentLoc->setChild(*Member, InitExprLoc);
+  } else if (auto *InitExprVal = Env.getValue(*InitExpr)) {
+    if (Member->getType()->isRecordType()) {
+      auto *InitValStruct = cast<StructValue>(InitExprVal);
+      // FIXME: Rather than performing a copy here, we should really be
+      // initializing the field in place. This would require us to propagate the
+      // storage location of the field to the AST node that creates the
+      // `StructValue`.
+      copyRecord(InitValStruct->getAggregateLoc(),
+                 *cast<AggregateStorageLocation>(MemberLoc), Env);
+    } else {
+      Env.setValue(*MemberLoc, *InitExprVal);
+    }
   }
 }
 

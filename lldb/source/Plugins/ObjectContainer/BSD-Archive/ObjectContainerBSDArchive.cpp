@@ -540,7 +540,8 @@ ObjectFileSP ObjectContainerBSDArchive::GetObjectFile(const FileSpec *file) {
           std::shared_ptr<DataBuffer> child_data_sp =
               FileSystem::Instance().CreateDataBuffer(child, file_size,
                                                       file_offset);
-          if (child_data_sp->GetByteSize() != object->file_size)
+          if (!child_data_sp ||
+              child_data_sp->GetByteSize() != object->file_size)
             return ObjectFileSP();
           lldb::offset_t data_offset = 0;
           return ObjectFile::FindPlugin(

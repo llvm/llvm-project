@@ -88,6 +88,7 @@ public:
     bool CollectMainFileRefs = false;
     /// Collect symbols with reserved names, like __Vector_base.
     /// This does not currently affect macros (many like _WIN32 are important!)
+    /// This only affects system headers.
     bool CollectReserved = false;
     /// If set to true, SymbolCollector will collect doc for all symbols.
     /// Note that documents of symbols being indexed for completion will always
@@ -173,11 +174,6 @@ private:
   llvm::DenseMap<SymbolID, FileID> IncludeFiles;
   void setIncludeLocation(const Symbol &S, SourceLocation,
                           const include_cleaner::Symbol &Sym);
-
-  // Providers for Symbol.IncludeHeaders.
-  // The final spelling is calculated in finish().
-  llvm::DenseMap<SymbolID, std::optional<include_cleaner::Header>>
-      SymbolProviders;
 
   // Files which contain ObjC symbols.
   // This is finalized and used in finish().

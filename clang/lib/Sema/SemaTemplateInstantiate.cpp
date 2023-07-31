@@ -258,6 +258,11 @@ Response HandleRecordDecl(const CXXRecordDecl *Rec,
                                        /*Final=*/false);
   }
 
+  if (const MemberSpecializationInfo *MSInfo =
+          Rec->getMemberSpecializationInfo())
+    if (MSInfo->getTemplateSpecializationKind() == TSK_ExplicitSpecialization)
+      return Response::Done();
+
   bool IsFriend = Rec->getFriendObjectKind() ||
                   (Rec->getDescribedClassTemplate() &&
                    Rec->getDescribedClassTemplate()->getFriendObjectKind());

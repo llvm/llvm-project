@@ -210,8 +210,7 @@ constexpr FeatureBitset FeaturesSapphireRapids =
     FeatureSERIALIZE | FeatureSHSTK | FeatureTSXLDTRK | FeatureUINTR |
     FeatureWAITPKG;
 constexpr FeatureBitset FeaturesGraniteRapids =
-    FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI |
-    FeatureAMX_COMPLEX;
+    FeaturesSapphireRapids | FeatureAMX_FP16 | FeaturePREFETCHI;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -234,10 +233,12 @@ constexpr FeatureBitset FeaturesAlderlake =
     FeatureCLDEMOTE | FeatureMOVDIR64B | FeatureMOVDIRI | FeatureWAITPKG |
     FeatureAVXVNNI | FeatureHRESET | FeatureWIDEKL;
 constexpr FeatureBitset FeaturesSierraforest =
-    FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA |
-    FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
+    FeaturesAlderlake | FeatureCMPCCXADD | FeatureAVXIFMA | FeatureUINTR |
+    FeatureENQCMD | FeatureAVXNECONVERT | FeatureAVXVNNIINT8;
 constexpr FeatureBitset FeaturesGrandridge =
     FeaturesSierraforest | FeatureRAOINT;
+constexpr FeatureBitset FeaturesArrowlakeS = FeaturesSierraforest |
+    FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 | FeatureSM4;
 
 // Geode Processor.
 constexpr FeatureBitset FeaturesGeode =
@@ -423,12 +424,21 @@ constexpr ProcInfo Processors[] = {
   { {"raptorlake"}, CK_Raptorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
   // Meteorlake microarchitecture based processors.
   { {"meteorlake"}, CK_Meteorlake, FEATURE_AVX2, FeaturesAlderlake, 'p', false },
+  // Arrowlake microarchitecture based processors.
+  { {"arrowlake"}, CK_Arrowlake, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
+  { {"arrowlake-s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, '\0', false },
+  { {"arrowlake_s"}, CK_ArrowlakeS, FEATURE_AVX2, FeaturesArrowlakeS, 'p', true },
+  // Lunarlake microarchitecture based processors.
+  { {"lunarlake"}, CK_Lunarlake, FEATURE_AVX2, FeaturesArrowlakeS, 'p', false },
   // Sierraforest microarchitecture based processors.
   { {"sierraforest"}, CK_Sierraforest, FEATURE_AVX2, FeaturesSierraforest, 'p', false },
   // Grandridge microarchitecture based processors.
   { {"grandridge"}, CK_Grandridge, FEATURE_AVX2, FeaturesGrandridge, 'p', false },
   // Granite Rapids microarchitecture based processors.
   { {"graniterapids"}, CK_Graniterapids, FEATURE_AVX512BF16, FeaturesGraniteRapids, 'n', false },
+  // Granite Rapids D microarchitecture based processors.
+  { {"graniterapids-d"}, CK_GraniterapidsD, FEATURE_AVX512BF16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, '\0', false },
+  { {"graniterapids_d"}, CK_GraniterapidsD, FEATURE_AVX512BF16, FeaturesGraniteRapids | FeatureAMX_COMPLEX, 'n', true },
   // Emerald Rapids microarchitecture based processors.
   { {"emeraldrapids"}, CK_Emeraldrapids, FEATURE_AVX512BF16, FeaturesSapphireRapids, 'n', false },
   // Knights Landing processor.

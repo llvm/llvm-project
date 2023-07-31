@@ -83,6 +83,9 @@ protected:
 
   bool MadeIRChange = false;
 
+  /// Edges that are known to never be taken.
+  SmallDenseSet<std::pair<BasicBlock *, BasicBlock *>, 8> DeadEdges;
+
 public:
   InstCombiner(InstructionWorklist &Worklist, BuilderTy &Builder,
                bool MinimizeSize, AAResults *AA, AssumptionCache &AC,

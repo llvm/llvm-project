@@ -591,7 +591,6 @@ public:
   /// Returns true if value \p V is loop invariant.
   bool isInvariant(Value *V) const;
 
-  uint64_t getMaxSafeDepDistBytes() const { return MaxSafeDepDistBytes; }
   unsigned getNumStores() const { return NumStores; }
   unsigned getNumLoads() const { return NumLoads;}
 

@@ -453,17 +453,17 @@ public:
 
     _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI const _Container& __get_container() const { return c; }
 
-    template <class _T1, class _C1>
+    template <class _T1, class _OtherContainer>
     friend
     _LIBCPP_INLINE_VISIBILITY
     bool
-    operator==(const queue<_T1, _C1>& __x,const queue<_T1, _C1>& __y);
+    operator==(const queue<_T1, _OtherContainer>& __x,const queue<_T1, _OtherContainer>& __y);
 
-    template <class _T1, class _C1>
+    template <class _T1, class _OtherContainer>
     friend
     _LIBCPP_INLINE_VISIBILITY
     bool
-    operator< (const queue<_T1, _C1>& __x,const queue<_T1, _C1>& __y);
+    operator< (const queue<_T1, _OtherContainer>& __x,const queue<_T1, _OtherContainer>& __y);
 };
 
 #if _LIBCPP_STD_VER >= 17
