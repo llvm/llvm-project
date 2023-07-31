@@ -17648,6 +17648,40 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
                      DAG.getIntPtrConstant(0, dl));
 }
 
+// Helper to find all the extracted elements from a vector.
+static APInt getExtractedDemandedElts(SDNode *N) {
+  MVT VT = N->getSimpleValueType(0);
+  unsigned NumElts = VT.getVectorNumElements();
+  APInt DemandedElts = APInt::getZero(NumElts);
+  for (SDNode *User : N->uses()) {
+    switch (User->getOpcode()) {
+    case X86ISD::PEXTRB:
+    case X86ISD::PEXTRW:
+    case ISD::EXTRACT_VECTOR_ELT:
+      if (!isa<ConstantSDNode>(User->getOperand(1))) {
+        DemandedElts.setAllBits();
+        return DemandedElts;
+      }
+      DemandedElts.setBit(User->getConstantOperandVal(1));
+      break;
+    case ISD::BITCAST: {
+      if (!User->getValueType(0).isSimple() ||
+          !User->getValueType(0).isVector()) {
+        DemandedElts.setAllBits();
+        return DemandedElts;
+      }
+      APInt DemandedSrcElts = getExtractedDemandedElts(User);
+      DemandedElts |= APIntOps::ScaleBitMask(DemandedSrcElts, NumElts);
+      break;
+    }
+    default:
+      DemandedElts.setAllBits();
+      return DemandedElts;
+    }
+  }
+  return DemandedElts;
+}
+
 SDValue
 X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
                                            SelectionDAG &DAG) const {
@@ -17739,13 +17773,16 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     if (SDValue Res = LowerEXTRACT_VECTOR_ELT_SSE4(Op, DAG))
       return Res;
 
-  // TODO: We only extract a single element from v16i8, we can probably afford
-  // to be more aggressive here before using the default approach of spilling to
-  // stack.
-  if (VT == MVT::i8 && Op->isOnlyUserOf(Vec.getNode())) {
+  // Only extract a single element from a v16i8 source - determine the common
+  // DWORD/WORD that all extractions share, and extract the sub-byte.
+  // TODO: Add QWORD MOVQ extraction?
+  if (VT == MVT::i8) {
+    APInt DemandedElts = getExtractedDemandedElts(Vec.getNode());
+    assert(DemandedElts.getBitWidth() == 16 && "Vector width mismatch");
+
     // Extract either the lowest i32 or any i16, and extract the sub-byte.
     int DWordIdx = IdxVal / 4;
-    if (DWordIdx == 0) {
+    if (DWordIdx == 0 && DemandedElts == (DemandedElts & 15)) {
       SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i32,
                                 DAG.getBitcast(MVT::v4i32, Vec),
                                 DAG.getIntPtrConstant(DWordIdx, dl));
@@ -17757,14 +17794,16 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
     }
 
     int WordIdx = IdxVal / 2;
-    SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i16,
-                              DAG.getBitcast(MVT::v8i16, Vec),
-                              DAG.getIntPtrConstant(WordIdx, dl));
-    int ShiftVal = (IdxVal % 2) * 8;
-    if (ShiftVal != 0)
-      Res = DAG.getNode(ISD::SRL, dl, MVT::i16, Res,
-                        DAG.getConstant(ShiftVal, dl, MVT::i8));
-    return DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
+    if (DemandedElts == (DemandedElts & (3 << (WordIdx * 2)))) {
+      SDValue Res = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, MVT::i16,
+                                DAG.getBitcast(MVT::v8i16, Vec),
+                                DAG.getIntPtrConstant(WordIdx, dl));
+      int ShiftVal = (IdxVal % 2) * 8;
+      if (ShiftVal != 0)
+        Res = DAG.getNode(ISD::SRL, dl, MVT::i16, Res,
+                          DAG.getConstant(ShiftVal, dl, MVT::i8));
+      return DAG.getNode(ISD::TRUNCATE, dl, VT, Res);
+    }
   }
 
   if (VT == MVT::f16 || VT.getSizeInBits() == 32) {
