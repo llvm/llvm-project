@@ -236,12 +236,6 @@ void DataSharingProcessor::collectSymbolsForPrivatization() {
     }
   }
 
-  for (const Fortran::semantics::Symbol *ps : privatizedSymbols) {
-    if (ps->has<Fortran::semantics::CommonBlockDetails>())
-      TODO(converter.getCurrentLocation(),
-           "Common Block in privatization clause");
-  }
-
   if (hasCollapse && hasLastPrivateOp)
     TODO(converter.getCurrentLocation(), "Collapse clause with lastprivate");
 }
