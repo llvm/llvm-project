@@ -1670,8 +1670,10 @@ def int_coro_subfn_addr : DefaultAttrsIntrinsic<
 
 ///===-------------------------- Other Intrinsics --------------------------===//
 //
-def int_trap : Intrinsic<[], [], [IntrNoReturn, IntrCold]>,
-               ClangBuiltin<"__builtin_trap">;
+// TODO: We should introduce a new memory kind fo traps (and other side effects 
+//       we only model to keep things alive).
+def int_trap : Intrinsic<[], [], [IntrNoReturn, IntrCold, IntrInaccessibleMemOnly,
+               IntrWriteMem]>, ClangBuiltin<"__builtin_trap">;
 def int_debugtrap : Intrinsic<[]>,
                     ClangBuiltin<"__builtin_debugtrap">;
 def int_ubsantrap : Intrinsic<[], [llvm_i8_ty],
