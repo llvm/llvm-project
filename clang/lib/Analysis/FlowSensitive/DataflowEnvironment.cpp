@@ -336,8 +336,8 @@ Environment Environment::pushCall(const CallExpr *Call) const {
   if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
       if (!isa<CXXThisExpr>(Arg))
-        Env.ThisPointeeLoc = cast<AggregateStorageLocation>(
-            getStorageLocation(*Arg, SkipPast::Reference));
+          Env.ThisPointeeLoc =
+              cast<AggregateStorageLocation>(getStorageLocation(*Arg));
       // Otherwise (when the argument is `this`), retain the current
       // environment's `ThisPointeeLoc`.
     }
@@ -396,10 +396,10 @@ void Environment::popCall(const CallExpr *Call, const Environment &CalleeEnv) {
 
   if (Call->isGLValue()) {
     if (CalleeEnv.ReturnLoc != nullptr)
-      setStorageLocationStrict(*Call, *CalleeEnv.ReturnLoc);
+      setStorageLocation(*Call, *CalleeEnv.ReturnLoc);
   } else if (!Call->getType()->isVoidType()) {
     if (CalleeEnv.ReturnVal != nullptr)
-      setValueStrict(*Call, *CalleeEnv.ReturnVal);
+      setValue(*Call, *CalleeEnv.ReturnVal);
   }
 }
 
@@ -410,7 +410,7 @@ void Environment::popCall(const CXXConstructExpr *Call,
   this->FlowConditionToken = std::move(CalleeEnv.FlowConditionToken);
 
   if (Value *Val = CalleeEnv.getValue(*CalleeEnv.ThisPointeeLoc)) {
-    setValueStrict(*Call, *Val);
+    setValue(*Call, *Val);
   }
 }
 
@@ -619,38 +619,19 @@ StorageLocation *Environment::getStorageLocation(const ValueDecl &D) const {
 }
 
 void Environment::setStorageLocation(const Expr &E, StorageLocation &Loc) {
-  const Expr &CanonE = ignoreCFGOmittedNodes(E);
-  assert(!ExprToLoc.contains(&CanonE));
-  ExprToLoc[&CanonE] = &Loc;
-}
-
-void Environment::setStorageLocationStrict(const Expr &E,
-                                           StorageLocation &Loc) {
   // `DeclRefExpr`s to builtin function types aren't glvalues, for some reason,
   // but we still want to be able to associate a `StorageLocation` with them,
   // so allow these as an exception.
   assert(E.isGLValue() ||
          E.getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn));
-  setStorageLocation(E, Loc);
+  setStorageLocationInternal(E, Loc);
 }
 
-StorageLocation *Environment::getStorageLocation(const Expr &E,
-                                                 SkipPast SP) const {
-  // FIXME: Add a test with parens.
-  auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
-  return It == ExprToLoc.end() ? nullptr : &*It->second;
-}
-
-StorageLocation *Environment::getStorageLocationStrict(const Expr &E) const {
-  // See comment in `setStorageLocationStrict()`.
+StorageLocation *Environment::getStorageLocation(const Expr &E) const {
+  // See comment in `setStorageLocation()`.
   assert(E.isGLValue() ||
          E.getType()->isSpecificBuiltinType(BuiltinType::BuiltinFn));
-  StorageLocation *Loc = getStorageLocation(E, SkipPast::None);
-
-  if (Loc == nullptr)
-    return nullptr;
-
-  return Loc;
+  return getStorageLocationInternal(E);
 }
 
 AggregateStorageLocation *Environment::getThisPointeeStorageLocation() const {
@@ -662,12 +643,11 @@ Environment::getResultObjectLocation(const Expr &RecordPRValue) {
   assert(RecordPRValue.getType()->isRecordType());
   assert(RecordPRValue.isPRValue());
 
-  if (StorageLocation *ExistingLoc =
-          getStorageLocation(RecordPRValue, SkipPast::None))
+  if (StorageLocation *ExistingLoc = getStorageLocationInternal(RecordPRValue))
     return *cast<AggregateStorageLocation>(ExistingLoc);
   auto &Loc = cast<AggregateStorageLocation>(
       DACtx->getStableStorageLocation(RecordPRValue));
-  setStorageLocation(RecordPRValue, Loc);
+  setStorageLocationInternal(RecordPRValue, Loc);
   return Loc;
 }
 
@@ -682,7 +662,7 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
   LocToVal[&Loc] = &Val;
 }
 
-void Environment::setValueStrict(const Expr &E, Value &Val) {
+void Environment::setValue(const Expr &E, Value &Val) {
   assert(E.isPRValue());
 
   if (auto *StructVal = dyn_cast<StructValue>(&Val)) {
@@ -690,18 +670,18 @@ void Environment::setValueStrict(const Expr &E, Value &Val) {
             cast_or_null<StructValue>(getValue(E)))
       assert(&ExistingVal->getAggregateLoc() == &StructVal->getAggregateLoc());
     if ([[maybe_unused]] StorageLocation *ExistingLoc =
-            getStorageLocation(E, SkipPast::None))
+            getStorageLocationInternal(E))
       assert(ExistingLoc == &StructVal->getAggregateLoc());
     else
-      setStorageLocation(E, StructVal->getAggregateLoc());
+      setStorageLocationInternal(E, StructVal->getAggregateLoc());
     setValue(StructVal->getAggregateLoc(), Val);
     return;
   }
 
-  StorageLocation *Loc = getStorageLocation(E, SkipPast::None);
+  StorageLocation *Loc = getStorageLocationInternal(E);
   if (Loc == nullptr) {
     Loc = &createStorageLocation(E);
-    setStorageLocation(E, *Loc);
+    setStorageLocationInternal(E, *Loc);
   }
   setValue(*Loc, Val);
 }
@@ -717,16 +697,11 @@ Value *Environment::getValue(const ValueDecl &D) const {
   return getValue(*Loc);
 }
 
-Value *Environment::getValue(const Expr &E, SkipPast SP) const {
-  auto *Loc = getStorageLocation(E, SP);
-  if (Loc == nullptr)
+Value *Environment::getValue(const Expr &E) const {
+  auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
+  if (It == ExprToLoc.end())
     return nullptr;
-  return getValue(*Loc);
-}
-
-Value *Environment::getValueStrict(const Expr &E) const {
-  assert(E.isPRValue());
-  return getValue(E);
+  return getValue(*It->second);
 }
 
 Value *Environment::createValue(QualType Type) {
@@ -739,6 +714,18 @@ Value *Environment::createValue(QualType Type) {
                  << '\n';
   }
   return Val;
+}
+
+void Environment::setStorageLocationInternal(const Expr &E,
+                                             StorageLocation &Loc) {
+  const Expr &CanonE = ignoreCFGOmittedNodes(E);
+  assert(!ExprToLoc.contains(&CanonE));
+  ExprToLoc[&CanonE] = &Loc;
+}
+
+StorageLocation *Environment::getStorageLocationInternal(const Expr &E) const {
+  auto It = ExprToLoc.find(&ignoreCFGOmittedNodes(E));
+  return It == ExprToLoc.end() ? nullptr : &*It->second;
 }
 
 Value *Environment::createValueUnlessSelfReferential(
@@ -832,9 +819,8 @@ StorageLocation &Environment::createObjectInternal(const VarDecl *D,
     // can happen that we can't see the initializer, so `InitExpr` may still
     // be null.
     if (InitExpr) {
-      if (auto *InitExprLoc =
-              getStorageLocation(*InitExpr, SkipPast::Reference))
-        return *InitExprLoc;
+      if (auto *InitExprLoc = getStorageLocation(*InitExpr))
+          return *InitExprLoc;
     }
 
     // Even though we have an initializer, we might not get an
@@ -913,16 +899,13 @@ getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
   Expr *ImplicitObject = MCE.getImplicitObjectArgument();
   if (ImplicitObject == nullptr)
     return nullptr;
-  StorageLocation *Loc =
-      Env.getStorageLocation(*ImplicitObject, SkipPast::Reference);
-  if (Loc == nullptr)
-    return nullptr;
   if (ImplicitObject->getType()->isPointerType()) {
-    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*Loc)))
+    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*ImplicitObject)))
       return &cast<AggregateStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
-  return cast<AggregateStorageLocation>(Loc);
+  return cast_or_null<AggregateStorageLocation>(
+      Env.getStorageLocation(*ImplicitObject));
 }
 
 AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
@@ -930,15 +913,12 @@ AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
   Expr *Base = ME.getBase();
   if (Base == nullptr)
     return nullptr;
-  StorageLocation *Loc = Env.getStorageLocation(*Base, SkipPast::Reference);
-  if (Loc == nullptr)
-    return nullptr;
   if (ME.isArrow()) {
-    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*Loc)))
+    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*Base)))
       return &cast<AggregateStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
-  return cast<AggregateStorageLocation>(Loc);
+  return cast_or_null<AggregateStorageLocation>(Env.getStorageLocation(*Base));
 }
 
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
@@ -966,24 +946,24 @@ StructValue &refreshStructValue(const Expr &Expr, Environment &Env) {
   if (Expr.isPRValue()) {
     if (auto *ExistingVal = cast_or_null<StructValue>(Env.getValue(Expr))) {
       auto &NewVal = Env.create<StructValue>(ExistingVal->getAggregateLoc());
-      Env.setValueStrict(Expr, NewVal);
+      Env.setValue(Expr, NewVal);
       return NewVal;
     }
 
     auto &NewVal = *cast<StructValue>(Env.createValue(Expr.getType()));
-    Env.setValueStrict(Expr, NewVal);
+    Env.setValue(Expr, NewVal);
     return NewVal;
   }
 
   if (auto *Loc = cast_or_null<AggregateStorageLocation>(
-          Env.getStorageLocationStrict(Expr))) {
+          Env.getStorageLocation(Expr))) {
     auto &NewVal = Env.create<StructValue>(*Loc);
     Env.setValue(*Loc, NewVal);
     return NewVal;
   }
 
   auto &NewVal = *cast<StructValue>(Env.createValue(Expr.getType()));
-  Env.setStorageLocationStrict(Expr, NewVal.getAggregateLoc());
+  Env.setStorageLocation(Expr, NewVal.getAggregateLoc());
   return NewVal;
 }
 

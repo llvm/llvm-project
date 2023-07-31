@@ -36,8 +36,9 @@ LIBC_INLINE void funlockfile(FILE *f) {
 
 LIBC_INLINE int fwrite_unlocked(const void *ptr, size_t size, size_t nmemb,
                                 FILE *f) {
-  return reinterpret_cast<__llvm_libc::File *>(f)->write_unlocked(ptr,
-                                                                  size * nmemb);
+  return static_cast<int>(
+      reinterpret_cast<__llvm_libc::File *>(f)->write_unlocked(ptr,
+                                                               size * nmemb));
 }
 #else  // defined(LIBC_COPT_PRINTF_USE_SYSTEM_FILE)
 LIBC_INLINE int ferror_unlocked(::FILE *f) { return ::ferror_unlocked(f); }

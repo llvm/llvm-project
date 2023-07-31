@@ -131,7 +131,7 @@ set(LLVM_TEST_DEPENDS
           llvm-strip
           llvm-symbolizer
           llvm-tblgen
-          llvm-tapi-diff
+          llvm-readtapi
           llvm-tli-checker
           llvm-undname
           llvm-windres

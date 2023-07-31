@@ -2011,6 +2011,21 @@ static void __kmp_stg_print_foreign_threads_threadprivate(kmp_str_buf_t *buffer,
 // -----------------------------------------------------------------------------
 // KMP_AFFINITY, GOMP_CPU_AFFINITY, KMP_TOPOLOGY_METHOD
 
+static inline const char *
+__kmp_hw_get_core_type_keyword(kmp_hw_core_type_t type) {
+  switch (type) {
+  case KMP_HW_CORE_TYPE_UNKNOWN:
+    return "unknown";
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+  case KMP_HW_CORE_TYPE_ATOM:
+    return "intel_atom";
+  case KMP_HW_CORE_TYPE_CORE:
+    return "intel_core";
+#endif
+  }
+  return "unknown";
+}
+
 #if KMP_AFFINITY_SUPPORTED
 // Parse the proc id list.  Return TRUE if successful, FALSE otherwise.
 static int __kmp_parse_affinity_proc_id_list(const char *var, const char *env,
@@ -2365,14 +2380,32 @@ static void __kmp_parse_affinity_env(char const *name, char const *value,
 
       buf = next;
 
-      // Try any hardware topology type for granularity
-      KMP_FOREACH_HW_TYPE(type) {
-        const char *name = __kmp_hw_get_keyword(type);
-        if (__kmp_match_str(name, buf, CCAST(const char **, &next))) {
-          set_gran(type, -1);
-          buf = next;
-          set = true;
-          break;
+      // Have to try core_type and core_efficiency matches first since "core"
+      // will register as core granularity with "extra chars"
+      if (__kmp_match_str("core_type", buf, CCAST(const char **, &next))) {
+        set_gran(KMP_HW_CORE, -1);
+        out_affinity->flags.core_types_gran = 1;
+        buf = next;
+        set = true;
+      } else if (__kmp_match_str("core_efficiency", buf,
+                                 CCAST(const char **, &next)) ||
+                 __kmp_match_str("core_eff", buf,
+                                 CCAST(const char **, &next))) {
+        set_gran(KMP_HW_CORE, -1);
+        out_affinity->flags.core_effs_gran = 1;
+        buf = next;
+        set = true;
+      }
+      if (!set) {
+        // Try any hardware topology type for granularity
+        KMP_FOREACH_HW_TYPE(type) {
+          const char *name = __kmp_hw_get_keyword(type);
+          if (__kmp_match_str(name, buf, CCAST(const char **, &next))) {
+            set_gran(type, -1);
+            buf = next;
+            set = true;
+            break;
+          }
         }
       }
       if (!set) {
@@ -2632,8 +2665,15 @@ static void __kmp_print_affinity_env(kmp_str_buf_t *buffer, char const *name,
         __kmp_str_buf_print(buffer, "%s,", "noreset");
       }
     }
-    __kmp_str_buf_print(buffer, "granularity=%s,",
-                        __kmp_hw_get_keyword(affinity.gran, false));
+    __kmp_str_buf_print(buffer, "granularity=");
+    if (affinity.flags.core_types_gran)
+      __kmp_str_buf_print(buffer, "core_type,");
+    else if (affinity.flags.core_effs_gran) {
+      __kmp_str_buf_print(buffer, "core_eff,");
+    } else {
+      __kmp_str_buf_print(
+          buffer, "%s,", __kmp_hw_get_keyword(affinity.gran, /*plural=*/false));
+    }
   }
   if (!KMP_AFFINITY_CAPABLE()) {
     __kmp_str_buf_print(buffer, "%s", "disabled");
@@ -2751,11 +2791,7 @@ signed := + signed
 signed := - signed
 -----------------------------------------------------------------------------*/
 
-// Warning to issue for syntax error during parsing of OMP_PLACES
-static inline void __kmp_omp_places_syntax_warn(const char *var) {
-  KMP_WARNING(SyntaxErrorUsing, var, "\"cores\"");
-}
-
+// Return TRUE if successful parse, FALSE otherwise
 static int __kmp_parse_subplace_list(const char *var, const char **scan) {
   const char *next;
 
@@ -2767,7 +2803,6 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
     //
     SKIP_WS(*scan);
     if ((**scan < '0') || (**scan > '9')) {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = *scan;
@@ -2786,7 +2821,6 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
       continue;
     }
     if (**scan != ':') {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     (*scan)++; // skip ':'
@@ -2794,7 +2828,6 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
     // Read count parameter
     SKIP_WS(*scan);
     if ((**scan < '0') || (**scan > '9')) {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = *scan;
@@ -2813,7 +2846,6 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
       continue;
     }
     if (**scan != ':') {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     (*scan)++; // skip ':'
@@ -2835,7 +2867,6 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
     }
     SKIP_WS(*scan);
     if ((**scan < '0') || (**scan > '9')) {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = *scan;
@@ -2854,13 +2885,12 @@ static int __kmp_parse_subplace_list(const char *var, const char **scan) {
       (*scan)++; // skip ','
       continue;
     }
-
-    __kmp_omp_places_syntax_warn(var);
     return FALSE;
   }
   return TRUE;
 }
 
+// Return TRUE if successful parse, FALSE otherwise
 static int __kmp_parse_place(const char *var, const char **scan) {
   const char *next;
 
@@ -2872,7 +2902,6 @@ static int __kmp_parse_place(const char *var, const char **scan) {
       return FALSE;
     }
     if (**scan != '}') {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     (*scan)++; // skip '}'
@@ -2886,12 +2915,12 @@ static int __kmp_parse_place(const char *var, const char **scan) {
     KMP_ASSERT(proc >= 0);
     *scan = next;
   } else {
-    __kmp_omp_places_syntax_warn(var);
     return FALSE;
   }
   return TRUE;
 }
 
+// Return TRUE if successful parse, FALSE otherwise
 static int __kmp_parse_place_list(const char *var, const char *env,
                                   char **place_list) {
   const char *scan = env;
@@ -2914,7 +2943,6 @@ static int __kmp_parse_place_list(const char *var, const char *env,
       continue;
     }
     if (*scan != ':') {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     scan++; // skip ':'
@@ -2922,7 +2950,6 @@ static int __kmp_parse_place_list(const char *var, const char *env,
     // Read count parameter
     SKIP_WS(scan);
     if ((*scan < '0') || (*scan > '9')) {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = scan;
@@ -2941,7 +2968,6 @@ static int __kmp_parse_place_list(const char *var, const char *env,
       continue;
     }
     if (*scan != ':') {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     scan++; // skip ':'
@@ -2963,7 +2989,6 @@ static int __kmp_parse_place_list(const char *var, const char *env,
     }
     SKIP_WS(scan);
     if ((*scan < '0') || (*scan > '9')) {
-      __kmp_omp_places_syntax_warn(var);
       return FALSE;
     }
     next = scan;
@@ -2983,7 +3008,6 @@ static int __kmp_parse_place_list(const char *var, const char *env,
       continue;
     }
 
-    __kmp_omp_places_syntax_warn(var);
     return FALSE;
   }
 
@@ -2997,6 +3021,22 @@ static int __kmp_parse_place_list(const char *var, const char *env,
   return TRUE;
 }
 
+static inline void __kmp_places_set(enum affinity_type type, kmp_hw_t kind) {
+  __kmp_affinity.type = type;
+  __kmp_affinity.gran = kind;
+  __kmp_affinity.flags.dups = FALSE;
+  __kmp_affinity.flags.omp_places = TRUE;
+}
+
+static void __kmp_places_syntax_error_fallback(char const *name,
+                                               kmp_hw_t kind) {
+  const char *str = __kmp_hw_get_catalog_string(kind, /*plural=*/true);
+  KMP_WARNING(SyntaxErrorUsing, name, str);
+  __kmp_places_set(affinity_compact, kind);
+  if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default)
+    __kmp_nested_proc_bind.bind_types[0] = proc_bind_true;
+}
+
 static void __kmp_stg_parse_places(char const *name, char const *value,
                                    void *data) {
   struct kmp_place_t {
@@ -3007,7 +3047,6 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
   bool set = false;
   const char *scan = value;
   const char *next = scan;
-  const char *kind = "\"threads\"";
   kmp_place_t std_places[] = {{"threads", KMP_HW_THREAD},
                               {"cores", KMP_HW_CORE},
                               {"numa_domains", KMP_HW_NUMA},
@@ -3026,10 +3065,54 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
     const kmp_place_t &place = std_places[i];
     if (__kmp_match_str(place.name, scan, &next)) {
       scan = next;
-      __kmp_affinity.type = affinity_compact;
-      __kmp_affinity.gran = place.type;
-      __kmp_affinity.flags.dups = FALSE;
+      __kmp_places_set(affinity_compact, place.type);
       set = true;
+      // Parse core attribute if it exists
+      if (KMP_HW_MAX_NUM_CORE_TYPES > 1) {
+        SKIP_WS(scan);
+        if (*scan == ':') {
+          if (place.type != KMP_HW_CORE) {
+            __kmp_places_syntax_error_fallback(name, place.type);
+            return;
+          }
+          scan++; // skip ':'
+          SKIP_WS(scan);
+#if KMP_ARCH_X86 || KMP_ARCH_X86_64
+          if (__kmp_match_str("intel_core", scan, &next)) {
+            __kmp_affinity.core_attr_gran.core_type = KMP_HW_CORE_TYPE_CORE;
+            __kmp_affinity.core_attr_gran.valid = 1;
+            scan = next;
+          } else if (__kmp_match_str("intel_atom", scan, &next)) {
+            __kmp_affinity.core_attr_gran.core_type = KMP_HW_CORE_TYPE_ATOM;
+            __kmp_affinity.core_attr_gran.valid = 1;
+            scan = next;
+          } else
+#endif
+              if (__kmp_match_str("eff", scan, &next)) {
+            int eff;
+            if (!isdigit(*next)) {
+              __kmp_places_syntax_error_fallback(name, place.type);
+              return;
+            }
+            scan = next;
+            SKIP_DIGITS(next);
+            eff = __kmp_str_to_int(scan, *next);
+            if (eff < 0) {
+              __kmp_places_syntax_error_fallback(name, place.type);
+              return;
+            }
+            if (eff >= KMP_HW_MAX_NUM_CORE_EFFS)
+              eff = KMP_HW_MAX_NUM_CORE_EFFS - 1;
+            __kmp_affinity.core_attr_gran.core_eff = eff;
+            __kmp_affinity.core_attr_gran.valid = 1;
+            scan = next;
+          }
+          if (!__kmp_affinity.core_attr_gran.valid) {
+            __kmp_places_syntax_error_fallback(name, place.type);
+            return;
+          }
+        }
+      }
       break;
     }
   }
@@ -3041,36 +3124,56 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
         continue;
       if (__kmp_match_str(name, scan, &next)) {
         scan = next;
-        __kmp_affinity.type = affinity_compact;
-        __kmp_affinity.gran = type;
-        __kmp_affinity.flags.dups = FALSE;
+        __kmp_places_set(affinity_compact, type);
         set = true;
         break;
       }
     }
   }
+  // Implementation choices for OMP_PLACES based on core attributes
+  if (!set) {
+    if (__kmp_match_str("core_types", scan, &next)) {
+      scan = next;
+      if (*scan != '\0') {
+        KMP_WARNING(ParseExtraCharsWarn, name, scan);
+      }
+      __kmp_places_set(affinity_compact, KMP_HW_CORE);
+      __kmp_affinity.flags.core_types_gran = 1;
+      set = true;
+    } else if (__kmp_match_str("core_effs", scan, &next) ||
+               __kmp_match_str("core_efficiencies", scan, &next)) {
+      scan = next;
+      if (*scan != '\0') {
+        KMP_WARNING(ParseExtraCharsWarn, name, scan);
+      }
+      __kmp_places_set(affinity_compact, KMP_HW_CORE);
+      __kmp_affinity.flags.core_effs_gran = 1;
+      set = true;
+    }
+  }
+  // Explicit place list
   if (!set) {
     if (__kmp_affinity.proclist != NULL) {
       KMP_INTERNAL_FREE((void *)__kmp_affinity.proclist);
       __kmp_affinity.proclist = NULL;
     }
     if (__kmp_parse_place_list(name, value, &__kmp_affinity.proclist)) {
-      __kmp_affinity.type = affinity_explicit;
-      __kmp_affinity.gran = KMP_HW_THREAD;
-      __kmp_affinity.flags.dups = FALSE;
+      __kmp_places_set(affinity_explicit, KMP_HW_THREAD);
     } else {
       // Syntax error fallback
-      __kmp_affinity.type = affinity_compact;
-      __kmp_affinity.gran = KMP_HW_CORE;
-      __kmp_affinity.flags.dups = FALSE;
+      __kmp_places_syntax_error_fallback(name, KMP_HW_CORE);
     }
     if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default) {
       __kmp_nested_proc_bind.bind_types[0] = proc_bind_true;
     }
     return;
   }
+
+  kmp_hw_t gran = __kmp_affinity.gran;
   if (__kmp_affinity.gran != KMP_HW_UNKNOWN) {
-    kind = __kmp_hw_get_keyword(__kmp_affinity.gran);
+    gran = __kmp_affinity.gran;
+  } else {
+    gran = KMP_HW_CORE;
   }
 
   if (__kmp_nested_proc_bind.bind_types[0] == proc_bind_default) {
@@ -3084,7 +3187,7 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
 
   // Parse option count parameter in parentheses
   if (*scan != '(') {
-    KMP_WARNING(SyntaxErrorUsing, name, kind);
+    __kmp_places_syntax_error_fallback(name, gran);
     return;
   }
   scan++; // skip '('
@@ -3098,7 +3201,7 @@ static void __kmp_stg_parse_places(char const *name, char const *value,
 
   SKIP_WS(scan);
   if (*scan != ')') {
-    KMP_WARNING(SyntaxErrorUsing, name, kind);
+    __kmp_places_syntax_error_fallback(name, gran);
     return;
   }
   scan++; // skip ')'
@@ -3141,12 +3244,37 @@ static void __kmp_stg_print_places(kmp_str_buf_t *buffer, char const *name,
       num = 0;
     }
     if (gran != KMP_HW_UNKNOWN) {
-      const char *name = __kmp_hw_get_keyword(gran, true);
-      if (num > 0) {
-        __kmp_str_buf_print(buffer, "='%s(%d)'\n", name, num);
-      } else {
-        __kmp_str_buf_print(buffer, "='%s'\n", name);
+      // If core_types or core_effs, just print and return
+      if (__kmp_affinity.flags.core_types_gran) {
+        __kmp_str_buf_print(buffer, "='%s'\n", "core_types");
+        return;
       }
+      if (__kmp_affinity.flags.core_effs_gran) {
+        __kmp_str_buf_print(buffer, "='%s'\n", "core_effs");
+        return;
+      }
+
+      // threads, cores, sockets, cores:<attribute>, etc.
+      const char *name = __kmp_hw_get_keyword(gran, true);
+      __kmp_str_buf_print(buffer, "='%s", name);
+
+      // Add core attributes if it exists
+      if (__kmp_affinity.core_attr_gran.valid) {
+        kmp_hw_core_type_t ct =
+            (kmp_hw_core_type_t)__kmp_affinity.core_attr_gran.core_type;
+        int eff = __kmp_affinity.core_attr_gran.core_eff;
+        if (ct != KMP_HW_CORE_TYPE_UNKNOWN) {
+          const char *ct_name = __kmp_hw_get_core_type_keyword(ct);
+          __kmp_str_buf_print(buffer, ":%s", name, ct_name);
+        } else if (eff >= 0 && eff < KMP_HW_MAX_NUM_CORE_EFFS) {
+          __kmp_str_buf_print(buffer, ":eff%d", name, eff);
+        }
+      }
+
+      // Add the '(#)' part if it exists
+      if (num > 0)
+        __kmp_str_buf_print(buffer, "(%d)", num);
+      __kmp_str_buf_print(buffer, "'\n");
     } else {
       __kmp_str_buf_print(buffer, ": %s\n", KMP_I18N_STR(NotDefined));
     }
@@ -5143,21 +5271,6 @@ err:
     __kmp_hw_subset = nullptr;
   }
   return;
-}
-
-static inline const char *
-__kmp_hw_get_core_type_keyword(kmp_hw_core_type_t type) {
-  switch (type) {
-  case KMP_HW_CORE_TYPE_UNKNOWN:
-    return "unknown";
-#if KMP_ARCH_X86 || KMP_ARCH_X86_64
-  case KMP_HW_CORE_TYPE_ATOM:
-    return "intel_atom";
-  case KMP_HW_CORE_TYPE_CORE:
-    return "intel_core";
-#endif
-  }
-  return "unknown";
 }
 
 static void __kmp_stg_print_hw_subset(kmp_str_buf_t *buffer, char const *name,

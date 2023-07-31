@@ -34,9 +34,10 @@ define i32 @PR63108() {
 ; SSE-NEXT:    psrld $16, %xmm0
 ; SSE-NEXT:    pxor %xmm2, %xmm0
 ; SSE-NEXT:  .LBB0_5: # %for.cond.cleanup
-; SSE-NEXT:    movdqa %xmm0, -{{[0-9]+}}(%rsp)
-; SSE-NEXT:    movsbl -{{[0-9]+}}(%rsp), %ecx
-; SSE-NEXT:    movsbl -{{[0-9]+}}(%rsp), %eax
+; SSE-NEXT:    movd %xmm0, %eax
+; SSE-NEXT:    movsbl %al, %ecx
+; SSE-NEXT:    shrl $8, %eax
+; SSE-NEXT:    movsbl %al, %eax
 ; SSE-NEXT:    addl %ecx, %eax
 ; SSE-NEXT:    retq
 ;

@@ -456,8 +456,12 @@ class BuildStdModule(ConfigAction):
     flags = _getSubstitution('%{flags}', config)
     cmake = _getSubstitution('%{cmake}', config)
 
-    subprocess.check_call([cmake, "-DCMAKE_CXX_STANDARD=" + std, f"-DCMAKE_CXX_FLAGS={flags}", build], env={})
-    subprocess.check_call([cmake, "--build", build], env={})
+    subprocess.check_call([cmake, f"-DCMAKE_CXX_STANDARD={std}", f"-DCMAKE_CXX_FLAGS={flags}", build], env={})
+    subprocess.check_call([cmake, "--build", build, "--", "-v"], env={})
+    config.substitutions = _appendToSubstitution(
+       # TODO MODULES Avoid manually modifying link_flags.
+       config.substitutions, "%{link_flags}",  os.path.join(build, "libc++std.a")
+    )
 
   def pretty(self, config, litParams):
     return "building std module with flags {}".format(_getSubstitution('%{flags}', config))

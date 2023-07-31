@@ -1,4 +1,4 @@
-executable("llvm-tapi-diff") {
+executable("llvm-readtapi") {
   deps = [
     "//llvm/lib/Object",
     "//llvm/lib/Support",
@@ -6,6 +6,6 @@ executable("llvm-tapi-diff") {
   ]
   sources = [
     "DiffEngine.cpp",
-    "llvm-tapi-diff.cpp",
+    "llvm-readtapi.cpp",
   ]
 }

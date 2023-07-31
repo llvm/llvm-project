@@ -178,7 +178,8 @@ LIBC_INLINE constexpr cpp::UInt<MID_INT_SIZE> get_table_positive(int exponent,
   // ~1000 for double and ~16000 for long double. Be warned that the time
   // complexity of exponentiation is O(n^2 * log_2(m)) where n is the number of
   // bits in the number being exponentiated and m is the exponent.
-  const int shift_amount = exponent + CALC_SHIFT_CONST - (BLOCK_SIZE * i);
+  const int shift_amount =
+      static_cast<int>(exponent + CALC_SHIFT_CONST - (BLOCK_SIZE * i));
   if (shift_amount < 0) {
     return 1;
   }
@@ -221,7 +222,8 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_positive_df(int exponent,
   // doubles are only accurate to ~35 digits, the 50 digits of accuracy are
   // enough for these floats to be converted back and forth safely. This is
   // ideal for avoiding the size of the long double table.
-  const int shift_amount = exponent + CALC_SHIFT_CONST - (9 * i);
+  const int shift_amount =
+      static_cast<int>(exponent + CALC_SHIFT_CONST - (9 * i));
   if (shift_amount < 0) {
     return 1;
   }
@@ -288,7 +290,7 @@ LIBC_INLINE cpp::UInt<MID_INT_SIZE> get_table_negative(int exponent, size_t i) {
     } else {
       ten_blocks = 0;
       five_blocks = i;
-      shift_amount = shift_amount + (i * BLOCK_SIZE);
+      shift_amount = static_cast<int>(shift_amount + (i * BLOCK_SIZE));
     }
   }
 
@@ -375,8 +377,9 @@ LIBC_INLINE uint32_t fast_uint_mod_1e9(const cpp::UInt<MID_INT_SIZE> &val) {
       {0x31680A88F8953031u, 0x89705F4136B4A597u, 0});
   const auto middle = (mult_const * val);
   const uint64_t result = static_cast<uint64_t>(middle[2]);
-  const uint32_t shifted = result >> 29;
-  return static_cast<uint32_t>(val) - (1000000000 * shifted);
+  const uint64_t shifted = result >> 29;
+  return static_cast<uint32_t>(static_cast<uint32_t>(val) -
+                               (1000000000 * shifted));
 }
 
 LIBC_INLINE uint32_t mul_shift_mod_1e9(const MantissaInt mantissa,
@@ -390,7 +393,8 @@ LIBC_INLINE uint32_t mul_shift_mod_1e9(const MantissaInt mantissa,
   wide_mant[1] = static_cast<size_t>(mantissa >> 64);
   val = (val * wide_mant) >> shift_amount;
 
-  return val.div_uint32_times_pow_2(1000000000, 0).value()[0];
+  return static_cast<uint32_t>(
+      val.div_uint32_times_pow_2(1000000000, 0).value());
   // return fast_uint_mod_1e9(val);
 }
 
@@ -596,7 +600,7 @@ public:
     return false;
 #else
     const int32_t idx = -exponent / IDX_SIZE;
-    const uint32_t p = POW10_OFFSET_2[idx] + block_index - MIN_BLOCK_2[idx];
+    const size_t p = POW10_OFFSET_2[idx] + block_index - MIN_BLOCK_2[idx];
     // If the remaining digits are all 0, then this is the lowest block.
     return p >= POW10_OFFSET_2[idx + 1];
 #endif

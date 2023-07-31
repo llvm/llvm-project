@@ -1,4 +1,4 @@
-/*===-- flang/Runtime/float128.h ----------------------------------*- C -*-===
+/*===-- flang/Common/float128.h ----------------------------------*- C -*-===
  *
  * Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
  * See https://llvm.org/LICENSE.txt for license information.
@@ -17,8 +17,8 @@
  * long double and __float128; prefer long double by testing for it first.
  */
 
-#ifndef FORTRAN_RUNTIME_FLOAT128_H_
-#define FORTRAN_RUNTIME_FLOAT128_H_
+#ifndef FORTRAN_COMMON_FLOAT128_H_
+#define FORTRAN_COMMON_FLOAT128_H_
 
 #ifdef __cplusplus
 /*
@@ -49,4 +49,4 @@
 #endif /* (defined(__FLOAT128__) || defined(__SIZEOF_FLOAT128__)) && \
           !defined(_LIBCPP_VERSION)  && !defined(__CUDA_ARCH__) */
 
-#endif /* FORTRAN_RUNTIME_FLOAT128_H_ */
+#endif /* FORTRAN_COMMON_FLOAT128_H_ */

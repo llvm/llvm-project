@@ -191,7 +191,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
 
   // these are signed to prevent underflow due to negative values. The eventual
   // values will always be non-negative.
-  int trailing_zeroes = 0;
+  size_t trailing_zeroes = 0;
   int padding;
 
   // prefix is "0x", and always appears.
@@ -214,9 +214,10 @@ LIBC_INLINE int convert_float_hex_exp(Writer *writer,
   const char exp_seperator = a + ('p' - 'a');
   constexpr int EXP_SEPERATOR_LEN = 1;
 
-  padding = to_conv.min_width - (sign_char > 0 ? 1 : 0) - PREFIX_LEN -
-            mant_digits - (has_hexadecimal_point ? 1 : 0) - EXP_SEPERATOR_LEN -
-            (EXP_LEN - exp_cur);
+  padding = static_cast<int>(to_conv.min_width - (sign_char > 0 ? 1 : 0) -
+                             PREFIX_LEN - mant_digits -
+                             static_cast<int>(has_hexadecimal_point) -
+                             EXP_SEPERATOR_LEN - (EXP_LEN - exp_cur));
   if (padding < 0)
     padding = 0;
 
