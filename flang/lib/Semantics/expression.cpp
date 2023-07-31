@@ -1510,8 +1510,8 @@ private:
     return std::nullopt;
   }
   bool NeedLength() const {
-    return !explicitType_ && type_ &&
-        type_->category() == TypeCategory::Character && !LengthIfGood();
+    return type_ && type_->category() == TypeCategory::Character &&
+        !LengthIfGood();
   }
   void Push(MaybeExpr &&);
   void Add(const parser::AcValue::Triplet &);
