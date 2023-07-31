@@ -62,10 +62,14 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
   void updatePointsToForZeroStruct(mlir::Value addr, StructType sTy,
                                    mlir::Location loc);
 
-  // FIXME: classify tasks, lambdas and call args prior to check ptr deref
-  // and pass down an enum.
+  enum DerefStyle {
+    Direct,
+    RetLambda,
+    CallParam,
+    IndirectCallParam,
+  };
   void checkPointerDeref(mlir::Value addr, mlir::Location loc,
-                         bool forRetLambda = false, bool inCallArg = false);
+                         DerefStyle derefStyle = DerefStyle::Direct);
   void checkCoroTaskStore(StoreOp storeOp);
   void checkLambdaCaptureStore(StoreOp storeOp);
   void trackCallToCoroutine(CallOp callOp);
@@ -107,7 +111,8 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 
   // Diagnostic helpers.
   void emitInvalidHistory(mlir::InFlightDiagnostic &D, mlir::Value histKey,
-                          mlir::Location warningLoc, bool forRetLambda);
+                          mlir::Location warningLoc,
+                          DerefStyle derefStyle = DerefStyle::Direct);
 
   ///
   /// Pass options handling
@@ -573,8 +578,7 @@ void LifetimeCheckPass::LexicalScopeGuard::cleanup() {
 
   // Catch interesting dangling references out of returns.
   for (auto l : localScope->localRetLambdas)
-    Pass.checkPointerDeref(l.first, l.second,
-                           /*forRetLambda=*/true);
+    Pass.checkPointerDeref(l.first, l.second, DerefStyle::RetLambda);
 }
 
 void LifetimeCheckPass::checkBlock(Block &block) {
@@ -1321,7 +1325,7 @@ void LifetimeCheckPass::checkLoad(LoadOp loadOp) {
 void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
                                            mlir::Value histKey,
                                            mlir::Location warningLoc,
-                                           bool forRetLambda) {
+                                           DerefStyle derefStyle) {
   assert(invalidHist.count(histKey) && "expected invalid hist");
   auto &hist = invalidHist[histKey];
   unsigned limit = opts.histLimit;
@@ -1346,7 +1350,7 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
             << "coroutine bound to " << resource << " with expired lifetime";
         D.attachNote(info.loc) << "at the end of scope or full-expression";
         emittedDanglingTasks.insert(warningLoc);
-      } else if (forRetLambda) {
+      } else if (derefStyle == DerefStyle::RetLambda) {
         assert(currFunc && "expected function");
         StringRef parent = currFunc->getLambda() ? "lambda" : "function";
         D.attachNote(info.val->getLoc())
@@ -1370,7 +1374,7 @@ void LifetimeCheckPass::emitInvalidHistory(mlir::InFlightDiagnostic &D,
 }
 
 void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
-                                          bool forRetLambda, bool inCallArg) {
+                                          DerefStyle derefStyle) {
   bool hasInvalid = getPmap()[addr].count(State::getInvalid());
   bool hasNullptr = getPmap()[addr].count(State::getNullPtr());
 
@@ -1404,9 +1408,10 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
 
   if (tasks.count(addr))
     D << "use of coroutine '" << varName << "' with dangling reference";
-  else if (forRetLambda)
+  else if (derefStyle == DerefStyle::RetLambda)
     D << "returned lambda captures local variable";
-  else if (inCallArg) {
+  else if (derefStyle == DerefStyle::CallParam ||
+           derefStyle == DerefStyle::IndirectCallParam) {
     bool isAgg = isa_and_nonnull<StructElementAddr>(addr.getDefiningOp());
     D << "passing ";
     if (!isAgg)
@@ -1420,7 +1425,7 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
   // TODO: add accuracy levels, different combinations of invalid and null
   // could have different ratios of false positives.
   if (hasInvalid && opts.emitHistoryInvalid())
-    emitInvalidHistory(D, addr, loc, forRetLambda);
+    emitInvalidHistory(D, addr, loc, derefStyle);
 
   if (hasNullptr && opts.emitHistoryNull()) {
     assert(pmapNullHist.count(addr) && "expected nullptr hist");
@@ -1688,8 +1693,9 @@ void LifetimeCheckPass::checkForOwnerAndPointerArguments(CallOp callOp,
   for (auto o : ownersToInvalidate)
     checkNonConstUseOfOwner(o, callOp.getLoc());
   for (auto p : ptrsToDeref)
-    checkPointerDeref(p, callOp.getLoc(), /*forRetLambda=*/false,
-                      /*inCallArg=*/true);
+    checkPointerDeref(p, callOp.getLoc(),
+                      callOp.getCallee() ? DerefStyle::CallParam
+                                         : DerefStyle::IndirectCallParam);
 }
 
 void LifetimeCheckPass::checkOtherMethodsAndFunctions(
