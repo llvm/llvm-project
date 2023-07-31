@@ -413,15 +413,30 @@ void DataSharingProcessor::collectDefaultSymbols() {
 
 void DataSharingProcessor::privatize() {
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols) {
-    cloneSymbol(sym);
-    copyFirstPrivateSymbol(sym);
+    if (const auto *commonDet =
+            sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+      for (const auto mem : commonDet->objects()) {
+        cloneSymbol(&*mem);
+        copyFirstPrivateSymbol(&*mem);
+      }
+    } else {
+      cloneSymbol(sym);
+      copyFirstPrivateSymbol(sym);
+    }
   }
 }
 
 void DataSharingProcessor::copyLastPrivatize(mlir::Operation *op) {
   insertLastPrivateCompare(op);
   for (const Fortran::semantics::Symbol *sym : privatizedSymbols)
-    copyLastPrivateSymbol(sym, &lastPrivIP);
+    if (const auto *commonDet =
+            sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+      for (const auto mem : commonDet->objects()) {
+        copyLastPrivateSymbol(&*mem, &lastPrivIP);
+      }
+    } else {
+      copyLastPrivateSymbol(sym, &lastPrivIP);
+    }
 }
 
 void DataSharingProcessor::defaultPrivatize() {

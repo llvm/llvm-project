@@ -564,18 +564,6 @@ public:
 
   bool createHostAssociateVarClone(
       const Fortran::semantics::Symbol &sym) override final {
-    bool success{false};
-    if (const auto *commonDet =
-            sym.detailsIf<Fortran::semantics::CommonBlockDetails>()) {
-      for (const auto &mem : commonDet->objects())
-        success = genHostAssociateVarClone(*mem);
-    } else {
-      success = genHostAssociateVarClone(sym);
-    }
-    return success;
-  }
-
-  bool genHostAssociateVarClone(const Fortran::semantics::Symbol &sym) {
     mlir::Location loc = genLocation(sym.name());
     mlir::Type symType = genType(sym);
     const auto *details = sym.detailsIf<Fortran::semantics::HostAssocDetails>();
