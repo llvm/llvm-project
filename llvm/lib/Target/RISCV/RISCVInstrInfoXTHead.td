@@ -87,9 +87,9 @@ class THShift_ri<bits<5> funct5, bits<3> funct3, string opcodestr>
                    opcodestr, "$rd, $rs1, $shamt">;
 
 class THBitfieldExtract_rii<bits<3> funct3, string opcodestr>
-    : RVInstI<funct3, OPC_CUSTOM_0, (outs GPR:$rd),
-              (ins GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb),
-              opcodestr, "$rd, $rs1, $msb, $lsb"> {
+    : RVInstIBase<funct3, OPC_CUSTOM_0, (outs GPR:$rd),
+                  (ins GPR:$rs1, uimmlog2xlen:$msb, uimmlog2xlen:$lsb),
+                  opcodestr, "$rd, $rs1, $msb, $lsb"> {
   bits<6> msb;
   bits<6> lsb;
   let Inst{31-26} = msb;
@@ -184,14 +184,14 @@ class THLoadIndexed<RegisterClass Ty, bits<5> funct5, string opcodestr>
 }
 
 class THLoadUpdate<bits<5> funct5, string opcodestr>
-    : RVInstI<0b100, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
-              (ins GPR:$rs1, simm5:$simm5, uimm2:$uimm2),
-              opcodestr, "$rd, (${rs1}), $simm5, $uimm2"> {
+    : RVInstIBase<0b100, OPC_CUSTOM_0, (outs GPR:$rd, GPR:$rs1_wb),
+                  (ins GPR:$rs1, simm5:$simm5, uimm2:$uimm2),
+                  opcodestr, "$rd, (${rs1}), $simm5, $uimm2"> {
   bits<5> simm5;
   bits<2> uimm2;
-  let imm12{11-7} = funct5;
-  let imm12{6-5} = uimm2;
-  let imm12{4-0} = simm5;
+  let Inst{31-27} = funct5;
+  let Inst{26-25} = uimm2;
+  let Inst{24-20} = simm5;
   let Constraints = "@earlyclobber $rd, $rs1_wb = $rs1";
 }
 }
@@ -206,14 +206,14 @@ class THStoreIndexed<RegisterClass StTy, bits<5> funct5, string opcodestr>
 }
 
 class THStoreUpdate<bits<5> funct5, string opcodestr>
-    : RVInstI<0b101, OPC_CUSTOM_0, (outs GPR:$rs1_up),
-              (ins GPR:$rd, GPR:$rs1, simm5:$simm5, uimm2:$uimm2),
-              opcodestr, "$rd, (${rs1}), $simm5, $uimm2"> {
+    : RVInstIBase<0b101, OPC_CUSTOM_0, (outs GPR:$rs1_up),
+                  (ins GPR:$rd, GPR:$rs1, simm5:$simm5, uimm2:$uimm2),
+                  opcodestr, "$rd, (${rs1}), $simm5, $uimm2"> {
   bits<5> simm5;
   bits<2> uimm2;
-  let imm12{11-7} = funct5;
-  let imm12{6-5} = uimm2;
-  let imm12{4-0} = simm5;
+  let Inst{31-27} = funct5;
+  let Inst{26-25} = uimm2;
+  let Inst{24-20} = simm5;
   let Constraints = "$rs1_up = $rs1";
 }
 }
