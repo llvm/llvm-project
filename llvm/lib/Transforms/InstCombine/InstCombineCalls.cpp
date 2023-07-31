@@ -4066,8 +4066,6 @@ bool InstCombinerImpl::transformConstExprCastCall(CallBase &Call) {
 Instruction *
 InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
                                                  IntrinsicInst &Tramp) {
-  Value *Callee = Call.getCalledOperand();
-  Type *CalleeTy = Callee->getType();
   FunctionType *FTy = Call.getFunctionType();
   AttributeList Attrs = Call.getAttributes();
 
@@ -4164,12 +4162,8 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
 
       // Replace the trampoline call with a direct call.  Let the generic
       // code sort out any function type mismatches.
-      FunctionType *NewFTy = FunctionType::get(FTy->getReturnType(), NewTypes,
-                                                FTy->isVarArg());
-      Constant *NewCallee =
-        NestF->getType() == PointerType::getUnqual(NewFTy) ?
-        NestF : ConstantExpr::getBitCast(NestF,
-                                         PointerType::getUnqual(NewFTy));
+      FunctionType *NewFTy =
+          FunctionType::get(FTy->getReturnType(), NewTypes, FTy->isVarArg());
       AttributeList NewPAL =
           AttributeList::get(FTy->getContext(), Attrs.getFnAttrs(),
                              Attrs.getRetAttrs(), NewArgAttrs);
@@ -4179,19 +4173,18 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
 
       Instruction *NewCaller;
       if (InvokeInst *II = dyn_cast<InvokeInst>(&Call)) {
-        NewCaller = InvokeInst::Create(NewFTy, NewCallee,
-                                       II->getNormalDest(), II->getUnwindDest(),
-                                       NewArgs, OpBundles);
+        NewCaller = InvokeInst::Create(NewFTy, NestF, II->getNormalDest(),
+                                       II->getUnwindDest(), NewArgs, OpBundles);
         cast<InvokeInst>(NewCaller)->setCallingConv(II->getCallingConv());
         cast<InvokeInst>(NewCaller)->setAttributes(NewPAL);
       } else if (CallBrInst *CBI = dyn_cast<CallBrInst>(&Call)) {
         NewCaller =
-            CallBrInst::Create(NewFTy, NewCallee, CBI->getDefaultDest(),
+            CallBrInst::Create(NewFTy, NestF, CBI->getDefaultDest(),
                                CBI->getIndirectDests(), NewArgs, OpBundles);
         cast<CallBrInst>(NewCaller)->setCallingConv(CBI->getCallingConv());
         cast<CallBrInst>(NewCaller)->setAttributes(NewPAL);
       } else {
-        NewCaller = CallInst::Create(NewFTy, NewCallee, NewArgs, OpBundles);
+        NewCaller = CallInst::Create(NewFTy, NestF, NewArgs, OpBundles);
         cast<CallInst>(NewCaller)->setTailCallKind(
             cast<CallInst>(Call).getTailCallKind());
         cast<CallInst>(NewCaller)->setCallingConv(
@@ -4207,7 +4200,6 @@ InstCombinerImpl::transformCallThroughTrampoline(CallBase &Call,
   // Replace the trampoline call with a direct call.  Since there is no 'nest'
   // parameter, there is no need to adjust the argument list.  Let the generic
   // code sort out any function type mismatches.
-  Constant *NewCallee = ConstantExpr::getBitCast(NestF, CalleeTy);
-  Call.setCalledFunction(FTy, NewCallee);
+  Call.setCalledFunction(FTy, NestF);
   return &Call;
 }
