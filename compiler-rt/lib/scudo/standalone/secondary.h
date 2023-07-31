@@ -90,7 +90,8 @@ template <typename Config> class MapAllocatorNoCache {
 public:
   void init(UNUSED s32 ReleaseToOsInterval) {}
   bool retrieve(UNUSED Options Options, UNUSED uptr Size, UNUSED uptr Alignment,
-                UNUSED LargeBlock::Header **H, UNUSED bool *Zeroed) {
+                UNUSED uptr HeadersSize, UNUSED LargeBlock::Header **H,
+                UNUSED bool *Zeroed) {
     return false;
   }
   void store(UNUSED Options Options, LargeBlock::Header *H) { unmap(H); }
@@ -262,7 +263,7 @@ public:
       Entry.MemMap.unmap(Entry.MemMap.getBase(), Entry.MemMap.getCapacity());
   }
 
-  bool retrieve(Options Options, uptr Size, uptr Alignment,
+  bool retrieve(Options Options, uptr Size, uptr Alignment, uptr HeadersSize,
                 LargeBlock::Header **H, bool *Zeroed) EXCLUDES(Mutex) {
     const uptr PageSize = getPageSizeCached();
     const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
@@ -280,8 +281,7 @@ public:
         const uptr CommitSize = Entries[I].CommitSize;
         const uptr AllocPos =
             roundDown(CommitBase + CommitSize - Size, Alignment);
-        HeaderPos =
-            AllocPos - Chunk::getHeaderSize() - LargeBlock::getHeaderSize();
+        HeaderPos = AllocPos - HeadersSize;
         if (HeaderPos > CommitBase + CommitSize)
           continue;
         if (HeaderPos < CommitBase ||
@@ -461,6 +461,10 @@ public:
     return getBlockEnd(Ptr) - reinterpret_cast<uptr>(Ptr);
   }
 
+  static constexpr uptr getHeadersSize() {
+    return Chunk::getHeaderSize() + LargeBlock::getHeaderSize();
+  }
+
   void disable() NO_THREAD_SAFETY_ANALYSIS {
     Mutex.lock();
     Cache.disable();
@@ -526,17 +530,16 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
     Size += 1UL << SCUDO_MIN_ALIGNMENT_LOG;
   Alignment = Max(Alignment, uptr(1U) << SCUDO_MIN_ALIGNMENT_LOG);
   const uptr PageSize = getPageSizeCached();
-  uptr RoundedSize =
-      roundUp(roundUp(Size, Alignment) + LargeBlock::getHeaderSize() +
-                  Chunk::getHeaderSize(),
-              PageSize);
-  if (Alignment > PageSize)
-    RoundedSize += Alignment - PageSize;
 
-  if (Alignment < PageSize && Cache.canCache(RoundedSize)) {
+  // Note that cached blocks may have aligned address already. Thus we simply
+  // pass the required size (`Size` + `getHeadersSize()`) to do cache look up.
+  const uptr MinNeededSizeForCache = roundUp(Size + getHeadersSize(), PageSize);
+
+  if (Alignment < PageSize && Cache.canCache(MinNeededSizeForCache)) {
     LargeBlock::Header *H;
     bool Zeroed;
-    if (Cache.retrieve(Options, Size, Alignment, &H, &Zeroed)) {
+    if (Cache.retrieve(Options, Size, Alignment, getHeadersSize(), &H,
+                       &Zeroed)) {
       const uptr BlockEnd = H->CommitBase + H->CommitSize;
       if (BlockEndPtr)
         *BlockEndPtr = BlockEnd;
@@ -559,6 +562,11 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
       return Ptr;
     }
   }
+
+  uptr RoundedSize =
+      roundUp(roundUp(Size, Alignment) + getHeadersSize(), PageSize);
+  if (Alignment > PageSize)
+    RoundedSize += Alignment - PageSize;
 
   ReservedMemoryT ReservedMemory;
   const uptr MapSize = RoundedSize + 2 * PageSize;
@@ -604,8 +612,7 @@ void *MapAllocator<Config>::allocate(const Options &Options, uptr Size,
     MemMap.unmap(MemMap.getBase(), MemMap.getCapacity());
     return nullptr;
   }
-  const uptr HeaderPos =
-      AllocPos - Chunk::getHeaderSize() - LargeBlock::getHeaderSize();
+  const uptr HeaderPos = AllocPos - getHeadersSize();
   LargeBlock::Header *H = reinterpret_cast<LargeBlock::Header *>(
       LargeBlock::addHeaderTag<Config>(HeaderPos));
   if (useMemoryTagging<Config>(Options))
