@@ -87,6 +87,7 @@ public:
   bool isMin() const { return F.isSmallest(); }
   bool isMinusOne() const { return F.isExactlyValue(-1.0); }
   bool isNan() const { return F.isNaN(); }
+  bool isInf() const { return F.isInfinity(); }
   bool isFinite() const { return F.isFinite(); }
 
   ComparisonCategoryResult compare(const Floating &RHS) const {
