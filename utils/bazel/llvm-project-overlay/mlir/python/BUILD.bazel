@@ -902,6 +902,45 @@ gentbl_filegroup(
     ],
 )
 
+gentbl_filegroup(
+    name = "VectorTransformEnumPyGen",
+    tbl_outs = [
+        (
+            ["-gen-python-enum-bindings"],
+            "mlir/dialects/_vector_transform_enum_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/VectorTransformOps.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:TransformDialectTdFiles",
+        "//mlir:VectorTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
+    name = "VectorTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=vector_transform",
+            ],
+            "mlir/dialects/_vector_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/VectorTransformOps.td",
+    deps = [
+        "//mlir:OpBaseTdFiles",
+        "//mlir:TransformDialectTdFiles",
+        "//mlir:VectorTransformOpsTdFiles",
+    ],
+)
+
+
 filegroup(
     name = "TransformOpsPyFiles",
     srcs = [
@@ -919,6 +958,8 @@ filegroup(
         ":StructuredTransformOpsPyGen",
         ":TransformEnumPyGen",
         ":TransformOpsPyGen",
+        ":VectorTransformEnumPyGen",
+        ":VectorTransformOpsPyGen",
     ],
 )
 
