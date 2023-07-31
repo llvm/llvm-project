@@ -2630,11 +2630,7 @@ void InnerLoopVectorizer::vectorizeInterleaveGroup(
     if (auto *gep = dyn_cast<GetElementPtrInst>(AddrPart->stripPointerCasts()))
       InBounds = gep->isInBounds();
     AddrPart = Builder.CreateGEP(ScalarTy, AddrPart, Idx, "", InBounds);
-
-    // Cast to the vector pointer type.
-    unsigned AddressSpace = AddrPart->getType()->getPointerAddressSpace();
-    Type *PtrTy = VecTy->getPointerTo(AddressSpace);
-    AddrParts.push_back(Builder.CreateBitCast(AddrPart, PtrTy));
+    AddrParts.push_back(AddrPart);
   }
 
   State.setDebugLocFromInst(Instr);
