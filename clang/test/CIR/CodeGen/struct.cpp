@@ -115,6 +115,10 @@ struct A {
   int a;
 };
 
+// Should globally const-initialize struct members.
+struct A simpleConstInit = {1};
+// CHECK: cir.global external @simpleConstInit = #cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2EA22
+
 A get_default() { return A{2}; }
 
 struct S {
