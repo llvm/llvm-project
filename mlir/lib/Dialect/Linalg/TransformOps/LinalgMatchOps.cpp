@@ -260,6 +260,53 @@ transform::MatchStructuredClassifyContractionDimsOp::matchOperation(
 }
 
 //===----------------------------------------------------------------------===//
+// MatchStructuredClassifyConvolutionDimsOp
+//===----------------------------------------------------------------------===//
+
+DiagnosedSilenceableFailure
+transform::MatchStructuredClassifyConvolutionDimsOp::matchOperation(
+    Operation *current, transform::TransformResults &results,
+    transform::TransformState &state) {
+  FailureOr<linalg::ConvolutionDimensions> convolutionDims =
+      linalg::inferConvolutionDims(cast<linalg::LinalgOp>(current));
+  if (failed(convolutionDims))
+    return emitSilenceableError() << "could not infer convolution dimensions";
+
+  MLIRContext *context = current->getContext();
+  Builder builder(context);
+  auto makeI64Attrs = [&](ArrayRef<unsigned> values) {
+    return llvm::to_vector(
+        llvm::map_range(values, [&](unsigned value) -> Attribute {
+          return builder.getI64IntegerAttr(value);
+        }));
+  };
+  results.setParams(getBatch().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->batch));
+  results.setParams(getOutputImage().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->outputImage));
+  results.setParams(getOutputChannel().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->outputChannel));
+  results.setParams(getFilterLoop().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->filterLoop));
+  results.setParams(getInputChannel().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->inputChannel));
+  results.setParams(getDepth().cast<OpResult>(),
+                    makeI64Attrs(convolutionDims->depth));
+
+  auto makeI64AttrsFromI64 = [&](ArrayRef<int64_t> values) {
+    return llvm::to_vector(
+        llvm::map_range(values, [&](int64_t value) -> Attribute {
+          return builder.getI64IntegerAttr(value);
+        }));
+  };
+  results.setParams(getStrides().cast<OpResult>(),
+                    makeI64AttrsFromI64(convolutionDims->strides));
+  results.setParams(getDilations().cast<OpResult>(),
+                    makeI64AttrsFromI64(convolutionDims->dilations));
+  return DiagnosedSilenceableFailure::success();
+}
+
+//===----------------------------------------------------------------------===//
 // Utilities for structured match predicates.
 //===----------------------------------------------------------------------===//
 
