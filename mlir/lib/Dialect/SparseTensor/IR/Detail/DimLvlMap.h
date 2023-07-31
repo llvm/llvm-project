@@ -220,8 +220,10 @@ public:
   void setElideExpr(bool b) { elideExpr = b; }
   constexpr SparseTensorDimSliceAttr getSlice() const { return slice; }
 
-  /// Checks whether the variables bound/used by this spec are valid
-  /// with respect to the given ranks.
+  /// Checks whether the variables bound/used by this spec are valid with
+  /// respect to the given ranks.  Note that null `DimExpr` is considered
+  /// to be vacuously valid, and therefore calling `setExpr` invalidates
+  /// the result of this predicate.
   bool isValid(Ranks const &ranks) const;
 
   // TODO(wrengr): Use it or loose it.

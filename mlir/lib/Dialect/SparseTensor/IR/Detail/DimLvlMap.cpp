@@ -150,8 +150,6 @@ void DimLvlExpr::printAffineExprInternal(
     rhs.printStrong(os);
   } else {
     // Combination of all the special rules for addition/subtraction.
-    // TODO(wrengr): despite being succinct, this is prolly too confusing for
-    // readers.
     lhs.printWeak(os);
     const auto rx = matchNeg(rhs);
     os << (rx ? " - " : " + ");
@@ -180,8 +178,9 @@ DimSpec::DimSpec(DimVar var, DimExpr expr, SparseTensorDimSliceAttr slice)
     : var(var), expr(expr), slice(slice) {}
 
 bool DimSpec::isValid(Ranks const &ranks) const {
-  return ranks.isValid(var) && ranks.isValid(expr);
-  // TODO(wrengr): is there anything in `slice` that needs validation?
+  // Nothing in `slice` needs additional validation.
+  // We explicitly consider null-expr to be vacuously valid.
+  return ranks.isValid(var) && (!expr || ranks.isValid(expr));
 }
 
 bool DimSpec::isFunctionOf(VarSet const &vars) const {
@@ -220,8 +219,8 @@ LvlSpec::LvlSpec(LvlVar var, LvlExpr expr, DimLevelType type)
 }
 
 bool LvlSpec::isValid(Ranks const &ranks) const {
+  // Nothing in `type` needs additional validation.
   return ranks.isValid(var) && ranks.isValid(expr);
-  // TODO(wrengr): is there anything in `type` that needs validation?
 }
 
 bool LvlSpec::isFunctionOf(VarSet const &vars) const {
