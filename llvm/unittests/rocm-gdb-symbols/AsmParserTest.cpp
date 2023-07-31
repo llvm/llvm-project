@@ -86,7 +86,7 @@ TEST_F(DIExprAsmParserTest, Reinterpret) {
       R"(!named = !{!DIExpr(DIOpReinterpret(i32 addrspace(5)*))})");
   ASSERT_EQ(SmallVector<DIOp::Variant>(Expr->builder().range()),
             SmallVector<DIOp::Variant>(
-                {DIOp::Reinterpret(Type::getInt32PtrTy(Context, 5))}));
+                {DIOp::Reinterpret(PointerType::get(Context, 5))}));
 }
 
 TEST_F(DIExprAsmParserTest, BitOffset) {
