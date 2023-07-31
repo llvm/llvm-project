@@ -3144,6 +3144,8 @@ public:
                                        QualType ElementType,
                                        const llvm::APInt &NumElements);
 
+  unsigned getNumAddressingBits(const ASTContext &Context) const;
+
   /// Determine the maximum number of active bits that an array's size
   /// can require, which limits the maximum size of the array.
   static unsigned getMaxSizeBits(const ASTContext &Context);

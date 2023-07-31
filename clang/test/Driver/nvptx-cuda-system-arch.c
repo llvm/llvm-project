@@ -26,8 +26,8 @@
 // EMPTY-OUTPUT: error: cannot determine nvptx64 architecture: No NVIDIA GPU detected in the system; consider passing it via '--offload-arch'
 
 // case when nvptx-arch does not return anything with successful execution
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-arch=native --nvptx-arch-tool=%t/nvptx_arch_sm_70 -x cuda %s 2>&1 \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-arch=native --nvptx-arch-tool=%t/nvptx_arch_sm_70 -x cuda --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-sm_70
-// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-arch=native --offload-new-driver --nvptx-arch-tool=%t/nvptx_arch_sm_70 -x cuda %s 2>&1 \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-arch=native --offload-new-driver --nvptx-arch-tool=%t/nvptx_arch_sm_70 -x cuda --cuda-path=%S/Inputs/CUDA_102/usr/local/cuda %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-sm_70
 // ARCH-sm_70: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_70"

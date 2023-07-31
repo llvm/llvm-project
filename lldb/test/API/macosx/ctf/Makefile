@@ -28,3 +28,4 @@ a.ctf: a.out.dSYM
 		-R __DWARF,__apple_objc \
 		a.ctf a.ctf
 	rm -rf a.out.dSYM
+	rm -rf test.o

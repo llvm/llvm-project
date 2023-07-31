@@ -3605,6 +3605,13 @@ void CodeGenModule::EmitGlobal(GlobalDecl GD) {
         // Emit declaration of the must-be-emitted declare target variable.
         if (std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
                 OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD)) {
+
+          // If this variable has external storage and doesn't require special
+          // link handling we defer to its canonical definition.
+          if (VD->hasExternalStorage() &&
+              Res != OMPDeclareTargetDeclAttr::MT_Link)
+            return;
+
           bool UnifiedMemoryEnabled =
               getOpenMPRuntime().hasRequiresUnifiedSharedMemory();
           if ((*Res == OMPDeclareTargetDeclAttr::MT_To ||
@@ -5976,7 +5983,7 @@ CodeGenModule::GetAddrOfConstantCFString(const StringLiteral *Literal) {
   }
 
   // Note: -fwritable-strings doesn't make the backing store strings of
-  // CFStrings writable. (See <rdar://problem/10657500>)
+  // CFStrings writable.
   auto *GV =
       new llvm::GlobalVariable(getModule(), C->getType(), /*isConstant=*/true,
                                llvm::GlobalValue::PrivateLinkage, C, ".str");

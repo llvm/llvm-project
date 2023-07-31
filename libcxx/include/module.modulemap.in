@@ -826,6 +826,7 @@ module std_private_algorithm_pstl_generate                               [system
 module std_private_algorithm_pstl_is_partitioned                         [system] { header "__algorithm/pstl_is_partitioned.h" }
 module std_private_algorithm_pstl_merge                                  [system] { header "__algorithm/pstl_merge.h" }
 module std_private_algorithm_pstl_replace                                [system] { header "__algorithm/pstl_replace.h" }
+module std_private_algorithm_pstl_sort                                   [system] { header "__algorithm/pstl_sort.h" }
 module std_private_algorithm_pstl_stable_sort                            [system] {
   header "__algorithm/pstl_stable_sort.h"
   export std_private_functional_operations
@@ -1537,7 +1538,10 @@ module std_private_memory_allocator_destructor            [system] { header "__m
 module std_private_memory_allocator_traits                [system] { header "__memory/allocator_traits.h" }
 module std_private_memory_assume_aligned                  [system] { header "__memory/assume_aligned.h" }
 module std_private_memory_auto_ptr                        [system] { header "__memory/auto_ptr.h" }
-module std_private_memory_builtin_new_allocator           [system] { header "__memory/builtin_new_allocator.h" }
+module std_private_memory_builtin_new_allocator           [system] {
+  header "__memory/builtin_new_allocator.h"
+  export *
+}
 module std_private_memory_compressed_pair                 [system] { header "__memory/compressed_pair.h" }
 module std_private_memory_concepts                        [system] {
   header "__memory/concepts.h"
@@ -1644,9 +1648,15 @@ module std_private_random_piecewise_linear_distribution   [system] {
   export *
 }
 module std_private_random_poisson_distribution            [system] { header "__random/poisson_distribution.h" }
-module std_private_random_random_device                   [system] { header "__random/random_device.h" }
+module std_private_random_random_device                   [system] {
+  header "__random/random_device.h"
+  export *
+}
 module std_private_random_ranlux                          [system] { header "__random/ranlux.h" }
-module std_private_random_seed_seq                        [system] { header "__random/seed_seq.h" }
+module std_private_random_seed_seq                        [system] {
+  header "__random/seed_seq.h"
+  export *
+}
 module std_private_random_shuffle_order_engine            [system] { header "__random/shuffle_order_engine.h" }
 module std_private_random_student_t_distribution          [system] { header "__random/student_t_distribution.h" }
 module std_private_random_subtract_with_carry_engine      [system] { header "__random/subtract_with_carry_engine.h" }
@@ -1756,7 +1766,10 @@ module std_private_stop_token_stop_token           [system] {
   export *
 }
 
-module std_private_string_char_traits           [system] { header "__string/char_traits.h" }
+module std_private_string_char_traits           [system] {
+  header "__string/char_traits.h"
+  export *
+}
 module std_private_string_constexpr_c_functions [system] {
   header "__string/constexpr_c_functions.h"
   export std_private_type_traits_is_equality_comparable

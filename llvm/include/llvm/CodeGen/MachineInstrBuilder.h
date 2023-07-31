@@ -281,6 +281,11 @@ public:
     return *this;
   }
 
+  const MachineInstrBuilder &setOperandDead(unsigned OpIdx) const {
+    MI->getOperand(OpIdx).setIsDead();
+    return *this;
+  }
+
   // Add a displacement from an existing MachineOperand with an added offset.
   const MachineInstrBuilder &addDisp(const MachineOperand &Disp, int64_t off,
                                      unsigned char TargetFlags = 0) const {

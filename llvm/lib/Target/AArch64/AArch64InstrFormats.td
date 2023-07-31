@@ -2985,7 +2985,7 @@ class BaseExtractImm<RegisterClass regtype, Operand imm_type, string asm,
 multiclass ExtractImm<string asm> {
   def Wrri : BaseExtractImm<GPR32, imm0_31, asm,
                       [(set GPR32:$Rd,
-                        (AArch64Extr GPR32:$Rn, GPR32:$Rm, imm0_31:$imm))]> {
+                        (fshr GPR32:$Rn, GPR32:$Rm, imm0_31:$imm))]> {
     let Inst{31} = 0;
     let Inst{22} = 0;
     // imm<5> must be zero.
@@ -2993,7 +2993,7 @@ multiclass ExtractImm<string asm> {
   }
   def Xrri : BaseExtractImm<GPR64, imm0_63, asm,
                       [(set GPR64:$Rd,
-                        (AArch64Extr GPR64:$Rn, GPR64:$Rm, imm0_63:$imm))]> {
+                        (fshr GPR64:$Rn, GPR64:$Rm, imm0_63:$imm))]> {
 
     let Inst{31} = 1;
     let Inst{22} = 1;

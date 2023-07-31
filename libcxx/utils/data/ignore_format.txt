@@ -109,7 +109,6 @@ libcxx/include/__bit/countl.h
 libcxx/include/__bit/countr.h
 libcxx/include/__bit/endian.h
 libcxx/include/__bit/popcount.h
-libcxx/include/__bit_reference
 libcxx/include/__bit/rotate.h
 libcxx/include/bitset
 libcxx/include/cctype

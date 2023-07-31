@@ -686,9 +686,11 @@ void Environment::setValueStrict(const Expr &E, Value &Val) {
   assert(E.isPRValue());
 
   if (auto *StructVal = dyn_cast<StructValue>(&Val)) {
-    if (auto *ExistingVal = cast_or_null<StructValue>(getValue(E)))
+    if ([[maybe_unused]] auto *ExistingVal =
+            cast_or_null<StructValue>(getValue(E)))
       assert(&ExistingVal->getAggregateLoc() == &StructVal->getAggregateLoc());
-    if (StorageLocation *ExistingLoc = getStorageLocation(E, SkipPast::None))
+    if ([[maybe_unused]] StorageLocation *ExistingLoc =
+            getStorageLocation(E, SkipPast::None))
       assert(ExistingLoc == &StructVal->getAggregateLoc());
     else
       setStorageLocation(E, StructVal->getAggregateLoc());

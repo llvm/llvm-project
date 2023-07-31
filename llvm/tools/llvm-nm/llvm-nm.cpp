@@ -1803,9 +1803,9 @@ static bool getSymbolNamesFromObject(SymbolicFile &Obj,
       // --special-syms option.
       auto *ELFObj = dyn_cast<ELFObjectFileBase>(&Obj);
       bool HasMappingSymbol =
-          ELFObj &&
-          llvm::is_contained({ELF::EM_ARM, ELF::EM_AARCH64, ELF::EM_CSKY},
-                             ELFObj->getEMachine());
+          ELFObj && llvm::is_contained({ELF::EM_ARM, ELF::EM_AARCH64,
+                                        ELF::EM_CSKY, ELF::EM_RISCV},
+                                       ELFObj->getEMachine());
       if (!HasMappingSymbol && !DebugSyms &&
           (*SymFlagsOrErr & SymbolRef::SF_FormatSpecific))
         continue;

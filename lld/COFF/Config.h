@@ -103,9 +103,7 @@ enum class ICFLevel {
 // Global configuration.
 struct Configuration {
   enum ManifestKind { Default, SideBySide, Embed, No };
-  bool is64() const {
-    return machine == AMD64 || llvm::COFF::isAnyArm64(machine);
-  }
+  bool is64() const { return llvm::COFF::is64Bit(machine); }
 
   llvm::COFF::MachineTypes machine = IMAGE_FILE_MACHINE_UNKNOWN;
   size_t wordsize;

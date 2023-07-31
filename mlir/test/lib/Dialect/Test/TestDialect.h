@@ -14,9 +14,10 @@
 #ifndef MLIR_TESTDIALECT_H
 #define MLIR_TESTDIALECT_H
 
-#include "TestTypes.h"
 #include "TestAttributes.h"
 #include "TestInterfaces.h"
+#include "TestTypes.h"
+#include "mlir/Bytecode/BytecodeImplementation.h"
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/DLTI/Traits.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -57,6 +58,19 @@ class RewritePatternSet;
 #include "TestOpsDialect.h.inc"
 
 namespace test {
+
+//===----------------------------------------------------------------------===//
+// TestDialect version utilities
+//===----------------------------------------------------------------------===//
+
+struct TestDialectVersion : public mlir::DialectVersion {
+  TestDialectVersion() = default;
+  TestDialectVersion(uint32_t _major, uint32_t _minor)
+      : major(_major), minor(_minor){};
+  uint32_t major = 2;
+  uint32_t minor = 0;
+};
+
 // Define some classes to exercises the Properties feature.
 
 struct PropertiesWithCustomPrint {
@@ -82,6 +96,17 @@ public:
   llvm::hash_code hash() const;
   bool operator==(const MyPropStruct &rhs) const {
     return content == rhs.content;
+  }
+};
+struct VersionedProperties {
+  // For the sake of testing, assume that this object was associated to version
+  // 1.2 of the test dialect when having only one int value. In the current
+  // version 2.0, the property has two values. We also assume that the class is
+  // upgrade-able if value2 = 0.
+  int value1;
+  int value2;
+  bool operator==(const VersionedProperties &rhs) const {
+    return value1 == rhs.value1 && value2 == rhs.value2;
   }
 };
 } // namespace test

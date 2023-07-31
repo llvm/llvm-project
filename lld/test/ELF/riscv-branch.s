@@ -1,7 +1,7 @@
 # REQUIRES: riscv
 
-# RUN: llvm-mc -filetype=obj -triple=riscv32-unknown-elf -mattr=-relax %s -o %t.rv32.o
-# RUN: llvm-mc -filetype=obj -triple=riscv64-unknown-elf -mattr=-relax %s -o %t.rv64.o
+# RUN: llvm-mc -filetype=obj -triple=riscv32-unknown-elf -mattr=-relax -riscv-asm-relax-branches=0 %s -o %t.rv32.o
+# RUN: llvm-mc -filetype=obj -triple=riscv64-unknown-elf -mattr=-relax -riscv-asm-relax-branches=0 %s -o %t.rv64.o
 
 # RUN: ld.lld %t.rv32.o --defsym foo=_start+4 --defsym bar=_start -o %t.rv32
 # RUN: ld.lld %t.rv64.o --defsym foo=_start+4 --defsym bar=_start -o %t.rv64

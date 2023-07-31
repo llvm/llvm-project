@@ -3648,8 +3648,15 @@ void X86InstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 
 std::optional<DestSourcePair>
 X86InstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
-  if (MI.isMoveReg())
+  if (MI.isMoveReg()) {
+    // FIXME: Dirty hack for apparent invariant that doesn't hold when
+    // subreg_to_reg is coalesced with ordinary copies, such that the bits that
+    // were asserted as 0 are now undef.
+    if (MI.getOperand(0).isUndef() && MI.getOperand(0).getSubReg())
+      return std::nullopt;
+
     return DestSourcePair{MI.getOperand(0), MI.getOperand(1)};
+  }
   return std::nullopt;
 }
 

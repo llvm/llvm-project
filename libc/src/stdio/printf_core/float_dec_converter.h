@@ -965,15 +965,6 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   if (digits_checked == 0) {
     last_block_size = int_to_str.size();
     implicit_leading_zeroes = 0;
-  } else {
-    // If the block is not the maximum size, that means it has leading
-    // zeroes, and zeroes are not nines.
-    if (implicit_leading_zeroes > 0) {
-      trailing_nines = 0;
-    }
-
-    // But leading zeroes are zeroes (that could be trailing).
-    trailing_zeroes += implicit_leading_zeroes;
   }
 
   int digits_requested = (exp_precision + 1) - digits_checked;
@@ -982,6 +973,19 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
   if (digits_to_check < 0) {
     digits_to_check = 0;
   }
+
+  // If the block is not the maximum size, that means it has leading
+  // zeroes, and zeroes are not nines.
+  if (implicit_leading_zeroes > 0) {
+    trailing_nines = 0;
+  }
+
+  // But leading zeroes are zeroes (that could be trailing). We take the
+  // minimum of the leading zeroes and digits requested because if there are
+  // more requested digits than leading zeroes we shouldn't count those.
+  trailing_zeroes +=
+      (implicit_leading_zeroes > digits_requested ? digits_requested
+                                                  : implicit_leading_zeroes);
 
   // Check the upper digits of this block.
   for (int i = 0; i < digits_to_check; ++i) {
@@ -1103,6 +1107,24 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
     } else {
       // If alt form isn't set, then we need to determine the number of trailing
       // zeroes and set the precision such that they are removed.
+
+      /*
+      Here's a diagram of an example:
+
+      printf("%.15g", 22.25);
+
+                            +--- init_precision = 15
+                            |
+                            +-------------------+
+                            |                   |
+                            |  ++--- trimmed_precision = 2
+                            |  ||               |
+                            22.250000000000000000
+                            ||   |              |
+                            ++   +--------------+
+                             |   |
+       base_10_exp + 1 = 2 --+   +--- trailing_zeroes = 11
+      */
       int trimmed_precision =
           digits_checked - (base_10_exp + 1) - trailing_zeroes;
       if (trimmed_precision < 0) {
