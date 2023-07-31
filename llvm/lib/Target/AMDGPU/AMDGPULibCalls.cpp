@@ -538,7 +538,6 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
 
   assert(Callee->hasName() && "Invalid read_pipe/write_pipe function");
   auto *M = Callee->getParent();
-  auto &Ctx = M->getContext();
   std::string Name = std::string(Callee->getName());
   auto NumArg = CI->arg_size();
   if (NumArg != 4 && NumArg != 6)
@@ -552,15 +551,9 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   if (Alignment != Size)
     return false;
 
-  Type *PtrElemTy;
-  if (Size <= 8)
-    PtrElemTy = Type::getIntNTy(Ctx, Size * 8);
-  else
-    PtrElemTy = FixedVectorType::get(Type::getInt64Ty(Ctx), Size / 8);
   unsigned PtrArgLoc = CI->arg_size() - 3;
-  auto PtrArg = CI->getArgOperand(PtrArgLoc);
-  unsigned PtrArgAS = PtrArg->getType()->getPointerAddressSpace();
-  auto *PtrTy = llvm::PointerType::get(PtrElemTy, PtrArgAS);
+  Value *PtrArg = CI->getArgOperand(PtrArgLoc);
+  Type *PtrTy = PtrArg->getType();
 
   SmallVector<llvm::Type *, 6> ArgTys;
   for (unsigned I = 0; I != PtrArgLoc; ++I)
