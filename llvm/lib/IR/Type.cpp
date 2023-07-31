@@ -254,64 +254,8 @@ IntegerType *Type::getIntNTy(LLVMContext &C, unsigned N) {
   return IntegerType::get(C, N);
 }
 
-PointerType *Type::getHalfPtrTy(LLVMContext &C, unsigned AS) {
-  return getHalfTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getBFloatPtrTy(LLVMContext &C, unsigned AS) {
-  return getBFloatTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getFloatPtrTy(LLVMContext &C, unsigned AS) {
-  return getFloatTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getDoublePtrTy(LLVMContext &C, unsigned AS) {
-  return getDoubleTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getX86_FP80PtrTy(LLVMContext &C, unsigned AS) {
-  return getX86_FP80Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getFP128PtrTy(LLVMContext &C, unsigned AS) {
-  return getFP128Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getPPC_FP128PtrTy(LLVMContext &C, unsigned AS) {
-  return getPPC_FP128Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getX86_MMXPtrTy(LLVMContext &C, unsigned AS) {
-  return getX86_MMXTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getX86_AMXPtrTy(LLVMContext &C, unsigned AS) {
-  return getX86_AMXTy(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getIntNPtrTy(LLVMContext &C, unsigned N, unsigned AS) {
-  return getIntNTy(C, N)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt1PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt1Ty(C)->getPointerTo(AS);
-}
-
 PointerType *Type::getInt8PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt8Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt16PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt16Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt32PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt32Ty(C)->getPointerTo(AS);
-}
-
-PointerType *Type::getInt64PtrTy(LLVMContext &C, unsigned AS) {
-  return getInt64Ty(C)->getPointerTo(AS);
+  return PointerType::get(C, AS);
 }
 
 Type *Type::getWasm_ExternrefTy(LLVMContext &C) {
