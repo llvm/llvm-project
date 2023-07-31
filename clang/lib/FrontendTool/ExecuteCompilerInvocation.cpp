@@ -33,6 +33,7 @@
 #include "llvm/Support/ErrorHandling.h"
 
 #if CLANG_ENABLE_CIR
+#include "mlir/IR/AsmState.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Pass/PassManager.h"
 #include "clang/CIRFrontendAction/CIRGenAction.h"
@@ -324,6 +325,7 @@ bool ExecuteCompilerInvocation(CompilerInstance *Clang) {
   if (!Clang->getFrontendOpts().MLIRArgs.empty()) {
     mlir::registerMLIRContextCLOptions();
     mlir::registerPassManagerCLOptions();
+    mlir::registerAsmPrinterCLOptions();
     unsigned NumArgs = Clang->getFrontendOpts().MLIRArgs.size();
     auto Args = std::make_unique<const char *[]>(NumArgs + 2);
     Args[0] = "clang (MLIR option parsing)";
