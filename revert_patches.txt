@@ -12,11 +12,6 @@ Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime "
 Nicole and Saiyed:
 Revert " [OpenMP][DeviceRTL][AMDGPU] Support code object version 5"
 
-Revert: breaks build of libdevice
-  15e0fe0b6122 clang/OpenCL: Add inline implementations of sqrt in builtin header
- Need to revisit upstream vs ASO: clang/lib/Headers/__clang_hip_math.h
-   new test:   clang/test/CodeGenOpenCL/sqrt-fpmath.cl
-
 Revert: waiting on pip install myst-parser 
  b6ff03206 "[Documentation] Replace recommonmark by myst-parser
 
