@@ -19,16 +19,16 @@
 // RUN: chmod +x %t/nvptx_arch_empty
 
 // case when nvptx-arch and amdgpu-arch return nothing or fails
-// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_fail --amdgpu-arch-tool=%t/amdgpu_arch_fail %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT-ERROR
-// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch=native \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_empty --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT-ERROR
-// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch= \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch= \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_fail --amdgpu-arch-tool=%t/amdgpu_arch_fail %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT-ERROR
-// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch= \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp --offload-arch= \
 // RUN:     --nvptx-arch-tool=%t/nvptx_arch_empty --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NO-OUTPUT-ERROR
 // NO-OUTPUT-ERROR: error: failed to deduce triple for target architecture 'native'; specify the triple using '-fopenmp-targets' and '-Xopenmp-target' instead.
@@ -68,13 +68,13 @@
 // ARCH-MULTIPLE: "-cc1" "-triple" "nvptx64-nvidia-cuda"{{.*}}"-target-cpu" "sm_75"
 
 // case when 'nvptx-arch' returns nothing using `-fopenmp-targets=`.
-// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp \
 // RUN:     -fopenmp-targets=nvptx64-nvidia-cuda --nvptx-arch-tool=%t/nvptx_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=NVPTX
 // NVPTX: error: cannot determine nvptx64 architecture: No NVIDIA GPU detected in the system; consider passing it via '-march'
 
 // case when 'amdgpu-arch' returns nothing using `-fopenmp-targets=`.
-// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpulib -fopenmp=libomp \
 // RUN:     -fopenmp-targets=amdgcn-amd-amdhsa --amdgpu-arch-tool=%t/amdgpu_arch_empty %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=AMDGPU
 // AMDGPU: error: cannot determine amdgcn architecture: No AMD GPU detected in the system; consider passing it via '-march'
