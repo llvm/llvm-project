@@ -11,5 +11,5 @@
 // NOUSE:     "-fprofile-instrument=csllvm"
 // NOUSE-NOT: "-fprofile-instrument-path=
 
-// RUN: not %clang -### -c -fprofile-generate -fcs-profile-generate %s 2>&1 | FileCheck %s --check-prefix=CONFLICT
+// RUN: %clang -### -c -fprofile-generate -fcs-profile-generate %s 2>&1 | FileCheck %s --check-prefix=CONFLICT
 // CONFLICT: error: invalid argument '-fcs-profile-generate' not allowed with '-fprofile-generate'

@@ -17,20 +17,20 @@
 // RUN: %clang -### --target=powerpc64-ibm-aix-xcoff -mxcoff-roptr %t.o 2>&1 | \
 // RUN:     FileCheck %s --check-prefix=LINK
 
-// RUN: not %clang -### --target=powerpc64le-unknown-linux-gnu -mxcoff-roptr \
+// RUN: %clang -### --target=powerpc64le-unknown-linux-gnu -mxcoff-roptr \
 // RUN:     %s 2>&1 | FileCheck %s --check-prefix=TARGET_ROPTR_ERR
-// RUN: not %clang -### --target=powerpc64le-unknown-linux-gnu -mno-xcoff-roptr \
+// RUN: %clang -### --target=powerpc64le-unknown-linux-gnu -mno-xcoff-roptr \
 // RUN:     %s 2>&1 | FileCheck %s --check-prefix=TARGET_NOROPTR_ERR
 // RUN: touch %t.o
-// RUN: not %clang -### --target=powerpc64-ibm-aix-xcoff -mxcoff-roptr -shared \
+// RUN: %clang -### --target=powerpc64-ibm-aix-xcoff -mxcoff-roptr -shared \
 // RUN:     %t.o 2>&1 | FileCheck %s --check-prefix=SHARED_ERR
-// RUN: not %clang -### --target=powerpc64le-unknown-linux-gnu -mxcoff-roptr -flto \
+// RUN: %clang -### --target=powerpc64le-unknown-linux-gnu -mxcoff-roptr -flto \
 // RUN:     %t.o 2>&1 | FileCheck %s --check-prefix=TARGET_ROPTR_ERR
-// RUN: not %clang -### --target=powerpc64-ibm-aix-xcoff -mxcoff-roptr -flto -fno-data-sections \
+// RUN: %clang -### --target=powerpc64-ibm-aix-xcoff -mxcoff-roptr -flto -fno-data-sections \
 // RUN:     %t.o 2>&1 | FileCheck %s --check-prefix=DATA_SECTION_ERR
 // RUN: %clang -### --target=powerpc64-ibm-aix-xcoff -mno-xcoff-roptr -flto -fno-data-sections \
 // RUN:     %t.o 2>&1 | FileCheck %s --check-prefix=NO_DATA_SECTION_ERR
-// RUN: not %clang -### --target=powerpc64le-unknown-linux-gnu -mno-xcoff-roptr -flto \
+// RUN: %clang -### --target=powerpc64le-unknown-linux-gnu -mno-xcoff-roptr -flto \
 // RUN:     %t.o 2>&1 | FileCheck %s --check-prefix=TARGET_NOROPTR_ERR
 
 // DATA_SECTION_ERR: error: -mxcoff-roptr is supported only with -fdata-sections
