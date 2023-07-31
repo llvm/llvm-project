@@ -336,8 +336,8 @@ Environment Environment::pushCall(const CallExpr *Call) const {
   if (const auto *MethodCall = dyn_cast<CXXMemberCallExpr>(Call)) {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
       if (!isa<CXXThisExpr>(Arg))
-        Env.ThisPointeeLoc = cast<AggregateStorageLocation>(
-            getStorageLocation(*Arg, SkipPast::Reference));
+          Env.ThisPointeeLoc =
+              cast<AggregateStorageLocation>(getStorageLocationStrict(*Arg));
       // Otherwise (when the argument is `this`), retain the current
       // environment's `ThisPointeeLoc`.
     }
@@ -832,9 +832,8 @@ StorageLocation &Environment::createObjectInternal(const VarDecl *D,
     // can happen that we can't see the initializer, so `InitExpr` may still
     // be null.
     if (InitExpr) {
-      if (auto *InitExprLoc =
-              getStorageLocation(*InitExpr, SkipPast::Reference))
-        return *InitExprLoc;
+      if (auto *InitExprLoc = getStorageLocationStrict(*InitExpr))
+          return *InitExprLoc;
     }
 
     // Even though we have an initializer, we might not get an
@@ -913,16 +912,13 @@ getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
   Expr *ImplicitObject = MCE.getImplicitObjectArgument();
   if (ImplicitObject == nullptr)
     return nullptr;
-  StorageLocation *Loc =
-      Env.getStorageLocation(*ImplicitObject, SkipPast::Reference);
-  if (Loc == nullptr)
-    return nullptr;
   if (ImplicitObject->getType()->isPointerType()) {
-    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*Loc)))
+    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*ImplicitObject)))
       return &cast<AggregateStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
-  return cast<AggregateStorageLocation>(Loc);
+  return cast_or_null<AggregateStorageLocation>(
+      Env.getStorageLocationStrict(*ImplicitObject));
 }
 
 AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
@@ -930,15 +926,13 @@ AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
   Expr *Base = ME.getBase();
   if (Base == nullptr)
     return nullptr;
-  StorageLocation *Loc = Env.getStorageLocation(*Base, SkipPast::Reference);
-  if (Loc == nullptr)
-    return nullptr;
   if (ME.isArrow()) {
-    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*Loc)))
+    if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*Base)))
       return &cast<AggregateStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
-  return cast<AggregateStorageLocation>(Loc);
+  return cast_or_null<AggregateStorageLocation>(
+      Env.getStorageLocationStrict(*Base));
 }
 
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
