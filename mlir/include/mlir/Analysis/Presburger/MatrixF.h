@@ -160,8 +160,13 @@ public:
   /// this matrix, say M, and return Mv.
   SmallVector<Fraction, 8> postMultiplyWithColumn(ArrayRef<Fraction> colVec) const;
 
-  // Run Gram-Schmidt orthogonalisation on the matrix, modifying the data in-place.
-  void gramSchmidt();
+  // Run Gram-Schmidt orthogonalisation on the matrix, leaving the calling object
+  // unmodified and returning the orthogonal (unnormalised) matrix.
+  MatrixF gramSchmidt();
+
+  // Run LLL basis reduction on the matrix, modifying the data in-place.
+  // The parameter is delta.
+  void LLL(Fraction);
 
   /// Resize the matrix to the specified dimensions. If a dimension is smaller,
   /// the values are truncated; if it is bigger, the new values are initialized

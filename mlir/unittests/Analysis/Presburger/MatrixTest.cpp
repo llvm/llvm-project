@@ -267,9 +267,9 @@ TEST(MatrixTest, gramSchmidt) {
             {Fraction(142, 185), Fraction(383, 555), Fraction(68, 111), Fraction(13, 185),   Fraction(-262, 555)},
             {Fraction(53, 463),  Fraction(27, 463),  Fraction(1, 463),  Fraction(-181, 463), Fraction(100, 463)}});
 
-     mat.gramSchmidt();
+    MatrixF gs = mat.gramSchmidt();
 
     for (unsigned row = 0; row < 3; row++)
       for (unsigned col = 0; col < 5; col++)
-        EXPECT_EQ(mat(row, col), gramSchmidt(row, col));
+        EXPECT_EQ(gs(row, col), gramSchmidt(row, col));
 }

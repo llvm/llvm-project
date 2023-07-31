@@ -256,18 +256,22 @@ Fraction mlir::presburger::dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b
     return sum;
 }
 
-void MatrixF::gramSchmidt()
+MatrixF MatrixF::gramSchmidt()
 {
     Fraction projection;
+    MatrixF copy(getNumRows(), getNumColumns());
+    for (unsigned i = 0; i < getNumRows(); i++)
+      copy.setRow(i, getRow(i));
     for (unsigned i = 1; i < getNumRows(); i++)
     {
         for (unsigned j = 0; j < i; j++)
         {
-            projection = dotProduct(getRow(i), getRow(j)) /
-                         dotProduct(getRow(j), getRow(j));
-            addToRow(i, getRow(j), -projection);
+            projection = dotProduct(copy.getRow(i), copy.getRow(j)) /
+                         dotProduct(copy.getRow(j), copy.getRow(j));
+            copy.addToRow(i, copy.getRow(j), -projection);
         }
     }
+    return copy;
 }
 
 void MatrixF::print(raw_ostream &os) const {
