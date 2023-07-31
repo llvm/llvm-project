@@ -86,7 +86,7 @@ llvm::object::computeSymbolSizes(const ObjectFile &O) {
 
   // Compute the size as the gap to the next symbol. If multiple symbols have
   // the same address, give both the same size. Because Addresses is sorted,
-  // using two pointers to keep track of the current symbol vs. the next symbol
+  // use two pointers to keep track of the current symbol vs. the next symbol
   // that doesn't have the same address for size computation.
   for (unsigned I = 0, NextI = 0, N = Addresses.size() - 1; I < N; ++I) {
     auto &P = Addresses[I];
