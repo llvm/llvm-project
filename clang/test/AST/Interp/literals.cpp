@@ -502,22 +502,22 @@ namespace IncDec {
     return 1;
   }
   static_assert(uninit<int, true>(), ""); // ref-error {{not an integral constant expression}} \
-                                          // ref-note {{in call to 'uninit()'}} \
+                                          // ref-note {{in call to 'uninit<int, true>()'}} \
                                           // expected-error {{not an integral constant expression}} \
                                           // expected-note {{in call to 'uninit()'}}
 
   static_assert(uninit<int, false>(), ""); // ref-error {{not an integral constant expression}} \
-                                           // ref-note {{in call to 'uninit()'}} \
+                                           // ref-note {{in call to 'uninit<int, false>()'}} \
                                            // expected-error {{not an integral constant expression}} \
                                            // expected-note {{in call to 'uninit()'}}
 
   static_assert(uninit<float, true>(), ""); // ref-error {{not an integral constant expression}} \
-                                            // ref-note {{in call to 'uninit()'}} \
+                                            // ref-note {{in call to 'uninit<float, true>()'}} \
                                             // expected-error {{not an integral constant expression}} \
                                             // expected-note {{in call to 'uninit()'}}
 
   static_assert(uninit<float, false>(), ""); // ref-error {{not an integral constant expression}} \
-                                             // ref-note {{in call to 'uninit()'}} \
+                                             // ref-note {{in call to 'uninit<float, false>()'}} \
                                              // expected-error {{not an integral constant expression}} \
                                              // expected-note {{in call to 'uninit()'}}
 
