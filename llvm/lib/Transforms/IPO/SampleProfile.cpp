@@ -2123,10 +2123,29 @@ void SampleProfileMatcher::findIRAnchors(
   // Extract profile matching anchors in the IR.
   for (auto &BB : F) {
     for (auto &I : BB) {
-      // TODO: Support line-number based location(AutoFDO).
+      // TODO: To support AutoFDO, we need to parse all the non-call
+      // instructions to extract the line-number based locations. For
+      // pseudo-probe mode, since each block is instrumented with one probe
+      // inst, parsing probe inst is enough.
       if (FunctionSamples::ProfileIsProbeBased && isa<PseudoProbeInst>(&I)) {
-        if (std::optional<PseudoProbe> Probe = extractProbe(I))
-          IRAnchors.emplace(LineLocation(Probe->Id, 0), StringRef());
+        std::optional<PseudoProbe> Probe = extractProbe(I);
+        assert(Probe &&
+               "Probe should not be null for pseudo-probe instruction");
+        // Flatten inlined IR for the matching. Recover the original callsite
+        // and call target by analyzing the inline frames from the debug info.
+        if (DILocation *DIL = I.getDebugLoc()) {
+          if (DIL->getInlinedAt()) {
+            // Find the top-level inline frame.
+            const DILocation *PrevDIL = DIL;
+            for (; DIL->getInlinedAt(); DIL = DIL->getInlinedAt())
+              PrevDIL = DIL;
+
+            LineLocation Callsite = FunctionSamples::getCallSiteIdentifier(DIL);
+            StringRef CalleeName = PrevDIL->getSubprogramLinkageName();
+            IRAnchors.emplace(Callsite, CalleeName);
+          } else
+            IRAnchors.emplace(LineLocation(Probe->Id, 0), StringRef());
+        }
       }
 
       if (!isa<CallBase>(&I) || isa<IntrinsicInst>(&I))
@@ -2134,6 +2153,11 @@ void SampleProfileMatcher::findIRAnchors(
 
       const auto *CB = dyn_cast<CallBase>(&I);
       if (auto &DLoc = I.getDebugLoc()) {
+        // Skip the inlined callsite. For pseudo probe mode, extracting inline
+        // info from the probe inst is enough.
+        if (DLoc.getInlinedAt())
+          continue;
+
         LineLocation IRCallsite = FunctionSamples::getCallSiteIdentifier(DLoc);
         StringRef CalleeName = UnknownIndirectCallee;
         if (Function *Callee = CB->getCalledFunction())
