@@ -202,7 +202,8 @@ static SomeExpr SaveDerivedPointerTarget(Scope &scope, SourceName name,
   if (x.empty()) {
     return SomeExpr{evaluate::NullPointer{}};
   } else {
-    const auto &derivedType{x.front().GetType().GetDerivedTypeSpec()};
+    auto dyType{x.front().GetType()};
+    const auto &derivedType{dyType.GetDerivedTypeSpec()};
     ObjectEntityDetails object;
     DeclTypeSpec typeSpec{DeclTypeSpec::TypeDerived, derivedType};
     if (const DeclTypeSpec * spec{scope.FindType(typeSpec)}) {

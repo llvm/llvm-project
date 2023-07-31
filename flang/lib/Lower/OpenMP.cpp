@@ -2662,8 +2662,8 @@ checkForSymbolMatch(const Fortran::parser::AssignmentStmt &assignmentStmt) {
   const auto &expr{std::get<Fortran::parser::Expr>(assignmentStmt.t)};
   const auto *e{Fortran::semantics::GetExpr(expr)};
   const auto *v{Fortran::semantics::GetExpr(var)};
-  const Fortran::semantics::Symbol &varSymbol =
-      Fortran::evaluate::GetSymbolVector(*v).front();
+  auto varSyms{Fortran::evaluate::GetSymbolVector(*v)};
+  const Fortran::semantics::Symbol &varSymbol{*varSyms.front()};
   for (const Fortran::semantics::Symbol &symbol :
        Fortran::evaluate::GetSymbolVector(*e))
     if (varSymbol == symbol)
