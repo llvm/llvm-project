@@ -523,8 +523,7 @@ bool SymbolFileCTF::CompleteType(CompilerType &compiler_type) {
   assert(ctf_type && "m_compiler_types should only contain valid CTF types");
 
   // We only support resolving record types.
-  assert(ctf_type->kind == CTFType::Kind::eStruct ||
-         ctf_type->kind == CTFType::Kind::eUnion);
+  assert(llvm::isa<CTFRecord>(ctf_type));
 
   // Cast to the appropriate CTF type.
   const CTFRecord *ctf_record = static_cast<const CTFRecord *>(ctf_type);
@@ -551,9 +550,10 @@ bool SymbolFileCTF::CompleteType(CompilerType &compiler_type) {
   }
   m_ast->CompleteTagDeclarationDefinition(compiler_type);
 
-  // Now that the compiler type is no longer incomplete we don't need to
-  // remember it anymore.
+  // Now that the compiler type is complete, we don't need to remember it
+  // anymore and can remove the CTF record type.
   m_compiler_types.erase(compiler_type.GetOpaqueQualType());
+  m_ctf_types.erase(ctf_type->uid);
 
   return true;
 }
@@ -727,9 +727,8 @@ size_t SymbolFileCTF::ParseTypes(CompileUnit &cu) {
     llvm::Expected<std::unique_ptr<CTFType>> type_or_error =
         ParseType(type_offset, type_uid);
     if (type_or_error) {
-      m_ctf_types.emplace_back(std::move(*type_or_error));
+      m_ctf_types[(*type_or_error)->uid] = std::move(*type_or_error);
     } else {
-      m_ctf_types.emplace_back(std::unique_ptr<CTFType>());
       LLDB_LOG_ERROR(log, type_or_error.takeError(),
                      "Failed to parse type {1} at offset {2}: {0}", type_uid,
                      type_offset);
@@ -982,16 +981,16 @@ void SymbolFileCTF::AddSymbols(Symtab &symtab) {
 }
 
 lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {
-  auto find_result = m_types.find(type_uid);
-  if (find_result != m_types.end())
-    return find_result->second.get();
+  auto type_it = m_types.find(type_uid);
+  if (type_it != m_types.end())
+    return type_it->second.get();
 
-  if (type_uid == 0 || type_uid > m_ctf_types.size())
+  auto ctf_type_it = m_ctf_types.find(type_uid);
+  if (ctf_type_it == m_ctf_types.end())
     return nullptr;
 
-  CTFType *ctf_type = m_ctf_types[type_uid - 1].get();
-  if (!ctf_type)
-    return nullptr;
+  CTFType *ctf_type = ctf_type_it->second.get();
+  assert(ctf_type && "m_ctf_types should only contain valid CTF types");
 
   Log *log = GetLog(LLDBLog::Symbols);
 
@@ -1012,6 +1011,11 @@ lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {
   }
 
   m_types[type_uid] = type_sp;
+
+  // Except for record types which we'll need to complete later, we don't need
+  // the CTF type anymore.
+  if (!isa<CTFRecord>(ctf_type))
+    m_ctf_types.erase(type_uid);
 
   return type_sp.get();
 }
