@@ -292,6 +292,9 @@ public:
       : Ranks(ranks[VarKind::Symbol], ranks[VarKind::Dimension],
               ranks[VarKind::Level]) {}
 
+  bool operator==(Ranks const &other) const;
+  bool operator!=(Ranks const &other) const { return !(*this == other); }
+
   constexpr unsigned getRank(VarKind vk) const { return impl[to_index(vk)]; }
   constexpr unsigned getSymRank() const { return getRank(VarKind::Symbol); }
   constexpr unsigned getDimRank() const { return getRank(VarKind::Dimension); }
@@ -323,6 +326,14 @@ class VarSet final {
 
 public:
   explicit VarSet(Ranks const &ranks);
+
+  unsigned getRank(VarKind vk) const { return impl[vk].size(); }
+  unsigned getSymRank() const { return getRank(VarKind::Symbol); }
+  unsigned getDimRank() const { return getRank(VarKind::Dimension); }
+  unsigned getLvlRank() const { return getRank(VarKind::Level); }
+  Ranks getRanks() const {
+    return Ranks(getSymRank(), getDimRank(), getLvlRank());
+  }
 
   bool contains(Var var) const;
   bool occursIn(VarSet const &vars) const;
