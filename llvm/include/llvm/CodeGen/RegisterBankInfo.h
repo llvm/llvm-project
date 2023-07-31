@@ -29,6 +29,7 @@
 namespace llvm {
 
 class MachineInstr;
+class MachineIRBuilder;
 class MachineRegisterInfo;
 class raw_ostream;
 class TargetInstrInfo;
@@ -571,8 +572,9 @@ public:
   static void applyDefaultMapping(const OperandsMapper &OpdMapper);
 
   /// See ::applyMapping.
-  virtual void applyMappingImpl(const OperandsMapper &OpdMapper) const {
-    llvm_unreachable("The target has to implement that part");
+  virtual void applyMappingImpl(MachineIRBuilder &Builder,
+                                const OperandsMapper &OpdMapper) const {
+    llvm_unreachable("The target has to implement this");
   }
 
 public:
@@ -729,14 +731,15 @@ public:
   ///
   /// Therefore, getting the mapping and applying it should be kept in
   /// sync.
-  void applyMapping(const OperandsMapper &OpdMapper) const {
+  void applyMapping(MachineIRBuilder &Builder,
+                    const OperandsMapper &OpdMapper) const {
     // The only mapping we know how to handle is the default mapping.
     if (OpdMapper.getInstrMapping().getID() == DefaultMappingID)
       return applyDefaultMapping(OpdMapper);
     // For other mapping, the target needs to do the right thing.
     // If that means calling applyDefaultMapping, fine, but this
     // must be explicitly stated.
-    applyMappingImpl(OpdMapper);
+    applyMappingImpl(Builder, OpdMapper);
   }
 
   /// Get the size in bits of \p Reg.

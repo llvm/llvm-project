@@ -20519,7 +20519,7 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
 
   if (!IdxC) {
     // Its more profitable to go through memory (1 cycles throughput)
-    // than using VMOVD + VPERMV/PSHUFB sequence ( 2/3 cycles throughput)
+    // than using VMOVD + VPERMV/PSHUFB sequence (2/3 cycles throughput)
     // IACA tool was used to get performance estimation
     // (https://software.intel.com/en-us/articles/intel-architecture-code-analyzer)
     //
@@ -20599,7 +20599,7 @@ X86TargetLowering::LowerEXTRACT_VECTOR_ELT(SDValue Op,
   // TODO: We only extract a single element from v16i8, we can probably afford
   // to be more aggressive here before using the default approach of spilling to
   // stack.
-  if (VT.getSizeInBits() == 8 && Op->isOnlyUserOf(Vec.getNode())) {
+  if (VT == MVT::i8 && Op->isOnlyUserOf(Vec.getNode())) {
     // Extract either the lowest i32 or any i16, and extract the sub-byte.
     int DWordIdx = IdxVal / 4;
     if (DWordIdx == 0) {

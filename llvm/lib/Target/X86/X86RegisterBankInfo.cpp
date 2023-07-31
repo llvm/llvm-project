@@ -272,7 +272,7 @@ X86RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
 }
 
 void X86RegisterBankInfo::applyMappingImpl(
-    const OperandsMapper &OpdMapper) const {
+    MachineIRBuilder &Builder, const OperandsMapper &OpdMapper) const {
   return applyDefaultMapping(OpdMapper);
 }
 

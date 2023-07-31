@@ -165,14 +165,12 @@ TEST_F(AArch64GISelMITest, BuildIntrinsic) {
   collectCopies(Copies, MF);
 
   // Make sure DstOp version works. sqrt is just a placeholder intrinsic.
-  B.buildIntrinsic(Intrinsic::sqrt, {S64}, false)
-    .addUse(Copies[0]);
+  B.buildIntrinsic(Intrinsic::sqrt, {S64}).addUse(Copies[0]);
 
   // Make sure register version works
   SmallVector<Register, 1> Results;
   Results.push_back(MRI->createGenericVirtualRegister(S64));
-  B.buildIntrinsic(Intrinsic::sqrt, Results, false)
-    .addUse(Copies[1]);
+  B.buildIntrinsic(Intrinsic::sqrt, Results).addUse(Copies[1]);
 
   auto CheckStr = R"(
   ; CHECK: [[COPY0:%[0-9]+]]:_(s64) = COPY $x0

@@ -580,6 +580,16 @@ llvm::SetVector<Value> AnalysisState::findValueInReverseUseDefChain(
         continue;
       }
 
+      if (config.followSameTypeOrCastsOnly &&
+          a.opOperand->get().getType() != value.getType() &&
+          !opResult.getDefiningOp<CastOpInterface>()) {
+        // Stop iterating if `followSameTypeOrCastsOnly` is set but the alias is
+        // has a different type and the op is not a cast.
+        if (config.alwaysIncludeLeaves)
+          result.insert(value);
+        continue;
+      }
+
       workingSet.insert(a.opOperand->get());
     }
   }
