@@ -273,3 +273,29 @@ TEST(MatrixTest, gramSchmidt) {
       for (unsigned col = 0; col < 5; col++)
         EXPECT_EQ(gs(row, col), gramSchmidt(row, col));
 }
+
+TEST(MatrixTest, LLL) {
+    MatrixF mat = makeMatrixF(3, 3, {{Fraction(1, 1), Fraction(1, 1), Fraction(1, 1)},
+                                     {Fraction(-1, 1), Fraction(0, 1), Fraction(2, 1)},
+                                     {Fraction(3, 1), Fraction(5, 1), Fraction(6, 1)}});
+    mat.LLL();
+    
+    MatrixF LLL = makeMatrixF(3, 3, {{Fraction(0, 1), Fraction(1, 1), Fraction(0, 1)},
+                                     {Fraction(1, 1), Fraction(0, 1), Fraction(1, 1)},
+                                     {Fraction(-1, 1), Fraction(0, 1), Fraction(2, 1)}});
+
+    for (unsigned row = 0; row < 3; row++)
+      for (unsigned col = 0; col < 3; col++)
+        EXPECT_EQ(mat(row, col), LLL(row, col));
+
+
+    mat = makeMatrixF(2, 2, {{Fraction(12, 1), Fraction(2, 1)}, {Fraction(13, 1), Fraction(4, 1)}});
+    LLL = makeMatrixF(2, 2, {{Fraction(1, 1),  Fraction(2, 1)}, {Fraction(9, 1),  Fraction(-4, 1)}});
+
+    mat.LLL();
+
+    for (unsigned row = 0; row < 2; row++)
+      for (unsigned col = 0; col < 2; col++)
+        EXPECT_EQ(mat(row, col), LLL(row, col));
+
+}

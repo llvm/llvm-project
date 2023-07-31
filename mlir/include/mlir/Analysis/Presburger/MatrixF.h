@@ -164,9 +164,9 @@ public:
   // unmodified and returning the orthogonal (unnormalised) matrix.
   MatrixF gramSchmidt();
 
-  // Run LLL basis reduction on the matrix, modifying the data in-place.
-  // The parameter is delta.
-  void LLL(Fraction);
+  // Run LLL basis reduction on the matrix, modifying it in-place.
+  // The parameter is delta, taken to be 3/4 by default.
+  void LLL(Fraction delta = Fraction(3, 4));
 
   /// Resize the matrix to the specified dimensions. If a dimension is smaller,
   /// the values are truncated; if it is bigger, the new values are initialized
