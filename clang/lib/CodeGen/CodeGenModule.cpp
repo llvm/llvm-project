@@ -7462,6 +7462,8 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   assert(NewBuilder->DeferredDecls.empty() &&
          "Newly created module should not have deferred decls");
   NewBuilder->DeferredDecls = std::move(DeferredDecls);
+  assert(EmittedDeferredDecls.empty() &&
+         "Still have (unmerged) EmittedDeferredDecls deferred decls");
 
   assert(NewBuilder->DeferredVTables.empty() &&
          "Newly created module should not have deferred vtables");
@@ -7476,11 +7478,6 @@ void CodeGenModule::moveLazyEmissionStates(CodeGenModule *NewBuilder) {
   NewBuilder->WeakRefReferences = std::move(WeakRefReferences);
 
   NewBuilder->TBAA = std::move(TBAA);
-
-  assert(NewBuilder->EmittedDeferredDecls.empty() &&
-         "Still have (unmerged) EmittedDeferredDecls deferred decls");
-
-  NewBuilder->EmittedDeferredDecls = std::move(EmittedDeferredDecls);
 
   NewBuilder->ABI->MangleCtx = std::move(ABI->MangleCtx);
 }
