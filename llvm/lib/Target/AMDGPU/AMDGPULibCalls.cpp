@@ -95,8 +95,7 @@ private:
   bool fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
   // sin/cos
-  bool fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo,
-                   AliasAnalysis *AA);
+  bool fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
   // __read_pipe/__write_pipe
   bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
@@ -129,7 +128,7 @@ protected:
 public:
   AMDGPULibCalls(const TargetMachine *TM_ = nullptr) : TM(TM_) {}
 
-  bool fold(CallInst *CI, AliasAnalysis *AA = nullptr);
+  bool fold(CallInst *CI);
 
   void initFunction(const Function &F);
   void initNativeFuncs();
@@ -154,10 +153,6 @@ namespace {
       initializeAMDGPUSimplifyLibCallsPass(*PassRegistry::getPassRegistry());
     }
 
-    void getAnalysisUsage(AnalysisUsage &AU) const override {
-      AU.addRequired<AAResultsWrapperPass>();
-    }
-
     bool runOnFunction(Function &M) override;
   };
 
@@ -173,6 +168,10 @@ namespace {
       Simplifier.initNativeFuncs();
     }
 
+    void getAnalysisUsage(AnalysisUsage &AU) const override {
+      // TODO: Preserves most
+    }
+
     bool runOnFunction(Function &F) override;
   };
 
@@ -183,7 +182,6 @@ char AMDGPUUseNativeCalls::ID = 0;
 
 INITIALIZE_PASS_BEGIN(AMDGPUSimplifyLibCalls, "amdgpu-simplifylib",
                       "Simplify well-known AMD library calls", false, false)
-INITIALIZE_PASS_DEPENDENCY(AAResultsWrapperPass)
 INITIALIZE_PASS_END(AMDGPUSimplifyLibCalls, "amdgpu-simplifylib",
                     "Simplify well-known AMD library calls", false, false)
 
@@ -601,7 +599,7 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
 }
 
 // This function returns false if no change; return true otherwise.
-bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
+bool AMDGPULibCalls::fold(CallInst *CI) {
   Function *Callee = CI->getCalledFunction();
   // Ignore indirect calls.
   if (!Callee || CI->isNoBuiltin())
@@ -653,7 +651,7 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
       return fold_sqrt(FPOp, B, FInfo);
     case AMDGPULibFunc::EI_COS:
     case AMDGPULibFunc::EI_SIN:
-      return fold_sincos(FPOp, B, FInfo, AA);
+      return fold_sincos(FPOp, B, FInfo);
     case AMDGPULibFunc::EI_RECIP:
       // skip vector function
       assert((FInfo.getPrefix() == AMDGPULibFunc::NATIVE ||
@@ -1220,7 +1218,7 @@ bool AMDGPULibCalls::fold_sqrt(FPMathOperator *FPOp, IRBuilder<> &B,
 
 // fold sin, cos -> sincos.
 bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
-                                 const FuncInfo &fInfo, AliasAnalysis *AA) {
+                                 const FuncInfo &fInfo) {
   assert(fInfo.getId() == AMDGPULibFunc::EI_SIN ||
          fInfo.getId() == AMDGPULibFunc::EI_COS);
 
@@ -1237,21 +1235,6 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
 
   int const MaxScan = 30;
   bool Changed = false;
-
-  { // fold in load value.
-    LoadInst *LI = dyn_cast<LoadInst>(CArgVal);
-    if (LI && LI->getParent() == CBB) {
-      BasicBlock::iterator BBI = LI->getIterator();
-      Value *AvailableVal = FindAvailableLoadedValue(LI, CBB, BBI, MaxScan, AA);
-      if (AvailableVal) {
-        Changed = true;
-        CArgVal->replaceAllUsesWith(AvailableVal);
-        if (CArgVal->getNumUses() == 0)
-          LI->eraseFromParent();
-        CArgVal = FPOp->getOperand(0);
-      }
-    }
-  }
 
   Module *M = CI->getModule();
   FuncInfo PartnerInfo(isSin ? AMDGPULibFunc::EI_COS : AMDGPULibFunc::EI_SIN,
@@ -1674,7 +1657,6 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
   Simplifier.initFunction(F);
 
   bool Changed = false;
-  auto AA = &getAnalysis<AAResultsWrapperPass>().getAAResults();
 
   LLVM_DEBUG(dbgs() << "AMDIC: process function ";
              F.printAsOperand(dbgs(), false, F.getParent()); dbgs() << '\n';);
@@ -1685,7 +1667,7 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
       CallInst *CI = dyn_cast<CallInst>(I);
       ++I;
       if (CI) {
-        if (Simplifier.fold(CI, AA))
+        if (Simplifier.fold(CI))
           Changed = true;
       }
     }
@@ -1700,7 +1682,6 @@ PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
   Simplifier.initFunction(F);
 
   bool Changed = false;
-  auto AA = &AM.getResult<AAManager>(F);
 
   LLVM_DEBUG(dbgs() << "AMDIC: process function ";
              F.printAsOperand(dbgs(), false, F.getParent()); dbgs() << '\n';);
@@ -1712,7 +1693,7 @@ PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
       ++I;
 
       if (CI) {
-        if (Simplifier.fold(CI, AA))
+        if (Simplifier.fold(CI))
           Changed = true;
       }
     }
