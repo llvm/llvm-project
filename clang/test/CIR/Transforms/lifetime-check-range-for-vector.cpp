@@ -2,6 +2,8 @@
 
 #include "std-cxx.h"
 
+// expected-no-diagnostics
+
 typedef enum SType {
   INFO_ENUM_0 = 9,
   INFO_ENUM_1 = 2020,
@@ -16,8 +18,6 @@ typedef struct InfoRaw {
 void swappy(unsigned c) {
   std::vector<InfoRaw> images(c);
   for (auto& image : images) {
-    // FIXME: this warning shall not happen, fix next!
-    image = {INFO_ENUM_1}; // expected-warning {{passing aggregate containing invalid pointer member 'ref.tmp0.next'}}
-                           // expected-note@-1 {{'nullptr' invalidated here}}
+    image = {INFO_ENUM_1};
   }
 }
