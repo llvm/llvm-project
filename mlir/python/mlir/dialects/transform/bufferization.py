@@ -2,4 +2,5 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+from .._bufferization_transform_enum_gen import *
 from .._bufferization_transform_ops_gen import *
