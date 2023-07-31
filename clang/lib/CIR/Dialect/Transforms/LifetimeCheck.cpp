@@ -567,6 +567,7 @@ void LifetimeCheckPass::kill(const State &s, InvalidStyle invalidStyle,
     owners.erase(v);
     ptrs.erase(v);
     tasks.erase(v);
+    aggregates.erase(v);
   }
 }
 

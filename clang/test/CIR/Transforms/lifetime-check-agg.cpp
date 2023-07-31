@@ -35,8 +35,8 @@ struct X {
   static entries e;
 };
 
-void exploded_fields(bool cond) {
-  {
+void exploded_fields(bool cond, int c) {
+  for (int i = 0; i < c; i++) {
     InfoRaw info = {INFO_ENUM_0}; // expected-note {{invalidated here}}
     if (cond) {
       InfoPriv privTmp = {INFO_ENUM_1};
