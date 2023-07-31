@@ -135,7 +135,7 @@ private:
     // for the condition expression, even if just an atom.
     if (Val == nullptr) {
       Val = &Env.makeAtomicBoolValue();
-      Env.setValueStrict(Cond, *Val);
+      Env.setValue(Cond, *Val);
     }
 
     bool ConditionValue = true;
@@ -402,7 +402,7 @@ builtinTransferInitializer(const CFGInitializer &Elt,
   // the `AggregateStorageLocation` already exists. We should explore if there's
   // anything that we can do to change this.
   if (Member->getType()->isReferenceType()) {
-    auto *InitExprLoc = Env.getStorageLocationStrict(*InitExpr);
+    auto *InitExprLoc = Env.getStorageLocation(*InitExpr);
     if (InitExprLoc == nullptr)
       return;
 
