@@ -357,62 +357,51 @@ class RVInstRFrm<bits<7> funct7, RISCVOpcode opcode, dag outs, dag ins,
   let Inst{6-0} = opcode.Value;
 }
 
-class RVInstI<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
-              string opcodestr, string argstr>
+// Common base class for I format instructions. Bits {31-20} should be set by
+// the subclasses.
+class RVInstIBase<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
+                  string opcodestr, string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
-  bits<12> imm12;
   bits<5> rs1;
   bits<5> rd;
 
-  let Inst{31-20} = imm12;
   let Inst{19-15} = rs1;
   let Inst{14-12} = funct3;
   let Inst{11-7} = rd;
   let Inst{6-0} = opcode.Value;
+}
+
+class RVInstI<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
+              string opcodestr, string argstr>
+    : RVInstIBase<funct3, opcode, outs, ins, opcodestr, argstr> {
+  bits<12> imm12;
+
+  let Inst{31-20} = imm12;
 }
 
 class RVInstIShift<bits<5> imm11_7, bits<3> funct3, RISCVOpcode opcode,
                    dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+    : RVInstIBase<funct3, opcode, outs, ins, opcodestr, argstr> {
   bits<6> shamt;
-  bits<5> rs1;
-  bits<5> rd;
 
   let Inst{31-27} = imm11_7;
   let Inst{26} = 0;
   let Inst{25-20} = shamt;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstIShiftW<bits<7> imm11_5, bits<3> funct3, RISCVOpcode opcode,
                     dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
+    : RVInstIBase<funct3, opcode, outs, ins, opcodestr, argstr> {
   bits<5> shamt;
-  bits<5> rs1;
-  bits<5> rd;
 
   let Inst{31-25} = imm11_5;
   let Inst{24-20} = shamt;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstIUnary<bits<12> imm12, bits<3> funct3, RISCVOpcode opcode,
                    dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatI> {
-  bits<5> rs1;
-  bits<5> rd;
-
+    : RVInstIBase<funct3, opcode, outs, ins, opcodestr, argstr> {
   let Inst{31-20} = imm12;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = opcode.Value;
 }
 
 class RVInstS<bits<3> funct3, RISCVOpcode opcode, dag outs, dag ins,
