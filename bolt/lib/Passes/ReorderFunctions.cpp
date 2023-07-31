@@ -340,7 +340,8 @@ void ReorderFunctions::runOnFunctions(BinaryContext &BC) {
         applyCDSLayout(FuncSizes, FuncCounts, CallCounts, CallOffsets);
 
     // Create a single cluster from the computed order of hot functions.
-    Clusters.emplace_back(Cluster(Result, Cg));
+    std::vector<CallGraph::NodeId> NodeOrder(Result.begin(), Result.end());
+    Clusters.emplace_back(Cluster(NodeOrder, Cg));
   } break;
   case RT_PETTIS_HANSEN:
     Clusters = pettisAndHansen(Cg);
