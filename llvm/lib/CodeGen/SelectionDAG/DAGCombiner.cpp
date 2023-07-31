@@ -5459,12 +5459,12 @@ static SDValue isSaturatingMinMax(SDValue N0, SDValue N1, SDValue N2,
     if (N0 != N2 && (N2.getOpcode() != ISD::TRUNCATE || N0 != N2.getOperand(0)))
       return 0;
     // The constants need to be the same or a truncated version of each other.
-    ConstantSDNode *N1C = isConstOrConstSplat(N1);
-    ConstantSDNode *N3C = isConstOrConstSplat(N3);
+    ConstantSDNode *N1C = isConstOrConstSplat(peekThroughTruncates(N1));
+    ConstantSDNode *N3C = isConstOrConstSplat(peekThroughTruncates(N3));
     if (!N1C || !N3C)
       return 0;
-    const APInt &C1 = N1C->getAPIntValue();
-    const APInt &C2 = N3C->getAPIntValue();
+    const APInt &C1 = N1C->getAPIntValue().trunc(N1.getScalarValueSizeInBits());
+    const APInt &C2 = N3C->getAPIntValue().trunc(N3.getScalarValueSizeInBits());
     if (C1.getBitWidth() < C2.getBitWidth() || C1 != C2.sext(C1.getBitWidth()))
       return 0;
     return CC == ISD::SETLT ? ISD::SMIN : (CC == ISD::SETGT ? ISD::SMAX : 0);

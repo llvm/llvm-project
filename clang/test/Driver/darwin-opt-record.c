@@ -1,5 +1,3 @@
-// REQUIRES: system-darwin
-
 // RUN: %clang -target x86_64-apple-darwin10 -### -c -o FOO -fsave-optimization-record -arch x86_64 -arch x86_64h %s 2>&1 | FileCheck %s --check-prefix=CHECK-MULTIPLE-ARCH
 // RUN: %clang -target x86_64-apple-darwin10 -### -c -o FOO -foptimization-record-file=tmp -arch x86_64 -arch x86_64h %s 2>&1 | FileCheck %s --check-prefix=CHECK-MULTIPLE-ARCH-ERROR
 // RUN: %clang -target x86_64-apple-darwin10 -### -o FOO -fsave-optimization-record %s 2>&1 | FileCheck %s --check-prefix=CHECK-DSYMUTIL-NO-G

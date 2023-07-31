@@ -385,10 +385,10 @@ void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
       ++I;
       auto Delim = std::find(I, Input.end(), '}');
       assert(Delim != Input.end());
+      StringRef Name(I, std::distance(I, Delim));
       std::optional<llvm::sys::unicode::LooseMatchingResult> Res =
-          llvm::sys::unicode::nameToCodepointLooseMatching(
-              StringRef(I, std::distance(I, Delim)));
-      assert(Res);
+          llvm::sys::unicode::nameToCodepointLooseMatching(Name);
+      assert(Res && "could not find a codepoint that was previously found");
       CodePoint = Res->CodePoint;
       assert(CodePoint != 0xFFFFFFFF);
       appendCodePoint(CodePoint, Buf);

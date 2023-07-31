@@ -1727,6 +1727,15 @@ llvm.func @passthrough() attributes {passthrough = ["noinline", ["alignstack", "
 
 // -----
 
+// CHECK-LABEL: @my_allocator
+// CHECK: #[[ALLOC_ATTRS:[0-9]*]]
+llvm.func @my_allocator(i64) attributes {passthrough = [["allocsize", "4294967295"]]}
+
+// CHECK: attributes #[[ALLOC_ATTRS]] = {
+// CHECK-DAG: allocsize(0)
+
+// -----
+
 // CHECK-LABEL: @functionEntryCount
 // CHECK-SAME: !prof ![[PROF_ID:[0-9]*]]
 llvm.func @functionEntryCount() attributes {function_entry_count = 4242 : i64} {
@@ -2020,6 +2029,21 @@ llvm.func @fastmathFlags(%arg0: f32, %arg1 : vector<2xf32>) {
 // CHECK: select contract i1
   %26 = llvm.select %25, %arg0, %20 {fastmathFlags = #llvm.fastmath<contract>} : i1, f32
   llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @switch_empty
+llvm.func @switch_empty(%arg0 : i32) -> i32 {
+  // CHECK:      switch i32 %[[SWITCH_arg0:[0-9]+]], label %[[SWITCHDEFAULT_bb1:[0-9]+]] [
+  // CHECK-NEXT: ]
+  llvm.switch %arg0 : i32, ^bb1 [
+  ]
+
+  // CHECK:      [[SWITCHDEFAULT_bb1]]:
+  // CHECK-NEXT:   ret i32 %[[SWITCH_arg0]]
+^bb1:
+  llvm.return %arg0 : i32
 }
 
 // -----

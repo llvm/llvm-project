@@ -23,6 +23,17 @@ namespace Throw {
              // ref-note {{subexpression not valid in a constant expression}}
     return 0;
   }
+
+  constexpr int NoSubExpr() { // ref-error {{never produces a constant expression}} \
+                              // expected-error {{never produces a constant expression}}
+    throw; // ref-note 2{{subexpression not valid}} \
+           // expected-note 2{{subexpression not valid}}
+    return 0;
+  }
+  static_assert(NoSubExpr() == 0, ""); // ref-error {{not an integral constant expression}} \
+                                       // ref-note {{in call to}} \
+                                       // expected-error {{not an integral constant expression}} \
+                                       // expected-note {{in call to}}
 }
 
 namespace Asm {

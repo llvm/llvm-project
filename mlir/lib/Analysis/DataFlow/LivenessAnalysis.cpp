@@ -89,13 +89,15 @@ void LivenessAnalysis::visitOperation(Operation *op,
 
 void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // We know (at the moment) and assume (for the future) that `operand` is a
-  // non-forwarded branch operand of an op of type `RegionBranchOpInterface`,
-  // `BranchOpInterface`, or `RegionBranchTerminatorOpInterface`.
+  // non-forwarded branch operand of a `RegionBranchOpInterface`,
+  // `BranchOpInterface`, `RegionBranchTerminatorOpInterface` or return-like op.
   Operation *op = operand.getOwner();
   assert((isa<RegionBranchOpInterface>(op) || isa<BranchOpInterface>(op) ||
-          isa<RegionBranchTerminatorOpInterface>(op)) &&
+          isa<RegionBranchTerminatorOpInterface>(op) ||
+          op->hasTrait<OpTrait::ReturnLike>()) &&
          "expected the op to be `RegionBranchOpInterface`, "
-         "`BranchOpInterface`, or `RegionBranchTerminatorOpInterface`");
+         "`BranchOpInterface`, `RegionBranchTerminatorOpInterface`, or "
+         "return-like");
 
   // The lattices of the non-forwarded branch operands don't get updated like
   // the forwarded branch operands or the non-branch operands. Thus they need
@@ -120,10 +122,14 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
     // successors.
     blocks = op->getSuccessors();
   } else {
-    // When the op is a `RegionBranchTerminatorOpInterface`, like a
-    // `scf.condition` op, its branch operand controls the flow into this op's
-    // parent's (which is a `RegionBranchOpInterface`'s) regions.
-    for (Region &region : op->getParentOp()->getRegions()) {
+    // When the op is a `RegionBranchTerminatorOpInterface`, like an
+    // `scf.condition` op or return-like, like an `scf.yield` op, its branch
+    // operand controls the flow into this op's parent's (which is a
+    // `RegionBranchOpInterface`'s) regions.
+    Operation *parentOp = op->getParentOp();
+    assert(isa<RegionBranchOpInterface>(parentOp) &&
+           "expected parent op to implement `RegionBranchOpInterface`");
+    for (Region &region : parentOp->getRegions()) {
       for (Block &block : region)
         blocks.push_back(&block);
     }
@@ -155,10 +161,11 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   visitOperation(op, operandLiveness, resultsLiveness);
 
   // We also visit the parent op with the parent's results and this operand if
-  // `op` is a `RegionBranchTerminatorOpInterface` because its non-forwarded
-  // operand depends on not only its memory effects/results but also on those of
-  // its parent's.
-  if (!isa<RegionBranchTerminatorOpInterface>(op))
+  // `op` is a `RegionBranchTerminatorOpInterface` or return-like because its
+  // non-forwarded operand depends on not only its memory effects/results but
+  // also on those of its parent's.
+  if (!isa<RegionBranchTerminatorOpInterface>(op) &&
+      !op->hasTrait<OpTrait::ReturnLike>())
     return;
   Operation *parentOp = op->getParentOp();
   SmallVector<const Liveness *, 4> parentResultsLiveness;

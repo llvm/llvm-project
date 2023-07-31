@@ -9,7 +9,7 @@ define i1 @oss_fuzz_32759(i1 %y, i1 %c1) {
 ; CHECK:       cond.true:
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    ret i1 [[C1]]
+; CHECK-NEXT:    ret i1 false
 ;
 entry:
   br i1 %c1, label %cond.true, label %end

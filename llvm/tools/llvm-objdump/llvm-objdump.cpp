@@ -1411,18 +1411,14 @@ fetchBinaryByBuildID(const ObjectFile &Obj) {
 }
 
 static void
-disassembleObject(const Target *TheTarget, ObjectFile &Obj,
-                  const ObjectFile &DbgObj, MCContext &Ctx,
-                  MCDisassembler *PrimaryDisAsm,
+disassembleObject(ObjectFile &Obj, const ObjectFile &DbgObj,
+                  DisassemblerTarget &PrimaryTarget,
                   std::optional<DisassemblerTarget> &SecondaryTarget,
-                  const MCInstrAnalysis *MIA, MCInstPrinter *IP,
-                  const MCSubtargetInfo *PrimarySTI, PrettyPrinter &PIP,
                   SourcePrinter &SP, bool InlineRelocs) {
-  const MCSubtargetInfo *STI = PrimarySTI;
-  MCDisassembler *DisAsm = PrimaryDisAsm;
+  DisassemblerTarget *DT = &PrimaryTarget;
   bool PrimaryIsThumb = false;
   if (isArmElf(Obj))
-    PrimaryIsThumb = STI->checkFeatures("+thumb-mode");
+    PrimaryIsThumb = PrimaryTarget.SubtargetInfo->checkFeatures("+thumb-mode");
 
   std::map<SectionRef, std::vector<RelocationRef>> RelocMap;
   if (InlineRelocs)
@@ -1559,7 +1555,7 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
   llvm::stable_sort(AbsoluteSymbols);
 
   std::unique_ptr<DWARFContext> DICtx;
-  LiveVariablePrinter LVP(*Ctx.getRegisterInfo(), *STI);
+  LiveVariablePrinter LVP(*DT->Context->getRegisterInfo(), *DT->SubtargetInfo);
 
   if (DbgVariables != DVDisabled) {
     DICtx = DWARFContext::create(DbgObj);
@@ -1616,8 +1612,8 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
     std::vector<std::unique_ptr<std::string>> SynthesizedLabelNames;
     if (Obj.isELF() && Obj.getArch() == Triple::amdgcn) {
       // AMDGPU disassembler uses symbolizer for printing labels
-      addSymbolizer(Ctx, TheTarget, TripleName, DisAsm, SectionAddr, Bytes,
-                    Symbols, SynthesizedLabelNames);
+      addSymbolizer(*DT->Context, DT->TheTarget, TripleName, DT->DisAsm.get(),
+                    SectionAddr, Bytes, Symbols, SynthesizedLabelNames);
     }
 
     StringRef SegmentName = getSegmentName(MachO, Section);
@@ -1828,9 +1824,9 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
       for (size_t SHI = 0; SHI < SymbolsHere.size(); ++SHI) {
         SymbolInfoTy Symbol = SymbolsHere[SHI];
 
-        auto Status =
-            DisAsm->onSymbolStart(Symbol, Size, Bytes.slice(Start, End - Start),
-                                  SectionAddr + Start, CommentStream);
+        auto Status = DT->DisAsm->onSymbolStart(
+            Symbol, Size, Bytes.slice(Start, End - Start), SectionAddr + Start,
+            CommentStream);
 
         if (!Status) {
           // If onSymbolStart returns std::nullopt, that means it didn't trigger
@@ -1855,7 +1851,7 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
           // distance to the next symbol, and sometimes it will be just a
           // prologue and we should start disassembling instructions from where
           // it left off.
-          outs() << Ctx.getAsmInfo()->getCommentString()
+          outs() << DT->Context->getAsmInfo()->getCommentString()
                  << " error in decoding " << SymNamesHere[SHI]
                  << " : decoding failed region as bytes.\n";
           for (uint64_t I = 0; I < Size; ++I) {
@@ -1888,7 +1884,9 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
       std::unordered_map<uint64_t, std::string> AllLabels;
       std::unordered_map<uint64_t, std::vector<std::string>> BBAddrMapLabels;
       if (SymbolizeOperands) {
-        collectLocalBranchTargets(Bytes, MIA, DisAsm, IP, PrimarySTI,
+        collectLocalBranchTargets(Bytes, DT->InstrAnalysis.get(),
+                                  DT->DisAsm.get(), DT->InstPrinter.get(),
+                                  PrimaryTarget.SubtargetInfo.get(),
                                   SectionAddr, Index, End, AllLabels);
         collectBBAddrMapLabels(AddrToBBAddrMap, SectionAddr, Index, End,
                                BBAddrMapLabels);
@@ -1904,22 +1902,16 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
           DumpARMELFData = Kind == 'd';
           if (SecondaryTarget) {
             if (Kind == 'a') {
-              STI = PrimaryIsThumb ? SecondaryTarget->SubtargetInfo.get()
-                                   : PrimarySTI;
-              DisAsm = PrimaryIsThumb ? SecondaryTarget->DisAsm.get()
-                                      : PrimaryDisAsm;
+              DT = PrimaryIsThumb ? &*SecondaryTarget : &PrimaryTarget;
             } else if (Kind == 't') {
-              STI = PrimaryIsThumb ? PrimarySTI
-                                   : SecondaryTarget->SubtargetInfo.get();
-              DisAsm = PrimaryIsThumb ? PrimaryDisAsm
-                                      : SecondaryTarget->DisAsm.get();
+              DT = PrimaryIsThumb ? &PrimaryTarget : &*SecondaryTarget;
             }
           }
         }
 
         if (DumpARMELFData) {
           Size = dumpARMELFData(SectionAddr, Index, End, Obj, Bytes,
-                                MappingSymbols, *STI, FOS);
+                                MappingSymbols, *DT->SubtargetInfo, FOS);
         } else {
           // When -z or --disassemble-zeroes are given we always dissasemble
           // them. Otherwise we might want to skip zero bytes we see.
@@ -1943,8 +1935,8 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
               doesXCOFFTracebackTableBegin(Bytes.slice(Index, 4))) {
             dumpTracebackTable(Bytes.slice(Index),
                                SectionAddr + Index + VMAAdjustment, FOS,
-                               SectionAddr + End + VMAAdjustment, *STI,
-                               cast<XCOFFObjectFile>(&Obj));
+                               SectionAddr + End + VMAAdjustment,
+                               *DT->SubtargetInfo, cast<XCOFFObjectFile>(&Obj));
             Index = End;
             continue;
           }
@@ -1965,39 +1957,41 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
           MCInst Inst;
           ArrayRef<uint8_t> ThisBytes = Bytes.slice(Index);
           uint64_t ThisAddr = SectionAddr + Index;
-          bool Disassembled = DisAsm->getInstruction(Inst, Size, ThisBytes,
-                                                     ThisAddr, CommentStream);
+          bool Disassembled = DT->DisAsm->getInstruction(
+              Inst, Size, ThisBytes, ThisAddr, CommentStream);
           if (Size == 0)
             Size = std::min<uint64_t>(
                 ThisBytes.size(),
-                DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
+                DT->DisAsm->suggestBytesToSkip(ThisBytes, ThisAddr));
 
           LVP.update({Index, Section.getIndex()},
                      {Index + Size, Section.getIndex()}, Index + Size != End);
 
-          IP->setCommentStream(CommentStream);
+          DT->InstPrinter->setCommentStream(CommentStream);
 
-          PIP.printInst(
-              *IP, Disassembled ? &Inst : nullptr, Bytes.slice(Index, Size),
+          DT->Printer->printInst(
+              *DT->InstPrinter, Disassembled ? &Inst : nullptr,
+              Bytes.slice(Index, Size),
               {SectionAddr + Index + VMAAdjustment, Section.getIndex()}, FOS,
-              "", *STI, &SP, Obj.getFileName(), &Rels, LVP);
+              "", *DT->SubtargetInfo, &SP, Obj.getFileName(), &Rels, LVP);
 
-          IP->setCommentStream(llvm::nulls());
+          DT->InstPrinter->setCommentStream(llvm::nulls());
 
           // If disassembly has failed, avoid analysing invalid/incomplete
           // instruction information. Otherwise, try to resolve the target
           // address (jump target or memory operand address) and print it on the
           // right of the instruction.
-          if (Disassembled && MIA) {
+          if (Disassembled && DT->InstrAnalysis) {
             // Branch targets are printed just after the instructions.
             llvm::raw_ostream *TargetOS = &FOS;
             uint64_t Target;
-            bool PrintTarget =
-                MIA->evaluateBranch(Inst, SectionAddr + Index, Size, Target);
+            bool PrintTarget = DT->InstrAnalysis->evaluateBranch(
+                Inst, SectionAddr + Index, Size, Target);
             if (!PrintTarget)
               if (std::optional<uint64_t> MaybeTarget =
-                      MIA->evaluateMemoryOperandAddress(
-                          Inst, STI, SectionAddr + Index, Size)) {
+                      DT->InstrAnalysis->evaluateMemoryOperandAddress(
+                          Inst, DT->SubtargetInfo.get(), SectionAddr + Index,
+                          Size)) {
                 Target = *MaybeTarget;
                 PrintTarget = true;
                 // Do not print real address when symbolizing.
@@ -2099,9 +2093,9 @@ disassembleObject(const Target *TheTarget, ObjectFile &Obj,
           }
         }
 
-        assert(Ctx.getAsmInfo());
-        emitPostInstructionInfo(FOS, *Ctx.getAsmInfo(), *STI,
-                                CommentStream.str(), LVP);
+        assert(DT->Context->getAsmInfo());
+        emitPostInstructionInfo(FOS, *DT->Context->getAsmInfo(),
+                                *DT->SubtargetInfo, CommentStream.str(), LVP);
         Comments.clear();
 
         // Hexagon does this in pretty printer
@@ -2256,12 +2250,8 @@ static void disassembleObject(ObjectFile *Obj, bool InlineRelocs) {
       reportError(Obj->getFileName(),
                   "Unrecognized disassembler option: " + Opt);
 
-  disassembleObject(TheTarget, *Obj, *DbgObj, *PrimaryTarget.Context.get(),
-                    PrimaryTarget.DisAsm.get(), SecondaryTarget,
-                    PrimaryTarget.InstrAnalysis.get(),
-                    PrimaryTarget.InstPrinter.get(),
-                    PrimaryTarget.SubtargetInfo.get(),
-                    *PrimaryTarget.Printer, SP, InlineRelocs);
+  disassembleObject(*Obj, *DbgObj, PrimaryTarget, SecondaryTarget, SP,
+                    InlineRelocs);
 }
 
 void Dumper::printRelocations() {

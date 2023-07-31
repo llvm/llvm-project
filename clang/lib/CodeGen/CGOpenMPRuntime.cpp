@@ -10166,6 +10166,13 @@ void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
 
   std::optional<OMPDeclareTargetDeclAttr::MapTypeTy> Res =
       OMPDeclareTargetDeclAttr::isDeclareTargetDeclaration(VD);
+
+  // If this is an 'extern' declaration we defer to the canonical definition and
+  // do not emit an offloading entry.
+  if (Res && *Res != OMPDeclareTargetDeclAttr::MT_Link &&
+      VD->hasExternalStorage())
+    return;
+
   if (!Res) {
     if (CGM.getLangOpts().OpenMPIsTargetDevice) {
       // Register non-target variables being emitted in device code (debug info

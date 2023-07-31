@@ -772,8 +772,10 @@ Expected<uint32_t> ELFObjectFile<ELFT>::getSymbolFlags(DataRefImpl Sym) const {
     }
   } else if (EF.getHeader().e_machine == ELF::EM_RISCV) {
     if (Expected<StringRef> NameOrErr = getSymbolName(Sym)) {
-      // Mark empty name symbols used for label differences.
-      if (NameOrErr->empty())
+      StringRef Name = *NameOrErr;
+      // Mark empty name symbols (used for label differences) and mapping
+      // symbols.
+      if (Name.empty() || Name.startswith("$d") || Name.startswith("$x"))
         Result |= SymbolRef::SF_FormatSpecific;
     } else {
       // TODO: Actually report errors helpfully.

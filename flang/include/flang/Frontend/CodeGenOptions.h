@@ -58,6 +58,17 @@ public:
   /// The directory where temp files are stored if specified by -save-temps
   std::optional<std::string> SaveTempsDir;
 
+  /// The name of the file to which the backend should save YAML optimization
+  /// records.
+  std::string OptRecordFile;
+
+  /// The regex that filters the passes that should be saved to the optimization
+  /// records.
+  std::string OptRecordPasses;
+
+  /// The format used for serializing remarks (default: YAML)
+  std::string OptRecordFormat;
+
   // Define accessors/mutators for code generation options of enumeration type.
 #define CODEGENOPT(Name, Bits, Default)
 #define ENUM_CODEGENOPT(Name, Type, Bits, Default)                             \

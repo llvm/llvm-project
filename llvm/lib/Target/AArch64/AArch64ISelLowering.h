@@ -165,9 +165,6 @@ enum NodeType : unsigned {
   // Floating point comparison
   FCMP,
 
-  // Scalar extract
-  EXTR,
-
   // Scalar-to-vector duplication
   DUP,
   DUPLANE8,

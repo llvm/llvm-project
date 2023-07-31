@@ -2717,3 +2717,37 @@ define hidden void @zext_store_div(ptr addrspace(1) %in0, ptr addrspace(1) %in1,
   store <4 x i8> %shuffle0_0, ptr addrspace(1) %out0
   ret void
 }
+
+define void @Source16Bit(i16 %in, <2 x i16> %reg) {
+; GFX10-LABEL: Source16Bit:
+; GFX10:       ; %bb.0: ; %entry
+; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX10-NEXT:    v_perm_b32 v0, v0, v1, 0x3050204
+; GFX10-NEXT:    global_store_dword v[0:1], v0, off
+; GFX10-NEXT:    s_setpc_b64 s[30:31]
+;
+; GFX9-LABEL: Source16Bit:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_mov_b32 s4, 0x3050204
+; GFX9-NEXT:    v_perm_b32 v0, v0, v1, s4
+; GFX9-NEXT:    global_store_dword v[0:1], v0, off
+; GFX9-NEXT:    s_waitcnt vmcnt(0)
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
+entry:
+  %elt0 = extractelement <2 x i16> %reg, i32 1
+  %e0b0 = and i16 %elt0, 255
+  %e0b1 = and i16 %elt0, -256
+  %e1b0 = and i16 %in, 255
+  %e1b1 = and i16 %in, -256
+  %tmp0 = shl i16 %e0b0, 8
+  %byte0 = or i16 %tmp0, %e1b0
+  %tmp2 = lshr i16 %e1b1, 8
+  %byte1 = or i16 %e0b1, %tmp2
+  %ext0 = zext i16 %byte0 to i32
+  %ext1 = zext i16 %byte1 to i32
+  %shifted = shl i32 %ext1, 16
+  %result = or i32 %shifted, %ext0
+  store i32 %result, ptr addrspace(1) undef
+  ret void
+}

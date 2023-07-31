@@ -472,8 +472,7 @@ private:
     mutable size_t InputIndex;
 
     bool operator==(const IndexedModuleID &Other) const {
-      return std::tie(ID.ModuleName, ID.ContextHash) ==
-             std::tie(Other.ID.ModuleName, Other.ID.ContextHash);
+      return ID == Other.ID;
     }
 
     bool operator<(const IndexedModuleID &Other) const {
@@ -493,7 +492,7 @@ private:
 
     struct Hasher {
       std::size_t operator()(const IndexedModuleID &IMID) const {
-        return llvm::hash_combine(IMID.ID.ModuleName, IMID.ID.ContextHash);
+        return llvm::hash_value(IMID.ID);
       }
     };
   };
@@ -880,7 +879,7 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
 
   for (unsigned I = 0; I < Pool.getThreadCount(); ++I) {
     Pool.async([&, I]() {
-      llvm::StringSet<> AlreadySeenModules;
+      llvm::DenseSet<ModuleID> AlreadySeenModules;
       while (auto MaybeInputIndex = GetNextInputIndex()) {
         size_t LocalIndex = *MaybeInputIndex;
         const tooling::CompileCommand *Input = &Inputs[LocalIndex];

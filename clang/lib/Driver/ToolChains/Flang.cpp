@@ -12,6 +12,8 @@
 
 #include "clang/Driver/Options.h"
 #include "llvm/Frontend/Debug/Options.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Path.h"
 
 #include <cassert>
 
@@ -138,12 +140,11 @@ void Flang::addCodegenOptions(const ArgList &Args,
       !stackArrays->getOption().matches(options::OPT_fno_stack_arrays))
     CmdArgs.push_back("-fstack-arrays");
 
-  if (Args.hasArg(options::OPT_flang_experimental_hlfir))
-    CmdArgs.push_back("-flang-experimental-hlfir");
-  if (Args.hasArg(options::OPT_flang_experimental_polymorphism))
-    CmdArgs.push_back("-flang-experimental-polymorphism");
   if (shouldLoopVersion(Args))
     CmdArgs.push_back("-fversion-loops-for-stride");
+
+  Args.AddAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
+                            options::OPT_flang_experimental_polymorphism});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {
@@ -387,6 +388,50 @@ static void addFloatingPointOptions(const Driver &D, const ArgList &Args,
     CmdArgs.push_back("-freciprocal-math");
 }
 
+static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
+                                 const InputInfo &Input) {
+  StringRef Format = "yaml";
+  if (const Arg *A = Args.getLastArg(options::OPT_fsave_optimization_record_EQ))
+    Format = A->getValue();
+
+  CmdArgs.push_back("-opt-record-file");
+
+  const Arg *A = Args.getLastArg(options::OPT_foptimization_record_file_EQ);
+  if (A) {
+    CmdArgs.push_back(A->getValue());
+  } else {
+    SmallString<128> F;
+
+    if (Args.hasArg(options::OPT_c) || Args.hasArg(options::OPT_S)) {
+      if (Arg *FinalOutput = Args.getLastArg(options::OPT_o))
+        F = FinalOutput->getValue();
+    }
+
+    if (F.empty()) {
+      // Use the input filename.
+      F = llvm::sys::path::stem(Input.getBaseInput());
+    }
+
+    SmallString<32> Extension;
+    Extension += "opt.";
+    Extension += Format;
+
+    llvm::sys::path::replace_extension(F, Extension);
+    CmdArgs.push_back(Args.MakeArgString(F));
+  }
+
+  if (const Arg *A =
+          Args.getLastArg(options::OPT_foptimization_record_passes_EQ)) {
+    CmdArgs.push_back("-opt-record-passes");
+    CmdArgs.push_back(A->getValue());
+  }
+
+  if (!Format.empty()) {
+    CmdArgs.push_back("-opt-record-format");
+    CmdArgs.push_back(Format.data());
+  }
+}
+
 void Flang::ConstructJob(Compilation &C, const JobAction &JA,
                          const InputInfo &Output, const InputInfoList &Inputs,
                          const ArgList &Args, const char *LinkingOutput) const {
@@ -470,6 +515,10 @@ void Flang::ConstructJob(Compilation &C, const JobAction &JA,
 
   // Add Codegen options
   addCodegenOptions(Args, CmdArgs);
+
+  // Remarks can be enabled with any of the `-f.*optimization-record.*` flags.
+  if (willEmitRemarks(Args))
+    renderRemarksOptions(Args, CmdArgs, Input);
 
   // Add other compile options
   addOtherOptions(Args, CmdArgs);

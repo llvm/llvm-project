@@ -2210,7 +2210,7 @@ bool X86DAGToDAGISel::matchAddressRecursively(SDValue N, X86ISelAddressMode &AM,
     AM.dump(CurDAG);
   });
   // Limit recursion.
-  if (Depth > 5)
+  if (Depth >= SelectionDAG::MaxRecursionDepth)
     return matchAddressBase(N, AM);
 
   // If this is already a %rip relative address, we can only merge immediates

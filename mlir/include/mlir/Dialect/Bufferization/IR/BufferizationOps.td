@@ -514,6 +514,7 @@ def Bufferization_DeallocOp : Bufferization_Op<"dealloc", [
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 }
 
 #endif // BUFFERIZATION_OPS

@@ -219,6 +219,8 @@ public:
 
   bool requiresFrameIndexScavenging(const MachineFunction &MF) const override;
 
+  bool supportsBackwardScavenger() const override { return true; }
+
   bool requiresVirtualBaseRegisters(const MachineFunction &MF) const override;
 
   bool eliminateFrameIndex(MachineBasicBlock::iterator II,
