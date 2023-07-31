@@ -108,13 +108,15 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
       // If this conv has flag 0 but not - and no specified precision, it's
       // padded with 0's instead of spaces identically to if precision =
       // min_width - (1 if sign_char). For example: ("%+04d", 1) -> "+001"
-      zeroes = to_conv.min_width - digits_written - prefix_len;
+      zeroes =
+          static_cast<int>(to_conv.min_width - digits_written - prefix_len);
       spaces = 0;
     } else {
       // If there are enough digits to pass over the precision, just write the
       // number, padded by spaces.
       zeroes = 0;
-      spaces = to_conv.min_width - digits_written - prefix_len;
+      spaces =
+          static_cast<int>(to_conv.min_width - digits_written - prefix_len);
     }
   } else {
     // If precision was specified, possibly write zeroes, and possibly write
@@ -127,10 +129,12 @@ LIBC_INLINE int convert_int(Writer *writer, const FormatSection &to_conv) {
     // that special case first.
     if (num == 0 && to_conv.precision == 0)
       digits_written = 0;
-    zeroes = to_conv.precision - digits_written; // a negative value means 0
+    zeroes = static_cast<int>(to_conv.precision -
+                              digits_written); // a negative value means 0
     if (zeroes < 0)
       zeroes = 0;
-    spaces = to_conv.min_width - zeroes - digits_written - prefix_len;
+    spaces = static_cast<int>(to_conv.min_width - zeroes - digits_written -
+                              prefix_len);
   }
 
   if ((to_conv.conv_name == 'o') &&
