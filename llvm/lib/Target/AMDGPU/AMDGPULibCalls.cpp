@@ -20,7 +20,6 @@
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAMDGPU.h"
 #include "llvm/InitializePasses.h"
-#include "llvm/Target/TargetMachine.h"
 #include <cmath>
 
 #define DEBUG_TYPE "amdgpu-simplifylib"
@@ -48,8 +47,6 @@ class AMDGPULibCalls {
 private:
 
   typedef llvm::AMDGPULibFunc FuncInfo;
-
-  const TargetMachine *TM;
 
   bool UnsafeFPMath = false;
 
@@ -101,13 +98,11 @@ private:
   bool fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
                             const FuncInfo &FInfo);
 
-  // llvm.amdgcn.wavefrontsize
-  bool fold_wavefrontsize(CallInst *CI, IRBuilder<> &B);
-
   // Get insertion point at entry.
   BasicBlock::iterator getEntryIns(CallInst * UI);
   // Insert an Alloc instruction.
   AllocaInst* insertAlloca(CallInst * UI, IRBuilder<> &B, const char *prefix);
+
   // Get a scalar native builtin single argument FP function
   FunctionCallee getNativeFunction(Module *M, const FuncInfo &FInfo);
 
@@ -126,7 +121,7 @@ protected:
   }
 
 public:
-  AMDGPULibCalls(const TargetMachine *TM_ = nullptr) : TM(TM_) {}
+  AMDGPULibCalls() {}
 
   bool fold(CallInst *CI);
 
@@ -148,8 +143,7 @@ namespace {
   public:
     static char ID; // Pass identification
 
-    AMDGPUSimplifyLibCalls(const TargetMachine *TM = nullptr)
-      : FunctionPass(ID), Simplifier(TM) {
+    AMDGPUSimplifyLibCalls() : FunctionPass(ID) {
       initializeAMDGPUSimplifyLibCallsPass(*PassRegistry::getPassRegistry());
     }
 
@@ -602,18 +596,8 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
 bool AMDGPULibCalls::fold(CallInst *CI) {
   Function *Callee = CI->getCalledFunction();
   // Ignore indirect calls.
-  if (!Callee || CI->isNoBuiltin())
+  if (!Callee || Callee->isIntrinsic() || CI->isNoBuiltin())
     return false;
-
-  IRBuilder<> B(CI);
-  switch (Callee->getIntrinsicID()) {
-  case Intrinsic::not_intrinsic:
-    break;
-  case Intrinsic::amdgcn_wavefrontsize:
-    return !EnablePreLink && fold_wavefrontsize(CI, B);
-  default:
-    return false;
-  }
 
   FuncInfo FInfo;
   if (!parseFunctionName(Callee->getName(), FInfo))
@@ -628,6 +612,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
 
   if (TDOFold(CI, FInfo))
     return true;
+
+  IRBuilder<> B(CI);
 
   if (FPMathOperator *FPOp = dyn_cast<FPMathOperator>(CI)) {
     // Under unsafe-math, evaluate calls if possible.
@@ -1310,28 +1296,6 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   return true;
 }
 
-bool AMDGPULibCalls::fold_wavefrontsize(CallInst *CI, IRBuilder<> &B) {
-  if (!TM)
-    return false;
-
-  StringRef CPU = TM->getTargetCPU();
-  StringRef Features = TM->getTargetFeatureString();
-  if ((CPU.empty() || CPU.equals_insensitive("generic")) &&
-      (Features.empty() || !Features.contains_insensitive("wavefrontsize")))
-    return false;
-
-  Function *F = CI->getParent()->getParent();
-  const GCNSubtarget &ST = TM->getSubtarget<GCNSubtarget>(*F);
-  unsigned N = ST.getWavefrontSize();
-
-  LLVM_DEBUG(errs() << "AMDIC: fold_wavefrontsize (" << *CI << ") with "
-               << N << "\n");
-
-  CI->replaceAllUsesWith(ConstantInt::get(B.getInt32Ty(), N));
-  CI->eraseFromParent();
-  return true;
-}
-
 // Get insertion point at entry.
 BasicBlock::iterator AMDGPULibCalls::getEntryIns(CallInst * UI) {
   Function * Func = UI->getParent()->getParent();
@@ -1642,8 +1606,8 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
 }
 
 // Public interface to the Simplify LibCalls pass.
-FunctionPass *llvm::createAMDGPUSimplifyLibCallsPass(const TargetMachine *TM) {
-  return new AMDGPUSimplifyLibCalls(TM);
+FunctionPass *llvm::createAMDGPUSimplifyLibCallsPass() {
+  return new AMDGPUSimplifyLibCalls();
 }
 
 FunctionPass *llvm::createAMDGPUUseNativeCallsPass() {
@@ -1677,7 +1641,7 @@ bool AMDGPUSimplifyLibCalls::runOnFunction(Function &F) {
 
 PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
                                                   FunctionAnalysisManager &AM) {
-  AMDGPULibCalls Simplifier(&TM);
+  AMDGPULibCalls Simplifier;
   Simplifier.initNativeFuncs();
   Simplifier.initFunction(F);
 
