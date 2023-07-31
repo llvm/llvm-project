@@ -1037,6 +1037,11 @@ void LifetimeCheckPass::classifyAndInitTypeCategories(mlir::Value addr,
         return;
 
       auto eltAddr = op.getResult();
+      // If nothing is using this StructElementAddr, don't bother since
+      // it could lead to even more noisy outcomes.
+      if (eltAddr.use_empty())
+        return;
+
       auto eltTy =
           eltAddr.getType().cast<mlir::cir::PointerType>().getPointee();
 
@@ -1451,6 +1456,7 @@ mlir::Value LifetimeCheckPass::getThisParamPointerCategory(CallOp callOp) {
     if (ptrs.count(loadOp.getAddr()))
       return loadOp.getAddr();
   }
+  // TODO: add a remark to spot 'this' indirections we currently not track.
   return {};
 }
 
@@ -1462,6 +1468,7 @@ mlir::Value LifetimeCheckPass::getThisParamOwnerCategory(CallOp callOp) {
     if (owners.count(loadOp.getAddr()))
       return loadOp.getAddr();
   }
+  // TODO: add a remark to spot 'this' indirections we currently not track.
   return {};
 }
 
