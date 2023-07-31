@@ -1889,7 +1889,7 @@ int Driver::ExecuteCompilation(
   // Just print if -### was present.
   if (C.getArgs().hasArg(options::OPT__HASH_HASH_HASH)) {
     C.getJobs().Print(llvm::errs(), "\n", true);
-    return Diags.hasErrorOccurred() ? 1 : 0;
+    return 0;
   }
 
   // If there were errors building the compilation, quit now.
