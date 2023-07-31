@@ -777,6 +777,13 @@ gentbl_filegroup(
     tbl_outs = [
         (
             [
+                "-gen-python-enum-bindings",
+                "-bind-dialect=transform",
+            ],
+            "mlir/dialects/_bufferization_transform_enums_gen.py",
+        ),
+        (
+            [
                 "-gen-python-op-bindings",
                 "-bind-dialect=transform",
                 "-dialect-extension=bufferization_transform",
