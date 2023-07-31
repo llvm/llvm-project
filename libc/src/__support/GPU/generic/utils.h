@@ -18,6 +18,11 @@ namespace gpu {
 
 constexpr const uint64_t LANE_SIZE = 1;
 
+template <typename T> using Private = T;
+template <typename T> using Constant = T;
+template <typename T> using Shared = T;
+template <typename T> using Global = T;
+
 LIBC_INLINE uint32_t get_num_blocks_x() { return 1; }
 
 LIBC_INLINE uint32_t get_num_blocks_y() { return 1; }
