@@ -1401,8 +1401,16 @@ void LifetimeCheckPass::checkPointerDeref(mlir::Value addr, mlir::Location loc,
   if (!hasInvalid && !hasNullptr)
     return;
 
-  // Looks like we found a bad path leading to this deference point,
-  // diagnose it.
+  // TODO: create verbosity/accuracy levels, for now use deref styles directly
+  // to decide when not to emit a warning.
+
+  // For indirect calls, do not relly on blunt nullptr passing, require some
+  // invalidation to have happened in a path.
+  if (derefStyle == DerefStyle::IndirectCallParam && !hasInvalid)
+    return;
+
+  // Ok, filtered out questionable warnings, take the bad path leading to this
+  // deference point and diagnose it.
   auto varName = getVarNameFromValue(addr);
   auto D = emitWarning(loc);
 
