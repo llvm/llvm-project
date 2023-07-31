@@ -927,6 +927,18 @@ RISC-V Support
 - The rules for ordering of extensions in ``-march`` strings were relaxed. A
   canonical ordering is no longer enforced on ``z*``, ``s*``, and ``x*``
   prefixed extensions.
+- Support the RVV intrinsics v0.12. Please checkout `the RVV C intrinsics
+  specification
+  <https://github.com/riscv-non-isa/rvv-intrinsic-doc/releases/tag/v0.12.0>`_.
+  It is expected there won't be any incompatibility from this v0.12 to the
+  specifications planned for v1.0.
+
+  * Added vector intrinsics that models control to the rounding mode
+    (``frm`` and ``vxrm``) for the floating-point instruction intrinsics and the 
+    fixed-point instruction intrinsics.
+  * Added intrinsics for reinterpret cast between vector boolean and vector
+    integer ``m1`` value
+  * Removed the ``vread_csr`` and ``vwrite_csr`` intrinsics
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
