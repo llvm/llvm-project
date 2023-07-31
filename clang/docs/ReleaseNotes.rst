@@ -239,6 +239,7 @@ Floating Point Support in Clang
 - Add ``__builtin_set_flt_rounds`` builtin for X86, x86_64, Arm and AArch64 only.
 - Add ``__builtin_elementwise_pow`` builtin for floating point types only.
 - Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
+- Add ``__builtin_elementwise_sqrt`` builtin for floating point types only.
 
 AST Matchers
 ------------
