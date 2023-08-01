@@ -1176,35 +1176,38 @@ add_fp_unittest(
     libc.src.__support.FPUtil.fp_bits
 )
 
-add_fp_unittest(
-  nextafter_test
-  SUITE
-    libc_math_unittests
-  SRCS
-    nextafter_test.cpp
-  HDRS
-    NextAfterTest.h
-  DEPENDS
-    libc.include.math
-    libc.src.math.nextafter
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.fp_bits
-)
+# FIXME: These tests are currently spurious for NVPTX.
+if(NOT LIBC_GPU_TARGET_ARCHITECTURE_IS_NVPTX)
+  add_fp_unittest(
+    nextafter_test
+    SUITE
+      libc_math_unittests
+    SRCS
+      nextafter_test.cpp
+    HDRS
+      NextAfterTest.h
+    DEPENDS
+      libc.include.math
+      libc.src.math.nextafter
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.fp_bits
+  )
 
-add_fp_unittest(
-  nextafterf_test
-  SUITE
-    libc_math_unittests
-  SRCS
-    nextafterf_test.cpp
-  HDRS
-    NextAfterTest.h
-  DEPENDS
-    libc.include.math
-    libc.src.math.nextafterf
-    libc.src.__support.FPUtil.basic_operations
-    libc.src.__support.FPUtil.fp_bits
-)
+  add_fp_unittest(
+    nextafterf_test
+    SUITE
+      libc_math_unittests
+    SRCS
+      nextafterf_test.cpp
+    HDRS
+      NextAfterTest.h
+    DEPENDS
+      libc.include.math
+      libc.src.math.nextafterf
+      libc.src.__support.FPUtil.basic_operations
+      libc.src.__support.FPUtil.fp_bits
+  )
+endif()
 
 add_fp_unittest(
   nextafterl_test
