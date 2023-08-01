@@ -197,6 +197,7 @@ void GPUDialect::initialize() {
   addTypes<MMAMatrixType>();
   addTypes<SparseDnTensorHandleType>();
   addTypes<SparseSpMatHandleType>();
+  addTypes<SparseSpGEMMOpHandleType>();
   addOperations<
 #define GET_OP_LIST
 #include "mlir/Dialect/GPU/IR/GPUOps.cpp.inc"
@@ -214,6 +215,8 @@ static std::string getSparseHandleKeyword(SparseHandleKind kind) {
     return "sparse.dntensor_handle";
   case SparseHandleKind::SpMat:
     return "sparse.spmat_handle";
+  case SparseHandleKind::SpGEMMOp:
+    return "sparse.spgemmop_handle";
   }
   llvm_unreachable("unknown sparse handle kind");
   return "";
@@ -266,6 +269,8 @@ Type GPUDialect::parseType(DialectAsmParser &parser) const {
     return SparseDnTensorHandleType::get(context);
   if (keyword == getSparseHandleKeyword(SparseHandleKind::SpMat))
     return SparseSpMatHandleType::get(context);
+  if (keyword == getSparseHandleKeyword(SparseHandleKind::SpGEMMOp))
+    return SparseSpGEMMOpHandleType::get(context);
 
   parser.emitError(parser.getNameLoc(), "unknown gpu type: " + keyword);
   return Type();
@@ -280,6 +285,9 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
       })
       .Case<SparseSpMatHandleType>(
           [&](Type) { os << getSparseHandleKeyword(SparseHandleKind::SpMat); })
+      .Case<SparseSpGEMMOpHandleType>([&](Type) {
+        os << getSparseHandleKeyword(SparseHandleKind::SpGEMMOp);
+      })
       .Case<MMAMatrixType>([&](MMAMatrixType fragTy) {
         os << "mma_matrix<";
         auto shape = fragTy.getShape();
