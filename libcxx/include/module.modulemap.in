@@ -617,7 +617,7 @@ module std_experimental [system] {
     export *
   }
   module __config {
-    private textual header "experimental/__config"
+    textual header "experimental/__config"
     export *
   }
   // FIXME these should be private
@@ -1516,6 +1516,26 @@ module std_private_iterator_wrap_iter               [system] { header "__iterato
 module std_private_locale_locale_base_api_bsd_locale_defaults  [system] { textual header "__locale_dir/locale_base_api/bsd_locale_defaults.h" }
 module std_private_locale_locale_base_api_bsd_locale_fallbacks [system] { textual header "__locale_dir/locale_base_api/bsd_locale_fallbacks.h" }
 module std_private_locale_locale_base_api_locale_guard         [system] { header "__locale_dir/locale_base_api/locale_guard.h" }
+
+module std_private_math_abs                             [system] { header "__math/abs.h" }
+module std_private_math_copysign                        [system] { header "__math/copysign.h" }
+module std_private_math_error_functions                 [system] { header "__math/error_functions.h" }
+module std_private_math_exponential_functions           [system] { header "__math/exponential_functions.h" }
+module std_private_math_fdim                            [system] { header "__math/fdim.h" }
+module std_private_math_fma                             [system] { header "__math/fma.h" }
+module std_private_math_gamma                           [system] { header "__math/gamma.h" }
+module std_private_math_hyperbolic_functions            [system] { header "__math/hyperbolic_functions.h" }
+module std_private_math_hypot                           [system] { header "__math/hypot.h" }
+module std_private_math_inverse_hyperbolic_functions    [system] { header "__math/inverse_hyperbolic_functions.h" }
+module std_private_math_inverse_trigonometric_functions [system] { header "__math/inverse_trigonometric_functions.h" }
+module std_private_math_logarithms                      [system] { header "__math/logarithms.h" }
+module std_private_math_min_max                         [system] { header "__math/min_max.h" }
+module std_private_math_modulo                          [system] { header "__math/modulo.h" }
+module std_private_math_remainder                       [system] { header "__math/remainder.h" }
+module std_private_math_roots                           [system] { header "__math/roots.h" }
+module std_private_math_rounding_functions              [system] { header "__math/rounding_functions.h" }
+module std_private_math_traits                          [system] { header "__math/traits.h" }
+module std_private_math_trigonometric_functions         [system] { header "__math/trigonometric_functions.h" }
 
 module std_private_mdspan_default_accessor [system] { header "__mdspan/default_accessor.h" }
 module std_private_mdspan_extents          [system] {
