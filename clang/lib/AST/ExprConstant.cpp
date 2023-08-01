@@ -551,8 +551,8 @@ namespace {
     /// Temporaries - Temporary lvalues materialized within this stack frame.
     MapTy Temporaries;
 
-    /// CallLoc - The location of the call expression for this call.
-    SourceLocation CallLoc;
+    /// CallRange - The source range of the call expression for this call.
+    SourceRange CallRange;
 
     /// Index - The call index of this call.
     unsigned Index;
@@ -586,7 +586,7 @@ namespace {
     llvm::DenseMap<const ValueDecl *, FieldDecl *> LambdaCaptureFields;
     FieldDecl *LambdaThisCaptureField = nullptr;
 
-    CallStackFrame(EvalInfo &Info, SourceLocation CallLoc,
+    CallStackFrame(EvalInfo &Info, SourceRange CallRange,
                    const FunctionDecl *Callee, const LValue *This,
                    const Expr *CallExpr, CallRef Arguments);
     ~CallStackFrame();
@@ -630,7 +630,7 @@ namespace {
     void describe(llvm::raw_ostream &OS) const override;
 
     Frame *getCaller() const override { return Caller; }
-    SourceLocation getCallLocation() const override { return CallLoc; }
+    SourceRange getCallRange() const override { return CallRange; }
     const FunctionDecl *getCallee() const override { return Callee; }
 
     bool isStdFunction() const {
@@ -1468,11 +1468,11 @@ void SubobjectDesignator::diagnosePointerArithmetic(EvalInfo &Info,
   setInvalid();
 }
 
-CallStackFrame::CallStackFrame(EvalInfo &Info, SourceLocation CallLoc,
+CallStackFrame::CallStackFrame(EvalInfo &Info, SourceRange CallRange,
                                const FunctionDecl *Callee, const LValue *This,
                                const Expr *CallExpr, CallRef Call)
     : Info(Info), Caller(Info.CurrentCall), Callee(Callee), This(This),
-      CallExpr(CallExpr), Arguments(Call), CallLoc(CallLoc),
+      CallExpr(CallExpr), Arguments(Call), CallRange(CallRange),
       Index(Info.NextCallIndex++) {
   Info.CurrentCall = this;
   ++Info.CallStackDepth;
@@ -6245,7 +6245,7 @@ static bool HandleFunctionCall(SourceLocation CallLoc,
   if (!Info.CheckCallLimit(CallLoc))
     return false;
 
-  CallStackFrame Frame(Info, CallLoc, Callee, This, E, Call);
+  CallStackFrame Frame(Info, E->getSourceRange(), Callee, This, E, Call);
 
   // For a trivial copy or move assignment, perform an APValue copy. This is
   // essential for unions, where the operations performed by the assignment
@@ -6310,7 +6310,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
       Info,
       ObjectUnderConstruction{This.getLValueBase(), This.Designator.Entries},
       RD->getNumBases());
-  CallStackFrame Frame(Info, CallLoc, Definition, &This, E, Call);
+  CallStackFrame Frame(Info, E->getSourceRange(), Definition, &This, E, Call);
 
   // FIXME: Creating an APValue just to hold a nonexistent return value is
   // wasteful.
@@ -6518,7 +6518,7 @@ static bool HandleConstructorCall(const Expr *E, const LValue &This,
          CallScope.destroy();
 }
 
-static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
+static bool HandleDestructionImpl(EvalInfo &Info, SourceRange CallRange,
                                   const LValue &This, APValue &Value,
                                   QualType T) {
   // Objects can only be destroyed while they're within their lifetimes.
@@ -6528,21 +6528,22 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
   if (Value.isAbsent() && !T->isNullPtrType()) {
     APValue Printable;
     This.moveInto(Printable);
-    Info.FFDiag(CallLoc, diag::note_constexpr_destroy_out_of_lifetime)
-      << Printable.getAsString(Info.Ctx, Info.Ctx.getLValueReferenceType(T));
+    Info.FFDiag(CallRange.getBegin(),
+                diag::note_constexpr_destroy_out_of_lifetime)
+        << Printable.getAsString(Info.Ctx, Info.Ctx.getLValueReferenceType(T));
     return false;
   }
 
   // Invent an expression for location purposes.
   // FIXME: We shouldn't need to do this.
-  OpaqueValueExpr LocE(CallLoc, Info.Ctx.IntTy, VK_PRValue);
+  OpaqueValueExpr LocE(CallRange.getBegin(), Info.Ctx.IntTy, VK_PRValue);
 
   // For arrays, destroy elements right-to-left.
   if (const ConstantArrayType *CAT = Info.Ctx.getAsConstantArrayType(T)) {
     uint64_t Size = CAT->getSize().getZExtValue();
     QualType ElemT = CAT->getElementType();
 
-    if (!CheckArraySize(Info, CAT, CallLoc))
+    if (!CheckArraySize(Info, CAT, CallRange.getBegin()))
       return false;
 
     LValue ElemLV = This;
@@ -6559,7 +6560,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
     for (; Size != 0; --Size) {
       APValue &Elem = Value.getArrayInitializedElt(Size - 1);
       if (!HandleLValueArrayAdjustment(Info, &LocE, ElemLV, ElemT, -1) ||
-          !HandleDestructionImpl(Info, CallLoc, ElemLV, Elem, ElemT))
+          !HandleDestructionImpl(Info, CallRange, ElemLV, Elem, ElemT))
         return false;
     }
 
@@ -6571,7 +6572,9 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
   const CXXRecordDecl *RD = T->getAsCXXRecordDecl();
   if (!RD) {
     if (T.isDestructedType()) {
-      Info.FFDiag(CallLoc, diag::note_constexpr_unsupported_destruction) << T;
+      Info.FFDiag(CallRange.getBegin(),
+                  diag::note_constexpr_unsupported_destruction)
+          << T;
       return false;
     }
 
@@ -6580,13 +6583,13 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
   }
 
   if (RD->getNumVBases()) {
-    Info.FFDiag(CallLoc, diag::note_constexpr_virtual_base) << RD;
+    Info.FFDiag(CallRange.getBegin(), diag::note_constexpr_virtual_base) << RD;
     return false;
   }
 
   const CXXDestructorDecl *DD = RD->getDestructor();
   if (!DD && !RD->hasTrivialDestructor()) {
-    Info.FFDiag(CallLoc);
+    Info.FFDiag(CallRange.getBegin());
     return false;
   }
 
@@ -6605,16 +6608,16 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
     return true;
   }
 
-  if (!Info.CheckCallLimit(CallLoc))
+  if (!Info.CheckCallLimit(CallRange.getBegin()))
     return false;
 
   const FunctionDecl *Definition = nullptr;
   const Stmt *Body = DD->getBody(Definition);
 
-  if (!CheckConstexprFunction(Info, CallLoc, DD, Definition, Body))
+  if (!CheckConstexprFunction(Info, CallRange.getBegin(), DD, Definition, Body))
     return false;
 
-  CallStackFrame Frame(Info, CallLoc, Definition, &This, /*CallExpr=*/nullptr,
+  CallStackFrame Frame(Info, CallRange, Definition, &This, /*CallExpr=*/nullptr,
                        CallRef());
 
   // We're now in the period of destruction of this object.
@@ -6629,7 +6632,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
     // (Note that formally the lifetime ends when the period of destruction
     // begins, even though certain uses of the object remain valid until the
     // period of destruction ends.)
-    Info.FFDiag(CallLoc, diag::note_constexpr_double_destroy);
+    Info.FFDiag(CallRange.getBegin(), diag::note_constexpr_double_destroy);
     return false;
   }
 
@@ -6658,7 +6661,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
       return false;
 
     APValue *SubobjectValue = &Value.getStructField(FD->getFieldIndex());
-    if (!HandleDestructionImpl(Info, CallLoc, Subobject, *SubobjectValue,
+    if (!HandleDestructionImpl(Info, CallRange, Subobject, *SubobjectValue,
                                FD->getType()))
       return false;
   }
@@ -6677,7 +6680,7 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
       return false;
 
     APValue *SubobjectValue = &Value.getStructBase(BasesLeft);
-    if (!HandleDestructionImpl(Info, CallLoc, Subobject, *SubobjectValue,
+    if (!HandleDestructionImpl(Info, CallRange, Subobject, *SubobjectValue,
                                BaseType))
       return false;
   }
@@ -6698,7 +6701,7 @@ struct DestroyObjectHandler {
   typedef bool result_type;
   bool failed() { return false; }
   bool found(APValue &Subobj, QualType SubobjType) {
-    return HandleDestructionImpl(Info, E->getExprLoc(), This, Subobj,
+    return HandleDestructionImpl(Info, E->getSourceRange(), This, Subobj,
                                  SubobjType);
   }
   bool found(APSInt &Value, QualType SubobjType) {
@@ -12167,8 +12170,9 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
           Callee->getIdentifier()->isStr("is_constant_evaluated")))) {
       // FIXME: Find a better way to avoid duplicated diagnostics.
       if (Info.EvalStatus.Diag)
-        Info.report((Info.CallStackDepth == 1) ? E->getExprLoc()
-                                               : Info.CurrentCall->CallLoc,
+        Info.report((Info.CallStackDepth == 1)
+                        ? E->getExprLoc()
+                        : Info.CurrentCall->getCallRange().getBegin(),
                     diag::warn_is_constant_evaluated_always_true_constexpr)
             << (Info.CallStackDepth == 1 ? "__builtin_is_constant_evaluated"
                                          : "std::is_constant_evaluated");
