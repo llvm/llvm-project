@@ -701,8 +701,12 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   const char *function_name = frame.GetDisplayFunctionName();
   std::string frame_name =
       function_name == nullptr ? std::string() : function_name;
-  if (frame_name.empty())
-    frame_name = "<unknown>";
+  if (frame_name.empty()) {
+    // If the function name is unavailable, display the pc address as a 16-digit
+    // hex string, e.g. "0x0000000000012345"
+    llvm::raw_string_ostream os(frame_name);
+    os << llvm::format_hex(frame.GetPC(), 18);
+  }
   bool is_optimized = frame.GetFunction().GetIsOptimized();
   if (is_optimized)
     frame_name += " [opt]";
