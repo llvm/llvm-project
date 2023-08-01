@@ -408,7 +408,7 @@ public:
     auto FailureCB = [this](const Twine &Message) {
       this->CheckFailed(Message);
     };
-    CV.initialize(*OS, FailureCB, F);
+    CV.initialize(OS, FailureCB, F);
 
     Broken = false;
     // FIXME: We strip const here because the inst visitor strips const.
