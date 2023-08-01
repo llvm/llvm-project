@@ -93,8 +93,9 @@ template <class ContextT>
 void GenericConvergenceVerifier<ContextT>::reportFailure(
     const Twine &Message, ArrayRef<Printable> DumpedValues) {
   FailureCB(Message);
-  for (auto V : DumpedValues) {
-    *OS << V << '\n';
+  if (OS) {
+    for (auto V : DumpedValues)
+      *OS << V << '\n';
   }
 }
 
