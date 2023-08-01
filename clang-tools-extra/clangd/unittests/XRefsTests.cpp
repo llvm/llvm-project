@@ -125,6 +125,13 @@ TEST(HighlightsTest, All) {
           [Foo [[x]]:2 [[^y]]:4];
         }
       )cpp",
+      R"cpp( // Label
+        int main() {
+          goto [[^theLabel]];
+          [[theLabel]]:
+            return 1;
+        }
+      )cpp",
   };
   for (const char *Test : Tests) {
     Annotations T(Test);
