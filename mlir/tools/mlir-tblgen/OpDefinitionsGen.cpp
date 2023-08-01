@@ -1088,12 +1088,16 @@ void OpEmitter::genAttrNameGetters() {
         MethodParameter("unsigned", "index"));
     ERROR_IF_PRUNED(method, "getAttributeNameForIndex", op);
 
-    const char *const getAttrName = R"(
+    if (attributes.empty()) {
+      method->body() << "  return {};";
+    } else {
+      const char *const getAttrName = R"(
   assert(index < {0} && "invalid attribute index");
   assert(name.getStringRef() == getOperationName() && "invalid operation name");
   return name.getAttributeNames()[index];
 )";
-    method->body() << formatv(getAttrName, attributes.size());
+      method->body() << formatv(getAttrName, attributes.size());
+    }
   }
 
   // Generate the <attr>AttrName methods, that expose the attribute names to
