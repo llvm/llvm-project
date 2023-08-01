@@ -68,3 +68,23 @@ end module
 ! CHECK:         acc.declare_enter dataOperands(%[[LINK]] : !fir.ref<!fir.array<5000xi32>>)
 ! CHECK:         acc.terminator
 ! CHECK:       }
+
+module acc_declare
+  contains
+
+  subroutine acc_declare_copy()
+    integer :: a(100), i
+    !$acc declare copy(a)
+
+    do i = 1, 100
+      a(i) = i
+    end do
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_copy()
+! CHECK: %[[ALLOCA:.*]] = fir.alloca !fir.array<100xi32> {acc.declare = #acc.declare<dataClause =  acc_copy>, bindc_name = "a", uniq_name = "_QMacc_declareFacc_declare_copyEa"}
+! CHECK: %[[BOUND:.*]] = acc.bounds   lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%c1 : index) startIdx(%c1 : index)
+! CHECK: %[[COPYIN:.*]] = acc.copyin varPtr(%[[ALLOCA]] : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xi32>> {dataClause = #acc<data_clause acc_copy>, name = "a"}
+! CHECK: acc.declare_enter dataOperands(%[[COPYIN]] : !fir.ref<!fir.array<100xi32>>)
+
+end module
