@@ -4670,12 +4670,18 @@ static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
   // ensures that when one input is a nan, the other will also be a nan allowing
   // the nan to propagate. If both inputs are nan, this will swap the inputs
   // which is harmless.
-  // FIXME: Handle nonans FMF and use isKnownNeverNaN.
-  SDValue XIsNonNan = DAG.getSetCC(DL, XLenVT, X, X, ISD::SETOEQ);
-  SDValue NewY = DAG.getSelect(DL, VT, XIsNonNan, Y, X);
 
-  SDValue YIsNonNan = DAG.getSetCC(DL, XLenVT, Y, Y, ISD::SETOEQ);
-  SDValue NewX = DAG.getSelect(DL, VT, YIsNonNan, X, Y);
+  SDValue NewY = Y;;
+  if (!Op->getFlags().hasNoNaNs() && !DAG.isKnownNeverNaN(X)) {
+    SDValue XIsNonNan = DAG.getSetCC(DL, XLenVT, X, X, ISD::SETOEQ);
+    NewY = DAG.getSelect(DL, VT, XIsNonNan, Y, X);
+  }
+
+  SDValue NewX = X;
+  if (!Op->getFlags().hasNoNaNs() && !DAG.isKnownNeverNaN(Y)) {
+    SDValue YIsNonNan = DAG.getSetCC(DL, XLenVT, Y, Y, ISD::SETOEQ);
+    NewX = DAG.getSelect(DL, VT, YIsNonNan, X, Y);
+  }
 
   unsigned Opc =
       Op.getOpcode() == ISD::FMAXIMUM ? RISCVISD::FMAX : RISCVISD::FMIN;
