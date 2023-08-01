@@ -58,7 +58,7 @@
 
 // Check output one file without bundling cause error.
 
-// RUN: %clang -### --target=x86_64-linux-gnu \
+// RUN: not %clang -### --target=x86_64-linux-gnu \
 // RUN:   -x hip --cuda-gpu-arch=gfx803 --cuda-gpu-arch=gfx900 \
 // RUN:   -S -nogpuinc -nogpulib --cuda-device-only -fgpu-rdc \
 // RUN:   %S/Inputs/hip_multiple_inputs/a.cu -o %t.s --no-gpu-bundle-output \
