@@ -4,12 +4,7 @@
 define i32 @ctlz_0(i32 %x) {
 ; CHECK-LABEL: ctlz_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bez32 a0, .LBB0_2
-; CHECK-NEXT:  # %bb.1: # %cond.false
 ; CHECK-NEXT:    ff1.32 a0, a0
-; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB0_2:
-; CHECK-NEXT:    movi16 a0, 32
 ; CHECK-NEXT:    rts16
 entry:
   %nlz = call i32 @llvm.ctlz.i32(i32 %x, i1 0)
@@ -29,13 +24,8 @@ entry:
 define i32 @cttz_0(i32 %x) {
 ; CHECK-LABEL: cttz_0:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    bez32 a0, .LBB2_2
-; CHECK-NEXT:  # %bb.1: # %cond.false
 ; CHECK-NEXT:    brev32 a0, a0
 ; CHECK-NEXT:    ff1.32 a0, a0
-; CHECK-NEXT:    rts16
-; CHECK-NEXT:  .LBB2_2:
-; CHECK-NEXT:    movi16 a0, 32
 ; CHECK-NEXT:    rts16
 entry:
   %ntz = call i32 @llvm.cttz.i32(i32 %x, i1 0)
