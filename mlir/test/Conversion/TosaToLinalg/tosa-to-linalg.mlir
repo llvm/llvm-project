@@ -20,20 +20,41 @@ func.func @test_abs_scalar(%arg0: tensor<f32>) -> tensor<f32> {
 // -----
 
 // CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
-// CHECK-LABEL: @test_abs_1d_cast_result
+// CHECK-LABEL: @test_abs_1d_cast_static_to_dynamic
 // CHECK-SAME: ([[ARG0:%[0-9a-zA-Z_]*]]
-func.func @test_abs_1d_cast_result(%arg0: tensor<5xf32>) -> tensor<?xf32> {
+func.func @test_abs_1d_cast_static_to_dynamic(%arg0: tensor<5xf32>) -> tensor<?xf32> {
   // CHECK: [[EMPTY:%.+]] = tensor.empty() : tensor<5xf32>
   // CHECK: [[RESULT:%.+]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel"]} ins([[ARG0]] : tensor<5xf32>) outs([[EMPTY]] : tensor<5xf32>) {
   // CHECK: ^bb0([[IN0:%.+]]: f32, [[OUT0:%.+]]: f32):
   // CHECK:   [[ABS:%.+]] = math.absf [[IN0]] : f32
   // CHECK:   linalg.yield [[ABS]] : f32
   // CHECK: } -> tensor<5xf32>
+  // CHECK: [[CAST_RESULT:%.+]] = tensor.cast [[RESULT]] : tensor<5xf32> to tensor<?xf32>
   %0 = "tosa.abs"(%arg0) : (tensor<5xf32>) -> tensor<?xf32>
 
-  // CHECK: [[CAST_RESULT:%.+]] = tensor.cast [[RESULT]] : tensor<5xf32> to tensor<?xf32>
   // CHECK: return [[CAST_RESULT]] : tensor<?xf32>
   return %0 : tensor<?xf32>
+}
+
+// -----
+
+// CHECK: #[[$MAP0:.*]] = affine_map<(d0) -> (d0)>
+// CHECK-LABEL: @test_abs_1d_cast_dynamic_to_static
+// CHECK-SAME: (%[[ARG0:[0-9a-zA-Z_]*]]
+func.func @test_abs_1d_cast_dynamic_to_static(%arg0: tensor<?xf32>) -> tensor<5xf32> {
+  // CHECK: %[[ZERO:.*]] = arith.constant 0 : index
+  // CHECK: %[[DIM_SIZE:.*]] = tensor.dim %[[ARG0]], %[[ZERO]] : tensor<?xf32>
+  // CHECK: %[[EMPTY:.*]] = tensor.empty(%[[DIM_SIZE]]) : tensor<?xf32>
+  // CHECK: %[[RESULT:.*]] = linalg.generic {indexing_maps = [#[[$MAP0]], #[[$MAP0]]], iterator_types = ["parallel"]} ins(%[[ARG0]] : tensor<?xf32>) outs(%[[EMPTY]] : tensor<?xf32>) {
+  // CHECK: ^bb0(%[[VAL_0:.*]]: f32, %[[VAL_1:.*]]: f32):
+  // CHECK:   %[[VAL_2:.*]] = math.absf %[[VAL_0]] : f32
+  // CHECK:   linalg.yield %[[VAL_2]] : f32
+  // CHECK: } -> tensor<?xf32>
+  // CHECK: %[[CAST_RESULT:.*]] = tensor.cast %[[RESULT]] : tensor<?xf32> to tensor<5xf32>
+  %0 = "tosa.abs"(%arg0) : (tensor<?xf32>) -> tensor<5xf32>
+
+  // CHECK: return %[[CAST_RESULT]] : tensor<5xf32>
+  return %0 : tensor<5xf32>
 }
 
 // -----
