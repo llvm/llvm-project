@@ -1318,6 +1318,47 @@ Instruction *InstCombinerImpl::FoldOpIntoSelect(Instruction &Op, SelectInst *SI,
   return SelectInst::Create(SI->getCondition(), NewTV, NewFV, "", nullptr, SI);
 }
 
+static Value *simplifyInstructionWithPHI(Instruction &I, PHINode *PN,
+                                         Value *InValue, BasicBlock *InBB,
+                                         const DataLayout &DL,
+                                         const SimplifyQuery SQ) {
+  // NB: It is a precondition of this transform that the operands be
+  // phi translatable! This is usually trivially satisfied by limiting it
+  // to constant ops, and for selects we do a more sophisticated check.
+  SmallVector<Value *> Ops;
+  for (Value *Op : I.operands()) {
+    if (Op == PN)
+      Ops.push_back(InValue);
+    else
+      Ops.push_back(Op->DoPHITranslation(PN->getParent(), InBB));
+  }
+
+  // Don't consider the simplification successful if we get back a constant
+  // expression. That's just an instruction in hiding.
+  // Also reject the case where we simplify back to the phi node. We wouldn't
+  // be able to remove it in that case.
+  Value *NewVal = simplifyInstructionWithOperands(
+      &I, Ops, SQ.getWithInstruction(InBB->getTerminator()));
+  if (NewVal && NewVal != PN && !match(NewVal, m_ConstantExpr()))
+    return NewVal;
+
+  // Check if incoming PHI value can be replaced with constant
+  // based on implied condition.
+  BranchInst *TerminatorBI = dyn_cast<BranchInst>(InBB->getTerminator());
+  const ICmpInst *ICmp = dyn_cast<ICmpInst>(&I);
+  if (TerminatorBI && TerminatorBI->isConditional() &&
+      TerminatorBI->getSuccessor(0) != TerminatorBI->getSuccessor(1) && ICmp) {
+    bool LHSIsTrue = TerminatorBI->getSuccessor(0) == PN->getParent();
+    std::optional<bool> ImpliedCond =
+        isImpliedCondition(TerminatorBI->getCondition(), ICmp->getPredicate(),
+                           Ops[0], Ops[1], DL, LHSIsTrue);
+    if (ImpliedCond)
+      return ConstantInt::getBool(I.getType(), ImpliedCond.value());
+  }
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
   unsigned NumPHIValues = PN->getNumIncomingValues();
   if (NumPHIValues == 0)
@@ -1346,24 +1387,7 @@ Instruction *InstCombinerImpl::foldOpIntoPhi(Instruction &I, PHINode *PN) {
     Value *InVal = PN->getIncomingValue(i);
     BasicBlock *InBB = PN->getIncomingBlock(i);
 
-    // NB: It is a precondition of this transform that the operands be
-    // phi translatable! This is usually trivially satisfied by limiting it
-    // to constant ops, and for selects we do a more sophisticated check.
-    SmallVector<Value *> Ops;
-    for (Value *Op : I.operands()) {
-      if (Op == PN)
-        Ops.push_back(InVal);
-      else
-        Ops.push_back(Op->DoPHITranslation(PN->getParent(), InBB));
-    }
-
-    // Don't consider the simplification successful if we get back a constant
-    // expression. That's just an instruction in hiding.
-    // Also reject the case where we simplify back to the phi node. We wouldn't
-    // be able to remove it in that case.
-    Value *NewVal = simplifyInstructionWithOperands(
-        &I, Ops, SQ.getWithInstruction(InBB->getTerminator()));
-    if (NewVal && NewVal != PN && !match(NewVal, m_ConstantExpr())) {
+    if (auto *NewVal = simplifyInstructionWithPHI(I, PN, InVal, InBB, DL, SQ)) {
       NewPhiValues.push_back(NewVal);
       continue;
     }
