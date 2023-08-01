@@ -132,11 +132,11 @@
 // RUN: --sysroot=%S/Inputs/basic_freebsd_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE-LD
 // RUN: %clang %s -target i386-linux-gnu -fPIE -pie -### \
-// RUN: --gcc-toolchain="" -rtlib=platform \
+// RUN: --gcc-toolchain="" -rtlib=platform --unwindlib=platform \
 // RUN: --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE-LD
 // RUN: %clang %s -target i386-linux-gnu -fPIC -pie -### \
-// RUN: --gcc-toolchain="" -rtlib=platform \
+// RUN: --gcc-toolchain="" -rtlib=platform --unwindlib=platform \
 // RUN: --sysroot=%S/Inputs/basic_linux_tree 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-PIE-LD
 //

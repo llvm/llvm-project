@@ -28,6 +28,7 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/ToolOutputFile.h"
@@ -125,7 +126,7 @@ static Expected<Triple> readTargetTriple(StringRef FileName) {
   return ErrOrObj->getBinary()->makeTriple();
 }
 
-int main(int argc, char **argv) {
+int llvm_dwp_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
 
   DwpOptTable Tbl;

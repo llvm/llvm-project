@@ -692,7 +692,8 @@ static LogicalResult rewrite2To4SpMM(PatternRewriter &rewriter,
   Type tokenTp = rewriter.getType<gpu::AsyncTokenType>();
   Value token = genFirstWait(rewriter, loc);
   Operation *spGenA = rewriter.create<gpu::Create2To4SpMatOp>(
-      loc, spMatHandleTp, tokenTp, token, szm, szk, matA);
+      loc, spMatHandleTp, tokenTp, token, szm, szk,
+      gpu::Prune2To4SpMatFlag::PRUNE_AND_CHECK, matA);
 
   Value spMatA = spGenA->getResult(0);
   token = spGenA->getResult(1);

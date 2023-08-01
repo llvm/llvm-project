@@ -173,6 +173,26 @@ static bool interp__builtin_fmin(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_fmax(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame,
+                                 const Function *Func) {
+  const Floating &LHS = getParam<Floating>(Frame, 0);
+  const Floating &RHS = getParam<Floating>(Frame, 1);
+
+  Floating Result;
+
+  // When comparing zeroes, return +0.0 if one of the zeroes is positive.
+  if (LHS.isZero() && RHS.isZero() && LHS.isNegative())
+    Result = RHS;
+  else if (LHS.isNan() || RHS > LHS)
+    Result = RHS;
+  else
+    Result = LHS;
+
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
 /// Defined as __builtin_isnan(...), to accommodate the fact that it can
 /// take a float, double, long double, etc.
 /// But for us, that's all a Floating anyway.
@@ -338,6 +358,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   case Builtin::BI__builtin_fminf16:
   case Builtin::BI__builtin_fminf128:
     if (interp__builtin_fmin(S, OpPC, Frame, F))
+      return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_fmax:
+  case Builtin::BI__builtin_fmaxf:
+  case Builtin::BI__builtin_fmaxl:
+  case Builtin::BI__builtin_fmaxf16:
+  case Builtin::BI__builtin_fmaxf128:
+    if (interp__builtin_fmax(S, OpPC, Frame, F))
       return Ret<PT_Float>(S, OpPC, Dummy);
     break;
 

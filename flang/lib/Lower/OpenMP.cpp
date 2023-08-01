@@ -1934,6 +1934,27 @@ static void resetBeforeTerminator(fir::FirOpBuilder &firOpBuilder,
     firOpBuilder.setInsertionPointToStart(&block);
 }
 
+static mlir::Operation *
+createAndSetPrivatizedLoopVar(Fortran::lower::AbstractConverter &converter,
+                              mlir::Location loc, mlir::Type loopVarType,
+                              mlir::Value indexVal,
+                              const Fortran::semantics::Symbol *sym) {
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
+  firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
+
+  mlir::Value temp = firOpBuilder.create<fir::AllocaOp>(
+      loc, loopVarType, /*pinned=*/true, /*lengthParams=*/mlir::ValueRange{},
+      /*shapeParams*/ mlir::ValueRange{},
+      llvm::ArrayRef<mlir::NamedAttribute>{
+          Fortran::lower::getAdaptToByRefAttr(firOpBuilder)});
+  converter.bindSymbol(*sym, temp);
+  firOpBuilder.restoreInsertionPoint(insPt);
+  mlir::Operation *storeOp = firOpBuilder.create<fir::StoreOp>(
+      loc, indexVal, converter.getSymbolAddress(*sym));
+  return storeOp;
+}
+
 /// Create the body (block) for an OpenMP Operation.
 ///
 /// \param [in]    op - the operation the body belongs to.
@@ -1974,14 +1995,10 @@ static void createBodyOfOp(
     // The argument is not currently in memory, so make a temporary for the
     // argument, and store it there, then bind that location to the argument.
     for (const Fortran::semantics::Symbol *arg : args) {
-      mlir::Value val =
+      mlir::Value indexVal =
           fir::getBase(op.getRegion().front().getArgument(argIndex));
-      mlir::Value temp = firOpBuilder.createTemporary(
-          loc, loopVarType,
-          llvm::ArrayRef<mlir::NamedAttribute>{
-              Fortran::lower::getAdaptToByRefAttr(firOpBuilder)});
-      storeOp = firOpBuilder.create<fir::StoreOp>(loc, val, temp);
-      converter.bindSymbol(*arg, temp);
+      storeOp = createAndSetPrivatizedLoopVar(converter, loc, loopVarType,
+                                              indexVal, arg);
       argIndex++;
     }
   } else {

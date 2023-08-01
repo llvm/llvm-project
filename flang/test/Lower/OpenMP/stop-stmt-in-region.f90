@@ -71,7 +71,7 @@ subroutine test_stop_in_region3()
 end
 
 ! CHECK-LABEL: func.func @_QPtest_stop_in_region4() {
-! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {adapt.valuebyref}
+! CHECK:         %[[VAL_0:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 ! CHECK:         %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_stop_in_region4Ei"}
 ! CHECK:         %[[VAL_2:.*]] = fir.alloca i32 {bindc_name = "x", uniq_name = "_QFtest_stop_in_region4Ex"}
 ! CHECK:         %[[VAL_3:.*]] = arith.constant 1 : i32
