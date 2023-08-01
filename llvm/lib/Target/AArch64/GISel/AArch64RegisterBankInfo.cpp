@@ -493,8 +493,12 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
     return false;
   case Intrinsic::aarch64_neon_uaddlv:
   case Intrinsic::aarch64_neon_uaddv:
+  case Intrinsic::aarch64_neon_saddv:
   case Intrinsic::aarch64_neon_umaxv:
+  case Intrinsic::aarch64_neon_smaxv:
   case Intrinsic::aarch64_neon_uminv:
+  case Intrinsic::aarch64_neon_sminv:
+  case Intrinsic::aarch64_neon_faddv:
   case Intrinsic::aarch64_neon_fmaxv:
   case Intrinsic::aarch64_neon_fminv:
   case Intrinsic::aarch64_neon_fmaxnmv:
@@ -504,13 +508,6 @@ static bool isFPIntrinsic(const MachineRegisterInfo &MRI,
     const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
     return SrcTy.getElementType().getSizeInBits() >= 16 &&
            SrcTy.getElementCount().getFixedValue() >= 4;
-  }
-  case Intrinsic::aarch64_neon_saddv:
-  case Intrinsic::aarch64_neon_smaxv:
-  case Intrinsic::aarch64_neon_sminv: {
-    const LLT SrcTy = MRI.getType(MI.getOperand(2).getReg());
-    return SrcTy.getElementType().getSizeInBits() >= 32 &&
-           SrcTy.getElementCount().getFixedValue() >= 2;
   }
   }
 }
