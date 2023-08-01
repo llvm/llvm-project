@@ -562,18 +562,18 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
-  if (DiscardResult)
-    return true;
-
   // 'Base.Member'
   const Expr *Base = E->getBase();
-  const ValueDecl *Member = E->getMemberDecl();
+
+  if (DiscardResult)
+    return this->discard(Base);
 
   if (!this->visit(Base))
     return false;
 
   // Base above gives us a pointer on the stack.
   // TODO: Implement non-FieldDecl members.
+  const ValueDecl *Member = E->getMemberDecl();
   if (const auto *FD = dyn_cast<FieldDecl>(Member)) {
     const RecordDecl *RD = FD->getParent();
     const Record *R = getRecord(RD);
