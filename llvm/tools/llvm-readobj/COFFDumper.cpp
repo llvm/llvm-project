@@ -854,17 +854,17 @@ void COFFDumper::printCOFFLoadConfig() {
         reportError(std::move(E), Obj->getFileName());
       auto CodeMap = reinterpret_cast<const chpe_range_entry *>(CodeMapInt);
       for (uint32_t i = 0; i < CHPE->CodeMapCount; i++) {
-        uint32_t Start = CodeMap[i].StartOffset & ~3;
+        uint32_t Start = CodeMap[i].getStart();
         W.startLine() << W.hex(Start) << " - "
                       << W.hex(Start + CodeMap[i].Length) << "  ";
-        switch (CodeMap[i].StartOffset & 3) {
-        case CHPE_RANGE_ARM64:
+        switch (CodeMap[i].getType()) {
+        case chpe_range_type::Arm64:
           W.getOStream() << "ARM64\n";
           break;
-        case CHPE_RANGE_ARM64EC:
+        case chpe_range_type::Arm64EC:
           W.getOStream() << "ARM64EC\n";
           break;
-        case CHPE_RANGE_AMD64:
+        case chpe_range_type::Amd64:
           W.getOStream() << "X64\n";
           break;
         default:
