@@ -90,7 +90,9 @@ public:
   bool isInf() const { return F.isInfinity(); }
   bool isFinite() const { return F.isFinite(); }
   bool isNormal() const { return F.isNormal(); }
+  bool isDenormal() const { return F.isDenormal(); }
   llvm::FPClassTest classify() const { return F.classify(); }
+  APFloat::fltCategory getCategory() const { return F.getCategory(); }
 
   ComparisonCategoryResult compare(const Floating &RHS) const {
     llvm::APFloatBase::cmpResult CmpRes = F.compare(RHS.F);
