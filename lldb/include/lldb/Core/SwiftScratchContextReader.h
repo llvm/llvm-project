@@ -52,7 +52,7 @@ class SwiftScratchContextReader {
   TypeSystemSwiftTypeRefForExpressions *m_ts;
 
 public:
-  SwiftScratchContextReader(std::shared_mutex &mutex,
+  SwiftScratchContextReader(std::shared_lock<std::shared_mutex> &&lock,
                             TypeSystemSwiftTypeRefForExpressions &ts);
   SwiftScratchContextReader(const SwiftScratchContextReader &) = delete;
   SwiftScratchContextReader(SwiftScratchContextReader &&other) = default;
