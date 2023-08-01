@@ -10,7 +10,10 @@ define i8 @and_add_shl(i8 %x) {
 ; CHECK-SAME: (i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[OP1_P2:%.*]] = icmp ult i8 [[X]], 6
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[NOTMASK:%.*]] = shl nsw i8 -1, [[X]]
+; CHECK-NEXT:    [[SUB:%.*]] = and i8 [[NOTMASK]], 32
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[SUB]], 32
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %op1_p2 = icmp ule i8 %x, 5
   call void @llvm.assume(i1 %op1_p2)
@@ -26,7 +29,10 @@ define i8 @and_not_shl(i8 %x) {
 ; CHECK-SAME: (i8 [[X:%.*]]) {
 ; CHECK-NEXT:    [[OP1_P2:%.*]] = icmp ult i8 [[X]], 6
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[OP1_P2]])
-; CHECK-NEXT:    ret i8 0
+; CHECK-NEXT:    [[SHIFT:%.*]] = shl i8 -1, [[X]]
+; CHECK-NEXT:    [[NOT:%.*]] = and i8 [[SHIFT]], 32
+; CHECK-NEXT:    [[R:%.*]] = xor i8 [[NOT]], 32
+; CHECK-NEXT:    ret i8 [[R]]
 ;
   %op1_p2 = icmp ule i8 %x, 5
   call void @llvm.assume(i1 %op1_p2)

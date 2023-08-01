@@ -78,9 +78,6 @@ static Value *simplifyInstructionWithOperands(Instruction *I,
                                               ArrayRef<Value *> NewOps,
                                               const SimplifyQuery &SQ,
                                               unsigned MaxRecurse);
-static Value *simplifyICmpWithDominatingAssume(CmpInst::Predicate Predicate,
-                                               Value *LHS, Value *RHS,
-                                               const SimplifyQuery &Q);
 
 static Value *foldSelectWithBinaryOp(Value *Cond, Value *TrueVal,
                                      Value *FalseVal) {
@@ -2117,32 +2114,6 @@ static Value *simplifyAndInst(Value *Op0, Value *Op1, const SimplifyQuery &Q,
     if (match(Op0, m_LShr(m_Value(X), m_APInt(ShAmt))) &&
         (~(*Mask)).shl(*ShAmt).isZero())
       return Op0;
-  }
-
-  // and 2^x-1, 2^C --> 0 where x <= C.
-  const APInt *PowerC;
-  Value *Shift;
-  if (match(Op1, m_Power2(PowerC)) &&
-      match(Op0, m_Add(m_Value(Shift), m_AllOnes())) &&
-      isKnownToBeAPowerOfTwo(Shift, Q.DL, /*OrZero*/ true, 0, Q.AC, Q.CxtI,
-                             Q.DT)) {
-    KnownBits Known = computeKnownBits(Shift, Q.DL, 0, Q.AC, Q.CxtI, Q.DT);
-    // Use getActiveBits() to make use of the additional power of two knowledge
-    if (PowerC->getActiveBits() >= Known.getMaxValue().getActiveBits())
-      return ConstantInt::getNullValue(Op1->getType());
-  }
-
-  // not (-1 << x), 1 << C --> 0 where x <= C.
-  // Fold 1 << x into ~(-1 << x) in canonicalizeLowbitMask
-  if (match(Op1, m_Power2(PowerC)) && match(Op0, m_Not(m_Value(Shift))) &&
-      match(Shift, m_Shl(m_AllOnes(), m_Value(X)))) {
-    Value *ShiftC = ConstantInt::get(Op1->getType(), PowerC->logBase2());
-    if (auto *V =
-            simplifyICmpWithDominatingAssume(CmpInst::ICMP_ULE, X, ShiftC, Q)) {
-      auto *CV = cast<ConstantInt>(V);
-      if (CV->isOne())
-        return ConstantInt::getNullValue(Op1->getType());
-    }
   }
 
   // If we have a multiplication overflow check that is being 'and'ed with a
