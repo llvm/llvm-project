@@ -561,7 +561,7 @@ static Constant* SegmentOffset(IRBuilderBase &IRB,
                                int Offset, unsigned AddressSpace) {
   return ConstantExpr::getIntToPtr(
       ConstantInt::get(Type::getInt32Ty(IRB.getContext()), Offset),
-      Type::getInt8PtrTy(IRB.getContext())->getPointerTo(AddressSpace));
+      IRB.getPtrTy(AddressSpace));
 }
 
 Value *X86TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
