@@ -122,10 +122,12 @@ class SIRegisterTuples<list<SubRegIndex> Indices, RegisterClass RC,
 //===----------------------------------------------------------------------===//
 //  Declarations that describe the SI registers
 //===----------------------------------------------------------------------===//
-class SIReg <string n, bits<16> regIdx = 0> :
-  Register<n> {
+class SIReg <string n, bits<8> regIdx = 0, bit isAGPROrVGPR = 0,
+             bit isHi = 0> : Register<n> {
   let Namespace = "AMDGPU";
-  let HWEncoding = regIdx;
+  let HWEncoding{7-0} = regIdx;
+  let HWEncoding{8} = isAGPROrVGPR;
+  let HWEncoding{9} = isHi;
 }
 
 // For register classes that use TSFlags.
@@ -148,28 +150,20 @@ class SIRegisterClass <string n, list<ValueType> rTypes, int Align, dag rList>
   let TSFlags{4} = HasSGPR;
 }
 
-multiclass SIRegLoHi16 <string n, bits<16> regIdx, bit ArtificialHigh = 1,
-                        bit HWEncodingHigh = 0> {
-  // There is no special encoding for 16 bit subregs, these are not real
-  // registers but rather operands for instructions preserving other 16 bits
-  // of the result or reading just 16 bits of a 32 bit VGPR.
-  // It is encoded as a corresponding 32 bit register.
-  // Non-VGPR register classes use it as we need to have matching subregisters
-  // to move instructions and data between ALUs.
-  def _LO16 : SIReg<n#".l", regIdx> {
-    let HWEncoding{8} = HWEncodingHigh;
-  }
-  def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx> {
+multiclass SIRegLoHi16 <string n, bits<8> regIdx, bit ArtificialHigh = 1,
+                        bit isAGPROrVGPR = 0> {
+  def _LO16 : SIReg<n#".l", regIdx, isAGPROrVGPR>;
+  def _HI16 : SIReg<!if(ArtificialHigh, "", n#".h"), regIdx, isAGPROrVGPR,
+                    /* isHi */ 1> {
     let isArtificial = ArtificialHigh;
-    let HWEncoding{8} = HWEncodingHigh;
   }
   def "" : RegisterWithSubRegs<n, [!cast<Register>(NAME#"_LO16"),
                                    !cast<Register>(NAME#"_HI16")]> {
     let Namespace = "AMDGPU";
     let SubRegIndices = [lo16, hi16];
     let CoveredBySubRegs = !not(ArtificialHigh);
-    let HWEncoding = regIdx;
-    let HWEncoding{8} = HWEncodingHigh;
+    let HWEncoding{7-0} = regIdx;
+    let HWEncoding{8} = isAGPROrVGPR;
   }
 }
 
@@ -247,7 +241,7 @@ def SGPR_NULL64 :
 // the high 32 bits. The lower 32 bits are always zero (for base) or
 // -1 (for limit). Since we cannot access the high 32 bits, when we
 // need them, we need to do a 64 bit load and extract the bits manually.
-multiclass ApertureRegister<string name, bits<16> regIdx> {
+multiclass ApertureRegister<string name, bits<8> regIdx> {
   let isConstant = true in {
     // FIXME: We shouldn't need to define subregisters for these (nor add them to any 16 bit
     //  register classes), but if we don't it seems to confuse the TableGen
@@ -315,7 +309,7 @@ foreach Index = 0...15 in {
   defm TTMP#Index           : SIRegLoHi16<"ttmp"#Index, 0>;
 }
 
-multiclass FLAT_SCR_LOHI_m <string n, bits<16> ci_e, bits<16> vi_e> {
+multiclass FLAT_SCR_LOHI_m <string n, bits<8> ci_e, bits<8> vi_e> {
   defm _ci : SIRegLoHi16<n, ci_e>;
   defm _vi : SIRegLoHi16<n, vi_e>;
   defm "" : SIRegLoHi16<n, 0>;
