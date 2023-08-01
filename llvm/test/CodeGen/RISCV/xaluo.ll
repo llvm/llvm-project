@@ -5670,9 +5670,7 @@ define zeroext i1 @uaddo.i64.constant(i64 %v1, ptr %res) {
 ; RV32ZICOND-NEXT:    sltu a0, a3, a0
 ; RV32ZICOND-NEXT:    add a4, a1, a0
 ; RV32ZICOND-NEXT:    sltu a1, a4, a1
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a0
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a0
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    and a0, a0, a1
 ; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sw a4, 4(a2)
 ; RV32ZICOND-NEXT:    ret
@@ -5739,9 +5737,7 @@ define zeroext i1 @uaddo.i64.constant_2048(i64 %v1, ptr %res) {
 ; RV32ZICOND-NEXT:    sltu a0, a3, a0
 ; RV32ZICOND-NEXT:    add a4, a1, a0
 ; RV32ZICOND-NEXT:    sltu a1, a4, a1
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a0
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a0
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    and a0, a0, a1
 ; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sw a4, 4(a2)
 ; RV32ZICOND-NEXT:    ret
@@ -5809,9 +5805,7 @@ define zeroext i1 @uaddo.i64.constant_2049(i64 %v1, ptr %res) {
 ; RV32ZICOND-NEXT:    sltu a0, a3, a0
 ; RV32ZICOND-NEXT:    add a4, a1, a0
 ; RV32ZICOND-NEXT:    sltu a1, a4, a1
-; RV32ZICOND-NEXT:    czero.eqz a1, a1, a0
-; RV32ZICOND-NEXT:    czero.nez a0, a0, a0
-; RV32ZICOND-NEXT:    or a0, a0, a1
+; RV32ZICOND-NEXT:    and a0, a0, a1
 ; RV32ZICOND-NEXT:    sw a3, 0(a2)
 ; RV32ZICOND-NEXT:    sw a4, 4(a2)
 ; RV32ZICOND-NEXT:    ret
@@ -5892,9 +5886,7 @@ define i64 @uaddo.i64.constant_setcc_on_overflow_flag(ptr %p) {
 ; RV32ZICOND-NEXT:    sltu a3, a0, a1
 ; RV32ZICOND-NEXT:    add a1, a2, a3
 ; RV32ZICOND-NEXT:    sltu a2, a1, a2
-; RV32ZICOND-NEXT:    czero.eqz a2, a2, a3
-; RV32ZICOND-NEXT:    czero.nez a3, a3, a3
-; RV32ZICOND-NEXT:    or a2, a3, a2
+; RV32ZICOND-NEXT:    and a2, a3, a2
 ; RV32ZICOND-NEXT:    bnez a2, .LBB69_2
 ; RV32ZICOND-NEXT:  # %bb.1: # %IfOverflow
 ; RV32ZICOND-NEXT:    li a0, 0
