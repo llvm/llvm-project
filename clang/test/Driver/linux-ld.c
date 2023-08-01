@@ -191,7 +191,7 @@
 // CHECK-CLANG-LD-STATIC-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
-// RUN: %clang -static-pie -pie -### %s -no-pie 2>&1 \
+// RUN: not %clang -static-pie -pie -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -206,7 +206,7 @@
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-PIE: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
-// RUN: %clang -static-pie -static -### %s -no-pie 2>&1 \
+// RUN: not %clang -static-pie -static -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform --unwindlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -221,7 +221,7 @@
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "{{.*}}rcrt1.o"
 // CHECK-CLANG-LD-STATIC-PIE-STATIC: "--start-group" "-lgcc" "-lgcc_eh" "-lc" "--end-group"
 //
-// RUN: %clang -static-pie -nopie -### %s -no-pie 2>&1 \
+// RUN: not %clang -static-pie -nopie -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=platform \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_linux_tree \
@@ -382,7 +382,7 @@
 // CHECK-64-TO-64: "-L[[SYSROOT]]/lib"
 // CHECK-64-TO-64: "-L[[SYSROOT]]/usr/lib"
 //
-// RUN: %clang -### %s -no-pie 2>&1 \
+// RUN: not %clang -### %s -no-pie 2>&1 \
 // RUN:     --target=x86_64-unknown-linux -rtlib=plaform --unwindlib=platform -m32 \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/multilib_64bit_linux_tree \
@@ -1344,7 +1344,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-ANDROID-PTHREAD %s
 // CHECK-ANDROID-PTHREAD-NOT: -lpthread
 //
-// RUN: %clang %t.o -no-pie -### -o %t 2>&1 \
+// RUN: not %clang %t.o -no-pie -### -o %t 2>&1 \
 // RUN:     --target=arm-linux-androideabi -pthread \
 // RUN:     --gcc-toolchain="" \
 // RUN:     --sysroot=%S/Inputs/basic_android_tree/sysroot \

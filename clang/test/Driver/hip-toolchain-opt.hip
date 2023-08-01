@@ -1,63 +1,63 @@
 // REQUIRES: x86-registered-target
 // REQUIRES: amdgpu-registered-target
 
-// RUN: %clang -### \
+// RUN: not %clang -### \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,DEFAULT %s
 
-// RUN: %clang -### -O0 \
+// RUN: not %clang -### -O0 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,O0 %s
 
-// RUN: %clang -### -O1 \
+// RUN: not %clang -### -O1 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,O1 %s
 
-// RUN: %clang -### -O2 \
+// RUN: not %clang -### -O2 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,O2 %s
 
-// RUN: %clang -### -O3 \
+// RUN: not %clang -### -O3 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,O3 %s
 
-// RUN: %clang -### -Os \
+// RUN: not %clang -### -Os \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,Os %s
 
-// RUN: %clang -### -Oz \
+// RUN: not %clang -### -Oz \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,Oz %s
 
-// RUN: %clang -### -Og \
+// RUN: not %clang -### -Og \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
 // RUN:   -c -nogpulib \
 // RUN:   %S/Inputs/hip_multiple_inputs/b.hip \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,Og %s
 
-// RUN: %clang -### -O0 \
+// RUN: not %clang -### -O0 \
 // RUN:   -Xoffload-linker --lto-CGO2 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   --cuda-gpu-arch=gfx900 \
