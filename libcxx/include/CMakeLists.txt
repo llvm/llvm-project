@@ -249,6 +249,7 @@ set(files
   __bit/countr.h
   __bit/endian.h
   __bit/has_single_bit.h
+  __bit/invert_if.h
   __bit/popcount.h
   __bit/rotate.h
   __bit_reference
@@ -415,6 +416,7 @@ set(files
   __functional/unary_negate.h
   __functional/weak_result_type.h
   __fwd/array.h
+  __fwd/bit_reference.h
   __fwd/fstream.h
   __fwd/get.h
   __fwd/hash.h
