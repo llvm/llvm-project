@@ -1327,7 +1327,8 @@ static void genDataOperandOperationsWithModifier(
     Fortran::parser::AccDataModifier::Modifier mod,
     llvm::SmallVectorImpl<mlir::Value> &dataClauseOperands,
     const mlir::acc::DataClause clause,
-    const mlir::acc::DataClause clauseWithModifier) {
+    const mlir::acc::DataClause clauseWithModifier,
+    bool setDeclareAttr = false) {
   const Fortran::parser::AccObjectListWithModifier &listWithModifier = x->v;
   const auto &accObjectList =
       std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
@@ -1338,7 +1339,7 @@ static void genDataOperandOperationsWithModifier(
       (modifier && (*modifier).v == mod) ? clauseWithModifier : clause;
   genDataOperandOperations<Op>(accObjectList, converter, semanticsContext,
                                stmtCtx, dataClauseOperands, dataClause,
-                               /*structured=*/true);
+                               /*structured=*/true, setDeclareAttr);
 }
 
 template <typename Op>
@@ -2436,6 +2437,13 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
           presentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_present,
           /*structured=*/true, /*setDeclareAttr=*/true);
+    } else if (const auto *copyinClause =
+                   std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
+      genDataOperandOperationsWithModifier<mlir::acc::CopyinOp>(
+          copyinClause, converter, semanticsContext, stmtCtx,
+          Fortran::parser::AccDataModifier::Modifier::ReadOnly,
+          dataClauseOperands, mlir::acc::DataClause::acc_copyin,
+          mlir::acc::DataClause::acc_copyin_readonly, /*setDeclareAttr=*/true);
     } else {
       mlir::Location clauseLocation = converter.genLocation(clause.source);
       TODO(clauseLocation, "clause on declare directive");
