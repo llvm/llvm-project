@@ -467,8 +467,13 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
   for (const Expr *Init : E->inits()) {
-    if (!this->visit(Init))
-      return false;
+    if (DiscardResult) {
+      if (!this->discard(Init))
+        return false;
+    } else {
+      if (!this->visit(Init))
+        return false;
+    }
   }
   return true;
 }
@@ -944,12 +949,16 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
   // Otherwise, use a local variable.
   if (T) {
     // For primitive types, we just visit the initializer.
-    return this->visit(Init);
+    return DiscardResult ? this->discard(Init) : this->visit(Init);
   } else {
     if (std::optional<unsigned> LocalIndex = allocateLocal(Init)) {
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
-      return this->visitInitializer(Init);
+      if (!this->visitInitializer(Init))
+        return false;
+      if (DiscardResult)
+        return this->emitPopPtr(E);
+      return true;
     }
   }
 
