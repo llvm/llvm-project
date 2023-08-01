@@ -149,10 +149,15 @@ Expr<Type<TypeCategory::Real, KIND>> FoldIntrinsicFunction(
   } else if (name == "dot_product") {
     return FoldDotProduct<T>(context, std::move(funcRef));
   } else if (name == "dprod") {
-    if (auto scalars{GetScalarConstantArguments<T, T>(context, args)}) {
-      return Fold(context,
-          Expr<T>{Multiply<T>{
-              Expr<T>{std::get<0>(*scalars)}, Expr<T>{std::get<1>(*scalars)}}});
+    // Rewrite DPROD(x,y) -> DBLE(x)*DBLE(y)
+    if (args.at(0) && args.at(1)) {
+      const auto *xExpr{args[0]->UnwrapExpr()};
+      const auto *yExpr{args[1]->UnwrapExpr()};
+      if (xExpr && yExpr) {
+        return Fold(context,
+            ToReal<T::kind>(context, common::Clone(*xExpr)) *
+                ToReal<T::kind>(context, common::Clone(*yExpr)));
+      }
     }
   } else if (name == "epsilon") {
     return Expr<T>{Scalar<T>::EPSILON()};
