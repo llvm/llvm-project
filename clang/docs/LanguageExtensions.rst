@@ -816,6 +816,7 @@ to ``float``; see below for more information on this emulation.
 * ``__bf16`` is supported on the following targets (currently never natively):
   * 32-bit ARM
   * 64-bit ARM (AArch64)
+  * RISC-V
   * X86 (when SSE2 is available)
 
 (For X86, SSE2 is available on 64-bit and all recent 32-bit processors.)
