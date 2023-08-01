@@ -435,7 +435,7 @@ public:
       }
     }
 
-    AggregateStorageLocation *BaseLoc = getBaseObjectLocation(*S, Env);
+    RecordStorageLocation *BaseLoc = getBaseObjectLocation(*S, Env);
     if (BaseLoc == nullptr)
       return;
 
@@ -464,7 +464,7 @@ public:
       assert(Arg != nullptr);
 
       auto *ArgLoc =
-          cast_or_null<AggregateStorageLocation>(Env.getStorageLocation(*Arg));
+          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg));
       if (ArgLoc == nullptr)
         return;
 
@@ -472,9 +472,9 @@ public:
         if (Value *Val = Env.getValue(*ArgLoc))
           Env.setValue(*S, *Val);
       } else {
-        auto &Val = *cast<StructValue>(Env.createValue(S->getType()));
+        auto &Val = *cast<RecordValue>(Env.createValue(S->getType()));
         Env.setValue(*S, Val);
-        copyRecord(*ArgLoc, Val.getAggregateLoc(), Env);
+        copyRecord(*ArgLoc, Val.getLoc(), Env);
       }
       return;
     }
@@ -483,9 +483,8 @@ public:
     // of records, and we currently can't create values for arrays. So check if
     // we've got a record type.
     if (S->getType()->isRecordType()) {
-      auto &InitialVal = *cast<StructValue>(Env.createValue(S->getType()));
-      copyRecord(InitialVal.getAggregateLoc(), Env.getResultObjectLocation(*S),
-                 Env);
+      auto &InitialVal = *cast<RecordValue>(Env.createValue(S->getType()));
+      copyRecord(InitialVal.getLoc(), Env.getResultObjectLocation(*S), Env);
     }
 
     transferInlineCall(S, ConstructorDecl);
@@ -511,9 +510,9 @@ public:
         return;
 
       auto *LocSrc =
-          cast_or_null<AggregateStorageLocation>(Env.getStorageLocation(*Arg1));
+          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg1));
       auto *LocDst =
-          cast_or_null<AggregateStorageLocation>(Env.getStorageLocation(*Arg0));
+          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Arg0));
 
       if (LocSrc != nullptr && LocDst != nullptr) {
         copyRecord(*LocSrc, *LocDst, Env);
@@ -573,8 +572,8 @@ public:
     if (SubExprVal == nullptr)
       return;
 
-    if (StructValue *StructVal = dyn_cast<StructValue>(SubExprVal)) {
-      Env.setStorageLocation(*S, StructVal->getAggregateLoc());
+    if (RecordValue *RecordVal = dyn_cast<RecordValue>(SubExprVal)) {
+      Env.setStorageLocation(*S, RecordVal->getLoc());
       return;
     }
 
@@ -638,14 +637,13 @@ public:
     }
 
     auto &Loc =
-        Env.getDataflowAnalysisContext()
-            .arena()
-            .create<AggregateStorageLocation>(Type, std::move(FieldLocs));
-    StructValue &StructVal = Env.create<StructValue>(Loc);
+        Env.getDataflowAnalysisContext().arena().create<RecordStorageLocation>(
+            Type, std::move(FieldLocs));
+    RecordValue &RecordVal = Env.create<RecordValue>(Loc);
 
-    Env.setValue(Loc, StructVal);
+    Env.setValue(Loc, RecordVal);
 
-    Env.setValue(*S, StructVal);
+    Env.setValue(*S, RecordVal);
 
     // FIXME: Implement array initialization.
   }

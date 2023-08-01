@@ -28,8 +28,8 @@ llvm::StringRef debugString(Value::Kind Kind) {
     return "Integer";
   case Value::Kind::Pointer:
     return "Pointer";
-  case Value::Kind::Struct:
-    return "Struct";
+  case Value::Kind::Record:
+    return "Record";
   case Value::Kind::AtomicBool:
     return "AtomicBool";
   case Value::Kind::TopBool:

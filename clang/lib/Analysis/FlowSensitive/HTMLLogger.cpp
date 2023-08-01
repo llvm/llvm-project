@@ -103,9 +103,8 @@ public:
       JOS.attributeObject(
           "pointee", [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
       break;
-    case Value::Kind::Struct:
-      for (const auto &Child :
-           cast<StructValue>(V).getAggregateLoc().children())
+    case Value::Kind::Record:
+      for (const auto &Child : cast<RecordValue>(V).getLoc().children())
         JOS.attributeObject("f:" + Child.first->getNameAsString(), [&] {
           if (Child.second)
             if (Value *Val = Env.getValue(*Child.second))
