@@ -1228,7 +1228,7 @@ define i1 @phi_knownnonzero_eq_2(i32 %n, i32 %s, ptr nocapture readonly %P) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 2, [[IF_ELSE]] ], [ [[N]], [[ENTRY:%.*]] ], [ 2, [[IF_THEN]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[IF_ELSE]] ], [ [[N]], [[ENTRY:%.*]] ], [ poison, [[IF_THEN]] ]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq i32 [[A_0]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
@@ -1262,7 +1262,7 @@ define i1 @phi_knownnonzero_ne_2(i32 %n, i32 %s, ptr nocapture readonly %P) {
 ; CHECK:       if.else:
 ; CHECK-NEXT:    br label [[IF_END]]
 ; CHECK:       if.end:
-; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 2, [[IF_ELSE]] ], [ [[N]], [[ENTRY:%.*]] ], [ 2, [[IF_THEN]] ]
+; CHECK-NEXT:    [[A_0:%.*]] = phi i32 [ 1, [[IF_ELSE]] ], [ [[N]], [[ENTRY:%.*]] ], [ poison, [[IF_THEN]] ]
 ; CHECK-NEXT:    [[CMP1:%.*]] = icmp ne i32 [[A_0]], 0
 ; CHECK-NEXT:    ret i1 [[CMP1]]
 ;
