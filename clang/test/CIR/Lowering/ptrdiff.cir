@@ -1,0 +1,18 @@
+// RUN: cir-translate %s -cir-to-llvmir | FileCheck %s
+
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+
+module {
+  cir.func @foo(%arg0: !cir.ptr<!s32i>, %arg1: !cir.ptr<!s32i>) -> !s32i {
+    %1 = cir.ptr_diff(%arg0, %arg1) : !cir.ptr<!s32i> -> !u64i
+    %2 = cir.cast(integral, %1 : !u64i), !s32i
+    cir.return %2 : !s32i
+  }
+}
+
+//      CHECK: %3 = ptrtoint ptr %0 to i64
+// CHECK-NEXT: %4 = ptrtoint ptr %1 to i64
+// CHECK-NEXT: %5 = sub i64 %3, %4
+// CHECK-NEXT: %6 = udiv i64 %5, 4
+// CHECK-NEXT: %7 = trunc i64 %6 to i32
