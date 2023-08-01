@@ -2875,7 +2875,7 @@ def offload_device_only : Flag<["--"], "offload-device-only">, Flags<[FlangOptio
 def offload_host_only : Flag<["--"], "offload-host-only">, Flags<[FlangOption]>,
   HelpText<"Only compile for the offloading host.">;
 def offload_host_device : Flag<["--"], "offload-host-device">, Flags<[FlangOption]>,
-  HelpText<"Only compile for the offloading host.">;
+  HelpText<"Compile for both the offloading host and device (default).">;
 def cuda_device_only : Flag<["--"], "cuda-device-only">, Alias<offload_device_only>,
   HelpText<"Compile CUDA code for device only">;
 def cuda_host_only : Flag<["--"], "cuda-host-only">, Alias<offload_host_only>,
