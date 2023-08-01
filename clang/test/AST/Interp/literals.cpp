@@ -901,6 +901,8 @@ namespace DiscardExprs {
     (int[]){1,2,3};
     int arr[] = {1,2,3};
     arr[0];
+    "a";
+    'b';
 
     return 0;
   }
