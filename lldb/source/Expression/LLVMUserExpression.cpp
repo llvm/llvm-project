@@ -120,7 +120,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
 
     IRInterpreter::Interpret(*module, *function, args, *m_execution_unit_sp,
                              interpreter_error, function_stack_bottom,
-                             function_stack_top, exe_ctx);
+                             function_stack_top, exe_ctx, options.GetTimeout());
 
     if (!interpreter_error.Success()) {
       diagnostic_manager.Printf(eDiagnosticSeverityError,
@@ -233,7 +233,7 @@ LLVMUserExpression::DoExecute(DiagnosticManager &diagnostic_manager,
           eDiagnosticSeverityError,
           "Couldn't complete execution; the thread "
           "on which the expression was being run: 0x%" PRIx64
-          " exited during its execution.", 
+          " exited during its execution.",
           expr_thread_id);
       return execution_result;
     } else if (execution_result != lldb::eExpressionCompleted) {
