@@ -3522,12 +3522,21 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
+expand_template(
+    name = "dwp_main",
+    out = "llvm-dwp-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "llvm_dwp",
+    },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
+)
+
 cc_binary(
     name = "llvm-dwp",
     srcs = glob([
         "tools/llvm-dwp/*.cpp",
         "tools/llvm-dwp/*.h",
-    ]),
+    ]) + ["llvm-dwp-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -3725,12 +3734,21 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
+expand_template(
+    name = "libtool-darwin_main",
+    out = "llvm-libtool-darwin-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "llvm_libtool_darwin",
+    },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
+)
+
 cc_binary(
     name = "llvm-libtool-darwin",
     srcs = glob([
         "tools/llvm-libtool-darwin/*.cpp",
         "tools/llvm-libtool-darwin/*.h",
-    ]),
+    ]) + ["llvm-libtool-darwin-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
