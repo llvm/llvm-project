@@ -451,8 +451,8 @@ bool ValueObjectDynamicValue::DynamicValueTypeInfoNeedsUpdate() {
 
 #ifdef LLDB_ENABLE_SWIFT
   auto cached_ctx = m_value.GetCompilerType().GetTypeSystem();
-  llvm::Optional<SwiftScratchContextReader> scratch_ctx =
-      GetSwiftScratchContext();
+  llvm::Optional<SwiftScratchContextReader> scratch_ctx(
+      GetSwiftScratchContext());
 
   if (!scratch_ctx || !cached_ctx)
     return true;

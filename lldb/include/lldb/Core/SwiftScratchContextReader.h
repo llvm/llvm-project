@@ -13,63 +13,13 @@
 #ifndef liblldb_SwiftASTContextReader_h_
 #define liblldb_SwiftASTContextReader_h_
 
-#include "llvm/Support/RWMutex.h"
+#include <shared_mutex>
 
 namespace lldb_private {
 
 class TypeSystemSwiftTypeRefForExpressions;
 class ExecutionContext;
 class ExecutionContextRef;
-
-/// This is like llvm::sys::SmartRWMutex<true>, but with a try_lock method.
-///
-/// FIXME: Replace this with a C++14 shared_timed_mutex or a C++17
-/// share_mutex as soon as possible.
-class SharedMutex {
-  llvm::sys::SmartRWMutex<true> m_impl;
-  unsigned m_readers = 0;
-  std::mutex m_reader_mutex;
-public:
-  SharedMutex() = default;
-  SharedMutex(const SharedMutex &) = delete;
-  SharedMutex &operator=(const SharedMutex &) = delete;
-  bool lock_shared() {
-    std::lock_guard<std::mutex> lock(m_reader_mutex);
-    ++m_readers;
-    return m_impl.lock_shared();
-  }
-  bool unlock_shared() {
-    std::lock_guard<std::mutex> lock(m_reader_mutex);
-    assert(m_readers > 0);
-    --m_readers;
-    return m_impl.unlock_shared();
-  }
-  bool try_lock() {
-    std::lock_guard<std::mutex> lock(m_reader_mutex);
-    return m_readers ? false : m_impl.lock();
-  }
-  bool unlock() { return m_impl.unlock(); }
-};
-
-/// RAII acquisition of a reader lock.
-struct ScopedSharedMutexReader {
-  SharedMutex *m_mutex;
-  explicit ScopedSharedMutexReader(SharedMutex *m) : m_mutex(m) {
-    if (m_mutex)
-      m_mutex->lock_shared();
-  }
-
-  ScopedSharedMutexReader(const ScopedSharedMutexReader &copy)
-      : m_mutex(copy.m_mutex) {
-    if (m_mutex)
-      m_mutex->lock_shared();
-  }
-
-  ~ScopedSharedMutexReader() {
-    if (m_mutex)
-      m_mutex->unlock_shared();
-  }
-};
 
 /// A scratch Swift context pointer and its reader lock.
 /// The Swift scratch context may need to be replaced when it gets corrupted,
@@ -97,27 +47,25 @@ struct ScopedSharedMutexReader {
 /// or even separate scratch contexts for each lldb::Module. But it
 /// will only do this if no client holds on to a read lock on \b
 /// m_scratch_typesystem_lock.
-class SwiftScratchContextReader : ScopedSharedMutexReader {
-  TypeSystemSwiftTypeRefForExpressions *m_ptr;
+class SwiftScratchContextReader {
+  std::shared_lock<std::shared_mutex> m_lock;
+  TypeSystemSwiftTypeRefForExpressions *m_ts;
 
 public:
-  SwiftScratchContextReader(SharedMutex &mutex,
-                            TypeSystemSwiftTypeRefForExpressions &ctx)
-      : ScopedSharedMutexReader(&mutex), m_ptr(&ctx) {
-    assert(m_ptr && "invalid context");
-  }
-
-  TypeSystemSwiftTypeRefForExpressions *get() {
-    assert(m_ptr && "invalid context");
-    return m_ptr;
-  }
-
+  SwiftScratchContextReader(std::shared_mutex &mutex,
+                            TypeSystemSwiftTypeRefForExpressions &ts);
+  SwiftScratchContextReader(const SwiftScratchContextReader &) = delete;
+  SwiftScratchContextReader(SwiftScratchContextReader &&other) = default;
+  SwiftScratchContextReader &
+  operator=(SwiftScratchContextReader &&other) = default;
+  TypeSystemSwiftTypeRefForExpressions *get() { return m_ts; }
   TypeSystemSwiftTypeRefForExpressions *operator->() { return get(); }
   TypeSystemSwiftTypeRefForExpressions &operator*() { return *get(); }
 };
 
 /// An RAII object that just acquires the reader lock.
-struct SwiftScratchContextLock : ScopedSharedMutexReader {
+struct SwiftScratchContextLock {
+  std::shared_lock<std::shared_mutex> lock;
   SwiftScratchContextLock(const ExecutionContextRef *exe_ctx_ref);
   SwiftScratchContextLock(const ExecutionContext *exe_ctx);
 };
