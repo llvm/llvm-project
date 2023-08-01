@@ -1,4 +1,5 @@
 // RUN: %libomptarget-compilexx-and-run-generic
+// RUN: %libomptarget-compileoptxx-and-run-generic
 
 // UNSUPPORTED: amdgcn-amd-amdhsa
 // UNSUPPORTED: amdgcn-amd-amdhsa-newRTL

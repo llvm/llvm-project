@@ -48,7 +48,10 @@ public:
   typedef typename Config::Primary::CompactPtrT CompactPtrT;
   typedef typename Config::Primary::SizeClassMap SizeClassMap;
   static const uptr CompactPtrScale = Config::Primary::CompactPtrScale;
+  static const uptr RegionSizeLog = Config::Primary::RegionSizeLog;
   static const uptr GroupSizeLog = Config::Primary::GroupSizeLog;
+  static_assert(RegionSizeLog >= GroupSizeLog,
+                "Group size shouldn't be greater than the region size");
   static const uptr GroupScale = GroupSizeLog - CompactPtrScale;
   typedef SizeClassAllocator64<Config> ThisT;
   typedef SizeClassAllocatorLocalCache<ThisT> CacheT;
@@ -67,7 +70,7 @@ public:
     DCHECK(isAligned(reinterpret_cast<uptr>(this), alignof(ThisT)));
 
     const uptr PageSize = getPageSizeCached();
-    const uptr GroupSize = (1U << GroupSizeLog);
+    const uptr GroupSize = (1UL << GroupSizeLog);
     const uptr PagesInGroup = GroupSize / PageSize;
     const uptr MinSizeClass = getSizeByClassId(1);
     // When trying to release pages back to memory, visiting smaller size
@@ -119,11 +122,10 @@ public:
       RegionInfo *Region = getRegionInfo(I);
       // The actual start of a region is offset by a random number of pages
       // when PrimaryEnableRandomOffset is set.
-      Region->RegionBeg =
-          (PrimaryBase + (I << Config::Primary::RegionSizeLog)) +
-          (Config::Primary::EnableRandomOffset
-               ? ((getRandomModN(&Seed, 16) + 1) * PageSize)
-               : 0);
+      Region->RegionBeg = (PrimaryBase + (I << RegionSizeLog)) +
+                          (Config::Primary::EnableRandomOffset
+                               ? ((getRandomModN(&Seed, 16) + 1) * PageSize)
+                               : 0);
       Region->RandState = getRandomU32(&Seed);
       // Releasing small blocks is expensive, set a higher threshold to avoid
       // frequent page releases.
@@ -134,7 +136,7 @@ public:
       Region->ReleaseInfo.LastReleaseAtNs = Time;
 
       Region->MemMapInfo.MemMap = ReservedMemory.dispatch(
-          PrimaryBase + (I << Config::Primary::RegionSizeLog), RegionSize);
+          PrimaryBase + (I << RegionSizeLog), RegionSize);
       CHECK(Region->MemMapInfo.MemMap.isAllocated());
     }
     shuffle(RegionInfoArray, NumClasses, &Seed);
@@ -271,19 +273,21 @@ public:
     // TODO(chiahungduan): Consider not doing grouping if the group size is not
     // greater than the block size with a certain scale.
 
-    // Sort the blocks so that blocks belonging to the same group can be pushed
-    // together.
     bool SameGroup = true;
-    for (u32 I = 1; I < Size; ++I) {
-      if (compactPtrGroup(Array[I - 1]) != compactPtrGroup(Array[I]))
-        SameGroup = false;
-      CompactPtrT Cur = Array[I];
-      u32 J = I;
-      while (J > 0 && compactPtrGroup(Cur) < compactPtrGroup(Array[J - 1])) {
-        Array[J] = Array[J - 1];
-        --J;
+    if (GroupSizeLog < RegionSizeLog) {
+      // Sort the blocks so that blocks belonging to the same group can be
+      // pushed together.
+      for (u32 I = 1; I < Size; ++I) {
+        if (compactPtrGroup(Array[I - 1]) != compactPtrGroup(Array[I]))
+          SameGroup = false;
+        CompactPtrT Cur = Array[I];
+        u32 J = I;
+        while (J > 0 && compactPtrGroup(Cur) < compactPtrGroup(Array[J - 1])) {
+          Array[J] = Array[J - 1];
+          --J;
+        }
+        Array[J] = Cur;
       }
-      Array[J] = Cur;
     }
 
     {
@@ -477,7 +481,7 @@ public:
   AtomicOptions Options;
 
 private:
-  static const uptr RegionSize = 1UL << Config::Primary::RegionSizeLog;
+  static const uptr RegionSize = 1UL << RegionSizeLog;
   static const uptr NumClasses = SizeClassMap::NumClasses;
   static const uptr PrimarySize = RegionSize * NumClasses;
 
@@ -1125,7 +1129,7 @@ private:
   collectGroupsToRelease(RegionInfo *Region, const uptr BlockSize,
                          const uptr AllocatedUserEnd, const uptr CompactPtrBase)
       REQUIRES(Region->MMLock, Region->FLLock) {
-    const uptr GroupSize = (1U << GroupSizeLog);
+    const uptr GroupSize = (1UL << GroupSizeLog);
     const uptr PageSize = getPageSizeCached();
     SinglyLinkedList<BatchGroup> GroupsToRelease;
 
@@ -1292,7 +1296,7 @@ private:
                  const uptr AllocatedUserEnd, const uptr CompactPtrBase,
                  SinglyLinkedList<BatchGroup> &GroupsToRelease)
       REQUIRES(Region->MMLock) EXCLUDES(Region->FLLock) {
-    const uptr GroupSize = (1U << GroupSizeLog);
+    const uptr GroupSize = (1UL << GroupSizeLog);
     auto DecompactPtr = [CompactPtrBase](CompactPtrT CompactPtr) {
       return decompactPtrInternal(CompactPtrBase, CompactPtr);
     };

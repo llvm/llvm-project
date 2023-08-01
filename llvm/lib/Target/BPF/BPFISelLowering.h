@@ -85,7 +85,7 @@ private:
                           SmallVectorImpl<SDValue> &InVals) const;
 
   // Maximum number of arguments to a call
-  static const unsigned MaxArgs;
+  static const size_t MaxArgs;
 
   // Lower a call into CALLSEQ_START - BPFISD:CALL - CALLSEQ_END chain
   SDValue LowerCall(TargetLowering::CallLoweringInfo &CLI,
