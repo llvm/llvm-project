@@ -376,7 +376,7 @@ builtinTransferInitializer(const CFGInitializer &Elt,
   assert(InitExpr != nullptr);
 
   const FieldDecl *Member = nullptr;
-  AggregateStorageLocation *ParentLoc = &ThisLoc;
+  RecordStorageLocation *ParentLoc = &ThisLoc;
   StorageLocation *MemberLoc = nullptr;
   if (Init->isMemberInitializer()) {
     Member = Init->getMember();
@@ -387,7 +387,7 @@ builtinTransferInitializer(const CFGInitializer &Elt,
     MemberLoc = &ThisLoc;
     for (const auto *I : IndirectField->chain()) {
       Member = cast<FieldDecl>(I);
-      ParentLoc = cast<AggregateStorageLocation>(MemberLoc);
+      ParentLoc = cast<RecordStorageLocation>(MemberLoc);
       MemberLoc = ParentLoc->getChild(*Member);
     }
   }
@@ -398,8 +398,8 @@ builtinTransferInitializer(const CFGInitializer &Elt,
   // to simply use `Environment::createObject()` here, the same way that we do
   // this in `TransferVisitor::VisitInitListExpr()`. However, this would require
   // us to be able to build a list of fields that we then use to initialize an
-  // `AggregateStorageLocation` -- and the problem is that, when we get here,
-  // the `AggregateStorageLocation` already exists. We should explore if there's
+  // `RecordStorageLocation` -- and the problem is that, when we get here,
+  // the `RecordStorageLocation` already exists. We should explore if there's
   // anything that we can do to change this.
   if (Member->getType()->isReferenceType()) {
     auto *InitExprLoc = Env.getStorageLocation(*InitExpr);
@@ -409,13 +409,13 @@ builtinTransferInitializer(const CFGInitializer &Elt,
     ParentLoc->setChild(*Member, InitExprLoc);
   } else if (auto *InitExprVal = Env.getValue(*InitExpr)) {
     if (Member->getType()->isRecordType()) {
-      auto *InitValStruct = cast<StructValue>(InitExprVal);
+      auto *InitValStruct = cast<RecordValue>(InitExprVal);
       // FIXME: Rather than performing a copy here, we should really be
       // initializing the field in place. This would require us to propagate the
       // storage location of the field to the AST node that creates the
-      // `StructValue`.
-      copyRecord(InitValStruct->getAggregateLoc(),
-                 *cast<AggregateStorageLocation>(MemberLoc), Env);
+      // `RecordValue`.
+      copyRecord(InitValStruct->getLoc(),
+                 *cast<RecordStorageLocation>(MemberLoc), Env);
     } else {
       Env.setValue(*MemberLoc, *InitExprVal);
     }
