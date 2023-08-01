@@ -34,15 +34,15 @@ define float @test_atomicrmw_fsub(ptr addrspace(3) %addr) {
   ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:_(s32) = G_PHI [[LOAD]](s32), %bb.1, %14(s32), %bb.2
   ; CHECK-NEXT:   [[FSUB:%[0-9]+]]:_(s32) = G_FSUB [[PHI1]], [[C]]
   ; CHECK-NEXT:   [[ATOMIC_CMPXCHG_WITH_SUCCESS:%[0-9]+]]:_(s32), [[ATOMIC_CMPXCHG_WITH_SUCCESS1:%[0-9]+]]:_(s1) = G_ATOMIC_CMPXCHG_WITH_SUCCESS [[COPY]](p3), [[PHI1]], [[FSUB]] :: (load store seq_cst seq_cst (s32) on %ir.addr, addrspace 3)
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](s1), [[PHI]](s64)
-  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s1) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INT]](s64)
-  ; CHECK-NEXT:   G_BRCOND [[INT1]](s1), %bb.3
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.if.break), [[ATOMIC_CMPXCHG_WITH_SUCCESS1]](s1), [[PHI]](s64)
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:%[0-9]+]]:_(s1) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.loop), [[INTRINSIC_CONVERGENT]](s64)
+  ; CHECK-NEXT:   G_BRCOND [[INTRINSIC_CONVERGENT_W_SIDE_EFFECTS]](s1), %bb.3
   ; CHECK-NEXT:   G_BR %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.atomicrmw.end:
   ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:_(s32) = G_PHI [[ATOMIC_CMPXCHG_WITH_SUCCESS]](s32), %bb.2
-  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:_(s64) = G_PHI [[INT]](s64), %bb.2
-  ; CHECK-NEXT:   G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI3]](s64)
+  ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:_(s64) = G_PHI [[INTRINSIC_CONVERGENT]](s64), %bb.2
+  ; CHECK-NEXT:   G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), [[PHI3]](s64)
   ; CHECK-NEXT:   $vgpr0 = COPY [[PHI2]](s32)
   ; CHECK-NEXT:   SI_RETURN implicit $vgpr0
   %oldval = atomicrmw fsub ptr addrspace(3) %addr, float 1.0 seq_cst

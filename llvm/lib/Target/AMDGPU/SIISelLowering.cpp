@@ -3482,22 +3482,21 @@ SDValue SITargetLowering::lowerDYNAMIC_STACKALLOCImpl(
   SDValue SP = DAG.getCopyFromReg(Chain, dl, SPReg, VT);
   Chain = SP.getValue(1);
   MaybeAlign Alignment = cast<ConstantSDNode>(Tmp3)->getMaybeAlignValue();
-  const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
-  const TargetFrameLowering *TFL = ST.getFrameLowering();
+  const TargetFrameLowering *TFL = Subtarget->getFrameLowering();
   unsigned Opc =
     TFL->getStackGrowthDirection() == TargetFrameLowering::StackGrowsUp ?
     ISD::ADD : ISD::SUB;
 
   SDValue ScaledSize = DAG.getNode(
       ISD::SHL, dl, VT, Size,
-      DAG.getConstant(ST.getWavefrontSizeLog2(), dl, MVT::i32));
+      DAG.getConstant(Subtarget->getWavefrontSizeLog2(), dl, MVT::i32));
 
   Align StackAlign = TFL->getStackAlign();
   Tmp1 = DAG.getNode(Opc, dl, VT, SP, ScaledSize); // Value
   if (Alignment && *Alignment > StackAlign) {
     Tmp1 = DAG.getNode(ISD::AND, dl, VT, Tmp1,
                        DAG.getConstant(-(uint64_t)Alignment->value()
-                                           << ST.getWavefrontSizeLog2(),
+                                           << Subtarget->getWavefrontSizeLog2(),
                                        dl, VT));
   }
 
@@ -11328,6 +11327,7 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
         return false;
     return true;
   case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_CONVERGENT:
     switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
     case Intrinsic::amdgcn_fmul_legacy:
     case Intrinsic::amdgcn_fmad_ftz:
@@ -13761,7 +13761,8 @@ void SITargetLowering::computeKnownBitsForTargetInstr(
     const MachineRegisterInfo &MRI, unsigned Depth) const {
   const MachineInstr *MI = MRI.getVRegDef(R);
   switch (MI->getOpcode()) {
-  case AMDGPU::G_INTRINSIC: {
+  case AMDGPU::G_INTRINSIC:
+  case AMDGPU::G_INTRINSIC_CONVERGENT: {
     switch (cast<GIntrinsic>(MI)->getIntrinsicID()) {
     case Intrinsic::amdgcn_workitem_id_x:
       knownBitsForWorkitemID(*getSubtarget(), KB, Known, 0);
@@ -13835,7 +13836,6 @@ Align SITargetLowering::computeKnownAlignForTargetInstr(
     AttributeList Attrs = Intrinsic::getAttributes(Ctx, IID);
     if (MaybeAlign RetAlign = Attrs.getRetAlignment())
       return *RetAlign;
-    return Align(1);
   }
   return Align(1);
 }

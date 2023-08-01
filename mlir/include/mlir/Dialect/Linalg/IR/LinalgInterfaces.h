@@ -22,6 +22,7 @@
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
+#include "mlir/Support/RawOstreamExtras.h"
 
 namespace mlir {
 namespace linalg {
@@ -90,7 +91,7 @@ namespace detail {
 /// the failed precondition is send to the `errs` stream, if provided.
 bool isContractionBody(Block &block,
                        function_ref<bool(Operation *, Operation *)> isaPair,
-                       llvm::raw_ostream &errs = llvm::nulls());
+                       llvm::raw_ostream &errs = mlir::thread_safe_nulls());
 
 /// Result of matching a Linalg generic against the predicates of it being a
 /// contraction.

@@ -6601,7 +6601,7 @@ void Sema::CodeCompleteQualifiedId(Scope *S, CXXScopeSpec &SS,
   // The "template" keyword can follow "::" in the grammar, but only
   // put it into the grammar if the nested-name-specifier is dependent.
   // FIXME: results is always empty, this appears to be dead.
-  if (!Results.empty() && NNS->isDependent())
+  if (!Results.empty() && NNS && NNS->isDependent())
     Results.AddResult("template");
 
   // If the scope is a concept-constrained type parameter, infer nested

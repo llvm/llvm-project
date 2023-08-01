@@ -95,6 +95,8 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang constexpr evaluator now prints template arguments when displaying
+  template-specialization function calls.
 
 Bug Fixes in This Version
 -------------------------

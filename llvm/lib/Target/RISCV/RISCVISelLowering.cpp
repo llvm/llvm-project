@@ -324,19 +324,19 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
     if (Subtarget.is64Bit())
       setOperationAction(
-          {ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF, ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF},
+          {ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF},
           MVT::i32, Custom);
   } else {
-    setOperationAction({ISD::CTTZ, ISD::CTLZ, ISD::CTPOP}, XLenVT, Expand);
+    setOperationAction({ISD::CTTZ, ISD::CTPOP}, XLenVT, Expand);
   }
 
-  if (Subtarget.hasVendorXTHeadBb()) {
-    setOperationAction(ISD::CTLZ, XLenVT, Legal);
-
+  if (Subtarget.hasStdExtZbb() || Subtarget.hasVendorXTHeadBb()) {
     // We need the custom lowering to make sure that the resulting sequence
     // for the 32bit case is efficient on 64bit targets.
     if (Subtarget.is64Bit())
       setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
+  } else {
+    setOperationAction(ISD::CTLZ, XLenVT, Expand);
   }
 
   if (Subtarget.is64Bit())
