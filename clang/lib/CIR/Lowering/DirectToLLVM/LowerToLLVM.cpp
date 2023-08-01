@@ -39,6 +39,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Interfaces/DataLayoutInterfaces.h"
 #include "mlir/Pass/Pass.h"
 #include "mlir/Pass/PassManager.h"
 #include "mlir/Support/LLVM.h"
@@ -1485,6 +1486,46 @@ public:
   }
 };
 
+class CIRPtrDiffOpLowering
+    : public mlir::OpConversionPattern<mlir::cir::PtrDiffOp> {
+public:
+  using OpConversionPattern<mlir::cir::PtrDiffOp>::OpConversionPattern;
+
+  uint64_t getTypeSize(mlir::Type type, mlir::Operation &op) const {
+    mlir::DataLayout layout(op.getParentOfType<mlir::ModuleOp>());
+    return llvm::divideCeil(layout.getTypeSizeInBits(type), 8);
+  }
+
+  mlir::LogicalResult
+  matchAndRewrite(mlir::cir::PtrDiffOp op, OpAdaptor adaptor,
+                  mlir::ConversionPatternRewriter &rewriter) const override {
+    auto dstTy = op.getType().cast<mlir::cir::IntType>();
+    auto llvmDstTy = getTypeConverter()->convertType(dstTy);
+
+    auto lhs = rewriter.create<mlir::LLVM::PtrToIntOp>(op.getLoc(), llvmDstTy,
+                                                       adaptor.getLhs());
+    auto rhs = rewriter.create<mlir::LLVM::PtrToIntOp>(op.getLoc(), llvmDstTy,
+                                                       adaptor.getRhs());
+
+    auto diff =
+        rewriter.create<mlir::LLVM::SubOp>(op.getLoc(), llvmDstTy, lhs, rhs);
+
+    auto ptrTy = op.getLhs().getType().cast<mlir::cir::PointerType>();
+    auto typeSize = getTypeSize(ptrTy.getPointee(), *op);
+    auto typeSizeVal = rewriter.create<mlir::LLVM::ConstantOp>(
+        op.getLoc(), llvmDstTy, mlir::IntegerAttr::get(llvmDstTy, typeSize));
+
+    if (dstTy.isUnsigned())
+      rewriter.replaceOpWithNewOp<mlir::LLVM::UDivOp>(op, llvmDstTy, diff,
+                                                      typeSizeVal);
+    else
+      rewriter.replaceOpWithNewOp<mlir::LLVM::SDivOp>(op, llvmDstTy, diff,
+                                                      typeSizeVal);
+
+    return mlir::success();
+  }
+};
+
 void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                                          mlir::TypeConverter &converter) {
   patterns.add<CIRReturnLowering>(patterns.getContext());
@@ -1496,7 +1537,8 @@ void populateCIRToLLVMConversionPatterns(mlir::RewritePatternSet &patterns,
                CIRIfLowering, CIRGlobalOpLowering, CIRGetGlobalOpLowering,
                CIRVAStartLowering, CIRVAEndLowering, CIRVACopyLowering,
                CIRVAArgLowering, CIRBrOpLowering, CIRTernaryOpLowering,
-               CIRStructElementAddrOpLowering, CIRSwitchOpLowering>(
+               CIRStructElementAddrOpLowering, CIRSwitchOpLowering,
+               CIRPtrDiffOpLowering>(
       converter, patterns.getContext());
 }
 
