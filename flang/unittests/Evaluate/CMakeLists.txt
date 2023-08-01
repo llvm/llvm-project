@@ -8,8 +8,15 @@ if (LLVM_LINK_LLVM_DYLIB)
 else()
   llvm_map_components_to_libnames(llvm_libs Support)
 endif()
+
+check_include_file(quadmath.h FOUND_QUADMATH_HEADER)
+check_library_exists(quadmath sinq "" FOUND_QUADMATH_LIB)
+if(FOUND_QUADMATH_HEADER AND FOUND_QUADMATH_LIB)
+  set(QUADMATHLIB quadmath)
+endif()
+
 target_link_libraries(FortranEvaluateTesting
-    ${llvm_libs})
+  ${llvm_libs} ${QUADMATHLIB})
 
 add_flang_nongtest_unittest(leading-zero-bit-count
   FortranEvaluateTesting

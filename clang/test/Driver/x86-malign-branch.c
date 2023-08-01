@@ -18,7 +18,7 @@
 // RUN: %clang -target x86_64-unknown-linux -malign-branch=fused,jcc,jmp -flto %s -### %s 2>&1 | FileCheck %s --check-prefix=TYPE0-LTO
 // TYPE0-LTO: "-plugin-opt=-x86-align-branch=fused+jcc+jmp"
 
-// RUN: %clang -target x86_64 -malign-branch=fused,foo,bar %s -c -### %s 2>&1 | FileCheck %s --check-prefix=TYPE-ERR
+// RUN: %clang --target=x86_64 -malign-branch=fused,foo,bar %s -c -### %s 2>&1 | FileCheck %s --check-prefix=TYPE-ERR
 // TYPE-ERR: invalid argument 'foo' to -malign-branch=; each element must be one of: fused, jcc, jmp, call, ret, indirect
 // TYPE-ERR: invalid argument 'bar' to -malign-branch=; each element must be one of: fused, jcc, jmp, call, ret, indirect
 

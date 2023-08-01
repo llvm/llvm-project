@@ -441,7 +441,7 @@ Instruction *InstCombinerImpl::visitExtractElementInst(ExtractElementInst &EI) {
         if (IndexC->getValue().getActiveBits() <= BitWidth)
           Idx = ConstantInt::get(Ty, IndexC->getValue().zextOrTrunc(BitWidth));
         else
-          Idx = UndefValue::get(Ty);
+          Idx = PoisonValue::get(Ty);
         return replaceInstUsesWith(EI, Idx);
       }
     }
@@ -2197,9 +2197,9 @@ static Instruction *canonicalizeInsertSplat(ShuffleVectorInst &Shuf,
       !match(Op1, m_Undef()) || match(Mask, m_ZeroMask()) || IndexC == 0)
     return nullptr;
 
-  // Insert into element 0 of an undef vector.
-  UndefValue *UndefVec = UndefValue::get(Shuf.getType());
-  Value *NewIns = Builder.CreateInsertElement(UndefVec, X, (uint64_t)0);
+  // Insert into element 0 of a poison vector.
+  PoisonValue *PoisonVec = PoisonValue::get(Shuf.getType());
+  Value *NewIns = Builder.CreateInsertElement(PoisonVec, X, (uint64_t)0);
 
   // Splat from element 0. Any mask element that is undefined remains undefined.
   // For example:

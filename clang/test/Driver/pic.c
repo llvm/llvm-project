@@ -209,7 +209,7 @@
 // Darwin gets even more special with '-mdynamic-no-pic'. This flag is only
 // valid on Darwin, and it's behavior is very strange but needs to remain
 // consistent for compatibility.
-// RUN: %clang -c %s -target i386-unknown-unknown -mdynamic-no-pic -### 2>&1 \
+// RUN: %clang -c %s --target=i386-unknown-unknown -mdynamic-no-pic -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-NON-DARWIN-DYNAMIC-NO-PIC
 // RUN: %clang -c %s -target i386-apple-darwin -mdynamic-no-pic -### 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=CHECK-DYNAMIC-NO-PIC-32

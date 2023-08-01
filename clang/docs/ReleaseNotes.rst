@@ -95,6 +95,8 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang constexpr evaluator now prints template arguments when displaying
+  template-specialization function calls.
 
 Bug Fixes in This Version
 -------------------------
@@ -111,6 +113,21 @@ Bug Fixes to Attribute Support
 
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
+
+- Clang limits the size of arrays it will try to evaluate at compile time
+  to avoid memory exhaustion.
+  This limit can be modified by `-fconstexpr-steps`.
+  (`#63562 <https://github.com/llvm/llvm-project/issues/63562>`_)
+
+- Fix a crash caused by some named unicode escape sequences designating
+  a Unicode character whose name contains a ``-``.
+  (`Fixes #64161 <https://github.com/llvm/llvm-project/issues/64161>_`)
+
+- Fix cases where we ignore ambiguous name lookup when looking up memebers.
+  (`#22413 <https://github.com/llvm/llvm-project/issues/22413>_`),
+  (`#29942 <https://github.com/llvm/llvm-project/issues/29942>_`),
+  (`#35574 <https://github.com/llvm/llvm-project/issues/35574>_`) and
+  (`#27224 <https://github.com/llvm/llvm-project/issues/27224>_`).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -139,9 +156,6 @@ Windows Support
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
-- The ``-march=native`` ``-mtune=`` options and ``__loongarch_{arch,tune}``
-  macros are now supported.
-
 RISC-V Support
 ^^^^^^^^^^^^^^
 
@@ -165,6 +179,14 @@ DWARF Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
+- Add ``__builtin_elementwise_log`` builtin for floating point types only.
+- Add ``__builtin_elementwise_log10`` builtin for floating point types only.
+- Add ``__builtin_elementwise_log2`` builtin for floating point types only.
+- Add ``__builtin_elementwise_exp`` builtin for floating point types only.
+- Add ``__builtin_elementwise_exp2`` builtin for floating point types only.
+- Add ``__builtin_set_flt_rounds`` builtin for X86, x86_64, Arm and AArch64 only.
+- Add ``__builtin_elementwise_pow`` builtin for floating point types only.
+- Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
 
 AST Matchers
 ------------

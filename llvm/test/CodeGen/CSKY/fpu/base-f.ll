@@ -144,6 +144,40 @@ entry:
   ret float %fmul
 }
 
+define float @fnmulRR_a(float %x, float %y) {
+;
+; CHECK-SF-LABEL: fnmulRR_a:
+; CHECK-SF:       # %bb.0: # %entry
+; CHECK-SF-NEXT:    fnmuls vr0, vr1, vr0
+; CHECK-SF-NEXT:    rts16
+;
+; CHECK-SF2-LABEL: fnmulRR_a:
+; CHECK-SF2:       # %bb.0: # %entry
+; CHECK-SF2-NEXT:    fnmul.32 vr0, vr1, vr0
+; CHECK-SF2-NEXT:    rts16
+
+entry:
+  %z = fneg float %y
+  %fnmul = fmul float %z, %x
+  ret float %fnmul
+}
+
+define float @fnmulRR_b(float %x, float %y) {
+; CHECK-SF-LABEL: fnmulRR_b:
+; CHECK-SF:       # %bb.0: # %entry
+; CHECK-SF-NEXT:    fnmuls vr0, vr0, vr1
+; CHECK-SF-NEXT:    rts16
+;
+; CHECK-SF2-LABEL: fnmulRR_b:
+; CHECK-SF2:       # %bb.0: # %entry
+; CHECK-SF2-NEXT:    fnmul.32 vr0, vr0, vr1
+; CHECK-SF2-NEXT:    rts16
+entry:
+  %z = fneg float %x
+  %fnmul = fmul float %y, %z
+  ret float %fnmul
+}
+
 define float @fmulRI(float %x) {
 ;
 ; CHECK-SF-LABEL: fmulRI:

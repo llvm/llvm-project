@@ -440,10 +440,10 @@
 // RUN: %clang -### -c -gdwarf-5 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
 // RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
 // RUN: %clang -### -c -gdwarf-3 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_ON %s
-// RUN: %clang -### -c -gdwarf-2 -gdwarf64 -target x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_VER %s
+// RUN: %clang -### -c -gdwarf-2 -gdwarf64 --target=x86_64 %s 2>&1 | FileCheck -check-prefix=GDWARF64_VER %s
 // RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64 -target x86_64 %s 2>&1 \
 // RUN:       | FileCheck -check-prefix=GDWARF64_ON %s
-// RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target i386-linux-gnu %s 2>&1 \
+// RUN: %clang -### -c -gdwarf-4 -gdwarf64 --target=i386-linux-gnu %s 2>&1 \
 // RUN:       | FileCheck -check-prefix=GDWARF64_32ARCH %s
 // RUN: %clang -### -c -gdwarf-4 -gdwarf64 -target x86_64-apple-darwin %s 2>&1 \
 // RUN:       | FileCheck -check-prefix=GDWARF64_ELF %s

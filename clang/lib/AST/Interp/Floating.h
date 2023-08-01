@@ -87,10 +87,26 @@ public:
   bool isMin() const { return F.isSmallest(); }
   bool isMinusOne() const { return F.isExactlyValue(-1.0); }
   bool isNan() const { return F.isNaN(); }
+  bool isInf() const { return F.isInfinity(); }
   bool isFinite() const { return F.isFinite(); }
+  bool isNormal() const { return F.isNormal(); }
+  bool isDenormal() const { return F.isDenormal(); }
+  llvm::FPClassTest classify() const { return F.classify(); }
+  APFloat::fltCategory getCategory() const { return F.getCategory(); }
 
   ComparisonCategoryResult compare(const Floating &RHS) const {
-    return Compare(F, RHS.F);
+    llvm::APFloatBase::cmpResult CmpRes = F.compare(RHS.F);
+    switch (CmpRes) {
+    case llvm::APFloatBase::cmpLessThan:
+      return ComparisonCategoryResult::Less;
+    case llvm::APFloatBase::cmpEqual:
+      return ComparisonCategoryResult::Equal;
+    case llvm::APFloatBase::cmpGreaterThan:
+      return ComparisonCategoryResult::Greater;
+    case llvm::APFloatBase::cmpUnordered:
+      return ComparisonCategoryResult::Unordered;
+    }
+    llvm_unreachable("Inavlid cmpResult value");
   }
 
   static APFloat::opStatus fromIntegral(APSInt Val,
@@ -101,6 +117,13 @@ public:
     APFloat::opStatus Status = F.convertFromAPInt(Val, Val.isSigned(), RM);
     Result = Floating(F);
     return Status;
+  }
+
+  static Floating abs(const Floating &F) {
+    APFloat V = F.F;
+    if (V.isNegative())
+      V.changeSign();
+    return Floating(V);
   }
 
   // -------

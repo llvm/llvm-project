@@ -1,10 +1,37 @@
 ; RUN: not llvm-as < %s -o /dev/null 2>&1 | FileCheck %s
 
+; CHECK: Convergence control tokens can only be produced by calls to the convergence control intrinsics.
+; CHECK-NEXT:  %t04_tok1 = call token @produce_token()
+; CHECK-NEXT:  call void @f() [ "convergencectrl"(token %t04_tok1) ]
+define void @wrong_token() {
+  %t04_tok1 = call token @produce_token()
+  call void @f() [ "convergencectrl"(token %t04_tok1) ]
+  ret void
+}
+
 ; CHECK: Expected convergent attribute on a controlled convergent call.
 ; CHECK-NEXT  call void @g(){{.*}}%t05_tok1
 define void @missing.attribute() {
   %t05_tok1 = call token @llvm.experimental.convergence.anchor()
   call void @g() [ "convergencectrl"(token %t05_tok1) ]
+  ret void
+}
+
+; CHECK: The 'convergencectrl' bundle requires exactly one token use.
+; CHECK-NEXT:  call void @g()
+define void @multiple_tokens() {
+  %t06_tok1 = call token @llvm.experimental.convergence.anchor()
+  %t06_tok2 = call token @llvm.experimental.convergence.anchor()
+  call void @g() [ "convergencectrl"(token %t06_tok2, token %t06_tok1) ]
+  ret void
+}
+
+; CHECK: The 'convergencetrl' bundle can occur at most once on a call
+; CHECK-NEXT:  call void @g()
+define void @multiple_bundles() {
+  %t07_tok1 = call token @llvm.experimental.convergence.anchor()
+  %t07_tok2 = call token @llvm.experimental.convergence.anchor()
+  call void @g() [ "convergencectrl"(token %t07_tok2), "convergencectrl"(token %t07_tok1) ]
   ret void
 }
 
@@ -216,6 +243,8 @@ F:
   call void @f() [ "convergencectrl"(token %a) ]
   ret void
 }
+
+declare token @produce_token()
 
 declare void @f() convergent
 declare void @g()

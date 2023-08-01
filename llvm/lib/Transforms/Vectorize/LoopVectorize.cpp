@@ -3571,7 +3571,10 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths(VPTransformState &State) {
     VPValue *Def = State.Plan->getVPValue(KV.first, true);
     if (!State.hasAnyVectorValue(Def))
       continue;
-    for (unsigned Part = 0; Part < UF; ++Part) {
+    // If the instruction is defined outside the loop, only update the first
+    // part; the first part will be re-used for all other parts.
+    unsigned UFToUse = OrigLoop->contains(KV.first) ? UF : 1;
+    for (unsigned Part = 0; Part < UFToUse; ++Part) {
       Value *I = State.get(Def, Part);
       if (Erased.count(I) || I->use_empty() || !isa<Instruction>(I))
         continue;
@@ -3595,21 +3598,22 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths(VPTransformState &State) {
       // unfortunately.
       Value *NewI = nullptr;
       if (auto *BO = dyn_cast<BinaryOperator>(I)) {
-        NewI = B.CreateBinOp(BO->getOpcode(), ShrinkOperand(BO->getOperand(0)),
-                             ShrinkOperand(BO->getOperand(1)));
+        Value *Op0 = ShrinkOperand(BO->getOperand(0));
+        Value *Op1 = ShrinkOperand(BO->getOperand(1));
+        NewI = B.CreateBinOp(BO->getOpcode(), Op0, Op1);
 
         // Any wrapping introduced by shrinking this operation shouldn't be
         // considered undefined behavior. So, we can't unconditionally copy
         // arithmetic wrapping flags to NewI.
         cast<BinaryOperator>(NewI)->copyIRFlags(I, /*IncludeWrapFlags=*/false);
       } else if (auto *CI = dyn_cast<ICmpInst>(I)) {
-        NewI =
-            B.CreateICmp(CI->getPredicate(), ShrinkOperand(CI->getOperand(0)),
-                         ShrinkOperand(CI->getOperand(1)));
+        Value *Op0 = ShrinkOperand(BO->getOperand(0));
+        Value *Op1 = ShrinkOperand(BO->getOperand(1));
+        NewI = B.CreateICmp(CI->getPredicate(), Op0, Op1);
       } else if (auto *SI = dyn_cast<SelectInst>(I)) {
-        NewI = B.CreateSelect(SI->getCondition(),
-                              ShrinkOperand(SI->getTrueValue()),
-                              ShrinkOperand(SI->getFalseValue()));
+        Value *TV = ShrinkOperand(SI->getTrueValue());
+        Value *FV = ShrinkOperand(SI->getFalseValue());
+        NewI = B.CreateSelect(SI->getCondition(), TV, FV);
       } else if (auto *CI = dyn_cast<CastInst>(I)) {
         switch (CI->getOpcode()) {
         default:
@@ -3679,7 +3683,8 @@ void InnerLoopVectorizer::truncateToMinimalBitwidths(VPTransformState &State) {
     VPValue *Def = State.Plan->getVPValue(KV.first, true);
     if (!State.hasAnyVectorValue(Def))
       continue;
-    for (unsigned Part = 0; Part < UF; ++Part) {
+    unsigned UFToUse = OrigLoop->contains(KV.first) ? UF : 1;
+    for (unsigned Part = 0; Part < UFToUse; ++Part) {
       Value *I = State.get(Def, Part);
       ZExtInst *Inst = dyn_cast<ZExtInst>(I);
       if (Inst && Inst->use_empty()) {
@@ -9869,6 +9874,9 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
   };
 
   if (!hasScalarValue(Def, {Part, 0})) {
+    assert(Def->isLiveIn() && "expected a live-in");
+    if (Part != 0)
+      return get(Def, 0);
     Value *IRV = Def->getLiveInIRValue();
     Value *B = GetBroadcastInstrs(IRV);
     set(Def, B, Part);

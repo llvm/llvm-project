@@ -171,6 +171,12 @@ public:
 
   unsigned getBuiltinID() const { return F->getBuiltinID(); }
 
+  bool isBuiltin() const { return F->getBuiltinID() != 0; }
+
+  /// Does this function need its arguments to be classified at runtime
+  /// rather than at bytecode-compile-time?
+  bool needsRuntimeArgPop(const ASTContext &Ctx) const;
+
   unsigned getNumParams() const { return ParamTypes.size(); }
 
   unsigned getParamOffset(unsigned ParamIndex) const {

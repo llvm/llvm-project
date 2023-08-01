@@ -405,22 +405,47 @@ std::string summarizeExpr(const Expr *E) {
 // Determines if any intermediate type in desugaring QualType QT is of
 // substituted template parameter type. Ignore pointer or reference wrappers.
 bool isSugaredTemplateParameter(QualType QT) {
-  static auto PeelWrappers = [](QualType QT) {
+  static auto PeelWrapper = [](QualType QT) {
     // Neither `PointerType` nor `ReferenceType` is considered as sugared
     // type. Peel it.
-    QualType Next;
-    while (!(Next = QT->getPointeeType()).isNull())
-      QT = Next;
-    return QT;
+    QualType Peeled = QT->getPointeeType();
+    return Peeled.isNull() ? QT : Peeled;
   };
+
+  // This is a bit tricky: we traverse the type structure and find whether or
+  // not a type in the desugaring process is of SubstTemplateTypeParmType.
+  // During the process, we may encounter pointer or reference types that are
+  // not marked as sugared; therefore, the desugar function won't apply. To
+  // move forward the traversal, we retrieve the pointees using
+  // QualType::getPointeeType().
+  //
+  // However, getPointeeType could leap over our interests: The QT::getAs<T>()
+  // invoked would implicitly desugar the type. Consequently, if the
+  // SubstTemplateTypeParmType is encompassed within a TypedefType, we may lose
+  // the chance to visit it.
+  // For example, given a QT that represents `std::vector<int *>::value_type`:
+  //  `-ElaboratedType 'value_type' sugar
+  //    `-TypedefType 'vector<int *>::value_type' sugar
+  //      |-Typedef 'value_type'
+  //      `-SubstTemplateTypeParmType 'int *' sugar class depth 0 index 0 T
+  //        |-ClassTemplateSpecialization 'vector'
+  //        `-PointerType 'int *'
+  //          `-BuiltinType 'int'
+  // Applying `getPointeeType` to QT results in 'int', a child of our target
+  // node SubstTemplateTypeParmType.
+  //
+  // As such, we always prefer the desugared over the pointee for next type
+  // in the iteration. It could avoid the getPointeeType's implicit desugaring.
   while (true) {
-    QualType Desugared =
-        PeelWrappers(QT->getLocallyUnqualifiedSingleStepDesugaredType());
-    if (Desugared == QT)
-      break;
-    if (Desugared->getAs<SubstTemplateTypeParmType>())
+    if (QT->getAs<SubstTemplateTypeParmType>())
       return true;
-    QT = Desugared;
+    QualType Desugared = QT->getLocallyUnqualifiedSingleStepDesugaredType();
+    if (Desugared != QT)
+      QT = Desugared;
+    else if (auto Peeled = PeelWrapper(Desugared); Peeled != QT)
+      QT = Peeled;
+    else
+      break;
   }
   return false;
 }

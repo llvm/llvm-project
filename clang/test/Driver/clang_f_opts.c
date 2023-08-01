@@ -1,4 +1,4 @@
-
+// UNSUPPORTED: target={{.*}}-aix{{.*}}
 // RUN: %clang -### -S -fasm -fblocks -fbuiltin -fno-math-errno -fcommon -fpascal-strings -fno-blocks -fno-builtin -fmath-errno -fno-common -fno-pascal-strings -fblocks -fbuiltin -fmath-errno -fcommon -fpascal-strings -fsplit-stack %s 2>&1 | FileCheck -check-prefix=CHECK-OPTIONS1 %s
 // RUN: %clang -### -S -fasm -fblocks -fbuiltin -fno-math-errno -fcommon -fpascal-strings -fno-asm -fno-blocks -fno-builtin -fmath-errno -fno-common -fno-pascal-strings -fno-show-source-location -fshort-enums -fprotect-parens %s 2>&1 | FileCheck -check-prefix=CHECK-OPTIONS2 %s
 
@@ -60,7 +60,7 @@
 
 //
 // RUN: %clang -### -x cuda -nocudainc -nocudalib \
-// RUN:    -c -fprofile-sample-use=%S/Inputs/file.prof %s 2>&1 \
+// RUN:    -c -fprofile-sample-use=%S/Inputs/file.prof --cuda-path=%S/Inputs/CUDA/usr/local/cuda %s 2>&1 \
 // RUN:  | FileCheck -check-prefix=CHECK-CUDA-SAMPLE-PROFILE %s
 // -fprofile-sample-use should not be passed to the GPU compilation
 // CHECK-CUDA-SAMPLE-PROFILE: "-cc1"
@@ -542,7 +542,7 @@
 // RUN: %clang -### -S -target x86_64-unknown-linux -frecord-command-line -fno-record-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-NO-RECORD-GCC-SWITCHES %s
 // Test with a couple examples of non-ELF object file formats
 // RUN: %clang -### -S -target x86_64-unknown-macosx -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES %s
-// RUN: %clang -### -S -target x86_64-unknown-windows -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ERROR %s
+// RUN: %clang -### -S --target=x86_64-unknown-windows -frecord-command-line %s 2>&1 | FileCheck -check-prefix=CHECK-RECORD-GCC-SWITCHES-ERROR %s
 // CHECK-RECORD-GCC-SWITCHES: "-record-command-line"
 // CHECK-NO-RECORD-GCC-SWITCHES-NOT: "-record-command-line"
 // CHECK-RECORD-GCC-SWITCHES-ERROR: error: unsupported option '-frecord-command-line' for target
@@ -607,5 +607,5 @@
 
 // RUN: %clang -### -fintegrated-objemitter -target x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-INT-OBJEMITTER %s
 // CHECK-INT-OBJEMITTER-NOT: unsupported option '-fintegrated-objemitter' for target
-// RUN: %clang -### -fno-integrated-objemitter -target x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-NOINT-OBJEMITTER %s
+// RUN: %clang -### -fno-integrated-objemitter --target=x86_64 %s 2>&1 | FileCheck -check-prefix=CHECK-NOINT-OBJEMITTER %s
 // CHECK-NOINT-OBJEMITTER: unsupported option '-fno-integrated-objemitter' for target

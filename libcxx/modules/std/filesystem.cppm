@@ -110,11 +110,11 @@ export namespace std::filesystem {
 } // namespace std::filesystem
 
 // [fs.path.hash], hash support
-namespace std {
+export namespace std {
   using std::hash;
 }
 
-namespace std::ranges {
+export namespace std::ranges {
   using std::ranges::enable_borrowed_range;
   using std::ranges::enable_view;
 } // namespace std::ranges

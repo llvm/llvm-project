@@ -67,7 +67,6 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   AMDGPU::GPUKind AK;
 
   switch (ElfMach) {
-  default: llvm_unreachable("Unhandled ELF::EF_AMDGPU type");
   case ELF::EF_AMDGPU_MACH_R600_R600:      AK = GK_R600;    break;
   case ELF::EF_AMDGPU_MACH_R600_R630:      AK = GK_R630;    break;
   case ELF::EF_AMDGPU_MACH_R600_RS880:     AK = GK_RS880;   break;
@@ -127,6 +126,7 @@ StringRef AMDGPUTargetStreamer::getArchNameFromElfMach(unsigned ElfMach) {
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1150: AK = GK_GFX1150; break;
   case ELF::EF_AMDGPU_MACH_AMDGCN_GFX1151: AK = GK_GFX1151; break;
   case ELF::EF_AMDGPU_MACH_NONE:           AK = GK_NONE;    break;
+  default:                                 AK = GK_NONE;    break;
   }
 
   StringRef GPUName = getArchNameAMDGCN(AK);

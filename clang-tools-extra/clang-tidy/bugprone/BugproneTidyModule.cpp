@@ -27,6 +27,7 @@
 #include "ForwardingReferenceOverloadCheck.h"
 #include "ImplicitWideningOfMultiplicationResultCheck.h"
 #include "InaccurateEraseCheck.h"
+#include "IncDecInConditionsCheck.h"
 #include "IncorrectRoundingsCheck.h"
 #include "InfiniteLoopCheck.h"
 #include "IntegerDivisionCheck.h"
@@ -43,6 +44,7 @@
 #include "NoEscapeCheck.h"
 #include "NonZeroEnumToBoolConversionCheck.h"
 #include "NotNullTerminatedResultCheck.h"
+#include "OptionalValueConversionCheck.h"
 #include "ParentVirtualCallCheck.h"
 #include "PosixReturnCheck.h"
 #include "RedundantBranchConditionCheck.h"
@@ -122,6 +124,8 @@ public:
         "bugprone-inaccurate-erase");
     CheckFactories.registerCheck<SwitchMissingDefaultCaseCheck>(
         "bugprone-switch-missing-default-case");
+    CheckFactories.registerCheck<IncDecInConditionsCheck>(
+        "bugprone-inc-dec-in-conditions");
     CheckFactories.registerCheck<IncorrectRoundingsCheck>(
         "bugprone-incorrect-roundings");
     CheckFactories.registerCheck<InfiniteLoopCheck>("bugprone-infinite-loop");
@@ -147,6 +151,8 @@ public:
         "bugprone-multiple-new-in-one-expression");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "bugprone-multiple-statement-macro");
+    CheckFactories.registerCheck<OptionalValueConversionCheck>(
+        "bugprone-optional-value-conversion");
     CheckFactories.registerCheck<RedundantBranchConditionCheck>(
         "bugprone-redundant-branch-condition");
     CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(

@@ -9,6 +9,7 @@
 #include "Interp.h"
 #include "PrimType.h"
 #include "clang/Basic/Builtins.h"
+#include "clang/Basic/TargetInfo.h"
 
 namespace clang {
 namespace interp {
@@ -18,6 +19,17 @@ static T getParam(const InterpFrame *Frame, unsigned Index) {
   assert(Frame->getFunction()->getNumParams() > Index);
   unsigned Offset = Frame->getFunction()->getParamOffset(Index);
   return Frame->getParam<T>(Offset);
+}
+
+/// Peek an integer value from the stack into an APSInt.
+static APSInt peekToAPSInt(InterpStack &Stk, PrimType T) {
+  APSInt R;
+  INT_TYPE_SWITCH(T, {
+    T Val = Stk.peek<T>();
+    R = APSInt(APInt(T::bitWidth(), static_cast<uint64_t>(Val), T::isSigned()));
+  });
+
+  return R;
 }
 
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
@@ -59,6 +71,235 @@ static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+static bool interp__builtin_nan(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *F,
+                                bool Signaling) {
+  const Pointer &Arg = getParam<Pointer>(Frame, 0);
+
+  if (!CheckLoad(S, OpPC, Arg))
+    return false;
+
+  assert(Arg.getFieldDesc()->isPrimitiveArray());
+
+  // Convert the given string to an integer using StringRef's API.
+  llvm::APInt Fill;
+  std::string Str;
+  assert(Arg.getNumElems() >= 1);
+  for (unsigned I = 0;; ++I) {
+    const Pointer &Elem = Arg.atIndex(I);
+
+    if (!CheckLoad(S, OpPC, Elem))
+      return false;
+
+    if (Elem.deref<int8_t>() == 0)
+      break;
+
+    Str += Elem.deref<char>();
+  }
+
+  // Treat empty strings as if they were zero.
+  if (Str.empty())
+    Fill = llvm::APInt(32, 0);
+  else if (StringRef(Str).getAsInteger(0, Fill))
+    return false;
+
+  const llvm::fltSemantics &TargetSemantics =
+      S.getCtx().getFloatTypeSemantics(F->getDecl()->getReturnType());
+
+  Floating Result;
+  if (S.getCtx().getTargetInfo().isNan2008()) {
+    if (Signaling)
+      Result = Floating(
+          llvm::APFloat::getSNaN(TargetSemantics, /*Negative=*/false, &Fill));
+    else
+      Result = Floating(
+          llvm::APFloat::getQNaN(TargetSemantics, /*Negative=*/false, &Fill));
+  } else {
+    // Prior to IEEE 754-2008, architectures were allowed to choose whether
+    // the first bit of their significand was set for qNaN or sNaN. MIPS chose
+    // a different encoding to what became a standard in 2008, and for pre-
+    // 2008 revisions, MIPS interpreted sNaN-2008 as qNan and qNaN-2008 as
+    // sNaN. This is now known as "legacy NaN" encoding.
+    if (Signaling)
+      Result = Floating(
+          llvm::APFloat::getQNaN(TargetSemantics, /*Negative=*/false, &Fill));
+    else
+      Result = Floating(
+          llvm::APFloat::getSNaN(TargetSemantics, /*Negative=*/false, &Fill));
+  }
+
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
+static bool interp__builtin_inf(InterpState &S, CodePtr OpPC,
+                                const InterpFrame *Frame, const Function *F) {
+  const llvm::fltSemantics &TargetSemantics =
+      S.getCtx().getFloatTypeSemantics(F->getDecl()->getReturnType());
+
+  S.Stk.push<Floating>(Floating::getInf(TargetSemantics));
+  return true;
+}
+
+static bool interp__builtin_copysign(InterpState &S, CodePtr OpPC,
+                                     const InterpFrame *Frame,
+                                     const Function *F) {
+  const Floating &Arg1 = getParam<Floating>(Frame, 0);
+  const Floating &Arg2 = getParam<Floating>(Frame, 1);
+
+  APFloat Copy = Arg1.getAPFloat();
+  Copy.copySign(Arg2.getAPFloat());
+  S.Stk.push<Floating>(Floating(Copy));
+
+  return true;
+}
+
+static bool interp__builtin_fmin(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame, const Function *F) {
+  const Floating &LHS = getParam<Floating>(Frame, 0);
+  const Floating &RHS = getParam<Floating>(Frame, 1);
+
+  Floating Result;
+
+  // When comparing zeroes, return -0.0 if one of the zeroes is negative.
+  if (LHS.isZero() && RHS.isZero() && RHS.isNegative())
+    Result = RHS;
+  else if (LHS.isNan() || RHS < LHS)
+    Result = RHS;
+  else
+    Result = LHS;
+
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
+static bool interp__builtin_fmax(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame,
+                                 const Function *Func) {
+  const Floating &LHS = getParam<Floating>(Frame, 0);
+  const Floating &RHS = getParam<Floating>(Frame, 1);
+
+  Floating Result;
+
+  // When comparing zeroes, return +0.0 if one of the zeroes is positive.
+  if (LHS.isZero() && RHS.isZero() && LHS.isNegative())
+    Result = RHS;
+  else if (LHS.isNan() || RHS > LHS)
+    Result = RHS;
+  else
+    Result = LHS;
+
+  S.Stk.push<Floating>(Result);
+  return true;
+}
+
+/// Defined as __builtin_isnan(...), to accommodate the fact that it can
+/// take a float, double, long double, etc.
+/// But for us, that's all a Floating anyway.
+static bool interp__builtin_isnan(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame, const Function *F) {
+  const Floating &Arg = S.Stk.peek<Floating>();
+
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg.isNan()));
+  return true;
+}
+
+static bool interp__builtin_isinf(InterpState &S, CodePtr OpPC,
+                                  const InterpFrame *Frame, const Function *F,
+                                  bool CheckSign) {
+  const Floating &Arg = S.Stk.peek<Floating>();
+  bool IsInf = Arg.isInf();
+
+  if (CheckSign)
+    S.Stk.push<Integral<32, true>>(
+        Integral<32, true>::from(IsInf ? (Arg.isNegative() ? -1 : 1) : 0));
+  else
+    S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg.isInf()));
+  return true;
+}
+
+static bool interp__builtin_isfinite(InterpState &S, CodePtr OpPC,
+                                     const InterpFrame *Frame,
+                                     const Function *F) {
+  const Floating &Arg = S.Stk.peek<Floating>();
+
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg.isFinite()));
+  return true;
+}
+
+static bool interp__builtin_isnormal(InterpState &S, CodePtr OpPC,
+                                     const InterpFrame *Frame,
+                                     const Function *F) {
+  const Floating &Arg = S.Stk.peek<Floating>();
+
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Arg.isNormal()));
+  return true;
+}
+
+/// First parameter to __builtin_isfpclass is the floating value, the
+/// second one is an integral value.
+static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func) {
+  const Expr *E = S.Current->getExpr(OpPC);
+  const CallExpr *CE = cast<CallExpr>(E);
+  PrimType FPClassArgT = *S.getContext().classify(CE->getArgs()[1]->getType());
+  APSInt FPClassArg = peekToAPSInt(S.Stk, FPClassArgT);
+  const Floating &F =
+      S.Stk.peek<Floating>(align(primSize(FPClassArgT) + primSize(PT_Float)));
+
+  int32_t Result =
+      static_cast<int32_t>((F.classify() & FPClassArg).getZExtValue());
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Result));
+
+  return true;
+}
+
+/// Five int32 values followed by one floating value.
+static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func) {
+  const Floating &Val = S.Stk.peek<Floating>();
+
+  unsigned Index;
+  switch (Val.getCategory()) {
+  case APFloat::fcNaN:
+    Index = 0;
+    break;
+  case APFloat::fcInfinity:
+    Index = 1;
+    break;
+  case APFloat::fcNormal:
+    Index = Val.isDenormal() ? 3 : 2;
+    break;
+  case APFloat::fcZero:
+    Index = 4;
+    break;
+  }
+
+  // The last argument is first on the stack.
+  unsigned Offset = align(primSize(PT_Float)) +
+                    ((1 + (4 - Index)) * align(primSize(PT_Sint32)));
+
+  const Integral<32, true> &I = S.Stk.peek<Integral<32, true>>(Offset);
+  S.Stk.push<Integral<32, true>>(I);
+  return true;
+}
+
+// The C standard says "fabs raises no floating-point exceptions,
+// even if x is a signaling NaN. The returned value is independent of
+// the current rounding direction mode."  Therefore constant folding can
+// proceed without regard to the floating point settings.
+// Reference, WG14 N2478 F.10.4.3
+static bool interp__builtin_fabs(InterpState &S, CodePtr OpPC,
+                                 const InterpFrame *Frame,
+                                 const Function *Func) {
+  const Floating &Val = getParam<Floating>(Frame, 0);
+
+  S.Stk.push<Floating>(Floating::abs(Val));
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
@@ -72,7 +313,103 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   case Builtin::BI__builtin_strcmp:
     if (interp__builtin_strcmp(S, OpPC, Frame))
       return Ret<PT_Sint32>(S, OpPC, Dummy);
-    return false;
+    break;
+  case Builtin::BI__builtin_nan:
+  case Builtin::BI__builtin_nanf:
+  case Builtin::BI__builtin_nanl:
+  case Builtin::BI__builtin_nanf16:
+  case Builtin::BI__builtin_nanf128:
+    if (interp__builtin_nan(S, OpPC, Frame, F, /*Signaling=*/false))
+      return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+  case Builtin::BI__builtin_nans:
+  case Builtin::BI__builtin_nansf:
+  case Builtin::BI__builtin_nansl:
+  case Builtin::BI__builtin_nansf16:
+  case Builtin::BI__builtin_nansf128:
+    if (interp__builtin_nan(S, OpPC, Frame, F, /*Signaling=*/true))
+      return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_huge_val:
+  case Builtin::BI__builtin_huge_valf:
+  case Builtin::BI__builtin_huge_vall:
+  case Builtin::BI__builtin_huge_valf16:
+  case Builtin::BI__builtin_huge_valf128:
+  case Builtin::BI__builtin_inf:
+  case Builtin::BI__builtin_inff:
+  case Builtin::BI__builtin_infl:
+  case Builtin::BI__builtin_inff16:
+  case Builtin::BI__builtin_inff128:
+    if (interp__builtin_inf(S, OpPC, Frame, F))
+      return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+  case Builtin::BI__builtin_copysign:
+  case Builtin::BI__builtin_copysignf:
+  case Builtin::BI__builtin_copysignl:
+  case Builtin::BI__builtin_copysignf128:
+    if (interp__builtin_copysign(S, OpPC, Frame, F))
+      return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_fmin:
+  case Builtin::BI__builtin_fminf:
+  case Builtin::BI__builtin_fminl:
+  case Builtin::BI__builtin_fminf16:
+  case Builtin::BI__builtin_fminf128:
+    if (interp__builtin_fmin(S, OpPC, Frame, F))
+      return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_fmax:
+  case Builtin::BI__builtin_fmaxf:
+  case Builtin::BI__builtin_fmaxl:
+  case Builtin::BI__builtin_fmaxf16:
+  case Builtin::BI__builtin_fmaxf128:
+    if (interp__builtin_fmax(S, OpPC, Frame, F))
+      return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_isnan:
+    if (interp__builtin_isnan(S, OpPC, Frame, F))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_isinf:
+    if (interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/false))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_isinf_sign:
+    if (interp__builtin_isinf(S, OpPC, Frame, F, /*Sign=*/true))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_isfinite:
+    if (interp__builtin_isfinite(S, OpPC, Frame, F))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+  case Builtin::BI__builtin_isnormal:
+    if (interp__builtin_isnormal(S, OpPC, Frame, F))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+  case Builtin::BI__builtin_isfpclass:
+    if (interp__builtin_isfpclass(S, OpPC, Frame, F))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+  case Builtin::BI__builtin_fpclassify:
+    if (interp__builtin_fpclassify(S, OpPC, Frame, F))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+
+  case Builtin::BI__builtin_fabs:
+  case Builtin::BI__builtin_fabsf:
+  case Builtin::BI__builtin_fabsl:
+  case Builtin::BI__builtin_fabsf128:
+    if (interp__builtin_fabs(S, OpPC, Frame, F))
+      return Ret<PT_Float>(S, OpPC, Dummy);
+    break;
+
   default:
     return false;
   }

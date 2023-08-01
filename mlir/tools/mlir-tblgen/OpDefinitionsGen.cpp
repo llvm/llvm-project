@@ -498,6 +498,9 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
 namespace {
 // Helper class to emit a record into the given output stream.
 class OpEmitter {
+  using ConstArgument =
+      llvm::PointerUnion<const AttributeMetadata *, const NamedProperty *>;
+
 public:
   static void
   emitDecl(const Operator &op, raw_ostream &os,
@@ -524,6 +527,10 @@ private:
 
   // Generates code to manage the properties, if any!
   void genPropertiesSupport();
+
+  // Generates code to manage the encoding of properties to bytecode.
+  void
+  genPropertiesSupportForBytecode(ArrayRef<ConstArgument> attrOrProperties);
 
   // Generates getters for the attributes.
   void genAttrGetters();
@@ -1177,8 +1184,6 @@ static void emitAttrGetterWithReturnType(FmtContext &fctx,
 void OpEmitter::genPropertiesSupport() {
   if (!emitHelper.hasProperties())
     return;
-  using ConstArgument =
-      llvm::PointerUnion<const AttributeMetadata *, const NamedProperty *>;
 
   SmallVector<ConstArgument> attrOrProperties;
   for (const std::pair<StringRef, AttributeMetadata> &it :
@@ -1243,21 +1248,6 @@ void OpEmitter::genPropertiesSupport() {
               MethodParameter(
                   "llvm::function_ref<::mlir::InFlightDiagnostic()>",
                   "getDiag"))
-          ->body();
-
-  auto &readPropertiesMethod =
-      opClass
-          .addStaticMethod(
-              "::mlir::LogicalResult", "readProperties",
-              MethodParameter("::mlir::DialectBytecodeReader &", "reader"),
-              MethodParameter("::mlir::OperationState &", "state"))
-          ->body();
-
-  auto &writePropertiesMethod =
-      opClass
-          .addMethod(
-              "void", "writeProperties",
-              MethodParameter("::mlir::DialectBytecodeWriter &", "writer"))
           ->body();
 
   opClass.declare<UsingDeclaration>("Properties", "FoldAdaptor::Properties");
@@ -1541,6 +1531,38 @@ void OpEmitter::genPropertiesSupport() {
     }
   }
   verifyInherentAttrsMethod << "    return ::mlir::success();";
+
+  // Generate methods to interact with bytecode.
+  genPropertiesSupportForBytecode(attrOrProperties);
+}
+
+void OpEmitter::genPropertiesSupportForBytecode(
+    ArrayRef<ConstArgument> attrOrProperties) {
+  if (op.useCustomPropertiesEncoding()) {
+    opClass.declareStaticMethod(
+        "::mlir::LogicalResult", "readProperties",
+        MethodParameter("::mlir::DialectBytecodeReader &", "reader"),
+        MethodParameter("::mlir::OperationState &", "state"));
+    opClass.declareMethod(
+        "void", "writeProperties",
+        MethodParameter("::mlir::DialectBytecodeWriter &", "writer"));
+    return;
+  }
+
+  auto &readPropertiesMethod =
+      opClass
+          .addStaticMethod(
+              "::mlir::LogicalResult", "readProperties",
+              MethodParameter("::mlir::DialectBytecodeReader &", "reader"),
+              MethodParameter("::mlir::OperationState &", "state"))
+          ->body();
+
+  auto &writePropertiesMethod =
+      opClass
+          .addMethod(
+              "void", "writeProperties",
+              MethodParameter("::mlir::DialectBytecodeWriter &", "writer"))
+          ->body();
 
   // Populate bytecode serialization logic.
   readPropertiesMethod

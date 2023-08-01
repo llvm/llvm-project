@@ -13,6 +13,7 @@
 #include <optional>
 #include <vector>
 
+#include "CTFTypes.h"
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/SymbolFile.h"
 
@@ -85,9 +86,6 @@ public:
 
   lldb::CompUnitSP ParseCompileUnitAtIndex(uint32_t index) override;
 
-  lldb::TypeSP GetTypeForUID(lldb::user_id_t type_uid);
-  void AddTypeForUID(lldb::user_id_t type_uid, lldb::TypeSP type);
-
   Type *ResolveTypeUID(lldb::user_id_t type_uid) override;
   std::optional<ArrayInfo> GetDynamicArrayInfoForUID(
       lldb::user_id_t type_uid,
@@ -95,7 +93,7 @@ public:
     return std::nullopt;
   }
 
-  bool CompleteType(CompilerType &compiler_type) override { return false; }
+  bool CompleteType(CompilerType &compiler_type) override;
 
   uint32_t ResolveSymbolContext(const lldb_private::Address &so_addr,
                                 lldb::SymbolContextItem resolve_scope,
@@ -216,60 +214,18 @@ private:
     uint32_t GetSize() const { return size; }
   };
 
-  struct ctf_member_t {
-    uint32_t name;
-    uint32_t type;
-    uint16_t offset;
-    uint16_t padding;
-  };
+  llvm::Expected<std::unique_ptr<CTFType>> ParseType(lldb::offset_t &offset,
+                                                     lldb::user_id_t uid);
 
-  struct ctf_array_t {
-    uint32_t contents;
-    uint32_t index;
-    uint32_t nelems;
-  };
-
-  struct ctf_enum_t {
-    uint32_t name;
-    int32_t value;
-  };
-
-  llvm::Expected<lldb::TypeSP> ParseType(lldb::offset_t &offset,
-                                         lldb::user_id_t uid,
-                                         llvm::StringRef name, uint32_t kind,
-                                         uint32_t variable_length,
-                                         uint32_t type, uint32_t size);
-
-  llvm::Expected<lldb::TypeSP> ParseInteger(lldb::offset_t &offset,
-                                            lldb::user_id_t uid,
-                                            llvm::StringRef name);
-
-  llvm::Expected<lldb::TypeSP> ParseModifierType(lldb::offset_t &offset,
-                                                 lldb::user_id_t uid,
-                                                 uint32_t kind, uint32_t type);
-
-  llvm::Expected<lldb::TypeSP> ParseTypedef(lldb::offset_t &offset,
-                                            lldb::user_id_t uid,
-                                            llvm::StringRef name,
-                                            uint32_t type);
-
-  llvm::Expected<lldb::TypeSP>
-  ParseArray(lldb::offset_t &offset, lldb::user_id_t uid, llvm::StringRef name);
-
-  llvm::Expected<lldb::TypeSP> ParseEnum(lldb::offset_t &offset,
-                                         lldb::user_id_t uid,
-                                         llvm::StringRef name,
-                                         uint32_t elements, uint32_t size);
-
-  llvm::Expected<lldb::TypeSP> ParseFunction(lldb::offset_t &offset,
-                                             lldb::user_id_t uid,
-                                             llvm::StringRef name,
-                                             uint32_t num_args, uint32_t type);
-
-  llvm::Expected<lldb::TypeSP> ParseRecord(lldb::offset_t &offset,
-                                           lldb::user_id_t uid,
-                                           llvm::StringRef name, uint32_t kind,
-                                           uint32_t fields, uint32_t size);
+  llvm::Expected<lldb::TypeSP> CreateType(CTFType *ctf_type);
+  llvm::Expected<lldb::TypeSP> CreateInteger(const CTFInteger &ctf_integer);
+  llvm::Expected<lldb::TypeSP> CreateModifier(const CTFModifier &ctf_modifier);
+  llvm::Expected<lldb::TypeSP> CreateTypedef(const CTFTypedef &ctf_typedef);
+  llvm::Expected<lldb::TypeSP> CreateArray(const CTFArray &ctf_array);
+  llvm::Expected<lldb::TypeSP> CreateEnum(const CTFEnum &ctf_enum);
+  llvm::Expected<lldb::TypeSP> CreateFunction(const CTFFunction &ctf_function);
+  llvm::Expected<lldb::TypeSP> CreateRecord(const CTFRecord &ctf_record);
+  llvm::Expected<lldb::TypeSP> CreateForward(const CTFForward &ctf_forward);
 
   llvm::StringRef ReadString(lldb::offset_t offset) const;
 
@@ -288,12 +244,24 @@ private:
   lldb::CompUnitSP m_comp_unit_sp;
 
   std::optional<ctf_header_t> m_header;
-  std::vector<lldb::TypeSP> m_types;
+
+  /// Parsed CTF types.
+  llvm::DenseMap<lldb::user_id_t, std::unique_ptr<CTFType>> m_ctf_types;
+
+  /// Parsed LLDB types.
+  llvm::DenseMap<lldb::user_id_t, lldb::TypeSP> m_types;
+
+  /// To complete types, we need a way to map (imcomplete) compiler types back
+  /// to parsed CTF types.
+  llvm::DenseMap<lldb::opaque_compiler_type_t, const CTFType *>
+      m_compiler_types;
+
   std::vector<lldb::FunctionSP> m_functions;
   std::vector<lldb::VariableSP> m_variables;
 
   static constexpr uint16_t g_ctf_magic = 0xcff1;
   static constexpr uint8_t g_ctf_version = 4;
+  static constexpr uint16_t g_ctf_field_threshold = 0x2000;
 };
 } // namespace lldb_private
 

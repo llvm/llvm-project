@@ -143,10 +143,15 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   case CK_NonAtomicToAtomic:
   case CK_NoOp:
   case CK_UserDefinedConversion:
+  case CK_BitCast:
+    if (DiscardResult)
+      return this->discard(SubExpr);
     return this->visit(SubExpr);
 
   case CK_IntegralToBoolean:
   case CK_IntegralCast: {
+      if (DiscardResult)
+        return this->discard(SubExpr);
     std::optional<PrimType> FromT = classify(SubExpr->getType());
     std::optional<PrimType> ToT = classify(CE->getType());
     if (!FromT || !ToT)
@@ -162,14 +167,16 @@ bool ByteCodeExprGen<Emitter>::VisitCastExpr(const CastExpr *CE) {
   }
 
   case CK_PointerToBoolean: {
+    PrimType PtrT = classifyPrim(SubExpr->getType());
+
     // Just emit p != nullptr for this.
     if (!this->visit(SubExpr))
       return false;
 
-    if (!this->emitNullPtr(CE))
+    if (!this->emitNull(PtrT, CE))
       return false;
 
-    return this->emitNEPtr(CE);
+    return this->emitNE(PtrT, CE);
   }
 
   case CK_ToVoid:
@@ -444,7 +451,9 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
     const ArraySubscriptExpr *E) {
   const Expr *Base = E->getBase();
   const Expr *Index = E->getIdx();
-  PrimType IndexT = classifyPrim(Index->getType());
+
+  if (DiscardResult)
+    return this->discard(Base) && this->discard(Index);
 
   // Take pointer of LHS, add offset from RHS.
   // What's left on the stack after this is a pointer.
@@ -454,20 +463,20 @@ bool ByteCodeExprGen<Emitter>::VisitArraySubscriptExpr(
   if (!this->visit(Index))
     return false;
 
-  if (!this->emitArrayElemPtrPop(IndexT, E))
-    return false;
-
-  if (DiscardResult)
-    return this->emitPopPtr(E);
-
-  return true;
+  PrimType IndexT = classifyPrim(Index->getType());
+  return this->emitArrayElemPtrPop(IndexT, E);
 }
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
   for (const Expr *Init : E->inits()) {
-    if (!this->visit(Init))
-      return false;
+    if (DiscardResult) {
+      if (!this->discard(Init))
+        return false;
+    } else {
+      if (!this->visit(Init))
+        return false;
+    }
   }
   return true;
 }
@@ -475,6 +484,8 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitSubstNonTypeTemplateParmExpr(
     const SubstNonTypeTemplateParmExpr *E) {
+  if (DiscardResult)
+    return this->discard(E->getReplacement());
   return this->visit(E->getReplacement());
 }
 
@@ -523,6 +534,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
       Size = ASTCtx.getTypeSizeInChars(ArgType);
     }
 
+    if (DiscardResult)
+      return true;
+
     return this->emitConst(Size.getQuantity(), E);
   }
 
@@ -553,6 +567,9 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
         Size = AlignOfType(Arg->getType(), ASTCtx, Kind);
     }
 
+    if (DiscardResult)
+      return true;
+
     return this->emitConst(Size.getQuantity(), E);
   }
 
@@ -561,18 +578,18 @@ bool ByteCodeExprGen<Emitter>::VisitUnaryExprOrTypeTraitExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitMemberExpr(const MemberExpr *E) {
-  if (DiscardResult)
-    return true;
-
   // 'Base.Member'
   const Expr *Base = E->getBase();
-  const ValueDecl *Member = E->getMemberDecl();
+
+  if (DiscardResult)
+    return this->discard(Base);
 
   if (!this->visit(Base))
     return false;
 
   // Base above gives us a pointer on the stack.
   // TODO: Implement non-FieldDecl members.
+  const ValueDecl *Member = E->getMemberDecl();
   if (const auto *FD = dyn_cast<FieldDecl>(Member)) {
     const RecordDecl *RD = FD->getParent();
     const Record *R = getRecord(RD);
@@ -611,6 +628,8 @@ bool ByteCodeExprGen<Emitter>::VisitAbstractConditionalOperator(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
+  if (DiscardResult)
+    return true;
   unsigned StringIndex = P.createGlobalString(E);
   return this->emitGetPtrGlobal(StringIndex, E);
 }
@@ -618,6 +637,8 @@ bool ByteCodeExprGen<Emitter>::VisitStringLiteral(const StringLiteral *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
     const CharacterLiteral *E) {
+  if (DiscardResult)
+    return true;
   return this->emitConst(E->getValue(), E);
 }
 
@@ -864,6 +885,11 @@ bool ByteCodeExprGen<Emitter>::VisitMaterializeTemporaryExpr(
   const Expr *SubExpr = E->getSubExpr();
   std::optional<PrimType> SubExprT = classify(SubExpr);
 
+  // If we don't end up using the materialized temporary anyway, don't
+  // bother creating it.
+  if (DiscardResult)
+    return this->discard(SubExpr);
+
   if (E->getStorageDuration() == SD_Static) {
     if (std::optional<unsigned> GlobalIndex = P.createGlobal(E)) {
       const LifetimeExtendedTemporaryDecl *TempDecl =
@@ -936,12 +962,16 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
   // Otherwise, use a local variable.
   if (T) {
     // For primitive types, we just visit the initializer.
-    return this->visit(Init);
+    return DiscardResult ? this->discard(Init) : this->visit(Init);
   } else {
     if (std::optional<unsigned> LocalIndex = allocateLocal(Init)) {
       if (!this->emitGetPtrLocal(*LocalIndex, E))
         return false;
-      return this->visitInitializer(Init);
+      if (!this->visitInitializer(Init))
+        return false;
+      if (DiscardResult)
+        return this->emitPopPtr(E);
+      return true;
     }
   }
 
@@ -950,6 +980,8 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
+  if (DiscardResult)
+    return true;
   return this->emitConstBool(E->getValue(), E);
 }
 
@@ -1000,7 +1032,7 @@ bool ByteCodeExprGen<Emitter>::VisitPredefinedExpr(const PredefinedExpr *E) {
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCXXThrowExpr(const CXXThrowExpr *E) {
-  if (!this->discard(E->getSubExpr()))
+  if (E->getSubExpr() && !this->discard(E->getSubExpr()))
     return false;
 
   return this->emitInvalid(E);

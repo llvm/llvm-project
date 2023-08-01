@@ -304,6 +304,16 @@ public:
     }
     return RecursiveASTVisitor::TraverseTemplateArgumentLoc(TL);
   }
+
+  bool VisitCXXStdInitializerListExpr(CXXStdInitializerListExpr *E) {
+    // Reliance on initializer_lists requires std::initializer_list to be
+    // visible per standard. So report a reference to it, otherwise include of
+    // `<initializer_list>` might not receive any use.
+    report(E->getExprLoc(),
+           const_cast<CXXRecordDecl *>(E->getBestDynamicClassType()),
+           RefType::Implicit);
+    return true;
+  }
 };
 
 } // namespace

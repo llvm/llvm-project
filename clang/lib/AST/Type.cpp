@@ -175,6 +175,11 @@ unsigned ConstantArrayType::getNumAddressingBits(const ASTContext &Context,
   return TotalSize.getActiveBits();
 }
 
+unsigned
+ConstantArrayType::getNumAddressingBits(const ASTContext &Context) const {
+  return getNumAddressingBits(Context, getElementType(), getSize());
+}
+
 unsigned ConstantArrayType::getMaxSizeBits(const ASTContext &Context) {
   unsigned Bits = Context.getTypeSize(Context.getSizeType());
 

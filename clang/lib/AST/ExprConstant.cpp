@@ -1019,6 +1019,34 @@ namespace {
       return false;
     }
 
+    bool CheckArraySize(SourceLocation Loc, unsigned BitWidth,
+                        uint64_t ElemCount, bool Diag) {
+      // FIXME: GH63562
+      // APValue stores array extents as unsigned,
+      // so anything that is greater that unsigned would overflow when
+      // constructing the array, we catch this here.
+      if (BitWidth > ConstantArrayType::getMaxSizeBits(Ctx) ||
+          ElemCount > uint64_t(std::numeric_limits<unsigned>::max())) {
+        if (Diag)
+          FFDiag(Loc, diag::note_constexpr_new_too_large) << ElemCount;
+        return false;
+      }
+
+      // FIXME: GH63562
+      // Arrays allocate an APValue per element.
+      // We use the number of constexpr steps as a proxy for the maximum size
+      // of arrays to avoid exhausting the system resources, as initialization
+      // of each element is likely to take some number of steps anyway.
+      uint64_t Limit = Ctx.getLangOpts().ConstexprStepLimit;
+      if (ElemCount > Limit) {
+        if (Diag)
+          FFDiag(Loc, diag::note_constexpr_new_exceeds_limits)
+              << ElemCount << Limit;
+        return false;
+      }
+      return true;
+    }
+
     std::pair<CallStackFrame *, unsigned>
     getCallFrameAndDepth(unsigned CallIndex) {
       assert(CallIndex && "no call index in getCallFrameAndDepth");
@@ -1922,7 +1950,8 @@ void CallStackFrame::describe(raw_ostream &Out) const {
                       cast<CXXMethodDecl>(Callee)->isInstance();
 
   if (!IsMemberCall)
-    Out << *Callee << '(';
+    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+                                 /*Qualified=*/false);
 
   if (This && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
@@ -1947,9 +1976,12 @@ void CallStackFrame::describe(raw_ostream &Out) const {
           Info.Ctx.getLValueReferenceType(This->Designator.MostDerivedType));
       Out << ".";
     }
-    Out << *Callee << '(';
+    Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
+                                 /*Qualified=*/false);
     IsMemberCall = false;
   }
+
+  Out << '(';
 
   for (FunctionDecl::param_const_iterator I = Callee->param_begin(),
        E = Callee->param_end(); I != E; ++I, ++ArgIndex) {
@@ -3583,6 +3615,14 @@ static bool lifetimeStartedInEvaluation(EvalInfo &Info,
   llvm_unreachable("unknown evaluating decl kind");
 }
 
+static bool CheckArraySize(EvalInfo &Info, const ConstantArrayType *CAT,
+                           SourceLocation CallLoc = {}) {
+  return Info.CheckArraySize(
+      CAT->getSizeExpr() ? CAT->getSizeExpr()->getBeginLoc() : CallLoc,
+      CAT->getNumAddressingBits(Info.Ctx), CAT->getSize().getZExtValue(),
+      /*Diag=*/true);
+}
+
 namespace {
 /// A handle to a complete object (an object that is not a subobject of
 /// another object).
@@ -3757,6 +3797,9 @@ findSubobject(EvalInfo &Info, const Expr *E, const CompleteObject &Obj,
       if (O->getArrayInitializedElts() > Index)
         O = &O->getArrayInitializedElt(Index);
       else if (!isRead(handler.AccessKind)) {
+        if (!CheckArraySize(Info, CAT, E->getExprLoc()))
+          return handler.failed();
+
         expandArray(*O, Index);
         O = &O->getArrayInitializedElt(Index);
       } else
@@ -6491,6 +6534,9 @@ static bool HandleDestructionImpl(EvalInfo &Info, SourceLocation CallLoc,
     uint64_t Size = CAT->getSize().getZExtValue();
     QualType ElemT = CAT->getElementType();
 
+    if (!CheckArraySize(Info, CAT, CallLoc))
+      return false;
+
     LValue ElemLV = This;
     ElemLV.addArray(Info, &LocE, CAT);
     if (!HandleLValueArrayAdjustment(Info, &LocE, ElemLV, ElemT, Size))
@@ -6681,7 +6727,7 @@ static bool HandleDestruction(EvalInfo &Info, SourceLocation Loc,
   return HandleDestructionImpl(Info, Loc, LV, Value, T);
 }
 
-/// Perform a call to 'perator new' or to `__builtin_operator_new'.
+/// Perform a call to 'operator new' or to `__builtin_operator_new'.
 static bool HandleOperatorNewCall(EvalInfo &Info, const CallExpr *E,
                                   LValue &Result) {
   if (Info.checkingPotentialConstantExpression() ||
@@ -6727,13 +6773,12 @@ static bool HandleOperatorNewCall(EvalInfo &Info, const CallExpr *E,
     return false;
   }
 
-  if (ByteSize.getActiveBits() > ConstantArrayType::getMaxSizeBits(Info.Ctx)) {
+  if (!Info.CheckArraySize(E->getBeginLoc(), ByteSize.getActiveBits(),
+                           Size.getZExtValue(), /*Diag=*/!IsNothrow)) {
     if (IsNothrow) {
       Result.setNull(Info.Ctx, E->getType());
       return true;
     }
-
-    Info.FFDiag(E, diag::note_constexpr_new_too_large) << APSInt(Size, true);
     return false;
   }
 
@@ -9617,14 +9662,12 @@ bool PointerExprEvaluator::VisitCXXNewExpr(const CXXNewExpr *E) {
 
     //   -- its value is such that the size of the allocated object would
     //      exceed the implementation-defined limit
-    if (ConstantArrayType::getNumAddressingBits(Info.Ctx, AllocType,
-                                                ArrayBound) >
-        ConstantArrayType::getMaxSizeBits(Info.Ctx)) {
+    if (!Info.CheckArraySize(ArraySize.value()->getExprLoc(),
+                             ConstantArrayType::getNumAddressingBits(
+                                 Info.Ctx, AllocType, ArrayBound),
+                             ArrayBound.getZExtValue(), /*Diag=*/!IsNothrow)) {
       if (IsNothrow)
         return ZeroInitialization(E);
-
-      Info.FFDiag(*ArraySize, diag::note_constexpr_new_too_large)
-        << ArrayBound << (*ArraySize)->getSourceRange();
       return false;
     }
 
@@ -13773,7 +13816,7 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
   case CK_PointerToIntegral: {
     CCEDiag(E, diag::note_constexpr_invalid_cast)
-        << 2 << Info.Ctx.getLangOpts().CPlusPlus;
+        << 2 << Info.Ctx.getLangOpts().CPlusPlus << E->getSourceRange();
 
     LValue LV;
     if (!EvaluatePointer(SubExpr, LV, Info))

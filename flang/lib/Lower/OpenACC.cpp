@@ -2317,9 +2317,9 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
   std::stringstream asFortran;
   asFortran << Fortran::lower::mangle::demangleName(globalOp.getSymName());
   llvm::SmallVector<mlir::Value> bounds;
-  EntryOp entryOp = createDataEntryOp<EntryOp>(builder, loc, addrOp.getResTy(),
-                                               asFortran, bounds, true, clause,
-                                               addrOp.getResTy().getType());
+  EntryOp entryOp = createDataEntryOp<EntryOp>(
+      builder, loc, addrOp.getResTy(), asFortran, bounds,
+      /*structured=*/false, clause, addrOp.getResTy().getType());
   builder.create<DeclareOp>(loc, mlir::ValueRange(entryOp.getAccPtr()));
   mlir::Value varPtr;
   if constexpr (std::is_same_v<GlobalOp, mlir::acc::GlobalDestructorOp>) {
@@ -2399,12 +2399,13 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     if (const auto *createClause =
             std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
-      genGlobalCtorsWithModifier<Fortran::parser::AccClause::Create,
-                                 mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-          converter, modBuilder, createClause,
-          Fortran::parser::AccDataModifier::Modifier::Zero,
-          mlir::acc::DataClause::acc_create,
-          mlir::acc::DataClause::acc_create_zero);
+      const Fortran::parser::AccObjectListWithModifier &listWithModifier =
+          createClause->v;
+      const auto &accObjectList =
+          std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+      genGlobalCtors<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
+          converter, modBuilder, accObjectList,
+          mlir::acc::DataClause::acc_create);
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
       genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,

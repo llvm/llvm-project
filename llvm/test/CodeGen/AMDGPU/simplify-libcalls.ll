@@ -347,7 +347,7 @@ declare float @_Z4pownfi(float, i32)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pow
 ; GCN-POSTLINK: call fast float @_Z3powff(float %tmp, float 1.013000e+03)
-; GCN-PRELINK: %__fabs = tail call fast float @_Z4fabsf(float %tmp)
+; GCN-PRELINK: %__fabs = tail call fast float @llvm.fabs.f32(float %tmp)
 ; GCN-PRELINK: %__log2 = tail call fast float @_Z4log2f(float %__fabs)
 ; GCN-PRELINK: %__ylogx = fmul fast float %__log2, 1.013000e+03
 ; GCN-PRELINK: %__exp2 = tail call fast float @_Z4exp2f(float %__ylogx)
@@ -387,7 +387,7 @@ entry:
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pown
 ; GCN-POSTLINK: call fast float @_Z4pownfi(float %tmp, i32 %conv)
 ; GCN-PRELINK: %conv = fptosi float %tmp1 to i32
-; GCN-PRELINK: %__fabs = tail call fast float @_Z4fabsf(float %tmp)
+; GCN-PRELINK: %__fabs = tail call fast float @llvm.fabs.f32(float %tmp)
 ; GCN-PRELINK: %__log2 = tail call fast float @_Z4log2f(float %__fabs)
 ; GCN-PRELINK: %pownI2F = sitofp i32 %conv to float
 ; GCN-PRELINK: %__ylogx = fmul fast float %__log2, %pownI2F
@@ -630,6 +630,18 @@ entry:
   ret void
 }
 
+; GCN-LABEL: {{^}}define amdgpu_kernel void @test_use_native_powr_nobuiltin
+; GCN: %call = tail call fast float @_Z4powrff(float %tmp, float %tmp1)
+define amdgpu_kernel void @test_use_native_powr_nobuiltin(ptr addrspace(1) nocapture %a) {
+entry:
+  %tmp = load float, ptr addrspace(1) %a, align 4
+  %arrayidx1 = getelementptr inbounds float, ptr addrspace(1) %a, i64 1
+  %tmp1 = load float, ptr addrspace(1) %arrayidx1, align 4
+  %call = call fast float @_Z4powrff(float %tmp, float %tmp1) nobuiltin
+  store float %call, ptr addrspace(1) %a, align 4
+  ret void
+}
+
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_use_native_sqrt
 ; GCN-NATIVE: call fast float @_Z11native_sqrtf(float %tmp)
 define amdgpu_kernel void @test_use_native_sqrt(ptr addrspace(1) nocapture %a) {
@@ -772,8 +784,7 @@ entry:
   ret void
 }
 
-; GCN-PRELINK: declare float @_Z4fabsf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
-; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY]]
+; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
 ; GCN-PRELINK: declare float @_Z11native_sqrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY]]
 
 ; GCN-PRELINK: attributes #[[$NOUNWIND]] = { nounwind }

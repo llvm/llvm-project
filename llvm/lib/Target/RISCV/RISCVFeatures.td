@@ -461,10 +461,18 @@ def HasVInstructionsF64 : Predicate<"Subtarget->hasVInstructionsF64()">;
 
 def HasVInstructionsFullMultiply : Predicate<"Subtarget->hasVInstructionsFullMultiply()">;
 
+def FeatureStdExtZfbfmin
+    : SubtargetFeature<"experimental-zfbfmin", "HasStdExtZfbfmin", "true",
+                       "'Zfbfmin' (Scalar BF16 Converts)",
+                       [FeatureStdExtF]>;
+def HasStdExtZfbfmin : Predicate<"Subtarget->hasStdExtZfbfmin()">,
+                                 AssemblerPredicate<(all_of FeatureStdExtZfbfmin),
+                                 "'Zfbfmin' (Scalar BF16 Converts)">;
+
 def FeatureStdExtZvfbfmin
     : SubtargetFeature<"experimental-zvfbfmin", "HasStdExtZvfbfmin", "true",
                        "'Zvbfmin' (Vector BF16 Converts)",
-                       [FeatureStdExtZve32f]>;
+                       [FeatureStdExtZve32f, FeatureStdExtZfbfmin]>;
 def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
                                   AssemblerPredicate<(all_of FeatureStdExtZvfbfmin),
                                   "'Zvfbfmin' (Vector BF16 Converts)">;
@@ -472,10 +480,12 @@ def HasStdExtZvfbfmin : Predicate<"Subtarget->hasStdExtZvfbfmin()">,
 def FeatureStdExtZvfbfwma
     : SubtargetFeature<"experimental-zvfbfwma", "HasStdExtZvfbfwma", "true",
                        "'Zvfbfwma' (Vector BF16 widening mul-add)",
-                       [FeatureStdExtZve32f]>;
+                       [FeatureStdExtZvfbfmin]>;
 def HasStdExtZvfbfwma : Predicate<"Subtarget->hasStdExtZvfbfwma()">,
                                   AssemblerPredicate<(all_of FeatureStdExtZvfbfwma),
                                   "'Zvfbfwma' (Vector BF16 widening mul-add)">;
+
+def HasVInstructionsBF16 : Predicate<"Subtarget->hasVInstructionsBF16()">;
 
 def FeatureStdExtZvfh
     : SubtargetFeature<"zvfh", "HasStdExtZvfh", "true",
@@ -657,22 +667,13 @@ def FeatureStdExtSsaia
                        "excluding the machine-level CSRs and behavior not "
                        "directly visible to supervisor level.)", []>;
 
-def FeatureStdExtZfbfmin
-    : SubtargetFeature<"experimental-zfbfmin", "HasStdExtZfbfmin", "true",
-                       "'Zfbfmin' (Scalar BF16 Converts)",
-                       [FeatureStdExtF]>;
-def HasStdExtZfbfmin : Predicate<"Subtarget->hasStdExtZfbfmin()">,
-                                 AssemblerPredicate<(all_of FeatureStdExtZfbfmin),
-                                 "'Zfbfmin' (Scalar BF16 Converts)">;
-
 def HasHalfFPLoadStoreMove
     : Predicate<"Subtarget->hasHalfFPLoadStoreMove()">,
                 AssemblerPredicate<(any_of FeatureStdExtZfh, FeatureStdExtZfhmin,
-                                    FeatureStdExtZfbfmin, FeatureStdExtZvfbfwma),
+                                    FeatureStdExtZfbfmin),
                                     "'Zfh' (Half-Precision Floating-Point) or "
                                     "'Zfhmin' (Half-Precision Floating-Point Minimal) or "
-                                    "'Zfbfmin' (Scalar BF16 Converts) or "
-                                    "'Zvfbfwma' (Vector BF16 widening mul-add)">;
+                                    "'Zfbfmin' (Scalar BF16 Converts)">;
 
 def FeatureStdExtZacas
     : SubtargetFeature<"experimental-zacas", "HasStdExtZacas", "true",
@@ -799,6 +800,28 @@ def FeatureVendorXCVmac
 def HasVendorXCVmac : Predicate<"Subtarget->hasVendorXCVmac()">,
                                 AssemblerPredicate<(all_of FeatureVendorXCVmac),
                                 "'XCVmac' (CORE-V Multiply-Accumulate)">;
+
+def FeatureVendorXCValu
+    : SubtargetFeature<"xcvalu", "HasVendorXCValu", "true",
+                       "'XCValu' (CORE-V ALU Operations)">;
+def HasVendorXCValu : Predicate<"Subtarget->hasVendorXCValu()">,
+                                AssemblerPredicate<(all_of FeatureVendorXCValu),
+                                "'XCValu' (CORE-V ALU Operations)">;
+
+def FeatureVendorXCVsimd
+    : SubtargetFeature<"xcvsimd", "HasVendorXCvsimd", "true",
+                       "'XCVsimd' (CORE-V SIMD ALU)">;
+def HasVendorXCVsimd
+    : Predicate<"Subtarget->hasVendorXCVsimd()">,
+                AssemblerPredicate<(any_of FeatureVendorXCVsimd),
+                "'XCVsimd' (CORE-V SIMD ALU)">;
+
+def FeatureVendorXCVbi
+    : SubtargetFeature<"xcvbi", "HasVendorXCVbi", "true",
+                       "'XCVbi' (CORE-V Immediate Branching)">;
+def HasVendorXCVbi : Predicate<"Subtarget->hasVendorXCVbi()">,
+                               AssemblerPredicate<(all_of FeatureVendorXCVbi),
+                               "'XCVbi' (CORE-V Immediate Branching)">;
 
 //===----------------------------------------------------------------------===//
 // LLVM specific features and extensions

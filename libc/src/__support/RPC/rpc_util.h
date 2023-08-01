@@ -26,6 +26,8 @@ LIBC_INLINE void sleep_briefly() {
   LIBC_INLINE_ASM("nanosleep.u32 64;" ::: "memory");
 #elif defined(LIBC_TARGET_ARCH_IS_AMDGPU)
   __builtin_amdgcn_s_sleep(2);
+#elif defined(LIBC_TARGET_ARCH_IS_X86)
+  __builtin_ia32_pause();
 #else
   // Simply do nothing if sleeping isn't supported on this platform.
 #endif

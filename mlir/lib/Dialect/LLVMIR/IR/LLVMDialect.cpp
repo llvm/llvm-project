@@ -10,6 +10,7 @@
 // MLIR, and the LLVM IR dialect.  It also registers the dialect.
 //
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "LLVMInlining.h"
 #include "TypeDetail.h"
@@ -2783,6 +2784,16 @@ OpFoldResult LLVM::OrOp::fold(FoldAdaptor adaptor) {
     return {};
 
   return IntegerAttr::get(getType(), lhs.getValue() | rhs.getValue());
+}
+
+//===----------------------------------------------------------------------===//
+// CallIntrinsicOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult CallIntrinsicOp::verify() {
+  if (!getIntrin().startswith("llvm."))
+    return emitOpError() << "intrinsic name must start with 'llvm.'";
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

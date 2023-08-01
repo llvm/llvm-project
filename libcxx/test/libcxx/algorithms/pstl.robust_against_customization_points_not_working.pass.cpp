@@ -42,6 +42,24 @@ bool __pstl_all_of(TestBackend, ForwardIterator, ForwardIterator, Pred) {
   return true;
 }
 
+bool pstl_copy_called = false;
+
+template <class, class ForwardIterator, class ForwardOutIterator>
+ForwardIterator __pstl_copy(TestBackend, ForwardIterator, ForwardIterator, ForwardOutIterator) {
+  assert(!pstl_copy_called);
+  pstl_copy_called = true;
+  return 0;
+}
+
+bool pstl_copy_n_called = false;
+
+template <class, class ForwardIterator, class Size, class ForwardOutIterator>
+ForwardIterator __pstl_copy_n(TestBackend, ForwardIterator, Size, ForwardOutIterator) {
+  assert(!pstl_copy_n_called);
+  pstl_copy_n_called = true;
+  return 0;
+}
+
 bool pstl_count_called = false;
 
 template <class, class ForwardIterator, class T>
@@ -290,6 +308,10 @@ int main(int, char**) {
   assert(std::pstl_all_of_called);
   (void)std::none_of(TestPolicy{}, std::begin(a), std::end(a), pred);
   assert(std::pstl_none_of_called);
+  std::copy(TestPolicy{}, std::begin(a), std::end(a), std::begin(a));
+  assert(std::pstl_copy_called);
+  std::copy_n(TestPolicy{}, std::begin(a), 1, std::begin(a));
+  assert(std::pstl_copy_n_called);
   (void)std::count(TestPolicy{}, std::begin(a), std::end(a), 0);
   assert(std::pstl_count_called);
   (void)std::count_if(TestPolicy{}, std::begin(a), std::end(a), pred);

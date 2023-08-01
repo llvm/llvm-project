@@ -19,6 +19,12 @@ namespace gpu {
 /// The number of threads that execute in lock-step in a warp.
 constexpr const uint64_t LANE_SIZE = 32;
 
+/// Type aliases to the address spaces used by the NVPTX backend.
+template <typename T> using Private = [[clang::opencl_private]] T;
+template <typename T> using Constant = [[clang::opencl_constant]] T;
+template <typename T> using Local = [[clang::opencl_local]] T;
+template <typename T> using Global = [[clang::opencl_global]] T;
+
 /// Returns the number of CUDA blocks in the 'x' dimension.
 LIBC_INLINE uint32_t get_num_blocks_x() {
   return __nvvm_read_ptx_sreg_nctaid_x();
