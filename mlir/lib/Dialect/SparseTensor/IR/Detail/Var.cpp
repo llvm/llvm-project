@@ -14,6 +14,14 @@ using namespace mlir::sparse_tensor;
 using namespace mlir::sparse_tensor::ir_detail;
 
 //===----------------------------------------------------------------------===//
+// `VarKind` helpers.
+//===----------------------------------------------------------------------===//
+
+/// For use in foreach loops.
+static constexpr const VarKind everyVarKind[] = {
+    VarKind::Dimension, VarKind::Symbol, VarKind::Level};
+
+//===----------------------------------------------------------------------===//
 // `Var` implementation.
 //===----------------------------------------------------------------------===//
 
@@ -32,6 +40,13 @@ void Var::dump() const {
 // `Ranks` implementation.
 //===----------------------------------------------------------------------===//
 
+bool Ranks::operator==(Ranks const &other) const {
+  for (const auto vk : everyVarKind)
+    if (getRank(vk) != other.getRank(vk))
+      return false;
+  return true;
+}
+
 bool Ranks::isValid(DimLvlExpr expr) const {
   assert(expr);
   // Compute the maximum identifiers for symbol-vars and dim/lvl-vars
@@ -49,9 +64,6 @@ bool Ranks::isValid(DimLvlExpr expr) const {
 // `VarSet` implementation.
 //===----------------------------------------------------------------------===//
 
-static constexpr const VarKind everyVarKind[] = {
-    VarKind::Dimension, VarKind::Symbol, VarKind::Level};
-
 VarSet::VarSet(Ranks const &ranks) {
   // NOTE: We must not use `reserve` here, since that doesn't change
   // the `size` of the bitvectors and therefore will result in unexpected
@@ -59,6 +71,7 @@ VarSet::VarSet(Ranks const &ranks) {
   // move-ctor since it should be (marginally) more efficient.
   for (const auto vk : everyVarKind)
     impl[vk] = llvm::SmallBitVector(ranks.getRank(vk));
+  assert(getRanks() == ranks);
 }
 
 bool VarSet::contains(Var var) const {
