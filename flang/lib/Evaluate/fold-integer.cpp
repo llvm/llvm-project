@@ -126,7 +126,7 @@ private:
   }
 
   template <typename T> ConstantSubscripts Get(const Parentheses<T> &x) {
-    // Cause of temp variable inside parentheses - return [1, ... 1] for lower
+    // Case of temp variable inside parentheses - return [1, ... 1] for lower
     // bounds and shape for upper bounds
     if (getLbound_) {
       return ConstantSubscripts(x.Rank(), ConstantSubscript{1});
