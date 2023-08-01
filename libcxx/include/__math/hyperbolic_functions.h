@@ -23,51 +23,51 @@ namespace __math {
 
 // cosh
 
-inline _LIBCPP_HIDE_FROM_ABI float       cosh(float __x) _NOEXCEPT       {return __builtin_coshf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float cosh(float __x) _NOEXCEPT { return __builtin_coshf(__x); }
 
 template <class = int>
 _LIBCPP_HIDE_FROM_ABI double cosh(double __x) _NOEXCEPT {
   return __builtin_cosh(__x);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double cosh(long double __x) _NOEXCEPT {return __builtin_coshl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double cosh(long double __x) _NOEXCEPT { return __builtin_coshl(__x); }
 
 template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI
-typename enable_if<is_integral<_A1>::value, double>::type
-cosh(_A1 __x) _NOEXCEPT {return __builtin_cosh((double)__x);}
+inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type cosh(_A1 __x) _NOEXCEPT {
+  return __builtin_cosh((double)__x);
+}
 
 // sinh
 
-inline _LIBCPP_HIDE_FROM_ABI float       sinh(float __x) _NOEXCEPT       {return __builtin_sinhf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float sinh(float __x) _NOEXCEPT { return __builtin_sinhf(__x); }
 
 template <class = int>
 _LIBCPP_HIDE_FROM_ABI double sinh(double __x) _NOEXCEPT {
   return __builtin_sinh(__x);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double sinh(long double __x) _NOEXCEPT {return __builtin_sinhl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double sinh(long double __x) _NOEXCEPT { return __builtin_sinhl(__x); }
 
 template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI
-typename enable_if<is_integral<_A1>::value, double>::type
-sinh(_A1 __x) _NOEXCEPT {return __builtin_sinh((double)__x);}
+inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type sinh(_A1 __x) _NOEXCEPT {
+  return __builtin_sinh((double)__x);
+}
 
 // tanh
 
-inline _LIBCPP_HIDE_FROM_ABI float       tanh(float __x) _NOEXCEPT       {return __builtin_tanhf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float tanh(float __x) _NOEXCEPT { return __builtin_tanhf(__x); }
 
 template <class = int>
 _LIBCPP_HIDE_FROM_ABI double tanh(double __x) _NOEXCEPT {
   return __builtin_tanh(__x);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double tanh(long double __x) _NOEXCEPT {return __builtin_tanhl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double tanh(long double __x) _NOEXCEPT { return __builtin_tanhl(__x); }
 
 template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI
-typename enable_if<is_integral<_A1>::value, double>::type
-tanh(_A1 __x) _NOEXCEPT {return __builtin_tanh((double)__x);}
+inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type tanh(_A1 __x) _NOEXCEPT {
+  return __builtin_tanh((double)__x);
+}
 
 } // namespace __math
 

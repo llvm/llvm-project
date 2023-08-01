@@ -35,12 +35,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double copysign(long dou
 
 template <class _A1, class _A2>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-typename __enable_if_t
-<
-    is_arithmetic<_A1>::value &&
-    is_arithmetic<_A2>::value,
-    __promote<_A1, _A2>
->::type
+    typename __enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, __promote<_A1, _A2> >::type
     copysign(_A1 __x, _A2 __y) _NOEXCEPT {
   return ::__builtin_copysign(__x, __y);
 }
