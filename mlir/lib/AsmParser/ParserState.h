@@ -74,6 +74,9 @@ struct ParserState {
   /// populated during parsing.
   AsmParserState *asmState;
 
+  std::vector<std::pair<unsigned, llvm::SMRange>> operandLocs_;
+  std::vector<Operation *> operationStack_;
+
   /// An optional code completion context.
   AsmParserCodeCompleteContext *codeCompleteContext;
 

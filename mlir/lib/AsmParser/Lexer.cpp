@@ -33,6 +33,7 @@ Lexer::Lexer(const llvm::SourceMgr &sourceMgr, MLIRContext *context,
   auto bufferID = sourceMgr.getMainFileID();
   curBuffer = sourceMgr.getMemoryBuffer(bufferID)->getBuffer();
   curPtr = curBuffer.begin();
+  lineNumber = 0;
 
   // Set the code completion location if it was provided.
   if (codeCompleteContext)
@@ -73,6 +74,8 @@ Token Lexer::lexToken() {
       return formToken(Token::code_complete, tokStart);
 
     // Lex the next token.
+    bool sawCarriageReturn = false;
+
     switch (*curPtr++) {
     default:
       // Handle bare identifiers.
@@ -84,11 +87,17 @@ Token Lexer::lexToken() {
 
     case ' ':
     case '\t':
-    case '\n':
     case '\r':
       // Handle whitespace.
+      lineNumber++;
+      sawCarriageReturn = true;
       continue;
-
+    case '\n':
+      if (!sawCarriageReturn) {
+        // Ignore whitespace and increment current line number.
+        lineNumber++;
+      }
+      continue;
     case '_':
       // Handle bare identifiers.
       return lexBareIdentifierOrKeyword(tokStart);
@@ -258,6 +267,7 @@ void Lexer::skipComment() {
     case '\n':
     case '\r':
       // Newline is end of comment.
+      lineNumber++;
       return;
     case 0:
       // If this is the end of the buffer, end the comment.
@@ -417,6 +427,9 @@ Token Lexer::lexString(const char *tokStart) {
         continue;
       [[fallthrough]];
     case '\n':
+      // Ignore whitespace and increment current line number.
+      lineNumber++;
+      [[fallthrough]];
     case '\v':
     case '\f':
       return emitError(curPtr - 1, "expected '\"' in string literal");

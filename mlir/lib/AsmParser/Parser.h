@@ -341,7 +341,7 @@ public:
   codeCompleteDialectSymbol(const llvm::StringMap<Attribute> &aliases);
   Type codeCompleteDialectSymbol(const llvm::StringMap<Type> &aliases);
 
-protected:
+public:
   /// The Parser is subclassed and reinstantiated.  Do not add additional
   /// non-trivial state here, add it to the ParserState class.
   ParserState &state;
