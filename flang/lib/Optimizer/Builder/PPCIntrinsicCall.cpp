@@ -193,6 +193,21 @@ static constexpr IntrinsicHandler ppcHandlers[]{
          &PI::genVecShift<VecOp::Slo>),
      {{{"arg1", asValue}, {"arg2", asValue}}},
      /*isElemental=*/true},
+    {"__ppc_vec_splat",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecSplat<VecOp::Splat>),
+     {{{"arg1", asValue}, {"arg2", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_splat_s32_",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecSplat<VecOp::Splat_s32>),
+     {{{"arg1", asValue}}},
+     /*isElemental=*/true},
+    {"__ppc_vec_splats",
+     static_cast<IntrinsicLibrary::ExtendedGenerator>(
+         &PI::genVecSplat<VecOp::Splats>),
+     {{{"arg1", asValue}}},
+     /*isElemental=*/true},
     {"__ppc_vec_sr",
      static_cast<IntrinsicLibrary::ExtendedGenerator>(
          &PI::genVecShift<VecOp::Sr>),
@@ -1606,6 +1621,53 @@ PPCIntrinsicLibrary::genVecShift(mlir::Type resultType,
     llvm_unreachable("Invalid vector operation for generator");
 
   return shftRes;
+}
+
+// VEC_SPLAT, VEC_SPLATS, VEC_SPLAT_S32
+template <VecOp vop>
+fir::ExtendedValue
+PPCIntrinsicLibrary::genVecSplat(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args) {
+  auto context{builder.getContext()};
+  auto argBases{getBasesForArgs(args)};
+
+  mlir::vector::SplatOp splatOp{nullptr};
+  mlir::Type retTy{nullptr};
+  switch (vop) {
+  case VecOp::Splat: {
+    assert(args.size() == 2);
+    auto vecTyInfo{getVecTypeFromFir(argBases[0])};
+
+    auto extractOp{genVecExtract(resultType, args)};
+    splatOp = builder.create<mlir::vector::SplatOp>(
+        loc, *(extractOp.getUnboxed()), vecTyInfo.toMlirVectorType(context));
+    retTy = vecTyInfo.toFirVectorType();
+    break;
+  }
+  case VecOp::Splats: {
+    assert(args.size() == 1);
+    auto vecTyInfo{getVecTypeFromEle(argBases[0])};
+
+    splatOp = builder.create<mlir::vector::SplatOp>(
+        loc, argBases[0], vecTyInfo.toMlirVectorType(context));
+    retTy = vecTyInfo.toFirVectorType();
+    break;
+  }
+  case VecOp::Splat_s32: {
+    assert(args.size() == 1);
+    auto eleTy{builder.getIntegerType(32)};
+    auto intOp{builder.createConvert(loc, eleTy, argBases[0])};
+
+    // the intrinsic always returns vector(integer(4))
+    splatOp = builder.create<mlir::vector::SplatOp>(
+        loc, intOp, mlir::VectorType::get(4, eleTy));
+    retTy = fir::VectorType::get(4, eleTy);
+    break;
+  }
+  default:
+    llvm_unreachable("invalid vector operation for generator");
+  }
+  return builder.createConvert(loc, retTy, splatOp);
 }
 
 const char *getMmaIrIntrName(MMAOp mmaOp) {
