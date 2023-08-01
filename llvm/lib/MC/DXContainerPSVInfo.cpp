@@ -47,8 +47,9 @@ void PSVRuntimeInfo::write(raw_ostream &OS, uint32_t Version) const {
   }
 
   OS.write(reinterpret_cast<const char *>(&ResourceCount), sizeof(uint32_t));
-  OS.write(reinterpret_cast<const char *>(&BindingSizeSwapped), sizeof(uint32_t));
-  
+  OS.write(reinterpret_cast<const char *>(&BindingSizeSwapped),
+           sizeof(uint32_t));
+
   for (const auto &Res : Resources)
     OS.write(reinterpret_cast<const char *>(&Res), BindingSize);
 }
