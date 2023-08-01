@@ -156,17 +156,21 @@ Expr<Type<TypeCategory::Integer, KIND>> LBOUND(FoldingContext &context,
   using T = Type<TypeCategory::Integer, KIND>;
   ActualArguments &args{funcRef.arguments()};
   if (const auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-    if (int rank{array->Rank()}; rank > 0 || IsAssumedRank(*array)) {
-      std::optional<int> dim;
-      if (funcRef.Rank() == 0) {
-        // Optional DIM= argument is present: result is scalar.
-        if (!CheckDimArg(args[1], *array, context.messages(), true, dim)) {
-          return MakeInvalidIntrinsic<T>(std::move(funcRef));
-        } else if (!dim) {
-          // DIM= is present but not constant, or error
-          return Expr<T>{std::move(funcRef)};
-        }
+    std::optional<int> dim;
+    if (funcRef.Rank() == 0) {
+      // Optional DIM= argument is present: result is scalar.
+      if (!CheckDimArg(args[1], *array, context.messages(), true, dim)) {
+        return MakeInvalidIntrinsic<T>(std::move(funcRef));
+      } else if (!dim) {
+        // DIM= is present but not constant, or error
+        return Expr<T>{std::move(funcRef)};
       }
+    }
+    if (IsAssumedRank(*array)) {
+      // Would like to return 1 if DIM=.. is present, but that would be
+      // hiding a runtime error if the DIM= were too large (including
+      // the case of an assumed-rank argument that's scalar).
+    } else if (int rank{array->Rank()}; rank > 0) {
       bool lowerBoundsAreOne{true};
       if (auto named{ExtractNamedEntity(*array)}) {
         const Symbol &symbol{named->GetLastSymbol()};
@@ -203,17 +207,18 @@ Expr<Type<TypeCategory::Integer, KIND>> UBOUND(FoldingContext &context,
   using T = Type<TypeCategory::Integer, KIND>;
   ActualArguments &args{funcRef.arguments()};
   if (auto *array{UnwrapExpr<Expr<SomeType>>(args[0])}) {
-    if (int rank{array->Rank()}; rank > 0 || IsAssumedRank(*array)) {
-      std::optional<int> dim;
-      if (funcRef.Rank() == 0) {
-        // Optional DIM= argument is present: result is scalar.
-        if (!CheckDimArg(args[1], *array, context.messages(), false, dim)) {
-          return MakeInvalidIntrinsic<T>(std::move(funcRef));
-        } else if (!dim) {
-          // DIM= is present but not constant
-          return Expr<T>{std::move(funcRef)};
-        }
+    std::optional<int> dim;
+    if (funcRef.Rank() == 0) {
+      // Optional DIM= argument is present: result is scalar.
+      if (!CheckDimArg(args[1], *array, context.messages(), false, dim)) {
+        return MakeInvalidIntrinsic<T>(std::move(funcRef));
+      } else if (!dim) {
+        // DIM= is present but not constant, or error
+        return Expr<T>{std::move(funcRef)};
       }
+    }
+    if (IsAssumedRank(*array)) {
+    } else if (int rank{array->Rank()}; rank > 0) {
       bool takeBoundsFromShape{true};
       if (auto named{ExtractNamedEntity(*array)}) {
         const Symbol &symbol{named->GetLastSymbol()};
