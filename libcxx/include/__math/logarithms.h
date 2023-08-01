@@ -34,7 +34,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double log(long double __x) _NOEXCEPT {return 
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 log(_A1 __x) _NOEXCEPT {return __builtin_log((double)__x);}
 
 // log10
@@ -51,7 +51,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double log10(long double __x) _NOEXCEPT {retur
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 log10(_A1 __x) _NOEXCEPT {return __builtin_log10((double)__x);}
 
 // ilogb
@@ -67,7 +67,7 @@ inline _LIBCPP_HIDE_FROM_ABI int ilogb(long double __x) _NOEXCEPT {return __buil
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, int>::type
+typename enable_if<is_integral<_A1>::value, int>::type
 ilogb(_A1 __x) _NOEXCEPT {return __builtin_ilogb((double)__x);}
 
 // log1p
@@ -83,7 +83,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double log1p(long double __x) _NOEXCEPT {retur
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 log1p(_A1 __x) _NOEXCEPT {return __builtin_log1p((double)__x);}
 
 // log2
@@ -99,7 +99,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double log2(long double __x) _NOEXCEPT {return
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 log2(_A1 __x) _NOEXCEPT {return __builtin_log2((double)__x);}
 
 // logb
@@ -115,7 +115,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double logb(long double __x) _NOEXCEPT {return
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 logb(_A1 __x) _NOEXCEPT {return __builtin_logb((double)__x);}
 
 } // namespace __math

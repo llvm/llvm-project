@@ -34,7 +34,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double sqrt(long double __x) _NOEXCEPT {return
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 sqrt(_A1 __x) _NOEXCEPT {return __builtin_sqrt((double)__x);}
 
 // cbrt
@@ -50,7 +50,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double cbrt(long double 
 
 template <class _A1>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 cbrt(_A1 __x) _NOEXCEPT {return __builtin_cbrt((double)__x);}
 
 } // namespace __math

@@ -28,17 +28,17 @@ namespace __math {
 
 // signbit
 
-template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
+template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
   return __builtin_signbit(__x);
 }
 
-template <class _A1, std::__enable_if_t<std::is_integral<_A1>::value && std::is_signed<_A1>::value, int> = 0>
+template <class _A1, __enable_if_t<is_integral<_A1>::value && is_signed<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1 __x) _NOEXCEPT {
   return __x < 0;
 }
 
-template <class _A1, std::__enable_if_t<std::is_integral<_A1>::value && !std::is_signed<_A1>::value, int> = 0>
+template <class _A1, __enable_if_t<is_integral<_A1>::value && !is_signed<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1) _NOEXCEPT {
   return false;
 }
@@ -46,13 +46,13 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool signbit(_A1) _NOEXCEPT {
 // isfinite
 
 template <class _A1,
-          std::__enable_if_t<std::is_arithmetic<_A1>::value && std::numeric_limits<_A1>::has_infinity, int> = 0>
+          __enable_if_t<is_arithmetic<_A1>::value && numeric_limits<_A1>::has_infinity, int> = 0>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(_A1 __x) _NOEXCEPT {
-  return __builtin_isfinite((typename std::__promote<_A1>::type)__x);
+  return __builtin_isfinite((typename __promote<_A1>::type)__x);
 }
 
 template <class _A1,
-          std::__enable_if_t<std::is_arithmetic<_A1>::value && !std::numeric_limits<_A1>::has_infinity, int> = 0>
+          __enable_if_t<is_arithmetic<_A1>::value && !numeric_limits<_A1>::has_infinity, int> = 0>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isfinite(_A1) _NOEXCEPT {
   return true;
 }
@@ -60,14 +60,14 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool i
 // isinf
 
 template <class _A1,
-          std::__enable_if_t<std::is_arithmetic<_A1>::value && std::numeric_limits<_A1>::has_infinity, int> = 0>
+          __enable_if_t<is_arithmetic<_A1>::value && numeric_limits<_A1>::has_infinity, int> = 0>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(_A1 __x) _NOEXCEPT {
-  return __builtin_isinf((typename std::__promote<_A1>::type)__x);
+  return __builtin_isinf((typename __promote<_A1>::type)__x);
 }
 
 template <class _A1>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
-    typename std::enable_if< std::is_arithmetic<_A1>::value && !std::numeric_limits<_A1>::has_infinity, bool>::type
+    typename enable_if< is_arithmetic<_A1>::value && !numeric_limits<_A1>::has_infinity, bool>::type
     isinf(_A1) _NOEXCEPT {
   return false;
 }
@@ -88,12 +88,12 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
 
 // isnan
 
-template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
+template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(_A1 __x) _NOEXCEPT {
   return __builtin_isnan(__x);
 }
 
-template <class _A1, std::__enable_if_t<std::is_integral<_A1>::value, int> = 0>
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnan(_A1) _NOEXCEPT {
   return false;
 }
@@ -114,12 +114,12 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
 
 // isnormal
 
-template <class _A1, std::__enable_if_t<std::is_floating_point<_A1>::value, int> = 0>
+template <class _A1, __enable_if_t<is_floating_point<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(_A1 __x) _NOEXCEPT {
   return __builtin_isnormal(__x);
 }
 
-template <class _A1, std::__enable_if_t<std::is_integral<_A1>::value, int> = 0>
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isnormal(_A1 __x) _NOEXCEPT {
   return __x != 0;
 }
@@ -128,9 +128,9 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool i
 
 template <class _A1,
           class _A2,
-          std::__enable_if_t<std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, int> = 0>
+          __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool isgreater(_A1 __x, _A2 __y) _NOEXCEPT {
-  typedef typename std::__promote<_A1, _A2>::type type;
+  typedef typename __promote<_A1, _A2>::type type;
   return __builtin_isgreater((type)__x, (type)__y);
 }
 
@@ -138,9 +138,9 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool isgreater(_A1 __x, _A2 _
 
 template <class _A1,
           class _A2,
-          std::__enable_if_t<std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, int> = 0>
+          __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool isgreaterequal(_A1 __x, _A2 __y) _NOEXCEPT {
-  typedef typename std::__promote<_A1, _A2>::type type;
+  typedef typename __promote<_A1, _A2>::type type;
   return __builtin_isgreaterequal((type)__x, (type)__y);
 }
 
@@ -148,9 +148,9 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool isgreaterequal(_A1 __x, 
 
 template <class _A1,
           class _A2,
-          std::__enable_if_t<std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, int> = 0>
+          __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool isless(_A1 __x, _A2 __y) _NOEXCEPT {
-  typedef typename std::__promote<_A1, _A2>::type type;
+  typedef typename __promote<_A1, _A2>::type type;
   return __builtin_isless((type)__x, (type)__y);
 }
 
@@ -158,9 +158,9 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool isless(_A1 __x, _A2 __y)
 
 template <class _A1,
           class _A2,
-          std::__enable_if_t<std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, int> = 0>
+          __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool islessequal(_A1 __x, _A2 __y) _NOEXCEPT {
-  typedef typename std::__promote<_A1, _A2>::type type;
+  typedef typename __promote<_A1, _A2>::type type;
   return __builtin_islessequal((type)__x, (type)__y);
 }
 
@@ -168,9 +168,9 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool islessequal(_A1 __x, _A2
 
 template <class _A1,
           class _A2,
-          std::__enable_if_t<std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, int> = 0>
+          __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool islessgreater(_A1 __x, _A2 __y) _NOEXCEPT {
-  typedef typename std::__promote<_A1, _A2>::type type;
+  typedef typename __promote<_A1, _A2>::type type;
   return __builtin_islessgreater((type)__x, (type)__y);
 }
 
@@ -178,9 +178,9 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool islessgreater(_A1 __x, _
 
 template <class _A1,
           class _A2,
-          std::__enable_if_t<std::is_arithmetic<_A1>::value && std::is_arithmetic<_A2>::value, int> = 0>
+          __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI bool isunordered(_A1 __x, _A2 __y) _NOEXCEPT {
-  typedef typename std::__promote<_A1, _A2>::type type;
+  typedef typename __promote<_A1, _A2>::type type;
   return __builtin_isunordered((type)__x, (type)__y);
 }
 

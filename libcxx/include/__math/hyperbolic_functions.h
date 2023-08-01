@@ -34,7 +34,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double cosh(long double __x) _NOEXCEPT {return
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 cosh(_A1 __x) _NOEXCEPT {return __builtin_cosh((double)__x);}
 
 // sinh
@@ -50,7 +50,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double sinh(long double __x) _NOEXCEPT {return
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 sinh(_A1 __x) _NOEXCEPT {return __builtin_sinh((double)__x);}
 
 // tanh
@@ -66,7 +66,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double tanh(long double __x) _NOEXCEPT {return
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 tanh(_A1 __x) _NOEXCEPT {return __builtin_tanh((double)__x);}
 
 } // namespace __math

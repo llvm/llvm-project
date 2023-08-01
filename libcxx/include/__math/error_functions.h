@@ -34,7 +34,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double erf(long double __x) _NOEXCEPT {return 
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 erf(_A1 __x) _NOEXCEPT {return __builtin_erf((double)__x);}
 
 // erfc
@@ -50,7 +50,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double erfc(long double __x) _NOEXCEPT {return
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 erfc(_A1 __x) _NOEXCEPT {return __builtin_erfc((double)__x);}
 
 } // namespace __math

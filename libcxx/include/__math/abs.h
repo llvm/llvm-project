@@ -34,7 +34,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double fabs(long double 
 
 template <class _A1>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 fabs(_A1 __x) _NOEXCEPT {return __builtin_fabs((double)__x);}
 
 } // namespace __math
