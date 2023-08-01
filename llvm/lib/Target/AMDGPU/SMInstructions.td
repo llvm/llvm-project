@@ -846,8 +846,8 @@ def smrd_prefetch : PatFrag <(ops node:$ptr, node:$rw, node:$loc, node:$type),
 
 def SMRDImm         : ComplexPattern<iPTR, 2, "SelectSMRDImm">;
 def SMRDImm32       : ComplexPattern<iPTR, 2, "SelectSMRDImm32">;
-def SMRDSgpr        : ComplexPattern<iPTR, 2, "SelectSMRDSgpr">;
-def SMRDSgprImm     : ComplexPattern<iPTR, 3, "SelectSMRDSgprImm">;
+def SMRDSgpr        : ComplexPattern<iPTR, 3, "SelectSMRDSgpr", [], [SDNPWantRoot], -3>;
+def SMRDSgprImm     : ComplexPattern<iPTR, 4, "SelectSMRDSgprImm", [], [SDNPWantRoot]>;
 def SMRDBufferImm   : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm">;
 def SMRDBufferImm32 : ComplexPattern<iPTR, 1, "SelectSMRDBufferImm32">;
 def SMRDBufferSgprImm : ComplexPattern<iPTR, 2, "SelectSMRDBufferSgprImm">;
@@ -874,15 +874,15 @@ multiclass SMRD_Pattern <string Instr, ValueType vt, bit immci = true> {
     let OtherPredicates = [isNotGFX9Plus];
   }
   def : GCNPat <
-    (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))> {
+    (smrd_load (SMRDSgpr i64:$sbase, i32:$soffset, CPol:$cpol)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, $cpol))> {
     let OtherPredicates = [isGFX9Plus];
   }
 
   // 4. SGPR+IMM offset
   def : GCNPat <
-    (smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))> {
+    (smrd_load (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset, CPol:$cpol)),
+    (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, $cpol))> {
     let OtherPredicates = [isGFX9Plus];
   }
 
@@ -942,15 +942,15 @@ multiclass ScalarLoadWithExtensionPat <string Instr, SDPatternOperator node, Val
 
    // 2. SGPR offset
    def : GCNPat <
-     (node (SMRDSgpr i64:$sbase, i32:$soffset)),
-     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))>{
+     (node (SMRDSgpr i64:$sbase, i32:$soffset, CPol:$cpol)),
+     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, $cpol))>{
        let OtherPredicates = [isGFX12Plus];
    }
 
    // 3. SGPR+IMM offset
    def : GCNPat <
-     (node (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
-     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))>{
+     (node (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset, CPol:$cpol)),
+     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, $cpol))>{
        let OtherPredicates = [isGFX12Plus];
    }
 

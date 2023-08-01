@@ -196,20 +196,25 @@ private:
   bool SelectScratchSVAddr(SDNode *N, SDValue Addr, SDValue &VAddr,
                            SDValue &SAddr, SDValue &Offset) const;
 
-  bool SelectSMRDOffset(SDValue ByteOffsetNode, SDValue *SOffset,
+  bool SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode, SDValue *SOffset,
                         SDValue *Offset, bool Imm32Only = false,
-                        bool IsBuffer = false) const;
+                        bool IsBuffer = false,
+                        bool *ScaleOffset = nullptr) const;
   SDValue Expand32BitAddress(SDValue Addr) const;
-  bool SelectSMRDBaseOffset(SDValue Addr, SDValue &SBase, SDValue *SOffset,
-                            SDValue *Offset, bool Imm32Only = false,
-                            bool IsBuffer = false) const;
-  bool SelectSMRD(SDValue Addr, SDValue &SBase, SDValue *SOffset,
-                  SDValue *Offset, bool Imm32Only = false) const;
+  bool SelectSMRDBaseOffset(SDNode *N, SDValue Addr, SDValue &SBase,
+                            SDValue *SOffset, SDValue *Offset,
+                            bool Imm32Only = false, bool IsBuffer = false,
+                            bool *ScaleOffset = nullptr) const;
+  bool SelectSMRD(SDNode *N, SDValue Addr, SDValue &SBase, SDValue *SOffset,
+                  SDValue *Offset, bool Imm32Only = false,
+                  bool *ScaleOffset = nullptr) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDImm32(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
-  bool SelectSMRDSgpr(SDValue Addr, SDValue &SBase, SDValue &SOffset) const;
-  bool SelectSMRDSgprImm(SDValue Addr, SDValue &SBase, SDValue &SOffset,
-                         SDValue &Offset) const;
+  bool SelectSMRDScaleOffset(SDNode *N, SDValue &SOffset) const;
+  bool SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase, SDValue &SOffset,
+                      SDValue &CPol) const;
+  bool SelectSMRDSgprImm(SDNode *N, SDValue Addr, SDValue &SBase,
+                         SDValue &SOffset, SDValue &Offset, SDValue &CPol) const;
   bool SelectSMRDBufferImm(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferImm32(SDValue N, SDValue &Offset) const;
   bool SelectSMRDBufferSgprImm(SDValue N, SDValue &SOffset,

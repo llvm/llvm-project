@@ -1019,6 +1019,9 @@ public:
 
   bool hasLshlAddB64() const { return GFX940Insts || GFX12_10Insts; }
 
+  // Scalar and global loads support scale_offset bit.
+  bool hasScaleOffset() const { return GFX12_10Insts; }
+
   bool enableSIScheduler() const {
     return EnableSIScheduler;
   }

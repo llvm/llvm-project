@@ -4494,7 +4494,8 @@ AMDGPUInstructionSelector::selectSmrdSgpr(MachineOperand &Root) const {
     return std::nullopt;
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Base); },
-           [=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); }}};
+           [=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(0); /* CPol */ }}};
 }
 
 InstructionSelector::ComplexRendererFns
@@ -4506,7 +4507,8 @@ AMDGPUInstructionSelector::selectSmrdSgprImm(MachineOperand &Root) const {
 
   return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(Base); },
            [=](MachineInstrBuilder &MIB) { MIB.addReg(SOffset); },
-           [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); }}};
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(Offset); },
+           [=](MachineInstrBuilder &MIB) { MIB.addImm(0); /* CPol */ }}};
 }
 
 std::pair<Register, int>
