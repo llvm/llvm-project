@@ -1401,3 +1401,11 @@ bool CSKYTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
 
   return false;
 }
+
+bool CSKYTargetLowering::isCheapToSpeculateCttz(Type *Ty) const {
+  return Subtarget.has2E3();
+}
+
+bool CSKYTargetLowering::isCheapToSpeculateCtlz(Type *Ty) const {
+  return Subtarget.hasE2();
+}
