@@ -36,13 +36,8 @@ define void @foo() {
 ; CHECK:       for.body3:
 ; CHECK-NEXT:    store i32 1, ptr @a, align 4
 ; CHECK-NEXT:    store i32 1, ptr @d, align 4
-; CHECK-NEXT:    [[CMP4_LE_LE:%.*]] = icmp sge i32 0, [[TMP0]]
-; CHECK-NEXT:    [[CONV_LE_LE:%.*]] = zext i1 [[CMP4_LE_LE]] to i32
-; CHECK-NEXT:    [[SEXT_LE_LE:%.*]] = shl i32 [[CONV_LE_LE]], 16
-; CHECK-NEXT:    [[CONV6_LE_LE:%.*]] = ashr exact i32 [[SEXT_LE_LE]], 16
-; CHECK-NEXT:    [[XOR_LE_LE:%.*]] = xor i32 [[CONV6_LE_LE]], 1
-; CHECK-NEXT:    [[CMP10:%.*]] = icmp sgt i32 [[XOR_LE_LE]], 0
-; CHECK-NEXT:    br i1 [[CMP10]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
+; CHECK-NEXT:    [[CMP4_LE_LE_INV:%.*]] = icmp sgt i32 [[TMP0]], 0
+; CHECK-NEXT:    br i1 [[CMP4_LE_LE_INV]], label [[IF_THEN:%.*]], label [[IF_END:%.*]]
 ; CHECK:       if.then:
 ; CHECK-NEXT:    store i32 0, ptr @b, align 4
 ; CHECK-NEXT:    br label [[IF_END]]

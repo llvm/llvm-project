@@ -115,6 +115,53 @@ join:
   ret i32 %phi
 }
 
+define i32 @br_true_const_phi_direct_edge(i1 %x) {
+; CHECK-LABEL: define i32 @br_true_const_phi_direct_edge
+; CHECK-SAME: (i1 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 true, label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i32 2
+;
+entry:
+  br i1 true, label %if, label %join
+
+if:
+  call void @dummy()
+  br label %join
+
+join:
+  %phi = phi i32 [ 1, %entry ], [ 2, %if ]
+  ret i32 %phi
+}
+
+define i32 @br_true_var_phi_direct_edge(i1 %x) {
+; CHECK-LABEL: define i32 @br_true_var_phi_direct_edge
+; CHECK-SAME: (i1 [[X:%.*]]) {
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    br i1 true, label [[IF:%.*]], label [[JOIN:%.*]]
+; CHECK:       if:
+; CHECK-NEXT:    call void @dummy()
+; CHECK-NEXT:    br label [[JOIN]]
+; CHECK:       join:
+; CHECK-NEXT:    ret i32 2
+;
+entry:
+  %c = or i1 %x, true
+  br i1 %c, label %if, label %join
+
+if:
+  call void @dummy()
+  br label %join
+
+join:
+  %phi = phi i32 [ 1, %entry ], [ 2, %if ]
+  ret i32 %phi
+}
+
 define void @switch_case(i32 %x) {
 ; CHECK-LABEL: define void @switch_case
 ; CHECK-SAME: (i32 [[X:%.*]]) {

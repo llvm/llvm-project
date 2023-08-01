@@ -34,8 +34,8 @@ define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP3]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BLOCKSIZE]], 15
 ; CHECK-NEXT:    [[CMP2_NOT15:%.*]] = icmp eq i32 [[AND]], 0
-; CHECK-NEXT:    br i1 [[CMP2_NOT15]], label [[WHILE_END5:%.*]], label [[VECTOR_BODY:%.*]]
-; CHECK:       vector.body:
+; CHECK-NEXT:    br i1 [[CMP2_NOT15]], label [[WHILE_END5:%.*]], label [[MIDDLE_BLOCK:%.*]]
+; CHECK:       middle.block:
 ; CHECK-NEXT:    [[ACTIVE_LANE_MASK:%.*]] = tail call <16 x i1> @llvm.get.active.lane.mask.v16i1.i32(i32 0, i32 [[AND]])
 ; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = tail call <16 x i8> @llvm.masked.load.v16i8.p0(ptr [[PSRC_ADDR_0_LCSSA]], i32 1, <16 x i1> [[ACTIVE_LANE_MASK]], <16 x i8> poison)
 ; CHECK-NEXT:    [[TMP4:%.*]] = sext <16 x i8> [[WIDE_MASKED_LOAD]] to <16 x i32>
@@ -44,7 +44,7 @@ define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[TMP7:%.*]] = add i32 [[TMP6]], [[SUM_0_LCSSA]]
 ; CHECK-NEXT:    br label [[WHILE_END5]]
 ; CHECK:       while.end5:
-; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_0_LCSSA]], [[WHILE_END]] ], [ [[TMP7]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[SUM_1_LCSSA:%.*]] = phi i32 [ [[SUM_0_LCSSA]], [[WHILE_END]] ], [ [[TMP7]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[DIV:%.*]] = sdiv i32 [[SUM_1_LCSSA]], [[BLOCKSIZE]]
 ; CHECK-NEXT:    [[CONV6:%.*]] = trunc i32 [[DIV]] to i8
 ; CHECK-NEXT:    store i8 [[CONV6]], ptr [[PRESULT:%.*]], align 1

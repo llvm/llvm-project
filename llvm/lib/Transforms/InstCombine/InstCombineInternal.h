@@ -673,6 +673,8 @@ public:
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
 
   bool removeInstructionsBeforeUnreachable(Instruction &I);
+  void addDeadEdge(BasicBlock *From, BasicBlock *To,
+                   SmallVectorImpl<BasicBlock *> &Worklist);
   void handleUnreachableFrom(Instruction *I,
                              SmallVectorImpl<BasicBlock *> &Worklist);
   void handlePotentiallyDeadBlocks(SmallVectorImpl<BasicBlock *> &Worklist);

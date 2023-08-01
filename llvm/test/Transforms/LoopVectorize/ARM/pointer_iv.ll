@@ -886,15 +886,11 @@ define hidden void @mult_ptr_iv(ptr noalias nocapture readonly %x, ptr noalias n
 ; CHECK-NEXT:    [[BOUND0:%.*]] = icmp ugt ptr [[SCEVGEP1]], [[Z]]
 ; CHECK-NEXT:    [[BOUND1:%.*]] = icmp ugt ptr [[SCEVGEP]], [[X]]
 ; CHECK-NEXT:    [[FOUND_CONFLICT:%.*]] = and i1 [[BOUND0]], [[BOUND1]]
-; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY:%.*]], label [[VECTOR_PH:%.*]]
-; CHECK:       vector.ph:
-; CHECK-NEXT:    [[IND_END:%.*]] = getelementptr i8, ptr [[X]], i32 3000
-; CHECK-NEXT:    [[IND_END2:%.*]] = getelementptr i8, ptr [[Z]], i32 3000
-; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
+; CHECK-NEXT:    br i1 [[FOUND_CONFLICT]], label [[FOR_BODY:%.*]], label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[X]], [[VECTOR_PH]] ], [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[POINTER_PHI5:%.*]] = phi ptr [ [[Z]], [[VECTOR_PH]] ], [ [[PTR_IND6:%.*]], [[VECTOR_BODY]] ]
-; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[POINTER_PHI:%.*]] = phi ptr [ [[PTR_IND:%.*]], [[VECTOR_BODY]] ], [ [[X]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[POINTER_PHI5:%.*]] = phi ptr [ [[PTR_IND6:%.*]], [[VECTOR_BODY]] ], [ [[Z]], [[ENTRY]] ]
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i8, ptr [[POINTER_PHI]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[POINTER_PHI5]], <4 x i32> <i32 0, i32 3, i32 6, i32 9>
 ; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr inbounds i8, <4 x ptr> [[TMP0]], i32 1
@@ -916,7 +912,7 @@ define hidden void @mult_ptr_iv(ptr noalias nocapture readonly %x, ptr noalias n
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp eq i32 [[INDEX_NEXT]], 1000
 ; CHECK-NEXT:    br i1 [[TMP9]], label [[END:%.*]], label [[VECTOR_BODY]], !llvm.loop [[LOOP33:![0-9]+]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[X_ADDR_050:%.*]] = phi ptr [ [[INCDEC_PTR2:%.*]], [[FOR_BODY]] ], [ [[X]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[X_ADDR_050:%.*]] = phi ptr [ [[INCDEC_PTR2:%.*]], [[FOR_BODY]] ], [ [[X]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[Z_ADDR_049:%.*]] = phi ptr [ [[INCDEC_PTR34:%.*]], [[FOR_BODY]] ], [ [[Z]], [[ENTRY]] ]
 ; CHECK-NEXT:    [[I_048:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    [[INCDEC_PTR:%.*]] = getelementptr inbounds i8, ptr [[X_ADDR_050]], i32 1
