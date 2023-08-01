@@ -69,7 +69,7 @@ static bool compareDistinctValues(QualType Type, Value &Val1,
     switch (Val1.getKind()) {
     case Value::Kind::Integer:
     case Value::Kind::Pointer:
-    case Value::Kind::Struct:
+    case Value::Kind::Record:
       // FIXME: this choice intentionally introduces unsoundness to allow
       // for convergence. Once we have widening support for the
       // reference/pointer and struct built-in models, this should be
@@ -120,19 +120,19 @@ static Value *mergeDistinctValues(QualType Type, Value &Val1,
   }
 
   Value *MergedVal = nullptr;
-  if (auto *StructVal1 = dyn_cast<StructValue>(&Val1)) {
-    [[maybe_unused]] auto *StructVal2 = cast<StructValue>(&Val2);
+  if (auto *RecordVal1 = dyn_cast<RecordValue>(&Val1)) {
+    [[maybe_unused]] auto *RecordVal2 = cast<RecordValue>(&Val2);
 
     // Values to be merged are always associated with the same location in
-    // `LocToVal`. The location stored in `StructVal` should therefore also
+    // `LocToVal`. The location stored in `RecordVal` should therefore also
     // be the same.
-    assert(&StructVal1->getAggregateLoc() == &StructVal2->getAggregateLoc());
+    assert(&RecordVal1->getLoc() == &RecordVal2->getLoc());
 
-    // `StructVal1` and `StructVal2` may have different properties associated
-    // with them. Create a new `StructValue` without any properties so that we
+    // `RecordVal1` and `RecordVal2` may have different properties associated
+    // with them. Create a new `RecordValue` without any properties so that we
     // soundly approximate both values. If a particular analysis needs to merge
     // properties, it should do so in `DataflowAnalysis::merge()`.
-    MergedVal = &MergedEnv.create<StructValue>(StructVal1->getAggregateLoc());
+    MergedVal = &MergedEnv.create<RecordValue>(RecordVal1->getLoc());
   } else {
     MergedVal = MergedEnv.createValue(Type);
   }
@@ -320,7 +320,7 @@ Environment::Environment(DataflowAnalysisContext &DACtx,
     if (MethodDecl && !MethodDecl->isStatic()) {
       QualType ThisPointeeType = MethodDecl->getThisObjectType();
       ThisPointeeLoc =
-          &cast<StructValue>(createValue(ThisPointeeType))->getAggregateLoc();
+          &cast<RecordValue>(createValue(ThisPointeeType))->getLoc();
     }
   }
 }
@@ -337,7 +337,7 @@ Environment Environment::pushCall(const CallExpr *Call) const {
     if (const Expr *Arg = MethodCall->getImplicitObjectArgument()) {
       if (!isa<CXXThisExpr>(Arg))
           Env.ThisPointeeLoc =
-              cast<AggregateStorageLocation>(getStorageLocation(*Arg));
+              cast<RecordStorageLocation>(getStorageLocation(*Arg));
       // Otherwise (when the argument is `this`), retain the current
       // environment's `ThisPointeeLoc`.
     }
@@ -634,18 +634,18 @@ StorageLocation *Environment::getStorageLocation(const Expr &E) const {
   return getStorageLocationInternal(E);
 }
 
-AggregateStorageLocation *Environment::getThisPointeeStorageLocation() const {
+RecordStorageLocation *Environment::getThisPointeeStorageLocation() const {
   return ThisPointeeLoc;
 }
 
-AggregateStorageLocation &
+RecordStorageLocation &
 Environment::getResultObjectLocation(const Expr &RecordPRValue) {
   assert(RecordPRValue.getType()->isRecordType());
   assert(RecordPRValue.isPRValue());
 
   if (StorageLocation *ExistingLoc = getStorageLocationInternal(RecordPRValue))
-    return *cast<AggregateStorageLocation>(ExistingLoc);
-  auto &Loc = cast<AggregateStorageLocation>(
+    return *cast<RecordStorageLocation>(ExistingLoc);
+  auto &Loc = cast<RecordStorageLocation>(
       DACtx->getStableStorageLocation(RecordPRValue));
   setStorageLocationInternal(RecordPRValue, Loc);
   return Loc;
@@ -656,8 +656,7 @@ PointerValue &Environment::getOrCreateNullPointerValue(QualType PointeeType) {
 }
 
 void Environment::setValue(const StorageLocation &Loc, Value &Val) {
-  assert(!isa<StructValue>(&Val) ||
-         &cast<StructValue>(&Val)->getAggregateLoc() == &Loc);
+  assert(!isa<RecordValue>(&Val) || &cast<RecordValue>(&Val)->getLoc() == &Loc);
 
   LocToVal[&Loc] = &Val;
 }
@@ -665,16 +664,16 @@ void Environment::setValue(const StorageLocation &Loc, Value &Val) {
 void Environment::setValue(const Expr &E, Value &Val) {
   assert(E.isPRValue());
 
-  if (auto *StructVal = dyn_cast<StructValue>(&Val)) {
+  if (auto *RecordVal = dyn_cast<RecordValue>(&Val)) {
     if ([[maybe_unused]] auto *ExistingVal =
-            cast_or_null<StructValue>(getValue(E)))
-      assert(&ExistingVal->getAggregateLoc() == &StructVal->getAggregateLoc());
+            cast_or_null<RecordValue>(getValue(E)))
+      assert(&ExistingVal->getLoc() == &RecordVal->getLoc());
     if ([[maybe_unused]] StorageLocation *ExistingLoc =
             getStorageLocationInternal(E))
-      assert(ExistingLoc == &StructVal->getAggregateLoc());
+      assert(ExistingLoc == &RecordVal->getLoc());
     else
-      setStorageLocationInternal(E, StructVal->getAggregateLoc());
-    setValue(StructVal->getAggregateLoc(), Val);
+      setStorageLocationInternal(E, RecordVal->getLoc());
+    setValue(RecordVal->getLoc(), Val);
     return;
   }
 
@@ -774,15 +773,15 @@ Value *Environment::createValueUnlessSelfReferential(
                                           CreatedValuesCount)});
     }
 
-    AggregateStorageLocation &Loc =
-        arena().create<AggregateStorageLocation>(Type, std::move(FieldLocs));
-    StructValue &StructVal = create<StructValue>(Loc);
+    RecordStorageLocation &Loc =
+        arena().create<RecordStorageLocation>(Type, std::move(FieldLocs));
+    RecordValue &RecordVal = create<RecordValue>(Loc);
 
-    // As we already have a storage location for the `StructValue`, we can and
+    // As we already have a storage location for the `RecordValue`, we can and
     // should associate them in the environment.
-    setValue(Loc, StructVal);
+    setValue(Loc, RecordVal);
 
-    return &StructVal;
+    return &RecordVal;
   }
 
   return nullptr;
@@ -804,7 +803,7 @@ Environment::createLocAndMaybeValue(QualType Ty,
     return createStorageLocation(Ty);
 
   if (Ty->isRecordType())
-    return cast<StructValue>(Val)->getAggregateLoc();
+    return cast<RecordValue>(Val)->getLoc();
 
   StorageLocation &Loc = createStorageLocation(Ty);
   setValue(Loc, *Val);
@@ -850,7 +849,7 @@ StorageLocation &Environment::createObjectInternal(const VarDecl *D,
     Val = createValue(Ty);
 
   if (Ty->isRecordType())
-    return cast<StructValue>(Val)->getAggregateLoc();
+    return cast<RecordValue>(Val)->getLoc();
 
   StorageLocation &Loc =
       D ? createStorageLocation(*D) : createStorageLocation(Ty);
@@ -893,32 +892,31 @@ void Environment::dump() const {
   dump(llvm::dbgs());
 }
 
-AggregateStorageLocation *
-getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
-                          const Environment &Env) {
+RecordStorageLocation *getImplicitObjectLocation(const CXXMemberCallExpr &MCE,
+                                                 const Environment &Env) {
   Expr *ImplicitObject = MCE.getImplicitObjectArgument();
   if (ImplicitObject == nullptr)
     return nullptr;
   if (ImplicitObject->getType()->isPointerType()) {
     if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*ImplicitObject)))
-      return &cast<AggregateStorageLocation>(Val->getPointeeLoc());
+      return &cast<RecordStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
-  return cast_or_null<AggregateStorageLocation>(
+  return cast_or_null<RecordStorageLocation>(
       Env.getStorageLocation(*ImplicitObject));
 }
 
-AggregateStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
-                                                const Environment &Env) {
+RecordStorageLocation *getBaseObjectLocation(const MemberExpr &ME,
+                                             const Environment &Env) {
   Expr *Base = ME.getBase();
   if (Base == nullptr)
     return nullptr;
   if (ME.isArrow()) {
     if (auto *Val = cast_or_null<PointerValue>(Env.getValue(*Base)))
-      return &cast<AggregateStorageLocation>(Val->getPointeeLoc());
+      return &cast<RecordStorageLocation>(Val->getPointeeLoc());
     return nullptr;
   }
-  return cast_or_null<AggregateStorageLocation>(Env.getStorageLocation(*Base));
+  return cast_or_null<RecordStorageLocation>(Env.getStorageLocation(*Base));
 }
 
 std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
@@ -933,37 +931,36 @@ std::vector<FieldDecl *> getFieldsForInitListExpr(const RecordDecl *RD) {
   return Fields;
 }
 
-StructValue &refreshStructValue(AggregateStorageLocation &Loc,
-                                Environment &Env) {
-  auto &NewVal = Env.create<StructValue>(Loc);
+RecordValue &refreshRecordValue(RecordStorageLocation &Loc, Environment &Env) {
+  auto &NewVal = Env.create<RecordValue>(Loc);
   Env.setValue(Loc, NewVal);
   return NewVal;
 }
 
-StructValue &refreshStructValue(const Expr &Expr, Environment &Env) {
+RecordValue &refreshRecordValue(const Expr &Expr, Environment &Env) {
   assert(Expr.getType()->isRecordType());
 
   if (Expr.isPRValue()) {
-    if (auto *ExistingVal = cast_or_null<StructValue>(Env.getValue(Expr))) {
-      auto &NewVal = Env.create<StructValue>(ExistingVal->getAggregateLoc());
+    if (auto *ExistingVal = cast_or_null<RecordValue>(Env.getValue(Expr))) {
+      auto &NewVal = Env.create<RecordValue>(ExistingVal->getLoc());
       Env.setValue(Expr, NewVal);
       return NewVal;
     }
 
-    auto &NewVal = *cast<StructValue>(Env.createValue(Expr.getType()));
+    auto &NewVal = *cast<RecordValue>(Env.createValue(Expr.getType()));
     Env.setValue(Expr, NewVal);
     return NewVal;
   }
 
-  if (auto *Loc = cast_or_null<AggregateStorageLocation>(
-          Env.getStorageLocation(Expr))) {
-    auto &NewVal = Env.create<StructValue>(*Loc);
+  if (auto *Loc =
+          cast_or_null<RecordStorageLocation>(Env.getStorageLocation(Expr))) {
+    auto &NewVal = Env.create<RecordValue>(*Loc);
     Env.setValue(*Loc, NewVal);
     return NewVal;
   }
 
-  auto &NewVal = *cast<StructValue>(Env.createValue(Expr.getType()));
-  Env.setStorageLocation(Expr, NewVal.getAggregateLoc());
+  auto &NewVal = *cast<RecordValue>(Env.createValue(Expr.getType()));
+  Env.setStorageLocation(Expr, NewVal.getLoc());
   return NewVal;
 }
 
