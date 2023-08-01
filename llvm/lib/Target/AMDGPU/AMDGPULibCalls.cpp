@@ -1036,11 +1036,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
   Value *nval;
   if (needabs) {
-    FunctionCallee AbsExpr =
-        getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_FABS, FInfo));
-    if (!AbsExpr)
-      return false;
-    nval = CreateCallEx(B, AbsExpr, opr0, "__fabs");
+    nval = B.CreateUnaryIntrinsic(Intrinsic::fabs, opr0, nullptr, "__fabs");
   } else {
     nval = cnval ? cnval : opr0;
   }
