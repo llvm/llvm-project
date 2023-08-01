@@ -23,35 +23,35 @@ namespace __math {
 
 // erf
 
-inline _LIBCPP_HIDE_FROM_ABI float       erf(float __x) _NOEXCEPT       {return __builtin_erff(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float erf(float __x) _NOEXCEPT { return __builtin_erff(__x); }
 
 template <class = int>
 _LIBCPP_HIDE_FROM_ABI double erf(double __x) _NOEXCEPT {
   return __builtin_erf(__x);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double erf(long double __x) _NOEXCEPT {return __builtin_erfl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double erf(long double __x) _NOEXCEPT { return __builtin_erfl(__x); }
 
 template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI
-typename enable_if<is_integral<_A1>::value, double>::type
-erf(_A1 __x) _NOEXCEPT {return __builtin_erf((double)__x);}
+inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type erf(_A1 __x) _NOEXCEPT {
+  return __builtin_erf((double)__x);
+}
 
 // erfc
 
-inline _LIBCPP_HIDE_FROM_ABI float       erfc(float __x) _NOEXCEPT       {return __builtin_erfcf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float erfc(float __x) _NOEXCEPT { return __builtin_erfcf(__x); }
 
 template <class = int>
 _LIBCPP_HIDE_FROM_ABI double erfc(double __x) _NOEXCEPT {
   return __builtin_erfc(__x);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double erfc(long double __x) _NOEXCEPT {return __builtin_erfcl(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double erfc(long double __x) _NOEXCEPT { return __builtin_erfcl(__x); }
 
 template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI
-typename enable_if<is_integral<_A1>::value, double>::type
-erfc(_A1 __x) _NOEXCEPT {return __builtin_erfc((double)__x);}
+inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type erfc(_A1 __x) _NOEXCEPT {
+  return __builtin_erfc((double)__x);
+}
 
 } // namespace __math
 

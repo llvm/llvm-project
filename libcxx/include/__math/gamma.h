@@ -23,37 +23,37 @@ namespace __math {
 
 // lgamma
 
-inline _LIBCPP_HIDE_FROM_ABI float       lgamma(float __x) _NOEXCEPT       {return __builtin_lgammaf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float lgamma(float __x) _NOEXCEPT { return __builtin_lgammaf(__x); }
 
 template <class = int>
 _LIBCPP_HIDE_FROM_ABI double lgamma(double __x) _NOEXCEPT {
   return __builtin_lgamma(__x);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double lgamma(long double __x) _NOEXCEPT {return __builtin_lgammal(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double lgamma(long double __x) _NOEXCEPT { return __builtin_lgammal(__x); }
 
 template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI
-typename enable_if<is_integral<_A1>::value, double>::type
-lgamma(_A1 __x) _NOEXCEPT {return __builtin_lgamma((double)__x);}
+inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type lgamma(_A1 __x) _NOEXCEPT {
+  return __builtin_lgamma((double)__x);
+}
 
 // nan
 
 // tgamma
 
-inline _LIBCPP_HIDE_FROM_ABI float       tgamma(float __x) _NOEXCEPT       {return __builtin_tgammaf(__x);}
+inline _LIBCPP_HIDE_FROM_ABI float tgamma(float __x) _NOEXCEPT { return __builtin_tgammaf(__x); }
 
 template <class = int>
 _LIBCPP_HIDE_FROM_ABI double tgamma(double __x) _NOEXCEPT {
   return __builtin_tgamma(__x);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI long double tgamma(long double __x) _NOEXCEPT {return __builtin_tgammal(__x);}
+inline _LIBCPP_HIDE_FROM_ABI long double tgamma(long double __x) _NOEXCEPT { return __builtin_tgammal(__x); }
 
 template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI
-typename enable_if<is_integral<_A1>::value, double>::type
-tgamma(_A1 __x) _NOEXCEPT {return __builtin_tgamma((double)__x);}
+inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type tgamma(_A1 __x) _NOEXCEPT {
+  return __builtin_tgamma((double)__x);
+}
 
 } // namespace __math
 
