@@ -16,6 +16,7 @@
 
 include "mlir/Interfaces/SideEffectInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
+include "mlir/Interfaces/InferTypeOpInterface.td"
 
 //===----------------------------------------------------------------------===//
 // ArmSME dialect definition
@@ -305,6 +306,102 @@ def TileStoreOp : ArmSME_Op<"tile_store"> {
 
   let assemblyFormat = "$valueToStore `,` $base `[` $indices `]` attr-dict "
                        "`:` type($base) `,` type($valueToStore)";
+}
+
+def LoadTileSliceOp : ArmSME_Op<"load_tile_slice", [
+    AllTypesMatch<["tile", "result"]>
+]> {
+  let summary = "Tile slice load and update operation";
+  let description = [{
+    Loads a 1D tile slice from memory into a 2D SME "virtual tile". The tile
+    slice is defined by the dimension of the 2D scalable vector type pointed by
+    the index. A tile slice index describes where in the input tile the tile
+    slice is loaded to. The updated tile is returned as the result.
+
+    The slice of memory read is defined by a base and indices and must be
+    contiguous. The memref must be either rank 1 or rank 2, have dynamic
+    dimensions since the operation is scalable, and the element type must be a
+    scalar that matches the element type of the result.
+
+    Example 1: Load a vector<[16]xi8> tile slice from memory into tile at given index.
+    ```mlir
+    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index : memref<?x?xi8>, vector<[16]x[16]xi8>
+    ```
+
+    Example 2: Load a vector<[4]xf32> tile slice from memory into tile at given index.
+    ```mlir
+    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index : memref<?x?xf32>, vector<[4]x[4]xf32>
+    ```
+
+    Example 3: Load a vector<[1]xi128> tile slice from memory into tile at given index.
+    ```mlir
+    %tile_update = arm_sme.load_tile_slice %base[%c0], %tile, %tile_slice_index : memref<?x?xi128>, vector<[1]x[1]xi128>
+    ```
+  }];
+  let arguments = (ins
+      Arg<AnyMemRef, "the reference to load from">:$base,
+      SMETile:$tile, Variadic<Index>:$indices, Index:$tile_slice_index);
+  let results = (outs SMETile:$result);
+
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return ::llvm::cast<MemRefType>(getBase().getType());
+    }
+    VectorType getVectorType() {
+      return ::llvm::cast<VectorType>(getResult().getType());
+    }
+  }];
+
+  let assemblyFormat = [{
+    $base `[` $indices `]` `,` $tile `,` $tile_slice_index
+      attr-dict `:` type($base) `,` type($result)
+  }];
+}
+
+def StoreTileSliceOp : ArmSME_Op<"store_tile_slice"> {
+  let summary = "Tile slice store operation";
+  let description = [{
+    Stores a 1D tile slice from a 2D SME "virtual tile" into memory. The tile
+    slice is defined by the dimension of the 2D scalable vector type pointed by
+    the index. A tile slice index describes where in the input tile the tile
+    slice is stored from.
+
+    The slice of memory written is defined by a base and indices and must be
+    contiguous. The memref must be either rank 1 or rank 2, have dynamic
+    dimensions since the operation is scalable, and the element type must be a
+    scalar that matches the element type of the input tile.
+
+    Example 1: Store vector<[16]xi8> tile slice from tile at given index to memory.
+    ```mlir
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] : vector<[16]x[16]xi8>, memref<?x?xi8>
+    ```
+
+    Example 2: Store vector<[4]xf32> tile slice from tile at given index to memory.
+    ```mlir
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] : vector<[4]x[4]xf32>, memref<?x?xf32>
+    ```
+
+    Example 3: Store a vector<[1]xi128> tile slice from tile at given index to memory.
+    ```mlir
+    arm_sme.store_tile_slice %tile, %tile_slice_index, %base[%c0] : vector<[1]x[1]xi128>, memref<?x?xi128>
+    ```
+  }];
+  let arguments = (ins SMETile:$tile, Index:$tile_slice_index,
+      Arg<AnyMemRef, "the reference to store to", [MemWrite]>:$base,
+      Variadic<Index>:$indices);
+  let extraClassDeclaration = [{
+    MemRefType getMemRefType() {
+      return ::llvm::cast<MemRefType>(getBase().getType());
+    }
+    VectorType getVectorType() {
+      return ::llvm::cast<VectorType>(getTile().getType());
+    }
+  }];
+
+  let assemblyFormat = [{
+    $tile `,` $tile_slice_index `,` $base `[` $indices `]`
+      attr-dict `:` type($base) `,` type($tile)
+  }];
 }
 
 //===----------------------------------------------------------------------===//
