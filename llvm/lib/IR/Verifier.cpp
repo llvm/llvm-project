@@ -73,7 +73,7 @@
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/Constants.h"
-#include "llvm/IR/ConvergenceVerifier.h"
+#include "llvm/IR/CycleInfo.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DebugInfo.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -329,6 +329,13 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   /// The current source language.
   dwarf::SourceLanguage CurrentSourceLang = dwarf::DW_LANG_lo_user;
 
+  /// Whether the current function has convergencectrl operand bundles.
+  enum {
+    ControlledConvergence,
+    UncontrolledConvergence,
+    NoConvergence
+  } ConvergenceKind = NoConvergence;
+
   /// Whether source was present on the first DIFile encountered in each CU.
   DenseMap<const DICompileUnit *, bool> HasSourceDebugInfo;
 
@@ -363,7 +370,6 @@ class Verifier : public InstVisitor<Verifier>, VerifierSupport {
   SmallVector<const DILocalVariable *, 16> DebugFnArgs;
 
   TBAAVerifier TBAAVerifyHelper;
-  ConvergenceVerifier CV;
 
   SmallVector<IntrinsicInst *, 4> NoAliasScopeDecls;
 
@@ -405,19 +411,12 @@ public:
       return false;
     }
 
-    auto FailureCB = [this](const Twine &Message) {
-      this->CheckFailed(Message);
-    };
-    CV.initialize(OS, FailureCB, F);
-
     Broken = false;
     // FIXME: We strip const here because the inst visitor strips const.
     visit(const_cast<Function &>(F));
     verifySiblingFuncletUnwinds();
-
-    if (CV.sawTokens())
-      CV.verify(DT);
-
+    if (ConvergenceKind == ControlledConvergence)
+      verifyConvergenceControl(const_cast<Function &>(F));
     InstsInThisBlock.clear();
     DebugFnArgs.clear();
     LandingPadResultTy = nullptr;
@@ -425,6 +424,7 @@ public:
     SiblingFuncletInfo.clear();
     verifyNoAliasScopeDecl();
     NoAliasScopeDecls.clear();
+    ConvergenceKind = NoConvergence;
 
     return !Broken;
   }
@@ -600,6 +600,7 @@ private:
   void verifyStatepoint(const CallBase &Call);
   void verifyFrameRecoverIndices();
   void verifySiblingFuncletUnwinds();
+  void verifyConvergenceControl(Function &F);
 
   void verifyFragmentExpression(const DbgVariableIntrinsic &I);
   template <typename ValueOrMetadata>
@@ -2534,6 +2535,138 @@ void Verifier::verifySiblingFuncletUnwinds() {
   }
 }
 
+static bool isConvergenceControlIntrinsic(const CallBase &Call) {
+  switch (Call.getIntrinsicID()) {
+  case Intrinsic::experimental_convergence_anchor:
+  case Intrinsic::experimental_convergence_entry:
+  case Intrinsic::experimental_convergence_loop:
+    return true;
+  default:
+    return false;
+  }
+}
+
+static bool isControlledConvergent(const CallBase &Call) {
+  if (Call.countOperandBundlesOfType(LLVMContext::OB_convergencectrl))
+    return true;
+  return isConvergenceControlIntrinsic(Call);
+}
+
+void Verifier::verifyConvergenceControl(Function &F) {
+  DenseMap<BasicBlock *, SmallVector<CallBase *, 8>> LiveTokenMap;
+  DenseMap<const Cycle *, const CallBase *> CycleHearts;
+
+  // Just like the DominatorTree, compute the CycleInfo locally so that we
+  // can run the verifier outside of a pass manager and we don't rely on
+  // potentially out-dated analysis results.
+  CycleInfo CI;
+  CI.compute(F);
+
+  auto checkBundle = [&](OperandBundleUse &Bundle, CallBase *CB,
+                         SmallVectorImpl<CallBase *> &LiveTokens) {
+    Check(Bundle.Inputs.size() == 1 && Bundle.Inputs[0]->getType()->isTokenTy(),
+          "The 'convergencectrl' bundle requires exactly one token use.", CB);
+
+    Value *Token = Bundle.Inputs[0].get();
+    auto *Def = dyn_cast<CallBase>(Token);
+    Check(Def && isConvergenceControlIntrinsic(*Def),
+          "Convergence control tokens can only be produced by calls to the "
+          "convergence control intrinsics.",
+          Token, CB);
+
+    Check(llvm::is_contained(LiveTokens, Token),
+          "Convergence region is not well-nested.", Token, CB);
+
+    while (LiveTokens.back() != Token)
+      LiveTokens.pop_back();
+
+    // Check static rules about cycles.
+    auto *BB = CB->getParent();
+    auto *BBCycle = CI.getCycle(BB);
+    if (!BBCycle)
+      return;
+
+    BasicBlock *DefBB = Def->getParent();
+    if (DefBB == BB || BBCycle->contains(DefBB)) {
+      // degenerate occurrence of a loop intrinsic
+      return;
+    }
+
+    auto *II = dyn_cast<IntrinsicInst>(CB);
+    Check(II &&
+              II->getIntrinsicID() == Intrinsic::experimental_convergence_loop,
+          "Convergence token used by an instruction other than "
+          "llvm.experimental.convergence.loop in a cycle that does "
+          "not contain the token's definition.",
+          CB, CI.print(BBCycle));
+
+    while (true) {
+      auto *Parent = BBCycle->getParentCycle();
+      if (!Parent || Parent->contains(DefBB))
+        break;
+      BBCycle = Parent;
+    };
+
+    Check(BBCycle->isReducible() && BB == BBCycle->getHeader(),
+          "Cycle heart must dominate all blocks in the cycle.", CB, BB,
+          CI.print(BBCycle));
+    Check(!CycleHearts.count(BBCycle),
+          "Two static convergence token uses in a cycle that does "
+          "not contain either token's definition.",
+          CB, CycleHearts[BBCycle], CI.print(BBCycle));
+    CycleHearts[BBCycle] = CB;
+  };
+
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  SmallVector<CallBase *, 8> LiveTokens;
+  for (BasicBlock *BB : RPOT) {
+    LiveTokens.clear();
+    auto LTIt = LiveTokenMap.find(BB);
+    if (LTIt != LiveTokenMap.end()) {
+      LiveTokens = std::move(LTIt->second);
+      LiveTokenMap.erase(LTIt);
+    }
+
+    for (Instruction &I : *BB) {
+      CallBase *CB = dyn_cast<CallBase>(&I);
+      if (!CB)
+        continue;
+
+      Check(CB->countOperandBundlesOfType(LLVMContext::OB_convergencectrl) <= 1,
+            "The 'convergencetrl' bundle can occur at most once on a call", CB);
+
+      auto Bundle = CB->getOperandBundle(LLVMContext::OB_convergencectrl);
+      if (Bundle)
+        checkBundle(*Bundle, CB, LiveTokens);
+
+      if (CB->getType()->isTokenTy())
+        LiveTokens.push_back(CB);
+    }
+
+    // Propagate token liveness
+    for (BasicBlock *Succ : successors(BB)) {
+      DomTreeNode *SuccNode = DT.getNode(Succ);
+      LTIt = LiveTokenMap.find(Succ);
+      if (LTIt == LiveTokenMap.end()) {
+        // We're the first predecessor: all tokens which dominate the
+        // successor are live for now.
+        LTIt = LiveTokenMap.try_emplace(Succ).first;
+        for (CallBase *LiveToken : LiveTokens) {
+          if (!DT.dominates(DT.getNode(LiveToken->getParent()), SuccNode))
+            break;
+          LTIt->second.push_back(LiveToken);
+        }
+      } else {
+        // Compute the intersection of live tokens.
+        auto It = llvm::partition(LTIt->second, [&LiveTokens](CallBase *Token) {
+          return llvm::is_contained(LiveTokens, Token);
+        });
+        LTIt->second.erase(It, LTIt->second.end());
+      }
+    }
+  }
+}
+
 // visitFunction - Verify that a function is ok.
 //
 void Verifier::visitFunction(const Function &F) {
@@ -3555,7 +3688,22 @@ void Verifier::visitCallBase(CallBase &Call) {
   if (Call.isInlineAsm())
     verifyInlineAsmCall(Call);
 
-  CV.visit(Call);
+  if (isControlledConvergent(Call)) {
+    Check(Call.isConvergent(),
+          "Expected convergent attribute on a controlled convergent call.",
+          Call);
+    Check(ConvergenceKind != UncontrolledConvergence,
+          "Cannot mix controlled and uncontrolled convergence in the same "
+          "function.",
+          Call);
+    ConvergenceKind = ControlledConvergence;
+  } else if (Call.isConvergent()) {
+    Check(ConvergenceKind != ControlledConvergence,
+          "Cannot mix controlled and uncontrolled convergence in the same "
+          "function.",
+          Call);
+    ConvergenceKind = UncontrolledConvergence;
+  }
 
   visitInstruction(Call);
 }
