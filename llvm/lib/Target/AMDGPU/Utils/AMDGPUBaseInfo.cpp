@@ -3125,9 +3125,11 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
     return hasNamedOperand(Opcode, OpName::vaddr) &&
            !hasNamedOperand(Opcode, OpName::saddr);
 
-  // For VGLOBAL only GVS mode is supported and VFLAT does not have GVS mode.
-  return hasNamedOperand(Opcode, OpName::vaddr) &&
-         hasNamedOperand(Opcode, OpName::saddr);
+  if (TSFlags & SIInstrFlags::FlatGlobal) // Only GVS mode is supported.
+    return hasNamedOperand(Opcode, OpName::vaddr) &&
+           hasNamedOperand(Opcode, OpName::saddr);
+
+  return false;
 }
 
 } // namespace AMDGPU
