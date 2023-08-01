@@ -464,9 +464,20 @@ struct LifetimeCheckPass : public LifetimeCheckBase<LifetimeCheckPass> {
 } // namespace
 
 static std::string getVarNameFromValue(mlir::Value v) {
-  if (auto allocaOp = dyn_cast<AllocaOp>(v.getDefiningOp()))
+
+  auto srcOp = v.getDefiningOp();
+  if (!srcOp) {
+    auto blockArg = cast<BlockArgument>(v);
+    assert(blockArg.getOwner()->isEntryBlock() && "random block args NYI");
+    llvm::SmallString<128> finalName;
+    llvm::raw_svector_ostream Out(finalName);
+    Out << "fn_arg:" << blockArg.getArgNumber();
+    return Out.str().str();
+  }
+
+  if (auto allocaOp = dyn_cast<AllocaOp>(srcOp))
     return allocaOp.getName().str();
-  if (auto getElemOp = dyn_cast<StructElementAddr>(v.getDefiningOp())) {
+  if (auto getElemOp = dyn_cast<StructElementAddr>(srcOp)) {
     auto parent = dyn_cast<AllocaOp>(getElemOp.getStructAddr().getDefiningOp());
     if (parent) {
       llvm::SmallString<128> finalName;
@@ -475,7 +486,7 @@ static std::string getVarNameFromValue(mlir::Value v) {
       return Out.str().str();
     }
   }
-  if (auto callOp = dyn_cast<CallOp>(v.getDefiningOp())) {
+  if (auto callOp = dyn_cast<CallOp>(srcOp)) {
     if (callOp.getCallee()) {
       llvm::SmallString<128> finalName;
       llvm::raw_svector_ostream Out(finalName);
@@ -1207,9 +1218,15 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
 
   auto dataSrcOp = data.getDefiningOp();
 
-  // Do not handle block arguments just yet.
-  if (!dataSrcOp)
+  // Handle function arguments but not all block arguments just yet.
+  if (!dataSrcOp) {
+    auto blockArg = cast<BlockArgument>(data);
+    if (!blockArg.getOwner()->isEntryBlock())
+      return;
+    getPmap()[addr].clear();
+    getPmap()[addr].insert(State::getLocalValue(data));
     return;
+  }
 
   // Ignore chains of bitcasts and update data source. Note that when
   // dataSrcOp gets updated, `data` might not be the most updated resource
