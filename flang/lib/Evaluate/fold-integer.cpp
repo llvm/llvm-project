@@ -352,12 +352,12 @@ public:
     if (mask) {
       if (auto scalarMask{mask->GetScalarValue()}) {
         // Convert into array in case of scalar MASK= (for
-        // MAXLOC/MINLOC/FINDLOC mask should be be conformable)
+        // MAXLOC/MINLOC/FINDLOC mask should be conformable)
         ConstantSubscript n{GetSize(array->shape())};
         std::vector<Scalar<LogicalResult>> mask_elements(
             n, Scalar<LogicalResult>{scalarMask.value()});
         *mask = Constant<LogicalResult>{
-            std::move(mask_elements), ConstantSubscripts{n}};
+            std::move(mask_elements), ConstantSubscripts{array->shape()}};
       }
       mask->SetLowerBoundsToOne();
       maskAt = mask->lbounds();
