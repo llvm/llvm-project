@@ -34,7 +34,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double acosh(long double __x) _NOEXCEPT {retur
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 acosh(_A1 __x) _NOEXCEPT {return __builtin_acosh((double)__x);}
 
 // asinh
@@ -50,7 +50,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double asinh(long double __x) _NOEXCEPT {retur
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 asinh(_A1 __x) _NOEXCEPT {return __builtin_asinh((double)__x);}
 
 // atanh
@@ -66,7 +66,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double atanh(long double __x) _NOEXCEPT {retur
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 atanh(_A1 __x) _NOEXCEPT {return __builtin_atanh((double)__x);}
 
 } // namespace __math

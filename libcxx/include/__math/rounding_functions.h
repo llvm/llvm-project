@@ -37,7 +37,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double ceil(long double 
 
 template <class _A1>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 ceil(_A1 __x) _NOEXCEPT {return __builtin_ceil((double)__x);}
 
 // floor
@@ -53,7 +53,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double floor(long double
 
 template <class _A1>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 floor(_A1 __x) _NOEXCEPT {return __builtin_floor((double)__x);}
 
 // llrint
@@ -75,7 +75,7 @@ inline _LIBCPP_HIDE_FROM_ABI long long llrint(long double __x) _NOEXCEPT
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, long long>::type
+typename enable_if<is_integral<_A1>::value, long long>::type
 llrint(_A1 __x) _NOEXCEPT
 {
     return __builtin_llrint((double)__x);
@@ -100,7 +100,7 @@ inline _LIBCPP_HIDE_FROM_ABI long long llround(long double __x) _NOEXCEPT
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, long long>::type
+typename enable_if<is_integral<_A1>::value, long long>::type
 llround(_A1 __x) _NOEXCEPT
 {
     return __builtin_llround((double)__x);
@@ -125,7 +125,7 @@ inline _LIBCPP_HIDE_FROM_ABI long lrint(long double __x) _NOEXCEPT
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, long>::type
+typename enable_if<is_integral<_A1>::value, long>::type
 lrint(_A1 __x) _NOEXCEPT
 {
     return __builtin_lrint((double)__x);
@@ -150,7 +150,7 @@ inline _LIBCPP_HIDE_FROM_ABI long lround(long double __x) _NOEXCEPT
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, long>::type
+typename enable_if<is_integral<_A1>::value, long>::type
 lround(_A1 __x) _NOEXCEPT
 {
     return __builtin_lround((double)__x);
@@ -169,7 +169,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double nearbyint(long do
 
 template <class _A1>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 nearbyint(_A1 __x) _NOEXCEPT {return __builtin_nearbyint((double)__x);}
 
 // nextafter
@@ -185,17 +185,17 @@ inline _LIBCPP_HIDE_FROM_ABI long double nextafter(long double __x, long double 
 
 template <class _A1, class _A2>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::__enable_if_t
+typename __enable_if_t
 <
-    std::is_arithmetic<_A1>::value &&
-    std::is_arithmetic<_A2>::value,
-    std::__promote<_A1, _A2>
+    is_arithmetic<_A1>::value &&
+    is_arithmetic<_A2>::value,
+    __promote<_A1, _A2>
 >::type
 nextafter(_A1 __x, _A2 __y) _NOEXCEPT
 {
-    typedef typename std::__promote<_A1, _A2>::type __result_type;
-    static_assert((!(std::_IsSame<_A1, __result_type>::value &&
-                     std::_IsSame<_A2, __result_type>::value)), "");
+    typedef typename __promote<_A1, _A2>::type __result_type;
+    static_assert((!(_IsSame<_A1, __result_type>::value &&
+                     _IsSame<_A2, __result_type>::value)), "");
     return __math::nextafter((__result_type)__x, (__result_type)__y);
 }
 
@@ -212,7 +212,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double nexttoward(long double __x, long double
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 nexttoward(_A1 __x, long double __y) _NOEXCEPT {return __builtin_nexttoward((double)__x, __y);}
 
 // rint
@@ -234,7 +234,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double rint(long double 
 
 template <class _A1>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 rint(_A1 __x) _NOEXCEPT
 {
     return __builtin_rint((double)__x);
@@ -259,7 +259,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double round(long double
 
 template <class _A1>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 round(_A1 __x) _NOEXCEPT
 {
     return __builtin_round((double)__x);
@@ -284,7 +284,7 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double trunc(long double
 
 template <class _A1>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 trunc(_A1 __x) _NOEXCEPT
 {
     return __builtin_trunc((double)__x);
