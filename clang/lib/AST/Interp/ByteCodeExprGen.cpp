@@ -2459,6 +2459,17 @@ bool ByteCodeExprGen<Emitter>::VisitDeclRefExpr(const DeclRefExpr *E) {
     return this->emitGetPtrThisField(Offset, E);
   }
 
+  // Lazily visit global declarations we haven't seen yet.
+  // This happens in C.
+  if (!Ctx.getLangOpts().CPlusPlus) {
+    if (const auto *VD = dyn_cast<VarDecl>(D);
+        VD && VD->hasGlobalStorage() && VD->getAnyInitializer()) {
+      if (!this->visitVarDecl(VD))
+        return false;
+      // Retry.
+      return this->VisitDeclRefExpr(E);
+    }
+  }
   return false;
 }
 
