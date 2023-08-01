@@ -5088,21 +5088,29 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
            isKnownNeverZero(Op.getOperand(2), Depth + 1);
 
-  case ISD::SHL:
+  case ISD::SHL: {
     if (Op->getFlags().hasNoSignedWrap() || Op->getFlags().hasNoUnsignedWrap())
       return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-
-    // 1 << X is never zero. TODO: This can be expanded if we can bound X.
-    // The expression is really !Known.One[BitWidth-MaxLog2(Known):0].isZero()
-    if (computeKnownBits(Op.getOperand(0), Depth + 1).One[0])
+    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+    // 1 << X is never zero.
+    if (ValKnown.One[0])
+      return true;
+    // If max shift cnt of known ones is non-zero, result is non-zero.
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    if (MaxCnt.ult(ValKnown.getBitWidth()) &&
+        !ValKnown.One.shl(MaxCnt).isZero())
       return true;
     break;
-
+  }
   case ISD::UADDSAT:
   case ISD::UMAX:
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) ||
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
+    // TODO for smin/smax: If either operand is known negative/positive
+    // respectively we don't need the other to be known at all.
+  case ISD::SMAX:
+  case ISD::SMIN:
   case ISD::UMIN:
     return isKnownNeverZero(Op.getOperand(1), Depth + 1) &&
            isKnownNeverZero(Op.getOperand(0), Depth + 1);
@@ -5116,16 +5124,19 @@ bool SelectionDAG::isKnownNeverZero(SDValue Op, unsigned Depth) const {
     return isKnownNeverZero(Op.getOperand(0), Depth + 1);
 
   case ISD::SRA:
-  case ISD::SRL:
+  case ISD::SRL: {
     if (Op->getFlags().hasExact())
       return isKnownNeverZero(Op.getOperand(0), Depth + 1);
-    // Signed >> X is never zero. TODO: This can be expanded if we can bound X.
-    // The expression is really
-    // !Known.One[SignBit:SignBit-(BitWidth-MaxLog2(Known))].isZero()
-    if (computeKnownBits(Op.getOperand(0), Depth + 1).isNegative())
+    KnownBits ValKnown = computeKnownBits(Op.getOperand(0), Depth + 1);
+    if (ValKnown.isNegative())
+      return true;
+    // If max shift cnt of known ones is non-zero, result is non-zero.
+    APInt MaxCnt = computeKnownBits(Op.getOperand(1), Depth + 1).getMaxValue();
+    if (MaxCnt.ult(ValKnown.getBitWidth()) &&
+        !ValKnown.One.lshr(MaxCnt).isZero())
       return true;
     break;
-
+  }
   case ISD::UDIV:
   case ISD::SDIV:
     // div exact can only produce a zero if the dividend is zero.
