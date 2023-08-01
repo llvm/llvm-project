@@ -2397,6 +2397,7 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
 static void
 genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                      Fortran::semantics::SemanticsContext &semanticsContext,
+                     Fortran::lower::StatementContext &fctCtx,
                      mlir::Location loc,
                      const Fortran::parser::AccClauseList &accClauseList) {
   llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands;
@@ -2418,8 +2419,14 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
       TODO(clauseLocation, "clause on declare directive");
     }
   }
-
   builder.create<mlir::acc::DeclareEnterOp>(loc, dataClauseOperands);
+
+  // Attach declare exit operation generation to function context.
+  fctCtx.attachCleanup([&builder, loc, copyEntryOperands]() {
+    builder.create<mlir::acc::DeclareExitOp>(loc, copyEntryOperands);
+    genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
+        builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+  });
 }
 
 static void
@@ -2465,6 +2472,7 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
 
 static void genACC(Fortran::lower::AbstractConverter &converter,
                    Fortran::semantics::SemanticsContext &semanticsContext,
+                   Fortran::lower::StatementContext &fctCtx,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
                        &declareConstruct) {
@@ -2483,8 +2491,8 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
     auto funcOp =
         builder.getBlock()->getParent()->getParentOfType<mlir::func::FuncOp>();
     if (funcOp)
-      genDeclareInFunction(converter, semanticsContext, directiveLocation,
-                           accClauseList);
+      genDeclareInFunction(converter, semanticsContext, fctCtx,
+                           directiveLocation, accClauseList);
     else if (moduleOp)
       genDeclareInModule(converter, moduleOp, accClauseList);
     return;
@@ -2532,6 +2540,7 @@ void Fortran::lower::genOpenACCConstruct(
 void Fortran::lower::genOpenACCDeclarativeConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::lower::StatementContext &fctCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct) {
 
@@ -2539,7 +2548,7 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
       common::visitors{
           [&](const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
                   &standaloneDeclarativeConstruct) {
-            genACC(converter, semanticsContext, eval,
+            genACC(converter, semanticsContext, fctCtx, eval,
                    standaloneDeclarativeConstruct);
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct
