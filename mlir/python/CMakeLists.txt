@@ -153,6 +153,15 @@ declare_mlir_dialect_extension_python_bindings(
   DIALECT_NAME transform
   EXTENSION_NAME bufferization_transform)
 
+set(LLVM_TARGET_DEFINITIONS "${CMAKE_CURRENT_SOURCE_DIR}/mlir/dialects/BufferizationTransformOps.td")
+mlir_tablegen("dialects/_bufferization_transform_enum_gen.py" -gen-python-enum-bindings)
+add_public_tablegen_target(MLIRBufferizationTransformDialectPyEnumGen)
+declare_mlir_python_sources(
+  MLIRPythonSources.Dialects.bufferization_transform.enum_gen
+  ROOT_DIR "${CMAKE_CURRENT_BINARY_DIR}"
+  ADD_TO_PARENT MLIRPythonSources.Dialects.bufferization_transform
+  SOURCES "dialects/_bufferization_transform_enum_gen.py")
+
 declare_mlir_dialect_extension_python_bindings(
   ADD_TO_PARENT MLIRPythonSources.Dialects
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir"
