@@ -17101,6 +17101,49 @@ bool RISCVTargetLowering::allowsMisalignedMemoryAccesses(
   return Subtarget.enableUnalignedVectorMem();
 }
 
+
+EVT RISCVTargetLowering::getOptimalMemOpType(const MemOp &Op,
+                                             const AttributeList &FuncAttributes) const {
+  if (!Subtarget.hasVInstructions())
+    return MVT::Other;
+
+  if (FuncAttributes.hasFnAttr(Attribute::NoImplicitFloat))
+    return MVT::Other;
+
+  // We use LMUL1 memory operations here for a non-obvious reason.  Our caller
+  // has an expansion threshold, and we want the number of hardware memory
+  // operations to correspond roughly to that threshold.  LMUL>1 operations
+  // are typically expanded linearly internally, and thus correspond to more
+  // than one actual memory operation.  Note that store merging and load
+  // combining will typically form larger LMUL operations from the LMUL1
+  // operations emitted here, and that's okay because combining isn't
+  // introducing new memory operations; it's just merging existing ones.
+  const unsigned MinVLenInBytes = Subtarget.getRealMinVLen()/8;
+  if (Op.size() < MinVLenInBytes)
+    // TODO: Figure out short memops.  For the moment, do the default thing
+    // which ends up using scalar sequences.
+    return MVT::Other;
+
+  // Prefer i8 for non-zero memset as it allows us to avoid materializing
+  // a large scalar constant and instead use vmv.v.x/i to do the
+  // broadcast.  For everything else, prefer ELenVT to minimize VL and thus
+  // maximize the chance we can encode the size in the vsetvli.
+  MVT ELenVT = MVT::getIntegerVT(Subtarget.getELEN());
+  MVT PreferredVT = (Op.isMemset() && !Op.isZeroMemset()) ? MVT::i8 : ELenVT;
+
+  // Do we have sufficient alignment for our preferred VT?  If not, revert
+  // to largest size allowed by our alignment criteria.
+  if (PreferredVT != MVT::i8 && !Subtarget.enableUnalignedVectorMem()) {
+    Align RequiredAlign(PreferredVT.getStoreSize());
+    if (Op.isFixedDstAlign())
+      RequiredAlign = std::min(RequiredAlign, Op.getDstAlign());
+    if (Op.isMemcpy())
+      RequiredAlign = std::min(RequiredAlign, Op.getSrcAlign());
+    PreferredVT = MVT::getIntegerVT(RequiredAlign.value() * 8);
+  }
+  return MVT::getVectorVT(PreferredVT, MinVLenInBytes/PreferredVT.getStoreSize());
+}
+
 bool RISCVTargetLowering::splitValueIntoRegisterParts(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,
     unsigned NumParts, MVT PartVT, std::optional<CallingConv::ID> CC) const {
