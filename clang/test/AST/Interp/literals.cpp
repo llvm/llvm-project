@@ -193,6 +193,21 @@ namespace SizeOf {
                                             // ref-error {{must be initialized by a constant expression}}
   }
 
+#if __cplusplus >= 201402L
+  constexpr int IgnoredRejected() { // ref-error {{never produces a constant expression}}
+    int n = 0;
+    sizeof(int[n++]); // expected-warning {{expression result unused}} \
+                      // ref-warning {{expression result unused}} \
+                      // ref-note 2{{subexpression not valid in a constant expression}}
+    return n;
+  }
+  /// FIXME: This is rejected because the parameter so sizeof() is not constant.
+  ///   produce a proper diagnostic.
+  static_assert(IgnoredRejected() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                             // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{in call to 'IgnoredRejected()'}}
+#endif
+
 
 #if __cplusplus >= 202002L
   /// FIXME: The following code should be accepted.
@@ -883,7 +898,7 @@ namespace DiscardExprs {
   struct A{ int a; };
   constexpr int ignoredExprs() {
     (void)(1 / 2);
-    A a;
+    A a{12};
     a;
     (void)a;
     (a);
@@ -903,9 +918,12 @@ namespace DiscardExprs {
     arr[0];
     "a";
     'b';
+    sizeof(int);
+    alignof(int);
 
     return 0;
   }
+  static_assert(ignoredExprs() == 0, "");
 
   constexpr int oh_my(int x) {
     (int){ x++ };
