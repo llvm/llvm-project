@@ -294,6 +294,7 @@ class DimLvlMap final {
   unsigned symRank;
   SmallVector<DimSpec> dimSpecs;
   SmallVector<LvlSpec> lvlSpecs;
+  bool mustPrintLvlVars;
 
   // Checks for integrity of variable-binding structure.
   // This is already called by the ctor.
