@@ -27,10 +27,10 @@ define void @arm_mean_q7(ptr noundef %pSrc, i32 noundef %blockSize, ptr noundef 
 ; CHECK-NEXT:    [[CMP_NOT:%.*]] = icmp eq i32 [[DEC]], 0
 ; CHECK-NEXT:    br i1 [[CMP_NOT]], label [[WHILE_END_LOOPEXIT:%.*]], label [[WHILE_BODY]]
 ; CHECK:       while.end.loopexit:
-; CHECK-NEXT:    [[UGLYGEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP0]]
+; CHECK-NEXT:    [[SCEVGEP:%.*]] = getelementptr i8, ptr [[PSRC]], i32 [[TMP0]]
 ; CHECK-NEXT:    br label [[WHILE_END]]
 ; CHECK:       while.end:
-; CHECK-NEXT:    [[PSRC_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PSRC]], [[ENTRY:%.*]] ], [ [[UGLYGEP]], [[WHILE_END_LOOPEXIT]] ]
+; CHECK-NEXT:    [[PSRC_ADDR_0_LCSSA:%.*]] = phi ptr [ [[PSRC]], [[ENTRY:%.*]] ], [ [[SCEVGEP]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[SUM_0_LCSSA:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[TMP3]], [[WHILE_END_LOOPEXIT]] ]
 ; CHECK-NEXT:    [[AND:%.*]] = and i32 [[BLOCKSIZE]], 15
 ; CHECK-NEXT:    [[CMP2_NOT15:%.*]] = icmp eq i32 [[AND]], 0
