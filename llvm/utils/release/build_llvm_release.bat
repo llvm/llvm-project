@@ -80,8 +80,7 @@ REM   Visual Studio 2019 SDK and Nuget (for the clang-format plugin),
 REM   Perl (for the OpenMP run-time).
 REM
 REM
-REM   For LLDB, SWIG version <= 3.0.8 needs to be used to work around
-REM   https://github.com/swig/swig/issues/769
+REM   For LLDB, SWIG version 4.1.1 should be used.
 REM
 
 :: Detect Visual Studio
