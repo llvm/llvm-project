@@ -1292,6 +1292,13 @@ void LifetimeCheckPass::updatePointsTo(mlir::Value addr, mlir::Value data,
     getPmap()[addr].insert(State::getLocalValue(callOp.getResult(0)));
   }
 
+  if (auto loadOp = dyn_cast<LoadOp>(dataSrcOp)) {
+    // handle indirections through a load, a common example are temporaries
+    // copying the 'this' param to a subsequent call.
+    updatePointsTo(addr, loadOp.getAddr(), loc);
+    return;
+  }
+
   // What should we add next?
 }
 
