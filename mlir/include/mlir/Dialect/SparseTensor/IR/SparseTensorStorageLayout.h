@@ -107,7 +107,7 @@ using FieldIndex = unsigned;
 /// encoding.
 class StorageLayout {
 public:
-  // TODO: Functions/methods marked with [NUMFIELDS] might should use
+  // TODO: Functions/methods marked with [NUMFIELDS] should use
   // `FieldIndex` for their return type, via the same reasoning for why
   // `Dimension`/`Level` are used both for identifiers and ranks.
   explicit StorageLayout(const SparseTensorType &stt)
@@ -154,12 +154,12 @@ private:
 // Wrapper functions to invoke StorageLayout-related method.
 //
 
-// TODO: See note [NUMFIELDS].
+// See note [NUMFIELDS].
 inline unsigned getNumFieldsFromEncoding(SparseTensorEncodingAttr enc) {
   return StorageLayout(enc).getNumFields();
 }
 
-// TODO: See note [NUMFIELDS].
+// See note [NUMFIELDS].
 inline unsigned getNumDataFieldsFromEncoding(SparseTensorEncodingAttr enc) {
   return StorageLayout(enc).getNumDataFields();
 }

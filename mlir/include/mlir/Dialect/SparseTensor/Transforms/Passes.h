@@ -41,7 +41,6 @@ enum class SparseParallelizationStrategy {
   kAnyStorageOuterLoop,
   kDenseAnyLoop,
   kAnyStorageAnyLoop
-  // TODO: support reduction parallelization too?
 };
 
 // TODO : Zero copy is disabled due to correctness bugs.Tracker #64316
