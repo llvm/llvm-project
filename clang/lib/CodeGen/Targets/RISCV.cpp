@@ -8,7 +8,6 @@
 
 #include "ABIInfoImpl.h"
 #include "TargetInfo.h"
-#include "llvm/TargetParser/RISCVTargetParser.h"
 
 using namespace clang;
 using namespace clang::CodeGen;
@@ -315,11 +314,15 @@ ABIArgInfo RISCVABIInfo::coerceVLSVector(QualType Ty) const {
 
   assert(VT->getElementType()->isBuiltinType() && "expected builtin type!");
 
-  const auto *BT = VT->getElementType()->castAs<BuiltinType>();
-  unsigned EltSize = getContext().getTypeSize(BT);
+  auto VScale =
+      getContext().getTargetInfo().getVScaleRange(getContext().getLangOpts());
+  // The MinNumElts is simplified from equation:
+  // NumElts / VScale =
+  //  (EltSize * NumElts / (VScale * RVVBitsPerBlock))
+  //    * (RVVBitsPerBlock / EltSize)
   llvm::ScalableVectorType *ResType =
-        llvm::ScalableVectorType::get(CGT.ConvertType(VT->getElementType()),
-                                      llvm::RISCV::RVVBitsPerBlock / EltSize);
+      llvm::ScalableVectorType::get(CGT.ConvertType(VT->getElementType()),
+                                    VT->getNumElements() / VScale->first);
   return ABIArgInfo::getDirect(ResType);
 }
 
