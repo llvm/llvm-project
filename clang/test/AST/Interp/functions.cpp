@@ -176,6 +176,13 @@ namespace FunctionReturnType {
 
   constexpr S s{ 12 };
   static_assert(s.fp == nullptr, ""); // zero-initialized function pointer.
+
+  constexpr int (*op)(int, int) = add;
+  constexpr bool b = op;
+  static_assert(op, "");
+  static_assert(!!op, "");
+  constexpr int (*op2)(int, int) = nullptr;
+  static_assert(!op2, "");
 }
 
 namespace Comparison {

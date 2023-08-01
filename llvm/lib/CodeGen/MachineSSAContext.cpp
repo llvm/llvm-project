@@ -13,7 +13,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/MachineSSAContext.h"
-#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -60,13 +59,6 @@ bool MachineSSAContext::isConstantOrUndefValuePhi(const MachineInstr &Phi) {
 }
 
 template <>
-Intrinsic::ID MachineSSAContext::getIntrinsicID(const MachineInstr &MI) {
-  if (auto *GI = dyn_cast<GIntrinsic>(&MI))
-    return GI->getIntrinsicID();
-  return Intrinsic::not_intrinsic;
-}
-
-template <>
 Printable MachineSSAContext::print(const MachineBasicBlock *Block) const {
   if (!Block)
     return Printable([](raw_ostream &Out) { Out << "<nullptr>"; });
@@ -90,9 +82,4 @@ template <> Printable MachineSSAContext::print(Register Value) const {
       }
     }
   });
-}
-
-template <>
-Printable MachineSSAContext::printAsOperand(const MachineBasicBlock *BB) const {
-  return Printable([BB](raw_ostream &Out) { BB->printAsOperand(Out); });
 }

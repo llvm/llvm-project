@@ -90,6 +90,9 @@ public:
   bool isInf() const { return F.isInfinity(); }
   bool isFinite() const { return F.isFinite(); }
   bool isNormal() const { return F.isNormal(); }
+  bool isDenormal() const { return F.isDenormal(); }
+  llvm::FPClassTest classify() const { return F.classify(); }
+  APFloat::fltCategory getCategory() const { return F.getCategory(); }
 
   ComparisonCategoryResult compare(const Floating &RHS) const {
     llvm::APFloatBase::cmpResult CmpRes = F.compare(RHS.F);
@@ -114,6 +117,13 @@ public:
     APFloat::opStatus Status = F.convertFromAPInt(Val, Val.isSigned(), RM);
     Result = Floating(F);
     return Status;
+  }
+
+  static Floating abs(const Floating &F) {
+    APFloat V = F.F;
+    if (V.isNegative())
+      V.changeSign();
+    return Floating(V);
   }
 
   // -------

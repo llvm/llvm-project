@@ -8,6 +8,7 @@ try:
 except ImportError as e:
     raise RuntimeError("Error loading imports from extension module") from e
 
+from enum import Enum
 from typing import Optional, overload, Union
 
 
@@ -65,16 +66,31 @@ class OneShotBufferizeOp:
         allow_unknown_ops: Optional[bool] = None,
         bufferize_function_boundaries: Optional[bool] = None,
         create_deallocs: Optional[bool] = None,
-        test_analysis_only: Optional[bool] = None,
-        print_conflicts: Optional[bool] = None,
+        function_boundary_type_conversion: Optional[Enum] = None,
         memcpy_op: Optional[str] = None,
+        print_conflicts: Optional[bool] = None,
+        test_analysis_only: Optional[bool] = None,
         loc=None,
         ip=None
     ):
         ...
 
     @overload
-    def __init__(self, target: Union[Operation, OpView, Value], *, loc=None, ip=None):
+    def __init__(
+        self,
+        target: Union[Operation, OpView, Value],
+        *,
+        allow_return_allocs: Optional[bool] = None,
+        allow_unknown_ops: Optional[bool] = None,
+        bufferize_function_boundaries: Optional[bool] = None,
+        create_deallocs: Optional[bool] = None,
+        function_boundary_type_conversion: Optional[Enum] = None,
+        memcpy_op: Optional[str] = None,
+        print_conflicts: Optional[bool] = None,
+        test_analysis_only: Optional[bool] = None,
+        loc=None,
+        ip=None
+    ):
         ...
 
     def __init__(
@@ -86,9 +102,10 @@ class OneShotBufferizeOp:
         allow_unknown_ops: Optional[bool] = None,
         bufferize_function_boundaries: Optional[bool] = None,
         create_deallocs: Optional[bool] = None,
-        test_analysis_only: Optional[bool] = None,
-        print_conflicts: Optional[bool] = None,
+        function_boundary_type_conversion: Optional[Enum] = None,
         memcpy_op: Optional[str] = None,
+        print_conflicts: Optional[bool] = None,
+        test_analysis_only: Optional[bool] = None,
         loc=None,
         ip=None
     ):
@@ -106,9 +123,10 @@ class OneShotBufferizeOp:
             allow_unknown_ops=allow_unknown_ops,
             bufferize_function_boundaries=bufferize_function_boundaries,
             create_deallocs=create_deallocs,
-            test_analysis_only=test_analysis_only,
-            print_conflicts=print_conflicts,
+            function_boundary_type_conversion=function_boundary_type_conversion,
             memcpy_op=memcpy_op,
+            print_conflicts=print_conflicts,
+            test_analysis_only=test_analysis_only,
             loc=loc,
             ip=ip,
         )
