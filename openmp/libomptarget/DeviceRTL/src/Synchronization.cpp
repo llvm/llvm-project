@@ -566,7 +566,7 @@ void setLock(omp_lock_t *Lock) {
     for (;;) {
       now = __nvvm_read_ptx_sreg_clock();
       int32_t cycles = now > start ? now - start : now + (0xffffffff - start);
-      if (cycles >= OMP_SPIN * mapping::getBlockId()) {
+      if (cycles >= OMP_SPIN * mapping::getBlockIdInKernel()) {
         break;
       }
     }
@@ -829,7 +829,15 @@ KMPC_ATOMIC_CAS_LOOP_MAX(double);
 
 #undef KMPC_ATOMIC_CAS_LOOP_MAX
 #endif // endif defined(__gfx941__)
-
+void ompx_sync_block(int Ordering) {
+  impl::syncThreadsAligned(/*atomic::OrderingTy(Ordering)*/);
+}
+void ompx_sync_block_acq_rel() {
+  impl::syncThreadsAligned(/*atomic::OrderingTy::acq_rel*/);
+}
+void ompx_sync_block_divergent(int Ordering) {
+  impl::syncThreads(/*atomic::OrderingTy(Ordering)*/);
+}
 } // extern "C"
 
 #pragma omp end declare target

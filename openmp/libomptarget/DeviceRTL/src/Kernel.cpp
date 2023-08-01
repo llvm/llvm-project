@@ -109,10 +109,11 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
   // reaches its corresponding synchronize::threads call: that would permit all
   // active worker threads to proceed before the main thread has actually set
   // state::ParallelRegionFn, and then they would immediately quit without
-  // doing any work.  mapping::getBlockSize() does not include any of the main
-  // thread's warp, so none of its threads can ever be active worker threads.
+  // doing any work.  mapping::getMaxTeamThreads() does not include any of the
+  // main thread's warp, so none of its threads can ever be active worker
+  // threads.
   if (UseGenericStateMachine &&
-      mapping::getThreadIdInBlock() < mapping::getBlockSize(IsSPMD)) {
+      mapping::getThreadIdInBlock() < mapping::getMaxTeamThreads(IsSPMD)) {
     genericStateMachine(Ident);
   } else {
     // Retrieve the work function just to ensure we always call
@@ -166,7 +167,7 @@ int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
     uint32_t TId = mapping::getThreadIdInBlock();
 
     uint32_t NThreadsICV = icv::NThreads;
-    uint32_t NumThreads = mapping::getBlockSize();
+    uint32_t NumThreads = mapping::getNumberOfThreadsInBlock();
 
     if (NThreadsICV != 0 && NThreadsICV < NumThreads)
       NumThreads = NThreadsICV;

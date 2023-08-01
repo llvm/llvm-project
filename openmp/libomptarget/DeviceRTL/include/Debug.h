@@ -32,6 +32,9 @@ void __assert_fail(const char *expr, const char *msg, const char *file,
     else                                                                       \
       __assert_assume(expr);                                                   \
   }
+#define UNREACHABLE(msg)                                                       \
+  PRINT(msg);                                                                  \
+  __builtin_trap();
 
 ///}
 
@@ -49,6 +52,7 @@ void __assert_fail(const char *expr, const char *msg, const char *file,
 #define PRINTF(fmt, ...)
 #define PRINT(str) PRINTF("%s", str)
 #define FunctionTracingRAII()
+#define UNREACHABLE(msg)
 #endif
 
 /// An RAII class for handling entries to debug locations. The current location

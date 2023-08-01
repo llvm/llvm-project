@@ -105,7 +105,7 @@ extern "C" {
 /// Extra API calls for ROCm
 
 int omp_ext_get_warp_id() {
-  int rc = ompx::mapping::getWarpId();
+  int rc = ompx::mapping::getWarpIdInBlock();
   return rc;
 }
 
