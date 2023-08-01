@@ -1134,7 +1134,8 @@ bool AArch64LegalizerInfo::legalizeSmallCMGlobalValue(
 
 bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
                                              MachineInstr &MI) const {
-  switch (cast<GIntrinsic>(MI).getIntrinsicID()) {
+  Intrinsic::ID IntrinsicID = cast<GIntrinsic>(MI).getIntrinsicID();
+  switch (IntrinsicID) {
   case Intrinsic::vacopy: {
     unsigned PtrSize = ST->isTargetILP32() ? 4 : 8;
     unsigned VaListSize =
@@ -1212,6 +1213,36 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
 
     MIB.buildInstr(AArch64::G_PREFETCH).addImm(PrfOp).add(AddrVal);
     MI.eraseFromParent();
+    return true;
+  }
+  case Intrinsic::aarch64_neon_uaddv:
+  case Intrinsic::aarch64_neon_saddv:
+  case Intrinsic::aarch64_neon_umaxv:
+  case Intrinsic::aarch64_neon_smaxv:
+  case Intrinsic::aarch64_neon_uminv:
+  case Intrinsic::aarch64_neon_sminv: {
+    MachineIRBuilder MIB(MI);
+    MachineRegisterInfo &MRI = *MIB.getMRI();
+    bool IsSigned = IntrinsicID == Intrinsic::aarch64_neon_saddv ||
+                    IntrinsicID == Intrinsic::aarch64_neon_smaxv ||
+                    IntrinsicID == Intrinsic::aarch64_neon_sminv;
+
+    auto OldDst = MI.getOperand(0).getReg();
+    auto OldDstTy = MRI.getType(OldDst);
+    LLT NewDstTy = MRI.getType(MI.getOperand(2).getReg()).getElementType();
+    if (OldDstTy == NewDstTy)
+      return true;
+
+    auto NewDst = MRI.createGenericVirtualRegister(NewDstTy);
+
+    Helper.Observer.changingInstr(MI);
+    MI.getOperand(0).setReg(NewDst);
+    Helper.Observer.changedInstr(MI);
+
+    MIB.setInsertPt(MIB.getMBB(), ++MIB.getInsertPt());
+    MIB.buildExtOrTrunc(IsSigned ? TargetOpcode::G_SEXT : TargetOpcode::G_ZEXT,
+                        OldDst, NewDst);
+
     return true;
   }
   }
