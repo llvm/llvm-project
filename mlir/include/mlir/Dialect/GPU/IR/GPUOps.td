@@ -1713,6 +1713,22 @@ def GPU_CreateCsrOp : GPU_Op<"create_csr", [GPU_AsyncOpInterface]> {
   }];
 }
 
+def GPU_Prune2To4SpMatFlag : I32EnumAttr<"Prune2To4SpMatFlag",
+  "pruning strategy for 2:4 sparse matrix",
+  [
+    I32EnumAttrCase<"NONE", 0>,
+    I32EnumAttrCase<"PRUNE_ONLY", 1>,
+    I32EnumAttrCase<"PRUNE_AND_CHECK", 2>,
+  ]> {
+    let genSpecializedAttr = 0;
+    let cppNamespace = GPU_Dialect.cppNamespace;
+}
+
+def GPU_Prune2To4SpMatFlagAttr : EnumAttr<GPU_Dialect, GPU_Prune2To4SpMatFlag,
+                                   "prune_2to4_spmat_flag">{
+  let defaultValue = "Prune2To4SpMatFlag::PRUNE_AND_CHECK";
+}
+
 
 def GPU_Create2To4SpMatOp : GPU_Op<"create_2to4_spmat", [GPU_AsyncOpInterface]> {
   let summary = "Create sparse matrix with 2:4 sparsity operation";
@@ -1730,20 +1746,21 @@ def GPU_Create2To4SpMatOp : GPU_Op<"create_2to4_spmat", [GPU_AsyncOpInterface]> 
     Example:
 
     ```mlir
-    %spmat, %token = gpu.create_2to4_spmat async [%dep] %rows, %cols, %mem : memref<?xf64>
+    %spmat, %token = gpu.create_2to4_spmat async [%dep] {PRUNE_AND_CHECK} %rows, %cols, %mem: memref<?xf64>
     ```
   }];
 
   let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                        Index:$rows,
                        Index:$cols,
+                       GPU_Prune2To4SpMatFlagAttr:$pruneFlag,
                        AnyMemRef:$memref);
   let results = (outs Res<GPU_SparseSpMatHandle>:$spMat, 
                       Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $rows `,` $cols `,` $memref attr-dict `:` type($memref)
+     `{` $pruneFlag `}` $rows `,` $cols `,` $memref attr-dict `:` type($memref)
   }];
 }
 
