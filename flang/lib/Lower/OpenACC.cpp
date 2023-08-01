@@ -2400,20 +2400,33 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                      Fortran::lower::StatementContext &fctCtx,
                      mlir::Location loc,
                      const Fortran::parser::AccClauseList &accClauseList) {
-  llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands;
+  llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
+      createEntryOperands;
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     if (const auto *copyClause =
             std::get_if<Fortran::parser::AccClause::Copy>(&clause.u)) {
       auto crtDataStart = dataClauseOperands.size();
-
       genDataOperandOperations<mlir::acc::CopyinOp>(
           copyClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_copy,
           /*structured=*/true, /*setDeclareAttr=*/true);
       copyEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                dataClauseOperands.end());
+    } else if (const auto *createClause =
+                   std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
+      const Fortran::parser::AccObjectListWithModifier &listWithModifier =
+          createClause->v;
+      const auto &accObjectList =
+          std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+      auto crtDataStart = dataClauseOperands.size();
+      genDataOperandOperations<mlir::acc::CreateOp>(
+          accObjectList, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_create,
+          /*structured=*/true, /*setDeclareAttr=*/true);
+      createEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                 dataClauseOperands.end());
     } else {
       mlir::Location clauseLocation = converter.genLocation(clause.source);
       TODO(clauseLocation, "clause on declare directive");
@@ -2422,10 +2435,13 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
   builder.create<mlir::acc::DeclareEnterOp>(loc, dataClauseOperands);
 
   // Attach declare exit operation generation to function context.
-  fctCtx.attachCleanup([&builder, loc, copyEntryOperands]() {
-    builder.create<mlir::acc::DeclareExitOp>(loc, copyEntryOperands);
-    genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-        builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+  fctCtx.attachCleanup([&builder, loc, dataClauseOperands, createEntryOperands,
+                        copyEntryOperands]() {
+    builder.create<mlir::acc::DeclareExitOp>(loc, dataClauseOperands);
+    genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
+        builder, createEntryOperands, /*structured=*/true, /*implicit=*/false);
+    genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(builder,
+        copyEntryOperands, /*structured=*/true, /*implicit=*/false);
   });
 }
 
