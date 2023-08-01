@@ -2267,7 +2267,6 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
 #endif
 
   assert(D && D->getBody());
-
   // We do not want to visit a Lambda expression defined inside a method independently.
   // Instead, it should be visited along with the outer method.
   if (const auto *fd = dyn_cast<CXXMethodDecl>(D)) {
