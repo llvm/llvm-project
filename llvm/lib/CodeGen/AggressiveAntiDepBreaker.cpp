@@ -909,7 +909,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
             unsigned R = S.getReg();
             if (!RegAliases[R])
               continue;
-            if (R == AntiDepReg || TRI->isSubRegister(AntiDepReg, R))
+            if (TRI->isSubRegisterEq(AntiDepReg, R))
               continue;
             AntiDepReg = 0;
             break;
