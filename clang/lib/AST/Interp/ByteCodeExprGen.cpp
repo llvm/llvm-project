@@ -958,6 +958,8 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundLiteralExpr(
 
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitTypeTraitExpr(const TypeTraitExpr *E) {
+  if (DiscardResult)
+    return true;
   return this->emitConstBool(E->getValue(), E);
 }
 

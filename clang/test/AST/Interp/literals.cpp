@@ -895,6 +895,8 @@ namespace DiscardExprs {
     (void)5, (void)6;
 
     1 ? 0 : 1;
+    __is_trivial(int);
+
     return 0;
   }
 
