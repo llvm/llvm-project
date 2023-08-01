@@ -438,11 +438,10 @@ define i32 @reduction_min(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.smin.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 256, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 1000, [[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 256, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[RESULT_08:%.*]] = phi i32 [ [[V0:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -451,7 +450,7 @@ define i32 @reduction_min(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], 257
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP19:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi i32 [ [[V0]], [[FOR_BODY]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi i32 [ [[V0]], [[FOR_BODY]] ], [ poison, [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[RESULT_0_LCSSA]]
 ;
 entry:
@@ -492,11 +491,10 @@ define i32 @reduction_max(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[TMP3:%.*]] = call i32 @llvm.vector.reduce.umax.v4i32(<4 x i32> [[TMP1]])
 ; CHECK-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; CHECK:       scalar.ph:
-; CHECK-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ 256, [[MIDDLE_BLOCK]] ], [ 0, [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP3]], [[MIDDLE_BLOCK]] ], [ 1000, [[ENTRY]] ]
+; CHECK-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       for.body:
-; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
+; CHECK-NEXT:    [[INDVARS_IV:%.*]] = phi i32 [ [[INDVARS_IV_NEXT:%.*]], [[FOR_BODY]] ], [ 256, [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[RESULT_08:%.*]] = phi i32 [ [[V0:%.*]], [[FOR_BODY]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
 ; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDVARS_IV]]
 ; CHECK-NEXT:    [[L0:%.*]] = load i32, ptr [[ARRAYIDX]], align 4
@@ -505,7 +503,7 @@ define i32 @reduction_max(ptr nocapture %A, ptr nocapture %B) {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp eq i32 [[INDVARS_IV_NEXT]], 257
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP21:![0-9]+]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi i32 [ [[V0]], [[FOR_BODY]] ], [ [[TMP3]], [[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RESULT_0_LCSSA:%.*]] = phi i32 [ [[V0]], [[FOR_BODY]] ], [ poison, [[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i32 [[RESULT_0_LCSSA]]
 ;
 entry:
