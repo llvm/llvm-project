@@ -316,6 +316,28 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  nextafter
+  SRCS
+    nextafter.cpp
+  HDRS
+    ../../nextafter.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  nextafterf
+  SRCS
+    nextafterf.cpp
+  HDRS
+    ../../nextafterf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
   pow
   SRCS
     pow.cpp
@@ -343,6 +365,105 @@ add_entrypoint_object(
     sin.cpp
   HDRS
     ../../sin.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  sinf
+  SRCS
+    sinf.cpp
+  HDRS
+    ../../sinf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  sincos
+  SRCS
+    sincos.cpp
+  HDRS
+    ../../sincos.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  sincosf
+  SRCS
+    sincosf.cpp
+  HDRS
+    ../../sincosf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  sinh
+  SRCS
+    sinh.cpp
+  HDRS
+    ../../sinh.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  sinhf
+  SRCS
+    sinhf.cpp
+  HDRS
+    ../../sinhf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  tan
+  SRCS
+    tan.cpp
+  HDRS
+    ../../tan.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  tanf
+  SRCS
+    tanf.cpp
+  HDRS
+    ../../tanf.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  tanh
+  SRCS
+    tanh.cpp
+  HDRS
+    ../../tanh.h
+  COMPILE_OPTIONS
+    ${bitcode_link_flags}
+    -O2
+)
+
+add_entrypoint_object(
+  tanhf
+  SRCS
+    tanhf.cpp
+  HDRS
+    ../../tanhf.h
   COMPILE_OPTIONS
     ${bitcode_link_flags}
     -O2
