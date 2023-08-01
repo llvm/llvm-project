@@ -8,6 +8,7 @@ on:
       - 'libunwind/**'
       - 'runtimes/**'
       - 'lldb/**'
+      - '.github/**'
 
 permissions:
   pull-requests: write
