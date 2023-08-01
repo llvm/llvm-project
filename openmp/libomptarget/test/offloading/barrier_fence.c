@@ -1,5 +1,7 @@
 // RUN: %libomptarget-compile-generic -fopenmp-offload-mandatory -O3
 // RUN: %libomptarget-run-generic
+// RUN: %libomptarget-compileopt-generic -fopenmp-offload-mandatory -O3
+// RUN: %libomptarget-run-generic
 
 // UNSUPPORTED: aarch64-unknown-linux-gnu
 // UNSUPPORTED: aarch64-unknown-linux-gnu-LTO

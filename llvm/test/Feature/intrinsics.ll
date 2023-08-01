@@ -70,4 +70,4 @@ define void @trap() {
 }
 
 ; CHECK: attributes #0 = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
-; CHECK: attributes #1 = { cold noreturn nounwind }
+; CHECK: attributes #1 = { cold noreturn nounwind memory(inaccessiblemem: write) }

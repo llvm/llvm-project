@@ -150,8 +150,6 @@ void DimLvlExpr::printAffineExprInternal(
     rhs.printStrong(os);
   } else {
     // Combination of all the special rules for addition/subtraction.
-    // TODO(wrengr): despite being succinct, this is prolly too confusing for
-    // readers.
     lhs.printWeak(os);
     const auto rx = matchNeg(rhs);
     os << (rx ? " - " : " + ");
@@ -180,8 +178,9 @@ DimSpec::DimSpec(DimVar var, DimExpr expr, SparseTensorDimSliceAttr slice)
     : var(var), expr(expr), slice(slice) {}
 
 bool DimSpec::isValid(Ranks const &ranks) const {
-  return ranks.isValid(var) && ranks.isValid(expr);
-  // TODO(wrengr): is there anything in `slice` that needs validation?
+  // Nothing in `slice` needs additional validation.
+  // We explicitly consider null-expr to be vacuously valid.
+  return ranks.isValid(var) && (!expr || ranks.isValid(expr));
 }
 
 bool DimSpec::isFunctionOf(VarSet const &vars) const {
@@ -220,8 +219,8 @@ LvlSpec::LvlSpec(LvlVar var, LvlExpr expr, DimLevelType type)
 }
 
 bool LvlSpec::isValid(Ranks const &ranks) const {
+  // Nothing in `type` needs additional validation.
   return ranks.isValid(var) && ranks.isValid(expr);
-  // TODO(wrengr): is there anything in `type` that needs validation?
 }
 
 bool LvlSpec::isFunctionOf(VarSet const &vars) const {
@@ -252,6 +251,8 @@ DimLvlMap::DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
                      ArrayRef<LvlSpec> lvlSpecs)
     : symRank(symRank), dimSpecs(dimSpecs), lvlSpecs(lvlSpecs) {
   // First, check integrity of the variable-binding structure.
+  // NOTE: This establishes the invariant that calls to `VarSet::add`
+  // below cannot cause OOB errors.
   assert(isWF());
 
   // TODO: Second, we need to infer/validate the `lvlToDim` mapping.
@@ -260,14 +261,19 @@ DimLvlMap::DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
   // needs to happen before the code for setting every `LvlSpec::elideVar`,
   // since if the LvlVar is only used in elided DimExpr, then the
   // LvlVar should also be elided.
+  // NOTE: Whenever we set a new DimExpr, we must make sure to validate it
+  // against our ranks, to restore the invariant established by `isWF` above.
+  // TODO(wrengr): We might should adjust the `DimLvlExpr` ctor to take a
+  // `Ranks` argument and perform the validation then.
 
   // Third, we set every `LvlSpec::elideVar` according to whether that
   // LvlVar occurs in a non-elided DimExpr (TODO: or CountingExpr).
+  // NOTE: The invariant established by `isWF` ensures that the following
+  // calls to `VarSet::add` cannot raise OOB errors.
   VarSet usedVars(getRanks());
-  // NOTE TO Wren: bypassed for now
-  // for (const auto &dimSpec : dimSpecs)
-  //  if (!dimSpec.canElideExpr())
-  //    usedVars.add(dimSpec.getExpr());
+  for (const auto &dimSpec : dimSpecs)
+    if (!dimSpec.canElideExpr())
+      usedVars.add(dimSpec.getExpr());
   for (auto &lvlSpec : this->lvlSpecs)
     lvlSpec.setElideVar(!usedVars.contains(lvlSpec.getBoundVar()));
 }

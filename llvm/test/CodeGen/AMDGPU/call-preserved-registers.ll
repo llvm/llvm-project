@@ -35,10 +35,12 @@ define amdgpu_kernel void @test_kernel_call_external_void_func_void_clobber_s30_
 ; GCN-NEXT: ;;#ASMSTART
 ; GCN-NEXT: ;;#ASMEND
 ; GCN-NEXT: s_swappc_b64
-; GCN-DAG:   v_readlane_b32 s30, v40, 2
-; GCN-DAG:   v_readlane_b32 s31, v40, 3
-; GCN: v_readlane_b32 s35, v40, 1
-; GCN: v_readlane_b32 s34, v40, 0
+; GCN: v_readlane_b32 s30, v40, 2
+; GCN: v_readlane_b32 s31, v40, 3
+; MUBUF-DAG:   v_readlane_b32 s35, v40, 1
+; MUBUF-DAG:   v_readlane_b32 s34, v40, 0
+; FLATSCR-DAG: v_readlane_b32 s35, v40, 1
+; FLATSCR-DAG: v_readlane_b32 s34, v40, 0
 
 ; GCN: v_readlane_b32 [[FP_SCRATCH_COPY:s[0-9]+]], v40, 4
 ; MUBUF:   buffer_load_dword
@@ -58,9 +60,9 @@ define void @test_func_call_external_void_func_void_clobber_s30_s31_call_externa
 ; MUBUF:   buffer_store_dword v40
 ; FLATSCR: scratch_store_dword off, v40
 ; GCN: v_writelane_b32 v40, [[FP_SCRATCH_COPY]], 4
-
 ; MUBUF:   s_addk_i32 s32, 0x400
 ; FLATSCR: s_add_i32 s32, s32, 16
+
 ; GCN: s_swappc_b64
 ; GCN-NEXT: s_swappc_b64
 

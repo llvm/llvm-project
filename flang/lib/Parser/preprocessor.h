@@ -80,6 +80,10 @@ public:
   // Implements a preprocessor directive.
   void Directive(const TokenSequence &, Prescanner &);
 
+  bool anyMacroWithUnbalancedParentheses() const {
+    return anyMacroWithUnbalancedParentheses_;
+  }
+
 private:
   enum class IsElseActive { No, Yes };
   enum class CanDeadElseAppear { No, Yes };
@@ -91,11 +95,14 @@ private:
   bool IsIfPredicateTrue(const TokenSequence &expr, std::size_t first,
       std::size_t exprTokens, Prescanner &);
   void LineDirective(const TokenSequence &, std::size_t, Prescanner &);
+  void CheckForUnbalancedParentheses(
+      const TokenSequence &, std::size_t first, std::size_t tokens);
 
   AllSources &allSources_;
   std::list<std::string> names_;
   std::unordered_map<CharBlock, Definition> definitions_;
   std::stack<CanDeadElseAppear> ifStack_;
+  bool anyMacroWithUnbalancedParentheses_{false};
 };
 } // namespace Fortran::parser
 #endif // FORTRAN_PARSER_PREPROCESSOR_H_

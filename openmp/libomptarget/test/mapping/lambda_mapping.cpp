@@ -1,7 +1,8 @@
-// RUN: %libomptarget-compilexx-run-and-check-generic
-
-// Error on the gpu that crashes the host
-// UNSUPPORTED: amdgcn-amd-amdhsa
+// On AMDGPU we don't have malloc support yet. We need optimizations
+// to avoid a thread state which requires malloc.
+//
+// XUN: %libomptarget-compilexx-run-and-check-generic
+// RUN: %libomptarget-compileoptxx-run-and-check-generic
 
 #include <iostream>
 

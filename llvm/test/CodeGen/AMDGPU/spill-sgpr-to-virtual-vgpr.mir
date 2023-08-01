@@ -17,20 +17,19 @@ machineFunctionInfo:
   hasSpilledSGPRs: true
 body:             |
   bb.0:
-    liveins: $sgpr10
+    liveins: $sgpr30_sgpr31, $sgpr10
     ; GCN-LABEL: name: sgpr32_spill
-    ; GCN: liveins: $sgpr10
+    ; GCN: liveins: $sgpr30_sgpr31, $sgpr10
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: S_NOP 0
     ; GCN-NEXT: [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr10, 0, [[V_WRITELANE_B32_]]
     ; GCN-NEXT: $sgpr10 = V_READLANE_B32 [[V_WRITELANE_B32_]], 0
-    ; GCN-NEXT: KILL [[V_WRITELANE_B32_]]
-    ; GCN-NEXT: SI_RETURN
+    ; GCN-NEXT: S_SETPC_B64 $sgpr30_sgpr31
     S_NOP 0
     SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-    SI_RETURN
+    S_SETPC_B64 $sgpr30_sgpr31
 ...
 
 # Needed an additional virtual lane register as the lanes of current register are fully occupied while spilling a wide SGPR tuple.
@@ -52,9 +51,9 @@ machineFunctionInfo:
   hasSpilledSGPRs: true
 body:             |
   bb.0:
-    liveins: $sgpr10, $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    liveins: $sgpr30_sgpr31, $sgpr10, $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN-LABEL: name: sgpr_spill_lane_crossover
-    ; GCN: liveins: $sgpr10, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $vgpr0, $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
+    ; GCN: liveins: $sgpr10, $sgpr64, $sgpr65, $sgpr66, $sgpr67, $sgpr68, $sgpr69, $sgpr70, $sgpr71, $sgpr72, $sgpr73, $sgpr74, $sgpr75, $sgpr76, $sgpr77, $sgpr78, $sgpr79, $sgpr80, $sgpr81, $sgpr82, $sgpr83, $sgpr84, $sgpr85, $sgpr86, $sgpr87, $sgpr88, $sgpr89, $sgpr90, $sgpr91, $sgpr92, $sgpr93, $sgpr94, $sgpr95, $vgpr0, $sgpr30_sgpr31, $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71, $sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79, $sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87, $sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95
     ; GCN-NEXT: {{  $}}
     ; GCN-NEXT: [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
     ; GCN-NEXT: $vgpr0 = V_WRITELANE_B32 killed $sgpr64, 0, $vgpr0
@@ -189,47 +188,14 @@ body:             |
     ; GCN-NEXT: $sgpr94 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 31
     ; GCN-NEXT: $sgpr95 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 32
     ; GCN-NEXT: $sgpr10 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 0
-    ; GCN-NEXT: $sgpr95 = V_READLANE_B32 $vgpr0, 31
-    ; GCN-NEXT: $sgpr94 = V_READLANE_B32 $vgpr0, 30
-    ; GCN-NEXT: $sgpr93 = V_READLANE_B32 $vgpr0, 29
-    ; GCN-NEXT: $sgpr92 = V_READLANE_B32 $vgpr0, 28
-    ; GCN-NEXT: $sgpr91 = V_READLANE_B32 $vgpr0, 27
-    ; GCN-NEXT: $sgpr90 = V_READLANE_B32 $vgpr0, 26
-    ; GCN-NEXT: $sgpr89 = V_READLANE_B32 $vgpr0, 25
-    ; GCN-NEXT: $sgpr88 = V_READLANE_B32 $vgpr0, 24
-    ; GCN-NEXT: $sgpr87 = V_READLANE_B32 $vgpr0, 23
-    ; GCN-NEXT: $sgpr86 = V_READLANE_B32 $vgpr0, 22
-    ; GCN-NEXT: $sgpr85 = V_READLANE_B32 $vgpr0, 21
-    ; GCN-NEXT: $sgpr84 = V_READLANE_B32 $vgpr0, 20
-    ; GCN-NEXT: $sgpr83 = V_READLANE_B32 $vgpr0, 19
-    ; GCN-NEXT: $sgpr82 = V_READLANE_B32 $vgpr0, 18
-    ; GCN-NEXT: $sgpr81 = V_READLANE_B32 $vgpr0, 17
-    ; GCN-NEXT: $sgpr80 = V_READLANE_B32 $vgpr0, 16
-    ; GCN-NEXT: $sgpr79 = V_READLANE_B32 $vgpr0, 15
-    ; GCN-NEXT: $sgpr78 = V_READLANE_B32 $vgpr0, 14
-    ; GCN-NEXT: $sgpr77 = V_READLANE_B32 $vgpr0, 13
-    ; GCN-NEXT: $sgpr76 = V_READLANE_B32 $vgpr0, 12
-    ; GCN-NEXT: $sgpr75 = V_READLANE_B32 $vgpr0, 11
-    ; GCN-NEXT: $sgpr74 = V_READLANE_B32 $vgpr0, 10
-    ; GCN-NEXT: $sgpr73 = V_READLANE_B32 $vgpr0, 9
-    ; GCN-NEXT: $sgpr72 = V_READLANE_B32 $vgpr0, 8
-    ; GCN-NEXT: $sgpr71 = V_READLANE_B32 $vgpr0, 7
-    ; GCN-NEXT: $sgpr70 = V_READLANE_B32 $vgpr0, 6
-    ; GCN-NEXT: $sgpr69 = V_READLANE_B32 $vgpr0, 5
-    ; GCN-NEXT: $sgpr68 = V_READLANE_B32 $vgpr0, 4
-    ; GCN-NEXT: $sgpr67 = V_READLANE_B32 $vgpr0, 3
-    ; GCN-NEXT: $sgpr66 = V_READLANE_B32 $vgpr0, 2
-    ; GCN-NEXT: $sgpr65 = V_READLANE_B32 $vgpr0, 1
-    ; GCN-NEXT: $sgpr64 = V_READLANE_B32 $vgpr0, 0
-    ; GCN-NEXT: KILL [[V_WRITELANE_B32_1]]
-    ; GCN-NEXT: SI_RETURN implicit $sgpr10
+    ; GCN-NEXT: S_SETPC_B64 $sgpr30_sgpr31
     S_NOP 0
     SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     SI_SPILL_S1024_SAVE killed $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95, %stack.1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     S_NOP 0
     renamable $sgpr64_sgpr65_sgpr66_sgpr67_sgpr68_sgpr69_sgpr70_sgpr71_sgpr72_sgpr73_sgpr74_sgpr75_sgpr76_sgpr77_sgpr78_sgpr79_sgpr80_sgpr81_sgpr82_sgpr83_sgpr84_sgpr85_sgpr86_sgpr87_sgpr88_sgpr89_sgpr90_sgpr91_sgpr92_sgpr93_sgpr94_sgpr95 = SI_SPILL_S1024_RESTORE %stack.1, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-    SI_RETURN implicit $sgpr10
+    S_SETPC_B64 $sgpr30_sgpr31
 ...
 
 # The implicit def for the lane VGPR should be inserted at the common dominator block (the entry block here).
@@ -251,7 +217,7 @@ body:             |
   ; GCN-LABEL: name: lane_vgpr_implicit_def_at_common_dominator_block
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr10, $sgpr11
+  ; GCN-NEXT:   liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN-NEXT:   S_NOP 0
@@ -260,7 +226,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
-  ; GCN-NEXT:   liveins: $sgpr10
+  ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = S_MOV_B32 10
   ; GCN-NEXT:   [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr10, 0, [[V_WRITELANE_B32_]]
@@ -268,37 +234,36 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
-  ; GCN-NEXT:   liveins: $sgpr10
+  ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = S_MOV_B32 20
   ; GCN-NEXT:   [[V_WRITELANE_B32_1:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr10, 0, [[V_WRITELANE_B32_1]]
   ; GCN-NEXT:   S_BRANCH %bb.3
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
-  ; GCN-NEXT:   liveins: $sgpr10
+  ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = V_READLANE_B32 [[V_WRITELANE_B32_1]], 0
-  ; GCN-NEXT:   KILL [[V_WRITELANE_B32_1]]
-  ; GCN-NEXT:   SI_RETURN implicit $sgpr10
+  ; GCN-NEXT:   S_SETPC_B64 $sgpr30_sgpr31, implicit $sgpr10
   bb.0:
-    liveins: $sgpr10, $sgpr11
+    liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
     S_NOP 0
     S_CMP_EQ_U32 $sgpr11, 0, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit killed $scc
   bb.1:
-    liveins: $sgpr10
+    liveins: $sgpr10, $sgpr30_sgpr31
     $sgpr10 = S_MOV_B32 10
     SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     S_BRANCH %bb.3
   bb.2:
-    liveins: $sgpr10
+    liveins: $sgpr10, $sgpr30_sgpr31
     $sgpr10 = S_MOV_B32 20
     SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     S_BRANCH %bb.3
   bb.3:
-    liveins: $sgpr10
+    liveins: $sgpr10, $sgpr30_sgpr31
     renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
-    SI_RETURN implicit $sgpr10
+    S_SETPC_B64 $sgpr30_sgpr31, implicit $sgpr10
 ...
 
 # The common dominator block is visited only at the end. The insertion point was initially identified to the
@@ -321,7 +286,7 @@ body:             |
   ; GCN-LABEL: name: dominator_block_follows_the_successors_bbs
   ; GCN: bb.0:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
-  ; GCN-NEXT:   liveins: $sgpr10, $sgpr11
+  ; GCN-NEXT:   liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[DEF:%[0-9]+]]:vgpr_32 = IMPLICIT_DEF
   ; GCN-NEXT:   S_NOP 0
@@ -329,7 +294,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.1:
   ; GCN-NEXT:   successors: %bb.2(0x80000000)
-  ; GCN-NEXT:   liveins: $sgpr10
+  ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = V_READLANE_B32 [[DEF]], 0
   ; GCN-NEXT:   $sgpr10 = S_ADD_I32 $sgpr10, 15, implicit-def dead $scc
@@ -337,7 +302,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.2:
   ; GCN-NEXT:   successors: %bb.3(0x80000000)
-  ; GCN-NEXT:   liveins: $sgpr10
+  ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = V_READLANE_B32 [[DEF]], 0
   ; GCN-NEXT:   $sgpr10 = S_ADD_I32 $sgpr10, 20, implicit-def dead $scc
@@ -345,7 +310,7 @@ body:             |
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.3:
   ; GCN-NEXT:   successors: %bb.2(0x40000000), %bb.1(0x40000000)
-  ; GCN-NEXT:   liveins: $sgpr10, $sgpr11
+  ; GCN-NEXT:   liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   $sgpr10 = S_MOV_B32 10
   ; GCN-NEXT:   [[V_WRITELANE_B32_:%[0-9]+]]:vgpr_32 = V_WRITELANE_B32 killed $sgpr10, 0, [[V_WRITELANE_B32_]]
@@ -354,34 +319,33 @@ body:             |
   ; GCN-NEXT:   S_BRANCH %bb.1
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT: bb.4:
-  ; GCN-NEXT:   liveins: $sgpr10
+  ; GCN-NEXT:   liveins: $sgpr10, $sgpr30_sgpr31
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   S_NOP 0
-  ; GCN-NEXT:   KILL [[V_WRITELANE_B32_]]
-  ; GCN-NEXT:   SI_RETURN implicit $sgpr10
+  ; GCN-NEXT:   S_SETPC_B64 $sgpr30_sgpr31, implicit $sgpr10
   bb.0:
-    liveins: $sgpr10, $sgpr11
+    liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
     S_NOP 0
     S_BRANCH %bb.3
   bb.1:
-    liveins: $sgpr10
+    liveins: $sgpr10, $sgpr30_sgpr31
     renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     $sgpr10 = S_ADD_I32 $sgpr10, 15, implicit-def dead $scc
     S_BRANCH %bb.2
   bb.2:
-    liveins: $sgpr10
+    liveins: $sgpr10, $sgpr30_sgpr31
     renamable $sgpr10 = SI_SPILL_S32_RESTORE %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     $sgpr10 = S_ADD_I32 $sgpr10, 20, implicit-def dead $scc
     S_BRANCH %bb.3
   bb.3:
-    liveins: $sgpr10, $sgpr11
+    liveins: $sgpr10, $sgpr11, $sgpr30_sgpr31
     $sgpr10 = S_MOV_B32 10
     SI_SPILL_S32_SAVE killed $sgpr10, %stack.0, implicit $exec, implicit $sgpr0_sgpr1_sgpr2_sgpr3, implicit $sgpr32
     S_CMP_EQ_U32 $sgpr11, 0, implicit-def $scc
     S_CBRANCH_SCC1 %bb.2, implicit killed $scc
     S_BRANCH %bb.1
   bb.4:
-    liveins: $sgpr10
+    liveins: $sgpr10, $sgpr30_sgpr31
     S_NOP 0
-    SI_RETURN implicit $sgpr10
+    S_SETPC_B64 $sgpr30_sgpr31, implicit $sgpr10
 ...

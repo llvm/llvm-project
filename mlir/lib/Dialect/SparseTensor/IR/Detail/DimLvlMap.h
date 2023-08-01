@@ -114,7 +114,7 @@ public:
 
   /// Checks whether the variables bound/used by this spec are valid
   /// with respect to the given ranks.
-  bool isValid(Ranks const &ranks) const;
+  [[nodiscard]] bool isValid(Ranks const &ranks) const;
 
   void print(llvm::raw_ostream &os) const;
   void print(AsmPrinter &printer) const;
@@ -220,9 +220,11 @@ public:
   void setElideExpr(bool b) { elideExpr = b; }
   constexpr SparseTensorDimSliceAttr getSlice() const { return slice; }
 
-  /// Checks whether the variables bound/used by this spec are valid
-  /// with respect to the given ranks.
-  bool isValid(Ranks const &ranks) const;
+  /// Checks whether the variables bound/used by this spec are valid with
+  /// respect to the given ranks.  Note that null `DimExpr` is considered
+  /// to be vacuously valid, and therefore calling `setExpr` invalidates
+  /// the result of this predicate.
+  [[nodiscard]] bool isValid(Ranks const &ranks) const;
 
   // TODO(wrengr): Use it or loose it.
   bool isFunctionOf(Var var) const;
@@ -271,7 +273,7 @@ public:
   //
   // NOTE: Once we introduce "counting expressions" this will need
   // a more sophisticated implementation than `DimSpec::isValid` does.
-  bool isValid(Ranks const &ranks) const;
+  [[nodiscard]] bool isValid(Ranks const &ranks) const;
 
   // TODO(wrengr): Use it or loose it.
   bool isFunctionOf(Var var) const;
@@ -295,7 +297,7 @@ class DimLvlMap final {
 
   // Checks for integrity of variable-binding structure.
   // This is already called by the ctor.
-  bool isWF() const;
+  [[nodiscard]] bool isWF() const;
 
 public:
   DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
