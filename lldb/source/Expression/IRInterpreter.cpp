@@ -470,7 +470,8 @@ static const char *memory_allocation_error =
     "Interpreter couldn't allocate memory";
 static const char *memory_write_error = "Interpreter couldn't write to memory";
 static const char *memory_read_error = "Interpreter couldn't read from memory";
-static const char *infinite_loop_error = "Interpreter ran for too many cycles";
+static const char *timeout_error =
+    "Reached timeout while interpreting expression";
 static const char *too_many_functions_error =
     "Interpreter doesn't handle modules with multiple function bodies.";
 
@@ -683,7 +684,8 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
                               lldb_private::Status &error,
                               lldb::addr_t stack_frame_bottom,
                               lldb::addr_t stack_frame_top,
-                              lldb_private::ExecutionContext &exe_ctx) {
+                              lldb_private::ExecutionContext &exe_ctx,
+                              lldb_private::Timeout<std::micro> timeout) {
   lldb_private::Log *log(GetLog(LLDBLog::Expressions));
 
   if (log) {
@@ -722,11 +724,23 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     frame.MakeArgument(&*ai, ptr);
   }
 
-  uint32_t num_insts = 0;
-
   frame.Jump(&function.front());
 
-  while (frame.m_ii != frame.m_ie && (++num_insts < 4096)) {
+  using clock = std::chrono::steady_clock;
+
+  // Compute the time at which the timeout has been exceeded.
+  std::optional<clock::time_point> end_time;
+  if (timeout && timeout->count() > 0)
+    end_time = clock::now() + *timeout;
+
+  while (frame.m_ii != frame.m_ie) {
+    // Timeout reached: stop interpreting.
+    if (end_time && clock::now() >= *end_time) {
+      error.SetErrorToGenericError();
+      error.SetErrorString(timeout_error);
+      return false;
+    }
+
     const Instruction *inst = &*frame.m_ii;
 
     LLDB_LOGF(log, "Interpreting %s", PrintValue(inst).c_str());
@@ -1569,12 +1583,6 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     }
 
     ++frame.m_ii;
-  }
-
-  if (num_insts >= 4096) {
-    error.SetErrorToGenericError();
-    error.SetErrorString(infinite_loop_error);
-    return false;
   }
 
   return false;
