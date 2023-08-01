@@ -2468,7 +2468,7 @@ Target::GetScratchTypeSystemForLanguage(lldb::LanguageType language,
         // replacing it could cause a use-after-free later on.
         auto &lock = GetSwiftScratchContextLock();
         if (lock.try_lock()) {
-          auto unlock = llvm::make_scope_exit([&lock] { lock.unlock(); });
+          std::lock_guard<std::shared_mutex> unlock(lock, std::adopt_lock);
           if (m_use_scratch_typesystem_per_module)
             DisplayFallbackSwiftContextErrors(swift_ast_ctx);
           else if (StreamSP errs = GetDebugger().GetAsyncErrorStream()) {
@@ -2813,7 +2813,7 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
         log->PutCString("couldn't acquire scratch context lock");
       return;
     }
-    auto unlock = llvm::make_scope_exit([&lock] { lock.unlock(); });
+    std::lock_guard<std::shared_mutex> unlock(lock, std::adopt_lock);
 
     // With the lock held, get the current scratch type system. This ensures
     // the current instance is used even in the unlikely event it was changed
