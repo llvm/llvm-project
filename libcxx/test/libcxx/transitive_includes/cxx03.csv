@@ -126,6 +126,7 @@ chrono tuple
 chrono type_traits
 chrono version
 cinttypes cstdint
+cmath limits
 cmath type_traits
 cmath version
 codecvt atomic
