@@ -10,7 +10,6 @@ add_llvm_component_library(LLVMCore
   ConstantFold.cpp
   ConstantRange.cpp
   Constants.cpp
-  ConvergenceVerifier.cpp
   Core.cpp
   CycleInfo.cpp
   DIBuilder.cpp
