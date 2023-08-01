@@ -262,10 +262,8 @@ DimLvlMap::DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
   // needs to happen before the code for setting every `LvlSpec::elideVar`,
   // since if the LvlVar is only used in elided DimExpr, then the
   // LvlVar should also be elided.
-  // NOTE: Whenever we set a new DimExpr, we must make sure to validate it
-  // against our ranks, to restore the invariant established by `isWF` above.
-  // TODO(wrengr): We might should adjust the `DimLvlExpr` ctor to take a
-  // `Ranks` argument and perform the validation then.
+  // NOTE: Be sure to use `DimLvlMap::setDimExpr` for setting the new exprs,
+  // to ensure that we maintain the invariant established by `isWF` above.
 
   // Third, we set every `LvlSpec::elideVar` according to whether that
   // LvlVar occurs in a non-elided DimExpr (TODO: or CountingExpr).
@@ -298,6 +296,22 @@ bool DimLvlMap::isWF() const {
       return false;
   assert(lvlNum == ranks.getLvlRank());
   return true;
+}
+
+AffineMap DimLvlMap::getDimToLvlMap(MLIRContext *context) const {
+  SmallVector<AffineExpr> lvlAffines;
+  lvlAffines.reserve(getLvlRank());
+  for (const auto &lvlSpec : lvlSpecs)
+    lvlAffines.push_back(lvlSpec.getExpr().getAffineExpr());
+  return AffineMap::get(getDimRank(), getSymRank(), lvlAffines, context);
+}
+
+AffineMap DimLvlMap::getLvlToDimMap(MLIRContext *context) const {
+  SmallVector<AffineExpr> dimAffines;
+  dimAffines.reserve(getDimRank());
+  for (const auto &dimSpec : dimSpecs)
+    dimAffines.push_back(dimSpec.getExpr().getAffineExpr());
+  return AffineMap::get(getLvlRank(), getSymRank(), dimAffines, context);
 }
 
 void DimLvlMap::dump() const {

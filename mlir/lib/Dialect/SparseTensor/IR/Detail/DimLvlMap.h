@@ -290,16 +290,6 @@ static_assert(IsZeroCostAbstraction<LvlSpec>);
 
 //===----------------------------------------------------------------------===//
 class DimLvlMap final {
-  // TODO(wrengr): Need to define getters
-  unsigned symRank;
-  SmallVector<DimSpec> dimSpecs;
-  SmallVector<LvlSpec> lvlSpecs;
-  bool mustPrintLvlVars;
-
-  // Checks for integrity of variable-binding structure.
-  // This is already called by the ctor.
-  [[nodiscard]] bool isWF() const;
-
 public:
   DimLvlMap(unsigned symRank, ArrayRef<DimSpec> dimSpecs,
             ArrayRef<LvlSpec> lvlSpecs);
@@ -310,11 +300,41 @@ public:
   unsigned getRank(VarKind vk) const { return getRanks().getRank(vk); }
   Ranks getRanks() const { return {getSymRank(), getDimRank(), getLvlRank()}; }
 
-  DimLevelType getDimLevelType(unsigned i) { return lvlSpecs[i].getType(); }
+  ArrayRef<DimSpec> getDims() const { return dimSpecs; }
+  const DimSpec &getDim(Dimension dim) const { return dimSpecs[dim]; }
+  SparseTensorDimSliceAttr getDimSlice(Dimension dim) const {
+    return getDim(dim).getSlice();
+  }
+
+  ArrayRef<LvlSpec> getLvls() const { return lvlSpecs; }
+  const LvlSpec &getLvl(Level lvl) const { return lvlSpecs[lvl]; }
+  DimLevelType getLvlType(Level lvl) const { return getLvl(lvl).getType(); }
+
+  AffineMap getDimToLvlMap(MLIRContext *context) const;
+  AffineMap getLvlToDimMap(MLIRContext *context) const;
 
   void print(llvm::raw_ostream &os, bool wantElision = true) const;
   void print(AsmPrinter &printer, bool wantElision = true) const;
   void dump() const;
+
+private:
+  /// Checks for integrity of variable-binding structure.
+  /// This is already called by the ctor.
+  [[nodiscard]] bool isWF() const;
+
+  /// Helper function to call `DimSpec::setExpr` while asserting that
+  /// the invariant established by `DimLvlMap:isWF` is maintained.
+  /// This is used by the ctor.
+  void setDimExpr(Dimension dim, DimExpr expr) {
+    assert(expr && getRanks().isValid(expr));
+    dimSpecs[dim].setExpr(expr);
+  }
+
+  // All these fields are const-after-ctor.
+  unsigned symRank;
+  SmallVector<DimSpec> dimSpecs;
+  SmallVector<LvlSpec> lvlSpecs;
+  bool mustPrintLvlVars;
 };
 
 //===----------------------------------------------------------------------===//
