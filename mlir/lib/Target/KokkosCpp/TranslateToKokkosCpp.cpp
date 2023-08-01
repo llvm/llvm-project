@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/ControlFlow/IR/ControlFlowOps.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
@@ -71,6 +72,113 @@ inline LogicalResult interleaveCommaWithError(const Container &c,
   return interleaveWithError(c.begin(), c.end(), eachFn, [&]() { os << ", "; });
 }
 
+
+int getInternalParallelDepth(scf::ParallelOp op) {
+  int parallelDepth = 0;
+  for (auto parallelOp : op.getOps<scf::ParallelOp>())
+  {
+    int parallelDepth_tmp = getInternalParallelDepth(parallelOp) + 1;
+    if (parallelDepth_tmp > parallelDepth)
+      parallelDepth = parallelDepth_tmp;
+  }
+  return parallelDepth;
+}
+
+struct KokkosParallelEnv{
+  KokkosParallelEnv(bool useHierarchicalParallelism) {
+    useHierarchicalParallelism_ = useHierarchicalParallelism;
+    parallelLvl_ = 0;
+    useTeamRange_ = false;
+    useTeamThreadRange_ = false;
+    useThreadVectorRange_ = false;
+    useTeamVectorRange_ = false;
+    parallelDepth_ = -1;
+  }
+
+  KokkosParallelEnv(const KokkosParallelEnv &kokkosParallelEnv) {
+    useHierarchicalParallelism_ = kokkosParallelEnv.useHierarchicalParallelism_;
+    parallelLvl_ = kokkosParallelEnv.parallelLvl_;
+    parallelDepth_ = kokkosParallelEnv.parallelDepth_;
+  }
+
+  KokkosParallelEnv getInternalParallelEnv() {
+    KokkosParallelEnv internalParallelEnv(*this);
+    ++internalParallelEnv.parallelLvl_;
+    --internalParallelEnv.parallelDepth_;
+    internalParallelEnv.insideTeamRange_ =  insideTeamRange_ || useTeamRange_;
+    internalParallelEnv.insideTeamThreadRange_ = insideTeamThreadRange_ || useTeamThreadRange_;
+    internalParallelEnv.insideThreadVectorRange_ = insideThreadVectorRange_ || useThreadVectorRange_;
+    internalParallelEnv.insideTeamVectorRange_ = insideTeamVectorRange_ || useTeamVectorRange_;
+    internalParallelEnv.useTeamRange_ = false;
+    internalParallelEnv.useTeamThreadRange_ = false;
+    internalParallelEnv.useThreadVectorRange_ = false;
+    internalParallelEnv.useTeamVectorRange_ = false;
+    return internalParallelEnv;
+  }
+
+  bool useRangePolicy(int rank) {
+    if (parallelLvl_ == 0 || (useHierarchicalParallelism_ && !insideTeamRange_ && parallelDepth_==0))
+      return true;
+    else
+      return false;
+  }
+
+  bool useTeamRange(int rank) {
+    if (useHierarchicalParallelism_ && parallelLvl_==0 && rank==1 && parallelDepth_>0)
+      useTeamRange_ = true;
+    else
+      useTeamRange_ = false;
+    return useTeamRange_;
+  }
+
+  bool useTeamThreadRange(int rank) {
+    if (insideTeamRange_ && !insideTeamThreadRange_ && !insideThreadVectorRange_ && !insideTeamVectorRange_ && rank==1)
+      useTeamThreadRange_ = true;
+    else
+      useTeamThreadRange_ = false;
+    return useTeamThreadRange_;
+  }
+
+  bool useThreadVectorRange(int rank) {
+    if (insideTeamRange_ && insideTeamThreadRange_ && !insideThreadVectorRange_ && !insideTeamVectorRange_ && rank==1)
+      useThreadVectorRange_ = true;
+    else
+      useThreadVectorRange_ = false;
+    return useThreadVectorRange_;
+  }
+
+  bool useTeamVectorRange(int rank) {
+    if (insideTeamRange_ && !insideTeamThreadRange_ && !insideThreadVectorRange_ && !insideTeamVectorRange_ && rank==1 && parallelDepth_==0)
+      useTeamVectorRange_ = true;
+    else
+      useTeamVectorRange_ = false;
+    return useTeamVectorRange_;
+  }
+
+  bool useSerialLoop() {
+    if (insideThreadVectorRange_ || insideTeamVectorRange_)
+      return true;
+    if (!insideTeamRange_ && parallelLvl_>0)
+      return true;
+    return false;
+  }
+
+  void computeInternalParallelDepth(scf::ParallelOp op) {
+    parallelDepth_ = getInternalParallelDepth(op);
+  }
+
+  bool insideTeamRange() {
+    return insideTeamRange_;
+  }
+
+  private:
+    bool useHierarchicalParallelism_;
+    int parallelLvl_;
+    int parallelDepth_;
+    bool insideTeamRange_, insideTeamThreadRange_, insideThreadVectorRange_, insideTeamVectorRange_;
+    bool useTeamRange_, useTeamThreadRange_, useThreadVectorRange_, useTeamVectorRange_;
+};
+
 namespace {
 struct KokkosCppEmitter {
   explicit KokkosCppEmitter(raw_ostream &os, bool enableSparseSupport);
@@ -80,7 +188,7 @@ struct KokkosCppEmitter {
   LogicalResult emitAttribute(Location loc, Attribute attr);
 
   /// Emits operation 'op' with/without training semicolon or returns failure.
-  LogicalResult emitOperation(Operation &op, bool trailingSemicolon);
+  LogicalResult emitOperation(Operation &op, bool trailingSemicolon, KokkosParallelEnv &kokkosParallelEnv);
 
   /// Emits the functions kokkos_mlir_initialize() and kokkos_mlir_finalize()
   /// These are responsible for init/finalize of Kokkos, and allocation/initialization/deallocation
@@ -885,7 +993,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::CallOp call
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp, KokkosParallelEnv &kokkosParallelEnv) {
 
   raw_indented_ostream &os = emitter.ostream();
 
@@ -939,7 +1047,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp)
   // the end of a loop iteration and set the result variables after the for
   // loop.
   for (auto it = regionOps.begin(); std::next(it) != regionOps.end(); ++it) {
-    if (failed(emitter.emitOperation(*it, /*trailingSemicolon=*/true)))
+    if (failed(emitter.emitOperation(*it, /*trailingSemicolon=*/true, kokkosParallelEnv)))
       return failure();
   }
 
@@ -970,7 +1078,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ForOp forOp)
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whileOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whileOp, KokkosParallelEnv &kokkosParallelEnv) {
   //Declare the before args, after args, and results.
   for (auto pair : llvm::zip(whileOp.getBeforeArguments(), whileOp.getInits())) {
   //for (OpResult beforeArg : whileOp.getBeforeArguments()) {
@@ -1012,7 +1120,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whil
 
   //Emit the "before" block(s)
   for (auto& beforeOp : whileOp.getBefore().getOps()) {
-    if (failed(emitter.emitOperation(beforeOp, /*trailingSemicolon=*/true)))
+    if (failed(emitter.emitOperation(beforeOp, /*trailingSemicolon=*/true, kokkosParallelEnv)))
       return failure();
   }
 
@@ -1028,7 +1136,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whil
 
   //Emit the "after" block(s)
   for (auto& afterOp : whileOp.getAfter().getOps()) {
-    if (failed(emitter.emitOperation(afterOp, /*trailingSemicolon=*/true)))
+    if (failed(emitter.emitOperation(afterOp, /*trailingSemicolon=*/true, kokkosParallelEnv)))
       return failure();
   }
 
@@ -1048,7 +1156,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::WhileOp whil
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp condOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp condOp, KokkosParallelEnv &kokkosParallelEnv) {
   //The condition value should already be in scope. Just break out of loop if it's falsey.
   emitter << "if(";
   if(failed(emitter.emitValue(condOp.getCondition())))
@@ -1062,7 +1170,95 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ConditionOp 
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp op) {
+static LogicalResult printSeralOperation(KokkosCppEmitter &emitter, scf::ParallelOp op, KokkosParallelEnv &kokkosParallelEnv) {
+  emitter << "// the scf.parallel is serialized as no more parallel level is available\n";
+  OperandRange lowerBounds = op.getLowerBound();
+  OperandRange upperBounds = op.getUpperBound();
+  OperandRange step = op.getStep();
+  //OperandRange initVals = op.getInitVals();
+  ValueRange inductionVars = op.getInductionVars();
+  //Note: results mean there is a reduction
+  ResultRange results = op.getResults();
+  bool isReduction = results.size() > size_t(0);
+
+  if(results.size() > size_t(1))
+    return op.emitError("Multiple reduction is not yet implemented");
+
+  for (OpResult result : results) {
+    if (failed(emitter.emitVariableDeclaration(result, true)))
+      return failure();
+  }
+
+  if(isReduction)
+  {
+    for (auto reduce : op.getOps<scf::ReduceOp>())
+    {
+      if (failed(emitter.emitType(reduce.getLoc(), reduce.getOperand().getType(), true)))
+        return failure();
+
+      emitter << " " << emitter.getOrCreateName(reduce.getRegion().getOps().begin()->getResult(0)) << " = ";
+      if (failed(emitter.emitType(reduce.getLoc(), reduce.getOperand().getType(), true)))
+        return failure();
+      emitter <<"(0);\n";
+    }
+  }
+  int rank = inductionVars.size();
+
+  if(rank == 0)
+    return op.emitError("Rank-0 (single element) parallel iteration space not supported in printSeralOperation");
+
+  for(int i = 0; i < rank; i++)
+  {
+    emitter << "for (";
+    emitter << "int64_t " << emitter.getOrCreateName(inductionVars[i]);
+    emitter << " = ";
+    if(failed(emitter.emitValue(lowerBounds[0])))
+      return failure();
+    emitter << "; ";
+    emitter << emitter.getOrCreateName(inductionVars[i]);
+    emitter << " < ";
+    if(failed(emitter.emitValue(upperBounds[0])))
+      return failure();
+    emitter << "; ";
+    emitter << emitter.getOrCreateName(inductionVars[i]);
+    emitter << " += ";
+    if(failed(emitter.emitValue(step[i])))
+      return failure();
+    emitter << ") {\n";
+    emitter.ostream().indent();
+  }
+
+  //Now add the parallel body
+  Region& body = op.getRegion();
+  for (auto& op : body.getOps())
+  {
+    if (failed(emitter.emitOperation(op, true, kokkosParallelEnv)))
+      return failure();
+  }
+
+  for(int i = 0; i < rank; i++)
+  {
+    emitter.ostream().unindent();
+    emitter << "}\n";
+  }
+
+  if(isReduction)
+  {
+    for (OpResult result : results) {
+      for (auto reduce : op.getOps<scf::ReduceOp>())
+      {
+        emitter << emitter.getOrCreateName(result) << " = " << emitter.getOrCreateName(reduce.getRegion().getOps().begin()->getResult(0)) << ";\n";
+      }
+    }
+  }
+
+  return success();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp op, KokkosParallelEnv &kokkosParallelEnv) {
+  if (kokkosParallelEnv.useSerialLoop())
+    return printSeralOperation(emitter, op, kokkosParallelEnv);
+
   OperandRange lowerBounds = op.getLowerBound();
   OperandRange upperBounds = op.getUpperBound();
   OperandRange step = op.getStep();
@@ -1077,11 +1273,35 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
       return failure();
   }
 
+  kokkosParallelEnv.computeInternalParallelDepth(op);
+
+  int rank = inductionVars.size();
+  const bool useTeamPolicy = kokkosParallelEnv.useTeamRange(rank);
+  const bool usedInsideTeamPolicy = kokkosParallelEnv.insideTeamRange();
+
+  if (useTeamPolicy)
+  {
+    emitter << "typedef Kokkos::TeamPolicy<exec_space>::member_type member_type;\n";
+    emitter << "int league_size = (";
+    if(failed(emitter.emitValue(upperBounds[0])))
+      return failure();
+    emitter << " - ";
+    if(failed(emitter.emitValue(lowerBounds[0])))
+      return failure();
+    emitter << " + ";
+    if(failed(emitter.emitValue(step[0])))
+      return failure();
+    emitter << " - 1) / ";
+    if(failed(emitter.emitValue(step[0])))
+      return failure();
+    emitter << ";\n";
+    emitter << "Kokkos::TeamPolicy<exec_space> policy (league_size, Kokkos::AUTO(), Kokkos::AUTO() );\n";
+  }
+
   //TODO: handle common simplifying cases:
   //  - if step for a dimension is the constant 1, don't need to shift/scale the induction variable.
   //  - if iter range for a dimension is a single value, remove it and simply declare
   //    that induction variable as a constant (lowerBound).
-  int rank = inductionVars.size();
   emitter << "Kokkos::parallel_";
   if(isReduction)
     emitter << "reduce";
@@ -1093,9 +1313,20 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
   //To express an iteration space with arbitrary (step, lower, upper) correctly:
   //  iterate from [0, (upper - lower + step - 1) / step)
   //  and then take lower + i * step to get the value of the induction variable's value
-  if(rank == 1)
+  if(useTeamPolicy)
   {
-    emitter << "(Kokkos::RangePolicy<exec_space>(0, (";
+    emitter << "(policy, ";
+  }
+  else if(rank == 1)
+  {
+    if (kokkosParallelEnv.useTeamVectorRange(rank))
+      emitter << "(Kokkos::TeamVectorRange(member, (";
+    else if (kokkosParallelEnv.useTeamThreadRange(rank))
+      emitter << "(Kokkos::TeamThreadRange(member, (";
+    else if (kokkosParallelEnv.useThreadVectorRange(rank))
+      emitter << "(Kokkos::ThreadVectorRange(member, (";
+    else
+      emitter << "(Kokkos::RangePolicy<exec_space>(0, (";
     if(failed(emitter.emitValue(upperBounds[0])))
       return failure();
     emitter << " - ";
@@ -1139,18 +1370,55 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
     }
     emitter << "}),\n";
   }
-  emitter << "KOKKOS_LAMBDA(";
-  for(int i = 0; i < rank; i++)
-  {
-    if(i > 0)
-      emitter << ", ";
-    //note: the MDRangePolicy only iterates with unit step in each dimension. This variable needs to be
-    //shifted and scaled to match the actual range.
-    emitter << "int64_t unit_" << emitter.getOrCreateName(inductionVars[i]);
+  if (!usedInsideTeamPolicy)
+    emitter << "KOKKOS_LAMBDA(";
+  else
+    emitter << "[&](const ";
+  if (useTeamPolicy) {
+   emitter << "member_type member";
   }
-  //TODO: declare local update vars for each reduction here
+  else {
+    for(int i = 0; i < rank; i++)
+    {
+      if(i > 0)
+        emitter << ", ";
+      //note: the MDRangePolicy only iterates with unit step in each dimension. This variable needs to be
+      //shifted and scaled to match the actual range.
+      emitter << "int64_t ";
+      if (usedInsideTeamPolicy)
+        emitter << "&";
+      emitter << "unit_" << emitter.getOrCreateName(inductionVars[i]);
+    }
+  }
+  if(isReduction)
+  {
+    //Loop over the parallel body to get information about the reduction types
+    Region& body = op.getRegion();
+
+    for (auto reduce : op.getOps<scf::ReduceOp>())
+    {
+      Type type = reduce.getOperand().getType();
+      Block &reduction = reduce.getRegion().front();
+      
+      emitter << ", ";
+
+      if (failed(emitter.emitType(reduce.getLoc(), reduce.getOperand().getType(), true)))
+        return failure();
+
+      emitter << "& " << emitter.getOrCreateName(reduce.getRegion().getOps().begin()->getResult(0));
+
+    }
+  }
   emitter << ")\n{\n";
   emitter.ostream().indent();
+
+  if (useTeamPolicy) {
+    for(int i = 0; i < rank; i++)
+    {
+      emitter << "int64_t unit_" << emitter.getOrCreateName(inductionVars[i]) << " = member.league_rank ();\n";;
+    }
+  }
+
   // Declare the actual induction variables, with the correct bounds and step
   for(int i = 0; i < rank; i++)
   {
@@ -1164,15 +1432,30 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
   }
   //Now add the parallel body
   Region& body = op.getRegion();
+  KokkosParallelEnv internalParallelEnv = kokkosParallelEnv.getInternalParallelEnv();
   for (auto& op : body.getOps())
   {
-    if (failed(emitter.emitOperation(op, true)))
+    if (failed(emitter.emitOperation(op, true, internalParallelEnv)))
       return failure();
   }
   emitter.ostream().unindent();
-  //TODO: add Kokkos reducers here. Then join with the 'init' values,
-  // since Kokkos always assumes the init is identity.
-  emitter << "})\n";
+
+  if(isReduction)
+  {
+    emitter << "}, ";
+
+    for(size_t i = 0; i < results.size(); i++) {
+      if(failed(emitter.emitValue(results[i])))
+        return failure();
+      if ( i != results.size() - 1)
+        emitter << ", ";
+    }
+
+    emitter << ")\n";
+  }
+  else {
+    emitter << "})\n";
+  }
   return success();
   /*
 
@@ -1239,7 +1522,54 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ParallelOp o
   */
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp) {
+/// Matches a block containing a "simple" reduction. The expected shape of the
+/// block is as follows.
+///
+///   ^bb(%arg0, %arg1):
+///     %0 = OpTy(%arg0, %arg1)
+///     scf.reduce.return %0
+template <typename... OpTy>
+static bool matchSimpleReduction(Block &block) {
+  if (block.empty() || llvm::hasSingleElement(block) ||
+      std::next(block.begin(), 2) != block.end())
+    return false;
+
+  if (block.getNumArguments() != 2)
+    return false;
+
+  SmallVector<Operation *, 4> combinerOps;
+  Value reducedVal = matchReduction({block.getArguments()[1]},
+                                    /*redPos=*/0, combinerOps);
+
+  if (!reducedVal || !reducedVal.isa<BlockArgument>() ||
+      combinerOps.size() != 1)
+    return false;
+
+  return isa<OpTy...>(combinerOps[0]) &&
+         isa<scf::ReduceReturnOp>(block.back()) &&
+         block.front().getOperands() == block.getArguments();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::ReduceOp reduceOp, KokkosParallelEnv &kokkosParallelEnv) {
+  raw_indented_ostream &os = emitter.ostream();
+
+  Block &reduction = reduceOp.getRegion().front();
+
+  Operation *terminator = &reduceOp.getRegion().front().back();
+  assert(isa<scf::ReduceReturnOp>(terminator) &&
+         "expected reduce op to be terminated by redure return");
+
+  if (matchSimpleReduction<arith::AddFOp, LLVM::FAddOp>(reduction)) {
+    os << emitter.getOrCreateName(reduceOp.getRegion().getOps().begin()->getResult(0));
+    os << " += ";
+    os << emitter.getOrCreateName(reduceOp.getOperand());
+    return success();
+  }
+
+  return failure();
+}
+
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp, KokkosParallelEnv &kokkosParallelEnv) {
   raw_indented_ostream &os = emitter.ostream();
 
   for (OpResult result : ifOp.getResults()) {
@@ -1258,7 +1588,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp) {
   for (Operation &op : thenRegion.getOps()) {
     // Note: This prints a superfluous semicolon if the terminating yield op has
     // zero results.
-    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true, kokkosParallelEnv)))
       return failure();
   }
 
@@ -1272,7 +1602,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp) {
     for (Operation &op : elseRegion.getOps()) {
       // Note: This prints a superfluous semicolon if the terminating yield op
       // has zero results.
-      if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true)))
+      if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/true, kokkosParallelEnv)))
         return failure();
     }
 
@@ -1282,14 +1612,16 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::IfOp ifOp) {
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::YieldOp yieldOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, scf::YieldOp yieldOp, KokkosParallelEnv &kokkosParallelEnv) {
   raw_ostream &os = emitter.ostream();
   Operation &parentOp = *yieldOp.getOperation()->getParentOp();
 
+/*
   if (yieldOp.getNumOperands() != parentOp.getNumResults()) {
     return yieldOp.emitError("number of operands does not to match the number "
                              "of the parent op's results");
   }
+*/
 
   if (failed(interleaveWithError(
           llvm::zip(parentOp.getResults(), yieldOp.getOperands()),
@@ -1328,17 +1660,17 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
   }
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, ModuleOp moduleOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, ModuleOp moduleOp, KokkosParallelEnv &kokkosParallelEnv) {
   KokkosCppEmitter::Scope scope(emitter);
 
   for (Operation &op : moduleOp) {
-    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false)))
+    if (failed(emitter.emitOperation(op, /*trailingSemicolon=*/false, kokkosParallelEnv)))
       return failure();
   }
   return success();
 }
 
-static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp functionOp) {
+static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp functionOp, KokkosParallelEnv &kokkosParallelEnv) {
   // Need to replace function names in 2 cases:
   //  1. functionOp is a forward declaration for a sparse support function
   //  2. functionOp's name is "main"
@@ -1498,7 +1830,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter, func::FuncOp func
           !isa<scf::IfOp, scf::ForOp, cf::CondBranchOp>(op);
 
       if (failed(emitter.emitOperation(
-              op, /*trailingSemicolon=*/trailingSemicolon)))
+              op, /*trailingSemicolon=*/trailingSemicolon,kokkosParallelEnv)))
         return failure();
     }
   }
@@ -2591,7 +2923,7 @@ static LogicalResult printOperation(KokkosCppEmitter &emitter,
   return success();
 }
 
-LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
+LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemicolon, KokkosParallelEnv &kokkosParallelEnv) {
   if(auto constantOp = dyn_cast<arith::ConstantOp>(&op)) {
     //arith.constant is not directly emitted in the code, so always skip the
     // "// arith.constant" comment and trailing semicolon.
@@ -2602,7 +2934,7 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
       llvm::TypeSwitch<Operation *, LogicalResult>(&op)
           // Builtin ops.
           .Case<func::FuncOp, ModuleOp>(
-              [&](auto op) { return printOperation(*this, op); })
+              [&](auto op) { return printOperation(*this, op, kokkosParallelEnv); })
           // CF ops.
           .Case<cf::BranchOp, cf::CondBranchOp, cf::AssertOp>(
               [&](auto op) { /* Do nothing */ return success(); })
@@ -2610,8 +2942,8 @@ LogicalResult KokkosCppEmitter::emitOperation(Operation &op, bool trailingSemico
           .Case<func::CallOp, func::ConstantOp, func::ReturnOp>(
               [&](auto op) { return printOperation(*this, op); })
           // SCF ops.
-          .Case<scf::ForOp, scf::WhileOp, scf::IfOp, scf::YieldOp, scf::ConditionOp, scf::ParallelOp>(
-              [&](auto op) { return printOperation(*this, op); })
+          .Case<scf::ForOp, scf::WhileOp, scf::IfOp, scf::YieldOp, scf::ConditionOp, scf::ParallelOp, scf::ReduceOp>(
+              [&](auto op) { return printOperation(*this, op, kokkosParallelEnv); })
           // Arithmetic ops: general
           .Case<arith::FPToUIOp, arith::NegFOp, arith::CmpFOp, arith::CmpIOp, arith::SelectOp>(
               [&](auto op) { return printOperation(*this, op); })
@@ -2961,25 +3293,27 @@ LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, bool e
   //pauseForDebugger();
   KokkosCppEmitter emitter(os, enableSparseSupport);
   emitCppBoilerplate(emitter, false, enableSparseSupport);
+  KokkosParallelEnv kokkosParallelEnv(false);
   //Emit the actual module (global variables and functions)
-  if(failed(emitter.emitOperation(*op, /*trailingSemicolon=*/false)))
+  if(failed(emitter.emitOperation(*op, /*trailingSemicolon=*/false, kokkosParallelEnv)))
     return failure();
   return success();
 }
 
 //Version for when we are emitting both C++ and Python wrappers
-LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os, bool enableSparseSupport) {
+LogicalResult emitc::translateToKokkosCpp(Operation *op, raw_ostream &os, raw_ostream &py_os, bool enableSparseSupport, bool useHierarchical) {
   //Uncomment to pause so you can attach debugger
   //pauseForDebugger();
   KokkosCppEmitter emitter(os, py_os, enableSparseSupport);
   //Emit the C++ boilerplate to os
   emitCppBoilerplate(emitter, true, enableSparseSupport);
+  KokkosParallelEnv kokkosParallelEnv(useHierarchical);
   //Emit the ctypes boilerplate to py_os first - function wrappers need to come after this.
   if(failed(emitter.emitPythonBoilerplate()))
       return failure();
   //Global preamble.
   //Emit the actual module (global variables and functions)
-  if(failed(emitter.emitOperation(*op, /*trailingSemicolon=*/false)))
+  if(failed(emitter.emitOperation(*op, /*trailingSemicolon=*/false, kokkosParallelEnv)))
     return failure();
   //Emit the init and finalize function definitions.
   if(failed(emitter.emitInitAndFinalize()))

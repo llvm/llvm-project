@@ -53,8 +53,9 @@ MlirLogicalResult mlirPassManagerEmitKokkos(MlirPassManager passManager,
 MlirLogicalResult mlirPassManagerEmitKokkosSparse(MlirPassManager passManager,
                                      MlirModule module,
                                      const char* cxxSourceFile,
-                                     const char* pySourceFile) {
-  return wrap(unwrap(passManager)->emitKokkosSparse(unwrap(module), cxxSourceFile, pySourceFile));
+                                     const char* pySourceFile,
+                                     bool useHierarchical) {
+  return wrap(unwrap(passManager)->emitKokkosSparse(unwrap(module), cxxSourceFile, pySourceFile, useHierarchical));
 }
 
 void mlirPassManagerEnableIRPrinting(MlirPassManager passManager) {
