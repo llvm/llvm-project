@@ -672,10 +672,10 @@ public:
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
 
   bool removeInstructionsBeforeUnreachable(Instruction &I);
-  bool handleUnreachableFrom(Instruction *I,
+  void handleUnreachableFrom(Instruction *I,
                              SmallVectorImpl<BasicBlock *> &Worklist);
-  bool handlePotentiallyDeadBlocks(SmallVectorImpl<BasicBlock *> &Worklist);
-  bool handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
+  void handlePotentiallyDeadBlocks(SmallVectorImpl<BasicBlock *> &Worklist);
+  void handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
   void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
 };
 
