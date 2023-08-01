@@ -142,8 +142,8 @@ class GsymCreator {
   std::vector<llvm::gsym::FileEntry> Files;
   std::vector<uint8_t> UUID;
   std::optional<AddressRanges> ValidTextRanges;
-  AddressRanges Ranges;
   std::optional<uint64_t> BaseAddress;
+  bool IsSegment = false;
   bool Finalized = false;
   bool Quiet;
 
@@ -282,6 +282,15 @@ class GsymCreator {
                            llvm::support::endianness ByteOrder,
                            uint64_t SegmentSize) const;
 
+  /// Let this creator know that this is a segment of another GsymCreator.
+  ///
+  /// When we have a segment, we know that function infos will be added in
+  /// ascending address range order without having to be finalized. We also
+  /// don't need to sort and unique entries during the finalize function call.
+  void setIsSegment() {
+    IsSegment = true;
+  }
+
 public:
   GsymCreator(bool Quiet = false);
 
@@ -378,17 +387,6 @@ public:
   /// Get the current number of FunctionInfo objects contained in this
   /// object.
   size_t getNumFunctionInfos() const;
-
-  /// Check if an address has already been added as a function info.
-  ///
-  /// FunctionInfo data can come from many sources: debug info, symbol tables,
-  /// exception information, and more. Symbol tables should be added after
-  /// debug info and can use this function to see if a symbol's start address
-  /// has already been added to the GsymReader. Calling this before adding
-  /// a function info from a source other than debug info avoids clients adding
-  /// many redundant FunctionInfo objects from many sources only for them to be
-  /// removed during the finalize() call.
-  bool hasFunctionInfoForAddress(uint64_t Addr) const;
 
   /// Set valid .text address ranges that all functions must be contained in.
   void SetValidTextRanges(AddressRanges &TextRanges) {
