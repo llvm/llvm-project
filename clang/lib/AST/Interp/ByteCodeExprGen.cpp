@@ -476,6 +476,8 @@ bool ByteCodeExprGen<Emitter>::VisitInitListExpr(const InitListExpr *E) {
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitSubstNonTypeTemplateParmExpr(
     const SubstNonTypeTemplateParmExpr *E) {
+  if (DiscardResult)
+    return this->discard(E->getReplacement());
   return this->visit(E->getReplacement());
 }
 
