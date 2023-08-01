@@ -2869,9 +2869,6 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
  
   auto get_or_create_fallback_context =
       [&]() -> TypeSystemSwiftTypeRefForExpressions * {
-    if (!lldb_module || !m_use_scratch_typesystem_per_module)
-      return nullptr;
-
     ModuleLanguage idx = {lldb_module, lldb::eLanguageTypeSwift};
     auto cached = m_scratch_typesystem_for_module.find(idx);
     if (cached != m_scratch_typesystem_for_module.end()) {
@@ -2940,7 +2937,9 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
     return typesystem_sp.get();
   };
 
-  auto *swift_scratch_ctx = get_or_create_fallback_context();
+  TypeSystemSwiftTypeRefForExpressions *swift_scratch_ctx = nullptr;
+  if (lldb_module && m_use_scratch_typesystem_per_module)
+    swift_scratch_ctx = get_or_create_fallback_context();
   if (!swift_scratch_ctx) {
     if (log)
       log->PutCString("returned project-wide scratch context");
