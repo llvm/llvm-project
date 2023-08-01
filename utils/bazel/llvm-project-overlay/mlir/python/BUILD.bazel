@@ -780,7 +780,7 @@ gentbl_filegroup(
                 "-gen-python-enum-bindings",
                 "-bind-dialect=transform",
             ],
-            "mlir/dialects/_bufferization_transform_enums_gen.py",
+            "mlir/dialects/_bufferization_transform_enum_gen.py",
         ),
         (
             [
