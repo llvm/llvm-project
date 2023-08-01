@@ -30,11 +30,11 @@ public:
   using CycleInfoT = GenericCycleInfo<ContextT>;
   using CycleT = typename CycleInfoT::CycleT;
 
-  void initialize(raw_ostream &OS,
+  void initialize(raw_ostream *OS,
                   function_ref<void(const Twine &Message)> FailureCB,
                   const FunctionT &F) {
     clear();
-    this->OS = &OS;
+    this->OS = OS;
     this->FailureCB = FailureCB;
     Context = ContextT(&F);
   }
