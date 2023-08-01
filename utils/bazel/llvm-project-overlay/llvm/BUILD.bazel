@@ -4704,12 +4704,22 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
+expand_template(
+    name = "sancov_main",
+    out = "sancov-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "sancov",
+    },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
+)
+
+
 cc_binary(
     name = "sancov",
     srcs = glob([
         "tools/sancov/*.cpp",
         "tools/sancov/*.h",
-    ]),
+    ]) + ["sancov-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
