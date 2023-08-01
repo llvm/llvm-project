@@ -9,6 +9,7 @@
 #include "derived.h"
 #include "stat.h"
 #include "terminator.h"
+#include "tools.h"
 #include "type-info.h"
 #include "flang/Runtime/descriptor.h"
 
@@ -124,11 +125,9 @@ static const typeInfo::SpecialBinding *FindFinal(
   }
 }
 
-static void CallFinalSubroutine(
-    const Descriptor &descriptor, const typeInfo::DerivedType &derived) {
+static void CallFinalSubroutine(const Descriptor &descriptor,
+    const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (const auto *special{FindFinal(derived, descriptor.rank())}) {
-    // The following code relies on the fact that finalizable objects
-    // must be contiguous.
     if (special->which() == typeInfo::SpecialBinding::Which::ElementalFinal) {
       std::size_t byteStride{descriptor.ElementBytes()};
       std::size_t elements{descriptor.Elements()};
@@ -150,28 +149,51 @@ static void CallFinalSubroutine(
           p(descriptor.OffsetElement<char>(j * byteStride));
         }
       }
-    } else if (special->IsArgDescriptor(0)) {
-      StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
-      Descriptor &tmpDesc{statDesc.descriptor()};
-      tmpDesc = descriptor;
-      tmpDesc.raw().attribute = CFI_attribute_pointer;
-      tmpDesc.Addendum()->set_derivedType(&derived);
-      auto *p{special->GetProc<void (*)(const Descriptor &)>()};
-      p(tmpDesc);
     } else {
-      auto *p{special->GetProc<void (*)(char *)>()};
-      p(descriptor.OffsetElement<char>());
+      StaticDescriptor<maxRank, true, 10> statDesc;
+      Descriptor &copy{statDesc.descriptor()};
+      const Descriptor *argDescriptor{&descriptor};
+      if (descriptor.rank() > 0 && special->IsArgContiguous(0) &&
+          !descriptor.IsContiguous()) {
+        // The FINAL subroutine demands a contiguous array argument, but
+        // this INTENT(OUT) or intrinsic assignment LHS isn't contiguous.
+        // Finalize a shallow copy of the data.
+        copy = descriptor;
+        copy.set_base_addr(nullptr);
+        copy.raw().attribute = CFI_attribute_allocatable;
+        Terminator stubTerminator{"CallFinalProcedure() in Fortran runtime", 0};
+        RUNTIME_CHECK(terminator ? *terminator : stubTerminator,
+            copy.Allocate() == CFI_SUCCESS);
+        ShallowCopyDiscontiguousToContiguous(copy, descriptor);
+        argDescriptor = &copy;
+      }
+      if (special->IsArgDescriptor(0)) {
+        StaticDescriptor<maxRank, true, 8 /*?*/> statDesc;
+        Descriptor &tmpDesc{statDesc.descriptor()};
+        tmpDesc = *argDescriptor;
+        tmpDesc.raw().attribute = CFI_attribute_pointer;
+        tmpDesc.Addendum()->set_derivedType(&derived);
+        auto *p{special->GetProc<void (*)(const Descriptor &)>()};
+        p(tmpDesc);
+      } else {
+        auto *p{special->GetProc<void (*)(char *)>()};
+        p(argDescriptor->OffsetElement<char>());
+      }
+      if (argDescriptor == &copy) {
+        ShallowCopyContiguousToDiscontiguous(descriptor, copy);
+        copy.Deallocate();
+      }
     }
   }
 }
 
 // Fortran 2018 subclause 7.5.6.2
-void Finalize(
-    const Descriptor &descriptor, const typeInfo::DerivedType &derived) {
+void Finalize(const Descriptor &descriptor,
+    const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (derived.noFinalizationNeeded() || !descriptor.IsAllocated()) {
     return;
   }
-  CallFinalSubroutine(descriptor, derived);
+  CallFinalSubroutine(descriptor, derived, terminator);
   const auto *parentType{derived.GetParentType()};
   bool recurse{parentType && !parentType->noFinalizationNeeded()};
   // If there's a finalizable parent component, handle it last, as required
@@ -181,9 +203,9 @@ void Finalize(
   std::size_t myComponents{componentDesc.Elements()};
   std::size_t elements{descriptor.Elements()};
   std::size_t byteStride{descriptor.ElementBytes()};
-  for (auto k{recurse
-               ? std::size_t{1} /* skip first component, it's the parent */
-               : 0};
+  for (auto k{recurse ? std::size_t{1}
+                      /* skip first component, it's the parent */
+                      : 0};
        k < myComponents; ++k) {
     const auto &comp{
         *componentDesc.ZeroBasedIndexedElement<typeInfo::Component>(k)};
@@ -195,7 +217,7 @@ void Finalize(
             const Descriptor &compDesc{*descriptor.OffsetElement<Descriptor>(
                 j * byteStride + comp.offset())};
             if (compDesc.IsAllocated()) {
-              Finalize(compDesc, *compType);
+              Finalize(compDesc, *compType, terminator);
             }
           }
         }
@@ -217,12 +239,12 @@ void Finalize(
         compDesc.Establish(compType,
             descriptor.OffsetElement<char>(j * byteStride + comp.offset()),
             comp.rank(), extent);
-        Finalize(compDesc, compType);
+        Finalize(compDesc, compType, terminator);
       }
     }
   }
   if (recurse) {
-    Finalize(descriptor, *parentType);
+    Finalize(descriptor, *parentType, terminator);
   }
 }
 
@@ -231,12 +253,12 @@ void Finalize(
 // before parent component finalization, and with all finalization
 // preceding any deallocation.
 void Destroy(const Descriptor &descriptor, bool finalize,
-    const typeInfo::DerivedType &derived) {
+    const typeInfo::DerivedType &derived, Terminator *terminator) {
   if (derived.noDestructionNeeded() || !descriptor.IsAllocated()) {
     return;
   }
   if (finalize && !derived.noFinalizationNeeded()) {
-    Finalize(descriptor, derived);
+    Finalize(descriptor, derived, terminator);
   }
   const Descriptor &componentDesc{derived.component()};
   std::size_t myComponents{componentDesc.Elements()};

@@ -313,6 +313,8 @@ FILE *SpecialBinding::Dump(FILE *f) const {
     break;
   }
   std::fprintf(f, "    isArgDescriptorSet: 0x%x\n", isArgDescriptorSet_);
+  std::fprintf(f, "    isTypeBound: 0x%x\n", isTypeBound_);
+  std::fprintf(f, "    isArgContiguousSet: 0x%x\n", isArgContiguousSet_);
   std::fprintf(f, "    proc: %p\n", reinterpret_cast<void *>(proc_));
   return f;
 }

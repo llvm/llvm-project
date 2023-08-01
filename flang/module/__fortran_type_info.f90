@@ -109,7 +109,8 @@ module __Fortran_type_info
     integer(1) :: which ! SpecialBinding::Which
     integer(1) :: isArgDescriptorSet
     integer(1) :: isTypeBound
-    integer(1) :: __padding0(5)
+    integer(1) :: isArgContiguousSet
+    integer(1) :: __padding0(4)
     type(__builtin_c_funptr) :: proc
   end type
 
