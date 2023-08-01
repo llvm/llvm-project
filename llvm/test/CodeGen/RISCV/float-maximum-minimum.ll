@@ -181,3 +181,162 @@ define float @fmaximum_f32(float %a, float %b) nounwind {
   %1 = call float @llvm.maximum.f32(float %a, float %b)
   ret float %1
 }
+
+define float @fminimum_nnan_f32(float %a, float %b) nounwind {
+; RV32IF-LABEL: fminimum_nnan_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmin.s fa0, fa0, fa1
+; RV32IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: fminimum_nnan_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IF-LABEL: fminimum_nnan_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmin.s fa0, fa0, fa1
+; RV64IF-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fminimum_nnan_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV64IZFINX-NEXT:    ret
+  %1 = call nnan float @llvm.minimum.f32(float %a, float %b)
+  ret float %1
+}
+
+define float @fmaximum_nnan_f32(float %a, float %b) nounwind {
+; RV32IF-LABEL: fmaximum_nnan_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmax.s fa0, fa0, fa1
+; RV32IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: fmaximum_nnan_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fmax.s a0, a0, a1
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IF-LABEL: fmaximum_nnan_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmax.s fa0, fa0, fa1
+; RV64IF-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fmaximum_nnan_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fmax.s a0, a0, a1
+; RV64IZFINX-NEXT:    ret
+  %1 = call nnan float @llvm.maximum.f32(float %a, float %b)
+  ret float %1
+}
+
+define float @fminimum_nnan_attr_f32(float %a, float %b) nounwind "no-nans-fp-math"="true" {
+; RV32IF-LABEL: fminimum_nnan_attr_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fmin.s fa0, fa0, fa1
+; RV32IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: fminimum_nnan_attr_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IF-LABEL: fminimum_nnan_attr_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fmin.s fa0, fa0, fa1
+; RV64IF-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fminimum_nnan_attr_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV64IZFINX-NEXT:    ret
+  %1 = call float @llvm.minimum.f32(float %a, float %b)
+  ret float %1
+}
+
+define float @fminimum_nnan_op_f32(float %a, float %b) nounwind {
+; RV32IF-LABEL: fminimum_nnan_op_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    feq.s a0, fa0, fa0
+; RV32IF-NEXT:    bnez a0, .LBB5_2
+; RV32IF-NEXT:  # %bb.1:
+; RV32IF-NEXT:    fmin.s fa0, fa0, fa0
+; RV32IF-NEXT:    ret
+; RV32IF-NEXT:  .LBB5_2:
+; RV32IF-NEXT:    fadd.s fa5, fa0, fa0
+; RV32IF-NEXT:    fmin.s fa0, fa0, fa5
+; RV32IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: fminimum_nnan_op_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    feq.s a1, a0, a0
+; RV32IZFINX-NEXT:    bnez a1, .LBB5_2
+; RV32IZFINX-NEXT:  # %bb.1:
+; RV32IZFINX-NEXT:    fmin.s a0, a0, a0
+; RV32IZFINX-NEXT:    ret
+; RV32IZFINX-NEXT:  .LBB5_2:
+; RV32IZFINX-NEXT:    fadd.s a1, a0, a0
+; RV32IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IF-LABEL: fminimum_nnan_op_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    feq.s a0, fa0, fa0
+; RV64IF-NEXT:    bnez a0, .LBB5_2
+; RV64IF-NEXT:  # %bb.1:
+; RV64IF-NEXT:    fmin.s fa0, fa0, fa0
+; RV64IF-NEXT:    ret
+; RV64IF-NEXT:  .LBB5_2:
+; RV64IF-NEXT:    fadd.s fa5, fa0, fa0
+; RV64IF-NEXT:    fmin.s fa0, fa0, fa5
+; RV64IF-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fminimum_nnan_op_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    feq.s a1, a0, a0
+; RV64IZFINX-NEXT:    bnez a1, .LBB5_2
+; RV64IZFINX-NEXT:  # %bb.1:
+; RV64IZFINX-NEXT:    fmin.s a0, a0, a0
+; RV64IZFINX-NEXT:    ret
+; RV64IZFINX-NEXT:  .LBB5_2:
+; RV64IZFINX-NEXT:    fadd.s a1, a0, a0
+; RV64IZFINX-NEXT:    fmin.s a0, a0, a1
+; RV64IZFINX-NEXT:    ret
+  %c = fadd nnan float %a, %a
+  %1 = call float @llvm.minimum.f32(float %a, float %c)
+  ret float %1
+}
+
+define float @fmaximum_nnan_op_f32(float %a, float %b) nounwind {
+; RV32IF-LABEL: fmaximum_nnan_op_f32:
+; RV32IF:       # %bb.0:
+; RV32IF-NEXT:    fadd.s fa5, fa0, fa1
+; RV32IF-NEXT:    fsub.s fa4, fa0, fa1
+; RV32IF-NEXT:    fmax.s fa0, fa5, fa4
+; RV32IF-NEXT:    ret
+;
+; RV32IZFINX-LABEL: fmaximum_nnan_op_f32:
+; RV32IZFINX:       # %bb.0:
+; RV32IZFINX-NEXT:    fadd.s a2, a0, a1
+; RV32IZFINX-NEXT:    fsub.s a0, a0, a1
+; RV32IZFINX-NEXT:    fmax.s a0, a2, a0
+; RV32IZFINX-NEXT:    ret
+;
+; RV64IF-LABEL: fmaximum_nnan_op_f32:
+; RV64IF:       # %bb.0:
+; RV64IF-NEXT:    fadd.s fa5, fa0, fa1
+; RV64IF-NEXT:    fsub.s fa4, fa0, fa1
+; RV64IF-NEXT:    fmax.s fa0, fa5, fa4
+; RV64IF-NEXT:    ret
+;
+; RV64IZFINX-LABEL: fmaximum_nnan_op_f32:
+; RV64IZFINX:       # %bb.0:
+; RV64IZFINX-NEXT:    fadd.s a2, a0, a1
+; RV64IZFINX-NEXT:    fsub.s a0, a0, a1
+; RV64IZFINX-NEXT:    fmax.s a0, a2, a0
+; RV64IZFINX-NEXT:    ret
+  %c = fadd nnan float %a, %b
+  %d = fsub nnan float %a, %b
+  %1 = call float @llvm.maximum.f32(float %c, float %d)
+  ret float %1
+}
