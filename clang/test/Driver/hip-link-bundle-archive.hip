@@ -5,15 +5,13 @@
 // value of the '-l' option, it should not interfere with
 // the discovery and unbundling of the archive.
 
-// RUN: rm -rf %t && mkdir %t
+// RUN: rm -rf %t hipBundled && mkdir %t hipBundled
 // RUN: touch %t/dummy.bc
-// RUN: mkdir hipBundled
 // RUN: llvm-ar cr %t/libhipBundled.a %t/dummy.bc
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
 // RUN:   -nogpulib %s -fgpu-rdc -L%t -lhipBundled \
 // RUN:   2>&1 | FileCheck -check-prefixes=GNU,GNU1,GNU-L %s
-// RUN: rm -rf hipBundled
 
 // RUN: %clang -### --offload-arch=gfx906 --offload-arch=gfx1030 \
 // RUN:   --target=x86_64-unknown-linux-gnu \
