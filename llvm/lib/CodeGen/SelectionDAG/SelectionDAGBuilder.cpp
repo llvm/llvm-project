@@ -2775,7 +2775,7 @@ void SelectionDAGBuilder::visitSPDescriptorParent(StackProtectorDescriptor &SPD,
   SDValue StackSlotPtr = DAG.getFrameIndex(FI, PtrTy);
   const Module &M = *ParentBB->getParent()->getFunction().getParent();
   Align Align =
-      DAG.getDataLayout().getPrefTypeAlign(Type::getInt8PtrTy(M.getContext()));
+      DAG.getDataLayout().getPrefTypeAlign(PointerType::get(M.getContext(), 0));
 
   // Generate code to load the content of the guard slot.
   SDValue GuardVal = DAG.getLoad(
