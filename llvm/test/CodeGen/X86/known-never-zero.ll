@@ -258,9 +258,7 @@ define i32 @smin_known_nonzero(i32 %xx, i32 %yy) {
 ; CHECK-NEXT:    addl $4, %esi
 ; CHECK-NEXT:    cmpl %esi, %eax
 ; CHECK-NEXT:    cmovll %eax, %esi
-; CHECK-NEXT:    bsfl %esi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
   %x = shl nuw i32 4, %xx
   %y = add nuw nsw i32 %yy, 4
@@ -298,9 +296,7 @@ define i32 @smax_known_nonzero(i32 %xx, i32 %yy) {
 ; CHECK-NEXT:    addl $4, %esi
 ; CHECK-NEXT:    cmpl %esi, %eax
 ; CHECK-NEXT:    cmovgl %eax, %esi
-; CHECK-NEXT:    bsfl %esi, %ecx
-; CHECK-NEXT:    movl $32, %eax
-; CHECK-NEXT:    cmovnel %ecx, %eax
+; CHECK-NEXT:    rep bsfl %esi, %eax
 ; CHECK-NEXT:    retq
   %x = shl nuw i32 4, %xx
   %y = add nuw nsw i32 %yy, 4
