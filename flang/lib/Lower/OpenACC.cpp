@@ -374,6 +374,8 @@ static Op createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
 
 static void addDeclareAttr(fir::FirOpBuilder &builder, mlir::Operation *op,
                            mlir::acc::DataClause clause) {
+  if (!op)
+    return;
   op->setAttr(mlir::acc::getDeclareAttrName(),
               mlir::acc::DeclareAttr::get(builder.getContext(),
                                           mlir::acc::DataClauseAttr::get(
@@ -2427,6 +2429,13 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
           /*structured=*/true, /*setDeclareAttr=*/true);
       createEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
                                  dataClauseOperands.end());
+    } else if (const auto *presentClause =
+                   std::get_if<Fortran::parser::AccClause::Present>(
+                       &clause.u)) {
+      genDataOperandOperations<mlir::acc::PresentOp>(
+          presentClause->v, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_present,
+          /*structured=*/true, /*setDeclareAttr=*/true);
     } else {
       mlir::Location clauseLocation = converter.genLocation(clause.source);
       TODO(clauseLocation, "clause on declare directive");
@@ -2434,15 +2443,18 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
   }
   builder.create<mlir::acc::DeclareEnterOp>(loc, dataClauseOperands);
 
-  // Attach declare exit operation generation to function context.
-  fctCtx.attachCleanup([&builder, loc, dataClauseOperands, createEntryOperands,
-                        copyEntryOperands]() {
-    builder.create<mlir::acc::DeclareExitOp>(loc, dataClauseOperands);
-    genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-        builder, createEntryOperands, /*structured=*/true, /*implicit=*/false);
-    genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(builder,
-        copyEntryOperands, /*structured=*/true, /*implicit=*/false);
-  });
+  if (!createEntryOperands.empty() || !copyEntryOperands.empty()) {
+    // Attach declare exit operation generation to function context.
+    fctCtx.attachCleanup([&builder, loc, dataClauseOperands,
+                          createEntryOperands, copyEntryOperands]() {
+      builder.create<mlir::acc::DeclareExitOp>(loc, dataClauseOperands);
+      genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
+          builder, createEntryOperands, /*structured=*/true,
+          /*implicit=*/false);
+      genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
+          builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+    });
+  }
 }
 
 static void

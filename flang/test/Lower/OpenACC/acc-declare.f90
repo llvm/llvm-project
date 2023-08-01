@@ -118,5 +118,21 @@ module acc_declare
 ! CHECK: acc.delete accPtr(%[[CREATE]] : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) {dataClause = #acc<data_clause acc_create>, name = "a"}
 ! CHECK: return
 
+  subroutine acc_declare_present(a)
+    integer :: a(100), i
+    !$acc declare present(a)
+
+    do i = 1, 100
+      a(i) = i
+    end do
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_present(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"})
+! CHECK: %[[BOUND:.*]] = acc.bounds lowerbound(%{{.*}} : index) upperbound(%{{.*}} : index) extent(%{{.*}} : index) stride(%{{.*}} : index) startIdx(%c1 : index)
+! CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
+! CHECK: acc.declare_enter dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
+! CHECK-NOT: acc.declare_exit
 
 end module
