@@ -37,7 +37,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double acos(long double __x) _NOEXCEPT {return
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 acos(_A1 __x) _NOEXCEPT {return __builtin_acos((double)__x);}
 
 // asin
@@ -53,7 +53,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double asin(long double __x) _NOEXCEPT {return
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 asin(_A1 __x) _NOEXCEPT {return __builtin_asin((double)__x);}
 
 // atan
@@ -69,7 +69,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double atan(long double __x) _NOEXCEPT {return
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 atan(_A1 __x) _NOEXCEPT {return __builtin_atan((double)__x);}
 
 // atan2
@@ -85,17 +85,17 @@ inline _LIBCPP_HIDE_FROM_ABI long double atan2(long double __y, long double __x)
 
 template <class _A1, class _A2>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::__enable_if_t
+typename __enable_if_t
 <
-    std::is_arithmetic<_A1>::value &&
-    std::is_arithmetic<_A2>::value,
-    std::__promote<_A1, _A2>
+    is_arithmetic<_A1>::value &&
+    is_arithmetic<_A2>::value,
+    __promote<_A1, _A2>
 >::type
 atan2(_A1 __y, _A2 __x) _NOEXCEPT
 {
-    typedef typename std::__promote<_A1, _A2>::type __result_type;
-    static_assert((!(std::_IsSame<_A1, __result_type>::value &&
-                     std::_IsSame<_A2, __result_type>::value)), "");
+    typedef typename __promote<_A1, _A2>::type __result_type;
+    static_assert((!(_IsSame<_A1, __result_type>::value &&
+                     _IsSame<_A2, __result_type>::value)), "");
     return __math::atan2((__result_type)__y, (__result_type)__x);
 }
 

@@ -34,7 +34,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double lgamma(long double __x) _NOEXCEPT {retu
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 lgamma(_A1 __x) _NOEXCEPT {return __builtin_lgamma((double)__x);}
 
 // nan
@@ -52,7 +52,7 @@ inline _LIBCPP_HIDE_FROM_ABI long double tgamma(long double __x) _NOEXCEPT {retu
 
 template <class _A1>
 inline _LIBCPP_HIDE_FROM_ABI
-typename std::enable_if<std::is_integral<_A1>::value, double>::type
+typename enable_if<is_integral<_A1>::value, double>::type
 tgamma(_A1 __x) _NOEXCEPT {return __builtin_tgamma((double)__x);}
 
 } // namespace __math
