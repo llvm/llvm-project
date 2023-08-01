@@ -6071,6 +6071,10 @@ SDValue RISCVTargetLowering::lowerSELECT(SDValue Op, SelectionDAG &DAG) const {
           ISD::OR, DL, VT, FalseV,
           DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV));
 
+    // Try some other optimizations before falling back to generic lowering.
+    if (SDValue V = combineSelectToBinOp(Op.getNode(), DAG, Subtarget))
+      return V;
+
     // (select c, t, f) -> (or (czero_eqz t, c), (czero_nez f, c))
     return DAG.getNode(ISD::OR, DL, VT,
                        DAG.getNode(RISCVISD::CZERO_EQZ, DL, VT, TrueV, CondV),
