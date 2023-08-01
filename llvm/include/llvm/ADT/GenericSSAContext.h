@@ -24,10 +24,6 @@ namespace llvm {
 template <typename, bool> class DominatorTreeBase;
 template <typename> class SmallVectorImpl;
 
-namespace Intrinsic {
-typedef unsigned ID;
-}
-
 // Specializations of this template should provide the types used by the
 // template GenericSSAContext below.
 template <typename _FunctionT> struct GenericSSATraits;
@@ -82,8 +78,6 @@ public:
 
   const FunctionT *getFunction() const { return F; }
 
-  static Intrinsic::ID getIntrinsicID(const InstructionT &I);
-
   static void appendBlockDefs(SmallVectorImpl<ValueRefT> &defs, BlockT &block);
   static void appendBlockDefs(SmallVectorImpl<ConstValueRefT> &defs,
                               const BlockT &block);
@@ -97,7 +91,6 @@ public:
   const BlockT *getDefBlock(ConstValueRefT value) const;
 
   Printable print(const BlockT *block) const;
-  Printable printAsOperand(const BlockT *BB) const;
   Printable print(const InstructionT *inst) const;
   Printable print(ConstValueRefT value) const;
 };
