@@ -184,6 +184,8 @@ bool RISCVInitUndef::handleSubReg(MachineFunction &MF, MachineInstr &MI,
       continue;
     if (!UseMO.getReg().isVirtual())
       continue;
+    if (UseMO.isTied())
+      continue;
 
     Register Reg = UseMO.getReg();
     if (NewRegs.count(Reg))
