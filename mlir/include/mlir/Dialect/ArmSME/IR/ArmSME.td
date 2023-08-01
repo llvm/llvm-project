@@ -162,7 +162,7 @@ def CastVectorToTile : ArmSME_Op<"cast_vector_to_tile", [Pure, TileElementWidthM
   let hasCanonicalizeMethod = 1;
 }
 
-def GetTileID : ArmSME_Op<"get_tile_id", [Pure]> {
+def GetTileID : ArmSME_Op<"get_tile_id"> {
   let summary = "Returns an SME \"virtual tile\" id";
   let description = [{
     A `get_tile_id` operation returns a scalar integer representing an SME
