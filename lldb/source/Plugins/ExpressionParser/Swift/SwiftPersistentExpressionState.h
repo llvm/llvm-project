@@ -30,16 +30,13 @@
 
 namespace lldb_private {
 
-//----------------------------------------------------------------------
-/// @class SwiftPersistentExpressionState SwiftPersistentExpressionState.h
-/// "lldb/Expression/SwiftPersistentExpressionState.h"
-/// @brief Manages persistent values that need to be preserved between
+/// Manages persistent values that need to be preserved between
 /// expression invocations.
 ///
-/// A list of variables that can be accessed and updated by any expression.  See
-/// ClangPersistentVariable for more discussion.  Also provides an increasing,
-/// 0-based counter for naming result variables.
-//----------------------------------------------------------------------
+/// A list of variables that can be accessed and updated by any
+/// expression.  See \ref ClangPersistentVariable for more discussion.
+/// Also provides an increasing, 0-based counter for naming result
+/// variables.
 class SwiftPersistentExpressionState : public PersistentExpressionState {
 
   typedef llvm::StringMap<swift::AttributedImport<swift::ImportedModule>>
@@ -130,18 +127,15 @@ public:
   HandLoadedModuleSet GetHandLoadedModules() { return m_hand_loaded_modules; }
 
 private:
-  uint32_t m_next_persistent_variable_id; ///< The counter used by
-                                          /// GetNextResultName().
-  uint32_t m_next_persistent_error_id;    ///< The counter used by
-                                       /// GetNextResultName() when is_error is
-                                       /// true.
-
-  SwiftDeclMap m_swift_persistent_decls; ///< The persistent functions declared
-                                         /// by the user.
-
-  HandLoadedModuleSet m_hand_loaded_modules; ///< These are the names of modules
-                                             /// that we have loaded by
-  ///< hand into the Contexts we make for parsing.
+  /// The counter used by GetNextResultName().
+  uint32_t m_next_persistent_variable_id;
+  /// The counter used by GetNextResultName() when is_error is true.
+  uint32_t m_next_persistent_error_id;
+  /// The persistent functions declared by the user.
+  SwiftDeclMap m_swift_persistent_decls;
+  /// These are the names of modules that we have loaded by hand into
+  /// the Contexts we make for parsing.
+  HandLoadedModuleSet m_hand_loaded_modules;
 };
 } // namespace lldb_private
 
