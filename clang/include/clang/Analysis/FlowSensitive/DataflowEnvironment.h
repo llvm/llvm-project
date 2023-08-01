@@ -276,11 +276,6 @@ public:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
   void setStorageLocation(const Expr &E, StorageLocation &Loc);
 
-  /// Deprecated synonym for `setStorageLocation()`.
-  void setStorageLocationStrict(const Expr &E, StorageLocation &Loc) {
-    setStorageLocation(E, Loc);
-  }
-
   /// Returns the storage location assigned to the glvalue `E` in the
   /// environment, or null if `E` isn't assigned a storage location in the
   /// environment.
@@ -291,11 +286,6 @@ public:
   /// Requirements:
   ///  `E` must be a glvalue or a `BuiltinType::BuiltinFn`
   StorageLocation *getStorageLocation(const Expr &E) const;
-
-  /// Deprecated synonym for `getStorageLocation()`.
-  StorageLocation *getStorageLocationStrict(const Expr &E) const {
-    return getStorageLocation(E);
-  }
 
   /// Returns the storage location assigned to the `this` pointee in the
   /// environment or null if the `this` pointee has no assigned storage location
@@ -453,9 +443,6 @@ public:
   ///  `E`. This is to guarantee that the result object initialized by a prvalue
   ///  `StructValue` has a durable storage location.
   void setValue(const Expr &E, Value &Val);
-
-  /// Deprecated synonym for `setValue()`.
-  void setValueStrict(const Expr &E, Value &Val) { setValue(E, Val); }
 
   /// Returns the value assigned to `Loc` in the environment or null if `Loc`
   /// isn't assigned a value in the environment.
