@@ -156,9 +156,6 @@ Windows Support
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
-- The ``-march=native`` ``-mtune=`` options and ``__loongarch_{arch,tune}``
-  macros are now supported.
-
 RISC-V Support
 ^^^^^^^^^^^^^^
 
