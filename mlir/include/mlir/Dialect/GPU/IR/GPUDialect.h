@@ -165,7 +165,7 @@ public:
 void addAsyncDependency(Operation *op, Value token);
 
 // Handle types for sparse.
-enum class SparseHandleKind { SpMat, DnTensor };
+enum class SparseHandleKind { SpMat, DnTensor, SpGEMMOp };
 
 template <SparseHandleKind K>
 class SparseHandleType
@@ -178,6 +178,7 @@ public:
 
 using SparseDnTensorHandleType = SparseHandleType<SparseHandleKind::DnTensor>;
 using SparseSpMatHandleType = SparseHandleType<SparseHandleKind::SpMat>;
+using SparseSpGEMMOpHandleType = SparseHandleType<SparseHandleKind::SpGEMMOp>;
 
 } // namespace gpu
 } // namespace mlir
