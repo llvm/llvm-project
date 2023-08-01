@@ -446,6 +446,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(FPOpToExpand, MVT::f32, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::f16, Expand);
     setTruncStoreAction(MVT::f32, MVT::f16, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f32, MVT::bf16, Expand);
+    setTruncStoreAction(MVT::f32, MVT::bf16, Expand);
     setOperationAction(ISD::IS_FPCLASS, MVT::f32, Custom);
     setOperationAction(ISD::BF16_TO_FP, MVT::f32, Custom);
     setOperationAction(ISD::FP_TO_BF16, MVT::f32,
@@ -488,6 +490,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(FPOpToExpand, MVT::f64, Expand);
     setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::f16, Expand);
     setTruncStoreAction(MVT::f64, MVT::f16, Expand);
+    setLoadExtAction(ISD::EXTLOAD, MVT::f64, MVT::bf16, Expand);
+    setTruncStoreAction(MVT::f64, MVT::bf16, Expand);
     setOperationAction(ISD::IS_FPCLASS, MVT::f64, Custom);
     setOperationAction(ISD::BF16_TO_FP, MVT::f64, Custom);
     setOperationAction(ISD::FP_TO_BF16, MVT::f64,
