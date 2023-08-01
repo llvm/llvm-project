@@ -699,7 +699,7 @@
 // CHECK-ASAN-DARWIN106-CXX-NOT: -lc++abi
 
 // Apple-Clang: Don't support LSan
-// RUN: %clangxx -fsanitize=leak -### %s 2>&1 \
+// RUN: not %clangxx -fsanitize=leak -### %s 2>&1 \
 // RUN:     -mmacosx-version-min=10.6 \
 // RUN:     --target=x86_64-apple-darwin13.4.0 -fuse-ld=ld -stdlib=platform \
 // RUN:     -resource-dir=%S/Inputs/resource_dir \

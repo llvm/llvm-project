@@ -169,7 +169,7 @@
 // LINK_IOSSIM_PROFILE: libclang_rt.profile_iossim.a
 // LINK_IOSSIM_PROFILE: libclang_rt.iossim.a
 
-// RUN: %clang -target x86_64-apple-ios13-macabi -mlinker-version=400 -fprofile-instr-generate -### %t.o 2> %t.log
+// RUN: not %clang -target x86_64-apple-ios13-macabi -mlinker-version=400 -fprofile-instr-generate -### %t.o 2> %t.log
 // RUN: FileCheck -check-prefix=LINK_MACABI_PROFILE %s < %t.log
 // LINK_MACABI_PROFILE: {{ld(.exe)?"}}
 // LINK_MACABI_PROFILE: libclang_rt.profile_osx.a
