@@ -1168,7 +1168,7 @@ public:
 
   /// Deinitialize the resource pool and delete all resources. This function
   /// must be called before the destructor.
-  Error deinit() {
+  virtual Error deinit() {
     if (NextAvailable)
       DP("Missing %d resources to be returned\n", NextAvailable);
 
@@ -1252,7 +1252,7 @@ protected:
     return Plugin::success();
   }
 
-private:
+protected:
   /// The resources between \p OldSize and \p NewSize need to be created or
   /// destroyed. The mutex is locked when this function is called.
   Error resizeResourcePoolImpl(uint32_t OldSize, uint32_t NewSize) {
