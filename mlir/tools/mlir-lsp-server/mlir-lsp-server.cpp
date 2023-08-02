@@ -67,6 +67,12 @@ void printRegion(Region &region, BlockArgsMap &blockArgsMap,
   printIndent() << "Region with " << region.getBlocks().size() << " blocks:\n";
   auto indent = pushIndent();
 
+  printIndent() << "  region arg count: " << region.getNumArguments() << "\n";
+  for (auto arg : region.getArguments()) {
+    printIndent() << "     - region arg " << arg.getArgNumber() << ": " << arg
+                  << "\n";
+  }
+
   nlohmann::json regionj;
   for (Block &block : region.getBlocks())
     printBlock(block, blockArgsMap, regionj);
@@ -82,8 +88,8 @@ void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
                 << " successors, and "
                 // Note, this `.size()` is traversing a linked-list and is O(n).
                 << block.getOperations().size() << " operations\n";
-  auto blockName = getBlockName(block);
-  printIndent() << "=> block name: " << blockName;
+  //auto blockName = getBlockName(block);
+  //printIndent() << "=> block name: " << blockName;
 
   // A block main role is to hold a list of Operations: let's recurse into
   // printing each operation.
@@ -100,7 +106,8 @@ void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
     for (auto &blockArg : block.getArguments()) {
       //
       nlohmann::json usesj;
-      printIndent() << "at arg " << blockArg.getArgNumber() << ", " << blockArg;
+      printIndent() << "at arg " << blockArg.getArgNumber() << ", " << blockArg
+                    << "\n";
 
       for (auto &useOp : blockArg.getUses()) {
         usesj.push_back({{"UseId", (int64_t)&useOp},
@@ -178,7 +185,7 @@ void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
 void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
                     nlohmann::json &j) {
   // Print the operation itself and some of its properties
-  printIndent() << "visiting op " << (int64_t)op << ": '" << op->getName()
+  printIndent() << "\no visiting op " << (int64_t)op << ": '" << op->getName()
                 << "' with " << op->getNumOperands() << " operands and "
                 << op->getNumResults() << " results\n";
 

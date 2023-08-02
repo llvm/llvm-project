@@ -45,6 +45,8 @@ struct SymbolState {
 // ParserState
 //===----------------------------------------------------------------------===//
 
+  typedef std::vector<std::pair<unsigned, llvm::SMRange>> OperandLocationList;
+
 /// This class refers to all of the state maintained globally by the parser,
 /// such as the current lexer position etc.
 struct ParserState {
@@ -74,7 +76,8 @@ struct ParserState {
   /// populated during parsing.
   AsmParserState *asmState;
 
-  std::vector<std::pair<unsigned, llvm::SMRange>> operandLocs_;
+  std::vector<OperandLocationList> operandLocs_;
+  
   std::vector<Operation *> operationStack_;
 
   /// An optional code completion context.

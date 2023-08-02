@@ -1102,7 +1102,7 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
 ParseResult OperationParser::parseOperation() {
   auto loc = getToken().getLoc();
   unsigned locLine = state.lex.getLineNumber();
-  state.operandLocs_.clear();
+  state.operandLocs_.push_back(OperandLocationList());
 
   SmallVector<ResultRecord, 1> resultIDs;
   size_t numExpectedResults = 0;
@@ -1212,10 +1212,12 @@ op->setAttr("irx_end_offset", endLocAttr);
 auto lineAttr = builder.getIntegerAttr(builder.getIntegerType(64, false), locLine);
 op->setAttr("irx_line", lineAttr);
 
-if (state.operandLocs_.size() > 0) {
+ auto &operandLocs = state.operandLocs_[state.operandLocs_.size() - 1];
+
+  if (operandLocs.size() > 0) {
   SmallVector<Attribute> opLocAttrs;
 
-  for (auto &sourceInfo : state.operandLocs_) {
+  for (auto &sourceInfo : operandLocs) {
     auto opLoc = sourceInfo.second;
     auto startLocAttr =
         builder.getIntegerAttr(builder.getIntegerType(64, false),
@@ -1252,7 +1254,7 @@ if (resultIDs.size() > 0) {
   op->setAttr("irx_results", opLocAttrib);
 }
 
-state.operandLocs_.clear();
+state.operandLocs_.pop_back();
 
   return success();
 }
@@ -1414,6 +1416,9 @@ ParseResult OperationParser::parseGenericOperationAfterOpName(
   for (unsigned i = 0, e = parsedOperandUseInfo->size(); i != e; ++i) {
     result.operands.push_back(
         resolveSSAUse((*parsedOperandUseInfo)[i], operandTypes[i]));
+    auto opRange = AsmParserState::convertIdLocToRange((*parsedOperandUseInfo)[i].location);
+    state.operandLocs_[state.operandLocs_.size() - 1].push_back(
+        std::make_pair((unsigned)state.operandLocs_.size(), opRange));
     if (!result.operands.back())
       return failure();
   }
@@ -1695,7 +1700,7 @@ public:
                              SmallVectorImpl<Value> &result) override {
     if (auto value = parser.resolveSSAUse(operand, type)) {
       auto opRange = AsmParserState::convertIdLocToRange(operand.location);
-      parser.state.operandLocs_.push_back(
+      parser.state.operandLocs_[parser.state.operandLocs_.size() - 1].push_back(
           std::make_pair((unsigned)parser.state.operandLocs_.size(), opRange));
 
       result.push_back(value);
