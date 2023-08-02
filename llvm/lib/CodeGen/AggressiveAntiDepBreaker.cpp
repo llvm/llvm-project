@@ -904,7 +904,7 @@ unsigned AggressiveAntiDepBreaker::BreakAntiDependencies(
             RegAliases.set(*AI);
           for (SDep S : PathSU->Succs) {
             SDep::Kind K = S.getKind();
-            if (K != SDep::Data && K != SDep::Output && K != SDep::Anti)
+            if (K != SDep::Data)
               continue;
             unsigned R = S.getReg();
             if (!RegAliases[R])

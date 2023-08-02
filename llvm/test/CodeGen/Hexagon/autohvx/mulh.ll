@@ -128,16 +128,16 @@ define <32 x i32> @mulhs32(<32 x i32> %a0, <32 x i32> %a1) #0 {
 ; V60-NEXT:     v2.w = vmpye(v1.w,v0.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v0.w = vasr(v0.w,r0)
+; V60-NEXT:     v31.w = vasr(v0.w,r0)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v3.w = vasr(v1.w,r0)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v5:4.w = vmpy(v0.h,v1.uh)
+; V60-NEXT:     v5:4.w = vmpy(v31.h,v1.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v31:30.w = vmpy(v0.h,v3.h)
+; V60-NEXT:     v31:30.w = vmpy(v31.h,v3.h)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v7:6.w = vadd(v2.uh,v4.uh)
@@ -211,10 +211,10 @@ define <32 x i32> @mulhu32(<32 x i32> %a0, <32 x i32> %a1) #0 {
 ; V60-NEXT:     v2.uw = vlsr(v2.uw,r2)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v1 = vdelta(v1,v4)
+; V60-NEXT:     v31 = vdelta(v1,v4)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
-; V60-NEXT:     v1:0.uw = vmpy(v0.uh,v1.uh)
+; V60-NEXT:     v1:0.uw = vmpy(v0.uh,v31.uh)
 ; V60-NEXT:    }
 ; V60-NEXT:    {
 ; V60-NEXT:     v1:0.w = vadd(v1.uh,v0.uh)
