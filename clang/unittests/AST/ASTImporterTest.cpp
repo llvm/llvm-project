@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "clang/AST/RecordLayout.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
@@ -2333,7 +2334,7 @@ TEST_P(ImportFunctions,
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,
-       ImportVirtualOverriddenMethodOnALoopTest) {
+       ImportVirtualOverriddenMethodOnALoop) {
   // B::f() calls => f1() ==> C ==> C::f()
   //     \
   //      \---- A::f()
@@ -8057,7 +8058,7 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportDeductionGuideDifferentOrder) {
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,
-       ImportFieldsFirstForCorrectRecordLayoutTest) {
+       ImportFieldsFirstForCorrectRecordLayout) {
   // UnaryOperator(&) triggers RecordLayout computation, which relies on
   // correctly imported fields.
   auto Code =
@@ -8075,6 +8076,45 @@ TEST_P(ASTImporterOptionSpecificTestBase,
   auto *FromF = FirstDeclMatcher<CXXMethodDecl>().match(
       FromTU, cxxMethodDecl(hasName("A::m")));
   Import(FromF, Lang_CXX11);
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase,
+       ImportCirularRefFieldsWithoutCorruptedRecordLayoutCache) {
+  // Import sequence: A => A.b => B => B.f() => ... => UnaryOperator(&) => ...
+  //
+  // UnaryOperator(&) should not introduce invalid RecordLayout since 'A' is
+  // still not completely imported.
+  auto Code =
+      R"(
+      class B;
+      class A {
+        B* b;
+        int c;
+      };
+      class B {
+        A *f() { return &((B *)0)->a; }
+        A a;
+      };
+      )";
+
+  auto *FromR = FirstDeclMatcher<CXXRecordDecl>().match(
+      getTuDecl(Code, Lang_CXX11), cxxRecordDecl(hasName("A")));
+  FromR = FromR->getDefinition();
+  auto &FromAST = FromR->getASTContext();
+  auto *ToR = Import(FromR, Lang_CXX11);
+  auto &ToAST = ToR->getASTContext();
+
+  uint64_t SecondFieldOffset = FromAST.getTypeSize(FromAST.VoidPtrTy);
+
+  EXPECT_TRUE(FromR->isCompleteDefinition());
+  const auto &FromLayout = FromAST.getASTRecordLayout(FromR);
+  EXPECT_TRUE(FromLayout.getFieldOffset(0) == 0);
+  EXPECT_TRUE(FromLayout.getFieldOffset(1) == SecondFieldOffset);
+
+  EXPECT_TRUE(ToR->isCompleteDefinition());
+  const auto &ToLayout = ToAST.getASTRecordLayout(ToR);
+  EXPECT_TRUE(ToLayout.getFieldOffset(0) == 0);
+  EXPECT_TRUE(ToLayout.getFieldOffset(1) == SecondFieldOffset);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase,

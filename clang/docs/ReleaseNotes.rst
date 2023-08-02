@@ -133,6 +133,10 @@ Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
   `Issue 64169 <https://github.com/llvm/llvm-project/issues/64169>`_
+- Remove unnecessary RecordLayout computation when importing UnaryOperator. The
+  computed RecordLayout is incorrect if fields are not completely imported and
+  should not be cached.
+  `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
