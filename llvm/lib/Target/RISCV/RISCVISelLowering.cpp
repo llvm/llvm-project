@@ -4727,8 +4727,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(SMAX)
   OP_CASE(UMIN)
   OP_CASE(UMAX)
-  OP_CASE(FMINNUM)
-  OP_CASE(FMAXNUM)
   OP_CASE(STRICT_FADD)
   OP_CASE(STRICT_FSUB)
   OP_CASE(STRICT_FMUL)
@@ -4752,8 +4750,6 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(SMAX)       // VP_SMAX
   VP_CASE(UMIN)       // VP_UMIN
   VP_CASE(UMAX)       // VP_UMAX
-  VP_CASE(FMINNUM)    // VP_FMINNUM
-  VP_CASE(FMAXNUM)    // VP_FMAXNUM
   VP_CASE(FCOPYSIGN)  // VP_FCOPYSIGN
   VP_CASE(SETCC)      // VP_SETCC
   VP_CASE(SINT_TO_FP) // VP_SINT_TO_FP
@@ -4805,6 +4801,12 @@ static unsigned getRISCVVLOp(SDValue Op) {
     return RISCVISD::VFCVT_RTZ_X_F_VL;
   case ISD::VP_FP_TO_UINT:
     return RISCVISD::VFCVT_RTZ_XU_F_VL;
+  case ISD::FMINNUM:
+  case ISD::VP_FMINNUM:
+    return RISCVISD::VFMIN_VL;
+  case ISD::FMAXNUM:
+  case ISD::VP_FMAXNUM:
+    return RISCVISD::VFMAX_VL;
   }
   // clang-format on
 #undef OP_CASE
@@ -4821,7 +4823,7 @@ static bool hasMergeOp(unsigned Opcode) {
                  ISD::FIRST_TARGET_STRICTFP_OPCODE ==
              21 &&
          "adding target specific op should update this function");
-  if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::FMAXNUM_VL)
+  if (Opcode >= RISCVISD::ADD_VL && Opcode <= RISCVISD::VFMAX_VL)
     return true;
   if (Opcode == RISCVISD::FCOPYSIGN_VL)
     return true;
@@ -16324,8 +16326,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(CTLZ_VL)
   NODE_NAME_CASE(CTTZ_VL)
   NODE_NAME_CASE(CTPOP_VL)
-  NODE_NAME_CASE(FMINNUM_VL)
-  NODE_NAME_CASE(FMAXNUM_VL)
+  NODE_NAME_CASE(VFMIN_VL)
+  NODE_NAME_CASE(VFMAX_VL)
   NODE_NAME_CASE(MULHS_VL)
   NODE_NAME_CASE(MULHU_VL)
   NODE_NAME_CASE(VFCVT_RTZ_X_F_VL)

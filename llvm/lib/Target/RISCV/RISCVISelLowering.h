@@ -257,8 +257,8 @@ enum NodeType : unsigned {
   FSUB_VL,
   FMUL_VL,
   FDIV_VL,
-  FMINNUM_VL,
-  FMAXNUM_VL,
+  VFMIN_VL,
+  VFMAX_VL,
 
   // Vector unary ops with a mask as a second operand and VL as a third operand.
   FNEG_VL,
