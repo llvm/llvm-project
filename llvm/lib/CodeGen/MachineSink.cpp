@@ -915,7 +915,7 @@ MachineSinking::GetAllSortedSuccessors(MachineInstr &MI, MachineBasicBlock *MBB,
       AllSuccs, [this](const MachineBasicBlock *L, const MachineBasicBlock *R) {
         uint64_t LHSFreq = MBFI ? MBFI->getBlockFreq(L).getFrequency() : 0;
         uint64_t RHSFreq = MBFI ? MBFI->getBlockFreq(R).getFrequency() : 0;
-        bool HasBlockFreq = LHSFreq != 0 && RHSFreq != 0;
+        bool HasBlockFreq = LHSFreq != 0 || RHSFreq != 0;
         return HasBlockFreq ? LHSFreq < RHSFreq
                             : CI->getCycleDepth(L) < CI->getCycleDepth(R);
       });
