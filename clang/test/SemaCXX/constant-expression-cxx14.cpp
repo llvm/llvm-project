@@ -1039,7 +1039,7 @@ const char Cs[] = {'a', 'b'}; // expected-note 2{{declared here}}
 void foo() __attribute__((enable_if(sum(Cs) == 'a' + 'b', "")));
 void run() { foo(); }
 
-static_assert(sum(Cs) == 'a' + 'b', ""); // expected-error{{not an integral constant expression}} expected-note{{in call to 'sum(Cs)'}}
+static_assert(sum(Cs) == 'a' + 'b', ""); // expected-error{{not an integral constant expression}} expected-note{{in call to 'sum<2>(Cs)'}}
 constexpr int S = sum(Cs); // expected-error{{must be initialized by a constant expression}} expected-note{{in call}}
 }
 

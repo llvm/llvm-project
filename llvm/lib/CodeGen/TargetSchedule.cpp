@@ -36,6 +36,10 @@ static cl::opt<bool> EnableSchedModel("schedmodel", cl::Hidden, cl::init(true),
 static cl::opt<bool> EnableSchedItins("scheditins", cl::Hidden, cl::init(true),
   cl::desc("Use InstrItineraryData for latency lookup"));
 
+static cl::opt<bool> ForceEnableIntervals(
+    "sched-model-force-enable-intervals", cl::Hidden, cl::init(false),
+    cl::desc("Force the use of resource intervals in the schedule model"));
+
 bool TargetSchedModel::hasInstrSchedModel() const {
   return EnableSchedModel && SchedModel.hasInstrSchedModel();
 }
@@ -341,3 +345,9 @@ TargetSchedModel::computeReciprocalThroughput(const MCInst &MI) const {
   return computeReciprocalThroughput(MI.getOpcode());
 }
 
+bool TargetSchedModel::enableIntervals() const {
+  if (ForceEnableIntervals)
+    return true;
+
+  return SchedModel.EnableIntervals;
+}

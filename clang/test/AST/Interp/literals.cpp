@@ -193,6 +193,21 @@ namespace SizeOf {
                                             // ref-error {{must be initialized by a constant expression}}
   }
 
+#if __cplusplus >= 201402L
+  constexpr int IgnoredRejected() { // ref-error {{never produces a constant expression}}
+    int n = 0;
+    sizeof(int[n++]); // expected-warning {{expression result unused}} \
+                      // ref-warning {{expression result unused}} \
+                      // ref-note 2{{subexpression not valid in a constant expression}}
+    return n;
+  }
+  /// FIXME: This is rejected because the parameter so sizeof() is not constant.
+  ///   produce a proper diagnostic.
+  static_assert(IgnoredRejected() == 0, ""); // expected-error {{not an integral constant expression}} \
+                                             // ref-error {{not an integral constant expression}} \
+                                             // ref-note {{in call to 'IgnoredRejected()'}}
+#endif
+
 
 #if __cplusplus >= 202002L
   /// FIXME: The following code should be accepted.
@@ -502,22 +517,22 @@ namespace IncDec {
     return 1;
   }
   static_assert(uninit<int, true>(), ""); // ref-error {{not an integral constant expression}} \
-                                          // ref-note {{in call to 'uninit()'}} \
+                                          // ref-note {{in call to 'uninit<int, true>()'}} \
                                           // expected-error {{not an integral constant expression}} \
                                           // expected-note {{in call to 'uninit()'}}
 
   static_assert(uninit<int, false>(), ""); // ref-error {{not an integral constant expression}} \
-                                           // ref-note {{in call to 'uninit()'}} \
+                                           // ref-note {{in call to 'uninit<int, false>()'}} \
                                            // expected-error {{not an integral constant expression}} \
                                            // expected-note {{in call to 'uninit()'}}
 
   static_assert(uninit<float, true>(), ""); // ref-error {{not an integral constant expression}} \
-                                            // ref-note {{in call to 'uninit()'}} \
+                                            // ref-note {{in call to 'uninit<float, true>()'}} \
                                             // expected-error {{not an integral constant expression}} \
                                             // expected-note {{in call to 'uninit()'}}
 
   static_assert(uninit<float, false>(), ""); // ref-error {{not an integral constant expression}} \
-                                             // ref-note {{in call to 'uninit()'}} \
+                                             // ref-note {{in call to 'uninit<float, false>()'}} \
                                              // expected-error {{not an integral constant expression}} \
                                              // expected-note {{in call to 'uninit()'}}
 
@@ -876,36 +891,91 @@ constexpr int ignoredDecls() {
 }
 static_assert(ignoredDecls() == 12, "");
 
-struct A{};
-constexpr int ignoredExprs() {
-  (void)(1 / 2);
-  A a;
-  a; // expected-warning {{unused}} \
-     // ref-warning {{unused}}
-  (void)a;
-  (a); // expected-warning {{unused}} \
-       // ref-warning {{unused}}
+namespace DiscardExprs {
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wunused-value"
 
-  (void)5, (void)6;
+  struct A{ int a; };
+  constexpr int ignoredExprs() {
+    (void)(1 / 2);
+    A a{12};
+    a;
+    (void)a;
+    (a);
 
-  1 ? 0 : 1; // expected-warning {{unused}} \
-             // ref-warning {{unused}}
+    /// Ignored MaterializeTemporaryExpr.
+    struct B{ const int &a; };
+    (void)B{12};
 
-  return 0;
-}
+    (void)5, (void)6;
 
-/// Ignored comma expressions still have their
-/// expressions evaluated.
-constexpr int Comma(int start) {
-    int i = start;
+    1 ? 0 : 1;
+    __is_trivial(int);
 
-    (void)i++;
-    (void)i++,(void)i++;
+    (int){1};
+    (int[]){1,2,3};
+    int arr[] = {1,2,3};
+    arr[0];
+    "a";
+    'b';
+    sizeof(int);
+    alignof(int);
+
+    (short)5;
+    (bool)1;
+
+    return 0;
+  }
+  static_assert(ignoredExprs() == 0, "");
+
+  constexpr int oh_my(int x) {
+    (int){ x++ };
+    return x;
+  }
+  static_assert(oh_my(0) == 1, "");
+
+  constexpr int oh_my2(int x) {
+    int y{x++};
+    return x;
+  }
+
+  static_assert(oh_my2(0) == 1, "");
+
+
+  /// Ignored comma expressions still have their
+  /// expressions evaluated.
+  constexpr int Comma(int start) {
+      int i = start;
+
+      (void)i++;
+      (void)i++,(void)i++;
+      return i;
+  }
+  constexpr int Value = Comma(5);
+  static_assert(Value == 8, "");
+
+  /// Ignored MemberExprs need to still evaluate the Base
+  /// expr.
+  constexpr A callme(int &i) {
+    ++i;
+    return A{};
+  }
+  constexpr int ignoredMemberExpr() {
+    int i = 0;
+    callme(i).a;
     return i;
-}
-constexpr int Value = Comma(5);
-static_assert(Value == 8, "");
+  }
+  static_assert(ignoredMemberExpr() == 1, "");
 
+  template <int I>
+  constexpr int foo() {
+    I;
+    return I;
+  }
+  static_assert(foo<3>() == 3, "");
+
+#pragma clang diagnostic pop
+}
 #endif
 
 namespace PredefinedExprs {

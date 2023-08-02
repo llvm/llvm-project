@@ -689,9 +689,9 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
                  LLVM::ModuleTranslation &moduleTranslation) {
   using InsertPointTy = llvm::OpenMPIRBuilder::InsertPointTy;
   LogicalResult bodyGenStatus = success();
-  if (taskOp.getIfExpr() || taskOp.getFinalExpr() || taskOp.getUntiedAttr() ||
-      taskOp.getMergeableAttr() || taskOp.getInReductions() ||
-      taskOp.getPriority() || !taskOp.getAllocateVars().empty()) {
+  if (taskOp.getUntiedAttr() || taskOp.getMergeableAttr() ||
+      taskOp.getInReductions() || taskOp.getPriority() ||
+      !taskOp.getAllocateVars().empty()) {
     return taskOp.emitError("unhandled clauses for translation to LLVM IR");
   }
   auto bodyCB = [&](InsertPointTy allocaIP, InsertPointTy codegenIP) {
@@ -733,8 +733,9 @@ convertOmpTaskOp(omp::TaskOp taskOp, llvm::IRBuilderBase &builder,
       findAllocaInsertPoint(builder, moduleTranslation);
   llvm::OpenMPIRBuilder::LocationDescription ompLoc(builder);
   builder.restoreIP(moduleTranslation.getOpenMPBuilder()->createTask(
-      ompLoc, allocaIP, bodyCB, !taskOp.getUntied(), /*Final*/ nullptr,
-      /*IfCondition*/ nullptr, dds));
+      ompLoc, allocaIP, bodyCB, !taskOp.getUntied(),
+      moduleTranslation.lookupValue(taskOp.getFinalExpr()),
+      moduleTranslation.lookupValue(taskOp.getIfExpr()), dds));
   return bodyGenStatus;
 }
 

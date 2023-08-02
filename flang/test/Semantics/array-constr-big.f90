@@ -19,7 +19,7 @@ program BigArray
             ( &
               !ERROR: Must be a constant value
               0_foo,ii=1,limit &
-            ),
+            ), &
             jj=kk,limit &
           ), &
         kk=1,limit &

@@ -95,6 +95,8 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang constexpr evaluator now prints template arguments when displaying
+  template-specialization function calls.
 
 Bug Fixes in This Version
 -------------------------
@@ -154,9 +156,6 @@ Windows Support
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
-- The ``-march=native`` ``-mtune=`` options and ``__loongarch_{arch,tune}``
-  macros are now supported.
-
 RISC-V Support
 ^^^^^^^^^^^^^^
 
@@ -180,6 +179,14 @@ DWARF Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
+- Add ``__builtin_elementwise_log`` builtin for floating point types only.
+- Add ``__builtin_elementwise_log10`` builtin for floating point types only.
+- Add ``__builtin_elementwise_log2`` builtin for floating point types only.
+- Add ``__builtin_elementwise_exp`` builtin for floating point types only.
+- Add ``__builtin_elementwise_exp2`` builtin for floating point types only.
+- Add ``__builtin_set_flt_rounds`` builtin for X86, x86_64, Arm and AArch64 only.
+- Add ``__builtin_elementwise_pow`` builtin for floating point types only.
+- Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
 
 AST Matchers
 ------------

@@ -573,7 +573,7 @@ def Vector_ExtractOp :
      PredOpTrait<"operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      InferTypeOpAdaptorWithIsCompatible]>,
-    Arguments<(ins AnyVectorOfAnyRank:$vector, I64ArrayAttr:$position)>,
+    Arguments<(ins AnyVectorOfAnyRank:$vector, DenseI64ArrayAttr:$position)>,
     Results<(outs AnyType)> {
   let summary = "extract operation";
   let description = [{
@@ -589,7 +589,6 @@ def Vector_ExtractOp :
     ```
   }];
   let builders = [
-    OpBuilder<(ins "Value":$source, "ArrayRef<int64_t>":$position)>,
     // Convenience builder which assumes the values in `position` are defined by
     // ConstantIndexOp.
     OpBuilder<(ins "Value":$source, "ValueRange":$position)>
@@ -689,7 +688,7 @@ def Vector_InsertOp :
      PredOpTrait<"source operand and result have same element type",
                  TCresVTEtIsSameAsOpBase<0, 0>>,
      AllTypesMatch<["dest", "res"]>]>,
-     Arguments<(ins AnyType:$source, AnyVectorOfAnyRank:$dest, I64ArrayAttr:$position)>,
+     Arguments<(ins AnyType:$source, AnyVectorOfAnyRank:$dest, DenseI64ArrayAttr:$position)>,
      Results<(outs AnyVectorOfAnyRank:$res)> {
   let summary = "insert operation";
   let description = [{
@@ -711,8 +710,6 @@ def Vector_InsertOp :
   }];
 
   let builders = [
-    OpBuilder<(ins "Value":$source, "Value":$dest,
-      "ArrayRef<int64_t>":$position)>,
     // Convenience builder which assumes all values are constant indices.
     OpBuilder<(ins "Value":$source, "Value":$dest, "ValueRange":$position)>
   ];

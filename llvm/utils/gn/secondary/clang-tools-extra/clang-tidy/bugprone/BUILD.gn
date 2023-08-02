@@ -51,6 +51,7 @@ static_library("bugprone") {
     "NoEscapeCheck.cpp",
     "NonZeroEnumToBoolConversionCheck.cpp",
     "NotNullTerminatedResultCheck.cpp",
+    "OptionalValueConversionCheck.cpp",
     "ParentVirtualCallCheck.cpp",
     "PosixReturnCheck.cpp",
     "RedundantBranchConditionCheck.cpp",

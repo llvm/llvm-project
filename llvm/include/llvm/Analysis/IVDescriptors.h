@@ -41,7 +41,7 @@ enum class RecurKind {
   Xor,        ///< Bitwise or logical XOR of integers.
   SMin,       ///< Signed integer min implemented in terms of select(cmp()).
   SMax,       ///< Signed integer max implemented in terms of select(cmp()).
-  UMin,       ///< Unisgned integer min implemented in terms of select(cmp()).
+  UMin,       ///< Unsigned integer min implemented in terms of select(cmp()).
   UMax,       ///< Unsigned integer max implemented in terms of select(cmp()).
   FAdd,       ///< Sum of floats.
   FMul,       ///< Product of floats.
@@ -49,7 +49,7 @@ enum class RecurKind {
   FMax,       ///< FP max implemented in terms of select(cmp()).
   FMinimum,   ///< FP min with llvm.minimum semantics
   FMaximum,   ///< FP max with llvm.maximum semantics
-  FMulAdd,    ///< Fused multiply-add of floats (a * b + c).
+  FMulAdd,    ///< Sum of float products with llvm.fmuladd(a * b + sum).
   SelectICmp, ///< Integer select(icmp(),x,y) where one of (x,y) is loop
               ///< invariant
   SelectFCmp  ///< Integer select(fcmp(),x,y) where one of (x,y) is loop

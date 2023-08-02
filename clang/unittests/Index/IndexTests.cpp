@@ -218,6 +218,28 @@ TEST(IndexTest, IndexParametersInDecls) {
   EXPECT_THAT(Index->Symbols, Not(Contains(QName("bar"))));
 }
 
+TEST(IndexTest, IndexLabels) {
+  std::string Code = R"cpp(
+        int main() {
+          goto theLabel;
+          theLabel:
+            return 1;
+        }
+      )cpp";
+  auto Index = std::make_shared<Indexer>();
+  IndexingOptions Opts;
+  Opts.IndexFunctionLocals = true;
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols,
+              Contains(AllOf(QName("theLabel"), WrittenAt(Position(3, 16)),
+                             DeclAt(Position(4, 11)))));
+
+  Opts.IndexFunctionLocals = false;
+  Index->Symbols.clear();
+  tooling::runToolOnCode(std::make_unique<IndexAction>(Index, Opts), Code);
+  EXPECT_THAT(Index->Symbols, Not(Contains(QName("theLabel"))));
+}
+
 TEST(IndexTest, IndexExplicitTemplateInstantiation) {
   std::string Code = R"cpp(
     template <typename T>

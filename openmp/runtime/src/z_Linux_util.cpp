@@ -1242,6 +1242,7 @@ static void __kmp_atfork_child(void) {
     *affinity = KMP_AFFINITY_INIT(affinity->env_var);
   __kmp_affin_fullMask = nullptr;
   __kmp_affin_origMask = nullptr;
+  __kmp_topology = nullptr;
 #endif // KMP_AFFINITY_SUPPORTED
 
 #if KMP_USE_MONITOR

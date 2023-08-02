@@ -29,17 +29,17 @@ public:
 
   bool parse(cl::Option &O, StringRef /*argName*/, StringRef arg,
              test::TestDialectVersion &v) {
-    long long major, minor;
-    if (getAsSignedInteger(arg.split(".").first, 10, major))
+    long long major_, minor_;
+    if (getAsSignedInteger(arg.split(".").first, 10, major_))
       return O.error("Invalid argument '" + arg);
-    if (getAsSignedInteger(arg.split(".").second, 10, minor))
+    if (getAsSignedInteger(arg.split(".").second, 10, minor_))
       return O.error("Invalid argument '" + arg);
-    v = test::TestDialectVersion(major, minor);
+    v = test::TestDialectVersion(major_, minor_);
     // Returns true on error.
     return false;
   }
   static void print(raw_ostream &os, const test::TestDialectVersion &v) {
-    os << v.major << "." << v.minor;
+    os << v.major_ << "." << v.minor_;
   };
 };
 
@@ -127,7 +127,7 @@ private:
         [&](Type entryValue, std::optional<StringRef> &dialectGroupName,
             DialectBytecodeWriter &writer) -> LogicalResult {
           // Do not override anything if version less than 2.0.
-          if (targetEmissionVersion.major >= 2)
+          if (targetEmissionVersion.major_ >= 2)
             return failure();
 
           // For version less than 2.0, override the encoding of IntegerType.
@@ -159,7 +159,7 @@ private:
           // supported. For the purpose of the test, just use
           // `targetEmissionVersion`.
           (void)version;
-          if (targetEmissionVersion.major >= 2)
+          if (targetEmissionVersion.major_ >= 2)
             return success();
 
           // `dialectName` is the name of the group we have the opportunity to

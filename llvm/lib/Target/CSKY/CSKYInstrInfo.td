@@ -1429,6 +1429,7 @@ let Predicates = [iHasE2] in {
   let Predicates = [iHas2E3] in {
     def : Pat<(bitreverse GPR:$rx), (BREV32 GPR:$rx)>;
     def : Pat<(bswap GPR:$rx), (REVB32 GPR:$rx)>;
+    def : Pat<(i32 (cttz GPR:$rx)), (FF1 (BREV32 GPR:$rx))>;
   }
   def : Pat<(i32 (ctlz GPR:$rx)), (FF1 GPR:$rx)>;
 }

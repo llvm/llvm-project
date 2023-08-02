@@ -786,13 +786,6 @@ static int getMemtagMode(opt::InputArgList &args) {
     return ELF::NT_MEMTAG_LEVEL_NONE;
   }
 
-  if (!config->androidMemtagHeap && !config->androidMemtagStack) {
-    error("when using --android-memtag-mode, at least one of "
-          "--android-memtag-heap or "
-          "--android-memtag-stack is required");
-    return ELF::NT_MEMTAG_LEVEL_NONE;
-  }
-
   if (memtagModeArg == "sync")
     return ELF::NT_MEMTAG_LEVEL_SYNC;
   if (memtagModeArg == "async")
@@ -2939,6 +2932,12 @@ void LinkerDriver::link(opt::InputArgList &args) {
   // Make copies of any input sections that need to be copied into each
   // partition.
   copySectionsIntoPartitions();
+
+  if (config->emachine == EM_AARCH64 &&
+      config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+    llvm::TimeTraceScope timeScope("Process memory tagged symbols");
+    createTaggedSymbols(ctx.objectFiles);
+  }
 
   // Create synthesized sections such as .got and .plt. This is called before
   // processSectionCommands() so that they can be placed by SECTIONS commands.

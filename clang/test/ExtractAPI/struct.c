@@ -161,6 +161,10 @@ struct Color {
         {
           "kind": "identifier",
           "spelling": "Red"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -213,6 +217,10 @@ struct Color {
         {
           "kind": "identifier",
           "spelling": "Green"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -265,6 +273,10 @@ struct Color {
         {
           "kind": "identifier",
           "spelling": "Blue"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -317,6 +329,10 @@ struct Color {
         {
           "kind": "identifier",
           "spelling": "Alpha"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "docComment": {

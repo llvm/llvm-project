@@ -65,10 +65,13 @@ namespace test {
 
 struct TestDialectVersion : public mlir::DialectVersion {
   TestDialectVersion() = default;
-  TestDialectVersion(uint32_t _major, uint32_t _minor)
-      : major(_major), minor(_minor){};
-  uint32_t major = 2;
-  uint32_t minor = 0;
+  TestDialectVersion(uint32_t majorVersion, uint32_t minorVersion)
+      : major_(majorVersion), minor_(minorVersion){};
+  // We cannot use 'major' and 'minor' here because these identifiers may
+  // already be used by <sys/types.h> on many POSIX systems including Linux and
+  // FreeBSD.
+  uint32_t major_ = 2;
+  uint32_t minor_ = 0;
 };
 
 // Define some classes to exercises the Properties feature.

@@ -1,0 +1,11 @@
+executable("llvm-readtapi") {
+  deps = [
+    "//llvm/lib/Object",
+    "//llvm/lib/Support",
+    "//llvm/lib/TextAPI",
+  ]
+  sources = [
+    "DiffEngine.cpp",
+    "llvm-readtapi.cpp",
+  ]
+}

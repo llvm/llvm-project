@@ -736,7 +736,7 @@ struct FunCloner {
         LLVMTypeRef FnTy = CloneType(LLVMGetCalledFunctionType(Src));
         LLVMValueRef Fn = CloneValue(LLVMGetCalledValue(Src));
         Dst = LLVMBuildCall2(Builder, FnTy, Fn, Args.data(), ArgCount, Name);
-        LLVMSetTailCall(Dst, LLVMIsTailCall(Src));
+        LLVMSetTailCallKind(Dst, LLVMGetTailCallKind(Src));
         CloneAttrs(Src, Dst);
         break;
       }

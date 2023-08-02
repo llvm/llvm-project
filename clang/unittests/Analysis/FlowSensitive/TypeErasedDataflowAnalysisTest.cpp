@@ -1243,7 +1243,7 @@ public:
         match(callExpr(callee(functionDecl(hasName("makeTop")))).bind("top"),
               *S, getASTContext());
     if (const auto *E = selectFirst<CallExpr>("top", Matches)) {
-      Env.setValueStrict(*E, Env.makeTopBoolValue());
+      Env.setValue(*E, Env.makeTopBoolValue());
     }
   }
 

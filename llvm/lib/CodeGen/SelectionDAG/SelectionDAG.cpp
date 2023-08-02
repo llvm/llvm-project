@@ -5691,6 +5691,22 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (OpOpcode == ISD::UNDEF)
       // zext(undef) = 0, because the top bits will be zero.
       return getConstant(0, DL, VT);
+
+    // Skip unnecessary zext_inreg pattern:
+    // (zext (trunc (assertzext x))) -> (assertzext x)
+    // TODO: Generalize to MaskedValueIsZero check?
+    if (OpOpcode == ISD::TRUNCATE) {
+      SDValue OpOp = N1.getOperand(0);
+      if (OpOp.getValueType() == VT) {
+        if (OpOp.getOpcode() == ISD::AssertZext && N1->hasOneUse()) {
+          EVT ExtVT = cast<VTSDNode>(OpOp.getOperand(1))->getVT();
+          if (N1.getScalarValueSizeInBits() >= ExtVT.getSizeInBits()) {
+            transferDbgValues(N1, OpOp);
+            return OpOp;
+          }
+        }
+      }
+    }
     break;
   case ISD::ANY_EXTEND:
     assert(VT.isInteger() && N1.getValueType().isInteger() &&

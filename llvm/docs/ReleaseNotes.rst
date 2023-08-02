@@ -116,6 +116,10 @@ Changes to the Python bindings
 Changes to the C API
 --------------------
 
+* Added ``LLVMGetTailCallKind`` and ``LLVMSetTailCallKind`` to
+  allow getting and setting ``tail``, ``musttail``, and ``notail``
+  attributes on call instructions.
+
 Changes to the CodeGen infrastructure
 -------------------------------------
 

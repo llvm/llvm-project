@@ -97,7 +97,7 @@ bool VirtRegAuxInfo::isRematerializable(const LiveInterval &LI,
     // Trace copies introduced by live range splitting.  The inline
     // spiller can rematerialize through these copies, so the spill
     // weight must reflect this.
-    while (MI->isFullCopy()) {
+    while (TII.isFullCopyInstr(*MI)) {
       // The copy destination must match the interval register.
       if (MI->getOperand(0).getReg() != Reg)
         return false;
@@ -224,7 +224,16 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
       continue;
 
     NumInstr++;
-    if (MI->isIdentityCopy() || MI->isImplicitDef())
+    bool identityCopy = false;
+    auto DestSrc = TII.isCopyInstr(*MI);
+    if (DestSrc) {
+      const MachineOperand *DestRegOp = DestSrc->Destination;
+      const MachineOperand *SrcRegOp = DestSrc->Source;
+      identityCopy = DestRegOp->getReg() == SrcRegOp->getReg() &&
+                     DestRegOp->getSubReg() == SrcRegOp->getSubReg();
+    }
+
+    if (identityCopy || MI->isImplicitDef())
       continue;
     if (!Visited.insert(MI).second)
       continue;
@@ -258,7 +267,7 @@ float VirtRegAuxInfo::weightCalcHelper(LiveInterval &LI, SlotIndex *Start,
     }
 
     // Get allocation hints from copies.
-    if (!MI->isCopy())
+    if (!TII.isCopyInstr(*MI))
       continue;
     Register HintReg = copyHint(MI, LI.reg(), TRI, MRI);
     if (!HintReg)

@@ -183,7 +183,7 @@ def C5LeftShift : PatLeaf<(imm), [{
 
 def C9LeftShift : PatLeaf<(imm), [{
   uint64_t C = N->getZExtValue();
-  return C > 5 && (C >> llvm::countr_zero(C)) == 9;
+  return C > 9 && (C >> llvm::countr_zero(C)) == 9;
 }]>;
 
 // Constant of the form (3 << C) where C is less than 32.

@@ -1385,7 +1385,34 @@ struct UnaryOp<
                                          hlfir::Entity lhs) {
     if constexpr (TC1 == Fortran::common::TypeCategory::Character &&
                   TC2 == TC1) {
-      TODO(loc, "character conversion in HLFIR");
+      // TODO(loc, "character conversion in HLFIR");
+      auto kindMap = builder.getKindMap();
+      mlir::Type fromTy = lhs.getFortranElementType();
+      mlir::Value origBufferSize = genCharLength(loc, builder, lhs);
+      mlir::Value bufferSize{origBufferSize};
+      auto fromBits = kindMap.getCharacterBitsize(
+          fir::unwrapRefType(fromTy).cast<fir::CharacterType>().getFKind());
+      mlir::Type toTy = Fortran::lower::getFIRType(
+          builder.getContext(), TC1, KIND, /*params=*/std::nullopt);
+      auto toBits = kindMap.getCharacterBitsize(
+          toTy.cast<fir::CharacterType>().getFKind());
+      if (toBits < fromBits) {
+        // Scale by relative ratio to give a buffer of the same length.
+        auto ratio = builder.createIntegerConstant(loc, bufferSize.getType(),
+                                                   fromBits / toBits);
+        bufferSize =
+            builder.create<mlir::arith::MulIOp>(loc, bufferSize, ratio);
+      }
+      // allocate space on the stack for toBuffer
+      auto dest = builder.create<fir::AllocaOp>(loc, toTy,
+                                                mlir::ValueRange{bufferSize});
+      builder.create<fir::CharConvertOp>(loc, lhs.getFirBase(), origBufferSize,
+                                         dest);
+
+      return hlfir::EntityWithAttributes{builder.create<hlfir::DeclareOp>(
+          loc, dest, "ctor.temp", /*shape=*/nullptr,
+          /*typeparams=*/mlir::ValueRange{origBufferSize},
+          fir::FortranVariableFlagsAttr{})};
     }
     mlir::Type type = Fortran::lower::getFIRType(builder.getContext(), TC1,
                                                  KIND, /*params=*/std::nullopt);

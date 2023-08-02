@@ -79,8 +79,8 @@ body: |
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
     ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
     ; CHECK-NEXT: [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-    ; CHECK-NEXT: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+    ; CHECK-NEXT: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .2:
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.1(0x40000000)
@@ -135,8 +135,8 @@ body: |
     ; CHECK-NEXT: [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
     ; CHECK-NEXT: [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
     ; CHECK-NEXT: [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-    ; CHECK-NEXT: [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-    ; CHECK-NEXT: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+    ; CHECK-NEXT: [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+    ; CHECK-NEXT: [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: .2:
     ; CHECK-NEXT: successors: %bb.3(0x40000000), %bb.1(0x40000000)

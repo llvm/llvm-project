@@ -807,8 +807,7 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
 
       Value el = rewriter.create<vector::LoadOp>(loc, loadedElType,
                                                  op.getSource(), newIndices);
-      result = rewriter.create<vector::InsertOp>(loc, el, result,
-                                                 rewriter.getI64ArrayAttr(i));
+      result = rewriter.create<vector::InsertOp>(loc, el, result, i);
     }
   } else {
     if (auto vecType = dyn_cast<VectorType>(loadedElType)) {
@@ -832,7 +831,7 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
         Value el = rewriter.create<memref::LoadOp>(op.getLoc(), loadedElType,
                                                    op.getSource(), newIndices);
         result = rewriter.create<vector::InsertOp>(
-            op.getLoc(), el, result, rewriter.getI64ArrayAttr({i, innerIdx}));
+            op.getLoc(), el, result, ArrayRef<int64_t>{i, innerIdx});
       }
     }
   }

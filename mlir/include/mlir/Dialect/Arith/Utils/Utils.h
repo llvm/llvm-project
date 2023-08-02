@@ -26,49 +26,8 @@ namespace mlir {
 /// Matches a ConstantIndexOp.
 detail::op_matcher<arith::ConstantIndexOp> matchConstantIndex();
 
-/// Returns `success` when any of the elements in `ofrs` was produced by
-/// arith::ConstantIndexOp. In that case the constant attribute replaces the
-/// Value. Returns `failure` when no folding happened.
-LogicalResult foldDynamicIndexList(Builder &b,
-                                   SmallVectorImpl<OpFoldResult> &ofrs);
-
 llvm::SmallBitVector getPositionsOfShapeOne(unsigned rank,
                                             ArrayRef<int64_t> shape);
-
-/// Pattern to rewrite a subview op with constant arguments.
-template <typename OpType, typename ResultTypeFunc, typename CastOpFunc>
-class OpWithOffsetSizesAndStridesConstantArgumentFolder final
-    : public OpRewritePattern<OpType> {
-public:
-  using OpRewritePattern<OpType>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(OpType op,
-                                PatternRewriter &rewriter) const override {
-    SmallVector<OpFoldResult> mixedOffsets(op.getMixedOffsets());
-    SmallVector<OpFoldResult> mixedSizes(op.getMixedSizes());
-    SmallVector<OpFoldResult> mixedStrides(op.getMixedStrides());
-
-    // No constant operands were folded, just return;
-    if (failed(foldDynamicIndexList(rewriter, mixedOffsets)) &&
-        failed(foldDynamicIndexList(rewriter, mixedSizes)) &&
-        failed(foldDynamicIndexList(rewriter, mixedStrides)))
-      return failure();
-
-    // Create the new op in canonical form.
-    ResultTypeFunc resultTypeFunc;
-    auto resultType =
-        resultTypeFunc(op, mixedOffsets, mixedSizes, mixedStrides);
-    if (!resultType)
-      return failure();
-    auto newOp =
-        rewriter.create<OpType>(op.getLoc(), resultType, op.getSource(),
-                                mixedOffsets, mixedSizes, mixedStrides);
-    CastOpFunc func;
-    func(rewriter, op, newOp);
-
-    return success();
-  }
-};
 
 /// Converts an OpFoldResult to a Value. Returns the fold result if it casts to
 /// a Value or creates a ConstantIndexOp if it casts to an IntegerAttribute.
