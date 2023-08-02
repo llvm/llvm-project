@@ -102,7 +102,9 @@ namespace format {
   TYPE(MacroBlockBegin)                                                        \
   TYPE(MacroBlockEnd)                                                          \
   TYPE(ModulePartitionColon)                                                   \
+  TYPE(NamespaceLBrace)                                                        \
   TYPE(NamespaceMacro)                                                         \
+  TYPE(NamespaceRBrace)                                                        \
   TYPE(NonNullAssertion)                                                       \
   TYPE(NullCoalescingEqual)                                                    \
   TYPE(NullCoalescingOperator)                                                 \
