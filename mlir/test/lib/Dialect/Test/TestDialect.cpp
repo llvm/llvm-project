@@ -1263,6 +1263,10 @@ Operation::operand_range TestCallAndStoreOp::getArgOperands() {
   return getCalleeOperands();
 }
 
+MutableOperandRange TestCallAndStoreOp::getArgOperandsMutable() {
+  return getCalleeOperandsMutable();
+}
+
 void TestStoreWithARegion::getSuccessorRegions(
     std::optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
