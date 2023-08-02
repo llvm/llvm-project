@@ -17,7 +17,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, chdir, (const char *path)) {
-  long ret = __llvm_libc::syscall_impl(SYS_chdir, path);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_chdir, path);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

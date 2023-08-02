@@ -21,14 +21,15 @@ LLVM_LIBC_FUNCTION(ssize_t, pwrite,
                    (int fd, const void *buf, size_t count, off_t offset)) {
 #ifdef LIBC_TARGET_ARCH_IS_RISCV32
   static_assert(sizeof(off_t) == 8);
-  long ret =
-      __llvm_libc::syscall_impl(SYS_pwrite64, fd, buf, count, (long)offset,
-                                (long)(((uint64_t)(offset)) >> 32));
+  ssize_t ret = __llvm_libc::syscall_impl<ssize_t>(
+      SYS_pwrite64, fd, buf, count, (long)offset,
+      (long)(((uint64_t)(offset)) >> 32));
 #else
-  long ret = __llvm_libc::syscall_impl(SYS_pwrite64, fd, buf, count, offset);
+  ssize_t ret =
+      __llvm_libc::syscall_impl<ssize_t>(SYS_pwrite64, fd, buf, count, offset);
 #endif
   if (ret < 0) {
-    libc_errno = -ret;
+    libc_errno = static_cast<int>(-ret);
     return -1;
   }
   return ret;
