@@ -11,8 +11,8 @@
 // NORM2 using common infrastructure.
 
 #include "reduction-templates.h"
+#include "flang/Common/float128.h"
 #include "flang/Runtime/character.h"
-#include "flang/Runtime/float128.h"
 #include "flang/Runtime/reduction.h"
 #include <algorithm>
 #include <cfloat>

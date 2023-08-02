@@ -857,17 +857,14 @@ define signext i32 @vpreduce_xor_v64i32(i32 signext %s, <64 x i32> %v, <64 x i1>
 ; CHECK-NEXT:    vmv.s.x v25, a0
 ; CHECK-NEXT:    vsetvli zero, a2, e32, m8, ta, ma
 ; CHECK-NEXT:    vredxor.vs v25, v8, v25, v0.t
-; CHECK-NEXT:    vmv.x.s a0, v25
-; CHECK-NEXT:    vsetivli zero, 1, e32, m1, ta, ma
-; CHECK-NEXT:    vmv.s.x v8, a0
 ; CHECK-NEXT:    addi a0, a1, -32
 ; CHECK-NEXT:    sltu a1, a1, a0
 ; CHECK-NEXT:    addi a1, a1, -1
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m8, ta, ma
 ; CHECK-NEXT:    vmv1r.v v0, v24
-; CHECK-NEXT:    vredxor.vs v8, v16, v8, v0.t
-; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    vredxor.vs v25, v16, v25, v0.t
+; CHECK-NEXT:    vmv.x.s a0, v25
 ; CHECK-NEXT:    ret
   %r = call i32 @llvm.vp.reduce.xor.v64i32(i32 %s, <64 x i32> %v, <64 x i1> %m, i32 %evl)
   ret i32 %r

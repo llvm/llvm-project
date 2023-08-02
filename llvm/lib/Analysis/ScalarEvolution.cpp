@@ -1715,9 +1715,9 @@ const SCEV *ScalarEvolution::getZeroExtendExprImpl(const SCEV *Op, Type *Ty,
           Step = getZeroExtendExpr(Step, Ty, Depth + 1);
           return getAddRecExpr(Start, Step, L, AR->getNoWrapFlags());
         }
-        
+
         // For a negative step, we can extend the operands iff doing so only
-        // traverses values in the range zext([0,UINT_MAX]). 
+        // traverses values in the range zext([0,UINT_MAX]).
         if (isKnownNegative(Step)) {
           const SCEV *N = getConstant(APInt::getMaxValue(BitWidth) -
                                       getSignedRangeMin(Step));
@@ -4403,8 +4403,8 @@ Type *ScalarEvolution::getWiderType(Type *T1, Type *T2) const {
   return  getTypeSizeInBits(T1) >= getTypeSizeInBits(T2) ? T1 : T2;
 }
 
-bool ScalarEvolution::instructionCouldExistWitthOperands(const SCEV *A,
-                                                         const SCEV *B) {
+bool ScalarEvolution::instructionCouldExistWithOperands(const SCEV *A,
+                                                        const SCEV *B) {
   /// For a valid use point to exist, the defining scope of one operand
   /// must dominate the other.
   bool PreciseA, PreciseB;
@@ -4416,7 +4416,6 @@ bool ScalarEvolution::instructionCouldExistWitthOperands(const SCEV *A,
   return (ScopeA == ScopeB) || DT.dominates(ScopeA, ScopeB) ||
     DT.dominates(ScopeB, ScopeA);
 }
-
 
 const SCEV *ScalarEvolution::getCouldNotCompute() {
   return CouldNotCompute.get();
@@ -9007,7 +9006,7 @@ ScalarEvolution::ExitLimit ScalarEvolution::computeExitLimitFromICmp(
       InnerLHS = ZExt->getOperand();
     if (const SCEVAddRecExpr *AR = dyn_cast<SCEVAddRecExpr>(InnerLHS)) {
       auto *StrideC = dyn_cast<SCEVConstant>(AR->getStepRecurrence(*this));
-      if (!AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() && 
+      if (!AR->hasNoSelfWrap() && AR->getLoop() == L && AR->isAffine() &&
           StrideC && StrideC->getAPInt().isPowerOf2()) {
         auto Flags = AR->getNoWrapFlags();
         Flags = setFlags(Flags, SCEV::FlagNW);
@@ -12501,7 +12500,7 @@ bool ScalarEvolution::canIVOverflowOnLT(const SCEV *RHS, const SCEV *Stride,
 
 bool ScalarEvolution::canIVOverflowOnGT(const SCEV *RHS, const SCEV *Stride,
                                         bool IsSigned) {
-  
+
   unsigned BitWidth = getTypeSizeInBits(RHS->getType());
   const SCEV *One = getOne(Stride->getType());
 

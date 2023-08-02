@@ -16,10 +16,10 @@ define void @spill_sgpr_with_no_lower_vgpr_available() #0 {
 ; GCN-LABEL: spill_sgpr_with_no_lower_vgpr_available:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s24, s33
+; GCN-NEXT:    s_mov_b32 s18, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; GCN-NEXT:    buffer_store_dword v255, off, s[0:3], s33 offset:452 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v255, off, s[0:3], s33 offset:448 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    s_add_i32 s32, s32, 0x7400
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:440 ; 4-byte Folded Spill
@@ -135,13 +135,13 @@ define void @spill_sgpr_with_no_lower_vgpr_available() #0 {
 ; GCN-NEXT:    buffer_store_dword v254, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_writelane_b32 v255, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v255, s31, 1
-; GCN-NEXT:    buffer_store_dword v31, off, s[0:3], s33 offset:448 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v31, off, s[0:3], s33 offset:452 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:444
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:448 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:452 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, child_function@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, child_function@gotpcrel32@hi+12
@@ -266,10 +266,10 @@ define void @spill_sgpr_with_no_lower_vgpr_available() #0 {
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:440 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_load_dword v255, off, s[0:3], s33 offset:452 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v255, off, s[0:3], s33 offset:448 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_add_i32 s32, s32, 0xffff8c00
-; GCN-NEXT:    s_mov_b32 s33, s24
+; GCN-NEXT:    s_mov_b32 s33, s18
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, align 4, addrspace(5)
@@ -310,10 +310,10 @@ define void @spill_to_lowest_available_vgpr() #0 {
 ; GCN-LABEL: spill_to_lowest_available_vgpr:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s24, s33
+; GCN-NEXT:    s_mov_b32 s18, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_or_saveexec_b64 s[16:17], -1
-; GCN-NEXT:    buffer_store_dword v254, off, s[0:3], s33 offset:448 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v254, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[16:17]
 ; GCN-NEXT:    s_add_i32 s32, s32, 0x7400
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:436 ; 4-byte Folded Spill
@@ -428,13 +428,13 @@ define void @spill_to_lowest_available_vgpr() #0 {
 ; GCN-NEXT:    buffer_store_dword v253, off, s[0:3], s33 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_writelane_b32 v254, s30, 0
 ; GCN-NEXT:    v_writelane_b32 v254, s31, 1
-; GCN-NEXT:    buffer_store_dword v31, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v31, off, s[0:3], s33 offset:448 ; 4-byte Folded Spill
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s33 offset:440
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v31, off, s[0:3], s33 offset:448 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_getpc_b64 s[16:17]
 ; GCN-NEXT:    s_add_u32 s16, s16, child_function@gotpcrel32@lo+4
 ; GCN-NEXT:    s_addc_u32 s17, s17, child_function@gotpcrel32@hi+12
@@ -558,10 +558,10 @@ define void @spill_to_lowest_available_vgpr() #0 {
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:432 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:436 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_load_dword v254, off, s[0:3], s33 offset:448 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v254, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_add_i32 s32, s32, 0xffff8c00
-; GCN-NEXT:    s_mov_b32 s33, s24
+; GCN-NEXT:    s_mov_b32 s33, s18
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   %alloca = alloca i32, align 4, addrspace(5)
@@ -602,8 +602,8 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
 ; GCN-LABEL: spill_sgpr_with_sgpr_uses:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_store_dword v254, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:436 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:432 ; 4-byte Folded Spill
@@ -715,22 +715,38 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
 ; GCN-NEXT:    buffer_store_dword v251, off, s[0:3], s32 offset:8 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v252, off, s[0:3], s32 offset:4 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v253, off, s[0:3], s32 ; 4-byte Folded Spill
+; GCN-NEXT:    ; implicit-def: $vgpr0
 ; GCN-NEXT:    v_mov_b32_e32 v0, 0
 ; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:440
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
+; GCN-NEXT:    s_or_saveexec_b64 s[8:9], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[8:9]
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; def s4
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    v_writelane_b32 v254, s4, 0
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_writelane_b32 v0, s4, 0
+; GCN-NEXT:    s_or_saveexec_b64 s[8:9], -1
+; GCN-NEXT:    buffer_store_dword v0, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
+; GCN-NEXT:    s_mov_b64 exec, s[8:9]
 ; GCN-NEXT:    s_cbranch_scc1 .LBB3_2
 ; GCN-NEXT:  ; %bb.1: ; %bb0
-; GCN-NEXT:    v_readlane_b32 s4, v254, 0
+; GCN-NEXT:    s_or_saveexec_b64 s[8:9], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[8:9]
+; GCN-NEXT:    s_waitcnt vmcnt(0)
+; GCN-NEXT:    v_readlane_b32 s4, v0, 0
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ; use s4
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:  .LBB3_2: ; %ret
+; GCN-NEXT:    s_or_saveexec_b64 s[8:9], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
+; GCN-NEXT:    s_mov_b64 exec, s[8:9]
+; GCN-NEXT:    ; kill: killed $vgpr0
 ; GCN-NEXT:    buffer_load_dword v253, off, s[0:3], s32 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v252, off, s[0:3], s32 offset:4 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v251, off, s[0:3], s32 offset:8 ; 4-byte Folded Reload
@@ -841,8 +857,8 @@ define void @spill_sgpr_with_sgpr_uses() #0 {
 ; GCN-NEXT:    buffer_load_dword v42, off, s[0:3], s32 offset:428 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:432 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:436 ; 4-byte Folded Reload
-; GCN-NEXT:    s_or_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_load_dword v254, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
+; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
+; GCN-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -1167,7 +1183,7 @@ define void @spill_sgpr_no_free_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:464 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v4, off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s32 offset:444 ; 4-byte Folded Spill
 ; GCN-NEXT:    buffer_store_dword v41, off, s[0:3], s32 offset:440 ; 4-byte Folded Spill
@@ -1299,17 +1315,17 @@ define void @spill_sgpr_no_free_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GCN-NEXT:    ; implicit-def: $sgpr4_sgpr5
 ; GCN-NEXT:    flat_load_dwordx4 v[5:8], v[2:3]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:448 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v5, off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
-; GCN-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:452 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:456 ; 4-byte Folded Spill
-; GCN-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:460 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v6, off, s[0:3], s32 offset:456 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v7, off, s[0:3], s32 offset:460 ; 4-byte Folded Spill
+; GCN-NEXT:    buffer_store_dword v8, off, s[0:3], s32 offset:464 ; 4-byte Folded Spill
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
-; GCN-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
-; GCN-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v5, off, s[0:3], s32 offset:452 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v6, off, s[0:3], s32 offset:456 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v7, off, s[0:3], s32 offset:460 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v8, off, s[0:3], s32 offset:464 ; 4-byte Folded Reload
 ; GCN-NEXT:    ;;#ASMSTART
 ; GCN-NEXT:    ;;#ASMEND
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
@@ -1431,7 +1447,7 @@ define void @spill_sgpr_no_free_vgpr(ptr addrspace(1) %out, ptr addrspace(1) %in
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s32 offset:440 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s32 offset:444 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_xor_saveexec_b64 s[4:5], -1
-; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:464 ; 4-byte Folded Reload
+; GCN-NEXT:    buffer_load_dword v4, off, s[0:3], s32 offset:448 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_mov_b64 exec, s[4:5]
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
@@ -1512,7 +1528,7 @@ define void @spill_sgpr_no_free_vgpr_ipra() #0 {
 ; GCN-LABEL: spill_sgpr_no_free_vgpr_ipra:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_mov_b32 s24, s33
+; GCN-NEXT:    s_mov_b32 s18, s33
 ; GCN-NEXT:    s_mov_b32 s33, s32
 ; GCN-NEXT:    s_add_i32 s32, s32, 0x7400
 ; GCN-NEXT:    buffer_store_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Spill
@@ -1782,7 +1798,7 @@ define void @spill_sgpr_no_free_vgpr_ipra() #0 {
 ; GCN-NEXT:    buffer_load_dword v41, off, s[0:3], s33 offset:440 ; 4-byte Folded Reload
 ; GCN-NEXT:    buffer_load_dword v40, off, s[0:3], s33 offset:444 ; 4-byte Folded Reload
 ; GCN-NEXT:    s_add_i32 s32, s32, 0xffff8c00
-; GCN-NEXT:    s_mov_b32 s33, s24
+; GCN-NEXT:    s_mov_b32 s33, s18
 ; GCN-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
   call void @child_function_ipra()

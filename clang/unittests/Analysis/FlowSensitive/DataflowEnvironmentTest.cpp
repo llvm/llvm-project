@@ -279,9 +279,9 @@ TEST_F(EnvironmentTest, RefreshStructValue) {
   ASSERT_THAT(DRE, NotNull());
 
   Environment Env(DAContext, *Target);
-  EXPECT_THAT(Env.getStorageLocationStrict(*DRE), IsNull());
+  EXPECT_THAT(Env.getStorageLocation(*DRE), IsNull());
   refreshStructValue(*DRE, Env);
-  EXPECT_THAT(Env.getStorageLocationStrict(*DRE), NotNull());
+  EXPECT_THAT(Env.getStorageLocation(*DRE), NotNull());
 }
 
 } // namespace

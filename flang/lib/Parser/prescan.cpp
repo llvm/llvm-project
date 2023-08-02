@@ -630,10 +630,14 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     }
   } else {
     char ch{*at_};
-    if (ch == '(' || ch == '[') {
-      ++delimiterNesting_;
-    } else if ((ch == ')' || ch == ']') && delimiterNesting_ > 0) {
-      --delimiterNesting_;
+    if (ch == '(') {
+      if (parenthesisNesting_++ == 0) {
+        isPossibleMacroCall_ = tokens.SizeInTokens() > 0 &&
+            preprocessor_.IsNameDefined(
+                tokens.TokenAt(tokens.SizeInTokens() - 1));
+      }
+    } else if (ch == ')' && parenthesisNesting_ > 0) {
+      --parenthesisNesting_;
     }
     char nch{EmitCharAndAdvance(tokens, ch)};
     preventHollerith_ = false;
@@ -1142,8 +1146,9 @@ bool Prescanner::FreeFormContinuation() {
 // Implicit line continuation allows a preprocessor macro call with
 // arguments to span multiple lines.
 bool Prescanner::IsImplicitContinuation() const {
-  return !inPreprocessorDirective_ && !inCharLiteral_ &&
-      delimiterNesting_ > 0 && !IsAtEnd() &&
+  return !inPreprocessorDirective_ && !inCharLiteral_ && isPossibleMacroCall_ &&
+      parenthesisNesting_ > 0 &&
+      !preprocessor_.anyMacroWithUnbalancedParentheses() && !IsAtEnd() &&
       ClassifyLine(nextLine_).kind == LineClassification::Kind::Source;
 }
 

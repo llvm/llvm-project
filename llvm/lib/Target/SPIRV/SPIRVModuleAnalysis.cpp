@@ -552,6 +552,10 @@ void RequirementHandler::initAvailableCapabilities(const SPIRVSubtarget &ST) {
   // TODO: verify if this needs some checks.
   addAvailableCaps({Capability::Float16, Capability::Float64});
 
+  // Add cap for SPV_INTEL_optnone.
+  // FIXME: this should be added only if the target has the extension.
+  addAvailableCaps({Capability::OptNoneINTEL});
+
   // TODO: add OpenCL extensions.
 }
 } // namespace SPIRV
@@ -898,6 +902,13 @@ static void collectReqs(const Module &M, SPIRV::ModuleAnalysisInfo &MAI,
       MAI.Reqs.getAndAddRequirements(
           SPIRV::OperandCategory::ExecutionModeOperand,
           SPIRV::ExecutionMode::VecTypeHint, ST);
+
+    if (F.hasOptNone() &&
+        ST.canUseExtension(SPIRV::Extension::SPV_INTEL_optnone)) {
+      // Output OpCapability OptNoneINTEL.
+      MAI.Reqs.addExtension(SPIRV::Extension::SPV_INTEL_optnone);
+      MAI.Reqs.addCapability(SPIRV::Capability::OptNoneINTEL);
+    }
   }
 }
 

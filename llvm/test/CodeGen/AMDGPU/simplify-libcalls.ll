@@ -347,7 +347,7 @@ declare float @_Z4pownfi(float, i32)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pow
 ; GCN-POSTLINK: call fast float @_Z3powff(float %tmp, float 1.013000e+03)
-; GCN-PRELINK: %__fabs = tail call fast float @_Z4fabsf(float %tmp)
+; GCN-PRELINK: %__fabs = tail call fast float @llvm.fabs.f32(float %tmp)
 ; GCN-PRELINK: %__log2 = tail call fast float @_Z4log2f(float %__fabs)
 ; GCN-PRELINK: %__ylogx = fmul fast float %__log2, 1.013000e+03
 ; GCN-PRELINK: %__exp2 = tail call fast float @_Z4exp2f(float %__ylogx)
@@ -387,7 +387,7 @@ entry:
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_pown
 ; GCN-POSTLINK: call fast float @_Z4pownfi(float %tmp, i32 %conv)
 ; GCN-PRELINK: %conv = fptosi float %tmp1 to i32
-; GCN-PRELINK: %__fabs = tail call fast float @_Z4fabsf(float %tmp)
+; GCN-PRELINK: %__fabs = tail call fast float @llvm.fabs.f32(float %tmp)
 ; GCN-PRELINK: %__log2 = tail call fast float @_Z4log2f(float %__fabs)
 ; GCN-PRELINK: %pownI2F = sitofp i32 %conv to float
 ; GCN-PRELINK: %__ylogx = fmul fast float %__log2, %pownI2F
@@ -784,8 +784,7 @@ entry:
   ret void
 }
 
-; GCN-PRELINK: declare float @_Z4fabsf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
-; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY]]
+; GCN-PRELINK: declare float @_Z4cbrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY:[0-9]+]]
 ; GCN-PRELINK: declare float @_Z11native_sqrtf(float) local_unnamed_addr #[[$NOUNWIND_READONLY]]
 
 ; GCN-PRELINK: attributes #[[$NOUNWIND]] = { nounwind }
