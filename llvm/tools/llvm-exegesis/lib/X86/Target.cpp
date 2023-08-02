@@ -43,6 +43,9 @@
 #include <unistd.h>
 #endif
 
+#define GET_AVAILABLE_OPCODE_CHECKER
+#include "X86GenInstrInfo.inc"
+
 namespace llvm {
 namespace exegesis {
 
@@ -669,7 +672,8 @@ private:
 
 class ExegesisX86Target : public ExegesisTarget {
 public:
-  ExegesisX86Target() : ExegesisTarget(X86CpuPfmCounters) {}
+  ExegesisX86Target()
+      : ExegesisTarget(X86CpuPfmCounters, X86_MC::isOpcodeAvailable) {}
 
   Expected<std::unique_ptr<pfm::Counter>>
   createCounter(StringRef CounterName, const LLVMState &State,

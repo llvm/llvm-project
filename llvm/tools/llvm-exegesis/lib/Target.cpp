@@ -14,6 +14,7 @@
 #include "UopsBenchmarkRunner.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/Error.h"
+#include "llvm/TargetParser/SubtargetFeature.h"
 
 namespace llvm {
 namespace exegesis {
@@ -180,10 +181,12 @@ ExegesisTarget::SavedState::~SavedState() {} // anchor.
 
 namespace {
 
+bool opcodeIsNotAvailable(unsigned, const FeatureBitset &) { return false; }
+
 // Default implementation.
 class ExegesisDefaultTarget : public ExegesisTarget {
 public:
-  ExegesisDefaultTarget() : ExegesisTarget({}) {}
+  ExegesisDefaultTarget() : ExegesisTarget({}, opcodeIsNotAvailable) {}
 
 private:
   std::vector<MCInst> setRegTo(const MCSubtargetInfo &STI, unsigned Reg,
