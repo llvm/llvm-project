@@ -4773,7 +4773,6 @@ def _warn__EQ : Joined<["--"], "warn-=">, Alias<W_Joined>;
 def _warn_ : Joined<["--"], "warn-">, Alias<W_Joined>;
 def _write_dependencies : Flag<["--"], "write-dependencies">, Alias<MD>;
 def _write_user_dependencies : Flag<["--"], "write-user-dependencies">, Alias<MMD>;
-def _ : Joined<["--"], "">, Flags<[Unsupported]>;
 
 // Hexagon feature flags.
 let Flags = [TargetSpecific] in {
