@@ -2638,9 +2638,6 @@ Instruction *InstCombinerImpl::visitFSub(BinaryOperator &I) {
   if (Instruction *X = foldFNegIntoConstant(I, DL))
     return X;
 
-  if (Instruction *R = hoistFNegAboveFMulFDiv(I, Builder))
-    return R;
-
   Value *X, *Y;
   Constant *C;
 
