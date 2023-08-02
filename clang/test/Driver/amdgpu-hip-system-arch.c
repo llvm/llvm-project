@@ -26,8 +26,8 @@
 // EMPTY-OUTPUT: error: cannot determine amdgcn architecture: No AMD GPU detected in the system; consider passing it via '--offload-arch'
 
 // case when amdgpu-arch returns a gfx906 GPU.
-// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-arch=native --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 -x hip %s 2>&1 \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib --offload-arch=native --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 -x hip %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-GFX906
-// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -nogpulib --offload-new-driver --offload-arch=native --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 -x hip %s 2>&1 \
+// RUN:   %clang -### --target=x86_64-unknown-linux-gnu -nogpuinc -nogpulib --offload-new-driver --offload-arch=native --amdgpu-arch-tool=%t/amdgpu_arch_gfx906 -x hip %s 2>&1 \
 // RUN:   | FileCheck %s --check-prefix=ARCH-GFX906
 // ARCH-GFX906: "-cc1" "-triple" "amdgcn-amd-amdhsa"{{.*}}"-target-cpu" "gfx906"
