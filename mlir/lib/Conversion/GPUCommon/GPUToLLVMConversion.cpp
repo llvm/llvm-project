@@ -67,9 +67,10 @@ public:
 protected:
   Value getNumElements(ConversionPatternRewriter &rewriter, Location loc,
                        MemRefType type, MemRefDescriptor desc) const {
+    Type indexType = ConvertToLLVMPattern::getIndexType();
     return type.hasStaticShape()
-               ? ConvertToLLVMPattern::createIndexConstant(
-                     rewriter, loc, type.getNumElements())
+               ? ConvertToLLVMPattern::createIndexAttrConstant(
+                     rewriter, loc, indexType, type.getNumElements())
                // For identity maps (verified by caller), the number of
                // elements is stride[0] * size[0].
                : rewriter.create<LLVM::MulOp>(loc,
