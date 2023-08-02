@@ -1905,10 +1905,8 @@ static void RemovePreallocated(Function *F) {
         Builder.SetInsertPoint(InsertBefore);
         auto *Alloca =
             Builder.CreateAlloca(ArgType, AddressSpace, nullptr, "paarg");
-        auto *BitCast = Builder.CreateBitCast(
-            Alloca, Type::getInt8PtrTy(M->getContext()), UseCall->getName());
-        ArgAllocas[AllocArgIndex] = BitCast;
-        AllocaReplacement = BitCast;
+        ArgAllocas[AllocArgIndex] = Alloca;
+        AllocaReplacement = Alloca;
       }
 
       UseCall->replaceAllUsesWith(AllocaReplacement);
@@ -2117,19 +2115,18 @@ static void setUsedInitializer(GlobalVariable &V,
   const auto *VEPT = cast<PointerType>(VAT->getArrayElementType());
 
   // Type of pointer to the array of pointers.
-  PointerType *Int8PtrTy =
-      Type::getInt8PtrTy(V.getContext(), VEPT->getAddressSpace());
+  PointerType *PtrTy =
+      PointerType::get(V.getContext(), VEPT->getAddressSpace());
 
   SmallVector<Constant *, 8> UsedArray;
   for (GlobalValue *GV : Init) {
-    Constant *Cast =
-        ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, Int8PtrTy);
+    Constant *Cast = ConstantExpr::getPointerBitCastOrAddrSpaceCast(GV, PtrTy);
     UsedArray.push_back(Cast);
   }
 
   // Sort to get deterministic order.
   array_pod_sort(UsedArray.begin(), UsedArray.end(), compareNames);
-  ArrayType *ATy = ArrayType::get(Int8PtrTy, UsedArray.size());
+  ArrayType *ATy = ArrayType::get(PtrTy, UsedArray.size());
 
   Module *M = V.getParent();
   V.removeFromParent();
