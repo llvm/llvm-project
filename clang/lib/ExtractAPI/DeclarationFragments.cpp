@@ -606,7 +606,7 @@ DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForSpecialCXXMethod(
     const CXXMethodDecl *Method) {
   DeclarationFragments Fragments;
-  StringRef Name;
+  std::string Name;
   if (isa<CXXConstructorDecl>(Method)) {
     auto *Constructor = dyn_cast<CXXConstructorDecl>(Method);
     Name = cast<CXXRecordDecl>(Constructor->getDeclContext())->getName();
@@ -614,7 +614,7 @@ DeclarationFragmentsBuilder::getFragmentsForSpecialCXXMethod(
       Fragments.append("explicit", DeclarationFragments::FragmentKind::Keyword)
           .appendSpace();
   } else if (isa<CXXDestructorDecl>(Method))
-    Name = StringRef(Method->getNameAsString());
+    Name = Method->getNameAsString();
 
   DeclarationFragments After;
   Fragments.append(Name, DeclarationFragments::FragmentKind::Identifier)
