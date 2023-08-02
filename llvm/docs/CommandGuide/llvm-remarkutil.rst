@@ -21,7 +21,7 @@ Subcommands
   * :ref:`yaml2bitstream_subcommand` - Reserialize YAML remarks to bitstream.
   * :ref:`instruction-count_subcommand` - Output function instruction counts.
   * :ref:`annotation-count_subcommand` - Output remark type count from annotation remarks.
-  * :ref: `size-diff_subcommand` - Compute diff in size remarks.
+  * :ref:`size-diff_subcommand` - Compute diff in size remarks.
 
 .. _bitstream2yaml_subcommand:
 
@@ -171,7 +171,7 @@ two sections:
 * A high-level summary of all changes.
 
 Changed Function Section
-########################
+~~~~~~~~~~~~~~~~~~~~~~~~
 
 Suppose you are comparing two remark files OLD and NEW.
 
@@ -208,7 +208,7 @@ A breakdown of the format is below:
   Second file stack byte count - first file stack byte count.
 
 Summary Section
-###############
+~~~~~~~~~~~~~~~
 
 :program:`llvm-remarkutil size-diff` will output a high-level summary after
 printing all changed functions.
@@ -236,7 +236,7 @@ JSON OUTPUT
 -----------
 
 High-Level view
-###############
+~~~~~~~~~~~~~~~
 
 Suppose we are comparing two files, OLD and NEW.
 
@@ -278,7 +278,7 @@ Suppose we are comparing two files, OLD and NEW.
   Functions only present in the second file.
 
 Function JSON
-#############
+~~~~~~~~~~~~~
 
 The ``InBoth``, ``OnlyInA``, and ``OnlyInB`` sections contain size information
 for each function in the input remark files.
@@ -313,7 +313,7 @@ for each function in the input remark files.
   *  ``STACK_BYTES_B``: Stack bytes in NEW.
 
 Computing Diffs From Function JSON
-**********************************
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Function JSON does not contain the diffs. Tools consuming JSON output from
 :program:`llvm-remarkutil size-diff` are responsible for computing the diffs
