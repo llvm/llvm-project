@@ -1630,6 +1630,14 @@ func.func @omp_target_data(%map1: memref<?xi32>) {
 
 // -----
 
+func.func @omp_target_data() {
+  // expected-error @below {{At least one of map, useDevicePtr, or useDeviceAddr operand must be present}}
+  omp.target_data {}
+  return
+}
+
+// -----
+
 func.func @omp_target_enter_data(%map1: memref<?xi32>) {
   // expected-error @below {{to and alloc map types are permitted}}
   omp.target_enter_data map((from -> %map1 : memref<?xi32>)){}
