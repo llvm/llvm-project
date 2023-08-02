@@ -1667,7 +1667,7 @@ Address CGOpenMPRuntime::getAddrOfDeclareTargetVar(const VarDecl *VD) {
   auto AddrOfGlobal = [&VD, this]() { return CGM.GetAddrOfGlobal(VD); };
 
   auto LinkageForVariable = [&VD, this]() {
-    return CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false);
+    return CGM.getLLVMLinkageVarDefinition(VD);
   };
 
   std::vector<llvm::GlobalVariable *> GeneratedRefs;
@@ -10170,7 +10170,7 @@ void CGOpenMPRuntime::registerTargetGlobalVariable(const VarDecl *VD,
 
   auto AddrOfGlobal = [&VD, this]() { return CGM.GetAddrOfGlobal(VD); };
   auto LinkageForVariable = [&VD, this]() {
-    return CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false);
+    return CGM.getLLVMLinkageVarDefinition(VD);
   };
 
   std::vector<llvm::GlobalVariable *> GeneratedRefs;

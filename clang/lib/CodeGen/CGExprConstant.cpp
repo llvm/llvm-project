@@ -1918,7 +1918,7 @@ ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
 
         if (VD->isLocalVarDecl()) {
           return CGM.getOrCreateStaticVarDecl(
-              *VD, CGM.getLLVMLinkageVarDefinition(VD, /*IsConstant=*/false));
+              *VD, CGM.getLLVMLinkageVarDefinition(VD));
         }
       }
     }
