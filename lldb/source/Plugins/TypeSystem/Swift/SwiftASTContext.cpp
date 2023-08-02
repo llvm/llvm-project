@@ -1112,9 +1112,14 @@ static void printASTValidationError(
 }
 
 void SwiftASTContext::DiagnoseWarnings(Process &process, Module &module) const {
-  if (HasDiagnostics())
-    process.PrintWarningCantLoadSwiftModule(module,
-                                            GetAllDiagnostics().AsCString());
+  if (!HasDiagnostics())
+    return;
+  auto debugger_id = process.GetTarget().GetDebugger().GetID();
+  std::string msg;
+  llvm::raw_string_ostream(msg) << "Cannot load Swift type information for "
+                                << module.GetFileSpec().GetPath();
+  Debugger::ReportWarning(msg, debugger_id, &m_swift_import_warning);
+  StreamAllDiagnostics(debugger_id);
 }
 
 /// Locate the swift-plugin-server for a plugin library,
@@ -1497,8 +1502,8 @@ bool ShouldUnique(StringRef arg) {
 } // namespace
 
 // static
-void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string>& source,
-                                        std::vector<std::string>& dest) {
+void SwiftASTContext::AddExtraClangArgs(const std::vector<std::string> &source,
+                                        std::vector<std::string> &dest) {
   llvm::StringSet<> unique_flags;
   for (auto &arg : dest)
     unique_flags.insert(arg);
@@ -1635,6 +1640,41 @@ void SwiftASTContext::RemapClangImporterOptions(
                  remapped.GetCString());
       arg_string = prefix.str() + remapped.GetCString();
     }
+  }
+}
+
+void SwiftASTContext::FilterClangImporterOptions(
+    std::vector<std::string> &extra_args, SwiftASTContext *ctx) {
+  std::string ivfs_arg;
+  // Copy back a filtered version of ExtraArgs.
+  std::vector<std::string> orig_args(std::move(extra_args));
+  for (auto &arg : orig_args) {
+    // The VFS options turn into fatal errors when the referenced file
+    // is not found. Since the Xcode build system tends to create a
+    // lot of VFS overlays by default, stat them and emit a warning if
+    // the yaml file couldn't be found.
+    if (StringRef(arg).startswith("-ivfs")) {
+      // Stash the argument.
+      ivfs_arg = arg;
+      continue;
+    }
+    if (!ivfs_arg.empty()) {
+      auto clear_ivfs_arg = llvm::make_scope_exit([&] { ivfs_arg.clear(); });
+      if (!FileSystem::Instance().Exists(arg)) {
+        if (ctx) {
+          std::string error;
+          llvm::raw_string_ostream(error)
+              << "Ignoring missing VFS file: " << arg
+              << "\nThis is the likely root cause for any subsequent compiler "
+                 "errors.";
+          ctx->AddDiagnostic(eDiagnosticSeverityWarning, error);
+        }
+        continue;
+      }
+      // Keep it.
+      extra_args.push_back(ivfs_arg);
+    }
+    extra_args.push_back(std::move(arg));
   }
 }
 
@@ -1894,6 +1934,8 @@ SwiftASTContext::CreateInstance(lldb::LanguageType language, Module &module,
 
   // Apply source path remappings found in the module's dSYM.
   swift_ast_sp->RemapClangImporterOptions(module.GetSourceMappingList());
+  swift_ast_sp->FilterClangImporterOptions(
+      swift_ast_sp->GetClangImporterOptions().ExtraArgs, swift_ast_sp.get());
 
   // Add Swift interfaces in the .dSYM at the end of the search paths.
   // .swiftmodules win over .swiftinterfaces, when they are loaded
@@ -2386,6 +2428,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
 
   // Apply source path remappings found in the target settings.
   swift_ast_sp->RemapClangImporterOptions(target.GetSourcePathMap());
+  swift_ast_sp->FilterClangImporterOptions(
+      swift_ast_sp->GetClangImporterOptions().ExtraArgs, swift_ast_sp.get());
 
   // This needs to happen once all the import paths are set, or
   // otherwise no modules will be found.
@@ -2471,6 +2515,35 @@ Status SwiftASTContext::GetAllDiagnostics() const {
         ->Clear();
   }
   return error;
+}
+
+void SwiftASTContext::StreamAllDiagnostics(
+    llvm::Optional<lldb::user_id_t> debugger_id) const {
+  Status error = m_fatal_errors;
+  if (!error.Success()) {
+    Debugger::ReportWarning(error.AsCString(), debugger_id,
+                            &m_swift_diags_streamed);
+    return;
+  }
+
+  // Retrieve the error message from the DiagnosticConsumer.
+  DiagnosticManager diagnostic_manager;
+  PrintDiagnostics(diagnostic_manager);
+  for (auto &diag : diagnostic_manager.Diagnostics())
+    if (diag) {
+      std::string msg = diag->GetMessage().str();
+      switch (diag->GetSeverity()) {
+      case eDiagnosticSeverityError:
+        Debugger::ReportError(msg, debugger_id, &m_swift_diags_streamed);
+        break;
+      case eDiagnosticSeverityWarning:
+      case eDiagnosticSeverityRemark:
+        Debugger::ReportWarning(msg, debugger_id, &m_swift_warning_streamed);
+        break;
+      }
+    }
+  static_cast<StoringDiagnosticConsumer *>(m_diagnostic_consumer_ap.get())
+      ->Clear();
 }
 
 void SwiftASTContext::LogFatalErrors() const {

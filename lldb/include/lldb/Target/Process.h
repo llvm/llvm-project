@@ -1355,14 +1355,6 @@ public:
   void PrintWarningOptimization(const SymbolContext &sc);
 
 #ifdef LLDB_ENABLE_SWIFT
-  /// Prints a async warning message to the user one time per Process
-  /// for a Module whose Swift AST sections couldn't be loaded because
-  /// they aren't buildable on the current machine.
-  ///
-  /// @param [in] module
-  ///     The affected Module.
-  void PrintWarningCantLoadSwiftModule(Module &module, std::string details);
-
   /// Print a user-visible warning about Swift CUs compiled with a
   /// different Swift compiler than the one embedded in LLDB.
   void PrintWarningToolchainMismatch(const SymbolContext &sc);

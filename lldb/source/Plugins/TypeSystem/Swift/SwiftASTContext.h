@@ -262,6 +262,9 @@ public:
   static void AddExtraClangArgs(const std::vector<std::string>& source,
                                 std::vector<std::string>& dest);
   static std::string GetPluginServer(llvm::StringRef plugin_library_path);
+  /// Removes nonexisting VFS overlay options.
+  static void FilterClangImporterOptions(std::vector<std::string> &extra_args,
+                                         SwiftASTContext *ctx = nullptr);
 
   /// Add the target's swift-extra-clang-flags to the ClangImporter options.
   void AddUserClangArgs(TargetProperties &props);
@@ -857,6 +860,8 @@ protected:
   /// Called by the VALID_OR_RETURN macro to log all errors.
   void LogFatalErrors() const;
   Status GetAllDiagnostics() const;
+  /// Stream all diagnostics to the Debugger and clear them.
+  void StreamAllDiagnostics(llvm::Optional<lldb::user_id_t> debugger_id) const;
 
   llvm::TargetOptions *getTargetOptions();
 
@@ -901,6 +906,9 @@ protected:
   std::unique_ptr<swift::irgen::IRGenerator> m_ir_generator_ap;
   std::unique_ptr<swift::irgen::IRGenModule> m_ir_gen_module_ap;
   llvm::once_flag m_ir_gen_module_once;
+  mutable std::once_flag m_swift_import_warning;
+  mutable std::once_flag m_swift_diags_streamed;
+  mutable std::once_flag m_swift_warning_streamed;
   std::unique_ptr<swift::DiagnosticConsumer> m_diagnostic_consumer_ap;
   std::unique_ptr<swift::DependencyTracker> m_dependency_tracker;
   swift::ModuleDecl *m_scratch_module = nullptr;

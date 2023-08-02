@@ -12,9 +12,10 @@
 
 #include "gtest/gtest.h"
 
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "lldb/Host/FileSystem.h"
 #include "lldb/Host/HostInfo.h"
-#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#include "llvm/Support/FileUtilities.h"
 
 using namespace lldb;
 using namespace lldb_private;
@@ -243,4 +244,41 @@ TEST(ClangArgs, DoubleDash) {
 
   // Check that all ignored arguments got removed.
   EXPECT_EQ(dest, std::vector<std::string>({"-v"}));
+}
+
+TEST_F(TestSwiftASTContext, IVFS) {
+  const auto *Info = testing::UnitTest::GetInstance()->current_test_info();
+  llvm::SmallString<128> name;
+  auto ec = llvm::sys::fs::createTemporaryFile(
+      llvm::Twine(Info->test_case_name()) + "-" + Info->name(), "overlay.yaml",
+      name);
+  ASSERT_FALSE((bool)ec);
+  llvm::FileRemover remover(name);
+
+  std::string valid = name.str().str();
+  std::string invalid = name.str().drop_back(1).str() +"XXX";
+  std::vector<std::string> args;
+  args.push_back("-ivfsoverlay");
+  args.push_back(valid);
+
+  args.push_back("-ivfsoverlay");
+  args.push_back(invalid);
+
+  args.push_back("-ivfsstatcache");
+  args.push_back(valid);
+
+  args.push_back("-ivfsstatcache");
+  args.push_back(invalid);
+
+  std::vector<std::string> expected;
+  expected.push_back("-ivfsoverlay");
+  expected.push_back(valid);
+
+  expected.push_back("-ivfsstatcache");
+  expected.push_back(valid);
+
+  SwiftASTContext::FilterClangImporterOptions(args);
+
+  // Check that all ignored arguments got removed.
+  EXPECT_EQ(args, expected);
 }
