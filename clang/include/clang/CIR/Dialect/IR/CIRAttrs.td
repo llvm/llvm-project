@@ -175,9 +175,7 @@ def ConstStructAttr : CIR_Attr<"ConstStruct", "const_struct",
   ];
 
   let assemblyFormat = [{
-    `<`
-      custom<ConstStructMembers>($type, $members)
-    `>`
+    `<` custom<StructMembers>($members) `>`
   }];
 
   let genVerifyDecl = 1;
@@ -307,12 +305,12 @@ def TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
   }];
 
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        "ConstStructAttr":$typeinfo_data);
+                        "mlir::ArrayAttr":$data);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "Type":$type,
-                                        "ConstStructAttr":$typeinfo_data), [{
-      return $_get(type.getContext(), type, typeinfo_data);
+                                        "mlir::ArrayAttr":$data), [{
+      return $_get(type.getContext(), type, data);
     }]>
   ];
 
@@ -320,7 +318,7 @@ def TypeInfoAttr : CIR_Attr<"TypeInfo", "typeinfo", [TypedAttrInterface]> {
   // element type.
   let genVerifyDecl = 1;
   let assemblyFormat = [{
-    `<` $typeinfo_data `>`
+    `<` custom<StructMembers>($data) `>`
   }];
 }
 

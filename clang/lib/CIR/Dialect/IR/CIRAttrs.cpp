@@ -23,6 +23,7 @@
 #include "mlir/IR/Location.h"
 #include "mlir/IR/OpImplementation.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Support/LogicalResult.h"
 
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -30,10 +31,9 @@
 // ClangIR holds back AST references when available.
 #include "clang/AST/Decl.h"
 
-static void printConstStructMembers(mlir::AsmPrinter &p, mlir::Type type,
+static void printStructMembers(mlir::AsmPrinter &p,
                                     mlir::ArrayAttr members);
-static mlir::ParseResult parseConstStructMembers(::mlir::AsmParser &parser,
-                                                 mlir::Type &type,
+static mlir::ParseResult parseStructMembers(::mlir::AsmParser &parser,
                                                  mlir::ArrayAttr &members);
 
 #define GET_ATTRDEF_CLASSES
@@ -64,47 +64,31 @@ void CIRDialect::printAttribute(Attribute attr, DialectAsmPrinter &os) const {
     llvm_unreachable("unexpected CIR type kind");
 }
 
-static void printConstStructMembers(mlir::AsmPrinter &p, mlir::Type type,
+static void printStructMembers(mlir::AsmPrinter &printer,
                                     mlir::ArrayAttr members) {
-  p << "{";
-  unsigned i = 0, e = members.size();
-  while (i < e) {
-    p << members[i];
-    if (e > 0 && i < e - 1)
-      p << ",";
-    i++;
-  }
-  p << "}";
+  printer << '{';
+  llvm::interleaveComma(members, printer);
+  printer << '}';
 }
 
-static ParseResult parseConstStructMembers(::mlir::AsmParser &parser,
-                                           mlir::Type &type,
+static ParseResult parseStructMembers(mlir::AsmParser &parser,
                                            mlir::ArrayAttr &members) {
   SmallVector<mlir::Attribute, 4> elts;
-  SmallVector<mlir::Type, 4> tys;
-  if (parser
-          .parseCommaSeparatedList(
-              AsmParser::Delimiter::Braces,
-              [&]() {
-                Attribute attr;
-                if (parser.parseAttribute(attr).succeeded()) {
-                  elts.push_back(attr);
-                  if (auto tyAttr = attr.dyn_cast<mlir::TypedAttr>()) {
-                    tys.push_back(tyAttr.getType());
-                    return success();
-                  }
-                  parser.emitError(parser.getCurrentLocation(),
-                                   "expected a typed attribute");
-                }
-                return failure();
-              })
-          .failed())
-    return failure();
 
-  auto *ctx = parser.getContext();
-  members = mlir::ArrayAttr::get(ctx, elts);
-  type = mlir::cir::StructType::get(ctx, tys, "", /*body=*/true);
-  return success();
+  auto delimiter = AsmParser::Delimiter::Braces;
+  auto result = parser.parseCommaSeparatedList(delimiter, [&]() {
+    mlir::TypedAttr attr;
+    if (parser.parseAttribute(attr).failed())
+      return mlir::failure();
+    elts.push_back(attr);
+    return mlir::success();
+  });
+
+  if (result.failed())
+    return mlir::failure();
+
+  members = mlir::ArrayAttr::get(parser.getContext(), elts);
+  return mlir::success();
 }
 
 LogicalResult ConstStructAttr::verify(
