@@ -28,6 +28,7 @@
 #include "llvm/Support/ExtensibleRTTI.h"
 
 #include <atomic>
+#include <deque>
 #include <future>
 #include <memory>
 #include <vector>
@@ -912,6 +913,8 @@ private:
 /// Definition generators can be attached to JITDylibs to generate new
 /// definitions for otherwise unresolved symbols during lookup.
 class DefinitionGenerator {
+  friend class ExecutionSession;
+
 public:
   virtual ~DefinitionGenerator();
 
@@ -924,6 +927,11 @@ public:
   virtual Error tryToGenerate(LookupState &LS, LookupKind K, JITDylib &JD,
                               JITDylibLookupFlags JDLookupFlags,
                               const SymbolLookupSet &LookupSet) = 0;
+
+private:
+  std::mutex M;
+  bool InUse = false;
+  std::deque<LookupState> PendingLookups;
 };
 
 /// Represents a JIT'd dynamic library.
@@ -1362,6 +1370,21 @@ private:
   std::unique_ptr<MaterializationResponsibility> MR;
 };
 
+/// Lookups are usually run on the current thread, but in some cases they may
+/// be run as tasks, e.g. if the lookup has been continued from a suspended
+/// state.
+class LookupTask : public RTTIExtends<LookupTask, Task> {
+public:
+  static char ID;
+
+  LookupTask(LookupState LS) : LS(std::move(LS)) {}
+  void printDescription(raw_ostream &OS) override;
+  void run() override;
+
+private:
+  LookupState LS;
+};
+
 /// An ExecutionSession represents a running JIT program.
 class ExecutionSession {
   friend class InProgressLookupFlagsState;
@@ -1717,6 +1740,9 @@ private:
   Error IL_updateCandidatesFor(JITDylib &JD, JITDylibLookupFlags JDLookupFlags,
                                SymbolLookupSet &Candidates,
                                SymbolLookupSet *NonCandidates);
+
+  /// Handle resumption of a lookup after entering a generator.
+  void OL_resumeLookupAfterGeneration(InProgressLookupState &IPLS);
 
   /// OL_applyQueryPhase1 is an optionally re-startable loop for triggering
   /// definition generation. It is called when a lookup is performed, and again

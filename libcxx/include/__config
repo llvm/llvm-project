@@ -1453,6 +1453,16 @@ __sanitizer_verify_double_ended_contiguous_container(const void*, const void*, c
 #    define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)                                                                   \
       _PSTL_PRAGMA(omp declare reduction(NAME:OP : omp_out(omp_in)) initializer(omp_priv = omp_orig))
 
+#  elif defined(_LIBCPP_COMPILER_CLANG_BASED)
+
+#    define _PSTL_PRAGMA_SIMD _Pragma("clang loop vectorize(enable) interleave(enable)")
+#    define _PSTL_PRAGMA_DECLARE_SIMD
+#    define _PSTL_PRAGMA_SIMD_REDUCTION(PRM) _Pragma("clang loop vectorize(enable) interleave(enable)")
+#    define _PSTL_PRAGMA_SIMD_SCAN(PRM) _Pragma("clang loop vectorize(enable) interleave(enable)")
+#    define _PSTL_PRAGMA_SIMD_INCLUSIVE_SCAN(PRM)
+#    define _PSTL_PRAGMA_SIMD_EXCLUSIVE_SCAN(PRM)
+#    define _PSTL_PRAGMA_DECLARE_REDUCTION(NAME, OP)
+
 #  else // (defined(_OPENMP) && _OPENMP >= 201307)
 
 #    define _PSTL_PRAGMA_SIMD

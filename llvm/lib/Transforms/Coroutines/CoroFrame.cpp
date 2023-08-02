@@ -98,6 +98,7 @@ class SuspendCrossingInfo {
     bool Suspend = false;
     bool End = false;
     bool KillLoop = false;
+    bool Changed = false;
   };
   SmallVector<BlockData, SmallVectorThreshold> Block;
 
@@ -105,50 +106,16 @@ class SuspendCrossingInfo {
     BasicBlock *BB = Mapping.indexToBlock(&BD - &Block[0]);
     return llvm::predecessors(BB);
   }
-  size_t pred_size(BlockData const &BD) const {
-    BasicBlock *BB = Mapping.indexToBlock(&BD - &Block[0]);
-    return llvm::pred_size(BB);
-  }
-  iterator_range<succ_iterator> successors(BlockData const &BD) const {
-    BasicBlock *BB = Mapping.indexToBlock(&BD - &Block[0]);
-    return llvm::successors(BB);
-  }
 
   BlockData &getBlockData(BasicBlock *BB) {
     return Block[Mapping.blockToIndex(BB)];
   }
 
-  /// This algorithm is based on topological sorting. As we know, topological
-  /// sorting is typically used on Directed Acyclic Graph (DAG). However, a
-  /// Control Flow Graph (CFG) may not always be a DAG, as it can contain back
-  /// edges or loops. To handle this, we need to break the back edge when we
-  /// encounter it in order to ensure a valid topological sorting.
-  /// Why do we need an extra traversal when a CFG contains a back edge?
-  /// Firstly, we need to figure out how the Consumes information propagates
-  /// along the back edge. For example,
-  ///
-  ///    A -> B -> C -> D -> H
-  ///         ^         |
-  ///         |         v
-  ///         G <- F <- E
-  ///
-  /// Following the direction of the arrow, we can obtain the traversal
-  /// sequences: A, B, C, D, H, E, F, G or A, B, C, D, E, H, F, G. We know that
-  /// there is a path from C to G after the first traversal. However, we are
-  /// uncertain about the existence of a path from G to C, as the Consumes info
-  /// of G has not yet propagated to C (via B). Therefore, we need a second
-  /// traversal to propagate G's Consumes info to C (via B) and its successors.
-  /// The second traversal allows us to obtain the complete Consumes info. Since
-  /// the computation of the Kills info depends on the Consumes info.
-
-  /// The parameter "EntryNo" represents the index associated with the entry
-  /// block.
-  /// The parameter "BlockPredecessorsNum" represents the number of predecessors
-  /// for each block.
-  /// Returns true if there exists back edges in CFG.
-  template <bool HasBackEdge = false>
-  bool collectConsumeKillInfo(size_t EntryNo,
-                              const SmallVector<size_t> &BlockPredecessorsNum);
+  /// Compute the BlockData for the current function in one iteration.
+  /// Returns whether the BlockData changes in this iteration.
+  /// Initialize - Whether this is the first iteration, we can optimize
+  /// the initial case a little bit by manual loop switch.
+  template <bool Initialize = false> bool computeBlockData();
 
 public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -256,115 +223,70 @@ LLVM_DUMP_METHOD void SuspendCrossingInfo::dump() const {
 }
 #endif
 
-template <bool HasBackEdge>
-bool SuspendCrossingInfo::collectConsumeKillInfo(
-    size_t EntryNo, const SmallVector<size_t> &BlockPredecessorsNum) {
-  bool FoundBackEdge = false;
-  SmallVector<size_t> UnvisitedBlockPredNum = BlockPredecessorsNum;
-  // BlockNo Queue with BlockPredNum[BlockNo] equal to zero.
-  std::queue<size_t> CandidateQueue;
-  // For blocks that maybe has a back edge.
-  DenseSet<size_t> MaybeBackEdgeSet;
-  // Visit BlockNo
-  auto visit = [&](size_t BlockNo) {
-    switch (UnvisitedBlockPredNum[BlockNo]) {
-    // Already visited, not visit again.
-    case 0:
-      break;
-    // If predecessors number of BlockNo is 1, it means all predecessors of
-    // BlockNo have propagated its info to BlockNo. So add BlockNo to
-    // CandidateQueue.
-    case 1: {
-      CandidateQueue.push(BlockNo);
-      MaybeBackEdgeSet.erase(BlockNo);
-      UnvisitedBlockPredNum[BlockNo] = 0;
-      break;
-    }
-    // If predecessors number of BlockNo bigger than 1, it means BlockNo not
-    // collect full Consumes/Kills info yet. So decrease
-    // UnvisitedBlockPredNum[BlockNo] and insert BlockNo into MaybeBackEdgeSet.
-    default: {
-      UnvisitedBlockPredNum[BlockNo]--;
-      MaybeBackEdgeSet.insert(BlockNo);
-      break;
-    }
-    }
-  };
+template <bool Initialize> bool SuspendCrossingInfo::computeBlockData() {
+  const size_t N = Mapping.size();
+  bool Changed = false;
 
-  CandidateQueue.push(EntryNo);
+  for (size_t I = 0; I < N; ++I) {
+    auto &B = Block[I];
 
-  // Topological sorting.
-  while (!CandidateQueue.empty()) {
-    auto &B = Block[CandidateQueue.front()];
-    CandidateQueue.pop();
-    for (BasicBlock *SI : successors(B)) {
-      auto SuccNo = Mapping.blockToIndex(SI);
-      auto &S = Block[SuccNo];
-
-      // Propagate Kills and Consumes from predecessors into S.
-      S.Consumes |= B.Consumes;
-      S.Kills |= B.Kills;
-
-      if (B.Suspend)
-        S.Kills |= B.Consumes;
-
-      if (S.Suspend) {
-        // If block S is a suspend block, it should kill all of the blocks
-        // it consumes.
-        S.Kills |= S.Consumes;
-      } else if (S.End) {
-        // If block S is an end block, it should not propagate kills as the
-        // blocks following coro.end() are reached during initial invocation
-        // of the coroutine while all the data are still available on the
-        // stack or in the registers.
-        S.Kills.reset();
-      } else {
-        // This is reached when S block it not Suspend nor coro.end and it
-        // need to make sure that it is not in the kill set.
-        S.KillLoop |= S.Kills[SuccNo];
-        S.Kills.reset(SuccNo);
+    // We don't need to count the predecessors when initialization.
+    if constexpr (!Initialize)
+      // If all the predecessors of the current Block don't change,
+      // the BlockData for the current block must not change too.
+      if (all_of(predecessors(B), [this](BasicBlock *BB) {
+            return !Block[Mapping.blockToIndex(BB)].Changed;
+          })) {
+        B.Changed = false;
+        continue;
       }
-      // visit SuccNo.
-      visit(SuccNo);
+
+    // Saved Consumes and Kills bitsets so that it is easy to see
+    // if anything changed after propagation.
+    auto SavedConsumes = B.Consumes;
+    auto SavedKills = B.Kills;
+
+    for (BasicBlock *PI : predecessors(B)) {
+      auto PrevNo = Mapping.blockToIndex(PI);
+      auto &P = Block[PrevNo];
+
+      // Propagate Kills and Consumes from predecessors into B.
+      B.Consumes |= P.Consumes;
+      B.Kills |= P.Kills;
+
+      // If block P is a suspend block, it should propagate kills into block
+      // B for every block P consumes.
+      if (P.Suspend)
+        B.Kills |= P.Consumes;
     }
 
-    // If the CandidateQueue is empty but the MaybeBackEdgeSet is not, it
-    // indicates the presence of a back edge that needs to be addressed. In such
-    // cases, it is necessary to break the back edge.
-    if (CandidateQueue.empty() && !MaybeBackEdgeSet.empty()) {
-      FoundBackEdge = true;
-      size_t CandidateNo = -1;
-      if constexpr (HasBackEdge) {
-        auto IsCandidate = [this](size_t I) {
-          for (BasicBlock *PI : llvm::predecessors(Mapping.indexToBlock(I))) {
-            auto PredNo = Mapping.blockToIndex(PI);
-            auto &P = Block[PredNo];
-            // The node I can reach its predecessor. So we found a loop.
-            if (P.Consumes[I])
-              return true;
-          }
+    if (B.Suspend) {
+      // If block S is a suspend block, it should kill all of the blocks it
+      // consumes.
+      B.Kills |= B.Consumes;
+    } else if (B.End) {
+      // If block B is an end block, it should not propagate kills as the
+      // blocks following coro.end() are reached during initial invocation
+      // of the coroutine while all the data are still available on the
+      // stack or in the registers.
+      B.Kills.reset();
+    } else {
+      // This is reached when B block it not Suspend nor coro.end and it
+      // need to make sure that it is not in the kill set.
+      B.KillLoop |= B.Kills[I];
+      B.Kills.reset(I);
+    }
 
-          return false;
-        };
-
-        for (auto I : MaybeBackEdgeSet) {
-          if (IsCandidate(I)) {
-            CandidateNo = I;
-            break;
-          }
-        }
-        assert(CandidateNo != size_t(-1) && "We collected the wrong backegdes");
-      } else
-        // When the value of HasBackEdge is false and we don't have any
-        // information about back edges, we can simply select one block from the
-        // MaybeBackEdgeSet.
-        CandidateNo = *(MaybeBackEdgeSet.begin());
-      CandidateQueue.push(CandidateNo);
-      MaybeBackEdgeSet.erase(CandidateNo);
-      UnvisitedBlockPredNum[CandidateNo] = 0;
+    if constexpr (!Initialize) {
+      B.Changed = (B.Kills != SavedKills) || (B.Consumes != SavedConsumes);
+      Changed |= B.Changed;
     }
   }
-  return FoundBackEdge;
+
+  if constexpr (Initialize)
+    return true;
+
+  return Changed;
 }
 
 SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
@@ -372,16 +294,13 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
   const size_t N = Mapping.size();
   Block.resize(N);
 
-  size_t EntryNo = Mapping.blockToIndex(&(F.getEntryBlock()));
-  SmallVector<size_t> BlockPredecessorsNum(N, 0);
-
   // Initialize every block so that it consumes itself
   for (size_t I = 0; I < N; ++I) {
     auto &B = Block[I];
     B.Consumes.resize(N);
     B.Kills.resize(N);
     B.Consumes.set(I);
-    BlockPredecessorsNum[I] = pred_size(B);
+    B.Changed = true;
   }
 
   // Mark all CoroEnd Blocks. We do not propagate Kills beyond coro.ends as
@@ -406,11 +325,10 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
       markSuspendBlock(Save);
   }
 
-  // We should collect the Consumes and Kills information initially. If there is
-  // a back edge present, it is necessary to perform the collection process
-  // again.
-  if (collectConsumeKillInfo(EntryNo, BlockPredecessorsNum))
-    collectConsumeKillInfo</*HasBackEdge*/ true>(EntryNo, BlockPredecessorsNum);
+  computeBlockData</*Initialize=*/true>();
+
+  while (computeBlockData())
+    ;
 
   LLVM_DEBUG(dump());
 }

@@ -64,13 +64,6 @@ VSCode::VSCode()
 
 VSCode::~VSCode() = default;
 
-int64_t VSCode::GetLineForPC(int64_t sourceReference, lldb::addr_t pc) const {
-  auto pos = source_map.find(sourceReference);
-  if (pos != source_map.end())
-    return pos->second.GetLineForPC(pc);
-  return 0;
-}
-
 ExceptionBreakpoint *VSCode::GetExceptionBreakpoint(const std::string &filter) {
   for (auto &bp : exception_breakpoints) {
     if (bp.filter == filter)
@@ -339,11 +332,6 @@ VSCode::SendFormattedOutput(OutputType o, const char *format, ...) {
   va_end(args);
   SendOutput(
       o, llvm::StringRef(buffer, std::min<int>(actual_length, sizeof(buffer))));
-}
-
-int64_t VSCode::GetNextSourceReference() {
-  static int64_t ref = 0;
-  return ++ref;
 }
 
 ExceptionBreakpoint *

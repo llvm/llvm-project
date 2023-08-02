@@ -1396,9 +1396,8 @@ bool RegisterCoalescer::reMaterializeTrivialDef(const CoalescerPair &CP,
     MachineOperand &MO = CopyMI->getOperand(I);
     if (MO.isReg()) {
       assert(MO.isImplicit() && "No explicit operands after implicit operands.");
-      // Discard VReg implicit defs.
-      if (MO.getReg().isPhysical())
-        ImplicitOps.push_back(MO);
+      assert(MO.getReg().isPhysical() && "unexpected implicit virtual register def");
+      ImplicitOps.push_back(MO);
     }
   }
 

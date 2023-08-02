@@ -228,6 +228,11 @@ void header_exportable_declarations::check(const clang::ast_matchers::MatchFinde
       if (clang::Module* M = decl->getOwningModule(); M && M->Kind != clang::Module::ModulePartitionInterface)
         return;
 
+    // For module partitions only take exported declarations.
+    if (file_type_ == FileType::ModulePartition)
+      if (decl->getModuleOwnershipKind() != clang::Decl::ModuleOwnershipKind::VisibleWhenImported)
+        return;
+
     if (decls_.contains(name)) {
       // For modules avoid exporting the same named declaration twice. For
       // header files this is common and valid.

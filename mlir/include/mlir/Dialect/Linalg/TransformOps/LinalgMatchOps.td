@@ -170,6 +170,57 @@ def MatchStructuredClassifyContractionDimsOp
   let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
 }
 
+def MatchStructuredClassifyConvolutionDimsOp
+    : Op<Transform_Dialect, "match.structured.classify_convolution_dims", [
+    SingleOpMatcher,
+    StructuredPredicate,
+    MatchOpInterface,
+    MemoryEffectsOpInterface]> {
+  let summary =
+      "Checks if an operation has convolution-like dimensions and returns them";
+  let description = !strconcat([{
+    Checks if the structured payload op has convolution-like dimensions as
+    follows:
+
+      C(batch, depth, oi, oc) += A(batch, depth, oi, ic) * B(fl, depth, ic, oc)
+
+    That is:
+
+      - 'batch' are parallel dimensions used in the input and result;
+      - 'output_image' ('oi') are parallel dimensions used in the input and result;
+      - 'output_channel' ('oc') are parallel dimensions used in the filter and result;
+      - 'filter_loop' ('fl') are reduction dimensions representing the dimensions of the sliding window;
+      - 'input_channel' ('ic') are reduction dimensions present only in the input and filter.
+      - 'depth' ('ic') are parallel dimensions present in the input, filter, and output.
+
+    Additionally this will match stride and dilation information for the convolution:
+      - 'strides' are the static strides per convolution window dimension;
+      - 'dilations' are the static dilations per convolution window dimension.
+
+    Note that this doesn't check the operation in the body.
+
+  }], StructuredPredicate.extraDescription, [{
+
+    #### Return modes
+
+    Succeeds if the operation has the convolution-like dimensions, produces a
+    silenceable failure otherwise.
+  }]);
+
+  let arguments = (ins TransformHandleTypeInterface:$operand_handle);
+  let results = (outs TransformParamTypeInterface:$batch,
+                      TransformParamTypeInterface:$output_image,
+                      TransformParamTypeInterface:$output_channel,
+                      TransformParamTypeInterface:$filter_loop,
+                      TransformParamTypeInterface:$input_channel,
+                      TransformParamTypeInterface:$depth,
+                      TransformParamTypeInterface:$strides,
+                      TransformParamTypeInterface:$dilations);
+  let assemblyFormat =
+    "$operand_handle attr-dict `:` functional-type(operands, results)";
+  let extraClassDeclaration = SingleOpMatcher.extraDeclaration;
+}
+
 class StructuredDimDescription<string kind> {
   string description = !strconcat([{
      The following }], kind ,[{ specifications are supported:

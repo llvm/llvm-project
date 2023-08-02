@@ -690,10 +690,12 @@ extern size_t __kmp_affin_mask_size;
 #define KMP_CPU_ISSET(i, mask) (mask)->is_set(i)
 #define KMP_CPU_CLR(i, mask) (mask)->clear(i)
 #define KMP_CPU_ZERO(mask) (mask)->zero()
+#define KMP_CPU_ISEMPTY(mask) (mask)->empty()
 #define KMP_CPU_COPY(dest, src) (dest)->copy(src)
 #define KMP_CPU_AND(dest, src) (dest)->bitwise_and(src)
 #define KMP_CPU_COMPLEMENT(max_bit_number, mask) (mask)->bitwise_not()
 #define KMP_CPU_UNION(dest, src) (dest)->bitwise_or(src)
+#define KMP_CPU_EQUAL(dest, src) (dest)->is_equal(src)
 #define KMP_CPU_ALLOC(ptr) (ptr = __kmp_affinity_dispatch->allocate_mask())
 #define KMP_CPU_FREE(ptr) __kmp_affinity_dispatch->deallocate_mask(ptr)
 #define KMP_CPU_ALLOC_ON_STACK(ptr) KMP_CPU_ALLOC(ptr)
@@ -730,6 +732,8 @@ public:
     virtual void clear(int i) {}
     // Zero out entire mask
     virtual void zero() {}
+    // Check whether mask is empty
+    virtual bool empty() const { return true; }
     // Copy src into this mask
     virtual void copy(const Mask *src) {}
     // this &= rhs
@@ -738,6 +742,8 @@ public:
     virtual void bitwise_or(const Mask *rhs) {}
     // this = ~this
     virtual void bitwise_not() {}
+    // this == rhs
+    virtual bool is_equal(const Mask *rhs) const { return false; }
     // API for iterating over an affinity mask
     // for (int i = mask->begin(); i != mask->end(); i = mask->next(i))
     virtual int begin() const { return 0; }
@@ -866,7 +872,10 @@ typedef struct kmp_affinity_flags_t {
   unsigned respect : 2;
   unsigned reset : 1;
   unsigned initialized : 1;
-  unsigned reserved : 25;
+  unsigned core_types_gran : 1;
+  unsigned core_effs_gran : 1;
+  unsigned omp_places : 1;
+  unsigned reserved : 22;
 } kmp_affinity_flags_t;
 KMP_BUILD_ASSERT(sizeof(kmp_affinity_flags_t) == 4);
 
@@ -895,6 +904,7 @@ typedef struct kmp_affinity_t {
   enum affinity_type type;
   kmp_hw_t gran;
   int gran_levels;
+  kmp_affinity_attrs_t core_attr_gran;
   int compact;
   int offset;
   kmp_affinity_flags_t flags;
@@ -909,9 +919,11 @@ typedef struct kmp_affinity_t {
 
 #define KMP_AFFINITY_INIT(env)                                                 \
   {                                                                            \
-    nullptr, affinity_default, KMP_HW_UNKNOWN, -1, 0, 0,                       \
-        {TRUE, FALSE, TRUE, affinity_respect_mask_default, FALSE, FALSE}, 0,   \
-        nullptr, nullptr, nullptr, 0, nullptr, env                             \
+    nullptr, affinity_default, KMP_HW_UNKNOWN, -1, KMP_AFFINITY_ATTRS_UNKNOWN, \
+        0, 0,                                                                  \
+        {TRUE,  FALSE, TRUE, affinity_respect_mask_default, FALSE, FALSE,      \
+         FALSE, FALSE, FALSE},                                                 \
+        0, nullptr, nullptr, nullptr, 0, nullptr, env                          \
   }
 
 extern enum affinity_top_method __kmp_affinity_top_method;

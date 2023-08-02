@@ -49,7 +49,7 @@ namespace {
 uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
   uint32_t NThreadsICV =
       NumThreadsClause != -1 ? NumThreadsClause : icv::NThreads;
-  uint32_t NumThreads = mapping::getBlockSize();
+  uint32_t NumThreads = mapping::getMaxTeamThreads();
 
   if (NThreadsICV != 0 && NThreadsICV < NumThreads)
     NumThreads = NThreadsICV;
@@ -110,8 +110,8 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
   ASSERT(state::HasThreadState == false, nullptr);
 
   uint32_t NumThreads = determineNumberOfThreads(num_threads);
-  uint32_t BlockSize = mapping::getBlockSize();
-  uint32_t PTeamSize = NumThreads == BlockSize ? 0 : NumThreads;
+  uint32_t MaxTeamThreads = mapping::getMaxTeamThreads();
+  uint32_t PTeamSize = NumThreads == MaxTeamThreads ? 0 : NumThreads;
   if (mapping::isSPMDMode()) {
     // Avoid the race between the read of the `icv::Level` above and the write
     // below by synchronizing all threads here.

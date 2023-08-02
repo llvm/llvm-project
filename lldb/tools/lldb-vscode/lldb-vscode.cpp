@@ -50,6 +50,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/ScopeExit.h"
+#include "llvm/ADT/StringExtras.h"
 #include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
@@ -1563,6 +1564,8 @@ void request_initialize(const llvm::json::Object &request) {
   body.try_emplace("supportsStepInTargetsRequest", false);
   // The debug adapter supports the completions request.
   body.try_emplace("supportsCompletionsRequest", true);
+  // The debug adapter supports the disassembly request.
+  body.try_emplace("supportsDisassembleRequest", true);
 
   llvm::json::Array completion_characters;
   completion_characters.emplace_back(".");
@@ -2588,18 +2591,7 @@ void request_setFunctionBreakpoints(const llvm::json::Object &request) {
 void request_source(const llvm::json::Object &request) {
   llvm::json::Object response;
   FillResponse(request, response);
-  llvm::json::Object body;
-
-  auto arguments = request.getObject("arguments");
-  auto source = arguments->getObject("source");
-  auto sourceReference = GetSigned(source, "sourceReference", -1);
-  auto pos = g_vsc.source_map.find((lldb::addr_t)sourceReference);
-  if (pos != g_vsc.source_map.end()) {
-    EmplaceSafeString(body, "content", pos->second.content);
-  } else {
-    response["success"] = llvm::json::Value(false);
-  }
-  EmplaceSafeString(body, "mimeType", "text/x-lldb.disassembly");
+  llvm::json::Object body{{"content", ""}};
   response.try_emplace("body", std::move(body));
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
@@ -3301,6 +3293,211 @@ void request_variables(const llvm::json::Object &request) {
   g_vsc.SendJSON(llvm::json::Value(std::move(response)));
 }
 
+// "DisassembleRequest": {
+//   "allOf": [ { "$ref": "#/definitions/Request" }, {
+//     "type": "object",
+//     "description": "Disassembles code stored at the provided
+//     location.\nClients should only call this request if the corresponding
+//     capability `supportsDisassembleRequest` is true.", "properties": {
+//       "command": {
+//         "type": "string",
+//         "enum": [ "disassemble" ]
+//       },
+//       "arguments": {
+//         "$ref": "#/definitions/DisassembleArguments"
+//       }
+//     },
+//     "required": [ "command", "arguments" ]
+//   }]
+// },
+// "DisassembleArguments": {
+//   "type": "object",
+//   "description": "Arguments for `disassemble` request.",
+//   "properties": {
+//     "memoryReference": {
+//       "type": "string",
+//       "description": "Memory reference to the base location containing the
+//       instructions to disassemble."
+//     },
+//     "offset": {
+//       "type": "integer",
+//       "description": "Offset (in bytes) to be applied to the reference
+//       location before disassembling. Can be negative."
+//     },
+//     "instructionOffset": {
+//       "type": "integer",
+//       "description": "Offset (in instructions) to be applied after the byte
+//       offset (if any) before disassembling. Can be negative."
+//     },
+//     "instructionCount": {
+//       "type": "integer",
+//       "description": "Number of instructions to disassemble starting at the
+//       specified location and offset.\nAn adapter must return exactly this
+//       number of instructions - any unavailable instructions should be
+//       replaced with an implementation-defined 'invalid instruction' value."
+//     },
+//     "resolveSymbols": {
+//       "type": "boolean",
+//       "description": "If true, the adapter should attempt to resolve memory
+//       addresses and other values to symbolic names."
+//     }
+//   },
+//   "required": [ "memoryReference", "instructionCount" ]
+// },
+// "DisassembleResponse": {
+//   "allOf": [ { "$ref": "#/definitions/Response" }, {
+//     "type": "object",
+//     "description": "Response to `disassemble` request.",
+//     "properties": {
+//       "body": {
+//         "type": "object",
+//         "properties": {
+//           "instructions": {
+//             "type": "array",
+//             "items": {
+//               "$ref": "#/definitions/DisassembledInstruction"
+//             },
+//             "description": "The list of disassembled instructions."
+//           }
+//         },
+//         "required": [ "instructions" ]
+//       }
+//     }
+//   }]
+// }
+void request_disassemble(const llvm::json::Object &request) {
+  llvm::json::Object response;
+  FillResponse(request, response);
+  auto arguments = request.getObject("arguments");
+
+  auto memoryReference = GetString(arguments, "memoryReference");
+  lldb::addr_t addr_ptr;
+  if (memoryReference.consumeInteger(0, addr_ptr)) {
+    response["success"] = false;
+    response["message"] =
+        "Malformed memory reference: " + memoryReference.str();
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  addr_ptr += GetSigned(arguments, "instructionOffset", 0);
+  lldb::SBAddress addr(addr_ptr, g_vsc.target);
+  if (!addr.IsValid()) {
+    response["success"] = false;
+    response["message"] = "Memory reference not found in the current binary.";
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  const auto inst_count = GetUnsigned(arguments, "instructionCount", 0);
+  lldb::SBInstructionList insts =
+      g_vsc.target.ReadInstructions(addr, inst_count);
+
+  if (!insts.IsValid()) {
+    response["success"] = false;
+    response["message"] = "Failed to find instructions for memory address.";
+    g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+    return;
+  }
+
+  const bool resolveSymbols = GetBoolean(arguments, "resolveSymbols", false);
+  llvm::json::Array instructions;
+  const auto num_insts = insts.GetSize();
+  for (size_t i = 0; i < num_insts; ++i) {
+    lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
+    auto addr = inst.GetAddress();
+    const auto inst_addr = addr.GetLoadAddress(g_vsc.target);
+    const char *m = inst.GetMnemonic(g_vsc.target);
+    const char *o = inst.GetOperands(g_vsc.target);
+    const char *c = inst.GetComment(g_vsc.target);
+    auto d = inst.GetData(g_vsc.target);
+
+    std::string bytes;
+    llvm::raw_string_ostream sb(bytes);
+    for (unsigned i = 0; i < inst.GetByteSize(); i++) {
+      lldb::SBError error;
+      uint8_t b = d.GetUnsignedInt8(error, i);
+      if (error.Success()) {
+        sb << llvm::format("%2.2x ", b);
+      }
+    }
+    sb.flush();
+
+    llvm::json::Object disassembled_inst{
+        {"address", "0x" + llvm::utohexstr(inst_addr)},
+        {"instructionBytes",
+         bytes.size() > 0 ? bytes.substr(0, bytes.size() - 1) : ""},
+    };
+
+    std::string instruction;
+    llvm::raw_string_ostream si(instruction);
+
+    lldb::SBSymbol symbol = addr.GetSymbol();
+    // Only add the symbol on the first line of the function.
+    if (symbol.IsValid() && symbol.GetStartAddress() == addr) {
+      // If we have a valid symbol, append it as a label prefix for the first
+      // instruction. This is so you can see the start of a function/callsite
+      // in the assembly, at the moment VS Code (1.80) does not visualize the
+      // symbol associated with the assembly instruction.
+      si << (symbol.GetMangledName() != nullptr ? symbol.GetMangledName()
+                                                : symbol.GetName())
+         << ": ";
+
+      if (resolveSymbols) {
+        disassembled_inst.try_emplace("symbol", symbol.GetDisplayName());
+      }
+    }
+
+    si << llvm::formatv("{0,7} {1,12}", m, o);
+    if (c && c[0]) {
+      si << " ; " << c;
+    }
+    si.flush();
+
+    disassembled_inst.try_emplace("instruction", instruction);
+
+    auto line_entry = addr.GetLineEntry();
+    // If the line number is 0 then the entry represents a compiler generated
+    // location.
+    if (line_entry.GetStartAddress() == addr && line_entry.IsValid() &&
+        line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0) {
+      auto source = CreateSource(line_entry);
+      disassembled_inst.try_emplace("location", source);
+
+      const auto line = line_entry.GetLine();
+      if (line && line != LLDB_INVALID_LINE_NUMBER) {
+        disassembled_inst.try_emplace("line", line);
+      }
+      const auto column = line_entry.GetColumn();
+      if (column && column != LLDB_INVALID_COLUMN_NUMBER) {
+        disassembled_inst.try_emplace("column", column);
+      }
+
+      auto end_line_entry = line_entry.GetEndAddress().GetLineEntry();
+      if (end_line_entry.IsValid() &&
+          end_line_entry.GetFileSpec() == line_entry.GetFileSpec()) {
+        const auto end_line = end_line_entry.GetLine();
+        if (end_line && end_line != LLDB_INVALID_LINE_NUMBER &&
+            end_line != line) {
+          disassembled_inst.try_emplace("endLine", end_line);
+
+          const auto end_column = end_line_entry.GetColumn();
+          if (end_column && end_column != LLDB_INVALID_COLUMN_NUMBER &&
+              end_column != column) {
+            disassembled_inst.try_emplace("endColumn", end_column - 1);
+          }
+        }
+      }
+    }
+
+    instructions.emplace_back(std::move(disassembled_inst));
+  }
+
+  llvm::json::Object body;
+  body.try_emplace("instructions", std::move(instructions));
+  response.try_emplace("body", std::move(body));
+  g_vsc.SendJSON(llvm::json::Value(std::move(response)));
+}
 // A request used in testing to get the details on all breakpoints that are
 // currently set in the target. This helps us to test "setBreakpoints" and
 // "setFunctionBreakpoints" requests to verify we have the correct set of
@@ -3345,6 +3542,7 @@ void RegisterRequestCallbacks() {
   g_vsc.RegisterRequestCallback("stepOut", request_stepOut);
   g_vsc.RegisterRequestCallback("threads", request_threads);
   g_vsc.RegisterRequestCallback("variables", request_variables);
+  g_vsc.RegisterRequestCallback("disassemble", request_disassemble);
   // Custom requests
   g_vsc.RegisterRequestCallback("compileUnits", request_compileUnits);
   g_vsc.RegisterRequestCallback("modules", request_modules);

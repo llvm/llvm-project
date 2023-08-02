@@ -1486,7 +1486,9 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
   if (LocalRS)
     LocalRS->enterBasicBlockEnd(*BB);
 
-  for (MachineInstr &MI : make_early_inc_range(reverse(*BB))) {
+  for (MachineBasicBlock::iterator I = BB->end(); I != BB->begin();) {
+    MachineInstr &MI = *std::prev(I);
+
     if (TII.isFrameInstr(MI)) {
       SPAdj -= TII.getSPAdjust(MI);
       TFI.eliminateCallFramePseudoInstr(MF, *BB, &MI);
@@ -1497,27 +1499,27 @@ void PEI::replaceFrameIndicesBackward(MachineBasicBlock *BB,
     if (LocalRS)
       LocalRS->backward(MI);
 
-    for (unsigned i = 0; i != MI.getNumOperands(); ++i) {
-      if (!MI.getOperand(i).isFI())
+    bool RemovedMI = false;
+    for (const auto &[Idx, Op] : enumerate(MI.operands())) {
+      if (!Op.isFI())
         continue;
 
-      if (replaceFrameIndexDebugInstr(MF, MI, i, SPAdj))
+      if (replaceFrameIndexDebugInstr(MF, MI, Idx, SPAdj))
         continue;
 
       // Eliminate this FrameIndex operand.
-      //
-      // Save and restore the scavenger's position around the call to
-      // eliminateFrameIndex in case it erases MI and invalidates the iterator.
-      MachineBasicBlock::iterator Save;
-      if (LocalRS)
-	Save = std::next(LocalRS->getCurrentPosition());
-      bool Removed = TRI.eliminateFrameIndex(MI, SPAdj, i, LocalRS);
-      if (LocalRS)
-	LocalRS->skipTo(std::prev(Save));
-
-      if (Removed)
+      RemovedMI = TRI.eliminateFrameIndex(MI, SPAdj, Idx, LocalRS);
+      if (RemovedMI)
         break;
     }
+
+    // Refresh the scavenger's internal iterator in case MI was removed or more
+    // instructions were inserted after it.
+    if (LocalRS)
+      LocalRS->skipTo(std::prev(I));
+
+    if (!RemovedMI)
+      --I;
   }
 }
 
