@@ -1306,6 +1306,11 @@ def fpimm16 : Operand<f16>,
   let PrintMethod = "printFPImmOperand";
 }
 
+def fpimmbf16 : Operand<bf16>,
+                FPImmLeaf<bf16, [{
+      return AArch64_AM::getFP16Imm(Imm) != -1;
+    }], fpimm16XForm>;
+
 def fpimm32 : Operand<f32>,
               FPImmLeaf<f32, [{
       return AArch64_AM::getFP32Imm(Imm) != -1;
