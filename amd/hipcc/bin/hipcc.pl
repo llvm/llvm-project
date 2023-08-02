@@ -441,12 +441,13 @@ foreach $arg (@ARGV)
                 $needCXXFLAGS = 1;
                 if ($HIP_COMPILE_CXX_AS_HIP eq '0' or $HIP_PLATFORM ne "amd" or $hasOMPTargets eq 1) {
                     $hasCXX = 1;
+                    if ($HIP_PLATFORM eq "nvidia") {
+                        $hasCU = 1;
+                        $toolArgs .= " -x cu";
+                    }
                 } elsif ($HIP_PLATFORM eq "amd") {
                     $hasHIP = 1;
                     $toolArgs .= " -x hip";
-                } elsif ($HIP_PLATFORM eq "nvidia") {
-                    $hasCU = 1;
-                    $toolArgs .= " -x cu";
                 }
             } elsif ((($arg =~ /\.cu$/ or $arg =~ /\.cuh$/) and $HIP_COMPILE_CXX_AS_HIP ne '0') or ($arg =~ /\.hip$/)) {
                 $needCXXFLAGS = 1;
