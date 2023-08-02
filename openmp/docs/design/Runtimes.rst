@@ -1193,7 +1193,7 @@ throughout the execution if needed. A stream is a queue of asynchronous
 operations (e.g., kernel launches and memory copies) that are executed
 sequentially. Parallelism is achieved by featuring multiple streams. The
 ``libomptarget`` leverages streams to exploit parallelism between plugin
-operations. The default value is ``32``.
+operations. The default value is ``1``, more streams are created as needed.
 
 LIBOMPTARGET_NUM_INITIAL_EVENTS
 """""""""""""""""""""""""""""""
@@ -1201,7 +1201,8 @@ LIBOMPTARGET_NUM_INITIAL_EVENTS
 This environment variable sets the number of pre-created events in the
 plugin (if supported) at initialization. More events will be created
 dynamically throughout the execution if needed. An event is used to synchronize
-a stream with another efficiently. The default value is ``32``.
+a stream with another efficiently. The default value is ``1``, more events are
+created as needed.
 
 LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS
 """""""""""""""""""""""""""""""""""""
