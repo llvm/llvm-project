@@ -73,6 +73,8 @@ void printRegion(Region &region, BlockArgsMap &blockArgsMap,
   j["Regions"].push_back(regionj);
 }
 
+StringRef getBlockName(Block &block);
+
 void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
   // Print the block intrinsics properties (basically: argument list)
   printIndent() << "Block with " << block.getNumArguments() << " arguments, "
@@ -80,12 +82,14 @@ void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
                 << " successors, and "
                 // Note, this `.size()` is traversing a linked-list and is O(n).
                 << block.getOperations().size() << " operations\n";
+  auto blockName = getBlockName(block);
+  printIndent() << "=> block name: " << blockName;
 
   // A block main role is to hold a list of Operations: let's recurse into
   // printing each operation.
   auto indent = pushIndent();
   nlohmann::json blockj;
-
+  block.print(llvm::outs());
   blockj["Id"] = (int64_t)&block;
   blockj["Arguments"] = nlohmann::json::array();
   auto entry = blockArgsMap.find((int64_t)&block);
@@ -94,22 +98,63 @@ void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
     int index = 0;
 
     for (auto &blockArg : block.getArguments()) {
-
+      //
       nlohmann::json usesj;
+      printIndent() << "at arg " << blockArg.getArgNumber() << ", " << blockArg;
 
       for (auto &useOp : blockArg.getUses()) {
         usesj.push_back({{"UseId", (int64_t)&useOp},
                          {"UserId", (int64_t)useOp.getOwner()}});
       }
 
-      printIndent() << "at arg " << blockArg.getArgNumber() << ", " << blockArg;
+      //
+      nlohmann::json incomingj;
+
+      if (!block.isEntryBlock()) {
+        for (auto predBlock = block.pred_begin(); predBlock != block.pred_end();
+             predBlock++) {
+          auto terminator = (*predBlock)->getTerminator();
+          auto branch = dyn_cast<BranchOpInterface>(terminator);
+
+          if (branch) {
+            auto succIndex = predBlock.getSuccessorIndex();
+            auto incomingOp =
+                branch.getSuccessorOperands(succIndex)[blockArg.getArgNumber()];
+            auto incomingArg =
+                branch.getSuccessorBlockArgument(blockArg.getArgNumber());
+            auto incomingOpIndex =
+                branch.getSuccessorOperands(succIndex).getOperandIndex(
+                    blockArg.getArgNumber());
+            auto& incomingOpOp = terminator->getOpOperand(incomingOpIndex);
+
+           /* if (incomingArg.has_value()) {
+              printIndent() << " > incoming arg " << incomingArg.value();
+              printIndent() << "    opop at index " << incomingOpIndex << ": "
+                            << incomingOpOp.getOperandNumber();
+            }
+
+            printIndent() << "  > incoming op from succIndex " << succIndex
+                          << ": " << incomingOp;*/
+            
+            incomingj.push_back( 
+                {{"BlockId", (int64_t)(*predBlock)},
+                 {"OperandId", (int64_t)&incomingOpOp}});
+          }
+        }
+      } else {
+        
+      }
 
       nlohmann::json sourcej{{"Id", (int64_t)blockArg.getAsOpaquePointer()},
                              {"Uses", usesj},
                              {"LineNumber", 0},
                              {"StartOffset", entry->second[index].first},
                              {"EndOffset", entry->second[index].second}};
-      blockj["Arguments"].push_back(sourcej);
+      blockj["Arguments"].push_back({
+          {"Argument",sourcej},
+          { "IncomingValues", incomingj}
+      });
+
       index++;
     }
   }
