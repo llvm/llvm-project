@@ -5538,11 +5538,10 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; INTERLEAVE-NEXT:    [[TMP49:%.*]] = call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[BIN_RDX]])
 ; INTERLEAVE-NEXT:    br i1 false, label [[FOR_END:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i32 [ -4, [[MIDDLE_BLOCK]] ], [ -20, [[ENTRY:%.*]] ]
-; INTERLEAVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ [[TMP49]], [[MIDDLE_BLOCK]] ], [ [[A]], [[ENTRY]] ]
+; INTERLEAVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[TMP49]], [[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    br label [[FOR_BODY:%.*]]
 ; INTERLEAVE:       for.body:
-; INTERLEAVE-NEXT:    [[I:%.*]] = phi i32 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
+; INTERLEAVE-NEXT:    [[I:%.*]] = phi i32 [ -4, [[SCALAR_PH]] ], [ [[I_NEXT:%.*]], [[FOR_INC:%.*]] ]
 ; INTERLEAVE-NEXT:    [[VAR0:%.*]] = phi i32 [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ], [ [[VAR6:%.*]], [[FOR_INC]] ]
 ; INTERLEAVE-NEXT:    [[VAR1:%.*]] = trunc i32 [[I]] to i16
 ; INTERLEAVE-NEXT:    [[VAR2:%.*]] = icmp eq i16 [[VAR1]], 0
@@ -5558,7 +5557,7 @@ define i32 @PR32419(i32 %a, i16 %b) {
 ; INTERLEAVE-NEXT:    [[COND:%.*]] = icmp eq i32 [[I_NEXT]], 0
 ; INTERLEAVE-NEXT:    br i1 [[COND]], label [[FOR_END]], label [[FOR_BODY]], !llvm.loop [[LOOP49:![0-9]+]]
 ; INTERLEAVE:       for.end:
-; INTERLEAVE-NEXT:    [[VAR7:%.*]] = phi i32 [ [[VAR6]], [[FOR_INC]] ], [ [[TMP49]], [[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[VAR7:%.*]] = phi i32 [ [[VAR6]], [[FOR_INC]] ], [ poison, [[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    ret i32 [[VAR7]]
 ;
 entry:
@@ -5693,18 +5692,16 @@ define i64 @trunc_with_first_order_recurrence() {
 ; IND-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i32> [[VEC_IND2]], i64 1
 ; IND-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; IND:       scalar.ph:
-; IND-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 42, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
-; IND-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1, [[ENTRY]] ], [ 113, [[MIDDLE_BLOCK]] ]
-; IND-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ 113, [[MIDDLE_BLOCK]] ]
-; IND-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[TMP12]], [[MIDDLE_BLOCK]] ]
+; IND-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
+; IND-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ poison, [[ENTRY]] ], [ [[TMP12]], [[MIDDLE_BLOCK]] ]
 ; IND-NEXT:    br label [[LOOP:%.*]]
 ; IND:       exit:
-; IND-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[C23:%.*]], [[LOOP]] ], [ [[TMP12]], [[MIDDLE_BLOCK]] ]
+; IND-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[C23:%.*]], [[LOOP]] ], [ poison, [[MIDDLE_BLOCK]] ]
 ; IND-NEXT:    ret i64 [[DOTLCSSA]]
 ; IND:       loop:
 ; IND-NEXT:    [[C5:%.*]] = phi i64 [ [[C23]], [[LOOP]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; IND-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; IND-NEXT:    [[X:%.*]] = phi i32 [ [[C24:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
+; IND-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 113, [[SCALAR_PH]] ]
+; IND-NEXT:    [[X:%.*]] = phi i32 [ [[C24:%.*]], [[LOOP]] ], [ 113, [[SCALAR_PH]] ]
 ; IND-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[C6:%.*]], [[LOOP]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
 ; IND-NEXT:    [[C6]] = trunc i64 [[INDVARS_IV]] to i32
 ; IND-NEXT:    [[C8:%.*]] = mul i32 [[X]], [[C6]]
@@ -5773,18 +5770,16 @@ define i64 @trunc_with_first_order_recurrence() {
 ; UNROLL-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <2 x i32> [[STEP_ADD5]], i64 1
 ; UNROLL-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; UNROLL:       scalar.ph:
-; UNROLL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 42, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
-; UNROLL-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1, [[ENTRY]] ], [ 113, [[MIDDLE_BLOCK]] ]
-; UNROLL-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ 113, [[MIDDLE_BLOCK]] ]
-; UNROLL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
+; UNROLL-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
+; UNROLL-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ poison, [[ENTRY]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
 ; UNROLL-NEXT:    br label [[LOOP:%.*]]
 ; UNROLL:       exit:
-; UNROLL-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[C23:%.*]], [[LOOP]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
+; UNROLL-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[C23:%.*]], [[LOOP]] ], [ poison, [[MIDDLE_BLOCK]] ]
 ; UNROLL-NEXT:    ret i64 [[DOTLCSSA]]
 ; UNROLL:       loop:
 ; UNROLL-NEXT:    [[C5:%.*]] = phi i64 [ [[C23]], [[LOOP]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; UNROLL-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; UNROLL-NEXT:    [[X:%.*]] = phi i32 [ [[C24:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
+; UNROLL-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 113, [[SCALAR_PH]] ]
+; UNROLL-NEXT:    [[X:%.*]] = phi i32 [ [[C24:%.*]], [[LOOP]] ], [ 113, [[SCALAR_PH]] ]
 ; UNROLL-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[C6:%.*]], [[LOOP]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
 ; UNROLL-NEXT:    [[C6]] = trunc i64 [[INDVARS_IV]] to i32
 ; UNROLL-NEXT:    [[C8:%.*]] = mul i32 [[X]], [[C6]]
@@ -5934,18 +5929,16 @@ define i64 @trunc_with_first_order_recurrence() {
 ; INTERLEAVE-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STEP_ADD5]], i64 3
 ; INTERLEAVE-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
-; INTERLEAVE-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 42, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 1, [[ENTRY]] ], [ 113, [[MIDDLE_BLOCK]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 1, [[ENTRY]] ], [ 113, [[MIDDLE_BLOCK]] ]
-; INTERLEAVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[BC_MERGE_RDX:%.*]] = phi i64 [ poison, [[ENTRY]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE:       exit:
-; INTERLEAVE-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[C23:%.*]], [[LOOP]] ], [ [[TMP23]], [[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[DOTLCSSA:%.*]] = phi i64 [ [[C23:%.*]], [[LOOP]] ], [ poison, [[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    ret i64 [[DOTLCSSA]]
 ; INTERLEAVE:       loop:
 ; INTERLEAVE-NEXT:    [[C5:%.*]] = phi i64 [ [[C23]], [[LOOP]] ], [ [[BC_MERGE_RDX]], [[SCALAR_PH]] ]
-; INTERLEAVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ]
-; INTERLEAVE-NEXT:    [[X:%.*]] = phi i32 [ [[C24:%.*]], [[LOOP]] ], [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ]
+; INTERLEAVE-NEXT:    [[INDVARS_IV:%.*]] = phi i64 [ [[INDVARS_IV_NEXT:%.*]], [[LOOP]] ], [ 113, [[SCALAR_PH]] ]
+; INTERLEAVE-NEXT:    [[X:%.*]] = phi i32 [ [[C24:%.*]], [[LOOP]] ], [ 113, [[SCALAR_PH]] ]
 ; INTERLEAVE-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[C6:%.*]], [[LOOP]] ], [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ]
 ; INTERLEAVE-NEXT:    [[C6]] = trunc i64 [[INDVARS_IV]] to i32
 ; INTERLEAVE-NEXT:    [[C8:%.*]] = mul i32 [[X]], [[C6]]
@@ -6209,13 +6202,11 @@ define void @pr52460_first_order_recurrence_truncated_iv(ptr noalias %src, ptr %
 ; INTERLEAVE-NEXT:    [[VECTOR_RECUR_EXTRACT:%.*]] = extractelement <4 x i32> [[STEP_ADD]], i64 3
 ; INTERLEAVE-NEXT:    br i1 false, label [[EXIT:%.*]], label [[SCALAR_PH]]
 ; INTERLEAVE:       scalar.ph:
-; INTERLEAVE-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL:%.*]] = phi i64 [ 0, [[ENTRY]] ], [ 96, [[MIDDLE_BLOCK]] ]
-; INTERLEAVE-NEXT:    [[BC_RESUME_VAL1:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ 96, [[MIDDLE_BLOCK]] ]
+; INTERLEAVE-NEXT:    [[SCALAR_RECUR_INIT:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[VECTOR_RECUR_EXTRACT]], [[MIDDLE_BLOCK]] ]
 ; INTERLEAVE-NEXT:    br label [[LOOP:%.*]]
 ; INTERLEAVE:       loop:
-; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ [[BC_RESUME_VAL]], [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
-; INTERLEAVE-NEXT:    [[TRUNC_IV:%.*]] = phi i32 [ [[BC_RESUME_VAL1]], [[SCALAR_PH]] ], [ [[TRUNC_IV_NEXT:%.*]], [[LOOP]] ]
+; INTERLEAVE-NEXT:    [[IV:%.*]] = phi i64 [ 96, [[SCALAR_PH]] ], [ [[IV_NEXT:%.*]], [[LOOP]] ]
+; INTERLEAVE-NEXT:    [[TRUNC_IV:%.*]] = phi i32 [ 96, [[SCALAR_PH]] ], [ [[TRUNC_IV_NEXT:%.*]], [[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[SCALAR_RECUR:%.*]] = phi i32 [ [[SCALAR_RECUR_INIT]], [[SCALAR_PH]] ], [ [[IV_TRUNC:%.*]], [[LOOP]] ]
 ; INTERLEAVE-NEXT:    [[LV:%.*]] = load i32, ptr [[SRC]], align 4
 ; INTERLEAVE-NEXT:    [[MUL:%.*]] = mul nsw i32 [[LV]], [[SCALAR_RECUR]]

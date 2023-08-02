@@ -839,7 +839,7 @@ void DWARFRewriter::updateUnitDebugInfo(
     case dwarf::DW_TAG_inlined_subroutine:
     case dwarf::DW_TAG_try_block:
     case dwarf::DW_TAG_catch_block: {
-      uint64_t RangesSectionOffset = RangesSectionWriter.getEmptyRangesOffset();
+      uint64_t RangesSectionOffset = 0;
       Expected<DWARFAddressRangesVector> RangesOrError =
           getDIEAddressRanges(*Die, Unit);
       const BinaryFunction *Function =
@@ -865,6 +865,10 @@ void DWARFRewriter::updateUnitDebugInfo(
         }
       } else if (!RangesOrError) {
         consumeError(RangesOrError.takeError());
+      } else {
+        OutputRanges.push_back({0, !RangesOrError->empty()
+                                       ? RangesOrError.get().front().HighPC
+                                       : 0});
       }
       DIEValue LowPCVal = Die->findAttribute(dwarf::DW_AT_low_pc);
       DIEValue HighPCVal = Die->findAttribute(dwarf::DW_AT_high_pc);

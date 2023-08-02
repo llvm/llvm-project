@@ -21,6 +21,17 @@ static T getParam(const InterpFrame *Frame, unsigned Index) {
   return Frame->getParam<T>(Offset);
 }
 
+/// Peek an integer value from the stack into an APSInt.
+static APSInt peekToAPSInt(InterpStack &Stk, PrimType T) {
+  APSInt R;
+  INT_TYPE_SWITCH(T, {
+    T Val = Stk.peek<T>();
+    R = APSInt(APInt(T::bitWidth(), static_cast<uint64_t>(Val), T::isSigned()));
+  });
+
+  return R;
+}
+
 static bool interp__builtin_strcmp(InterpState &S, CodePtr OpPC,
                                    const InterpFrame *Frame) {
   const Pointer &A = getParam<Pointer>(Frame, 0);
@@ -205,6 +216,56 @@ static bool interp__builtin_isnormal(InterpState &S, CodePtr OpPC,
   return true;
 }
 
+/// First parameter to __builtin_isfpclass is the floating value, the
+/// second one is an integral value.
+static bool interp__builtin_isfpclass(InterpState &S, CodePtr OpPC,
+                                      const InterpFrame *Frame,
+                                      const Function *Func) {
+  const Expr *E = S.Current->getExpr(OpPC);
+  const CallExpr *CE = cast<CallExpr>(E);
+  PrimType FPClassArgT = *S.getContext().classify(CE->getArgs()[1]->getType());
+  APSInt FPClassArg = peekToAPSInt(S.Stk, FPClassArgT);
+  const Floating &F =
+      S.Stk.peek<Floating>(align(primSize(FPClassArgT) + primSize(PT_Float)));
+
+  int32_t Result =
+      static_cast<int32_t>((F.classify() & FPClassArg).getZExtValue());
+  S.Stk.push<Integral<32, true>>(Integral<32, true>::from(Result));
+
+  return true;
+}
+
+/// Five int32 values followed by one floating value.
+static bool interp__builtin_fpclassify(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const Function *Func) {
+  const Floating &Val = S.Stk.peek<Floating>();
+
+  unsigned Index;
+  switch (Val.getCategory()) {
+  case APFloat::fcNaN:
+    Index = 0;
+    break;
+  case APFloat::fcInfinity:
+    Index = 1;
+    break;
+  case APFloat::fcNormal:
+    Index = Val.isDenormal() ? 3 : 2;
+    break;
+  case APFloat::fcZero:
+    Index = 4;
+    break;
+  }
+
+  // The last argument is first on the stack.
+  unsigned Offset = align(primSize(PT_Float)) +
+                    ((1 + (4 - Index)) * align(primSize(PT_Sint32)));
+
+  const Integral<32, true> &I = S.Stk.peek<Integral<32, true>>(Offset);
+  S.Stk.push<Integral<32, true>>(I);
+  return true;
+}
+
 bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
   InterpFrame *Frame = S.Current;
   APValue Dummy;
@@ -287,6 +348,14 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const Function *F) {
     break;
   case Builtin::BI__builtin_isnormal:
     if (interp__builtin_isnormal(S, OpPC, Frame, F))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+  case Builtin::BI__builtin_isfpclass:
+    if (interp__builtin_isfpclass(S, OpPC, Frame, F))
+      return Ret<PT_Sint32>(S, OpPC, Dummy);
+    break;
+  case Builtin::BI__builtin_fpclassify:
+    if (interp__builtin_fpclassify(S, OpPC, Frame, F))
       return Ret<PT_Sint32>(S, OpPC, Dummy);
     break;
 

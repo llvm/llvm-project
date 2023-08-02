@@ -385,7 +385,7 @@ void setLock(omp_lock_t *Lock) {
     for (;;) {
       now = __nvvm_read_ptx_sreg_clock();
       int32_t cycles = now > start ? now - start : now + (0xffffffff - start);
-      if (cycles >= OMP_SPIN * mapping::getBlockId()) {
+      if (cycles >= OMP_SPIN * mapping::getBlockIdInKernel()) {
         break;
       }
     }
@@ -595,6 +595,16 @@ void omp_set_lock(omp_lock_t *Lock) { impl::setLock(Lock); }
 void omp_unset_lock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
 
 int omp_test_lock(omp_lock_t *Lock) { return impl::testLock(Lock); }
+
+void ompx_sync_block(int Ordering) {
+  impl::syncThreadsAligned(atomic::OrderingTy(Ordering));
+}
+void ompx_sync_block_acq_rel() {
+  impl::syncThreadsAligned(atomic::OrderingTy::acq_rel);
+}
+void ompx_sync_block_divergent(int Ordering) {
+  impl::syncThreads(atomic::OrderingTy(Ordering));
+}
 } // extern "C"
 
 #pragma omp end declare target

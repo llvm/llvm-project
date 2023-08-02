@@ -50,6 +50,7 @@ set(LIBOMP_EXPORTS_LIB_DIR "${LIBOMP_EXPORTS_DIR}/${libomp_platform}${libomp_suf
 add_custom_command(TARGET omp POST_BUILD
   COMMAND ${CMAKE_COMMAND} -E make_directory ${LIBOMP_EXPORTS_CMN_DIR}
   COMMAND ${CMAKE_COMMAND} -E copy omp.h ${LIBOMP_EXPORTS_CMN_DIR}
+  COMMAND ${CMAKE_COMMAND} -E copy ompx.h ${LIBOMP_EXPORTS_CMN_DIR}
 )
 if(${LIBOMP_OMPT_SUPPORT})
   add_custom_command(TARGET omp POST_BUILD

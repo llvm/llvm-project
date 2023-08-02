@@ -282,7 +282,6 @@ template<> void $ambiguous^function(int);       // full specialization
            "using ns::^function;");
 }
 
-
 TEST(WalkAST, Alias) {
   testWalk(R"cpp(
     namespace ns { int x; }
@@ -510,5 +509,14 @@ TEST(WalkAST, Enums) {
   testWalk("enum class E : int {};", "enum class ^E : int ;");
 }
 
+TEST(WalkAST, InitializerList) {
+  testWalk(R"cpp(
+       namespace std {
+        template <typename T> struct $implicit^initializer_list {};
+       })cpp",
+           R"cpp(
+       const char* s = "";
+       auto sx = ^{s};)cpp");
+}
 } // namespace
 } // namespace clang::include_cleaner

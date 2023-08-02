@@ -19,6 +19,12 @@ if (LIBPGMATH_DIR)
   endif()
 endif()
 
+check_include_file(quadmath.h FOUND_QUADMATH_HEADER)
+check_library_exists(quadmath sinq "" FOUND_QUADMATH_LIB)
+if(FOUND_QUADMATH_HEADER AND FOUND_QUADMATH_LIB)
+  add_compile_definitions(HAS_QUADMATHLIB)
+endif()
+
 add_flang_library(FortranEvaluate
   call.cpp
   characteristics.cpp
