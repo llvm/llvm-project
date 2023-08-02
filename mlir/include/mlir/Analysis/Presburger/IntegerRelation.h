@@ -324,6 +324,10 @@ public:
   /// Removes all equalities and inequalities.
   void clearConstraints();
 
+  /// Clear all constraints and add an invalid equation indicating that the set
+  /// is empty.
+  void setEmpty();
+
   /// Sets the `values.size()` variables starting at `po`s to the specified
   /// values and removes them.
   void setAndEliminate(unsigned pos, ArrayRef<MPInt> values);
@@ -545,6 +549,10 @@ public:
 
   void removeDuplicateDivs();
 
+  /// Attempts to simplify the constraints. The return value indicates whether
+  /// the set is empty.
+  bool simplify();
+
   /// Converts variables of kind srcKind in the range [varStart, varLimit) to
   /// variables of kind dstKind. If `pos` is given, the variables are placed at
   /// position `pos` of dstKind, otherwise they are placed after all the other
@@ -724,6 +732,12 @@ protected:
   /// Returns the number of variables eliminated.
   unsigned gaussianEliminateVars(unsigned posStart, unsigned posLimit);
 
+  /// Perform a Gaussian elimination operation to reduce all equations to
+  /// standard form, and call setempty for cases that are clearly empty. the
+  /// return value indicates whether the number of constraints has been modified
+  /// or not.
+  bool gaussianEliminate();
+
   /// Eliminates the variable at the specified position using Fourier-Motzkin
   /// variable elimination, but uses Gaussian elimination if there is an
   /// equality involving that variable. If the result of the elimination is
@@ -754,6 +768,11 @@ protected:
   /// Returns true if the pos^th column is all zero for both inequalities and
   /// equalities.
   bool isColZero(unsigned pos) const;
+
+  /// Checks for identical inequalities and eliminates redundant inequalities.
+  /// The return value indicates whether the number of constraints has been
+  /// modified.
+  bool removeDuplicateConstraints();
 
   /// Returns false if the fields corresponding to various variable counts, or
   /// equality/inequality buffer sizes aren't consistent; true otherwise. This
