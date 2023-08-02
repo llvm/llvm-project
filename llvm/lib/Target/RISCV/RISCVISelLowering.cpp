@@ -376,6 +376,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
     setOperationAction(ISD::FP_EXTEND, MVT::f32, Custom);
     setOperationAction(ISD::FP_EXTEND, MVT::f64, Custom);
     setOperationAction(ISD::ConstantFP, MVT::bf16, Expand);
+    setOperationAction(ISD::SELECT_CC, MVT::bf16, Expand);
+    setOperationAction(ISD::SELECT, MVT::bf16, Promote);
+    setOperationAction(ISD::SETCC, MVT::bf16, Promote);
   }
 
   if (Subtarget.hasStdExtZfhOrZfhminOrZhinxOrZhinxmin()) {
