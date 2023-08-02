@@ -1472,6 +1472,7 @@ def GPU_ElementwiseOpDivS : I32EnumAttrCase<"DIVS", 9, "divs">;
 def GPU_ElementwiseOpDivU : I32EnumAttrCase<"DIVU", 10, "divu">;
 def GPU_ElementwiseOpNEGF : I32EnumAttrCase<"NEGATEF", 11, "negatef">;
 def GPU_ElementwiseOpNEGS : I32EnumAttrCase<"NEGATES", 12, "negates">;
+def GPU_ElementwiseOpEXTF : I32EnumAttrCase<"EXTF", 13, "extf">;
 
 def MMAElementWise : I32EnumAttr<"MMAElementwiseOp",
   "elementwise operation to apply to mma matrix", [
@@ -1487,7 +1488,8 @@ def MMAElementWise : I32EnumAttr<"MMAElementwiseOp",
     GPU_ElementwiseOpDivS,
     GPU_ElementwiseOpDivU,
     GPU_ElementwiseOpNEGF,
-    GPU_ElementwiseOpNEGS
+    GPU_ElementwiseOpNEGS,
+    GPU_ElementwiseOpEXTF
   ]> {
   let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::gpu";

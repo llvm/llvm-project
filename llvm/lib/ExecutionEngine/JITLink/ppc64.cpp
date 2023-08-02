@@ -66,6 +66,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "Pointer32";
   case Delta64:
     return "Delta64";
+  case Delta34:
+    return "Delta34";
   case Delta32:
     return "Delta32";
   case NegDelta32:
@@ -92,6 +94,10 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "RequestCall";
   case RequestCallNoTOC:
     return "RequestCallNoTOC";
+  case RequestTLSDescInGOTAndTransformToTOCDelta16HA:
+    return "RequestTLSDescInGOTAndTransformToTOCDelta16HA";
+  case RequestTLSDescInGOTAndTransformToTOCDelta16LO:
+    return "RequestTLSDescInGOTAndTransformToTOCDelta16LO";
   default:
     return getGenericEdgeKindName(static_cast<Edge::Kind>(K));
   }

@@ -82,6 +82,23 @@ test_external_call_notoc:
   blr
   .size test_external_call_notoc, .-test_external_call_notoc
 
+# Check R_PPC64_PCREL34
+# jitlink-check: (section_addr(elf_reloc.o, .rodata.str1.1) - test_pcrel34)[33:0] = \
+# jitlink-check:   ((((*{4}(test_pcrel34)) & 0x3ffff) << 16) | ((*{4}(test_pcrel34 + 4)) & 0xffff))[33:0]
+  .global test_pcrel34
+  .p2align 4
+  .type test_pcrel34,@function
+test_pcrel34:
+  paddi 3, 0, .L.str@PCREL, 1
+  blr
+  .size test_pcrel34, .-test_pcrel34
+
+  .type	.L.str,@object
+	.section	.rodata.str1.1,"aMS",@progbits,1
+.L.str:
+	.asciz	"Hey!"
+	.size	.L.str, 5
+
  .section .toc,"aw",@progbits
 .LC0:
   .tc external_data[TC],external_data
