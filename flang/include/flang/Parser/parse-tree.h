@@ -3544,17 +3544,17 @@ struct OmpInReductionClause {
 //                                   variable-name-list)
 //                allocate-modifier -> allocator | align
 struct OmpAllocateClause {
-  TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);
   struct AllocateModifier {
-    UNION_CLASS_BOILERPLATE(AllocateModifier);
     WRAPPER_CLASS(Allocator, ScalarIntExpr);
     WRAPPER_CLASS(Align, ScalarIntExpr);
     struct ComplexModifier {
       TUPLE_CLASS_BOILERPLATE(ComplexModifier);
       std::tuple<Allocator, Align> t;
     };
+    UNION_CLASS_BOILERPLATE(AllocateModifier);
     std::variant<Allocator, ComplexModifier, Align> u;
   };
+  TUPLE_CLASS_BOILERPLATE(OmpAllocateClause);
   std::tuple<std::optional<AllocateModifier>, OmpObjectList> t;
 };
 
