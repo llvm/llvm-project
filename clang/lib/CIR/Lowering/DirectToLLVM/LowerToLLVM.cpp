@@ -1008,16 +1008,29 @@ class CIRGlobalOpLowering
 public:
   using OpConversionPattern<mlir::cir::GlobalOp>::OpConversionPattern;
 
+  /// Replace CIR global with a region initialized LLVM global and update
+  /// insertion point to the end of the initializer block.
+  inline void setupRegionInitializedLLVMGlobalOp(
+      mlir::cir::GlobalOp op, mlir::ConversionPatternRewriter &rewriter) const {
+    const auto llvmType = getTypeConverter()->convertType(op.getSymType());
+    auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
+        op, llvmType, op.getConstant(), convertLinkage(op.getLinkage()),
+        op.getSymName(), nullptr);
+    newGlobalOp.getRegion().push_back(new mlir::Block());
+    rewriter.setInsertionPointToEnd(newGlobalOp.getInitializerBlock());
+  }
+
   mlir::LogicalResult
   matchAndRewrite(mlir::cir::GlobalOp op, OpAdaptor adaptor,
                   mlir::ConversionPatternRewriter &rewriter) const override {
 
     // Fetch required values to create LLVM op.
-    auto llvmType = getTypeConverter()->convertType(op.getSymType());
-    auto isConst = op.getConstant();
-    auto linkage = convertLinkage(op.getLinkage());
-    auto symbol = op.getSymName();
-    auto init = op.getInitialValue();
+    const auto llvmType = getTypeConverter()->convertType(op.getSymType());
+    const auto isConst = op.getConstant();
+    const auto linkage = convertLinkage(op.getLinkage());
+    const auto symbol = op.getSymName();
+    const auto loc = op.getLoc();
+    std::optional<mlir::Attribute> init = op.getInitialValue();
 
     // Check for missing funcionalities.
     if (!init.has_value()) {
@@ -1052,13 +1065,7 @@ public:
     }
     // Initializer is a global: load global value in initializer block.
     else if (auto attr = init.value().dyn_cast<mlir::FlatSymbolRefAttr>()) {
-      auto newGlobalOp = rewriter.replaceOpWithNewOp<mlir::LLVM::GlobalOp>(
-          op, llvmType, isConst, linkage, symbol, mlir::Attribute());
-      mlir::OpBuilder::InsertionGuard guard(rewriter);
-
-      // Create initializer block.
-      auto *newBlock = new mlir::Block();
-      newGlobalOp.getRegion().push_back(newBlock);
+      setupRegionInitializedLLVMGlobalOp(op, rewriter);
 
       // Fetch global used as initializer.
       auto sourceSymbol =
@@ -1066,16 +1073,14 @@ public:
               op->getParentOfType<mlir::ModuleOp>(), attr.getValue()));
 
       // Load and return the initializer value.
-      rewriter.setInsertionPointToEnd(newBlock);
       auto addressOfOp = rewriter.create<mlir::LLVM::AddressOfOp>(
-          op->getLoc(), mlir::LLVM::LLVMPointerType::get(getContext()),
+          loc, mlir::LLVM::LLVMPointerType::get(getContext()),
           sourceSymbol.getSymName());
       llvm::SmallVector<mlir::LLVM::GEPArg> offset{0};
       auto gepOp = rewriter.create<mlir::LLVM::GEPOp>(
-          op->getLoc(), llvmType, sourceSymbol.getType(),
+          loc, llvmType, sourceSymbol.getType(),
           addressOfOp.getResult(), offset);
-      rewriter.create<mlir::LLVM::ReturnOp>(op->getLoc(), gepOp.getResult());
-
+      rewriter.create<mlir::LLVM::ReturnOp>(loc, gepOp.getResult());
       return mlir::success();
     } else if (isa<mlir::cir::ZeroAttr, mlir::cir::NullAttr>(init.value())) {
       // TODO(cir): once LLVM's dialect has a proper zeroinitializer attribute
