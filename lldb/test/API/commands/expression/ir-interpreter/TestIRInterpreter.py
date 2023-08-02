@@ -47,6 +47,40 @@ class IRInterpreterTestCase(TestBase):
         self.assertGreaterEqual(duration_sec, 1)
         self.assertLess(duration_sec, 30)
 
+    def test_interpreter_interrupt(self):
+        """Test interrupting the IRInterpreter."""
+        self.build()
+        self.target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(self.target, VALID_TARGET)
+
+        # A non-trivial infinite loop.
+        inf_loop = "for (unsigned i = 0; i < 100; ++i) --i; 1"
+
+        options = lldb.SBExpressionOptions()
+
+        # This is an IRInterpreter specific test, so disable the JIT.
+        options.SetAllowJIT(False)
+
+        # Make sure we have a pretty long (10s) timeout so we have a chance to
+        # interrupt the interpreted expression.
+        options.SetTimeoutInMicroSeconds(10000000)
+
+        self.dbg.RequestInterrupt()
+
+        self.dbg.SetAsync(True)
+        res = self.target.EvaluateExpression(inf_loop, options)
+        self.dbg.SetAsync(False)
+
+        # Be sure to turn this off again:
+        def cleanup():
+            if self.dbg.InterruptRequested():
+                self.dbg.CancelInterruptRequest()
+
+        self.addTearDownHook(cleanup)
+
+        interrupt_error = "Interrupted while interpreting expression"
+        self.assertIn(interrupt_error, str(res.GetError()))
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)
