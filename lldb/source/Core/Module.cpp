@@ -1211,15 +1211,6 @@ void Module::ReportWarningUnsupportedLanguage(
 }
 
 #ifdef LLDB_ENABLE_SWIFT
-void Module::ReportWarningCantLoadSwiftModule(
-    std::string details, llvm::Optional<lldb::user_id_t> debugger_id) {
-  StreamString ss;
-  ss << GetFileSpec() << ": "
-     << "Cannot load Swift type information: " << details;
-  Debugger::ReportWarning(std::string(ss.GetString()), debugger_id,
-                          &m_swift_import_warning);
-}
-
 static llvm::VersionTuple GetAdjustedVersion(llvm::VersionTuple version) {
   return version;
 }

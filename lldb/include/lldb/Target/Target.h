@@ -1280,7 +1280,7 @@ public:
 
 #ifdef LLDB_ENABLE_SWIFT
   /// Get the lock guarding the scratch typesystem from being re-initialized.
-  SharedMutex &GetSwiftScratchContextLock() {
+  std::shared_mutex &GetSwiftScratchContextLock() {
     return m_scratch_typesystem_lock;
   }
 
@@ -1723,7 +1723,7 @@ protected:
       m_scratch_typesystem_for_module;
 
   /// Guards the scratch typesystem from being re-initialized.
-  SharedMutex m_scratch_typesystem_lock;
+  std::shared_mutex m_scratch_typesystem_lock;
 
   static void ImageSearchPathsChanged(const PathMappingList &path_list,
                                       void *baton);
