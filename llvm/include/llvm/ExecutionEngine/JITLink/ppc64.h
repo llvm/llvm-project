@@ -24,6 +24,7 @@ enum EdgeKind_ppc64 : Edge::Kind {
   Pointer64 = Edge::FirstRelocation,
   Pointer32,
   Delta64,
+  Delta34,
   Delta32,
   NegDelta32,
   Delta16,
@@ -229,6 +230,26 @@ inline static uint16_t ha16(uint64_t x) { return (x + 0x8000) >> 16; }
 
 inline static uint16_t lo16(uint64_t x) { return x & 0xffff; }
 
+// Prefixed instruction introduced in ISAv3.1 consists of two 32-bit words,
+// prefix word and suffix word, i.e., prefixed_instruction = concat(prefix_word,
+// suffix_word). That's to say, for a prefixed instruction encoded in uint64_t,
+// the most significant 32 bits belong to the prefix word. The prefix word is at
+// low address for both big/little endian. Byte order in each word still follows
+// its endian.
+template <support::endianness Endianness>
+inline static uint64_t readPrefixedInstruction(const char *Loc) {
+  constexpr bool isLE = Endianness == support::endianness::little;
+  uint64_t Inst = support::endian::read64<Endianness>(Loc);
+  return isLE ? (Inst << 32) | (Inst >> 32) : Inst;
+}
+
+template <support::endianness Endianness>
+inline static void writePrefixedInstruction(char *Loc, uint64_t Inst) {
+  constexpr bool isLE = Endianness == support::endianness::little;
+  Inst = isLE ? (Inst << 32) | (Inst >> 32) : Inst;
+  support::endian::write64<Endianness>(Loc, Inst);
+}
+
 /// Apply fixup expression for edge to block content.
 template <support::endianness Endianness>
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
@@ -313,6 +334,18 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
   case Delta64: {
     int64_t Value = S + A - P;
     support::endian::write64<Endianness>(FixupPtr, Value);
+    break;
+  }
+  case Delta34: {
+    int64_t Value = S + A - P;
+    if (!LLVM_UNLIKELY(isInt<34>(Value)))
+      return makeTargetOutOfRangeError(G, B, E);
+    static const uint64_t SI0Mask = 0x00000003ffff0000;
+    static const uint64_t SI1Mask = 0x000000000000ffff;
+    static const uint64_t FullMask = 0x0003ffff0000ffff;
+    uint64_t Inst = readPrefixedInstruction<Endianness>(FixupPtr) & ~FullMask;
+    writePrefixedInstruction<Endianness>(
+        FixupPtr, Inst | ((Value & SI0Mask) << 16) | (Value & SI1Mask));
     break;
   }
   case Delta32: {

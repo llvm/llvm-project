@@ -66,6 +66,8 @@ const char *getEdgeKindName(Edge::Kind K) {
     return "Pointer32";
   case Delta64:
     return "Delta64";
+  case Delta34:
+    return "Delta34";
   case Delta32:
     return "Delta32";
   case NegDelta32:
