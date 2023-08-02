@@ -71,6 +71,9 @@ Resolutions to C++ Defect Reports
 
 C Language Changes
 ------------------
+- ``structs``, ``unions``, and ``arrays`` that are const may now be used as
+  constant expressions.  This change is more consistent with the behavior of
+  GCC.
 
 C2x Feature Support
 ^^^^^^^^^^^^^^^^^^^
