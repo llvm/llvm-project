@@ -6304,24 +6304,27 @@ namespace {
       TemplateIdAnnotation *TemplateId = DS.getRepAsTemplateId();
       if (!TemplateId)
         return;
-      if (DS.getTypeSpecScope().isNotEmpty())
-        TL.setNestedNameSpecifierLoc(
-            DS.getTypeSpecScope().getWithLocInContext(Context));
-      else
-        TL.setNestedNameSpecifierLoc(NestedNameSpecifierLoc());
-      TL.setTemplateKWLoc(TemplateId->TemplateKWLoc);
-      TL.setConceptNameLoc(TemplateId->TemplateNameLoc);
-      TL.setFoundDecl(nullptr);
-      TL.setLAngleLoc(TemplateId->LAngleLoc);
-      TL.setRAngleLoc(TemplateId->RAngleLoc);
-      if (TemplateId->NumArgs == 0)
-        return;
-      TemplateArgumentListInfo TemplateArgsInfo;
-      ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
-                                         TemplateId->NumArgs);
-      SemaRef.translateTemplateArguments(TemplateArgsPtr, TemplateArgsInfo);
-      for (unsigned I = 0; I < TemplateId->NumArgs; ++I)
-        TL.setArgLocInfo(I, TemplateArgsInfo.arguments()[I].getLocInfo());
+
+      NestedNameSpecifierLoc NNS =
+          (DS.getTypeSpecScope().isNotEmpty()
+               ? DS.getTypeSpecScope().getWithLocInContext(Context)
+               : NestedNameSpecifierLoc());
+      TemplateArgumentListInfo TemplateArgsInfo(TemplateId->LAngleLoc,
+                                                TemplateId->RAngleLoc);
+      if (TemplateId->NumArgs > 0) {
+        ASTTemplateArgsPtr TemplateArgsPtr(TemplateId->getTemplateArgs(),
+                                           TemplateId->NumArgs);
+        SemaRef.translateTemplateArguments(TemplateArgsPtr, TemplateArgsInfo);
+      }
+      DeclarationNameInfo DNI = DeclarationNameInfo(
+          TL.getTypePtr()->getTypeConstraintConcept()->getDeclName(),
+          TemplateId->TemplateNameLoc);
+      auto *CR = ConceptReference::Create(
+          Context, NNS, TemplateId->TemplateKWLoc, DNI,
+          /*FoundDecl=*/nullptr,
+          /*NamedDecl=*/TL.getTypePtr()->getTypeConstraintConcept(),
+          ASTTemplateArgumentListInfo::Create(Context, TemplateArgsInfo));
+      TL.setConceptReference(CR);
     }
     void VisitTagTypeLoc(TagTypeLoc TL) {
       TL.setNameLoc(DS.getTypeSpecTypeNameLoc());

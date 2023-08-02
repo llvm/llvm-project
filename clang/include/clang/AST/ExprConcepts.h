@@ -38,14 +38,13 @@ class ASTStmtWriter;
 ///
 /// According to C++2a [expr.prim.id]p3 an id-expression that denotes the
 /// specialization of a concept results in a prvalue of type bool.
-class ConceptSpecializationExpr final : public Expr, public ConceptReference {
+class ConceptSpecializationExpr final : public Expr {
   friend class ASTReader;
   friend class ASTStmtReader;
 
-public:
-  using SubstitutionDiagnostic = std::pair<SourceLocation, std::string>;
+private:
+  ConceptReference *ConceptRef;
 
-protected:
   /// \brief The Implicit Concept Specialization Decl, which holds the template
   /// arguments for this specialization.
   ImplicitConceptSpecializationDecl *SpecDecl;
@@ -55,16 +54,11 @@ protected:
   /// ignored.
   ASTConstraintSatisfaction *Satisfaction;
 
-  ConceptSpecializationExpr(const ASTContext &C, NestedNameSpecifierLoc NNS,
-                            SourceLocation TemplateKWLoc,
-                            DeclarationNameInfo ConceptNameInfo,
-                            NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
-                            const ASTTemplateArgumentListInfo *ArgsAsWritten,
+  ConceptSpecializationExpr(const ASTContext &C, ConceptReference *ConceptRef,
                             ImplicitConceptSpecializationDecl *SpecDecl,
                             const ConstraintSatisfaction *Satisfaction);
 
-  ConceptSpecializationExpr(const ASTContext &C, ConceptDecl *NamedConcept,
-                            const ASTTemplateArgumentListInfo *ArgsAsWritten,
+  ConceptSpecializationExpr(const ASTContext &C, ConceptReference *ConceptRef,
                             ImplicitConceptSpecializationDecl *SpecDecl,
                             const ConstraintSatisfaction *Satisfaction,
                             bool Dependent,
@@ -73,22 +67,49 @@ protected:
 
 public:
   static ConceptSpecializationExpr *
-  Create(const ASTContext &C, NestedNameSpecifierLoc NNS,
-         SourceLocation TemplateKWLoc, DeclarationNameInfo ConceptNameInfo,
-         NamedDecl *FoundDecl, ConceptDecl *NamedConcept,
-         const ASTTemplateArgumentListInfo *ArgsAsWritten,
+  Create(const ASTContext &C, ConceptReference *ConceptRef,
          ImplicitConceptSpecializationDecl *SpecDecl,
          const ConstraintSatisfaction *Satisfaction);
 
   static ConceptSpecializationExpr *
-  Create(const ASTContext &C, ConceptDecl *NamedConcept,
-         const ASTTemplateArgumentListInfo *ArgsAsWritten,
+  Create(const ASTContext &C, ConceptReference *ConceptRef,
          ImplicitConceptSpecializationDecl *SpecDecl,
          const ConstraintSatisfaction *Satisfaction, bool Dependent,
          bool ContainsUnexpandedParameterPack);
 
   ArrayRef<TemplateArgument> getTemplateArguments() const {
     return SpecDecl->getTemplateArguments();
+  }
+
+  ConceptReference *getConceptReference() const { return ConceptRef; }
+
+  ConceptDecl *getNamedConcept() const { return ConceptRef->getNamedConcept(); }
+
+  // FIXME: Several of the following functions can be removed. Instead the
+  // caller can directly work with the ConceptReference.
+  bool hasExplicitTemplateArgs() const {
+    return ConceptRef->hasExplicitTemplateArgs();
+  }
+
+  SourceLocation getConceptNameLoc() const {
+    return ConceptRef->getConceptNameLoc();
+  }
+  const ASTTemplateArgumentListInfo *getTemplateArgsAsWritten() const {
+    return ConceptRef->getTemplateArgsAsWritten();
+  }
+
+  const NestedNameSpecifierLoc &getNestedNameSpecifierLoc() const {
+    return ConceptRef->getNestedNameSpecifierLoc();
+  }
+
+  SourceLocation getTemplateKWLoc() const {
+    return ConceptRef->getTemplateKWLoc();
+  }
+
+  NamedDecl *getFoundDecl() const { return ConceptRef->getFoundDecl(); }
+
+  const DeclarationNameInfo &getConceptNameInfo() const {
+    return ConceptRef->getConceptNameInfo();
   }
 
   const ImplicitConceptSpecializationDecl *getSpecializationDecl() const {
@@ -119,17 +140,15 @@ public:
   }
 
   SourceLocation getBeginLoc() const LLVM_READONLY {
-    if (auto QualifierLoc = getNestedNameSpecifierLoc())
-      return QualifierLoc.getBeginLoc();
-    return ConceptName.getBeginLoc();
+    return ConceptRef->getBeginLoc();
   }
 
   SourceLocation getEndLoc() const LLVM_READONLY {
-    // If the ConceptSpecializationExpr is the ImmediatelyDeclaredConstraint
-    // of a TypeConstraint written syntactically as a constrained-parameter,
-    // there may not be a template argument list.
-    return ArgsAsWritten->RAngleLoc.isValid() ? ArgsAsWritten->RAngleLoc
-                                              : ConceptName.getEndLoc();
+    return ConceptRef->getEndLoc();
+  }
+
+  SourceLocation getExprLoc() const LLVM_READONLY {
+    return ConceptRef->getLocation();
   }
 
   // Iterators
