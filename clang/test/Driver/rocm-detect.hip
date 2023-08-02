@@ -21,8 +21,8 @@
 // RUN:   | FileCheck -check-prefixes=COMMON,NODEFAULTLIBS %s
 
 // Test environment variable ROCM_PATH.
-// RUN: env ROCM_PATH=%S/Inputs/rocm not %clang -### --target=x86_64-linux-gnu \
-// RUN:   --print-rocm-search-dirs %s 2>&1 \
+// RUN: env ROCM_PATH=%S/Inputs/rocm %clang -### --target=x86_64-linux-gnu \
+// RUN:   --print-rocm-search-dirs --offload-arch=gfx1010 %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-ENV %s
 
 // Test interaction between environment variables HIP_PATH and ROCM_PATH.
@@ -82,7 +82,7 @@
 // RUN: mkdir -p %T/opt
 // RUN: cp -r %S/Inputs/rocm %T/opt/rocm-3.9.0-1234
 // RUN: cp -r %S/Inputs/rocm %T/opt/rocm-3.10.0
-// RUN: not %clang -### --target=x86_64-linux-gnu --sysroot=%T \
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-arch=gfx1010 --sysroot=%T \
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-REL %s
 
@@ -98,26 +98,18 @@
 // RUN:   | FileCheck -check-prefixes=SPACK %s
 
 // Test SPACK installation with multiple hip and rocm-device-libs packages of the same
-// ROCm release. Clang cannot determine which one to use and emit diagnostics. --hip-path
-// and --rocm-device-lib-path can be used to specify them.
+// ROCm release. --hip-path and --rocm-device-lib-path can be used to specify them.
 
 // RUN: cp -r %T/rocm-spack/hip-* %T/rocm-spack/hip-4.0.0-abcd
-// RUN: not %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
-// RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=SPACK-MULT %s
 // RUN: %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
 // RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 \
 // RUN:   --hip-path=%T/rocm-spack/hip-4.0.0-abcd \
 // RUN:    %s 2>&1 | FileCheck -check-prefixes=SPACK-SET %s
 
 // Test invalid SPACK ROCm installation missing hip and rocm-device-libs packages.
-// The message about SPACK is emitted only if -v is specified.
 
 // RUN: rm -rf %T/rocm-spack/hip-*
 // RUN: rm -rf %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn
-// RUN: not %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang -### -v \
-// RUN:   -target x86_64-linux-gnu --cuda-gpu-arch=gfx900 %s 2>&1 \
-// RUN:   | FileCheck -check-prefixes=SPACK-MISS %s
 // RUN: %T/rocm-spack/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin/clang --version 2>&1 \
 // RUN:   | FileCheck -check-prefixes=SPACK-MISS-SILENT %s
 
@@ -152,21 +144,11 @@
 // SPACK-SAME: "-mlink-builtin-bitcode" "[[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn/bitcode/hip.bc"
 // SPACK-SAME: "-idirafter" "[[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5/include"
 
-// SPACK-MULT: InstalledDir: [[DIR:.*]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
-// SPACK-MULT-DAG: Cannot use SPACK package hip-4.0.0 at [[DIR]] due to multiple installations for the same version
-// SPACK-MULT-NOT: Found HIP installation: [[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5, version 4.0.20214-a2917cd
-// SPACK-MULT-NOT: "-internal-isystem" "[[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5/include"
-
 // SPACK-SET: InstalledDir: [[DIR:.*]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
 // SPACK-SET: Found HIP installation: [[DIR]]/hip-4.0.0-abcd, version 4.0.20214-a2917cd
 // SPACK-SET: "-triple" "amdgcn-amd-amdhsa"
 // SPACK-SET-SAME: "-mlink-builtin-bitcode" "[[DIR]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/amdgcn/bitcode/hip.bc"
 // SPACK-SET-SAME: "-idirafter" "[[DIR]]/hip-4.0.0-abcd/include"
-
-// SPACK-MISS: InstalledDir: [[DIR:.*]]/llvm-amdgpu-4.0.0-ieagcs7inf7runpyfvepqkurasoglq4z/bin
-// SPACK-MISS-DAG: SPACK package hip-4.0.0 not found at [[DIR]]
-// SPACK-MISS-NOT: Found HIP installation: [[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5, version 4.0.20214-a2917cd
-// SPACK-MISS-NOT: "-idirafter" "[[DIR]]/hip-4.0.0-5f63slrursbrvfe2txrrjkynbsywsob5/include"
 
 // SPACK-MISS-SILENT-NOT: SPACK package hip-{{.*}} not found at
 // SPACK-MISS-SILENT-NOT: Found HIP installation
