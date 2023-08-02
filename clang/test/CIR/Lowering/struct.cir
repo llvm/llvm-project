@@ -4,6 +4,10 @@
 !s32i = !cir.int<s, 32>
 !u8i = !cir.int<u, 8>
 !ty_22struct2ES22 = !cir.struct<"struct.S", !u8i, !s32i>
+!ty_22struct2ES2A22 = !cir.struct<"struct.S2A", !s32i, #cir.recdecl.ast>
+!ty_22struct2ES122 = !cir.struct<"struct.S1", !s32i, f32, !cir.ptr<!s32i>, #cir.recdecl.ast>
+!ty_22struct2ES222 = !cir.struct<"struct.S2", !ty_22struct2ES2A22, #cir.recdecl.ast>
+
 module {
   cir.func @test() {
     %1 = cir.alloca !ty_22struct2ES22, cir.ptr <!ty_22struct2ES22>, ["x"] {alignment = 4 : i64}
@@ -15,4 +19,28 @@ module {
     // CHECK: = llvm.getelementptr %[[#STRUCT]][0, 1] : (!llvm.ptr) -> !llvm.ptr
     cir.return
   }
+
+  // Should lower basic #cir.const_struct initializer.
+  cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, 1.000000e-01 : f32, #cir.null : !cir.ptr<!s32i>}> : !ty_22struct2ES122
+  // CHECK: llvm.mlir.global external @s1() {addr_space = 0 : i32} : !llvm.struct<"struct.S1", (i32, f32, ptr)> {
+  // CHECK:   %0 = llvm.mlir.undef : !llvm.struct<"struct.S1", (i32, f32, ptr)>
+  // CHECK:   %1 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK:   %2 = llvm.insertvalue %1, %0[0] : !llvm.struct<"struct.S1", (i32, f32, ptr)> 
+  // CHECK:   %3 = llvm.mlir.constant(1.000000e-01 : f32) : f32
+  // CHECK:   %4 = llvm.insertvalue %3, %2[1] : !llvm.struct<"struct.S1", (i32, f32, ptr)> 
+  // CHECK:   %5 = llvm.mlir.zero : !llvm.ptr
+  // CHECK:   %6 = llvm.insertvalue %5, %4[2] : !llvm.struct<"struct.S1", (i32, f32, ptr)> 
+  // CHECK:   llvm.return %6 : !llvm.struct<"struct.S1", (i32, f32, ptr)>
+  // CHECK: }
+
+  // Should lower nested #cir.const_struct initializer.
+  cir.global external @s2 = #cir.const_struct<{#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2ES2A22}> : !ty_22struct2ES222
+  // CHECK: llvm.mlir.global external @s2() {addr_space = 0 : i32} : !llvm.struct<"struct.S2", (struct<"struct.S2A", (i32)>)> {
+  // CHECK:   %0 = llvm.mlir.undef : !llvm.struct<"struct.S2", (struct<"struct.S2A", (i32)>)>
+  // CHECK:   %1 = llvm.mlir.undef : !llvm.struct<"struct.S2A", (i32)>
+  // CHECK:   %2 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK:   %3 = llvm.insertvalue %2, %1[0] : !llvm.struct<"struct.S2A", (i32)> 
+  // CHECK:   %4 = llvm.insertvalue %3, %0[0] : !llvm.struct<"struct.S2", (struct<"struct.S2A", (i32)>)> 
+  // CHECK:   llvm.return %4 : !llvm.struct<"struct.S2", (struct<"struct.S2A", (i32)>)>
+  // CHECK: }
 }

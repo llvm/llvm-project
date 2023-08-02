@@ -54,8 +54,11 @@
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Passes.h"
 #include "llvm/ADT/APInt.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/IR/DebugInfoMetadata.h"
+#include "llvm/IR/DerivedTypes.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
 #include <cstdint>
@@ -66,6 +69,85 @@ using namespace llvm;
 
 namespace cir {
 namespace direct {
+
+//===----------------------------------------------------------------------===//
+// Visitors for Lowering CIR Const Attributes
+//===----------------------------------------------------------------------===//
+
+/// Switches on the type of attribute and calls the appropriate conversion.
+inline mlir::Value
+lowerCirAttrAsValue(mlir::Attribute attr, mlir::Location loc,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    const mlir::TypeConverter *converter);
+
+/// IntAttr visitor.
+inline mlir::Value
+lowerCirAttrAsValue(mlir::cir::IntAttr intAttr, mlir::Location loc,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    const mlir::TypeConverter *converter) {
+  return rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, converter->convertType(intAttr.getType()), intAttr.getValue());
+}
+
+/// NullAttr visitor.
+inline mlir::Value
+lowerCirAttrAsValue(mlir::cir::NullAttr nullAttr, mlir::Location loc,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    const mlir::TypeConverter *converter) {
+  return rewriter.create<mlir::LLVM::ZeroOp>(
+      loc, converter->convertType(nullAttr.getType()));
+}
+
+/// FloatAttr visitor.
+inline mlir::Value
+lowerCirAttrAsValue(mlir::FloatAttr fltAttr, mlir::Location loc,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    const mlir::TypeConverter *converter) {
+  return rewriter.create<mlir::LLVM::ConstantOp>(
+      loc, converter->convertType(fltAttr.getType()), fltAttr.getValue());
+}
+
+/// ConstStruct visitor.
+mlir::Value lowerCirAttrAsValue(mlir::cir::ConstStructAttr constStruct,
+                                mlir::Location loc,
+                                mlir::ConversionPatternRewriter &rewriter,
+                                const mlir::TypeConverter *converter) {
+  auto llvmTy = converter->convertType(constStruct.getType());
+  mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
+
+  // Iteratively lower each constant element of the struct.
+  for (auto [idx, elt] : llvm::enumerate(constStruct.getMembers())) {
+    mlir::Value init = lowerCirAttrAsValue(elt, loc, rewriter, converter);
+    result = rewriter.create<mlir::LLVM::InsertValueOp>(loc, result, init, idx);
+  }
+
+  return result;
+}
+
+/// Switches on the type of attribute and calls the appropriate conversion.
+inline mlir::Value
+lowerCirAttrAsValue(mlir::Attribute attr, mlir::Location loc,
+                    mlir::ConversionPatternRewriter &rewriter,
+                    const mlir::TypeConverter *converter) {
+  if (const auto intAttr = attr.dyn_cast<mlir::cir::IntAttr>())
+    return lowerCirAttrAsValue(intAttr, loc, rewriter, converter);
+  if (const auto fltAttr = attr.dyn_cast<mlir::FloatAttr>())
+    return lowerCirAttrAsValue(fltAttr, loc, rewriter, converter);
+  if (const auto nullAttr = attr.dyn_cast<mlir::cir::NullAttr>())
+    return lowerCirAttrAsValue(nullAttr, loc, rewriter, converter);
+  if (const auto constStruct = attr.dyn_cast<mlir::cir::ConstStructAttr>())
+    return lowerCirAttrAsValue(constStruct, loc, rewriter, converter);
+  if (const auto constArr = attr.dyn_cast<mlir::cir::ConstArrayAttr>())
+    llvm_unreachable("const array attribute is NYI");
+  if (const auto zeroAttr = attr.dyn_cast<mlir::cir::BoolAttr>())
+    llvm_unreachable("bool attribute is NYI");
+  if (const auto zeroAttr = attr.dyn_cast<mlir::cir::ZeroAttr>())
+    llvm_unreachable("zero attribute is NYI");
+
+  llvm_unreachable("unhandled attribute type");
+}
+
+//===----------------------------------------------------------------------===//
 
 mlir::LLVM::Linkage convertLinkage(mlir::cir::GlobalLinkageKind linkage) {
   using CIR = mlir::cir::GlobalLinkageKind;
@@ -1093,6 +1175,13 @@ public:
       auto cirZeroAttr = mlir::cir::ZeroAttr::get(getContext(), llvmType);
       llvmGlobalOp->setAttr("cir.initial_value", cirZeroAttr);
       return mlir::success();
+    } else if (const auto structAttr =
+                   init.value().dyn_cast<mlir::cir::ConstStructAttr>()) {
+      setupRegionInitializedLLVMGlobalOp(op, rewriter);
+      rewriter.create<mlir::LLVM::ReturnOp>(
+          op->getLoc(), lowerCirAttrAsValue(structAttr, op->getLoc(), rewriter,
+                                            typeConverter));
+      return mlir::success();
     } else {
       op.emitError() << "usupported initializer '" << init.value() << "'";
       return mlir::failure();
@@ -1576,10 +1665,20 @@ void prepareTypeConverter(mlir::LLVMTypeConverter &converter) {
     llvm::SmallVector<mlir::Type> llvmMembers;
     for (auto ty : type.getMembers())
       llvmMembers.push_back(converter.convertType(ty));
-    auto llvmStruct = mlir::LLVM::LLVMStructType::getIdentified(
-        type.getContext(), type.getTypeName());
-    if (llvmStruct.setBody(llvmMembers, /*isPacked=*/type.getPacked()).failed())
-      llvm_unreachable("Failed to set body of struct");
+
+    // Struct has a name: lower as an identified struct.
+    mlir::LLVM::LLVMStructType llvmStruct;
+    if (type.getTypeName().size() != 0) {
+      llvmStruct = mlir::LLVM::LLVMStructType::getIdentified(
+          type.getContext(), type.getTypeName());
+      if (llvmStruct.setBody(llvmMembers, /*isPacked=*/type.getPacked())
+              .failed())
+        llvm_unreachable("Failed to set body of struct");
+    } else { // Struct has no name: lower as literal struct.
+      llvmStruct = mlir::LLVM::LLVMStructType::getLiteral(
+          type.getContext(), llvmMembers, /*isPacked=*/type.getPacked());
+    }
+
     return llvmStruct;
   });
   converter.addConversion([&](mlir::cir::VoidType type) -> mlir::Type {
