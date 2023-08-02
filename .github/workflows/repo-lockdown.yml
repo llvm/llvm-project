@@ -12,7 +12,7 @@ on:
       - 'clang/lib/Format/**'
       - 'clang/include/clang/Format/**'
       - 'clang/docs/**'
-      - 'clang/unitests/Format**'
+      - 'clang/unitests/Format/**'
       - 'clang/tools/clang-format/**'
 
 permissions:
