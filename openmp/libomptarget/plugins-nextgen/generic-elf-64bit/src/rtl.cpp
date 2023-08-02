@@ -84,10 +84,6 @@ struct GenELF64KernelTy : public GenericKernelTy {
     return Plugin::success();
   }
 
-  /// Get the default number of blocks and threads for the kernel.
-  uint32_t getDefaultNumBlocks(GenericDeviceTy &) const override { return 1; }
-  uint32_t getDefaultNumThreads(GenericDeviceTy &) const override { return 1; }
-
 private:
   /// The kernel function to execute.
   void (*Func)(void);
