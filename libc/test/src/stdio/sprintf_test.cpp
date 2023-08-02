@@ -96,6 +96,12 @@ TEST(LlvmLibcSPrintfTest, StringConv) {
                                  "isn't", 12, 10, "important. Ever.");
   EXPECT_EQ(written, 26);
   ASSERT_STREQ(buff, " beginning is   important.");
+
+#ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
+  written = __llvm_libc::sprintf(buff, "%s", nullptr);
+  EXPECT_EQ(written, 4);
+  ASSERT_STREQ(buff, "null");
+#endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 }
 
 TEST(LlvmLibcSPrintfTest, IntConv) {
@@ -2781,8 +2787,10 @@ TEST(LlvmLibcSPrintfTest, WriteIntConv) {
   EXPECT_EQ(test_val, 8);
   ASSERT_STREQ(buff, "87654321");
 
+#ifndef LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
   written = __llvm_libc::sprintf(buff, "abc123%n", nullptr);
   EXPECT_LT(written, 0);
+#endif // LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 }
 #endif // LIBC_COPT_PRINTF_DISABLE_WRITE_INT
 
