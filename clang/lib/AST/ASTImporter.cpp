@@ -7414,10 +7414,17 @@ ExpectedStmt ASTNodeImporter::VisitUnaryOperator(UnaryOperator *E) {
   if (Err)
     return std::move(Err);
 
-  return UnaryOperator::Create(
-      Importer.getToContext(), ToSubExpr, E->getOpcode(), ToType,
-      E->getValueKind(), E->getObjectKind(), ToOperatorLoc, E->canOverflow(),
-      E->getFPOptionsOverride());
+  auto *UO = UnaryOperator::CreateEmpty(Importer.getToContext(),
+                                        E->hasStoredFPFeatures());
+  UO->setType(ToType);
+  UO->setSubExpr(ToSubExpr);
+  UO->setOpcode(E->getOpcode());
+  UO->setOperatorLoc(ToOperatorLoc);
+  UO->setCanOverflow(E->canOverflow());
+  if (E->hasStoredFPFeatures())
+    UO->setStoredFPFeatures(E->getStoredFPFeatures());
+
+  return UO;
 }
 
 ExpectedStmt
