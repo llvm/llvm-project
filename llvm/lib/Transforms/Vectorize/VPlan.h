@@ -2586,12 +2586,6 @@ public:
     return getVPValue(V);
   }
 
-  void removeVPValueFor(Value *V) {
-    assert(Value2VPValueEnabled &&
-           "IR value to VPValue mapping may be out of date!");
-    Value2VPValue.erase(V);
-  }
-
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print this VPlan to \p O.
   void print(raw_ostream &O) const;
