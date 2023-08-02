@@ -186,6 +186,9 @@ C Language Changes
     _Generic(i, int : 0, const int : 1); // Warns about unreachable code, the
                                          // result is 0, not 1.
     _Generic(typeof(i), int : 0, const int : 1); // Result is 1, not 0.
+- ``structs``, ``unions``, and ``arrays`` that are const may now be used as
+  constant expressions.  This change is more consistent with the behavior of
+  GCC.
 
 C2x Feature Support
 ^^^^^^^^^^^^^^^^^^^
