@@ -3441,6 +3441,18 @@ template <typename ToTy> struct ReachabilityQueryInfo {
   /// and remember if it worked:
   Reachable Result = Reachable::No;
 
+  /// Precomputed hash for this RQI.
+  unsigned Hash = 0;
+
+  unsigned computeHashValue() const {
+    assert(Hash == 0 && "Computed hash twice!");
+    using InstSetDMI = DenseMapInfo<const AA::InstExclusionSetTy *>;
+    using PairDMI = DenseMapInfo<std::pair<const Instruction *, const ToTy *>>;
+    return const_cast<ReachabilityQueryInfo<ToTy> *>(this)->Hash =
+               detail::combineHashValue(PairDMI ::getHashValue({From, To}),
+                                        InstSetDMI::getHashValue(ExclusionSet));
+  }
+
   ReachabilityQueryInfo(const Instruction *From, const ToTy *To)
       : From(From), To(To) {}
 
@@ -3474,9 +3486,7 @@ template <typename ToTy> struct DenseMapInfo<ReachabilityQueryInfo<ToTy> *> {
     return &TombstoneKey;
   }
   static unsigned getHashValue(const ReachabilityQueryInfo<ToTy> *RQI) {
-    unsigned H = PairDMI ::getHashValue({RQI->From, RQI->To});
-    H += InstSetDMI::getHashValue(RQI->ExclusionSet);
-    return H;
+    return RQI->Hash ? RQI->Hash : RQI->computeHashValue();
   }
   static bool isEqual(const ReachabilityQueryInfo<ToTy> *LHS,
                       const ReachabilityQueryInfo<ToTy> *RHS) {
