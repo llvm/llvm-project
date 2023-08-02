@@ -973,7 +973,8 @@ void BTFDebug::visitMapDefType(const DIType *Ty, uint32_t &TypeId) {
 }
 
 /// Read file contents from the actual file or from the source
-std::string BTFDebug::populateFileContent(const DIFile *File) {
+std::string BTFDebug::populateFileContent(const DISubprogram *SP) {
+  auto File = SP->getFile();
   std::string FileName;
 
   if (!File->getFilename().startswith("/") && File->getDirectory().size())
@@ -1004,9 +1005,9 @@ std::string BTFDebug::populateFileContent(const DIFile *File) {
   return FileName;
 }
 
-void BTFDebug::constructLineInfo(const DIFile *File, MCSymbol *Label,
+void BTFDebug::constructLineInfo(const DISubprogram *SP, MCSymbol *Label,
                                  uint32_t Line, uint32_t Column) {
-  std::string FileName = populateFileContent(File);
+  std::string FileName = populateFileContent(SP);
   BTFLineInfo LineInfo;
 
   LineInfo.Label = Label;
@@ -1373,7 +1374,7 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
     if (LineInfoGenerated == false) {
       auto *S = MI->getMF()->getFunction().getSubprogram();
       MCSymbol *FuncLabel = Asm->getFunctionBegin();
-      constructLineInfo(S->getFile(), FuncLabel, S->getLine(), 0);
+      constructLineInfo(S, FuncLabel, S->getLine(), 0);
       LineInfoGenerated = true;
     }
 
@@ -1385,7 +1386,8 @@ void BTFDebug::beginInstruction(const MachineInstr *MI) {
   OS.emitLabel(LineSym);
 
   // Construct the lineinfo.
-  constructLineInfo(DL->getFile(), LineSym, DL.getLine(), DL.getCol());
+  auto SP = DL->getScope()->getSubprogram();
+  constructLineInfo(SP, LineSym, DL.getLine(), DL.getCol());
 
   LineInfoGenerated = true;
   PrevInstLoc = DL;
