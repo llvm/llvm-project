@@ -91,10 +91,8 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
     return val;
   Type lowType = VectorType::Builder(type).dropDim(0);
   // At extraction dimension?
-  if (index == 0) {
-    auto posAttr = rewriter.getI64ArrayAttr(pos);
-    return rewriter.create<vector::ExtractOp>(loc, lowType, val, posAttr);
-  }
+  if (index == 0)
+    return rewriter.create<vector::ExtractOp>(loc, lowType, val, pos);
   // Unroll leading dimensions.
   VectorType vType = cast<VectorType>(lowType);
   Type resType = VectorType::Builder(type).dropDim(index);
@@ -102,11 +100,10 @@ static Value reshapeLoad(Location loc, Value val, VectorType type,
   Value result = rewriter.create<arith::ConstantOp>(
       loc, resVectorType, rewriter.getZeroAttr(resVectorType));
   for (int64_t d = 0, e = resVectorType.getDimSize(0); d < e; d++) {
-    auto posAttr = rewriter.getI64ArrayAttr(d);
-    Value ext = rewriter.create<vector::ExtractOp>(loc, vType, val, posAttr);
+    Value ext = rewriter.create<vector::ExtractOp>(loc, vType, val, d);
     Value load = reshapeLoad(loc, ext, vType, index - 1, pos, rewriter);
-    result = rewriter.create<vector::InsertOp>(loc, resVectorType, load, result,
-                                               posAttr);
+    result =
+        rewriter.create<vector::InsertOp>(loc, resVectorType, load, result, d);
   }
   return result;
 }
@@ -120,20 +117,17 @@ static Value reshapeStore(Location loc, Value val, Value result,
   if (index == -1)
     return val;
   // At insertion dimension?
-  if (index == 0) {
-    auto posAttr = rewriter.getI64ArrayAttr(pos);
-    return rewriter.create<vector::InsertOp>(loc, type, val, result, posAttr);
-  }
+  if (index == 0)
+    return rewriter.create<vector::InsertOp>(loc, type, val, result, pos);
   // Unroll leading dimensions.
   Type lowType = VectorType::Builder(type).dropDim(0);
   VectorType vType = cast<VectorType>(lowType);
   Type insType = VectorType::Builder(vType).dropDim(0);
   for (int64_t d = 0, e = type.getDimSize(0); d < e; d++) {
-    auto posAttr = rewriter.getI64ArrayAttr(d);
-    Value ext = rewriter.create<vector::ExtractOp>(loc, vType, result, posAttr);
-    Value ins = rewriter.create<vector::ExtractOp>(loc, insType, val, posAttr);
+    Value ext = rewriter.create<vector::ExtractOp>(loc, vType, result, d);
+    Value ins = rewriter.create<vector::ExtractOp>(loc, insType, val, d);
     Value sto = reshapeStore(loc, ins, ext, vType, index - 1, pos, rewriter);
-    result = rewriter.create<vector::InsertOp>(loc, type, sto, result, posAttr);
+    result = rewriter.create<vector::InsertOp>(loc, type, sto, result, d);
   }
   return result;
 }
@@ -823,10 +817,8 @@ struct ContractOpToElementwise
     newRhs = rewriter.create<vector::TransposeOp>(loc, newRhs, rhsTranspose);
     SmallVector<int64_t> lhsOffsets(lhsReductionDims.size(), 0);
     SmallVector<int64_t> rhsOffsets(rhsReductionDims.size(), 0);
-    newLhs = rewriter.create<vector::ExtractOp>(
-        loc, newLhs, rewriter.getI64ArrayAttr(lhsOffsets));
-    newRhs = rewriter.create<vector::ExtractOp>(
-        loc, newRhs, rewriter.getI64ArrayAttr(rhsOffsets));
+    newLhs = rewriter.create<vector::ExtractOp>(loc, newLhs, lhsOffsets);
+    newRhs = rewriter.create<vector::ExtractOp>(loc, newRhs, rhsOffsets);
     std::optional<Value> result =
         createContractArithOp(loc, newLhs, newRhs, contractOp.getAcc(),
                               contractOp.getKind(), rewriter, isInt);
@@ -1167,21 +1159,20 @@ public:
     Value result = rewriter.create<arith::ConstantOp>(
         loc, resType, rewriter.getZeroAttr(resType));
     for (int64_t d = 0, e = resType.getDimSize(0); d < e; ++d) {
-      auto pos = rewriter.getI64ArrayAttr(d);
-      Value x = rewriter.create<vector::ExtractOp>(loc, op.getLhs(), pos);
+      Value x = rewriter.create<vector::ExtractOp>(loc, op.getLhs(), d);
       Value a = rewriter.create<vector::BroadcastOp>(loc, rhsType, x);
       Value r = nullptr;
       if (acc)
-        r = rewriter.create<vector::ExtractOp>(loc, acc, pos);
+        r = rewriter.create<vector::ExtractOp>(loc, acc, d);
       Value extrMask;
       if (mask)
-        extrMask = rewriter.create<vector::ExtractOp>(loc, mask, pos);
+        extrMask = rewriter.create<vector::ExtractOp>(loc, mask, d);
 
       std::optional<Value> m = createContractArithOp(
           loc, a, op.getRhs(), r, kind, rewriter, isInt, extrMask);
       if (!m.has_value())
         return failure();
-      result = rewriter.create<vector::InsertOp>(loc, resType, *m, result, pos);
+      result = rewriter.create<vector::InsertOp>(loc, resType, *m, result, d);
     }
 
     rewriter.replaceOp(rootOp, result);

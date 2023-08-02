@@ -136,9 +136,10 @@ public:
   // Special bindings can be created during execution to handle defined
   // I/O procedures that are not type-bound.
   SpecialBinding(Which which, ProcedurePointer proc, std::uint8_t isArgDescSet,
-      std::uint8_t isTypeBound)
+      std::uint8_t isTypeBound, std::uint8_t isArgContiguousSet)
       : which_{which}, isArgDescriptorSet_{isArgDescSet},
-        isTypeBound_{isTypeBound}, proc_{proc} {}
+        isTypeBound_{isTypeBound}, isArgContiguousSet_{isArgContiguousSet},
+        proc_{proc} {}
 
   static constexpr Which RankFinal(int rank) {
     return static_cast<Which>(static_cast<int>(Which::ScalarFinal) + rank);
@@ -149,6 +150,9 @@ public:
     return (isArgDescriptorSet_ >> zeroBasedArg) & 1;
   }
   bool isTypeBound() const { return isTypeBound_; }
+  bool IsArgContiguous(int zeroBasedArg) const {
+    return (isArgContiguousSet_ >> zeroBasedArg) & 1;
+  }
   template <typename PROC> PROC GetProc() const {
     return reinterpret_cast<PROC>(proc_);
   }
@@ -185,6 +189,9 @@ private:
   //     called via a generic interface, not a generic TBP.
   std::uint8_t isArgDescriptorSet_{0};
   std::uint8_t isTypeBound_{0};
+  // True when a FINAL subroutine has a dummy argument that is an array that
+  // is CONTIGUOUS or neither assumed-rank nor assumed-shape.
+  std::uint8_t isArgContiguousSet_{0};
 
   ProcedurePointer proc_{nullptr};
 };

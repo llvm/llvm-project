@@ -119,8 +119,7 @@ LegalizerHelper::legalizeInstrStep(MachineInstr &MI,
 
   MIRBuilder.setInstrAndDebugLoc(MI);
 
-  if (MI.getOpcode() == TargetOpcode::G_INTRINSIC ||
-      MI.getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS)
+  if (isa<GIntrinsic>(MI))
     return LI.legalizeIntrinsic(*this, MI) ? Legalized : UnableToLegalize;
   auto Step = LI.getAction(MI, MRI);
   switch (Step.Action) {

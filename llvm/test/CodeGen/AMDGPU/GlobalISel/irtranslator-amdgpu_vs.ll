@@ -82,10 +82,10 @@ define amdgpu_vs <{ i32, i32 }> @ret_struct(i32 inreg %arg0, i32 inreg %arg1) {
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $sgpr2
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $sgpr3
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
-  ; CHECK-NEXT:   $sgpr0 = COPY [[INT]](s32)
-  ; CHECK-NEXT:   [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](s32)
-  ; CHECK-NEXT:   $sgpr1 = COPY [[INT1]](s32)
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY1]](s32)
+  ; CHECK-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
 main_body:
   %tmp0 = insertvalue <{ i32, i32 }> undef, i32 %arg0, 0
@@ -97,8 +97,8 @@ define amdgpu_vs i32 @non_void_ret() {
   ; CHECK-LABEL: name: non_void_ret
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 0
-  ; CHECK-NEXT:   [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[C]](s32)
-  ; CHECK-NEXT:   $sgpr0 = COPY [[INT]](s32)
+  ; CHECK-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[C]](s32)
+  ; CHECK-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
   ; CHECK-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
   ret i32 0
 }

@@ -4317,6 +4317,9 @@ def TLBSX : XForm_tlb<914, (outs), (ins gprc:$RA, gprc:$RB), "tlbsx $RA, $RB",
 def TLBIVAX : XForm_tlb<786, (outs), (ins gprc:$RA, gprc:$RB), "tlbivax $RA, $RB",
                 IIC_LdStLoad>, Requires<[IsBookE]>;
 
+def TLBILX : XForm_tlbilx<18, (outs), (ins u2imm:$T, gprc:$RA, gprc:$RB),
+    "tlbilx $T, $RA, $RB", IIC_LdStLoad>, Requires<[IsBookE]>;
+
 def TLBRE : XForm_24_eieio<31, 946, (outs), (ins),
                            "tlbre", IIC_LdStLoad, []>, Requires<[IsBookE]>;
 
@@ -4679,6 +4682,12 @@ def : InstAlias<"tlbwehi $RS, $A", (TLBWE2 gprc:$RS, gprc:$A, 0)>,
                 Requires<[IsPPC4xx]>;
 def : InstAlias<"tlbwelo $RS, $A", (TLBWE2 gprc:$RS, gprc:$A, 1)>,
                 Requires<[IsPPC4xx]>;
+
+def : InstAlias<"tlbilxlpid", (TLBILX 0, R0, R0)>, Requires<[IsBookE]>;
+def : InstAlias<"tlbilxpid", (TLBILX 1, R0, R0)>, Requires<[IsBookE]>;
+def : InstAlias<"tlbilxva $RA, $RB", (TLBILX 3, gprc:$RA, gprc:$RB)>,
+                Requires<[IsBookE]>;
+def : InstAlias<"tlbilxva $RB", (TLBILX 3, R0, gprc:$RB)>, Requires<[IsBookE]>;
 
 def LAx : PPCAsmPseudo<"la $rA, $addr", (ins gprc:$rA, memri:$addr)>;
 

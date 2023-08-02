@@ -83,9 +83,9 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
         (succeeded(versionOr))
             ? *reinterpret_cast<const TestDialectVersion *>(*versionOr)
             : TestDialectVersion();
-    if (version.major < 2)
+    if (version.major_ < 2)
       return readAttrOldEncoding(reader);
-    if (version.major == 2 && version.minor == 0)
+    if (version.major_ == 2 && version.minor_ == 0)
       return readAttrNewEncoding(reader);
     // Forbid reading future versions by returning nullptr.
     return Attribute();
@@ -94,30 +94,30 @@ struct TestBytecodeDialectInterface : public BytecodeDialectInterface {
   // Emit a specific version of the dialect.
   void writeVersion(DialectBytecodeWriter &writer) const final {
     auto version = TestDialectVersion();
-    writer.writeVarInt(version.major); // major
-    writer.writeVarInt(version.minor); // minor
+    writer.writeVarInt(version.major_); // major
+    writer.writeVarInt(version.minor_); // minor
   }
 
   std::unique_ptr<DialectVersion>
   readVersion(DialectBytecodeReader &reader) const final {
-    uint64_t major, minor;
-    if (failed(reader.readVarInt(major)) || failed(reader.readVarInt(minor)))
+    uint64_t major_, minor_;
+    if (failed(reader.readVarInt(major_)) || failed(reader.readVarInt(minor_)))
       return nullptr;
     auto version = std::make_unique<TestDialectVersion>();
-    version->major = major;
-    version->minor = minor;
+    version->major_ = major_;
+    version->minor_ = minor_;
     return version;
   }
 
   LogicalResult upgradeFromVersion(Operation *topLevelOp,
                                    const DialectVersion &version_) const final {
     const auto &version = static_cast<const TestDialectVersion &>(version_);
-    if ((version.major == 2) && (version.minor == 0))
+    if ((version.major_ == 2) && (version.minor_ == 0))
       return success();
-    if (version.major > 2 || (version.major == 2 && version.minor > 0)) {
+    if (version.major_ > 2 || (version.major_ == 2 && version.minor_ > 0)) {
       return topLevelOp->emitError()
              << "current test dialect version is 2.0, can't parse version: "
-             << version.major << "." << version.minor;
+             << version.major_ << "." << version.minor_;
     }
     // Prior version 2.0, the old op supported only a single attribute called
     // "dimensions". We can perform the upgrade.

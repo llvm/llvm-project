@@ -16,6 +16,7 @@
 #define LLVM_LIB_TRANSFORMS_INSTCOMBINE_INSTCOMBINEINTERNAL_H
 
 #include "llvm/ADT/Statistic.h"
+#include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/TargetFolder.h"
 #include "llvm/Analysis/ValueTracking.h"
@@ -72,6 +73,10 @@ public:
                      BFI, PSI, DL, LI) {}
 
   virtual ~InstCombinerImpl() = default;
+
+  /// Perform early cleanup and prepare the InstCombine worklist.
+  bool prepareWorklist(Function &F,
+                       ReversePostOrderTraversal<BasicBlock *> &RPOT);
 
   /// Run the combiner over the entire worklist until it is empty.
   ///
@@ -393,7 +398,7 @@ public:
   void CreateNonTerminatorUnreachable(Instruction *InsertAt) {
     auto &Ctx = InsertAt->getContext();
     auto *SI = new StoreInst(ConstantInt::getTrue(Ctx),
-                             PoisonValue::get(Type::getInt1PtrTy(Ctx)),
+                             PoisonValue::get(PointerType::getUnqual(Ctx)),
                              /*isVolatile*/ false, Align(1));
     InsertNewInstBefore(SI, *InsertAt);
   }
@@ -667,10 +672,12 @@ public:
   bool tryToSinkInstruction(Instruction *I, BasicBlock *DestBlock);
 
   bool removeInstructionsBeforeUnreachable(Instruction &I);
-  bool handleUnreachableFrom(Instruction *I,
+  void addDeadEdge(BasicBlock *From, BasicBlock *To,
+                   SmallVectorImpl<BasicBlock *> &Worklist);
+  void handleUnreachableFrom(Instruction *I,
                              SmallVectorImpl<BasicBlock *> &Worklist);
-  bool handlePotentiallyDeadBlocks(SmallVectorImpl<BasicBlock *> &Worklist);
-  bool handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
+  void handlePotentiallyDeadBlocks(SmallVectorImpl<BasicBlock *> &Worklist);
+  void handlePotentiallyDeadSuccessors(BasicBlock *BB, BasicBlock *LiveSucc);
   void freelyInvertAllUsersOf(Value *V, Value *IgnoredUser = nullptr);
 };
 

@@ -142,7 +142,7 @@ void RISCVDAGToDAGISel::PostprocessISelDAG() {
       continue;
 
     MadeChange |= doPeepholeSExtW(N);
-    MadeChange |= doPeepholeMaskedRVV(N);
+    MadeChange |= doPeepholeMaskedRVV(cast<MachineSDNode>(N));
   }
 
   CurDAG->setRoot(Dummy.getValue());
@@ -552,6 +552,12 @@ void RISCVDAGToDAGISel::selectVSETVLI(SDNode *Node) {
 
   SDValue VLOperand;
   unsigned Opcode = RISCV::PseudoVSETVLI;
+  if (auto *C = dyn_cast<ConstantSDNode>(Node->getOperand(1))) {
+    const unsigned VLEN = Subtarget->getRealMinVLen();
+    if (VLEN == Subtarget->getRealMaxVLen())
+      if (VLEN / RISCVVType::getSEWLMULRatio(SEW, VLMul) == C->getZExtValue())
+        VLMax = true;
+  }
   if (VLMax || isAllOnesConstant(Node->getOperand(1))) {
     VLOperand = CurDAG->getRegister(RISCV::X0, XLenVT);
     Opcode = RISCV::PseudoVSETVLIX0;
@@ -3199,7 +3205,7 @@ static bool isImplicitDef(SDValue V) {
 // corresponding "unmasked" pseudo versions. The mask we're interested in will
 // take the form of a V0 physical register operand, with a glued
 // register-setting instruction.
-bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
+bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(MachineSDNode *N) {
   const RISCV::RISCVMaskedPseudoInfo *I =
       RISCV::getMaskedPseudoInfo(N->getMachineOpcode());
   if (!I)
@@ -3238,7 +3244,12 @@ bool RISCVDAGToDAGISel::doPeepholeMaskedRVV(SDNode *N) {
   if (auto *TGlued = Glued->getGluedNode())
     Ops.push_back(SDValue(TGlued, TGlued->getNumValues() - 1));
 
-  SDNode *Result = CurDAG->getMachineNode(Opc, SDLoc(N), N->getVTList(), Ops);
+  MachineSDNode *Result =
+      CurDAG->getMachineNode(Opc, SDLoc(N), N->getVTList(), Ops);
+
+  if (!N->memoperands_empty())
+    CurDAG->setNodeMemRefs(Result, N->memoperands());
+
   Result->setFlags(N->getFlags());
   ReplaceUses(N, Result);
 
@@ -3508,9 +3519,12 @@ bool RISCVDAGToDAGISel::performCombineVMergeAndVOps(SDNode *N) {
   // Add the glue for the CopyToReg of mask->v0.
   Ops.push_back(Glue);
 
-  SDNode *Result =
+  MachineSDNode *Result =
       CurDAG->getMachineNode(MaskedOpc, DL, True->getVTList(), Ops);
   Result->setFlags(True->getFlags());
+
+  if (!cast<MachineSDNode>(True)->memoperands_empty())
+    CurDAG->setNodeMemRefs(Result, cast<MachineSDNode>(True)->memoperands());
 
   // Replace vmerge.vvm node by Result.
   ReplaceUses(SDValue(N, 0), SDValue(Result, 0));

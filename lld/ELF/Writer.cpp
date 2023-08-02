@@ -347,8 +347,13 @@ template <class ELFT> void elf::createSyntheticSections() {
 
     if (config->emachine == EM_AARCH64 &&
         config->androidMemtagMode != ELF::NT_MEMTAG_LEVEL_NONE) {
+      if (!config->relocatable && !config->shared && !needsInterpSection())
+        error("--android-memtag-mode is incompatible with fully-static "
+              "executables (-static)");
       part.memtagAndroidNote = std::make_unique<MemtagAndroidNote>();
       add(*part.memtagAndroidNote);
+      part.memtagDescriptors = std::make_unique<MemtagDescriptors>();
+      add(*part.memtagDescriptors);
     }
 
     if (config->androidPackDynRelocs)
@@ -672,7 +677,7 @@ static bool shouldKeepInSymtab(const Defined &sym) {
   return true;
 }
 
-static bool includeInSymtab(const Symbol &b) {
+bool lld::elf::includeInSymtab(const Symbol &b) {
   if (auto *d = dyn_cast<Defined>(&b)) {
     // Always include absolute symbols.
     SectionBase *sec = d->section;
@@ -1652,6 +1657,8 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= part.relaDyn->updateAllocSize();
       if (part.relrDyn)
         changed |= part.relrDyn->updateAllocSize();
+      if (part.memtagDescriptors)
+        changed |= part.memtagDescriptors->updateAllocSize();
     }
 
     const Defined *changedSym = script->assignAddresses();

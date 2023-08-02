@@ -2288,6 +2288,8 @@ bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
   case Instruction::FMul:
   case Instruction::FDiv:
   case Instruction::FRem:
+  case Instruction::And:
+  case Instruction::Or:
     return false;
   case Instruction::Add:
   case Instruction::Sub:
@@ -2295,8 +2297,6 @@ bool ConstantExpr::isDesirableBinOp(unsigned Opcode) {
   case Instruction::Shl:
   case Instruction::LShr:
   case Instruction::AShr:
-  case Instruction::And:
-  case Instruction::Or:
   case Instruction::Xor:
     return true;
   default:

@@ -364,6 +364,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUDAGToDAGISelPass(*PR);
   initializeGCNDPPCombinePass(*PR);
   initializeSILowerI1CopiesPass(*PR);
+  initializeSILowerWWMCopiesPass(*PR);
   initializeSILowerSGPRSpillsPass(*PR);
   initializeSIFixSGPRCopiesPass(*PR);
   initializeSIFixVGPRCopiesPass(*PR);
@@ -415,8 +416,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
   initializeAMDGPUExternalAAWrapperPass(*PR);
-  initializeAMDGPUUseNativeCallsPass(*PR);
-  initializeAMDGPUSimplifyLibCallsPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPUResourceUsageAnalysisPass(*PR);
   initializeGCNNSAReassignPass(*PR);
@@ -630,7 +629,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       [this](StringRef PassName, FunctionPassManager &PM,
              ArrayRef<PassBuilder::PipelineElement>) {
         if (PassName == "amdgpu-simplifylib") {
-          PM.addPass(AMDGPUSimplifyLibCallsPass(*this));
+          PM.addPass(AMDGPUSimplifyLibCallsPass());
           return true;
         }
         if (PassName == "amdgpu-usenative") {
@@ -682,11 +681,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   });
 
   PB.registerPipelineStartEPCallback(
-      [this](ModulePassManager &PM, OptimizationLevel Level) {
+      [](ModulePassManager &PM, OptimizationLevel Level) {
         FunctionPassManager FPM;
         FPM.addPass(AMDGPUUseNativeCallsPass());
         if (EnableLibCallSimplify && Level != OptimizationLevel::O0)
-          FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
+          FPM.addPass(AMDGPUSimplifyLibCallsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 
@@ -966,6 +965,10 @@ void AMDGPUPassConfig::addStraightLineScalarOptimizationPasses() {
 void AMDGPUPassConfig::addIRPasses() {
   const AMDGPUTargetMachine &TM = getAMDGPUTargetMachine();
 
+  Triple::ArchType Arch = TM.getTargetTriple().getArch();
+  if (RemoveIncompatibleFunctions && Arch == Triple::amdgcn)
+    addPass(createAMDGPURemoveIncompatibleFunctionsPass(&TM));
+
   // There is no reason to run these.
   disablePass(&StackMapLivenessID);
   disablePass(&FuncletLayoutID);
@@ -980,7 +983,7 @@ void AMDGPUPassConfig::addIRPasses() {
   addPass(createAlwaysInlinerLegacyPass());
 
   // Handle uses of OpenCL image2d_t, image3d_t and sampler_t arguments.
-  if (TM.getTargetTriple().getArch() == Triple::r600)
+  if (Arch == Triple::r600)
     addPass(createR600OpenCLImageTypeLoweringPass());
 
   // Replace OpenCL enqueued block function pointers with global variables.
@@ -1049,9 +1052,6 @@ void AMDGPUPassConfig::addIRPasses() {
 
 void AMDGPUPassConfig::addCodeGenPrepare() {
   if (TM->getTargetTriple().getArch() == Triple::amdgcn) {
-    if (RemoveIncompatibleFunctions)
-      addPass(createAMDGPURemoveIncompatibleFunctionsPass(TM));
-
     // FIXME: This pass adds 2 hacky attributes that can be replaced with an
     // analysis, and should be removed.
     addPass(createAMDGPUAnnotateKernelFeaturesPass());
@@ -1296,6 +1296,7 @@ void GCNPassConfig::addOptimizedRegAlloc() {
 }
 
 bool GCNPassConfig::addPreRewrite() {
+  addPass(&SILowerWWMCopiesID);
   if (EnableRegReassign)
     addPass(&GCNNSAReassignID);
   return true;
@@ -1350,6 +1351,8 @@ bool GCNPassConfig::addRegAssignAndRewriteFast() {
   addPass(&SILowerSGPRSpillsID);
 
   addPass(createVGPRAllocPass(false));
+
+  addPass(&SILowerWWMCopiesID);
   return true;
 }
 

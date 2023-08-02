@@ -10,10 +10,14 @@
 #ifndef _LIBCPP___ALGORITHM_FIND_H
 #define _LIBCPP___ALGORITHM_FIND_H
 
+#include <__algorithm/min.h>
 #include <__algorithm/unwrap_iter.h>
+#include <__bit/countr.h>
+#include <__bit/invert_if.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__functional/invoke.h>
+#include <__fwd/bit_reference.h>
 #include <__string/constexpr_c_functions.h>
 #include <__type_traits/is_same.h>
 
@@ -25,8 +29,12 @@
 #  pragma GCC system_header
 #endif
 
+_LIBCPP_PUSH_MACROS
+#include <__undef_macros>
+
 _LIBCPP_BEGIN_NAMESPACE_STD
 
+// generic implementation
 template <class _Iter, class _Sent, class _Tp, class _Proj>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Iter
 __find_impl(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
@@ -36,6 +44,7 @@ __find_impl(_Iter __first, _Sent __last, const _Tp& __value, _Proj& __proj) {
   return __first;
 }
 
+// trivially equality comparable implementations
 template <class _Tp,
           class _Up,
           class _Proj,
@@ -64,6 +73,51 @@ __find_impl(_Tp* __first, _Tp* __last, const _Up& __value, _Proj&) {
 }
 #endif // _LIBCPP_HAS_NO_WIDE_CHARACTERS
 
+// __bit_iterator implementation
+template <bool _ToFind, class _Cp, bool _IsConst>
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __bit_iterator<_Cp, _IsConst>
+__find_bool(__bit_iterator<_Cp, _IsConst> __first, typename _Cp::size_type __n) {
+  using _It            = __bit_iterator<_Cp, _IsConst>;
+  using __storage_type = typename _It::__storage_type;
+
+  const int __bits_per_word = _It::__bits_per_word;
+  // do first partial word
+  if (__first.__ctz_ != 0) {
+    __storage_type __clz_f = static_cast<__storage_type>(__bits_per_word - __first.__ctz_);
+    __storage_type __dn    = std::min(__clz_f, __n);
+    __storage_type __m     = (~__storage_type(0) << __first.__ctz_) & (~__storage_type(0) >> (__clz_f - __dn));
+    __storage_type __b     = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
+    if (__b)
+      return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
+    if (__n == __dn)
+      return __first + __n;
+    __n -= __dn;
+    ++__first.__seg_;
+  }
+  // do middle whole words
+  for (; __n >= __bits_per_word; ++__first.__seg_, __n -= __bits_per_word) {
+    __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_);
+    if (__b)
+      return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
+  }
+  // do last partial word
+  if (__n > 0) {
+    __storage_type __m = ~__storage_type(0) >> (__bits_per_word - __n);
+    __storage_type __b = std::__invert_if<!_ToFind>(*__first.__seg_) & __m;
+    if (__b)
+      return _It(__first.__seg_, static_cast<unsigned>(std::__libcpp_ctz(__b)));
+  }
+  return _It(__first.__seg_, static_cast<unsigned>(__n));
+}
+
+template <class _Cp, bool _IsConst, class _Tp, class _Proj, __enable_if_t<__is_identity<_Proj>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 __bit_iterator<_Cp, _IsConst>
+__find_impl(__bit_iterator<_Cp, _IsConst> __first, __bit_iterator<_Cp, _IsConst> __last, const _Tp& __value, _Proj&) {
+  if (static_cast<bool>(__value))
+    return std::__find_bool<true>(__first, static_cast<typename _Cp::size_type>(__last - __first));
+  return std::__find_bool<false>(__first, static_cast<typename _Cp::size_type>(__last - __first));
+}
+
 template <class _InputIterator, class _Tp>
 _LIBCPP_NODISCARD_EXT inline _LIBCPP_INLINE_VISIBILITY _LIBCPP_CONSTEXPR_SINCE_CXX20 _InputIterator
 find(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
@@ -73,5 +127,7 @@ find(_InputIterator __first, _InputIterator __last, const _Tp& __value) {
 }
 
 _LIBCPP_END_NAMESPACE_STD
+
+_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_FIND_H

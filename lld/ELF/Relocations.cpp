@@ -53,6 +53,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "llvm/ADT/SmallSet.h"
+#include "llvm/BinaryFormat/ELF.h"
 #include "llvm/Demangle/Demangle.h"
 #include "llvm/Support/Endian.h"
 #include <algorithm>
@@ -199,10 +200,7 @@ static bool needsPlt(RelExpr expr) {
                R_PPC32_PLTREL, R_PPC64_CALL_PLT>(expr);
 }
 
-// Returns true if Expr refers a GOT entry. Note that this function
-// returns false for TLS variables even though they need GOT, because
-// TLS variables uses GOT differently than the regular variables.
-static bool needsGot(RelExpr expr) {
+bool lld::elf::needsGot(RelExpr expr) {
   return oneof<R_GOT, R_GOT_OFF, R_MIPS_GOT_LOCAL_PAGE, R_MIPS_GOT_OFF,
                R_MIPS_GOT_OFF32, R_AARCH64_GOT_PAGE_PC, R_GOT_PC, R_GOTPLT,
                R_AARCH64_GOT_PAGE, R_LOONGARCH_GOT, R_LOONGARCH_GOT_PAGE_PC>(
@@ -858,6 +856,23 @@ static void addRelativeReloc(InputSectionBase &isec, uint64_t offsetInSec,
                              Symbol &sym, int64_t addend, RelExpr expr,
                              RelType type) {
   Partition &part = isec.getPartition();
+
+  if (sym.isTagged()) {
+    std::lock_guard<std::mutex> lock(relocMutex);
+    part.relaDyn->addRelativeReloc(target->relativeRel, isec, offsetInSec, sym,
+                                   addend, type, expr);
+    // With MTE globals, we always want to derive the address tag by `ldg`-ing
+    // the symbol. When we have a RELATIVE relocation though, we no longer have
+    // a reference to the symbol. Because of this, when we have an addend that
+    // puts the result of the RELATIVE relocation out-of-bounds of the symbol
+    // (e.g. the addend is outside of [0, sym.getSize()]), the AArch64 MemtagABI
+    // says we should store the offset to the start of the symbol in the target
+    // field. This is described in further detail in:
+    // https://github.com/ARM-software/abi-aa/blob/main/memtagabielf64/memtagabielf64.rst#841extended-semantics-of-r_aarch64_relative
+    if (addend < 0 || static_cast<uint64_t>(addend) >= sym.getSize())
+      isec.relocations.push_back({expr, type, offsetInSec, addend, &sym});
+    return;
+  }
 
   // Add a relative relocation. If relrDyn section is enabled, and the
   // relocation offset is guaranteed to be even, add the relocation to
@@ -1645,6 +1660,10 @@ void elf::postScanRelocations() {
     auto flags = sym.flags.load(std::memory_order_relaxed);
     if (handleNonPreemptibleIfunc(sym, flags))
       return;
+
+    if (sym.isTagged() && sym.isDefined())
+      mainPart->memtagDescriptors->addSymbol(sym);
+
     if (!sym.needsDynReloc())
       return;
     sym.allocateAux();

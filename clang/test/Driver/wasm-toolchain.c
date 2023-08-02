@@ -75,8 +75,8 @@
 // Thread-related command line tests.
 
 // '-pthread' sets +atomics, +bulk-memory, +mutable-globals, +sign-ext, and --shared-memory
-// RUN: not %clang -### --target=wasm32-unknown-unknown \
-// RUN:    --sysroot=/foo %s -fuse-ld=wasm-ld -pthread 2>&1 \
+// RUN: %clang -### --target=wasm32-unknown-unknown \
+// RUN:    --sysroot=/foo %s -pthread 2>&1 \
 // RUN:  | FileCheck -check-prefix=PTHREAD %s
 // PTHREAD: "-cc1" {{.*}} "-target-feature" "+atomics" "-target-feature" "+bulk-memory" "-target-feature" "+mutable-globals" "-target-feature" "+sign-ext"
 // PTHREAD: wasm-ld{{.*}}" "-lpthread" "--shared-memory"

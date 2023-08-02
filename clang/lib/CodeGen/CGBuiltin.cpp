@@ -3237,6 +3237,9 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI__builtin_elementwise_pow: {
     return RValue::get(emitBinaryBuiltin(*this, E, llvm::Intrinsic::pow));
   }
+  case Builtin::BI__builtin_elementwise_bitreverse:
+    return RValue::get(emitUnaryBuiltin(*this, E, llvm::Intrinsic::bitreverse,
+                                        "elt.bitreverse"));
   case Builtin::BI__builtin_elementwise_cos:
     return RValue::get(
         emitUnaryBuiltin(*this, E, llvm::Intrinsic::cos, "elt.cos"));
@@ -3514,6 +3517,12 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     return RValue::get(Result);
   }
 
+  // An alloca will always return a pointer to the alloca (stack) address
+  // space. This address space need not be the same as the AST / Language
+  // default (e.g. in C / C++ auto vars are in the generic address space). At
+  // the AST level this is handled within CreateTempAlloca et al., but for the
+  // builtin / dynamic alloca we have to handle it here. We use an explicit cast
+  // instead of passing an AS to CreateAlloca so as to not inhibit optimisation.
   case Builtin::BIalloca:
   case Builtin::BI_alloca:
   case Builtin::BI__builtin_alloca_uninitialized:
@@ -3529,6 +3538,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     AI->setAlignment(SuitableAlignmentInBytes);
     if (BuiltinID != Builtin::BI__builtin_alloca_uninitialized)
       initializeAlloca(*this, AI, Size, SuitableAlignmentInBytes);
+    LangAS AAS = getASTAllocaAddressSpace();
+    LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
+    if (AAS != EAS) {
+      llvm::Type *Ty = CGM.getTypes().ConvertType(E->getType());
+      return RValue::get(getTargetHooks().performAddrSpaceCast(*this, AI, AAS,
+                                                               EAS, Ty));
+    }
     return RValue::get(AI);
   }
 
@@ -3544,6 +3560,13 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     AI->setAlignment(AlignmentInBytes);
     if (BuiltinID != Builtin::BI__builtin_alloca_with_align_uninitialized)
       initializeAlloca(*this, AI, Size, AlignmentInBytes);
+    LangAS AAS = getASTAllocaAddressSpace();
+    LangAS EAS = E->getType()->getPointeeType().getAddressSpace();
+    if (AAS != EAS) {
+      llvm::Type *Ty = CGM.getTypes().ConvertType(E->getType());
+      return RValue::get(getTargetHooks().performAddrSpaceCast(*this, AI, AAS,
+                                                               EAS, Ty));
+    }
     return RValue::get(AI);
   }
 
@@ -10736,7 +10759,7 @@ Value *CodeGenFunction::EmitAArch64BuiltinExpr(unsigned BuiltinID,
                                      CharUnits::fromQuantity(16));
   }
   case NEON::BI__builtin_neon_vstrq_p128: {
-    llvm::Type *Int128PTy = llvm::Type::getIntNPtrTy(getLLVMContext(), 128);
+    llvm::Type *Int128PTy = llvm::PointerType::getUnqual(getLLVMContext());
     Value *Ptr = Builder.CreateBitCast(Ops[0], Int128PTy);
     return Builder.CreateDefaultAlignedStore(EmitScalarExpr(E->getArg(1)), Ptr);
   }

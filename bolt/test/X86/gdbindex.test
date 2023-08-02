@@ -18,8 +18,8 @@ RUN: llvm-dwarfdump -gdb-index %tfile.exe.bolt | FileCheck %s
 ; CHECK: Version = 7
 
 ; CHECK:      CU list offset = 0x18, has 2 entries:
-; CHECK-NEXT:   0: Offset = 0x0, Length = 0x4b
-; CHECK-NEXT:   1: Offset = 0x4b, Length = 0x4f
+; CHECK-NEXT:   0: Offset = 0x0, Length = 0x4f
+; CHECK-NEXT:   1: Offset = 0x4f, Length = 0x53
 
 ; CHECK:      Types CU list offset = 0x38, has 0 entries:
 

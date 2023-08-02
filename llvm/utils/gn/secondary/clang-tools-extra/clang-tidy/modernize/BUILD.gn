@@ -38,6 +38,7 @@ static_library("modernize") {
     "UnaryStaticAssertCheck.cpp",
     "UseAutoCheck.cpp",
     "UseBoolLiteralsCheck.cpp",
+    "UseConstraintsCheck.cpp",
     "UseDefaultMemberInitCheck.cpp",
     "UseEmplaceCheck.cpp",
     "UseEqualsDefaultCheck.cpp",

@@ -16,8 +16,8 @@ define amdgpu_ps i32 @s_buffer_load_i32(<4 x i32> inreg %rsrc, i32 inreg %soffse
   ; GFX7-NEXT:   [[COPY4:%[0-9]+]]:sgpr(s32) = COPY $sgpr6
   ; GFX7-NEXT:   [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:sgpr(s32) = G_AMDGPU_S_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), 0 :: (dereferenceable invariant load (s32))
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[AMDGPU_S_BUFFER_LOAD]](s32)
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](s32)
-  ; GFX7-NEXT:   $sgpr0 = COPY [[INT]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](s32)
+  ; GFX7-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
   ; GFX7-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0
   %val = call i32 @llvm.amdgcn.s.buffer.load.i32(<4 x i32> %rsrc, i32 %soffset, i32 0)
   ret i32 %val
@@ -37,11 +37,11 @@ define amdgpu_ps <2 x i32> @s_buffer_load_v2i32(<4 x i32> inreg %rsrc, i32 inreg
   ; GFX7-NEXT:   [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:sgpr(<2 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), 0 :: (dereferenceable invariant load (s64), align 4)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<2 x s32>)
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[UV]](s32)
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](s32)
-  ; GFX7-NEXT:   $sgpr0 = COPY [[INT]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](s32)
+  ; GFX7-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[UV1]](s32)
-  ; GFX7-NEXT:   [[INT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY6]](s32)
-  ; GFX7-NEXT:   $sgpr1 = COPY [[INT1]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY6]](s32)
+  ; GFX7-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
   ; GFX7-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1
   %val = call <2 x i32> @llvm.amdgcn.s.buffer.load.v2i32(<4 x i32> %rsrc, i32 %soffset, i32 0)
   ret <2 x i32> %val
@@ -61,14 +61,14 @@ define amdgpu_ps <3 x i32> @s_buffer_load_v3i32(<4 x i32> inreg %rsrc, i32 inreg
   ; GFX7-NEXT:   [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:sgpr(<4 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), 0 :: (dereferenceable invariant load (s96), align 4)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32), [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<4 x s32>)
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[UV]](s32)
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](s32)
-  ; GFX7-NEXT:   $sgpr0 = COPY [[INT]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](s32)
+  ; GFX7-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[UV1]](s32)
-  ; GFX7-NEXT:   [[INT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY6]](s32)
-  ; GFX7-NEXT:   $sgpr1 = COPY [[INT1]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY6]](s32)
+  ; GFX7-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
   ; GFX7-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[UV2]](s32)
-  ; GFX7-NEXT:   [[INT2:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY7]](s32)
-  ; GFX7-NEXT:   $sgpr2 = COPY [[INT2]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY7]](s32)
+  ; GFX7-NEXT:   $sgpr2 = COPY [[INTRINSIC_CONVERGENT2]](s32)
   ; GFX7-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1, implicit $sgpr2
   %val = call <3 x i32> @llvm.amdgcn.s.buffer.load.v3i32(<4 x i32> %rsrc, i32 %soffset, i32 0)
   ret <3 x i32> %val
@@ -88,29 +88,29 @@ define amdgpu_ps <8 x i32> @s_buffer_load_v8i32(<4 x i32> inreg %rsrc, i32 inreg
   ; GFX7-NEXT:   [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:sgpr(<8 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), 0 :: (dereferenceable invariant load (s256), align 4)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32), [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32), [[UV4:%[0-9]+]]:sgpr(s32), [[UV5:%[0-9]+]]:sgpr(s32), [[UV6:%[0-9]+]]:sgpr(s32), [[UV7:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<8 x s32>)
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[UV]](s32)
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](s32)
-  ; GFX7-NEXT:   $sgpr0 = COPY [[INT]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](s32)
+  ; GFX7-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[UV1]](s32)
-  ; GFX7-NEXT:   [[INT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY6]](s32)
-  ; GFX7-NEXT:   $sgpr1 = COPY [[INT1]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY6]](s32)
+  ; GFX7-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
   ; GFX7-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[UV2]](s32)
-  ; GFX7-NEXT:   [[INT2:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY7]](s32)
-  ; GFX7-NEXT:   $sgpr2 = COPY [[INT2]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY7]](s32)
+  ; GFX7-NEXT:   $sgpr2 = COPY [[INTRINSIC_CONVERGENT2]](s32)
   ; GFX7-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[UV3]](s32)
-  ; GFX7-NEXT:   [[INT3:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY8]](s32)
-  ; GFX7-NEXT:   $sgpr3 = COPY [[INT3]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT3:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY8]](s32)
+  ; GFX7-NEXT:   $sgpr3 = COPY [[INTRINSIC_CONVERGENT3]](s32)
   ; GFX7-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[UV4]](s32)
-  ; GFX7-NEXT:   [[INT4:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY9]](s32)
-  ; GFX7-NEXT:   $sgpr4 = COPY [[INT4]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY9]](s32)
+  ; GFX7-NEXT:   $sgpr4 = COPY [[INTRINSIC_CONVERGENT4]](s32)
   ; GFX7-NEXT:   [[COPY10:%[0-9]+]]:vgpr(s32) = COPY [[UV5]](s32)
-  ; GFX7-NEXT:   [[INT5:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY10]](s32)
-  ; GFX7-NEXT:   $sgpr5 = COPY [[INT5]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT5:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY10]](s32)
+  ; GFX7-NEXT:   $sgpr5 = COPY [[INTRINSIC_CONVERGENT5]](s32)
   ; GFX7-NEXT:   [[COPY11:%[0-9]+]]:vgpr(s32) = COPY [[UV6]](s32)
-  ; GFX7-NEXT:   [[INT6:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY11]](s32)
-  ; GFX7-NEXT:   $sgpr6 = COPY [[INT6]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT6:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY11]](s32)
+  ; GFX7-NEXT:   $sgpr6 = COPY [[INTRINSIC_CONVERGENT6]](s32)
   ; GFX7-NEXT:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY [[UV7]](s32)
-  ; GFX7-NEXT:   [[INT7:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY12]](s32)
-  ; GFX7-NEXT:   $sgpr7 = COPY [[INT7]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT7:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY12]](s32)
+  ; GFX7-NEXT:   $sgpr7 = COPY [[INTRINSIC_CONVERGENT7]](s32)
   ; GFX7-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7
   %val = call <8 x i32> @llvm.amdgcn.s.buffer.load.v8i32(<4 x i32> %rsrc, i32 %soffset, i32 0)
   ret <8 x i32> %val
@@ -130,53 +130,53 @@ define amdgpu_ps <16 x i32> @s_buffer_load_v16i32(<4 x i32> inreg %rsrc, i32 inr
   ; GFX7-NEXT:   [[AMDGPU_S_BUFFER_LOAD:%[0-9]+]]:sgpr(<16 x s32>) = G_AMDGPU_S_BUFFER_LOAD [[BUILD_VECTOR]](<4 x s32>), [[COPY4]](s32), 0 :: (dereferenceable invariant load (s512), align 4)
   ; GFX7-NEXT:   [[UV:%[0-9]+]]:sgpr(s32), [[UV1:%[0-9]+]]:sgpr(s32), [[UV2:%[0-9]+]]:sgpr(s32), [[UV3:%[0-9]+]]:sgpr(s32), [[UV4:%[0-9]+]]:sgpr(s32), [[UV5:%[0-9]+]]:sgpr(s32), [[UV6:%[0-9]+]]:sgpr(s32), [[UV7:%[0-9]+]]:sgpr(s32), [[UV8:%[0-9]+]]:sgpr(s32), [[UV9:%[0-9]+]]:sgpr(s32), [[UV10:%[0-9]+]]:sgpr(s32), [[UV11:%[0-9]+]]:sgpr(s32), [[UV12:%[0-9]+]]:sgpr(s32), [[UV13:%[0-9]+]]:sgpr(s32), [[UV14:%[0-9]+]]:sgpr(s32), [[UV15:%[0-9]+]]:sgpr(s32) = G_UNMERGE_VALUES [[AMDGPU_S_BUFFER_LOAD]](<16 x s32>)
   ; GFX7-NEXT:   [[COPY5:%[0-9]+]]:vgpr(s32) = COPY [[UV]](s32)
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](s32)
-  ; GFX7-NEXT:   $sgpr0 = COPY [[INT]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY5]](s32)
+  ; GFX7-NEXT:   $sgpr0 = COPY [[INTRINSIC_CONVERGENT]](s32)
   ; GFX7-NEXT:   [[COPY6:%[0-9]+]]:vgpr(s32) = COPY [[UV1]](s32)
-  ; GFX7-NEXT:   [[INT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY6]](s32)
-  ; GFX7-NEXT:   $sgpr1 = COPY [[INT1]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT1:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY6]](s32)
+  ; GFX7-NEXT:   $sgpr1 = COPY [[INTRINSIC_CONVERGENT1]](s32)
   ; GFX7-NEXT:   [[COPY7:%[0-9]+]]:vgpr(s32) = COPY [[UV2]](s32)
-  ; GFX7-NEXT:   [[INT2:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY7]](s32)
-  ; GFX7-NEXT:   $sgpr2 = COPY [[INT2]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT2:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY7]](s32)
+  ; GFX7-NEXT:   $sgpr2 = COPY [[INTRINSIC_CONVERGENT2]](s32)
   ; GFX7-NEXT:   [[COPY8:%[0-9]+]]:vgpr(s32) = COPY [[UV3]](s32)
-  ; GFX7-NEXT:   [[INT3:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY8]](s32)
-  ; GFX7-NEXT:   $sgpr3 = COPY [[INT3]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT3:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY8]](s32)
+  ; GFX7-NEXT:   $sgpr3 = COPY [[INTRINSIC_CONVERGENT3]](s32)
   ; GFX7-NEXT:   [[COPY9:%[0-9]+]]:vgpr(s32) = COPY [[UV4]](s32)
-  ; GFX7-NEXT:   [[INT4:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY9]](s32)
-  ; GFX7-NEXT:   $sgpr4 = COPY [[INT4]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT4:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY9]](s32)
+  ; GFX7-NEXT:   $sgpr4 = COPY [[INTRINSIC_CONVERGENT4]](s32)
   ; GFX7-NEXT:   [[COPY10:%[0-9]+]]:vgpr(s32) = COPY [[UV5]](s32)
-  ; GFX7-NEXT:   [[INT5:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY10]](s32)
-  ; GFX7-NEXT:   $sgpr5 = COPY [[INT5]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT5:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY10]](s32)
+  ; GFX7-NEXT:   $sgpr5 = COPY [[INTRINSIC_CONVERGENT5]](s32)
   ; GFX7-NEXT:   [[COPY11:%[0-9]+]]:vgpr(s32) = COPY [[UV6]](s32)
-  ; GFX7-NEXT:   [[INT6:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY11]](s32)
-  ; GFX7-NEXT:   $sgpr6 = COPY [[INT6]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT6:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY11]](s32)
+  ; GFX7-NEXT:   $sgpr6 = COPY [[INTRINSIC_CONVERGENT6]](s32)
   ; GFX7-NEXT:   [[COPY12:%[0-9]+]]:vgpr(s32) = COPY [[UV7]](s32)
-  ; GFX7-NEXT:   [[INT7:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY12]](s32)
-  ; GFX7-NEXT:   $sgpr7 = COPY [[INT7]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT7:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY12]](s32)
+  ; GFX7-NEXT:   $sgpr7 = COPY [[INTRINSIC_CONVERGENT7]](s32)
   ; GFX7-NEXT:   [[COPY13:%[0-9]+]]:vgpr(s32) = COPY [[UV8]](s32)
-  ; GFX7-NEXT:   [[INT8:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY13]](s32)
-  ; GFX7-NEXT:   $sgpr8 = COPY [[INT8]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT8:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY13]](s32)
+  ; GFX7-NEXT:   $sgpr8 = COPY [[INTRINSIC_CONVERGENT8]](s32)
   ; GFX7-NEXT:   [[COPY14:%[0-9]+]]:vgpr(s32) = COPY [[UV9]](s32)
-  ; GFX7-NEXT:   [[INT9:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY14]](s32)
-  ; GFX7-NEXT:   $sgpr9 = COPY [[INT9]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT9:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY14]](s32)
+  ; GFX7-NEXT:   $sgpr9 = COPY [[INTRINSIC_CONVERGENT9]](s32)
   ; GFX7-NEXT:   [[COPY15:%[0-9]+]]:vgpr(s32) = COPY [[UV10]](s32)
-  ; GFX7-NEXT:   [[INT10:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
-  ; GFX7-NEXT:   $sgpr10 = COPY [[INT10]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT10:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY15]](s32)
+  ; GFX7-NEXT:   $sgpr10 = COPY [[INTRINSIC_CONVERGENT10]](s32)
   ; GFX7-NEXT:   [[COPY16:%[0-9]+]]:vgpr(s32) = COPY [[UV11]](s32)
-  ; GFX7-NEXT:   [[INT11:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY16]](s32)
-  ; GFX7-NEXT:   $sgpr11 = COPY [[INT11]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT11:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY16]](s32)
+  ; GFX7-NEXT:   $sgpr11 = COPY [[INTRINSIC_CONVERGENT11]](s32)
   ; GFX7-NEXT:   [[COPY17:%[0-9]+]]:vgpr(s32) = COPY [[UV12]](s32)
-  ; GFX7-NEXT:   [[INT12:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY17]](s32)
-  ; GFX7-NEXT:   $sgpr12 = COPY [[INT12]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT12:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY17]](s32)
+  ; GFX7-NEXT:   $sgpr12 = COPY [[INTRINSIC_CONVERGENT12]](s32)
   ; GFX7-NEXT:   [[COPY18:%[0-9]+]]:vgpr(s32) = COPY [[UV13]](s32)
-  ; GFX7-NEXT:   [[INT13:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY18]](s32)
-  ; GFX7-NEXT:   $sgpr13 = COPY [[INT13]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT13:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY18]](s32)
+  ; GFX7-NEXT:   $sgpr13 = COPY [[INTRINSIC_CONVERGENT13]](s32)
   ; GFX7-NEXT:   [[COPY19:%[0-9]+]]:vgpr(s32) = COPY [[UV14]](s32)
-  ; GFX7-NEXT:   [[INT14:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY19]](s32)
-  ; GFX7-NEXT:   $sgpr14 = COPY [[INT14]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT14:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY19]](s32)
+  ; GFX7-NEXT:   $sgpr14 = COPY [[INTRINSIC_CONVERGENT14]](s32)
   ; GFX7-NEXT:   [[COPY20:%[0-9]+]]:vgpr(s32) = COPY [[UV15]](s32)
-  ; GFX7-NEXT:   [[INT15:%[0-9]+]]:sgpr(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.readfirstlane), [[COPY20]](s32)
-  ; GFX7-NEXT:   $sgpr15 = COPY [[INT15]](s32)
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT15:%[0-9]+]]:sgpr(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readfirstlane), [[COPY20]](s32)
+  ; GFX7-NEXT:   $sgpr15 = COPY [[INTRINSIC_CONVERGENT15]](s32)
   ; GFX7-NEXT:   SI_RETURN_TO_EPILOG implicit $sgpr0, implicit $sgpr1, implicit $sgpr2, implicit $sgpr3, implicit $sgpr4, implicit $sgpr5, implicit $sgpr6, implicit $sgpr7, implicit $sgpr8, implicit $sgpr9, implicit $sgpr10, implicit $sgpr11, implicit $sgpr12, implicit $sgpr13, implicit $sgpr14, implicit $sgpr15
   %val = call <16 x i32> @llvm.amdgcn.s.buffer.load.v16i32(<4 x i32> %rsrc, i32 %soffset, i32 0)
   ret <16 x i32> %val
@@ -887,8 +887,8 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc(<4 x i32> %rsrc, i32 inreg %
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -939,8 +939,8 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4092(<4 x i32> %
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -993,8 +993,8 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_soffset_add_4096(<4 x i32> %
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1045,8 +1045,8 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4095(<4 x i32> %rsrc)
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1096,8 +1096,8 @@ define amdgpu_ps float @s_buffer_load_f32_vgpr_rsrc_offset_4096(<4 x i32> %rsrc)
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1149,8 +1149,8 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4064(<4 x i32> %
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1214,8 +1214,8 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4068(<4 x i32> %
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1277,8 +1277,8 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_rsrc_add_4096(<4 x i32> %
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1339,8 +1339,8 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_5000
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1401,8 +1401,8 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4076
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1463,8 +1463,8 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_add_4080
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2
@@ -1524,8 +1524,8 @@ define amdgpu_ps <8 x float> @s_buffer_load_v8f32_vgpr_offset_vgpr_rsrc_offset_4
   ; GFX7-NEXT:   [[ICMP:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV6]](s64), [[UV4]]
   ; GFX7-NEXT:   [[ICMP1:%[0-9]+]]:vcc(s1) = G_ICMP intpred(eq), [[UV7]](s64), [[UV5]]
   ; GFX7-NEXT:   [[AND:%[0-9]+]]:vcc(s1) = G_AND [[ICMP]], [[ICMP1]]
-  ; GFX7-NEXT:   [[INT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
-  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
+  ; GFX7-NEXT:   [[INTRINSIC_CONVERGENT:%[0-9]+]]:sreg_64_xexec(s64) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.ballot), [[AND]](s1)
+  ; GFX7-NEXT:   [[S_AND_SAVEEXEC_B64_:%[0-9]+]]:sreg_64_xexec = S_AND_SAVEEXEC_B64 killed [[INTRINSIC_CONVERGENT]](s64), implicit-def $exec, implicit-def $scc, implicit $exec
   ; GFX7-NEXT: {{  $}}
   ; GFX7-NEXT: bb.3:
   ; GFX7-NEXT:   successors: %bb.4, %bb.2

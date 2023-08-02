@@ -123,8 +123,8 @@ func.func @insertion_point_outside_loop(%t : tensor<?xf32>, %sz : index,
 // -----
 
 // EmptyTensorElimination does currently not apply to chains where the type is
-// changing. This test just ensures that we do not crash or generate IR that
-// does not verify.
+// changing. (Casts are supported.) This test just ensures that we do not crash
+// or generate IR that does not verify.
 
 // CHECK-LABEL: func @shape_mismatch
 func.func @shape_mismatch(%t: tensor<5x6x128xf32>) -> tensor<5x6x128xf32> {
@@ -136,6 +136,24 @@ func.func @shape_mismatch(%t: tensor<5x6x128xf32>) -> tensor<5x6x128xf32> {
   %3 = tensor.insert_slice %2 into %t[2, 3, 0][1, 1, 128][1, 1, 1]
       : tensor<1x1x128xf32> into tensor<5x6x128xf32>
   return %3 : tensor<5x6x128xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @cast(
+//  CHECK-SAME:     %[[t:.*]]: memref<256xf32,
+//       CHECK:   %[[sv:.*]] = memref.subview %[[t]]
+//       CHECK:   linalg.fill {{.*}} outs(%[[sv]]
+//       CHECK:   return %[[t]]
+func.func @cast(%t: tensor<256xf32>) -> tensor<256xf32> {
+  %cst = arith.constant 8.0 : f32
+  %c128 = arith.constant 128 : index
+  %0 = tensor.empty(%c128) : tensor<?xf32>
+  %1 = linalg.fill ins(%cst : f32) outs(%0 : tensor<?xf32>) -> tensor<?xf32>
+  %2 = tensor.cast %1 : tensor<?xf32> to tensor<128xf32>
+  %3 = tensor.insert_slice %2 into %t[2][128][1]
+      : tensor<128xf32> into tensor<256xf32>
+  return %3 : tensor<256xf32>
 }
 
 // -----

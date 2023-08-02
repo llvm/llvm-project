@@ -446,6 +446,12 @@ int main(int argc, char **argv, char * const *envp) {
 
   ExitOnErr(loadDylibs());
 
+  if (EntryFunc.empty()) {
+    WithColor::error(errs(), argv[0])
+        << "--entry-function name cannot be empty\n";
+    exit(1);
+  }
+
   if (UseJITKind == JITKind::MCJIT)
     disallowOrcOptions();
   else

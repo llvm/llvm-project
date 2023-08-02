@@ -372,6 +372,16 @@ static Op createDataEntryOp(fir::FirOpBuilder &builder, mlir::Location loc,
   return op;
 }
 
+static void addDeclareAttr(fir::FirOpBuilder &builder, mlir::Operation *op,
+                           mlir::acc::DataClause clause) {
+  if (!op)
+    return;
+  op->setAttr(mlir::acc::getDeclareAttrName(),
+              mlir::acc::DeclareAttr::get(builder.getContext(),
+                                          mlir::acc::DataClauseAttr::get(
+                                              builder.getContext(), clause)));
+}
+
 template <typename Op>
 static void
 genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
@@ -379,7 +389,8 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
                          Fortran::semantics::SemanticsContext &semanticsContext,
                          Fortran::lower::StatementContext &stmtCtx,
                          llvm::SmallVectorImpl<mlir::Value> &dataOperands,
-                         mlir::acc::DataClause dataClause, bool structured) {
+                         mlir::acc::DataClause dataClause, bool structured,
+                         bool setDeclareAttr = false) {
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const auto &accObject : objectList.v) {
     llvm::SmallVector<mlir::Value> bounds;
@@ -392,6 +403,8 @@ genDataOperandOperations(const Fortran::parser::AccObjectList &objectList,
                                   bounds, structured, dataClause,
                                   baseAddr.getType());
     dataOperands.push_back(op.getAccPtr());
+    if (setDeclareAttr)
+      addDeclareAttr(builder, op.getVarPtr().getDefiningOp(), dataClause);
   }
 }
 
@@ -1314,7 +1327,8 @@ static void genDataOperandOperationsWithModifier(
     Fortran::parser::AccDataModifier::Modifier mod,
     llvm::SmallVectorImpl<mlir::Value> &dataClauseOperands,
     const mlir::acc::DataClause clause,
-    const mlir::acc::DataClause clauseWithModifier) {
+    const mlir::acc::DataClause clauseWithModifier,
+    bool setDeclareAttr = false) {
   const Fortran::parser::AccObjectListWithModifier &listWithModifier = x->v;
   const auto &accObjectList =
       std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
@@ -1325,7 +1339,7 @@ static void genDataOperandOperationsWithModifier(
       (modifier && (*modifier).v == mod) ? clauseWithModifier : clause;
   genDataOperandOperations<Op>(accObjectList, converter, semanticsContext,
                                stmtCtx, dataClauseOperands, dataClause,
-                               /*structured=*/true);
+                               /*structured=*/true, setDeclareAttr);
 }
 
 template <typename Op>
@@ -2283,14 +2297,6 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
     waitOp.setAsyncAttr(firOpBuilder.getUnitAttr());
 }
 
-static void addDeclareAttr(fir::FirOpBuilder &builder, mlir::Operation *op,
-                           mlir::acc::DataClause clause) {
-  op->setAttr(mlir::acc::getDeclareAttrName(),
-              mlir::acc::DeclareAttr::get(builder.getContext(),
-                                          mlir::acc::DataClauseAttr::get(
-                                              builder.getContext(), clause)));
-}
-
 template <typename GlobalOp, typename EntryOp, typename DeclareOp,
           typename ExitOp>
 static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
@@ -2392,6 +2398,74 @@ genGlobalCtorsWithModifier(Fortran::lower::AbstractConverter &converter,
 }
 
 static void
+genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
+                     Fortran::semantics::SemanticsContext &semanticsContext,
+                     Fortran::lower::StatementContext &fctCtx,
+                     mlir::Location loc,
+                     const Fortran::parser::AccClauseList &accClauseList) {
+  llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
+      createEntryOperands;
+  Fortran::lower::StatementContext stmtCtx;
+  fir::FirOpBuilder &builder = converter.getFirOpBuilder();
+  for (const Fortran::parser::AccClause &clause : accClauseList.v) {
+    if (const auto *copyClause =
+            std::get_if<Fortran::parser::AccClause::Copy>(&clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
+      genDataOperandOperations<mlir::acc::CopyinOp>(
+          copyClause->v, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_copy,
+          /*structured=*/true, /*setDeclareAttr=*/true);
+      copyEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                               dataClauseOperands.end());
+    } else if (const auto *createClause =
+                   std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
+      const Fortran::parser::AccObjectListWithModifier &listWithModifier =
+          createClause->v;
+      const auto &accObjectList =
+          std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+      auto crtDataStart = dataClauseOperands.size();
+      genDataOperandOperations<mlir::acc::CreateOp>(
+          accObjectList, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_create,
+          /*structured=*/true, /*setDeclareAttr=*/true);
+      createEntryOperands.append(dataClauseOperands.begin() + crtDataStart,
+                                 dataClauseOperands.end());
+    } else if (const auto *presentClause =
+                   std::get_if<Fortran::parser::AccClause::Present>(
+                       &clause.u)) {
+      genDataOperandOperations<mlir::acc::PresentOp>(
+          presentClause->v, converter, semanticsContext, stmtCtx,
+          dataClauseOperands, mlir::acc::DataClause::acc_present,
+          /*structured=*/true, /*setDeclareAttr=*/true);
+    } else if (const auto *copyinClause =
+                   std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
+      genDataOperandOperationsWithModifier<mlir::acc::CopyinOp>(
+          copyinClause, converter, semanticsContext, stmtCtx,
+          Fortran::parser::AccDataModifier::Modifier::ReadOnly,
+          dataClauseOperands, mlir::acc::DataClause::acc_copyin,
+          mlir::acc::DataClause::acc_copyin_readonly, /*setDeclareAttr=*/true);
+    } else {
+      mlir::Location clauseLocation = converter.genLocation(clause.source);
+      TODO(clauseLocation, "clause on declare directive");
+    }
+  }
+  builder.create<mlir::acc::DeclareEnterOp>(loc, dataClauseOperands);
+
+  if (!createEntryOperands.empty() || !copyEntryOperands.empty()) {
+    // Attach declare exit operation generation to function context.
+    fctCtx.attachCleanup([&builder, loc, dataClauseOperands,
+                          createEntryOperands, copyEntryOperands]() {
+      builder.create<mlir::acc::DeclareExitOp>(loc, dataClauseOperands);
+      genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
+          builder, createEntryOperands, /*structured=*/true,
+          /*implicit=*/false);
+      genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
+          builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+    });
+  }
+}
+
+static void
 genDeclareInModule(Fortran::lower::AbstractConverter &converter,
                    mlir::ModuleOp &moduleOp,
                    const Fortran::parser::AccClauseList &accClauseList) {
@@ -2399,12 +2473,13 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
     if (const auto *createClause =
             std::get_if<Fortran::parser::AccClause::Create>(&clause.u)) {
-      genGlobalCtorsWithModifier<Fortran::parser::AccClause::Create,
-                                 mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-          converter, modBuilder, createClause,
-          Fortran::parser::AccDataModifier::Modifier::Zero,
-          mlir::acc::DataClause::acc_create,
-          mlir::acc::DataClause::acc_create_zero);
+      const Fortran::parser::AccObjectListWithModifier &listWithModifier =
+          createClause->v;
+      const auto &accObjectList =
+          std::get<Fortran::parser::AccObjectList>(listWithModifier.t);
+      genGlobalCtors<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
+          converter, modBuilder, accObjectList,
+          mlir::acc::DataClause::acc_create);
     } else if (const auto *copyinClause =
                    std::get_if<Fortran::parser::AccClause::Copyin>(&clause.u)) {
       genGlobalCtorsWithModifier<Fortran::parser::AccClause::Copyin,
@@ -2433,12 +2508,15 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
 
 static void genACC(Fortran::lower::AbstractConverter &converter,
                    Fortran::semantics::SemanticsContext &semanticsContext,
+                   Fortran::lower::StatementContext &fctCtx,
                    Fortran::lower::pft::Evaluation &eval,
                    const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
                        &declareConstruct) {
 
   const auto &declarativeDir =
       std::get<Fortran::parser::AccDeclarativeDirective>(declareConstruct.t);
+  mlir::Location directiveLocation =
+      converter.genLocation(declarativeDir.source);
   const auto &accClauseList =
       std::get<Fortran::parser::AccClauseList>(declareConstruct.t);
 
@@ -2449,7 +2527,8 @@ static void genACC(Fortran::lower::AbstractConverter &converter,
     auto funcOp =
         builder.getBlock()->getParent()->getParentOfType<mlir::func::FuncOp>();
     if (funcOp)
-      TODO(funcOp.getLoc(), "OpenACC declare in function/subroutine");
+      genDeclareInFunction(converter, semanticsContext, fctCtx,
+                           directiveLocation, accClauseList);
     else if (moduleOp)
       genDeclareInModule(converter, moduleOp, accClauseList);
     return;
@@ -2497,6 +2576,7 @@ void Fortran::lower::genOpenACCConstruct(
 void Fortran::lower::genOpenACCDeclarativeConstruct(
     Fortran::lower::AbstractConverter &converter,
     Fortran::semantics::SemanticsContext &semanticsContext,
+    Fortran::lower::StatementContext &fctCtx,
     Fortran::lower::pft::Evaluation &eval,
     const Fortran::parser::OpenACCDeclarativeConstruct &accDeclConstruct) {
 
@@ -2504,7 +2584,7 @@ void Fortran::lower::genOpenACCDeclarativeConstruct(
       common::visitors{
           [&](const Fortran::parser::OpenACCStandaloneDeclarativeConstruct
                   &standaloneDeclarativeConstruct) {
-            genACC(converter, semanticsContext, eval,
+            genACC(converter, semanticsContext, fctCtx, eval,
                    standaloneDeclarativeConstruct);
           },
           [&](const Fortran::parser::OpenACCRoutineConstruct

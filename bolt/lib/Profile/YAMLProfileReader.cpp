@@ -344,8 +344,10 @@ Error YAMLProfileReader::readProfile(BinaryContext &BC) {
         continue;
 
       yaml::bolt::BinaryFunctionProfile &YamlBF = *PI->getValue();
-      if (profileMatches(YamlBF, Function))
+      if (profileMatches(YamlBF, Function)) {
         matchProfileToFunction(YamlBF, Function);
+        break;
+      }
     }
   }
 

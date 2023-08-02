@@ -44,6 +44,7 @@
 #include "NoEscapeCheck.h"
 #include "NonZeroEnumToBoolConversionCheck.h"
 #include "NotNullTerminatedResultCheck.h"
+#include "OptionalValueConversionCheck.h"
 #include "ParentVirtualCallCheck.h"
 #include "PosixReturnCheck.h"
 #include "RedundantBranchConditionCheck.h"
@@ -150,6 +151,8 @@ public:
         "bugprone-multiple-new-in-one-expression");
     CheckFactories.registerCheck<MultipleStatementMacroCheck>(
         "bugprone-multiple-statement-macro");
+    CheckFactories.registerCheck<OptionalValueConversionCheck>(
+        "bugprone-optional-value-conversion");
     CheckFactories.registerCheck<RedundantBranchConditionCheck>(
         "bugprone-redundant-branch-condition");
     CheckFactories.registerCheck<cppcoreguidelines::NarrowingConversionsCheck>(

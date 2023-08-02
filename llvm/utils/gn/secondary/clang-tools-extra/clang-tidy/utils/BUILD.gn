@@ -24,6 +24,7 @@ static_library("utils") {
     "IncludeInserter.cpp",
     "IncludeSorter.cpp",
     "LexerUtils.cpp",
+    "Matchers.cpp",
     "NamespaceAliaser.cpp",
     "OptionsUtils.cpp",
     "RenamerClangTidyCheck.cpp",

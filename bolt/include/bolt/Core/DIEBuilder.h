@@ -359,7 +359,6 @@ public:
     return Die->replaceValue(getState().DIEAlloc, Attribute, Form, NewValue);
   }
 
-  template <class T>
   bool deleteValue(DIEValueList *Die, dwarf::Attribute Attribute) {
     return Die->deleteValue(Attribute);
   }

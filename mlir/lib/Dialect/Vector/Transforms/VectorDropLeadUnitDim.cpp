@@ -165,16 +165,14 @@ struct CastAwayInsertLeadingOneDim : public OpRewritePattern<vector::InsertOp> {
     // type has leading unit dims, we also trim the position array accordingly,
     // then (2) if source type also has leading unit dims, we need to append
     // zeroes to the position array accordingly.
-    unsigned oldPosRank = insertOp.getPosition().getValue().size();
+    unsigned oldPosRank = insertOp.getPosition().size();
     unsigned newPosRank = std::max<int64_t>(0, oldPosRank - dstDropCount);
-    SmallVector<Attribute> newPositions = llvm::to_vector(
-        insertOp.getPosition().getValue().take_back(newPosRank));
-    newPositions.resize(newDstType.getRank() - newSrcRank,
-                        rewriter.getI64IntegerAttr(0));
+    SmallVector<int64_t> newPositions =
+        llvm::to_vector(insertOp.getPosition().take_back(newPosRank));
+    newPositions.resize(newDstType.getRank() - newSrcRank, 0);
 
     auto newInsertOp = rewriter.create<vector::InsertOp>(
-        loc, newDstType, newSrcVector, newDstVector,
-        rewriter.getArrayAttr(newPositions));
+        loc, newDstType, newSrcVector, newDstVector, newPositions);
 
     rewriter.replaceOpWithNewOp<vector::BroadcastOp>(insertOp, oldDstType,
                                                      newInsertOp);

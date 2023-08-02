@@ -66,16 +66,9 @@ struct ArchInfo {
 
 bool isValidArchName(StringRef Arch);
 bool getArchFeatures(StringRef Arch, std::vector<StringRef> &Features);
-bool isValidTuneCPUName(StringRef TuneCPU);
-void fillValidTuneCPUList(SmallVectorImpl<StringRef> &Values);
-StringRef getDefaultArch(bool Is64Bit);
-void setArch(StringRef Arch);
-StringRef getArch();
-void setTuneCPU(StringRef TuneCPU);
-StringRef getTuneCPU();
 
 } // namespace LoongArch
 
 } // namespace llvm
 
-#endif // LLVM_TARGETPARSER_LOONGARCHTARGETPARSER_H
+#endif // LLVM_SUPPORT_LOONGARCHTARGETPARSER_H

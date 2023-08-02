@@ -415,10 +415,6 @@ define signext i32 @cttz_i32(i32 signext %a) nounwind {
 ; RV64XTHEADBB-NEXT:  .LBB6_2:
 ; RV64XTHEADBB-NEXT:    li a0, 32
 ; RV64XTHEADBB-NEXT:    ret
-; RV64ZBB-LABEL: cttz_i32:
-; RV64ZBB:       # %bb.0:
-; RV64ZBB-NEXT:    ctzw a0, a0
-; RV64ZBB-NEXT:    ret
   %1 = call i32 @llvm.cttz.i32(i32 %a, i1 false)
   ret i32 %1
 }

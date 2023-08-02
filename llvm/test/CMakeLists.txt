@@ -120,7 +120,6 @@ set(LLVM_TEST_DEPENDS
           llvm-readobj
           llvm-readelf
           llvm-reduce
-          llvm-remark-size-diff
           llvm-remarkutil
           llvm-rtdyld
           llvm-sim
@@ -131,7 +130,7 @@ set(LLVM_TEST_DEPENDS
           llvm-strip
           llvm-symbolizer
           llvm-tblgen
-          llvm-tapi-diff
+          llvm-readtapi
           llvm-tli-checker
           llvm-undname
           llvm-windres

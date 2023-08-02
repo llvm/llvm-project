@@ -1171,16 +1171,17 @@ TypeSP DWARFASTParserClang::ParseSubroutine(const DWARFDIE &die,
                 class_type->GetFullCompilerType();
 
                 // The type for this DIE should have been filled in the
-                // function call above
+                // function call above.
                 Type *type_ptr = dwarf->GetDIEToType()[die.GetDIE()];
                 if (type_ptr && type_ptr != DIE_IS_BEING_PARSED) {
                   return type_ptr->shared_from_this();
                 }
 
-                // FIXME This is fixing some even uglier behavior but we
-                // really need to
-                // uniq the methods of each class as well as the class
-                // itself. <rdar://problem/11240464>
+                // The previous comment isn't actually true if the class wasn't
+                // resolved using the current method's parent DIE as source
+                // data. We need to ensure that we look up the method correctly
+                // in the class and then link the method's DIE to the unique
+                // CXXMethodDecl appropriately.
                 type_handled = true;
               }
             }
@@ -2950,12 +2951,10 @@ void DWARFASTParserClang::ParseSingleMember(
     member_clang_type.GetCompleteType();
 
   {
-    // Older versions of clang emit array[0] and array[1] in the
-    // same way (<rdar://problem/12566646>). If the current field
-    // is at the end of the structure, then there is definitely no
-    // room for extra elements and we override the type to
-    // array[0].
-
+    // Older versions of clang emit the same DWARF for array[0] and array[1]. If
+    // the current field is at the end of the structure, then there is
+    // definitely no room for extra elements and we override the type to
+    // array[0]. This was fixed by f454dfb6b5af.
     CompilerType member_array_element_type;
     uint64_t member_array_size;
     bool member_array_is_incomplete;

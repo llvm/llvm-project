@@ -326,11 +326,11 @@ namespace llvm {
       return VNI && VNI->id < getNumValNums() && VNI == getValNumInfo(VNI->id);
     }
 
-    /// getNextValue - Create a new value number and return it.  MIIdx specifies
-    /// the instruction that defines the value number.
-    VNInfo *getNextValue(SlotIndex def, VNInfo::Allocator &VNInfoAllocator) {
+    /// getNextValue - Create a new value number and return it.
+    /// @p Def is the index of instruction that defines the value number.
+    VNInfo *getNextValue(SlotIndex Def, VNInfo::Allocator &VNInfoAllocator) {
       VNInfo *VNI =
-        new (VNInfoAllocator) VNInfo((unsigned)valnos.size(), def);
+        new (VNInfoAllocator) VNInfo((unsigned)valnos.size(), Def);
       valnos.push_back(VNI);
       return VNI;
     }

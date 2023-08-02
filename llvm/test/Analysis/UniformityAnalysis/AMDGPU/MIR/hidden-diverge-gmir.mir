@@ -4,16 +4,16 @@
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_ICMP intpred(slt)
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_XOR %{{[0-9]*}}:_, %{{[0-9]*}}:_
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
 # CHECK: DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.1
 # CHECK: DIVERGENT: G_BR %bb.2
 # CHECK-LABEL: BLOCK bb.1
 # CHECK-LABEL: BLOCK bb.2
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s32) = G_PHI %{{[0-9]*}}:_(s32), %bb.1, %{{[0-9]*}}:_(s32), %bb.0
 # CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1) = G_PHI %{{[0-9]*}}:_(s1), %bb.1, %{{[0-9]*}}:_(s1), %bb.0
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
-# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
+# CHECK: DIVERGENT: %{{[0-9]*}}: %{{[0-9]*}}:_(s1), %{{[0-9]*}}:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if)
 # CHECK: DIVERGENT: G_BRCOND %{{[0-9]*}}:_(s1), %bb.3
 # CHECK: DIVERGENT: G_BR %bb.4
 # CHECK-LABEL: BLOCK bb.3
@@ -44,7 +44,7 @@ body:             |
     %14:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.workitem.id.x)
     %16:_(s1) = G_ICMP intpred(slt), %14(s32), %15
     %18:_(s1) = G_XOR %16, %17
-    %19:_(s1), %20:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %16(s1)
+    %19:_(s1), %20:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %16(s1)
     G_BRCOND %19(s1), %bb.2
     G_BR %bb.3
 
@@ -60,8 +60,8 @@ body:             |
 
     %25:_(s32) = G_PHI %22(s32), %bb.2, %33(s32), %bb.1
     %26:_(s1) = G_PHI %24(s1), %bb.2, %18(s1), %bb.1
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %20(s64)
-    %27:_(s1), %28:_(s64) = G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %26(s1)
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %20(s64)
+    %27:_(s1), %28:_(s64) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.if), %26(s1)
     G_BRCOND %27(s1), %bb.4
     G_BR %bb.5
 
@@ -72,7 +72,7 @@ body:             |
 
   bb.5:
     %31:_(s32) = G_PHI %25(s32), %bb.3, %29(s32), %bb.4
-    G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %28(s64)
+    G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.end.cf), %28(s64)
     G_STORE %31(s32), %32(p1) :: (volatile store (s32) into `i32 addrspace(1)* undef`, addrspace 1)
     S_ENDPGM 0
 

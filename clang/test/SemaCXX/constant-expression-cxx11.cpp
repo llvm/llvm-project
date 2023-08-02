@@ -1781,7 +1781,7 @@ namespace Void {
   static_assert(get(arr, 1) == 1, "");
   static_assert(get(arr, 4) == 4, "");
   static_assert(get(arr, 0) == 4, ""); // expected-error{{not an integral constant expression}} \
-  // expected-note{{in call to 'get(arr, 0)'}}
+  // expected-note{{in call to 'get<const int, 5UL>(arr, 0)'}}
 }
 
 namespace std { struct type_info; }

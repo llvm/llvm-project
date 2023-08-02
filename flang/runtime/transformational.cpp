@@ -20,6 +20,7 @@
 #include "copy.h"
 #include "terminator.h"
 #include "tools.h"
+#include "flang/Common/float128.h"
 #include "flang/Runtime/descriptor.h"
 
 namespace Fortran::runtime {

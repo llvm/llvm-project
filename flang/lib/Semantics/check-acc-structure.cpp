@@ -389,6 +389,15 @@ void AccStructureChecker::Enter(const parser::AccClause::Create &c) {
                   .str()),
           ContextDirectiveAsFortran());
     }
+    if (GetContext().directive == llvm::acc::Directive::ACCD_declare) {
+      context_.Say(GetContext().clauseSource,
+          "The ZERO modifier is not allowed for the %s clause "
+          "on the %s directive"_err_en_US,
+          parser::ToUpperCaseLetters(
+              llvm::acc::getOpenACCClauseName(llvm::acc::Clause::ACCC_create)
+                  .str()),
+          ContextDirectiveAsFortran());
+    }
   }
 }
 

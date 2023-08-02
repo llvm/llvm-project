@@ -35,7 +35,9 @@ public:
   enum class Kind {
     Integer,
     Pointer,
-    Struct,
+    Record,
+    // Deprecated synonym for `Record`
+    Struct = Record,
 
     // TODO: Top values should not be need to be type-specific.
     TopBool,
@@ -184,13 +186,13 @@ private:
 /// In C++, prvalues of class type serve only a limited purpose: They can only
 /// be used to initialize a result object. It is not possible to access member
 /// variables or call member functions on a prvalue of class type.
-/// Correspondingly, `StructValue` also serves only two limited purposes:
+/// Correspondingly, `RecordValue` also serves only two limited purposes:
 /// - It conveys a prvalue of class type from the place where the object is
 ///   constructed to the result object that it initializes.
 ///
 ///   When creating a prvalue of class type, we already need a storage location
 ///   for `this`, even though prvalues are otherwise not associated with storage
-///   locations. `StructValue` is therefore essentially a wrapper for a storage
+///   locations. `RecordValue` is therefore essentially a wrapper for a storage
 ///   location, which is then used to set the storage location for the result
 ///   object when we process the AST node for that result object.
 ///
@@ -198,42 +200,48 @@ private:
 ///      MyStruct S = MyStruct(3);
 ///
 ///   In this example, `MyStruct(3) is a prvalue, which is modeled as a
-///   `StructValue` that wraps an `AbstractStorageLocation`. This
-//    `AbstractStorageLocation` is then used as the storage location for `S`.
+///   `RecordValue` that wraps a `RecordStorageLocation`. This
+//    `RecordStorageLocation` is then used as the storage location for `S`.
 ///
 /// - It allows properties to be associated with an object of class type.
 ///   Note that when doing so, you should avoid mutating the properties of an
-///   existing `StructValue` in place, as these changes would be visible to
-///   other `Environment`s that share the same `StructValue`. Instead, associate
-///   a new `StructValue` with the `AggregateStorageLocation` and set the
-///   properties on this new `StructValue`. (See also `refreshStructValue()` in
+///   existing `RecordValue` in place, as these changes would be visible to
+///   other `Environment`s that share the same `RecordValue`. Instead, associate
+///   a new `RecordValue` with the `RecordStorageLocation` and set the
+///   properties on this new `RecordValue`. (See also `refreshRecordValue()` in
 ///   DataflowEnvironment.h, which makes this easy.)
 ///   Note also that this implies that it is common for the same
-///   `AggregateStorageLocation` to be associated with different `StructValue`s
+///   `RecordStorageLocation` to be associated with different `RecordValue`s
 ///   in different environments.
-/// Over time, we may eliminate `StructValue` entirely. See also the discussion
+/// Over time, we may eliminate `RecordValue` entirely. See also the discussion
 /// here: https://reviews.llvm.org/D155204#inline-1503204
-class StructValue final : public Value {
+class RecordValue final : public Value {
 public:
-  explicit StructValue(AggregateStorageLocation &Loc)
-      : Value(Kind::Struct), Loc(Loc) {}
+  explicit RecordValue(RecordStorageLocation &Loc)
+      : Value(Kind::Record), Loc(Loc) {}
 
   static bool classof(const Value *Val) {
-    return Val->getKind() == Kind::Struct;
+    return Val->getKind() == Kind::Record;
   }
 
-  /// Returns the storage location that this `StructValue` is associated with.
-  AggregateStorageLocation &getAggregateLoc() const { return Loc; }
+  /// Returns the storage location that this `RecordValue` is associated with.
+  RecordStorageLocation &getLoc() const { return Loc; }
+
+  /// Deprecated synonym for `getLoc()`.
+  RecordStorageLocation &getAggregateLoc() const { return Loc; }
 
   /// Convenience function that returns the child storage location for `Field`.
-  /// See also the documentation for `AggregateStorageLocation::getChild()`.
+  /// See also the documentation for `RecordStorageLocation::getChild()`.
   StorageLocation *getChild(const ValueDecl &Field) const {
     return Loc.getChild(Field);
   }
 
 private:
-  AggregateStorageLocation &Loc;
+  RecordStorageLocation &Loc;
 };
+
+/// Deprecated synonym for `RecordValue`.
+using StructValue = RecordValue;
 
 raw_ostream &operator<<(raw_ostream &OS, const Value &Val);
 

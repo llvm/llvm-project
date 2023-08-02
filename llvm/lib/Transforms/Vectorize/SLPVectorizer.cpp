@@ -3607,7 +3607,7 @@ private:
   /// where "width" indicates the minimum bit width and "signed" is True if the
   /// value must be signed-extended, rather than zero-extended, back to its
   /// original width.
-  MapVector<Value *, std::pair<uint64_t, bool>> MinBWs;
+  DenseMap<Value *, std::pair<uint64_t, bool>> MinBWs;
 };
 
 } // end namespace slpvectorizer
@@ -7290,9 +7290,11 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
 
   // If we have computed a smaller type for the expression, update VecTy so
   // that the costs will be accurate.
-  if (MinBWs.count(VL[0]))
-    VecTy = FixedVectorType::get(
-        IntegerType::get(F->getContext(), MinBWs[VL[0]].first), VL.size());
+  auto It = MinBWs.find(VL.front());
+  if (It != MinBWs.end()) {
+    ScalarTy = IntegerType::get(F->getContext(), It->second.first);
+    VecTy = FixedVectorType::get(ScalarTy, VL.size());
+  }
   unsigned EntryVF = E->getVectorFactor();
   auto *FinalVecTy = FixedVectorType::get(VecTy->getElementType(), EntryVF);
 
@@ -7302,6 +7304,16 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       return 0;
     if (isa<InsertElementInst>(VL[0]))
       return InstructionCost::getInvalid();
+    // The gather nodes use small bitwidth only if all operands use the same
+    // bitwidth. Otherwise - use the original one.
+    if (It != MinBWs.end() && any_of(VL.drop_front(), [&](Value *V) {
+          auto VIt = MinBWs.find(V);
+          return VIt == MinBWs.end() || VIt->second.first != It->second.first ||
+                 VIt->second.second != It->second.second;
+        })) {
+      ScalarTy = VL.front()->getType();
+      VecTy = FixedVectorType::get(ScalarTy, VL.size());
+    }
     ShuffleCostEstimator Estimator(*TTI, VectorizedVals, *this,
                                    CheckedExtracts);
     unsigned VF = E->getVectorFactor();
@@ -7319,7 +7331,6 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     std::optional<TargetTransformInfo::ShuffleKind> ExtractShuffle;
     std::optional<TargetTransformInfo::ShuffleKind> GatherShuffle;
     SmallVector<const TreeEntry *> Entries;
-    Type *ScalarTy = GatheredScalars.front()->getType();
     // Check for gathered extracts.
     ExtractShuffle = tryToGatherExtractElements(GatheredScalars, ExtractMask);
     SmallVector<Value *> IgnoredVals;
@@ -7394,8 +7405,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
           [&](Value *&Vec, SmallVectorImpl<int> &Mask) {
             Vec = Estimator.gather(GatheredScalars,
                                    Constant::getNullValue(FixedVectorType::get(
-                                       GatheredScalars.front()->getType(),
-                                       GatheredScalars.size())));
+                                       ScalarTy, GatheredScalars.size())));
           });
     }
     if (!all_of(GatheredScalars, PoisonValue::classof)) {
@@ -7404,8 +7414,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       Value *BV = Estimator.gather(
           Gathers, SameGathers ? nullptr
                                : Constant::getNullValue(FixedVectorType::get(
-                                     GatheredScalars.front()->getType(),
-                                     GatheredScalars.size())));
+                                     ScalarTy, GatheredScalars.size())));
       SmallVector<int> ReuseMask(Gathers.size(), PoisonMaskElem);
       std::iota(ReuseMask.begin(), ReuseMask.end(), 0);
       Estimator.add(BV, ReuseMask);
@@ -7680,8 +7689,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     // need to shift the vector.
     // Do not calculate the cost if the actual size is the register size and
     // we can merge this shuffle with the following SK_Select.
-    auto *InsertVecTy =
-        FixedVectorType::get(SrcVecTy->getElementType(), InsertVecSz);
+    auto *InsertVecTy = FixedVectorType::get(ScalarTy, InsertVecSz);
     if (!IsIdentity)
       Cost += TTI->getShuffleCost(TargetTransformInfo::SK_PermuteSingleSrc,
                                   InsertVecTy, Mask);
@@ -7697,8 +7705,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
                       buildUseMask(NumElts, InsertMask, UseMask::UndefsAsMask));
     if (!InMask.all() && NumScalars != NumElts && !IsWholeSubvector) {
       if (InsertVecSz != VecSz) {
-        auto *ActualVecTy =
-            FixedVectorType::get(SrcVecTy->getElementType(), VecSz);
+        auto *ActualVecTy = FixedVectorType::get(ScalarTy, VecSz);
         Cost += TTI->getShuffleCost(TTI::SK_InsertSubvector, ActualVecTy,
                                     std::nullopt, CostKind, OffsetBeg - Offset,
                                     InsertVecTy);
@@ -7729,22 +7736,60 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
   case Instruction::Trunc:
   case Instruction::FPTrunc:
   case Instruction::BitCast: {
+    auto SrcIt = MinBWs.find(VL0->getOperand(0));
+    Type *SrcScalarTy = VL0->getOperand(0)->getType();
+    auto *SrcVecTy = FixedVectorType::get(SrcScalarTy, VL.size());
+    unsigned Opcode = ShuffleOrOp;
+    if (!ScalarTy->isFloatingPointTy() && !SrcScalarTy->isFloatingPointTy() &&
+        (SrcIt != MinBWs.end() || It != MinBWs.end())) {
+      // Check if the values are candidates to demote.
+      unsigned SrcBWSz = DL->getTypeSizeInBits(SrcScalarTy);
+      if (SrcIt != MinBWs.end()) {
+        SrcBWSz = SrcIt->second.first;
+        SrcScalarTy = IntegerType::get(F->getContext(), SrcBWSz);
+        SrcVecTy = FixedVectorType::get(SrcScalarTy, VL.size());
+      }
+      unsigned BWSz = DL->getTypeSizeInBits(ScalarTy);
+      if (BWSz == SrcBWSz) {
+        Opcode = Instruction::BitCast;
+      } else if (BWSz < SrcBWSz) {
+        Opcode = Instruction::Trunc;
+      } else if (It != MinBWs.end()) {
+        assert(BWSz > SrcBWSz && "Invalid cast!");
+        Opcode = It->second.second ? Instruction::SExt : Instruction::ZExt;
+      }
+    }
     auto GetScalarCost = [=](unsigned Idx) {
-      auto *VI = cast<Instruction>(VL[Idx]);
-      return TTI->getCastInstrCost(E->getOpcode(), ScalarTy,
-                                   VI->getOperand(0)->getType(),
+      auto *VI =
+          VL0->getOpcode() == Opcode ? cast<Instruction>(VL[Idx]) : nullptr;
+      return TTI->getCastInstrCost(Opcode, ScalarTy, SrcScalarTy,
                                    TTI::getCastContextHint(VI), CostKind, VI);
     };
+    TTI::CastContextHint CCH = TTI::CastContextHint::None;
+    if (const TreeEntry *OpTE = getTreeEntry(VL0->getOperand(0))) {
+      if (OpTE->State == TreeEntry::ScatterVectorize) {
+        CCH = TTI::CastContextHint::GatherScatter;
+      } else if (OpTE->State == TreeEntry::Vectorize &&
+                 OpTE->getOpcode() == Instruction::Load &&
+                 !OpTE->isAltShuffle()) {
+        if (OpTE->ReorderIndices.empty()) {
+          CCH = TTI::CastContextHint::Normal;
+        } else {
+          SmallVector<int> Mask;
+          inversePermutation(OpTE->ReorderIndices, Mask);
+          if (ShuffleVectorInst::isReverseMask(Mask))
+            CCH = TTI::CastContextHint::Reversed;
+        }
+      }
+    } else {
+      InstructionsState SrcState = getSameOpcode(E->getOperand(0), *TLI);
+      if (SrcState.getOpcode() == Instruction::Load && !SrcState.isAltShuffle())
+        CCH = TTI::CastContextHint::GatherScatter;
+    }
     auto GetVectorCost = [=](InstructionCost CommonCost) {
-      Type *SrcTy = VL0->getOperand(0)->getType();
-      auto *SrcVecTy = FixedVectorType::get(SrcTy, VL.size());
-      InstructionCost VecCost = CommonCost;
-      // Check if the values are candidates to demote.
-      if (!MinBWs.count(VL0) || VecTy != SrcVecTy)
-        VecCost +=
-            TTI->getCastInstrCost(E->getOpcode(), VecTy, SrcVecTy,
-                                  TTI::getCastContextHint(VL0), CostKind, VL0);
-      return VecCost;
+      auto *VI = VL0->getOpcode() == Opcode ? VL0 : nullptr;
+      return CommonCost +
+             TTI->getCastInstrCost(Opcode, VecTy, SrcVecTy, CCH, CostKind, VI);
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
@@ -8568,10 +8613,11 @@ InstructionCost BoUpSLP::getTreeCost(ArrayRef<Value *> VectorizedVals) {
     auto *VecTy = FixedVectorType::get(EU.Scalar->getType(), BundleWidth);
     TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
     auto *ScalarRoot = VectorizableTree[0]->Scalars[0];
-    if (MinBWs.count(ScalarRoot)) {
-      auto *MinTy = IntegerType::get(F->getContext(), MinBWs[ScalarRoot].first);
-      auto Extend =
-          MinBWs[ScalarRoot].second ? Instruction::SExt : Instruction::ZExt;
+    auto It = MinBWs.find(ScalarRoot);
+    if (It != MinBWs.end()) {
+      auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
+      unsigned Extend =
+          It->second.second ? Instruction::SExt : Instruction::ZExt;
       VecTy = FixedVectorType::get(MinTy, BundleWidth);
       ExtractCost += TTI->getExtractWithExtendCost(Extend, EU.Scalar->getType(),
                                                    VecTy, EU.Lane);
@@ -10210,8 +10256,7 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     case Instruction::ExtractValue: {
       auto *LI = cast<LoadInst>(E->getSingleOperand(0));
       Builder.SetInsertPoint(LI);
-      auto *PtrTy = PointerType::get(VecTy, LI->getPointerAddressSpace());
-      Value *Ptr = Builder.CreateBitCast(LI->getOperand(0), PtrTy);
+      Value *Ptr = LI->getPointerOperand();
       LoadInst *V = Builder.CreateAlignedLoad(VecTy, Ptr, LI->getAlign());
       Value *NewV = propagateMetadata(V, E->Scalars);
       NewV = FinalShuffle(NewV, E);
@@ -10553,28 +10598,23 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
     }
     case Instruction::Store: {
       auto *SI = cast<StoreInst>(VL0);
-      unsigned AS = SI->getPointerAddressSpace();
 
       setInsertPointAfterBundle(E);
 
       Value *VecValue = vectorizeOperand(E, 0);
       VecValue = FinalShuffle(VecValue, E);
 
-      Value *ScalarPtr = SI->getPointerOperand();
-      Value *VecPtr = Builder.CreateBitCast(
-          ScalarPtr, VecValue->getType()->getPointerTo(AS));
+      Value *Ptr = SI->getPointerOperand();
       StoreInst *ST =
-          Builder.CreateAlignedStore(VecValue, VecPtr, SI->getAlign());
+          Builder.CreateAlignedStore(VecValue, Ptr, SI->getAlign());
 
-      // The pointer operand uses an in-tree scalar, so add the new BitCast or
-      // StoreInst to ExternalUses to make sure that an extract will be
-      // generated in the future.
-      if (TreeEntry *Entry = getTreeEntry(ScalarPtr)) {
+      // The pointer operand uses an in-tree scalar, so add the new StoreInst to
+      // ExternalUses to make sure that an extract will be generated in the
+      // future.
+      if (TreeEntry *Entry = getTreeEntry(Ptr)) {
         // Find which lane we need to extract.
-        unsigned FoundLane = Entry->findLaneForValue(ScalarPtr);
-        ExternalUses.push_back(ExternalUser(
-            ScalarPtr, ScalarPtr != VecPtr ? cast<User>(VecPtr) : ST,
-            FoundLane));
+        unsigned FoundLane = Entry->findLaneForValue(Ptr);
+        ExternalUses.push_back(ExternalUser(Ptr, ST, FoundLane));
       }
 
       Value *V = propagateMetadata(ST, E->Scalars);
@@ -10854,7 +10894,8 @@ Value *BoUpSLP::vectorizeTree(
   // vectorized root. InstCombine will then rewrite the entire expression. We
   // sign extend the extracted values below.
   auto *ScalarRoot = VectorizableTree[0]->Scalars[0];
-  if (MinBWs.count(ScalarRoot)) {
+  auto It = MinBWs.find(ScalarRoot);
+  if (It != MinBWs.end()) {
     if (auto *I = dyn_cast<Instruction>(VectorRoot)) {
       // If current instr is a phi and not the last phi, insert it after the
       // last phi node.
@@ -10864,7 +10905,7 @@ Value *BoUpSLP::vectorizeTree(
         Builder.SetInsertPoint(&*++BasicBlock::iterator(I));
     }
     auto BundleWidth = VectorizableTree[0]->Scalars.size();
-    auto *MinTy = IntegerType::get(F->getContext(), MinBWs[ScalarRoot].first);
+    auto *MinTy = IntegerType::get(F->getContext(), It->second.first);
     auto *VecTy = FixedVectorType::get(MinTy, BundleWidth);
     auto *Trunc = Builder.CreateTrunc(VectorRoot, VecTy);
     VectorizableTree[0]->VectorizedValue = Trunc;
@@ -10936,9 +10977,10 @@ Value *BoUpSLP::vectorizeTree(
         }
         // If necessary, sign-extend or zero-extend ScalarRoot
         // to the larger type.
-        if (!MinBWs.count(ScalarRoot))
+        auto BWIt = MinBWs.find(ScalarRoot);
+        if (BWIt == MinBWs.end())
           return Ex;
-        if (MinBWs[ScalarRoot].second)
+        if (BWIt->second.second)
           return Builder.CreateSExt(Ex, Scalar->getType());
         return Builder.CreateZExt(Ex, Scalar->getType());
       }
@@ -10979,7 +11021,7 @@ Value *BoUpSLP::vectorizeTree(
           std::optional<unsigned> InsertIdx = getInsertIndex(VU);
           if (InsertIdx) {
             // Need to use original vector, if the root is truncated.
-            if (MinBWs.count(Scalar) &&
+            if (MinBWs.contains(Scalar) &&
                 VectorizableTree[0]->VectorizedValue == Vec)
               Vec = VectorRoot;
             auto *It =
@@ -12243,7 +12285,7 @@ void BoUpSLP::computeMinimumValueSizes() {
 
   // Finally, map the values we can demote to the maximum bit with we computed.
   for (auto *Scalar : ToDemote)
-    MinBWs[Scalar] = std::make_pair(MaxBitWidth, !IsKnownPositive);
+    MinBWs.try_emplace(Scalar, MaxBitWidth, !IsKnownPositive);
 }
 
 PreservedAnalyses SLPVectorizerPass::run(Function &F, FunctionAnalysisManager &AM) {

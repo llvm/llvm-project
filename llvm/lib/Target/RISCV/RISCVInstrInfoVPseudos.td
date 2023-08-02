@@ -192,7 +192,7 @@ defvar MxListFWRed = [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8];
 // Use for zext/sext.vf2
 defvar MxListVF2 = [V_MF4, V_MF2, V_M1, V_M2, V_M4, V_M8];
 
-// Use for zext/sext.vf4
+// Use for zext/sext.vf4 and vector crypto instructions
 defvar MxListVF4 = [V_MF2, V_M1, V_M2, V_M4, V_M8];
 
 // Use for zext/sext.vf8
@@ -2012,6 +2012,19 @@ multiclass VPseudoBinary<VReg RetClass,
     def suffix # "_MASK" : VPseudoBinaryMaskPolicy<RetClass, Op1Class, Op2Class,
                                                    Constraint>,
                            RISCVMaskedPseudo<MaskIdx=3>;
+  }
+}
+
+multiclass VPseudoBinaryNoMask<VReg RetClass,
+                               VReg Op1Class,
+                               DAGOperand Op2Class,
+                               LMULInfo MInfo,
+                               string Constraint = "",
+                               int sew = 0> {
+  let VLMul = MInfo.value, SEW=sew in {
+    defvar suffix = !if(sew, "_" # MInfo.MX # "_E" # sew, "_" # MInfo.MX);
+    def suffix : VPseudoBinaryNoMaskTU<RetClass, Op1Class, Op2Class,
+                                       Constraint>;
   }
 }
 

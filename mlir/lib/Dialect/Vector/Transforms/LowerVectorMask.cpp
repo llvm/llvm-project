@@ -77,9 +77,7 @@ public:
       Value val = rewriter.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
                                                  bnd, idx);
       Value sel = rewriter.create<arith::SelectOp>(loc, val, trueVal, falseVal);
-      auto pos = rewriter.getI64ArrayAttr(d);
-      result =
-          rewriter.create<vector::InsertOp>(loc, dstType, sel, result, pos);
+      result = rewriter.create<vector::InsertOp>(loc, dstType, sel, result, d);
     }
     rewriter.replaceOp(op, result);
     return success();
@@ -151,11 +149,9 @@ public:
         loc, lowType, rewriter.getI64ArrayAttr(newDimSizes));
     Value result = rewriter.create<arith::ConstantOp>(
         loc, dstType, rewriter.getZeroAttr(dstType));
-    for (int64_t d = 0; d < trueDim; d++) {
-      auto pos = rewriter.getI64ArrayAttr(d);
+    for (int64_t d = 0; d < trueDim; d++)
       result =
-          rewriter.create<vector::InsertOp>(loc, dstType, trueVal, result, pos);
-    }
+          rewriter.create<vector::InsertOp>(loc, dstType, trueVal, result, d);
     rewriter.replaceOp(op, result);
     return success();
   }

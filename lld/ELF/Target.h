@@ -14,6 +14,7 @@
 #include "lld/Common/ErrorHandler.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Object/ELF.h"
+#include "llvm/Object/ELFTypes.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/MathExtras.h"
 #include <array>
@@ -233,6 +234,7 @@ void addArmInputSectionMappingSymbols();
 void addArmSyntheticSectionMappingSymbol(Defined *);
 void sortArmMappingSymbols();
 void convertArmInstructionstoBE8(InputSection *sec, uint8_t *buf);
+void createTaggedSymbols(const SmallVector<ELFFileBase *, 0> &files);
 
 LLVM_LIBRARY_VISIBILITY extern const TargetInfo *target;
 TargetInfo *getTarget();
@@ -306,17 +308,17 @@ inline void write64(void *p, uint64_t v) {
 #endif
 #define invokeELFT(f, ...)                                                     \
   switch (config->ekind) {                                                     \
-  case ELF32LEKind:                                                            \
-    f<ELF32LE>(__VA_ARGS__);                                                   \
+  case lld::elf::ELF32LEKind:                                                  \
+    f<llvm::object::ELF32LE>(__VA_ARGS__);                                     \
     break;                                                                     \
-  case ELF32BEKind:                                                            \
-    f<ELF32BE>(__VA_ARGS__);                                                   \
+  case lld::elf::ELF32BEKind:                                                  \
+    f<llvm::object::ELF32BE>(__VA_ARGS__);                                     \
     break;                                                                     \
-  case ELF64LEKind:                                                            \
-    f<ELF64LE>(__VA_ARGS__);                                                   \
+  case lld::elf::ELF64LEKind:                                                  \
+    f<llvm::object::ELF64LE>(__VA_ARGS__);                                     \
     break;                                                                     \
-  case ELF64BEKind:                                                            \
-    f<ELF64BE>(__VA_ARGS__);                                                   \
+  case lld::elf::ELF64BEKind:                                                  \
+    f<llvm::object::ELF64BE>(__VA_ARGS__);                                     \
     break;                                                                     \
   default:                                                                     \
     llvm_unreachable("unknown config->ekind");                                 \

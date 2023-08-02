@@ -7142,7 +7142,6 @@ llvm/tools/llvm-reduce/deltas/ReduceOperandsToArgs.cpp
 llvm/tools/llvm-reduce/deltas/ReduceOperandsToArgs.h
 llvm/tools/llvm-reduce/deltas/ReduceSpecialGlobals.cpp
 llvm/tools/llvm-reduce/deltas/ReduceSpecialGlobals.h
-llvm/tools/llvm-remark-size-diff/RemarkSizeDiff.cpp
 llvm/tools/llvm-rust-demangle-fuzzer/DummyDemanglerFuzzer.cpp
 llvm/tools/llvm-rust-demangle-fuzzer/llvm-rust-demangle-fuzzer.cpp
 llvm/tools/llvm-shlib/libllvm.cpp

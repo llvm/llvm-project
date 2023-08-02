@@ -214,6 +214,8 @@ static bool integerExtendSupportsMMAMatrixType(ExtOpTy extOp) {
   });
 }
 
+static bool fpExtendSupportsMMAMatrixType(arith::ExtFOp extOp) { return true; }
+
 /// Return the MMA elementwise enum associated with `op` if it is supported.
 /// Return `std::nullopt` otherwise.
 static std::optional<gpu::MMAElementwiseOp>
@@ -242,6 +244,8 @@ convertElementwiseOpToMMA(Operation *op) {
     return gpu::MMAElementwiseOp::DIVU;
   if (isa<arith::NegFOp>(op))
     return gpu::MMAElementwiseOp::NEGATEF;
+  if (isa<arith::ExtFOp>(op))
+    return gpu::MMAElementwiseOp::EXTF;
   return std::nullopt;
 }
 
@@ -297,6 +301,8 @@ static bool supportsMMaMatrixType(Operation *op, bool useNvGpu) {
     return integerExtendSupportsMMAMatrixType<arith::ExtSIOp>(signedExtend);
   if (auto unsignedExtend = dyn_cast<arith::ExtUIOp>(op))
     return integerExtendSupportsMMAMatrixType<arith::ExtUIOp>(unsignedExtend);
+  if (auto fpExtend = dyn_cast<arith::ExtFOp>(op))
+    return fpExtendSupportsMMAMatrixType(fpExtend);
   return elementwiseSupportsMMAMatrixType(op);
 }
 
@@ -807,8 +813,7 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
 
       Value el = rewriter.create<vector::LoadOp>(loc, loadedElType,
                                                  op.getSource(), newIndices);
-      result = rewriter.create<vector::InsertOp>(loc, el, result,
-                                                 rewriter.getI64ArrayAttr(i));
+      result = rewriter.create<vector::InsertOp>(loc, el, result, i);
     }
   } else {
     if (auto vecType = dyn_cast<VectorType>(loadedElType)) {
@@ -832,7 +837,7 @@ createNonLdMatrixLoads(RewriterBase &rewriter, vector::TransferReadOp op,
         Value el = rewriter.create<memref::LoadOp>(op.getLoc(), loadedElType,
                                                    op.getSource(), newIndices);
         result = rewriter.create<vector::InsertOp>(
-            op.getLoc(), el, result, rewriter.getI64ArrayAttr({i, innerIdx}));
+            op.getLoc(), el, result, ArrayRef<int64_t>{i, innerIdx});
       }
     }
   }
@@ -1204,8 +1209,17 @@ convertElementwiseOp(RewriterBase &rewriter, Operation *op,
       return rewriter.notifyMatchFailure(op, "no mapping");
     matrixOperands.push_back(it->second);
   }
+  auto resultType = matrixOperands[0].getType().cast<gpu::MMAMatrixType>();
+  if (opType == gpu::MMAElementwiseOp::EXTF) {
+    // The floating point extension case has a different result type.
+    auto vectorType = op->getResultTypes()[0].cast<VectorType>();
+    resultType = gpu::MMAMatrixType::get(resultType.getShape(),
+                                         vectorType.getElementType(),
+                                         resultType.getOperand());
+  }
+
   Value newOp = rewriter.create<gpu::SubgroupMmaElementwiseOp>(
-      op->getLoc(), matrixOperands[0].getType(), matrixOperands, opType);
+      op->getLoc(), resultType, matrixOperands, opType);
   valueMapping[op->getResult(0)] = newOp;
   return success();
 }

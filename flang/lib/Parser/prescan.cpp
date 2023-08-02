@@ -106,7 +106,7 @@ void Prescanner::Statement() {
   case LineClassification::Kind::PreprocessorDirective:
     preprocessor_.Directive(TokenizePreprocessorDirective(), *this);
     return;
-  case LineClassification::Kind::CompilerDirective:
+  case LineClassification::Kind::CompilerDirective: {
     directiveSentinel_ = line.sentinel;
     CHECK(InCompilerDirective());
     BeginStatementAndAdvance();
@@ -118,22 +118,22 @@ void Prescanner::Statement() {
       }
       CHECK(*at_ == '!');
     }
+    std::optional<int> condOffset;
     if (directiveSentinel_[0] == '$' && directiveSentinel_[1] == '\0') {
-      // OpenMP conditional compilation line.  Remove the sentinel and then
-      // treat the line as if it were normal source.
-      at_ += 2, column_ += 2;
-      if (inFixedForm_) {
-        LabelField(tokens);
-      } else {
-        SkipSpaces();
-      }
+      // OpenMP conditional compilation line.
+      condOffset = 2;
     } else if (directiveSentinel_[0] == '@' && directiveSentinel_[1] == 'c' &&
         directiveSentinel_[2] == 'u' && directiveSentinel_[3] == 'f' &&
         directiveSentinel_[4] == '\0') {
-      // CUDA conditional compilation line.  Remove the sentinel and then
-      // treat the line as if it were normal source.
-      at_ += 5, column_ += 5;
-      if (inFixedForm_) {
+      // CUDA conditional compilation line.
+      condOffset = 5;
+    }
+    if (condOffset) {
+      at_ += *condOffset, column_ += *condOffset;
+      if (auto payload{IsIncludeLine(at_)}) {
+        FortranInclude(at_ + *payload);
+        return;
+      } else if (inFixedForm_) {
         LabelField(tokens);
       } else {
         SkipSpaces();
@@ -153,6 +153,7 @@ void Prescanner::Statement() {
       tokens.CloseToken();
     }
     break;
+  }
   case LineClassification::Kind::Source:
     BeginStatementAndAdvance();
     if (inFixedForm_) {
@@ -630,10 +631,14 @@ bool Prescanner::NextToken(TokenSequence &tokens) {
     }
   } else {
     char ch{*at_};
-    if (ch == '(' || ch == '[') {
-      ++delimiterNesting_;
-    } else if ((ch == ')' || ch == ']') && delimiterNesting_ > 0) {
-      --delimiterNesting_;
+    if (ch == '(') {
+      if (parenthesisNesting_++ == 0) {
+        isPossibleMacroCall_ = tokens.SizeInTokens() > 0 &&
+            preprocessor_.IsNameDefined(
+                tokens.TokenAt(tokens.SizeInTokens() - 1));
+      }
+    } else if (ch == ')' && parenthesisNesting_ > 0) {
+      --parenthesisNesting_;
     }
     char nch{EmitCharAndAdvance(tokens, ch)};
     preventHollerith_ = false;
@@ -1142,8 +1147,9 @@ bool Prescanner::FreeFormContinuation() {
 // Implicit line continuation allows a preprocessor macro call with
 // arguments to span multiple lines.
 bool Prescanner::IsImplicitContinuation() const {
-  return !inPreprocessorDirective_ && !inCharLiteral_ &&
-      delimiterNesting_ > 0 && !IsAtEnd() &&
+  return !inPreprocessorDirective_ && !inCharLiteral_ && isPossibleMacroCall_ &&
+      parenthesisNesting_ > 0 &&
+      !preprocessor_.anyMacroWithUnbalancedParentheses() && !IsAtEnd() &&
       ClassifyLine(nextLine_).kind == LineClassification::Kind::Source;
 }
 

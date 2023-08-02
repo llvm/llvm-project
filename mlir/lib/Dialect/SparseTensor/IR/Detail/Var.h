@@ -60,7 +60,7 @@ namespace ir_detail {
 /// representation.
 enum class VarKind { Symbol = 1, Dimension = 0, Level = 2 };
 
-constexpr bool isWF(VarKind vk) {
+[[nodiscard]] constexpr bool isWF(VarKind vk) {
   const auto vk_ = to_underlying(vk);
   return 0 <= vk_ && vk_ <= 2;
 }
@@ -145,7 +145,7 @@ public:
   //
   // This must be public for `VarInfo` to use it (whereas we don't want
   // to expose the `impl` field via friendship).
-  static constexpr bool isWF_Num(Num n) { return n <= kMaxNum; }
+  [[nodiscard]] static constexpr bool isWF_Num(Num n) { return n <= kMaxNum; }
 
 protected:
   /// The underlying implementation of `Var`.  Note that this must be kept
@@ -179,7 +179,10 @@ protected:
 public:
   constexpr Var(VarKind vk, Num n) : impl(Impl(vk, n)) {}
   Var(AffineSymbolExpr sym) : Var(VarKind::Symbol, sym.getPosition()) {}
-  Var(VarKind vk, AffineDimExpr var) : Var(vk, var.getPosition()) {}
+  // TODO(wrengr): Should make the first argument an `ExprKind` instead...?
+  Var(VarKind vk, AffineDimExpr var) : Var(vk, var.getPosition()) {
+    assert(vk != VarKind::Symbol);
+  }
 
   constexpr bool operator==(Var other) const { return impl == other.impl; }
   constexpr bool operator!=(Var other) const { return !(*this == other); }
@@ -289,15 +292,18 @@ public:
       : Ranks(ranks[VarKind::Symbol], ranks[VarKind::Dimension],
               ranks[VarKind::Level]) {}
 
+  bool operator==(Ranks const &other) const;
+  bool operator!=(Ranks const &other) const { return !(*this == other); }
+
   constexpr unsigned getRank(VarKind vk) const { return impl[to_index(vk)]; }
   constexpr unsigned getSymRank() const { return getRank(VarKind::Symbol); }
   constexpr unsigned getDimRank() const { return getRank(VarKind::Dimension); }
   constexpr unsigned getLvlRank() const { return getRank(VarKind::Level); }
 
-  constexpr bool isValid(Var var) const {
+  [[nodiscard]] constexpr bool isValid(Var var) const {
     return var.getNum() < getRank(var.getKind());
   }
-  bool isValid(DimLvlExpr expr) const;
+  [[nodiscard]] bool isValid(DimLvlExpr expr) const;
 };
 static_assert(IsZeroCostAbstraction<Ranks>);
 
@@ -320,6 +326,14 @@ class VarSet final {
 
 public:
   explicit VarSet(Ranks const &ranks);
+
+  unsigned getRank(VarKind vk) const { return impl[vk].size(); }
+  unsigned getSymRank() const { return getRank(VarKind::Symbol); }
+  unsigned getDimRank() const { return getRank(VarKind::Dimension); }
+  unsigned getLvlRank() const { return getRank(VarKind::Level); }
+  Ranks getRanks() const {
+    return Ranks(getSymRank(), getDimRank(), getLvlRank());
+  }
 
   bool contains(Var var) const;
   bool occursIn(VarSet const &vars) const;
@@ -345,13 +359,8 @@ public:
   enum class ID : unsigned {};
 
 private:
-  // FUTURE_CL(wrengr): We could use the high-bit of `Var::Impl` to
-  // store the `std::optional` bit, therefore allowing us to bitbash the
-  // `num` and `kind` fields together.
-  //
   StringRef name;              // The bare-id used in the MLIR source.
   llvm::SMLoc loc;             // The location of the first occurence.
-                               // TODO(wrengr): See the above `LocatedVar` note.
   ID id;                       // The unique `VarInfo`-identifier.
   std::optional<Var::Num> num; // The unique `Var`-identifier (if resolved).
   VarKind kind;                // The kind of variable.

@@ -95,6 +95,8 @@ Attribute Changes in Clang
 
 Improvements to Clang's diagnostics
 -----------------------------------
+- Clang constexpr evaluator now prints template arguments when displaying
+  template-specialization function calls.
 
 Bug Fixes in This Version
 -------------------------
@@ -129,6 +131,12 @@ Bug Fixes to C++ Support
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed an import failure of recursive friend class template.
+  `Issue 64169 <https://github.com/llvm/llvm-project/issues/64169>`_
+- Remove unnecessary RecordLayout computation when importing UnaryOperator. The
+  computed RecordLayout is incorrect if fields are not completely imported and
+  should not be cached.
+  `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
@@ -154,9 +162,6 @@ Windows Support
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
 
-- The ``-march=native`` ``-mtune=`` options and ``__loongarch_{arch,tune}``
-  macros are now supported.
-
 RISC-V Support
 ^^^^^^^^^^^^^^
 
@@ -180,6 +185,14 @@ DWARF Support in Clang
 
 Floating Point Support in Clang
 -------------------------------
+- Add ``__builtin_elementwise_log`` builtin for floating point types only.
+- Add ``__builtin_elementwise_log10`` builtin for floating point types only.
+- Add ``__builtin_elementwise_log2`` builtin for floating point types only.
+- Add ``__builtin_elementwise_exp`` builtin for floating point types only.
+- Add ``__builtin_elementwise_exp2`` builtin for floating point types only.
+- Add ``__builtin_set_flt_rounds`` builtin for X86, x86_64, Arm and AArch64 only.
+- Add ``__builtin_elementwise_pow`` builtin for floating point types only.
+- Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
 
 AST Matchers
 ------------

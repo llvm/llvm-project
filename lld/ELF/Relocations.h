@@ -220,6 +220,11 @@ ArrayRef<RelTy> sortRels(ArrayRef<RelTy> rels, SmallVector<RelTy, 0> &storage) {
   }
   return rels;
 }
+
+// Returns true if Expr refers a GOT entry. Note that this function returns
+// false for TLS variables even though they need GOT, because TLS variables uses
+// GOT differently than the regular variables.
+bool needsGot(RelExpr expr);
 } // namespace lld::elf
 
 #endif

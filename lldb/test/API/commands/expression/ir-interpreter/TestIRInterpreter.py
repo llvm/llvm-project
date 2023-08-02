@@ -12,6 +12,41 @@ from lldbsuite.test import lldbutil
 class IRInterpreterTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    def time_expression(self, expr, options):
+        start = time.time()
+        res = self.target.EvaluateExpression(expr, options)
+        return res, time.time() - start
+
+    def test_interpreter_timeout(self):
+        """Test the timeout logic in the IRInterpreter."""
+        self.build()
+        self.target = self.dbg.CreateTarget(self.getBuildArtifact("a.out"))
+        self.assertTrue(self.target, VALID_TARGET)
+
+        # A non-trivial infinite loop.
+        inf_loop = "for (unsigned i = 0; i < 100; ++i) --i; 1"
+        timeout_error = "Reached timeout while interpreting expression"
+        options = lldb.SBExpressionOptions()
+
+        # This is an IRInterpreter specific test, so disable the JIT.
+        options.SetAllowJIT(False)
+
+        # No timeout means a 500ms.
+        options.SetTimeoutInMicroSeconds(0)
+        res, duration_sec = self.time_expression(inf_loop, options)
+        self.assertIn(timeout_error, str(res.GetError()))
+
+        # Depending on the machine load the expression might take quite some
+        # time, so give the time a generous upper bound.
+        self.assertLess(duration_sec, 15)
+
+        # Try a simple one second timeout.
+        options.SetTimeoutInMicroSeconds(1000000)
+        res, duration_sec = self.time_expression(inf_loop, options)
+        self.assertIn(timeout_error, str(res.GetError()))
+        self.assertGreaterEqual(duration_sec, 1)
+        self.assertLess(duration_sec, 30)
+
     def setUp(self):
         # Call super's setUp().
         TestBase.setUp(self)

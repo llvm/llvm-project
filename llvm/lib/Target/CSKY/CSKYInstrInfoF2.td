@@ -208,6 +208,16 @@ defm f2FNMULS : F2_XYZZ_T<0b010101, "fnmuls",
 defm f2FNMUL : F2_XYZ_T<0b010001, "fnmul",
   BinOpFrag<(fneg (fmul node:$LHS, node:$RHS))>>;
 
+// multiplication
+let Predicates = [HasFPUv3_SF] in {
+  def : Pat<(f32 (fmul (fneg FPR32Op:$vrx), FPR32Op:$vry)),
+            (f2FNMUL_S FPR32Op:$vrx, FPR32Op:$vry)>;
+}
+let Predicates = [HasFPUv3_DF] in {
+  def : Pat<(f64 (fmul (fneg FPR64Op:$vrx), FPR64Op:$vry)),
+            (f2FNMUL_D FPR64Op:$vrx, FPR64Op:$vry)>;
+}
+
 // fcvt
 def f2FFTOS32_S  : F2_XZ_P<0b01000, 0b011011, "fftoi.f32.s32", [], (outs FPR32Op:$vrz), (ins FPR32Op:$vrx)>;
 def f2FFTOU32_S  : F2_XZ_P<0b01000, 0b011010, "fftoi.f32.u32", [], (outs FPR32Op:$vrz), (ins FPR32Op:$vrx)>;

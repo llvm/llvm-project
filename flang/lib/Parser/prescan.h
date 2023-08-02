@@ -109,8 +109,9 @@ private:
     BeginSourceLineAndAdvance();
     slashInCurrentStatement_ = false;
     preventHollerith_ = false;
-    delimiterNesting_ = 0;
+    parenthesisNesting_ = 0;
     continuationLines_ = 0;
+    isPossibleMacroCall_ = false;
   }
 
   Provenance GetProvenance(const char *sourceChar) const {
@@ -194,9 +195,10 @@ private:
   bool inFixedForm_{false};
   int fixedFormColumnLimit_{72};
   Encoding encoding_{Encoding::UTF_8};
-  int delimiterNesting_{0};
+  int parenthesisNesting_{0};
   int prescannerNesting_{0};
   int continuationLines_{0};
+  bool isPossibleMacroCall_{false};
 
   Provenance startProvenance_;
   const char *start_{nullptr}; // beginning of current source file content

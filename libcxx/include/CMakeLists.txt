@@ -249,6 +249,7 @@ set(files
   __bit/countr.h
   __bit/endian.h
   __bit/has_single_bit.h
+  __bit/invert_if.h
   __bit/popcount.h
   __bit/rotate.h
   __bit_reference
@@ -415,6 +416,7 @@ set(files
   __functional/unary_negate.h
   __functional/weak_result_type.h
   __fwd/array.h
+  __fwd/bit_reference.h
   __fwd/fstream.h
   __fwd/get.h
   __fwd/hash.h
@@ -479,6 +481,25 @@ set(files
   __locale_dir/locale_base_api/bsd_locale_defaults.h
   __locale_dir/locale_base_api/bsd_locale_fallbacks.h
   __locale_dir/locale_base_api/locale_guard.h
+  __math/abs.h
+  __math/copysign.h
+  __math/error_functions.h
+  __math/exponential_functions.h
+  __math/fdim.h
+  __math/fma.h
+  __math/gamma.h
+  __math/hyperbolic_functions.h
+  __math/hypot.h
+  __math/inverse_hyperbolic_functions.h
+  __math/inverse_trigonometric_functions.h
+  __math/logarithms.h
+  __math/min_max.h
+  __math/modulo.h
+  __math/remainder.h
+  __math/roots.h
+  __math/rounding_functions.h
+  __math/traits.h
+  __math/trigonometric_functions.h
   __mbstate_t.h
   __mdspan/default_accessor.h
   __mdspan/extents.h

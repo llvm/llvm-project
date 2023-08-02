@@ -89,7 +89,7 @@ define dso_local i32 @test4(ptr readonly %0, i1 %cond) {
 ; COUNTER3-NEXT:    [[TMP3:%.*]] = load i32, ptr [[TMP0]], align 4
 ; COUNTER3-NEXT:    br label [[TMP4]]
 ; COUNTER3:       4:
-; COUNTER3-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[TMP2]] ], [ 0, [[A]] ]
+; COUNTER3-NEXT:    [[TMP5:%.*]] = phi i32 [ [[TMP3]], [[TMP2]] ], [ poison, [[A]] ]
 ; COUNTER3-NEXT:    ret i32 [[TMP5]]
 ;
   call void @llvm.assume(i1 true) ["dereferenceable"(ptr %0, i32 4)]

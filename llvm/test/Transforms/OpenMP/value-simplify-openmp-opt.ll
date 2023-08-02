@@ -856,7 +856,7 @@ declare void @llvm.assume(i1)
 ; TUNIT: attributes #[[ATTR2:[0-9]+]] = { nocallback norecurse nounwind "llvm.assume"="ompx_aligned_barrier" }
 ; TUNIT: attributes #[[ATTR3:[0-9]+]] = { nocallback norecurse nosync nounwind }
 ; TUNIT: attributes #[[ATTR4:[0-9]+]] = { nocallback }
-; TUNIT: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; TUNIT: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; TUNIT: attributes #[[ATTR6]] = { nounwind "llvm.assume"="ompx_aligned_barrier" }
 ; TUNIT: attributes #[[ATTR7]] = { nounwind }
 ;.
@@ -865,7 +865,7 @@ declare void @llvm.assume(i1)
 ; CGSCC: attributes #[[ATTR2:[0-9]+]] = { nocallback norecurse nounwind "llvm.assume"="ompx_aligned_barrier" }
 ; CGSCC: attributes #[[ATTR3:[0-9]+]] = { nocallback norecurse nosync nounwind }
 ; CGSCC: attributes #[[ATTR4:[0-9]+]] = { nocallback }
-; CGSCC: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: readwrite) }
+; CGSCC: attributes #[[ATTR5:[0-9]+]] = { nocallback nofree nosync nounwind willreturn memory(inaccessiblemem: write) }
 ; CGSCC: attributes #[[ATTR6]] = { nounwind }
 ;.
 ; CHECK: [[META0:![0-9]+]] = !{i32 7, !"openmp", i32 50}

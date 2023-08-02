@@ -490,7 +490,8 @@ define i1 @or(i32 %x) {
 define i1 @or_constexp(i32 %x) {
 ; CHECK-LABEL: @or_constexp(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[O:%.*]] = or i32 [[X:%.*]], and (i32 ptrtoint (ptr @GV to i32), i32 32)
+; CHECK-NEXT:    [[TMP0:%.*]] = and i32 ptrtoint (ptr @GV to i32), 32
+; CHECK-NEXT:    [[O:%.*]] = or i32 [[X:%.*]], [[TMP0]]
 ; CHECK-NEXT:    [[C:%.*]] = icmp eq i32 [[O]], 0
 ; CHECK-NEXT:    ret i1 [[C]]
 ;

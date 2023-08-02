@@ -31,7 +31,12 @@ namespace dataflow {
 /// values is stored in the environment.
 class StorageLocation {
 public:
-  enum class Kind { Scalar, Aggregate };
+  enum class Kind {
+    Scalar,
+    Record,
+    // Deprecated synonym for `Record`
+    Aggregate = Record,
+  };
 
   StorageLocation(Kind LocKind, QualType Type) : LocKind(LocKind), Type(Type) {
     assert(Type.isNull() || !Type->isReferenceType());
@@ -66,11 +71,11 @@ public:
   }
 };
 
-/// A storage location which is subdivided into smaller storage locations that
-/// can be traced independently by abstract interpretation. For example: a
-/// struct with public members. The child map is flat, so when used for a struct
-/// or class type, all accessible members of base struct and class types are
-/// directly accesible as children of this location.
+/// A storage location for a record (struct, class, or union).
+///
+/// Contains storage locations for all modeled fields of the record (also
+/// referred to as "children"). The child map is flat, so accessible members of
+/// the base class are directly accesible as children of this location.
 ///
 /// The storage location for a field of reference type may be null. This
 /// typically occurs in one of two situations:
@@ -82,16 +87,15 @@ public:
 /// FIXME: Currently, the storage location of unions is modelled the same way as
 /// that of structs or classes. Eventually, we need to change this modelling so
 /// that all of the members of a given union have the same storage location.
-class AggregateStorageLocation final : public StorageLocation {
+class RecordStorageLocation final : public StorageLocation {
 public:
   using FieldToLoc = llvm::DenseMap<const ValueDecl *, StorageLocation *>;
 
-  explicit AggregateStorageLocation(QualType Type)
-      : AggregateStorageLocation(Type, FieldToLoc()) {}
+  explicit RecordStorageLocation(QualType Type)
+      : RecordStorageLocation(Type, FieldToLoc()) {}
 
-  AggregateStorageLocation(QualType Type, FieldToLoc TheChildren)
-      : StorageLocation(Kind::Aggregate, Type),
-        Children(std::move(TheChildren)) {
+  RecordStorageLocation(QualType Type, FieldToLoc TheChildren)
+      : StorageLocation(Kind::Record, Type), Children(std::move(TheChildren)) {
     assert(!Type.isNull());
     assert(Type->isRecordType());
     assert([this] {
@@ -104,7 +108,7 @@ public:
   }
 
   static bool classof(const StorageLocation *Loc) {
-    return Loc->getKind() == Kind::Aggregate;
+    return Loc->getKind() == Kind::Record;
   }
 
   /// Returns the child storage location for `D`.
@@ -133,7 +137,7 @@ public:
 
   /// Changes the child storage location for a field `D` of reference type.
   /// All other fields cannot change their storage location and always retain
-  /// the storage location passed to the `AggregateStorageLocation` constructor.
+  /// the storage location passed to the `RecordStorageLocation` constructor.
   ///
   /// Requirements:
   ///
@@ -150,6 +154,9 @@ public:
 private:
   FieldToLoc Children;
 };
+
+/// Deprecated synonym for `RecordStorageLocation`.
+using AggregateStorageLocation = RecordStorageLocation;
 
 } // namespace dataflow
 } // namespace clang

@@ -629,14 +629,6 @@ bool TGParser::resolveArgumentsOfMultiClass(SubstStack &Substs, MultiClass *MC,
 // Parser Code
 //===----------------------------------------------------------------------===//
 
-/// isObjectStart - Return true if this is a valid first token for a statement.
-static bool isObjectStart(tgtok::TokKind K) {
-  return K == tgtok::Assert || K == tgtok::Class || K == tgtok::Def ||
-         K == tgtok::Defm || K == tgtok::Defset || K == tgtok::Defvar ||
-         K == tgtok::Foreach || K == tgtok::If || K == tgtok::Let ||
-         K == tgtok::MultiClass;
-}
-
 bool TGParser::consume(tgtok::TokKind K) {
   if (Lex.getCode() == K) {
     Lex.Lex();
@@ -2547,7 +2539,13 @@ Init *TGParser::ParseOperationCond(Record *CurRec, RecTy *ItemType) {
 Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
                                  IDParseMode Mode) {
   Init *R = nullptr;
-  switch (Lex.getCode()) {
+  tgtok::TokKind Code = Lex.getCode();
+
+  // Parse bang operators.
+  if (tgtok::isBangOperator(Code))
+    return ParseOperation(CurRec, ItemType);
+
+  switch (Code) {
   default: TokError("Unknown or reserved token when parsing a value"); break;
 
   case tgtok::TrueVal:
@@ -2801,58 +2799,6 @@ Init *TGParser::ParseSimpleValue(Record *CurRec, RecTy *ItemType,
     }
 
     return DagInit::get(Operator, OperatorName, DagArgs);
-  }
-
-  case tgtok::XHead:
-  case tgtok::XTail:
-  case tgtok::XSize:
-  case tgtok::XEmpty:
-  case tgtok::XCast:
-  case tgtok::XToLower:
-  case tgtok::XToUpper:
-  case tgtok::XGetDagOp: // Value ::= !unop '(' Value ')'
-  case tgtok::XExists:
-  case tgtok::XIsA:
-  case tgtok::XConcat:
-  case tgtok::XDag:
-  case tgtok::XADD:
-  case tgtok::XSUB:
-  case tgtok::XMUL:
-  case tgtok::XDIV:
-  case tgtok::XNOT:
-  case tgtok::XLOG2:
-  case tgtok::XAND:
-  case tgtok::XOR:
-  case tgtok::XXOR:
-  case tgtok::XSRA:
-  case tgtok::XSRL:
-  case tgtok::XSHL:
-  case tgtok::XEq:
-  case tgtok::XNe:
-  case tgtok::XLe:
-  case tgtok::XLt:
-  case tgtok::XGe:
-  case tgtok::XGt:
-  case tgtok::XListConcat:
-  case tgtok::XListSplat:
-  case tgtok::XListRemove:
-  case tgtok::XRange:
-  case tgtok::XStrConcat:
-  case tgtok::XInterleave:
-  case tgtok::XGetDagArg:
-  case tgtok::XGetDagName:
-  case tgtok::XSetDagOp: // Value ::= !binop '(' Value ',' Value ')'
-  case tgtok::XSetDagArg:
-  case tgtok::XSetDagName:
-  case tgtok::XIf:
-  case tgtok::XCond:
-  case tgtok::XFoldl:
-  case tgtok::XForEach:
-  case tgtok::XFilter:
-  case tgtok::XSubst:
-  case tgtok::XSubstr:
-  case tgtok::XFind: { // Value ::= !ternop '(' Value ',' Value ',' Value ')'
-    return ParseOperation(CurRec, ItemType);
   }
   }
 
@@ -4275,7 +4221,7 @@ bool TGParser::ParseObject(MultiClass *MC) {
 /// ParseObjectList
 ///   ObjectList :== Object*
 bool TGParser::ParseObjectList(MultiClass *MC) {
-  while (isObjectStart(Lex.getCode())) {
+  while (tgtok::isObjectStart(Lex.getCode())) {
     if (ParseObject(MC))
       return true;
   }

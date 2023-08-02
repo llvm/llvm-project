@@ -1581,8 +1581,8 @@ static unsigned gwsIntrinToOpcode(unsigned IntrID) {
 
 bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
                                                      Intrinsic::ID IID) const {
-  if (IID == Intrinsic::amdgcn_ds_gws_sema_release_all &&
-      !STI.hasGWSSemaReleaseAll())
+  if (!STI.hasGWS() || (IID == Intrinsic::amdgcn_ds_gws_sema_release_all &&
+                        !STI.hasGWSSemaReleaseAll()))
     return false;
 
   // intrinsic ID, vsrc, offset
@@ -3431,8 +3431,10 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_INSERT:
     return selectG_INSERT(I);
   case TargetOpcode::G_INTRINSIC:
+  case TargetOpcode::G_INTRINSIC_CONVERGENT:
     return selectG_INTRINSIC(I);
   case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+  case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS:
     return selectG_INTRINSIC_W_SIDE_EFFECTS(I);
   case TargetOpcode::G_ICMP:
     if (selectG_ICMP(I))
@@ -4375,8 +4377,12 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
   Register Reg = Root.getReg();
   const SIMachineFunctionInfo *Info = MF->getInfo<SIMachineFunctionInfo>();
 
-  const MachineInstr *Def = MRI->getVRegDef(Reg);
-  if (Register WaveBase = getWaveAddress(Def)) {
+  std::optional<DefinitionAndSourceRegister> Def =
+    getDefSrcRegIgnoringCopies(Reg, *MRI);
+  assert(Def && "this shouldn't be an optional result");
+  Reg = Def->Reg;
+
+  if (Register WaveBase = getWaveAddress(Def->MI)) {
     return {{
         [=](MachineInstrBuilder &MIB) { // rsrc
           MIB.addReg(Info->getScratchRSrcReg());
@@ -4392,10 +4398,12 @@ AMDGPUInstructionSelector::selectMUBUFScratchOffset(
 
   // FIXME: Copy check is a hack
   Register BasePtr;
-  if (mi_match(Reg, *MRI, m_GPtrAdd(m_Reg(BasePtr), m_Copy(m_ICst(Offset))))) {
+  if (mi_match(Reg, *MRI,
+               m_GPtrAdd(m_Reg(BasePtr),
+                         m_any_of(m_ICst(Offset), m_Copy(m_ICst(Offset)))))) {
     if (!SIInstrInfo::isLegalMUBUFImmOffset(Offset))
       return {};
-    const MachineInstr *BasePtrDef = MRI->getVRegDef(BasePtr);
+    MachineInstr *BasePtrDef = getDefIgnoringCopies(BasePtr, *MRI);
     Register WaveBase = getWaveAddress(BasePtrDef);
     if (!WaveBase)
       return {};

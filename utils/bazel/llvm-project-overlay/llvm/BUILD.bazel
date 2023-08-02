@@ -3522,12 +3522,21 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
+expand_template(
+    name = "dwp_main",
+    out = "llvm-dwp-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "llvm_dwp",
+    },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
+)
+
 cc_binary(
     name = "llvm-dwp",
     srcs = glob([
         "tools/llvm-dwp/*.cpp",
         "tools/llvm-dwp/*.h",
-    ]),
+    ]) + ["llvm-dwp-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -3725,12 +3734,21 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
+expand_template(
+    name = "libtool-darwin_main",
+    out = "llvm-libtool-darwin-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "llvm_libtool_darwin",
+    },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
+)
+
 cc_binary(
     name = "llvm-libtool-darwin",
     srcs = glob([
         "tools/llvm-libtool-darwin/*.cpp",
         "tools/llvm-libtool-darwin/*.h",
-    ]),
+    ]) + ["llvm-libtool-darwin-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -4444,24 +4462,6 @@ cc_binary(
 )
 
 cc_binary(
-    name = "llvm-remark-size-diff",
-    srcs = glob([
-        "tools/llvm-remark-size-diff/**/*.cpp",
-        "tools/llvm-remark-size-diff/**/*.h",
-    ]),
-    copts = llvm_copts,
-    includes = ["tools/llvm-reark-size-diff"],
-    stamp = 0,
-    deps = [
-        ":Core",
-        ":Demangle",
-        ":Object",
-        ":Remarks",
-        ":Support",
-    ],
-)
-
-cc_binary(
     name = "llvm-rtdyld",
     srcs = glob([
         "tools/llvm-rtdyld/*.cpp",
@@ -4686,12 +4686,22 @@ gentbl(
     td_srcs = ["include/llvm/Option/OptParser.td"],
 )
 
+expand_template(
+    name = "sancov_main",
+    out = "sancov-driver.cpp",
+    substitutions = {
+        "@TOOL_NAME@": "sancov",
+    },
+    template = "cmake/modules/llvm-driver-template.cpp.in",
+)
+
+
 cc_binary(
     name = "sancov",
     srcs = glob([
         "tools/sancov/*.cpp",
         "tools/sancov/*.h",
-    ]),
+    ]) + ["sancov-driver.cpp"],
     copts = llvm_copts,
     stamp = 0,
     deps = [
@@ -5042,11 +5052,11 @@ cc_binary(
 )
 
 cc_binary(
-    name = "llvm-tapi-diff",
+    name = "llvm-readtapi",
     testonly = True,
     srcs = glob([
-        "tools/llvm-tapi-diff/*.cpp",
-        "tools/llvm-tapi-diff/*.h",
+        "tools/llvm-readtapi/*.cpp",
+        "tools/llvm-readtapi/*.h",
     ]),
     copts = llvm_copts,
     stamp = 0,

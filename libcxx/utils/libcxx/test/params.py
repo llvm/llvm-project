@@ -51,6 +51,9 @@ _warningFlags = [
     # Disable warnings for extensions used in C++03
     "-Wno-local-type-template-args",
     "-Wno-c++11-extensions",
+
+    # TODO(philnik) This fails with the PSTL.
+    "-Wno-unknown-pragmas",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]

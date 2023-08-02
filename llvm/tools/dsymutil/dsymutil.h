@@ -29,8 +29,6 @@
 namespace llvm {
 namespace dsymutil {
 
-class BinaryHolder;
-
 /// Extract the DebugMaps from the given file.
 /// The file has to be a MachO object file. Multiple debug maps can be
 /// returned when the file is universal (aka fat) binary.

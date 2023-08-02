@@ -210,9 +210,8 @@ define i32 @bextr32_a1_indexzext(i32 %val, i8 zeroext %numskipbits, i8 zeroext %
 ; X64-BMI1-LABEL: bextr32_a1_indexzext:
 ; X64-BMI1:       # %bb.0:
 ; X64-BMI1-NEXT:    shll $8, %edx
-; X64-BMI1-NEXT:    movzbl %sil, %eax
-; X64-BMI1-NEXT:    orl %edx, %eax
-; X64-BMI1-NEXT:    bextrl %eax, %edi, %eax
+; X64-BMI1-NEXT:    orl %esi, %edx
+; X64-BMI1-NEXT:    bextrl %edx, %edi, %eax
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: bextr32_a1_indexzext:
@@ -351,9 +350,8 @@ define i32 @bextr32_a3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ; X64-BMI1-LABEL: bextr32_a3_load_indexzext:
 ; X64-BMI1:       # %bb.0:
 ; X64-BMI1-NEXT:    shll $8, %edx
-; X64-BMI1-NEXT:    movzbl %sil, %eax
-; X64-BMI1-NEXT:    orl %edx, %eax
-; X64-BMI1-NEXT:    bextrl %eax, (%rdi), %eax
+; X64-BMI1-NEXT:    orl %esi, %edx
+; X64-BMI1-NEXT:    bextrl %edx, (%rdi), %eax
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: bextr32_a3_load_indexzext:
@@ -953,10 +951,10 @@ define i64 @bextr64_a1_indexzext(i64 %val, i8 zeroext %numskipbits, i8 zeroext %
 ;
 ; X64-BMI1-LABEL: bextr64_a1_indexzext:
 ; X64-BMI1:       # %bb.0:
+; X64-BMI1-NEXT:    # kill: def $edx killed $edx def $rdx
 ; X64-BMI1-NEXT:    shll $8, %edx
-; X64-BMI1-NEXT:    movzbl %sil, %eax
-; X64-BMI1-NEXT:    orl %edx, %eax
-; X64-BMI1-NEXT:    bextrq %rax, %rdi, %rax
+; X64-BMI1-NEXT:    orl %esi, %edx
+; X64-BMI1-NEXT:    bextrq %rdx, %rdi, %rax
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: bextr64_a1_indexzext:
@@ -1250,10 +1248,10 @@ define i64 @bextr64_a3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ;
 ; X64-BMI1-LABEL: bextr64_a3_load_indexzext:
 ; X64-BMI1:       # %bb.0:
+; X64-BMI1-NEXT:    # kill: def $edx killed $edx def $rdx
 ; X64-BMI1-NEXT:    shll $8, %edx
-; X64-BMI1-NEXT:    movzbl %sil, %eax
-; X64-BMI1-NEXT:    orl %edx, %eax
-; X64-BMI1-NEXT:    bextrq %rax, (%rdi), %rax
+; X64-BMI1-NEXT:    orl %esi, %edx
+; X64-BMI1-NEXT:    bextrq %rdx, (%rdi), %rax
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: bextr64_a3_load_indexzext:
@@ -2327,9 +2325,8 @@ define i32 @bextr32_b1_indexzext(i32 %val, i8 zeroext %numskipbits, i8 zeroext %
 ; X64-BMI1-LABEL: bextr32_b1_indexzext:
 ; X64-BMI1:       # %bb.0:
 ; X64-BMI1-NEXT:    shll $8, %edx
-; X64-BMI1-NEXT:    movzbl %sil, %eax
-; X64-BMI1-NEXT:    orl %edx, %eax
-; X64-BMI1-NEXT:    bextrl %eax, %edi, %eax
+; X64-BMI1-NEXT:    orl %esi, %edx
+; X64-BMI1-NEXT:    bextrl %edx, %edi, %eax
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: bextr32_b1_indexzext:
@@ -2468,9 +2465,8 @@ define i32 @bextr32_b3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ; X64-BMI1-LABEL: bextr32_b3_load_indexzext:
 ; X64-BMI1:       # %bb.0:
 ; X64-BMI1-NEXT:    shll $8, %edx
-; X64-BMI1-NEXT:    movzbl %sil, %eax
-; X64-BMI1-NEXT:    orl %edx, %eax
-; X64-BMI1-NEXT:    bextrl %eax, (%rdi), %eax
+; X64-BMI1-NEXT:    orl %esi, %edx
+; X64-BMI1-NEXT:    bextrl %edx, (%rdi), %eax
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: bextr32_b3_load_indexzext:
@@ -2916,10 +2912,10 @@ define i64 @bextr64_b1_indexzext(i64 %val, i8 zeroext %numskipbits, i8 zeroext %
 ;
 ; X64-BMI1-LABEL: bextr64_b1_indexzext:
 ; X64-BMI1:       # %bb.0:
+; X64-BMI1-NEXT:    # kill: def $edx killed $edx def $rdx
 ; X64-BMI1-NEXT:    shll $8, %edx
-; X64-BMI1-NEXT:    movzbl %sil, %eax
-; X64-BMI1-NEXT:    orl %edx, %eax
-; X64-BMI1-NEXT:    bextrq %rax, %rdi, %rax
+; X64-BMI1-NEXT:    orl %esi, %edx
+; X64-BMI1-NEXT:    bextrq %rdx, %rdi, %rax
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: bextr64_b1_indexzext:
@@ -3205,10 +3201,10 @@ define i64 @bextr64_b3_load_indexzext(ptr %w, i8 zeroext %numskipbits, i8 zeroex
 ;
 ; X64-BMI1-LABEL: bextr64_b3_load_indexzext:
 ; X64-BMI1:       # %bb.0:
+; X64-BMI1-NEXT:    # kill: def $edx killed $edx def $rdx
 ; X64-BMI1-NEXT:    shll $8, %edx
-; X64-BMI1-NEXT:    movzbl %sil, %eax
-; X64-BMI1-NEXT:    orl %edx, %eax
-; X64-BMI1-NEXT:    bextrq %rax, (%rdi), %rax
+; X64-BMI1-NEXT:    orl %esi, %edx
+; X64-BMI1-NEXT:    bextrq %rdx, (%rdi), %rax
 ; X64-BMI1-NEXT:    retq
 ;
 ; X64-BMI2-LABEL: bextr64_b3_load_indexzext:

@@ -103,9 +103,8 @@ public:
       JOS.attributeObject(
           "pointee", [&] { dump(cast<PointerValue>(V).getPointeeLoc()); });
       break;
-    case Value::Kind::Struct:
-      for (const auto &Child :
-           cast<StructValue>(V).getAggregateLoc().children())
+    case Value::Kind::Record:
+      for (const auto &Child : cast<RecordValue>(V).getLoc().children())
         JOS.attributeObject("f:" + Child.first->getNameAsString(), [&] {
           if (Child.second)
             if (Value *Val = Env.getValue(*Child.second))
@@ -254,10 +253,17 @@ public:
       if (ElementIndex > 0) {
         auto S =
             Iters.back().first->Elements[ElementIndex - 1].getAs<CFGStmt>();
-        if (const Expr *E = S ? llvm::dyn_cast<Expr>(S->getStmt()) : nullptr)
-          if (auto *Loc = State.Env.getStorageLocation(*E, SkipPast::None))
-            JOS->attributeObject(
-                "value", [&] { ModelDumper(*JOS, State.Env).dump(*Loc); });
+        if (const Expr *E = S ? llvm::dyn_cast<Expr>(S->getStmt()) : nullptr) {
+          if (E->isPRValue()) {
+            if (auto *V = State.Env.getValue(*E))
+              JOS->attributeObject(
+                  "value", [&] { ModelDumper(*JOS, State.Env).dump(*V); });
+          } else {
+            if (auto *Loc = State.Env.getStorageLocation(*E))
+              JOS->attributeObject(
+                  "value", [&] { ModelDumper(*JOS, State.Env).dump(*Loc); });
+          }
+        }
       }
       if (!ContextLogs.empty()) {
         JOS->attribute("logs", ContextLogs);

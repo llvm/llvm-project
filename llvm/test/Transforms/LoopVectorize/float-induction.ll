@@ -852,8 +852,6 @@ define void @fp_iv_loop3(float %init, ptr noalias nocapture %A, ptr noalias noca
 ; VEC4_INTERL2-NEXT:    [[DOTSPLAT9:%.*]] = shufflevector <4 x float> [[DOTSPLATINSERT8]], <4 x float> poison, <4 x i32> zeroinitializer
 ; VEC4_INTERL2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
 ; VEC4_INTERL2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT]], <4 x float> poison, <4 x i32> zeroinitializer
-; VEC4_INTERL2-NEXT:    [[BROADCAST_SPLATINSERT14:%.*]] = insertelement <4 x float> poison, float [[TMP0]], i64 0
-; VEC4_INTERL2-NEXT:    [[BROADCAST_SPLAT15:%.*]] = shufflevector <4 x float> [[BROADCAST_SPLATINSERT14]], <4 x float> poison, <4 x i32> zeroinitializer
 ; VEC4_INTERL2-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; VEC4_INTERL2:       vector.body:
 ; VEC4_INTERL2-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
@@ -865,7 +863,7 @@ define void @fp_iv_loop3(float %init, ptr noalias nocapture %A, ptr noalias noca
 ; VEC4_INTERL2-NEXT:    [[TMP7:%.*]] = getelementptr inbounds float, ptr [[TMP6]], i64 4
 ; VEC4_INTERL2-NEXT:    store <4 x float> [[STEP_ADD11]], ptr [[TMP7]], align 4
 ; VEC4_INTERL2-NEXT:    [[TMP8:%.*]] = fadd fast <4 x float> [[VEC_IND10]], [[BROADCAST_SPLAT]]
-; VEC4_INTERL2-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[STEP_ADD11]], [[BROADCAST_SPLAT15]]
+; VEC4_INTERL2-NEXT:    [[TMP9:%.*]] = fadd fast <4 x float> [[STEP_ADD11]], [[BROADCAST_SPLAT]]
 ; VEC4_INTERL2-NEXT:    [[TMP10:%.*]] = fadd fast <4 x float> [[VEC_IND]], <float -5.000000e-01, float -5.000000e-01, float -5.000000e-01, float -5.000000e-01>
 ; VEC4_INTERL2-NEXT:    [[TMP11:%.*]] = fadd fast <4 x float> [[VEC_IND]], <float -2.500000e+00, float -2.500000e+00, float -2.500000e+00, float -2.500000e+00>
 ; VEC4_INTERL2-NEXT:    [[TMP12:%.*]] = fadd fast <4 x float> [[TMP10]], [[TMP8]]

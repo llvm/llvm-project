@@ -381,7 +381,7 @@ template <size_t Bits, bool Signed> struct BigInt {
 
     BigInt<Bits, Signed> quotient(0);
     BigInt<Bits, Signed> subtractor = other;
-    int cur_bit = subtractor.clz() - this->clz();
+    int cur_bit = static_cast<int>(subtractor.clz() - this->clz());
     subtractor.shift_left(cur_bit);
 
     for (; cur_bit >= 0 && *this > 0; --cur_bit, subtractor.shift_right(1)) {

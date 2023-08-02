@@ -598,11 +598,7 @@ struct BubbleDownVectorBitCastForExtract
     unsigned expandRatio =
         castDstType.getNumElements() / castSrcType.getNumElements();
 
-    auto getFirstIntValue = [](ArrayAttr attr) -> uint64_t {
-      return (*attr.getAsValueRange<IntegerAttr>().begin()).getZExtValue();
-    };
-
-    uint64_t index = getFirstIntValue(extractOp.getPosition());
+    uint64_t index = extractOp.getPosition()[0];
 
     // Get the single scalar (as a vector) in the source value that packs the
     // desired scalar. E.g. extract vector<1xf32> from vector<4xf32>
@@ -610,7 +606,7 @@ struct BubbleDownVectorBitCastForExtract
         VectorType::get({1}, castSrcType.getElementType());
     Value packedValue = rewriter.create<vector::ExtractOp>(
         extractOp.getLoc(), oneScalarType, castOp.getSource(),
-        rewriter.getI64ArrayAttr(index / expandRatio));
+        index / expandRatio);
 
     // Cast it to a vector with the desired scalar's type.
     // E.g. f32 -> vector<2xf16>
@@ -621,8 +617,7 @@ struct BubbleDownVectorBitCastForExtract
 
     // Finally extract the desired scalar.
     rewriter.replaceOpWithNewOp<vector::ExtractOp>(
-        extractOp, extractOp.getType(), castedValue,
-        rewriter.getI64ArrayAttr(index % expandRatio));
+        extractOp, extractOp.getType(), castedValue, index % expandRatio);
 
     return success();
   }

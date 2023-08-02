@@ -909,10 +909,8 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
                 ondisk_section_list->GetSectionAtIndex(sect_idx));
             if (ondisk_section_sp) {
               // Don't ever load __LINKEDIT as it may or may not be actually
-              // mapped into memory and there is no current way to tell.
-              // I filed rdar://problem/12851706 to track being able to tell
-              // if the __LINKEDIT is actually mapped, but until then, we need
-              // to not load the __LINKEDIT
+              // mapped into memory and there is no current way to tell. Until
+              // such an ability exists, do not load the __LINKEDIT.
               if (ignore_linkedit &&
                   ondisk_section_sp->GetName() == g_section_name_LINKEDIT)
                 continue;

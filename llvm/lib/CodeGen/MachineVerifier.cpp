@@ -32,6 +32,7 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/CodeGen/CodeGenCommonISel.h"
+#include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/LiveRangeCalc.h"
@@ -223,7 +224,11 @@ namespace {
     bool verifyAllRegOpsScalar(const MachineInstr &MI,
                                const MachineRegisterInfo &MRI);
     bool verifyVectorElementMatch(LLT Ty0, LLT Ty1, const MachineInstr *MI);
+
+    bool verifyGIntrinsicSideEffects(const MachineInstr *MI);
+    bool verifyGIntrinsicConvergence(const MachineInstr *MI);
     void verifyPreISelGenericInstruction(const MachineInstr *MI);
+
     void visitMachineInstrBefore(const MachineInstr *MI);
     void visitMachineOperand(const MachineOperand *MO, unsigned MONum);
     void visitMachineBundleAfter(const MachineInstr *MI);
@@ -955,6 +960,55 @@ bool MachineVerifier::verifyVectorElementMatch(LLT Ty0, LLT Ty1,
   return true;
 }
 
+bool MachineVerifier::verifyGIntrinsicSideEffects(const MachineInstr *MI) {
+  auto Opcode = MI->getOpcode();
+  bool NoSideEffects = Opcode == TargetOpcode::G_INTRINSIC ||
+                       Opcode == TargetOpcode::G_INTRINSIC_CONVERGENT;
+  unsigned IntrID = cast<GIntrinsic>(MI)->getIntrinsicID();
+  if (IntrID != 0 && IntrID < Intrinsic::num_intrinsics) {
+    AttributeList Attrs = Intrinsic::getAttributes(
+        MF->getFunction().getContext(), static_cast<Intrinsic::ID>(IntrID));
+    bool DeclHasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
+    if (NoSideEffects && DeclHasSideEffects) {
+      report(Twine(TII->getName(Opcode),
+                   " used with intrinsic that accesses memory"),
+             MI);
+      return false;
+    }
+    if (!NoSideEffects && !DeclHasSideEffects) {
+      report(Twine(TII->getName(Opcode), " used with readnone intrinsic"), MI);
+      return false;
+    }
+  }
+
+  return true;
+}
+
+bool MachineVerifier::verifyGIntrinsicConvergence(const MachineInstr *MI) {
+  auto Opcode = MI->getOpcode();
+  bool NotConvergent = Opcode == TargetOpcode::G_INTRINSIC ||
+                       Opcode == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS;
+  unsigned IntrID = cast<GIntrinsic>(MI)->getIntrinsicID();
+  if (IntrID != 0 && IntrID < Intrinsic::num_intrinsics) {
+    AttributeList Attrs = Intrinsic::getAttributes(
+        MF->getFunction().getContext(), static_cast<Intrinsic::ID>(IntrID));
+    bool DeclIsConvergent = Attrs.hasFnAttr(Attribute::Convergent);
+    if (NotConvergent && DeclIsConvergent) {
+      report(Twine(TII->getName(Opcode), " used with a convergent intrinsic"),
+             MI);
+      return false;
+    }
+    if (!NotConvergent && !DeclIsConvergent) {
+      report(
+          Twine(TII->getName(Opcode), " used with a non-convergent intrinsic"),
+          MI);
+      return false;
+    }
+  }
+
+  return true;
+}
+
 void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
   if (isFunctionSelected)
     report("Unexpected generic instruction in a Selected function", MI);
@@ -1493,7 +1547,9 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
     break;
   }
   case TargetOpcode::G_INTRINSIC:
-  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS: {
+  case TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS:
+  case TargetOpcode::G_INTRINSIC_CONVERGENT:
+  case TargetOpcode::G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS: {
     // TODO: Should verify number of def and use operands, but the current
     // interface requires passing in IR types for mangling.
     const MachineOperand &IntrIDOp = MI->getOperand(MI->getNumExplicitDefs());
@@ -1502,21 +1558,10 @@ void MachineVerifier::verifyPreISelGenericInstruction(const MachineInstr *MI) {
       break;
     }
 
-    bool NoSideEffects = MI->getOpcode() == TargetOpcode::G_INTRINSIC;
-    unsigned IntrID = IntrIDOp.getIntrinsicID();
-    if (IntrID != 0 && IntrID < Intrinsic::num_intrinsics) {
-      AttributeList Attrs = Intrinsic::getAttributes(
-          MF->getFunction().getContext(), static_cast<Intrinsic::ID>(IntrID));
-      bool DeclHasSideEffects = !Attrs.getMemoryEffects().doesNotAccessMemory();
-      if (NoSideEffects && DeclHasSideEffects) {
-        report("G_INTRINSIC used with intrinsic that accesses memory", MI);
-        break;
-      }
-      if (!NoSideEffects && !DeclHasSideEffects) {
-        report("G_INTRINSIC_W_SIDE_EFFECTS used with readnone intrinsic", MI);
-        break;
-      }
-    }
+    if (!verifyGIntrinsicSideEffects(MI))
+      break;
+    if (!verifyGIntrinsicConvergence(MI))
+      break;
 
     break;
   }

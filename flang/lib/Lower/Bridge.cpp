@@ -2230,7 +2230,7 @@ private:
   void genFIR(const Fortran::parser::OpenACCDeclarativeConstruct &accDecl) {
     mlir::OpBuilder::InsertPoint insertPt = builder->saveInsertionPoint();
     genOpenACCDeclarativeConstruct(*this, bridge.getSemanticsContext(),
-                                   getEval(), accDecl);
+                                   bridge.fctCtx(), getEval(), accDecl);
     for (Fortran::lower::pft::Evaluation &e : getEval().getNestedEvaluations())
       genFIR(e);
     builder->restoreInsertionPoint(insertPt);

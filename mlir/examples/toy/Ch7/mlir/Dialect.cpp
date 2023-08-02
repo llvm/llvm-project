@@ -377,6 +377,12 @@ void GenericCallOp::setCalleeFromCallable(CallInterfaceCallable callee) {
 /// call interface.
 Operation::operand_range GenericCallOp::getArgOperands() { return getInputs(); }
 
+/// Get the argument operands to the called function as a mutable range, this is
+/// required by the call interface.
+MutableOperandRange GenericCallOp::getArgOperandsMutable() {
+  return getInputsMutable();
+}
+
 //===----------------------------------------------------------------------===//
 // MulOp
 //===----------------------------------------------------------------------===//

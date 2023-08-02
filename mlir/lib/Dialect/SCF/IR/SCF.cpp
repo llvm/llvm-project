@@ -1513,9 +1513,9 @@ public:
     SmallVector<OpFoldResult> mixedLowerBound(op.getMixedLowerBound());
     SmallVector<OpFoldResult> mixedUpperBound(op.getMixedUpperBound());
     SmallVector<OpFoldResult> mixedStep(op.getMixedStep());
-    if (failed(foldDynamicIndexList(rewriter, mixedLowerBound)) &&
-        failed(foldDynamicIndexList(rewriter, mixedUpperBound)) &&
-        failed(foldDynamicIndexList(rewriter, mixedStep)))
+    if (failed(foldDynamicIndexList(mixedLowerBound)) &&
+        failed(foldDynamicIndexList(mixedUpperBound)) &&
+        failed(foldDynamicIndexList(mixedStep)))
       return failure();
 
     rewriter.updateRootInPlace(op, [&]() {

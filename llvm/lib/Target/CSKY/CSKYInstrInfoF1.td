@@ -141,6 +141,16 @@ defm FCMPZUO : FT_CMPZX<0b001011, "fcmpzuo">;
 
 defm FRECIP   : FT_MOV<0b011001, "frecip">;
 
+// multiplication
+let Predicates = [HasFPUv2_SF] in {
+  def : Pat<(f32 (fmul (fneg sFPR32Op:$vrx), sFPR32Op:$vry)),
+            (FNMUL_S sFPR32Op:$vrx, sFPR32Op:$vry)>;
+}
+let Predicates = [HasFPUv2_DF] in {
+  def : Pat<(f64 (fmul (fneg sFPR64Op:$vrx), sFPR64Op:$vry)),
+            (FNMUL_D sFPR64Op:$vrx, sFPR64Op:$vry)>;
+}
+
 //fmov, fmtvr, fmfvr
 defm FMOV : FT_MOV<0b000100, "fmov">;
 def FMFVRL : F_XZ_GF<3, 0b011001, (outs GPR:$rz), (ins sFPR32Op:$vrx),

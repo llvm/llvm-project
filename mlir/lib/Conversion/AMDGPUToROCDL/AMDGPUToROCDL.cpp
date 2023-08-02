@@ -168,7 +168,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Value lowHalf = rewriter.create<LLVM::TruncOp>(loc, llvmI32, ptrAsInt);
     resource = rewriter.create<LLVM::InsertElementOp>(
         loc, llvm4xI32, resource, lowHalf,
-        this->createIndexConstant(rewriter, loc, 0));
+        this->createIndexAttrConstant(rewriter, loc, this->getIndexType(), 0));
 
     // Bits 48-63 are used both for the stride of the buffer and (on gfx10) for
     // enabling swizzling. Prevent the high bits of pointers from accidentally
@@ -180,7 +180,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
         createI32Constant(rewriter, loc, 0x0000ffff));
     resource = rewriter.create<LLVM::InsertElementOp>(
         loc, llvm4xI32, resource, highHalfTruncated,
-        this->createIndexConstant(rewriter, loc, 1));
+        this->createIndexAttrConstant(rewriter, loc, this->getIndexType(), 1));
 
     Value numRecords;
     if (memrefType.hasStaticShape()) {
@@ -202,7 +202,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     }
     resource = rewriter.create<LLVM::InsertElementOp>(
         loc, llvm4xI32, resource, numRecords,
-        this->createIndexConstant(rewriter, loc, 2));
+        this->createIndexAttrConstant(rewriter, loc, this->getIndexType(), 2));
 
     // Final word:
     // bits 0-11: dst sel, ignored by these intrinsics
@@ -227,7 +227,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     Value word3Const = createI32Constant(rewriter, loc, word3);
     resource = rewriter.create<LLVM::InsertElementOp>(
         loc, llvm4xI32, resource, word3Const,
-        this->createIndexConstant(rewriter, loc, 3));
+        this->createIndexAttrConstant(rewriter, loc, this->getIndexType(), 3));
     args.push_back(resource);
 
     // Indexing (voffset)

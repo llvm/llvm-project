@@ -426,6 +426,12 @@ HANDLE_TARGET_OPCODE(G_INTRINSIC)
 /// Generic intrinsic use (with side effects).
 HANDLE_TARGET_OPCODE(G_INTRINSIC_W_SIDE_EFFECTS)
 
+/// Generic intrinsic use (without side effects).
+HANDLE_TARGET_OPCODE(G_INTRINSIC_CONVERGENT)
+
+/// Generic intrinsic use (with side effects).
+HANDLE_TARGET_OPCODE(G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS)
+
 /// Generic extension allowing rubbish in high bits.
 HANDLE_TARGET_OPCODE(G_ANYEXT)
 

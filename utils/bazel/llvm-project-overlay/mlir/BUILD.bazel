@@ -1883,6 +1883,22 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "ArmSMEToSCF",
+    srcs = glob(["lib/Conversion/ArmSMEToSCF/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ArmSMEToSCF/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ArmSMEDialect",
+        ":ArmSMEUtils",
+        ":ConversionPassIncGen",
+        ":Pass",
+        ":SCFDialect",
+        ":Transforms",
+    ],
+)
+
 ##---------------------------------------------------------------------------##
 # ArmSVE dialect.
 ##---------------------------------------------------------------------------##
@@ -3373,6 +3389,7 @@ cc_library(
         ":ArithToLLVM",
         ":ArithToSPIRV",
         ":ArmNeon2dToIntr",
+        ":ArmSMEToSCF",
         ":AsyncToLLVM",
         ":BufferizationToMemRef",
         ":ComplexToLLVM",

@@ -668,10 +668,14 @@ metadata: !LinalgOpMetadata
   name: matmul
   cpp_class_name: MatmulOp
   doc: |-
-    Performs a matrix multiplication of two 2D inputs.
+    Performs an accumulative (C += A*B) matrix multiplication of two 2D inputs.
 
     Numeric casting is performed on the operands to the inner multiply, promoting
     them to the same data type as the accumulator/output.
+
+    Note this operation represents an accumulative matrix multiplication, `C +=
+    A*B` (as opposed to `C = A*B`). The appropriate initialisation of the output
+    matrix should be done prior to calling this Op.
   implements:
   - LinalgContractionOpInterface
 structured_op: !LinalgStructuredOpConfig

@@ -624,8 +624,8 @@ static Value *rewriteGEPAsOffset(Type *ElemTy, Value *Start, Value *Base,
     }
   }
 
-  PointerType *PtrTy =
-      ElemTy->getPointerTo(Start->getType()->getPointerAddressSpace());
+  PointerType *PtrTy = PointerType::get(
+      Base->getContext(), Start->getType()->getPointerAddressSpace());
   for (Value *Val : Explored) {
     if (Val == Base)
       continue;

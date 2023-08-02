@@ -2,33 +2,33 @@
 // REQUIRES: amdgpu-registered-target
 
 // -fno-gpu-rdc without -o with -c
-// RUN: not %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   --cuda-gpu-arch=gfx900 -c %s 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN:   -nogpuinc --offload-arch=gfx900 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC %s
 
 // -fno-gpu-rdc without -o
-// RUN: not %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   --cuda-gpu-arch=gfx900 %s 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN:   -nogpuinc --offload-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC,NOUT %s
 
 // -fno-gpu-rdc with -o
-// RUN: not %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -o executable --cuda-gpu-arch=gfx900 %s 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN:   -nogpuinc -o executable --offload-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,NORDC,WOUT %s
 
 // -fgpu-rdc without -o with -c
-// RUN: not %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -fgpu-rdc --cuda-gpu-arch=gfx900 -c %s 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN:   -nogpuinc -fgpu-rdc --offload-arch=gfx900 -c %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDCC %s
 
 // -fgpu-rdc without -o
-// RUN: not %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// RUN:   -fgpu-rdc --cuda-gpu-arch=gfx900 %s 2>&1 | \
+// RUN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
+// RUN:   -nogpuinc -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
 // RUN:   FileCheck -check-prefixes=CHECK,RDC,RDCL,NOUT %s
 
 // -fgpu-rdc with -o
 // UN: %clang -### --target=x86_64-linux-gnu -nogpulib -save-temps \
-// UN:   -o executable -fgpu-rdc --cuda-gpu-arch=gfx900 %s 2>&1 | \
+// UN:   -nogpuinc -o executable -fgpu-rdc --offload-arch=gfx900 %s 2>&1 | \
 // UN:   FileCheck -check-prefixes=CHECK,RDC,RDCL,WOUT %s
 
 // -fgpu-rdc host object path

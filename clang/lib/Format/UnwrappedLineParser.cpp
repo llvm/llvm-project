@@ -581,7 +581,8 @@ void UnwrappedLineParser::calculateBraceTypes(bool ExpectClassBody) {
           ProbablyBracedList =
               ProbablyBracedList ||
               (NextTok->is(tok::l_brace) && LBraceStack.back().PrevTok &&
-               LBraceStack.back().PrevTok->is(tok::identifier));
+               LBraceStack.back().PrevTok->isOneOf(tok::identifier,
+                                                   tok::greater));
 
           ProbablyBracedList =
               ProbablyBracedList ||
@@ -804,6 +805,9 @@ FormatToken *UnwrappedLineParser::parseBlock(
     FormatTok->setBlockKind(BK_Block);
     return IfLBrace;
   }
+
+  if (FormatTok->is(tok::r_brace) && Tok->is(TT_NamespaceLBrace))
+    FormatTok->setFinalizedType(TT_NamespaceRBrace);
 
   const bool IsFunctionRBrace =
       FormatTok->is(tok::r_brace) && Tok->is(TT_FunctionLBrace);
@@ -1188,8 +1192,8 @@ void UnwrappedLineParser::parsePPUnknown() {
 static bool tokenCanStartNewLine(const FormatToken &Tok) {
   // Semicolon can be a null-statement, l_square can be a start of a macro or
   // a C++11 attribute, but this doesn't seem to be common.
+  assert(Tok.isNot(TT_AttributeSquare));
   return Tok.isNot(tok::semi) && Tok.isNot(tok::l_brace) &&
-         Tok.isNot(TT_AttributeSquare) &&
          // Tokens that can only be used as binary operators and a part of
          // overloaded operator names.
          Tok.isNot(tok::period) && Tok.isNot(tok::periodstar) &&
@@ -2958,6 +2962,8 @@ void UnwrappedLineParser::parseNamespace() {
     }
   }
   if (FormatTok->is(tok::l_brace)) {
+    FormatTok->setFinalizedType(TT_NamespaceLBrace);
+
     if (ShouldBreakBeforeBrace(Style, InitialToken))
       addUnwrappedLine();
 
@@ -3646,12 +3652,7 @@ bool UnwrappedLineParser::parseEnum() {
     // We can have macros or attributes in between 'enum' and the enum name.
     if (FormatTok->is(tok::l_paren))
       parseParens();
-    if (FormatTok->is(TT_AttributeSquare)) {
-      parseSquare();
-      // Consume the closing TT_AttributeSquare.
-      if (FormatTok->Next && FormatTok->is(TT_AttributeSquare))
-        nextToken();
-    }
+    assert(FormatTok->isNot(TT_AttributeSquare));
     if (FormatTok->is(tok::identifier)) {
       nextToken();
       // If there are two identifiers in a row, this is likely an elaborate

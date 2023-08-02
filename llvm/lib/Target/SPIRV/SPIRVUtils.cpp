@@ -219,7 +219,7 @@ MachineInstr *getDefInstrMaybeConstant(Register &ConstReg,
     ConstReg = ConstInstr->getOperand(1).getReg();
     return MRI->getVRegDef(ConstReg);
   }
-  return ConstInstr;
+  return MRI->getVRegDef(ConstReg);
 }
 
 uint64_t getIConstVal(Register ConstReg, const MachineRegisterInfo *MRI) {

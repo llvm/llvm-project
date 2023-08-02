@@ -2369,8 +2369,9 @@ static unsigned gwsIntrinToOpcode(unsigned IntrID) {
 }
 
 void AMDGPUDAGToDAGISel::SelectDS_GWS(SDNode *N, unsigned IntrID) {
-  if (IntrID == Intrinsic::amdgcn_ds_gws_sema_release_all &&
-      !Subtarget->hasGWSSemaReleaseAll()) {
+  if (!Subtarget->hasGWS() ||
+      (IntrID == Intrinsic::amdgcn_ds_gws_sema_release_all &&
+       !Subtarget->hasGWSSemaReleaseAll())) {
     // Let this error.
     SelectCode(N);
     return;

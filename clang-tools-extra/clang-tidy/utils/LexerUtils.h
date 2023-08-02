@@ -13,6 +13,7 @@
 #include "clang/Basic/TokenKinds.h"
 #include "clang/Lex/Lexer.h"
 #include <optional>
+#include <utility>
 
 namespace clang {
 
@@ -23,6 +24,9 @@ namespace tidy::utils::lexer {
 /// Returns previous token or ``tok::unknown`` if not found.
 Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
                        const LangOptions &LangOpts, bool SkipComments = true);
+std::pair<Token, SourceLocation>
+getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
+                         const LangOptions &LangOpts, bool SkipComments = true);
 
 SourceLocation findPreviousTokenStart(SourceLocation Start,
                                       const SourceManager &SM,

@@ -23,6 +23,7 @@
 #include "llvm/CodeGen/MachineInstr.h"
 #include "llvm/CodeGen/MachineOperand.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Debug.h"
@@ -109,6 +110,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
     return false;
 
   MachineRegisterInfo &MRI = MF.getRegInfo();
+  const TargetInstrInfo &TII = *MF.getSubtarget().getInstrInfo();
 
   LLVM_DEBUG(dbgs() << "**** Analysing " << MF.getName() << '\n');
 
@@ -197,7 +199,7 @@ bool LiveRangeShrink::runOnMachineFunction(MachineFunction &MF) {
           // is because it needs more accurate model to handle register
           // pressure correctly.
           MachineInstr &DefInstr = *MRI.def_instr_begin(Reg);
-          if (!DefInstr.isCopy())
+          if (!TII.isCopyInstr(DefInstr))
             NumEligibleUse++;
           Insert = FindDominatedInstruction(DefInstr, Insert, IOM);
         } else {

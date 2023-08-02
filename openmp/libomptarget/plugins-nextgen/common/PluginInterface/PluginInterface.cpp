@@ -227,8 +227,7 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
 
 Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
                             DeviceImageTy &Image) {
-  PreferredNumThreads = getDefaultNumThreads(GenericDevice);
-
+  PreferredNumThreads = GenericDevice.getDefaultNumThreads();
   MaxNumThreads = GenericDevice.getThreadLimit();
 
   return initImpl(GenericDevice, Image);
@@ -318,7 +317,7 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
     return std::min(NumTeamsClause[0], GenericDevice.getBlockLimit());
   }
 
-  uint64_t DefaultNumBlocks = getDefaultNumBlocks(GenericDevice);
+  uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
   if (LoopTripCount > 0) {
     if (isSPMDMode()) {
@@ -396,9 +395,9 @@ GenericDeviceTy::GenericDeviceTy(int32_t DeviceId, int32_t NumDevices,
       // device initialization. These cannot be consulted until the device is
       // initialized correctly. We intialize them in GenericDeviceTy::init().
       OMPX_TargetStackSize(), OMPX_TargetHeapSize(),
-      // By default, the initial number of streams and events are 32.
-      OMPX_InitialNumStreams("LIBOMPTARGET_NUM_INITIAL_STREAMS", 32),
-      OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 32),
+      // By default, the initial number of streams and events is 1.
+      OMPX_InitialNumStreams("LIBOMPTARGET_NUM_INITIAL_STREAMS", 1),
+      OMPX_InitialNumEvents("LIBOMPTARGET_NUM_INITIAL_EVENTS", 1),
       DeviceId(DeviceId), GridValues(OMPGridValues),
       PeerAccesses(NumDevices, PeerAccessState::PENDING), PeerAccessesLock(),
       PinnedAllocs(*this), RPCServer(nullptr) {

@@ -1263,6 +1263,10 @@ Operation::operand_range TestCallAndStoreOp::getArgOperands() {
   return getCalleeOperands();
 }
 
+MutableOperandRange TestCallAndStoreOp::getArgOperandsMutable() {
+  return getCalleeOperandsMutable();
+}
+
 void TestStoreWithARegion::getSuccessorRegions(
     std::optional<unsigned> index, ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &regions) {
@@ -1293,7 +1297,7 @@ TestVersionedOpA::readProperties(::mlir::DialectBytecodeReader &reader,
     // We can materialize missing properties post parsing before verification.
     const auto *version =
         reinterpret_cast<const TestDialectVersion *>(*maybeVersion);
-    if ((version->major < 2)) {
+    if ((version->major_ < 2)) {
       return success();
     }
   }
@@ -1324,7 +1328,7 @@ void TestVersionedOpA::writeProperties(::mlir::DialectBytecodeWriter &writer) {
     // We can materialize missing properties post parsing before verification.
     const auto *version =
         reinterpret_cast<const TestDialectVersion *>(*maybeVersion);
-    if ((version->major < 2))
+    if ((version->major_ < 2))
       needToParseAnotherInt = false;
   }
   if (needToParseAnotherInt && failed(reader.readVarInt(value2)))

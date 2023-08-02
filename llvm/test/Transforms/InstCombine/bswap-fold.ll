@@ -786,7 +786,8 @@ define i64 @bs_all_operand64_multiuse_both(i64 %a, i64 %b) #0 {
 
 define void @bs_and_constexpr(ptr %out, i64 %a) {
 ; CHECK-LABEL: @bs_and_constexpr(
-; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.bswap.i64(i64 and (i64 ptrtoint (ptr @gp to i64), i64 4095))
+; CHECK-NEXT:    [[EXP:%.*]] = and i64 ptrtoint (ptr @gp to i64), 4095
+; CHECK-NEXT:    [[RES:%.*]] = call i64 @llvm.bswap.i64(i64 [[EXP]])
 ; CHECK-NEXT:    store i64 [[RES]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
@@ -800,7 +801,8 @@ define void @bs_and_constexpr(ptr %out, i64 %a) {
 
 define void @bs_and_bs_constexpr(ptr %out, i64 %a) {
 ; CHECK-LABEL: @bs_and_bs_constexpr(
-; CHECK-NEXT:    store i64 and (i64 ptrtoint (ptr @gp to i64), i64 -67835469387268096), ptr [[OUT:%.*]], align 8
+; CHECK-NEXT:    [[TMP1:%.*]] = and i64 ptrtoint (ptr @gp to i64), -67835469387268096
+; CHECK-NEXT:    store i64 [[TMP1]], ptr [[OUT:%.*]], align 8
 ; CHECK-NEXT:    ret void
 ;
   %gpi = ptrtoint ptr @gp to i64

@@ -4762,7 +4762,8 @@ define i8 @canonicalize_logic_first_xor_bad_constants2(i8 %x) {
 define i32 @canonicalize_logic_first_constexpr(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_constexpr
 ; CHECK-SAME: (i32 [[X:%.*]]) {
-; CHECK-NEXT:    ret i32 and (i32 add (i32 ptrtoint (ptr @g to i32), i32 48), i32 -10)
+; CHECK-NEXT:    [[R:%.*]] = and i32 add (i32 ptrtoint (ptr @g to i32), i32 48), -10
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add i32 ptrtoint (ptr @g to i32), 48
   %r = and i32 %a, -10
@@ -4772,7 +4773,8 @@ define i32 @canonicalize_logic_first_constexpr(i32 %x) {
 define i32 @canonicalize_logic_first_constexpr_nuw(i32 %x) {
 ; CHECK-LABEL: define {{[^@]+}}@canonicalize_logic_first_constexpr_nuw
 ; CHECK-SAME: (i32 [[X:%.*]]) {
-; CHECK-NEXT:    ret i32 and (i32 add (i32 ptrtoint (ptr @g to i32), i32 48), i32 -10)
+; CHECK-NEXT:    [[R:%.*]] = and i32 add (i32 ptrtoint (ptr @g to i32), i32 48), -10
+; CHECK-NEXT:    ret i32 [[R]]
 ;
   %a = add nuw i32 ptrtoint (ptr @g to i32), 48
   %r = and i32 %a, -10

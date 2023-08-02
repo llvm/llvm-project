@@ -3,6 +3,14 @@
 
 module m
   real, target :: hosted(2)
+  integer, parameter :: cst(2,2) = reshape([1, 2, 3, 4], shape(cst))
+  integer, parameter :: empty_cst(2,0) = reshape([1], shape(empty_cst))
+  integer :: n
+  logical, parameter :: test_param1 = is_contiguous(cst(:,1))
+  logical, parameter :: test_param2 = is_contiguous(cst(1,:))
+  logical, parameter :: test_param3 = is_contiguous(cst(:,n))
+  logical, parameter :: test_param4 = .not. is_contiguous(cst(n,:))
+  logical, parameter :: test_param5 = is_contiguous(empty_cst(n,-1:n:2))
  contains
   function f()
     real, pointer, contiguous :: f(:)

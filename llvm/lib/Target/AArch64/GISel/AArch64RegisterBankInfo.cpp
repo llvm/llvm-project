@@ -389,7 +389,7 @@ AArch64RegisterBankInfo::getInstrAlternativeMappings(
 }
 
 void AArch64RegisterBankInfo::applyMappingImpl(
-    const OperandsMapper &OpdMapper) const {
+    MachineIRBuilder &Builder, const OperandsMapper &OpdMapper) const {
   switch (OpdMapper.getMI().getOpcode()) {
   case TargetOpcode::G_OR:
   case TargetOpcode::G_BITCAST:
