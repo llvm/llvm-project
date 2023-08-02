@@ -41,6 +41,8 @@ enum EdgeKind_ppc64 : Edge::Kind {
   RequestCall,
   // Request calling function without TOC.
   RequestCallNoTOC,
+  RequestTLSDescInGOTAndTransformToTOCDelta16HA,
+  RequestTLSDescInGOTAndTransformToTOCDelta16LO,
 };
 
 enum PLTCallStubKind {
