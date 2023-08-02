@@ -469,16 +469,6 @@ struct AMDGPUKernelTy : public GenericKernelTy {
                                KernelArgsTy &KernelArgs, uint32_t NumThreads,
                                uint64_t NumBlocks) const override;
 
-  /// The default number of blocks is common to the whole device.
-  uint32_t getDefaultNumBlocks(GenericDeviceTy &GenericDevice) const override {
-    return GenericDevice.getDefaultNumBlocks();
-  }
-
-  /// The default number of threads is common to the whole device.
-  uint32_t getDefaultNumThreads(GenericDeviceTy &GenericDevice) const override {
-    return GenericDevice.getDefaultNumThreads();
-  }
-
   /// Get group and private segment kernel size.
   uint32_t getGroupSize() const { return GroupSize; }
   uint32_t getPrivateSize() const { return PrivateSize; }

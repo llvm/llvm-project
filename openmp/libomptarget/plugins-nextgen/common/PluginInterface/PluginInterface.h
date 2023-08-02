@@ -318,10 +318,6 @@ private:
                     llvm::SmallVectorImpl<void *> &Args,
                     llvm::SmallVectorImpl<void *> &Ptrs) const;
 
-  /// Get the default number of threads and blocks for the kernel.
-  virtual uint32_t getDefaultNumThreads(GenericDeviceTy &Device) const = 0;
-  virtual uint32_t getDefaultNumBlocks(GenericDeviceTy &Device) const = 0;
-
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
   uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
