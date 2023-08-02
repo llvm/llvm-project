@@ -20,8 +20,8 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(int, linkat,
                    (int fd1, const char *path1, int fd2, const char *path2,
                     int flags)) {
-  long ret =
-      __llvm_libc::syscall_impl(SYS_linkat, fd1, path1, fd2, path2, flags);
+  int ret =
+      __llvm_libc::syscall_impl<int>(SYS_linkat, fd1, path1, fd2, path2, flags);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

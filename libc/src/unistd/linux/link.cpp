@@ -19,10 +19,10 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, link, (const char *path1, const char *path2)) {
 #ifdef SYS_link
-  long ret = __llvm_libc::syscall_impl(SYS_link, path1, path2);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_link, path1, path2);
 #elif defined(SYS_linkat)
-  long ret = __llvm_libc::syscall_impl(SYS_linkat, AT_FDCWD, path1, AT_FDCWD,
-                                       path2, 0);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_linkat, AT_FDCWD, path1,
+                                           AT_FDCWD, path2, 0);
 #else
 #error "link or linkat syscalls not available."
 #endif
