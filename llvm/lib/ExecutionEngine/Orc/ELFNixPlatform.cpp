@@ -11,6 +11,7 @@
 #include "llvm/BinaryFormat/ELF.h"
 #include "llvm/ExecutionEngine/JITLink/ELF_x86_64.h"
 #include "llvm/ExecutionEngine/JITLink/aarch64.h"
+#include "llvm/ExecutionEngine/JITLink/ppc64.h"
 #include "llvm/ExecutionEngine/JITLink/x86_64.h"
 #include "llvm/ExecutionEngine/Orc/DebugUtils.h"
 #include "llvm/ExecutionEngine/Orc/ExecutionUtils.h"
@@ -53,6 +54,16 @@ public:
       PointerSize = 8;
       Endianness = support::endianness::little;
       EdgeKind = jitlink::aarch64::Pointer64;
+      break;
+    case Triple::ppc64:
+      PointerSize = 8;
+      Endianness = support::endianness::big;
+      EdgeKind = jitlink::ppc64::Pointer64;
+      break;
+    case Triple::ppc64le:
+      PointerSize = 8;
+      Endianness = support::endianness::little;
+      EdgeKind = jitlink::ppc64::Pointer64;
       break;
     default:
       llvm_unreachable("Unrecognized architecture");
@@ -238,6 +249,9 @@ bool ELFNixPlatform::supportedTarget(const Triple &TT) {
   switch (TT.getArch()) {
   case Triple::x86_64:
   case Triple::aarch64:
+  // FIXME: jitlink for ppc64 hasn't been well tested, leave it unsupported
+  // right now.
+  case Triple::ppc64le:
     return true;
   default:
     return false;
