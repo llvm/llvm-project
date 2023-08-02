@@ -230,7 +230,6 @@ my $fileTypeFlag = 0;  # to see if -x flag is mentioned
 my $hasOMPTargets = 0; # If OMP targets is mentioned
 my $hasC = 0;          # options contain a c-style file
 my $hasCXX = 0;        # options contain a cpp-style file (NVCC must force recognition as GPU file)
-my $hasCU = 0;         # options contain a cu-style file (HCC must force recognition as GPU file)
 my $hasHIP = 0;        # options contain a hip-style file (HIP-Clang must pass offloading options)
 my $printHipVersion = 0;    # print HIP version
 my $printCXXFlags = 0;      # print HIPCXXFLAGS
@@ -442,7 +441,6 @@ foreach $arg (@ARGV)
                 if ($HIP_COMPILE_CXX_AS_HIP eq '0' or $HIP_PLATFORM ne "amd" or $hasOMPTargets eq 1) {
                     $hasCXX = 1;
                     if ($HIP_PLATFORM eq "nvidia") {
-                        $hasCU = 1;
                         $toolArgs .= " -x cu";
                     }
                 } elsif ($HIP_PLATFORM eq "amd") {
@@ -455,7 +453,6 @@ foreach $arg (@ARGV)
                     $hasHIP = 1;
                     $toolArgs .= " -x hip";
                 } elsif ($HIP_PLATFORM eq "nvidia") {
-                    $hasCU = 1;
                     $toolArgs .= " -x cu";
                 }
             }
