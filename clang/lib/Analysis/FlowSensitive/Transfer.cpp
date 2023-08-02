@@ -725,9 +725,7 @@ private:
     // FIXME: Use the same analysis as the caller for the callee. Note,
     // though, that doing so would require support for changing the analysis's
     // ASTContext.
-    assert(CFCtx->getDecl() != nullptr &&
-           "ControlFlowContexts in the environment should always carry a decl");
-    auto Analysis = NoopAnalysis(CFCtx->getDecl()->getASTContext(),
+    auto Analysis = NoopAnalysis(CFCtx->getDecl().getASTContext(),
                                  DataflowAnalysisOptions{Options});
 
     auto BlockToOutputState =

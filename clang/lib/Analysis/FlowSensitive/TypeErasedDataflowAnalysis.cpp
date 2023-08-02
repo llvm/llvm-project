@@ -189,7 +189,7 @@ public:
   void print(raw_ostream &OS) const override {
     OS << Message << "\n";
     OS << "Decl:\n";
-    CFCtx.getDecl()->dump(OS);
+    CFCtx.getDecl().dump(OS);
     OS << "CFG:\n";
     CFCtx.getCFG().print(OS, LangOptions(), false);
   }
