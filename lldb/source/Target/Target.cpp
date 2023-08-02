@@ -2782,6 +2782,14 @@ llvm::Optional<SwiftScratchContextReader> Target::GetSwiftScratchContext(
         DisplayFallbackSwiftContextErrors(cached_ast_ctx);
         // Try again.
         // FIXME: Shouldn't this continue rather than return?
+        auto &lock = GetSwiftScratchContextLock();
+        if (!lock.try_lock()) {
+          if (log)
+            log->Printf("module scratch context has errors but couldn't "
+                        "acquire scratch context lock\n");
+          return;
+        }
+        std::lock_guard<std::shared_mutex> unlock(lock, std::adopt_lock);
         m_scratch_typesystem_for_module.erase(key);
         if (log)
           log->Printf("erased module-wide scratch context with errors\n");
