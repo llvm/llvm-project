@@ -1,4 +1,3 @@
-// XFAIL: target={{powerpc64.*}}
 // RUN: %clang -c -o %t %s
 // RUN: %llvm_jitlink %t
 //

@@ -31,6 +31,70 @@ using namespace llvm::jitlink;
 constexpr StringRef ELFTOCSymbolName = ".TOC.";
 constexpr StringRef TOCSymbolAliasIdent = "__TOC__";
 constexpr uint64_t ELFTOCBaseOffset = 0x8000;
+constexpr StringRef ELFTLSInfoSectionName = "$__TLSINFO";
+
+template <support::endianness Endianness>
+class TLSInfoTableManager_ELF_ppc64
+    : public TableManager<TLSInfoTableManager_ELF_ppc64<Endianness>> {
+public:
+  static const uint8_t TLSInfoEntryContent[16];
+
+  static StringRef getSectionName() { return ELFTLSInfoSectionName; }
+
+  bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
+    Edge::Kind K = E.getKind();
+    if (K == ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16HA) {
+      E.setKind(ppc64::TOCDelta16HA);
+      E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+      return true;
+    }
+    if (K == ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16LO) {
+      E.setKind(ppc64::TOCDelta16LO);
+      E.setTarget(this->getEntryForTarget(G, E.getTarget()));
+      return true;
+    }
+    return false;
+  }
+
+  Symbol &createEntry(LinkGraph &G, Symbol &Target) {
+    // The TLS Info entry's key value will be written by
+    // `fixTLVSectionsAndEdges`, so create mutable content.
+    auto &TLSInfoEntry = G.createMutableContentBlock(
+        getTLSInfoSection(G), G.allocateContent(getTLSInfoEntryContent()),
+        orc::ExecutorAddr(), 8, 0);
+    TLSInfoEntry.addEdge(ppc64::Pointer64, 8, Target, 0);
+    return G.addAnonymousSymbol(TLSInfoEntry, 0, 16, false, false);
+  }
+
+private:
+  Section &getTLSInfoSection(LinkGraph &G) {
+    if (!TLSInfoTable)
+      TLSInfoTable =
+          &G.createSection(ELFTLSInfoSectionName, orc::MemProt::Read);
+    return *TLSInfoTable;
+  }
+
+  ArrayRef<char> getTLSInfoEntryContent() const {
+    return {reinterpret_cast<const char *>(TLSInfoEntryContent),
+            sizeof(TLSInfoEntryContent)};
+  }
+
+  Section *TLSInfoTable = nullptr;
+};
+
+template <>
+const uint8_t TLSInfoTableManager_ELF_ppc64<
+    support::endianness::little>::TLSInfoEntryContent[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
+};
+
+template <>
+const uint8_t TLSInfoTableManager_ELF_ppc64<
+    support::endianness::big>::TLSInfoEntryContent[16] = {
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, /*pthread key */
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00  /*data address*/
+};
 
 template <support::endianness Endianness>
 Symbol &createELFGOTHeader(LinkGraph &G,
@@ -91,8 +155,8 @@ Error buildTables_ELF_ppc64(LinkGraph &G) {
   registerExistingGOTEntries(G, TOC);
 
   ppc64::PLTTableManager<Endianness> PLT(TOC);
-  visitExistingEdges(G, TOC, PLT);
-  // TODO: Add TLS support.
+  TLSInfoTableManager_ELF_ppc64<Endianness> TLSInfo;
+  visitExistingEdges(G, TOC, PLT, TLSInfo);
 
   // After visiting edges in LinkGraph, we have GOT entries built in the
   // synthesized section.
@@ -164,6 +228,13 @@ private:
     if (LLVM_UNLIKELY(ELFReloc == ELF::R_PPC64_NONE))
       return Error::success();
 
+    // TLS model markers. We only support global-dynamic model now.
+    if (ELFReloc == ELF::R_PPC64_TLSGD)
+      return Error::success();
+    if (ELFReloc == ELF::R_PPC64_TLSLD)
+      return make_error<StringError>("Local-dynamic TLS model is not supported",
+                                     inconvertibleErrorCode());
+
     auto ObjSymbol = Base::Obj.getRelocationSymbol(Rel, Base::SymTabSec);
     if (!ObjSymbol)
       return ObjSymbol.takeError();
@@ -233,6 +304,12 @@ private:
       break;
     case ELF::R_PPC64_PCREL34:
       Kind = ppc64::Delta34;
+      break;
+    case ELF::R_PPC64_GOT_TLSGD16_HA:
+      Kind = ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16HA;
+      break;
+    case ELF::R_PPC64_GOT_TLSGD16_LO:
+      Kind = ppc64::RequestTLSDescInGOTAndTransformToTOCDelta16LO;
       break;
     }
 
