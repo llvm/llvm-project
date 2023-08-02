@@ -986,10 +986,12 @@ using AMDGPUSignalManagerTy = GenericDeviceResourceManagerTy<AMDGPUSignalRef>;
 /// Class holding an HSA queue to submit kernel and barrier packets.
 struct AMDGPUQueueTy {
   /// Create an empty queue.
-  AMDGPUQueueTy() : Queue(nullptr), Mutex() {}
+  AMDGPUQueueTy() : Queue(nullptr), Mutex(), NumUsers(0) {}
 
-  /// Initialize a new queue belonging to a specific agent.
+  /// Lazily initialize a new queue belonging to a specific agent.
   Error init(hsa_agent_t Agent, int32_t QueueSize) {
+    if (Queue)
+      return Plugin::success();
     hsa_status_t Status =
         hsa_queue_create(Agent, QueueSize, HSA_QUEUE_TYPE_MULTI, callbackError,
                          nullptr, UINT32_MAX, UINT32_MAX, &Queue);
@@ -1000,25 +1002,25 @@ struct AMDGPUQueueTy {
 
   /// Deinitialize the queue and destroy its resources.
   Error deinit() {
+    std::lock_guard<std::mutex> Lock(Mutex);
+    // Don't bother turning OFF profiling, the queue is going away anyways.
     if (!Queue)
       return Plugin::success();
-
-    // Don't bother turning OFF profiling, the queue is going away anyways.
     hsa_status_t Status = hsa_queue_destroy(Queue);
     return Plugin::check(Status, "Error in hsa_queue_destroy: %s");
   }
 
   /// Returns if this queue is considered busy
-  bool isBusy() { return Busy.load() > 0; }
+  bool isBusy() const { return NumUsers > 0; }
 
   /// Returns if the underlying HSA queue is initialized
   bool isInitialized() { return Queue != nullptr; }
 
-  /// Decrement busy count of the queue object
-  void decBusy() { Busy.fetch_sub(1); }
+  /// Decrement user count of the queue object
+  void removeUser() { --NumUsers; }
 
-  /// Increase busy count ob the queue object
-  void incBusy() { Busy.fetch_add(1); }
+  /// Increase user count of the queue object
+  void addUser() { ++NumUsers; }
 
   /// Push a kernel launch to the queue. The kernel launch requires an output
   /// signal and can define an optional input signal (nullptr if none).
@@ -1032,6 +1034,7 @@ struct AMDGPUQueueTy {
     // the addition of other packets to the queue. The following piece of code
     // should be lightweight; do not block the thread, allocate memory, etc.
     std::lock_guard<std::mutex> Lock(Mutex);
+    assert(Queue && "Interacted with a non-initialized queue!");
 
     // Avoid defining the input dependency if already satisfied.
     if (InputSignal && !InputSignal->load())
@@ -1080,6 +1083,7 @@ struct AMDGPUQueueTy {
                     const AMDGPUSignalTy *InputSignal2) {
     // Lock the queue during the packet publishing process.
     std::lock_guard<std::mutex> Lock(Mutex);
+    assert(Queue && "Interacted with a non-initialized queue!");
 
     // Push the barrier with the lock acquired.
     return pushBarrierImpl(OutputSignal, InputSignal1, InputSignal2);
@@ -1206,7 +1210,7 @@ private:
   std::mutex Mutex;
 
   /// Indicates that the queue is busy when > 0
-  std::atomic<int> Busy{0};
+  int NumUsers;
 };
 
 /// Struct that implements a stream of asynchronous operations for AMDGPU
@@ -1240,11 +1244,6 @@ private:
     double TicksToTime;
   };
 
-  /// Utility struct holding arguments for HSA lazy queue handling
-  struct HSABusyQueueTy {
-    AMDGPUQueueTy *Q;
-  };
-
   /// The stream is composed of N stream's slots. The struct below represents
   /// the fields of each slot. Each slot has a signal and an optional action
   /// function. When appending an HSA asynchronous operation to the stream, one
@@ -1268,9 +1267,6 @@ private:
     /// Set to nullptr when there is no action to perform.
     Error (*OmptActionFunction)(void *);
 
-    /// Action function to unmark an HSA queue from being busy
-    Error (*BusyQueueActionFunction)(void *);
-
     /// Space for the action's arguments. A pointer to these arguments is passed
     /// to the action function. Notice the space of arguments is limited.
     union {
@@ -1283,13 +1279,10 @@ private:
     /// passed to the action function.
     OmptKernelTimingArgsTy OmptKernelTimingArgs;
 
-    /// Space for Busy queue acstion's arguments
-    HSABusyQueueTy BusyQueueArgs;
-
     /// Create an empty slot.
     StreamSlotTy()
-        : Signal(nullptr), ActionFunction(nullptr), OmptActionFunction(nullptr),
-          BusyQueueActionFunction(nullptr) {}
+        : Signal(nullptr), ActionFunction(nullptr),
+          OmptActionFunction(nullptr) {}
 
     /// Schedule a host memory copy action on the slot.
     Error schedHostMemoryCopy(void *Dst, const void *Src, size_t Size) {
@@ -1322,15 +1315,9 @@ private:
       return Plugin::success();
     }
 
-    Error schedDecrementQueueBusyCount(AMDGPUQueueTy *Q) {
-      BusyQueueActionFunction = decrementBusyCounter;
-      BusyQueueArgs = HSABusyQueueTy{Q};
-      return Plugin::success();
-    }
-
     // Perform the action if needed.
     Error performAction() {
-      if (!ActionFunction && !BusyQueueActionFunction
+      if (!ActionFunction
 #ifdef OMPT_SUPPORT
           && !OmptActionFunction
 #endif
@@ -1357,13 +1344,6 @@ private:
               return Err;
           } else { return Plugin::error("Unknown ompt action function!"); });
 
-      if (BusyQueueActionFunction == decrementBusyCounter) {
-        if (auto Err = decrementBusyCounter(&BusyQueueArgs))
-          return Err;
-      }
-
-      BusyQueueActionFunction = nullptr;
-
       // Invalidate the actions.
       ActionFunction = nullptr;
 
@@ -1378,8 +1358,14 @@ private:
   /// The device agent where the stream was created.
   hsa_agent_t Agent;
 
+  /// The queue that the stream uses to launch kernels.
+  AMDGPUQueueTy *Queue;
+
   /// The manager of signals to reuse signals.
   AMDGPUSignalManagerTy &SignalManager;
+
+  /// A reference to the associated device.
+  GenericDeviceTy &Device;
 
   /// Array of stream slots. Use std::deque because it can dynamically grow
   /// without invalidating the already inserted elements. For instance, the
@@ -1464,7 +1450,34 @@ private:
   /// The idea is to make the current stream waiting on two signals: 1) the last
   /// signal of the current stream, and 2) the last signal of the other stream.
   /// Use a barrier packet with two input signals.
-  Error waitOnStreamOperation(AMDGPUStreamTy &OtherStream, uint32_t Slot);
+  Error waitOnStreamOperation(AMDGPUStreamTy &OtherStream, uint32_t Slot) {
+    if (Queue == nullptr)
+      return Plugin::error("Target queue was nullptr");
+
+    /// The signal that we must wait from the other stream.
+    AMDGPUSignalTy *OtherSignal = OtherStream.Slots[Slot].Signal;
+
+    // Prevent the release of the other stream's signal.
+    OtherSignal->increaseUseCount();
+
+    // Retrieve an available signal for the operation's output.
+    AMDGPUSignalTy *OutputSignal = nullptr;
+    if (auto Err = SignalManager.getResource(OutputSignal))
+      return Err;
+    OutputSignal->reset();
+    OutputSignal->increaseUseCount();
+
+    // Consume stream slot and compute dependencies.
+    auto [Curr, InputSignal] = consume(OutputSignal);
+
+    // Setup the post action to release the signal.
+    if (auto Err = Slots[Curr].schedReleaseSignal(OtherSignal, &SignalManager))
+      return Err;
+
+    // Push a barrier into the queue with both input signals.
+    DP("Using Queue: %p with HSA Queue: %p\n", Queue, Queue->getHsaQueue());
+    return Queue->pushBarrier(OutputSignal, InputSignal, OtherSignal);
+  }
 
   /// Callback for running a specific asynchronous operation. This callback is
   /// used for hsa_amd_signal_async_handler. The argument is the operation that
@@ -1543,15 +1556,6 @@ private:
                          "Error in hsa_amd_profiling_get_dispatch_time");
   }
 
-  static Error decrementBusyCounter(void *Data) {
-    HSABusyQueueTy *Args = reinterpret_cast<HSABusyQueueTy *>(Data);
-    assert(Args && "Valid arguments");
-    Args->Q->decBusy();
-    return Plugin::success();
-  }
-
-  AMDGPUDeviceTy &Device;
-
 public:
   /// Create an empty stream associated with a specific device.
   AMDGPUStreamTy(AMDGPUDeviceTy &Device);
@@ -1562,7 +1566,7 @@ public:
   /// Deinitialize the stream's signals.
   Error deinit() { return Plugin::success(); }
 
-  hsa_queue_t *getHsaQueue();
+  hsa_queue_t *getHsaQueue() { return Queue->getHsaQueue(); }
 
   /// Attach an RPC handle to this stream.
   void setRPCHandle(RPCHandleTy *Handle) { RPCHandle = Handle; }
@@ -1574,7 +1578,36 @@ public:
   Error pushKernelLaunch(const AMDGPUKernelTy &Kernel, void *KernelArgs,
                          uint32_t NumThreads, uint64_t NumBlocks,
                          uint32_t GroupSize,
-                         AMDGPUMemoryManagerTy &MemoryManager);
+                         AMDGPUMemoryManagerTy &MemoryManager) {
+    if (Queue == nullptr)
+      return Plugin::error("Target queue was nullptr");
+
+    // Retrieve an available signal for the operation's output.
+    AMDGPUSignalTy *OutputSignal = nullptr;
+    if (auto Err = SignalManager.getResource(OutputSignal))
+      return Err;
+    OutputSignal->reset();
+    OutputSignal->increaseUseCount();
+
+    std::lock_guard<std::mutex> StreamLock(Mutex);
+
+    // Consume stream slot and compute dependencies.
+    auto [Curr, InputSignal] = consume(OutputSignal);
+
+    // Setup the post action to release the kernel args buffer.
+    if (auto Err = Slots[Curr].schedReleaseBuffer(KernelArgs, MemoryManager))
+      return Err;
+
+    // Setup the post action to collect kernel execution timing.
+    OMPT_IF_TRACING_ENABLED(
+        if (auto Err = Slots[Curr].schedOmptKernelTiming(
+                Agent, OutputSignal, TicksToTime)) return Err;);
+
+    // Push the kernel with the output signal and an input signal (optional)
+    DP("Using Queue: %p with HSA Queue: %p\n", Queue, Queue->getHsaQueue());
+    return Queue->pushKernelLaunch(Kernel, KernelArgs, NumThreads, NumBlocks,
+                                   GroupSize, OutputSignal, InputSignal);
+  }
 
   /// Push an asynchronous memory copy between pinned memory buffers.
   Error pushPinnedMemoryCopyAsync(void *Dst, const void *Src,
@@ -1801,6 +1834,8 @@ public:
 
   /// Make the stream wait on an event.
   Error waitEvent(const AMDGPUEventTy &Event);
+
+  friend struct AMDGPUStreamManagerTy;
 };
 
 /// Class representing an event on AMDGPU. The event basically stores some
@@ -1897,6 +1932,106 @@ Error AMDGPUStreamTy::waitEvent(const AMDGPUEventTy &Event) {
   // Otherwise, make the current stream wait on the other stream's operation.
   return waitOnStreamOperation(RecordedStream, Event.RecordedSlot);
 }
+
+struct AMDGPUStreamManagerTy final
+    : GenericDeviceResourceManagerTy<AMDGPUResourceRef<AMDGPUStreamTy>> {
+  using ResourceRef = AMDGPUResourceRef<AMDGPUStreamTy>;
+  using ResourcePoolTy = GenericDeviceResourceManagerTy<ResourceRef>;
+
+  AMDGPUStreamManagerTy(GenericDeviceTy &Device, hsa_agent_t HSAAgent)
+      : GenericDeviceResourceManagerTy(Device), NextQueue(0), Agent(HSAAgent) {}
+
+  Error init(uint32_t InitialSize, int NumHSAQueues, int HSAQueueSize) {
+    Queues = std::vector<AMDGPUQueueTy>(NumHSAQueues);
+    QueueSize = HSAQueueSize;
+    MaxNumQueues = NumHSAQueues;
+    // Initialize one queue eagerly
+    if (auto Err = Queues.front().init(Agent, QueueSize))
+      return Err;
+
+    return GenericDeviceResourceManagerTy::init(InitialSize);
+  }
+
+  /// Deinitialize the resource pool and delete all resources. This function
+  /// must be called before the destructor.
+  Error deinit() override {
+    // De-init all queues
+    for (AMDGPUQueueTy &Queue : Queues) {
+      if (auto Err = Queue.deinit())
+        return Err;
+    }
+
+    return GenericDeviceResourceManagerTy::deinit();
+  }
+
+  /// Get a single stream from the pool or create new resources.
+  virtual Error getResource(AMDGPUStreamTy *&StreamHandle) override {
+    return getResourcesImpl(1, &StreamHandle, [this](AMDGPUStreamTy *&Handle) {
+      return assignNextQueue(Handle);
+    });
+  }
+
+  /// Return stream to the pool.
+  virtual Error returnResource(AMDGPUStreamTy *StreamHandle) override {
+    return returnResourceImpl(StreamHandle, [](AMDGPUStreamTy *Handle) {
+      Handle->Queue->removeUser();
+      return Plugin::success();
+    });
+  }
+
+  /// Enable/disable profiling of the HSA queues.
+  void setOmptQueueProfile(int Enable) {
+    for (auto &Q : Queues)
+      if (Q.isInitialized())
+        hsa_amd_profiling_set_profiler_enabled(Q.getHsaQueue(), Enable);
+  }
+
+private:
+  /// Search for and assign an prefereably idle queue to the given Stream. If
+  /// there is no queue without current users, resort to round robin selection.
+  inline Error assignNextQueue(AMDGPUStreamTy *Stream) {
+    uint32_t StartIndex = NextQueue % MaxNumQueues;
+    AMDGPUQueueTy *Q = nullptr;
+
+    for (int i = 0; i < MaxNumQueues; ++i) {
+      Q = &Queues[StartIndex++];
+      if (StartIndex == MaxNumQueues)
+        StartIndex = 0;
+
+      if (Q->isBusy())
+        continue;
+      else {
+        if (auto Err = Q->init(Agent, QueueSize))
+          return Err;
+
+        Q->addUser();
+        Stream->Queue = Q;
+        return Plugin::success();
+      }
+    }
+
+    // All queues busy: Round robin (StartIndex has the initial value again)
+    Queues[StartIndex].addUser();
+    Stream->Queue = &Queues[StartIndex];
+    ++NextQueue;
+    return Plugin::success();
+  }
+
+  /// The next queue index to use for round robin selection.
+  uint32_t NextQueue;
+
+  /// The queues which are assigned to requested streams.
+  std::vector<AMDGPUQueueTy> Queues;
+
+  /// The corresponding device as HSA agent.
+  hsa_agent_t Agent;
+
+  /// The maximum number of queues.
+  int MaxNumQueues;
+
+  /// The size of created queues.
+  int QueueSize;
+};
 
 /// Abstract class that holds the common members of the actual kernel devices
 /// and the host device. Both types should inherit from this class.
@@ -2083,9 +2218,8 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
                                64),
         OMPX_ForceSyncRegions("OMPX_FORCE_SYNC_REGIONS", 0),
         OMPX_StreamBusyWait("LIBOMPTARGET_AMDGPU_STREAM_BUSYWAIT", 2000000),
-        AMDGPUStreamManager(*this), AMDGPUEventManager(*this),
-        AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice),
-        Queues() {}
+        AMDGPUStreamManager(*this, Agent), AMDGPUEventManager(*this),
+        AMDGPUSignalManager(*this), Agent(Agent), HostDevice(HostDevice) {}
 
   ~AMDGPUDeviceTy() {}
 
@@ -2196,20 +2330,13 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
       return Err;
 
     // Compute the number of queues and their size.
-    const uint32_t NumQueues = std::min(getMaxNumHsaQueues(), MaxQueues);
-    const uint32_t QueueSize = std::min(OMPX_QueueSize.get(), MaxQueueSize);
-    DP("Using a maximum of %u HSA queues\n", NumQueues);
-
-    // Default-Construct each device queue (and initialize only the first) to
-    // avoid unnecessary initialization overhead.
-    Queues = std::vector<AMDGPUQueueTy>(NumQueues);
-    // TODO: Handle errors here: abort? Gracefully? Ignore?
-    if (auto Err = Queues.front().init(Agent, QueueSize))
-      DP("LAZY_QUEUE: Error occurred during AMDGPUQueueTy init\n");
-    ++NumInitQueues;
+    OMPX_NumQueues = std::max(1U, std::min(OMPX_NumQueues.get(), MaxQueues));
+    OMPX_QueueSize = std::min(OMPX_QueueSize.get(), MaxQueueSize);
+    DP("Using a maximum of %u HSA queues\n", OMPX_NumQueues);
 
     // Initialize stream pool.
-    if (auto Err = AMDGPUStreamManager.init(OMPX_InitialNumStreams))
+    if (auto Err = AMDGPUStreamManager.init(OMPX_InitialNumStreams,
+                                            OMPX_NumQueues, OMPX_QueueSize))
       return Err;
 
     // Initialize event pool.
@@ -2260,11 +2387,6 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         if (auto Err = AMDImage.unloadExecutable())
           return Err;
       }
-    }
-
-    for (AMDGPUQueueTy &Queue : Queues) {
-      if (auto Err = Queue.deinit())
-        return Err;
     }
 
     // Invalidate agent reference.
@@ -3005,57 +3127,9 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
         });
   }
 
-  /// Get the next queue depending on its status. Preferably an idle queue is
-  /// returned. If no initialized queue is available, but more queues may be
-  /// active, the next default-constructed queue is initialized. Otherwise, the
-  /// queue is selected in a round-robin fashion.
-  AMDGPUQueueTy &getNextQueue(bool shouldTrackBusy = false) {
-    // For now, simply use a lock.
-    // TODO: Improve implementation and get rid of lock if possible
-    std::lock_guard<std::mutex> LG(QueuesLock);
-
-    // The size is the maximum number of queues
-    int MaxNumQueues = Queues.size();
-
-    // Determine queues that are busy right now
-    // If an idle and already initialized queue is encountered, return it
-    int NumBusyQueues = 0;
-    for (auto &Q : Queues)
-      if (Q.isBusy())
-        NumBusyQueues++;
-      else if (Q.isInitialized()) {
-        if (shouldTrackBusy)
-          Q.incBusy();
-        return Q;
-      }
-
-    // For now we always take this code path, as no queue is initialized at the
-    // beginning, so we need to execute here at least once.
-    int QueueCount = NumInitQueues.load();
-    if (QueueCount < MaxNumQueues && QueueCount <= NumBusyQueues) {
-      DP("LAZY_QUEUE: Constructing new Queue: %i (Device %i)\n", QueueCount,
-         getDeviceId());
-      // TODO: Handle errors here: abort? Gracefully? Ignore?
-      if (auto Err = Queues[QueueCount].init(getAgent(), OMPX_QueueSize))
-        DP("LAZY_QUEUE: Error occurred during AMDGPUQueueTy init\n");
-      // Actually an atomic pre-increment
-      QueueCount = ++NumInitQueues;
-    }
-    QueueCount = (QueueCount == 0) ? 1 : QueueCount; // Circumvent divide by 0
-
-    uint32_t Current = NextQueue.fetch_add(1, std::memory_order_relaxed);
-    DP("LAZY_QUEUE: Busy: %i Current %i, QueueCount %i\n", NumBusyQueues,
-       Current, QueueCount);
-    // Now upper limit is number of init-ed queues
-    Queues[Current % QueueCount].incBusy();
-    return Queues[Current % QueueCount];
-  }
-
-  /// Enable/disable profiling of the HSA queues.
+  /// Propagate the enable/disable profiling request to the StreamManager.
   void setOmptQueueProfile(int Enable) {
-    for (auto &Q : Queues)
-      if (Q.isInitialized())
-        hsa_amd_profiling_set_profiler_enabled(Q.getHsaQueue(), Enable);
+    AMDGPUStreamManager.setOmptQueueProfile(Enable);
   }
 
   /// Get the address of pointer to the preallocated device memory pool.
@@ -3099,10 +3173,7 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   }
 
 private:
-  using AMDGPUStreamRef = AMDGPUResourceRef<AMDGPUStreamTy>;
   using AMDGPUEventRef = AMDGPUResourceRef<AMDGPUEventTy>;
-
-  using AMDGPUStreamManagerTy = GenericDeviceResourceManagerTy<AMDGPUStreamRef>;
   using AMDGPUEventManagerTy = GenericDeviceResourceManagerTy<AMDGPUEventRef>;
 
   /// Envar for controlling the number of HSA queues per device. High number of
@@ -3170,18 +3241,6 @@ private:
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;
-
-  /// List of device packet queues.
-  std::vector<AMDGPUQueueTy> Queues;
-
-  // The next queue index to be used.
-  std::atomic<uint32_t> NextQueue = {0};
-
-  /// Guarding the whole queue initialization
-  std::mutex QueuesLock;
-
-  /// Number of initialized (HSA) queues
-  std::atomic<int> NumInitQueues{0};
 
   // Data structure used to keep track of coarse grain memory regions
   AMDGPUMemTypeBitFieldTable *coarse_grain_mem_tab = nullptr;
@@ -3282,7 +3341,8 @@ Error AMDGPUResourceRef<ResourceTy>::create(GenericDeviceTy &Device) {
 }
 
 AMDGPUStreamTy::AMDGPUStreamTy(AMDGPUDeviceTy &Device)
-    : Agent(Device.getAgent()), SignalManager(Device.getSignalManager()),
+    : Agent(Device.getAgent()), Queue(nullptr),
+      SignalManager(Device.getSignalManager()),
       // Initialize the std::deque with some empty positions.
       Slots(32), NextSlot(0), SyncCycle(0), RPCHandle(nullptr),
       StreamBusyWaitMicroseconds(Device.getStreamBusyWaitMicroseconds()),
@@ -3957,76 +4017,6 @@ void *AMDGPUDeviceTy::allocate(size_t Size, void *, TargetAllocTy Kind) {
 
   return Alloc;
 }
-
-Error AMDGPUStreamTy::pushKernelLaunch(const AMDGPUKernelTy &Kernel,
-                                       void *KernelArgs, uint32_t NumThreads,
-                                       uint64_t NumBlocks, uint32_t GroupSize,
-                                       AMDGPUMemoryManagerTy &MemoryManager) {
-  // Retrieve an available signal for the operation's output.
-  AMDGPUSignalTy *OutputSignal = nullptr;
-  if (auto Err = SignalManager.getResource(OutputSignal))
-    return Err;
-  OutputSignal->reset();
-  OutputSignal->increaseUseCount();
-
-  std::lock_guard<std::mutex> StreamLock(Mutex);
-
-  // Consume stream slot and compute dependencies.
-  auto [Curr, InputSignal] = consume(OutputSignal);
-
-  // Setup the post action to release the kernel args buffer.
-  if (auto Err = Slots[Curr].schedReleaseBuffer(KernelArgs, MemoryManager))
-    return Err;
-
-  // Setup the post action to collect kernel execution timing.
-  OMPT_IF_TRACING_ENABLED(
-      if (auto Err = Slots[Curr].schedOmptKernelTiming(
-              Agent, OutputSignal, TicksToTime)) return Err;);
-
-  // Push the kernel with the output signal and an input signal (optional)
-  auto &Queue = Device.getNextQueue(true);
-  if (auto Err = Slots[Curr].schedDecrementQueueBusyCount(&Queue))
-    return Err;
-
-  DP("Using Queue: %p with HSA Queue: %p\n", &Queue, Queue.getHsaQueue());
-  return Queue.pushKernelLaunch(Kernel, KernelArgs, NumThreads, NumBlocks,
-                                GroupSize, OutputSignal, InputSignal);
-}
-
-Error AMDGPUStreamTy::waitOnStreamOperation(AMDGPUStreamTy &OtherStream,
-                                            uint32_t Slot) {
-  /// The signal that we must wait from the other stream.
-  AMDGPUSignalTy *OtherSignal = OtherStream.Slots[Slot].Signal;
-
-  // Prevent the release of the other stream's signal.
-  OtherSignal->increaseUseCount();
-
-  // Retrieve an available signal for the operation's output.
-  AMDGPUSignalTy *OutputSignal = nullptr;
-  if (auto Err = SignalManager.getResource(OutputSignal))
-    return Err;
-  OutputSignal->reset();
-  OutputSignal->increaseUseCount();
-
-  // Consume stream slot and compute dependencies.
-  auto [Curr, InputSignal] = consume(OutputSignal);
-
-  // Setup the post action to release the signal.
-  if (auto Err = Slots[Curr].schedReleaseSignal(OtherSignal, &SignalManager))
-    return Err;
-
-  // Push a barrier into the queue with both input signals.
-  auto &Queue = Device.getNextQueue(true);
-  if (auto Err = Slots[Curr].schedDecrementQueueBusyCount(&Queue))
-    return Err;
-  DP("Using Queue: %p with HSA Queue: %p\n", &Queue, Queue.getHsaQueue());
-  return Queue.pushBarrier(OutputSignal, InputSignal, OtherSignal);
-}
-
-hsa_queue_t *AMDGPUStreamTy::getHsaQueue() {
-  auto &Queue = Device.getNextQueue();
-  return Queue.getHsaQueue();
-};
 
 } // namespace plugin
 } // namespace target
