@@ -160,11 +160,12 @@ struct ReallocOpLoweringBase : public AllocationOpLLVMLowering {
     auto computeNumElements =
         [&](MemRefType type, function_ref<Value()> getDynamicSize) -> Value {
       // Compute number of elements.
+      Type indexType = ConvertToLLVMPattern::getIndexType();
       Value numElements =
           type.isDynamicDim(0)
               ? getDynamicSize()
-              : createIndexConstant(rewriter, loc, type.getDimSize(0));
-      Type indexType = getIndexType();
+              : createIndexAttrConstant(rewriter, loc, indexType,
+                                        type.getDimSize(0));
       if (numElements.getType() != indexType)
         numElements = typeConverter->materializeTargetConversion(
             rewriter, loc, indexType, numElements);
@@ -482,7 +483,8 @@ private:
     // The size value that we have to extract can be obtained using GEPop with
     // `dimOp.index() + 1` index argument.
     Value idxPlusOne = rewriter.create<LLVM::AddOp>(
-        loc, createIndexConstant(rewriter, loc, 1), adaptor.getIndex());
+        loc, createIndexAttrConstant(rewriter, loc, getIndexType(), 1),
+        adaptor.getIndex());
     Value sizePtr = rewriter.create<LLVM::GEPOp>(
         loc, indexPtrTy, getTypeConverter()->getIndexType(), offsetPtr,
         idxPlusOne);
@@ -508,6 +510,7 @@ private:
 
     // Take advantage if index is constant.
     MemRefType memRefType = cast<MemRefType>(operandType);
+    Type indexType = getIndexType();
     if (std::optional<int64_t> index = getConstantDimIndex(dimOp)) {
       int64_t i = *index;
       if (i >= 0 && i < memRefType.getRank()) {
@@ -518,7 +521,7 @@ private:
         }
         // Use constant for static size.
         int64_t dimSize = memRefType.getDimSize(i);
-        return createIndexConstant(rewriter, loc, dimSize);
+        return createIndexAttrConstant(rewriter, loc, indexType, dimSize);
       }
     }
     Value index = adaptor.getIndex();
@@ -717,7 +720,11 @@ struct GetGlobalMemrefOpLowering : public AllocLikeOpLLVMLowering {
 
     // This is called after a type conversion, which would have failed if this
     // call fails.
-    unsigned memSpace = *getTypeConverter()->getMemRefAddressSpace(type);
+    std::optional<unsigned> maybeAddressSpace =
+        getTypeConverter()->getMemRefAddressSpace(type);
+    if (!maybeAddressSpace)
+      return std::make_tuple(Value(), Value());
+    unsigned memSpace = *maybeAddressSpace;
 
     Type arrayTy = convertGlobalMemrefTypeToLLVM(type, *getTypeConverter());
     Type resTy = getTypeConverter()->getPointerType(arrayTy, memSpace);
@@ -826,8 +833,10 @@ struct RankOpLowering : public ConvertOpToLLVMPattern<memref::RankOp> {
       return success();
     }
     if (auto rankedMemRefType = dyn_cast<MemRefType>(operandType)) {
-      rewriter.replaceOp(
-          op, {createIndexConstant(rewriter, loc, rankedMemRefType.getRank())});
+      Type indexType = getIndexType();
+      rewriter.replaceOp(op,
+                         {createIndexAttrConstant(rewriter, loc, indexType,
+                                                  rankedMemRefType.getRank())});
       return success();
     }
     return failure();
@@ -1351,29 +1360,31 @@ private:
       assert(targetMemRefType.getLayout().isIdentity() &&
              "Identity layout map is a precondition of a valid reshape op");
 
+      Type indexType = getIndexType();
       Value stride = nullptr;
       int64_t targetRank = targetMemRefType.getRank();
       for (auto i : llvm::reverse(llvm::seq<int64_t>(0, targetRank))) {
         if (!ShapedType::isDynamic(strides[i])) {
           // If the stride for this dimension is dynamic, then use the product
           // of the sizes of the inner dimensions.
-          stride = createIndexConstant(rewriter, loc, strides[i]);
+          stride =
+              createIndexAttrConstant(rewriter, loc, indexType, strides[i]);
         } else if (!stride) {
           // `stride` is null only in the first iteration of the loop.  However,
           // since the target memref has an identity layout, we can safely set
           // the innermost stride to 1.
-          stride = createIndexConstant(rewriter, loc, 1);
+          stride = createIndexAttrConstant(rewriter, loc, indexType, 1);
         }
 
         Value dimSize;
         // If the size of this dimension is dynamic, then load it at runtime
         // from the shape operand.
         if (!targetMemRefType.isDynamicDim(i)) {
-          dimSize = createIndexConstant(rewriter, loc,
-                                        targetMemRefType.getDimSize(i));
+          dimSize = createIndexAttrConstant(rewriter, loc, indexType,
+                                            targetMemRefType.getDimSize(i));
         } else {
           Value shapeOp = reshapeOp.getShape();
-          Value index = createIndexConstant(rewriter, loc, i);
+          Value index = createIndexAttrConstant(rewriter, loc, indexType, i);
           dimSize = rewriter.create<memref::LoadOp>(loc, shapeOp, index);
           Type indexType = getIndexType();
           if (dimSize.getType() != indexType)
@@ -1444,7 +1455,7 @@ private:
     Value targetStridesBase = UnrankedMemRefDescriptor::strideBasePtr(
         rewriter, loc, *getTypeConverter(), targetSizesBase, resultRank);
     Value shapeOperandPtr = shapeDesc.alignedPtr(rewriter, loc);
-    Value oneIndex = createIndexConstant(rewriter, loc, 1);
+    Value oneIndex = createIndexAttrConstant(rewriter, loc, getIndexType(), 1);
     Value resultRankMinusOne =
         rewriter.create<LLVM::SubOp>(loc, resultRank, oneIndex);
 
@@ -1466,7 +1477,7 @@ private:
     Value indexArg = condBlock->getArgument(0);
     Value strideArg = condBlock->getArgument(1);
 
-    Value zeroIndex = createIndexConstant(rewriter, loc, 0);
+    Value zeroIndex = createIndexAttrConstant(rewriter, loc, indexType, 0);
     Value pred = rewriter.create<LLVM::ICmpOp>(
         loc, IntegerType::get(rewriter.getContext(), 1),
         LLVM::ICmpPredicate::sge, indexArg, zeroIndex);
@@ -1604,11 +1615,11 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
   // Build and return the value for the idx^th shape dimension, either by
   // returning the constant shape dimension or counting the proper dynamic size.
   Value getSize(ConversionPatternRewriter &rewriter, Location loc,
-                ArrayRef<int64_t> shape, ValueRange dynamicSizes,
-                unsigned idx) const {
+                ArrayRef<int64_t> shape, ValueRange dynamicSizes, unsigned idx,
+                Type indexType) const {
     assert(idx < shape.size());
     if (!ShapedType::isDynamic(shape[idx]))
-      return createIndexConstant(rewriter, loc, shape[idx]);
+      return createIndexAttrConstant(rewriter, loc, indexType, shape[idx]);
     // Count the number of dynamic dims in range [0, idx]
     unsigned nDynamic =
         llvm::count_if(shape.take_front(idx), ShapedType::isDynamic);
@@ -1621,16 +1632,16 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
   // result returned by this function.
   Value getStride(ConversionPatternRewriter &rewriter, Location loc,
                   ArrayRef<int64_t> strides, Value nextSize,
-                  Value runningStride, unsigned idx) const {
+                  Value runningStride, unsigned idx, Type indexType) const {
     assert(idx < strides.size());
     if (!ShapedType::isDynamic(strides[idx]))
-      return createIndexConstant(rewriter, loc, strides[idx]);
+      return createIndexAttrConstant(rewriter, loc, indexType, strides[idx]);
     if (nextSize)
       return runningStride
                  ? rewriter.create<LLVM::MulOp>(loc, runningStride, nextSize)
                  : nextSize;
     assert(!runningStride);
-    return createIndexConstant(rewriter, loc, 1);
+    return createIndexAttrConstant(rewriter, loc, indexType, 1);
   }
 
   LogicalResult
@@ -1697,11 +1708,13 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
 
     targetMemRef.setAlignedPtr(rewriter, loc, bitcastPtr);
 
-    // Field 3: The offset in the resulting type must be 0. This is because of
-    // the type change: an offset on srcType* may not be expressible as an
-    // offset on dstType*.
-    targetMemRef.setOffset(rewriter, loc,
-                           createIndexConstant(rewriter, loc, offset));
+    Type indexType = getIndexType();
+    // Field 3: The offset in the resulting type must be 0. This is
+    // because of the type change: an offset on srcType* may not be
+    // expressible as an offset on dstType*.
+    targetMemRef.setOffset(
+        rewriter, loc,
+        createIndexAttrConstant(rewriter, loc, indexType, offset));
 
     // Early exit for 0-D corner case.
     if (viewMemRefType.getRank() == 0)
@@ -1712,10 +1725,11 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
     for (int i = viewMemRefType.getRank() - 1; i >= 0; --i) {
       // Update size.
       Value size = getSize(rewriter, loc, viewMemRefType.getShape(),
-                           adaptor.getSizes(), i);
+                           adaptor.getSizes(), i, indexType);
       targetMemRef.setSize(rewriter, loc, i, size);
       // Update stride.
-      stride = getStride(rewriter, loc, strides, nextSize, stride, i);
+      stride =
+          getStride(rewriter, loc, strides, nextSize, stride, i, indexType);
       targetMemRef.setStride(rewriter, loc, i, stride);
       nextSize = size;
     }
