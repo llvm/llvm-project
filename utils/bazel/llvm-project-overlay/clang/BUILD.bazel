@@ -2509,6 +2509,7 @@ cc_library(
         ":frontend",
         ":index",
         ":lex",
+        ":parse",
         "//llvm:Option",
         "//llvm:Support",
         "//llvm:TargetParser",
