@@ -1,14 +1,20 @@
-// REDEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// RUN: %{compile} | %{run} | FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{run_option} =
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext,%mlir_lib_dir/libmlir_runner_utils%shlibext %{run_option} | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
-// RUN: %{compile} | %{run} | FileCheck %s
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=4 reassociate-fp-reductions=true enable-index-optimizations=true
-// RUN: %{compile} | %{run} | FileCheck %s
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true vl=4 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{compile} | %{run}
 
 #MAT_C_C = #sparse_tensor.encoding<{lvlTypes = ["compressed", "compressed"]}>
 #MAT_D_C = #sparse_tensor.encoding<{lvlTypes = ["dense", "compressed"]}>

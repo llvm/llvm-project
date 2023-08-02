@@ -1,19 +1,20 @@
-// DEFINE: %{env} = TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx"
-// REDEFINE: %{run_libs} = -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=false
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = TENSOR0="%mlir_src_dir/test/Integration/data/test.mtx" \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
+// REDEFINE: %{option} = "enable-runtime-library=true"
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
-// RUN: %{compile} | %{env} %{run} | FileCheck %s
-//
-// Do the same run, but now with direct IR generation and VLA vectorization.
-// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{env} %{run_sve} | FileCheck %s %}
-
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{compile} | %{run}
 
 #COO_2D = #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
 #COO_3D = #sparse_tensor.encoding<{ lvlTypes = [ "compressed-nu", "singleton-nu", "singleton" ], posWidth = 32, crdWidth = 32 }>
