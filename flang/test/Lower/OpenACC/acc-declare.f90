@@ -155,4 +155,22 @@ module acc_declare
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
 ! CHECK-NOT: acc.declare_exit
 
+  subroutine acc_declare_copyout()
+    integer :: a(100), i
+    !$acc declare copyout(a)
+
+    do i = 1, 100
+      a(i) = i
+    end do
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_copyout()
+! CHECK: %[[A:.*]] = fir.alloca !fir.array<100xi32> {acc.declare = #acc.declare<dataClause =  acc_copyout>, bindc_name = "a", uniq_name = "_QMacc_declareFacc_declare_copyoutEa"}
+! CHECK: %[[CREATE:.*]] = acc.create varPtr(%[[A]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {dataClause = #acc<data_clause acc_copyout>, name = "a"}
+! CHECK: acc.declare_enter dataOperands(%[[CREATE]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
+! CHECK: acc.declare_exit dataOperands(%[[CREATE]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK: acc.copyout accPtr(%[[CREATE]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) to varPtr(%[[A]] : !fir.ref<!fir.array<100xi32>>) {name = "a"}
+! CHECK: return
+
 end module
