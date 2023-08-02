@@ -57,7 +57,7 @@ def getTestSuite(item, litConfig, cache):
         config_map = litConfig.params.get("config_map")
         if config_map:
             cfgpath = util.abs_path_preserve_drive(cfgpath)
-            target = config_map.get(cfgpath)
+            target = config_map.get(os.path.normcase(cfgpath))
             if target:
                 cfgpath = target
 
