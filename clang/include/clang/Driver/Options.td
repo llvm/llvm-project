@@ -150,11 +150,21 @@ def f_clang_Group : OptionGroup<"<f (clang-only) group>">,
                     Group<CompileOnly_Group>, DocFlatten;
 def pedantic_Group : OptionGroup<"<pedantic group>">, Group<f_Group>,
                      DocFlatten;
+
+def offload_Group : OptionGroup<"<offload group>">, Group<f_Group>,
+                   DocName<"Common Offloading options">;
+
 def opencl_Group : OptionGroup<"<opencl group>">, Group<f_Group>,
                    DocName<"OpenCL options">;
 
 def sycl_Group : OptionGroup<"<SYCL group>">, Group<f_Group>,
                  DocName<"SYCL options">;
+
+def cuda_Group : OptionGroup<"<CUDA group>">, Group<f_Group>,
+                   DocName<"CUDA options">;
+
+def hip_Group : OptionGroup<"<HIP group>">, Group<f_Group>,
+                   DocName<"HIP options">;
 
 def m_Group : OptionGroup<"<m group>">, Group<CompileOnly_Group>,
               DocName<"Target-dependent compilation options">;
@@ -987,32 +997,108 @@ defm convergent_functions : BoolFOption<"convergent-functions",
   NegFlag<SetFalse, [], "Assume all functions may be convergent.">,
   PosFlag<SetTrue, [CC1Option]>>;
 
-def gpu_use_aux_triple_only : Flag<["--"], "gpu-use-aux-triple-only">,
-  InternalDriverOpt, HelpText<"Prepare '-aux-triple' only without populating "
-                              "'-aux-target-cpu' and '-aux-target-feature'.">;
-def cuda_include_ptx_EQ : Joined<["--"], "cuda-include-ptx=">, Flags<[NoXarchOption]>,
-  HelpText<"Include PTX for the following GPU architecture (e.g. sm_35) or 'all'. May be specified more than once.">;
-def no_cuda_include_ptx_EQ : Joined<["--"], "no-cuda-include-ptx=">, Flags<[NoXarchOption]>,
-  HelpText<"Do not include PTX for the following GPU architecture (e.g. sm_35) or 'all'. May be specified more than once.">;
+// Common offloading options
+let Group = offload_Group in {
 def offload_arch_EQ : Joined<["--"], "offload-arch=">, Flags<[NoXarchOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
            "If 'native' is used the compiler will detect locally installed architectures. "
            "For HIP offloading, the device architecture can be followed by target ID features "
            "delimited by a colon (e.g. gfx908:xnack+:sramecc-). May be specified more than once.">;
-def cuda_gpu_arch_EQ : Joined<["--"], "cuda-gpu-arch=">, Flags<[NoXarchOption]>,
-  Alias<offload_arch_EQ>;
-def cuda_feature_EQ : Joined<["--"], "cuda-feature=">, HelpText<"Manually specify the CUDA feature to use">;
-def hip_link : Flag<["--"], "hip-link">,
-  HelpText<"Link clang-offload-bundler bundles for HIP">;
-def no_hip_rt: Flag<["-"], "no-hip-rt">,
-  HelpText<"Do not link against HIP runtime libraries">;
 def no_offload_arch_EQ : Joined<["--"], "no-offload-arch=">, Flags<[NoXarchOption]>,
   HelpText<"Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. "
            "'all' resets the list to its default value.">;
-def emit_static_lib : Flag<["--"], "emit-static-lib">,
-  HelpText<"Enable linker job to emit a static library.">;
+
+def offload_new_driver : Flag<["--"], "offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
+  MarshallingInfoFlag<LangOpts<"OffloadingNewDriver">>, HelpText<"Use the new driver for offloading compilation.">;
+def no_offload_new_driver : Flag<["--"], "no-offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
+  HelpText<"Don't Use the new driver for offloading compilation.">;
+
+def offload_device_only : Flag<["--"], "offload-device-only">, Flags<[FlangOption]>,
+  HelpText<"Only compile for the offloading device.">;
+def offload_host_only : Flag<["--"], "offload-host-only">, Flags<[FlangOption]>,
+  HelpText<"Only compile for the offloading host.">;
+def offload_host_device : Flag<["--"], "offload-host-device">, Flags<[FlangOption]>,
+  HelpText<"Compile for both the offloading host and device (default).">;
+
+def gpu_use_aux_triple_only : Flag<["--"], "gpu-use-aux-triple-only">,
+  InternalDriverOpt, HelpText<"Prepare '-aux-triple' only without populating "
+                              "'-aux-target-cpu' and '-aux-target-feature'.">;
+def amdgpu_arch_tool_EQ : Joined<["--"], "amdgpu-arch-tool=">,
+  HelpText<"Tool used for detecting AMD GPU arch in the system.">;
+def nvptx_arch_tool_EQ : Joined<["--"], "nvptx-arch-tool=">,
+  HelpText<"Tool used for detecting NVIDIA GPU arch in the system.">;
+
+defm gpu_rdc : BoolFOption<"gpu-rdc",
+  LangOpts<"GPURelocatableDeviceCode">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Generate relocatable device code, also known as separate compilation mode">,
+  NegFlag<SetFalse>>;
+
+def fgpu_default_stream_EQ : Joined<["-"], "fgpu-default-stream=">,
+  HelpText<"Specify default stream. The default value is 'legacy'. (CUDA/HIP only)">,
+  Flags<[CC1Option]>,
+  Values<"legacy,per-thread">,
+  NormalizedValuesScope<"LangOptions::GPUDefaultStreamKind">,
+  NormalizedValues<["Legacy", "PerThread"]>,
+  MarshallingInfoEnum<LangOpts<"GPUDefaultStream">, "Legacy">;
+
+def fgpu_flush_denormals_to_zero : Flag<["-"], "fgpu-flush-denormals-to-zero">,
+  HelpText<"Flush denormal floating point values to zero in CUDA/HIP device mode.">;
+def fno_gpu_flush_denormals_to_zero : Flag<["-"], "fno-gpu-flush-denormals-to-zero">;
+
+defm gpu_defer_diag : BoolFOption<"gpu-defer-diag",
+  LangOpts<"GPUDeferDiag">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Defer">, NegFlag<SetFalse, [], "Don't defer">,
+  BothFlags<[], " host/device related diagnostic messages for CUDA/HIP">>;
+
+defm gpu_exclude_wrong_side_overloads : BoolFOption<"gpu-exclude-wrong-side-overloads",
+  LangOpts<"GPUExcludeWrongSideOverloads">, DefaultFalse,
+  PosFlag<SetTrue, [CC1Option], "Always exclude wrong side overloads">,
+  NegFlag<SetFalse, [], "Exclude wrong side overloads only if there are same side overloads">,
+  BothFlags<[HelpHidden], " in overloading resolution for CUDA/HIP">>;
+
+def cuid_EQ : Joined<["-"], "cuid=">, Flags<[CC1Option]>,
+  HelpText<"An ID for compilation unit, which should be the same for the same "
+           "compilation unit but different for different compilation units. "
+           "It is used to externalize device-side static variables for single "
+           "source offloading languages CUDA and HIP so that they can be "
+           "accessed by the host code of the same compilation unit.">,
+  MarshallingInfoString<LangOpts<"CUID">>;
+def fuse_cuid_EQ : Joined<["-"], "fuse-cuid=">,
+  HelpText<"Method to generate ID's for compilation units for single source "
+           "offloading languages CUDA and HIP: 'hash' (ID's generated by hashing "
+           "file path and command line options) | 'random' (ID's generated as "
+           "random numbers) | 'none' (disabled). Default is 'hash'. This option "
+           "will be overridden by option '-cuid=[ID]' if it is specified." >;
+
+def fgpu_inline_threshold_EQ : Joined<["-"], "fgpu-inline-threshold=">,
+  Flags<[HelpHidden]>,
+  HelpText<"Inline threshold for device compilation for CUDA/HIP">;
+
+def fgpu_sanitize : Flag<["-"], "fgpu-sanitize">, Group<f_Group>,
+  HelpText<"Enable sanitizer for supported offloading devices">;
+def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
+}
+
+// CUDA options
+let Group = cuda_Group in {
+def cuda_include_ptx_EQ : Joined<["--"], "cuda-include-ptx=">, Flags<[NoXarchOption]>,
+  HelpText<"Include PTX for the following GPU architecture (e.g. sm_35) or 'all'. May be specified more than once.">;
+def no_cuda_include_ptx_EQ : Joined<["--"], "no-cuda-include-ptx=">, Flags<[NoXarchOption]>,
+  HelpText<"Do not include PTX for the following GPU architecture (e.g. sm_35) or 'all'. May be specified more than once.">;
+def cuda_gpu_arch_EQ : Joined<["--"], "cuda-gpu-arch=">, Flags<[NoXarchOption]>,
+  Alias<offload_arch_EQ>;
+def cuda_feature_EQ : Joined<["--"], "cuda-feature=">, HelpText<"Manually specify the CUDA feature to use">;
 def no_cuda_gpu_arch_EQ : Joined<["--"], "no-cuda-gpu-arch=">, Flags<[NoXarchOption]>,
   Alias<no_offload_arch_EQ>;
+
+def cuda_device_only : Flag<["--"], "cuda-device-only">, Alias<offload_device_only>,
+  HelpText<"Compile CUDA code for device only">;
+def cuda_host_only : Flag<["--"], "cuda-host-only">, Alias<offload_host_only>,
+  HelpText<"Compile CUDA code for host only. Has no effect on non-CUDA compilations.">;
+def cuda_compile_host_device : Flag<["--"], "cuda-compile-host-device">, Alias<offload_host_device>,
+  HelpText<"Compile CUDA code for both host and device (default). Has no "
+           "effect on non-CUDA compilations.">;
+
 def cuda_noopt_device_debug : Flag<["--"], "cuda-noopt-device-debug">,
   HelpText<"Enable device-side debug info generation. Disables ptxas optimizations.">;
 def no_cuda_version_check : Flag<["--"], "no-cuda-version-check">,
@@ -1025,23 +1111,21 @@ def cuda_path_ignore_env : Flag<["--"], "cuda-path-ignore-env">, Group<i_Group>,
   HelpText<"Ignore environment variables to detect CUDA installation">;
 def ptxas_path_EQ : Joined<["--"], "ptxas-path=">, Group<i_Group>,
   HelpText<"Path to ptxas (used for compiling CUDA code)">;
-def fgpu_flush_denormals_to_zero : Flag<["-"], "fgpu-flush-denormals-to-zero">,
-  HelpText<"Flush denormal floating point values to zero in CUDA/HIP device mode.">;
-def fno_gpu_flush_denormals_to_zero : Flag<["-"], "fno-gpu-flush-denormals-to-zero">;
 def fcuda_flush_denormals_to_zero : Flag<["-"], "fcuda-flush-denormals-to-zero">,
   Alias<fgpu_flush_denormals_to_zero>;
 def fno_cuda_flush_denormals_to_zero : Flag<["-"], "fno-cuda-flush-denormals-to-zero">,
   Alias<fno_gpu_flush_denormals_to_zero>;
-defm gpu_rdc : BoolFOption<"gpu-rdc",
-  LangOpts<"GPURelocatableDeviceCode">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option], "Generate relocatable device code, also known as separate compilation mode">,
-  NegFlag<SetFalse>>;
 def : Flag<["-"], "fcuda-rdc">, Alias<fgpu_rdc>;
 def : Flag<["-"], "fno-cuda-rdc">, Alias<fno_gpu_rdc>;
 defm cuda_short_ptr : BoolFOption<"cuda-short-ptr",
   TargetOpts<"NVPTXUseShortPointers">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Use 32-bit pointers for accessing const/local/shared address spaces">,
   NegFlag<SetFalse>>;
+}
+
+def emit_static_lib : Flag<["--"], "emit-static-lib">,
+  HelpText<"Enable linker job to emit a static library.">;
+
 def mprintf_kind_EQ : Joined<["-"], "mprintf-kind=">, Group<m_Group>,
   HelpText<"Specify the printf lowering scheme (AMDGPU only), allowed values are "
   "\"hostcall\"(printing happens during kernel execution, this scheme "
@@ -1053,30 +1137,26 @@ def mprintf_kind_EQ : Joined<["-"], "mprintf-kind=">, Group<m_Group>,
   NormalizedValuesScope<"TargetOptions::AMDGPUPrintfKind">,
   NormalizedValues<["Hostcall", "Buffered"]>,
   MarshallingInfoEnum<TargetOpts<"AMDGPUPrintfKindVal">, "Hostcall">;
-def fgpu_default_stream_EQ : Joined<["-"], "fgpu-default-stream=">,
-  HelpText<"Specify default stream. The default value is 'legacy'. (HIP only)">,
-  Flags<[CC1Option]>,
-  Values<"legacy,per-thread">,
-  NormalizedValuesScope<"LangOptions::GPUDefaultStreamKind">,
-  NormalizedValues<["Legacy", "PerThread"]>,
-  MarshallingInfoEnum<LangOpts<"GPUDefaultStream">, "Legacy">;
-def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<i_Group>,
+
+// HIP options
+let Group = hip_Group in {
+def hip_link : Flag<["--"], "hip-link">, Group<opencl_Group>,
+  HelpText<"Link clang-offload-bundler bundles for HIP">;
+def no_hip_rt: Flag<["-"], "no-hip-rt">, Group<hip_Group>,
+  HelpText<"Do not link against HIP runtime libraries">;
+def rocm_path_EQ : Joined<["--"], "rocm-path=">, Group<hip_Group>,
   HelpText<"ROCm installation path, used for finding and automatically linking required bitcode libraries.">;
-def hip_path_EQ : Joined<["--"], "hip-path=">, Group<i_Group>,
+def hip_path_EQ : Joined<["--"], "hip-path=">, Group<hip_Group>,
   HelpText<"HIP runtime installation path, used for finding HIP version and adding HIP include path.">;
-def amdgpu_arch_tool_EQ : Joined<["--"], "amdgpu-arch-tool=">, Group<i_Group>,
-  HelpText<"Tool used for detecting AMD GPU arch in the system.">;
-def nvptx_arch_tool_EQ : Joined<["--"], "nvptx-arch-tool=">, Group<i_Group>,
-  HelpText<"Tool used for detecting NVIDIA GPU arch in the system.">;
-def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Group<Link_Group>,
+def rocm_device_lib_path_EQ : Joined<["--"], "rocm-device-lib-path=">, Group<hip_Group>,
   HelpText<"ROCm device library path. Alternative to rocm-path.">;
 def : Joined<["--"], "hip-device-lib-path=">, Alias<rocm_device_lib_path_EQ>;
-def hip_device_lib_EQ : Joined<["--"], "hip-device-lib=">, Group<Link_Group>,
+def hip_device_lib_EQ : Joined<["--"], "hip-device-lib=">, Group<hip_Group>,
   HelpText<"HIP device library">;
-def hip_version_EQ : Joined<["--"], "hip-version=">,
+def hip_version_EQ : Joined<["--"], "hip-version=">, Group<hip_Group>,
   HelpText<"HIP version in the format of major.minor.patch">;
 def fhip_dump_offload_linker_script : Flag<["-"], "fhip-dump-offload-linker-script">,
-  Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>;
+  Group<hip_Group>, Flags<[NoArgumentUnused, HelpHidden]>;
 defm hip_new_launch_api : BoolFOption<"hip-new-launch-api",
   LangOpts<"HIPUseNewLaunchAPI">, DefaultFalse,
   PosFlag<SetTrue, [CC1Option], "Use">, NegFlag<SetFalse, [], "Don't use">,
@@ -1102,50 +1182,24 @@ defm gpu_allow_device_init : BoolFOption<"gpu-allow-device-init",
   PosFlag<SetTrue, [CC1Option], "Allow">, NegFlag<SetFalse, [], "Don't allow">,
   BothFlags<[], " device side init function in HIP (experimental)">>,
   ShouldParseIf<hip.KeyPath>;
-defm gpu_defer_diag : BoolFOption<"gpu-defer-diag",
-  LangOpts<"GPUDeferDiag">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option], "Defer">, NegFlag<SetFalse, [], "Don't defer">,
-  BothFlags<[], " host/device related diagnostic messages for CUDA/HIP">>;
-defm gpu_exclude_wrong_side_overloads : BoolFOption<"gpu-exclude-wrong-side-overloads",
-  LangOpts<"GPUExcludeWrongSideOverloads">, DefaultFalse,
-  PosFlag<SetTrue, [CC1Option], "Always exclude wrong side overloads">,
-  NegFlag<SetFalse, [], "Exclude wrong side overloads only if there are same side overloads">,
-  BothFlags<[HelpHidden], " in overloading resolution for CUDA/HIP">>;
 def gpu_max_threads_per_block_EQ : Joined<["--"], "gpu-max-threads-per-block=">,
   Flags<[CC1Option]>,
   HelpText<"Default max threads per block for kernel launch bounds for HIP">,
   MarshallingInfoInt<LangOpts<"GPUMaxThreadsPerBlock">, "1024">,
   ShouldParseIf<hip.KeyPath>;
-def fgpu_inline_threshold_EQ : Joined<["-"], "fgpu-inline-threshold=">,
-  Flags<[HelpHidden]>,
-  HelpText<"Inline threshold for device compilation for CUDA/HIP">;
 def gpu_instrument_lib_EQ : Joined<["--"], "gpu-instrument-lib=">,
   HelpText<"Instrument device library for HIP, which is a LLVM bitcode containing "
   "__cyg_profile_func_enter and __cyg_profile_func_exit">;
-def fgpu_sanitize : Flag<["-"], "fgpu-sanitize">, Group<f_Group>,
-  HelpText<"Enable sanitizer for AMDGPU target">;
-def fno_gpu_sanitize : Flag<["-"], "fno-gpu-sanitize">, Group<f_Group>;
 def gpu_bundle_output : Flag<["--"], "gpu-bundle-output">,
-  Group<f_Group>, HelpText<"Bundle output files of HIP device compilation">;
+  HelpText<"Bundle output files of HIP device compilation">;
 def no_gpu_bundle_output : Flag<["--"], "no-gpu-bundle-output">,
-  Group<f_Group>, HelpText<"Do not bundle output files of HIP device compilation">;
-def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">, Group<f_Group>,
+  Group<hip_Group>, HelpText<"Do not bundle output files of HIP device compilation">;
+def fhip_emit_relocatable : Flag<["-"], "fhip-emit-relocatable">,
   HelpText<"Compile HIP source to relocatable">;
-def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">, Group<f_Group>,
+def fno_hip_emit_relocatable : Flag<["-"], "fno-hip-emit-relocatable">,
   HelpText<"Do not override toolchain to compile HIP source to relocatable">;
-def cuid_EQ : Joined<["-"], "cuid=">, Flags<[CC1Option]>,
-  HelpText<"An ID for compilation unit, which should be the same for the same "
-           "compilation unit but different for different compilation units. "
-           "It is used to externalize device-side static variables for single "
-           "source offloading languages CUDA and HIP so that they can be "
-           "accessed by the host code of the same compilation unit.">,
-  MarshallingInfoString<LangOpts<"CUID">>;
-def fuse_cuid_EQ : Joined<["-"], "fuse-cuid=">,
-  HelpText<"Method to generate ID's for compilation units for single source "
-           "offloading languages CUDA and HIP: 'hash' (ID's generated by hashing "
-           "file path and command line options) | 'random' (ID's generated as "
-           "random numbers) | 'none' (disabled). Default is 'hash'. This option "
-           "will be overridden by option '-cuid=[ID]' if it is specified." >;
+}
+
 def libomptarget_amdgpu_bc_path_EQ : Joined<["--"], "libomptarget-amdgpu-bc-path=">, Group<i_Group>,
   HelpText<"Path to libomptarget-amdgcn bitcode library">;
 def libomptarget_amdgcn_bc_path_EQ : Joined<["--"], "libomptarget-amdgcn-bc-path=">, Group<i_Group>,
@@ -2866,23 +2920,6 @@ defm openmp_optimistic_collapse : BoolFOption<"openmp-optimistic-collapse",
   PosFlag<SetTrue, [CC1Option]>, NegFlag<SetFalse>, BothFlags<[NoArgumentUnused, HelpHidden]>>;
 def static_openmp: Flag<["-"], "static-openmp">,
   HelpText<"Use the static host OpenMP runtime while linking.">;
-def offload_new_driver : Flag<["--"], "offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
-  MarshallingInfoFlag<LangOpts<"OffloadingNewDriver">>, HelpText<"Use the new driver for offloading compilation.">;
-def no_offload_new_driver : Flag<["--"], "no-offload-new-driver">, Flags<[CC1Option]>, Group<f_Group>,
-  HelpText<"Don't Use the new driver for offloading compilation.">;
-def offload_device_only : Flag<["--"], "offload-device-only">, Flags<[FlangOption]>,
-  HelpText<"Only compile for the offloading device.">;
-def offload_host_only : Flag<["--"], "offload-host-only">, Flags<[FlangOption]>,
-  HelpText<"Only compile for the offloading host.">;
-def offload_host_device : Flag<["--"], "offload-host-device">, Flags<[FlangOption]>,
-  HelpText<"Compile for both the offloading host and device (default).">;
-def cuda_device_only : Flag<["--"], "cuda-device-only">, Alias<offload_device_only>,
-  HelpText<"Compile CUDA code for device only">;
-def cuda_host_only : Flag<["--"], "cuda-host-only">, Alias<offload_host_only>,
-  HelpText<"Compile CUDA code for host only. Has no effect on non-CUDA compilations.">;
-def cuda_compile_host_device : Flag<["--"], "cuda-compile-host-device">, Alias<offload_host_device>,
-  HelpText<"Compile CUDA code for both host and device (default). Has no "
-           "effect on non-CUDA compilations.">;
 def fopenmp_new_driver : Flag<["-"], "fopenmp-new-driver">, Flags<[HelpHidden]>,
   HelpText<"Use the new driver for OpenMP offloading.">;
 def fno_openmp_new_driver : Flag<["-"], "fno-openmp-new-driver">, Flags<[HelpHidden]>,
