@@ -241,13 +241,6 @@ void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
                   << (int64_t)sourceOp.get().getAsOpaquePointer() << ", def "
                   << (int64_t)sourceOp.get().getDefiningOp() << ": "
                   << sourceOp.get() << "\n";
-    if (auto blockArg = dyn_cast<BlockArgument>(sourceOp.get())) {
-      printIndent() << "        - block arg " << blockArg.getArgNumber() << ": "
-                    << (int64_t)blockArg.getDefiningOp() << ", value "
-                    << blockArg.getDefiningOp() << "\n";
-
-      printIndent() << blockArg << "\n";
-    }
 
     index++;
   }
@@ -289,8 +282,19 @@ void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
   auto indent = pushIndent();
   opj["Regions"] = nlohmann::json::array();
 
-  for (Region &region : op->getRegions())
+  for (Region &region : op->getRegions()) {
+    for (auto arg : region.getArguments()) {
+      printIndent() << "     - region arg " << arg.getArgNumber() << ": " << arg
+                    << "\n";
+      nlohmann::json sourcej{
+          {"Id", (int64_t)arg.getAsOpaquePointer()},
+         // {"DefinitionId", (int64_t)arg.getAsOpaquePointer()},
+      };
+      opj["Results"].push_back(sourcej);
+    }
+
     printRegion(region, blockArgsMap, opj);
+  }
 
   j["Operations"].push_back(opj);
 }

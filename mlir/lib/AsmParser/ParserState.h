@@ -55,7 +55,8 @@ struct ParserState {
               AsmParserCodeCompleteContext *codeCompleteContext)
       : config(config),
         lex(sourceMgr, config.getContext(), codeCompleteContext),
-        curToken(lex.lexToken()), symbols(symbols), asmState(asmState),
+        curToken(lex.lexToken()), prevToken(Token::eof, ""), symbols(symbols),
+        asmState(asmState),
         codeCompleteContext(codeCompleteContext) {}
   ParserState(const ParserState &) = delete;
   void operator=(const ParserState &) = delete;
@@ -68,6 +69,7 @@ struct ParserState {
 
   /// This is the next token that hasn't been consumed yet.
   Token curToken;
+  Token prevToken;
 
   /// The current state for symbol parsing.
   SymbolState &symbols;

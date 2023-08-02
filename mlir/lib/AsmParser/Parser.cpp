@@ -1200,9 +1200,9 @@ ParseResult OperationParser::parseOperation() {
   }
 
 Builder builder(state.config.getContext());
-  auto endLoc =
-      getToken().getLoc();
-auto startLocAttr = builder.getIntegerAttr(builder.getIntegerType(64, false),
+  auto endLoc = getPreviousTokenEndLoc();
+  auto startLocAttr =
+      builder.getIntegerAttr(builder.getIntegerType(64, false),
                      loc.getPointer() - state.lex.getBufferBegin());
 op->setAttr("irx_start_offset", startLocAttr);
 auto endLocAttr =
