@@ -92,8 +92,7 @@ llvm::Error ObjectFileTransformer::convert(const object::ObjectFile &Obj,
       return AddrOrErr.takeError();
 
     if (SymType.get() != SymbolRef::Type::ST_Function ||
-        !Gsym.IsValidTextAddress(*AddrOrErr) ||
-        Gsym.hasFunctionInfoForAddress(*AddrOrErr))
+        !Gsym.IsValidTextAddress(*AddrOrErr))
       continue;
     // Function size for MachO files will be 0
     constexpr bool NoCopy = false;

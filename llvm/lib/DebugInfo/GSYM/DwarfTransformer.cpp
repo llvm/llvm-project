@@ -215,8 +215,6 @@ static void parseInlineInfo(GsymCreator &Gsym, raw_ostream &Log, CUInfo &CUI,
   if (Tag == dwarf::DW_TAG_inlined_subroutine) {
     // create new InlineInfo and append to parent.children
     InlineInfo II;
-    DWARFAddressRange FuncRange =
-        DWARFAddressRange(FI.startAddress(), FI.endAddress());
     Expected<DWARFAddressRangesVector> RangesOrError = Die.getAddressRanges();
     if (RangesOrError) {
       for (const DWARFAddressRange &Range : RangesOrError.get()) {
@@ -421,6 +419,23 @@ void DwarfTransformer::handleDie(raw_ostream &OS, CUInfo &CUI, DWARFDie Die) {
         FI.Inline->Name = *NameIndex;
         FI.Inline->Ranges.insert(FI.Range);
         parseInlineInfo(Gsym, OS, CUI, Die, 0, FI, *FI.Inline);
+        // Make sure we at least got some valid inline info other than just
+        // the top level function. If we didn't then remove the inline info
+        // from the function info. We have seen cases where LTO tries to modify
+        // the DWARF for functions and it messes up the address ranges for
+        // the inline functions so it is no longer valid.
+        //
+        // By checking if there are any valid children on the top level inline
+        // information object, we will know if we got anything valid from the
+        // debug info.
+        if (FI.Inline->Children.empty()) {
+          if (!Gsym.isQuiet()) {
+            OS << "warning: DIE contains inline function information that has "
+                  "no valid ranges, removing inline information:\n";
+            Die.dump(OS, 0, DIDumpOptions::getForSingleDIE());
+          }
+          FI.Inline = std::nullopt;
+        }
       }
       Gsym.addFunctionInfo(std::move(FI));
     }

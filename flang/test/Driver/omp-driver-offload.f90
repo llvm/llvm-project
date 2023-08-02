@@ -33,7 +33,7 @@
 ! OFFLOAD-HOST-NOT: "-triple" "nvptx64-nvidia-cuda"
 ! OFFLOAD-HOST-NOT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 
-! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: not %flang -S -### %s -o %t 2>&1 \
 ! RUN: -fopenmp --offload-arch=gfx90a --offload-arch=sm_70 --offload-device-only \
 ! RUN: --target=aarch64-unknown-linux-gnu \
 ! RUN:   | FileCheck %s --check-prefix=OFFLOAD-DEVICE
@@ -44,7 +44,7 @@
 ! OFFLOAD-DEVICE-NOT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu"
 
 ! Test regular -fopenmp with offload for basic fopenmp-is-target-device flag addition and correct fopenmp 
-! RUN: %flang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa %s 2>&1 | FileCheck --check-prefixes=CHECK-OPENMP-IS-TARGET-DEVICE %s
+! RUN: not %flang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa %s 2>&1 | FileCheck --check-prefixes=CHECK-OPENMP-IS-TARGET-DEVICE %s
 ! CHECK-OPENMP-IS-TARGET-DEVICE: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" {{.*}}.f90"
 
 ! Testing appropriate flags are gnerated and appropriately assigned by the driver when offloading
@@ -58,43 +58,43 @@
 ! OPENMP-OFFLOAD-ARGS-NEXT: "{{[^"]*}}flang-new" "-fc1" "-triple" "aarch64-unknown-linux-gnu" {{.*}} "-fopenmp" {{.*}} "-fembed-offload-object={{.*}}.out" {{.*}}.bc"
 
 ! Test -fopenmp with offload for RTL Flag Options
-! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: not %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-assume-threads-oversubscription \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-THREADS-OVS
 ! CHECK-THREADS-OVS: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-threads-oversubscription" {{.*}}.f90"
 
-! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: not %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-assume-teams-oversubscription  \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TEAMS-OVS
 ! CHECK-TEAMS-OVS: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-teams-oversubscription" {{.*}}.f90"
 
-! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: not %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-assume-no-nested-parallelism  \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-NEST-PAR
 ! CHECK-NEST-PAR: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-no-nested-parallelism" {{.*}}.f90"
 
-! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: not %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-assume-no-thread-state \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-THREAD-STATE
 ! CHECK-THREAD-STATE: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-assume-no-thread-state" {{.*}}.f90"
 
-! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: not %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-target-debug \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
 ! CHECK-TARGET-DEBUG: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug" {{.*}}.f90"
 
-! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: not %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-target-debug \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-TARGET-DEBUG
 ! CHECK-TARGET-DEBUG-EQ: "{{[^"]*}}flang-new" "-fc1" {{.*}} "-fopenmp" {{.*}} "-fopenmp-is-target-device" "-fopenmp-target-debug=111" {{.*}}.f90"
 
-! RUN: %flang -S -### %s -o %t 2>&1 \
+! RUN: not %flang -S -### %s -o %t 2>&1 \
 ! RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-target-debug -fopenmp-assume-threads-oversubscription \
 ! RUN: -fopenmp-assume-teams-oversubscription -fopenmp-assume-no-nested-parallelism \
@@ -104,7 +104,7 @@
 ! CHECK-RTL-ALL: "-fopenmp-assume-threads-oversubscription" "-fopenmp-assume-no-thread-state" "-fopenmp-assume-no-nested-parallelism"
 ! CHECK-RTL-ALL: {{.*}}.f90"
 
-! RUN: %flang -### %s -o %t 2>&1 \
+! RUN: not %flang -### %s -o %t 2>&1 \
 ! RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa \
 ! RUN: -fopenmp-version=45 \
 ! RUN: | FileCheck %s --check-prefixes=CHECK-OPENMP-VERSION

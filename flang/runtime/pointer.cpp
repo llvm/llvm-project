@@ -175,7 +175,9 @@ int RTNAME(PointerDeallocate)(Descriptor &pointer, bool hasStat,
   if (!pointer.IsAllocated()) {
     return ReturnError(terminator, StatBaseNull, errMsg, hasStat);
   }
-  return ReturnError(terminator, pointer.Destroy(true, true), errMsg, hasStat);
+  return ReturnError(terminator,
+      pointer.Destroy(/*finalize=*/true, /*destroyPointers=*/true, &terminator),
+      errMsg, hasStat);
 }
 
 int RTNAME(PointerDeallocatePolymorphic)(Descriptor &pointer,

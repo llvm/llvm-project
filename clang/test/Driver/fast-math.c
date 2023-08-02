@@ -130,7 +130,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
 // RUN: %clang -### -target x86_64-linux-musl -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
-// RUN: %clang -### -target amdgcn-amd-amdhsa -c %s 2>&1 \
+// RUN: %clang -### --target=amdgcn-amd-amdhsa -nogpuinc -nogpulib -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s
 // RUN: %clang -### -target amdgcn-amd-amdpal -c %s 2>&1 \
 // RUN:   | FileCheck --check-prefix=CHECK-NO-MATH-ERRNO %s

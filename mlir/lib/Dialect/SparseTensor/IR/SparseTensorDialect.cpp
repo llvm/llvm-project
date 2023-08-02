@@ -530,8 +530,8 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
       RETURN_ON_FAIL(res);
       // Proof of concept result.
       // TODO: use DimLvlMap directly as storage representation
-      for (unsigned i = 0, e = res->getLvlRank(); i < e; i++)
-        lvlTypes.push_back(res->getDimLevelType(i));
+      for (Level lvl = 0, lvlRank = res->getLvlRank(); lvl < lvlRank; lvl++)
+        lvlTypes.push_back(res->getLvlType(lvl));
     }
 
     // Only the last item can omit the comma

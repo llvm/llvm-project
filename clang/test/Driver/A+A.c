@@ -8,13 +8,13 @@
 // CHECK-OPEN-NOT: "{{.*}}../alt/bin/clang-{{.*}}"
 // CHECK-OPEN-NOT: "{{.*}}../alt/bin/ld.lld"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN: not %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
 // RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 \
 // RUN: -fno-amd-opt -flto -O3 -### 2>&1 | FileCheck --check-prefix=CHECK-OMP-LTO-OPEN  %s
 // CHECK-OMP-LTO-OPEN-NOT: "{{.*}}../alt/bin/clang-{{.*}}"
 // CHECK-OMP-LTO-OPEN-NOT: "{{.*}}../alt/bin/ld.lld"
 
-// RUN: %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
+// RUN: not %clang -target x86_64-unknown-linux-gnu --sysroot %S/Inputs/basic_cross_linux_tree %s \
 // RUN: -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx906 \
 // RUN: -fno-amd-opt -O3 -### 2>&1 | FileCheck --check-prefix=CHECK-OMP-OPEN  %s
 // CHECK-OMP-OPEN-NOT: "{{.*}}../alt/bin/clang-{{.*}}"
