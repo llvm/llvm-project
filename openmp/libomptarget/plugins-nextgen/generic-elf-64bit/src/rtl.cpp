@@ -49,14 +49,27 @@ using llvm::sys::DynamicLibrary;
 
 /// Class implementing kernel functionalities for GenELF64.
 struct GenELF64KernelTy : public GenericKernelTy {
-  /// Construct the kernel with a name, execution mode and a function.
-  GenELF64KernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode,
-                   void (*Func)(void))
-      : GenericKernelTy(Name, ExecutionMode), Func(Func) {}
+  /// Construct the kernel with a name and an execution mode.
+  GenELF64KernelTy(const char *Name, OMPTgtExecModeFlags ExecMode)
+      : GenericKernelTy(Name, ExecMode), Func(nullptr) {}
 
   /// Initialize the kernel.
-  Error initImpl(GenericDeviceTy &GenericDevice,
-                 DeviceImageTy &Image) override {
+  Error initImpl(GenericDeviceTy &Device, DeviceImageTy &Image) override {
+    // Functions have zero size.
+    GlobalTy Global(getName(), 0);
+
+    // Get the metadata (address) of the kernel function.
+    GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
+    if (auto Err = GHandler.getGlobalMetadataFromDevice(Device, Image, Global))
+      return Err;
+
+    // Check that the function pointer is valid.
+    if (!Global.getPtr())
+      return Plugin::error("Invalid function for kernel %s", getName());
+
+    // Save the function pointer.
+    Func = (void (*)())Global.getPtr();
+
     // Set the maximum number of threads to a single.
     MaxNumThreads = 1;
     return Plugin::success();
@@ -119,23 +132,18 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error deinitImpl() override { return Plugin::success(); }
 
   /// Construct the kernel for a specific image on the device.
-  Expected<GenericKernelTy *>
-  constructKernelEntry(const __tgt_offload_entry &KernelEntry,
-                       DeviceImageTy &Image) override {
-    GlobalTy Func(KernelEntry);
-
-    // Get the metadata (address) of the kernel function.
-    GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
-    if (auto Err = GHandler.getGlobalMetadataFromDevice(*this, Image, Func))
-      return std::move(Err);
-
-    // Allocate and create the kernel.
+  Expected<GenericKernelTy &>
+  constructKernel(const __tgt_offload_entry &KernelEntry,
+                  OMPTgtExecModeFlags ExecMode) override {
+    // Allocate and construct the kernel.
     GenELF64KernelTy *GenELF64Kernel =
         Plugin::get().allocate<GenELF64KernelTy>();
-    new (GenELF64Kernel) GenELF64KernelTy(
-        KernelEntry.name, OMP_TGT_EXEC_MODE_GENERIC, (void (*)())Func.getPtr());
+    if (!GenELF64Kernel)
+      return Plugin::error("Failed to allocate memory for GenELF64 kernel");
 
-    return GenELF64Kernel;
+    new (GenELF64Kernel) GenELF64KernelTy(KernelEntry.name, ExecMode);
+
+    return *GenELF64Kernel;
   }
 
   /// Set the current context to this device, which is a no-op.
@@ -311,6 +319,13 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Plugin::success();
   }
   Error setDeviceHeapSize(uint64_t Value) override { return Plugin::success(); }
+
+protected:
+  /// Retrieve the execution mode for kernels. All kernels use the generic mode.
+  Expected<OMPTgtExecModeFlags>
+  getExecutionModeForKernel(StringRef Name, DeviceImageTy &Image) override {
+    return OMP_TGT_EXEC_MODE_GENERIC;
+  }
 
 private:
   /// Grid values for Generic ELF64 plugins.

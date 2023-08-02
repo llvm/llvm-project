@@ -37,31 +37,80 @@ struct CUDAKernelTy;
 struct CUDADeviceTy;
 struct CUDAPluginTy;
 
+/// Class implementing the CUDA device images properties.
+struct CUDADeviceImageTy : public DeviceImageTy {
+  /// Create the CUDA image with the id and the target image pointer.
+  CUDADeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
+      : DeviceImageTy(ImageId, TgtImage), Module(nullptr) {}
+
+  /// Load the image as a CUDA module.
+  Error loadModule() {
+    assert(!Module && "Module already loaded");
+
+    CUresult Res = cuModuleLoadDataEx(&Module, getStart(), 0, nullptr, nullptr);
+    if (auto Err = Plugin::check(Res, "Error in cuModuleLoadDataEx: %s"))
+      return Err;
+
+    return Plugin::success();
+  }
+
+  /// Unload the CUDA module corresponding to the image.
+  Error unloadModule() {
+    assert(Module && "Module not loaded");
+
+    CUresult Res = cuModuleUnload(Module);
+    if (auto Err = Plugin::check(Res, "Error in cuModuleUnload: %s"))
+      return Err;
+
+    Module = nullptr;
+
+    return Plugin::success();
+  }
+
+  /// Getter of the CUDA module.
+  CUmodule getModule() const { return Module; }
+
+private:
+  /// The CUDA module that loaded the image.
+  CUmodule Module;
+};
+
 /// Class implementing the CUDA kernel functionalities which derives from the
 /// generic kernel class.
 struct CUDAKernelTy : public GenericKernelTy {
-  /// Create a CUDA kernel with a name, an execution mode, and the kernel
-  /// function.
-  CUDAKernelTy(const char *Name, OMPTgtExecModeFlags ExecutionMode,
-               CUfunction Func)
-      : GenericKernelTy(Name, ExecutionMode), Func(Func) {}
+  /// Create a CUDA kernel with a name and an execution mode.
+  CUDAKernelTy(const char *Name, OMPTgtExecModeFlags ExecMode)
+      : GenericKernelTy(Name, ExecMode), Func(nullptr) {}
 
-  /// Initialize the CUDA kernel
+  /// Initialize the CUDA kernel.
   Error initImpl(GenericDeviceTy &GenericDevice,
                  DeviceImageTy &Image) override {
+    CUresult Res;
+    CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(Image);
+
+    // Retrieve the function pointer of the kernel.
+    Res = cuModuleGetFunction(&Func, CUDAImage.getModule(), getName());
+    if (auto Err = Plugin::check(Res, "Error in cuModuleGetFunction('%s'): %s",
+                                 getName()))
+      return Err;
+
+    // Check that the function pointer is valid.
+    if (!Func)
+      return Plugin::error("Invalid function for kernel %s", getName());
+
     int MaxThreads;
-    CUresult Res = cuFuncGetAttribute(
-        &MaxThreads, CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, Func);
+    Res = cuFuncGetAttribute(&MaxThreads,
+                             CU_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK, Func);
     if (auto Err = Plugin::check(Res, "Error in cuFuncGetAttribute: %s"))
       return Err;
 
-    /// Set the maximum number of threads for the CUDA kernel.
+    // The maximum number of threads cannot exceed the maximum of the kernel.
     MaxNumThreads = std::min(MaxNumThreads, (uint32_t)MaxThreads);
 
     return Plugin::success();
   }
 
-  /// Launch the CUDA kernel function
+  /// Launch the CUDA kernel function.
   Error launchImpl(GenericDeviceTy &GenericDevice, uint32_t NumThreads,
                    uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
@@ -163,44 +212,6 @@ struct CUDAEventRef final : public GenericDeviceResourceRef {
 private:
   /// The reference to the CUDA event.
   HandleTy Event;
-};
-
-/// Class implementing the CUDA device images properties.
-struct CUDADeviceImageTy : public DeviceImageTy {
-  /// Create the CUDA image with the id and the target image pointer.
-  CUDADeviceImageTy(int32_t ImageId, const __tgt_device_image *TgtImage)
-      : DeviceImageTy(ImageId, TgtImage), Module(nullptr) {}
-
-  /// Load the image as a CUDA module.
-  Error loadModule() {
-    assert(!Module && "Module already loaded");
-
-    CUresult Res = cuModuleLoadDataEx(&Module, getStart(), 0, nullptr, nullptr);
-    if (auto Err = Plugin::check(Res, "Error in cuModuleLoadDataEx: %s"))
-      return Err;
-
-    return Plugin::success();
-  }
-
-  /// Unload the CUDA module corresponding to the image.
-  Error unloadModule() {
-    assert(Module && "Module not loaded");
-
-    CUresult Res = cuModuleUnload(Module);
-    if (auto Err = Plugin::check(Res, "Error in cuModuleUnload: %s"))
-      return Err;
-
-    Module = nullptr;
-
-    return Plugin::success();
-  }
-
-  /// Getter of the CUDA module.
-  CUmodule getModule() const { return Module; }
-
-private:
-  /// The CUDA module that loaded the image.
-  CUmodule Module;
 };
 
 /// Class implementing the CUDA device functionalities which derives from the
@@ -330,32 +341,17 @@ struct CUDADeviceTy : public GenericDeviceTy {
   }
 
   /// Allocate and construct a CUDA kernel.
-  Expected<GenericKernelTy *>
-  constructKernelEntry(const __tgt_offload_entry &KernelEntry,
-                       DeviceImageTy &Image) override {
-    CUDADeviceImageTy &CUDAImage = static_cast<CUDADeviceImageTy &>(Image);
-
-    // Retrieve the function pointer of the kernel.
-    CUfunction Func;
-    CUresult Res =
-        cuModuleGetFunction(&Func, CUDAImage.getModule(), KernelEntry.name);
-    if (auto Err = Plugin::check(Res, "Error in cuModuleGetFunction('%s'): %s",
-                                 KernelEntry.name))
-      return std::move(Err);
-
-    DP("Entry point " DPxMOD " maps to %s (" DPxMOD ")\n", DPxPTR(&KernelEntry),
-       KernelEntry.name, DPxPTR(Func));
-
-    Expected<OMPTgtExecModeFlags> ExecModeOrErr =
-        getExecutionModeForKernel(KernelEntry.name, Image);
-    if (!ExecModeOrErr)
-      return ExecModeOrErr.takeError();
-
-    // Allocate and initialize the CUDA kernel.
+  Expected<GenericKernelTy &>
+  constructKernel(const __tgt_offload_entry &KernelEntry,
+                  OMPTgtExecModeFlags ExecMode) override {
+    // Allocate and construct the CUDA kernel.
     CUDAKernelTy *CUDAKernel = Plugin::get().allocate<CUDAKernelTy>();
-    new (CUDAKernel) CUDAKernelTy(KernelEntry.name, ExecModeOrErr.get(), Func);
+    if (!CUDAKernel)
+      return Plugin::error("Failed to allocate memory for CUDA kernel");
 
-    return CUDAKernel;
+    new (CUDAKernel) CUDAKernelTy(KernelEntry.name, ExecMode);
+
+    return *CUDAKernel;
   }
 
   /// Set the current context to this device's context.
