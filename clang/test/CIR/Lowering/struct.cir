@@ -21,6 +21,22 @@ module {
     cir.return
   }
 
+  cir.func @shouldConstInitLocalStructsWithConstStructAttr() {
+    %0 = cir.alloca !ty_22struct2ES2A22, cir.ptr <!ty_22struct2ES2A22>, ["s"] {alignment = 4 : i64}
+    %1 = cir.const(#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2ES2A22) : !ty_22struct2ES2A22
+    cir.store %1, %0 : !ty_22struct2ES2A22, cir.ptr <!ty_22struct2ES2A22>
+    cir.return
+  }
+  // CHECK: llvm.func @shouldConstInitLocalStructsWithConstStructAttr()
+  // CHECK:   %0 = llvm.mlir.constant(1 : index) : i64
+  // CHECK:   %1 = llvm.alloca %0 x !llvm.struct<"struct.S2A", (i32)> {alignment = 4 : i64} : (i64) -> !llvm.ptr
+  // CHECK:   %2 = llvm.mlir.undef : !llvm.struct<"struct.S2A", (i32)>
+  // CHECK:   %3 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK:   %4 = llvm.insertvalue %3, %2[0] : !llvm.struct<"struct.S2A", (i32)> 
+  // CHECK:   llvm.store %4, %1 : !llvm.struct<"struct.S2A", (i32)>, !llvm.ptr
+  // CHECK:   llvm.return
+  // CHECK: }
+
   // Should lower basic #cir.const_struct initializer.
   cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, 1.000000e-01 : f32, #cir.null : !cir.ptr<!s32i>}> : !ty_22struct2ES122
   // CHECK: llvm.mlir.global external @s1() {addr_space = 0 : i32} : !llvm.struct<"struct.S1", (i32, f32, ptr)> {
