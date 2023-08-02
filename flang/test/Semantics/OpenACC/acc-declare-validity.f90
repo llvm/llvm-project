@@ -57,4 +57,10 @@ contains
     !$acc declare present(cc)
   end subroutine sub2
 
+  subroutine sub3()
+    real :: aa(100)
+    !ERROR: The ZERO modifier is not allowed for the COPYOUT clause on the DECLARE directive
+    !$acc declare copyout(zero: aa)
+  end subroutine
+
 end module openacc_declare_validity
