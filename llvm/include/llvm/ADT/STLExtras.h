@@ -1792,7 +1792,7 @@ OutputIt copy_if(R &&Range, OutputIt Out, UnaryPredicate P) {
 template <typename T, typename R, typename Predicate>
 T *find_singleton(R &&Range, Predicate P, bool AllowRepeats = false) {
   T *RC = nullptr;
-  for (auto *A : Range) {
+  for (auto &&A : Range) {
     if (T *PRC = P(A, AllowRepeats)) {
       if (RC) {
         if (!AllowRepeats || PRC != RC)
