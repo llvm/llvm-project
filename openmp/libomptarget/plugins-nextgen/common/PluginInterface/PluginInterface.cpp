@@ -227,8 +227,7 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
 
 Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
                             DeviceImageTy &Image) {
-  PreferredNumThreads = getDefaultNumThreads(GenericDevice);
-
+  PreferredNumThreads = GenericDevice.getDefaultNumThreads();
   MaxNumThreads = GenericDevice.getThreadLimit();
 
   return initImpl(GenericDevice, Image);
@@ -318,7 +317,7 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
     return std::min(NumTeamsClause[0], GenericDevice.getBlockLimit());
   }
 
-  uint64_t DefaultNumBlocks = getDefaultNumBlocks(GenericDevice);
+  uint64_t DefaultNumBlocks = GenericDevice.getDefaultNumBlocks();
   uint64_t TripCountNumBlocks = std::numeric_limits<uint64_t>::max();
   if (LoopTripCount > 0) {
     if (isSPMDMode()) {
