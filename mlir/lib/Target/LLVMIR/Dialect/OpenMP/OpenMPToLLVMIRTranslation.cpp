@@ -1437,7 +1437,8 @@ convertOmpTargetData(Operation *op, llvm::IRBuilderBase &builder,
                   deviceID = intAttr.getInt();
 
             mapOperands = dataOp.getMapOperands();
-            mapTypes = dataOp.getMapTypes();
+            if (dataOp.getMapTypes())
+              mapTypes = dataOp.getMapTypes().value();
             return success();
           })
           .Case([&](omp::EnterDataOp enterDataOp) {

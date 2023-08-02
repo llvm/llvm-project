@@ -1041,15 +1041,16 @@ def Target_DataOp: OpenMP_Op<"target_data", [AttrSizedOperandSegments]>{
                        Variadic<OpenMP_PointerLikeType>:$use_device_ptr,
                        Variadic<OpenMP_PointerLikeType>:$use_device_addr,
                        Variadic<OpenMP_PointerLikeType>:$map_operands,
-                       I64ArrayAttr:$map_types);
+                       OptionalAttr<I64ArrayAttr>:$map_types);
 
   let regions = (region AnyRegion:$region);
 
   let assemblyFormat = [{
     oilist(`if` `(` $if_expr `:` type($if_expr) `)`
-    | `device` `(` $device `:` type($device) `)`)
-    `map` `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
-    oilist(`use_device_ptr` `(` $use_device_ptr `:` type($use_device_ptr) `)`
+    | `device` `(` $device `:` type($device) `)`
+    | `map`
+      `(` custom<MapClause>($map_operands, type($map_operands), $map_types) `)`
+    | `use_device_ptr` `(` $use_device_ptr `:` type($use_device_ptr) `)`
     | `use_device_addr` `(` $use_device_addr `:` type($use_device_addr) `)`)
     $region attr-dict
   }];
