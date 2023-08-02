@@ -834,8 +834,8 @@ define float @select_fneg_use3(float %x, float %y, i1 %b) {
 
 define float @fneg_ldexp(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %n)
@@ -845,8 +845,8 @@ define float @fneg_ldexp(float %x, i32 %n) {
 
 define float @fsub_fneg_ldexp(float %x, i32 %n) {
 ; CHECK-LABEL: @fsub_fneg_ldexp(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %n)
@@ -856,8 +856,8 @@ define float @fsub_fneg_ldexp(float %x, i32 %n) {
 
 define float @fsub_fneg_ldexp_nsz(float %x, i32 %n) {
 ; CHECK-LABEL: @fsub_fneg_ldexp_nsz(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg nsz float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nsz float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call nsz float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %n)
@@ -867,8 +867,8 @@ define float @fsub_fneg_ldexp_nsz(float %x, i32 %n) {
 
 define float @fsub_fneg_ldexp_p0_nsz(float %x, i32 %n) {
 ; CHECK-LABEL: @fsub_fneg_ldexp_p0_nsz(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg nsz float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nsz float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call nsz float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %n)
@@ -889,8 +889,8 @@ define float @fsub_fneg_ldexp_p0(float %x, i32 %n) {
 
 define <2 x float> @fneg_ldexp_vector(<2 x float> %x, <2 x i32> %n) {
 ; CHECK-LABEL: @fneg_ldexp_vector(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X:%.*]], <2 x i32> [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg <2 x float> [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg <2 x float> [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[TMP1]], <2 x i32> [[N:%.*]])
 ; CHECK-NEXT:    ret <2 x float> [[NEG]]
 ;
   %ldexp = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> %x, <2 x i32> %n)
@@ -913,8 +913,8 @@ define float @fneg_ldexp_multiuse(float %x, i32 %n, ptr %ptr) {
 
 define float @fneg_ldexp_fmf_ldexp(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp_fmf_ldexp(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call nnan float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call nnan float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call nnan float @llvm.ldexp.f32.i32(float %x, i32 %n)
@@ -924,8 +924,8 @@ define float @fneg_ldexp_fmf_ldexp(float %x, i32 %n) {
 
 define float @fneg_ldexp_fmf_neg(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp_fmf_neg(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg nnan float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call nnan float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %n)
@@ -935,8 +935,8 @@ define float @fneg_ldexp_fmf_neg(float %x, i32 %n) {
 
 define float @fneg_ldexp_fmf(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp_fmf(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call ninf float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg nnan float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg nnan ninf float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call nnan ninf float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call ninf float @llvm.ldexp.f32.i32(float %x, i32 %n)
@@ -946,8 +946,8 @@ define float @fneg_ldexp_fmf(float %x, i32 %n) {
 
 define float @fneg_ldexp_contract0(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp_contract0(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg contract float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call contract float @llvm.ldexp.f32.i32(float %x, i32 %n)
@@ -957,8 +957,8 @@ define float @fneg_ldexp_contract0(float %x, i32 %n) {
 
 define float @fneg_ldexp_contract1(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp_contract1(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg contract float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg contract float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %n)
@@ -968,8 +968,8 @@ define float @fneg_ldexp_contract1(float %x, i32 %n) {
 
 define float @fneg_ldexp_contract(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp_contract(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]])
-; CHECK-NEXT:    [[NEG:%.*]] = fneg contract float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg contract float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call contract float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]])
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call contract float @llvm.ldexp.f32.i32(float %x, i32 %n)
@@ -979,8 +979,8 @@ define float @fneg_ldexp_contract(float %x, i32 %n) {
 
 define float @fneg_ldexp_metadata(float %x, i32 %n) {
 ; CHECK-LABEL: @fneg_ldexp_metadata(
-; CHECK-NEXT:    [[LDEXP:%.*]] = call float @llvm.ldexp.f32.i32(float [[X:%.*]], i32 [[N:%.*]]), !arst !0
-; CHECK-NEXT:    [[NEG:%.*]] = fneg float [[LDEXP]]
+; CHECK-NEXT:    [[TMP1:%.*]] = fneg float [[X:%.*]]
+; CHECK-NEXT:    [[NEG:%.*]] = call float @llvm.ldexp.f32.i32(float [[TMP1]], i32 [[N:%.*]]), !arst !0
 ; CHECK-NEXT:    ret float [[NEG]]
 ;
   %ldexp = call float @llvm.ldexp.f32.i32(float %x, i32 %n), !arst !0
