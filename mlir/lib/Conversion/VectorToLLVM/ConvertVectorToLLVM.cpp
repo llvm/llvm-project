@@ -573,35 +573,31 @@ static Value createIntegerReductionComparisonOpLowering(
   return result;
 }
 
-/// Create lowering of minf/maxf op. We cannot use llvm.maximum/llvm.minimum
-/// with vector types.
-static Value createMinMaxF(OpBuilder &builder, Location loc, Value lhs,
-                           Value rhs, bool isMin) {
-  auto floatType = cast<FloatType>(getElementTypeOrSelf(lhs.getType()));
-  Type i1Type = builder.getI1Type();
-  if (auto vecType = dyn_cast<VectorType>(lhs.getType()))
-    i1Type = VectorType::get(vecType.getShape(), i1Type);
-  Value cmp = builder.create<LLVM::FCmpOp>(
-      loc, i1Type, isMin ? LLVM::FCmpPredicate::olt : LLVM::FCmpPredicate::ogt,
-      lhs, rhs);
-  Value sel = builder.create<LLVM::SelectOp>(loc, cmp, lhs, rhs);
-  Value isNan = builder.create<LLVM::FCmpOp>(
-      loc, i1Type, LLVM::FCmpPredicate::uno, lhs, rhs);
-  Value nan = builder.create<LLVM::ConstantOp>(
-      loc, lhs.getType(),
-      builder.getFloatAttr(floatType,
-                           APFloat::getQNaN(floatType.getFloatSemantics())));
-  return builder.create<LLVM::SelectOp>(loc, isNan, nan, sel);
-}
+namespace {
+template <typename Source>
+struct VectorToScalarMapper;
+template <>
+struct VectorToScalarMapper<LLVM::vector_reduce_fmaximum> {
+  using Type = LLVM::MaximumOp;
+};
+template <>
+struct VectorToScalarMapper<LLVM::vector_reduce_fminimum> {
+  using Type = LLVM::MinimumOp;
+};
+} // namespace
 
 template <class LLVMRedIntrinOp>
-static Value createFPReductionComparisonOpLowering(
-    ConversionPatternRewriter &rewriter, Location loc, Type llvmType,
-    Value vectorOperand, Value accumulator, bool isMin) {
+static Value
+createFPReductionComparisonOpLowering(ConversionPatternRewriter &rewriter,
+                                      Location loc, Type llvmType,
+                                      Value vectorOperand, Value accumulator) {
   Value result = rewriter.create<LLVMRedIntrinOp>(loc, llvmType, vectorOperand);
 
-  if (accumulator)
-    result = createMinMaxF(rewriter, loc, result, accumulator, /*isMin=*/isMin);
+  if (accumulator) {
+    result =
+        rewriter.create<typename VectorToScalarMapper<LLVMRedIntrinOp>::Type>(
+            loc, result, accumulator);
+  }
 
   return result;
 }
@@ -774,17 +770,13 @@ public:
                                             ReductionNeutralFPOne>(
           rewriter, loc, llvmType, operand, acc, reassociateFPReductions);
     } else if (kind == vector::CombiningKind::MINF) {
-      // FIXME: MLIR's 'minf' and LLVM's 'vector_reduce_fmin' do not handle
-      // NaNs/-0.0/+0.0 in the same way.
-      result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmin>(
-          rewriter, loc, llvmType, operand, acc,
-          /*isMin=*/true);
+      result =
+          createFPReductionComparisonOpLowering<LLVM::vector_reduce_fminimum>(
+              rewriter, loc, llvmType, operand, acc);
     } else if (kind == vector::CombiningKind::MAXF) {
-      // FIXME: MLIR's 'maxf' and LLVM's 'vector_reduce_fmax' do not handle
-      // NaNs/-0.0/+0.0 in the same way.
-      result = createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmax>(
-          rewriter, loc, llvmType, operand, acc,
-          /*isMin=*/false);
+      result =
+          createFPReductionComparisonOpLowering<LLVM::vector_reduce_fmaximum>(
+              rewriter, loc, llvmType, operand, acc);
     } else
       return failure();
 
