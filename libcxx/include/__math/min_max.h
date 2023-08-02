@@ -38,10 +38,8 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double fmax(long double 
   return __builtin_fmaxl(__x, __y);
 }
 
-template <class _A1, class _A2>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-    typename __enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, __promote<_A1, _A2> >::type
-    fmax(_A1 __x, _A2 __y) _NOEXCEPT {
+template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type fmax(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename __promote<_A1, _A2>::type __result_type;
   static_assert((!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value)), "");
   return __math::fmax((__result_type)__x, (__result_type)__y);
@@ -62,10 +60,8 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double fmin(long double 
   return __builtin_fminl(__x, __y);
 }
 
-template <class _A1, class _A2>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI
-    typename __enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, __promote<_A1, _A2> >::type
-    fmin(_A1 __x, _A2 __y) _NOEXCEPT {
+template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type fmin(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename __promote<_A1, _A2>::type __result_type;
   static_assert((!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value)), "");
   return __math::fmin((__result_type)__x, (__result_type)__y);
