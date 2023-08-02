@@ -87,7 +87,9 @@ public:
   bool isMin() const { return F.isSmallest(); }
   bool isMinusOne() const { return F.isExactlyValue(-1.0); }
   bool isNan() const { return F.isNaN(); }
+  bool isInf() const { return F.isInfinity(); }
   bool isFinite() const { return F.isFinite(); }
+  bool isNormal() const { return F.isNormal(); }
 
   ComparisonCategoryResult compare(const Floating &RHS) const {
     llvm::APFloatBase::cmpResult CmpRes = F.compare(RHS.F);

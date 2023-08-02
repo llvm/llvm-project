@@ -585,21 +585,21 @@
 // CHECK-LSAN-I386-TVOSSIMULATOR-NOT: unsupported option
 
 
-// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=x86_64-apple-darwin10 -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=x86_64-pc-win32 -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOMFCALL
-// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi -fsanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOMFCALL
-// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-derived-cast -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-DCAST
-// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-unrelated-cast -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-UCAST
-// RUN: %clang --target=x86_64-linux-gnu -flto -fvisibility=hidden -fsanitize=cfi-nvcall -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NVCALL
-// RUN: %clang --target=x86_64-linux-gnu -flto -fvisibility=hidden -fsanitize=cfi-vcall -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-VCALL
-// RUN: %clang --target=arm-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=aarch64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=arm-linux-android -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=aarch64-linux-android -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=aarch64_be -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=riscv32 -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
-// RUN: %clang --target=riscv64 -fvisibility=hidden -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=x86_64-apple-darwin10 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=x86_64-pc-win32 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOMFCALL
+// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi -fsanitize-cfi-cross-dso -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOMFCALL
+// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-derived-cast -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-DCAST
+// RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-unrelated-cast -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-UCAST
+// RUN: %clang --target=x86_64-linux-gnu -flto -fvisibility=hidden -fsanitize=cfi-nvcall -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NVCALL
+// RUN: %clang --target=x86_64-linux-gnu -flto -fvisibility=hidden -fsanitize=cfi-vcall -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-VCALL
+// RUN: %clang --target=arm-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=aarch64-linux-gnu -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=arm-linux-android -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=aarch64-linux-android -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=aarch64_be -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=riscv32 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
+// RUN: %clang --target=riscv64 -fvisibility=hidden -fsanitize=cfi -flto -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI
 // CHECK-CFI: -emit-llvm-bc{{.*}}-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall
 // CHECK-CFI-NOMFCALL: -emit-llvm-bc{{.*}}-fsanitize=cfi-derived-cast,cfi-icall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall
 // CHECK-CFI-DCAST: -emit-llvm-bc{{.*}}-fsanitize=cfi-derived-cast
@@ -611,15 +611,15 @@
 // CHECK-CFI-NOLTO: '-fsanitize=cfi-derived-cast' only allowed with '-flto'
 
 // RUN: %clang --target=x86_64-linux-gnu -flto -fsanitize=cfi-derived-cast -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS
-// CHECK-CFI-NOVIS: '-fsanitize=cfi-derived-cast' only allowed with '-fvisibility='
+// CHECK-CFI-NOVIS: error: invalid argument '-fsanitize=cfi-derived-cast' only allowed with '-fvisibility='
 
-// RUN: %clang --target=x86_64-pc-win32 -flto -fsanitize=cfi-derived-cast -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS-NOERROR
+// RUN: %clang --target=x86_64-pc-win32 -flto -fsanitize=cfi-derived-cast -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS-NOERROR
 // RUN: echo > %t.o
-// RUN: %clang --target=x86_64-linux-gnu -flto -fsanitize=cfi-derived-cast %t.o -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS-NOERROR
+// RUN: %clang --target=x86_64-linux-gnu -flto -fsanitize=cfi-derived-cast -resource-dir=%S/Inputs/resource_dir %t.o -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOVIS-NOERROR
 // CHECK-CFI-NOVIS-NOERROR-NOT: only allowed with
 
 // RUN: %clang --target=mips-unknown-linux -fsanitize=cfi-icall %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-ICALL-MIPS
-// CHECK-CFI-ICALL-MIPS: unsupported option '-fsanitize=cfi-icall' for target 'mips-unknown-linux'
+// CHECK-CFI-ICALL-MIPS: error: unsupported option '-fsanitize=cfi-icall' for target 'mips-unknown-linux'
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize-trap=address -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-ASAN-TRAP
 // CHECK-ASAN-TRAP: error: unsupported argument 'address' to option '-fsanitize-trap='
@@ -630,14 +630,14 @@
 // RUN: %clang --target=x86_64-apple-darwin10 -mmacosx-version-min=10.7 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-OLD-MACOS
 // CHECK-CFI-NOTRAP-OLD-MACOS: error: unsupported option '-fno-sanitize-trap=cfi-vcall' for target 'x86_64-apple-darwin10'
 
-// RUN: %clang --target=x86_64-pc-win32 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-WIN
+// RUN: %clang --target=x86_64-pc-win32 -flto -fsanitize=cfi-vcall -fno-sanitize-trap=cfi -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-WIN
 // CHECK-CFI-NOTRAP-WIN: -emit-llvm-bc
 // CHECK-CFI-NOTRAP-WIN-NOT: -fsanitize-trap=cfi
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CROSS-DSO
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NO-CROSS-DSO
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-cfi-cross-dso -fno-sanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NO-CROSS-DSO
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-cfi-cross-dso -fsanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CROSS-DSO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-cfi-cross-dso -flto -fvisibility=hidden -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CROSS-DSO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NO-CROSS-DSO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-cfi-cross-dso -fno-sanitize-cfi-cross-dso -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NO-CROSS-DSO
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-cfi-cross-dso -fsanitize-cfi-cross-dso -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CROSS-DSO
 // CHECK-CFI-CROSS-DSO: -emit-llvm-bc
 // CHECK-CFI-CROSS-DSO: -fsanitize-cfi-cross-dso
 // CHECK-CFI-NO-CROSS-DSO: -emit-llvm-bc
@@ -646,21 +646,21 @@
 // RUN: %clang --target=x86_64-linux-gnu -fvisibility=hidden -fsanitize=cfi-mfcall -fsanitize-cfi-cross-dso -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-MFCALL-CROSS-DSO
 // CHECK-CFI-MFCALL-CROSS-DSO: '-fsanitize=cfi-mfcall' not allowed with '-fsanitize-cfi-cross-dso'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-icall-generalize-pointers -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-GENERALIZE-POINTERS
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-CFI-GENERALIZE-POINTERS
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-icall-generalize-pointers -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-GENERALIZE-POINTERS
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-CFI-GENERALIZE-POINTERS
 // CHECK-CFI-GENERALIZE-POINTERS: -fsanitize-cfi-icall-generalize-pointers
 // CHECK-NO-CFI-GENERALIZE-POINTERS-NOT: -fsanitize-cfi-icall-generalize-pointers
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-icall-generalize-pointers -fsanitize-cfi-cross-dso -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-GENERALIZE-AND-CROSS-DSO
 // CHECK-CFI-GENERALIZE-AND-CROSS-DSO: error: invalid argument '-fsanitize-cfi-cross-dso' not allowed with '-fsanitize-cfi-icall-generalize-pointers'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fno-sanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-CFI-CANONICAL-JUMP-TABLES
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fvisibility=hidden -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fsanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fno-sanitize-cfi-canonical-jump-tables -fvisibility=hidden -flto -c %s -resource-dir=%S/Inputs/resource_dir -### 2>&1 | FileCheck %s --check-prefix=CHECK-NO-CFI-CANONICAL-JUMP-TABLES
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi-icall -fvisibility=hidden -flto -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-CANONICAL-JUMP-TABLES
 // CHECK-CFI-CANONICAL-JUMP-TABLES: -fsanitize-cfi-canonical-jump-tables
 // CHECK-NO-CFI-CANONICAL-JUMP-TABLES-NOT: -fsanitize-cfi-canonical-jump-tables
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-stats -flto -c %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-STATS
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fsanitize-stats -flto -fvisibility=hidden -c -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-STATS
 // CHECK-CFI-STATS: -fsanitize-stats
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=kcfi -fsanitize=cfi -flto -fvisibility=hidden %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-KCFI-NOCFI
@@ -768,8 +768,8 @@
 // RUN: %clang --target=x86_64--netbsd -fsanitize=dataflow %s -### 2>&1 | FileCheck %s -check-prefix=DATAFLOW-NETBSD
 // DATAFLOW-NETBSD: "-fsanitize=dataflow"
 
-// RUN: %clang --target=i386--netbsd -fsanitize=cfi %s -### 2>&1 | FileCheck %s -check-prefix=CFI-NETBSD
-// RUN: %clang --target=x86_64--netbsd -fsanitize=cfi %s -### 2>&1 | FileCheck %s -check-prefix=CFI-NETBSD
+// RUN: %clang --target=i386--netbsd -fsanitize=cfi -flto -fvisibility=hidden -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s -check-prefix=CFI-NETBSD
+// RUN: %clang --target=x86_64--netbsd -fsanitize=cfi -flto -fvisibility=hidden -resource-dir=%S/Inputs/resource_dir -c %s -### 2>&1 | FileCheck %s -check-prefix=CFI-NETBSD
 // CFI-NETBSD: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 
 // RUN: %clang --target=i386--netbsd -fsanitize=safe-stack %s -### 2>&1 | FileCheck %s -check-prefix=SAFESTACK-NETBSD
@@ -865,7 +865,7 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=hwaddress -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-HWASAN-MINIMAL
 // CHECK-HWASAN-MINIMAL: error: invalid argument '-fsanitize-minimal-runtime' not allowed with '-fsanitize=hwaddress'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-MINIMAL
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -flto -fvisibility=hidden -fsanitize-minimal-runtime -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-MINIMAL
 // CHECK-CFI-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 // CHECK-CFI-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-icall,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 // CHECK-CFI-MINIMAL: "-fsanitize-minimal-runtime"
@@ -873,7 +873,7 @@
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOTRAP-MINIMAL
 // CHECK-CFI-NOTRAP-MINIMAL: error: invalid argument 'fsanitize-minimal-runtime' only allowed with 'fsanitize-trap=cfi'
 
-// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -fno-sanitize=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOICALL-MINIMAL
+// RUN: %clang --target=x86_64-linux-gnu -fsanitize=cfi -fno-sanitize-trap=cfi-icall -fno-sanitize=cfi-icall -flto -fvisibility=hidden -fsanitize-minimal-runtime -resource-dir=%S/Inputs/resource_dir %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-CFI-NOICALL-MINIMAL
 // CHECK-CFI-NOICALL-MINIMAL: "-fsanitize=cfi-derived-cast,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 // CHECK-CFI-NOICALL-MINIMAL: "-fsanitize-trap=cfi-derived-cast,cfi-mfcall,cfi-unrelated-cast,cfi-nvcall,cfi-vcall"
 // CHECK-CFI-NOICALL-MINIMAL: "-fsanitize-minimal-runtime"

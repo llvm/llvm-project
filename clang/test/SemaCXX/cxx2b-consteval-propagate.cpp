@@ -45,7 +45,7 @@ constexpr T hh() {           // hh<int> is an immediate function
 }
 
 int i = hh<int>(); // expected-error {{call to immediate function 'examples::hh<int>' is not a constant expression}} \
-                   // expected-note {{in call to 'hh()'}}
+                   // expected-note {{in call to 'hh<int>()'}}
 
 struct A {
   int x;
@@ -180,7 +180,7 @@ constexpr S immediate(auto) {
 
 void test_runtime() {
     (void)immediate(0); // expected-error {{call to immediate function 'Aggregate::immediate<int>' is not a constant expression}} \
-                        // expected-note {{in call to 'immediate(0)'}}
+                        // expected-note {{in call to 'immediate<int>(0)'}}
 }
 consteval int f(int i) {
     return i;

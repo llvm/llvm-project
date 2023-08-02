@@ -748,6 +748,12 @@ struct ArithIntNarrowingPass final
   using ArithIntNarrowingBase::ArithIntNarrowingBase;
 
   void runOnOperation() override {
+    if (bitwidthsSupported.empty() ||
+        llvm::is_contained(bitwidthsSupported, 0)) {
+      // Invalid pass options.
+      return signalPassFailure();
+    }
+
     Operation *op = getOperation();
     MLIRContext *ctx = op->getContext();
     RewritePatternSet patterns(ctx);
