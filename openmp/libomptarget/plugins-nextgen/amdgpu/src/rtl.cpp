@@ -3474,8 +3474,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 #endif
 
     // Initialize flags for device type:
-    HasGFX90ADevice = hasGfx90aDeviceHelper();
-    HasAPUDevice = hasAPUDeviceHelper();
+    hasGfx90aDevice();
+    hasAPUDevice();
 
     return NumDevices;
   }
@@ -3503,14 +3503,24 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
   uint16_t getMagicElfBits() const override { return ELF::EM_AMDGPU; }
 
   bool hasAPUDevice() override final {
+    if (HasAPUDevice != -1)
+      return HasAPUDevice;
+
     if (!Initialized)
       FATAL_MESSAGE(1, "%s", "hasAPUDevice called on uninitialized plugin");
+
+    HasAPUDevice = checkForDeviceByGFXName("gfx940");
     return HasAPUDevice;
   }
 
   bool hasGfx90aDevice() override final {
+    if (HasGFX90ADevice != -1)
+      return HasGFX90ADevice;
+
     if (!Initialized)
       FATAL_MESSAGE(1, "%s", "hasGfx90aDevice called on uninitialized plugin");
+
+    HasGFX90ADevice = checkForDeviceByGFXName("gfx90a");
     return HasGFX90ADevice;
   }
 
@@ -3611,74 +3621,36 @@ private:
     return HSA_STATUS_ERROR;
   }
 
-  /// Helper function for detecting AMD APU devices.
-  bool hasAPUDeviceHelper() {
-    CHECK_KMT_ERROR(hsaKmtOpenKFD());
-    HsaSystemProperties sp;
-    int errSys = CHECK_KMT_ERROR(hsaKmtAcquireSystemProperties(&sp));
-    if (errSys)
-      return false;
+  bool checkForDeviceByGFXName(const llvm::StringRef GfxLookUpName) {
+    bool CheckForMI300A =
+        (GfxLookUpName.find_insensitive("gfx940") != llvm::StringRef::npos);
+    char GfxName[64];
+    llvm::StringRef GfxNameRef = llvm::StringRef(GfxName);
 
-    for (int i = 0; i < sp.NumNodes; ++i) {
-      HsaNodeProperties props;
-      CHECK_KMT_ERROR(hsaKmtGetNodeProperties(i, &props));
+    for (hsa_agent_t GPUAgent : KernelAgents) {
+      std::memset((void *)&GfxName, 0, sizeof(char) * 64);
 
-      // Check for 'small' APU system
-      if (props.NumCPUCores && props.NumFComputeCores) {
-        CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
-        CHECK_KMT_ERROR(hsaKmtCloseKFD());
-        return true;
-      }
+      hsa_status_t Status = hsa_agent_get_info(
+          GPUAgent, (hsa_agent_info_t)HSA_AGENT_INFO_NAME, GfxName);
 
-      // For an appAPU it is only neccesary to compare GPUs with all connected
-      // CPUs.
-      if (props.NumCPUCores) {
+      if (Status != HSA_STATUS_SUCCESS)
         continue;
-      }
 
-      // Retrieving GPU's interconnect graph
-      std::vector<HsaIoLinkProperties> IoLinkProperties(props.NumIOLinks);
-      if (hsaKmtGetNodeIoLinkProperties(i, props.NumIOLinks,
-                                        IoLinkProperties.data())) {
-        DP("Unable to get Node IO Link Information for node %u\n", i);
-        continue;
-      }
+      if (GfxLookUpName.find_insensitive(GfxNameRef) != llvm::StringRef::npos) {
+        // Special handling for MI300. We will have to distinguish between an MI300A
+        // and X
+        if (CheckForMI300A) {
+          uint32_t ChipID = 0;
+          Status = hsa_agent_get_info(
+              GPUAgent, (hsa_agent_info_t)HSA_AMD_AGENT_INFO_CHIP_ID, &ChipID);
 
-      // Checking connection weight between GPU and CPU.
-      // If connection weight is 13 (= KFD_CRAT_INTRA_SOCKET_WEIGHT), we found
-      // an AppAPU
-      for (int linkId = 0; linkId < props.NumIOLinks; linkId++) {
-        HsaNodeProperties linkProps;
+          if (Status != HSA_STATUS_SUCCESS) {
+            continue;
+          }
 
-        if (hsaKmtGetNodeProperties(IoLinkProperties[linkId].NodeTo,
-                                    &linkProps)) {
-          DP("Unable to get IO Link informationen for connected node\n");
-          break;
+          if ((ChipID & 0x1))
+            continue;
         }
-
-        if (linkProps.NumCPUCores && IoLinkProperties[linkId].Weight == 13) {
-          CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
-          CHECK_KMT_ERROR(hsaKmtCloseKFD());
-          return true;
-        }
-      }
-    }
-
-    CHECK_KMT_ERROR(hsaKmtReleaseSystemProperties());
-    CHECK_KMT_ERROR(hsaKmtCloseKFD());
-    return false;
-  }
-
-  /// Helper function for detecting GFX90A architecture.
-  bool hasGfx90aDeviceHelper() {
-    char name[64];
-
-    for (const auto &agent : KernelAgents) {
-      memset(&name, 0, sizeof(char) * 64);
-      hsa_agent_get_info(agent, HSA_AGENT_INFO_NAME, name);
-
-      llvm::StringRef srName(name);
-      if (srName.equals_insensitive("gfx90a")) {
         return true;
       }
     }
@@ -3691,10 +3663,10 @@ private:
   bool Initialized;
 
   /// Flag that shows if device is a GFX90A AMD GPU
-  bool HasGFX90ADevice;
+  int16_t HasGFX90ADevice{-1};
 
   /// Flag that shows if device is an APU device
-  bool HasAPUDevice;
+  int16_t HasAPUDevice{-1};
 
   /// Arrays of the available GPU and CPU agents. These arrays of handles should
   /// not be here but in the AMDGPUDeviceTy structures directly. However, the
