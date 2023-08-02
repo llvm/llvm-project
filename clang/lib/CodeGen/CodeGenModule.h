@@ -361,10 +361,15 @@ private:
   llvm::DenseMap<llvm::StringRef, GlobalDecl> EmittedDeferredDecls;
 
   void addEmittedDeferredDecl(GlobalDecl GD) {
-    if (!llvm::isa<FunctionDecl>(GD.getDecl()))
-      return;
-    llvm::GlobalVariable::LinkageTypes L = getFunctionLinkage(GD);
-    if (llvm::GlobalValue::isLinkOnceLinkage(L) ||
+    // Assume a linkage by default that does not need reemission.
+    auto L = llvm::GlobalValue::ExternalLinkage;
+    if (llvm::isa<FunctionDecl>(GD.getDecl()))
+      L = getFunctionLinkage(GD);
+    else if (auto *VD = llvm::dyn_cast<VarDecl>(GD.getDecl()))
+      L = getLLVMLinkageVarDefinition(VD);
+
+    if (llvm::GlobalValue::isInternalLinkage(L) ||
+        llvm::GlobalValue::isLinkOnceLinkage(L) ||
         llvm::GlobalValue::isWeakLinkage(L)) {
       EmittedDeferredDecls[getMangledName(GD)] = GD;
     }
