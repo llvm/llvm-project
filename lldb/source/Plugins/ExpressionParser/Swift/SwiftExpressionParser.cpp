@@ -874,10 +874,12 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     needs_init = true;
 
     Status error;
-
     if (repl) {
       if (!variable.GetType().IsVoidType()) {
         auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
+        assert(variable.GetType()
+                   .GetTypeSystem()
+                   .isa_and_nonnull<TypeSystemSwiftTypeRef>());
         offset = repl_mat.AddREPLResultVariable(
             variable.GetType(), variable.GetDecl(),
             is_result ? &user_expression.GetResultDelegate()
