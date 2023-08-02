@@ -380,8 +380,8 @@ define dso_local void @spam() {
 ; TUNIT-NEXT:    store i32 [[X]], ptr [[TMP]], align 4
 ; TUNIT-NEXT:    br label [[BB16:%.*]]
 ; TUNIT:       bb16:
-; TUNIT-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[X]], 0
-; TUNIT-NEXT:    br i1 [[TMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
+; TUNIT-NEXT:    [[TRUETMP18:%.*]] = icmp eq i32 [[X]], 0
+; TUNIT-NEXT:    br i1 [[TRUETMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
 ; TUNIT:       bb19:
 ; TUNIT-NEXT:    br label [[BB23:%.*]]
 ; TUNIT:       bb23:
@@ -404,8 +404,8 @@ define dso_local void @spam() {
 ; CGSCC-NEXT:    store i32 [[X]], ptr [[TMP]], align 4
 ; CGSCC-NEXT:    br label [[BB16:%.*]]
 ; CGSCC:       bb16:
-; CGSCC-NEXT:    [[TMP18:%.*]] = icmp eq i32 [[X]], 0
-; CGSCC-NEXT:    br i1 [[TMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
+; CGSCC-NEXT:    [[TRUETMP18:%.*]] = icmp eq i32 [[X]], 0
+; CGSCC-NEXT:    br i1 [[TRUETMP18]], label [[BB35:%.*]], label [[BB19:%.*]]
 ; CGSCC:       bb19:
 ; CGSCC-NEXT:    br label [[BB23:%.*]]
 ; CGSCC:       bb23:

@@ -31,6 +31,9 @@ void __assert_fail(const char *expr, const char *msg, const char *file,
     else                                                                       \
       __assert_assume(expr);                                                   \
   }
+#define UNREACHABLE(msg)                                                       \
+  PRINT(msg);                                                                  \
+  __builtin_trap();
 
 ///}
 

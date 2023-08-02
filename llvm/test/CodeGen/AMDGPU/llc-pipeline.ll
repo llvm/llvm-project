@@ -28,6 +28,7 @@
 ; GCN-O0-NEXT:    FunctionPass Manager
 ; GCN-O0-NEXT:      Expand large div/rem
 ; GCN-O0-NEXT:      Expand large fp convert
+; GCN-O0-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O0-NEXT:    AMDGPU Printf lowering
 ; GCN-O0-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O0-NEXT:    AMDGPU Inline All Functions
@@ -45,7 +46,6 @@
 ; GCN-O0-NEXT:      Expand vector predication intrinsics
 ; GCN-O0-NEXT:      Scalarize Masked Memory Intrinsics
 ; GCN-O0-NEXT:      Expand reduction intrinsics
-; GCN-O0-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O0-NEXT:    CallGraph Construction
 ; GCN-O0-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O0-NEXT:      AMDGPU Annotate Kernel Features
@@ -120,6 +120,7 @@
 ; GCN-O0-NEXT:        Fast Register Allocator
 ; GCN-O0-NEXT:        SI lower SGPR spill instructions
 ; GCN-O0-NEXT:        Fast Register Allocator
+; GCN-O0-NEXT:        SI Lower WWM Copies
 ; GCN-O0-NEXT:        SI Fix VGPR copies
 ; GCN-O0-NEXT:        Remove Redundant DEBUG_VALUE analysis
 ; GCN-O0-NEXT:        Fixup Statepoint Caller Saved
@@ -173,6 +174,7 @@
 ; GCN-O1-NEXT:    FunctionPass Manager
 ; GCN-O1-NEXT:      Expand large div/rem
 ; GCN-O1-NEXT:      Expand large fp convert
+; GCN-O1-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-NEXT:    AMDGPU Printf lowering
 ; GCN-O1-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O1-NEXT:    AMDGPU Inline All Functions
@@ -224,7 +226,6 @@
 ; GCN-O1-NEXT:      Expand reduction intrinsics
 ; GCN-O1-NEXT:      Natural Loop Information
 ; GCN-O1-NEXT:      TLS Variable Hoist
-; GCN-O1-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-NEXT:    CallGraph Construction
 ; GCN-O1-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O1-NEXT:      AMDGPU Annotate Kernel Features
@@ -368,6 +369,7 @@
 ; GCN-O1-NEXT:        Virtual Register Map
 ; GCN-O1-NEXT:        Live Register Matrix
 ; GCN-O1-NEXT:        Greedy Register Allocator
+; GCN-O1-NEXT:        SI Lower WWM Copies
 ; GCN-O1-NEXT:        GCN NSA Reassign
 ; GCN-O1-NEXT:        Virtual Register Rewriter
 ; GCN-O1-NEXT:        Stack Slot Coloring
@@ -448,6 +450,7 @@
 ; GCN-O1-OPTS-NEXT:    FunctionPass Manager
 ; GCN-O1-OPTS-NEXT:      Expand large div/rem
 ; GCN-O1-OPTS-NEXT:      Expand large fp convert
+; GCN-O1-OPTS-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-OPTS-NEXT:    AMDGPU Printf lowering
 ; GCN-O1-OPTS-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O1-OPTS-NEXT:    AMDGPU Inline All Functions
@@ -507,7 +510,6 @@
 ; GCN-O1-OPTS-NEXT:      Natural Loop Information
 ; GCN-O1-OPTS-NEXT:      TLS Variable Hoist
 ; GCN-O1-OPTS-NEXT:      Early CSE
-; GCN-O1-OPTS-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O1-OPTS-NEXT:    CallGraph Construction
 ; GCN-O1-OPTS-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O1-OPTS-NEXT:      AMDGPU Annotate Kernel Features
@@ -666,6 +668,7 @@
 ; GCN-O1-OPTS-NEXT:        Virtual Register Map
 ; GCN-O1-OPTS-NEXT:        Live Register Matrix
 ; GCN-O1-OPTS-NEXT:        Greedy Register Allocator
+; GCN-O1-OPTS-NEXT:        SI Lower WWM Copies
 ; GCN-O1-OPTS-NEXT:        GCN NSA Reassign
 ; GCN-O1-OPTS-NEXT:        Virtual Register Rewriter
 ; GCN-O1-OPTS-NEXT:        Stack Slot Coloring
@@ -746,6 +749,7 @@
 ; GCN-O2-NEXT:    FunctionPass Manager
 ; GCN-O2-NEXT:      Expand large div/rem
 ; GCN-O2-NEXT:      Expand large fp convert
+; GCN-O2-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O2-NEXT:    AMDGPU Printf lowering
 ; GCN-O2-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O2-NEXT:    AMDGPU Inline All Functions
@@ -813,7 +817,6 @@
 ; GCN-O2-NEXT:      Natural Loop Information
 ; GCN-O2-NEXT:      TLS Variable Hoist
 ; GCN-O2-NEXT:      Early CSE
-; GCN-O2-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O2-NEXT:    CallGraph Construction
 ; GCN-O2-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O2-NEXT:      AMDGPU Annotate Kernel Features
@@ -974,6 +977,7 @@
 ; GCN-O2-NEXT:        Virtual Register Map
 ; GCN-O2-NEXT:        Live Register Matrix
 ; GCN-O2-NEXT:        Greedy Register Allocator
+; GCN-O2-NEXT:        SI Lower WWM Copies
 ; GCN-O2-NEXT:        GCN NSA Reassign
 ; GCN-O2-NEXT:        Virtual Register Rewriter
 ; GCN-O2-NEXT:        Stack Slot Coloring
@@ -1054,6 +1058,7 @@
 ; GCN-O3-NEXT:    FunctionPass Manager
 ; GCN-O3-NEXT:      Expand large div/rem
 ; GCN-O3-NEXT:      Expand large fp convert
+; GCN-O3-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O3-NEXT:    AMDGPU Printf lowering
 ; GCN-O3-NEXT:    Lower ctors and dtors for AMDGPU
 ; GCN-O3-NEXT:    AMDGPU Inline All Functions
@@ -1133,7 +1138,6 @@
 ; GCN-O3-NEXT:      Lazy Block Frequency Analysis
 ; GCN-O3-NEXT:      Optimization Remark Emitter
 ; GCN-O3-NEXT:      Global Value Numbering
-; GCN-O3-NEXT:    AMDGPU Remove Incompatible Functions
 ; GCN-O3-NEXT:    CallGraph Construction
 ; GCN-O3-NEXT:    Call Graph SCC Pass Manager
 ; GCN-O3-NEXT:      AMDGPU Annotate Kernel Features
@@ -1294,6 +1298,7 @@
 ; GCN-O3-NEXT:        Virtual Register Map
 ; GCN-O3-NEXT:        Live Register Matrix
 ; GCN-O3-NEXT:        Greedy Register Allocator
+; GCN-O3-NEXT:        SI Lower WWM Copies
 ; GCN-O3-NEXT:        GCN NSA Reassign
 ; GCN-O3-NEXT:        Virtual Register Rewriter
 ; GCN-O3-NEXT:        Stack Slot Coloring

@@ -376,11 +376,13 @@ const TokenSequence &TokenSequence::CheckBadParentheses(
   std::size_t tokens{SizeInTokens()};
   for (std::size_t j{0}; j < tokens; ++j) {
     CharBlock token{TokenAt(j)};
-    char ch{token.FirstNonBlank()};
+    char ch{token.OnlyNonBlank()};
     if (ch == '(') {
       ++nesting;
     } else if (ch == ')') {
-      --nesting;
+      if (nesting-- == 0) {
+        break;
+      }
     }
   }
   if (nesting != 0) {
@@ -388,7 +390,7 @@ const TokenSequence &TokenSequence::CheckBadParentheses(
     std::vector<std::size_t> stack;
     for (std::size_t j{0}; j < tokens; ++j) {
       CharBlock token{TokenAt(j)};
-      char ch{token.FirstNonBlank()};
+      char ch{token.OnlyNonBlank()};
       if (ch == '(') {
         stack.push_back(j);
       } else if (ch == ')') {

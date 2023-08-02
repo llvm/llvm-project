@@ -1,6 +1,6 @@
-# Minmal MLIR binaries
+# Minimal MLIR binaries
 
-This folder contains example of minimal MLIR setup that can showcase the
+This folder contains example of minimal MLIR setups that can showcase the
 intended binary footprint of the framework.
 
 - mlir-cat: This includes the Core IR, the builtin dialect, the textual
@@ -15,7 +15,7 @@ using clang-14 on a X86 Ubuntu and [bloaty](https://github.com/google/bloaty).
 
 |                                  | Base   | Os     | Oz     | Os LTO | Oz LTO |
 | :------------------------------: | ------ | ------ | ------ | ------ | ------ |
-| `mlit-cat`                       | 1018kB | 836KB  | 879KB  | 697KB  | 649KB  |
+| `mlir-cat`                       | 1018kB | 836KB  | 879KB  | 697KB  | 649KB  |
 | `mlir-minimal-opt`               | 1.54MB | 1.25MB | 1.29MB | 1.10MB | 1.00MB |
 | `mlir-minimal-opt-canonicalizer` | 2.24MB | 1.81MB | 1.86MB | 1.62MB | 1.48MB |
 

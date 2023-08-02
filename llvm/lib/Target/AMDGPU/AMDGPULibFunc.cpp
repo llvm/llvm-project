@@ -945,17 +945,21 @@ std::string AMDGPUMangledLibFunc::getName() const {
   return std::string(OS.str());
 }
 
+bool AMDGPULibFunc::isCompatibleSignature(const FunctionType *FuncTy) const {
+  // TODO: Validate types make sense
+  return !FuncTy->isVarArg() && FuncTy->getNumParams() == getNumArgs();
+}
+
 Function *AMDGPULibFunc::getFunction(Module *M, const AMDGPULibFunc &fInfo) {
   std::string FuncName = fInfo.mangle();
   Function *F = dyn_cast_or_null<Function>(
     M->getValueSymbolTable().lookup(FuncName));
 
   // check formal with actual types conformance
-  if (F && !F->isDeclaration()
-        && !F->isVarArg()
-        && F->arg_size() == fInfo.getNumArgs()) {
+  if (F && !F->isDeclaration() &&
+      fInfo.isCompatibleSignature(F->getFunctionType()))
     return F;
-  }
+
   return nullptr;
 }
 
@@ -966,11 +970,9 @@ FunctionCallee AMDGPULibFunc::getOrInsertFunction(Module *M,
     M->getValueSymbolTable().lookup(FuncName));
 
   // check formal with actual types conformance
-  if (F && !F->isDeclaration()
-        && !F->isVarArg()
-        && F->arg_size() == fInfo.getNumArgs()) {
+  if (F && !F->isDeclaration() &&
+      fInfo.isCompatibleSignature(F->getFunctionType()))
     return F;
-  }
 
   FunctionType *FuncTy = fInfo.getFunctionType(*M);
 

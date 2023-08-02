@@ -1272,6 +1272,7 @@ const char *getMmaIrIntrName(MMAOp mmaOp) {
   case MMAOp::DisassemblePair:
     return "llvm.ppc.vsx.disassemble.pair";
   }
+  llvm_unreachable("getMmaIrIntrName");
 }
 
 mlir::FunctionType getMmaIrFuncType(mlir::MLIRContext *context, MMAOp mmaOp) {
@@ -1285,6 +1286,7 @@ mlir::FunctionType getMmaIrFuncType(mlir::MLIRContext *context, MMAOp mmaOp) {
   case MMAOp::DisassemblePair:
     return genMmaDisassembleFuncType(context, mmaOp);
   }
+  llvm_unreachable("getMmaIrFuncType");
 }
 
 template <MMAOp IntrId, MMAHandlerOp HandlerOp>

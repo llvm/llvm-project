@@ -4,8 +4,8 @@
 
 module acc_declare_test
  integer, parameter :: n = 100000
- real, dimension(n) :: data1, data2
- !$acc declare create(data1) create(zero: data2)
+ real, dimension(n) :: data1
+ !$acc declare create(data1)
 end module
 
 ! CHECK-LABEL: fir.global @_QMacc_declare_testEdata1 {acc.declare = #acc.declare<dataClause = acc_create>} : !fir.array<100000xf32>
@@ -22,23 +22,6 @@ end module
 ! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) -> !fir.ref<!fir.array<100000xf32>> {dataClause = #acc<data_clause acc_create>, name = "data1", structured = false}
 ! CHECK:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>)
 ! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>) {dataClause = #acc<data_clause acc_create>, name = "data1", structured = false}
-! CHECK:         acc.terminator
-! CHECK:       }
-
-! CHECK-LABEL: fir.global @_QMacc_declare_testEdata2 {acc.declare = #acc.declare<dataClause =  acc_create_zero>} : !fir.array<100000xf32>
-
-! CHECK-LABEL: acc.global_ctor @_QMacc_declare_testEdata2_acc_ctor {
-! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_testEdata2) {acc.declare = #acc.declare<dataClause =  acc_create_zero>} : !fir.ref<!fir.array<100000xf32>>
-! CHECK:         %[[CREATE:.*]] = acc.create varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) -> !fir.ref<!fir.array<100000xf32>> {dataClause = #acc<data_clause acc_create_zero>, name = "data2", structured = false}
-! CHECK:         acc.declare_enter dataOperands(%[[CREATE]] : !fir.ref<!fir.array<100000xf32>>)
-! CHECK:         acc.terminator
-! CHECK:       }
-
-! CHECK-LABEL: acc.global_dtor @_QMacc_declare_testEdata2_acc_dtor {
-! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_testEdata2) {acc.declare = #acc.declare<dataClause =  acc_create_zero>} : !fir.ref<!fir.array<100000xf32>>
-! CHECK:         %[[DEVICEPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<100000xf32>>) -> !fir.ref<!fir.array<100000xf32>> {dataClause = #acc<data_clause acc_create_zero>, name = "data2", structured = false}
-! CHECK:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>)
-! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<100000xf32>>) {dataClause = #acc<data_clause acc_create_zero>, name = "data2", structured = false}
 ! CHECK:         acc.terminator
 ! CHECK:       }
 

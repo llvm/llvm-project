@@ -603,7 +603,7 @@ void MachineLICMBase::AddToLiveIns(MCRegister Reg) {
       for (MachineOperand &MO : MI.all_uses()) {
         if (!MO.getReg())
           continue;
-        if (MO.getReg() == Reg || TRI->isSuperRegister(Reg, MO.getReg()))
+        if (TRI->isSuperRegisterEq(Reg, MO.getReg()))
           MO.setIsKill(false);
       }
     }

@@ -30,6 +30,9 @@ module openacc_declare_validity
   !ERROR: DEVICEPTR clause is not allowed on the DECLARE directive in module declaration section
   !$acc declare deviceptr(ab)
 
+  !ERROR: The ZERO modifier is not allowed for the CREATE clause on the DECLARE directive
+  !$acc declare create(zero: aa)
+
 contains
 
   subroutine sub1(cc, dd)

@@ -70,6 +70,10 @@ char unavailable __attribute__((unavailable));
         {
           "kind": "identifier",
           "spelling": "num"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

@@ -622,7 +622,8 @@ bool AMDGPULibCalls::fold(CallInst *CI, AliasAnalysis *AA) {
     return false;
 
   // Further check the number of arguments to see if they match.
-  if (CI->arg_size() != FInfo.getNumArgs())
+  // TODO: Check calling convention matches too
+  if (!FInfo.isCompatibleSignature(CI->getFunctionType()))
     return false;
 
   LLVM_DEBUG(dbgs() << "AMDIC: try folding " << *CI << '\n');
@@ -1035,11 +1036,7 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
 
   Value *nval;
   if (needabs) {
-    FunctionCallee AbsExpr =
-        getFunction(M, AMDGPULibFunc(AMDGPULibFunc::EI_FABS, FInfo));
-    if (!AbsExpr)
-      return false;
-    nval = CreateCallEx(B, AbsExpr, opr0, "__fabs");
+    nval = B.CreateUnaryIntrinsic(Intrinsic::fabs, opr0, nullptr, "__fabs");
   } else {
     nval = cnval ? cnval : opr0;
   }

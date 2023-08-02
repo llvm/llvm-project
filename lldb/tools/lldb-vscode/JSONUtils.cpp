@@ -342,6 +342,9 @@ llvm::json::Value CreateBreakpoint(lldb::SBBreakpoint &bp,
     object.try_emplace("source", CreateSource(*request_path));
 
   if (bp_addr.IsValid()) {
+    std::string formatted_addr =
+        "0x" + llvm::utohexstr(bp_addr.GetLoadAddress(g_vsc.target));
+    object.try_emplace("instructionReference", formatted_addr);
     auto line_entry = bp_addr.GetLineEntry();
     const auto line = line_entry.GetLine();
     if (line != UINT32_MAX)
@@ -600,8 +603,8 @@ llvm::json::Value CreateSource(lldb::SBLineEntry &line_entry) {
     if (name)
       EmplaceSafeString(object, "name", name);
     char path[PATH_MAX] = "";
-    file.GetPath(path, sizeof(path));
-    if (path[0]) {
+    if (file.GetPath(path, sizeof(path)) &&
+        lldb::SBFileSpec::ResolvePath(path, path, PATH_MAX)) {
       EmplaceSafeString(object, "path", std::string(path));
     }
   }
@@ -616,97 +619,14 @@ llvm::json::Value CreateSource(llvm::StringRef source_path) {
   return llvm::json::Value(std::move(source));
 }
 
-llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
-  disasm_line = 0;
+std::optional<llvm::json::Value> CreateSource(lldb::SBFrame &frame) {
   auto line_entry = frame.GetLineEntry();
   // A line entry of 0 indicates the line is compiler generated i.e. no source
-  // file so don't return early with the line entry.
+  // file is associated with the frame.
   if (line_entry.GetFileSpec().IsValid() && line_entry.GetLine() != 0)
     return CreateSource(line_entry);
 
-  llvm::json::Object object;
-  const auto pc = frame.GetPC();
-
-  lldb::SBInstructionList insts;
-  lldb::SBFunction function = frame.GetFunction();
-  lldb::addr_t low_pc = LLDB_INVALID_ADDRESS;
-  if (function.IsValid()) {
-    low_pc = function.GetStartAddress().GetLoadAddress(g_vsc.target);
-    auto addr_srcref = g_vsc.addr_to_source_ref.find(low_pc);
-    if (addr_srcref != g_vsc.addr_to_source_ref.end()) {
-      // We have this disassembly cached already, return the existing
-      // sourceReference
-      object.try_emplace("sourceReference", addr_srcref->second);
-      disasm_line = g_vsc.GetLineForPC(addr_srcref->second, pc);
-    } else {
-      insts = function.GetInstructions(g_vsc.target);
-    }
-  } else {
-    lldb::SBSymbol symbol = frame.GetSymbol();
-    if (symbol.IsValid()) {
-      low_pc = symbol.GetStartAddress().GetLoadAddress(g_vsc.target);
-      auto addr_srcref = g_vsc.addr_to_source_ref.find(low_pc);
-      if (addr_srcref != g_vsc.addr_to_source_ref.end()) {
-        // We have this disassembly cached already, return the existing
-        // sourceReference
-        object.try_emplace("sourceReference", addr_srcref->second);
-        disasm_line = g_vsc.GetLineForPC(addr_srcref->second, pc);
-      } else {
-        insts = symbol.GetInstructions(g_vsc.target);
-      }
-    }
-  }
-  const auto num_insts = insts.GetSize();
-  if (low_pc != LLDB_INVALID_ADDRESS && num_insts > 0) {
-    if (line_entry.GetLine() == 0) {
-      EmplaceSafeString(object, "name", "<compiler-generated>");
-    } else {
-      EmplaceSafeString(object, "name", frame.GetDisplayFunctionName());
-    }
-    SourceReference source;
-    llvm::raw_string_ostream src_strm(source.content);
-    std::string line;
-    for (size_t i = 0; i < num_insts; ++i) {
-      lldb::SBInstruction inst = insts.GetInstructionAtIndex(i);
-      const auto inst_addr = inst.GetAddress().GetLoadAddress(g_vsc.target);
-      const char *m = inst.GetMnemonic(g_vsc.target);
-      const char *o = inst.GetOperands(g_vsc.target);
-      const char *c = inst.GetComment(g_vsc.target);
-      if (pc == inst_addr)
-        disasm_line = i + 1;
-      const auto inst_offset = inst_addr - low_pc;
-      int spaces = 0;
-      if (inst_offset < 10)
-        spaces = 3;
-      else if (inst_offset < 100)
-        spaces = 2;
-      else if (inst_offset < 1000)
-        spaces = 1;
-      line.clear();
-      llvm::raw_string_ostream line_strm(line);
-      line_strm << llvm::formatv("{0:X+}: <{1}> {2} {3,12} {4}", inst_addr,
-                                 inst_offset, llvm::fmt_repeat(' ', spaces), m,
-                                 o);
-
-      // If there is a comment append it starting at column 60 or after one
-      // space past the last char
-      const uint32_t comment_row = std::max(line_strm.str().size(), (size_t)60);
-      if (c && c[0]) {
-        if (line.size() < comment_row)
-          line_strm.indent(comment_row - line_strm.str().size());
-        line_strm << " # " << c;
-      }
-      src_strm << line_strm.str() << "\n";
-      source.addr_to_line[inst_addr] = i + 1;
-    }
-    // Flush the source stream
-    src_strm.str();
-    auto sourceReference = VSCode::GetNextSourceReference();
-    g_vsc.source_map[sourceReference] = std::move(source);
-    g_vsc.addr_to_source_ref[low_pc] = sourceReference;
-    object.try_emplace("sourceReference", sourceReference);
-  }
-  return llvm::json::Value(std::move(object));
+  return {};
 }
 
 // "StackFrame": {
@@ -748,6 +668,12 @@ llvm::json::Value CreateSource(lldb::SBFrame &frame, int64_t &disasm_line) {
 //       "description": "An optional end column of the range covered by the
 //                       stack frame."
 //     },
+//     "instructionPointerReference": {
+// 	     "type": "string",
+// 	     "description": "A memory reference for the current instruction
+// pointer
+//                       in this frame."
+//     },
 //     "moduleId": {
 //       "type": ["integer", "string"],
 //       "description": "The module associated with this frame, if any."
@@ -770,30 +696,37 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   int64_t frame_id = MakeVSCodeFrameID(frame);
   object.try_emplace("id", frame_id);
 
-  std::string frame_name;
-  const char *func_name = frame.GetFunctionName();
-  if (func_name)
-    frame_name = func_name;
-  else
+  std::string frame_name = frame.GetDisplayFunctionName();
+  if (frame_name.empty())
     frame_name = "<unknown>";
   bool is_optimized = frame.GetFunction().GetIsOptimized();
   if (is_optimized)
     frame_name += " [opt]";
   EmplaceSafeString(object, "name", frame_name);
 
-  int64_t disasm_line = 0;
-  object.try_emplace("source", CreateSource(frame, disasm_line));
+  auto source = CreateSource(frame);
 
-  auto line_entry = frame.GetLineEntry();
-  if (disasm_line > 0) {
-    object.try_emplace("line", disasm_line);
-  } else {
+  if (source) {
+    object.try_emplace("source", *source);
+    auto line_entry = frame.GetLineEntry();
     auto line = line_entry.GetLine();
-    if (line == UINT32_MAX)
-      line = 0;
-    object.try_emplace("line", line);
+    if (line && line != LLDB_INVALID_LINE_NUMBER)
+      object.try_emplace("line", line);
+    auto column = line_entry.GetColumn();
+    if (column && column != LLDB_INVALID_COLUMN_NUMBER)
+      object.try_emplace("column", column);
+  } else {
+    object.try_emplace("line", 0);
+    object.try_emplace("column", 0);
+    object.try_emplace("presentationHint", "subtle");
   }
-  object.try_emplace("column", line_entry.GetColumn());
+
+  const auto pc = frame.GetPC();
+  if (pc != LLDB_INVALID_ADDRESS) {
+    std::string formatted_addr = "0x" + llvm::utohexstr(pc);
+    object.try_emplace("instructionPointerReference", formatted_addr);
+  }
+
   return llvm::json::Value(std::move(object));
 }
 

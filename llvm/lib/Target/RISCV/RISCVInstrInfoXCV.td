@@ -13,10 +13,12 @@
 let DecoderNamespace = "XCVbitmanip" in {
   class CVInstBitManipRII<bits<2> funct2, bits<3> funct3, dag outs, dag ins,
                       string opcodestr, string argstr>
-      : RVInstI<funct3, OPC_CUSTOM_2, outs, ins, opcodestr, argstr> {
+      : RVInstIBase<funct3, OPC_CUSTOM_2, outs, ins, opcodestr, argstr> {
     bits<5> is3;
     bits<5> is2;
-    let imm12 = {funct2, is3, is2};
+    let Inst{31-30} = funct2;
+    let Inst{29-25} = is3;
+    let Inst{24-20} = is2;
   }
 
   class CVBitManipRII<bits<2> funct2, bits<3> funct3, string opcodestr,
@@ -76,20 +78,12 @@ class CVInstMac<bits<7> funct7, bits<3> funct3, string opcodestr>
 
 class CVInstMacMulN<bits<2> funct2, bits<3> funct3, dag outs, dag ins,
                     string opcodestr>
-    : RVInst<outs, ins, opcodestr, "$rd, $rs1, $rs2, $imm5",
-             [], InstFormatOther> {
+    : RVInstRBase<funct3, OPC_CUSTOM_2, outs, ins, opcodestr,
+                  "$rd, $rs1, $rs2, $imm5"> {
   bits<5> imm5;
-  bits<5> rs2;
-  bits<5> rs1;
-  bits<5> rd;
 
   let Inst{31-30} = funct2;
   let Inst{29-25} = imm5;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = OPC_CUSTOM_2.Value;
   let DecoderNamespace = "XCVmac";
 }
 
@@ -169,20 +163,13 @@ let Predicates = [HasVendorXCVmac, IsRV32] in {
 
 let DecoderNamespace = "XCValu" in {
   class CVInstAluRRI<bits<2> funct2, bits<3> funct3, string opcodestr>
-      : RVInst<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5),
-                opcodestr, "$rd, $rs1, $rs2, $imm5", [], InstFormatOther> {
+      : RVInstRBase<funct3, OPC_CUSTOM_2, (outs GPR:$rd),
+                    (ins GPR:$rs1, GPR:$rs2, uimm5:$imm5), opcodestr,
+                    "$rd, $rs1, $rs2, $imm5"> {
     bits<5> imm5;
-    bits<5> rs2;
-    bits<5> rs1;
-    bits<5> rd;
 
     let Inst{31-30} = funct2;
     let Inst{29-25} = imm5;
-    let Inst{24-20} = rs2;
-    let Inst{19-15} = rs1;
-    let Inst{14-12} = funct3;
-    let Inst{11-7} = rd;
-    let Inst{6-0} = OPC_CUSTOM_2.Value;
   }
 
   class CVInstAluRR<bits<7> funct7, bits<3> funct3, string opcodestr>
@@ -194,18 +181,13 @@ let DecoderNamespace = "XCValu" in {
               (ins GPR:$rd, GPR:$rs1, GPR:$rs2), opcodestr, "$rd, $rs1, $rs2">;
 
   class CVInstAluRI<bits<7> funct7, bits<3> funct3, string opcodestr>
-      : RVInst<(outs GPR:$rd), (ins GPR:$rs1, uimm5:$imm5), opcodestr,
-                "$rd, $rs1, $imm5", [], InstFormatOther> {
+      : RVInstIBase<funct3, OPC_CUSTOM_1, (outs GPR:$rd),
+                    (ins GPR:$rs1, uimm5:$imm5), opcodestr,
+                    "$rd, $rs1, $imm5"> {
     bits<5> imm5;
-    bits<5> rs1;
-    bits<5> rd;
 
     let Inst{31-25} = funct7;
     let Inst{24-20} = imm5;
-    let Inst{19-15} = rs1;
-    let Inst{14-12} = funct3;
-    let Inst{11-7} = rd;
-    let Inst{6-0} = OPC_CUSTOM_1.Value;
   }
 
   class CVInstAluR<bits<7> funct7, bits<3> funct3, string opcodestr>
@@ -298,37 +280,22 @@ let Predicates = [HasVendorXCValu],
 class CVInstSIMDRR<bits<5> funct5, bit F, bit funct1, bits<3> funct3,
                    RISCVOpcode opcode, dag outs,
                    dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
-  bits<5> rs2;
-  bits<5> rs1;
-  bits<5> rd;
-
+    : RVInstRBase<funct3, opcode, outs, ins, opcodestr, argstr> {
   let Inst{31-27} = funct5;
   let Inst{26} = F;
   let Inst{25} = funct1;
-  let Inst{24-20} = rs2;
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = opcode.Value;
   let DecoderNamespace = "XCVsimd";
 }
 
 class CVInstSIMDRI<bits<5> funct5, bit F, bits<3> funct3, RISCVOpcode opcode,
                    dag outs, dag ins, string opcodestr, string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatOther> {
+    : RVInstIBase<funct3, opcode, outs, ins, opcodestr, argstr> {
   bits<6> imm6;
-  bits<5> rs1;
-  bits<5> rd;
 
   let Inst{31-27} = funct5;
   let Inst{26} = F;
   let Inst{25} = imm6{0}; // funct1 unused
   let Inst{24-20} = imm6{5-1};
-  let Inst{19-15} = rs1;
-  let Inst{14-12} = funct3;
-  let Inst{11-7} = rd;
-  let Inst{6-0} = opcode.Value;
   let DecoderNamespace = "XCVsimd";
 }
 

@@ -4,7 +4,7 @@
 
 ## Ensure MTE globals doesn't work with REL (only RELA).
 # RUN: yaml2obj %s -o %t.rel.o
-# RUN: not ld.lld -shared --android-memtag-mode=sync %t.rel.o 2>&1 | FileCheck %s --check-prefix=CHECK-RELA
+# RUN: not ld.lld -shared --android-memtag-mode=sync %t.rel.o -o %t1.so 2>&1 | FileCheck %s --check-prefix=CHECK-RELA
 # CHECK-RELA: non-RELA relocations are not allowed with memtag globals
 --- !ELF
 FileHeader:
@@ -70,12 +70,12 @@ Symbols:
 
 ## And ensure that --apply-dynamic-relocs is banned.
 # RUN: not ld.lld --apply-dynamic-relocs -shared --android-memtag-mode=sync \
-# RUN:   %t1.o %t2.o 2>&1 | FileCheck %s --check-prefix=CHECK-DYNRELOC
+# RUN:   %t1.o %t2.o -o %t1.so 2>&1 | FileCheck %s --check-prefix=CHECK-DYNRELOC
 # CHECK-DYNRELOC: --apply-dynamic-relocs cannot be used with MTE globals
 
 ## And ensure that fully-static executables are banned.
 # RUN: not ld.lld --static --android-memtag-mode=sync \
-# RUN:   %t1.o %t2.o 2>&1 | FileCheck %s --check-prefix=CHECK-NOSTATIC
+# RUN:   %t1.o %t2.o -o %t1.so 2>&1 | FileCheck %s --check-prefix=CHECK-NOSTATIC
 # CHECK-NOSTATIC: --android-memtag-mode is incompatible with fully-static executables (-static)
 
 # CHECK:     Symbol table '.dynsym' contains

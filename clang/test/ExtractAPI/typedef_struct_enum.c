@@ -328,6 +328,10 @@ struct Foo {
         {
           "kind": "identifier",
           "spelling": "bar"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

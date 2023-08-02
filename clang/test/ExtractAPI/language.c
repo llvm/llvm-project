@@ -70,6 +70,10 @@ char objc;
         {
           "kind": "identifier",
           "spelling": "c"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {
@@ -150,6 +154,10 @@ char objc;
         {
           "kind": "identifier",
           "spelling": "objc"
+        },
+        {
+          "kind": "text",
+          "spelling": ";"
         }
       ],
       "identifier": {

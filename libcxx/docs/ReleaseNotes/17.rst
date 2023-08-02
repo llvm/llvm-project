@@ -112,6 +112,9 @@ Improvements and New Features
 
 - ASan annotations have been added to the ``std::deque`` container, to detect container overflows.
 
+- On Windows, ``std::wcout``, ``wcin``, and ``wcerr`` now work correctly when the underlying
+  stream has been configured in wide mode.
+
 Deprecations and Removals
 -------------------------
 
