@@ -1003,6 +1003,11 @@ Operation::operand_range CallOp::getArgOperands() {
   return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
 }
 
+MutableOperandRange CallOp::getArgOperandsMutable() {
+  return MutableOperandRange(*this, getCallee().has_value() ? 0 : 1,
+                             getCalleeOperands().size());
+}
+
 LogicalResult CallOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
   if (getNumResults() > 1)
     return emitOpError("must have 0 or 1 result");
@@ -1235,6 +1240,11 @@ void InvokeOp::setCalleeFromCallable(CallInterfaceCallable callee) {
 
 Operation::operand_range InvokeOp::getArgOperands() {
   return getOperands().drop_front(getCallee().has_value() ? 0 : 1);
+}
+
+MutableOperandRange InvokeOp::getArgOperandsMutable() {
+  return MutableOperandRange(*this, getCallee().has_value() ? 0 : 1,
+                             getCalleeOperands().size());
 }
 
 LogicalResult InvokeOp::verify() {
