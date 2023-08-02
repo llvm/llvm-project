@@ -556,10 +556,6 @@ public:
                             const VPIteration &Instance,
                             VPTransformState &State);
 
-  /// Construct the vector value of a scalarized value \p V one lane at a time.
-  void packScalarIntoVectorValue(VPValue *Def, const VPIteration &Instance,
-                                 VPTransformState &State);
-
   /// Try to vectorize interleaved access group \p Group with the base address
   /// given in \p Addr, optionally masking the vector operations if \p
   /// BlockInMask is non-null. Use \p State to translate given VPValues to IR
@@ -2522,17 +2518,6 @@ static bool isIndvarOverflowCheckKnownFalse(
   }
 
   return false;
-}
-
-void InnerLoopVectorizer::packScalarIntoVectorValue(VPValue *Def,
-                                                    const VPIteration &Instance,
-                                                    VPTransformState &State) {
-  Value *ScalarInst = State.get(Def, Instance);
-  Value *VectorValue = State.get(Def, Instance.Part);
-  VectorValue = Builder.CreateInsertElement(
-      VectorValue, ScalarInst,
-      Instance.Lane.getAsRuntimeExpr(State.Builder, VF));
-  State.set(Def, VectorValue, Instance.Part);
 }
 
 // Return whether we allow using masked interleave-groups (for dealing with
@@ -9619,7 +9604,7 @@ void VPReplicateRecipe::execute(VPTransformState &State) {
             VectorType::get(UI->getType(), State.VF));
         State.set(this, Poison, State.Instance->Part);
       }
-      State.ILV->packScalarIntoVectorValue(this, *State.Instance, State);
+      State.packScalarIntoVectorValue(this, *State.Instance);
     }
     return;
   }
@@ -9929,7 +9914,7 @@ Value *VPTransformState::get(VPValue *Def, unsigned Part) {
     Value *Undef = PoisonValue::get(VectorType::get(LastInst->getType(), VF));
     set(Def, Undef, Part);
     for (unsigned Lane = 0; Lane < VF.getKnownMinValue(); ++Lane)
-      ILV->packScalarIntoVectorValue(Def, {Part, Lane}, *this);
+      packScalarIntoVectorValue(Def, {Part, Lane});
     VectorValue = get(Def, Part);
   }
   Builder.restoreIP(OldIP);
