@@ -1979,7 +1979,7 @@ CodeGenModule::getFunctionLinkage(GlobalDecl GD) {
     return llvm::GlobalValue::InternalLinkage;
   }
 
-  return getLLVMLinkageForDeclarator(D, Linkage, /*IsConstantVariable=*/false);
+  return getLLVMLinkageForDeclarator(D, Linkage);
 }
 
 llvm::ConstantInt *CodeGenModule::CreateCrossDsoCfiTypeId(llvm::Metadata *MD) {
@@ -5220,8 +5220,7 @@ void CodeGenModule::EmitGlobalVarDefinition(const VarDecl *D,
     AddGlobalAnnotations(D, GV);
 
   // Set the llvm linkage type as appropriate.
-  llvm::GlobalValue::LinkageTypes Linkage =
-      getLLVMLinkageVarDefinition(D, GV->isConstant());
+  llvm::GlobalValue::LinkageTypes Linkage = getLLVMLinkageVarDefinition(D);
 
   // CUDA B.2.1 "The __device__ qualifier declares a variable that resides on
   // the device. [...]"
@@ -5414,8 +5413,9 @@ static bool isVarDeclStrongDefinition(const ASTContext &Context,
   return false;
 }
 
-llvm::GlobalValue::LinkageTypes CodeGenModule::getLLVMLinkageForDeclarator(
-    const DeclaratorDecl *D, GVALinkage Linkage, bool IsConstantVariable) {
+llvm::GlobalValue::LinkageTypes
+CodeGenModule::getLLVMLinkageForDeclarator(const DeclaratorDecl *D,
+                                           GVALinkage Linkage) {
   if (Linkage == GVA_Internal)
     return llvm::Function::InternalLinkage;
 
@@ -5485,10 +5485,10 @@ llvm::GlobalValue::LinkageTypes CodeGenModule::getLLVMLinkageForDeclarator(
   return llvm::GlobalVariable::ExternalLinkage;
 }
 
-llvm::GlobalValue::LinkageTypes CodeGenModule::getLLVMLinkageVarDefinition(
-    const VarDecl *VD, bool IsConstant) {
+llvm::GlobalValue::LinkageTypes
+CodeGenModule::getLLVMLinkageVarDefinition(const VarDecl *VD) {
   GVALinkage Linkage = getContext().GetGVALinkageForVariable(VD);
-  return getLLVMLinkageForDeclarator(VD, Linkage, IsConstant);
+  return getLLVMLinkageForDeclarator(VD, Linkage);
 }
 
 /// Replace the uses of a function that was declared with a non-proto type.
@@ -5700,7 +5700,7 @@ void CodeGenModule::EmitAliasDefinition(GlobalDecl GD) {
     Aliasee = GetOrCreateLLVMGlobal(AA->getAliasee(), DeclTy, LangAS::Default,
                                     /*D=*/nullptr);
     if (const auto *VD = dyn_cast<VarDecl>(GD.getDecl()))
-      LT = getLLVMLinkageVarDefinition(VD, D->getType().isConstQualified());
+      LT = getLLVMLinkageVarDefinition(VD);
     else
       LT = getFunctionLinkage(GD);
   }
@@ -6334,8 +6334,7 @@ ConstantAddress CodeGenModule::GetAddrOfGlobalTemporary(
   }
 
   // Create a global variable for this lifetime-extended temporary.
-  llvm::GlobalValue::LinkageTypes Linkage =
-      getLLVMLinkageVarDefinition(VD, Constant);
+  llvm::GlobalValue::LinkageTypes Linkage = getLLVMLinkageVarDefinition(VD);
   if (Linkage == llvm::GlobalVariable::ExternalLinkage) {
     const VarDecl *InitVD;
     if (VD->isStaticDataMember() && VD->getAnyInitializer(InitVD) &&

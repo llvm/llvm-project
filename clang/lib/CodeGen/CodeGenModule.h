@@ -1314,12 +1314,11 @@ public:
 
   /// Returns LLVM linkage for a declarator.
   llvm::GlobalValue::LinkageTypes
-  getLLVMLinkageForDeclarator(const DeclaratorDecl *D, GVALinkage Linkage,
-                              bool IsConstantVariable);
+  getLLVMLinkageForDeclarator(const DeclaratorDecl *D, GVALinkage Linkage);
 
   /// Returns LLVM linkage for a declarator.
   llvm::GlobalValue::LinkageTypes
-  getLLVMLinkageVarDefinition(const VarDecl *VD, bool IsConstant);
+  getLLVMLinkageVarDefinition(const VarDecl *VD);
 
   /// Emit all the global annotations.
   void EmitGlobalAnnotations();
