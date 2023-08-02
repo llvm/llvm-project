@@ -83,6 +83,12 @@ public:
     }
   }
 
+  Envar<Ty> &operator=(const Ty &V) {
+    Data = V;
+    Initialized = true;
+    return *this;
+  }
+
   /// Get the definitive value.
   const Ty &get() const {
     // Throw a runtime error in case this envar is not initialized.
