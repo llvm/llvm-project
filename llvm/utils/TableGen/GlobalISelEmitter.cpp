@@ -498,6 +498,10 @@ GlobalISelEmitter::getEquivNode(Record &Equiv, const TreePatternNode *N) const {
       return &Target.getInstruction(Equiv.getValueAsDef("IfFloatingPoint"));
   }
 
+  if (!Equiv.isValueUnset("IfConvergent") &&
+      N->getIntrinsicInfo(CGP)->isConvergent)
+    return &Target.getInstruction(Equiv.getValueAsDef("IfConvergent"));
+
   for (const TreePredicateCall &Call : N->getPredicateCalls()) {
     const TreePredicateFn &Predicate = Call.Fn;
     if (!Equiv.isValueUnset("IfSignExtend") &&
@@ -863,7 +867,10 @@ Expected<InstructionMatcher &> GlobalISelEmitter::createAndImportSelDAGMatcher(
     // Match the used operands (i.e. the children of the operator).
     bool IsIntrinsic =
         SrcGIOrNull->TheDef->getName() == "G_INTRINSIC" ||
-        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_W_SIDE_EFFECTS";
+        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_W_SIDE_EFFECTS" ||
+        SrcGIOrNull->TheDef->getName() == "G_INTRINSIC_CONVERGENT" ||
+        SrcGIOrNull->TheDef->getName() ==
+            "G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS";
     const CodeGenIntrinsic *II = Src->getIntrinsicInfo(CGP);
     if (IsIntrinsic && !II)
       return failedImport("Expected IntInit containing intrinsic ID)");

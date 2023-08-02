@@ -408,6 +408,10 @@ struct TraversalConfig {
   /// Specifies whether unknown/non-bufferizable/ops not included in the
   /// OpFilter of BufferizationOptions should be followed.
   bool followUnknownOps = false;
+
+  /// Specifies whether OpOperands with a different type that are not the result
+  /// of a CastOpInterface op should be followed.
+  bool followSameTypeOrCastsOnly = false;
 };
 
 /// AnalysisState provides a variety of helper functions for dealing with

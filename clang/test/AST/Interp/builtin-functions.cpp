@@ -72,3 +72,14 @@ namespace fmin {
   constexpr float min3 = __builtin_fmin(__builtin_inf(), __builtin_nan(""));
   static_assert(min3 == __builtin_inf(), "");
 }
+
+namespace inf {
+  static_assert(__builtin_isinf(__builtin_inf()), "");
+  static_assert(!__builtin_isinf(1.0), "");
+
+  static_assert(__builtin_isfinite(1.0), "");
+  static_assert(!__builtin_isfinite(__builtin_inf()), "");
+
+  static_assert(__builtin_isnormal(1.0), "");
+  static_assert(!__builtin_isnormal(__builtin_inf()), "");
+}

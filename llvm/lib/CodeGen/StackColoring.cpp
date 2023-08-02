@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 //
 // This pass implements the stack-coloring optimization that looks for
-// lifetime markers machine instructions (LIFESTART_BEGIN and LIFESTART_END),
+// lifetime markers machine instructions (LIFETIME_START and LIFETIME_END),
 // which represent the possible lifetime of stack slots. It attempts to
 // merge disjoint stack slots and reduce the used stack space.
 // NOTE: This pass is not StackSlotColoring, which optimizes spill slots.

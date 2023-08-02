@@ -1138,7 +1138,7 @@ void PPC64PltCallStub::writeTo(uint8_t *buf) {
 void PPC64PltCallStub::addSymbols(ThunkSection &isec) {
   Defined *s = addSymbol(saver().save("__plt_" + destination.getName()),
                          STT_FUNC, 0, isec);
-  s->needsTocRestore = true;
+  s->setNeedsTocRestore(true);
   s->file = destination.file;
 }
 
@@ -1182,7 +1182,7 @@ void PPC64R2SaveStub::writeTo(uint8_t *buf) {
 void PPC64R2SaveStub::addSymbols(ThunkSection &isec) {
   Defined *s = addSymbol(saver().save("__toc_save_" + destination.getName()),
                          STT_FUNC, 0, isec);
-  s->needsTocRestore = true;
+  s->setNeedsTocRestore(true);
 }
 
 bool PPC64R2SaveStub::isCompatibleWith(const InputSection &isec,
