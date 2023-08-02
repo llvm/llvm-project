@@ -444,6 +444,9 @@ foreach $arg (@ARGV)
                 } elsif ($HIP_PLATFORM eq "amd") {
                     $hasHIP = 1;
                     $toolArgs .= " -x hip";
+                } elsif ($HIP_PLATFORM eq "nvidia") {
+                    $hasCU = 1;
+                    $toolArgs .= " -x cu";
                 }
             } elsif ((($arg =~ /\.cu$/ or $arg =~ /\.cuh$/) and $HIP_COMPILE_CXX_AS_HIP ne '0') or ($arg =~ /\.hip$/)) {
                 $needCXXFLAGS = 1;
