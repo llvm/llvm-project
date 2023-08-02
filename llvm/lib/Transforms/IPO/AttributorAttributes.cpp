@@ -3637,12 +3637,19 @@ struct AAIntraFnReachabilityFunction final
     // of them changed.
     auto *LivenessAA =
         A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
-    if (LivenessAA && llvm::all_of(DeadEdges, [&](const auto &DeadEdge) {
-          return LivenessAA->isEdgeDead(DeadEdge.first, DeadEdge.second);
+    if (LivenessAA &&
+        llvm::all_of(DeadEdges,
+                     [&](const auto &DeadEdge) {
+                       return LivenessAA->isEdgeDead(DeadEdge.first,
+                                                     DeadEdge.second);
+                     }) &&
+        llvm::all_of(DeadBlocks, [&](const BasicBlock *BB) {
+          return LivenessAA->isAssumedDead(BB);
         })) {
       return ChangeStatus::UNCHANGED;
     }
     DeadEdges.clear();
+    DeadBlocks.clear();
     return Base::updateImpl(A);
   }
 
@@ -3688,15 +3695,20 @@ struct AAIntraFnReachabilityFunction final
     if (ExclusionBlocks.count(FromBB) &&
         !WillReachInBlock(*RQI.From, *FromBB->getTerminator(),
                           RQI.ExclusionSet))
+      return rememberResult(A, RQITy::Reachable::No, RQI, true);
+
+    auto *LivenessAA =
+        A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
+    if (LivenessAA && LivenessAA->isAssumedDead(ToBB)) {
+      DeadBlocks.insert(ToBB);
       return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet);
+    }
 
     SmallPtrSet<const BasicBlock *, 16> Visited;
     SmallVector<const BasicBlock *, 16> Worklist;
     Worklist.push_back(FromBB);
 
     DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> LocalDeadEdges;
-    auto *LivenessAA =
-        A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
     while (!Worklist.empty()) {
       const BasicBlock *BB = Worklist.pop_back_val();
       if (!Visited.insert(BB).second)
@@ -3726,6 +3738,10 @@ struct AAIntraFnReachabilityFunction final
   void trackStatistics() const override {}
 
 private:
+  // Set of assumed dead blocks we used in the last query. If any changes we
+  // update the state.
+  DenseSet<const BasicBlock *> DeadBlocks;
+
   // Set of assumed dead edges we used in the last query. If any changes we
   // update the state.
   DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> DeadEdges;
