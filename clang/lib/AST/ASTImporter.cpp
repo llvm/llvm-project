@@ -1010,6 +1010,33 @@ ASTNodeImporter::import(const Designator &D) {
 }
 
 template <>
+Expected<ConceptReference *> ASTNodeImporter::import(ConceptReference *From) {
+  Error Err = Error::success();
+  auto ToNNS = importChecked(Err, From->getNestedNameSpecifierLoc());
+  auto ToTemplateKWLoc = importChecked(Err, From->getTemplateKWLoc());
+  auto ToConceptNameLoc =
+      importChecked(Err, From->getConceptNameInfo().getLoc());
+  auto ToConceptName = importChecked(Err, From->getConceptNameInfo().getName());
+  auto ToFoundDecl = importChecked(Err, From->getFoundDecl());
+  auto ToNamedConcept = importChecked(Err, From->getNamedConcept());
+  if (Err)
+    return std::move(Err);
+  TemplateArgumentListInfo ToTAInfo;
+  const auto *ASTTemplateArgs = From->getTemplateArgsAsWritten();
+  if (ASTTemplateArgs)
+    if (Error Err = ImportTemplateArgumentListInfo(*ASTTemplateArgs, ToTAInfo))
+      return std::move(Err);
+  auto *ConceptRef = ConceptReference::Create(
+      Importer.getToContext(), ToNNS, ToTemplateKWLoc,
+      DeclarationNameInfo(ToConceptName, ToConceptNameLoc), ToFoundDecl,
+      ToNamedConcept,
+      ASTTemplateArgs ? ASTTemplateArgumentListInfo::Create(
+                            Importer.getToContext(), ToTAInfo)
+                      : nullptr);
+  return ConceptRef;
+}
+
+template <>
 Expected<LambdaCapture> ASTNodeImporter::import(const LambdaCapture &From) {
   ValueDecl *Var = nullptr;
   if (From.capturesVariable()) {
@@ -5688,28 +5715,12 @@ ASTNodeImporter::VisitTemplateTypeParmDecl(TemplateTypeParmDecl *D) {
   if (const TypeConstraint *TC = D->getTypeConstraint()) {
 
     Error Err = Error::success();
-    auto ToNNS = importChecked(Err, TC->getNestedNameSpecifierLoc());
-    auto ToName = importChecked(Err, TC->getConceptNameInfo().getName());
-    auto ToNameLoc = importChecked(Err, TC->getConceptNameInfo().getLoc());
-    auto ToFoundDecl = importChecked(Err, TC->getFoundDecl());
-    auto ToNamedConcept = importChecked(Err, TC->getNamedConcept());
+    auto ToConceptRef = importChecked(Err, TC->getConceptReference());
     auto ToIDC = importChecked(Err, TC->getImmediatelyDeclaredConstraint());
     if (Err)
       return std::move(Err);
 
-    TemplateArgumentListInfo ToTAInfo;
-    const auto *ASTTemplateArgs = TC->getTemplateArgsAsWritten();
-    if (ASTTemplateArgs)
-      if (Error Err = ImportTemplateArgumentListInfo(*ASTTemplateArgs,
-                                                     ToTAInfo))
-        return std::move(Err);
-
-    ToD->setTypeConstraint(ToNNS, DeclarationNameInfo(ToName, ToNameLoc),
-        ToFoundDecl, ToNamedConcept,
-        ASTTemplateArgs ?
-            ASTTemplateArgumentListInfo::Create(Importer.getToContext(),
-                                                ToTAInfo) : nullptr,
-        ToIDC);
+    ToD->setTypeConstraint(ToConceptRef, ToIDC);
   }
 
   if (D->hasDefaultArgument()) {
