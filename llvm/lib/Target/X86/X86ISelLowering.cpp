@@ -6258,13 +6258,29 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, const APInt &NonZeroMask,
   SDValue V;
 
   // Pre-SSE4.1 - merge byte pairs and insert with PINSRW.
-  for (unsigned i = 0; i < 16; i += 2) {
+  // If both the lowest 16-bits are non-zero, then convert to MOVD.
+  if (!NonZeroMask.extractBits(2, 0).isZero() &&
+      !NonZeroMask.extractBits(2, 2).isZero()) {
+    for (unsigned I = 0; I != 4; ++I) {
+      if (!NonZeroMask[I])
+        continue;
+      SDValue Elt = DAG.getZExtOrTrunc(Op.getOperand(I), dl, MVT::i32);
+      if (I != 0)
+        Elt = DAG.getNode(ISD::SHL, dl, MVT::i32, Elt,
+                          DAG.getConstant(I * 8, dl, MVT::i8));
+      V = V ? DAG.getNode(ISD::OR, dl, MVT::i32, V, Elt) : Elt;
+    }
+    assert(V && "Failed to fold v16i8 vector to zero");
+    V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
+    V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
+    V = DAG.getBitcast(MVT::v8i16, V);
+  }
+  for (unsigned i = V ? 4 : 0; i < 16; i += 2) {
     bool ThisIsNonZero = NonZeroMask[i];
     bool NextIsNonZero = NonZeroMask[i + 1];
     if (!ThisIsNonZero && !NextIsNonZero)
       continue;
 
-    // FIXME: Investigate combining the first 4 bytes as a i32 instead.
     SDValue Elt;
     if (ThisIsNonZero) {
       if (NumZero || NextIsNonZero)
