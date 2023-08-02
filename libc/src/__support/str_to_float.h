@@ -1180,7 +1180,9 @@ LIBC_INLINE StrToNumResult<T> strtofloatingpoint(const char *__restrict src) {
       if (src[index] == '(') {
         size_t left_paren = index;
         ++index;
-        while (isalnum(src[index]))
+        // Apparently it's common for underscores to also be accepted. No idea
+        // why, but it's causing fuzz failures.
+        while (isalnum(src[index]) || src[index] == '_')
           ++index;
         if (src[index] == ')') {
           ++index;
