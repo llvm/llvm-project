@@ -2404,6 +2404,18 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     MachineFunction *MF = MBB->getParent();
     ApplyRegBankMapping ApplySALU(B, *this, MRI, &AMDGPU::SGPRRegBank);
 
+    if (DstTy.isVector() && Opc == AMDGPU::G_ABS) {
+      Register WideSrcLo, WideSrcHi;
+
+      std::tie(WideSrcLo, WideSrcHi) =
+          unpackV2S16ToS32(B, MI.getOperand(1).getReg(), TargetOpcode::G_SEXT);
+      auto Lo = B.buildInstr(AMDGPU::G_ABS, {S32}, {WideSrcLo});
+      auto Hi = B.buildInstr(AMDGPU::G_ABS, {S32}, {WideSrcHi});
+      B.buildBuildVectorTrunc(DstReg, {Lo.getReg(0), Hi.getReg(0)});
+      MI.eraseFromParent();
+      return;
+    }
+
     if (DstTy.isVector()) {
       Register WideSrc0Lo, WideSrc0Hi;
       Register WideSrc1Lo, WideSrc1Hi;

@@ -1109,6 +1109,42 @@ OpFoldResult arith::RemFOp::fold(FoldAdaptor adaptor) {
                                       });
 }
 
+static Attribute getBoolAttribute(Type type, MLIRContext *ctx, bool value) {
+  auto boolAttr = BoolAttr::get(ctx, value);
+  ShapedType shapedType = llvm::dyn_cast_or_null<ShapedType>(type);
+  if (!shapedType)
+    return boolAttr;
+  return DenseElementsAttr::get(shapedType, boolAttr);
+}
+
+//===----------------------------------------------------------------------===//
+// IsNanOp
+//===----------------------------------------------------------------------===//
+OpFoldResult IsNanOp::fold(FoldAdaptor adaptor) {
+  if (bitEnumContainsAll(getFastmath(), FastMathFlags::nnan))
+    return getBoolAttribute(getType(), getContext(), false);
+  return constFoldCastOp<FloatAttr, IntegerAttr>(
+      adaptor.getOperands(), getType(),
+      [](const APFloat &x, bool &success) -> APInt {
+        success = true;
+        return APInt(1, x.isNaN());
+      });
+}
+
+//===----------------------------------------------------------------------===//
+// IsInfOp
+//===----------------------------------------------------------------------===//
+OpFoldResult IsInfOp::fold(FoldAdaptor adaptor) {
+  if (bitEnumContainsAll(getFastmath(), FastMathFlags::ninf))
+    return getBoolAttribute(getType(), getContext(), false);
+  return constFoldCastOp<FloatAttr, IntegerAttr>(
+      adaptor.getOperands(), getType(),
+      [](const APFloat &x, bool &success) -> APInt {
+        success = true;
+        return APInt(1, x.isInfinity());
+      });
+}
+
 //===----------------------------------------------------------------------===//
 // Utility functions for verifying cast ops
 //===----------------------------------------------------------------------===//
@@ -1657,14 +1693,6 @@ static bool applyCmpPredicateToEqualOperands(arith::CmpIPredicate predicate) {
     return false;
   }
   llvm_unreachable("unknown cmpi predicate kind");
-}
-
-static Attribute getBoolAttribute(Type type, MLIRContext *ctx, bool value) {
-  auto boolAttr = BoolAttr::get(ctx, value);
-  ShapedType shapedType = llvm::dyn_cast_or_null<ShapedType>(type);
-  if (!shapedType)
-    return boolAttr;
-  return DenseElementsAttr::get(shapedType, boolAttr);
 }
 
 static std::optional<int64_t> getIntegerWidth(Type t) {

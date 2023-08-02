@@ -37,10 +37,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double remainder(long double __x, long double 
   return __builtin_remainderl(__x, __y);
 }
 
-template <class _A1, class _A2>
-inline _LIBCPP_HIDE_FROM_ABI
-    typename __enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, __promote<_A1, _A2> >::type
-    remainder(_A1 __x, _A2 __y) _NOEXCEPT {
+template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type remainder(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename __promote<_A1, _A2>::type __result_type;
   static_assert((!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value)), "");
   return __math::remainder((__result_type)__x, (__result_type)__y);
@@ -61,10 +59,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double remquo(long double __x, long double __y
   return __builtin_remquol(__x, __y, __z);
 }
 
-template <class _A1, class _A2>
-inline _LIBCPP_HIDE_FROM_ABI
-    typename __enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, __promote<_A1, _A2> >::type
-    remquo(_A1 __x, _A2 __y, int* __z) _NOEXCEPT {
+template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type remquo(_A1 __x, _A2 __y, int* __z) _NOEXCEPT {
   typedef typename __promote<_A1, _A2>::type __result_type;
   static_assert((!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value)), "");
   return __math::remquo((__result_type)__x, (__result_type)__y, __z);

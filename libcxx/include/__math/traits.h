@@ -62,10 +62,8 @@ _LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool i
   return __builtin_isinf((typename __promote<_A1>::type)__x);
 }
 
-template <class _A1>
-_LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI
-    typename enable_if< is_arithmetic<_A1>::value && !numeric_limits<_A1>::has_infinity, bool>::type
-    isinf(_A1) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_arithmetic<_A1>::value && !numeric_limits<_A1>::has_infinity, int> = 0>
+_LIBCPP_NODISCARD_EXT _LIBCPP_CONSTEXPR_SINCE_CXX23 _LIBCPP_HIDE_FROM_ABI bool isinf(_A1) _NOEXCEPT {
   return false;
 }
 

@@ -37,9 +37,8 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double ceil(long double 
   return __builtin_ceill(__x);
 }
 
-template <class _A1>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-ceil(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI double ceil(_A1 __x) _NOEXCEPT {
   return __builtin_ceil((double)__x);
 }
 
@@ -56,9 +55,8 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double floor(long double
   return __builtin_floorl(__x);
 }
 
-template <class _A1>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-floor(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI double floor(_A1 __x) _NOEXCEPT {
   return __builtin_floor((double)__x);
 }
 
@@ -73,8 +71,8 @@ _LIBCPP_HIDE_FROM_ABI long long llrint(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long long llrint(long double __x) _NOEXCEPT { return __builtin_llrintl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, long long>::type llrint(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI long long llrint(_A1 __x) _NOEXCEPT {
   return __builtin_llrint((double)__x);
 }
 
@@ -89,8 +87,8 @@ _LIBCPP_HIDE_FROM_ABI long long llround(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long long llround(long double __x) _NOEXCEPT { return __builtin_llroundl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, long long>::type llround(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI long long llround(_A1 __x) _NOEXCEPT {
   return __builtin_llround((double)__x);
 }
 
@@ -105,8 +103,8 @@ _LIBCPP_HIDE_FROM_ABI long lrint(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long lrint(long double __x) _NOEXCEPT { return __builtin_lrintl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, long>::type lrint(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI long lrint(_A1 __x) _NOEXCEPT {
   return __builtin_lrint((double)__x);
 }
 
@@ -121,8 +119,8 @@ _LIBCPP_HIDE_FROM_ABI long lround(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long lround(long double __x) _NOEXCEPT { return __builtin_lroundl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, long>::type lround(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI long lround(_A1 __x) _NOEXCEPT {
   return __builtin_lround((double)__x);
 }
 
@@ -141,9 +139,8 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double nearbyint(long do
   return __builtin_nearbyintl(__x);
 }
 
-template <class _A1>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-nearbyint(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI double nearbyint(_A1 __x) _NOEXCEPT {
   return __builtin_nearbyint((double)__x);
 }
 
@@ -160,10 +157,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double nextafter(long double __x, long double 
   return __builtin_nextafterl(__x, __y);
 }
 
-template <class _A1, class _A2>
-inline _LIBCPP_HIDE_FROM_ABI
-    typename __enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, __promote<_A1, _A2> >::type
-    nextafter(_A1 __x, _A2 __y) _NOEXCEPT {
+template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type nextafter(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename __promote<_A1, _A2>::type __result_type;
   static_assert((!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value)), "");
   return __math::nextafter((__result_type)__x, (__result_type)__y);
@@ -184,9 +179,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double nexttoward(long double __x, long double
   return __builtin_nexttowardl(__x, __y);
 }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-nexttoward(_A1 __x, long double __y) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double nexttoward(_A1 __x, long double __y) _NOEXCEPT {
   return __builtin_nexttoward((double)__x, __y);
 }
 
@@ -203,9 +197,8 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double rint(long double 
   return __builtin_rintl(__x);
 }
 
-template <class _A1>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-rint(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI double rint(_A1 __x) _NOEXCEPT {
   return __builtin_rint((double)__x);
 }
 
@@ -222,9 +215,8 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double round(long double
   return __builtin_roundl(__x);
 }
 
-template <class _A1>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-round(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI double round(_A1 __x) _NOEXCEPT {
   return __builtin_round((double)__x);
 }
 
@@ -241,9 +233,8 @@ _LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI long double trunc(long double
   return __builtin_truncl(__x);
 }
 
-template <class _A1>
-_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-trunc(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+_LIBCPP_NODISCARD_EXT inline _LIBCPP_HIDE_FROM_ABI double trunc(_A1 __x) _NOEXCEPT {
   return __builtin_trunc((double)__x);
 }
 

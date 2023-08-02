@@ -555,7 +555,7 @@ TEST_F(MDNodeTest, UniquedOnDeletedOperand) {
 
 TEST_F(MDNodeTest, DistinctOnDeletedValueOperand) {
   // i1* @GV
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   ConstantAsMetadata *Op = ConstantAsMetadata::get(GV.get());
@@ -794,7 +794,7 @@ TEST_F(MDNodeTest, replaceWithUniquedResolvingOperand) {
 
 TEST_F(MDNodeTest, replaceWithUniquedDeletedOperand) {
   // i1* @GV
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   ConstantAsMetadata *Op = ConstantAsMetadata::get(GV.get());
@@ -817,7 +817,7 @@ TEST_F(MDNodeTest, replaceWithUniquedDeletedOperand) {
 
 TEST_F(MDNodeTest, replaceWithUniquedChangedOperand) {
   // i1* @GV
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   ConstantAsMetadata *Op = ConstantAsMetadata::get(GV.get());
@@ -3757,7 +3757,7 @@ TEST_F(MetadataAsValueTest, MDNodeConstant) {
 typedef MetadataTest ValueAsMetadataTest;
 
 TEST_F(ValueAsMetadataTest, UpdatesOnRAUW) {
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV0(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   auto *MD = ValueAsMetadata::get(GV0.get());
@@ -3829,7 +3829,7 @@ TEST_F(DIArgListTest, get) {
 }
 
 TEST_F(DIArgListTest, UpdatesOnRAUW) {
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   ConstantAsMetadata *CI =
       ConstantAsMetadata::get(ConstantInt::get(Context, APInt(8, 0)));
   std::unique_ptr<GlobalVariable> GV0(
@@ -3854,7 +3854,7 @@ TEST_F(DIArgListTest, UpdatesOnRAUW) {
 typedef MetadataTest TrackingMDRefTest;
 
 TEST_F(TrackingMDRefTest, UpdatesOnRAUW) {
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV0(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   TypedTrackingMDRef<ValueAsMetadata> MD(ValueAsMetadata::get(GV0.get()));
@@ -3871,7 +3871,7 @@ TEST_F(TrackingMDRefTest, UpdatesOnRAUW) {
 }
 
 TEST_F(TrackingMDRefTest, UpdatesOnDeletion) {
-  Type *Ty = Type::getInt1PtrTy(Context);
+  Type *Ty = PointerType::getUnqual(Context);
   std::unique_ptr<GlobalVariable> GV(
       new GlobalVariable(Ty, false, GlobalValue::ExternalLinkage));
   TypedTrackingMDRef<ValueAsMetadata> MD(ValueAsMetadata::get(GV.get()));

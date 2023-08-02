@@ -35,8 +35,8 @@ _LIBCPP_HIDE_FROM_ABI double acos(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double acos(long double __x) _NOEXCEPT { return __builtin_acosl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type acos(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double acos(_A1 __x) _NOEXCEPT {
   return __builtin_acos((double)__x);
 }
 
@@ -51,8 +51,8 @@ _LIBCPP_HIDE_FROM_ABI double asin(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double asin(long double __x) _NOEXCEPT { return __builtin_asinl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type asin(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double asin(_A1 __x) _NOEXCEPT {
   return __builtin_asin((double)__x);
 }
 
@@ -67,8 +67,8 @@ _LIBCPP_HIDE_FROM_ABI double atan(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double atan(long double __x) _NOEXCEPT { return __builtin_atanl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type atan(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double atan(_A1 __x) _NOEXCEPT {
   return __builtin_atan((double)__x);
 }
 
@@ -85,10 +85,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double atan2(long double __y, long double __x)
   return __builtin_atan2l(__y, __x);
 }
 
-template <class _A1, class _A2>
-inline _LIBCPP_HIDE_FROM_ABI
-    typename __enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, __promote<_A1, _A2> >::type
-    atan2(_A1 __y, _A2 __x) _NOEXCEPT {
+template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type atan2(_A1 __y, _A2 __x) _NOEXCEPT {
   typedef typename __promote<_A1, _A2>::type __result_type;
   static_assert((!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value)), "");
   return __math::atan2((__result_type)__y, (__result_type)__x);

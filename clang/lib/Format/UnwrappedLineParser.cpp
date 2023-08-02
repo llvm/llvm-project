@@ -806,6 +806,9 @@ FormatToken *UnwrappedLineParser::parseBlock(
     return IfLBrace;
   }
 
+  if (FormatTok->is(tok::r_brace) && Tok->is(TT_NamespaceLBrace))
+    FormatTok->setFinalizedType(TT_NamespaceRBrace);
+
   const bool IsFunctionRBrace =
       FormatTok->is(tok::r_brace) && Tok->is(TT_FunctionLBrace);
 
@@ -2959,6 +2962,8 @@ void UnwrappedLineParser::parseNamespace() {
     }
   }
   if (FormatTok->is(tok::l_brace)) {
+    FormatTok->setFinalizedType(TT_NamespaceLBrace);
+
     if (ShouldBreakBeforeBrace(Style, InitialToken))
       addUnwrappedLine();
 

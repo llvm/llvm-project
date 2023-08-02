@@ -180,6 +180,8 @@ protected:
   bool HasArchitectedFlatScratch = false;
   bool EnableFlatScratch = false;
   bool HasArchitectedSGPRs = false;
+  bool HasGDS = false;
+  bool HasGWS = false;
   bool AddNoCarryInsts = false;
   bool HasUnpackedD16VMem = false;
   bool LDSMisalignedBug = false;
@@ -1154,6 +1156,12 @@ public:
 
   /// \returns true if the architected SGPRs are enabled.
   bool hasArchitectedSGPRs() const { return HasArchitectedSGPRs; }
+
+  /// \returns true if Global Data Share is supported.
+  bool hasGDS() const { return HasGDS; }
+
+  /// \returns true if Global Wave Sync is supported.
+  bool hasGWS() const { return HasGWS; }
 
   /// \returns true if the machine has merged shaders in which s0-s7 are
   /// reserved by the hardware and user SGPRs start at s8

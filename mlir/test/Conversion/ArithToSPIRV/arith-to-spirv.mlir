@@ -169,6 +169,16 @@ func.func @float32_binary_scalar(%lhs: f32, %rhs: f32) {
   return
 }
 
+// Check float predicate operation conversions
+// CHECK-LABEL: @float32_predicate_scalar
+func.func @float32_predicate_scalar(%arg0 : f32) {
+  // CHECK: spirv.IsNan %{{.*}}: f32
+  %0 = arith.is_nan %arg0 : f32
+  // CHECK: spirv.IsInf %{{.*}}: f32
+  %1 = arith.is_inf %arg0 : f32
+  return
+}
+
 // Check int vector types.
 // CHECK-LABEL: @int_vector234
 func.func @int_vector234(%arg0: vector<2xi8>, %arg1: vector<4xi64>) {

@@ -331,10 +331,6 @@ private:
                     llvm::SmallVectorImpl<void *> &Args,
                     llvm::SmallVectorImpl<void *> &Ptrs) const;
 
-  /// Get the default number of threads and blocks for the kernel.
-  virtual uint32_t getDefaultNumThreads(GenericDeviceTy &Device) const = 0;
-  virtual uint32_t getDefaultNumBlocks(GenericDeviceTy &Device) const = 0;
-
   /// Lower number of threads if tripcount is low.
   virtual std::pair<bool, uint32_t>
   adjustNumThreadsForLowTripCount(GenericDeviceTy &GenericDevice,

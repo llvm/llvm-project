@@ -1581,8 +1581,8 @@ static unsigned gwsIntrinToOpcode(unsigned IntrID) {
 
 bool AMDGPUInstructionSelector::selectDSGWSIntrinsic(MachineInstr &MI,
                                                      Intrinsic::ID IID) const {
-  if (IID == Intrinsic::amdgcn_ds_gws_sema_release_all &&
-      !STI.hasGWSSemaReleaseAll())
+  if (!STI.hasGWS() || (IID == Intrinsic::amdgcn_ds_gws_sema_release_all &&
+                        !STI.hasGWSSemaReleaseAll()))
     return false;
 
   // intrinsic ID, vsrc, offset

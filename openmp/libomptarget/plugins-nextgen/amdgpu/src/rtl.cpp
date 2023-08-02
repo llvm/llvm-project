@@ -673,17 +673,6 @@ struct AMDGPUKernelTy : public GenericKernelTy {
   void printAMDOneLineKernelTrace(GenericDeviceTy &GenericDevice,
                                   KernelArgsTy &KernelArgs, uint32_t NumThreads,
                                   uint64_t NumBlocks) const;
-
-  /// The default number of blocks is common to the whole device.
-  uint32_t getDefaultNumBlocks(GenericDeviceTy &GenericDevice) const override {
-    return GenericDevice.getDefaultNumBlocks();
-  }
-
-  /// The default number of threads is common to the whole device.
-  uint32_t getDefaultNumThreads(GenericDeviceTy &GenericDevice) const override {
-    return GenericDevice.getDefaultNumThreads();
-  }
-
   /// Get group and private segment kernel size.
   uint32_t getGroupSize() const { return GroupSize; }
   uint32_t getPrivateSize() const { return PrivateSize; }
@@ -900,7 +889,7 @@ private:
     }
     // If the loops are long running we rather reuse blocks than spawn too many.
     uint32_t PreferredNumBlocks = std::min(uint32_t(TripCountNumBlocks),
-                                           getDefaultNumBlocks(GenericDevice));
+                                           GenericDevice.getDefaultNumBlocks());
     return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
   }
 };

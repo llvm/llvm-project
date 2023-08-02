@@ -268,8 +268,7 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
 
 Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
                             DeviceImageTy &Image) {
-  PreferredNumThreads = getDefaultNumThreads(GenericDevice);
-
+  PreferredNumThreads = GenericDevice.getDefaultNumThreads();
   MaxNumThreads = GenericDevice.getThreadLimit();
 
   return initImpl(GenericDevice, Image);
@@ -400,7 +399,7 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
   }
   // If the loops are long running we rather reuse blocks than spawn too many.
   uint32_t PreferredNumBlocks = std::min(uint32_t(TripCountNumBlocks),
-                                         getDefaultNumBlocks(GenericDevice));
+                                         GenericDevice.getDefaultNumBlocks());
   return std::min(PreferredNumBlocks, GenericDevice.getBlockLimit());
 }
 

@@ -86,8 +86,10 @@ void connectLibrary();
 } // namespace omp
 } // namespace llvm
 
-#endif // OMPT_SUPPORT
-
 #pragma pop_macro("DEBUG_PREFIX")
+
+#else
+#define performIfOmptInitialized(stmt)
+#endif // OMPT_SUPPORT
 
 #endif // _OMPTCALLBACK_H

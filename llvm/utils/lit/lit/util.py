@@ -138,12 +138,12 @@ def abs_path_preserve_drive(path):
         # Since Python 3.8, os.path.realpath resolves sustitute drives,
         # so we should not use it. In Python 3.7, os.path.realpath
         # was implemented as os.path.abspath.
-        return os.path.normpath(os.path.abspath(path))
+        return os.path.abspath(path)
     else:
         # On UNIX, the current directory always has symbolic links resolved,
         # so any program accepting relative paths cannot preserve symbolic
         # links in paths and we should always use os.path.realpath.
-        return os.path.normpath(os.path.realpath(path))
+        return os.path.realpath(path)
 
 def mkdir(path):
     try:

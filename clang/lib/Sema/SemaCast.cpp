@@ -935,6 +935,14 @@ void CastOperation::CheckDynamicCast() {
           << isClangCL;
   }
 
+  // For a dynamic_cast to a final type, IR generation might emit a reference
+  // to the vtable.
+  if (DestRecord) {
+    auto *DestDecl = DestRecord->getAsCXXRecordDecl();
+    if (DestDecl->isEffectivelyFinal())
+      Self.MarkVTableUsed(OpRange.getBegin(), DestDecl);
+  }
+
   // Done. Everything else is run-time checks.
   Kind = CK_Dynamic;
 }
