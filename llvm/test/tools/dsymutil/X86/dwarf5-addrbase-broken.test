@@ -25,14 +25,14 @@
 # CHECK: DW_TAG_variable
 # CHECK: DW_AT_name{{.*}}"var1"
 # CHECK: DW_AT_location        (DW_OP_addr
-# CHECK: 0x0000004e:   NULL
+# CHECK: 0x00000043:   NULL
 # CHECK: Compile Unit:
 # CHECK: DW_TAG_compile_unit
 # CHECK-NOT: DW_AT_low_pc
 # CHECK: DW_AT_name{{.*}}"BadCU"
 # CHECK-NOT: DW_TAG_subprogram
 # CHECK-NOT: DW_TAG_variable
-# CHECK: 0x0000006b:   NULL
+# CHECK: 0x0000005b:   NULL
 
 --- !mach-o
 FileHeader:
