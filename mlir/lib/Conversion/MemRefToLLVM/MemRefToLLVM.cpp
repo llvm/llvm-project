@@ -1865,7 +1865,7 @@ public:
 
 } // namespace
 
-void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
+static void populateModuleIndependentFinalizeMemRefToLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
@@ -1881,7 +1881,6 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
       GetGlobalMemrefOpLowering,
       LoadOpLowering,
       MemRefCastOpLowering,
-      MemRefCopyOpLowering,
       MemorySpaceCastOpLowering,
       MemRefReinterpretCastOpLowering,
       MemRefReshapeOpLowering,
@@ -1894,6 +1893,15 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
       TransposeOpLowering,
       ViewOpLowering>(converter);
   // clang-format on
+}
+
+void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
+    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
+  // clang-format off
+  patterns.add<
+      MemRefCopyOpLowering>(converter);
+  // clang-format on
+
   auto allocLowering = converter.getOptions().allocLowering;
   if (allocLowering == LowerToLLVMOptions::AllocLowering::AlignedAlloc)
     patterns.add<AlignedAllocOpLowering, AlignedReallocOpLowering,
@@ -1901,6 +1909,9 @@ void mlir::populateFinalizeMemRefToLLVMConversionPatterns(
   else if (allocLowering == LowerToLLVMOptions::AllocLowering::Malloc)
     patterns.add<AllocOpLowering, ReallocOpLowering, DeallocOpLowering>(
         converter);
+
+  populateModuleIndependentFinalizeMemRefToLLVMConversionPatterns(converter,
+                                                                  patterns);
 }
 
 namespace {
@@ -1929,6 +1940,12 @@ struct FinalizeMemRefToLLVMConversionPass
                                     &dataLayoutAnalysis);
     RewritePatternSet patterns(&getContext());
     populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
+    if (isa<ModuleOp>(getOperation())) {
+      populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
+    } else {
+      populateModuleIndependentFinalizeMemRefToLLVMConversionPatterns(
+          typeConverter, patterns);
+    }
     LLVMConversionTarget target(getContext());
     target.addLegalOp<func::FuncOp>();
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
