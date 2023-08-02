@@ -822,6 +822,17 @@ public:
         return mlir::failure();
       }
       attr = denseAttr.value();
+    } else if (const auto structAttr =
+                   op.getValue().dyn_cast<mlir::cir::ConstStructAttr>()) {
+      // TODO(cir): this diverges from traditional lowering. Normally the
+      // initializer would be a global constant that is memcopied. Here we just
+      // define a local constant with llvm.undef that will be stored into the
+      // stack.
+      auto initVal =
+          lowerCirAttrAsValue(structAttr, op.getLoc(), rewriter, typeConverter);
+      rewriter.replaceAllUsesWith(op, initVal);
+      rewriter.eraseOp(op);
+      return mlir::success();
     } else
       return op.emitError() << "unsupported constant type " << op.getType();
 
