@@ -228,6 +228,9 @@ private:
     case ELF::R_PPC64_REL64:
       Kind = ppc64::Delta64;
       break;
+    case ELF::R_PPC64_PCREL34:
+      Kind = ppc64::Delta34;
+      break;
     }
 
     Edge GE(Kind, Offset, *GraphSymbol, Addend);
