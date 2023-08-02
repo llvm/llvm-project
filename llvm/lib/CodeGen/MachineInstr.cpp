@@ -1883,16 +1883,20 @@ void MachineInstr::print(raw_ostream &OS, ModuleSlotTracker &MST,
     DL.print(OS);
   }
 
-  // Print extra comments for DEBUG_VALUE.
-  if (isDebugValueLike() && getDebugVariableOp().isMetadata()) {
-    if (!HaveSemi) {
-      OS << ";";
-      HaveSemi = true;
+  // Print extra comments for DEBUG_VALUE and friends if they are well-formed.
+  if ((isNonListDebugValue() && getNumOperands() >= 4) ||
+      (isDebugValueList() && getNumOperands() >= 2) ||
+      (isDebugRef() && getNumOperands() >= 3)) {
+    if (getDebugVariableOp().isMetadata()) {
+      if (!HaveSemi) {
+        OS << ";";
+        HaveSemi = true;
+      }
+      auto *DV = getDebugVariable();
+      OS << " line no:" << DV->getLine();
+      if (isIndirectDebugValue())
+        OS << " indirect";
     }
-    auto *DV = getDebugVariable();
-    OS << " line no:" <<  DV->getLine();
-    if (isIndirectDebugValue())
-      OS << " indirect";
   }
   // TODO: DBG_LABEL
 
