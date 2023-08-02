@@ -341,12 +341,12 @@ class BTFDebug : public DebugHandlerBase {
   /// Check whether the type is a forward declaration candidate or not.
   bool IsForwardDeclCandidate(const DIType *Base);
 
-  /// Get the file content for the subprogram. Certain lines of the file
+  /// Get the file content. Certain lines of the file
   /// later may be put into string table and referenced by line info.
-  std::string populateFileContent(const DISubprogram *SP);
+  std::string populateFileContent(const DIFile *File);
 
   /// Construct a line info.
-  void constructLineInfo(const DISubprogram *SP, MCSymbol *Label, uint32_t Line,
+  void constructLineInfo(const DIFile *File, MCSymbol *Label, uint32_t Line,
                          uint32_t Column);
 
   /// Generate types and variables for globals.
