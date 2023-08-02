@@ -911,6 +911,8 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           ToCompilerType(transformed_type->mapTypeOutOfContext().getPointer());
       auto swift_ast_ctx =
           actual_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>();
+      if (!swift_ast_ctx)
+        return {};
 
       actual_type =
           swift_ast_ctx->GetTypeRefType(actual_type.GetOpaqueQualType());
