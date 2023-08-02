@@ -147,6 +147,13 @@ getCC1Arguments(DiagnosticsEngine *Diagnostics,
     if (IsCC1Command(Job) && llvm::all_of(Job.getInputInfos(), IsSrcFile))
       CC1Jobs.push_back(&Job);
 
+  // If there are no jobs for source files, try checking again for a single job
+  // with any file type. This accepts a preprocessed file as input.
+  if (CC1Jobs.empty())
+    for (const driver::Command &Job : Jobs)
+      if (IsCC1Command(Job))
+        CC1Jobs.push_back(&Job);
+
   if (CC1Jobs.empty() ||
       (CC1Jobs.size() > 1 && !ignoreExtraCC1Commands(Compilation))) {
     SmallString<256> error_msg;
