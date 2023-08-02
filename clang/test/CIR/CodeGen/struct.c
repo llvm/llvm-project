@@ -17,10 +17,10 @@ void baz(void) {
   struct Foo f;
 }
 
-//      CHECK: !ty_22struct2EBar22 = !cir.struct<"struct.Bar", !s32i, !s8i>
-// CHECK-NEXT: !ty_22struct2EFoo22 = !cir.struct<"struct.Foo", !s32i, !s8i, !ty_22struct2EBar22>
+// CHECK-DAG: !ty_22struct2EBar22 = !cir.struct<"struct.Bar", !s32i, !s8i>
+// CHECK-DAG: !ty_22struct2EFoo22 = !cir.struct<"struct.Foo", !s32i, !s8i, !ty_22struct2EBar22>
 //  CHECK-DAG: module {{.*}} {
-// CHECK-NEXT:   cir.func @baz()
+     // CHECK:   cir.func @baz()
 // CHECK-NEXT:     %0 = cir.alloca !ty_22struct2EBar22, cir.ptr <!ty_22struct2EBar22>, ["b"] {alignment = 4 : i64}
 // CHECK-NEXT:     %1 = cir.alloca !ty_22struct2EFoo22, cir.ptr <!ty_22struct2EFoo22>, ["f"] {alignment = 4 : i64}
 // CHECK-NEXT:     cir.return
@@ -34,5 +34,25 @@ void shouldConstInitStructs(void) {
   // CHECK: cir.store %[[#V1]], %[[#V0]] : !ty_22struct2EFoo22, cir.ptr <!ty_22struct2EFoo22>
 }
 
-// Check if global structs are zero-initialized.
-//      CHECK: cir.global external @bar = #cir.zero : !ty_22struct2EBar22
+// Should zero-initialize uninitialized global structs.
+struct S {
+  int a,b;
+} s;
+// CHECK-DAG: cir.global external @s = #cir.zero : !ty_22struct2ES22
+
+// Should initialize basic global structs.
+struct S1 {
+  int a;
+  float f;
+  int *p;
+} s1 = {1, .1, 0};
+// CHECK-DAG: cir.global external @s1 = #cir.const_struct<{#cir.int<1> : !s32i, 1.000000e-01 : f32, #cir.null : !cir.ptr<!s32i>}> : !ty_22struct2ES122
+
+// Should initialize global nested structs.
+struct S2 {
+  struct S2A {
+    int a;
+  } s2a;
+} s2 = {{1}};
+// CHECK-DAG: cir.global external @s2 = #cir.const_struct<{#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2ES2A22}> : !ty_22struct2ES222
+

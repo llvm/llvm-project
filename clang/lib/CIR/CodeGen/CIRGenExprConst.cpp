@@ -279,6 +279,7 @@ mlir::Attribute ConstantAggregateBuilder::buildFrom(
     llvm_unreachable("NYI");
   }
 
+  // TODO(cir): emit a #cir.zero if all elements are null values.
   auto &builder = CGM.getBuilder();
   return builder.getAnonConstStruct(
       mlir::ArrayAttr::get(builder.getContext(),
