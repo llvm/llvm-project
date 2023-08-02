@@ -128,22 +128,6 @@ foreach(archname ${HOSTRPC_ARCHS})
       set(abi_nums "nvptx")
    endif()
 
-
-   if (${archname} STREQUAL "amdgcn")
-      set(opencl_cmd ${CLANG_TOOL}
-       -fvisibility=default
-       -c -emit-llvm -nogpulib
-       -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200
-       -Dcl_khr_fp64 -Dcl_khr_fp16
-       -Dcl_khr_subgroups -Dcl_khr_int64_base_atomics -Dcl_khr_int64_extended_atomics
-       -x cl -Xclang -cl-std=CL2.0 -Xclang -finclude-default-header
-       -target amdgcn-amd-amdhsa )
-      set(ocl_atomics_cl_bc "ocl_atomics_${archname}.bc")
-      add_custom_target(${ocl_atomics_cl_bc}
-      COMMAND ${opencl_cmd} ${ocl_atomics_cl_filename} -o ${ocl_atomics_cl_bc}
-      DEPENDS ${ocl_atomics_cl_filename})
-   endif()
-   
  foreach(abi_num ${abi_nums})
    if("${abi_num}" STREQUAL "400")
      set(clang_abi_opt "-mcode-object-version=4")
@@ -152,6 +136,22 @@ foreach(archname ${HOSTRPC_ARCHS})
    else()
      set(clang_abi_opt "")
    endif()
+   if (${archname} STREQUAL "amdgcn")
+      set(opencl_cmd ${CLANG_TOOL}
+       -fvisibility=default
+       -c -emit-llvm -nogpulib
+       -DCL_VERSION_2_0=200 -D__OPENCL_C_VERSION__=200
+       -Dcl_khr_fp64 -Dcl_khr_fp16
+       -Dcl_khr_subgroups -Dcl_khr_int64_base_atomics -Dcl_khr_int64_extended_atomics
+       -x cl -Xclang -cl-std=CL2.0 -Xclang -finclude-default-header
+       -target amdgcn-amd-amdhsa
+       ${clang_abi_opt} )
+      set(ocl_atomics_cl_bc "ocl_atomics_${abi_num}-${archname}.bc")
+      add_custom_target(${ocl_atomics_cl_bc}
+      COMMAND ${opencl_cmd} ${ocl_atomics_cl_filename} -o ${ocl_atomics_cl_bc}
+      DEPENDS ${ocl_atomics_cl_filename})
+   endif()
+   
    foreach(mcpu ${mcpus})
       if (${archname} STREQUAL "amdgcn")
          set(openmp_device_args 
