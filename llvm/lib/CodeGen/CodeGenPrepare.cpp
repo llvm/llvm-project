@@ -23,7 +23,6 @@
 #include "llvm/ADT/Statistic.h"
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/BranchProbabilityInfo.h"
-#include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/InstructionSimplify.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
@@ -252,15 +251,6 @@ static cl::opt<bool> EnableICMP_EQToICMP_ST(
     "cgp-icmp-eq2icmp-st", cl::Hidden, cl::init(false),
     cl::desc("Enable ICMP_EQ to ICMP_S(L|G)T conversion."));
 
-#ifdef EXPENSIVE_CHECKS
-static bool VerifyDT = true;
-#else
-static bool VerifyDT = false;
-#endif
-static cl::opt<bool, true> VerifyDTUpdates(
-    "cgp-verify-dt-updates", cl::location(VerifyDT), cl::Hidden,
-    cl::desc("Verify dominator tree updates in CodeGenPrepare"));
-
 static cl::opt<bool>
     VerifyBFIUpdates("cgp-verify-bfi-updates", cl::Hidden, cl::init(false),
                      cl::desc("Enable BFI update verification for "
@@ -314,8 +304,6 @@ class CodeGenPrepare : public FunctionPass {
   const TargetTransformInfo *TTI = nullptr;
   const BasicBlockSectionsProfileReader *BBSectionsProfileReader = nullptr;
   const TargetLibraryInfo *TLInfo = nullptr;
-  DominatorTree *DT = nullptr;
-  DomTreeUpdater *DTU = nullptr;
   LoopInfo *LI = nullptr;
   std::unique_ptr<BlockFrequencyInfo> BFI;
   std::unique_ptr<BranchProbabilityInfo> BPI;
@@ -367,6 +355,10 @@ class CodeGenPrepare : public FunctionPass {
   /// DataLayout for the Function being processed.
   const DataLayout *DL = nullptr;
 
+  /// Building the dominator tree can be expensive, so we only build it
+  /// lazily and update it when required.
+  std::unique_ptr<DominatorTree> DT;
+
 public:
   /// If encounter huge function, we need to limit the build time.
   bool IsHugeFunc = false;
@@ -402,7 +394,6 @@ public:
     AU.addRequired<TargetLibraryInfoWrapperPass>();
     AU.addRequired<TargetPassConfig>();
     AU.addRequired<TargetTransformInfoWrapperPass>();
-    AU.addRequired<DominatorTreeWrapperPass>();
     AU.addRequired<LoopInfoWrapperPass>();
     AU.addUsedIfAvailable<BasicBlockSectionsProfileReader>();
   }
@@ -426,16 +417,20 @@ private:
     }
   }
 
-  // Get the DominatorTree, updating it if necessary.
-  DominatorTree &getDT() { return DTU->getDomTree(); }
+  // Get the DominatorTree, building if necessary.
+  DominatorTree &getDT(Function &F) {
+    if (!DT)
+      DT = std::make_unique<DominatorTree>(F);
+    return *DT;
+  }
 
   void removeAllAssertingVHReferences(Value *V);
   bool eliminateAssumptions(Function &F);
-  bool eliminateFallThrough(Function &F);
-  bool eliminateMostlyEmptyBlocks(Function &F, ModifyDT &ModifiedDT);
+  bool eliminateFallThrough(Function &F, DominatorTree *DT = nullptr);
+  bool eliminateMostlyEmptyBlocks(Function &F);
   BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
   bool canMergeBlocks(const BasicBlock *BB, const BasicBlock *DestBB) const;
-  void eliminateMostlyEmptyBlock(BasicBlock *BB, ModifyDT &ModifiedDT);
+  void eliminateMostlyEmptyBlock(BasicBlock *BB);
   bool isMergingEmptyBlockProfitable(BasicBlock *BB, BasicBlock *DestBB,
                                      bool isPreheader);
   bool makeBitReverse(Instruction &I);
@@ -476,7 +471,7 @@ private:
       Instruction *&Inst, bool AllowPromotionWithoutCommonHeader,
       bool HasPromoted, TypePromotionTransaction &TPT,
       SmallVectorImpl<Instruction *> &SpeculativelyMovedExts);
-  bool splitBranchCondition(Function &F);
+  bool splitBranchCondition(Function &F, ModifyDT &ModifiedDT);
   bool simplifyOffsetableRelocate(GCStatepointInst &I);
 
   bool tryToSinkFreeOperands(Instruction *I);
@@ -495,7 +490,6 @@ char CodeGenPrepare::ID = 0;
 INITIALIZE_PASS_BEGIN(CodeGenPrepare, DEBUG_TYPE,
                       "Optimize for code generation", false, false)
 INITIALIZE_PASS_DEPENDENCY(BasicBlockSectionsProfileReader)
-INITIALIZE_PASS_DEPENDENCY(DominatorTreeWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(LoopInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(ProfileSummaryInfoWrapperPass)
 INITIALIZE_PASS_DEPENDENCY(TargetLibraryInfoWrapperPass)
@@ -520,7 +514,6 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   TRI = SubtargetInfo->getRegisterInfo();
   TLInfo = &getAnalysis<TargetLibraryInfoWrapperPass>().getTLI(F);
   TTI = &getAnalysis<TargetTransformInfoWrapperPass>().getTTI(F);
-  DT = &getAnalysis<DominatorTreeWrapperPass>().getDomTree();
   LI = &getAnalysis<LoopInfoWrapperPass>().getLoopInfo();
   BPI.reset(new BranchProbabilityInfo(F, *LI));
   BFI.reset(new BlockFrequencyInfo(F, *BPI, *LI));
@@ -551,14 +544,6 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
       F.setSectionPrefix("unknown");
   }
 
-  DomTreeUpdater DTUpdater(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-  DTU = &DTUpdater;
-  auto resetDTAndLI = [&]() {
-    DTU->recalculate(F);
-    LI->releaseMemory();
-    LI->analyze(*DT);
-  };
-
   /// This optimization identifies DIV instructions that can be
   /// profitably bypassed and carried out with a shorter, faster divide.
   if (!OptSize && !PSI->hasHugeWorkingSetSize() && TLI->isSlowDivBypassed()) {
@@ -571,7 +556,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
       BasicBlock *Next = BB->getNextNode();
       // F.hasOptSize is already checked in the outer if statement.
       if (!llvm::shouldOptimizeForSize(BB, PSI, BFI.get()))
-        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI);
+        EverMadeChange |= bypassSlowDivision(BB, BypassWidths);
       BB = Next;
     }
   }
@@ -583,36 +568,25 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
 
   // Eliminate blocks that contain only PHI nodes and an
   // unconditional branch.
-  ModifyDT ModifiedDT = ModifyDT::NotModifyDT;
-  EverMadeChange |= eliminateMostlyEmptyBlocks(F, ModifiedDT);
-  if (ModifiedDT != ModifyDT::NotModifyDT) {
-    // Rebuild the dom tree if the transformation above did change the CFG, but
-    // did not update the DT.
-    resetDTAndLI();
-  }
+  EverMadeChange |= eliminateMostlyEmptyBlocks(F);
 
+  ModifyDT ModifiedDT = ModifyDT::NotModifyDT;
   if (!DisableBranchOpts)
-    EverMadeChange |= splitBranchCondition(F);
+    EverMadeChange |= splitBranchCondition(F, ModifiedDT);
 
   // Split some critical edges where one of the sources is an indirect branch,
   // to help generate sane code for PHIs involving such edges.
-  if (SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/true)) {
-    EverMadeChange = true;
-    resetDTAndLI();
-  }
-
-#ifndef NDEBUG
-  if (VerifyDT)
-    assert(getDT().verify(DominatorTree::VerificationLevel::Fast) &&
-           "Incorrect DominatorTree updates in CGP");
-
-  if (VerifyLoopInfo)
-    LI->verify(getDT());
-#endif
+  EverMadeChange |=
+      SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/true);
 
   // If we are optimzing huge function, we need to consider the build time.
   // Because the basic algorithm's complex is near O(N!).
   IsHugeFunc = F.size() > HugeFuncThresholdInCGPP;
+
+  // Transformations above may invalidate dominator tree and/or loop info.
+  DT.reset();
+  LI->releaseMemory();
+  LI->analyze(getDT(F));
 
   bool MadeChange = true;
   bool FuncIterated = false;
@@ -625,6 +599,9 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
 
       ModifyDT ModifiedDTOnIteration = ModifyDT::NotModifyDT;
       bool Changed = optimizeBlock(BB, ModifiedDTOnIteration);
+
+      if (ModifiedDTOnIteration == ModifyDT::ModifyBBDT)
+        DT.reset();
 
       MadeChange |= Changed;
       if (IsHugeFunc) {
@@ -658,15 +635,11 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     MadeChange |= optimizePhiTypes(F);
 
     if (MadeChange)
-      eliminateFallThrough(F);
+      eliminateFallThrough(F, DT.get());
 
 #ifndef NDEBUG
-    if (VerifyDT)
-      assert(getDT().verify(DominatorTree::VerificationLevel::Fast) &&
-             "Incorrect DominatorTree updates in CGP");
-
-    if (VerifyLoopInfo)
-      LI->verify(getDT());
+    if (MadeChange && VerifyLoopInfo)
+      LI->verify(getDT(F));
 #endif
 
     // Really free removed instructions during promotion.
@@ -684,9 +657,6 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
   NewGEPBases.clear();
   SunkAddrs.clear();
 
-  // LoopInfo is not needed anymore and ConstantFoldTerminator can break it.
-  LI = nullptr;
-
   if (!DisableBranchOpts) {
     MadeChange = false;
     // Use a set vector to get deterministic iteration order. The order the
@@ -695,7 +665,7 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
     SmallSetVector<BasicBlock *, 8> WorkList;
     for (BasicBlock &BB : F) {
       SmallVector<BasicBlock *, 2> Successors(successors(&BB));
-      MadeChange |= ConstantFoldTerminator(&BB, true, nullptr, DTU);
+      MadeChange |= ConstantFoldTerminator(&BB, true);
       if (!MadeChange)
         continue;
 
@@ -710,15 +680,12 @@ bool CodeGenPrepare::runOnFunction(Function &F) {
       BasicBlock *BB = WorkList.pop_back_val();
       SmallVector<BasicBlock *, 2> Successors(successors(BB));
 
-      DeleteDeadBlock(BB, DTU);
+      DeleteDeadBlock(BB);
 
       for (BasicBlock *Succ : Successors)
         if (pred_empty(Succ))
           WorkList.insert(Succ);
     }
-
-    // Flush pending DT updates in order to finalise deletion of dead blocks.
-    DTU->flush();
 
     // Merge pairs of basic blocks with unconditional branches, connected by
     // a single edge.
@@ -806,7 +773,7 @@ void LLVM_ATTRIBUTE_UNUSED CodeGenPrepare::verifyBFIUpdates(Function &F) {
 /// Merge basic blocks which are connected by a single edge, where one of the
 /// basic blocks has a single successor pointing to the other basic block,
 /// which has a single predecessor.
-bool CodeGenPrepare::eliminateFallThrough(Function &F) {
+bool CodeGenPrepare::eliminateFallThrough(Function &F, DominatorTree *DT) {
   bool Changed = false;
   // Scan all of the blocks in the function, except for the entry block.
   // Use a temporary array to avoid iterator being invalidated when
@@ -828,13 +795,19 @@ bool CodeGenPrepare::eliminateFallThrough(Function &F) {
     if (!SinglePred || SinglePred == BB || BB->hasAddressTaken())
       continue;
 
+    // Make an effort to skip unreachable blocks.
+    if (DT && !DT->isReachableFromEntry(BB))
+      continue;
+
     BranchInst *Term = dyn_cast<BranchInst>(SinglePred->getTerminator());
     if (Term && !Term->isConditional()) {
       Changed = true;
       LLVM_DEBUG(dbgs() << "To merge:\n" << *BB << "\n\n\n");
 
       // Merge BB into SinglePred and delete it.
-      MergeBlockIntoPredecessor(BB, DTU, LI);
+      MergeBlockIntoPredecessor(BB, /* DTU */ nullptr, LI, /* MSSAU */ nullptr,
+                                /* MemDep */ nullptr,
+                                /* PredecessorWithTwoSuccessors */ false, DT);
       Preds.insert(SinglePred);
 
       if (IsHugeFunc) {
@@ -890,8 +863,7 @@ BasicBlock *CodeGenPrepare::findDestBlockOfMergeableEmptyBlock(BasicBlock *BB) {
 /// unconditional branch. Passes before isel (e.g. LSR/loopsimplify) often split
 /// edges in ways that are non-optimal for isel. Start by eliminating these
 /// blocks so we can split them the way we want them.
-bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F,
-                                                ModifyDT &ModifiedDT) {
+bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
   SmallPtrSet<BasicBlock *, 16> Preheaders;
   SmallVector<Loop *, 16> LoopList(LI->begin(), LI->end());
   while (!LoopList.empty()) {
@@ -918,7 +890,7 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F,
         !isMergingEmptyBlockProfitable(BB, DestBB, Preheaders.count(BB)))
       continue;
 
-    eliminateMostlyEmptyBlock(BB, ModifiedDT);
+    eliminateMostlyEmptyBlock(BB);
     MadeChange = true;
   }
   return MadeChange;
@@ -1095,9 +1067,7 @@ static void replaceAllUsesWith(Value *Old, Value *New,
 
 /// Eliminate a basic block that has only phi's and an unconditional branch in
 /// it.
-/// Indicate that the DT was modified only if the DT wasn't updated.
-void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB,
-                                               ModifyDT &ModifiedDT) {
+void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
   BranchInst *BI = cast<BranchInst>(BB->getTerminator());
   BasicBlock *DestBB = BI->getSuccessor(0);
 
@@ -1111,7 +1081,7 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB,
       assert(SinglePred == BB &&
              "Single predecessor not the same as predecessor");
       // Merge DestBB into SinglePred/BB and delete it.
-      MergeBlockIntoPredecessor(DestBB, DTU, LI);
+      MergeBlockIntoPredecessor(DestBB);
       // Note: BB(=SinglePred) will not be deleted on this path.
       // DestBB(=its single successor) is the one that was deleted.
       LLVM_DEBUG(dbgs() << "AFTER:\n" << *SinglePred << "\n\n\n");
@@ -1158,7 +1128,6 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB,
   BB->eraseFromParent();
   ++NumBlocksElim;
 
-  ModifiedDT = ModifyDT::ModifyBBDT;
   LLVM_DEBUG(dbgs() << "AFTER:\n" << *DestBB << "\n\n\n");
 }
 
@@ -1535,7 +1504,7 @@ bool CodeGenPrepare::replaceMathCmpWithIntrinsic(BinaryOperator *BO,
     // Finally, we need to ensure that the insert point will dominate all
     // existing uses of the increment.
 
-    auto &DT = getDT();
+    auto &DT = getDT(*BO->getParent()->getParent());
     if (DT.dominates(Cmp->getParent(), BO->getParent()))
       // If we're moving up the dom tree, all uses are trivially dominated.
       // (This is the common case for code produced by LSR.)
@@ -2220,7 +2189,7 @@ static bool OptimizeExtractBits(BinaryOperator *ShiftI, ConstantInt *CI,
 ///
 /// If the transform is performed, return true and set ModifiedDT to true.
 static bool despeculateCountZeros(IntrinsicInst *CountZeros,
-                                  DomTreeUpdater &DTU, LoopInfo &LI,
+                                  LoopInfo &LI,
                                   const TargetLowering *TLI,
                                   const DataLayout *DL, ModifyDT &ModifiedDT,
                                   SmallSet<BasicBlock *, 32> &FreshBBs,
@@ -2248,8 +2217,7 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
 
   // The intrinsic will be sunk behind a compare against zero and branch.
   BasicBlock *StartBlock = CountZeros->getParent();
-  BasicBlock *CallBlock = SplitBlock(StartBlock, CountZeros, &DTU, &LI,
-                                     /* MSSAU */ nullptr, "cond.false");
+  BasicBlock *CallBlock = StartBlock->splitBasicBlock(CountZeros, "cond.false");
   if (IsHugeFunc)
     FreshBBs.insert(CallBlock);
 
@@ -2257,10 +2225,16 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   // in this block to select the result of the intrinsic or the bit-width
   // constant if the input to the intrinsic is zero.
   BasicBlock::iterator SplitPt = ++(BasicBlock::iterator(CountZeros));
-  BasicBlock *EndBlock = SplitBlock(CallBlock, &*SplitPt, &DTU, &LI,
-                                    /* MSSAU */ nullptr, "cond.end");
+  BasicBlock *EndBlock = CallBlock->splitBasicBlock(SplitPt, "cond.end");
   if (IsHugeFunc)
     FreshBBs.insert(EndBlock);
+
+  // Update the LoopInfo. The new blocks are in the same loop as the start
+  // block.
+  if (Loop *L = LI.getLoopFor(StartBlock)) {
+    L->addBasicBlockToLoop(CallBlock, LI);
+    L->addBasicBlockToLoop(EndBlock, LI);
+  }
 
   // Set up a builder to create a compare, conditional branch, and PHI.
   IRBuilder<> Builder(CountZeros->getContext());
@@ -2276,7 +2250,6 @@ static bool despeculateCountZeros(IntrinsicInst *CountZeros,
   Value *Cmp = Builder.CreateICmpEQ(Op, Zero, "cmpz");
   Builder.CreateCondBr(Cmp, EndBlock, CallBlock);
   StartBlock->getTerminator()->eraseFromParent();
-  DTU.applyUpdates({{DominatorTree::Insert, StartBlock, EndBlock}});
 
   // Create a PHI in the end block to select either the output of the intrinsic
   // or the bit width of the operand.
@@ -2437,7 +2410,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
     case Intrinsic::cttz:
     case Intrinsic::ctlz:
       // If counting zeros is expensive, try to avoid it.
-      return despeculateCountZeros(II, *DTU, *LI, TLI, DL, ModifiedDT, FreshBBs,
+      return despeculateCountZeros(II, *LI, TLI, DL, ModifiedDT, FreshBBs,
                                    IsHugeFunc);
     case Intrinsic::fshl:
     case Intrinsic::fshr:
@@ -2605,7 +2578,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
       continue;
 
     // Duplicate the return into TailCallBB.
-    (void)FoldReturnIntoUncondBranch(RetI, BB, TailCallBB, DTU);
+    (void)FoldReturnIntoUncondBranch(RetI, BB, TailCallBB);
     assert(!VerifyBFIUpdates ||
            BFI->getBlockFreq(BB) >= BFI->getBlockFreq(TailCallBB));
     BFI->setBlockFreq(
@@ -2618,7 +2591,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
 
   // If we eliminated all predecessors of the block, delete the block now.
   if (Changed && !BB->hasAddressTaken() && pred_empty(BB))
-    DTU->deleteBB(BB);
+    BB->eraseFromParent();
 
   return Changed;
 }
@@ -5373,7 +5346,10 @@ bool CodeGenPrepare::optimizeMemoryInst(Instruction *MemoryInst, Value *Addr,
     // Defer the query (and possible computation of) the dom tree to point of
     // actual use.  It's expected that most address matches don't actually need
     // the domtree.
-    auto getDTFn = [this]() -> const DominatorTree & { return getDT(); };
+    auto getDTFn = [MemoryInst, this]() -> const DominatorTree & {
+      Function *F = MemoryInst->getParent()->getParent();
+      return this->getDT(*F);
+    };
     ExtAddrMode NewAddrMode = AddressingModeMatcher::Match(
         V, AccessTy, AddrSpace, MemoryInst, AddrModeInsts, *TLI, *LI, getDTFn,
         *TRI, InsertedInsts, PromotedInsts, TPT, LargeOffsetGEP, OptSize, PSI,
@@ -6038,7 +6014,7 @@ bool CodeGenPrepare::mergeSExts(Function &F) {
         continue;
       bool inserted = false;
       for (auto &Pt : CurPts) {
-        if (getDT().dominates(Inst, Pt)) {
+        if (getDT(F).dominates(Inst, Pt)) {
           replaceAllUsesWith(Pt, Inst, FreshBBs, IsHugeFunc);
           RemovedInsts.insert(Pt);
           Pt->removeFromParent();
@@ -6047,7 +6023,7 @@ bool CodeGenPrepare::mergeSExts(Function &F) {
           Changed = true;
           break;
         }
-        if (!getDT().dominates(Pt, Inst))
+        if (!getDT(F).dominates(Pt, Inst))
           // Give up if we need to merge in a common dominator as the
           // experiments show it is not profitable.
           continue;
@@ -6169,8 +6145,8 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
           if (isa<PHINode>(BaseI))
             NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
           else if (InvokeInst *Invoke = dyn_cast<InvokeInst>(BaseI)) {
-            NewBaseInsertBB = SplitEdge(NewBaseInsertBB,
-                                        Invoke->getNormalDest(), &getDT(), LI);
+            NewBaseInsertBB =
+                SplitEdge(NewBaseInsertBB, Invoke->getNormalDest(), DT.get(), LI);
             NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
           } else
             NewBaseInsertPt = std::next(BaseI->getIterator());
@@ -6990,6 +6966,12 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
        llvm::shouldOptimizeForSize(SI->getParent(), PSI, BFI.get())))
     return false;
 
+  // The DominatorTree needs to be rebuilt by any consumers after this
+  // transformation. We simply reset here rather than setting the ModifiedDT
+  // flag to avoid restarting the function walk in runOnFunction for each
+  // select optimized.
+  DT.reset();
+
   // Transform a sequence like this:
   //    start:
   //       %cmp = cmp uge i32 %a, %b
@@ -7014,9 +6996,6 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   // block and its branch may be optimized away. In that case, one side of the
   // first branch will point directly to select.end, and the corresponding PHI
   // predecessor block will be the start block.
-  // The CFG is altered here and we update the DominatorTree and the LoopInfo,
-  // but we don't set a ModifiedDT flag to avoid restarting the function walk in
-  // runOnFunction for each select optimized.
 
   // Collect values that go on the true side and the values that go on the false
   // side.
@@ -7042,20 +7021,20 @@ bool CodeGenPrepare::optimizeSelectInst(SelectInst *SI) {
   BranchInst *TrueBranch = nullptr;
   BranchInst *FalseBranch = nullptr;
   if (TrueInstrs.size() == 0) {
-    FalseBranch = cast<BranchInst>(
-        SplitBlockAndInsertIfElse(CondFr, &*SplitPt, false, nullptr, DTU, LI));
+    FalseBranch = cast<BranchInst>(SplitBlockAndInsertIfElse(
+        CondFr, &*SplitPt, false, nullptr, nullptr, LI));
     FalseBlock = FalseBranch->getParent();
     EndBlock = cast<BasicBlock>(FalseBranch->getOperand(0));
   } else if (FalseInstrs.size() == 0) {
-    TrueBranch = cast<BranchInst>(
-        SplitBlockAndInsertIfThen(CondFr, &*SplitPt, false, nullptr, DTU, LI));
+    TrueBranch = cast<BranchInst>(SplitBlockAndInsertIfThen(
+        CondFr, &*SplitPt, false, nullptr, nullptr, LI));
     TrueBlock = TrueBranch->getParent();
     EndBlock = cast<BasicBlock>(TrueBranch->getOperand(0));
   } else {
     Instruction *ThenTerm = nullptr;
     Instruction *ElseTerm = nullptr;
     SplitBlockAndInsertIfThenElse(CondFr, &*SplitPt, &ThenTerm, &ElseTerm,
-                                  nullptr, DTU, LI);
+                                  nullptr, nullptr, LI);
     TrueBranch = cast<BranchInst>(ThenTerm);
     FalseBranch = cast<BranchInst>(ElseTerm);
     TrueBlock = TrueBranch->getParent();
@@ -8333,9 +8312,13 @@ bool CodeGenPrepare::optimizeBlock(BasicBlock &BB, ModifyDT &ModifiedDT) {
         // For huge function we tend to quickly go though the inner optmization
         // opportunities in the BB. So we go back to the BB head to re-optimize
         // each instruction instead of go back to the function head.
-        if (IsHugeFunc)
+        if (IsHugeFunc) {
+          DT.reset();
+          getDT(*BB.getParent());
           break;
-        return true;
+        } else {
+          return true;
+        }
       }
     }
   } while (ModifiedDT == ModifyDT::ModifyInstDT);
@@ -8388,7 +8371,7 @@ bool CodeGenPrepare::fixupDbgValue(Instruction *I) {
 // to re-order dbg.value intrinsics.
 bool CodeGenPrepare::placeDbgValues(Function &F) {
   bool MadeChange = false;
-  DominatorTree &DT = getDT();
+  DominatorTree DT(F);
 
   for (BasicBlock &BB : F) {
     for (Instruction &Insn : llvm::make_early_inc_range(BB)) {
@@ -8498,7 +8481,7 @@ static void scaleWeights(uint64_t &NewTrue, uint64_t &NewFalse) {
 ///
 /// FIXME: Remove the (equivalent?) implementation in SelectionDAG.
 ///
-bool CodeGenPrepare::splitBranchCondition(Function &F) {
+bool CodeGenPrepare::splitBranchCondition(Function &F, ModifyDT &ModifiedDT) {
   if (!TM->Options.EnableFastISel || TLI->isJumpExpensive())
     return false;
 
@@ -8592,20 +8575,6 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
       PN.addIncoming(Val, TmpBB);
     }
 
-    if (LI) {
-      if (Loop *L = LI->getLoopFor(&BB))
-        L->addBasicBlockToLoop(TmpBB, *LI);
-    }
-
-    if (DTU) {
-      // The edge we need to delete starts at BB and ends at whatever TBB ends
-      // up pointing to.
-      DTU->applyUpdates({{DominatorTree::Insert, &BB, TmpBB},
-                         {DominatorTree::Insert, TmpBB, TBB},
-                         {DominatorTree::Insert, TmpBB, FBB},
-                         {DominatorTree::Delete, &BB, TBB}});
-    }
-
     // Update the branch weights (from SelectionDAGBuilder::
     // FindMergedConditions).
     if (Opc == Instruction::Or) {
@@ -8681,6 +8650,7 @@ bool CodeGenPrepare::splitBranchCondition(Function &F) {
       }
     }
 
+    ModifiedDT = ModifyDT::ModifyBBDT;
     MadeChange = true;
 
     LLVM_DEBUG(dbgs() << "After branch condition splitting\n"; BB.dump();
