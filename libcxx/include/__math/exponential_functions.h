@@ -35,8 +35,8 @@ _LIBCPP_HIDE_FROM_ABI double exp(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double exp(long double __x) _NOEXCEPT { return __builtin_expl(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type exp(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double exp(_A1 __x) _NOEXCEPT {
   return __builtin_exp((double)__x);
 }
 
@@ -53,9 +53,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double frexp(long double __x, int* __e) _NOEXC
   return __builtin_frexpl(__x, __e);
 }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-frexp(_A1 __x, int* __e) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double frexp(_A1 __x, int* __e) _NOEXCEPT {
   return __builtin_frexp((double)__x, __e);
 }
 
@@ -72,9 +71,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double ldexp(long double __x, int __e) _NOEXCE
   return __builtin_ldexpl(__x, __e);
 }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-ldexp(_A1 __x, int __e) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double ldexp(_A1 __x, int __e) _NOEXCEPT {
   return __builtin_ldexp((double)__x, __e);
 }
 
@@ -89,8 +87,8 @@ _LIBCPP_HIDE_FROM_ABI double exp2(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double exp2(long double __x) _NOEXCEPT { return __builtin_exp2l(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type exp2(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double exp2(_A1 __x) _NOEXCEPT {
   return __builtin_exp2((double)__x);
 }
 
@@ -105,8 +103,8 @@ _LIBCPP_HIDE_FROM_ABI double expm1(double __x) _NOEXCEPT {
 
 inline _LIBCPP_HIDE_FROM_ABI long double expm1(long double __x) _NOEXCEPT { return __builtin_expm1l(__x); }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type expm1(_A1 __x) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double expm1(_A1 __x) _NOEXCEPT {
   return __builtin_expm1((double)__x);
 }
 
@@ -123,9 +121,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double scalbln(long double __x, long __y) _NOE
   return __builtin_scalblnl(__x, __y);
 }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-scalbln(_A1 __x, long __y) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double scalbln(_A1 __x, long __y) _NOEXCEPT {
   return __builtin_scalbln((double)__x, __y);
 }
 
@@ -142,9 +139,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double scalbn(long double __x, int __y) _NOEXC
   return __builtin_scalbnl(__x, __y);
 }
 
-template <class _A1>
-inline _LIBCPP_HIDE_FROM_ABI typename enable_if<is_integral<_A1>::value, double>::type
-scalbn(_A1 __x, int __y) _NOEXCEPT {
+template <class _A1, __enable_if_t<is_integral<_A1>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI double scalbn(_A1 __x, int __y) _NOEXCEPT {
   return __builtin_scalbn((double)__x, __y);
 }
 
@@ -161,10 +157,8 @@ inline _LIBCPP_HIDE_FROM_ABI long double pow(long double __x, long double __y) _
   return __builtin_powl(__x, __y);
 }
 
-template <class _A1, class _A2>
-inline _LIBCPP_HIDE_FROM_ABI
-    typename __enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, __promote<_A1, _A2> >::type
-    pow(_A1 __x, _A2 __y) _NOEXCEPT {
+template <class _A1, class _A2, __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2>::type pow(_A1 __x, _A2 __y) _NOEXCEPT {
   typedef typename __promote<_A1, _A2>::type __result_type;
   static_assert((!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value)), "");
   return __math::pow((__result_type)__x, (__result_type)__y);

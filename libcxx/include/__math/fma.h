@@ -36,11 +36,11 @@ inline _LIBCPP_HIDE_FROM_ABI long double fma(long double __x, long double __y, l
   return __builtin_fmal(__x, __y, __z);
 }
 
-template <class _A1, class _A2, class _A3>
-inline _LIBCPP_HIDE_FROM_ABI
-    typename __enable_if_t< is_arithmetic<_A1>::value && is_arithmetic<_A2>::value && is_arithmetic<_A3>::value,
-                            __promote<_A1, _A2, _A3> >::type
-    fma(_A1 __x, _A2 __y, _A3 __z) _NOEXCEPT {
+template <class _A1,
+          class _A2,
+          class _A3,
+          __enable_if_t<is_arithmetic<_A1>::value && is_arithmetic<_A2>::value && is_arithmetic<_A3>::value, int> = 0>
+inline _LIBCPP_HIDE_FROM_ABI typename __promote<_A1, _A2, _A3>::type fma(_A1 __x, _A2 __y, _A3 __z) _NOEXCEPT {
   typedef typename __promote<_A1, _A2, _A3>::type __result_type;
   static_assert((!(_IsSame<_A1, __result_type>::value && _IsSame<_A2, __result_type>::value &&
                    _IsSame<_A3, __result_type>::value)),
