@@ -22,7 +22,6 @@
 #include "clang/AST/DeclObjC.h"
 #include "clang/AST/RawCommentList.h"
 #include "clang/Basic/SourceLocation.h"
-#include "clang/Basic/Specifiers.h"
 #include "clang/ExtractAPI/AvailabilityInfo.h"
 #include "clang/ExtractAPI/DeclarationFragments.h"
 #include "llvm/ADT/MapVector.h"
@@ -65,14 +64,6 @@ struct APIRecord {
     RK_Enum,
     RK_StructField,
     RK_Struct,
-    RK_Union,
-    RK_StaticField,
-    RK_CXXField,
-    RK_CXXClass,
-    RK_CXXStaticMethod,
-    RK_CXXInstanceMethod,
-    RK_CXXConstructorMethod,
-    RK_CXXDestructorMethod,
     RK_ObjCInstanceProperty,
     RK_ObjCClassProperty,
     RK_ObjCIvar,
@@ -275,132 +266,6 @@ private:
   virtual void anchor();
 };
 
-struct CXXFieldRecord : APIRecord {
-  AccessControl Access;
-
-  CXXFieldRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                 AvailabilitySet Availabilities, const DocComment &Comment,
-                 DeclarationFragments Declaration,
-                 DeclarationFragments SubHeading, AccessControl Access,
-                 bool IsFromSystemHeader)
-      : APIRecord(RK_CXXField, USR, Name, Loc, std::move(Availabilities),
-                  LinkageInfo::none(), Comment, Declaration, SubHeading,
-                  IsFromSystemHeader),
-        Access(Access) {}
-
-  CXXFieldRecord(RecordKind Kind, StringRef USR, StringRef Name,
-                 PresumedLoc Loc, AvailabilitySet Availabilities,
-                 const DocComment &Comment, DeclarationFragments Declaration,
-                 DeclarationFragments SubHeading, AccessControl Access,
-                 bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availabilities),
-                  LinkageInfo::none(), Comment, Declaration, SubHeading,
-                  IsFromSystemHeader),
-        Access(Access) {}
-
-  static bool classof(const APIRecord *Record) {
-    return Record->getKind() == RK_CXXField;
-  }
-
-private:
-  virtual void anchor();
-};
-
-struct CXXMethodRecord : APIRecord {
-  FunctionSignature Signature;
-  AccessControl Access;
-
-  CXXMethodRecord() = delete;
-
-  CXXMethodRecord(RecordKind Kind, StringRef USR, StringRef Name,
-                  PresumedLoc Loc, AvailabilitySet Availabilities,
-                  const DocComment &Comment, DeclarationFragments Declaration,
-                  DeclarationFragments SubHeading, FunctionSignature Signature,
-                  AccessControl Access, bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availabilities),
-                  LinkageInfo::none(), Comment, Declaration, SubHeading,
-                  IsFromSystemHeader),
-        Signature(Signature), Access(Access) {}
-
-  virtual ~CXXMethodRecord() = 0;
-};
-
-struct CXXConstructorRecord : CXXMethodRecord {
-  CXXConstructorRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                       AvailabilitySet Availabilities,
-                       const DocComment &Comment,
-                       DeclarationFragments Declaration,
-                       DeclarationFragments SubHeading,
-                       FunctionSignature Signature, AccessControl Access,
-                       bool IsFromSystemHeader)
-      : CXXMethodRecord(RK_CXXConstructorMethod, USR, Name, Loc,
-                        std::move(Availabilities), Comment, Declaration,
-                        SubHeading, Signature, Access, IsFromSystemHeader) {}
-  static bool classof(const APIRecord *Record) {
-    return Record->getKind() == RK_CXXConstructorMethod;
-  }
-
-private:
-  virtual void anchor();
-};
-
-struct CXXDestructorRecord : CXXMethodRecord {
-  CXXDestructorRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                      AvailabilitySet Availabilities, const DocComment &Comment,
-                      DeclarationFragments Declaration,
-                      DeclarationFragments SubHeading,
-                      FunctionSignature Signature, AccessControl Access,
-                      bool IsFromSystemHeader)
-      : CXXMethodRecord(RK_CXXDestructorMethod, USR, Name, Loc,
-                        std::move(Availabilities), Comment, Declaration,
-                        SubHeading, Signature, Access, IsFromSystemHeader) {}
-  static bool classof(const APIRecord *Record) {
-    return Record->getKind() == RK_CXXDestructorMethod;
-  }
-
-private:
-  virtual void anchor();
-};
-
-struct CXXStaticMethodRecord : CXXMethodRecord {
-  CXXStaticMethodRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                        AvailabilitySet Availabilities,
-                        const DocComment &Comment,
-                        DeclarationFragments Declaration,
-                        DeclarationFragments SubHeading,
-                        FunctionSignature Signature, AccessControl Access,
-                        bool IsFromSystemHeader)
-      : CXXMethodRecord(RK_CXXStaticMethod, USR, Name, Loc,
-                        std::move(Availabilities), Comment, Declaration,
-                        SubHeading, Signature, Access, IsFromSystemHeader) {}
-  static bool classof(const APIRecord *Record) {
-    return Record->getKind() == RK_CXXStaticMethod;
-  }
-
-private:
-  virtual void anchor();
-};
-
-struct CXXInstanceMethodRecord : CXXMethodRecord {
-  CXXInstanceMethodRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                          AvailabilitySet Availabilities,
-                          const DocComment &Comment,
-                          DeclarationFragments Declaration,
-                          DeclarationFragments SubHeading,
-                          FunctionSignature Signature, AccessControl Access,
-                          bool IsFromSystemHeader)
-      : CXXMethodRecord(RK_CXXInstanceMethod, USR, Name, Loc,
-                        std::move(Availabilities), Comment, Declaration,
-                        SubHeading, Signature, Access, IsFromSystemHeader) {}
-
-  static bool classof(const APIRecord *Record) {
-    return Record->getKind() == RK_CXXInstanceMethod;
-  }
-
-private:
-  virtual void anchor();
-};
-
 /// This holds information associated with Objective-C properties.
 struct ObjCPropertyRecord : APIRecord {
   /// The attributes associated with an Objective-C property.
@@ -579,24 +444,6 @@ struct SymbolReference {
   bool empty() const { return Name.empty() && USR.empty() && Source.empty(); }
 };
 
-struct StaticFieldRecord : CXXFieldRecord {
-  SymbolReference Context;
-
-  StaticFieldRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                    AvailabilitySet Availabilities, LinkageInfo Linkage,
-                    const DocComment &Comment, DeclarationFragments Declaration,
-                    DeclarationFragments SubHeading, SymbolReference Context,
-                    AccessControl Access, bool IsFromSystemHeader)
-      : CXXFieldRecord(RK_StaticField, USR, Name, Loc,
-                       std::move(Availabilities), Comment, Declaration,
-                       SubHeading, Access, IsFromSystemHeader),
-        Context(Context) {}
-
-  static bool classof(const APIRecord *Record) {
-    return Record->getKind() == RK_StaticField;
-  }
-};
-
 /// The base representation of an Objective-C container record. Holds common
 /// information associated with Objective-C containers.
 struct ObjCContainerRecord : APIRecord {
@@ -616,28 +463,6 @@ struct ObjCContainerRecord : APIRecord {
                   Comment, Declaration, SubHeading, IsFromSystemHeader) {}
 
   virtual ~ObjCContainerRecord() = 0;
-};
-
-struct CXXClassRecord : APIRecord {
-  SmallVector<std::unique_ptr<CXXFieldRecord>> Fields;
-  SmallVector<std::unique_ptr<CXXMethodRecord>> Methods;
-  SmallVector<SymbolReference> Bases;
-
-  CXXClassRecord(StringRef USR, StringRef Name, PresumedLoc Loc,
-                 AvailabilitySet Availabilities, const DocComment &Comment,
-                 DeclarationFragments Declaration,
-                 DeclarationFragments SubHeading, RecordKind Kind,
-                 bool IsFromSystemHeader)
-      : APIRecord(Kind, USR, Name, Loc, std::move(Availabilities),
-                  LinkageInfo::none(), Comment, Declaration, SubHeading,
-                  IsFromSystemHeader) {}
-
-  static bool classof(const APIRecord *Record) {
-    return (Record->getKind() == RK_CXXClass);
-  }
-
-private:
-  virtual void anchor();
 };
 
 /// This holds information associated with Objective-C categories.
@@ -766,12 +591,6 @@ struct has_function_signature<ObjCInstanceMethodRecord>
     : public std::true_type {};
 template <>
 struct has_function_signature<ObjCClassMethodRecord> : public std::true_type {};
-template <>
-struct has_function_signature<CXXMethodRecord> : public std::true_type {};
-
-template <typename RecordTy> struct has_access : public std::false_type {};
-template <> struct has_access<CXXMethodRecord> : public std::true_type {};
-template <> struct has_access<CXXFieldRecord> : public std::true_type {};
 
 /// APISet holds the set of API records collected from given inputs.
 class APISet {
@@ -848,41 +667,6 @@ public:
                           DeclarationFragments Declaration,
                           DeclarationFragments SubHeading,
                           bool IsFromSystemHeader);
-
-  StaticFieldRecord *
-  addStaticField(StringRef Name, StringRef USR, PresumedLoc Loc,
-                 AvailabilitySet Availabilities, LinkageInfo Linkage,
-                 const DocComment &Comment, DeclarationFragments Declaration,
-                 DeclarationFragments SubHeading, SymbolReference Context,
-                 AccessControl Access, bool IsFromSystemHeaderg);
-
-  CXXFieldRecord *addCXXField(CXXClassRecord *CXXClass, StringRef Name,
-                              StringRef USR, PresumedLoc Loc,
-                              AvailabilitySet Availabilities,
-                              const DocComment &Comment,
-                              DeclarationFragments Declaration,
-                              DeclarationFragments SubHeading,
-                              AccessControl Access, bool IsFromSystemHeader);
-
-  CXXClassRecord *
-  addCXXClass(StringRef Name, StringRef USR, PresumedLoc Loc,
-              AvailabilitySet Availability, const DocComment &Comment,
-              DeclarationFragments Declaration, DeclarationFragments SubHeading,
-              APIRecord::RecordKind Kind, bool IsFromSystemHeader);
-
-  CXXMethodRecord *
-  addCXXMethod(CXXClassRecord *CXXClassRecord, StringRef Name, StringRef USR,
-               PresumedLoc Loc, AvailabilitySet Availability,
-               const DocComment &Comment, DeclarationFragments Declaration,
-               DeclarationFragments SubHeading, FunctionSignature Signature,
-               bool IsStatic, AccessControl Access, bool IsFromSystemHeader);
-
-  CXXMethodRecord *addCXXSpecialMethod(
-      CXXClassRecord *CXXClassRecord, StringRef Name, StringRef USR,
-      PresumedLoc Loc, AvailabilitySet Availability, const DocComment &Comment,
-      DeclarationFragments Declaration, DeclarationFragments SubHeading,
-      FunctionSignature Signature, bool IsConstructor, AccessControl Access,
-      bool IsFromSystemHeader);
 
   /// Create and add an Objective-C category record into the API set.
   ///
@@ -1006,12 +790,8 @@ public:
   const RecordMap<GlobalVariableRecord> &getGlobalVariables() const {
     return GlobalVariables;
   }
-  const RecordMap<StaticFieldRecord> &getStaticFields() const {
-    return StaticFields;
-  }
   const RecordMap<EnumRecord> &getEnums() const { return Enums; }
   const RecordMap<StructRecord> &getStructs() const { return Structs; }
-  const RecordMap<CXXClassRecord> &getCXXClasses() const { return CXXClasses; }
   const RecordMap<ObjCCategoryRecord> &getObjCCategories() const {
     return ObjCCategories;
   }
@@ -1065,10 +845,8 @@ private:
   llvm::DenseMap<StringRef, APIRecord *> USRBasedLookupTable;
   RecordMap<GlobalFunctionRecord> GlobalFunctions;
   RecordMap<GlobalVariableRecord> GlobalVariables;
-  RecordMap<StaticFieldRecord> StaticFields;
   RecordMap<EnumRecord> Enums;
   RecordMap<StructRecord> Structs;
-  RecordMap<CXXClassRecord> CXXClasses;
   RecordMap<ObjCCategoryRecord> ObjCCategories;
   RecordMap<ObjCInterfaceRecord> ObjCInterfaces;
   RecordMap<ObjCProtocolRecord> ObjCProtocols;
