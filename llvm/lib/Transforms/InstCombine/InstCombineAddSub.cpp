@@ -2520,18 +2520,17 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
   return nullptr;
 }
 
-static Instruction *hoistFNegAboveFMulFDiv(Instruction &I,
+static Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp,
+                                           Instruction &FMFSource,
                                            InstCombiner::BuilderTy &Builder) {
-  Value *FNeg;
-  if (!match(&I, m_FNeg(m_Value(FNeg))))
-    return nullptr;
-
   Value *X, *Y;
-  if (match(FNeg, m_OneUse(m_FMul(m_Value(X), m_Value(Y)))))
-    return BinaryOperator::CreateFMulFMF(Builder.CreateFNegFMF(X, &I), Y, &I);
+  if (match(FNegOp, m_FMul(m_Value(X), m_Value(Y))))
+    return BinaryOperator::CreateFMulFMF(Builder.CreateFNegFMF(X, &FMFSource),
+                                         Y, &FMFSource);
 
-  if (match(FNeg, m_OneUse(m_FDiv(m_Value(X), m_Value(Y)))))
-    return BinaryOperator::CreateFDivFMF(Builder.CreateFNegFMF(X, &I), Y, &I);
+  if (match(FNegOp, m_FDiv(m_Value(X), m_Value(Y))))
+    return BinaryOperator::CreateFDivFMF(Builder.CreateFNegFMF(X, &FMFSource),
+                                         Y, &FMFSource);
 
   return nullptr;
 }
@@ -2553,12 +2552,12 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
       match(Op, m_OneUse(m_FSub(m_Value(X), m_Value(Y)))))
     return BinaryOperator::CreateFSubFMF(Y, X, &I);
 
-  if (Instruction *R = hoistFNegAboveFMulFDiv(I, Builder))
-    return R;
-
   Value *OneUse;
   if (!match(Op, m_OneUse(m_Value(OneUse))))
     return nullptr;
+
+  if (Instruction *R = hoistFNegAboveFMulFDiv(OneUse, I, Builder))
+    return R;
 
   // Try to eliminate fneg if at least 1 arm of the select is negated.
   Value *Cond;
