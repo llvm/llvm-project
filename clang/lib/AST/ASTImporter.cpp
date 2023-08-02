@@ -2857,9 +2857,13 @@ ExpectedDecl ASTNodeImporter::VisitRecordDecl(RecordDecl *D) {
   } else if (Importer.getToContext().getLangOpts().CPlusPlus)
     IDNS |= Decl::IDNS_Ordinary | Decl::IDNS_TagFriend;
 
+  bool IsDependentContext = DC != LexicalDC ? LexicalDC->isDependentContext()
+                                            : DC->isDependentContext();
+  bool DependentFriend = IsFriendTemplate && IsDependentContext;
+
   // We may already have a record of the same name; try to find and match it.
   RecordDecl *PrevDecl = nullptr;
-  if (!DC->isFunctionOrMethod() && !D->isLambda()) {
+  if (!DependentFriend && !DC->isFunctionOrMethod() && !D->isLambda()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls =
         Importer.findDeclsInToCtx(DC, SearchName);
@@ -5796,10 +5800,15 @@ ExpectedDecl ASTNodeImporter::VisitClassTemplateDecl(ClassTemplateDecl *D) {
   if (ToD)
     return ToD;
 
+  bool IsFriendTemplate = D->getFriendObjectKind() != Decl::FOK_None;
+  bool IsDependentContext = DC != LexicalDC ? LexicalDC->isDependentContext()
+                                            : DC->isDependentContext();
+  bool DependentFriend = IsFriendTemplate && IsDependentContext;
+
   ClassTemplateDecl *FoundByLookup = nullptr;
 
   // We may already have a template of the same name; try to find and match it.
-  if (!DC->isFunctionOrMethod()) {
+  if (!DependentFriend && !DC->isFunctionOrMethod()) {
     SmallVector<NamedDecl *, 4> ConflictingDecls;
     auto FoundDecls = Importer.findDeclsInToCtx(DC, Name);
     for (auto *FoundDecl : FoundDecls) {

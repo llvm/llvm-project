@@ -131,6 +131,8 @@ Bug Fixes to C++ Support
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed an import failure of recursive friend class template.
+  `Issue 64169 <https://github.com/llvm/llvm-project/issues/64169>`_
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
