@@ -7,6 +7,7 @@
 !ty_22struct2ES2A22 = !cir.struct<"struct.S2A", !s32i, #cir.recdecl.ast>
 !ty_22struct2ES122 = !cir.struct<"struct.S1", !s32i, f32, !cir.ptr<!s32i>, #cir.recdecl.ast>
 !ty_22struct2ES222 = !cir.struct<"struct.S2", !ty_22struct2ES2A22, #cir.recdecl.ast>
+!ty_22struct2ES322 = !cir.struct<"struct.S3", !s32i, #cir.recdecl.ast>
 
 module {
   cir.func @test() {
@@ -42,5 +43,23 @@ module {
   // CHECK:   %3 = llvm.insertvalue %2, %1[0] : !llvm.struct<"struct.S2A", (i32)> 
   // CHECK:   %4 = llvm.insertvalue %3, %0[0] : !llvm.struct<"struct.S2", (struct<"struct.S2A", (i32)>)> 
   // CHECK:   llvm.return %4 : !llvm.struct<"struct.S2", (struct<"struct.S2A", (i32)>)>
+  // CHECK: }
+
+  cir.global external @s3 = #cir.const_array<[#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2ES322, #cir.const_struct<{#cir.int<2> : !s32i}> : !ty_22struct2ES322, #cir.const_struct<{#cir.int<3> : !s32i}> : !ty_22struct2ES322]> : !cir.array<!ty_22struct2ES322 x 3>
+  // CHECK: llvm.mlir.global external @s3() {addr_space = 0 : i32} : !llvm.array<3 x struct<"struct.S3", (i32)>> {
+  // CHECK:   %0 = llvm.mlir.undef : !llvm.array<3 x struct<"struct.S3", (i32)>>
+  // CHECK:   %1 = llvm.mlir.undef : !llvm.struct<"struct.S3", (i32)>
+  // CHECK:   %2 = llvm.mlir.constant(1 : i32) : i32
+  // CHECK:   %3 = llvm.insertvalue %2, %1[0] : !llvm.struct<"struct.S3", (i32)> 
+  // CHECK:   %4 = llvm.insertvalue %3, %0[0] : !llvm.array<3 x struct<"struct.S3", (i32)>> 
+  // CHECK:   %5 = llvm.mlir.undef : !llvm.struct<"struct.S3", (i32)>
+  // CHECK:   %6 = llvm.mlir.constant(2 : i32) : i32
+  // CHECK:   %7 = llvm.insertvalue %6, %5[0] : !llvm.struct<"struct.S3", (i32)> 
+  // CHECK:   %8 = llvm.insertvalue %7, %4[1] : !llvm.array<3 x struct<"struct.S3", (i32)>> 
+  // CHECK:   %9 = llvm.mlir.undef : !llvm.struct<"struct.S3", (i32)>
+  // CHECK:   %10 = llvm.mlir.constant(3 : i32) : i32
+  // CHECK:   %11 = llvm.insertvalue %10, %9[0] : !llvm.struct<"struct.S3", (i32)> 
+  // CHECK:   %12 = llvm.insertvalue %11, %8[2] : !llvm.array<3 x struct<"struct.S3", (i32)>> 
+  // CHECK:   llvm.return %12 : !llvm.array<3 x struct<"struct.S3", (i32)>>
   // CHECK: }
 }
