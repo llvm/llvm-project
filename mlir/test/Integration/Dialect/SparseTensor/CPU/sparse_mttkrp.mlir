@@ -1,32 +1,19 @@
-// DEFINE: %{option} = enable-runtime-library=true
-// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
-// DEFINE: %{run} = TENSOR0="%mlir_src_dir/test/Integration/data/mttkrp_b.tns"  \
-// DEFINE: mlir-cpu-runner \
-// DEFINE:  -e entry -entry-point-result=void  \
-// DEFINE:  -shared-libs=%mlir_c_runner_utils,%mlir_runner_utils | \
-// DEFINE: FileCheck %s
-//
-// RUN: %{compile} | %{run}
+// DEFINE: %{env} = TENSOR0="%mlir_src_dir/test/Integration/data/mttkrp_b.tns"
+// REDEFINE: %{run_libs} = -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
+// RUN: %{compile} | %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{option} = enable-runtime-library=false
-// RUN: %{compile} | %{run}
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
+// RUN: %{compile} | %{env} %{run} | FileCheck %s
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
-// RUN: %{compile} | %{run}
-
+// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
+// RUN: %{compile} | %{env} %{run} | FileCheck %s
+//
 // Do the same run, but now with direct IR generation and, if available, VLA
 // vectorization.
-// REDEFINE: %{option} = "enable-runtime-library=false vl=4  enable-arm-sve=%ENABLE_VLA"
-// REDEFINE: %{run} = TENSOR0="%mlir_src_dir/test/Integration/data/mttkrp_b.tns" \
-// REDEFINE: %lli_host_or_aarch64_cmd \
-// REDEFINE:   --entry-function=entry_lli \
-// REDEFINE:   --extra-module=%S/Inputs/main_for_lli.ll \
-// REDEFINE:   %VLA_ARCH_ATTR_OPTIONS \
-// REDEFINE:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext -dlopen=%mlir_runner_utils| \
-// REDEFINE: FileCheck %s
-// RUN: %{compile} | mlir-translate -mlir-to-llvmir | %{run}
+// RUN: %if mlir_arm_sve_tests %{ %{compile_sve} | %{env} %{run_sve} | FileCheck %s %}
 
 !Filename = !llvm.ptr<i8>
 
