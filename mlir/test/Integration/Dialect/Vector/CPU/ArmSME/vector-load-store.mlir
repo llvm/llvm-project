@@ -1,21 +1,31 @@
-// RUN: mlir-opt %s -enable-arm-streaming="mode=locally enable-za" \
-// RUN:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
-// RUN:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
-// RUN:   -allocate-arm-sme-tiles -test-lower-to-llvm | \
-// RUN: mlir-translate -mlir-to-llvmir | \
-// RUN: %lli_aarch64_cmd --march=aarch64 --mattr="+sve,+sme" \
-// RUN:   --entry-function=za0_d_f64 \
-// RUN:   --dlopen=%mlir_native_utils_lib_dir/libmlir_c_runner_utils%shlibext | \
-// RUN: FileCheck %s --check-prefix=CHECK-ZA0_D
+// DEFINE: %{entry_point} = za0_d_f64
+// DEFINE: %{compile} = mlir-opt %s \
+// DEFINE:   -enable-arm-streaming="mode=locally enable-za" \
+// DEFINE:   -convert-vector-to-arm-sme -convert-arm-sme-to-scf \
+// DEFINE:   -convert-vector-to-llvm="enable-arm-sme" -cse -canonicalize \
+// DEFINE:   -allocate-arm-sme-tiles -test-lower-to-llvm
+// DEFINE: %{run} = %mcr_aarch64_cmd \
+// DEFINE:  -march=aarch64 -mattr=+sve,+sme \
+// DEFINE:  -e %{entry_point} -entry-point-result=i32 \
+// DEFINE:  -shared-libs=%mlir_runner_utils,%mlir_c_runner_utils
 
-// Integration test demonstrating load/store to/from SME ZA tile.
+// RUN: %{compile} | %{run} | FileCheck %s --check-prefix=CHECK-ZA0_D
+
+// REDEFINE: %{entry_point} = load_store_two_za_s_tiles
+// RUN: %{compile} | %{run} | FileCheck %s
+
+// Integration tests demonstrating load/store to/from SME ZA tile.
 
 llvm.func @printF64(f64)
+llvm.func @printI64(i64)
 llvm.func @printOpen()
 llvm.func @printClose()
 llvm.func @printComma()
 llvm.func @printNewline()
+llvm.func @printCString(!llvm.ptr<i8>)
 
+// This test verifies a 64-bit element ZA with FP64 data is correctly
+// loaded/stored to/from memory.
 func.func @za0_d_f64() -> i32 {
   %c0 = arith.constant 0 : index
   %c0_f64 = arith.constant 0.0 : f64
@@ -191,3 +201,174 @@ func.func @za0_d_f64() -> i32 {
   %c0_i32 = arith.constant 0 : i32
   return %c0_i32 : i32
 }
+
+func.func @printTileBegin() {
+  %0 = llvm.mlir.addressof @str_tile_begin : !llvm.ptr<array<11 x i8>>
+  %1 = llvm.mlir.constant(0 : index) : i64
+  %2 = llvm.getelementptr %0[%1, %1]
+    : (!llvm.ptr<array<11 x i8>>, i64, i64) -> !llvm.ptr<i8>
+  llvm.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
+  return
+}
+
+func.func @printTileEnd() {
+  %0 = llvm.mlir.addressof @str_tile_end : !llvm.ptr<array<9 x i8>>
+  %1 = llvm.mlir.constant(0 : index) : i64
+  %2 = llvm.getelementptr %0[%1, %1]
+    : (!llvm.ptr<array<9 x i8>>, i64, i64) -> !llvm.ptr<i8>
+  llvm.call @printCString(%2) : (!llvm.ptr<i8>) -> ()
+  return
+}
+
+// This test loads two 32-bit element ZA tiles from memory and stores them back
+// to memory in reverse order. This verifies the memref indices for the vector
+// load and store are correctly preserved since the second tile is offset from
+// the first tile.
+func.func @load_store_two_za_s_tiles() -> i32 {
+  %c0 = arith.constant 0 : index
+  %c0_i32 = arith.constant 0 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %c2_i32 = arith.constant 2 : i32
+  %c1_index = arith.constant 1 : index
+  %c2_index = arith.constant 2 : index
+
+  %min_elts_s = arith.constant 4 : index
+  %vscale = vector.vscale
+
+  // "svl" refers to the Streaming Vector Length and "svl_s" can mean either:
+  // * the number of 32-bit elements in a vector of SVL bits.
+  // * the number of tile slices (1d vectors) in a 32-bit element tile.
+  %svl_s = arith.muli %min_elts_s, %vscale : index
+
+  // Allocate memory for two 32-bit element tiles.
+  %size_of_tile = arith.muli %svl_s, %svl_s : index
+  %size_of_two_tiles = arith.muli %size_of_tile, %c2_index : index
+  %mem1 = memref.alloca(%size_of_two_tiles) : memref<?xi32>
+
+  // Fill memory that tile 1 will be loaded from with '1' and '2' for tile 2.
+  //
+  // For example, assuming an SVL of 128-bits and two 4x4xi32 tiles:
+  //
+  // tile 1
+  //
+  //   1, 1, 1, 1
+  //   1, 1, 1, 1
+  //   1, 1, 1, 1
+  //   1, 1, 1, 1
+  //
+  // tile 2
+  //
+  //   2, 2, 2, 2
+  //   2, 2, 2, 2
+  //   2, 2, 2, 2
+  //   2, 2, 2, 2
+  //
+  scf.for %i = %c0 to %size_of_two_tiles step %svl_s {
+    %isFirstTile = arith.cmpi ult, %i, %size_of_tile : index
+    %val = scf.if %isFirstTile -> i32 {
+      scf.yield %c1_i32 : i32
+    } else {
+      scf.yield %c2_i32 : i32
+    }
+    %splat_val = vector.broadcast %val : i32 to vector<[4]xi32>
+    vector.store %splat_val, %mem1[%i] : memref<?xi32>, vector<[4]xi32>
+  }
+
+  // Dump "mem1". The smallest SVL is 128-bits so each tile will be at least
+  // 4x4xi32.
+  //
+  // CHECK:      ( 1, 1, 1, 1
+  // CHECK-NEXT: ( 1, 1, 1, 1
+  // CHECK-NEXT: ( 1, 1, 1, 1
+  // CHECK-NEXT: ( 1, 1, 1, 1
+  // CHECK:      ( 2, 2, 2, 2
+  // CHECK-NEXT: ( 2, 2, 2, 2
+  // CHECK-NEXT: ( 2, 2, 2, 2
+  // CHECK-NEXT: ( 2, 2, 2, 2
+  scf.for %i = %c0 to %size_of_two_tiles step %svl_s {
+    %tileslice = vector.load %mem1[%i] : memref<?xi32>, vector<[4]xi32>
+
+    llvm.call @printOpen() : () -> ()
+    scf.for %i2 = %c0 to %svl_s step %c1_index {
+      %elem = vector.extractelement %tileslice[%i2 : index] : vector<[4]xi32>
+      %elem_i64 = llvm.zext %elem : i32 to i64
+      llvm.call @printI64(%elem_i64) : (i64) -> ()
+      %last_i = arith.subi %svl_s, %c1_index : index
+      %isNotLastIter = arith.cmpi ult, %i2, %last_i : index
+      scf.if %isNotLastIter {
+        llvm.call @printComma() : () -> ()
+      }
+    }
+    llvm.call @printClose() : () -> ()
+    llvm.call @printNewline() : () -> ()
+  }
+
+  // Load tile 1 from memory
+  %za0_s = vector.load %mem1[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
+
+  // Load tile 2 from memory
+  %za1_s = vector.load %mem1[%size_of_tile] : memref<?xi32>, vector<[4]x[4]xi32>
+
+  // Allocate new memory to store tiles to
+  %mem2 = memref.alloca(%size_of_two_tiles)  : memref<?xi32>
+
+  // Zero new memory
+  scf.for %i = %c0 to %size_of_two_tiles step %c1_index {
+    memref.store %c0_i32, %mem2[%i] : memref<?xi32>
+  }
+
+  // Stores tiles back to (new) memory in reverse order
+
+  // Store tile 2 to memory
+  vector.store %za1_s, %mem2[%c0] : memref<?xi32>, vector<[4]x[4]xi32>
+
+  // Store tile 1 to memory
+  vector.store %za0_s, %mem2[%size_of_tile] : memref<?xi32>, vector<[4]x[4]xi32>
+
+  // Dump "mem2" and check the tiles were stored in reverse order. The smallest
+  // SVL is 128-bits so the tiles will be at least 4x4xi32.
+  //
+  // CHECK:      TILE BEGIN
+  // CHECK-NEXT: ( 2, 2, 2, 2
+  // CHECK-NEXT: ( 2, 2, 2, 2
+  // CHECK-NEXT: ( 2, 2, 2, 2
+  // CHECK-NEXT: ( 2, 2, 2, 2
+  // CHECK:      TILE END
+  // CHECK-NEXT: TILE BEGIN
+  // CHECK-NEXT: ( 1, 1, 1, 1
+  // CHECK-NEXT: ( 1, 1, 1, 1
+  // CHECK-NEXT: ( 1, 1, 1, 1
+  // CHECK-NEXT: ( 1, 1, 1, 1
+  // CHECK:      TILE END
+  func.call @printTileBegin() : () -> ()
+  scf.for %i = %c0 to %size_of_two_tiles step %svl_s {
+    %av = vector.load %mem2[%i] : memref<?xi32>, vector<[4]xi32>
+
+    llvm.call @printOpen() : () -> ()
+    scf.for %i2 = %c0 to %svl_s step %c1_index {
+      %elem = vector.extractelement %av[%i2 : index] : vector<[4]xi32>
+      %elem_i64 = llvm.zext %elem : i32 to i64
+      llvm.call @printI64(%elem_i64) : (i64) -> ()
+      %last_i = arith.subi %svl_s, %c1_index : index
+      %isNotLastIter = arith.cmpi ult, %i2, %last_i : index
+      scf.if %isNotLastIter {
+        llvm.call @printComma() : () -> ()
+      }
+    }
+    llvm.call @printClose() : () -> ()
+    llvm.call @printNewline() : () -> ()
+
+    %tileSizeMinusStep = arith.subi %size_of_tile, %svl_s : index
+    %isNextTile = arith.cmpi eq, %i, %tileSizeMinusStep : index
+    scf.if %isNextTile {
+      func.call @printTileEnd() : () -> ()
+      func.call @printTileBegin() : () -> ()
+    }
+  }
+  func.call @printTileEnd() : () -> ()
+
+  return %c0_i32 : i32
+}
+
+llvm.mlir.global internal constant @str_tile_begin("TILE BEGIN\0A")
+llvm.mlir.global internal constant @str_tile_end("TILE END\0A")
