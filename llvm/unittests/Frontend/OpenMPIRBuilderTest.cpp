@@ -1126,23 +1126,22 @@ TEST_F(OpenMPIRBuilderTest, ParallelForwardAsPointers) {
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
 
   Type *I32Ty = Type::getInt32Ty(M->getContext());
-  Type *I32PtrTy = Type::getInt32PtrTy(M->getContext());
-  Type *StructTy = StructType::get(I32Ty, I32PtrTy);
-  Type *StructPtrTy = StructTy->getPointerTo();
+  Type *PtrTy = PointerType::get(M->getContext(), 0);
+  Type *StructTy = StructType::get(I32Ty, PtrTy);
   Type *VoidTy = Type::getVoidTy(M->getContext());
   FunctionCallee RetI32Func = M->getOrInsertFunction("ret_i32", I32Ty);
   FunctionCallee TakeI32Func =
       M->getOrInsertFunction("take_i32", VoidTy, I32Ty);
-  FunctionCallee RetI32PtrFunc = M->getOrInsertFunction("ret_i32ptr", I32PtrTy);
+  FunctionCallee RetI32PtrFunc = M->getOrInsertFunction("ret_i32ptr", PtrTy);
   FunctionCallee TakeI32PtrFunc =
-      M->getOrInsertFunction("take_i32ptr", VoidTy, I32PtrTy);
+      M->getOrInsertFunction("take_i32ptr", VoidTy, PtrTy);
   FunctionCallee RetStructFunc = M->getOrInsertFunction("ret_struct", StructTy);
   FunctionCallee TakeStructFunc =
       M->getOrInsertFunction("take_struct", VoidTy, StructTy);
   FunctionCallee RetStructPtrFunc =
-      M->getOrInsertFunction("ret_structptr", StructPtrTy);
+      M->getOrInsertFunction("ret_structptr", PtrTy);
   FunctionCallee TakeStructPtrFunc =
-      M->getOrInsertFunction("take_structPtr", VoidTy, StructPtrTy);
+      M->getOrInsertFunction("take_structPtr", VoidTy, PtrTy);
   Value *I32Val = Builder.CreateCall(RetI32Func);
   Value *I32PtrVal = Builder.CreateCall(RetI32PtrFunc);
   Value *StructVal = Builder.CreateCall(RetStructFunc);
@@ -5125,8 +5124,8 @@ TEST_F(OpenMPIRBuilderTest, TargetRegionDevice) {
   LoadInst *Value = nullptr;
   StoreInst *TargetStore = nullptr;
   llvm::SmallVector<llvm::Value *, 2> CapturedArgs = {
-      Constant::getNullValue(Type::getInt32PtrTy(Ctx)),
-      Constant::getNullValue(Type::getInt32PtrTy(Ctx))};
+      Constant::getNullValue(PointerType::get(Ctx, 0)),
+      Constant::getNullValue(PointerType::get(Ctx, 0))};
 
   auto BodyGenCB = [&](OpenMPIRBuilder::InsertPointTy AllocaIP,
                        OpenMPIRBuilder::InsertPointTy CodeGenIP)
@@ -5756,10 +5755,10 @@ TEST_F(OpenMPIRBuilderTest, EmitOffloadingArraysArguments) {
   OpenMPIRBuilder::TargetDataRTArgs RTArgs;
   OpenMPIRBuilder::TargetDataInfo Info(true, false);
 
-  auto VoidPtrTy = Type::getInt8PtrTy(Builder.getContext());
-  auto VoidPtrPtrTy = VoidPtrTy->getPointerTo(0);
+  auto VoidPtrTy = PointerType::getUnqual(Builder.getContext());
+  auto VoidPtrPtrTy = PointerType::getUnqual(Builder.getContext());
   auto Int64Ty = Type::getInt64Ty(Builder.getContext());
-  auto Int64PtrTy = Type::getInt64PtrTy(Builder.getContext());
+  auto Int64PtrTy = PointerType::getUnqual(Builder.getContext());
   auto Array4VoidPtrTy = ArrayType::get(VoidPtrTy, 4);
   auto Array4Int64PtrTy = ArrayType::get(Int64Ty, 4);
 
