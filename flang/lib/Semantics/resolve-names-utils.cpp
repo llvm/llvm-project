@@ -917,6 +917,7 @@ void MapSubprogramToNewSymbols(const Symbol &oldSymbol, Symbol &newSymbol,
     if (!dummyArg) {
       newDetails.add_alternateReturn();
     } else if (Symbol *copy{newScope.CopySymbol(*dummyArg)}) {
+      copy->set(Symbol::Flag::Implicit, false);
       newDetails.add_dummyArg(*copy);
       mappings->symbolMap[dummyArg] = copy;
     }
