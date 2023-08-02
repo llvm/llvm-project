@@ -76,7 +76,7 @@ private:
 using ReservedMemoryT = ReservedMemoryDefault;
 using MemMapT = ReservedMemoryT::MemMapT;
 #elif SCUDO_FUCHSIA
-using ReservedMemoryT = ReservedMemoryFuchsia;
+using ReservedMemoryT = ReservedMemoryDefault;
 using MemMapT = ReservedMemoryT::MemMapT;
 #elif SCUDO_TRUSTY
 using ReservedMemoryT = ReservedMemoryDefault;
