@@ -66,7 +66,7 @@ void yo() {
 // CHECK: cir.func @_Z2yov()
 // CHECK:   %0 = cir.alloca !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>, ["ext"] {alignment = 8 : i64}
 // CHECK:   %1 = cir.alloca !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>, ["ext2", init] {alignment = 8 : i64}
-// CHECK:   %2 = cir.const(#cir.const_struct<{#cir.int<1000070000> : !u32i,#cir.null : !cir.ptr<!void>,#cir.int<0> : !u64i}> : !ty_22struct2EYo22) : !ty_22struct2EYo22
+// CHECK:   %2 = cir.const(#cir.const_struct<{#cir.int<1000070000> : !u32i, #cir.null : !cir.ptr<!void>, #cir.int<0> : !u64i}> : !ty_22struct2EYo22) : !ty_22struct2EYo22
 // CHECK:   cir.store %2, %0 : !ty_22struct2EYo22, cir.ptr <!ty_22struct2EYo22>
 // CHECK:   %3 = "cir.struct_element_addr"(%1) <{member_index = 0 : index, member_name = "type"}> : (!cir.ptr<!ty_22struct2EYo22>) -> !cir.ptr<!u32i>
 // CHECK:   %4 = cir.const(#cir.int<1000066001> : !u32i) : !u32i

@@ -149,7 +149,7 @@ public:
 
   mlir::cir::TypeInfoAttr getTypeInfo(mlir::ArrayAttr fieldsAttr) {
     auto anonStruct = getAnonConstStruct(fieldsAttr);
-    return mlir::cir::TypeInfoAttr::get(anonStruct.getType(), anonStruct);
+    return mlir::cir::TypeInfoAttr::get(anonStruct.getType(), fieldsAttr);
   }
 
   mlir::TypedAttr getZeroInitAttr(mlir::Type ty) {

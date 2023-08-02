@@ -2,11 +2,15 @@
 
 !u8i = !cir.int<u, 8>
 !u16i = !cir.int<u, 16>
+!s32i = !cir.int<s, 32>
 !u32i = !cir.int<u, 32>
 
 !ty_2222 = !cir.struct<"", !cir.array<!cir.ptr<!u8i> x 5>>
 !ty_22221 = !cir.struct<"", !cir.ptr<!u8i>, !cir.ptr<!u8i>, !cir.ptr<!u8i>>
 !ty_22class2EA22 = !cir.struct<"class.A", incomplete, #cir.recdecl.ast>
+// CHECK: !ty_22i22 = !cir.struct<"i", incomplete>
+// CHECK: !ty_22S22 = !cir.struct<"S", !u8i, !u16i, !u32i>
+!ty_22struct2ES22 = !cir.struct<"struct.S", !s32i, !s32i>
 
 module  {
   cir.func @structs() {
@@ -14,12 +18,14 @@ module  {
     %1 = cir.alloca !cir.ptr<!cir.struct<"i", incomplete>>, cir.ptr <!cir.ptr<!cir.struct<"i", incomplete>>>, ["i", init]
     cir.return
   }
+
+// CHECK: cir.func @structs() {
+// CHECK:     %0 = cir.alloca !cir.ptr<!ty_22S22>, cir.ptr <!cir.ptr<!ty_22S22>>, ["s", init]
+// CHECK:     %1 = cir.alloca !cir.ptr<!ty_22i22>, cir.ptr <!cir.ptr<!ty_22i22>>, ["i", init]
+
+  cir.func @shouldSuccessfullyParseConstStructAttrs() {
+    %0 = cir.const(#cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22struct2ES22) : !ty_22struct2ES22
+    // CHECK: cir.const(#cir.const_struct<{#cir.int<1> : !s32i, #cir.int<2> : !s32i}> : !ty_22struct2ES22) : !ty_22struct2ES22
+    cir.return
+  }
 }
-
-//      CHECK: !ty_22i22 = !cir.struct<"i", incomplete>
-//      CHECK: !ty_22S22 = !cir.struct<"S", !u8i, !u16i, !u32i>
-
-// CHECK-NEXT: module {
-// CHECK-NEXT: cir.func @structs() {
-// CHECK-NEXT:     %0 = cir.alloca !cir.ptr<!ty_22S22>, cir.ptr <!cir.ptr<!ty_22S22>>, ["s", init]
-// CHECK-NEXT:     %1 = cir.alloca !cir.ptr<!ty_22i22>, cir.ptr <!cir.ptr<!ty_22i22>>, ["i", init]
