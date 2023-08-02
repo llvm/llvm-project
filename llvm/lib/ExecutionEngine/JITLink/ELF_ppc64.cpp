@@ -192,6 +192,9 @@ private:
     case ELF::R_PPC64_ADDR64:
       Kind = ppc64::Pointer64;
       break;
+    case ELF::R_PPC64_ADDR32:
+      Kind = ppc64::Pointer32;
+      break;
     case ELF::R_PPC64_TOC16_HA:
       Kind = ppc64::TOCDelta16HA;
       break;
