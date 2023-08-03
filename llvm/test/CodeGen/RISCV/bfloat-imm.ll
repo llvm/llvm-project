@@ -29,8 +29,7 @@ define bfloat @bfloat_imm_op(bfloat %a) nounwind {
 define bfloat @bfloat_zero() nounwind {
 ; CHECK-LABEL: bfloat_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI2_0)
-; CHECK-NEXT:    flh fa0, %lo(.LCPI2_0)(a0)
+; CHECK-NEXT:    fmv.h.x fa0, zero
 ; CHECK-NEXT:    ret
   ret bfloat 0.0
 }
@@ -38,8 +37,8 @@ define bfloat @bfloat_zero() nounwind {
 define bfloat @bfloat_negative_zero() nounwind {
 ; CHECK-LABEL: bfloat_negative_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    lui a0, %hi(.LCPI3_0)
-; CHECK-NEXT:    flh fa0, %lo(.LCPI3_0)(a0)
+; CHECK-NEXT:    lui a0, 1048568
+; CHECK-NEXT:    fmv.h.x fa0, a0
 ; CHECK-NEXT:    ret
   ret bfloat -0.0
 }
