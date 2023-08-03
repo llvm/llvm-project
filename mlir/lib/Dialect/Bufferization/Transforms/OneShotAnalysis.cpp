@@ -542,6 +542,22 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
         }
       }
 
+      // Two equivalent operands of the same op are not conflicting if the op
+      // bufferizes to element-wise access. I.e., all loads at a position happen
+      // before all stores to the same position.
+      if (conflictingWritingOp == readingOp &&
+          state.areEquivalentBufferizedValues(uRead->get(),
+                                              uConflictingWrite->get())) {
+        if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
+          if (bufferizableOp.bufferizesToElementwiseAccess(state)) {
+            LLVM_DEBUG(
+                llvm::dbgs()
+                << "  no conflict: op bufferizes to element-wise access\n");
+            continue;
+          }
+        }
+      }
+
       // No conflict if the op interface says so.
       if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
         if (bufferizableOp.isNotConflicting(uRead, uConflictingWrite, state)) {
