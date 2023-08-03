@@ -72,9 +72,10 @@ private:
   llvm::DILexicalBlockFile *translateImpl(DILexicalBlockFileAttr attr);
   llvm::DILocalScope *translateImpl(DILocalScopeAttr attr);
   llvm::DILocalVariable *translateImpl(DILocalVariableAttr attr);
+  llvm::DIModule *translateImpl(DIModuleAttr attr);
+  llvm::DINamespace *translateImpl(DINamespaceAttr attr);
   llvm::DIScope *translateImpl(DIScopeAttr attr);
   llvm::DISubprogram *translateImpl(DISubprogramAttr attr);
-  llvm::DINamespace *translateImpl(DINamespaceAttr attr);
   llvm::DISubrange *translateImpl(DISubrangeAttr attr);
   llvm::DISubroutineType *translateImpl(DISubroutineTypeAttr attr);
   llvm::DIType *translateImpl(DITypeAttr attr);
