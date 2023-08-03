@@ -2317,7 +2317,10 @@ multiclass sve_fp_3op_p_zds_a<bits<2> opc, string asm, string Ps,
            SVEPseudo2Instr<Ps # _D, 1>, SVEInstr2Rev<NAME # _D, revname # _D, isReverseInstr>;
 
   def : SVE_4_Op_Pat<nxv8f16, op, nxv8i1, nxv8f16, nxv8f16, nxv8f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_4_Op_Pat<nxv4f16, op, nxv4i1, nxv4f16, nxv4f16, nxv4f16, !cast<Instruction>(NAME # _H)>;
+  def : SVE_4_Op_Pat<nxv2f16, op, nxv2i1, nxv2f16, nxv2f16, nxv2f16, !cast<Instruction>(NAME # _H)>;
   def : SVE_4_Op_Pat<nxv4f32, op, nxv4i1, nxv4f32, nxv4f32, nxv4f32, !cast<Instruction>(NAME # _S)>;
+  def : SVE_4_Op_Pat<nxv2f32, op, nxv2i1, nxv2f32, nxv2f32, nxv2f32, !cast<Instruction>(NAME # _S)>;
   def : SVE_4_Op_Pat<nxv2f64, op, nxv2i1, nxv2f64, nxv2f64, nxv2f64, !cast<Instruction>(NAME # _D)>;
 }
 
