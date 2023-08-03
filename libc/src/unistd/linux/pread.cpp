@@ -12,13 +12,21 @@
 #include "src/__support/common.h"
 
 #include "src/errno/libc_errno.h"
+#include <stdint.h>      // For uint64_t.
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(ssize_t, pread,
                    (int fd, void *buf, size_t count, off_t offset)) {
+#ifdef LIBC_TARGET_ARCH_IS_RISCV32
+  static_assert(sizeof(off_t) == 8);
+  long ret =
+      __llvm_libc::syscall_impl(SYS_pread64, fd, buf, count, (long)offset,
+                                (long)(((uint64_t)(offset)) >> 32));
+#else
   long ret = __llvm_libc::syscall_impl(SYS_pread64, fd, buf, count, offset);
+#endif
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
