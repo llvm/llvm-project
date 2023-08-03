@@ -288,9 +288,9 @@ public:
     case RecurKind::UMax:
     case RecurKind::FMin:
     case RecurKind::FMax:
-    case RecurKind::SelectICmp:
-    case RecurKind::SelectFCmp:
     case RecurKind::FMulAdd:
+    case RecurKind::IAnyOf:
+    case RecurKind::FAnyOf:
       return true;
     default:
       return false;

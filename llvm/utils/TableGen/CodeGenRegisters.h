@@ -353,8 +353,11 @@ namespace llvm {
     // created by TableGen.
     Record *getDef() const { return TheDef; }
 
+    std::string getNamespaceQualification() const;
     const std::string &getName() const { return Name; }
     std::string getQualifiedName() const;
+    std::string getIdName() const;
+    std::string getQualifiedIdName() const;
     ArrayRef<ValueTypeByHwMode> getValueTypes() const { return VTs; }
     unsigned getNumValueTypes() const { return VTs.size(); }
     bool hasType(const ValueTypeByHwMode &VT) const;

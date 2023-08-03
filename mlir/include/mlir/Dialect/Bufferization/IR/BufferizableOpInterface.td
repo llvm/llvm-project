@@ -93,6 +93,56 @@ def BufferizableOpInterface : OpInterface<"BufferizableOpInterface"> {
       >,
       InterfaceMethod<
         /*desc=*/[{
+          Return `true` if the operation bufferizes to IR that performs only
+          element-wise accesses on all tensor operands. (All operands must have
+          the same shape.) The `bufferize` method must be implemented in such a
+          way that it is free of loop-carried dependences. I.e., all loads at a
+          position appear before all stores at the same position.
+
+          Example: Consider a hypothetical op element-wise op, where the "ins"
+          bufferize to a memory read and the "outs" bufferize to a memory write.
+          ```
+          test.element_wise ins(%0), outs(%1) : tensor<3xf32>
+          ```
+
+          The following is a valid access pattern:
+          ```
+          load(%0[1])
+          store(%1[1])
+          load(%0[2])
+          store(%1[2])
+          load(%0[0])
+          store(%1[0])
+          ```
+
+          The following would be an invalid (not element-wise) access pattern:
+          ```
+          load(%0[1])
+          store(%0[1])
+          load(%0[1])
+          ...
+          ```
+
+          Element-wise ops can sometimes bufferize more efficiently: a RaW
+          conflict between two operands of the same op can be avoided if it is
+          guaranteed that an original element value is no longer needed after
+          writing a computed element value at the same location. E.g., such an
+          optimization is possible in the above example if %0 and %1 are
+          equivalent tensors. (It is not possible, if %0 and %1 are merely
+          aliasing. It is not necessary if %0 and %1 are not aliasing at all,
+          because there would be no conflict anyway.)
+        }],
+        /*retType=*/"bool",
+        /*methodName=*/"bufferizesToElementwiseAccess",
+        /*args=*/(ins "const ::mlir::bufferization::AnalysisState &":$state),
+        /*methodBody=*/"",
+        /*defaultImplementation=*/[{
+          // It is always safe to assume that the op is not element-wise.
+          return false;
+        }]
+      >,
+      InterfaceMethod<
+        /*desc=*/[{
           Return `true` if the given OpResult bufferizes to a memory write.
           This is the same property as `bufferizesToMemoryWrite`, but from The
           perspective of OpResults.

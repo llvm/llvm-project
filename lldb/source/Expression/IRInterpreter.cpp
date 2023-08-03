@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Expression/IRInterpreter.h"
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/ValueObject.h"
@@ -464,6 +465,8 @@ static const char *unsupported_operand_error =
     "Interpreter doesn't handle one of the expression's operands";
 static const char *interpreter_internal_error =
     "Interpreter encountered an internal error";
+static const char *interrupt_error =
+    "Interrupted while interpreting expression";
 static const char *bad_value_error =
     "Interpreter couldn't resolve a value during execution";
 static const char *memory_allocation_error =
@@ -726,6 +729,9 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
 
   frame.Jump(&function.front());
 
+  lldb_private::Process *process = exe_ctx.GetProcessPtr();
+  lldb_private::Target *target = exe_ctx.GetTargetPtr();
+
   using clock = std::chrono::steady_clock;
 
   // Compute the time at which the timeout has been exceeded.
@@ -739,6 +745,16 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       error.SetErrorToGenericError();
       error.SetErrorString(timeout_error);
       return false;
+    }
+
+    // If we have access to the debugger we can honor an interrupt request.
+    if (target) {
+      if (INTERRUPT_REQUESTED(target->GetDebugger(),
+                              "Interrupted in IR interpreting.")) {
+        error.SetErrorToGenericError();
+        error.SetErrorString(interrupt_error);
+        return false;
+      }
     }
 
     const Instruction *inst = &*frame.m_ii;
@@ -1432,7 +1448,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       }
 
       // Make sure we have a valid process
-      if (!exe_ctx.GetProcessPtr()) {
+      if (!process) {
         error.SetErrorToGenericError();
         error.SetErrorString("unable to get the process");
         return false;
@@ -1538,11 +1554,11 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      exe_ctx.GetProcessPtr()->SetRunningUserExpression(true);
+      process->SetRunningUserExpression(true);
 
       // Execute the actual function call thread plan
-      lldb::ExpressionResults res = exe_ctx.GetProcessRef().RunThreadPlan(
-          exe_ctx, call_plan_sp, options, diagnostics);
+      lldb::ExpressionResults res =
+          process->RunThreadPlan(exe_ctx, call_plan_sp, options, diagnostics);
 
       // Check that the thread plan completed successfully
       if (res != lldb::ExpressionResults::eExpressionCompleted) {
@@ -1551,7 +1567,7 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
         return false;
       }
 
-      exe_ctx.GetProcessPtr()->SetRunningUserExpression(false);
+      process->SetRunningUserExpression(false);
 
       // Void return type
       if (returnType->isVoidTy()) {

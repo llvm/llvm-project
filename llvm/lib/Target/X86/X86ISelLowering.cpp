@@ -9150,13 +9150,29 @@ static SDValue LowerBuildVectorv16i8(SDValue Op, const APInt &NonZeroMask,
   SDValue V;
 
   // Pre-SSE4.1 - merge byte pairs and insert with PINSRW.
-  for (unsigned i = 0; i < 16; i += 2) {
+  // If both the lowest 16-bits are non-zero, then convert to MOVD.
+  if (!NonZeroMask.extractBits(2, 0).isZero() &&
+      !NonZeroMask.extractBits(2, 2).isZero()) {
+    for (unsigned I = 0; I != 4; ++I) {
+      if (!NonZeroMask[I])
+        continue;
+      SDValue Elt = DAG.getZExtOrTrunc(Op.getOperand(I), dl, MVT::i32);
+      if (I != 0)
+        Elt = DAG.getNode(ISD::SHL, dl, MVT::i32, Elt,
+                          DAG.getConstant(I * 8, dl, MVT::i8));
+      V = V ? DAG.getNode(ISD::OR, dl, MVT::i32, V, Elt) : Elt;
+    }
+    assert(V && "Failed to fold v16i8 vector to zero");
+    V = DAG.getNode(ISD::SCALAR_TO_VECTOR, dl, MVT::v4i32, V);
+    V = DAG.getNode(X86ISD::VZEXT_MOVL, dl, MVT::v4i32, V);
+    V = DAG.getBitcast(MVT::v8i16, V);
+  }
+  for (unsigned i = V ? 4 : 0; i < 16; i += 2) {
     bool ThisIsNonZero = NonZeroMask[i];
     bool NextIsNonZero = NonZeroMask[i + 1];
     if (!ThisIsNonZero && !NextIsNonZero)
       continue;
 
-    // FIXME: Investigate combining the first 4 bytes as a i32 instead.
     SDValue Elt;
     if (ThisIsNonZero) {
       if (NumZero || NextIsNonZero)
@@ -20476,6 +20492,19 @@ static SDValue ExtractBitFromMaskVector(SDValue Op, SelectionDAG &DAG,
     unsigned NumElts = VecVT.getVectorNumElements();
     // Extending v8i1/v16i1 to 512-bit get better performance on KNL
     // than extending to 128/256bit.
+    if (NumElts == 1) {
+      if (Subtarget.hasDQI()) {
+        Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v8i1,
+                          DAG.getUNDEF(MVT::v8i1), Vec,
+                          DAG.getIntPtrConstant(0, dl));
+        return DAG.getBitcast(MVT::i8, Vec);
+      }
+      Vec = DAG.getNode(ISD::INSERT_SUBVECTOR, dl, MVT::v16i1,
+                        DAG.getUNDEF(MVT::v16i1), Vec,
+                        DAG.getIntPtrConstant(0, dl));
+      return DAG.getNode(ISD::TRUNCATE, dl, MVT::i8,
+                         DAG.getBitcast(MVT::i16, Vec));
+    }
     MVT ExtEltVT = (NumElts <= 8) ? MVT::getIntegerVT(128 / NumElts) : MVT::i8;
     MVT ExtVecVT = MVT::getVectorVT(ExtEltVT, NumElts);
     SDValue Ext = DAG.getNode(ISD::SIGN_EXTEND, dl, ExtVecVT, Vec);
@@ -51103,7 +51132,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   // Attempt to combine a scalar bitmask AND with an extracted shuffle.
   if ((VT.getScalarSizeInBits() % 8) == 0 &&
       N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-      isa<ConstantSDNode>(N0.getOperand(1))) {
+      isa<ConstantSDNode>(N0.getOperand(1)) && N0->hasOneUse()) {
     SDValue BitMask = N1;
     SDValue SrcVec = N0.getOperand(0);
     EVT SrcVecVT = SrcVec.getValueType();

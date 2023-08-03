@@ -330,9 +330,10 @@ void RISCVInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     if (STI.hasStdExtZfh()) {
       Opc = RISCV::FSGNJ_H;
     } else {
-      assert(STI.hasStdExtF() && STI.hasStdExtZfhmin() &&
+      assert(STI.hasStdExtF() &&
+             (STI.hasStdExtZfhmin() || STI.hasStdExtZfbfmin()) &&
              "Unexpected extensions");
-      // Zfhmin subset doesn't have FSGNJ_H, replaces FSGNJ_H with FSGNJ_S.
+      // Zfhmin/Zfbfmin doesn't have FSGNJ_H, replace FSGNJ_H with FSGNJ_S.
       DstReg = TRI->getMatchingSuperReg(DstReg, RISCV::sub_16,
                                         &RISCV::FPR32RegClass);
       SrcReg = TRI->getMatchingSuperReg(SrcReg, RISCV::sub_16,

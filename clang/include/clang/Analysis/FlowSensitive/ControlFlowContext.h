@@ -48,7 +48,7 @@ public:
 
   /// Returns the `Decl` containing the statement used to construct the CFG, if
   /// available.
-  const Decl *getDecl() const { return ContainingDecl; }
+  const Decl &getDecl() const { return ContainingDecl; }
 
   /// Returns the CFG that is stored in this context.
   const CFG &getCFG() const { return *Cfg; }
@@ -64,9 +64,7 @@ public:
   }
 
 private:
-  // FIXME: Once the deprecated `build` method is removed, mark `D` as "must not
-  // be null" and add an assertion.
-  ControlFlowContext(const Decl *D, std::unique_ptr<CFG> Cfg,
+  ControlFlowContext(const Decl &D, std::unique_ptr<CFG> Cfg,
                      llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock,
                      llvm::BitVector BlockReachable)
       : ContainingDecl(D), Cfg(std::move(Cfg)),
@@ -74,7 +72,7 @@ private:
         BlockReachable(std::move(BlockReachable)) {}
 
   /// The `Decl` containing the statement used to construct the CFG.
-  const Decl *ContainingDecl;
+  const Decl &ContainingDecl;
   std::unique_ptr<CFG> Cfg;
   llvm::DenseMap<const Stmt *, const CFGBlock *> StmtToBlock;
   llvm::BitVector BlockReachable;

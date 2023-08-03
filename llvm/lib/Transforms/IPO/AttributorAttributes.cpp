@@ -3439,6 +3439,18 @@ template <typename ToTy> struct ReachabilityQueryInfo {
   /// and remember if it worked:
   Reachable Result = Reachable::No;
 
+  /// Precomputed hash for this RQI.
+  unsigned Hash = 0;
+
+  unsigned computeHashValue() const {
+    assert(Hash == 0 && "Computed hash twice!");
+    using InstSetDMI = DenseMapInfo<const AA::InstExclusionSetTy *>;
+    using PairDMI = DenseMapInfo<std::pair<const Instruction *, const ToTy *>>;
+    return const_cast<ReachabilityQueryInfo<ToTy> *>(this)->Hash =
+               detail::combineHashValue(PairDMI ::getHashValue({From, To}),
+                                        InstSetDMI::getHashValue(ExclusionSet));
+  }
+
   ReachabilityQueryInfo(const Instruction *From, const ToTy *To)
       : From(From), To(To) {}
 
@@ -3472,9 +3484,7 @@ template <typename ToTy> struct DenseMapInfo<ReachabilityQueryInfo<ToTy> *> {
     return &TombstoneKey;
   }
   static unsigned getHashValue(const ReachabilityQueryInfo<ToTy> *RQI) {
-    unsigned H = PairDMI ::getHashValue({RQI->From, RQI->To});
-    H += InstSetDMI::getHashValue(RQI->ExclusionSet);
-    return H;
+    return RQI->Hash ? RQI->Hash : RQI->computeHashValue();
   }
   static bool isEqual(const ReachabilityQueryInfo<ToTy> *LHS,
                       const ReachabilityQueryInfo<ToTy> *RHS) {
@@ -3614,7 +3624,10 @@ struct AAIntraFnReachabilityFunction final
     : public CachedReachabilityAA<AAIntraFnReachability, Instruction> {
   using Base = CachedReachabilityAA<AAIntraFnReachability, Instruction>;
   AAIntraFnReachabilityFunction(const IRPosition &IRP, Attributor &A)
-      : Base(IRP, A) {}
+      : Base(IRP, A) {
+    DT = A.getInfoCache().getAnalysisResultForFunction<DominatorTreeAnalysis>(
+        *IRP.getAssociatedFunction());
+  }
 
   bool isAssumedReachable(
       Attributor &A, const Instruction &From, const Instruction &To,
@@ -3635,12 +3648,19 @@ struct AAIntraFnReachabilityFunction final
     // of them changed.
     auto *LivenessAA =
         A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
-    if (LivenessAA && llvm::all_of(DeadEdges, [&](const auto &DeadEdge) {
-          return LivenessAA->isEdgeDead(DeadEdge.first, DeadEdge.second);
+    if (LivenessAA &&
+        llvm::all_of(DeadEdges,
+                     [&](const auto &DeadEdge) {
+                       return LivenessAA->isEdgeDead(DeadEdge.first,
+                                                     DeadEdge.second);
+                     }) &&
+        llvm::all_of(DeadBlocks, [&](const BasicBlock *BB) {
+          return LivenessAA->isAssumedDead(BB);
         })) {
       return ChangeStatus::UNCHANGED;
     }
     DeadEdges.clear();
+    DeadBlocks.clear();
     return Base::updateImpl(A);
   }
 
@@ -3677,24 +3697,31 @@ struct AAIntraFnReachabilityFunction final
     if (!WillReachInBlock(ToBB->front(), *RQI.To, RQI.ExclusionSet))
       return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet);
 
+    const Function *Fn = FromBB->getParent();
     SmallPtrSet<const BasicBlock *, 16> ExclusionBlocks;
     if (RQI.ExclusionSet)
       for (auto *I : *RQI.ExclusionSet)
-        ExclusionBlocks.insert(I->getParent());
+        if (I->getFunction() == Fn)
+          ExclusionBlocks.insert(I->getParent());
 
     // Check if we make it out of the FromBB block at all.
     if (ExclusionBlocks.count(FromBB) &&
         !WillReachInBlock(*RQI.From, *FromBB->getTerminator(),
                           RQI.ExclusionSet))
+      return rememberResult(A, RQITy::Reachable::No, RQI, true);
+
+    auto *LivenessAA =
+        A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
+    if (LivenessAA && LivenessAA->isAssumedDead(ToBB)) {
+      DeadBlocks.insert(ToBB);
       return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet);
+    }
 
     SmallPtrSet<const BasicBlock *, 16> Visited;
     SmallVector<const BasicBlock *, 16> Worklist;
     Worklist.push_back(FromBB);
 
     DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> LocalDeadEdges;
-    auto *LivenessAA =
-        A.getAAFor<AAIsDead>(*this, getIRPosition(), DepClassTy::OPTIONAL);
     while (!Worklist.empty()) {
       const BasicBlock *BB = Worklist.pop_back_val();
       if (!Visited.insert(BB).second)
@@ -3708,6 +3735,10 @@ struct AAIntraFnReachabilityFunction final
         if (SuccBB == ToBB)
           return rememberResult(A, RQITy::Reachable::Yes, RQI,
                                 UsedExclusionSet);
+        if (DT && ExclusionBlocks.empty() && DT->dominates(BB, ToBB))
+          return rememberResult(A, RQITy::Reachable::Yes, RQI,
+                                UsedExclusionSet);
+
         if (ExclusionBlocks.count(SuccBB)) {
           UsedExclusionSet = true;
           continue;
@@ -3724,9 +3755,16 @@ struct AAIntraFnReachabilityFunction final
   void trackStatistics() const override {}
 
 private:
+  // Set of assumed dead blocks we used in the last query. If any changes we
+  // update the state.
+  DenseSet<const BasicBlock *> DeadBlocks;
+
   // Set of assumed dead edges we used in the last query. If any changes we
   // update the state.
   DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> DeadEdges;
+
+  /// The dominator tree of the function to short-circuit reasoning.
+  const DominatorTree *DT = nullptr;
 };
 } // namespace
 
@@ -10575,6 +10613,12 @@ struct AAInterFnReachabilityFunction
   bool isReachableImpl(Attributor &A, RQITy &RQI,
                        SmallPtrSet<const Function *, 16> *Visited) {
 
+    const Instruction *EntryI =
+        &RQI.From->getFunction()->getEntryBlock().front();
+    if (EntryI != RQI.From &&
+        !instructionCanReach(A, *EntryI, *RQI.To, nullptr, nullptr))
+      return rememberResult(A, RQITy::Reachable::No, RQI, false);
+
     SmallPtrSet<const Function *, 16> LocalVisited;
     if (!Visited)
       Visited = &LocalVisited;
@@ -10600,10 +10644,15 @@ struct AAInterFnReachabilityFunction
           return false;
         }
 
-        const AAInterFnReachability *InterFnReachability = this;
-        if (Fn != getAnchorScope())
-          InterFnReachability = A.getAAFor<AAInterFnReachability>(
-              *this, IRPosition::function(*Fn), DepClassTy::OPTIONAL);
+        if (Fn == getAnchorScope()) {
+          if (EntryI == RQI.From)
+            continue;
+          return false;
+        }
+
+        const AAInterFnReachability *InterFnReachability =
+            A.getAAFor<AAInterFnReachability>(*this, IRPosition::function(*Fn),
+                                              DepClassTy::OPTIONAL);
 
         const Instruction &FnFirstInst = Fn->getEntryBlock().front();
         if (!InterFnReachability ||

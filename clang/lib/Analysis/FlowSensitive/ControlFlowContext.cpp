@@ -105,7 +105,7 @@ ControlFlowContext::build(const Decl &D, Stmt &S, ASTContext &C) {
 
   llvm::BitVector BlockReachable = findReachableBlocks(*Cfg);
 
-  return ControlFlowContext(&D, std::move(Cfg), std::move(StmtToBlock),
+  return ControlFlowContext(D, std::move(Cfg), std::move(StmtToBlock),
                             std::move(BlockReachable));
 }
 
