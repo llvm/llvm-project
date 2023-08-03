@@ -1874,6 +1874,12 @@ static bool findBiarchMultilibs(const Driver &D,
                         .flag("-m64", /*Disallow=*/true)
                         .flag("-mx32")
                         .makeMultilib();
+  Multilib Alt32sparc = MultilibBuilder()
+                            .gccSuffix("/sparcv8plus")
+                            .includeSuffix("/sparcv8plus")
+                            .flag("-m32")
+                            .flag("-m64", /*Disallow=*/true)
+                            .makeMultilib();
 
   // GCC toolchain for IAMCU doesn't have crtbegin.o, so look for libgcc.a.
   FilterNonExistent NonExistent(
@@ -1885,10 +1891,14 @@ static bool findBiarchMultilibs(const Driver &D,
   const bool IsX32 = TargetTriple.isX32();
   if (TargetTriple.isArch32Bit() && !NonExistent(Alt32))
     Want = WANT64;
+  if (TargetTriple.isArch32Bit() && !NonExistent(Alt32sparc))
+    Want = WANT64;
   else if (TargetTriple.isArch64Bit() && IsX32 && !NonExistent(Altx32))
     Want = WANT64;
   else if (TargetTriple.isArch64Bit() && !IsX32 && !NonExistent(Alt64))
     Want = WANT32;
+  else if (TargetTriple.isArch64Bit() && !NonExistent(Alt32sparc))
+    Want = WANT64;
   else {
     if (TargetTriple.isArch32Bit())
       Want = NeedsBiarchSuffix ? WANT64 : WANT32;
@@ -1919,6 +1929,7 @@ static bool findBiarchMultilibs(const Driver &D,
   Result.Multilibs.push_back(Alt64);
   Result.Multilibs.push_back(Alt32);
   Result.Multilibs.push_back(Altx32);
+  Result.Multilibs.push_back(Alt32sparc);
 
   Result.Multilibs.FilterOut(NonExistent);
 
@@ -1932,7 +1943,8 @@ static bool findBiarchMultilibs(const Driver &D,
 
   if (Result.SelectedMultilibs.back() == Alt64 ||
       Result.SelectedMultilibs.back() == Alt32 ||
-      Result.SelectedMultilibs.back() == Altx32)
+      Result.SelectedMultilibs.back() == Altx32 ||
+      Result.SelectedMultilibs.back() == Alt32sparc)
     Result.BiarchSibling = Default;
 
   return true;
