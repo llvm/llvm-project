@@ -1244,8 +1244,12 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
       NeedConverted = true;
 
     uint64_t CurRangeBase = 0;
-    if (std::optional<uint64_t> DWOId = Unit.getDWOId()) {
-      CurRangeBase = getDwoRangesBase(*DWOId);
+    if (Unit.isDWOUnit()) {
+      if (std::optional<uint64_t> DWOId = Unit.getDWOId())
+        CurRangeBase = getDwoRangesBase(*DWOId);
+      else
+        errs() << "BOLT-WARNING: [internal-dwarf-error]: DWOId is not found "
+                  "for DWO Unit.";
     }
     if (NeedConverted || RangesAttrInfo.getForm() == dwarf::DW_FORM_rnglistx)
       DIEBldr.replaceValue(&Die, dwarf::DW_AT_ranges, dwarf::DW_FORM_rnglistx,

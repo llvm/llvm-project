@@ -1,0 +1,51 @@
+; RUN: rm -rf %t
+; RUN: mkdir %t
+; RUN: cd %t
+;; RUN: llvm-mc -dwarf-version=5 -filetype=obj -triple x86_64-unknown-linux %p/Inputs/dwarf5-df-input-lowpc-ranges-main.s \
+; RUN: -split-dwarf-file=main.dwo -o main.o
+; RUN: %clang %cflags -gdwarf-4 -gsplit-dwarf=split main.o -o main.exe
+; RUN: llvm-bolt main.exe -o main.exe.bolt --update-debug-sections
+; RUN: llvm-dwarfdump --show-form --verbose --debug-rnglists main.exe.bolt &> %t/foo.txt
+; RUN: llvm-dwarfdump --show-form --verbose --debug-addr main.exe.bolt >> %t/foo.txt
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.exe.bolt >> %t/foo.txt
+; RUN: cat %t/foo.txt | FileCheck -check-prefix=BOLT %s
+; RUN: llvm-dwarfdump --show-form --verbose --debug-info main.dwo.dwo &> %t/mainddwodwo.txt
+; RUN: cat %t/mainddwodwo.txt | FileCheck -check-prefix=BOLT-DWO-MAIN %s
+
+; Tests BOLT handles correctly Skeleton CU which has DW_AT_low_pc/DW_AT_ranges as input.
+
+; BOLT: Addrs: [
+; BOLT-NEXT: 0x[[#%.16x,ADDR1:]]
+; BOLT-NEXT: 0x[[#%.16x,ADDR2:]]
+; BOLT-NEXT: 0x[[#%.16x,ADDR3:]]
+; BOLT-NEXT: 0x[[#%.16x,ADDR4:]]
+; BOLT-NEXT: 0x[[#%.16x,ADDR5:]]
+
+
+; BOLT: DW_TAG_skeleton_unit
+; BOLT: DW_AT_dwo_name [DW_FORM_strx1]  (indexed (00000001) string = "main.dwo.dwo")
+; BOLT-NEXT: DW_AT_low_pc [DW_FORM_addr] (0x0000000000000000)
+; BOLT-NEXT: DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000010
+; BOLT-NEXT: [0x[[#ADDR1]], 0x[[#ADDR1 + 0x16]])
+; BOLT-NEXT: [0x[[#ADDR1 + 0x16]], 0x[[#ADDR1 + 0x24]])
+; BOLT-NEXT: [0x[[#ADDR1 + 0x24]], 0x[[#ADDR1 + 0x29]])
+; BOLT-NEXT: [0x[[#ADDR1 + 0x30]], 0x[[#ADDR1 + 0x46]])
+; BOLT-NEXT: [0x[[#ADDR1 + 0x50]], 0x[[#ADDR1 + 0x77]])
+; BOLT-NEXT: [0x[[#ADDR1 + 0x77]], 0x[[#ADDR1 + 0x85]])
+; BOLT-NEXT: [0x[[#ADDR1 + 0x85]], 0x[[#ADDR1 + 0x9f]])
+; BOLT-NEXT: DW_AT_addr_base [DW_FORM_sec_offset]  (0x00000008)
+; BOLT-NEXT: DW_AT_rnglists_base [DW_FORM_sec_offset]  (0x0000000c)
+
+; BOLT-DWO-MAIN:        DW_TAG_subprogram
+; BOLT-DWO-MAIN-NEXT:   DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x0) rangelist = 0x00000014
+; BOLT-DWO-MAIN-NEXT:       [0x0000000000000000, 0x0000000000000016)
+; BOLT-DWO-MAIN-NEXT:       [0x0000000000000016, 0x0000000000000024)
+; BOLT-DWO-MAIN-NEXT:       [0x0000000000000024, 0x0000000000000029))
+; BOLT-DWO-MAIN:        DW_TAG_subprogram
+; BOLT-DWO-MAIN:        DW_TAG_subprogram
+; BOLT-DWO-MAIN:        DW_TAG_subprogram
+; BOLT-DWO-MAIN:        DW_TAG_subprogram
+; BOLT-DWO-MAIN-NEXT:   DW_AT_ranges [DW_FORM_rnglistx] (indexed (0x1) rangelist = 0x00000020
+; BOLT-DWO-MAIN-NEXT:       [0x0000000000000002, 0x0000000000000029)
+; BOLT-DWO-MAIN-NEXT:       [0x0000000000000029, 0x0000000000000037)
+; BOLT-DWO-MAIN-NEXT:       [0x0000000000000037, 0x0000000000000051))
