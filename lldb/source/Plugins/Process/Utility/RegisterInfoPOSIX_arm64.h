@@ -119,6 +119,7 @@ public:
   bool IsSSVEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskSSVE); }
   bool IsPAuthEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskPAuth); }
   bool IsMTEEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskMTE); }
+  bool IsTLSEnabled() const { return m_opt_regsets.AnySet(eRegsetMaskTLS); }
 
   bool IsSVEReg(unsigned reg) const;
   bool IsSVEZReg(unsigned reg) const;
