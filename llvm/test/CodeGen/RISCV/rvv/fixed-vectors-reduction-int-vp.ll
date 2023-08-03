@@ -1875,3 +1875,32 @@ define signext i8 @vpreduce_mul_v64i8(i8 signext %s, <64 x i8> %v, <64 x i1> %m,
   %r = call i8 @llvm.vp.reduce.mul.v64i8(i8 %s, <64 x i8> %v, <64 x i1> %m, i32 %evl)
   ret i8 %r
 }
+
+; Test start value is the first element of a vector.
+define zeroext i8 @front_ele_v4i8(<4 x i8> %v, <4 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: front_ele_v4i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, mf4, ta, ma
+; CHECK-NEXT:    vredand.vs v8, v8, v8, v0.t
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    ret
+  %s = extractelement <4 x i8> %v, i64 0
+  %r = call i8 @llvm.vp.reduce.and.v4i8(i8 %s, <4 x i8> %v, <4 x i1> %m, i32 %evl)
+  ret i8 %r
+}
+
+; Test start value is the first element of a vector which longer than M1.
+declare i8 @llvm.vp.reduce.and.v32i8(i8, <32 x i8>, <32 x i1>, i32)
+define zeroext i8 @front_ele_v32i8(<32 x i8> %v, <32 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: front_ele_v32i8:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetvli zero, a0, e8, m2, ta, ma
+; CHECK-NEXT:    vredand.vs v8, v8, v8, v0.t
+; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    andi a0, a0, 255
+; CHECK-NEXT:    ret
+  %s = extractelement <32 x i8> %v, i64 0
+  %r = call i8 @llvm.vp.reduce.and.v32i8(i8 %s, <32 x i8> %v, <32 x i1> %m, i32 %evl)
+  ret i8 %r
+}
