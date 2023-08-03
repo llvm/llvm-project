@@ -1,4 +1,5 @@
 #include "../ClangTidyDiagnosticConsumer.h"
+#include "ClangTidyCheck.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/CIR/CIRGenerator.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -19,6 +20,7 @@ private:
   std::unique_ptr<CIRGenerator> Gen;
   ASTContext *AstContext{nullptr};
   clang::tidy::ClangTidyContext &Context;
+  clang::tidy::ClangTidyCheck::OptionsView OptsView;
 };
 } // namespace tidy
 } // namespace cir
