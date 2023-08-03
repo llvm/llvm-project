@@ -1,14 +1,19 @@
-// REDEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// RUN: %{compile} | %{run} | FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{compile} = mlir-opt %s --sparse-compiler=%{option}
+// DEFINE: %{run} = mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true
-// RUN: %{compile} | %{run} | FileCheck %s
+// REDEFINE: %{option} = "enable-runtime-library=false enable-buffer-initialization=true"
+// RUN: %{compile} | %{run}
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
-// RUN: %{compile} | %{run} | FileCheck %s
+// REDEFINE: %{option} = "enable-runtime-library=false  enable-buffer-initialization=true vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{compile} | %{run}
 
 // Product reductions - kept in a seperate file as these are not supported by
 // the AArch64 SVE backend (so the set-up is a bit different to

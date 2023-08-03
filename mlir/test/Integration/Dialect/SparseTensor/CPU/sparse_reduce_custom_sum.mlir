@@ -1,14 +1,19 @@
-// REDEFINE: %{run_libs} = -shared-libs=%mlir_c_runner_utils
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=true
-// RUN: %{compile} | %{run} | FileCheck %s
+// DEFINE: %{option} = enable-runtime-library=true
+// DEFINE: %{command} = mlir-opt %s --sparse-compiler=%{option} | \
+// DEFINE: mlir-cpu-runner \
+// DEFINE:  -e entry -entry-point-result=void  \
+// DEFINE:  -shared-libs=%mlir_c_runner_utils | \
+// DEFINE: FileCheck %s
+//
+// RUN: %{command}
 //
 // Do the same run, but now with direct IR generation.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false
-// RUN: %{compile} | %{run} | FileCheck %s
+// REDEFINE: %{option} = enable-runtime-library=false
+// RUN: %{command}
 //
 // Do the same run, but now with direct IR generation and vectorization.
-// REDEFINE: %{sparse_compiler_opts} = enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true
-// RUN: %{compile} | %{run} | FileCheck %s
+// REDEFINE: %{option} = "enable-runtime-library=false vl=2 reassociate-fp-reductions=true enable-index-optimizations=true"
+// RUN: %{command}
 
 #SV = #sparse_tensor.encoding<{ lvlTypes = [ "compressed" ] }>
 
