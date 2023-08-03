@@ -48370,7 +48370,7 @@ static SDValue combineAnd(SDNode *N, SelectionDAG &DAG,
   // Attempt to combine a scalar bitmask AND with an extracted shuffle.
   if ((VT.getScalarSizeInBits() % 8) == 0 &&
       N0.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
-      isa<ConstantSDNode>(N0.getOperand(1))) {
+      isa<ConstantSDNode>(N0.getOperand(1)) && N0->hasOneUse()) {
     SDValue BitMask = N1;
     SDValue SrcVec = N0.getOperand(0);
     EVT SrcVecVT = SrcVec.getValueType();
