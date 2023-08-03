@@ -1,0 +1,5 @@
+module ReturnsClass {
+  header "returns-class.h"
+  requires cplusplus
+}
+

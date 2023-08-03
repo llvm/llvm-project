@@ -42,6 +42,10 @@
 #include "lldb/Utility/State.h"
 #include "lldb/Utility/StreamString.h"
 
+#ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#endif //LLDB_ENABLE_SWIFT
+
 using namespace lldb_private;
 
 char UserExpression::ID;
@@ -288,6 +292,12 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
 
   *fixed_expression = user_expression_sp->GetFixedText().str();
 
+  // Swift Playgrounds disable fixits, but SwiftASTContext may get
+  // poisoned (see SwiftASTContextForExpressions::ModulesDidLoad())
+  // during expression evaluation. When this happens we want to re-run
+  // the same expression with a freshly initialized SwiftASTContext.
+  bool is_replay = !options.GetAutoApplyFixIts() && expr == *fixed_expression;
+
   // If there is a fixed expression, try to parse it:
   if (!parse_success) {
     // Delete the expression that failed to parse before attempting to parse
@@ -295,8 +305,9 @@ UserExpression::Evaluate(ExecutionContext &exe_ctx,
     user_expression_sp.reset();
 
     execution_results = lldb::eExpressionParseError;
-    if (!fixed_expression->empty() && options.GetAutoApplyFixIts()) {
-      const uint64_t max_fix_retries = options.GetRetriesWithFixIts();
+    if (!fixed_expression->empty() &&
+        (options.GetAutoApplyFixIts() || is_replay)) {
+      const uint64_t max_fix_retries = is_replay ? 1 : options.GetRetriesWithFixIts();
       for (uint64_t i = 0; i < max_fix_retries; ++i) {
         // Try parsing the fixed expression.
         lldb::UserExpressionSP fixed_expression_sp(
@@ -428,8 +439,16 @@ UserExpression::Execute(DiagnosticManager &diagnostic_manager,
       diagnostic_manager, exe_ctx, options, shared_ptr_to_me, result_var);
   Target *target = exe_ctx.GetTargetPtr();
   if (options.GetSuppressPersistentResult() && result_var && target) {
+#ifdef LLDB_ENABLE_SWIFT
+    if (m_language == lldb::eLanguageTypeSwift) {
+      if (auto *exe_scope = exe_ctx.GetBestExecutionContextScope())
+        if (auto *persistent_state =
+                target->GetSwiftPersistentExpressionState(*exe_scope))
+          persistent_state->RemovePersistentVariable(result_var);
+    } else
+#endif // LLDB_ENABLE_SWIFT
     if (auto *persistent_state =
-            target->GetPersistentExpressionStateForLanguage(m_language))
+                   target->GetPersistentExpressionStateForLanguage(m_language))
       persistent_state->RemovePersistentVariable(result_var);
   }
   return expr_result;

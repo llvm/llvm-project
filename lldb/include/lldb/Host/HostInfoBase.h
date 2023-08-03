@@ -126,6 +126,14 @@ public:
 
   static FileSpec GetXcodeContentsDirectory() { return {}; }
   static FileSpec GetXcodeDeveloperDirectory() { return {}; }
+#ifdef LLDB_ENABLE_SWIFT
+  static FileSpec GetSwiftResourceDir() { return {}; }
+  static FileSpec GetSwiftResourceDir(llvm::Triple triple) { return {}; }
+  static bool ComputeSwiftResourceDirectory(
+      FileSpec &lldb_shlib_spec, FileSpec &file_spec, bool verify) {
+    return false;
+  }
+#endif
 
   struct SDKOptions {
     std::optional<XcodeSDK> XcodeSDKSelection;
@@ -156,6 +164,20 @@ public:
   /// \return Returns either std::nullopt or a reference to a const std::string
   /// containing the distribution id
   static llvm::StringRef GetDistributionId() { return llvm::StringRef(); }
+
+#ifdef LLDB_ENABLE_SWIFT
+  static FileSpec GetSwiftResourceDir() { return {}; }
+  static FileSpec GetSwiftResourceDir(llvm::Triple triple) { return {}; }
+  static bool ComputeSwiftResourceDirectory(
+      FileSpec &lldb_shlib_spec, FileSpec &file_spec, bool verify) {
+    return false;
+  }
+
+  /// Return the default set of library paths to search in.  This allows a
+  /// platform specific extension for system libraries that may need to be
+  /// resolved (e.g. `/usr/lib` on Unicies and `Path` on Windows).
+  static std::vector<std::string> GetSwiftLibrarySearchPaths() { return {}; }
+#endif
 
 protected:
   static bool ComputeSharedLibraryDirectory(FileSpec &file_spec);

@@ -708,8 +708,15 @@ bool SearchFilterByModuleListAndCU::CompUnitPasses(FileSpec &fileSpec) {
 }
 
 bool SearchFilterByModuleListAndCU::CompUnitPasses(CompileUnit &compUnit) {
+  // BEGIN SWIFT
+  // If it comes from "<stdin>" then we should check it
+  static ConstString g_stdin_filename("<stdin>");
+  // END SWIFT
   bool in_cu_list = m_cu_spec_list.FindFileIndex(0, compUnit.GetPrimaryFile(),
-                                                 false) != UINT32_MAX;
+                                                 false) != UINT32_MAX
+      // BEGIN SWIFT
+                    || (compUnit.GetPrimaryFile().GetFilename() == g_stdin_filename);
+      // END SWIFT
   if (!in_cu_list)
     return false;
 
@@ -739,6 +746,9 @@ void SearchFilterByModuleListAndCU::Search(Searcher &searcher) {
   bool no_modules_in_filter = m_module_spec_list.GetSize() == 0;
   for (ModuleSP module_sp : m_target_sp->GetImages().Modules()) {
     if (!no_modules_in_filter &&
+        // BEGIN SWIFT
+        ModulePasses(module_sp) &&
+        // END SWIFT
         m_module_spec_list.FindFileIndex(0, module_sp->GetFileSpec(), false) ==
             UINT32_MAX)
       continue;

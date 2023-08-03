@@ -25,6 +25,8 @@ class DataExtractor;
 using namespace lldb;
 using namespace lldb_private;
 
+char Section::ID;
+
 const char *Section::GetTypeAsCString() const {
   switch (m_type) {
   case eSectionTypeInvalid:
@@ -149,6 +151,11 @@ const char *Section::GetTypeAsCString() const {
     return "ctf";
   case eSectionTypeOther:
     return "regular";
+
+  // BEGIN SWIFT
+  case eSectionTypeSwiftModules:
+    break;
+  // END SWIFT
   }
   return "unknown";
 }
@@ -371,6 +378,14 @@ void Section::SetPermissions(uint32_t permissions) {
   m_executable = (permissions & ePermissionsExecutable) != 0;
 }
 
+bool Section::CanContainSwiftReflectionData() const {
+#ifdef LLDB_ENABLE_SWIFT
+  return m_obj_file->CanContainSwiftReflectionData(*this);
+#else
+  return false;
+#endif // LLDB_ENABLE_SWIFT
+}
+
 lldb::offset_t Section::GetSectionData(void *dst, lldb::offset_t dst_len,
                                        lldb::offset_t offset) {
   if (m_obj_file)
@@ -420,6 +435,9 @@ bool Section::ContainsOnlyDebugInfo() const {
   case eSectionTypeDebug:
     return false;
 
+#ifdef LLDB_ENABLE_SWIFT
+  case eSectionTypeSwiftModules:
+#endif
   case eSectionTypeDWARFDebugAbbrev:
   case eSectionTypeDWARFDebugAbbrevDwo:
   case eSectionTypeDWARFDebugAddr:

@@ -99,8 +99,9 @@ public:
     EVTypeIsReference = 1 << 6, ///< The original type of this variable is a
                                 ///reference, so materialize the value rather
                                 ///than the location
-    EVBareRegister = 1 << 7 ///< This variable is a direct reference to $pc or
-                            ///some other entity.
+    EVBareRegister = 1 << 7, ///< This variable is a direct reference to $pc or
+                             ///some other entity.
+    EVIsSwiftFixedBuffer = 1 << 8 ///< A Swift global in a fixed-size buffer.
   };
 
   typedef uint16_t FlagType;
@@ -232,6 +233,8 @@ public:
   virtual lldb::addr_t LookupSymbol(ConstString name);
 
   void RegisterExecutionUnit(lldb::IRExecutionUnitSP &execution_unit_sp);
+
+  void RegisterSymbol(ConstString name, lldb::addr_t address);
 
 protected:
   virtual llvm::StringRef

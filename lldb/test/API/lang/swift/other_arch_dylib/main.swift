@@ -1,0 +1,3 @@
+import OtherArch
+
+foo()

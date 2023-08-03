@@ -70,6 +70,8 @@
 #include "llvm/IR/EHPersonalities.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/GetElementPtrTypeIterator.h"
+#include "llvm/IR/GlobalPtrAuthInfo.h"
+#include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instructions.h"
@@ -1650,8 +1652,20 @@ SDValue SelectionDAGBuilder::getValueImpl(const Value *V) {
     if (const ConstantInt *CI = dyn_cast<ConstantInt>(C))
       return DAG.getConstant(*CI, getCurSDLoc(), VT);
 
-    if (const GlobalValue *GV = dyn_cast<GlobalValue>(C))
+    if (const GlobalValue *GV = dyn_cast<GlobalValue>(C)) {
+      if (const GlobalVariable *GVB = dyn_cast<GlobalVariable>(GV)) {
+        if (GVB->getSection() == "llvm.ptrauth") {
+          auto PAI = GlobalPtrAuthInfo::analyze(GVB);
+          return DAG.getNode(ISD::PtrAuthGlobalAddress, getCurSDLoc(), VT,
+                             DAG.getGlobalAddress(GV, getCurSDLoc(), VT),
+                             getValue(PAI->getPointer()),
+                             getValue(PAI->getKey()),
+                             getValue(PAI->getAddrDiscriminator()),
+                             getValue(PAI->getDiscriminator()));
+        }
+      }
       return DAG.getGlobalAddress(GV, getCurSDLoc(), VT);
+    }
 
     if (isa<ConstantPointerNull>(C)) {
       unsigned AS = V->getType()->getPointerAddressSpace();
@@ -3007,12 +3021,12 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
   const BasicBlock *EHPadBB = I.getSuccessor(1);
   MachineBasicBlock *EHPadMBB = FuncInfo.MBBMap[EHPadBB];
 
-  // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
+  // Deopt and ptrauth bundles are lowered in helper functions, and we don't
   // have to do anything here to lower funclet bundles.
   assert(!I.hasOperandBundlesOtherThan(
              {LLVMContext::OB_deopt, LLVMContext::OB_gc_transition,
               LLVMContext::OB_gc_live, LLVMContext::OB_funclet,
-              LLVMContext::OB_cfguardtarget,
+              LLVMContext::OB_cfguardtarget, LLVMContext::OB_ptrauth,
               LLVMContext::OB_clang_arc_attachedcall}) &&
          "Cannot lower invokes with arbitrary operand bundles yet!");
 
@@ -3063,6 +3077,8 @@ void SelectionDAGBuilder::visitInvoke(const InvokeInst &I) {
     // intrinsic, and right now there are no plans to support other intrinsics
     // with deopt state.
     LowerCallSiteWithDeoptBundle(&I, getValue(Callee), EHPadBB);
+  } else if (I.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+    LowerCallSiteWithPtrAuthBundle(cast<CallBase>(I), EHPadBB);
   } else {
     LowerCallTo(I, getValue(Callee), false, false, EHPadBB);
   }
@@ -6210,6 +6226,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
       } else if (isa<Argument>(Address)) {
         // Address is an argument, so try to emit its dbg value using
         // virtual register info from the FuncInfo.ValueMap.
+        assert(Intrinsic == Intrinsic::dbg_declare);
         EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
                                  FuncArgumentDbgValueKind::Declare, N);
         return;
@@ -6221,6 +6238,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     } else {
       // If Address is an argument then try to emit its dbg value using
       // virtual register info from the FuncInfo.ValueMap.
+      assert(Intrinsic == Intrinsic::dbg_declare);
       if (!EmitFuncArgumentDbgValue(Address, Variable, Expression, dl,
                                     FuncArgumentDbgValueKind::Declare, N)) {
         LLVM_DEBUG(dbgs() << "Dropping debug info for " << DI
@@ -8063,7 +8081,8 @@ SelectionDAGBuilder::lowerInvokable(TargetLowering::CallLoweringInfo &CLI,
 void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
                                       bool isTailCall,
                                       bool isMustTailCall,
-                                      const BasicBlock *EHPadBB) {
+                                      const BasicBlock *EHPadBB,
+                                      const TargetLowering::PtrAuthInfo *PAI) {
   auto &DL = DAG.getDataLayout();
   FunctionType *FTy = CB.getFunctionType();
   Type *RetTy = CB.getType();
@@ -8163,6 +8182,15 @@ void SelectionDAGBuilder::LowerCallTo(const CallBase &CB, SDValue Callee,
       .setIsPreallocated(
           CB.countOperandBundlesOfType(LLVMContext::OB_preallocated) != 0)
       .setCFIType(CFIType);
+
+  // Set the pointer authentication info if we have it.
+  if (PAI) {
+    if (!TLI.supportPtrAuthBundles())
+      report_fatal_error(
+          "This target doesn't support calls with ptrauth operand bundles.");
+    CLI.setPtrAuth(*PAI);
+  }
+
   std::pair<SDValue, SDValue> Result = lowerInvokable(CLI, EHPadBB);
 
   if (Result.first.getNode()) {
@@ -8702,6 +8730,11 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     }
   }
 
+  if (I.countOperandBundlesOfType(LLVMContext::OB_ptrauth)) {
+    LowerCallSiteWithPtrAuthBundle(cast<CallBase>(I), /*EHPadBB=*/nullptr);
+    return;
+  }
+
   // Deopt bundles are lowered in LowerCallSiteWithDeoptBundle, and we don't
   // have to do anything here to lower funclet bundles.
   // CFGuardTarget bundles are lowered in LowerCallTo.
@@ -8720,6 +8753,47 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
     // is be done within LowerCallTo, after more information about the call is
     // known.
     LowerCallTo(I, Callee, I.isTailCall(), I.isMustTailCall());
+}
+
+void SelectionDAGBuilder::LowerCallSiteWithPtrAuthBundle(
+    const CallBase &CB, const BasicBlock *EHPadBB) {
+  auto PAB = CB.getOperandBundle("ptrauth");
+  auto *CalleeV = CB.getCalledOperand();
+
+  // Gather the call ptrauth data from the operand bundle:
+  //   [ i32 <key>, i64 <discriminator> ]
+  auto *Key = cast<ConstantInt>(PAB->Inputs[0]);
+  Value *Discriminator = PAB->Inputs[1];
+
+  assert(Key->getType()->isIntegerTy(32) && "Invalid ptrauth key");
+  assert(Discriminator->getType()->isIntegerTy(64) &&
+         "Invalid ptrauth discriminator");
+
+  // Look through ptrauth globals to find the raw callee.
+  // Do a direct unauthenticated call if we found it and everything matches.
+  if (auto CalleePAI = GlobalPtrAuthInfo::analyze(CalleeV)) {
+    // FIXME: bring back a static diagnostic when we can guarantee the mismatch
+    if (CalleePAI->isCompatibleWith(Key, Discriminator, DAG.getDataLayout())) {
+      LowerCallTo(CB, getValue(CalleePAI->getPointer()), CB.isTailCall(),
+                  CB.isMustTailCall(), EHPadBB);
+      return;
+    }
+  }
+
+  // Functions should never be ptrauth-called directly.
+  // We could lower these to direct unauthenticated calls, but for that to
+  // occur, there must have been a semantic mismatch somewhere leading to this
+  // arguably incorrect IR.
+  if (isa<Function>(CalleeV))
+    report_fatal_error("Cannot lower direct authenticated call to"
+                       " unauthenticated target");
+
+  // Otherwise, do an authenticated indirect call.
+  TargetLowering::PtrAuthInfo PAI = {Key->getZExtValue(),
+                                     getValue(Discriminator)};
+
+  LowerCallTo(CB, getValue(CalleeV), CB.isTailCall(), CB.isMustTailCall(),
+              EHPadBB, &PAI);
 }
 
 namespace {

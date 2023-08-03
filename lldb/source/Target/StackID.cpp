@@ -10,14 +10,31 @@
 #include "lldb/Symbol/Block.h"
 #include "lldb/Symbol/Symbol.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/Target/MemoryRegionInfo.h"
+#include "lldb/Target/Process.h"
+#include "lldb/Target/Thread.h"
 #include "lldb/Utility/Stream.h"
 
 using namespace lldb_private;
 
+bool StackID::IsStackAddress(lldb::addr_t addr,
+                             lldb::ThreadSP thread_sp) const {
+  if (addr == LLDB_INVALID_ADDRESS)
+    return false;
+
+  if (thread_sp)
+    if (auto process_sp = thread_sp->GetProcess()) {
+      MemoryRegionInfo mem_info;
+      if (process_sp->GetMemoryRegionInfo(addr, mem_info).Success())
+        return mem_info.IsStackMemory() == MemoryRegionInfo::eYes;
+    }
+  return true; // assumed
+}
+
 void StackID::Dump(Stream *s) {
   s->Printf("StackID (pc = 0x%16.16" PRIx64 ", cfa = 0x%16.16" PRIx64
-            ", symbol_scope = %p",
-            m_pc, m_cfa, static_cast<void *>(m_symbol_scope));
+            ", cfa_on_stack = %d, symbol_scope = %p",
+            m_pc, m_cfa, m_cfa_on_stack, static_cast<void *>(m_symbol_scope));
   if (m_symbol_scope) {
     SymbolContext sc;
 
@@ -60,6 +77,15 @@ bool lldb_private::operator!=(const StackID &lhs, const StackID &rhs) {
 bool lldb_private::operator<(const StackID &lhs, const StackID &rhs) {
   const lldb::addr_t lhs_cfa = lhs.GetCallFrameAddress();
   const lldb::addr_t rhs_cfa = rhs.GetCallFrameAddress();
+
+  // FIXME: rdar://76119439
+  // Heuristic: At the boundary between an async parent frame calling a regular
+  // child frame, the CFA of the parent async function is a heap addresses, and
+  // the CFA of concrete child function is a stack addresses. Therefore, if lhs
+  // is on stack, and rhs is not, lhs is considered less than rhs (regardless of
+  // address values).
+  if (lhs.IsCFAOnStack() && !rhs.IsCFAOnStack())
+    return true;
 
   // FIXME: We are assuming that the stacks grow downward in memory.  That's not
   // necessary, but true on

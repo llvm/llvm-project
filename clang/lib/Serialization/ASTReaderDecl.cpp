@@ -1450,6 +1450,8 @@ void ASTDeclReader::VisitObjCCategoryDecl(ObjCCategoryDecl *CD) {
 void ASTDeclReader::VisitObjCCompatibleAliasDecl(ObjCCompatibleAliasDecl *CAD) {
   VisitNamedDecl(CAD);
   CAD->setClassInterface(readDeclAs<ObjCInterfaceDecl>());
+  CAD->setClassInterfaceLoc(readSourceLocation());
+  CAD->setAtLoc(readSourceLocation());
 }
 
 void ASTDeclReader::VisitObjCPropertyDecl(ObjCPropertyDecl *D) {
@@ -3068,6 +3070,8 @@ public:
 
   Expr *readExpr() { return Reader.readExpr(); }
 
+  Attr *readAttr() { return Reader.readAttr(); }
+
   std::string readString() {
     return Reader.readString();
   }
@@ -3163,8 +3167,7 @@ static bool isConsumerInterestedIn(ASTContext &Ctx, Decl *D, bool HasBody) {
   // emitted when we import the relevant module.
   if (isPartOfPerModuleInitializer(D)) {
     auto *M = D->getImportedOwningModule();
-    if (M && M->Kind == Module::ModuleMapModule &&
-        Ctx.DeclMustBeEmitted(D))
+    if (M && M->isModuleMapModule() && Ctx.DeclMustBeEmitted(D))
       return false;
   }
 

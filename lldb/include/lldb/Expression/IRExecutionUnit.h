@@ -11,11 +11,13 @@
 
 #include <atomic>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <vector>
 
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/IR/Module.h"
+#include "llvm/ADT/StringMap.h"
 
 #include "lldb/Expression/IRMemoryMap.h"
 #include "lldb/Expression/ObjectFileJIT.h"
@@ -100,6 +102,11 @@ public:
   ArchSpec GetArchitecture() override;
 
   lldb::ModuleSP GetJITModule();
+
+  lldb::ModuleSP CreateJITModule(const char *name);
+
+  /// Accessor for the mutex that guards LLVM::getGlobalContext()
+  static std::recursive_mutex &GetLLVMGlobalContextMutex();
 
   lldb::addr_t FindSymbol(ConstString name, bool &missing_weak);
 
@@ -368,6 +375,7 @@ private:
   std::unique_ptr<llvm::ObjectCache> m_object_cache_up;
   std::unique_ptr<llvm::Module>
       m_module_up;        ///< Holder for the module until it's been handed off
+  lldb::ModuleWP m_jit_module_wp;
   llvm::Module *m_module; ///< Owned by the execution engine
   std::vector<std::string> m_cpu_features;
   std::vector<JittedFunction> m_jitted_functions; ///< A vector of all functions
@@ -383,6 +391,9 @@ private:
   std::vector<ConstString> m_failed_lookups;
 
   std::atomic<bool> m_did_jit;
+  // BEGIN SWIFT
+  std::atomic<bool> m_in_populate_symtab = false;
+  // END SWIFT
 
   lldb::addr_t m_function_load_addr;
   lldb::addr_t m_function_end_load_addr;
@@ -396,6 +407,8 @@ private:
   ///< defining no functions using that variable, would do this.)  If this
   ///< is true, any allocations need to be committed immediately -- no
   ///< opportunity for relocation.
+
+  llvm::StringMap<uint64_t> m_section_size_map;
 };
 
 } // namespace lldb_private

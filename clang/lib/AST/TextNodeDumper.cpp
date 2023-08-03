@@ -2343,6 +2343,8 @@ void TextNodeDumper::VisitObjCCompatibleAliasDecl(
     const ObjCCompatibleAliasDecl *D) {
   dumpName(D);
   dumpDeclRef(D->getClassInterface());
+  OS << " ";
+  dumpLocation(D->getClassInterfaceLoc());
 }
 
 void TextNodeDumper::VisitObjCPropertyDecl(const ObjCPropertyDecl *D) {

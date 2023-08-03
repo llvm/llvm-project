@@ -99,6 +99,8 @@ public:
   void emitDarwinTargetVariantBuildVersion(unsigned Platform, unsigned Major,
                                            unsigned Minor, unsigned Update,
                                            VersionTuple SDKVersion) override;
+  void EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
+                             bool PtrAuthKernelABIVersion) override;
   void emitThumbFunc(MCSymbol *Func) override;
   bool emitSymbolAttribute(MCSymbol *Symbol, MCSymbolAttr Attribute) override;
   void emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) override;
@@ -158,8 +160,13 @@ static bool canGoAfterDWARF(const MCSectionMachO &MSec) {
   if (SegName == "__DATA" && (SecName == "__nl_symbol_ptr" ||
                               SecName == "__thread_ptr"))
     return true;
+
+  if (SegName == "__DATA" && SecName == "__auth_ptr")
+    return true;
+
   if (SegName == "__LLVM" && SecName == "__cg_profile")
     return true;
+
   return false;
 }
 
@@ -303,6 +310,12 @@ void MCMachOStreamer::emitDarwinTargetVariantBuildVersion(
     VersionTuple SDKVersion) {
   getAssembler().setDarwinTargetVariantBuildVersion(
       (MachO::PlatformType)Platform, Major, Minor, Update, SDKVersion);
+}
+
+void MCMachOStreamer::EmitPtrAuthABIVersion(unsigned PtrAuthABIVersion,
+                                            bool PtrAuthKernelABIVersion) {
+  getAssembler().setPtrAuthABIVersion(PtrAuthABIVersion);
+  getAssembler().setPtrAuthKernelABIVersion(PtrAuthKernelABIVersion);
 }
 
 void MCMachOStreamer::emitThumbFunc(MCSymbol *Symbol) {

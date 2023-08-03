@@ -452,6 +452,7 @@ private:
   }
 
   friend class ClassDescriptorV2;
+  friend class SwiftLanguageRuntime;
 
   lldb::ModuleSP m_objc_module_sp;
 

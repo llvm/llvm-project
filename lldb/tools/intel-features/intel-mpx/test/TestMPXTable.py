@@ -16,9 +16,6 @@ from lldbsuite.test import lldbutil
 
 class TestMPXTable(TestBase):
 
-    def setUp(self):
-        TestBase.setUp(self)
-
     @skipIf(compiler="clang")
     @skipIf(oslist=no_match(['linux']))
     @skipIf(archs=no_match(['i386', 'x86_64']))

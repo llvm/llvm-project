@@ -11,6 +11,7 @@
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Target/ThreadPlan.h"
+#include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-private.h"
 
 #include "llvm/ADT/ArrayRef.h"
@@ -94,7 +95,11 @@ public:
 
   void ThreadDestroyed() override { m_takedown_done = true; }
 
-  void SetStopOthers(bool new_value) override;
+  virtual void SetStopOthers(bool new_value) override;
+
+  lldb::LanguageType GetExpressionLanguage() { return m_expression_language; }
+
+  bool HitErrorBackstop() { return m_hit_error_backstop; }
 
 protected:
   void ReportRegisterState(const char *message);
@@ -143,6 +148,10 @@ protected:
   bool m_should_clear_cxx_exception_bp;
   lldb::addr_t m_stop_address; // This is the address we stopped at.  Also set
                                // in DoTakedown;
+  lldb::LanguageType
+      m_expression_language; // Set from the incoming ExpressionOptions.
+  lldb::BreakpointSP m_error_backstop_bp_sp;
+  bool m_hit_error_backstop;
 
 private:
   CompilerType m_return_type;

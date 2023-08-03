@@ -623,6 +623,9 @@ public:
   }
 
   LLVM_DUMP_METHOD void dump(llvm::raw_ostream &OS);
+
+  void mergePropInfoIntoGetter(const ObjCPropertyInfo &pInfo);
+  void mergePropInfoIntoSetter(const ObjCPropertyInfo &pInfo);
 };
 
 inline bool operator==(const ObjCMethodInfo &LHS, const ObjCMethodInfo &RHS) {
@@ -729,5 +732,38 @@ inline bool operator!=(const TypedefInfo &LHS, const TypedefInfo &RHS) {
 }
 } // namespace api_notes
 } // namespace clang
+
+#include "llvm/ADT/ArrayRef.h"
+
+namespace clang {
+namespace api_notes {
+/// The file extension used for the source representation of API notes.
+static const char SOURCE_APINOTES_EXTENSION[] = "apinotes";
+
+/// Opaque context ID used to refer to an Objective-C class or protocol.
+class ContextID {
+public:
+  unsigned Value;
+
+  explicit ContextID(unsigned value) : Value(value) { }
+};
+
+/// A temporary reference to an Objective-C selector, suitable for
+/// referencing selector data on the stack.
+///
+/// Instances of this struct do not store references to any of the
+/// data they contain; it is up to the user to ensure that the data
+/// referenced by the identifier list persists.
+struct ObjCSelectorRef {
+  unsigned NumPieces;
+  llvm::ArrayRef<llvm::StringRef> Identifiers;
+};
+
+/// Descripts a series of options for a module
+struct ModuleOptions {
+  bool SwiftInferImportAsMember = false;
+};
+}
+}
 
 #endif

@@ -34,6 +34,11 @@ CXDiagnosticSetImpl::appendDiagnostic(std::unique_ptr<CXDiagnosticImpl> D) {
   Diagnostics.push_back(std::move(D));
 }
 
+void CXDiagnosticSetImpl::recordSourceFileContents(
+    CXFile file, StringRef contents, CXSourceRange originalSourceRange) {
+  FileContents[file] = CXSourceFileContents{contents, originalSourceRange};
+}
+
 CXDiagnosticImpl::~CXDiagnosticImpl() {}
 
 namespace {
@@ -143,7 +148,20 @@ public:
 
   CXDiagnosticSetImpl *CurrentSet;
   CXDiagnosticSetImpl *MainSet;
-};  
+};
+
+class CXStoredDiagnosticSet : public CXDiagnosticSetImpl {
+  llvm::SmallVector<StoredDiagnostic, 2> Diags;
+
+public:
+  CXStoredDiagnosticSet(ArrayRef<StoredDiagnostic> Diags,
+                        const LangOptions &LangOpts)
+      : CXDiagnosticSetImpl(/*isManaged=*/true),
+        Diags(Diags.begin(), Diags.end()) {
+    for (const auto &Diag : this->Diags)
+      appendDiagnostic(std::make_unique<CXStoredDiagnostic>(Diag, LangOpts));
+  }
+};
 }
 
 CXDiagnosticSetImpl *cxdiag::lazyCreateDiags(CXTranslationUnit TU,
@@ -191,6 +209,11 @@ CXDiagnosticSetImpl *cxdiag::lazyCreateDiags(CXTranslationUnit TU,
     }
   }
   return static_cast<CXDiagnosticSetImpl*>(TU->Diagnostics);
+}
+
+CXDiagnosticSetImpl *cxdiag::createStoredDiags(ArrayRef<StoredDiagnostic> Diags,
+                                               const LangOptions &LangOpts) {
+  return new CXStoredDiagnosticSet(Diags, LangOpts);
 }
 
 //-----------------------------------------------------------------------------
@@ -459,6 +482,30 @@ CXDiagnosticSet clang_getChildDiagnostics(CXDiagnostic Diag) {
     return ChildDiags.empty() ? nullptr : (CXDiagnosticSet) &ChildDiags;
   }
   return nullptr;
+}
+
+const char *clang_getDiagnosticFileContents(
+    CXDiagnosticSet diags, CXFile file, size_t *outFileSize) {
+  if (CXDiagnosticSetImpl *D = static_cast<CXDiagnosticSetImpl *>(diags)) {
+    CXSourceRange originalSourceRange;
+    if (auto contents = D->getSourceFileContents(file, originalSourceRange)) {
+      if (outFileSize)
+        *outFileSize = contents->size();
+      return contents->data();
+    }
+  }
+  return nullptr;
+}
+
+CXSourceRange clang_getDiagnosticFileOriginalSourceRange(
+    CXDiagnosticSet diags, CXFile file) {
+  if (CXDiagnosticSetImpl *D = static_cast<CXDiagnosticSetImpl *>(diags)) {
+    CXSourceRange originalSourceRange;
+    if (auto contents = D->getSourceFileContents(file, originalSourceRange)) {
+      return originalSourceRange;
+    }
+  }
+  return clang_getNullRange();
 }
 
 unsigned clang_getNumDiagnosticsInSet(CXDiagnosticSet Diags) {

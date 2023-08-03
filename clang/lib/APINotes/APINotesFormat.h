@@ -252,4 +252,38 @@ struct StoredObjCSelector {
 } // namespace api_notes
 } // namespace clang
 
+namespace llvm {
+  template<>
+  struct DenseMapInfo<clang::api_notes::StoredObjCSelector> {
+    typedef DenseMapInfo<unsigned> UnsignedInfo;
+
+    static inline clang::api_notes::StoredObjCSelector getEmptyKey() {
+      return clang::api_notes::StoredObjCSelector{ 
+               UnsignedInfo::getEmptyKey(), { } };
+    }
+
+    static inline clang::api_notes::StoredObjCSelector getTombstoneKey() {
+      return clang::api_notes::StoredObjCSelector{ 
+               UnsignedInfo::getTombstoneKey(), { } };
+    }
+
+    static unsigned getHashValue(
+                      const clang::api_notes::StoredObjCSelector& value) {
+      auto hash = llvm::hash_value(value.NumPieces);
+      hash = hash_combine(hash, value.Identifiers.size());
+      for (auto piece : value.Identifiers)
+        hash = hash_combine(hash, static_cast<unsigned>(piece));
+      // FIXME: Mix upper/lower 32-bit values together to produce
+      // unsigned rather than truncating.
+      return hash;
+    }
+
+    static bool isEqual(const clang::api_notes::StoredObjCSelector &lhs, 
+                        const clang::api_notes::StoredObjCSelector &rhs) {
+      return lhs.NumPieces == rhs.NumPieces && 
+             lhs.Identifiers == rhs.Identifiers;
+    }
+  };
+}
+
 #endif

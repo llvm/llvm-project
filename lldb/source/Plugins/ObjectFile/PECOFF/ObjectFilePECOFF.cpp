@@ -40,6 +40,10 @@
 #include "llvm/TargetParser/Host.h"
 #include <optional>
 
+#ifdef LLDB_ENABLE_SWIFT
+#include "swift/ABI/ObjectFile.h"
+#endif //LLDB_ENABLE_SWIFT
+
 #define IMAGE_DOS_SIGNATURE 0x5A4D    // MZ
 #define IMAGE_NT_SIGNATURE 0x00004550 // PE00
 #define OPT_HEADER_MAGIC_PE32 0x010b
@@ -1010,6 +1014,7 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
           // .eh_frame can be truncated to 8 chars.
           .Cases(".eh_frame", ".eh_fram", eSectionTypeEHFrame)
           .Case(".gosymtab", eSectionTypeGoSymtab)
+          .Case("swiftast", eSectionTypeSwiftModules) // downstream change
           .Default(eSectionTypeInvalid);
   if (section_type != eSectionTypeInvalid)
     return section_type;
@@ -1419,3 +1424,21 @@ ObjectFile::Type ObjectFilePECOFF::CalculateType() {
 }
 
 ObjectFile::Strata ObjectFilePECOFF::CalculateStrata() { return eStrataUser; }
+
+llvm::StringRef ObjectFilePECOFF::GetReflectionSectionIdentifier(
+    swift::ReflectionSectionKind section) {
+#ifdef LLDB_ENABLE_SWIFT
+  swift::SwiftObjectFileFormatCOFF file_format_coff;
+  return file_format_coff.getSectionName(section);
+#else
+  llvm_unreachable("Swift support disabled");
+#endif //LLDB_ENABLE_SWIFT
+}
+
+#ifdef LLDB_ENABLE_SWIFT
+bool ObjectFilePECOFF::CanContainSwiftReflectionData(const Section &section) {
+  swift::SwiftObjectFileFormatCOFF file_format;
+  return file_format.sectionContainsReflectionData(
+      section.GetName().GetStringRef());
+}
+#endif // LLDB_ENABLE_SWIFT

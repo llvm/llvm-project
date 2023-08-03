@@ -1,0 +1,8 @@
+// Test that importing non-existing module fails.
+// REQUIRES: swift
+
+// RUN: %lldb --repl < %s 2>&1 | FileCheck %s
+
+import ModuleThatDoesNotExist
+// CHECK: error: no such module 'ModuleThatDoesNotExist'
+// CHECK-NOT: fixed expression suggested

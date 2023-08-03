@@ -84,4 +84,3 @@ Comdat *llvm::getOrCreateFunctionComdat(Function &F, Triple &T) {
   F.setComdat(C);
   return C;
 }
-

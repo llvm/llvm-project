@@ -47,7 +47,7 @@
 
 @interface Interface1 <T : I1 *> {
 @public
-  T<P1> x;
+  T x; // FIXME: align with upstream (rdar://43906928).
 }
 @end
 
@@ -235,12 +235,12 @@ Valid v;
 #if defined(FIRST)
 @interface Interface4 <T : I1 *> {
 @public
-  T<P1> x;
+  T x; // FIXME: align with upstream (rdar://43906928).
 }
 @end
 @interface Interface5 <T : I1 *> {
 @public
-  T<P1> y;
+  T y; // FIXME: align with upstream (rdar://43906928).
 }
 @end
 @interface Interface6 <T1 : I1 *, T2 : I2 *> {
@@ -251,12 +251,12 @@ Valid v;
 #elif defined(SECOND)
 @interface Interface4 <T : I1 *> {
 @public
-  T<P2> x;
+  T x; // FIXME: align with upstream (rdar://43906928).
 }
 @end
 @interface Interface5 <T : I1 *> {
 @public
-  T<P1, P2> y;
+  T y; // FIXME: align with upstream (rdar://43906928).
 }
 @end
 @interface Interface6 <T1 : I1 *, T2 : I2 *> {

@@ -21,4 +21,29 @@ bool parseAndDumpAPINotes(llvm::StringRef YI, llvm::raw_ostream &OS);
 } // namespace api_notes
 } // namespace clang
 
+#include "llvm/Support/SourceMgr.h"
+
+namespace llvm {
+class MemoryBuffer;
+}
+
+namespace clang {
+class FileEntry;
+
+namespace api_notes {
+enum class ActionType {
+  None,
+  YAMLToBinary,
+  BinaryToYAML,
+  Dump,
+};
+
+/// Converts API notes from YAML format to binary format.
+bool compileAPINotes(llvm::StringRef yamlInput, const FileEntry *sourceFile,
+                     llvm::raw_ostream &os,
+                     llvm::SourceMgr::DiagHandlerTy diagHandler = nullptr,
+                     void *diagHandlerCtxt = nullptr);
+}
+}
+
 #endif

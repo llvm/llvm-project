@@ -197,6 +197,7 @@ set(x86_files
   popcntintrin.h
   prfchiintrin.h
   prfchwintrin.h
+  ptrauth.h
   ptwriteintrin.h
   raointintrin.h
   rdpruintrin.h

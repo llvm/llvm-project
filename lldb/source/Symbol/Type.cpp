@@ -193,7 +193,8 @@ void Type::GetDescription(Stream *s, lldb::DescriptionLevel level,
 
   if (m_compiler_type.IsValid()) {
     *s << ", compiler_type = \"";
-    GetForwardCompilerType().DumpTypeDescription(s);
+    GetForwardCompilerType().DumpTypeDescription(s, eDescriptionLevelFull,
+                                                 exe_scope);
     *s << '"';
   } else if (m_encoding_uid != LLDB_INVALID_UID) {
     s->Printf(", type_uid = 0x%8.8" PRIx64, m_encoding_uid);
@@ -653,6 +654,11 @@ uint32_t Type::GetEncodingMask() {
   if (encoding_type)
     encoding_mask |= encoding_type->GetEncodingMask();
   return encoding_mask;
+}
+
+void Type::GetDeclContext(
+    llvm::SmallVectorImpl<lldb_private::CompilerContext> &context) const {
+  m_symbol_file->GetDeclContextForUID(context, GetID());
 }
 
 CompilerType Type::GetFullCompilerType() {

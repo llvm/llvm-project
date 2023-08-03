@@ -61,13 +61,16 @@ private:
   DenseMap<Metadata *, SmallSet<std::pair<GlobalVariable *, uint64_t>, 4>>
       TypeIdMap;
 
-  // Global variables which are vtables, and which we have enough information
-  // about to safely do dead virtual function elimination.
-  SmallPtrSet<GlobalValue *, 32> VFESafeVTables;
+  /// VTable -> set of vfuncs. This only contains vtables for which we have
+  /// enough information to safely do dead virtual function elimination, and
+  /// only contains vfuncs that are within the range specified in
+  /// !vcall_visibility).
+  DenseMap<GlobalValue *, SmallPtrSet<GlobalValue *, 8>> VFESafeVTablesAndFns;
 
   void UpdateGVDependencies(GlobalValue &GV);
   void MarkLive(GlobalValue &GV,
                 SmallVectorImpl<GlobalValue *> *Updates = nullptr);
+  void PropagateLivenessInGlobalValues();
 
   // Dead virtual function elimination.
   void AddVirtualFunctionDependencies(Module &M);
@@ -76,6 +79,9 @@ private:
   void ScanVTableLoad(Function *Caller, Metadata *TypeId, uint64_t CallOffset);
 
   void ComputeDependencies(Value *V, SmallPtrSetImpl<GlobalValue *> &U);
+
+  GlobalValue *TargetFromConditionalUsedIfLive(MDNode *M);
+  void PropagateLivenessToConditionallyUsed(Module &M);
 };
 
 }

@@ -1,0 +1,1 @@
+struct FromOverlay { int i; };

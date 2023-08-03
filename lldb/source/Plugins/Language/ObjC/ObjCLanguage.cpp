@@ -910,7 +910,8 @@ std::unique_ptr<Language::TypeScavenger> ObjCLanguage::GetTypeScavenger() {
 
     bool IsValid() override { return m_compiler_type.IsValid(); }
 
-    bool DumpToStream(Stream &stream, bool print_help_if_available) override {
+    bool DumpToStream(Stream &stream, bool print_help_if_available,
+                      ExecutionContextScope *exe_scope = nullptr) override {
       if (IsValid()) {
         m_compiler_type.DumpTypeDescription(&stream);
         stream.EOL();

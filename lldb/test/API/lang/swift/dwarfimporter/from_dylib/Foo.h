@@ -1,0 +1,4 @@
+struct FromDylib {
+  int i;
+};
+

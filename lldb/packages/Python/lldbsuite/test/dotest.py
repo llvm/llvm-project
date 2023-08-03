@@ -333,6 +333,9 @@ def parseOptionsAndInitTestdirs():
             args.skip_categories, False
         )
 
+    if args.swiftcompiler:
+        configuration.swiftCompiler = args.swiftcompiler
+
     if args.xfail_categories:
         configuration.xfail_categories += test_categories.validate(
             args.xfail_categories, False
@@ -432,6 +435,9 @@ def parseOptionsAndInitTestdirs():
         configuration.clang_module_cache_dir = os.path.join(
             configuration.test_build_dir, "module-cache-clang"
         )
+
+    if args.swift_libs_dir:
+        configuration.swift_libs_dir = args.swift_libs_dir
 
     if args.lldb_libs_dir:
         configuration.lldb_libs_dir = args.lldb_libs_dir
@@ -1048,6 +1054,8 @@ def run_suite():
         print("compiler=%s" % configuration.compiler)
 
     # Iterating over all possible architecture and compiler combinations.
+    os.environ["ARCH"] = configuration.arch
+    os.environ["CC"] = configuration.compiler
     configString = "arch=%s compiler=%s" % (configuration.arch, configuration.compiler)
 
     # Output the configuration.

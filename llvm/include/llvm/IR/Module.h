@@ -995,6 +995,20 @@ public:
   VersionTuple getSDKVersion() const;
   /// @}
 
+  /// With ptrauth enabled, the module has a version that is used to represent
+  /// ABI changes.
+  struct PtrAuthABIVersion {
+    int Version = 0;
+    bool Kernel = false;
+  };
+  /// Return all the ptrauth abi versions that the module has.
+  SmallVector<PtrAuthABIVersion, 2> getPtrAuthABIVersions() const;
+  /// Return the "final" ptrauth abi version for the module. This handles errors
+  /// and does not report them to the caller.
+  std::optional<PtrAuthABIVersion> getPtrAuthABIVersion() const;
+  /// Set the ptrauth abi version in the module.
+  void setPtrAuthABIVersion(PtrAuthABIVersion ABIVersion);
+
   /// Take ownership of the given memory buffer.
   void setOwnedMemoryBuffer(std::unique_ptr<MemoryBuffer> MB);
 

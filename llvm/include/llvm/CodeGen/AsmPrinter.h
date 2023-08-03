@@ -76,6 +76,8 @@ class TargetLoweringObjectFile;
 class TargetMachine;
 class Twine;
 
+class GlobalPtrAuthInfo;
+
 namespace remarks {
 class RemarkStreamer;
 }
@@ -598,6 +600,16 @@ public:
   /// Targets can override this to customize the output of IMPLICIT_DEF
   /// instructions in verbose mode.
   virtual void emitImplicitDef(const MachineInstr *MI) const;
+
+  /// Lower the specified "llvm.ptrauth" GlobalVariable to an MCExpr.
+  virtual const MCExpr *
+  lowerPtrAuthGlobalConstant(const GlobalPtrAuthInfo &PAI) {
+    report_fatal_error("llvm.ptrauth global lowering not implemented");
+  }
+
+  /// Lower the specified "llvm.ptrauth" GlobalVariable to an MCExpr.
+  virtual const MCExpr *
+  lowerBlockAddressConstant(const BlockAddress *BA);
 
   /// Emit N NOP instructions.
   void emitNops(unsigned N);

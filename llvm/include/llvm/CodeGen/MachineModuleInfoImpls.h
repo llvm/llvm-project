@@ -17,6 +17,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
+#include "llvm/MC/MCSymbol.h"
 #include <cassert>
 
 namespace llvm {
@@ -26,6 +27,13 @@ class MCSymbol;
 /// MachineModuleInfoMachO - This is a MachineModuleInfoImpl implementation
 /// for MachO targets.
 class MachineModuleInfoMachO : public MachineModuleInfoImpl {
+public:
+  /// The information specific to a Darwin '$auth_ptr' stub.
+  struct AuthStubInfo {
+    const MCExpr *Pointer;
+  };
+
+private:
   /// GVStubs - Darwin '$non_lazy_ptr' stubs.  The key is something like
   /// "Lfoo$non_lazy_ptr", the value is something like "_foo". The extra bit
   /// is true if this GV is external.
@@ -35,6 +43,11 @@ class MachineModuleInfoMachO : public MachineModuleInfoImpl {
   /// like "Lfoo$non_lazy_ptr", the value is something like "_foo". The extra
   /// bit is true if this GV is external.
   DenseMap<MCSymbol *, StubValueTy> ThreadLocalGVStubs;
+
+  /// Darwin '$auth_ptr' stubs.  The key is the stub symbol, like
+  /// "Lfoo$addend$auth_ptr$ib$12".  The value is the MCExpr representing that
+  /// pointer, something like "_foo+addend@AUTH(ib, 12)".
+  DenseMap<MCSymbol *, AuthStubInfo> AuthGVStubs;
 
   virtual void anchor(); // Out of line virtual method.
 
@@ -51,10 +64,31 @@ public:
     return ThreadLocalGVStubs[Sym];
   }
 
+  AuthStubInfo &getAuthGVStubEntry(MCSymbol *Sym) {
+    assert(Sym && "Key cannot be null");
+    return AuthGVStubs[Sym];
+  }
+
   /// Accessor methods to return the set of stubs in sorted order.
   SymbolListTy GetGVStubList() { return getSortedStubs(GVStubs); }
   SymbolListTy GetThreadLocalGVStubList() {
     return getSortedStubs(ThreadLocalGVStubs);
+  }
+
+  typedef std::pair<MCSymbol *, AuthStubInfo> AuthStubPairTy;
+  typedef std::vector<AuthStubPairTy> AuthStubListTy;
+
+  AuthStubListTy getAuthGVStubList() {
+    AuthStubListTy List(AuthGVStubs.begin(), AuthGVStubs.end());
+
+    if (!List.empty())
+      std::sort(List.begin(), List.end(),
+                [](const AuthStubPairTy &LHS, const AuthStubPairTy &RHS) {
+                  return LHS.first->getName() < RHS.first->getName();
+                });
+
+    AuthGVStubs.clear();
+    return List;
   }
 };
 

@@ -41,6 +41,7 @@ public:
   void AddRange(const AddressRange &new_range);
 
 protected:
+  bool DoPlanExplainsStop(Event *event_ptr) override;
   bool InRange();
   lldb::FrameComparison CompareCurrentFrameToStartFrame();
   bool InSymbol();

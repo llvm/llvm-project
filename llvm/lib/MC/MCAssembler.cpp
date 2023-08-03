@@ -91,6 +91,8 @@ MCAssembler::MCAssembler(MCContext &Context,
       IncrementalLinkerCompatible(false), ELFHeaderEFlags(0) {
   VersionInfo.Major = 0; // Major version == 0 for "none specified"
   DarwinTargetVariantVersionInfo.Major = 0;
+  PtrAuthABIVersion = std::nullopt;
+  PtrAuthKernelABIVersion = false;
 }
 
 MCAssembler::~MCAssembler() = default;
@@ -113,6 +115,8 @@ void MCAssembler::reset() {
   VersionInfo.SDKVersion = VersionTuple();
   DarwinTargetVariantVersionInfo.Major = 0;
   DarwinTargetVariantVersionInfo.SDKVersion = VersionTuple();
+  PtrAuthABIVersion = std::nullopt;
+  PtrAuthKernelABIVersion = false;
 
   // reset objects owned by us
   if (getBackendPtr())

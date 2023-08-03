@@ -171,6 +171,7 @@ extern "C" {
     void free(void *ptr);
     Class* objc_copyRealizedClassList_nolock(unsigned int *outCount);
     const char* objc_debug_class_getNameRaw(Class cls);
+    const char* class_getName(Class cls);
 }
 
 #define DEBUG_PRINTF(fmt, ...) if (should_log) printf(fmt, ## __VA_ARGS__)
@@ -206,6 +207,10 @@ __lldb_apple_objc_v2_get_dynamic_class_info2(void *gdb_objc_realized_classes_ptr
         {
             Class isa = realized_class_list[i];
             const char *name_ptr = objc_debug_class_getNameRaw(isa);
+            if (!name_ptr) {
+              class_getName(isa); /* Realize lazy names of bridged Swift classes. */
+              name_ptr = objc_debug_class_getNameRaw(isa);
+            }
             if (!name_ptr)
                 continue;
             const char *s = name_ptr;
@@ -809,10 +814,17 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
           class_type_or_name.SetTypeSP(type_sp);
         } else {
           // try to go for a CompilerType at least
-          if (auto *vendor = GetDeclVendor()) {
-            auto types = vendor->FindTypes(class_name, /*max_matches*/ 1);
-            if (!types.empty())
-              class_type_or_name.SetCompilerType(types.front());
+          DeclVendor *vendor = GetDeclVendor();
+          if (vendor) {
+            std::vector<CompilerDecl> decls;
+            if (vendor->FindDecls(class_name, false, 1, decls) &&
+                decls.size()) {
+              auto *ctx = llvm::dyn_cast<TypeSystemClang>(decls[0].GetTypeSystem());
+              if (ctx)
+                if (CompilerType type =
+                        ctx->GetTypeForDecl(decls[0].GetOpaqueDecl()))
+                  class_type_or_name.SetCompilerType(type);
+            }
           }
         }
       }
@@ -821,6 +833,7 @@ bool AppleObjCRuntimeV2::GetDynamicTypeAndAddress(
   return !class_type_or_name.IsEmpty();
 }
 
+//------------------------------------------------------------------
 // Static Functions
 LanguageRuntime *AppleObjCRuntimeV2::CreateInstance(Process *process,
                                                     LanguageType language) {

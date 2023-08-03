@@ -179,6 +179,65 @@ function(add_lldb_library name)
   endif()
 endfunction(add_lldb_library)
 
+# BEGIN Swift Mods
+function(add_properties_for_swift_modules target reldir)
+  # The relative directory for build can be passed as an optional
+  # extra argument. Retrieve it, or use reldir instead.
+  list(LENGTH ARGN num_optional_arguments)
+  if (${num_optional_arguments} GREATER 0)
+    list(GET ARGN 0 build_reldir)
+  else()
+    set(build_reldir ${reldir})
+  endif()
+
+  if (NOT BOOTSTRAPPING_MODE)
+    if (SWIFT_SWIFT_PARSER)
+      set(APSM_BOOTSTRAPPING_MODE "HOSTTOOLS")
+    endif()
+  else()
+    set(APSM_BOOTSTRAPPING_MODE "${BOOTSTRAPPING_MODE}")
+  endif()
+
+  if (APSM_BOOTSTRAPPING_MODE)
+    if (CMAKE_SYSTEM_NAME MATCHES "Darwin")
+      if(APSM_BOOTSTRAPPING_MODE MATCHES "HOSTTOOLS|.*HOSTLIBS")
+        target_link_directories(${target} PRIVATE
+            "${CMAKE_OSX_SYSROOT}/usr/lib/swift"
+            "${LLDB_SWIFT_LIBS}/macosx")
+	set(SWIFT_BUILD_RPATH "/usr/lib/swift")
+	set(SWIFT_INSTALL_RPATH "/usr/lib/swift")
+      elseif(APSM_BOOTSTRAPPING_MODE STREQUAL "BOOTSTRAPPING")
+        target_link_directories(${target} PRIVATE "${LLDB_SWIFT_LIBS}/macosx")
+	set(SWIFT_BUILD_RPATH "${LLDB_SWIFT_LIBS}/macosx")
+	set(SWIFT_INSTALL_RPATH "${LLDB_SWIFT_LIBS}/macosx")
+      else()
+        message(FATAL_ERROR "Unknown APSM_BOOTSTRAPPING_MODE '${APSM_BOOTSTRAPPING_MODE}'")
+      endif()
+
+      # Workaround for a linker crash related to autolinking: rdar://77839981
+      set_property(TARGET ${target} APPEND_STRING PROPERTY
+                   LINK_FLAGS " -lobjc ")
+    elseif (CMAKE_SYSTEM_NAME MATCHES "Linux|Android|OpenBSD|FreeBSD")
+      string(REGEX MATCH "^[^-]*" arch ${LLVM_TARGET_TRIPLE})
+      target_link_libraries(${target} PRIVATE swiftCore-linux-${arch})
+      string(TOLOWER ${CMAKE_SYSTEM_NAME} platform)
+      set(SWIFT_BUILD_RPATH "${LLDB_SWIFT_LIBS}/${platform}")
+      set(SWIFT_INSTALL_RPATH "$ORIGIN/swift/${platform}")
+    endif()
+
+    set_property(TARGET ${target} APPEND PROPERTY BUILD_RPATH "${SWIFT_BUILD_RPATH}")
+    set_property(TARGET ${target} APPEND PROPERTY INSTALL_RPATH "${SWIFT_INSTALL_RPATH}")
+
+    if (SWIFT_SWIFT_PARSER)
+      set_property(TARGET ${target}
+        APPEND PROPERTY BUILD_RPATH "@loader_path/${build_reldir}lib/swift/host")
+      set_property(TARGET ${target}
+        APPEND PROPERTY INSTALL_RPATH "@loader_path/${reldir}lib/swift/host")
+    endif()
+  endif()
+endfunction()
+# END Swift Mods
+
 function(add_lldb_executable name)
   cmake_parse_arguments(ARG
     "GENERATE_INSTALL"
@@ -318,7 +377,7 @@ function(lldb_add_post_install_steps_darwin name install_prefix)
   endif()
 
   # Generate dSYM
-  if(NOT LLDB_SKIP_DSYM)
+  if(NOT ${name} STREQUAL "repl_swift")
     set(dsym_name ${output_name}.dSYM)
     if(is_framework)
       set(dsym_name ${output_name}.framework.dSYM)

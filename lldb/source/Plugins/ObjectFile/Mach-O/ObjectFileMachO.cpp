@@ -52,6 +52,10 @@
 #include "llvm/Support/MemoryBuffer.h"
 
 #include "ObjectFileMachO.h"
+#ifdef LLDB_ENABLE_SWIFT
+#include "swift/ABI/ObjectFile.h"
+#include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#endif //LLDB_ENABLE_SWIFT
 
 #if defined(__APPLE__)
 #include <TargetConditionals.h>
@@ -1201,6 +1205,7 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
         case eSectionTypeDWARFAppleTypes:
         case eSectionTypeDWARFAppleNamespaces:
         case eSectionTypeDWARFAppleObjC:
+        case eSectionTypeSwiftModules:
         case eSectionTypeDWARFGNUDebugAltLink:
         case eSectionTypeCTF:
           return AddressClass::eDebug;
@@ -1288,6 +1293,8 @@ AddressClass ObjectFileMachO::GetAddressClass(lldb::addr_t file_addr) {
       return AddressClass::eRuntime;
     case eSymbolTypeReExported:
       return AddressClass::eRuntime;
+    case eSymbolTypeASTFile:
+      return AddressClass::eDebug;
     }
   }
   return AddressClass::eUnknown;
@@ -1475,6 +1482,7 @@ static lldb::SectionType GetSectionType(uint32_t flags,
   static ConstString g_sect_name_compact_unwind("__unwind_info");
   static ConstString g_sect_name_text("__text");
   static ConstString g_sect_name_data("__data");
+  static ConstString g_sect_name_swift_ast("__swift_ast");
   static ConstString g_sect_name_go_symtab("__gosymtab");
   static ConstString g_sect_name_ctf("__ctf");
 
@@ -1552,6 +1560,8 @@ static lldb::SectionType GetSectionType(uint32_t flags,
     return eSectionTypeCompactUnwind;
   if (section_name == g_sect_name_cfstring)
     return eSectionTypeDataObjCCFStrings;
+  if (section_name == g_sect_name_swift_ast)
+    return eSectionTypeSwiftModules;
   if (section_name == g_sect_name_go_symtab)
     return eSectionTypeGoSymtab;
   if (section_name == g_sect_name_ctf)
@@ -2648,6 +2658,7 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
   std::vector<TrieEntryWithOffset> reexport_trie_entries;
   std::vector<TrieEntryWithOffset> external_sym_trie_entries;
   std::set<lldb::addr_t> resolver_addresses;
+  std::set<lldb::addr_t> symbol_file_addresses;
 
   if (dyld_trie_data.GetByteSize() > 0) {
     SectionSP text_segment_sp =
@@ -3478,6 +3489,13 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
                         }
                       }
                       if (symbol_section) {
+                        // Keep track of the symbols we added by address in
+                        // case we have other sources
+                        // for symbols where we only want to add a symbol if
+                        // it isn't already in the
+                        // symbol table.
+                        symbol_file_addresses.insert(nlist.n_value);
+
                         const addr_t section_file_addr =
                             symbol_section->GetFileAddress();
                         if (symbol_byte_size == 0 &&
@@ -4106,6 +4124,11 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
           type = eSymbolTypeAdditional;
           break;
 
+        case N_AST:
+          // A path to a compiler AST file
+          type = eSymbolTypeASTFile;
+          break;
+
         default:
           break;
         }
@@ -4338,6 +4361,13 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       }
 
       if (symbol_section) {
+        // Keep track of the symbols we added by address in case we have
+        // other sources
+        // for symbols where we only want to add a symbol if it isn't
+        // already in the
+        // symbol table.
+        symbol_file_addresses.insert(nlist.n_value);
+
         const addr_t section_file_addr = symbol_section->GetFileAddress();
         if (symbol_byte_size == 0 && function_starts_count > 0) {
           addr_t symbol_lookup_file_addr = nlist.n_value;
@@ -6807,6 +6837,24 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
   }
   return false;
 }
+
+llvm::StringRef ObjectFileMachO::GetReflectionSectionIdentifier(
+    swift::ReflectionSectionKind section) {
+#ifdef LLDB_ENABLE_SWIFT
+  swift::SwiftObjectFileFormatMachO file_format_mach_o;
+  return file_format_mach_o.getSectionName(section);
+#else
+  llvm_unreachable("Swift support disabled");
+#endif //LLDB_ENABLE_SWIFT
+}
+
+#ifdef LLDB_ENABLE_SWIFT
+bool ObjectFileMachO::CanContainSwiftReflectionData(const Section &section) {
+  swift::SwiftObjectFileFormatMachO file_format;
+  return file_format.sectionContainsReflectionData(
+      section.GetName().GetStringRef());
+}
+#endif // LLDB_ENABLE_SWIFT
 
 ObjectFileMachO::MachOCorefileAllImageInfos
 ObjectFileMachO::GetCorefileAllImageInfos() {

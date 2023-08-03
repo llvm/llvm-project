@@ -263,6 +263,9 @@ if config.target_triple.startswith("ppc") or config.target_triple.startswith("po
 if re.match(r"^x86_64.*-linux", config.target_triple):
     config.available_features.add("x86_64-linux")
 
+if lit.util.isMacOSTriple(config.target_triple):
+   config.available_features.add('darwin')
+
 config.available_features.add("host-byteorder-" + sys.byteorder + "-endian")
 
 if config.have_zlib:

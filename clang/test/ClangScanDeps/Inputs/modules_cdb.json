@@ -1,7 +1,7 @@
 [
 {
   "directory": "DIR",
-  "command": "clang -E DIR/modules_cdb_input2.cpp -IInputs -D INCLUDE_HEADER2 -MD -MF DIR/modules_cdb2.d -fmodules -fcxx-modules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fimplicit-module-maps",
+  "command": "clang -E DIR/modules_cdb_input2.cpp -IInputs -D INCLUDE_HEADER2 -MD -MF DIR/modules_cdb2.d -fmodules -fcxx-modules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -fimplicit-module-maps -gmodules",
   "file": "DIR/modules_cdb_input2.cpp"
 },
 {

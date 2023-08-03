@@ -83,6 +83,10 @@ enum NodeType {
   ExternalSymbol,
   BlockAddress,
 
+  /// A llvm.ptrauth global
+  /// wrapper llvm.ptrauth global, ptr, key, addr-disc, disc
+  PtrAuthGlobalAddress,
+
   /// The address of the GOT
   GLOBAL_OFFSET_TABLE,
 

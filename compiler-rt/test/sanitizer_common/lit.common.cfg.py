@@ -52,6 +52,9 @@ if config.host_os == "Darwin":
     default_tool_options += ["abort_on_error=0"]
     if config.tool_name == "tsan":
         default_tool_options += ["ignore_interceptors_accesses=0"]
+elif config.host_os == "Linux" and config.tool_name == "tsan":
+    # For Swift, the above also applies on Linux.
+    default_tool_options += ["ignore_interceptors_accesses=0"]
 elif config.android:
     # The same as on Darwin, we default to "abort_on_error=1" which slows down
     # testing. Also, all existing tests are using "not" instead of "not --crash"
@@ -94,6 +97,12 @@ if config.host_os not in ["Linux", "Darwin", "NetBSD", "FreeBSD", "SunOS"]:
 
 if not config.parallelism_group:
     config.parallelism_group = "shadow-memory"
+
+# Disable LSan sanitizer_common tests
+# because AppleClang doesn't support LSan.
+if config.tool_name == "lsan" and config.host_os == "Darwin":
+  lit_config.note("LSan sanitizer_common tests disabled")
+  config.unsupported = True
 
 if config.host_os == "NetBSD":
     config.substitutions.insert(0, ("%run", config.netbsd_noaslr_prefix))

@@ -15,6 +15,7 @@
 
 #include <stdbool.h>
 #include "llvm-c/Core.h"
+#include "llvm-c/ErrorHandling.h"
 
 #ifdef __cplusplus
 extern "C" {

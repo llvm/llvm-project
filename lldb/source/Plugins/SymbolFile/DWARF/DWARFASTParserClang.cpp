@@ -2447,12 +2447,16 @@ DWARFASTParserClang::ParseFunctionFromDWARF(CompileUnit &comp_unit,
 
     assert(func_type == nullptr || func_type != DIE_IS_BEING_PARSED);
 
+    bool is_generic_trampoline = die.IsGenericTrampoline();
+
     const user_id_t func_user_id = die.GetID();
     func_sp =
         std::make_shared<Function>(&comp_unit,
                                    func_user_id, // UserID is the DIE offset
                                    func_user_id, func_name, func_type,
-                                   func_range); // first address range
+                                   func_range, // first address range
+                                   false, // canThrow
+                                   is_generic_trampoline);
 
     if (func_sp.get() != nullptr) {
       if (frame_base.IsValid())
@@ -3353,8 +3357,9 @@ DWARFASTParserClang::GetOwningClangModule(const DWARFDIE &die) {
       if (!name)
         return {};
 
-      OptionalClangModuleID id =
-          m_ast.GetOrCreateClangModule(name, GetOwningClangModule(module_die));
+      OptionalClangModuleID id = m_ast.GetOrCreateClangModule(
+          name, GetOwningClangModule(module_die),
+          module_die.GetAttributeValueAsString(DW_AT_LLVM_apinotes, ""));
       m_die_to_module.insert({module_die.GetDIE(), id});
       return id;
     }

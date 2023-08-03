@@ -2041,6 +2041,12 @@ static void writeDIDerivedType(raw_ostream &Out, const DIDerivedType *N,
     Printer.printInt("dwarfAddressSpace", *DWARFAddressSpace,
                      /* ShouldSkipZero */ false);
   Printer.printMetadata("annotations", N->getRawAnnotations());
+  if (auto Key = N->getPtrAuthKey())
+    Printer.printInt("ptrAuthKey", *Key);
+  if (auto AddrDisc = N->isPtrAuthAddressDiscriminated())
+    Printer.printBool("ptrAuthIsAddressDiscriminated", *AddrDisc);
+  if (auto Disc = N->getPtrAuthExtraDiscriminator())
+    Printer.printInt("ptrAuthExtraDiscriminator", *Disc);
   Out << ")";
 }
 

@@ -149,6 +149,30 @@ CINDEX_LINKAGE void clang_disposeDiagnosticSet(CXDiagnosticSet Diags);
 CINDEX_LINKAGE CXDiagnosticSet clang_getChildDiagnostics(CXDiagnostic D);
 
 /**
+ * Get the contents if the given file that was provided via diagnostics.
+ *
+ * \param diags the diagnostics set to query for the contents of the file.
+ * \param file the file to get the contents of.
+ * \param outFileSize if non-null, set to the file size on success.
+ * \returns on success, a pointer to the file contents. Otherwise, NULL.
+ */
+CINDEX_LINKAGE const char *clang_getDiagnosticFileContents(
+    CXDiagnosticSet diags, CXFile file, size_t *outFileSize);
+
+/**
+ * Retrieve the original source range if the given file was provided via
+ * diagnostics and is conceptually a replacement for the original source range.
+ *
+ * \param diags the diagnostics set to query for the contents of the file.
+ * \param file the file to get the contents of.
+ * \returns on success, the source range (into another file) that is
+ * conceptually replaced by the contents of the given file (available via
+ * \c clang_getDiagnosticFileContents).
+ */
+CINDEX_LINKAGE CXSourceRange clang_getDiagnosticFileOriginalSourceRange(
+    CXDiagnosticSet diags, CXFile file);
+
+/**
  * Destroy a diagnostic.
  */
 CINDEX_LINKAGE void clang_disposeDiagnostic(CXDiagnostic Diagnostic);

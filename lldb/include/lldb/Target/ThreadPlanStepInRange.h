@@ -38,6 +38,8 @@ public:
 
   bool IsVirtualStep() override;
 
+  bool MischiefManaged() override;
+
   // Plans that are implementing parts of a step in might need to follow the
   // behavior of this plan w.r.t. StepThrough.  They can get that from here.
   static uint32_t GetDefaultFlagsValue() {
@@ -67,8 +69,26 @@ protected:
   bool FrameMatchesAvoidCriteria();
 
 private:
+  friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepOverRange(
+      bool abort_other_plans, const AddressRange &range,
+      const SymbolContext &addr_context, lldb::RunMode stop_others,
+      Status &status, LazyBool avoid_code_without_debug_info);
+  friend lldb::ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
+      bool abort_other_plans, const AddressRange &range,
+      const SymbolContext &addr_context, const char *step_in_target,
+      lldb::RunMode stop_others, Status &status,
+      LazyBool step_in_avoids_code_without_debug_info,
+      LazyBool step_out_avoids_code_without_debug_info);
+
   void SetupAvoidNoDebug(LazyBool step_in_avoids_code_without_debug_info,
                          LazyBool step_out_avoids_code_without_debug_info);
+
+  bool DefaultShouldStopHereImpl(Flags &flags, bool should_step_out);
+
+  bool StepInDeepBreakpointExplainsStop(lldb::StopInfoSP stop_info_sp);
+
+  void ClearStepInDeepBreakpoints();
+
   // Need an appropriate marker for the current stack so we can tell step out
   // from step in.
 
@@ -83,6 +103,9 @@ private:
   bool m_virtual_step; // true if we've just done a "virtual step", i.e. just
                        // moved the inline stack depth.
   ConstString m_step_into_target;
+  std::vector<lldb::break_id_t> m_step_in_deep_bps; // Places where we might
+                                                    // want to stop when we do a
+                                                    // step out.
   ThreadPlanStepInRange(const ThreadPlanStepInRange &) = delete;
   const ThreadPlanStepInRange &
   operator=(const ThreadPlanStepInRange &) = delete;

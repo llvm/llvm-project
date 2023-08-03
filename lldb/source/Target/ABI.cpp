@@ -20,6 +20,10 @@
 #include "llvm/MC/TargetRegistry.h"
 #include <cctype>
 
+#ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
+#endif //LLDB_ENABLE_SWIFT
+
 using namespace lldb;
 using namespace lldb_private;
 
@@ -85,11 +89,18 @@ ValueObjectSP ABI::GetReturnValueObject(Thread &thread, CompilerType &ast_type,
   // work.
 
   if (persistent) {
+    lldb::LanguageType lang = ast_type.GetMinimumLanguage();
+    PersistentExpressionState *persistent_expression_state;
     Target &target = *thread.CalculateTarget();
-    PersistentExpressionState *persistent_expression_state =
-        target.GetPersistentExpressionStateForLanguage(
-            ast_type.GetMinimumLanguage());
-
+#ifdef LLDB_ENABLE_SWIFT
+    if (lang == lldb::eLanguageTypeSwift)
+      persistent_expression_state = 
+        target.GetSwiftPersistentExpressionState(thread);
+    else
+#endif // LLDB_ENABLE_SWIFT
+      persistent_expression_state =
+        target.GetPersistentExpressionStateForLanguage(lang);
+    
     if (!persistent_expression_state)
       return {};
 

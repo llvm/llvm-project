@@ -1,0 +1,5 @@
+@_implementationOnly import Discovered
+public class D {
+    public init() { member = Invisible() }
+    private let member : Invisible
+}

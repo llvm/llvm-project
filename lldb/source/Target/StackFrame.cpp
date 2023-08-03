@@ -57,7 +57,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index), m_reg_context_sp(),
-      m_id(pc, cfa, nullptr), m_frame_code_addr(pc), m_sc(), m_flags(),
+      m_id(pc, cfa, thread_sp), m_frame_code_addr(pc), m_sc(), m_flags(),
       m_frame_base(), m_frame_base_error(), m_cfa_is_valid(cfa_is_valid),
       m_stack_frame_kind(kind),
       m_behaves_like_zeroth_frame(behaves_like_zeroth_frame),
@@ -83,7 +83,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
                        const SymbolContext *sc_ptr)
     : m_thread_wp(thread_sp), m_frame_index(frame_idx),
       m_concrete_frame_index(unwind_frame_index),
-      m_reg_context_sp(reg_context_sp), m_id(pc, cfa, nullptr),
+      m_reg_context_sp(reg_context_sp), m_id(pc, cfa, thread_sp),
       m_frame_code_addr(pc), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular),
@@ -111,7 +111,7 @@ StackFrame::StackFrame(const ThreadSP &thread_sp, user_id_t frame_idx,
       m_concrete_frame_index(unwind_frame_index),
       m_reg_context_sp(reg_context_sp),
       m_id(pc_addr.GetLoadAddress(thread_sp->CalculateTarget().get()), cfa,
-           nullptr),
+           thread_sp),
       m_frame_code_addr(pc_addr), m_sc(), m_flags(), m_frame_base(),
       m_frame_base_error(), m_cfa_is_valid(true),
       m_stack_frame_kind(StackFrame::Kind::Regular),
@@ -892,9 +892,18 @@ ValueObjectSP StackFrame::GetValueForVariableExpressionPath(
           }
         } else if (valobj_sp->GetCompilerType().IsArrayType(
                        nullptr, nullptr, &is_incomplete_array)) {
-          // Pass false to dynamic_value here so we can tell the difference
-          // between no dynamic value and no member of this type...
-          child_valobj_sp = valobj_sp->GetChildAtIndex(child_index);
+          // BEGIN SWIFT MOD
+          // This is a workaround for value-providing synthetic
+          // children like the one used for Swift.Int.
+          if (!no_synth_child) {
+            ValueObjectSP synthetic = valobj_sp->GetSyntheticValue();
+            if (synthetic)
+              child_valobj_sp = synthetic->GetChildAtIndex(child_index);
+          }
+          if (!child_valobj_sp)
+            child_valobj_sp = valobj_sp->GetChildAtIndex(child_index);
+          // END SWIFT MOD
+
           if (!child_valobj_sp && (is_incomplete_array || !no_synth_child))
             child_valobj_sp =
                 valobj_sp->GetSyntheticArrayMember(child_index, true);

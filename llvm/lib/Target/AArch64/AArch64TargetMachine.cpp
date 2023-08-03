@@ -239,6 +239,7 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAArch64Target() {
   initializeAArch64StackTaggingPreRAPass(*PR);
   initializeAArch64LowerHomogeneousPrologEpilogPass(*PR);
   initializeAArch64DAGToDAGISelPass(*PR);
+  initializeAArch64ExpandHardenedPseudosPass(*PR);
   initializeAArch64GlobalsTaggingPass(*PR);
 }
 
@@ -360,6 +361,7 @@ AArch64TargetMachine::AArch64TargetMachine(const Target &T, const Triple &TT,
   // MachO/CodeModel::Large, which GlobalISel does not support.
   if (getOptLevel() <= EnableGlobalISelAtO &&
       TT.getArch() != Triple::aarch64_32 &&
+      TT.getArchName() != "arm64e" &&
       TT.getEnvironment() != Triple::GNUILP32 &&
       !(getCodeModel() == CodeModel::Large && TT.isOSBinFormatMachO())) {
     setGlobalISel(true);
@@ -818,6 +820,10 @@ void AArch64PassConfig::addPreEmitPass() {
     // Identify valid eh continuation targets for Windows EHCont Guard.
     addPass(createEHContGuardCatchretPass());
   }
+
+  // Expand hardened pseudo-instructions.
+  // Do this now to enable LOH emission.
+  addPass(createAArch64ExpandHardenedPseudosPass());
 
   if (TM->getOptLevel() != CodeGenOpt::None && EnableCollectLOH &&
       TM->getTargetTriple().isOSBinFormatMachO())

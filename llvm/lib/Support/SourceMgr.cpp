@@ -24,6 +24,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/SMLoc.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/WithColor.h"
 #include "llvm/Support/raw_ostream.h"
 #include <algorithm>
@@ -37,6 +38,19 @@
 using namespace llvm;
 
 static const size_t TabStop = 8;
+
+// Out of line to avoid needing definition of vfs::FileSystem in header.
+SourceMgr::SourceMgr() = default;
+SourceMgr::~SourceMgr() = default;
+SourceMgr::SourceMgr(SourceMgr &&) = default;
+SourceMgr &SourceMgr::operator=(SourceMgr &&) = default;
+
+SourceMgr::SourceMgr(IntrusiveRefCntPtr<vfs::FileSystem> FS)
+    : FS(std::move(FS)) {}
+
+void SourceMgr::setFileSystem(IntrusiveRefCntPtr<vfs::FileSystem> FS) {
+  this->FS = std::move(FS);
+}
 
 unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
                                    SMLoc IncludeLoc,
@@ -52,8 +66,10 @@ unsigned SourceMgr::AddIncludeFile(const std::string &Filename,
 ErrorOr<std::unique_ptr<MemoryBuffer>>
 SourceMgr::OpenIncludeFile(const std::string &Filename,
                            std::string &IncludedFile) {
-  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr =
-      MemoryBuffer::getFile(Filename);
+  auto getFile = [this](StringRef Path) {
+    return FS ? FS->getBufferForFile(Path) : MemoryBuffer::getFile(Path);
+  };
+  ErrorOr<std::unique_ptr<MemoryBuffer>> NewBufOrErr = getFile(Filename);
 
   SmallString<64> Buffer(Filename);
   // If the file didn't exist directly, see if it's in an include path.
@@ -61,7 +77,7 @@ SourceMgr::OpenIncludeFile(const std::string &Filename,
        ++i) {
     Buffer = IncludeDirectories[i];
     sys::path::append(Buffer, Filename);
-    NewBufOrErr = MemoryBuffer::getFile(Buffer);
+    NewBufOrErr = getFile(Buffer);
   }
 
   if (NewBufOrErr)

@@ -91,9 +91,9 @@ bool SymbolContext::DumpStopContext(Stream *s, ExecutionContextScope *exe_scope,
     } else {
       ConstString name;
       if (!show_function_arguments)
-        name = function->GetNameNoArguments();
+        name = function->GetNameNoArguments(this);
       if (!name)
-        name = function->GetName();
+        name = function->GetName(this);
       if (name)
         name.Dump(s);
     }
@@ -850,6 +850,8 @@ const Symbol *SymbolContext::FindBestGlobalDataSymbol(ConstString name,
           case eSymbolTypeInstrumentation:
           case eSymbolTypeUndefined:
           case eSymbolTypeResolver:
+            break;
+          case eSymbolTypeASTFile:
             break;
           }
         }

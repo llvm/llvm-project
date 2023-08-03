@@ -24,14 +24,17 @@ config.test_source_root = os.path.dirname(__file__)
 default_tsan_opts = "atexit_sleep_ms=0"
 
 if config.host_os == "Darwin":
-    # On Darwin, we default to `abort_on_error=1`, which would make tests run
-    # much slower. Let's override this and run lit tests with 'abort_on_error=0'.
-    default_tsan_opts += ":abort_on_error=0"
-    # On Darwin, we default to ignore_noninstrumented_modules=1, which also
-    # suppresses some races the tests are supposed to find. Let's run without this
-    # setting, but turn it back on for Darwin tests (see Darwin/lit.local.cfg.py).
-    default_tsan_opts += ":ignore_noninstrumented_modules=0"
-    default_tsan_opts += ":ignore_interceptors_accesses=0"
+  # On Darwin, we default to `abort_on_error=1`, which would make tests run
+  # much slower. Let"s override this and run lit tests with "abort_on_error=0".
+  default_tsan_opts += ":abort_on_error=0"
+
+# For Swift, the following also applies on Linux.
+if config.host_os == "Darwin" or config.host_os == "Linux":
+  # On Darwin, we default to ignore_noninstrumented_modules=1, which also
+  # suppresses some races the tests are supposed to find. Let"s run without this
+  # setting, but turn it back on for Darwin tests (see Darwin/lit.local.cfg.py).
+  default_tsan_opts += ":ignore_noninstrumented_modules=0"
+  default_tsan_opts += ":ignore_interceptors_accesses=0"
 
 # Platform-specific default TSAN_OPTIONS for lit tests.
 if default_tsan_opts:

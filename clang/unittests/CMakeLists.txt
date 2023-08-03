@@ -24,6 +24,7 @@ function(add_clang_unittest test_dirname)
 endfunction()
 
 add_subdirectory(Basic)
+add_subdirectory(CAS)
 add_subdirectory(Lex)
 add_subdirectory(Driver)
 if(CLANG_ENABLE_STATIC_ANALYZER)

@@ -360,6 +360,17 @@ enum ControlRecordTypes {
 
   /// Record code for the module build directory.
   MODULE_DIRECTORY,
+
+  /// Record code for the (optional) \c ActionCache  key for this module.
+  MODULE_CACHE_KEY,
+
+  /// Record code for the (optional) CAS filesystem root ID for implicit modules
+  /// built with the dependency scanner.
+  CASFS_ROOT_ID,
+
+  /// Record code for the (optional) include-tree ID for implicit modules
+  /// built with the dependency scanner.
+  CAS_INCLUDE_TREE_ID,
 };
 
 /// Record types that occur within the options block inside
@@ -375,9 +386,6 @@ enum OptionsRecordTypes {
 
   /// Record code for the target options table.
   TARGET_OPTIONS,
-
-  /// Record code for the filesystem options table.
-  FILE_SYSTEM_OPTIONS,
 
   /// Record code for the headers search options table.
   HEADER_SEARCH_OPTIONS,
@@ -399,6 +407,9 @@ enum UnhashedControlBlockRecordTypes {
 
   /// Record code for the headers search paths.
   HEADER_SEARCH_PATHS,
+
+  /// Record code for the filesystem options table.
+  FILE_SYSTEM_OPTIONS,
 
   /// Record code for \#pragma diagnostic mappings.
   DIAG_PRAGMA_MAPPINGS,

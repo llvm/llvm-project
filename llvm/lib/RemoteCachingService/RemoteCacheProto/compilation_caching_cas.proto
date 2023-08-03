@@ -1,0 +1,136 @@
+//===--- compilation_caching_cas.proto - CAS service definition -----------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "com.apple.dt.compilation_cache_service";
+option java_outer_classname = "CompilationCachingProto";
+option objc_class_prefix = "CCS";
+
+package compilation_cache_service.cas.v1;
+
+// MARK: - Data types
+message CASDataID {
+  bytes id = 1;
+}
+
+// `CASObject` and `CASBlob` should be wire compatible.
+message CASObject {
+  CASBytes blob = 1;
+  repeated CASDataID references = 2;
+}
+
+// `CASObject` and `CASBlob` should be wire compatible.
+message CASBlob {
+    CASBytes blob = 1;
+}
+
+message CASBytes {
+  oneof contents {
+    bytes data = 1;
+    string file_path = 2;
+  }
+}
+
+// MARK: - Service interface
+
+// Interface exported by the service.
+service CASDBService {
+  rpc Get(CASGetRequest) returns (CASGetResponse) {}
+  rpc Put(CASPutRequest) returns (CASPutResponse) {}
+
+  rpc Load(CASLoadRequest) returns (CASLoadResponse) {}
+  rpc Save(CASSaveRequest) returns (CASSaveResponse) {}
+}
+
+message ResponseError { string description = 1; }
+
+// MARK: - Service request/response types
+
+// MARK: Put
+message CASPutRequest {
+  CASObject data = 1;
+}
+
+message CASPutResponse {
+  oneof contents {
+    ResponseError error = 1;
+    CASDataID cas_id = 2;
+  }
+}
+
+// MARK: Get
+message CASGetRequest {
+  CASDataID cas_id = 1;
+  // If set, the client asks for the service to write the blob part to disk, with a
+  // file path of the service's choosing.
+  //
+  // However this is not a hard requirement, the service can still choose to
+  // return the blob back as `bytes`. The client should always check whether
+  // the blob came back as `bytes` or as a file on disk.
+  //
+  // If the service writes the blob to a file, it should have the right
+  // access for the client to be able to move it to a different path.
+  bool write_to_disk = 2;
+}
+
+message CASGetResponse {
+  enum Outcome {
+    ERROR = 0; // if unset, we'll get error
+
+    OBJECT_NOT_FOUND = 1;
+    SUCCESS = 2;
+  }
+  Outcome outcome = 1;
+  oneof contents {
+    ResponseError error = 2;
+    CASObject data = 3;
+  }
+}
+
+// MARK: Save
+message CASSaveRequest {
+  CASBlob data = 1;
+}
+
+message CASSaveResponse {
+  oneof contents {
+    ResponseError error = 1;
+    CASDataID cas_id = 2;
+  }
+}
+
+// MARK: Load
+message CASLoadRequest {
+  CASDataID cas_id = 1;
+  // If set, the client asks for the service to write the blob part to disk, with a
+  // file path of the service's choosing.
+  //
+  // However this is not a hard requirement, the service can still choose to
+  // return the blob back as `bytes`. The client should always check whether
+  // the blob came back as `bytes` or as a file on disk.
+  //
+  // If the service writes the blob to a file, it should have the right
+  // access for the client to be able to move it to a different path.
+  bool write_to_disk = 2;
+}
+
+message CASLoadResponse {
+  enum Outcome {
+    ERROR = 0; // if unset, we'll get error
+
+    OBJECT_NOT_FOUND = 1;
+    SUCCESS = 2;
+  }
+  Outcome outcome = 1;
+  oneof contents {
+    ResponseError error = 2;
+    CASBlob data = 3;
+  }
+}

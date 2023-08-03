@@ -450,6 +450,24 @@ bool ModuleManager::lookupModuleFile(StringRef FileName, off_t ExpectedSize,
   OptionalFileEntryRef FileOrErr =
       expectedToOptional(FileMgr.getFileRef(FileName, /*OpenFile=*/true,
                                             /*CacheFailure=*/false));
+#if !defined(__APPLE__)
+  if (FileOrErr) {
+    // On Linux ext4 FileManager's inode caching system does not
+    // provide us correct behaviour for ModuleCache directories.
+    // inode can be reused after PCM delete resulting in cache misleading.
+    FileOrErr = FileMgr.getBypassFile(*FileOrErr);
+  }
+#endif
+
+  // If the file is known to the module cache but not in the filesystem, it is
+  // a memory buffer. Create a virtual file for it.
+  if (!FileOrErr) {
+    if (auto *KnownBuffer = getModuleCache().lookupPCM(FileName)) {
+      FileOrErr =
+          FileMgr.getVirtualFileRef(FileName, KnownBuffer->getBufferSize(), 0);
+    }
+  }
+
   if (!FileOrErr)
     return false;
 

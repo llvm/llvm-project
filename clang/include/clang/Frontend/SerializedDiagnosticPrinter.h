@@ -31,9 +31,16 @@ namespace serialized_diags {
 /// This allows wrapper tools for Clang to get diagnostics from Clang
 /// (via libclang) without needing to parse Clang's command line output.
 ///
-std::unique_ptr<DiagnosticConsumer> create(StringRef OutputFile,
-                                           DiagnosticOptions *Diags,
-                                           bool MergeChildRecords = false);
+/// \param OS optional stream to output the serialized diagnostics buffer,
+/// instead of writing out directly to a file.
+/// FIXME: \p OS is temporary transition until we have structured diagnostics
+/// caching in which case we won't need to manage serialized diagnostics files
+/// explicitly for caching purposes and the changes to add \p OS in this
+/// function should be reverted.
+std::unique_ptr<DiagnosticConsumer>
+create(StringRef OutputFile, DiagnosticOptions *Diags,
+       bool MergeChildRecords = false,
+       std::unique_ptr<raw_ostream> OS = nullptr);
 
 } // end serialized_diags namespace
 } // end clang namespace

@@ -23,6 +23,10 @@
 #include "llvm/Support/VersionTuple.h"
 #include <optional>
 
+namespace swift {
+class SwiftObjectFileFormat;
+enum ReflectionSectionKind : uint8_t;
+}
 namespace lldb_private {
 
 /// \class ObjectFile ObjectFile.h "lldb/Symbol/ObjectFile.h"
@@ -654,6 +658,9 @@ public:
   virtual size_t ReadSectionData(Section *section,
                                  DataExtractor &section_data);
 
+  const char *GetCStrFromSection(Section *section,
+                                 lldb::offset_t section_offset) const;
+
   /// Returns true if the object file exists only in memory.
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 
@@ -683,6 +690,15 @@ public:
 
   /// Creates a plugin-specific call frame info
   virtual std::unique_ptr<CallFrameInfo> CreateCallFrameInfo();
+
+  virtual llvm::StringRef
+  GetReflectionSectionIdentifier(swift::ReflectionSectionKind section);
+
+#ifdef LLDB_ENABLE_SWIFT
+  virtual bool CanContainSwiftReflectionData(const Section &section) {
+    return false;
+  }
+#endif // LLDB_ENABLE_SWIFT
 
   /// Load binaries listed in a corefile
   ///

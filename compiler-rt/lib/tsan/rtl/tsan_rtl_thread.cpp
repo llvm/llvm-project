@@ -214,10 +214,14 @@ void ThreadContext::OnStarted(void *arg) {
 void ThreadFinish(ThreadState *thr) {
   DPrintf("#%d: ThreadFinish\n", thr->tid);
   ThreadCheckIgnore(thr);
-  if (thr->stk_addr && thr->stk_size)
+  if (thr->stk_addr && thr->stk_size) {
+    MemoryResetRange(thr, /*pc=*/ 1, thr->stk_addr, thr->stk_size);
     DontNeedShadowFor(thr->stk_addr, thr->stk_size);
-  if (thr->tls_addr && thr->tls_size)
+  }
+  if (thr->tls_addr && thr->tls_size) {
+    MemoryResetRange(thr, /*pc=*/ 1, thr->tls_addr, thr->tls_size);
     DontNeedShadowFor(thr->tls_addr, thr->tls_size);
+  }
   thr->is_dead = true;
 #if !SANITIZER_GO
   thr->is_inited = false;

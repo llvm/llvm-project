@@ -395,6 +395,19 @@ bool generateDsymCompanion(
   bool Is64Bit = Writer.is64Bit();
   MachO::symtab_command SymtabCmd = InputBinary.getSymtabLoadCommand();
 
+  // Get the ptrauth ABI version (for arm64 subtypes).
+  Optional<unsigned> PtrAuthABIVersion;
+  bool PtrAuthKernelABIVersion = false;
+  unsigned CPUType = InputBinary.getHeader().cputype;
+  unsigned CPUSubTypeField = InputBinary.getHeader().cpusubtype;
+  if (CPUType == MachO::CPU_TYPE_ARM64 &&
+      MachO::CPU_SUBTYPE_ARM64E_IS_VERSIONED_PTRAUTH_ABI(CPUSubTypeField)) {
+    PtrAuthABIVersion =
+        MachO::CPU_SUBTYPE_ARM64E_PTRAUTH_VERSION(CPUSubTypeField);
+    PtrAuthKernelABIVersion =
+        MachO::CPU_SUBTYPE_ARM64E_IS_KERNEL_PTRAUTH_ABI(CPUSubTypeField);
+  }
+
   // Compute the number of load commands we will need.
   unsigned LoadCommandSize = 0;
   unsigned NumLoadCommands = 0;
@@ -515,7 +528,9 @@ bool generateDsymCompanion(
   SymtabStart = alignTo(SymtabStart, 0x1000);
 
   // We gathered all the information we need, start emitting the output file.
-  Writer.writeHeader(MachO::MH_DSYM, NumLoadCommands, LoadCommandSize, false);
+  Writer.writeHeader(MachO::MH_DSYM, NumLoadCommands, LoadCommandSize,
+                     /*SubsectionsViaSymbols=*/false, PtrAuthABIVersion,
+                     PtrAuthKernelABIVersion);
 
   // Write the load commands.
   assert(OutFile.tell() == HeaderSize);

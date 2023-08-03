@@ -780,6 +780,13 @@ def warn_pp_date_time : Warning<
   "expansion of date or time macro is not reproducible">,
   ShowInSystemHeader, DefaultIgnore, InGroup<DiagGroup<"date-time">>;
 
+def warn_pp_encounter_nonreproducible: Warning<
+  "encountered non-reproducible token, caching will be skipped">,
+  InGroup<DiagGroup<"reproducible-caching">>,
+  DefaultWarnNoWerror, ShowInSystemHeader, ShowInSystemMacro;
+def err_pp_encounter_nonreproducible: Error<
+  "encountered non-reproducible token, caching failed">;
+
 // Module map parsing
 def err_mmap_unknown_token : Error<"skipping stray token">;
 def err_mmap_expected_module : Error<"expected module declaration">;
@@ -879,7 +886,7 @@ def warn_quoted_include_in_framework_header : Warning<
   >, InGroup<FrameworkHdrQuotedInclude>, DefaultIgnore;
 def warn_framework_include_private_from_public : Warning<
   "public framework header includes private framework header '%0'"
-  >, InGroup<FrameworkIncludePrivateFromPublic>;
+  >, InGroup<FrameworkIncludePrivateFromPublic>, DefaultIgnore;
 
 def remark_pp_include_directive_modular_translation : Remark<
   "treating #%select{include|import|include_next|__include_macros}0 as an "
@@ -931,6 +938,9 @@ def warn_defined_in_object_type_macro : Warning<
 def warn_defined_in_function_type_macro : Extension<
   "macro expansion producing 'defined' has undefined behavior">,
   InGroup<ExpansionToDefined>;
+
+def err_pp_missing_module_include_tree : Error<
+  "no module named '%0' declared in include-tree module map">, DefaultFatal;
 
 let CategoryName = "Nullability Issue" in {
 

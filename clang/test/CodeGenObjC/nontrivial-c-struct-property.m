@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -emit-llvm -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-DISABLE-PTRAUTH %s
+// RUN: %clang_cc1 -triple arm64-apple-ios11 -fobjc-arc  -fptrauth-calls -emit-llvm -o - %s | FileCheck --check-prefix=CHECK --check-prefix=CHECK-ENABLE-PTRAUTH %s
 
 typedef struct {
   id x;
@@ -24,6 +25,9 @@ typedef struct {
 @end
 
 // CHECK: %[[STRUCT_S0:.*]] = type { ptr }
+
+// CHECK-ENABLE-PTRAUTH: @__copy_constructor_8_8_s0.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @__copy_constructor_8_8_s0, i32 0, i64 0, i64 0 }, section "llvm.ptrauth",
+// CHECK-ENABLE-PTRAUTH: @__move_assignment_8_8_s0.ptrauth = private constant { ptr, i32, i64, i64 } { ptr @__move_assignment_8_8_s0, i32 0, i64 0, i64 0 }, section "llvm.ptrauth",
 
 // Check that parameters of user-defined setters are destructed.
 
@@ -60,12 +64,14 @@ typedef struct {
 // CHECK: ret void
 
 // CHECK-LABEL: define internal i64 @"\01-[C atomic0]"(
-// CHECK: call void @objc_copyCppObjectAtomic({{.*}}, {{.*}}, ptr noundef @__copy_constructor_8_8_s0)
+// CHECK-DISABLE-PTRAUTH: call void @objc_copyCppObjectAtomic({{.*}}, {{.*}}, ptr noundef @__copy_constructor_8_8_s0)
+// CHECK-ENABLE-PTRAUTH: call void @objc_copyCppObjectAtomic({{.*}}, {{.*}}, ptr noundef @__copy_constructor_8_8_s0.ptrauth)
 // CHECK-NOT: call
 // CHECK: ret i64
 
 // CHECK-LABEL: define internal void @"\01-[C setAtomic0:]"(
-// CHECK: call void @objc_copyCppObjectAtomic({{.*}}, {{.*}}, ptr noundef @__move_assignment_8_8_s0)
+// CHECK-DISABLE-PTRAUTH: call void @objc_copyCppObjectAtomic({{.*}}, {{.*}}, ptr noundef @__move_assignment_8_8_s0)
+// CHECK-ENABLE-PTRAUTH: call void @objc_copyCppObjectAtomic({{.*}}, {{.*}}, ptr noundef @__move_assignment_8_8_s0.ptrauth)
 // CHECK-NOT: call
 // CHECK: ret void
 

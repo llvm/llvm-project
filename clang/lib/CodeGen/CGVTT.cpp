@@ -81,6 +81,11 @@ CodeGenVTables::EmitVTTDefinition(llvm::GlobalVariable *VTT,
          VTable->getValueType(), VTable, Idxs, /*InBounds=*/true,
          /*InRangeIndex=*/1);
 
+     if (auto &schema =
+             CGM.getCodeGenOpts().PointerAuth.CXXVTTVTablePointers)
+       Init = CGM.getConstantSignedPointer(Init, schema, nullptr, GlobalDecl(),
+                                           QualType());
+
      VTTComponents.push_back(Init);
   }
 

@@ -10,6 +10,7 @@ add_clang_tool(clang-check
 
 clang_target_link_libraries(clang-check
   PRIVATE
+  clangAPINotes
   clangAST
   clangBasic
   clangDriver

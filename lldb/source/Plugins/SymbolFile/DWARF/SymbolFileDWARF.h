@@ -55,6 +55,11 @@ class SymbolFileDWARFDwo;
 class SymbolFileDWARFDwp;
 class UserID;
 
+namespace lldb_private {
+  class ClangASTImporter;
+  class SwiftASTContext;
+}
+
 #define DIE_IS_BEING_PARSED ((lldb_private::Type *)1)
 
 class SymbolFileDWARF : public lldb_private::SymbolFileCommon {
@@ -76,6 +81,7 @@ public:
   friend class DWARFCompileUnit;
   friend class DWARFDIE;
   friend class DWARFASTParserClang;
+  friend class DWARFASTParserSwift;
 
   // Static Functions
   static void Initialize();
@@ -103,6 +109,8 @@ public:
   void InitializeObject() override;
 
   // Compile Unit function calls
+  llvm::VersionTuple
+  GetProducerVersion(lldb_private::CompileUnit &comp_unit) override;
 
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
@@ -154,6 +162,10 @@ public:
 
   lldb_private::CompilerDeclContext
   GetDeclContextContainingUID(lldb::user_id_t uid) override;
+
+  void GetDeclContextForUID(
+      llvm::SmallVectorImpl<lldb_private::CompilerContext> &context,
+      lldb::user_id_t type_uid) override;
 
   void
   ParseDeclsForContext(lldb_private::CompilerDeclContext decl_ctx) override;
@@ -216,6 +228,9 @@ public:
   FindNamespace(lldb_private::ConstString name,
                 const lldb_private::CompilerDeclContext &parent_decl_ctx,
                 bool only_root_namespaces) override;
+
+  bool GetCompileOption(const char *option, std::string &value,
+                        lldb_private::CompileUnit *cu = nullptr) override;
 
   void PreloadSymbols() override;
 
@@ -498,6 +513,15 @@ protected:
 
   void UpdateExternalModuleListIfNeeded();
 
+  lldb_private::ClangASTImporter &GetClangASTImporter();
+
+  lldb_private::SwiftASTContext *
+  GetSwiftASTContextForCU(lldb_private::Status *error, DWARFCompileUnit &cu);
+
+  lldb::user_id_t GetTypeUIDFromTypeAttribute(const DWARFFormValue &type_attr);
+
+  lldb::TypeSP ResolveTypeFromAttribute(const DWARFFormValue &type_attr);
+
   virtual DIEToTypePtr &GetDIEToType() { return m_die_to_type; }
 
   virtual DIEToVariableSP &GetDIEToVariable() { return m_die_to_variable_sp; }
@@ -538,6 +562,7 @@ protected:
 
   std::unique_ptr<DWARFDebugAbbrev> m_abbr;
   std::unique_ptr<GlobalVariableMap> m_global_aranges_up;
+  std::unique_ptr<lldb_private::ClangASTImporter> m_clang_ast_importer_up;
 
   typedef std::unordered_map<lldb::offset_t, lldb_private::DebugMacrosSP>
       DebugMacrosMap;

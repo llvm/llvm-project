@@ -802,6 +802,14 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DIDerivedType *DTy) {
   if (DTy->getDWARFAddressSpace())
     addUInt(Buffer, dwarf::DW_AT_address_class, dwarf::DW_FORM_data4,
             *DTy->getDWARFAddressSpace());
+  if (auto Key = DTy->getPtrAuthKey())
+    addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_key, dwarf::DW_FORM_data1, *Key);
+  if (auto AddrDisc = DTy->isPtrAuthAddressDiscriminated())
+    if (AddrDisc)
+      addFlag(Buffer, dwarf::DW_AT_LLVM_ptrauth_address_discriminated);
+  if (auto Disc = DTy->getPtrAuthExtraDiscriminator())
+    addUInt(Buffer, dwarf::DW_AT_LLVM_ptrauth_extra_discriminator,
+            dwarf::DW_FORM_data2, *Disc);
 }
 
 void DwarfUnit::constructSubprogramArguments(DIE &Buffer, DITypeRefArray Args) {
@@ -1008,6 +1016,11 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
   if (!Name.empty())
     addString(Buffer, dwarf::DW_AT_name, Name);
 
+  // For Swift, mangled names are put into DW_AT_linkage_name; human-readable
+  // names are emitted put into DW_AT_name and the accelerator table.
+  if (CTy->getRuntimeLang() == dwarf::DW_LANG_Swift && CTy->getRawIdentifier())
+    addString(Buffer, dwarf::DW_AT_linkage_name, CTy->getIdentifier());
+
   addAnnotation(Buffer, CTy->getAnnotations());
 
   if (Tag == dwarf::DW_TAG_enumeration_type ||
@@ -1037,8 +1050,7 @@ void DwarfUnit::constructTypeDIE(DIE &Buffer, const DICompositeType *CTy) {
     // No harm in adding the runtime language to the declaration.
     unsigned RLang = CTy->getRuntimeLang();
     if (RLang)
-      addUInt(Buffer, dwarf::DW_AT_APPLE_runtime_class, dwarf::DW_FORM_data1,
-              RLang);
+      addUInt(Buffer, dwarf::DW_AT_APPLE_runtime_class, std::nullopt, RLang);
 
     // Add align info if available.
     if (uint32_t AlignInBytes = CTy->getAlignInBytes())
@@ -1344,6 +1356,9 @@ void DwarfUnit::applySubprogramAttributes(const DISubprogram *SP, DIE &SPDie,
 
   if (!SP->getTargetFuncName().empty())
     addString(SPDie, dwarf::DW_AT_trampoline, SP->getTargetFuncName());
+
+  if (SP->getIsTransparentStepping())
+    addFlag(SPDie, dwarf::DW_AT_trampoline);
 
   if (DD->getDwarfVersion() >= 5 && SP->isDeleted())
     addFlag(SPDie, dwarf::DW_AT_deleted);

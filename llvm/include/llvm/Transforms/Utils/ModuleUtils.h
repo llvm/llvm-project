@@ -14,6 +14,7 @@
 #define LLVM_TRANSFORMS_UTILS_MODULEUTILS_H
 
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/GlobalIFunc.h"
 #include "llvm/Support/Alignment.h"
@@ -29,6 +30,7 @@ class Function;
 class FunctionCallee;
 class GlobalIFunc;
 class GlobalValue;
+class GlobalVariable;
 class Constant;
 class Value;
 class Type;
@@ -87,6 +89,10 @@ void appendToUsed(Module &M, ArrayRef<GlobalValue *> Values);
 
 /// Adds global values to the llvm.compiler.used list.
 void appendToCompilerUsed(Module &M, ArrayRef<GlobalValue *> Values);
+
+/// Replaces llvm.used or llvm.compiler.used list with a new set of values.
+GlobalVariable *setUsedInitializer(GlobalVariable &V,
+                                   const SmallPtrSetImpl<GlobalValue *> &Init);
 
 /// Removes global values from the llvm.used and llvm.compiler.used arrays. \p
 /// ShouldRemove should return true for any initializer field that should not be

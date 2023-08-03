@@ -163,6 +163,40 @@ void SBExpressionOptions::SetCancelCallback(
   m_opaque_up->SetCancelCallback(callback, baton);
 }
 
+// BEGIN SWIFT
+
+bool SBExpressionOptions::GetPlaygroundTransformEnabled() const {
+  return m_opaque_up->GetPlaygroundTransformEnabled();
+}
+
+void SBExpressionOptions::SetPlaygroundTransformEnabled(
+    bool enable_playground_transform) {
+  m_opaque_up->SetPlaygroundTransformEnabled(enable_playground_transform);
+}
+
+bool SBExpressionOptions::GetPlaygroundTransformHighPerformance() const {
+  return m_opaque_up->GetPlaygroundTransformHighPerformance();
+}
+
+void SBExpressionOptions::SetPlaygroundTransformHighPerformance(
+    bool playground_transforms_hp) {
+  m_opaque_up->SetPlaygroundTransformHighPerformance(playground_transforms_hp);
+}
+
+bool SBExpressionOptions::GetREPLMode() const {
+  return m_opaque_up->GetREPLEnabled();
+}
+
+void SBExpressionOptions::SetREPLMode(bool enable_repl_mode) {
+  m_opaque_up->SetREPLEnabled(enable_repl_mode);
+  // Don't trap exceptions in the REPL.  That would make it impossible
+  // to call any swift code whose underlying framework used exceptions.
+  if (enable_repl_mode == true)
+    SetTrapExceptions(false);
+}
+
+// END SWIFT
+
 bool SBExpressionOptions::GetGenerateDebugInfo() {
   LLDB_INSTRUMENT_VA(this);
 

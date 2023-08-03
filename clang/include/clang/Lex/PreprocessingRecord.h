@@ -294,9 +294,6 @@ class Token;
                                                              FileID FID) {
       return std::nullopt;
     }
-
-    /// Read a preallocated skipped range from the external source.
-    virtual SourceRange ReadSkippedRange(unsigned Index) = 0;
   };
 
   /// A record of the steps taken while preprocessing a source file,
@@ -321,8 +318,6 @@ class Token;
 
     /// The set of ranges that were skipped by the preprocessor,
     std::vector<SourceRange> SkippedRanges;
-
-    bool SkippedRangesAllLoaded = true;
 
     /// Global (loaded or local) ID for a preprocessed entity.
     /// Negative values are used to indicate preprocessed entities
@@ -378,16 +373,6 @@ class Token;
     /// \returns The index into the set of loaded preprocessed entities, which
     /// corresponds to the first newly-allocated entity.
     unsigned allocateLoadedEntities(unsigned NumEntities);
-
-    /// Allocate space for a new set of loaded preprocessed skipped
-    /// ranges.
-    ///
-    /// \returns The index into the set of loaded preprocessed ranges, which
-    /// corresponds to the first newly-allocated range.
-    unsigned allocateSkippedRanges(unsigned NumRanges);
-
-    /// Ensures that all external skipped ranges have been loaded.
-    void ensureSkippedRangesLoaded();
 
     /// Register a new macro definition.
     void RegisterMacroDefinition(MacroInfo *Macro, MacroDefinitionRecord *Def);
@@ -512,7 +497,6 @@ class Token;
 
     /// Retrieve all ranges that got skipped while preprocessing.
     const std::vector<SourceRange> &getSkippedRanges() {
-      ensureSkippedRangesLoaded();
       return SkippedRanges;
     }
 

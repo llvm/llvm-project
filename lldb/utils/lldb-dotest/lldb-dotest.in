@@ -7,6 +7,7 @@ dotest_args_str = '@LLDB_DOTEST_ARGS_CONFIGURED@'
 arch = '@LLDB_TEST_ARCH@'
 executable = '@LLDB_TEST_EXECUTABLE_CONFIGURED@'
 compiler = '@LLDB_TEST_COMPILER_CONFIGURED@'
+swift_compiler = '@LLDB_SWIFTC@'
 dsymutil = '@LLDB_TEST_DSYMUTIL_CONFIGURED@'
 lldb_build_dir = '@LLDB_TEST_BUILD_DIRECTORY_CONFIGURED@'
 lldb_build_intel_pt = "@LLDB_BUILD_INTEL_PT@"
@@ -17,6 +18,7 @@ has_libcxx = @LLDB_HAS_LIBCXX@
 libcxx_libs_dir = "@LIBCXX_LIBRARY_DIR@"
 libcxx_include_dir = "@LIBCXX_GENERATED_INCLUDE_DIR@"
 libcxx_include_target_dir = "@LIBCXX_GENERATED_INCLUDE_TARGET_DIR@"
+swift_libs_dir = '@LLDB_SWIFT_LIBS@' 
 
 if __name__ == '__main__':
     wrapper_args = sys.argv[1:]
@@ -35,6 +37,8 @@ if __name__ == '__main__':
     cmd.extend(['--dsymutil', dsymutil])
     cmd.extend(['--lldb-libs-dir', lldb_libs_dir])
     cmd.extend(['--llvm-tools-dir', llvm_tools_dir])
+    if swift_compiler:
+        cmd.extend(['--swift-compiler', swift_compiler])
     if has_libcxx:
         cmd.extend(['--libcxx-include-dir', libcxx_include_dir])
         if libcxx_include_target_dir:

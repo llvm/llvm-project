@@ -1,0 +1,25 @@
+// Test that we don't crash when SILGen(ing) property wrappers
+// [private].
+// REQUIRES: swift
+
+// RUN: %lldb --repl < %s
+
+@propertyWrapper
+struct Wrapper<T> {
+  var wrappedValue: T
+
+  init(initialValue: T) {
+    wrappedValue = initialValue
+  }
+}
+
+struct Foo {
+  var x: Int = 17
+  @Wrapper private var y: Int = 42
+}
+
+func patatino() {
+  _ = Foo(x: 5)
+}
+
+patatino()

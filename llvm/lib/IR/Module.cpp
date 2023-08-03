@@ -816,6 +816,86 @@ VersionTuple Module::getSDKVersion() const {
   return getSDKVersionMD(getModuleFlag("SDK Version"));
 }
 
+SmallVector<Module::PtrAuthABIVersion, 2>
+Module::getPtrAuthABIVersions() const {
+  // Look for the ptrauth abi version in the module flags.
+  SmallVector<Module::PtrAuthABIVersion, 2> Result;
+  const Metadata *Meta = getModuleFlag("ptrauth.abi-version");
+  if (!Meta)
+    return Result;
+  const MDNode *MD = cast<MDNode>(Meta);
+
+  auto extractVersionFromOperand = [](const Metadata *Meta) {
+    const auto *CV = cast<ConstantAsMetadata>(Meta)->getValue();
+    return cast<ConstantInt>(CV)->getSExtValue();
+  };
+
+  // If there are multiple versions, there's a mismatch.  In that case, fall
+  // back to version "64".
+  if (MD->getNumOperands() == 1) {
+    int V = extractVersionFromOperand(
+        cast<MDNode>(MD->getOperand(0))->getOperand(0));
+    // The version -1 has special meaning: we're treating old bitcode files with
+    // no ptrauth abi version. In that case, we want to fall back to the old
+    // behavior where the flags are 0.
+    if (V == -1)
+      return Result;
+    bool K = extractVersionFromOperand(
+        cast<MDNode>(MD->getOperand(0))->getOperand(1));
+    Result.push_back({V, K});
+    return Result;
+  } else if (MD->getNumOperands() >= 2) {
+    // If we do have multiple versions, print them in a warning.
+    int LV = extractVersionFromOperand(
+        cast<MDNode>(MD->getOperand(0))->getOperand(0));
+    bool LK = extractVersionFromOperand(
+        cast<MDNode>(MD->getOperand(0))->getOperand(1));
+    Result.push_back({LV, LK});
+    int RV = extractVersionFromOperand(
+        cast<MDNode>(MD->getOperand(1))->getOperand(0));
+    bool RK = extractVersionFromOperand(
+        cast<MDNode>(MD->getOperand(1))->getOperand(1));
+    Result.push_back({RV, RK});
+    return Result;
+  } else {
+    llvm_unreachable(
+        "Malformed ptrauth.abi-version metadata with no operands.");
+    return {};
+  }
+}
+
+std::optional<Module::PtrAuthABIVersion> Module::getPtrAuthABIVersion() const {
+  SmallVector<Module::PtrAuthABIVersion, 2> Versions = getPtrAuthABIVersions();
+  if (Versions.size() == 0)
+    return std::nullopt;
+  if (Versions.size() == 1) {
+    int V = Versions[0].Version;
+    if (V == -1)
+      return std::nullopt;
+    if (V > 64)
+      V = 64;
+    bool K = Versions[0].Kernel;
+    return PtrAuthABIVersion{V, K};
+  }
+  // If there are multiple versions, there's a mismatch.  In that case, fall
+  // back to version "64".
+  if (Versions.size() == 2)
+    return PtrAuthABIVersion{64, false};
+  llvm_unreachable("Mismatch between more than two ptrauth abi versions.");
+}
+
+void Module::setPtrAuthABIVersion(Module::PtrAuthABIVersion ABIVersion) {
+  // Add a module flag containing a tuple of i32s representing the version.
+  llvm::LLVMContext &Ctx = getContext();
+  auto *ABIVer = llvm::ConstantAsMetadata::get(
+      llvm::ConstantInt::get(Type::getInt32Ty(Ctx), ABIVersion.Version));
+  auto *KernelABI = llvm::ConstantAsMetadata::get(
+      llvm::ConstantInt::get(Type::getInt1Ty(Ctx), ABIVersion.Kernel));
+  auto *ABIVerNode = llvm::MDNode::get(Ctx, {ABIVer, KernelABI});
+  auto *ABIVerNodes = llvm::MDNode::get(Ctx, ABIVerNode);
+  addModuleFlag(llvm::Module::AppendUnique, "ptrauth.abi-version", ABIVerNodes);
+}
+
 GlobalVariable *llvm::collectUsedGlobalVariables(
     const Module &M, SmallVectorImpl<GlobalValue *> &Vec, bool CompilerUsed) {
   const char *Name = CompilerUsed ? "llvm.compiler.used" : "llvm.used";

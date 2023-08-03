@@ -22,6 +22,7 @@
 #include "lldb/Core/Value.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
+#include "lldb/Utility/OptionParsing.h"
 #include "lldb/Utility/RegularExpression.h"
 #include "lldb/Utility/Scalar.h"
 #include "lldb/Utility/StreamString.h"
@@ -909,6 +910,16 @@ bool SymbolFileDWARF::FixupAddress(Address &addr) {
   // This is a normal DWARF file, no address fixups need to happen
   return true;
 }
+
+llvm::VersionTuple SymbolFileDWARF::GetProducerVersion(CompileUnit &comp_unit) {
+  std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
+  DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
+  if (dwarf_cu)
+    return dwarf_cu->GetProducerVersion();
+  else
+    return {};
+}
+
 lldb::LanguageType SymbolFileDWARF::ParseLanguage(CompileUnit &comp_unit) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(&comp_unit);
@@ -1096,8 +1107,9 @@ bool SymbolFileDWARF::ParseImportedModules(
   DWARFUnit *dwarf_cu = GetDWARFCompileUnit(sc.comp_unit);
   if (!dwarf_cu)
     return false;
-  if (!ClangModulesDeclVendor::LanguageSupportsClangModules(
-          sc.comp_unit->GetLanguage()))
+  auto lang = sc.comp_unit->GetLanguage();
+  if (!ClangModulesDeclVendor::LanguageSupportsClangModules(lang) &&
+      lang != eLanguageTypeSwift)
     return false;
   UpdateExternalModuleListIfNeeded();
 
@@ -1106,7 +1118,8 @@ bool SymbolFileDWARF::ParseImportedModules(
     return false;
 
   for (DWARFDIE child_die : die.children()) {
-    if (child_die.Tag() != DW_TAG_imported_declaration)
+    if (child_die.Tag() != DW_TAG_imported_declaration &&
+        child_die.Tag() != DW_TAG_imported_module)
       continue;
 
     DWARFDIE module_die = child_die.GetReferencedDIE(DW_AT_import);
@@ -1441,6 +1454,12 @@ SymbolFileDWARF::GetDeclContextContainingUID(lldb::user_id_t type_uid) {
   return CompilerDeclContext();
 }
 
+void SymbolFileDWARF::GetDeclContextForUID(
+    llvm::SmallVectorImpl<CompilerContext> &context, lldb::user_id_t type_uid) {
+  if (DWARFDIE die = GetDIE(type_uid))
+    return die.GetDeclContext(context);
+}
+
 Type *SymbolFileDWARF::ResolveTypeUID(lldb::user_id_t type_uid) {
   std::lock_guard<std::recursive_mutex> guard(GetModuleMutex());
   // Anytime we have a lldb::user_id_t, we must get the DIE by calling
@@ -1755,6 +1774,10 @@ SymbolFileDWARF::GetDwoSymbolFileForCompileUnit(
     FileSystem::Instance().Resolve(dwo_file);
     dwo_file.AppendPathComponent(dwo_name);
   }
+
+  if (dwo_file.GetFileNameExtension() == ".pcm" ||
+      dwo_file.GetFileNameExtension() == ".pch")
+    return nullptr;
 
   if (!FileSystem::Instance().Exists(dwo_file)) {
     unit.SetDwoError(Status::createWithFormat(
@@ -3092,6 +3115,66 @@ SymbolFileDWARF::FindDefinitionTypeForDWARFDeclContext(const DWARFDIE &die) {
   return type_sp;
 }
 
+bool SymbolFileDWARF::GetCompileOption(const char *option, std::string &value,
+                                       CompileUnit *cu) {
+  value.clear();
+
+  DWARFDebugInfo &debug_info = DebugInfo();
+
+  const uint32_t num_compile_units = GetNumCompileUnits();
+
+  if (cu) {
+    auto *dwarf_cu =
+        llvm::dyn_cast_or_null<DWARFCompileUnit>(GetDWARFCompileUnit(cu));
+
+    if (dwarf_cu) {
+      // GetDWARFCompileUnit() only looks up by CU#. Make sure that
+      // this is actually the correct SymbolFile by converting it
+      // back to a CompileUnit.
+      if (GetCompUnitForDWARFCompUnit(*dwarf_cu) != cu)
+        return false;
+
+      const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+      if (die) {
+        const char *flags =
+            die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+        if (flags) {
+          if (strstr(flags, option)) {
+            Args compiler_args(flags);
+
+            return OptionParsing::GetOptionValueAsString(compiler_args,
+                                                         option, value);
+          }
+        }
+      }
+    }
+  } else {
+    for (uint32_t cu_idx = 0; cu_idx < num_compile_units; ++cu_idx) {
+      DWARFUnit *dwarf_cu = debug_info.GetUnitAtIndex(cu_idx);
+
+      if (dwarf_cu) {
+        const DWARFBaseDIE die = dwarf_cu->GetUnitDIEOnly();
+        if (die) {
+          const char *flags =
+              die.GetAttributeValueAsString(DW_AT_APPLE_flags, NULL);
+
+          if (flags) {
+            if (strstr(flags, option)) {
+              Args compiler_args(flags);
+
+              return OptionParsing::GetOptionValueAsString(compiler_args,
+                                                           option, value);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return false;
+}
+
 TypeSP SymbolFileDWARF::ParseType(const SymbolContext &sc, const DWARFDIE &die,
                                   bool *type_is_new_ptr) {
   if (!die)
@@ -3436,6 +3519,12 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
     }
   }
 
+#ifdef LLDB_ENABLE_SWIFT
+  if (tag == DW_TAG_variable && mangled &&
+      sc.comp_unit->GetLanguage() == eLanguageTypeSwift)
+    mangled = nullptr;
+#endif
+
   // Prefer DW_AT_location over DW_AT_const_value. Both can be emitted e.g.
   // for static constexpr member variables -- DW_AT_const_value will be
   // present in the class declaration and DW_AT_location in the DIE defining
@@ -3617,10 +3706,18 @@ VariableSP SymbolFileDWARF::ParseVariableDIE(const SymbolContext &sc,
                           die.GetCU()->GetAddressByteSize());
   }
 
+  // Swift let-bindings are marked by a DW_TAG_const_type.
+  bool is_constant = false;
+  if (sc.comp_unit->GetLanguage() == eLanguageTypeSwift) {
+    DWARFDIE type_die = die.GetReferencedDIE(llvm::dwarf::DW_AT_type);
+    if (type_die && type_die.Tag() == llvm::dwarf::DW_TAG_const_type)
+      is_constant = true;
+  }
+
   return std::make_shared<Variable>(
       die.GetID(), name, mangled, type_sp, scope, symbol_context_scope,
       scope_ranges, &decl, location_list, is_external, is_artificial,
-      location_is_const_value_data, is_static_member);
+      location_is_const_value_data, is_static_member, is_constant);
 }
 
 DWARFDIE

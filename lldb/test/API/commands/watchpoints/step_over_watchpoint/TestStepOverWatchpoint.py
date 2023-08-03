@@ -54,6 +54,7 @@ class TestStepOverWatchpoint(TestBase):
         archs=["aarch64", "arm"],
         bugnumber="llvm.org/pr26031",
     )
+    @expectedFailureAll(oslist=["linux"], bugnumber="bugs.swift.org/SR-796")
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
     @expectedFailureAll(

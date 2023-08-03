@@ -15,6 +15,12 @@ if(LLDB_BUILD_FRAMEWORK)
   set(framework_arg --framework --target-platform Darwin)
 endif()
 
+if(${LLDB_USE_STATIC_BINDINGS})
+  set(PREPARE_BINDINGS_ARGS "--use-static-binding")
+else()
+  set(PREPARE_BINDINGS_ARGS "--swig-executable=${SWIG_EXECUTABLE}")
+endif()
+
 if(APPLE)
   set(DARWIN_EXTRAS "-D__APPLE__")
 else()

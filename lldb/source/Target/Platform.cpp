@@ -1965,9 +1965,11 @@ lldb::ProcessSP Platform::DoConnectProcess(llvm::StringRef connect_url,
                                      nullptr);
     process_sp->RestoreProcessEvents();
     bool pop_process_io_handler = false;
+    bool pop_command_interpreter = false;
     // This is a user-level stop, so we allow recognizers to select frames.
     Process::HandleProcessStateChangedEvent(
-        event_sp, stream, SelectMostRelevantFrame, pop_process_io_handler);
+        event_sp, stream, SelectMostRelevantFrame, pop_process_io_handler,
+        pop_command_interpreter);
   }
 
   return process_sp;

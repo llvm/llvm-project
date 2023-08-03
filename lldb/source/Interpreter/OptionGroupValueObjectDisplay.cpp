@@ -58,7 +58,8 @@ static const OptionDefinition g_option_table[] = {
     {LLDB_OPT_SET_1, false, "element-count", 'Z',
      OptionParser::eRequiredArgument, nullptr, {}, 0, eArgTypeCount,
      "Treat the result of the expression as if its type is an array of this "
-     "many values."}};
+     "many values."},
+};
 
 llvm::ArrayRef<OptionDefinition>
 OptionGroupValueObjectDisplay::GetDefinitions() {

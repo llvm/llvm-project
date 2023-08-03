@@ -24,6 +24,7 @@ class SymbolFileDWARF;
 class DWARFCompileUnit;
 class DWARFDebugAranges;
 class DWARFDeclContext;
+class DebugMapModule;
 
 class SymbolFileDWARFDebugMap : public lldb_private::SymbolFileCommon {
   /// LLVM RTTI support.
@@ -58,6 +59,8 @@ public:
   void InitializeObject() override;
 
   // Compile Unit function calls
+  llvm::VersionTuple
+  GetProducerVersion(lldb_private::CompileUnit &comp_unit) override;
   lldb::LanguageType
   ParseLanguage(lldb_private::CompileUnit &comp_unit) override;
   lldb_private::XcodeSDK
@@ -146,7 +149,13 @@ public:
   std::vector<std::unique_ptr<lldb_private::CallEdge>>
   ParseCallEdgesInFunction(lldb_private::UserID func_id) override;
 
+  std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language) override;
+
   void DumpClangAST(lldb_private::Stream &s) override;
+
+  bool GetCompileOption(const char *option, std::string &value,
+                        lldb_private::CompileUnit *cu) override;
 
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return GetPluginNameStatic(); }
@@ -162,6 +171,7 @@ protected:
 
   friend class DebugMapModule;
   friend class DWARFASTParserClang;
+  friend class DWARFASTParserSwift;
   friend class DWARFCompileUnit;
   friend class SymbolFileDWARF;
   struct OSOInfo {

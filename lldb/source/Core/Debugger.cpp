@@ -1223,6 +1223,45 @@ void Debugger::PushIOHandler(const IOHandlerSP &reader_sp,
   }
 }
 
+// BEGIN SWIFT
+
+// Pop 2 IOHandlers and don't active the second one after the first is popped
+uint32_t Debugger::RemoveIOHandlers(const IOHandlerSP &reader1_sp,
+                                    const IOHandlerSP &reader2_sp) {
+  uint32_t result = 0;
+
+  std::lock_guard<std::recursive_mutex> guard(m_io_handler_stack.GetMutex());
+
+  // The reader on the stop of the stack is done, so let the next
+  // read on the stack refresh its prompt and if there is one...
+  if (!m_io_handler_stack.IsEmpty()) {
+    IOHandlerSP reader_sp(m_io_handler_stack.Top());
+
+    if (!reader1_sp || reader1_sp.get() == reader_sp.get()) {
+      reader_sp->Deactivate();
+      reader_sp->Cancel();
+      m_io_handler_stack.Pop();
+      ++result;
+
+      reader_sp = m_io_handler_stack.Top();
+
+      if (reader2_sp && reader2_sp.get() == reader_sp.get()) {
+        m_io_handler_stack.Pop();
+        ++result;
+        reader_sp = m_io_handler_stack.Top();
+      }
+
+      if (reader_sp)
+        reader_sp->Activate();
+
+    } else if (PopIOHandler(reader2_sp)) {
+      ++result;
+    }
+  }
+  return result;
+}
+// END SWIFT
+
 bool Debugger::PopIOHandler(const IOHandlerSP &pop_reader_sp) {
   if (!pop_reader_sp)
     return false;
@@ -1723,6 +1762,9 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
 
   if (!gui_enabled) {
     bool pop_process_io_handler = false;
+    // BEGIN SWIFT
+    bool pop_command_interpreter = false;
+    // END SWIFT
     assert(process_sp);
 
     bool state_is_stopped = false;
@@ -1745,7 +1787,11 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
       // we should force the most relevant frame selection here.
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
                                               SelectMostRelevantFrame,
-                                              pop_process_io_handler);
+                                              pop_process_io_handler,
+                                              // BEGIN SWIFT
+                                              pop_command_interpreter
+                                              // END SWIFT
+                                              );
     }
 
     // Now display STDOUT and STDERR
@@ -1785,14 +1831,20 @@ void Debugger::HandleProcessEvent(const EventSP &event_sp) {
     if (got_state_changed && state_is_stopped) {
       Process::HandleProcessStateChangedEvent(event_sp, output_stream_sp.get(),
                                               SelectMostRelevantFrame,
-                                              pop_process_io_handler);
+                                              pop_process_io_handler,
+                                              // BEGIN SWIFT
+                                              pop_command_interpreter
+                                              // END SWIFT
+                                              );
     }
 
     output_stream_sp->Flush();
     error_stream_sp->Flush();
 
     if (pop_process_io_handler)
-      process_sp->PopProcessIOHandler();
+      // BEGIN SWIFT
+      process_sp->PopProcessIOHandler(pop_command_interpreter);
+      // END SWIFT
   }
 }
 

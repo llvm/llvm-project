@@ -21,6 +21,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/Statistic.h"
+#include "llvm/CAS/CASReference.h"
 #include "llvm/Config/llvm-config.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -537,7 +538,8 @@ void FileManager::fillRealPathName(FileEntry *UFE, llvm::StringRef FileName) {
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
-                              bool RequiresNullTerminator) {
+                              bool RequiresNullTerminator,
+                              std::optional<cas::ObjectRef> *CASContents) {
   // If the content is living on the file entry, return a reference to it.
   if (Entry->Content)
     return llvm::MemoryBuffer::getMemBuffer(Entry->Content->getMemBufferRef());
@@ -553,27 +555,44 @@ FileManager::getBufferForFile(const FileEntry *Entry, bool isVolatile,
   if (Entry->File) {
     auto Result = Entry->File->getBuffer(Filename, FileSize,
                                          RequiresNullTerminator, isVolatile);
+    if (CASContents) {
+      auto CASRef = Entry->File->getObjectRefForContent();
+      if (!CASRef)
+        return CASRef.getError();
+      *CASContents = *CASRef;
+    }
     Entry->closeFile();
     return Result;
   }
 
   // Otherwise, open the file.
   return getBufferForFileImpl(Filename, FileSize, isVolatile,
-                              RequiresNullTerminator);
+                              RequiresNullTerminator, CASContents);
 }
 
 llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>>
 FileManager::getBufferForFileImpl(StringRef Filename, int64_t FileSize,
-                                  bool isVolatile,
-                                  bool RequiresNullTerminator) {
+                                  bool isVolatile, bool RequiresNullTerminator,
+                                  std::optional<cas::ObjectRef> *CASContents) {
   if (FileSystemOpts.WorkingDir.empty())
     return FS->getBufferForFile(Filename, FileSize, RequiresNullTerminator,
-                                isVolatile);
+                                isVolatile, CASContents);
 
   SmallString<128> FilePath(Filename);
   FixupRelativePath(FilePath);
   return FS->getBufferForFile(FilePath, FileSize, RequiresNullTerminator,
-                              isVolatile);
+                              isVolatile, CASContents);
+}
+
+llvm::ErrorOr<std::optional<cas::ObjectRef>>
+FileManager::getObjectRefForFileContent(const Twine &Filename) {
+  if (FileSystemOpts.WorkingDir.empty())
+    return FS->getObjectRefForFileContent(Filename);
+
+  SmallString<128> FilePath;
+  Filename.toVector(FilePath);
+  FixupRelativePath(FilePath);
+  return FS->getObjectRefForFileContent(FilePath);
 }
 
 /// getStatValue - Get the 'stat' information for the specified path,

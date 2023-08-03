@@ -19,12 +19,7 @@ public:
   // Constructors and Destructors
   StackID() = default;
 
-  explicit StackID(lldb::addr_t pc, lldb::addr_t cfa,
-                   SymbolContextScope *symbol_scope)
-      : m_pc(pc), m_cfa(cfa), m_symbol_scope(symbol_scope) {}
-
-  StackID(const StackID &rhs)
-      : m_pc(rhs.m_pc), m_cfa(rhs.m_cfa), m_symbol_scope(rhs.m_symbol_scope) {}
+  StackID(const StackID &rhs) = default;
 
   ~StackID() = default;
 
@@ -41,6 +36,7 @@ public:
   void Clear() {
     m_pc = LLDB_INVALID_ADDRESS;
     m_cfa = LLDB_INVALID_ADDRESS;
+    m_cfa_on_stack = true;
     m_symbol_scope = nullptr;
   }
 
@@ -55,13 +51,21 @@ public:
     if (this != &rhs) {
       m_pc = rhs.m_pc;
       m_cfa = rhs.m_cfa;
+      m_cfa_on_stack = rhs.m_cfa_on_stack;
       m_symbol_scope = rhs.m_symbol_scope;
     }
     return *this;
   }
 
+  bool IsCFAOnStack() const { return m_cfa_on_stack; }
+
 protected:
   friend class StackFrame;
+
+  explicit StackID(lldb::addr_t pc, lldb::addr_t cfa, lldb::ThreadSP thread_sp)
+      : m_pc(pc), m_cfa(cfa), m_cfa_on_stack(IsStackAddress(cfa, thread_sp)) {}
+
+  bool IsStackAddress(lldb::addr_t addr, lldb::ThreadSP thread_sp) const;
 
   void SetPC(lldb::addr_t pc) { m_pc = pc; }
 
@@ -78,6 +82,9 @@ protected:
                             // at the beginning of the function that uniquely
                             // identifies this frame (along with m_symbol_scope
                             // below)
+  // True if the CFA is an address on the stack, false if it's an address
+  // elsewhere (ie heap).
+  bool m_cfa_on_stack = true;
   SymbolContextScope *m_symbol_scope =
       nullptr; // If nullptr, there is no block or symbol for this frame.
                // If not nullptr, this will either be the scope for the

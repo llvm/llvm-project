@@ -83,6 +83,7 @@ add_clang_library(clangBasic
   Sarif.cpp
   SourceLocation.cpp
   SourceManager.cpp
+  SourceMgrAdapter.cpp
   Stack.cpp
   TargetID.cpp
   TargetInfo.cpp

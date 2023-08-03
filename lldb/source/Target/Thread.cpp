@@ -41,6 +41,7 @@
 #include "lldb/Target/ThreadPlanStepOverBreakpoint.h"
 #include "lldb/Target/ThreadPlanStepOverRange.h"
 #include "lldb/Target/ThreadPlanStepThrough.h"
+#include "lldb/Target/ThreadPlanStepThroughGenericTrampoline.h"
 #include "lldb/Target/ThreadPlanStepUntil.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Target/UnwindLLDB.h"
@@ -328,12 +329,26 @@ void Thread::FrameSelectedCallback(StackFrame *frame) {
 
   if (frame->HasDebugInformation() &&
       (GetProcess()->GetWarningsOptimization() ||
-       GetProcess()->GetWarningsUnsupportedLanguage())) {
+       GetProcess()->GetWarningsUnsupportedLanguage()
+#ifdef LLDB_ENABLE_SWIFT
+       || GetProcess()->GetWarningsToolchainMismatch()
+#endif
+           )) {
     SymbolContext sc =
         frame->GetSymbolContext(eSymbolContextFunction | eSymbolContextModule);
     GetProcess()->PrintWarningOptimization(sc);
     GetProcess()->PrintWarningUnsupportedLanguage(sc);
+#ifdef LLDB_ENABLE_SWIFT
+    GetProcess()->PrintWarningToolchainMismatch(sc);
+#endif
   }
+  SymbolContext msc = frame->GetSymbolContext(eSymbolContextModule);
+  if (msc.module_sp)
+    msc.module_sp->ForEachTypeSystem([&](lldb::TypeSystemSP ts) {
+      if (ts)
+        ts->DiagnoseWarnings(*GetProcess(), *msc.module_sp);
+      return true;
+    });
 }
 
 lldb::StopInfoSP Thread::GetStopInfo() {
@@ -361,8 +376,12 @@ lldb::StopInfoSP Thread::GetStopInfo() {
   if (have_valid_stop_info && !plan_overrides_trace && !plan_failed) {
     return m_stop_info_sp;
   } else if (completed_plan_sp) {
+    bool is_swift_error_value;
+    lldb::ValueObjectSP return_value_sp =
+        GetReturnValueObject(&is_swift_error_value);
     return StopInfo::CreateStopReasonWithPlan(
-        completed_plan_sp, GetReturnValueObject(), GetExpressionVariable());
+        completed_plan_sp, return_value_sp, GetExpressionVariable(),
+        is_swift_error_value);
   } else {
     GetPrivateStopInfo();
     return m_stop_info_sp;
@@ -719,8 +738,6 @@ void Thread::DidResume() {
 void Thread::DidStop() { SetState(eStateStopped); }
 
 bool Thread::ShouldStop(Event *event_ptr) {
-  ThreadPlan *current_plan = GetCurrentPlan();
-
   bool should_stop = true;
 
   Log *log = GetLog(LLDBLog::Step);
@@ -774,9 +791,6 @@ bool Thread::ShouldStop(Event *event_ptr) {
     LLDB_LOGF(log, "Plan stack initial state:\n%s", s.GetData());
   }
 
-  // The top most plan always gets to do the trace log...
-  current_plan->DoTraceLog();
-
   // First query the stop info's ShouldStopSynchronous.  This handles
   // "synchronous" stop reasons, for example the breakpoint command on internal
   // breakpoints.  If a synchronous stop reason says we should not stop, then
@@ -788,6 +802,16 @@ bool Thread::ShouldStop(Event *event_ptr) {
                    "stop, returning ShouldStop of false.");
     return false;
   }
+
+  // Call this after ShouldStopSynchronous.
+  ThreadPlan *current_plan;
+  if (auto plan = GetProcess()->FindDetachedPlanExplainingStop(*this, event_ptr))
+    current_plan = plan.get();
+  else
+    current_plan = GetCurrentPlan();
+
+  // The top most plan always gets to do the trace log…
+  current_plan->DoTraceLog();
 
   // If we've already been restarted, don't query the plans since the state
   // they would examine is not current.
@@ -1117,12 +1141,22 @@ ThreadPlan *Thread::GetCurrentPlan() const {
   return GetPlans().GetCurrentPlan().get();
 }
 
-ThreadPlanSP Thread::GetCompletedPlan() const {
-  return GetPlans().GetCompletedPlan();
+ValueObjectSP Thread::GetReturnValueObject(bool *is_swift_error_value) {
+  if (is_swift_error_value)
+    *is_swift_error_value = false;
+    
+  bool is_error;
+  ValueObjectSP return_valobj_sp = GetPlans().GetReturnValueObject(is_error);
+  if (return_valobj_sp) {
+    if (is_swift_error_value)
+      *is_swift_error_value = is_error;
+    return return_valobj_sp;
+  }
+  return ValueObjectSP();
 }
 
-ValueObjectSP Thread::GetReturnValueObject() const {
-  return GetPlans().GetReturnValueObject();
+ThreadPlanSP Thread::GetCompletedPlan() const {
+  return GetPlans().GetCompletedPlan();
 }
 
 ExpressionVariableSP Thread::GetExpressionVariable() const {
@@ -1283,6 +1317,25 @@ ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
   return thread_plan_sp;
 }
 
+ThreadPlanSP Thread::QueueThreadPlanForStepInRangeNoShouldStop(
+    bool abort_other_plans, const AddressRange &range,
+    const SymbolContext &addr_context, const char *step_in_target,
+    lldb::RunMode stop_other_threads, Status &status,
+    LazyBool step_in_avoids_code_without_debug_info,
+    LazyBool step_out_avoids_code_without_debug_info) {
+  ThreadPlanSP thread_plan_sp(new ThreadPlanStepInRange(
+      *this, range, addr_context, step_in_target, stop_other_threads,
+      step_in_avoids_code_without_debug_info,
+      step_out_avoids_code_without_debug_info));
+
+  ThreadPlanStepInRange *plan =
+      static_cast<ThreadPlanStepInRange *>(thread_plan_sp.get());
+  plan->ClearShouldStopHereCallbacks();
+
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  return thread_plan_sp;
+}
+
 // Call the QueueThreadPlanForStepInRange method which takes an address range.
 ThreadPlanSP Thread::QueueThreadPlanForStepInRange(
     bool abort_other_plans, const LineEntry &line_entry,
@@ -1340,6 +1393,17 @@ ThreadPlanSP Thread::QueueThreadPlanForStepThrough(StackID &return_stack_id,
   if (!thread_plan_sp || !thread_plan_sp->ValidatePlan(nullptr))
     return ThreadPlanSP();
 
+  status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
+  return thread_plan_sp;
+}
+
+ThreadPlanSP Thread::QueueThreadPlanForStepThroughGenericTrampoline(
+    bool abort_other_plans, lldb::RunMode stop_other_threads, Status &status) {
+  ThreadPlanSP thread_plan_sp(
+      new ThreadPlanStepThroughGenericTrampoline(*this, stop_other_threads));
+
+  if (!thread_plan_sp || !thread_plan_sp->ValidatePlan(nullptr))
+    return ThreadPlanSP();
   status = QueueThreadPlan(thread_plan_sp, abort_other_plans);
   return thread_plan_sp;
 }

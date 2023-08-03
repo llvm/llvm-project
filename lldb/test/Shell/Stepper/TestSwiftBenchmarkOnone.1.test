@@ -1,0 +1,13 @@
+# REQUIRES: swift_Benchmark_Onone
+#
+# The test has regressed, tracked by: rdar://73760364
+# The regression only appears when compiling with -disable-copy-propagation.
+# REQUIRES: rdar73760364
+#
+# - Don't capture a reproducer (it can easily exceed 1GB).
+# - Skip `po` testing for now (until we can un-XFAIL `frame var` testing).
+# - Just run benchmark #1 for now (there are more; --list lists all of them). 
+#
+# RUN: env LLDB_CAPTURE_REPRODUCER=0 STEPPER_OPTIONS="ONLY_VISIT_SWIFT=True;SKIP_PO=True" \
+# RUN:   %lldb --batch -o "command script import %p/../helper/stepper.py" -- \
+# RUN:   %swift_Benchmark_Onone --num-samples 1 --num-iters 1 1 1>&2

@@ -114,6 +114,10 @@ public:
     /// This is a C++ 20 header unit.
     ModuleHeaderUnit,
 
+    /// This is a module that was defined by a module map and built out
+    /// of header files as part of an \c IncludeTree.
+    IncludeTreeModuleMap,
+
     /// This is a C++20 module interface unit.
     ModuleInterfaceUnit,
 
@@ -171,6 +175,9 @@ public:
   /// eventually be exposed, for use in "private" modules.
   std::string ExportAsModule;
 
+  /// For the debug info, the path to this module's .apinotes file, if any.
+  std::string APINotesFile;
+  
   /// Does this Module scope describe part of the purview of a standard named
   /// C++ module?
   bool isModulePurview() const {
@@ -200,7 +207,9 @@ public:
 
   bool isPrivateModule() const { return Kind == PrivateModuleFragment; }
 
-  bool isModuleMapModule() const { return Kind == ModuleMapModule; }
+  bool isModuleMapModule() const {
+    return Kind == ModuleMapModule || Kind == IncludeTreeModuleMap;
+  }
 
 private:
   /// The submodules of this module, indexed by name.
@@ -213,6 +222,9 @@ private:
   /// The AST file if this is a top-level module which has a
   /// corresponding serialized AST file, or null otherwise.
   OptionalFileEntryRef ASTFile;
+
+  /// The \c ActionCache key for this module, if any.
+  std::optional<std::string> ModuleCacheKey;
 
   /// The top-level headers associated with this module.
   llvm::SmallSetVector<FileEntryRef, 2> TopHeaders;
@@ -351,6 +363,9 @@ public:
   /// Whether this module came from a "private" module map, found next
   /// to a regular (public) module map.
   unsigned ModuleMapIsPrivate : 1;
+
+  /// \brief Whether this is a module who has its swift_names inferred.
+  unsigned IsSwiftInferImportAsMember : 1;
 
   /// Describes the visibility of the various names within a
   /// particular module.
@@ -644,6 +659,15 @@ public:
   void setASTFile(OptionalFileEntryRef File) {
     assert((!getASTFile() || getASTFile() == File) && "file path changed");
     getTopLevelModule()->ASTFile = File;
+  }
+
+  std::optional<std::string> getModuleCacheKey() const {
+    return getTopLevelModule()->ModuleCacheKey;
+  }
+
+  void setModuleCacheKey(std::string Key) {
+    assert(!getModuleCacheKey() || *getModuleCacheKey() == Key);
+    getTopLevelModule()->ModuleCacheKey = std::move(Key);
   }
 
   /// Retrieve the umbrella directory as written.

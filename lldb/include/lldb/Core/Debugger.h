@@ -226,6 +226,10 @@ public:
   ///  Remove the given IO handler if it's currently active.
   bool RemoveIOHandler(const lldb::IOHandlerSP &reader_sp);
 
+  ///  Remove the given IO handlers if it's currently active.
+  uint32_t RemoveIOHandlers(const lldb::IOHandlerSP &reader1_sp,
+                        const lldb::IOHandlerSP &reader2_sp);
+
   bool IsTopIOHandler(const lldb::IOHandlerSP &reader_sp);
 
   bool CheckTopIOHandlerTypes(IOHandler::Type top_type,
@@ -381,6 +385,10 @@ public:
 
   Status RunREPL(lldb::LanguageType language, const char *repl_options);
 
+  bool REPLIsActive() { return m_io_handler_stack.REPLIsActive(); }
+
+  bool REPLIsEnabled() { return m_io_handler_stack.REPLIsEnabled(); }
+
   /// Interruption in LLDB:
   ///
   /// This is a voluntary interruption mechanism, not preemptive.  Parts of lldb
@@ -443,7 +451,6 @@ public:
     }
     return ret_val;
   }
-  
   
   /// This handy define will keep you from having to generate a report for the
   /// interruption by hand.  Use this except in the case where the arguments to
@@ -587,6 +594,7 @@ public:
 
 protected:
   friend class CommandInterpreter;
+  friend class SwiftREPL;
   friend class REPL;
   friend class Progress;
 

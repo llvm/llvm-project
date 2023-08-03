@@ -40,9 +40,15 @@ public:
 
   SymbolFile *GetSymbolFile() { return m_sym_file_up.get(); }
 
+  /// Notify the SymbolVendor that the file addresses in the Sections
+  /// for this module have been changed.
+  virtual void SectionFileAddressesChanged();
+
   // PluginInterface protocol
   llvm::StringRef GetPluginName() override { return "vendor-default"; }
 
+  virtual std::vector<lldb::DataBufferSP>
+  GetASTData(lldb::LanguageType language);
 protected:
   std::unique_ptr<SymbolFile> m_sym_file_up; // A single symbol file. Subclasses
                                              // can add more of these if needed.

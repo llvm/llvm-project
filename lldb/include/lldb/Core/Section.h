@@ -131,7 +131,12 @@ public:
           lldb::offset_t file_size, uint32_t log2align, uint32_t flags,
           uint32_t target_byte_size = 1);
 
-  ~Section();
+  virtual ~Section();
+
+  // LLVM RTTI support
+  static char ID;
+  virtual bool isA(const void *ClassID) const { return ClassID == &ID; }
+  static bool classof(const Section *obj) { return obj->isA(&ID); }
 
   static int Compare(const Section &a, const Section &b);
 
@@ -203,6 +208,8 @@ public:
 
   ObjectFile *GetObjectFile() { return m_obj_file; }
   const ObjectFile *GetObjectFile() const { return m_obj_file; }
+
+  bool CanContainSwiftReflectionData() const;
 
   /// Read the section data from the object file that the section
   /// resides in.

@@ -302,6 +302,7 @@ public:
     eKindStepInRange,
     eKindRunToAddress,
     eKindStepThrough,
+    eKindStepThroughGenericTrampoline,
     eKindStepUntil
   };
 
@@ -454,6 +455,8 @@ public:
     return lldb::ValueObjectSP();
   }
 
+  virtual bool IsReturnValueSwiftErrorValue() { return false; }
+
   // If the thread plan managing the evaluation of a user expression lives
   // longer than the command that instigated the expression (generally because
   // the expression evaluation hit a breakpoint, and the user regained control
@@ -482,6 +485,26 @@ public:
     }
     return m_takes_iteration_count;
   }
+
+  bool IsTID(lldb::tid_t tid) { return tid == m_tid; }
+  bool HasTID() { return m_tid != LLDB_INVALID_THREAD_ID; }
+  lldb::tid_t GetTID() { return m_tid; }
+
+  void SetTID(lldb::tid_t tid) {
+    if (m_tid != tid) {
+      m_tid = tid;
+      ClearThreadCache();
+    }
+  }
+
+  void ClearTID() {
+    m_tid = LLDB_INVALID_THREAD_ID;
+    ClearThreadCache();
+  }
+
+  friend lldb::ThreadPlanSP
+  Process::DoesStackExplainStopNoLock(ThreadPlanStack &stack, Thread &thread,
+                                      Event *event_ptr);
 
 protected:
   // Constructors and Destructors
@@ -521,6 +544,12 @@ protected:
   void SetStopInfo(lldb::StopInfoSP stop_reason_sp) {
     GetThread().SetStopInfo(stop_reason_sp);
   }
+
+  // BEGIN SWIFT MOD
+  LazyBool GetCachedPlanExplainsStop() const {
+    return m_cached_plan_explains_stop;
+  }
+  // END SWIFT MOD
 
   virtual lldb::StateType GetPlanRunState() = 0;
 
