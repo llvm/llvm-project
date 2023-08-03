@@ -523,12 +523,13 @@ PacketStatus VSCode::GetNextObject(llvm::json::Object &object) {
     }
     return PacketStatus::JSONMalformed;
   }
-  object = *json_value->getAsObject();
-  if (!json_value->getAsObject()) {
+  llvm::json::Object *object_ptr = json_value->getAsObject();
+  if (!object_ptr) {
     if (log)
       *log << "error: json packet isn't a object" << std::endl;
     return PacketStatus::JSONNotObject;
   }
+  object = *object_ptr;
   return PacketStatus::Success;
 }
 
