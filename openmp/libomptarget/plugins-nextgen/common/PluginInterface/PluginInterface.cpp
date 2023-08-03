@@ -715,6 +715,21 @@ Error GenericDeviceTy::registerKernelOffloadEntry(
   return Plugin::success();
 }
 
+Expected<KernelEnvironmentTy>
+GenericDeviceTy::getKernelEnvironmentForKernel(StringRef Name,
+                                               DeviceImageTy &Image) {
+  // Create a metadata object for the kernel environment object.
+  StaticGlobalTy<KernelEnvironmentTy> KernelEnv(Name.data(),
+                                                "_kernel_environment");
+
+  // Retrieve kernel environment object for the kernel.
+  GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
+  if (auto Err = GHandler.readGlobalFromImage(*this, Image, KernelEnv))
+    return Err;
+
+  return KernelEnv.getValue();
+}
+
 Expected<OMPTgtExecModeFlags>
 GenericDeviceTy::getExecutionModeForKernel(StringRef Name,
                                            DeviceImageTy &Image) {

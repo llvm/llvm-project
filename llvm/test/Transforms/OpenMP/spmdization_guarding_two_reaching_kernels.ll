@@ -42,14 +42,11 @@ target triple = "nvptx64"
 ;.
 ; CHECK: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[__OMP_OFFLOADING_2B_10393B5_SPMD_L12_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
-; CHECK: @[[__OMP_OFFLOADING_2B_10393B5_GENERIC_L20_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 3
+; CHECK: @[[__OMP_OFFLOADING_2B_10393B5_SPMD_L12_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
+; CHECK: @[[__OMP_OFFLOADING_2B_10393B5_GENERIC_L20_EXEC_MODE:[a-zA-Z0-9_$"\\.-]+]] = weak constant i8 1
 ; CHECK: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
 ; CHECK: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
 ; CHECK: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [2 x ptr] [ptr @__omp_offloading_2b_10393b5_spmd_l12_exec_mode, ptr @__omp_offloading_2b_10393b5_generic_l20_exec_mode], section "llvm.metadata"
-; CHECK: @[[__OMP_OFFLOADING_2B_10393B5_SPMD_L12_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 1
-; CHECK: @[[GLOB3:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 22, ptr @[[GLOB0]] }, align 8
-; CHECK: @[[__OMP_OFFLOADING_2B_10393B5_GENERIC_L20_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 0
 ;.
 ; CHECK-DISABLE-SPMDIZATION: @[[GLOB0:[0-9]+]] = private unnamed_addr constant [23 x i8] c"
 ; CHECK-DISABLE-SPMDIZATION: @[[GLOB1:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 0, i32 0, ptr @[[GLOB0]] }, align 8
@@ -58,19 +55,17 @@ target triple = "nvptx64"
 ; CHECK-DISABLE-SPMDIZATION: @[[GLOB2:[0-9]+]] = private unnamed_addr constant [[STRUCT_IDENT_T:%.*]] { i32 0, i32 2, i32 2, i32 0, ptr @[[GLOB0]] }, align 8
 ; CHECK-DISABLE-SPMDIZATION: @[[G:[a-zA-Z0-9_$"\\.-]+]] = external global i32, align 4
 ; CHECK-DISABLE-SPMDIZATION: @[[LLVM_COMPILER_USED:[a-zA-Z0-9_$"\\.-]+]] = appending global [2 x ptr] [ptr @__omp_offloading_2b_10393b5_spmd_l12_exec_mode, ptr @__omp_offloading_2b_10393b5_generic_l20_exec_mode], section "llvm.metadata"
-; CHECK-DISABLE-SPMDIZATION: @[[__OMP_OFFLOADING_2B_10393B5_SPMD_L12_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 1
-; CHECK-DISABLE-SPMDIZATION: @[[__OMP_OFFLOADING_2B_10393B5_GENERIC_L20_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 0
 ;.
 define weak void @__omp_offloading_2b_10393b5_spmd_l12() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2b_10393b5_spmd_l12
 ; CHECK-SAME: () #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 true)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    call void @spmd_helper() #[[ATTR6:[0-9]+]]
-; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
 ; CHECK-NEXT:    ret void
@@ -122,18 +117,12 @@ define weak void @__omp_offloading_2b_10393b5_generic_l20() #0 {
 ; CHECK-LABEL: define {{[^@]+}}@__omp_offloading_2b_10393b5_generic_l20
 ; CHECK-SAME: () #[[ATTR0]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 2, i1 false)
-; CHECK-NEXT:    [[THREAD_ID_IN_BLOCK:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-; CHECK-NEXT:    [[THREAD_IS_MAIN:%.*]] = icmp ne i32 [[THREAD_ID_IN_BLOCK]], 0
-; CHECK-NEXT:    br i1 [[THREAD_IS_MAIN]], label [[EXIT_THREADS:%.*]], label [[MAIN_THREAD_USER_CODE:%.*]]
-; CHECK:       exit.threads:
-; CHECK-NEXT:    ret void
-; CHECK:       main.thread.user_code:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1]], i8 1, i1 true)
 ; CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 ; CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 ; CHECK:       user_code.entry:
 ; CHECK-NEXT:    call void @generic_helper() #[[ATTR7:[0-9]+]]
-; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 1)
 ; CHECK-NEXT:    ret void
 ; CHECK:       worker.exit:
 ; CHECK-NEXT:    ret void
@@ -270,20 +259,7 @@ define internal void @leaf() #1 {
 ; CHECK-LABEL: define {{[^@]+}}@leaf
 ; CHECK-SAME: () #[[ATTR5:[0-9]+]] {
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    br label [[REGION_CHECK_TID:%.*]]
-; CHECK:       region.check.tid:
-; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_get_hardware_thread_id_in_block()
-; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[TMP0]], 0
-; CHECK-NEXT:    br i1 [[TMP1]], label [[REGION_GUARDED:%.*]], label [[REGION_BARRIER:%.*]]
-; CHECK:       region.guarded:
 ; CHECK-NEXT:    store i32 42, ptr @G, align 4
-; CHECK-NEXT:    br label [[REGION_GUARDED_END:%.*]]
-; CHECK:       region.guarded.end:
-; CHECK-NEXT:    br label [[REGION_BARRIER]]
-; CHECK:       region.barrier:
-; CHECK-NEXT:    call void @__kmpc_barrier_simple_spmd(ptr @[[GLOB3]], i32 [[TMP0]])
-; CHECK-NEXT:    br label [[REGION_EXIT:%.*]]
-; CHECK:       region.exit:
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLE-SPMDIZATION-LABEL: define {{[^@]+}}@leaf

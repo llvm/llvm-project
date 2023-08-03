@@ -266,12 +266,14 @@ uint32_t __kmpc_get_hardware_num_blocks();
 /// Kernel
 ///
 ///{
+// Forward declaration
+struct KernelEnvironmentTy;
+
 int8_t __kmpc_is_spmd_exec_mode();
 
-int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
-                           bool UseGenericStateMachine);
+int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment);
 
-void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode);
+void __kmpc_target_deinit();
 
 ///}
 

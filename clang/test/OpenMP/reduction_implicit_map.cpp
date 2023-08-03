@@ -103,16 +103,16 @@ int main()
 // CHECK-NEXT:    [[E_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[CAPTURED_VARS_ADDRS:%.*]] = alloca [1 x ptr], align 8
 // CHECK-NEXT:    store ptr [[E]], ptr [[E_ADDR]], align 8
-// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @[[GLOB1:[0-9]+]], i8 2, i1 false)
+// CHECK-NEXT:    [[TMP0:%.*]] = call i32 @__kmpc_target_init(ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l32_kernel_environment)
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP0]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
-// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1]])
+// CHECK-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB1:[0-9]+]])
 // CHECK-NEXT:    [[TMP2:%.*]] = load ptr, ptr [[E_ADDR]], align 8
 // CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds [1 x ptr], ptr [[CAPTURED_VARS_ADDRS]], i64 0, i64 0
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[TMP3]], align 8
 // CHECK-NEXT:    call void @__kmpc_parallel_51(ptr @[[GLOB1]], i32 [[TMP1]], i32 1, i32 -1, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}__Z3fooi_l32_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS]], i64 1)
-// CHECK-NEXT:    call void @__kmpc_target_deinit(ptr @[[GLOB1]], i8 2)
+// CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
 // CHECK-NEXT:    ret void

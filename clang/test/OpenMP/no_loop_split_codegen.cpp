@@ -517,19 +517,19 @@ int main()
 // CHECK-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[B_ADDR_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP4:%.*]] = load i64, ptr [[VLA_ADDR4_ASCAST]], align 8
 // CHECK-NEXT:    [[TMP5:%.*]] = load ptr, ptr [[C_ADDR_ASCAST]], align 8
-// CHECK-NEXT:    [[TMP6:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr), i8 1, i1 true)
+// CHECK-NEXT:    [[TMP6:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_kernel_environment to ptr))
 // CHECK-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP6]], -1
 // CHECK-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // CHECK:       user_code.entry:
 // CHECK-NEXT:    [[TMP7:%.*]] = load i32, ptr [[N_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    [[N5:%.*]] = call align 8 ptr @__kmpc_alloc_shared(i64 4)
 // CHECK-NEXT:    store i32 [[TMP7]], ptr [[N5]], align 4
-// CHECK-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr))
+// CHECK-NEXT:    [[TMP8:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
 // CHECK-NEXT:    store i32 0, ptr [[DOTZERO_ADDR_ASCAST]], align 4
 // CHECK-NEXT:    store i32 [[TMP8]], ptr [[DOTTHREADID_TEMP__ASCAST]], align 4
 // CHECK-NEXT:    call void @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l61_omp_outlined(ptr [[DOTTHREADID_TEMP__ASCAST]], ptr [[DOTZERO_ADDR_ASCAST]], ptr [[N5]], i64 [[TMP0]], ptr [[TMP1]], i64 [[TMP2]], ptr [[TMP3]], i64 [[TMP4]], ptr [[TMP5]]) #[[ATTR1:[0-9]+]]
 // CHECK-NEXT:    call void @__kmpc_free_shared(ptr [[N5]], i64 4)
-// CHECK-NEXT:    call void @__kmpc_target_deinit(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i8 1)
+// CHECK-NEXT:    call void @__kmpc_target_deinit()
 // CHECK-NEXT:    ret void
 // CHECK:       worker.exit:
 // CHECK-NEXT:    ret void

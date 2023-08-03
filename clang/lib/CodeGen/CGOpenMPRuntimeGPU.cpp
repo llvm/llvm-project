@@ -915,7 +915,7 @@ void CGOpenMPRuntimeGPU::emitKernelDeinit(CodeGenFunction &CGF,
     emitGenericVarsEpilog(CGF);
 
   CGBuilderTy &Bld = CGF.Builder;
-  OMPBuilder.createTargetDeinit(Bld, IsSPMD);
+  OMPBuilder.createTargetDeinit(Bld);
 }
 
 void CGOpenMPRuntimeGPU::emitSPMDKernel(const OMPExecutableDirective &D,

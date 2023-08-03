@@ -19,10 +19,8 @@ target triple = "nvptx64"
 ; Make it a weak definition so we will apply custom state machine rewriting but can't use the body in the reasoning.
 ;.
 ; CHECK: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
-; CHECK: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 0
 ;.
 ; CHECK-DISABLED: @[[S:[a-zA-Z0-9_$"\\.-]+]] = external local_unnamed_addr global ptr
-; CHECK-DISABLED: @[[KERNEL_NESTED_PARALLELISM:[a-zA-Z0-9_$"\\.-]+]] = weak hidden constant i8 0
 ;.
 define weak i32 @__kmpc_target_init(ptr, i8, i1) {
 ; CHECK-LABEL: define {{[^@]+}}@__kmpc_target_init
@@ -45,7 +43,7 @@ define void @kernel() "kernel" {
 ; CHECK-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
 ; CHECK-NEXT:    call void @bar() #[[ATTR1]]
 ; CHECK-NEXT:    call void @convert_and_move_alloca() #[[ATTR1]]
-; CHECK-NEXT:    call void @unknown_no_openmp() #[[ATTR4:[0-9]+]]
+; CHECK-NEXT:    call void @unknown_no_openmp()
 ; CHECK-NEXT:    call void @__kmpc_target_deinit(ptr nonnull null, i8 1)
 ; CHECK-NEXT:    ret void
 ;
@@ -56,7 +54,7 @@ define void @kernel() "kernel" {
 ; CHECK-DISABLED-NEXT:    call void @foo() #[[ATTR1:[0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @bar() #[[ATTR1]]
 ; CHECK-DISABLED-NEXT:    call void @convert_and_move_alloca() #[[ATTR1]]
-; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp() #[[ATTR4:[0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @unknown_no_openmp()
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_target_deinit(ptr nonnull null, i8 1)
 ; CHECK-DISABLED-NEXT:    ret void
 ;
@@ -80,7 +78,8 @@ define internal void @foo() {
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@foo
 ; CHECK-DISABLED-SAME: () #[[ATTR1]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR5:[0-9]+]], !dbg [[DBG8:![0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR5]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
 entry:
@@ -102,8 +101,8 @@ define internal void @bar() {
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@bar
 ; CHECK-DISABLED-SAME: () #[[ATTR1]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR5:[0-9]+]], !dbg [[DBG8:![0-9]+]]
-; CHECK-DISABLED-NEXT:    call void @share(ptr nofree [[TMP0]]) #[[ATTR6:[0-9]+]], !dbg [[DBG8]]
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR5]], !dbg [[DBG11:![0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @share(ptr [[TMP0]]) #[[ATTR2:[0-9]+]], !dbg [[DBG11]]
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR5]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
@@ -127,7 +126,7 @@ define internal void @share(ptr %x) {
 ; CHECK-NEXT:    ret void
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@share
-; CHECK-DISABLED-SAME: (ptr nofree [[X:%.*]]) #[[ATTR2:[0-9]+]] {
+; CHECK-DISABLED-SAME: (ptr [[X:%.*]]) #[[ATTR2]] {
 ; CHECK-DISABLED-NEXT:  entry:
 ; CHECK-DISABLED-NEXT:    store ptr [[X]], ptr @S, align 8
 ; CHECK-DISABLED-NEXT:    ret void
@@ -145,7 +144,7 @@ define void @unused() {
 ;
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@unused() {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR5]], !dbg [[DBG11:![0-9]+]]
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR5]], !dbg [[DBG13:![0-9]+]]
 ; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR5]]
 ; CHECK-DISABLED-NEXT:    ret void
 ;
@@ -180,16 +179,17 @@ define internal void @convert_and_move_alloca() {
 ; CHECK-DISABLED-LABEL: define {{[^@]+}}@convert_and_move_alloca
 ; CHECK-DISABLED-SAME: () #[[ATTR1]] {
 ; CHECK-DISABLED-NEXT:  entry:
-; CHECK-DISABLED-NEXT:    [[DOTH2S:%.*]] = alloca i8, i64 4, align 4
 ; CHECK-DISABLED-NEXT:    [[IV_PTR:%.*]] = alloca i32, align 4
 ; CHECK-DISABLED-NEXT:    br label [[INITLOOP:%.*]]
 ; CHECK-DISABLED:       initloop:
 ; CHECK-DISABLED-NEXT:    store i32 0, ptr [[IV_PTR]], align 4
 ; CHECK-DISABLED-NEXT:    br label [[LOOPBODY:%.*]]
 ; CHECK-DISABLED:       loopbody:
+; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = call align 4 ptr @__kmpc_alloc_shared(i64 4) #[[ATTR5]], !dbg [[DBG14:![0-9]+]]
+; CHECK-DISABLED-NEXT:    call void @__kmpc_free_shared(ptr [[TMP0]], i64 4) #[[ATTR5]]
 ; CHECK-DISABLED-NEXT:    [[IV:%.*]] = load i32, ptr [[IV_PTR]], align 4
-; CHECK-DISABLED-NEXT:    [[TMP0:%.*]] = icmp eq i32 [[IV]], 10
-; CHECK-DISABLED-NEXT:    br i1 [[TMP0]], label [[EXIT:%.*]], label [[LOOPINC:%.*]]
+; CHECK-DISABLED-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[IV]], 10
+; CHECK-DISABLED-NEXT:    br i1 [[TMP1]], label [[EXIT:%.*]], label [[LOOPINC:%.*]]
 ; CHECK-DISABLED:       loopinc:
 ; CHECK-DISABLED-NEXT:    [[INC:%.*]] = add i32 [[IV]], 1
 ; CHECK-DISABLED-NEXT:    store i32 [[INC]], ptr [[IV_PTR]], align 4
@@ -259,17 +259,16 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK: attributes #[[ATTR1]] = { nosync nounwind }
 ; CHECK: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind memory(write) }
 ; CHECK: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK: attributes #[[ATTR4]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK: attributes #[[ATTR5]] = { nounwind }
 ; CHECK: attributes #[[ATTR6]] = { nosync nounwind memory(write) }
 ;.
 ; CHECK-DISABLED: attributes #[[ATTR0]] = { "kernel" }
 ; CHECK-DISABLED: attributes #[[ATTR1]] = { nosync nounwind }
-; CHECK-DISABLED: attributes #[[ATTR2]] = { nofree norecurse nosync nounwind memory(write) }
+; CHECK-DISABLED: attributes #[[ATTR2]] = { nosync nounwind memory(write) }
 ; CHECK-DISABLED: attributes #[[ATTR3:[0-9]+]] = { nosync nounwind allocsize(0) }
-; CHECK-DISABLED: attributes #[[ATTR4]] = { "llvm.assume"="omp_no_openmp" }
+; CHECK-DISABLED: attributes #[[ATTR4:[0-9]+]] = { "llvm.assume"="omp_no_openmp" }
 ; CHECK-DISABLED: attributes #[[ATTR5]] = { nounwind }
-; CHECK-DISABLED: attributes #[[ATTR6]] = { nosync nounwind memory(write) }
 ;.
 ; CHECK: [[META0:![0-9]+]] = distinct !DICompileUnit(language: DW_LANG_C99, file: !1, producer: "clang version 13.0.0", isOptimized: false, runtimeVersion: 0, emissionKind: FullDebug, enums: !2, splitDebugInlining: false, nameTableKind: None)
 ; CHECK: [[META1:![0-9]+]] = !DIFile(filename: "remove_globalization.c", directory: "/tmp/remove_globalization.c")
@@ -291,10 +290,13 @@ declare void @unknown_no_openmp() "llvm.assume"="omp_no_openmp"
 ; CHECK-DISABLED: [[META5:![0-9]+]] = !{i32 7, !"openmp", i32 50}
 ; CHECK-DISABLED: [[META6:![0-9]+]] = !{i32 7, !"openmp-device", i32 50}
 ; CHECK-DISABLED: [[META7:![0-9]+]] = !{ptr @kernel, !"kernel", i32 1}
-; CHECK-DISABLED: [[DBG8]] = !DILocation(line: 4, column: 2, scope: !9)
-; CHECK-DISABLED: [[META9:![0-9]+]] = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+; CHECK-DISABLED: [[DBG8]] = !DILocation(line: 2, column: 2, scope: !9)
+; CHECK-DISABLED: [[META9:![0-9]+]] = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
 ; CHECK-DISABLED: [[META10:![0-9]+]] = !DISubroutineType(types: !2)
-; CHECK-DISABLED: [[DBG11]] = !DILocation(line: 6, column: 2, scope: !9)
+; CHECK-DISABLED: [[DBG11]] = !DILocation(line: 4, column: 2, scope: !12)
+; CHECK-DISABLED: [[META12:![0-9]+]] = distinct !DISubprogram(name: "bar", scope: !1, file: !1, line: 1, type: !10, scopeLine: 1, flags: DIFlagPrototyped, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, retainedNodes: !2)
+; CHECK-DISABLED: [[DBG13]] = !DILocation(line: 6, column: 2, scope: !12)
+; CHECK-DISABLED: [[DBG14]] = !DILocation(line: 10, column: 2, scope: !12)
 ;.
 ;; NOTE: These prefixes are unused and the list is autogenerated. Do not add tests below this line:
 ; CHECK-REMARKS: {{.*}}

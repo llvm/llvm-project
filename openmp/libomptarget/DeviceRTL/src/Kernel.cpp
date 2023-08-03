@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "Debug.h"
+#include "Environment.h"
 #include "Interface.h"
 #include "Mapping.h"
 #include "State.h"
@@ -23,11 +24,12 @@ using namespace ompx;
 
 #pragma omp begin declare target device_type(nohost)
 
-static void inititializeRuntime(bool IsSPMD) {
+static void inititializeRuntime(bool IsSPMD,
+                                KernelEnvironmentTy &KernelEnvironment) {
   // Order is important here.
   synchronize::init(IsSPMD);
   mapping::init(IsSPMD);
-  state::init(IsSPMD);
+  state::init(IsSPMD, KernelEnvironment);
   if (__kmpc_get_hardware_thread_id_in_block() == 0)
     __init_ThreadDSTPtrPtr();
 }
@@ -69,8 +71,7 @@ extern "C" {
 ///
 /// \param Ident               Source location identification, can be NULL.
 ///
-int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
-                           bool UseGenericStateMachine) {
+int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
   FunctionTracingRAII();
 #ifdef __AMDGCN__
   if (__kmpc_get_hardware_thread_id_in_block() == 0) {
@@ -79,13 +80,15 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
   }
   synchronize::threadsAligned();
 #endif
-  const bool IsSPMD =
-      Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
+  ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
+  bool IsSPMD = Configuration.ExecMode &
+                llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
+  bool UseGenericStateMachine = Configuration.UseGenericStateMachine;
   if (IsSPMD) {
-    inititializeRuntime(/* IsSPMD */ true);
+    inititializeRuntime(/* IsSPMD */ true, KernelEnvironment);
     synchronize::threadsAligned();
   } else {
-    inititializeRuntime(/* IsSPMD */ false);
+    inititializeRuntime(/* IsSPMD */ false, KernelEnvironment);
     // No need to wait since only the main threads will execute user
     // code and workers will run into a barrier right away.
   }
@@ -114,7 +117,7 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
   // threads.
   if (UseGenericStateMachine &&
       mapping::getThreadIdInBlock() < mapping::getMaxTeamThreads(IsSPMD)) {
-    genericStateMachine(Ident);
+    genericStateMachine(KernelEnvironment.Ident);
   } else {
     // Retrieve the work function just to ensure we always call
     // __kmpc_kernel_parallel even if a custom state machine is used.
@@ -138,10 +141,9 @@ int32_t __kmpc_target_init(IdentTy *Ident, int8_t Mode,
 ///
 /// \param Ident Source location identification, can be NULL.
 ///
-void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode) {
+void __kmpc_target_deinit() {
   FunctionTracingRAII();
-  const bool IsSPMD =
-      Mode & llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
+  bool IsSPMD = mapping::isSPMDMode();
   state::assumeInitialState(IsSPMD);
   if (IsSPMD)
     return;
@@ -156,12 +158,16 @@ void __kmpc_target_deinit(IdentTy *Ident, int8_t Mode) {
 }
 
 #ifndef FORTRAN_NO_LONGER_NEEDS
-
 int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
                               int8_t UseGenericStateMachine,
                               int8_t RequiresFullRuntime) {
   FunctionTracingRAII();
-  int32_t res = __kmpc_target_init(nullptr, Mode, UseGenericStateMachine);
+  KernelEnvironmentTy KE{{static_cast<uint8_t>(UseGenericStateMachine),
+                          /*MayUseNestedParallelism=*/1,
+                          static_cast<llvm::omp::OMPTgtExecModeFlags>(Mode)},
+                         /*Ident=*/nullptr,
+                         /*DebugIndentionLevel=*/0};
+  int32_t res = __kmpc_target_init(KE);
   if (Mode & llvm::omp::OMP_TGT_EXEC_MODE_SPMD) {
 
     uint32_t TId = mapping::getThreadIdInBlock();
@@ -202,7 +208,7 @@ void __kmpc_target_deinit_v1(int64_t *, int8_t Mode,
   // otherwise the following assertions and the assumption in
   // __kmpc_target_deinit may not hold.
   synchronize::threadsAligned();
-  __kmpc_target_deinit(nullptr, Mode);
+  __kmpc_target_deinit();
 }
 
 #endif

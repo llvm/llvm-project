@@ -53,18 +53,18 @@ int main() {
 // IR-GPU-NEXT:    store ptr [[DEVICE_RESULT]], ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    store ptr [[OMP_PTEAM_MEM_ALLOC]], ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP0:%.*]] = load ptr, ptr [[DEVICE_RESULT_ADDR_ASCAST]], align 8
-// IR-GPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr), i8 2, i1 false)
+// IR-GPU-NEXT:    [[TMP1:%.*]] = call i32 @__kmpc_target_init(ptr addrspacecast (ptr addrspace(1) @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_kernel_environment to ptr))
 // IR-GPU-NEXT:    [[EXEC_USER_CODE:%.*]] = icmp eq i32 [[TMP1]], -1
 // IR-GPU-NEXT:    br i1 [[EXEC_USER_CODE]], label [[USER_CODE_ENTRY:%.*]], label [[WORKER_EXIT:%.*]]
 // IR-GPU:       user_code.entry:
-// IR-GPU-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr))
+// IR-GPU-NEXT:    [[TMP2:%.*]] = call i32 @__kmpc_global_thread_num(ptr addrspacecast (ptr addrspace(1) @[[GLOB1:[0-9]+]] to ptr))
 // IR-GPU-NEXT:    [[TMP3:%.*]] = load ptr, ptr [[OMP_PTEAM_MEM_ALLOC_ADDR_ASCAST]], align 8
 // IR-GPU-NEXT:    [[TMP4:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 0
 // IR-GPU-NEXT:    store ptr [[TMP0]], ptr [[TMP4]], align 8
 // IR-GPU-NEXT:    [[TMP5:%.*]] = getelementptr inbounds [2 x ptr], ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 0, i64 1
 // IR-GPU-NEXT:    store ptr [[TMP3]], ptr [[TMP5]], align 8
 // IR-GPU-NEXT:    call void @__kmpc_parallel_51(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i32 [[TMP2]], i32 1, i32 64, i32 -1, ptr @{{__omp_offloading_[0-9a-z]+_[0-9a-z]+}}_main_l37_omp_outlined, ptr null, ptr [[CAPTURED_VARS_ADDRS_ASCAST]], i64 2)
-// IR-GPU-NEXT:    call void @__kmpc_target_deinit(ptr addrspacecast (ptr addrspace(1) @[[GLOB1]] to ptr), i8 2)
+// IR-GPU-NEXT:    call void @__kmpc_target_deinit()
 // IR-GPU-NEXT:    ret void
 // IR-GPU:       worker.exit:
 // IR-GPU-NEXT:    ret void

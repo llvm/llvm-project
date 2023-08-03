@@ -9,8 +9,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "State.h"
-#include "Configuration.h"
 #include "Debug.h"
+#include "Environment.h"
 #include "Interface.h"
 #include "Synchronization.h"
 #include "Types.h"
@@ -37,6 +37,9 @@ constexpr const uint32_t Alignment = 16;
 /// External symbol to access dynamic shared memory.
 extern unsigned char DynamicSharedBuffer[] __attribute__((aligned(Alignment)));
 #pragma omp allocate(DynamicSharedBuffer) allocator(omp_pteam_mem_alloc)
+
+/// The kernel environment passed to the init method by the compiler.
+static KernelEnvironmentTy *SHARED(KernelEnvironmentPtr);
 
 namespace {
 
@@ -270,14 +273,18 @@ int returnValIfLevelIsActive(int Level, int Val, int DefaultVal,
 
 } // namespace
 
-void state::init(bool IsSPMD) {
+void state::init(bool IsSPMD, KernelEnvironmentTy &KernelEnvironment) {
   SharedMemorySmartStack.init(IsSPMD);
   if (mapping::isInitialThreadInLevel0(IsSPMD)) {
     TeamState.init(IsSPMD);
-    DebugEntryRAII::init();
+    KernelEnvironmentPtr = &KernelEnvironment;
   }
 
   ThreadStates[mapping::getThreadIdInBlock()] = nullptr;
+}
+
+KernelEnvironmentTy &state::getKernelEnvironment() {
+  return *KernelEnvironmentPtr;
 }
 
 void state::enterDataEnvironment(IdentTy *Ident) {

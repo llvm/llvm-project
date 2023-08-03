@@ -20,7 +20,7 @@
 #include <vector>
 
 #include "Debug.h"
-#include "DeviceEnvironment.h"
+#include "Environment.h"
 #include "GlobalHandler.h"
 #include "JIT.h"
 #include "MemoryManager.h"
@@ -904,6 +904,11 @@ protected:
   /// A pointer to an RPC server instance attached to this device if present.
   /// This is used to run the RPC server during task synchronization.
   RPCHandleTy *RPCHandle;
+
+private:
+  /// Return the kernel environment object for kernel \p Name.
+  Expected<KernelEnvironmentTy>
+  getKernelEnvironmentForKernel(StringRef Name, DeviceImageTy &Image);
 };
 
 /// Class implementing common functionalities of offload plugins. Each plugin
