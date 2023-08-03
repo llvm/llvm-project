@@ -1,0 +1,6 @@
+/root/LLVMFILES/problem3/build/CMakeFiles/rebuild_cache.dir
+/root/LLVMFILES/problem3/build/CMakeFiles/LoadStoreAnalysisPass.dir
+/root/LLVMFILES/problem3/build/CMakeFiles/acc_gen.dir
+/root/LLVMFILES/problem3/build/CMakeFiles/edit_cache.dir
+/root/LLVMFILES/problem3/build/CMakeFiles/omp_gen.dir
+/root/LLVMFILES/problem3/build/CMakeFiles/intrinsics_gen.dir
