@@ -262,22 +262,16 @@ static unsigned getPushPopEncoding(const Register MaxReg) {
 
 // Get the max reg of Push/Pop for restoring callee saved registers.
 static Register getMaxPushPopReg(const MachineFunction &MF,
-                                 const std::vector<CalleeSavedInfo> &CSI,
-                                 unsigned &PushPopRegs) {
+                                 const std::vector<CalleeSavedInfo> &CSI) {
   Register MaxPushPopReg = RISCV::NoRegister;
-  PushPopRegs = 0;
   for (auto &CS : CSI) {
     Register Reg = CS.getReg();
-    if (RISCV::PGPRRegClass.contains(Reg)) {
+    if (RISCV::PGPRRegClass.contains(Reg))
       MaxPushPopReg = std::max(MaxPushPopReg.id(), Reg.id());
-      PushPopRegs += 1;
-    }
   }
   // if rlist is {rs, s0-s10}, then s11 will also be included
-  if (MaxPushPopReg == RISCV::X26) {
+  if (MaxPushPopReg == RISCV::X26)
     MaxPushPopReg = RISCV::X27;
-    PushPopRegs = 13;
-  }
   return MaxPushPopReg;
 }
 
@@ -1332,10 +1326,11 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
   // Emit CM.PUSH with base SPimm & evaluate Push stack
   RISCVMachineFunctionInfo *RVFI = MF->getInfo<RISCVMachineFunctionInfo>();
   if (RVFI->isPushable(*MF)) {
-    unsigned PushPopRegs = 0;
-    Register MaxReg = getMaxPushPopReg(*MF, CSI, PushPopRegs);
-    RVFI->setRVPushRegs(PushPopRegs);
-    RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushPopRegs, 16));
+    Register MaxReg = getMaxPushPopReg(*MF, CSI);
+    unsigned PushedRegNum =
+        getPushPopEncoding(MaxReg) - llvm::RISCVZC::RLISTENCODE::RA + 1;
+    RVFI->setRVPushRegs(PushedRegNum);
+    RVFI->setRVPushStackSize(alignTo((STI.getXLen() / 8) * PushedRegNum, 16));
 
     if (MaxReg != RISCV::NoRegister) {
       // Use encoded number to represent registers to spill.
@@ -1347,7 +1342,7 @@ bool RISCVFrameLowering::spillCalleeSavedRegisters(
       PushBuilder.addImm((int64_t)RegEnc);
       PushBuilder.addImm(0);
 
-      for (unsigned i = 0; i < PushPopRegs; i++)
+      for (unsigned i = 0; i < PushedRegNum; i++)
         PushBuilder.addUse(AllPopRegs[i], RegState::Implicit);
     }
   } else if (const char *SpillLibCall = getSpillLibCallName(*MF, CSI)) {
