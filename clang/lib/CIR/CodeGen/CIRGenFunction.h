@@ -1065,7 +1065,6 @@ public:
   /// might decide to leave this as a separate pass (see EmitBranchOnBoolExpr
   /// for extra ideas).
   mlir::LogicalResult buildIfOnBoolExpr(const clang::Expr *cond,
-                                        mlir::Location loc,
                                         const clang::Stmt *thenS,
                                         const clang::Stmt *elseS);
   mlir::Value buildTernaryOnBoolExpr(const clang::Expr *cond,

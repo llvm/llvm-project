@@ -332,26 +332,6 @@ static void terminateBody(mlir::OpBuilder &builder, mlir::Region &r,
     b->erase();
 }
 
-static mlir::Location getIfLocs(CIRGenFunction &CGF, const clang::Stmt *thenS,
-                                const clang::Stmt *elseS) {
-  // Attempt to be more accurate as possible with IfOp location, generate
-  // one fused location that has either 2 or 4 total locations, depending
-  // on else's availability.
-  SmallVector<mlir::Location, 4> ifLocs;
-  mlir::Attribute metadata;
-
-  clang::SourceRange t = thenS->getSourceRange();
-  ifLocs.push_back(CGF.getLoc(t.getBegin()));
-  ifLocs.push_back(CGF.getLoc(t.getEnd()));
-  if (elseS) {
-    clang::SourceRange e = elseS->getSourceRange();
-    ifLocs.push_back(CGF.getLoc(e.getBegin()));
-    ifLocs.push_back(CGF.getLoc(e.getEnd()));
-  }
-
-  return mlir::FusedLoc::get(ifLocs, metadata, CGF.getBuilder().getContext());
-}
-
 mlir::LogicalResult CIRGenFunction::buildIfStmt(const IfStmt &S) {
   // The else branch of a consteval if statement is always the only branch
   // that can be runtime evaluated.
@@ -382,8 +362,7 @@ mlir::LogicalResult CIRGenFunction::buildIfStmt(const IfStmt &S) {
 
     assert(!UnimplementedFeature::emitCondLikelihoodViaExpectIntrinsic());
     assert(!UnimplementedFeature::incrementProfileCounter());
-    auto ifLoc = getIfLocs(*this, S.getThen(), S.getElse());
-    return buildIfOnBoolExpr(S.getCond(), ifLoc, S.getThen(), S.getElse());
+    return buildIfOnBoolExpr(S.getCond(), S.getThen(), S.getElse());
   };
 
   // TODO: Add a new scoped symbol table.
