@@ -45,13 +45,14 @@ class SwiftPersistentExpressionState : public PersistentExpressionState {
 public:
   class SwiftDeclMap {
   public:
-    void AddDecl(swift::ValueDecl *decl, bool check_existing, ConstString name);
+    void AddDecl(swift::ValueDecl *decl, bool check_existing,
+                 llvm::StringRef name);
 
     /// Find decls matching `name`, excluding decls that are equivalent to
     /// decls in `excluding_equivalents`, and put the results in `matches`.
     /// Return true if there are any results.
     bool FindMatchingDecls(
-        ConstString name,
+        llvm::StringRef name,
         const std::vector<swift::ValueDecl *> &excluding_equivalents,
         std::vector<swift::ValueDecl *> &matches);
 
@@ -59,10 +60,7 @@ public:
     static bool DeclsAreEquivalent(swift::Decl *lhs, swift::Decl *rhs);
 
   private:
-    typedef std::unordered_multimap<std::string, swift::ValueDecl *>
-        SwiftDeclMapTy;
-    typedef SwiftDeclMapTy::iterator iterator;
-    SwiftDeclMapTy m_swift_decls;
+    llvm::StringMap<llvm::SmallVector<swift::ValueDecl *, 1>> m_swift_decls;
   };
 
   //----------------------------------------------------------------------
@@ -101,7 +99,7 @@ public:
   void RegisterSwiftPersistentDecl(swift::ValueDecl *value_decl);
 
   void RegisterSwiftPersistentDeclAlias(swift::ValueDecl *value_decl,
-                                        ConstString name);
+                                        llvm::StringRef name);
 
   void CopyInSwiftPersistentDecls(SwiftDeclMap &source_map);
 
@@ -109,7 +107,7 @@ public:
   /// in `excluding_equivalents`, and put the results in `matches`.  Return true
   /// if there are any results.
   bool GetSwiftPersistentDecls(
-      ConstString name,
+      llvm::StringRef name,
       const std::vector<swift::ValueDecl *> &excluding_equivalents,
       std::vector<swift::ValueDecl *> &matches);
 

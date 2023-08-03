@@ -219,7 +219,7 @@ public:
       // kind lldb explicitly wants to globalize.
       if (shouldGlobalize(value_decl->getBaseName().getIdentifier(),
                           value_decl->getKind()))
-        m_staged_decls.AddDecl(value_decl, false, ConstString());
+        m_staged_decls.AddDecl(value_decl, false, {});
     }
   }
 
@@ -248,11 +248,10 @@ public:
     if (NameStr.empty())
       return false;
 
-    ConstString name_const_str(NameStr);
-    if (m_log) {
-      m_log->Printf("[LLDBExprNameLookup::lookupAdditions (%u)] Searching for %s",
-                    count, name_const_str.AsCString("<anonymous>"));
-    }
+    if (m_log)
+      m_log->Printf(
+          "[LLDBExprNameLookup::lookupAdditions (%u)] Searching for %s", count,
+          NameStr.empty() ? "<anonymous>" : NameStr.str().c_str());
 
     std::vector<swift::ValueDecl *> results;
 
@@ -267,7 +266,7 @@ public:
     // Later, when we look for persistent decls, these staged decls
     // take precedence.
 
-    m_staged_decls.FindMatchingDecls(name_const_str, {}, results);
+    m_staged_decls.FindMatchingDecls(NameStr, {}, results);
 
     // Next look up persistent decls matching this name.  Then, if we
     // aren't looking at a debugger variable, filter out persistent
@@ -294,7 +293,7 @@ public:
       size_t num_external_results = RV.size();
       if (!is_debugger_variable && num_external_results > 0) {
         std::vector<swift::ValueDecl *> persistent_results;
-        m_persistent_vars->GetSwiftPersistentDecls(name_const_str, {},
+        m_persistent_vars->GetSwiftPersistentDecls(NameStr, {},
                                                    persistent_results);
 
         size_t num_persistent_results = persistent_results.size();
@@ -336,8 +335,7 @@ public:
             results.push_back(value_decl);
         }
       } else {
-        m_persistent_vars->GetSwiftPersistentDecls(name_const_str, results,
-                                                   results);
+        m_persistent_vars->GetSwiftPersistentDecls(NameStr, results, results);
       }
     }
 
@@ -401,11 +399,10 @@ public:
     if (NameStr.empty())
       return false;
 
-    ConstString name_const_str(NameStr);
-    if (m_log) {
-      m_log->Printf("[LLDBREPLNameLookup::lookupAdditions (%u)] Searching for %s",
-                    count, name_const_str.AsCString("<anonymous>"));
-    }
+    if (m_log)
+      m_log->Printf(
+          "[LLDBREPLNameLookup::lookupAdditions (%u)] Searching for %s", count,
+          NameStr.empty() ? "<anonymous>" : NameStr.str().c_str());
 
     // Find decls that come from the current compilation.
     std::vector<swift::ValueDecl *> current_compilation_results;
@@ -420,9 +417,8 @@ public:
     // decls from the current compilation.  This makes the decls from
     // the current compilation take precedence.
     std::vector<swift::ValueDecl *> persistent_decl_results;
-    m_persistent_vars->GetSwiftPersistentDecls(name_const_str,
-                                               current_compilation_results,
-                                               persistent_decl_results);
+    m_persistent_vars->GetSwiftPersistentDecls(
+        NameStr, current_compilation_results, persistent_decl_results);
 
     // Append the persistent decls that we found to the result vector.
     for (auto result : persistent_decl_results) {
