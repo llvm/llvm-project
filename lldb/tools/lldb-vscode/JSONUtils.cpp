@@ -696,7 +696,11 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   int64_t frame_id = MakeVSCodeFrameID(frame);
   object.try_emplace("id", frame_id);
 
-  std::string frame_name = frame.GetDisplayFunctionName();
+  // `function_name` can be a nullptr, which throws an error when assigned to an
+  // `std::string`.
+  const char *function_name = frame.GetDisplayFunctionName();
+  std::string frame_name =
+      function_name == nullptr ? std::string() : function_name;
   if (frame_name.empty())
     frame_name = "<unknown>";
   bool is_optimized = frame.GetFunction().GetIsOptimized();
