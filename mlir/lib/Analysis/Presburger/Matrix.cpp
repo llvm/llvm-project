@@ -353,7 +353,7 @@ template <> std::pair<Matrix<MPInt>, Matrix<MPInt>> Matrix<MPInt>::computeHermit
   return {h, u};
 }
 
-template <> void Matrix<MPInt>::print(raw_ostream &os) const {
+template <typename T> void Matrix<T>::print(raw_ostream &os) const {
   for (unsigned row = 0; row < nRows; ++row) {
     for (unsigned column = 0; column < nColumns; ++column)
       os << at(row, column) << ' ';

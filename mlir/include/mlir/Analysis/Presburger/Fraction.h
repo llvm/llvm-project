@@ -49,7 +49,7 @@ struct Fraction {
     return num / den;
   }
 
-  llvm::raw_ostream print(llvm::raw_ostream &os) const {
+  llvm::raw_ostream &print(llvm::raw_ostream &os) const {
     return os << "(" << num << "/" << den << ")";
   }
 
@@ -121,7 +121,7 @@ inline Fraction operator-(const Fraction &x, const Fraction &y) {
   return reduce(Fraction(x.num * y.den - x.den * y.num, x.den * y.den));
 }
 
-llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &os, const Fraction &x) {
   x.print(os);
   return os;
 }
