@@ -1452,34 +1452,4 @@ to selectively enable and disable different features.  Currently, the following
 debugging features are supported.
 
     * Enable debugging assertions in the device. ``0x01``
-    * Enable OpenMP runtime function traces in the device. ``0x2``
     * Enable diagnosing common problems during offloading . ``0x4``
-
-.. code-block:: c++
-
-    void copy(double *X, double *Y) {
-    #pragma omp target teams distribute parallel for
-      for (std::size_t i = 0; i < N; ++i)
-        Y[i] = X[i];
-    }
-
-Compiling this code targeting ``nvptx64`` with debugging enabled will
-provide the following output from the device runtime library.
-
-.. code-block:: console
-
-    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -fopenmp-target-debug=3
-    $ env LIBOMPTARGET_DEVICE_RTL_DEBUG=3 ./zaxpy
-
-.. code-block:: text
-
-    Kernel.cpp:70: Thread 0 Entering int32_t __kmpc_target_init()
-    Parallelism.cpp:196: Thread 0 Entering int32_t __kmpc_global_thread_num()
-    Mapping.cpp:239: Thread 0 Entering uint32_t __kmpc_get_hardware_num_threads_in_block()
-    Workshare.cpp:616: Thread 0 Entering void __kmpc_distribute_static_init_4()
-    Parallelism.cpp:85: Thread 0 Entering void __kmpc_parallel_51()
-      Parallelism.cpp:69: Thread 0 Entering <OpenMP Outlined Function>
-        Workshare.cpp:575: Thread 0 Entering void __kmpc_for_static_init_4()
-        Workshare.cpp:660: Thread 0 Entering void __kmpc_distribute_static_fini()
-    Workshare.cpp:660: Thread 0 Entering void __kmpc_distribute_static_fini()
-    Kernel.cpp:103: Thread 0 Entering void __kmpc_target_deinit()
