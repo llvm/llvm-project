@@ -164,7 +164,7 @@ if ($_reader.getBytecodeVersion() < /*kNativePropertiesODSSegmentSize=*/6) {
     $_reader.emitError("size mismatch for operand/result_segment_size");
     return failure();
   }
-  llvm::copy(ArrayRef<int32_t>(attr), $_storage);
+  llvm::copy(ArrayRef<int32_t>(attr), $_storage.begin());
 } else {
   return $_reader.readSparseArray(MutableArrayRef($_storage));
 }
@@ -429,7 +429,8 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
         /*storageType=*/storageType,
         /*interfaceType=*/"::llvm::ArrayRef<int32_t>",
         /*convertFromStorageCall=*/"$_storage",
-        /*assignToStorageCall=*/"::llvm::copy($_value, $_storage)",
+        /*assignToStorageCall=*/
+        "llvm::copy($_value, $_storage.begin())",
         /*convertToAttributeCall=*/
         "DenseI32ArrayAttr::get($_ctxt, $_storage)",
         /*convertFromAttributeCall=*/
@@ -445,7 +446,7 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
     if (op.getDialect().usePropertiesForAttributes()) {
       operandSegmentsSizeStorage =
-          llvm::formatv("int32_t[{0}]", op.getNumOperands());
+          llvm::formatv("std::array<int32_t, {0}>", op.getNumOperands());
       operandSegmentsSize = {"odsOperandSegmentSizes",
                              makeProperty(operandSegmentsSizeStorage)};
     } else {
@@ -458,7 +459,7 @@ void OpOrAdaptorHelper::computeAttrMetadata() {
   if (op.getTrait("::mlir::OpTrait::AttrSizedResultSegments")) {
     if (op.getDialect().usePropertiesForAttributes()) {
       resultSegmentsSizeStorage =
-          llvm::formatv("int32_t[{0}]", op.getNumResults());
+          llvm::formatv("std::array<int32_t, {0}>", op.getNumResults());
       resultSegmentsSize = {"odsResultSegmentSizes",
                             makeProperty(resultSegmentsSizeStorage)};
     } else {
@@ -1501,7 +1502,7 @@ void OpEmitter::genPropertiesSupport() {
        if (!arrAttr) return;
        if (arrAttr.size() != sizeof(prop.{0}) / sizeof(int32_t))
          return;
-       llvm::copy(arrAttr.asArrayRef(), prop.{0});
+       llvm::copy(arrAttr.asArrayRef(), prop.{0}.begin());
        return;
     }
 )decl",
@@ -2319,7 +2320,8 @@ void OpEmitter::genSeparateArgParamBuilder() {
             });
         if (op.getDialect().usePropertiesForAttributes()) {
           body << "}), " << builderOpState
-               << ".getOrAddProperties<Properties>().odsResultSegmentSizes);\n";
+               << ".getOrAddProperties<Properties>()."
+                  "odsResultSegmentSizes.begin());\n";
         } else {
           body << "}));\n";
         }
@@ -2944,7 +2946,8 @@ void OpEmitter::genCodeForAddingArgAndRegionForBuilder(
       body << "  llvm::copy(ArrayRef<int32_t>({";
       emitSegment();
       body << "}), " << builderOpState
-           << ".getOrAddProperties<Properties>().odsOperandSegmentSizes);\n";
+           << ".getOrAddProperties<Properties>()."
+              "odsOperandSegmentSizes.begin());\n";
     } else {
       body << "  " << builderOpState << ".addAttribute(" << sizes << "AttrName("
            << builderOpState << ".name), "
