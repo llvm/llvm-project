@@ -709,11 +709,10 @@ define i64 @extractelt_nxv8i64_idx(<vscale x 8 x i64> %v, i32 zeroext %idx) {
 define i32 @extractelt_add_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: extractelt_add_nxv4i32_splat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vadd.vi v8, v8, 3
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 2
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    addiw a0, a0, 3
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
   %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
@@ -725,11 +724,11 @@ define i32 @extractelt_add_nxv4i32_splat(<vscale x 4 x i32> %x) {
 define i32 @extractelt_sub_nxv4i32_splat(<vscale x 4 x i32> %x) {
 ; CHECK-LABEL: extractelt_sub_nxv4i32_splat:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-NEXT:    vrsub.vi v8, v8, 3
 ; CHECK-NEXT:    vsetivli zero, 1, e32, m2, ta, ma
 ; CHECK-NEXT:    vslidedown.vi v8, v8, 1
 ; CHECK-NEXT:    vmv.x.s a0, v8
+; CHECK-NEXT:    li a1, 3
+; CHECK-NEXT:    subw a0, a1, a0
 ; CHECK-NEXT:    ret
   %head = insertelement <vscale x 4 x i32> poison, i32 3, i32 0
   %splat = shufflevector <vscale x 4 x i32> %head, <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
