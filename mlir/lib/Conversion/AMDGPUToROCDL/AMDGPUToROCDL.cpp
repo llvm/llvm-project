@@ -59,7 +59,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     MemRefType memrefType = cast<MemRefType>(unconvertedMemref.getType());
 
     if (chipset.majorVersion < 9)
-      return gpuOp.emitOpError("Raw buffer ops require GCN or higher");
+      return gpuOp.emitOpError("raw buffer ops require GCN or higher");
 
     Value storeData = adaptor.getODSOperands(0)[0];
     if (storeData == memref) // no write component to this op
@@ -82,6 +82,7 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
 
     Type i32 = rewriter.getI32Type();
     Type llvmI32 = this->typeConverter->convertType(i32);
+    Type llvmI16 = this->typeConverter->convertType(rewriter.getI16Type());
 
     int64_t elementByteWidth = memrefType.getElementTypeBitWidth() / 8;
     Value byteWidthConst = createI32Constant(rewriter, loc, elementByteWidth);
@@ -156,41 +157,13 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     if (failed(getStridesAndOffset(memrefType, strides, offset)))
       return gpuOp.emitOpError("Can't lower non-stride-offset memrefs");
 
-    // Resource descriptor
-    // bits 0-47: base address
-    // bits 48-61: stride (0 for raw buffers)
-    // bit 62: texture cache coherency (always 0)
-    // bit 63: enable swizzles (always off for raw buffers)
-    // bits 64-95 (word 2): Number of records, units of stride
-    // bits 96-127 (word 3): See below
-
-    Type llvm4xI32 = this->typeConverter->convertType(VectorType::get(4, i32));
     MemRefDescriptor memrefDescriptor(memref);
-    Type llvmI64 = this->typeConverter->convertType(rewriter.getI64Type());
-    Value c32I64 = rewriter.create<LLVM::ConstantOp>(
-        loc, llvmI64, rewriter.getI64IntegerAttr(32));
-
-    Value resource = rewriter.create<LLVM::UndefOp>(loc, llvm4xI32);
 
     Value ptr = memrefDescriptor.alignedPtr(rewriter, loc);
-    Value ptrAsInt = rewriter.create<LLVM::PtrToIntOp>(loc, llvmI64, ptr);
-    Value lowHalf = rewriter.create<LLVM::TruncOp>(loc, llvmI32, ptrAsInt);
-    resource = rewriter.create<LLVM::InsertElementOp>(
-        loc, llvm4xI32, resource, lowHalf,
-        this->createIndexAttrConstant(rewriter, loc, this->getIndexType(), 0));
-
-    // Bits 48-63 are used both for the stride of the buffer and (on gfx10) for
-    // enabling swizzling. Prevent the high bits of pointers from accidentally
-    // setting those flags.
-    Value highHalfShifted = rewriter.create<LLVM::TruncOp>(
-        loc, llvmI32, rewriter.create<LLVM::LShrOp>(loc, ptrAsInt, c32I64));
-    Value highHalfTruncated = rewriter.create<LLVM::AndOp>(
-        loc, llvmI32, highHalfShifted,
-        createI32Constant(rewriter, loc, 0x0000ffff));
-    resource = rewriter.create<LLVM::InsertElementOp>(
-        loc, llvm4xI32, resource, highHalfTruncated,
-        this->createIndexAttrConstant(rewriter, loc, this->getIndexType(), 1));
-
+    // The stride value is always 0 for raw buffers. This also disables
+    // swizling.
+    Value stride = rewriter.createOrFold<LLVM::ConstantOp>(
+        loc, llvmI16, rewriter.getI16IntegerAttr(0));
     Value numRecords;
     if (memrefType.hasStaticShape()) {
       numRecords = createI32Constant(
@@ -209,11 +182,8 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
       }
       numRecords = rewriter.create<LLVM::TruncOp>(loc, llvmI32, maxIndex);
     }
-    resource = rewriter.create<LLVM::InsertElementOp>(
-        loc, llvm4xI32, resource, numRecords,
-        this->createIndexAttrConstant(rewriter, loc, this->getIndexType(), 2));
 
-    // Final word:
+    // Flag word:
     // bits 0-11: dst sel, ignored by these intrinsics
     // bits 12-14: data format (ignored, must be nonzero, 7=float)
     // bits 15-18: data format (ignored, must be nonzero, 4=32bit)
@@ -227,16 +197,16 @@ struct RawBufferOpLowering : public ConvertOpToLLVMPattern<GpuOp> {
     // bits 28-29: Out of bounds select (0 = structured, 1 = check index, 2 =
     //  none, 3 = either swizzles or testing against offset field) RDNA only
     // bits 30-31: Type (must be 0)
-    uint32_t word3 = (7 << 12) | (4 << 15);
+    uint32_t flags = (7 << 12) | (4 << 15);
     if (chipset.majorVersion >= 10) {
-      word3 |= (1 << 24);
+      flags |= (1 << 24);
       uint32_t oob = adaptor.getBoundsCheck() ? 3 : 2;
-      word3 |= (oob << 28);
+      flags |= (oob << 28);
     }
-    Value word3Const = createI32Constant(rewriter, loc, word3);
-    resource = rewriter.create<LLVM::InsertElementOp>(
-        loc, llvm4xI32, resource, word3Const,
-        this->createIndexAttrConstant(rewriter, loc, this->getIndexType(), 3));
+    Value flagsConst = createI32Constant(rewriter, loc, flags);
+    Type rsrcType = LLVM::LLVMPointerType::get(rewriter.getContext(), 8);
+    Value resource = rewriter.createOrFold<ROCDL::MakeBufferRsrcOp>(
+        loc, rsrcType, ptr, stride, numRecords, flagsConst);
     args.push_back(resource);
 
     // Indexing (voffset)
@@ -708,16 +678,20 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
   });
 
   patterns.add<LDSBarrierOpLowering>(converter);
-  patterns.add<
-      RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawBufferLoadOp>,
-      RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawBufferStoreOp>,
-      RawBufferOpLowering<RawBufferAtomicFaddOp, ROCDL::RawBufferAtomicFAddOp>,
-      RawBufferOpLowering<RawBufferAtomicFmaxOp, ROCDL::RawBufferAtomicFMaxOp>,
-      RawBufferOpLowering<RawBufferAtomicSmaxOp, ROCDL::RawBufferAtomicSMaxOp>,
-      RawBufferOpLowering<RawBufferAtomicUminOp, ROCDL::RawBufferAtomicUMinOp>,
-      RawBufferOpLowering<RawBufferAtomicCmpswapOp,
-                          ROCDL::RawBufferAtomicCmpSwap>,
-      MFMAOpLowering, WMMAOpLowering>(converter, chipset);
+  patterns
+      .add<RawBufferOpLowering<RawBufferLoadOp, ROCDL::RawPtrBufferLoadOp>,
+           RawBufferOpLowering<RawBufferStoreOp, ROCDL::RawPtrBufferStoreOp>,
+           RawBufferOpLowering<RawBufferAtomicFaddOp,
+                               ROCDL::RawPtrBufferAtomicFaddOp>,
+           RawBufferOpLowering<RawBufferAtomicFmaxOp,
+                               ROCDL::RawPtrBufferAtomicFmaxOp>,
+           RawBufferOpLowering<RawBufferAtomicSmaxOp,
+                               ROCDL::RawPtrBufferAtomicSmaxOp>,
+           RawBufferOpLowering<RawBufferAtomicUminOp,
+                               ROCDL::RawPtrBufferAtomicUminOp>,
+           RawBufferOpLowering<RawBufferAtomicCmpswapOp,
+                               ROCDL::RawPtrBufferAtomicCmpSwap>,
+           MFMAOpLowering, WMMAOpLowering>(converter, chipset);
 }
 
 std::unique_ptr<Pass> mlir::createConvertAMDGPUToROCDLPass() {
