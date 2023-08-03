@@ -137,6 +137,7 @@ struct JumpInstrMod {
 template <class ELFT> void scanRelocations();
 void reportUndefinedSymbols();
 void postScanRelocations();
+void addGotEntry(Symbol &sym);
 
 void hexagonTLSSymbolUpdate(ArrayRef<OutputSection *> outputSections);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
