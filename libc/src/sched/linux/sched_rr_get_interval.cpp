@@ -12,8 +12,11 @@
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
 
-#include <linux/time_types.h> // For __kernel_timespec.
 #include <sys/syscall.h> // For syscall numbers.
+
+#ifdef SYS_sched_rr_get_interval_time64
+#include <linux/time_types.h> // For __kernel_timespec.
+#endif
 
 namespace __llvm_libc {
 
