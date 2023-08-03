@@ -1666,7 +1666,7 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
         llvm::interleaveComma(op.getOperands(), body, interleaveFn);
         body << formatv("}), "
                         "result.getOrAddProperties<{0}::Properties>()."
-                        "odsOperandSegmentSizes);\n",
+                        "odsOperandSegmentSizes.begin());\n",
                         op.getCppClassName());
       } else {
         body << "  result.addAttribute(\"operand_segment_sizes\", "
@@ -1708,11 +1708,10 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
     if (op.getDialect().usePropertiesForAttributes()) {
       body << "llvm::copy(ArrayRef<int32_t>({";
       llvm::interleaveComma(op.getResults(), body, interleaveFn);
-      body << formatv(
-          "}), "
-          "result.getOrAddProperties<{0}::Properties>().odsResultSegmentSizes"
-          ");\n",
-          op.getCppClassName());
+      body << formatv("}), "
+                      "result.getOrAddProperties<{0}::Properties>()."
+                      "odsResultSegmentSizes.begin());\n",
+                      op.getCppClassName());
     } else {
       body << "  result.addAttribute(\"result_segment_sizes\", "
            << "parser.getBuilder().getDenseI32ArrayAttr({";
