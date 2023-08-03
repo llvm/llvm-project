@@ -196,3 +196,9 @@ bool mlir::detail::sameOffsetsSizesAndStrides(
       return false;
   return true;
 }
+
+unsigned mlir::detail::getNumDynamicEntriesUpToIdx(ArrayRef<int64_t> staticVals,
+                                                   unsigned idx) {
+  return std::count_if(staticVals.begin(), staticVals.begin() + idx,
+                       [&](int64_t val) { return ShapedType::isDynamic(val); });
+}
