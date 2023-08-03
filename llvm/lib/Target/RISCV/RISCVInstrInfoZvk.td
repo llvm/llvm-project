@@ -15,48 +15,6 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def RnumArg_0_7 : AsmOperandClass {
-  let Name = "RnumArg_0_7";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidRnumArg_0_7";
-}
-
-def RnumArg_1_10 : AsmOperandClass {
-  let Name = "RnumArg_1_10";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidRnumArg_1_10";
-}
-
-def RnumArg_2_14 : AsmOperandClass {
-  let Name = "RnumArg_2_14";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidRnumArg_2_14";
-}
-
-def rnum_0_7 : Operand<XLenVT>, ImmLeaf<XLenVT,
-                                         [{return (0 <= Imm && Imm <= 7);}]> {
-  let ParserMatchClass = RnumArg_0_7;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_RVKRNUM_0_7";
-  let OperandNamespace = "RISCVOp";
-}
-
-def rnum_1_10 : Operand<XLenVT>, ImmLeaf<XLenVT,
-                                         [{return (1 <= Imm && Imm <= 10);}]> {
-  let ParserMatchClass = RnumArg_1_10;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_RVKRNUM_1_10";
-  let OperandNamespace = "RISCVOp";
-}
-
-def rnum_2_14 : Operand<XLenVT>, ImmLeaf<XLenVT,
-                                         [{return (2 <= Imm && Imm <= 14);}]> {
-  let ParserMatchClass = RnumArg_2_14;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_RVKRNUM_2_14";
-  let OperandNamespace = "RISCVOp";
-}
-
 def tuimm5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5>;
   let EncoderMethod = "getUImmOpValue";
