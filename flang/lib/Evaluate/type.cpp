@@ -34,13 +34,23 @@ static bool IsDescriptor(const DeclTypeSpec *type) {
 }
 
 static bool IsDescriptor(const ObjectEntityDetails &details) {
-  if (IsDescriptor(details.type())) {
+  if (IsDescriptor(details.type()) || details.IsAssumedRank()) {
     return true;
   }
+  std::size_t j{0};
   for (const ShapeSpec &shapeSpec : details.shape()) {
-    const auto &lb{shapeSpec.lbound().GetExplicit()};
-    const auto &ub{shapeSpec.ubound().GetExplicit()};
-    if (!lb || !ub || !IsConstantExpr(*lb) || !IsConstantExpr(*ub)) {
+    ++j;
+    if (const auto &lb{shapeSpec.lbound().GetExplicit()};
+        !lb || !IsConstantExpr(*lb)) {
+      return true;
+    }
+    if (const auto &ub{shapeSpec.ubound().GetExplicit()}) {
+      if (!IsConstantExpr(*ub)) {
+        return true;
+      }
+    } else if (j == details.shape().size() && details.isDummy()) {
+      // assumed size array
+    } else {
       return true;
     }
   }
