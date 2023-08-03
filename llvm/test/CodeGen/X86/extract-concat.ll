@@ -11,14 +11,14 @@ define void @foo(<4 x float> %in, ptr %out) {
 ; SSE2-NEXT:    cvttps2dq %xmm0, %xmm0
 ; SSE2-NEXT:    movaps %xmm0, -{{[0-9]+}}(%rsp)
 ; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %ecx
+; SSE2-NEXT:    movzbl -{{[0-9]+}}(%rsp), %ecx
 ; SSE2-NEXT:    shll $8, %ecx
 ; SSE2-NEXT:    orl %eax, %ecx
-; SSE2-NEXT:    movd %ecx, %xmm0
-; SSE2-NEXT:    movl $65280, %eax # imm = 0xFF00
-; SSE2-NEXT:    orl -{{[0-9]+}}(%rsp), %eax
-; SSE2-NEXT:    pinsrw $1, %eax, %xmm0
-; SSE2-NEXT:    movd %xmm0, (%rdi)
+; SSE2-NEXT:    movl -{{[0-9]+}}(%rsp), %eax
+; SSE2-NEXT:    shll $16, %eax
+; SSE2-NEXT:    orl %ecx, %eax
+; SSE2-NEXT:    orl $-16777216, %eax # imm = 0xFF000000
+; SSE2-NEXT:    movl %eax, (%rdi)
 ; SSE2-NEXT:    retq
 ;
 ; SSE42-LABEL: foo:
