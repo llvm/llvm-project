@@ -909,6 +909,24 @@ struct make_unsigned<Int<Bits>> : type_identity<UInt<Bits>> {
                 "Number of bits in Int should be a multiple of 64.");
 };
 
+template <size_t Bits>
+struct make_unsigned<UInt<Bits>> : type_identity<UInt<Bits>> {
+  static_assert(Bits > 0 && Bits % 64 == 0,
+                "Number of bits in Int should be a multiple of 64.");
+};
+
+template <size_t Bits>
+struct make_signed<Int<Bits>> : type_identity<Int<Bits>> {
+  static_assert(Bits > 0 && Bits % 64 == 0,
+                "Number of bits in Int should be a multiple of 64.");
+};
+
+template <size_t Bits>
+struct make_signed<UInt<Bits>> : type_identity<Int<Bits>> {
+  static_assert(Bits > 0 && Bits % 64 == 0,
+                "Number of bits in Int should be a multiple of 64.");
+};
+
 } // namespace __llvm_libc::cpp
 
 #endif // LLVM_LIBC_SRC_SUPPORT_UINT_H
