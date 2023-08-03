@@ -1271,7 +1271,8 @@ define <vscale x 4 x float> @fadd_sel_fmul_no_contract_s(<vscale x 4 x float> %a
 define <vscale x 8 x half> @fma_sel_h_different_arg_order(<vscale x 8 x i1> %pred, <vscale x 8 x half> %m1, <vscale x 8 x half> %m2, <vscale x 8 x half> %acc) {
 ; CHECK-LABEL: fma_sel_h_different_arg_order:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmad z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    fmla z2.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %mul.add = call <vscale x 8 x half> @llvm.fma.nxv8f16(<vscale x 8 x half> %m1, <vscale x 8 x half> %m2, <vscale x 8 x half> %acc)
   %masked.mul.add = select <vscale x 8 x i1> %pred, <vscale x 8 x half> %mul.add, <vscale x 8 x half> %acc
@@ -1281,7 +1282,8 @@ define <vscale x 8 x half> @fma_sel_h_different_arg_order(<vscale x 8 x i1> %pre
 define <vscale x 4 x float> @fma_sel_s_different_arg_order(<vscale x 4 x i1> %pred, <vscale x 4 x float> %m1, <vscale x 4 x float> %m2, <vscale x 4 x float> %acc) {
 ; CHECK-LABEL: fma_sel_s_different_arg_order:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmad z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    fmla z2.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %mul.add = call <vscale x 4 x float> @llvm.fma.nxv4f32(<vscale x 4 x float> %m1, <vscale x 4 x float> %m2, <vscale x 4 x float> %acc)
   %masked.mul.add = select <vscale x 4 x i1> %pred, <vscale x 4 x float> %mul.add, <vscale x 4 x float> %acc
@@ -1291,7 +1293,8 @@ define <vscale x 4 x float> @fma_sel_s_different_arg_order(<vscale x 4 x i1> %pr
 define <vscale x 2 x double> @fma_sel_d_different_arg_order(<vscale x 2 x i1> %pred, <vscale x 2 x double> %m1, <vscale x 2 x double> %m2, <vscale x 2 x double> %acc) {
 ; CHECK-LABEL: fma_sel_d_different_arg_order:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmad z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    fmla z2.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %mul.add = call <vscale x 2 x double> @llvm.fma.nxv2f64(<vscale x 2 x double> %m1, <vscale x 2 x double> %m2, <vscale x 2 x double> %acc)
   %masked.mul.add = select <vscale x 2 x i1> %pred, <vscale x 2 x double> %mul.add, <vscale x 2 x double> %acc
@@ -1301,7 +1304,8 @@ define <vscale x 2 x double> @fma_sel_d_different_arg_order(<vscale x 2 x i1> %p
 define <vscale x 8 x half> @fnma_sel_h_different_arg_order(<vscale x 8 x i1> %pred, <vscale x 8 x half> %m1, <vscale x 8 x half> %m2, <vscale x 8 x half> %acc) {
 ; CHECK-LABEL: fnma_sel_h_different_arg_order:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmsb z0.h, p0/m, z1.h, z2.h
+; CHECK-NEXT:    fmls z2.h, p0/m, z0.h, z1.h
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %neg_m1 = fneg contract <vscale x 8 x half> %m1
   %mul.add = call <vscale x 8 x half> @llvm.fma.nxv8f16(<vscale x 8 x half> %neg_m1, <vscale x 8 x half> %m2, <vscale x 8 x half> %acc)
@@ -1312,7 +1316,8 @@ define <vscale x 8 x half> @fnma_sel_h_different_arg_order(<vscale x 8 x i1> %pr
 define <vscale x 4 x float> @fnma_sel_s_different_arg_order(<vscale x 4 x i1> %pred, <vscale x 4 x float> %m1, <vscale x 4 x float> %m2, <vscale x 4 x float> %acc) {
 ; CHECK-LABEL: fnma_sel_s_different_arg_order:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmsb z0.s, p0/m, z1.s, z2.s
+; CHECK-NEXT:    fmls z2.s, p0/m, z0.s, z1.s
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %neg_m1 = fneg contract <vscale x 4 x float> %m1
   %mul.add = call <vscale x 4 x float> @llvm.fma.nxv4f32(<vscale x 4 x float> %neg_m1, <vscale x 4 x float> %m2, <vscale x 4 x float> %acc)
@@ -1323,7 +1328,8 @@ define <vscale x 4 x float> @fnma_sel_s_different_arg_order(<vscale x 4 x i1> %p
 define <vscale x 2 x double> @fnma_sel_d_different_arg_order(<vscale x 2 x i1> %pred, <vscale x 2 x double> %m1, <vscale x 2 x double> %m2, <vscale x 2 x double> %acc) {
 ; CHECK-LABEL: fnma_sel_d_different_arg_order:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmsb z0.d, p0/m, z1.d, z2.d
+; CHECK-NEXT:    fmls z2.d, p0/m, z0.d, z1.d
+; CHECK-NEXT:    mov z0.d, z2.d
 ; CHECK-NEXT:    ret
   %neg_m1 = fneg contract <vscale x 2 x double> %m1
   %mul.add = call <vscale x 2 x double> @llvm.fma.nxv2f64(<vscale x 2 x double> %neg_m1, <vscale x 2 x double> %m2, <vscale x 2 x double> %acc)
