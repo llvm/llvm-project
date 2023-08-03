@@ -14,9 +14,9 @@ MATH_MANGLE(rsqrt)(float x)
         return BUILTIN_AMDGPU_RSQRT_F32(x);
     } else {
         bool need_scale = x < 0x1p-126f;
-        float input_scale = need_scale ? 0x1.0p+24f : 1.0f;
-        float output_scale = need_scale ? 0x1.0p+12f : 1.0f;
-        return BUILTIN_AMDGPU_RSQRT_F32(x * input_scale) * output_scale;
+        float scaled_input = need_scale ? 0x1.0p+24f * x : x;
+        float result = BUILTIN_AMDGPU_RSQRT_F32(scaled_input);
+        return need_scale ? result * 0x1.0p+12f : result;
     }
 }
 
