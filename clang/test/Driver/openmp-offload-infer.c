@@ -39,7 +39,7 @@
 // CHECK-ARCH-BINDINGS: "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[HOST_BC]]", "[[BINARY]]"], output: "[[HOST_OBJ:.*]]"
 // CHECK-ARCH-BINDINGS: "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[HOST_OBJ]]"], output: "a.out"
 
-// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp \
+// RUN:   not %clang -### --target=x86_64-unknown-linux-gnu -ccc-print-bindings -fopenmp=libomp \
 // RUN:     --offload-arch=sm_70 --offload-arch=gfx908 --offload-arch=skylake \
 // RUN:     -nogpulib %s 2>&1 | FileCheck %s --check-prefix=CHECK-FAILED
 
