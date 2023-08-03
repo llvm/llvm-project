@@ -2789,13 +2789,13 @@ define <vscale x 8 x i64> @intrinsic_vror_mask_vi_nxv8i64(<vscale x 8 x i64> %0,
 ; CHECK-LABEL: intrinsic_vror_mask_vi_nxv8i64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vsetvli zero, a0, e64, m8, ta, mu
-; CHECK-NEXT:    vror.vi v8, v16, 2, v0.t
+; CHECK-NEXT:    vror.vi v8, v16, 62, v0.t
 ; CHECK-NEXT:    ret
 entry:
   %a = call <vscale x 8 x i64> @llvm.riscv.vror.mask.nxv8i64(
     <vscale x 8 x i64> %0,
     <vscale x 8 x i64> %1,
-    iXLen 2,
+    iXLen 62,
     <vscale x 8 x i1> %2,
     iXLen %3, iXLen 1)
 
