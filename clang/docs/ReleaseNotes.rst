@@ -171,6 +171,8 @@ LoongArch Support
 
 RISC-V Support
 ^^^^^^^^^^^^^^
+- Unaligned memory accesses can be toggled by ``-m[no-]unaligned-access`` or the
+  aliases ``-m[no-]strict-align``.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
