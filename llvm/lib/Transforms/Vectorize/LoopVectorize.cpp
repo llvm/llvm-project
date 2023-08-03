@@ -3993,10 +3993,10 @@ void InnerLoopVectorizer::fixReduction(VPReductionPHIRecipe *PhiR,
     Builder.setFastMathFlags(RdxDesc.getFastMathFlags());
     for (unsigned Part = 1; Part < UF; ++Part) {
       Value *RdxPart = State.get(LoopExitInstDef, Part);
-      if (Op != Instruction::ICmp && Op != Instruction::FCmp) {
+      if (Op != Instruction::ICmp && Op != Instruction::FCmp)
         ReducedPartRdx = Builder.CreateBinOp(
             (Instruction::BinaryOps)Op, RdxPart, ReducedPartRdx, "bin.rdx");
-      } else if (RecurrenceDescriptor::isSelectCmpRecurrenceKind(RK))
+      else if (RecurrenceDescriptor::isSelectCmpRecurrenceKind(RK))
         ReducedPartRdx = createSelectCmpOp(Builder, ReductionStartValue, RK,
                                            ReducedPartRdx, RdxPart);
       else
