@@ -313,6 +313,13 @@ endif()
     DEFS ${ASAN_COMMON_DEFINITIONS}
     PARENT_TARGET asan)
 
+
+  if (MSVC AND COMPILER_RT_DEBUG)
+    set(MSVC_DBG_SUFFIX _dbg)
+  else()
+    set(MSVC_DBG_SUFFIX )
+  endif()
+
   foreach(arch ${ASAN_SUPPORTED_ARCH})
     if (COMPILER_RT_HAS_VERSION_SCRIPT)
       add_sanitizer_rt_version_list(clang_rt.asan-dynamic-${arch}
@@ -376,6 +383,7 @@ endif()
 
       add_library(clang_rt.asan-${arch}_implib STATIC)
       target_link_libraries(clang_rt.asan-${arch}_implib RTAsan_static_implib.${arch})
+      add_dependencies(asan clang_rt.asan-${arch}_implib)
       add_dependencies(clang_rt.asan-${arch}_implib clang_rt.asan${MSVC_DBG_SUFFIX}-dynamic-${arch})
       get_compiler_rt_output_dir(${arch} IMPLIB_OUTPUT_DIR)
       set_target_properties(clang_rt.asan-${arch}_implib
