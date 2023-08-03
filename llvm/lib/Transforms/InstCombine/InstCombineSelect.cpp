@@ -3318,6 +3318,31 @@ static Instruction *foldBitCeil(SelectInst &SI, IRBuilderBase &Builder) {
                                 Masked);
 }
 
+bool InstCombinerImpl::fmulByZeroIsZero(Value *MulVal, FastMathFlags FMF,
+                                        const Instruction *CtxI) const {
+  KnownFPClass Known = computeKnownFPClass(MulVal, FMF, fcNegative, CtxI);
+
+  return Known.isKnownNeverNaN() && Known.isKnownNeverInfinity() &&
+         (FMF.noSignedZeros() || Known.signBitIsZeroOrNaN());
+}
+
+static bool matchFMulByZeroIfResultEqZero(InstCombinerImpl &IC, Value *Cmp0,
+                                          Value *Cmp1, Value *TrueVal,
+                                          Value *FalseVal, Instruction &CtxI,
+                                          bool SelectIsNSZ) {
+  Value *MulRHS;
+  if (match(Cmp1, m_PosZeroFP()) &&
+      match(TrueVal, m_c_FMul(m_Specific(Cmp0), m_Value(MulRHS)))) {
+    FastMathFlags FMF = cast<FPMathOperator>(TrueVal)->getFastMathFlags();
+    // nsz must be on the select, it must be ignored on the multiply. We
+    // need nnan and ninf on the multiply for the other value.
+    FMF.setNoSignedZeros(SelectIsNSZ);
+    return IC.fmulByZeroIsZero(MulRHS, FMF, &CtxI);
+  }
+
+  return false;
+}
+
 Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   Value *CondVal = SI.getCondition();
   Value *TrueVal = SI.getTrueValue();
@@ -3408,7 +3433,10 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
     }
   }
 
+  auto *SIFPOp = dyn_cast<FPMathOperator>(&SI);
+
   if (auto *FCmp = dyn_cast<FCmpInst>(CondVal)) {
+    FCmpInst::Predicate Pred = FCmp->getPredicate();
     Value *Cmp0 = FCmp->getOperand(0), *Cmp1 = FCmp->getOperand(1);
     // Are we selecting a value based on a comparison of the two values?
     if ((Cmp0 == TrueVal && Cmp1 == FalseVal) ||
@@ -3418,7 +3446,7 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       //
       // e.g.
       // (X ugt Y) ? X : Y -> (X ole Y) ? Y : X
-      if (FCmp->hasOneUse() && FCmpInst::isUnordered(FCmp->getPredicate())) {
+      if (FCmp->hasOneUse() && FCmpInst::isUnordered(Pred)) {
         FCmpInst::Predicate InvPred = FCmp->getInversePredicate();
         IRBuilder<>::FastMathFlagGuard FMFG(Builder);
         // FIXME: The FMF should propagate from the select, not the fcmp.
@@ -3429,14 +3457,47 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         return replaceInstUsesWith(SI, NewSel);
       }
     }
+
+    if (SIFPOp) {
+      // Fold out scale-if-equals-zero pattern.
+      //
+      // This pattern appears in code with denormal range checks after it's
+      // assumed denormals are treated as zero. This drops a canonicalization.
+
+      // TODO: Could relax the signed zero logic. We just need to know the sign
+      // of the result matches (fmul x, y has the same sign as x).
+      //
+      // TODO: Handle always-canonicalizing variant that selects some value or 1
+      // scaling factor in the fmul visitor.
+
+      // TODO: Handle ldexp too
+
+      Value *MatchCmp0 = nullptr;
+      Value *MatchCmp1 = nullptr;
+
+      // (select (fcmp [ou]eq x, 0.0), (fmul x, K), x => x
+      // (select (fcmp [ou]ne x, 0.0), x, (fmul x, K) => x
+      if (Pred == CmpInst::FCMP_OEQ || Pred == CmpInst::FCMP_UEQ) {
+        MatchCmp0 = FalseVal;
+        MatchCmp1 = TrueVal;
+      } else if (Pred == CmpInst::FCMP_ONE || Pred == CmpInst::FCMP_UNE) {
+        MatchCmp0 = TrueVal;
+        MatchCmp1 = FalseVal;
+      }
+
+      if (Cmp0 == MatchCmp0 &&
+          matchFMulByZeroIfResultEqZero(*this, Cmp0, Cmp1, MatchCmp1, MatchCmp0,
+                                        SI, SIFPOp->hasNoSignedZeros()))
+        return replaceInstUsesWith(SI, Cmp0);
+    }
   }
 
-  if (isa<FPMathOperator>(SI)) {
+  if (SIFPOp) {
     // TODO: Try to forward-propagate FMF from select arms to the select.
 
     // Canonicalize select of FP values where NaN and -0.0 are not valid as
     // minnum/maxnum intrinsics.
-    if (SI.hasNoNaNs() && SI.hasNoSignedZeros()) {
+    if (SIFPOp->hasNoNaNs() && SIFPOp->hasNoSignedZeros()) {
       Value *X, *Y;
       if (match(&SI, m_OrdFMax(m_Value(X), m_Value(Y))))
         return replaceInstUsesWith(
