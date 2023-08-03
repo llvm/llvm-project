@@ -2591,9 +2591,7 @@ Instruction *InstCombinerImpl::hoistFNegAboveFMulFDiv(Value *FNegOp,
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(FNegOp)) {
     // Make sure to preserve flags and metadata on the call.
     if (II->getIntrinsicID() == Intrinsic::ldexp) {
-      FastMathFlags FMF = FMFSource.getFastMathFlags();
-      FMF |= II->getFastMathFlags();
-
+      FastMathFlags FMF = FMFSource.getFastMathFlags() | II->getFastMathFlags();
       IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
       Builder.setFastMathFlags(FMF);
 
@@ -2641,8 +2639,7 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     auto propagateSelectFMF = [&](SelectInst *S, bool CommonOperand) {
       S->copyFastMathFlags(&I);
       if (auto *OldSel = dyn_cast<SelectInst>(Op)) {
-        FastMathFlags FMF = I.getFastMathFlags();
-        FMF |= OldSel->getFastMathFlags();
+        FastMathFlags FMF = I.getFastMathFlags() | OldSel->getFastMathFlags();
         S->setFastMathFlags(FMF);
         if (!OldSel->hasNoSignedZeros() && !CommonOperand &&
             !isGuaranteedNotToBeUndefOrPoison(OldSel->getCondition()))
