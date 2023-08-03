@@ -619,7 +619,7 @@ Status SwiftExpressionSourceCode::GetText(
     }
     std::vector<swift::ValueDecl *> persistent_results;
     // Check if we have already declared the playground stub debug functions
-    persistent_state->GetSwiftPersistentDecls(ConstString("__builtin_log_with_id"), {},
+    persistent_state->GetSwiftPersistentDecls("__builtin_log_with_id", {},
                                               persistent_results);
 
     size_t num_persistent_results = persistent_results.size();

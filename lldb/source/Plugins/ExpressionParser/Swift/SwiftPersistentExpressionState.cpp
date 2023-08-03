@@ -131,85 +131,66 @@ bool SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(
 }
 
 void SwiftPersistentExpressionState::SwiftDeclMap::AddDecl(
-    swift::ValueDecl *value_decl, bool check_existing, ConstString alias) {
-  std::string name_str;
+    swift::ValueDecl *value_decl, bool check_existing, llvm::StringRef alias) {
+  llvm::StringRef name;
 
-  if (alias.IsEmpty()) {
-    name_str = value_decl->getBaseName().getIdentifier().str().str();
-  } else {
-    name_str.assign(alias.GetCString());
-  }
+  if (alias.empty())
+    name = value_decl->getBaseName().getIdentifier().str();
+  else
+    name = alias;
 
-  if (!check_existing) {
-    m_swift_decls.insert(std::make_pair(name_str, value_decl));
+  auto it = m_swift_decls.find(name);
+  if (it == m_swift_decls.end()) {
+    m_swift_decls.insert({name, {value_decl}});
     return;
   }
 
-  SwiftDeclMapTy::iterator map_end = m_swift_decls.end();
-  std::pair<SwiftDeclMapTy::iterator, SwiftDeclMapTy::iterator> found_range =
-      m_swift_decls.equal_range(name_str);
+  llvm::SmallVectorImpl<swift::ValueDecl *> &decls = it->second;
+  if (check_existing)
+    decls.erase(std::remove_if(decls.begin(), decls.end(),
+                               [&value_decl](swift::ValueDecl *cur_decl) {
+                                 return DeclsAreEquivalent(cur_decl,
+                                                           value_decl);
+                               }),
+                decls.end());
 
-  if (found_range.first == map_end) {
-    m_swift_decls.insert(std::make_pair(name_str, value_decl));
-    return;
-  } else {
-    SwiftDeclMapTy::iterator cur_item;
-    bool done = false;
-    for (cur_item = found_range.first; !done && cur_item != found_range.second;
-         cur_item++) {
-      swift::ValueDecl *cur_decl = (*cur_item).second;
-      if (DeclsAreEquivalent(cur_decl, value_decl)) {
-        m_swift_decls.erase(cur_item);
-        break;
-      }
-    }
-
-    m_swift_decls.insert(std::make_pair(name_str, value_decl));
-  }
+  decls.push_back(value_decl);
 }
 
 bool SwiftPersistentExpressionState::SwiftDeclMap::FindMatchingDecls(
-    ConstString name,
+    llvm::StringRef name,
     const std::vector<swift::ValueDecl *> &excluding_equivalents,
     std::vector<swift::ValueDecl *> &matches) {
-  std::string name_str(name.AsCString());
+  auto it = m_swift_decls.find(name);
+  if (it == m_swift_decls.end())
+    return false;
+  llvm::SmallVectorImpl<swift::ValueDecl *> &decls = it->second;
+
   size_t start_num_items = matches.size();
-  size_t start_num_excluding_equivalents = excluding_equivalents.size();
+  for (auto &cur_decl : decls)
+    if (std::none_of(excluding_equivalents.begin(), excluding_equivalents.end(),
+                     [&](swift::ValueDecl *decl) {
+                       return DeclsAreEquivalent(cur_decl, decl);
+                     }))
+      matches.push_back(cur_decl);
 
-  std::pair<SwiftDeclMapTy::iterator, SwiftDeclMapTy::iterator> found_range =
-      m_swift_decls.equal_range(name_str);
-  for (SwiftDeclMapTy::iterator cur_item = found_range.first;
-       cur_item != found_range.second; cur_item++) {
-    bool add_it = true;
-    swift::ValueDecl *cur_decl = (*cur_item).second;
-
-    // Iterate over only the elements of `excluding_equivalents` that were
-    // originally there, in case `matches` aliases it.
-    for (size_t idx = 0; idx < start_num_excluding_equivalents; idx++) {
-      if (DeclsAreEquivalent(excluding_equivalents[idx], cur_decl)) {
-        add_it = false;
-        break;
-      }
-    }
-    if (add_it)
-      matches.push_back((*cur_item).second);
-  }
   return start_num_items != matches.size();
 }
 
 void SwiftPersistentExpressionState::SwiftDeclMap::CopyDeclsTo(
     SwiftPersistentExpressionState::SwiftDeclMap &target_map) {
-  for (auto elem : m_swift_decls)
-    target_map.AddDecl(elem.second, true, ConstString());
+  for (auto &entry : m_swift_decls)
+    for (auto &elem : entry.second)
+      target_map.AddDecl(elem, true, {});
 }
 
 void SwiftPersistentExpressionState::RegisterSwiftPersistentDecl(
     swift::ValueDecl *value_decl) {
-  m_swift_persistent_decls.AddDecl(value_decl, true, ConstString());
+  m_swift_persistent_decls.AddDecl(value_decl, true, {});
 }
 
 void SwiftPersistentExpressionState::RegisterSwiftPersistentDeclAlias(
-    swift::ValueDecl *value_decl, ConstString name) {
+    swift::ValueDecl *value_decl, llvm::StringRef name) {
   m_swift_persistent_decls.AddDecl(value_decl, true, name);
 }
 
@@ -219,7 +200,7 @@ void SwiftPersistentExpressionState::CopyInSwiftPersistentDecls(
 }
 
 bool SwiftPersistentExpressionState::GetSwiftPersistentDecls(
-    ConstString name,
+    llvm::StringRef name,
     const std::vector<swift::ValueDecl *> &excluding_equivalents,
     std::vector<swift::ValueDecl *> &matches) {
   return m_swift_persistent_decls.FindMatchingDecls(name, excluding_equivalents,
