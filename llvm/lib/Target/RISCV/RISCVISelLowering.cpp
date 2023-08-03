@@ -1909,6 +1909,8 @@ bool RISCVTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
     IsLegalVT = Subtarget.hasStdExtFOrZfinx();
   else if (VT == MVT::f64)
     IsLegalVT = Subtarget.hasStdExtDOrZdinx();
+  else if (VT == MVT::bf16)
+    IsLegalVT = Subtarget.hasStdExtZfbfmin();
 
   if (!IsLegalVT)
     return false;

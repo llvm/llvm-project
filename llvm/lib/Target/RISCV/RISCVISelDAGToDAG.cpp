@@ -876,6 +876,10 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
     switch (VT.SimpleTy) {
     default:
       llvm_unreachable("Unexpected size");
+    case MVT::bf16:
+      assert(Subtarget->hasStdExtZfbfmin());
+      Opc = RISCV::FMV_H_X;
+      break;
     case MVT::f16:
       Opc =
           Subtarget->hasStdExtZhinxOrZhinxmin() ? RISCV::COPY : RISCV::FMV_H_X;
