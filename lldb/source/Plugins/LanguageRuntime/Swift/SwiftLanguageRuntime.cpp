@@ -462,11 +462,7 @@ void SwiftLanguageRuntimeImpl::ProcessModulesToAdd() {
   // A snapshot of the modules to be processed. This is necessary because
   // AddModuleToReflectionContext may recursively call into this function again.
   ModuleList modules_to_add_snapshot;
-  {
-    std::lock_guard<std::recursive_mutex> lock(m_modules_to_add.GetMutex());
-    modules_to_add_snapshot = m_modules_to_add;
-    m_modules_to_add.Clear();
-  }
+  modules_to_add_snapshot.Swap(m_modules_to_add);
 
   if (modules_to_add_snapshot.IsEmpty())
     return;
