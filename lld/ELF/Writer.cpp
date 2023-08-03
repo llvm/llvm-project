@@ -1672,6 +1672,7 @@ template <class ELFT> void Writer<ELFT>::finalizeAddressDependentContent() {
       changed |= a32p.createFixes();
     }
 
+    finalizeSynthetic(in.got.get());
     if (in.mipsGot)
       in.mipsGot->updateAllocSize();
 
