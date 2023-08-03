@@ -204,7 +204,7 @@ public:
   ~CompilerInstance() override;
 
   /// @name High-Level Operations
-  /// {
+  /// @{
 
   /// ExecuteAction - Execute the provided action against the compiler's
   /// CompilerInvocation object.
@@ -241,9 +241,9 @@ public:
   /// Load the list of plugins requested in the \c FrontendOptions.
   void LoadRequestedPlugins();
 
-  /// }
+  /// @}
   /// @name Compiler Invocation and Options
-  /// {
+  /// @{
 
   bool hasInvocation() const { return Invocation != nullptr; }
 
@@ -266,9 +266,9 @@ public:
     BuildGlobalModuleIndex = Build;
   }
 
-  /// }
+  /// @}
   /// @name Forwarding Methods
-  /// {
+  /// @{
 
   AnalyzerOptionsRef getAnalyzerOpts() {
     return Invocation->getAnalyzerOpts();
@@ -374,9 +374,9 @@ public:
 
   void setPrefixMapper(llvm::PrefixMapper PM) { PrefixMapper = std::move(PM); }
 
-  /// }
+  /// @}
   /// @name Diagnostics Engine
-  /// {
+  /// @{
 
   bool hasDiagnostics() const { return Diagnostics != nullptr; }
 
@@ -400,9 +400,9 @@ public:
     return *Diagnostics->getClient();
   }
 
-  /// }
+  /// @}
   /// @name VerboseOutputStream
-  /// }
+  /// @{
 
   /// Replace the current stream for verbose output.
   void setVerboseOutputStream(raw_ostream &Value);
@@ -415,9 +415,9 @@ public:
     return *VerboseOutputStream;
   }
 
-  /// }
+  /// @}
   /// @name Target Info
-  /// {
+  /// @{
 
   bool hasTarget() const { return Target != nullptr; }
 
@@ -434,9 +434,9 @@ public:
   /// Replace the current Target.
   void setTarget(TargetInfo *Value);
 
-  /// }
+  /// @}
   /// @name AuxTarget Info
-  /// {
+  /// @{
 
   TargetInfo *getAuxTarget() const { return AuxTarget.get(); }
 
@@ -446,15 +446,15 @@ public:
   // Create Target and AuxTarget based on current options
   bool createTarget();
 
-  /// }
+  /// @}
   /// @name Virtual File System
-  /// {
+  /// @{
 
   llvm::vfs::FileSystem &getVirtualFileSystem() const;
 
-  /// }
+  /// @}
   /// @name File Manager
-  /// {
+  /// @{
 
   bool hasFileManager() const { return FileMgr != nullptr; }
 
@@ -492,9 +492,9 @@ public:
   llvm::cas::ObjectStore &getOrCreateObjectStore();
   llvm::cas::ActionCache &getOrCreateActionCache();
 
-  /// }
+  /// @}
   /// @name Source Manager
-  /// {
+  /// @{
 
   bool hasSourceManager() const { return SourceMgr != nullptr; }
 
@@ -517,9 +517,9 @@ public:
   /// setSourceManager - Replace the current source manager.
   void setSourceManager(SourceManager *Value);
 
-  /// }
+  /// @}
   /// @name Preprocessor
-  /// {
+  /// @{
 
   bool hasPreprocessor() const { return PP != nullptr; }
 
@@ -538,9 +538,9 @@ public:
   /// Replace the current preprocessor.
   void setPreprocessor(std::shared_ptr<Preprocessor> Value);
 
-  /// }
+  /// @}
   /// @name ASTContext
-  /// {
+  /// @{
 
   bool hasASTContext() const { return Context != nullptr; }
 
@@ -566,9 +566,9 @@ public:
   /// of S.
   void setSema(Sema *S);
 
-  /// }
+  /// @}
   /// @name ASTConsumer
-  /// {
+  /// @{
 
   bool hasASTConsumer() const { return (bool)Consumer; }
 
@@ -585,9 +585,9 @@ public:
   /// takes ownership of \p Value.
   void setASTConsumer(std::unique_ptr<ASTConsumer> Value);
 
-  /// }
+  /// @}
   /// @name Semantic analysis
-  /// {
+  /// @{
   bool hasSema() const { return (bool)TheSema; }
 
   Sema &getSema() const {
@@ -598,9 +598,9 @@ public:
   std::unique_ptr<Sema> takeSema();
   void resetAndLeakSema();
 
-  /// }
+  /// @}
   /// @name Module Management
-  /// {
+  /// @{
 
   IntrusiveRefCntPtr<ASTReader> getASTReader() const;
   void setASTReader(IntrusiveRefCntPtr<ASTReader> Reader);
@@ -641,9 +641,9 @@ public:
     return *Reader;
   }
 
-  /// }
+  /// @}
   /// @name Code Completion
-  /// {
+  /// @{
 
   bool hasCodeCompletionConsumer() const { return (bool)CompletionConsumer; }
 
@@ -657,9 +657,9 @@ public:
   /// the compiler instance takes ownership of \p Value.
   void setCodeCompletionConsumer(CodeCompleteConsumer *Value);
 
-  /// }
+  /// @}
   /// @name Frontend timer
-  /// {
+  /// @{
 
   bool hasFrontendTimer() const { return (bool)FrontendTimer; }
 
@@ -668,9 +668,9 @@ public:
     return *FrontendTimer;
   }
 
-  /// }
+  /// @}
   /// @name Output Files
-  /// {
+  /// @{
 
   /// clearOutputFiles - Clear the output file list. The underlying output
   /// streams must have been closed beforehand.
@@ -678,9 +678,9 @@ public:
   /// \param EraseFiles - If true, attempt to erase the files from disk.
   void clearOutputFiles(bool EraseFiles);
 
-  /// }
+  /// @}
   /// @name Construction Utility Methods
-  /// {
+  /// @{
 
   /// Create the diagnostics engine using the invocation's diagnostic options
   /// and replace any existing one with it.
@@ -833,9 +833,9 @@ private:
 public:
   std::unique_ptr<raw_pwrite_stream> createNullOutputFile();
 
-  /// }
+  /// @}
   /// @name Initialization Utility Methods
-  /// {
+  /// @{
 
   /// InitializeSourceManager - Initialize the source manager to set InputFile
   /// as the main file.
@@ -852,7 +852,7 @@ public:
                                       FileManager &FileMgr,
                                       SourceManager &SourceMgr);
 
-  /// }
+  /// @}
 
   void setOutputStream(std::unique_ptr<llvm::raw_pwrite_stream> OutStream) {
     OutputStream = std::move(OutStream);
