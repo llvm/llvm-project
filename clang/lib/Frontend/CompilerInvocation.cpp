@@ -4611,17 +4611,10 @@ void CompilerInvocation::generateCC1CommandLine(
 }
 
 std::vector<std::string> CompilerInvocation::getCC1CommandLine() const {
-  // Set up string allocator.
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Strings(Alloc);
-  auto SA = [&Strings](const Twine &Arg) { return Strings.save(Arg).data(); };
-
-  // Synthesize full command line from the CompilerInvocation, including "-cc1".
-  SmallVector<const char *, 32> Args{"-cc1"};
-  generateCC1CommandLine(Args, SA);
-
-  // Convert arguments to the return type.
-  return std::vector<std::string>{Args.begin(), Args.end()};
+  std::vector<std::string> Args{"-cc1"};
+  generateCC1CommandLine(
+      [&Args](const Twine &Arg) { Args.push_back(Arg.str()); });
+  return Args;
 }
 
 void CompilerInvocation::resetNonModularOptions() {
