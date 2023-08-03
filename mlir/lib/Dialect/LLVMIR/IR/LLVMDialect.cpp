@@ -2819,12 +2819,12 @@ struct LLVMOpAsmDialectInterface : public OpAsmDialectInterface {
         .Case<AccessGroupAttr, AliasScopeAttr, AliasScopeDomainAttr,
               DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
               DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
-              DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
-              DINullTypeAttr, DISubprogramAttr, DISubroutineTypeAttr,
-              LoopAnnotationAttr, LoopVectorizeAttr, LoopInterleaveAttr,
-              LoopUnrollAttr, LoopUnrollAndJamAttr, LoopLICMAttr,
-              LoopDistributeAttr, LoopPipelineAttr, LoopPeeledAttr,
-              LoopUnswitchAttr, TBAARootAttr, TBAATagAttr,
+              DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+              DINamespaceAttr, DINullTypeAttr, DISubprogramAttr,
+              DISubroutineTypeAttr, LoopAnnotationAttr, LoopVectorizeAttr,
+              LoopInterleaveAttr, LoopUnrollAttr, LoopUnrollAndJamAttr,
+              LoopLICMAttr, LoopDistributeAttr, LoopPipelineAttr,
+              LoopPeeledAttr, LoopUnswitchAttr, TBAARootAttr, TBAATagAttr,
               TBAATypeDescriptorAttr>([&](auto attr) {
           os << decltype(attr)::getMnemonic();
           return AliasResult::OverridableAlias;
