@@ -12,13 +12,36 @@
 #include "src/__support/common.h"
 #include "src/errno/libc_errno.h"
 
+#include <linux/time_types.h> // For __kernel_timespec.
 #include <sys/syscall.h> // For syscall numbers.
 
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, sched_rr_get_interval,
                    (pid_t tid, struct timespec *tp)) {
+#ifdef SYS_sched_rr_get_interval
   long ret = __llvm_libc::syscall_impl(SYS_sched_rr_get_interval, tid, tp);
+#elif defined(SYS_sched_rr_get_interval_time64)
+  // The difference between the  and SYS_sched_rr_get_interval
+  // SYS_sched_rr_get_interval_time64 syscalls is the data type used for the
+  // time interval parameter: the latter takes a struct __kernel_timespec
+  long ret;
+  if (tp) {
+    struct __kernel_timespec ts32;
+    ret =
+        __llvm_libc::syscall_impl(SYS_sched_rr_get_interval_time64, tid, &ts32);
+    if (ret == 0) {
+      tp->tv_sec = ts32.tv_sec;
+      tp->tv_nsec = ts32.tv_nsec;
+    }
+  } else
+    // When tp is a nullptr, we still do the syscall to set ret and errno
+    ret = __llvm_libc::syscall_impl(SYS_sched_rr_get_interval_time64, tid,
+                                    nullptr);
+#else
+#error                                                                         \
+    "sched_rr_get_interval and sched_rr_get_interval_time64 syscalls not available."
+#endif
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
