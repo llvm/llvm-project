@@ -593,10 +593,11 @@ bool TGParser::resolveArguments(Record *Rec, ArrayRef<ArgumentInit *> ArgValues,
   for (auto *UnsolvedArgName : UnsolvedArgNames) {
     Init *Default = Rec->getValue(UnsolvedArgName)->getValue();
     if (!Default->isComplete()) {
-      return Error(Loc, "value not specified for template argument (" +
-                            UnsolvedArgName->getAsUnquotedString() +
-                            ") of multiclass '" + Rec->getNameInitAsString() +
-                            "'");
+      std::string Name = UnsolvedArgName->getAsUnquotedString();
+      Error(Loc, "value not specified for template argument '" + Name + "'");
+      PrintNote(Rec->getFieldLoc(Name),
+                "declared in '" + Rec->getNameInitAsString() + "'");
+      return true;
     }
     ArgValueHandler(UnsolvedArgName, Default);
   }
