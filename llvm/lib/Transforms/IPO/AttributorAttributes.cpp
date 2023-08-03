@@ -3616,7 +3616,10 @@ struct AAIntraFnReachabilityFunction final
     : public CachedReachabilityAA<AAIntraFnReachability, Instruction> {
   using Base = CachedReachabilityAA<AAIntraFnReachability, Instruction>;
   AAIntraFnReachabilityFunction(const IRPosition &IRP, Attributor &A)
-      : Base(IRP, A) {}
+      : Base(IRP, A) {
+    DT = A.getInfoCache().getAnalysisResultForFunction<DominatorTreeAnalysis>(
+        *IRP.getAssociatedFunction());
+  }
 
   bool isAssumedReachable(
       Attributor &A, const Instruction &From, const Instruction &To,
@@ -3686,10 +3689,12 @@ struct AAIntraFnReachabilityFunction final
     if (!WillReachInBlock(ToBB->front(), *RQI.To, RQI.ExclusionSet))
       return rememberResult(A, RQITy::Reachable::No, RQI, UsedExclusionSet);
 
+    const Function *Fn = FromBB->getParent();
     SmallPtrSet<const BasicBlock *, 16> ExclusionBlocks;
     if (RQI.ExclusionSet)
       for (auto *I : *RQI.ExclusionSet)
-        ExclusionBlocks.insert(I->getParent());
+        if (I->getFunction() == Fn)
+          ExclusionBlocks.insert(I->getParent());
 
     // Check if we make it out of the FromBB block at all.
     if (ExclusionBlocks.count(FromBB) &&
@@ -3722,6 +3727,10 @@ struct AAIntraFnReachabilityFunction final
         if (SuccBB == ToBB)
           return rememberResult(A, RQITy::Reachable::Yes, RQI,
                                 UsedExclusionSet);
+        if (DT && ExclusionBlocks.empty() && DT->dominates(BB, ToBB))
+          return rememberResult(A, RQITy::Reachable::Yes, RQI,
+                                UsedExclusionSet);
+
         if (ExclusionBlocks.count(SuccBB)) {
           UsedExclusionSet = true;
           continue;
@@ -3745,6 +3754,9 @@ private:
   // Set of assumed dead edges we used in the last query. If any changes we
   // update the state.
   DenseSet<std::pair<const BasicBlock *, const BasicBlock *>> DeadEdges;
+
+  /// The dominator tree of the function to short-circuit reasoning.
+  const DominatorTree *DT = nullptr;
 };
 } // namespace
 
