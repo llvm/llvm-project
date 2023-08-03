@@ -1402,7 +1402,10 @@ void UnwrappedLineParser::parseStructuralElement(
     return;
   }
 
-  if (Style.isVerilog()) {
+  if (Style.isCpp()) {
+    while (FormatTok->is(tok::l_square) && handleCppAttributes()) {
+    }
+  } else if (Style.isVerilog()) {
     if (Keywords.isVerilogStructuredProcedure(*FormatTok)) {
       parseForOrWhileLoop(/*HasParens=*/false);
       return;
@@ -1636,6 +1639,17 @@ void UnwrappedLineParser::parseStructuralElement(
     }
     if (Style.isCpp() && FormatTok->is(TT_NamespaceMacro)) {
       parseNamespace();
+      return;
+    }
+    // In Verilog labels can be any expression, so we don't do them here.
+    if (!Style.isVerilog() && Tokens->peekNextToken()->is(tok::colon) &&
+        !Line->MustBeDeclaration) {
+      nextToken();
+      Line->Tokens.begin()->Tok->MustBreakBefore = true;
+      FormatTok->setFinalizedType(TT_GotoLabelColon);
+      parseLabel(!Style.IndentGotoLabels);
+      if (HasLabel)
+        *HasLabel = true;
       return;
     }
     // In all other cases, parse the declaration.
@@ -1942,16 +1956,6 @@ void UnwrappedLineParser::parseStructuralElement(
         return I != E && (++I == E);
       };
       if (OneTokenSoFar()) {
-        // In Verilog labels can be any expression, so we don't do them here.
-        if (!Style.isVerilog() && FormatTok->is(tok::colon) &&
-            !Line->MustBeDeclaration) {
-          Line->Tokens.begin()->Tok->MustBreakBefore = true;
-          FormatTok->setFinalizedType(TT_GotoLabelColon);
-          parseLabel(!Style.IndentGotoLabels);
-          if (HasLabel)
-            *HasLabel = true;
-          return;
-        }
         // Recognize function-like macro usages without trailing semicolon as
         // well as free-standing macros like Q_OBJECT.
         bool FunctionLike = FormatTok->is(tok::l_paren);
