@@ -349,22 +349,18 @@ bool mapping::isGenericMode() { return !isSPMDMode(); }
 
 extern "C" {
 __attribute__((noinline)) uint32_t __kmpc_get_hardware_thread_id_in_block() {
-  FunctionTracingRAII();
   return mapping::getThreadIdInBlock();
 }
 
 __attribute__((noinline)) uint32_t __kmpc_get_hardware_num_threads_in_block() {
-  FunctionTracingRAII();
   return impl::getNumberOfThreadsInBlock(mapping::DIM_X);
 }
 
 __attribute__((noinline)) uint32_t __kmpc_get_warp_size() {
-  FunctionTracingRAII();
   return impl::getWarpSize();
 }
 
 __attribute__((noinline)) uint32_t __kmpc_get_hardware_num_blocks() {
-  FunctionTracingRAII();
   return impl::getNumberOfBlocksInKernel(0);
 }
 }

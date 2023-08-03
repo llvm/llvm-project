@@ -12,12 +12,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang/ExtractAPI/DeclarationFragments.h"
-#include "clang/AST/Decl.h"
-#include "clang/AST/DeclCXX.h"
-#include "clang/Basic/OperatorKinds.h"
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
 #include "clang/Index/USRGeneration.h"
-#include "clang/Parse/Parser.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang::extractapi;
@@ -86,59 +82,6 @@ DeclarationFragments::parseFragmentKindFromString(StringRef S) {
       .Case("externalParam", DeclarationFragments::FragmentKind::ExternalParam)
       .Case("text", DeclarationFragments::FragmentKind::Text)
       .Default(DeclarationFragments::FragmentKind::None);
-}
-
-DeclarationFragments DeclarationFragments::getExceptionSpecificationString(
-    ExceptionSpecificationType ExceptionSpec) {
-  DeclarationFragments Fragments;
-  switch (ExceptionSpec) {
-  case ExceptionSpecificationType::EST_None:
-    return Fragments;
-  case ExceptionSpecificationType::EST_DynamicNone:
-    return Fragments.append(" ", DeclarationFragments::FragmentKind::Text)
-        .append("throw", DeclarationFragments::FragmentKind::Keyword)
-        .append("(", DeclarationFragments::FragmentKind::Text)
-        .append(")", DeclarationFragments::FragmentKind::Text);
-  case ExceptionSpecificationType::EST_Dynamic:
-    // FIXME: throw(int), get types of inner expression
-    return Fragments;
-  case ExceptionSpecificationType::EST_BasicNoexcept:
-
-    return Fragments.append(" ", DeclarationFragments::FragmentKind::Text)
-        .append("noexcept", DeclarationFragments::FragmentKind::Keyword);
-  case ExceptionSpecificationType::EST_DependentNoexcept:
-    // FIXME: throw(conditional-expression), get expression
-    break;
-  case ExceptionSpecificationType::EST_NoexceptFalse:
-    return Fragments.append(" ", DeclarationFragments::FragmentKind::Text)
-        .append("noexcept", DeclarationFragments::FragmentKind::Keyword)
-        .append("(", DeclarationFragments::FragmentKind::Text)
-        .append("false", DeclarationFragments::FragmentKind::Keyword)
-        .append(")", DeclarationFragments::FragmentKind::Text);
-  case ExceptionSpecificationType::EST_NoexceptTrue:
-    return Fragments.append(" ", DeclarationFragments::FragmentKind::Text)
-        .append("noexcept", DeclarationFragments::FragmentKind::Keyword)
-        .append("(", DeclarationFragments::FragmentKind::Text)
-        .append("true", DeclarationFragments::FragmentKind::Keyword)
-        .append(")", DeclarationFragments::FragmentKind::Text);
-  default:
-    return Fragments;
-  }
-
-  llvm_unreachable("Unhandled exception specification");
-}
-
-DeclarationFragments
-DeclarationFragments::getStructureTypeFragment(const RecordDecl *Record) {
-  DeclarationFragments Fragments;
-  if (Record->isStruct())
-    Fragments.append("struct", DeclarationFragments::FragmentKind::Keyword);
-  else if (Record->isUnion())
-    Fragments.append("union", DeclarationFragments::FragmentKind::Keyword);
-  else
-    Fragments.append("class", DeclarationFragments::FragmentKind::Keyword);
-
-  return Fragments;
 }
 
 // NNS stores C++ nested name specifiers, which are prefixes to qualified names.
@@ -426,9 +369,6 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForType(
 DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForVar(const VarDecl *Var) {
   DeclarationFragments Fragments;
-  if (Var->isConstexpr())
-    Fragments.append("constexpr ", DeclarationFragments::FragmentKind::Keyword);
-
   StorageClass SC = Var->getStorageClass();
   if (SC != SC_None)
     Fragments
@@ -498,10 +438,7 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
   case SC_Register:
     llvm_unreachable("invalid for functions");
   }
-  if (Func->isConsteval()) // if consteval, it is also constexpr
-    Fragments.append("consteval ", DeclarationFragments::FragmentKind::Keyword);
-  else if (Func->isConstexpr())
-    Fragments.append("constexpr ", DeclarationFragments::FragmentKind::Keyword);
+  // FIXME: Handle C++ function specifiers: constexpr, consteval, explicit, etc.
 
   // FIXME: Is `after` actually needed here?
   DeclarationFragments After;
@@ -519,9 +456,6 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
     Fragments.append(getFragmentsForParam(Func->getParamDecl(i)));
   }
   Fragments.append(")", DeclarationFragments::FragmentKind::Text);
-
-  Fragments.append(DeclarationFragments::getExceptionSpecificationString(
-      Func->getExceptionSpecType()));
 
   // FIXME: Handle exception specifiers: throw, noexcept
   return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
@@ -559,13 +493,7 @@ DeclarationFragmentsBuilder::getFragmentsForEnum(const EnumDecl *EnumDecl) {
 DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForField(const FieldDecl *Field) {
   DeclarationFragments After;
-  DeclarationFragments Fragments;
-  if (Field->isMutable())
-    Fragments.append("mutable", DeclarationFragments::FragmentKind::Keyword)
-        .appendSpace();
-  return Fragments
-      .append(
-          getFragmentsForType(Field->getType(), Field->getASTContext(), After))
+  return getFragmentsForType(Field->getType(), Field->getASTContext(), After)
       .appendSpace()
       .append(Field->getName(), DeclarationFragments::FragmentKind::Identifier)
       .append(std::move(After))
@@ -583,156 +511,6 @@ DeclarationFragmentsBuilder::getFragmentsForStruct(const RecordDecl *Record) {
   if (!Record->getName().empty())
     Fragments.appendSpace().append(
         Record->getName(), DeclarationFragments::FragmentKind::Identifier);
-
-  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
-}
-
-DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForCXXClass(
-    const CXXRecordDecl *Record) {
-  if (const auto *TypedefNameDecl = Record->getTypedefNameForAnonDecl())
-    return getFragmentsForTypedef(TypedefNameDecl);
-
-  DeclarationFragments Fragments;
-  Fragments.append(DeclarationFragments::getStructureTypeFragment(Record));
-
-  if (!Record->getName().empty())
-    Fragments.appendSpace().append(
-        Record->getName(), DeclarationFragments::FragmentKind::Identifier);
-
-  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
-}
-
-DeclarationFragments
-DeclarationFragmentsBuilder::getFragmentsForSpecialCXXMethod(
-    const CXXMethodDecl *Method) {
-  DeclarationFragments Fragments;
-  std::string Name;
-  if (isa<CXXConstructorDecl>(Method)) {
-    auto *Constructor = dyn_cast<CXXConstructorDecl>(Method);
-    Name = cast<CXXRecordDecl>(Constructor->getDeclContext())->getName();
-    if (Constructor->isExplicit())
-      Fragments.append("explicit", DeclarationFragments::FragmentKind::Keyword)
-          .appendSpace();
-  } else if (isa<CXXDestructorDecl>(Method))
-    Name = Method->getNameAsString();
-
-  DeclarationFragments After;
-  Fragments.append(Name, DeclarationFragments::FragmentKind::Identifier)
-      .append(std::move(After));
-  Fragments.append("(", DeclarationFragments::FragmentKind::Text);
-  for (unsigned i = 0, end = Method->getNumParams(); i != end; ++i) {
-    if (i)
-      Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
-    Fragments.append(getFragmentsForParam(Method->getParamDecl(i)));
-  }
-  Fragments.append(")", DeclarationFragments::FragmentKind::Text);
-
-  Fragments.append(DeclarationFragments::getExceptionSpecificationString(
-      Method->getExceptionSpecType()));
-
-  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
-}
-
-DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForCXXMethod(
-    const CXXMethodDecl *Method) {
-  DeclarationFragments Fragments;
-  StringRef Name;
-  Name = Method->getName();
-  if (Method->isStatic())
-    Fragments.append("static", DeclarationFragments::FragmentKind::Keyword)
-        .appendSpace();
-  if (Method->isConstexpr())
-    Fragments.append("constexpr", DeclarationFragments::FragmentKind::Keyword)
-        .appendSpace();
-  if (Method->isVolatile())
-    Fragments.append("volatile", DeclarationFragments::FragmentKind::Keyword)
-        .appendSpace();
-
-  // Build return type
-  DeclarationFragments After;
-  Fragments
-      .append(getFragmentsForType(Method->getReturnType(),
-                                  Method->getASTContext(), After))
-      .appendSpace()
-      .append(Name, DeclarationFragments::FragmentKind::Identifier)
-      .append(std::move(After));
-  Fragments.append("(", DeclarationFragments::FragmentKind::Text);
-  for (unsigned i = 0, end = Method->getNumParams(); i != end; ++i) {
-    if (i)
-      Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
-    Fragments.append(getFragmentsForParam(Method->getParamDecl(i)));
-  }
-  Fragments.append(")", DeclarationFragments::FragmentKind::Text);
-
-  if (Method->isConst())
-    Fragments.appendSpace().append("const",
-                                   DeclarationFragments::FragmentKind::Keyword);
-
-  Fragments.append(DeclarationFragments::getExceptionSpecificationString(
-      Method->getExceptionSpecType()));
-
-  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
-}
-
-DeclarationFragments
-DeclarationFragmentsBuilder::getFragmentsForConversionFunction(
-    const CXXConversionDecl *ConversionFunction) {
-  DeclarationFragments Fragments;
-
-  if (ConversionFunction->isExplicit())
-    Fragments.append("explicit", DeclarationFragments::FragmentKind::Keyword)
-        .appendSpace();
-
-  Fragments.append("operator", DeclarationFragments::FragmentKind::Keyword)
-      .appendSpace();
-
-  Fragments
-      .append(ConversionFunction->getConversionType().getAsString(),
-              DeclarationFragments::FragmentKind::TypeIdentifier)
-      .append("(", DeclarationFragments::FragmentKind::Text);
-  for (unsigned i = 0, end = ConversionFunction->getNumParams(); i != end;
-       ++i) {
-    if (i)
-      Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
-    Fragments.append(getFragmentsForParam(ConversionFunction->getParamDecl(i)));
-  }
-  Fragments.append(")", DeclarationFragments::FragmentKind::Text);
-
-  if (ConversionFunction->isConst())
-    Fragments.appendSpace().append("const",
-                                   DeclarationFragments::FragmentKind::Keyword);
-
-  return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
-}
-
-DeclarationFragments
-DeclarationFragmentsBuilder::getFragmentsForOverloadedOperator(
-    const CXXMethodDecl *Method) {
-  DeclarationFragments Fragments;
-
-  // Build return type
-  DeclarationFragments After;
-  Fragments
-      .append(getFragmentsForType(Method->getReturnType(),
-                                  Method->getASTContext(), After))
-      .appendSpace()
-      .append(Method->getNameAsString(),
-              DeclarationFragments::FragmentKind::Identifier)
-      .append(std::move(After));
-  Fragments.append("(", DeclarationFragments::FragmentKind::Text);
-  for (unsigned i = 0, end = Method->getNumParams(); i != end; ++i) {
-    if (i)
-      Fragments.append(", ", DeclarationFragments::FragmentKind::Text);
-    Fragments.append(getFragmentsForParam(Method->getParamDecl(i)));
-  }
-  Fragments.append(")", DeclarationFragments::FragmentKind::Text);
-
-  if (Method->isConst())
-    Fragments.appendSpace().append("const",
-                                   DeclarationFragments::FragmentKind::Keyword);
-
-  Fragments.append(DeclarationFragments::getExceptionSpecificationString(
-      Method->getExceptionSpecType()));
 
   return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
@@ -987,6 +765,24 @@ DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForTypedef(
   return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
+template <typename FunctionT>
+FunctionSignature
+DeclarationFragmentsBuilder::getFunctionSignature(const FunctionT *Function) {
+  FunctionSignature Signature;
+
+  DeclarationFragments ReturnType, After;
+  ReturnType
+      .append(getFragmentsForType(Function->getReturnType(),
+                                  Function->getASTContext(), After))
+      .append(std::move(After));
+  Signature.setReturnType(ReturnType);
+
+  for (const auto *Param : Function->parameters())
+    Signature.addParameter(Param->getName(), getFragmentsForParam(Param));
+
+  return Signature;
+}
+
 // Instantiate template for FunctionDecl.
 template FunctionSignature
 DeclarationFragmentsBuilder::getFunctionSignature(const FunctionDecl *);
@@ -999,18 +795,7 @@ DeclarationFragmentsBuilder::getFunctionSignature(const ObjCMethodDecl *);
 DeclarationFragments
 DeclarationFragmentsBuilder::getSubHeading(const NamedDecl *Decl) {
   DeclarationFragments Fragments;
-  if (isa<CXXConstructorDecl>(Decl) || isa<CXXDestructorDecl>(Decl))
-    Fragments.append(cast<CXXRecordDecl>(Decl->getDeclContext())->getName(),
-                     DeclarationFragments::FragmentKind::Identifier);
-  else if (isa<CXXConversionDecl>(Decl)) {
-    Fragments.append(
-        cast<CXXConversionDecl>(Decl)->getConversionType().getAsString(),
-        DeclarationFragments::FragmentKind::Identifier);
-  } else if (isa<CXXMethodDecl>(Decl) &&
-             cast<CXXMethodDecl>(Decl)->isOverloadedOperator()) {
-    Fragments.append(Decl->getNameAsString(),
-                     DeclarationFragments::FragmentKind::Identifier);
-  } else if (!Decl->getName().empty())
+  if (!Decl->getName().empty())
     Fragments.append(Decl->getName(),
                      DeclarationFragments::FragmentKind::Identifier);
   return Fragments;

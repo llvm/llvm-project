@@ -464,3 +464,24 @@ define void @noname_subprogram(ptr %arg) !dbg !8 {
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !8 = distinct !DISubprogram(scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1);
+
+; // -----
+
+; CHECK:      #[[MODULE:.+]] = #llvm.di_module<
+; CHECK-SAME: file = #{{.*}}, scope = #{{.*}}, name = "module", 
+; CHECK-SAME: configMacros = "bar", includePath = "/",
+; CHECK-SAME: apinotes = "/", line = 42, isDecl = true
+; CHECK-SAME: >
+; CHECK: #[[SUBPROGRAM:.+]] = #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #[[MODULE]], name = "func_in_module"
+
+define void @func_in_module(ptr %arg) !dbg !8 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!8 = distinct !DISubprogram(name: "func_in_module", scope: !10, file: !2, unit: !1);
+!10 = !DIModule(scope: !2, name: "module", configMacros: "bar", includePath: "/", apinotes: "/", file: !2, line: 42, isDecl: true)

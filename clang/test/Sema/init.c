@@ -164,3 +164,46 @@ struct vortexstruct vortexvar = { "asdf" };
 
 typedef struct { uintptr_t x : 2; } StructWithBitfield;
 StructWithBitfield bitfieldvar = { (uintptr_t)&bitfieldvar }; // expected-error {{initializer element is not a compile-time constant}}
+
+// PR45157
+struct PR4517_foo {
+  int x;
+};
+struct PR4517_bar {
+  struct PR4517_foo foo;
+};
+const struct PR4517_foo my_foo = {.x = 42};
+struct PR4517_bar my_bar = {
+    .foo = my_foo, // no-warning
+};
+struct PR4517_bar my_bar2 = (struct PR4517_bar){
+    .foo = my_foo, // no-warning
+};
+struct PR4517_bar my_bar3 = {
+    my_foo, // no-warning
+};
+struct PR4517_bar my_bar4 = (struct PR4517_bar){
+    my_foo // no-warning
+};
+extern const struct PR4517_foo my_foo2;
+struct PR4517_bar my_bar5 = {
+  .foo = my_foo2, // expected-error {{initializer element is not a compile-time constant}}
+};
+const struct PR4517_foo my_foo3 = {.x = my_foo.x};
+int PR4517_a[2] = {0, 1};
+const int PR4517_ca[2] = {0, 1};
+int PR4517_idx = 0;
+const int PR4517_idxc = 1;
+int PR4517_x1 = PR4517_a[PR4517_idx]; // expected-error {{initializer element is not a compile-time constant}}
+int PR4517_x2 = PR4517_a[PR4517_idxc]; // expected-error {{initializer element is not a compile-time constant}}
+int PR4517_x3 = PR4517_a[0]; // expected-error {{initializer element is not a compile-time constant}}
+int PR4517_y1 = PR4517_ca[PR4517_idx]; // expected-error {{initializer element is not a compile-time constant}}
+int PR4517_y2 = PR4517_ca[PR4517_idxc]; // no-warning
+int PR4517_y3 = PR4517_ca[0]; // no-warning
+union PR4517_u {
+    int x;
+    float y;
+};
+const union PR4517_u u1 = {4.0f};
+const union PR4517_u u2 = u1; // no-warning
+const union PR4517_u u3 = {u1.y}; // expected-error {{initializer element is not a compile-time constant}}

@@ -36,8 +36,6 @@ static void inititializeRuntime(bool IsSPMD,
 
 /// Simple generic state machine for worker threads.
 static void genericStateMachine(IdentTy *Ident) {
-  FunctionTracingRAII();
-
   uint32_t TId = mapping::getThreadIdInBlock();
 
   do {
@@ -72,7 +70,6 @@ extern "C" {
 /// \param Ident               Source location identification, can be NULL.
 ///
 int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
-  FunctionTracingRAII();
 #ifdef __AMDGCN__
   if (__kmpc_get_hardware_thread_id_in_block() == 0) {
     synchronize::omptarget_workers_done = false;
@@ -80,6 +77,7 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
   }
   synchronize::threadsAligned();
 #endif
+
   ConfigurationEnvironmentTy &Configuration = KernelEnvironment.Configuration;
   bool IsSPMD = Configuration.ExecMode &
                 llvm::omp::OMPTgtExecModeFlags::OMP_TGT_EXEC_MODE_SPMD;
@@ -142,7 +140,6 @@ int32_t __kmpc_target_init(KernelEnvironmentTy &KernelEnvironment) {
 /// \param Ident Source location identification, can be NULL.
 ///
 void __kmpc_target_deinit() {
-  FunctionTracingRAII();
   bool IsSPMD = mapping::isSPMDMode();
   state::assumeInitialState(IsSPMD);
   if (IsSPMD)
@@ -161,7 +158,6 @@ void __kmpc_target_deinit() {
 int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
                               int8_t UseGenericStateMachine,
                               int8_t RequiresFullRuntime) {
-  FunctionTracingRAII();
   KernelEnvironmentTy KE{{static_cast<uint8_t>(UseGenericStateMachine),
                           /*MayUseNestedParallelism=*/1,
                           static_cast<llvm::omp::OMPTgtExecModeFlags>(Mode)},
@@ -194,7 +190,6 @@ int32_t __kmpc_target_init_v1(int64_t *, int8_t Mode,
 
 void __kmpc_target_deinit_v1(int64_t *, int8_t Mode,
                              int8_t RequiresFullRuntime) {
-  FunctionTracingRAII();
   uint32_t TId = mapping::getThreadIdInBlock();
   synchronize::threadsAligned();
 
@@ -213,10 +208,7 @@ void __kmpc_target_deinit_v1(int64_t *, int8_t Mode,
 
 #endif
 
-int8_t __kmpc_is_spmd_exec_mode() {
-  FunctionTracingRAII();
-  return mapping::isSPMDMode();
-}
+int8_t __kmpc_is_spmd_exec_mode() { return mapping::isSPMDMode(); }
 }
 
 #pragma omp end declare target

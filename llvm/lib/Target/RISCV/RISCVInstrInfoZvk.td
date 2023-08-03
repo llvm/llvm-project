@@ -15,48 +15,6 @@
 // Operand and SDNode transformation definitions.
 //===----------------------------------------------------------------------===//
 
-def RnumArg_0_7 : AsmOperandClass {
-  let Name = "RnumArg_0_7";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidRnumArg_0_7";
-}
-
-def RnumArg_1_10 : AsmOperandClass {
-  let Name = "RnumArg_1_10";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidRnumArg_1_10";
-}
-
-def RnumArg_2_14 : AsmOperandClass {
-  let Name = "RnumArg_2_14";
-  let RenderMethod = "addImmOperands";
-  let DiagnosticType = "InvalidRnumArg_2_14";
-}
-
-def rnum_0_7 : Operand<XLenVT>, ImmLeaf<XLenVT,
-                                         [{return (0 <= Imm && Imm <= 7);}]> {
-  let ParserMatchClass = RnumArg_0_7;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_RVKRNUM_0_7";
-  let OperandNamespace = "RISCVOp";
-}
-
-def rnum_1_10 : Operand<XLenVT>, ImmLeaf<XLenVT,
-                                         [{return (1 <= Imm && Imm <= 10);}]> {
-  let ParserMatchClass = RnumArg_1_10;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_RVKRNUM_1_10";
-  let OperandNamespace = "RISCVOp";
-}
-
-def rnum_2_14 : Operand<XLenVT>, ImmLeaf<XLenVT,
-                                         [{return (2 <= Imm && Imm <= 14);}]> {
-  let ParserMatchClass = RnumArg_2_14;
-  let DecoderMethod = "decodeUImmOperand<5>";
-  let OperandType = "OPERAND_RVKRNUM_2_14";
-  let OperandNamespace = "RISCVOp";
-}
-
 def tuimm5 : Operand<XLenVT>, TImmLeaf<XLenVT, [{return isUInt<5>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<5>;
   let EncoderMethod = "getUImmOpValue";
@@ -625,6 +583,41 @@ defm : VPatUnaryVL_V<riscv_bswap_vl, "PseudoVREV8">;
 defm : VPatUnaryVL_V<riscv_ctlz_vl, "PseudoVCLZ">;
 defm : VPatUnaryVL_V<riscv_cttz_vl, "PseudoVCTZ">;
 defm : VPatUnaryVL_V<riscv_ctpop_vl, "PseudoVCPOP">;
+
+foreach vtiToWti = AllWidenableIntVectors in {
+  defvar vti = vtiToWti.Vti;
+  defvar wti = vtiToWti.Wti;
+  let Predicates = !listconcat([HasStdExtZvbb],
+                               GetVTypePredicates<vti>.Predicates,
+                               GetVTypePredicates<wti>.Predicates) in {
+    def : Pat<(riscv_shl_vl
+                 (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                 (wti.Vector (ext_oneuse (vti.Vector vti.RegClass:$rs1))),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VV_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, vti.RegClass:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
+                 (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                 (wti.Vector (Low8BitsSplatPat (XLenVT GPR:$rs1))),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VX_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, GPR:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+
+    def : Pat<(riscv_shl_vl
+                 (wti.Vector (zext_oneuse (vti.Vector vti.RegClass:$rs2))),
+                 (wti.Vector (SplatPat_uimm5 uimm5:$rs1)),
+                 (wti.Vector wti.RegClass:$merge),
+                 (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVWSLL_VI_"#vti.LMul.MX#"_MASK")
+                 wti.RegClass:$merge, vti.RegClass:$rs2, uimm5:$rs1,
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
+}
 
 //===----------------------------------------------------------------------===//
 // Codegen patterns

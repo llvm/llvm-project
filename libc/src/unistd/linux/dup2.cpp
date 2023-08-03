@@ -27,7 +27,15 @@ LLVM_LIBC_FUNCTION(int, dup2, (int oldfd, int newfd)) {
   // separately before making the dup3 syscall.
   if (oldfd == newfd) {
     // Check if oldfd is actually a valid file descriptor.
+#if SYS_fcntl
     long ret = __llvm_libc::syscall_impl(SYS_fcntl, oldfd, F_GETFD);
+#elif defined(SYS_fcntl64)
+    // Same as fcntl but can handle large offsets
+    static_assert(sizeof(off_t) == 8);
+    long ret = __llvm_libc::syscall_impl(SYS_fcntl64, oldfd, F_GETFD);
+#else
+#error "SYS_fcntl and SYS_fcntl64 syscalls not available."
+#endif
     if (ret >= 0)
       return oldfd;
     libc_errno = -ret;
