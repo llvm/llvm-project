@@ -197,10 +197,12 @@ static std::optional<bool> normalizeSimpleNegativeFlag(OptSpecifier Opt,
 /// unnecessary template instantiations and just ignore it with a variadic
 /// argument.
 static void denormalizeSimpleFlag(SmallVectorImpl<const char *> &Args,
-                                  const char *Spelling,
+                                  const Twine &Spelling,
                                   CompilerInvocation::StringAllocator,
                                   Option::OptionClass, unsigned, /*T*/...) {
-  Args.push_back(Spelling);
+  // Spelling is already allocated or a static string, no need to call SA.
+  assert(*Spelling.getSingleStringRef().end() == '\0');
+  Args.push_back(Spelling.getSingleStringRef().data());
 }
 
 template <typename T> static constexpr bool is_uint64_t_convertible() {
@@ -237,16 +239,19 @@ static auto makeBooleanOptionNormalizer(bool Value, bool OtherValue,
 }
 
 static auto makeBooleanOptionDenormalizer(bool Value) {
-  return [Value](SmallVectorImpl<const char *> &Args, const char *Spelling,
+  return [Value](SmallVectorImpl<const char *> &Args, const Twine &Spelling,
                  CompilerInvocation::StringAllocator, Option::OptionClass,
                  unsigned, bool KeyPath) {
-    if (KeyPath == Value)
-      Args.push_back(Spelling);
+    if (KeyPath == Value) {
+      // Spelling is already allocated or a static string, no need to call SA.
+      assert(*Spelling.getSingleStringRef().end() == '\0');
+      Args.push_back(Spelling.getSingleStringRef().data());
+    }
   };
 }
 
 static void denormalizeStringImpl(SmallVectorImpl<const char *> &Args,
-                                  const char *Spelling,
+                                  const Twine &Spelling,
                                   CompilerInvocation::StringAllocator SA,
                                   Option::OptionClass OptClass, unsigned,
                                   const Twine &Value) {
@@ -254,7 +259,9 @@ static void denormalizeStringImpl(SmallVectorImpl<const char *> &Args,
   case Option::SeparateClass:
   case Option::JoinedOrSeparateClass:
   case Option::JoinedAndSeparateClass:
-    Args.push_back(Spelling);
+    // Spelling is already allocated or a static string, no need to call SA.
+    assert(*Spelling.getSingleStringRef().end() == '\0');
+    Args.push_back(Spelling.getSingleStringRef().data());
     Args.push_back(SA(Value));
     break;
   case Option::JoinedClass:
@@ -269,7 +276,7 @@ static void denormalizeStringImpl(SmallVectorImpl<const char *> &Args,
 
 template <typename T>
 static void
-denormalizeString(SmallVectorImpl<const char *> &Args, const char *Spelling,
+denormalizeString(SmallVectorImpl<const char *> &Args, const Twine &Spelling,
                   CompilerInvocation::StringAllocator SA,
                   Option::OptionClass OptClass, unsigned TableIndex, T Value) {
   denormalizeStringImpl(Args, Spelling, SA, OptClass, TableIndex, Twine(Value));
@@ -314,7 +321,7 @@ static std::optional<unsigned> normalizeSimpleEnum(OptSpecifier Opt,
 }
 
 static void denormalizeSimpleEnumImpl(SmallVectorImpl<const char *> &Args,
-                                      const char *Spelling,
+                                      const Twine &Spelling,
                                       CompilerInvocation::StringAllocator SA,
                                       Option::OptionClass OptClass,
                                       unsigned TableIndex, unsigned Value) {
@@ -331,7 +338,7 @@ static void denormalizeSimpleEnumImpl(SmallVectorImpl<const char *> &Args,
 
 template <typename T>
 static void denormalizeSimpleEnum(SmallVectorImpl<const char *> &Args,
-                                  const char *Spelling,
+                                  const Twine &Spelling,
                                   CompilerInvocation::StringAllocator SA,
                                   Option::OptionClass OptClass,
                                   unsigned TableIndex, T Value) {
@@ -372,7 +379,7 @@ normalizeStringVector(OptSpecifier Opt, int, const ArgList &Args,
 }
 
 static void denormalizeStringVector(SmallVectorImpl<const char *> &Args,
-                                    const char *Spelling,
+                                    const Twine &Spelling,
                                     CompilerInvocation::StringAllocator SA,
                                     Option::OptionClass OptClass,
                                     unsigned TableIndex,
