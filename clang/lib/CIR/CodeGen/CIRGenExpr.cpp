@@ -2053,33 +2053,44 @@ bool CIRGenFunction::LValueIsSuitableForInlineAtomic(LValue LV) {
 /// Emit an `if` on a boolean condition, filling `then` and `else` into
 /// appropriated regions.
 mlir::LogicalResult CIRGenFunction::buildIfOnBoolExpr(const Expr *cond,
-                                                      mlir::Location loc,
                                                       const Stmt *thenS,
                                                       const Stmt *elseS) {
+  auto getStmtLoc = [this](const Stmt &s) {
+    return mlir::FusedLoc::get(builder.getContext(),
+                               {getLoc(s.getSourceRange().getBegin()),
+                                getLoc(s.getSourceRange().getEnd())});
+  };
+
+  auto thenLoc = getStmtLoc(*thenS);
+  std::optional<mlir::Location> elseLoc;
+  SmallVector<mlir::Location, 2> ifLocs{thenLoc};
+
+  if (elseS) {
+    elseLoc = getStmtLoc(*elseS);
+    ifLocs.push_back(*elseLoc);
+  }
+
+  // Attempt to be more accurate as possible with IfOp location, generate
+  // one fused location that has either 2 or 4 total locations, depending
+  // on else's availability.
+  auto loc = mlir::FusedLoc::get(builder.getContext(), ifLocs);
+
   // Emit the code with the fully general case.
   mlir::Value condV = buildOpOnBoolExpr(cond, loc, thenS, elseS);
   mlir::LogicalResult resThen = mlir::success(), resElse = mlir::success();
+
   builder.create<mlir::cir::IfOp>(
       loc, condV, elseS,
       /*thenBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        if (const auto fusedLoc = loc.dyn_cast<mlir::FusedLoc>()) {
-          loc = mlir::FusedLoc::get(
-              builder.getContext(),
-              {fusedLoc.getLocations()[0], fusedLoc.getLocations()[1]});
-        }
-        LexicalScopeContext lexScope{loc, builder.getInsertionBlock()};
+      [&](mlir::OpBuilder &, mlir::Location) {
+        LexicalScopeContext lexScope{thenLoc, builder.getInsertionBlock()};
         LexicalScopeGuard lexThenGuard{*this, &lexScope};
         resThen = buildStmt(thenS, /*useCurrentScope=*/true);
       },
       /*elseBuilder=*/
-      [&](mlir::OpBuilder &b, mlir::Location loc) {
-        if (const auto fusedLoc = loc.dyn_cast<mlir::FusedLoc>()) {
-          loc = mlir::FusedLoc::get(
-              builder.getContext(),
-              {fusedLoc.getLocations()[2], fusedLoc.getLocations()[3]});
-        }
-        LexicalScopeContext lexScope{loc, builder.getInsertionBlock()};
+      [&](mlir::OpBuilder &, mlir::Location) {
+        assert(elseLoc && "Invalid location for elseS.");
+        LexicalScopeContext lexScope{*elseLoc, builder.getInsertionBlock()};
         LexicalScopeGuard lexElseGuard{*this, &lexScope};
         resElse = buildStmt(elseS, /*useCurrentScope=*/true);
       });
