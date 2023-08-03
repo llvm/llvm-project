@@ -1079,3 +1079,10 @@ bool ModuleList::AnyOf(
 
   return false;
 }
+
+
+void ModuleList::Swap(ModuleList &other) {
+  // scoped_lock locks both mutexes at once.
+  std::scoped_lock lock(m_modules_mutex, other.m_modules_mutex);
+  m_modules.swap(other.m_modules);
+}
