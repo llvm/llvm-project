@@ -195,7 +195,6 @@ bool CommandObjectDWIMPrint::DoExecute(StringRef command,
     is_swift = true;
   else if (m_expr_options.language == lldb::eLanguageTypeUnknown)
     is_swift = frame && frame->GuessLanguage() == lldb::eLanguageTypeSwift;
-  bool is_po = m_varobj_options.use_objc;
   if (is_swift && is_po) {
     lldb::addr_t addr;
     bool is_integer = !expr.getAsInteger(0, addr);
