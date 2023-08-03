@@ -829,16 +829,6 @@ class JSONCrashLogParser(CrashLogParser):
         if "reportNotes" in json_data:
             self.crashlog.errors = json_data["reportNotes"]
 
-
-class CrashLogParseMode:
-    NORMAL = 0
-    THREAD = 1
-    IMAGES = 2
-    THREGS = 3
-    SYSTEM = 4
-    INSTRS = 5
-
-
 class TextCrashLogParser(CrashLogParser):
     parent_process_regex = re.compile(r"^Parent Process:\s*(.*)\[(\d+)\]")
     thread_state_regex = re.compile(r"^Thread \d+ crashed with")
@@ -898,18 +888,27 @@ class TextCrashLogParser(CrashLogParser):
     )
     exception_extra_regex = re.compile(r"^Exception\s+.*:\s+(.*)")
 
+
+    class CrashLogParseMode:
+        NORMAL = 0
+        THREAD = 1
+        IMAGES = 2
+        THREGS = 3
+        SYSTEM = 4
+        INSTRS = 5
+
     def __init__(self, debugger, path, options):
         super().__init__(debugger, path, options)
         self.thread = None
         self.app_specific_backtrace = False
-        self.parse_mode = CrashLogParseMode.NORMAL
+        self.parse_mode = self.CrashLogParseMode.NORMAL
         self.parsers = {
-            CrashLogParseMode.NORMAL: self.parse_normal,
-            CrashLogParseMode.THREAD: self.parse_thread,
-            CrashLogParseMode.IMAGES: self.parse_images,
-            CrashLogParseMode.THREGS: self.parse_thread_registers,
-            CrashLogParseMode.SYSTEM: self.parse_system,
-            CrashLogParseMode.INSTRS: self.parse_instructions,
+            self.CrashLogParseMode.NORMAL: self.parse_normal,
+            self.CrashLogParseMode.THREAD: self.parse_thread,
+            self.CrashLogParseMode.IMAGES: self.parse_images,
+            self.CrashLogParseMode.THREGS: self.parse_thread_registers,
+            self.CrashLogParseMode.SYSTEM: self.parse_system,
+            self.CrashLogParseMode.INSTRS: self.parse_instructions,
         }
         self.symbols = {}
 
@@ -928,7 +927,7 @@ class TextCrashLogParser(CrashLogParser):
 
             if line_len == 0:
                 if self.thread:
-                    if self.parse_mode == CrashLogParseMode.THREAD:
+                    if self.parse_mode == self.CrashLogParseMode.THREAD:
                         if self.thread.index == self.crashlog.crashed_thread_idx:
                             self.thread.reason = ""
                             if hasattr(self.crashlog, "thread_exception"):
@@ -953,7 +952,7 @@ class TextCrashLogParser(CrashLogParser):
                 if (
                     empty_lines == 1
                     and idx + empty_lines < lines_count - 1
-                    and self.parse_mode != CrashLogParseMode.NORMAL
+                    and self.parse_mode != self.CrashLogParseMode.NORMAL
                 ):
                     # check if next line can be parsed with the current parse mode
                     next_line_idx = idx + empty_lines
@@ -961,7 +960,7 @@ class TextCrashLogParser(CrashLogParser):
                         # If that suceeded, skip the empty line and the next line.
                         idx = next_line_idx + 1
                         continue
-                self.parse_mode = CrashLogParseMode.NORMAL
+                self.parse_mode = self.CrashLogParseMode.NORMAL
 
             self.parsers[self.parse_mode](line)
 
@@ -1047,7 +1046,7 @@ class TextCrashLogParser(CrashLogParser):
             self.crashlog.version = int(line[15:].strip())
             return
         elif line.startswith("System Profile:"):
-            self.parse_mode = CrashLogParseMode.SYSTEM
+            self.parse_mode = self.CrashLogParseMode.SYSTEM
             return
         elif (
             line.startswith("Interval Since Last Report:")
@@ -1065,17 +1064,17 @@ class TextCrashLogParser(CrashLogParser):
                 self.app_specific_backtrace = False
                 thread_state_match = self.thread_regex.search(line)
                 thread_idx = int(thread_state_match.group(1))
-                self.parse_mode = CrashLogParseMode.THREGS
+                self.parse_mode = self.CrashLogParseMode.THREGS
                 self.thread = self.crashlog.threads[thread_idx]
                 return
             thread_insts_match = self.thread_instrs_regex.search(line)
             if thread_insts_match:
-                self.parse_mode = CrashLogParseMode.INSTRS
+                self.parse_mode = self.CrashLogParseMode.INSTRS
                 return
             thread_match = self.thread_regex.search(line)
             if thread_match:
                 self.app_specific_backtrace = False
-                self.parse_mode = CrashLogParseMode.THREAD
+                self.parse_mode = self.CrashLogParseMode.THREAD
                 thread_idx = int(thread_match.group(1))
                 self.thread = self.crashlog.Thread(
                     thread_idx, False, self.crashlog.process_arch
@@ -1083,19 +1082,19 @@ class TextCrashLogParser(CrashLogParser):
                 return
             return
         elif line.startswith("Binary Images:"):
-            self.parse_mode = CrashLogParseMode.IMAGES
+            self.parse_mode = self.CrashLogParseMode.IMAGES
             return
         elif line.startswith("Application Specific Backtrace"):
             app_backtrace_match = self.app_backtrace_regex.search(line)
             if app_backtrace_match:
-                self.parse_mode = CrashLogParseMode.THREAD
+                self.parse_mode = self.CrashLogParseMode.THREAD
                 self.app_specific_backtrace = True
                 idx = int(app_backtrace_match.group(1))
                 self.thread = self.crashlog.Thread(
                     idx, True, self.crashlog.process_arch
                 )
         elif line.startswith("Last Exception Backtrace:"):  # iOS
-            self.parse_mode = CrashLogParseMode.THREAD
+            self.parse_mode = self.CrashLogParseMode.THREAD
             self.app_specific_backtrace = True
             idx = 1
             self.thread = self.crashlog.Thread(idx, True, self.crashlog.process_arch)
