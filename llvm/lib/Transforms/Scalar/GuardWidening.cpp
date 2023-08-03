@@ -157,8 +157,8 @@ class GuardWideningImpl {
   /// maps BasicBlocks to the set of guards seen in that block.
   bool eliminateInstrViaWidening(
       Instruction *Instr, const df_iterator<DomTreeNode *> &DFSI,
-      const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> &
-          GuardsPerBlock, bool InvertCondition = false);
+      const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>>
+          &GuardsPerBlock);
 
   /// Used to keep track of which widening potential is more effective.
   enum WideningScore {
@@ -181,11 +181,9 @@ class GuardWideningImpl {
   static StringRef scoreTypeToString(WideningScore WS);
 
   /// Compute the score for widening the condition in \p DominatedInstr
-  /// into \p DominatingGuard. If \p InvertCond is set, then we widen the
-  /// inverted condition of the dominating guard.
+  /// into \p DominatingGuard.
   WideningScore computeWideningScore(Instruction *DominatedInstr,
-                                     Instruction *DominatingGuard,
-                                     bool InvertCond);
+                                     Instruction *DominatingGuard);
 
   /// Helper to check if \p V can be hoisted to \p InsertPos.
   bool canBeHoistedTo(const Value *V, const Instruction *InsertPos) const {
@@ -201,14 +199,13 @@ class GuardWideningImpl {
   void makeAvailableAt(Value *V, Instruction *InsertPos) const;
 
   /// Common helper used by \c widenGuard and \c isWideningCondProfitable.  Try
-  /// to generate an expression computing the logical AND of \p Cond0 and (\p
-  /// Cond1 XOR \p InvertCondition).
+  /// to generate an expression computing the logical AND of \p Cond0 and Cond1.
   /// Return true if the expression computing the AND is only as
   /// expensive as computing one of the two. If \p InsertPt is true then
   /// actually generate the resulting expression, make it available at \p
   /// InsertPt and return it in \p Result (else no change to the IR is made).
   bool widenCondCommon(Value *Cond0, Value *Cond1, Instruction *InsertPt,
-                       Value *&Result, bool InvertCondition);
+                       Value *&Result);
 
   /// Adds freeze to Orig and push it as far as possible very aggressively.
   /// Also replaces all uses of frozen instruction with frozen version.
@@ -273,21 +270,16 @@ class GuardWideningImpl {
 
   /// Can we compute the logical AND of \p Cond0 and \p Cond1 for the price of
   /// computing only one of the two expressions?
-  bool isWideningCondProfitable(Value *Cond0, Value *Cond1, bool InvertCond) {
+  bool isWideningCondProfitable(Value *Cond0, Value *Cond1) {
     Value *ResultUnused;
-    return widenCondCommon(Cond0, Cond1, /*InsertPt=*/nullptr, ResultUnused,
-                           InvertCond);
+    return widenCondCommon(Cond0, Cond1, /*InsertPt=*/nullptr, ResultUnused);
   }
 
-  /// If \p InvertCondition is false, Widen \p ToWiden to fail if
-  /// \p NewCondition is false, otherwise make it fail if \p NewCondition is
-  /// true (in addition to whatever it is already checking).
-  void widenGuard(Instruction *ToWiden, Value *NewCondition,
-                  bool InvertCondition) {
+  /// Widen \p ToWiden to fail if \p NewCondition is false
+  void widenGuard(Instruction *ToWiden, Value *NewCondition) {
     Value *Result;
     Instruction *InsertPt = findInsertionPointForWideCondition(ToWiden);
-    widenCondCommon(getCondition(ToWiden), NewCondition, InsertPt, Result,
-                    InvertCondition);
+    widenCondCommon(getCondition(ToWiden), NewCondition, InsertPt, Result);
     if (isGuardAsWidenableBranch(ToWiden)) {
       setWidenableBranchCond(cast<BranchInst>(ToWiden), Result);
       return;
@@ -353,8 +345,8 @@ bool GuardWideningImpl::run() {
 
 bool GuardWideningImpl::eliminateInstrViaWidening(
     Instruction *Instr, const df_iterator<DomTreeNode *> &DFSI,
-    const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>> &
-        GuardsInBlock, bool InvertCondition) {
+    const DenseMap<BasicBlock *, SmallVector<Instruction *, 8>>
+        &GuardsInBlock) {
   // Ignore trivial true or false conditions. These instructions will be
   // trivially eliminated by any cleanup pass. Do not erase them because other
   // guards can possibly be widened into them.
@@ -394,7 +386,7 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
     assert((i == (e - 1)) == (Instr->getParent() == CurBB) && "Bad DFS?");
 
     for (auto *Candidate : make_range(I, E)) {
-      auto Score = computeWideningScore(Instr, Candidate, InvertCondition);
+      auto Score = computeWideningScore(Instr, Candidate);
       LLVM_DEBUG(dbgs() << "Score between " << *getCondition(Instr)
                         << " and " << *getCondition(Candidate) << " is "
                         << scoreTypeToString(Score) << "\n");
@@ -416,10 +408,8 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
   LLVM_DEBUG(dbgs() << "Widening " << *Instr << " into " << *BestSoFar
                     << " with score " << scoreTypeToString(BestScoreSoFar)
                     << "\n");
-  widenGuard(BestSoFar, getCondition(Instr), InvertCondition);
-  auto NewGuardCondition = InvertCondition
-                               ? ConstantInt::getFalse(Instr->getContext())
-                               : ConstantInt::getTrue(Instr->getContext());
+  widenGuard(BestSoFar, getCondition(Instr));
+  auto NewGuardCondition = ConstantInt::getTrue(Instr->getContext());
   setCondition(Instr, NewGuardCondition);
   EliminatedGuardsAndBranches.push_back(Instr);
   WidenedGuards.insert(BestSoFar);
@@ -428,8 +418,7 @@ bool GuardWideningImpl::eliminateInstrViaWidening(
 
 GuardWideningImpl::WideningScore
 GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
-                                        Instruction *DominatingGuard,
-                                        bool InvertCond) {
+                                        Instruction *DominatingGuard) {
   Loop *DominatedInstrLoop = LI.getLoopFor(DominatedInstr->getParent());
   Loop *DominatingGuardLoop = LI.getLoopFor(DominatingGuard->getParent());
   bool HoistingOutOfLoop = false;
@@ -459,7 +448,7 @@ GuardWideningImpl::computeWideningScore(Instruction *DominatedInstr,
   // NOTE: As written, this also lets us hoist right over another guard which
   // is essentially just another spelling for control flow.
   if (isWideningCondProfitable(getCondition(DominatedInstr),
-                               getCondition(DominatingGuard), InvertCond))
+                               getCondition(DominatingGuard)))
     return HoistingOutOfLoop ? WS_VeryPositive : WS_Positive;
 
   if (HoistingOutOfLoop)
@@ -668,8 +657,7 @@ Value *GuardWideningImpl::freezeAndPush(Value *Orig, Instruction *InsertPt) {
 }
 
 bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
-                                        Instruction *InsertPt, Value *&Result,
-                                        bool InvertCondition) {
+                                        Instruction *InsertPt, Value *&Result) {
   using namespace llvm::PatternMatch;
 
   {
@@ -679,8 +667,6 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
     ICmpInst::Predicate Pred0, Pred1;
     if (match(Cond0, m_ICmp(Pred0, m_Value(LHS), m_ConstantInt(RHS0))) &&
         match(Cond1, m_ICmp(Pred1, m_Specific(LHS), m_ConstantInt(RHS1)))) {
-      if (InvertCondition)
-        Pred1 = ICmpInst::getInversePredicate(Pred1);
 
       ConstantRange CR0 =
           ConstantRange::makeExactICmpRegion(Pred0, RHS0->getValue());
@@ -710,9 +696,7 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
 
   {
     SmallVector<GuardWideningImpl::RangeCheck, 4> Checks, CombinedChecks;
-    // TODO: Support InvertCondition case?
-    if (!InvertCondition &&
-        parseRangeChecks(Cond0, Checks) && parseRangeChecks(Cond1, Checks) &&
+    if (parseRangeChecks(Cond0, Checks) && parseRangeChecks(Cond1, Checks) &&
         combineRangeChecks(Checks, CombinedChecks)) {
       if (InsertPt) {
         Result = nullptr;
@@ -737,8 +721,6 @@ bool GuardWideningImpl::widenCondCommon(Value *Cond0, Value *Cond1,
   if (InsertPt) {
     makeAvailableAt(Cond0, InsertPt);
     makeAvailableAt(Cond1, InsertPt);
-    if (InvertCondition)
-      Cond1 = BinaryOperator::CreateNot(Cond1, "inverted", InsertPt);
     Cond1 = freezeAndPush(Cond1, InsertPt);
     Result = BinaryOperator::CreateAnd(Cond0, Cond1, "wide.chk", InsertPt);
   }
