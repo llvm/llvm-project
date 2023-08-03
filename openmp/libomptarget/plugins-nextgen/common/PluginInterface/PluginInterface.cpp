@@ -715,7 +715,7 @@ GenericDeviceTy::getKernelEnvironmentForKernel(StringRef Name,
   // Retrieve kernel environment object for the kernel.
   GenericGlobalHandlerTy &GHandler = Plugin::get().getGlobalHandler();
   if (auto Err = GHandler.readGlobalFromImage(*this, Image, KernelEnv))
-    return Err;
+    return std::move(Err);
 
   return KernelEnv.getValue();
 }
