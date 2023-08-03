@@ -581,11 +581,18 @@ void RISCVFrameLowering::emitPrologue(MachineFunction &MF,
     int64_t Offset;
     // Offsets for objects with fixed locations (IE: those saved by libcall) are
     // simply calculated from the frame index.
-    if (FrameIdx < 0)
-      Offset = FrameIdx * (int64_t) STI.getXLen() / 8;
-    else
+    if (FrameIdx < 0) {
+      if (RVFI->isPushable(MF)) {
+        // Callee-saved register stored by Zcmp push is in reverse order.
+        Offset = -(FrameIdx + RVFI->getRVPushRegs() + 1) *
+                 (int64_t)STI.getXLen() / 8;
+      } else {
+        Offset = FrameIdx * (int64_t)STI.getXLen() / 8;
+      }
+    } else {
       Offset = MFI.getObjectOffset(Entry.getFrameIdx()) -
                RVFI->getLibCallStackSize();
+    }
     Register Reg = Entry.getReg();
     unsigned CFIIndex = MF.addFrameInst(MCCFIInstruction::createOffset(
         nullptr, RI->getDwarfRegNum(Reg, true), Offset));
