@@ -104,12 +104,14 @@ enum State : u32 { Unlocked = 0, Locked = 1, Sleeping = 2 };
 }
 
 bool HybridMutex::tryLock() {
-  return atomic_compare_exchange(&M, Unlocked, Locked) == Unlocked;
+  return atomic_compare_exchange_strong(&M, Unlocked, Locked,
+                                        memory_order_acquire) == Unlocked;
 }
 
 // The following is based on https://akkadia.org/drepper/futex.pdf.
 void HybridMutex::lockSlow() {
-  u32 V = atomic_compare_exchange(&M, Unlocked, Locked);
+  u32 V = atomic_compare_exchange_strong(&M, Unlocked, Locked,
+                                         memory_order_acquire);
   if (V == Unlocked)
     return;
   if (V != Sleeping)
