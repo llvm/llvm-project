@@ -10577,6 +10577,12 @@ struct AAInterFnReachabilityFunction
   bool isReachableImpl(Attributor &A, RQITy &RQI,
                        SmallPtrSet<const Function *, 16> *Visited) {
 
+    const Instruction *EntryI =
+        &RQI.From->getFunction()->getEntryBlock().front();
+    if (EntryI != RQI.From &&
+        !instructionCanReach(A, *EntryI, *RQI.To, nullptr, nullptr))
+      return rememberResult(A, RQITy::Reachable::No, RQI, false);
+
     SmallPtrSet<const Function *, 16> LocalVisited;
     if (!Visited)
       Visited = &LocalVisited;
@@ -10602,10 +10608,15 @@ struct AAInterFnReachabilityFunction
           return false;
         }
 
-        const AAInterFnReachability *InterFnReachability = this;
-        if (Fn != getAnchorScope())
-          InterFnReachability = A.getAAFor<AAInterFnReachability>(
-              *this, IRPosition::function(*Fn), DepClassTy::OPTIONAL);
+        if (Fn == getAnchorScope()) {
+          if (EntryI == RQI.From)
+            continue;
+          return false;
+        }
+
+        const AAInterFnReachability *InterFnReachability =
+            A.getAAFor<AAInterFnReachability>(*this, IRPosition::function(*Fn),
+                                              DepClassTy::OPTIONAL);
 
         const Instruction &FnFirstInst = Fn->getEntryBlock().front();
         if (!InterFnReachability ||
