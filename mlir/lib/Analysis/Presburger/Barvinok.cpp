@@ -85,7 +85,7 @@ MPInt mlir::presburger::getIndex(ConeV cone)
         return MPInt(0);
     }
     // Convert to a linear transform in order to perform Gaussian elimination.
-    LinearTransform<MPInt> lt(cone);
+    LinearTransform lt(cone);
     return lt.determinant();
 }
 

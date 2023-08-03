@@ -14,7 +14,6 @@
 #ifndef MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 #define MLIR_ANALYSIS_PRESBURGER_MATRIX_H
 
-#include "mlir/Analysis/Presburger/MPInt.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/raw_ostream.h"
@@ -213,6 +212,16 @@ public:
   /// Return whether the Matrix is in a consistent state with all its
   /// invariants satisfied.
   bool hasConsistentState() const;
+
+  T dotProduct(ArrayRef<T> a, ArrayRef<T> b)
+  {
+    T sum = T(0);
+    for (unsigned long i = 0; i < a.size(); i++)
+    {
+        sum = sum + a[i] * b[i];
+    }
+    return sum;
+  }
 
 private:
   /// The current number of rows, columns, and reserved columns. The underlying

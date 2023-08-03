@@ -12,11 +12,11 @@
 using namespace mlir;
 using namespace presburger;
 
-template <typename T> LinearTransform<T>::LinearTransform(Matrix<T> &&oMatrix) : matrix(oMatrix) {}
-template <typename T> LinearTransform<T>::LinearTransform(const Matrix<T> &oMatrix) : matrix(oMatrix) {}
+LinearTransform::LinearTransform(Matrix<MPInt> &&oMatrix) : matrix(oMatrix) {}
+LinearTransform::LinearTransform(const Matrix<MPInt> &oMatrix) : matrix(oMatrix) {}
 
-template <typename T> std::pair<unsigned, LinearTransform<T>>
-LinearTransform<T>::makeTransformToColumnEchelon(const Matrix<T> &m) {
+std::pair<unsigned, LinearTransform>
+LinearTransform::makeTransformToColumnEchelon(const Matrix<MPInt> &m) {
   // Compute the hermite normal form of m. This, is by definition, is in column
   // echelon form.
   auto [h, u] = m.computeHermiteNormalForm();
@@ -40,25 +40,25 @@ LinearTransform<T>::makeTransformToColumnEchelon(const Matrix<T> &m) {
   return {col, LinearTransform(std::move(u))};
 }
 
-template <typename T> IntegerRelation LinearTransform<T>::applyTo(const IntegerRelation &rel) const {
+IntegerRelation LinearTransform::applyTo(const IntegerRelation &rel) const {
   IntegerRelation result(rel.getSpace());
 
   for (unsigned i = 0, e = rel.getNumEqualities(); i < e; ++i) {
-    ArrayRef<T> eq = rel.getEquality(i);
+    ArrayRef<MPInt> eq = rel.getEquality(i);
 
-    const T &c = eq.back();
+    const MPInt &c = eq.back();
 
-    SmallVector<T, 8> newEq = preMultiplyWithRow(eq.drop_back());
+    SmallVector<MPInt, 8> newEq = preMultiplyWithRow(eq.drop_back());
     newEq.push_back(c);
     result.addEquality(newEq);
   }
 
   for (unsigned i = 0, e = rel.getNumInequalities(); i < e; ++i) {
-    ArrayRef<T> ineq = rel.getInequality(i);
+    ArrayRef<MPInt> ineq = rel.getInequality(i);
 
-    const T &c = ineq.back();
+    const MPInt &c = ineq.back();
 
-    SmallVector<T, 8> newIneq = preMultiplyWithRow(ineq.drop_back());
+    SmallVector<MPInt, 8> newIneq = preMultiplyWithRow(ineq.drop_back());
     newIneq.push_back(c);
     result.addInequality(newIneq);
   }
@@ -66,19 +66,19 @@ template <typename T> IntegerRelation LinearTransform<T>::applyTo(const IntegerR
   return result;
 }
 
-template <typename T> T LinearTransform<T>::determinant()
+MPInt LinearTransform::determinant()
 {
     // Convert to column echelon form. Now `colEchelon` is lower triangular.
-    Matrix<T> m = this->matrix;
-    LinearTransform<T> colEchelon = makeTransformToColumnEchelon(m).second;
-    T determinant(1);
+    Matrix<MPInt> m = this->matrix;
+    LinearTransform colEchelon = makeTransformToColumnEchelon(m).second;
+    MPInt determinant(1);
     for (unsigned i = 0; i < m.getNumColumns(); i++)
     {
         // Construct a one-hot vector for i.
-        SmallVector<T, 8U> pickColumnVec(m.getNumRows(), T(0));
+        SmallVector<MPInt, 8U> pickColumnVec(m.getNumRows(), MPInt(0));
         pickColumnVec[i] = 1;
         // Select column i by post-multiplying.
-        SmallVector<T, 8> iThColumn = colEchelon.postMultiplyWithColumn(ArrayRef(pickColumnVec));
+        SmallVector<MPInt, 8> iThColumn = colEchelon.postMultiplyWithColumn(ArrayRef(pickColumnVec));
         // Get ith element of column i.
         determinant *= iThColumn[i];
     }

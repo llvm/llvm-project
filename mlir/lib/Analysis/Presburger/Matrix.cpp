@@ -202,7 +202,7 @@ template <typename T> void Matrix<T>::addToRow(unsigned row, ArrayRef<T> rowVec,
   if (scale == 0)
     return;
   for (unsigned col = 0; col < nColumns; ++col)
-    at(row, col) += scale * rowVec[col];
+    at(row, col) = at(row, col) + scale * rowVec[col];
 }
 
 template <typename T> void Matrix<T>::addToColumn(unsigned sourceColumn, unsigned targetColumn,
@@ -210,7 +210,7 @@ template <typename T> void Matrix<T>::addToColumn(unsigned sourceColumn, unsigne
   if (scale == 0)
     return;
   for (unsigned row = 0, e = getNumRows(); row < e; ++row)
-    at(row, targetColumn) += scale * at(row, sourceColumn);
+    at(row, targetColumn) = at(row, targetColumn) + scale * at(row, sourceColumn);
 }
 
 template <typename T> void Matrix<T>::negateColumn(unsigned column) {
@@ -223,11 +223,11 @@ template <typename T> void Matrix<T>::negateRow(unsigned row) {
     at(row, column) = -at(row, column);
 }
 
-template <typename T> T Matrix<T>::normalizeRow(unsigned row, unsigned cols) {
+template <> MPInt Matrix<MPInt>::normalizeRow(unsigned row, unsigned cols) {
   return normalizeRange(getRow(row).slice(0, cols));
 }
 
-template <typename T> T Matrix<T>::normalizeRow(unsigned row) {
+template <> MPInt Matrix<MPInt>::normalizeRow(unsigned row) {
   return normalizeRow(row, getNumColumns());
 }
 
@@ -237,7 +237,7 @@ template <typename T> SmallVector<T, 8> Matrix<T>::preMultiplyWithRow(ArrayRef<T
   SmallVector<T, 8> result(getNumColumns(), T(0));
   for (unsigned col = 0, e = getNumColumns(); col < e; ++col)
     for (unsigned i = 0, e = getNumRows(); i < e; ++i)
-      result[col] += rowVec[i] * at(i, col);
+      result[col] = result[col] + rowVec[i] * at(i, col);
   return result;
 }
 
@@ -249,7 +249,7 @@ Matrix<T>::postMultiplyWithColumn(ArrayRef<T> colVec) const {
   SmallVector<T, 8> result(getNumRows(), T(0));
   for (unsigned row = 0, e = getNumRows(); row < e; row++)
     for (unsigned i = 0, e = getNumColumns(); i < e; i++)
-      result[row] += at(row, i) * colVec[i];
+      result[row] = result[row] + at(row, i) * colVec[i];
   return result;
 }
 
@@ -258,8 +258,8 @@ Matrix<T>::postMultiplyWithColumn(ArrayRef<T> colVec) const {
 /// sourceCol. This brings M(row, targetCol) to the range [0, M(row,
 /// sourceCol)). Apply the same column operation to otherMatrix, with the same
 /// integer multiple.
-template<typename T> static void modEntryColumnOperation(Matrix<T> &m, unsigned row, unsigned sourceCol,
-                                    unsigned targetCol, Matrix<T> &otherMatrix) {
+static void modEntryColumnOperation(Matrix<MPInt> &m, unsigned row, unsigned sourceCol,
+                                    unsigned targetCol, Matrix<MPInt> &otherMatrix) {
   assert(m(row, sourceCol) != 0 && "Cannot divide by zero!");
   assert(m(row, sourceCol) > 0 && "Source must be positive!");
   MPInt ratio = -floorDiv(m(row, targetCol), m(row, sourceCol));
@@ -267,12 +267,12 @@ template<typename T> static void modEntryColumnOperation(Matrix<T> &m, unsigned 
   otherMatrix.addToColumn(sourceCol, targetCol, ratio);
 }
 
-template <typename T> std::pair<Matrix<T>, Matrix<T>> Matrix<T>::computeHermiteNormalForm() const {
+template <> std::pair<Matrix<MPInt>, Matrix<MPInt>> Matrix<MPInt>::computeHermiteNormalForm() const {
   // We start with u as an identity matrix and perform operations on h until h
   // is in hermite normal form. We apply the same sequence of operations on u to
   // obtain a transform that takes h to hermite normal form.
-  Matrix<T> h = *this;
-  Matrix<T> u = Matrix<T>::identity(h.getNumColumns());
+  Matrix<MPInt> h = *this;
+  Matrix<MPInt> u = Matrix<MPInt>::identity(h.getNumColumns());
 
   unsigned echelonCol = 0;
   // Invariant: in all rows above row, all columns from echelonCol onwards
@@ -353,7 +353,7 @@ template <typename T> std::pair<Matrix<T>, Matrix<T>> Matrix<T>::computeHermiteN
   return {h, u};
 }
 
-template <typename T> void Matrix<T>::print(raw_ostream &os) const {
+template <> void Matrix<MPInt>::print(raw_ostream &os) const {
   for (unsigned row = 0; row < nRows; ++row) {
     for (unsigned column = 0; column < nColumns; ++column)
       os << at(row, column) << ' ';
@@ -377,7 +377,7 @@ template <typename T> bool Matrix<T>::hasConsistentState() const {
   return true;
 }
 
-template<typename T> Matrix<T> Matrix<T>::inverse()
+template<> Matrix<Fraction> Matrix<Fraction>::inverse()
 {
     // We use Gaussian elimination on the rows of [M | I]
     // to find the integer inverse. We proceed left-to-right,
@@ -386,13 +386,14 @@ template<typename T> Matrix<T> Matrix<T>::inverse()
     unsigned dim = getNumRows();
 
     // Construct the augmented matrix [M | I]
-    Matrix<T> augmented(dim, dim + dim);
+    Matrix<Fraction> augmented(dim, dim + dim);
     for (unsigned i = 0; i < dim; i++)
     {
         augmented.fillRow(i, 0);
         for (unsigned j = 0; j < dim; j++)
             augmented(i, j) = at(i, j);
-        augmented(i, dim+i) = Fraction(1, 1);
+        augmented(i, dim+i).num = 1;
+        augmented(i, dim+i).den = 1;
     }
 
     Fraction a, b;
@@ -419,7 +420,7 @@ template<typename T> Matrix<T> Matrix<T>::inverse()
     }
 
     // Copy the right half of the augmented matrix.
-    Matrix<T> inverse(dim, dim);
+    Matrix<Fraction> inverse(dim, dim);
     for (unsigned i = 0; i < dim; i++)
         for (unsigned j = 0; j < dim; j++)
             inverse(i, j) = augmented(i, j+dim);
@@ -427,10 +428,10 @@ template<typename T> Matrix<T> Matrix<T>::inverse()
     return inverse;
 }
 
-template<typename T> Matrix<T> Matrix<T>::gramSchmidt()
+template<> Matrix<Fraction> Matrix<Fraction>::gramSchmidt()
 {
     Fraction projection;
-    Matrix<T> copy(getNumRows(), getNumColumns());
+    Matrix<Fraction> copy(getNumRows(), getNumColumns());
     for (unsigned i = 0; i < getNumRows(); i++)
       copy.setRow(i, getRow(i));
     for (unsigned i = 1; i < getNumRows(); i++)
@@ -445,12 +446,12 @@ template<typename T> Matrix<T> Matrix<T>::gramSchmidt()
     return copy;
 }
 
-template<typename T> void Matrix<T>::LLL(T delta)
+template<> void Matrix<Fraction>::LLL(Fraction delta)
 {
     MPInt nearest;
     Fraction mu;
 
-    Matrix<T> bStar = gramSchmidt();
+    Matrix<Fraction> bStar = gramSchmidt();
 
     unsigned k = 1;
     while (k < getNumRows())
@@ -476,4 +477,13 @@ template<typename T> void Matrix<T>::LLL(T delta)
         }
     }
     return;
+}
+
+namespace mlir
+{
+  namespace presburger
+  {
+    template class Matrix<MPInt>;
+    template class Matrix<Fraction>;
+  }
 }

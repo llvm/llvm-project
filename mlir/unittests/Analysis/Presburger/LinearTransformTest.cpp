@@ -15,11 +15,11 @@ using namespace presburger;
 
 void testColumnEchelonForm(const Matrix<MPInt> &m, unsigned expectedRank) {
   unsigned lastAllowedNonZeroCol = 0;
-  std::pair<unsigned, LinearTransform<MPInt>> result =
-      LinearTransform<MPInt>::makeTransformToColumnEchelon(m);
+  std::pair<unsigned, LinearTransform> result =
+      LinearTransform::makeTransformToColumnEchelon(m);
   unsigned rank = result.first;
   EXPECT_EQ(rank, expectedRank);
-  LinearTransform<MPInt> transform = result.second;
+  LinearTransform transform = result.second;
   // In column echelon form, each row's last non-zero value can be at most one
   // column to the right of the last non-zero column among the previous rows.
   for (unsigned row = 0, nRows = m.getNumRows(); row < nRows; ++row) {
