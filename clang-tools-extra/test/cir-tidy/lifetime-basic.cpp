@@ -3,6 +3,8 @@
 // RUN: -config='{CheckOptions: \
 // RUN:  [{key: cir-lifetime-check.RemarksList, value: "all"}, \
 // RUN:   {key: cir-lifetime-check.HistLimit, value: "1"}, \
+// RUN:   {key: cir-lifetime-check.CodeGenBuildDeferredThreshold, value: "500"}, \
+// RUN:   {key: cir-lifetime-check.CodeGenSkipFunctionsFromSystemHeaders, value: "false"}, \
 // RUN:   {key: cir-lifetime-check.HistoryList, value: "invalid;null"}]}' \
 // RUN: --
 // RUN: FileCheck -input-file=%t.yaml -check-prefix=CHECK-YAML %s
