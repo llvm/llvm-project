@@ -1878,7 +1878,7 @@ void Function::allocHungoffUselist() {
   setNumHungOffUseOperands(3);
 
   // Initialize the uselist with placeholder operands to allow traversal.
-  auto *CPN = ConstantPointerNull::get(Type::getInt1PtrTy(getContext(), 0));
+  auto *CPN = ConstantPointerNull::get(PointerType::get(getContext(), 0));
   Op<0>().set(CPN);
   Op<1>().set(CPN);
   Op<2>().set(CPN);
@@ -1890,8 +1890,7 @@ void Function::setHungoffOperand(Constant *C) {
     allocHungoffUselist();
     Op<Idx>().set(C);
   } else if (getNumOperands()) {
-    Op<Idx>().set(
-        ConstantPointerNull::get(Type::getInt1PtrTy(getContext(), 0)));
+    Op<Idx>().set(ConstantPointerNull::get(PointerType::get(getContext(), 0)));
   }
 }
 

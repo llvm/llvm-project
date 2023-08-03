@@ -13890,44 +13890,44 @@ void Sema::diagnoseLogicalInsteadOfBitwise(Expr *Op1, Expr *Op2,
       Op2->getType()->isIntegerType() && !Op2->isValueDependent() &&
       // Don't warn in macros or template instantiations.
       !Loc.isMacroID() && !inTemplateInstantiation() &&
-      !Op2->getExprLoc().isMacroID() &&
-      !Op1->getExprLoc().isMacroID()) {
+      !Op2->getExprLoc().isMacroID() && !Op1->getExprLoc().isMacroID()) {
     bool IsOp1InMacro = Op1->getExprLoc().isMacroID();
     bool IsOp2InMacro = Op2->getExprLoc().isMacroID();
 
     // Exclude the specific expression from triggering the warning.
-    if (!(IsOp1InMacro && IsOp2InMacro && Op1->getSourceRange() == Op2->getSourceRange())) {
-    // If the RHS can be constant folded, and if it constant folds to something
-    // that isn't 0 or 1 (which indicate a potential logical operation that
-    // happened to fold to true/false) then warn.
-    // Parens on the RHS are ignored.
-    // If the RHS can be constant folded, and if it constant folds to something
-    // that isn't 0 or 1 (which indicate a potential logical operation that
-    // happened to fold to true/false) then warn.
-    // Parens on the RHS are ignored.
-    Expr::EvalResult EVResult;
-    if (Op2->EvaluateAsInt(EVResult, Context)) {
-      llvm::APSInt Result = EVResult.Val.getInt();
-      if ((getLangOpts().Bool && !Op2->getType()->isBooleanType() &&
-           !Op2->getExprLoc().isMacroID()) ||
-          (Result != 0 && Result != 1)) {
-        Diag(Loc, diag::warn_logical_instead_of_bitwise)
-            << Op2->getSourceRange() << (Opc == BO_LAnd ? "&&" : "||");
-        // Suggest replacing the logical operator with the bitwise version
-        Diag(Loc, diag::note_logical_instead_of_bitwise_change_operator)
-            << (Opc == BO_LAnd ? "&" : "|")
-            << FixItHint::CreateReplacement(
-                   SourceRange(Loc, getLocForEndOfToken(Loc)),
-                   Opc == BO_LAnd ? "&" : "|");
-        if (Opc == BO_LAnd)
-          // Suggest replacing "Foo() && kNonZero" with "Foo()"
-          Diag(Loc, diag::note_logical_instead_of_bitwise_remove_constant)
-              << FixItHint::CreateRemoval(SourceRange(
-                     getLocForEndOfToken(Op1->getEndLoc()), Op2->getEndLoc()));
+    if (!(IsOp1InMacro && IsOp2InMacro &&
+          Op1->getSourceRange() == Op2->getSourceRange())) {
+      // If the RHS can be constant folded, and if it constant folds to
+      // something that isn't 0 or 1 (which indicate a potential logical
+      // operation that happened to fold to true/false) then warn. Parens on the
+      // RHS are ignored. If the RHS can be constant folded, and if it constant
+      // folds to something that isn't 0 or 1 (which indicate a potential
+      // logical operation that happened to fold to true/false) then warn.
+      // Parens on the RHS are ignored.
+      Expr::EvalResult EVResult;
+      if (Op2->EvaluateAsInt(EVResult, Context)) {
+        llvm::APSInt Result = EVResult.Val.getInt();
+        if ((getLangOpts().Bool && !Op2->getType()->isBooleanType() &&
+             !Op2->getExprLoc().isMacroID()) ||
+            (Result != 0 && Result != 1)) {
+          Diag(Loc, diag::warn_logical_instead_of_bitwise)
+              << Op2->getSourceRange() << (Opc == BO_LAnd ? "&&" : "||");
+          // Suggest replacing the logical operator with the bitwise version
+          Diag(Loc, diag::note_logical_instead_of_bitwise_change_operator)
+              << (Opc == BO_LAnd ? "&" : "|")
+              << FixItHint::CreateReplacement(
+                     SourceRange(Loc, getLocForEndOfToken(Loc)),
+                     Opc == BO_LAnd ? "&" : "|");
+          if (Opc == BO_LAnd)
+            // Suggest replacing "Foo() && kNonZero" with "Foo()"
+            Diag(Loc, diag::note_logical_instead_of_bitwise_remove_constant)
+                << FixItHint::CreateRemoval(
+                       SourceRange(getLocForEndOfToken(Op1->getEndLoc()),
+                                   Op2->getEndLoc()));
+        }
       }
     }
   }
-      }
 }
 
 // C99 6.5.[13,14]

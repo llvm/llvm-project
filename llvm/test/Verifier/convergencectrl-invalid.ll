@@ -26,7 +26,7 @@ define void @multiple_tokens() {
   ret void
 }
 
-; CHECK: The 'convergencetrl' bundle can occur at most once on a call
+; CHECK: The 'convergencectrl' bundle can occur at most once on a call
 ; CHECK-NEXT:  call void @g()
 define void @multiple_bundles() {
   %t07_tok1 = call token @llvm.experimental.convergence.anchor()

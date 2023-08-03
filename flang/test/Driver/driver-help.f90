@@ -80,7 +80,7 @@
 ! HELP-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! HELP-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! HELP-NEXT: --offload-device-only   Only compile for the offloading device.
-! HELP-NEXT: --offload-host-device   Only compile for the offloading host.
+! HELP-NEXT: --offload-host-device   Compile for both the offloading host and device (default).
 ! HELP-NEXT: --offload-host-only     Only compile for the offloading host.
 ! HELP-NEXT: -o <file>              Write output to <file>
 ! HELP-NEXT: -pedantic              Warn on language extensions

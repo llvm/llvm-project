@@ -592,11 +592,11 @@ void HTMLDiagnostics::FinalizeHTML(const PathDiagnostic& D, Rewriter &R,
             P->getLocation().asLocation().getExpansionLineNumber();
         int ColumnNumber =
             P->getLocation().asLocation().getExpansionColumnNumber();
+        ++NumExtraPieces;
         os << "<tr><td class=\"rowname\">Note:</td><td>"
            << "<a href=\"#Note" << NumExtraPieces << "\">line "
            << LineNumber << ", column " << ColumnNumber << "</a><br />"
            << P->getString() << "</td></tr>";
-        ++NumExtraPieces;
       }
     }
 

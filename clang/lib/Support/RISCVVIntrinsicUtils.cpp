@@ -742,6 +742,10 @@ void RVVType::applyModifier(const PrototypeDescriptor &Transformer) {
     break;
   }
 
+  // Early return if the current type modifier is already invalid.
+  if (ScalarType == Invalid)
+    return;
+
   for (unsigned TypeModifierMaskShift = 0;
        TypeModifierMaskShift <= static_cast<unsigned>(TypeModifier::MaxOffset);
        ++TypeModifierMaskShift) {
@@ -803,13 +807,13 @@ void RVVType::applyFixedSEW(unsigned NewSEW) {
 void RVVType::applyFixedLog2LMUL(int Log2LMUL, enum FixedLMULType Type) {
   switch (Type) {
   case FixedLMULType::LargerThan:
-    if (Log2LMUL < LMUL.Log2LMUL) {
+    if (Log2LMUL <= LMUL.Log2LMUL) {
       ScalarType = ScalarTypeKind::Invalid;
       return;
     }
     break;
   case FixedLMULType::SmallerThan:
-    if (Log2LMUL > LMUL.Log2LMUL) {
+    if (Log2LMUL >= LMUL.Log2LMUL) {
       ScalarType = ScalarTypeKind::Invalid;
       return;
     }

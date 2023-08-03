@@ -1187,6 +1187,17 @@ func.func @batchmatmul_transpose_b(%arg0: memref<2x3x5xf32>, %arg1: memref<2x7x5
 
 // -----
 
+// CHECK-LABEL: func @batch_mmt4d
+func.func @batch_mmt4d(%arg0: tensor<128x10x32x8x1xf32>, %arg1: tensor<128x80x32x4x1xf32>, %arg2: tensor<128x10x80x8x4xf32>) -> tensor<128x10x80x8x4xf32> {
+  // CHECK: %{{.+}} = linalg.batch_mmt4d
+  // CHECK-SAME: ins(%{{.+}}, %{{.+}} : tensor<128x10x32x8x1xf32>, tensor<128x80x32x4x1xf32>)
+  // CHECK-SAME: outs(%{{.+}} : tensor<128x10x80x8x4xf32>) -> tensor<128x10x80x8x4xf32>
+  %0 = linalg.batch_mmt4d ins(%arg0, %arg1 : tensor<128x10x32x8x1xf32>, tensor<128x80x32x4x1xf32>) outs(%arg2 : tensor<128x10x80x8x4xf32>) -> tensor<128x10x80x8x4xf32>
+  return %0: tensor<128x10x80x8x4xf32>
+}
+
+// -----
+
 // CHECK-LABEL: func @add_dynamic
 func.func @add_dynamic(%arg0: memref<?x?x?xf32>, %arg1: memref<?x?x?xf32>, %arg2: memref<?x?x?xf32>) {
   // CHECK: linalg.add

@@ -11,6 +11,7 @@
 #include "pointer-assignment.h"
 #include "flang/Evaluate/characteristics.h"
 #include "flang/Evaluate/check-expression.h"
+#include "flang/Evaluate/fold-designator.h"
 #include "flang/Evaluate/shape.h"
 #include "flang/Evaluate/tools.h"
 #include "flang/Parser/characters.h"
@@ -98,6 +99,19 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
   }
 }
 
+// F'2023 15.5.2.12p1: "Sequence association only applies when the dummy
+// argument is an explicit-shape or assumed-size array."
+static bool CanAssociateWithStorageSequence(
+    const characteristics::DummyDataObject &dummy) {
+  return !dummy.type.attrs().test(
+             characteristics::TypeAndShape::Attr::AssumedRank) &&
+      !dummy.type.attrs().test(
+          characteristics::TypeAndShape::Attr::AssumedShape) &&
+      !dummy.type.attrs().test(characteristics::TypeAndShape::Attr::Coarray) &&
+      !dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable) &&
+      !dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer);
+}
+
 // When a CHARACTER actual argument is known to be short,
 // we extend it on the right with spaces and a warning if
 // possible.  When it is long, and not required to be equal,
@@ -105,46 +119,106 @@ static void CheckImplicitInterfaceArg(evaluate::ActualArgument &arg,
 static void CheckCharacterActual(evaluate::Expr<evaluate::SomeType> &actual,
     const characteristics::DummyDataObject &dummy,
     characteristics::TypeAndShape &actualType, SemanticsContext &context,
-    parser::ContextualMessages &messages) {
+    parser::ContextualMessages &messages, bool extentErrors,
+    const std::string &dummyName) {
   if (dummy.type.type().category() == TypeCategory::Character &&
       actualType.type().category() == TypeCategory::Character &&
-      dummy.type.type().kind() == actualType.type().kind()) {
+      dummy.type.type().kind() == actualType.type().kind() &&
+      !dummy.attrs.test(
+          characteristics::DummyDataObject::Attr::DeducedFromActual)) {
     if (dummy.type.LEN() && actualType.LEN()) {
       evaluate::FoldingContext &foldingContext{context.foldingContext()};
       auto dummyLength{
           ToInt64(Fold(foldingContext, common::Clone(*dummy.type.LEN())))};
       auto actualLength{
           ToInt64(Fold(foldingContext, common::Clone(*actualType.LEN())))};
-      if (dummyLength && actualLength && *actualLength != *dummyLength) {
-        if (dummy.attrs.test(
-                characteristics::DummyDataObject::Attr::Allocatable) ||
-            dummy.attrs.test(characteristics::DummyDataObject::Attr::Pointer) ||
-            dummy.type.attrs().test(
-                characteristics::TypeAndShape::Attr::AssumedRank) ||
-            dummy.type.attrs().test(
-                characteristics::TypeAndShape::Attr::AssumedShape)) {
-          // See 15.5.2.4 paragraph 4., 15.5.2.5.
-          messages.Say(
-              "Actual argument variable length '%jd' does not match the expected length '%jd'"_err_en_US,
-              *actualLength, *dummyLength);
-        } else if (*actualLength < *dummyLength) {
-          bool isVariable{evaluate::IsVariable(actual)};
-          if (context.ShouldWarn(common::UsageWarning::ShortCharacterActual)) {
-            if (isVariable) {
-              messages.Say(
-                  "Actual argument variable length '%jd' is less than expected length '%jd'"_warn_en_US,
-                  *actualLength, *dummyLength);
-            } else {
-              messages.Say(
-                  "Actual argument expression length '%jd' is less than expected length '%jd'"_warn_en_US,
-                  *actualLength, *dummyLength);
+      if (dummyLength && actualLength) {
+        bool canAssociate{CanAssociateWithStorageSequence(dummy)};
+        if (dummy.type.Rank() > 0 && canAssociate) {
+          // Character storage sequence association (F'2023 15.5.2.12p4)
+          if (auto dummySize{evaluate::ToInt64(evaluate::Fold(foldingContext,
+                  evaluate::GetSize(evaluate::Shape{dummy.type.shape()})))}) {
+            auto dummyChars{*dummySize * *dummyLength};
+            if (actualType.Rank() == 0) {
+              evaluate::DesignatorFolder folder{
+                  context.foldingContext(), /*getLastComponent=*/true};
+              if (auto actualOffset{folder.FoldDesignator(actual)}) {
+                std::int64_t actualChars{*actualLength};
+                if (static_cast<std::size_t>(actualOffset->offset()) >=
+                        actualOffset->symbol().size() ||
+                    !evaluate::IsContiguous(
+                        actualOffset->symbol(), foldingContext)) {
+                  // If substring, take rest of substring
+                  if (*actualLength > 0) {
+                    actualChars -=
+                        (actualOffset->offset() / actualType.type().kind()) %
+                        *actualLength;
+                  }
+                } else {
+                  actualChars = (static_cast<std::int64_t>(
+                                     actualOffset->symbol().size()) -
+                                    actualOffset->offset()) /
+                      actualType.type().kind();
+                }
+                if (actualChars < dummyChars) {
+                  auto msg{
+                      "Actual argument has fewer characters remaining in storage sequence (%jd) than %s (%jd)"_warn_en_US};
+                  if (extentErrors) {
+                    msg.set_severity(parser::Severity::Error);
+                  }
+                  messages.Say(std::move(msg),
+                      static_cast<std::intmax_t>(actualChars), dummyName,
+                      static_cast<std::intmax_t>(dummyChars));
+                }
+              }
+            } else { // actual.type.Rank() > 0
+              if (auto actualSize{evaluate::ToInt64(evaluate::Fold(
+                      foldingContext,
+                      evaluate::GetSize(evaluate::Shape(actualType.shape()))))};
+                  actualSize &&
+                  *actualSize * *actualLength < *dummySize * *dummyLength) {
+                auto msg{
+                    "Actual argument array has fewer characters (%jd) than %s array (%jd)"_warn_en_US};
+                if (extentErrors) {
+                  msg.set_severity(parser::Severity::Error);
+                }
+                messages.Say(std::move(msg),
+                    static_cast<std::intmax_t>(*actualSize * *actualLength),
+                    dummyName,
+                    static_cast<std::intmax_t>(*dummySize * *dummyLength));
+              }
             }
           }
-          if (!isVariable) {
-            auto converted{ConvertToType(dummy.type.type(), std::move(actual))};
-            CHECK(converted);
-            actual = std::move(*converted);
-            actualType.set_LEN(SubscriptIntExpr{*dummyLength});
+        } else if (*actualLength != *dummyLength) {
+          // Not using storage sequence association, and the lengths don't
+          // match.
+          if (!canAssociate) {
+            // F'2023 15.5.2.5 paragraph 4
+            messages.Say(
+                "Actual argument variable length '%jd' does not match the expected length '%jd'"_err_en_US,
+                *actualLength, *dummyLength);
+          } else if (*actualLength < *dummyLength) {
+            CHECK(dummy.type.Rank() == 0);
+            bool isVariable{evaluate::IsVariable(actual)};
+            if (context.ShouldWarn(
+                    common::UsageWarning::ShortCharacterActual)) {
+              if (isVariable) {
+                messages.Say(
+                    "Actual argument variable length '%jd' is less than expected length '%jd'"_warn_en_US,
+                    *actualLength, *dummyLength);
+              } else {
+                messages.Say(
+                    "Actual argument expression length '%jd' is less than expected length '%jd'"_warn_en_US,
+                    *actualLength, *dummyLength);
+              }
+            }
+            if (!isVariable) {
+              auto converted{
+                  ConvertToType(dummy.type.type(), std::move(actual))};
+              CHECK(converted);
+              actual = std::move(*converted);
+              actualType.set_LEN(SubscriptIntExpr{*dummyLength});
+            }
           }
         }
       }
@@ -201,7 +275,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
 
   // Basic type & rank checking
   parser::ContextualMessages &messages{foldingContext.messages()};
-  CheckCharacterActual(actual, dummy, actualType, context, messages);
+  CheckCharacterActual(
+      actual, dummy, actualType, context, messages, extentErrors, dummyName);
   bool dummyIsAllocatable{
       dummy.attrs.test(characteristics::DummyDataObject::Attr::Allocatable)};
   bool dummyIsPointer{
@@ -221,8 +296,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   }
   bool typesCompatible{typesCompatibleWithIgnoreTKR ||
       dummy.type.type().IsTkCompatibleWith(actualType.type())};
-  if (!typesCompatible && dummy.type.Rank() == 0 &&
-      allowActualArgumentConversions) {
+  int dummyRank{dummy.type.Rank()};
+  if (!typesCompatible && dummyRank == 0 && allowActualArgumentConversions) {
     // Extension: pass Hollerith literal to scalar as if it had been BOZ
     if (auto converted{evaluate::HollerithToBOZ(
             foldingContext, actual, dummy.type.type())}) {
@@ -238,7 +313,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     } else if (dummy.type.attrs().test(
                    characteristics::TypeAndShape::Attr::AssumedRank)) {
     } else if (dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
-    } else if (dummy.type.Rank() > 0 && !dummyIsAllocatableOrPointer &&
+    } else if (dummyRank > 0 && !dummyIsAllocatableOrPointer &&
         !dummy.type.attrs().test(
             characteristics::TypeAndShape::Attr::AssumedShape) &&
         !dummy.type.attrs().test(
@@ -364,7 +439,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
   const ObjectEntityDetails *actualLastObject{actualLastSymbol
           ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
           : nullptr};
-  int actualRank{evaluate::GetRank(actualType.shape())};
+  int actualRank{actualType.Rank()};
   bool actualIsPointer{evaluate::IsObjectPointer(actual, foldingContext)};
   bool dummyIsAssumedRank{dummy.type.attrs().test(
       characteristics::TypeAndShape::Attr::AssumedRank)};
@@ -381,59 +456,111 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           "Assumed-size array may not be associated with assumed-shape %s"_err_en_US,
           dummyName);
     }
-  } else if (actualRank == 0 && dummy.type.Rank() > 0 &&
-      !dummyIsAllocatableOrPointer) {
-    // Actual is scalar, dummy is an array.  15.5.2.4(14), 15.5.2.11
-    if (actualIsCoindexed) {
-      messages.Say(
-          "Coindexed scalar actual argument must be associated with a scalar %s"_err_en_US,
-          dummyName);
+  } else if (dummyRank > 0) {
+    bool basicError{false};
+    if (actualRank == 0 && !dummyIsAllocatableOrPointer) {
+      // Actual is scalar, dummy is an array.  F'2023 15.5.2.5p14
+      if (actualIsCoindexed) {
+        basicError = true;
+        messages.Say(
+            "Coindexed scalar actual argument must be associated with a scalar %s"_err_en_US,
+            dummyName);
+      }
+      bool actualIsArrayElement{IsArrayElement(actual)};
+      bool actualIsCKindCharacter{
+          actualType.type().category() == TypeCategory::Character &&
+          actualType.type().kind() == 1};
+      if (!actualIsCKindCharacter) {
+        if (!actualIsArrayElement &&
+            !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
+            !dummyIsAssumedRank &&
+            !dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
+          basicError = true;
+          messages.Say(
+              "Whole scalar actual argument may not be associated with a %s array"_err_en_US,
+              dummyName);
+        }
+        if (actualIsPolymorphic) {
+          basicError = true;
+          messages.Say(
+              "Polymorphic scalar may not be associated with a %s array"_err_en_US,
+              dummyName);
+        }
+        if (actualIsArrayElement && actualLastSymbol &&
+            IsPointer(*actualLastSymbol)) {
+          basicError = true;
+          messages.Say(
+              "Element of pointer array may not be associated with a %s array"_err_en_US,
+              dummyName);
+        }
+        if (actualLastSymbol && IsAssumedShape(*actualLastSymbol)) {
+          basicError = true;
+          messages.Say(
+              "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
+              dummyName);
+        }
+      }
     }
-    bool actualIsArrayElement{IsArrayElement(actual)};
-    bool actualIsCKindCharacter{
-        actualType.type().category() == TypeCategory::Character &&
-        actualType.type().kind() == 1};
-    if (!actualIsCKindCharacter) {
-      if (!actualIsArrayElement &&
-          !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
-          !dummyIsAssumedRank &&
-          !dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
-        messages.Say(
-            "Whole scalar actual argument may not be associated with a %s array"_err_en_US,
-            dummyName);
-      }
-      if (actualIsPolymorphic) {
-        messages.Say(
-            "Polymorphic scalar may not be associated with a %s array"_err_en_US,
-            dummyName);
-      }
-      if (actualIsArrayElement && actualLastSymbol &&
-          IsPointer(*actualLastSymbol)) {
-        messages.Say(
-            "Element of pointer array may not be associated with a %s array"_err_en_US,
-            dummyName);
-      }
-      if (actualLastSymbol && IsAssumedShape(*actualLastSymbol)) {
-        messages.Say(
-            "Element of assumed-shape array may not be associated with a %s array"_err_en_US,
-            dummyName);
-      }
-    }
-  } else if (actualRank > 0 && dummy.type.Rank() > 0 &&
-      actualType.type().category() != TypeCategory::Character) {
-    // Both arrays, dummy is not assumed-shape, not character
-    if (auto dummySize{evaluate::ToInt64(evaluate::Fold(foldingContext,
-            evaluate::GetSize(evaluate::Shape{dummy.type.shape()})))}) {
-      if (auto actualSize{evaluate::ToInt64(evaluate::Fold(foldingContext,
-              evaluate::GetSize(evaluate::Shape{actualType.shape()})))}) {
-        if (*actualSize < *dummySize) {
-          auto msg{
-              "Actual argument array is smaller (%jd element(s)) than %s array (%jd)"_warn_en_US};
-          if (extentErrors) {
-            msg.set_severity(parser::Severity::Error);
+    // Storage sequence association (F'2023 15.5.2.12p3) checks.
+    // Character storage sequence association is checked in
+    // CheckCharacterActual().
+    if (!basicError &&
+        actualType.type().category() != TypeCategory::Character &&
+        CanAssociateWithStorageSequence(dummy) &&
+        !dummy.attrs.test(
+            characteristics::DummyDataObject::Attr::DeducedFromActual)) {
+      if (auto dummySize{evaluate::ToInt64(evaluate::Fold(foldingContext,
+              evaluate::GetSize(evaluate::Shape{dummy.type.shape()})))}) {
+        if (actualRank == 0) {
+          if (evaluate::IsArrayElement(actual)) {
+            // Actual argument is a scalar array element
+            evaluate::DesignatorFolder folder{
+                context.foldingContext(), /*getLastComponent=*/true};
+            if (auto actualOffset{folder.FoldDesignator(actual)}) {
+              std::optional<std::int64_t> actualElements;
+              if (static_cast<std::size_t>(actualOffset->offset()) >=
+                      actualOffset->symbol().size() ||
+                  !evaluate::IsContiguous(
+                      actualOffset->symbol(), foldingContext)) {
+                actualElements = 1;
+              } else if (auto actualSymType{evaluate::DynamicType::From(
+                             actualOffset->symbol())}) {
+                if (auto actualSymTypeBytes{
+                        evaluate::ToInt64(evaluate::Fold(foldingContext,
+                            actualSymType->MeasureSizeInBytes(
+                                foldingContext, false)))};
+                    actualSymTypeBytes && *actualSymTypeBytes > 0) {
+                  actualElements = (static_cast<std::int64_t>(
+                                        actualOffset->symbol().size()) -
+                                       actualOffset->offset()) /
+                      *actualSymTypeBytes;
+                }
+              }
+              if (actualElements && *actualElements < *dummySize) {
+                auto msg{
+                    "Actual argument has fewer elements remaining in storage sequence (%jd) than %s array (%jd)"_warn_en_US};
+                if (extentErrors) {
+                  msg.set_severity(parser::Severity::Error);
+                }
+                messages.Say(std::move(msg),
+                    static_cast<std::intmax_t>(*actualElements), dummyName,
+                    static_cast<std::intmax_t>(*dummySize));
+              }
+            }
           }
-          messages.Say(std::move(msg), static_cast<std::intmax_t>(*actualSize),
-              dummyName, static_cast<std::intmax_t>(*dummySize));
+        } else { // actualRank > 0
+          if (auto actualSize{evaluate::ToInt64(evaluate::Fold(foldingContext,
+                  evaluate::GetSize(evaluate::Shape(actualType.shape()))))};
+              actualSize && *actualSize < *dummySize) {
+            auto msg{
+                "Actual argument array has fewer elements (%jd) than %s array (%jd)"_warn_en_US};
+            if (extentErrors) {
+              msg.set_severity(parser::Severity::Error);
+            }
+            messages.Say(std::move(msg),
+                static_cast<std::intmax_t>(*actualSize), dummyName,
+                static_cast<std::intmax_t>(*dummySize));
+          }
         }
       }
     }
@@ -626,7 +753,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
             dummyName);
       }
     }
-    if (actualRank == dummy.type.Rank() && !actualIsContiguous) {
+    if (actualRank == dummyRank && !actualIsContiguous) {
       if (dummyIsContiguous) {
         messages.Say(
             "Actual argument associated with a CONTIGUOUS coarray %s must be simply contiguous"_err_en_US,

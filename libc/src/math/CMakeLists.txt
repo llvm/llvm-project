@@ -198,6 +198,8 @@ add_math_entrypoint_object(sincosf)
 
 add_math_entrypoint_object(sin)
 add_math_entrypoint_object(sinf)
+
+add_math_entrypoint_object(sinh)
 add_math_entrypoint_object(sinhf)
 
 add_math_entrypoint_object(sqrt)
@@ -206,6 +208,8 @@ add_math_entrypoint_object(sqrtl)
 
 add_math_entrypoint_object(tan)
 add_math_entrypoint_object(tanf)
+
+add_math_entrypoint_object(tanh)
 add_math_entrypoint_object(tanhf)
 
 add_math_entrypoint_object(trunc)

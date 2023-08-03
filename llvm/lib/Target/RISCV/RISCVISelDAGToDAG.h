@@ -185,7 +185,7 @@ public:
 
 private:
   bool doPeepholeSExtW(SDNode *Node);
-  bool doPeepholeMaskedRVV(SDNode *Node);
+  bool doPeepholeMaskedRVV(MachineSDNode *Node);
   bool doPeepholeMergeVVMFold();
   bool performVMergeToVMv(SDNode *N);
   bool performCombineVMergeAndVOps(SDNode *N);

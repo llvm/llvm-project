@@ -328,7 +328,7 @@ int Thread::run(ThreadStyle style, ThreadRunner runner, void *arg, void *stack,
 #else
     asm volatile("mov x29, sp");
 #endif
-#elif defined(LIBC_TARGET_ARCH_IS_RISCV64)
+#elif defined(LIBC_TARGET_ARCH_IS_ANY_RISCV)
     asm volatile("mv fp, sp");
 #endif
     start_thread();
@@ -379,7 +379,7 @@ void Thread::wait() {
   while (clear_tid->load() != 0) {
     // We cannot do a FUTEX_WAIT_PRIVATE here as the kernel does a
     // FUTEX_WAKE and not a FUTEX_WAKE_PRIVATE.
-    __llvm_libc::syscall_impl(SYS_futex, &clear_tid->val, FUTEX_WAIT,
+    __llvm_libc::syscall_impl(FUTEX_SYSCALL_ID, &clear_tid->val, FUTEX_WAIT,
                               CLEAR_TID_VALUE, nullptr);
   }
 }

@@ -314,7 +314,7 @@ public:
               DescriptorInquiry::Field::LowerBound, dimension_}};
         }
       } else {
-        auto exprLowerBound{((*this)(assoc->expr()))};
+        Result exprLowerBound{((*this)(assoc->expr()))};
         if (IsActuallyConstant(exprLowerBound)) {
           return std::move(exprLowerBound);
         } else {
@@ -334,8 +334,8 @@ public:
     }
   }
 
-  Result operator()(const Symbol &symbol0) const {
-    return GetLowerBound(symbol0, NamedEntity{symbol0});
+  Result operator()(const Symbol &symbol) const {
+    return GetLowerBound(symbol, NamedEntity{symbol});
   }
 
   Result operator()(const Component &component) const {
@@ -346,8 +346,30 @@ public:
     return Result{1};
   }
 
+  template <typename T> Result operator()(const Expr<T> &expr) const {
+    if (const Symbol * whole{UnwrapWholeSymbolOrComponentDataRef(expr)}) {
+      return (*this)(*whole);
+    } else if constexpr (common::HasMember<Constant<T>, decltype(expr.u)>) {
+      if (const auto *con{std::get_if<Constant<T>>(&expr.u)}) {
+        ConstantSubscripts lb{con->lbounds()};
+        if (dimension_ < GetRank(lb)) {
+          return Result{lb[dimension_]};
+        }
+      } else { // operation
+        return Result{1};
+      }
+    } else {
+      return (*this)(expr.u);
+    }
+    if constexpr (LBOUND_SEMANTICS) {
+      return Result{};
+    } else {
+      return Result{1};
+    }
+  }
+
 private:
-  int dimension_;
+  int dimension_; // zero-based
   FoldingContext *context_{nullptr};
 };
 
@@ -618,16 +640,27 @@ static MaybeExtentExpr GetUBOUND(
       if (auto ubound{GetExplicitUBOUND(context, shapeSpec)}) {
         return *ubound;
       } else if (details->IsAssumedSize() && dimension + 1 == symbol.Rank()) {
-        return std::nullopt;
+        return std::nullopt; // UBOUND() folding replaces with -1
       } else if (auto lb{GetLBOUND(base, dimension)}) {
         return ComputeUpperBound(std::move(*lb), GetExtent(base, dimension));
       }
     }
   } else if (const auto *assoc{
                  symbol.detailsIf<semantics::AssocEntityDetails>()}) {
-    if (auto extent{GetAssociatedExtent(base, *assoc, dimension)}) {
-      if (auto lb{GetLBOUND(base, dimension)}) {
-        return ComputeUpperBound(std::move(*lb), std::move(extent));
+    if (assoc->rank()) { // SELECT RANK case
+      const Symbol &resolved{ResolveAssociations(symbol)};
+      if (IsDescriptor(resolved) && dimension < *assoc->rank()) {
+        ExtentExpr lb{DescriptorInquiry{NamedEntity{base},
+            DescriptorInquiry::Field::LowerBound, dimension}};
+        ExtentExpr extent{DescriptorInquiry{
+            std::move(base), DescriptorInquiry::Field::Extent, dimension}};
+        return ComputeUpperBound(std::move(lb), std::move(extent));
+      }
+    } else if (assoc->expr()) {
+      if (auto extent{GetAssociatedExtent(base, *assoc, dimension)}) {
+        if (auto lb{GetLBOUND(base, dimension)}) {
+          return ComputeUpperBound(std::move(*lb), std::move(extent));
+        }
       }
     }
   }
@@ -644,29 +677,12 @@ MaybeExtentExpr GetUBOUND(
 }
 
 static Shape GetUBOUNDs(FoldingContext *context, const NamedEntity &base) {
-  const Symbol &symbol{
-      ResolveAssociationsExceptSelectRank(base.GetLastSymbol())};
-  if (const auto *details{symbol.detailsIf<semantics::ObjectEntityDetails>()}) {
-    Shape result;
-    int dim{0};
-    for (const auto &shapeSpec : details->shape()) {
-      if (auto ubound{GetExplicitUBOUND(context, shapeSpec)}) {
-        result.emplace_back(*ubound);
-      } else if (details->IsAssumedSize() && dim + 1 == base.Rank()) {
-        result.emplace_back(std::nullopt); // UBOUND folding replaces with -1
-      } else if (auto lb{GetLBOUND(base, dim)}) {
-        result.emplace_back(
-            ComputeUpperBound(std::move(*lb), GetExtent(base, dim)));
-      } else {
-        result.emplace_back(); // unknown
-      }
-      ++dim;
-    }
-    CHECK(GetRank(result) == symbol.Rank());
-    return result;
-  } else {
-    return std::move(GetShape(symbol).value());
+  Shape result;
+  int rank{base.Rank()};
+  for (int dim{0}; dim < rank; ++dim) {
+    result.emplace_back(GetUBOUND(context, base, dim));
   }
+  return result;
 }
 
 Shape GetUBOUNDs(FoldingContext &context, const NamedEntity &base) {

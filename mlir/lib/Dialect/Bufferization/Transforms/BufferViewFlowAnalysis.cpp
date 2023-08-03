@@ -45,6 +45,18 @@ void BufferViewFlowAnalysis::remove(const SetVector<Value> &aliasValues) {
     llvm::set_subtract(entry.second, aliasValues);
 }
 
+void BufferViewFlowAnalysis::rename(Value from, Value to) {
+  dependencies[to] = dependencies[from];
+  dependencies.erase(from);
+
+  for (auto &[key, value] : dependencies) {
+    if (value.contains(from)) {
+      value.insert(to);
+      value.erase(from);
+    }
+  }
+}
+
 /// This function constructs a mapping from values to its immediate
 /// dependencies. It iterates over all blocks, gets their predecessors,
 /// determines the values that will be passed to the corresponding block

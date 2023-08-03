@@ -69,7 +69,6 @@ STATISTIC(NumMemSetInfer, "Number of memsets inferred");
 STATISTIC(NumMoveToCpy,   "Number of memmoves converted to memcpy");
 STATISTIC(NumCpyToSet,    "Number of memcpys converted to memset");
 STATISTIC(NumCallSlot,    "Number of call slot optimizations performed");
-STATISTIC(NumStackMove, "Number of stack-move optimizations performed");
 
 namespace {
 
@@ -729,23 +728,6 @@ bool MemCpyOptPass::processStoreOfLoad(StoreInst *SI, LoadInst *LI,
     eraseInstruction(LI);
     ++NumMemCpyInstr;
     return true;
-  }
-
-  // If this is a load-store pair from a stack slot to a stack slot, we
-  // might be able to perform the stack-move optimization just as we do for
-  // memcpys from an alloca to an alloca.
-  if (auto *DestAlloca = dyn_cast<AllocaInst>(SI->getPointerOperand())) {
-    if (auto *SrcAlloca = dyn_cast<AllocaInst>(LI->getPointerOperand())) {
-      if (performStackMoveOptzn(LI, SI, DestAlloca, SrcAlloca,
-                                DL.getTypeStoreSize(T), BAA)) {
-        // Avoid invalidating the iterator.
-        BBI = SI->getNextNonDebugInstruction()->getIterator();
-        eraseInstruction(SI);
-        eraseInstruction(LI);
-        ++NumMemCpyInstr;
-        return true;
-      }
-    }
   }
 
   return false;
@@ -1426,217 +1408,6 @@ bool MemCpyOptPass::performMemCpyToMemSetOptzn(MemCpyInst *MemCpy,
   return true;
 }
 
-// Attempts to optimize the pattern whereby memory is copied from an alloca to
-// another alloca, where the two allocas don't have conflicting mod/ref. If
-// successful, the two allocas can be merged into one and the transfer can be
-// deleted. This pattern is generated frequently in Rust, due to the ubiquity of
-// move operations in that language.
-//
-// Once we determine that the optimization is safe to perform, we replace all
-// uses of the destination alloca with the source alloca. We also "shrink wrap"
-// the lifetime markers of the single merged alloca to before the first use
-// and after the last use. Note that the "shrink wrapping" procedure is a safe
-// transformation only because we restrict the scope of this optimization to
-// allocas that aren't captured.
-bool MemCpyOptPass::performStackMoveOptzn(Instruction *Load, Instruction *Store,
-                                          AllocaInst *DestAlloca,
-                                          AllocaInst *SrcAlloca, uint64_t Size,
-                                          BatchAAResults &BAA) {
-  LLVM_DEBUG(dbgs() << "Stack Move: Attempting to optimize:\n"
-                    << *Store << "\n");
-
-  // Make sure the two allocas are in the same address space.
-  if (SrcAlloca->getAddressSpace() != DestAlloca->getAddressSpace()) {
-    LLVM_DEBUG(dbgs() << "Stack Move: Address space mismatch\n");
-    return false;
-  }
-
-  // 1. Check that copy is full. Calculate the static size of the allocas to be
-  // merged, bail out if we can't.
-  const DataLayout &DL = DestAlloca->getModule()->getDataLayout();
-  std::optional<TypeSize> SrcSize = SrcAlloca->getAllocationSize(DL);
-  if (!SrcSize || SrcSize->isScalable() || Size != SrcSize->getFixedValue()) {
-    LLVM_DEBUG(dbgs() << "Stack Move: Source alloca size mismatch\n");
-    return false;
-  }
-  std::optional<TypeSize> DestSize = DestAlloca->getAllocationSize(DL);
-  if (!DestSize || DestSize->isScalable() ||
-      Size != DestSize->getFixedValue()) {
-    LLVM_DEBUG(dbgs() << "Stack Move: Destination alloca size mismatch\n");
-    return false;
-  }
-
-  // 2-1. Check that src and dest are static allocas, which are not affected by
-  // stacksave/stackrestore.
-  if (!SrcAlloca->isStaticAlloca() || !DestAlloca->isStaticAlloca() ||
-      SrcAlloca->getParent() != Load->getParent() ||
-      SrcAlloca->getParent() != Store->getParent())
-    return false;
-
-  // 2-2. Check that src and dest are never captured, unescaped allocas. Also
-  // collect lifetime markers first/last users in order to shrink wrap the
-  // lifetimes, and instructions with noalias metadata to remove them.
-
-  SmallVector<Instruction *, 4> LifetimeMarkers;
-  Instruction *FirstUser = nullptr, *LastUser = nullptr;
-  SmallSet<Instruction *, 4> NoAliasInstrs;
-
-  // Recursively track the user and check whether modified alias exist.
-  auto IsDereferenceableOrNull = [](Value *V, const DataLayout &DL) -> bool {
-    bool CanBeNull, CanBeFreed;
-    return V->getPointerDereferenceableBytes(DL, CanBeNull, CanBeFreed);
-  };
-
-  auto CaptureTrackingWithModRef =
-      [&](Instruction *AI,
-          function_ref<bool(Instruction *)> ModRefCallback) -> bool {
-    SmallVector<Instruction *, 8> Worklist;
-    Worklist.push_back(AI);
-    unsigned MaxUsesToExplore = getDefaultMaxUsesToExploreForCaptureTracking();
-    Worklist.reserve(MaxUsesToExplore);
-    SmallSet<const Use *, 20> Visited;
-    while (!Worklist.empty()) {
-      Instruction *I = Worklist.back();
-      Worklist.pop_back();
-      for (const Use &U : I->uses()) {
-        if (Visited.size() >= MaxUsesToExplore) {
-          LLVM_DEBUG(
-              dbgs()
-              << "Stack Move: Exceeded max uses to see ModRef, bailing\n");
-          return false;
-        }
-        if (!Visited.insert(&U).second)
-          continue;
-        switch (DetermineUseCaptureKind(U, IsDereferenceableOrNull)) {
-        case UseCaptureKind::MAY_CAPTURE:
-          return false;
-        case UseCaptureKind::PASSTHROUGH:
-          // Instructions cannot have non-instruction users.
-          Worklist.push_back(cast<Instruction>(U.getUser()));
-          continue;
-        case UseCaptureKind::NO_CAPTURE: {
-          auto *UI = cast<Instruction>(U.getUser());
-          if (DestAlloca->getParent() != UI->getParent())
-            return false;
-          if (!FirstUser || UI->comesBefore(FirstUser))
-            FirstUser = UI;
-          if (!LastUser || LastUser->comesBefore(UI))
-            LastUser = UI;
-          if (UI->isLifetimeStartOrEnd()) {
-            // We note the locations of these intrinsic calls so that we can
-            // delete them later if the optimization succeeds, this is safe
-            // since both llvm.lifetime.start and llvm.lifetime.end intrinsics
-            // conceptually fill all the bytes of the alloca with an undefined
-            // value.
-            int64_t Size = cast<ConstantInt>(UI->getOperand(0))->getSExtValue();
-            if (Size < 0 || Size == DestSize) {
-              LifetimeMarkers.push_back(UI);
-              continue;
-            }
-          }
-          if (UI->hasMetadata(LLVMContext::MD_noalias))
-            NoAliasInstrs.insert(UI);
-          if (!ModRefCallback(UI))
-            return false;
-        }
-        }
-      }
-    }
-    return true;
-  };
-
-  // 3. Check that dest has no Mod/Ref, except full size lifetime intrinsics,
-  // from the alloca to the Store.
-  ModRefInfo DestModRef = ModRefInfo::NoModRef;
-  MemoryLocation DestLoc(DestAlloca, LocationSize::precise(Size));
-  auto DestModRefCallback = [&](Instruction *UI) -> bool {
-    // We don't care about the store itself.
-    if (UI == Store)
-      return true;
-    ModRefInfo Res = BAA.getModRefInfo(UI, DestLoc);
-    // FIXME: For multi-BB cases, we need to see reachability from it to
-    // store.
-    // Bailout if Dest may have any ModRef before Store.
-    if (UI->comesBefore(Store) && isModOrRefSet(Res))
-      return false;
-    DestModRef |= BAA.getModRefInfo(UI, DestLoc);
-
-    return true;
-  };
-
-  if (!CaptureTrackingWithModRef(DestAlloca, DestModRefCallback))
-    return false;
-
-  // 3. Check that, from after the Load to the end of the BB,
-  // 3-1. if the dest has any Mod, src has no Ref, and
-  // 3-2. if the dest has any Ref, src has no Mod except full-sized lifetimes.
-  MemoryLocation SrcLoc(SrcAlloca, LocationSize::precise(Size));
-
-  auto SrcModRefCallback = [&](Instruction *UI) -> bool {
-    // Any ModRef before Load doesn't matter, also Load and Store can be
-    // ignored.
-    if (UI->comesBefore(Load) || UI == Load || UI == Store)
-      return true;
-    ModRefInfo Res = BAA.getModRefInfo(UI, SrcLoc);
-    if ((isModSet(DestModRef) && isRefSet(Res)) ||
-        (isRefSet(DestModRef) && isModSet(Res)))
-      return false;
-
-    return true;
-  };
-
-  if (!CaptureTrackingWithModRef(SrcAlloca, SrcModRefCallback))
-    return false;
-
-  // We can do the transformation. First, align the allocas appropriately.
-  SrcAlloca->setAlignment(
-      std::max(SrcAlloca->getAlign(), DestAlloca->getAlign()));
-
-  // Merge the two allocas.
-  DestAlloca->replaceAllUsesWith(SrcAlloca);
-  eraseInstruction(DestAlloca);
-
-  // Drop metadata on the source alloca.
-  SrcAlloca->dropUnknownNonDebugMetadata();
-
-  // Do "shrink wrap" the lifetimes, if the original lifetime intrinsics exists.
-  if (!LifetimeMarkers.empty()) {
-    LLVMContext &C = SrcAlloca->getContext();
-    IRBuilder<> Builder(C);
-
-    ConstantInt *AllocaSize = ConstantInt::get(Type::getInt64Ty(C), Size);
-    // Create a new lifetime start marker before the first user of src or alloca
-    // users.
-    Builder.SetInsertPoint(FirstUser->getParent(), FirstUser->getIterator());
-    Builder.CreateLifetimeStart(SrcAlloca, AllocaSize);
-
-    // Create a new lifetime end marker after the last user of src or alloca
-    // users.
-    // FIXME: If the last user is the terminator for the bb, we can insert
-    // lifetime.end marker to the immidiate post-dominator, but currently do
-    // nothing.
-    if (!LastUser->isTerminator()) {
-      Builder.SetInsertPoint(LastUser->getParent(), ++LastUser->getIterator());
-      Builder.CreateLifetimeEnd(SrcAlloca, AllocaSize);
-    }
-
-    // Remove all other lifetime markers.
-    for (Instruction *I : LifetimeMarkers)
-      eraseInstruction(I);
-  }
-
-  // As this transformation can cause memory accesses that didn't previously
-  // alias to begin to alias one another, we remove !noalias metadata from any
-  // uses of either alloca. This is conservative, but more precision doesn't
-  // seem worthwhile right now.
-  for (Instruction *I : NoAliasInstrs)
-    I->setMetadata(LLVMContext::MD_noalias, nullptr);
-
-  LLVM_DEBUG(dbgs() << "Stack Move: Performed staack-move optimization\n");
-  NumStackMove++;
-  return true;
-}
-
 /// Perform simplification of memcpy's.  If we have memcpy A
 /// which copies X to Y, and memcpy B which copies Y to Z, then we can rewrite
 /// B to be a memcpy from X to Z (or potentially a memmove, depending on
@@ -1693,14 +1464,13 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
   MemoryAccess *SrcClobber = MSSA->getWalker()->getClobberingMemoryAccess(
       AnyClobber, MemoryLocation::getForSource(M), BAA);
 
-  // There are five possible optimizations we can do for memcpy:
+  // There are four possible optimizations we can do for memcpy:
   //   a) memcpy-memcpy xform which exposes redundance for DSE.
   //   b) call-memcpy xform for return slot optimization.
   //   c) memcpy from freshly alloca'd space or space that has just started
   //      its lifetime copies undefined data, and we can therefore eliminate
   //      the memcpy in favor of the data that was already at the destination.
   //   d) memcpy from a just-memset'd source can be turned into memset.
-  //   e) elimination of memcpy via stack-move optimization.
   if (auto *MD = dyn_cast<MemoryDef>(SrcClobber)) {
     if (Instruction *MI = MD->getMemoryInst()) {
       if (auto *CopySize = dyn_cast<ConstantInt>(M->getLength())) {
@@ -1719,8 +1489,7 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
         }
       }
       if (auto *MDep = dyn_cast<MemCpyInst>(MI))
-        if (processMemCpyMemCpyDependence(M, MDep, BAA))
-          return true;
+        return processMemCpyMemCpyDependence(M, MDep, BAA);
       if (auto *MDep = dyn_cast<MemSetInst>(MI)) {
         if (performMemCpyToMemSetOptzn(M, MDep, BAA)) {
           LLVM_DEBUG(dbgs() << "Converted memcpy to memset\n");
@@ -1737,27 +1506,6 @@ bool MemCpyOptPass::processMemCpy(MemCpyInst *M, BasicBlock::iterator &BBI) {
       ++NumMemCpyInstr;
       return true;
     }
-  }
-
-  // If the transfer is from a stack slot to a stack slot, then we may be able
-  // to perform the stack-move optimization. See the comments in
-  // performStackMoveOptzn() for more details.
-  auto *DestAlloca = dyn_cast<AllocaInst>(M->getDest());
-  if (!DestAlloca)
-    return false;
-  auto *SrcAlloca = dyn_cast<AllocaInst>(M->getSource());
-  if (!SrcAlloca)
-    return false;
-  ConstantInt *Len = dyn_cast<ConstantInt>(M->getLength());
-  if (Len == nullptr)
-    return false;
-  if (performStackMoveOptzn(M, M, DestAlloca, SrcAlloca, Len->getZExtValue(),
-                            BAA)) {
-    // Avoid invalidating the iterator.
-    BBI = M->getNextNonDebugInstruction()->getIterator();
-    eraseInstruction(M);
-    ++NumMemCpyInstr;
-    return true;
   }
 
   return false;

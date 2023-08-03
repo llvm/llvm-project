@@ -5869,11 +5869,6 @@ tree in terms of conformance to :doc:`ClangFormat` as of: March 06, 2022 17:32:2
      - `39`
      - `1`
      - :part:`97%`
-   * - llvm/tools/llvm-remark-size-diff
-     - `1`
-     - `1`
-     - `0`
-     - :good:`100%`
    * - llvm/tools/llvm-rtdyld
      - `1`
      - `0`

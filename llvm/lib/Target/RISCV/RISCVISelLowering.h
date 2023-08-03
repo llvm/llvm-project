@@ -257,8 +257,8 @@ enum NodeType : unsigned {
   FSUB_VL,
   FMUL_VL,
   FDIV_VL,
-  FMINNUM_VL,
-  FMAXNUM_VL,
+  VFMIN_VL,
+  VFMAX_VL,
 
   // Vector unary ops with a mask as a second operand and VL as a third operand.
   FNEG_VL,
@@ -701,6 +701,9 @@ public:
       EVT VT, unsigned AddrSpace = 0, Align Alignment = Align(1),
       MachineMemOperand::Flags Flags = MachineMemOperand::MONone,
       unsigned *Fast = nullptr) const override;
+
+  EVT getOptimalMemOpType(const MemOp &Op,
+                          const AttributeList &FuncAttributes) const override;
 
   bool splitValueIntoRegisterParts(
       SelectionDAG & DAG, const SDLoc &DL, SDValue Val, SDValue *Parts,

@@ -42,9 +42,28 @@ LIBC_INLINE long long llrint(double x) { return __builtin_rint(x); }
 LIBC_INLINE long long llrintf(float x) { return __builtin_rintf(x); }
 LIBC_INLINE long long llround(double x) { return __builtin_round(x); }
 LIBC_INLINE long long llroundf(float x) { return __builtin_roundf(x); }
+LIBC_INLINE double nextafter(double x, double y) {
+  return __ocml_nextafter_f64(x, y);
+}
+LIBC_INLINE float nextafterf(float x, float y) {
+  return __ocml_nextafter_f32(x, y);
+}
 LIBC_INLINE double pow(double x, double y) { return __ocml_pow_f64(x, y); }
 LIBC_INLINE float powf(float x, float y) { return __ocml_pow_f32(x, y); }
 LIBC_INLINE double sin(double x) { return __ocml_sin_f64(x); }
+LIBC_INLINE float sinf(float x) { return __ocml_sin_f32(x); }
+LIBC_INLINE void sincos(double x, double *sinptr, double *cosptr) {
+  *sinptr = __ocml_sincos_f64(x, cosptr);
+}
+LIBC_INLINE void sincosf(float x, float *sinptr, float *cosptr) {
+  *sinptr = __ocml_sincos_f32(x, cosptr);
+}
+LIBC_INLINE double sinh(double x) { return __ocml_sinh_f64(x); }
+LIBC_INLINE float sinhf(float x) { return __ocml_sinh_f32(x); }
+LIBC_INLINE double tan(double x) { return __ocml_tan_f64(x); }
+LIBC_INLINE float tanf(float x) { return __ocml_tan_f32(x); }
+LIBC_INLINE double tanh(double x) { return __ocml_tanh_f64(x); }
+LIBC_INLINE float tanhf(float x) { return __ocml_tanh_f32(x); }
 
 } // namespace internal
 } // namespace __llvm_libc

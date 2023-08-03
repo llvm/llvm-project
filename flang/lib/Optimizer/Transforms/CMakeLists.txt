@@ -23,6 +23,7 @@ add_flang_library(FIRTransforms
   DEPENDS
   FIRDialect
   FIROptTransformsPassIncGen
+  HLFIROpsIncGen
 
   LINK_LIBS
   FIRBuilder

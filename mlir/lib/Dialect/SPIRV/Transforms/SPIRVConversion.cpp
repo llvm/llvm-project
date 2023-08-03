@@ -390,8 +390,14 @@ static Type convertTensorType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
-  auto arrayElemCount = *tensorSize / *scalarSize;
-  auto arrayElemType = convertScalarType(targetEnv, options, scalarType);
+  int64_t arrayElemCount = *tensorSize / *scalarSize;
+  if (arrayElemCount == 0) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: cannot handle zero-element tensors\n");
+    return nullptr;
+  }
+
+  Type arrayElemType = convertScalarType(targetEnv, options, scalarType);
   if (!arrayElemType)
     return nullptr;
   std::optional<int64_t> arrayElemSize =

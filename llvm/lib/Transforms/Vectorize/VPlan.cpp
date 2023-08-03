@@ -291,6 +291,15 @@ void VPTransformState::setDebugLocFromInst(const Value *V) {
     Builder.SetCurrentDebugLocation(DIL);
 }
 
+void VPTransformState::packScalarIntoVectorValue(VPValue *Def,
+                                                 const VPIteration &Instance) {
+  Value *ScalarInst = get(Def, Instance);
+  Value *VectorValue = get(Def, Instance.Part);
+  VectorValue = Builder.CreateInsertElement(
+      VectorValue, ScalarInst, Instance.Lane.getAsRuntimeExpr(Builder, VF));
+  set(Def, VectorValue, Instance.Part);
+}
+
 BasicBlock *
 VPBasicBlock::createEmptyBasicBlock(VPTransformState::CFGState &CFG) {
   // BB stands for IR BasicBlocks. VPBB stands for VPlan VPBasicBlocks.

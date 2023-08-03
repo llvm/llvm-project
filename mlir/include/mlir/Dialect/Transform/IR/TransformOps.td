@@ -632,6 +632,10 @@ def IncludeOp : TransformDialectOp<"include",
     ::mlir::Operation::operand_range getArgOperands() {
       return getOperands();
     }
+
+    ::mlir::MutableOperandRange getArgOperandsMutable() {
+      return getOperandsMutable();
+    }
   }];
 }
 

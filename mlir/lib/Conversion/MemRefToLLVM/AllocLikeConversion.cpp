@@ -138,7 +138,8 @@ bool AllocationOpLLVMLowering::isMemRefSizeMultipleOf(
 Value AllocationOpLLVMLowering::allocateBufferAutoAlign(
     ConversionPatternRewriter &rewriter, Location loc, Value sizeBytes,
     Operation *op, const DataLayout *defaultLayout, int64_t alignment) const {
-  Value allocAlignment = createIndexConstant(rewriter, loc, alignment);
+  Value allocAlignment =
+      createIndexAttrConstant(rewriter, loc, getIndexType(), alignment);
 
   MemRefType memRefType = getMemRefResultType(op);
   // Function aligned_alloc requires size to be a multiple of alignment; we pad

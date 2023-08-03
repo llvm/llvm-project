@@ -682,7 +682,7 @@ define i1 @test_class_isnan_f32(float %x) nounwind {
   ret i1 %val
 }
 
-define i1 @test_class_isnan_f32_strict(float %x) nounwind {
+define i1 @test_class_isnan_f32_strict(float %x) nounwind strictfp {
 ; CHECK-LABEL: @test_class_isnan_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 3) #[[ATTR16:[0-9]+]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -700,7 +700,7 @@ define i1 @test_class_is_p0_n0_f32(float %x) nounwind {
   ret i1 %val
 }
 
-define i1 @test_class_is_p0_n0_f32_strict(float %x) nounwind {
+define i1 @test_class_is_p0_n0_f32_strict(float %x) nounwind strictfp {
 ; CHECK-LABEL: @test_class_is_p0_n0_f32_strict(
 ; CHECK-NEXT:    [[VAL:%.*]] = call i1 @llvm.is.fpclass.f32(float [[X:%.*]], i32 96) #[[ATTR16]]
 ; CHECK-NEXT:    ret i1 [[VAL]]
@@ -5624,7 +5624,7 @@ define double @trig_preop_constfold() {
   ret double %val
 }
 
-define double @trig_preop_constfold_strictfp() {
+define double @trig_preop_constfold_strictfp() strictfp {
 ; CHECK-LABEL: @trig_preop_constfold_strictfp(
 ; CHECK-NEXT:    [[VAL:%.*]] = call double @llvm.amdgcn.trig.preop.f64(double 3.454350e+02, i32 5) #[[ATTR16]]
 ; CHECK-NEXT:    ret double [[VAL]]

@@ -866,11 +866,60 @@ struct EraseEmptyDealloc : public OpRewritePattern<DeallocOp> {
   }
 };
 
+/// Removes memrefs from the deallocation list if their associated condition is
+/// always 'false'.
+///
+/// Example:
+/// ```
+/// %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xi32>, memref<2xi32>)
+///                           if (%arg2, %false)
+/// ```
+/// becomes
+/// ```
+/// %0 = bufferization.dealloc (%arg0 : memref<2xi32>) if (%arg2)
+/// ```
+struct EraseAlwaysFalseDealloc : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> newMemrefs, newConditions;
+    SmallVector<Value> replacements;
+
+    for (auto [res, memref, cond] :
+         llvm::zip(deallocOp.getUpdatedConditions(), deallocOp.getMemrefs(),
+                   deallocOp.getConditions())) {
+      if (matchPattern(cond, m_Zero())) {
+        replacements.push_back(cond);
+        continue;
+      }
+      newMemrefs.push_back(memref);
+      newConditions.push_back(cond);
+      replacements.push_back({});
+    }
+
+    if (newMemrefs.size() == deallocOp.getMemrefs().size())
+      return failure();
+
+    auto newDeallocOp = rewriter.create<DeallocOp>(
+        deallocOp.getLoc(), newMemrefs, newConditions, deallocOp.getRetained());
+    unsigned i = 0;
+    for (auto &repl : replacements)
+      if (!repl)
+        repl = newDeallocOp.getResult(i++);
+
+    rewriter.replaceOp(deallocOp, replacements);
+    return success();
+  }
+};
+
 } // anonymous namespace
 
 void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results.add<DeallocRemoveDuplicates, EraseEmptyDealloc>(context);
+  results
+      .add<DeallocRemoveDuplicates, EraseEmptyDealloc, EraseAlwaysFalseDealloc>(
+          context);
 }
 
 //===----------------------------------------------------------------------===//

@@ -83,6 +83,10 @@ def CallOp : Func_Op<"call",
       return {arg_operand_begin(), arg_operand_end()};
     }
 
+    MutableOperandRange getArgOperandsMutable() {
+      return getOperandsMutable();
+    }
+
     operand_iterator arg_operand_begin() { return operand_begin(); }
     operand_iterator arg_operand_end() { return operand_end(); }
 
@@ -150,6 +154,10 @@ def CallIndirectOp : Func_Op<"call_indirect", [
     /// Get the argument operands to the called function.
     operand_range getArgOperands() {
       return {arg_operand_begin(), arg_operand_end()};
+    }
+
+    MutableOperandRange getArgOperandsMutable() {
+      return getCalleeOperandsMutable();
     }
 
     operand_iterator arg_operand_begin() { return ++operand_begin(); }
