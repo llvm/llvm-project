@@ -20,10 +20,11 @@
 namespace mlir {
 namespace presburger {
 
+template<typename T>
 class LinearTransform {
 public:
-  explicit LinearTransform(Matrix &&oMatrix);
-  explicit LinearTransform(const Matrix &oMatrix);
+  explicit LinearTransform(Matrix<T> &&oMatrix);
+  explicit LinearTransform(const Matrix<T> &oMatrix);
 
   // Returns a linear transform T such that MT is M in column echelon form.
   // Also returns the number of non-zero columns in MT.
@@ -32,7 +33,7 @@ public:
   // strictly below that of the previous column, and all columns which have only
   // zeros are at the end.
   static std::pair<unsigned, LinearTransform>
-  makeTransformToColumnEchelon(const Matrix &m);
+  makeTransformToColumnEchelon(const Matrix<T> &m);
 
   // Returns an IntegerRelation having a constraint vector vT for every
   // constraint vector v in rel, where T is this transform.
@@ -40,22 +41,22 @@ public:
 
   // The given vector is interpreted as a row vector v. Post-multiply v with
   // this transform, say T, and return vT.
-  SmallVector<MPInt, 8> preMultiplyWithRow(ArrayRef<MPInt> rowVec) const {
+  SmallVector<T, 8> preMultiplyWithRow(ArrayRef<T> rowVec) const {
     return matrix.preMultiplyWithRow(rowVec);
   }
 
   // The given vector is interpreted as a column vector v. Pre-multiply v with
   // this transform, say T, and return Tv.
-  SmallVector<MPInt, 8> postMultiplyWithColumn(ArrayRef<MPInt> colVec) const {
+  SmallVector<T, 8> postMultiplyWithColumn(ArrayRef<T> colVec) const {
     return matrix.postMultiplyWithColumn(colVec);
   }
 
   // Compute the determinant of the transform by converting it to row echelon
   // form and then taking the product of the diagonal.
-  MPInt determinant();
+  T determinant();
 
 private:
-  Matrix matrix;
+  Matrix<T> matrix;
 };
 
 } // namespace presburger

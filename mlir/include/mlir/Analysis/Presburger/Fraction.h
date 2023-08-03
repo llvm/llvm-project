@@ -31,16 +31,16 @@ struct Fraction {
   Fraction() = default;
 
   /// Construct a Fraction from a numerator and denominator.
-  Fraction(const MPInt &oNum, const MPInt &oDen) : num(oNum), den(oDen) {
+  Fraction(const MPInt &oNum, const MPInt &oDen = MPInt(1)) : num(oNum), den(oDen) {
     if (den < 0) {
       num = -num;
       den = -den;
     }
   }
   /// Overloads for passing literals.
-  Fraction(const MPInt &num, int64_t den) : Fraction(num, MPInt(den)) {}
-  Fraction(int64_t num, const MPInt &den) : Fraction(MPInt(num), den) {}
-  Fraction(int64_t num, int64_t den) : Fraction(MPInt(num), MPInt(den)) {}
+  Fraction(const MPInt &num, int64_t den = 1) : Fraction(num, MPInt(den)) {}
+  Fraction(int64_t num, const MPInt &den = MPInt(1)) : Fraction(MPInt(num), den) {}
+  Fraction(int64_t num, int64_t den = 1) : Fraction(MPInt(num), MPInt(den)) {}
 
   // Return the value of the fraction as an integer. This should only be called
   // when the fraction's value is really an integer.
@@ -115,6 +115,16 @@ inline Fraction operator+(const Fraction &x, const Fraction &y) {
 
 inline Fraction operator-(const Fraction &x, const Fraction &y) {
   return reduce(Fraction(x.num * y.den - x.den * y.num, x.den * y.den));
+}
+
+inline Fraction dotProduct(ArrayRef<Fraction> a, ArrayRef<Fraction> b)
+{
+    Fraction sum(0, 1);
+    for (unsigned long i = 0; i < a.size(); i++)
+    {
+        sum = sum + a[i] * b[i];
+    }
+    return sum;
 }
 
 } // namespace presburger

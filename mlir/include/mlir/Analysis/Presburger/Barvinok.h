@@ -24,7 +24,7 @@ namespace mlir {
 namespace presburger {
 
 using PolyhedronH = IntegerRelation;
-using PolyhedronV = Matrix;
+using PolyhedronV = Matrix<MPInt>;
 using ConeH = PolyhedronH;
 using ConeV = PolyhedronV;
 using Point = SmallVector<MPInt, 16>;

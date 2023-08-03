@@ -17,7 +17,7 @@
 #include "mlir/Analysis/Presburger/PWMAFunction.h"
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "mlir/Analysis/Presburger/Simplex.h"
-#include "mlir/Analysis/Presburger/MatrixF.h"
+#include "mlir/Analysis/Presburger/Matrix.h"
 #include "mlir/IR/MLIRContext.h"
 #include "mlir/Support/LLVM.h"
 
@@ -27,31 +27,15 @@
 namespace mlir {
 namespace presburger {
 
-inline Matrix makeMatrix(unsigned numRow, unsigned numColumns,
-                         ArrayRef<SmallVector<int64_t, 8>> matrix) {
-  Matrix results(numRow, numColumns);
+template<typename T> inline Matrix<T> makeMatrix(unsigned numRow, unsigned numColumns,
+                         ArrayRef<SmallVector<T, 8>> matrix) {
+  Matrix<T> results(numRow, numColumns);
   assert(matrix.size() == numRow);
   for (unsigned i = 0; i < numRow; ++i) {
     assert(matrix[i].size() == numColumns &&
            "Output expression has incorrect dimensionality!");
     for (unsigned j = 0; j < numColumns; ++j)
-      results(i, j) = matrix[i][j];
-  }
-  return results;
-}
-
-inline MatrixF makeMatrixF(unsigned numRow, unsigned numColumns,
-                         ArrayRef<SmallVector<Fraction, 8>> matrix) {
-  MatrixF results(numRow, numColumns);
-  assert(matrix.size() == numRow);
-  for (unsigned i = 0; i < numRow; ++i) {
-    assert(matrix[i].size() == numColumns &&
-           "Output expression has incorrect dimensionality!");
-    for (unsigned j = 0; j < numColumns; ++j)
-    {
-      results(i, j).num = matrix[i][j].num;
-      results(i, j).den = matrix[i][j].den;
-    }
+      results(i, j) = T(matrix[i][j]);
   }
   return results;
 }

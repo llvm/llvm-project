@@ -52,7 +52,7 @@ inline MultiAffineFunction parseMultiAffineFunction(StringRef str) {
 
   // TODO: Add default constructor for MultiAffineFunction.
   MultiAffineFunction multiAff(PresburgerSpace::getRelationSpace(),
-                               Matrix(0, 1));
+                               Matrix<MPInt>(0, 1));
   if (getMultiAffineFunctionFromMap(parseAffineMap(str, &context), multiAff)
           .failed())
     llvm_unreachable(
