@@ -189,4 +189,20 @@ module acc_declare
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
 ! CHECK-NOT: acc.declare_exit
 
+  subroutine acc_declare_link(a)
+    integer :: a(100), i
+    !$acc declare link(a)
+
+    do i = 1, 100
+      a(i) = i
+    end do
+  end subroutine
+
+! CHECK-LABEL: func.func @_QMacc_declarePacc_declare_link(
+! CHECK-SAME: %[[ARG0:.*]]: !fir.ref<!fir.array<100xi32>> {fir.bindc_name = "a"})
+! CHECK: %[[LINK:.*]] = acc.declare_link varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
+! CHECK: acc.declare_enter dataOperands(%[[LINK]] : !fir.ref<!fir.array<100xi32>>)
+! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
+! CHECK-NOT: acc.declare_exit
+
 end module
