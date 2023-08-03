@@ -42,7 +42,11 @@ endif()
 # by unittests if these are built.
 
 set(BUILDTREE_ONLY BUILDTREE_ONLY)
-set(EXCLUDE_FROM_ALL ON)
+# TODO: Swift does not build as part of the LLVM unified build, so it can't find
+#       GTest when LLVM doesn't export it. Swift should be built in the unified
+#       build, but we're not there yet. Put this back once Swift gets cleaned up
+#       a bit. rdar://113340971
+# set(EXCLUDE_FROM_ALL ON)
 if (LLVM_INSTALL_GTEST)
   set(EXCLUDE_FROM_ALL OFF)
   set(BUILDTREE_ONLY "")
