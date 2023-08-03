@@ -432,6 +432,17 @@ Changes to Sanitizers
     // Example override
     extern "C" const char *__asan_default_options() { ... }
 
+Changes to BOLT
+---------------
+* Initial RISC-V (RV64GC) target support was added.
+* DWARFRewriter got new mechanism for more flexible handling of debug
+  information. It raises debug information to IR level before performing
+  updates, and IR is written out to the binary after updates are applied.
+* Stale profile matching was added under a flag `--infer-stale-profile`.
+  It requires the use of a YAML profile, produced by perf2bolt using `-w`
+  flag, or with `--profile-format=yaml`.
+
+
 Other Changes
 -------------
 
