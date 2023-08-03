@@ -1,6 +1,9 @@
 # RUN: llvm-mc -triple=powerpc64le-unknown-linux-gnu -filetype=obj -o %t %s
 # RUN: llvm-jitlink -abs external_var=0xffff0000 -abs puts=0xffff6400 -abs \
 # RUN:   foo=0xffff8800 -noexec %t
+# RUN: llvm-mc -triple=powerpc64-unknown-linux-gnu -filetype=obj -o %t %s
+# RUN: not llvm-jitlink -abs external_var=0xffff0000 -abs puts=0xffff6400 -abs \
+# RUN:   foo=0xffff8800 -noexec %t
 #
 # Check typical relocations involving external function call, external variable
 # reference, local function call and referencing global variable defined in the
@@ -8,7 +11,7 @@
 
 	.text
 	.abiversion 2
-	.file	"ppc64le-relocs.c"
+	.file	"ppc64-relocs.c"
 	.globl	main
 	.p2align	4
 	.type	main,@function
