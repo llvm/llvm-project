@@ -1829,6 +1829,18 @@ void OmpAttributeVisitor::ResolveOmpObject(
                               GetContext().directive)
                               .str()));
                 }
+                if ((GetContext().directive ==
+                        llvm::omp::Directive::OMPD_target_data) &&
+                    (((ompFlag == Symbol::Flag::OmpUseDevicePtr) &&
+                         symbol->test(Symbol::Flag::OmpUseDeviceAddr)) ||
+                        ((ompFlag == Symbol::Flag::OmpUseDeviceAddr) &&
+                            symbol->test(Symbol::Flag::OmpUseDevicePtr)))) {
+                  context_.Say(designator.source,
+                      "Variable '%s' may not "
+                      "appear on both USE_DEVICE_PTR and USE_DEVICE_ADDR "
+                      "clauses on a TARGET DATA construct"_err_en_US,
+                      symbol->name());
+                }
               }
             } else {
               // Array sections to be changed to substrings as needed
