@@ -4,14 +4,13 @@ from lldbsuite.test.lldbtest import *
 import lldbsuite.test.lldbutil as lldbutil
 
 
-class TestSwiftMutablePersistentVar(TestBase):
+class TestSwiftFunctionDefinition(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
     @swiftTest
     def test(self):
         """Test that persistent variables are mutable."""
         self.build()
         lldbutil.run_to_name_breakpoint(self, "main")
-        self.expect("expr var $count = 30")
-        self.expect("expr $count = 41")
-        self.expect("expr $count += 1")
-        self.expect("expr $count", substrs=["42"])
+        self.expect("expr struct $S { let v : Int }")
+        self.expect("expr func $dup<T>(_ t: T) -> (T, T) { return (t, t) }")
+        self.expect("expr $dup($S(v: 1))", substrs=["($S, $S)", "v = 1", "v = 1"])
