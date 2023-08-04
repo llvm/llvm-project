@@ -45,6 +45,7 @@ add_clang_library(clangTidyCppCoreGuidelinesModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyCppCoreGuidelinesModule

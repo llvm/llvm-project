@@ -1096,6 +1096,42 @@ bool NamedDecl::isLinkageValid() const {
   return L == getCachedLinkage();
 }
 
+bool NamedDecl::isPlaceholderVar(const LangOptions &LangOpts) const {
+  // [C++2c] [basic.scope.scope]/p5
+  // A declaration is name-independent if its name is _ and it declares
+  // - a variable with automatic storage duration,
+  // - a structured binding not inhabiting a namespace scope,
+  // - the variable introduced by an init-capture
+  // - or a non-static data member.
+
+  if (!LangOpts.CPlusPlus || !getIdentifier() ||
+      !getIdentifier()->isPlaceholder())
+    return false;
+  if (isa<FieldDecl>(this))
+    return true;
+  if (auto *IFD = dyn_cast<IndirectFieldDecl>(this)) {
+    if (!getDeclContext()->isFunctionOrMethod() &&
+        !getDeclContext()->isRecord())
+      return false;
+    VarDecl *VD = IFD->getVarDecl();
+    return !VD || VD->getStorageDuration() == SD_Automatic;
+  }
+  // and it declares a variable with automatic storage duration
+  if (const auto *VD = dyn_cast<VarDecl>(this)) {
+    if (isa<ParmVarDecl>(VD))
+      return false;
+    if (VD->isInitCapture())
+      return true;
+    return VD->getStorageDuration() == StorageDuration::SD_Automatic;
+  }
+  if (const auto *BD = dyn_cast<BindingDecl>(this);
+      BD && getDeclContext()->isFunctionOrMethod()) {
+    VarDecl *VD = BD->getHoldingVar();
+    return !VD || VD->getStorageDuration() == StorageDuration::SD_Automatic;
+  }
+  return false;
+}
+
 ReservedIdentifierStatus
 NamedDecl::isReserved(const LangOptions &LangOpts) const {
   const IdentifierInfo *II = getIdentifier();

@@ -755,7 +755,8 @@ LogicalResult DeallocOp::inferReturnTypes(
     ValueRange operands, DictionaryAttr attributes, OpaqueProperties properties,
     RegionRange regions, SmallVectorImpl<Type> &inferredReturnTypes) {
   DeallocOpAdaptor adaptor(operands, attributes, properties, regions);
-  inferredReturnTypes = SmallVector<Type>(adaptor.getConditions().getTypes());
+  inferredReturnTypes = SmallVector<Type>(adaptor.getRetained().size(),
+                                          IntegerType::get(context, 1));
   return success();
 }
 
@@ -766,44 +767,46 @@ LogicalResult DeallocOp::verify() {
   return success();
 }
 
+static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
+                                            ArrayRef<Value> memrefs,
+                                            ArrayRef<Value> conditions,
+                                            PatternRewriter &rewriter) {
+  if (deallocOp.getMemrefs() == memrefs)
+    return failure();
+
+  rewriter.updateRootInPlace(deallocOp, [&]() {
+    deallocOp.getMemrefsMutable().assign(memrefs);
+    deallocOp.getConditionsMutable().assign(conditions);
+  });
+  return success();
+}
+
 namespace {
 
-/// Remove duplicate values in the list of retained memrefs as well as the list
-/// of memrefs to be deallocated. For the latter, we need to make sure the
-/// corresponding condition values match as well, or otherwise have to combine
-/// them (by computing the disjunction of them).
+/// Remove duplicate values in the list of memrefs to be deallocated. We need to
+/// make sure the corresponding condition value is updated accordingly since
+/// their two conditions might not cover the same set of cases. In that case, we
+/// have to combine them (by computing the disjunction of them).
 /// Example:
 /// ```mlir
-/// %0:2 = bufferization.dealloc (%arg0, %arg0 : ...)
-///                           if (%arg1, %arg2)
-///                       retain (%arg3, %arg3 : ...)
+/// bufferization.dealloc (%arg0, %arg0 : ...) if (%arg1, %arg2)
 /// ```
 /// is canonicalized to
 /// ```mlir
 /// %0 = arith.ori %arg1, %arg2 : i1
-/// %1 = bufferization.dealloc (%arg0 : memref<2xi32>)
-///                         if (%0)
-///                     retain (%arg3 : memref<2xi32>)
+/// bufferization.dealloc (%arg0 : memref<2xi32>) if (%0)
 /// ```
-struct DeallocRemoveDuplicates : public OpRewritePattern<DeallocOp> {
+struct DeallocRemoveDuplicateDeallocMemrefs
+    : public OpRewritePattern<DeallocOp> {
   using OpRewritePattern<DeallocOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     // Unique memrefs to be deallocated.
-    DenseSet<Value> retained(deallocOp.getRetained().begin(),
-                             deallocOp.getRetained().end());
     DenseMap<Value, unsigned> memrefToCondition;
-    SmallVector<Value> newMemrefs, newConditions, newRetained;
-    SmallVector<int32_t> resultIndices(deallocOp.getMemrefs().size(), -1);
+    SmallVector<Value> newMemrefs, newConditions;
     for (auto [i, memref, cond] :
          llvm::enumerate(deallocOp.getMemrefs(), deallocOp.getConditions())) {
-      if (retained.contains(memref)) {
-        rewriter.replaceAllUsesWith(deallocOp.getResult(i),
-                                    deallocOp.getConditions()[i]);
-        continue;
-      }
-
       if (memrefToCondition.count(memref)) {
         // If the dealloc conditions don't match, we need to make sure that the
         // dealloc happens on the union of cases.
@@ -816,42 +819,121 @@ struct DeallocRemoveDuplicates : public OpRewritePattern<DeallocOp> {
         newMemrefs.push_back(memref);
         newConditions.push_back(cond);
       }
-      resultIndices[i] = memrefToCondition[memref];
-    }
-
-    // Unique retained values
-    DenseSet<Value> seen;
-    for (auto retained : deallocOp.getRetained()) {
-      if (!seen.contains(retained)) {
-        seen.insert(retained);
-        newRetained.push_back(retained);
-      }
     }
 
     // Return failure if we don't change anything such that we don't run into an
     // infinite loop of pattern applications.
-    if (newConditions.size() == deallocOp.getConditions().size() &&
-        newRetained.size() == deallocOp.getRetained().size())
+    return updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
+                                  rewriter);
+  }
+};
+
+/// Remove duplicate values in the list of retained memrefs. We need to make
+/// sure the corresponding result condition value is replaced properly.
+/// Example:
+/// ```mlir
+/// %0:2 = bufferization.dealloc retain (%arg3, %arg3 : ...)
+/// ```
+/// is canonicalized to
+/// ```mlir
+/// %0 = bufferization.dealloc retain (%arg3 : memref<2xi32>)
+/// ```
+struct DeallocRemoveDuplicateRetainedMemrefs
+    : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    // Unique retained values
+    DenseMap<Value, unsigned> seen;
+    SmallVector<Value> newRetained;
+    SmallVector<unsigned> resultReplacementIdx;
+    unsigned i = 0;
+    for (auto retained : deallocOp.getRetained()) {
+      if (seen.count(retained)) {
+        resultReplacementIdx.push_back(seen[retained]);
+        continue;
+      }
+
+      seen[retained] = i;
+      newRetained.push_back(retained);
+      resultReplacementIdx.push_back(i++);
+    }
+
+    // Return failure if we don't change anything such that we don't run into an
+    // infinite loop of pattern applications.
+    if (newRetained.size() == deallocOp.getRetained().size())
       return failure();
 
     // We need to create a new op because the number of results is always the
     // same as the number of condition operands.
-    auto newDealloc = rewriter.create<DeallocOp>(deallocOp.getLoc(), newMemrefs,
-                                                 newConditions, newRetained);
-    for (auto [i, newIdx] : llvm::enumerate(resultIndices))
-      if (newIdx != -1)
-        rewriter.replaceAllUsesWith(deallocOp.getResult(i),
-                                    newDealloc.getResult(newIdx));
-
-    rewriter.eraseOp(deallocOp);
+    auto newDeallocOp =
+        rewriter.create<DeallocOp>(deallocOp.getLoc(), deallocOp.getMemrefs(),
+                                   deallocOp.getConditions(), newRetained);
+    SmallVector<Value> replacements(
+        llvm::map_range(resultReplacementIdx, [&](unsigned idx) {
+          return newDeallocOp.getUpdatedConditions()[idx];
+        }));
+    rewriter.replaceOp(deallocOp, replacements);
     return success();
   }
 };
 
-/// Erase deallocation operations where the variadic list of memrefs to
-/// deallocate is emtpy. Example:
+/// Remove memrefs to be deallocated that are also present in the retained list
+/// since they will always alias and thus never actually be deallocated.
+/// Example:
 /// ```mlir
-/// bufferization.dealloc retain (%arg0: memref<2xi32>)
+/// %0 = bufferization.dealloc (%arg0 : ...) if (%arg1) retain (%arg0 : ...)
+/// ```
+/// is canonicalized to
+/// ```mlir
+/// %0 = bufferization.dealloc retain (%arg0 : ...)
+/// ```
+struct DeallocRemoveDeallocMemrefsContainedInRetained
+    : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    // Unique memrefs to be deallocated.
+    DenseMap<Value, unsigned> retained;
+    for (auto [i, ret] : llvm::enumerate(deallocOp.getRetained()))
+      retained[ret] = i;
+
+    // There must not be any duplicates in the retain list anymore because we
+    // would miss updating one of the result values otherwise.
+    if (retained.size() != deallocOp.getRetained().size())
+      return failure();
+
+    SmallVector<Value> newMemrefs, newConditions;
+    for (auto [memref, cond] :
+         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+      if (retained.contains(memref)) {
+        rewriter.setInsertionPointAfter(deallocOp);
+        auto orOp = rewriter.create<arith::OrIOp>(
+            deallocOp.getLoc(),
+            deallocOp.getUpdatedConditions()[retained[memref]], cond);
+        rewriter.replaceAllUsesExcept(
+            deallocOp.getUpdatedConditions()[retained[memref]],
+            orOp.getResult(), orOp);
+        continue;
+      }
+
+      newMemrefs.push_back(memref);
+      newConditions.push_back(cond);
+    }
+
+    // Return failure if we don't change anything such that we don't run into an
+    // infinite loop of pattern applications.
+    return updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
+                                  rewriter);
+  }
+};
+
+/// Erase deallocation operations where the variadic list of memrefs to
+/// deallocate is empty. Example:
+/// ```mlir
+/// %0 = bufferization.dealloc retain (%arg0: memref<2xi32>)
 /// ```
 struct EraseEmptyDealloc : public OpRewritePattern<DeallocOp> {
   using OpRewritePattern<DeallocOp>::OpRewritePattern;
@@ -859,7 +941,11 @@ struct EraseEmptyDealloc : public OpRewritePattern<DeallocOp> {
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     if (deallocOp.getMemrefs().empty()) {
-      rewriter.eraseOp(deallocOp);
+      Value constFalse = rewriter.create<arith::ConstantOp>(
+          deallocOp.getLoc(), rewriter.getBoolAttr(false));
+      rewriter.replaceOp(
+          deallocOp, SmallVector<Value>(deallocOp.getUpdatedConditions().size(),
+                                        constFalse));
       return success();
     }
     return failure();
@@ -871,12 +957,12 @@ struct EraseEmptyDealloc : public OpRewritePattern<DeallocOp> {
 ///
 /// Example:
 /// ```
-/// %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xi32>, memref<2xi32>)
+/// bufferization.dealloc (%arg0, %arg1 : memref<2xi32>, memref<2xi32>)
 ///                           if (%arg2, %false)
 /// ```
 /// becomes
 /// ```
-/// %0 = bufferization.dealloc (%arg0 : memref<2xi32>) if (%arg2)
+/// bufferization.dealloc (%arg0 : memref<2xi32>) if (%arg2)
 /// ```
 struct EraseAlwaysFalseDealloc : public OpRewritePattern<DeallocOp> {
   using OpRewritePattern<DeallocOp>::OpRewritePattern;
@@ -884,32 +970,16 @@ struct EraseAlwaysFalseDealloc : public OpRewritePattern<DeallocOp> {
   LogicalResult matchAndRewrite(DeallocOp deallocOp,
                                 PatternRewriter &rewriter) const override {
     SmallVector<Value> newMemrefs, newConditions;
-    SmallVector<Value> replacements;
-
-    for (auto [res, memref, cond] :
-         llvm::zip(deallocOp.getUpdatedConditions(), deallocOp.getMemrefs(),
-                   deallocOp.getConditions())) {
-      if (matchPattern(cond, m_Zero())) {
-        replacements.push_back(cond);
-        continue;
+    for (auto [memref, cond] :
+         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
+      if (!matchPattern(cond, m_Zero())) {
+        newMemrefs.push_back(memref);
+        newConditions.push_back(cond);
       }
-      newMemrefs.push_back(memref);
-      newConditions.push_back(cond);
-      replacements.push_back({});
     }
 
-    if (newMemrefs.size() == deallocOp.getMemrefs().size())
-      return failure();
-
-    auto newDeallocOp = rewriter.create<DeallocOp>(
-        deallocOp.getLoc(), newMemrefs, newConditions, deallocOp.getRetained());
-    unsigned i = 0;
-    for (auto &repl : replacements)
-      if (!repl)
-        repl = newDeallocOp.getResult(i++);
-
-    rewriter.replaceOp(deallocOp, replacements);
-    return success();
+    return updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
+                                  rewriter);
   }
 };
 
@@ -917,9 +987,10 @@ struct EraseAlwaysFalseDealloc : public OpRewritePattern<DeallocOp> {
 
 void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
-  results
-      .add<DeallocRemoveDuplicates, EraseEmptyDealloc, EraseAlwaysFalseDealloc>(
-          context);
+  results.add<DeallocRemoveDuplicateDeallocMemrefs,
+              DeallocRemoveDuplicateRetainedMemrefs,
+              DeallocRemoveDeallocMemrefsContainedInRetained, EraseEmptyDealloc,
+              EraseAlwaysFalseDealloc>(context);
 }
 
 //===----------------------------------------------------------------------===//

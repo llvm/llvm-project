@@ -43,8 +43,7 @@ protected:
     MemRefType memRefType = op.getType();
     Value alignment;
     if (auto alignmentAttr = op.getAlignment()) {
-      Type indexType =
-          ConvertToLLVMPattern::getIndexTypeMatchingMemRef(memRefType);
+      Type indexType = getIndexType();
       alignment =
           createIndexAttrConstant(rewriter, loc, indexType, *alignmentAttr);
     } else if (!memRefType.getElementType().isSignlessIntOrIndexOrFloat()) {

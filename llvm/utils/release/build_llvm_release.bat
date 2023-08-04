@@ -149,6 +149,7 @@ set common_cmake_flags=^
   -DCMAKE_CL_SHOWINCLUDES_PREFIX="Note: including file: " ^
   -DLLVM_ENABLE_LIBXML2=FORCE_ON ^
   -DLLDB_ENABLE_LIBXML2=OFF ^
+  -DCLANG_ENABLE_LIBXML2=OFF ^
   -DCMAKE_C_FLAGS="-DLIBXML_STATIC" ^
   -DCMAKE_CXX_FLAGS="-DLIBXML_STATIC" ^
   -DLLVM_ENABLE_PROJECTS="clang;clang-tools-extra;lld;compiler-rt;lldb;openmp"

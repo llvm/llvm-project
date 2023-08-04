@@ -5185,9 +5185,8 @@ define void @truncstore_v4i32_v4i8(<4 x i32> %x, ptr %p, <4 x i32> %mask) {
 ; SSE2-NEXT:    pand %xmm3, %xmm4
 ; SSE2-NEXT:    pandn %xmm0, %xmm3
 ; SSE2-NEXT:    por %xmm4, %xmm3
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm3
-; SSE2-NEXT:    packuswb %xmm3, %xmm3
-; SSE2-NEXT:    packuswb %xmm3, %xmm3
+; SSE2-NEXT:    packssdw %xmm3, %xmm3
+; SSE2-NEXT:    packsswb %xmm3, %xmm3
 ; SSE2-NEXT:    pcmpeqd %xmm1, %xmm2
 ; SSE2-NEXT:    movmskps %xmm2, %ecx
 ; SSE2-NEXT:    xorl $15, %ecx
