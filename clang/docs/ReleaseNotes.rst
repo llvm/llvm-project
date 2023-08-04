@@ -107,6 +107,8 @@ Bug Fixes in This Version
   instantiated in one module and whose definition is instantiated in another
   module may end up with members associated with the wrong declaration of the
   class, which can result in miscompiles in some cases.
+- Fix crash on use of a variadic overloaded operator.
+  (`#42535 <https://github.com/llvm/llvm-project/issues/42535>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
