@@ -160,6 +160,10 @@ public:
   /// Visit a struct record.
   void visitStructRecord(const StructRecord &Record);
 
+  void visitStaticFieldRecord(const StaticFieldRecord &Record);
+
+  void visitCXXClassRecord(const CXXClassRecord &Record);
+
   /// Visit an Objective-C container record.
   void visitObjCContainerRecord(const ObjCContainerRecord &Record);
 

@@ -14,6 +14,10 @@
 #ifndef LLVM_CLANG_EXTRACTAPI_EXTRACT_API_VISITOR_H
 #define LLVM_CLANG_EXTRACTAPI_EXTRACT_API_VISITOR_H
 
+#include "clang/AST/DeclCXX.h"
+#include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/Specifiers.h"
+#include "clang/ExtractAPI/DeclarationFragments.h"
 #include "llvm/ADT/FunctionExtras.h"
 
 #include "clang/AST/ASTContext.h"
@@ -44,7 +48,13 @@ public:
 
   bool VisitEnumDecl(const EnumDecl *Decl);
 
+  bool WalkUpFromRecordDecl(const RecordDecl *Decl);
+
+  bool WalkUpFromCXXRecordDecl(const CXXRecordDecl *Decl);
+
   bool VisitRecordDecl(const RecordDecl *Decl);
+
+  bool VisitCXXRecordDecl(const CXXRecordDecl *Decl);
 
   bool VisitObjCInterfaceDecl(const ObjCInterfaceDecl *Decl);
 
@@ -68,6 +78,20 @@ protected:
   /// parent struct.
   void recordStructFields(StructRecord *StructRecord,
                           const RecordDecl::field_range Fields);
+
+  /// Collect API information for the class fields and associate with the parent
+  /// struct
+  void recordCXXFields(CXXClassRecord *CXXClassRecord,
+                       const RecordDecl::field_range Fields);
+
+  void recordCXXMethods(CXXClassRecord *CXXClassRecord,
+                        const CXXRecordDecl::method_range Methods);
+
+  void recordConversionMethod(CXXClassRecord *CXXClassRecord,
+                              const CXXMethodDecl *SpecialCXXMethod);
+
+  void recordSpecialCXXMethod(CXXClassRecord *CXXClassRecord,
+                              const CXXMethodDecl *SpecialCXXMethod);
 
   /// Collect API information for the Objective-C methods and associate with the
   /// parent container.
@@ -131,8 +155,9 @@ bool ExtractAPIVisitorBase<Derived>::VisitVarDecl(const VarDecl *Decl) {
   if (isa<ParmVarDecl>(Decl))
     return true;
 
-  // Skip non-global variables in records (struct/union/class).
-  if (Decl->getDeclContext()->isRecord())
+  // Skip non-global variables in records (struct/union/class) but not static
+  // members.
+  if (Decl->getDeclContext()->isRecord() && !Decl->isStaticDataMember())
     return true;
 
   // Skip local variables inside function or method.
@@ -165,9 +190,19 @@ bool ExtractAPIVisitorBase<Derived>::VisitVarDecl(const VarDecl *Decl) {
   DeclarationFragments SubHeading =
       DeclarationFragmentsBuilder::getSubHeading(Decl);
 
-  // Add the global variable record to the API set.
-  API.addGlobalVar(Name, USR, Loc, AvailabilitySet(Decl), Linkage, Comment,
-                   Declaration, SubHeading, isInSystemHeader(Decl));
+  if (Decl->isStaticDataMember()) {
+    SymbolReference Context;
+    auto Record = dyn_cast<RecordDecl>(Decl->getDeclContext());
+    Context.Name = Record->getName();
+    Context.USR = API.recordUSR(Record);
+    auto Access = DeclarationFragmentsBuilder::getAccessControl(Decl);
+    API.addStaticField(Name, USR, Loc, AvailabilitySet(Decl), Linkage, Comment,
+                       Declaration, SubHeading, Context, Access,
+                       isInSystemHeader(Decl));
+  } else
+    // Add the global variable record to the API set.
+    API.addGlobalVar(Name, USR, Loc, AvailabilitySet(Decl), Linkage, Comment,
+                     Declaration, SubHeading, isInSystemHeader(Decl));
   return true;
 }
 
@@ -280,15 +315,23 @@ bool ExtractAPIVisitorBase<Derived>::VisitEnumDecl(const EnumDecl *Decl) {
 }
 
 template <typename Derived>
-bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
-  // Skip C++ structs/classes/unions
-  // TODO: support C++ records
-  if (isa<CXXRecordDecl>(Decl))
-    return true;
+bool ExtractAPIVisitorBase<Derived>::WalkUpFromRecordDecl(
+    const RecordDecl *Decl) {
+  getDerivedExtractAPIVisitor().VisitRecordDecl(Decl);
+  return true;
+}
 
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::WalkUpFromCXXRecordDecl(
+    const CXXRecordDecl *Decl) {
+  getDerivedExtractAPIVisitor().VisitCXXRecordDecl(Decl);
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
     return true;
-
   // Collect symbol information.
   StringRef Name = Decl->getName();
   if (Name.empty())
@@ -319,6 +362,57 @@ bool ExtractAPIVisitorBase<Derived>::VisitRecordDecl(const RecordDecl *Decl) {
   getDerivedExtractAPIVisitor().recordStructFields(StructRecord,
                                                    Decl->fields());
 
+  return true;
+}
+
+template <typename Derived>
+bool ExtractAPIVisitorBase<Derived>::VisitCXXRecordDecl(
+    const CXXRecordDecl *Decl) {
+  if (!getDerivedExtractAPIVisitor().shouldDeclBeIncluded(Decl))
+    return true;
+
+  StringRef Name = Decl->getName();
+  StringRef USR = API.recordUSR(Decl);
+  PresumedLoc Loc =
+      Context.getSourceManager().getPresumedLoc(Decl->getLocation());
+  DocComment Comment;
+  if (auto *RawComment =
+          getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Decl))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+  DeclarationFragments Declaration =
+      DeclarationFragmentsBuilder::getFragmentsForCXXClass(Decl);
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(Decl);
+
+  APIRecord::RecordKind Kind;
+  if (Decl->isUnion())
+    Kind = APIRecord::RecordKind::RK_Union;
+  else if (Decl->isStruct())
+    Kind = APIRecord::RecordKind::RK_Struct;
+  else
+    Kind = APIRecord::RecordKind::RK_CXXClass;
+
+  CXXClassRecord *CXXClassRecord =
+      API.addCXXClass(Name, USR, Loc, AvailabilitySet(Decl), Comment,
+                      Declaration, SubHeading, Kind, isInSystemHeader(Decl));
+
+  // FIXME: store AccessSpecifier given by inheritance
+  for (const auto BaseSpecifier : Decl->bases()) {
+    // skip classes not inherited as public
+    if (BaseSpecifier.getAccessSpecifier() != AccessSpecifier::AS_public)
+      continue;
+    SymbolReference BaseClass;
+    CXXRecordDecl *BaseClassDecl =
+        BaseSpecifier.getType().getTypePtr()->getAsCXXRecordDecl();
+    BaseClass.Name = BaseClassDecl->getName();
+    BaseClass.USR = API.recordUSR(BaseClassDecl);
+    CXXClassRecord->Bases.emplace_back(BaseClass);
+  }
+
+  getDerivedExtractAPIVisitor().recordCXXFields(CXXClassRecord, Decl->fields());
+  getDerivedExtractAPIVisitor().recordCXXMethods(CXXClassRecord,
+                                                 Decl->methods());
   return true;
 }
 
@@ -555,6 +649,155 @@ void ExtractAPIVisitorBase<Derived>::recordStructFields(
     API.addStructField(StructRecord, Name, USR, Loc, AvailabilitySet(Field),
                        Comment, Declaration, SubHeading,
                        isInSystemHeader(Field));
+  }
+}
+
+template <typename Derived>
+void ExtractAPIVisitorBase<Derived>::recordCXXFields(
+    CXXClassRecord *CXXClassRecord, const RecordDecl::field_range Fields) {
+  for (const auto *Field : Fields) {
+    // Collect symbol information.
+    StringRef Name = Field->getName();
+    StringRef USR = API.recordUSR(Field);
+    PresumedLoc Loc =
+        Context.getSourceManager().getPresumedLoc(Field->getLocation());
+    Context.getSourceManager().getPresumedLoc(Field->getLocation());
+    DocComment Comment;
+    if (auto *RawComment =
+            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Field))
+      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                              Context.getDiagnostics());
+
+    // Build declaration fragments and sub-heading for the struct field.
+    DeclarationFragments Declaration =
+        DeclarationFragmentsBuilder::getFragmentsForField(Field);
+    DeclarationFragments SubHeading =
+        DeclarationFragmentsBuilder::getSubHeading(Field);
+    AccessControl Access = DeclarationFragmentsBuilder::getAccessControl(Field);
+
+    API.addCXXField(CXXClassRecord, Name, USR, Loc, AvailabilitySet(Field),
+                    Comment, Declaration, SubHeading, Access,
+                    isInSystemHeader(Field));
+  }
+}
+
+/// Collect API information for constructors and destructors and associate with
+/// the parent class.
+template <typename Derived>
+void ExtractAPIVisitorBase<Derived>::recordSpecialCXXMethod(
+    CXXClassRecord *CXXClassRecord, const CXXMethodDecl *CXXSpecialMethod) {
+  StringRef Name;
+  bool isConstructor = false;
+  if (isa<CXXConstructorDecl>(CXXSpecialMethod)) {
+    isConstructor = true;
+    Name = CXXClassRecord->Name;
+  } else if (isa<CXXDestructorDecl>(CXXSpecialMethod)) {
+    // Copy string to get name with '~'.
+    Name = API.copyString(CXXSpecialMethod->getNameAsString());
+  }
+
+  StringRef USR = API.recordUSR(CXXSpecialMethod);
+  PresumedLoc Loc = Context.getSourceManager().getPresumedLoc(
+      CXXSpecialMethod->getLocation());
+  DocComment Comment;
+  if (auto *RawComment = getDerivedExtractAPIVisitor().fetchRawCommentForDecl(
+          CXXSpecialMethod))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+
+  // Build declaration fragments, sub-heading, and signature for the method.
+  DeclarationFragments Declaration =
+      DeclarationFragmentsBuilder::getFragmentsForSpecialCXXMethod(
+          CXXSpecialMethod);
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(CXXSpecialMethod);
+  FunctionSignature Signature =
+      DeclarationFragmentsBuilder::getFunctionSignature(CXXSpecialMethod);
+  AccessControl Access =
+      DeclarationFragmentsBuilder::getAccessControl(CXXSpecialMethod);
+
+  API.addCXXSpecialMethod(CXXClassRecord, Name, USR, Loc,
+                          AvailabilitySet(CXXSpecialMethod), Comment,
+                          Declaration, SubHeading, Signature, isConstructor,
+                          Access, isInSystemHeader(CXXSpecialMethod));
+}
+
+template <typename Derived>
+void ExtractAPIVisitorBase<Derived>::recordConversionMethod(
+    CXXClassRecord *CXXClassRecord, const CXXMethodDecl *SpecialCXXMethod) {
+  StringRef Name = API.copyString(SpecialCXXMethod->getNameAsString());
+  StringRef USR = API.recordUSR(SpecialCXXMethod);
+  PresumedLoc Loc = Context.getSourceManager().getPresumedLoc(
+      SpecialCXXMethod->getLocation());
+  DocComment Comment;
+  if (auto *RawComment = getDerivedExtractAPIVisitor().fetchRawCommentForDecl(
+          SpecialCXXMethod))
+    Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                            Context.getDiagnostics());
+
+  // Build declaration fragments, sub-heading, and signature for the method.
+  DeclarationFragments Declaration =
+      DeclarationFragmentsBuilder::getFragmentsForConversionFunction(
+          cast<CXXConversionDecl>(SpecialCXXMethod));
+  DeclarationFragments SubHeading =
+      DeclarationFragmentsBuilder::getSubHeading(SpecialCXXMethod);
+  FunctionSignature Signature =
+      DeclarationFragmentsBuilder::getFunctionSignature(SpecialCXXMethod);
+  AccessControl Access =
+      DeclarationFragmentsBuilder::getAccessControl(SpecialCXXMethod);
+
+  API.addCXXMethod(CXXClassRecord, Name, USR, Loc,
+                   AvailabilitySet(SpecialCXXMethod), Comment, Declaration,
+                   SubHeading, Signature, SpecialCXXMethod->isStatic(), Access,
+                   isInSystemHeader(SpecialCXXMethod));
+}
+
+template <typename Derived>
+void ExtractAPIVisitorBase<Derived>::recordCXXMethods(
+    CXXClassRecord *CXXClassRecord, const CXXRecordDecl::method_range Methods) {
+  for (const auto *Method : Methods) {
+    if (isa<CXXConstructorDecl>(Method) || isa<CXXDestructorDecl>(Method)) {
+      recordSpecialCXXMethod(CXXClassRecord, Method);
+      continue;
+    }
+
+    if (isa<CXXConversionDecl>(Method)) {
+      recordConversionMethod(CXXClassRecord, Method);
+      continue;
+    }
+
+    StringRef Name;
+    DeclarationFragments Declaration;
+    if (Method->isOverloadedOperator()) {
+      Name = API.copyString(Method->getNameAsString());
+      Declaration =
+          DeclarationFragmentsBuilder::getFragmentsForOverloadedOperator(
+              Method);
+    } else {
+      Name = API.copyString(Method->getNameAsString());
+      Declaration =
+          DeclarationFragmentsBuilder::getFragmentsForCXXMethod(Method);
+    }
+    StringRef USR = API.recordUSR(Method);
+    PresumedLoc Loc =
+        Context.getSourceManager().getPresumedLoc(Method->getLocation());
+    DocComment Comment;
+    if (auto *RawComment =
+            getDerivedExtractAPIVisitor().fetchRawCommentForDecl(Method))
+      Comment = RawComment->getFormattedLines(Context.getSourceManager(),
+                                              Context.getDiagnostics());
+
+    // Build declaration fragments, sub-heading, and signature for the method.
+    DeclarationFragments SubHeading =
+        DeclarationFragmentsBuilder::getSubHeading(Method);
+    FunctionSignature Signature =
+        DeclarationFragmentsBuilder::getFunctionSignature(Method);
+    AccessControl Access =
+        DeclarationFragmentsBuilder::getAccessControl(Method);
+
+    API.addCXXMethod(CXXClassRecord, Name, USR, Loc, AvailabilitySet(Method),
+                     Comment, Declaration, SubHeading, Signature,
+                     Method->isStatic(), Access, isInSystemHeader(Method));
   }
 }
 
