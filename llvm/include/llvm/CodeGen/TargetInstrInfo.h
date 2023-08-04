@@ -2072,6 +2072,10 @@ public:
     return false;
   }
 
+  /// Return true if the function is a viable candidate for machine function
+  /// splitting. The criteria for if a function can be split may vary by target.
+  virtual bool isFunctionSafeToSplit(const MachineFunction &MF) const;
+
   /// Produce the expression describing the \p MI loading a value into
   /// the physical register \p Reg. This hook should only be used with
   /// \p MIs belonging to VReg-less functions.
