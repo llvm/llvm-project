@@ -35,6 +35,39 @@ define amdgpu_ps void @test_s_load_i8_imm(ptr addrspace(4) inreg %in, ptr addrsp
   ret void
 }
 
+define amdgpu_ps void @test_s_load_i8_sgpr(ptr addrspace(4) inreg %in, i32 inreg %offset, ptr addrspace(1) %out) {
+; DAG-LABEL: test_s_load_i8_sgpr:
+; DAG:       ; %bb.0:
+; DAG-NEXT:    s_mov_b32 s3, 0
+; DAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; DAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; DAG-NEXT:    s_load_i8 s0, s[0:1], 0x0
+; DAG-NEXT:    s_wait_kmcnt 0x0
+; DAG-NEXT:    v_mov_b32_e32 v2, s0
+; DAG-NEXT:    global_store_b32 v[0:1], v2, off
+; DAG-NEXT:    s_nop 0
+; DAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; DAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: test_s_load_i8_sgpr:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_add_co_u32 s0, s0, s2
+; GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
+; GISEL-NEXT:    s_load_i8 s0, s[0:1], 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GISEL-NEXT:    s_nop 0
+; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GISEL-NEXT:    s_endpgm
+  %zext = zext i32 %offset to i64
+  %gep = getelementptr i8, ptr addrspace(4) %in, i64 %zext
+  %ld = load i8, ptr addrspace(4) %gep
+  %sext = sext i8 %ld to i32
+  store i32 %sext, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_ps void @test_s_load_i8_sgpr_imm(ptr addrspace(4) inreg %in, i32 inreg %offset, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_i8_sgpr_imm:
 ; GCN:       ; %bb.0:
@@ -105,6 +138,39 @@ define amdgpu_ps void @test_s_load_u8_imm(ptr addrspace(4) inreg %in, ptr addrsp
   ret void
 }
 
+define amdgpu_ps void @test_s_load_u8_sgpr(ptr addrspace(4) inreg %in, i32 inreg %offset, ptr addrspace(1) %out) {
+; DAG-LABEL: test_s_load_u8_sgpr:
+; DAG:       ; %bb.0:
+; DAG-NEXT:    s_mov_b32 s3, 0
+; DAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; DAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; DAG-NEXT:    s_load_u8 s0, s[0:1], 0x0
+; DAG-NEXT:    s_wait_kmcnt 0x0
+; DAG-NEXT:    v_mov_b32_e32 v2, s0
+; DAG-NEXT:    global_store_b32 v[0:1], v2, off
+; DAG-NEXT:    s_nop 0
+; DAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; DAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: test_s_load_u8_sgpr:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_add_co_u32 s0, s0, s2
+; GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
+; GISEL-NEXT:    s_load_u8 s0, s[0:1], 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GISEL-NEXT:    s_nop 0
+; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GISEL-NEXT:    s_endpgm
+  %zext1 = zext i32 %offset to i64
+  %gep = getelementptr i8, ptr addrspace(4) %in, i64 %zext1
+  %ld = load i8, ptr addrspace(4) %gep
+  %zext2 = zext i8 %ld to i32
+  store i32 %zext2, ptr addrspace(1) %out
+  ret void
+}
+
 define amdgpu_ps void @test_s_load_u8_sgpr_imm(ptr addrspace(4) inreg %in, i32 inreg %offset, ptr addrspace(1) %out) {
 ; GCN-LABEL: test_s_load_u8_sgpr_imm:
 ; GCN:       ; %bb.0:
@@ -169,6 +235,39 @@ define amdgpu_ps void @test_s_load_i16_imm(ptr addrspace(4) inreg %in, ptr addrs
 ; GCN-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GCN-NEXT:    s_endpgm
   %gep = getelementptr i16, ptr addrspace(4) %in, i64 -100
+  %ld = load i16, ptr addrspace(4) %gep
+  %sext = sext i16 %ld to i32
+  store i32 %sext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @test_s_load_i16_sgpr(ptr addrspace(4) inreg %in, i32 inreg %offset, ptr addrspace(1) %out) {
+; DAG-LABEL: test_s_load_i16_sgpr:
+; DAG:       ; %bb.0:
+; DAG-NEXT:    s_mov_b32 s3, 0
+; DAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; DAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; DAG-NEXT:    s_load_i16 s0, s[0:1], 0x0
+; DAG-NEXT:    s_wait_kmcnt 0x0
+; DAG-NEXT:    v_mov_b32_e32 v2, s0
+; DAG-NEXT:    global_store_b32 v[0:1], v2, off
+; DAG-NEXT:    s_nop 0
+; DAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; DAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: test_s_load_i16_sgpr:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_add_co_u32 s0, s0, s2
+; GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
+; GISEL-NEXT:    s_load_i16 s0, s[0:1], 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GISEL-NEXT:    s_nop 0
+; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GISEL-NEXT:    s_endpgm
+  %zext = zext i32 %offset to i64
+  %gep = getelementptr i8, ptr addrspace(4) %in, i64 %zext
   %ld = load i16, ptr addrspace(4) %gep
   %sext = sext i16 %ld to i32
   store i32 %sext, ptr addrspace(1) %out
@@ -284,6 +383,39 @@ define amdgpu_ps void @test_s_load_u16_imm(ptr addrspace(4) inreg %in, ptr addrs
   %ld = load i16, ptr addrspace(4) %gep
   %zext = zext i16 %ld to i32
   store i32 %zext, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_ps void @test_s_load_u16_sgpr(ptr addrspace(4) inreg %in, i32 inreg %offset, ptr addrspace(1) %out) {
+; DAG-LABEL: test_s_load_u16_sgpr:
+; DAG:       ; %bb.0:
+; DAG-NEXT:    s_mov_b32 s3, 0
+; DAG-NEXT:    s_delay_alu instid0(SALU_CYCLE_1)
+; DAG-NEXT:    s_add_nc_u64 s[0:1], s[0:1], s[2:3]
+; DAG-NEXT:    s_load_u16 s0, s[0:1], 0x0
+; DAG-NEXT:    s_wait_kmcnt 0x0
+; DAG-NEXT:    v_mov_b32_e32 v2, s0
+; DAG-NEXT:    global_store_b32 v[0:1], v2, off
+; DAG-NEXT:    s_nop 0
+; DAG-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; DAG-NEXT:    s_endpgm
+;
+; GISEL-LABEL: test_s_load_u16_sgpr:
+; GISEL:       ; %bb.0:
+; GISEL-NEXT:    s_add_co_u32 s0, s0, s2
+; GISEL-NEXT:    s_add_co_ci_u32 s1, s1, 0
+; GISEL-NEXT:    s_load_u16 s0, s[0:1], 0x0
+; GISEL-NEXT:    s_wait_kmcnt 0x0
+; GISEL-NEXT:    v_mov_b32_e32 v2, s0
+; GISEL-NEXT:    global_store_b32 v[0:1], v2, off
+; GISEL-NEXT:    s_nop 0
+; GISEL-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
+; GISEL-NEXT:    s_endpgm
+  %zext1 = zext i32 %offset to i64
+  %gep = getelementptr i8, ptr addrspace(4) %in, i64 %zext1
+  %ld = load i16, ptr addrspace(4) %gep
+  %zext2 = zext i16 %ld to i32
+  store i32 %zext2, ptr addrspace(1) %out
   ret void
 }
 
