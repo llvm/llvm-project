@@ -240,23 +240,15 @@ struct SwitchOpLowering : public ConvertOpToLLVMPattern<cf::SwitchOp> {
 
 } // namespace
 
-static void populateModuleIndependentControlFlowToLLVMConversionPatterns(
+void mlir::cf::populateControlFlowToLLVMConversionPatterns(
     LLVMTypeConverter &converter, RewritePatternSet &patterns) {
   // clang-format off
   patterns.add<
+      AssertOpLowering,
       BranchOpLowering,
       CondBranchOpLowering,
       SwitchOpLowering>(converter);
   // clang-format on
-}
-
-void mlir::cf::populateControlFlowToLLVMConversionPatterns(
-    LLVMTypeConverter &converter, RewritePatternSet &patterns) {
-  // clang-format off
-  patterns.add<AssertOpLowering>(converter);
-  // clang-format on
-  populateModuleIndependentControlFlowToLLVMConversionPatterns(converter,
-                                                               patterns);
 }
 
 void mlir::cf::populateAssertToLLVMConversionPattern(
@@ -287,13 +279,8 @@ struct ConvertControlFlowToLLVM
     options.useOpaquePointers = useOpaquePointers;
 
     LLVMTypeConverter converter(&getContext(), options);
-    if (isa<ModuleOp>(getOperation())) {
-      mlir::cf::populateControlFlowToLLVMConversionPatterns(converter,
-                                                            patterns);
-    } else {
-      populateModuleIndependentControlFlowToLLVMConversionPatterns(converter,
-                                                                   patterns);
-    }
+    mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
+
     if (failed(applyPartialConversion(getOperation(), target,
                                       std::move(patterns))))
       signalPassFailure();

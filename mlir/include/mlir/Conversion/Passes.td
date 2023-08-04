@@ -249,7 +249,7 @@ def ConvertComplexToStandard : Pass<"convert-complex-to-standard"> {
 // ControlFlowToLLVM
 //===----------------------------------------------------------------------===//
 
-def ConvertControlFlowToLLVMPass : Pass<"convert-cf-to-llvm"> {
+def ConvertControlFlowToLLVMPass : Pass<"convert-cf-to-llvm", "ModuleOp"> {
   let summary = "Convert ControlFlow operations to the LLVM dialect";
   let description = [{
     Convert ControlFlow operations into LLVM IR dialect operations.
@@ -257,16 +257,6 @@ def ConvertControlFlowToLLVMPass : Pass<"convert-cf-to-llvm"> {
     If other operations are present and their results are required by the LLVM
     IR dialect operations, the pass will fail.  Any LLVM IR operations or types
     already present in the IR will be kept as is.
-
-    This pass is not restricted to run to any op but certain conversions are
-    omitted when the pass is run on a non-builtin ModuleOp. The omitted 
-    conversions are the ones that assume a ModuleOp is accessible, for 
-    manipulating its symbol table (for the purpose of calling into external
-    libraries), namely:
-      1. cf.assert lowering
-
-    Such decoupling of partial lowerings is particularly useful in the context
-    of accelerators that may depend on custom module operations.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
@@ -655,25 +645,15 @@ def ConvertMathToFuncs : Pass<"convert-math-to-funcs", "ModuleOp"> {
 // MemRefToLLVM
 //===----------------------------------------------------------------------===//
 
-def FinalizeMemRefToLLVMConversionPass : Pass<"finalize-memref-to-llvm"> {
+def FinalizeMemRefToLLVMConversionPass :
+    Pass<"finalize-memref-to-llvm", "ModuleOp"> {
   let summary = "Finalize MemRef dialect to LLVM dialect conversion";
   let description = [{
-    Finalize the conversion of the operations from the MemRef dialect to the
-    LLVM dialect.
-    This conversion will not convert some complex MemRef operations. Make sure
-    to run `expand-strided-metadata` beforehand for these.
-
-    This pass is not restricted to run to any op but certain conversions are
-    omitted when the pass is run on a non-builtin ModuleOp. The omitted 
-    conversions are the ones that assume a ModuleOp is accessible, for 
-    manipulating its symbol table (for the purpose of calling into external
-    libraries), namely:
-      1. memref.copy lowering
-      2. memref.alloc lowering
-      3. memref.dealloc lowering
-
-    Such decoupling of partial lowerings is particularly useful in the context
-    of accelerators that may depend on custom module operations.
+    Finalize the conversion of the operations from the MemRef
+    dialect to the LLVM dialect.
+    This conversion will not convert some complex MemRef
+    operations. Make sure to run `expand-strided-metadata`
+    beforehand for these.
   }];
   let dependentDialects = ["LLVM::LLVMDialect"];
   let options = [
