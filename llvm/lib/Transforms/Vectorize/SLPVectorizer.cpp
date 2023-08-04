@@ -140,6 +140,10 @@ static cl::opt<unsigned>
 MaxVFOption("slp-max-vf", cl::init(0), cl::Hidden,
     cl::desc("Maximum SLP vectorization factor (0=unlimited)"));
 
+static cl::opt<int>
+MaxStoreLookup("slp-max-store-lookup", cl::init(32), cl::Hidden,
+    cl::desc("Maximum depth of the lookup for consecutive stores."));
+
 /// Limits the size of scheduling regions in a block.
 /// It avoid long compile times for _very_ large blocks where vector
 /// instructions are spread over a wide range.
@@ -12435,185 +12439,138 @@ bool SLPVectorizerPass::vectorizeStores(ArrayRef<StoreInst *> Stores,
   BoUpSLP::ValueSet VectorizedStores;
   bool Changed = false;
 
-  // Stores the pair of stores (first_store, last_store) in a range, that were
-  // already tried to be vectorized. Allows to skip the store ranges that were
-  // already tried to be vectorized but the attempts were unsuccessful.
-  DenseSet<std::pair<Value *, Value *>> TriedSequences;
-  struct StoreDistCompare {
-    bool operator()(const std::pair<unsigned, int> &Op1,
-                    const std::pair<unsigned, int> &Op2) const {
-      return Op1.second < Op2.second;
+  int E = Stores.size();
+  SmallBitVector Tails(E, false);
+  int MaxIter = MaxStoreLookup.getValue();
+  SmallVector<std::pair<int, int>, 16> ConsecutiveChain(
+      E, std::make_pair(E, INT_MAX));
+  SmallVector<SmallBitVector, 4> CheckedPairs(E, SmallBitVector(E, false));
+  int IterCnt;
+  auto &&FindConsecutiveAccess = [this, &Stores, &Tails, &IterCnt, MaxIter,
+                                  &CheckedPairs,
+                                  &ConsecutiveChain](int K, int Idx) {
+    if (IterCnt >= MaxIter)
+      return true;
+    if (CheckedPairs[Idx].test(K))
+      return ConsecutiveChain[K].second == 1 &&
+             ConsecutiveChain[K].first == Idx;
+    ++IterCnt;
+    CheckedPairs[Idx].set(K);
+    CheckedPairs[K].set(Idx);
+    std::optional<int> Diff = getPointersDiff(
+        Stores[K]->getValueOperand()->getType(), Stores[K]->getPointerOperand(),
+        Stores[Idx]->getValueOperand()->getType(),
+        Stores[Idx]->getPointerOperand(), *DL, *SE, /*StrictCheck=*/true);
+    if (!Diff || *Diff == 0)
+      return false;
+    int Val = *Diff;
+    if (Val < 0) {
+      if (ConsecutiveChain[Idx].second > -Val) {
+        Tails.set(K);
+        ConsecutiveChain[Idx] = std::make_pair(K, -Val);
+      }
+      return false;
     }
+    if (ConsecutiveChain[K].second <= Val)
+      return false;
+
+    Tails.set(Idx);
+    ConsecutiveChain[K] = std::make_pair(Idx, Val);
+    return Val == 1;
   };
-  // A set of pairs (index of store in Stores array ref, Distance of the store
-  // address relative to base store address in units).
-  using StoreIndexToDistSet =
-      std::set<std::pair<unsigned, int>, StoreDistCompare>;
-  auto TryToVectorize = [&](const StoreIndexToDistSet &Set) {
-    int PrevDist = -1;
+  // Do a quadratic search on all of the given stores in reverse order and find
+  // all of the pairs of stores that follow each other.
+  for (int Idx = E - 1; Idx >= 0; --Idx) {
+    // If a store has multiple consecutive store candidates, search according
+    // to the sequence: Idx-1, Idx+1, Idx-2, Idx+2, ...
+    // This is because usually pairing with immediate succeeding or preceding
+    // candidate create the best chance to find slp vectorization opportunity.
+    const int MaxLookDepth = std::max(E - Idx, Idx + 1);
+    IterCnt = 0;
+    for (int Offset = 1, F = MaxLookDepth; Offset < F; ++Offset)
+      if ((Idx >= Offset && FindConsecutiveAccess(Idx - Offset, Idx)) ||
+          (Idx + Offset < E && FindConsecutiveAccess(Idx + Offset, Idx)))
+        break;
+  }
+
+  // Tracks if we tried to vectorize stores starting from the given tail
+  // already.
+  SmallBitVector TriedTails(E, false);
+  // For stores that start but don't end a link in the chain:
+  for (int Cnt = E; Cnt > 0; --Cnt) {
+    int I = Cnt - 1;
+    if (ConsecutiveChain[I].first == E || Tails.test(I))
+      continue;
+    // We found a store instr that starts a chain. Now follow the chain and try
+    // to vectorize it.
     BoUpSLP::ValueList Operands;
     // Collect the chain into a list.
-    for (auto [Idx, Data] : enumerate(Set)) {
-      if (Operands.empty() || Data.second - PrevDist == 1) {
-        Operands.push_back(Stores[Data.first]);
-        PrevDist = Data.second;
-        if (Idx != Set.size() - 1)
-          continue;
-      }
-      if (Operands.size() <= 1) {
-        Operands.clear();
-        Operands.push_back(Stores[Data.first]);
-        PrevDist = Data.second;
-        continue;
-      }
-
-      unsigned MaxVecRegSize = R.getMaxVecRegSize();
-      unsigned EltSize = R.getVectorElementSize(Operands[0]);
-      unsigned MaxElts = llvm::bit_floor(MaxVecRegSize / EltSize);
-
-      unsigned MaxVF =
-          std::min(R.getMaximumVF(EltSize, Instruction::Store), MaxElts);
-      auto *Store = cast<StoreInst>(Operands[0]);
-      Type *StoreTy = Store->getValueOperand()->getType();
-      Type *ValueTy = StoreTy;
-      if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
-        ValueTy = Trunc->getSrcTy();
-      unsigned MinVF = TTI->getStoreMinimumVF(
-          R.getMinVF(DL->getTypeSizeInBits(ValueTy)), StoreTy, ValueTy);
-
-      if (MaxVF <= MinVF) {
-        LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF
-                          << ") <= "
-                          << "MinVF (" << MinVF << ")\n");
-      }
-
-      // FIXME: Is division-by-2 the correct step? Should we assert that the
-      // register size is a power-of-2?
-      unsigned StartIdx = 0;
-      for (unsigned Size = MaxVF; Size >= MinVF; Size /= 2) {
-        for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {
-          ArrayRef<Value *> Slice = ArrayRef(Operands).slice(Cnt, Size);
-          if (!VectorizedStores.count(Slice.front()) &&
-              !VectorizedStores.count(Slice.back()) &&
-              TriedSequences.insert(std::make_pair(Slice.front(), Slice.back()))
-                  .second &&
-              vectorizeStoreChain(Slice, R, Cnt, MinVF)) {
-            // Mark the vectorized stores so that we don't vectorize them again.
-            VectorizedStores.insert(Slice.begin(), Slice.end());
-            Changed = true;
-            // If we vectorized initial block, no need to try to vectorize it
-            // again.
-            if (Cnt == StartIdx)
-              StartIdx += Size;
-            Cnt += Size;
-            continue;
-          }
-          ++Cnt;
+    while (I != E && !VectorizedStores.count(Stores[I])) {
+      Operands.push_back(Stores[I]);
+      Tails.set(I);
+      if (ConsecutiveChain[I].second != 1) {
+        // Mark the new end in the chain and go back, if required. It might be
+        // required if the original stores come in reversed order, for example.
+        if (ConsecutiveChain[I].first != E &&
+            Tails.test(ConsecutiveChain[I].first) && !TriedTails.test(I) &&
+            !VectorizedStores.count(Stores[ConsecutiveChain[I].first])) {
+          TriedTails.set(I);
+          Tails.reset(ConsecutiveChain[I].first);
+          if (Cnt < ConsecutiveChain[I].first + 2)
+            Cnt = ConsecutiveChain[I].first + 2;
         }
-        // Check if the whole array was vectorized already - exit.
-        if (StartIdx >= Operands.size())
-          break;
+        break;
       }
-      Operands.clear();
-      Operands.push_back(Stores[Data.first]);
-      PrevDist = Data.second;
+      // Move to the next value in the chain.
+      I = ConsecutiveChain[I].first;
     }
-  };
+    assert(!Operands.empty() && "Expected non-empty list of stores.");
 
-  // Stores pair (first: index of the store into Stores array ref, address of
-  // which taken as base, second: sorted set of pairs {index, dist}, which are
-  // indices of stores in the set and their store location distances relative to
-  // the base address).
+    unsigned MaxVecRegSize = R.getMaxVecRegSize();
+    unsigned EltSize = R.getVectorElementSize(Operands[0]);
+    unsigned MaxElts = llvm::bit_floor(MaxVecRegSize / EltSize);
 
-  // Need to store the index of the very first store separately, since the set
-  // may be reordered after the insertion and the first store may be moved. This
-  // container allows to reduce number of calls of getPointersDiff() function.
-  SmallVector<std::pair<unsigned, StoreIndexToDistSet>> SortedStores;
-  // Inserts the specified store SI with the given index Idx to the set of the
-  // stores. If the store with the same distance is found already - stop
-  // insertion, try to vectorize already found stores. If some stores from this
-  // sequence were not vectorized - try to vectorize them with the new store
-  // later. But this logic is applied only to the stores, that come before the
-  // previous store with the same distance.
-  // Example:
-  // 1. store x, %p
-  // 2. store y, %p+1
-  // 3. store z, %p+2
-  // 4. store a, %p
-  // 5. store b, %p+3
-  // - Scan this from the last to first store. The very first bunch of stores is
-  // {5, {{4, -3}, {2, -2}, {3, -1}, {5, 0}}} (the element in SortedStores
-  // vector).
-  // - The next store in the list - #1 - has the same distance from store #5 as
-  // the store #4.
-  // - Try to vectorize sequence of stores 4,2,3,5.
-  // - If all these stores are vectorized - just drop them.
-  // - If some of them are not vectorized (say, #3 and #5), do extra analysis.
-  // - Start new stores sequence.
-  // The new bunch of stores is {1, {1, 0}}.
-  // - Add the stores from previous sequence, that were not vectorized.
-  // Here we consider the stores in the reversed order, rather they are used in
-  // the IR (Stores are reversed already, see vectorizeStoreChains() function).
-  // Store #3 can be added -> comes after store #4 with the same distance as
-  // store #1.
-  // Store #5 cannot be added - comes before store #4.
-  // This logic allows to improve the compile time, we assume that the stores
-  // after previous store with the same distance most likely have memory
-  // dependencies and no need to waste compile time to try to vectorize them.
-  // - Try to vectorize the sequence {1, {1, 0}, {3, 2}}.
-  auto FillStoresSet = [&](unsigned Idx, StoreInst *SI) {
-    for (auto &Set : SortedStores) {
-      std::optional<int> Diff = getPointersDiff(
-          Stores[Set.first]->getValueOperand()->getType(),
-          Stores[Set.first]->getPointerOperand(),
-          SI->getValueOperand()->getType(), SI->getPointerOperand(), *DL, *SE,
-          /*StrictCheck=*/true);
-      if (!Diff)
-        continue;
-      auto It = Set.second.find(std::make_pair(Idx, *Diff));
-      if (It == Set.second.end()) {
-        Set.second.emplace(Idx, *Diff);
-        return;
-      }
-      // Try to vectorize the first found set to avoid duplicate analysis.
-      TryToVectorize(Set.second);
-      StoreIndexToDistSet PrevSet;
-      PrevSet.swap(Set.second);
-      Set.first = Idx;
-      Set.second.emplace(Idx, 0);
-      // Insert stores that followed previous match to try to vectorize them
-      // with this store.
-      unsigned StartIdx = It->first + 1;
-      SmallBitVector UsedStores(Idx - StartIdx);
-      // Distances to previously found dup store (or this store, since they
-      // store to the same addresses).
-      SmallVector<int> Dists(Idx - StartIdx, 0);
-      for (const std::pair<unsigned, int> &Pair : reverse(PrevSet)) {
-        // Do not try to vectorize sequences, we already tried.
-        if (Pair.first <= It->first ||
-            VectorizedStores.contains(Stores[Pair.first]))
-          break;
-        unsigned BI = Pair.first - StartIdx;
-        UsedStores.set(BI);
-        Dists[BI] = Pair.second - It->second;
-      }
-      for (unsigned I = StartIdx; I < Idx; ++I) {
-        unsigned BI = I - StartIdx;
-        if (BI < UsedStores.size() && UsedStores.test(BI))
-          Set.second.emplace(I, Dists[BI]);
-      }
-      return;
+    unsigned MaxVF = std::min(R.getMaximumVF(EltSize, Instruction::Store),
+                              MaxElts);
+    auto *Store = cast<StoreInst>(Operands[0]);
+    Type *StoreTy = Store->getValueOperand()->getType();
+    Type *ValueTy = StoreTy;
+    if (auto *Trunc = dyn_cast<TruncInst>(Store->getValueOperand()))
+      ValueTy = Trunc->getSrcTy();
+    unsigned MinVF = TTI->getStoreMinimumVF(
+        R.getMinVF(DL->getTypeSizeInBits(ValueTy)), StoreTy, ValueTy);
+
+    if (MaxVF <= MinVF) {
+      LLVM_DEBUG(dbgs() << "SLP: Vectorization infeasible as MaxVF (" << MaxVF << ") <= "
+                        << "MinVF (" << MinVF << ")\n");
     }
-    auto &Res = SortedStores.emplace_back();
-    Res.first = Idx;
-    Res.second.emplace(Idx, 0);
-  };
-  for (auto [I, SI] : enumerate(Stores))
-    FillStoresSet(I, SI);
 
-  // Final vectorization attempt.
-  for (auto &Set : SortedStores)
-    TryToVectorize(Set.second);
+    // FIXME: Is division-by-2 the correct step? Should we assert that the
+    // register size is a power-of-2?
+    unsigned StartIdx = 0;
+    for (unsigned Size = MaxVF; Size >= MinVF; Size /= 2) {
+      for (unsigned Cnt = StartIdx, E = Operands.size(); Cnt + Size <= E;) {
+        ArrayRef<Value *> Slice = ArrayRef(Operands).slice(Cnt, Size);
+        if (!VectorizedStores.count(Slice.front()) &&
+            !VectorizedStores.count(Slice.back()) &&
+            vectorizeStoreChain(Slice, R, Cnt, MinVF)) {
+          // Mark the vectorized stores so that we don't vectorize them again.
+          VectorizedStores.insert(Slice.begin(), Slice.end());
+          Changed = true;
+          // If we vectorized initial block, no need to try to vectorize it
+          // again.
+          if (Cnt == StartIdx)
+            StartIdx += Size;
+          Cnt += Size;
+          continue;
+        }
+        ++Cnt;
+      }
+      // Check if the whole array was vectorized already - exit.
+      if (StartIdx >= Operands.size())
+        break;
+    }
+  }
 
   return Changed;
 }
@@ -15178,12 +15135,6 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   // compatible (have the same opcode, same parent), otherwise it is
   // definitely not profitable to try to vectorize them.
   auto &&StoreSorter = [this](StoreInst *V, StoreInst *V2) {
-    if (V->getValueOperand()->getType()->getTypeID() <
-        V2->getValueOperand()->getType()->getTypeID())
-      return true;
-    if (V->getValueOperand()->getType()->getTypeID() >
-        V2->getValueOperand()->getType()->getTypeID())
-      return false;
     if (V->getPointerOperandType()->getTypeID() <
         V2->getPointerOperandType()->getTypeID())
       return true;
@@ -15222,8 +15173,6 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   auto &&AreCompatibleStores = [this](StoreInst *V1, StoreInst *V2) {
     if (V1 == V2)
       return true;
-    if (V1->getValueOperand()->getType() != V2->getValueOperand()->getType())
-      return false;
     if (V1->getPointerOperandType() != V2->getPointerOperandType())
       return false;
     // Undefs are compatible with any other value.
@@ -15255,13 +15204,8 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
     if (!isValidElementType(Pair.second.front()->getValueOperand()->getType()))
       continue;
 
-    // Reverse stores to do bottom-to-top analysis. This is important if the
-    // values are stores to the same addresses several times, in this case need
-    // to follow the stores order (reversed to meet the memory dependecies).
-    SmallVector<StoreInst *> ReversedStores(Pair.second.rbegin(),
-                                            Pair.second.rend());
     Changed |= tryToVectorizeSequence<StoreInst>(
-        ReversedStores, StoreSorter, AreCompatibleStores,
+        Pair.second, StoreSorter, AreCompatibleStores,
         [this, &R](ArrayRef<StoreInst *> Candidates, bool) {
           return vectorizeStores(Candidates, R);
         },
