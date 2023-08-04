@@ -373,10 +373,8 @@ LoadInst *AtomicExpand::convertAtomicLoadToIntegerType(LoadInst *LI) {
   ReplacementIRBuilder Builder(LI, *DL);
 
   Value *Addr = LI->getPointerOperand();
-  Type *PT = PointerType::get(NewTy, Addr->getType()->getPointerAddressSpace());
-  Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
-  auto *NewLI = Builder.CreateLoad(NewTy, NewAddr);
+  auto *NewLI = Builder.CreateLoad(NewTy, Addr);
   NewLI->setAlignment(LI->getAlign());
   NewLI->setVolatile(LI->isVolatile());
   NewLI->setAtomic(LI->getOrdering(), LI->getSyncScopeID());
@@ -398,14 +396,12 @@ AtomicExpand::convertAtomicXchgToIntegerType(AtomicRMWInst *RMWI) {
 
   Value *Addr = RMWI->getPointerOperand();
   Value *Val = RMWI->getValOperand();
-  Type *PT = PointerType::get(NewTy, RMWI->getPointerAddressSpace());
-  Value *NewAddr = Builder.CreateBitCast(Addr, PT);
   Value *NewVal = Val->getType()->isPointerTy()
                       ? Builder.CreatePtrToInt(Val, NewTy)
                       : Builder.CreateBitCast(Val, NewTy);
 
   auto *NewRMWI =
-      Builder.CreateAtomicRMW(AtomicRMWInst::Xchg, NewAddr, NewVal,
+      Builder.CreateAtomicRMW(AtomicRMWInst::Xchg, Addr, NewVal,
                               RMWI->getAlign(), RMWI->getOrdering());
   NewRMWI->setVolatile(RMWI->isVolatile());
   LLVM_DEBUG(dbgs() << "Replaced " << *RMWI << " with " << *NewRMWI << "\n");
@@ -508,10 +504,8 @@ StoreInst *AtomicExpand::convertAtomicStoreToIntegerType(StoreInst *SI) {
   Value *NewVal = Builder.CreateBitCast(SI->getValueOperand(), NewTy);
 
   Value *Addr = SI->getPointerOperand();
-  Type *PT = PointerType::get(NewTy, Addr->getType()->getPointerAddressSpace());
-  Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
-  StoreInst *NewSI = Builder.CreateStore(NewVal, NewAddr);
+  StoreInst *NewSI = Builder.CreateStore(NewVal, Addr);
   NewSI->setAlignment(SI->getAlign());
   NewSI->setVolatile(SI->isVolatile());
   NewSI->setAtomic(SI->getOrdering(), SI->getSyncScopeID());
@@ -1188,14 +1182,12 @@ AtomicExpand::convertCmpXchgToIntegerType(AtomicCmpXchgInst *CI) {
   ReplacementIRBuilder Builder(CI, *DL);
 
   Value *Addr = CI->getPointerOperand();
-  Type *PT = PointerType::get(NewTy, Addr->getType()->getPointerAddressSpace());
-  Value *NewAddr = Builder.CreateBitCast(Addr, PT);
 
   Value *NewCmp = Builder.CreatePtrToInt(CI->getCompareOperand(), NewTy);
   Value *NewNewVal = Builder.CreatePtrToInt(CI->getNewValOperand(), NewTy);
 
   auto *NewCI = Builder.CreateAtomicCmpXchg(
-      NewAddr, NewCmp, NewNewVal, CI->getAlign(), CI->getSuccessOrdering(),
+      Addr, NewCmp, NewNewVal, CI->getAlign(), CI->getSuccessOrdering(),
       CI->getFailureOrdering(), CI->getSyncScopeID());
   NewCI->setVolatile(CI->isVolatile());
   NewCI->setWeak(CI->isWeak());

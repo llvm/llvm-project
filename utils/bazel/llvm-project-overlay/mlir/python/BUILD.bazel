@@ -975,7 +975,7 @@ filegroup(
         "mlir/dialects/_loop_transform_ops_ext.py",
         "mlir/dialects/_memref_transform_ops_ext.py",
         "mlir/dialects/_structured_transform_ops_ext.py",
-        "mlir/dialects/_tensor_ops_ext.py",
+        "mlir/dialects/_tensor_transform_ops_ext.py",
         "mlir/dialects/_transform_ops_ext.py",
         "mlir/dialects/_transform_pdl_extension_ops_ext.py",
         ":BufferizationTransformOpsPyGen",

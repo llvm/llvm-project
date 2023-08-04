@@ -32,7 +32,6 @@ class Function;
 class GlobalVariable;
 class Instruction;
 class LLVMContext;
-class PostDominatorTree;
 class StructType;
 class TargetLibraryInfo;
 class Value;

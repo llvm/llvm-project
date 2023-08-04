@@ -170,20 +170,22 @@ bool OmpStructureChecker::IsCloselyNestedRegion(const OmpDirectiveSet &set) {
   return false;
 }
 
+void OmpStructureChecker::CheckMultipleOccurrence(
+    semantics::UnorderedSymbolSet &listVars,
+    const std::list<parser::Name> &nameList, const parser::CharBlock &item,
+    const std::string &clauseName) {
+  for (auto const &var : nameList) {
+    if (llvm::is_contained(listVars, *(var.symbol))) {
+      context_.Say(item,
+          "List item '%s' present at multiple %s clauses"_err_en_US,
+          var.ToString(), clauseName);
+    }
+    listVars.insert(*(var.symbol));
+  }
+}
+
 void OmpStructureChecker::CheckMultListItems() {
   semantics::UnorderedSymbolSet listVars;
-  auto checkMultipleOcurrence = [&](const std::list<parser::Name> &nameList,
-                                    const parser::CharBlock &item,
-                                    const std::string &clauseName) {
-    for (auto const &var : nameList) {
-      if (llvm::is_contained(listVars, *(var.symbol))) {
-        context_.Say(item,
-            "List item '%s' present at multiple %s clauses"_err_en_US,
-            var.ToString(), clauseName);
-      }
-      listVars.insert(*(var.symbol));
-    }
-  };
 
   // Aligned clause
   auto alignedClauses{FindClauses(llvm::omp::Clause::OMPC_aligned)};
@@ -216,7 +218,8 @@ void OmpStructureChecker::CheckMultListItems() {
         }
       }
     }
-    checkMultipleOcurrence(alignedNameList, itr->second->source, "ALIGNED");
+    CheckMultipleOccurrence(
+        listVars, alignedNameList, itr->second->source, "ALIGNED");
   }
 
   // Nontemporal clause
@@ -226,7 +229,8 @@ void OmpStructureChecker::CheckMultListItems() {
     const auto &nontempClause{
         std::get<parser::OmpClause::Nontemporal>(itr->second->u)};
     const auto &nontempNameList{nontempClause.v};
-    checkMultipleOcurrence(nontempNameList, itr->second->source, "NONTEMPORAL");
+    CheckMultipleOccurrence(
+        listVars, nontempNameList, itr->second->source, "NONTEMPORAL");
   }
 }
 
@@ -2000,10 +2004,8 @@ CHECK_SIMPLE_CLAUSE(UnifiedSharedMemory, OMPC_unified_shared_memory)
 CHECK_SIMPLE_CLAUSE(Uniform, OMPC_uniform)
 CHECK_SIMPLE_CLAUSE(Unknown, OMPC_unknown)
 CHECK_SIMPLE_CLAUSE(Untied, OMPC_untied)
-CHECK_SIMPLE_CLAUSE(UseDevicePtr, OMPC_use_device_ptr)
 CHECK_SIMPLE_CLAUSE(UsesAllocators, OMPC_uses_allocators)
 CHECK_SIMPLE_CLAUSE(Update, OMPC_update)
-CHECK_SIMPLE_CLAUSE(UseDeviceAddr, OMPC_use_device_addr)
 CHECK_SIMPLE_CLAUSE(Write, OMPC_write)
 CHECK_SIMPLE_CLAUSE(Init, OMPC_init)
 CHECK_SIMPLE_CLAUSE(Use, OMPC_use)
@@ -2616,6 +2618,89 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Copyin &x) {
   GetSymbolsInObjectList(x.v, currSymbols);
   CheckCopyingPolymorphicAllocatable(
       currSymbols, llvm::omp::Clause::OMPC_copyin);
+}
+
+void OmpStructureChecker::CheckStructureElement(
+    const parser::OmpObjectList &ompObjectList,
+    const llvm::omp::Clause clause) {
+  for (const auto &ompObject : ompObjectList.v) {
+    common::visit(
+        common::visitors{
+            [&](const parser::Designator &designator) {
+              if (const auto *dataRef{
+                      std::get_if<parser::DataRef>(&designator.u)}) {
+                if (parser::Unwrap<parser::StructureComponent>(ompObject)) {
+                  context_.Say(GetContext().clauseSource,
+                      "A variable that is part of another variable "
+                      "(structure element) cannot appear on the %s "
+                      "%s clause"_err_en_US,
+                      ContextDirectiveAsFortran(),
+                      parser::ToUpperCaseLetters(getClauseName(clause).str()));
+                }
+              }
+            },
+            [&](const parser::Name &name) {},
+        },
+        ompObject.u);
+  }
+  return;
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::UseDevicePtr &x) {
+  CheckStructureElement(x.v, llvm::omp::Clause::OMPC_use_device_ptr);
+  CheckAllowed(llvm::omp::Clause::OMPC_use_device_ptr);
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(x.v, currSymbols);
+  semantics::UnorderedSymbolSet listVars;
+  auto useDevicePtrClauses{FindClauses(llvm::omp::Clause::OMPC_use_device_ptr)};
+  for (auto itr = useDevicePtrClauses.first; itr != useDevicePtrClauses.second;
+       ++itr) {
+    const auto &useDevicePtrClause{
+        std::get<parser::OmpClause::UseDevicePtr>(itr->second->u)};
+    const auto &useDevicePtrList{useDevicePtrClause.v};
+    std::list<parser::Name> useDevicePtrNameList;
+    for (const auto &ompObject : useDevicePtrList.v) {
+      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+        if (name->symbol) {
+          if (!(IsBuiltinCPtr(*(name->symbol)))) {
+            context_.Say(itr->second->source,
+                "'%s' in USE_DEVICE_PTR clause must be of type C_PTR"_err_en_US,
+                name->ToString());
+          } else {
+            useDevicePtrNameList.push_back(*name);
+          }
+        }
+      }
+    }
+    CheckMultipleOccurrence(
+        listVars, useDevicePtrNameList, itr->second->source, "USE_DEVICE_PTR");
+  }
+}
+
+void OmpStructureChecker::Enter(const parser::OmpClause::UseDeviceAddr &x) {
+  CheckStructureElement(x.v, llvm::omp::Clause::OMPC_use_device_addr);
+  CheckAllowed(llvm::omp::Clause::OMPC_use_device_addr);
+  SymbolSourceMap currSymbols;
+  GetSymbolsInObjectList(x.v, currSymbols);
+  semantics::UnorderedSymbolSet listVars;
+  auto useDeviceAddrClauses{
+      FindClauses(llvm::omp::Clause::OMPC_use_device_addr)};
+  for (auto itr = useDeviceAddrClauses.first;
+       itr != useDeviceAddrClauses.second; ++itr) {
+    const auto &useDeviceAddrClause{
+        std::get<parser::OmpClause::UseDeviceAddr>(itr->second->u)};
+    const auto &useDeviceAddrList{useDeviceAddrClause.v};
+    std::list<parser::Name> useDeviceAddrNameList;
+    for (const auto &ompObject : useDeviceAddrList.v) {
+      if (const auto *name{parser::Unwrap<parser::Name>(ompObject)}) {
+        if (name->symbol) {
+          useDeviceAddrNameList.push_back(*name);
+        }
+      }
+    }
+    CheckMultipleOccurrence(listVars, useDeviceAddrNameList,
+        itr->second->source, "USE_DEVICE_ADDR");
+  }
 }
 
 llvm::StringRef OmpStructureChecker::getClauseName(llvm::omp::Clause clause) {

@@ -269,12 +269,13 @@ static std::string getModuleContextHash(const ModuleDeps &MD,
   HashBuilder.add(serialization::VERSION_MAJOR, serialization::VERSION_MINOR);
 
   // Hash the BuildInvocation without any input files.
-  SmallVector<const char *, 32> Args;
-  llvm::BumpPtrAllocator Alloc;
-  llvm::StringSaver Saver(Alloc);
-  CI.generateCC1CommandLine(
-      Args, [&](const Twine &Arg) { return Saver.save(Arg).data(); });
-  HashBuilder.addRange(Args);
+  SmallString<0> ArgVec;
+  ArgVec.reserve(4096);
+  CI.generateCC1CommandLine([&](const Twine &Arg) {
+    Arg.toVector(ArgVec);
+    ArgVec.push_back('\0');
+  });
+  HashBuilder.add(ArgVec);
 
   // Hash the module dependencies. These paths may differ even if the invocation
   // is identical if they depend on the contents of the files in the TU -- for
