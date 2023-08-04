@@ -3462,8 +3462,8 @@ struct OmpDeviceTypeClause {
 // 2.12 if-clause -> IF ([ directive-name-modifier :] scalar-logical-expr)
 struct OmpIfClause {
   TUPLE_CLASS_BOILERPLATE(OmpIfClause);
-  ENUM_CLASS(DirectiveNameModifier, Parallel, Target, TargetEnterData,
-      TargetExitData, TargetData, TargetUpdate, Taskloop, Task)
+  ENUM_CLASS(DirectiveNameModifier, Parallel, Simd, Target, TargetData,
+      TargetEnterData, TargetExitData, TargetUpdate, Task, Taskloop, Teams)
   std::tuple<std::optional<DirectiveNameModifier>, ScalarLogicalExpr> t;
 };
 
