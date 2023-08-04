@@ -27,10 +27,7 @@ endif(EXISTS "${CMAKE_SOURCE_DIR}/../../.git")
 
 include(GNUInstallDirs)
 include(CMakePackageConfigHelpers)
-# Disable file reorg backward compatibility for ASAN build
-if(NOT ENABLE_ASAN_PACKAGING)
-  option(FILE_REORG_BACKWARD_COMPATIBILITY "Enable File Reorg with backward compatibility" ON)
-endif()
+option(FILE_REORG_BACKWARD_COMPATIBILITY "Enable File Reorg with backward compatibility" OFF)
 # Optionally, build Compiler Support with ccache.
 set(ROCM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if (ROCM_CCACHE_BUILD)
