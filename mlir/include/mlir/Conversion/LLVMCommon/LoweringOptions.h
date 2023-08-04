@@ -14,7 +14,6 @@
 #ifndef MLIR_CONVERSION_LLVMCOMMON_LOWERINGOPTIONS_H
 #define MLIR_CONVERSION_LLVMCOMMON_LOWERINGOPTIONS_H
 
-#include "mlir/IR/BuiltinTypes.h"
 #include "llvm/IR/DataLayout.h"
 
 namespace mlir {
@@ -66,9 +65,6 @@ public:
 
   /// Get the index bitwidth.
   unsigned getIndexBitwidth() const { return indexBitwidth; }
-
-  /// Hook to customize the conversion of MemRefType to LLVMType.
-  llvm::function_ref<Type(MemRefType)> memrefIndexTypeConverter = nullptr;
 
 private:
   unsigned indexBitwidth;
