@@ -9085,7 +9085,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::mergeBlocksIntoPredecessors(*Plan);
 
   assert(VPlanVerifier::verifyPlanIsValid(*Plan) && "VPlan is invalid");
-  return std::move(Plan);
+  return Plan;
 }
 
 VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
