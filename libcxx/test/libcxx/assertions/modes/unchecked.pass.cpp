@@ -9,7 +9,7 @@
 // This test checks that if no hardening mode is defined (i.e., in the unchecked mode), by default assertions aren't
 // triggered.
 
-// UNSUPPORTED: libcpp-has-hardened-mode, libcpp-has-debug-mode
+// REQUIRES: libcpp-hardening-mode=unchecked
 
 #include <cassert>
 

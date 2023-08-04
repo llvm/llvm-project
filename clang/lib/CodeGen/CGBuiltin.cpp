@@ -20298,11 +20298,13 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
   // Zihintntl
   case RISCV::BI__builtin_riscv_ntl_load: {
     llvm::Type *ResTy = ConvertType(E->getType());
-    ConstantInt *Mode = cast<ConstantInt>(Ops[1]);
+    unsigned DomainVal = 5; // Default __RISCV_NTLH_ALL
+    if (Ops.size() == 2)
+      DomainVal = cast<ConstantInt>(Ops[1])->getZExtValue();
 
     llvm::MDNode *RISCVDomainNode = llvm::MDNode::get(
         getLLVMContext(),
-        llvm::ConstantAsMetadata::get(Builder.getInt32(Mode->getZExtValue())));
+        llvm::ConstantAsMetadata::get(Builder.getInt32(DomainVal)));
     llvm::MDNode *NontemporalNode = llvm::MDNode::get(
         getLLVMContext(), llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
 
@@ -20324,11 +20326,13 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
     return Load;
   }
   case RISCV::BI__builtin_riscv_ntl_store: {
-    ConstantInt *Mode = cast<ConstantInt>(Ops[2]);
+    unsigned DomainVal = 5; // Default __RISCV_NTLH_ALL
+    if (Ops.size() == 3)
+      DomainVal = cast<ConstantInt>(Ops[2])->getZExtValue();
 
     llvm::MDNode *RISCVDomainNode = llvm::MDNode::get(
         getLLVMContext(),
-        llvm::ConstantAsMetadata::get(Builder.getInt32(Mode->getZExtValue())));
+        llvm::ConstantAsMetadata::get(Builder.getInt32(DomainVal)));
     llvm::MDNode *NontemporalNode = llvm::MDNode::get(
         getLLVMContext(), llvm::ConstantAsMetadata::get(Builder.getInt32(1)));
 
