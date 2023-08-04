@@ -483,10 +483,10 @@ static int writeFile(const char *OutputName) {
 
   if (OutputFile == getProfileFile()) {
     fflush(OutputFile);
-  } else {
     if (doMerging() && !__llvm_profile_is_continuous_mode_enabled()) {
       lprofUnlockFileHandle(OutputFile);
     }
+  } else {
     fclose(OutputFile);
   }
 
