@@ -56,16 +56,24 @@ class THInstVdotVX<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 // op vd, vs1, vs2, vm (reverse the order of vs1 and vs2)
-class THVdotALUrVV<bits<6> funct6, RISCVVFormat opv, string opcodestr>
-    : THInstVdotVV<funct6, opv, (outs VR:$vd),
-                   (ins VR:$vs1, VR:$vs2, VMaskOp:$vm),
-                   opcodestr, "$vd, $vs1, $vs2$vm">;
+class THVdotALUrVV<bits<6> funct6, RISCVVFormat opv, string opcodestr,
+                   bit EarlyClobber>
+    : THInstVdotVV<funct6, opv, (outs VR:$vd_wb),
+                   (ins VR:$vd, VR:$vs1, VR:$vs2, VMaskOp:$vm),
+                   opcodestr, "$vd, $vs1, $vs2$vm"> {
+  let Constraints = !if(EarlyClobber, "@earlyclobber $vd_wb, $vd = $vd_wb",
+                                      "$vd = $vd_wb");
+}
 
 // op vd, rs1, vs2, vm (reverse the order of rs1 and vs2)
-class THVdotALUrVX<bits<6> funct6, RISCVVFormat opv, string opcodestr>
-    : THInstVdotVX<funct6, opv, (outs VR:$vd),
-                   (ins GPR:$rs1, VR:$vs2, VMaskOp:$vm),
-                   opcodestr, "$vd, $rs1, $vs2$vm">;
+class THVdotALUrVX<bits<6> funct6, RISCVVFormat opv, string opcodestr,
+                   bit EarlyClobber>
+    : THInstVdotVX<funct6, opv, (outs VR:$vd_wb),
+                   (ins VR:$vd, GPR:$rs1, VR:$vs2, VMaskOp:$vm),
+                   opcodestr, "$vd, $rs1, $vs2$vm"> {
+  let Constraints = !if(EarlyClobber, "@earlyclobber $vd_wb, $vd = $vd_wb",
+                                      "$vd = $vd_wb");
+}
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
 let Predicates = [HasVendorXTHeadBa], DecoderNamespace = "XTHeadBa",
@@ -227,12 +235,14 @@ class THStoreUpdate<bits<5> funct5, string opcodestr>
 //===----------------------------------------------------------------------===//
 
 multiclass THVdotVMAQA_VX<string opcodestr, bits<6> funct6> {
-  def _VX : THVdotALUrVX<funct6, OPMVX, opcodestr # ".vx">;
+  let RVVConstraint = WidenV in
+  def _VX : THVdotALUrVX<funct6, OPMVX, opcodestr # ".vx", /*EarlyClobber*/1>;
 }
 
-multiclass THVdotVMAQA<string opcodestr, bits<6> funct6> {
-  def _VV   : THVdotALUrVV<funct6, OPMVX, opcodestr # ".vv">;
-  defm ""   : THVdotVMAQA_VX<opcodestr, funct6>;
+multiclass THVdotVMAQA<string opcodestr, bits<6> funct6>
+    : THVdotVMAQA_VX<opcodestr, funct6> {
+  let RVVConstraint = WidenV in
+  def _VV   : THVdotALUrVV<funct6, OPMVX, opcodestr # ".vv", /*EarlyClobber*/1>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -448,9 +458,7 @@ def TH_FSURD : THStoreIndexed<FPR64, 0b01110, "th.fsurd">,
                Sched<[WriteFST64, ReadFStoreData, ReadFMemBase]>;
 }
 
-let Predicates = [HasVendorXTHeadVdot],
-    Constraints = "@earlyclobber $vd",
-    RVVConstraint = WidenV in {
+let Predicates = [HasVendorXTHeadVdot] in {
 defm THVdotVMAQA      : THVdotVMAQA<"th.vmaqa",     0b100000>;
 defm THVdotVMAQAU     : THVdotVMAQA<"th.vmaqau",    0b100010>;
 defm THVdotVMAQASU    : THVdotVMAQA<"th.vmaqasu",   0b100100>;
