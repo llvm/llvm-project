@@ -4585,10 +4585,11 @@ void OpenMPIRBuilder::emitOffloadingArraysArgument(IRBuilderBase &Builder,
                                                    bool ForEndCall) {
   assert((!ForEndCall || Info.separateBeginEndCalls()) &&
          "expected region end call to runtime only when end call is separate");
-  auto VoidPtrTy = Type::getInt8PtrTy(M.getContext());
-  auto VoidPtrPtrTy = VoidPtrTy->getPointerTo(0);
+  auto UnqualPtrTy = PointerType::getUnqual(M.getContext());
+  auto VoidPtrTy = UnqualPtrTy;
+  auto VoidPtrPtrTy = UnqualPtrTy;
   auto Int64Ty = Type::getInt64Ty(M.getContext());
-  auto Int64PtrTy = Type::getInt64PtrTy(M.getContext());
+  auto Int64PtrTy = UnqualPtrTy;
 
   if (!Info.NumberOfPtrs) {
     RTArgs.BasePointersArray = ConstantPointerNull::get(VoidPtrPtrTy);
@@ -4737,7 +4738,7 @@ void OpenMPIRBuilder::emitOffloadingArrays(
   // need to fill up the arrays as we do for the pointers.
   Type *Int64Ty = Builder.getInt64Ty();
   SmallVector<Constant *> ConstSizes(CombinedInfo.Sizes.size(),
-                                     ConstantInt::get(Builder.getInt64Ty(), 0));
+                                     ConstantInt::get(Int64Ty, 0));
   SmallBitVector RuntimeSizes(CombinedInfo.Sizes.size());
   for (unsigned I = 0, E = CombinedInfo.Sizes.size(); I < E; ++I) {
     if (auto *CI = dyn_cast<Constant>(CombinedInfo.Sizes[I])) {
@@ -4746,7 +4747,7 @@ void OpenMPIRBuilder::emitOffloadingArrays(
             static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
                 CombinedInfo.Types[I] &
                 OpenMPOffloadMappingFlags::OMP_MAP_NON_CONTIG))
-          ConstSizes[I] = ConstantInt::get(Builder.getInt64Ty(),
+          ConstSizes[I] = ConstantInt::get(Int64Ty,
                                            CombinedInfo.NonContigInfo.Dims[I]);
         else
           ConstSizes[I] = CI;
@@ -4780,11 +4781,9 @@ void OpenMPIRBuilder::emitOffloadingArrays(
           SizeArrayType, /* ArraySize = */ nullptr, ".offload_sizes");
       Buffer->setAlignment(OffloadSizeAlign);
       Builder.restoreIP(CodeGenIP);
-      Value *GblConstPtr = Builder.CreatePointerBitCastOrAddrSpaceCast(
-          SizesArrayGbl, Int64Ty->getPointerTo());
       Builder.CreateMemCpy(
           Buffer, M.getDataLayout().getPrefTypeAlign(Buffer->getType()),
-          GblConstPtr, OffloadSizeAlign,
+          SizesArrayGbl, OffloadSizeAlign,
           Builder.getIntN(
               IndexSize,
               Buffer->getAllocationSize(M.getDataLayout())->getFixedValue()));
@@ -4813,7 +4812,7 @@ void OpenMPIRBuilder::emitOffloadingArrays(
     Info.RTArgs.MapNamesArray = MapNamesArrayGbl;
   } else {
     Info.RTArgs.MapNamesArray = Constant::getNullValue(
-        Type::getInt8Ty(Builder.getContext())->getPointerTo());
+        PointerType::getUnqual(Builder.getContext()));
   }
 
   // If there's a present map type modifier, it must not be applied to the end
@@ -4834,22 +4833,20 @@ void OpenMPIRBuilder::emitOffloadingArrays(
     }
   }
 
+  PointerType *PtrTy = Builder.getPtrTy();
   for (unsigned I = 0; I < Info.NumberOfPtrs; ++I) {
     Value *BPVal = CombinedInfo.BasePointers[I];
     Value *BP = Builder.CreateConstInBoundsGEP2_32(
-        ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs),
+        ArrayType::get(PtrTy, Info.NumberOfPtrs),
         Info.RTArgs.BasePointersArray, 0, I);
-    BP = Builder.CreatePointerBitCastOrAddrSpaceCast(
-        BP, BPVal->getType()->getPointerTo(/*AddrSpace=*/0));
     Builder.CreateAlignedStore(
-        BPVal, BP, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+        BPVal, BP, M.getDataLayout().getPrefTypeAlign(PtrTy));
 
     if (Info.requiresDevicePointerInfo()) {
       if (CombinedInfo.DevicePointers[I] == DeviceInfoTy::Pointer) {
         CodeGenIP = Builder.saveIP();
         Builder.restoreIP(AllocaIP);
-        Info.DevicePtrInfoMap[BPVal] = {
-            BP, Builder.CreateAlloca(Builder.getPtrTy())};
+        Info.DevicePtrInfoMap[BPVal] = {BP, Builder.CreateAlloca(PtrTy)};
         Builder.restoreIP(CodeGenIP);
         assert(DeviceAddrCB &&
                "DeviceAddrCB missing for DevicePtr code generation");
@@ -4864,13 +4861,11 @@ void OpenMPIRBuilder::emitOffloadingArrays(
 
     Value *PVal = CombinedInfo.Pointers[I];
     Value *P = Builder.CreateConstInBoundsGEP2_32(
-        ArrayType::get(Builder.getInt8PtrTy(), Info.NumberOfPtrs),
+        ArrayType::get(PtrTy, Info.NumberOfPtrs),
         Info.RTArgs.PointersArray, 0, I);
-    P = Builder.CreatePointerBitCastOrAddrSpaceCast(
-        P, PVal->getType()->getPointerTo(/*AddrSpace=*/0));
     // TODO: Check alignment correct.
     Builder.CreateAlignedStore(
-        PVal, P, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+        PVal, P, M.getDataLayout().getPrefTypeAlign(PtrTy));
 
     if (RuntimeSizes.test(I)) {
       Value *S = Builder.CreateConstInBoundsGEP2_32(
@@ -4880,14 +4875,14 @@ void OpenMPIRBuilder::emitOffloadingArrays(
       Builder.CreateAlignedStore(
           Builder.CreateIntCast(CombinedInfo.Sizes[I], Int64Ty,
                                 /*isSigned=*/true),
-          S, M.getDataLayout().getPrefTypeAlign(Builder.getInt8PtrTy()));
+          S, M.getDataLayout().getPrefTypeAlign(PtrTy));
     }
     // Fill up the mapper array.
     unsigned IndexSize = M.getDataLayout().getIndexSizeInBits(0);
-    Value *MFunc = ConstantPointerNull::get(Builder.getInt8PtrTy());
+    Value *MFunc = ConstantPointerNull::get(PtrTy);
     if (CustomMapperCB)
       if (Value *CustomMFunc = CustomMapperCB(I))
-        MFunc = Builder.CreatePointerCast(CustomMFunc, Builder.getInt8PtrTy());
+        MFunc = Builder.CreatePointerCast(CustomMFunc, PtrTy);
     Value *MAddr = Builder.CreateInBoundsGEP(
         MappersArray->getAllocatedType(), MappersArray,
         {Builder.getIntN(IndexSize, 0), Builder.getIntN(IndexSize, I)});
@@ -5483,7 +5478,7 @@ OpenMPIRBuilder::createOffloadMapnames(SmallVectorImpl<llvm::Constant *> &Names,
                                        std::string VarName) {
   llvm::Constant *MapNamesArrayInit = llvm::ConstantArray::get(
       llvm::ArrayType::get(
-          llvm::Type::getInt8Ty(M.getContext())->getPointerTo(), Names.size()),
+          llvm::PointerType::getUnqual(M.getContext()), Names.size()),
       Names);
   auto *MapNamesArrayGlobal = new llvm::GlobalVariable(
       M, MapNamesArrayInit->getType(),

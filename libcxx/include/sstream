@@ -399,8 +399,12 @@ public:
     _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() const & { return str(__str_.get_allocator()); }
 
     _LIBCPP_HIDE_FROM_ABI_SSTREAM string_type str() && {
+        string_type __result;
         const basic_string_view<_CharT, _Traits> __view = view();
-        string_type __result(std::move(__str_), __view.data() - __str_.data(), __view.size());
+        if (!__view.empty()) {
+            auto __pos = __view.data() - __str_.data();
+            __result.assign(std::move(__str_), __pos, __view.size());
+        }
         __str_.clear();
         __init_buf_ptrs();
         return __result;

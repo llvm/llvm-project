@@ -577,6 +577,30 @@ func.func @test_remf_scalable_vector(%arg0 : vector<[8]xf64>, %arg1 : vector<[8]
   return %0 : vector<[8]xf64>
 }
 
+// CHECK-LABEL: test_is_nan
+func.func @test_is_nan(%arg0 : f32) -> i1 {
+  %0 = arith.is_nan %arg0 : f32
+  func.return %0 : i1
+}
+
+// CHECK-LABEL: test_is_nan_vector
+func.func @test_is_nan_vector(%arg0 : vector<2x2xf32>) -> vector<2x2xi1> {
+  %0 = arith.is_nan %arg0 : vector<2x2xf32>
+  func.return %0 : vector<2x2xi1>
+}
+
+// CHECK-LABEL: test_is_inf
+func.func @test_is_inf(%arg0 : f32) -> i1 {
+  %0 = arith.is_inf %arg0 : f32
+  func.return %0 : i1
+}
+
+// CHECK-LABEL: test_is_inf_vector
+func.func @test_is_inf_vector(%arg0 : vector<2x2xf32>) -> vector<2x2xi1> {
+  %0 = arith.is_inf %arg0 : vector<2x2xf32>
+  func.return %0 : vector<2x2xi1>
+}
+
 // CHECK-LABEL: test_extui
 func.func @test_extui(%arg0 : i32) -> i64 {
   %0 = arith.extui %arg0 : i32 to i64

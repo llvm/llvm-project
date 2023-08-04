@@ -1693,11 +1693,12 @@ public:
 
   bool canLoadActualArgumentBeforeLoop(unsigned argIdx) const {
     using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
-    assert(argIdx < caller.getPassedArguments().size() && "bad argument index");
+    const auto &passedArgs{caller.getPassedArguments()};
+    assert(argIdx < passedArgs.size() && "bad argument index");
     // If the actual argument does not need to be passed via an address,
     // or will be passed in the address of a temporary copy, it can be loaded
     // before the elemental loop nest.
-    const auto &arg = caller.getPassedArguments()[argIdx];
+    const auto &arg{passedArgs[argIdx]};
     return arg.passBy == PassBy::Value ||
            arg.passBy == PassBy::BaseAddressValueAttribute;
   }

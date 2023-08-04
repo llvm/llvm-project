@@ -424,10 +424,13 @@ static void createProfileDir(const char *Filename) {
  * its instrumented shared libraries dump profile data into their own data file.
 */
 static FILE *openFileForMerging(const char *ProfileFileName, int *MergeDone) {
-  FILE *ProfileFile = getProfileFile();
+  FILE *ProfileFile = NULL;
   int rc;
 
-  if (!ProfileFile) {
+  ProfileFile = getProfileFile();
+  if (ProfileFile) {
+    lprofLockFileHandle(ProfileFile);
+  } else {
     createProfileDir(ProfileFileName);
     ProfileFile = lprofOpenFileEx(ProfileFileName);
   }
@@ -478,6 +481,9 @@ static int writeFile(const char *OutputName) {
 
   if (OutputFile == getProfileFile()) {
     fflush(OutputFile);
+    if (doMerging()) {
+      lprofUnlockFileHandle(OutputFile);
+    }
   } else {
     fclose(OutputFile);
   }

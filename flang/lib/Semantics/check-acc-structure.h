@@ -18,6 +18,7 @@
 #include "flang/Common/enum-set.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/semantics.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/Frontend/OpenACC/ACC.h.inc"
 
 using AccDirectiveSet = Fortran::common::EnumSet<llvm::acc::Directive,
@@ -66,6 +67,11 @@ public:
   void Leave(const parser::AccClauseList &);
   void Enter(const parser::AccClause &);
 
+  void Enter(const parser::Module &);
+  void Enter(const parser::SubroutineSubprogram &);
+  void Enter(const parser::FunctionSubprogram &);
+  void Enter(const parser::SeparateModuleSubprogram &);
+
 #define GEN_FLANG_CLAUSE_CHECK_ENTER
 #include "llvm/Frontend/OpenACC/ACC.inc"
 
@@ -74,8 +80,14 @@ private:
   bool IsComputeConstruct(llvm::acc::Directive directive) const;
   bool IsInsideComputeConstruct() const;
   void CheckNotInComputeConstruct();
+  void CheckMultipleOccurrenceInDeclare(
+      const parser::AccObjectList &, llvm::acc::Clause);
+  void CheckMultipleOccurrenceInDeclare(
+      const parser::AccObjectListWithModifier &, llvm::acc::Clause);
   llvm::StringRef getClauseName(llvm::acc::Clause clause) override;
   llvm::StringRef getDirectiveName(llvm::acc::Directive directive) override;
+
+  llvm::SmallDenseSet<Symbol *> declareSymbols;
 };
 
 } // namespace Fortran::semantics

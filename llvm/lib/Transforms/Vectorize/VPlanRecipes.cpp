@@ -1269,8 +1269,8 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   Value *Iden = nullptr;
   RecurKind RK = RdxDesc.getRecurrenceKind();
   if (RecurrenceDescriptor::isMinMaxRecurrenceKind(RK) ||
-      RecurrenceDescriptor::isSelectCmpRecurrenceKind(RK)) {
-    // MinMax reduction have the start value as their identify.
+      RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
+    // MinMax and AnyOf reductions have the start value as their identity.
     if (ScalarPHI) {
       Iden = StartV;
     } else {

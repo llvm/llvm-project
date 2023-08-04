@@ -84,7 +84,7 @@
 ! CHECK-NEXT: -module-dir <dir>      Put MODULE files in <dir>
 ! CHECK-NEXT: -nocpp                 Disable predefined and command line preprocessor macros
 ! CHECK-NEXT: --offload-device-only   Only compile for the offloading device.
-! CHECK-NEXT: --offload-host-device   Only compile for the offloading host.
+! CHECK-NEXT: --offload-host-device   Compile for both the offloading host and device (default).
 ! CHECK-NEXT: --offload-host-only     Only compile for the offloading host.
 ! CHECK-NEXT: -o <file> Write output to <file>
 ! CHECK-NEXT: -pedantic              Warn on language extensions

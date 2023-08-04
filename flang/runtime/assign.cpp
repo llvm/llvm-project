@@ -11,6 +11,7 @@
 #include "derived.h"
 #include "stat.h"
 #include "terminator.h"
+#include "tools.h"
 #include "type-info.h"
 #include "flang/Runtime/descriptor.h"
 
@@ -299,18 +300,7 @@ static void Assign(
           RTNAME(AssignTemporary)
           (newFrom, from, terminator.sourceFileName(), terminator.sourceLine());
         } else {
-          char *toAt{newFrom.OffsetElement()};
-          std::size_t fromElements{from.Elements()};
-          if (from.IsContiguous()) {
-            std::memcpy(
-                toAt, from.OffsetElement(), fromElements * fromElementBytes);
-          } else {
-            SubscriptValue fromAt[maxRank];
-            for (from.GetLowerBounds(fromAt); fromElements-- > 0;
-                 toAt += fromElementBytes, from.IncrementSubscripts(fromAt)) {
-              std::memcpy(toAt, from.Element<char>(fromAt), fromElementBytes);
-            }
-          }
+          ShallowCopy(newFrom, from, true, from.IsContiguous());
         }
         Assign(to, newFrom, terminator,
             flags &
@@ -325,11 +315,12 @@ static void Assign(
     if (mustDeallocateLHS) {
       if (deferDeallocation) {
         if ((flags & NeedFinalization) && toDerived) {
-          Finalize(to, *toDerived);
+          Finalize(to, *toDerived, &terminator);
           flags &= ~NeedFinalization;
         }
       } else {
-        to.Destroy((flags & NeedFinalization) != 0);
+        to.Destroy((flags & NeedFinalization) != 0, /*destroyPointers=*/false,
+            &terminator);
         flags &= ~NeedFinalization;
       }
     } else if (to.rank() != from.rank() && !to.IsAllocated()) {
@@ -394,7 +385,7 @@ static void Assign(
     // for all components, including parent components (10.2.1.2-3).
     // The target is first finalized if still necessary (7.5.6.3(1))
     if (flags & NeedFinalization) {
-      Finalize(to, *updatedToDerived);
+      Finalize(to, *updatedToDerived, &terminator);
     }
     // Copy the data components (incl. the parent) first.
     const Descriptor &componentDesc{updatedToDerived->component()};
@@ -467,7 +458,8 @@ static void Assign(
               // This is just a shortcut, because the recursive Assign()
               // below would initiate the destruction for to.
               // No finalization is required.
-              toDesc->Destroy();
+              toDesc->Destroy(
+                  /*finalize=*/false, /*destroyPointers=*/false, &terminator);
               continue; // F'2018 10.2.1.3(13)(2)
             }
           }
@@ -526,7 +518,8 @@ static void Assign(
   if (deferDeallocation) {
     // deferDeallocation is used only when LHS is an allocatable.
     // The finalization has already been run for it.
-    deferDeallocation->Destroy();
+    deferDeallocation->Destroy(
+        /*finalize=*/false, /*destroyPointers=*/false, &terminator);
   }
 }
 

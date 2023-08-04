@@ -31,7 +31,7 @@ program test
   character(4), pointer :: longptr
   !WARNING: Actual argument variable length '2' is less than expected length '3'
   call s1(short)
-  !WARNING: Actual argument variable length '2' is less than expected length '3'
+  !ERROR: Actual argument array has fewer characters (2) than dummy argument 'x=' array (3)
   call s2(shortarr)
   !ERROR: Actual argument variable length '2' does not match the expected length '3'
   call s3(shortarr)

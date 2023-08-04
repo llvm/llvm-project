@@ -42,12 +42,19 @@ class AArch64LinuxTLSRegisters(TestBase):
             substrs=["stopped", "stop reason = breakpoint"],
         )
 
-    def check_tls_reg(self, registers):
-        self.setup(registers)
-
+    def check_registers(self, registers, values):
         regs = self.thread().GetSelectedFrame().GetRegisters()
         tls_regs = regs.GetFirstValueByName("Thread Local Storage Registers")
         self.assertTrue(tls_regs.IsValid(), "No TLS registers found.")
+
+        for register in registers:
+            tls_reg = tls_regs.GetChildMemberWithName(register)
+            self.assertTrue(tls_reg.IsValid(), "{} register not found.".format(
+                register))
+            self.assertEqual(tls_reg.GetValueAsUnsigned(), values[register])
+
+    def check_tls_reg(self, registers):
+        self.setup(registers)
 
         # Since we can't predict what the value will be, the program has set
         # a target value for us to find.
@@ -56,11 +63,12 @@ class AArch64LinuxTLSRegisters(TestBase):
             "tpidr2": 0x8877665544332211,
         }
 
-        for register in registers:
-            tls_reg = tls_regs.GetChildMemberWithName(register)
-            self.assertTrue(tls_reg.IsValid(), "{} register not found.".format(
-                register))
-            self.assertEqual(tls_reg.GetValueAsUnsigned(), initial_values[register])
+        self.check_registers(registers, initial_values)
+
+        # Their values should be restored if an expression modifies them.
+        self.runCmd("expression expr_func()")
+
+        self.check_registers(registers, initial_values)
 
         set_values = {
             "tpidr": 0x1111222233334444,
@@ -95,7 +103,7 @@ class AArch64LinuxTLSRegisters(TestBase):
     @skipUnlessPlatform(["linux"])
     def test_tls_sme(self):
         if not self.isAArch64SME():
-            self.skipTest("SME must present.")
+            self.skipTest("SME must be present.")
 
         self.check_tls_reg(["tpidr", "tpidr2"])
 

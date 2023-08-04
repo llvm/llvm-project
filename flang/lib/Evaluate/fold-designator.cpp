@@ -15,7 +15,7 @@ DEFINE_DEFAULT_CONSTRUCTORS_AND_ASSIGNMENTS(OffsetSymbol)
 
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
     const Symbol &symbol, ConstantSubscript which) {
-  if (IsAllocatableOrPointer(symbol)) {
+  if (!getLastComponent_ && IsAllocatableOrPointer(symbol)) {
     // A pointer may appear as a DATA statement object if it is the
     // rightmost symbol in a designator and has no subscripts.
     // An allocatable may appear if its initializer is NULL().
@@ -142,21 +142,26 @@ std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
 std::optional<OffsetSymbol> DesignatorFolder::FoldDesignator(
     const Component &component, ConstantSubscript which) {
   const Symbol &comp{component.GetLastSymbol()};
-  const DataRef &base{component.base()};
-  std::optional<OffsetSymbol> baseResult, compResult;
-  if (base.Rank() == 0) { // A%X(:) - apply "which" to component
-    baseResult = FoldDesignator(base, 0);
-    compResult = FoldDesignator(comp, which);
-  } else { // A(:)%X - apply "which" to base
-    baseResult = FoldDesignator(base, which);
-    compResult = FoldDesignator(comp, 0);
-  }
-  if (baseResult && compResult) {
-    OffsetSymbol result{baseResult->symbol(), compResult->size()};
-    result.Augment(baseResult->offset() + compResult->offset() + comp.offset());
-    return {std::move(result)};
+  if (getLastComponent_) {
+    return FoldDesignator(comp, which);
   } else {
-    return std::nullopt;
+    const DataRef &base{component.base()};
+    std::optional<OffsetSymbol> baseResult, compResult;
+    if (base.Rank() == 0) { // A%X(:) - apply "which" to component
+      baseResult = FoldDesignator(base, 0);
+      compResult = FoldDesignator(comp, which);
+    } else { // A(:)%X - apply "which" to base
+      baseResult = FoldDesignator(base, which);
+      compResult = FoldDesignator(comp, 0);
+    }
+    if (baseResult && compResult) {
+      OffsetSymbol result{baseResult->symbol(), compResult->size()};
+      result.Augment(
+          baseResult->offset() + compResult->offset() + comp.offset());
+      return {std::move(result)};
+    } else {
+      return std::nullopt;
+    }
   }
 }
 

@@ -311,11 +311,12 @@ void OmpStructureChecker::CheckPredefinedAllocatorRestriction(
         (IsSaved(*symbol) || commonBlock ||
             containingScope.kind() == Scope::Kind::Module)) {
       context_.Say(source,
-          "If list items within the ALLOCATE directive have the "
+          "If list items within the %s directive have the "
           "SAVE attribute, are a common block name, or are "
           "declared in the scope of a module, then only "
           "predefined memory allocator parameters can be used "
-          "in the allocator clause"_err_en_US);
+          "in the allocator clause"_err_en_US,
+          ContextDirectiveAsFortran());
     }
   }
 }
@@ -1140,6 +1141,39 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Allocator &x) {
   RequiresPositiveParameter(llvm::omp::Clause::OMPC_allocator, x.v);
 }
 
+void OmpStructureChecker::Enter(const parser::OmpClause::Allocate &x) {
+  CheckAllowed(llvm::omp::Clause::OMPC_allocate);
+  if (const auto &modifier{
+          std::get<std::optional<parser::OmpAllocateClause::AllocateModifier>>(
+              x.v.t)}) {
+    common::visit(
+        common::visitors{
+            [&](const parser::OmpAllocateClause::AllocateModifier::Allocator
+                    &y) {
+              RequiresPositiveParameter(llvm::omp::Clause::OMPC_allocate, y.v);
+              isPredefinedAllocator = GetIntValue(y.v).has_value();
+            },
+            [&](const parser::OmpAllocateClause::AllocateModifier::
+                    ComplexModifier &y) {
+              const auto &alloc = std::get<
+                  parser::OmpAllocateClause::AllocateModifier::Allocator>(y.t);
+              const auto &align =
+                  std::get<parser::OmpAllocateClause::AllocateModifier::Align>(
+                      y.t);
+              RequiresPositiveParameter(
+                  llvm::omp::Clause::OMPC_allocate, alloc.v);
+              RequiresPositiveParameter(
+                  llvm::omp::Clause::OMPC_allocate, align.v);
+              isPredefinedAllocator = GetIntValue(alloc.v).has_value();
+            },
+            [&](const parser::OmpAllocateClause::AllocateModifier::Align &y) {
+              RequiresPositiveParameter(llvm::omp::Clause::OMPC_allocate, y.v);
+            },
+        },
+        modifier->u);
+  }
+}
+
 void OmpStructureChecker::Enter(const parser::OpenMPDeclareTargetConstruct &x) {
   const auto &dir{std::get<parser::Verbatim>(x.t)};
   PushContext(dir.source, llvm::omp::Directive::OMPD_declare_target);
@@ -1215,6 +1249,33 @@ void OmpStructureChecker::Leave(const parser::OpenMPExecutableAllocate &x) {
   const auto &objectList{std::get<std::optional<parser::OmpObjectList>>(x.t)};
   if (objectList)
     CheckPredefinedAllocatorRestriction(dir.source, *objectList);
+  dirContext_.pop_back();
+}
+
+void OmpStructureChecker::Enter(const parser::OpenMPAllocatorsConstruct &x) {
+  isPredefinedAllocator = true;
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  PushContextAndClauseSets(dir.source, llvm::omp::Directive::OMPD_allocators);
+  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
+  for (const auto &clause : clauseList.v) {
+    if (const auto *allocClause{
+            parser::Unwrap<parser::OmpClause::Allocate>(clause)}) {
+      CheckIsVarPartOfAnotherVar(
+          dir.source, std::get<parser::OmpObjectList>(allocClause->v.t));
+    }
+  }
+}
+
+void OmpStructureChecker::Leave(const parser::OpenMPAllocatorsConstruct &x) {
+  const auto &dir{std::get<parser::Verbatim>(x.t)};
+  const auto &clauseList{std::get<parser::OmpClauseList>(x.t)};
+  for (const auto &clause : clauseList.v) {
+    if (const auto *allocClause{
+            std::get_if<parser::OmpClause::Allocate>(&clause.u)}) {
+      CheckPredefinedAllocatorRestriction(
+          dir.source, std::get<parser::OmpObjectList>(allocClause->v.t));
+    }
+  }
   dirContext_.pop_back();
 }
 
@@ -1893,7 +1954,6 @@ CHECK_SIMPLE_CLAUSE(AcqRel, OMPC_acq_rel)
 CHECK_SIMPLE_CLAUSE(Acquire, OMPC_acquire)
 CHECK_SIMPLE_CLAUSE(AtomicDefaultMemOrder, OMPC_atomic_default_mem_order)
 CHECK_SIMPLE_CLAUSE(Affinity, OMPC_affinity)
-CHECK_SIMPLE_CLAUSE(Allocate, OMPC_allocate)
 CHECK_SIMPLE_CLAUSE(Capture, OMPC_capture)
 CHECK_SIMPLE_CLAUSE(Default, OMPC_default)
 CHECK_SIMPLE_CLAUSE(Depobj, OMPC_depobj)
@@ -2189,6 +2249,7 @@ bool OmpStructureChecker::IsDataRefTypeParamInquiry(
 void OmpStructureChecker::CheckIsVarPartOfAnotherVar(
     const parser::CharBlock &source, const parser::OmpObjectList &objList) {
   OmpDirectiveSet nonPartialVarSet{llvm::omp::Directive::OMPD_allocate,
+      llvm::omp::Directive::OMPD_allocators,
       llvm::omp::Directive::OMPD_threadprivate,
       llvm::omp::Directive::OMPD_declare_target};
   for (const auto &ompObject : objList.v) {

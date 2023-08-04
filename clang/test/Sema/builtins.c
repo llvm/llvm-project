@@ -131,7 +131,7 @@ struct foo x = (struct foo) { __builtin_constant_p(42) ? 37 : 927 };
 
 const int test17_n = 0;
 const char test17_c[] = {1, 2, 3, 0};
-const char test17_d[] = {1, 2, 3, 4};
+const char test17_d[] = {1, 2, 3, 4}; // Like test17_c but not NUL-terminated.
 typedef int __attribute__((vector_size(16))) IntVector;
 struct Aggregate { int n; char c; };
 enum Enum { EnumValue1, EnumValue2 };
@@ -178,9 +178,10 @@ void test17(void) {
   ASSERT(!OPT("abcd"));
   // In these cases, the strlen is non-constant, but the __builtin_constant_p
   // is 0: the array size is not an ICE but is foldable.
-  ASSERT(!OPT(test17_c));        // expected-warning {{folding}}
-  ASSERT(!OPT(&test17_c[0]));    // expected-warning {{folding}}
-  ASSERT(!OPT((char*)test17_c)); // expected-warning {{folding}}
+  ASSERT(!OPT(test17_c));
+  ASSERT(!OPT(&test17_c[0]));
+  ASSERT(!OPT((char*)test17_c));
+  // NOTE: test17_d is not NUL-termintated, so calling strlen on it is UB.
   ASSERT(!OPT(test17_d));        // expected-warning {{folding}}
   ASSERT(!OPT(&test17_d[0]));    // expected-warning {{folding}}
   ASSERT(!OPT((char*)test17_d)); // expected-warning {{folding}}
