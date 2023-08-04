@@ -720,9 +720,13 @@ bool matchDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   case 4:
     if (ScalarSize == 32)
       Opc = AArch64::G_DUPLANE32;
+    else if (ScalarSize == 16)
+      Opc = AArch64::G_DUPLANE16;
     break;
   case 8:
-    if (ScalarSize == 16)
+    if (ScalarSize == 8)
+      Opc = AArch64::G_DUPLANE8;
+    else if (ScalarSize == 16)
       Opc = AArch64::G_DUPLANE16;
     break;
   case 16:
@@ -752,13 +756,10 @@ void applyDupLane(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register DupSrc = MI.getOperand(1).getReg();
   // For types like <2 x s32>, we can use G_DUPLANE32, with a <4 x s32> source.
   // To do this, we can use a G_CONCAT_VECTORS to do the widening.
-  if (SrcTy == LLT::fixed_vector(2, LLT::scalar(32))) {
-    assert(MRI.getType(MI.getOperand(0).getReg()).getNumElements() == 2 &&
-           "Unexpected dest elements");
+  if (SrcTy.getSizeInBits() == 64) {
     auto Undef = B.buildUndef(SrcTy);
-    DupSrc = B.buildConcatVectors(
-                  SrcTy.changeElementCount(ElementCount::getFixed(4)),
-                  {Src1Reg, Undef.getReg(0)})
+    DupSrc = B.buildConcatVectors(SrcTy.multiplyElements(2),
+                                  {Src1Reg, Undef.getReg(0)})
                  .getReg(0);
   }
   B.buildInstr(MatchInfo.first, {MI.getOperand(0).getReg()}, {DupSrc, Lane});
