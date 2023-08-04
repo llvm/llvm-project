@@ -843,11 +843,13 @@ private:
 
   using ProcedureKind = parser::ProcedureStmt::Kind;
   // mapping of generic to its specific proc names and kinds
-  std::multimap<Symbol *, std::pair<const parser::Name *, ProcedureKind>>
-      specificProcs_;
+  using SpecificProcMapType =
+      std::multimap<Symbol *, std::pair<const parser::Name *, ProcedureKind>>;
+  SpecificProcMapType specificProcs_;
 
   void AddSpecificProcs(const std::list<parser::Name> &, ProcedureKind);
-  void ResolveSpecificsInGeneric(Symbol &generic);
+  void ResolveSpecificsInGeneric(Symbol &, bool isEndOfSpecificationPart);
+  void ResolveNewSpecifics();
 };
 
 class SubprogramVisitor : public virtual ScopeHandler, public InterfaceVisitor {
@@ -3258,6 +3260,7 @@ bool InterfaceVisitor::Pre(const parser::InterfaceStmt &x) {
 void InterfaceVisitor::Post(const parser::InterfaceStmt &) { EndAttrs(); }
 
 void InterfaceVisitor::Post(const parser::EndInterfaceStmt &) {
+  ResolveNewSpecifics();
   genericInfo_.pop();
 }
 
@@ -3277,11 +3280,11 @@ bool InterfaceVisitor::Pre(const parser::GenericSpec &x) {
 bool InterfaceVisitor::Pre(const parser::ProcedureStmt &x) {
   if (!isGeneric()) {
     Say("A PROCEDURE statement is only allowed in a generic interface block"_err_en_US);
-    return false;
+  } else {
+    auto kind{std::get<parser::ProcedureStmt::Kind>(x.t)};
+    const auto &names{std::get<std::list<parser::Name>>(x.t)};
+    AddSpecificProcs(names, kind);
   }
-  auto kind{std::get<parser::ProcedureStmt::Kind>(x.t)};
-  const auto &names{std::get<std::list<parser::Name>>(x.t)};
-  AddSpecificProcs(names, kind);
   return false;
 }
 
@@ -3295,6 +3298,7 @@ void InterfaceVisitor::Post(const parser::GenericStmt &x) {
   }
   const auto &names{std::get<std::list<parser::Name>>(x.t)};
   AddSpecificProcs(names, ProcedureKind::Procedure);
+  ResolveNewSpecifics();
   genericInfo_.pop();
 }
 
@@ -3318,36 +3322,48 @@ void InterfaceVisitor::AddSpecificProcs(
 
 // By now we should have seen all specific procedures referenced by name in
 // this generic interface. Resolve those names to symbols.
-void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
+void InterfaceVisitor::ResolveSpecificsInGeneric(
+    Symbol &generic, bool isEndOfSpecificationPart) {
   auto &details{generic.get<GenericDetails>()};
   UnorderedSymbolSet symbolsSeen;
   for (const Symbol &symbol : details.specificProcs()) {
     symbolsSeen.insert(symbol.GetUltimate());
   }
   auto range{specificProcs_.equal_range(&generic)};
+  SpecificProcMapType retain;
   for (auto it{range.first}; it != range.second; ++it) {
     const parser::Name *name{it->second.first};
     auto kind{it->second.second};
-    const auto *symbol{FindSymbol(*name)};
-    if (!symbol) {
-      Say(*name, "Procedure '%s' not found"_err_en_US);
+    const Symbol *symbol{FindSymbol(*name)};
+    if (!isEndOfSpecificationPart && symbol &&
+        &symbol->owner() != &generic.owner()) {
+      // Don't mistakenly use a name from the enclosing scope while there's
+      // still a chance that it could be overridden by a later declaration in
+      // this scope.
+      retain.emplace(&generic, std::make_pair(name, kind));
       continue;
     }
-    // Subtlety: when *symbol is a use- or host-association, the specific
-    // procedure that is recorded in the GenericDetails below must be *symbol,
-    // not the specific procedure shadowed by a generic, because that specific
-    // procedure may be a symbol from another module and its name unavailable to
-    // emit to a module file.
-    const Symbol &bypassed{BypassGeneric(*symbol)};
-    const Symbol &specific{
-        symbol == &symbol->GetUltimate() ? bypassed : *symbol};
-    const Symbol &ultimate{bypassed.GetUltimate()};
-    ProcedureDefinitionClass defClass{ClassifyProcedure(ultimate)};
+    ProcedureDefinitionClass defClass{ProcedureDefinitionClass::None};
+    const Symbol *specific{symbol};
+    const Symbol *ultimate{nullptr};
+    if (symbol) {
+      // Subtlety: when *symbol is a use- or host-association, the specific
+      // procedure that is recorded in the GenericDetails below must be *symbol,
+      // not the specific procedure shadowed by a generic, because that specific
+      // procedure may be a symbol from another module and its name unavailable
+      // to emit to a module file.
+      const Symbol &bypassed{BypassGeneric(*symbol)};
+      if (symbol == &symbol->GetUltimate()) {
+        specific = &bypassed;
+      }
+      ultimate = &bypassed.GetUltimate();
+      defClass = ClassifyProcedure(*ultimate);
+    }
+    std::optional<MessageFixedText> error;
     if (defClass == ProcedureDefinitionClass::Module) {
       // ok
     } else if (kind == ProcedureKind::ModuleProcedure) {
-      Say(*name, "'%s' is not a module procedure"_err_en_US);
-      continue;
+      error = "'%s' is not a module procedure"_err_en_US;
     } else {
       switch (defClass) {
       case ProcedureDefinitionClass::Intrinsic:
@@ -3357,47 +3373,58 @@ void InterfaceVisitor::ResolveSpecificsInGeneric(Symbol &generic) {
       case ProcedureDefinitionClass::Pointer:
         break;
       case ProcedureDefinitionClass::None:
-        Say(*name, "'%s' is not a procedure"_err_en_US);
-        continue;
+        error = "'%s' is not a procedure"_err_en_US;
+        break;
       default:
-        Say(*name,
-            "'%s' is not a procedure that can appear in a generic interface"_err_en_US);
-        continue;
+        error =
+            "'%s' is not a procedure that can appear in a generic interface"_err_en_US;
+        break;
       }
     }
-    if (symbolsSeen.insert(ultimate).second /*true if added*/) {
+    if (error) {
+      if (isEndOfSpecificationPart) {
+        Say(*name, std::move(*error));
+      } else {
+        // possible forward reference, catch it later
+        retain.emplace(&generic, std::make_pair(name, kind));
+      }
+    } else if (!ultimate) {
+    } else if (symbolsSeen.insert(*ultimate).second /*true if added*/) {
       // When a specific procedure is a USE association, that association
       // is saved in the generic's specifics, not its ultimate symbol,
       // so that module file output of interfaces can distinguish them.
-      details.AddSpecificProc(specific, name->source);
-    } else if (&specific == &ultimate) {
+      details.AddSpecificProc(*specific, name->source);
+    } else if (specific == ultimate) {
       Say(name->source,
           "Procedure '%s' is already specified in generic '%s'"_err_en_US,
           name->source, MakeOpName(generic.name()));
     } else {
       Say(name->source,
           "Procedure '%s' from module '%s' is already specified in generic '%s'"_err_en_US,
-          ultimate.name(), ultimate.owner().GetName().value(),
+          ultimate->name(), ultimate->owner().GetName().value(),
           MakeOpName(generic.name()));
     }
   }
   specificProcs_.erase(range.first, range.second);
+  specificProcs_.merge(std::move(retain));
+}
+
+void InterfaceVisitor::ResolveNewSpecifics() {
+  if (Symbol * generic{genericInfo_.top().symbol};
+      generic && generic->has<GenericDetails>()) {
+    ResolveSpecificsInGeneric(*generic, false);
+  }
 }
 
 // Mixed interfaces are allowed by the standard.
 // If there is a derived type with the same name, they must all be functions.
 void InterfaceVisitor::CheckGenericProcedures(Symbol &generic) {
-  ResolveSpecificsInGeneric(generic);
+  ResolveSpecificsInGeneric(generic, true);
   auto &details{generic.get<GenericDetails>()};
   if (auto *proc{details.CheckSpecific()}) {
-    auto msg{
-        "'%s' should not be the name of both a generic interface and a"
-        " procedure unless it is a specific procedure of the generic"_warn_en_US};
-    if (proc->name().begin() > generic.name().begin()) {
-      Say(proc->name(), std::move(msg));
-    } else {
-      Say(generic.name(), std::move(msg));
-    }
+    Say(proc->name().begin() > generic.name().begin() ? proc->name()
+                                                      : generic.name(),
+        "'%s' should not be the name of both a generic interface and a procedure unless it is a specific procedure of the generic"_warn_en_US);
   }
   auto &specifics{details.specificProcs()};
   if (specifics.empty()) {

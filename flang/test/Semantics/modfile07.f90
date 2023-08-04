@@ -53,10 +53,6 @@ contains
 end
 !Expect: m1.mod
 !module m1
-! interface foo
-!  procedure::s1
-!  procedure::s2
-! end interface
 ! interface
 !  function s1(x,y)
 !   real(4),intent(in)::x
@@ -71,16 +67,6 @@ end
 !   complex(4)::s2
 !  end
 ! end interface
-! interface operator(+)
-!  procedure::s1
-!  procedure::s2
-! end interface
-! interface operator(/=)
-!  procedure::f1
-!  procedure::f2
-!  procedure::f3
-! end interface
-! private::operator(/=)
 ! interface
 !  function f1(x,y)
 !   real(4),intent(in)::x
@@ -102,6 +88,20 @@ end
 !   logical(4)::f3
 !  end
 ! end interface
+! interface foo
+!  procedure::s1
+!  procedure::s2
+! end interface
+! interface operator(+)
+!  procedure::s1
+!  procedure::s2
+! end interface
+! interface operator(/=)
+!  procedure::f1
+!  procedure::f2
+!  procedure::f3
+! end interface
+! private::operator(/=)
 ! interface bar
 !  procedure::s1
 !  procedure::s2
@@ -191,11 +191,11 @@ module m2b
 end
 !Expect: m2b.mod
 !module m2b
-! interface foo
-! end interface
 ! type::foo
 !  real(4)::x
 ! end type
+! interface foo
+! end interface
 ! interface bar
 ! end interface
 ! private::bar
@@ -218,9 +218,6 @@ module m3
 end
 !Expect: m3.mod
 !module m3
-! interface g
-!  procedure::s1
-! end interface
 ! interface
 !  subroutine s1(f)
 !   interface
@@ -233,6 +230,9 @@ end
 !    end
 !   end interface
 !  end
+! end interface
+! interface g
+!  procedure::s1
 ! end interface
 !end
 
@@ -250,10 +250,6 @@ subroutine s4
 end
 !Expect: m4.mod
 !module m4
-! interface foo
-!  procedure::foo
-!  procedure::f
-! end interface
 ! interface
 !  function foo()
 !   integer(4)::foo
@@ -264,6 +260,10 @@ end
 !   real(4)::x
 !   integer(4)::f
 !  end
+! end interface
+! interface foo
+!  procedure::foo
+!  procedure::f
 ! end interface
 !end
 
@@ -287,10 +287,6 @@ module m5
 end
 !Expect: m5.mod
 !module m5
-! interface foo
-!  procedure::foo
-!  procedure::f
-! end interface
 ! interface
 !  function foo()
 !   integer(4)::foo
@@ -301,6 +297,10 @@ end
 !   real(4)::x
 !   integer(4)::f
 !  end
+! end interface
+! interface foo
+!  procedure::foo
+!  procedure::f
 ! end interface
 !end
 
@@ -313,15 +313,15 @@ module m6a
 end
 !Expect: m6a.mod
 !module m6a
-! interface operator(<)
-!  procedure::lt
-! end interface
 ! interface
 !  function lt(x,y)
 !   logical(4),intent(in)::x
 !   logical(4),intent(in)::y
 !   logical(4)::lt
 !  end
+! end interface
+! interface operator(<)
+!  procedure::lt
 ! end interface
 !end
 
@@ -345,10 +345,10 @@ contains
 end
 !Expect: m7a.mod
 !module m7a
+! private :: s
 ! interface g_integer
 !  procedure :: s
 ! end interface
-! private :: s
 !contains
 ! subroutine s(x)
 !  integer(4) :: x
@@ -367,10 +367,10 @@ contains
 end
 !Expect: m7b.mod
 !module m7b
+! private :: s
 ! interface g_real
 !  procedure :: s
 ! end interface
-! private :: s
 !contains
 ! subroutine s(x)
 !  real(4) :: x
@@ -401,10 +401,10 @@ end
 !module m7c
 ! use m7a, only: g => g_integer
 ! use m7b, only: g => g_real
+! private :: s
 ! interface g
 !  procedure :: s
 ! end interface
-! private :: s
 !contains
 ! subroutine s(x)
 !  complex(4) :: x
@@ -427,10 +427,10 @@ contains
 end
 !Expect: m8a.mod
 !module m8a
+! private :: s
 ! interface g
 !  procedure :: s
 ! end interface
-! private :: s
 !contains
 ! subroutine s(x)
 !  integer(4) :: x
@@ -449,10 +449,10 @@ contains
 end
 !Expect: m8b.mod
 !module m8b
+! private :: s
 ! interface g
 !  procedure :: s
 ! end interface
-! private :: s
 !contains
 ! subroutine s(x)
 !  real(4) :: x
@@ -483,10 +483,10 @@ end
 !module m8c
 ! use m8a, only: g
 ! use m8b, only: g
+! private :: s
 ! interface g
 !  procedure :: s
 ! end interface
-! private :: s
 !contains
 ! subroutine s(x)
 !  complex(4) :: x
@@ -509,10 +509,10 @@ contains
 end
 !Expect: m9a.mod
 !module m9a
+! private :: s
 ! interface g
 !  procedure :: s
 ! end interface
-! private :: s
 !contains
 ! subroutine s(x)
 !  integer(4) :: x
@@ -537,10 +537,10 @@ end
 !Expect: m9b.mod
 !module m9b
 ! use m9a,only:g
+! private::s
 ! interface g
 !   procedure::s
 ! end interface
-! private::s
 !contains
 ! subroutine s(x)
 !   real(4)::x
@@ -623,4 +623,38 @@ end
 ! interface g
 !  procedure::s1
 ! end interface
+!end
+
+module m12
+  interface generic
+    module procedure specific
+  end interface
+  interface
+    module subroutine s(a1,a2)
+      character(*) a1
+      character(generic(a1)) a2
+    end
+  end interface
+ contains
+  pure integer function specific(x)
+    character(*), intent(in) :: x
+    specific = len(x)
+  end
+end
+!Expect: m12.mod
+!module m12
+! interface
+!  module subroutine s(a1,a2)
+!   character(*,1)::a1
+!   character(specific(a1),1)::a2
+!  end
+! end interface
+! interface generic
+!  procedure::specific
+! end interface
+!contains
+! pure function specific(x)
+!  character(*,1),intent(in)::x
+!  integer(4)::specific
+! end
 !end
