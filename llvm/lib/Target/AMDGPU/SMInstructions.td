@@ -940,14 +940,21 @@ multiclass ScalarLoadWithExtensionPat <string Instr, SDPatternOperator node, Val
        let OtherPredicates = [isGFX12Plus];
    }
 
-   // 2. SGPR+IMM offset
+   // 2. SGPR offset
+   def : GCNPat <
+     (node (SMRDSgpr i64:$sbase, i32:$soffset)),
+     (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, 0, 0))>{
+       let OtherPredicates = [isGFX12Plus];
+   }
+
+   // 3. SGPR+IMM offset
    def : GCNPat <
      (node (SMRDSgprImm i64:$sbase, i32:$soffset, i32:$offset)),
      (vt (!cast<SM_Pseudo>(Instr#"_SGPR_IMM") $sbase, $soffset, $offset, 0))>{
        let OtherPredicates = [isGFX12Plus];
    }
 
-   // 3. No offset
+   // 4. No offset
    def : GCNPat <
      (vt (node (i64 SReg_64:$sbase))),
      (vt (!cast<SM_Pseudo>(Instr#"_IMM") i64:$sbase, 0, 0))>{
