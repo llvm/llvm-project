@@ -2805,9 +2805,9 @@ static bool CheckedIntArithmetic(EvalInfo &Info, const Expr *E,
 }
 
 /// Perform the given binary integer operation.
-static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
-                              BinaryOperatorKind Opcode, APSInt RHS,
-                              APSInt &Result) {
+static bool handleIntIntBinOp(EvalInfo &Info, const BinaryOperator *E,
+                              const APSInt &LHS, APSInt RHS, APSInt &Result) {
+  BinaryOperatorKind Opcode = E->getOpcode();
   bool HandleOverflowResult = true;
   switch (Opcode) {
   default:
@@ -2828,7 +2828,8 @@ static bool handleIntIntBinOp(EvalInfo &Info, const Expr *E, const APSInt &LHS,
   case BO_Div:
   case BO_Rem:
     if (RHS == 0) {
-      Info.FFDiag(E, diag::note_expr_divide_by_zero);
+      Info.FFDiag(E, diag::note_expr_divide_by_zero)
+          << E->getRHS()->getSourceRange();
       return false;
     }
     // Check for overflow case: INT_MIN / -1 or INT_MIN % -1. APSInt supports
@@ -3072,8 +3073,8 @@ static bool handleVectorVectorBinOp(EvalInfo &Info, const BinaryOperator *E,
       else if (BinaryOperator::isComparisonOp(Opcode))
         Success = handleCompareOpForVector(LHSElt, Opcode, RHSElt, EltResult);
       else
-        Success = handleIntIntBinOp(Info, E, LHSElt.getInt(), Opcode,
-                                    RHSElt.getInt(), EltResult);
+        Success = handleIntIntBinOp(Info, E, LHSElt.getInt(), RHSElt.getInt(),
+                                    EltResult);
 
       if (!Success) {
         Info.FFDiag(E);
@@ -4473,7 +4474,7 @@ struct CompoundAssignSubobjectHandler {
     if (RHS.isInt()) {
       APSInt LHS =
           HandleIntToIntCast(Info, E, PromotedLHSType, SubobjType, Value);
-      if (!handleIntIntBinOp(Info, E, LHS, Opcode, RHS.getInt(), LHS))
+      if (!handleIntIntBinOp(Info, E, LHS, RHS.getInt(), LHS))
         return false;
       Value = HandleIntToIntCast(Info, E, SubobjType, PromotedLHSType, LHS);
       return true;
@@ -12892,8 +12893,7 @@ bool DataRecursiveIntBinOpEvaluator::
   // FIXME: Don't do this in the cases where we can deduce it.
   APSInt Value(Info.Ctx.getIntWidth(E->getType()),
                E->getType()->isUnsignedIntegerOrEnumerationType());
-  if (!handleIntIntBinOp(Info, E, LHSVal.getInt(), E->getOpcode(),
-                         RHSVal.getInt(), Value))
+  if (!handleIntIntBinOp(Info, E, LHSVal.getInt(), RHSVal.getInt(), Value))
     return false;
   return Success(Value, E, Result);
 }
