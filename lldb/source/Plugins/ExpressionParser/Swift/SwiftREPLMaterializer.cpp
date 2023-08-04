@@ -12,6 +12,7 @@
 
 #include "SwiftREPLMaterializer.h"
 #include "SwiftASTManipulator.h"
+#include "SwiftPersistentExpressionState.h"
 
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/DumpDataExtractor.h"

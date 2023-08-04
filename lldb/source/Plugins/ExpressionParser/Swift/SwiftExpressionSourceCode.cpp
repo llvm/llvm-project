@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "SwiftExpressionSourceCode.h"
+#include "SwiftPersistentExpressionState.h"
 
 #include "Plugins/ExpressionParser/Swift/SwiftASTManipulator.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"

@@ -20,9 +20,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 
-#include <set>
 #include <string>
-#include <unordered_map>
 
 namespace lldb_private {
 

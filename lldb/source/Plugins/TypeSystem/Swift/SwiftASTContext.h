@@ -13,7 +13,6 @@
 #ifndef liblldb_SwiftASTContext_h_
 #define liblldb_SwiftASTContext_h_
 
-#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "Plugins/TypeSystem/Swift/TypeSystemSwiftTypeRef.h"
 
