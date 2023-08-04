@@ -330,6 +330,7 @@ void ModFileWriter::PutSymbol(
           [](const MiscDetails &) {},
           [&](const auto &) {
             PutEntity(decls_, symbol);
+            PutDirective(decls_, symbol);
             if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
               decls_ << "!$omp threadprivate(" << symbol.name() << ")\n";
             }
@@ -872,6 +873,30 @@ llvm::raw_ostream &PutLower(llvm::raw_ostream &os, std::string_view str) {
     os << parser::ToLowerCaseLetter(c);
   }
   return os;
+}
+
+void ModFileWriter::PutDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  if (symbol.test(Symbol::Flag::AccDeclare)) {
+    os << "!$acc declare ";
+    if (symbol.test(Symbol::Flag::AccCopy)) {
+      os << "copy";
+    } else if (symbol.test(Symbol::Flag::AccCopyIn)) {
+      os << "copyin";
+    } else if (symbol.test(Symbol::Flag::AccCopyOut)) {
+      os << "copyout";
+    } else if (symbol.test(Symbol::Flag::AccCreate)) {
+      os << "create";
+    } else if (symbol.test(Symbol::Flag::AccPresent)) {
+      os << "present";
+    } else if (symbol.test(Symbol::Flag::AccDevicePtr)) {
+      os << "deviceptr";
+    } else if (symbol.test(Symbol::Flag::AccDeviceResident)) {
+      os << "device_resident";
+    } else if (symbol.test(Symbol::Flag::AccLink)) {
+      os << "link";
+    }
+    os << "(" << symbol.name() << ")\n";
+  }
 }
 
 struct Temp {
