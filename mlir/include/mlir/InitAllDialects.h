@@ -69,6 +69,7 @@
 #include "mlir/Dialect/Shape/IR/Shape.h"
 #include "mlir/Dialect/Shape/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/SparseTensor/IR/SparseTensor.h"
+#include "mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h"
 #include "mlir/Dialect/SparseTensor/Transforms/BufferizableOpInterfaceImpl.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/IR/TensorInferTypeOpInterfaceImpl.h"
@@ -142,6 +143,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   memref::registerTransformDialectExtension(registry);
   nvgpu::registerTransformDialectExtension(registry);
   scf::registerTransformDialectExtension(registry);
+  sparse_tensor::registerTransformDialectExtension(registry);
   tensor::registerTransformDialectExtension(registry);
   transform::registerPDLExtension(registry);
   vector::registerTransformDialectExtension(registry);
