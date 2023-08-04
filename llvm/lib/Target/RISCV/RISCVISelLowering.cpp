@@ -2999,8 +2999,101 @@ static SDValue matchSplatAsGather(SDValue SplatVal, MVT VT, const SDLoc &DL,
   return convertFromScalableVector(VT, Gather, DAG, Subtarget);
 }
 
-static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
-                                 const RISCVSubtarget &Subtarget) {
+
+/// Try and optimize BUILD_VECTORs with "dominant values" - these are values
+/// which constitute a large proportion of the elements. In such cases we can
+/// splat a vector with the dominant element and make up the shortfall with
+/// INSERT_VECTOR_ELTs.  Returns SDValue if not profitable.
+/// Note that this includes vectors of 2 elements by association. The
+/// upper-most element is the "dominant" one, allowing us to use a splat to
+/// "insert" the upper element, and an insert of the lower element at position
+/// 0, which improves codegen.
+static SDValue lowerBuildVectorViaDominantValues(SDValue Op, SelectionDAG &DAG,
+                                                 const RISCVSubtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
+  assert(VT.isFixedLengthVector() && "Unexpected vector!");
+
+  SDLoc DL(Op);
+
+  MVT XLenVT = Subtarget.getXLenVT();
+  unsigned NumElts = Op.getNumOperands();
+
+  SDValue DominantValue;
+  unsigned MostCommonCount = 0;
+  DenseMap<SDValue, unsigned> ValueCounts;
+  unsigned NumUndefElts =
+      count_if(Op->op_values(), [](const SDValue &V) { return V.isUndef(); });
+
+  // Track the number of scalar loads we know we'd be inserting, estimated as
+  // any non-zero floating-point constant. Other kinds of element are either
+  // already in registers or are materialized on demand. The threshold at which
+  // a vector load is more desirable than several scalar materializion and
+  // vector-insertion instructions is not known.
+  unsigned NumScalarLoads = 0;
+
+  for (SDValue V : Op->op_values()) {
+    if (V.isUndef())
+      continue;
+
+    ValueCounts.insert(std::make_pair(V, 0));
+    unsigned &Count = ValueCounts[V];
+    if (0 == Count)
+      if (auto *CFP = dyn_cast<ConstantFPSDNode>(V))
+        NumScalarLoads += !CFP->isExactlyValue(+0.0);
+
+    // Is this value dominant? In case of a tie, prefer the highest element as
+    // it's cheaper to insert near the beginning of a vector than it is at the
+    // end.
+    if (++Count >= MostCommonCount) {
+      DominantValue = V;
+      MostCommonCount = Count;
+    }
+  }
+
+  assert(DominantValue && "Not expecting an all-undef BUILD_VECTOR");
+  unsigned NumDefElts = NumElts - NumUndefElts;
+  unsigned DominantValueCountThreshold = NumDefElts <= 2 ? 0 : NumDefElts - 2;
+
+  // Don't perform this optimization when optimizing for size, since
+  // materializing elements and inserting them tends to cause code bloat.
+  if (!DAG.shouldOptForSize() && NumScalarLoads < NumElts &&
+      (NumElts != 2 || ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) &&
+      ((MostCommonCount > DominantValueCountThreshold) ||
+       (ValueCounts.size() <= Log2_32(NumDefElts)))) {
+    // Start by splatting the most common element.
+    SDValue Vec = DAG.getSplatBuildVector(VT, DL, DominantValue);
+
+    DenseSet<SDValue> Processed{DominantValue};
+    MVT SelMaskTy = VT.changeVectorElementType(MVT::i1);
+    for (const auto &OpIdx : enumerate(Op->ops())) {
+      const SDValue &V = OpIdx.value();
+      if (V.isUndef() || !Processed.insert(V).second)
+        continue;
+      if (ValueCounts[V] == 1) {
+        Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, Vec, V,
+                          DAG.getConstant(OpIdx.index(), DL, XLenVT));
+      } else {
+        // Blend in all instances of this value using a VSELECT, using a
+        // mask where each bit signals whether that element is the one
+        // we're after.
+        SmallVector<SDValue> Ops;
+        transform(Op->op_values(), std::back_inserter(Ops), [&](SDValue V1) {
+          return DAG.getConstant(V == V1, DL, XLenVT);
+        });
+        Vec = DAG.getNode(ISD::VSELECT, DL, VT,
+                          DAG.getBuildVector(SelMaskTy, DL, Ops),
+                          DAG.getSplatBuildVector(VT, DL, V), Vec);
+      }
+    }
+
+    return Vec;
+  }
+
+  return SDValue();
+}
+
+static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
+                                           const RISCVSubtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
   assert(VT.isFixedLengthVector() && "Unexpected vector!");
 
@@ -3033,91 +3126,63 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     // codegen across RV32 and RV64.
     unsigned NumViaIntegerBits = std::clamp(NumElts, 8u, Subtarget.getXLen());
     NumViaIntegerBits = std::min(NumViaIntegerBits, Subtarget.getELEN());
-    if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
-      // If we have to use more than one INSERT_VECTOR_ELT then this
-      // optimization is likely to increase code size; avoid peforming it in
-      // such a case. We can use a load from a constant pool in this case.
-      if (DAG.shouldOptForSize() && NumElts > NumViaIntegerBits)
-        return SDValue();
-      // Now we can create our integer vector type. Note that it may be larger
-      // than the resulting mask type: v4i1 would use v1i8 as its integer type.
-      unsigned IntegerViaVecElts = divideCeil(NumElts, NumViaIntegerBits);
-      MVT IntegerViaVecVT =
-          MVT::getVectorVT(MVT::getIntegerVT(NumViaIntegerBits),
-                           IntegerViaVecElts);
+    // If we have to use more than one INSERT_VECTOR_ELT then this
+    // optimization is likely to increase code size; avoid peforming it in
+    // such a case. We can use a load from a constant pool in this case.
+    if (DAG.shouldOptForSize() && NumElts > NumViaIntegerBits)
+      return SDValue();
+    // Now we can create our integer vector type. Note that it may be larger
+    // than the resulting mask type: v4i1 would use v1i8 as its integer type.
+    unsigned IntegerViaVecElts = divideCeil(NumElts, NumViaIntegerBits);
+    MVT IntegerViaVecVT =
+      MVT::getVectorVT(MVT::getIntegerVT(NumViaIntegerBits),
+                       IntegerViaVecElts);
 
-      uint64_t Bits = 0;
-      unsigned BitPos = 0, IntegerEltIdx = 0;
-      SmallVector<SDValue, 8> Elts(IntegerViaVecElts);
+    uint64_t Bits = 0;
+    unsigned BitPos = 0, IntegerEltIdx = 0;
+    SmallVector<SDValue, 8> Elts(IntegerViaVecElts);
 
-      for (unsigned I = 0; I < NumElts;) {
-        SDValue V = Op.getOperand(I);
-        bool BitValue = !V.isUndef() && cast<ConstantSDNode>(V)->getZExtValue();
-        Bits |= ((uint64_t)BitValue << BitPos);
-        ++BitPos;
-        ++I;
+    for (unsigned I = 0; I < NumElts;) {
+      SDValue V = Op.getOperand(I);
+      bool BitValue = !V.isUndef() && cast<ConstantSDNode>(V)->getZExtValue();
+      Bits |= ((uint64_t)BitValue << BitPos);
+      ++BitPos;
+      ++I;
 
-        // Once we accumulate enough bits to fill our scalar type or process the
-        // last element, insert into our vector and clear our accumulated data.
-        if (I % NumViaIntegerBits == 0 || I == NumElts) {
-          if (NumViaIntegerBits <= 32)
-            Bits = SignExtend64<32>(Bits);
-          SDValue Elt = DAG.getConstant(Bits, DL, XLenVT);
-          Elts[IntegerEltIdx] = Elt;
-          Bits = 0;
-          BitPos = 0;
-          IntegerEltIdx++;
-        }
+      // Once we accumulate enough bits to fill our scalar type or process the
+      // last element, insert into our vector and clear our accumulated data.
+      if (I % NumViaIntegerBits == 0 || I == NumElts) {
+        if (NumViaIntegerBits <= 32)
+          Bits = SignExtend64<32>(Bits);
+        SDValue Elt = DAG.getConstant(Bits, DL, XLenVT);
+        Elts[IntegerEltIdx] = Elt;
+        Bits = 0;
+        BitPos = 0;
+        IntegerEltIdx++;
       }
-
-      SDValue Vec = DAG.getBuildVector(IntegerViaVecVT, DL, Elts);
-
-      if (NumElts < NumViaIntegerBits) {
-        // If we're producing a smaller vector than our minimum legal integer
-        // type, bitcast to the equivalent (known-legal) mask type, and extract
-        // our final mask.
-        assert(IntegerViaVecVT == MVT::v1i8 && "Unexpected mask vector type");
-        Vec = DAG.getBitcast(MVT::v8i1, Vec);
-        Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
-                          DAG.getConstant(0, DL, XLenVT));
-      } else {
-        // Else we must have produced an integer type with the same size as the
-        // mask type; bitcast for the final result.
-        assert(VT.getSizeInBits() == IntegerViaVecVT.getSizeInBits());
-        Vec = DAG.getBitcast(VT, Vec);
-      }
-
-      return Vec;
     }
 
-    // A BUILD_VECTOR can be lowered as a SETCC. For each fixed-length mask
-    // vector type, we have a legal equivalently-sized i8 type, so we can use
-    // that.
-    MVT WideVecVT = VT.changeVectorElementType(MVT::i8);
-    SDValue VecZero = DAG.getConstant(0, DL, WideVecVT);
+    SDValue Vec = DAG.getBuildVector(IntegerViaVecVT, DL, Elts);
 
-    SDValue WideVec;
-    if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
-      // For a splat, perform a scalar truncate before creating the wider
-      // vector.
-      assert(Splat.getValueType() == XLenVT &&
-             "Unexpected type for i1 splat value");
-      Splat = DAG.getNode(ISD::AND, DL, XLenVT, Splat,
-                          DAG.getConstant(1, DL, XLenVT));
-      WideVec = DAG.getSplatBuildVector(WideVecVT, DL, Splat);
+    if (NumElts < NumViaIntegerBits) {
+      // If we're producing a smaller vector than our minimum legal integer
+      // type, bitcast to the equivalent (known-legal) mask type, and extract
+      // our final mask.
+      assert(IntegerViaVecVT == MVT::v1i8 && "Unexpected mask vector type");
+      Vec = DAG.getBitcast(MVT::v8i1, Vec);
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, VT, Vec,
+                        DAG.getConstant(0, DL, XLenVT));
     } else {
-      SmallVector<SDValue, 8> Ops(Op->op_values());
-      WideVec = DAG.getBuildVector(WideVecVT, DL, Ops);
-      SDValue VecOne = DAG.getConstant(1, DL, WideVecVT);
-      WideVec = DAG.getNode(ISD::AND, DL, WideVecVT, WideVec, VecOne);
+      // Else we must have produced an integer type with the same size as the
+      // mask type; bitcast for the final result.
+      assert(VT.getSizeInBits() == IntegerViaVecVT.getSizeInBits());
+      Vec = DAG.getBitcast(VT, Vec);
     }
 
-    return DAG.getSetCC(DL, VT, WideVec, VecZero, ISD::SETNE);
+    return Vec;
   }
 
   if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
-    if (auto Gather = matchSplatAsGather(Splat, VT, DL, DAG, Subtarget))
-      return Gather;
     unsigned Opc = VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
                                         : RISCVISD::VMV_V_X_VL;
     Splat =
@@ -3246,91 +3311,69 @@ static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
     }
   }
 
-  // Try and optimize BUILD_VECTORs with "dominant values" - these are values
-  // which constitute a large proportion of the elements. In such cases we can
-  // splat a vector with the dominant element and make up the shortfall with
-  // INSERT_VECTOR_ELTs.
-  // Note that this includes vectors of 2 elements by association. The
-  // upper-most element is the "dominant" one, allowing us to use a splat to
-  // "insert" the upper element, and an insert of the lower element at position
-  // 0, which improves codegen.
-  SDValue DominantValue;
-  unsigned MostCommonCount = 0;
-  DenseMap<SDValue, unsigned> ValueCounts;
-  unsigned NumUndefElts =
-      count_if(Op->op_values(), [](const SDValue &V) { return V.isUndef(); });
-
-  // Track the number of scalar loads we know we'd be inserting, estimated as
-  // any non-zero floating-point constant. Other kinds of element are either
-  // already in registers or are materialized on demand. The threshold at which
-  // a vector load is more desirable than several scalar materializion and
-  // vector-insertion instructions is not known.
-  unsigned NumScalarLoads = 0;
-
-  for (SDValue V : Op->op_values()) {
-    if (V.isUndef())
-      continue;
-
-    ValueCounts.insert(std::make_pair(V, 0));
-    unsigned &Count = ValueCounts[V];
-    if (0 == Count)
-      if (auto *CFP = dyn_cast<ConstantFPSDNode>(V))
-        NumScalarLoads += !CFP->isExactlyValue(+0.0);
-
-    // Is this value dominant? In case of a tie, prefer the highest element as
-    // it's cheaper to insert near the beginning of a vector than it is at the
-    // end.
-    if (++Count >= MostCommonCount) {
-      DominantValue = V;
-      MostCommonCount = Count;
-    }
-  }
-
-  assert(DominantValue && "Not expecting an all-undef BUILD_VECTOR");
-  unsigned NumDefElts = NumElts - NumUndefElts;
-  unsigned DominantValueCountThreshold = NumDefElts <= 2 ? 0 : NumDefElts - 2;
-
-  // Don't perform this optimization when optimizing for size, since
-  // materializing elements and inserting them tends to cause code bloat.
-  if (!DAG.shouldOptForSize() && NumScalarLoads < NumElts &&
-      (NumElts != 2 || ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) &&
-      ((MostCommonCount > DominantValueCountThreshold) ||
-       (ValueCounts.size() <= Log2_32(NumDefElts)))) {
-    // Start by splatting the most common element.
-    SDValue Vec = DAG.getSplatBuildVector(VT, DL, DominantValue);
-
-    DenseSet<SDValue> Processed{DominantValue};
-    MVT SelMaskTy = VT.changeVectorElementType(MVT::i1);
-    for (const auto &OpIdx : enumerate(Op->ops())) {
-      const SDValue &V = OpIdx.value();
-      if (V.isUndef() || !Processed.insert(V).second)
-        continue;
-      if (ValueCounts[V] == 1) {
-        Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, VT, Vec, V,
-                          DAG.getConstant(OpIdx.index(), DL, XLenVT));
-      } else {
-        // Blend in all instances of this value using a VSELECT, using a
-        // mask where each bit signals whether that element is the one
-        // we're after.
-        SmallVector<SDValue> Ops;
-        transform(Op->op_values(), std::back_inserter(Ops), [&](SDValue V1) {
-          return DAG.getConstant(V == V1, DL, XLenVT);
-        });
-        Vec = DAG.getNode(ISD::VSELECT, DL, VT,
-                          DAG.getBuildVector(SelMaskTy, DL, Ops),
-                          DAG.getSplatBuildVector(VT, DL, V), Vec);
-      }
-    }
-
-    return Vec;
-  }
+  if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
+    return Res;
 
   // For constant vectors, use generic constant pool lowering.  Otherwise,
   // we'd have to materialize constants in GPRs just to move them into the
   // vector.
+  return SDValue();
+}
+
+static SDValue lowerBUILD_VECTOR(SDValue Op, SelectionDAG &DAG,
+                                 const RISCVSubtarget &Subtarget) {
+  MVT VT = Op.getSimpleValueType();
+  assert(VT.isFixedLengthVector() && "Unexpected vector!");
+
   if (ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) ||
       ISD::isBuildVectorOfConstantFPSDNodes(Op.getNode()))
-    return SDValue();
+    return lowerBuildVectorOfConstants(Op, DAG, Subtarget);
+
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+
+  SDLoc DL(Op);
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  MVT XLenVT = Subtarget.getXLenVT();
+
+  if (VT.getVectorElementType() == MVT::i1) {
+    // A BUILD_VECTOR can be lowered as a SETCC. For each fixed-length mask
+    // vector type, we have a legal equivalently-sized i8 type, so we can use
+    // that.
+    MVT WideVecVT = VT.changeVectorElementType(MVT::i8);
+    SDValue VecZero = DAG.getConstant(0, DL, WideVecVT);
+
+    SDValue WideVec;
+    if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
+      // For a splat, perform a scalar truncate before creating the wider
+      // vector.
+      assert(Splat.getValueType() == XLenVT &&
+             "Unexpected type for i1 splat value");
+      Splat = DAG.getNode(ISD::AND, DL, XLenVT, Splat,
+                          DAG.getConstant(1, DL, XLenVT));
+      WideVec = DAG.getSplatBuildVector(WideVecVT, DL, Splat);
+    } else {
+      SmallVector<SDValue, 8> Ops(Op->op_values());
+      WideVec = DAG.getBuildVector(WideVecVT, DL, Ops);
+      SDValue VecOne = DAG.getConstant(1, DL, WideVecVT);
+      WideVec = DAG.getNode(ISD::AND, DL, WideVecVT, WideVec, VecOne);
+    }
+
+    return DAG.getSetCC(DL, VT, WideVec, VecZero, ISD::SETNE);
+  }
+
+  if (SDValue Splat = cast<BuildVectorSDNode>(Op)->getSplatValue()) {
+    if (auto Gather = matchSplatAsGather(Splat, VT, DL, DAG, Subtarget))
+      return Gather;
+    unsigned Opc = VT.isFloatingPoint() ? RISCVISD::VFMV_V_F_VL
+                                        : RISCVISD::VMV_V_X_VL;
+    Splat =
+        DAG.getNode(Opc, DL, ContainerVT, DAG.getUNDEF(ContainerVT), Splat, VL);
+    return convertFromScalableVector(VT, Splat, DAG, Subtarget);
+  }
+
+  if (SDValue Res = lowerBuildVectorViaDominantValues(Op, DAG, Subtarget))
+    return Res;
 
   assert((!VT.isFloatingPoint() ||
           VT.getVectorElementType().getSizeInBits() <= Subtarget.getFLen()) &&
