@@ -1,7 +1,7 @@
 ! RUN: %flang_fc1 -emit-fir -fopenmp -o - %s 2>&1 | FileCheck %s 
 
 !CHECK: func.func @_QPlastprivate_common() {
-!CHECK: %[[val_0:.*]] = fir.alloca i32 {adapt.valuebyref}
+!CHECK: %[[val_0:.*]] = fir.alloca i32 {adapt.valuebyref, pinned}
 !CHECK: %[[val_1:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFlastprivate_commonEi"}
 !CHECK: %[[val_2:.*]] = fir.address_of(@_QCc) : !fir.ref<!fir.array<8xi8>>
 !CHECK: %[[val_3:.*]] = fir.convert %[[val_2]] : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>

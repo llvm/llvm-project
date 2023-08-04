@@ -53,6 +53,18 @@ using FPToSIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToSIOp, LLVM::FPToSIOp>;
 using FPToUIOpLowering =
     VectorConvertToLLVMPattern<arith::FPToUIOp, LLVM::FPToUIOp>;
+template <typename SourceOp, typename TargetOp>
+// FPClass bitmask for -inf (bit 2) and +inf (bit 9).
+using InfKinds =
+    arith::AttrConvertAddFpclassKinds<(1 << 2) | (1 << 9), SourceOp, TargetOp>;
+using IsInfLowering =
+    VectorConvertToLLVMPattern<arith::IsInfOp, LLVM::IsFPClass, InfKinds>;
+// FPClass bitmask for signalling NaN (bit 0) or quiet NaN (bit 1).
+template <typename SourceOp, typename TargetOp>
+using NanKinds =
+    arith::AttrConvertAddFpclassKinds<(1 << 0) | (1 << 1), SourceOp, TargetOp>;
+using IsNanLowering =
+    VectorConvertToLLVMPattern<arith::IsNanOp, LLVM::IsFPClass, NanKinds>;
 using MaxFOpLowering =
     VectorConvertToLLVMPattern<arith::MaxFOp, LLVM::MaxNumOp,
                                arith::AttrConvertFastMathToLLVM>;
@@ -465,6 +477,8 @@ void mlir::arith::populateArithToLLVMConversionPatterns(
     FPToUIOpLowering,
     IndexCastOpSILowering,
     IndexCastOpUILowering,
+    IsInfLowering,
+    IsNanLowering,
     MaxFOpLowering,
     MaxSIOpLowering,
     MaxUIOpLowering,

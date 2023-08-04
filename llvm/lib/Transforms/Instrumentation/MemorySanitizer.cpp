@@ -5202,7 +5202,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
     Value *SaveAreaPtrPtr = IRB.CreateIntToPtr(
         IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
                       ConstantInt::get(MS.IntptrTy, offset)),
-        Type::getInt64PtrTy(*MS.C));
+        PointerType::get(*MS.C, 0));
     return IRB.CreateLoad(Type::getInt64Ty(*MS.C), SaveAreaPtrPtr);
   }
 
@@ -5211,7 +5211,7 @@ struct VarArgAArch64Helper : public VarArgHelper {
     Value *SaveAreaPtr = IRB.CreateIntToPtr(
         IRB.CreateAdd(IRB.CreatePtrToInt(VAListTag, MS.IntptrTy),
                       ConstantInt::get(MS.IntptrTy, offset)),
-        Type::getInt32PtrTy(*MS.C));
+        PointerType::get(*MS.C, 0));
     Value *SaveArea32 = IRB.CreateLoad(IRB.getInt32Ty(), SaveAreaPtr);
     return IRB.CreateSExt(SaveArea32, MS.IntptrTy);
   }

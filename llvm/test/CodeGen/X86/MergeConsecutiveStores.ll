@@ -767,20 +767,61 @@ define void @merge_vec_stores_from_loads(<4 x float>* %v, <4 x float>* %ptr) {
 
 }
 
-; Merging vector stores when sourced from a constant vector is not currently handled.
-define void @merge_vec_stores_of_constants(<4 x i32>* %ptr) {
-; CHECK-LABEL: merge_vec_stores_of_constants:
+define void @merge_vec_stores_of_zero(<4 x i32>* %ptr) {
+; CHECK-LABEL: merge_vec_stores_of_zero:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %ymm0, 48(%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %idx0 = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 3
+  %idx1 = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 4
+  store <4 x i32> zeroinitializer, <4 x i32>* %idx0, align 16
+  store <4 x i32> zeroinitializer, <4 x i32>* %idx1, align 16
+  ret void
+}
+
+define void @merge_vec_stores_of_constant_splat(<4 x i32>* %ptr) {
+; CHECK-LABEL: merge_vec_stores_of_constant_splat:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vbroadcastss {{.*#+}} xmm0 = [42,42,42,42]
 ; CHECK-NEXT:    vmovaps %xmm0, 48(%rdi)
 ; CHECK-NEXT:    vmovaps %xmm0, 64(%rdi)
 ; CHECK-NEXT:    retq
   %idx0 = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 3
   %idx1 = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 4
-  store <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32>* %idx0, align 16
-  store <4 x i32> <i32 0, i32 0, i32 0, i32 0>, <4 x i32>* %idx1, align 16
+  store <4 x i32> <i32 42, i32 42, i32 42, i32 42>, <4 x i32>* %idx0, align 16
+  store <4 x i32> <i32 42, i32 42, i32 42, i32 42>, <4 x i32>* %idx1, align 16
   ret void
+}
 
+define void @merge_vec_stores_of_constants(<4 x i32>* %ptr) {
+; CHECK-LABEL: merge_vec_stores_of_constants:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [25,51,45,0]
+; CHECK-NEXT:    vmovaps %xmm0, 48(%rdi)
+; CHECK-NEXT:    vmovaps {{.*#+}} xmm0 = [0,265,26,0]
+; CHECK-NEXT:    vmovaps %xmm0, 64(%rdi)
+; CHECK-NEXT:    retq
+  %idx0 = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 3
+  %idx1 = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 4
+  store <4 x i32> <i32 25, i32 51, i32 45, i32 0>, <4 x i32>* %idx0, align 16
+  store <4 x i32> <i32 0, i32 265, i32 26, i32 0>, <4 x i32>* %idx1, align 16
+  ret void
+}
+
+define void @merge_vec_stores_of_constants_with_undefs(<4 x i32>* %ptr) {
+; CHECK-LABEL: merge_vec_stores_of_constants_with_undefs:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    vxorps %xmm0, %xmm0, %xmm0
+; CHECK-NEXT:    vmovups %ymm0, 48(%rdi)
+; CHECK-NEXT:    vzeroupper
+; CHECK-NEXT:    retq
+  %idx0 = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 3
+  %idx1 = getelementptr inbounds <4 x i32>, <4 x i32>* %ptr, i64 4
+  store <4 x i32> <i32 0, i32 0, i32 0, i32 undef>, <4 x i32>* %idx0, align 16
+  store <4 x i32> <i32 0, i32 undef, i32 0, i32 0>, <4 x i32>* %idx1, align 16
+  ret void
 }
 
 ; This is a minimized test based on real code that was failing.
@@ -855,17 +896,17 @@ define void @merge_const_store_heterogeneous(i32 %count, %struct.C* nocapture %p
 ; CHECK-LABEL: merge_const_store_heterogeneous:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    testl %edi, %edi
-; CHECK-NEXT:    jle .LBB20_3
+; CHECK-NEXT:    jle .LBB23_3
 ; CHECK-NEXT:  # %bb.1: # %.lr.ph.preheader
 ; CHECK-NEXT:    movabsq $578437695752307201, %rax # imm = 0x807060504030201
 ; CHECK-NEXT:    .p2align 4, 0x90
-; CHECK-NEXT:  .LBB20_2: # %.lr.ph
+; CHECK-NEXT:  .LBB23_2: # %.lr.ph
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    movq %rax, (%rsi)
 ; CHECK-NEXT:    addq $24, %rsi
 ; CHECK-NEXT:    decl %edi
-; CHECK-NEXT:    jne .LBB20_2
-; CHECK-NEXT:  .LBB20_3: # %._crit_edge
+; CHECK-NEXT:    jne .LBB23_2
+; CHECK-NEXT:  .LBB23_3: # %._crit_edge
 ; CHECK-NEXT:    retq
   %1 = icmp sgt i32 %count, 0
   br i1 %1, label %.lr.ph, label %._crit_edge

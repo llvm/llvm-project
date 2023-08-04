@@ -296,6 +296,23 @@ let TargetPrefix = "riscv" in {
                     [IntrNoMem]>, RISCVVIntrinsic {
     let VLOperand = 2;
   }
+  // For destination vector type is the same as the source vector type
+  // Input: (passthru, vector_in, vl, policy)
+  class RISCVUnaryAAUnMaskedZvk<bit IsVS>
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                    [LLVMMatchType<0>, !if(IsVS, llvm_anyvector_ty, LLVMMatchType<0>),
+                     llvm_anyint_ty, !if(IsVS, LLVMMatchType<2>, LLVMMatchType<1>)],
+                    [ImmArg<ArgIndex<3>>, IntrNoMem]>, RISCVVIntrinsic {
+    let VLOperand = 2;
+  }
+
+  multiclass RISCVUnaryAAUnMaskedZvk<bit HasVV = 1, bit HasVS = 1> {
+    if HasVV then
+      def "int_riscv_" # NAME # "_vv" : RISCVUnaryAAUnMaskedZvk</*IsVS*/0>;
+
+    if HasVS then
+      def "int_riscv_" # NAME # "_vs" : RISCVUnaryAAUnMaskedZvk</*IsVS*/1>;
+  }
   // For destination vector type is the same as first source vector (with mask).
   // Input: (vector_in, vector_in, mask, vl, policy)
   class RISCVUnaryAAMasked
@@ -402,11 +419,25 @@ let TargetPrefix = "riscv" in {
   }
   // For destination vector type is the same as first source vector.
   // Input: (passthru, vector_in, vector_in/scalar_in, vl)
-  class RISCVBinaryAAXUnMasked
+  class RISCVBinaryAAXUnMasked<bit IsVI = 0>
         : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
                     [LLVMMatchType<0>, LLVMMatchType<0>, llvm_any_ty,
                      llvm_anyint_ty],
-                    [IntrNoMem]>, RISCVVIntrinsic {
+                    !listconcat([IntrNoMem],
+                                !if(IsVI, [ImmArg<ArgIndex<2>>], []))>,
+                    RISCVVIntrinsic {
+    let ScalarOperand = 2;
+    let VLOperand = 3;
+  }
+  // For destination vector type is the same as the source vector type.
+  // Input: (passthru, vector_in, vector_in/scalar_in, vl, policy)
+  class RISCVBinaryAAXUnMaskedZvk<bit IsVI = 0>
+        : DefaultAttrsIntrinsic<[llvm_anyvector_ty],
+                                [LLVMMatchType<0>, LLVMMatchType<0>,
+                                 llvm_any_ty, llvm_anyint_ty, LLVMMatchType<2>],
+                                !listconcat([ImmArg<ArgIndex<4>>, IntrNoMem],
+                                            !if(IsVI, [ImmArg<ArgIndex<2>>], []))>,
+                                RISCVVIntrinsic {
     let ScalarOperand = 2;
     let VLOperand = 3;
   }
@@ -1840,6 +1871,54 @@ def int_riscv_sm3p1      : ScalarCryptoGprIntrinsic32;
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
+// Vector Cryptography
+//
+// These intrinsics will lower directly into the corresponding instructions
+// added by the vector cyptography extension, if the extension is present.
+let TargetPrefix = "riscv" in {
+  // Zvbb
+  defm vandn             : RISCVBinaryAAX;
+  defm vbrev             : RISCVUnaryAA;
+  defm vbrev8            : RISCVUnaryAA;
+  defm vrev8             : RISCVUnaryAA;
+  defm vclz              : RISCVUnaryAA;
+  defm vctz              : RISCVUnaryAA;
+  defm vcpopv            : RISCVUnaryAA;
+  defm vrol              : RISCVBinaryAAX;
+  defm vror              : RISCVBinaryAAX;
+  defm vwsll             : RISCVBinaryABX;
+
+  // Zvbc
+  defm vclmul            : RISCVBinaryAAX;
+  defm vclmulh           : RISCVBinaryAAX;
+
+  // Zvkg
+  def int_riscv_vghsh    : RISCVBinaryAAXUnMaskedZvk;
+  def int_riscv_vgmul_vv : RISCVUnaryAAUnMaskedZvk</*IsVS*/0>;
+
+  // Zvkned
+  defm vaesdf            : RISCVUnaryAAUnMaskedZvk;
+  defm vaesdm            : RISCVUnaryAAUnMaskedZvk;
+  defm vaesef            : RISCVUnaryAAUnMaskedZvk;
+  defm vaesem            : RISCVUnaryAAUnMaskedZvk;
+  def int_riscv_vaeskf1  : RISCVBinaryAAXUnMasked</*IsVI*/1>;
+  def int_riscv_vaeskf2  : RISCVBinaryAAXUnMaskedZvk</*IsVI*/1>;
+  defm vaesz             : RISCVUnaryAAUnMaskedZvk</*HasVV*/0>;
+
+  // Zvknha or Zvknhb
+  def int_riscv_vsha2ch  : RISCVBinaryAAXUnMaskedZvk;
+  def int_riscv_vsha2cl  : RISCVBinaryAAXUnMaskedZvk;
+  def int_riscv_vsha2ms  : RISCVBinaryAAXUnMaskedZvk;
+
+  // Zvksed
+  def int_riscv_vsm4k    : RISCVBinaryAAXUnMasked</*IsVI*/1>;
+  defm vsm4r             : RISCVUnaryAAUnMaskedZvk;
+
+  // Zvksh
+  def int_riscv_vsm3c    : RISCVBinaryAAXUnMaskedZvk</*IsVI*/1>;
+  def int_riscv_vsm3me   : RISCVBinaryAAXUnMasked;
+} // TargetPrefix = "riscv"
+
 // Vendor extensions
 //===----------------------------------------------------------------------===//
 include "llvm/IR/IntrinsicsRISCVXTHead.td"

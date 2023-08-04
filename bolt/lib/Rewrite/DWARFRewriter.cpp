@@ -1244,8 +1244,12 @@ void DWARFRewriter::updateDWARFObjectAddressRanges(
       NeedConverted = true;
 
     uint64_t CurRangeBase = 0;
-    if (std::optional<uint64_t> DWOId = Unit.getDWOId()) {
-      CurRangeBase = getDwoRangesBase(*DWOId);
+    if (Unit.isDWOUnit()) {
+      if (std::optional<uint64_t> DWOId = Unit.getDWOId())
+        CurRangeBase = getDwoRangesBase(*DWOId);
+      else
+        errs() << "BOLT-WARNING: [internal-dwarf-error]: DWOId is not found "
+                  "for DWO Unit.";
     }
     if (NeedConverted || RangesAttrInfo.getForm() == dwarf::DW_FORM_rnglistx)
       DIEBldr.replaceValue(&Die, dwarf::DW_AT_ranges, dwarf::DW_FORM_rnglistx,
@@ -2161,16 +2165,16 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
   } else if (Unit.getVersion() < 4) {
     RangesForm = dwarf::DW_FORM_data4;
   }
-
+  bool IsUnitDie = Die.getTag() == dwarf::DW_TAG_compile_unit ||
+                   Die.getTag() == dwarf::DW_TAG_skeleton_unit;
+  if (!IsUnitDie)
+    DIEBldr.deleteValue(&Die, LowPCAttrInfo.getAttribute());
   // In DWARF4 for DW_AT_low_pc in binary DW_FORM_addr is used. In the DWO
   // section DW_FORM_GNU_addr_index is used. So for if we are converting
   // DW_AT_low_pc/DW_AT_high_pc and see DW_FORM_GNU_addr_index. We are
   // converting in DWO section, and DW_AT_ranges [DW_FORM_sec_offset] is
   // relative to DW_AT_GNU_ranges_base.
   if (LowForm == dwarf::DW_FORM_GNU_addr_index) {
-    // Use ULEB128 for the value.
-    DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
-                         LowPCAttrInfo.getForm(), DIEInteger(0));
     // Ranges are relative to DW_AT_GNU_ranges_base.
     uint64_t CurRangeBase = 0;
     if (std::optional<uint64_t> DWOId = Unit.getDWOId()) {
@@ -2181,14 +2185,16 @@ void DWARFRewriter::convertToRangesPatchDebugInfo(
     // In DWARF 5 we can have DW_AT_low_pc either as DW_FORM_addr, or
     // DW_FORM_addrx. Former is when DW_AT_rnglists_base is present. Latter is
     // when it's absent.
-    if (LowForm == dwarf::DW_FORM_addrx) {
-      const uint32_t Index = AddrWriter->getIndexFromAddress(0, Unit);
-      DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
-                           LowPCAttrInfo.getForm(), DIEInteger(Index));
-    } else
-      DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
-                           LowPCAttrInfo.getForm(), DIEInteger(0));
-
+    if (IsUnitDie) {
+      if (LowForm == dwarf::DW_FORM_addrx) {
+        const uint32_t Index = AddrWriter->getIndexFromAddress(0, Unit);
+        DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
+                             LowPCAttrInfo.getForm(), DIEInteger(Index));
+      } else {
+        DIEBldr.replaceValue(&Die, LowPCAttrInfo.getAttribute(),
+                             LowPCAttrInfo.getForm(), DIEInteger(0));
+      }
+    }
     // Original CU didn't have DW_AT_*_base. We converted it's children (or
     // dwo), so need to insert it into CU.
     if (RangesBase)

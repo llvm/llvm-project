@@ -1318,10 +1318,7 @@ public:
                                                     reduc);
     }
 
-    SmallVector<Value> lcvs;
-    lcvs.reserve(lvlRank);
-    loopEmitter.getLoopIVs(lcvs);
-
+    SmallVector<Value> lcvs = loopEmitter.getLoopIVs();
     if (op.getOrder()) {
       // FIXME: There is some dim/lvl confusion here since `dimRank != lvlRank`
       SmallVector<Value> dcvs = lcvs; // keep a copy

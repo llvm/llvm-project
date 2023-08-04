@@ -2263,11 +2263,11 @@ CleanupAndExit:
 
     if (DestVolatile) {
       Type *Int32Ty = Type::getInt32Ty(Ctx);
-      Type *Int32PtrTy = Type::getInt32PtrTy(Ctx);
+      Type *PtrTy = PointerType::get(Ctx, 0);
       Type *VoidTy = Type::getVoidTy(Ctx);
       Module *M = Func->getParent();
       FunctionCallee Fn = M->getOrInsertFunction(
-          HexagonVolatileMemcpyName, VoidTy, Int32PtrTy, Int32PtrTy, Int32Ty);
+          HexagonVolatileMemcpyName, VoidTy, PtrTy, PtrTy, Int32Ty);
 
       const SCEV *OneS = SE->getConstant(Int32Ty, 1);
       const SCEV *BECount32 = SE->getTruncateOrZeroExtend(BECount, Int32Ty);
@@ -2278,13 +2278,8 @@ CleanupAndExit:
         if (Value *Simp = simplifyInstruction(In, {*DL, TLI, DT}))
           NumWords = Simp;
 
-      Value *Op0 = (StoreBasePtr->getType() == Int32PtrTy)
-                      ? StoreBasePtr
-                      : CondBuilder.CreateBitCast(StoreBasePtr, Int32PtrTy);
-      Value *Op1 = (LoadBasePtr->getType() == Int32PtrTy)
-                      ? LoadBasePtr
-                      : CondBuilder.CreateBitCast(LoadBasePtr, Int32PtrTy);
-      NewCall = CondBuilder.CreateCall(Fn, {Op0, Op1, NumWords});
+      NewCall = CondBuilder.CreateCall(Fn,
+                                       {StoreBasePtr, LoadBasePtr, NumWords});
     } else {
       NewCall = CondBuilder.CreateMemMove(
           StoreBasePtr, SI->getAlign(), LoadBasePtr, LI->getAlign(), NumBytes);

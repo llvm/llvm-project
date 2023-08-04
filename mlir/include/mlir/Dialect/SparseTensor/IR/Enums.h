@@ -42,7 +42,6 @@ namespace sparse_tensor {
 /// values with the built-in type "index".  For now, we simply assume that
 /// type is 64-bit, but targets with different "index" bitwidths should
 /// link with an alternatively built runtime support library.
-// TODO: support such targets?
 using index_type = uint64_t;
 
 /// Encoding of overhead types (both position overhead and coordinate
@@ -92,11 +91,6 @@ enum class PrimaryType : uint32_t {
 };
 
 // This x-macro includes all `V` types.
-// TODO: We currently split out the non-variadic version from the variadic
-// version. Using ##__VA_ARGS__ to avoid the split gives
-//   warning: token pasting of ',' and __VA_ARGS__ is a GNU extension
-//   [-Wgnu-zero-variadic-macro-arguments]
-// and __VA_OPT__(, ) __VA_ARGS__ requires c++20.
 #define MLIR_SPARSETENSOR_FOREVERY_V(DO)                                       \
   DO(F64, double)                                                              \
   DO(F32, float)                                                               \
@@ -205,7 +199,6 @@ enum class LevelFormat : uint8_t {
 /// Returns string representation of the given dimension level type.
 constexpr const char *toMLIRString(DimLevelType dlt) {
   switch (dlt) {
-  // TODO: should probably raise an error instead of printing it...
   case DimLevelType::Undef:
     return "undef";
   case DimLevelType::Dense:

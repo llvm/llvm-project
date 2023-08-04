@@ -3023,6 +3023,26 @@ TEST_F(FormatTest, FormatsLabels) {
                "  some_other_code();\n"
                "}\n"
                "}");
+  verifyFormat("{\n"
+               "L0:\n"
+               "[[foo]] L1:\n"
+               "[[bar]] [[baz]] L2:\n"
+               "  g();\n"
+               "}");
+  verifyFormat("{\n"
+               "[[foo]] L1: {\n"
+               "[[bar]] [[baz]] L2:\n"
+               "  g();\n"
+               "}\n"
+               "}");
+  verifyFormat("{\n"
+               "[[foo]] L1:\n"
+               "  f();\n"
+               "  {\n"
+               "  [[bar]] [[baz]] L2:\n"
+               "    g();\n"
+               "  }\n"
+               "}");
   FormatStyle Style = getLLVMStyle();
   Style.IndentGotoLabels = false;
   verifyFormat("void f() {\n"
@@ -3046,10 +3066,20 @@ TEST_F(FormatTest, FormatsLabels) {
                "  some_code();\n"
                "test_label:;\n"
                "  int i = 0;\n"
-               "}");
+               "}",
+               Style);
   verifyFormat("{\n"
                "  some_code();\n"
                "test_label: { some_other_code(); }\n"
+               "}",
+               Style);
+  verifyFormat("{\n"
+               "[[foo]] L1:\n"
+               "  f();\n"
+               "  {\n"
+               "[[bar]] [[baz]] L2:\n"
+               "    g();\n"
+               "  }\n"
                "}",
                Style);
   // The opening brace may either be on the same unwrapped line as the colon or
@@ -3061,6 +3091,14 @@ TEST_F(FormatTest, FormatsLabels) {
                "test_label:\n"
                "{\n"
                "  some_other_code();\n"
+               "}\n"
+               "}",
+               Style);
+  verifyFormat("{\n"
+               "[[foo]] L1:\n"
+               "{\n"
+               "[[bar]] [[baz]] L2:\n"
+               "  g();\n"
                "}\n"
                "}",
                Style);
@@ -13458,6 +13496,8 @@ TEST_F(FormatTest, LayoutCxx11BraceInitializers) {
   verifyFormat(
       "class A {\n"
       "  A() : a{} {}\n"
+      "  A() : Base<int>{} {}\n"
+      "  A() : Base<Foo<int>>{} {}\n"
       "  A(int b) : b(b) {}\n"
       "  A(int a, int b) : a(a), bs{{bs...}} { f(); }\n"
       "  int a, b;\n"
@@ -20314,7 +20354,7 @@ TEST_F(FormatTest, WhitesmithsBraceBreaking) {
                "      int x;\n"
                "      };\n"
                "    } // namespace b\n"
-               "  }   // namespace a",
+               "  } // namespace a",
                WhitesmithsBraceStyle);
 
   verifyFormat("void f()\n"

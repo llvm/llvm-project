@@ -352,6 +352,9 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location in \p V.
   void setDebugLocFromInst(const Value *V);
 
+  /// Construct the vector value of a scalarized value \p V one lane at a time.
+  void packScalarIntoVectorValue(VPValue *Def, const VPIteration &Instance);
+
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
   struct CFGState {
@@ -2581,12 +2584,6 @@ public:
     }
 
     return getVPValue(V);
-  }
-
-  void removeVPValueFor(Value *V) {
-    assert(Value2VPValueEnabled &&
-           "IR value to VPValue mapping may be out of date!");
-    Value2VPValue.erase(V);
   }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)

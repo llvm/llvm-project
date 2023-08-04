@@ -32,6 +32,11 @@ bool sameOffsetsSizesAndStrides(
     OffsetSizeAndStrideOpInterface a, OffsetSizeAndStrideOpInterface b,
     llvm::function_ref<bool(OpFoldResult, OpFoldResult)> cmp);
 
+/// Helper method to compute the number of dynamic entries of `staticVals`,
+/// up to `idx`.
+unsigned getNumDynamicEntriesUpToIdx(ArrayRef<int64_t> staticVals,
+                                     unsigned idx);
+
 } // namespace detail
 } // namespace mlir
 

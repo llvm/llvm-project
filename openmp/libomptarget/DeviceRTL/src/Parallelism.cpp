@@ -70,7 +70,6 @@ uint32_t determineNumberOfThreads(int32_t NumThreadsClause) {
 // Invoke an outlined parallel function unwrapping arguments (up to 32).
 void invokeMicrotask(int32_t global_tid, int32_t bound_tid, void *fn,
                      void **args, int64_t nargs) {
-  DebugEntryRAII Entry(__FILE__, __LINE__, "<OpenMP Outlined Function>");
   switch (nargs) {
 #include "generated_microtask_cases.gen"
   default:
@@ -86,8 +85,6 @@ extern "C" {
 void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
                         int32_t num_threads, int proc_bind, void *fn,
                         void *wrapper_fn, void **args, int64_t nargs) {
-  FunctionTracingRAII();
-
   uint32_t TId = mapping::getThreadIdInBlock();
 
   // Assert the parallelism level is zero if disabled by the user.
@@ -264,7 +261,6 @@ void __kmpc_parallel_51(IdentTy *ident, int32_t, int32_t if_expr,
 
 __attribute__((noinline)) bool
 __kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {
-  FunctionTracingRAII();
   // Work function and arguments for L1 parallel region.
   *WorkFn = state::ParallelRegionFn;
 
@@ -279,7 +275,6 @@ __kmpc_kernel_parallel(ParallelRegionFnTy *WorkFn) {
 }
 
 __attribute__((noinline)) void __kmpc_kernel_end_parallel() {
-  FunctionTracingRAII();
   // In case we have modified an ICV for this thread before a ThreadState was
   // created. We drop it now to not contaminate the next parallel region.
   ASSERT(!mapping::isSPMDMode(), nullptr);
@@ -288,24 +283,14 @@ __attribute__((noinline)) void __kmpc_kernel_end_parallel() {
   ASSERT(!mapping::isSPMDMode(), nullptr);
 }
 
-uint16_t __kmpc_parallel_level(IdentTy *, uint32_t) {
-  FunctionTracingRAII();
-  return omp_get_level();
-}
+uint16_t __kmpc_parallel_level(IdentTy *, uint32_t) { return omp_get_level(); }
 
-int32_t __kmpc_global_thread_num(IdentTy *) {
-  FunctionTracingRAII();
-  return omp_get_thread_num();
-}
+int32_t __kmpc_global_thread_num(IdentTy *) { return omp_get_thread_num(); }
 
 void __kmpc_push_num_teams(IdentTy *loc, int32_t tid, int32_t num_teams,
-                           int32_t thread_limit) {
-  FunctionTracingRAII();
-}
+                           int32_t thread_limit) {}
 
-void __kmpc_push_proc_bind(IdentTy *loc, uint32_t tid, int proc_bind) {
-  FunctionTracingRAII();
-}
+void __kmpc_push_proc_bind(IdentTy *loc, uint32_t tid, int proc_bind) {}
 }
 
 #pragma omp end declare target

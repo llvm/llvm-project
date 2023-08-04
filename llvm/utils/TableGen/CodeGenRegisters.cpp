@@ -965,11 +965,20 @@ static bool TopoOrderRC(const CodeGenRegisterClass &PA,
   return StringRef(A->getName()) < B->getName();
 }
 
+std::string CodeGenRegisterClass::getNamespaceQualification() const {
+  return Namespace.empty() ? "" : (Namespace + "::").str();
+}
+
 std::string CodeGenRegisterClass::getQualifiedName() const {
-  if (Namespace.empty())
-    return getName();
-  else
-    return (Namespace + "::" + getName()).str();
+  return getNamespaceQualification() + getName();
+}
+
+std::string CodeGenRegisterClass::getIdName() const {
+  return getName() + "RegClassID";
+}
+
+std::string CodeGenRegisterClass::getQualifiedIdName() const {
+  return getNamespaceQualification() + getIdName();
 }
 
 // Compute sub-classes of all register classes.

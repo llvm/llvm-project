@@ -255,11 +255,11 @@ std::optional<Constant<T>> Folder<T>::ApplyComponent(
     const std::vector<Constant<SubscriptInteger>> *subscripts) {
   if (auto scalar{structures.GetScalarValue()}) {
     if (std::optional<Expr<SomeType>> expr{scalar->Find(component)}) {
-      if (const Constant<T> *value{UnwrapConstantValue<T>(expr.value())}) {
-        if (!subscripts) {
-          return std::move(*value);
-        } else {
+      if (const Constant<T> *value{UnwrapConstantValue<T>(*expr)}) {
+        if (subscripts) {
           return ApplySubscripts(*value, *subscripts);
+        } else {
+          return *value;
         }
       }
     }

@@ -1,5 +1,4 @@
-// RUN: mlir-opt %s -convert-vector-to-arm-sme -split-input-file | mlir-opt | FileCheck %s
-
+// RUN: mlir-opt %s -convert-vector-to-arm-sme -split-input-file -allow-unregistered-dialect | FileCheck %s
 
 // CHECK-LABEL:   func.func @transfer_write_2d_zero(
 // CHECK-SAME:      %[[ARG_0:.*]]: memref<?x?xi8>) {
@@ -11,6 +10,16 @@ func.func @transfer_write_2d_zero(%arg0 : memref<?x?xi8>) {
   %c0 = arith.constant 0 : index
   %cst = arith.constant dense<0> : vector<[16]x[16]xi8>
   vector.transfer_write %cst, %arg0[%c0, %c0] {in_bounds = [true, true]} : vector<[16]x[16]xi8>, memref<?x?xi8>
+  return
+}
+
+// -----
+
+// CHECK-LABEL: @arith_constant_dense_2d_zero_i8
+// CHECK: %[[ZERO:.*]] = arm_sme.zero : vector<[16]x[16]xi8>
+func.func @arith_constant_dense_2d_zero_i8() {
+  %zero = arith.constant dense<0> : vector<[16]x[16]xi8>
+  "prevent.dce"(%zero) : (vector<[16]x[16]xi8>) -> ()
   return
 }
 
@@ -70,6 +79,7 @@ func.func @transfer_write_2d_zero__non_memref_type(%arg0 : tensor<?x?xi8>) -> te
 
 // CHECK-LABEL: @transfer_write_2d_zero__non_zero_value
 // CHECK: vector.transfer_write
+// CHECK-NOT: arm_sme.zero
 // CHECK-NOT: arm_sme.tile_store
 func.func @transfer_write_2d_zero__non_zero_value(%arg0 : memref<?x?xi8>) {
   %c0 = arith.constant 0 : index

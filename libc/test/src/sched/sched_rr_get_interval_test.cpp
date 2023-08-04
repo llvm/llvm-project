@@ -29,7 +29,8 @@ TEST(LlvmLibcSchedRRGetIntervalTest, SmokeTest) {
   };
 
   auto TimespecToNs = [](struct timespec t) {
-    return t.tv_sec * 1000UL * 1000UL * 1000UL + t.tv_nsec;
+    return static_cast<uint64_t>(t.tv_sec * 1000UL * 1000UL * 1000UL +
+                                 t.tv_nsec);
   };
 
   struct timespec ts;
@@ -49,8 +50,10 @@ TEST(LlvmLibcSchedRRGetIntervalTest, SmokeTest) {
     ASSERT_EQ(libc_errno, 0);
 
     // Check that numbers make sense (liberal bound of 10ns - 30sec)
-    ASSERT_GT(TimespecToNs(ts), 10UL);
-    ASSERT_LT(TimespecToNs(ts), 30UL * 1000UL * 1000UL * 1000UL);
+    constexpr uint64_t tenNs = 10UL;
+    ASSERT_GT(TimespecToNs(ts), tenNs);
+    constexpr uint64_t thirstyS = 30UL * 1000UL * 1000UL * 1000UL;
+    ASSERT_LT(TimespecToNs(ts), thirstyS);
 
     // Null timespec
     ASSERT_EQ(__llvm_libc::sched_rr_get_interval(0, nullptr), -1);

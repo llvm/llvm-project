@@ -448,7 +448,7 @@ config("zdefs") {
   # -Wl,-z,defs doesn't work with sanitizers.
   # https://clang.llvm.org/docs/AddressSanitizer.html
   if (current_os != "ios" && current_os != "mac" && current_os != "win" &&
-      current_os != "android" && !(use_asan || use_tsan || use_ubsan)) {
+      !(use_asan || use_tsan || use_ubsan)) {
     ldflags = [ "-Wl,-z,defs" ]
   }
 }

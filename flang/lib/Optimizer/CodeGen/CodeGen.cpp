@@ -1754,8 +1754,11 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
     // Adjust the element scaling factor if the element is a dependent type.
     if (fir::hasDynamicSize(seqEleTy)) {
       if (auto charTy = seqEleTy.dyn_cast<fir::CharacterType>()) {
-        prevPtrOff =
-            getCharacterByteSize(loc, rewriter, charTy, adaptor.getLenParams());
+        // The GEP pointer type decays to llvm.ptr<i[width]>.
+        // The scaling factor is the runtime value of the length.
+        assert(!adaptor.getLenParams().empty());
+        prevPtrOff = FIROpConversion::integerCast(
+            loc, rewriter, i64Ty, adaptor.getLenParams().back());
       } else if (seqEleTy.isa<fir::RecordType>()) {
         // prevPtrOff = ;
         TODO(loc, "generate call to calculate size of PDT");
@@ -1783,7 +1786,8 @@ struct XEmboxOpConversion : public EmboxCommonConversion<fir::cg::XEmboxOp> {
       // per CHARACTER element.
       auto charTy = seqEleTy.cast<fir::CharacterType>();
       if (fir::hasDynamicSize(charTy)) {
-        prevDimByteStride = prevPtrOff;
+        prevDimByteStride =
+            getCharacterByteSize(loc, rewriter, charTy, adaptor.getLenParams());
       } else {
         prevDimByteStride = genConstantIndex(
             loc, i64Ty, rewriter,
