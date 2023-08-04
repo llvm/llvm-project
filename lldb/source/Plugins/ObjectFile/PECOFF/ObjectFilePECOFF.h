@@ -263,6 +263,7 @@ protected:
   llvm::StringRef GetSectionName(const section_header_t &sect);
   static lldb::SectionType GetSectionType(llvm::StringRef sect_name,
                                           const section_header_t &sect);
+  size_t GetSectionDataSize(lldb_private::Section *section) override;
 
   llvm::StringRef
   GetReflectionSectionIdentifier(swift::ReflectionSectionKind section) override;
