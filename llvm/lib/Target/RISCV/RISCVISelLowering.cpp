@@ -835,6 +835,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
       setCondCodeAction(VFPCCToExpand, VT, Expand);
 
       setOperationAction({ISD::FMINNUM, ISD::FMAXNUM}, VT, Legal);
+      setOperationAction({ISD::FMAXIMUM, ISD::FMINIMUM}, VT, Custom);
 
       setOperationAction({ISD::FTRUNC, ISD::FCEIL, ISD::FFLOOR, ISD::FROUND,
                           ISD::FROUNDEVEN, ISD::FRINT, ISD::FNEARBYINT,
@@ -1106,7 +1107,7 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         setOperationAction({ISD::FADD, ISD::FSUB, ISD::FMUL, ISD::FDIV,
                             ISD::FNEG, ISD::FABS, ISD::FCOPYSIGN, ISD::FSQRT,
                             ISD::FMA, ISD::FMINNUM, ISD::FMAXNUM,
-                            ISD::IS_FPCLASS},
+                            ISD::IS_FPCLASS, ISD::FMAXIMUM, ISD::FMINIMUM},
                            VT, Custom);
 
         setOperationAction({ISD::FP_ROUND, ISD::FP_EXTEND}, VT, Custom);
@@ -4679,33 +4680,74 @@ SDValue RISCVTargetLowering::LowerIS_FPCLASS(SDValue Op,
 static SDValue lowerFMAXIMUM_FMINIMUM(SDValue Op, SelectionDAG &DAG,
                                       const RISCVSubtarget &Subtarget) {
   SDLoc DL(Op);
-  EVT VT = Op.getValueType();
+  MVT VT = Op.getSimpleValueType();
 
   SDValue X = Op.getOperand(0);
   SDValue Y = Op.getOperand(1);
 
-  MVT XLenVT = Subtarget.getXLenVT();
+  if (!VT.isVector()) {
+    MVT XLenVT = Subtarget.getXLenVT();
 
-  // If X is a nan, replace Y with X. If Y is a nan, replace X with Y. This
-  // ensures that when one input is a nan, the other will also be a nan allowing
-  // the nan to propagate. If both inputs are nan, this will swap the inputs
-  // which is harmless.
+    // If X is a nan, replace Y with X. If Y is a nan, replace X with Y. This
+    // ensures that when one input is a nan, the other will also be a nan
+    // allowing the nan to propagate. If both inputs are nan, this will swap the
+    // inputs which is harmless.
 
-  SDValue NewY = Y;;
-  if (!Op->getFlags().hasNoNaNs() && !DAG.isKnownNeverNaN(X)) {
-    SDValue XIsNonNan = DAG.getSetCC(DL, XLenVT, X, X, ISD::SETOEQ);
-    NewY = DAG.getSelect(DL, VT, XIsNonNan, Y, X);
+    SDValue NewY = Y;
+    if (!Op->getFlags().hasNoNaNs() && !DAG.isKnownNeverNaN(X)) {
+      SDValue XIsNonNan = DAG.getSetCC(DL, XLenVT, X, X, ISD::SETOEQ);
+      NewY = DAG.getSelect(DL, VT, XIsNonNan, Y, X);
+    }
+
+    SDValue NewX = X;
+    if (!Op->getFlags().hasNoNaNs() && !DAG.isKnownNeverNaN(Y)) {
+      SDValue YIsNonNan = DAG.getSetCC(DL, XLenVT, Y, Y, ISD::SETOEQ);
+      NewX = DAG.getSelect(DL, VT, YIsNonNan, X, Y);
+    }
+
+    unsigned Opc =
+        Op.getOpcode() == ISD::FMAXIMUM ? RISCVISD::FMAX : RISCVISD::FMIN;
+    return DAG.getNode(Opc, DL, VT, NewX, NewY);
+  }
+
+  // Check no NaNs before converting to fixed vector scalable.
+  bool XIsNeverNan = Op->getFlags().hasNoNaNs() || DAG.isKnownNeverNaN(X);
+  bool YIsNeverNan = Op->getFlags().hasNoNaNs() || DAG.isKnownNeverNaN(Y);
+
+  MVT ContainerVT = VT;
+  if (VT.isFixedLengthVector()) {
+    ContainerVT = getContainerForFixedLengthVector(DAG, VT, Subtarget);
+    X = convertToScalableVector(ContainerVT, X, DAG, Subtarget);
+    Y = convertToScalableVector(ContainerVT, Y, DAG, Subtarget);
+  }
+
+  auto [Mask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
+
+  SDValue NewY = Y;
+  if (!XIsNeverNan) {
+    SDValue XIsNonNan = DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
+                                    {X, X, DAG.getCondCode(ISD::SETOEQ),
+                                     DAG.getUNDEF(ContainerVT), Mask, VL});
+    NewY =
+        DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, XIsNonNan, Y, X, VL);
   }
 
   SDValue NewX = X;
-  if (!Op->getFlags().hasNoNaNs() && !DAG.isKnownNeverNaN(Y)) {
-    SDValue YIsNonNan = DAG.getSetCC(DL, XLenVT, Y, Y, ISD::SETOEQ);
-    NewX = DAG.getSelect(DL, VT, YIsNonNan, X, Y);
+  if (!YIsNeverNan) {
+    SDValue YIsNonNan = DAG.getNode(RISCVISD::SETCC_VL, DL, Mask.getValueType(),
+                                    {Y, Y, DAG.getCondCode(ISD::SETOEQ),
+                                     DAG.getUNDEF(ContainerVT), Mask, VL});
+    NewX =
+        DAG.getNode(RISCVISD::VSELECT_VL, DL, ContainerVT, YIsNonNan, X, Y, VL);
   }
 
   unsigned Opc =
-      Op.getOpcode() == ISD::FMAXIMUM ? RISCVISD::FMAX : RISCVISD::FMIN;
-  return DAG.getNode(Opc, DL, VT, NewX, NewY);
+      Op.getOpcode() == ISD::FMAXIMUM ? RISCVISD::VFMAX_VL : RISCVISD::VFMIN_VL;
+  SDValue Res = DAG.getNode(Opc, DL, ContainerVT, NewX, NewY,
+                            DAG.getUNDEF(ContainerVT), Mask, VL);
+  if (VT.isFixedLengthVector())
+    Res = convertFromScalableVector(VT, Res, DAG, Subtarget);
+  return Res;
 }
 
 /// Get a RISCV target specified VL op for a given SDNode.
