@@ -379,3 +379,6 @@ def gi_set_glc : GICustomOperandRenderer<"renderSetGLC">,
 
 def gi_frameindex_to_targetframeindex : GICustomOperandRenderer<"renderFrameIndex">,
   GISDNodeXFormEquiv<frameindex_to_targetframeindex>;
+
+def gi_fp_pow2_to_exponent : GICustomOperandRenderer<"renderFPPow2ToExponent">,
+  GISDNodeXFormEquiv<FPPow2ToExponentXForm>;
