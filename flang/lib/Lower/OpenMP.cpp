@@ -1525,22 +1525,31 @@ bool ClauseProcessor::processCopyin() const {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   mlir::OpBuilder::InsertPoint insPt = firOpBuilder.saveInsertionPoint();
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
-
+  auto checkAndCopyHostAssociateVar =
+      [&](Fortran::semantics::Symbol *sym,
+          mlir::OpBuilder::InsertPoint *copyAssignIP = nullptr) {
+        assert(sym->has<Fortran::semantics::HostAssocDetails>() &&
+               "No host-association found");
+        converter.copyHostAssociateVar(*sym, copyAssignIP);
+      };
   bool hasCopyin = findRepeatableClause<ClauseTy::Copyin>(
       [&](const ClauseTy::Copyin *copyinClause,
           const Fortran::parser::CharBlock &) {
         const Fortran::parser::OmpObjectList &ompObjectList = copyinClause->v;
         for (const Fortran::parser::OmpObject &ompObject : ompObjectList.v) {
           Fortran::semantics::Symbol *sym = getOmpObjectSymbol(ompObject);
-          if (sym->has<Fortran::semantics::CommonBlockDetails>())
-            TODO(converter.getCurrentLocation(),
-                 "common block in Copyin clause");
+          if (const auto *commonDetails =
+                  sym->detailsIf<Fortran::semantics::CommonBlockDetails>()) {
+            for (const auto &mem : commonDetails->objects())
+              checkAndCopyHostAssociateVar(&*mem, &insPt);
+            break;
+          }
           if (Fortran::semantics::IsAllocatableOrPointer(sym->GetUltimate()))
             TODO(converter.getCurrentLocation(),
                  "pointer or allocatable variables in Copyin clause");
           assert(sym->has<Fortran::semantics::HostAssocDetails>() &&
                  "No host-association found");
-          converter.copyHostAssociateVar(*sym);
+          checkAndCopyHostAssociateVar(sym);
         }
       });
 
