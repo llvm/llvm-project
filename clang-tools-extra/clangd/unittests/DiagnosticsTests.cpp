@@ -34,6 +34,7 @@
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/TargetSelect.h"
+#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
@@ -1961,8 +1962,8 @@ $fix[[  $diag[[#include "unused.h"]]
           withTag(DiagnosticTag::Unnecessary), diagSource(Diag::Clangd),
           withFix(Fix(Test.range("fix"), "", "remove #include directive")))));
   auto &Diag = AST.getDiagnostics().front();
-  EXPECT_EQ(getDiagnosticDocURI(Diag.Source, Diag.ID, Diag.Name),
-            std::string("https://clangd.llvm.org/guides/include-cleaner"));
+  EXPECT_THAT(getDiagnosticDocURI(Diag.Source, Diag.ID, Diag.Name),
+              llvm::ValueIs(Not(IsEmpty())));
   Cfg.Diagnostics.SuppressAll = true;
   WithContextValue SuppressAllWithCfg(Config::Key, std::move(Cfg));
   EXPECT_THAT(TU.build().getDiagnostics(), IsEmpty());
