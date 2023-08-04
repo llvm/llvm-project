@@ -38,9 +38,7 @@ createInterpreter(const Args &ExtraArgs = {},
                   DiagnosticConsumer *Client = nullptr) {
   Args ClangArgs = {"-Xclang", "-emit-llvm-only"};
   ClangArgs.insert(ClangArgs.end(), ExtraArgs.begin(), ExtraArgs.end());
-  auto CB = clang::IncrementalCompilerBuilder();
-  CB.SetCompilerArgs(ClangArgs);
-  auto CI = cantFail(CB.CreateCpp());
+  auto CI = cantFail(clang::IncrementalCompilerBuilder::create(ClangArgs));
   if (Client)
     CI->getDiagnostics().setClient(Client, /*ShouldOwnClient=*/false);
   return cantFail(clang::Interpreter::create(std::move(CI)));

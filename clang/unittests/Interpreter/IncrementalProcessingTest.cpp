@@ -52,9 +52,7 @@ const Function *getGlobalInit(llvm::Module *M) {
 
 TEST(IncrementalProcessing, EmitCXXGlobalInitFunc) {
   std::vector<const char *> ClangArgv = {"-Xclang", "-emit-llvm-only"};
-  auto CB = clang::IncrementalCompilerBuilder();
-  CB.SetCompilerArgs(ClangArgv);
-  auto CI = cantFail(CB.CreateCpp());
+  auto CI = llvm::cantFail(IncrementalCompilerBuilder::create(ClangArgv));
   auto Interp = llvm::cantFail(Interpreter::create(std::move(CI)));
 
   std::array<clang::PartialTranslationUnit *, 2> PTUs;
