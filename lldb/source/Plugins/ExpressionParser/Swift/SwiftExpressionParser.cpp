@@ -1261,9 +1261,6 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   // FIXME: We won't have to do this once the playground adds import
   //        statements for the things it needs itself.
   if (playground) {
-    auto *persistent_state =
-        sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
-
     Status error;
     SourceModule module_info;
     module_info.path.emplace_back("Swift");
@@ -1274,7 +1271,7 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
       return error.ToError();
     }
 
-    persistent_state->AddHandLoadedModule(ConstString("Swift"),
+    swift_ast_context.AddHandLoadedModule(ConstString("Swift"),
                                           swift::ImportedModule(module));
   }
 
@@ -1297,9 +1294,8 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
   if (lldb::StackFrameSP this_frame_sp = stack_frame_wp.lock())
     process_sp = this_frame_sp->CalculateProcess();
   swift_ast_context.LoadImplicitModules(sc.target_sp, process_sp, exe_scope);
-  if (!SwiftASTContext::GetImplicitImports(swift_ast_context, sc, exe_scope,
-                                           process_sp, additional_imports,
-                                           implicit_import_error)) {
+  if (!swift_ast_context.GetImplicitImports(sc, process_sp, additional_imports,
+                                            implicit_import_error)) {
     const char *msg = implicit_import_error.AsCString();
     if (!msg)
       msg = "error status positive, but import still failed";
@@ -1449,9 +1445,8 @@ static llvm::Expected<ParsedExpression> ParseAndImport(
         IRExecutionUnit::GetLLVMGlobalContextMutex());
 
     Status auto_import_error;
-    if (!SwiftASTContext::CacheUserImports(swift_ast_context, sc, exe_scope,
-                                           process_sp, *source_file,
-                                           auto_import_error)) {
+    if (!swift_ast_context.CacheUserImports(process_sp, *source_file,
+                                            auto_import_error)) {
       const char *msg = auto_import_error.AsCString();
       if (!msg) {
         // The import itself succeeded, but the AST context is in a
