@@ -52,6 +52,7 @@
 #include "lldb/lldb-private-types.h"
 
 #ifdef LLDB_ENABLE_SWIFT
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #endif //LLDB_ENABLE_SWIFT
 

@@ -13,13 +13,14 @@
 #include "SwiftExpressionParser.h"
 
 #include "SwiftASTManipulator.h"
+#include "SwiftDiagnostic.h"
 #include "SwiftExpressionSourceCode.h"
+#include "SwiftExpressionVariable.h"
+#include "SwiftPersistentExpressionState.h"
 #include "SwiftREPLMaterializer.h"
 #include "SwiftSILManipulator.h"
 #include "SwiftUserExpression.h"
 
-#include "Plugins/ExpressionParser/Swift/SwiftDiagnostic.h"
-#include "Plugins/ExpressionParser/Swift/SwiftExpressionVariable.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleList.h"

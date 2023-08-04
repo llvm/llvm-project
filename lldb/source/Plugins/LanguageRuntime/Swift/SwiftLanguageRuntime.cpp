@@ -15,6 +15,7 @@
 #include "SwiftLanguageRuntimeImpl.h"
 #include "SwiftMetadataCache.h"
 
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/Process/Utility/RegisterContext_x86.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "Utility/ARM64_DWARF_Registers.h"

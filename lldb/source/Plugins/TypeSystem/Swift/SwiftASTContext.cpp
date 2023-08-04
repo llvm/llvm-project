@@ -12,6 +12,7 @@
 
 #include "Plugins/TypeSystem/Swift/SwiftASTContext.h"
 #include "Plugins/TypeSystem/Swift/StoringDiagnosticConsumer.h"
+#include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 
 #include "swift/AST/ASTContext.h"
 #include "swift/AST/ASTDemangler.h"
@@ -8019,8 +8020,7 @@ SwiftASTContext::GetASTVectorForModule(const Module *module) {
 
 SwiftASTContextForExpressions::SwiftASTContextForExpressions(
     std::string description, TypeSystemSwiftTypeRef &typeref_typesystem)
-    : SwiftASTContext(std::move(description), typeref_typesystem),
-      m_persistent_state_up(new SwiftPersistentExpressionState) {
+    : SwiftASTContext(std::move(description), typeref_typesystem) {
   assert(llvm::isa<TypeSystemSwiftTypeRefForExpressions>(m_typeref_typesystem));
 }
 
@@ -8069,7 +8069,7 @@ UserExpression *SwiftASTContextForExpressions::GetUserExpression(
 
 PersistentExpressionState *
 SwiftASTContextForExpressions::GetPersistentExpressionState() {
-  return m_persistent_state_up.get();
+  return GetTypeSystemSwiftTypeRef().GetPersistentExpressionState();
 }
 
 static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
