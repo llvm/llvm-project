@@ -8709,7 +8709,7 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
     if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange, DeadInstructions))
-      VPlans.push_back(std::move(*Plan));
+      VPlans.push_back(std::move(Plan));
     VF = SubRange.End;
   }
 }
@@ -8841,7 +8841,7 @@ static void addUsersInExitBlock(VPBasicBlock *HeaderVPBB,
   }
 }
 
-std::optional<VPlanPtr> LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
+VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     VFRange &Range, SmallPtrSetImpl<Instruction *> &DeadInstructions) {
 
   SmallPtrSet<const InterleaveGroup<Instruction> *, 1> InterleaveGroups;
@@ -9071,7 +9071,7 @@ std::optional<VPlanPtr> LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Sink users of fixed-order recurrence past the recipe defining the previous
   // value and introduce FirstOrderRecurrenceSplice VPInstructions.
   if (!VPlanTransforms::adjustFixedOrderRecurrences(*Plan, Builder))
-    return std::nullopt;
+    return nullptr;
 
   VPlanTransforms::removeRedundantCanonicalIVs(*Plan);
   VPlanTransforms::removeRedundantInductionCasts(*Plan);
@@ -9085,7 +9085,7 @@ std::optional<VPlanPtr> LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   VPlanTransforms::mergeBlocksIntoPredecessors(*Plan);
 
   assert(VPlanVerifier::verifyPlanIsValid(*Plan) && "VPlan is invalid");
-  return std::make_optional(std::move(Plan));
+  return std::move(Plan);
 }
 
 VPlanPtr LoopVectorizationPlanner::buildVPlan(VFRange &Range) {
