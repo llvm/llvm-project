@@ -1510,7 +1510,7 @@ void SwiftLanguageRuntime::RegisterGlobalError(Target &target, ConstString name,
       if (!persistent_state)
         return;
 
-      persistent_state->RegisterSwiftPersistentDecl(var_decl);
+      persistent_state->RegisterSwiftPersistentDecl({ast_context, var_decl});
 
       ConstString mangled_name;
 

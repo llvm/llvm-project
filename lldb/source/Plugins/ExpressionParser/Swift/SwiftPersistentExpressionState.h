@@ -45,7 +45,7 @@ class SwiftPersistentExpressionState : public PersistentExpressionState {
 public:
   class SwiftDeclMap {
   public:
-    void AddDecl(swift::ValueDecl *decl, bool check_existing,
+    void AddDecl(CompilerDecl value_decl, bool check_existing,
                  llvm::StringRef name);
 
     /// Find decls matching `name`, excluding decls that are equivalent to
@@ -53,14 +53,15 @@ public:
     /// Return true if there are any results.
     bool FindMatchingDecls(
         llvm::StringRef name,
-        const std::vector<swift::ValueDecl *> &excluding_equivalents,
-        std::vector<swift::ValueDecl *> &matches);
+        const std::vector<CompilerDecl> &excluding_equivalents,
+        std::vector<CompilerDecl> &matches);
 
     void CopyDeclsTo(SwiftDeclMap &target_map);
-    static bool DeclsAreEquivalent(swift::Decl *lhs, swift::Decl *rhs);
+    static bool DeclsAreEquivalent(CompilerDecl lhs, CompilerDecl rhs);
 
   private:
-    llvm::StringMap<llvm::SmallVector<swift::ValueDecl *, 1>> m_swift_decls;
+    /// Each decl also stores the context it comes from.
+    llvm::StringMap<llvm::SmallVector<CompilerDecl, 1>> m_swift_decls;
   };
 
   //----------------------------------------------------------------------
@@ -96,9 +97,9 @@ public:
   llvm::Optional<CompilerType>
   GetCompilerTypeFromPersistentDecl(ConstString type_name) override;
 
-  void RegisterSwiftPersistentDecl(swift::ValueDecl *value_decl);
+  void RegisterSwiftPersistentDecl(CompilerDecl value_decl);
 
-  void RegisterSwiftPersistentDeclAlias(swift::ValueDecl *value_decl,
+  void RegisterSwiftPersistentDeclAlias(CompilerDecl value_decl,
                                         llvm::StringRef name);
 
   void CopyInSwiftPersistentDecls(SwiftDeclMap &source_map);
@@ -108,8 +109,8 @@ public:
   /// if there are any results.
   bool GetSwiftPersistentDecls(
       llvm::StringRef name,
-      const std::vector<swift::ValueDecl *> &excluding_equivalents,
-      std::vector<swift::ValueDecl *> &matches);
+      const std::vector<CompilerDecl> &excluding_equivalents,
+      std::vector<CompilerDecl> &matches);
 
   // This just adds this module to the list of hand-loaded modules, it doesn't
   // actually load it.

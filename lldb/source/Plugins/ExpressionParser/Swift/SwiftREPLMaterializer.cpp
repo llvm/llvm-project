@@ -186,7 +186,11 @@ public:
 
     if (m_swift_decl) {
       llvm::cast<SwiftPersistentExpressionState>(persistent_state)
-          ->RegisterSwiftPersistentDeclAlias(m_swift_decl, name.GetStringRef());
+          ->RegisterSwiftPersistentDeclAlias(
+              {SwiftASTContext::GetSwiftASTContext(
+                   &m_swift_decl->getASTContext()),
+               m_swift_decl},
+              name.GetStringRef());
     }
 
     return;
