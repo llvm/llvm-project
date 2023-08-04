@@ -35,6 +35,22 @@ using namespace mlir::gpu;
 
 #include "mlir/Dialect/GPU/IR/GPUOpsDialect.cpp.inc"
 
+/// Return true if the given MemRefType has an address space that is a
+/// gpu::AddressSpaceAttr attribute with value 'workgroup`.
+bool gpu::GPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
+  return isSharedMemoryAddressSpace(type.getMemorySpace());
+}
+
+/// Return true if the given Attribute has matches is a gpu::AddressSpaceAttr
+/// attribute with value 'workgroup`.
+bool gpu::GPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
+  if (!memorySpace)
+    return false;
+  if (auto gpuAttr = llvm::dyn_cast<gpu::AddressSpaceAttr>(memorySpace))
+    return gpuAttr.getValue() == gpu::AddressSpace::Workgroup;
+  return false;
+}
+
 //===----------------------------------------------------------------------===//
 // GPU Device Mapping Attributes
 //===----------------------------------------------------------------------===//
