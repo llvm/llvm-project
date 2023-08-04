@@ -2018,7 +2018,8 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
       return true;
   if (match(V, m_Power2()))
       return true;
-  if (Q.CxtI && match(V, m_VScale())) {
+  if (Q.CxtI &&
+      (match(V, m_VScale()) || match(V, m_Shl(m_VScale(), m_Value())))) {
     const Function *F = Q.CxtI->getFunction();
     // The vscale_range indicates vscale is a power-of-two.
     return F->hasFnAttribute(Attribute::VScaleRange);
