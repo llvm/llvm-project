@@ -25,7 +25,7 @@ OptionValue::OptionValue(const OptionValue &other) {
 }
 
 OptionValue& OptionValue::operator=(const OptionValue &other) {
-  std::scoped_lock lock(m_mutex, other.m_mutex);
+  std::scoped_lock<std::mutex, std::mutex> lock(m_mutex, other.m_mutex);
 
   m_parent_wp = other.m_parent_wp;
   m_callback = other.m_callback;
