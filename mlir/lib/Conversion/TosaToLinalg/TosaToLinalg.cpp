@@ -91,8 +91,8 @@ createLinalgBodyCalculationForElementwiseOp(Operation *op, ValueRange args,
     return rewriter.create<arith::MulFOp>(loc, resultTypes, args);
   }
 
-  // tosa::DivOp
-  if (isa<tosa::DivOp>(op) && isa<IntegerType>(elementTy))
+  // tosa::IntDivOp
+  if (isa<tosa::IntDivOp>(op) && elementTy.isa<IntegerType>())
     return rewriter.create<arith::DivSIOp>(loc, resultTypes, args);
 
   // tosa::ReciprocalOp
@@ -2555,7 +2555,7 @@ void mlir::tosa::populateTosaToLinalgConversionPatterns(
       PointwiseConverter<tosa::AddOp>,
       PointwiseConverter<tosa::SubOp>,
       PointwiseConverter<tosa::MulOp>,
-      PointwiseConverter<tosa::DivOp>,
+      PointwiseConverter<tosa::IntDivOp>,
       PointwiseConverter<tosa::NegateOp>,
       PointwiseConverter<tosa::PowOp>,
       PointwiseConverter<tosa::ReciprocalOp>,
