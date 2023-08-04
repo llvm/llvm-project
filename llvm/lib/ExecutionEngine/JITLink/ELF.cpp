@@ -52,6 +52,22 @@ Expected<uint16_t> readTargetMachineArch(StringRef Buffer) {
     }
   }
 
+  if (Data[ELF::EI_DATA] == ELF::ELFDATA2MSB) {
+    if (Data[ELF::EI_CLASS] == ELF::ELFCLASS64) {
+      if (auto File = llvm::object::ELF64BEFile::create(Buffer)) {
+        return File->getHeader().e_machine;
+      } else {
+        return File.takeError();
+      }
+    } else if (Data[ELF::EI_CLASS] == ELF::ELFCLASS32) {
+      if (auto File = llvm::object::ELF32BEFile::create(Buffer)) {
+        return File->getHeader().e_machine;
+      } else {
+        return File.takeError();
+      }
+    }
+  }
+
   return ELF::EM_NONE;
 }
 

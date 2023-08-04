@@ -214,7 +214,7 @@ def FeatureAES     : SubtargetFeature<"aes", "HasAES", "true",
                                       [FeatureSSE2]>;
 def FeatureVAES    : SubtargetFeature<"vaes", "HasVAES", "true",
                        "Promote selected AES instructions to AVX512/AVX registers",
-                        [FeatureAVX, FeatureAES]>;
+                        [FeatureAVX2, FeatureAES]>;
 def FeatureTBM     : SubtargetFeature<"tbm", "HasTBM", "true",
                                       "Enable TBM instructions">;
 def FeatureLWP     : SubtargetFeature<"lwp", "HasLWP", "true",
@@ -238,10 +238,19 @@ def FeatureADX     : SubtargetFeature<"adx", "HasADX", "true",
 def FeatureSHA     : SubtargetFeature<"sha", "HasSHA", "true",
                                       "Enable SHA instructions",
                                       [FeatureSSE2]>;
+def FeatureSHA512  : SubtargetFeature<"sha512", "HasSHA512", "true",
+                                      "Support SHA512 instructions",
+                                      [FeatureAVX2]>;
 // Processor supports CET SHSTK - Control-Flow Enforcement Technology
 // using Shadow Stack
 def FeatureSHSTK   : SubtargetFeature<"shstk", "HasSHSTK", "true",
                        "Support CET Shadow-Stack instructions">;
+def FeatureSM3     : SubtargetFeature<"sm3", "HasSM3", "true",
+                                      "Support SM3 instructions",
+                                      [FeatureAVX]>;
+def FeatureSM4     : SubtargetFeature<"sm4", "HasSM4", "true",
+                                      "Support SM4 instructions",
+                                      [FeatureAVX2]>;
 def FeaturePRFCHW  : SubtargetFeature<"prfchw", "HasPRFCHW", "true",
                                       "Support PRFCHW instructions">;
 def FeatureRDSEED  : SubtargetFeature<"rdseed", "HasRDSEED", "true",
