@@ -209,6 +209,14 @@ public:
       return true;
     }
 
+    if (const auto arrayVal = attr.dyn_cast<mlir::cir::ConstArrayAttr>()) {
+      for (const auto elt : arrayVal.getElts().cast<mlir::ArrayAttr>()) {
+        if (!isNullValue(elt))
+          return false;
+      }
+      return true;
+    }
+
     llvm_unreachable("NYI");
   }
 
