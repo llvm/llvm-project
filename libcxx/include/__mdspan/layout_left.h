@@ -164,7 +164,7 @@ public:
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
         __r < extents_type::rank(), "layout_left::mapping::stride(): invalid rank index");
     index_type __s = 1;
-    for (rank_type __i = extents_type::rank() - 1; __i > __r; __i--)
+    for (rank_type __i = 0; __i < __r; __i++)
       __s *= __extents_.extent(__i);
     return __s;
   }
