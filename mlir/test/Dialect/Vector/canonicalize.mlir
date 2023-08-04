@@ -2104,6 +2104,15 @@ func.func @extract_from_broadcast(%src: vector<1x1x1xf32>) -> vector<1xf32> {
   return %1: vector<1xf32>
 }
 
+// CHECK-LABEL: func.func @extract_from_stretch_broadcast
+func.func @extract_from_stretch_broadcast(%src: vector<3x1x2xf32>) -> f32 {
+  //  CHECK-NEXT:  %0 = vector.extract {{.*}}[0, 0, 0] : vector<3x1x2xf32>
+  //  CHECK-NEXT:  return %0 : f32
+  %0 = vector.broadcast %src : vector<3x1x2xf32> to vector<3x4x2xf32>
+  %1 = vector.extract %0[0, 2, 0] : vector<3x4x2xf32>
+  return %1: f32
+}
+
 // -----
 // CHECK-LABEL: func.func @extract_strided_slice_of_constant_mask
 func.func @extract_strided_slice_of_constant_mask() -> vector<5x7xi1>{
