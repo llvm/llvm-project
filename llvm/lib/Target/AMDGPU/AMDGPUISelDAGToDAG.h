@@ -188,7 +188,14 @@ private:
   bool SelectScratchOffset(SDNode *N, SDValue Addr, SDValue &VAddr,
                            SDValue &Offset) const;
   bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
-                         SDValue &VOffset, SDValue &Offset) const;
+                         SDValue &VOffset, SDValue &Offset,
+                         bool &ScaleOffset) const;
+  bool SelectGlobalSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
+                         SDValue &VOffset, SDValue &Offset,
+                         SDValue &CPol) const;
+  bool SelectGlobalSAddrGLC(SDNode *N, SDValue Addr, SDValue &SAddr,
+                            SDValue &VOffset, SDValue &Offset,
+                            SDValue &CPol) const;
   bool SelectScratchSAddr(SDNode *N, SDValue Addr, SDValue &SAddr,
                           SDValue &Offset) const;
   bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,
@@ -210,7 +217,7 @@ private:
                   bool *ScaleOffset = nullptr) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDImm32(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
-  bool SelectSMRDScaleOffset(SDNode *N, SDValue &SOffset) const;
+  bool SelectScaleOffset(SDNode *N, SDValue &Offset) const;
   bool SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase, SDValue &SOffset,
                       SDValue &CPol) const;
   bool SelectSMRDSgprImm(SDNode *N, SDValue Addr, SDValue &SBase,

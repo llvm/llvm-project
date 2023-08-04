@@ -1666,7 +1666,11 @@ bool AMDGPUDAGToDAGISel::SelectScratchOffset(SDNode *N, SDValue Addr,
 }
 
 // If this matches zero_extend i32:x, return x
-static SDValue matchZExtFromI32(SDValue Op) {
+// Otherwise if the value is I32 returns x.
+static SDValue matchZExtFromI32orI32(SDValue Op) {
+  if (Op.getValueType() == MVT::i32)
+    return Op;
+
   if (Op.getOpcode() != ISD::ZERO_EXTEND)
     return SDValue();
 
@@ -1679,8 +1683,10 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
                                            SDValue Addr,
                                            SDValue &SAddr,
                                            SDValue &VOffset,
-                                           SDValue &Offset) const {
+                                           SDValue &Offset,
+                                           bool &ScaleOffset) const {
   int64_t ImmOffset = 0;
+  ScaleOffset = false;
 
   // Match the immediate offset first, which canonically is moved as low as
   // possible.
@@ -1731,25 +1737,45 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
   // Match the variable offset.
   if (Addr.getOpcode() == ISD::ADD) {
     LHS = Addr.getOperand(0);
-    RHS = Addr.getOperand(1);
 
     if (!LHS->isDivergent()) {
       // add (i64 sgpr), (zero_extend (i32 vgpr))
-      if (SDValue ZextRHS = matchZExtFromI32(RHS)) {
+      RHS = Addr.getOperand(1);
+      ScaleOffset = SelectScaleOffset(N, RHS);
+      if (SDValue ZextRHS = matchZExtFromI32orI32(RHS)) {
         SAddr = LHS;
         VOffset = ZextRHS;
       }
     }
 
+    RHS = Addr.getOperand(1);
     if (!SAddr && !RHS->isDivergent()) {
       // add (zero_extend (i32 vgpr)), (i64 sgpr)
-      if (SDValue ZextLHS = matchZExtFromI32(LHS)) {
+      ScaleOffset = SelectScaleOffset(N, LHS);
+      if (SDValue ZextLHS = matchZExtFromI32orI32(LHS)) {
         SAddr = RHS;
         VOffset = ZextLHS;
       }
     }
 
     if (SAddr) {
+      Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+      return true;
+    }
+  }
+
+  if (Subtarget->hasScaleOffset() &&
+      Addr.getOpcode() == AMDGPUISD::MAD_U64_U32 &&
+      Addr.getOperand(0)->isDivergent() &&
+      isa<ConstantSDNode>(Addr.getOperand(1)) &&
+      !Addr.getOperand(2)->isDivergent()) {
+    // mad_u64_u32 (i32 vgpr), (i32 c), (i64 sgpr)
+    unsigned Size = (unsigned)
+        cast<MemSDNode>(N)->getMemoryVT().getFixedSizeInBits() / 8;
+    ScaleOffset = Addr.getConstantOperandVal(1) == Size;
+    if (ScaleOffset) {
+      SAddr = Addr.getOperand(2);
+      VOffset = Addr.getOperand(0);
       Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
       return true;
     }
@@ -1767,6 +1793,36 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
                              CurDAG->getTargetConstant(0, SDLoc(), MVT::i32));
   VOffset = SDValue(VMov, 0);
   Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
+                                           SDValue Addr,
+                                           SDValue &SAddr,
+                                           SDValue &VOffset,
+                                           SDValue &Offset,
+                                           SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset))
+    return false;
+
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(), MVT::i32);
+  return true;
+}
+
+bool AMDGPUDAGToDAGISel::SelectGlobalSAddrGLC(SDNode *N,
+                                              SDValue Addr,
+                                              SDValue &SAddr,
+                                              SDValue &VOffset,
+                                              SDValue &Offset,
+                                              SDValue &CPol) const {
+  bool ScaleOffset;
+  if (!SelectGlobalSAddr(N, Addr, SAddr, VOffset, Offset, ScaleOffset))
+    return false;
+
+  unsigned CPolVal = (ScaleOffset ? AMDGPU::CPol::SCAL : 0) | AMDGPU::CPol::GLC;
+  CPol = CurDAG->getTargetConstant(CPolVal, SDLoc(), MVT::i32);
   return true;
 }
 
@@ -1914,36 +1970,34 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
   return true;
 }
 
-// Given \p SOffset and load node \p N check if \p SOffset is a multiple of the
-// load byte size. If it is update \p SOffset to a pre-scaled value and return
-// true.
-bool AMDGPUDAGToDAGISel::SelectSMRDScaleOffset(SDNode *N,
-                                               SDValue &SOffset) const {
+// Given \p Offset and load node \p N check if an \p Offset is a multiple of
+// the load byte size. If it is update \p Offset to a pre-scaled value and
+// return true.
+bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N,
+                                           SDValue &Offset) const {
   bool ScaleOffset = false;
-  if (!Subtarget->hasScaleOffset() || !SOffset)
+  if (!Subtarget->hasScaleOffset() || !Offset)
     return false;
-
-  assert(isa<LoadSDNode>(N));
 
   unsigned Size = (unsigned)
       cast<MemSDNode>(N)->getMemoryVT().getFixedSizeInBits() / 8;
 
-  SDValue Offset = SOffset;
+  SDValue Off = Offset;
   if (Offset.getOpcode() == ISD::ZERO_EXTEND)
-    Offset = Offset.getOperand(0);
+    Off = Off.getOperand(0);
 
-  if (isPowerOf2_32(Size) && Offset.getOpcode() == ISD::SHL) {
-    if (auto *C = dyn_cast<ConstantSDNode>(Offset.getOperand(1)))
+  if (isPowerOf2_32(Size) && Off.getOpcode() == ISD::SHL) {
+    if (auto *C = dyn_cast<ConstantSDNode>(Off.getOperand(1)))
       ScaleOffset = C->getZExtValue() == Log2_32(Size);
   } else if (Offset.getOpcode() == ISD::MUL ||
              (Offset.isMachineOpcode() &&
               Offset.getMachineOpcode() == AMDGPU::S_MUL_U64_U32_PSEUDO)) {
-    if (auto *C = dyn_cast<ConstantSDNode>(SOffset.getOperand(1)))
+    if (auto *C = dyn_cast<ConstantSDNode>(Offset.getOperand(1)))
       ScaleOffset = C->getZExtValue() == Size;
   }
 
   if (ScaleOffset)
-    SOffset = Offset.getOperand(0);
+    Offset = Off.getOperand(0);
 
   return ScaleOffset;
 }
@@ -1961,7 +2015,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode,
   if (ScaleOffset) {
     assert(N && SOffset);
 
-    *ScaleOffset = SelectSMRDScaleOffset(N, ByteOffsetNode);
+    *ScaleOffset = SelectScaleOffset(N, ByteOffsetNode);
   }
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(ByteOffsetNode);

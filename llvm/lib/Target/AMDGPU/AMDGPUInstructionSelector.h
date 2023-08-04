@@ -220,7 +220,7 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
-  bool selectSmrdScaleOffset(MachineOperand &Root, Register &SOffset) const;
+  bool selectScaleOffset(MachineOperand &Root, Register &Offset) const;
   bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
                         int64_t *Offset, bool *ScaleOffset) const;
   InstructionSelector::ComplexRendererFns
@@ -243,7 +243,11 @@ private:
   selectScratchOffset(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
+  selectGlobalSAddr(MachineOperand &Root, unsigned CPolBits) const;
+  InstructionSelector::ComplexRendererFns
   selectGlobalSAddr(MachineOperand &Root) const;
+  InstructionSelector::ComplexRendererFns
+  selectGlobalSAddrGLC(MachineOperand &Root) const;
 
   InstructionSelector::ComplexRendererFns
   selectScratchSAddr(MachineOperand &Root) const;
