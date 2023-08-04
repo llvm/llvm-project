@@ -290,6 +290,10 @@ New Compiler Flags
   individual relocations in the program will generally increase.
 - ``-f[no-]assume-unique-vtables`` controls whether Clang assumes that each
   class has a unique vtable address, when that is required by the ABI.
+- ``-print-multi-flags-experimental`` prints the flags used for multilib
+  selection. See `the multilib docs <https://clang.llvm.org/docs/Multilib.html>`_
+  for more details.
+
 
 Deprecated Compiler Flags
 -------------------------
@@ -883,6 +887,10 @@ Arm and AArch64 Support
   ``-mfloat-abi=hard`` or a triple ending in ``hf``) would silently
   use the soft-float ABI instead.
 
+- Clang now emits ``-Wunsupported-abi`` if the hard-float ABI is specified
+  and the selected processor lacks floating point registers.
+  (`#55755 <https://github.com/llvm/llvm-project/issues/55755>`_)
+
 - Clang builtin ``__arithmetic_fence`` and the command line option ``-fprotect-parens``
   are now enabled for AArch64.
 
@@ -897,6 +905,9 @@ Arm and AArch64 Support
 
 - Fix a crash when ``preserve_all`` calling convention is used on AArch64.
   `Issue 58145 <https://github.com/llvm/llvm-project/issues/58145>`_
+
+- Clang now warns if invalid target triples ``--target=aarch64-*-eabi`` or
+  ``--target=arm-*-elf`` are specified.
 
 Windows Support
 ^^^^^^^^^^^^^^^
@@ -1130,6 +1141,12 @@ The following methods have been added:
 
 - ``clang_Location_isInSystemHeader`` exposed via the ``is_in_system_header``
   property of the `Location` class.
+
+Configurable Multilib
+---------------------
+The BareMetal toolchain for AArch64 & ARM now supports multilib, configurable
+via ``multilib.yaml``. See `the multilib docs <https://clang.llvm.org/docs/Multilib.html>`_
+for more details.
 
 Additional Information
 ======================
