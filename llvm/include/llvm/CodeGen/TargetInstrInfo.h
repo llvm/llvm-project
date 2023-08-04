@@ -2076,6 +2076,13 @@ public:
   /// splitting. The criteria for if a function can be split may vary by target.
   virtual bool isFunctionSafeToSplit(const MachineFunction &MF) const;
 
+  /// Return true if the MachineBasicBlock can safely be split to the cold
+  /// section. On AArch64, certain instructions may cause a block to be unsafe
+  /// to split to the cold section.
+  virtual bool isMBBSafeToSplitToCold(const MachineBasicBlock &MBB) const {
+    return true;
+  }
+
   /// Produce the expression describing the \p MI loading a value into
   /// the physical register \p Reg. This hook should only be used with
   /// \p MIs belonging to VReg-less functions.
