@@ -712,8 +712,8 @@ bool SwiftUserExpression::Parse(DiagnosticManager &diagnostic_manager,
   if (status.Fail() || !module_decl)
     return error("could not load Swift Standard Library", status.AsCString());
 
-  persistent_state->AddHandLoadedModule(ConstString("Swift"),
-                                        swift::ImportedModule(module_decl));
+  m_swift_ast_ctx->AddHandLoadedModule(ConstString("Swift"),
+                                       swift::ImportedModule(module_decl));
   m_result_delegate.RegisterPersistentState(persistent_state);
   m_error_delegate.RegisterPersistentState(persistent_state);
  

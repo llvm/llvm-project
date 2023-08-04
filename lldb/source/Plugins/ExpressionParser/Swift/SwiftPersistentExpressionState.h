@@ -15,10 +15,6 @@
 
 #include "SwiftExpressionVariable.h"
 
-#include "swift/AST/Import.h"
-#include "swift/AST/Module.h"
-
-#include "lldb/Core/SwiftForward.h"
 #include "lldb/Expression/ExpressionVariable.h"
 
 #include "llvm/ADT/StringMap.h"
@@ -38,10 +34,6 @@ namespace lldb_private {
 /// Also provides an increasing, 0-based counter for naming result
 /// variables.
 class SwiftPersistentExpressionState : public PersistentExpressionState {
-
-  typedef llvm::StringMap<swift::AttributedImport<swift::ImportedModule>>
-      HandLoadedModuleSet;
-
 public:
   class SwiftDeclMap {
   public:
@@ -112,18 +104,6 @@ public:
       const std::vector<CompilerDecl> &excluding_equivalents,
       std::vector<CompilerDecl> &matches);
 
-  // This just adds this module to the list of hand-loaded modules, it doesn't
-  // actually load it.
-  void AddHandLoadedModule(
-      ConstString module_name,
-      swift::AttributedImport<swift::ImportedModule> attributed_import) {
-    m_hand_loaded_modules.insert_or_assign(module_name.GetStringRef(),
-                                           attributed_import);
-  }
-
-  /// This returns the list of hand-loaded modules.
-  HandLoadedModuleSet GetHandLoadedModules() { return m_hand_loaded_modules; }
-
 private:
   /// The counter used by GetNextResultName().
   uint32_t m_next_persistent_variable_id;
@@ -131,9 +111,6 @@ private:
   uint32_t m_next_persistent_error_id;
   /// The persistent functions declared by the user.
   SwiftDeclMap m_swift_persistent_decls;
-  /// These are the names of modules that we have loaded by hand into
-  /// the Contexts we make for parsing.
-  HandLoadedModuleSet m_hand_loaded_modules;
 };
 } // namespace lldb_private
 

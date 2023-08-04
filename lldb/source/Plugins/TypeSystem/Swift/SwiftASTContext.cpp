@@ -8225,24 +8225,18 @@ static swift::ModuleDecl *LoadOneModule(const SourceModule &module,
   return swift_module;
 }
 
-bool SwiftASTContext::GetImplicitImports(
-    SwiftASTContext &swift_ast_context, SymbolContext &sc,
-    ExecutionContextScope &exe_scope, lldb::ProcessSP process_sp,
+bool SwiftASTContextForExpressions::GetImplicitImports(
+    SymbolContext &sc, lldb::ProcessSP process_sp,
     llvm::SmallVectorImpl<swift::AttributedImport<swift::ImportedModule>>
         &modules,
     Status &error) {
   LLDB_SCOPED_TIMER();
-  if (!swift_ast_context.GetCompileUnitImports(sc, process_sp, modules,
-                                               error)) {
+  if (!GetCompileUnitImports(sc, process_sp, modules, error)) {
     return false;
   }
 
-  auto *persistent_expression_state =
-      sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
-
   // Get the hand-loaded modules from the SwiftPersistentExpressionState.
-  for (auto &module_pair :
-       persistent_expression_state->GetHandLoadedModules()) {
+  for (auto &module_pair : m_hand_loaded_modules) {
 
     auto &attributed_import = module_pair.second;
 
@@ -8256,7 +8250,7 @@ bool SwiftASTContext::GetImplicitImports(
     // Otherwise, try reloading the ModuleDecl using the module name.
     SourceModule module_info;
     module_info.path.emplace_back(module_pair.first());
-    auto *module = LoadOneModule(module_info, swift_ast_context, process_sp,
+    auto *module = LoadOneModule(module_info, *this, process_sp,
                                  /*import_dylibs=*/false, error);
     if (!module)
       return false;
@@ -8267,8 +8261,8 @@ bool SwiftASTContext::GetImplicitImports(
   return true;
 }
 
-void SwiftASTContext::LoadImplicitModules(TargetSP target, ProcessSP process,
-                                          ExecutionContextScope &exe_scope) {
+void SwiftASTContextForExpressions::LoadImplicitModules(
+    TargetSP target, ProcessSP process, ExecutionContextScope &exe_scope) {
   auto load_module = [&](ConstString module_name) {
     SourceModule module_info;
     module_info.path.push_back(module_name);
@@ -8281,8 +8275,6 @@ void SwiftASTContext::LoadImplicitModules(TargetSP target, ProcessSP process,
       return;
     }
 
-    auto *persistent_expression_state =
-        target->GetSwiftPersistentExpressionState(exe_scope);
     swift::ModuleDecl *module = GetModule(module_info, err);
     if (err.Fail()) {
       LOG_PRINTF(
@@ -8292,24 +8284,16 @@ void SwiftASTContext::LoadImplicitModules(TargetSP target, ProcessSP process,
       return;
     }
 
-    persistent_expression_state->AddHandLoadedModule(
-        module_name, swift::ImportedModule(module));
+    AddHandLoadedModule(module_name, swift::ImportedModule(module));
   };
 
   load_module(ConstString(swift::SWIFT_STRING_PROCESSING_NAME));
   load_module(ConstString(swift::SWIFT_CONCURRENCY_NAME));
 }
 
-bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
-                                       SymbolContext &sc,
-                                       ExecutionContextScope &exe_scope,
-                                       lldb::ProcessSP process_sp,
-                                       swift::SourceFile &source_file,
-                                       Status &error) {
+bool SwiftASTContextForExpressions::CacheUserImports(
+    lldb::ProcessSP process_sp, swift::SourceFile &source_file, Status &error) {
   llvm::SmallString<1> m_description;
-
-  auto *persistent_expression_state =
-      sc.target_sp->GetSwiftPersistentExpressionState(exe_scope);
 
   auto src_file_imports = source_file.getImports();
 
@@ -8346,13 +8330,12 @@ bool SwiftASTContext::CacheUserImports(SwiftASTContext &swift_ast_context,
         LOG_PRINTF(GetLog(LLDBLog::Types | LLDBLog::Expressions),
                    "Performing auto import on found module: %s.\n",
                    module_name.c_str());
-        if (!LoadOneModule(module_info, swift_ast_context, process_sp,
+        if (!LoadOneModule(module_info, *this, process_sp,
                            /*import_dylibs=*/true, error))
           return false;
 
         // How do we tell we are in REPL or playground mode?
-        persistent_expression_state->AddHandLoadedModule(module_const_str,
-                                                         attributed_import);
+        AddHandLoadedModule(module_const_str, attributed_import);
       }
     }
   }
