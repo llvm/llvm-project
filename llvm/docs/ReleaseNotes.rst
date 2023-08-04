@@ -151,6 +151,9 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
+* Methods in SBHostOS related to threads have had their implementations
+  removed. These methods will return a value indicating failure.
+
 Changes to Sanitizers
 ---------------------
 * HWASan now defaults to detecting use-after-scope bugs.
