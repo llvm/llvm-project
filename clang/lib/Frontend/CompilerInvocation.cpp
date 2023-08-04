@@ -412,7 +412,7 @@ normalizeStringPairVector(OptSpecifier Opt, int, const ArgList &Args,
 }
 
 static void denormalizeStringPairVector(
-    ArgumentConsumer Consumer, const char *Spelling,
+    ArgumentConsumer Consumer, const Twine &Spelling,
     Option::OptionClass OptClass, unsigned TableIndex,
     const std::vector<std::pair<std::string, std::string>> &Values) {
   std::vector<std::string> Joined;
