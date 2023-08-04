@@ -8708,8 +8708,12 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
     VFRange SubRange = {VF, MaxVFTimes2};
-    if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange, DeadInstructions))
+    if (auto Plan = tryToBuildVPlanWithVPRecipes(SubRange, DeadInstructions)) {
+      // Now optimize the initial VPlan.
+      VPlanTransforms::optimize(*Plan, *PSE.getSE());
+      assert(VPlanVerifier::verifyPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
+    }
     VF = SubRange.End;
   }
 }
@@ -9073,18 +9077,6 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   if (!VPlanTransforms::adjustFixedOrderRecurrences(*Plan, Builder))
     return nullptr;
 
-  VPlanTransforms::removeRedundantCanonicalIVs(*Plan);
-  VPlanTransforms::removeRedundantInductionCasts(*Plan);
-
-  VPlanTransforms::optimizeInductions(*Plan, *PSE.getSE());
-  VPlanTransforms::removeDeadRecipes(*Plan);
-
-  VPlanTransforms::createAndOptimizeReplicateRegions(*Plan);
-
-  VPlanTransforms::removeRedundantExpandSCEVRecipes(*Plan);
-  VPlanTransforms::mergeBlocksIntoPredecessors(*Plan);
-
-  assert(VPlanVerifier::verifyPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
 }
 

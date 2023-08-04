@@ -174,11 +174,6 @@ Type LLVMTypeConverter::getIndexType() {
   return IntegerType::get(&getContext(), getIndexTypeBitwidth());
 }
 
-Type LLVMTypeConverter::getIndexTypeMatchingMemRef(MemRefType t) {
-  return options.memrefIndexTypeConverter ? options.memrefIndexTypeConverter(t)
-                                          : getIndexType();
-}
-
 LLVM::LLVMPointerType
 LLVMTypeConverter::getPointerType(Type elementType, unsigned int addressSpace) {
   if (useOpaquePointers())
@@ -344,7 +339,7 @@ LLVMTypeConverter::getMemRefDescriptorFields(MemRefType type,
   }
   auto ptrTy = getPointerType(elementType, *addressSpace);
 
-  Type indexTy = getIndexTypeMatchingMemRef(type);
+  auto indexTy = getIndexType();
 
   SmallVector<Type, 5> results = {ptrTy, ptrTy, indexTy};
   auto rank = type.getRank();
@@ -363,8 +358,7 @@ unsigned LLVMTypeConverter::getMemRefDescriptorSize(MemRefType type,
   // Compute the descriptor size given that of its components indicated above.
   unsigned space = *getMemRefAddressSpace(type);
   return 2 * llvm::divideCeil(getPointerBitwidth(space), 8) +
-         (1 + 2 * type.getRank()) *
-             layout.getTypeSize(getIndexTypeMatchingMemRef(type));
+         (1 + 2 * type.getRank()) * layout.getTypeSize(getIndexType());
 }
 
 /// Converts MemRefType to LLVMType. A MemRefType is converted to a struct that

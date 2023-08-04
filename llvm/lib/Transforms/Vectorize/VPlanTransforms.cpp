@@ -778,3 +778,16 @@ void VPlanTransforms::clearReductionWrapFlags(VPlan &Plan) {
     }
   }
 }
+
+void VPlanTransforms::optimize(VPlan &Plan, ScalarEvolution &SE) {
+  removeRedundantCanonicalIVs(Plan);
+  removeRedundantInductionCasts(Plan);
+
+  optimizeInductions(Plan, SE);
+  removeDeadRecipes(Plan);
+
+  createAndOptimizeReplicateRegions(Plan);
+
+  removeRedundantExpandSCEVRecipes(Plan);
+  mergeBlocksIntoPredecessors(Plan);
+}

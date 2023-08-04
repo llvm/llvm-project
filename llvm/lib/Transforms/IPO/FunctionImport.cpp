@@ -272,7 +272,7 @@ class GlobalsImporter final {
   function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
       IsPrevailing;
   FunctionImporter::ImportMapTy &ImportList;
-  StringMap<FunctionImporter::ExportSetTy> *const ExportLists;
+  DenseMap<StringRef, FunctionImporter::ExportSetTy> *const ExportLists;
 
   bool shouldImportGlobal(const ValueInfo &VI) {
     const auto &GVS = DefinedGVSummaries.find(VI.getGUID());
@@ -357,7 +357,7 @@ public:
       function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
           IsPrevailing,
       FunctionImporter::ImportMapTy &ImportList,
-      StringMap<FunctionImporter::ExportSetTy> *ExportLists)
+      DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists)
       : Index(Index), DefinedGVSummaries(DefinedGVSummaries),
         IsPrevailing(IsPrevailing), ImportList(ImportList),
         ExportLists(ExportLists) {}
@@ -403,7 +403,7 @@ static void computeImportForFunction(
         isPrevailing,
     SmallVectorImpl<EdgeInfo> &Worklist, GlobalsImporter &GVImporter,
     FunctionImporter::ImportMapTy &ImportList,
-    StringMap<FunctionImporter::ExportSetTy> *ExportLists,
+    DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists,
     FunctionImporter::ImportThresholdsTy &ImportThresholds) {
   GVImporter.onImportingSummary(Summary);
   static int ImportCount = 0;
@@ -576,7 +576,7 @@ static void ComputeImportForModule(
         isPrevailing,
     const ModuleSummaryIndex &Index, StringRef ModName,
     FunctionImporter::ImportMapTy &ImportList,
-    StringMap<FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
+    DenseMap<StringRef, FunctionImporter::ExportSetTy> *ExportLists = nullptr) {
   // Worklist contains the list of function imported in this module, for which
   // we will analyse the callees and may import further down the callgraph.
   SmallVector<EdgeInfo, 128> Worklist;
@@ -671,10 +671,10 @@ static unsigned numGlobalVarSummaries(const ModuleSummaryIndex &Index,
 #endif
 
 #ifndef NDEBUG
-static bool
-checkVariableImport(const ModuleSummaryIndex &Index,
-                    StringMap<FunctionImporter::ImportMapTy> &ImportLists,
-                    StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
+static bool checkVariableImport(
+    const ModuleSummaryIndex &Index,
+    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
 
   DenseSet<GlobalValue::GUID> FlattenedImports;
 
@@ -702,7 +702,7 @@ checkVariableImport(const ModuleSummaryIndex &Index,
   for (auto &ExportPerModule : ExportLists)
     for (auto &VI : ExportPerModule.second)
       if (!FlattenedImports.count(VI.getGUID()) &&
-          IsReadOrWriteOnlyVarNeedingImporting(ExportPerModule.first(), VI))
+          IsReadOrWriteOnlyVarNeedingImporting(ExportPerModule.first, VI))
         return false;
 
   return true;
@@ -712,19 +712,18 @@ checkVariableImport(const ModuleSummaryIndex &Index,
 /// Compute all the import and export for every module using the Index.
 void llvm::ComputeCrossModuleImport(
     const ModuleSummaryIndex &Index,
-    const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     function_ref<bool(GlobalValue::GUID, const GlobalValueSummary *)>
         isPrevailing,
-    StringMap<FunctionImporter::ImportMapTy> &ImportLists,
-    StringMap<FunctionImporter::ExportSetTy> &ExportLists) {
+    DenseMap<StringRef, FunctionImporter::ImportMapTy> &ImportLists,
+    DenseMap<StringRef, FunctionImporter::ExportSetTy> &ExportLists) {
   // For each module that has function defined, compute the import/export lists.
   for (const auto &DefinedGVSummaries : ModuleToDefinedGVSummaries) {
-    auto &ImportList = ImportLists[DefinedGVSummaries.first()];
+    auto &ImportList = ImportLists[DefinedGVSummaries.first];
     LLVM_DEBUG(dbgs() << "Computing import for Module '"
-                      << DefinedGVSummaries.first() << "'\n");
+                      << DefinedGVSummaries.first << "'\n");
     ComputeImportForModule(DefinedGVSummaries.second, isPrevailing, Index,
-                           DefinedGVSummaries.first(), ImportList,
-                           &ExportLists);
+                           DefinedGVSummaries.first, ImportList, &ExportLists);
   }
 
   // When computing imports we only added the variables and functions being
@@ -735,7 +734,7 @@ void llvm::ComputeCrossModuleImport(
   for (auto &ELI : ExportLists) {
     FunctionImporter::ExportSetTy NewExports;
     const auto &DefinedGVSummaries =
-        ModuleToDefinedGVSummaries.lookup(ELI.first());
+        ModuleToDefinedGVSummaries.lookup(ELI.first);
     for (auto &EI : ELI.second) {
       // Find the copy defined in the exporting module so that we can mark the
       // values it references in that specific definition as exported.
@@ -783,7 +782,7 @@ void llvm::ComputeCrossModuleImport(
   LLVM_DEBUG(dbgs() << "Import/Export lists for " << ImportLists.size()
                     << " modules:\n");
   for (auto &ModuleImports : ImportLists) {
-    auto ModName = ModuleImports.first();
+    auto ModName = ModuleImports.first;
     auto &Exports = ExportLists[ModName];
     unsigned NumGVS = numGlobalVarSummaries(Index, Exports);
     LLVM_DEBUG(dbgs() << "* Module " << ModName << " exports "
@@ -791,7 +790,7 @@ void llvm::ComputeCrossModuleImport(
                       << " vars. Imports from " << ModuleImports.second.size()
                       << " modules.\n");
     for (auto &Src : ModuleImports.second) {
-      auto SrcModName = Src.first();
+      auto SrcModName = Src.first;
       unsigned NumGVSPerMod = numGlobalVarSummaries(Index, Src.second);
       LLVM_DEBUG(dbgs() << " - " << Src.second.size() - NumGVSPerMod
                         << " functions imported from " << SrcModName << "\n");
@@ -809,7 +808,7 @@ static void dumpImportListForModule(const ModuleSummaryIndex &Index,
   LLVM_DEBUG(dbgs() << "* Module " << ModulePath << " imports from "
                     << ImportList.size() << " modules.\n");
   for (auto &Src : ImportList) {
-    auto SrcModName = Src.first();
+    auto SrcModName = Src.first;
     unsigned NumGVSPerMod = numGlobalVarSummaries(Index, Src.second);
     LLVM_DEBUG(dbgs() << " - " << Src.second.size() - NumGVSPerMod
                       << " functions imported from " << SrcModName << "\n");
@@ -1041,7 +1040,7 @@ void llvm::computeDeadSymbolsWithConstProp(
 /// \p ModulePath.
 void llvm::gatherImportedSummariesForModule(
     StringRef ModulePath,
-    const StringMap<GVSummaryMapTy> &ModuleToDefinedGVSummaries,
+    const DenseMap<StringRef, GVSummaryMapTy> &ModuleToDefinedGVSummaries,
     const FunctionImporter::ImportMapTy &ImportList,
     std::map<std::string, GVSummaryMapTy> &ModuleToSummariesForIndex) {
   // Include all summaries from the importing module.
@@ -1049,10 +1048,9 @@ void llvm::gatherImportedSummariesForModule(
       ModuleToDefinedGVSummaries.lookup(ModulePath);
   // Include summaries for imports.
   for (const auto &ILI : ImportList) {
-    auto &SummariesForIndex =
-        ModuleToSummariesForIndex[std::string(ILI.first())];
+    auto &SummariesForIndex = ModuleToSummariesForIndex[std::string(ILI.first)];
     const auto &DefinedGVSummaries =
-        ModuleToDefinedGVSummaries.lookup(ILI.first());
+        ModuleToDefinedGVSummaries.lookup(ILI.first);
     for (const auto &GI : ILI.second) {
       const auto &DS = DefinedGVSummaries.find(GI);
       assert(DS != DefinedGVSummaries.end() &&
@@ -1327,7 +1325,7 @@ Expected<bool> FunctionImporter::importFunctions(
   // Do the actual import of functions now, one Module at a time
   std::set<StringRef> ModuleNameOrderedList;
   for (const auto &FunctionsToImportPerModule : ImportList) {
-    ModuleNameOrderedList.insert(FunctionsToImportPerModule.first());
+    ModuleNameOrderedList.insert(FunctionsToImportPerModule.first);
   }
   for (const auto &Name : ModuleNameOrderedList) {
     // Get the module for the import

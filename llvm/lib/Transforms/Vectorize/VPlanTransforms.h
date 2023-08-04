@@ -37,12 +37,37 @@ struct VPlanTransforms {
                                 GetIntOrFpInductionDescriptor,
                             ScalarEvolution &SE, const TargetLibraryInfo &TLI);
 
+  /// Sink users of fixed-order recurrences after the recipe defining their
+  /// previous value. Then introduce FirstOrderRecurrenceSplice VPInstructions
+  /// to combine the value from the recurrence phis and previous values. The
+  /// current implementation assumes all users can be sunk after the previous
+  /// value, which is enforced by earlier legality checks.
+  /// \returns true if all users of fixed-order recurrences could be re-arranged
+  /// as needed or false if it is not possible. In the latter case, \p Plan is
+  /// not valid.
+  static bool adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
+
+  /// Clear NSW/NUW flags from reduction instructions if necessary.
+  static void clearReductionWrapFlags(VPlan &Plan);
+
+  /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
+  /// resulting plan to \p BestVF and \p BestUF.
+  static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
+                                 unsigned BestUF,
+                                 PredicatedScalarEvolution &PSE);
+
+  /// Apply VPlan-to-VPlan optimizations to \p Plan, including induction recipe
+  /// optimizations, dead recipe removal, replicate region optimizations and
+  /// block merging.
+  static void optimize(VPlan &Plan, ScalarEvolution &SE);
+
   /// Wrap predicated VPReplicateRecipes with a mask operand in an if-then
   /// region block and remove the mask operand. Optimize the created regions by
   /// iteratively sinking scalar operands into the region, followed by merging
   /// regions until no improvements are remaining.
   static void createAndOptimizeReplicateRegions(VPlan &Plan);
 
+private:
   /// Remove redundant VPBasicBlocks by merging them into their predecessor if
   /// the predecessor has a single successor.
   static bool mergeBlocksIntoPredecessors(VPlan &Plan);
@@ -71,24 +96,6 @@ struct VPlanTransforms {
   /// them with already existing recipes expanding the same SCEV expression.
   static void removeRedundantExpandSCEVRecipes(VPlan &Plan);
 
-  /// Sink users of fixed-order recurrences after the recipe defining their
-  /// previous value. Then introduce FirstOrderRecurrenceSplice VPInstructions
-  /// to combine the value from the recurrence phis and previous values. The
-  /// current implementation assumes all users can be sunk after the previous
-  /// value, which is enforced by earlier legality checks.
-  /// \returns true if all users of fixed-order recurrences could be re-arranged
-  /// as needed or false if it is not possible. In the latter case, \p Plan is
-  /// not valid.
-  static bool adjustFixedOrderRecurrences(VPlan &Plan, VPBuilder &Builder);
-
-  /// Clear NSW/NUW flags from reduction instructions if necessary.
-  static void clearReductionWrapFlags(VPlan &Plan);
-
-  /// Optimize \p Plan based on \p BestVF and \p BestUF. This may restrict the
-  /// resulting plan to \p BestVF and \p BestUF.
-  static void optimizeForVFAndUF(VPlan &Plan, ElementCount BestVF,
-                                 unsigned BestUF,
-                                 PredicatedScalarEvolution &PSE);
 };
 
 } // namespace llvm

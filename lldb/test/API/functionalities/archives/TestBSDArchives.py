@@ -167,7 +167,7 @@ class BSDArchivesTestCase(TestBase):
             ") of the .o file doesn't match",
         ]
         self.check_frame_variable_errors(thread, error_strings)
-        
+
         # Break at b() should succeed
         (target, process, thread, bkpt) = lldbutil.run_to_name_breakpoint(
             self, "b", bkpt_module=exe
@@ -180,7 +180,6 @@ class BSDArchivesTestCase(TestBase):
         self.expect(
             "frame variable", VARIABLES_DISPLAYED_CORRECTLY, substrs=["(int) arg = 2"]
         )
-
 
     @skipIfRemote
     @skipUnlessDarwin

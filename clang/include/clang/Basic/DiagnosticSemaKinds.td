@@ -6611,6 +6611,16 @@ def warn_atomic_member_access : Warning<
   InGroup<DiagGroup<"atomic-access">>, DefaultError;
 
 // Expressions.
+def err_using_placeholder_variable : Error<
+  "ambiguous reference to placeholder '_', which is defined multiple times">;
+def note_reference_placeholder : Note<
+  "placeholder declared here">;
+def ext_placeholder_var_definition : ExtWarn<
+  "placeholder variables are a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_placeholder_var_definition : Warning<
+  "placeholder variables are incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
 def ext_sizeof_alignof_function_type : Extension<
   "invalid application of '%0' to a function type">, InGroup<PointerArith>;
 def ext_sizeof_alignof_void_type : Extension<

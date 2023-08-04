@@ -2981,33 +2981,18 @@ define <16 x i8> @trunc_usat_v16i64_v16i8(ptr %p0) {
 }
 
 define <4 x i8> @trunc_usat_v4i32_v4i8(<4 x i32> %a0) {
-; SSE2-LABEL: trunc_usat_v4i32_v4i8:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2-NEXT:    pxor %xmm0, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483903,2147483903,2147483903,2147483903]
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm1, %xmm0
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
-; SSE2-NEXT:    packuswb %xmm0, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: trunc_usat_v4i32_v4i8:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; SSSE3-NEXT:    pxor %xmm0, %xmm1
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483903,2147483903,2147483903,2147483903]
-; SSSE3-NEXT:    pcmpgtd %xmm1, %xmm2
-; SSSE3-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSSE3-NEXT:    pxor %xmm2, %xmm1
-; SSSE3-NEXT:    pand %xmm2, %xmm0
-; SSSE3-NEXT:    por %xmm1, %xmm0
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; SSSE3-NEXT:    retq
+; SSE2-SSSE3-LABEL: trunc_usat_v4i32_v4i8:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm1
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483903,2147483903,2147483903,2147483903]
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm2
+; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-SSSE3-NEXT:    por %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    packuswb %xmm0, %xmm0
+; SSE2-SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_usat_v4i32_v4i8:
 ; SSE41:       # %bb.0:
@@ -3066,35 +3051,19 @@ define <4 x i8> @trunc_usat_v4i32_v4i8(<4 x i32> %a0) {
 }
 
 define void @trunc_usat_v4i32_v4i8_store(<4 x i32> %a0, ptr%p1) {
-; SSE2-LABEL: trunc_usat_v4i32_v4i8_store:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; SSE2-NEXT:    pxor %xmm0, %xmm1
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483903,2147483903,2147483903,2147483903]
-; SSE2-NEXT:    pcmpgtd %xmm1, %xmm2
-; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSE2-NEXT:    pxor %xmm2, %xmm1
-; SSE2-NEXT:    pand %xmm0, %xmm2
-; SSE2-NEXT:    por %xmm1, %xmm2
-; SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
-; SSE2-NEXT:    packuswb %xmm2, %xmm2
-; SSE2-NEXT:    movd %xmm2, (%rdi)
-; SSE2-NEXT:    retq
-;
-; SSSE3-LABEL: trunc_usat_v4i32_v4i8_store:
-; SSSE3:       # %bb.0:
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
-; SSSE3-NEXT:    pxor %xmm0, %xmm1
-; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483903,2147483903,2147483903,2147483903]
-; SSSE3-NEXT:    pcmpgtd %xmm1, %xmm2
-; SSSE3-NEXT:    pcmpeqd %xmm1, %xmm1
-; SSSE3-NEXT:    pxor %xmm2, %xmm1
-; SSSE3-NEXT:    pand %xmm0, %xmm2
-; SSSE3-NEXT:    por %xmm1, %xmm2
-; SSSE3-NEXT:    pshufb {{.*#+}} xmm2 = xmm2[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
-; SSSE3-NEXT:    movd %xmm2, (%rdi)
-; SSSE3-NEXT:    retq
+; SSE2-SSSE3-LABEL: trunc_usat_v4i32_v4i8_store:
+; SSE2-SSSE3:       # %bb.0:
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm1 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-SSSE3-NEXT:    pxor %xmm0, %xmm1
+; SSE2-SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483903,2147483903,2147483903,2147483903]
+; SSE2-SSSE3-NEXT:    pcmpgtd %xmm1, %xmm2
+; SSE2-SSSE3-NEXT:    pand %xmm2, %xmm0
+; SSE2-SSSE3-NEXT:    pandn {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-SSSE3-NEXT:    por %xmm0, %xmm2
+; SSE2-SSSE3-NEXT:    packuswb %xmm2, %xmm2
+; SSE2-SSSE3-NEXT:    packuswb %xmm2, %xmm2
+; SSE2-SSSE3-NEXT:    movd %xmm2, (%rdi)
+; SSE2-SSSE3-NEXT:    retq
 ;
 ; SSE41-LABEL: trunc_usat_v4i32_v4i8_store:
 ; SSE41:       # %bb.0:

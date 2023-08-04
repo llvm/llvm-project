@@ -21,6 +21,6 @@ class SwigVersionTestCase(TestBase):
         self.assertTrue(getattr(lldb, "swig_version"))
         self.assertIsInstance(lldb.swig_version, tuple)
         self.assertEqual(len(lldb.swig_version), 3)
-        self.assertGreaterEqual(lldb.swig_version[0], 1)
+        self.assertGreaterEqual(lldb.swig_version[0], 4)
         for v in lldb.swig_version:
             self.assertGreaterEqual(v, 0)

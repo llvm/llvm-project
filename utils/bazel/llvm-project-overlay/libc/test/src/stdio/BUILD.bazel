@@ -89,3 +89,35 @@ libc_test(
         "//libc:fprintf",
     ],
 )
+
+libc_test(
+    name = "vsprintf_test",
+    srcs = ["vsprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vsprintf",
+    ],
+)
+
+libc_test(
+    name = "vsnprintf_test",
+    srcs = ["vsnprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vsnprintf",
+    ],
+)
+
+libc_test(
+    name = "vprintf_test",
+    srcs = ["vprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vprintf",
+    ],
+)
+
+libc_test(
+    name = "vfprintf_test",
+    srcs = ["vfprintf_test.cpp"],
+    libc_function_deps = [
+        "//libc:vfprintf",
+    ],
+)
