@@ -31,7 +31,7 @@ int main(int argc, char **argv) {
     {
       int tid = ompx_thread_id_x();
       int bid = ompx_block_id_x();
-      int tdim = ompx_thread_dim_x();
+      int tdim = ompx_block_dim_x();
       int gid = tid + bid * tdim;
       if (gid < N) {
         X[gid].tid = tid;

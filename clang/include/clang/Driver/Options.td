@@ -3513,8 +3513,9 @@ def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
     Flags<[NoXarchOption]>,
     HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
-def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption, FC1Option,
-    FlangOption]>, HelpText<"Display available options">,
+def help : Flag<["-", "--"], "help">,
+    Flags<[CC1Option, CC1AsOption, FC1Option, FlangOption]>,
+    HelpText<"Display available options">,
     MarshallingInfoFlag<FrontendOpts<"ShowHelp">>;
 def ibuiltininc : Flag<["-"], "ibuiltininc">, Group<clang_i_Group>,
   HelpText<"Enable builtin #include directories even when -nostdinc is used "
@@ -4411,8 +4412,8 @@ def nostdincxx : Flag<["-"], "nostdinc++">, Flags<[CC1Option]>, Group<IncludePat
 def nostdlib : Flag<["-"], "nostdlib">, Group<Link_Group>;
 def nostdlibxx : Flag<["-"], "nostdlib++">;
 def object : Flag<["-"], "object">;
-def o : JoinedOrSeparate<["-"], "o">, Flags<[NoXarchOption,
-  CC1Option, CC1AsOption, FC1Option, FlangOption]>,
+def o : JoinedOrSeparate<["-"], "o">,
+  Flags<[NoXarchOption, CC1Option, CC1AsOption, FC1Option, FlangOption]>,
   HelpText<"Write output to <file>">, MetaVarName<"<file>">,
   MarshallingInfoString<FrontendOpts<"OutputFile">>;
 def object_file_name_EQ : Joined<["-"], "object-file-name=">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
@@ -4890,6 +4891,7 @@ foreach i = {0-7} in
 } // let Flags = [TargetSpecific]
 
 // X86 feature flags
+let Flags = [TargetSpecific] in {
 def mx87 : Flag<["-"], "mx87">, Group<m_x86_Features_Group>;
 def mno_x87 : Flag<["-"], "mno-x87">, Group<m_x86_Features_Group>;
 def m80387 : Flag<["-"], "m80387">, Alias<mx87>;
@@ -4923,7 +4925,11 @@ def mssse3 : Flag<["-"], "mssse3">, Group<m_x86_Features_Group>;
 def mno_ssse3 : Flag<["-"], "mno-ssse3">, Group<m_x86_Features_Group>;
 def msse4_1 : Flag<["-"], "msse4.1">, Group<m_x86_Features_Group>;
 def mno_sse4_1 : Flag<["-"], "mno-sse4.1">, Group<m_x86_Features_Group>;
+} // let Flags = [TargetSpecific]
+// TODO: Make -msse4.2 TargetSpecific after
+// https://github.com/llvm/llvm-project/issues/63270 is fixed.
 def msse4_2 : Flag<["-"], "msse4.2">, Group<m_x86_Features_Group>;
+let Flags = [TargetSpecific] in {
 def mno_sse4_2 : Flag<["-"], "mno-sse4.2">, Group<m_x86_Features_Group>;
 def msse4 : Flag<["-"], "msse4">, Alias<msse4_2>;
 // -mno-sse4 turns off sse4.1 which has the effect of turning off everything
@@ -5104,6 +5110,7 @@ def mretpoline_external_thunk : Flag<["-"], "mretpoline-external-thunk">, Group<
 def mno_retpoline_external_thunk : Flag<["-"], "mno-retpoline-external-thunk">, Group<m_x86_Features_Group>;
 def mvzeroupper : Flag<["-"], "mvzeroupper">, Group<m_x86_Features_Group>;
 def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
+} // let Flags = [TargetSpecific]
 
 // These are legacy user-facing driver-level option spellings. They are always
 // aliases for options that are spelled using the more common Unix / GNU flag
@@ -6877,7 +6884,7 @@ def defsym : Separate<["-"], "defsym">,
 // clang-cl Options
 //===----------------------------------------------------------------------===//
 
-def cl_Group : OptionGroup<"<clang-cl options>">, Flags<[CLDXCOption]>,
+def cl_Group : OptionGroup<"<clang-cl options>">,
   HelpText<"CL.EXE COMPATIBILITY OPTIONS">;
 
 def cl_compile_Group : OptionGroup<"<clang-cl compile-only options>">,

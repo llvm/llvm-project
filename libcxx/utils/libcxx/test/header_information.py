@@ -45,7 +45,7 @@ lit_header_restrictions = {
     "locale.h": "// UNSUPPORTED: no-localization",
     "mutex": "// UNSUPPORTED: no-threads, c++03",
     "ostream": "// UNSUPPORTED: no-localization",
-    "print": "// UNSUPPORTED: availability-fp_to_chars-missing", # TODO PRINT investigate
+    "print": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14, c++17, c++20, availability-fp_to_chars-missing", # TODO PRINT investigate
     "regex": "// UNSUPPORTED: no-localization",
     "semaphore": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "shared_mutex": "// UNSUPPORTED: no-threads, c++03, c++11",
