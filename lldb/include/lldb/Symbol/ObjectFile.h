@@ -662,6 +662,12 @@ public:
   const char *GetCStrFromSection(Section *section,
                                  lldb::offset_t section_offset) const;
 
+  // Returns the section data size. This is special-cased for PECOFF
+  // due to file alignment.
+  virtual size_t GetSectionDataSize(Section *section) {
+    return section->GetFileSize();
+  }
+
   /// Returns true if the object file exists only in memory.
   bool IsInMemory() const { return m_memory_addr != LLDB_INVALID_ADDRESS; }
 
