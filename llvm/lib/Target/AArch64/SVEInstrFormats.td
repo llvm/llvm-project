@@ -7203,6 +7203,10 @@ multiclass sve_int_perm_cpy_v<string asm, SDPatternOperator op> {
 
   def : Pat<(nxv8f16 (op nxv8i1:$pg, f16:$splat, nxv8f16:$passthru)),
             (!cast<Instruction>(NAME # _H) $passthru, $pg, $splat)>;
+  def : Pat<(nxv4f16 (op nxv4i1:$pg, f16:$splat, nxv4f16:$passthru)),
+            (!cast<Instruction>(NAME # _H) $passthru, $pg, $splat)>;
+  def : Pat<(nxv2f16 (op nxv2i1:$pg, f16:$splat, nxv2f16:$passthru)),
+            (!cast<Instruction>(NAME # _H) $passthru, $pg, $splat)>;
   def : Pat<(nxv2f32 (op nxv2i1:$pg, f32:$splat, nxv2f32:$passthru)),
             (!cast<Instruction>(NAME # _S) $passthru, $pg, $splat)>;
   def : Pat<(nxv4f32 (op nxv4i1:$pg, f32:$splat, nxv4f32:$passthru)),
