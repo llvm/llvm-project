@@ -50,6 +50,11 @@ protected:
   /// defined by the used type converter.
   Type getIndexType() const;
 
+  /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
+  /// defined by the used type converter and matching the index type needed for
+  /// MemRefType `t`.
+  Type getIndexTypeMatchingMemRef(MemRefType t) const;
+
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width
   /// corresponds to that of a LLVM pointer type.
   Type getIntPtrType(unsigned addressSpace = 0) const;

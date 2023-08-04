@@ -19,6 +19,20 @@ using namespace mlir;
 // ConvertToLLVMPattern
 //===----------------------------------------------------------------------===//
 
+static Value convertToDesiredIndexType(OpBuilder &b, Location loc, Value src,
+                                       Type desiredIndexType) {
+  assert(src.getType().isIntOrIndex() && !src.getType().isIndex() &&
+         "expected int type");
+  assert(desiredIndexType.isIntOrIndex() && !desiredIndexType.isIndex() &&
+         "expected int type");
+  if (src.getType() == desiredIndexType)
+    return src;
+  if (src.getType().getIntOrFloatBitWidth() <
+      desiredIndexType.getIntOrFloatBitWidth())
+    return b.create<LLVM::SExtOp>(loc, desiredIndexType, src);
+  return b.create<LLVM::TruncOp>(loc, desiredIndexType, src);
+}
+
 ConvertToLLVMPattern::ConvertToLLVMPattern(StringRef rootOpName,
                                            MLIRContext *context,
                                            LLVMTypeConverter &typeConverter,
@@ -36,6 +50,10 @@ LLVM::LLVMDialect &ConvertToLLVMPattern::getDialect() const {
 
 Type ConvertToLLVMPattern::getIndexType() const {
   return getTypeConverter()->getIndexType();
+}
+
+Type ConvertToLLVMPattern::getIndexTypeMatchingMemRef(MemRefType t) const {
+  return getTypeConverter()->getIndexTypeMatchingMemRef(t);
 }
 
 Type ConvertToLLVMPattern::getIntPtrType(unsigned addressSpace) const {
@@ -74,7 +92,7 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
   Value base =
       memRefDescriptor.bufferPtr(rewriter, loc, *getTypeConverter(), type);
 
-  Type indexType = getIndexType();
+  Type indexType = getIndexTypeMatchingMemRef(type);
   Value index;
   for (int i = 0, e = indices.size(); i < e; ++i) {
     Value increment = indices[i];
@@ -83,8 +101,11 @@ Value ConvertToLLVMPattern::getStridedElementPtr(
           ShapedType::isDynamic(strides[i])
               ? memRefDescriptor.stride(rewriter, loc, i)
               : createIndexAttrConstant(rewriter, loc, indexType, strides[i]);
+      increment =
+          convertToDesiredIndexType(rewriter, loc, increment, indexType);
       increment = rewriter.create<LLVM::MulOp>(loc, increment, stride);
     }
+    increment = convertToDesiredIndexType(rewriter, loc, increment, indexType);
     index =
         index ? rewriter.create<LLVM::AddOp>(loc, index, increment) : increment;
   }
@@ -127,7 +148,7 @@ void ConvertToLLVMPattern::getMemRefDescriptorSizes(
 
   sizes.reserve(memRefType.getRank());
   unsigned dynamicIndex = 0;
-  Type indexType = getIndexType();
+  Type indexType = getIndexTypeMatchingMemRef(memRefType);
   for (int64_t size : memRefType.getShape()) {
     sizes.push_back(
         size == ShapedType::kDynamic
@@ -194,7 +215,7 @@ Value ConvertToLLVMPattern::getNumElements(
              static_cast<ssize_t>(dynamicSizes.size()) &&
          "dynamicSizes size doesn't match dynamic sizes count in memref shape");
 
-  Type indexType = getIndexType();
+  Type indexType = getIndexTypeMatchingMemRef(memRefType);
   Value numElements = memRefType.getRank() == 0
                           ? createIndexAttrConstant(rewriter, loc, indexType, 1)
                           : nullptr;
@@ -233,7 +254,7 @@ MemRefDescriptor ConvertToLLVMPattern::createMemRefDescriptor(
   memRefDescriptor.setAlignedPtr(rewriter, loc, alignedPtr);
 
   // Field 3: Offset in aligned pointer.
-  Type indexType = getIndexType();
+  Type indexType = getIndexTypeMatchingMemRef(memRefType);
   memRefDescriptor.setOffset(
       rewriter, loc, createIndexAttrConstant(rewriter, loc, indexType, 0));
 

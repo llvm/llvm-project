@@ -123,6 +123,15 @@ Changes to the C API
 Changes to the CodeGen infrastructure
 -------------------------------------
 
+* ``PrologEpilogInserter`` no longer supports register scavenging
+  during forwards frame index elimination. Targets should use
+  backwards frame index elimination instead.
+
+* ``RegScavenger`` no longer supports forwards register
+  scavenging. Clients should use backwards register scavenging
+  instead, which is preferred because it does not depend on accurate
+  kill flags.
+
 Changes to the Metadata Info
 ---------------------------------
 

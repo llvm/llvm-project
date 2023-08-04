@@ -14,7 +14,6 @@ import os
 class TestVSCode_disassemble(lldbvscode_testcase.VSCodeTestCaseBase):
     @skipIfWindows
     @skipIfRemote
-    @skipIf(archs=["arm"])
     def test_disassemble(self):
         """
         Tests the 'disassemble' request.
