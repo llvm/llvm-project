@@ -1939,6 +1939,7 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(
     RecordDecl *AnonRecord = nullptr;
     Decl *TheDecl = Actions.ParsedFreeStandingDeclSpec(
         getCurScope(), AS_none, DS, ParsedAttributesView::none(), AnonRecord);
+    Actions.ActOnDefinedDeclarationSpecifier(TheDecl);
     DS.complete(TheDecl);
     if (AnonRecord) {
       Decl* decls[] = {AnonRecord, TheDecl};
@@ -1946,6 +1947,9 @@ Parser::DeclGroupPtrTy Parser::ParseSimpleDeclaration(
     }
     return Actions.ConvertDeclToDeclGroup(TheDecl);
   }
+
+  if (DS.hasTagDefinition())
+    Actions.ActOnDefinedDeclarationSpecifier(DS.getRepAsDecl());
 
   if (DeclSpecStart)
     DS.SetRangeStart(*DeclSpecStart);

@@ -2691,21 +2691,16 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
     FieldDecl *KnownField = D->getFieldDecl();
     if (!KnownField) {
       const IdentifierInfo *FieldName = D->getFieldName();
-      DeclContext::lookup_result Lookup = RD->lookup(FieldName);
-      for (NamedDecl *ND : Lookup) {
-        if (auto *FD = dyn_cast<FieldDecl>(ND)) {
-          KnownField = FD;
-          break;
-        }
-        if (auto *IFD = dyn_cast<IndirectFieldDecl>(ND)) {
-          // In verify mode, don't modify the original.
-          if (VerifyOnly)
-            DIE = CloneDesignatedInitExpr(SemaRef, DIE);
-          ExpandAnonymousFieldDesignator(SemaRef, DIE, DesigIdx, IFD);
-          D = DIE->getDesignator(DesigIdx);
-          KnownField = cast<FieldDecl>(*IFD->chain_begin());
-          break;
-        }
+      ValueDecl *VD = SemaRef.tryLookupUnambiguousFieldDecl(RD, FieldName);
+      if (auto *FD = dyn_cast_if_present<FieldDecl>(VD)) {
+        KnownField = FD;
+      } else if (auto *IFD = dyn_cast_if_present<IndirectFieldDecl>(VD)) {
+        // In verify mode, don't modify the original.
+        if (VerifyOnly)
+          DIE = CloneDesignatedInitExpr(SemaRef, DIE);
+        ExpandAnonymousFieldDesignator(SemaRef, DIE, DesigIdx, IFD);
+        D = DIE->getDesignator(DesigIdx);
+        KnownField = cast<FieldDecl>(*IFD->chain_begin());
       }
       if (!KnownField) {
         if (VerifyOnly) {
@@ -2713,10 +2708,17 @@ InitListChecker::CheckDesignatedInitializer(const InitializedEntity &Entity,
           return true;  // No typo correction when just trying this out.
         }
 
+        // We found a placeholder variable
+        if (SemaRef.DiagRedefinedPlaceholderFieldDecl(DIE->getBeginLoc(), RD,
+                                                      FieldName)) {
+          ++Index;
+          return true;
+        }
         // Name lookup found something, but it wasn't a field.
-        if (!Lookup.empty()) {
+        if (DeclContextLookupResult Lookup = RD->lookup(FieldName);
+            !Lookup.empty()) {
           SemaRef.Diag(D->getFieldLoc(), diag::err_field_designator_nonfield)
-            << FieldName;
+              << FieldName;
           SemaRef.Diag(Lookup.front()->getLocation(),
                        diag::note_field_designator_found);
           ++Index;
