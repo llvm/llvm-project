@@ -128,6 +128,10 @@ set(TARGET_LIBC_ENTRYPOINTS
     libc.src.stdio.snprintf
     libc.src.stdio.fprintf
     libc.src.stdio.printf
+    libc.src.stdio.vsprintf
+    libc.src.stdio.vsnprintf
+    libc.src.stdio.vfprintf
+    libc.src.stdio.vprintf
 
     # sys/mman.h entrypoints
     libc.src.sys.mman.madvise
