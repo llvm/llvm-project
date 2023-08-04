@@ -874,10 +874,12 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
     needs_init = true;
 
     Status error;
-
     if (repl) {
       if (!variable.GetType().IsVoidType()) {
         auto &repl_mat = *llvm::cast<SwiftREPLMaterializer>(&materializer);
+        assert(variable.GetType()
+                   .GetTypeSystem()
+                   .isa_and_nonnull<TypeSystemSwiftTypeRef>());
         offset = repl_mat.AddREPLResultVariable(
             variable.GetType(), variable.GetDecl(),
             is_result ? &user_expression.GetResultDelegate()
@@ -909,6 +911,8 @@ MaterializeVariable(SwiftASTManipulatorBase::VariableInfo &variable,
           ToCompilerType(transformed_type->mapTypeOutOfContext().getPointer());
       auto swift_ast_ctx =
           actual_type.GetTypeSystem().dyn_cast_or_null<SwiftASTContext>();
+      if (!swift_ast_ctx)
+        return {};
 
       actual_type =
           swift_ast_ctx->GetTypeRefType(actual_type.GetOpaqueQualType());

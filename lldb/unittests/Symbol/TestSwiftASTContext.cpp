@@ -83,6 +83,7 @@ TEST_F(TestSwiftASTContext, SwiftFriendlyTriple) {
 TEST_F(TestSwiftASTContext, ApplyWorkingDir) {
   std::string abs_working_dir = "/abs/dir";
   std::string rel_working_dir = "rel/dir";
+  std::string dot_working_dir = ".";
 
   // non-include option should not apply working dir
   llvm::SmallString<128> non_include_flag("-non-include-flag");
@@ -155,6 +156,16 @@ TEST_F(TestSwiftASTContext, ApplyWorkingDir) {
   EXPECT_EQ(module_file_with_name_rel_path,
             llvm::SmallString<128>(
                 "-fmodule-file=modulename=/abs/dir/relpath/module.pcm"));
+
+  // include path arg with cwd = .
+  llvm::SmallString<128> dot_rel_path("-iquoterel/path");
+  SwiftASTContext::ApplyWorkingDir(dot_rel_path, dot_working_dir);
+  EXPECT_EQ(dot_rel_path, llvm::SmallString<128>("-iquoterel/path"));
+
+  // . include path arg with cwd = . should stay as .
+  llvm::SmallString<128> dot_dot_path("-iquote.");
+  SwiftASTContext::ApplyWorkingDir(dot_dot_path, dot_working_dir);
+  EXPECT_EQ(dot_dot_path, llvm::SmallString<128>("-iquote."));
 }
 
 TEST_F(TestSwiftASTContext, PluginPath) {
