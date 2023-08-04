@@ -66,12 +66,16 @@ ErrorOr<long> seek_func(File *f, long offset, int whence) {
 #ifdef SYS_lseek
   int ret = __llvm_libc::syscall_impl(SYS_lseek, lf->get_fd(), offset, whence);
   result = ret;
+#elif defined(SYS_llseek)
+  int ret = __llvm_libc::syscall_impl(SYS_llseek, lf->get_fd(),
+                                      (long)(((uint64_t)(offset)) >> 32),
+                                      (long)offset, &result, whence);
+  result = ret;
 #elif defined(SYS__llseek)
-  long result;
   int ret = __llvm_libc::syscall_impl(SYS__llseek, lf->get_fd(), offset >> 32,
                                       offset, &result, whence);
 #else
-#error "lseek and _llseek syscalls not available to perform a seek operation."
+#error "lseek, llseek and _llseek syscalls not available."
 #endif
 
   if (ret < 0)

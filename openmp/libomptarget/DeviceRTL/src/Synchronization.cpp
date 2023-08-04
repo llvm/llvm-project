@@ -504,18 +504,16 @@ void unsetCriticalLock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
 void setCriticalLock(omp_lock_t *Lock) { impl::setLock(Lock); }
 
 extern "C" {
-void __kmpc_ordered(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
+void __kmpc_ordered(IdentTy *Loc, int32_t TId) {}
 
-void __kmpc_end_ordered(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
+void __kmpc_end_ordered(IdentTy *Loc, int32_t TId) {}
 
 int32_t __kmpc_cancel_barrier(IdentTy *Loc, int32_t TId) {
-  FunctionTracingRAII();
   __kmpc_barrier(Loc, TId);
   return 0;
 }
 
 void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
-  FunctionTracingRAII();
   if (mapping::isMainThreadInGenericMode())
     return __kmpc_flush(Loc);
 
@@ -527,62 +525,45 @@ void __kmpc_barrier(IdentTy *Loc, int32_t TId) {
 
 __attribute__((noinline)) void __kmpc_barrier_simple_spmd(IdentTy *Loc,
                                                           int32_t TId) {
-  FunctionTracingRAII();
   synchronize::threadsAligned(atomic::OrderingTy::seq_cst);
 }
 
 __attribute__((noinline)) void __kmpc_barrier_simple_generic(IdentTy *Loc,
                                                              int32_t TId) {
-  FunctionTracingRAII();
   synchronize::threads(atomic::OrderingTy::seq_cst);
 }
 
 int32_t __kmpc_master(IdentTy *Loc, int32_t TId) {
-  FunctionTracingRAII();
   return omp_get_thread_num() == 0;
 }
 
-void __kmpc_end_master(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
+void __kmpc_end_master(IdentTy *Loc, int32_t TId) {}
 
 int32_t __kmpc_masked(IdentTy *Loc, int32_t TId, int32_t Filter) {
-  FunctionTracingRAII();
   return omp_get_thread_num() == Filter;
 }
 
-void __kmpc_end_masked(IdentTy *Loc, int32_t TId) { FunctionTracingRAII(); }
+void __kmpc_end_masked(IdentTy *Loc, int32_t TId) {}
 
 int32_t __kmpc_single(IdentTy *Loc, int32_t TId) {
-  FunctionTracingRAII();
   return __kmpc_master(Loc, TId);
 }
 
 void __kmpc_end_single(IdentTy *Loc, int32_t TId) {
-  FunctionTracingRAII();
   // The barrier is explicitly called.
 }
 
-void __kmpc_flush(IdentTy *Loc) {
-  FunctionTracingRAII();
-  fence::kernel(atomic::seq_cst);
-}
+void __kmpc_flush(IdentTy *Loc) { fence::kernel(atomic::seq_cst); }
 
-uint64_t __kmpc_warp_active_thread_mask(void) {
-  FunctionTracingRAII();
-  return mapping::activemask();
-}
+uint64_t __kmpc_warp_active_thread_mask(void) { return mapping::activemask(); }
 
-void __kmpc_syncwarp(uint64_t Mask) {
-  FunctionTracingRAII();
-  synchronize::warp(Mask);
-}
+void __kmpc_syncwarp(uint64_t Mask) { synchronize::warp(Mask); }
 
 void __kmpc_critical(IdentTy *Loc, int32_t TId, CriticalNameTy *Name) {
-  FunctionTracingRAII();
   impl::setCriticalLock(reinterpret_cast<omp_lock_t *>(Name));
 }
 
 void __kmpc_end_critical(IdentTy *Loc, int32_t TId, CriticalNameTy *Name) {
-  FunctionTracingRAII();
   impl::unsetCriticalLock(reinterpret_cast<omp_lock_t *>(Name));
 }
 

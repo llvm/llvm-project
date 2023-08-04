@@ -311,9 +311,10 @@ MaybeExpr ExpressionAnalyzer::ApplySubscripts(
 
 void ExpressionAnalyzer::CheckConstantSubscripts(ArrayRef &ref) {
   // Fold subscript expressions and check for an empty triplet.
-  Shape lb{GetLBOUNDs(foldingContext_, ref.base())};
+  const Symbol &arraySymbol{ref.base().GetLastSymbol()};
+  Shape lb{GetLBOUNDs(foldingContext_, NamedEntity{arraySymbol})};
   CHECK(lb.size() >= ref.subscript().size());
-  Shape ub{GetUBOUNDs(foldingContext_, ref.base())};
+  Shape ub{GetUBOUNDs(foldingContext_, NamedEntity{arraySymbol})};
   CHECK(ub.size() >= ref.subscript().size());
   bool anyPossiblyEmptyDim{false};
   int dim{0};
@@ -1510,8 +1511,8 @@ private:
     return std::nullopt;
   }
   bool NeedLength() const {
-    return !explicitType_ && type_ &&
-        type_->category() == TypeCategory::Character && !LengthIfGood();
+    return type_ && type_->category() == TypeCategory::Character &&
+        !LengthIfGood();
   }
   void Push(MaybeExpr &&);
   void Add(const parser::AcValue::Triplet &);

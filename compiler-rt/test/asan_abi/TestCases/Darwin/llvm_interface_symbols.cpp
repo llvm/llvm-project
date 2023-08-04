@@ -1,6 +1,6 @@
 // RUN: %clang_asan_abi -O0 -c -fsanitize-stable-abi -fsanitize=address %s -o %t.o
 // RUN: %clangxx -c %p/../../../../lib/asan_abi/asan_abi.cpp -o asan_abi.o
-// RUN: %clangxx -dead_strip -o %t %t.o %libasan_abi asan_abi.o && %run %t 2>&1
+// RUN: %clangxx -dead_strip -o %t %t.o -fsanitize-stable-abi -fsanitize=address asan_abi.o && %run %t 2>&1
 // RUN: %clangxx -x c++-header -o - -E %p/../../../../lib/asan/asan_interface.inc \
 // RUN: | sed "s/INTERFACE_FUNCTION/\nINTERFACE_FUNCTION/g" > %t.asan_interface.inc
 // RUN: llvm-nm -g %libasan_abi                                   \
@@ -21,6 +21,9 @@
 // RUN: sort %t.imports | uniq > %t.imports-sorted
 // RUN: sort %t.exports | uniq > %t.exports-sorted
 // RUN: diff %t.imports-sorted %t.exports-sorted
+
+// Ensure that there is no dynamic dylib linked.
+// RUN: otool -L %t | (! grep -q "dynamic.dylib")
 
 // UNSUPPORTED: ios
 

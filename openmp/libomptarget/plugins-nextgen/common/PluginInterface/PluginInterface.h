@@ -318,10 +318,6 @@ private:
                     llvm::SmallVectorImpl<void *> &Args,
                     llvm::SmallVectorImpl<void *> &Ptrs) const;
 
-  /// Get the default number of threads and blocks for the kernel.
-  virtual uint32_t getDefaultNumThreads(GenericDeviceTy &Device) const = 0;
-  virtual uint32_t getDefaultNumBlocks(GenericDeviceTy &Device) const = 0;
-
   /// Get the number of threads and blocks for the kernel based on the
   /// user-defined threads and block clauses.
   uint32_t getNumThreads(GenericDeviceTy &GenericDevice,
@@ -1168,7 +1164,7 @@ public:
 
   /// Deinitialize the resource pool and delete all resources. This function
   /// must be called before the destructor.
-  Error deinit() {
+  virtual Error deinit() {
     if (NextAvailable)
       DP("Missing %d resources to be returned\n", NextAvailable);
 
@@ -1252,7 +1248,7 @@ protected:
     return Plugin::success();
   }
 
-private:
+protected:
   /// The resources between \p OldSize and \p NewSize need to be created or
   /// destroyed. The mutex is locked when this function is called.
   Error resizeResourcePoolImpl(uint32_t OldSize, uint32_t NewSize) {

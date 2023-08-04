@@ -50,6 +50,11 @@ protected:
   /// defined by the used type converter.
   Type getIndexType() const;
 
+  /// Gets the MLIR type wrapping the LLVM integer type whose bit width is
+  /// defined by the used type converter and matching the index type needed for
+  /// MemRefType `t`.
+  Type getIndexTypeMatchingMemRef(MemRefType t) const;
+
   /// Gets the MLIR type wrapping the LLVM integer type whose bit width
   /// corresponds to that of a LLVM pointer type.
   Type getIntPtrType(unsigned addressSpace = 0) const;
@@ -64,10 +69,6 @@ protected:
   /// integer attribute.
   static Value createIndexAttrConstant(OpBuilder &builder, Location loc,
                                        Type resultType, int64_t value);
-
-  /// Create an LLVM dialect operation defining the given index constant.
-  Value createIndexConstant(ConversionPatternRewriter &builder, Location loc,
-                            uint64_t value) const;
 
   // This is a strided getElementPtr variant that linearizes subscripts as:
   //   `base_offset + index_0 * stride_0 + ... + index_n * stride_n`.
@@ -155,9 +156,9 @@ public:
                ConversionPatternRewriter &rewriter) const final {
     if constexpr (SourceOp::hasProperties())
       return rewrite(cast<SourceOp>(op),
-              OpAdaptor(operands, op->getDiscardableAttrDictionary(),
-                        cast<SourceOp>(op).getProperties()),
-              rewriter);
+                     OpAdaptor(operands, op->getDiscardableAttrDictionary(),
+                               cast<SourceOp>(op).getProperties()),
+                     rewriter);
     rewrite(cast<SourceOp>(op),
             OpAdaptor(operands, op->getDiscardableAttrDictionary()), rewriter);
   }

@@ -1201,14 +1201,15 @@ def Vector_TransferReadOp :
     `0` are masked out and replaced with `padding`.
 
     An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds.
-    While the starting point of the transfer has to be in-bounds, accesses may
-    run out-of-bounds as indices increase. Broadcast dimensions must always be
-    in-bounds. If specified, the `in_bounds` array length has to be equal to the
-    vector rank. In absence of the attribute, accesses along all dimensions
-    (except for broadcasts) may run out-of-bounds. A `vector.transfer_read` can
-    be lowered to a simple load if all dimensions are specified to be within
-    bounds and no `mask` was specified.
+    dimension if the transfer is guaranteed to be within the source bounds. If
+    specified, the `in_bounds` array length has to be equal to the vector rank.
+    If set to "false", accesses (including the starting point) may run
+    out-of-bounds along the respective vector dimension as the index increases.
+    Broadcast dimensions must always be in-bounds. In absence of the attribute,
+    accesses along all vector dimensions (except for broadcasts) may run
+    out-of-bounds. A `vector.transfer_read` can be lowered to a simple load if
+    all dimensions are specified to be within bounds and no `mask` was
+    specified. Note that non-vector dimensions *must* always be in-bounds.
 
     This operation is called 'read' by opposition to 'load' because the
     super-vector granularity is generally not representable with a single
@@ -1446,13 +1447,14 @@ def Vector_TransferWriteOp :
     is `0` are masked out.
 
     An optional boolean array attribute `in_bounds` specifies for every vector
-    dimension if the transfer is guaranteed to be within the source bounds.
-    While the starting point of the transfer has to be in-bounds, accesses may
-    run out-of-bounds as indices increase. If specified, the `in_bounds` array
-    length has to be equal to the vector rank. In absence of the attribute,
-    accesses along all dimensions may run out-of-bounds. A
-    `vector.transfer_write` can be lowered to a simple store if all dimensions
-    are specified to be within bounds and no `mask` was specified.
+    dimension if the transfer is guaranteed to be within the source bounds. If
+    specified, the `in_bounds` array length has to be equal to the vector rank.
+    If set to "false", accesses (including the starting point) may run
+    out-of-bounds along the respective vector dimension as the index increases.
+    In absence of the attribute, accesses along all vector dimensions may run
+    out-of-bounds. A `vector.transfer_write` can be lowered to a simple store if
+    all dimensions are specified to be within bounds and no `mask` was
+    specified. Note that non-vector dimensions *must* always be in-bounds.
 
     This operation is called 'write' by opposition to 'store' because the
     super-vector granularity is generally not representable with a single

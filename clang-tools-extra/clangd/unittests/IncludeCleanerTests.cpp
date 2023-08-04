@@ -15,7 +15,6 @@
 #include "TestTU.h"
 #include "clang-include-cleaner/Analysis.h"
 #include "clang-include-cleaner/Types.h"
-#include "support/Context.h"
 #include "clang/AST/DeclBase.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Tooling/Syntax/Tokens.h"
@@ -26,13 +25,11 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Testing/Support/SupportHelpers.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cstddef>
 #include <optional>
 #include <string>
-#include <utility>
 #include <vector>
 
 namespace clang {

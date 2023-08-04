@@ -11,6 +11,9 @@
 #include "clang/AST/ASTConsumer.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
+#include "clang/Basic/FileEntry.h"
+#include "clang/Basic/LLVM.h"
+#include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
 #include "clang/Basic/Specifiers.h"
 #include "clang/Frontend/CompilerInstance.h"
@@ -20,8 +23,17 @@
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Allocator.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/StringSaver.h"
+#include <algorithm>
+#include <assert.h>
 #include <memory>
+#include <optional>
 #include <utility>
 #include <vector>
 
@@ -207,12 +219,13 @@ public:
       }
     if (!IncludedHeader && File)
       IncludedHeader = &File->getFileEntry();
-    checkForExport(HashFID, HashLine, std::move(IncludedHeader));
-    checkForKeep(HashLine);
+    checkForExport(HashFID, HashLine, std::move(IncludedHeader), File);
+    checkForKeep(HashLine, File);
   }
 
   void checkForExport(FileID IncludingFile, int HashLine,
-                      std::optional<Header> IncludedHeader) {
+                      std::optional<Header> IncludedHeader,
+                      OptionalFileEntryRef IncludedFile) {
     if (ExportStack.empty())
       return;
     auto &Top = ExportStack.back();
@@ -236,20 +249,22 @@ public:
         }
       }
       // main-file #include with export pragma should never be removed.
-      if (Top.SeenAtFile == SM.getMainFileID())
-        Out->ShouldKeep.insert(HashLine);
+      if (Top.SeenAtFile == SM.getMainFileID() && IncludedFile)
+        Out->ShouldKeep.insert(IncludedFile->getUniqueID());
     }
     if (!Top.Block) // Pop immediately for single-line export pragma.
       ExportStack.pop_back();
   }
 
-  void checkForKeep(int HashLine) {
+  void checkForKeep(int HashLine, OptionalFileEntryRef IncludedFile) {
     if (!InMainFile || KeepStack.empty())
       return;
     KeepPragma &Top = KeepStack.back();
     // Check if the current include is covered by a keep pragma.
-    if ((Top.Block && HashLine > Top.SeenAtLine) || Top.SeenAtLine == HashLine)
-      Out->ShouldKeep.insert(HashLine);
+    if (IncludedFile && ((Top.Block && HashLine > Top.SeenAtLine) ||
+                         Top.SeenAtLine == HashLine)) {
+      Out->ShouldKeep.insert(IncludedFile->getUniqueID());
+    }
 
     if (!Top.Block)
       KeepStack.pop_back(); // Pop immediately for single-line keep pragma.
@@ -262,40 +277,8 @@ public:
     if (!Pragma)
       return false;
 
-    if (Pragma->consume_front("private")) {
-      auto *FE = SM.getFileEntryForID(SM.getFileID(Range.getBegin()));
-      if (!FE)
-        return false;
-      StringRef PublicHeader;
-      if (Pragma->consume_front(", include ")) {
-        // We always insert using the spelling from the pragma.
-        PublicHeader = save(Pragma->startswith("<") || Pragma->startswith("\"")
-                                ? (*Pragma)
-                                : ("\"" + *Pragma + "\"").str());
-      }
-      Out->IWYUPublic.insert({FE->getLastRef().getUniqueID(), PublicHeader});
-      return false;
-    }
-    FileID CommentFID = SM.getFileID(Range.getBegin());
-    int CommentLine = SM.getLineNumber(SM.getFileID(Range.getBegin()),
-                                       SM.getFileOffset(Range.getBegin()));
-    // Record export pragma.
-    if (Pragma->startswith("export")) {
-      ExportStack.push_back({CommentLine, CommentFID,
-                             save(SM.getFileEntryForID(CommentFID)->getName()),
-                             false});
-    } else if (Pragma->startswith("begin_exports")) {
-      ExportStack.push_back({CommentLine, CommentFID,
-                             save(SM.getFileEntryForID(CommentFID)->getName()),
-                             true});
-    } else if (Pragma->startswith("end_exports")) {
-      // FIXME: be robust on unmatching cases. We should only pop the stack if
-      // the begin_exports and end_exports is in the same file.
-      if (!ExportStack.empty()) {
-        assert(ExportStack.back().Block);
-        ExportStack.pop_back();
-      }
-    }
+    auto [CommentFID, CommentOffset] = SM.getDecomposedLoc(Range.getBegin());
+    int CommentLine = SM.getLineNumber(CommentFID, CommentOffset);
 
     if (InMainFile) {
       if (Pragma->startswith("keep")) {
@@ -305,6 +288,45 @@ public:
       } else if (Pragma->starts_with("end_keep") && !KeepStack.empty()) {
         assert(KeepStack.back().Block);
         KeepStack.pop_back();
+      }
+    }
+
+    auto FE = SM.getFileEntryRefForID(CommentFID);
+    if (!FE) {
+      // This can only happen when the buffer was registered virtually into
+      // SourceManager and FileManager has no idea about it. In such a scenario,
+      // that file cannot be discovered by HeaderSearch, therefore no "explicit"
+      // includes for that file.
+      return false;
+    }
+    auto CommentUID = FE->getUniqueID();
+    if (Pragma->consume_front("private")) {
+      StringRef PublicHeader;
+      if (Pragma->consume_front(", include ")) {
+        // We always insert using the spelling from the pragma.
+        PublicHeader = save(Pragma->startswith("<") || Pragma->startswith("\"")
+                                ? (*Pragma)
+                                : ("\"" + *Pragma + "\"").str());
+      }
+      Out->IWYUPublic.insert({CommentUID, PublicHeader});
+      return false;
+    }
+    if (Pragma->consume_front("always_keep")) {
+      Out->ShouldKeep.insert(CommentUID);
+      return false;
+    }
+    auto Filename = FE->getName();
+    // Record export pragma.
+    if (Pragma->startswith("export")) {
+      ExportStack.push_back({CommentLine, CommentFID, save(Filename), false});
+    } else if (Pragma->startswith("begin_exports")) {
+      ExportStack.push_back({CommentLine, CommentFID, save(Filename), true});
+    } else if (Pragma->startswith("end_exports")) {
+      // FIXME: be robust on unmatching cases. We should only pop the stack if
+      // the begin_exports and end_exports is in the same file.
+      if (!ExportStack.empty()) {
+        assert(ExportStack.back().Block);
+        ExportStack.pop_back();
       }
     }
     return false;
@@ -399,6 +421,10 @@ bool PragmaIncludes::isSelfContained(const FileEntry *FE) const {
 
 bool PragmaIncludes::isPrivate(const FileEntry *FE) const {
   return IWYUPublic.contains(FE->getUniqueID());
+}
+
+bool PragmaIncludes::shouldKeep(const FileEntry *FE) const {
+  return ShouldKeep.contains(FE->getUniqueID());
 }
 
 namespace {

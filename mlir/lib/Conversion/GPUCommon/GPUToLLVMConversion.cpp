@@ -67,9 +67,10 @@ public:
 protected:
   Value getNumElements(ConversionPatternRewriter &rewriter, Location loc,
                        MemRefType type, MemRefDescriptor desc) const {
+    Type indexType = ConvertToLLVMPattern::getIndexTypeMatchingMemRef(type);
     return type.hasStaticShape()
-               ? ConvertToLLVMPattern::createIndexConstant(
-                     rewriter, loc, type.getNumElements())
+               ? ConvertToLLVMPattern::createIndexAttrConstant(
+                     rewriter, loc, indexType, type.getNumElements())
                // For identity maps (verified by caller), the number of
                // elements is stride[0] * size[0].
                : rewriter.create<LLVM::MulOp>(loc,
@@ -286,7 +287,7 @@ protected:
       "mgpuCuSparseLtSpMMBufferSize",
       llvmVoidType,
       {llvmPointerType, llvmInt32Type, llvmInt32Type, llvmPointerType,
-       llvmPointerType, llvmPointerType, llvmInt32Type,
+       llvmPointerType, llvmPointerType, llvmInt32Type, llvmInt32Type,
        llvmPointerType /*void *stream*/}};
   FunctionCallBuilder createCuSparseLtSpMMBuilder = {
       "mgpuCuSparseLtSpMM",
@@ -653,10 +654,16 @@ private:
 
 } // namespace
 
+static IntegerType getIndexTypeForMemRef(MemRefType t) {
+  int64_t numBits = gpu::GPUDialect::hasSharedMemoryAddressSpace(t) ? 32 : 64;
+  return IntegerType::get(t.getContext(), numBits);
+}
+
 void GpuToLLVMConversionPass::runOnOperation() {
   LowerToLLVMOptions options(&getContext());
   options.useOpaquePointers = useOpaquePointers;
   options.useBarePtrCallConv = hostBarePtrCallConv;
+  options.memrefIndexTypeConverter = getIndexTypeForMemRef;
 
   LLVMTypeConverter converter(&getContext(), options);
   RewritePatternSet patterns(&getContext());
@@ -747,6 +754,9 @@ static int32_t getCuSparseDataTypeFrom(Type type) {
   llvm_unreachable("unsupported element type");
 }
 
+static gpu::Prune2To4SpMatFlag get2To4PruneFlag(Value spMat) {
+  return spMat.getDefiningOp<gpu::Create2To4SpMatOp>().getPruneFlag();
+}
 // TODO:  We may want a run-time (of the mlir compiler) disablement/warning:
 // cusparseLt currently won't work for cuda architecture <8.0 and will trigger a
 // runtime (of the CUDA program) error , but it might be great if we could at
@@ -1628,6 +1638,8 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
   auto stream = adaptor.getAsyncDependencies().front();
   Value bufferSize;
   if (is2To4Sparsity(op.getSpmatA())) {
+    auto prune_flag =
+        genConstInt32From(rewriter, loc, get2To4PruneFlag(op.getSpmatA()));
     auto computeType = genConstInt32From(
         rewriter, loc, getCuSparseLtDataTypeFrom(adaptor.getComputeType()));
     auto three = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
@@ -1637,7 +1649,8 @@ LogicalResult ConvertSpMMBufferSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
     createCuSparseLtSpMMBufferSizeBuilder
         .create(loc, rewriter,
                 {bufferSize, modeA, modeB, adaptor.getSpmatA(),
-                 adaptor.getDnmatB(), adaptor.getDnmatC(), computeType, stream})
+                 adaptor.getDnmatB(), adaptor.getDnmatC(), computeType,
+                 prune_flag, stream})
         .getResult();
 
     auto bufferSizePtr1 = rewriter.create<LLVM::GEPOp>(

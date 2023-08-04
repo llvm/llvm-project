@@ -154,7 +154,7 @@ TEST(Local, ReplaceDbgDeclare) {
   ASSERT_TRUE(Inst);
   auto *DII = dyn_cast<DbgDeclareInst>(Inst);
   ASSERT_TRUE(DII);
-  Value *NewBase = Constant::getNullValue(Type::getInt32PtrTy(C));
+  Value *NewBase = Constant::getNullValue(PointerType::getUnqual(C));
   DIBuilder DIB(*M);
   replaceDbgDeclare(AI, NewBase, DIB, DIExpression::ApplyOffset, 0);
 

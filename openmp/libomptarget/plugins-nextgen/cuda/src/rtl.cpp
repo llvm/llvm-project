@@ -66,16 +66,6 @@ struct CUDAKernelTy : public GenericKernelTy {
                    uint64_t NumBlocks, KernelArgsTy &KernelArgs, void *Args,
                    AsyncInfoWrapperTy &AsyncInfoWrapper) const override;
 
-  /// The default number of blocks is common to the whole device.
-  uint32_t getDefaultNumBlocks(GenericDeviceTy &GenericDevice) const override {
-    return GenericDevice.getDefaultNumBlocks();
-  }
-
-  /// The default number of threads is common to the whole device.
-  uint32_t getDefaultNumThreads(GenericDeviceTy &GenericDevice) const override {
-    return GenericDevice.getDefaultNumThreads();
-  }
-
 private:
   /// The CUDA kernel function to execute.
   CUfunction Func;

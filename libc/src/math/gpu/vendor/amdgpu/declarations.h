@@ -34,13 +34,24 @@ int __ocml_ilogb_f64(double);
 int __ocml_ilogb_f32(float);
 float __ocml_ldexp_f32(float, int);
 double __ocml_ldexp_f64(double, int);
+float __ocml_nextafter_f32(float, float);
+double __ocml_nextafter_f64(double, double);
 float __ocml_pow_f32(float, float);
 double __ocml_pow_f64(double, double);
 double __ocml_rint_f64(double);
 float __ocml_rint_f32(float);
 double __ocml_round_f64(double);
 float __ocml_round_f32(float);
+float __ocml_sin_f32(float);
 double __ocml_sin_f64(double);
+float __ocml_sincos_f32(float, float *);
+double __ocml_sincos_f64(double, double *);
+float __ocml_sinh_f32(float);
+double __ocml_sinh_f64(double);
+float __ocml_tan_f32(float);
+double __ocml_tan_f64(double);
+float __ocml_tanh_f32(float);
+double __ocml_tanh_f64(double);
 }
 
 } // namespace __llvm_libc

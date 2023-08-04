@@ -111,33 +111,6 @@ Value castTileIDToI32(Value tile, Location loc,
   return tile;
 }
 
-/// Returns the following
-/// * for rank 2 memrefs `tileSliceIndex`, since `getStridedElementPtr` does
-///   the arithmetic.
-/// * for rank 1 memrefs `tileSliceIndex * tileSliceNumElts`, adjusting the
-///   index by the number of elements in a vector of SVL bits.
-/// * otherwise throws an unreachable error.
-Value getTileSlicePtrIndex(unsigned rank, Value tileSliceIndex,
-                           Value tileSliceNumElts, Location loc,
-                           ConversionPatternRewriter &rewriter) {
-  assert((rank == 1 || rank == 2) && "memref has unexpected rank!");
-
-  auto tileSliceIndexI64 = rewriter.create<arith::IndexCastUIOp>(
-      loc, rewriter.getI64Type(), tileSliceIndex);
-
-  if (rank == 1) {
-    auto tileSliceNumEltsI64 = rewriter.create<arith::IndexCastUIOp>(
-        loc, rewriter.getI64Type(), tileSliceNumElts);
-    return rewriter.create<arith::MulIOp>(loc, tileSliceIndexI64,
-                                          tileSliceNumEltsI64);
-  }
-
-  if (rank == 2)
-    return tileSliceIndexI64;
-
-  llvm_unreachable("memref has unexpected rank!");
-}
-
 /// Lower `arm_sme.load_tile_slice` to SME intrinsics.
 struct LoadTileSliceToArmSMELowering
     : public ConvertOpToLLVMPattern<arm_sme::LoadTileSliceOp> {
@@ -159,25 +132,11 @@ struct LoadTileSliceToArmSMELowering
         loc, rewriter.getIntegerType(tileElementWidth),
         loadTileSliceOp.getTile());
 
-    auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
-        loc, arm_sme::getSMETileSliceMinNumElts(tileElementType));
-    auto vscale =
-        rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
-    // This describes both the number of ZA tile slices and the number of
-    // elements in a vector of SVL bits for a given element type (SVL_B, SVL_H,
-    // ..., SVL_Q).
-    auto numTileSlices =
-        rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
+    Value ptr = this->getStridedElementPtr(loc, loadTileSliceOp.getMemRefType(),
+                                           adaptor.getBase(),
+                                           adaptor.getIndices(), rewriter);
 
-    // Create 'arm_sme.intr.ld1*.horiz' intrinsic to load ZA tile slice.
-    auto memRefType = loadTileSliceOp.getMemRefType();
     auto tileSlice = loadTileSliceOp.getTileSliceIndex();
-    // TODO: The 'indices' argument for the 'base' memref is currently ignored,
-    // 'tileSliceIndex' should be added to 'indices[0]'.
-    Value tileSliceIndex = getTileSlicePtrIndex(memRefType.getRank(), tileSlice,
-                                                numTileSlices, loc, rewriter);
-    Value ptr = this->getStridedElementPtr(loc, memRefType, adaptor.getBase(),
-                                           {tileSliceIndex}, rewriter);
 
     // Cast tile slice to i32 for intrinsic.
     auto tileSliceI32 = rewriter.create<arith::IndexCastUIOp>(
@@ -192,6 +151,7 @@ struct LoadTileSliceToArmSMELowering
     auto allActiveMask = rewriter.create<vector::SplatOp>(loc, predTy, one);
 
     auto tileI32 = castTileIDToI32(tile, loc, rewriter);
+    // Create 'arm_sme.intr.ld1*.horiz' intrinsic to load ZA tile slice.
     switch (tileElementWidth) {
     default:
       llvm_unreachable("unexpected element type!");
@@ -243,25 +203,12 @@ struct StoreTileSliceToArmSMELowering
         loc, rewriter.getIntegerType(tileElementWidth),
         storeTileSliceOp.getTile());
 
-    auto minTileSlices = rewriter.create<arith::ConstantIndexOp>(
-        loc, arm_sme::getSMETileSliceMinNumElts(tileElementType));
-    auto vscale =
-        rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
-    // This describes both the number of ZA tile slices and the number of
-    // elements in a vector of SVL bits for a given element type (SVL_B, SVL_H,
-    // ..., SVL_Q).
-    auto numTileSlices =
-        rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
-
     // Create 'arm_sme.intr.st1*.horiz' intrinsic to store ZA tile slice.
-    auto memRefType = storeTileSliceOp.getMemRefType();
+    Value ptr = this->getStridedElementPtr(
+        loc, storeTileSliceOp.getMemRefType(), adaptor.getBase(),
+        adaptor.getIndices(), rewriter);
+
     auto tileSlice = storeTileSliceOp.getTileSliceIndex();
-    // TODO: The 'indices' argument for the 'base' memref is currently ignored,
-    // 'tileSliceIndex' should be added to 'indices[0]'.
-    Value tileSliceIndex = getTileSlicePtrIndex(memRefType.getRank(), tileSlice,
-                                                numTileSlices, loc, rewriter);
-    Value ptr = this->getStridedElementPtr(loc, memRefType, adaptor.getBase(),
-                                           {tileSliceIndex}, rewriter);
 
     // Cast tile slice to i32 for intrinsic.
     auto tileSliceI32 = rewriter.create<arith::IndexCastUIOp>(

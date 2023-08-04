@@ -89,6 +89,7 @@ bitset cstddef
 bitset cstdint
 bitset cstdlib
 bitset cstring
+bitset cwchar
 bitset initializer_list
 bitset iosfwd
 bitset limits

@@ -1438,7 +1438,10 @@ public:
 
   bool hasG16() const { return AMDGPU::hasG16(getSTI()); }
 
-  bool hasGDS() const { return AMDGPU::hasGDS(getSTI()); }
+  bool hasGDS() const {
+    // TODO: Remove gfx90a exemption when MC tests are fixed upstream.
+    return AMDGPU::hasGDS(getSTI()) || isGFX90A();
+  }
 
   bool isSI() const {
     return AMDGPU::isSI(getSTI());

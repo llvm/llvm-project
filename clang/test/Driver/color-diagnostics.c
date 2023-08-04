@@ -27,7 +27,7 @@
 // RUN:     | FileCheck --check-prefix=CHECK-DCE_AUTO %s
 // CHECK-DCE_AUTO-NOT: "-cc1"{{.*}} "-fcolor-diagnostics"
 
-// RUN: %clang -fdiagnostics-color=foo -### -c %s 2>&1 \
+// RUN: not %clang -fdiagnostics-color=foo -### -c %s 2>&1 \
 // RUN:     | FileCheck --check-prefix=CHECK-DCE_FOO %s
 // CHECK-DCE_FOO: error: invalid argument 'foo' to -fdiagnostics-color=
 

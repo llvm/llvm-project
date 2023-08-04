@@ -66,22 +66,21 @@ static OmpDirectiveSet targetSet{Directive::OMPD_target,
     Directive::OMPD_target_parallel, Directive::OMPD_target_parallel_do,
     Directive::OMPD_target_parallel_do_simd, Directive::OMPD_target_simd,
     Directive::OMPD_target_teams, Directive::OMPD_target_teams_distribute,
+    Directive::OMPD_target_teams_distribute_parallel_do,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
     Directive::OMPD_target_teams_distribute_simd};
 static OmpDirectiveSet simdSet{Directive::OMPD_distribute_parallel_do_simd,
-    Directive::OMPD_distribute_simd, Directive::OMPD_parallel_do_simd,
-    Directive::OMPD_do_simd, Directive::OMPD_simd,
-    Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_distribute_simd, Directive::OMPD_do_simd,
+    Directive::OMPD_parallel_do_simd, Directive::OMPD_simd,
+    Directive::OMPD_target_parallel_do_simd, Directive::OMPD_target_simd,
     Directive::OMPD_target_teams_distribute_parallel_do_simd,
-    Directive::OMPD_target_teams_distribute_simd, Directive::OMPD_target_simd,
-    Directive::OMPD_taskloop_simd,
+    Directive::OMPD_target_teams_distribute_simd, Directive::OMPD_taskloop_simd,
     Directive::OMPD_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd};
 static OmpDirectiveSet teamSet{Directive::OMPD_teams,
     Directive::OMPD_teams_distribute,
     Directive::OMPD_teams_distribute_parallel_do,
     Directive::OMPD_teams_distribute_parallel_do_simd,
-    Directive::OMPD_teams_distribute_parallel_for,
-    Directive::OMPD_teams_distribute_parallel_for_simd,
     Directive::OMPD_teams_distribute_simd};
 static OmpDirectiveSet taskGeneratingSet{
     OmpDirectiveSet{Directive::OMPD_task} | taskloopSet};
@@ -152,6 +151,8 @@ public:
   void Leave(const parser::OpenMPDeclareTargetConstruct &);
   void Enter(const parser::OpenMPExecutableAllocate &);
   void Leave(const parser::OpenMPExecutableAllocate &);
+  void Enter(const parser::OpenMPAllocatorsConstruct &);
+  void Leave(const parser::OpenMPAllocatorsConstruct &);
   void Enter(const parser::OpenMPRequiresConstruct &);
   void Leave(const parser::OpenMPRequiresConstruct &);
   void Enter(const parser::OpenMPThreadprivate &);
@@ -193,7 +194,12 @@ public:
   }
 
 private:
+  void CheckMultipleOccurrence(semantics::UnorderedSymbolSet &listVars,
+      const std::list<parser::Name> &nameList, const parser::CharBlock &item,
+      const std::string &clauseName);
   void CheckMultListItems();
+  void CheckStructureElement(const parser::OmpObjectList &ompObjectList,
+      const llvm::omp::Clause clause);
   bool HasInvalidWorksharingNesting(
       const parser::CharBlock &, const OmpDirectiveSet &);
   bool IsCloselyNestedRegion(const OmpDirectiveSet &set);

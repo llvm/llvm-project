@@ -467,6 +467,7 @@ add_gen_header(
     .llvm-libc-macros.sys_wait_macros
     .llvm-libc-types.pid_t
     .llvm-libc-types.struct_rusage
+    .llvm-libc-types.siginfo_t
 )
 
 add_gen_header(

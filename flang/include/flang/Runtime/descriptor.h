@@ -36,6 +36,7 @@ class DerivedType;
 namespace Fortran::runtime {
 
 using SubscriptValue = ISO::CFI_index_t;
+class Terminator;
 
 RT_VAR_GROUP_BEGIN
 static constexpr RT_CONST_VAR_ATTRS int maxRank{CFI_MAX_RANK};
@@ -369,7 +370,8 @@ public:
 
   // Deallocates storage, including allocatable and automatic
   // components.  Optionally invokes FINAL subroutines.
-  RT_API_ATTRS int Destroy(bool finalize = false, bool destroyPointers = false);
+  RT_API_ATTRS int Destroy(bool finalize = false, bool destroyPointers = false,
+      Terminator * = nullptr);
 
   RT_API_ATTRS bool IsContiguous(int leadingDimensions = maxRank) const {
     auto bytes{static_cast<SubscriptValue>(ElementBytes())};

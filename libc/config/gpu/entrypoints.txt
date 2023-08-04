@@ -150,9 +150,32 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.pow
     libc.src.math.powf
     libc.src.math.sin
+    libc.src.math.modf
+    libc.src.math.modff
+    libc.src.math.nearbyint
+    libc.src.math.nearbyintf
+    libc.src.math.nextafter
+    libc.src.math.nextafterf
+    libc.src.math.remainder
+    libc.src.math.remainderf
+    libc.src.math.remquo
+    libc.src.math.remquof
+    libc.src.math.rint
+    libc.src.math.rintf
     libc.src.math.round
     libc.src.math.roundf
-    libc.src.math.roundl
+    libc.src.math.scalbn
+    libc.src.math.scalbnf
+    libc.src.math.sinh
+    libc.src.math.sinhf
+    libc.src.math.sqrt
+    libc.src.math.sqrtf
+    libc.src.math.tan
+    libc.src.math.tanf
+    libc.src.math.tanh
+    libc.src.math.tanhf
+    libc.src.math.trunc
+    libc.src.math.truncf
 )
 
 set(TARGET_LLVMLIBC_ENTRYPOINTS

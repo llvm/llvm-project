@@ -221,6 +221,15 @@ llvm::DISubprogram *DebugTranslation::translateImpl(DISubprogramAttr attr) {
       translate(attr.getCompileUnit()));
 }
 
+llvm::DIModule *DebugTranslation::translateImpl(DIModuleAttr attr) {
+  return llvm::DIModule::get(
+      llvmCtx, translate(attr.getFile()), translate(attr.getScope()),
+      getMDStringOrNull(attr.getName()),
+      getMDStringOrNull(attr.getConfigMacros()),
+      getMDStringOrNull(attr.getIncludePath()),
+      getMDStringOrNull(attr.getApinotes()), attr.getLine(), attr.getIsDecl());
+}
+
 llvm::DINamespace *DebugTranslation::translateImpl(DINamespaceAttr attr) {
   return llvm::DINamespace::get(llvmCtx, translate(attr.getScope()),
                                 getMDStringOrNull(attr.getName()),
@@ -266,9 +275,9 @@ llvm::DINode *DebugTranslation::translate(DINodeAttr attr) {
       TypeSwitch<DINodeAttr, llvm::DINode *>(attr)
           .Case<DIBasicTypeAttr, DICompileUnitAttr, DICompositeTypeAttr,
                 DIDerivedTypeAttr, DIFileAttr, DILabelAttr, DILexicalBlockAttr,
-                DILexicalBlockFileAttr, DILocalVariableAttr, DINamespaceAttr,
-                DINullTypeAttr, DISubprogramAttr, DISubrangeAttr,
-                DISubroutineTypeAttr>(
+                DILexicalBlockFileAttr, DILocalVariableAttr, DIModuleAttr,
+                DINamespaceAttr, DINullTypeAttr, DISubprogramAttr,
+                DISubrangeAttr, DISubroutineTypeAttr>(
               [&](auto attr) { return translateImpl(attr); });
   attrToNode.insert({attr, node});
   return node;

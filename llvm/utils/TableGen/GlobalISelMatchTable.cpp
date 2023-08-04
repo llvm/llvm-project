@@ -1104,7 +1104,7 @@ void RegisterBankOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
         << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
         << MatchTable::Comment("RC")
-        << MatchTable::NamedValue(RC.getQualifiedName() + "RegClassID")
+        << MatchTable::NamedValue(RC.getQualifiedIdName())
         << MatchTable::LineBreak;
 }
 
@@ -2000,7 +2000,7 @@ void ConstrainOperandToRegClassAction::emitActionOpcodes(
   Table << MatchTable::Opcode("GIR_ConstrainOperandRC")
         << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
         << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-        << MatchTable::NamedValue(RC.getQualifiedName() + "RegClassID")
+        << MatchTable::NamedValue(RC.getQualifiedIdName())
         << MatchTable::LineBreak;
 }
 

@@ -56,11 +56,11 @@ define <8 x i32> @vector_interleave_v8i32_v4i32(<4 x i32> %a, <4 x i32> %b) {
 define <4 x i64> @vector_interleave_v4i64_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ; RV32-LABEL: vector_interleave_v4i64_v2i64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vmv1r.v v10, v9
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    lui a0, %hi(.LCPI3_0)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI3_0)
 ; RV32-NEXT:    vle16.v v12, (a0)
+; RV32-NEXT:    vmv1r.v v10, v9
 ; RV32-NEXT:    vslideup.vi v8, v10, 2
 ; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
 ; RV32-NEXT:    vmv.v.v v8, v10
@@ -68,11 +68,11 @@ define <4 x i64> @vector_interleave_v4i64_v2i64(<2 x i64> %a, <2 x i64> %b) {
 ;
 ; RV64-LABEL: vector_interleave_v4i64_v2i64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vmv1r.v v10, v9
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    lui a0, %hi(.LCPI3_0)
 ; RV64-NEXT:    addi a0, a0, %lo(.LCPI3_0)
 ; RV64-NEXT:    vle64.v v12, (a0)
+; RV64-NEXT:    vmv1r.v v10, v9
 ; RV64-NEXT:    vslideup.vi v8, v10, 2
 ; RV64-NEXT:    vrgather.vv v10, v8, v12
 ; RV64-NEXT:    vmv.v.v v8, v10
@@ -156,11 +156,11 @@ define <8 x float> @vector_interleave_v8f32_v4f32(<4 x float> %a, <4 x float> %b
 define <4 x double> @vector_interleave_v4f64_v2f64(<2 x double> %a, <2 x double> %b) {
 ; RV32-LABEL: vector_interleave_v4f64_v2f64:
 ; RV32:       # %bb.0:
-; RV32-NEXT:    vmv1r.v v10, v9
 ; RV32-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV32-NEXT:    lui a0, %hi(.LCPI9_0)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI9_0)
 ; RV32-NEXT:    vle16.v v12, (a0)
+; RV32-NEXT:    vmv1r.v v10, v9
 ; RV32-NEXT:    vslideup.vi v8, v10, 2
 ; RV32-NEXT:    vrgatherei16.vv v10, v8, v12
 ; RV32-NEXT:    vmv.v.v v8, v10
@@ -168,11 +168,11 @@ define <4 x double> @vector_interleave_v4f64_v2f64(<2 x double> %a, <2 x double>
 ;
 ; RV64-LABEL: vector_interleave_v4f64_v2f64:
 ; RV64:       # %bb.0:
-; RV64-NEXT:    vmv1r.v v10, v9
 ; RV64-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
 ; RV64-NEXT:    lui a0, %hi(.LCPI9_0)
 ; RV64-NEXT:    addi a0, a0, %lo(.LCPI9_0)
 ; RV64-NEXT:    vle64.v v12, (a0)
+; RV64-NEXT:    vmv1r.v v10, v9
 ; RV64-NEXT:    vslideup.vi v8, v10, 2
 ; RV64-NEXT:    vrgather.vv v10, v8, v12
 ; RV64-NEXT:    vmv.v.v v8, v10

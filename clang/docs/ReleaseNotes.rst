@@ -71,6 +71,9 @@ Resolutions to C++ Defect Reports
 
 C Language Changes
 ------------------
+- ``structs``, ``unions``, and ``arrays`` that are const may now be used as
+  constant expressions.  This change is more consistent with the behavior of
+  GCC.
 
 C2x Feature Support
 ^^^^^^^^^^^^^^^^^^^
@@ -104,6 +107,8 @@ Bug Fixes in This Version
   instantiated in one module and whose definition is instantiated in another
   module may end up with members associated with the wrong declaration of the
   class, which can result in miscompiles in some cases.
+- Fix crash on use of a variadic overloaded operator.
+  (`#42535 <https://github.com/llvm/llvm-project/issues/42535>_`)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -131,12 +136,22 @@ Bug Fixes to C++ Support
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed an import failure of recursive friend class template.
+  `Issue 64169 <https://github.com/llvm/llvm-project/issues/64169>`_
+- Remove unnecessary RecordLayout computation when importing UnaryOperator. The
+  computed RecordLayout is incorrect if fields are not completely imported and
+  should not be cached.
+  `Issue 64170 <https://github.com/llvm/llvm-project/issues/64170>`_
 
 Miscellaneous Bug Fixes
 ^^^^^^^^^^^^^^^^^^^^^^^
 
 Miscellaneous Clang Crashes Fixed
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+- Fixed a crash when parsing top-level ObjC blocks that aren't properly
+  terminated. Clang should now also recover better when an @end is missing
+  between blocks.
+  `Issue 64065 <https://github.com/llvm/llvm-project/issues/64065>`_
 
 Target Specific Changes
 -----------------------
@@ -158,6 +173,8 @@ LoongArch Support
 
 RISC-V Support
 ^^^^^^^^^^^^^^
+- Unaligned memory accesses can be toggled by ``-m[no-]unaligned-access`` or the
+  aliases ``-m[no-]strict-align``.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^

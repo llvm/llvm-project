@@ -119,6 +119,13 @@ public:
     return Status;
   }
 
+  static Floating abs(const Floating &F) {
+    APFloat V = F.F;
+    if (V.isNegative())
+      V.changeSign();
+    return Floating(V);
+  }
+
   // -------
 
   static APFloat::opStatus add(const Floating &A, const Floating &B,

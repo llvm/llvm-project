@@ -58,6 +58,8 @@ public:
     resize(count);
     inline_memcpy(buffer_, cstr, count);
   }
+  LIBC_INLINE string(const string_view &view)
+      : string(view.data(), view.size()) {}
   LIBC_INLINE string(const char *cstr)
       : string(cstr, ::__llvm_libc::internal::string_length(cstr)) {}
   LIBC_INLINE string(size_t size_, char value) {
@@ -76,6 +78,10 @@ public:
     capacity_ = other.capacity_;
     other.reset_no_deallocate();
     return *this;
+  }
+
+  LIBC_INLINE string &operator=(const string_view &view) {
+    return *this = string(view);
   }
 
   LIBC_INLINE ~string() {

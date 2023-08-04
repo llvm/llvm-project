@@ -77,7 +77,7 @@
 // CXX-RV64-BAREMETAL-NOSYSROOT-LP64: "{{.*}}/Inputs/basic_riscv64_tree/lib/gcc/riscv64-unknown-linux-gnu/8.0.1{{/|\\\\}}crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld= -no-pie \
-// RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform -mabi=lp64 \
+// RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -mabi=lp64 \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-LINUX-MULTI-LP64 %s
@@ -92,7 +92,7 @@
 // C-RV64-LINUX-MULTI-LP64: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib64/lp64"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld -no-pie \
-// RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform -march=rv64imafd \
+// RUN:   --target=riscv64-unknown-linux-gnu --rtlib=platform --unwindlib=platform -march=rv64imafd \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_linux_sdk \
 // RUN:   --sysroot=%S/Inputs/multilib_riscv_linux_sdk/sysroot 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-LINUX-MULTI-LP64D %s
@@ -107,7 +107,7 @@
 // C-RV64-LINUX-MULTI-LP64D: "-L{{.*}}/Inputs/multilib_riscv_linux_sdk/sysroot/usr/lib64/lp64d"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
-// RUN:   --target=riscv64-unknown-elf --rtlib=platform --sysroot= \
+// RUN:   --target=riscv64-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
 // RUN:   -march=rv64imac -mabi=lp64\
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64IMAC-BAREMETAL-MULTI-LP64 %s
@@ -122,7 +122,7 @@
 // C-RV64IMAC-BAREMETAL-MULTI-LP64: "{{.*}}/Inputs/multilib_riscv_elf_sdk/lib/gcc/riscv64-unknown-elf/8.2.0/rv64imac/lp64{{/|\\\\}}crtend.o"
 
 // RUN: env "PATH=" %clang -### %s -fuse-ld=ld \
-// RUN:   --target=riscv64-unknown-elf --rtlib=platform --sysroot= \
+// RUN:   --target=riscv64-unknown-elf --rtlib=platform --unwindlib=platform --sysroot= \
 // RUN:   -march=rv64imafdc -mabi=lp64d \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64IMAFDC-BAREMETAL-MULTI-ILP64D %s
@@ -139,7 +139,7 @@
 // Check that --rtlib can be used to override the used runtime library
 // RUN: %clang -### %s \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \
-// RUN:   --target=riscv64-unknown-elf --rtlib=libgcc 2>&1 \
+// RUN:   --target=riscv64-unknown-elf --rtlib=libgcc --unwindlib=libgcc 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-RTLIB-LIBGCC-LP64 %s
 // C-RV64-RTLIB-LIBGCC-LP64: "{{.*}}crt0.o"
 // C-RV64-RTLIB-LIBGCC-LP64: "{{.*}}crtbegin.o"
@@ -148,7 +148,7 @@
 
 // RUN: %clang -### %s \
 // RUN:   --gcc-toolchain=%S/Inputs/multilib_riscv_elf_sdk \
-// RUN:   --target=riscv64-unknown-elf --rtlib=compiler-rt 2>&1 \
+// RUN:   --target=riscv64-unknown-elf --rtlib=compiler-rt --unwindlib=compiler-rt 2>&1 \
 // RUN:   | FileCheck -check-prefix=C-RV64-RTLIB-COMPILERRT-LP64 %s
 // C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}crt0.o"
 // C-RV64-RTLIB-COMPILERRT-LP64: "{{.*}}clang_rt.crtbegin-riscv64.o"

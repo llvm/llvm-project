@@ -427,8 +427,6 @@ extern "C" LLVM_EXTERNAL_VISIBILITY void LLVMInitializeAMDGPUTarget() {
   initializeAMDGPUUnifyDivergentExitNodesPass(*PR);
   initializeAMDGPUAAWrapperPassPass(*PR);
   initializeAMDGPUExternalAAWrapperPass(*PR);
-  initializeAMDGPUUseNativeCallsPass(*PR);
-  initializeAMDGPUSimplifyLibCallsPass(*PR);
   initializeAMDGPUImageIntrinsicOptimizerPass(*PR);
   initializeAMDGPUPrintfRuntimeBindingPass(*PR);
   initializeAMDGPUResourceUsageAnalysisPass(*PR);
@@ -643,7 +641,7 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
       [this](StringRef PassName, FunctionPassManager &PM,
              ArrayRef<PassBuilder::PipelineElement>) {
         if (PassName == "amdgpu-simplifylib") {
-          PM.addPass(AMDGPUSimplifyLibCallsPass(*this));
+          PM.addPass(AMDGPUSimplifyLibCallsPass());
           return true;
         }
         if (PassName == "amdgpu-image-intrinsic-opt") {
@@ -699,11 +697,11 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
   });
 
   PB.registerPipelineStartEPCallback(
-      [this](ModulePassManager &PM, OptimizationLevel Level) {
+      [](ModulePassManager &PM, OptimizationLevel Level) {
         FunctionPassManager FPM;
         FPM.addPass(AMDGPUUseNativeCallsPass());
         if (EnableLibCallSimplify && Level != OptimizationLevel::O0)
-          FPM.addPass(AMDGPUSimplifyLibCallsPass(*this));
+          FPM.addPass(AMDGPUSimplifyLibCallsPass());
         PM.addPass(createModuleToFunctionPassAdaptor(std::move(FPM)));
       });
 

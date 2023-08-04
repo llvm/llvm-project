@@ -176,7 +176,6 @@ extern "C" {
 int32_t __kmpc_nvptx_parallel_reduce_nowait_v2(
     IdentTy *Loc, int32_t TId, int32_t num_vars, uint64_t reduce_size,
     void *reduce_data, ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct) {
-  FunctionTracingRAII();
   return nvptx_parallel_reduce_nowait(TId, num_vars, reduce_size, reduce_data,
                                       shflFct, cpyFct, mapping::isSPMDMode(),
                                       false);
@@ -187,8 +186,6 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
     void *reduce_data, ShuffleReductFnTy shflFct, InterWarpCopyFnTy cpyFct,
     ListGlobalFnTy lgcpyFct, ListGlobalFnTy lgredFct, ListGlobalFnTy glcpyFct,
     ListGlobalFnTy glredFct) {
-  FunctionTracingRAII();
-
   // Terminate all threads in non-SPMD mode except for the master thread.
   uint32_t ThreadId = mapping::getThreadIdInBlock();
   if (mapping::isGenericMode()) {
@@ -311,9 +308,9 @@ int32_t __kmpc_nvptx_teams_reduce_nowait_v2(
   return 0;
 }
 
-void __kmpc_nvptx_end_reduce(int32_t TId) { FunctionTracingRAII(); }
+void __kmpc_nvptx_end_reduce(int32_t TId) {}
 
-void __kmpc_nvptx_end_reduce_nowait(int32_t TId) { FunctionTracingRAII(); }
+void __kmpc_nvptx_end_reduce_nowait(int32_t TId) {}
 }
 
 #pragma omp end declare target

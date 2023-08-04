@@ -115,7 +115,7 @@ bool VarSet::occursIn(DimLvlExpr expr) const {
 }
 
 void VarSet::add(Var var) {
-  // NOTE: `SmallBitVactor::operator[]` will raise assertion errors for OOB.
+  // NOTE: `SmallBitVector::operator[]` will raise assertion errors for OOB.
   impl[var.getKind()][var.getNum()] = true;
 }
 

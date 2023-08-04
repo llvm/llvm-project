@@ -71,7 +71,7 @@
 // CHECK-FP-NONLEAF: "-mframe-pointer=non-leaf"
 // CHECK-FP-NONE: "-mframe-pointer=none"
 
-// RUN: %clang -### %s --target=x86_64-unknown-fuchsia -rtlib=libgcc 2>&1 \
+// RUN: not %clang -### %s --target=x86_64-unknown-fuchsia -rtlib=libgcc 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-RTLIB
 // CHECK-RTLIB: error: invalid runtime library name in argument '-rtlib=libgcc'
 

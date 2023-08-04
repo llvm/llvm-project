@@ -140,3 +140,7 @@ namespace fpclassify {
   char classify_neg_zero[__builtin_fpclassify(-1, -1, -1, -1, +1, -0.0)];
   char classify_subnorm [__builtin_fpclassify(-1, -1, -1, +1, -1, 1.0e-38f)];
 }
+
+namespace fabs {
+  static_assert(__builtin_fabs(-14.0) == 14.0, "");
+}

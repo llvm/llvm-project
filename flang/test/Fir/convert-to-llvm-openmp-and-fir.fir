@@ -321,6 +321,19 @@ func.func @_QPopenmp_target_data_region() {
 
 // -----
 
+func.func @_QPomp_target_data_empty() {
+  %0 = fir.alloca !fir.array<1024xi32> {bindc_name = "a", uniq_name = "_QFomp_target_data_emptyEa"}
+  omp.target_data use_device_addr(%0 : !fir.ref<!fir.array<1024xi32>>) {
+  }
+  return
+}
+
+// CHECK-LABEL:   llvm.func @_QPomp_target_data_empty
+// CHECK: omp.target_data   use_device_addr(%1 : !llvm.ptr<array<1024 x i32>>) {
+// CHECK: }
+
+// -----
+
 func.func @_QPomp_target() {
   %0 = fir.alloca !fir.array<512xi32> {bindc_name = "a", uniq_name = "_QFomp_targetEa"}
   %c64_i32 = arith.constant 64 : i32
@@ -631,3 +644,14 @@ func.func @_QPsimple_reduction(%arg0: !fir.ref<!fir.array<100x!fir.logical<4>>> 
   }
   return
 }
+
+// -----
+
+// CHECK: llvm.func @_QPs
+// CHECK: omp.atomic.read %{{.*}} = %{{.*}}   : !llvm.ptr<struct<(f32, f32)>>, !llvm.struct<(f32, f32)>
+
+func.func @_QPs(%arg0: !fir.ref<!fir.complex<4>> {fir.bindc_name = "x"}) {
+  %0 = fir.alloca !fir.complex<4> {bindc_name = "v", uniq_name = "_QFsEv"}
+  omp.atomic.read %0 = %arg0   : !fir.ref<!fir.complex<4>>, !fir.complex<4>
+  return
+} 
