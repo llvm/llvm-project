@@ -277,7 +277,7 @@ bool PEI::runOnMachineFunction(MachineFunction &MF) {
         (RS && !FrameIndexVirtualScavenging) ||
         TRI->requiresFrameIndexReplacementScavenging(MF);
 
-    if (TRI->supportsBackwardScavenger())
+    if (TRI->eliminateFrameIndicesBackwards())
       replaceFrameIndicesBackward(MF);
     else
       replaceFrameIndices(MF);

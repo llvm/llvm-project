@@ -3690,8 +3690,8 @@ static Value *emitPointerArithmetic(CodeGenFunction &CGF,
 
     index = CGF.Builder.CreateMul(index, objectSize);
 
-    Value *result = CGF.Builder.CreateBitCast(pointer, CGF.VoidPtrTy);
-    result = CGF.Builder.CreateGEP(CGF.Int8Ty, result, index, "add.ptr");
+    Value *result =
+        CGF.Builder.CreateGEP(CGF.Int8Ty, pointer, index, "add.ptr");
     return CGF.Builder.CreateBitCast(result, pointer->getType());
   }
 

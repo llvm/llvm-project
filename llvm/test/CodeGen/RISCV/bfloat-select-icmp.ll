@@ -178,11 +178,8 @@ define bfloat @select_icmp_slt_one(i32 signext %a) {
 ; CHECK-LABEL: select_icmp_slt_one:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    slti a0, a0, 1
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    lui a1, %hi(.LCPI10_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI10_0)
-; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    flh fa0, 0(a0)
+; CHECK-NEXT:    fcvt.s.w fa5, a0
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %1 = icmp slt i32 %a, 1
   %2 = select i1 %1, bfloat 1.000000e+00, bfloat 0.000000e+00
@@ -192,12 +189,9 @@ define bfloat @select_icmp_slt_one(i32 signext %a) {
 define bfloat @select_icmp_sgt_zero(i32 signext %a) {
 ; CHECK-LABEL: select_icmp_sgt_zero:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    sgtz a0, a0
-; CHECK-NEXT:    slli a0, a0, 1
-; CHECK-NEXT:    lui a1, %hi(.LCPI11_0)
-; CHECK-NEXT:    addi a1, a1, %lo(.LCPI11_0)
-; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    flh fa0, 0(a0)
+; CHECK-NEXT:    slti a0, a0, 1
+; CHECK-NEXT:    fcvt.s.w fa5, a0
+; CHECK-NEXT:    fcvt.bf16.s fa0, fa5
 ; CHECK-NEXT:    ret
   %1 = icmp sgt i32 %a, 0
   %2 = select i1 %1, bfloat 0.000000e+00, bfloat 1.000000e+00

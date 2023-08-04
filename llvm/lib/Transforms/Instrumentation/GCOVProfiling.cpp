@@ -1051,8 +1051,8 @@ FunctionCallee GCOVProfiler::getEmitFunctionFunc(const TargetLibraryInfo *TLI) {
 
 FunctionCallee GCOVProfiler::getEmitArcsFunc(const TargetLibraryInfo *TLI) {
   Type *Args[] = {
-    Type::getInt32Ty(*Ctx),     // uint32_t num_counters
-    Type::getInt64PtrTy(*Ctx),  // uint64_t *counters
+      Type::getInt32Ty(*Ctx),       // uint32_t num_counters
+      PointerType::getUnqual(*Ctx), // uint64_t *counters
   };
   FunctionType *FTy = FunctionType::get(Type::getVoidTy(*Ctx), Args, false);
   return M->getOrInsertFunction("llvm_gcda_emit_arcs", FTy,

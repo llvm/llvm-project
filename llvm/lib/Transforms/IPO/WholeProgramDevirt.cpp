@@ -1437,7 +1437,7 @@ void DevirtModule::applyICallBranchFunnel(VTableSlotInfo &SlotInfo,
 
       IRBuilder<> IRB(&CB);
       std::vector<Value *> Args;
-      Args.push_back(IRB.CreateBitCast(VCallSite.VTable, Int8PtrTy));
+      Args.push_back(VCallSite.VTable);
       llvm::append_range(Args, CB.args());
 
       CallBase *NewCS = nullptr;
@@ -1708,8 +1708,7 @@ void DevirtModule::applyVirtualConstProp(CallSiteInfo &CSInfo, StringRef FnName,
       continue;
     auto *RetType = cast<IntegerType>(Call.CB.getType());
     IRBuilder<> B(&Call.CB);
-    Value *Addr =
-        B.CreateGEP(Int8Ty, B.CreateBitCast(Call.VTable, Int8PtrTy), Byte);
+    Value *Addr = B.CreateGEP(Int8Ty, Call.VTable, Byte);
     if (RetType->getBitWidth() == 1) {
       Value *Bits = B.CreateLoad(Int8Ty, Addr);
       Value *BitsAndBit = B.CreateAnd(Bits, Bit);
@@ -2007,17 +2006,14 @@ void DevirtModule::scanTypeCheckedLoadUsers(Function *TypeCheckedLoadFunc) {
     if (TypeCheckedLoadFunc->getIntrinsicID() ==
         Intrinsic::type_checked_load_relative) {
       Value *GEP = LoadB.CreateGEP(Int8Ty, Ptr, Offset);
-      Value *GEPPtr = LoadB.CreateBitCast(GEP, PointerType::getUnqual(Int32Ty));
-      LoadedValue = LoadB.CreateLoad(Int32Ty, GEPPtr);
+      LoadedValue = LoadB.CreateLoad(Int32Ty, GEP);
       LoadedValue = LoadB.CreateSExt(LoadedValue, IntPtrTy);
       GEP = LoadB.CreatePtrToInt(GEP, IntPtrTy);
       LoadedValue = LoadB.CreateAdd(GEP, LoadedValue);
       LoadedValue = LoadB.CreateIntToPtr(LoadedValue, Int8PtrTy);
     } else {
       Value *GEP = LoadB.CreateGEP(Int8Ty, Ptr, Offset);
-      Value *GEPPtr =
-          LoadB.CreateBitCast(GEP, PointerType::getUnqual(Int8PtrTy));
-      LoadedValue = LoadB.CreateLoad(Int8PtrTy, GEPPtr);
+      LoadedValue = LoadB.CreateLoad(Int8PtrTy, GEP);
     }
 
     for (Instruction *LoadedPtr : LoadedPtrs) {

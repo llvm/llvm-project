@@ -52,17 +52,17 @@ static cl::opt<bool> Widen16BitOps(
   cl::init(true));
 
 static cl::opt<bool>
-    ScalarizeLargePHIs("amdgpu-codegenprepare-break-large-phis",
-                       cl::desc("Break large PHI nodes for DAGISel"),
-                       cl::ReallyHidden, cl::init(true));
+    BreakLargePHIs("amdgpu-codegenprepare-break-large-phis",
+                   cl::desc("Break large PHI nodes for DAGISel"),
+                   cl::ReallyHidden, cl::init(true));
 
 static cl::opt<bool>
-    ForceScalarizeLargePHIs("amdgpu-codegenprepare-force-break-large-phis",
-                            cl::desc("For testing purposes, always break large "
-                                     "PHIs even if it isn't profitable."),
-                            cl::ReallyHidden, cl::init(false));
+    ForceBreakLargePHIs("amdgpu-codegenprepare-force-break-large-phis",
+                        cl::desc("For testing purposes, always break large "
+                                 "PHIs even if it isn't profitable."),
+                        cl::ReallyHidden, cl::init(false));
 
-static cl::opt<unsigned> ScalarizeLargePHIsThreshold(
+static cl::opt<unsigned> BreakLargePHIsThreshold(
     "amdgpu-codegenprepare-break-large-phis-threshold",
     cl::desc("Minimum type size in bits for breaking large PHI nodes"),
     cl::ReallyHidden, cl::init(32));
@@ -1777,47 +1777,79 @@ static bool isInterestingPHIIncomingValue(const Value *V) {
   return false;
 }
 
-bool AMDGPUCodeGenPrepareImpl::canBreakPHINode(const PHINode &I) {
-  // Check in the cache, or add an entry for this node.
-  //
-  // We init with false because we consider all PHI nodes unbreakable until we
-  // reach a conclusion. Doing the opposite - assuming they're break-able until
-  // proven otherwise - can be harmful in some pathological cases so we're
-  // conservative for now.
-  const auto [It, DidInsert] = BreakPhiNodesCache.insert({&I, false});
-  if (!DidInsert)
-    return It->second;
+static void collectPHINodes(const PHINode &I,
+                            SmallPtrSet<const PHINode *, 8> &SeenPHIs) {
+  const auto [It, Inserted] = SeenPHIs.insert(&I);
+  if (!Inserted)
+    return;
 
-  // This function may recurse, so to guard against infinite looping, this PHI
-  // is conservatively considered unbreakable until we reach a conclusion.
-
-  // Don't break PHIs that have no interesting incoming values. That is, where
-  // there is no clear opportunity to fold the "extractelement" instructions we
-  // would add.
-  //
-  // Note: IC does not run after this pass, so we're only interested in the
-  // foldings that the DAG combiner can do.
-  if (none_of(I.incoming_values(),
-              [&](Value *V) { return isInterestingPHIIncomingValue(V); }))
-    return false;
-
-  // Now, check users for unbreakable PHI nodes. If we have an unbreakable PHI
-  // node as user, we don't want to break this PHI either because it's unlikely
-  // to be beneficial. We would just explode the vector and reassemble it
-  // directly, wasting instructions.
-  //
-  // In the case where multiple users are PHI nodes, we want at least half of
-  // them to be breakable.
-  int Score = 0;
-  for (const Value *U : I.users()) {
-    if (const auto *PU = dyn_cast<PHINode>(U))
-      Score += canBreakPHINode(*PU) ? 1 : -1;
+  for (const Value *Inc : I.incoming_values()) {
+    if (const auto *PhiInc = dyn_cast<PHINode>(Inc))
+      collectPHINodes(*PhiInc, SeenPHIs);
   }
 
-  if (Score < 0)
-    return false;
+  for (const User *U : I.users()) {
+    if (const auto *PhiU = dyn_cast<PHINode>(U))
+      collectPHINodes(*PhiU, SeenPHIs);
+  }
+}
 
-  return BreakPhiNodesCache[&I] = true;
+bool AMDGPUCodeGenPrepareImpl::canBreakPHINode(const PHINode &I) {
+  // Check in the cache first.
+  if (const auto It = BreakPhiNodesCache.find(&I);
+      It != BreakPhiNodesCache.end())
+    return It->second;
+
+  // We consider PHI nodes as part of "chains", so given a PHI node I, we
+  // recursively consider all its users and incoming values that are also PHI
+  // nodes. We then make a decision about all of those PHIs at once. Either they
+  // all get broken up, or none of them do. That way, we avoid cases where a
+  // single PHI is/is not broken and we end up reforming/exploding a vector
+  // multiple times, or even worse, doing it in a loop.
+  SmallPtrSet<const PHINode *, 8> WorkList;
+  collectPHINodes(I, WorkList);
+
+#ifndef NDEBUG
+  // Check that none of the PHI nodes in the worklist are in the map. If some of
+  // them are, it means we're not good enough at collecting related PHIs.
+  for (const PHINode *WLP : WorkList) {
+    assert(BreakPhiNodesCache.count(WLP) == 0);
+  }
+#endif
+
+  // To consider a PHI profitable to break, we need to see some interesting
+  // incoming values. At least 2/3rd (rounded up) of all PHIs in the worklist
+  // must have one to consider all PHIs breakable.
+  //
+  // This threshold has been determined through performance testing.
+  //
+  // Note that the computation below is equivalent to
+  //
+  //    (unsigned)ceil((K / 3.0) * 2)
+  //
+  // It's simply written this way to avoid mixing integral/FP arithmetic.
+  const auto Threshold = (alignTo(WorkList.size() * 2, 3) / 3);
+  unsigned NumBreakablePHIs = 0;
+  bool CanBreak = false;
+  for (const PHINode *Cur : WorkList) {
+    // Don't break PHIs that have no interesting incoming values. That is, where
+    // there is no clear opportunity to fold the "extractelement" instructions
+    // we would add.
+    //
+    // Note: IC does not run after this pass, so we're only interested in the
+    // foldings that the DAG combiner can do.
+    if (any_of(Cur->incoming_values(), isInterestingPHIIncomingValue)) {
+      if (++NumBreakablePHIs >= Threshold) {
+        CanBreak = true;
+        break;
+      }
+    }
+  }
+
+  for (const PHINode *Cur : WorkList)
+    BreakPhiNodesCache[Cur] = CanBreak;
+
+  return CanBreak;
 }
 
 /// Helper class for "break large PHIs" (visitPHINode).
@@ -1898,14 +1930,15 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
   // operations with most elements being "undef". This inhibits a lot of
   // optimization opportunities and can result in unreasonably high register
   // pressure and the inevitable stack spilling.
-  if (!ScalarizeLargePHIs || getCGPassBuilderOption().EnableGlobalISelOption)
+  if (!BreakLargePHIs || getCGPassBuilderOption().EnableGlobalISelOption)
     return false;
 
   FixedVectorType *FVT = dyn_cast<FixedVectorType>(I.getType());
-  if (!FVT || DL->getTypeSizeInBits(FVT) <= ScalarizeLargePHIsThreshold)
+  if (!FVT || FVT->getNumElements() == 1 ||
+      DL->getTypeSizeInBits(FVT) <= BreakLargePHIsThreshold)
     return false;
 
-  if (!ForceScalarizeLargePHIs && !canBreakPHINode(I))
+  if (!ForceBreakLargePHIs && !canBreakPHINode(I))
     return false;
 
   std::vector<VectorSlice> Slices;
@@ -1930,8 +1963,7 @@ bool AMDGPUCodeGenPrepareImpl::visitPHINode(PHINode &I) {
       Slices.emplace_back(EltTy, Idx, 1);
   }
 
-  if (Slices.size() == 1)
-    return false;
+  assert(Slices.size() > 1);
 
   // Create one PHI per vector piece. The "VectorSlice" class takes care of
   // creating the necessary instruction to extract the relevant slices of each

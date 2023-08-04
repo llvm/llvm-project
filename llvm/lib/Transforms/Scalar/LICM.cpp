@@ -1055,14 +1055,15 @@ static bool isLoadInvariantInLoop(LoadInst *LI, DominatorTree *DT,
   if (LocSizeInBits.isScalable())
     return false;
 
-  // if the type is i8 addrspace(x)*, we know this is the type of
+  // if the type is ptr addrspace(x), we know this is the type of
   // llvm.invariant.start operand
-  auto *PtrInt8Ty = PointerType::get(Type::getInt8Ty(LI->getContext()),
-                                     LI->getPointerAddressSpace());
+  auto *PtrASXTy = PointerType::get(LI->getContext(),
+                                    LI->getPointerAddressSpace());
   unsigned BitcastsVisited = 0;
-  // Look through bitcasts until we reach the i8* type (this is invariant.start
-  // operand type).
-  while (Addr->getType() != PtrInt8Ty) {
+  // Look through bitcasts until we reach the PtrASXTy type (this is
+  // invariant.start operand type).
+  // FIXME: We shouldn't really find such bitcasts with opaque pointers.
+  while (Addr->getType() != PtrASXTy) {
     auto *BC = dyn_cast<BitCastInst>(Addr);
     // Avoid traversing high number of bitcast uses.
     if (++BitcastsVisited > MaxNumUsesTraversed || !BC)
