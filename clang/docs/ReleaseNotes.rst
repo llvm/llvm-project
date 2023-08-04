@@ -74,6 +74,7 @@ C++2c Feature Support
   is not supported.
 
   .. code-block:: cpp
+
     struct S {
       int _, _; // Was invalid, now OK
     };
