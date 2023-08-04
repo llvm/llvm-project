@@ -7,18 +7,32 @@
 //===----------------------------------------------------------------------===//
 
 #include "clang-include-cleaner/Record.h"
+#include "clang-include-cleaner/Types.h"
+#include "clang/AST/Decl.h"
+#include "clang/Basic/Diagnostic.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
+#include "clang/Frontend/FrontendOptions.h"
+#include "clang/Serialization/PCHContainerOperations.h"
 #include "clang/Testing/TestAST.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Error.h"
+#include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Testing/Annotations/Annotations.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include <cassert>
+#include <memory>
+#include <optional>
+#include <utility>
 
 namespace clang::include_cleaner {
 namespace {
@@ -508,6 +522,39 @@ TEST_F(PragmaIncludeTest, AlwaysKeep) {
   auto &FM = Processed.fileManager();
   EXPECT_TRUE(PI.shouldKeep(FM.getFile("always_keep.h").get()));
   EXPECT_FALSE(PI.shouldKeep(FM.getFile("usual.h").get()));
+}
+
+TEST_F(PragmaIncludeTest, ExportInUnnamedBuffer) {
+  llvm::StringLiteral Filename = "test.cpp";
+  auto Code = R"cpp(#include "exporter.h")cpp";
+  Inputs.ExtraFiles["exporter.h"] = R"cpp(
+  #pragma once
+  #include "foo.h" // IWYU pragma: export
+  )cpp";
+  Inputs.ExtraFiles["foo.h"] = "";
+
+  auto Clang = std::make_unique<CompilerInstance>(
+      std::make_shared<PCHContainerOperations>());
+  Clang->createDiagnostics();
+
+  Clang->setInvocation(std::make_unique<CompilerInvocation>());
+  ASSERT_TRUE(CompilerInvocation::CreateFromArgs(
+      Clang->getInvocation(), {Filename.data()}, Clang->getDiagnostics(),
+      "clang"));
+
+  // Create unnamed memory buffers for all the files.
+  auto VFS = llvm::makeIntrusiveRefCnt<llvm::vfs::InMemoryFileSystem>();
+  VFS->addFile(Filename, /*ModificationTime=*/0,
+               llvm::MemoryBuffer::getMemBufferCopy(Code, /*BufferName=*/""));
+  for (const auto &Extra : Inputs.ExtraFiles)
+    VFS->addFile(Extra.getKey(), /*ModificationTime=*/0,
+                 llvm::MemoryBuffer::getMemBufferCopy(Extra.getValue(),
+                                                      /*BufferName=*/""));
+  auto *FM = Clang->createFileManager(VFS);
+  ASSERT_TRUE(Clang->ExecuteAction(*Inputs.MakeAction()));
+  EXPECT_THAT(
+      PI.getExporters(llvm::cantFail(FM->getFileRef("foo.h")), *FM),
+      testing::ElementsAre(llvm::cantFail(FM->getFileRef("exporter.h"))));
 }
 } // namespace
 } // namespace clang::include_cleaner
