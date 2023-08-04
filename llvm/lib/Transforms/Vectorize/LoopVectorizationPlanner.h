@@ -377,7 +377,7 @@ private:
   /// returned VPlan is valid for. If no VPlan can be built for the input range,
   /// set the largest included VF to the maximum VF for which no plan could be
   /// built.
-  std::optional<VPlanPtr> tryToBuildVPlanWithVPRecipes(
+  VPlanPtr tryToBuildVPlanWithVPRecipes(
       VFRange &Range, SmallPtrSetImpl<Instruction *> &DeadInstructions);
 
   /// Build VPlans for power-of-2 VF's between \p MinVF and \p MaxVF inclusive,
