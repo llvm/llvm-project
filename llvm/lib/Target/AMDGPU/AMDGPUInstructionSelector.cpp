@@ -5095,7 +5095,7 @@ void AMDGPUInstructionSelector::renderSetGLC(MachineInstrBuilder &MIB,
 void AMDGPUInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
                                                  const MachineInstr &MI,
                                                  int OpIdx) const {
-  MIB.addFrameIndex((MI.getOperand(1).getIndex()));
+  MIB.addFrameIndex(MI.getOperand(1).getIndex());
 }
 
 bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {
