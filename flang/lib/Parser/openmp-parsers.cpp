@@ -115,6 +115,7 @@ TYPE_PARSER(construct<OmpDeviceTypeClause>(
 TYPE_PARSER(construct<OmpIfClause>(
     maybe(
         ("PARALLEL" >> pure(OmpIfClause::DirectiveNameModifier::Parallel) ||
+            "SIMD" >> pure(OmpIfClause::DirectiveNameModifier::Simd) ||
             "TARGET ENTER DATA" >>
                 pure(OmpIfClause::DirectiveNameModifier::TargetEnterData) ||
             "TARGET EXIT DATA" >>
@@ -125,7 +126,8 @@ TYPE_PARSER(construct<OmpIfClause>(
                 pure(OmpIfClause::DirectiveNameModifier::TargetUpdate) ||
             "TARGET" >> pure(OmpIfClause::DirectiveNameModifier::Target) ||
             "TASK"_id >> pure(OmpIfClause::DirectiveNameModifier::Task) ||
-            "TASKLOOP" >> pure(OmpIfClause::DirectiveNameModifier::Taskloop)) /
+            "TASKLOOP" >> pure(OmpIfClause::DirectiveNameModifier::Taskloop) ||
+            "TEAMS" >> pure(OmpIfClause::DirectiveNameModifier::Teams)) /
         ":"),
     scalarLogicalExpr))
 

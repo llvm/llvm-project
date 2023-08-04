@@ -2395,19 +2395,35 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Defaultmap &x) {
 void OmpStructureChecker::Enter(const parser::OmpClause::If &x) {
   CheckAllowed(llvm::omp::Clause::OMPC_if);
   using dirNameModifier = parser::OmpIfClause::DirectiveNameModifier;
+  // TODO Check that, when multiple 'if' clauses are applied to a combined
+  // construct, at most one of them applies to each directive.
+  // Need to define set here because llvm::omp::teamSet does not include target
+  // teams combined constructs.
+  OmpDirectiveSet teamSet{llvm::omp::Directive::OMPD_target_teams,
+      llvm::omp::Directive::OMPD_target_teams_distribute,
+      llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do,
+      llvm::omp::Directive::OMPD_target_teams_distribute_parallel_do_simd,
+      llvm::omp::Directive::OMPD_target_teams_distribute_simd,
+      llvm::omp::Directive::OMPD_teams,
+      llvm::omp::Directive::OMPD_teams_distribute,
+      llvm::omp::Directive::OMPD_teams_distribute_parallel_do,
+      llvm::omp::Directive::OMPD_teams_distribute_parallel_do_simd,
+      llvm::omp::Directive::OMPD_teams_distribute_simd};
   static std::unordered_map<dirNameModifier, OmpDirectiveSet>
       dirNameModifierMap{{dirNameModifier::Parallel, llvm::omp::parallelSet},
+          {dirNameModifier::Simd, llvm::omp::simdSet},
           {dirNameModifier::Target, llvm::omp::targetSet},
+          {dirNameModifier::TargetData,
+              {llvm::omp::Directive::OMPD_target_data}},
           {dirNameModifier::TargetEnterData,
               {llvm::omp::Directive::OMPD_target_enter_data}},
           {dirNameModifier::TargetExitData,
               {llvm::omp::Directive::OMPD_target_exit_data}},
-          {dirNameModifier::TargetData,
-              {llvm::omp::Directive::OMPD_target_data}},
           {dirNameModifier::TargetUpdate,
               {llvm::omp::Directive::OMPD_target_update}},
           {dirNameModifier::Task, {llvm::omp::Directive::OMPD_task}},
-          {dirNameModifier::Taskloop, llvm::omp::taskloopSet}};
+          {dirNameModifier::Taskloop, llvm::omp::taskloopSet},
+          {dirNameModifier::Teams, teamSet}};
   if (const auto &directiveName{
           std::get<std::optional<dirNameModifier>>(x.v.t)}) {
     auto search{dirNameModifierMap.find(*directiveName)};

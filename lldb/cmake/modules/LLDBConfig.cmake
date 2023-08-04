@@ -17,12 +17,6 @@ if(CMAKE_SOURCE_DIR STREQUAL CMAKE_BINARY_DIR)
     "`CMakeFiles'. Please delete them.")
 endif()
 
-set(LLDB_LINKER_SUPPORTS_GROUPS OFF)
-if (LLVM_COMPILER_IS_GCC_COMPATIBLE AND NOT "${CMAKE_SYSTEM_NAME}" MATCHES "Darwin")
-  # The Darwin linker doesn't understand --start-group/--end-group.
-  set(LLDB_LINKER_SUPPORTS_GROUPS ON)
-endif()
-
 macro(add_optional_dependency variable description package found)
   cmake_parse_arguments(ARG
     "QUIET"

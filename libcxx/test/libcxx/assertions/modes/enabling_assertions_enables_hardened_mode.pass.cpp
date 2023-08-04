@@ -14,7 +14,7 @@
 // The ability to set a custom abort message is required to compare the assertion message.
 // XFAIL: availability-verbose_abort-missing
 // Debug mode is mutually exclusive with hardened mode.
-// UNSUPPORTED: libcpp-has-debug-mode
+// UNSUPPORTED: libcpp-hardening-mode=debug
 // Ignore the warning about `_LIBCPP_ENABLE_ASSERTIONS` being deprecated.
 // ADDITIONAL_COMPILE_FLAGS: -Wno-error -D_LIBCPP_ENABLE_ASSERTIONS=1
 
