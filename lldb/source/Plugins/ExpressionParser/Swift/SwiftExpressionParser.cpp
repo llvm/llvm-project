@@ -125,6 +125,10 @@ static CompilerType ImportType(SwiftASTContextForExpressions &target_context,
   return target_context.ImportType(source_type, error);
 }
 
+static CompilerDecl GetCompilerDecl(swift::Decl *decl) {
+  return {SwiftASTContext::GetSwiftASTContext(&decl->getASTContext()), decl};
+}
+
 namespace {
 class LLDBNameLookup : public swift::SILDebuggerClient {
 public:
@@ -219,7 +223,7 @@ public:
       // kind lldb explicitly wants to globalize.
       if (shouldGlobalize(value_decl->getBaseName().getIdentifier(),
                           value_decl->getKind()))
-        m_staged_decls.AddDecl(value_decl, false, {});
+        m_staged_decls.AddDecl(GetCompilerDecl(value_decl), false, {});
     }
   }
 
@@ -253,11 +257,11 @@ public:
           "[LLDBExprNameLookup::lookupAdditions (%u)] Searching for %s", count,
           NameStr.empty() ? "<anonymous>" : NameStr.str().c_str());
 
-    std::vector<swift::ValueDecl *> results;
+    std::vector<CompilerDecl> results;
 
     for (auto *alias : m_type_aliases) {
       if (alias->getName().str() == NameStr) {
-        results.push_back(alias);
+        results.push_back(GetCompilerDecl(alias));
         break;
       }
     }
@@ -292,13 +296,18 @@ public:
 
       size_t num_external_results = RV.size();
       if (!is_debugger_variable && num_external_results > 0) {
-        std::vector<swift::ValueDecl *> persistent_results;
+        std::vector<CompilerDecl> persistent_results;
         m_persistent_vars->GetSwiftPersistentDecls(NameStr, {},
                                                    persistent_results);
 
-        size_t num_persistent_results = persistent_results.size();
-        for (size_t idx = 0; idx < num_persistent_results; idx++) {
-          swift::ValueDecl *value_decl = persistent_results[idx];
+        for (CompilerDecl & decl : persistent_results) {
+          if (decl.GetTypeSystem() !=
+              SwiftASTContext::GetSwiftASTContext(&DC->getASTContext())) {
+            LLDB_LOG(m_log, "ignoring persistent result from other context");
+            continue;
+          }
+          auto *value_decl =
+              static_cast<swift::ValueDecl *>(decl.GetOpaqueDecl());
           if (!value_decl)
             continue;
           swift::DeclName value_decl_name = value_decl->getName();
@@ -332,15 +341,15 @@ public:
             }
           }
           if (!skip_it)
-            results.push_back(value_decl);
+            results.push_back(decl);
         }
       } else {
         m_persistent_vars->GetSwiftPersistentDecls(NameStr, results, results);
       }
     }
 
-    for (size_t idx = 0; idx < results.size(); idx++) {
-      swift::ValueDecl *value_decl = results[idx];
+    for (CompilerDecl &decl : results) {
+      auto *value_decl = static_cast<swift::ValueDecl *>(decl.GetOpaqueDecl());
       // No import required.
       assert(&DC->getASTContext() == &value_decl->getASTContext());
       RV.push_back(swift::LookupResultEntry(value_decl));
@@ -405,26 +414,28 @@ public:
           NameStr.empty() ? "<anonymous>" : NameStr.str().c_str());
 
     // Find decls that come from the current compilation.
-    std::vector<swift::ValueDecl *> current_compilation_results;
+    std::vector<CompilerDecl> current_compilation_results;
     for (auto result : RV) {
       auto result_decl = result.getValueDecl();
       auto result_decl_context = result_decl->getDeclContext();
       if (result_decl_context->isChildContextOf(DC) || result_decl_context == DC)
-        current_compilation_results.push_back(result_decl);
+        current_compilation_results.push_back(GetCompilerDecl(result_decl));
     }
 
     // Find persistent decls, excluding decls that are equivalent to
     // decls from the current compilation.  This makes the decls from
     // the current compilation take precedence.
-    std::vector<swift::ValueDecl *> persistent_decl_results;
+    std::vector<CompilerDecl> persistent_decl_results;
     m_persistent_vars->GetSwiftPersistentDecls(
         NameStr, current_compilation_results, persistent_decl_results);
 
     // Append the persistent decls that we found to the result vector.
     for (auto result : persistent_decl_results) {
       // No import required.
-      assert(&DC->getASTContext() == &result->getASTContext());
-      RV.push_back(swift::LookupResultEntry(result));
+      auto *result_decl =
+          static_cast<swift::ValueDecl *>(result.GetOpaqueDecl());
+      assert(&DC->getASTContext() == &result_decl->getASTContext());
+      RV.push_back(swift::LookupResultEntry(result_decl));
     }
 
     return !persistent_decl_results.empty();
@@ -1835,16 +1846,15 @@ SwiftExpressionParser::Parse(DiagnosticManager &diagnostic_manager,
               persistent_variable));
 
       // This is only exercised by the PlaygroundsREPL tests.
-      persistent_state->RegisterSwiftPersistentDecl(decl);
+      persistent_state->RegisterSwiftPersistentDecl(GetCompilerDecl(decl));
     }
 
     if (repl) {
       llvm::SmallVector<swift::ValueDecl *, 1> non_variables;
       parsed_expr->code_manipulator->FindNonVariableDeclarations(non_variables);
 
-      for (swift::ValueDecl *decl : non_variables) {
-        persistent_state->RegisterSwiftPersistentDecl(decl);
-      }
+      for (swift::ValueDecl *decl : non_variables)
+        persistent_state->RegisterSwiftPersistentDecl(GetCompilerDecl(decl));
     }
   }
 

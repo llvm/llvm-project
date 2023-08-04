@@ -91,7 +91,11 @@ SwiftPersistentExpressionState::GetCompilerTypeFromPersistentDecl(
 }
 
 bool SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(
-    swift::Decl *lhs_decl, swift::Decl *rhs_decl) {
+    CompilerDecl lhs, CompilerDecl rhs) {
+  if (lhs.GetTypeSystem() != rhs.GetTypeSystem())
+    return false;
+  auto *lhs_decl = static_cast<swift::Decl *>(lhs.GetOpaqueDecl());
+  auto *rhs_decl = static_cast<swift::Decl *>(rhs.GetOpaqueDecl());
   swift::DeclKind lhs_kind = lhs_decl->getKind();
   swift::DeclKind rhs_kind = rhs_decl->getKind();
   if (lhs_kind != rhs_kind)
@@ -131,9 +135,10 @@ bool SwiftPersistentExpressionState::SwiftDeclMap::DeclsAreEquivalent(
 }
 
 void SwiftPersistentExpressionState::SwiftDeclMap::AddDecl(
-    swift::ValueDecl *value_decl, bool check_existing, llvm::StringRef alias) {
-  llvm::StringRef name;
+    CompilerDecl decl, bool check_existing, llvm::StringRef alias) {
+  auto *value_decl = static_cast<swift::ValueDecl *>(decl.GetOpaqueDecl());
 
+  llvm::StringRef name;
   if (alias.empty())
     name = value_decl->getBaseName().getIdentifier().str();
   else
@@ -141,35 +146,34 @@ void SwiftPersistentExpressionState::SwiftDeclMap::AddDecl(
 
   auto it = m_swift_decls.find(name);
   if (it == m_swift_decls.end()) {
-    m_swift_decls.insert({name, {value_decl}});
+    m_swift_decls.insert({name, {decl}});
     return;
   }
 
-  llvm::SmallVectorImpl<swift::ValueDecl *> &decls = it->second;
+  llvm::SmallVectorImpl<CompilerDecl> &decls = it->second;
   if (check_existing)
     decls.erase(std::remove_if(decls.begin(), decls.end(),
-                               [&value_decl](swift::ValueDecl *cur_decl) {
-                                 return DeclsAreEquivalent(cur_decl,
-                                                           value_decl);
+                               [&decl](CompilerDecl cur_decl) {
+                                 return DeclsAreEquivalent(cur_decl, decl);
                                }),
                 decls.end());
 
-  decls.push_back(value_decl);
+  decls.push_back(decl);
 }
 
 bool SwiftPersistentExpressionState::SwiftDeclMap::FindMatchingDecls(
     llvm::StringRef name,
-    const std::vector<swift::ValueDecl *> &excluding_equivalents,
-    std::vector<swift::ValueDecl *> &matches) {
+    const std::vector<CompilerDecl> &excluding_equivalents,
+    std::vector<CompilerDecl> &matches) {
   auto it = m_swift_decls.find(name);
   if (it == m_swift_decls.end())
     return false;
-  llvm::SmallVectorImpl<swift::ValueDecl *> &decls = it->second;
+  llvm::SmallVectorImpl<CompilerDecl> &decls = it->second;
 
   size_t start_num_items = matches.size();
   for (auto &cur_decl : decls)
     if (std::none_of(excluding_equivalents.begin(), excluding_equivalents.end(),
-                     [&](swift::ValueDecl *decl) {
+                     [&](CompilerDecl decl) {
                        return DeclsAreEquivalent(cur_decl, decl);
                      }))
       matches.push_back(cur_decl);
@@ -185,12 +189,12 @@ void SwiftPersistentExpressionState::SwiftDeclMap::CopyDeclsTo(
 }
 
 void SwiftPersistentExpressionState::RegisterSwiftPersistentDecl(
-    swift::ValueDecl *value_decl) {
+    CompilerDecl value_decl) {
   m_swift_persistent_decls.AddDecl(value_decl, true, {});
 }
 
 void SwiftPersistentExpressionState::RegisterSwiftPersistentDeclAlias(
-    swift::ValueDecl *value_decl, llvm::StringRef name) {
+    CompilerDecl value_decl, llvm::StringRef name) {
   m_swift_persistent_decls.AddDecl(value_decl, true, name);
 }
 
@@ -201,8 +205,8 @@ void SwiftPersistentExpressionState::CopyInSwiftPersistentDecls(
 
 bool SwiftPersistentExpressionState::GetSwiftPersistentDecls(
     llvm::StringRef name,
-    const std::vector<swift::ValueDecl *> &excluding_equivalents,
-    std::vector<swift::ValueDecl *> &matches) {
+    const std::vector<CompilerDecl> &excluding_equivalents,
+    std::vector<CompilerDecl> &matches) {
   return m_swift_persistent_decls.FindMatchingDecls(name, excluding_equivalents,
                                                     matches);
 }

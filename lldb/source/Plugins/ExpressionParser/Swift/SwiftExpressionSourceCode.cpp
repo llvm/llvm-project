@@ -617,7 +617,7 @@ Status SwiftExpressionSourceCode::GetText(
       status.SetErrorString("no persistent state");
       return status;
     }
-    std::vector<swift::ValueDecl *> persistent_results;
+    std::vector<CompilerDecl> persistent_results;
     // Check if we have already declared the playground stub debug functions
     persistent_state->GetSwiftPersistentDecls("__builtin_log_with_id", {},
                                               persistent_results);
