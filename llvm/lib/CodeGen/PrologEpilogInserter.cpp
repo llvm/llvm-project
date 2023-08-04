@@ -1531,9 +1531,6 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
   const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
   const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
 
-  if (RS && FrameIndexEliminationScavenging)
-    RS->enterBasicBlock(*BB);
-
   bool InsideCallSequence = false;
 
   for (MachineBasicBlock::iterator I = BB->begin(); I != BB->end(); ) {
@@ -1567,8 +1564,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
       // If this instruction has a FrameIndex operand, we need to
       // use that target machine register info object to eliminate
       // it.
-      TRI.eliminateFrameIndex(MI, SPAdj, i,
-                              FrameIndexEliminationScavenging ?  RS : nullptr);
+      TRI.eliminateFrameIndex(MI, SPAdj, i);
 
       // Reset the iterator if we were at the beginning of the BB.
       if (AtBeginning) {
@@ -1590,10 +1586,7 @@ void PEI::replaceFrameIndices(MachineBasicBlock *BB, MachineFunction &MF,
     if (DidFinishLoop && InsideCallSequence)
       SPAdj += TII.getSPAdjust(MI);
 
-    if (DoIncr && I != BB->end()) ++I;
-
-    // Update register states.
-    if (RS && FrameIndexEliminationScavenging && DidFinishLoop)
-      RS->forward(MI);
+    if (DoIncr && I != BB->end())
+      ++I;
   }
 }

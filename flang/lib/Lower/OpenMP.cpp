@@ -518,8 +518,10 @@ public:
   bool processCopyin() const;
   bool processDepend(llvm::SmallVectorImpl<mlir::Attribute> &dependTypeOperands,
                      llvm::SmallVectorImpl<mlir::Value> &dependOperands) const;
-  bool processIf(Fortran::lower::StatementContext &stmtCtx,
-                 mlir::Value &result) const;
+  bool
+  processIf(Fortran::lower::StatementContext &stmtCtx,
+            Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
+            mlir::Value &result) const;
   bool
   processLink(llvm::SmallVectorImpl<DeclareTargetCapturePair> &result) const;
   bool processMap(llvm::SmallVectorImpl<mlir::Value> &mapOperands,
@@ -1049,11 +1051,19 @@ genDependKindAttr(fir::FirOpBuilder &firOpBuilder,
                                               pbKind);
 }
 
-static mlir::Value
-getIfClauseOperand(Fortran::lower::AbstractConverter &converter,
-                   Fortran::lower::StatementContext &stmtCtx,
-                   const Fortran::parser::OmpClause::If *ifClause,
-                   mlir::Location clauseLocation) {
+static mlir::Value getIfClauseOperand(
+    Fortran::lower::AbstractConverter &converter,
+    Fortran::lower::StatementContext &stmtCtx,
+    const Fortran::parser::OmpClause::If *ifClause,
+    Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
+    mlir::Location clauseLocation) {
+  // Only consider the clause if it's intended for the given directive.
+  auto &directive = std::get<
+      std::optional<Fortran::parser::OmpIfClause::DirectiveNameModifier>>(
+      ifClause->v.t);
+  if (directive && directive.value() != directiveName)
+    return nullptr;
+
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
   auto &expr = std::get<Fortran::parser::ScalarLogicalExpr>(ifClause->v.t);
   mlir::Value ifVal = fir::getBase(
@@ -1572,17 +1582,25 @@ bool ClauseProcessor::processDepend(
       });
 }
 
-bool ClauseProcessor::processIf(Fortran::lower::StatementContext &stmtCtx,
-                                mlir::Value &result) const {
-  return findRepeatableClause<ClauseTy::If>(
+bool ClauseProcessor::processIf(
+    Fortran::lower::StatementContext &stmtCtx,
+    Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName,
+    mlir::Value &result) const {
+  bool found = false;
+  findRepeatableClause<ClauseTy::If>(
       [&](const ClauseTy::If *ifClause,
           const Fortran::parser::CharBlock &source) {
         mlir::Location clauseLocation = converter.genLocation(source);
-        // TODO Consider DirectiveNameModifier of the `ifClause` to only search
-        // for an applicable 'if' clause.
-        result =
-            getIfClauseOperand(converter, stmtCtx, ifClause, clauseLocation);
+        mlir::Value operand = getIfClauseOperand(converter, stmtCtx, ifClause,
+                                                 directiveName, clauseLocation);
+        // Assume that, at most, a single 'if' clause will be applicable to the
+        // given directive.
+        if (operand) {
+          result = operand;
+          found = true;
+        }
       });
+  return found;
 }
 
 bool ClauseProcessor::processLink(
@@ -2109,8 +2127,30 @@ static void createTargetOp(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Location> useDeviceLocs;
   llvm::SmallVector<const Fortran::semantics::Symbol *> useDeviceSymbols;
 
+  Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName;
+  switch (directive) {
+  case llvm::omp::Directive::OMPD_target:
+    directiveName = Fortran::parser::OmpIfClause::DirectiveNameModifier::Target;
+    break;
+  case llvm::omp::Directive::OMPD_target_data:
+    directiveName =
+        Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetData;
+    break;
+  case llvm::omp::Directive::OMPD_target_enter_data:
+    directiveName =
+        Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetEnterData;
+    break;
+  case llvm::omp::Directive::OMPD_target_exit_data:
+    directiveName =
+        Fortran::parser::OmpIfClause::DirectiveNameModifier::TargetExitData;
+    break;
+  default:
+    TODO(currentLocation, "OMPD_target directive unknown");
+    break;
+  }
+
   ClauseProcessor cp(converter, opClauseList);
-  cp.processIf(stmtCtx, ifClauseOperand);
+  cp.processIf(stmtCtx, directiveName, ifClauseOperand);
   cp.processDevice(stmtCtx, deviceOperand);
   cp.processThreadLimit(stmtCtx, threadLmtOperand);
   cp.processNowait(nowaitAttr);
@@ -2157,8 +2197,6 @@ static void createTargetOp(Fortran::lower::AbstractConverter &converter,
     firOpBuilder.create<mlir::omp::ExitDataOp>(currentLocation, ifClauseOperand,
                                                deviceOperand, nowaitAttr,
                                                mapOperands, mapTypesArrayAttr);
-  } else {
-    TODO(currentLocation, "OMPD_target directive unknown");
   }
 }
 
@@ -2256,7 +2294,9 @@ createCombinedParallelOp(Fortran::lower::AbstractConverter &converter,
   // 1. default
   // Note: rest of the clauses are handled when the inner operation is created
   ClauseProcessor cp(converter, opClauseList);
-  cp.processIf(stmtCtx, ifClauseOperand);
+  cp.processIf(stmtCtx,
+               Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel,
+               ifClauseOperand);
   cp.processNumThreads(stmtCtx, numThreadsClauseOperand);
   cp.processProcBind(procBindKindAttr);
 
@@ -2315,7 +2355,9 @@ static void genOMP(Fortran::lower::AbstractConverter &converter,
   cp.processCollapse(currentLocation, eval, lowerBound, upperBound, step, iv,
                      loopVarTypeSize);
   cp.processScheduleChunk(stmtCtx, scheduleChunkClauseOperand);
-  cp.processIf(stmtCtx, ifClauseOperand);
+  cp.processIf(stmtCtx,
+               Fortran::parser::OmpIfClause::DirectiveNameModifier::Simd,
+               ifClauseOperand);
   cp.processReduction(currentLocation, reductionVars, reductionDeclSymbols);
   cp.processSimdlen(simdlenClauseOperand);
   cp.processSafelen(safelenClauseOperand);
@@ -2416,10 +2458,38 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   llvm::SmallVector<mlir::Attribute> dependTypeOperands, reductionDeclSymbols;
   mlir::UnitAttr nowaitAttr, untiedAttr, mergeableAttr;
 
+  // Use placeholder value to avoid uninitialized `directiveName` compiler
+  // errors. The 'if clause' obtained won't be used for these directives.
+  Fortran::parser::OmpIfClause::DirectiveNameModifier directiveName =
+      Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel;
+  switch (blockDirective.v) {
+  case llvm::omp::OMPD_parallel:
+    directiveName =
+        Fortran::parser::OmpIfClause::DirectiveNameModifier::Parallel;
+    break;
+  case llvm::omp::OMPD_task:
+    directiveName = Fortran::parser::OmpIfClause::DirectiveNameModifier::Task;
+    break;
+  // Target-related 'if' clauses handled by createTargetOp().
+  case llvm::omp::OMPD_target:
+  case llvm::omp::OMPD_target_data:
+  // These block directives do not accept an 'if' clause.
+  case llvm::omp::OMPD_master:
+  case llvm::omp::OMPD_single:
+  case llvm::omp::OMPD_ordered:
+  case llvm::omp::OMPD_taskgroup:
+    break;
+  default:
+    TODO(currentLocation,
+         "Unhandled block directive (" +
+             llvm::omp::getOpenMPDirectiveName(blockDirective.v) + ")");
+    break;
+  }
+
   const auto &opClauseList =
       std::get<Fortran::parser::OmpClauseList>(beginBlockDirective.t);
   ClauseProcessor cp(converter, opClauseList);
-  cp.processIf(stmtCtx, ifClauseOperand);
+  cp.processIf(stmtCtx, directiveName, ifClauseOperand);
   cp.processNumThreads(stmtCtx, numThreadsClauseOperand);
   cp.processProcBind(procBindKindAttr);
   cp.processAllocate(allocatorOperands, allocateOperands);
@@ -2524,8 +2594,6 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   } else if (blockDirective.v == llvm::omp::OMPD_target_data) {
     createTargetOp(converter, opClauseList, blockDirective.v, currentLocation,
                    &eval);
-  } else {
-    TODO(currentLocation, "Unhandled block directive");
   }
 }
 

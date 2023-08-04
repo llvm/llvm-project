@@ -132,14 +132,20 @@ public:
   /// integer type with the size configured for this type converter.
   Type getIndexType();
 
-  /// Returns true if using opaque pointers was enabled in the lowering options.
+  /// Gets the LLVM representation of the index type that matches the MemRefType
+  /// `t`. The returned type is an integer type with the size configured for
+  /// this type converter.
+  Type getIndexTypeMatchingMemRef(MemRefType t);
+
+  /// Returns true if using opaque pointers was enabled in the lowering
+  /// options.
   bool useOpaquePointers() const { return getOptions().useOpaquePointers; }
 
   /// Creates an LLVM pointer type with the given element type and address
   /// space.
-  /// This function is meant to be used in code supporting both typed and opaque
-  /// pointers, as it will create an opaque pointer with the given address space
-  /// if opaque pointers are enabled in the lowering options.
+  /// This function is meant to be used in code supporting both typed and
+  /// opaque pointers, as it will create an opaque pointer with the given
+  /// address space if opaque pointers are enabled in the lowering options.
   LLVM::LLVMPointerType getPointerType(Type elementType,
                                        unsigned addressSpace = 0);
 
@@ -170,13 +176,13 @@ protected:
 
 private:
   /// Convert a function type.  The arguments and results are converted one by
-  /// one.  Additionally, if the function returns more than one value, pack the
-  /// results into an LLVM IR structure type so that the converted function type
-  /// returns at most one result.
+  /// one.  Additionally, if the function returns more than one value, pack
+  /// the results into an LLVM IR structure type so that the converted
+  /// function type returns at most one result.
   Type convertFunctionType(FunctionType type);
 
-  /// Convert the index type.  Uses llvmModule data layout to create an integer
-  /// of the pointer bitwidth.
+  /// Convert the index type.  Uses llvmModule data layout to create an
+  /// integer of the pointer bitwidth.
   Type convertIndexType(IndexType type);
 
   /// Convert an integer type `i*` to `!llvm<"i*">`.
@@ -184,12 +190,13 @@ private:
 
   /// Convert a floating point type: `f16` to `f16`, `f32` to
   /// `f32` and `f64` to `f64`.  `bf16` is not supported
-  /// by LLVM. 8-bit float types are converted to 8-bit integers as this is how
-  /// all LLVM backends that support them currently represent them.
+  /// by LLVM. 8-bit float types are converted to 8-bit integers as this is
+  /// how all LLVM backends that support them currently represent them.
   Type convertFloatType(FloatType type);
 
-  /// Convert complex number type: `complex<f16>` to `!llvm<"{ half, half }">`,
-  /// `complex<f32>` to `!llvm<"{ float, float }">`, and `complex<f64>` to
+  /// Convert complex number type: `complex<f16>` to `!llvm<"{ half, half
+  /// }">`, `complex<f32>` to `!llvm<"{ float, float }">`, and `complex<f64>`
+  /// to
   /// `!llvm<"{ double, double }">`. `complex<bf16>` is not supported.
   Type convertComplexType(ComplexType type);
 
@@ -197,10 +204,10 @@ private:
   Type convertMemRefType(MemRefType type);
 
   /// Convert a memref type into a list of LLVM IR types that will form the
-  /// memref descriptor. If `unpackAggregates` is true the `sizes` and `strides`
-  /// arrays in the descriptors are unpacked to individual index-typed elements,
-  /// else they are are kept as rank-sized arrays of index type. In particular,
-  /// the list will contain:
+  /// memref descriptor. If `unpackAggregates` is true the `sizes` and
+  /// `strides` arrays in the descriptors are unpacked to individual
+  /// index-typed elements, else they are are kept as rank-sized arrays of
+  /// index type. In particular, the list will contain:
   /// - two pointers to the memref element type, followed by
   /// - an index-typed offset, followed by
   /// - (if unpackAggregates = true)
@@ -220,9 +227,9 @@ private:
   SmallVector<Type, 5> getMemRefDescriptorFields(MemRefType type,
                                                  bool unpackAggregates);
 
-  /// Convert an unranked memref type into a list of non-aggregate LLVM IR types
-  /// that will form the unranked memref descriptor. In particular, this list
-  /// contains:
+  /// Convert an unranked memref type into a list of non-aggregate LLVM IR
+  /// types that will form the unranked memref descriptor. In particular, this
+  /// list contains:
   /// - an integer rank, followed by
   /// - a pointer to the memref descriptor struct.
   /// For example, memref<*xf32> is converted to the following list:
