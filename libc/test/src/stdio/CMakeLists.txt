@@ -135,9 +135,6 @@ add_libc_unittest(
     libc.src.stdio.snprintf
 )
 
-list(APPEND fprintf_test_deps
-      libc.src.stdio.fprintf
-)
 if(LLVM_LIBC_FULL_BUILD)
 # In fullbuild mode, fprintf's tests use the internal FILE for other functions.
  list(APPEND fprintf_test_deps
@@ -158,6 +155,7 @@ add_libc_unittest(
   SRCS
     fprintf_test.cpp
   DEPENDS
+    libc.src.stdio.fprintf
     ${fprintf_test_deps}
   COMPILE_OPTIONS
     ${fprintf_test_copts}
@@ -171,6 +169,50 @@ add_libc_unittest(
     printf_test.cpp
   DEPENDS
     libc.src.stdio.printf
+)
+
+add_fp_unittest(
+  vsprintf_test
+  UNIT_TEST_ONLY
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    vsprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.vsprintf
+)
+
+add_libc_unittest(
+  vsnprintf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    vsnprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.vsnprintf
+)
+
+add_libc_unittest(
+  vfprintf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    vfprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.vfprintf
+    ${fprintf_test_deps}
+  COMPILE_OPTIONS
+    ${fprintf_test_copts}
+)
+
+add_libc_unittest(
+  vprintf_test
+  SUITE
+    libc_stdio_unittests
+  SRCS
+    vprintf_test.cpp
+  DEPENDS
+    libc.src.stdio.vprintf
 )
 
 add_libc_unittest(
