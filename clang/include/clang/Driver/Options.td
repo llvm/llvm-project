@@ -3593,8 +3593,9 @@ def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
     Flags<[NoXarchOption]>,
     HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
-def help : Flag<["-", "--"], "help">, Flags<[CC1Option,CC1AsOption, FC1Option,
-    FlangOption]>, HelpText<"Display available options">,
+def help : Flag<["-", "--"], "help">,
+    Flags<[CC1Option, CC1AsOption, FC1Option, FlangOption]>,
+    HelpText<"Display available options">,
     MarshallingInfoFlag<FrontendOpts<"ShowHelp">>;
 def ibuiltininc : Flag<["-"], "ibuiltininc">, Group<clang_i_Group>,
   HelpText<"Enable builtin #include directories even when -nostdinc is used "
@@ -4493,8 +4494,8 @@ def nostdincxx : Flag<["-"], "nostdinc++">, Flags<[CC1Option]>, Group<IncludePat
 def nostdlib : Flag<["-"], "nostdlib">, Group<Link_Group>;
 def nostdlibxx : Flag<["-"], "nostdlib++">;
 def object : Flag<["-"], "object">;
-def o : JoinedOrSeparate<["-"], "o">, Flags<[NoXarchOption,
-  CC1Option, CC1AsOption, FC1Option, FlangOption]>,
+def o : JoinedOrSeparate<["-"], "o">,
+  Flags<[NoXarchOption, CC1Option, CC1AsOption, FC1Option, FlangOption]>,
   HelpText<"Write output to <file>">, MetaVarName<"<file>">,
   MarshallingInfoString<FrontendOpts<"OutputFile">>;
 def object_file_name_EQ : Joined<["-"], "object-file-name=">, Flags<[CC1Option, CC1AsOption, CoreOption]>,
