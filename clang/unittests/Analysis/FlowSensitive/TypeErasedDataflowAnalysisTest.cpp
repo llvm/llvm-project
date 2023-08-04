@@ -415,7 +415,7 @@ public:
     if (const auto *E = selectFirst<CXXConstructExpr>(
             "call", match(cxxConstructExpr(HasSpecialBoolType).bind("call"), *S,
                           getASTContext()))) {
-      cast<StructValue>(Env.getValue(*E))
+      cast<RecordValue>(Env.getValue(*E))
           ->setProperty("is_set", Env.getBoolLiteralValue(false));
     } else if (const auto *E = selectFirst<CXXMemberCallExpr>(
                    "call", match(cxxMemberCallExpr(callee(cxxMethodDecl(ofClass(
@@ -423,9 +423,9 @@ public:
                                      .bind("call"),
                                  *S, getASTContext()))) {
       auto &ObjectLoc =
-          *cast<AggregateStorageLocation>(getImplicitObjectLocation(*E, Env));
+          *cast<RecordStorageLocation>(getImplicitObjectLocation(*E, Env));
 
-      refreshStructValue(ObjectLoc, Env)
+      refreshRecordValue(ObjectLoc, Env)
           .setProperty("is_set", Env.getBoolLiteralValue(true));
     }
   }
@@ -572,7 +572,7 @@ public:
         *S, getASTContext());
     if (const auto *E = selectFirst<CXXConstructExpr>(
             "construct", Matches)) {
-      cast<StructValue>(Env.getValue(*E))
+      cast<RecordValue>(Env.getValue(*E))
           ->setProperty("has_value", Env.getBoolLiteralValue(false));
     } else if (const auto *E =
                    selectFirst<CXXOperatorCallExpr>("operator", Matches)) {
@@ -580,7 +580,7 @@ public:
       auto *Object = E->getArg(0);
       assert(Object != nullptr);
 
-      refreshStructValue(*Object, Env)
+      refreshRecordValue(*Object, Env)
           .setProperty("has_value", Env.getBoolLiteralValue(true));
     }
   }

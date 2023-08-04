@@ -36,6 +36,7 @@
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/Support/RISCVISAInfo.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Instrumentation/HWAddressSanitizer.h"
 
@@ -45,6 +46,10 @@ using namespace llvm;
 
 STATISTIC(RISCVNumInstrsCompressed,
           "Number of RISC-V Compressed instructions emitted");
+
+namespace llvm {
+extern const SubtargetFeatureKV RISCVFeatureKV[RISCV::NumSubtargetFeatures];
+} // namespace llvm
 
 namespace {
 class RISCVAsmPrinter : public AsmPrinter {
@@ -83,6 +88,8 @@ public:
   void emitEndOfAsmFile(Module &M) override;
 
   void emitFunctionEntryLabel() override;
+  void emitDirectiveOptionArch();
+  bool isSameAttribute();
 
 private:
   void emitAttributes();
@@ -238,11 +245,45 @@ bool RISCVAsmPrinter::PrintAsmMemoryOperand(const MachineInstr *MI,
   return false;
 }
 
+void RISCVAsmPrinter::emitDirectiveOptionArch() {
+  RISCVTargetStreamer &RTS =
+      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  SmallVector<RISCVOptionArchArg> NeedEmitStdOptionArgs;
+  const MCSubtargetInfo &MCSTI = *TM.getMCSubtargetInfo();
+  for (const auto &Feature : RISCVFeatureKV) {
+    if (STI->hasFeature(Feature.Value) == MCSTI.hasFeature(Feature.Value))
+      continue;
+
+    if (!llvm::RISCVISAInfo::isSupportedExtensionFeature(Feature.Key))
+      continue;
+
+    auto Delta = STI->hasFeature(Feature.Value) ? RISCVOptionArchArgType::Plus
+                                                : RISCVOptionArchArgType::Minus;
+    NeedEmitStdOptionArgs.emplace_back(Delta, Feature.Key);
+  }
+  if (!NeedEmitStdOptionArgs.empty())
+    RTS.emitDirectiveOptionArch(NeedEmitStdOptionArgs);
+}
+
+bool RISCVAsmPrinter::isSameAttribute() {
+  const MCSubtargetInfo &MCSTI = *TM.getMCSubtargetInfo();
+  return MCSTI.getFeatureBits() == STI->getFeatureBits();
+}
+
 bool RISCVAsmPrinter::runOnMachineFunction(MachineFunction &MF) {
   STI = &MF.getSubtarget<RISCVSubtarget>();
+  RISCVTargetStreamer &RTS =
+      static_cast<RISCVTargetStreamer &>(*OutStreamer->getTargetStreamer());
+  if (!isSameAttribute()) {
+    RTS.emitDirectiveOptionPush();
+    emitDirectiveOptionArch();
+  }
 
   SetupMachineFunction(MF);
   emitFunctionBody();
+
+  if (!isSameAttribute())
+    RTS.emitDirectiveOptionPop();
   return false;
 }
 

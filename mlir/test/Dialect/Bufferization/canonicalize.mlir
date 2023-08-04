@@ -309,3 +309,17 @@ func.func @dealloc_canonicalize_retained_and_deallocated(%arg0: memref<2xi32>, %
 //  CHECK-SAME: ([[ARG0:%.+]]: memref<2xi32>, [[ARG1:%.+]]: i1, [[ARG2:%.+]]: memref<2xi32>)
 //  CHECK-NEXT: [[V0:%.+]] = bufferization.dealloc ([[ARG2]] : memref<2xi32>) if ([[ARG1]]) retain ([[ARG0]] : memref<2xi32>)
 //  CHECK-NEXT: return [[ARG1]], [[ARG1]], [[V0]] :
+
+// -----
+
+func.func @dealloc_always_false_condition(%arg0: memref<2xi32>, %arg1: memref<2xi32>, %arg2: i1) -> (i1, i1) {
+  %false = arith.constant false
+  %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xi32>, memref<2xi32>) if (%false, %arg2)
+  return %0#0, %0#1 : i1, i1
+}
+
+// CHECK-LABEL: func @dealloc_always_false_condition
+//  CHECK-SAME: ([[ARG0:%.+]]: memref<2xi32>, [[ARG1:%.+]]: memref<2xi32>, [[ARG2:%.+]]: i1)
+//  CHECK-NEXT: [[FALSE:%.+]] = arith.constant false
+//  CHECK-NEXT: [[V0:%.+]] = bufferization.dealloc ([[ARG1]] : {{.*}}) if ([[ARG2]])
+//  CHECK-NEXT: return [[FALSE]], [[V0]] :

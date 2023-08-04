@@ -26,6 +26,28 @@ namespace mlir {
 using namespace mlir;
 
 namespace {
+/// Adjusts `indices` as follows for a given tile slice and returns them in
+/// `outIndices`:
+///   rank 1: (indices[0] + (tileSliceIndex * tileSliceNumElts))
+///   rank 2: (indices[0] + tileSliceIndex, indices[1])
+void getMemrefIndices(ValueRange indices, unsigned rank, Value tileSliceIndex,
+                      Value tileSliceNumElts,
+                      SmallVectorImpl<Value> &outIndices, Location loc,
+                      PatternRewriter &rewriter) {
+  assert((rank == 1 || rank == 2) && "memref has unexpected rank!");
+
+  auto tileSliceOffset = tileSliceIndex;
+  if (rank == 1)
+    tileSliceOffset =
+        rewriter.create<arith::MulIOp>(loc, tileSliceOffset, tileSliceNumElts);
+
+  auto baseIndexPlusTileSliceOffset =
+      rewriter.create<arith::AddIOp>(loc, indices[0], tileSliceOffset);
+  outIndices.push_back(baseIndexPlusTileSliceOffset);
+
+  if (rank == 2)
+    outIndices.push_back(indices[1]);
+}
 
 /// Lower `arm_sme.tile_load` to a loop over the tile slices and load each slice
 /// using `arm_sme.load_tile_slice`.
@@ -77,6 +99,9 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
     auto vscale =
         rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
     auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    // This describes both the number of ZA tile slices and the number of
+    // elements in a vector of SVL bits for a given element type (SVL_B, SVL_H,
+    // ..., SVL_Q).
     auto numTileSlices =
         rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
     auto forOp =
@@ -84,13 +109,16 @@ struct TileLoadOpConversion : public OpRewritePattern<arm_sme::TileLoadOp> {
 
     rewriter.setInsertionPointToStart(forOp.getBody());
 
+    // Create 'arm_sme.load_tile_slice' to load tile slice from memory into
+    // tile.
+    SmallVector<Value> memrefIndices;
     auto tileSliceIndex = forOp.getInductionVar();
-    // TODO: use indices
-    // Create 'arm_sme.load_tile_slice' to load tile slice from
-    // memory into tile.
-    rewriter.create<arm_sme::LoadTileSliceOp>(
-        loc, tileType, tileLoadOp.getBase(), tile, tileSliceIndex,
-        tileSliceIndex);
+    getMemrefIndices(tileLoadOp.getIndices(),
+                     tileLoadOp.getMemRefType().getRank(), tileSliceIndex,
+                     numTileSlices, memrefIndices, loc, rewriter);
+    rewriter.create<arm_sme::LoadTileSliceOp>(loc, tileType,
+                                              tileLoadOp.getBase(), tile,
+                                              memrefIndices, tileSliceIndex);
 
     rewriter.setInsertionPointAfter(forOp);
 
@@ -139,6 +167,9 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
     auto vscale =
         rewriter.create<vector::VectorScaleOp>(loc, rewriter.getIndexType());
     auto lowerBound = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+    // This describes both the number of ZA tile slices and the number of
+    // elements in a vector of SVL bits for a given element type (SVL_B, SVL_H,
+    // ..., SVL_Q).
     auto numTileSlices =
         rewriter.create<arith::MulIOp>(loc, minTileSlices, vscale);
     auto forOp =
@@ -146,11 +177,14 @@ struct TileStoreOpConversion : public OpRewritePattern<arm_sme::TileStoreOp> {
 
     rewriter.setInsertionPointToStart(forOp.getBody());
 
+    SmallVector<Value> memrefIndices;
     auto tileSliceIndex = forOp.getInductionVar();
-    // TODO: use indices
+    getMemrefIndices(tileStoreOp.getIndices(),
+                     tileStoreOp.getMemRefType().getRank(), tileSliceIndex,
+                     numTileSlices, memrefIndices, loc, rewriter);
     rewriter.replaceOpWithNewOp<arm_sme::StoreTileSliceOp>(
         tileStoreOp, tileStoreOp.getValueToStore(), tileSliceIndex,
-        tileStoreOp.getBase(), tileSliceIndex);
+        tileStoreOp.getBase(), memrefIndices);
 
     return success();
   }

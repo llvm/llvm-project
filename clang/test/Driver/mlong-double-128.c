@@ -8,8 +8,8 @@
 
 // CHECK: "-mlong-double-128"
 
-// RUN: %clang -target aarch64 -c -### %s -mlong-double-128 2>&1 | FileCheck --check-prefix=ERR %s
-// RUN: %clang -target powerpc -c -### %s -mlong-double-80 2>&1 | FileCheck --check-prefix=ERR2 %s
+// RUN: not %clang -target aarch64 -c -### %s -mlong-double-128 2>&1 | FileCheck --check-prefix=ERR %s
+// RUN: not %clang -target powerpc -c -### %s -mlong-double-80 2>&1 | FileCheck --check-prefix=ERR2 %s
 
 // ERR: error: unsupported option '-mlong-double-128' for target 'aarch64'
 // ERR2: error: unsupported option '-mlong-double-80' for target 'powerpc'

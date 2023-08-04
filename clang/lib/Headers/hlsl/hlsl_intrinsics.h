@@ -476,5 +476,61 @@ double3 min(double3, double3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_min)))
 double4 min(double4, double4);
 
+// reversebits builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int16_t reversebits(int16_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int16_t2 reversebits(int16_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int16_t3 reversebits(int16_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int16_t4 reversebits(int16_t4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint16_t reversebits(uint16_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint16_t2 reversebits(uint16_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint16_t3 reversebits(uint16_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint16_t4 reversebits(uint16_t4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse))) int
+reversebits(int);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int2 reversebits(int2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int3 reversebits(int3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int4 reversebits(int4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint reversebits(uint);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint2 reversebits(uint2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint3 reversebits(uint3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint4 reversebits(uint4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int64_t reversebits(int64_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int64_t2 reversebits(int64_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int64_t3 reversebits(int64_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+int64_t4 reversebits(int64_t4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint64_t reversebits(uint64_t);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint64_t2 reversebits(uint64_t2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint64_t3 reversebits(uint64_t3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
+uint64_t4 reversebits(uint64_t4);
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

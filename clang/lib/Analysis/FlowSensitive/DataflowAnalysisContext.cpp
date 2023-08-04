@@ -67,7 +67,7 @@ StorageLocation &DataflowAnalysisContext::createStorageLocation(QualType Type) {
       else
         FieldLocs.insert({Field, &createStorageLocation(
                                      Field->getType().getNonReferenceType())});
-    return arena().create<AggregateStorageLocation>(Type, std::move(FieldLocs));
+    return arena().create<RecordStorageLocation>(Type, std::move(FieldLocs));
   }
   return arena().create<ScalarStorageLocation>(Type);
 }

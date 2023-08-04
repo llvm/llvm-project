@@ -35,7 +35,7 @@
 // "-dll"
 
 // RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /LD /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-DLL %s
-// RUN: %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /LDd /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-DLL %s
+// RUN: not %clang_cl -m32 -arch:IA32 --target=i386-pc-win32 /LDd /Tc%s -fuse-ld=link -### -fsanitize=address 2>&1 | FileCheck --check-prefix=ASAN-DLL %s
 // ASAN-DLL: link.exe
 // ASAN-DLL: "-dll"
 // ASAN-DLL: "-debug"
@@ -48,7 +48,7 @@
 // DEBUG: "-debug"
 
 // Don't pass through /libpath: if it's not after a /link flag:
-// RUN: %clang_cl /Tc%s /libpath:foo -fuse-ld=link -### /link /libpath:bar 2>&1 | FileCheck --check-prefix=LIBPATH %s
+// RUN: not %clang_cl /Tc%s /libpath:foo -fuse-ld=link -### /link /libpath:bar 2>&1 | FileCheck --check-prefix=LIBPATH %s
 // LIBPATH: error: no such file or directory: '/libpath:foo'
 // LIBPATH: libpath:bar
 

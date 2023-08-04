@@ -208,6 +208,10 @@ Operation::operand_range FunctionCallOp::getArgOperands() {
   return getArguments();
 }
 
+MutableOperandRange FunctionCallOp::getArgOperandsMutable() {
+  return getArgumentsMutable();
+}
+
 //===----------------------------------------------------------------------===//
 // spirv.mlir.loop
 //===----------------------------------------------------------------------===//

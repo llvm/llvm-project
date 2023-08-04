@@ -133,6 +133,13 @@ public:
   /// (see IntegerRelation::findIntegerSample()).
   bool isEqual(const IntegerRelation &other) const;
 
+  /// Perform a quick equality check on `this` and `other`. The relations are
+  /// equal if the check return true, but may or may not be equal if the check
+  /// returns false. The equality check is performed in a plain manner, by
+  /// comparing if all the equalities and inequalities in `this` and `other`
+  /// are the same.
+  bool isPlainEqual(const IntegerRelation &other) const;
+
   /// Return whether this is a subset of the given IntegerRelation. This is
   /// integer-exact and somewhat expensive, since it uses the integer emptiness
   /// check (see IntegerRelation::findIntegerSample()).

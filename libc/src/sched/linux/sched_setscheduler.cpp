@@ -24,7 +24,7 @@ LLVM_LIBC_FUNCTION(int, sched_setscheduler,
     libc_errno = -ret;
     return -1;
   }
-  return 0;
+  return ret;
 }
 
 } // namespace __llvm_libc

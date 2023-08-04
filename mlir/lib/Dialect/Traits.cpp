@@ -195,17 +195,10 @@ static std::tuple<bool, bool> hasTensorOrVectorType(iterator_range types) {
 
 static bool isCompatibleInferredReturnShape(ArrayRef<int64_t> inferred,
                                             ArrayRef<int64_t> existing) {
+  // If both interred and existing dimensions are static, they must be equal.
   auto isCompatible = [](int64_t inferredDim, int64_t existingDim) {
-    // The following criterion is used to determine the validity of an existing
-    // dimension:
-    //
-    // inferredDim  existingDim  Behavior
-    // -----------  -----------  --------
-    // dynamic      dynamic      OK
-    // dynamic      static       Error
-    // static       dynamic      OK
-    // static       static       OK if equal
-    return ShapedType::isDynamic(existingDim) || inferredDim == existingDim;
+    return ShapedType::isDynamic(existingDim) ||
+           ShapedType::isDynamic(inferredDim) || inferredDim == existingDim;
   };
   if (inferred.size() != existing.size())
     return false;

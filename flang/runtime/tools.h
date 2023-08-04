@@ -381,5 +381,18 @@ inline const char *FindCharacter(const char *data, char ch, std::size_t chars) {
       std::memchr(data, static_cast<int>(ch), chars));
 }
 
+// Copy payload data from one allocated descriptor to another.
+// Assumes element counts and element sizes match, and that both
+// descriptors are allocated.
+void ShallowCopyDiscontiguousToDiscontiguous(
+    const Descriptor &to, const Descriptor &from);
+void ShallowCopyDiscontiguousToContiguous(
+    const Descriptor &to, const Descriptor &from);
+void ShallowCopyContiguousToDiscontiguous(
+    const Descriptor &to, const Descriptor &from);
+void ShallowCopy(const Descriptor &to, const Descriptor &from,
+    bool toIsContiguous, bool fromIsContiguous);
+void ShallowCopy(const Descriptor &to, const Descriptor &from);
+
 } // namespace Fortran::runtime
 #endif // FORTRAN_RUNTIME_TOOLS_H_

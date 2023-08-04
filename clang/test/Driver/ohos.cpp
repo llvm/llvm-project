@@ -25,7 +25,7 @@
 // CHECK: clang_rt.crtend.o
 // CHECK: crtn.o
 
-// RUN: %clangxx %s -### --target=arm-unknown-liteos -stdlib=libstdc++ 2>&1 \
+// RUN: not %clangxx %s -### --target=arm-unknown-liteos -stdlib=libstdc++ 2>&1 \
 // RUN:     | FileCheck %s -check-prefix=CHECK-STDLIB
 // CHECK-STDLIB: error: invalid library name in argument '-stdlib=libstdc++'
 

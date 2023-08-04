@@ -8,7 +8,6 @@ config.bits = "@ASAN_ABI_TEST_BITS@"
 config.arm_thumb = "@COMPILER_RT_ARM_THUMB@"
 config.apple_platform = "@ASAN_ABI_TEST_APPLE_PLATFORM@"
 config.apple_platform_min_deployment_target_flag = "@ASAN_ABI_TEST_MIN_DEPLOYMENT_TARGET_FLAG@"
-config.asan_abi_dynamic = @ASAN_ABI_TEST_DYNAMIC@
 config.target_arch = "@ASAN_ABI_TEST_TARGET_ARCH@"
 
 # Load common config for all compiler-rt lit tests.

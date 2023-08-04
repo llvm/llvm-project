@@ -800,11 +800,22 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange map_operands,
                std::underlying_type_t<llvm::omp::OpenMPOffloadMappingFlags>>(
                flag);
   };
-  if (!map_types.has_value())
-    return success();
+  if (!map_types) {
+    if (!map_operands.empty())
+      return emitError(op->getLoc(), "missing mapTypes");
+    else
+      return success();
+  }
+
+  if (map_operands.empty() && !map_types->empty())
+    return emitError(op->getLoc(), "missing mapOperands");
+
+  if (map_types->empty() && !map_operands.empty())
+    return emitError(op->getLoc(), "missing mapTypes");
 
   if (map_operands.size() != map_types->size())
-    return failure();
+    return emitError(op->getLoc(),
+                     "mismatch in number of mapOperands and mapTypes");
 
   for (const auto &mapTypeOp : *map_types) {
     int64_t mapTypeBits = 0x00;
@@ -835,6 +846,11 @@ static LogicalResult verifyMapClause(Operation *op, OperandRange map_operands,
 }
 
 LogicalResult DataOp::verify() {
+  if (getMapOperands().empty() && getUseDevicePtr().empty() &&
+      getUseDeviceAddr().empty()) {
+    return ::emitError(this->getLoc(), "At least one of map, useDevicePtr, or "
+                                       "useDeviceAddr operand must be present");
+  }
   return verifyMapClause(*this, getMapOperands(), getMapTypes());
 }
 

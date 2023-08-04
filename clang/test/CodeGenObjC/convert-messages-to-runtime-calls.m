@@ -28,6 +28,11 @@ void test1(id x) {
   // MSGS: {{call.*@objc_msgSend}}
   // CALLS: {{call.*@objc_alloc}}
   // CALLS: {{call.*@objc_allocWithZone}}
+
+  // Note that calls to the intrinsics are not allowed for
+  // retain/release/autorelease they're marked `thisreturn`, which isn't
+  // guaranteed to be true for classes that define their own `-retain`, for
+  // example. Be sure to keep these as normal function calls:
   // CALLS: {{call.*@objc_retain}}
   // CALLS: {{call.*@objc_release}}
   // CALLS: {{tail call.*@objc_autorelease}}

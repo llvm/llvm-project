@@ -62,6 +62,16 @@ TEST(LlvmLibcStringTest, InitializeCStringWithSize) {
   ASSERT_EQ(s.back(), 'b');
 }
 
+TEST(LlvmLibcStringTest, InitializeStringView) {
+  const string_view str = "ab";
+  const string s(str);
+  ASSERT_EQ(s.size(), size_t(2));
+  ASSERT_EQ(s[0], 'a');
+  ASSERT_EQ(s[1], 'b');
+  ASSERT_EQ(s.front(), 'a');
+  ASSERT_EQ(s.back(), 'b');
+}
+
 TEST(LlvmLibcStringTest, InitializeRepeatedChar) {
   const string s(4, '1');
   ASSERT_EQ(string_view(s), string_view("1111"));
@@ -112,6 +122,17 @@ TEST(LlvmLibcStringTest, MoveAssign) {
   b = move(a);
   ASSERT_STREQ(b.c_str(), str);
   ASSERT_STREQ(a.c_str(), "");
+}
+
+TEST(LlvmLibcStringTest, StringViewAssign) {
+  const string_view str = "ab";
+  string s;
+  s = str;
+  ASSERT_EQ(s.size(), size_t(2));
+  ASSERT_EQ(s[0], 'a');
+  ASSERT_EQ(s[1], 'b');
+  ASSERT_EQ(s.front(), 'a');
+  ASSERT_EQ(s.back(), 'b');
 }
 
 TEST(LlvmLibcStringTest, Concat) {
