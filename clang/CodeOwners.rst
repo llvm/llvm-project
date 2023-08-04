@@ -19,7 +19,7 @@ assistance.
 All parts of Clang not covered by someone else
 ----------------------------------------------
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
 Contained Components
@@ -222,7 +222,7 @@ standard, when fixing standards bugs, or when implementing a new standard featur
 C conformance
 ~~~~~~~~~~~~~
 | Aaron Ballman
-| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub)
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord), AaronBallman (IRC)
 
 
 C++ conformance
