@@ -120,7 +120,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
     case Instruction::ICmp:
     case VPInstruction::Not:
     case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrement:
+    case VPInstruction::AddPart0:
     case VPInstruction::CanonicalIVIncrementForPart:
       return false;
     default:
@@ -335,13 +335,10 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     Value *Zero = ConstantInt::get(ScalarTC->getType(), 0);
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
-  case VPInstruction::CanonicalIVIncrement: {
+  case VPInstruction::AddPart0: {
     if (Part == 0) {
       auto *Phi = State.get(getOperand(0), 0);
-      // The loop step is equal to the vectorization factor (num of SIMD
-      // elements) times the unroll factor (num of SIMD instructions).
-      Value *Step =
-          createStepForVF(Builder, Phi->getType(), State.VF, State.UF);
+      Value *Step = State.get(getOperand(1), 0);
       return Builder.CreateAdd(Phi, Step, Name, hasNoUnsignedWrap(),
                                hasNoSignedWrap());
     }
@@ -468,8 +465,8 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   case VPInstruction::FirstOrderRecurrenceSplice:
     O << "first-order splice";
     break;
-  case VPInstruction::CanonicalIVIncrement:
-    O << "VF * UF +";
+  case VPInstruction::AddPart0:
+    O << "add (part 0)";
     break;
   case VPInstruction::BranchOnCond:
     O << "branch-on-cond";

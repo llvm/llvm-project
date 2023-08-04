@@ -741,6 +741,12 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
   for (unsigned Part = 0, UF = State.UF; Part < UF; ++Part)
     State.set(&VectorTripCount, VectorTripCountV, Part);
 
+  IRBuilder<> Builder(State.CFG.PrevBB->getTerminator());
+  // FIXME: Model runtime VF * UF computation completely in VPlan.
+  State.set(&RuntimeVFxUF,
+            createStepForVF(Builder, TripCountV->getType(), State.VF, State.UF),
+            0);
+
   // When vectorizing the epilogue loop, the canonical induction start value
   // needs to be changed from zero to the value after the main vector loop.
   // FIXME: Improve modeling for canonical IV start values in the epilogue loop.
@@ -752,7 +758,7 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
                     return isa<VPScalarIVStepsRecipe>(U) ||
                            isa<VPDerivedIVRecipe>(U) ||
                            cast<VPInstruction>(U)->getOpcode() ==
-                               VPInstruction::CanonicalIVIncrement;
+                               VPInstruction::AddPart0;
                   }) &&
            "the canonical IV should only be used by its increment or "
            "ScalarIVSteps when resetting the start value");
@@ -845,6 +851,13 @@ void VPlan::execute(VPTransformState *State) {
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
+
+  if (RuntimeVFxUF.getNumUsers() > 0) {
+    O << "\nLive-in ";
+    RuntimeVFxUF.printAsOperand(O, SlotTracker);
+    O << " = runtime VF * UF";
+  }
+
   if (VectorTripCount.getNumUsers() > 0) {
     O << "\nLive-in ";
     VectorTripCount.printAsOperand(O, SlotTracker);
@@ -1237,6 +1250,8 @@ void VPSlotTracker::assignSlot(const VPValue *V) {
 }
 
 void VPSlotTracker::assignSlots(const VPlan &Plan) {
+  if (Plan.RuntimeVFxUF.getNumUsers() > 0)
+    assignSlot(&Plan.RuntimeVFxUF);
   assignSlot(&Plan.VectorTripCount);
   if (Plan.BackedgeTakenCount)
     assignSlot(Plan.BackedgeTakenCount);
