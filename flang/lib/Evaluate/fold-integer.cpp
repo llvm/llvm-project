@@ -1038,8 +1038,6 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
   } else if (name == "maxval") {
     return FoldMaxvalMinval<T>(context, std::move(funcRef),
         RelationalOperator::GT, T::Scalar::Least());
-  } else if (name == "merge") {
-    return FoldMerge<T>(context, std::move(funcRef));
   } else if (name == "merge_bits") {
     return FoldElementalIntrinsic<T, T, T, T>(
         context, std::move(funcRef), &Scalar<T>::MERGE_BITS);
