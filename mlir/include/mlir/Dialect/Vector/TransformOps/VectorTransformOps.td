@@ -118,8 +118,11 @@ def ApplyLowerMaskedTransfersPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.lower_masked_transfers",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Indicates that masked vector.transfer and vector.gather operations should
-    be lowered to finer-grained vector primitives.
+    Apply opt-in patterns that lower vector.mask operations surrounding 
+    side-effecting ops:
+      - MaskedTransferReadOpPattern
+      - MaskedTransferWriteOpPattern
+      - MaskedGatherOpPattern
 
     This is usually a late step that is run after bufferization as part of the
     process of lowering to e.g. LLVM or NVVM.
@@ -308,6 +311,25 @@ def ApplyFoldArithExtensionPatternsOp : Op<Transform_Dialect,
   let description = [{
     Collect a set of patterns that fold arithmetic extension on floating point
     into vector contract for the backends with native support.
+  }];
+
+  let assemblyFormat = "attr-dict";
+}
+
+def ApplyVectorReductionToContractPatternsOp : Op<Transform_Dialect,
+    "apply_patterns.vector.reduction_to_contract",
+    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
+  let description = [{
+    Apply opt-in patterns that convert reductions to contract:
+      - MultiReduceToContract
+      - CombineContractBroadcast
+      - CombineContractABTranspose
+      - CombineContractResultTranspose
+      - ReorderCastOpsOnBroadcast
+      - ReorderElementwiseOpsOnTranspose
+
+    These patterns have the effect of rewriting a vector.multi_reduce into a 
+    vector.contract.
   }];
 
   let assemblyFormat = "attr-dict";
