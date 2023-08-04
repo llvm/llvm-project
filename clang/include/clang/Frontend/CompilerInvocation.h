@@ -223,7 +223,7 @@ public:
   /// identifying the conditions under which the module was built.
   std::string getModuleHash() const;
 
-  using StringAllocator = llvm::function_ref<const char *(const llvm::Twine &)>;
+  using StringAllocator = llvm::function_ref<const char *(const Twine &)>;
   /// Generate cc1-compatible command line arguments from this instance.
   ///
   /// \param [out] Args - The generated arguments. Note that the caller is
@@ -233,7 +233,21 @@ public:
   /// command line argument and return a pointer to the newly allocated string.
   /// The returned pointer is what gets appended to Args.
   void generateCC1CommandLine(llvm::SmallVectorImpl<const char *> &Args,
-                              StringAllocator SA) const;
+                              StringAllocator SA) const {
+    generateCC1CommandLine([&](const Twine &Arg) {
+      // No need to allocate static string literals.
+      Args.push_back(Arg.isSingleStringLiteral()
+                         ? Arg.getSingleStringRef().data()
+                         : SA(Arg));
+    });
+  }
+
+  using ArgumentConsumer = llvm::function_ref<void(const Twine &)>;
+  /// Generate cc1-compatible command line arguments from this instance.
+  ///
+  /// \param Consumer - Callback that gets invoked for every single generated
+  /// command line argument.
+  void generateCC1CommandLine(ArgumentConsumer Consumer) const;
 
   /// Generate cc1-compatible command line arguments from this instance,
   /// wrapping the result as a std::vector<std::string>.
@@ -267,8 +281,8 @@ private:
 
   /// Generate command line options from DiagnosticOptions.
   static void GenerateDiagnosticArgs(const DiagnosticOptions &Opts,
-                                     SmallVectorImpl<const char *> &Args,
-                                     StringAllocator SA, bool DefaultDiagColor);
+                                     ArgumentConsumer Consumer,
+                                     bool DefaultDiagColor);
 
   /// Parse command line options that map to LangOptions.
   static bool ParseLangArgs(LangOptions &Opts, llvm::opt::ArgList &Args,
@@ -278,8 +292,7 @@ private:
 
   /// Generate command line options from LangOptions.
   static void GenerateLangArgs(const LangOptions &Opts,
-                               SmallVectorImpl<const char *> &Args,
-                               StringAllocator SA, const llvm::Triple &T,
+                               ArgumentConsumer Consumer, const llvm::Triple &T,
                                InputKind IK);
 
   /// Parse command line options that map to CodeGenOptions.
@@ -291,8 +304,8 @@ private:
 
   // Generate command line options from CodeGenOptions.
   static void GenerateCodeGenArgs(const CodeGenOptions &Opts,
-                                  SmallVectorImpl<const char *> &Args,
-                                  StringAllocator SA, const llvm::Triple &T,
+                                  ArgumentConsumer Consumer,
+                                  const llvm::Triple &T,
                                   const std::string &OutputFile,
                                   const LangOptions *LangOpts);
 };

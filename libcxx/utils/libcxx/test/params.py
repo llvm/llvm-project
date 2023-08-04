@@ -298,8 +298,7 @@ DEFAULT_PARAMETERS = [
             [
                 AddCompileFlag("-D_LIBCPP_ENABLE_HARDENED_MODE=1") if hardening_mode == "hardened" else None,
                 AddCompileFlag("-D_LIBCPP_ENABLE_DEBUG_MODE=1")    if hardening_mode == "debug" else None,
-                AddFeature("libcpp-has-hardened-mode")             if hardening_mode == "hardened" else None,
-                AddFeature("libcpp-has-debug-mode")                if hardening_mode == "debug" else None,
+                AddFeature("libcpp-hardening-mode={}".format(hardening_mode)),
             ],
         ),
     ),

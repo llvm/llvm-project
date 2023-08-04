@@ -2432,6 +2432,7 @@ genOMP(Fortran::lower::AbstractConverter &converter,
   cp.processDepend(dependTypeOperands, dependOperands);
 
   for (const Fortran::parser::OmpClause &clause : opClauseList.v) {
+    mlir::Location clauseLocation = converter.genLocation(clause.source);
     if (!std::get_if<Fortran::parser::OmpClause::If>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::NumThreads>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::ProcBind>(&clause.u) &&
@@ -2458,13 +2459,19 @@ genOMP(Fortran::lower::AbstractConverter &converter,
         !std::get_if<Fortran::parser::OmpClause::UseDevicePtr>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::UseDeviceAddr>(&clause.u) &&
         !std::get_if<Fortran::parser::OmpClause::ThreadLimit>(&clause.u)) {
-      TODO(converter.getCurrentLocation(), "OpenMP Block construct clause");
+      TODO(clauseLocation, "OpenMP Block construct clause");
     }
   }
 
   ClauseProcessor(converter,
                   std::get<Fortran::parser::OmpClauseList>(endBlockDirective.t))
       .processNowait(nowaitAttr);
+  for (const auto &clause :
+       std::get<Fortran::parser::OmpClauseList>(endBlockDirective.t).v) {
+    mlir::Location clauseLocation = converter.genLocation(clause.source);
+    if (!std::get_if<Fortran::parser::OmpClause::Nowait>(&clause.u))
+      TODO(clauseLocation, "OpenMP Block construct clause");
+  }
 
   if (blockDirective.v == llvm::omp::OMPD_parallel) {
     // Create and insert the operation.

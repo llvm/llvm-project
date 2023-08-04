@@ -647,9 +647,7 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
   // Apply the adjustment and cast back to the original struct type
   // for consistency.
   llvm::Value *This = ThisAddr.getPointer();
-  llvm::Value *Ptr = Builder.CreateBitCast(This, Builder.getInt8PtrTy());
-  Ptr = Builder.CreateInBoundsGEP(Builder.getInt8Ty(), Ptr, Adj);
-  This = Builder.CreateBitCast(Ptr, This->getType(), "this.adjusted");
+  This = Builder.CreateInBoundsGEP(Builder.getInt8Ty(), This, Adj);
   ThisPtrForCall = This;
 
   // Load the function pointer.
@@ -740,9 +738,8 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
                                       ? llvm::Intrinsic::type_test
                                       : llvm::Intrinsic::public_type_test;
 
-        CheckResult = Builder.CreateCall(
-            CGM.getIntrinsic(IID),
-            {Builder.CreateBitCast(VFPAddr, CGF.Int8PtrTy), TypeId});
+        CheckResult =
+            Builder.CreateCall(CGM.getIntrinsic(IID), {VFPAddr, TypeId});
       }
 
       if (CGM.getItaniumVTableContext().isRelativeLayout()) {
@@ -812,8 +809,6 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
       };
 
       llvm::Value *Bit = Builder.getFalse();
-      llvm::Value *CastedNonVirtualFn =
-          Builder.CreateBitCast(NonVirtualFn, CGF.Int8PtrTy);
       for (const CXXRecordDecl *Base : CGM.getMostBaseClasses(RD)) {
         llvm::Metadata *MD = CGM.CreateMetadataIdentifierForType(
             getContext().getMemberPointerType(
@@ -824,13 +819,13 @@ CGCallee ItaniumCXXABI::EmitLoadOfMemberFunctionPointer(
 
         llvm::Value *TypeTest =
             Builder.CreateCall(CGM.getIntrinsic(llvm::Intrinsic::type_test),
-                               {CastedNonVirtualFn, TypeId});
+                               {NonVirtualFn, TypeId});
         Bit = Builder.CreateOr(Bit, TypeTest);
       }
 
       CGF.EmitCheck(std::make_pair(Bit, SanitizerKind::CFIMFCall),
                     SanitizerHandler::CFICheckFail, StaticData,
-                    {CastedNonVirtualFn, llvm::UndefValue::get(CGF.IntPtrTy)});
+                    {NonVirtualFn, llvm::UndefValue::get(CGF.IntPtrTy)});
 
       FnNonVirtual = Builder.GetInsertBlock();
     }
@@ -1253,8 +1248,7 @@ void ItaniumCXXABI::emitVirtualObjectDelete(CodeGenFunction &CGF,
                                                         CGF.getPointerAlign());
 
     // Apply the offset.
-    llvm::Value *CompletePtr =
-      CGF.Builder.CreateBitCast(Ptr.getPointer(), CGF.Int8PtrTy);
+    llvm::Value *CompletePtr = Ptr.getPointer();
     CompletePtr =
         CGF.Builder.CreateInBoundsGEP(CGF.Int8Ty, CompletePtr, Offset);
 
@@ -1344,15 +1338,16 @@ void ItaniumCXXABI::emitThrow(CodeGenFunction &CGF, const CXXThrowExpr *E) {
 
 static llvm::FunctionCallee getItaniumDynamicCastFn(CodeGenFunction &CGF) {
   // void *__dynamic_cast(const void *sub,
-  //                      const abi::__class_type_info *src,
-  //                      const abi::__class_type_info *dst,
+  //                      global_as const abi::__class_type_info *src,
+  //                      global_as const abi::__class_type_info *dst,
   //                      std::ptrdiff_t src2dst_offset);
 
   llvm::Type *Int8PtrTy = CGF.Int8PtrTy;
+  llvm::Type *GlobInt8PtrTy = CGF.GlobalsInt8PtrTy;
   llvm::Type *PtrDiffTy =
     CGF.ConvertType(CGF.getContext().getPointerDiffType());
 
-  llvm::Type *Args[4] = { Int8PtrTy, Int8PtrTy, Int8PtrTy, PtrDiffTy };
+  llvm::Type *Args[4] = { Int8PtrTy, GlobInt8PtrTy, GlobInt8PtrTy, PtrDiffTy };
 
   llvm::FunctionType *FTy = llvm::FunctionType::get(Int8PtrTy, Args, false);
 
@@ -1454,7 +1449,6 @@ llvm::Value *ItaniumCXXABI::EmitTypeid(CodeGenFunction &CGF,
 
   if (CGM.getItaniumVTableContext().isRelativeLayout()) {
     // Load the type info.
-    Value = CGF.Builder.CreateBitCast(Value, CGM.Int8PtrTy);
     Value = CGF.Builder.CreateCall(
         CGM.getIntrinsic(llvm::Intrinsic::load_relative, {CGM.Int32Ty}),
         {Value, llvm::ConstantInt::get(CGM.Int32Ty, -4)});
@@ -2211,8 +2205,7 @@ static llvm::Value *performTypeAdjustment(CodeGenFunction &CGF,
                                                        NonVirtualAdjustment);
   }
 
-  // Cast back to the original type.
-  return CGF.Builder.CreateBitCast(ResultPtr, InitialPtr.getType());
+  return ResultPtr;
 }
 
 llvm::Value *ItaniumCXXABI::performThisAdjustment(CodeGenFunction &CGF,
