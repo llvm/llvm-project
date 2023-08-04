@@ -2642,6 +2642,19 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "vfprintf_internal",
+    hdrs = ["src/stdio/printf_core/vfprintf_internal.h"],
+    defines = PRINTF_COPTS,
+    deps = [
+        ":__support_arg_list",
+        ":__support_file_file",
+        ":__support_macros_attributes",
+        ":printf_main",
+        ":printf_writer",
+    ],
+)
+
 libc_function(
     name = "sprintf",
     srcs = ["src/stdio/sprintf.cpp"],
@@ -2669,19 +2682,6 @@ libc_function(
     ],
 )
 
-libc_support_library(
-    name = "vfprintf_internal",
-    hdrs = ["src/stdio/printf_core/vfprintf_internal.h"],
-    defines = PRINTF_COPTS,
-    deps = [
-        ":__support_arg_list",
-        ":__support_file_file",
-        ":__support_macros_attributes",
-        ":printf_main",
-        ":printf_writer",
-    ],
-)
-
 libc_function(
     name = "printf",
     srcs = ["src/stdio/printf.cpp"],
@@ -2699,6 +2699,59 @@ libc_function(
     name = "fprintf",
     srcs = ["src/stdio/fprintf.cpp"],
     hdrs = ["src/stdio/fprintf.h"],
+    defines = PRINTF_COPTS,
+    deps = [
+        ":__support_arg_list",
+        ":__support_file_file",
+        ":errno",
+        ":vfprintf_internal",
+    ],
+)
+
+libc_function(
+    name = "vsprintf",
+    srcs = ["src/stdio/vsprintf.cpp"],
+    hdrs = ["src/stdio/vsprintf.h"],
+    defines = PRINTF_COPTS,
+    deps = [
+        ":__support_arg_list",
+        ":__support_cpp_limits",
+        ":errno",
+        ":printf_main",
+        ":printf_writer",
+    ],
+)
+
+libc_function(
+    name = "vsnprintf",
+    srcs = ["src/stdio/vsnprintf.cpp"],
+    hdrs = ["src/stdio/vsnprintf.h"],
+    defines = PRINTF_COPTS,
+    deps = [
+        ":__support_arg_list",
+        ":errno",
+        ":printf_main",
+        ":printf_writer",
+    ],
+)
+
+libc_function(
+    name = "vprintf",
+    srcs = ["src/stdio/vprintf.cpp"],
+    hdrs = ["src/stdio/vprintf.h"],
+    defines = PRINTF_COPTS,
+    deps = [
+        ":__support_arg_list",
+        ":__support_file_file",
+        ":errno",
+        ":vfprintf_internal",
+    ],
+)
+
+libc_function(
+    name = "vfprintf",
+    srcs = ["src/stdio/vfprintf.cpp"],
+    hdrs = ["src/stdio/vfprintf.h"],
     defines = PRINTF_COPTS,
     deps = [
         ":__support_arg_list",

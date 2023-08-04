@@ -52,14 +52,6 @@ def GPU_Dialect : Dialect {
     /// Returns the numeric value used to identify the private memory address
     /// space.
     static AddressSpace getPrivateAddressSpace() { return AddressSpace::Private; }
-
-    /// Return true if the given MemRefType has an address space that is a 
-    /// gpu::AddressSpaceAttr attribute with value 'workgroup`.
-    static bool hasSharedMemoryAddressSpace(MemRefType type);
-
-    /// Return true if the given Attribute has matches is a gpu::AddressSpaceAttr
-    /// attribute with value 'workgroup`.
-    static bool isSharedMemoryAddressSpace(Attribute type);
   }];
 
   let dependentDialects = ["arith::ArithDialect"];

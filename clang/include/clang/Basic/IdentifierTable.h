@@ -504,6 +504,9 @@ public:
   /// If the identifier is an "uglified" reserved name, return a cleaned form.
   /// e.g. _Foo => Foo. Otherwise, just returns the name.
   StringRef deuglifiedName() const;
+  bool isPlaceholder() const {
+    return getLength() == 1 && getNameStart()[0] == '_';
+  }
 
   /// Provide less than operator for lexicographical sorting.
   bool operator<(const IdentifierInfo &RHS) const {

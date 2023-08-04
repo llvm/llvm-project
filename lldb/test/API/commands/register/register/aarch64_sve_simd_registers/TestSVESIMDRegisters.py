@@ -19,10 +19,12 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class Mode(Enum):
     SIMD = 0
     SVE = 1
     SSVE = 2
+
 
 class SVESIMDRegistersTestCase(TestBase):
     def get_build_flags(self, mode):
@@ -69,19 +71,22 @@ class SVESIMDRegistersTestCase(TestBase):
         # These are 128 bit registers, so getting them from the API as unsigned
         # values doesn't work. Check the command output instead.
         for i in range(32):
-            self.expect("register read v{}".format(i),
-                substrs=[self.make_simd_value(i)])
+            self.expect(
+                "register read v{}".format(i), substrs=[self.make_simd_value(i)]
+            )
 
         # Write a new set of values. The kernel will move the program back to
         # non-streaming mode here.
         for i in range(32):
-            self.runCmd("register write v{} \"{}\"".format(
-                i, self.make_simd_value(i+1)))
+            self.runCmd(
+                'register write v{} "{}"'.format(i, self.make_simd_value(i + 1))
+            )
 
         # Should be visible within lldb.
         for i in range(32):
-            self.expect("register read v{}".format(i),
-                substrs=[self.make_simd_value(i+1)])
+            self.expect(
+                "register read v{}".format(i), substrs=[self.make_simd_value(i + 1)]
+            )
 
         # The program should agree with lldb.
         self.expect("continue", substrs=["exited with status = 0"])

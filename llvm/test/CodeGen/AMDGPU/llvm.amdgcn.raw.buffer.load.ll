@@ -534,17 +534,13 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_and(<4 x i32> inreg %rsrc, i3
 ;
 ; GFX12-LABEL: buffer_load_x1_offen_merged_and:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_clause 0x5
-; GFX12-NEXT:    buffer_load_b32 v1, v0, s[0:3], null offen offset:4
-; GFX12-NEXT:    buffer_load_b32 v2, v0, s[0:3], null offen offset:8
-; GFX12-NEXT:    buffer_load_b32 v3, v0, s[0:3], null offen offset:12
-; GFX12-NEXT:    buffer_load_b32 v4, v0, s[0:3], null offen offset:16
-; GFX12-NEXT:    buffer_load_b32 v5, v0, s[0:3], null offen offset:28
-; GFX12-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen offset:32
-; GFX12-NEXT:    s_wait_loadcnt 0x2
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    buffer_load_b128 v[1:4], v0, s[0:3], null offen offset:4
+; GFX12-NEXT:    buffer_load_b64 v[5:6], v0, s[0:3], null offen offset:28
+; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    export mrt0 v1, v2, v3, v4 done
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    export mrt0 v5, v0, v0, v0 done
+; GFX12-NEXT:    export mrt0 v5, v6, v0, v0 done
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %a1 = add i32 %a, 4
@@ -602,18 +598,14 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_or(<4 x i32> inreg %rsrc, i32
 ;
 ; GFX12-SDAG-LABEL: buffer_load_x1_offen_merged_or:
 ; GFX12-SDAG:       ; %bb.0: ; %main_body
-; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v0, 6, v0
-; GFX12-SDAG-NEXT:    s_clause 0x5
-; GFX12-SDAG-NEXT:    buffer_load_b32 v1, v0, s[0:3], null offen offset:4
-; GFX12-SDAG-NEXT:    buffer_load_b32 v2, v0, s[0:3], null offen offset:8
-; GFX12-SDAG-NEXT:    buffer_load_b32 v3, v0, s[0:3], null offen offset:12
-; GFX12-SDAG-NEXT:    buffer_load_b32 v4, v0, s[0:3], null offen offset:16
-; GFX12-SDAG-NEXT:    buffer_load_b32 v5, v0, s[0:3], null offen offset:28
-; GFX12-SDAG-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen offset:32
-; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x2
-; GFX12-SDAG-NEXT:    export mrt0 v1, v2, v3, v4 done
+; GFX12-SDAG-NEXT:    v_lshlrev_b32_e32 v4, 6, v0
+; GFX12-SDAG-NEXT:    s_clause 0x1
+; GFX12-SDAG-NEXT:    buffer_load_b128 v[0:3], v4, s[0:3], null offen offset:4
+; GFX12-SDAG-NEXT:    buffer_load_b64 v[4:5], v4, s[0:3], null offen offset:28
+; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x1
+; GFX12-SDAG-NEXT:    export mrt0 v0, v1, v2, v3 done
 ; GFX12-SDAG-NEXT:    s_wait_loadcnt 0x0
-; GFX12-SDAG-NEXT:    export mrt0 v5, v0, v0, v0 done
+; GFX12-SDAG-NEXT:    export mrt0 v4, v5, v0, v0 done
 ; GFX12-SDAG-NEXT:    s_endpgm
 ;
 ; GFX12-GISEL-LABEL: buffer_load_x1_offen_merged_or:
@@ -694,17 +686,14 @@ define amdgpu_ps void @buffer_load_x1_offen_merged_glc_slc(<4 x i32> inreg %rsrc
 ;
 ; GFX12-LABEL: buffer_load_x1_offen_merged_glc_slc:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_clause 0x5
-; GFX12-NEXT:    buffer_load_b32 v1, v0, s[0:3], null offen offset:4
-; GFX12-NEXT:    buffer_load_b32 v2, v0, s[0:3], null offen offset:8
-; GFX12-NEXT:    buffer_load_b32 v3, v0, s[0:3], null offen offset:12 th:TH_LOAD_NT
-; GFX12-NEXT:    buffer_load_b32 v4, v0, s[0:3], null offen offset:16 th:TH_LOAD_NT
-; GFX12-NEXT:    buffer_load_b32 v5, v0, s[0:3], null offen offset:28 th:TH_LOAD_LU
-; GFX12-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen offset:32 th:TH_LOAD_LU
-; GFX12-NEXT:    s_wait_loadcnt 0x2
+; GFX12-NEXT:    s_clause 0x2
+; GFX12-NEXT:    buffer_load_b64 v[1:2], v0, s[0:3], null offen offset:4
+; GFX12-NEXT:    buffer_load_b64 v[3:4], v0, s[0:3], null offen offset:12 th:TH_LOAD_NT
+; GFX12-NEXT:    buffer_load_b64 v[5:6], v0, s[0:3], null offen offset:28 th:TH_LOAD_LU
+; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    export mrt0 v1, v2, v3, v4 done
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    export mrt0 v5, v0, v0, v0 done
+; GFX12-NEXT:    export mrt0 v5, v6, v0, v0 done
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %a1 = add i32 %a, 4
@@ -748,11 +737,9 @@ define amdgpu_ps void @buffer_load_x2_offen_merged_and(<4 x i32> inreg %rsrc, i3
 ;
 ; GFX12-LABEL: buffer_load_x2_offen_merged_and:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    buffer_load_b64 v[1:2], v0, s[0:3], null offen offset:4
-; GFX12-NEXT:    buffer_load_b64 v[3:4], v0, s[0:3], null offen offset:12
+; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen offset:4
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    export mrt0 v1, v2, v3, v4 done
+; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %a1 = add i32 %a, 4
@@ -794,10 +781,8 @@ define amdgpu_ps void @buffer_load_x2_offen_merged_or(<4 x i32> inreg %rsrc, i32
 ;
 ; GFX12-LABEL: buffer_load_x2_offen_merged_or:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    v_lshlrev_b32_e32 v2, 4, v0
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    buffer_load_b64 v[0:1], v2, s[0:3], null offen offset:4
-; GFX12-NEXT:    buffer_load_b64 v[2:3], v2, s[0:3], null offen offset:12
+; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
+; GFX12-NEXT:    buffer_load_b128 v[0:3], v0, s[0:3], null offen offset:4
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
 ; GFX12-NEXT:    s_endpgm
@@ -850,14 +835,10 @@ define amdgpu_ps void @buffer_load_x1_offset_merged(<4 x i32> inreg %rsrc) {
 ;
 ; GFX12-LABEL: buffer_load_x1_offset_merged:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_clause 0x5
-; GFX12-NEXT:    buffer_load_b32 v0, off, s[0:3], null offset:4
-; GFX12-NEXT:    buffer_load_b32 v1, off, s[0:3], null offset:8
-; GFX12-NEXT:    buffer_load_b32 v2, off, s[0:3], null offset:12
-; GFX12-NEXT:    buffer_load_b32 v3, off, s[0:3], null offset:16
-; GFX12-NEXT:    buffer_load_b32 v4, off, s[0:3], null offset:28
-; GFX12-NEXT:    buffer_load_b32 v5, off, s[0:3], null offset:32
-; GFX12-NEXT:    s_wait_loadcnt 0x2
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:4
+; GFX12-NEXT:    buffer_load_b64 v[4:5], off, s[0:3], null offset:28
+; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    export mrt0 v4, v5, v0, v0 done
@@ -898,9 +879,7 @@ define amdgpu_ps void @buffer_load_x2_offset_merged(<4 x i32> inreg %rsrc) {
 ;
 ; GFX12-LABEL: buffer_load_x2_offset_merged:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    buffer_load_b64 v[0:1], off, s[0:3], null offset:4
-; GFX12-NEXT:    buffer_load_b64 v[2:3], off, s[0:3], null offset:12
+; GFX12-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:4
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
 ; GFX12-NEXT:    s_endpgm
@@ -1313,14 +1292,10 @@ define amdgpu_ps void @raw_buffer_load_x1_offset_merged(<4 x i32> inreg %rsrc) {
 ;
 ; GFX12-LABEL: raw_buffer_load_x1_offset_merged:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_clause 0x5
-; GFX12-NEXT:    buffer_load_b32 v0, off, s[0:3], null offset:4
-; GFX12-NEXT:    buffer_load_b32 v1, off, s[0:3], null offset:8
-; GFX12-NEXT:    buffer_load_b32 v2, off, s[0:3], null offset:12
-; GFX12-NEXT:    buffer_load_b32 v3, off, s[0:3], null offset:16
-; GFX12-NEXT:    buffer_load_b32 v4, off, s[0:3], null offset:28
-; GFX12-NEXT:    buffer_load_b32 v5, off, s[0:3], null offset:32
-; GFX12-NEXT:    s_wait_loadcnt 0x2
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:4
+; GFX12-NEXT:    buffer_load_b64 v[4:5], off, s[0:3], null offset:28
+; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    export mrt0 v4, v5, v0, v0 done
@@ -1384,14 +1359,10 @@ define amdgpu_ps void @raw_buffer_load_x1_offset_swizzled_not_merged(<4 x i32> i
 ;
 ; GFX12-LABEL: raw_buffer_load_x1_offset_swizzled_not_merged:
 ; GFX12:       ; %bb.0: ; %main_body
-; GFX12-NEXT:    s_clause 0x5
-; GFX12-NEXT:    buffer_load_b32 v0, off, s[0:3], null offset:4
-; GFX12-NEXT:    buffer_load_b32 v1, off, s[0:3], null offset:8
-; GFX12-NEXT:    buffer_load_b32 v2, off, s[0:3], null offset:12
-; GFX12-NEXT:    buffer_load_b32 v3, off, s[0:3], null offset:16
-; GFX12-NEXT:    buffer_load_b32 v4, off, s[0:3], null offset:28
-; GFX12-NEXT:    buffer_load_b32 v5, off, s[0:3], null offset:32
-; GFX12-NEXT:    s_wait_loadcnt 0x2
+; GFX12-NEXT:    s_clause 0x1
+; GFX12-NEXT:    buffer_load_b128 v[0:3], off, s[0:3], null offset:4 scope:SCOPE_SE
+; GFX12-NEXT:    buffer_load_b64 v[4:5], off, s[0:3], null offset:28 scope:SCOPE_SE
+; GFX12-NEXT:    s_wait_loadcnt 0x1
 ; GFX12-NEXT:    export mrt0 v0, v1, v2, v3 done
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
 ; GFX12-NEXT:    export mrt0 v4, v5, v0, v0 done

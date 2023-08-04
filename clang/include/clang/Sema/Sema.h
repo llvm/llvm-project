@@ -2960,6 +2960,10 @@ public:
   NamedDecl *
   ActOnDecompositionDeclarator(Scope *S, Declarator &D,
                                MultiTemplateParamsArg TemplateParamLists);
+  void DiagPlaceholderVariableDefinition(SourceLocation Loc);
+  bool DiagRedefinedPlaceholderFieldDecl(SourceLocation Loc,
+                                         RecordDecl *ClassDecl,
+                                         const IdentifierInfo *Name);
   // Returns true if the variable declaration is a redeclaration
   bool CheckVariableDeclaration(VarDecl *NewVD, LookupResult &Previous);
   void CheckVariableDeclarationType(VarDecl *NewVD);
@@ -3315,6 +3319,12 @@ public:
                                     AccessSpecifier AS,
                                     RecordDecl *Record,
                                     const PrintingPolicy &Policy);
+
+  /// Called once it is known whether
+  /// a tag declaration is an anonymous union or struct.
+  void ActOnDefinedDeclarationSpecifier(Decl *D);
+
+  void DiagPlaceholderFieldDeclDefinitions(RecordDecl *Record);
 
   Decl *BuildMicrosoftCAnonymousStruct(Scope *S, DeclSpec &DS,
                                        RecordDecl *Record);
@@ -6166,6 +6176,9 @@ public:
 
   CXXRecordDecl *getStdBadAlloc() const;
   EnumDecl *getStdAlignValT() const;
+
+  ValueDecl *tryLookupUnambiguousFieldDecl(RecordDecl *ClassDecl,
+                                           const IdentifierInfo *MemberOrBase);
 
 private:
   // A cache representing if we've fully checked the various comparison category

@@ -1,5 +1,5 @@
 # RUN: not yaml2obj %s -o %t 2>&1 | FileCheck %s
-# CHECK: YAML:18:5: error: unknown key 'SizeOfRawData'
+# CHECK: YAML:14:5: error: StructuredData and SizeOfRawData can't be used together
 
 --- !COFF
 OptionalHeader:

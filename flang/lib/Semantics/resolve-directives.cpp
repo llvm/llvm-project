@@ -195,6 +195,21 @@ public:
     return false;
   }
 
+  bool Pre(const parser::AccClause::DeviceResident &x) {
+    ResolveAccObjectList(x.v, Symbol::Flag::AccDeviceResident);
+    return false;
+  }
+
+  bool Pre(const parser::AccClause::Deviceptr &x) {
+    ResolveAccObjectList(x.v, Symbol::Flag::AccDevicePtr);
+    return false;
+  }
+
+  bool Pre(const parser::AccClause::Link &x) {
+    ResolveAccObjectList(x.v, Symbol::Flag::AccLink);
+    return false;
+  }
+
   bool Pre(const parser::AccClause::Host &x) {
     ResolveAccObjectList(x.v, Symbol::Flag::AccHost);
     return false;
@@ -216,23 +231,24 @@ public:
 private:
   std::int64_t GetAssociatedLoopLevelFromClauses(const parser::AccClauseList &);
 
-  static constexpr Symbol::Flags dataSharingAttributeFlags{
-      Symbol::Flag::AccShared, Symbol::Flag::AccPrivate,
-      Symbol::Flag::AccPresent, Symbol::Flag::AccFirstPrivate,
-      Symbol::Flag::AccReduction};
-
-  static constexpr Symbol::Flags dataMappingAttributeFlags{
-      Symbol::Flag::AccCreate, Symbol::Flag::AccCopyIn,
-      Symbol::Flag::AccCopyOut, Symbol::Flag::AccDelete};
-
-  static constexpr Symbol::Flags accFlagsRequireNewSymbol{
+  Symbol::Flags dataSharingAttributeFlags{Symbol::Flag::AccShared,
       Symbol::Flag::AccPrivate, Symbol::Flag::AccFirstPrivate,
       Symbol::Flag::AccReduction};
 
-  static constexpr Symbol::Flags accDataMvtFlags{
+  Symbol::Flags dataMappingAttributeFlags{Symbol::Flag::AccCreate,
+      Symbol::Flag::AccCopyIn, Symbol::Flag::AccCopyOut,
+      Symbol::Flag::AccDelete, Symbol::Flag::AccPresent};
+
+  Symbol::Flags accFlagsRequireNewSymbol{Symbol::Flag::AccPrivate,
+      Symbol::Flag::AccFirstPrivate, Symbol::Flag::AccReduction};
+
+  Symbol::Flags accDataMvtFlags{
       Symbol::Flag::AccDevice, Symbol::Flag::AccHost, Symbol::Flag::AccSelf};
 
-  static constexpr Symbol::Flags accFlagsRequireMark{};
+  Symbol::Flags accFlagsRequireMark{Symbol::Flag::AccCreate,
+      Symbol::Flag::AccCopyIn, Symbol::Flag::AccCopy, Symbol::Flag::AccCopyOut,
+      Symbol::Flag::AccDevicePtr, Symbol::Flag::AccDeviceResident,
+      Symbol::Flag::AccLink, Symbol::Flag::AccPresent};
 
   void PrivatizeAssociatedLoopIndex(const parser::OpenACCLoopConstruct &);
   void ResolveAccObjectList(const parser::AccObjectList &, Symbol::Flag);
@@ -532,26 +548,24 @@ public:
 private:
   std::int64_t GetAssociatedLoopLevelFromClauses(const parser::OmpClauseList &);
 
-  static constexpr Symbol::Flags dataSharingAttributeFlags{
-      Symbol::Flag::OmpShared, Symbol::Flag::OmpPrivate,
-      Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
-      Symbol::Flag::OmpReduction, Symbol::Flag::OmpLinear};
-
-  static constexpr Symbol::Flags privateDataSharingAttributeFlags{
+  Symbol::Flags dataSharingAttributeFlags{Symbol::Flag::OmpShared,
       Symbol::Flag::OmpPrivate, Symbol::Flag::OmpFirstPrivate,
-      Symbol::Flag::OmpLastPrivate};
+      Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
+      Symbol::Flag::OmpLinear};
 
-  static constexpr Symbol::Flags ompFlagsRequireNewSymbol{
-      Symbol::Flag::OmpPrivate, Symbol::Flag::OmpLinear,
-      Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate,
-      Symbol::Flag::OmpReduction, Symbol::Flag::OmpCriticalLock,
-      Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpUseDevicePtr,
-      Symbol::Flag::OmpUseDeviceAddr};
+  Symbol::Flags privateDataSharingAttributeFlags{Symbol::Flag::OmpPrivate,
+      Symbol::Flag::OmpFirstPrivate, Symbol::Flag::OmpLastPrivate};
 
-  static constexpr Symbol::Flags ompFlagsRequireMark{
+  Symbol::Flags ompFlagsRequireNewSymbol{Symbol::Flag::OmpPrivate,
+      Symbol::Flag::OmpLinear, Symbol::Flag::OmpFirstPrivate,
+      Symbol::Flag::OmpLastPrivate, Symbol::Flag::OmpReduction,
+      Symbol::Flag::OmpCriticalLock, Symbol::Flag::OmpCopyIn,
+      Symbol::Flag::OmpUseDevicePtr, Symbol::Flag::OmpUseDeviceAddr};
+
+  Symbol::Flags ompFlagsRequireMark{
       Symbol::Flag::OmpThreadprivate, Symbol::Flag::OmpDeclareTarget};
 
-  static constexpr Symbol::Flags dataCopyingAttributeFlags{
+  Symbol::Flags dataCopyingAttributeFlags{
       Symbol::Flag::OmpCopyIn, Symbol::Flag::OmpCopyPrivate};
 
   std::vector<const parser::Name *> allocateNames_; // on one directive
@@ -1171,7 +1185,10 @@ Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
 Symbol *AccAttributeVisitor::DeclareOrMarkOtherAccessEntity(
     Symbol &object, Symbol::Flag accFlag) {
   if (accFlagsRequireMark.test(accFlag)) {
-    object.set(accFlag);
+    if (GetContext().directive == llvm::acc::ACCD_declare) {
+      object.set(Symbol::Flag::AccDeclare);
+      object.set(accFlag);
+    }
   }
   return &object;
 }

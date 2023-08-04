@@ -135,6 +135,11 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
   PPCIntrinsicLibrary() = delete;
   PPCIntrinsicLibrary(const PPCIntrinsicLibrary &) = delete;
 
+  // Helper functions for vector element ordering.
+  bool isBEVecElemOrderOnLE();
+  bool isNativeVecElemOrderOnLE();
+  bool changeVecElemOrder();
+
   // PPC MMA intrinsic generic handler
   template <MMAOp IntrId, MMAHandlerOp HandlerOp>
   void genMmaIntr(llvm::ArrayRef<fir::ExtendedValue>);

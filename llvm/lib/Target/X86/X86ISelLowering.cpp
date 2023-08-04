@@ -3716,6 +3716,12 @@ static SDValue extractSubVector(SDValue Vec, unsigned IdxVal, SelectionDAG &DAG,
     return DAG.getBuildVector(ResultVT, dl,
                               Vec->ops().slice(IdxVal, ElemsPerChunk));
 
+  // Check if we're extracting the upper undef of a widening pattern.
+  if (Vec.getOpcode() == ISD::INSERT_SUBVECTOR && Vec.getOperand(0).isUndef() &&
+      Vec.getOperand(1).getValueType().getVectorNumElements() <= IdxVal &&
+      isNullConstant(Vec.getOperand(2)))
+    return DAG.getUNDEF(ResultVT);
+
   SDValue VecIdx = DAG.getIntPtrConstant(IdxVal, dl);
   return DAG.getNode(ISD::EXTRACT_SUBVECTOR, dl, ResultVT, Vec, VecIdx);
 }
@@ -20016,6 +20022,14 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   SDValue Lo, Hi;
   std::tie(Lo, Hi) = splitVector(In, DAG, DL);
 
+  // If Hi is undef, then don't bother packing it and widen the result instead.
+  if (Hi.isUndef()) {
+    EVT DstHalfVT = DstVT.getHalfNumVectorElementsVT(Ctx);
+    if (SDValue Res =
+            truncateVectorWithPACK(Opcode, DstHalfVT, Lo, DL, DAG, Subtarget))
+      return widenSubVector(Res, false, Subtarget, DAG, DL, DstSizeInBits);
+  }
+
   unsigned SubSizeInBits = SrcSizeInBits / 2;
   InVT = EVT::getVectorVT(Ctx, InVT, SubSizeInBits / InVT.getSizeInBits());
   OutVT = EVT::getVectorVT(Ctx, OutVT, SubSizeInBits / OutVT.getSizeInBits());
@@ -31974,9 +31988,45 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT InEltVT = InVT.getVectorElementType();
     EVT EltVT = VT.getVectorElementType();
     unsigned WidenNumElts = WidenVT.getVectorNumElements();
-
     unsigned InBits = InVT.getSizeInBits();
+
     if (128 % InBits == 0) {
+      // See if we there are sufficient leading bits to perform a PACKUS/PACKSS.
+      // Skip for AVX512 unless this will be a single stage truncation.
+      if ((InEltVT == MVT::i16 || InEltVT == MVT::i32) &&
+          (EltVT == MVT::i8 || EltVT == MVT::i16) &&
+          (!Subtarget.hasAVX512() || InBits == (2 * VT.getSizeInBits()))) {
+        unsigned NumPackedSignBits =
+            std::min<unsigned>(EltVT.getSizeInBits(), 16);
+        unsigned NumPackedZeroBits =
+            Subtarget.hasSSE41() ? NumPackedSignBits : 8;
+
+        // Use PACKUS if the input has zero-bits that extend all the way to the
+        // packed/truncated value. e.g. masks, zext_in_reg, etc.
+        KnownBits Known = DAG.computeKnownBits(In);
+        unsigned NumLeadingZeroBits = Known.countMinLeadingZeros();
+        bool UsePACKUS =
+            NumLeadingZeroBits >= (InEltVT.getSizeInBits() - NumPackedZeroBits);
+
+        // Use PACKSS if the input has sign-bits that extend all the way to the
+        // packed/truncated value. e.g. Comparison result, sext_in_reg, etc.
+        unsigned NumSignBits = DAG.ComputeNumSignBits(In);
+        bool UsePACKSS =
+            NumSignBits > (InEltVT.getSizeInBits() - NumPackedSignBits);
+
+        if (UsePACKUS || UsePACKSS) {
+          SDValue WidenIn =
+              widenSubVector(In, false, Subtarget, DAG, dl,
+                             InEltVT.getSizeInBits() * WidenNumElts);
+          if (SDValue Res = truncateVectorWithPACK(
+                  UsePACKUS ? X86ISD::PACKUS : X86ISD::PACKSS, WidenVT, WidenIn,
+                  dl, DAG, Subtarget)) {
+            Results.push_back(Res);
+            return;
+          }
+        }
+      }
+
       // 128 bit and smaller inputs should avoid truncate all together and
       // just use a build_vector that will become a shuffle.
       // TODO: Widen and use a shuffle directly?
@@ -31992,6 +32042,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       Results.push_back(DAG.getBuildVector(WidenVT, dl, Ops));
       return;
     }
+
     // With AVX512 there are some cases that can use a target specific
     // truncate node to go from 256/512 to less than 128 with zeros in the
     // upper elements of the 128 bit result.

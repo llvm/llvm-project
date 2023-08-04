@@ -2730,6 +2730,58 @@ cc_library(
 )
 
 cc_library(
+    name = "SparseTensorTransformOps",
+    srcs = glob([
+        "lib/Dialect/SparseTensor/TransformOps/*.cpp",
+    ]),
+    hdrs = glob([
+        "include/mlir/Dialect/SparseTensor/TransformOps/*.h",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":IR",
+        ":LinalgDialect",
+        ":LinalgTransformOps",
+        ":SparseTensorDialect",
+        ":SparseTensorTransformOpsIncGen",
+        ":Support",
+        ":TransformDialect",
+        "//llvm:Support",
+    ],
+)
+
+td_library(
+    name = "SparseTensorTransformOpsTdFiles",
+    srcs = glob([
+        "include/mlir/Dialect/SparseTensor/TransformOps/*.td",
+    ]),
+    includes = ["include"],
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "SparseTensorTransformOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/SparseTensor/TransformOps/SparseTensorTransformOps.td",
+    deps = [
+        ":SparseTensorTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
     name = "SparseTensorUtils",
     srcs = glob(["lib/Dialect/SparseTensor/Utils/*.cpp"]),
     hdrs = glob(["include/mlir/Dialect/SparseTensor/Utils/*.h"]),
@@ -7995,6 +8047,7 @@ cc_library(
         ":ShapeTransformsPassIncGen",
         ":SparseTensorDialect",
         ":SparseTensorPipelines",
+        ":SparseTensorTransformOps",
         ":SparseTensorTransforms",
         ":TensorDialect",
         ":TensorInferTypeOpInterfaceImpl",

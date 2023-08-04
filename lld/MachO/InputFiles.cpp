@@ -185,6 +185,27 @@ static bool checkCompatibility(const InputFile *input) {
   return true;
 }
 
+template <class Header>
+static bool compatWithTargetArch(const InputFile *file, const Header *hdr) {
+  uint32_t cpuType;
+  std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
+
+  if (hdr->cputype != cpuType) {
+    Architecture arch =
+        getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
+    auto msg = config->errorForArchMismatch
+                   ? static_cast<void (*)(const Twine &)>(error)
+                   : warn;
+
+    msg(toString(file) + " has architecture " + getArchitectureName(arch) +
+        " which is incompatible with target architecture " +
+        getArchitectureName(config->arch()));
+    return false;
+  }
+
+  return checkCompatibility(file);
+}
+
 // This cache mostly exists to store system libraries (and .tbds) as they're
 // loaded, rather than the input archives, which are already cached at a higher
 // level, and other files like the filelist that are only read once.
@@ -930,9 +951,10 @@ OpaqueFile::OpaqueFile(MemoryBufferRef mb, StringRef segName,
 }
 
 ObjFile::ObjFile(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-                 bool lazy, bool forceHidden)
+                 bool lazy, bool forceHidden, bool compatArch)
     : InputFile(ObjKind, mb, lazy), modTime(modTime), forceHidden(forceHidden) {
   this->archiveName = std::string(archiveName);
+  this->compatArch = compatArch;
   if (lazy) {
     if (target->wordSize == 8)
       parseLazy<LP64>();
@@ -955,21 +977,10 @@ template <class LP> void ObjFile::parse() {
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
 
-  uint32_t cpuType;
-  std::tie(cpuType, std::ignore) = getCPUTypeFromArchitecture(config->arch());
-  if (hdr->cputype != cpuType) {
-    Architecture arch =
-        getArchitectureFromCpuType(hdr->cputype, hdr->cpusubtype);
-    auto msg = config->errorForArchMismatch
-                   ? static_cast<void (*)(const Twine &)>(error)
-                   : warn;
-    msg(toString(this) + " has architecture " + getArchitectureName(arch) +
-        " which is incompatible with target architecture " +
-        getArchitectureName(config->arch()));
+  // If we've already checked the arch, then don't need to check again.
+  if (!compatArch)
     return;
-  }
-
-  if (!checkCompatibility(this))
+  if (!(compatArch = compatWithTargetArch(this, hdr)))
     return;
 
   for (auto *cmd : findCommands<linker_option_command>(hdr, LC_LINKER_OPTION)) {
@@ -1026,6 +1037,12 @@ template <class LP> void ObjFile::parseLazy() {
 
   auto *buf = reinterpret_cast<const uint8_t *>(mb.getBufferStart());
   auto *hdr = reinterpret_cast<const Header *>(mb.getBufferStart());
+
+  if (!compatArch)
+    return;
+  if (!(compatArch = compatWithTargetArch(this, hdr)))
+    return;
+
   const load_command *cmd = findCommand(hdr, LC_SYMTAB);
   if (!cmd)
     return;
@@ -2089,22 +2106,45 @@ ArchiveFile::ArchiveFile(std::unique_ptr<object::Archive> &&f, bool forceHidden)
       forceHidden(forceHidden) {}
 
 void ArchiveFile::addLazySymbols() {
+  Error err = Error::success();
+  Expected<MemoryBufferRef> mbOrErr =
+      this->file->child_begin(err)->getMemoryBufferRef();
+
+  // Ignore the I/O error here - will be reported later.
+  if (!mbOrErr) {
+    llvm::consumeError(mbOrErr.takeError());
+  } else if (!err) {
+    if (identify_magic(mbOrErr->getBuffer()) == file_magic::macho_object) {
+      if (target->wordSize == 8)
+        compatArch = compatWithTargetArch(
+            this, reinterpret_cast<const LP64::mach_header *>(
+                      mbOrErr->getBufferStart()));
+      else
+        compatArch = compatWithTargetArch(
+            this, reinterpret_cast<const ILP32::mach_header *>(
+                      mbOrErr->getBufferStart()));
+
+      if (!compatArch)
+        return;
+    }
+  }
   for (const object::Archive::Symbol &sym : file->symbols())
     symtab->addLazyArchive(sym.getName(), this, sym);
 }
 
 static Expected<InputFile *>
 loadArchiveMember(MemoryBufferRef mb, uint32_t modTime, StringRef archiveName,
-                  uint64_t offsetInArchive, bool forceHidden) {
+                  uint64_t offsetInArchive, bool forceHidden, bool compatArch) {
   if (config->zeroModTime)
     modTime = 0;
 
   switch (identify_magic(mb.getBuffer())) {
   case file_magic::macho_object:
-    return make<ObjFile>(mb, modTime, archiveName, /*lazy=*/false, forceHidden);
+    return make<ObjFile>(mb, modTime, archiveName, /*lazy=*/false, forceHidden,
+                         compatArch);
   case file_magic::bitcode:
     return make<BitcodeFile>(mb, archiveName, offsetInArchive, /*lazy=*/false,
-                             forceHidden);
+                             forceHidden, compatArch);
   default:
     return createStringError(inconvertibleErrorCode(),
                              mb.getBufferIdentifier() +
@@ -2128,8 +2168,9 @@ Error ArchiveFile::fetch(const object::Archive::Child &c, StringRef reason) {
   if (!modTime)
     return modTime.takeError();
 
-  Expected<InputFile *> file = loadArchiveMember(
-      *mb, toTimeT(*modTime), getName(), c.getChildOffset(), forceHidden);
+  Expected<InputFile *> file =
+      loadArchiveMember(*mb, toTimeT(*modTime), getName(), c.getChildOffset(),
+                        forceHidden, compatArch);
 
   if (!file)
     return file.takeError();
@@ -2192,12 +2233,19 @@ static macho::Symbol *createBitcodeSymbol(const lto::InputFile::Symbol &objSym,
 }
 
 BitcodeFile::BitcodeFile(MemoryBufferRef mb, StringRef archiveName,
-                         uint64_t offsetInArchive, bool lazy, bool forceHidden)
+                         uint64_t offsetInArchive, bool lazy, bool forceHidden,
+                         bool compatArch)
     : InputFile(BitcodeKind, mb, lazy), forceHidden(forceHidden) {
   this->archiveName = std::string(archiveName);
+  this->compatArch = compatArch;
   std::string path = mb.getBufferIdentifier().str();
   if (config->thinLTOIndexOnly)
     path = replaceThinLTOSuffix(mb.getBufferIdentifier());
+
+  // If the parent archive already determines that the arch is not compat with
+  // target, then just return.
+  if (!compatArch)
+    return;
 
   // ThinLTO assumes that all MemoryBufferRefs given to it have a unique
   // name. If two members with the same name are provided, this causes a

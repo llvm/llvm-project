@@ -25,8 +25,12 @@ using namespace ompx;
 extern "C" {
 void __assert_assume(bool condition) { __builtin_assume(condition); }
 
-void __assert_fail(const char *expr, const char *msg, const char *file,
-                   unsigned line, const char *function) {
+void __assert_fail(const char *expr, const char *file, unsigned line,
+                   const char *function) {
+  __assert_fail_internal(expr, nullptr, file, line, function);
+}
+void __assert_fail_internal(const char *expr, const char *msg, const char *file,
+                            unsigned line, const char *function) {
   if (msg) {
     PRINTF("%s:%u: %s: Assertion %s (`%s') failed.\n", file, line, function,
            msg, expr);
