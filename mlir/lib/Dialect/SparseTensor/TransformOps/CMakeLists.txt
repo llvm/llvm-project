@@ -10,6 +10,7 @@ add_mlir_dialect_library(MLIRSparseTensorTransformOps
   LINK_LIBS PUBLIC
   MLIRIR
   MLIRSparseTensorDialect
+  MLIRLinalgTransformOps
   MLIRParser
   MLIRSideEffectInterfaces
   MLIRTransformDialect

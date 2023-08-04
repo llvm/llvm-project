@@ -50,6 +50,8 @@
 ! CHECK-NEXT: -fno-automatic         Implies the SAVE attribute for non-automatic local objects in subprograms unless RECURSIVE
 ! CHECK-NEXT: -fno-color-diagnostics  Disable colors in diagnostics
 ! CHECK-NEXT: -fno-integrated-as     Disable the integrated assembler
+! CHECK-NEXT: -fno-ppc-native-vector-element-order
+! CHECK-NEXT:                        Specifies PowerPC non-native vector element order
 ! CHECK-NEXT: -fno-signed-zeros      Allow optimizations that ignore the sign of floating point zeros
 ! CHECK-NEXT: -fno-stack-arrays      Allocate array temporaries on the heap (default)
 ! CHECK-NEXT: -fno-version-loops-for-stride
@@ -63,6 +65,8 @@
 ! CHECK-NEXT: -foptimization-record-passes=<regex>
 ! CHECK-NEXT:                        Only include passes which match a specified regular expression in the generated optimization record (by default, include all passes)
 ! CHECK-NEXT: -fpass-plugin=<dsopath> Load pass plugin from a dynamic shared object file (only with new pass manager).
+! CHECK-NEXT: -fppc-native-vector-element-order
+! CHECK-NEXT:                        Specifies PowerPC native vector element order
 ! CHECK-NEXT: -freciprocal-math      Allow division operations to be reassociated
 ! CHECK-NEXT: -fsave-optimization-record=<format>
 ! CHECK-NEXT:                        Generate an optimization record file in a specific format

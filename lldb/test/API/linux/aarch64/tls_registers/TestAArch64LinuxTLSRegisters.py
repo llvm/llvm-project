@@ -49,8 +49,9 @@ class AArch64LinuxTLSRegisters(TestBase):
 
         for register in registers:
             tls_reg = tls_regs.GetChildMemberWithName(register)
-            self.assertTrue(tls_reg.IsValid(), "{} register not found.".format(
-                register))
+            self.assertTrue(
+                tls_reg.IsValid(), "{} register not found.".format(register)
+            )
             self.assertEqual(tls_reg.GetValueAsUnsigned(), values[register])
 
     def check_tls_reg(self, registers):
@@ -77,8 +78,9 @@ class AArch64LinuxTLSRegisters(TestBase):
 
         # Set our own value(s) for the program to find.
         for register in registers:
-            self.expect("register write {} 0x{:x}".format(register,
-                            set_values[register]))
+            self.expect(
+                "register write {} 0x{:x}".format(register, set_values[register])
+            )
 
         self.expect("continue")
 
@@ -119,5 +121,4 @@ class AArch64LinuxTLSRegisters(TestBase):
         tls_regs = regs.GetFirstValueByName("Thread Local Storage Registers")
         self.assertTrue(tls_regs.IsValid(), "No TLS registers found.")
         tls_reg = tls_regs.GetChildMemberWithName("tpidr2")
-        self.assertFalse(tls_reg.IsValid(),
-            "tpdir2 should not be present without SME")
+        self.assertFalse(tls_reg.IsValid(), "tpdir2 should not be present without SME")
