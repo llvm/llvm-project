@@ -158,6 +158,30 @@ def uimm_shift : Operand<i32>, ImmLeaf<i32, "return isUInt<2>(Imm);"> {
   let DecoderMethod = "decodeImmShiftOpValue";
 }
 
+// Optimize (or x, imm) to (BSETI x, log2(imm)). We should exclude the
+// case can be opimized to (ORI32/ORI16 x, imm).
+def imm32_1_pop_bit_XFORM : SDNodeXForm<imm, [{
+  uint32_t I = N->getZExtValue();
+  return CurDAG->getTargetConstant(llvm::Log2_32(I), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+def imm32_1_pop_bit : PatLeaf<(imm), [{
+  uint32_t I = N->getZExtValue();
+  return llvm::popcount(I) == 1 && I > 0xffff;
+}]>;
+
+// Optimize (and x, imm) to (BCLRI x, log2(~imm)). We should exclude the
+// case can be opimized to (ANDNI x, ~imm).
+def imm32_1_zero_bit_XFORM : SDNodeXForm<imm, [{
+  uint32_t I = ~N->getZExtValue();
+  return CurDAG->getTargetConstant(llvm::Log2_32(I), SDLoc(N),
+                                   N->getValueType(0));
+}]>;
+def imm32_1_zero_bit : PatLeaf<(imm), [{
+  uint32_t I = ~N->getZExtValue();
+  return llvm::popcount(I) == 1 && I > 0xfff;
+}]>;
+
 def CSKYSymbol : AsmOperandClass {
   let Name = "CSKYSymbol";
   let RenderMethod = "addImmOperands";
@@ -1421,6 +1445,14 @@ def : Pat<(select CARRY:$ca, GPR:$other, (i32 0)),
 let Predicates = [iHasE2] in
   def : Pat<(i32 imm:$imm),
             (ORI32 (MOVIH32 (uimm32_hi16 imm:$imm)), (uimm32_lo16 imm:$imm))>;
+
+// Bit operations.
+let Predicates = [iHasE2] in {
+  def : Pat<(or GPR:$rs, imm32_1_pop_bit:$imm),
+            (BSETI32 GPR:$rs, (imm32_1_pop_bit_XFORM imm32_1_pop_bit:$imm))>;
+  def : Pat<(and GPR:$rs, imm32_1_zero_bit:$imm),
+            (BCLRI32 GPR:$rs, (imm32_1_zero_bit_XFORM imm32_1_zero_bit:$imm))>;
+}
 
 // Other operations.
 let Predicates = [iHasE2] in {
