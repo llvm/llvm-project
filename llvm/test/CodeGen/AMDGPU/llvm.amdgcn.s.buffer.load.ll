@@ -770,11 +770,9 @@ define amdgpu_ps void @s_buffer_load_index_across_bb_merged(<4 x i32> inreg %des
 ; GFX12-LABEL: s_buffer_load_index_across_bb_merged:
 ; GFX12:       ; %bb.0: ; %main_body
 ; GFX12-NEXT:    v_lshlrev_b32_e32 v0, 4, v0
-; GFX12-NEXT:    s_clause 0x1
-; GFX12-NEXT:    buffer_load_b32 v1, v0, s[0:3], null offen offset:8
-; GFX12-NEXT:    buffer_load_b32 v0, v0, s[0:3], null offen offset:12
+; GFX12-NEXT:    buffer_load_b64 v[0:1], v0, s[0:3], null offen offset:8
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    export mrt0 v1, v0, v0, v0 done
+; GFX12-NEXT:    export mrt0 v0, v1, v0, v0 done
 ; GFX12-NEXT:    s_endpgm
 main_body:
   %tmp = shl i32 %index, 4

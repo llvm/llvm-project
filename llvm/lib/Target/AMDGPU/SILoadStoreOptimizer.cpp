@@ -161,8 +161,9 @@ class SILoadStoreOptimizer : public MachineFunctionPass {
         if (!AddrOp->isReg())
           return false;
 
-        // TODO: We should be able to merge physical reg addresses.
-        if (AddrOp->getReg().isPhysical())
+        // TODO: We should be able to merge instructions with other physical reg addresses too.
+        if (AddrOp->getReg().isPhysical() &&
+            AddrOp->getReg() != AMDGPU::SGPR_NULL)
           return false;
 
         // If an address has only one use then there will be no other
@@ -401,11 +402,19 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
       case AMDGPU::BUFFER_LOAD_DWORD_OFFEN_exact:
       case AMDGPU::BUFFER_LOAD_DWORD_OFFSET:
       case AMDGPU::BUFFER_LOAD_DWORD_OFFSET_exact:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFEN:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFEN_exact:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFSET:
+      case AMDGPU::BUFFER_LOAD_DWORD_VBUFFER_OFFSET_exact:
         return BUFFER_LOAD;
       case AMDGPU::BUFFER_STORE_DWORD_OFFEN:
       case AMDGPU::BUFFER_STORE_DWORD_OFFEN_exact:
       case AMDGPU::BUFFER_STORE_DWORD_OFFSET:
       case AMDGPU::BUFFER_STORE_DWORD_OFFSET_exact:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_OFFEN:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_OFFEN_exact:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_OFFSET:
+      case AMDGPU::BUFFER_STORE_DWORD_VBUFFER_OFFSET_exact:
         return BUFFER_STORE;
       }
     }
@@ -427,19 +436,31 @@ static InstClassEnum getInstClass(unsigned Opc, const SIInstrInfo &TII) {
       switch (AMDGPU::getMTBUFBaseOpcode(Opc)) {
       default:
         return UNKNOWN;
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_BOTHEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_BOTHEN_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_IDXEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_IDXEN_exact:
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_OFFEN:
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_OFFEN_exact:
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_OFFSET:
       case AMDGPU::TBUFFER_LOAD_FORMAT_X_OFFSET_exact:
-      case AMDGPU::TBUFFER_LOAD_FORMAT_X_IDXEN:
-      case AMDGPU::TBUFFER_LOAD_FORMAT_X_IDXEN_exact:
-      case AMDGPU::TBUFFER_LOAD_FORMAT_X_BOTHEN:
-      case AMDGPU::TBUFFER_LOAD_FORMAT_X_BOTHEN_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_BOTHEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_BOTHEN_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_IDXEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_IDXEN_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_OFFEN:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_OFFEN_exact:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_OFFSET:
+      case AMDGPU::TBUFFER_LOAD_FORMAT_X_VBUFFER_OFFSET_exact:
         return TBUFFER_LOAD;
       case AMDGPU::TBUFFER_STORE_FORMAT_X_OFFEN:
       case AMDGPU::TBUFFER_STORE_FORMAT_X_OFFEN_exact:
       case AMDGPU::TBUFFER_STORE_FORMAT_X_OFFSET:
       case AMDGPU::TBUFFER_STORE_FORMAT_X_OFFSET_exact:
+      case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_OFFEN:
+      case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_OFFEN_exact:
+      case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_OFFSET:
+      case AMDGPU::TBUFFER_STORE_FORMAT_X_VBUFFER_OFFSET_exact:
         return TBUFFER_STORE;
       }
     }
