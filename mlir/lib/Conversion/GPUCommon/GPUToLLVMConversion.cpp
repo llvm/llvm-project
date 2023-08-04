@@ -67,7 +67,7 @@ public:
 protected:
   Value getNumElements(ConversionPatternRewriter &rewriter, Location loc,
                        MemRefType type, MemRefDescriptor desc) const {
-    Type indexType = ConvertToLLVMPattern::getIndexTypeMatchingMemRef(type);
+    Type indexType = ConvertToLLVMPattern::getIndexType();
     return type.hasStaticShape()
                ? ConvertToLLVMPattern::createIndexAttrConstant(
                      rewriter, loc, indexType, type.getNumElements())
@@ -654,16 +654,10 @@ private:
 
 } // namespace
 
-static IntegerType getIndexTypeForMemRef(MemRefType t) {
-  int64_t numBits = gpu::GPUDialect::hasSharedMemoryAddressSpace(t) ? 32 : 64;
-  return IntegerType::get(t.getContext(), numBits);
-}
-
 void GpuToLLVMConversionPass::runOnOperation() {
   LowerToLLVMOptions options(&getContext());
   options.useOpaquePointers = useOpaquePointers;
   options.useBarePtrCallConv = hostBarePtrCallConv;
-  options.memrefIndexTypeConverter = getIndexTypeForMemRef;
 
   LLVMTypeConverter converter(&getContext(), options);
   RewritePatternSet patterns(&getContext());

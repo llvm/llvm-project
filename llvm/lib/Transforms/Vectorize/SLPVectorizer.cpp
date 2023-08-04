@@ -15178,6 +15178,12 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   // compatible (have the same opcode, same parent), otherwise it is
   // definitely not profitable to try to vectorize them.
   auto &&StoreSorter = [this](StoreInst *V, StoreInst *V2) {
+    if (V->getValueOperand()->getType()->getTypeID() <
+        V2->getValueOperand()->getType()->getTypeID())
+      return true;
+    if (V->getValueOperand()->getType()->getTypeID() >
+        V2->getValueOperand()->getType()->getTypeID())
+      return false;
     if (V->getPointerOperandType()->getTypeID() <
         V2->getPointerOperandType()->getTypeID())
       return true;
@@ -15216,6 +15222,8 @@ bool SLPVectorizerPass::vectorizeStoreChains(BoUpSLP &R) {
   auto &&AreCompatibleStores = [this](StoreInst *V1, StoreInst *V2) {
     if (V1 == V2)
       return true;
+    if (V1->getValueOperand()->getType() != V2->getValueOperand()->getType())
+      return false;
     if (V1->getPointerOperandType() != V2->getPointerOperandType())
       return false;
     // Undefs are compatible with any other value.

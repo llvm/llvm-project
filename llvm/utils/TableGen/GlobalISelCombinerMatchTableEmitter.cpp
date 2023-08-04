@@ -491,7 +491,9 @@ public:
   void dump() const { print(dbgs()); }
 
   /// Debug-only verification of invariants.
+#ifndef NDEBUG
   void verify() const;
+#endif
 
 private:
   void PrintError(Twine Msg) const { ::PrintError(RuleDef.getLoc(), Msg); }
@@ -669,6 +671,7 @@ void CombineRuleBuilder::print(raw_ostream &OS) const {
   OS << ")\n";
 }
 
+#ifndef NDEBUG
 void CombineRuleBuilder::verify() const {
   const auto VerifyPats = [&](const PatternMap &Pats) {
     for (const auto &[Name, Pat] : Pats) {
@@ -706,6 +709,7 @@ void CombineRuleBuilder::verify() const {
     }
   }
 }
+#endif
 
 bool CombineRuleBuilder::addFeaturePredicates(RuleMatcher &M) {
   if (!RuleDef.getValue("Predicates"))
