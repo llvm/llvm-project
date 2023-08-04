@@ -1,3 +1,4 @@
+# REQUIRES: x86, aarch64
 ## Test that LLD correctly ignored archives with incompatible architecture without crashing.
 
 # RUN: rm -rf %t; split-file %s %t
