@@ -2,10 +2,9 @@
 Clang Code Owners
 =================
 
-This file is a list of the people responsible for ensuring that patches for a
-particular part of Clang are reviewed, either by themself or by someone else.
-They are also the gatekeepers for their part of Clang, with the final word on
-what goes in or not.
+This file is a list of the
+`code owners <https://llvm.org/docs/DeveloperPolicy.html#code-owners>`_ for
+Clang.
 
 .. contents::
    :depth: 2
