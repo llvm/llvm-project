@@ -2643,8 +2643,7 @@ void OmpStructureChecker::CheckStructureElement(
     common::visit(
         common::visitors{
             [&](const parser::Designator &designator) {
-              if (const auto *dataRef{
-                      std::get_if<parser::DataRef>(&designator.u)}) {
+              if (std::get_if<parser::DataRef>(&designator.u)) {
                 if (parser::Unwrap<parser::StructureComponent>(ompObject)) {
                   context_.Say(GetContext().clauseSource,
                       "A variable that is part of another variable "
