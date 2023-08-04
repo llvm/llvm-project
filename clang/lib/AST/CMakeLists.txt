@@ -133,5 +133,6 @@ add_clang_library(clangAST
   ClangAttrDocTable
   Opcodes
   omp_gen
+  ClangDriverOptions
   intrinsics_gen
   )
