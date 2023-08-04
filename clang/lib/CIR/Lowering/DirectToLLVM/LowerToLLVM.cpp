@@ -132,9 +132,6 @@ mlir::Value lowerCirAttrAsValue(mlir::cir::ConstArrayAttr constArr,
   auto llvmTy = converter->convertType(constArr.getType());
   mlir::Value result = rewriter.create<mlir::LLVM::UndefOp>(loc, llvmTy);
   auto arrayAttr = constArr.getElts().cast<mlir::ArrayAttr>();
-  auto cirArrayType = constArr.getType().cast<mlir::cir::ArrayType>();
-  assert(cirArrayType.getEltType().isa<mlir::cir::StructType>() &&
-         "Types other than ConstArrayAttr are NYI");
 
   // Iteratively lower each constant element of the array.
   for (auto [idx, elt] : llvm::enumerate(arrayAttr)) {
@@ -1157,20 +1154,14 @@ public:
       if (auto attr = constArr.getElts().dyn_cast<mlir::StringAttr>()) {
         init = rewriter.getStringAttr(attr.getValue());
       } else if (auto attr = constArr.getElts().dyn_cast<mlir::ArrayAttr>()) {
-        auto eltTy =
-            constArr.getType().cast<mlir::cir::ArrayType>().getEltType();
-        if (eltTy.isa<mlir::cir::StructType>()) {
+        // Failed to use a compact attribute as an initializer:
+        // initialize elements individually.
+        if (!(init = lowerConstArrayAttr(constArr, getTypeConverter()))) {
           setupRegionInitializedLLVMGlobalOp(op, rewriter);
           rewriter.create<mlir::LLVM::ReturnOp>(
               op->getLoc(), lowerCirAttrAsValue(constArr, op->getLoc(),
                                                 rewriter, typeConverter));
           return mlir::success();
-        }
-        if (!(init = lowerConstArrayAttr(constArr, getTypeConverter()))) {
-          op.emitError() << "unsupported lowering for #cir.const_array with "
-                            "element type "
-                         << op.getSymType();
-          return mlir::failure();
         }
       } else {
         op.emitError()

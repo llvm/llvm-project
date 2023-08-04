@@ -10,6 +10,8 @@
 !u32i = !cir.int<u, 32>
 !u64i = !cir.int<u, 64>
 !u8i = !cir.int<u, 8>
+!ty_22struct2EA22 = !cir.struct<"struct.A", !s32i, !cir.array<!cir.array<!s32i x 2> x 2>, #cir.recdecl.ast>
+
 module {
   cir.global external @a = #cir.int<3> : !s32i
   cir.global external @c = #cir.int<2> : !u64i
@@ -83,6 +85,10 @@ module {
   cir.global external @ll = #cir.const_array<[#cir.int<999999999> : !s64i, #cir.int<0> : !s64i, #cir.int<0> : !s64i, #cir.int<0> : !s64i]> : !cir.array<!s64i x 4>
   // MLIR: llvm.mlir.global external @ll(dense<[999999999, 0, 0, 0]> : tensor<4xi64>) {addr_space = 0 : i32} : !llvm.array<4 x i64>
   // LLVM: @ll = global [4 x i64] [i64 999999999, i64 0, i64 0, i64 0]
+  cir.global external @twoDim = #cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 2>
+  // LLVM: @twoDim = global [2 x [2 x i32{{\]\] \[\[}}2 x i32] [i32 1, i32 2], [2 x i32] [i32 3, i32 4{{\]\]}}
+  cir.global external @nestedTwoDim = #cir.const_struct<{#cir.int<1> : !s32i, #cir.const_array<[#cir.const_array<[#cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<4> : !s32i, #cir.int<5> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 2>}> : !ty_22struct2EA22
+  // LLVM: @nestedTwoDim = global %struct.A { i32 1, [2 x [2 x i32{{\]\] \[\[}}2 x i32] [i32 2, i32 3], [2 x i32] [i32 4, i32 5{{\]\]}} }
   cir.func @_Z11get_globalsv() {
     %0 = cir.alloca !cir.ptr<!s8i>, cir.ptr <!cir.ptr<!s8i>>, ["s", init] {alignment = 8 : i64}
     %1 = cir.alloca !cir.ptr<!u32i>, cir.ptr <!cir.ptr<!u32i>>, ["u", init] {alignment = 8 : i64}

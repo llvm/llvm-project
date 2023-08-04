@@ -27,6 +27,15 @@ int tentativeE[];
 int tentativeE[2] = {1, 2};
 // CHECK: cir.global external @tentativeE = #cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>
 
+int twoDim[2][2] = {{1, 2}, {3, 4}};
+// CHECK: cir.global external @twoDim = #cir.const_array<[#cir.const_array<[#cir.int<1> : !s32i, #cir.int<2> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<3> : !s32i, #cir.int<4> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 2>
+
+struct {
+  int x;
+  int y[2][2];
+} nestedTwoDim = {1, {{2, 3}, {4, 5}}};
+// CHECK: cir.global external @nestedTwoDim = #cir.const_struct<{#cir.int<1> : !s32i, #cir.const_array<[#cir.const_array<[#cir.int<2> : !s32i, #cir.int<3> : !s32i]> : !cir.array<!s32i x 2>, #cir.const_array<[#cir.int<4> : !s32i, #cir.int<5> : !s32i]> : !cir.array<!s32i x 2>]> : !cir.array<!cir.array<!s32i x 2> x 2>}> : !ty_22struct2Eanon22
+
 // TODO: test tentatives with internal linkage.
 
 // Tentative definition is THE definition. Should be zero-initialized.
