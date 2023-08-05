@@ -51,7 +51,6 @@ module attributes {
 //       CHECK:   %{{.+}} = spirv.AtomicAnd "Workgroup" "AcquireRelease" %[[PTR]], %{{.+}} : !spirv.ptr<i32, Workgroup>
 //       CHECK:   %{{.+}} = spirv.AtomicOr "Workgroup" "AcquireRelease" %[[PTR]], %{{.+}} : !spirv.ptr<i32, Workgroup>
 
-
 // -----
 
 module attributes {
@@ -91,7 +90,6 @@ module attributes {
 //   CHECK-DAG: spirv.GlobalVariable @__workgroup_mem__{{[0-9]+}}
 //  CHECK-SAME:   !spirv.ptr<!spirv.struct<(!spirv.array<4 x vector<4xf32>>)>, Workgroup>
 // CHECK-LABEL: func @two_allocs_vector()
-
 
 // -----
 
@@ -179,3 +177,19 @@ module attributes {
 //       CHECK:   %[[STOREPTR:.+]] = spirv.AccessChain %[[PTR]]
 //       CHECK:   spirv.Store "Workgroup" %[[STOREPTR]], %[[VAL]] : f32
 //   CHECK-NOT:   memref.dealloc
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [Shader], [SPV_KHR_storage_buffer_storage_class]>, #spirv.resource_limits<>>
+  }
+{
+  func.func @zero_size() {
+    %0 = memref.alloc() : memref<0xf32, #spirv.storage_class<Workgroup>>
+    return
+  }
+}
+
+// Zero-sized allocations are not handled yet. Just make sure we do not crash.
+// CHECK-LABEL: func @zero_size()

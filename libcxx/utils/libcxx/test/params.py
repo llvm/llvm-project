@@ -54,6 +54,9 @@ _warningFlags = [
 
     # TODO(philnik) This fails with the PSTL.
     "-Wno-unknown-pragmas",
+    # Don't fail compilation in case the compiler fails to perform the requested
+    # loop vectorization.
+    "-Wno-pass-failed",
 ]
 
 _allStandards = ["c++03", "c++11", "c++14", "c++17", "c++20", "c++23", "c++26"]
