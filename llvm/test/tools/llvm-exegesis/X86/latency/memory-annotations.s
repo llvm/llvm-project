@@ -1,4 +1,4 @@
-# REQUIRES: exegesis-can-execute-in-subprocess, x86_64-linux
+# REQUIRES: exegesis-can-measure-latency, x86_64-linux
 
 # Test the basic functionality of memory annotations, namely that we can
 # specify a memory definition, map it into the process, and then use the

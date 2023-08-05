@@ -1854,23 +1854,6 @@ SDValue SelectionDAG::getConstantPool(MachineConstantPoolValue *C, EVT VT,
   return SDValue(N, 0);
 }
 
-SDValue SelectionDAG::getTargetIndex(int Index, EVT VT, int64_t Offset,
-                                     unsigned TargetFlags) {
-  FoldingSetNodeID ID;
-  AddNodeIDNode(ID, ISD::TargetIndex, getVTList(VT), std::nullopt);
-  ID.AddInteger(Index);
-  ID.AddInteger(Offset);
-  ID.AddInteger(TargetFlags);
-  void *IP = nullptr;
-  if (SDNode *E = FindNodeOrInsertPos(ID, IP))
-    return SDValue(E, 0);
-
-  auto *N = newSDNode<TargetIndexSDNode>(Index, VT, Offset, TargetFlags);
-  CSEMap.InsertNode(N, IP);
-  InsertNode(N);
-  return SDValue(N, 0);
-}
-
 SDValue SelectionDAG::getBasicBlock(MachineBasicBlock *MBB) {
   FoldingSetNodeID ID;
   AddNodeIDNode(ID, ISD::BasicBlock, getVTList(MVT::Other), std::nullopt);
