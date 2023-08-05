@@ -3787,7 +3787,7 @@ static SDValue insert128BitVector(SDValue Result, SDValue Vec, unsigned IdxVal,
 static SDValue widenSubVector(MVT VT, SDValue Vec, bool ZeroNewElements,
                               const X86Subtarget &Subtarget, SelectionDAG &DAG,
                               const SDLoc &dl) {
-  assert(Vec.getValueSizeInBits().getFixedValue() < VT.getFixedSizeInBits() &&
+  assert(Vec.getValueSizeInBits().getFixedValue() <= VT.getFixedSizeInBits() &&
          Vec.getValueType().getScalarType() == VT.getScalarType() &&
          "Unsupported vector widening type");
   SDValue Res = ZeroNewElements ? getZeroVector(VT, Subtarget, DAG, dl)
@@ -3801,7 +3801,7 @@ static SDValue widenSubVector(MVT VT, SDValue Vec, bool ZeroNewElements,
 static SDValue widenSubVector(SDValue Vec, bool ZeroNewElements,
                               const X86Subtarget &Subtarget, SelectionDAG &DAG,
                               const SDLoc &dl, unsigned WideSizeInBits) {
-  assert(Vec.getValueSizeInBits() < WideSizeInBits &&
+  assert(Vec.getValueSizeInBits() <= WideSizeInBits &&
          (WideSizeInBits % Vec.getScalarValueSizeInBits()) == 0 &&
          "Unsupported vector widening type");
   unsigned WideNumElts = WideSizeInBits / Vec.getScalarValueSizeInBits();
@@ -19982,22 +19982,18 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   if (SrcVT == DstVT)
     return In;
 
-  // We only support vector truncation to 64bits or greater from a
-  // 128bits or greater source.
-  unsigned DstSizeInBits = DstVT.getSizeInBits();
-  unsigned SrcSizeInBits = SrcVT.getSizeInBits();
-  if ((DstSizeInBits % 64) != 0 || (SrcSizeInBits % 128) != 0)
-    return SDValue();
-
   unsigned NumElems = SrcVT.getVectorNumElements();
   if (!isPowerOf2_32(NumElems))
     return SDValue();
 
-  LLVMContext &Ctx = *DAG.getContext();
+  unsigned DstSizeInBits = DstVT.getSizeInBits();
+  unsigned SrcSizeInBits = SrcVT.getSizeInBits();
   assert(DstVT.getVectorNumElements() == NumElems && "Illegal truncation");
   assert(SrcSizeInBits > DstSizeInBits && "Illegal truncation");
 
+  LLVMContext &Ctx = *DAG.getContext();
   EVT PackedSVT = EVT::getIntegerVT(Ctx, SrcVT.getScalarSizeInBits() / 2);
+  EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
 
   // Pack to the largest type possible:
   // vXi64/vXi32 -> PACK*SDW and vXi16 -> PACK*SWB.
@@ -20008,14 +20004,16 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
     OutVT = MVT::i16;
   }
 
-  // 128bit -> 64bit truncate - PACK 128-bit src in the lower subvector.
-  if (SrcVT.is128BitVector()) {
+  // Sub-128-bit truncation - widen to 128-bit src and pack in the lower half.
+  if (SrcSizeInBits <= 128) {
     InVT = EVT::getVectorVT(Ctx, InVT, 128 / InVT.getSizeInBits());
     OutVT = EVT::getVectorVT(Ctx, OutVT, 128 / OutVT.getSizeInBits());
+    In = widenSubVector(In, false, Subtarget, DAG, DL, 128);
     In = DAG.getBitcast(InVT, In);
     SDValue Res = DAG.getNode(Opcode, DL, OutVT, In, DAG.getUNDEF(InVT));
-    Res = extractSubVector(Res, 0, DAG, DL, 64);
-    return DAG.getBitcast(DstVT, Res);
+    Res = extractSubVector(Res, 0, DAG, DL, SrcSizeInBits / 2);
+    Res = DAG.getBitcast(PackedVT, Res);
+    return truncateVectorWithPACK(Opcode, DstVT, Res, DL, DAG, Subtarget);
   }
 
   // Split lower/upper subvectors.
@@ -20061,7 +20059,6 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
       return DAG.getBitcast(DstVT, Res);
 
     // If 512bit -> 128bit truncate another stage.
-    EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
     Res = DAG.getBitcast(PackedVT, Res);
     return truncateVectorWithPACK(Opcode, DstVT, Res, DL, DAG, Subtarget);
   }
@@ -20069,7 +20066,6 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
   // Recursively pack lower/upper subvectors, concat result and pack again.
   assert(SrcSizeInBits >= 256 && "Expected 256-bit vector or greater");
 
-  EVT PackedVT = EVT::getVectorVT(Ctx, PackedSVT, NumElems);
   if (PackedVT.is128BitVector()) {
     // Avoid CONCAT_VECTORS on sub-128bit nodes as these can fail after
     // type legalization.
@@ -50831,6 +50827,10 @@ static SDValue combineVectorSignBitsTruncation(SDNode *N, const SDLoc &DL,
 
   // Truncation to sub-128bit vXi32 can be better handled with shuffles.
   if (SVT == MVT::i32 && VT.getSizeInBits() < 128)
+    return SDValue();
+
+  // Truncation from sub-128bit to vXi8 can be better handled with PSHUFB.
+  if (SVT == MVT::i8 && InVT.getSizeInBits() <= 128 && Subtarget.hasSSSE3())
     return SDValue();
 
   // AVX512 has fast truncate, but if the input is already going to be split,
