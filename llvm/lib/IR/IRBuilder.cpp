@@ -220,6 +220,9 @@ CallInst *IRBuilderBase::CreateMemTransferInst(
     Intrinsic::ID IntrID, Value *Dst, MaybeAlign DstAlign, Value *Src,
     MaybeAlign SrcAlign, Value *Size, bool isVolatile, MDNode *TBAATag,
     MDNode *TBAAStructTag, MDNode *ScopeTag, MDNode *NoAliasTag) {
+  assert((IntrID == Intrinsic::memcpy || IntrID == Intrinsic::memcpy_inline ||
+          IntrID == Intrinsic::memmove) &&
+         "Unexpected intrinsic ID");
   Value *Ops[] = {Dst, Src, Size, getInt1(isVolatile)};
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
@@ -246,41 +249,6 @@ CallInst *IRBuilderBase::CreateMemTransferInst(
 
   if (NoAliasTag)
     CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
-  return CI;
-}
-
-CallInst *IRBuilderBase::CreateMemCpyInline(
-    Value *Dst, MaybeAlign DstAlign, Value *Src, MaybeAlign SrcAlign,
-    Value *Size, bool IsVolatile, MDNode *TBAATag, MDNode *TBAAStructTag,
-    MDNode *ScopeTag, MDNode *NoAliasTag) {
-  Value *Ops[] = {Dst, Src, Size, getInt1(IsVolatile)};
-  Type *Tys[] = {Dst->getType(), Src->getType(), Size->getType()};
-  Function *F = BB->getParent();
-  Module *M = F->getParent();
-  Function *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memcpy_inline, Tys);
-
-  CallInst *CI = CreateCall(TheFn, Ops);
-
-  auto *MCI = cast<MemCpyInlineInst>(CI);
-  if (DstAlign)
-    MCI->setDestAlignment(*DstAlign);
-  if (SrcAlign)
-    MCI->setSourceAlignment(*SrcAlign);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    MCI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
-
-  // Set the TBAA Struct info if present.
-  if (TBAAStructTag)
-    MCI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
-
-  if (ScopeTag)
-    MCI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    MCI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
 
   return CI;
 }
@@ -313,37 +281,6 @@ CallInst *IRBuilderBase::CreateElementUnorderedAtomicMemCpy(
   // Set the TBAA Struct info if present.
   if (TBAAStructTag)
     CI->setMetadata(LLVMContext::MD_tbaa_struct, TBAAStructTag);
-
-  if (ScopeTag)
-    CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
-
-  if (NoAliasTag)
-    CI->setMetadata(LLVMContext::MD_noalias, NoAliasTag);
-
-  return CI;
-}
-
-CallInst *IRBuilderBase::CreateMemMove(Value *Dst, MaybeAlign DstAlign,
-                                       Value *Src, MaybeAlign SrcAlign,
-                                       Value *Size, bool isVolatile,
-                                       MDNode *TBAATag, MDNode *ScopeTag,
-                                       MDNode *NoAliasTag) {
-  Value *Ops[] = {Dst, Src, Size, getInt1(isVolatile)};
-  Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
-  Module *M = BB->getParent()->getParent();
-  Function *TheFn = Intrinsic::getDeclaration(M, Intrinsic::memmove, Tys);
-
-  CallInst *CI = CreateCall(TheFn, Ops);
-
-  auto *MMI = cast<MemMoveInst>(CI);
-  if (DstAlign)
-    MMI->setDestAlignment(*DstAlign);
-  if (SrcAlign)
-    MMI->setSourceAlignment(*SrcAlign);
-
-  // Set the TBAA info if present.
-  if (TBAATag)
-    CI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
 
   if (ScopeTag)
     CI->setMetadata(LLVMContext::MD_alias_scope, ScopeTag);
@@ -1223,29 +1160,6 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
   SmallVector<int, 16> Zeros;
   Zeros.resize(EC.getKnownMinValue());
   return CreateShuffleVector(V, Zeros, Name + ".splat");
-}
-
-Value *IRBuilderBase::CreateExtractInteger(
-    const DataLayout &DL, Value *From, IntegerType *ExtractedTy,
-    uint64_t Offset, const Twine &Name) {
-  auto *IntTy = cast<IntegerType>(From->getType());
-  assert(DL.getTypeStoreSize(ExtractedTy) + Offset <=
-             DL.getTypeStoreSize(IntTy) &&
-         "Element extends past full value");
-  uint64_t ShAmt = 8 * Offset;
-  Value *V = From;
-  if (DL.isBigEndian())
-    ShAmt = 8 * (DL.getTypeStoreSize(IntTy) -
-                 DL.getTypeStoreSize(ExtractedTy) - Offset);
-  if (ShAmt) {
-    V = CreateLShr(V, ShAmt, Name + ".shift");
-  }
-  assert(ExtractedTy->getBitWidth() <= IntTy->getBitWidth() &&
-         "Cannot extract to a larger integer!");
-  if (ExtractedTy != IntTy) {
-    V = CreateTrunc(V, ExtractedTy, Name + ".trunc");
-  }
-  return V;
 }
 
 Value *IRBuilderBase::CreatePreserveArrayAccessIndex(

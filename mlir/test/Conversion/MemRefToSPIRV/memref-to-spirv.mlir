@@ -608,4 +608,14 @@ func.func @cast_to_static(%arg: memref<4x?xf32, #spirv.storage_class<CrossWorkgr
   return %ret : memref<4x4xf32, #spirv.storage_class<CrossWorkgroup>>
 }
 
+// TODO: Not supported yet
+// CHECK-LABEL: func.func @cast_to_static_zero_elems
+//  CHECK-SAME:  (%[[MEM:.*]]: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>)
+func.func @cast_to_static_zero_elems(%arg: memref<?xf32, #spirv.storage_class<CrossWorkgroup>>) -> memref<0xf32, #spirv.storage_class<CrossWorkgroup>> {
+//       CHECK:  %[[MEM1:.*]] =  memref.cast %[[MEM]] : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<0xf32, #spirv.storage_class<CrossWorkgroup>>
+//       CHECK:  return %[[MEM1]]
+  %ret = memref.cast %arg : memref<?xf32, #spirv.storage_class<CrossWorkgroup>> to memref<0xf32, #spirv.storage_class<CrossWorkgroup>>
+  return %ret : memref<0xf32, #spirv.storage_class<CrossWorkgroup>>
+}
+
 }

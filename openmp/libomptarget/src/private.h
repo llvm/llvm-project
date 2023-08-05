@@ -41,6 +41,9 @@ extern int targetDataUpdate(ident_t *Loc, DeviceTy &Device, int32_t ArgNum,
 extern int target(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                   KernelArgsTy &KernelArgs, AsyncInfoTy &AsyncInfo);
 
+extern int target_activate_rr(DeviceTy &Device, uint64_t MemorySize,
+                              bool isRecord, bool SaveOutput);
+
 extern int target_replay(ident_t *Loc, DeviceTy &Device, void *HostPtr,
                          void *DeviceMemory, int64_t DeviceMemorySize,
                          void **TgtArgs, ptrdiff_t *TgtOffsets, int32_t NumArgs,

@@ -13,6 +13,7 @@ add_llvm_unittest(JITLinkTests
     JITLinkMocks.cpp
     LinkGraphTests.cpp
     MemoryManagerErrorTests.cpp
+    StubsTests.cpp
   )
 
 target_link_libraries(JITLinkTests PRIVATE LLVMTestingSupport)
