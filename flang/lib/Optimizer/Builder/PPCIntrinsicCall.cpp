@@ -360,6 +360,20 @@ checkPPCMathOperationsRange(llvm::StringRef name) {
   return ppcMathOps.equal_range(name);
 }
 
+// Helper functions for vector element ordering.
+bool PPCIntrinsicLibrary::isBEVecElemOrderOnLE() {
+  return (Fortran::evaluate::isHostLittleEndian &&
+          converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
+}
+bool PPCIntrinsicLibrary::isNativeVecElemOrderOnLE() {
+  return (Fortran::evaluate::isHostLittleEndian &&
+          !converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
+}
+bool PPCIntrinsicLibrary::changeVecElemOrder() {
+  return (Fortran::evaluate::isHostLittleEndian !=
+          converter->getLoweringOptions().getNoPPCNativeVecElemOrder());
+}
+
 static mlir::FunctionType genMmaVpFuncType(mlir::MLIRContext *context,
                                            int quadCnt, int pairCnt, int vecCnt,
                                            int intCnt = 0,
@@ -1014,8 +1028,8 @@ PPCIntrinsicLibrary::genVecConvert(mlir::Type resultType,
 
     mlir::Value newArgs[]{vArg1};
     if (vecTyInfo.isFloat32()) {
-      // TODO: Handle element ordering
-      newArgs[0] = swapVectorWordPairs(builder, loc, newArgs[0]);
+      if (changeVecElemOrder())
+        newArgs[0] = swapVectorWordPairs(builder, loc, newArgs[0]);
 
       const llvm::StringRef fname{"llvm.ppc.vsx.xvcvspdp"};
       auto ftype{
@@ -1036,8 +1050,8 @@ PPCIntrinsicLibrary::genVecConvert(mlir::Type resultType,
       auto mvf32Ty{mlir::VectorType::get(4, f32type)};
       newArgs[0] = builder.createConvert(loc, mvf32Ty, newArgs[0]);
 
-      // TODO: Handle element ordering
-      newArgs[0] = swapVectorWordPairs(builder, loc, newArgs[0]);
+      if (changeVecElemOrder())
+        newArgs[0] = swapVectorWordPairs(builder, loc, newArgs[0]);
 
       return builder.createConvert(loc, fvf32Ty, newArgs[0]);
     }

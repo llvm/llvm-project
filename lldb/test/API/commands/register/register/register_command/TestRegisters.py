@@ -572,16 +572,22 @@ class RegisterCommandsTestCase(TestBase):
         self.build()
         self.common_setup()
 
-        self.expect("register info blub", error=True,
-                    substrs=["error: No register found with name 'blub'."])
+        self.expect(
+            "register info blub",
+            error=True,
+            substrs=["error: No register found with name 'blub'."],
+        )
 
     def test_info_many_registers(self):
         self.build()
         self.common_setup()
 
         # Only 1 register allowed at this time.
-        self.expect("register info abc def", error=True,
-                    substrs=["error: register info takes exactly 1 argument"])
+        self.expect(
+            "register info abc def",
+            error=True,
+            substrs=["error: register info takes exactly 1 argument"],
+        )
 
     @skipIf(archs=no_match(["aarch64"]))
     def test_info_register(self):
@@ -593,12 +599,17 @@ class RegisterCommandsTestCase(TestBase):
         self.common_setup()
 
         # Standard register. Doesn't invalidate anything, doesn't have an alias.
-        self.expect("register info x1", substrs=[
-                   "Name: x1",
-                   "Size: 8 bytes (64 bits)",
-                   "In sets: General Purpose Registers"])
-        self.expect("register info x1", substrs=["Invalidates:", "Name: x1 ("],
-                    matching=False)
+        self.expect(
+            "register info x1",
+            substrs=[
+                "Name: x1",
+                "Size: 8 bytes (64 bits)",
+                "In sets: General Purpose Registers",
+            ],
+        )
+        self.expect(
+            "register info x1", substrs=["Invalidates:", "Name: x1 ("], matching=False
+        )
 
         # These registers invalidate others as they are subsets of those registers.
         self.expect("register info w1", substrs=["Invalidates: x1"])
@@ -631,9 +642,7 @@ class RegisterCommandsTestCase(TestBase):
         self.assertTrue(reg_fs_base.IsValid(), "fs_base is not available")
         reg_gs_base = current_frame.FindRegister("gs_base")
         self.assertTrue(reg_gs_base.IsValid(), "gs_base is not available")
-        self.assertEqual(
-            reg_gs_base.GetValueAsSigned(-1), 0, f"gs_base should be zero"
-        )
+        self.assertEqual(reg_gs_base.GetValueAsSigned(-1), 0, f"gs_base should be zero")
 
         # Evaluate pthread_self() and compare against fs_base register read.
         pthread_self_code = "(uint64_t)pthread_self()"

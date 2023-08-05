@@ -60,9 +60,7 @@ class TestVSCode_runInTerminal(lldbvscode_testcase.VSCodeTestCaseBase):
         )
 
         self.assertEqual(
-            len(self.vscode.reverse_requests), 
-            1, 
-            "make sure we got a reverse request"
+            len(self.vscode.reverse_requests), 1, "make sure we got a reverse request"
         )
 
         request = self.vscode.reverse_requests[0]

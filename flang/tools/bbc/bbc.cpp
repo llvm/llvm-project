@@ -186,6 +186,11 @@ static llvm::cl::opt<bool> enablePolymorphic(
     llvm::cl::desc("enable polymorphic type lowering (experimental)"),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> enableNoPPCNativeVecElemOrder(
+    "fno-ppc-native-vector-element-order",
+    llvm::cl::desc("no PowerPC native vector element order."),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool> useHLFIR("hlfir",
                                     llvm::cl::desc("Lower to high level FIR"),
                                     llvm::cl::init(false));
@@ -289,6 +294,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // Use default lowering options for bbc.
   Fortran::lower::LoweringOptions loweringOptions{};
   loweringOptions.setPolymorphicTypeImpl(enablePolymorphic);
+  loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),

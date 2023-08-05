@@ -1467,18 +1467,21 @@ static Value foldExtractFromBroadcast(ExtractOp extractOp) {
     return Value();
 
   auto broadcastOp = cast<vector::BroadcastOp>(defOp);
-  int64_t rankDiff = broadcastSrcRank - extractResultRank;
+  int64_t broadcastDstRank = broadcastOp.getResultVectorType().getRank();
+
   // Detect all the positions that come from "dim-1" broadcasting.
   // These dimensions correspond to "dim-1" broadcasted dims; set the mathching
   // extract position to `0` when extracting from the source operand.
   llvm::SetVector<int64_t> broadcastedUnitDims =
       broadcastOp.computeBroadcastedUnitDims();
   SmallVector<int64_t> extractPos(extractOp.getPosition());
-  for (int64_t i = rankDiff, e = extractPos.size(); i < e; ++i)
+  int64_t broadcastRankDiff = broadcastDstRank - broadcastSrcRank;
+  for (int64_t i = broadcastRankDiff, e = extractPos.size(); i < e; ++i)
     if (broadcastedUnitDims.contains(i))
       extractPos[i] = 0;
   // `rankDiff` leading dimensions correspond to new broadcasted dims, drop the
   // matching extract position when extracting from the source operand.
+  int64_t rankDiff = broadcastSrcRank - extractResultRank;
   extractPos.erase(extractPos.begin(),
                    std::next(extractPos.begin(), extractPos.size() - rankDiff));
   // OpBuilder is only used as a helper to build an I64ArrayAttr.
@@ -4953,7 +4956,8 @@ void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
 
 OpFoldResult vector::TransposeOp::fold(FoldAdaptor adaptor) {
   // Eliminate splat constant transpose ops.
-  if (auto attr = llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getVector()))
+  if (auto attr =
+          llvm::dyn_cast_if_present<DenseElementsAttr>(adaptor.getVector()))
     if (attr.isSplat())
       return attr.reshape(getResultVectorType());
 

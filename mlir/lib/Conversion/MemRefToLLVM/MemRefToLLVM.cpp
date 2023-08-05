@@ -160,7 +160,7 @@ struct ReallocOpLoweringBase : public AllocationOpLLVMLowering {
     auto computeNumElements =
         [&](MemRefType type, function_ref<Value()> getDynamicSize) -> Value {
       // Compute number of elements.
-      Type indexType = ConvertToLLVMPattern::getIndexTypeMatchingMemRef(type);
+      Type indexType = ConvertToLLVMPattern::getIndexType();
       Value numElements =
           type.isDynamicDim(0)
               ? getDynamicSize()
@@ -483,8 +483,7 @@ private:
     // The size value that we have to extract can be obtained using GEPop with
     // `dimOp.index() + 1` index argument.
     Value idxPlusOne = rewriter.create<LLVM::AddOp>(
-        loc,
-        createIndexAttrConstant(rewriter, loc, adaptor.getIndex().getType(), 1),
+        loc, createIndexAttrConstant(rewriter, loc, getIndexType(), 1),
         adaptor.getIndex());
     Value sizePtr = rewriter.create<LLVM::GEPOp>(
         loc, indexPtrTy, getTypeConverter()->getIndexType(), offsetPtr,
@@ -511,7 +510,7 @@ private:
 
     // Take advantage if index is constant.
     MemRefType memRefType = cast<MemRefType>(operandType);
-    Type indexType = getIndexTypeMatchingMemRef(memRefType);
+    Type indexType = getIndexType();
     if (std::optional<int64_t> index = getConstantDimIndex(dimOp)) {
       int64_t i = *index;
       if (i >= 0 && i < memRefType.getRank()) {
@@ -1361,7 +1360,7 @@ private:
       assert(targetMemRefType.getLayout().isIdentity() &&
              "Identity layout map is a precondition of a valid reshape op");
 
-      Type indexType = getIndexTypeMatchingMemRef(targetMemRefType);
+      Type indexType = getIndexType();
       Value stride = nullptr;
       int64_t targetRank = targetMemRefType.getRank();
       for (auto i : llvm::reverse(llvm::seq<int64_t>(0, targetRank))) {
@@ -1456,8 +1455,7 @@ private:
     Value targetStridesBase = UnrankedMemRefDescriptor::strideBasePtr(
         rewriter, loc, *getTypeConverter(), targetSizesBase, resultRank);
     Value shapeOperandPtr = shapeDesc.alignedPtr(rewriter, loc);
-    Value oneIndex =
-        createIndexAttrConstant(rewriter, loc, resultRank.getType(), 1);
+    Value oneIndex = createIndexAttrConstant(rewriter, loc, getIndexType(), 1);
     Value resultRankMinusOne =
         rewriter.create<LLVM::SubOp>(loc, resultRank, oneIndex);
 
@@ -1710,7 +1708,7 @@ struct ViewOpLowering : public ConvertOpToLLVMPattern<memref::ViewOp> {
 
     targetMemRef.setAlignedPtr(rewriter, loc, bitcastPtr);
 
-    auto indexType = targetMemRef.getIndexType();
+    Type indexType = getIndexType();
     // Field 3: The offset in the resulting type must be 0. This is
     // because of the type change: an offset on srcType* may not be
     // expressible as an offset on dstType*.

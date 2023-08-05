@@ -33,7 +33,7 @@ class TestVSCode_disassemble(lldbvscode_testcase.VSCodeTestCaseBase):
         pc_assembly = self.disassemble(frameIndex=0)
         self.assertTrue("location" in pc_assembly, "Source location missing.")
         self.assertTrue("instruction" in pc_assembly, "Assembly instruction missing.")
-        
+
         # The calling frame (qsort) is coming from a system library, as a result
         # we should not have a source location.
         qsort_assembly = self.disassemble(frameIndex=1)

@@ -14,9 +14,11 @@ from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
 
+
 class Mode(Enum):
     SVE = 0
     SSVE = 1
+
 
 class RegisterCommandsTestCase(TestBase):
     def get_supported_vg(self):
@@ -147,7 +149,7 @@ class RegisterCommandsTestCase(TestBase):
         self.runCmd("process continue", RUN_SUCCEEDED)
 
         # If we start the checks too quickly, thread 3 may not have started.
-        while (process.GetNumThreads() < 3):
+        while process.GetNumThreads() < 3:
             pass
 
         for idx in range(1, process.GetNumThreads()):

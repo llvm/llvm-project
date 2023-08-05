@@ -23,6 +23,7 @@ add_clang_library(clangTidyHICPPModule
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangTidyHICPPModule

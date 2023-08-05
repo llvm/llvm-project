@@ -26,9 +26,7 @@ class TestObjcPoHint(TestBase):
         # Make sure it's not printed again.
         self.expect(
             "dwim-print -O -- foo",
-            substrs=[
-                "note: object description"
-            ],
+            substrs=["note: object description"],
             matching=False,
         )
 
@@ -42,8 +40,6 @@ class TestObjcPoHint(TestBase):
         # Make sure the hint is printed the first time
         self.expect(
             "dwim-print -O -- foo",
-            substrs=[
-                "note: object description"
-            ],
+            substrs=["note: object description"],
             matching=False,
         )
