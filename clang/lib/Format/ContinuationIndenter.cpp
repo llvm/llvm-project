@@ -1437,6 +1437,7 @@ unsigned ContinuationIndenter::moveStateToNextToken(LineState &State,
     if (Style.PackConstructorInitializers > FormatStyle::PCIS_BinPack) {
       CurrentState.AvoidBinPacking = true;
       CurrentState.BreakBeforeParameter =
+          Style.ColumnLimit > 0 &&
           Style.PackConstructorInitializers != FormatStyle::PCIS_NextLine &&
           Style.PackConstructorInitializers != FormatStyle::PCIS_NextLineOnly;
     } else {
