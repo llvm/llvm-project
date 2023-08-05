@@ -820,6 +820,9 @@ LogicalResult PassManager::run(Operation *op) {
   if (failed(getImpl().finalizePassList(context)))
     return failure();
 
+  // Notify the context that we start running a pipeline for book keeping.
+  context->enterMultiThreadedExecution();
+
   // Initialize all of the passes within the pass manager with a new generation.
   llvm::hash_code newInitKey = context->getRegistryHash();
   if (newInitKey != initializationKey) {
@@ -830,9 +833,6 @@ LogicalResult PassManager::run(Operation *op) {
 
   // Construct a top level analysis manager for the pipeline.
   ModuleAnalysisManager am(op, instrumentor.get());
-
-  // Notify the context that we start running a pipeline for book keeping.
-  context->enterMultiThreadedExecution();
 
   // If reproducer generation is enabled, run the pass manager with crash
   // handling enabled.
