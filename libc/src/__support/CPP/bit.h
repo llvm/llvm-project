@@ -10,6 +10,7 @@
 #define LLVM_LIBC_SUPPORT_CPP_BIT_H
 
 #include "src/__support/CPP/type_traits.h"
+#include "src/__support/macros/attributes.h"
 #include "src/__support/macros/config.h" // LIBC_HAS_BUILTIN
 
 namespace __llvm_libc::cpp {
@@ -24,7 +25,8 @@ namespace __llvm_libc::cpp {
 
 // This function guarantees the bitcast to be optimized away by the compiler for
 // GCC >= 8 and Clang >= 6.
-template <class To, class From> constexpr To bit_cast(const From &from) {
+template <class To, class From>
+LIBC_INLINE constexpr To bit_cast(const From &from) {
   static_assert(sizeof(To) == sizeof(From), "To and From must be of same size");
   static_assert(cpp::is_trivially_copyable<To>::value &&
                     cpp::is_trivially_copyable<From>::value,
