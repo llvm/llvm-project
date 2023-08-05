@@ -12,6 +12,9 @@ _Static_assert(1.0 == 1.0, ""); // pedantic-ref-warning {{not an integer constan
 _Static_assert(1 && 1.0, ""); // pedantic-ref-warning {{not an integer constant expression}} \
                               // pedantic-expected-warning {{not an integer constant expression}}
 _Static_assert( (5 > 4) + (3 > 2) == 2, "");
+_Static_assert(!!1.0, ""); // pedantic-ref-warning {{not an integer constant expression}} \
+                           // pedantic-expected-warning {{not an integer constant expression}}
+_Static_assert(!!1, "");
 
 /// FIXME: Should also be rejected in the new interpreter
 int a = (1 == 1 ? 5 : 3);
