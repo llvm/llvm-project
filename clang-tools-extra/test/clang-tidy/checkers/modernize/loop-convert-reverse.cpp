@@ -40,6 +40,8 @@
 // Make sure no header is included in this example
 // CHECK-FIXES-CUSTOM-NO-HEADER-NOT: #include
 
+namespace ADL {
+
 template <typename T>
 struct Reversable {
   using iterator = T *;
@@ -61,6 +63,28 @@ struct Reversable {
   const_iterator crend() const;
 };
 
+template <typename C>
+constexpr auto rbegin(C& c) -> decltype(c.rbegin()) { return c.rbegin(); }
+template <typename C>
+constexpr auto rend(C& c) -> decltype(c.rend()) { return c.rend(); }
+template <typename C>
+constexpr auto rbegin(const C& c) -> decltype(c.rbegin()) { return c.rbegin(); }
+template <typename C>
+constexpr auto rend(const C& c) -> decltype(c.rend()) { return c.rend(); }
+
+template <typename C>
+constexpr auto crbegin(C& c) -> decltype(c.crbegin());
+template <typename C>
+constexpr auto crend(C& c) -> decltype(c.crend());
+template <typename C>
+constexpr auto crbegin(const C& c) -> decltype(c.crbegin());
+template <typename C>
+constexpr auto crend(const C& c) -> decltype(c.crend());
+
+} // namespace ADL
+
+using ADL::Reversable;
+
 template <typename T>
 void observe(const T &);
 template <typename T>
@@ -77,6 +101,24 @@ void constContainer(const Reversable<int> &Numbers) {
   //   CHECK-FIXES-NEXT: }
 
   for (auto I = Numbers.crbegin(), E = Numbers.crend(); I != E; ++I) {
+    observe(*I);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES-RANGES: for (int Number : std::ranges::reverse_view(Numbers)) {
+  // CHECK-FIXES-CUSTOM: for (int Number : llvm::reverse(Numbers)) {
+  //   CHECK-FIXES-NEXT:   observe(Number);
+  //   CHECK-FIXES-NEXT: }
+
+  for (auto I = rbegin(Numbers), E = rend(Numbers); I != E; ++I) {
+    observe(*I);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES-RANGES: for (int Number : std::ranges::reverse_view(Numbers)) {
+  // CHECK-FIXES-CUSTOM: for (int Number : llvm::reverse(Numbers)) {
+  //   CHECK-FIXES-NEXT:   observe(Number);
+  //   CHECK-FIXES-NEXT: }
+
+  for (auto I = crbegin(Numbers), E = crend(Numbers); I != E; ++I) {
     observe(*I);
   }
   // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
@@ -111,5 +153,14 @@ void nonConstContainer(Reversable<int> &Numbers) {
   // CHECK-FIXES-RANGES: for (int Number : std::ranges::reverse_view(Numbers)) {
   // CHECK-FIXES-CUSTOM: for (int Number : llvm::reverse(Numbers)) {
   //   CHECK-FIXES-NEXT:   observe(Number);
+  //   CHECK-FIXES-NEXT: }
+
+  for (auto I = rbegin(Numbers), E = rend(Numbers); I != E; ++I) {
+    mutate(*I);
+  }
+  // CHECK-MESSAGES: :[[@LINE-3]]:3: warning: use range-based for loop instead
+  // CHECK-FIXES-RANGES: for (int & Number : std::ranges::reverse_view(Numbers)) {
+  // CHECK-FIXES-CUSTOM: for (int & Number : llvm::reverse(Numbers)) {
+  //   CHECK-FIXES-NEXT:   mutate(Number);
   //   CHECK-FIXES-NEXT: }
 }
