@@ -213,6 +213,7 @@ std::string SparseTensorDimSliceAttr::getStaticString(int64_t v) {
 }
 
 void SparseTensorDimSliceAttr::print(llvm::raw_ostream &os) const {
+  assert(getImpl() && "Uninitialized SparseTensorDimSliceAttr");
   os << '(';
   os << getStaticString(getOffset());
   os << ", ";
@@ -528,10 +529,37 @@ Attribute SparseTensorEncodingAttr::parse(AsmParser &parser, Type type) {
       ir_detail::DimLvlMapParser cParser(parser);
       auto res = cParser.parseDimLvlMap();
       RETURN_ON_FAIL(res);
-      // Proof of concept result.
-      // TODO: use DimLvlMap directly as storage representation
-      for (Level lvl = 0, lvlRank = res->getLvlRank(); lvl < lvlRank; lvl++)
-        lvlTypes.push_back(res->getLvlType(lvl));
+      // TODO: use DimLvlMap directly as storage representation, rather
+      // than converting things over.
+      const auto &dlm = *res;
+
+      ERROR_IF(!lvlTypes.empty(), "Cannot mix `lvlTypes` with `NEW_SYNTAX`")
+      const Level lvlRank = dlm.getLvlRank();
+      for (Level lvl = 0; lvl < lvlRank; lvl++)
+        lvlTypes.push_back(dlm.getLvlType(lvl));
+
+      ERROR_IF(!dimSlices.empty(), "Cannot mix `dimSlices` with `NEW_SYNTAX`")
+      const Dimension dimRank = dlm.getDimRank();
+      for (Dimension dim = 0; dim < dimRank; dim++)
+        dimSlices.push_back(dlm.getDimSlice(dim));
+      // NOTE: the old syntax requires an all-or-nothing approach to
+      // `dimSlices`; therefore, if any slice actually exists then we need
+      // to convert null-DSA into default/nop DSA.
+      const auto isDefined = [](SparseTensorDimSliceAttr slice) {
+        return static_cast<bool>(slice.getImpl());
+      };
+      if (llvm::any_of(dimSlices, isDefined)) {
+        const auto defaultSlice =
+            SparseTensorDimSliceAttr::get(parser.getContext());
+        for (Dimension dim = 0; dim < dimRank; dim++)
+          if (!isDefined(dimSlices[dim]))
+            dimSlices[dim] = defaultSlice;
+      } else {
+        dimSlices.clear();
+      }
+
+      ERROR_IF(dimToLvl, "Cannot mix `dimToLvl` with `NEW_SYNTAX`")
+      dimToLvl = dlm.getDimToLvlMap(parser.getContext());
     }
 
     // Only the last item can omit the comma

@@ -563,6 +563,12 @@ static Type convertMemrefType(const spirv::TargetEnv &targetEnv,
     return nullptr;
   }
 
+  if (*memrefSize == 0) {
+    LLVM_DEBUG(llvm::dbgs()
+               << type << " illegal: zero-element memrefs are not supported\n");
+    return nullptr;
+  }
+
   int64_t arrayElemCount = llvm::divideCeil(*memrefSize, *arrayElemSize);
   int64_t stride = needsExplicitLayout(storageClass) ? *arrayElemSize : 0;
   auto arrayType = spirv::ArrayType::get(arrayElemType, arrayElemCount, stride);
