@@ -98,9 +98,10 @@ Fortran::lower::genIntrinsicCall(fir::FirOpBuilder &builder, mlir::Location loc,
                                  llvm::StringRef name,
                                  std::optional<mlir::Type> resultType,
                                  llvm::ArrayRef<fir::ExtendedValue> args,
-                                 Fortran::lower::StatementContext &stmtCtx) {
+                                 Fortran::lower::StatementContext &stmtCtx,
+                                 Fortran::lower::AbstractConverter *converter) {
   auto [result, mustBeFreed] =
-      fir::genIntrinsicCall(builder, loc, name, resultType, args);
+      fir::genIntrinsicCall(builder, loc, name, resultType, args, converter);
   if (mustBeFreed) {
     mlir::Value addr = fir::getBase(result);
     if (auto *box = result.getBoxOf<fir::BoxValue>())
