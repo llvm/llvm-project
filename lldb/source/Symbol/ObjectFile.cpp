@@ -553,8 +553,8 @@ size_t ObjectFile::ReadSectionData(Section *section,
 
   // The object file now contains a full mmap'ed copy of the object file
   // data, so just use this
-  return GetData(section->GetFileOffset(), section->GetFileSize(),
-                  section_data);
+  return GetData(section->GetFileOffset(), GetSectionDataSize(section),
+                 section_data);
 }
 
 const char *
