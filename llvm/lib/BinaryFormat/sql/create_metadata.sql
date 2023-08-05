@@ -23,20 +23,20 @@ CREATE TABLE IF NOT EXISTS Metadata
     PRIMARY
     KEY,
     e_type
-    INTEGER, -- Object file type (ET_REL, ET_EXEC, etc.)
+    TEXT, -- Object file type (ET_REL, ET_EXEC, etc.)
     e_machine
-    INTEGER, -- Architecture (EM_386, EM_X86_64, etc.)
+    TEXT, -- Architecture (EM_386, EM_X86_64, etc.)
     e_version
-    INTEGER, -- Object file version
+    INTEGER -- Object file version
     -- Only relevant in a binary file
     -- e_entry   INTEGER, -- Entry point virtual address
     -- Only relevant in a binary file
     -- e_phoff      INTEGER, -- Program header table file offset
     -- Only relevant in a binary file
     --  e_shoff    INTEGER, -- Section header table file offset
-    e_flags
-    INTEGER  -- Processor-specific flags
-    -- Only relevant in a binary file
+    -- No flags defined so just omit it for now
+    --  e_flags
+    -- INTEGER  -- Processor-specific flags
     -- Only relevant in a binary file
     -- e_phentsize INTEGER, -- Program header table entry size
     -- e_phnum     INTEGER, -- Program header table entry count

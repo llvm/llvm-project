@@ -11,6 +11,11 @@
 
 using namespace llvm;
 
-MCSQELFObjectTargetWriter::MCSQELFObjectTargetWriter() {}
+MCSQELFObjectTargetWriter::MCSQELFObjectTargetWriter(bool Is64Bit_,
+                                                     uint8_t OSABI_,
+                                                     uint16_t EMachine_,
+                                                     uint8_t ABIVersion_)
+    : OSABI(OSABI_), ABIVersion(ABIVersion_), EMachine(EMachine_),
+      Is64Bit(Is64Bit_) {}
 
 MCSQELFObjectTargetWriter::~MCSQELFObjectTargetWriter() = default;

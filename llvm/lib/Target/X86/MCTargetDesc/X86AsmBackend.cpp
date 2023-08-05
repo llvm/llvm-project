@@ -1113,7 +1113,8 @@ public:
     // ObjectWriter? We need to first create the ObjectTargetWriter
     // which creates the ObjectWriter in AsmBackend::createObjectWriter
     if (getSTI().getTargetTriple().isOSBinFormatSQELF()) {
-      return std::make_unique<MCSQELFObjectTargetWriter>();
+      return std::make_unique<MCSQELFObjectTargetWriter>(/*IsELF64*/ true,
+                                                         OSABI, ELF::EM_X86_64);
     }
     return createX86ELFObjectWriter(/*IsELF64*/ true, OSABI, ELF::EM_X86_64);
   }
