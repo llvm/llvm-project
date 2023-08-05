@@ -15,6 +15,7 @@
 
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
+#include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
@@ -1850,6 +1851,30 @@ Error makeTargetOutOfRangeError(const LinkGraph &G, const Block &B,
 
 Error makeAlignmentError(llvm::orc::ExecutorAddr Loc, uint64_t Value, int N,
                          const Edge &E);
+
+/// Creates a new pointer block in the given section and returns an
+/// Anonymous symobl pointing to it.
+///
+/// The pointer block will have the following default values:
+///   alignment: PointerSize
+///   alignment-offset: 0
+///   address: highest allowable
+using AnonymousPointerCreator = unique_function<Expected<Symbol &>(
+    LinkGraph &G, Section &PointerSection, Symbol *InitialTarget,
+    uint64_t InitialAddend)>;
+
+/// Get target-specific AnonymousPointerCreator
+AnonymousPointerCreator getAnonymousPointerCreator(const Triple &TT);
+
+/// Create a jump stub that jumps via the pointer at the given symbol and
+/// an anonymous symbol pointing to it. Return the anonymous symbol.
+///
+/// The stub block will be created by createPointerJumpStubBlock.
+using PointerJumpStubCreator = unique_function<Expected<Symbol &>(
+    LinkGraph &G, Section &StubSection, Symbol &PointerSymbol)>;
+
+/// Get target-specific PointerJumpStubCreator
+PointerJumpStubCreator getPointerJumpStubCreator(const Triple &TT);
 
 /// Base case for edge-visitors where the visitor-list is empty.
 inline void visitEdge(LinkGraph &G, Block *B, Edge &E) {}
