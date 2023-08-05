@@ -1225,29 +1225,6 @@ Value *IRBuilderBase::CreateVectorSplat(ElementCount EC, Value *V,
   return CreateShuffleVector(V, Zeros, Name + ".splat");
 }
 
-Value *IRBuilderBase::CreateExtractInteger(
-    const DataLayout &DL, Value *From, IntegerType *ExtractedTy,
-    uint64_t Offset, const Twine &Name) {
-  auto *IntTy = cast<IntegerType>(From->getType());
-  assert(DL.getTypeStoreSize(ExtractedTy) + Offset <=
-             DL.getTypeStoreSize(IntTy) &&
-         "Element extends past full value");
-  uint64_t ShAmt = 8 * Offset;
-  Value *V = From;
-  if (DL.isBigEndian())
-    ShAmt = 8 * (DL.getTypeStoreSize(IntTy) -
-                 DL.getTypeStoreSize(ExtractedTy) - Offset);
-  if (ShAmt) {
-    V = CreateLShr(V, ShAmt, Name + ".shift");
-  }
-  assert(ExtractedTy->getBitWidth() <= IntTy->getBitWidth() &&
-         "Cannot extract to a larger integer!");
-  if (ExtractedTy != IntTy) {
-    V = CreateTrunc(V, ExtractedTy, Name + ".trunc");
-  }
-  return V;
-}
-
 Value *IRBuilderBase::CreatePreserveArrayAccessIndex(
     Type *ElTy, Value *Base, unsigned Dimension, unsigned LastIndex,
     MDNode *DbgInfo) {
