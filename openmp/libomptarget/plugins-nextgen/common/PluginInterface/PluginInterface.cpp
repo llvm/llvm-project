@@ -395,7 +395,7 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
       MinThreads = std::min(MinThreads, NumThreads);
 
       // Honor the thread_limit clause; only lower the number of threads.
-      auto OldNumThreads = NumThreads;
+      [[maybe_unused]] auto OldNumThreads = NumThreads;
       if (LoopTripCount >= DefaultNumBlocks * NumThreads) {
         // Enough parallelism for teams and threads.
         TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;

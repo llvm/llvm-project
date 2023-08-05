@@ -350,7 +350,8 @@ EXTERN int __tgt_activate_record_replay(int64_t DeviceId, uint64_t MemorySize,
   }
 
   DeviceTy &Device = *PM->Devices[DeviceId];
-  int Rc = target_activate_rr(Device, MemorySize, IsRecord, SaveOutput);
+  [[maybe_unused]] int Rc =
+      target_activate_rr(Device, MemorySize, IsRecord, SaveOutput);
   assert(Rc == OFFLOAD_SUCCESS &&
          "__tgt_activate_record_replay unexpected failure!");
   return OMP_TGT_SUCCESS;
