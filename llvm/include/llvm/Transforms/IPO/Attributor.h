@@ -2387,6 +2387,10 @@ public:
   /// The allocator used to allocate memory, e.g. for `AbstractAttribute`s.
   BumpPtrAllocator &Allocator;
 
+  const SmallSetVector<Function *, 8> &getModifiedFunctions() {
+    return CGModifiedFunctions;
+  }
+
 private:
   /// This method will do fixpoint iteration until fixpoint or the
   /// maximum iteration count is reached.
@@ -3371,6 +3375,20 @@ struct AttributorPass : public PassInfoMixin<AttributorPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+};
+
+/// A more lightweight version of the Attributor which only runs attribute
+/// inference but no simplifications.
+struct AttributorLightPass : public PassInfoMixin<AttributorLightPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+/// A more lightweight version of the Attributor which only runs attribute
+/// inference but no simplifications.
+struct AttributorLightCGSCCPass
+    : public PassInfoMixin<AttributorLightCGSCCPass> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 };
