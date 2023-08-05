@@ -3650,6 +3650,8 @@ Intrinsic::ID llvm::getIntrinsicForCallSite(const CallBase &CB,
   return Intrinsic::not_intrinsic;
 }
 
+/// Deprecated, use computeKnownFPClass instead.
+///
 /// If \p SignBitOnly is true, test for a known 0 sign bit rather than a
 /// standard ordered compare. e.g. make -0.0 olt 0.0 be true because of the sign
 /// bit despite comparing equal.
@@ -3841,13 +3843,9 @@ static bool cannotBeOrderedLessThanZeroImpl(const Value *V,
   return false;
 }
 
-bool llvm::CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
-                                       const TargetLibraryInfo *TLI) {
-  return cannotBeOrderedLessThanZeroImpl(V, DL, TLI, false, 0);
-}
-
 bool llvm::SignBitMustBeZero(const Value *V, const DataLayout &DL,
                              const TargetLibraryInfo *TLI) {
+  // FIXME: Use computeKnownFPClass and pass all arguments
   return cannotBeOrderedLessThanZeroImpl(V, DL, TLI, true, 0);
 }
 
