@@ -39,6 +39,10 @@ GenericPluginTy *Plugin::SpecificPlugin = nullptr;
 
 // TODO: Fix any thread safety issues for multi-threaded kernel recording.
 struct RecordReplayTy {
+
+  // Describes the state of the record replay mechanism.
+  enum RRStatusTy { RRDeactivated = 0, RRRecording, RRReplaying };
+
 private:
   // Memory pointers for recording, replaying memory.
   void *MemoryStart;
@@ -47,26 +51,19 @@ private:
   GenericDeviceTy *Device;
   std::mutex AllocationLock;
 
-  // Environment variables for record and replay.
-  // Enables recording kernels if set.
-  BoolEnvar OMPX_RecordKernel;
-  // Enables replaying a kernel if set.
-  BoolEnvar OMPX_ReplayKernel;
-  // Enables saving the device memory kernel output post execution if set.
-  BoolEnvar OMPX_ReplaySaveOutput;
-  // Sets the maximum to pre-allocate device memory.
-  UInt32Envar OMPX_DeviceMemorySize;
+  RRStatusTy Status;
+  bool ReplaySaveOutput;
+  uint64_t DeviceMemorySize;
 
   // Record/replay pre-allocates the largest possible device memory using the
   // default kind.
   // TODO: Expand allocation to include other kinds (device, host, shared) and
   // possibly use a MemoryManager to track (de-)allocations for
   // storing/retrieving when recording/replaying.
-  Error preallocateDeviceMemory() {
+  Error preallocateDeviceMemory(uint64_t DeviceMemorySize) {
     // Pre-allocate memory on device. Starts with 64GB and subtracts in steps
     // of 1GB until allocation succeeds.
-    const size_t MAX_MEMORY_ALLOCATION =
-        OMPX_DeviceMemorySize * 1024 * 1024 * 1024ULL;
+    const size_t MAX_MEMORY_ALLOCATION = DeviceMemorySize;
     constexpr size_t STEP = 1024 * 1024 * 1024ULL;
     MemoryStart = nullptr;
     for (size_t Try = MAX_MEMORY_ALLOCATION; Try > 0; Try -= STEP) {
@@ -85,15 +82,14 @@ private:
     return Plugin::success();
   }
 
-  void dumpDeviceMemory(StringRef Filename,
-                        AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  void dumpDeviceMemory(StringRef Filename) {
     ErrorOr<std::unique_ptr<WritableMemoryBuffer>> DeviceMemoryMB =
         WritableMemoryBuffer::getNewUninitMemBuffer(MemorySize);
     if (!DeviceMemoryMB)
       report_fatal_error("Error creating MemoryBuffer for device memory");
 
     auto Err = Device->dataRetrieve(DeviceMemoryMB.get()->getBufferStart(),
-                                    MemoryStart, MemorySize, AsyncInfoWrapper);
+                                    MemoryStart, MemorySize, nullptr);
     if (Err)
       report_fatal_error("Error retrieving data for target pointer");
 
@@ -108,21 +104,19 @@ private:
   }
 
 public:
-  bool isRecording() const { return OMPX_RecordKernel; }
-  bool isReplaying() const { return OMPX_ReplayKernel; }
+  bool isRecording() const { return Status == RRStatusTy::RRRecording; }
+  bool isReplaying() const { return Status == RRStatusTy::RRReplaying; }
   bool isRecordingOrReplaying() const {
-    return (OMPX_RecordKernel || OMPX_ReplayKernel);
+    return (Status != RRStatusTy::RRDeactivated);
   }
-  bool isSaveOutputEnabled() const { return OMPX_ReplaySaveOutput; }
+  void setStatus(RRStatusTy Status) { this->Status = Status; }
+  bool isSaveOutputEnabled() const { return ReplaySaveOutput; }
 
   RecordReplayTy()
-      : OMPX_RecordKernel("LIBOMPTARGET_RECORD"),
-        OMPX_ReplayKernel("LIBOMPTARGET_REPLAY"),
-        OMPX_ReplaySaveOutput("LIBOMPTARGET_RR_SAVE_OUTPUT"),
-        OMPX_DeviceMemorySize("LIBOMPTARGET_RR_DEVMEM_SIZE",
-                              /* Default in GB */ 64) {}
+      : Status(RRStatusTy::RRDeactivated), ReplaySaveOutput(false),
+        DeviceMemorySize(-1) {}
 
-  void saveImage(const char *Name, DeviceImageTy &Image) {
+  void saveImage(const char *Name, const DeviceImageTy &Image) {
     SmallString<128> ImageName = {Name, ".image"};
     std::error_code EC;
     raw_fd_ostream OS(ImageName, EC);
@@ -140,11 +134,60 @@ public:
     OS.close();
   }
 
-  void saveKernelInputInfo(const char *Name, void **ArgPtrs,
-                           ptrdiff_t *ArgOffsets, int32_t NumArgs,
-                           uint64_t NumTeamsClause, uint32_t ThreadLimitClause,
-                           uint64_t LoopTripCount,
-                           AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  void dumpGlobals(StringRef Filename, DeviceImageTy &Image) {
+    int32_t Size = 0;
+
+    for (auto &OffloadEntry : Image.getOffloadEntryTable()) {
+      if (!OffloadEntry.size)
+        continue;
+      Size += std::strlen(OffloadEntry.name) + /* '\0' */ 1 +
+              /* OffloadEntry.size value */ sizeof(uint32_t) +
+              OffloadEntry.size;
+    }
+
+    ErrorOr<std::unique_ptr<WritableMemoryBuffer>> GlobalsMB =
+        WritableMemoryBuffer::getNewUninitMemBuffer(Size);
+    if (!GlobalsMB)
+      report_fatal_error("Error creating MemoryBuffer for globals memory");
+
+    void *BufferPtr = GlobalsMB.get()->getBufferStart();
+    for (auto &OffloadEntry : Image.getOffloadEntryTable()) {
+      if (!OffloadEntry.size)
+        continue;
+
+      int32_t NameLength = std::strlen(OffloadEntry.name) + 1;
+      memcpy(BufferPtr, OffloadEntry.name, NameLength);
+      BufferPtr = advanceVoidPtr(BufferPtr, NameLength);
+
+      *((uint32_t *)(BufferPtr)) = OffloadEntry.size;
+      BufferPtr = advanceVoidPtr(BufferPtr, sizeof(uint32_t));
+
+      auto Err = Plugin::success();
+      {
+        if (auto Err = Device->dataRetrieve(BufferPtr, OffloadEntry.addr,
+                                            OffloadEntry.size, nullptr))
+          report_fatal_error("Error retrieving data for global");
+      }
+      if (Err)
+        report_fatal_error("Error retrieving data for global");
+      BufferPtr = advanceVoidPtr(BufferPtr, OffloadEntry.size);
+    }
+    assert(BufferPtr == GlobalsMB->get()->getBufferEnd() &&
+           "Buffer over/under-filled.");
+    assert(Size == getPtrDiff(BufferPtr, GlobalsMB->get()->getBufferStart()) &&
+           "Buffer size mismatch");
+
+    StringRef GlobalsMemory(GlobalsMB.get()->getBufferStart(), Size);
+    std::error_code EC;
+    raw_fd_ostream OS(Filename, EC);
+    OS << GlobalsMemory;
+    OS.close();
+  }
+
+  void saveKernelInputInfo(const char *Name, DeviceImageTy &Image,
+                           void **ArgPtrs, ptrdiff_t *ArgOffsets,
+                           int32_t NumArgs, uint64_t NumTeamsClause,
+                           uint32_t ThreadLimitClause, uint64_t LoopTripCount) {
     json::Object JsonKernelInfo;
     JsonKernelInfo["Name"] = Name;
     JsonKernelInfo["NumArgs"] = NumArgs;
@@ -165,7 +208,10 @@ public:
     JsonKernelInfo["ArgOffsets"] = json::Value(std::move(JsonArgOffsets));
 
     SmallString<128> MemoryFilename = {Name, ".memory"};
-    dumpDeviceMemory(MemoryFilename, AsyncInfoWrapper);
+    dumpDeviceMemory(MemoryFilename);
+
+    SmallString<128> GlobalsFilename = {Name, ".globals"};
+    dumpGlobals(GlobalsFilename, Image);
 
     SmallString<128> JsonFilename = {Name, ".json"};
     std::error_code EC;
@@ -177,11 +223,10 @@ public:
     JsonOS.close();
   }
 
-  void saveKernelOutputInfo(const char *Name,
-                            AsyncInfoWrapperTy &AsyncInfoWrapper) {
+  void saveKernelOutputInfo(const char *Name) {
     SmallString<128> OutputFilename = {
         Name, (isRecording() ? ".original.output" : ".replay.output")};
-    dumpDeviceMemory(OutputFilename, AsyncInfoWrapper);
+    dumpDeviceMemory(OutputFilename);
   }
 
   void *alloc(uint64_t Size) {
@@ -194,12 +239,28 @@ public:
     Alloc = MemoryPtr;
     MemoryPtr = (char *)MemoryPtr + AlignedSize;
     MemorySize += AlignedSize;
+    DP("Memory Allocator return " DPxMOD "\n", DPxPTR(Alloc));
     return Alloc;
   }
 
-  Error init(GenericDeviceTy *Device) {
+  Error init(GenericDeviceTy *Device, uint64_t MemSize, RRStatusTy Status,
+             bool SaveOutput) {
     this->Device = Device;
-    return preallocateDeviceMemory();
+    this->Status = Status;
+    this->DeviceMemorySize = MemSize;
+    this->ReplaySaveOutput = SaveOutput;
+
+    if (auto Err = preallocateDeviceMemory(MemSize))
+      return Err;
+
+    INFO(OMP_INFOTYPE_PLUGIN_KERNEL, Device->getDeviceId(),
+         "Record Replay Initialized (%p)"
+         " as starting address, %lu Memory Size"
+         " and set on status %s\n",
+         MemoryStart, MemSize,
+         Status == RRStatusTy::RRRecording ? "Recording" : "Replaying");
+
+    return Plugin::success();
   }
 
   void deinit() { Device->free(MemoryStart); }
@@ -227,7 +288,11 @@ void AsyncInfoWrapperTy::finalize(Error &Err) {
 
 Error GenericKernelTy::init(GenericDeviceTy &GenericDevice,
                             DeviceImageTy &Image) {
+
+  ImagePtr = &Image;
+
   PreferredNumThreads = GenericDevice.getDefaultNumThreads();
+
   MaxNumThreads = GenericDevice.getThreadLimit();
 
   return initImpl(GenericDevice, Image);
@@ -467,10 +532,6 @@ Error GenericDeviceTy::init(GenericPluginTy &Plugin) {
   auto [ThresholdMM, EnableMM] = MemoryManagerTy::getSizeThresholdFromEnv();
   if (EnableMM)
     MemoryManager = new MemoryManagerTy(*this, ThresholdMM);
-
-  if (RecordReplay.isRecordingOrReplaying())
-    if (auto Err = RecordReplay.init(this))
-      return Err;
 
   return Plugin::success();
 }
@@ -1087,26 +1148,31 @@ Error GenericDeviceTy::launchKernel(void *EntryPtr, void **ArgPtrs,
                                     ptrdiff_t *ArgOffsets,
                                     KernelArgsTy &KernelArgs,
                                     __tgt_async_info *AsyncInfo) {
-  AsyncInfoWrapperTy AsyncInfoWrapper(*this, AsyncInfo);
+  AsyncInfoWrapperTy AsyncInfoWrapper(
+      *this, RecordReplay.isRecordingOrReplaying() ? nullptr : AsyncInfo);
 
   GenericKernelTy &GenericKernel =
       *reinterpret_cast<GenericKernelTy *>(EntryPtr);
 
   if (RecordReplay.isRecording())
     RecordReplay.saveKernelInputInfo(
-        GenericKernel.getName(), ArgPtrs, ArgOffsets, KernelArgs.NumArgs,
-        KernelArgs.NumTeams[0], KernelArgs.ThreadLimit[0], KernelArgs.Tripcount,
-        AsyncInfoWrapper);
+        GenericKernel.getName(), GenericKernel.getImage(), ArgPtrs, ArgOffsets,
+        KernelArgs.NumArgs, KernelArgs.NumTeams[0], KernelArgs.ThreadLimit[0],
+        KernelArgs.Tripcount);
+
+  if (RecordReplay.isRecording())
+    RecordReplay.saveImage(GenericKernel.getName(), GenericKernel.getImage());
 
   auto Err = GenericKernel.launch(*this, ArgPtrs, ArgOffsets, KernelArgs,
                                   AsyncInfoWrapper);
 
+  // 'finalize' here to guarantee next record-replay actions are in-sync
+  AsyncInfoWrapper.finalize(Err);
+
   if (RecordReplay.isRecordingOrReplaying() &&
       RecordReplay.isSaveOutputEnabled())
-    RecordReplay.saveKernelOutputInfo(GenericKernel.getName(),
-                                      AsyncInfoWrapper);
+    RecordReplay.saveKernelOutputInfo(GenericKernel.getName());
 
-  AsyncInfoWrapper.finalize(Err);
   return Err;
 }
 
@@ -1356,6 +1422,28 @@ int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
 int32_t __tgt_rtl_is_data_exchangable(int32_t SrcDeviceId,
                                       int32_t DstDeviceId) {
   return Plugin::get().isDataExchangable(SrcDeviceId, DstDeviceId);
+}
+
+int32_t __tgt_rtl_initialize_record_replay(int32_t DeviceId,
+                                           uint64_t MemorySize, bool isRecord,
+                                           bool SaveOutput) {
+  GenericPluginTy &Plugin = Plugin::get();
+  GenericDeviceTy &Device = Plugin.getDevice(DeviceId);
+  RecordReplayTy::RRStatusTy Status =
+      isRecord ? RecordReplayTy::RRStatusTy::RRRecording
+               : RecordReplayTy::RRStatusTy::RRReplaying;
+
+  if (auto Err = RecordReplay.init(&Device, MemorySize, Status, SaveOutput)) {
+    REPORT("WARNING RR did not intialize RR-properly with %lu bytes"
+           "(Error: %s)\n",
+           MemorySize, toString(std::move(Err)).data());
+    RecordReplay.setStatus(RecordReplayTy::RRStatusTy::RRDeactivated);
+
+    if (!isRecord) {
+      return OFFLOAD_FAIL;
+    }
+  }
+  return OFFLOAD_SUCCESS;
 }
 
 __tgt_target_table *__tgt_rtl_load_binary(int32_t DeviceId,
