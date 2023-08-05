@@ -1,4 +1,6 @@
 .. title:: clang-tidy - hicpp-avoid-goto
+.. meta::
+   :http-equiv=refresh: 5;URL=../cppcoreguidelines/avoid-goto.html
 
 hicpp-avoid-goto
 ================
