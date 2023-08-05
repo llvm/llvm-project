@@ -1,24 +1,24 @@
 // REQUIRES: amdgpu-registered-target
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a %s -O0 2>&1 \
+// RUN: %clang -### -fopenmp -nogpuinc -nogpulib  -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a %s -O0 2>&1 \
 // RUN:   | FileCheck -check-prefixes=NoTFast,NoEnV,NoTState,NoNestParallel %s
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -O0 -fopenmp-target-fast %s 2>&1 \
+// RUN:  %clang -### -fopenmp -nogpuinc -nogpulib  -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -O0 -fopenmp-target-fast %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=TFast,EnV,TState,NestParallel %s
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -O4 %s 2>&1 \
+// RUN: %clang -### -fopenmp -nogpuinc -nogpulib  -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -O4 %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=O4,NoTFast,NoEnV,NoTState,NoNestParallel %s
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -O4 -fno-openmp-target-fast %s 2>&1 \
+// RUN: %clang -### -fopenmp -nogpuinc -nogpulib  -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -O4 -fno-openmp-target-fast %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=O4,NoTFast,NoEnV,NoTState,NoNestParallel %s
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -Ofast %s 2>&1 \
+// RUN: %clang -### -fopenmp -nogpuinc -nogpulib  -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -Ofast %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=OFast,TFast,EnV,TState,NestParallel %s
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -Ofast -fno-openmp-target-fast %s 2>&1 \
+// RUN: %clang -### -fopenmp -nogpuinc -nogpulib  -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -Ofast -fno-openmp-target-fast %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=OFast,NoTFast,NoEnV,NoTState,NoNestParallel %s
 
-// RUN:   %clang -### -fopenmp -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -fopenmp-target-fast -fno-openmp-target-ignore-env-vars %s 2>&1 \
+// RUN: %clang -### -fopenmp -nogpuinc -nogpulib  -fopenmp-targets=amdgcn-amd-amdhsa -Xopenmp-target=amdgcn-amd-amdhsa -march=gfx90a -fopenmp-target-fast -fno-openmp-target-ignore-env-vars %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=TFast,NoEnV,TState,NestParallel,O3 %s
 
 // O4: -O4
