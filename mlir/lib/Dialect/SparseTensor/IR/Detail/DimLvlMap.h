@@ -93,7 +93,9 @@ public:
     assert(expr);
     return expr.getKind();
   }
-  MLIRContext *getContext() const { return expr ? expr.getContext() : nullptr; }
+  MLIRContext *tryGetContext() const {
+    return expr ? expr.getContext() : nullptr;
+  }
 
   //
   // Getters for handling `AffineExpr` subclasses.
@@ -209,6 +211,8 @@ class DimSpec final {
 public:
   DimSpec(DimVar var, DimExpr expr, SparseTensorDimSliceAttr slice);
 
+  MLIRContext *tryGetContext() const { return expr.tryGetContext(); }
+
   constexpr DimVar getBoundVar() const { return var; }
   bool hasExpr() const { return static_cast<bool>(expr); }
   constexpr DimExpr getExpr() const { return expr; }
@@ -261,6 +265,12 @@ class LvlSpec final {
 
 public:
   LvlSpec(LvlVar var, LvlExpr expr, DimLevelType type);
+
+  MLIRContext *getContext() const {
+    MLIRContext *ctx = expr.tryGetContext();
+    assert(ctx);
+    return ctx;
+  }
 
   constexpr LvlVar getBoundVar() const { return var; }
   constexpr bool canElideVar() const { return elideVar; }
