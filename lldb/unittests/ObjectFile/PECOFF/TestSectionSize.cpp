@@ -69,10 +69,10 @@ symbols:         []
   DataExtractor section_data;
   ASSERT_NE(object_file->ReadSectionData(swiftast_section.get(),
                                          section_data),
-            0);
+            (size_t)0);
 
   // Check that the section data size is equal to VirtualSize (496)
   // without the zero padding, instead of SizeOfRawData (512).
-  EXPECT_EQ(section_data.GetByteSize(), 496);
+  EXPECT_EQ(section_data.GetByteSize(), (uint64_t)496);
 }
 
