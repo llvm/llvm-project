@@ -7471,9 +7471,8 @@ void CodeGenModule::printPostfixForExternalizedDecl(llvm::raw_ostream &OS,
 }
 
 namespace {
-/// A 'teams loop' with a nested 'loop bind(parallel)', OpenMP API call,
-/// or generic function call in the associated loop-nest cannot be a
-/// 'parllel for'.
+/// A 'teams loop' with a nested 'loop bind(parallel)' or generic function
+/// call in the associated loop-nest cannot be a 'parllel for'.
 class TeamsLoopChecker final : public ConstStmtVisitor<TeamsLoopChecker> {
 public:
   TeamsLoopChecker(CodeGenModule &CGM)
@@ -7497,22 +7496,21 @@ public:
   }
 
   void VisitCallExpr(const CallExpr *C) {
-    // For now, can't be parallel if
-    //  - calling an OpenMP API; or
-    //  - a regular function call, unless no-nested-parallelism has been set.
+    // Function calls inhibit parallel loop translation of 'target teams loop'
+    // unless the assume-no-nested-parallelism flag has been specified.
+    // OpenMP API runtime library calls do not inhibit parallel loop
+    // translation, regardless of the assume-no-nested-parallelism.
     if (C) {
+      bool IsOpenMPAPI = false;
       auto *FD = dyn_cast_or_null<FunctionDecl>(C->getCalleeDecl());
       if (FD) {
         std::string Name = FD->getNameInfo().getAsString();
-        if (Name.find("omp_") == 0) {
-          TeamsLoopCanBeParallelFor = false;
-          // No need to continue visiting any more
-          return;
-        }
+        IsOpenMPAPI = Name.find("omp_") == 0;
       }
-      TeamsLoopCanBeParallelFor = CGM.getLangOpts().OpenMPNoNestedParallelism;
-      // No need to continue visiting any more
-      return;
+      TeamsLoopCanBeParallelFor =
+          IsOpenMPAPI || CGM.getLangOpts().OpenMPNoNestedParallelism;
+      if (!TeamsLoopCanBeParallelFor)
+        return;
     }
     for (const Stmt *Child : C->children())
       if (Child)
