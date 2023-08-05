@@ -14,6 +14,7 @@
 #ifndef MLIR_INITALLEXTENSIONS_H_
 #define MLIR_INITALLEXTENSIONS_H_
 
+#include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
 
 #include <cstdlib>
@@ -27,6 +28,7 @@ namespace mlir {
 /// pipelines and transformations you are using.
 inline void registerAllExtensions(DialectRegistry &registry) {
   func::registerAllExtensions(registry);
+  registerConvertNVVMToLLVMInterface(registry);
 }
 
 } // namespace mlir

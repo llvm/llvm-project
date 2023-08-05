@@ -16,6 +16,7 @@
 
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -721,6 +722,7 @@ void NVVMDialect::initialize() {
   // Support unknown operations because not all NVVM operations are
   // registered.
   allowUnknownOperations();
+  declarePromisedInterface<ConvertToLLVMPatternInterface>();
 }
 
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
