@@ -22,7 +22,6 @@ using namespace llvm;
 
 namespace llvm {
 extern cl::opt<bool> ShouldPreserveAllAttributes;
-extern cl::opt<bool> EnableKnowledgeRetention;
 } // namespace llvm
 
 static void RunTest(
