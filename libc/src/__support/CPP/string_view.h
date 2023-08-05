@@ -26,7 +26,7 @@ private:
   const char *Data;
   size_t Len;
 
-  static size_t min(size_t A, size_t B) { return A <= B ? A : B; }
+  LIBC_INLINE static size_t min(size_t A, size_t B) { return A <= B ? A : B; }
 
   LIBC_INLINE static int compareMemory(const char *Lhs, const char *Rhs,
                                        size_t Length) {
