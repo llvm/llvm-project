@@ -3431,12 +3431,14 @@ void CodeGenFunction::EmitCfiCheckStub() {
   llvm::Function *F = llvm::Function::Create(
       llvm::FunctionType::get(VoidTy, {Int64Ty, Int8PtrTy, Int8PtrTy}, false),
       llvm::GlobalValue::WeakAnyLinkage, "__cfi_check", M);
-  F->setAlignment(llvm::Align(4096));
   CGM.setDSOLocal(F);
   llvm::BasicBlock *BB = llvm::BasicBlock::Create(Ctx, "entry", F);
-  // CrossDSOCFI pass is not executed if there is no executable code.
-  SmallVector<llvm::Value*> Args{F->getArg(2), F->getArg(1)};
-  llvm::CallInst::Create(M->getFunction("__cfi_check_fail"), Args, "", BB);
+  // FIXME: consider emitting an intrinsic call like
+  // call void @llvm.cfi_check(i64 %0, i8* %1, i8* %2)
+  // which can be lowered in CrossDSOCFI pass to the actual contents of
+  // __cfi_check. This would allow inlining of __cfi_check calls.
+  llvm::CallInst::Create(
+      llvm::Intrinsic::getDeclaration(M, llvm::Intrinsic::trap), "", BB);
   llvm::ReturnInst::Create(Ctx, nullptr, BB);
 }
 
@@ -3530,6 +3532,9 @@ void CodeGenFunction::EmitCfiCheckFail() {
   }
 
   FinishFunction();
+  // The only reference to this function will be created during LTO link.
+  // Make sure it survives until then.
+  CGM.addUsedGlobal(F);
 }
 
 void CodeGenFunction::EmitUnreachable(SourceLocation Loc) {

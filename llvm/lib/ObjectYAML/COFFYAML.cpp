@@ -689,11 +689,12 @@ void MappingTraits<COFFYAML::Section>::mapping(IO &IO, COFFYAML::Section &Sec) {
     return;
   }
 
-  // Uninitialized sections, such as .bss, typically have no data, but the size
-  // is carried in SizeOfRawData, even though PointerToRawData is zero.
-  if (Sec.SectionData.binary_size() == 0 && Sec.StructuredData.empty() &&
-      NC->Characteristics & COFF::IMAGE_SCN_CNT_UNINITIALIZED_DATA)
-    IO.mapOptional("SizeOfRawData", Sec.Header.SizeOfRawData);
+  IO.mapOptional("SizeOfRawData", Sec.Header.SizeOfRawData, 0U);
+
+  if (!Sec.StructuredData.empty() && Sec.Header.SizeOfRawData) {
+    IO.setError("StructuredData and SizeOfRawData can't be used together");
+    return;
+  }
 
   IO.mapOptional("Relocations", Sec.Relocations);
 }

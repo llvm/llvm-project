@@ -114,22 +114,14 @@ define <4 x i16> @ashr_mulhw_v4i16(<4 x i32> %a, <4 x i32> %b) {
 ; SSE41-NEXT:    pmulhw %xmm1, %xmm0
 ; SSE41-NEXT:    retq
 ;
-; AVX2-LABEL: ashr_mulhw_v4i16:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX2-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX2-NEXT:    vpackusdw %xmm1, %xmm1, %xmm1
-; AVX2-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpmulhw %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    retq
-;
-; AVX512-LABEL: ashr_mulhw_v4i16:
-; AVX512:       # %bb.0:
-; AVX512-NEXT:    vpsrld $16, %xmm0, %xmm0
-; AVX512-NEXT:    vpsrld $16, %xmm1, %xmm1
-; AVX512-NEXT:    vpmulhw %xmm1, %xmm0, %xmm0
-; AVX512-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,1,4,5,8,9,12,13,8,9,12,13,12,13,14,15]
-; AVX512-NEXT:    retq
+; AVX-LABEL: ashr_mulhw_v4i16:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpsrld $16, %xmm0, %xmm0
+; AVX-NEXT:    vpsrld $16, %xmm1, %xmm1
+; AVX-NEXT:    vpackusdw %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpackusdw %xmm0, %xmm0, %xmm0
+; AVX-NEXT:    vpmulhw %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
   %a1 = ashr <4 x i32> %a, <i32 16, i32 16, i32 16, i32 16>
   %b1 = ashr <4 x i32> %b, <i32 16, i32 16, i32 16, i32 16>
   %c = mul <4 x i32> %a1, %b1

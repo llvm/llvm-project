@@ -360,5 +360,38 @@ TEST(GetIntervalWTO, NestedWhile) {
               Optional(blockOrder(9, 8, 7, 6, 1, 0, 5, 4, 2, 3)));
 }
 
+TEST(GetIntervalWTO, UnreachablePred) {
+  const char *Code = R"(
+  void target(bool Foo) {
+    bool Bar = false;
+    if (Foo)
+      Bar = Foo;
+    else
+      __builtin_unreachable();
+    (void)0;
+  })";
+  BuildResult Result = BuildCFG(Code);
+  ASSERT_EQ(BuildResult::BuiltCFG, Result.getStatus());
+  EXPECT_THAT(getIntervalWTO(*Result.getCFG()),
+              Optional(blockOrder(5, 4, 3, 2, 1, 0)));
+}
+
+TEST(WTOCompare, UnreachableBlock) {
+  const char *Code = R"(
+    void target() {
+      while (true) {}
+      (void)0;
+      /*[[p]]*/
+    })";
+  BuildResult Result = BuildCFG(Code);
+  ASSERT_EQ(BuildResult::BuiltCFG, Result.getStatus());
+  std::optional<WeakTopologicalOrdering> WTO = getIntervalWTO(*Result.getCFG());
+  ASSERT_THAT(WTO, Optional(blockOrder(4, 3, 2)));
+  auto Cmp = WTOCompare(*WTO);
+  const CFGBlock &Entry = Result.getCFG()->getEntry();
+  const CFGBlock &Exit = Result.getCFG()->getExit();
+  EXPECT_TRUE(Cmp(&Entry, &Exit));
+}
+
 } // namespace
 } // namespace clang

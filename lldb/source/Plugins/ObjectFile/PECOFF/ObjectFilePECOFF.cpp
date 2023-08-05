@@ -1027,6 +1027,16 @@ SectionType ObjectFilePECOFF::GetSectionType(llvm::StringRef sect_name,
   return eSectionTypeOther;
 }
 
+size_t ObjectFilePECOFF::GetSectionDataSize(Section *section) {
+  // For executables, SizeOfRawData (getFileSize()) is aligned by
+  // FileAlignment and the actual section size is in VirtualSize
+  // (getByteSize()). See the comment on
+  // llvm::object::COFFObjectFile::getSectionSize().
+  if (m_binary->getPE32Header() || m_binary->getPE32PlusHeader())
+    return std::min(section->GetByteSize(), section->GetFileSize());
+  return section->GetFileSize();
+}
+
 void ObjectFilePECOFF::CreateSections(SectionList &unified_section_list) {
   if (m_sections_up)
     return;

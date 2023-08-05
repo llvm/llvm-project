@@ -9,6 +9,9 @@ add_clang_library(clangIncludeCleaner
   Record.cpp
   Types.cpp
   WalkAST.cpp
+
+  DEPENDS
+  ClangDriverOptions
   )
 
 clang_target_link_libraries(clangIncludeCleaner

@@ -723,6 +723,12 @@ bool Sema::MergeCXXFunctionDecl(FunctionDecl *New, FunctionDecl *Old,
   return Invalid;
 }
 
+void Sema::DiagPlaceholderVariableDefinition(SourceLocation Loc) {
+  Diag(Loc, getLangOpts().CPlusPlus26
+                ? diag::warn_cxx23_placeholder_var_definition
+                : diag::ext_placeholder_var_definition);
+}
+
 NamedDecl *
 Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
                                    MultiTemplateParamsArg TemplateParamLists) {
@@ -878,6 +884,9 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
   for (auto &B : D.getDecompositionDeclarator().bindings()) {
     // Check for name conflicts.
     DeclarationNameInfo NameInfo(B.Name, B.NameLoc);
+    IdentifierInfo *VarName = B.Name;
+    assert(VarName && "Cannot have an unnamed binding declaration");
+
     LookupResult Previous(*this, NameInfo, LookupOrdinaryName,
                           ForVisibleRedeclaration);
     LookupName(Previous, S,
@@ -891,7 +900,7 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
       Previous.clear();
     }
 
-    auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, B.Name);
+    auto *BD = BindingDecl::Create(Context, DC, B.NameLoc, VarName);
 
     // Find the shadowed declaration before filtering for scope.
     NamedDecl *ShadowedDecl = D.getCXXScopeSpec().isEmpty()
@@ -903,10 +912,24 @@ Sema::ActOnDecompositionDeclarator(Scope *S, Declarator &D,
     FilterLookupForScope(Previous, DC, S, ConsiderLinkage,
                          /*AllowInlineNamespace*/false);
 
+    bool IsPlaceholder = DS.getStorageClassSpec() != DeclSpec::SCS_static &&
+                         DC->isFunctionOrMethod() && VarName->isPlaceholder();
     if (!Previous.empty()) {
-      auto *Old = Previous.getRepresentativeDecl();
-      Diag(B.NameLoc, diag::err_redefinition) << B.Name;
-      Diag(Old->getLocation(), diag::note_previous_definition);
+      if (IsPlaceholder) {
+        bool sameDC = (Previous.end() - 1)
+                          ->getDeclContext()
+                          ->getRedeclContext()
+                          ->Equals(DC->getRedeclContext());
+        if (sameDC &&
+            isDeclInScope(*(Previous.end() - 1), CurContext, S, false)) {
+          Previous.clear();
+          DiagPlaceholderVariableDefinition(B.NameLoc);
+        }
+      } else {
+        auto *Old = Previous.getRepresentativeDecl();
+        Diag(B.NameLoc, diag::err_redefinition) << B.Name;
+        Diag(Old->getLocation(), diag::note_previous_definition);
+      }
     } else if (ShadowedDecl && !D.isRedeclaration()) {
       CheckShadow(BD, ShadowedDecl, Previous);
     }
@@ -4327,16 +4350,57 @@ private:
 
 }
 
+bool Sema::DiagRedefinedPlaceholderFieldDecl(SourceLocation Loc,
+                                             RecordDecl *ClassDecl,
+                                             const IdentifierInfo *Name) {
+  DeclContextLookupResult Result = ClassDecl->lookup(Name);
+  DeclContextLookupResult::iterator Found =
+      llvm::find_if(Result, [this](const NamedDecl *Elem) {
+        return isa<FieldDecl, IndirectFieldDecl>(Elem) &&
+               Elem->isPlaceholderVar(getLangOpts());
+      });
+  // We did not find a placeholder variable
+  if (Found == Result.end())
+    return false;
+  Diag(Loc, diag::err_using_placeholder_variable) << Name;
+  for (DeclContextLookupResult::iterator It = Found; It != Result.end(); It++) {
+    const NamedDecl *ND = *It;
+    if (ND->getDeclContext() != ND->getDeclContext())
+      break;
+    if (isa<FieldDecl, IndirectFieldDecl>(ND) &&
+        ND->isPlaceholderVar(getLangOpts()))
+      Diag(ND->getLocation(), diag::note_reference_placeholder) << ND;
+  }
+  return true;
+}
+
+ValueDecl *
+Sema::tryLookupUnambiguousFieldDecl(RecordDecl *ClassDecl,
+                                    const IdentifierInfo *MemberOrBase) {
+  ValueDecl *ND = nullptr;
+  for (auto *D : ClassDecl->lookup(MemberOrBase)) {
+    if (isa<FieldDecl, IndirectFieldDecl>(D)) {
+      bool IsPlaceholder = D->isPlaceholderVar(getLangOpts());
+      if (ND) {
+        if (IsPlaceholder && D->getDeclContext() == ND->getDeclContext())
+          return nullptr;
+        break;
+      }
+      if (!IsPlaceholder)
+        return cast<ValueDecl>(D);
+      ND = cast<ValueDecl>(D);
+    }
+  }
+  return ND;
+}
+
 ValueDecl *Sema::tryLookupCtorInitMemberDecl(CXXRecordDecl *ClassDecl,
                                              CXXScopeSpec &SS,
                                              ParsedType TemplateTypeTy,
                                              IdentifierInfo *MemberOrBase) {
   if (SS.getScopeRep() || TemplateTypeTy)
     return nullptr;
-  for (auto *D : ClassDecl->lookup(MemberOrBase))
-    if (isa<FieldDecl>(D) || isa<IndirectFieldDecl>(D))
-      return cast<ValueDecl>(D);
-  return nullptr;
+  return tryLookupUnambiguousFieldDecl(ClassDecl, MemberOrBase);
 }
 
 /// Handle a C++ member initializer.

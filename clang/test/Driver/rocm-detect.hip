@@ -35,32 +35,32 @@
 
 // Test HIP_PATH overrides ROCM_PATH.
 // RUN: env ROCM_PATH=%S/Inputs/rocm HIP_PATH=%t/myhip \
-// RUN:   %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 --hip-link \
+// RUN:   %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 \
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-ENV,HIP-PATH %s
 
 // Test --hip-path overrides ROCM_PATH.
 // RUN: env ROCM_PATH=%S/Inputs/rocm \
-// RUN:   %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 --hip-link \
+// RUN:   %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 \
 // RUN:   --hip-path=%t/myhip \
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-ENV,HIP-PATH %s
 
 // Test --hip-path overrides --rocm-path.
-// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 --hip-link \
+// RUN: %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 \
 // RUN:   --hip-path=%t/myhip --rocm-path=%S/Inputs/rocm \
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-ENV,HIP-PATH %s
 
 // Test HIP_PATH overrides --rocm-path.
-// RUN: env HIP_PATH=%t/myhip %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 --hip-link \
+// RUN: env HIP_PATH=%t/myhip %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 \
 // RUN:   --rocm-path=%S/Inputs/rocm \
 // RUN:   --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-ENV,HIP-PATH %s
 
 // Test empty HIP_PATH does not override --rocm-path.
 // RUN: env HIP_PATH= \
-// RUN:   %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 --hip-link \
+// RUN:   %clang -### -target x86_64-linux-gnu --offload-arch=gfx1010 \
 // RUN:   --rocm-path=%S/Inputs/rocm --print-rocm-search-dirs %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-PATH %s
 
