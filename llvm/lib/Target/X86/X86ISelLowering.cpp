@@ -39683,12 +39683,15 @@ static SDValue combineTargetShuffle(SDValue N, SelectionDAG &DAG,
                          extract128BitVector(Src, 0, DAG, DL));
 
     // broadcast(scalar_to_vector(x)) -> broadcast(x).
-    if (Src.getOpcode() == ISD::SCALAR_TO_VECTOR)
+    if (Src.getOpcode() == ISD::SCALAR_TO_VECTOR &&
+        Src.getValueType().getScalarType() == Src.getOperand(0).getValueType())
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
 
     // broadcast(extract_vector_elt(x, 0)) -> broadcast(x).
     if (Src.getOpcode() == ISD::EXTRACT_VECTOR_ELT &&
         isNullConstant(Src.getOperand(1)) &&
+        Src.getValueType() ==
+            Src.getOperand(0).getValueType().getScalarType() &&
         DAG.getTargetLoweringInfo().isTypeLegal(
             Src.getOperand(0).getValueType()))
       return DAG.getNode(X86ISD::VBROADCAST, DL, VT, Src.getOperand(0));
