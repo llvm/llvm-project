@@ -4776,8 +4776,8 @@ struct AAKernelInfoCallSite : AAKernelInfo {
 
     // Check for SPMD-mode assumptions.
     if (AssumptionAA && AssumptionAA->hasAssumption("ompx_spmd_amenable")) {
-      SPMDCompatibilityTracker.indicateOptimisticFixpoint();
       indicateOptimisticFixpoint();
+      return;
     }
 
     // First weed out calls we do not care about, that is readonly/readnone
