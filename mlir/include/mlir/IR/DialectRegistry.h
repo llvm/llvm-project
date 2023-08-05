@@ -44,7 +44,8 @@ public:
   virtual ~DialectExtensionBase();
 
   /// Return the dialects that our required by this extension to be loaded
-  /// before applying.
+  /// before applying. If empty then the extension is invoked for every loaded
+  /// dialect indepently.
   ArrayRef<StringRef> getRequiredDialects() const { return dialectNames; }
 
   /// Apply this extension to the given context and the required dialects.
@@ -55,12 +56,11 @@ public:
   virtual std::unique_ptr<DialectExtensionBase> clone() const = 0;
 
 protected:
-  /// Initialize the extension with a set of required dialects. Note that there
-  /// should always be at least one affected dialect.
+  /// Initialize the extension with a set of required dialects.
+  /// If the list is empty, the extension is invoked for every loaded dialect
+  /// independently.
   DialectExtensionBase(ArrayRef<StringRef> dialectNames)
-      : dialectNames(dialectNames.begin(), dialectNames.end()) {
-    assert(!dialectNames.empty() && "expected at least one affected dialect");
-  }
+      : dialectNames(dialectNames.begin(), dialectNames.end()) {}
 
 private:
   /// The names of the dialects affected by this extension.
