@@ -27,7 +27,7 @@ CREATE TABLE IF NOT EXISTS Metadata
     e_machine
     TEXT, -- Architecture (EM_386, EM_X86_64, etc.)
     e_version
-    INTEGER, -- Object file version
+    INTEGER -- Object file version
     -- Only relevant in a binary file
     -- e_entry   INTEGER, -- Entry point virtual address
     -- Only relevant in a binary file

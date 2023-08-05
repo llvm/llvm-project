@@ -8,11 +8,10 @@
 using namespace llvm;
 using namespace BinaryFormat;
 
-static void writeMetadataToDatabase(sqlite3 *DB, const SQELF::Metadata &M);
 static void writeInMemoryDatabaseToStream(llvm::raw_ostream &OS, sqlite3 *DB);
 static void initializeTables(sqlite3 *DB);
 
-SQELF::SQELF(const Metadata &M) : M(M) {
+SQELF::SQELF() {
   int ResultCode = sqlite3_open(":memory:", &DB);
   if (ResultCode != SQLITE_OK) {
     report_fatal_error("Could not create an in-memory sqlite database");
@@ -28,10 +27,66 @@ SQELF::~SQELF() {
   }
 }
 
+SQELF &SQELF::setMetadata(const Metadata &M) {
+  const char *SQL =
+      "INSERT INTO Metadata (e_type, e_machine, e_version) VALUES (?, ?, ?)";
+  sqlite3_stmt *STMT;
+
+  // Prepare the SQL statement
+  int ResultCode = sqlite3_prepare_v2(DB, SQL, -1, &STMT, nullptr);
+  if (ResultCode != SQLITE_OK) {
+    report_fatal_error(formatv("Failed to prepare metadata statement: {0}",
+                               sqlite3_errmsg(DB)));
+  }
+
+  // Bind the Metadata fields to the SQL statement
+  sqlite3_bind_text(STMT, 1, M.Type.c_str(), -1, SQLITE_STATIC);
+  sqlite3_bind_text(STMT, 2, M.Arch.c_str(), -1, SQLITE_STATIC);
+  sqlite3_bind_int(STMT, 3, M.Version);
+
+  // Execute the SQL statement
+  if (sqlite3_step(STMT) != SQLITE_DONE) {
+    report_fatal_error(formatv("Failed to insert metadata statement: {0}",
+                               sqlite3_errmsg(DB)));
+  }
+
+  // Finalize the statement to release resources
+  sqlite3_finalize(STMT);
+
+  return *this;
+}
+
+SQELF::Metadata SQELF::getMetadata() const {
+  const char *SQL = "SELECT e_type, e_machine, e_version FROM Metadata LIMIT 1";
+  sqlite3_stmt *STMT;
+  Metadata M;
+
+  // Prepare the SQL statement
+  int ResultCode = sqlite3_prepare_v2(DB, SQL, -1, &STMT, nullptr);
+  if (ResultCode != SQLITE_OK) {
+    report_fatal_error(formatv("Failed to prepare metadata statement: {0}",
+                               sqlite3_errmsg(DB)));
+  }
+
+  // Execute the SQL statement and populate the Metadata structure
+  if (sqlite3_step(STMT) != SQLITE_ROW) {
+    report_fatal_error(
+        formatv("Failed to retrieve metadata: {0}", sqlite3_errmsg(DB)));
+  }
+
+  M.Type = reinterpret_cast<const char *>(sqlite3_column_text(STMT, 0));
+  M.Arch = reinterpret_cast<const char *>(sqlite3_column_text(STMT, 1));
+  M.Version = sqlite3_column_int(STMT, 2);
+
+  // Finalize the statement to release resources
+  sqlite3_finalize(STMT);
+
+  return M;
+}
+
 namespace llvm {
 namespace BinaryFormat {
 llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SQELF &BF) {
-  writeMetadataToDatabase(BF.DB, BF.M);
   writeInMemoryDatabaseToStream(OS, BF.DB);
   return OS;
 }
@@ -55,8 +110,6 @@ void initializeTables(sqlite3 *DB) {
     sqlite3_free(ErrorMessage);
   }
 }
-
-void writeMetadataToDatabase(sqlite3 *DB, const SQELF::Metadata &M) {}
 
 /**
  * @brief The SQELF ObjectFormat stores it's internal representation as an

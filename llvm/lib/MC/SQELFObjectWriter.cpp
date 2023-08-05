@@ -58,8 +58,10 @@ SQELFObjectWriter::createMetadata(MCAssembler &Asm) {
 uint64_t SQELFObjectWriter::writeObject(MCAssembler &Asm,
                                         const MCAsmLayout &Layout) {
   BinaryFormat::SQELF::Metadata M = createMetadata(Asm);
-  BinaryFormat::SQELF sqlelf{M};
-  OS << sqlelf;
+  BinaryFormat::SQELF OF{};
+  OF.setMetadata(M);
+
+  OS << OF;
   return 0;
 }
 

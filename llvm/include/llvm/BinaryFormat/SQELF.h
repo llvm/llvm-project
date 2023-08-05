@@ -16,14 +16,16 @@ public:
   } Metadata;
 
 public:
-  SQELF(const Metadata &M);
+  SQELF();
   virtual ~SQELF();
+
+  SQELF &setMetadata(const Metadata &M);
+  Metadata getMetadata() const;
 
   friend llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const SQELF &BF);
 
 private:
   sqlite3 *DB;
-  Metadata M;
 };
 } // namespace BinaryFormat
 } // namespace llvm
