@@ -359,8 +359,10 @@ std::pair<tooling::Replacements, unsigned> NamespaceEndCommentsFixer::analyze(
         computeEndCommentText(NamespaceName, AddNewline, NamespaceTok,
                               Style.SpacesInLineCommentPrefix.Minimum);
     if (!hasEndComment(EndCommentPrevTok)) {
-      bool isShort = I - StartLineIndex <= Style.ShortNamespaceLines + 1;
-      if (!isShort) {
+      unsigned LineCount = 0;
+      for (auto J = StartLineIndex + 1; J < I; ++J)
+        LineCount += AnnotatedLines[J]->size();
+      if (LineCount > Style.ShortNamespaceLines) {
         addEndComment(EndCommentPrevTok,
                       std::string(Style.SpacesBeforeTrailingComments, ' ') +
                           EndCommentText,
