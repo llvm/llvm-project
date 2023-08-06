@@ -143,8 +143,10 @@ void DefinitionBlockSeparator::separateBlocks(
       if (LikelyDefinition(OperateLine))
         return false;
 
-      if (OperateLine->First->is(tok::comment))
+      if (const auto *Tok = OperateLine->First;
+          Tok->is(tok::comment) && !isClangFormatOn(Tok->TokenText)) {
         return true;
+      }
 
       // A single line identifier that is not in the last line.
       if (OperateLine->First->is(tok::identifier) &&
