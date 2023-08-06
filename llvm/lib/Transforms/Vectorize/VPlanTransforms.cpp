@@ -12,16 +12,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "VPlanTransforms.h"
-#include "VPlanDominatorTree.h"
 #include "VPRecipeBuilder.h"
 #include "VPlanCFG.h"
+#include "VPlanDominatorTree.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/VectorUtils.h"
 #include "llvm/IR/Intrinsics.h"
+#include "llvm/IR/PatternMatch.h"
 
 using namespace llvm;
+
+using namespace llvm::PatternMatch;
 
 void VPlanTransforms::VPInstructionsToVPRecipes(
     VPlanPtr &Plan,
@@ -479,10 +482,20 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
     // The recipes in the block are processed in reverse order, to catch chains
     // of dead recipes.
     for (VPRecipeBase &R : make_early_inc_range(reverse(*VPBB))) {
-      if (R.mayHaveSideEffects() || any_of(R.definedValues(), [](VPValue *V) {
-            return V->getNumUsers() > 0;
-          }))
+      // A user keeps R alive:
+      if (any_of(R.definedValues(),
+                 [](VPValue *V) { return V->getNumUsers(); }))
         continue;
+
+      // Having side effects keeps R alive, but do remove conditional assume
+      // instructions as their conditions may be flattened.
+      auto *RepR = dyn_cast<VPReplicateRecipe>(&R);
+      bool IsConditionalAssume =
+          RepR && RepR->isPredicated() &&
+          match(RepR->getUnderlyingInstr(), m_Intrinsic<Intrinsic::assume>());
+      if (R.mayHaveSideEffects() && !IsConditionalAssume)
+        continue;
+
       R.eraseFromParent();
     }
   }
