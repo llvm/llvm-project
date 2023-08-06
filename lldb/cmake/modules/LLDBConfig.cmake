@@ -50,7 +50,7 @@ macro(add_optional_dependency variable description package found)
   message(STATUS "${description}: ${${variable}}")
 endmacro()
 
-add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 3)
+add_optional_dependency(LLDB_ENABLE_SWIG "Enable SWIG to generate LLDB bindings" SWIG SWIG_FOUND VERSION 4)
 
 # BEGIN SWIFT MOD
 if (LLDB_ENABLE_SWIG)
