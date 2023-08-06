@@ -1899,20 +1899,17 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   uint64_t getClockFrequency() const override { return ClockFrequency; }
 
   /// Allocate and construct an AMDGPU kernel.
-  Expected<GenericKernelTy *>
-  constructKernelEntry(const __tgt_offload_entry &KernelEntry,
-                       DeviceImageTy &Image) override {
+  Expected<GenericKernelTy &>
+  constructKernel(const __tgt_offload_entry &KernelEntry,
+                  OMPTgtExecModeFlags ExecMode) override {
+    // Allocate and construct the AMDGPU kernel.
+    AMDGPUKernelTy *AMDGPUKernel = Plugin::get().allocate<AMDGPUKernelTy>();
+    if (!AMDGPUKernel)
+      return Plugin::error("Failed to allocate memory for AMDGPU kernel");
 
-    Expected<OMPTgtExecModeFlags> ExecModeOrErr =
-        getExecutionModeForKernel(KernelEntry.name, Image);
-    if (!ExecModeOrErr)
-      return ExecModeOrErr.takeError();
+    new (AMDGPUKernel) AMDGPUKernelTy(KernelEntry.name, ExecMode);
 
-    // Allocate and initialize the AMDGPU kernel.
-    AMDGPUKernelTy *AMDKernel = Plugin::get().allocate<AMDGPUKernelTy>();
-    new (AMDKernel) AMDGPUKernelTy(KernelEntry.name, ExecModeOrErr.get());
-
-    return AMDKernel;
+    return *AMDGPUKernel;
   }
 
   /// Set the current context to this device's context. Do nothing since the
