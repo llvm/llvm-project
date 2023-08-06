@@ -12,6 +12,7 @@
 #include "../misc/NonPrivateMemberVariablesInClassesCheck.h"
 #include "../misc/UnconventionalAssignOperatorCheck.h"
 #include "../modernize/AvoidCArraysCheck.h"
+#include "../modernize/MacroToEnumCheck.h"
 #include "../modernize/UseDefaultMemberInitCheck.h"
 #include "../modernize/UseOverrideCheck.h"
 #include "../performance/NoexceptDestructorCheck.h"
@@ -77,6 +78,8 @@ public:
         "cppcoreguidelines-init-variables");
     CheckFactories.registerCheck<InterfacesGlobalInitCheck>(
         "cppcoreguidelines-interfaces-global-init");
+    CheckFactories.registerCheck<modernize::MacroToEnumCheck>(
+        "cppcoreguidelines-macro-to-enum");
     CheckFactories.registerCheck<MacroUsageCheck>(
         "cppcoreguidelines-macro-usage");
     CheckFactories.registerCheck<MisleadingCaptureDefaultByValueCheck>(
