@@ -626,8 +626,9 @@ llvm::SmallVector<std::string, 12> amdgpu::dlr::getCommonDeviceLibNames(
   StringRef LibDeviceFile = RocmInstallation.getLibDeviceFile(CanonArch);
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(D, DriverArgs));
+  bool noGPULib = DriverArgs.hasArg(options::OPT_nogpulib);
   if (!RocmInstallation.checkCommonBitcodeLibs(CanonArch, LibDeviceFile,
-                                               ABIVer))
+                                               ABIVer, noGPULib))
     return {};
 
   // If --hip-device-lib is not set, add the default bitcode libraries.
@@ -886,8 +887,9 @@ void ROCMToolChain::addClangTargetOptions(
   StringRef LibDeviceFile = RocmInstallation->getLibDeviceFile(CanonArch);
   auto ABIVer = DeviceLibABIVersion::fromCodeObjectVersion(
       getAMDGPUCodeObjectVersion(getDriver(), DriverArgs));
+  bool noGPULib = DriverArgs.hasArg(options::OPT_nogpulib);
   if (!RocmInstallation->checkCommonBitcodeLibs(CanonArch, LibDeviceFile,
-                                                ABIVer))
+                                                ABIVer, noGPULib))
     return;
 
   bool Wave64 = isWave64(DriverArgs, Kind);
@@ -921,17 +923,20 @@ void ROCMToolChain::addClangTargetOptions(
 
 bool RocmInstallationDetector::checkCommonBitcodeLibs(
     StringRef GPUArch, StringRef LibDeviceFile,
-    DeviceLibABIVersion ABIVer) const {
+    DeviceLibABIVersion ABIVer, bool noGPULib) const {
   if (!hasDeviceLibrary()) {
-    D.Diag(diag::err_drv_no_rocm_device_lib) << 0;
+    if (!noGPULib)
+      D.Diag(diag::err_drv_no_rocm_device_lib) << 0;
     return false;
   }
   if (LibDeviceFile.empty()) {
-    D.Diag(diag::err_drv_no_rocm_device_lib) << 1 << GPUArch;
+    if (!noGPULib)
+      D.Diag(diag::err_drv_no_rocm_device_lib) << 1 << GPUArch;
     return false;
   }
   if (ABIVer.requiresLibrary() && getABIVersionPath(ABIVer).empty()) {
-    D.Diag(diag::err_drv_no_rocm_device_lib) << 2 << ABIVer.toString();
+    if (!noGPULib)
+      D.Diag(diag::err_drv_no_rocm_device_lib) << 2 << ABIVer.toString();
     return false;
   }
   return true;

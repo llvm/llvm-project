@@ -259,7 +259,8 @@ const char *amdgpu::dlr::getLinkCommandArgs(
       TC.getSanitizerArgs(Args).needsAsanRt()) {
     std::string AsanRTL(RocmInstallation.getAsanRTLPath());
     if (AsanRTL.empty()) {
-      TC.getDriver().Diag(diag::err_drv_no_asan_rt_lib);
+      if (!Args.hasArg(options::OPT_nogpulib))
+        TC.getDriver().Diag(diag::err_drv_no_asan_rt_lib);
     } else {
       BCLibs.push_back(AsanRTL);
     }
