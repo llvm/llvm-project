@@ -241,7 +241,6 @@ Clang-Tidy Checks
    `google-runtime-int <google/runtime-int.html>`_,
    `google-runtime-operator <google/runtime-operator.html>`_,
    `google-upgrade-googletest-case <google/upgrade-googletest-case.html>`_, "Yes"
-   `hicpp-avoid-goto <hicpp/avoid-goto.html>`_,
    `hicpp-exception-baseclass <hicpp/exception-baseclass.html>`_,
    `hicpp-multiway-paths-covered <hicpp/multiway-paths-covered.html>`_,
    `hicpp-no-assembler <hicpp/no-assembler.html>`_,
@@ -503,6 +502,7 @@ Clang-Tidy Checks
    `google-readability-function-size <google/readability-function-size.html>`_, `readability-function-size <readability/function-size.html>`_,
    `google-readability-namespace-comments <google/readability-namespace-comments.html>`_, `llvm-namespace-comment <llvm/namespace-comment.html>`_,
    `hicpp-avoid-c-arrays <hicpp/avoid-c-arrays.html>`_, `modernize-avoid-c-arrays <modernize/avoid-c-arrays.html>`_,
+   `hicpp-avoid-goto <hicpp/avoid-goto.html>`_, cppcoreguidelines-avoid-goto <cppcoreguidelines/avoid-goto>`_,
    `hicpp-braces-around-statements <hicpp/braces-around-statements.html>`_, `readability-braces-around-statements <readability/braces-around-statements.html>`_, "Yes"
    `hicpp-deprecated-headers <hicpp/deprecated-headers.html>`_, `modernize-deprecated-headers <modernize/deprecated-headers.html>`_, "Yes"
    `hicpp-explicit-conversions <hicpp/explicit-conversions.html>`_, `google-explicit-constructor <google/explicit-constructor.html>`_, "Yes"
