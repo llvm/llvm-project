@@ -395,7 +395,7 @@ uint64_t GenericKernelTy::getNumBlocks(GenericDeviceTy &GenericDevice,
       MinThreads = std::min(MinThreads, NumThreads);
 
       // Honor the thread_limit clause; only lower the number of threads.
-      auto OldNumThreads = NumThreads;
+      [[maybe_unused]] auto OldNumThreads = NumThreads;
       if (LoopTripCount >= DefaultNumBlocks * NumThreads) {
         // Enough parallelism for teams and threads.
         TripCountNumBlocks = ((LoopTripCount - 1) / NumThreads) + 1;
@@ -746,21 +746,25 @@ Error GenericDeviceTy::registerKernelOffloadEntry(
     __tgt_offload_entry &DeviceEntry) {
   DeviceEntry = KernelEntry;
 
+  // Retrieve the execution mode.
+  auto ExecModeOrErr = getExecutionModeForKernel(KernelEntry.name, Image);
+  if (!ExecModeOrErr)
+    return ExecModeOrErr.takeError();
+
   // Create a kernel object.
-  auto KernelOrErr = constructKernelEntry(KernelEntry, Image);
+  auto KernelOrErr = constructKernel(KernelEntry, *ExecModeOrErr);
   if (!KernelOrErr)
     return KernelOrErr.takeError();
 
-  GenericKernelTy *Kernel = *KernelOrErr;
-  assert(Kernel != nullptr && "Invalid kernel");
+  GenericKernelTy &Kernel = *KernelOrErr;
 
   // Initialize the kernel.
-  if (auto Err = Kernel->init(*this, Image))
+  if (auto Err = Kernel.init(*this, Image))
     return Err;
 
   // Set the device entry address to the kernel address and store the entry on
   // the entry table.
-  DeviceEntry.addr = (void *)Kernel;
+  DeviceEntry.addr = (void *)&Kernel;
   Image.getOffloadEntryTable().addEntry(DeviceEntry);
 
   return Plugin::success();

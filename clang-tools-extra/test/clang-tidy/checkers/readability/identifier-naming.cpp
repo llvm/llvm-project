@@ -707,3 +707,19 @@ public:
 task ImplicitDeclTest(async_obj &a_object) {
   co_await a_object;  // CHECK-MESSAGES-NOT: warning: invalid case style for local variable
 }
+
+// Test scenario when canonical declaration will be a forward declaration
+struct ForwardDeclStruct;
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for struct 'ForwardDeclStruct' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}struct forward_decl_struct;
+// CHECK-FIXES: {{^}}struct forward_decl_struct {
+struct ForwardDeclStruct {
+};
+
+struct forward_declared_as_struct;
+// CHECK-MESSAGES: :[[@LINE-1]]:8: warning: invalid case style for class 'forward_declared_as_struct' [readability-identifier-naming]
+// CHECK-FIXES: {{^}}struct CForwardDeclaredAsStruct;
+// CHECK-FIXES: {{^}}class CForwardDeclaredAsStruct {
+class forward_declared_as_struct {
+};
+
