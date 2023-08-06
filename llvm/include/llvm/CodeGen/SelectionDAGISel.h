@@ -128,6 +128,7 @@ public:
     OPC_CheckChild0Same, OPC_CheckChild1Same,
     OPC_CheckChild2Same, OPC_CheckChild3Same,
     OPC_CheckPatternPredicate,
+    OPC_CheckPatternPredicate2,
     OPC_CheckPredicate,
     OPC_CheckPredicateWithOperands,
     OPC_CheckOpcode,
