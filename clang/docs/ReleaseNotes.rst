@@ -121,6 +121,9 @@ Improvements to Clang's diagnostics
 -----------------------------------
 - Clang constexpr evaluator now prints template arguments when displaying
   template-specialization function calls.
+- Clang now warns on unused variables declared and initialized in condition
+  expressions.
+  (`#61681: <https://github.com/llvm/llvm-project/issues/61681>`_)
 
 Bug Fixes in This Version
 -------------------------
