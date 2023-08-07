@@ -3,6 +3,7 @@
 ; RUN:   -verify-machineinstrs -target-abi=ilp32d | FileCheck %s
 ; RUN: sed 's/iXLen/i64/g' %s | llc -mtriple=riscv64 -mattr=+v,+experimental-zfbfmin,+experimental-zvfbfwma \
 ; RUN:   -verify-machineinstrs -target-abi=lp64d | FileCheck %s
+
 declare <vscale x 1 x float> @llvm.riscv.vfwmaccbf16.nxv1f32.nxv1bf16(
   <vscale x 1 x float>,
   <vscale x 1 x bfloat>,

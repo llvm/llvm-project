@@ -2000,6 +2000,10 @@ bool hasPackedD16(const MCSubtargetInfo &STI) {
          !isSI(STI);
 }
 
+bool hasGDS(const MCSubtargetInfo &STI) {
+  return STI.hasFeature(AMDGPU::FeatureGDS);
+}
+
 unsigned getNSAMaxSize(const MCSubtargetInfo &STI) {
   auto Version = getIsaVersion(STI.getCPU());
   if (Version.Major == 10)

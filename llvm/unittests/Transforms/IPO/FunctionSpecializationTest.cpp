@@ -194,16 +194,18 @@ TEST_F(FunctionSpecializationTest, BranchInst) {
     entry:
       br label %loop
     loop:
-      br i1 %cond, label %bb0, label %bb2
+      br i1 %cond, label %bb0, label %bb3
     bb0:
       %0 = mul i32 %a, 2
       %1 = sub i32 6, 5
-      br label %bb1
+      br i1 %cond, label %bb1, label %bb2
     bb1:
       %2 = add i32 %0, %b
       %3 = sdiv i32 8, 2
-      br label %loop
+      br label %bb2
     bb2:
+      br label %loop
+    bb3:
       ret void
     }
   )";
@@ -220,14 +222,16 @@ TEST_F(FunctionSpecializationTest, BranchInst) {
   BasicBlock &Loop = *++FuncIter;
   BasicBlock &BB0 = *++FuncIter;
   BasicBlock &BB1 = *++FuncIter;
+  BasicBlock &BB2 = *++FuncIter;
 
   Instruction &Branch = Loop.front();
   Instruction &Mul = BB0.front();
   Instruction &Sub = *++BB0.begin();
-  Instruction &BrBB1 = BB0.back();
+  Instruction &BrBB1BB2 = BB0.back();
   Instruction &Add = BB1.front();
   Instruction &Sdiv = *++BB1.begin();
-  Instruction &BrLoop = BB1.back();
+  Instruction &BrBB2 = BB1.back();
+  Instruction &BrLoop = BB2.front();
 
   // mul
   Bonus Ref = getInstCost(Mul);
@@ -244,8 +248,9 @@ TEST_F(FunctionSpecializationTest, BranchInst) {
   // branch + sub + br + sdiv + br
   Ref = getInstCost(Branch) +
         getInstCost(Sub, /*SizeOnly =*/ true) +
-        getInstCost(BrBB1, /*SizeOnly =*/ true) +
+        getInstCost(BrBB1BB2) +
         getInstCost(Sdiv, /*SizeOnly =*/ true) +
+        getInstCost(BrBB2, /*SizeOnly =*/ true) +
         getInstCost(BrLoop, /*SizeOnly =*/ true);
   Test = Specializer.getSpecializationBonus(F->getArg(2), False, Visitor);
   EXPECT_EQ(Test, Ref);

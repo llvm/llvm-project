@@ -1362,7 +1362,7 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     if (targetIt == dirContext_.rend()) {
       return;
     }
-    if (llvm::omp::parallelSet.test(targetIt->directive) ||
+    if (llvm::omp::allParallelSet.test(targetIt->directive) ||
         llvm::omp::taskGeneratingSet.test(targetIt->directive)) {
       break;
     }
@@ -1463,7 +1463,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     return;
   }
   Symbol::Flag ivDSA;
-  if (!llvm::omp::simdSet.test(GetContext().directive)) {
+  if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
     ivDSA = Symbol::Flag::OmpPrivate;
   } else if (level == 1) {
     ivDSA = Symbol::Flag::OmpLinear;
