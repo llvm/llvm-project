@@ -188,8 +188,7 @@ struct ExpressionFormatParameterisedFixture
 
   template <class T> void checkMatchingString(T Val, StringRef ExpectedStr) {
     APInt Value(LiteralsBitWidth, Val, std::is_signed_v<T>);
-    Expected<std::string> MatchingString =
-        Format.getMatchingString(ExpressionValue(Value));
+    Expected<std::string> MatchingString = Format.getMatchingString(Value);
     ASSERT_THAT_EXPECTED(MatchingString, Succeeded())
         << "No matching string for " << Val;
     EXPECT_EQ(*MatchingString, ExpectedStr);
@@ -197,34 +196,33 @@ struct ExpressionFormatParameterisedFixture
 
   template <class T> void checkMatchingStringFailure(T Val) {
     APInt Value(LiteralsBitWidth, Val, std::is_signed_v<T>);
-    Expected<std::string> MatchingString =
-        Format.getMatchingString(ExpressionValue(Value));
-    // Error message tested in ExpressionValue unit tests.
+    Expected<std::string> MatchingString = Format.getMatchingString(Value);
+    // Error message tested in ExpressionFormat unit tests.
     EXPECT_THAT_EXPECTED(MatchingString, Failed());
   }
 
-  Expected<ExpressionValue> getValueFromStringReprFailure(StringRef Str) {
+  Expected<APInt> getValueFromStringReprFailure(StringRef Str) {
     StringRef BufferizedStr = bufferize(SM, Str);
     return Format.valueFromStringRepr(BufferizedStr, SM);
   }
 
   template <class T>
   void checkValueFromStringRepr(StringRef Str, T ExpectedVal) {
-    Expected<ExpressionValue> ResultValue = getValueFromStringReprFailure(Str);
+    Expected<APInt> ResultValue = getValueFromStringReprFailure(Str);
     ASSERT_THAT_EXPECTED(ResultValue, Succeeded())
         << "Failed to get value from " << Str;
-    APInt ResValue = ResultValue->getAPIntValue();
-    ASSERT_EQ(ResValue.isNegative(), ExpectedVal < 0)
+    ASSERT_EQ(ResultValue->isNegative(), ExpectedVal < 0)
         << "Value for " << Str << " is not " << ExpectedVal;
-    if (ResValue.isNegative())
-      EXPECT_EQ(ResValue.getSExtValue(), static_cast<int64_t>(ExpectedVal));
+    if (ResultValue->isNegative())
+      EXPECT_EQ(ResultValue->getSExtValue(), static_cast<int64_t>(ExpectedVal));
     else
-      EXPECT_EQ(ResValue.getZExtValue(), static_cast<uint64_t>(ExpectedVal));
+      EXPECT_EQ(ResultValue->getZExtValue(),
+                static_cast<uint64_t>(ExpectedVal));
   }
 
   void checkValueFromStringReprFailure(
       StringRef Str, StringRef ErrorStr = "unable to represent numeric value") {
-    Expected<ExpressionValue> ResultValue = getValueFromStringReprFailure(Str);
+    Expected<APInt> ResultValue = getValueFromStringReprFailure(Str);
     expectDiagnosticError(ErrorStr, ResultValue.takeError());
   }
 };
@@ -363,7 +361,7 @@ TEST_F(FileCheckTest, NoFormatProperties) {
                            NoFormat.getWildcardRegex().takeError());
   expectError<StringError>(
       "trying to match value with invalid format",
-      NoFormat.getMatchingString(ExpressionValue(APInt(64, 18u))).takeError());
+      NoFormat.getMatchingString(APInt(64, 18u)).takeError());
   EXPECT_FALSE(bool(NoFormat));
 }
 
@@ -397,12 +395,9 @@ TEST_F(FileCheckTest, FormatKindEqualityOperators) {
 static void expectOperationValueResult(binop_eval_t Operation, APInt LeftValue,
                                        APInt RightValue, APInt ExpectedValue) {
   bool Overflow;
-  ExpressionValue LeftVal(LeftValue);
-  ExpressionValue RightVal(RightValue);
-  Expected<ExpressionValue> OperationResult =
-      Operation(LeftVal, RightVal, Overflow);
+  Expected<APInt> OperationResult = Operation(LeftValue, RightValue, Overflow);
   ASSERT_THAT_EXPECTED(OperationResult, Succeeded());
-  EXPECT_EQ(OperationResult->getAPIntValue(), ExpectedValue);
+  EXPECT_EQ(*OperationResult, ExpectedValue);
 }
 
 template <class T1, class T2, class TR>
@@ -421,10 +416,8 @@ template <class T1, class T2>
 static void expectOperationValueResult(binop_eval_t Operation, T1 LeftValue,
                                        T2 RightValue) {
   bool Overflow;
-  ExpressionValue LeftVal(
-      APInt(LiteralsBitWidth, LeftValue, std::is_signed_v<T1>));
-  ExpressionValue RightVal(
-      APInt(LiteralsBitWidth, RightValue, std::is_signed_v<T2>));
+  APInt LeftVal(LiteralsBitWidth, LeftValue, std::is_signed_v<T1>);
+  APInt RightVal(LiteralsBitWidth, RightValue, std::is_signed_v<T2>);
   expectError<OverflowError>(
       "overflow error", Operation(LeftVal, RightVal, Overflow).takeError());
 }
@@ -565,9 +558,9 @@ TEST_F(FileCheckTest, Literal) {
 
   // Eval returns the literal's value.
   ExpressionLiteral Ten(bufferize(SM, "10"), APInt(64, 10u));
-  Expected<ExpressionValue> Value = Ten.eval();
+  Expected<APInt> Value = Ten.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
-  EXPECT_EQ(10, Value->getAPIntValue().getSExtValue());
+  EXPECT_EQ(10, Value->getSExtValue());
   Expected<ExpressionFormat> ImplicitFormat = Ten.getImplicitFormat(SM);
   ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
   EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::NoFormat);
@@ -577,14 +570,14 @@ TEST_F(FileCheckTest, Literal) {
                         APInt(64, MinInt64, /*IsSigned=*/true));
   Value = Min.eval();
   ASSERT_TRUE(bool(Value));
-  EXPECT_EQ(MinInt64, Value->getAPIntValue().getSExtValue());
+  EXPECT_EQ(MinInt64, Value->getSExtValue());
 
   // Max value can be correctly represented.
   ExpressionLiteral Max(bufferize(SM, std::to_string(MaxUint64)),
                         APInt(64, MaxUint64));
   Value = Max.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
-  EXPECT_EQ(MaxUint64, Value->getAPIntValue().getZExtValue());
+  EXPECT_EQ(MaxUint64, Value->getZExtValue());
 }
 
 TEST_F(FileCheckTest, Expression) {
@@ -626,33 +619,33 @@ TEST_F(FileCheckTest, NumericVariable) {
   ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
   EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::Unsigned);
   EXPECT_FALSE(FooVar.getValue());
-  Expected<ExpressionValue> EvalResult = FooVarUse.eval();
+  Expected<APInt> EvalResult = FooVarUse.eval();
   expectUndefErrors({"FOO"}, EvalResult.takeError());
 
   // Defined variable without string: only getValue and eval return value set.
-  FooVar.setValue(ExpressionValue(APInt(64, 42u)));
-  std::optional<ExpressionValue> Value = FooVar.getValue();
+  FooVar.setValue(APInt(64, 42u));
+  std::optional<APInt> Value = FooVar.getValue();
   ASSERT_TRUE(Value);
-  EXPECT_EQ(42, Value->getAPIntValue().getSExtValue());
+  EXPECT_EQ(42, Value->getSExtValue());
   EXPECT_FALSE(FooVar.getStringValue());
   EvalResult = FooVarUse.eval();
   ASSERT_THAT_EXPECTED(EvalResult, Succeeded());
-  EXPECT_EQ(42, EvalResult->getAPIntValue().getSExtValue());
+  EXPECT_EQ(42, EvalResult->getSExtValue());
 
   // Defined variable with string: getValue, eval, and getStringValue return
   // value set.
   StringRef StringValue = "925";
-  FooVar.setValue(ExpressionValue(APInt(64, 925u)), StringValue);
+  FooVar.setValue(APInt(64, 925u), StringValue);
   Value = FooVar.getValue();
   ASSERT_TRUE(Value);
-  EXPECT_EQ(925, Value->getAPIntValue().getSExtValue());
+  EXPECT_EQ(925, Value->getSExtValue());
   // getStringValue should return the same memory not just the same characters.
   EXPECT_EQ(StringValue.begin(), FooVar.getStringValue()->begin());
   EXPECT_EQ(StringValue.end(), FooVar.getStringValue()->end());
   EvalResult = FooVarUse.eval();
   ASSERT_THAT_EXPECTED(EvalResult, Succeeded());
-  EXPECT_EQ(925, EvalResult->getAPIntValue().getSExtValue());
-  EXPECT_EQ(925, EvalResult->getAPIntValue().getSExtValue());
+  EXPECT_EQ(925, EvalResult->getSExtValue());
+  EXPECT_EQ(925, EvalResult->getSExtValue());
 
   // Clearing variable: getValue and eval fail. Error returned by eval holds
   // the name of the cleared variable.
@@ -670,13 +663,13 @@ TEST_F(FileCheckTest, Binop) {
   StringRef FooStr = ExprStr.take_front(3);
   NumericVariable FooVar(FooStr,
                          ExpressionFormat(ExpressionFormat::Kind::Unsigned), 1);
-  FooVar.setValue(ExpressionValue(APInt(64, 42u)));
+  FooVar.setValue(APInt(64, 42u));
   std::unique_ptr<NumericVariableUse> FooVarUse =
       std::make_unique<NumericVariableUse>(FooStr, &FooVar);
   StringRef BarStr = ExprStr.take_back(3);
   NumericVariable BarVar(BarStr,
                          ExpressionFormat(ExpressionFormat::Kind::Unsigned), 2);
-  BarVar.setValue(ExpressionValue(APInt(64, 18u)));
+  BarVar.setValue(APInt(64, 18u));
   std::unique_ptr<NumericVariableUse> BarVarUse =
       std::make_unique<NumericVariableUse>(BarStr, &BarVar);
   BinaryOperation Binop(ExprStr, exprAdd, std::move(FooVarUse),
@@ -684,29 +677,28 @@ TEST_F(FileCheckTest, Binop) {
 
   // Defined variables with same bitwidth and no overflow: eval returns right
   // value; implicit formas is as expected.
-  Expected<ExpressionValue> Value = Binop.eval();
+  Expected<APInt> Value = Binop.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
-  EXPECT_EQ(60, Value->getAPIntValue().getSExtValue());
+  EXPECT_EQ(60, Value->getSExtValue());
   Expected<ExpressionFormat> ImplicitFormat = Binop.getImplicitFormat(SM);
   ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
   EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::Unsigned);
 
   // Defined variables with different bitwidth and no overflow: eval succeeds
   // and return the right value.
-  BarVar.setValue(ExpressionValue(APInt(32, 18u)));
+  BarVar.setValue(APInt(32, 18u));
   Value = Binop.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
-  EXPECT_EQ(60, Value->getAPIntValue().getSExtValue());
+  EXPECT_EQ(60, Value->getSExtValue());
 
   // Defined variables with same bitwidth and wider result (i.e. overflow):
   // eval succeeds and return the right value in a wider APInt.
-  BarVar.setValue(ExpressionValue(APInt(64, AbsoluteMaxInt64)));
+  BarVar.setValue(APInt(64, AbsoluteMaxInt64));
   Value = Binop.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
-  EXPECT_EQ(128u, Value->getAPIntValue().getBitWidth());
-  EXPECT_EQ(APInt(128, AbsoluteMaxInt64 +
-                           FooVar.getValue()->getAPIntValue().getZExtValue()),
-            Value->getAPIntValue());
+  EXPECT_EQ(128u, Value->getBitWidth());
+  EXPECT_EQ(APInt(128, AbsoluteMaxInt64 + FooVar.getValue()->getZExtValue()),
+            *Value);
 
   // 1 undefined variable: eval fails, error contains name of undefined
   // variable.
@@ -1463,7 +1455,7 @@ TEST_F(FileCheckTest, Substitution) {
   // substituted for the variable's value.
   NumericVariable NVar("N", ExpressionFormat(ExpressionFormat::Kind::Unsigned),
                        1);
-  NVar.setValue(ExpressionValue(APInt(64, 10u)));
+  NVar.setValue(APInt(64, 10u));
   auto NVarUse = std::make_unique<NumericVariableUse>("N", &NVar);
   auto ExpressionN = std::make_unique<Expression>(
       std::move(NVarUse), ExpressionFormat(ExpressionFormat::Kind::HexUpper));
@@ -1573,24 +1565,23 @@ TEST_F(FileCheckTest, FileCheckContext) {
   Expected<StringRef> EmptyVar = Cxt.getPatternVarValue(EmptyVarStr);
   Expected<StringRef> UnknownVar = Cxt.getPatternVarValue(UnknownVarStr);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
-  Expected<ExpressionValue> ExpressionVal =
-      (*ExpressionPointer)->getAST()->eval();
+  Expected<APInt> ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
-  EXPECT_EQ(ExpressionVal->getAPIntValue().getSExtValue(), 18);
+  EXPECT_EQ(ExpressionVal->getSExtValue(), 18);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar2Ref, DefinedNumericVariable,
       /*IsLegacyLineExpr=*/false, LineNumber, &Cxt, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
-  EXPECT_EQ(ExpressionVal->getAPIntValue().getSExtValue(), 20);
+  EXPECT_EQ(ExpressionVal->getSExtValue(), 20);
   ExpressionPointer = P.parseNumericSubstitutionBlock(
       LocalNumVar3Ref, DefinedNumericVariable,
       /*IsLegacyLineExpr=*/false, LineNumber, &Cxt, SM);
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
-  EXPECT_EQ(ExpressionVal->getAPIntValue().getSExtValue(), 12);
+  EXPECT_EQ(ExpressionVal->getSExtValue(), 12);
   ASSERT_THAT_EXPECTED(EmptyVar, Succeeded());
   EXPECT_EQ(*EmptyVar, "");
   expectUndefErrors({std::string(UnknownVarStr)}, UnknownVar.takeError());
@@ -1640,7 +1631,7 @@ TEST_F(FileCheckTest, FileCheckContext) {
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
-  EXPECT_EQ(ExpressionVal->getAPIntValue().getSExtValue(), 36);
+  EXPECT_EQ(ExpressionVal->getSExtValue(), 36);
 
   // Clear local variables and check global variables remain defined.
   Cxt.clearLocalVars();
@@ -1652,7 +1643,7 @@ TEST_F(FileCheckTest, FileCheckContext) {
   ASSERT_THAT_EXPECTED(ExpressionPointer, Succeeded());
   ExpressionVal = (*ExpressionPointer)->getAST()->eval();
   ASSERT_THAT_EXPECTED(ExpressionVal, Succeeded());
-  EXPECT_EQ(ExpressionVal->getAPIntValue().getSExtValue(), 36);
+  EXPECT_EQ(ExpressionVal->getSExtValue(), 36);
 }
 
 TEST_F(FileCheckTest, CapturedVarDiags) {
