@@ -701,13 +701,13 @@ define <2 x i16> @stest_f64i16(<2 x double> %x) {
 ; CHECK-NEXT:    pand %xmm2, %xmm0
 ; CHECK-NEXT:    pandn %xmm1, %xmm2
 ; CHECK-NEXT:    por %xmm0, %xmm2
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <4294934528,4294934528,u,u>
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
-; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
-; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    pandn %xmm1, %xmm0
-; CHECK-NEXT:    por %xmm2, %xmm0
-; CHECK-NEXT:    packssdw %xmm0, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = <4294934528,4294934528,u,u>
+; CHECK-NEXT:    movdqa %xmm2, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    pandn %xmm0, %xmm1
+; CHECK-NEXT:    por %xmm2, %xmm1
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,2,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
@@ -2265,13 +2265,13 @@ define <2 x i16> @stest_f64i16_mm(<2 x double> %x) {
 ; CHECK-NEXT:    pand %xmm2, %xmm0
 ; CHECK-NEXT:    pandn %xmm1, %xmm2
 ; CHECK-NEXT:    por %xmm0, %xmm2
-; CHECK-NEXT:    movdqa {{.*#+}} xmm1 = <4294934528,4294934528,u,u>
-; CHECK-NEXT:    movdqa %xmm2, %xmm0
-; CHECK-NEXT:    pcmpgtd %xmm1, %xmm0
-; CHECK-NEXT:    pand %xmm0, %xmm2
-; CHECK-NEXT:    pandn %xmm1, %xmm0
-; CHECK-NEXT:    por %xmm2, %xmm0
-; CHECK-NEXT:    packssdw %xmm0, %xmm0
+; CHECK-NEXT:    movdqa {{.*#+}} xmm0 = <4294934528,4294934528,u,u>
+; CHECK-NEXT:    movdqa %xmm2, %xmm1
+; CHECK-NEXT:    pcmpgtd %xmm0, %xmm1
+; CHECK-NEXT:    pand %xmm1, %xmm2
+; CHECK-NEXT:    pandn %xmm0, %xmm1
+; CHECK-NEXT:    por %xmm2, %xmm1
+; CHECK-NEXT:    pshuflw {{.*#+}} xmm0 = xmm1[0,2,2,3,4,5,6,7]
 ; CHECK-NEXT:    retq
 entry:
   %conv = fptosi <2 x double> %x to <2 x i32>
