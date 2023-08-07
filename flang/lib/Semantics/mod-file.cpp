@@ -331,9 +331,6 @@ void ModFileWriter::PutSymbol(
           [&](const auto &) {
             PutEntity(decls_, symbol);
             PutDirective(decls_, symbol);
-            if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
-              decls_ << "!$omp threadprivate(" << symbol.name() << ")\n";
-            }
           },
       },
       symbol.details());
@@ -875,7 +872,7 @@ llvm::raw_ostream &PutLower(llvm::raw_ostream &os, std::string_view str) {
   return os;
 }
 
-void ModFileWriter::PutDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+void PutOpenACCDirective(llvm::raw_ostream &os, const Symbol &symbol) {
   if (symbol.test(Symbol::Flag::AccDeclare)) {
     os << "!$acc declare ";
     if (symbol.test(Symbol::Flag::AccCopy)) {
@@ -897,6 +894,17 @@ void ModFileWriter::PutDirective(llvm::raw_ostream &os, const Symbol &symbol) {
     }
     os << "(" << symbol.name() << ")\n";
   }
+}
+
+void PutOpenMPDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  if (symbol.test(Symbol::Flag::OmpThreadprivate)) {
+    os << "!$omp threadprivate(" << symbol.name() << ")\n";
+  }
+}
+
+void ModFileWriter::PutDirective(llvm::raw_ostream &os, const Symbol &symbol) {
+  PutOpenACCDirective(os, symbol);
+  PutOpenMPDirective(os, symbol);
 }
 
 struct Temp {
