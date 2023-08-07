@@ -373,7 +373,7 @@ static bool tryToFPToSat(Instruction &I, TargetTransformInfo &TTI) {
   InstructionCost SatCost = TTI.getIntrinsicInstrCost(
       IntrinsicCostAttributes(Intrinsic::fptosi_sat, SatTy, {In}, {FpTy}),
       TTI::TCK_RecipThroughput);
-  SatCost += TTI.getCastInstrCost(Instruction::SExt, SatTy, IntTy,
+  SatCost += TTI.getCastInstrCost(Instruction::SExt, IntTy, SatTy,
                                   TTI::CastContextHint::None,
                                   TTI::TCK_RecipThroughput);
 
