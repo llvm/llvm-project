@@ -309,6 +309,8 @@ void DeclPrinter::PrintConstructorInitializers(CXXConstructorDecl *CDecl,
   for (const auto *BMInitializer : CDecl->inits()) {
     if (BMInitializer->isInClassMemberInitializer())
       continue;
+    if (!BMInitializer->isWritten())
+      continue;
 
     if (!HasInitializerList) {
       Proto += " : ";
