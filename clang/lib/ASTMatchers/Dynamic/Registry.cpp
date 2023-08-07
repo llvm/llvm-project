@@ -178,6 +178,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(constantExpr);
   REGISTER_MATCHER(containsDeclaration);
   REGISTER_MATCHER(continueStmt);
+  REGISTER_MATCHER(convertVectorExpr);
   REGISTER_MATCHER(coreturnStmt);
   REGISTER_MATCHER(coroutineBodyStmt);
   REGISTER_MATCHER(coyieldExpr);
