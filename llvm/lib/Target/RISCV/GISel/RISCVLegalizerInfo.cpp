@@ -27,6 +27,7 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
 
   getActionDefinitionsBuilder({G_ADD, G_SUB, G_AND, G_OR, G_XOR})
       .legalFor({XLenLLT})
+      .widenScalarToNextPow2(0)
       .clampScalar(0, XLenLLT, XLenLLT);
 
   getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
