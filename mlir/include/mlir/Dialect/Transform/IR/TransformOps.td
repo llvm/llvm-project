@@ -156,6 +156,84 @@ def ApplyCommonSubexpressionEliminationOp : TransformDialectOp<"apply_cse",
   }];
 }
 
+def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
+    [DeclareOpInterfaceMethods<TransformOpInterface>,
+     DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
+     ReportTrackingListenerFailuresOpTrait]
+        # GraphRegionNoTerminator.traits> {
+  let summary = "Applies conversion patterns to the body of the targeted op";
+  let description = [{
+    This transform applies the specified conversion patterns to the targeted op
+    and all nested ops. By default, this transform applies a "full" dialect
+    conversion. If the `partial_conversion` unit attribute is present, this
+    transform applies a partial dialect conversion.
+
+    The patterns that should be applied are specified in the first graph region
+    of this op. They must implement the
+    `ConversionPatternDescriptorOpInterface`. The order in which patterns are
+    applied is unspecified; i.e., the ordering of ops in the region of this op
+    is irrelevant.
+
+    The second, optional graph region contains exactly one op that specifies
+    default type converter that should be used with this dialect conversion. If
+    provided, this op must implement the `TypeConverterBuilderOpInterface`.
+    Type converters are a property of conversion patterns: each conversion
+    pattern stores the type converter that should be used in its C++ class. Each
+    conversion pattern descriptor can optionally specify a type converter in its
+    `getTypeConverter` interface method. If no type converter is specified in
+    this method, the default type converter of the dialect conversion is used.
+    Default type converters are useful if the same type converter should be used
+    for multiple sets of conversion patterns. (Patterns that should not use this
+    default type converter specify their own type converter.)
+
+    The `legal_ops`, `illegal_ops`, `legal_dialects`, `illegal_dialects`
+    attributes specify the conversion target. At least one of those four
+    attributes must be specified.
+
+    This transform consumes the `target` handle and modifies the payload. It
+    does not produce any handles.
+
+    This transform fails silently if the dialect conversion was unsuccessful.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target,
+                       OptionalAttr<StrArrayAttr>:$legal_ops,
+                       OptionalAttr<StrArrayAttr>:$illegal_ops,
+                       OptionalAttr<StrArrayAttr>:$legal_dialects,
+                       OptionalAttr<StrArrayAttr>:$illegal_dialects,
+                       UnitAttr:$partialConversion);
+  let results = (outs);
+  let regions = (region VariadicRegion<MaxSizedRegion<1>>:$regions);
+
+  let assemblyFormat = [{
+    `to` $target $regions attr-dict `:` type($target)
+  }];
+  let hasVerifier = 1;
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    OpBuilder<(ins
+        "Value":$target,
+        CArg<"function_ref<void(OpBuilder &, Location)>", "nullptr">:
+            $patternsBodyBuilder,
+        CArg<"function_ref<void(OpBuilder &, Location)>", "nullptr">:
+            $typeConverterBodyBuilder)>,
+  ];
+
+  let extraClassDeclaration = [{
+    ::mlir::Region &getPatterns() {
+      return getRegion(0);
+    }
+
+    ::mlir::transform::TypeConverterBuilderOpInterface getDefaultTypeConverter() {
+      if (getNumRegions() < 2)
+        return {};
+      return ::llvm::cast<::mlir::transform::TypeConverterBuilderOpInterface>(
+          &getRegion(1).front().front());
+    }
+  }];
+}
+
 def ApplyDeadCodeEliminationOp : TransformDialectOp<"apply_dce",
     [TransformOpInterface, TransformEachOpTrait,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
