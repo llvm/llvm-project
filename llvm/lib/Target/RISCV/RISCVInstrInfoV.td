@@ -548,24 +548,22 @@ class VALUVs2NoVm<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, string opcodest
 // Use these multiclasses to define instructions more easily.
 //===----------------------------------------------------------------------===//
 
-multiclass VIndexLoadStore<list<int> EEWList> {
-  foreach n = EEWList in {
-    defvar w = !cast<RISCVWidth>("LSWidth" # n);
+multiclass VIndexLoadStore<int eew> {
+  defvar w = !cast<RISCVWidth>("LSWidth" # eew);
 
-    def VLUXEI # n # _V :
-      VIndexedLoad<MOPLDIndexedUnord, w, "vluxei" # n # ".v">,
-      VLXSchedMC<n, isOrdered=0>;
-    def VLOXEI # n # _V :
-      VIndexedLoad<MOPLDIndexedOrder, w, "vloxei" # n # ".v">,
-      VLXSchedMC<n, isOrdered=1>;
+  def VLUXEI # eew # _V :
+    VIndexedLoad<MOPLDIndexedUnord, w, "vluxei" # eew # ".v">,
+    VLXSchedMC<eew, isOrdered=0>;
+  def VLOXEI # eew # _V :
+    VIndexedLoad<MOPLDIndexedOrder, w, "vloxei" # eew # ".v">,
+    VLXSchedMC<eew, isOrdered=1>;
 
-    def VSUXEI # n # _V :
-      VIndexedStore<MOPSTIndexedUnord, w, "vsuxei" # n # ".v">,
-      VSXSchedMC<n, isOrdered=0>;
-    def VSOXEI # n # _V :
-      VIndexedStore<MOPSTIndexedOrder, w, "vsoxei" # n # ".v">,
-      VSXSchedMC<n, isOrdered=1>;
-  }
+  def VSUXEI # eew # _V :
+    VIndexedStore<MOPSTIndexedUnord, w, "vsuxei" # eew # ".v">,
+    VSXSchedMC<eew, isOrdered=0>;
+  def VSOXEI # eew # _V :
+    VIndexedStore<MOPSTIndexedOrder, w, "vsoxei" # eew # ".v">,
+    VSXSchedMC<eew, isOrdered=1>;
 }
 
 multiclass VALU_IV_V<string opcodestr, bits<6> funct6> {
@@ -1020,18 +1018,12 @@ multiclass VCPR_MV_Mask<string opcodestr, bits<6> funct6, string vm = "v"> {
            SchedBinaryMC<"WriteVCompressV", "ReadVCompressV", "ReadVCompressV">;
 }
 
-multiclass VWholeLoadN<bits<3> nf, string opcodestr, RegisterClass VRC> {
-  foreach l = [8, 16, 32] in {
-    defvar w = !cast<RISCVWidth>("LSWidth" # l);
-    defvar s = !cast<SchedWrite>("WriteVLD" # !add(nf, 1) # "R");
+multiclass VWholeLoadN<int l, bits<3> nf, string opcodestr, RegisterClass VRC> {
+  defvar w = !cast<RISCVWidth>("LSWidth" # l);
+  defvar s = !cast<SchedWrite>("WriteVLD" # !add(nf, 1) # "R");
 
-    def E # l # _V : VWholeLoad<nf, w, opcodestr # "e" # l # ".v", VRC>,
-                     Sched<[s, ReadVLDX]>;
-  }
-}
-multiclass VWholeLoadEEW64<bits<3> nf, string opcodestr, RegisterClass VRC, SchedReadWrite schedrw> {
-  def E64_V : VWholeLoad<nf, LSWidth64, opcodestr # "e64.v", VRC>,
-              Sched<[schedrw, ReadVLDX]>;
+  def E # l # _V : VWholeLoad<nf, w, opcodestr # "e" # l # ".v", VRC>,
+                   Sched<[s, ReadVLDX]>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1051,23 +1043,34 @@ def VSETVL : RVInstSetVL<(outs GPR:$rd), (ins GPR:$rs1, GPR:$rs2),
                          "vsetvl", "$rd, $rs1, $rs2">,
                           Sched<[WriteVSETVL, ReadVSETVL, ReadVSETVL]>;
 } // hasSideEffects = 1, mayLoad = 0, mayStore = 0
-foreach eew = [8, 16, 32] in {
+} // Predicates = [HasVInstructions]
+
+foreach eew = [8, 16, 32, 64] in {
   defvar w = !cast<RISCVWidth>("LSWidth" # eew);
 
-  // Vector Unit-Stride Instructions
-  def VLE#eew#_V : VUnitStrideLoad<w, "vle"#eew#".v">, VLESchedMC;
-  def VSE#eew#_V  : VUnitStrideStore<w,  "vse"#eew#".v">, VSESchedMC;
+  let Predicates = !if(!eq(eew, 64), [HasVInstructionsI64],
+                                     [HasVInstructions]) in {
+    // Vector Unit-Stride Instructions
+    def VLE#eew#_V : VUnitStrideLoad<w, "vle"#eew#".v">, VLESchedMC;
+    def VSE#eew#_V  : VUnitStrideStore<w,  "vse"#eew#".v">, VSESchedMC;
 
-  // Vector Unit-Stride Fault-only-First Loads
-  def VLE#eew#FF_V : VUnitStrideLoadFF<w,  "vle"#eew#"ff.v">, VLFSchedMC;
+    // Vector Unit-Stride Fault-only-First Loads
+    def VLE#eew#FF_V : VUnitStrideLoadFF<w,  "vle"#eew#"ff.v">, VLFSchedMC;
 
-  // Vector Strided Instructions
-  def VLSE#eew#_V  : VStridedLoad<w,  "vlse"#eew#".v">, VLSSchedMC<eew>;
-  def VSSE#eew#_V  : VStridedStore<w,  "vsse"#eew#".v">, VSSSchedMC<eew>;
+    // Vector Strided Instructions
+    def VLSE#eew#_V  : VStridedLoad<w,  "vlse"#eew#".v">, VLSSchedMC<eew>;
+    def VSSE#eew#_V  : VStridedStore<w,  "vsse"#eew#".v">, VSSSchedMC<eew>;
+
+    defm VL1R : VWholeLoadN<eew, 0, "vl1r", VR>;
+    defm VL2R : VWholeLoadN<eew, 1, "vl2r", VRM2>;
+    defm VL4R : VWholeLoadN<eew, 3, "vl4r", VRM4>;
+    defm VL8R : VWholeLoadN<eew, 7, "vl8r", VRM8>;
+  }
+
+  let Predicates = !if(!eq(eew, 64), [IsRV64, HasVInstructionsI64],
+                                     [HasVInstructions]) in
+  defm "" : VIndexLoadStore<eew>;
 }
-
-defm "" : VIndexLoadStore<[8, 16, 32]>;
-} // Predicates = [HasVInstructions]
 
 let Predicates = [HasVInstructions] in {
 def VLM_V : VUnitStrideLoadMask<"vlm.v">,
@@ -1078,11 +1081,6 @@ def : InstAlias<"vle1.v $vd, (${rs1})",
                 (VLM_V VR:$vd, GPR:$rs1), 0>;
 def : InstAlias<"vse1.v $vs3, (${rs1})",
                 (VSM_V VR:$vs3, GPR:$rs1), 0>;
-
-defm VL1R : VWholeLoadN<0, "vl1r", VR>;
-defm VL2R : VWholeLoadN<1, "vl2r", VRM2>;
-defm VL4R : VWholeLoadN<3, "vl4r", VRM4>;
-defm VL8R : VWholeLoadN<7, "vl8r", VRM8>;
 
 def VS1R_V : VWholeStore<0, "vs1r.v", VR>,
              Sched<[WriteVST1R, ReadVST1R, ReadVSTX]>;
@@ -1098,33 +1096,6 @@ def : InstAlias<"vl2r.v $vd, (${rs1})", (VL2RE8_V VRM2:$vd, GPR:$rs1)>;
 def : InstAlias<"vl4r.v $vd, (${rs1})", (VL4RE8_V VRM4:$vd, GPR:$rs1)>;
 def : InstAlias<"vl8r.v $vd, (${rs1})", (VL8RE8_V VRM8:$vd, GPR:$rs1)>;
 } // Predicates = [HasVInstructions]
-
-let Predicates = [HasVInstructionsI64] in {
-// Vector Unit-Stride Instructions
-def VLE64_V : VUnitStrideLoad<LSWidth64, "vle64.v">,
-              VLESchedMC;
-
-def VLE64FF_V : VUnitStrideLoadFF<LSWidth64, "vle64ff.v">,
-                VLFSchedMC;
-
-def VSE64_V : VUnitStrideStore<LSWidth64, "vse64.v">,
-              VSESchedMC;
-// Vector Strided Instructions
-def VLSE64_V : VStridedLoad<LSWidth64, "vlse64.v">,
-               VLSSchedMC<32>;
-
-def VSSE64_V : VStridedStore<LSWidth64, "vsse64.v">,
-               VSSSchedMC<64>;
-
-defm VL1R: VWholeLoadEEW64<0, "vl1r", VR, WriteVLD1R>;
-defm VL2R: VWholeLoadEEW64<1, "vl2r", VRM2, WriteVLD2R>;
-defm VL4R: VWholeLoadEEW64<3, "vl4r", VRM4, WriteVLD4R>;
-defm VL8R: VWholeLoadEEW64<7, "vl8r", VRM8, WriteVLD8R>;
-} // Predicates = [HasVInstructionsI64]
-let Predicates = [IsRV64, HasVInstructionsI64] in {
-  // Vector Indexed Instructions
-  defm "" : VIndexLoadStore<[64]>;
-} // [IsRV64, HasVInstructionsI64]
 
 let Predicates = [HasVInstructions] in {
 // Vector Single-Width Integer Add and Subtract
