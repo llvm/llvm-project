@@ -151,3 +151,51 @@ builtin.module {
     transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
   }
 }
+
+// -----
+
+// 2D vector.transfer_read with a mask.
+builtin.module {
+  // CHECK-LABEL: @read_2d_with_mask(
+  //  CHECK-SAME:     %[[sz0:.*]]: index, %[[sz1:.*]]: index, %[[a:.*]]: memref<1024x1024xf32>
+  func.func @read_2d_with_mask(%sz0: index, %sz1: index, %a: memref<1024x1024xf32>) {
+    // CHECK: %[[c0:.*]] = arith.constant 0 : index
+    // CHECK: %[[c1:.*]] = arith.constant 1 : index
+    // CHECK: %[[c2:.*]] = arith.constant 2 : index
+    %0 = memref.alloc() : memref<4x32x16xf32, #gpu.address_space<workgroup>>
+    %c0 = arith.constant 0 : index
+    %cst_0 = arith.constant 0.000000e+00 : f32
+    // CHECK: %[[mask:.*]] = vector.create_mask
+    // CHECK: %[[e0:.*]] = vector.extract %[[mask]][0] : vector<3x4xi1>
+    // CHECK: %[[e1:.*]] = vector.extract %[[mask]][1] : vector<3x4xi1>
+    // CHECK: %[[e2:.*]] = vector.extract %[[mask]][2] : vector<3x4xi1>
+
+    // CHECK: %[[cmpi0:.*]] = arith.cmpi slt, %[[c0]], %[[sz0]]
+    // CHECK: %[[s0:.*]] = arith.select %[[cmpi0]], %[[sz1]], %[[c0]]
+    // CHECK: nvgpu.device_async_copy %[[a]][%[[c0]], %[[c0]]], {{.*}}, 4, %[[s0]] {bypassL1}
+
+    // CHECK: %[[cmpi1:.*]] = arith.cmpi slt, %[[c1]], %[[sz0]]
+    // CHECK: %[[s1:.*]] = arith.select %[[cmpi1]], %[[sz1]], %[[c0]]
+    // CHECK: nvgpu.device_async_copy %[[a]][%[[c1]], %[[c0]]], {{.*}}, 4, %[[s1]] {bypassL1}
+
+    // CHECK: %[[cmpi2:.*]] = arith.cmpi slt, %[[c2]], %[[sz0]]
+    // CHECK: %[[s2:.*]] = arith.select %[[cmpi2]], %[[sz1]], %[[c0]]
+    // CHECK: nvgpu.device_async_copy %[[a]][%[[c2]], %[[c0]]], {{.*}}, 4, %[[s2]] {bypassL1}
+    %mask = vector.create_mask %sz0, %sz1 : vector<3x4xi1>
+    %1 = vector.transfer_read %a[%c0, %c0], %cst_0, %mask {in_bounds = [true, true]} : memref<1024x1024xf32>, vector<3x4xf32>
+    vector.transfer_write %1, %0[%c0, %c0, %c0] {in_bounds = [true, true]} : vector<3x4xf32>, memref<4x32x16xf32, #gpu.address_space<workgroup>>
+
+    return
+  }
+
+  transform.sequence failures(propagate) {
+  ^bb1(%variant_op: !transform.any_op):
+    %top_level_func = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+    transform.apply_patterns to %top_level_func {
+      transform.apply_patterns.vector.transfer_to_scf max_transfer_rank = 1 full_unroll = true
+    } : !transform.any_op
+    transform.nvgpu.create_async_groups %top_level_func {bypass_l1} : (!transform.any_op) -> (!transform.any_op)
+    %top_level_func_2 = transform.structured.match ops{["func.func"]} in %variant_op : (!transform.any_op) -> !transform.any_op
+    transform.apply_cse to %top_level_func_2 : !transform.any_op
+  }
+}
