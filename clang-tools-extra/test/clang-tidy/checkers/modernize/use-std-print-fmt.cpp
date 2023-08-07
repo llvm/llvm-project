@@ -1,19 +1,10 @@
 // RUN: %check_clang_tidy %s modernize-use-std-print %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [ \
-// RUN:              { \
-// RUN:               key: modernize-use-std-print.ReplacementPrintFunction, \
-// RUN:               value: 'fmt::print' \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-print.ReplacementPrintlnFunction, \
-// RUN:               value: 'fmt::println' \
-// RUN:              }, \
-// RUN:              { \
-// RUN:               key: modernize-use-std-print.PrintHeader, \
-// RUN:               value: '<fmt/core.h>' \
-// RUN:              } \
-// RUN:             ] \
+// RUN:             { \
+// RUN:               modernize-use-std-print.ReplacementPrintFunction: 'fmt::print', \
+// RUN:               modernize-use-std-print.ReplacementPrintlnFunction: 'fmt::println', \
+// RUN:               modernize-use-std-print.PrintHeader: '<fmt/core.h>' \
+// RUN:             } \
 // RUN:            }" \
 // RUN:   -- -isystem %clang_tidy_headers
 
