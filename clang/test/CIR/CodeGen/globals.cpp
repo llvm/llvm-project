@@ -115,3 +115,8 @@ int testExternVar(void) { return externVar; }
 // CHECK: cir.global "private" external @externVar : !s32i
 // CHECK: cir.func @{{.+}}testExternVar
 // CHECK:   cir.get_global @externVar : cir.ptr <!s32i>
+
+// Should constant initialize global with constant address.
+int var = 1;
+int *constAddr = &var;
+// CHECK-DAG: cir.global external @constAddr = #cir.global_view<@var> : !cir.ptr<!s32i>

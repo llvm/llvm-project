@@ -35,3 +35,10 @@ void func2(void) {
   static float j;
   // CHECK-DAG: cir.global "private" internal @func2.j = 0.000000e+00 : f32
 }
+
+// Should const initialize static vars with constant addresses.
+void func3(void) {
+  static int var;
+  static int *constAddr = &var;
+  // CHECK-DAG: cir.global "private" internal @func3.constAddr = #cir.global_view<@func3.var> : !cir.ptr<!s32i>
+}

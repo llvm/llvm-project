@@ -17,6 +17,7 @@
 #include "CIRGenModule.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
+#include "mlir/IR/BuiltinAttributes.h"
 #include "clang/AST/APValue.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
@@ -999,16 +1000,16 @@ namespace {
 /// A struct which can be used to peephole certain kinds of finalization
 /// that normally happen during l-value emission.
 struct ConstantLValue {
-  using SymbolTy = mlir::SymbolRefAttr;
-  llvm::PointerUnion<mlir::Value, SymbolTy> Value;
+  llvm::PointerUnion<mlir::Value, mlir::Attribute> Value;
   bool HasOffsetApplied;
 
   /*implicit*/ ConstantLValue(mlir::Value value, bool hasOffsetApplied = false)
       : Value(value), HasOffsetApplied(hasOffsetApplied) {}
 
-  /*implicit*/ ConstantLValue(SymbolTy address) : Value(address) {}
+  /*implicit*/ ConstantLValue(mlir::SymbolRefAttr address) : Value(address) {}
 
   ConstantLValue(std::nullptr_t) : ConstantLValue({}, false) {}
+  ConstantLValue(mlir::Attribute value) : Value(value) {}
 };
 
 /// A helper class for emitting constant l-values.
@@ -1053,10 +1054,13 @@ private:
   /// Return the value offset.
   mlir::Attribute getOffset() { llvm_unreachable("NYI"); }
 
+  // TODO(cir): create a proper interface to absctract CIR constant values.
+
   /// Apply the value offset to the given constant.
-  mlir::Attribute applyOffset(mlir::Attribute C) {
+  ConstantLValue applyOffset(ConstantLValue &C) {
     if (!hasNonZeroOffset())
       return C;
+
     // TODO(cir): use ptr_stride, or something...
     llvm_unreachable("NYI");
   }
@@ -1092,15 +1096,15 @@ mlir::Attribute ConstantLValueEmitter::tryEmit() {
     return {};
 
   // Apply the offset if necessary and not already done.
-  if (!result.HasOffsetApplied && !value.is<ConstantLValue::SymbolTy>()) {
-    assert(0 && "NYI");
+  if (!result.HasOffsetApplied && !value.is<mlir::Attribute>()) {
+    value = applyOffset(result).Value;
   }
 
   // Convert to the appropriate type; this could be an lvalue for
   // an integer. FIXME: performAddrSpaceCast
   if (destTy.isa<mlir::cir::PointerType>()) {
-    if (value.is<ConstantLValue::SymbolTy>())
-      return value.get<ConstantLValue::SymbolTy>();
+    if (value.is<mlir::Attribute>())
+      return value.get<mlir::Attribute>();
     llvm_unreachable("NYI");
   }
 
@@ -1124,7 +1128,30 @@ ConstantLValue
 ConstantLValueEmitter::tryEmitBase(const APValue::LValueBase &base) {
   // Handle values.
   if (const ValueDecl *D = base.dyn_cast<const ValueDecl *>()) {
-    assert(0 && "NYI");
+    // The constant always points to the canonical declaration. We want to look
+    // at properties of the most recent declaration at the point of emission.
+    D = cast<ValueDecl>(D->getMostRecentDecl());
+
+    if (D->hasAttr<WeakRefAttr>())
+      llvm_unreachable("emit pointer base for weakref is NYI");
+
+    if (auto *FD = dyn_cast<FunctionDecl>(D))
+      llvm_unreachable("emit pointer base for fun decl is NYI");
+
+    if (auto *VD = dyn_cast<VarDecl>(D)) {
+      // We can never refer to a variable with local storage.
+      if (!VD->hasLocalStorage()) {
+        if (VD->isFileVarDecl() || VD->hasExternalStorage())
+          return CGM.getAddrOfGlobalVarAttr(VD);
+
+        if (VD->isLocalVarDecl()) {
+          auto linkage =
+              CGM.getCIRLinkageVarDefinition(VD, /*IsConstant=*/false);
+          return CGM.getBuilder().getGlobalViewAttr(
+              CGM.getOrCreateStaticVarDecl(*VD, linkage));
+        }
+      }
+    }
   }
 
   // Handle typeid(T).
