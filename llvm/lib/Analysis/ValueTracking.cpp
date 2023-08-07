@@ -2045,9 +2045,8 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   case Instruction::ZExt:
     return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
   case Instruction::Shl:
-    if (OrZero)
-      return isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth,
-             Q);
+    if (OrZero || Q.IIQ.hasNoUnsignedWrap(I) || Q.IIQ.hasNoSignedWrap(I))
+      return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
     return false;
   case Instruction::LShr:
     if (OrZero || Q.IIQ.isExact(cast<BinaryOperator>(I)))
