@@ -1058,13 +1058,20 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(IntegerVPOps, VT, Custom);
 
-        // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
-        // range of f32.
-        EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
-        if (isTypeLegal(FloatVT))
-          setOperationAction(
-              {ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
-              Custom);
+        if (Subtarget.hasStdExtZvbb()) {
+          setOperationAction({ISD::BITREVERSE, ISD::BSWAP, ISD::CTLZ,
+                              ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ,
+                              ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP},
+                             VT, Custom);
+        } else {
+          // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
+          // range of f32.
+          EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
+          if (isTypeLegal(FloatVT))
+            setOperationAction(
+                {ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+                Custom);
+        }
       }
 
       for (MVT VT : MVT::fp_fixedlen_vector_valuetypes()) {
@@ -4880,6 +4887,11 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(SHL)
   OP_CASE(SRA)
   OP_CASE(SRL)
+  OP_CASE(BSWAP)
+  OP_CASE(CTTZ)
+  OP_CASE(CTLZ)
+  OP_CASE(CTPOP)
+  OP_CASE(BITREVERSE)
   OP_CASE(SADDSAT)
   OP_CASE(UADDSAT)
   OP_CASE(SSUBSAT)
@@ -4927,8 +4939,10 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(CTLZ)       // VP_CTLZ
   VP_CASE(CTTZ)       // VP_CTTZ
   VP_CASE(CTPOP)      // VP_CTPOP
+  case ISD::CTLZ_ZERO_UNDEF:
   case ISD::VP_CTLZ_ZERO_UNDEF:
     return RISCVISD::CTLZ_VL;
+  case ISD::CTTZ_ZERO_UNDEF:
   case ISD::VP_CTTZ_ZERO_UNDEF:
     return RISCVISD::CTTZ_VL;
   case ISD::FMA:
@@ -5156,6 +5170,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return LowerIS_FPCLASS(Op, DAG);
   case ISD::BITREVERSE: {
     MVT VT = Op.getSimpleValueType();
+    if (VT.isFixedLengthVector()) {
+      assert(Subtarget.hasStdExtZvbb());
+      return lowerToScalableOp(Op, DAG);
+    }
     SDLoc DL(Op);
     assert(Subtarget.hasStdExtZbkb() && "Unexpected custom legalization");
     assert(Op.getOpcode() == ISD::BITREVERSE && "Unexpected opcode");
@@ -5668,6 +5686,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SREM:
   case ISD::UDIV:
   case ISD::UREM:
+  case ISD::BSWAP:
+  case ISD::CTPOP:
     return lowerToScalableOp(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
@@ -5702,7 +5722,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerABS(Op, DAG);
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
+    if (Subtarget.hasStdExtZvbb())
+      return lowerToScalableOp(Op, DAG);
+    assert(Op.getOpcode() != ISD::CTTZ);
     return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
   case ISD::VSELECT:
     return lowerFixedLengthVectorSelectToRVV(Op, DAG);
