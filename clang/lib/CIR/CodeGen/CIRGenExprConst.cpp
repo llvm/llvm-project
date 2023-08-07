@@ -957,7 +957,7 @@ buildArrayConstant(CIRGenModule &CGM, mlir::Type DesiredType,
   }
 
   if (NonzeroLength == 0)
-    assert(0 && "NYE");
+    return builder.getZeroInitAttr(DesiredType);
 
   // Add a zeroinitializer array filler if we have lots of trailing zeroes.
   unsigned TrailingZeroes = ArrayBound - NonzeroLength;

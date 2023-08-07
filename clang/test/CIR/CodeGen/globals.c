@@ -36,5 +36,5 @@ int tentativeD[];
 float zeroInitFlt[2];
 // CHECK: cir.global external @tentativeA = #cir.int<0> : !s32i
 // CHECK: cir.global external @tentativeC = 0.000000e+00 : f32
-// CHECK: cir.global external @tentativeD = #cir.const_array<[#cir.int<0> : !s32i]> : !cir.array<!s32i x 1>
-// CHECK: cir.global external @zeroInitFlt = #cir.const_array<[0.000000e+00 : f32, 0.000000e+00 : f32]> : !cir.array<f32 x 2>
+// CHECK: cir.global external @tentativeD = #cir.zero : !cir.array<!s32i x 1>
+// CHECK: cir.global external @zeroInitFlt = #cir.zero : !cir.array<f32 x 2>
