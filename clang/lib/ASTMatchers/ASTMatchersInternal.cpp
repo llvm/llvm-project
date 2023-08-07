@@ -1046,6 +1046,7 @@ const AstTypeMatcher<ConstantArrayType> constantArrayType;
 const AstTypeMatcher<DeducedTemplateSpecializationType>
     deducedTemplateSpecializationType;
 const AstTypeMatcher<DependentSizedArrayType> dependentSizedArrayType;
+const AstTypeMatcher<DependentSizedExtVectorType> dependentSizedExtVectorType;
 const AstTypeMatcher<IncompleteArrayType> incompleteArrayType;
 const AstTypeMatcher<VariableArrayType> variableArrayType;
 const AstTypeMatcher<AtomicType> atomicType;

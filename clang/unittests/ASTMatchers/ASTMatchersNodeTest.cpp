@@ -1560,6 +1560,20 @@ TEST_P(ASTMatchersTest, DependentSizedArrayType) {
                  dependentSizedArrayType()));
 }
 
+TEST_P(ASTMatchersTest, DependentSizedExtVectorType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(matches("template<typename T, int Size>"
+                      "class vector {"
+                      "  typedef T __attribute__((ext_vector_type(Size))) type;"
+                      "};",
+                      dependentSizedExtVectorType()));
+  EXPECT_TRUE(
+      notMatches("int a[42]; int b[] = { 2, 3 }; void f() { int c[b[0]]; }",
+                 dependentSizedExtVectorType()));
+}
+
 TEST_P(ASTMatchersTest, IncompleteArrayType) {
   EXPECT_TRUE(matches("int a[] = { 2, 3 };", incompleteArrayType()));
   EXPECT_TRUE(matches("void f(int a[]) {}", incompleteArrayType()));

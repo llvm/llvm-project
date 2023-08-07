@@ -227,6 +227,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(defaultStmt);
   REGISTER_MATCHER(dependentCoawaitExpr);
   REGISTER_MATCHER(dependentSizedArrayType);
+  REGISTER_MATCHER(dependentSizedExtVectorType);
   REGISTER_MATCHER(designatedInitExpr);
   REGISTER_MATCHER(designatorCountIs);
   REGISTER_MATCHER(doStmt);
