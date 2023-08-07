@@ -3,6 +3,7 @@
 !s8i = !cir.int<s, 8>
 !s32i = !cir.int<s, 32>
 !s64i = !cir.int<s, 64>
+!ty_22class2EInit22 = !cir.struct<"class.Init", !s8i, #cir.recdecl.ast>
 module {
   cir.global external @a = #cir.int<3> : !s32i
   cir.global external @rgb = #cir.const_array<[#cir.int<0> : !s8i, #cir.int<-23> : !s8i, #cir.int<33> : !s8i] : !cir.array<!s8i x 3>>
@@ -32,6 +33,12 @@ module {
     #cir.global_view<@type_info_A> : !cir.ptr<!s8i>}>
     : !cir.struct<"", !cir.ptr<!s8i>, !cir.ptr<!s8i>, !cir.ptr<!s8i>
   >
+  cir.func private @_ZN4InitC1Eb(!cir.ptr<!ty_22class2EInit22>, !s8i)
+  cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22class2EInit22 {
+    %0 = cir.get_global @_ZL8__ioinit : cir.ptr <!ty_22class2EInit22>
+    %1 = cir.const(#cir.int<3> : !s8i) : !s8i
+    cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_22class2EInit22>, !s8i) -> ()
+  }
 }
 
 // CHECK: cir.global external @a = #cir.int<3> : !s32i
@@ -44,3 +51,9 @@ module {
 
 // CHECK: cir.func @use_global()
 // CHECK-NEXT: %0 = cir.get_global @a : cir.ptr <!s32i>
+
+// CHECK:      cir.global "private" internal @_ZL8__ioinit = ctor : !ty_22class2EInit22 {
+// CHECK-NEXT:  %0 = cir.get_global @_ZL8__ioinit : cir.ptr <!ty_22class2EInit22>
+// CHECK-NEXT:  %1 = cir.const(#cir.int<3> : !s8i) : !s8i
+// CHECK-NEXT:  cir.call @_ZN4InitC1Eb(%0, %1) : (!cir.ptr<!ty_22class2EInit22>, !s8i) -> ()
+// CHECK-NEXT: }

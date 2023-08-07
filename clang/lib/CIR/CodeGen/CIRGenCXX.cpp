@@ -20,6 +20,34 @@
 using namespace clang;
 using namespace cir;
 
+static void buildDeclInit(CIRGenFunction &CGF, const VarDecl *D,
+                          Address DeclPtr) {
+  assert((D->hasGlobalStorage() ||
+          (D->hasLocalStorage() &&
+           CGF.getContext().getLangOpts().OpenCLCPlusPlus)) &&
+         "VarDecl must have global or local (in the case of OpenCL) storage!");
+  assert(!D->getType()->isReferenceType() &&
+         "Should not call buildDeclInit on a reference!");
+
+  QualType type = D->getType();
+  LValue lv = CGF.makeAddrLValue(DeclPtr, type);
+
+  const Expr *Init = D->getInit();
+  switch (CIRGenFunction::getEvaluationKind(type)) {
+  case TEK_Aggregate:
+    CGF.buildAggExpr(
+        Init, AggValueSlot::forLValue(lv, AggValueSlot::IsDestructed,
+                                      AggValueSlot::DoesNotNeedGCBarriers,
+                                      AggValueSlot::IsNotAliased,
+                                      AggValueSlot::DoesNotOverlap));
+    return;
+  case TEK_Scalar:
+    llvm_unreachable("scalar evaluation NYI");
+  case TEK_Complex:
+    llvm_unreachable("complext evaluation NYI");
+  }
+}
+
 mlir::cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
   const auto &FnInfo = getTypes().arrangeCXXStructorDeclaration(GD);
   auto Fn = getAddrOfCXXStructor(GD, &FnInfo, /*FnType=*/nullptr,
@@ -37,4 +65,21 @@ mlir::cir::FuncOp CIRGenModule::codegenCXXStructor(GlobalDecl GD) {
   // TODO: setNonAliasAttributes
   // TODO: SetLLVMFunctionAttributesForDefinition
   return Fn;
+}
+
+void CIRGenModule::codegenGlobalInitCxxStructor(const VarDecl *D,
+                                                mlir::cir::GlobalOp Addr) {
+  CIRGenFunction CGF{*this, builder, true};
+  CurCGF = &CGF;
+  CurCGF->CurFn = Addr;
+  {
+    mlir::OpBuilder::InsertionGuard guard(builder);
+    auto block = builder.createBlock(&Addr.getCtorRegion());
+    builder.setInsertionPointToStart(block);
+    Address DeclAddr(getAddrOfGlobalVar(D), getASTContext().getDeclAlign(D));
+    buildDeclInit(CGF, D, DeclAddr);
+    builder.setInsertionPointToEnd(block);
+    builder.create<mlir::cir::YieldOp>(Addr->getLoc());
+  }
+  CurCGF = nullptr;
 }

@@ -1144,49 +1144,79 @@ LogicalResult LoopOp::verify() {
 //===----------------------------------------------------------------------===//
 
 static void printGlobalOpTypeAndInitialValue(OpAsmPrinter &p, GlobalOp op,
-                                             TypeAttr type,
-                                             Attribute initAttr) {
+                                             TypeAttr type, Attribute initAttr,
+                                             mlir::Region& ctorRegion) {
   auto printType = [&]() { p << ": " << type; };
   if (!op.isDeclaration()) {
     p << "= ";
-    // This also prints the type...
-    printConstant(p, initAttr);
-    if (initAttr.isa<SymbolRefAttr>())
+    if (!ctorRegion.empty()) {
+      p << "ctor ";
       printType();
+      p << " ";
+      p.printRegion(ctorRegion,
+                    /*printEntryBlockArgs=*/false,
+                    /*printBlockTerminators=*/false);
+    } else {
+      // This also prints the type...
+      if (initAttr)
+        printConstant(p, initAttr);
+      if (initAttr.isa<SymbolRefAttr>())
+        printType();
+    }
+
   } else {
     printType();
   }
 }
 
-static ParseResult
-parseGlobalOpTypeAndInitialValue(OpAsmParser &parser, TypeAttr &typeAttr,
-                                 Attribute &initialValueAttr) {
+static ParseResult parseGlobalOpTypeAndInitialValue(OpAsmParser &parser,
+                                                    TypeAttr &typeAttr,
+                                                    Attribute &initialValueAttr,
+                                                    mlir::Region& ctorRegion) {
+  mlir::Type opTy;
   if (parser.parseOptionalEqual().failed()) {
     // Absence of equal means a declaration, so we need to parse the type.
     //  cir.global @a : i32
-    Type type;
-    if (parser.parseColonType(type))
-      return failure();
-    typeAttr = TypeAttr::get(type);
-    return success();
-  }
-
-  // Parse constant with initializer, examples:
-  //  cir.global @y = 3.400000e+00 : f32
-  //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
-  if (parseConstantValue(parser, initialValueAttr).failed())
-    return failure();
-
-  mlir::Type opTy;
-  if (auto sra = initialValueAttr.dyn_cast<SymbolRefAttr>()) {
     if (parser.parseColonType(opTy))
       return failure();
-  } else {
-    // Handle StringAttrs
-    assert(initialValueAttr.isa<mlir::TypedAttr>() &&
-           "Non-typed attrs shouldn't appear here.");
-    auto typedAttr = initialValueAttr.cast<mlir::TypedAttr>();
-    opTy = typedAttr.getType();
+  }
+  else {
+    // Parse contructor, example:
+    //  cir.global @rgb = ctor : type { ... }
+    if (!parser.parseOptionalKeyword("ctor")) {
+      if (parser.parseColonType(opTy))
+        return failure();
+      auto parseLoc = parser.getCurrentLocation();
+      if (parser.parseRegion(ctorRegion, /*arguments=*/{}, /*argTypes=*/{}))
+        return failure();
+      if (!ctorRegion.hasOneBlock())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "ctor region must have exactly one block");
+      if (ctorRegion.back().empty())
+        return parser.emitError(parser.getCurrentLocation(),
+                                "ctor region shall not be empty");
+      if (checkBlockTerminator(parser, parseLoc,
+                               ctorRegion.back().back().getLoc(), &ctorRegion)
+              .failed())
+        return failure();
+    } else {
+      // Parse constant with initializer, examples:
+      //  cir.global @y = 3.400000e+00 : f32
+      //  cir.global @rgb = #cir.const_array<[...] : !cir.array<i8 x 3>>
+      if (parseConstantValue(parser, initialValueAttr).failed())
+        return failure();
+
+      if (auto sra = initialValueAttr.dyn_cast<SymbolRefAttr>()) {
+        if (parser.parseColonType(opTy))
+          return failure();
+      } else {
+        // Handle StringAttrs
+        assert(initialValueAttr.isa<mlir::TypedAttr>() &&
+               "Non-typed attrs shouldn't appear here.");
+        auto typedAttr = initialValueAttr.cast<mlir::TypedAttr>();
+        opTy = typedAttr.getType();
+      }
+    }
   }
 
   typeAttr = TypeAttr::get(opTy);
@@ -1239,9 +1269,10 @@ LogicalResult GlobalOp::verify() {
   return success();
 }
 
-void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
-                     StringRef sym_name, Type sym_type, bool isConstant,
-                     cir::GlobalLinkageKind linkage) {
+void GlobalOp::build(
+    OpBuilder &odsBuilder, OperationState &odsState, StringRef sym_name,
+    Type sym_type, bool isConstant, cir::GlobalLinkageKind linkage,
+    function_ref<void(OpBuilder &, Location)> ctorBuilder) {
   odsState.addAttribute(getSymNameAttrName(odsState.name),
                         odsBuilder.getStringAttr(sym_name));
   odsState.addAttribute(getSymTypeAttrName(odsState.name),
@@ -1253,6 +1284,35 @@ void GlobalOp::build(OpBuilder &odsBuilder, OperationState &odsState,
   ::mlir::cir::GlobalLinkageKindAttr linkageAttr =
       cir::GlobalLinkageKindAttr::get(odsBuilder.getContext(), linkage);
   odsState.addAttribute(getLinkageAttrName(odsState.name), linkageAttr);
+
+  Region *ctorRegion = odsState.addRegion();
+  if (ctorBuilder) {
+    odsBuilder.createBlock(ctorRegion);
+    ctorBuilder(odsBuilder, odsState.location);
+  }
+}
+
+/// Given the region at `index`, or the parent operation if `index` is None,
+/// return the successor regions. These are the regions that may be selected
+/// during the flow of control. `operands` is a set of optional attributes that
+/// correspond to a constant value for each operand, or null if that operand is
+/// not a constant.
+void GlobalOp::getSuccessorRegions(mlir::RegionBranchPoint point,
+                                   SmallVectorImpl<RegionSuccessor> &regions) {
+  // The only region always branch back to the parent operation.
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor());
+    return;
+  }
+
+  // Don't consider the ctor region if it is empty.
+  Region *ctorRegion = &this->getCtorRegion();
+  if (ctorRegion->empty())
+    ctorRegion = nullptr;
+
+  // If the condition isn't constant, both regions may be executed.
+  if (ctorRegion)
+    regions.push_back(RegionSuccessor(ctorRegion));
 }
 
 //===----------------------------------------------------------------------===//

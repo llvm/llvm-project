@@ -254,7 +254,9 @@ CIRGenFunction::buildCoroutineBody(const CoroutineBodyStmt &S) {
   auto openCurlyLoc = getLoc(S.getBeginLoc());
   auto nullPtrCst = builder.getNullPtr(VoidPtrTy, openCurlyLoc);
 
-  CurFn.setCoroutineAttr(mlir::UnitAttr::get(builder.getContext()));
+  auto Fn = dyn_cast<mlir::cir::FuncOp>(CurFn);
+  assert(Fn && "other callables NYI");
+  Fn.setCoroutineAttr(mlir::UnitAttr::get(builder.getContext()));
   auto coroId = buildCoroIDBuiltinCall(openCurlyLoc, nullPtrCst);
   createCoroData(*this, CurCoro, coroId);
 
