@@ -355,7 +355,8 @@ static CIRGenCallee buildDirectCallee(CIRGenModule &CGM, GlobalDecl GD) {
 
     // When directing calling an inline builtin, call it through it's mangled
     // name to make it clear it's not the actual builtin.
-    if (CGF.CurFn.getName() != FDInlineName &&
+    auto Fn = cast<mlir::cir::FuncOp>(CGF.CurFn);
+    if (Fn.getName() != FDInlineName &&
         onlyHasInlineBuiltinDeclaration(FD)) {
       assert(0 && "NYI");
     }
@@ -2136,7 +2137,7 @@ mlir::Value CIRGenFunction::buildAlloca(StringRef name, mlir::Type ty,
                                         mlir::Location loc, CharUnits alignment,
                                         bool insertIntoFnEntryBlock) {
   mlir::Block *entryBlock = insertIntoFnEntryBlock
-                                ? &CurFn.getRegion().front()
+                                ? getCurFunctionEntryBlock()
                                 : currLexScope->getEntryBlock();
   return buildAlloca(name, ty, loc, alignment,
                      builder.getBestAllocaInsertPoint(entryBlock));
@@ -2514,9 +2515,11 @@ mlir::Value CIRGenFunction::buildScalarConstant(
 }
 
 LValue CIRGenFunction::buildPredefinedLValue(const PredefinedExpr *E) {
-  auto SL = E->getFunctionName();
+  const auto *SL = E->getFunctionName();
   assert(SL != nullptr && "No StringLiteral name in PredefinedExpr");
-  StringRef FnName = CurFn.getName();
+  auto Fn = dyn_cast<mlir::cir::FuncOp>(CurFn);
+  assert(Fn && "other callables NYI");
+  StringRef FnName = Fn.getName();
   if (FnName.starts_with("\01"))
     FnName = FnName.substr(1);
   StringRef NameItems[] = {PredefinedExpr::getIdentKindName(E->getIdentKind()),

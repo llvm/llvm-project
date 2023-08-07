@@ -322,7 +322,9 @@ void CIRGenFunction::LexicalScopeGuard::cleanup() {
 
   auto buildReturn = [&](mlir::Location loc) {
     // If we are on a coroutine, add the coro_end builtin call.
-    if (CGF.CurFn.getCoroutine())
+    auto Fn = dyn_cast<mlir::cir::FuncOp>(CGF.CurFn);
+    assert(Fn && "other callables NYI");
+    if (Fn.getCoroutine())
       CGF.buildCoroEndBuiltinCall(
           loc, builder.getNullPtr(builder.getVoidPtrTy(), loc));
 
@@ -1012,7 +1014,9 @@ void CIRGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     const auto *MD = cast<CXXMethodDecl>(D);
     if (MD->getParent()->isLambda() && MD->getOverloadedOperator() == OO_Call) {
       // We're in a lambda.
-      CurFn.setLambdaAttr(mlir::UnitAttr::get(builder.getContext()));
+      auto Fn = dyn_cast<mlir::cir::FuncOp>(CurFn);
+      assert(Fn && "other callables NYI");
+      Fn.setLambdaAttr(mlir::UnitAttr::get(builder.getContext()));
 
       // Figure out the captures.
       MD->getParent()->getCaptureFields(LambdaCaptureFields,

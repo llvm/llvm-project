@@ -478,7 +478,7 @@ mlir::cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &CGM,
     // Be sure to insert global before the current function
     auto *curCGF = CGM.getCurrCIRGenFun();
     if (curCGF)
-      builder.setInsertionPoint(curCGF->CurFn.getOperation());
+      builder.setInsertionPoint(curCGF->CurFn);
 
     g = builder.create<mlir::cir::GlobalOp>(loc, name, t, isCst);
     if (!curCGF)
@@ -783,8 +783,14 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
   // TODO(cir): LLVM's codegen uses a llvm::TrackingVH here. Is that
   // necessary here for CIR gen?
   mlir::Attribute Init;
-  // TODO(cir): bool NeedsGlobalCtor = false;
+  bool NeedsGlobalCtor = false;
+  // Whether the definition of the variable is available externally.
+  // If yes, we shouldn't emit the GloablCtor and GlobalDtor for the variable
+  // since this is the job for its original source.
+  bool IsDefinitionAvailableExternally =
+      astCtx.GetGVALinkageForVariable(D) == GVA_AvailableExternally;
   bool NeedsGlobalDtor =
+      !IsDefinitionAvailableExternally &&
       D->needsDestruction(astCtx) == QualType::DK_cxx_destructor;
 
   const VarDecl *InitDecl;
@@ -830,7 +836,19 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
     emitter.emplace(*this);
     auto Initializer = emitter->tryEmitForInitializer(*InitDecl);
     if (!Initializer) {
-      assert(0 && "not implemented");
+      QualType T = InitExpr->getType();
+      if (D->getType()->isReferenceType())
+        T = D->getType();
+
+      if (getLangOpts().CPlusPlus) {
+        if (InitDecl->hasFlexibleArrayInit(astCtx))
+          ErrorUnsupported(D, "flexible array initializer");
+        Init = builder.getZeroInitAttr(getCIRType(T));
+        if (!IsDefinitionAvailableExternally)
+          NeedsGlobalCtor = true;
+      } else {
+        ErrorUnsupported(D, "static initializer");
+      }
     } else {
       Init = Initializer;
       // We don't need an initializer, so remove the entry for the delayed
@@ -972,8 +990,8 @@ void CIRGenModule::buildGlobalVarDefinition(const clang::VarDecl *D,
 
   // TODO(cir):
   // Emit the initializer function if necessary.
-  // if (NeedsGlobalCtor || NeedsGlobalDtor)
-  //   EmitCXXGlobalVarDeclInitFunc(D, GV, NeedsGlobalCtor);
+  if (NeedsGlobalCtor || NeedsGlobalDtor)
+    buildGlobalVarDeclInit(D, GV, NeedsGlobalCtor);
 
   // TODO(cir): sanitizers (reportGlobalToASan) and global variable debug
   // information.
@@ -1789,7 +1807,7 @@ CIRGenModule::createCIRFunction(mlir::Location loc, StringRef name,
     // Be sure to insert a new function before a current one.
     auto *curCGF = getCurrCIRGenFun();
     if (curCGF)
-      builder.setInsertionPoint(curCGF->CurFn.getOperation());
+      builder.setInsertionPoint(curCGF->CurFn);
 
     f = builder.create<mlir::cir::FuncOp>(loc, name, Ty);
 

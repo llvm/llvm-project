@@ -576,7 +576,9 @@ public:
   const clang::Decl *CurCodeDecl;
   const CIRGenFunctionInfo *CurFnInfo;
   clang::QualType FnRetTy;
-  mlir::cir::FuncOp CurFn = nullptr;
+
+  /// This is the current function or global initializer that is generated code for.
+  mlir::Operation *CurFn = nullptr;
 
   /// Save Parameter Decl for coroutine.
   llvm::SmallVector<const ParmVarDecl *, 4> FnArgs;
@@ -590,6 +592,12 @@ public:
   CIRGenBuilderTy &getBuilder() { return builder; }
 
   CIRGenModule &getCIRGenModule() { return CGM; }
+
+  mlir::Block* getCurFunctionEntryBlock() {
+    auto Fn = dyn_cast<mlir::cir::FuncOp>(CurFn);
+    assert(Fn && "other callables NYI");
+    return &Fn.getRegion().front();
+  }
 
   /// Sanitizers enabled for this function.
   clang::SanitizerSet SanOpts;

@@ -571,11 +571,12 @@ def YieldOpKind : I32EnumAttr<
 
 def YieldOp : CIR_Op<"yield", [ReturnLike, Terminator,
     ParentOneOf<["IfOp", "ScopeOp", "SwitchOp", "LoopOp", "AwaitOp",
-                 "TernaryOp"]>]> {
+                 "TernaryOp", "GlobalOp"]>]> {
   let summary = "Terminate CIR regions";
   let description = [{
     The `cir.yield` operation terminates regions on different CIR operations:
-    `cir.if`, `cir.scope`, `cir.switch`, `cir.loop`, `cir.await` and `cir.ternary`.
+    `cir.if`, `cir.scope`, `cir.switch`, `cir.loop`, `cir.await`, `cir.ternary`
+    and `cir.global`.
 
     Might yield an SSA value and the semantics of how the values are yielded is
     defined by the parent operation.
@@ -1242,7 +1243,7 @@ def SignedOverflowBehaviorEnum : I32EnumAttr<
 }
 
 
-def GlobalOp : CIR_Op<"global", [Symbol]> {
+def GlobalOp : CIR_Op<"global", [Symbol, DeclareOpInterfaceMethods<RegionBranchOpInterface>, NoRegionArguments]> {
   let summary = "Declares or defines a global variable";
   let description = [{
     The `cir.global` operation declares or defines a named global variable.
@@ -1280,19 +1281,19 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$constant,
                        OptionalAttr<I64Attr>:$alignment);
-
+  let regions = (region AnyRegion:$ctorRegion);
   let assemblyFormat = [{
        ($sym_visibility^)?
        (`constant` $constant^)?
        $linkage
        $sym_name
-       custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value)
+       custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value, $ctorRegion)
        attr-dict
   }];
 
   let extraClassDeclaration = [{
     bool isDeclaration() {
-      return !getInitialValue();
+      return !getInitialValue() && getCtorRegion().empty();
     }
     bool hasInitializer() { return !isDeclaration(); }
     bool hasAvailableExternallyLinkage() {
@@ -1318,8 +1319,9 @@ def GlobalOp : CIR_Op<"global", [Symbol]> {
       CArg<"bool", "false">:$isConstant,
       // CIR defaults to external linkage.
       CArg<"cir::GlobalLinkageKind",
-            "cir::GlobalLinkageKind::ExternalLinkage">:$linkage
-      )>
+            "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,
+      CArg<"function_ref<void(OpBuilder &, Location)>",
+           "nullptr">:$ctorBuilder)>
   ];
 
   let hasVerifier = 1;
