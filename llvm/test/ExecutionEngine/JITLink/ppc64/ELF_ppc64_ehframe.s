@@ -2,6 +2,9 @@
 # RUN: llvm-mc -triple=powerpc64le-unknown-linux-gnu -filetype=obj -o %t %s
 # RUN: llvm-jitlink -noexec -phony-externals -debug-only=jitlink %t 2>&1 | \
 # RUN:   FileCheck %s
+# RUN: llvm-mc -triple=powerpc64-unknown-linux-gnu -filetype=obj -o %t %s
+# RUN: llvm-jitlink -noexec -phony-externals -debug-only=jitlink %t 2>&1 | \
+# RUN:   FileCheck %s
 #
 # Check that splitting of eh-frame sections works.
 #
