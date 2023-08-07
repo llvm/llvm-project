@@ -12,6 +12,7 @@ class DS_Pseudo <string opName, dag outs, dag ins, string asmOps, list<dag> patt
 
   let LGKM_CNT = 1;
   let DS = 1;
+  let GWS = 0;
   let Size = 8;
   let UseNamedOperandTable = 1;
 
@@ -61,6 +62,7 @@ class DS_Real <DS_Pseudo ps, string opName = ps.Mnemonic> :
   let UseNamedOperandTable = 1;
 
   // copy relevant pseudo op flags
+  let GWS                = ps.GWS;
   let SubtargetPredicate = ps.SubtargetPredicate;
   let OtherPredicates    = ps.OtherPredicates;
   let SchedRW            = ps.SchedRW;
@@ -376,6 +378,7 @@ multiclass DS_1A_mc <string opName> {
 
 class DS_GWS <string opName, dag ins, string asmOps>
 : DS_Pseudo<opName, (outs), ins, asmOps> {
+  let GWS = 1;
 
   let has_vdst  = 0;
   let has_addr  = 0;
