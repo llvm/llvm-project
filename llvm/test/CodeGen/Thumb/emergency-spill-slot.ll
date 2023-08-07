@@ -176,18 +176,13 @@ define void @arg_emergency_spill(i32 %n, i32 %n2, i32 %n3, i32 %n4, ptr byval([2
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
 ; CHECK-NEXT:    str r0, [sp]
-; CHECK-NEXT:    ldr r0, .LCPI3_0
-; CHECK-NEXT:    add r0, sp
-; CHECK-NEXT:    str r5, [r0]
+; CHECK-NEXT:    add r0, sp, #904
+; CHECK-NEXT:    str r5, [r0, #124]
 ; CHECK-NEXT:    ldr r0, [sp]
 ; CHECK-NEXT:    @APP
 ; CHECK-NEXT:    @NO_APP
 ; CHECK-NEXT:    add sp, #4
 ; CHECK-NEXT:    pop {r4, r5, r6, r7, pc}
-; CHECK-NEXT:    .p2align 2
-; CHECK-NEXT:  @ %bb.1:
-; CHECK-NEXT:  .LCPI3_0:
-; CHECK-NEXT:    .long 1028 @ 0x404
 entry:
   %asm1 = call { i32, i32, i32, i32, i32, i32, i32, i32 } asm "", "={r0},={r1},={r2},={r3},={r4},={r5},={r6},={r7},0,1,2,3,4,5,6,7"(ptr %p, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef, i32 undef)
   %asmresult = extractvalue { i32, i32, i32, i32, i32, i32, i32, i32 } %asm1, 0
