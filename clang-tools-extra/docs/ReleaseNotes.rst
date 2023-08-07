@@ -184,7 +184,7 @@ Changes in existing checks
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
   match with the swap function signature, eliminating false-positives.
 
-- Improved the :doc:`readability-identifier-naming
+- Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check to emit proper
   warnings when a type forward declaration precedes its definition.
 
