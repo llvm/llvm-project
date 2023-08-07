@@ -1935,9 +1935,12 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
         auto Namespace = Def->getValue("Namespace")
                              ? Def->getValueAsString("Namespace")
                              : "";
+        const bool IsDead = DeadImplicitDefs.contains(Def);
         Table << MatchTable::Opcode("GIR_AddImplicitDef")
               << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
               << MatchTable::NamedValue(Namespace, Def->getName())
+              << (IsDead ? MatchTable::NamedValue("RegState", "Dead")
+                         : MatchTable::IntValue(0))
               << MatchTable::LineBreak;
       }
       for (auto *Use : I->ImplicitUses) {
