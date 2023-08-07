@@ -1006,7 +1006,7 @@ __ockl_dm_init_v1(ulong hp, ulong sp, uint hb, uint nis)
 // reverse local array, n <= wavesize
 // Expect this to be called by one full wave
 // TODO make this work on devices which can't permute full wave
-static void
+static void __attribute__((target("gfx8-insts")))
 reverse_la(__local uint *x, uint i, uint n)
 {
     if (i < n) {
