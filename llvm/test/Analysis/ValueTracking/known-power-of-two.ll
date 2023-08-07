@@ -36,7 +36,8 @@ define i8 @trunc_is_pow2_or_zero(i16 %x, i8 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i8 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 4, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = trunc i16 [[XP2]] to i8
-; CHECK-NEXT:    [[R:%.*]] = urem i8 [[Y]], [[XX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[XX]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i8 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %xp2 = shl i16 4, %x
