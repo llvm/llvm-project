@@ -231,6 +231,8 @@ enum NodeType : unsigned {
   SREM_VL,
   SRA_VL,
   SRL_VL,
+  ROTL_VL,
+  ROTR_VL,
   SUB_VL,
   UDIV_VL,
   UREM_VL,
