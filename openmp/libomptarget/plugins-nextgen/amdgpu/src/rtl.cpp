@@ -594,13 +594,16 @@ struct AMDGPUQueueTy {
     return Plugin::check(Status, "Error in hsa_queue_destroy: %s");
   }
 
-  /// Returns if this queue is considered busy
-  bool isBusy() const { return NumUsers > 0; }
+  /// Returns the number of streams, this queue is currently assigned to.
+  bool getUserCount() const { return NumUsers; }
 
-  /// Decrement user count of the queue object
+  /// Returns if the underlying HSA queue is initialized.
+  bool isInitialized() { return Queue != nullptr; }
+
+  /// Decrement user count of the queue object.
   void removeUser() { --NumUsers; }
 
-  /// Increase user count of the queue object
+  /// Increase user count of the queue object.
   void addUser() { ++NumUsers; }
 
   /// Push a kernel launch to the queue. The kernel launch requires an output
@@ -784,8 +787,9 @@ private:
   /// atomic operations. We can further investigate it if this is a bottleneck.
   std::mutex Mutex;
 
-  /// Indicates that the queue is busy when > 0
-  int NumUsers;
+  /// The number of streams, this queue is currently assigned to. A queue is
+  /// considered idle when this is zero, otherwise: busy.
+  uint32_t NumUsers;
 };
 
 /// Struct that implements a stream of asynchronous operations for AMDGPU
@@ -1451,7 +1455,9 @@ struct AMDGPUStreamManagerTy final
   using ResourcePoolTy = GenericDeviceResourceManagerTy<ResourceRef>;
 
   AMDGPUStreamManagerTy(GenericDeviceTy &Device, hsa_agent_t HSAAgent)
-      : GenericDeviceResourceManagerTy(Device), NextQueue(0), Agent(HSAAgent) {}
+      : GenericDeviceResourceManagerTy(Device),
+        OMPX_QueueTracking("LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING", true),
+        NextQueue(0), Agent(HSAAgent) {}
 
   Error init(uint32_t InitialSize, int NumHSAQueues, int HSAQueueSize) {
     Queues = std::vector<AMDGPUQueueTy>(NumHSAQueues);
@@ -1493,34 +1499,38 @@ struct AMDGPUStreamManagerTy final
 
 private:
   /// Search for and assign an prefereably idle queue to the given Stream. If
-  /// there is no queue without current users, resort to round robin selection.
+  /// there is no queue without current users, choose the queue with the lowest
+  /// user count. If utilization is ignored: use round robin selection.
   inline Error assignNextQueue(AMDGPUStreamTy *Stream) {
-    uint32_t StartIndex = NextQueue % MaxNumQueues;
-    AMDGPUQueueTy *Q = nullptr;
+    // Start from zero when tracking utilization, otherwise: round robin policy.
+    uint32_t Index = OMPX_QueueTracking ? 0 : NextQueue++ % MaxNumQueues;
 
-    for (int i = 0; i < MaxNumQueues; ++i) {
-      Q = &Queues[StartIndex++];
-      if (StartIndex == MaxNumQueues)
-        StartIndex = 0;
+    if (OMPX_QueueTracking) {
+      // Find the least used queue.
+      for (uint32_t I = 0; I < MaxNumQueues; ++I) {
+        // Early exit when an initialized queue is idle.
+        if (Queues[I].isInitialized() && Queues[I].getUserCount() == 0) {
+          Index = I;
+          break;
+        }
 
-      if (Q->isBusy())
-        continue;
-      else {
-        if (auto Err = Q->init(Agent, QueueSize))
-          return Err;
-
-        Q->addUser();
-        Stream->Queue = Q;
-        return Plugin::success();
+        // Update the least used queue.
+        if (Queues[Index].getUserCount() > Queues[I].getUserCount())
+          Index = I;
       }
     }
 
-    // All queues busy: Round robin (StartIndex has the initial value again)
-    Queues[StartIndex].addUser();
-    Stream->Queue = &Queues[StartIndex];
-    ++NextQueue;
+    // Make sure the queue is initialized, then add user & assign.
+    if (auto Err = Queues[Index].init(Agent, QueueSize))
+      return Err;
+    Queues[Index].addUser();
+    Stream->Queue = &Queues[Index];
+
     return Plugin::success();
   }
+
+  /// Envar for controlling the tracking of busy HSA queues.
+  BoolEnvar OMPX_QueueTracking;
 
   /// The next queue index to use for round robin selection.
   uint32_t NextQueue;

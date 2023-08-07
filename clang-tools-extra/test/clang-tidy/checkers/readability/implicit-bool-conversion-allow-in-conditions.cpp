@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s readability-implicit-bool-conversion %t \
 // RUN: -config='{CheckOptions: \
-// RUN:  [{key: readability-implicit-bool-conversion.AllowIntegerConditions, value: true}, \
-// RUN:   {key: readability-implicit-bool-conversion.AllowPointerConditions, value: true}]}'
+// RUN:  {readability-implicit-bool-conversion.AllowIntegerConditions: true, \
+// RUN:   readability-implicit-bool-conversion.AllowPointerConditions: true}}'
 
 template<typename T>
 void functionTaking(T);

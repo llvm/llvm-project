@@ -2404,7 +2404,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
                      mlir::Location loc,
                      const Fortran::parser::AccClauseList &accClauseList) {
   llvm::SmallVector<mlir::Value> dataClauseOperands, copyEntryOperands,
-      createEntryOperands, copyoutEntryOperands;
+      createEntryOperands, copyoutEntryOperands, deviceResidentEntryOperands;
   Fortran::lower::StatementContext stmtCtx;
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   for (const Fortran::parser::AccClause &clause : accClauseList.v) {
@@ -2471,6 +2471,17 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
           linkClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_declare_link,
           /*structured=*/true);
+    } else if (const auto *deviceResidentClause =
+                   std::get_if<Fortran::parser::AccClause::DeviceResident>(
+                       &clause.u)) {
+      auto crtDataStart = dataClauseOperands.size();
+      genDataOperandOperations<mlir::acc::DeclareDeviceResidentOp>(
+          deviceResidentClause->v, converter, semanticsContext, stmtCtx,
+          dataClauseOperands,
+          mlir::acc::DataClause::acc_declare_device_resident,
+          /*structured=*/true);
+      deviceResidentEntryOperands.append(
+          dataClauseOperands.begin() + crtDataStart, dataClauseOperands.end());
     } else {
       mlir::Location clauseLocation = converter.genLocation(clause.source);
       TODO(clauseLocation, "clause on declare directive");
@@ -2479,14 +2490,18 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
   builder.create<mlir::acc::DeclareEnterOp>(loc, dataClauseOperands);
 
   if (!createEntryOperands.empty() || !copyEntryOperands.empty() ||
-      !copyoutEntryOperands.empty()) {
+      !copyoutEntryOperands.empty() || !deviceResidentEntryOperands.empty()) {
     // Attach declare exit operation generation to function context.
     fctCtx.attachCleanup([&builder, loc, dataClauseOperands,
                           createEntryOperands, copyEntryOperands,
-                          copyoutEntryOperands]() {
+                          copyoutEntryOperands, deviceResidentEntryOperands]() {
       builder.create<mlir::acc::DeclareExitOp>(loc, dataClauseOperands);
       genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
           builder, createEntryOperands, /*structured=*/true,
+          /*implicit=*/false);
+      genDataExitOperations<mlir::acc::DeclareDeviceResidentOp,
+                            mlir::acc::DeleteOp>(
+          builder, deviceResidentEntryOperands, /*structured=*/true,
           /*implicit=*/false);
       genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
           builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);

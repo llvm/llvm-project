@@ -62,20 +62,6 @@ void DebugTranslation::translate(LLVMFuncOp func, llvm::Function &llvmFunc) {
   if (!debugEmissionIsEnabled)
     return;
 
-  // If we are to create debug info for the function, we need to ensure that all
-  // inlinable calls in it are with debug info, otherwise the LLVM verifier will
-  // complain. For now, be more restricted and treat all calls as inlinable.
-  const bool hasCallWithoutDebugInfo =
-      func.walk([&](LLVM::CallOp call) {
-            return call.getLoc()->walk([](Location l) {
-              return isa<UnknownLoc>(l) ? WalkResult::interrupt()
-                                        : WalkResult::advance();
-            });
-          })
-          .wasInterrupted();
-  if (hasCallWithoutDebugInfo)
-    return;
-
   // Look for a sub program attached to the function.
   auto spLoc =
       func.getLoc()->findInstanceOf<FusedLocWith<LLVM::DISubprogramAttr>>();

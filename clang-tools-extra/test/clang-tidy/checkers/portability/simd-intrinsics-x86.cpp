@@ -1,15 +1,15 @@
 // RUN: %check_clang_tidy -std=c++11-or-later %s portability-simd-intrinsics %t -- \
-// RUN:  -config='{CheckOptions: [ \
-// RUN:    {key: portability-simd-intrinsics.Suggest, value: false} \
-// RUN:  ]}' -- -target x86_64
+// RUN:  -config='{CheckOptions: { \
+// RUN:    portability-simd-intrinsics.Suggest: false \
+// RUN:  }}' -- -target x86_64
 // RUN: %check_clang_tidy -std=c++11,c++14,c++17 %s portability-simd-intrinsics -check-suffix=BEFORE-CXX20 %t -- \
-// RUN:  -config='{CheckOptions: [ \
-// RUN:    {key: portability-simd-intrinsics.Suggest, value: true} \
-// RUN:  ]}' -- -target x86_64
+// RUN:  -config='{CheckOptions: { \
+// RUN:    portability-simd-intrinsics.Suggest: true \
+// RUN:  }}' -- -target x86_64
 // RUN: %check_clang_tidy -std=c++20-or-later %s portability-simd-intrinsics -check-suffix=CXX20 %t -- \
-// RUN:  -config='{CheckOptions: [ \
-// RUN:    {key: portability-simd-intrinsics.Suggest, value: true} \
-// RUN:  ]}' -- -target x86_64
+// RUN:  -config='{CheckOptions: { \
+// RUN:    portability-simd-intrinsics.Suggest: true \
+// RUN:  }}' -- -target x86_64
 
 typedef long long __m128i __attribute__((vector_size(16)));
 typedef double __m256 __attribute__((vector_size(32)));

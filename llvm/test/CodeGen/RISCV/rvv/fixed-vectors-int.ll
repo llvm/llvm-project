@@ -1285,10 +1285,10 @@ define void @mulhu_v4i32(ptr %x) {
 ; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; CHECK-NEXT:    vmulhu.vv v8, v8, v11
 ; CHECK-NEXT:    vadd.vv v8, v8, v9
-; CHECK-NEXT:    vmv.v.i v9, 1
-; CHECK-NEXT:    vmv.v.i v10, 2
-; CHECK-NEXT:    vslideup.vi v10, v9, 3
-; CHECK-NEXT:    vsrl.vv v8, v8, v10
+; CHECK-NEXT:    vmv.v.i v9, 2
+; CHECK-NEXT:    li a1, 1
+; CHECK-NEXT:    vslide1down.vx v9, v9, a1
+; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    vse32.v v8, (a0)
 ; CHECK-NEXT:    ret
   %a = load <4 x i32>, ptr %x
@@ -5216,15 +5216,15 @@ define void @mulhu_v8i32(ptr %x) {
 ; LMULMAX1-RV32-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
 ; LMULMAX1-RV32-NEXT:    vmulhu.vv v8, v8, v13
 ; LMULMAX1-RV32-NEXT:    vadd.vv v8, v8, v11
-; LMULMAX1-RV32-NEXT:    vmv.v.i v11, 1
-; LMULMAX1-RV32-NEXT:    vmv.v.i v12, 2
-; LMULMAX1-RV32-NEXT:    vslideup.vi v12, v11, 3
-; LMULMAX1-RV32-NEXT:    vsrl.vv v8, v8, v12
+; LMULMAX1-RV32-NEXT:    vmv.v.i v11, 2
+; LMULMAX1-RV32-NEXT:    li a2, 1
+; LMULMAX1-RV32-NEXT:    vslide1down.vx v11, v11, a2
+; LMULMAX1-RV32-NEXT:    vsrl.vv v8, v8, v11
 ; LMULMAX1-RV32-NEXT:    vmulhu.vv v9, v10, v9
 ; LMULMAX1-RV32-NEXT:    vsub.vv v10, v10, v9
 ; LMULMAX1-RV32-NEXT:    vmulhu.vv v10, v10, v13
 ; LMULMAX1-RV32-NEXT:    vadd.vv v9, v10, v9
-; LMULMAX1-RV32-NEXT:    vsrl.vv v9, v9, v12
+; LMULMAX1-RV32-NEXT:    vsrl.vv v9, v9, v11
 ; LMULMAX1-RV32-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1-RV32-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-RV32-NEXT:    ret

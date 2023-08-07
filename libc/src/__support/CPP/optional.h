@@ -18,12 +18,12 @@ namespace cpp {
 
 // Trivial in_place_t struct.
 struct in_place_t {
-  LIBC_INLINE_VAR explicit in_place_t() = default;
+  LIBC_INLINE constexpr explicit in_place_t() = default;
 };
 
 // Trivial nullopt_t struct.
 struct nullopt_t {
-  LIBC_INLINE_VAR explicit nullopt_t() = default;
+  LIBC_INLINE constexpr explicit nullopt_t() = default;
 };
 
 // nullopt that can be used and returned.

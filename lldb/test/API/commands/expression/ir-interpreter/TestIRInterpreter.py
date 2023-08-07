@@ -44,7 +44,8 @@ class IRInterpreterTestCase(TestBase):
         options.SetTimeoutInMicroSeconds(1000000)
         res, duration_sec = self.time_expression(inf_loop, options)
         self.assertIn(timeout_error, str(res.GetError()))
-        self.assertGreaterEqual(duration_sec, 1)
+        # Anything within 5% of 1s is fine, to account for machine differences.
+        self.assertGreaterEqual(duration_sec, 0.95)
         self.assertLess(duration_sec, 30)
 
     def test_interpreter_interrupt(self):

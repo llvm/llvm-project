@@ -2,86 +2,86 @@
 // r288563 is resolved.
 // UNSUPPORTED: target=powerpc64le{{.*}}
 // RUN: %check_clang_tidy -std=c++20 %s readability-identifier-naming %t -- \
-// RUN:   -config='{CheckOptions: [ \
-// RUN:     {key: readability-identifier-naming.AbstractClassCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.AbstractClassPrefix, value: 'A'}, \
-// RUN:     {key: readability-identifier-naming.ClassCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.ClassPrefix, value: 'C'}, \
-// RUN:     {key: readability-identifier-naming.ClassConstantCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.ClassConstantPrefix, value: 'k'}, \
-// RUN:     {key: readability-identifier-naming.ClassMemberCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.ClassMethodCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.ConstantCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.ConstantSuffix, value: '_CST'}, \
-// RUN:     {key: readability-identifier-naming.ConstexprFunctionCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.ConstexprMethodCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.ConstexprVariableCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.EnumCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.EnumPrefix, value: 'E'}, \
-// RUN:     {key: readability-identifier-naming.ScopedEnumConstantCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.EnumConstantCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.FunctionCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.GlobalConstantCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.GlobalFunctionCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.GlobalVariableCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.GlobalVariablePrefix, value: 'g_'}, \
-// RUN:     {key: readability-identifier-naming.InlineNamespaceCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.LocalConstantCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.LocalConstantPrefix, value: 'k'}, \
-// RUN:     {key: readability-identifier-naming.LocalVariableCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.MemberCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.MemberPrefix, value: 'm_'}, \
-// RUN:     {key: readability-identifier-naming.ConstantMemberCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.PrivateMemberPrefix, value: '__'}, \
-// RUN:     {key: readability-identifier-naming.ProtectedMemberPrefix, value: '_'}, \
-// RUN:     {key: readability-identifier-naming.PublicMemberCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.MethodCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.PrivateMethodPrefix, value: '__'}, \
-// RUN:     {key: readability-identifier-naming.ProtectedMethodPrefix, value: '_'}, \
-// RUN:     {key: readability-identifier-naming.NamespaceCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.ParameterCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.ParameterPrefix, value: 'a_'}, \
-// RUN:     {key: readability-identifier-naming.ConstantParameterCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.ConstantParameterPrefix, value: 'i_'}, \
-// RUN:     {key: readability-identifier-naming.ParameterPackCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.PureFunctionCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.PureMethodCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.StaticConstantCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.StaticVariableCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.StaticVariablePrefix, value: 's_'}, \
-// RUN:     {key: readability-identifier-naming.StructCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.TemplateParameterCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.TemplateTemplateParameterCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.TemplateUsingCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.TemplateUsingPrefix, value: 'u_'}, \
-// RUN:     {key: readability-identifier-naming.TypeTemplateParameterCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.TypeTemplateParameterSuffix, value: '_t'}, \
-// RUN:     {key: readability-identifier-naming.TypedefCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.TypedefSuffix, value: '_t'}, \
-// RUN:     {key: readability-identifier-naming.UnionCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.UnionPrefix, value: 'U'}, \
-// RUN:     {key: readability-identifier-naming.UsingCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.ValueTemplateParameterCase, value: camelBack}, \
-// RUN:     {key: readability-identifier-naming.VariableCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.VirtualMethodCase, value: Camel_Snake_Case}, \
-// RUN:     {key: readability-identifier-naming.VirtualMethodPrefix, value: 'v_'}, \
-// RUN:     {key: readability-identifier-naming.MacroDefinitionCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.TypeAliasCase, value: camel_Snake_Back}, \
-// RUN:     {key: readability-identifier-naming.TypeAliasSuffix, value: '_t'}, \
-// RUN:     {key: readability-identifier-naming.IgnoreFailedSplit, value: false}, \
-// RUN:     {key: readability-identifier-naming.GlobalPointerCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.GlobalPointerSuffix, value: '_Ptr'}, \
-// RUN:     {key: readability-identifier-naming.GlobalConstantPointerCase, value: UPPER_CASE}, \
-// RUN:     {key: readability-identifier-naming.GlobalConstantPointerSuffix, value: '_Ptr'}, \
-// RUN:     {key: readability-identifier-naming.PointerParameterCase, value: lower_case}, \
-// RUN:     {key: readability-identifier-naming.PointerParameterPrefix, value: 'p_'}, \
-// RUN:     {key: readability-identifier-naming.ConstantPointerParameterCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.ConstantPointerParameterPrefix, value: 'cp_'}, \
-// RUN:     {key: readability-identifier-naming.LocalPointerCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.LocalPointerPrefix, value: 'l_'}, \
-// RUN:     {key: readability-identifier-naming.LocalConstantPointerCase, value: CamelCase}, \
-// RUN:     {key: readability-identifier-naming.LocalConstantPointerPrefix, value: 'lc_'}, \
-// RUN:   ]}' -- -fno-delayed-template-parsing -Dbad_macro \
+// RUN:   -config='{CheckOptions: { \
+// RUN:     readability-identifier-naming.AbstractClassCase: CamelCase, \
+// RUN:     readability-identifier-naming.AbstractClassPrefix: 'A', \
+// RUN:     readability-identifier-naming.ClassCase: CamelCase, \
+// RUN:     readability-identifier-naming.ClassPrefix: 'C', \
+// RUN:     readability-identifier-naming.ClassConstantCase: CamelCase, \
+// RUN:     readability-identifier-naming.ClassConstantPrefix: 'k', \
+// RUN:     readability-identifier-naming.ClassMemberCase: CamelCase, \
+// RUN:     readability-identifier-naming.ClassMethodCase: camelBack, \
+// RUN:     readability-identifier-naming.ConstantCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.ConstantSuffix: '_CST', \
+// RUN:     readability-identifier-naming.ConstexprFunctionCase: lower_case, \
+// RUN:     readability-identifier-naming.ConstexprMethodCase: lower_case, \
+// RUN:     readability-identifier-naming.ConstexprVariableCase: lower_case, \
+// RUN:     readability-identifier-naming.EnumCase: CamelCase, \
+// RUN:     readability-identifier-naming.EnumPrefix: 'E', \
+// RUN:     readability-identifier-naming.ScopedEnumConstantCase: CamelCase, \
+// RUN:     readability-identifier-naming.EnumConstantCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.FunctionCase: camelBack, \
+// RUN:     readability-identifier-naming.GlobalConstantCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.GlobalFunctionCase: CamelCase, \
+// RUN:     readability-identifier-naming.GlobalVariableCase: lower_case, \
+// RUN:     readability-identifier-naming.GlobalVariablePrefix: 'g_', \
+// RUN:     readability-identifier-naming.InlineNamespaceCase: lower_case, \
+// RUN:     readability-identifier-naming.LocalConstantCase: CamelCase, \
+// RUN:     readability-identifier-naming.LocalConstantPrefix: 'k', \
+// RUN:     readability-identifier-naming.LocalVariableCase: lower_case, \
+// RUN:     readability-identifier-naming.MemberCase: CamelCase, \
+// RUN:     readability-identifier-naming.MemberPrefix: 'm_', \
+// RUN:     readability-identifier-naming.ConstantMemberCase: lower_case, \
+// RUN:     readability-identifier-naming.PrivateMemberPrefix: '__', \
+// RUN:     readability-identifier-naming.ProtectedMemberPrefix: '_', \
+// RUN:     readability-identifier-naming.PublicMemberCase: lower_case, \
+// RUN:     readability-identifier-naming.MethodCase: camelBack, \
+// RUN:     readability-identifier-naming.PrivateMethodPrefix: '__', \
+// RUN:     readability-identifier-naming.ProtectedMethodPrefix: '_', \
+// RUN:     readability-identifier-naming.NamespaceCase: lower_case, \
+// RUN:     readability-identifier-naming.ParameterCase: camelBack, \
+// RUN:     readability-identifier-naming.ParameterPrefix: 'a_', \
+// RUN:     readability-identifier-naming.ConstantParameterCase: camelBack, \
+// RUN:     readability-identifier-naming.ConstantParameterPrefix: 'i_', \
+// RUN:     readability-identifier-naming.ParameterPackCase: camelBack, \
+// RUN:     readability-identifier-naming.PureFunctionCase: lower_case, \
+// RUN:     readability-identifier-naming.PureMethodCase: camelBack, \
+// RUN:     readability-identifier-naming.StaticConstantCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.StaticVariableCase: camelBack, \
+// RUN:     readability-identifier-naming.StaticVariablePrefix: 's_', \
+// RUN:     readability-identifier-naming.StructCase: lower_case, \
+// RUN:     readability-identifier-naming.TemplateParameterCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.TemplateTemplateParameterCase: CamelCase, \
+// RUN:     readability-identifier-naming.TemplateUsingCase: lower_case, \
+// RUN:     readability-identifier-naming.TemplateUsingPrefix: 'u_', \
+// RUN:     readability-identifier-naming.TypeTemplateParameterCase: camelBack, \
+// RUN:     readability-identifier-naming.TypeTemplateParameterSuffix: '_t', \
+// RUN:     readability-identifier-naming.TypedefCase: lower_case, \
+// RUN:     readability-identifier-naming.TypedefSuffix: '_t', \
+// RUN:     readability-identifier-naming.UnionCase: CamelCase, \
+// RUN:     readability-identifier-naming.UnionPrefix: 'U', \
+// RUN:     readability-identifier-naming.UsingCase: lower_case, \
+// RUN:     readability-identifier-naming.ValueTemplateParameterCase: camelBack, \
+// RUN:     readability-identifier-naming.VariableCase: lower_case, \
+// RUN:     readability-identifier-naming.VirtualMethodCase: Camel_Snake_Case, \
+// RUN:     readability-identifier-naming.VirtualMethodPrefix: 'v_', \
+// RUN:     readability-identifier-naming.MacroDefinitionCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.TypeAliasCase: camel_Snake_Back, \
+// RUN:     readability-identifier-naming.TypeAliasSuffix: '_t', \
+// RUN:     readability-identifier-naming.IgnoreFailedSplit: false, \
+// RUN:     readability-identifier-naming.GlobalPointerCase: CamelCase, \
+// RUN:     readability-identifier-naming.GlobalPointerSuffix: '_Ptr', \
+// RUN:     readability-identifier-naming.GlobalConstantPointerCase: UPPER_CASE, \
+// RUN:     readability-identifier-naming.GlobalConstantPointerSuffix: '_Ptr', \
+// RUN:     readability-identifier-naming.PointerParameterCase: lower_case, \
+// RUN:     readability-identifier-naming.PointerParameterPrefix: 'p_', \
+// RUN:     readability-identifier-naming.ConstantPointerParameterCase: CamelCase, \
+// RUN:     readability-identifier-naming.ConstantPointerParameterPrefix: 'cp_', \
+// RUN:     readability-identifier-naming.LocalPointerCase: CamelCase, \
+// RUN:     readability-identifier-naming.LocalPointerPrefix: 'l_', \
+// RUN:     readability-identifier-naming.LocalConstantPointerCase: CamelCase, \
+// RUN:     readability-identifier-naming.LocalConstantPointerPrefix: 'lc_', \
+// RUN:   }}' -- -fno-delayed-template-parsing -Dbad_macro \
 // RUN:   -I%S/Inputs/identifier-naming \
 // RUN:   -isystem %S/Inputs/identifier-naming/system
 

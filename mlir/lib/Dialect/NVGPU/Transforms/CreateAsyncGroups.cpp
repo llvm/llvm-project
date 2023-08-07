@@ -46,23 +46,79 @@ static bool isContiguousRead(Operation *read) {
   return isa<vector::LoadOp>(read);
 }
 
+namespace {
+/// A vector.create_mask op and extract position.
+struct TransferMask {
+  vector::CreateMaskOp createMaskOp;
+  SmallVector<int64_t> extractPosition;
+};
+} // namespace
+
 /// If the given vector load op has a mask that is defined by
 /// vector.create_mask, return that op.
-static vector::CreateMaskOp getMaskOp(Operation *loadOp) {
+static FailureOr<TransferMask> getMaskOp(Operation *loadOp) {
   auto transferRead = dyn_cast<vector::TransferReadOp>(loadOp);
   if (!transferRead || !transferRead.getMask())
-    return {};
-  auto maskOp = transferRead.getMask().getDefiningOp<vector::CreateMaskOp>();
-  // TODO: Support 2D masks and higher. Ops with a >1D mask are ignored at the
-  // moment.
-  if (maskOp.getVectorType().getRank() != 1)
-    return {};
-  return maskOp;
+    return TransferMask{{}, {}};
+  assert(transferRead.getMask().getType().getRank() == 1 &&
+         "expected 1-D mask");
+
+  // Case 1: Mask is the result of a vector.create_mask.
+  if (auto maskOp =
+          transferRead.getMask().getDefiningOp<vector::CreateMaskOp>())
+    return TransferMask{maskOp, {}};
+
+  // Case 2: Mask is the result of a vector.extract(vector.create_mask). Only
+  // 2D -> 1D extracts are supported at the moment.
+  if (auto extractOp =
+          transferRead.getMask().getDefiningOp<vector::ExtractOp>())
+    if (auto maskOp =
+            extractOp.getVector().getDefiningOp<vector::CreateMaskOp>())
+      if (extractOp.getPosition().size() == 1 &&
+          extractOp.getSourceVectorType().getRank() == 2)
+        return TransferMask{maskOp,
+                            SmallVector<int64_t>(extractOp.getPosition())};
+
+  // All other cases: not supported.
+  return {};
+}
+
+/// Build an SSA value that represents the number of read elements.
+static Value buildNumReadElements(OpBuilder &b, Location loc,
+                                  Operation *readOp) {
+  FailureOr<TransferMask> transferMask = getMaskOp(readOp);
+  assert(succeeded(transferMask) && "invalid transfer mask");
+
+  // No mask => no num_read_elements.
+  if (!transferMask->createMaskOp)
+    return Value();
+
+  // No extract: return size of "ones" segment in the mask.
+  if (transferMask->extractPosition.empty()) {
+    assert(transferMask->createMaskOp.getNumOperands() == 1 &&
+           "expected single operand");
+    return transferMask->createMaskOp.getOperand(0);
+  }
+
+  // vector.extract(vector.create_mask).
+  // If extract_pos < num_ones, take number of elements from the least
+  // significant dimension.
+  assert(transferMask->createMaskOp.getVectorType().getRank() == 2 &&
+         "expected 2D mask");
+  assert(transferMask->extractPosition.size() == 1 &&
+         "expected 2D->1D extract");
+  Value cmp = b.create<arith::CmpIOp>(
+      loc, arith::CmpIPredicate::slt,
+      b.create<arith::ConstantIndexOp>(loc,
+                                       transferMask->extractPosition.front()),
+      transferMask->createMaskOp->getOperands().front());
+  return b.create<arith::SelectOp>(
+      loc, cmp, transferMask->createMaskOp->getOperands().back(),
+      b.create<arith::ConstantIndexOp>(loc, 0));
 }
 
 /// Return "true" if the conversion to async copy is supported by "async copy".
 static bool resultsInSupportedAsyncCopy(MemRefType memrefType,
-                                        Operation::operand_range indices,
                                         VectorType vecType) {
   assert(vecType.getRank() == 1 && "expected 1-D vector");
   constexpr int64_t kSupportedCpAsyncAlignmentsInBytes[3] = {4, 8, 16};
@@ -121,7 +177,7 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
         if (getConstantIntValue(transferRead.getPadding()) ==
             static_cast<int64_t>(0))
           return;
-        if (!getMaskOp(readOp))
+        if (failed(getMaskOp(readOp)))
           return;
       }
     }
@@ -131,9 +187,9 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
     VectorType vecType = cast<VectorType>(vectorVal.getType());
 
     if (!resultsInSupportedAsyncCopy(cast<MemRefType>(loadBase.getType()),
-                                     nvgpu::getIndices(readOp), vecType) ||
+                                     vecType) ||
         !resultsInSupportedAsyncCopy(cast<MemRefType>(storeBase.getType()),
-                                     nvgpu::getIndices(writeOp), vecType))
+                                     vecType))
       return;
 
     copyToSharedMem.insert(writeOp);
@@ -184,11 +240,8 @@ void nvgpu::createAsyncGroups(RewriterBase &rewriter, Operation *op,
       Operation *readOp = vectorVal.getDefiningOp();
       Value storeBase = nvgpu::getMemrefOperand(writeOp);
       Value loadBase = nvgpu::getMemrefOperand(readOp);
-      Value numReadElements;
-      if (vector::CreateMaskOp maskOp = getMaskOp(readOp)) {
-        assert(maskOp.getNumOperands() == 1 && "expected single operand");
-        numReadElements = maskOp.getOperand(0);
-      }
+      Value numReadElements =
+          buildNumReadElements(rewriter, writeOp->getLoc(), readOp);
       auto dstMemref = cast<MemRefType>(storeBase.getType());
       int64_t sizeInBytes =
           (dstMemref.getElementTypeBitWidth() * numElements) / 8;

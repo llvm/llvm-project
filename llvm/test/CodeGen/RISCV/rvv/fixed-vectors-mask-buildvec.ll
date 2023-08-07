@@ -10,6 +10,7 @@
 ; Test with ELEN limited
 ; RUN: llc -mtriple=riscv32 -mattr=+f,+zve32f -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVE32F
 ; RUN: llc -mtriple=riscv64 -mattr=+f,+zve32f -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVE32F
+
 define <1 x i1> @buildvec_mask_nonconst_v1i1(i1 %x) {
 ; CHECK-LABEL: buildvec_mask_nonconst_v1i1:
 ; CHECK:       # %bb.0:

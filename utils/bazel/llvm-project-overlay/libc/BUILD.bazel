@@ -146,7 +146,10 @@ libc_support_library(
 libc_support_library(
     name = "__support_cpp_array",
     hdrs = ["src/__support/CPP/array.h"],
-    deps = [":libc_root"],
+    deps = [
+        ":__support_macros_attributes",
+        ":libc_root",
+    ],
 )
 
 libc_support_library(
@@ -428,6 +431,7 @@ libc_support_library(
 libc_support_library(
     name = "__support_ctype_utils",
     hdrs = ["src/__support/ctype_utils.h"],
+    deps = [":__support_macros_attributes"],
 )
 
 libc_support_library(

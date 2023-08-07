@@ -39,7 +39,7 @@
 
 namespace __llvm_libc {
 namespace internal {
-constexpr bool same_string(char const *lhs, char const *rhs) {
+LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
   for (; *lhs || *rhs; ++lhs, ++rhs)
     if (*lhs != *rhs)
       return false;

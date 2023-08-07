@@ -13,6 +13,7 @@
 #include <__algorithm/pstl_for_each.h>
 #include <__algorithm/pstl_frontend_dispatch.h>
 #include <__config>
+#include <__iterator/concepts.h>
 #include <__iterator/cpp17_iterator_concepts.h>
 #include <__iterator/iterator_traits.h>
 #include <__type_traits/enable_if.h>
@@ -67,7 +68,7 @@ fill_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _SizeT __n, const 
   std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_fill_n),
       [&](_ForwardIterator __g_first, _SizeT __g_n, const _Tp& __g_value) {
-        if constexpr (__has_random_access_iterator_category<_ForwardIterator>::value)
+        if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value)
           std::fill(__policy, __g_first, __g_first + __g_n, __g_value);
         else
           std::fill_n(__g_first, __g_n, __g_value);

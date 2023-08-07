@@ -177,39 +177,39 @@ define <8 x i64> @vrgather_permute_shuffle_uv_v8i64(<8 x i64> %x) {
 define <8 x i64> @vrgather_shuffle_vv_v8i64(<8 x i64> %x, <8 x i64> %y) {
 ; RV32-LABEL: vrgather_shuffle_vv_v8i64:
 ; RV32:       # %bb.0:
+; RV32-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; RV32-NEXT:    vmv.v.i v16, 2
 ; RV32-NEXT:    lui a0, %hi(.LCPI11_0)
 ; RV32-NEXT:    addi a0, a0, %lo(.LCPI11_0)
-; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV32-NEXT:    vle16.v v20, (a0)
+; RV32-NEXT:    li a0, 5
+; RV32-NEXT:    vslide1down.vx v21, v16, a0
+; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, ma
 ; RV32-NEXT:    vrgatherei16.vv v16, v8, v20
-; RV32-NEXT:    vsetvli zero, zero, e16, m1, ta, ma
-; RV32-NEXT:    vmv.v.i v8, 5
-; RV32-NEXT:    vmv.v.i v9, 2
-; RV32-NEXT:    vslideup.vi v9, v8, 7
 ; RV32-NEXT:    li a0, 164
+; RV32-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV32-NEXT:    vmv.v.x v0, a0
-; RV32-NEXT:    vsetvli zero, zero, e64, m4, ta, mu
-; RV32-NEXT:    vrgatherei16.vv v16, v12, v9, v0.t
+; RV32-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
+; RV32-NEXT:    vrgatherei16.vv v16, v12, v21, v0.t
 ; RV32-NEXT:    vmv.v.v v8, v16
 ; RV32-NEXT:    ret
 ;
 ; RV64-LABEL: vrgather_shuffle_vv_v8i64:
 ; RV64:       # %bb.0:
+; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    lui a0, %hi(.LCPI11_0)
 ; RV64-NEXT:    addi a0, a0, %lo(.LCPI11_0)
-; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, ma
 ; RV64-NEXT:    vle64.v v20, (a0)
-; RV64-NEXT:    vmv4r.v v16, v8
-; RV64-NEXT:    vrgather.vv v8, v16, v20
-; RV64-NEXT:    li a0, 5
-; RV64-NEXT:    vmv.s.x v20, a0
 ; RV64-NEXT:    vmv.v.i v16, 2
-; RV64-NEXT:    vslideup.vi v16, v20, 7
+; RV64-NEXT:    li a0, 5
+; RV64-NEXT:    vslide1down.vx v24, v16, a0
+; RV64-NEXT:    vrgather.vv v16, v8, v20
 ; RV64-NEXT:    li a0, 164
 ; RV64-NEXT:    vsetivli zero, 1, e8, mf8, ta, ma
 ; RV64-NEXT:    vmv.v.x v0, a0
 ; RV64-NEXT:    vsetivli zero, 8, e64, m4, ta, mu
-; RV64-NEXT:    vrgather.vv v8, v12, v16, v0.t
+; RV64-NEXT:    vrgather.vv v16, v12, v24, v0.t
+; RV64-NEXT:    vmv.v.v v8, v16
 ; RV64-NEXT:    ret
   %s = shufflevector <8 x i64> %x, <8 x i64> %y, <8 x i32> <i32 1, i32 2, i32 10, i32 5, i32 1, i32 10, i32 3, i32 13>
   ret <8 x i64> %s

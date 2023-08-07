@@ -1018,6 +1018,20 @@ static std::optional<bool> getKnownSign(Value *Op, Instruction *CxtI,
       ICmpInst::ICMP_SLT, Op, Constant::getNullValue(Op->getType()), CxtI, DL);
 }
 
+static std::optional<bool> getKnownSignOrZero(Value *Op, Instruction *CxtI,
+                                              const DataLayout &DL,
+                                              AssumptionCache *AC,
+                                              DominatorTree *DT) {
+  if (std::optional<bool> Sign = getKnownSign(Op, CxtI, DL, AC, DT))
+    return Sign;
+
+  Value *X, *Y;
+  if (match(Op, m_NSWSub(m_Value(X), m_Value(Y))))
+    return isImpliedByDomCondition(ICmpInst::ICMP_SLE, X, Y, CxtI, DL);
+
+  return std::nullopt;
+}
+
 /// Return true if two values \p Op0 and \p Op1 are known to have the same sign.
 static bool signBitMustBeTheSame(Value *Op0, Value *Op1, Instruction *CxtI,
                                  const DataLayout &DL, AssumptionCache *AC,
@@ -1518,12 +1532,15 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
     if (match(IIOperand, m_Select(m_Value(), m_Neg(m_Value(X)), m_Deferred(X))))
       return replaceOperand(*II, 0, X);
 
-    if (std::optional<bool> Sign = getKnownSign(IIOperand, II, DL, &AC, &DT)) {
-      // abs(x) -> x if x >= 0
-      if (!*Sign)
+    if (std::optional<bool> Known =
+            getKnownSignOrZero(IIOperand, II, DL, &AC, &DT)) {
+      // abs(x) -> x if x >= 0 (include abs(x-y) --> x - y where x >= y)
+      // abs(x) -> x if x > 0 (include abs(x-y) --> x - y where x > y)
+      if (!*Known)
         return replaceInstUsesWith(*II, IIOperand);
 
       // abs(x) -> -x if x < 0
+      // abs(x) -> -x if x < = 0 (include abs(x-y) --> y - x where x <= y)
       if (IntMinIsPoison)
         return BinaryOperator::CreateNSWNeg(IIOperand);
       return BinaryOperator::CreateNeg(IIOperand);
