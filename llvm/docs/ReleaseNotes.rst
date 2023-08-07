@@ -152,9 +152,6 @@ Changes to the AMDGPU Backend
   improves the interaction between AMDGPU buffer operations and the LLVM memory
   model, and so the non `.ptr` intrinsics are deprecated.
 
-* SGPR spilling is now performed to virtual VGPRs. This should avoid
-  some assorted register allocation failures.
-
 * Backend now performs range merging of "amdgpu-waves-per-eu" attribute based on
   known callers.
 
