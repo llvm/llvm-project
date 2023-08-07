@@ -2013,13 +2013,15 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
                             const SimplifyQuery &Q) {
   assert(Depth <= MaxAnalysisRecursionDepth && "Limit Search Depth");
 
-  // Attempt to match against constants.
-  if (OrZero && match(V, m_Power2OrZero()))
-      return true;
-  if (match(V, m_Power2()))
-      return true;
+  if (isa<Constant>(V))
+    return OrZero ? match(V, m_Power2OrZero()) : match(V, m_Power2());
+
+  auto *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return false;
+
   if (Q.CxtI &&
-      (match(V, m_VScale()) || match(V, m_Shl(m_VScale(), m_Value())))) {
+      (match(I, m_VScale()) || match(I, m_Shl(m_VScale(), m_Value())))) {
     const Function *F = Q.CxtI->getFunction();
     // The vscale_range indicates vscale is a power-of-two.
     return F->hasFnAttribute(Attribute::VScaleRange);
@@ -2027,70 +2029,67 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
 
   // 1 << X is clearly a power of two if the one is not shifted off the end.  If
   // it is shifted off the end then the result is undefined.
-  if (match(V, m_Shl(m_One(), m_Value())))
+  if (match(I, m_Shl(m_One(), m_Value())))
     return true;
 
   // (signmask) >>l X is clearly a power of two if the one is not shifted off
   // the bottom.  If it is shifted off the bottom then the result is undefined.
-  if (match(V, m_LShr(m_SignMask(), m_Value())))
+  if (match(I, m_LShr(m_SignMask(), m_Value())))
     return true;
 
   // The remaining tests are all recursive, so bail out if we hit the limit.
   if (Depth++ == MaxAnalysisRecursionDepth)
     return false;
 
-  Value *X = nullptr, *Y = nullptr;
-  // A shift left or a logical shift right of a power of two is a power of two
-  // or zero.
-  if (OrZero && (match(V, m_Shl(m_Value(X), m_Value())) ||
-                 match(V, m_LShr(m_Value(X), m_Value()))))
-    return isKnownToBeAPowerOfTwo(X, /*OrZero*/ true, Depth, Q);
-
-  if (const ZExtInst *ZI = dyn_cast<ZExtInst>(V))
-    return isKnownToBeAPowerOfTwo(ZI->getOperand(0), OrZero, Depth, Q);
-
-  if (const SelectInst *SI = dyn_cast<SelectInst>(V))
-    return isKnownToBeAPowerOfTwo(SI->getTrueValue(), OrZero, Depth, Q) &&
-           isKnownToBeAPowerOfTwo(SI->getFalseValue(), OrZero, Depth, Q);
-
-  // Peek through min/max.
-  if (match(V, m_MaxOrMin(m_Value(X), m_Value(Y)))) {
-    return isKnownToBeAPowerOfTwo(X, OrZero, Depth, Q) &&
-           isKnownToBeAPowerOfTwo(Y, OrZero, Depth, Q);
-  }
-
-  if (OrZero && match(V, m_And(m_Value(X), m_Value(Y)))) {
-    // A power of two and'd with anything is a power of two or zero.
-    if (isKnownToBeAPowerOfTwo(X, /*OrZero*/ true, Depth, Q) ||
-        isKnownToBeAPowerOfTwo(Y, /*OrZero*/ true, Depth, Q))
-      return true;
-    // X & (-X) is always a power of two or zero.
-    if (match(X, m_Neg(m_Specific(Y))) || match(Y, m_Neg(m_Specific(X))))
-      return true;
+  switch (I->getOpcode()) {
+  case Instruction::ZExt:
+    return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
+  case Instruction::Shl:
+    if (OrZero)
+      return isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth,
+             Q);
     return false;
-  }
-
-  // Adding a power-of-two or zero to the same power-of-two or zero yields
-  // either the original power-of-two, a larger power-of-two or zero.
-  if (match(V, m_Add(m_Value(X), m_Value(Y)))) {
+  case Instruction::LShr:
+    if (OrZero || Q.IIQ.isExact(cast<BinaryOperator>(I)))
+      return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
+    return false;
+  case Instruction::UDiv:
+    if (Q.IIQ.isExact(cast<BinaryOperator>(I)))
+      return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
+    return false;
+  case Instruction::And:
+    if (OrZero) {
+      // A power of two and'd with anything is a power of two or zero.
+      if (isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth, Q) ||
+          isKnownToBeAPowerOfTwo(I->getOperand(1), /*OrZero*/ true, Depth, Q))
+        return true;
+      // X & (-X) is always a power of two or zero.
+      if (match(I->getOperand(0), m_Neg(m_Specific(I->getOperand(1)))) ||
+          match(I->getOperand(1), m_Neg(m_Specific(I->getOperand(0)))))
+        return true;
+    }
+    return false;
+  case Instruction::Add: {
+    // Adding a power-of-two or zero to the same power-of-two or zero yields
+    // either the original power-of-two, a larger power-of-two or zero.
     const OverflowingBinaryOperator *VOBO = cast<OverflowingBinaryOperator>(V);
     if (OrZero || Q.IIQ.hasNoUnsignedWrap(VOBO) ||
         Q.IIQ.hasNoSignedWrap(VOBO)) {
-      if (match(X, m_And(m_Specific(Y), m_Value())) ||
-          match(X, m_And(m_Value(), m_Specific(Y))))
-        if (isKnownToBeAPowerOfTwo(Y, OrZero, Depth, Q))
-          return true;
-      if (match(Y, m_And(m_Specific(X), m_Value())) ||
-          match(Y, m_And(m_Value(), m_Specific(X))))
-        if (isKnownToBeAPowerOfTwo(X, OrZero, Depth, Q))
-          return true;
+      if (match(I->getOperand(0),
+                m_c_And(m_Specific(I->getOperand(1)), m_Value())) &&
+          isKnownToBeAPowerOfTwo(I->getOperand(1), OrZero, Depth, Q))
+        return true;
+      if (match(I->getOperand(1),
+                m_c_And(m_Specific(I->getOperand(0)), m_Value())) &&
+          isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q))
+        return true;
 
       unsigned BitWidth = V->getType()->getScalarSizeInBits();
       KnownBits LHSBits(BitWidth);
-      computeKnownBits(X, LHSBits, Depth, Q);
+      computeKnownBits(I->getOperand(0), LHSBits, Depth, Q);
 
       KnownBits RHSBits(BitWidth);
-      computeKnownBits(Y, RHSBits, Depth, Q);
+      computeKnownBits(I->getOperand(1), RHSBits, Depth, Q);
       // If i8 V is a power of two or zero:
       //  ZeroBits: 1 1 1 0 1 1 1 1
       // ~ZeroBits: 0 0 0 1 0 0 0 0
@@ -2100,11 +2099,16 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
         if (OrZero || RHSBits.One.getBoolValue() || LHSBits.One.getBoolValue())
           return true;
     }
+    return false;
   }
-
-  // A PHI node is power of two if all incoming values are power of two, or if
-  // it is an induction variable where in each step its value is a power of two.
-  if (const PHINode *PN = dyn_cast<PHINode>(V)) {
+  case Instruction::Select:
+    return isKnownToBeAPowerOfTwo(I->getOperand(1), OrZero, Depth, Q) &&
+           isKnownToBeAPowerOfTwo(I->getOperand(2), OrZero, Depth, Q);
+  case Instruction::PHI: {
+    // A PHI node is power of two if all incoming values are power of two, or if
+    // it is an induction variable where in each step its value is a power of
+    // two.
+    auto *PN = cast<PHINode>(I);
     SimplifyQuery RecQ = Q;
 
     // Check if it is an induction variable and always power of two.
@@ -2125,17 +2129,16 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
       return isKnownToBeAPowerOfTwo(U.get(), OrZero, NewDepth, RecQ);
     });
   }
-
-  // An exact divide or right shift can only shift off zero bits, so the result
-  // is a power of two only if the first operand is a power of two and not
-  // copying a sign bit (sdiv int_min, 2).
-  if (match(V, m_Exact(m_LShr(m_Value(), m_Value()))) ||
-      match(V, m_Exact(m_UDiv(m_Value(), m_Value())))) {
-    return isKnownToBeAPowerOfTwo(cast<Operator>(V)->getOperand(0), OrZero,
-                                  Depth, Q);
+  case Instruction::Call: {
+    Value *X, *Y;
+    if (match(I, m_MaxOrMin(m_Value(X), m_Value(Y))))
+      return isKnownToBeAPowerOfTwo(X, OrZero, Depth, Q) &&
+             isKnownToBeAPowerOfTwo(Y, OrZero, Depth, Q);
+    return false;
   }
-
-  return false;
+  default:
+    return false;
+  }
 }
 
 /// Test whether a GEP's result is known to be non-null.
