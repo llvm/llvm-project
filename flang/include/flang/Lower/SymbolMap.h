@@ -316,10 +316,10 @@ public:
   }
 
 private:
-  /// Add `symbol` to the current map and bind a `box`.
+  /// Bind `box` to `symRef` in the symbol map.
   void makeSym(semantics::SymbolRef symRef, const SymbolBox &box,
                bool force = false) {
-    const auto *sym = &symRef.get().GetUltimate();
+    auto *sym = symRef->HasLocalLocality() ? &*symRef : &symRef->GetUltimate();
     if (force)
       symbolMapStack.back().erase(sym);
     assert(box && "cannot add an undefined symbol box");
