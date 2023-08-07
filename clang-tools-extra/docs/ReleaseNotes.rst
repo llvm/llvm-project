@@ -180,6 +180,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``.
 
+- Improved the :doc:`readability-identifier-naming
+  <clang-tidy/checks/readability/identifier-naming>` check to emit proper
+  warnings when a type forward declaration precedes its definition.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
