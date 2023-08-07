@@ -1,0 +1,51 @@
+{
+    "version": 6,
+    "cmakeMinimumRequired": {
+        "major": 3,
+        "minor": 23,
+        "patch": 0
+    },
+    "configurePresets": [
+        {
+            "name": "default",
+            "displayName": "default",
+            "description": "Default preset",
+            "generator": "Ninja",
+            "binaryDir": "${sourceDir}/build",
+            "cacheVariables": {
+                "LLVM_ENABLE_PROJECTS": "mlir",
+                "LLVM_TARGETS_TO_BUILD": "X86",
+                "LLVM_ENABLE_ASSERTIONS": "ON",
+                "CMAKE_EXPORT_COMPILE_COMMANDS": "ON",
+                "LLVM_USE_LINKER": "mold",
+                "LLVM_ENABLE_LLD": "OFF",
+                "LLVM_PARALLEL_COMPILE_JOBS": "24",
+                "LLVM_PARALLEL_LINK_JOBS": "2"
+            }
+        }
+    ],
+    "buildPresets": [
+        {
+            "name": "default",
+            "displayName": "Default",
+            "description": "Default preset",
+            "configurePreset": "default"
+        }
+    ],
+    "workflowPresets": [
+        {
+            "name": "default",
+            "description": "default",
+            "steps": [
+                {
+                    "type": "configure",
+                    "name": "default"
+                },
+                {
+                    "type": "build",
+                    "name": "default"
+                }
+            ]
+        }
+    ]
+}
