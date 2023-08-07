@@ -2091,28 +2091,25 @@ LogicalResult TypeInfoAttr::verify(
 
 LogicalResult
 VTableAttr::verify(::llvm::function_ref<::mlir::InFlightDiagnostic()> emitError,
-                   ::mlir::Type type, ConstStructAttr vtableData) {
+                   ::mlir::Type type, ::mlir::ArrayAttr vtableData) {
   auto sTy = type.dyn_cast_or_null<mlir::cir::StructType>();
   if (!sTy) {
     emitError() << "expected !cir.struct type result";
     return failure();
   }
-  if (sTy.getMembers().size() != 1 || vtableData.getMembers().size() != 1) {
+  if (sTy.getMembers().size() != 1 || vtableData.size() != 1) {
     emitError() << "expected struct type with only one subtype";
     return failure();
   }
 
   auto arrayTy = sTy.getMembers()[0].dyn_cast<mlir::cir::ArrayType>();
-  auto constArrayAttr =
-      vtableData.getMembers()[0].dyn_cast<mlir::cir::ConstArrayAttr>();
+  auto constArrayAttr = vtableData[0].dyn_cast<mlir::cir::ConstArrayAttr>();
   if (!arrayTy || !constArrayAttr) {
     emitError() << "expected struct type with one array element";
     return failure();
   }
 
-  if (mlir::cir::ConstStructAttr::verify(emitError, type,
-                                         vtableData.getMembers())
-          .failed())
+  if (mlir::cir::ConstStructAttr::verify(emitError, type, vtableData).failed())
     return failure();
 
   LogicalResult eltTypeCheck = success();

@@ -406,9 +406,9 @@ public:
     assert(initCSA &&
            "expected #cir.const_struct attribute to represent vtable data");
     return this->Builder.setGlobalInitializer(
-        global, forVTable
-                    ? mlir::cir::VTableAttr::get(initCSA.getType(), initCSA)
-                    : init);
+        global, forVTable ? mlir::cir::VTableAttr::get(initCSA.getType(),
+                                                       initCSA.getMembers())
+                          : init);
   }
 
   /// Given that this builder was created by beginning an array or struct

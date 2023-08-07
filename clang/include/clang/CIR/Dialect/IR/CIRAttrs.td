@@ -347,18 +347,18 @@ def VTableAttr : CIR_Attr<"VTable", "vtable", [TypedAttrInterface]> {
   // `vtable_data` is const struct with one element, containing an array of
   // vtable information.
   let parameters = (ins AttributeSelfTypeParameter<"">:$type,
-                        "ConstStructAttr":$vtable_data);
+                        "ArrayAttr":$vtable_data);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "Type":$type,
-                                        "ConstStructAttr":$vtable_data), [{
+                                        "ArrayAttr":$vtable_data), [{
       return $_get(type.getContext(), type, vtable_data);
     }]>
   ];
 
   let genVerifyDecl = 1;
   let assemblyFormat = [{
-    `<` $vtable_data `>`
+    `<` custom<StructMembers>($vtable_data) `>`
   }];
 }
 
