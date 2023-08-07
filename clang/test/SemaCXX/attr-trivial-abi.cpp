@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s -std=c++11
+// RUN: %clang_cc1 -fsyntax-only -fclang-abi-compat=17 -verify %s -std=c++11 -DCLANG_ABI_COMPAT=17
 
 void __attribute__((trivial_abi)) foo(); // expected-warning {{'trivial_abi' attribute only applies to classes}}
 
@@ -169,3 +170,115 @@ static_assert(!__is_trivially_relocatable(S20), "");
 static_assert(__is_trivially_relocatable(S20), "");
 #endif
 } // namespace deletedCopyMoveConstructor
+
+namespace anonymousUnionsAndStructs {
+  // Test helper:
+  struct [[clang::trivial_abi]] Trivial {
+    Trivial() {}
+    Trivial(Trivial&& other) {}
+    Trivial& operator=(Trivial&& other) { return *this; }
+    ~Trivial() {}
+  };
+  static_assert(__is_trivially_relocatable(Trivial), "");
+
+  // Test helper:
+  struct Nontrivial {
+    Nontrivial() {}
+    Nontrivial(Nontrivial&& other) {}
+    Nontrivial& operator=(Nontrivial&& other) { return *this; }
+    ~Nontrivial() {}
+  };
+  static_assert(!__is_trivially_relocatable(Nontrivial), "");
+
+  // Basic smoke test, not yet related to anonymous unions or structs:
+  struct [[clang::trivial_abi]] BasicStruct {
+    BasicStruct(BasicStruct&& other) {}
+    BasicStruct& operator=(BasicStruct&& other) { return *this; }
+    ~BasicStruct() {}
+    Trivial field;
+  };
+  static_assert(__is_trivially_relocatable(BasicStruct), "");
+
+  // `StructWithAnonymousUnion` is like `BasicStruct`, but `field` is wrapped in
+  // an anonymous union, and thus trivial relocatability of `BasicStruct` and
+  // `StructWithAnonymousUnion` should be the same).
+  //
+  // It's impossible to declare a constructor for an anonymous unions so to
+  // support applying `[[clang::trivial_abi]]` to structs containing anonymous
+  // unions, and therefore when processing fields of the struct containing the
+  // anonymous union, the trivial relocatability of the *union* is ignored and
+  // instead the union's fields are recursively inspected in
+  // `checkIllFormedTrivialABIStruct`.
+  struct [[clang::trivial_abi]] StructWithAnonymousUnion {
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 17
+    // expected-warning@-2 {{'trivial_abi' cannot be applied to 'StructWithAnonymousUnion'}}
+    // expected-note@-3 {{trivial_abi' is disallowed on 'StructWithAnonymousUnion' because it has a field of a non-trivial class type}}
+#endif
+    StructWithAnonymousUnion(StructWithAnonymousUnion&& other) {}
+    StructWithAnonymousUnion& operator=(StructWithAnonymousUnion&& other) { return *this; }
+    ~StructWithAnonymousUnion() {}
+    union { Trivial field; };
+  };
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 17
+  static_assert(!__is_trivially_relocatable(StructWithAnonymousUnion), "");
+#else
+  static_assert(__is_trivially_relocatable(StructWithAnonymousUnion), "");
+#endif
+
+  // `StructWithAnonymousStruct` is like `StructWithAnonymousUnion` but uses an
+  // anonymous `struct` rather than an anonymous `union.  The same expectations
+  // can be applied to CLANG_ABI_COMPAT <= 17 and 18+, because the anonymous
+  // `struct` does have move constructors in the test below (unlike the
+  // anonymous `union` in the previous `StructWithAnonymousUnion` test).
+  struct [[clang::trivial_abi]] StructWithAnonymousStruct {
+    StructWithAnonymousStruct(StructWithAnonymousStruct&& other) {}
+    StructWithAnonymousStruct& operator=(StructWithAnonymousStruct&& other) { return *this; }
+    ~StructWithAnonymousStruct() {}
+    struct { Trivial field; };
+  };
+  static_assert(__is_trivially_relocatable(StructWithAnonymousStruct), "");
+
+  // `TrivialAbiAttributeAppliedToAnonymousUnion` is like
+  // `StructWithAnonymousUnion` but with `[[clang::trivial_abi]]` also applied
+  // to the anonymous union.
+  //
+  // The example below shows that it is still *not* okay to explicitly apply
+  // `[[clang::trivial_abi]]` to anonymous unions. Handling this would require
+  // relaxing the `HasNonDeletedCopyOrMoveConstructor` check when
+  // `isAnonymousStructOrUnion` in `checkIllFormedTrivialABIStruct` but when
+  // that check runs `setAnonymousStructOrUnion` hasn't been called yet (i.e. at
+  // this point it's not possible to rely on `RD->isAnonymousStructOrUnion()`).
+  struct [[clang::trivial_abi]] TrivialAbiAttributeAppliedToAnonymousUnion {
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 17
+    // expected-warning@-2 {{'trivial_abi' cannot be applied to 'TrivialAbiAttributeAppliedToAnonymousUnion'}}
+    // expected-note@-3 {{trivial_abi' is disallowed on 'TrivialAbiAttributeAppliedToAnonymousUnion' because it has a field of a non-trivial class type}}
+#endif
+    TrivialAbiAttributeAppliedToAnonymousUnion(TrivialAbiAttributeAppliedToAnonymousUnion&& other) {}
+    TrivialAbiAttributeAppliedToAnonymousUnion& operator=(TrivialAbiAttributeAppliedToAnonymousUnion&& other) { return *this; }
+    ~TrivialAbiAttributeAppliedToAnonymousUnion() {}
+    union [[clang::trivial_abi]] { // expected-warning {{'trivial_abi' cannot be applied to '(unnamed union}} expected-note {{copy constructors and move constructors are all deleted}}
+      Trivial field;
+    };
+  };
+#if defined(CLANG_ABI_COMPAT) && CLANG_ABI_COMPAT <= 17
+  static_assert(!__is_trivially_relocatable(TrivialAbiAttributeAppliedToAnonymousUnion), "");
+#else
+  static_assert(__is_trivially_relocatable(TrivialAbiAttributeAppliedToAnonymousUnion), "");
+#endif
+
+  // Like `StructWithAnonymousUnion`, but the field of the anonymous union is
+  // *not* trivial.
+  struct [[clang::trivial_abi]] StructWithAnonymousUnionWithNonTrivialField {
+    // expected-warning@-1 {{'trivial_abi' cannot be applied to 'StructWithAnonymousUnionWithNonTrivialField'}}
+    // expected-note@-2 {{trivial_abi' is disallowed on 'StructWithAnonymousUnionWithNonTrivialField' because it has a field of a non-trivial class type}}
+    StructWithAnonymousUnionWithNonTrivialField(StructWithAnonymousUnionWithNonTrivialField&& other) {}
+    StructWithAnonymousUnionWithNonTrivialField& operator=(StructWithAnonymousUnionWithNonTrivialField&& other) { return *this; }
+    ~StructWithAnonymousUnionWithNonTrivialField() {}
+    union {
+      Nontrivial field;
+    };
+  };
+  static_assert(!__is_trivially_relocatable(StructWithAnonymousUnionWithNonTrivialField), "");
+
+}  // namespace anonymousStructsAndUnions
+
