@@ -838,6 +838,7 @@ libc_support_library(
     ],
     deps = [
         ":__support_common",
+        ":__support_cpp_bit",
         ":libc_root",
     ],
 )

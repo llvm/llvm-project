@@ -19,7 +19,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, tcflow, (int fd, int action)) {
-  long ret = __llvm_libc::syscall_impl(SYS_ioctl, fd, TCXONC, action);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_ioctl, fd, TCXONC, action);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
