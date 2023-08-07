@@ -3,6 +3,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=2 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX2,LMULMAX2-RV64
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1,LMULMAX1-RV32
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1,LMULMAX1-RV64
+; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvbb -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
+; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvbb -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
 
 define void @ctpop_v16i8(ptr %x, ptr %y) {
 ; CHECK-LABEL: ctpop_v16i8:
@@ -23,6 +25,14 @@ define void @ctpop_v16i8(ptr %x, ptr %y) {
 ; CHECK-NEXT:    vand.vi v8, v8, 15
 ; CHECK-NEXT:    vse8.v v8, (a0)
 ; CHECK-NEXT:    ret
+;
+; ZVBB-LABEL: ctpop_v16i8:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; ZVBB-NEXT:    vle8.v v8, (a0)
+; ZVBB-NEXT:    vcpop.v v8, v8
+; ZVBB-NEXT:    vse8.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <16 x i8>, ptr %x
   %b = load <16 x i8>, ptr %y
   %c = call <16 x i8> @llvm.ctpop.v16i8(<16 x i8> %a)
@@ -135,6 +145,14 @@ define void @ctpop_v8i16(ptr %x, ptr %y) {
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v8, v8, 8
 ; LMULMAX1-RV64-NEXT:    vse16.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
+;
+; ZVBB-LABEL: ctpop_v8i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVBB-NEXT:    vle16.v v8, (a0)
+; ZVBB-NEXT:    vcpop.v v8, v8
+; ZVBB-NEXT:    vse16.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <8 x i16>, ptr %x
   %b = load <8 x i16>, ptr %y
   %c = call <8 x i16> @llvm.ctpop.v8i16(<8 x i16> %a)
@@ -251,6 +269,14 @@ define void @ctpop_v4i32(ptr %x, ptr %y) {
 ; LMULMAX1-RV64-NEXT:    vsrl.vi v8, v8, 24
 ; LMULMAX1-RV64-NEXT:    vse32.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
+;
+; ZVBB-LABEL: ctpop_v4i32:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVBB-NEXT:    vle32.v v8, (a0)
+; ZVBB-NEXT:    vcpop.v v8, v8
+; ZVBB-NEXT:    vse32.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <4 x i32>, ptr %x
   %b = load <4 x i32>, ptr %y
   %c = call <4 x i32> @llvm.ctpop.v4i32(<4 x i32> %a)
@@ -411,6 +437,14 @@ define void @ctpop_v2i64(ptr %x, ptr %y) {
 ; LMULMAX1-RV64-NEXT:    vsrl.vx v8, v8, a1
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a0)
 ; LMULMAX1-RV64-NEXT:    ret
+;
+; ZVBB-LABEL: ctpop_v2i64:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZVBB-NEXT:    vle64.v v8, (a0)
+; ZVBB-NEXT:    vcpop.v v8, v8
+; ZVBB-NEXT:    vse64.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <2 x i64>, ptr %x
   %b = load <2 x i64>, ptr %y
   %c = call <2 x i64> @llvm.ctpop.v2i64(<2 x i64> %a)
@@ -471,6 +505,15 @@ define void @ctpop_v32i8(ptr %x, ptr %y) {
 ; LMULMAX1-NEXT:    vse8.v v9, (a0)
 ; LMULMAX1-NEXT:    vse8.v v8, (a1)
 ; LMULMAX1-NEXT:    ret
+;
+; ZVBB-LABEL: ctpop_v32i8:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    li a1, 32
+; ZVBB-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; ZVBB-NEXT:    vle8.v v8, (a0)
+; ZVBB-NEXT:    vcpop.v v8, v8
+; ZVBB-NEXT:    vse8.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %b = load <32 x i8>, ptr %y
   %c = call <32 x i8> @llvm.ctpop.v32i8(<32 x i8> %a)
@@ -613,6 +656,14 @@ define void @ctpop_v16i16(ptr %x, ptr %y) {
 ; LMULMAX1-RV64-NEXT:    vse16.v v9, (a0)
 ; LMULMAX1-RV64-NEXT:    vse16.v v8, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
+;
+; ZVBB-LABEL: ctpop_v16i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVBB-NEXT:    vle16.v v8, (a0)
+; ZVBB-NEXT:    vcpop.v v8, v8
+; ZVBB-NEXT:    vse16.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <16 x i16>, ptr %x
   %b = load <16 x i16>, ptr %y
   %c = call <16 x i16> @llvm.ctpop.v16i16(<16 x i16> %a)
@@ -759,6 +810,14 @@ define void @ctpop_v8i32(ptr %x, ptr %y) {
 ; LMULMAX1-RV64-NEXT:    vse32.v v9, (a0)
 ; LMULMAX1-RV64-NEXT:    vse32.v v8, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
+;
+; ZVBB-LABEL: ctpop_v8i32:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZVBB-NEXT:    vle32.v v8, (a0)
+; ZVBB-NEXT:    vcpop.v v8, v8
+; ZVBB-NEXT:    vse32.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <8 x i32>, ptr %x
   %b = load <8 x i32>, ptr %y
   %c = call <8 x i32> @llvm.ctpop.v8i32(<8 x i32> %a)
@@ -949,6 +1008,14 @@ define void @ctpop_v4i64(ptr %x, ptr %y) {
 ; LMULMAX1-RV64-NEXT:    vse64.v v9, (a0)
 ; LMULMAX1-RV64-NEXT:    vse64.v v8, (a1)
 ; LMULMAX1-RV64-NEXT:    ret
+;
+; ZVBB-LABEL: ctpop_v4i64:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVBB-NEXT:    vle64.v v8, (a0)
+; ZVBB-NEXT:    vcpop.v v8, v8
+; ZVBB-NEXT:    vse64.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <4 x i64>, ptr %x
   %b = load <4 x i64>, ptr %y
   %c = call <4 x i64> @llvm.ctpop.v4i64(<4 x i64> %a)
