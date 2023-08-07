@@ -27,57 +27,35 @@ define i16 @fcvt_si_bf16(bfloat %a) nounwind {
   ret i16 %1
 }
 
-; TODO: Codegen for saturating fptosi is poor.
-
 define i16 @fcvt_si_bf16_sat(bfloat %a) nounwind {
 ; CHECK32-LABEL: fcvt_si_bf16_sat:
 ; CHECK32:       # %bb.0: # %start
 ; CHECK32-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK32-NEXT:    lui a0, 815104
-; CHECK32-NEXT:    fmv.w.x fa4, a0
-; CHECK32-NEXT:    fle.s a1, fa4, fa5
-; CHECK32-NEXT:    lui a0, 1048568
-; CHECK32-NEXT:    beqz a1, .LBB1_2
-; CHECK32-NEXT:  # %bb.1: # %start
-; CHECK32-NEXT:    fcvt.s.bf16 fa4, fa0, rne
-; CHECK32-NEXT:    fcvt.w.s a0, fa4, rtz
-; CHECK32-NEXT:  .LBB1_2: # %start
-; CHECK32-NEXT:    lui a1, 290800
-; CHECK32-NEXT:    fmv.w.x fa4, a1
-; CHECK32-NEXT:    flt.s a1, fa4, fa5
-; CHECK32-NEXT:    beqz a1, .LBB1_4
-; CHECK32-NEXT:  # %bb.3:
-; CHECK32-NEXT:    lui a0, 8
-; CHECK32-NEXT:    addi a0, a0, -1
-; CHECK32-NEXT:  .LBB1_4: # %start
-; CHECK32-NEXT:    feq.s a1, fa5, fa5
-; CHECK32-NEXT:    neg a1, a1
-; CHECK32-NEXT:    and a0, a1, a0
+; CHECK32-NEXT:    feq.s a0, fa5, fa5
+; CHECK32-NEXT:    neg a0, a0
+; CHECK32-NEXT:    lui a1, %hi(.LCPI1_0)
+; CHECK32-NEXT:    flw fa4, %lo(.LCPI1_0)(a1)
+; CHECK32-NEXT:    lui a1, 815104
+; CHECK32-NEXT:    fmv.w.x fa3, a1
+; CHECK32-NEXT:    fmax.s fa5, fa5, fa3
+; CHECK32-NEXT:    fmin.s fa5, fa5, fa4
+; CHECK32-NEXT:    fcvt.w.s a1, fa5, rtz
+; CHECK32-NEXT:    and a0, a0, a1
 ; CHECK32-NEXT:    ret
 ;
 ; CHECK64-LABEL: fcvt_si_bf16_sat:
 ; CHECK64:       # %bb.0: # %start
 ; CHECK64-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK64-NEXT:    lui a0, 815104
-; CHECK64-NEXT:    fmv.w.x fa4, a0
-; CHECK64-NEXT:    fle.s a1, fa4, fa5
-; CHECK64-NEXT:    lui a0, 1048568
-; CHECK64-NEXT:    beqz a1, .LBB1_2
-; CHECK64-NEXT:  # %bb.1: # %start
-; CHECK64-NEXT:    fcvt.s.bf16 fa4, fa0, rne
-; CHECK64-NEXT:    fcvt.l.s a0, fa4, rtz
-; CHECK64-NEXT:  .LBB1_2: # %start
-; CHECK64-NEXT:    lui a1, 290800
-; CHECK64-NEXT:    fmv.w.x fa4, a1
-; CHECK64-NEXT:    flt.s a1, fa4, fa5
-; CHECK64-NEXT:    beqz a1, .LBB1_4
-; CHECK64-NEXT:  # %bb.3:
-; CHECK64-NEXT:    lui a0, 8
-; CHECK64-NEXT:    addiw a0, a0, -1
-; CHECK64-NEXT:  .LBB1_4: # %start
-; CHECK64-NEXT:    feq.s a1, fa5, fa5
-; CHECK64-NEXT:    neg a1, a1
-; CHECK64-NEXT:    and a0, a1, a0
+; CHECK64-NEXT:    feq.s a0, fa5, fa5
+; CHECK64-NEXT:    lui a1, %hi(.LCPI1_0)
+; CHECK64-NEXT:    flw fa4, %lo(.LCPI1_0)(a1)
+; CHECK64-NEXT:    lui a1, 815104
+; CHECK64-NEXT:    fmv.w.x fa3, a1
+; CHECK64-NEXT:    fmax.s fa5, fa5, fa3
+; CHECK64-NEXT:    neg a0, a0
+; CHECK64-NEXT:    fmin.s fa5, fa5, fa4
+; CHECK64-NEXT:    fcvt.l.s a1, fa5, rtz
+; CHECK64-NEXT:    and a0, a0, a1
 ; CHECK64-NEXT:    ret
 start:
   %0 = tail call i16 @llvm.fptosi.sat.i16.bf16(bfloat %a)
@@ -101,47 +79,27 @@ define i16 @fcvt_ui_bf16(bfloat %a) nounwind {
   ret i16 %1
 }
 
-; TODO: Codegen for saturating fptoui is poor.
-
 define i16 @fcvt_ui_bf16_sat(bfloat %a) nounwind {
 ; CHECK32-LABEL: fcvt_ui_bf16_sat:
 ; CHECK32:       # %bb.0: # %start
-; CHECK32-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK32-NEXT:    lui a0, 292848
-; CHECK32-NEXT:    fmv.w.x fa4, a0
-; CHECK32-NEXT:    flt.s a0, fa4, fa5
-; CHECK32-NEXT:    bnez a0, .LBB3_2
-; CHECK32-NEXT:  # %bb.1: # %start
-; CHECK32-NEXT:    fmv.w.x fa4, zero
-; CHECK32-NEXT:    fle.s a0, fa4, fa5
-; CHECK32-NEXT:    neg a0, a0
-; CHECK32-NEXT:    fcvt.s.bf16 fa5, fa0, rne
-; CHECK32-NEXT:    fcvt.wu.s a1, fa5, rtz
-; CHECK32-NEXT:    and a0, a0, a1
-; CHECK32-NEXT:    ret
-; CHECK32-NEXT:  .LBB3_2:
-; CHECK32-NEXT:    lui a0, 16
-; CHECK32-NEXT:    addi a0, a0, -1
+; CHECK32-NEXT:    lui a0, %hi(.LCPI3_0)
+; CHECK32-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
+; CHECK32-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK32-NEXT:    fmv.w.x fa3, zero
+; CHECK32-NEXT:    fmax.s fa4, fa4, fa3
+; CHECK32-NEXT:    fmin.s fa5, fa4, fa5
+; CHECK32-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; CHECK32-NEXT:    ret
 ;
 ; CHECK64-LABEL: fcvt_ui_bf16_sat:
 ; CHECK64:       # %bb.0: # %start
-; CHECK64-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK64-NEXT:    lui a0, 292848
-; CHECK64-NEXT:    fmv.w.x fa4, a0
-; CHECK64-NEXT:    flt.s a0, fa4, fa5
-; CHECK64-NEXT:    bnez a0, .LBB3_2
-; CHECK64-NEXT:  # %bb.1: # %start
-; CHECK64-NEXT:    fmv.w.x fa4, zero
-; CHECK64-NEXT:    fle.s a0, fa4, fa5
-; CHECK64-NEXT:    neg a0, a0
-; CHECK64-NEXT:    fcvt.s.bf16 fa5, fa0, rne
-; CHECK64-NEXT:    fcvt.lu.s a1, fa5, rtz
-; CHECK64-NEXT:    and a0, a0, a1
-; CHECK64-NEXT:    ret
-; CHECK64-NEXT:  .LBB3_2:
-; CHECK64-NEXT:    lui a0, 16
-; CHECK64-NEXT:    addiw a0, a0, -1
+; CHECK64-NEXT:    lui a0, %hi(.LCPI3_0)
+; CHECK64-NEXT:    flw fa5, %lo(.LCPI3_0)(a0)
+; CHECK64-NEXT:    fcvt.s.bf16 fa4, fa0
+; CHECK64-NEXT:    fmv.w.x fa3, zero
+; CHECK64-NEXT:    fmax.s fa4, fa4, fa3
+; CHECK64-NEXT:    fmin.s fa5, fa4, fa5
+; CHECK64-NEXT:    fcvt.lu.s a0, fa5, rtz
 ; CHECK64-NEXT:    ret
 start:
   %0 = tail call i16 @llvm.fptoui.sat.i16.bf16(bfloat %a)
@@ -630,56 +588,34 @@ define signext i8 @fcvt_w_s_i8(bfloat %a) nounwind {
   ret i8 %1
 }
 
-; TODO: Codegen for saturating fptosi is poor.
-
 define signext i8 @fcvt_w_s_sat_i8(bfloat %a) nounwind {
 ; CHECK32-LABEL: fcvt_w_s_sat_i8:
 ; CHECK32:       # %bb.0: # %start
 ; CHECK32-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK32-NEXT:    lui a0, 798720
-; CHECK32-NEXT:    fmv.w.x fa4, a0
-; CHECK32-NEXT:    fle.s a1, fa4, fa5
-; CHECK32-NEXT:    li a0, -128
-; CHECK32-NEXT:    beqz a1, .LBB26_2
-; CHECK32-NEXT:  # %bb.1: # %start
-; CHECK32-NEXT:    fcvt.s.bf16 fa4, fa0, rne
-; CHECK32-NEXT:    fcvt.w.s a0, fa4, rtz
-; CHECK32-NEXT:  .LBB26_2: # %start
-; CHECK32-NEXT:    lui a1, 274400
-; CHECK32-NEXT:    fmv.w.x fa4, a1
-; CHECK32-NEXT:    flt.s a2, fa4, fa5
-; CHECK32-NEXT:    li a1, 127
-; CHECK32-NEXT:    bnez a2, .LBB26_4
-; CHECK32-NEXT:  # %bb.3: # %start
-; CHECK32-NEXT:    mv a1, a0
-; CHECK32-NEXT:  .LBB26_4: # %start
 ; CHECK32-NEXT:    feq.s a0, fa5, fa5
 ; CHECK32-NEXT:    neg a0, a0
+; CHECK32-NEXT:    lui a1, 798720
+; CHECK32-NEXT:    fmv.w.x fa4, a1
+; CHECK32-NEXT:    fmax.s fa5, fa5, fa4
+; CHECK32-NEXT:    lui a1, 274400
+; CHECK32-NEXT:    fmv.w.x fa4, a1
+; CHECK32-NEXT:    fmin.s fa5, fa5, fa4
+; CHECK32-NEXT:    fcvt.w.s a1, fa5, rtz
 ; CHECK32-NEXT:    and a0, a0, a1
 ; CHECK32-NEXT:    ret
 ;
 ; CHECK64-LABEL: fcvt_w_s_sat_i8:
 ; CHECK64:       # %bb.0: # %start
 ; CHECK64-NEXT:    fcvt.s.bf16 fa5, fa0
-; CHECK64-NEXT:    lui a0, 798720
-; CHECK64-NEXT:    fmv.w.x fa4, a0
-; CHECK64-NEXT:    fle.s a1, fa4, fa5
-; CHECK64-NEXT:    li a0, -128
-; CHECK64-NEXT:    beqz a1, .LBB26_2
-; CHECK64-NEXT:  # %bb.1: # %start
-; CHECK64-NEXT:    fcvt.s.bf16 fa4, fa0, rne
-; CHECK64-NEXT:    fcvt.l.s a0, fa4, rtz
-; CHECK64-NEXT:  .LBB26_2: # %start
-; CHECK64-NEXT:    lui a1, 274400
-; CHECK64-NEXT:    fmv.w.x fa4, a1
-; CHECK64-NEXT:    flt.s a2, fa4, fa5
-; CHECK64-NEXT:    li a1, 127
-; CHECK64-NEXT:    bnez a2, .LBB26_4
-; CHECK64-NEXT:  # %bb.3: # %start
-; CHECK64-NEXT:    mv a1, a0
-; CHECK64-NEXT:  .LBB26_4: # %start
 ; CHECK64-NEXT:    feq.s a0, fa5, fa5
 ; CHECK64-NEXT:    neg a0, a0
+; CHECK64-NEXT:    lui a1, 798720
+; CHECK64-NEXT:    fmv.w.x fa4, a1
+; CHECK64-NEXT:    fmax.s fa5, fa5, fa4
+; CHECK64-NEXT:    lui a1, 274400
+; CHECK64-NEXT:    fmv.w.x fa4, a1
+; CHECK64-NEXT:    fmin.s fa5, fa5, fa4
+; CHECK64-NEXT:    fcvt.l.s a1, fa5, rtz
 ; CHECK64-NEXT:    and a0, a0, a1
 ; CHECK64-NEXT:    ret
 start:
@@ -704,43 +640,27 @@ define zeroext i8 @fcvt_wu_s_i8(bfloat %a) nounwind {
   ret i8 %1
 }
 
-; TODO: Codegen for saturating fptoui is poor.
-
 define zeroext i8 @fcvt_wu_s_sat_i8(bfloat %a) nounwind {
 ; CHECK32-LABEL: fcvt_wu_s_sat_i8:
 ; CHECK32:       # %bb.0: # %start
 ; CHECK32-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK32-NEXT:    fmv.w.x fa4, zero
+; CHECK32-NEXT:    fmax.s fa5, fa5, fa4
 ; CHECK32-NEXT:    lui a0, 276464
 ; CHECK32-NEXT:    fmv.w.x fa4, a0
-; CHECK32-NEXT:    flt.s a1, fa4, fa5
-; CHECK32-NEXT:    li a0, 255
-; CHECK32-NEXT:    bnez a1, .LBB28_2
-; CHECK32-NEXT:  # %bb.1: # %start
-; CHECK32-NEXT:    fmv.w.x fa4, zero
-; CHECK32-NEXT:    fle.s a0, fa4, fa5
-; CHECK32-NEXT:    neg a0, a0
-; CHECK32-NEXT:    fcvt.s.bf16 fa5, fa0, rne
-; CHECK32-NEXT:    fcvt.wu.s a1, fa5, rtz
-; CHECK32-NEXT:    and a0, a0, a1
-; CHECK32-NEXT:  .LBB28_2: # %start
+; CHECK32-NEXT:    fmin.s fa5, fa5, fa4
+; CHECK32-NEXT:    fcvt.wu.s a0, fa5, rtz
 ; CHECK32-NEXT:    ret
 ;
 ; CHECK64-LABEL: fcvt_wu_s_sat_i8:
 ; CHECK64:       # %bb.0: # %start
 ; CHECK64-NEXT:    fcvt.s.bf16 fa5, fa0
+; CHECK64-NEXT:    fmv.w.x fa4, zero
+; CHECK64-NEXT:    fmax.s fa5, fa5, fa4
 ; CHECK64-NEXT:    lui a0, 276464
 ; CHECK64-NEXT:    fmv.w.x fa4, a0
-; CHECK64-NEXT:    flt.s a1, fa4, fa5
-; CHECK64-NEXT:    li a0, 255
-; CHECK64-NEXT:    bnez a1, .LBB28_2
-; CHECK64-NEXT:  # %bb.1: # %start
-; CHECK64-NEXT:    fmv.w.x fa4, zero
-; CHECK64-NEXT:    fle.s a0, fa4, fa5
-; CHECK64-NEXT:    neg a0, a0
-; CHECK64-NEXT:    fcvt.s.bf16 fa5, fa0, rne
-; CHECK64-NEXT:    fcvt.lu.s a1, fa5, rtz
-; CHECK64-NEXT:    and a0, a0, a1
-; CHECK64-NEXT:  .LBB28_2: # %start
+; CHECK64-NEXT:    fmin.s fa5, fa5, fa4
+; CHECK64-NEXT:    fcvt.lu.s a0, fa5, rtz
 ; CHECK64-NEXT:    ret
 start:
   %0 = tail call i8 @llvm.fptoui.sat.i8.bf16(bfloat %a)
