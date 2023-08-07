@@ -305,9 +305,11 @@ attributes #13 = { nounwind memory(none) }
 !43 = distinct !DICompositeType(tag: DW_TAG_structure_type, name: "$s4main5entryOXMtD", file: !44, size: 8, flags: DIFlagArtificial, runtimeLang: DW_LANG_Swift, identifier: "$s4main5entryOXMtD")
 !44 = !DIFile(filename: "<compiler-generated>", directory: "")
 ; CHECK-DAG: ![[DECL:[0-9]+]] = !DISubprogram({{.*}}, linkageName: "$s4main5entryOAAyyYaFZ"
+; CHECK-DAG: ![[DECL_Q0:[0-9]+]] = !DISubprogram({{.*}}, linkageName: "$s4main5entryOAAyyYaFZTQ0_"
+; CHECK-DAG: ![[DECL_Y1:[0-9]+]] = !DISubprogram({{.*}}, linkageName: "$s4main5entryOAAyyYaFZTY1_"
 ; CHECK-DAG: distinct !DISubprogram({{.*}}, linkageName: "$s4main5entryOAAyyYaFZ"{{.*}}, declaration: ![[DECL]]
-; CHECK-DAG: distinct !DISubprogram({{.*}}, linkageName: "$s4main5entryOAAyyYaFZ"{{.*}}, declaration: ![[DECL]]
-; CHECK-DAG: distinct !DISubprogram({{.*}}, linkageName: "$s4main5entryOAAyyYaFZ"{{.*}}, declaration: ![[DECL]]
+; CHECK-DAG: distinct !DISubprogram({{.*}}, linkageName: "$s4main5entryOAAyyYaFZTQ0_"{{.*}}, declaration: ![[DECL_Q0]]
+; CHECK-DAG: distinct !DISubprogram({{.*}}, linkageName: "$s4main5entryOAAyyYaFZTY1_"{{.*}}, declaration: ![[DECL_Y1]]
 !45 = !DISubprogram(name: "main", linkageName: "$s4main5entryOAAyyYaFZ", scope: !39, file: !1, line: 2, type: !40, scopeLine: 2, spFlags: 0)
 !46 = !{!47, !49}
 !47 = !DILocalVariable(name: "self", arg: 1, scope: !38, file: !1, line: 2, type: !48, flags: DIFlagArtificial)
