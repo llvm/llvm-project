@@ -3474,8 +3474,6 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "14.0");
   else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver15)
     GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "15.0");
-  else if (Opts.getClangABICompat() == LangOptions::ClangABI::Ver17)
-    GenerateArg(Consumer, OPT_fclang_abi_compat_EQ, "17.0");
 
   if (Opts.getSignReturnAddressScope() ==
       LangOptions::SignReturnAddressScopeKind::All)
@@ -3961,8 +3959,6 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
         Opts.setClangABICompat(LangOptions::ClangABI::Ver14);
       else if (Major <= 15)
         Opts.setClangABICompat(LangOptions::ClangABI::Ver15);
-      else if (Major <= 17)
-        Opts.setClangABICompat(LangOptions::ClangABI::Ver17);
     } else if (Ver != "latest") {
       Diags.Report(diag::err_drv_invalid_value)
           << A->getAsString(Args) << A->getValue();

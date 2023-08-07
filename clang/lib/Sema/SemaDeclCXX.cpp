@@ -45,7 +45,6 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallString.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include <map>
@@ -10414,35 +10413,21 @@ void Sema::checkIllFormedTrivialABIStruct(CXXRecordDecl &RD) {
     }
   }
 
-  llvm::SmallVector<const FieldDecl *> FieldsToCheck{RD.fields()};
-  while (!FieldsToCheck.empty()) {
-    const FieldDecl *FD = FieldsToCheck.pop_back_val();
-
-    // Ill-formed if the field is an ObjectiveC pointer.
+  for (const auto *FD : RD.fields()) {
+    // Ill-formed if the field is an ObjectiveC pointer or of a type that is
+    // non-trivial for the purpose of calls.
     QualType FT = FD->getType();
     if (FT.getObjCLifetime() == Qualifiers::OCL_Weak) {
       PrintDiagAndRemoveAttr(4);
       return;
     }
 
-    if (const auto *RT = FT->getBaseElementTypeUnsafe()->getAs<RecordType>()) {
-      // Check the fields of anonymous structs (and/or or unions) instead of
-      // checking the type of the anonynous struct itself.
-      if (getLangOpts().getClangABICompat() > LangOptions::ClangABI::Ver17 &&
-          RT->getDecl()->isAnonymousStructOrUnion()) {
-        FieldsToCheck.append(RT->getDecl()->field_begin(),
-                             RT->getDecl()->field_end());
-        continue;
-      }
-
-      // Ill-formed if the field is of a type that is non-trivial for the
-      // purpose of calls.
+    if (const auto *RT = FT->getBaseElementTypeUnsafe()->getAs<RecordType>())
       if (!RT->isDependentType() &&
           !cast<CXXRecordDecl>(RT->getDecl())->canPassInRegisters()) {
         PrintDiagAndRemoveAttr(5);
         return;
       }
-    }
   }
 }
 
