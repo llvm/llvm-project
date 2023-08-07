@@ -251,6 +251,9 @@ RISC-V Support
 ^^^^^^^^^^^^^^
 - Unaligned memory accesses can be toggled by ``-m[no-]unaligned-access`` or the
   aliases ``-m[no-]strict-align``.
+- An ABI mismatch between GCC and Clang related to the handling of empty
+  structs in C++ parameter passing under the hard floating point calling
+  conventions was fixed.
 
 CUDA/HIP Language Changes
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -283,6 +286,8 @@ Floating Point Support in Clang
 
 AST Matchers
 ------------
+- Add ``convertVectorExpr``.
+- Add ``dependentSizedExtVectorType``.
 
 clang-format
 ------------

@@ -363,6 +363,7 @@ SYMBOL(make_integer_sequence, std::, <utility>)
 // Symbols missing from the generated symbol map as reported by users.
 // Remove when the generator starts producing them.
 SYMBOL(make_any, std::, <any>)
+SYMBOL(any_cast, std::, <any>)
 
 // The std::placeholder symbols (_1, ..., _N) are listed in the cppreference
 // placeholder.html, but the index only contains a single entry with "_1, _2, ..., _N"

@@ -84,6 +84,9 @@ constexpr int64_t MinInt64 = std::numeric_limits<int64_t>::min();
 constexpr uint64_t AbsoluteMinInt64 =
     static_cast<uint64_t>(-(MinInt64 + 1)) + 1;
 constexpr uint64_t AbsoluteMaxInt64 = static_cast<uint64_t>(MaxInt64);
+// Use 128 bitwidth for literals to keep one bit for sign for uint64_t
+// literals.
+constexpr unsigned LiteralsBitWidth = 128;
 
 struct ExpressionFormatParameterisedFixture
     : public ::testing::TestWithParam<
@@ -184,16 +187,18 @@ struct ExpressionFormatParameterisedFixture
   }
 
   template <class T> void checkMatchingString(T Val, StringRef ExpectedStr) {
+    APInt Value(LiteralsBitWidth, Val, std::is_signed_v<T>);
     Expected<std::string> MatchingString =
-        Format.getMatchingString(ExpressionValue(Val));
+        Format.getMatchingString(ExpressionValue(Value));
     ASSERT_THAT_EXPECTED(MatchingString, Succeeded())
         << "No matching string for " << Val;
     EXPECT_EQ(*MatchingString, ExpectedStr);
   }
 
   template <class T> void checkMatchingStringFailure(T Val) {
+    APInt Value(LiteralsBitWidth, Val, std::is_signed_v<T>);
     Expected<std::string> MatchingString =
-        Format.getMatchingString(ExpressionValue(Val));
+        Format.getMatchingString(ExpressionValue(Value));
     // Error message tested in ExpressionValue unit tests.
     EXPECT_THAT_EXPECTED(MatchingString, Failed());
   }
@@ -286,7 +291,7 @@ TEST_P(ExpressionFormatParameterisedFixture, FormatGetMatchingString) {
 
   if (Signed) {
     checkMatchingString(-5, padWithLeadingZeros("-5"));
-    checkMatchingStringFailure(MaxUint64);
+    checkMatchingString(MaxUint64, padWithLeadingZeros(MaxUint64Str));
     checkMatchingString(MaxInt64, padWithLeadingZeros(MaxInt64Str));
     checkMatchingString(MinInt64, padWithLeadingZeros(MinInt64Str));
   } else {
@@ -308,7 +313,7 @@ TEST_P(ExpressionFormatParameterisedFixture, FormatValueFromStringRepr) {
 
   if (Signed) {
     checkValueFromStringRepr("-5", -5);
-    checkValueFromStringReprFailure(MaxUint64Str);
+    checkValueFromStringRepr(MaxUint64Str, MaxUint64);
   } else {
     checkValueFromStringRepr(addBasePrefix(MaxUint64Str), MaxUint64);
   }
@@ -358,7 +363,7 @@ TEST_F(FileCheckTest, NoFormatProperties) {
                            NoFormat.getWildcardRegex().takeError());
   expectError<StringError>(
       "trying to match value with invalid format",
-      NoFormat.getMatchingString(ExpressionValue(18u)).takeError());
+      NoFormat.getMatchingString(ExpressionValue(APInt(64, 18u))).takeError());
   EXPECT_FALSE(bool(NoFormat));
 }
 
@@ -389,172 +394,177 @@ TEST_F(FileCheckTest, FormatKindEqualityOperators) {
   EXPECT_FALSE(NoFormat != ExpressionFormat::Kind::NoFormat);
 }
 
-template <class T1, class T2>
-static Expected<ExpressionValue> doValueOperation(binop_eval_t Operation,
-                                                  T1 LeftValue, T2 RightValue) {
-  ExpressionValue LeftOperand(LeftValue);
-  ExpressionValue RightOperand(RightValue);
-  return Operation(LeftOperand, RightOperand);
-}
-
-template <class T>
-static void expectValueEqual(ExpressionValue ActualValue, T ExpectedValue) {
-  APInt Value = ActualValue.getAPIntValue();
-  EXPECT_EQ(ExpectedValue < 0, Value.isNegative());
-  if (ExpectedValue < 0)
-    EXPECT_EQ(Value.getSExtValue(), static_cast<int64_t>(ExpectedValue));
-  else
-    EXPECT_EQ(Value.getZExtValue(), static_cast<uint64_t>(ExpectedValue));
+static void expectOperationValueResult(binop_eval_t Operation, APInt LeftValue,
+                                       APInt RightValue, APInt ExpectedValue) {
+  bool Overflow;
+  ExpressionValue LeftVal(LeftValue);
+  ExpressionValue RightVal(RightValue);
+  Expected<ExpressionValue> OperationResult =
+      Operation(LeftVal, RightVal, Overflow);
+  ASSERT_THAT_EXPECTED(OperationResult, Succeeded());
+  EXPECT_EQ(OperationResult->getAPIntValue(), ExpectedValue);
 }
 
 template <class T1, class T2, class TR>
 static void expectOperationValueResult(binop_eval_t Operation, T1 LeftValue,
                                        T2 RightValue, TR ResultValue) {
-  Expected<ExpressionValue> OperationResult =
-      doValueOperation(Operation, LeftValue, RightValue);
-  ASSERT_THAT_EXPECTED(OperationResult, Succeeded());
-  expectValueEqual(*OperationResult, ResultValue);
+  APInt LeftVal(LiteralsBitWidth, LeftValue, std::is_signed_v<T1>);
+  APInt RightVal(LiteralsBitWidth, RightValue, std::is_signed_v<T2>);
+  APInt ResultVal =
+      std::is_integral_v<TR>
+          ? APInt(LiteralsBitWidth, ResultValue, std::is_signed_v<TR>)
+          : APInt(LiteralsBitWidth, ResultValue, /*Radix=*/10);
+  expectOperationValueResult(Operation, LeftVal, RightVal, ResultVal);
 }
 
 template <class T1, class T2>
 static void expectOperationValueResult(binop_eval_t Operation, T1 LeftValue,
                                        T2 RightValue) {
+  bool Overflow;
+  ExpressionValue LeftVal(
+      APInt(LiteralsBitWidth, LeftValue, std::is_signed_v<T1>));
+  ExpressionValue RightVal(
+      APInt(LiteralsBitWidth, RightValue, std::is_signed_v<T2>));
   expectError<OverflowError>(
-      "overflow error",
-      doValueOperation(Operation, LeftValue, RightValue).takeError());
+      "overflow error", Operation(LeftVal, RightVal, Overflow).takeError());
 }
 
 TEST_F(FileCheckTest, ExpressionValueAddition) {
   // Test both negative values.
-  expectOperationValueResult(operator+, -10, -10, -20);
+  expectOperationValueResult(exprAdd, -10, -10, -20);
 
   // Test both negative values with underflow.
-  expectOperationValueResult(operator+, MinInt64, -1);
-  expectOperationValueResult(operator+, MinInt64, MinInt64);
+  expectOperationValueResult(exprAdd, MinInt64, -1, "-9223372036854775809");
+  expectOperationValueResult(exprAdd, MinInt64, MinInt64,
+                             "-18446744073709551616");
 
   // Test negative and positive value.
-  expectOperationValueResult(operator+, -10, 10, 0);
-  expectOperationValueResult(operator+, -10, 11, 1);
-  expectOperationValueResult(operator+, -11, 10, -1);
+  expectOperationValueResult(exprAdd, -10, 10, 0);
+  expectOperationValueResult(exprAdd, -10, 11, 1);
+  expectOperationValueResult(exprAdd, -11, 10, -1);
 
   // Test positive and negative value.
-  expectOperationValueResult(operator+, 10, -10, 0);
-  expectOperationValueResult(operator+, 10, -11, -1);
-  expectOperationValueResult(operator+, 11, -10, 1);
+  expectOperationValueResult(exprAdd, 10, -10, 0);
+  expectOperationValueResult(exprAdd, 10, -11, -1);
+  expectOperationValueResult(exprAdd, 11, -10, 1);
 
   // Test both positive values.
-  expectOperationValueResult(operator+, 10, 10, 20);
+  expectOperationValueResult(exprAdd, 10, 10, 20);
 
-  // Test both positive values with overflow.
-  expectOperationValueResult(operator+, MaxUint64, 1);
-  expectOperationValueResult(operator+, MaxUint64, MaxUint64);
+  // Test both positive values with result not representable as uint64_t.
+  expectOperationValueResult(exprAdd, MaxUint64, 1, "18446744073709551616");
+  expectOperationValueResult(exprAdd, MaxUint64, MaxUint64,
+                             "36893488147419103230");
 }
 
 TEST_F(FileCheckTest, ExpressionValueSubtraction) {
   // Test negative value and value bigger than int64_t max.
-  expectOperationValueResult(operator-, -10, MaxUint64);
+  expectOperationValueResult(exprSub, -10, MaxUint64, "-18446744073709551625");
 
-  // Test negative and positive value with underflow.
-  expectOperationValueResult(operator-, MinInt64, 1);
+  // Test negative and positive value with result not representable as int64_t.
+  expectOperationValueResult(exprSub, MinInt64, 1, "-9223372036854775809");
 
   // Test negative and positive value.
-  expectOperationValueResult(operator-, -10, 10, -20);
+  expectOperationValueResult(exprSub, -10, 10, -20);
 
   // Test both negative values.
-  expectOperationValueResult(operator-, -10, -10, 0);
-  expectOperationValueResult(operator-, -11, -10, -1);
-  expectOperationValueResult(operator-, -10, -11, 1);
+  expectOperationValueResult(exprSub, -10, -10, 0);
+  expectOperationValueResult(exprSub, -11, -10, -1);
+  expectOperationValueResult(exprSub, -10, -11, 1);
 
   // Test positive and negative values.
-  expectOperationValueResult(operator-, 10, -10, 20);
+  expectOperationValueResult(exprSub, 10, -10, 20);
 
   // Test both positive values with result positive.
-  expectOperationValueResult(operator-, 10, 5, 5);
+  expectOperationValueResult(exprSub, 10, 5, 5);
 
-  // Test both positive values with underflow.
-  expectOperationValueResult(operator-, 0, MaxUint64);
-  expectOperationValueResult(operator-, 0,
-                             static_cast<uint64_t>(-(MinInt64 + 10)) + 11);
+  // Test both positive values with result not representable as int64_t.
+  expectOperationValueResult(exprSub, 0, MaxUint64, "-18446744073709551615");
+  expectOperationValueResult(exprSub, 0,
+                             static_cast<uint64_t>(-(MinInt64 + 10)) + 11,
+                             "-9223372036854775809");
 
   // Test both positive values with result < -(max int64_t)
-  expectOperationValueResult(operator-, 10,
-                             static_cast<uint64_t>(MaxInt64) + 11,
+  expectOperationValueResult(exprSub, 10, static_cast<uint64_t>(MaxInt64) + 11,
                              -MaxInt64 - 1);
 
   // Test both positive values with 0 > result > -(max int64_t)
-  expectOperationValueResult(operator-, 10, 11, -1);
+  expectOperationValueResult(exprSub, 10, 11, -1);
 }
 
 TEST_F(FileCheckTest, ExpressionValueMultiplication) {
   // Test mixed signed values.
-  expectOperationValueResult(operator*, -3, 10, -30);
-  expectOperationValueResult(operator*, 2, -17, -34);
-  expectOperationValueResult(operator*, 0, MinInt64, 0);
-  expectOperationValueResult(operator*, MinInt64, 1, MinInt64);
-  expectOperationValueResult(operator*, 1, MinInt64, MinInt64);
-  expectOperationValueResult(operator*, MaxInt64, -1, -MaxInt64);
-  expectOperationValueResult(operator*, -1, MaxInt64, -MaxInt64);
+  expectOperationValueResult(exprMul, -3, 10, -30);
+  expectOperationValueResult(exprMul, 2, -17, -34);
+  expectOperationValueResult(exprMul, 0, MinInt64, 0);
+  expectOperationValueResult(exprMul, MinInt64, 1, MinInt64);
+  expectOperationValueResult(exprMul, 1, MinInt64, MinInt64);
+  expectOperationValueResult(exprMul, MaxInt64, -1, -MaxInt64);
+  expectOperationValueResult(exprMul, -1, MaxInt64, -MaxInt64);
 
   // Test both negative values.
-  expectOperationValueResult(operator*, -3, -10, 30);
-  expectOperationValueResult(operator*, -2, -17, 34);
-  expectOperationValueResult(operator*, MinInt64, -1, AbsoluteMinInt64);
+  expectOperationValueResult(exprMul, -3, -10, 30);
+  expectOperationValueResult(exprMul, -2, -17, 34);
+  expectOperationValueResult(exprMul, MinInt64, -1, AbsoluteMinInt64);
 
   // Test both positive values.
-  expectOperationValueResult(operator*, 3, 10, 30);
-  expectOperationValueResult(operator*, 2, 17, 34);
-  expectOperationValueResult(operator*, 0, MaxUint64, 0);
+  expectOperationValueResult(exprMul, 3, 10, 30);
+  expectOperationValueResult(exprMul, 2, 17, 34);
+  expectOperationValueResult(exprMul, 0, MaxUint64, 0);
 
-  // Test negative results that underflow.
-  expectOperationValueResult(operator*, -10, MaxInt64);
-  expectOperationValueResult(operator*, MaxInt64, -10);
-  expectOperationValueResult(operator*, 10, MinInt64);
-  expectOperationValueResult(operator*, MinInt64, 10);
-  expectOperationValueResult(operator*, -1, MaxUint64);
-  expectOperationValueResult(operator*, MaxUint64, -1);
-  expectOperationValueResult(operator*, -1, AbsoluteMaxInt64 + 2);
-  expectOperationValueResult(operator*, AbsoluteMaxInt64 + 2, -1);
+  // Test negative results not representable as int64_t.
+  expectOperationValueResult(exprMul, -10, MaxInt64, "-92233720368547758070");
+  expectOperationValueResult(exprMul, MaxInt64, -10, "-92233720368547758070");
+  expectOperationValueResult(exprMul, 10, MinInt64, "-92233720368547758080");
+  expectOperationValueResult(exprMul, MinInt64, 10, "-92233720368547758080");
+  expectOperationValueResult(exprMul, -1, MaxUint64, "-18446744073709551615");
+  expectOperationValueResult(exprMul, MaxUint64, -1, "-18446744073709551615");
+  expectOperationValueResult(exprMul, -1, AbsoluteMaxInt64 + 2,
+                             "-9223372036854775809");
+  expectOperationValueResult(exprMul, AbsoluteMaxInt64 + 2, -1,
+                             "-9223372036854775809");
 
-  // Test positive results that overflow.
-  expectOperationValueResult(operator*, 10, MaxUint64);
-  expectOperationValueResult(operator*, MaxUint64, 10);
-  expectOperationValueResult(operator*, MinInt64, -10);
-  expectOperationValueResult(operator*, -10, MinInt64);
+  // Test positive results not representable as uint64_t.
+  expectOperationValueResult(exprMul, 10, MaxUint64, "184467440737095516150");
+  expectOperationValueResult(exprMul, MaxUint64, 10, "184467440737095516150");
+  expectOperationValueResult(exprMul, MinInt64, -10, "92233720368547758080");
+  expectOperationValueResult(exprMul, -10, MinInt64, "92233720368547758080");
 }
 
 TEST_F(FileCheckTest, ExpressionValueDivision) {
   // Test mixed signed values.
-  expectOperationValueResult(operator/, -30, 10, -3);
-  expectOperationValueResult(operator/, 34, -17, -2);
-  expectOperationValueResult(operator/, 0, -10, 0);
-  expectOperationValueResult(operator/, MinInt64, 1, MinInt64);
-  expectOperationValueResult(operator/, MaxInt64, -1, -MaxInt64);
-  expectOperationValueResult(operator/, -MaxInt64, 1, -MaxInt64);
+  expectOperationValueResult(exprDiv, -30, 10, -3);
+  expectOperationValueResult(exprDiv, 34, -17, -2);
+  expectOperationValueResult(exprDiv, 0, -10, 0);
+  expectOperationValueResult(exprDiv, MinInt64, 1, MinInt64);
+  expectOperationValueResult(exprDiv, MaxInt64, -1, -MaxInt64);
+  expectOperationValueResult(exprDiv, -MaxInt64, 1, -MaxInt64);
 
   // Test both negative values.
-  expectOperationValueResult(operator/, -30, -10, 3);
-  expectOperationValueResult(operator/, -34, -17, 2);
+  expectOperationValueResult(exprDiv, -30, -10, 3);
+  expectOperationValueResult(exprDiv, -34, -17, 2);
 
   // Test both positive values.
-  expectOperationValueResult(operator/, 30, 10, 3);
-  expectOperationValueResult(operator/, 34, 17, 2);
-  expectOperationValueResult(operator/, 0, 10, 0);
+  expectOperationValueResult(exprDiv, 30, 10, 3);
+  expectOperationValueResult(exprDiv, 34, 17, 2);
+  expectOperationValueResult(exprDiv, 0, 10, 0);
 
   // Test divide by zero.
-  expectOperationValueResult(operator/, -10, 0);
-  expectOperationValueResult(operator/, 10, 0);
-  expectOperationValueResult(operator/, 0, 0);
+  expectOperationValueResult(exprDiv, -10, 0);
+  expectOperationValueResult(exprDiv, 10, 0);
+  expectOperationValueResult(exprDiv, 0, 0);
 
-  // Test negative result that underflows.
-  expectOperationValueResult(operator/, MaxUint64, -1);
-  expectOperationValueResult(operator/, AbsoluteMaxInt64 + 2, -1);
+  // Test negative result not representable as int64_t.
+  expectOperationValueResult(exprDiv, MaxUint64, -1, "-18446744073709551615");
+  expectOperationValueResult(exprDiv, AbsoluteMaxInt64 + 2, -1,
+                             "-9223372036854775809");
 }
 
 TEST_F(FileCheckTest, Literal) {
   SourceMgr SM;
 
   // Eval returns the literal's value.
-  ExpressionLiteral Ten(bufferize(SM, "10"), 10u);
+  ExpressionLiteral Ten(bufferize(SM, "10"), APInt(64, 10u));
   Expected<ExpressionValue> Value = Ten.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
   EXPECT_EQ(10, Value->getAPIntValue().getSExtValue());
@@ -563,13 +573,15 @@ TEST_F(FileCheckTest, Literal) {
   EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::NoFormat);
 
   // Min value can be correctly represented.
-  ExpressionLiteral Min(bufferize(SM, std::to_string(MinInt64)), MinInt64);
+  ExpressionLiteral Min(bufferize(SM, std::to_string(MinInt64)),
+                        APInt(64, MinInt64, /*IsSigned=*/true));
   Value = Min.eval();
   ASSERT_TRUE(bool(Value));
   EXPECT_EQ(MinInt64, Value->getAPIntValue().getSExtValue());
 
   // Max value can be correctly represented.
-  ExpressionLiteral Max(bufferize(SM, std::to_string(MaxUint64)), MaxUint64);
+  ExpressionLiteral Max(bufferize(SM, std::to_string(MaxUint64)),
+                        APInt(64, MaxUint64));
   Value = Max.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
   EXPECT_EQ(MaxUint64, Value->getAPIntValue().getZExtValue());
@@ -579,7 +591,7 @@ TEST_F(FileCheckTest, Expression) {
   SourceMgr SM;
 
   std::unique_ptr<ExpressionLiteral> Ten =
-      std::make_unique<ExpressionLiteral>(bufferize(SM, "10"), 10u);
+      std::make_unique<ExpressionLiteral>(bufferize(SM, "10"), APInt(64, 10u));
   ExpressionLiteral *TenPtr = Ten.get();
   Expression Expr(std::move(Ten),
                   ExpressionFormat(ExpressionFormat::Kind::HexLower));
@@ -618,7 +630,7 @@ TEST_F(FileCheckTest, NumericVariable) {
   expectUndefErrors({"FOO"}, EvalResult.takeError());
 
   // Defined variable without string: only getValue and eval return value set.
-  FooVar.setValue(ExpressionValue(42u));
+  FooVar.setValue(ExpressionValue(APInt(64, 42u)));
   std::optional<ExpressionValue> Value = FooVar.getValue();
   ASSERT_TRUE(Value);
   EXPECT_EQ(42, Value->getAPIntValue().getSExtValue());
@@ -630,7 +642,7 @@ TEST_F(FileCheckTest, NumericVariable) {
   // Defined variable with string: getValue, eval, and getStringValue return
   // value set.
   StringRef StringValue = "925";
-  FooVar.setValue(ExpressionValue(925u), StringValue);
+  FooVar.setValue(ExpressionValue(APInt(64, 925u)), StringValue);
   Value = FooVar.getValue();
   ASSERT_TRUE(Value);
   EXPECT_EQ(925, Value->getAPIntValue().getSExtValue());
@@ -658,27 +670,43 @@ TEST_F(FileCheckTest, Binop) {
   StringRef FooStr = ExprStr.take_front(3);
   NumericVariable FooVar(FooStr,
                          ExpressionFormat(ExpressionFormat::Kind::Unsigned), 1);
-  FooVar.setValue(ExpressionValue(42u));
+  FooVar.setValue(ExpressionValue(APInt(64, 42u)));
   std::unique_ptr<NumericVariableUse> FooVarUse =
       std::make_unique<NumericVariableUse>(FooStr, &FooVar);
   StringRef BarStr = ExprStr.take_back(3);
   NumericVariable BarVar(BarStr,
                          ExpressionFormat(ExpressionFormat::Kind::Unsigned), 2);
-  BarVar.setValue(ExpressionValue(18u));
+  BarVar.setValue(ExpressionValue(APInt(64, 18u)));
   std::unique_ptr<NumericVariableUse> BarVarUse =
       std::make_unique<NumericVariableUse>(BarStr, &BarVar);
-  binop_eval_t doAdd = operator+;
-  BinaryOperation Binop(ExprStr, doAdd, std::move(FooVarUse),
+  BinaryOperation Binop(ExprStr, exprAdd, std::move(FooVarUse),
                         std::move(BarVarUse));
 
-  // Defined variables: eval returns right value; implicit format is as
-  // expected.
+  // Defined variables with same bitwidth and no overflow: eval returns right
+  // value; implicit formas is as expected.
   Expected<ExpressionValue> Value = Binop.eval();
   ASSERT_THAT_EXPECTED(Value, Succeeded());
   EXPECT_EQ(60, Value->getAPIntValue().getSExtValue());
   Expected<ExpressionFormat> ImplicitFormat = Binop.getImplicitFormat(SM);
   ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
   EXPECT_EQ(*ImplicitFormat, ExpressionFormat::Kind::Unsigned);
+
+  // Defined variables with different bitwidth and no overflow: eval succeeds
+  // and return the right value.
+  BarVar.setValue(ExpressionValue(APInt(32, 18u)));
+  Value = Binop.eval();
+  ASSERT_THAT_EXPECTED(Value, Succeeded());
+  EXPECT_EQ(60, Value->getAPIntValue().getSExtValue());
+
+  // Defined variables with same bitwidth and wider result (i.e. overflow):
+  // eval succeeds and return the right value in a wider APInt.
+  BarVar.setValue(ExpressionValue(APInt(64, AbsoluteMaxInt64)));
+  Value = Binop.eval();
+  ASSERT_THAT_EXPECTED(Value, Succeeded());
+  EXPECT_EQ(128u, Value->getAPIntValue().getBitWidth());
+  EXPECT_EQ(APInt(128, AbsoluteMaxInt64 +
+                           FooVar.getValue()->getAPIntValue().getZExtValue()),
+            Value->getAPIntValue());
 
   // 1 undefined variable: eval fails, error contains name of undefined
   // variable.
@@ -698,8 +726,8 @@ TEST_F(FileCheckTest, Binop) {
   StringRef EighteenStr = ExprStr.take_back(2);
   FooVarUse = std::make_unique<NumericVariableUse>(FooStr, &FooVar);
   std::unique_ptr<ExpressionLiteral> Eighteen =
-      std::make_unique<ExpressionLiteral>(EighteenStr, 18u);
-  Binop = BinaryOperation(ExprStr, doAdd, std::move(FooVarUse),
+      std::make_unique<ExpressionLiteral>(EighteenStr, APInt(64, 18u));
+  Binop = BinaryOperation(ExprStr, exprAdd, std::move(FooVarUse),
                           std::move(Eighteen));
   ImplicitFormat = Binop.getImplicitFormat(SM);
   ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
@@ -708,8 +736,8 @@ TEST_F(FileCheckTest, Binop) {
   FooStr = ExprStr.take_back(3);
   EighteenStr = ExprStr.take_front(2);
   FooVarUse = std::make_unique<NumericVariableUse>(FooStr, &FooVar);
-  Eighteen = std::make_unique<ExpressionLiteral>(EighteenStr, 18u);
-  Binop = BinaryOperation(ExprStr, doAdd, std::move(Eighteen),
+  Eighteen = std::make_unique<ExpressionLiteral>(EighteenStr, APInt(64, 18u));
+  Binop = BinaryOperation(ExprStr, exprAdd, std::move(Eighteen),
                           std::move(FooVarUse));
   ImplicitFormat = Binop.getImplicitFormat(SM);
   ASSERT_THAT_EXPECTED(ImplicitFormat, Succeeded());
@@ -724,7 +752,7 @@ TEST_F(FileCheckTest, Binop) {
   FooVarUse = std::make_unique<NumericVariableUse>(FooStr, &FooVar);
   std::unique_ptr<NumericVariableUse> BazVarUse =
       std::make_unique<NumericVariableUse>(BazStr, &BazVar);
-  Binop = BinaryOperation(ExprStr, doAdd, std::move(FooVarUse),
+  Binop = BinaryOperation(ExprStr, exprAdd, std::move(FooVarUse),
                           std::move(BazVarUse));
   ImplicitFormat = Binop.getImplicitFormat(SM);
   expectDiagnosticError(
@@ -749,12 +777,13 @@ TEST_F(FileCheckTest, Binop) {
   std::unique_ptr<NumericVariableUse> QuuxVarUse =
       std::make_unique<NumericVariableUse>(QuuxStr, &QuuxVar);
   std::unique_ptr<BinaryOperation> Binop1 = std::make_unique<BinaryOperation>(
-      ExprStr.take_front(9), doAdd, std::move(FooVarUse), std::move(BazVarUse));
+      ExprStr.take_front(9), exprAdd, std::move(FooVarUse),
+      std::move(BazVarUse));
   std::unique_ptr<BinaryOperation> Binop2 = std::make_unique<BinaryOperation>(
-      ExprStr.take_back(10), doAdd, std::move(FooVarUse2),
+      ExprStr.take_back(10), exprAdd, std::move(FooVarUse2),
       std::move(QuuxVarUse));
   std::unique_ptr<BinaryOperation> OuterBinop =
-      std::make_unique<BinaryOperation>(ExprStr, doAdd, std::move(Binop1),
+      std::make_unique<BinaryOperation>(ExprStr, exprAdd, std::move(Binop1),
                                         std::move(Binop2));
   ImplicitFormat = OuterBinop->getImplicitFormat(SM);
   expectSameErrors<ErrorDiagnostic>(
@@ -1434,7 +1463,7 @@ TEST_F(FileCheckTest, Substitution) {
   // substituted for the variable's value.
   NumericVariable NVar("N", ExpressionFormat(ExpressionFormat::Kind::Unsigned),
                        1);
-  NVar.setValue(ExpressionValue(10u));
+  NVar.setValue(ExpressionValue(APInt(64, 10u)));
   auto NVarUse = std::make_unique<NumericVariableUse>("N", &NVar);
   auto ExpressionN = std::make_unique<Expression>(
       std::move(NVarUse), ExpressionFormat(ExpressionFormat::Kind::HexUpper));

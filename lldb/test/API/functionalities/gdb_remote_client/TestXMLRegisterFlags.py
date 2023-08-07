@@ -348,7 +348,7 @@ class TestXMLRegisterFlags(GDBRemoteTestBase):
 
     @skipIfXmlSupportMissing
     @skipIfRemote
-    def test_flags_requried_attributes(self):
+    def test_flags_required_attributes(self):
         # flags must have an id and size so the flags with "C" is the only valid one
         # here.
         self.setup_register_test(

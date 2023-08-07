@@ -2755,8 +2755,8 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
               assert(vm_nlist_bytes_read == nlist_byte_size * nlistCount);
 
               // We don't know the size of the string table. It's cheaper
-              // to map the whol VM region than to determine the size by
-              // parsing all teh nlist entries.
+              // to map the whole VM region than to determine the size by
+              // parsing all the nlist entries.
               vm_address_t string_address = (vm_address_t)stringTable;
               vm_size_t region_size;
               mach_msg_type_number_t info_count = VM_REGION_BASIC_INFO_COUNT_64;

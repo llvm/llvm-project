@@ -3789,15 +3789,24 @@ define <4 x i8> @trunc_ssat_v4i32_v4i8(<4 x i32> %a0) {
 ; AVX1-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
 ; AVX1-NEXT:    retq
 ;
-; AVX2-LABEL: trunc_ssat_v4i32_v4i8:
-; AVX2:       # %bb.0:
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [127,127,127,127]
-; AVX2-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967168,4294967168,4294967168,4294967168]
-; AVX2-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
-; AVX2-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
-; AVX2-NEXT:    retq
+; AVX2-SLOW-LABEL: trunc_ssat_v4i32_v4i8:
+; AVX2-SLOW:       # %bb.0:
+; AVX2-SLOW-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [127,127,127,127]
+; AVX2-SLOW-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967168,4294967168,4294967168,4294967168]
+; AVX2-SLOW-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    vpackssdw %xmm0, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    vpacksswb %xmm0, %xmm0, %xmm0
+; AVX2-SLOW-NEXT:    retq
+;
+; AVX2-FAST-LABEL: trunc_ssat_v4i32_v4i8:
+; AVX2-FAST:       # %bb.0:
+; AVX2-FAST-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [127,127,127,127]
+; AVX2-FAST-NEXT:    vpminsd %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [4294967168,4294967168,4294967168,4294967168]
+; AVX2-FAST-NEXT:    vpmaxsd %xmm1, %xmm0, %xmm0
+; AVX2-FAST-NEXT:    vpshufb {{.*#+}} xmm0 = xmm0[0,4,8,12,u,u,u,u,u,u,u,u,u,u,u,u]
+; AVX2-FAST-NEXT:    retq
 ;
 ; AVX512F-LABEL: trunc_ssat_v4i32_v4i8:
 ; AVX512F:       # %bb.0:
