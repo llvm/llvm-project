@@ -100,3 +100,26 @@ struct DefMethodsWithoutBody {
 
   // CHECK-NEXT: };
 };
+
+
+// ---- Check that implict (non-written) constructor initializers are not output
+
+struct ImplicitCtorInit1 {
+  int a;
+};
+
+// CHECK: struct ImplicitCtorInit2 : ImplicitCtorInit1 {
+struct ImplicitCtorInit2 : ImplicitCtorInit1 {
+
+  // CHECK-NEXT: ImplicitCtorInit2(int *) {
+  ImplicitCtorInit2(int *) {
+  // CHECK-NEXT: }
+  }
+
+  // CHECK-NEXT: ImplicitCtorInit2(int **) : ImplicitCtorInit1() {
+  ImplicitCtorInit2(int **) : ImplicitCtorInit1() {
+  // CHECK-NEXT: }
+  }
+
+  // CHECK-NEXT: };
+};
