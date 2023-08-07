@@ -1105,9 +1105,8 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::BuildTypeInfo(mlir::Location loc,
   if (OldGV && !OldGV.isDeclaration()) {
     assert(!OldGV.hasAvailableExternallyLinkage() &&
            "available_externally typeinfos not yet implemented");
-    return mlir::cir::GlobalViewAttr::get(
-        CGM.getBuilder().getUInt8PtrTy(),
-        mlir::FlatSymbolRefAttr::get(OldGV.getSymNameAttr()));
+    return CGM.getBuilder().getGlobalViewAttr(CGM.getBuilder().getUInt8PtrTy(),
+                                              OldGV);
   }
 
   // Check if there is already an external RTTI descriptor for this type.
@@ -1275,10 +1274,9 @@ void CIRGenItaniumRTTIBuilder::BuildVTablePointer(mlir::Location loc,
   } else {
     SmallVector<mlir::Attribute, 4> offsets{
         mlir::cir::IntAttr::get(PtrDiffTy, 2)};
-    field = mlir::cir::GlobalViewAttr::get(
-        builder.getUInt8PtrTy(),
-        mlir::FlatSymbolRefAttr::get(VTable.getSymNameAttr()),
-        mlir::ArrayAttr::get(builder.getContext(), offsets));
+    auto indices = mlir::ArrayAttr::get(builder.getContext(), offsets);
+    field = CGM.getBuilder().getGlobalViewAttr(CGM.getBuilder().getUInt8PtrTy(),
+                                               VTable, indices);
   }
 
   assert(field && "expected attribute");
@@ -1347,9 +1345,7 @@ CIRGenItaniumRTTIBuilder::GetAddrOfExternalRTTIDescriptor(mlir::Location loc,
       llvm_unreachable("NYI");
   }
 
-  return mlir::cir::GlobalViewAttr::get(
-      builder.getUInt8PtrTy(),
-      mlir::FlatSymbolRefAttr::get(GV.getSymNameAttr()));
+  return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), GV);
 }
 
 mlir::Attribute CIRGenItaniumRTTIBuilder::BuildTypeInfo(
@@ -1374,9 +1370,8 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::BuildTypeInfo(
     // for global pointers.  This is very ARM64-specific.
     llvm_unreachable("NYI");
   } else {
-    TypeNameField = mlir::cir::GlobalViewAttr::get(
-        builder.getUInt8PtrTy(),
-        mlir::FlatSymbolRefAttr::get(TypeName.getSymNameAttr()));
+    TypeNameField =
+        builder.getGlobalViewAttr(builder.getUInt8PtrTy(), TypeName);
   }
   Fields.push_back(TypeNameField);
 
@@ -1541,9 +1536,7 @@ mlir::Attribute CIRGenItaniumRTTIBuilder::BuildTypeInfo(
   assert(!UnimplementedFeature::setDSOLocal());
   CIRGenModule::setInitializer(GV, init);
 
-  return mlir::cir::GlobalViewAttr::get(
-      builder.getUInt8PtrTy(),
-      mlir::FlatSymbolRefAttr::get(GV.getSymNameAttr()));
+  return builder.getGlobalViewAttr(builder.getUInt8PtrTy(), GV);;
 }
 
 mlir::Attribute CIRGenItaniumCXXABI::getAddrOfRTTIDescriptor(mlir::Location loc,

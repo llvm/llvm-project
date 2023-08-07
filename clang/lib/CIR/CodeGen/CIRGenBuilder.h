@@ -102,6 +102,23 @@ public:
   // Attribute helpers
   // -----------------
   //
+
+  /// Get constant address of a global variable as an MLIR attribute.
+  /// This wrapper infers the attribute type through the global op.
+  mlir::cir::GlobalViewAttr getGlobalViewAttr(mlir::cir::GlobalOp globalOp,
+                                              mlir::ArrayAttr indices = {}) {
+    auto type = getPointerTo(globalOp.getSymType());
+    return getGlobalViewAttr(type, globalOp, indices);
+  }
+
+  /// Get constant address of a global variable as an MLIR attribute.
+  mlir::cir::GlobalViewAttr getGlobalViewAttr(mlir::cir::PointerType type,
+                                              mlir::cir::GlobalOp globalOp,
+                                              mlir::ArrayAttr indices = {}) {
+    auto symbol = mlir::FlatSymbolRefAttr::get(globalOp.getSymNameAttr());
+    return mlir::cir::GlobalViewAttr::get(type, symbol, indices);
+  }
+
   mlir::TypedAttr getZeroAttr(mlir::Type t) {
     return mlir::cir::ZeroAttr::get(getContext(), t);
   }
