@@ -542,7 +542,7 @@ void DeviceTy::init() {
     llvm::omp::target::UInt64Envar OMPX_DeviceMemorySize(
         "LIBOMPTARGET_RR_DEVMEM_SIZE", 16);
     DP("Activating Record-Replay for Device %d with %lu GB memory\n",
-       RTLDeviceID, OMPX_DeviceMemorySize);
+       RTLDeviceID, OMPX_DeviceMemorySize.get());
 
     RTL->activate_record_replay(RTLDeviceID,
                                 OMPX_DeviceMemorySize * 1024 * 1024 * 1024,
