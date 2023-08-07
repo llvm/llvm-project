@@ -1001,10 +1001,11 @@ void ProcessGDBRemote::LoadStubBinaries() {
       const bool force_symbol_search = true;
       const bool notify = true;
       const bool set_address_in_target = true;
+      const bool allow_memory_image_last_resort = false;
       DynamicLoader::LoadBinaryWithUUIDAndAddress(
           this, "", standalone_uuid, standalone_value,
           standalone_value_is_offset, force_symbol_search, notify,
-          set_address_in_target);
+          set_address_in_target, allow_memory_image_last_resort);
     }
   }
 
@@ -1033,10 +1034,12 @@ void ProcessGDBRemote::LoadStubBinaries() {
 
       const bool force_symbol_search = true;
       const bool set_address_in_target = true;
+      const bool allow_memory_image_last_resort = false;
       // Second manually load this binary into the Target.
       DynamicLoader::LoadBinaryWithUUIDAndAddress(
           this, llvm::StringRef(), uuid, addr, value_is_slide,
-          force_symbol_search, notify, set_address_in_target);
+          force_symbol_search, notify, set_address_in_target,
+          allow_memory_image_last_resort);
     }
   }
 }

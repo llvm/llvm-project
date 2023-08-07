@@ -6938,9 +6938,15 @@ bool ObjectFileMachO::LoadCoreFileImages(lldb_private::Process &process) {
     if (image.uuid.IsValid() ||
         (!value_is_offset && value != LLDB_INVALID_ADDRESS)) {
       const bool set_load_address = image.segment_load_addresses.size() == 0;
+      const bool notify = false;
+      // Userland Darwin binaries will have segment load addresses via
+      // the `all image infos` LC_NOTE.
+      const bool allow_memory_image_last_resort =
+          image.segment_load_addresses.size();
       module_sp = DynamicLoader::LoadBinaryWithUUIDAndAddress(
           &process, image.filename, image.uuid, value, value_is_offset,
-          image.currently_executing, false /* notify */, set_load_address);
+          image.currently_executing, notify, set_load_address,
+          allow_memory_image_last_resort);
     }
 
     // We have a ModuleSP to load in the Target.  Load it at the
