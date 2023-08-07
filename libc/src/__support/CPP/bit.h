@@ -50,6 +50,15 @@ LIBC_INLINE constexpr To bit_cast(const From &from) {
 #endif // defined(LLVM_LIBC_HAS_BUILTIN_BIT_CAST)
 }
 
+template <class To, class From>
+LIBC_INLINE constexpr To bit_or_static_cast(const From &from) {
+  if constexpr (sizeof(To) == sizeof(From)) {
+    return bit_cast<To>(from);
+  } else {
+    return static_cast<To>(from);
+  }
+}
+
 } // namespace __llvm_libc::cpp
 
 #endif // LLVM_LIBC_SUPPORT_CPP_BIT_H

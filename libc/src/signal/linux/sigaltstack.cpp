@@ -34,7 +34,7 @@ LLVM_LIBC_FUNCTION(int, sigaltstack,
     }
   }
 
-  int ret = __llvm_libc::syscall_impl(SYS_sigaltstack, ss, oss);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_sigaltstack, ss, oss);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

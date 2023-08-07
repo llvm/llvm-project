@@ -20,11 +20,11 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, socket, (int domain, int type, int protocol)) {
 #ifdef SYS_socket
-  long ret = __llvm_libc::syscall_impl(SYS_socket, domain, type, protocol);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_socket, domain, type, protocol);
 #elif defined(SYS_socketcall)
   unsigned long sockcall_args[3] = {domain, type, protocol};
-  long ret =
-      __llvm_libc::syscall_impl(SYS_socketcall, SYS_SOCKET, sockcall_args);
+  int ret =
+      __llvm_libc::syscall_impl<int>(SYS_socketcall, SYS_SOCKET, sockcall_args);
 #else
 #error "socket and socketcall syscalls unavailable for this platform."
 #endif

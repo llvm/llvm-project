@@ -259,10 +259,12 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
       const bool force_symbol_search = true;
       const bool notify = true;
       const bool set_address_in_target = true;
+      const bool allow_memory_image_last_resort = false;
       if (DynamicLoader::LoadBinaryWithUUIDAndAddress(
               this, llvm::StringRef(), objfile_binary_uuid,
               objfile_binary_value, objfile_binary_value_is_offset,
-              force_symbol_search, notify, set_address_in_target)) {
+              force_symbol_search, notify, set_address_in_target,
+              allow_memory_image_last_resort)) {
         found_main_binary_definitively = true;
         m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
       }
@@ -315,10 +317,11 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
       const bool force_symbol_search = true;
       const bool notify = true;
       const bool set_address_in_target = true;
+      const bool allow_memory_image_last_resort = false;
       if (DynamicLoader::LoadBinaryWithUUIDAndAddress(
               this, llvm::StringRef(), ident_uuid, ident_binary_addr,
               value_is_offset, force_symbol_search, notify,
-              set_address_in_target)) {
+              set_address_in_target, allow_memory_image_last_resort)) {
         found_main_binary_definitively = true;
         m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
       }
