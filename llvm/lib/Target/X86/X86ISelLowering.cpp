@@ -31983,6 +31983,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     EVT InVT = In.getValueType();
     EVT InEltVT = InVT.getVectorElementType();
     EVT EltVT = VT.getVectorElementType();
+    unsigned MinElts = VT.getVectorNumElements();
     unsigned WidenNumElts = WidenVT.getVectorNumElements();
     unsigned InBits = InVT.getSizeInBits();
 
@@ -32029,7 +32030,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
       SmallVector<SDValue, 16> Ops(WidenNumElts, DAG.getUNDEF(EltVT));
       // Use the original element count so we don't do more scalar opts than
       // necessary.
-      unsigned MinElts = VT.getVectorNumElements();
       for (unsigned i=0; i < MinElts; ++i) {
         SDValue Val = DAG.getNode(ISD::EXTRACT_VECTOR_ELT, dl, InEltVT, In,
                                   DAG.getIntPtrConstant(i, dl));
@@ -32077,8 +32077,9 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     // this via type legalization.
     if ((InEltVT == MVT::i16 || InEltVT == MVT::i32 || InEltVT == MVT::i64) &&
         (EltVT == MVT::i8 || EltVT == MVT::i16 || EltVT == MVT::i32) &&
-        (!Subtarget.hasSSSE3() || (InVT == MVT::v8i64 && VT == MVT::v8i8) ||
-         (InVT == MVT::v4i64 && VT == MVT::v4i16 && !Subtarget.hasAVX()))) {
+        (!Subtarget.hasSSSE3() ||
+         (!isTypeLegal(InVT) &&
+          !(MinElts <= 4 && InEltVT == MVT::i64 && EltVT == MVT::i8)))) {
       SDValue WidenIn = widenSubVector(In, false, Subtarget, DAG, dl,
                                        InEltVT.getSizeInBits() * WidenNumElts);
       Results.push_back(DAG.getNode(ISD::TRUNCATE, dl, WidenVT, WidenIn));
