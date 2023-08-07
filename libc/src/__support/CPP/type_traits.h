@@ -68,7 +68,8 @@ template <typename T> struct remove_cvref {
 template <typename T> using remove_cvref_t = typename remove_cvref<T>::type;
 
 namespace details {
-template <typename T, typename... Args> constexpr bool is_unqualified_any_of() {
+template <typename T, typename... Args>
+LIBC_INLINE constexpr bool is_unqualified_any_of() {
   return (... || is_same_v<remove_cv_t<T>, Args>);
 }
 } // namespace details
