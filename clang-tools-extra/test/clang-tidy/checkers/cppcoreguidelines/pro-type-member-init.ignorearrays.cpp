@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy %s \
 // RUN: cppcoreguidelines-pro-type-member-init %t \
 // RUN: -config="{CheckOptions: \
-// RUN: [{key: cppcoreguidelines-pro-type-member-init.IgnoreArrays, value: true} ]}"
+// RUN: {cppcoreguidelines-pro-type-member-init.IgnoreArrays: true}}"
 
 typedef int TypedefArray[4];
 using UsingArray = int[4];
