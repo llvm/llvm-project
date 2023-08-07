@@ -84,7 +84,8 @@ define i16 @bswap_is_pow2_or_zero(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 4, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.bswap.i16(i16 [[XP2]])
-; CHECK-NEXT:    [[R:%.*]] = urem i16 [[Y]], [[XX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[XX]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xp2 = shl i16 4, %x
@@ -115,7 +116,7 @@ define i1 @bswap_is_pow2(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl nuw i16 1, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.bswap.i16(i16 [[XP2]])
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xp2 = shl i16 1, %x
@@ -148,7 +149,8 @@ define i16 @bitreverse_is_pow2_or_zero(i16 %x, i16 %y) {
 ; CHECK-SAME: (i16 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 4, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[XP2]])
-; CHECK-NEXT:    [[R:%.*]] = urem i16 [[Y]], [[XX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i16 [[XX]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xp2 = shl i16 4, %x
@@ -179,7 +181,7 @@ define i1 @bitreverse_is_pow2(i16 %x, i16 %y) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl nuw i16 1, [[X]]
 ; CHECK-NEXT:    [[XX:%.*]] = call i16 @llvm.bitreverse.i16(i16 [[XP2]])
 ; CHECK-NEXT:    [[AND:%.*]] = and i16 [[XX]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = icmp eq i16 [[AND]], [[XX]]
+; CHECK-NEXT:    [[R:%.*]] = icmp ne i16 [[AND]], 0
 ; CHECK-NEXT:    ret i1 [[R]]
 ;
   %xp2 = shl i16 1, %x

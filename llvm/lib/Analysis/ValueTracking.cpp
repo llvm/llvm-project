@@ -2132,6 +2132,11 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
       case Intrinsic::smin:
         return isKnownToBeAPowerOfTwo(II->getArgOperand(1), OrZero, Depth, Q) &&
                isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Depth, Q);
+      // bswap/bitreverse just move around bits, but don't change any 1s/0s
+      // thus dont change pow2/non-pow2 status.
+      case Intrinsic::bitreverse:
+      case Intrinsic::bswap:
+        return isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Depth, Q);
       default:
         break;
       }
