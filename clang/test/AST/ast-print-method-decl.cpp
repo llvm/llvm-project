@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-print %s -o - -std=c++20 | FileCheck %s
+// RUN: %clang_cc1 -ast-print -triple i386-linux-gnu %s -o - -std=c++20 | FileCheck %s
 
 // CHECK: struct DelegatingCtor1 {
 struct DelegatingCtor1 {
@@ -82,6 +82,21 @@ struct CurlyCtorInit {
   CurlyCtorInit(int ****) : a({.x = 0}), i(a.x) {
   // CHECK-NEXT: }
   }
+
+  // CHECK-NEXT: };
+};
+
+
+// CHECK: struct DefMethodsWithoutBody {
+struct DefMethodsWithoutBody {
+  // CHECK-NEXT: DefMethodsWithoutBody() = delete;
+  DefMethodsWithoutBody() = delete;
+
+  // CHECK-NEXT: DefMethodsWithoutBody() = default;
+  ~DefMethodsWithoutBody() = default;
+
+  // CHECK-NEXT: void m1() __attribute__((alias("X")));
+  void m1() __attribute__((alias("X")));
 
   // CHECK-NEXT: };
 };
