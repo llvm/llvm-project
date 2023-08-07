@@ -332,6 +332,7 @@ enum {
   /// Add an implicit register def to the specified instruction
   /// - InsnID - Instruction ID to modify
   /// - RegNum - The register to add
+  /// - Flags - Register Flags
   GIR_AddImplicitDef,
   /// Add an implicit register use to the specified instruction
   /// - InsnID - Instruction ID to modify
@@ -386,7 +387,8 @@ enum {
   /// Calls a C++ function to perform an action when a match is complete.
   /// The MatcherState is passed to the function to allow it to modify
   /// instructions.
-  /// This is less constrained than a custom renderer and can update instructions
+  /// This is less constrained than a custom renderer and can update
+  /// instructions
   /// in the state.
   /// - FnID - The function to call.
   /// TODO: Remove this at some point when combiners aren't reliant on it. It's
