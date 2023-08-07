@@ -61,3 +61,7 @@ int multidim(int i, int j) {
 // CHECK: %7 = cir.load %{{.+}} : cir.ptr <!s32i>, !s32i
 // CHECK: %8 = cir.cast(array_to_ptrdecay, %6 : !cir.ptr<!cir.array<!s32i x 2>>), !cir.ptr<!s32i>
 // CHECK: %9 = cir.ptr_stride(%8 : !cir.ptr<!s32i>, %7 : !s32i), !cir.ptr<!s32i>
+
+// Should globally zero-initialize null arrays.
+int globalNullArr[] = {0, 0};
+// CHECK: cir.global external @globalNullArr = #cir.zero : !cir.array<!s32i x 2>

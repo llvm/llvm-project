@@ -259,7 +259,7 @@ cir.func @unary1() {
 
 !u32i = !cir.int<u, 32>
 module {
-  cir.global external @v = #cir.zero : !u32i // expected-error {{zero expects struct type}}
+  cir.global external @v = #cir.zero : !u32i // expected-error {{zero expects struct or array type}}
 }
 
 // -----
