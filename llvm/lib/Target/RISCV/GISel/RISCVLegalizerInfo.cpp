@@ -29,6 +29,12 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
       .legalFor({XLenLLT})
       .clampScalar(0, XLenLLT, XLenLLT);
 
+  getActionDefinitionsBuilder({G_ASHR, G_LSHR, G_SHL})
+      .legalFor({{XLenLLT, XLenLLT}})
+      .widenScalarToNextPow2(0)
+      .clampScalar(1, XLenLLT, XLenLLT)
+      .clampScalar(0, XLenLLT, XLenLLT);
+
   // Extensions
   auto ExtLegalFunc = [=](const LegalityQuery &Query) {
     unsigned DstSize = Query.Types[0].getSizeInBits();
@@ -52,6 +58,8 @@ RISCVLegalizerInfo::RISCVLegalizerInfo(const RISCVSubtarget &ST) {
   getActionDefinitionsBuilder({G_ZEXT, G_SEXT, G_ANYEXT})
       .legalIf(ExtLegalFunc)
       .clampScalar(0, XLenLLT, XLenLLT);
+
+  getActionDefinitionsBuilder(G_SEXT_INREG).legalFor({XLenLLT}).lower();
 
   // Merge/Unmerge
   for (unsigned Op : {G_MERGE_VALUES, G_UNMERGE_VALUES}) {
