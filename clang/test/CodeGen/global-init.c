@@ -49,6 +49,11 @@ struct K {
 // CHECK: @yuv_types ={{.*}} global [4 x [6 x i8]] {{\[}}[6 x i8] c"4:0:0\00", [6 x i8] c"4:2:0\00", [6 x i8] c"4:2:2\00", [6 x i8] c"4:4:4\00"]
 char yuv_types[4][6]= {"4:0:0","4:2:0","4:2:2","4:4:4"};
 
+unsigned long long x = -1000;
+// CHECK: @x ={{.*}} global i64 -1000
+unsigned long long uint_max = 4294967295u;
+// CHECK: @uint_max ={{.*}} global i64 4294967295
+
 
 // NOTE: tentative definitions are processed at the end of the translation unit.
 
