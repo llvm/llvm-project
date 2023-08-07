@@ -1,11 +1,11 @@
 // RUN: clang-tidy %s -checks=readability-identifier-naming \
-// RUN:   -config="{CheckOptions: [\
-// RUN:   {key: readability-identifier-naming.FunctionCase, value: camelback}, \
-// RUN:   {key: readability-identifier-naming.VariableCase, value: camelBack}, \
-// RUN:   {key: readability-identifier-naming.ClassCase, value: UUPER_CASE}, \
-// RUN:   {key: readability-identifier-naming.StructCase, value: CAMEL}, \
-// RUN:   {key: readability-identifier-naming.EnumCase, value: AnY_cASe}, \
-// RUN:   ]}" 2>&1 | FileCheck %s --implicit-check-not="{{warning|error}}:"
+// RUN:   -config="{CheckOptions: {\
+// RUN:   readability-identifier-naming.FunctionCase: camelback, \
+// RUN:   readability-identifier-naming.VariableCase: camelBack, \
+// RUN:   readability-identifier-naming.ClassCase: UUPER_CASE, \
+// RUN:   readability-identifier-naming.StructCase: CAMEL, \
+// RUN:   readability-identifier-naming.EnumCase: AnY_cASe, \
+// RUN:   }}" 2>&1 | FileCheck %s --implicit-check-not="{{warning|error}}:"
 
 // CHECK-DAG: warning: invalid configuration value 'camelback' for option 'readability-identifier-naming.FunctionCase'; did you mean 'camelBack'? [clang-tidy-config]
 // CHECK-DAG: warning: invalid configuration value 'UUPER_CASE' for option 'readability-identifier-naming.ClassCase'; did you mean 'UPPER_CASE'? [clang-tidy-config]

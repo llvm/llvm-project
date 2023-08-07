@@ -1,10 +1,10 @@
 // RUN: %check_clang_tidy -check-suffix=DEFAULT %s \
 // RUN: cppcoreguidelines-narrowing-conversions %t -- \
-// RUN: -config='{CheckOptions: [{key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion, value: true}]}'
+// RUN: -config='{CheckOptions: {cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion: true}}'
 
 // RUN: %check_clang_tidy -check-suffix=DISABLED %s \
 // RUN: cppcoreguidelines-narrowing-conversions %t -- \
-// RUN: -config='{CheckOptions: [{key: cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion, value: false}]}'
+// RUN: -config='{CheckOptions: {cppcoreguidelines-narrowing-conversions.WarnOnIntegerToFloatingPointNarrowingConversion: false}}'
 
 void foo(unsigned long long value) {
   double a = value;

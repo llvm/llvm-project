@@ -1,8 +1,8 @@
 // RUN: %check_clang_tidy %s performance-faster-string-find %t
 // RUN: %check_clang_tidy -check-suffix=CUSTOM %s performance-faster-string-find %t -- \
 // RUN:   -config="{CheckOptions: \
-// RUN:             [{key: performance-faster-string-find.StringLikeClasses, \
-// RUN:               value: '::llvm::StringRef;'}]}"
+// RUN:             {performance-faster-string-find.StringLikeClasses: \
+// RUN:                '::llvm::StringRef;'}}"
 
 namespace std {
 template <typename Char>

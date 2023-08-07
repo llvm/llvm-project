@@ -2,7 +2,7 @@
 // RUN: mkdir %T/Headers
 // RUN: cp -r %S/Inputs/restrict-system-includes %T/Headers/portability-restrict-system-includes
 // RUN: %check_clang_tidy -std=c++11 %s portability-restrict-system-includes %t \
-// RUN:   -- -config="{CheckOptions: [{key: portability-restrict-system-includes.Includes, value: 'transitive.h,s.h'}]}" \
+// RUN:   -- -config="{CheckOptions: {portability-restrict-system-includes.Includes: 'transitive.h,s.h'}}" \
 // RUN:   -system-headers -header-filter=.* \
 // RUN:   -- -I %T/Headers/portability-restrict-system-includes -isystem %T/Headers/portability-restrict-system-includes/system
 // RUN: FileCheck -input-file=%T/Headers/portability-restrict-system-includes/transitive2.h %s -check-prefix=CHECK-FIXES
