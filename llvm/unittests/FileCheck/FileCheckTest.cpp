@@ -201,29 +201,16 @@ struct ExpressionFormatParameterisedFixture
     EXPECT_THAT_EXPECTED(MatchingString, Failed());
   }
 
-  Expected<APInt> getValueFromStringReprFailure(StringRef Str) {
-    StringRef BufferizedStr = bufferize(SM, Str);
-    return Format.valueFromStringRepr(BufferizedStr, SM);
-  }
-
   template <class T>
   void checkValueFromStringRepr(StringRef Str, T ExpectedVal) {
-    Expected<APInt> ResultValue = getValueFromStringReprFailure(Str);
-    ASSERT_THAT_EXPECTED(ResultValue, Succeeded())
-        << "Failed to get value from " << Str;
-    ASSERT_EQ(ResultValue->isNegative(), ExpectedVal < 0)
+    StringRef BufferizedStr = bufferize(SM, Str);
+    APInt ResultValue = Format.valueFromStringRepr(BufferizedStr, SM);
+    ASSERT_EQ(ResultValue.isNegative(), ExpectedVal < 0)
         << "Value for " << Str << " is not " << ExpectedVal;
-    if (ResultValue->isNegative())
-      EXPECT_EQ(ResultValue->getSExtValue(), static_cast<int64_t>(ExpectedVal));
+    if (ResultValue.isNegative())
+      EXPECT_EQ(ResultValue.getSExtValue(), static_cast<int64_t>(ExpectedVal));
     else
-      EXPECT_EQ(ResultValue->getZExtValue(),
-                static_cast<uint64_t>(ExpectedVal));
-  }
-
-  void checkValueFromStringReprFailure(
-      StringRef Str, StringRef ErrorStr = "unable to represent numeric value") {
-    Expected<APInt> ResultValue = getValueFromStringReprFailure(Str);
-    expectDiagnosticError(ErrorStr, ResultValue.takeError());
+      EXPECT_EQ(ResultValue.getZExtValue(), static_cast<uint64_t>(ExpectedVal));
   }
 };
 
@@ -321,7 +308,10 @@ TEST_P(ExpressionFormatParameterisedFixture, FormatValueFromStringRepr) {
 
   // Wrong casing is not tested because valueFromStringRepr() relies on
   // StringRef's getAsInteger() which does not allow to restrict casing.
-  checkValueFromStringReprFailure(addBasePrefix("G"));
+
+  // Likewise, wrong letter digit for hex value is not tested because it is
+  // only caught by an assert in FileCheck due to getWildcardRegex()
+  // guaranteeing only valid letter digits are used.
 }
 
 TEST_P(ExpressionFormatParameterisedFixture, FormatBoolOperator) {

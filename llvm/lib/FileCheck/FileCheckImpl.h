@@ -96,11 +96,8 @@ public:
   Expected<std::string> getMatchingString(APInt Value) const;
 
   /// \returns the value corresponding to string representation \p StrVal
-  /// according to the matching format represented by this instance or an error
-  /// with diagnostic against \p SM if \p StrVal does not correspond to a valid
-  /// and representable value.
-  Expected<APInt> valueFromStringRepr(StringRef StrVal,
-                                      const SourceMgr &SM) const;
+  /// according to the matching format represented by this instance.
+  APInt valueFromStringRepr(StringRef StrVal, const SourceMgr &SM) const;
 };
 
 /// Class to represent an overflow error that might result when manipulating a
