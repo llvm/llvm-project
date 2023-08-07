@@ -84,16 +84,21 @@ llvm::object::computeSymbolSizes(const ObjectFile &O) {
 
   array_pod_sort(Addresses.begin(), Addresses.end(), compareAddress);
 
-  // Compute the size as the gap to the next symbol
-  for (unsigned I = 0, N = Addresses.size() - 1; I < N; ++I) {
+  // Compute the size as the gap to the next symbol. If multiple symbols have
+  // the same address, give both the same size. Because Addresses is sorted,
+  // using two pointers to keep track of the current symbol vs. the next symbol
+  // that doesn't have the same address for size computation.
+  for (unsigned I = 0, NextI = 0, N = Addresses.size() - 1; I < N; ++I) {
     auto &P = Addresses[I];
     if (P.I == O.symbol_end())
       continue;
 
-    // If multiple symbol have the same address, give both the same size.
-    unsigned NextI = I + 1;
-    while (NextI < N && Addresses[NextI].Address == P.Address)
-      ++NextI;
+    // If the next pointer is behind, update it to the next symbol.
+    if (NextI <= I) {
+      NextI = I + 1;
+      while (NextI < N && Addresses[NextI].Address == P.Address)
+        ++NextI;
+    }
 
     uint64_t Size = Addresses[NextI].Address - P.Address;
     P.Address = Size;
