@@ -6920,7 +6920,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
               continue;
 
             CompilerType child_type =
-                ToCompilerType(VD->getType().getPointer());
+                ToCompilerType(VD->getTypeInContext().getPointer());
             child_name = VD->getNameStr().str();
             if (!get_type_size(child_byte_size, child_type))
               return {};
