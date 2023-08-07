@@ -794,9 +794,9 @@ private:
                                    __tgt_offload_entry &DeviceEntry);
 
   /// Allocate and construct a kernel object.
-  virtual Expected<GenericKernelTy *>
-  constructKernelEntry(const __tgt_offload_entry &KernelEntry,
-                       DeviceImageTy &Image) = 0;
+  virtual Expected<GenericKernelTy &>
+  constructKernel(const __tgt_offload_entry &KernelEntry,
+                  OMPTgtExecModeFlags ExecMode) = 0;
 
   /// Get and set the stack size and heap size for the device. If not used, the
   /// plugin can implement the setters as no-op and setting the output
@@ -837,8 +837,8 @@ private:
 
 protected:
   /// Return the execution mode used for kernel \p Name.
-  Expected<OMPTgtExecModeFlags> getExecutionModeForKernel(StringRef Name,
-                                                          DeviceImageTy &Image);
+  virtual Expected<OMPTgtExecModeFlags>
+  getExecutionModeForKernel(StringRef Name, DeviceImageTy &Image);
 
   /// Environment variables defined by the LLVM OpenMP implementation
   /// regarding the initial number of streams and events.
