@@ -23,6 +23,7 @@
 #include "lldb/lldb-private-enumerations.h"
 #include "lldb/lldb-private-interfaces.h"
 #include "llvm/Support/JSON.h"
+#include <mutex>
 
 namespace lldb_private {
 
@@ -69,6 +70,10 @@ public:
   OptionValue() = default;
 
   virtual ~OptionValue() = default;
+
+  OptionValue(const OptionValue &other);
+  
+  OptionValue& operator=(const OptionValue &other);
 
   // Subclasses should override these functions
   virtual Type GetType() const = 0;
@@ -382,6 +387,8 @@ private:
 
   const FormatEntity::Entry *GetFormatEntity() const;
   const RegularExpression *GetRegexValue() const;
+  
+  mutable std::mutex m_mutex;
 };
 
 } // namespace lldb_private
