@@ -188,7 +188,7 @@ static ModuleSP ReadUnnamedMemoryModule(Process *process, addr_t addr,
 ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
     Process *process, llvm::StringRef name, UUID uuid, addr_t value,
     bool value_is_offset, bool force_symbol_search, bool notify,
-    bool set_address_in_target) {
+    bool set_address_in_target, bool allow_memory_image_last_resort) {
   ModuleSP memory_module_sp;
   ModuleSP module_sp;
   PlatformSP platform_sp = process->GetTarget().GetPlatform();
@@ -245,7 +245,8 @@ ModuleSP DynamicLoader::LoadBinaryWithUUIDAndAddress(
 
   // If we couldn't find the binary anywhere else, as a last resort,
   // read it out of memory.
-  if (!module_sp.get() && value != LLDB_INVALID_ADDRESS && !value_is_offset) {
+  if (allow_memory_image_last_resort && !module_sp.get() &&
+      value != LLDB_INVALID_ADDRESS && !value_is_offset) {
     if (!memory_module_sp)
       memory_module_sp = ReadUnnamedMemoryModule(process, value, name);
     if (memory_module_sp)
