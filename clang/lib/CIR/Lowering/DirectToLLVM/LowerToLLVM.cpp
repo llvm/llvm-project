@@ -1223,6 +1223,15 @@ public:
           op->getLoc(), lowerCirAttrAsValue(structAttr, op->getLoc(), rewriter,
                                             typeConverter));
       return mlir::success();
+    } else if (auto attr = init.value().dyn_cast<mlir::cir::GlobalViewAttr>()) {
+      setupRegionInitializedLLVMGlobalOp(op, rewriter);
+
+      // Return the address of the global symbol.
+      auto elementType = typeConverter->convertType(attr.getType());
+      auto addrOfOp = rewriter.create<mlir::LLVM::AddressOfOp>(
+          op->getLoc(), elementType, attr.getSymbol());
+      rewriter.create<mlir::LLVM::ReturnOp>(op->getLoc(), addrOfOp.getResult());
+      return mlir::success();
     } else {
       op.emitError() << "usupported initializer '" << init.value() << "'";
       return mlir::failure();
