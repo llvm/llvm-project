@@ -2009,6 +2009,10 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   if (isa<Constant>(V))
     return OrZero ? match(V, m_Power2OrZero()) : match(V, m_Power2());
 
+  // i1 is by definition a power of 2 or zero.
+  if (OrZero && V->getType()->getScalarSizeInBits() == 1)
+    return true;
+
   auto *I = dyn_cast<Instruction>(V);
   if (!I)
     return false;
