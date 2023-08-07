@@ -7,6 +7,9 @@ module acc_mod
   real :: data_copyin(10)
   !$acc declare copyin(data_copyin)
 
+  real :: data_copyinro(10)
+  !$acc declare copyin(readonly: data_copyinro)
+
   real :: data_device_resident(20)
   !$acc declare device_resident(data_device_resident)
 
@@ -20,6 +23,8 @@ end module
 ! !$acc declare create(data_create)
 ! real(4)::data_copyin(1_8:10_8)
 ! !$acc declare copyin(data_copyin)
+! real(4)::data_copyinro(1_8:10_8)
+! !$acc declare copyin(readonly: data_copyinro)
 ! real(4)::data_device_resident(1_8:20_8)
 ! !$acc declare device_resident(data_device_resident)
 ! integer(4)::data_link(1_8:50_8)
