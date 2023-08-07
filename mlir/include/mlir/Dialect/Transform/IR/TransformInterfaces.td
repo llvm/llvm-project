@@ -240,9 +240,13 @@ def FindPayloadReplacementOpInterface
 
 def PatternDescriptorOpInterface : OpInterface<"PatternDescriptorOpInterface"> {
   let description = [{
-    This interface should be implemented by ops that select patterns of a
-    `transform.apply_patterns` op. It provides a method to populate a rewrite
+    This interface should be implemented by ops that select rewrite patterns of
+    a `transform.apply_patterns` op. It provides a method to populate a rewrite
     pattern set with patterns.
+
+    Note: Conversion patterns are rewrite patterns in MLIR, but they should not
+    be populated with `PatternDescriptorOpInterface` because they cannot be
+    used in a greedy pattern rewrite.
   }];
 
   let cppNamespace = "::mlir::transform";
@@ -250,11 +254,73 @@ def PatternDescriptorOpInterface : OpInterface<"PatternDescriptorOpInterface"> {
   let methods = [
     InterfaceMethod<
       /*desc=*/[{
-        Populate patterns into the given pattern set.
+        Populate rewrite patterns into the given pattern set.
       }],
       /*returnType=*/"void",
       /*name=*/"populatePatterns",
-      /*arguments=*/(ins "RewritePatternSet &":$patterns)
+      /*arguments=*/(ins "::mlir::RewritePatternSet &":$patterns)
+    >,
+  ];
+}
+
+def ConversionPatternDescriptorOpInterface
+    : OpInterface<"ConversionPatternDescriptorOpInterface"> {
+  let description = [{
+    This interface should be implemented by ops that select conversion patterns
+    of a `transform.apply_patterns` op. It provides a method to populate a
+    rewrite pattern set with conversion patterns.
+
+    Note: Non-conversion rewrite patterns should not be populated with
+    `ConversionPatternDescriptorOpInterface` because it is not generally safe
+    to use non-conversion rewrite patterns as part of a dialect conversion.
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Populate conversion patterns into the given pattern set with the
+        given type converter.
+      }],
+      /*returnType=*/"void",
+      /*name=*/"populatePatterns",
+      /*arguments=*/(ins "::mlir::TypeConverter &":$typeConverter,
+                         "::mlir::RewritePatternSet &":$patterns)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the type converter to be used with this pattern set. If no
+        type converter is specified, the default type converter of the enclosing
+        "apply_conversion_patterns" op is used.
+      }],
+      /*returnType=*/"std::unique_ptr<::mlir::TypeConverter>",
+      /*name=*/"getTypeConverter",
+      /*arguments=*/(ins),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/"return nullptr;"
+    >,
+  ];
+}
+
+def TypeConverterBuilderOpInterface
+    : OpInterface<"TypeConverterBuilderOpInterface"> {
+  let description = [{
+    This interface should be implemented by ops that specify a type converter
+    for a dialect conversion. Such ops can be used with
+    "apply_conversion_patterns".
+  }];
+
+  let cppNamespace = "::mlir::transform";
+
+  let methods = [
+    InterfaceMethod<
+      /*desc=*/[{
+        Return the type converter to be used with a dialect conversion.
+      }],
+      /*returnType=*/"std::unique_ptr<::mlir::TypeConverter>",
+      /*name=*/"getTypeConverter",
+      /*arguments=*/(ins)
     >,
   ];
 }
