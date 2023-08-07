@@ -2050,6 +2050,10 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
     if (Q.IIQ.isExact(cast<BinaryOperator>(I)))
       return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
     return false;
+  case Instruction::Mul:
+    return OrZero &&
+           isKnownToBeAPowerOfTwo(I->getOperand(1), OrZero, Depth, Q) &&
+           isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
   case Instruction::And:
     if (OrZero) {
       // A power of two and'd with anything is a power of two or zero.
