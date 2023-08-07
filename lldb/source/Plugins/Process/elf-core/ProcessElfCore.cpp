@@ -53,7 +53,7 @@ lldb::ProcessSP ProcessElfCore::CreateInstance(lldb::TargetSP target_sp,
                                                bool can_connect) {
   lldb::ProcessSP process_sp;
   if (crash_file && !can_connect) {
-    // Read enough data for a ELF32 header or ELF64 header Note: Here we care
+    // Read enough data for an ELF32 header or ELF64 header Note: Here we care
     // about e_type field only, so it is safe to ignore possible presence of
     // the header extension.
     const size_t header_size = sizeof(llvm::ELF::Elf64_Ehdr);
