@@ -941,6 +941,8 @@ const internal::VariadicDynCastAllOfMatcher<Stmt, CompoundLiteralExpr>
 const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNullPtrLiteralExpr>
     cxxNullPtrLiteralExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, ChooseExpr> chooseExpr;
+const internal::VariadicDynCastAllOfMatcher<Stmt, ConvertVectorExpr>
+    convertVectorExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, CoawaitExpr>
     coawaitExpr;
 const internal::VariadicDynCastAllOfMatcher<Stmt, DependentCoawaitExpr>
