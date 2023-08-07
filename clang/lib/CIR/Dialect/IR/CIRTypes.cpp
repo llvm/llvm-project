@@ -202,7 +202,7 @@ uint64_t PointerType::getPreferredAlignment(
 llvm::TypeSize
 ArrayType::getTypeSizeInBits(const ::mlir::DataLayout &dataLayout,
                              ::mlir::DataLayoutEntryListRef params) const {
-  return dataLayout.getTypeSizeInBits(getEltType());
+  return getSize() * dataLayout.getTypeSizeInBits(getEltType());
 }
 
 uint64_t

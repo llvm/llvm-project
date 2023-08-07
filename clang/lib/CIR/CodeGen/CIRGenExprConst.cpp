@@ -910,11 +910,15 @@ public:
       assert(CGM.getASTContext().hasSameUnqualifiedType(Ty, Arg->getType()) &&
              "argument to copy ctor is of wrong type");
 
-      return Visit(Arg, Ty);
+      // Look through the temporary; it's just converting the value to an lvalue
+      // to pass it to the constructor.
+      if (auto *MTE = dyn_cast<MaterializeTemporaryExpr>(Arg))
+          return Visit(MTE->getSubExpr(), Ty);
+      // Don't try to support arbitrary lvalue-to-rvalue conversions for now.
+      return nullptr;
     }
 
-    assert(0 && "not implemented");
-    return {};
+    llvm_unreachable("NYI");
   }
 
   mlir::Attribute VisitStringLiteral(StringLiteral *E, QualType T) {

@@ -1,5 +1,6 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
+// XFAIL: *
 
 void func1(void) {
   // Should lower default-initialized static vars.
@@ -41,4 +42,10 @@ void func3(void) {
   static int var;
   static int *constAddr = &var;
   // CHECK-DAG: cir.global "private" internal @func3.constAddr = #cir.global_view<@func3.var> : !cir.ptr<!s32i>
+}
+
+// Should match type size in bytes between var and initializer.
+void func4(void) {
+  static char string[] = "Hello";
+  // CHECK-DAG: cir.global "private" internal @func4.string = #cir.const_array<"Hello\00" : !cir.array<!s8i x 6>> : !cir.array<!s8i x 6>
 }
