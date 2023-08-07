@@ -4949,11 +4949,15 @@ void vector::TransposeOp::build(OpBuilder &builder, OperationState &result,
                                 Value vector, ArrayRef<int64_t> transp) {
   VectorType vt = llvm::cast<VectorType>(vector.getType());
   SmallVector<int64_t, 4> transposedShape(vt.getRank());
-  for (unsigned i = 0; i < transp.size(); ++i)
+  SmallVector<bool, 4> transposedScalableDims(vt.getRank());
+  for (unsigned i = 0; i < transp.size(); ++i) {
     transposedShape[i] = vt.getShape()[transp[i]];
+    transposedScalableDims[i] = vt.getScalableDims()[transp[i]];
+  }
 
   result.addOperands(vector);
-  result.addTypes(VectorType::get(transposedShape, vt.getElementType()));
+  result.addTypes(VectorType::get(transposedShape, vt.getElementType(),
+                                  transposedScalableDims));
   result.addAttribute(TransposeOp::getTranspAttrName(result.name),
                       builder.getI64ArrayAttr(transp));
 }
