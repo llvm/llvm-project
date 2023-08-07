@@ -3275,6 +3275,48 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
     }
   }
 
+  // For very small build_vectors, use a single scalar insert of a constant.
+  // TODO: Base this on constant rematerialization cost, not size.
+  const unsigned EltBitSize = VT.getScalarSizeInBits();
+  if (VT.getSizeInBits() <= 32 &&
+      ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
+    MVT ViaIntVT = MVT::getIntegerVT(VT.getSizeInBits());
+    assert((ViaIntVT == MVT::i16 || ViaIntVT == MVT::i32) &&
+           "Unexpected sequence type");
+    // If we can use the original VL with the modified element type, this
+    // means we only have a VTYPE toggle, not a VL toggle.  TODO: Should this
+    // be moved into InsertVSETVLI?
+    unsigned ViaVecLen =
+      (Subtarget.getRealMinVLen() >= VT.getSizeInBits() * NumElts) ? NumElts : 1;
+    MVT ViaVecVT = MVT::getVectorVT(ViaIntVT, ViaVecLen);
+
+    uint64_t EltMask = maskTrailingOnes<uint64_t>(EltBitSize);
+    uint64_t SplatValue = 0;
+    // Construct the amalgamated value at this larger vector type.
+    for (const auto &OpIdx : enumerate(Op->op_values())) {
+      const auto &SeqV = OpIdx.value();
+      if (!SeqV.isUndef())
+        SplatValue |= ((cast<ConstantSDNode>(SeqV)->getZExtValue() & EltMask)
+                       << (OpIdx.index() * EltBitSize));
+    }
+
+    // On RV64, sign-extend from 32 to 64 bits where possible in order to
+    // achieve better constant materializion.
+    if (Subtarget.is64Bit() && ViaIntVT == MVT::i32)
+      SplatValue = SignExtend64<32>(SplatValue);
+
+    SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ViaVecVT,
+                              DAG.getUNDEF(ViaVecVT),
+                              DAG.getConstant(SplatValue, DL, XLenVT),
+                              DAG.getConstant(0, DL, XLenVT));
+    if (ViaVecLen != 1)
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
+                        MVT::getVectorVT(ViaIntVT, 1), Vec,
+                        DAG.getConstant(0, DL, XLenVT));
+    return DAG.getBitcast(VT, Vec);
+  }
+
+
   // Attempt to detect "hidden" splats, which only reveal themselves as splats
   // when re-interpreted as a vector with a larger element type. For example,
   //   v4i16 = build_vector i16 0, i16 1, i16 0, i16 1
@@ -3283,7 +3325,6 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // TODO: This optimization could also work on non-constant splats, but it
   // would require bit-manipulation instructions to construct the splat value.
   SmallVector<SDValue> Sequence;
-  unsigned EltBitSize = VT.getScalarSizeInBits();
   const auto *BV = cast<BuildVectorSDNode>(Op);
   if (VT.isInteger() && EltBitSize < 64 &&
       ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) &&

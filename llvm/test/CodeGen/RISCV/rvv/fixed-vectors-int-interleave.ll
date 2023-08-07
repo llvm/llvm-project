@@ -551,25 +551,49 @@ define <4 x i8> @unary_interleave_v4i8(<4 x i8> %x) {
 
 ; This shouldn't be interleaved
 define <4 x i8> @unary_interleave_v4i8_invalid(<4 x i8> %x) {
-; V128-LABEL: unary_interleave_v4i8_invalid:
-; V128:       # %bb.0:
-; V128-NEXT:    lui a0, %hi(.LCPI19_0)
-; V128-NEXT:    addi a0, a0, %lo(.LCPI19_0)
-; V128-NEXT:    vsetivli zero, 4, e8, mf4, ta, ma
-; V128-NEXT:    vle8.v v10, (a0)
-; V128-NEXT:    vrgather.vv v9, v8, v10
-; V128-NEXT:    vmv1r.v v8, v9
-; V128-NEXT:    ret
+; RV32-V128-LABEL: unary_interleave_v4i8_invalid:
+; RV32-V128:       # %bb.0:
+; RV32-V128-NEXT:    lui a0, 16
+; RV32-V128-NEXT:    addi a0, a0, 768
+; RV32-V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV32-V128-NEXT:    vmv.s.x v10, a0
+; RV32-V128-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; RV32-V128-NEXT:    vrgather.vv v9, v8, v10
+; RV32-V128-NEXT:    vmv1r.v v8, v9
+; RV32-V128-NEXT:    ret
 ;
-; V512-LABEL: unary_interleave_v4i8_invalid:
-; V512:       # %bb.0:
-; V512-NEXT:    lui a0, %hi(.LCPI19_0)
-; V512-NEXT:    addi a0, a0, %lo(.LCPI19_0)
-; V512-NEXT:    vsetivli zero, 4, e8, mf8, ta, ma
-; V512-NEXT:    vle8.v v10, (a0)
-; V512-NEXT:    vrgather.vv v9, v8, v10
-; V512-NEXT:    vmv1r.v v8, v9
-; V512-NEXT:    ret
+; RV64-V128-LABEL: unary_interleave_v4i8_invalid:
+; RV64-V128:       # %bb.0:
+; RV64-V128-NEXT:    lui a0, 16
+; RV64-V128-NEXT:    addiw a0, a0, 768
+; RV64-V128-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; RV64-V128-NEXT:    vmv.s.x v10, a0
+; RV64-V128-NEXT:    vsetvli zero, zero, e8, mf4, ta, ma
+; RV64-V128-NEXT:    vrgather.vv v9, v8, v10
+; RV64-V128-NEXT:    vmv1r.v v8, v9
+; RV64-V128-NEXT:    ret
+;
+; RV32-V512-LABEL: unary_interleave_v4i8_invalid:
+; RV32-V512:       # %bb.0:
+; RV32-V512-NEXT:    lui a0, 16
+; RV32-V512-NEXT:    addi a0, a0, 768
+; RV32-V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; RV32-V512-NEXT:    vmv.s.x v10, a0
+; RV32-V512-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV32-V512-NEXT:    vrgather.vv v9, v8, v10
+; RV32-V512-NEXT:    vmv1r.v v8, v9
+; RV32-V512-NEXT:    ret
+;
+; RV64-V512-LABEL: unary_interleave_v4i8_invalid:
+; RV64-V512:       # %bb.0:
+; RV64-V512-NEXT:    lui a0, 16
+; RV64-V512-NEXT:    addiw a0, a0, 768
+; RV64-V512-NEXT:    vsetivli zero, 4, e32, mf2, ta, ma
+; RV64-V512-NEXT:    vmv.s.x v10, a0
+; RV64-V512-NEXT:    vsetvli zero, zero, e8, mf8, ta, ma
+; RV64-V512-NEXT:    vrgather.vv v9, v8, v10
+; RV64-V512-NEXT:    vmv1r.v v8, v9
+; RV64-V512-NEXT:    ret
   %a = shufflevector <4 x i8> %x, <4 x i8> poison, <4 x i32> <i32 0, i32 3, i32 1, i32 4>
   ret <4 x i8> %a
 }
