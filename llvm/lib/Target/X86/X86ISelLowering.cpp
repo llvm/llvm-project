@@ -19983,7 +19983,7 @@ static SDValue truncateVectorWithPACK(unsigned Opcode, EVT DstVT, SDValue In,
     return In;
 
   unsigned NumElems = SrcVT.getVectorNumElements();
-  if (!isPowerOf2_32(NumElems))
+  if (NumElems < 2 || !isPowerOf2_32(NumElems) )
     return SDValue();
 
   unsigned DstSizeInBits = DstVT.getSizeInBits();
