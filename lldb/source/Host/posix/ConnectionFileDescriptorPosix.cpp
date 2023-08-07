@@ -202,9 +202,6 @@ ConnectionStatus ConnectionFileDescriptor::Disconnect(Status *error_ptr) {
     return eConnectionStatusSuccess;
   }
 
-  if (m_io_sp->GetFdType() == IOObject::eFDTypeSocket)
-    static_cast<Socket &>(*m_io_sp).PreDisconnect();
-
   // Try to get the ConnectionFileDescriptor's mutex.  If we fail, that is
   // quite likely because somebody is doing a blocking read on our file
   // descriptor.  If that's the case, then send the "q" char to the command
