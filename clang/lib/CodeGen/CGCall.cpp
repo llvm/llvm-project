@@ -13,6 +13,7 @@
 
 #include "CGCall.h"
 #include "ABIInfo.h"
+#include "ABIInfoImpl.h"
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGCleanup.h"
@@ -5759,9 +5760,14 @@ RValue CodeGenFunction::EmitCall(const CGFunctionInfo &CallInfo,
         DestIsVolatile = false;
       }
 
-      // If the value is offset in memory, apply the offset now.
-      Address StorePtr = emitAddressAtOffset(*this, DestPtr, RetAI);
-      CreateCoercedStore(CI, StorePtr, DestIsVolatile, *this);
+      // An empty record can overlap other data (if declared with
+      // no_unique_address); omit the store for such types - as there is no
+      // actual data to store.
+      if (!isEmptyRecord(getContext(), RetTy, true)) {
+        // If the value is offset in memory, apply the offset now.
+        Address StorePtr = emitAddressAtOffset(*this, DestPtr, RetAI);
+        CreateCoercedStore(CI, StorePtr, DestIsVolatile, *this);
+      }
 
       return convertTempToRValue(DestPtr, RetTy, SourceLocation());
     }
