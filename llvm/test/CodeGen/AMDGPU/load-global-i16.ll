@@ -3788,13 +3788,13 @@ define amdgpu_kernel void @global_zextload_v64i16_to_v64i32(ptr addrspace(1) %ou
 ; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v33, 16, v2
 ; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v34, 0xffff, v3
 ; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v32, 0xffff, v2
+; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v39, 16, v1
+; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v37, 16, v0
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dword v32, off, s[88:91], 0 offset:4 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    s_waitcnt vmcnt(0)
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dword v33, off, s[88:91], 0 offset:8 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dword v34, off, s[88:91], 0 offset:12 ; 4-byte Folded Spill
 ; GCN-NOHSA-VI-NEXT:    buffer_store_dword v35, off, s[88:91], 0 offset:16 ; 4-byte Folded Spill
-; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v39, 16, v1
-; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v37, 16, v0
 ; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v38, 0xffff, v1
 ; GCN-NOHSA-VI-NEXT:    v_and_b32_e32 v36, 0xffff, v0
 ; GCN-NOHSA-VI-NEXT:    v_lshrrev_b32_e32 v3, 16, v29
