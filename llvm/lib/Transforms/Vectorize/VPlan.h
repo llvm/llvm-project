@@ -811,141 +811,6 @@ public:
     return R->getVPDefID() == VPDefID;                                         \
   }
 
-/// This is a concrete Recipe that models a single VPlan-level instruction.
-/// While as any Recipe it may generate a sequence of IR instructions when
-/// executed, these instructions would always form a single-def expression as
-/// the VPInstruction is also a single def-use vertex.
-class VPInstruction : public VPRecipeBase, public VPValue {
-  friend class VPlanSlp;
-
-public:
-  /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
-  enum {
-    FirstOrderRecurrenceSplice =
-        Instruction::OtherOpsEnd + 1, // Combines the incoming and previous
-                                      // values of a first-order recurrence.
-    Not,
-    ICmpULE,
-    SLPLoad,
-    SLPStore,
-    ActiveLaneMask,
-    CalculateTripCountMinusVF,
-    CanonicalIVIncrement,
-    CanonicalIVIncrementNUW,
-    // The next two are similar to the above, but instead increment the
-    // canonical IV separately for each unrolled part.
-    CanonicalIVIncrementForPart,
-    CanonicalIVIncrementForPartNUW,
-    BranchOnCount,
-    BranchOnCond
-  };
-
-private:
-  typedef unsigned char OpcodeTy;
-  OpcodeTy Opcode;
-  FastMathFlags FMF;
-  DebugLoc DL;
-
-  /// An optional name that can be used for the generated IR instruction.
-  const std::string Name;
-
-  /// Utility method serving execute(): generates a single instance of the
-  /// modeled instruction. \returns the generated value for \p Part.
-  /// In some cases an existing value is returned rather than a generated
-  /// one.
-  Value *generateInstruction(VPTransformState &State, unsigned Part);
-
-protected:
-  void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
-
-public:
-  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
-                const Twine &Name = "")
-      : VPRecipeBase(VPDef::VPInstructionSC, Operands), VPValue(this),
-        Opcode(Opcode), DL(DL), Name(Name.str()) {}
-
-  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
-                DebugLoc DL = {}, const Twine &Name = "")
-      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name) {}
-
-  VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
-
-  VPInstruction *clone() const {
-    SmallVector<VPValue *, 2> Operands(operands());
-    return new VPInstruction(Opcode, Operands, DL, Name);
-  }
-
-  unsigned getOpcode() const { return Opcode; }
-
-  /// Generate the instruction.
-  /// TODO: We currently execute only per-part unless a specific instance is
-  /// provided.
-  void execute(VPTransformState &State) override;
-
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  /// Print the VPInstruction to \p O.
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override;
-
-  /// Print the VPInstruction to dbgs() (for debugging).
-  LLVM_DUMP_METHOD void dump() const;
-#endif
-
-  /// Return true if this instruction may modify memory.
-  bool mayWriteToMemory() const {
-    // TODO: we can use attributes of the called function to rule out memory
-    //       modifications.
-    return Opcode == Instruction::Store || Opcode == Instruction::Call ||
-           Opcode == Instruction::Invoke || Opcode == SLPStore;
-  }
-
-  bool hasResult() const {
-    // CallInst may or may not have a result, depending on the called function.
-    // Conservatively return calls have results for now.
-    switch (getOpcode()) {
-    case Instruction::Ret:
-    case Instruction::Br:
-    case Instruction::Store:
-    case Instruction::Switch:
-    case Instruction::IndirectBr:
-    case Instruction::Resume:
-    case Instruction::CatchRet:
-    case Instruction::Unreachable:
-    case Instruction::Fence:
-    case Instruction::AtomicRMW:
-    case VPInstruction::BranchOnCond:
-    case VPInstruction::BranchOnCount:
-      return false;
-    default:
-      return true;
-    }
-  }
-
-  /// Set the fast-math flags.
-  void setFastMathFlags(FastMathFlags FMFNew);
-
-  /// Returns true if the recipe only uses the first lane of operand \p Op.
-  bool onlyFirstLaneUsed(const VPValue *Op) const override {
-    assert(is_contained(operands(), Op) &&
-           "Op must be an operand of the recipe");
-    if (getOperand(0) != Op)
-      return false;
-    switch (getOpcode()) {
-    default:
-      return false;
-    case VPInstruction::ActiveLaneMask:
-    case VPInstruction::CalculateTripCountMinusVF:
-    case VPInstruction::CanonicalIVIncrement:
-    case VPInstruction::CanonicalIVIncrementNUW:
-    case VPInstruction::CanonicalIVIncrementForPart:
-    case VPInstruction::CanonicalIVIncrementForPartNUW:
-    case VPInstruction::BranchOnCount:
-      return true;
-    };
-    llvm_unreachable("switch should return");
-  }
-};
-
 /// Class to record LLVM IR flag for a recipe along with it.
 class VPRecipeWithIRFlags : public VPRecipeBase {
   enum class OperationType : unsigned char {
@@ -1098,6 +963,141 @@ public:
 
   void printFlags(raw_ostream &O) const;
 #endif
+};
+
+/// This is a concrete Recipe that models a single VPlan-level instruction.
+/// While as any Recipe it may generate a sequence of IR instructions when
+/// executed, these instructions would always form a single-def expression as
+/// the VPInstruction is also a single def-use vertex.
+class VPInstruction : public VPRecipeBase, public VPValue {
+  friend class VPlanSlp;
+
+public:
+  /// VPlan opcodes, extending LLVM IR with idiomatics instructions.
+  enum {
+    FirstOrderRecurrenceSplice =
+        Instruction::OtherOpsEnd + 1, // Combines the incoming and previous
+                                      // values of a first-order recurrence.
+    Not,
+    ICmpULE,
+    SLPLoad,
+    SLPStore,
+    ActiveLaneMask,
+    CalculateTripCountMinusVF,
+    CanonicalIVIncrement,
+    CanonicalIVIncrementNUW,
+    // The next two are similar to the above, but instead increment the
+    // canonical IV separately for each unrolled part.
+    CanonicalIVIncrementForPart,
+    CanonicalIVIncrementForPartNUW,
+    BranchOnCount,
+    BranchOnCond
+  };
+
+private:
+  typedef unsigned char OpcodeTy;
+  OpcodeTy Opcode;
+  FastMathFlags FMF;
+  DebugLoc DL;
+
+  /// An optional name that can be used for the generated IR instruction.
+  const std::string Name;
+
+  /// Utility method serving execute(): generates a single instance of the
+  /// modeled instruction. \returns the generated value for \p Part.
+  /// In some cases an existing value is returned rather than a generated
+  /// one.
+  Value *generateInstruction(VPTransformState &State, unsigned Part);
+
+protected:
+  void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
+
+public:
+  VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
+                const Twine &Name = "")
+      : VPRecipeBase(VPDef::VPInstructionSC, Operands), VPValue(this),
+        Opcode(Opcode), DL(DL), Name(Name.str()) {}
+
+  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
+                DebugLoc DL = {}, const Twine &Name = "")
+      : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name) {}
+
+  VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
+
+  VPInstruction *clone() const {
+    SmallVector<VPValue *, 2> Operands(operands());
+    return new VPInstruction(Opcode, Operands, DL, Name);
+  }
+
+  unsigned getOpcode() const { return Opcode; }
+
+  /// Generate the instruction.
+  /// TODO: We currently execute only per-part unless a specific instance is
+  /// provided.
+  void execute(VPTransformState &State) override;
+
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+  /// Print the VPInstruction to \p O.
+  void print(raw_ostream &O, const Twine &Indent,
+             VPSlotTracker &SlotTracker) const override;
+
+  /// Print the VPInstruction to dbgs() (for debugging).
+  LLVM_DUMP_METHOD void dump() const;
+#endif
+
+  /// Return true if this instruction may modify memory.
+  bool mayWriteToMemory() const {
+    // TODO: we can use attributes of the called function to rule out memory
+    //       modifications.
+    return Opcode == Instruction::Store || Opcode == Instruction::Call ||
+           Opcode == Instruction::Invoke || Opcode == SLPStore;
+  }
+
+  bool hasResult() const {
+    // CallInst may or may not have a result, depending on the called function.
+    // Conservatively return calls have results for now.
+    switch (getOpcode()) {
+    case Instruction::Ret:
+    case Instruction::Br:
+    case Instruction::Store:
+    case Instruction::Switch:
+    case Instruction::IndirectBr:
+    case Instruction::Resume:
+    case Instruction::CatchRet:
+    case Instruction::Unreachable:
+    case Instruction::Fence:
+    case Instruction::AtomicRMW:
+    case VPInstruction::BranchOnCond:
+    case VPInstruction::BranchOnCount:
+      return false;
+    default:
+      return true;
+    }
+  }
+
+  /// Set the fast-math flags.
+  void setFastMathFlags(FastMathFlags FMFNew);
+
+  /// Returns true if the recipe only uses the first lane of operand \p Op.
+  bool onlyFirstLaneUsed(const VPValue *Op) const override {
+    assert(is_contained(operands(), Op) &&
+           "Op must be an operand of the recipe");
+    if (getOperand(0) != Op)
+      return false;
+    switch (getOpcode()) {
+    default:
+      return false;
+    case VPInstruction::ActiveLaneMask:
+    case VPInstruction::CalculateTripCountMinusVF:
+    case VPInstruction::CanonicalIVIncrement:
+    case VPInstruction::CanonicalIVIncrementNUW:
+    case VPInstruction::CanonicalIVIncrementForPart:
+    case VPInstruction::CanonicalIVIncrementForPartNUW:
+    case VPInstruction::BranchOnCount:
+      return true;
+    };
+    llvm_unreachable("switch should return");
+  }
 };
 
 /// VPWidenRecipe is a recipe for producing a copy of vector type its
