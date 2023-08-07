@@ -2435,7 +2435,8 @@ def AArch64SVEPcs: DeclOrTypeAttr {
 
 def ArmStreaming : TypeAttr, TargetSpecificAttr<TargetAArch64> {
   let Spellings = [RegularKeyword<"__arm_streaming">];
-  let Documentation = [ArmStreamingDocs];
+  let Subjects = SubjectList<[HasFunctionProto], ErrorDiag>;
+  let Documentation = [ArmSmeStreamingDocs];
 }
 
 def Pure : InheritableAttr {

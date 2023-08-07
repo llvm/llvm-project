@@ -2444,9 +2444,10 @@ static SDValue lowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG,
   bool IsSigned = Op.getOpcode() == ISD::FP_TO_SINT_SAT;
 
   if (!DstVT.isVector()) {
-    // In absense of Zfh, promote f16 to f32, then saturate the result.
-    if (Src.getSimpleValueType() == MVT::f16 &&
-        !Subtarget.hasStdExtZfhOrZhinx()) {
+    // For bf16 or for f16 in absense of Zfh, promote to f32, then saturate
+    // the result.
+    if ((Src.getValueType() == MVT::f16 && !Subtarget.hasStdExtZfhOrZhinx()) ||
+        Src.getValueType() == MVT::bf16) {
       Src = DAG.getNode(ISD::FP_EXTEND, SDLoc(Op), MVT::f32, Src);
     }
 
@@ -9813,8 +9814,11 @@ void RISCVTargetLowering::ReplaceNodeResults(SDNode *N,
         Results.push_back(Res.getValue(1));
         return;
       }
-      // In absense of Zfh, promote f16 to f32, then convert.
-      if (Op0.getValueType() == MVT::f16 && !Subtarget.hasStdExtZfhOrZhinx())
+      // For bf16, or f16 in absense of Zfh, promote [b]f16 to f32 and then
+      // convert.
+      if ((Op0.getValueType() == MVT::f16 &&
+           !Subtarget.hasStdExtZfhOrZhinx()) ||
+          Op0.getValueType() == MVT::bf16)
         Op0 = DAG.getNode(ISD::FP_EXTEND, DL, MVT::f32, Op0);
 
       unsigned Opc = IsSigned ? RISCVISD::FCVT_W_RV64 : RISCVISD::FCVT_WU_RV64;
