@@ -619,8 +619,7 @@ define i16 @i1_is_pow2_or_zero(i1 %x, i16 %y) {
 ; CHECK-LABEL: define i16 @i1_is_pow2_or_zero
 ; CHECK-SAME: (i1 [[X:%.*]], i16 [[Y:%.*]]) {
 ; CHECK-NEXT:    [[XX:%.*]] = zext i1 [[X]] to i16
-; CHECK-NEXT:    [[YY:%.*]] = xor i16 [[XX]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.umax.i16(i16 [[YY]], i16 [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = or i16 [[XX]], [[Y]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xx = zext i1 %x to i16
@@ -634,8 +633,7 @@ define i16 @i1_is_pow2_or_zero2(i1 %x, i16 %y0, i16 %z) {
 ; CHECK-SAME: (i1 [[X:%.*]], i16 [[Y0:%.*]], i16 [[Z:%.*]]) {
 ; CHECK-NEXT:    [[XX:%.*]] = zext i1 [[X]] to i16
 ; CHECK-NEXT:    [[Y:%.*]] = or i16 [[Y0]], [[Z]]
-; CHECK-NEXT:    [[YY:%.*]] = xor i16 [[Y]], [[XX]]
-; CHECK-NEXT:    [[R:%.*]] = call i16 @llvm.umax.i16(i16 [[YY]], i16 [[Y]])
+; CHECK-NEXT:    [[R:%.*]] = or i16 [[Y]], [[XX]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xx = zext i1 %x to i16
