@@ -590,13 +590,15 @@ absentBoxToUnallocatedBox(fir::FirOpBuilder &builder, mlir::Location loc,
 // associations.
 template <typename A>
 const Fortran::semantics::Symbol &getFirstSym(const A &obj) {
-  return obj.GetFirstSymbol().GetUltimate();
+  const Fortran::semantics::Symbol &sym = obj.GetFirstSymbol();
+  return sym.HasLocalLocality() ? sym : sym.GetUltimate();
 }
 
 // Helper to get the ultimate last symbol.
 template <typename A>
 const Fortran::semantics::Symbol &getLastSym(const A &obj) {
-  return obj.GetLastSymbol().GetUltimate();
+  const Fortran::semantics::Symbol &sym = obj.GetLastSymbol();
+  return sym.HasLocalLocality() ? sym : sym.GetUltimate();
 }
 
 // Return true if TRANSPOSE should be lowered without a runtime call.
