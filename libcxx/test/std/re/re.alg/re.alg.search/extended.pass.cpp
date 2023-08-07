@@ -221,6 +221,21 @@ int main(int, char**)
     }
     {
         std::cmatch m;
+        const char s[] = "efabc";
+        assert(std::regex_search(s, m, std::regex("$", std::regex_constants::extended)));
+        assert(m.size() == 1);
+        assert(m.prefix().matched);
+        assert(m.prefix().first == s);
+        assert(m.prefix().second == m[0].first);
+        assert(!m.suffix().matched);
+        assert(m.suffix().first == m[0].second);
+        assert(m.suffix().second == s+5);
+        assert(m.length(0) == 0);
+        assert(m.position(0) == 5);
+        assert(m.str(0) == s+5);
+    }
+    {
+        std::cmatch m;
         const char s[] = "efabcg";
         assert(!std::regex_search(s, m, std::regex("abc$", std::regex_constants::extended)));
         assert(m.size() == 0);
