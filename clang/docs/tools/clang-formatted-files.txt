@@ -2185,8 +2185,6 @@ flang/include/flang/Runtime/time-intrinsic.h
 flang/include/flang/Runtime/transformational.h
 flang/include/flang/Runtime/type-code.h
 flang/include/flang/Semantics/attr.h
-flang/include/flang/Semantics/expression.h
-flang/include/flang/Semantics/openmp-directive-sets.h
 flang/include/flang/Semantics/runtime-type-info.h
 flang/include/flang/Semantics/scope.h
 flang/include/flang/Semantics/semantics.h
