@@ -948,19 +948,9 @@ public:
     return GEPFlags.IsInBounds;
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  FastMathFlags getFastMathFlags() const {
-    FastMathFlags Res;
-    Res.setAllowReassoc(FMFs.AllowReassoc);
-    Res.setNoNaNs(FMFs.NoNaNs);
-    Res.setNoInfs(FMFs.NoInfs);
-    Res.setNoSignedZeros(FMFs.NoSignedZeros);
-    Res.setAllowReciprocal(FMFs.AllowReciprocal);
-    Res.setAllowContract(FMFs.AllowContract);
-    Res.setApproxFunc(FMFs.ApproxFunc);
-    return Res;
-  }
+  FastMathFlags getFastMathFlags() const;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printFlags(raw_ostream &O) const;
 #endif
 };
