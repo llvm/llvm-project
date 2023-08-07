@@ -250,6 +250,10 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   *((void **)&RTL.data_notify_unmapped) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_unmapped");
 
+  // Record Replay RTL
+  *((void **)&RTL.activate_record_replay) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_initialize_record_replay");
+
   RTL.LibraryHandler = std::move(DynLibrary);
 
   // Successfully loaded
