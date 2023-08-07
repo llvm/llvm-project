@@ -231,6 +231,8 @@ Floating Point Support in Clang
 
 AST Matchers
 ------------
+- Add ``convertVectorExpr``.
+- Add ``dependentSizedExtVectorType``.
 
 clang-format
 ------------

@@ -124,27 +124,25 @@ private:
   APInt Value;
 
 public:
-  // Store signed and unsigned 64-bit integers in a signed 65-bit APInt.
-  template <class T>
-  explicit ExpressionValue(T Val) : Value(65, Val, /*isSigned=*/Val < 0) {}
+  ExpressionValue(APInt Val) : Value(Val) {}
 
   APInt getAPIntValue() const { return Value; }
 };
 
 /// Performs operation and \returns its result or an error in case of failure,
 /// such as if an overflow occurs.
-Expected<ExpressionValue> operator+(const ExpressionValue &Lhs,
-                                    const ExpressionValue &Rhs);
-Expected<ExpressionValue> operator-(const ExpressionValue &Lhs,
-                                    const ExpressionValue &Rhs);
-Expected<ExpressionValue> operator*(const ExpressionValue &Lhs,
-                                    const ExpressionValue &Rhs);
-Expected<ExpressionValue> operator/(const ExpressionValue &Lhs,
-                                    const ExpressionValue &Rhs);
-Expected<ExpressionValue> max(const ExpressionValue &Lhs,
-                              const ExpressionValue &Rhs);
-Expected<ExpressionValue> min(const ExpressionValue &Lhs,
-                              const ExpressionValue &Rhs);
+Expected<ExpressionValue> exprAdd(const ExpressionValue &Lhs,
+                                  const ExpressionValue &Rhs, bool &Overflow);
+Expected<ExpressionValue> exprSub(const ExpressionValue &Lhs,
+                                  const ExpressionValue &Rhs, bool &Overflow);
+Expected<ExpressionValue> exprMul(const ExpressionValue &Lhs,
+                                  const ExpressionValue &Rhs, bool &Overflow);
+Expected<ExpressionValue> exprDiv(const ExpressionValue &Lhs,
+                                  const ExpressionValue &Rhs, bool &Overflow);
+Expected<ExpressionValue> exprMax(const ExpressionValue &Lhs,
+                                  const ExpressionValue &Rhs, bool &Overflow);
+Expected<ExpressionValue> exprMin(const ExpressionValue &Lhs,
+                                  const ExpressionValue &Rhs, bool &Overflow);
 
 /// Base class representing the AST of a given expression.
 class ExpressionAST {
@@ -179,8 +177,7 @@ private:
   ExpressionValue Value;
 
 public:
-  template <class T>
-  explicit ExpressionLiteral(StringRef ExpressionStr, T Val)
+  explicit ExpressionLiteral(StringRef ExpressionStr, APInt Val)
       : ExpressionAST(ExpressionStr), Value(Val) {}
 
   /// \returns the literal's value.
@@ -322,7 +319,8 @@ public:
 
 /// Type of functions evaluating a given binary operation.
 using binop_eval_t = Expected<ExpressionValue> (*)(const ExpressionValue &,
-                                                   const ExpressionValue &);
+                                                   const ExpressionValue &,
+                                                   bool &);
 
 /// Class representing a single binary operation in the AST of an expression.
 class BinaryOperation : public ExpressionAST {

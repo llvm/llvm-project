@@ -490,9 +490,6 @@ inline bool cannotBeNegativeZero(const Value *V, const DataLayout &DL,
   return Known.isKnownNeverNegZero();
 }
 
-bool CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI);
-
 /// Return true if we can prove that the specified FP value is either NaN or
 /// never less than -0.0.
 ///
