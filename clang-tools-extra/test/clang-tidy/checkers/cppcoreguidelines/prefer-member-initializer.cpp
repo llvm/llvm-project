@@ -563,3 +563,10 @@ struct MacroCantFix {
     // CHECK-FIXES: ASSIGN_IN_MACRO(n, 0)
   }
 };
+
+struct PR52818  {
+    PR52818() : bar(5) {}
+    PR52818(int) : PR52818() { bar = 3; }
+
+    int bar;
+};

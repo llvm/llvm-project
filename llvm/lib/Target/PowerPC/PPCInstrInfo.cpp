@@ -1121,7 +1121,7 @@ bool PPCInstrInfo::isReallyTriviallyReMaterializable(
   case PPC::XXSETACCZW:
     return true;
   }
-  return false;
+  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 unsigned PPCInstrInfo::isStoreToStackSlot(const MachineInstr &MI,

@@ -3096,7 +3096,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     auto Recvfrom =
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(0)),
+                   ArgumentCondition(2, WithinRange, SingleValue(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
@@ -3123,7 +3126,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
     auto Sendto =
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(0)),
+                   ArgumentCondition(2, WithinRange, SingleValue(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
@@ -3161,7 +3167,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(0)),
+                   ArgumentCondition(2, WithinRange, SingleValue(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))
@@ -3179,7 +3188,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, StructMsghdrPtrTy, IntTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
+            .Case({ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(
@@ -3191,7 +3200,7 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
         Signature(ArgTypes{IntTy, ConstStructMsghdrPtrTy, IntTy},
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
-            .Case({ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
+            .Case({ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(
@@ -3233,7 +3242,10 @@ void StdLibraryFunctionsChecker::initFunctionSummaries(
                   RetType{Ssize_tTy}),
         Summary(NoEvalCall)
             .Case({ReturnValueCondition(LessThanOrEq, ArgNo(2)),
-                   ReturnValueCondition(WithinRange, Range(0, Ssize_tMax))},
+                   ReturnValueCondition(WithinRange, Range(1, Ssize_tMax))},
+                  ErrnoMustNotBeChecked, GenericSuccessMsg)
+            .Case({ReturnValueCondition(WithinRange, SingleValue(0)),
+                   ArgumentCondition(2, WithinRange, SingleValue(0))},
                   ErrnoMustNotBeChecked, GenericSuccessMsg)
             .Case(ReturnsMinusOne, ErrnoNEZeroIrrelevant, GenericFailureMsg)
             .ArgConstraint(ArgumentCondition(0, WithinRange, Range(0, IntMax)))

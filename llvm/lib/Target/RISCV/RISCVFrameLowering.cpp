@@ -265,9 +265,10 @@ static Register getMaxPushPopReg(const MachineFunction &MF,
                                  const std::vector<CalleeSavedInfo> &CSI) {
   Register MaxPushPopReg = RISCV::NoRegister;
   for (auto &CS : CSI) {
-    Register Reg = CS.getReg();
-    if (RISCV::PGPRRegClass.contains(Reg))
-      MaxPushPopReg = std::max(MaxPushPopReg.id(), Reg.id());
+    // RISCVRegisterInfo::hasReservedSpillSlot assigns negative frame indices to
+    // registers which can be saved by Zcmp Push.
+    if (CS.getFrameIdx() < 0)
+      MaxPushPopReg = std::max(MaxPushPopReg.id(), CS.getReg().id());
   }
   // if rlist is {rs, s0-s10}, then s11 will also be included
   if (MaxPushPopReg == RISCV::X26)

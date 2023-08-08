@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s abseil-string-find-startswith %t -- \
-// RUN:   -config="{CheckOptions: [{key: 'abseil-string-find-startswith.StringLikeClasses', value: '::std::basic_string;::basic_string'}]}"
+// RUN:   -config="{CheckOptions: {abseil-string-find-startswith.StringLikeClasses: '::std::basic_string;::basic_string'}}"
 
 using size_t = decltype(sizeof(int));
 

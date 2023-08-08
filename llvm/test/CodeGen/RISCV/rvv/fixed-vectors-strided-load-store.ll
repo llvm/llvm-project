@@ -947,3 +947,19 @@ bb4:                                              ; preds = %bb4, %bb2
 bb16:                                             ; preds = %bb4, %bb
   ret void
 }
+
+define <8 x i8> @broadcast_ptr_base(ptr %a) {
+; CHECK-LABEL: @broadcast_ptr_base(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call <8 x i8> @llvm.riscv.masked.strided.load.v8i8.p0.i64(<8 x i8> poison, ptr [[A:%.*]], i64 64, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>)
+; CHECK-NEXT:    ret <8 x i8> [[TMP0]]
+;
+entry:
+  %0 = insertelement <8 x ptr> poison, ptr %a, i64 0
+  %1 = shufflevector <8 x ptr> %0, <8 x ptr> poison, <8 x i32> zeroinitializer
+  %2 = getelementptr i8, <8 x ptr> %1, <8 x i64> <i64 0, i64 64, i64 128, i64 192, i64 256, i64 320, i64 384, i64 448>
+  %3 = tail call <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr> %2, i32 1, <8 x i1> <i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true, i1 true>, <8 x i8> poison)
+  ret <8 x i8> %3
+}
+
+declare <8 x i8> @llvm.masked.gather.v8i8.v8p0(<8 x ptr>, i32 immarg, <8 x i1>, <8 x i8>)

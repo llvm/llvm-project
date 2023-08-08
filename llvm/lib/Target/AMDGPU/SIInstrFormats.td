@@ -158,6 +158,9 @@ class InstSI <dag outs, dag ins, string asm = "",
   // This bit indicates that the instruction is never-uniform/divergent
   field bit IsNeverUniform = 0;
 
+  // ds_gws_* instructions.
+  field bit GWS = 0;
+
   // This bit indicates that this is one of SWMMAC instructions.
   field bit IsSWMMAC = 0;
 
@@ -245,8 +248,10 @@ class InstSI <dag outs, dag ins, string asm = "",
   let TSFlags{60} = TiedSourceNotRead;
 
   let TSFlags{61} = IsNeverUniform;
+  
+  let TSFlags{62} = GWS;
 
-  let TSFlags{62} = IsSWMMAC;
+  let TSFlags{63} = IsSWMMAC;
 
   let SchedRW = [Write32Bit];
 
