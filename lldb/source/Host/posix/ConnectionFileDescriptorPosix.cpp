@@ -118,7 +118,6 @@ void ConnectionFileDescriptor::CloseCommandPipe() {
 }
 
 bool ConnectionFileDescriptor::IsConnected() const {
-  std::lock_guard<std::recursive_mutex> guard(m_mutex);
   return m_io_sp && m_io_sp->IsValid();
 }
 
