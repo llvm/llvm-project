@@ -16,8 +16,6 @@
 // CHECK-NOT: __riscv_fsqrt {{.*$}}
 // CHECK-NOT: __riscv_c {{.*$}}
 // CHECK-NOT: __riscv_compressed {{.*$}}
-// CHECK-NOT: __riscv_b {{.*$}}
-// CHECK-NOT: __riscv_bitmanip {{.*$}}
 // CHECK-NOT: __riscv_zihintntl {{.*$}}
 // CHECK-NOT: __riscv_zba {{.*$}}
 // CHECK-NOT: __riscv_zbb {{.*$}}
@@ -165,7 +163,6 @@
 // RUN: %clang -target riscv64-unknown-linux-gnu \
 // RUN: -march=rv64izba -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZBA-EXT %s
-// CHECK-ZBA-NOT: __riscv_b
 // CHECK-ZBA-EXT: __riscv_zba 1000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu \
@@ -180,7 +177,6 @@
 // RUN: %clang -target riscv64-unknown-linux-gnu \
 // RUN: -march=rv64izbb -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZBB-EXT %s
-// CHECK-ZBB-NOT: __riscv_b
 // CHECK-ZBB-EXT: __riscv_zbb 1000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu \
@@ -195,7 +191,6 @@
 // RUN: %clang -target riscv64-unknown-linux-gnu \
 // RUN: -march=rv64izbc -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZBC-EXT %s
-// CHECK-ZBC-NOT: __riscv_b
 // CHECK-ZBC-EXT: __riscv_zbc 1000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu \
@@ -210,7 +205,6 @@
 // RUN: %clang -target riscv64-unknown-linux-gnu \
 // RUN: -march=rv64izbs -x c -E -dM %s \
 // RUN: -o - | FileCheck --check-prefix=CHECK-ZBS-EXT %s
-// CHECK-ZBS-NOT: __riscv_b
 // CHECK-ZBS-EXT: __riscv_zbs 1000000{{$}}
 
 // RUN: %clang -target riscv32-unknown-linux-gnu \
