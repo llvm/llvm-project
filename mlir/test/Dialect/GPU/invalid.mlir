@@ -610,3 +610,19 @@ module attributes {gpu.container_module} {
     }
   }
 }
+
+// -----
+
+module {
+  // expected-error @+1 {{'gpu.module' op attribute 'targets' failed to satisfy constraint: array of GPU target attributes with at least 1 elements}}
+  gpu.module @gpu_funcs [] {
+  }
+}
+
+// -----
+
+module {
+  // expected-error @+1 {{'gpu.module' op attribute 'targets' failed to satisfy constraint: array of GPU target attributes with at least 1 elements}}
+  gpu.module @gpu_funcs [1] {
+  }
+}
