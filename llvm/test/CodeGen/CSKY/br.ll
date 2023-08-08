@@ -6615,9 +6615,8 @@ label2:
 define i32 @br_bit_test_eq_0(i32 %c) {
 ; CHECK-LABEL: br_bit_test_eq_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movih32 a1, 2
-; CHECK-NEXT:    and16 a0, a1
-; CHECK-NEXT:    bnez32 a0, .LBB145_2
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    bt32 .LBB145_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -6661,9 +6660,8 @@ label2:
 define i32 @br_bit_test_ne_0(i32 %c) {
 ; CHECK-LABEL: br_bit_test_ne_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movih32 a1, 2
-; CHECK-NEXT:    and16 a0, a1
-; CHECK-NEXT:    bez32 a0, .LBB146_2
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    bf32 .LBB146_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -6707,9 +6705,8 @@ label2:
 define i32 @br_bit_test_eq_mask(i32 %c) {
 ; CHECK-LABEL: br_bit_test_eq_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movih32 a1, 2
-; CHECK-NEXT:    and16 a0, a1
-; CHECK-NEXT:    bez32 a0, .LBB147_2
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    bf32 .LBB147_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
@@ -6753,9 +6750,8 @@ label2:
 define i32 @br_bit_test_ne_mask(i32 %c) {
 ; CHECK-LABEL: br_bit_test_ne_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movih32 a1, 2
-; CHECK-NEXT:    and16 a0, a1
-; CHECK-NEXT:    bnez32 a0, .LBB148_2
+; CHECK-NEXT:    btsti16 a0, 17
+; CHECK-NEXT:    bt32 .LBB148_2
 ; CHECK-NEXT:  # %bb.1: # %label1
 ; CHECK-NEXT:    movi16 a0, 1
 ; CHECK-NEXT:    rts16
