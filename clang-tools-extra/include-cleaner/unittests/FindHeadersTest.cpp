@@ -465,6 +465,22 @@ TEST_F(HeadersForSymbolTest, PreferPublicOverNameMatchOnPrivate) {
                                            physicalHeader("foo.h")));
 }
 
+TEST_F(HeadersForSymbolTest, PublicOverPrivateWithoutUmbrella) {
+  Inputs.Code = R"cpp(
+    #include "bar.h"
+    #include "foo.h"
+  )cpp";
+  Inputs.ExtraFiles["bar.h"] =
+      guard(R"cpp(#include "foo.h" // IWYU pragma: export)cpp");
+  Inputs.ExtraFiles["foo.h"] = guard(R"cpp(
+    // IWYU pragma: private
+    struct foo {};
+  )cpp");
+  buildAST();
+  EXPECT_THAT(headersForFoo(),
+              ElementsAre(physicalHeader("bar.h"), physicalHeader("foo.h")));
+}
+
 TEST_F(HeadersForSymbolTest, AmbiguousStdSymbols) {
   struct {
     llvm::StringRef Code;
