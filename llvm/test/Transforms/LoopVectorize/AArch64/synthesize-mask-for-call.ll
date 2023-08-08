@@ -25,8 +25,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     REPLICATE ir<%call> = call @foo(ir<%load>)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN store ir<%arrayidx>, ir<%call>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
-; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
@@ -51,7 +51,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN-CALL ir<%call> = call @foo(ir<%load>) (using library function: foo_vector_fixed4_nomask)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN store ir<%arrayidx>, ir<%call>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
@@ -82,7 +82,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN-CALL ir<%call> = call @foo(ir<%load>) (using library function: foo_vector_fixed2_nomask)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN store ir<%arrayidx>, ir<%call>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXST:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXST:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
@@ -108,7 +108,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN-CALL ir<%call> = call @foo(ir<%load>, ir<true>) (using library function: foo_vector_fixed4_mask)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN store ir<%arrayidx>, ir<%call>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
@@ -138,8 +138,8 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN-CALL ir<%call> = call @foo(ir<%load>) (using library function: foo_vector_fixed2_nomask)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN store ir<%arrayidx>, ir<%call>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
-; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
@@ -164,7 +164,7 @@ target triple = "aarch64-unknown-linux-gnu"
 ; CHECK-NEXT:     WIDEN-CALL ir<%call> = call @foo(ir<%load>) (using library function: foo_vector_fixed4_nomask)
 ; CHECK-NEXT:     CLONE ir<%arrayidx> = getelementptr inbounds ir<%a>, vp<[[STEPS]]>
 ; CHECK-NEXT:     WIDEN store ir<%arrayidx>, ir<%call>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
 ; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }

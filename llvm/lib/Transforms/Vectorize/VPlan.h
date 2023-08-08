@@ -820,10 +820,16 @@ class VPRecipeWithIRFlags : public VPRecipeBase {
     FPMathOp,
     Other
   };
+
+public:
   struct WrapFlagsTy {
     char HasNUW : 1;
     char HasNSW : 1;
+
+    WrapFlagsTy(bool HasNUW, bool HasNSW) : HasNUW(HasNUW), HasNSW(HasNSW) {}
   };
+
+private:
   struct ExactFlagsTy {
     char IsExact : 1;
   };
@@ -863,8 +869,7 @@ public:
       : VPRecipeWithIRFlags(SC, Operands) {
     if (auto *Op = dyn_cast<OverflowingBinaryOperator>(&I)) {
       OpType = OperationType::OverflowingBinOp;
-      WrapFlags.HasNUW = Op->hasNoUnsignedWrap();
-      WrapFlags.HasNSW = Op->hasNoSignedWrap();
+      WrapFlags = {Op->hasNoUnsignedWrap(), Op->hasNoSignedWrap()};
     } else if (auto *Op = dyn_cast<PossiblyExactOperator>(&I)) {
       OpType = OperationType::PossiblyExactOp;
       ExactFlags.IsExact = Op->isExact();
@@ -884,8 +889,15 @@ public:
     }
   }
 
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                      WrapFlagsTy WrapFlags)
+      : VPRecipeBase(SC, Operands), OpType(OperationType::OverflowingBinOp),
+        WrapFlags(WrapFlags) {}
+
   static inline bool classof(const VPRecipeBase *R) {
-    return R->getVPDefID() == VPRecipeBase::VPWidenSC ||
+    return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
+           R->getVPDefID() == VPRecipeBase::VPWidenSC ||
            R->getVPDefID() == VPRecipeBase::VPWidenGEPSC ||
            R->getVPDefID() == VPRecipeBase::VPReplicateSC;
   }
@@ -949,6 +961,18 @@ public:
 
   FastMathFlags getFastMathFlags() const;
 
+  bool hasNoUnsignedWrap() const {
+    assert(OpType == OperationType::OverflowingBinOp &&
+           "recipe doesn't have a NUW flag");
+    return WrapFlags.HasNUW;
+  }
+
+  bool hasNoSignedWrap() const {
+    assert(OpType == OperationType::OverflowingBinOp &&
+           "recipe doesn't have a NUW flag");
+    return WrapFlags.HasNSW;
+  }
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void printFlags(raw_ostream &O) const;
 #endif
@@ -958,7 +982,7 @@ public:
 /// While as any Recipe it may generate a sequence of IR instructions when
 /// executed, these instructions would always form a single-def expression as
 /// the VPInstruction is also a single def-use vertex.
-class VPInstruction : public VPRecipeBase, public VPValue {
+class VPInstruction : public VPRecipeWithIRFlags, public VPValue {
   friend class VPlanSlp;
 
 public:
@@ -974,11 +998,9 @@ public:
     ActiveLaneMask,
     CalculateTripCountMinusVF,
     CanonicalIVIncrement,
-    CanonicalIVIncrementNUW,
-    // The next two are similar to the above, but instead increment the
+    // The next op is similar to the above, but instead increment the
     // canonical IV separately for each unrolled part.
     CanonicalIVIncrementForPart,
-    CanonicalIVIncrementForPartNUW,
     BranchOnCount,
     BranchOnCond
   };
@@ -1004,12 +1026,17 @@ protected:
 public:
   VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands, DebugLoc DL,
                 const Twine &Name = "")
-      : VPRecipeBase(VPDef::VPInstructionSC, Operands), VPValue(this),
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands), VPValue(this),
         Opcode(Opcode), DL(DL), Name(Name.str()) {}
 
   VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
                 DebugLoc DL = {}, const Twine &Name = "")
       : VPInstruction(Opcode, ArrayRef<VPValue *>(Operands), DL, Name) {}
+
+  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
+                WrapFlagsTy WrapFlags, DebugLoc DL = {}, const Twine &Name = "")
+      : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags),
+        VPValue(this), Opcode(Opcode), DL(DL), Name(Name.str()) {}
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
@@ -1079,9 +1106,7 @@ public:
     case VPInstruction::ActiveLaneMask:
     case VPInstruction::CalculateTripCountMinusVF:
     case VPInstruction::CanonicalIVIncrement:
-    case VPInstruction::CanonicalIVIncrementNUW:
     case VPInstruction::CanonicalIVIncrementForPart:
-    case VPInstruction::CanonicalIVIncrementForPartNUW:
     case VPInstruction::BranchOnCount:
       return true;
     };
