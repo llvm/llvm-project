@@ -148,9 +148,8 @@ bool CheckShift(InterpState &S, CodePtr OpPC, const LT &LHS, const RT &RHS,
 template <typename T>
 bool CheckDivRem(InterpState &S, CodePtr OpPC, const T &LHS, const T &RHS) {
   if (RHS.isZero()) {
-    const auto *Op = cast<BinaryOperator>(S.Current->getExpr(OpPC));
-    S.FFDiag(Op, diag::note_expr_divide_by_zero)
-        << Op->getRHS()->getSourceRange();
+    const SourceInfo &Loc = S.Current->getSource(OpPC);
+    S.FFDiag(Loc, diag::note_expr_divide_by_zero);
     return false;
   }
 
