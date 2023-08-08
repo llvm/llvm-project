@@ -103,12 +103,8 @@ public:
 
   SwiftFlagType m_swift_flags; // takes elements of Flags
 
-  //------------------------------------------------------------------
-  // llvm casting support
-  //------------------------------------------------------------------
-  static bool classof(const ExpressionVariable *ev) {
-    return ev->getKind() == ExpressionVariable::eKindSwift;
-  }
+  // LLVM RTTI Support
+  static char ID;
 
   //----------------------------------------------------------------------
   /// Members

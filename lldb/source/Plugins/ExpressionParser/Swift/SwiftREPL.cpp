@@ -43,6 +43,8 @@
 using namespace lldb;
 using namespace lldb_private;
 
+char SwiftREPL::ID;
+
 lldb::REPLSP SwiftREPL::CreateInstance(Status &err, lldb::LanguageType language,
                                        Debugger *debugger, Target *target,
                                        const char *repl_options) {
@@ -291,8 +293,7 @@ void SwiftREPL::Terminate() {
   SwiftASTContext::Terminate();
 }
 
-SwiftREPL::SwiftREPL(Target &target)
-    : REPL(LLVMCastKind::eKindSwift, target), m_swift_ast(nullptr) {}
+SwiftREPL::SwiftREPL(Target &target) : REPL(target), m_swift_ast(nullptr) {}
 
 SwiftREPL::~SwiftREPL() {}
 
