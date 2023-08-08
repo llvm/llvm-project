@@ -3591,6 +3591,17 @@ void DAGTypeLegalizer::ExpandIntRes_GET_ROUNDING(SDNode *N, SDValue &Lo,
   ReplaceValueWith(SDValue(N, 1), Chain);
 }
 
+// Helper for producing an FP_EXTEND/STRICT_FP_EXTEND of Op.
+static SDValue fpExtendHelper(SDValue Op, SDValue &Chain, bool IsStrict, EVT VT,
+                              SDLoc DL, SelectionDAG &DAG) {
+  if (IsStrict) {
+    Op = DAG.getNode(ISD::STRICT_FP_EXTEND, DL, {VT, MVT::Other}, {Chain, Op});
+    Chain = Op.getValue(1);
+    return Op;
+  }
+  return DAG.getNode(ISD::FP_EXTEND, DL, VT, Op);
+}
+
 void DAGTypeLegalizer::ExpandIntRes_FP_TO_SINT(SDNode *N, SDValue &Lo,
                                                SDValue &Hi) {
   SDLoc dl(N);
@@ -3609,6 +3620,11 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_SINT(SDNode *N, SDValue &Lo,
     Op = DAG.getNode(ISD::FP_TO_SINT, dl, VT, Op);
     SplitInteger(Op, Lo, Hi);
     return;
+  }
+
+  if (Op.getValueType() == MVT::bf16) {
+    // Extend to f32 as there is no bf16 libcall.
+    Op = fpExtendHelper(Op, Chain, IsStrict, MVT::f32, dl, DAG);
   }
 
   RTLIB::Libcall LC = RTLIB::getFPTOSINT(Op.getValueType(), VT);
@@ -3643,6 +3659,11 @@ void DAGTypeLegalizer::ExpandIntRes_FP_TO_UINT(SDNode *N, SDValue &Lo,
     return;
   }
 
+  if (Op.getValueType() == MVT::bf16) {
+    // Extend to f32 as there is no bf16 libcall.
+    Op = fpExtendHelper(Op, Chain, IsStrict, MVT::f32, dl, DAG);
+  }
+
   RTLIB::Libcall LC = RTLIB::getFPTOUINT(Op.getValueType(), VT);
   assert(LC != RTLIB::UNKNOWN_LIBCALL && "Unexpected fp-to-uint conversion!");
   TargetLowering::MakeLibCallOptions CallOptions;
@@ -3673,14 +3694,9 @@ void DAGTypeLegalizer::ExpandIntRes_XROUND_XRINT(SDNode *N, SDValue &Lo,
   EVT VT = Op.getValueType();
 
   if (VT == MVT::f16) {
-    VT = MVT::f32;
     // Extend to f32.
-    if (IsStrict) {
-      Op = DAG.getNode(ISD::STRICT_FP_EXTEND, dl, { VT, MVT::Other }, {Chain, Op});
-      Chain = Op.getValue(1);
-    } else {
-      Op = DAG.getNode(ISD::FP_EXTEND, dl, VT, Op);
-    }
+    VT = MVT::f32;
+    Op = fpExtendHelper(Op, Chain, IsStrict, VT, dl, DAG);
   }
 
   RTLIB::Libcall LC = RTLIB::UNKNOWN_LIBCALL;

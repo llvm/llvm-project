@@ -969,7 +969,7 @@ public:
 
   bool hasNoSignedWrap() const {
     assert(OpType == OperationType::OverflowingBinOp &&
-           "recipe doesn't have a NUW flag");
+           "recipe doesn't have a NSW flag");
     return WrapFlags.HasNSW;
   }
 
