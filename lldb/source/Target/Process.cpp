@@ -320,8 +320,8 @@ bool ProcessProperties::GetWarningsUnsupportedLanguage() const {
 #ifdef LLDB_ENABLE_SWIFT
 bool ProcessProperties::GetWarningsToolchainMismatch() const {
   const uint32_t idx = ePropertyWarningToolchainMismatch;
-  return m_collection_sp->GetPropertyAtIndexAsBoolean(
-      nullptr, idx, g_process_properties[idx].default_uint_value != 0);
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_process_properties[idx].default_uint_value != 0);
 }
 #endif
 
