@@ -2584,6 +2584,48 @@ static Instruction *foldSelectToPhi(SelectInst &Sel, const DominatorTree &DT,
   return nullptr;
 }
 
+/// Tries to reduce a pattern that arises when calculating the remainder of the
+/// Euclidean division. When the divisor is a power of two and is guaranteed not
+/// to be negative, a signed remainder can be folded with a bitwise and.
+///
+/// (x % n) < 0 ? (x % n) + n : (x % n)
+///    -> x & (n - 1)
+static Instruction *foldSelectWithSRem(SelectInst &SI, InstCombinerImpl &IC,
+                                       IRBuilderBase &Builder) {
+  Value *CondVal = SI.getCondition();
+  Value *TrueVal = SI.getTrueValue();
+  Value *FalseVal = SI.getFalseValue();
+
+  ICmpInst::Predicate Pred;
+  Value *Op, *RemRes, *Remainder;
+  const APInt *C;
+  bool TrueIfSigned = false;
+
+  if (!(match(CondVal, m_ICmp(Pred, m_Value(RemRes), m_APInt(C))) &&
+        IC.isSignBitCheck(Pred, *C, TrueIfSigned)))
+    return nullptr;
+
+  // If the sign bit is not set, we have a SGE/SGT comparison, and the operands
+  // of the select are inverted.
+  if (!TrueIfSigned)
+    std::swap(TrueVal, FalseVal);
+
+  // We are matching a quite specific pattern here:
+  // %rem = srem i32 %x, %n
+  // %cnd = icmp slt i32 %rem, 0
+  // %add = add i32 %rem, %n
+  // %sel = select i1 %cnd, i32 %add, i32 %rem
+  if (!(match(TrueVal, m_Add(m_Value(RemRes), m_Value(Remainder))) &&
+        match(RemRes, m_SRem(m_Value(Op), m_Specific(Remainder))) &&
+        IC.isKnownToBeAPowerOfTwo(Remainder, /*OrZero*/ true) &&
+        FalseVal == RemRes))
+    return nullptr;
+
+  Value *Add = Builder.CreateAdd(Remainder,
+                                 Constant::getAllOnesValue(RemRes->getType()));
+  return BinaryOperator::CreateAnd(Op, Add);
+}
+
 static Value *foldSelectWithFrozenICmp(SelectInst &Sel, InstCombiner::BuilderTy &Builder) {
   FreezeInst *FI = dyn_cast<FreezeInst>(Sel.getCondition());
   if (!FI)
@@ -3428,6 +3470,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       return IV;
 
   if (Instruction *I = foldSelectExtConst(SI))
+    return I;
+
+  if (Instruction *I = foldSelectWithSRem(SI, *this, Builder))
     return I;
 
   // Fold (select C, (gep Ptr, Idx), Ptr) -> (gep Ptr, (select C, Idx, 0))
