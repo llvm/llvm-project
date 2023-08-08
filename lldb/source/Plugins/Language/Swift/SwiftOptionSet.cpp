@@ -170,7 +170,7 @@ bool lldb_private::formatters::swift::SwiftOptionSetSummaryProvider::
   bool first_match = true;
   bool any_match = false;
 
-  llvm::APInt matched_value(llvm::APInt::getNullValue(64));
+  llvm::APInt matched_value(llvm::APInt::getZero(64));
 
   // Look for an exact case match first.
   for (auto val_name : *m_cases) {
