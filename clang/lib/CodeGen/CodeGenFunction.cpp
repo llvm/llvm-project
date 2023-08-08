@@ -572,7 +572,7 @@ llvm::ConstantInt *
 CodeGenFunction::getUBSanFunctionTypeHash(QualType Ty) const {
   // Remove any (C++17) exception specifications, to allow calling e.g. a
   // noexcept function through a non-noexcept pointer.
-  if (!isa<FunctionNoProtoType>(Ty))
+  if (!Ty->isFunctionNoProtoType())
     Ty = getContext().getFunctionTypeWithExceptionSpec(Ty, EST_None);
   std::string Mangled;
   llvm::raw_string_ostream Out(Mangled);
