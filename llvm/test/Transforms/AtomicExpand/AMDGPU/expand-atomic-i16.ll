@@ -530,7 +530,7 @@ define i16 @test_atomicrmw_xor_i16_local_align4(ptr addrspace(3) %ptr, i16 %valu
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_inc_i16_global(i16 addrspace(1)* %ptr, i16 %value) {
+define i16 @test_atomicrmw_inc_i16_global(ptr addrspace(1) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i16_global(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
@@ -561,11 +561,11 @@ define i16 @test_atomicrmw_inc_i16_global(i16 addrspace(1)* %ptr, i16 %value) {
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw uinc_wrap i16 addrspace(1)* %ptr, i16 %value seq_cst
+  %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i16 %value seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_inc_i16_global_align4(i16 addrspace(1)* %ptr, i16 %value) {
+define i16 @test_atomicrmw_inc_i16_global_align4(ptr addrspace(1) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i16_global_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -586,11 +586,11 @@ define i16 @test_atomicrmw_inc_i16_global_align4(i16 addrspace(1)* %ptr, i16 %va
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw uinc_wrap i16 addrspace(1)* %ptr, i16 %value seq_cst, align 4
+  %res = atomicrmw uinc_wrap ptr addrspace(1) %ptr, i16 %value seq_cst, align 4
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_inc_i16_local(i16 addrspace(3)* %ptr, i16 %value) {
+define i16 @test_atomicrmw_inc_i16_local(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i16_local(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
@@ -620,11 +620,11 @@ define i16 @test_atomicrmw_inc_i16_local(i16 addrspace(3)* %ptr, i16 %value) {
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw uinc_wrap i16 addrspace(3)* %ptr, i16 %value seq_cst
+  %res = atomicrmw uinc_wrap ptr addrspace(3) %ptr, i16 %value seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_inc_i16_local_align4(i16 addrspace(3)* %ptr, i16 %value) {
+define i16 @test_atomicrmw_inc_i16_local_align4(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i16_local_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -645,11 +645,11 @@ define i16 @test_atomicrmw_inc_i16_local_align4(i16 addrspace(3)* %ptr, i16 %val
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw uinc_wrap i16 addrspace(3)* %ptr, i16 %value seq_cst, align 4
+  %res = atomicrmw uinc_wrap ptr addrspace(3) %ptr, i16 %value seq_cst, align 4
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_inc_i16_flat(i16* %ptr, i16 %value) {
+define i16 @test_atomicrmw_inc_i16_flat(ptr %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i16_flat(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
@@ -680,11 +680,11 @@ define i16 @test_atomicrmw_inc_i16_flat(i16* %ptr, i16 %value) {
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw uinc_wrap i16* %ptr, i16 %value seq_cst
+  %res = atomicrmw uinc_wrap ptr %ptr, i16 %value seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_inc_i16_flat_align4(i16* %ptr, i16 %value) {
+define i16 @test_atomicrmw_inc_i16_flat_align4(ptr %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_inc_i16_flat_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -705,11 +705,11 @@ define i16 @test_atomicrmw_inc_i16_flat_align4(i16* %ptr, i16 %value) {
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw uinc_wrap i16* %ptr, i16 %value seq_cst, align 4
+  %res = atomicrmw uinc_wrap ptr %ptr, i16 %value seq_cst, align 4
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_dec_i16_global(i16 addrspace(1)* %ptr, i16 %value) {
+define i16 @test_atomicrmw_dec_i16_global(ptr addrspace(1) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i16_global(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(1) @llvm.ptrmask.p1.i64(ptr addrspace(1) [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(1) [[PTR]] to i64
@@ -742,11 +742,11 @@ define i16 @test_atomicrmw_dec_i16_global(i16 addrspace(1)* %ptr, i16 %value) {
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw udec_wrap i16 addrspace(1)* %ptr, i16 %value seq_cst
+  %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i16 %value seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_dec_i16_global_align4(i16 addrspace(1)* %ptr, i16 %value) {
+define i16 @test_atomicrmw_dec_i16_global_align4(ptr addrspace(1) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i16_global_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(1) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -769,11 +769,11 @@ define i16 @test_atomicrmw_dec_i16_global_align4(i16 addrspace(1)* %ptr, i16 %va
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw udec_wrap i16 addrspace(1)* %ptr, i16 %value seq_cst, align 4
+  %res = atomicrmw udec_wrap ptr addrspace(1) %ptr, i16 %value seq_cst, align 4
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_dec_i16_local(i16 addrspace(3)* %ptr, i16 %value) {
+define i16 @test_atomicrmw_dec_i16_local(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i16_local(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr addrspace(3) @llvm.ptrmask.p3.i32(ptr addrspace(3) [[PTR:%.*]], i32 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr addrspace(3) [[PTR]] to i32
@@ -805,11 +805,11 @@ define i16 @test_atomicrmw_dec_i16_local(i16 addrspace(3)* %ptr, i16 %value) {
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw udec_wrap i16 addrspace(3)* %ptr, i16 %value seq_cst
+  %res = atomicrmw udec_wrap ptr addrspace(3) %ptr, i16 %value seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_dec_i16_local_align4(i16 addrspace(3)* %ptr, i16 %value) {
+define i16 @test_atomicrmw_dec_i16_local_align4(ptr addrspace(3) %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i16_local_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr addrspace(3) [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -832,11 +832,11 @@ define i16 @test_atomicrmw_dec_i16_local_align4(i16 addrspace(3)* %ptr, i16 %val
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw udec_wrap i16 addrspace(3)* %ptr, i16 %value seq_cst, align 4
+  %res = atomicrmw udec_wrap ptr addrspace(3) %ptr, i16 %value seq_cst, align 4
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_dec_i16_flat(i16* %ptr, i16 %value) {
+define i16 @test_atomicrmw_dec_i16_flat(ptr %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i16_flat(
 ; CHECK-NEXT:    [[ALIGNEDADDR:%.*]] = call ptr @llvm.ptrmask.p0.i64(ptr [[PTR:%.*]], i64 -4)
 ; CHECK-NEXT:    [[TMP1:%.*]] = ptrtoint ptr [[PTR]] to i64
@@ -869,11 +869,11 @@ define i16 @test_atomicrmw_dec_i16_flat(i16* %ptr, i16 %value) {
 ; CHECK-NEXT:    [[EXTRACTED3:%.*]] = trunc i32 [[SHIFTED2]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED3]]
 ;
-  %res = atomicrmw udec_wrap i16* %ptr, i16 %value seq_cst
+  %res = atomicrmw udec_wrap ptr %ptr, i16 %value seq_cst
   ret i16 %res
 }
 
-define i16 @test_atomicrmw_dec_i16_flat_align4(i16* %ptr, i16 %value) {
+define i16 @test_atomicrmw_dec_i16_flat_align4(ptr %ptr, i16 %value) {
 ; CHECK-LABEL: @test_atomicrmw_dec_i16_flat_align4(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load i32, ptr [[PTR:%.*]], align 4
 ; CHECK-NEXT:    br label [[ATOMICRMW_START:%.*]]
@@ -896,6 +896,6 @@ define i16 @test_atomicrmw_dec_i16_flat_align4(i16* %ptr, i16 %value) {
 ; CHECK-NEXT:    [[EXTRACTED1:%.*]] = trunc i32 [[NEWLOADED]] to i16
 ; CHECK-NEXT:    ret i16 [[EXTRACTED1]]
 ;
-  %res = atomicrmw udec_wrap i16* %ptr, i16 %value seq_cst, align 4
+  %res = atomicrmw udec_wrap ptr %ptr, i16 %value seq_cst, align 4
   ret i16 %res
 }
