@@ -1865,6 +1865,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
             if (LdInst->getPointerOperandType() != LdInst->getType())
               break;
             CurDef = LdInst->getPointerOperand();
+            if (!isa<AllocaInst, LoadInst>(CurDef))
+              break;
             DIs = FindDbgDeclareUses(CurDef);
           }
         }
