@@ -163,9 +163,52 @@ createTempFromMold(mlir::Location loc, fir::FirOpBuilder &builder,
 static std::pair<hlfir::Entity, mlir::Value>
 createArrayTemp(mlir::Location loc, fir::FirOpBuilder &builder,
                 mlir::Type exprType, mlir::Value shape,
-                mlir::ValueRange extents, mlir::ValueRange lenParams) {
+                mlir::ValueRange extents, mlir::ValueRange lenParams,
+                std::optional<hlfir::Entity> polymorphicMold) {
   mlir::Type sequenceType = hlfir::getFortranElementOrSequenceType(exprType);
   llvm::StringRef tmpName{".tmp.array"};
+
+  if (polymorphicMold) {
+    // Create *allocated* polymorphic temporary using the dynamic type
+    // of the mold and the provided shape/extents. The created temporary
+    // array will be written element per element, that is why it has to be
+    // allocated.
+    mlir::Type boxHeapType = fir::HeapType::get(sequenceType);
+    mlir::Value alloc = fir::factory::genNullBoxStorage(
+        builder, loc, fir::ClassType::get(boxHeapType));
+    mlir::Value isHeapAlloc = builder.createBool(loc, true);
+    fir::FortranVariableFlagsAttr declAttrs =
+        fir::FortranVariableFlagsAttr::get(
+            builder.getContext(), fir::FortranVariableFlagsEnum::allocatable);
+
+    auto declareOp = builder.create<hlfir::DeclareOp>(loc, alloc, tmpName,
+                                                      /*shape=*/nullptr,
+                                                      lenParams, declAttrs);
+
+    int rank = extents.size();
+    fir::runtime::genAllocatableApplyMold(builder, loc, alloc,
+                                          polymorphicMold->getFirBase(), rank);
+    if (!extents.empty()) {
+      mlir::Type idxTy = builder.getIndexType();
+      mlir::Value one = builder.createIntegerConstant(loc, idxTy, 1);
+      unsigned dim = 0;
+      for (mlir::Value extent : extents) {
+        mlir::Value dimIndex = builder.createIntegerConstant(loc, idxTy, dim++);
+        fir::runtime::genAllocatableSetBounds(builder, loc, alloc, dimIndex,
+                                              one, extent);
+      }
+    }
+    if (!lenParams.empty()) {
+      // We should call AllocatableSetDerivedLength() here.
+      // TODO: does the mold provide the length parameters or
+      // the operation itself or should they be in sync?
+      TODO(loc, "polymorphic type with length parameters in HLFIR");
+    }
+    fir::runtime::genAllocatableAllocate(builder, loc, alloc);
+
+    return {hlfir::Entity{declareOp.getBase()}, isHeapAlloc};
+  }
+
   mlir::Value allocmem = builder.createHeapTemporary(loc, sequenceType, tmpName,
                                                      extents, lenParams);
   auto declareOp =
@@ -676,10 +719,17 @@ struct ElementalOpConversion
     builder.setListener(&listener);
 
     mlir::Value shape = adaptor.getShape();
+    std::optional<hlfir::Entity> mold;
+    if (adaptor.getMold())
+      mold = getBufferizedExprStorage(adaptor.getMold());
     auto extents = hlfir::getIndexExtents(loc, builder, shape);
     auto [temp, cleanup] =
         createArrayTemp(loc, builder, elemental.getType(), shape, extents,
-                        adaptor.getTypeparams());
+                        adaptor.getTypeparams(), mold);
+    // If the box load is needed, we'd better place it outside
+    // of the loop nest.
+    temp = derefPointersAndAllocatables(loc, builder, temp);
+
     // Generate a loop nest looping around the fir.elemental shape and clone
     // fir.elemental region inside the inner loop.
     hlfir::LoopNest loopNest =
