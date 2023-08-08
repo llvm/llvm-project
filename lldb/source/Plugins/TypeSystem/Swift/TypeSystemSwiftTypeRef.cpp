@@ -2579,7 +2579,7 @@ TypeSystemSwiftTypeRef::GetBitSize(opaque_compiler_type_t type,
         /// Type::GetByteSize() may call into this function again.
         llvm::Optional<uint64_t> GetStaticByteSize() {
           if (m_byte_size_has_value)
-            return m_byte_size;
+            return uint64_t(m_byte_size);
           return {};
         }
       };
