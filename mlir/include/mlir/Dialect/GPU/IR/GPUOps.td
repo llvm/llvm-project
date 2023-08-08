@@ -1776,7 +1776,7 @@ def GPU_Create2To4SpMatOp : GPU_Op<"create_2to4_spmat", [GPU_AsyncOpInterface]> 
                        Index:$cols,
                        GPU_Prune2To4SpMatFlagAttr:$pruneFlag,
                        AnyMemRef:$memref);
-  let results = (outs Res<GPU_SparseSpMatHandle>:$spMat, 
+  let results = (outs Res<GPU_SparseSpMatHandle>:$spMat,
                       Optional<GPU_AsyncToken>:$asyncToken);
 
   let assemblyFormat = [{
@@ -2176,14 +2176,14 @@ def GPU_SpGEMMWorkEstimationOrComputeKind : I32EnumAttr<"SpGEMMWorkEstimationOrC
       let cppNamespace = GPU_Dialect.cppNamespace;
 }
 
-def GPU_SpGEMMWorkEstimationOrComputeKindAttr : EnumAttr<GPU_Dialect, 
-    GPU_SpGEMMWorkEstimationOrComputeKind, 
+def GPU_SpGEMMWorkEstimationOrComputeKindAttr : EnumAttr<GPU_Dialect,
+    GPU_SpGEMMWorkEstimationOrComputeKind,
     "spgemm_work_estimation_or_compute_kind"> {}
 
 def GPU_SpGEMMCreateDescrOp : GPU_Op<"spgemm_create_descr", [GPU_AsyncOpInterface]> {
   let summary = "SpGEMM Create Descr operation";
   let description = [{
-    The `gpu.spgemm_create_descr` creates a descriptor for the SpGEMM operation. 
+    The `gpu.spgemm_create_descr` creates a descriptor for the SpGEMM operation.
     The descriptor describes the SpGEMM operation and stores the internal data
     throughout the computation. It needs to be passed as an argument to
     spgemm_* operations.
@@ -2238,11 +2238,11 @@ def GPU_SpGEMMDestroyDescrOp : GPU_Op<"spgemm_destroy_descr", [GPU_AsyncOpInterf
 def GPU_SpGEMMWorkEstimationOrComputeOp : GPU_Op<"spgemm_work_estimation_or_compute", [GPU_AsyncOpInterface]> {
   let summary = "SpGEMM work estimation operation";
   let description = [{
-    The `gpu.spgemm_work_estimation_or_compute` is used to call 
+    The `gpu.spgemm_work_estimation_or_compute` is used to call
     cusparseSpGEMM_workEstimation or cusparseSpGEMM_compute. Both of them are
     for both determining the buffer size and performing the actual computation.
     The operation expects handles returned by previous sparse operations to
-    construct an environment and the operands for SpGEMM. 
+    construct an environment and the operands for SpGEMM.
     The buffer must have been allocated on the device.
 
 
@@ -2256,8 +2256,8 @@ def GPU_SpGEMMWorkEstimationOrComputeOp : GPU_Op<"spgemm_work_estimation_or_comp
 
     ```mlir
     %bufferSz, %token = gpu.spgemm_work_estimation_or_compute async [%dep]{COMPUTE}
-                          %desc, %spmatA{NON_TRANSPOSE}, %spmatB{NON_TRANSPOSE}, 
-                          %spmatC, ALG2, %spgemmDesc, %c0, %alloc: f32 into 
+                          %desc, %spmatA{NON_TRANSPOSE}, %spmatB{NON_TRANSPOSE},
+                          %spmatC, ALG2, %spgemmDesc, %c0, %alloc: f32 into
                           memref<0xi8>
     ```
 
@@ -2358,8 +2358,8 @@ def GPU_SpGEMMEstimateMemoryOp : GPU_Op<"spgemm_estimate_memory", [GPU_AsyncOpIn
   auto modeA = gpu::TransposeMode::NON_TRANSPOSE;
   auto modeB = gpu::TransposeMode::NON_TRANSPOSE;
   auto alg = gpu::SpGEMMAlg::ALG1;
-  return build($_builder, $_state, bufferSz3New, bufferSz2New, asyncToken, 
-               asyncDependencies, desc, modeA, modeB, spmatA, spmatB, spmatC, 
+  return build($_builder, $_state, bufferSz3New, bufferSz2New, asyncToken,
+               asyncDependencies, desc, modeA, modeB, spmatA, spmatB, spmatC,
                computeType, alg, bufferSz3, buffer3, bufferSz2);}]>
   ];
 
@@ -2375,7 +2375,7 @@ def GPU_SpGEMMCopyOp : GPU_Op<"spgemm_copy", [GPU_AsyncOpInterface]> {
   let description = [{
     The `gpu.spgemm_copy` operation copies a sparse matrix, e.g., the result of
     the SpGEMM computation.
-    
+
     If the `async` keyword is present, the op is executed asynchronously (i.e.
     it does not block until the execution has finished on the device). In
     that case, it returns a `!gpu.async.token` in addition to the environment.
@@ -2430,7 +2430,7 @@ def GPU_SpGEMMGetSizeOp : GPU_Op<"spgemm_get_size", [GPU_AsyncOpInterface]> {
   let description = [{
     The `gpu.spgemm_get_size` operation retrieves the number of rows, number of
     columns, and number of non-zero elements of a sparse matrix.
-    
+
     If the `async` keyword is present, the op is executed asynchronously (i.e.
     it does not block until the execution has finished on the device). In
     that case, it returns a `!gpu.async.token` in addition to the environment.
