@@ -79,11 +79,6 @@ template<typename T> concept C16 = true && (0 && 0); // expected-error {{atomic 
 // expected-warning@-1{{use of logical '&&' with constant operand}}
 // expected-note@-2{{use '&' for a bitwise operation}}
 // expected-note@-3{{remove constant to silence this warning}}
-// expected-warning@-4{{use of logical '&&' with constant operand}}
-// expected-note@-5{{use '&' for a bitwise operation}}
-// expected-note@-6{{remove constant to silence this warning}}
-
-
 template<typename T> concept C17 = T{};
 static_assert(!C17<bool>);
 template<typename T> concept C18 = (bool&&)true;
