@@ -47,7 +47,7 @@ public:
 
   bool IsSourceFile(llvm::StringRef file_path) const override;
 
-  std::vector<ConstString>
+  std::vector<FormattersMatchCandidate>
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic) override;
 
