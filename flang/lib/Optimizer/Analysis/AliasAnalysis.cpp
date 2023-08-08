@@ -10,6 +10,7 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
@@ -227,6 +228,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
             attributes.set(Attribute::Pointer);
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
+        })
+        .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
+          // Track further through the operand
+          v = op.getMemref();
+          defOp = v.getDefiningOp();
         })
         .Default([&](auto op) {
           defOp = nullptr;
