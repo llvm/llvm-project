@@ -127,6 +127,10 @@ DEFAULT_PARAMETERS = [
             AddFeature("modules-build"),
             AddCompileFlag("-fmodules"),
             AddCompileFlag("-fcxx-modules"), # AppleClang disregards -fmodules entirely when compiling C++. This enables modules for C++.
+            # Note: We use a custom modules cache path to make sure that we don't reuse
+            #       the default one, which can be shared across CI builds with different
+            #       configurations.
+            AddCompileFlag(lambda cfg: f"-fmodules-cache-path={cfg.test_exec_root}/ModuleCache"),
         ]
         if enable_modules == "clang"
         else [
