@@ -37,4 +37,4 @@ Options
 .. option:: DeduplicateFindings
 
    A boolean that controls whether the check should deduplicate findings for the
-   same symbol. Defaults to true.
+   same symbol. Defaults to `true`.
