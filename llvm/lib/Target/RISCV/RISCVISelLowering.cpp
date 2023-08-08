@@ -1061,7 +1061,8 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         if (Subtarget.hasStdExtZvbb()) {
           setOperationAction({ISD::BITREVERSE, ISD::BSWAP, ISD::CTLZ,
                               ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ,
-                              ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP},
+                              ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP, ISD::ROTL,
+                              ISD::ROTR},
                              VT, Custom);
         } else {
           // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
@@ -4887,6 +4888,8 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(SHL)
   OP_CASE(SRA)
   OP_CASE(SRL)
+  OP_CASE(ROTL)
+  OP_CASE(ROTR)
   OP_CASE(BSWAP)
   OP_CASE(CTTZ)
   OP_CASE(CTLZ)
@@ -5001,7 +5004,7 @@ static bool hasMergeOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    122 &&
+                    124 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -5025,7 +5028,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    122 &&
+                    124 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -5077,6 +5080,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerShiftRightParts(Op, DAG, false);
   case ISD::ROTL:
   case ISD::ROTR:
+    if (Op.getValueType().isFixedLengthVector()) {
+      assert(Subtarget.hasStdExtZvbb());
+      return lowerToScalableOp(Op, DAG);
+    }
     assert(Subtarget.hasVendorXTHeadBb() &&
            !(Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) &&
            "Unexpected custom legalization");
@@ -16478,6 +16485,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SREM_VL)
   NODE_NAME_CASE(SRA_VL)
   NODE_NAME_CASE(SRL_VL)
+  NODE_NAME_CASE(ROTL_VL)
+  NODE_NAME_CASE(ROTR_VL)
   NODE_NAME_CASE(SUB_VL)
   NODE_NAME_CASE(UDIV_VL)
   NODE_NAME_CASE(UREM_VL)

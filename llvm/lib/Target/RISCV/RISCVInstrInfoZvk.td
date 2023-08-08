@@ -584,6 +584,25 @@ defm : VPatUnaryVL_V<riscv_ctlz_vl, "PseudoVCLZ">;
 defm : VPatUnaryVL_V<riscv_cttz_vl, "PseudoVCTZ">;
 defm : VPatUnaryVL_V<riscv_ctpop_vl, "PseudoVCPOP">;
 
+defm : VPatBinaryVL_VV_VX<riscv_rotl_vl, "PseudoVROL">;
+// Although there is no vrol.vi, an immediate rotate left can be achieved by
+// negating the immediate in vror.vi
+foreach vti = AllIntegerVectors in {
+  let Predicates = !listconcat([HasStdExtZvbb],
+                               GetVTypePredicates<vti>.Predicates) in {
+    def : Pat<(riscv_rotl_vl vti.RegClass:$rs2,
+                             (vti.Vector (SplatPat_uimm6 uimm6:$rs1)),
+                             (vti.Vector vti.RegClass:$merge),
+                             (vti.Mask V0), VLOpFrag),
+              (!cast<Instruction>("PseudoVROR_VI_"#vti.LMul.MX#"_MASK")
+                 vti.RegClass:$merge,
+                 vti.RegClass:$rs2,
+                 (!cast<SDNodeXForm>("InvRot" # vti.SEW # "Imm") uimm6:$rs1),
+                 (vti.Mask V0), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
+  }
+}
+defm : VPatBinaryVL_VV_VX_VI<riscv_rotr_vl, "PseudoVROR", uimm6>;
+
 foreach vtiToWti = AllWidenableIntVectors in {
   defvar vti = vtiToWti.Vti;
   defvar wti = vtiToWti.Wti;
