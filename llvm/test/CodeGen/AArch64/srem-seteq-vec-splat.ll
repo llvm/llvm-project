@@ -5,13 +5,13 @@
 define <4 x i32> @test_srem_odd_25(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_25:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #23593
-; CHECK-NEXT:    mov w9, #47185
+; CHECK-NEXT:    mov w8, #23593 // =0x5c29
+; CHECK-NEXT:    mov w9, #47185 // =0xb851
 ; CHECK-NEXT:    movk w8, #49807, lsl #16
 ; CHECK-NEXT:    movk w9, #1310, lsl #16
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    dup v2.4s, w9
-; CHECK-NEXT:    mov w8, #28834
+; CHECK-NEXT:    mov w8, #28834 // =0x70a2
 ; CHECK-NEXT:    movk w8, #2621, lsl #16
 ; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    movi v1.4s, #1
@@ -29,14 +29,14 @@ define <4 x i32> @test_srem_odd_25(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_even_100(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_even_100:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #23593
-; CHECK-NEXT:    mov w9, #47184
+; CHECK-NEXT:    mov w8, #23593 // =0x5c29
+; CHECK-NEXT:    mov w9, #47184 // =0xb850
 ; CHECK-NEXT:    movk w8, #49807, lsl #16
 ; CHECK-NEXT:    movk w9, #1310, lsl #16
 ; CHECK-NEXT:    movi v3.4s, #1
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    dup v2.4s, w9
-; CHECK-NEXT:    mov w8, #23592
+; CHECK-NEXT:    mov w8, #23592 // =0x5c28
 ; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    movk w8, #655, lsl #16
 ; CHECK-NEXT:    shl v0.4s, v2.4s, #30
@@ -58,13 +58,13 @@ define <4 x i32> @test_srem_even_100(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_odd_neg25(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_neg25:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #23593
-; CHECK-NEXT:    mov w9, #47185
+; CHECK-NEXT:    mov w8, #23593 // =0x5c29
+; CHECK-NEXT:    mov w9, #47185 // =0xb851
 ; CHECK-NEXT:    movk w8, #49807, lsl #16
 ; CHECK-NEXT:    movk w9, #1310, lsl #16
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    dup v2.4s, w9
-; CHECK-NEXT:    mov w8, #28834
+; CHECK-NEXT:    mov w8, #28834 // =0x70a2
 ; CHECK-NEXT:    movk w8, #2621, lsl #16
 ; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    movi v1.4s, #1
@@ -82,14 +82,14 @@ define <4 x i32> @test_srem_odd_neg25(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_even_neg100(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_even_neg100:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #23593
-; CHECK-NEXT:    mov w9, #47184
+; CHECK-NEXT:    mov w8, #23593 // =0x5c29
+; CHECK-NEXT:    mov w9, #47184 // =0xb850
 ; CHECK-NEXT:    movk w8, #49807, lsl #16
 ; CHECK-NEXT:    movk w9, #1310, lsl #16
 ; CHECK-NEXT:    movi v3.4s, #1
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    dup v2.4s, w9
-; CHECK-NEXT:    mov w8, #23592
+; CHECK-NEXT:    mov w8, #23592 // =0x5c28
 ; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
 ; CHECK-NEXT:    movk w8, #655, lsl #16
 ; CHECK-NEXT:    shl v0.4s, v2.4s, #30
@@ -112,7 +112,7 @@ define <4 x i32> @test_srem_even_neg100(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_odd_undef1(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_odd_undef1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #34079
+; CHECK-NEXT:    mov w8, #34079 // =0x851f
 ; CHECK-NEXT:    movk w8, #20971, lsl #16
 ; CHECK-NEXT:    movi v3.4s, #25
 ; CHECK-NEXT:    dup v1.4s, w8
@@ -135,7 +135,7 @@ define <4 x i32> @test_srem_odd_undef1(<4 x i32> %X) nounwind {
 define <4 x i32> @test_srem_even_undef1(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_srem_even_undef1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #34079
+; CHECK-NEXT:    mov w8, #34079 // =0x851f
 ; CHECK-NEXT:    movk w8, #20971, lsl #16
 ; CHECK-NEXT:    movi v3.4s, #100
 ; CHECK-NEXT:    dup v1.4s, w8
