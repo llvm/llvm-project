@@ -10,10 +10,9 @@ define <2 x i64> @rax1(<2 x i64> %x, <2 x i64> %y) {
 ;
 ; NOSHA3-LABEL: rax1:
 ; NOSHA3:       // %bb.0:
-; NOSHA3-NEXT:    ushr v2.2d, v1.2d, #63
-; NOSHA3-NEXT:    add v1.2d, v1.2d, v1.2d
-; NOSHA3-NEXT:    orr v1.16b, v1.16b, v2.16b
-; NOSHA3-NEXT:    eor v0.16b, v0.16b, v1.16b
+; NOSHA3-NEXT:    add v2.2d, v1.2d, v1.2d
+; NOSHA3-NEXT:    usra v2.2d, v1.2d, #63
+; NOSHA3-NEXT:    eor v0.16b, v0.16b, v2.16b
 ; NOSHA3-NEXT:    ret
     %a = call <2 x i64> @llvm.fshl.v2i64(<2 x i64> %y, <2 x i64> %y, <2 x i64> <i64 1, i64 1>)
     %b = xor <2 x i64> %x, %a

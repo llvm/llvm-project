@@ -94,9 +94,9 @@ define <4 x i32> @rotl_v4i32(<4 x i32> %x, <4 x i32> %z) {
 define <4 x i32> @rotl_v4i32_rotl_const_shift(<4 x i32> %x) {
 ; CHECK-LABEL: rotl_v4i32_rotl_const_shift:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ushr v1.4s, v0.4s, #29
-; CHECK-NEXT:    shl v0.4s, v0.4s, #3
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    shl v1.4s, v0.4s, #3
+; CHECK-NEXT:    usra v1.4s, v0.4s, #29
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %f = call <4 x i32> @llvm.fshl.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
   ret <4 x i32> %f
@@ -185,8 +185,8 @@ define <4 x i32> @rotr_v4i32_const_shift(<4 x i32> %x) {
 ; CHECK-LABEL: rotr_v4i32_const_shift:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    shl v1.4s, v0.4s, #29
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #3
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
+; CHECK-NEXT:    usra v1.4s, v0.4s, #3
+; CHECK-NEXT:    mov v0.16b, v1.16b
 ; CHECK-NEXT:    ret
   %f = call <4 x i32> @llvm.fshr.v4i32(<4 x i32> %x, <4 x i32> %x, <4 x i32> <i32 3, i32 3, i32 3, i32 3>)
   ret <4 x i32> %f

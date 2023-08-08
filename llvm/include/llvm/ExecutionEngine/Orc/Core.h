@@ -1434,6 +1434,9 @@ public:
   /// Return the triple for the executor.
   const Triple &getTargetTriple() const { return EPC->getTargetTriple(); }
 
+  // Return the page size for the executor.
+  size_t getPageSize() const { return EPC->getPageSize(); }
+
   /// Get the SymbolStringPool for this instance.
   std::shared_ptr<SymbolStringPool> getSymbolStringPool() {
     return EPC->getSymbolStringPool();
