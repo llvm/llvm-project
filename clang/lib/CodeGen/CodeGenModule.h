@@ -361,6 +361,10 @@ private:
   llvm::DenseMap<llvm::StringRef, GlobalDecl> EmittedDeferredDecls;
 
   void addEmittedDeferredDecl(GlobalDecl GD) {
+    // Reemission is only needed in incremental mode.
+    if (!Context.getLangOpts().IncrementalExtensions)
+      return;
+
     // Assume a linkage by default that does not need reemission.
     auto L = llvm::GlobalValue::ExternalLinkage;
     if (llvm::isa<FunctionDecl>(GD.getDecl()))
