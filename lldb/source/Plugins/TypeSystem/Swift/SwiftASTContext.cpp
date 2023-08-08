@@ -90,7 +90,6 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Host/Host.h"
@@ -109,6 +108,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/ThreadSafeDenseMap.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/XcodeSDK.h"
 

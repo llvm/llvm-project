@@ -15,7 +15,7 @@
 
 #include "Plugins/TypeSystem/Swift/TypeSystemSwift.h"
 #include "lldb/Core/SwiftForward.h"
-#include "lldb/Core/ThreadSafeDenseMap.h"
+#include "lldb/Utility/ThreadSafeDenseMap.h"
 
 #include "swift/AST/Type.h"
 
