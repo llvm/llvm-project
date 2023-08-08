@@ -21,7 +21,10 @@ add_mlir_conversion_library(MLIRConvertToLLVMPass
 
   LINK_LIBS PUBLIC
   MLIRConvertToLLVMInterface
-  MLIRPass
   MLIRIR
+  MLIRLLVMDialect
+  MLIRPass
+  MLIRRewrite
   MLIRSupport
+  MLIRTransformUtils
   )
