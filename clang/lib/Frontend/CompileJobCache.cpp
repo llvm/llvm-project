@@ -93,7 +93,7 @@ private:
 
   /// Replay a cache hit.
   ///
-  /// Return status if should exit immediately, otherwise None.
+  /// Return status if should exit immediately, otherwise std::nullopt.
   std::optional<int> replayCachedResult(const llvm::cas::CASID &ResultCacheKey,
                                         llvm::cas::ObjectRef ResultID,
                                         bool JustComputedResult);
@@ -188,7 +188,7 @@ private:
   void tryReleaseLLBuildExecutionLane();
 
   static StringRef getOutputKindName(OutputKind Kind);
-  /// \returns \p None if \p Name doesn't match one of the output kind names.
+  /// \returns \p std::nullopt if \p Name doesn't match one of the output kind names.
   static std::optional<OutputKind> getOutputKindForName(StringRef Name);
 
   std::unique_ptr<llvm::cas::remote::KeyValueDBClient> RemoteKVClient;
