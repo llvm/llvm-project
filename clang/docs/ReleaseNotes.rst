@@ -157,6 +157,10 @@ Bug Fixes to C++ Support
   (`#35574 <https://github.com/llvm/llvm-project/issues/35574>_`) and
   (`#27224 <https://github.com/llvm/llvm-project/issues/27224>_`).
 
+- Clang emits an error on substitution failure within lambda body inside a
+  requires-expression. This fixes:
+  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>_`).
+
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed an import failure of recursive friend class template.
