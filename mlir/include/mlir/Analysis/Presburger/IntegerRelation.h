@@ -326,7 +326,7 @@ public:
 
   /// Clear all constraints and add an invalid equation indicating that the set
   /// is empty.
-  void setEmpty();
+  void markSetEmpty();
 
   /// Sets the `values.size()` variables starting at `po`s to the specified
   /// values and removes them.
@@ -354,6 +354,9 @@ public:
   /// any equality, or if any invalid constraints are discovered on any row.
   /// Returns false otherwise.
   bool isEmpty() const;
+
+  /// Performs GCD checks and invalid constraint checks.
+  bool isPlainEmpty() const;
 
   /// Runs the GCD test on all equality constraints. Returns true if this test
   /// fails on any equality. Returns false otherwise.
@@ -549,9 +552,8 @@ public:
 
   void removeDuplicateDivs();
 
-  /// Attempts to simplify the constraints. The return value indicates whether
-  /// the set is empty.
-  bool simplify();
+  /// Attempts to simplify the constraints.
+  void simplify();
 
   /// Converts variables of kind srcKind in the range [varStart, varLimit) to
   /// variables of kind dstKind. If `pos` is given, the variables are placed at
@@ -733,9 +735,7 @@ protected:
   unsigned gaussianEliminateVars(unsigned posStart, unsigned posLimit);
 
   /// Perform a Gaussian elimination operation to reduce all equations to
-  /// standard form, and call setempty for cases that are clearly empty. the
-  /// return value indicates whether the number of constraints has been modified
-  /// or not.
+  /// standard form. The return value indicates if anything was modified.
   bool gaussianEliminate();
 
   /// Eliminates the variable at the specified position using Fourier-Motzkin
@@ -770,8 +770,7 @@ protected:
   bool isColZero(unsigned pos) const;
 
   /// Checks for identical inequalities and eliminates redundant inequalities.
-  /// The return value indicates whether the number of constraints has been
-  /// modified.
+  /// The return value indicates if anything has changed.
   bool removeDuplicateConstraints();
 
   /// Returns false if the fields corresponding to various variable counts, or

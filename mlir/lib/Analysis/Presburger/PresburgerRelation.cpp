@@ -1018,7 +1018,8 @@ bool PresburgerRelation::hasOnlyDivLocals() const {
 PresburgerRelation PresburgerRelation::simplify() {
   PresburgerRelation rel = PresburgerRelation(getSpace());
   for (IntegerRelation &disjunct : disjuncts) {
-    if (disjunct.simplify())
+    disjunct.simplify();
+    if (!disjunct.isPlainEmpty())
       rel.unionInPlace(disjunct);
   }
   return rel;

@@ -445,13 +445,12 @@ void IntegerRelation::clearConstraints() {
   inequalities.resizeVertically(0);
 }
 
-void IntegerRelation::setEmpty() {
+void IntegerRelation::markSetEmpty() {
   clearConstraints();
-  auto col = getNumCols();
-  std::vector<int64_t> eqeff(col, 0);
+  unsigned col = getNumCols();
+  SmallVector<int64_t> eqeff(col, 0);
   eqeff.back() = 1;
-  ArrayRef<int64_t> eq(eqeff);
-  addEquality(eq);
+  addEquality(eqeff);
 }
 
 /// Gather all lower and upper bounds of the variable at `pos`, and
@@ -707,6 +706,12 @@ bool IntegerRelation::isEmpty() const {
     if (tmpCst.hasInvalidConstraint())
       return true;
   }
+  return false;
+}
+
+bool IntegerRelation::isPlainEmpty() const {
+  if (isEmptyByGCDTest() || hasInvalidConstraint())
+    return true;
   return false;
 }
 
@@ -1131,7 +1136,7 @@ bool IntegerRelation::gaussianEliminate() {
     if (atEq(i, vars) == 0)
       continue;
 
-    setEmpty();
+    markSetEmpty();
     return true;
   }
   // Rows that are confirmed to be all zeros can be eliminated.
@@ -1329,19 +1334,19 @@ void IntegerRelation::removeDuplicateDivs() {
   divs.removeDuplicateDivs(merge);
 }
 
-bool IntegerRelation::simplify() {
+void IntegerRelation::simplify() {
   bool changed = true;
-  // Repeat the attempt when there is a modification to the constraints.
+  // Repeat until we reach a fixed point.
   while (changed) {
     changed = false;
     normalizeConstraintsByGCD();
     changed |= gaussianEliminate();
-    if (isEmptyByGCDTest() || hasInvalidConstraint())
-      return false;
+    if (isPlainEmpty())
+      return;
     changed |= removeDuplicateConstraints();
   }
   // Current set is not empty.
-  return true;
+  return;
 }
 
 /// Removes local variables using equalities. Each equality is checked if it
@@ -2346,7 +2351,7 @@ bool IntegerRelation::removeDuplicateConstraints() {
       removeInequality(l);
       removeInequality(k);
     } else
-      setEmpty();
+      markSetEmpty();
     break;
   }
 
