@@ -1857,8 +1857,8 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ArmSMEDialect",
-        ":IR",
         ":Dialect",
+        ":IR",
     ],
 )
 
@@ -1870,8 +1870,8 @@ cc_library(
     deps = [
         ":ArithDialect",
         ":ArmSMEDialect",
-        ":ArmSMEUtils",
         ":ArmSMETransformsPassIncGen",
+        ":ArmSMEUtils",
         ":FuncDialect",
         ":IR",
         ":LLVMCommonConversion",
@@ -5417,6 +5417,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/LLVMIR/NVVMDialect.h"],
     includes = ["include"],
     deps = [
+        ":ConvertToLLVM",
         ":DialectUtils",
         ":IR",
         ":LLVMDialect",
@@ -5529,6 +5530,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":ConversionPassIncGen",
+        ":ConvertToLLVM",
         ":FuncDialect",
         ":GPUDialect",
         ":IR",
@@ -7010,6 +7012,23 @@ cc_library(
 )
 
 cc_library(
+    name = "ConvertToLLVM",
+    srcs = glob(["lib/Conversion/ConvertToLLVM/*.cpp"]),
+    hdrs = glob(["include/mlir/Conversion/ConvertToLLVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ConversionPassIncGen",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":Pass",
+        ":Rewrite",
+        ":TransformUtils",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "FuncToLLVM",
     srcs = [
         "lib/Conversion/FuncToLLVM/FuncToLLVM.cpp",
@@ -7976,6 +7995,7 @@ cc_library(
         ":ComplexToSPIRV",
         ":ControlFlowDialect",
         ":ConversionPasses",
+        ":ConvertToLLVM",
         ":DLTIDialect",
         ":EmitCDialect",
         ":FuncDialect",
