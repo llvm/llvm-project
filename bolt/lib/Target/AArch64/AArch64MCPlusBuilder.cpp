@@ -1352,6 +1352,34 @@ public:
     return createInstrumentedIndCallHandlerExitBB();
   }
 
+  InstructionListType createGetter(MCContext *Ctx, const char *name) const {
+    InstructionListType Insts(4);
+    MCSymbol *Locs = Ctx->getOrCreateSymbol(name);
+    InstructionListType Addr = materializeAddress(Locs, Ctx, AArch64::X0);
+    std::copy(Addr.begin(), Addr.end(), Insts.begin());
+    assert(Addr.size() == 2 && "Invalid Addr size");
+    loadReg(Insts[2], AArch64::X0, AArch64::X0);
+    createReturn(Insts[3]);
+    return Insts;
+  }
+
+  InstructionListType createNumCountersGetter(MCContext *Ctx) const override {
+    return createGetter(Ctx, "__bolt_num_counters");
+  }
+
+  InstructionListType
+  createInstrLocationsGetter(MCContext *Ctx) const override {
+    return createGetter(Ctx, "__bolt_instr_locations");
+  }
+
+  InstructionListType createInstrTablesGetter(MCContext *Ctx) const override {
+    return createGetter(Ctx, "__bolt_instr_tables");
+  }
+
+  InstructionListType createInstrNumFuncsGetter(MCContext *Ctx) const override {
+    return createGetter(Ctx, "__bolt_instr_num_funcs");
+  }
+
   void convertIndirectCallToLoad(MCInst &Inst, MCPhysReg Reg) override {
     bool IsTailCall = isTailCall(Inst);
     if (IsTailCall)
