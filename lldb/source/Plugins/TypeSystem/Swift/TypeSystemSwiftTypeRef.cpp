@@ -3633,10 +3633,10 @@ void TypeSystemSwiftTypeRef::DumpTypeDescription(
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
-    opaque_compiler_type_t type, Stream *s, lldb::DescriptionLevel level,
+    opaque_compiler_type_t type, Stream &s, lldb::DescriptionLevel level,
     ExecutionContextScope *exe_scope) {
   LLDB_SCOPED_TIMER();
-  DumpTypeDescription(type, s, false, true, level, exe_scope);
+  DumpTypeDescription(type, &s, false, true, level, exe_scope);
 }
 
 void TypeSystemSwiftTypeRef::DumpTypeDescription(
@@ -3689,7 +3689,7 @@ TypeSystemSwiftTypeRef::dump(opaque_compiler_type_t type) const {
 #endif
 
 bool TypeSystemSwiftTypeRef::DumpTypeValue(
-    opaque_compiler_type_t type, Stream *s, lldb::Format format,
+    opaque_compiler_type_t type, Stream &s, lldb::Format format,
     const DataExtractor &data, lldb::offset_t data_offset,
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, ExecutionContextScope *exe_scope,
@@ -3749,7 +3749,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
       default:
         break;
       }
-      return DumpDataExtractor(data, s, data_offset, format, data_byte_size,
+      return DumpDataExtractor(data, &s, data_offset, format, data_byte_size,
                                item_count, UINT32_MAX, LLDB_INVALID_ADDRESS,
                                bitfield_bit_size, bitfield_bit_offset,
                                exe_scope);
@@ -3762,7 +3762,7 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
       assert(referent_node->getKind() == Node::Kind::Type);
       auto referent_type = RemangleAsType(dem, referent_node);
       return referent_type.DumpTypeValue(
-          s, format, data, data_offset, data_byte_size, bitfield_bit_size,
+          &s, format, data, data_offset, data_byte_size, bitfield_bit_size,
           bitfield_bit_offset, exe_scope, is_base_class);
     }
     case Node::Kind::BoundGenericStructure:
@@ -3791,9 +3791,9 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
                 SwiftLanguageRuntime::Get(exe_scope->CalculateProcess())) {
           ExecutionContext exe_ctx;
           exe_scope->CalculateExecutionContext(exe_ctx);
-          if (auto case_name =
-                  runtime->GetEnumCaseName({weak_from_this(), type}, data, &exe_ctx)) {
-            s->PutCString(*case_name);
+          if (auto case_name = runtime->GetEnumCaseName(
+                  {weak_from_this(), type}, data, &exe_ctx)) {
+            s.PutCString(*case_name);
             return true;
           }
         }
@@ -3834,13 +3834,13 @@ bool TypeSystemSwiftTypeRef::DumpTypeValue(
   StreamString ast_s;
   auto defer = llvm::make_scope_exit([&] {
     assert(Equivalent(ConstString(ast_s.GetString()),
-                      ConstString(((StreamString *)s)->GetString())) &&
+                      ConstString(((StreamString *)&s)->GetString())) &&
            "TypeSystemSwiftTypeRef diverges from SwiftASTContext");
   });
 #endif
   VALIDATE_AND_RETURN(
       impl, DumpTypeValue, type, exe_scope,
-      (ReconstructType(type), &ast_s, format, data, data_offset, data_byte_size,
+      (ReconstructType(type), ast_s, format, data, data_offset, data_byte_size,
        bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class),
       (ReconstructType(type), s, format, data, data_offset, data_byte_size,
        bitfield_bit_size, bitfield_bit_offset, exe_scope, is_base_class));
