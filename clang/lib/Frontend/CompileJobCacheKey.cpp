@@ -55,7 +55,7 @@ createCompileJobCacheKeyForArgs(ObjectStore &CAS,
   return llvm::cantFail(Builder.create(CAS)).getID();
 }
 
-static Optional<llvm::cas::CASID>
+static std::optional<llvm::cas::CASID>
 createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
                              CompilerInvocation CI) {
   FrontendOptions &FrontendOpts = CI.getFrontendOpts();
@@ -132,7 +132,7 @@ createCompileJobCacheKeyImpl(ObjectStore &CAS, DiagnosticsEngine &Diags,
     Diags.Report(diag::err_cas_cannot_parse_root_id) << RootIDString;
     return std::nullopt;
   }
-  Optional<llvm::cas::ObjectRef> RootRef = CAS.getReference(*RootID);
+  std::optional<llvm::cas::ObjectRef> RootRef = CAS.getReference(*RootID);
   if (!RootRef) {
     Diags.Report(diag::err_cas_missing_root_id) << RootIDString;
     return std::nullopt;
@@ -177,14 +177,14 @@ canonicalizeForCaching(llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
   return Opts;
 }
 
-llvm::Optional<llvm::cas::CASID> clang::canonicalizeAndCreateCacheKey(
+std::optional<llvm::cas::CASID> clang::canonicalizeAndCreateCacheKey(
     llvm::cas::ObjectStore &CAS, DiagnosticsEngine &Diags,
     CompilerInvocation &Invocation, CompileJobCachingOptions &Opts) {
   Opts = canonicalizeForCaching(CAS, Diags, Invocation);
   return createCompileJobCacheKeyImpl(CAS, Diags, Invocation);
 }
 
-Optional<llvm::cas::CASID>
+std::optional<llvm::cas::CASID>
 clang::createCompileJobCacheKey(ObjectStore &CAS, DiagnosticsEngine &Diags,
                                 const CompilerInvocation &OriginalInvocation) {
 
@@ -197,7 +197,7 @@ static Error printFileSystem(ObjectStore &CAS, ObjectRef Root,
                              raw_ostream &OS) {
   TreeSchema Schema(CAS);
   return Schema.walkFileTreeRecursively(
-      CAS, Root, [&](const NamedTreeEntry &Entry, Optional<TreeProxy> Tree) {
+      CAS, Root, [&](const NamedTreeEntry &Entry, std::optional<TreeProxy> Tree) {
         if (Entry.getKind() != TreeEntry::Tree || Tree->empty()) {
           OS << "\n  ";
           Entry.print(OS, CAS);

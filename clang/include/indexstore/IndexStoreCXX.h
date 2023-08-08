@@ -16,13 +16,11 @@
 #include "indexstore/indexstore.h"
 #include "clang/Basic/PathRemapper.h"
 #include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/Optional.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallString.h"
 
 namespace indexstore {
   using llvm::ArrayRef;
-  using llvm::Optional;
   using llvm::StringRef;
 
 static inline StringRef stringFromIndexStoreStringRef(indexstore_string_ref_t str) {
