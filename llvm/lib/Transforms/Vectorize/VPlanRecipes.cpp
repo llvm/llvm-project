@@ -320,7 +320,8 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     // The canonical IV is incremented by the vectorization factor (num of SIMD
     // elements) times the unroll part.
     Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Part);
-    return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(), false);
+    return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
+                             hasNoSignedWrap());
   }
   case VPInstruction::BranchOnCond: {
     if (Part != 0)
