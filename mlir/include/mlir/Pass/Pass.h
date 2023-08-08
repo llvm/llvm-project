@@ -182,7 +182,7 @@ protected:
   /// invoked within this hook.
   /// This method is invoked after all dependent dialects for the pipeline are
   /// loaded, and is not allowed to load any further dialects (override the
-  /// `geDependentDialects()` for this purpose instead). Returns a LogicalResult
+  /// `getDependentDialects()` for this purpose instead). Returns a LogicalResult
   /// to indicate failure, in which case the pass pipeline won't execute.
   virtual LogicalResult initialize(MLIRContext *context) { return success(); }
 
