@@ -364,3 +364,10 @@ gpu.module @module {
     gpu.return
   }) {function_type = () -> (), sym_name = "func"} : () -> ()
 }
+
+// Check that this doesn't crash.
+gpu.module @module_with_one_target [#nvvm.target] {
+  gpu.func @kernel(%arg0 : f32) kernel {
+    gpu.return
+  }
+}
