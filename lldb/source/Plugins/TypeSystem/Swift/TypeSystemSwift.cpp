@@ -111,8 +111,8 @@ bool TypeSystemSwift::ShouldTreatScalarValueAsAddress(
 }
 
 uint32_t TypeSystemSwift::GetIndexOfChildWithName(
-    opaque_compiler_type_t type, const char *name, ExecutionContext *exe_ctx,
-    bool omit_empty_base_classes) {
+    opaque_compiler_type_t type, llvm::StringRef name,
+    ExecutionContext *exe_ctx, bool omit_empty_base_classes) {
   std::vector<uint32_t> child_indexes;
   size_t num_child_indexes = GetIndexOfChildMemberWithName(
       type, name, exe_ctx, omit_empty_base_classes, child_indexes);
