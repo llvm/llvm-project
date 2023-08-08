@@ -225,7 +225,7 @@ private:
                                       unsigned &Index) const;
 
 public:
-  void print(raw_ostream &O) const;
+  void print(raw_ostream &O, bool AddNewLine = true) const;
   void dump() const;
 };
 
