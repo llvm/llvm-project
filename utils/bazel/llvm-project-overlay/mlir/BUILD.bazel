@@ -3451,6 +3451,7 @@ cc_library(
         ":ControlFlowToLLVM",
         ":ControlFlowToSPIRV",
         ":ConversionPassIncGen",
+        ":ConvertToLLVM",
         ":FuncToLLVM",
         ":FuncToSPIRV",
         ":GPUToGPURuntimeTransforms",
@@ -4050,6 +4051,7 @@ cc_library(
     hdrs = ["include/mlir/InitAllExtensions.h"],
     deps = [
         ":FuncExtensions",
+        ":NVVMToLLVM",
     ],
 )
 
@@ -7023,6 +7025,7 @@ cc_library(
         ":LLVMDialect",
         ":Pass",
         ":Rewrite",
+        ":Support",
         ":TransformUtils",
         "//llvm:Support",
     ],
