@@ -1400,10 +1400,6 @@ CompilerType SwiftLanguageRuntimeImpl::GetChildCompilerTypeAtIndex(
   };
 
   // Try the static type metadata.
-  ExecutionContext exe_ctx;
-  if (valobj)
-    exe_ctx = valobj->GetExecutionContextRef();
-
   auto *ti =
       GetSwiftRuntimeTypeInfo(type, exe_ctx.GetBestExecutionContextScope());
   if (!ti)
