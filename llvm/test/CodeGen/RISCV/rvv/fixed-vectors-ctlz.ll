@@ -11,6 +11,8 @@
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+d -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=1 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,LMULMAX1,LMULMAX1-RV64
 ; RUN: llc -mtriple=riscv32 -mattr=+m,+v,+d -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=LMULMAX8
 ; RUN: llc -mtriple=riscv64 -mattr=+m,+v,+d -riscv-v-vector-bits-min=128 -riscv-v-fixed-length-vector-lmul-max=8 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=LMULMAX8
+; RUN: llc -mtriple=riscv32 -mattr=+v,+experimental-zvbb -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
+; RUN: llc -mtriple=riscv64 -mattr=+v,+experimental-zvbb -riscv-v-vector-bits-min=128 -verify-machineinstrs < %s | FileCheck %s --check-prefixes=ZVBB
 
 define void @ctlz_v16i8(ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: ctlz_v16i8:
@@ -54,6 +56,14 @@ define void @ctlz_v16i8(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vminu.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse8.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_v16i8:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; ZVBB-NEXT:    vle8.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse8.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <16 x i8>, ptr %x
   %b = load <16 x i8>, ptr %y
   %c = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 false)
@@ -267,6 +277,14 @@ define void @ctlz_v8i16(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vminu.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse16.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_v8i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVBB-NEXT:    vle16.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse16.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <8 x i16>, ptr %x
   %b = load <8 x i16>, ptr %y
   %c = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 false)
@@ -423,6 +441,14 @@ define void @ctlz_v4i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vminu.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_v4i32:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVBB-NEXT:    vle32.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse32.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <4 x i32>, ptr %x
   %b = load <4 x i32>, ptr %y
   %c = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 false)
@@ -621,6 +647,14 @@ define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vminu.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_v2i64:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZVBB-NEXT:    vle64.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse64.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <2 x i64>, ptr %x
   %b = load <2 x i64>, ptr %y
   %c = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 false)
@@ -719,6 +753,15 @@ define void @ctlz_v32i8(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vminu.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse8.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_v32i8:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    li a1, 32
+; ZVBB-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; ZVBB-NEXT:    vle8.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse8.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %b = load <32 x i8>, ptr %y
   %c = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 false)
@@ -928,6 +971,14 @@ define void @ctlz_v16i16(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vminu.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse16.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_v16i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVBB-NEXT:    vle16.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse16.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <16 x i16>, ptr %x
   %b = load <16 x i16>, ptr %y
   %c = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 false)
@@ -1086,6 +1137,14 @@ define void @ctlz_v8i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vminu.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_v8i32:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZVBB-NEXT:    vle32.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse32.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <8 x i32>, ptr %x
   %b = load <8 x i32>, ptr %y
   %c = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 false)
@@ -1284,6 +1343,14 @@ define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vminu.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_v4i64:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVBB-NEXT:    vle64.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse64.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <4 x i64>, ptr %x
   %b = load <4 x i64>, ptr %y
   %c = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 false)
@@ -1332,6 +1399,14 @@ define void @ctlz_zero_undef_v16i8(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vrsub.vx v8, v10, a1
 ; LMULMAX8-NEXT:    vse8.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_zero_undef_v16i8:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 16, e8, m1, ta, ma
+; ZVBB-NEXT:    vle8.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse8.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <16 x i8>, ptr %x
   %b = load <16 x i8>, ptr %y
   %c = call <16 x i8> @llvm.ctlz.v16i8(<16 x i8> %a, i1 true)
@@ -1534,6 +1609,14 @@ define void @ctlz_zero_undef_v8i16(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vrsub.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse16.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_zero_undef_v8i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 8, e16, m1, ta, ma
+; ZVBB-NEXT:    vle16.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse16.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <8 x i16>, ptr %x
   %b = load <8 x i16>, ptr %y
   %c = call <8 x i16> @llvm.ctlz.v8i16(<8 x i16> %a, i1 true)
@@ -1679,6 +1762,14 @@ define void @ctlz_zero_undef_v4i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vrsub.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_zero_undef_v4i32:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; ZVBB-NEXT:    vle32.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse32.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <4 x i32>, ptr %x
   %b = load <4 x i32>, ptr %y
   %c = call <4 x i32> @llvm.ctlz.v4i32(<4 x i32> %a, i1 true)
@@ -1864,6 +1955,14 @@ define void @ctlz_zero_undef_v2i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vrsub.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_zero_undef_v2i64:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 2, e64, m1, ta, ma
+; ZVBB-NEXT:    vle64.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse64.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <2 x i64>, ptr %x
   %b = load <2 x i64>, ptr %y
   %c = call <2 x i64> @llvm.ctlz.v2i64(<2 x i64> %a, i1 true)
@@ -1959,6 +2058,15 @@ define void @ctlz_zero_undef_v32i8(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vrsub.vx v8, v12, a1
 ; LMULMAX8-NEXT:    vse8.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_zero_undef_v32i8:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    li a1, 32
+; ZVBB-NEXT:    vsetvli zero, a1, e8, m2, ta, ma
+; ZVBB-NEXT:    vle8.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse8.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <32 x i8>, ptr %x
   %b = load <32 x i8>, ptr %y
   %c = call <32 x i8> @llvm.ctlz.v32i8(<32 x i8> %a, i1 true)
@@ -2165,6 +2273,14 @@ define void @ctlz_zero_undef_v16i16(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vrsub.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse16.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_zero_undef_v16i16:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; ZVBB-NEXT:    vle16.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse16.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <16 x i16>, ptr %x
   %b = load <16 x i16>, ptr %y
   %c = call <16 x i16> @llvm.ctlz.v16i16(<16 x i16> %a, i1 true)
@@ -2312,6 +2428,14 @@ define void @ctlz_zero_undef_v8i32(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vrsub.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse32.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_zero_undef_v8i32:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 8, e32, m2, ta, ma
+; ZVBB-NEXT:    vle32.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse32.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <8 x i32>, ptr %x
   %b = load <8 x i32>, ptr %y
   %c = call <8 x i32> @llvm.ctlz.v8i32(<8 x i32> %a, i1 true)
@@ -2497,6 +2621,14 @@ define void @ctlz_zero_undef_v4i64(ptr %x, ptr %y) nounwind {
 ; LMULMAX8-NEXT:    vrsub.vx v8, v8, a1
 ; LMULMAX8-NEXT:    vse64.v v8, (a0)
 ; LMULMAX8-NEXT:    ret
+;
+; ZVBB-LABEL: ctlz_zero_undef_v4i64:
+; ZVBB:       # %bb.0:
+; ZVBB-NEXT:    vsetivli zero, 4, e64, m2, ta, ma
+; ZVBB-NEXT:    vle64.v v8, (a0)
+; ZVBB-NEXT:    vclz.v v8, v8
+; ZVBB-NEXT:    vse64.v v8, (a0)
+; ZVBB-NEXT:    ret
   %a = load <4 x i64>, ptr %x
   %b = load <4 x i64>, ptr %y
   %c = call <4 x i64> @llvm.ctlz.v4i64(<4 x i64> %a, i1 true)
