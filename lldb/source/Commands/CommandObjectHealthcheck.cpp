@@ -62,8 +62,11 @@ bool CommandObjectHealthcheck::DoExecute(Args &args,
   // the user's configured editor or the default Console.app otherwise.
   if ((strcmp("lldb", getprogname()) == 0 ||
        strcmp("lldb-rpc-server", getprogname()) == 0) &&
-      Host::IsInteractiveGraphicSession())
-    Host::OpenFileInExternalEditor(FileSpec(temp_path), 0);
+      Host::IsInteractiveGraphicSession()) {
+    if (llvm::Error err =
+            Host::OpenFileInExternalEditor("", FileSpec(temp_path), 0))
+      return false;
+  }
 #endif
 
   return true;
