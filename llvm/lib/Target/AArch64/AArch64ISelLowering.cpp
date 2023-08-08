@@ -14984,15 +14984,6 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
   // The base address of the load.
   Value *BaseAddr = LI->getPointerOperand();
 
-  if (NumLoads > 1) {
-    // We will compute the pointer operand of each load from the original base
-    // address using GEPs. Cast the base address to a pointer to the scalar
-    // element type.
-    BaseAddr = Builder.CreateBitCast(
-        BaseAddr,
-        LDVTy->getElementType()->getPointerTo(LI->getPointerAddressSpace()));
-  }
-
   Type *PtrTy = LI->getPointerOperandType();
   Type *PredTy = VectorType::get(Type::getInt1Ty(LDVTy->getContext()),
                                  LDVTy->getElementCount());
@@ -15030,11 +15021,9 @@ bool AArch64TargetLowering::lowerInterleavedLoad(
 
     CallInst *LdN;
     if (UseScalable)
-      LdN = Builder.CreateCall(
-          LdNFunc, {PTrue, Builder.CreateBitCast(BaseAddr, PtrTy)}, "ldN");
+      LdN = Builder.CreateCall(LdNFunc, {PTrue, BaseAddr}, "ldN");
     else
-      LdN = Builder.CreateCall(LdNFunc, Builder.CreateBitCast(BaseAddr, PtrTy),
-                               "ldN");
+      LdN = Builder.CreateCall(LdNFunc, BaseAddr, "ldN");
 
     // Extract and store the sub-vectors returned by the load intrinsic.
     for (unsigned i = 0; i < Shuffles.size(); i++) {
@@ -15154,15 +15143,6 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
   // The base address of the store.
   Value *BaseAddr = SI->getPointerOperand();
 
-  if (NumStores > 1) {
-    // We will compute the pointer operand of each store from the original base
-    // address using GEPs. Cast the base address to a pointer to the scalar
-    // element type.
-    BaseAddr = Builder.CreateBitCast(
-        BaseAddr,
-        SubVecTy->getElementType()->getPointerTo(SI->getPointerAddressSpace()));
-  }
-
   auto Mask = SVI->getShuffleMask();
 
   // Sanity check if all the indices are NOT in range.
@@ -15245,7 +15225,7 @@ bool AArch64TargetLowering::lowerInterleavedStore(StoreInst *SI,
       BaseAddr = Builder.CreateConstGEP1_32(SubVecTy->getElementType(),
                                             BaseAddr, LaneLen * Factor);
 
-    Ops.push_back(Builder.CreateBitCast(BaseAddr, PtrTy));
+    Ops.push_back(BaseAddr);
     Builder.CreateCall(StNFunc, Ops);
   }
   return true;
@@ -24393,7 +24373,6 @@ Value *AArch64TargetLowering::emitLoadLinked(IRBuilderBase &Builder,
         IsAcquire ? Intrinsic::aarch64_ldaxp : Intrinsic::aarch64_ldxp;
     Function *Ldxr = Intrinsic::getDeclaration(M, Int);
 
-    Addr = Builder.CreateBitCast(Addr, Type::getInt8PtrTy(M->getContext()));
     Value *LoHi = Builder.CreateCall(Ldxr, Addr, "lohi");
 
     Value *Lo = Builder.CreateExtractValue(LoHi, 0, "lo");
@@ -24442,7 +24421,6 @@ Value *AArch64TargetLowering::emitStoreConditional(IRBuilderBase &Builder,
 
     Value *Lo = Builder.CreateTrunc(Val, Int64Ty, "lo");
     Value *Hi = Builder.CreateTrunc(Builder.CreateLShr(Val, 64), Int64Ty, "hi");
-    Addr = Builder.CreateBitCast(Addr, Type::getInt8PtrTy(M->getContext()));
     return Builder.CreateCall(Stxr, {Lo, Hi, Addr});
   }
 
@@ -24490,7 +24468,7 @@ static Value *UseTlsOffset(IRBuilderBase &IRB, unsigned Offset) {
   return IRB.CreatePointerCast(
       IRB.CreateConstGEP1_32(IRB.getInt8Ty(), IRB.CreateCall(ThreadPointerFunc),
                              Offset),
-      IRB.getInt8PtrTy()->getPointerTo(0));
+      IRB.getPtrTy(0));
 }
 
 Value *AArch64TargetLowering::getIRStackGuard(IRBuilderBase &IRB) const {
