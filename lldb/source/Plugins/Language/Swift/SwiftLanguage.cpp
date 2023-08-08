@@ -12,6 +12,7 @@
 
 #include "SwiftLanguage.h"
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectVariable.h"
@@ -1137,9 +1138,9 @@ bool SwiftLanguage::IsSourceFile(llvm::StringRef file_path) const {
   return file_path.endswith(".swift");
 }
 
-std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
+std::vector<FormattersMatchCandidate> SwiftLanguage::GetPossibleFormattersMatches(
     ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
-  std::vector<ConstString> result;
+  std::vector<FormattersMatchCandidate> result;
 
   if (use_dynamic == lldb::eNoDynamicValues)
     return result;
@@ -1176,7 +1177,9 @@ std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
                                          address, value_type))
     return result;
   if (ConstString name = type_and_or_name.GetName())
-    result.push_back(name);
+    result.push_back(
+        {name, valobj.GetTargetSP()->GetDebugger().GetScriptInterpreter(),
+         TypeImpl(compiler_type), FormattersMatchCandidate::Flags{}});
   return result;
 }
 
