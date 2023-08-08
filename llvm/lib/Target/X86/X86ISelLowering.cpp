@@ -10984,31 +10984,6 @@ static SDValue lowerShuffleAsDecomposedShuffleMerge(
   return DAG.getVectorShuffle(VT, DL, V1, V2, FinalMask);
 }
 
-/// Try to lower a vector shuffle as a bit rotation.
-///
-/// Look for a repeated rotation pattern in each sub group.
-/// Returns a ISD::ROTL element rotation amount or -1 if failed.
-static int matchShuffleAsBitRotate(ArrayRef<int> Mask, int NumSubElts) {
-  int NumElts = Mask.size();
-  assert((NumElts % NumSubElts) == 0 && "Illegal shuffle mask");
-
-  int RotateAmt = -1;
-  for (int i = 0; i != NumElts; i += NumSubElts) {
-    for (int j = 0; j != NumSubElts; ++j) {
-      int M = Mask[i + j];
-      if (M < 0)
-        continue;
-      if (!isInRange(M, i, i + NumSubElts))
-        return -1;
-      int Offset = (NumSubElts - (M - (i + j))) % NumSubElts;
-      if (0 <= RotateAmt && Offset != RotateAmt)
-        return -1;
-      RotateAmt = Offset;
-    }
-  }
-  return RotateAmt;
-}
-
 static int matchShuffleAsBitRotate(MVT &RotateVT, int EltSizeInBits,
                                    const X86Subtarget &Subtarget,
                                    ArrayRef<int> Mask) {
@@ -11018,18 +10993,14 @@ static int matchShuffleAsBitRotate(MVT &RotateVT, int EltSizeInBits,
   // AVX512 only has vXi32/vXi64 rotates, so limit the rotation sub group size.
   int MinSubElts = Subtarget.hasAVX512() ? std::max(32 / EltSizeInBits, 2) : 2;
   int MaxSubElts = 64 / EltSizeInBits;
-  for (int NumSubElts = MinSubElts; NumSubElts <= MaxSubElts; NumSubElts *= 2) {
-    int RotateAmt = matchShuffleAsBitRotate(Mask, NumSubElts);
-    if (RotateAmt < 0)
-      continue;
-
-    int NumElts = Mask.size();
-    MVT RotateSVT = MVT::getIntegerVT(EltSizeInBits * NumSubElts);
-    RotateVT = MVT::getVectorVT(RotateSVT, NumElts / NumSubElts);
-    return RotateAmt * EltSizeInBits;
-  }
-
-  return -1;
+  unsigned RotateAmt, NumSubElts;
+  if (!ShuffleVectorInst::isBitRotateMask(Mask, EltSizeInBits, MinSubElts,
+                                          MaxSubElts, NumSubElts, RotateAmt))
+    return -1;
+  unsigned NumElts = Mask.size();
+  MVT RotateSVT = MVT::getIntegerVT(EltSizeInBits * NumSubElts);
+  RotateVT = MVT::getVectorVT(RotateSVT, NumElts / NumSubElts);
+  return RotateAmt;
 }
 
 /// Lower shuffle using X86ISD::VROTLI rotations.
