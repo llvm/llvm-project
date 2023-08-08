@@ -288,6 +288,13 @@ export namespace std {
     } // namespace views
 #endif // _LIBCPP_STD_VER >= 23
 
+    // [range.stride], stride view
+    using std::ranges::stride_view;
+
+    namespace views {
+      using std::ranges::views::stride;
+    }
+
 #if 0
     // [range.zip.transform], zip transform view
     using std::ranges::zip_transform_view;
@@ -334,7 +341,6 @@ export namespace std {
     }
 #endif // _LIBCPP_STD_VER >= 23
 
-#if 0
     // [range.stride], stride view
     using std::ranges::stride_view;
 
@@ -342,6 +348,7 @@ export namespace std {
       using std::ranges::views::stride;
     }
 
+#if 0
     using std::ranges::cartesian_product_view;
 
     namespace views {
