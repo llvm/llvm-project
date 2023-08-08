@@ -15,6 +15,7 @@
 
 include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
+include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td"
 include "mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td"
 include "mlir/IR/EnumAttr.td"
@@ -998,10 +999,9 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [
-  DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
-  SymbolTable, Symbol,
-  SingleBlockImplicitTerminator<"ModuleEndOp">
-]> {
+      DataLayoutOpInterface, HasDefaultDLTIDataLayout, IsolatedFromAbove,
+      SymbolTable, Symbol, SingleBlockImplicitTerminator<"ModuleEndOp">
+    ]>, Arguments<(ins OptionalAttr<GPUNonEmptyTargetArrayAttr>:$targets)> {
   let summary = "A top level compilation unit containing code to be run on a GPU.";
   let description = [{
     GPU module contains code that is intended to be run on a GPU. A host device
@@ -1018,22 +1018,41 @@ def GPU_GPUModuleOp : GPU_Op<"module", [
     allows filtering of code regions to execute passes on only code intended to
     or not intended to be run on the separate device.
 
+    Modules can contain zero or more target attributes. These attributes encode
+    how to transform modules into binary strings and are used by the
+    `gpu-module-to-binary` pass to transform modules into GPU binaries.
+
     ```
-      gpu.module @symbol_name {
+    gpu.module @symbol_name {
       gpu.func {}
         ...
       gpu.module_end
     }
-
+    gpu.module @symbol_name2 [#nvvm.target, #rocdl.target<chip = "gfx90a">] {
+      gpu.func {}
+        ...
+      gpu.module_end
+    }
     ```
   }];
-  let builders = [OpBuilder<(ins "StringRef":$name)>];
+  let builders = [
+    OpBuilder<(ins "StringRef":$name, CArg<"ArrayAttr", "{}">:$targets)>,
+    OpBuilder<(ins "StringRef":$name, "ArrayRef<Attribute>":$targets)>
+  ];
   let regions = (region SizedRegion<1>:$bodyRegion);
   let hasCustomAssemblyFormat = 1;
 
   // We need to ensure the block inside the region is properly terminated;
   // the auto-generated builders do not guarantee that.
   let skipDefaultBuilders = 1;
+
+  let extraClassDeclaration = [{
+    /// Checks if `target` is in the `targets` list.
+    bool hasTarget(Attribute target);
+
+    /// Sets the targets of the module.
+    void setTargets(ArrayRef<TargetAttrInterface> targets);
+  }];
 }
 
 def GPU_ModuleEndOp : GPU_Op<"module_end", [

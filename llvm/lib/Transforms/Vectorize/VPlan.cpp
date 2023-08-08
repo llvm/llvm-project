@@ -758,16 +758,12 @@ void VPlan::prepareToExecute(Value *TripCountV, Value *VectorTripCountV,
     auto *IV = getCanonicalIV();
     assert(all_of(IV->users(),
                   [](const VPUser *U) {
-                    if (isa<VPScalarIVStepsRecipe>(U) ||
-                        isa<VPDerivedIVRecipe>(U))
-                      return true;
-                    auto *VPI = cast<VPInstruction>(U);
-                    return VPI->getOpcode() ==
-                               VPInstruction::CanonicalIVIncrement ||
-                           VPI->getOpcode() ==
-                               VPInstruction::CanonicalIVIncrementNUW;
+                    return isa<VPScalarIVStepsRecipe>(U) ||
+                           isa<VPDerivedIVRecipe>(U) ||
+                           cast<VPInstruction>(U)->getOpcode() ==
+                               VPInstruction::CanonicalIVIncrement;
                   }) &&
-           "the canonical IV should only be used by its increments or "
+           "the canonical IV should only be used by its increment or "
            "ScalarIVSteps when resetting the start value");
     IV->setOperand(0, VPV);
   }

@@ -28,7 +28,9 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/StringSaver.h"
 
 using namespace mlir;
 using namespace mlir::gpu;
@@ -1506,18 +1508,41 @@ LogicalResult gpu::ReturnOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name) {
+                        StringRef name, ArrayAttr targets) {
   ensureTerminator(*result.addRegion(), builder, result.location);
   result.attributes.push_back(builder.getNamedAttr(
       ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+
+  if (targets)
+    result.getOrAddProperties<Properties>().targets = targets;
+}
+
+void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
+                        StringRef name, ArrayRef<Attribute> targets) {
+  build(builder, result, name,
+        targets.size() > 0 ? builder.getArrayAttr(targets) : ArrayAttr());
 }
 
 ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr nameAttr;
+  ArrayAttr targetsAttr;
+
   if (parser.parseSymbolName(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
-                             result.attributes) ||
-      // If module attributes are present, parse them.
-      parser.parseOptionalAttrDictWithKeyword(result.attributes))
+                             result.attributes))
+    return failure();
+
+  // Parse the optional array of target attributes.
+  OptionalParseResult targetsAttrResult =
+      parser.parseOptionalAttribute(targetsAttr, Type{});
+  if (targetsAttrResult.has_value()) {
+    if (failed(*targetsAttrResult)) {
+      return failure();
+    }
+    result.getOrAddProperties<Properties>().targets = targetsAttr;
+  }
+
+  // If module attributes are present, parse them.
+  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
     return failure();
 
   // Parse the module body.
@@ -1533,11 +1558,31 @@ ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
 void GPUModuleOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printSymbolName(getName());
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
-                                     {mlir::SymbolTable::getSymbolAttrName()});
+
+  if (Attribute attr = getTargetsAttr()) {
+    p << ' ';
+    p.printAttribute(attr);
+    p << ' ';
+  }
+
+  p.printOptionalAttrDictWithKeyword(
+      (*this)->getAttrs(),
+      {mlir::SymbolTable::getSymbolAttrName(), getTargetsAttrName()});
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
+}
+
+bool GPUModuleOp::hasTarget(Attribute target) {
+  if (ArrayAttr targets = getTargetsAttr())
+    return llvm::count(targets.getValue(), target);
+  return false;
+}
+
+void GPUModuleOp::setTargets(ArrayRef<TargetAttrInterface> targets) {
+  ArrayAttr &targetsAttr = getProperties().targets;
+  SmallVector<Attribute> targetsVector(targets);
+  targetsAttr = ArrayAttr::get(getContext(), targetsVector);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1811,6 +1856,53 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<SimplifyDimOfAllocOp>(context);
 }
 
+//===----------------------------------------------------------------------===//
+// GPU target options
+//===----------------------------------------------------------------------===//
+
+TargetOptions::TargetOptions(StringRef toolkitPath,
+                             ArrayRef<std::string> linkFiles,
+                             StringRef cmdOptions,
+                             CompilationTarget compilationTarget)
+    : TargetOptions(TypeID::get<TargetOptions>(), toolkitPath, linkFiles,
+                    cmdOptions, compilationTarget) {}
+
+TargetOptions::TargetOptions(TypeID typeID, StringRef toolkitPath,
+                             ArrayRef<std::string> linkFiles,
+                             StringRef cmdOptions,
+                             CompilationTarget compilationTarget)
+    : toolkitPath(toolkitPath.str()), linkFiles(linkFiles),
+      cmdOptions(cmdOptions.str()), compilationTarget(compilationTarget),
+      typeID(typeID) {}
+
+TypeID TargetOptions::getTypeID() const { return typeID; }
+
+StringRef TargetOptions::getToolkitPath() const { return toolkitPath; }
+
+ArrayRef<std::string> TargetOptions::getLinkFiles() const { return linkFiles; }
+
+StringRef TargetOptions::getCmdOptions() const { return cmdOptions; }
+
+std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>>
+TargetOptions::tokenizeCmdOptions() const {
+  std::pair<llvm::BumpPtrAllocator, SmallVector<const char *>> options;
+  llvm::StringSaver stringSaver(options.first);
+#ifdef _WIN32
+  llvm::cl::TokenizeWindowsCommandLine(cmdOptions, stringSaver, options.second,
+                                       /*MarkEOLs=*/false);
+#else
+  llvm::cl::TokenizeGNUCommandLine(cmdOptions, stringSaver, options.second,
+                                   /*MarkEOLs=*/false);
+#endif // _WIN32
+  return options;
+}
+
+TargetOptions::CompilationTarget TargetOptions::getCompilationTarget() const {
+  return compilationTarget;
+}
+
+MLIR_DEFINE_EXPLICIT_TYPE_ID(::mlir::gpu::TargetOptions)
+
 #include "mlir/Dialect/GPU/IR/GPUOpInterfaces.cpp.inc"
 #include "mlir/Dialect/GPU/IR/GPUOpsEnums.cpp.inc"
 
@@ -1819,3 +1911,5 @@ void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/GPU/IR/GPUOps.cpp.inc"
+
+#include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.cpp.inc"

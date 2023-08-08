@@ -164,4 +164,33 @@ def RewriteMatmulAsMmaSyncOp :
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// RewriteCopyAsTmaOp
+//===----------------------------------------------------------------------===//
+
+def RewriteCopyAsTmaOp :
+  Op<Transform_Dialect, "nvgpu.rewrite_copy_as_tma",
+    [FunctionalStyleTransformOpTrait,
+     MemoryEffectsOpInterface,
+     TransformEachOpTrait,
+     TransformOpInterface,
+     ReportTrackingListenerFailuresOpTrait]> {
+  let description = [{
+    Rewrite a copy operation on memref to tma operations that transit through
+    shared memory.
+  }];
+
+  let arguments = (ins TransformHandleTypeInterface:$target);
+  let results = (outs);
+
+  let assemblyFormat = "$target attr-dict `:` functional-type(operands, results) ";
+
+  let extraClassDeclaration = [{
+    ::mlir::DiagnosedSilenceableFailure apply(
+        ::mlir::transform::TransformRewriter &rewriter,
+        ::mlir::transform::TransformResults &transformResults,
+        ::mlir::transform::TransformState &state);
+  }];
+}
+
 #endif // NVGPU_TRANSFORM_OPS
