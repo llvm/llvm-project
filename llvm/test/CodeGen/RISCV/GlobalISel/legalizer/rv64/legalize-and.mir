@@ -22,6 +22,26 @@ body:             |
 
 ...
 ---
+name:            and_i15
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: and_i15
+    ; CHECK: [[COPY:%[0-9]+]]:_(s64) = COPY $x10
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s64) = COPY $x11
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND [[COPY]], [[COPY1]]
+    ; CHECK-NEXT: $x10 = COPY [[AND]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10
+    %0:_(s64) = COPY $x10
+    %1:_(s64) = COPY $x11
+    %2:_(s15) = G_TRUNC %0(s64)
+    %3:_(s15) = G_TRUNC %1(s64)
+    %4:_(s15) = G_AND %2, %3
+    %5:_(s64) = G_ANYEXT %4(s15)
+    $x10 = COPY %5(s64)
+    PseudoRET implicit $x10
+
+...
+---
 name:            and_i16
 body:             |
   bb.0.entry:
@@ -76,6 +96,36 @@ body:             |
     %2:_(s64) = G_AND %0, %1
     $x10 = COPY %2(s64)
     PseudoRET implicit $x10
+
+...
+---
+name:            and_i72
+body:             |
+  bb.0.entry:
+    ; CHECK-LABEL: name: and_i72
+    ; CHECK: %x00:_(s64) = COPY $x10
+    ; CHECK-NEXT: %x01:_(s64) = COPY $x11
+    ; CHECK-NEXT: %y00:_(s64) = COPY $x12
+    ; CHECK-NEXT: %y01:_(s64) = COPY $x13
+    ; CHECK-NEXT: [[AND:%[0-9]+]]:_(s64) = G_AND %x00, %y00
+    ; CHECK-NEXT: [[AND1:%[0-9]+]]:_(s64) = G_AND %x01, %y01
+    ; CHECK-NEXT: $x10 = COPY [[AND]](s64)
+    ; CHECK-NEXT: $x11 = COPY [[AND1]](s64)
+    ; CHECK-NEXT: PseudoRET implicit $x10, implicit $x11
+    %x00:_(s64) = COPY $x10
+    %x01:_(s64) = COPY $x11
+    %y00:_(s64) = COPY $x12
+    %y01:_(s64) = COPY $x13
+    %x0:_(s128) = G_MERGE_VALUES %x00(s64), %x01
+    %y0:_(s128) = G_MERGE_VALUES %y00(s64), %y01
+    %x:_(s72) = G_TRUNC %x0(s128)
+    %y:_(s72) = G_TRUNC %y0(s128)
+    %z:_(s72) = G_AND %x, %y
+    %z0:_(s128) = G_ANYEXT %z(s72)
+    %z00:_(s64), %z01:_(s64) = G_UNMERGE_VALUES %z0(s128)
+    $x10 = COPY %z00(s64)
+    $x11 = COPY %z01(s64)
+    PseudoRET implicit $x10, implicit $x11
 
 ...
 ---
