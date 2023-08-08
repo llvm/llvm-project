@@ -32,9 +32,6 @@ namespace __llvm_libc {
 namespace printf_core {
 
 using MantissaInt = fputil::FPBits<long double>::UIntType;
-using DecimalString = IntegerToString<intmax_t>;
-using ExponentString =
-    IntegerToString<intmax_t, radix::Dec::WithWidth<2>::WithSign>;
 
 // Returns true if value is divisible by 2^p.
 template <typename T>
@@ -196,11 +193,39 @@ class FloatWriter {
     return 0;
   }
 
-  // -exponent will never overflow because all long double types we support
-  // have at most 15 bits of mantissa and the C standard defines an int as
-  // being at least 16 bits.
-  static_assert(fputil::FloatProperties<long double>::EXPONENT_WIDTH <
-                (sizeof(int) * 8));
+  cpp::string_view exp_str(int exponent, cpp::span<char> exp_buffer) {
+
+    // -exponent will never overflow because all long double types we support
+    // have at most 15 bits of mantissa and the C standard defines an int as
+    // being at least 16 bits.
+    static_assert(fputil::FloatProperties<long double>::EXPONENT_WIDTH <
+                  (sizeof(int) * 8));
+
+    int positive_exponent = exponent < 0 ? -exponent : exponent;
+    char exp_sign = exponent < 0 ? '-' : '+';
+    auto const int_to_str =
+        *IntegerToString::dec(positive_exponent, exp_buffer);
+
+    // IntegerToString writes the digits from right to left so there will be
+    // space to the left of int_to_str.
+    size_t digits_in_exp = int_to_str.size();
+    size_t index = exp_buffer.size() - digits_in_exp - 1;
+
+    // Ensure that at least two digits were written. IntegerToString always
+    // writes at least 1 digit (it writes "0" when the input number is 0).
+    if (digits_in_exp < 2) {
+      exp_buffer[index] = '0';
+      --index;
+    }
+
+    // Since the exp_buffer has to be sized to handle an intmax_t, it has space
+    // for a sign. In this case we're handling the sign on our own since we also
+    // want plus signs for positive numbers.
+    exp_buffer[index] = exp_sign;
+
+    return cpp::string_view(exp_buffer.data() + index,
+                            exp_buffer.size() - index);
+  }
 
 public:
   FloatWriter(Writer *init_writer, bool init_has_decimal_point,
@@ -214,8 +239,8 @@ public:
   }
 
   void write_first_block(BlockInt block, bool exp_format = false) {
-    const DecimalString buf(block);
-    const cpp::string_view int_to_str = buf.view();
+    char buf[IntegerToString::dec_bufsize<intmax_t>()];
+    auto const int_to_str = *IntegerToString::dec(block, buf);
     size_t digits_buffered = int_to_str.size();
     // Block Buffer is guaranteed to not overflow since block cannot have more
     // than BLOCK_SIZE digits.
@@ -243,8 +268,9 @@ public:
       // Now buffer the current block. We add 1 + MAX_BLOCK to force the
       // leading zeroes, and drop the leading one. This is probably inefficient,
       // but it works. See https://xkcd.com/2021/
-      const DecimalString buf(block + (MAX_BLOCK + 1));
-      const cpp::string_view int_to_str = buf.view();
+      char buf[IntegerToString::dec_bufsize<intmax_t>()];
+      auto const int_to_str =
+          *IntegerToString::dec(block + (MAX_BLOCK + 1), buf);
       // TODO: Replace with memcpy
       for (size_t count = 0; count < BLOCK_SIZE; ++count) {
         block_buffer[count] = int_to_str[count + 1];
@@ -259,8 +285,8 @@ public:
                            RoundDirection round) {
     char end_buff[BLOCK_SIZE];
 
-    const DecimalString buf(block + (MAX_BLOCK + 1));
-    const cpp::string_view int_to_str = buf.view();
+    char buf[IntegerToString::dec_bufsize<intmax_t>()];
+    auto const int_to_str = *IntegerToString::dec(block + (MAX_BLOCK + 1), buf);
 
     // copy the last block_digits characters into the start of end_buff.
     // TODO: Replace with memcpy
@@ -346,8 +372,9 @@ public:
     char end_buff[BLOCK_SIZE];
 
     {
-      const DecimalString buf(block + (MAX_BLOCK + 1));
-      const cpp::string_view int_to_str = buf.view();
+      char buf[IntegerToString::dec_bufsize<intmax_t>()];
+      auto const int_to_str =
+          *IntegerToString::dec(block + (MAX_BLOCK + 1), buf);
 
       // copy the last block_digits characters into the start of end_buff.
       // TODO: Replace with memcpy
@@ -397,8 +424,8 @@ public:
         // but we do increment the exponent.
         ++exponent;
 
-        const ExponentString buf(exponent);
-        const cpp::string_view int_to_str = buf.view();
+        char buf[IntegerToString::dec_bufsize<intmax_t>()];
+        auto const int_to_str = exp_str(exponent, buf);
 
         // TODO: also change this to calculate the width of the number more
         // efficiently.
@@ -452,9 +479,11 @@ public:
     buffered_digits = block_digits;
     RET_IF_RESULT_NEGATIVE(flush_buffer());
 
+    char buf[IntegerToString::dec_bufsize<intmax_t>()];
+    auto const int_to_str = exp_str(exponent, buf);
+
     RET_IF_RESULT_NEGATIVE(writer->write(exp_char));
-    const ExponentString buf(exponent);
-    RET_IF_RESULT_NEGATIVE(writer->write(buf.view()));
+    RET_IF_RESULT_NEGATIVE(writer->write(int_to_str));
 
     total_digits_written = total_digits;
 
@@ -678,12 +707,17 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
     cur_block = 0;
   }
 
-  const size_t block_width = IntegerToString<intmax_t>(digits).size();
+  // TODO: Find a better way to calculate the number of digits in the
+  // initial block and exponent.
+  char buf[IntegerToString::dec_bufsize<intmax_t>()];
+  auto int_to_str = *IntegerToString::dec(digits, buf);
+  size_t block_width = int_to_str.size();
 
   final_exponent = (cur_block * BLOCK_SIZE) + static_cast<int>(block_width - 1);
   int positive_exponent = final_exponent < 0 ? -final_exponent : final_exponent;
 
-  size_t exponent_width = IntegerToString<intmax_t>(positive_exponent).size();
+  int_to_str = *IntegerToString::dec(positive_exponent, buf);
+  size_t exponent_width = int_to_str.size();
 
   // Calculate the total number of digits in the number.
   // 1 - the digit before the decimal point
@@ -718,7 +752,10 @@ LIBC_INLINE int convert_float_dec_exp_typed(Writer *writer,
 
   // if the last block is also the first block, then ignore leading zeroes.
   if (digits_written == 0) {
-    last_block_size = IntegerToString<intmax_t>(digits).size();
+    // TODO: Find a better way to calculate the number of digits in a block.
+    char buf[IntegerToString::dec_bufsize<intmax_t>()];
+    auto int_to_str = *IntegerToString::dec(digits, buf);
+    last_block_size = int_to_str.size();
   }
 
   // This is the last block.
@@ -844,7 +881,14 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
     return convert_float_decimal_typed<T>(writer, new_conv, float_bits);
   }
 
-  const size_t block_width = IntegerToString<intmax_t>(digits).size();
+  size_t block_width = 0;
+  {
+    // TODO: Find a better way to calculate the number of digits in the
+    // initial block and exponent.
+    char buf[IntegerToString::dec_bufsize<intmax_t>()];
+    auto int_to_str = *IntegerToString::dec(digits, buf);
+    block_width = int_to_str.size();
+  }
 
   size_t digits_checked = 0;
   // TODO: look into unifying trailing_zeroes and trailing_nines. The number can
@@ -856,8 +900,8 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
 
   // If the first block is not also the last block
   if (block_width <= exp_precision + 1) {
-    const DecimalString buf(digits);
-    const cpp::string_view int_to_str = buf.view();
+    char buf[IntegerToString::dec_bufsize<intmax_t>()];
+    auto int_to_str = *IntegerToString::dec(digits, buf);
 
     for (size_t i = 0; i < block_width; ++i) {
       if (int_to_str[i] == '9') {
@@ -918,8 +962,8 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer *writer,
 
   size_t last_block_size = BLOCK_SIZE;
 
-  const DecimalString buf(digits);
-  const cpp::string_view int_to_str = buf.view();
+  char buf[IntegerToString::dec_bufsize<intmax_t>()];
+  auto int_to_str = *IntegerToString::dec(digits, buf);
 
   size_t implicit_leading_zeroes = BLOCK_SIZE - int_to_str.size();
 
