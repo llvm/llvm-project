@@ -78,8 +78,7 @@ Expected<std::string> ExpressionFormat::getWildcardRegex() const {
 }
 
 Expected<std::string>
-ExpressionFormat::getMatchingString(ExpressionValue IntegerValue) const {
-  APInt IntValue = IntegerValue.getAPIntValue();
+ExpressionFormat::getMatchingString(APInt IntValue) const {
   if (Value != Kind::Signed && IntValue.isNegative())
     return make_error<OverflowError>();
 
@@ -135,15 +134,9 @@ static APInt toSigned(APInt AbsVal, bool Negative) {
   return Result;
 }
 
-Expected<ExpressionValue>
-ExpressionFormat::valueFromStringRepr(StringRef StrVal,
-                                      const SourceMgr &SM) const {
+APInt ExpressionFormat::valueFromStringRepr(StringRef StrVal,
+                                            const SourceMgr &SM) const {
   bool ValueIsSigned = Value == Kind::Signed;
-  // Both the FileCheck utility and library only call this method with a valid
-  // value in StrVal. This is guaranteed by the regex returned by
-  // getWildcardRegex() above. Only underflow and overflow errors can thus
-  // occur. However new uses of this method could be added in the future so
-  // the error message does not make assumptions about StrVal.
   bool Negative = StrVal.consume_front("-");
   bool Hex = Value == Kind::HexUpper || Value == Kind::HexLower;
   bool MissingFormPrefix =
@@ -151,80 +144,65 @@ ExpressionFormat::valueFromStringRepr(StringRef StrVal,
   (void)MissingFormPrefix;
   assert(!MissingFormPrefix && "missing alternate form prefix");
   APInt ResultValue;
-  bool ParseFailure = StrVal.getAsInteger(Hex ? 16 : 10, ResultValue);
-  if (ParseFailure)
-    return ErrorDiagnostic::get(SM, StrVal,
-                                "unable to represent numeric value");
-  return ExpressionValue(toSigned(ResultValue, Negative));
+  [[maybe_unused]] bool ParseFailure =
+      StrVal.getAsInteger(Hex ? 16 : 10, ResultValue);
+  // Both the FileCheck utility and library only call this method with a valid
+  // value in StrVal. This is guaranteed by the regex returned by
+  // getWildcardRegex() above.
+  assert(!ParseFailure && "unable to represent numeric value");
+  return toSigned(ResultValue, Negative);
 }
 
-Expected<ExpressionValue> llvm::exprAdd(const ExpressionValue &LeftOperand,
-                                        const ExpressionValue &RightOperand,
-                                        bool &Overflow) {
-  APInt Result = LeftOperand.getAPIntValue().sadd_ov(
-      RightOperand.getAPIntValue(), Overflow);
-  return ExpressionValue(Result);
+Expected<APInt> llvm::exprAdd(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
+  return LeftOperand.sadd_ov(RightOperand, Overflow);
 }
 
-Expected<ExpressionValue> llvm::exprSub(const ExpressionValue &LeftOperand,
-                                        const ExpressionValue &RightOperand,
-                                        bool &Overflow) {
-  APInt Result = LeftOperand.getAPIntValue().ssub_ov(
-      RightOperand.getAPIntValue(), Overflow);
-  return ExpressionValue(Result);
+Expected<APInt> llvm::exprSub(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
+  return LeftOperand.ssub_ov(RightOperand, Overflow);
 }
 
-Expected<ExpressionValue> llvm::exprMul(const ExpressionValue &LeftOperand,
-                                        const ExpressionValue &RightOperand,
-                                        bool &Overflow) {
-  APInt Result = LeftOperand.getAPIntValue().smul_ov(
-      RightOperand.getAPIntValue(), Overflow);
-  return ExpressionValue(Result);
+Expected<APInt> llvm::exprMul(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
+  return LeftOperand.smul_ov(RightOperand, Overflow);
 }
 
-Expected<ExpressionValue> llvm::exprDiv(const ExpressionValue &LeftOperand,
-                                        const ExpressionValue &RightOperand,
-                                        bool &Overflow) {
+Expected<APInt> llvm::exprDiv(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
   // Check for division by zero.
-  if (RightOperand.getAPIntValue().isZero())
+  if (RightOperand.isZero())
     return make_error<OverflowError>();
 
-  APInt Result = LeftOperand.getAPIntValue().sdiv_ov(
-      RightOperand.getAPIntValue(), Overflow);
-  return ExpressionValue(Result);
+  return LeftOperand.sdiv_ov(RightOperand, Overflow);
 }
 
-Expected<ExpressionValue> llvm::exprMax(const ExpressionValue &LeftOperand,
-                                        const ExpressionValue &RightOperand,
-                                        bool &Overflow) {
+Expected<APInt> llvm::exprMax(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
   Overflow = false;
-  return LeftOperand.getAPIntValue().slt(RightOperand.getAPIntValue())
-             ? RightOperand
-             : LeftOperand;
+  return LeftOperand.slt(RightOperand) ? RightOperand : LeftOperand;
 }
 
-Expected<ExpressionValue> llvm::exprMin(const ExpressionValue &LeftOperand,
-                                        const ExpressionValue &RightOperand,
-                                        bool &Overflow) {
+Expected<APInt> llvm::exprMin(const APInt &LeftOperand,
+                              const APInt &RightOperand, bool &Overflow) {
   Overflow = false;
-  if (cantFail(exprMax(LeftOperand, RightOperand, Overflow)).getAPIntValue() ==
-      LeftOperand.getAPIntValue())
+  if (cantFail(exprMax(LeftOperand, RightOperand, Overflow)) == LeftOperand)
     return RightOperand;
 
   return LeftOperand;
 }
 
-Expected<ExpressionValue> NumericVariableUse::eval() const {
-  std::optional<ExpressionValue> Value = Variable->getValue();
+Expected<APInt> NumericVariableUse::eval() const {
+  std::optional<APInt> Value = Variable->getValue();
   if (Value)
     return *Value;
 
   return make_error<UndefVarError>(getExpressionStr());
 }
 
-Expected<ExpressionValue> BinaryOperation::eval() const {
-  Expected<ExpressionValue> MaybeLeftOp = LeftOperand->eval();
-  Expected<ExpressionValue> MaybeRightOp = RightOperand->eval();
+Expected<APInt> BinaryOperation::eval() const {
+  Expected<APInt> MaybeLeftOp = LeftOperand->eval();
+  Expected<APInt> MaybeRightOp = RightOperand->eval();
 
   // Bubble up any error (e.g. undefined variables) in the recursive
   // evaluation.
@@ -237,8 +215,8 @@ Expected<ExpressionValue> BinaryOperation::eval() const {
     return std::move(Err);
   }
 
-  APInt LeftOp = MaybeLeftOp->getAPIntValue();
-  APInt RightOp = MaybeRightOp->getAPIntValue();
+  APInt LeftOp = *MaybeLeftOp;
+  APInt RightOp = *MaybeRightOp;
   bool Overflow;
   // Ensure both operands have the same bitwidth.
   unsigned LeftBitWidth = LeftOp.getBitWidth();
@@ -247,8 +225,7 @@ Expected<ExpressionValue> BinaryOperation::eval() const {
   LeftOp = LeftOp.sext(NewBitWidth);
   RightOp = RightOp.sext(NewBitWidth);
   do {
-    Expected<ExpressionValue> MaybeResult =
-        EvalBinop(ExpressionValue(LeftOp), ExpressionValue(RightOp), Overflow);
+    Expected<APInt> MaybeResult = EvalBinop(LeftOp, RightOp, Overflow);
     if (!MaybeResult)
       return MaybeResult.takeError();
 
@@ -291,8 +268,7 @@ BinaryOperation::getImplicitFormat(const SourceMgr &SM) const {
 Expected<std::string> NumericSubstitution::getResult() const {
   assert(ExpressionPointer->getAST() != nullptr &&
          "Substituting empty expression");
-  Expected<ExpressionValue> EvaluatedValue =
-      ExpressionPointer->getAST()->eval();
+  Expected<APInt> EvaluatedValue = ExpressionPointer->getAST()->eval();
   if (!EvaluatedValue)
     return EvaluatedValue.takeError();
   ExpressionFormat Format = ExpressionPointer->getFormat();
@@ -1117,7 +1093,7 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
     TmpStr = RegExStr;
     if (LineNumber)
       Context->LineVariable->setValue(
-          ExpressionValue(APInt(sizeof(*LineNumber) * 8, *LineNumber)));
+          APInt(sizeof(*LineNumber) * 8, *LineNumber));
 
     size_t InsertOffset = 0;
     // Substitute all string variables and expressions whose values are only
@@ -1196,11 +1172,8 @@ Pattern::MatchResult Pattern::match(StringRef Buffer,
 
     StringRef MatchedValue = MatchInfo[CaptureParenGroup];
     ExpressionFormat Format = DefinedNumericVariable->getImplicitFormat();
-    Expected<ExpressionValue> Value =
-        Format.valueFromStringRepr(MatchedValue, SM);
-    if (!Value)
-      return MatchResult(TheMatch, Value.takeError());
-    DefinedNumericVariable->setValue(*Value, MatchedValue);
+    APInt Value = Format.valueFromStringRepr(MatchedValue, SM);
+    DefinedNumericVariable->setValue(Value, MatchedValue);
   }
 
   return MatchResult(TheMatch, Error::success());
@@ -2583,7 +2556,7 @@ Error FileCheckPatternContext::defineCmdlineVariables(
       // to, since the expression of a command-line variable definition should
       // only use variables defined earlier on the command-line. If not, this
       // is an error and we report it.
-      Expected<ExpressionValue> Value = Expression->getAST()->eval();
+      Expected<APInt> Value = Expression->getAST()->eval();
       if (!Value) {
         Errs = joinErrors(std::move(Errs), Value.takeError());
         continue;

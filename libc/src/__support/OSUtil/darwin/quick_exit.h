@@ -17,7 +17,7 @@ namespace __llvm_libc {
 
 LIBC_INLINE void quick_exit(int status) {
   for (;;) {
-    __llvm_libc::syscall_impl(1 /* SYS_exit */, status);
+    __llvm_libc::syscall_impl<long>(1 /* SYS_exit */, status);
   }
 }
 

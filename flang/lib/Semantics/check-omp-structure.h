@@ -17,9 +17,11 @@
 #include "check-directive-structure.h"
 #include "flang/Common/enum-set.h"
 #include "flang/Parser/parse-tree.h"
-#include "flang/Semantics/openmp-directive-sets.h"
 #include "flang/Semantics/semantics.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
+
+using OmpDirectiveSet = Fortran::common::EnumSet<llvm::omp::Directive,
+    llvm::omp::Directive_enumSize>;
 
 using OmpClauseSet =
     Fortran::common::EnumSet<llvm::omp::Clause, llvm::omp::Clause_enumSize>;
@@ -29,6 +31,74 @@ using OmpClauseSet =
 
 namespace llvm {
 namespace omp {
+static OmpDirectiveSet parallelSet{Directive::OMPD_distribute_parallel_do,
+    Directive::OMPD_distribute_parallel_do_simd, Directive::OMPD_parallel,
+    Directive::OMPD_parallel_do, Directive::OMPD_parallel_do_simd,
+    Directive::OMPD_parallel_sections, Directive::OMPD_parallel_workshare,
+    Directive::OMPD_target_parallel, Directive::OMPD_target_parallel_do,
+    Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_parallel_do,
+    Directive::OMPD_teams_distribute_parallel_do_simd};
+static OmpDirectiveSet doSet{Directive::OMPD_distribute_parallel_do,
+    Directive::OMPD_distribute_parallel_do_simd, Directive::OMPD_parallel_do,
+    Directive::OMPD_parallel_do_simd, Directive::OMPD_do,
+    Directive::OMPD_do_simd, Directive::OMPD_target_parallel_do,
+    Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_parallel_do,
+    Directive::OMPD_teams_distribute_parallel_do_simd};
+static OmpDirectiveSet doSimdSet{Directive::OMPD_distribute_parallel_do_simd,
+    Directive::OMPD_parallel_do_simd, Directive::OMPD_do_simd,
+    Directive::OMPD_target_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_parallel_do_simd};
+static OmpDirectiveSet workShareSet{
+    OmpDirectiveSet{Directive::OMPD_workshare,
+        Directive::OMPD_parallel_workshare, Directive::OMPD_parallel_sections,
+        Directive::OMPD_sections, Directive::OMPD_single} |
+    doSet};
+static OmpDirectiveSet taskloopSet{
+    Directive::OMPD_taskloop, Directive::OMPD_taskloop_simd};
+static OmpDirectiveSet targetSet{Directive::OMPD_target,
+    Directive::OMPD_target_parallel, Directive::OMPD_target_parallel_do,
+    Directive::OMPD_target_parallel_do_simd, Directive::OMPD_target_simd,
+    Directive::OMPD_target_teams, Directive::OMPD_target_teams_distribute,
+    Directive::OMPD_target_teams_distribute_parallel_do,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_simd};
+static OmpDirectiveSet simdSet{Directive::OMPD_distribute_parallel_do_simd,
+    Directive::OMPD_distribute_simd, Directive::OMPD_do_simd,
+    Directive::OMPD_parallel_do_simd, Directive::OMPD_simd,
+    Directive::OMPD_target_parallel_do_simd, Directive::OMPD_target_simd,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_simd, Directive::OMPD_taskloop_simd,
+    Directive::OMPD_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_simd};
+static OmpDirectiveSet teamSet{Directive::OMPD_teams,
+    Directive::OMPD_teams_distribute,
+    Directive::OMPD_teams_distribute_parallel_do,
+    Directive::OMPD_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_simd};
+static OmpDirectiveSet taskGeneratingSet{
+    OmpDirectiveSet{Directive::OMPD_task} | taskloopSet};
+static OmpDirectiveSet nestedOrderedErrSet{Directive::OMPD_critical,
+    Directive::OMPD_ordered, Directive::OMPD_atomic, Directive::OMPD_task,
+    Directive::OMPD_taskloop};
+static OmpDirectiveSet nestedWorkshareErrSet{
+    OmpDirectiveSet{Directive::OMPD_task, Directive::OMPD_taskloop,
+        Directive::OMPD_critical, Directive::OMPD_ordered,
+        Directive::OMPD_atomic, Directive::OMPD_master} |
+    workShareSet};
+static OmpDirectiveSet nestedMasterErrSet{
+    OmpDirectiveSet{llvm::omp::Directive::OMPD_atomic} | taskGeneratingSet |
+    workShareSet};
+static OmpDirectiveSet nestedBarrierErrSet{
+    OmpDirectiveSet{Directive::OMPD_critical, Directive::OMPD_ordered,
+        Directive::OMPD_atomic, Directive::OMPD_master} |
+    taskGeneratingSet | workShareSet};
 static OmpClauseSet privateSet{
     Clause::OMPC_private, Clause::OMPC_firstprivate, Clause::OMPC_lastprivate};
 static OmpClauseSet privateReductionSet{

@@ -167,7 +167,14 @@ public:
 
   bool Pre(const parser::AccClause::Copyin &x) {
     const auto &objectList{std::get<parser::AccObjectList>(x.v.t)};
-    ResolveAccObjectList(objectList, Symbol::Flag::AccCopyIn);
+    const auto &modifier{
+        std::get<std::optional<parser::AccDataModifier>>(x.v.t)};
+    if (modifier &&
+        (*modifier).v == parser::AccDataModifier::Modifier::ReadOnly) {
+      ResolveAccObjectList(objectList, Symbol::Flag::AccCopyInReadOnly);
+    } else {
+      ResolveAccObjectList(objectList, Symbol::Flag::AccCopyIn);
+    }
     return false;
   }
 
@@ -246,7 +253,8 @@ private:
       Symbol::Flag::AccDevice, Symbol::Flag::AccHost, Symbol::Flag::AccSelf};
 
   Symbol::Flags accFlagsRequireMark{Symbol::Flag::AccCreate,
-      Symbol::Flag::AccCopyIn, Symbol::Flag::AccCopy, Symbol::Flag::AccCopyOut,
+      Symbol::Flag::AccCopyIn, Symbol::Flag::AccCopyInReadOnly,
+      Symbol::Flag::AccCopy, Symbol::Flag::AccCopyOut,
       Symbol::Flag::AccDevicePtr, Symbol::Flag::AccDeviceResident,
       Symbol::Flag::AccLink, Symbol::Flag::AccPresent};
 
@@ -1362,7 +1370,7 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     if (targetIt == dirContext_.rend()) {
       return;
     }
-    if (llvm::omp::allParallelSet.test(targetIt->directive) ||
+    if (llvm::omp::parallelSet.test(targetIt->directive) ||
         llvm::omp::taskGeneratingSet.test(targetIt->directive)) {
       break;
     }
@@ -1463,7 +1471,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     return;
   }
   Symbol::Flag ivDSA;
-  if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
+  if (!llvm::omp::simdSet.test(GetContext().directive)) {
     ivDSA = Symbol::Flag::OmpPrivate;
   } else if (level == 1) {
     ivDSA = Symbol::Flag::OmpLinear;
