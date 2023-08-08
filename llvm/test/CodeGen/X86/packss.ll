@@ -11,11 +11,9 @@
 define <4 x i32> @trunc_ashr_v4i64(<4 x i64> %a) nounwind {
 ; SSE2-LABEL: trunc_ashr_v4i64:
 ; SSE2:       # %bb.0:
-; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm1
-; SSE2-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,3,3]
 ; SSE2-NEXT:    psrad $31, %xmm0
-; SSE2-NEXT:    packssdw %xmm1, %xmm0
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE2-NEXT:    ret{{[l|q]}}
 ;
 ; SSE4-LABEL: trunc_ashr_v4i64:

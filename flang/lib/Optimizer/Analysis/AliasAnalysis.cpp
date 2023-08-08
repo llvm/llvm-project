@@ -10,14 +10,18 @@
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "mlir/Analysis/AliasAnalysis.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 
 using namespace mlir;
+
+#define DEBUG_TYPE "fir-alias-analysis"
 
 //===----------------------------------------------------------------------===//
 // AliasAnalysis: alias
@@ -67,6 +71,12 @@ bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   auto lhsSrc = getSource(lhs);
   auto rhsSrc = getSource(rhs);
+  LLVM_DEBUG(llvm::dbgs() << "AliasAnalysis::alias\n";
+             llvm::dbgs() << "  lhs: " << lhs << "\n";
+             llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
+             llvm::dbgs() << "  rhs: " << rhs << "\n";
+             llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";
+             llvm::dbgs() << "\n";);
 
   // Indirect case currently not handled. Conservatively assume
   // it aliases with everything
@@ -218,6 +228,11 @@ AliasAnalysis::Source AliasAnalysis::getSource(mlir::Value v) {
             attributes.set(Attribute::Pointer);
           global = llvm::cast<fir::AddrOfOp>(op).getSymbol();
           breakFromLoop = true;
+        })
+        .Case<hlfir::DeclareOp, fir::DeclareOp>([&](auto op) {
+          // Track further through the operand
+          v = op.getMemref();
+          defOp = v.getDefiningOp();
         })
         .Default([&](auto op) {
           defOp = nullptr;
