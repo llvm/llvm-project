@@ -395,10 +395,11 @@ static void expectOperationValueResult(binop_eval_t Operation, T1 LeftValue,
                                        T2 RightValue, TR ResultValue) {
   APInt LeftVal(LiteralsBitWidth, LeftValue, std::is_signed_v<T1>);
   APInt RightVal(LiteralsBitWidth, RightValue, std::is_signed_v<T2>);
-  APInt ResultVal =
-      std::is_integral_v<TR>
-          ? APInt(LiteralsBitWidth, ResultValue, std::is_signed_v<TR>)
-          : APInt(LiteralsBitWidth, ResultValue, /*Radix=*/10);
+  APInt ResultVal;
+  if constexpr (std::is_integral_v<TR>)
+    ResultVal = APInt(LiteralsBitWidth, ResultValue, std::is_signed_v<TR>);
+  else
+    ResultVal = APInt(LiteralsBitWidth, ResultValue, /*Radix=*/10);
   expectOperationValueResult(Operation, LeftVal, RightVal, ResultVal);
 }
 

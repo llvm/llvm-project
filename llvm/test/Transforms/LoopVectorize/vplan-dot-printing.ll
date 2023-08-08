@@ -34,7 +34,7 @@ define void @print_call_and_memory(i64 %n, ptr noalias %y, ptr noalias %x) nounw
 ; CHECK-NEXT:    "  CLONE ir\<%arrayidx2\> = getelementptr inbounds ir\<%x\>, vp\<[[STEPS]]\>\l" +
 ; CHECK-NEXT:    "  WIDEN store ir\<%arrayidx2\>, ir\<%call\>\l" +
 ; CHECK-NEXT:    "  EMIT vp\<[[CAN_IV_NEXT:%.+]]\> = VF * UF +(nuw) vp\<[[CAN_IV]]\>\l" +
-; CHECK-NEXT:    "  EMIT branch-on-count vp\<[[CAN_IV_NEXT]]\> vp\<{{.+}}\>\l" +
+; CHECK-NEXT:    "  EMIT branch-on-count vp\<[[CAN_IV_NEXT]]\>, vp\<{{.+}}\>\l" +
 ; CHECK-NEXT:    "No successors\l"
 ; CHECK-NEXT:  ]
 ;

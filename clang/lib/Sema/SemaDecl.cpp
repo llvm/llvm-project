@@ -3770,6 +3770,16 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
     }
   }
 
+  // It is not permitted to redeclare an SME function with different SME
+  // attributes.
+  if (IsInvalidSMECallConversion(Old->getType(), New->getType(),
+                                 AArch64SMECallConversionKind::MatchExactly)) {
+    Diag(New->getLocation(), diag::err_sme_attr_mismatch)
+        << New->getType() << Old->getType();
+    Diag(OldLocation, diag::note_previous_declaration);
+    return true;
+  }
+
   // If a function is first declared with a calling convention, but is later
   // declared or defined without one, all following decls assume the calling
   // convention of the first.

@@ -176,6 +176,8 @@ Improvements to Clang's diagnostics
 -----------------------------------
 - Clang constexpr evaluator now prints template arguments when displaying
   template-specialization function calls.
+- Clang contexpr evaluator now displays notes as well as an error when a constructor
+  of a base class is not called in the constructor of its derived class.
 
 Bug Fixes in This Version
 -------------------------
@@ -209,6 +211,10 @@ Bug Fixes to C++ Support
   (`#29942 <https://github.com/llvm/llvm-project/issues/29942>_`),
   (`#35574 <https://github.com/llvm/llvm-project/issues/35574>_`) and
   (`#27224 <https://github.com/llvm/llvm-project/issues/27224>_`).
+
+- Clang emits an error on substitution failure within lambda body inside a
+  requires-expression. This fixes:
+  (`#64138 <https://github.com/llvm/llvm-project/issues/64138>_`).
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -246,6 +252,9 @@ Windows Support
 
 LoongArch Support
 ^^^^^^^^^^^^^^^^^
+
+- An ABI mismatch between GCC and Clang related to the handling of empty structs
+  in C++ parameter passing under ``lp64d`` ABI was fixed.
 
 RISC-V Support
 ^^^^^^^^^^^^^^
