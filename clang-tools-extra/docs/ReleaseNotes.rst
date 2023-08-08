@@ -192,6 +192,9 @@ Changes in existing checks
   <clang-tidy/checks/readability/identifier-naming>` check to emit proper
   warnings when a type forward declaration precedes its definition.
 
+- Misc-include-cleaner check has option `DeduplicateFindings` to output one
+  finding per occurence of a symbol.
+
 Removed checks
 ^^^^^^^^^^^^^^
 
