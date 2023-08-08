@@ -54590,6 +54590,21 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         }
       }
       break;
+    case X86ISD::SHUF128: {
+      if (!IsSplat && NumOps == 2 && VT.is512BitVector()) {
+        unsigned Imm0 = Ops[0].getConstantOperandVal(2);
+        unsigned Imm1 = Ops[1].getConstantOperandVal(2);
+        unsigned Imm = ((Imm0 & 1) << 0) | ((Imm0 & 2) << 1) | 0x08 |
+                       ((Imm1 & 1) << 4) | ((Imm1 & 2) << 5) | 0x80;
+        SDValue LHS = concatSubVectors(Ops[0].getOperand(0),
+                                       Ops[0].getOperand(1), DAG, DL);
+        SDValue RHS = concatSubVectors(Ops[1].getOperand(0),
+                                       Ops[1].getOperand(1), DAG, DL);
+        return DAG.getNode(X86ISD::SHUF128, DL, VT, LHS, RHS,
+                           DAG.getTargetConstant(Imm, DL, MVT::i8));
+      }
+      break;
+    }
     case ISD::TRUNCATE:
       if (!IsSplat && NumOps == 2 && VT.is256BitVector()) {
         EVT SrcVT = Ops[0].getOperand(0).getValueType();
