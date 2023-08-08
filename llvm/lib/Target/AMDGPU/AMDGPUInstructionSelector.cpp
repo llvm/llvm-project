@@ -4416,6 +4416,7 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
     OffsetReg = Def->Reg;
 
   Register Op0;
+  MachineInstr *Mul;
   bool ScaleOffset =
       (isPowerOf2_64(Size) &&
        mi_match(OffsetReg, *MRI,
@@ -4424,7 +4425,15 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
                                 m_Copy(m_SpecificICst(Log2_64(Size))))))) ||
       mi_match(OffsetReg, *MRI, m_GMul(m_Reg(Op0), m_SpecificICst(Size))) ||
       mi_match(OffsetReg, *MRI,
-               m_BinOp(AMDGPU::S_MUL_U64, m_Reg(Op0), m_SpecificICst(Size)));
+               m_BinOp(AMDGPU::S_MUL_U64, m_Reg(Op0), m_SpecificICst(Size))) ||
+      // Match G_AMDGPU_MAD_U64_U32 offset, c, 0
+      (mi_match(OffsetReg, *MRI, m_MInstr(Mul)) &&
+       Mul->getOpcode() == AMDGPU::G_AMDGPU_MAD_U64_U32 &&
+       mi_match(Mul->getOperand(4).getReg(), *MRI, m_ZeroInt()) &&
+       mi_match(Mul->getOperand(3).getReg(), *MRI,
+                  m_GTrunc(m_any_of(m_SpecificICst(Size),
+                                    m_Copy(m_SpecificICst(Size))))) &&
+       mi_match(Mul->getOperand(2).getReg(), *MRI, m_Reg(Op0)));
 
   if (ScaleOffset)
     Offset = Op0;

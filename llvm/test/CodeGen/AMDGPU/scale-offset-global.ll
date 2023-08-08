@@ -101,30 +101,12 @@ entry:
   ret <2 x float> %ret
 }
 
-; FIXME: This is practically impossible to match as long as global ISel creates a
-;        cascade of COPY instructions with illegal type for MAD_U64_U32 to do
-;        just a multiplication.
-
 define amdgpu_ps <3 x float> @global_load_b96_idxprom(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
-; SDAG-LABEL: global_load_b96_idxprom:
-; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    global_load_b96 v[0:2], v0, s[0:1] scale_offset
-; SDAG-NEXT:    s_wait_loadcnt 0x0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-LABEL: global_load_b96_idxprom:
-; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_mov_b32_e32 v3, v2
-; GISEL-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 12, v[2:3]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
-; GISEL-NEXT:    global_load_b96 v[0:2], v[0:1], off
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    ; return to shader part epilog
+; GCN-LABEL: global_load_b96_idxprom:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    global_load_b96 v[0:2], v0, s[0:1] scale_offset
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
   %arrayidx = getelementptr inbounds [3 x float], ptr addrspace(1) %p, i64 %idxprom
@@ -133,25 +115,11 @@ entry:
 }
 
 define amdgpu_ps <3 x float> @global_load_b96_idxpromi_ioffset(ptr addrspace(1) align 4 inreg %p, i32 %idx) {
-; SDAG-LABEL: global_load_b96_idxpromi_ioffset:
-; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    global_load_b96 v[0:2], v0, s[0:1] offset:192 scale_offset
-; SDAG-NEXT:    s_wait_loadcnt 0x0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-LABEL: global_load_b96_idxpromi_ioffset:
-; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    v_mov_b32_e32 v2, 0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_mov_b32_e32 v3, v2
-; GISEL-NEXT:    v_mad_co_u64_u32 v[0:1], null, v0, 12, v[2:3]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
-; GISEL-NEXT:    global_load_b96 v[0:2], v[0:1], off offset:192
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    ; return to shader part epilog
+; GCN-LABEL: global_load_b96_idxpromi_ioffset:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    global_load_b96 v[0:2], v0, s[0:1] offset:192 scale_offset
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idxprom = zext i32 %idx to i64
   %idxadd = add i64 %idxprom, 16
@@ -281,29 +249,13 @@ entry:
 }
 
 define amdgpu_ps <3 x float> @global_load_b96_idxprom_range(ptr addrspace(1) align 4 inreg %p, ptr addrspace(1) align 4 %pp) {
-; SDAG-LABEL: global_load_b96_idxprom_range:
-; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    global_load_b32 v0, v[0:1], off
-; SDAG-NEXT:    s_wait_loadcnt 0x0
-; SDAG-NEXT:    global_load_b96 v[0:2], v0, s[0:1] scale_offset
-; SDAG-NEXT:    s_wait_loadcnt 0x0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-LABEL: global_load_b96_idxprom_range:
-; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    global_load_b32 v2, v[0:1], off
-; GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_mov_b32_e32 v1, v0
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_mad_co_u64_u32 v[0:1], null, v2, 12, v[0:1]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
-; GISEL-NEXT:    global_load_b96 v[0:2], v[0:1], off
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    ; return to shader part epilog
+; GCN-LABEL: global_load_b96_idxprom_range:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    global_load_b32 v0, v[0:1], off
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_load_b96 v[0:2], v0, s[0:1] scale_offset
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
   %idxprom = zext i32 %idx to i64
@@ -313,29 +265,13 @@ entry:
 }
 
 define amdgpu_ps <3 x float> @global_load_b96_idxprom_range_ioffset(ptr addrspace(1) align 4 inreg %p, ptr addrspace(1) align 4 %pp) {
-; SDAG-LABEL: global_load_b96_idxprom_range_ioffset:
-; SDAG:       ; %bb.0: ; %entry
-; SDAG-NEXT:    global_load_b32 v0, v[0:1], off
-; SDAG-NEXT:    s_wait_loadcnt 0x0
-; SDAG-NEXT:    global_load_b96 v[0:2], v0, s[0:1] offset:192 scale_offset
-; SDAG-NEXT:    s_wait_loadcnt 0x0
-; SDAG-NEXT:    ; return to shader part epilog
-;
-; GISEL-LABEL: global_load_b96_idxprom_range_ioffset:
-; GISEL:       ; %bb.0: ; %entry
-; GISEL-NEXT:    global_load_b32 v2, v[0:1], off
-; GISEL-NEXT:    v_mov_b32_e32 v0, 0
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_1)
-; GISEL-NEXT:    v_mov_b32_e32 v1, v0
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    v_mad_co_u64_u32 v[0:1], null, v2, 12, v[0:1]
-; GISEL-NEXT:    v_mov_b64_e32 v[2:3], s[0:1]
-; GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_2)
-; GISEL-NEXT:    v_add_co_u32 v0, vcc_lo, v2, v0
-; GISEL-NEXT:    v_add_co_ci_u32_e32 v1, vcc_lo, v3, v1, vcc_lo
-; GISEL-NEXT:    global_load_b96 v[0:2], v[0:1], off offset:192
-; GISEL-NEXT:    s_wait_loadcnt 0x0
-; GISEL-NEXT:    ; return to shader part epilog
+; GCN-LABEL: global_load_b96_idxprom_range_ioffset:
+; GCN:       ; %bb.0: ; %entry
+; GCN-NEXT:    global_load_b32 v0, v[0:1], off
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    global_load_b96 v[0:2], v0, s[0:1] offset:192 scale_offset
+; GCN-NEXT:    s_wait_loadcnt 0x0
+; GCN-NEXT:    ; return to shader part epilog
 entry:
   %idx = load i32, ptr addrspace(1) %pp, align 4, !range !0
   %idxprom = zext i32 %idx to i64
