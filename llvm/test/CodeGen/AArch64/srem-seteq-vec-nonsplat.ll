@@ -83,17 +83,16 @@ define <4 x i32> @test_srem_even_allones_eq(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    mov w9, #9362 // =0x2492
 ; CHECK-NEXT:    movk w8, #46811, lsl #16
 ; CHECK-NEXT:    movk w9, #4681, lsl #16
-; CHECK-NEXT:    movi v3.4s, #1
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    dup v2.4s, w9
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI3_0]
 ; CHECK-NEXT:    shl v0.4s, v2.4s, #31
-; CHECK-NEXT:    ushr v1.4s, v2.4s, #1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI3_0]
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    usra v0.4s, v2.4s, #1
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    cmhs v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 14, i32 14, i32 4294967295, i32 14>
   %cmp = icmp eq <4 x i32> %srem, <i32 0, i32 0, i32 0, i32 0>
@@ -107,17 +106,16 @@ define <4 x i32> @test_srem_even_allones_ne(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    mov w9, #9362 // =0x2492
 ; CHECK-NEXT:    movk w8, #46811, lsl #16
 ; CHECK-NEXT:    movk w9, #4681, lsl #16
-; CHECK-NEXT:    movi v3.4s, #1
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    dup v2.4s, w9
 ; CHECK-NEXT:    adrp x8, .LCPI4_0
 ; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI4_0]
 ; CHECK-NEXT:    shl v0.4s, v2.4s, #31
-; CHECK-NEXT:    ushr v1.4s, v2.4s, #1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI4_0]
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    cmhi v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    usra v0.4s, v2.4s, #1
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    cmhi v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 14, i32 14, i32 4294967295, i32 14>
   %cmp = icmp ne <4 x i32> %srem, <i32 0, i32 0, i32 0, i32 0>
@@ -298,17 +296,16 @@ define <4 x i32> @test_srem_even_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    mov w9, #9362 // =0x2492
 ; CHECK-NEXT:    movk w8, #46811, lsl #16
 ; CHECK-NEXT:    movk w9, #4681, lsl #16
-; CHECK-NEXT:    movi v3.4s, #1
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    dup v2.4s, w9
 ; CHECK-NEXT:    adrp x8, .LCPI11_0
 ; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI11_0]
 ; CHECK-NEXT:    shl v0.4s, v2.4s, #31
-; CHECK-NEXT:    ushr v1.4s, v2.4s, #1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI11_0]
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    usra v0.4s, v2.4s, #1
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    cmhs v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 14, i32 14, i32 1, i32 14>
   %cmp = icmp eq <4 x i32> %srem, <i32 0, i32 0, i32 0, i32 0>
@@ -552,17 +549,16 @@ define <4 x i32> @test_srem_even_allones_and_one(<4 x i32> %X) nounwind {
 ; CHECK-NEXT:    mov w9, #9362 // =0x2492
 ; CHECK-NEXT:    movk w8, #46811, lsl #16
 ; CHECK-NEXT:    movk w9, #4681, lsl #16
-; CHECK-NEXT:    movi v3.4s, #1
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    dup v2.4s, w9
 ; CHECK-NEXT:    adrp x8, .LCPI20_0
 ; CHECK-NEXT:    mla v2.4s, v0.4s, v1.4s
+; CHECK-NEXT:    ldr q1, [x8, :lo12:.LCPI20_0]
 ; CHECK-NEXT:    shl v0.4s, v2.4s, #31
-; CHECK-NEXT:    ushr v1.4s, v2.4s, #1
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI20_0]
-; CHECK-NEXT:    orr v0.16b, v1.16b, v0.16b
-; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    usra v0.4s, v2.4s, #1
+; CHECK-NEXT:    movi v2.4s, #1
+; CHECK-NEXT:    cmhs v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %srem = srem <4 x i32> %X, <i32 14, i32 4294967295, i32 1, i32 14>
   %cmp = icmp eq <4 x i32> %srem, <i32 0, i32 0, i32 0, i32 0>

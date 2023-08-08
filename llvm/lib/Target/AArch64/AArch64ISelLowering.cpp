@@ -2107,6 +2107,13 @@ void AArch64TargetLowering::computeKnownBitsForTargetNode(
     Known = KnownBits::ashr(Known, Known2);
     break;
   }
+  case AArch64ISD::VSHL: {
+    KnownBits Known2;
+    Known = DAG.computeKnownBits(Op->getOperand(0), Depth + 1);
+    Known2 = DAG.computeKnownBits(Op->getOperand(1), Depth + 1);
+    Known = KnownBits::shl(Known, Known2);
+    break;
+  }
   case AArch64ISD::MOVI: {
     ConstantSDNode *CN = cast<ConstantSDNode>(Op->getOperand(0));
     Known =
