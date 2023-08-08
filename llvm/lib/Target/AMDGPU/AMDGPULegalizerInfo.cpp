@@ -5891,49 +5891,48 @@ bool AMDGPULegalizerInfo::legalizeImageIntrinsic(
   const unsigned HasPartialNSA = ST.hasPartialNSAEncoding();
 
   if (IsA16 || IsG16) {
-    if (Intr->NumVAddrs > 1) {
-      SmallVector<Register, 4> PackedRegs;
+    // Even if NumVAddrs == 1 we should pack it into a 32-bit value, because the
+    // instructions expect VGPR_32
+    SmallVector<Register, 4> PackedRegs;
 
-      packImage16bitOpsToDwords(B, MI, PackedRegs, ArgOffset, Intr, IsA16,
-                                IsG16);
+    packImage16bitOpsToDwords(B, MI, PackedRegs, ArgOffset, Intr, IsA16, IsG16);
 
-      // See also below in the non-a16 branch
-      const bool UseNSA = ST.hasNSAEncoding() &&
-                          PackedRegs.size() >= ST.getNSAThreshold(MF) &&
-                          (PackedRegs.size() <= NSAMaxSize || HasPartialNSA);
-      const bool UsePartialNSA =
-          UseNSA && HasPartialNSA && PackedRegs.size() > NSAMaxSize;
+    // See also below in the non-a16 branch
+    const bool UseNSA = ST.hasNSAEncoding() &&
+                        PackedRegs.size() >= ST.getNSAThreshold(MF) &&
+                        (PackedRegs.size() <= NSAMaxSize || HasPartialNSA);
+    const bool UsePartialNSA =
+        UseNSA && HasPartialNSA && PackedRegs.size() > NSAMaxSize;
 
-      if (UsePartialNSA) {
-        // Pack registers that would go over NSAMaxSize into last VAddr register
-        LLT PackedAddrTy =
-            LLT::fixed_vector(2 * (PackedRegs.size() - NSAMaxSize + 1), 16);
-        auto Concat = B.buildConcatVectors(
-            PackedAddrTy, ArrayRef(PackedRegs).slice(NSAMaxSize - 1));
-        PackedRegs[NSAMaxSize - 1] = Concat.getReg(0);
-        PackedRegs.resize(NSAMaxSize);
-      } else if (!UseNSA && PackedRegs.size() > 1) {
-        LLT PackedAddrTy = LLT::fixed_vector(2 * PackedRegs.size(), 16);
-        auto Concat = B.buildConcatVectors(PackedAddrTy, PackedRegs);
-        PackedRegs[0] = Concat.getReg(0);
-        PackedRegs.resize(1);
+    if (UsePartialNSA) {
+      // Pack registers that would go over NSAMaxSize into last VAddr register
+      LLT PackedAddrTy =
+          LLT::fixed_vector(2 * (PackedRegs.size() - NSAMaxSize + 1), 16);
+      auto Concat = B.buildConcatVectors(
+          PackedAddrTy, ArrayRef(PackedRegs).slice(NSAMaxSize - 1));
+      PackedRegs[NSAMaxSize - 1] = Concat.getReg(0);
+      PackedRegs.resize(NSAMaxSize);
+    } else if (!UseNSA && PackedRegs.size() > 1) {
+      LLT PackedAddrTy = LLT::fixed_vector(2 * PackedRegs.size(), 16);
+      auto Concat = B.buildConcatVectors(PackedAddrTy, PackedRegs);
+      PackedRegs[0] = Concat.getReg(0);
+      PackedRegs.resize(1);
+    }
+
+    const unsigned NumPacked = PackedRegs.size();
+    for (unsigned I = Intr->VAddrStart; I < Intr->VAddrEnd; I++) {
+      MachineOperand &SrcOp = MI.getOperand(ArgOffset + I);
+      if (!SrcOp.isReg()) {
+        assert(SrcOp.isImm() && SrcOp.getImm() == 0);
+        continue;
       }
 
-      const unsigned NumPacked = PackedRegs.size();
-      for (unsigned I = Intr->VAddrStart; I < Intr->VAddrEnd; I++) {
-        MachineOperand &SrcOp = MI.getOperand(ArgOffset + I);
-        if (!SrcOp.isReg()) {
-          assert(SrcOp.isImm() && SrcOp.getImm() == 0);
-          continue;
-        }
+      assert(SrcOp.getReg() != AMDGPU::NoRegister);
 
-        assert(SrcOp.getReg() != AMDGPU::NoRegister);
-
-        if (I - Intr->VAddrStart < NumPacked)
-          SrcOp.setReg(PackedRegs[I - Intr->VAddrStart]);
-        else
-          SrcOp.setReg(AMDGPU::NoRegister);
-      }
+      if (I - Intr->VAddrStart < NumPacked)
+        SrcOp.setReg(PackedRegs[I - Intr->VAddrStart]);
+      else
+        SrcOp.setReg(AMDGPU::NoRegister);
     }
   } else {
     // If the register allocator cannot place the address registers contiguously
