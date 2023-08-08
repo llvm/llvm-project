@@ -14,6 +14,7 @@
 namespace mlir {
 
 class ConversionTarget;
+class DialectRegistry;
 class Pass;
 class MLIRContext;
 class TypeConverter;
@@ -33,6 +34,8 @@ class RewritePatternSet;
 void populateAsyncStructuralTypeConversionsAndLegality(
     TypeConverter &typeConverter, RewritePatternSet &patterns,
     ConversionTarget &target);
+
+void registerConvertAsyncToLLVMInterface(DialectRegistry &registry);
 
 } // namespace mlir
 
