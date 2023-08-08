@@ -1,13 +1,14 @@
 /**
  * Test for asm-dump functionality.
  *
- * REQUIRES: system-linux,bolt-runtime
+ * REQUIRES: x86_64-linux,bolt-runtime
  *
  * Compile the source
  * RUN: %clang -fPIC %s -o %t.exe -Wl,-q
  *
  * Profile collection: instrument the binary
- * RUN: llvm-bolt %t.exe --instrument --instrumentation-file=%t.fdata -o %t.instr
+ * RUN: llvm-bolt %t.exe --instrument --instrumentation-file=%t.fdata -o \
+ * RUN:   %t.instr
  *
  * Profile collection: run instrumented binary (and capture output)
  * RUN: %t.instr > %t.result
