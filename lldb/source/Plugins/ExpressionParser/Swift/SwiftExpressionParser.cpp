@@ -49,11 +49,11 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "clang/Basic/Module.h"
 #include "clang/Rewrite/Core/RewriteBuffer.h"
