@@ -180,6 +180,10 @@ Changes in existing checks
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
 
+- Improved :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by adding option
+  `DeduplicateFindings` to output one finding per symbol occurence.
+
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``.
@@ -191,9 +195,6 @@ Changes in existing checks
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check to emit proper
   warnings when a type forward declaration precedes its definition.
-
-- Misc-include-cleaner check has option `DeduplicateFindings` to output one
-  finding per occurence of a symbol.
 
 Removed checks
 ^^^^^^^^^^^^^^
