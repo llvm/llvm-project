@@ -5208,7 +5208,8 @@ SwiftASTContext::GetTypeRefType(lldb::opaque_compiler_type_t type) {
 // Type Completion
 //----------------------------------------------------------------------
 
-ConstString SwiftASTContext::GetTypeName(opaque_compiler_type_t type) {
+ConstString SwiftASTContext::GetTypeName(opaque_compiler_type_t type,
+                                         bool BaseOnly) {
   VALID_OR_RETURN_CHECK_TYPE(
       type, ConstString("<invalid Swift context or opaque type>"));
   LLDB_SCOPED_TIMER();
@@ -5264,7 +5265,7 @@ ConstString SwiftASTContext::GetDisplayTypeName(opaque_compiler_type_t type,
   VALID_OR_RETURN_CHECK_TYPE(
       type, ConstString("<invalid Swift context or opaque type>"));
   LLDB_SCOPED_TIMER();
-  std::string type_name(GetTypeName(type).AsCString(""));
+  std::string type_name(GetTypeName(type, false).AsCString(""));
   if (type) {
     swift::Type swift_type(GetSwiftType(type));
     swift::PrintOptions print_options;

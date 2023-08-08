@@ -2303,7 +2303,8 @@ uint32_t TypeSystemSwiftTypeRef::GetPointerByteSize() {
   VALIDATE_AND_RETURN_STATIC(impl, GetPointerByteSize);
 }
 // Accessors
-ConstString TypeSystemSwiftTypeRef::GetTypeName(opaque_compiler_type_t type) {
+ConstString TypeSystemSwiftTypeRef::GetTypeName(opaque_compiler_type_t type,
+                                                bool BaseOnly) {
   auto impl = [&]() {
     using namespace swift::Demangle;
     Demangler dem;
@@ -2323,7 +2324,8 @@ ConstString TypeSystemSwiftTypeRef::GetTypeName(opaque_compiler_type_t type) {
         remangled, SwiftLanguageRuntime::eTypeName));
   };
   VALIDATE_AND_RETURN(impl, GetTypeName, type, g_no_exe_ctx,
-                      (ReconstructType(type)), (ReconstructType(type)));
+                      (ReconstructType(type), false),
+                      (ReconstructType(type), false));
 }
 ConstString
 TypeSystemSwiftTypeRef::GetDisplayTypeName(opaque_compiler_type_t type,

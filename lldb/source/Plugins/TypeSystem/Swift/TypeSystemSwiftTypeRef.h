@@ -138,7 +138,8 @@ public:
   // AST related queries
   uint32_t GetPointerByteSize() override;
   // Accessors
-  ConstString GetTypeName(lldb::opaque_compiler_type_t type) override;
+  ConstString GetTypeName(lldb::opaque_compiler_type_t type,
+                          bool BaseOnly) override;
   ConstString GetDisplayTypeName(lldb::opaque_compiler_type_t type,
                                  const SymbolContext *sc) override;
   ConstString GetMangledTypeName(lldb::opaque_compiler_type_t type) override;
