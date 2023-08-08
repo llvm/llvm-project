@@ -609,7 +609,7 @@ extern "C" MLIR_CUDA_WRAPPERS_EXPORT intptr_t mgpuSpGEMMWorkEstimation(
   cusparseSpGEMMDescr_t spgemmDesc = reinterpret_cast<cusparseSpGEMMDescr_t>(s);
   cusparseOperation_t modeA = static_cast<cusparseOperation_t>(ma);
   cusparseOperation_t modeB = static_cast<cusparseOperation_t>(mb);
-  cusparseSpGEMMAlg_t algType = static_cast<cusparseSpGEMMAlg_t>(alg);
+  cusparseSpGEMMAlg_t algorithm = static_cast<cusparseSpGEMMAlg_t>(alg);
   cusparseSpMatDescr_t matA = reinterpret_cast<cusparseSpMatDescr_t>(a);
   cusparseSpMatDescr_t matB = reinterpret_cast<cusparseSpMatDescr_t>(b);
   cusparseSpMatDescr_t matC = reinterpret_cast<cusparseSpMatDescr_t>(c);
