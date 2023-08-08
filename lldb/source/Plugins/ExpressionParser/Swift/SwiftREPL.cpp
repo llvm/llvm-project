@@ -309,8 +309,8 @@ Status SwiftREPL::DoInitialization() {
   return Status();
 }
 
-ConstString SwiftREPL::GetSourceFileBasename() {
-  static ConstString s_basename("repl.swift");
+llvm::StringRef SwiftREPL::GetSourceFileBasename() {
+  static constexpr llvm::StringLiteral s_basename("repl.swift");
   return s_basename;
 }
 
