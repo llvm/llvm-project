@@ -273,16 +273,15 @@ define <4 x i32> @test_urem_even_one(<4 x i32> %X) nounwind {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #28087 // =0x6db7
 ; CHECK-NEXT:    movk w8, #46811, lsl #16
-; CHECK-NEXT:    movi v3.4s, #1
+; CHECK-NEXT:    movi v2.4s, #1
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    adrp x8, .LCPI11_0
 ; CHECK-NEXT:    mul v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    ldr q2, [x8, :lo12:.LCPI11_0]
 ; CHECK-NEXT:    shl v1.4s, v0.4s, #31
-; CHECK-NEXT:    ushr v0.4s, v0.4s, #1
-; CHECK-NEXT:    orr v0.16b, v0.16b, v1.16b
-; CHECK-NEXT:    cmhs v0.4s, v2.4s, v0.4s
-; CHECK-NEXT:    and v0.16b, v0.16b, v3.16b
+; CHECK-NEXT:    usra v1.4s, v0.4s, #1
+; CHECK-NEXT:    ldr q0, [x8, :lo12:.LCPI11_0]
+; CHECK-NEXT:    cmhs v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    and v0.16b, v0.16b, v2.16b
 ; CHECK-NEXT:    ret
   %urem = urem <4 x i32> %X, <i32 14, i32 14, i32 1, i32 14>
   %cmp = icmp eq <4 x i32> %urem, <i32 0, i32 0, i32 0, i32 0>
