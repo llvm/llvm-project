@@ -131,7 +131,7 @@ protected:
   lldb::IOObjectSP m_io_sp;
 
   Pipe m_pipe;
-  std::recursive_mutex m_mutex;
+  mutable std::recursive_mutex m_mutex;
   std::atomic<bool> m_shutting_down; // This marks that we are shutting down so
                                      // if we get woken up from
   // BytesAvailable to disconnect, we won't try to read again.
