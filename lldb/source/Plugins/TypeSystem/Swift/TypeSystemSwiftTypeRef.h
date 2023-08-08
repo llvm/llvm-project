@@ -212,7 +212,7 @@ public:
   dump(lldb::opaque_compiler_type_t type) const override;
 #endif
 
-  bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream *s,
+  bool DumpTypeValue(lldb::opaque_compiler_type_t type, Stream &s,
                      lldb::Format format, const DataExtractor &data,
                      lldb::offset_t data_offset, size_t data_byte_size,
                      uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
@@ -224,7 +224,7 @@ public:
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
       ExecutionContextScope *exe_scope = nullptr) override;
   void DumpTypeDescription(
-      lldb::opaque_compiler_type_t type, Stream *s,
+      lldb::opaque_compiler_type_t type, Stream &s,
       lldb::DescriptionLevel level = lldb::eDescriptionLevelFull,
       ExecutionContextScope *exe_scope = nullptr) override;
   void DumpTypeDescription(

@@ -7457,7 +7457,7 @@ LLVM_DUMP_METHOD void SwiftASTContext::dump(opaque_compiler_type_t type) const {
 #endif
 
 bool SwiftASTContext::DumpTypeValue(
-    opaque_compiler_type_t type, Stream *s, lldb::Format format,
+    opaque_compiler_type_t type, Stream &s, lldb::Format format,
     const lldb_private::DataExtractor &data, lldb::offset_t byte_offset,
     size_t byte_size, uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
     ExecutionContextScope *exe_scope, bool is_base_class) {
@@ -7578,7 +7578,7 @@ bool SwiftASTContext::DumpTypeValue(
       byte_size = 4;
       break;
     }
-    return DumpDataExtractor(data, s, byte_offset, format, byte_size,
+    return DumpDataExtractor(data, &s, byte_offset, format, byte_size,
                              item_count, UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
   } break;
@@ -7592,7 +7592,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return ToCompilerType(swift_can_type->getReferenceStorageReferent())
-        .DumpTypeValue(s, format, data, byte_offset, byte_size,
+        .DumpTypeValue(&s, format, data, byte_offset, byte_size,
                        bitfield_bit_size, bitfield_bit_offset, exe_scope,
                        is_base_class);
   case swift::TypeKind::Enum:
@@ -7601,17 +7601,17 @@ bool SwiftASTContext::DumpTypeValue(
     if (cached_enum_info) {
       auto enum_elem_info = cached_enum_info->GetElementFromData(data, true);
       if (enum_elem_info)
-        s->Printf("%s", enum_elem_info->name.GetCString());
+        s.Printf("%s", enum_elem_info->name.GetCString());
       else {
         lldb::offset_t ptr = 0;
         if (data.GetByteSize())
-          s->Printf("<invalid> (0x%" PRIx8 ")", data.GetU8(&ptr));
+          s.Printf("<invalid> (0x%" PRIx8 ")", data.GetU8(&ptr));
         else
-          s->Printf("<empty>");
+          s.Printf("<empty>");
       }
       return true;
     } else
-      s->Printf("<unknown type>");
+      s.Printf("<unknown type>");
   } break;
 
   case swift::TypeKind::Struct:
@@ -7620,7 +7620,7 @@ bool SwiftASTContext::DumpTypeValue(
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype: {
-    return DumpDataExtractor(data, s, byte_offset, eFormatPointer, byte_size, 1,
+    return DumpDataExtractor(data, &s, byte_offset, eFormatPointer, byte_size, 1,
                              UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
   } break;
@@ -7749,14 +7749,14 @@ void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
                                           lldb::DescriptionLevel level,
                                           ExecutionContextScope *) {
   StreamFile s(stdout, false);
-  DumpTypeDescription(type, &s, level);
+  DumpTypeDescription(type, s, level);
 }
 
 void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
-                                          Stream *s,
+                                          Stream &s,
                                           lldb::DescriptionLevel level,
                                           ExecutionContextScope *) {
-  DumpTypeDescription(type, s, false, true, level);
+  DumpTypeDescription(type, &s, false, true, level);
 }
 
 void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
