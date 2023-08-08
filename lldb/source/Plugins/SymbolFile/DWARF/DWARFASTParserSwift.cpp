@@ -245,9 +245,9 @@ Function *DWARFASTParserSwift::ParseFunctionFromDWARF(
 
     Mangled func_name;
     if (mangled)
-      func_name.SetValue(ConstString(mangled), true);
+      func_name.SetValue(ConstString(mangled));
     else
-      func_name.SetValue(ConstString(name), false);
+      func_name.SetValue(ConstString(name));
 
     // See if this function can throw.  We can't get that from the
     // mangled name (even though the information is often there)
