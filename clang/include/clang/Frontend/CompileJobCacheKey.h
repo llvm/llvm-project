@@ -16,7 +16,6 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/CAS/CASID.h"
 #include "llvm/Support/Error.h"
-#include <optional>
 
 namespace llvm {
 namespace cas {
@@ -37,6 +36,8 @@ struct CompileJobCachingOptions {
   std::string CompilationCachingServicePath;
   /// See \c FrontendOptions::DisableCachedCompileJobReplay.
   bool DisableCachedCompileJobReplay;
+  /// See \c FrontendOptions::WriteOutputAsCASID.
+  bool WriteOutputAsCASID;
   /// See \c FrontendOptions::PathPrefixMappings.
   std::vector<std::string> PathPrefixMappings;
 };

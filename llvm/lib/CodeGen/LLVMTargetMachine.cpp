@@ -22,11 +22,13 @@
 #include "llvm/MC/MCCodeEmitter.h"
 #include "llvm/MC/MCContext.h"
 #include "llvm/MC/MCInstrInfo.h"
+#include "llvm/MC/MCMachOCASWriter.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/MC/MCStreamer.h"
 #include "llvm/MC/MCSubtargetInfo.h"
 #include "llvm/MC/TargetRegistry.h"
+#include "llvm/MCCAS/MCCASObjectV1.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormattedStream.h"
 #include "llvm/Target/TargetMachine.h"
@@ -202,9 +204,37 @@ Expected<std::unique_ptr<MCStreamer>> LLVMTargetMachine::createMCStreamer(
                                      inconvertibleErrorCode());
 
     Triple T(getTargetTriple().str());
+    // BEGIN MCCAS
+    std::unique_ptr<MCObjectWriter> CASBackendWriter;
+    if (Options.UseCASBackend) {
+      std::function<const cas::ObjectProxy(
+          llvm::MachOCASWriter &, llvm::MCAssembler &,
+          const llvm::MCAsmLayout &, cas::ObjectStore &, raw_ostream *)>
+          CreateFromMcAssembler =
+              [](llvm::MachOCASWriter &Writer, llvm::MCAssembler &Asm,
+                 const llvm::MCAsmLayout &Layout, cas::ObjectStore &CAS,
+                 raw_ostream *DebugOS = nullptr) -> const cas::ObjectProxy {
+        auto Schema = std::make_unique<mccasformats::v1::MCSchema>(CAS);
+        return cantFail(
+            Schema->createFromMCAssembler(Writer, Asm, Layout, DebugOS));
+      };
+      std::function<Error(cas::ObjectProxy, cas::ObjectStore &, raw_ostream &)>
+          SerializeObjectFile = [](cas::ObjectProxy RootNode,
+                                   cas::ObjectStore &CAS,
+                                   raw_ostream &OS) -> Error {
+        auto Schema = std::make_unique<mccasformats::v1::MCSchema>(CAS);
+        return Schema->serializeObjectFile(RootNode, OS);
+      };
+      CASBackendWriter = MAB->createCASObjectWriter(
+          Out, getTargetTriple(), *Options.MCOptions.CAS, Options.MCOptions,
+          Options.MCOptions.CASObjMode, CreateFromMcAssembler,
+          SerializeObjectFile);
+    }
+    // END MCCAS
     AsmStreamer.reset(getTarget().createMCObjectStreamer(
         T, Context, std::unique_ptr<MCAsmBackend>(MAB),
-        DwoOut ? MAB->createDwoObjectWriter(Out, *DwoOut)
+        Options.UseCASBackend ? std::move(CASBackendWriter) // MCCAS
+        : DwoOut ? MAB->createDwoObjectWriter(Out, *DwoOut)
                : MAB->createObjectWriter(Out),
         std::unique_ptr<MCCodeEmitter>(MCE), STI, Options.MCOptions.MCRelaxAll,
         Options.MCOptions.MCIncrementalLinkerCompatible,

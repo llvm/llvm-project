@@ -513,6 +513,13 @@ CODEGENOPT(SkipRaxSetup, 1, 0)
 ENUM_CODEGENOPT(ZeroCallUsedRegs, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind,
                 5, llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip)
 
+/// Whether to use CASID backend.
+CODEGENOPT(UseCASBackend, 1, 0)
+
+/// The CASObjectFormat used when CAS output is used.
+ENUM_CODEGENOPT(CASObjMode, llvm::CASBackendMode,
+                2, llvm::CASBackendMode::Native)
+                
 /// Modify C++ ABI to returning `this` pointer from constructors and
 /// non-deleting destructors. (No effect on Microsoft ABI.)
 CODEGENOPT(CtorDtorReturnThis, 1, 0)
