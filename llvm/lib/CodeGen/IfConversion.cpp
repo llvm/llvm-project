@@ -541,13 +541,12 @@ bool IfConverter::runOnMachineFunction(MachineFunction &MF) {
         RetVal = IfConvertTriangle(BBI, Kind);
         LLVM_DEBUG(dbgs() << (RetVal ? "succeeded!" : "failed!") << "\n");
         if (RetVal) {
-          if (isFalse) {
-            if (isRev) ++NumTriangleFRev;
-            else       ++NumTriangleFalse;
-          } else {
-            if (isRev) ++NumTriangleRev;
-            else       ++NumTriangle;
-          }
+          if (isFalse)
+            ++NumTriangleFalse;
+          else if (isRev)
+            ++NumTriangleRev;
+          else
+            ++NumTriangle;
         }
         break;
       }
