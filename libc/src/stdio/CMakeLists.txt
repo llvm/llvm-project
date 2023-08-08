@@ -1,3 +1,23 @@
+# Helper function that creates an alias if a target specific implementation
+# exists, otherwise it uses a generic one.
+function(add_stdio_entrypoint_object name)
+  if(TARGET libc.src.stdio.${LIBC_TARGET_OS}.${name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .${LIBC_TARGET_OS}.${name}
+    )
+  elseif(TARGET libc.src.stdio.generic_${name})
+    add_entrypoint_object(
+      ${name}
+      ALIAS
+      DEPENDS
+        .${LIBC_TARGET_OS}.${name}
+    )
+  endif()
+endfunction(add_stdio_entrypoint_object)
+
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
@@ -322,7 +342,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  fputs
+  generic_fputs
   SRCS
     fputs.cpp
   HDRS
@@ -336,7 +356,7 @@ add_entrypoint_object(
 
 
 add_entrypoint_object(
-  puts
+  generic_puts
   SRCS
     puts.cpp
   HDRS
@@ -386,7 +406,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  stdin
+  generic_stdin
   SRCS
     stdin.cpp
   HDRS
@@ -398,7 +418,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  stdout
+  generic_stdout
   SRCS
     stdout.cpp
   HDRS
@@ -410,7 +430,7 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  stderr
+  generic_stderr
   SRCS
     stderr.cpp
   HDRS
@@ -608,3 +628,10 @@ add_entrypoint_object(
   DEPENDS
     .${LIBC_TARGET_OS}.remove
 )
+
+# These entrypoints have multiple potential implementations.
+add_stdio_entrypoint_object(puts)
+add_stdio_entrypoint_object(fputs)
+add_stdio_entrypoint_object(stdin)
+add_stdio_entrypoint_object(stdout)
+add_stdio_entrypoint_object(stderr)
