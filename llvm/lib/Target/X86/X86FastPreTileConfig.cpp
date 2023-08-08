@@ -667,7 +667,9 @@ bool X86FastPreTileConfig::runOnMachineFunction(MachineFunction &MFunc) {
   bool HasVirtTileReg = false;
   for (unsigned I = 0, E = NumVirtRegs; I != E; ++I) {
     Register VirtReg = Register::index2VirtReg(I);
-    if (MRI->getRegClass(VirtReg)->getID() == X86::TILERegClassID) {
+    const TargetRegisterClass *RC = MRI->getRegClassOrNull(VirtReg);
+    assert(RC && "A register must have a class after FastISel");
+    if (RC->getID() == X86::TILERegClassID) {
       HasVirtTileReg = true;
       break;
     }

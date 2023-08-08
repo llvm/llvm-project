@@ -531,10 +531,10 @@ void X86PassConfig::addPreRegAlloc() {
   addPass(createX86FlagsCopyLoweringPass());
   addPass(createX86DynAllocaExpander());
 
-  if (getOptLevel() != CodeGenOptLevel::None)
-    addPass(createX86PreTileConfigPass());
-  else
+  if (TM->Options.EnableFastISel)
     addPass(createX86FastPreTileConfigPass());
+  else
+    addPass(createX86PreTileConfigPass());
 }
 
 void X86PassConfig::addMachineSSAOptimization() {
