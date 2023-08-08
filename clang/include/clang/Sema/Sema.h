@@ -12728,8 +12728,6 @@ public:
   QualType CheckBitwiseOperands( // C99 6.5.[10...12]
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
       BinaryOperatorKind Opc);
-  void diagnoseLogicalInsteadOfBitwise(Expr *Op1, Expr *Op2, SourceLocation Loc,
-                                       BinaryOperatorKind Opc);
   QualType CheckLogicalOperands( // C99 6.5.[13,14]
     ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
     BinaryOperatorKind Opc);
