@@ -820,7 +820,7 @@ LogicalResult PassManager::run(Operation *op) {
   if (failed(getImpl().finalizePassList(context)))
     return failure();
 
-  // Notify the context that we start running a pipeline for book keeping.
+  // Notify the context that we start running a pipeline for bookkeeping.
   context->enterMultiThreadedExecution();
 
   // Initialize all of the passes within the pass manager with a new generation.
