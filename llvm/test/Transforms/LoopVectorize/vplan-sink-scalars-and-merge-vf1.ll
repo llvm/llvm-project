@@ -40,7 +40,7 @@ define void @sink_with_sideeffects(i1 %c, ptr %ptr) {
 
 ; CHECK:      if.then.0:
 ; CHECK-NEXT:  EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw) vp<[[CAN_IV]]>
-; CHECK-NEXT:  EMIT branch-on-count vp<[[CAN_IV_NEXT]]> vp<[[VEC_TC]]>
+; CHECK-NEXT:  EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VEC_TC]]>
 ; CHECK-NEXT: No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
