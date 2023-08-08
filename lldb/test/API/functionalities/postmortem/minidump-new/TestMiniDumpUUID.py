@@ -91,7 +91,7 @@ class MiniDumpUUIDTestCase(TestBase):
     def test_uuid_modules_elf_build_id_16(self):
         """
         Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
-        and contains a ELF build ID whose value is valid and is 16 bytes long.
+        and contains an ELF build ID whose value is valid and is 16 bytes long.
         """
         modules = self.get_minidump_modules("linux-arm-uuids-elf-build-id-16.yaml")
         self.assertEqual(2, len(modules))
@@ -101,7 +101,7 @@ class MiniDumpUUIDTestCase(TestBase):
     def test_uuid_modules_elf_build_id_20(self):
         """
         Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
-        and contains a ELF build ID whose value is valid and is 20 bytes long.
+        and contains an ELF build ID whose value is valid and is 20 bytes long.
         """
         modules = self.get_minidump_modules("linux-arm-uuids-elf-build-id-20.yaml")
         self.assertEqual(2, len(modules))
@@ -115,7 +115,7 @@ class MiniDumpUUIDTestCase(TestBase):
     def test_uuid_modules_elf_build_id_zero(self):
         """
         Test multiple modules having a MINIDUMP_MODULE.CvRecord that is valid,
-        and contains a ELF build ID whose value is all zero.
+        and contains an ELF build ID whose value is all zero.
         """
         modules = self.get_minidump_modules("linux-arm-uuids-elf-build-id-zero.yaml")
         self.assertEqual(2, len(modules))
@@ -125,7 +125,7 @@ class MiniDumpUUIDTestCase(TestBase):
     def test_uuid_modules_elf_build_id_same(self):
         """
         Test multiple modules having a MINIDUMP_MODULE.CvRecord that is
-        valid, and contains a ELF build ID whose value is the same. There
+        valid, and contains an ELF build ID whose value is the same. There
         is an assert in the PlaceholderObjectFile that was firing when we
         encountered this which was crashing the process that was checking
         if PlaceholderObjectFile.m_base was the same as the address this

@@ -141,6 +141,8 @@
 
 #include "Inputs/std-c-library-functions-POSIX.h"
 
+void clang_analyzer_eval(int);
+
 void test_open(void) {
   open(0, 0); // \
   // expected-warning{{The 1st argument to 'open' is NULL but should not be NULL}}
@@ -149,4 +151,57 @@ void test_open(void) {
 void test_open_additional_arg(void) {
   open(0, 0, 0); // \
   // expected-warning{{The 1st argument to 'open' is NULL but should not be NULL}}
+}
+
+void test_recvfrom(int socket, void *restrict buffer, size_t length, int flags,
+                   struct sockaddr *restrict address,
+                   socklen_t *restrict address_len) {
+  ssize_t Ret = recvfrom(socket, buffer, length, flags, address, address_len);
+  if (Ret == 0)
+    clang_analyzer_eval(length == 0); // expected-warning{{TRUE}}
+  if (Ret > 0)
+    clang_analyzer_eval(length > 0); // expected-warning{{TRUE}}
+  if (Ret == -1)
+    clang_analyzer_eval(length == 0); // expected-warning{{UNKNOWN}}
+}
+
+void test_sendto(int socket, const void *message, size_t length, int flags,
+                 const struct sockaddr *dest_addr, socklen_t dest_len) {
+  ssize_t Ret = sendto(socket, message, length, flags, dest_addr, dest_len);
+  if (Ret == 0)
+    clang_analyzer_eval(length == 0); // expected-warning{{TRUE}}
+  if (Ret > 0)
+    clang_analyzer_eval(length > 0); // expected-warning{{TRUE}}
+  if (Ret == -1)
+    clang_analyzer_eval(length == 0); // expected-warning{{UNKNOWN}}
+}
+
+void test_recv(int sockfd, void *buf, size_t len, int flags) {
+  ssize_t Ret = recv(sockfd, buf, len, flags);
+  if (Ret == 0)
+    clang_analyzer_eval(len == 0); // expected-warning{{TRUE}}
+  if (Ret > 0)
+    clang_analyzer_eval(len > 0); // expected-warning{{TRUE}}
+  if (Ret == -1)
+    clang_analyzer_eval(len == 0); // expected-warning{{UNKNOWN}}
+}
+
+void test_send(int sockfd, void *buf, size_t len, int flags) {
+  ssize_t Ret = send(sockfd, buf, len, flags);
+  if (Ret == 0)
+    clang_analyzer_eval(len == 0); // expected-warning{{TRUE}}
+  if (Ret > 0)
+    clang_analyzer_eval(len > 0); // expected-warning{{TRUE}}
+  if (Ret == -1)
+    clang_analyzer_eval(len == 0); // expected-warning{{UNKNOWN}}
+}
+
+void test_recvmsg(int sockfd, struct msghdr *msg, int flags) {
+  ssize_t Ret = recvmsg(sockfd, msg, flags);
+  clang_analyzer_eval(Ret != 0); // expected-warning{{TRUE}}
+}
+
+void test_sendmsg(int sockfd, const struct msghdr *msg, int flags) {
+  ssize_t Ret = sendmsg(sockfd, msg, flags);
+  clang_analyzer_eval(Ret != 0); // expected-warning{{TRUE}}
 }

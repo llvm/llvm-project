@@ -1,6 +1,6 @@
 // RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-empty-catch %t -- \
-// RUN: -config="{CheckOptions: [{key: bugprone-empty-catch.AllowEmptyCatchForExceptions, value: '::SafeException;WarnException'}, \
-// RUN:        {key: bugprone-empty-catch.IgnoreCatchWithKeywords, value: '@IGNORE;@TODO'}]}" -- -fexceptions
+// RUN: -config="{CheckOptions: {bugprone-empty-catch.AllowEmptyCatchForExceptions: '::SafeException;WarnException', \
+// RUN:        bugprone-empty-catch.IgnoreCatchWithKeywords: '@IGNORE;@TODO'}}" -- -fexceptions
 
 struct Exception {};
 struct SafeException {};

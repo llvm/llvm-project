@@ -77,11 +77,12 @@ namespace llvm {
   struct PhysRegSUOper {
     SUnit *SU;
     int OpIdx;
-    unsigned Reg;
+    unsigned RegUnit;
 
-    PhysRegSUOper(SUnit *su, int op, unsigned R): SU(su), OpIdx(op), Reg(R) {}
+    PhysRegSUOper(SUnit *su, int op, unsigned R)
+        : SU(su), OpIdx(op), RegUnit(R) {}
 
-    unsigned getSparseSetIndex() const { return Reg; }
+    unsigned getSparseSetIndex() const { return RegUnit; }
   };
 
   /// Use a SparseMultiSet to track physical registers. Storage is only

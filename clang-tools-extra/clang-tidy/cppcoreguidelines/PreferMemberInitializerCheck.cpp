@@ -141,10 +141,11 @@ void PreferMemberInitializerCheck::storeOptions(
 }
 
 void PreferMemberInitializerCheck::registerMatchers(MatchFinder *Finder) {
-  Finder->addMatcher(
-      cxxConstructorDecl(hasBody(compoundStmt()), unless(isInstantiated()))
-          .bind("ctor"),
-      this);
+  Finder->addMatcher(cxxConstructorDecl(hasBody(compoundStmt()),
+                                        unless(isInstantiated()),
+                                        unless(isDelegatingConstructor()))
+                         .bind("ctor"),
+                     this);
 }
 
 void PreferMemberInitializerCheck::check(

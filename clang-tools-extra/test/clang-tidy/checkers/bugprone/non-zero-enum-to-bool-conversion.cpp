@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy -std=c++98-or-later %s bugprone-non-zero-enum-to-bool-conversion %t -- \
-// RUN:   -config="{CheckOptions: [{key: bugprone-non-zero-enum-to-bool-conversion.EnumIgnoreList, value: '::without::issue::IgnoredEnum;IgnoredSecondEnum'}]}"
+// RUN:   -config="{CheckOptions: {bugprone-non-zero-enum-to-bool-conversion.EnumIgnoreList: '::without::issue::IgnoredEnum;IgnoredSecondEnum'}}"
 
 namespace with::issue {
 

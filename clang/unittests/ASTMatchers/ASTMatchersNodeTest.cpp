@@ -986,6 +986,17 @@ TEST_P(ASTMatchersTest, ChooseExpr) {
                       chooseExpr()));
 }
 
+TEST_P(ASTMatchersTest, ConvertVectorExpr) {
+  EXPECT_TRUE(matches(
+      "typedef double vector4double __attribute__((__vector_size__(32)));"
+      "typedef float  vector4float  __attribute__((__vector_size__(16)));"
+      "vector4float vf;"
+      "void f() { (void)__builtin_convertvector(vf, vector4double); }",
+      convertVectorExpr()));
+  EXPECT_TRUE(notMatches("void f() { (void)__builtin_choose_expr(1, 2, 3); }",
+                         convertVectorExpr()));
+}
+
 TEST_P(ASTMatchersTest, GNUNullExpr) {
   if (!GetParam().isCXX()) {
     return;
@@ -1558,6 +1569,20 @@ TEST_P(ASTMatchersTest, DependentSizedArrayType) {
   EXPECT_TRUE(
       notMatches("int a[42]; int b[] = { 2, 3 }; void f() { int c[b[0]]; }",
                  dependentSizedArrayType()));
+}
+
+TEST_P(ASTMatchersTest, DependentSizedExtVectorType) {
+  if (!GetParam().isCXX()) {
+    return;
+  }
+  EXPECT_TRUE(matches("template<typename T, int Size>"
+                      "class vector {"
+                      "  typedef T __attribute__((ext_vector_type(Size))) type;"
+                      "};",
+                      dependentSizedExtVectorType()));
+  EXPECT_TRUE(
+      notMatches("int a[42]; int b[] = { 2, 3 }; void f() { int c[b[0]]; }",
+                 dependentSizedExtVectorType()));
 }
 
 TEST_P(ASTMatchersTest, IncompleteArrayType) {

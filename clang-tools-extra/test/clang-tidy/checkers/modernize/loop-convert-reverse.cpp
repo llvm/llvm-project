@@ -1,31 +1,31 @@
 // RUN: %check_clang_tidy -std=c++20 -check-suffixes=,RANGES %s modernize-loop-convert %t
 
 // RUN: %check_clang_tidy -check-suffixes=,CUSTOM,CUSTOM-NO-SYS %s modernize-loop-convert %t -- \
-// RUN:   -config="{CheckOptions: [ \
-// RUN:   {key: modernize-loop-convert.MakeReverseRangeFunction, value: 'llvm::reverse'}, \
-// RUN:   {key: modernize-loop-convert.MakeReverseRangeHeader, value: 'llvm/ADT/STLExtras.h'}]}"
+// RUN:   -config="{CheckOptions: { \
+// RUN:   modernize-loop-convert.MakeReverseRangeFunction: 'llvm::reverse', \
+// RUN:   modernize-loop-convert.MakeReverseRangeHeader: 'llvm/ADT/STLExtras.h'}}"
 
 // RUN: %check_clang_tidy -check-suffixes=,CUSTOM,CUSTOM-SYS %s modernize-loop-convert %t -- \
-// RUN:   -config="{CheckOptions: [ \
-// RUN:   {key: modernize-loop-convert.MakeReverseRangeFunction, value: 'llvm::reverse'}, \
-// RUN:   {key: modernize-loop-convert.MakeReverseRangeHeader, value: '<llvm/ADT/STLExtras.h>'}]}"
+// RUN:   -config="{CheckOptions: { \
+// RUN:   modernize-loop-convert.MakeReverseRangeFunction: 'llvm::reverse', \
+// RUN:   modernize-loop-convert.MakeReverseRangeHeader: '<llvm/ADT/STLExtras.h>'}}"
 
 // RUN: %check_clang_tidy -check-suffixes=,CUSTOM,CUSTOM-NO-HEADER %s modernize-loop-convert %t -- \
-// RUN:   -config="{CheckOptions: [ \
-// RUN:   {key: modernize-loop-convert.MakeReverseRangeFunction, value: 'llvm::reverse'}]}"
+// RUN:   -config="{CheckOptions: { \
+// RUN:   modernize-loop-convert.MakeReverseRangeFunction: 'llvm::reverse'}}"
 
 // Ensure the check doesn't transform reverse loops when not in c++20 mode or
 // when UseCxx20ReverseRanges has been disabled
 // RUN: clang-tidy %s -checks=-*,modernize-loop-convert -- -std=c++17 | count 0
 
 // RUN: clang-tidy %s -checks=-*,modernize-loop-convert -config="{CheckOptions: \
-// RUN:     [{key: modernize-loop-convert.UseCxx20ReverseRanges, value: 'false'}] \
+// RUN:     {modernize-loop-convert.UseCxx20ReverseRanges: 'false'} \
 // RUN:     }" -- -std=c++20 | count 0
 
 // Ensure we get a warning if we supply the header argument without the
 // function argument.
-// RUN: clang-tidy %s -checks=-*,modernize-loop-convert -config="{CheckOptions: [ \
-// RUN:   {key: modernize-loop-convert.MakeReverseRangeHeader, value: 'llvm/ADT/STLExtras.h'}]}" \
+// RUN: clang-tidy %s -checks=-*,modernize-loop-convert -config="{CheckOptions: { \
+// RUN:   modernize-loop-convert.MakeReverseRangeHeader: 'llvm/ADT/STLExtras.h'}}" \
 // RUN: -- -std=c++17 2>&1 \
 // RUN:   | FileCheck %s -check-prefix=CHECK-HEADER-NO-FUNC \
 // RUN:       -implicit-check-not="{{warning|error}}:"

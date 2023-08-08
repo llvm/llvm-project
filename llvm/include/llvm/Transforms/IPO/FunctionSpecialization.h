@@ -184,6 +184,10 @@ public:
 private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
 
+  static bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
+                                    DenseSet<BasicBlock *> &DeadBlocks);
+
+  Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList);
   Cost estimateSwitchInst(SwitchInst &I);
   Cost estimateBranchInst(BranchInst &I);
 
