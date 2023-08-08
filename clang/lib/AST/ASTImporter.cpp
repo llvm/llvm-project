@@ -381,7 +381,8 @@ namespace clang {
     ExpectedType VisitIncompleteArrayType(const IncompleteArrayType *T);
     ExpectedType VisitVariableArrayType(const VariableArrayType *T);
     ExpectedType VisitDependentSizedArrayType(const DependentSizedArrayType *T);
-    // FIXME: DependentSizedExtVectorType
+    ExpectedType
+    VisitDependentSizedExtVectorType(const DependentSizedExtVectorType *T);
     ExpectedType VisitVectorType(const VectorType *T);
     ExpectedType VisitExtVectorType(const ExtVectorType *T);
     ExpectedType VisitFunctionNoProtoType(const FunctionNoProtoType *T);
@@ -1262,6 +1263,18 @@ ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
   return Importer.getToContext().getDependentSizedArrayType(
       ToElementType, ToSizeExpr, T->getSizeModifier(),
       T->getIndexTypeCVRQualifiers(), ToBracketsRange);
+}
+
+ExpectedType ASTNodeImporter::VisitDependentSizedExtVectorType(
+    const DependentSizedExtVectorType *T) {
+  Error Err = Error::success();
+  QualType ToElementType = importChecked(Err, T->getElementType());
+  Expr *ToSizeExpr = importChecked(Err, T->getSizeExpr());
+  SourceLocation ToAttrLoc = importChecked(Err, T->getAttributeLoc());
+  if (Err)
+    return std::move(Err);
+  return Importer.getToContext().getDependentSizedExtVectorType(
+      ToElementType, ToSizeExpr, ToAttrLoc);
 }
 
 ExpectedType ASTNodeImporter::VisitVectorType(const VectorType *T) {

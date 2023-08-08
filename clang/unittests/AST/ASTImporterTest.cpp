@@ -1044,6 +1044,17 @@ TEST_P(ImportExpr, DependentSizedArrayType) {
                  has(fieldDecl(hasType(dependentSizedArrayType())))))));
 }
 
+TEST_P(ImportExpr, DependentSizedExtVectorType) {
+  MatchVerifier<Decl> Verifier;
+  testImport("template<typename T, int Size>"
+             "class declToImport {"
+             "  typedef T __attribute__((ext_vector_type(Size))) type;"
+             "};",
+             Lang_CXX03, "", Lang_CXX03, Verifier,
+             classTemplateDecl(has(cxxRecordDecl(
+                 has(typedefDecl(hasType(dependentSizedExtVectorType())))))));
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportUsingPackDecl) {
   Decl *FromTU = getTuDecl(
       "struct A { int operator()() { return 1; } };"
