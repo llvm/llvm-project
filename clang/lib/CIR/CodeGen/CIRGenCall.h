@@ -210,6 +210,8 @@ public:
       : RV(rv), HasLV(false), IsUsed(false), Ty(ty) {
     (void)IsUsed;
   }
+  CallArg(LValue lv, clang::QualType ty)
+      : LV(lv), HasLV(true), IsUsed(false), Ty(ty) {}
 
   /// \returns an independent RValue. If the CallArg contains an LValue,
   /// a temporary copy is returned.
@@ -240,6 +242,10 @@ public:
 
   void add(RValue rvalue, clang::QualType type) {
     push_back(CallArg(rvalue, type));
+  }
+
+  void addUncopiedAggregate(LValue LV, clang::QualType type) {
+    push_back(CallArg(LV, type));
   }
 
   /// Add all the arguments from another CallArgList to this one. After doing
