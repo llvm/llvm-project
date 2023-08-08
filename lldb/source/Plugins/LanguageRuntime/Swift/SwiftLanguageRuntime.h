@@ -460,6 +460,10 @@ public:
   lldb::SyntheticChildrenSP
   GetBridgedSyntheticChildProvider(ValueObject &valobj);
 
+  /// Get the synthetic child provider that displays Swift in C++ frames.
+  lldb::SyntheticChildrenSP
+  GetCxxBridgedSyntheticChildProvider(lldb::ValueObjectSP valobj);
+
   /// Expression Callbacks.
   /// \{
   void WillStartExecutingUserExpression(bool);
