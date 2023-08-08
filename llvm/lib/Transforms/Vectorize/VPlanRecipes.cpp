@@ -423,10 +423,10 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     O << "first-order splice";
     break;
   case VPInstruction::CanonicalIVIncrement:
-    O << "VF * UF + ";
+    O << "VF * UF +";
     break;
   case VPInstruction::CanonicalIVIncrementNUW:
-    O << "VF * UF +(nuw) ";
+    O << "VF * UF +(nuw)";
     break;
   case VPInstruction::BranchOnCond:
     O << "branch-on-cond";
@@ -435,24 +435,22 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     O << "TC > VF ? TC - VF : 0";
     break;
   case VPInstruction::CanonicalIVIncrementForPart:
-    O << "VF * Part + ";
+    O << "VF * Part +";
     break;
   case VPInstruction::CanonicalIVIncrementForPartNUW:
-    O << "VF * Part +(nuw) ";
+    O << "VF * Part +(nuw)";
     break;
   case VPInstruction::BranchOnCount:
-    O << "branch-on-count ";
+    O << "branch-on-count";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
 
   O << FMF;
-
-  for (const VPValue *Operand : operands()) {
+  if (getNumOperands() > 0)
     O << " ";
-    Operand->printAsOperand(O, SlotTracker);
-  }
+  printOperands(O, SlotTracker);
 
   if (DL) {
     O << ", !dbg ";

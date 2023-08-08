@@ -71,7 +71,7 @@ define void @vector_reverse_i64(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN store ir<%arrayidx3>, ir<%add9>
 ; CHECK-NEXT:    EMIT vp<%11> = VF * UF +(nuw) vp<%2>
-; CHECK-NEXT:    EMIT branch-on-count vp<%11> vp<%0>
+; CHECK-NEXT:    EMIT branch-on-count vp<%11>, vp<%0>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
@@ -207,7 +207,7 @@ define void @vector_reverse_f32(ptr nocapture noundef writeonly %A, ptr nocaptur
 ; CHECK-NEXT:    CLONE ir<%arrayidx3> = getelementptr inbounds ir<%A>, ir<%idxprom>
 ; CHECK-NEXT:    WIDEN store ir<%arrayidx3>, ir<%conv1>
 ; CHECK-NEXT:    EMIT vp<%11> = VF * UF +(nuw) vp<%2>
-; CHECK-NEXT:    EMIT branch-on-count vp<%11> vp<%0>
+; CHECK-NEXT:    EMIT branch-on-count vp<%11>, vp<%0>
 ; CHECK-NEXT:    No successors
 ; CHECK-NEXT:  }
 ; CHECK-NEXT:  Successor(s): middle.block
