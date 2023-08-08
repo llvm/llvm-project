@@ -55,7 +55,9 @@ IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
                                          ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       IgnoreHeaders(utils::options::parseStringList(
-          Options.getLocalOrGlobal("IgnoreHeaders", ""))) {
+          Options.getLocalOrGlobal("IgnoreHeaders", ""))),
+      DeduplicateFindings(
+          Options.getLocalOrGlobal("DeduplicateFindings", true)) {
   for (const auto &Header : IgnoreHeaders) {
     if (!llvm::Regex{Header}.isValid())
       configurationDiag("Invalid ignore headers regex '%0'") << Header;
@@ -69,6 +71,7 @@ IncludeCleanerCheck::IncludeCleanerCheck(StringRef Name,
 void IncludeCleanerCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "IgnoreHeaders",
                 utils::options::serializeStringList(IgnoreHeaders));
+  Options.store(Opts, "DeduplicateFindings", DeduplicateFindings);
 }
 
 bool IncludeCleanerCheck::isLanguageVersionSupported(
@@ -114,12 +117,26 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     // FIXME: Filter out implicit template specializations.
     MainFileDecls.push_back(D);
   }
+  llvm::DenseSet<include_cleaner::Symbol> SeenSymbols;
   // FIXME: Find a way to have less code duplication between include-cleaner
   // analysis implementation and the below code.
   walkUsed(MainFileDecls, RecordedPreprocessor.MacroReferences, &RecordedPI,
            *SM,
            [&](const include_cleaner::SymbolReference &Ref,
                llvm::ArrayRef<include_cleaner::Header> Providers) {
+             // Process each symbol once to reduce noise in the findings.
+             // Tidy checks are used in two different workflows:
+             // - Ones that show all the findings for a given file. For such
+             // workflows there is not much point in showing all the occurences,
+             // as one is enough to indicate the issue.
+             // - Ones that show only the findings on changed pieces. For such
+             // workflows it's useful to show findings on every reference of a
+             // symbol as otherwise tools might give incosistent results
+             // depending on the parts of the file being edited. But it should
+             // still help surface findings for "new violations" (i.e.
+             // dependency did not exist in the code at all before).
+             if (DeduplicateFindings && !SeenSymbols.insert(Ref.Target).second)
+               return;
              bool Satisfied = false;
              for (const include_cleaner::Header &H : Providers) {
                if (H.kind() == include_cleaner::Header::Physical &&
