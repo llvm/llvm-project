@@ -2608,6 +2608,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     Register SrcReg0 = MI.getOperand(1).getReg();
     Register SrcReg1 = MI.getOperand(2).getReg();
     LLT DstTy = MRI.getType(DstReg);
+    const LLT S32 = LLT::scalar(32);
     const LLT S64 = LLT::scalar(64);
     assert(DstTy == S64 && "This is a special case for s_mul_u64 that handles "
                            "only 64-bit operands.");
@@ -2629,31 +2630,19 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     assert(MRI.getRegBankOrNull(DstReg) == &AMDGPU::VGPRRegBank &&
            "The destination operand should be in vector registers.");
 
-    MachineBasicBlock *MBB = MI.getParent();
     DebugLoc DL = MI.getDebugLoc();
 
     // Extract the lower subregister from the first operand.
-    Register NewSrcReg0 = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
-    MRI.setRegClass(NewSrcReg0, &AMDGPU::VReg_64RegClass);
-    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), NewSrcReg0)
-        .addReg(SrcReg0, 0, MI.getOperand(1).getSubReg());
     Register Op0L = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     MRI.setRegClass(Op0L, &AMDGPU::VGPR_32RegClass);
-    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op0L)
-        .addReg(NewSrcReg0, 0, AMDGPU::sub0);
+    MRI.setType(Op0L, S32);
+    B.buildTrunc(Op0L, SrcReg0);
 
     // Extract the lower subregister from the second operand.
-    Register NewSrcReg1 = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
-    MRI.setRegClass(NewSrcReg1, &AMDGPU::VReg_64RegClass);
-    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), NewSrcReg1)
-        .addReg(SrcReg1, 0, MI.getOperand(2).getSubReg());
     Register Op1L = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
     MRI.setRegClass(Op1L, &AMDGPU::VGPR_32RegClass);
-    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), Op1L)
-        .addReg(NewSrcReg1, 0, AMDGPU::sub0);
-
-    Register NewDestReg = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
-    MRI.setRegClass(NewDestReg, &AMDGPU::VReg_64RegClass);
+    MRI.setType(Op1L, S32);
+    B.buildTrunc(Op1L, SrcReg1);
 
     unsigned NewOpc = Opc == AMDGPU::G_AMDGPU_S_MUL_U64_U32_PSEUDO
                           ? AMDGPU::G_AMDGPU_MAD_U64_U32
@@ -2664,9 +2653,7 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
     MRI.setRegClass(Zero64, &AMDGPU::VReg_64RegClass);
     Register CarryOut = MRI.createVirtualRegister(&AMDGPU::VReg_64RegClass);
     MRI.setRegClass(CarryOut, &AMDGPU::VReg_64RegClass);
-    B.buildInstr(NewOpc, {NewDestReg, CarryOut}, {Op0L, Op1L, Zero64});
-    BuildMI(*MBB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-        .addReg(NewDestReg);
+    B.buildInstr(NewOpc, {DstReg, CarryOut}, {Op0L, Op1L, Zero64});
     MI.eraseFromParent();
     return;
   }
