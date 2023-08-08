@@ -230,32 +230,6 @@ Region *getEnclosingRepetitiveRegion(Operation *op);
 Region *getEnclosingRepetitiveRegion(Value value);
 
 //===----------------------------------------------------------------------===//
-// RegionBranchTerminatorOpInterface
-//===----------------------------------------------------------------------===//
-
-/// Returns true if the given operation is either annotated with the
-/// `ReturnLike` trait or implements the `RegionBranchTerminatorOpInterface`.
-bool isRegionReturnLike(Operation *operation);
-
-/// Returns the mutable operands that are passed to the region with the given
-/// `regionIndex`. If the operation does not implement the
-/// `RegionBranchTerminatorOpInterface` and is not marked as `ReturnLike`, the
-/// result will be `std::nullopt`. In all other cases, the resulting
-/// `OperandRange` represents all operands that are passed to the specified
-/// successor region. If `regionIndex` is `std::nullopt`, all operands that are
-/// passed to the parent operation will be returned.
-std::optional<MutableOperandRange>
-getMutableRegionBranchSuccessorOperands(Operation *operation,
-                                        std::optional<unsigned> regionIndex);
-
-/// Returns the read only operands that are passed to the region with the given
-/// `regionIndex`. See `getMutableRegionBranchSuccessorOperands` for more
-/// information.
-std::optional<OperandRange>
-getRegionBranchSuccessorOperands(Operation *operation,
-                                 std::optional<unsigned> regionIndex);
-
-//===----------------------------------------------------------------------===//
 // ControlFlow Traits
 //===----------------------------------------------------------------------===//
 

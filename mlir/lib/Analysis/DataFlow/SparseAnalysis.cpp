@@ -226,9 +226,9 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
     if (op == branch) {
       operands = branch.getSuccessorEntryOperands(successorIndex);
       // Otherwise, try to deduce the operands from a region return-like op.
-    } else {
-      if (isRegionReturnLike(op))
-        operands = getRegionBranchSuccessorOperands(op, successorIndex);
+    } else if (auto regionTerminator =
+                   dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
+      operands = regionTerminator.getSuccessorOperands(successorIndex);
     }
 
     if (!operands) {
@@ -439,10 +439,9 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
   // successor's input. There are two types of successor operands: the operands
   // of this op itself and the operands of the terminators of the regions of
   // this op.
-  if (isa<RegionBranchTerminatorOpInterface>(op) ||
-      op->hasTrait<OpTrait::ReturnLike>()) {
+  if (auto terminator = dyn_cast<RegionBranchTerminatorOpInterface>(op)) {
     if (auto branch = dyn_cast<RegionBranchOpInterface>(op->getParentOp())) {
-      visitRegionSuccessorsFromTerminator(op, branch);
+      visitRegionSuccessorsFromTerminator(terminator, branch);
       return;
     }
   }
@@ -506,12 +505,11 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
 }
 
 void AbstractSparseBackwardDataFlowAnalysis::
-    visitRegionSuccessorsFromTerminator(Operation *terminator,
-                                        RegionBranchOpInterface branch) {
-  assert(isa<RegionBranchTerminatorOpInterface>(terminator) ||
-         terminator->hasTrait<OpTrait::ReturnLike>() &&
-             "expected a `RegionBranchTerminatorOpInterface` op or a "
-             "return-like op");
+    visitRegionSuccessorsFromTerminator(
+        RegionBranchTerminatorOpInterface terminator,
+        RegionBranchOpInterface branch) {
+  assert(isa<RegionBranchTerminatorOpInterface>(terminator) &&
+         "expected a `RegionBranchTerminatorOpInterface` op");
   assert(terminator->getParentOp() == branch.getOperation() &&
          "expected `branch` to be the parent op of `terminator`");
 
@@ -527,10 +525,8 @@ void AbstractSparseBackwardDataFlowAnalysis::
   for (const RegionSuccessor &successor : successors) {
     ValueRange inputs = successor.getSuccessorInputs();
     Region *region = successor.getSuccessor();
-    OperandRange operands =
-        region ? *getRegionBranchSuccessorOperands(terminator,
-                                                   region->getRegionNumber())
-               : *getRegionBranchSuccessorOperands(terminator, {});
+    OperandRange operands = terminator.getSuccessorOperands(
+        region ? region->getRegionNumber() : std::optional<unsigned>{});
     MutableArrayRef<OpOperand> opOperands = operandsToOpOperands(operands);
     for (auto [opOperand, input] : llvm::zip(opOperands, inputs)) {
       meet(getLatticeElement(opOperand.get()),
