@@ -88,7 +88,7 @@ public:
 
   bool SymbolNameFitsToLanguage(Mangled mangled) const override;
 
-  ConstString GetInstanceVariableName() override { return ConstString("self"); }
+  llvm::StringRef GetInstanceVariableName() override { return "self"; }
 
   //------------------------------------------------------------------
   // PluginInterface protocol
