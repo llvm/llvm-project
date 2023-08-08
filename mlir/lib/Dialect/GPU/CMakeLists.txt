@@ -32,6 +32,7 @@ add_mlir_dialect_library(MLIRGPUDialect
   MLIRGPUOpsAttributesIncGen
   MLIRGPUOpsEnumsGen
   MLIRGPUOpInterfacesIncGen
+  MLIRGPUCompilationAttrInterfacesIncGen
 
   LINK_LIBS PUBLIC
   MLIRArithDialect
