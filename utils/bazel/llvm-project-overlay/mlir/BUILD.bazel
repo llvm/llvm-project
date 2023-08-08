@@ -7463,6 +7463,9 @@ cc_library(
             "include/mlir/Analysis/*/*.h",
         ],
     ),
+    copts = [
+        "$(STACK_FRAME_UNLIMITED)",
+    ],
     includes = ["include"],
     deps = [
         ":ArithDialect",
