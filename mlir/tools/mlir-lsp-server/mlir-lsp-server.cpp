@@ -64,14 +64,23 @@ void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j);
 void printRegion(Region &region, BlockArgsMap &blockArgsMap,
                  nlohmann::json &j) {
   // A region does not hold anything by itself other than a list of blocks.
-  printIndent() << "Region with " << region.getBlocks().size() << " blocks:\n";
+  LLVM_DEBUG(printIndent() << "Region with " << region.getBlocks().size()
+                           << " blocks:\n");
   auto indent = pushIndent();
 
-  printIndent() << "  region arg count: " << region.getNumArguments() << "\n";
+  // Print the operation attributes
+  /*if (!region.getParentOp()->getAttrs().empty()) {
+    printIndent() << region.getParentOp()->getAttrs().size() << " attributes:\n";
+    for (NamedAttribute attr : region.getParentOp()->getAttrs())
+      printIndent() << " - '" << attr.getName() << "' : '" << attr.getValue()
+                    << "'\n";
+  }*/
+
+  /*printIndent() << "  region arg count: " << region.getNumArguments() << "\n";
   for (auto arg : region.getArguments()) {
     printIndent() << "     - region arg " << arg.getArgNumber() << ": " << arg
                   << "\n";
-  }
+  }*/
 
   nlohmann::json regionj;
   for (Block &block : region.getBlocks())
@@ -83,11 +92,12 @@ StringRef getBlockName(Block &block);
 
 void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
   // Print the block intrinsics properties (basically: argument list)
-  printIndent() << "Block with " << block.getNumArguments() << " arguments, "
+  LLVM_DEBUG(printIndent()
+      << "Block with " << block.getNumArguments() << " arguments, "
                 << block.getNumSuccessors()
                 << " successors, and "
                 // Note, this `.size()` is traversing a linked-list and is O(n).
-                << block.getOperations().size() << " operations\n";
+                << block.getOperations().size() << " operations\n");
   //auto blockName = getBlockName(block);
   //printIndent() << "=> block name: " << blockName;
 
@@ -95,7 +105,6 @@ void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
   // printing each operation.
   auto indent = pushIndent();
   nlohmann::json blockj;
-  block.print(llvm::outs());
   blockj["Id"] = (int64_t)&block;
   blockj["Arguments"] = nlohmann::json::array();
   auto entry = blockArgsMap.find((int64_t)&block);
@@ -106,8 +115,8 @@ void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
     for (auto &blockArg : block.getArguments()) {
       //
       nlohmann::json usesj;
-      printIndent() << "at arg " << blockArg.getArgNumber() << ", " << blockArg
-                    << "\n";
+      LLVM_DEBUG(printIndent() << "at arg " << blockArg.getArgNumber() << ", "
+                               << blockArg << "\n");
 
       for (auto &useOp : blockArg.getUses()) {
         usesj.push_back({{"UseId", (int64_t)&useOp},
@@ -185,21 +194,22 @@ void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
 void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
                     nlohmann::json &j) {
   // Print the operation itself and some of its properties
-  printIndent() << "\no visiting op " << (int64_t)op << ": '" << op->getName()
+  LLVM_DEBUG(printIndent() << "\no visiting op " << (int64_t)op << ": '"
+                          << op->getName()
                 << "' with " << op->getNumOperands() << " operands and "
-                << op->getNumResults() << " results\n";
+                << op->getNumResults() << " results\n");
 
   nlohmann::json opj;
   opj["Opcode"] = op->getName().getStringRef().str();
   opj["Id"] = (int64_t)op;
 
   // Print the operation attributes
-  if (!op->getAttrs().empty()) {
+  /*if (!op->getAttrs().empty()) {
     printIndent() << op->getAttrs().size() << " attributes:\n";
     for (NamedAttribute attr : op->getAttrs())
       printIndent() << " - '" << attr.getName() << "' : '" << attr.getValue()
                     << "'\n";
-  }
+  }*/
 
   if (auto startOffsetAttr =
           op->getAttrOfType<IntegerAttr>("irx_start_offset")) {
@@ -210,8 +220,11 @@ void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
     opj["EndOffset"] = endOffsetAttr.getUInt();
   }
 
-  if (auto startOffsetAttr = op->getAttrOfType<IntegerAttr>("irx_line")) {
-    opj["LineNumber"] = startOffsetAttr.getUInt();
+  unsigned lineNumber = 0;
+
+  if (auto lineAttr = op->getAttrOfType<IntegerAttr>("irx_line")) {
+    lineNumber = lineAttr.getUInt();
+    opj["LineNumber"] = lineAttr.getUInt();
   }
 
   opj["Sources"] = nlohmann::json::array();
@@ -237,10 +250,11 @@ void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
 
     opj["Sources"].push_back(sourcej);
 
-    printIndent() << "     - source " << sourceOp.getOperandNumber() << " "
-                  << (int64_t)sourceOp.get().getAsOpaquePointer() << ", def "
-                  << (int64_t)sourceOp.get().getDefiningOp() << ": "
-                  << sourceOp.get() << "\n";
+    LLVM_DEBUG(printIndent()
+               << "     - source " << sourceOp.getOperandNumber() << " "
+               << (int64_t)sourceOp.get().getAsOpaquePointer() << ", def "
+               << (int64_t)sourceOp.get().getDefiningOp() << ": "
+               << sourceOp.get() << "\n");
 
     index++;
   }
@@ -272,20 +286,20 @@ void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
 
     opj["Results"].push_back(resultj);
 
-    printIndent() << "     - dest " << (int64_t)destOp.getAsOpaquePointer()
-                  << ", def " << (int64_t)destOp.getDefiningOp() << ": "
-                  << destOp.getResultNumber() << "\n ";
+    LLVM_DEBUG(printIndent()
+               << "     - dest " << (int64_t)destOp.getAsOpaquePointer()
+               << ", def " << (int64_t)destOp.getDefiningOp() << ": "
+               << destOp.getResultNumber() << "\n ");
   }
 
   // Recurse into each of the regions attached to the operation.
-  printIndent() << " " << op->getNumRegions() << " nested regions:\n";
   auto indent = pushIndent();
   opj["Regions"] = nlohmann::json::array();
 
   for (Region &region : op->getRegions()) {
     for (auto arg : region.getArguments()) {
-      printIndent() << "     - region arg " << arg.getArgNumber() << ": " << arg
-                    << "\n";
+      LLVM_DEBUG(printIndent() << "     - region arg " << arg.getArgNumber()
+                               << ": " << arg << "\n");
       nlohmann::json sourcej{
           {"Id", (int64_t)arg.getAsOpaquePointer()},
          // {"DefinitionId", (int64_t)arg.getAsOpaquePointer()},

@@ -66,6 +66,8 @@ Token Lexer::emitError(const char *loc, const Twine &message) {
 }
 
 Token Lexer::lexToken() {
+  bool sawCarriageReturn = false;
+
   while (true) {
     const char *tokStart = curPtr;
 
@@ -74,8 +76,6 @@ Token Lexer::lexToken() {
       return formToken(Token::code_complete, tokStart);
 
     // Lex the next token.
-    bool sawCarriageReturn = false;
-
     switch (*curPtr++) {
     default:
       // Handle bare identifiers.
