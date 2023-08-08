@@ -7685,6 +7685,7 @@ mlir/include/mlir/Dialect/Linalg/Transforms/HoistPadding.h
 mlir/include/mlir/Dialect/Linalg/Transforms/Transforms.h
 mlir/include/mlir/Dialect/Linalg/Utils/Utils.h
 mlir/include/mlir/Dialect/LLVMIR/FunctionCallUtils.h
+mlir/include/mlir/Dialect/LLVMIR/GENXDialect.h
 mlir/include/mlir/Dialect/LLVMIR/LLVMDialect.h
 mlir/include/mlir/Dialect/LLVMIR/LLVMTypes.h
 mlir/include/mlir/Dialect/LLVMIR/NVVMDialect.h
@@ -8167,6 +8168,7 @@ mlir/lib/Dialect/Linalg/Transforms/Transforms.cpp
 mlir/lib/Dialect/Linalg/Transforms/Vectorization.cpp
 mlir/lib/Dialect/Linalg/Utils/Utils.cpp
 mlir/lib/Dialect/LLVMIR/IR/FunctionCallUtils.cpp
+mlir/lib/Dialect/LLVMIR/IR/GENXDialect.cpp
 mlir/lib/Dialect/LLVMIR/IR/LLVMTypes.cpp
 mlir/lib/Dialect/LLVMIR/IR/NVVMDialect.cpp
 mlir/lib/Dialect/LLVMIR/IR/ROCDLDialect.cpp

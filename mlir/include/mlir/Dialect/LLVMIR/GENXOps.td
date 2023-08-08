@@ -17,6 +17,17 @@ include "mlir/IR/EnumAttr.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
+// spirv::CrossWorkGroup: 1
+def LLVM_i8Ptr_cross_workgroup : LLVM_IntPtrBase<8, 1>;
+// spirv::WorkGroup: 3
+def LLVM_i8Ptr_workgroup : LLVM_IntPtrBase<8, 3>;
+// spirv::Function: 0
+def LLVM_i8Ptr_function : LLVM_IntPtrBase<8, 0>;
+// spirv::UniformConst: 2
+def LLVM_i8Ptr_uniform_constant : LLVM_IntPtrBase<8, 2>;
+// spirv::Generic: 4
+def LLVM_i8Ptr_generic : LLVM_IntPtrBase<8, 4>;
+
 //===----------------------------------------------------------------------===//
 // GENX dialect definitions
 //===----------------------------------------------------------------------===//
@@ -30,16 +41,16 @@ def GENX_Dialect : Dialect {
   let extraClassDeclaration = [{
     /// Get the name of the attribute used to annotate external kernel
     /// functions.
-    static StringRef getKernelFuncAttrName() { return "genx.kernel"; }
+    static StringRef getKernelFuncAttrName() { return "opencl.kernels"; }
     /// Get the name of the attribute used to annotate max work group size
     /// required for kernel functions
     static constexpr ::llvm::StringLiteral getMaxWorkGroupSizeAttrName() {
-      return ::llvm::StringLiteral("genx.max_work_group_size");
+      return ::llvm::StringLiteral("max_work_group_size");
     }
     /// Get the name of the attribute used to annotate exact work group size
     /// required for kernel functions.
     static constexpr ::llvm::StringLiteral getReqdWorkGroupSizeAttrName() {
-      return ::llvm::StringLiteral("genx.reqd_work_group_size");
+      return ::llvm::StringLiteral("reqd_work_group_size");
     }
 
     /// The address space value that represents global memory.
@@ -48,9 +59,13 @@ def GENX_Dialect : Dialect {
     static constexpr unsigned kSharedMemoryAddressSpace = 3;
     /// The address space value that represents private memory.
     static constexpr unsigned kPrivateMemoryAddressSpace = 0;
+
+    /// private:
+    ///  Attribute parseAttribute(DialectAsmParser& parser, Type type) const override;
+    ///  void printAttribute(Attribute attr, DialectAsmPrinter& p) const override;
   }];
 
-  let useDefaultAttributePrinterParser = 1;
+  /// let useDefaultAttributePrinterParser = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -77,7 +92,7 @@ class GENX_IntrOp<string mnem, list<Trait> traits,
 //===----------------------------------------------------------------------===//
 
 class GENX_SpecialRegisterOp<string mnemonic, list<Trait> traits = []> :
-  GENX_IntrOp<mnemonic, !listconcat(traits, [Pure], 1)> {
+  GENX_IntrOp<mnemonic, !listconcat(traits, [Pure]), 1> {
   let arguments = (ins);
   let assemblyFormat = "attr-dict `:` type($res)";
 }
@@ -91,42 +106,43 @@ class GENX_DeviceFunctionOp<string mnemonic, string device_function,
   let assemblyFormat = "attr-dict `:` type($res)";
 }
 
-#if 0
-// Let the SPIRV dialect to deal with the SPIRV builtin for now
-
 //===----------------------------------------------------------------------===//
 // Thread index and Block index
 
-def GENX_ThreadIdXOp : GENX_SpecialRegisterOp<"workitem.id.x">;
-def GENX_ThreadIdYOp : GENX_SpecialRegisterOp<"workitem.id.y">;
-def GENX_ThreadIdZOp : GENX_SpecialRegisterOp<"workitem.id.z">;
-
-def GENX_BlockIdXOp : GENX_SpecialRegisterOp<"workgroup.id.x">;
-def GENX_BlockIdYOp : GENX_SpecialRegisterOp<"workgroup.id.y">;
-def GENX_BlockIdZOp : GENX_SpecialRegisterOp<"workgroup.id.z">;
+def GENX_ThreadIdXOp : GENX_DeviceFunctionOp<"workitem.id.x",
+                        "get_local_id", 0>;
+def GENX_ThreadIdYOp : GENX_DeviceFunctionOp<"workitem.id.y",
+                        "get_local_id", 1>;
+def GENX_ThreadIdZOp : GENX_DeviceFunctionOp<"workitem.id.z",
+                        "get_local_id", 2>;
+def GENX_BlockIdXOp : GENX_DeviceFunctionOp<"workgroup.id.x",
+                        "get_group_id", 0>;
+def GENX_BlockIdYOp : GENX_DeviceFunctionOp<"workgroup.id.y",
+                        "get_group_id", 1>;
+def GENX_BlockIdZOp : GENX_DeviceFunctionOp<"workgroup.id.z",
+                        "get_group_id", 2>;
 
 //===----------------------------------------------------------------------===//
 // Thread range and Block range
 
 def GENX_BlockDimXOp : GENX_DeviceFunctionOp<"workgroup.dim.x",
-                                             "__ockl_get_local_size", 0>;
+                        "get_local_size", 0>;
 
 def GENX_BlockDimYOp : GENX_DeviceFunctionOp<"workgroup.dim.y",
-                                             "__ockl_get_local_size", 1>;
+                        "get_local_size", 1>;
 
 def GENX_BlockDimZOp : GENX_DeviceFunctionOp<"workgroup.dim.z",
-                                             "__ockl_get_local_size", 2>;
+                        "get_local_size", 2>;
 
 def GENX_GridDimXOp : GENX_DeviceFunctionOp<"grid.dim.x",
-                                            "__ockl_get_global_size", 0>;
+                        "get_global_size", 0>;
 
 def GENX_GridDimYOp : GENX_DeviceFunctionOp<"grid.dim.y",
-                                            "__ockl_get_global_size", 1>;
+                        "get_global_size", 1>;
 
 def GENX_GridDimZOp : GENX_DeviceFunctionOp<"grid.dim.z",
-                                            "__ockl_get_global_size", 2>;
-#endif
-
+                        "get_global_size", 2>;
+/*
 //===----------------------------------------------------------------------===//
 // Attributes for load intrinsics
 //===----------------------------------------------------------------------===//
@@ -190,7 +206,6 @@ def LSCVectorSizeAttr : I32EnumAttr<
 //===----------------------------------------------------------------------===//
 // masked load intrinsics
 //===----------------------------------------------------------------------===//
-#if 0
 def GENX_Masked4LoadOp : 
     GENX_Op<"lsc.load.stateless">,
     Results<(outs LLVM_Type:$res)>,
@@ -222,7 +237,6 @@ def GENX_Masked4LoadOp :
     }];
 
     }
-#else
 def GENX_MaskedLoadOp : GENX_Op<"lsc.load.stateless", [MemoryEffects<[MemRead]>]> {
   let summary = "Load of a vector of length 1, 2, 3, 4, 8, 16, 32, 64 with mask";
 
@@ -232,10 +246,6 @@ def GENX_MaskedLoadOp : GENX_Op<"lsc.load.stateless", [MemoryEffects<[MemRead]>]
 
   let results = (outs FixedVectorOfLength<[1, 2, 3, 4, 8, 16, 32, 64]>);
 }
-#endif
-             ,
-
-
 
 //===---------------------------------------------------------------------===//
 // Vector buffer load/store intrinsics
@@ -382,5 +392,6 @@ def ROCDL_RawBufferAtomicUMinOp :
   }];
   let hasCustomAssemblyFormat = 1;
 }
+*/
 
 #endif // GENXIR_OPS

@@ -405,6 +405,30 @@ def LowerHostCodeToLLVMPass : Pass<"lower-host-to-llvm", "ModuleOp"> {
 }
 
 //===----------------------------------------------------------------------===//
+// GPUToGENX
+//===----------------------------------------------------------------------===//
+
+def ConvertGpuOpsToGENXOps : Pass<"convert-gpu-to-genx", "gpu::GPUModuleOp"> {
+  let summary = "Generate GENX operations for gpu operations";
+  let constructor = "mlir::createLowerGpuOpsToGENXOpsPass()";
+  let dependentDialects = [
+    "cf::ControlFlowDialect",
+    "memref::MemRefDialect",
+    "GENX::GENXDialect",
+  ];
+  let options = [
+    Option<"indexBitwidth", "index-bitwidth", "unsigned",
+           /*default=kDeriveIndexBitwidthFromDataLayout*/"0",
+           "Bitwidth of the index type, 0 to use size of machine word">,
+    Option<"hasRedux", "has-redux", "bool", /*default=*/"false",
+           "Target gpu supports redux">,
+    Option<"useOpaquePointers", "use-opaque-pointers", "bool",
+                   /*default=*/"true", "Generate LLVM IR using opaque pointers "
+                   "instead of typed pointers">,
+  ];
+}
+
+//===----------------------------------------------------------------------===//
 // GPUToNVVM
 //===----------------------------------------------------------------------===//
 

@@ -11,6 +11,7 @@ add_mlir_library(MLIRGPUTestPasses
   MLIRAffineDialect
   MLIRFuncDialect
   MLIRGPUOps
+  MLIRGENXDialect
   MLIRGPUToGPURuntimeTransforms
   MLIRLLVMToLLVMIRTranslation
   MLIRNVVMDialect
