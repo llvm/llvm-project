@@ -83,6 +83,11 @@ static cl::opt<unsigned> MaxIncomingPhiValues(
     "The maximum number of incoming values a PHI node can have to be "
     "considered during the specialization bonus estimation"));
 
+static cl::opt<unsigned> MaxBlockPredecessors(
+    "funcspec-max-block-predecessors", cl::init(2), cl::Hidden, cl::desc(
+    "The maximum number of predecessors a basic block can have to be "
+    "considered during the estimation of dead code"));
+
 static cl::opt<unsigned> MinFunctionSize(
     "funcspec-min-function-size", cl::init(100), cl::Hidden, cl::desc(
     "Don't specialize functions that have less than this number of "
@@ -101,16 +106,24 @@ static cl::opt<bool> SpecializeLiteralConstant(
     "Enable specialization of functions that take a literal constant as an "
     "argument"));
 
+bool InstCostVisitor::canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
+                                         DenseSet<BasicBlock *> &DeadBlocks) {
+  unsigned I = 0;
+  return all_of(predecessors(Succ),
+    [&I, BB, Succ, &DeadBlocks] (BasicBlock *Pred) {
+    return I++ < MaxBlockPredecessors &&
+      (Pred == BB || Pred == Succ || DeadBlocks.contains(Pred));
+  });
+}
+
 // Estimates the codesize savings due to dead code after constant propagation.
 // \p WorkList represents the basic blocks of a specialization which will
 // eventually become dead once we replace instructions that are known to be
 // constants. The successors of such blocks are added to the list as long as
 // the \p Solver found they were executable prior to specialization, and only
-// if they have a unique predecessor.
-static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
-                                DenseSet<BasicBlock *> &DeadBlocks,
-                                ConstMap &KnownConstants, SCCPSolver &Solver,
-                                TargetTransformInfo &TTI) {
+// if all their predecessors are dead.
+Cost InstCostVisitor::estimateBasicBlocks(
+                          SmallVectorImpl<BasicBlock *> &WorkList) {
   Cost CodeSize = 0;
   // Accumulate the instruction cost of each basic block weighted by frequency.
   while (!WorkList.empty()) {
@@ -139,10 +152,10 @@ static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
     }
 
     // Keep adding dead successors to the list as long as they are
-    // executable and they have a unique predecessor.
+    // executable and only reachable from dead blocks.
     for (BasicBlock *SuccBB : successors(BB))
-      if (Solver.isBlockExecutable(SuccBB) &&
-          SuccBB->getUniquePredecessor() == BB)
+      if (isBlockExecutable(SuccBB) &&
+          canEliminateSuccessor(BB, SuccBB, DeadBlocks))
         WorkList.push_back(SuccBB);
   }
   return CodeSize;
@@ -185,8 +198,12 @@ Bonus InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) 
     C = visit(*User);
     if (!C)
       return {0, 0};
-    KnownConstants.insert({User, C});
   }
+
+  // Even though it doesn't make sense to bind switch and branch instructions
+  // with a constant, unlike any other instruction type, it prevents estimating
+  // their bonus multiple times.
+  KnownConstants.insert({User, C});
 
   CodeSize += TTI.getInstructionCost(User, TargetTransformInfo::TCK_CodeSize);
 
@@ -226,13 +243,12 @@ Cost InstCostVisitor::estimateSwitchInst(SwitchInst &I) {
   SmallVector<BasicBlock *> WorkList;
   for (const auto &Case : I.cases()) {
     BasicBlock *BB = Case.getCaseSuccessor();
-    if (BB == Succ || !Solver.isBlockExecutable(BB) ||
-        BB->getUniquePredecessor() != I.getParent())
-      continue;
-    WorkList.push_back(BB);
+    if (BB != Succ && isBlockExecutable(BB) &&
+        canEliminateSuccessor(I.getParent(), BB, DeadBlocks))
+      WorkList.push_back(BB);
   }
 
-  return estimateBasicBlocks(WorkList, DeadBlocks, KnownConstants, Solver, TTI);
+  return estimateBasicBlocks(WorkList);
 }
 
 Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
@@ -245,11 +261,11 @@ Cost InstCostVisitor::estimateBranchInst(BranchInst &I) {
   // Initialize the worklist with the dead successor as long as
   // it is executable and has a unique predecessor.
   SmallVector<BasicBlock *> WorkList;
-  if (Solver.isBlockExecutable(Succ) &&
-      Succ->getUniquePredecessor() == I.getParent())
+  if (isBlockExecutable(Succ) &&
+      canEliminateSuccessor(I.getParent(), Succ, DeadBlocks))
     WorkList.push_back(Succ);
 
-  return estimateBasicBlocks(WorkList, DeadBlocks, KnownConstants, Solver, TTI);
+  return estimateBasicBlocks(WorkList);
 }
 
 Constant *InstCostVisitor::visitPHINode(PHINode &I) {

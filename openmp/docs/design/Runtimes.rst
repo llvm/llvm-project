@@ -1175,6 +1175,7 @@ There are several environment variables to change the behavior of the plugins:
 * ``LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS``
 * ``LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES``
 * ``LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE``
+* ``LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING``
 * ``LIBOMPTARGET_AMDGPU_TEAMS_PER_CU``
 * ``LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES``
 * ``LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS``
@@ -1230,6 +1231,17 @@ This environment variable controls the size of each HSA queue in the AMDGPU
 plugin. The size is the number of AQL packets an HSA queue is expected to hold.
 It is also the number of AQL packets that can be pushed into each queue without
 waiting the driver to process them. The default value is ``512``.
+
+LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING
+"""""""""""""""""""""""""""""""""""""""""""
+
+This environment variable controls if idle HSA queues will be preferentially
+assigned to streams, for example when they are requested for a kernel launch.
+Should all queues be considered busy, a new queue is initialized and returned,
+until we reach the set maximum. Otherwise, we will select the least utilized
+queue. If this is disabled, each time a stream is requested a new HSA queue
+will be initialized, regardless of their utilization. Additionally, queues will
+be selected using round robin selection. The default value is ``true``.
 
 .. _libomptarget_amdgpu_teams_per_cu:
 

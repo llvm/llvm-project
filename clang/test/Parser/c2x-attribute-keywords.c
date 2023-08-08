@@ -1,13 +1,13 @@
 // RUN: %clang_cc1 -fsyntax-only -triple aarch64-none-linux-gnu -target-feature +sme -verify=expected,notc2x -Wno-strict-prototypes %s
 // RUN: %clang_cc1 -fsyntax-only -triple aarch64-none-linux-gnu -target-feature +sme -verify=expected,c2x %s
 
-enum __arm_streaming E { // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
-  One __arm_streaming, // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+enum __arm_streaming E { // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+  One __arm_streaming, // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
   Two,
-  Three __arm_streaming // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+  Three __arm_streaming // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 };
 
-enum __arm_streaming { Four }; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+enum __arm_streaming { Four }; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 __arm_streaming enum E2 { Five }; // expected-error {{misplaced '__arm_streaming'}}
 
 // FIXME: this diagnostic can be improved.
@@ -16,7 +16,7 @@ enum { __arm_streaming Six }; // expected-error {{expected identifier}}
 // FIXME: this diagnostic can be improved.
 enum E3 __arm_streaming { Seven }; // expected-error {{expected identifier or '('}}
 
-struct __arm_streaming S1 { // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+struct __arm_streaming S1 { // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
   int i __arm_streaming; // expected-error {{'__arm_streaming' only applies to function types}}
   int __arm_streaming j; // expected-error {{'__arm_streaming' only applies to function types}}
   int k[10] __arm_streaming; // expected-error {{'__arm_streaming' only applies to function types}}
@@ -32,20 +32,20 @@ struct __arm_streaming S1 { // expected-error {{'__arm_streaming' cannot be appl
 
 __arm_streaming struct S2 { int a; }; // expected-error {{misplaced '__arm_streaming'}}
 struct S3 __arm_streaming { int a; }; // expected-error {{'__arm_streaming' cannot appear here}} \
-                                         expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                                         expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 
-union __arm_streaming U { // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+union __arm_streaming U { // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
   double d __arm_streaming; // expected-error {{'__arm_streaming' only applies to function types; type here is 'double'}}
   __arm_streaming int i; // expected-error {{'__arm_streaming' only applies to function types; type here is 'int'}}
 };
 
 __arm_streaming union U2 { double d; }; // expected-error {{misplaced '__arm_streaming'}}
 union U3 __arm_streaming { double d; }; // expected-error {{'__arm_streaming' cannot appear here}} \
-                                           expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+                                           expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 
-struct __arm_streaming IncompleteStruct; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
-union __arm_streaming IncompleteUnion; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
-enum __arm_streaming IncompleteEnum; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+struct __arm_streaming IncompleteStruct; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+union __arm_streaming IncompleteUnion; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
+enum __arm_streaming IncompleteEnum; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 
 __arm_streaming void f1(void); // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
 void __arm_streaming f2(void); // expected-error {{'__arm_streaming' only applies to function types}}
@@ -95,7 +95,7 @@ void f11(void) {
   }
 
   goto foo;
-  __arm_streaming foo: (void)1; // expected-error {{'__arm_streaming' cannot be applied to a declaration}}
+  __arm_streaming foo: (void)1; // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}}
 
   __arm_streaming for (;;); // expected-error {{'__arm_streaming' cannot be applied to a statement}}
   __arm_streaming while (1); // expected-error {{'__arm_streaming' cannot be applied to a statement}}
@@ -106,7 +106,7 @@ void f11(void) {
   __arm_streaming; // expected-error {{'__arm_streaming' cannot be applied to a statement}}
 
   (void)sizeof(int [4]__arm_streaming); // expected-error {{'__arm_streaming' only applies to function types}}
-  (void)sizeof(struct __arm_streaming S3 { int a __arm_streaming; }); // expected-error {{'__arm_streaming' cannot be applied to a declaration}} \
+  (void)sizeof(struct __arm_streaming S3 { int a __arm_streaming; }); // expected-error {{'__arm_streaming' only applies to non-K&R-style functions}} \
                                                                       // expected-error {{'__arm_streaming' only applies to function types; type here is 'int'}}
 
   __arm_streaming return; // expected-error {{'__arm_streaming' cannot be applied to a statement}}

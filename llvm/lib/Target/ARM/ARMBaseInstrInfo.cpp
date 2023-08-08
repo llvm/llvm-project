@@ -6731,7 +6731,8 @@ bool ARMBaseInstrInfo::isReallyTriviallyReMaterializable(
   // the tail predication conversion. This means that the element count
   // register has to be live for longer, but that has to be better than
   // spill/restore and VPT predication.
-  return isVCTP(&MI) && !isPredicated(MI);
+  return (isVCTP(&MI) && !isPredicated(MI)) ||
+         TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 unsigned llvm::getBLXOpcode(const MachineFunction &MF) {

@@ -78,18 +78,18 @@ static const llvm::StringSet<> StdNames{
     "std::begin", "std::cbegin", "std::rbegin", "std::crbegin", "std::end",
     "std::cend",  "std::rend",   "std::crend",  "std::size"};
 
-static const StatementMatcher integerComparisonMatcher() {
+static StatementMatcher integerComparisonMatcher() {
   return expr(ignoringParenImpCasts(
       declRefExpr(to(varDecl(equalsBoundNode(InitVarName))))));
 }
 
-static const DeclarationMatcher initToZeroMatcher() {
+static DeclarationMatcher initToZeroMatcher() {
   return varDecl(
              hasInitializer(ignoringParenImpCasts(integerLiteral(equals(0)))))
       .bind(InitVarName);
 }
 
-static const StatementMatcher incrementVarMatcher() {
+static StatementMatcher incrementVarMatcher() {
   return declRefExpr(to(varDecl(equalsBoundNode(InitVarName))));
 }
 
