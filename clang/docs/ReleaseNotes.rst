@@ -121,6 +121,8 @@ Improvements to Clang's diagnostics
 -----------------------------------
 - Clang constexpr evaluator now prints template arguments when displaying
   template-specialization function calls.
+- Clang contexpr evaluator now displays notes as well as an error when a constructor
+  of a base class is not called in the constructor of its derived class.
 
 Bug Fixes in This Version
 -------------------------

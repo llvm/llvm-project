@@ -2035,6 +2035,10 @@ def err_different_return_type_for_overriding_virtual_function : Error<
   "than the function it overrides}1,2">;
 def note_overridden_virtual_function : Note<
   "overridden virtual function is here">;
+def err_conflicting_overriding_attributes : Error<
+  "virtual function %0 has different attributes "
+  "%diff{($) than the function it overrides (which has $)|"
+  "than the function it overrides}1,2">;
 def err_conflicting_overriding_cc_attributes : Error<
   "virtual function %0 has different calling convention attributes "
   "%diff{($) than the function it overrides (which has calling convention $)|"
@@ -3621,6 +3625,8 @@ def err_attribute_vecreturn_only_vector_member : Error<
   "the vecreturn attribute can only be used on a class or structure with one member, which must be a vector">;
 def err_attribute_vecreturn_only_pod_record : Error<
   "the vecreturn attribute can only be used on a POD (plain old data) class or structure (i.e. no virtual functions)">;
+def err_sme_attr_mismatch : Error<
+  "function declared %0 was previously declared %1, which has different SME function attributes">;
 def err_cconv_change : Error<
   "function declared '%0' here was previously declared "
   "%select{'%2'|without calling convention}1">;
