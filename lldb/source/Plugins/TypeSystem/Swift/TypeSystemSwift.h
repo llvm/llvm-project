@@ -304,7 +304,8 @@ public:
   /// Lookup a child given a name. This function will match base class names
   /// and member names in \p type only, not descendants.
   uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                   const char *name, ExecutionContext *exe_ctx,
+                                   llvm::StringRef name,
+                                   ExecutionContext *exe_ctx,
                                    bool omit_empty_base_classes) override;
 
   CompilerType

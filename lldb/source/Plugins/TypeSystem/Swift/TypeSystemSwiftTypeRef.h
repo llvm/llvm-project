@@ -23,6 +23,8 @@
 #include "clang/APINotes/APINotesManager.h"
 #include "clang/Basic/Module.h"
 
+#include "llvm/ADT/StringRef.h"
+
 namespace swift {
 class DWARFImporterDelegate;
 namespace Demangle {
@@ -194,7 +196,7 @@ public:
       ValueObject *valobj, uint64_t &language_flags) override;
   size_t
   GetIndexOfChildMemberWithName(lldb::opaque_compiler_type_t type,
-                                StringRef name, ExecutionContext *exe_ctx,
+                                llvm::StringRef name, ExecutionContext *exe_ctx,
                                 bool omit_empty_base_classes,
                                 std::vector<uint32_t> &child_indexes) override;
   size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
