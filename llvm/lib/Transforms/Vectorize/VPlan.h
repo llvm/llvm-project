@@ -852,15 +852,14 @@ class VPRecipeWithIRFlags : public VPRecipeBase {
 
 public:
   template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, iterator_range<IterT> Operands)
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands)
       : VPRecipeBase(SC, Operands) {
     OpType = OperationType::Other;
     AllFlags = 0;
   }
 
   template <typename IterT>
-  VPRecipeWithIRFlags(const unsigned char SC, iterator_range<IterT> Operands,
-                      Instruction &I)
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands, Instruction &I)
       : VPRecipeWithIRFlags(SC, Operands) {
     if (auto *Op = dyn_cast<OverflowingBinaryOperator>(&I)) {
       OpType = OperationType::OverflowingBinOp;
