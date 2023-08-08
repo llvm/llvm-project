@@ -1039,6 +1039,7 @@ steps:
             limit: 2
       timeout_in_minutes: 120
 
+  # TODO: Remove soft_fail from these jobs once the AIX builders have been fixed.
   - group: "AIX"
     steps:
     - label: "AIX (32-bit)"
@@ -1058,6 +1059,7 @@ steps:
           - exit_status: -1  # Agent was lost
             limit: 2
       timeout_in_minutes: 120
+      soft_fail: true
 
     - label: "AIX (64-bit)"
       command: "libcxx/utils/ci/run-buildbot aix"
@@ -1076,6 +1078,7 @@ steps:
           - exit_status: -1  # Agent was lost
             limit: 2
       timeout_in_minutes: 120
+      soft_fail: true
 
   - group: ":freebsd: FreeBSD"
     steps:

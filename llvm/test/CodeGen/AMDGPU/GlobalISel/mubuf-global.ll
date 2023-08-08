@@ -927,7 +927,7 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4095(ptr addrspace(1) inr
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
-  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 syncscope("agent") seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
@@ -968,7 +968,7 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4294967296(ptr addrspace(
 ; GFX7-NEXT:    buffer_wbinvl1
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
-  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 syncscope("agent") seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
@@ -1003,7 +1003,7 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4095(ptr addrspace(1) %pt
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
-  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 syncscope("agent") seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
@@ -1038,7 +1038,7 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4294967296(ptr addrspace(
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
-  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 syncscope("agent") seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
@@ -1077,7 +1077,7 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_vgpr_offset(ptr addrspace(1) in
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 %voffset
-  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 syncscope("agent") seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
@@ -1114,7 +1114,7 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4095(ptr addrspace(1) inreg
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
-  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
@@ -1158,7 +1158,7 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4294967296(ptr addrspace(1)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v1
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
-  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
@@ -1194,7 +1194,7 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4095(ptr addrspace(1) %ptr,
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
-  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
@@ -1230,7 +1230,7 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4294967296(ptr addrspace(1)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v3
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
-  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
@@ -1270,7 +1270,7 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_vgpr_offset(ptr addrspace(1) inre
 ; GFX7-NEXT:    v_mov_b32_e32 v0, v2
 ; GFX7-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 %voffset
-  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
