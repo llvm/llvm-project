@@ -9167,10 +9167,10 @@ void LoopVectorizationPlanner::adjustRecipesForReductions(
         // need to create an fmul recipe (multiplying the first two operands of
         // the fmuladd together) to use as the vector operand for the fadd
         // reduction.
-        VPInstruction *FMulRecipe =
-            new VPInstruction(Instruction::FMul, {CurrentLink->getOperand(0),
-                                                  CurrentLink->getOperand(1)});
-        FMulRecipe->setFastMathFlags(CurrentLinkI->getFastMathFlags());
+        VPInstruction *FMulRecipe = new VPInstruction(
+            Instruction::FMul,
+            {CurrentLink->getOperand(0), CurrentLink->getOperand(1)},
+            CurrentLinkI->getFastMathFlags());
         LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
         VecOp = FMulRecipe;
       } else {
