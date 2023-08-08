@@ -4260,6 +4260,51 @@ static SDValue lowerBitreverseShuffle(ShuffleVectorSDNode *SVN,
   return Res;
 }
 
+// Given a shuffle mask like <3, 0, 1, 2, 7, 4, 5, 6> for v8i8, we can
+// reinterpret it as a shuffle of v2i32 where the two i32s are bit rotated, and
+// lower it as a vror.vi (if legal with zvbb enabled).
+static SDValue lowerVECTOR_SHUFFLEAsRotate(ShuffleVectorSDNode *SVN,
+                                           SelectionDAG &DAG,
+                                           const RISCVSubtarget &Subtarget) {
+  SDLoc DL(SVN);
+
+  EVT VT = SVN->getValueType(0);
+  unsigned NumElts = VT.getVectorNumElements();
+  unsigned EltSizeInBits = VT.getScalarSizeInBits();
+  unsigned NumSubElts, RotateAmt;
+  if (!ShuffleVectorInst::isBitRotateMask(SVN->getMask(), EltSizeInBits, 2,
+                                          NumElts, NumSubElts, RotateAmt))
+    return SDValue();
+  MVT RotateVT = MVT::getVectorVT(MVT::getIntegerVT(EltSizeInBits * NumSubElts),
+                                  NumElts / NumSubElts);
+
+  // We might have a RotateVT that isn't legal, e.g. v4i64 on zve32x.
+  if (!Subtarget.getTargetLowering()->isOperationLegalOrCustom(ISD::ROTL,
+                                                               RotateVT))
+    return SDValue();
+
+  // If we just create the shift amount with
+  //
+  // DAG.getConstant(RotateAmt, DL, RotateVT)
+  //
+  // then for e64 we get a weird bitcasted build_vector on RV32 that we're
+  // unable to detect as a splat during pattern matching. So directly lower it
+  // to a vmv.v.x which gets matched to vror.vi.
+  MVT ContainerVT = getContainerForFixedLengthVector(DAG, RotateVT, Subtarget);
+  SDValue VL =
+      getDefaultVLOps(RotateVT, ContainerVT, DL, DAG, Subtarget).second;
+  SDValue RotateAmtSplat = DAG.getNode(
+      RISCVISD::VMV_V_X_VL, DL, ContainerVT, DAG.getUNDEF(ContainerVT),
+      DAG.getConstant(RotateAmt, DL, Subtarget.getXLenVT()), VL);
+  RotateAmtSplat =
+      convertFromScalableVector(RotateVT, RotateAmtSplat, DAG, Subtarget);
+
+  SDValue Rotate =
+      DAG.getNode(ISD::ROTL, DL, RotateVT,
+                  DAG.getBitcast(RotateVT, SVN->getOperand(0)), RotateAmtSplat);
+  return DAG.getBitcast(VT, Rotate);
+}
+
 static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
                                    const RISCVSubtarget &Subtarget) {
   SDValue V1 = Op.getOperand(0);
@@ -4269,6 +4314,11 @@ static SDValue lowerVECTOR_SHUFFLE(SDValue Op, SelectionDAG &DAG,
   MVT VT = Op.getSimpleValueType();
   unsigned NumElts = VT.getVectorNumElements();
   ShuffleVectorSDNode *SVN = cast<ShuffleVectorSDNode>(Op.getNode());
+
+  // Lower to a vror.vi of a larger element type if possible. Do this before we
+  // promote i1s to i8s.
+  if (SDValue V = lowerVECTOR_SHUFFLEAsRotate(SVN, DAG, Subtarget))
+    return V;
 
   if (VT.getVectorElementType() == MVT::i1) {
     if (SDValue V = lowerBitreverseShuffle(SVN, DAG, Subtarget))
