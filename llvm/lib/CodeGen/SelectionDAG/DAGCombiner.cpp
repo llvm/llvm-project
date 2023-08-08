@@ -20524,7 +20524,7 @@ SDValue DAGCombiner::replaceStoreOfInsertLoad(StoreSDNode *ST) {
   EVT PtrVT = Ptr.getValueType();
 
   SDValue Offset =
-      DAG.getNode(ISD::MUL, DL, PtrVT, Idx,
+      DAG.getNode(ISD::MUL, DL, PtrVT, DAG.getZExtOrTrunc(Idx, DL, PtrVT),
                   DAG.getConstant(EltVT.getSizeInBits() / 8, DL, PtrVT));
   SDValue NewPtr = DAG.getNode(ISD::ADD, DL, PtrVT, Ptr, Offset);
   MachinePointerInfo PointerInfo(ST->getAddressSpace());
