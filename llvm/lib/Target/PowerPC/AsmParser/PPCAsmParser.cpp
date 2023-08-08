@@ -1544,24 +1544,58 @@ bool PPCAsmParser::ParseOperand(OperandVector &Operands) {
   Operands.push_back(PPCOperand::CreateFromMCExpr(EVal, S, E, isPPC64()));
 
   // Check whether this is a TLS call expression
-  bool TLSCall = false;
-  if (const MCSymbolRefExpr *Ref = dyn_cast<MCSymbolRefExpr>(EVal))
-    TLSCall = Ref->getSymbol().getName() == "__tls_get_addr";
+  const char TlsGetAddr[] = "__tls_get_addr";
+  bool TlsCall = false;
+  const MCExpr *TlsCallAddend = nullptr;
+  if (auto *Ref = dyn_cast<MCSymbolRefExpr>(EVal)) {
+    TlsCall = Ref->getSymbol().getName() == TlsGetAddr;
+  } else if (auto *Bin = dyn_cast<MCBinaryExpr>(EVal);
+             Bin && Bin->getOpcode() == MCBinaryExpr::Add) {
+    if (auto *Ref = dyn_cast<MCSymbolRefExpr>(Bin->getLHS())) {
+      TlsCall = Ref->getSymbol().getName() == TlsGetAddr;
+      TlsCallAddend = Bin->getRHS();
+    }
+  }
 
-  if (TLSCall && parseOptionalToken(AsmToken::LParen)) {
+  if (TlsCall && parseOptionalToken(AsmToken::LParen)) {
     const MCExpr *TLSSym;
-    S = Parser.getTok().getLoc();
+    const SMLoc S2 = Parser.getTok().getLoc();
     if (ParseExpression(TLSSym))
-      return Error(S, "invalid TLS call expression");
+      return Error(S2, "invalid TLS call expression");
+    E = Parser.getTok().getLoc();
     if (parseToken(AsmToken::RParen, "expected ')'"))
       return true;
-    E = Parser.getTok().getLoc();
+    // PPC32 allows bl __tls_get_addr[+a](x@tlsgd)@plt+b. Parse "@plt[+b]".
+    if (!isPPC64() && parseOptionalToken(AsmToken::At)) {
+      AsmToken Tok = getTok();
+      if (!(parseOptionalToken(AsmToken::Identifier) &&
+            Tok.getString().compare_insensitive("plt") == 0))
+        return Error(Tok.getLoc(), "expected 'plt'");
+      EVal = MCSymbolRefExpr::create(TlsGetAddr, MCSymbolRefExpr::VK_PLT,
+                                     getContext());
+      if (parseOptionalToken(AsmToken::Plus)) {
+        const MCExpr *Addend = nullptr;
+        SMLoc EndLoc;
+        if (parsePrimaryExpr(Addend, EndLoc))
+          return true;
+        if (TlsCallAddend) // __tls_get_addr+a(x@tlsgd)@plt+b
+          TlsCallAddend =
+              MCBinaryExpr::createAdd(TlsCallAddend, Addend, getContext());
+        else // __tls_get_addr(x@tlsgd)@plt+b
+          TlsCallAddend = Addend;
+      }
+      if (TlsCallAddend)
+        EVal = MCBinaryExpr::createAdd(EVal, TlsCallAddend, getContext());
+      // Add a __tls_get_addr operand with addend a, b, or a+b.
+      Operands.back() = PPCOperand::CreateFromMCExpr(
+          EVal, S, Parser.getTok().getLoc(), false);
+    }
 
     Operands.push_back(PPCOperand::CreateFromMCExpr(TLSSym, S, E, isPPC64()));
   }
 
   // Otherwise, check for D-form memory operands
-  if (!TLSCall && parseOptionalToken(AsmToken::LParen)) {
+  if (!TlsCall && parseOptionalToken(AsmToken::LParen)) {
     S = Parser.getTok().getLoc();
 
     int64_t IntVal;

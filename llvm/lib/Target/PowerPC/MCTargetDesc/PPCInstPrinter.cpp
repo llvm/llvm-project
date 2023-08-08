@@ -564,10 +564,10 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
   // come at the _end_ of the expression.
   const MCOperand &Op = MI->getOperand(OpNo);
   const MCSymbolRefExpr *RefExp = nullptr;
-  const MCConstantExpr *ConstExp = nullptr;
+  const MCExpr *Rhs = nullptr;
   if (const MCBinaryExpr *BinExpr = dyn_cast<MCBinaryExpr>(Op.getExpr())) {
     RefExp = cast<MCSymbolRefExpr>(BinExpr->getLHS());
-    ConstExp = cast<MCConstantExpr>(BinExpr->getRHS());
+    Rhs = BinExpr->getRHS();
   } else
     RefExp = cast<MCSymbolRefExpr>(Op.getExpr());
 
@@ -584,8 +584,14 @@ void PPCInstPrinter::printTLSCall(const MCInst *MI, unsigned OpNo,
   if (RefExp->getKind() != MCSymbolRefExpr::VK_None &&
       RefExp->getKind() != MCSymbolRefExpr::VK_PPC_NOTOC)
     O << '@' << MCSymbolRefExpr::getVariantKindName(RefExp->getKind());
-  if (ConstExp != nullptr)
-    O << '+' << ConstExp->getValue();
+  if (Rhs) {
+    SmallString<0> Buf;
+    raw_svector_ostream Tmp(Buf);
+    Rhs->print(Tmp, &MAI);
+    if (isdigit(Buf[0]))
+      O << '+';
+    O << Buf;
+  }
 }
 
 /// showRegistersWithPercentPrefix - Check if this register name should be
