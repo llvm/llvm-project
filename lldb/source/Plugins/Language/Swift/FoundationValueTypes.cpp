@@ -264,9 +264,9 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
   //       enum _Representation { ... }
   //       var _representation: _Representation
   //   }
-  static ConstString g__representation("_representation");
+  static constexpr llvm::StringLiteral g__representation("_representation");
   ValueObjectSP representation_enum_sp =
-      valobj.GetChildAtNamePath(g__representation);
+      valobj.GetChildAtNamePath({g__representation});
   if (!representation_enum_sp)
     return false;
 
@@ -315,8 +315,8 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     //       var length: UInt8
     //       var buffer: (...)
     //   }
-    static ConstString g_length("length");
-    ValueObjectSP length_sp = inline_data_sp->GetChildAtNamePath(g_length)
+    static constexpr llvm::StringLiteral g_length("length");
+    ValueObjectSP length_sp = inline_data_sp->GetChildAtNamePath({g_length})
                                   ->GetQualifiedRepresentationIfAvailable(
                                       lldb::eDynamicDontRunTarget, true);
     if (!length_sp)
@@ -345,8 +345,9 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     //       var slice: Range<HalfInt>
     //       var storage: __DataStorage
     //   }
-    static ConstString g_slice("slice");
-    ValueObjectSP slice_storage_sp = slice_data_sp->GetChildAtNamePath(g_slice);
+    static constexpr llvm::StringLiteral g_slice("slice");
+    ValueObjectSP slice_storage_sp =
+        slice_data_sp->GetChildAtNamePath({g_slice});
     if (!slice_storage_sp)
       return false;
 
@@ -356,9 +357,9 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
       return false;
 
     // We need to manually calculate slice.upperBound - slice.lowerBound.
-    static ConstString g_upperBound("upperBound");
+    static constexpr llvm::StringLiteral g_upperBound("upperBound");
     ValueObjectSP upper_bound_sp =
-        slice_storage_sp->GetChildAtNamePath(g_upperBound);
+        slice_storage_sp->GetChildAtNamePath({g_upperBound});
     if (!upper_bound_sp)
       return false;
 
@@ -367,9 +368,9 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     if (!upper_bound_sp)
       return false;
 
-    static ConstString g_lowerBound("lowerBound");
+    static constexpr llvm::StringLiteral g_lowerBound("lowerBound");
     ValueObjectSP lower_bound_sp =
-        slice_storage_sp->GetChildAtNamePath(g_lowerBound);
+        slice_storage_sp->GetChildAtNamePath({g_lowerBound});
     if (!lower_bound_sp)
       return false;
 
@@ -406,8 +407,8 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     //       var slice: RangeReference
     //       var storage: __DataStorage
     //   }
-    static ConstString g_slice("slice");
-    ValueObjectSP slice_ref_sp = large_data_sp->GetChildAtNamePath(g_slice);
+    static constexpr llvm::StringLiteral g_slice("slice");
+    ValueObjectSP slice_ref_sp = large_data_sp->GetChildAtNamePath({g_slice});
     if (!slice_ref_sp)
       return false;
 
@@ -421,8 +422,8 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     //   class RangeReference {
     //       var range: Range<Int>
     //   }
-    static ConstString g_range("range");
-    ValueObjectSP range_sp = slice_ref_sp->GetChildAtNamePath(g_range);
+    static constexpr llvm::StringLiteral g_range("range");
+    ValueObjectSP range_sp = slice_ref_sp->GetChildAtNamePath({g_range});
     if (!range_sp)
       return false;
 
@@ -432,8 +433,8 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
       return false;
 
     // We need to manually calculate range.upperBound - range.lowerBound.
-    static ConstString g_upperBound("upperBound");
-    ValueObjectSP upper_bound_sp = range_sp->GetChildAtNamePath(g_upperBound);
+    static constexpr llvm::StringLiteral g_upperBound("upperBound");
+    ValueObjectSP upper_bound_sp = range_sp->GetChildAtNamePath({g_upperBound});
     if (!upper_bound_sp)
       return false;
 
@@ -442,8 +443,8 @@ bool lldb_private::formatters::swift::Data_SummaryProvider(
     if (!upper_bound_sp)
       return false;
 
-    static ConstString g_lowerBound("lowerBound");
-    ValueObjectSP lower_bound_sp = range_sp->GetChildAtNamePath(g_lowerBound);
+    static constexpr llvm::StringLiteral g_lowerBound("lowerBound");
+    ValueObjectSP lower_bound_sp = range_sp->GetChildAtNamePath({g_lowerBound});
     if (!lower_bound_sp)
       return false;
 
@@ -503,8 +504,8 @@ bool lldb_private::formatters::swift::Decimal_SummaryProvider(
   uint8_t length = length_and_flags & 0xf;
   bool isNegative = length_and_flags & 0x10;
 
-  static ConstString g_mantissa("_mantissa");
-  ValueObjectSP mantissa_sp = valobj.GetChildAtNamePath(g_mantissa);
+  static constexpr llvm::StringLiteral g_mantissa("_mantissa");
+  ValueObjectSP mantissa_sp = valobj.GetChildAtNamePath({g_mantissa});
   if (!mantissa_sp)
     return false;
 
@@ -527,8 +528,8 @@ bool lldb_private::formatters::swift::Decimal_SummaryProvider(
     ValueObjectSP child_sp = mantissa_sp->GetChildAtIndex(i, true);
     if (!child_sp)
       return false;
-    static ConstString g_value("_value");
-    ValueObjectSP value_sp = child_sp->GetChildAtNamePath(g_value);
+    static constexpr llvm::StringLiteral g_value("_value");
+    ValueObjectSP value_sp = child_sp->GetChildAtNamePath({g_value});
     if (!value_sp)
       return false;
     auto val = value_sp->GetValueAsUnsigned(0) & 0xffff;
