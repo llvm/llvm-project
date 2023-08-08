@@ -654,12 +654,15 @@ void CIRGenFunction::buildCallArg(CallArgList &args, const Expr *E,
   // we make it to the call.
   if (type->isRecordType() &&
       type->castAs<RecordType>()->getDecl()->isParamDestroyedInCallee()) {
-    llvm_unreachable("NYI");
+    llvm_unreachable("Microsoft C++ ABI is NYI");
   }
 
   if (HasAggregateEvalKind && isa<ImplicitCastExpr>(E) &&
       cast<CastExpr>(E)->getCastKind() == CK_LValueToRValue) {
-    assert(0 && "NYI");
+    LValue L = buildLValue(cast<CastExpr>(E)->getSubExpr());
+    assert(L.isSimple());
+    args.addUncopiedAggregate(L, type);
+    return;
   }
 
   args.add(buildAnyExprToTemp(E), type);

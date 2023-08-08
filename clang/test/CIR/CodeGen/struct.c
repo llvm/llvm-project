@@ -61,3 +61,10 @@ struct S3 {
   int a;
 } s3[3] = {{1}, {2}, {3}};
 // CHECK-DAG: cir.global external @s3 = #cir.const_array<[#cir.const_struct<{#cir.int<1> : !s32i}> : !ty_22struct2ES322, #cir.const_struct<{#cir.int<2> : !s32i}> : !ty_22struct2ES322, #cir.const_struct<{#cir.int<3> : !s32i}> : !ty_22struct2ES322]> : !cir.array<!ty_22struct2ES322 x 3>
+
+void shouldCopyStructAsCallArg(struct S1 s) {
+// CHECK-DAG: cir.func @shouldCopyStructAsCallArg
+  shouldCopyStructAsCallArg(s);
+  // CHECK-DAG: %[[#LV:]] = cir.load %{{.+}} : cir.ptr <!ty_22struct2ES122>, !ty_22struct2ES122
+  // CHECK-DAG: cir.call @shouldCopyStructAsCallArg(%[[#LV]]) : (!ty_22struct2ES122) -> ()
+}
