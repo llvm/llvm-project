@@ -777,7 +777,7 @@ def C : Flag<["-"], "C">, Visibility<[ClangOption, CC1Option]>,
     HelpText<"Include comments in preprocessed output">,
     MarshallingInfoFlag<PreprocessorOutputOpts<"ShowComments">>;
 def D : JoinedOrSeparate<["-"], "D">, Group<Preprocessor_Group>,
-    Visibility<[ClangOption, CC1Option, FlangOption, FC1Option]>,
+    Visibility<[ClangOption, CC1Option, FlangOption, FC1Option, DXCOption]>,
     MetaVarName<"<macro>=<value>">,
     HelpText<"Define <macro> to <value> (or 1 if <value> omitted)">;
 def E : Flag<["-"], "E">, Flags<[NoXarchOption]>,
@@ -4058,7 +4058,8 @@ def gno_embed_source : Flag<["-"], "gno-embed-source">, Group<g_flags_Group>,
     HelpText<"Restore the default behavior of not embedding source text in DWARF debug sections">;
 def headerpad__max__install__names : Joined<["-"], "headerpad_max_install_names">;
 def help : Flag<["-", "--"], "help">,
-    Visibility<[ClangOption, CC1Option, CC1AsOption, FC1Option, FlangOption]>,
+    Visibility<[ClangOption, CC1Option, CC1AsOption,
+                FC1Option, FlangOption, DXCOption]>,
     HelpText<"Display available options">,
     MarshallingInfoFlag<FrontendOpts<"ShowHelp">>;
 def ibuiltininc : Flag<["-"], "ibuiltininc">, Group<clang_i_Group>,
@@ -7665,8 +7666,8 @@ def _SLASH_diagnostics_column : CLFlag<"diagnostics:column">,
   HelpText<"Disable caret diagnostics but keep column info">;
 def _SLASH_diagnostics_classic : CLFlag<"diagnostics:classic">,
   HelpText<"Disable column and caret diagnostics">;
-def _SLASH_D : CLJoinedOrSeparate<"D">, HelpText<"Define macro">,
-  MetaVarName<"<macro[=value]>">, Alias<D>;
+def _SLASH_D : CLJoinedOrSeparate<"D", [CLOption, DXCOption]>,
+  HelpText<"Define macro">, MetaVarName<"<macro[=value]>">, Alias<D>;
 def _SLASH_E : CLFlag<"E">, HelpText<"Preprocess to stdout">, Alias<E>;
 def _SLASH_external_COLON_I : CLJoinedOrSeparate<"external:I">, Alias<isystem>,
   HelpText<"Add directory to include search path with warnings suppressed">,
@@ -7705,7 +7706,7 @@ def _SLASH_Gw : CLFlag<"Gw">, HelpText<"Put each data item in its own section">,
 def _SLASH_Gw_ : CLFlag<"Gw-">,
   HelpText<"Do not put each data item in its own section (default)">,
   Alias<fno_data_sections>;
-def _SLASH_help : CLFlag<"help">, Alias<help>,
+def _SLASH_help : CLFlag<"help", [CLOption, DXCOption]>, Alias<help>,
   HelpText<"Display available options">;
 def _SLASH_HELP : CLFlag<"HELP">, Alias<help>;
 def _SLASH_hotpatch : CLFlag<"hotpatch">, Alias<fms_hotpatch>,
@@ -8143,10 +8144,6 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
   KIND_JOINED_OR_SEPARATE>, Group<dxc_Group>, Flags<[NoXarchOption]>,
   Visibility<[DXCOption]>;
 
-def dxc_help : Option<["/", "-", "--"], "help", KIND_JOINED>,
-  Group<dxc_Group>, Flags<[NoXarchOption]>, Visibility<[DXCOption]>,
-  Alias<help>,
-  HelpText<"Display available options">;
 def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
 def Fo : DXCJoinedOrSeparate<"Fo">, Alias<o>,
@@ -8168,8 +8165,6 @@ def target_profile : DXCJoinedOrSeparate<"T">, MetaVarName<"<profile>">,
          "lib_6_3, lib_6_4, lib_6_5, lib_6_6, lib_6_7, lib_6_x,"
          "ms_6_5, ms_6_6, ms_6_7,"
          "as_6_5, as_6_6, as_6_7">;
-def dxc_D : Option<["--", "/", "-"], "D", KIND_JOINED_OR_SEPARATE>,
-  Group<dxc_Group>, Flags<[NoXarchOption]>, Visibility<[DXCOption]>, Alias<D>;
 def emit_pristine_llvm : DXCFlag<"emit-pristine-llvm">,
   HelpText<"Emit pristine LLVM IR from the frontend by not running any LLVM passes at all."
            "Same as -S + -emit-llvm + -disable-llvm-passes.">;
