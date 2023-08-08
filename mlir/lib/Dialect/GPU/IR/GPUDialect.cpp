@@ -1508,18 +1508,41 @@ LogicalResult gpu::ReturnOp::verify() {
 //===----------------------------------------------------------------------===//
 
 void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
-                        StringRef name) {
+                        StringRef name, ArrayAttr targets) {
   ensureTerminator(*result.addRegion(), builder, result.location);
   result.attributes.push_back(builder.getNamedAttr(
       ::mlir::SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+
+  if (targets)
+    result.getOrAddProperties<Properties>().targets = targets;
+}
+
+void GPUModuleOp::build(OpBuilder &builder, OperationState &result,
+                        StringRef name, ArrayRef<Attribute> targets) {
+  build(builder, result, name,
+        targets.size() > 0 ? builder.getArrayAttr(targets) : ArrayAttr());
 }
 
 ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
   StringAttr nameAttr;
+  ArrayAttr targetsAttr;
+
   if (parser.parseSymbolName(nameAttr, mlir::SymbolTable::getSymbolAttrName(),
-                             result.attributes) ||
-      // If module attributes are present, parse them.
-      parser.parseOptionalAttrDictWithKeyword(result.attributes))
+                             result.attributes))
+    return failure();
+
+  // Parse the optional array of target attributes.
+  OptionalParseResult targetsAttrResult =
+      parser.parseOptionalAttribute(targetsAttr, Type{});
+  if (targetsAttrResult.has_value()) {
+    if (failed(*targetsAttrResult)) {
+      return failure();
+    }
+    result.getOrAddProperties<Properties>().targets = targetsAttr;
+  }
+
+  // If module attributes are present, parse them.
+  if (parser.parseOptionalAttrDictWithKeyword(result.attributes))
     return failure();
 
   // Parse the module body.
@@ -1535,11 +1558,31 @@ ParseResult GPUModuleOp::parse(OpAsmParser &parser, OperationState &result) {
 void GPUModuleOp::print(OpAsmPrinter &p) {
   p << ' ';
   p.printSymbolName(getName());
-  p.printOptionalAttrDictWithKeyword((*this)->getAttrs(),
-                                     {mlir::SymbolTable::getSymbolAttrName()});
+
+  if (Attribute attr = getTargetsAttr()) {
+    p << ' ';
+    p.printAttribute(attr);
+    p << ' ';
+  }
+
+  p.printOptionalAttrDictWithKeyword(
+      (*this)->getAttrs(),
+      {mlir::SymbolTable::getSymbolAttrName(), getTargetsAttrName()});
   p << ' ';
   p.printRegion(getRegion(), /*printEntryBlockArgs=*/false,
                 /*printBlockTerminators=*/false);
+}
+
+bool GPUModuleOp::hasTarget(Attribute target) {
+  if (ArrayAttr targets = getTargetsAttr())
+    return llvm::count(targets.getValue(), target);
+  return false;
+}
+
+void GPUModuleOp::setTargets(ArrayRef<TargetAttrInterface> targets) {
+  ArrayAttr &targetsAttr = getProperties().targets;
+  SmallVector<Attribute> targetsVector(targets);
+  targetsAttr = ArrayAttr::get(getContext(), targetsVector);
 }
 
 //===----------------------------------------------------------------------===//
