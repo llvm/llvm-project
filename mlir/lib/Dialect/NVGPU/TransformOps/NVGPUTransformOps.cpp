@@ -966,8 +966,7 @@ SmallVector<Operation *> CopyBuilder::rewrite(ArrayRef<Operation *> copyOps) {
     auto copyOp = cast<linalg::CopyOp>(op);
     auto inMemRef =
         cast<TypedValue<MemRefType>>(copyOp.getDpsInputOperand(0)->get());
-    MemRefType inMemRefType = inMemRef.getType();
-    assert(inMemRefType.getRank() == 2 && "expected in to be a 2D memref");
+    assert(inMemRef.getType().getRank() == 2 && "expected in to be a 2D memref");
 
     // 2. Build global memory descriptor.
     TypedValue<nvgpu::TensorMapDescriptorType> globalDesc =
