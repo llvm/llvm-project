@@ -76,22 +76,47 @@ void CIRASTConsumer::HandleTranslationUnit(ASTContext &C) {
     clang::tidy::ClangTidyContext &tidyCtx;
     clang::SourceManager &clangSrcMgr;
 
-    clang::SourceLocation getClangSrcLoc(mlir::Location loc) {
+    clang::SourceLocation getClangFromFileLineCol(mlir::FileLineColLoc loc) {
       clang::SourceLocation clangLoc;
       FileManager &fileMgr = clangSrcMgr.getFileManager();
-
-      auto fileLoc = loc.dyn_cast<mlir::FileLineColLoc>();
-      if (!fileLoc)
-        return clangLoc;
+      assert(loc && "not a valid mlir::FileLineColLoc");
       // The column and line may be zero to represent unknown column and/or
       // unknown line/column information.
-      if (fileLoc.getLine() == 0 || fileLoc.getColumn() == 0)
+      if (loc.getLine() == 0 || loc.getColumn() == 0) {
+        llvm_unreachable("How should we workaround this?");
         return clangLoc;
-      if (auto FE = fileMgr.getFile(fileLoc.getFilename())) {
-        return clangSrcMgr.translateFileLineCol(*FE, fileLoc.getLine(),
-                                                fileLoc.getColumn());
       }
-      return clangLoc;
+      if (auto FE = fileMgr.getFile(loc.getFilename())) {
+        return clangSrcMgr.translateFileLineCol(*FE, loc.getLine(),
+                                                loc.getColumn());
+      }
+      llvm_unreachable("location doesn't map to a file?");
+    }
+
+    clang::SourceLocation getClangSrcLoc(mlir::Location loc) {
+      // Direct maps into a clang::SourceLocation.
+      if (auto fileLoc = loc.dyn_cast<mlir::FileLineColLoc>()) {
+        return getClangFromFileLineCol(fileLoc);
+      }
+
+      // FusedLoc needs to be decomposed but the canonical one
+      // is the first location, we handle source ranges somewhere
+      // else.
+      if (auto fileLoc = loc.dyn_cast<mlir::FusedLoc>()) {
+        auto locArray = fileLoc.getLocations();
+        assert(locArray.size() > 0 && "expected multiple locs");
+        return getClangFromFileLineCol(
+            locArray[0].dyn_cast<mlir::FileLineColLoc>());
+      }
+
+      // Many loc styles are yet to be handled.
+      if (auto fileLoc = loc.dyn_cast<mlir::UnknownLoc>()) {
+        llvm_unreachable("mlir::UnknownLoc not implemented!");
+      }
+      if (auto fileLoc = loc.dyn_cast<mlir::CallSiteLoc>()) {
+        llvm_unreachable("mlir::CallSiteLoc not implemented!");
+      }
+      llvm_unreachable("Unknown location style");
     }
 
     clang::DiagnosticIDs::Level
@@ -111,13 +136,13 @@ void CIRASTConsumer::HandleTranslationUnit(ASTContext &C) {
 
   public:
     void emitClangTidyDiagnostic(mlir::Diagnostic &diag) {
-      tidyCtx.diag(cir::checks::LifetimeCheckName,
-                   getClangSrcLoc(diag.getLocation()), diag.str(),
+      auto clangBeginLoc = getClangSrcLoc(diag.getLocation());
+      tidyCtx.diag(cir::checks::LifetimeCheckName, clangBeginLoc, diag.str(),
                    translateToClangDiagLevel(diag.getSeverity()));
       for (const auto &note : diag.getNotes()) {
-        tidyCtx.diag(cir::checks::LifetimeCheckName,
-                     getClangSrcLoc(note.getLocation()), note.str(),
-                     translateToClangDiagLevel(note.getSeverity()));
+        auto clangNoteBeginLoc = getClangSrcLoc(note.getLocation());
+        tidyCtx.diag(cir::checks::LifetimeCheckName, clangNoteBeginLoc,
+                     note.str(), translateToClangDiagLevel(note.getSeverity()));
       }
     }
 
