@@ -2580,6 +2580,7 @@ const char *AArch64TargetLowering::getTargetNodeName(unsigned Opcode) const {
     MAKE_CASE(AArch64ISD::CALL_BTI)
     MAKE_CASE(AArch64ISD::MRRS)
     MAKE_CASE(AArch64ISD::MSRR)
+    MAKE_CASE(AArch64ISD::RSHRNB_I)
   }
 #undef MAKE_CASE
   return nullptr;
@@ -20078,7 +20079,59 @@ static SDValue performUnpackCombine(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
-static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG) {
+// Try to simplify:
+//    t1 = nxv8i16 add(X, 1 << (ShiftValue - 1))
+//    t2 = nxv8i16 srl(t1, ShiftValue)
+// to
+//    t1 = nxv8i16 rshrnb(X, shiftvalue).
+// rshrnb will zero the top half bits of each element. Therefore, this combine
+// should only be performed when a following instruction with the rshrnb
+// as an operand does not care about the top half of each element. For example,
+// a uzp1 or a truncating store.
+static SDValue trySimplifySrlAddToRshrnb(SDValue Srl, SelectionDAG &DAG,
+                                         const AArch64Subtarget *Subtarget) {
+  EVT VT = Srl->getValueType(0);
+
+  if (!VT.isScalableVector() || !Subtarget->hasSVE2() ||
+      Srl->getOpcode() != ISD::SRL)
+    return SDValue();
+
+  EVT ResVT;
+  if (VT == MVT::nxv8i16)
+    ResVT = MVT::nxv16i8;
+  else if (VT == MVT::nxv4i32)
+    ResVT = MVT::nxv8i16;
+  else if (VT == MVT::nxv2i64)
+    ResVT = MVT::nxv4i32;
+  else
+    return SDValue();
+
+  auto SrlOp1 =
+      dyn_cast_or_null<ConstantSDNode>(DAG.getSplatValue(Srl->getOperand(1)));
+  if (!SrlOp1)
+    return SDValue();
+  unsigned ShiftValue = SrlOp1->getZExtValue();
+
+  SDValue Add = Srl->getOperand(0);
+  if (Add->getOpcode() != ISD::ADD || !Add->hasOneUse())
+    return SDValue();
+  auto AddOp1 =
+      dyn_cast_or_null<ConstantSDNode>(DAG.getSplatValue(Add->getOperand(1)));
+  if (!AddOp1)
+    return SDValue();
+  uint64_t AddValue = AddOp1->getZExtValue();
+  if (AddValue != 1ULL << (ShiftValue - 1))
+    return SDValue();
+
+  SDLoc DL(Srl);
+  SDValue Rshrnb = DAG.getNode(
+      AArch64ISD::RSHRNB_I, DL, ResVT,
+      {Add->getOperand(0), DAG.getTargetConstant(ShiftValue, DL, MVT::i32)});
+  return DAG.getNode(ISD::BITCAST, DL, VT, Rshrnb);
+}
+
+static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG,
+                                 const AArch64Subtarget *Subtarget) {
   SDLoc DL(N);
   SDValue Op0 = N->getOperand(0);
   SDValue Op1 = N->getOperand(1);
@@ -20110,6 +20163,12 @@ static SDValue performUzpCombine(SDNode *N, SelectionDAG &DAG) {
                          DAG.getUNDEF(HalfVT));
     }
   }
+
+  if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(Op0, DAG, Subtarget))
+    return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Rshrnb, Op1);
+
+  if (SDValue Rshrnb = trySimplifySrlAddToRshrnb(Op1, DAG, Subtarget))
+    return DAG.getNode(AArch64ISD::UZP1, DL, ResVT, Op0, Rshrnb);
 
   // uzp1(unpklo(uzp1(x, y)), z) => uzp1(x, z)
   if (Op0.getOpcode() == AArch64ISD::UUNPKLO) {
@@ -20726,6 +20785,17 @@ static SDValue performSTORECombine(SDNode *N,
 
   if (SDValue Store = combineBoolVectorAndTruncateStore(DAG, ST))
     return Store;
+
+  if (ST->isTruncatingStore())
+    if (SDValue Rshrnb =
+            trySimplifySrlAddToRshrnb(ST->getOperand(1), DAG, Subtarget)) {
+      EVT StoreVT = ST->getMemoryVT();
+      if ((ValueVT == MVT::nxv8i16 && StoreVT == MVT::nxv8i8) ||
+          (ValueVT == MVT::nxv4i32 && StoreVT == MVT::nxv4i16) ||
+          (ValueVT == MVT::nxv2i64 && StoreVT == MVT::nxv2i32))
+        return DAG.getTruncStore(ST->getChain(), ST, Rshrnb, ST->getBasePtr(),
+                                 StoreVT, ST->getMemOperand());
+    }
 
   return SDValue();
 }
@@ -23044,7 +23114,7 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
   case AArch64ISD::UUNPKHI:
     return performUnpackCombine(N, DAG, Subtarget);
   case AArch64ISD::UZP1:
-    return performUzpCombine(N, DAG);
+    return performUzpCombine(N, DAG, Subtarget);
   case AArch64ISD::SETCC_MERGE_ZERO:
     return performSetccMergeZeroCombine(N, DCI);
   case AArch64ISD::REINTERPRET_CAST:
