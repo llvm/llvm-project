@@ -484,6 +484,10 @@ DerivedArgList *Driver::TranslateInputArgs(const InputArgList &Args) const {
     DAL->append(A);
   }
 
+  // DXC mode quits before assembly if an output object file isn't specified.
+  if (IsDXCMode() && !Args.hasArg(options::OPT_dxc_Fo))
+    DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_S));
+
   // Enforce -static if -miamcu is present.
   if (Args.hasFlag(options::OPT_miamcu, options::OPT_mno_iamcu, false))
     DAL->AddFlagArg(nullptr, Opts.getOption(options::OPT_static));
@@ -5023,7 +5027,8 @@ class ToolSelector final {
     return TC.useIntegratedAs() && !SaveTemps &&
            !C.getArgs().hasArg(options::OPT_via_file_asm) &&
            !C.getArgs().hasArg(options::OPT__SLASH_FA) &&
-           !C.getArgs().hasArg(options::OPT__SLASH_Fa);
+           !C.getArgs().hasArg(options::OPT__SLASH_Fa) &&
+           !C.getArgs().hasArg(options::OPT_dxc_Fc);
   }
 
   /// Return true if a preprocessor action can be collapsed.
@@ -5776,8 +5781,21 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     return "-";
   }
 
-  if (IsDXCMode() && !C.getArgs().hasArg(options::OPT_o))
-    return "-";
+  if (JA.getType() == types::TY_PP_Asm &&
+      C.getArgs().hasArg(options::OPT_dxc_Fc)) {
+    StringRef FcValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fc);
+    // TODO: Should we use `MakeCLOutputFilename` here? If so, we can probably
+    // handle this as part of the SLASH_Fa handling below.
+    return C.addResultFile(C.getArgs().MakeArgString(FcValue.str()), &JA);
+  }
+
+  if (JA.getType() == types::TY_Object &&
+      C.getArgs().hasArg(options::OPT_dxc_Fo)) {
+    StringRef FoValue = C.getArgs().getLastArgValue(options::OPT_dxc_Fo);
+    // TODO: Should we use `MakeCLOutputFilename` here? If so, we can probably
+    // handle this as part of the SLASH_Fo handling below.
+    return C.addResultFile(C.getArgs().MakeArgString(FoValue.str()), &JA);
+  }
 
   // Is this the assembly listing for /FA?
   if (JA.getType() == types::TY_PP_Asm &&
@@ -5790,6 +5808,11 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
         MakeCLOutputFilename(C.getArgs(), FaValue, BaseName, JA.getType()),
         &JA);
   }
+
+  // DXC defaults to standard out when generating assembly. We check this after
+  // any DXC flags that might specify a file.
+  if (AtTopLevel && JA.getType() == types::TY_PP_Asm && IsDXCMode())
+    return "-";
 
   bool SpecifiedModuleOutput =
       C.getArgs().hasArg(options::OPT_fmodule_output) ||
@@ -5809,7 +5832,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
       CCGenDiagnostics) {
     StringRef Name = llvm::sys::path::filename(BaseInput);
     std::pair<StringRef, StringRef> Split = Name.split('.');
-    const char *Suffix = types::getTypeTempSuffix(JA.getType(), IsCLMode());
+    const char *Suffix =
+        types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
     // The non-offloading toolchain on Darwin requires deterministic input
     // file name for binaries to be deterministic, therefore it needs unique
     // directory.
@@ -5900,7 +5924,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
     NamedOutput =
         MakeCLOutputFilename(C.getArgs(), Val, BaseName, types::TY_Object);
   } else {
-    const char *Suffix = types::getTypeTempSuffix(JA.getType(), IsCLMode());
+    const char *Suffix =
+        types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode());
     assert(Suffix && "All types used for output should have a suffix.");
 
     std::string::size_type End = std::string::npos;
@@ -5961,7 +5986,8 @@ const char *Driver::GetNamedOutputPath(Compilation &C, const JobAction &JA,
       StringRef Name = llvm::sys::path::filename(BaseInput);
       std::pair<StringRef, StringRef> Split = Name.split('.');
       std::string TmpName = GetTemporaryPath(
-          Split.first, types::getTypeTempSuffix(JA.getType(), IsCLMode()));
+          Split.first,
+          types::getTypeTempSuffix(JA.getType(), IsCLMode() || IsDXCMode()));
       return C.addTempFile(C.getArgs().MakeArgString(TmpName));
     }
   }
