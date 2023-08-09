@@ -57,6 +57,52 @@ lit_header_restrictions = {
     "wctype.h": "// UNSUPPORTED: no-wide-characters",
 }
 
+header_include_requirements = {
+    ("_LIBCPP_HAS_NO_ATOMIC_HEADER",): (
+        # headers with #error directives
+        "atomic",
+        # transitive includers of the above headers
+        "stdatomic.h",
+    ),
+    ("_LIBCPP_HAS_NO_LOCALIZATION",): (
+        # headers with #error directives
+        "ios",
+        "locale.h",
+        # transitive includers of the above headers
+        "clocale",
+        "codecvt",
+        "experimental/regex",
+        "fstream",
+        "iomanip",
+        "iostream",
+        "istream",
+        "locale",
+        "ostream",
+        "regex",
+        "sstream",
+        "streambuf",
+        "strstream",
+    ),
+    ("_LIBCPP_HAS_NO_THREADS",): (
+        # headers with #error directives
+        "barrier",
+        "future",
+        "latch",
+        "semaphore",
+        "shared_mutex",
+        "stop_token",
+        "thread",
+    ),
+    ("_LIBCPP_HAS_NO_WIDE_CHARACTERS",): (
+        # headers with #error directives
+        "wchar.h",
+        "wctype.h",
+        # transitive includers of the above headers
+        "cwchar",
+        "cwctype",
+    ),
+}
+
 # This table was produced manually, by grepping the TeX source of the Standard's
 # library clauses for the string "#include". Each header's synopsis contains
 # explicit "#include" directives for its mandatory inclusions.
