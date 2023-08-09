@@ -4054,9 +4054,15 @@ cc_library(
     hdrs = ["include/mlir/InitAllExtensions.h"],
     deps = [
         ":ArithToLLVM",
+        ":ComplexToLLVM",
+        ":ControlFlowToLLVM",
         ":FuncExtensions",
+        ":IndexToLLVM",
+        ":MathToLLVM",
+        ":MemRefToLLVM",
         ":NVVMTarget",
         ":NVVMToLLVM",
+        ":UBToLLVM",
     ],
 )
 
