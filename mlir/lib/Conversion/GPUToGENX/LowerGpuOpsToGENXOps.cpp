@@ -151,7 +151,16 @@ static void populateOpPatterns(LLVMTypeConverter &converter,
 void mlir::populateGpuToGENXConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns) {
   populateWithGenerated(patterns);
-  // TODO: add conversion patterns.
+  patterns
+      .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, GENX::ThreadIdXOp,
+                                       GENX::ThreadIdYOp, GENX::ThreadIdZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, GENX::BlockIdXOp,
+                                       GENX::BlockIdYOp, GENX::BlockIdZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, GENX::BlockDimXOp,
+                                       GENX::BlockDimYOp, GENX::BlockDimZOp>,
+           GPUIndexIntrinsicOpLowering<gpu::GridDimOp, GENX::GridDimXOp,
+                                       GENX::GridDimYOp, GENX::GridDimZOp>>(
+          converter);
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
