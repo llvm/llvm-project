@@ -1883,6 +1883,27 @@ ExprResult Sema::CreateGenericSelectionExpr(
       ContainsUnexpandedParameterPack, ResultIndex);
 }
 
+static PredefinedExpr::IdentKind getPredefinedExprKind(tok::TokenKind Kind) {
+  switch (Kind) {
+  default:
+    llvm_unreachable("unexpected TokenKind");
+  case tok::kw___func__:
+    return PredefinedExpr::Func; // [C99 6.4.2.2]
+  case tok::kw___FUNCTION__:
+    return PredefinedExpr::Function;
+  case tok::kw___FUNCDNAME__:
+    return PredefinedExpr::FuncDName; // [MS]
+  case tok::kw___FUNCSIG__:
+    return PredefinedExpr::FuncSig; // [MS]
+  case tok::kw_L__FUNCTION__:
+    return PredefinedExpr::LFunction; // [MS]
+  case tok::kw_L__FUNCSIG__:
+    return PredefinedExpr::LFuncSig; // [MS]
+  case tok::kw___PRETTY_FUNCTION__:
+    return PredefinedExpr::PrettyFunction; // [GNU]
+  }
+}
+
 /// getUDSuffixLoc - Create a SourceLocation for a ud-suffix, given the
 /// location of the token and the offset of the ud-suffix within it.
 static SourceLocation getUDSuffixLoc(Sema &S, SourceLocation TokLoc,
@@ -1923,6 +1944,11 @@ static ExprResult BuildCookedLiteralOperatorCall(Sema &S, Scope *Scope,
 }
 
 ExprResult Sema::ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks) {
+  // StringToks needs backing storage as it doesn't hold array elements itself
+  std::vector<Token> ExpandedToks;
+  if (getLangOpts().MicrosoftExt)
+    StringToks = ExpandedToks = ExpandFunctionLocalPredefinedMacros(StringToks);
+
   StringLiteralParser Literal(StringToks, PP,
                               StringLiteralEvalMethod::Unevaluated);
   if (Literal.hadError)
@@ -1946,6 +1972,55 @@ ExprResult Sema::ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks) {
   return Lit;
 }
 
+std::vector<Token>
+Sema::ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks) {
+  // MSVC treats some predefined identifiers (e.g. __FUNCTION__) as function
+  // local macros that expand to string literals that may be concatenated.
+  // These macros are expanded here (in Sema), because StringLiteralParser
+  // (in Lex) doesn't know the enclosing function (because it hasn't been
+  // parsed yet).
+  assert(getLangOpts().MicrosoftExt);
+
+  // Note: Although function local macros are defined only inside functions,
+  // we ensure a valid `CurrentDecl` even outside of a function. This allows
+  // expansion of macros into empty string literals without additional checks.
+  Decl *CurrentDecl = getCurLocalScopeDecl();
+  if (!CurrentDecl)
+    CurrentDecl = Context.getTranslationUnitDecl();
+
+  std::vector<Token> ExpandedToks;
+  ExpandedToks.reserve(Toks.size());
+  for (const Token &Tok : Toks) {
+    if (!isFunctionLocalStringLiteralMacro(Tok.getKind(), getLangOpts())) {
+      assert(tok::isStringLiteral(Tok.getKind()));
+      ExpandedToks.emplace_back(Tok);
+      continue;
+    }
+    if (isa<TranslationUnitDecl>(CurrentDecl))
+      Diag(Tok.getLocation(), diag::ext_predef_outside_function);
+    // Stringify predefined expression
+    Diag(Tok.getLocation(), diag::ext_string_literal_from_predefined)
+        << Tok.getKind();
+    SmallString<64> Str;
+    llvm::raw_svector_ostream OS(Str);
+    Token &Exp = ExpandedToks.emplace_back();
+    Exp.startToken();
+    if (Tok.getKind() == tok::kw_L__FUNCTION__ ||
+        Tok.getKind() == tok::kw_L__FUNCSIG__) {
+      OS << 'L';
+      Exp.setKind(tok::wide_string_literal);
+    } else {
+      Exp.setKind(tok::string_literal);
+    }
+    OS << '"'
+       << Lexer::Stringify(PredefinedExpr::ComputeName(
+              getPredefinedExprKind(Tok.getKind()), CurrentDecl))
+       << '"';
+    PP.CreateString(OS.str(), Exp, Tok.getLocation(), Tok.getEndLoc());
+  }
+  return ExpandedToks;
+}
+
 /// ActOnStringLiteral - The specified tokens were lexed as pasted string
 /// fragments (e.g. "foo" "bar" L"baz").  The result string has to handle string
 /// concatenation ([C99 5.1.1.2, translation phase #6]), so it may come from
@@ -1955,6 +2030,11 @@ ExprResult Sema::ActOnUnevaluatedStringLiteral(ArrayRef<Token> StringToks) {
 ExprResult
 Sema::ActOnStringLiteral(ArrayRef<Token> StringToks, Scope *UDLScope) {
   assert(!StringToks.empty() && "Must have at least one string!");
+
+  // StringToks needs backing storage as it doesn't hold array elements itself
+  std::vector<Token> ExpandedToks;
+  if (getLangOpts().MicrosoftExt)
+    StringToks = ExpandedToks = ExpandFunctionLocalPredefinedMacros(StringToks);
 
   StringLiteralParser Literal(StringToks, PP);
   if (Literal.hadError)
@@ -3625,17 +3705,7 @@ static void ConvertUTF8ToWideString(unsigned CharByteWidth, StringRef Source,
 
 ExprResult Sema::BuildPredefinedExpr(SourceLocation Loc,
                                      PredefinedExpr::IdentKind IK) {
-  // Pick the current block, lambda, captured statement or function.
-  Decl *currentDecl = nullptr;
-  if (const BlockScopeInfo *BSI = getCurBlock())
-    currentDecl = BSI->TheDecl;
-  else if (const LambdaScopeInfo *LSI = getCurLambda())
-    currentDecl = LSI->CallOperator;
-  else if (const CapturedRegionScopeInfo *CSI = getCurCapturedRegion())
-    currentDecl = CSI->TheCapturedDecl;
-  else
-    currentDecl = getCurFunctionOrMethodDecl();
-
+  Decl *currentDecl = getCurLocalScopeDecl();
   if (!currentDecl) {
     Diag(Loc, diag::ext_predef_outside_function);
     currentDecl = Context.getTranslationUnitDecl();
@@ -3700,20 +3770,7 @@ ExprResult Sema::ActOnSYCLUniqueStableNameExpr(SourceLocation OpLoc,
 }
 
 ExprResult Sema::ActOnPredefinedExpr(SourceLocation Loc, tok::TokenKind Kind) {
-  PredefinedExpr::IdentKind IK;
-
-  switch (Kind) {
-  default: llvm_unreachable("Unknown simple primary expr!");
-  case tok::kw___func__: IK = PredefinedExpr::Func; break; // [C99 6.4.2.2]
-  case tok::kw___FUNCTION__: IK = PredefinedExpr::Function; break;
-  case tok::kw___FUNCDNAME__: IK = PredefinedExpr::FuncDName; break; // [MS]
-  case tok::kw___FUNCSIG__: IK = PredefinedExpr::FuncSig; break; // [MS]
-  case tok::kw_L__FUNCTION__: IK = PredefinedExpr::LFunction; break; // [MS]
-  case tok::kw_L__FUNCSIG__: IK = PredefinedExpr::LFuncSig; break; // [MS]
-  case tok::kw___PRETTY_FUNCTION__: IK = PredefinedExpr::PrettyFunction; break;
-  }
-
-  return BuildPredefinedExpr(Loc, IK);
+  return BuildPredefinedExpr(Loc, getPredefinedExprKind(Kind));
 }
 
 ExprResult Sema::ActOnCharacterConstant(const Token &Tok, Scope *UDLScope) {

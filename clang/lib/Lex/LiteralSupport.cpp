@@ -417,6 +417,19 @@ void clang::expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input) {
   }
 }
 
+bool clang::isFunctionLocalStringLiteralMacro(tok::TokenKind K,
+                                              const LangOptions &LO) {
+  return LO.MicrosoftExt &&
+         (K == tok::kw___FUNCTION__ || K == tok::kw_L__FUNCTION__ ||
+          K == tok::kw___FUNCSIG__ || K == tok::kw_L__FUNCSIG__ ||
+          K == tok::kw___FUNCDNAME__);
+}
+
+bool clang::tokenIsLikeStringLiteral(const Token &Tok, const LangOptions &LO) {
+  return tok::isStringLiteral(Tok.getKind()) ||
+         isFunctionLocalStringLiteralMacro(Tok.getKind(), LO);
+}
+
 static bool ProcessNumericUCNEscape(const char *ThisTokBegin,
                                     const char *&ThisTokBuf,
                                     const char *ThisTokEnd, uint32_t &UcnVal,
