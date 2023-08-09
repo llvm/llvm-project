@@ -3613,6 +3613,10 @@ public:
   /// in a 'block', this returns the containing context.
   NamedDecl *getCurFunctionOrMethodDecl() const;
 
+  /// getCurLocalScopeDecl - Return the Decl for either of:
+  /// block, lambda, captured statement, function, or nullptr.
+  Decl *getCurLocalScopeDecl();
+
   /// Add this decl to the scope shadowed decl chains.
   void PushOnScopeChains(NamedDecl *D, Scope *S, bool AddToContext = true);
 
@@ -5707,6 +5711,11 @@ public:
                       ArrayRef<Expr *> Args,
                       SourceLocation LitEndLoc,
                       TemplateArgumentListInfo *ExplicitTemplateArgs = nullptr);
+
+  // ExpandFunctionLocalPredefinedMacros - Returns a new vector of Tokens,
+  // where Tokens representing function local predefined macros (such as
+  // __FUNCTION__) are replaced (expanded) with string-literal Tokens.
+  std::vector<Token> ExpandFunctionLocalPredefinedMacros(ArrayRef<Token> Toks);
 
   ExprResult BuildPredefinedExpr(SourceLocation Loc,
                                  PredefinedExpr::IdentKind IK);
