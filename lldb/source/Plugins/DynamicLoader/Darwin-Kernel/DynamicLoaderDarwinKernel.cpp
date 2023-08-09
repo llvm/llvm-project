@@ -767,9 +767,10 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       // to do anything useful. This will force a call to dsymForUUID if it
       // exists, instead of depending on the DebugSymbols preferences being
       // set.
+      Status kernel_search_error;
       if (IsKernel()) {
-        Status error;
-        if (Symbols::DownloadObjectAndSymbolFile(module_spec, error, true)) {
+        if (Symbols::DownloadObjectAndSymbolFile(module_spec,
+                                                 kernel_search_error, true)) {
           if (FileSystem::Instance().Exists(module_spec.GetFileSpec())) {
             m_module_sp = std::make_shared<Module>(module_spec.GetFileSpec(),
                                                    target.GetArchitecture());
@@ -807,9 +808,13 @@ bool DynamicLoaderDarwinKernel::KextImageInfo::LoadImageUsingMemoryModule(
       }
 
       if (IsKernel() && !m_module_sp) {
-        Stream &s = target.GetDebugger().GetOutputStream();
+        Stream &s = target.GetDebugger().GetErrorStream();
         s.Printf("WARNING: Unable to locate kernel binary on the debugger "
                  "system.\n");
+        if (kernel_search_error.Fail() && kernel_search_error.AsCString("") &&
+            kernel_search_error.AsCString("")[0] != '\0') {
+          s << kernel_search_error.AsCString();
+        }
       }
     }
 
