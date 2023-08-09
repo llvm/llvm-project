@@ -256,3 +256,23 @@ transform.sequence failures(propagate) {
   // Verify that the returned handle is usable.
   transform.test_print_remark_at_operand %1, "transformed" : !transform.any_op
 }
+
+// -----
+
+// CHECK-LABEL: func @lower_to_llvm
+//   CHECK-NOT:   memref.alloc
+//       CHECK:   llvm.call @malloc
+func.func @lower_to_llvm() {
+  %0 = memref.alloc() : memref<2048xi8>
+  return
+}
+
+transform.sequence failures(propagate) {
+^bb1(%arg1: !transform.any_op):
+  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
+  transform.apply_conversion_patterns to %0 {
+    transform.apply_conversion_patterns.dialect_to_llvm "memref"
+  } with type_converter {
+    transform.apply_conversion_patterns.memref.memref_to_llvm_type_converter
+  } {legal_dialects = ["func", "llvm"]} : !transform.any_op
+}
