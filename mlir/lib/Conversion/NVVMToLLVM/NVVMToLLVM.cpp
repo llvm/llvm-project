@@ -201,7 +201,8 @@ struct NVVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
   /// Hook for derived dialect interface to provide conversion patterns
   /// and mark dialect legal for the conversion target.
   void populateConvertToLLVMConversionPatterns(
-      ConversionTarget &target, RewritePatternSet &patterns) const final {
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
     populateNVVMToLLVMConversionPatterns(patterns);
   }
 };

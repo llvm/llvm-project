@@ -1849,7 +1849,7 @@ define <8 x double> @shuffle_v8f64_23014567(<8 x double> %a0, <8 x double> %a1) 
 define <8 x double> @shuffle_v8f64_2301uu67(<8 x double> %a0, <8 x double> %a1) {
 ; ALL-LABEL: shuffle_v8f64_2301uu67:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[2,3,0,1,0,1,6,7]
+; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[2,3,0,1,4,5,6,7]
 ; ALL-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <8 x double> %a1, <8 x double> undef, <8 x i32> <i32 2, i32 3, i32 0, i32 1, i32 undef, i32 undef, i32 6, i32 7>
   ret <8 x double> %1
@@ -1867,7 +1867,7 @@ define <8 x double> @shuffle_v8f64_2301uuuu(<8 x double> %a0, <8 x double> %a1) 
 define <8 x double> @shuffle_v8f64_uuu2301(<8 x double> %a0, <8 x double> %a1) {
 ; ALL-LABEL: shuffle_v8f64_uuu2301:
 ; ALL:       # %bb.0:
-; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,0,1,2,3,0,1]
+; ALL-NEXT:    vshuff64x2 {{.*#+}} zmm0 = zmm1[0,1,2,3,2,3,0,1]
 ; ALL-NEXT:    ret{{[l|q]}}
   %1 = shufflevector <8 x double> %a1, <8 x double> undef, <8 x i32> <i32 undef, i32 undef, i32 undef, i32 undef, i32 2, i32 3, i32 0, i32 1>
   ret <8 x double> %1

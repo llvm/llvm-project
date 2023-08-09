@@ -223,15 +223,19 @@ void ProcessMachCore::CreateMemoryRegions() {
   }
 }
 
-void ProcessMachCore::LoadBinariesViaMetadata() {
+bool ProcessMachCore::LoadBinariesViaMetadata() {
   Log *log(GetLog(LLDBLog::DynamicLoader | LLDBLog::Process));
   ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
-  bool found_main_binary_definitively = false;
 
   addr_t objfile_binary_value;
   bool objfile_binary_value_is_offset;
   UUID objfile_binary_uuid;
   ObjectFile::BinaryType type;
+
+  // This will be set to true if we had a metadata hint
+  // specifying a UUID or address -- and we should not fall back
+  // to doing an exhaustive search.
+  bool found_binary_spec_in_metadata = false;
 
   if (core_objfile->GetCorefileMainBinaryInfo(objfile_binary_value,
                                               objfile_binary_value_is_offset,
@@ -244,6 +248,7 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
                   objfile_binary_uuid.GetAsString().c_str(),
                   objfile_binary_value, objfile_binary_value_is_offset, type);
     }
+    found_binary_spec_in_metadata = true;
 
     // If this is the xnu kernel, don't load it now.  Note the correct
     // DynamicLoader plugin to use, and the address of the kernel, and
@@ -251,7 +256,6 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
     if (type == ObjectFile::eBinaryTypeKernel) {
       m_mach_kernel_addr = objfile_binary_value;
       m_dyld_plugin_name = DynamicLoaderDarwinKernel::GetPluginNameStatic();
-      found_main_binary_definitively = true;
     } else if (type == ObjectFile::eBinaryTypeUser) {
       m_dyld_addr = objfile_binary_value;
       m_dyld_plugin_name = DynamicLoaderMacOSXDYLD::GetPluginNameStatic();
@@ -265,7 +269,6 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
               objfile_binary_value, objfile_binary_value_is_offset,
               force_symbol_search, notify, set_address_in_target,
               allow_memory_image_last_resort)) {
-        found_main_binary_definitively = true;
         m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
       }
     }
@@ -276,7 +279,6 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
   // load command is present, let's use the contents.
   UUID ident_uuid;
   addr_t ident_binary_addr = LLDB_INVALID_ADDRESS;
-  if (!found_main_binary_definitively) {
     std::string corefile_identifier = core_objfile->GetIdentifierString();
 
     // Search for UUID= and stext= strings in the identifier str.
@@ -287,6 +289,7 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
       if (log)
         log->Printf("Got a UUID from LC_IDENT/kern ver str LC_NOTE: %s",
                     ident_uuid.GetAsString().c_str());
+      found_binary_spec_in_metadata = true;
     }
     if (corefile_identifier.find("stext=") != std::string::npos) {
       size_t p = corefile_identifier.find("stext=") + strlen("stext=");
@@ -297,6 +300,7 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
           log->Printf("Got a load address from LC_IDENT/kern ver str "
                       "LC_NOTE: 0x%" PRIx64,
                       ident_binary_addr);
+        found_binary_spec_in_metadata = true;
       }
     }
 
@@ -309,7 +313,7 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
             "ProcessMachCore::LoadBinariesViaMetadata: Found kernel binary via "
             "LC_IDENT/kern ver str LC_NOTE");
       m_mach_kernel_addr = ident_binary_addr;
-      found_main_binary_definitively = true;
+      found_binary_spec_in_metadata = true;
     } else if (ident_uuid.IsValid()) {
       // We have no address specified, only a UUID.  Load it at the file
       // address.
@@ -322,16 +326,15 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
               this, llvm::StringRef(), ident_uuid, ident_binary_addr,
               value_is_offset, force_symbol_search, notify,
               set_address_in_target, allow_memory_image_last_resort)) {
-        found_main_binary_definitively = true;
+        found_binary_spec_in_metadata = true;
         m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
       }
     }
-  }
 
   // Finally, load any binaries noted by "load binary" LC_NOTEs in the
   // corefile
   if (core_objfile->LoadCoreFileImages(*this)) {
-    found_main_binary_definitively = true;
+    found_binary_spec_in_metadata = true;
     m_dyld_plugin_name = DynamicLoaderStatic::GetPluginNameStatic();
   }
 
@@ -341,6 +344,8 @@ void ProcessMachCore::LoadBinariesViaMetadata() {
   // un-set it later.
   if (m_dyld_up)
     m_dyld_plugin_name = GetDynamicLoader()->GetPluginName();
+
+  return found_binary_spec_in_metadata;
 }
 
 void ProcessMachCore::LoadBinariesViaExhaustiveSearch() {
@@ -417,8 +422,8 @@ void ProcessMachCore::LoadBinariesViaExhaustiveSearch() {
 void ProcessMachCore::LoadBinariesAndSetDYLD() {
   Log *log(GetLog(LLDBLog::DynamicLoader | LLDBLog::Process));
 
-  LoadBinariesViaMetadata();
-  if (m_dyld_plugin_name.empty())
+  bool found_binary_spec_in_metadata = LoadBinariesViaMetadata();
+  if (!found_binary_spec_in_metadata)
     LoadBinariesViaExhaustiveSearch();
 
   if (m_dyld_plugin_name.empty()) {

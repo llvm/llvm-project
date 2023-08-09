@@ -203,10 +203,14 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
                        OptionalAttr<StrArrayAttr>:$illegal_dialects,
                        UnitAttr:$partialConversion);
   let results = (outs);
-  let regions = (region VariadicRegion<MaxSizedRegion<1>>:$regions);
+  let regions = (region
+      MaxSizedRegion<1>:$patterns,
+      VariadicRegion<MaxSizedRegion<1>>:$default_type_converter_region);
 
   let assemblyFormat = [{
-    `to` $target $regions attr-dict `:` type($target)
+    `to` $target $patterns
+    (`with` `type_converter` $default_type_converter_region^)?
+    attr-dict `:` type($target)
   }];
   let hasVerifier = 1;
 
@@ -221,15 +225,11 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
   ];
 
   let extraClassDeclaration = [{
-    ::mlir::Region &getPatterns() {
-      return getRegion(0);
-    }
-
     ::mlir::transform::TypeConverterBuilderOpInterface getDefaultTypeConverter() {
-      if (getNumRegions() < 2)
+      if (getDefaultTypeConverterRegion().size() == 0)
         return {};
       return ::llvm::cast<::mlir::transform::TypeConverterBuilderOpInterface>(
-          &getRegion(1).front().front());
+          &getDefaultTypeConverterRegion()[0].front().front());
     }
   }];
 }
