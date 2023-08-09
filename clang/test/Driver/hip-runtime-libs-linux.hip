@@ -12,6 +12,10 @@
 // RUN:   --target=x86_64-linux-gnu %t.o 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-PATH %s
 
+// RUN: %clang -### --hip-link --target=x86_64-linux-gnu \
+// RUN:   --rocm-path=%S/Inputs/rocm %t.o --offload-add-rpath 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ROCM-RPATH %s
+
 // Test detecting latest /opt/rocm-{release} directory.
 // RUN: rm -rf %t && mkdir -p %t/opt
 // RUN: cp -r %S/Inputs/rocm %t/opt/rocm-3.9.0-1234
