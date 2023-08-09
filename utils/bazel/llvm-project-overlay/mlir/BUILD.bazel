@@ -2999,6 +2999,7 @@ cc_library(
         ":LinalgDialect",
         ":MemRefDialect",
         ":NVGPUDialect",
+        ":NVGPUToNVVM",
         ":NVGPUTransformOpsIncGen",
         ":NVGPUTransforms",
         ":NVVMDialect",
