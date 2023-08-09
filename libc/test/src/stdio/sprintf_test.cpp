@@ -865,6 +865,20 @@ TEST_F(LlvmLibcSPrintfTest, FloatHexExpConv) {
 
   written = __llvm_libc::sprintf(buff, "%+-#12.3a % 012.3a", 0.1256, 1256.0);
   ASSERT_STREQ_LEN(written, buff, "+0x1.014p-3   0x1.3a0p+10");
+
+  // These tests check that the padding is properly calculated based on the
+  // min_width field. Specifically, they check that the extra zeroes added by
+  // the high precision are accounted for correctly.
+  written = __llvm_libc::sprintf(buff, "%50.50a", 0x1.0p0);
+  ASSERT_STREQ_LEN(written, buff,
+                   "0x1.00000000000000000000000000000000000000000000000000p+0");
+
+  // The difference with this test is that the formatted number is exactly 57
+  // characters, so padding to 58 adds a space.
+  written = __llvm_libc::sprintf(buff, "%58.50a", 0x1.0p0);
+  ASSERT_STREQ_LEN(
+      written, buff,
+      " 0x1.00000000000000000000000000000000000000000000000000p+0");
 }
 
 TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
