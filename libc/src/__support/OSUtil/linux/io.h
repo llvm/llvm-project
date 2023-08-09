@@ -17,7 +17,8 @@
 namespace __llvm_libc {
 
 LIBC_INLINE void write_to_stderr(cpp::string_view msg) {
-  __llvm_libc::syscall_impl(SYS_write, 2 /* stderr */, msg.data(), msg.size());
+  __llvm_libc::syscall_impl<long>(SYS_write, 2 /* stderr */, msg.data(),
+                                  msg.size());
 }
 
 } // namespace __llvm_libc

@@ -21,16 +21,16 @@ LLVM_LIBC_FUNCTION(time_t, time, (time_t * tp)) {
   // TODO: Use the Linux VDSO to fetch the time and avoid the syscall.
   struct timespec ts;
 #if SYS_clock_gettime
-  long ret_val = __llvm_libc::syscall_impl(SYS_clock_gettime, CLOCK_REALTIME,
+  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime, CLOCK_REALTIME,
                                            reinterpret_cast<long>(&ts));
 #elif defined(SYS_clock_gettime64)
-  long ret_val = __llvm_libc::syscall_impl(SYS_clock_gettime64, CLOCK_REALTIME,
+  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime64, CLOCK_REALTIME,
                                            reinterpret_cast<long>(&ts));
 #else
 #error "SYS_clock_gettime and SYS_clock_gettime64 syscalls not available."
 #endif
-  if (ret_val < 0) {
-    libc_errno = -ret_val;
+  if (ret < 0) {
+    libc_errno = -ret;
     return -1;
   }
 
