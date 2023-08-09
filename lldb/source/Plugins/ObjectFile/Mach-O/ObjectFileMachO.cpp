@@ -5414,6 +5414,8 @@ uint32_t ObjectFileMachO::GetNumThreadContexts() {
 
 std::string ObjectFileMachO::GetIdentifierString() {
   std::string result;
+  Log *log(
+      GetLog(LLDBLog::Symbols | LLDBLog::Process | LLDBLog::DynamicLoader));
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
@@ -5449,6 +5451,8 @@ std::string ObjectFileMachO::GetIdentifierString() {
                 result = buf;
                 if (buf)
                   free(buf);
+                LLDB_LOGF(log, "LC_NOTE 'kern ver str' found with text '%s'",
+                          result.c_str());
                 return result;
               }
             }
@@ -5472,6 +5476,7 @@ std::string ObjectFileMachO::GetIdentifierString() {
                                               buf) == ident_command.cmdsize) {
           buf[ident_command.cmdsize - 1] = '\0';
           result = buf;
+          LLDB_LOGF(log, "LC_IDENT found with text '%s'", result.c_str());
         }
         if (buf)
           free(buf);
@@ -5484,6 +5489,7 @@ std::string ObjectFileMachO::GetIdentifierString() {
 
 addr_t ObjectFileMachO::GetAddressMask() {
   addr_t mask = 0;
+  Log *log(GetLog(LLDBLog::Process));
   ModuleSP module_sp(GetModule());
   if (module_sp) {
     std::lock_guard<std::recursive_mutex> guard(module_sp->GetMutex());
@@ -5511,6 +5517,10 @@ addr_t ObjectFileMachO::GetAddressMask() {
               if (num_addr_bits != 0) {
                 mask = ~((1ULL << num_addr_bits) - 1);
               }
+              LLDB_LOGF(log,
+                        "LC_NOTE 'addrable bits' found, value %d bits, "
+                        "mask 0x%" PRIx64,
+                        num_addr_bits, mask);
               break;
             }
           }
@@ -5526,6 +5536,8 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
                                                 bool &value_is_offset,
                                                 UUID &uuid,
                                                 ObjectFile::BinaryType &type) {
+  Log *log(
+      GetLog(LLDBLog::Symbols | LLDBLog::Process | LLDBLog::DynamicLoader));
   value = LLDB_INVALID_ADDRESS;
   value_is_offset = false;
   uuid.Clear();
@@ -5605,20 +5617,31 @@ bool ObjectFileMachO::GetCorefileMainBinaryInfo(addr_t &value,
               uuid = UUID(raw_uuid, sizeof(uuid_t));
               // convert the "main bin spec" type into our
               // ObjectFile::BinaryType enum
+              const char *typestr = "unrecognized type";
               switch (binspec_type) {
               case 0:
                 type = eBinaryTypeUnknown;
+                typestr = "uknown";
                 break;
               case 1:
                 type = eBinaryTypeKernel;
+                typestr = "xnu kernel";
                 break;
               case 2:
                 type = eBinaryTypeUser;
+                typestr = "userland dyld";
                 break;
               case 3:
                 type = eBinaryTypeStandalone;
+                typestr = "standalone";
                 break;
               }
+              LLDB_LOGF(log,
+                        "LC_NOTE 'main bin spec' found, version %d type %d "
+                        "(%s), value 0x%" PRIx64 " value-is-slide==%s uuid %s",
+                        version, type, typestr, value,
+                        value_is_offset ? "true" : "false",
+                        uuid.GetAsString().c_str());
               if (!m_data.GetU32(&offset, &log2_pagesize, 1))
                 return false;
               if (version > 1 && !m_data.GetU32(&offset, &platform, 1))
@@ -6811,6 +6834,8 @@ bool ObjectFileMachO::SaveCore(const lldb::ProcessSP &process_sp,
 ObjectFileMachO::MachOCorefileAllImageInfos
 ObjectFileMachO::GetCorefileAllImageInfos() {
   MachOCorefileAllImageInfos image_infos;
+  Log *log(
+      GetLog(LLDBLog::Symbols | LLDBLog::Process | LLDBLog::DynamicLoader));
 
   // Look for an "all image infos" LC_NOTE.
   lldb::offset_t offset = MachHeaderSizeFromMagic(m_header.magic);
@@ -6840,6 +6865,9 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
         //  offset += 4; // uint32_t entries_size;
         //  offset += 4; // uint32_t unused;
 
+        LLDB_LOGF(log,
+                  "LC_NOTE 'all image infos' found version %d with %d images",
+                  version, imgcount);
         offset = entries_fileoff;
         for (uint32_t i = 0; i < imgcount; i++) {
           // Read the struct image_entry.
@@ -6871,6 +6899,12 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
                                                     vmaddr};
             image_entry.segment_load_addresses.push_back(new_seg);
           }
+          LLDB_LOGF(
+              log, "  image entry: %s %s 0x%" PRIx64 " %s",
+              image_entry.filename.c_str(),
+              image_entry.uuid.GetAsString().c_str(), image_entry.load_address,
+              image_entry.currently_executing ? "currently executing"
+                                              : "not currently executing");
           image_infos.all_image_infos.push_back(image_entry);
         }
       } else if (strcmp("load binary", data_owner) == 0) {
@@ -6890,6 +6924,14 @@ ObjectFileMachO::GetCorefileAllImageInfos() {
           image_entry.slide = slide;
           image_entry.currently_executing = true;
           image_infos.all_image_infos.push_back(image_entry);
+          LLDB_LOGF(log,
+                    "LC_NOTE 'load binary' found, filename %s uuid %s load "
+                    "address 0x%" PRIx64 " slide 0x%" PRIx64,
+                    filename.c_str(),
+                    image_entry.uuid.IsValid()
+                        ? image_entry.uuid.GetAsString().c_str()
+                        : "00000000-0000-0000-0000-000000000000",
+                    load_address, slide);
         }
       }
     }
