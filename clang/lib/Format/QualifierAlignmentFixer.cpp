@@ -625,4 +625,3 @@ bool LeftRightQualifierAlignmentFixer::isPossibleMacro(const FormatToken *Tok) {
 
 } // namespace format
 } // namespace clang
-
