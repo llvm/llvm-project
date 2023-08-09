@@ -5701,10 +5701,10 @@ void Sema::diagnoseMissingImport(SourceLocation Loc, const NamedDecl *Decl,
 /// suggesting the addition of a #include of the specified file.
 static std::string getHeaderNameForHeader(Preprocessor &PP, const FileEntry *E,
                                           llvm::StringRef IncludingFile) {
-  bool IsSystem = false;
+  bool IsAngled = false;
   auto Path = PP.getHeaderSearchInfo().suggestPathToFileForDiagnostics(
-      E, IncludingFile, &IsSystem);
-  return (IsSystem ? '<' : '"') + Path + (IsSystem ? '>' : '"');
+      E, IncludingFile, &IsAngled);
+  return (IsAngled ? '<' : '"') + Path + (IsAngled ? '>' : '"');
 }
 
 void Sema::diagnoseMissingImport(SourceLocation UseLoc, const NamedDecl *Decl,
