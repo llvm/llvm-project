@@ -542,33 +542,10 @@ class LLVM_DbgIntrOp<string name, string argName, list<Trait> traits = []>
       });
   }];
   let mlirBuilder = [{
-    // Drop debug intrinsics with a non-empty debug expression.
-    // TODO: Support debug intrinsics that evaluate a debug expression.
-    auto *dbgIntr = cast<llvm::DbgVariableIntrinsic>(inst);
-    if (dbgIntr->hasArgList() || dbgIntr->getExpression()->getNumElements() != 0)
-      return success();
-    // Convert the value/address operand late since it cannot be a debug
-    // metadata argument list at this stage. Generating the conversion using an
-    // argument variable would not work here, since the builder variables are
-    // converted before entering the builder, which would result in an error
-    // when attempting to convert an argument list.
-
-    FailureOr<Value> argOperand = moduleImport.convertMetadataValue(llvmOperands[0]);
-    // Drop the intrinsic when its operand could not be converted. This can
-    // happen for use before definition cases that are allowed for debug
-    // intrinsics.
-    // TODO: Implement a two pass solution that translates the debug intrinsics
-    // after the entire function as been translated.
-    if (failed(argOperand))
-      return success();
-
-    // Ensure that the debug instrinsic is inserted right after its operand is
-    // defined. Otherwise, the operand might not necessarily dominate the
-    // intrinsic.
-    OpBuilder::InsertionGuard guard($_builder);
-    $_builder.setInsertionPointAfterValue(*argOperand);
-    $_op = $_builder.create<$_qualCppClassName>($_location,
-        *argOperand, $_var_attr($varInfo));
+    // Add debug intrindic to the list of intrinsics that need to be converted once the
+    // full function was converted.
+    moduleImport.addDebugIntrinsic(inst);
+    return success();
   }];
   let assemblyFormat = [{
     qualified($varInfo) `=` $}] # argName #
