@@ -644,7 +644,7 @@ static unsigned getOptimizationLevelSize(ArgList &Args) {
 static void GenerateArg(ArgumentConsumer Consumer,
                         llvm::opt::OptSpecifier OptSpecifier) {
   Option Opt = getDriverOptTable().getOption(OptSpecifier);
-  denormalizeSimpleFlag(Consumer, Opt.getPrefix() + Opt.getName(),
+  denormalizeSimpleFlag(Consumer, Opt.getPrefixedName(),
                         Option::OptionClass::FlagClass, 0);
 }
 
@@ -652,8 +652,7 @@ static void GenerateArg(ArgumentConsumer Consumer,
                         llvm::opt::OptSpecifier OptSpecifier,
                         const Twine &Value) {
   Option Opt = getDriverOptTable().getOption(OptSpecifier);
-  denormalizeString(Consumer, Opt.getPrefix() + Opt.getName(), Opt.getKind(), 0,
-                    Value);
+  denormalizeString(Consumer, Opt.getPrefixedName(), Opt.getKind(), 0, Value);
 }
 
 static void GenerateMultiArg(ArgumentConsumer Consumer,
