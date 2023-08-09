@@ -8,6 +8,8 @@
 
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
@@ -640,6 +642,43 @@ void transform::ApplyConversionPatternsOp::build(
     if (typeConverterBodyBuilder)
       typeConverterBodyBuilder(builder, result.location);
   }
+}
+
+//===----------------------------------------------------------------------===//
+// ApplyToLLVMConversionPatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyToLLVMConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  Dialect *dialect = getContext()->getLoadedDialect(getDialectName());
+  assert(dialect && "expected that dialect is loaded");
+  auto iface = cast<ConvertToLLVMPatternInterface>(dialect);
+  // ConversionTarget is currently ignored because the enclosing
+  // apply_conversion_patterns op sets up its own ConversionTarget.
+  ConversionTarget target(*getContext());
+  iface->populateConvertToLLVMConversionPatterns(
+      target, static_cast<LLVMTypeConverter &>(typeConverter), patterns);
+}
+
+LogicalResult transform::ApplyToLLVMConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() != "LLVMTypeConverter")
+    return emitOpError("expected LLVMTypeConverter");
+  return success();
+}
+
+LogicalResult transform::ApplyToLLVMConversionPatternsOp::verify() {
+  Dialect *dialect = getContext()->getLoadedDialect(getDialectName());
+  if (!dialect)
+    return emitOpError("unknown dialect or dialect not loaded: ")
+           << getDialectName();
+  auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+  if (!iface)
+    return emitOpError(
+               "dialect does not implement ConvertToLLVMPatternInterface or "
+               "extension was not loaded: ")
+           << getDialectName();
+  return success();
 }
 
 //===----------------------------------------------------------------------===//
