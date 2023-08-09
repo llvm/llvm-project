@@ -34,6 +34,7 @@
 #include "mlir/Dialect/DLTI/DLTI.h"
 #include "mlir/Dialect/EmitC/IR/EmitC.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
+#include "mlir/Dialect/Func/TransformOps/FuncTransformOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 #include "mlir/Dialect/IRDL/IR/IRDL.h"
@@ -138,6 +139,7 @@ inline void registerAllDialects(DialectRegistry &registry) {
   // Register all dialect extensions.
   affine::registerTransformDialectExtension(registry);
   bufferization::registerTransformDialectExtension(registry);
+  func::registerTransformDialectExtension(registry);
   gpu::registerTransformDialectExtension(registry);
   linalg::registerTransformDialectExtension(registry);
   memref::registerTransformDialectExtension(registry);
