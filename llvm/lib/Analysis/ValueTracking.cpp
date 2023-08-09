@@ -2061,8 +2061,8 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   case Instruction::And:
     if (OrZero) {
       // A power of two and'd with anything is a power of two or zero.
-      if (isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth, Q) ||
-          isKnownToBeAPowerOfTwo(I->getOperand(1), /*OrZero*/ true, Depth, Q))
+      if (isKnownToBeAPowerOfTwo(I->getOperand(1), /*OrZero*/ true, Depth, Q) ||
+          isKnownToBeAPowerOfTwo(I->getOperand(0), /*OrZero*/ true, Depth, Q))
         return true;
       // X & (-X) is always a power of two or zero.
       if (match(I->getOperand(0), m_Neg(m_Specific(I->getOperand(1)))) ||
