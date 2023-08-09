@@ -27,7 +27,6 @@
 
 #ifndef LLDB_HOST_EDITLINE_H
 #define LLDB_HOST_EDITLINE_H
-#if defined(__cplusplus)
 
 #include "lldb/Host/Config.h"
 
@@ -408,5 +407,4 @@ private:
 };
 }
 
-#endif // #if defined(__cplusplus)
 #endif // LLDB_HOST_EDITLINE_H
