@@ -16,6 +16,7 @@
 
 #include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
+#include "mlir/Target/LLVM/NVVM/Target.h"
 
 #include <cstdlib>
 
@@ -29,6 +30,7 @@ namespace mlir {
 inline void registerAllExtensions(DialectRegistry &registry) {
   func::registerAllExtensions(registry);
   registerConvertNVVMToLLVMInterface(registry);
+  registerNVVMTarget(registry);
 }
 
 } // namespace mlir
