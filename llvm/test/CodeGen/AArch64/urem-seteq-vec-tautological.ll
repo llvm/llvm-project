@@ -20,7 +20,7 @@ define <4 x i1> @t0_all_tautological(<4 x i32> %X) nounwind {
 define <4 x i1> @t1_all_odd_eq(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: t1_all_odd_eq:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    adrp x8, .LCPI1_0
@@ -39,7 +39,7 @@ define <4 x i1> @t1_all_odd_eq(<4 x i32> %X) nounwind {
 define <4 x i1> @t1_all_odd_ne(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: t1_all_odd_ne:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
 ; CHECK-NEXT:    movk w8, #43690, lsl #16
 ; CHECK-NEXT:    dup v1.4s, w8
 ; CHECK-NEXT:    adrp x8, .LCPI2_0
@@ -58,7 +58,7 @@ define <4 x i1> @t1_all_odd_ne(<4 x i32> %X) nounwind {
 define <8 x i1> @t2_narrow(<8 x i16> %X) nounwind {
 ; CHECK-LABEL: t2_narrow:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #43691
+; CHECK-NEXT:    mov w8, #43691 // =0xaaab
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    adrp x8, .LCPI3_0
 ; CHECK-NEXT:    mul v0.8h, v0.8h, v1.8h
@@ -76,7 +76,7 @@ define <8 x i1> @t2_narrow(<8 x i16> %X) nounwind {
 define <2 x i1> @t3_wide(<2 x i64> %X) nounwind {
 ; CHECK-LABEL: t3_wide:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov x8, #-6148914691236517206
+; CHECK-NEXT:    mov x8, #-6148914691236517206 // =0xaaaaaaaaaaaaaaaa
 ; CHECK-NEXT:    fmov x9, d0
 ; CHECK-NEXT:    movk x8, #43691
 ; CHECK-NEXT:    mov x10, v0.d[1]

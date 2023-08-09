@@ -184,24 +184,32 @@ public:
   void exitCurrentLoop(RewriterBase &rewriter, Location loc,
                        MutableArrayRef<Value> reduc = {});
 
+  /// Get the range of values for all induction variables.
+  auto getLoopIVsRange() const {
+    return llvm::map_range(loopStack, [](const LoopInfo &li) { return li.iv; });
+  }
+
   /// Fills the out-parameter with the loop induction variables for all
   /// loops in the current loop-stack.  The variables are given in the
   /// same order as the loop-stack, hence `ivs` should be indexed into
   /// by `LoopOrd` (not `LoopId`).
-  void getLoopIVs(SmallVectorImpl<Value> &ivs) const {
-    ivs.clear();
-    ivs.reserve(getCurrentDepth());
-    for (auto &l : loopStack)
-      ivs.push_back(l.iv);
+  SmallVector<Value> getLoopIVs() const {
+    return llvm::to_vector(getLoopIVsRange());
   }
 
   /// Gets the current depth of the loop-stack.  The result is given
   /// the type `LoopOrd` for the same reason as one-past-the-end iterators.
-  LoopOrd getCurrentDepth() const { return loopStack.size(); }
+  LoopOrd getCurrentDepth() const {
+    return llvm::range_size(getLoopIVsRange());
+  }
 
   /// Gets loop induction variable for the given `LoopOrd`.
   Value getLoopIV(LoopOrd n) const {
-    return n < getCurrentDepth() ? loopStack[n].iv : Value();
+    if (n >= getCurrentDepth())
+      return Value();
+    auto it = getLoopIVsRange().begin();
+    std::advance(it, n);
+    return *it;
   }
 
   /// Gets the total number of manifest tensors (excluding the synthetic

@@ -124,10 +124,6 @@ bool isKnownToBeAPowerOfTwo(const Value *V, const DataLayout &DL,
                             const DominatorTree *DT = nullptr,
                             bool UseInstrInfo = true);
 
-/// Return true if the given instruction is only used in zero comparison
-bool isOnlyUsedInZeroComparison(const Instruction *CxtI);
-
-/// Return true if the given instruction is only used in zero equality comparison
 bool isOnlyUsedInZeroEqualityComparison(const Instruction *CxtI);
 
 /// Return true if the given value is known to be non-zero when defined. For
@@ -489,9 +485,6 @@ inline bool cannotBeNegativeZero(const Value *V, const DataLayout &DL,
                                            CtxI, DT, UseInstrInfo);
   return Known.isKnownNeverNegZero();
 }
-
-bool CannotBeOrderedLessThanZero(const Value *V, const DataLayout &DL,
-                                 const TargetLibraryInfo *TLI);
 
 /// Return true if we can prove that the specified FP value is either NaN or
 /// never less than -0.0.

@@ -1525,11 +1525,6 @@ private:
     // Elemental expression.
     mlir::Type elementType;
     if constexpr (R::category == Fortran::common::TypeCategory::Derived) {
-      // TODO: need to pass a mold to hlfir.elemental for polymorphic arrays
-      // if using hlfir.elemental here so that it can get the dynamic type
-      // info.
-      if (left.isPolymorphic())
-        TODO(loc, "parenthesized polymorphic arrays in HLFIR");
       elementType = Fortran::lower::translateDerivedTypeToFIRType(
           getConverter(), op.derived().GetType().GetDerivedTypeSpec());
     } else {
@@ -1545,9 +1540,9 @@ private:
       auto leftVal = hlfir::loadTrivialScalar(l, b, leftElement);
       return unaryOp.gen(l, b, op.derived(), leftVal);
     };
-    mlir::Value elemental = hlfir::genElementalOp(loc, builder, elementType,
-                                                  shape, typeParams, genKernel,
-                                                  /*isUnordered=*/true);
+    mlir::Value elemental = hlfir::genElementalOp(
+        loc, builder, elementType, shape, typeParams, genKernel,
+        /*isUnordered=*/true, left.isPolymorphic() ? left : mlir::Value{});
     fir::FirOpBuilder *bldr = &builder;
     getStmtCtx().attachCleanup(
         [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });

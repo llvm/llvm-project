@@ -176,14 +176,20 @@ public:
     return Solver.isBlockExecutable(BB) && !DeadBlocks.contains(BB);
   }
 
-  Bonus getUserBonus(Instruction *User, Value *Use = nullptr,
-                     Constant *C = nullptr);
+  Bonus getSpecializationBonus(Argument *A, Constant *C);
 
   Bonus getBonusFromPendingPHIs();
 
 private:
   friend class InstVisitor<InstCostVisitor, Constant *>;
 
+  static bool canEliminateSuccessor(BasicBlock *BB, BasicBlock *Succ,
+                                    DenseSet<BasicBlock *> &DeadBlocks);
+
+  Bonus getUserBonus(Instruction *User, Value *Use = nullptr,
+                     Constant *C = nullptr);
+
+  Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList);
   Cost estimateSwitchInst(SwitchInst &I);
   Cost estimateBranchInst(BranchInst &I);
 
@@ -240,10 +246,6 @@ public:
     return InstCostVisitor(M.getDataLayout(), BFI, TTI, Solver);
   }
 
-  /// Compute a bonus for replacing argument \p A with constant \p C.
-  Bonus getSpecializationBonus(Argument *A, Constant *C,
-                               InstCostVisitor &Visitor);
-
 private:
   Constant *getPromotableAlloca(AllocaInst *Alloca, CallInst *Call);
 
@@ -264,13 +266,15 @@ private:
 
   /// @brief  Find potential specialization opportunities.
   /// @param F Function to specialize
-  /// @param SpecCost Cost of specializing a function. Final score is benefit
-  /// minus this cost.
+  /// @param FuncSize Cost of specializing a function.
   /// @param AllSpecs A vector to add potential specializations to.
   /// @param SM  A map for a function's specialisation range
   /// @return True, if any potential specializations were found
-  bool findSpecializations(Function *F, unsigned SpecCost,
+  bool findSpecializations(Function *F, unsigned FuncSize,
                            SmallVectorImpl<Spec> &AllSpecs, SpecMap &SM);
+
+  /// Compute the inlining bonus for replacing argument \p A with constant \p C.
+  unsigned getInliningBonus(Argument *A, Constant *C);
 
   bool isCandidateFunction(Function *F);
 

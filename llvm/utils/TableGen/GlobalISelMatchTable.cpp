@@ -1104,7 +1104,7 @@ void RegisterBankOperandMatcher::emitPredicateOpcodes(MatchTable &Table,
         << MatchTable::Comment("MI") << MatchTable::IntValue(InsnVarID)
         << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
         << MatchTable::Comment("RC")
-        << MatchTable::NamedValue(RC.getQualifiedName() + "RegClassID")
+        << MatchTable::NamedValue(RC.getQualifiedIdName())
         << MatchTable::LineBreak;
 }
 
@@ -1935,9 +1935,12 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
         auto Namespace = Def->getValue("Namespace")
                              ? Def->getValueAsString("Namespace")
                              : "";
+        const bool IsDead = DeadImplicitDefs.contains(Def);
         Table << MatchTable::Opcode("GIR_AddImplicitDef")
               << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
               << MatchTable::NamedValue(Namespace, Def->getName())
+              << (IsDead ? MatchTable::NamedValue("RegState", "Dead")
+                         : MatchTable::IntValue(0))
               << MatchTable::LineBreak;
       }
       for (auto *Use : I->ImplicitUses) {
@@ -2000,7 +2003,7 @@ void ConstrainOperandToRegClassAction::emitActionOpcodes(
   Table << MatchTable::Opcode("GIR_ConstrainOperandRC")
         << MatchTable::Comment("InsnID") << MatchTable::IntValue(InsnID)
         << MatchTable::Comment("Op") << MatchTable::IntValue(OpIdx)
-        << MatchTable::NamedValue(RC.getQualifiedName() + "RegClassID")
+        << MatchTable::NamedValue(RC.getQualifiedIdName())
         << MatchTable::LineBreak;
 }
 

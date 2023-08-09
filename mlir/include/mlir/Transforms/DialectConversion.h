@@ -37,6 +37,8 @@ class Value;
 /// registered using addConversion and addMaterialization, respectively.
 class TypeConverter {
 public:
+  virtual ~TypeConverter() = default;
+
   /// This class provides all of the information necessary to convert a type
   /// signature.
   class SignatureConversion {
@@ -1068,11 +1070,11 @@ void registerConversionPDLFunctions(RewritePatternSet &patterns);
 /// there is an op explicitly marked as illegal, the conversion terminates and
 /// the `unconvertedOps` set will not necessarily be complete.)
 LogicalResult
-applyPartialConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
+applyPartialConversion(ArrayRef<Operation *> ops, const ConversionTarget &target,
                        const FrozenRewritePatternSet &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 LogicalResult
-applyPartialConversion(Operation *op, ConversionTarget &target,
+applyPartialConversion(Operation *op, const ConversionTarget &target,
                        const FrozenRewritePatternSet &patterns,
                        DenseSet<Operation *> *unconvertedOps = nullptr);
 
@@ -1081,9 +1083,9 @@ applyPartialConversion(Operation *op, ConversionTarget &target,
 /// fails, or if there are unreachable blocks in any of the regions nested
 /// within 'ops'.
 LogicalResult applyFullConversion(ArrayRef<Operation *> ops,
-                                  ConversionTarget &target,
+                                  const ConversionTarget &target,
                                   const FrozenRewritePatternSet &patterns);
-LogicalResult applyFullConversion(Operation *op, ConversionTarget &target,
+LogicalResult applyFullConversion(Operation *op, const ConversionTarget &target,
                                   const FrozenRewritePatternSet &patterns);
 
 /// Apply an analysis conversion on the given operations, and all nested

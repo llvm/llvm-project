@@ -150,3 +150,24 @@ static_assert(__is_same(decltype(i), I<char, 4>));
 
 J j = { "ghi" };  // expected-error {{no viable constructor or deduction guide}}
 }
+
+namespace dr2672 { // dr2672: 18 open
+template <class T>
+void f(T) requires requires { []() { T::invalid; } (); }; // expected-error{{type 'int' cannot be used prior to '::'}}
+                                                          // expected-note@-1{{while substituting into a lambda expression here}}
+                                                          // expected-note@-2{{in instantiation of requirement here}}
+                                                          // expected-note@-3{{while substituting template arguments into constraint expression here}}
+void f(...);
+
+template <class T>
+void bar(T) requires requires {
+   decltype([]() -> T {})::foo();
+};
+void bar(...);
+
+void m() {
+  f(0); // expected-note {{while checking constraint satisfaction for template 'f<int>' required here}}
+        // expected-note@-1 {{in instantiation of function template specialization}}
+  bar(0);
+}
+}

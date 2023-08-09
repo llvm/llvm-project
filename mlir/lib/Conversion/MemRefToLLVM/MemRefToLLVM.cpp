@@ -9,6 +9,7 @@
 #include "mlir/Conversion/MemRefToLLVM/MemRefToLLVM.h"
 
 #include "mlir/Analysis/DataLayoutAnalysis.h"
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
@@ -1935,4 +1936,27 @@ struct FinalizeMemRefToLLVMConversionPass
       signalPassFailure();
   }
 };
+
+/// Implement the interface to convert MemRef to LLVM.
+struct MemRefToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<LLVM::LLVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateFinalizeMemRefToLLVMConversionPatterns(typeConverter, patterns);
+  }
+};
+
 } // namespace
+
+void mlir::registerConvertMemRefToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, memref::MemRefDialect *dialect) {
+    dialect->addInterfaces<MemRefToLLVMDialectInterface>();
+  });
+}

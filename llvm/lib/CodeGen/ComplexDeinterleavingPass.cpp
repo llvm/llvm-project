@@ -226,6 +226,7 @@ private:
   const TargetLowering *TL = nullptr;
   const TargetLibraryInfo *TLI = nullptr;
   SmallVector<NodePtr> CompositeNodes;
+  DenseMap<std::pair<Value *, Value *>, NodePtr> CachedResult;
 
   SmallPtrSet<Instruction *, 16> FinalInstructions;
 
@@ -292,15 +293,9 @@ private:
 
   NodePtr submitCompositeNode(NodePtr Node) {
     CompositeNodes.push_back(Node);
+    if (Node->Real && Node->Imag)
+      CachedResult[{Node->Real, Node->Imag}] = Node;
     return Node;
-  }
-
-  NodePtr getContainingComposite(Value *R, Value *I) {
-    for (const auto &CN : CompositeNodes) {
-      if (CN->Real == R && CN->Imag == I)
-        return CN;
-    }
-    return nullptr;
   }
 
   /// Identifies a complex partial multiply pattern and its rotation, based on
@@ -900,9 +895,11 @@ ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I) {
   LLVM_DEBUG(dbgs() << "identifyNode on " << *R << " / " << *I << "\n");
   assert(R->getType() == I->getType() &&
          "Real and imaginary parts should not have different types");
-  if (NodePtr CN = getContainingComposite(R, I)) {
+
+  auto It = CachedResult.find({R, I});
+  if (It != CachedResult.end()) {
     LLVM_DEBUG(dbgs() << " - Folding to existing node\n");
-    return CN;
+    return It->second;
   }
 
   if (NodePtr CN = identifySplat(R, I))
@@ -949,6 +946,7 @@ ComplexDeinterleavingGraph::identifyNode(Value *R, Value *I) {
     return CN;
 
   LLVM_DEBUG(dbgs() << "  - Not recognised as a valid pattern.\n");
+  CachedResult[{R, I}] = nullptr;
   return nullptr;
 }
 

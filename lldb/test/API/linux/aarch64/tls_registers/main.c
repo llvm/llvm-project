@@ -22,8 +22,18 @@ void set_tpidr2(uint64_t value) {
   __asm__ volatile("msr S3_3_C13_C0_5, %0" ::"r"(value));
 }
 
+bool use_tpidr2 = false;
+const uint64_t tpidr_pattern = 0x1122334455667788;
+const uint64_t tpidr2_pattern = 0x8877665544332211;
+
+void expr_func() {
+  set_tpidr(~tpidr_pattern);
+  if (use_tpidr2)
+    set_tpidr2(~tpidr2_pattern);
+}
+
 int main(int argc, char *argv[]) {
-  bool use_tpidr2 = argc > 1;
+  use_tpidr2 = argc > 1;
 
   uint64_t original_tpidr = get_tpidr();
   // Accessing this on a core without it produces SIGILL. Only do this if
@@ -32,10 +42,8 @@ int main(int argc, char *argv[]) {
   if (use_tpidr2)
     original_tpidr2 = get_tpidr2();
 
-  uint64_t tpidr_pattern = 0x1122334455667788;
   set_tpidr(tpidr_pattern);
 
-  uint64_t tpidr2_pattern = 0x8877665544332211;
   if (use_tpidr2)
     set_tpidr2(tpidr2_pattern);
 

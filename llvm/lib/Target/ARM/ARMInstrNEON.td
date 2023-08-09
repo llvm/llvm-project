@@ -6396,6 +6396,10 @@ def VGETLNi32 : NVGetLane<{1,1,1,0,0,0,?,1}, 0b1011, 0b00,
                 Requires<[HasFPRegs, HasFastVGETLNi32]> {
   let Inst{21} = lane{0};
 }
+// VGETLNi32 is also legal as just vmov r0,d0[0] without the .32 suffix
+def : InstAlias<"vmov${p} $R, $V$lane",
+    (VGETLNi32 GPR:$R, DPR:$V, VectorIndex32:$lane, pred:$p), 0>,
+    Requires<VGETLNi32.Predicates>;
 let Predicates = [HasNEON] in {
 // def VGETLNf32: see FMRDH and FMRDL in ARMInstrVFP.td
 def : Pat<(ARMvgetlanes (v16i8 QPR:$src), imm:$lane),
@@ -6538,6 +6542,10 @@ def VSETLNi32 : NVSetLane<{1,1,1,0,0,0,?,0}, 0b1011, 0b00, (outs DPR:$V),
   let isInsertSubreg = 1;
 }
 }
+// VSETLNi32 is also legal as just vmov d0[0],r0 without the .32 suffix
+def : InstAlias<"vmov${p} $V$lane, $R",
+    (VSETLNi32 DPR:$V, GPR:$R, VectorIndex32:$lane, pred:$p), 0>,
+    Requires<VSETLNi32.Predicates>;
 
 // TODO: for odd lanes we could optimize this a bit by using the VINS
 // FullFP16 instruction when it is available

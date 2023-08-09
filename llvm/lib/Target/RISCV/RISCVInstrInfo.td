@@ -237,7 +237,7 @@ def InsnDirectiveOpcode : AsmOperandClass {
   let PredicateMethod = "isImm";
 }
 
-def uimm6 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isInt<6>(Imm);}]> {
+def uimm6 : Operand<XLenVT>, ImmLeaf<XLenVT, [{return isUInt<6>(Imm);}]> {
   let ParserMatchClass = UImmAsmOperand<6>;
   let DecoderMethod = "decodeUImmOperand<6>";
   let OperandType = "OPERAND_UIMM6";
@@ -1906,7 +1906,7 @@ let Predicates = [IsRV64], Uses = [X5],
     Defs = [X1, X6, X7, X28, X29, X30, X31] in
 def HWASAN_CHECK_MEMACCESS_SHORTGRANULES 
   : Pseudo<(outs), (ins GPRJALR:$ptr, i32imm:$accessinfo),
-           [(int_hwasan_check_memaccess_shortgranules X5, GPRJALR:$ptr,
+           [(int_hwasan_check_memaccess_shortgranules (i64 X5), GPRJALR:$ptr,
                                                       (i32 timm:$accessinfo))]>;
 
 // This gets lowered into a 20-byte instruction sequence (at most)

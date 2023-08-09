@@ -4040,7 +4040,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
       ConstantStruct::get(DynamicEnvironment, {DebugIndentionLevelVal});
   Constant *DynamicEnvironmentGV = new GlobalVariable(
       M, DynamicEnvironment, /* IsConstant */ false,
-      GlobalValue::InternalLinkage, DynamicEnvironmentInitializer,
+      GlobalValue::WeakODRLinkage, DynamicEnvironmentInitializer,
       DynamicEnvironmentName,
       /* InsertBefore */ nullptr, llvm::GlobalValue::NotThreadLocal,
       DL.getDefaultGlobalsAddressSpace());
@@ -4062,7 +4062,7 @@ OpenMPIRBuilder::createTargetInit(const LocationDescription &Loc, bool IsSPMD) {
                          });
   Twine KernelEnvironmentName = KernelName + "_kernel_environment";
   Constant *KernelEnvironmentGV = new GlobalVariable(
-      M, KernelEnvironment, /* IsConstant */ true, GlobalValue::ExternalLinkage,
+      M, KernelEnvironment, /* IsConstant */ true, GlobalValue::WeakODRLinkage,
       KernelEnvironmentInitializer, KernelEnvironmentName,
       /* InsertBefore */ nullptr, llvm::GlobalValue::NotThreadLocal,
       DL.getDefaultGlobalsAddressSpace());
@@ -4848,14 +4848,12 @@ void OpenMPIRBuilder::emitOffloadingArrays(
         Builder.restoreIP(AllocaIP);
         Info.DevicePtrInfoMap[BPVal] = {BP, Builder.CreateAlloca(PtrTy)};
         Builder.restoreIP(CodeGenIP);
-        assert(DeviceAddrCB &&
-               "DeviceAddrCB missing for DevicePtr code generation");
-        DeviceAddrCB(I, Info.DevicePtrInfoMap[BPVal].second);
+        if (DeviceAddrCB)
+          DeviceAddrCB(I, Info.DevicePtrInfoMap[BPVal].second);
       } else if (CombinedInfo.DevicePointers[I] == DeviceInfoTy::Address) {
         Info.DevicePtrInfoMap[BPVal] = {BP, BP};
-        assert(DeviceAddrCB &&
-               "DeviceAddrCB missing for DevicePtr code generation");
-        DeviceAddrCB(I, BP);
+        if (DeviceAddrCB)
+          DeviceAddrCB(I, BP);
       }
     }
 

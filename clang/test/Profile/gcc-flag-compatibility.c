@@ -9,8 +9,8 @@
 
 // On AIX, -flto used to be required with -fprofile-generate. gcc-flag-compatibility-aix.c is used to do the testing on AIX with -flto
 // RUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate | FileCheck -check-prefix=PROFILE-GEN %s
-// PROFILE-GEN: @__profc_main = {{(private|internal)}} global [2 x i64] zeroinitializer, section
-// PROFILE-GEN: @__profd_main =
+// PROFILE-GEN: @__profc_{{_?}}main = {{(private|internal)}} global [2 x i64] zeroinitializer, section
+// PROFILE-GEN: @__profd_{{_?}}main =
 
 // Check that -fprofile-generate=/path/to generates /path/to/default.profraw
 // RxUN: %clang %s -c -S -o - -emit-llvm -fprofile-generate=/path/to | FileCheck -check-prefixes=PROFILE-GEN,PROFILE-GEN-EQ %s

@@ -350,7 +350,7 @@ AA::combineOptionalValuesInAAValueLatice(const std::optional<Value *> &A,
 template <bool IsLoad, typename Ty>
 static bool getPotentialCopiesOfMemoryValue(
     Attributor &A, Ty &I, SmallSetVector<Value *, 4> &PotentialCopies,
-    SmallSetVector<Instruction *, 4> &PotentialValueOrigins,
+    SmallSetVector<Instruction *, 4> *PotentialValueOrigins,
     const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation,
     bool OnlyExact) {
   LLVM_DEBUG(dbgs() << "Trying to determine the potential copies of " << I
@@ -361,8 +361,8 @@ static bool getPotentialCopiesOfMemoryValue(
   // sure that we can find all of them. If we abort we want to avoid spurious
   // dependences and potential copies in the provided container.
   SmallVector<const AAPointerInfo *> PIs;
-  SmallVector<Value *> NewCopies;
-  SmallVector<Instruction *> NewCopyOrigins;
+  SmallSetVector<Value *, 8> NewCopies;
+  SmallSetVector<Instruction *, 8> NewCopyOrigins;
 
   const auto *TLI =
       A.getInfoCache().getTargetLibraryInfoForFunction(*I.getFunction());
@@ -425,6 +425,30 @@ static bool getPotentialCopiesOfMemoryValue(
       return AdjV;
     };
 
+    auto SkipCB = [&](const AAPointerInfo::Access &Acc) {
+      if ((IsLoad && !Acc.isWriteOrAssumption()) || (!IsLoad && !Acc.isRead()))
+        return true;
+      if (IsLoad) {
+        if (Acc.isWrittenValueYetUndetermined())
+          return true;
+        if (PotentialValueOrigins && !isa<AssumeInst>(Acc.getRemoteInst()))
+          return false;
+        if (!Acc.isWrittenValueUnknown())
+          if (Value *V = AdjustWrittenValueType(Acc, *Acc.getWrittenValue()))
+            if (NewCopies.count(V)) {
+              NewCopyOrigins.insert(Acc.getRemoteInst());
+              return true;
+            }
+        if (auto *SI = dyn_cast<StoreInst>(Acc.getRemoteInst()))
+          if (Value *V = AdjustWrittenValueType(Acc, *SI->getValueOperand()))
+            if (NewCopies.count(V)) {
+              NewCopyOrigins.insert(Acc.getRemoteInst());
+              return true;
+            }
+      }
+      return false;
+    };
+
     auto CheckAccess = [&](const AAPointerInfo::Access &Acc, bool IsExact) {
       if ((IsLoad && !Acc.isWriteOrAssumption()) || (!IsLoad && !Acc.isRead()))
         return true;
@@ -449,8 +473,9 @@ static bool getPotentialCopiesOfMemoryValue(
           Value *V = AdjustWrittenValueType(Acc, *Acc.getWrittenValue());
           if (!V)
             return false;
-          NewCopies.push_back(V);
-          NewCopyOrigins.push_back(Acc.getRemoteInst());
+          NewCopies.insert(V);
+          if (PotentialValueOrigins)
+            NewCopyOrigins.insert(Acc.getRemoteInst());
           return true;
         }
         auto *SI = dyn_cast<StoreInst>(Acc.getRemoteInst());
@@ -463,8 +488,9 @@ static bool getPotentialCopiesOfMemoryValue(
         Value *V = AdjustWrittenValueType(Acc, *SI->getValueOperand());
         if (!V)
           return false;
-        NewCopies.push_back(V);
-        NewCopyOrigins.push_back(SI);
+        NewCopies.insert(V);
+        if (PotentialValueOrigins)
+          NewCopyOrigins.insert(SI);
       } else {
         assert(isa<StoreInst>(I) && "Expected load or store instruction only!");
         auto *LI = dyn_cast<LoadInst>(Acc.getRemoteInst());
@@ -474,7 +500,7 @@ static bool getPotentialCopiesOfMemoryValue(
                             << *Acc.getRemoteInst() << "\n";);
           return false;
         }
-        NewCopies.push_back(Acc.getRemoteInst());
+        NewCopies.insert(Acc.getRemoteInst());
       }
       return true;
     };
@@ -486,11 +512,11 @@ static bool getPotentialCopiesOfMemoryValue(
     AA::RangeTy Range;
     auto *PI = A.getAAFor<AAPointerInfo>(QueryingAA, IRPosition::value(Obj),
                                          DepClassTy::NONE);
-    if (!PI ||
-        !PI->forallInterferingAccesses(A, QueryingAA, I,
-                                       /* FindInterferingWrites */ IsLoad,
-                                       /* FindInterferingReads */ !IsLoad,
-                                       CheckAccess, HasBeenWrittenTo, Range)) {
+    if (!PI || !PI->forallInterferingAccesses(
+                   A, QueryingAA, I,
+                   /* FindInterferingWrites */ IsLoad,
+                   /* FindInterferingReads */ !IsLoad, CheckAccess,
+                   HasBeenWrittenTo, Range, SkipCB)) {
       LLVM_DEBUG(
           dbgs()
           << "Failed to verify all interfering accesses for underlying object: "
@@ -514,8 +540,9 @@ static bool getPotentialCopiesOfMemoryValue(
         return false;
       }
 
-      NewCopies.push_back(InitialValue);
-      NewCopyOrigins.push_back(nullptr);
+      NewCopies.insert(InitialValue);
+      if (PotentialValueOrigins)
+        NewCopyOrigins.insert(nullptr);
     }
 
     PIs.push_back(PI);
@@ -540,7 +567,8 @@ static bool getPotentialCopiesOfMemoryValue(
     A.recordDependence(*PI, QueryingAA, DepClassTy::OPTIONAL);
   }
   PotentialCopies.insert(NewCopies.begin(), NewCopies.end());
-  PotentialValueOrigins.insert(NewCopyOrigins.begin(), NewCopyOrigins.end());
+  if (PotentialValueOrigins)
+    PotentialValueOrigins->insert(NewCopyOrigins.begin(), NewCopyOrigins.end());
 
   return true;
 }
@@ -551,7 +579,7 @@ bool AA::getPotentiallyLoadedValues(
     const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation,
     bool OnlyExact) {
   return getPotentialCopiesOfMemoryValue</* IsLoad */ true>(
-      A, LI, PotentialValues, PotentialValueOrigins, QueryingAA,
+      A, LI, PotentialValues, &PotentialValueOrigins, QueryingAA,
       UsedAssumedInformation, OnlyExact);
 }
 
@@ -559,10 +587,9 @@ bool AA::getPotentialCopiesOfStoredValue(
     Attributor &A, StoreInst &SI, SmallSetVector<Value *, 4> &PotentialCopies,
     const AbstractAttribute &QueryingAA, bool &UsedAssumedInformation,
     bool OnlyExact) {
-  SmallSetVector<Instruction *, 4> PotentialValueOrigins;
   return getPotentialCopiesOfMemoryValue</* IsLoad */ false>(
-      A, SI, PotentialCopies, PotentialValueOrigins, QueryingAA,
-      UsedAssumedInformation, OnlyExact);
+      A, SI, PotentialCopies, nullptr, QueryingAA, UsedAssumedInformation,
+      OnlyExact);
 }
 
 static bool isAssumedReadOnlyOrReadNone(Attributor &A, const IRPosition &IRP,
@@ -3248,9 +3275,10 @@ void Attributor::checkAndQueryIRAttr(const IRPosition &IRP,
                                      AttributeSet Attrs) {
   bool IsKnown;
   if (!Attrs.hasAttribute(AK))
-    if (!AA::hasAssumedIRAttr<AK>(*this, nullptr, IRP, DepClassTy::NONE,
-                                  IsKnown))
-      getOrCreateAAFor<AAType>(IRP);
+    if (!Configuration.Allowed || Configuration.Allowed->count(&AAType::ID))
+      if (!AA::hasAssumedIRAttr<AK>(*this, nullptr, IRP, DepClassTy::NONE,
+                                    IsKnown))
+        getOrCreateAAFor<AAType>(IRP);
 }
 
 void Attributor::identifyDefaultAbstractAttributes(Function &F) {
@@ -3771,6 +3799,88 @@ static bool runAttributorOnFunctions(InformationCache &InfoCache,
   return Changed == ChangeStatus::CHANGED;
 }
 
+static bool runAttributorLightOnFunctions(InformationCache &InfoCache,
+                                          SetVector<Function *> &Functions,
+                                          AnalysisGetter &AG,
+                                          CallGraphUpdater &CGUpdater,
+                                          FunctionAnalysisManager &FAM,
+                                          bool IsModulePass) {
+  if (Functions.empty())
+    return false;
+
+  LLVM_DEBUG({
+    dbgs() << "[AttributorLight] Run on module with " << Functions.size()
+           << " functions:\n";
+    for (Function *Fn : Functions)
+      dbgs() << "  - " << Fn->getName() << "\n";
+  });
+
+  // Create an Attributor and initially empty information cache that is filled
+  // while we identify default attribute opportunities.
+  AttributorConfig AC(CGUpdater);
+  AC.IsModulePass = IsModulePass;
+  AC.DeleteFns = false;
+  DenseSet<const char *> Allowed(
+      {&AAWillReturn::ID, &AANoUnwind::ID, &AANoRecurse::ID, &AANoSync::ID,
+       &AANoFree::ID, &AANoReturn::ID, &AAMemoryLocation::ID,
+       &AAMemoryBehavior::ID, &AAUnderlyingObjects::ID, &AANoCapture::ID,
+       &AAInterFnReachability::ID, &AAIntraFnReachability::ID, &AACallEdges::ID,
+       &AANoFPClass::ID, &AAMustProgress::ID, &AANonNull::ID});
+  AC.Allowed = &Allowed;
+  AC.UseLiveness = false;
+
+  Attributor A(Functions, InfoCache, AC);
+
+  for (Function *F : Functions) {
+    if (F->hasExactDefinition())
+      NumFnWithExactDefinition++;
+    else
+      NumFnWithoutExactDefinition++;
+
+    // We look at internal functions only on-demand but if any use is not a
+    // direct call or outside the current set of analyzed functions, we have
+    // to do it eagerly.
+    if (F->hasLocalLinkage()) {
+      if (llvm::all_of(F->uses(), [&Functions](const Use &U) {
+            const auto *CB = dyn_cast<CallBase>(U.getUser());
+            return CB && CB->isCallee(&U) &&
+                   Functions.count(const_cast<Function *>(CB->getCaller()));
+          }))
+        continue;
+    }
+
+    // Populate the Attributor with abstract attribute opportunities in the
+    // function and the information cache with IR information.
+    A.identifyDefaultAbstractAttributes(*F);
+  }
+
+  ChangeStatus Changed = A.run();
+
+  if (Changed == ChangeStatus::CHANGED) {
+    // Invalidate analyses for modified functions so that we don't have to
+    // invalidate all analyses for all functions in this SCC.
+    PreservedAnalyses FuncPA;
+    // We haven't changed the CFG for modified functions.
+    FuncPA.preserveSet<CFGAnalyses>();
+    for (Function *Changed : A.getModifiedFunctions()) {
+      FAM.invalidate(*Changed, FuncPA);
+      // Also invalidate any direct callers of changed functions since analyses
+      // may care about attributes of direct callees. For example, MemorySSA
+      // cares about whether or not a call's callee modifies memory and queries
+      // that through function attributes.
+      for (auto *U : Changed->users()) {
+        if (auto *Call = dyn_cast<CallBase>(U)) {
+          if (Call->getCalledFunction() == Changed)
+            FAM.invalidate(*Call->getFunction(), FuncPA);
+        }
+      }
+    }
+  }
+  LLVM_DEBUG(dbgs() << "[Attributor] Done with " << Functions.size()
+                    << " functions, result: " << Changed << ".\n");
+  return Changed == ChangeStatus::CHANGED;
+}
+
 void AADepGraph::viewGraph() { llvm::ViewGraph(this, "Dependency Graph"); }
 
 void AADepGraph::dumpGraph() {
@@ -3851,6 +3961,62 @@ PreservedAnalyses AttributorCGSCCPass::run(LazyCallGraph::SCC &C,
   return PreservedAnalyses::all();
 }
 
+PreservedAnalyses AttributorLightPass::run(Module &M,
+                                           ModuleAnalysisManager &AM) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerModuleProxy>(M).getManager();
+  AnalysisGetter AG(FAM, /* CachedOnly */ true);
+
+  SetVector<Function *> Functions;
+  for (Function &F : M)
+    Functions.insert(&F);
+
+  CallGraphUpdater CGUpdater;
+  BumpPtrAllocator Allocator;
+  InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ nullptr);
+  if (runAttributorLightOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+                                    /* IsModulePass */ true)) {
+    PreservedAnalyses PA;
+    // We have not added or removed functions.
+    PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+    // We already invalidated all relevant function analyses above.
+    PA.preserveSet<AllAnalysesOn<Function>>();
+    return PA;
+  }
+  return PreservedAnalyses::all();
+}
+
+PreservedAnalyses AttributorLightCGSCCPass::run(LazyCallGraph::SCC &C,
+                                                CGSCCAnalysisManager &AM,
+                                                LazyCallGraph &CG,
+                                                CGSCCUpdateResult &UR) {
+  FunctionAnalysisManager &FAM =
+      AM.getResult<FunctionAnalysisManagerCGSCCProxy>(C, CG).getManager();
+  AnalysisGetter AG(FAM);
+
+  SetVector<Function *> Functions;
+  for (LazyCallGraph::Node &N : C)
+    Functions.insert(&N.getFunction());
+
+  if (Functions.empty())
+    return PreservedAnalyses::all();
+
+  Module &M = *Functions.back()->getParent();
+  CallGraphUpdater CGUpdater;
+  CGUpdater.initialize(CG, C, AM, UR);
+  BumpPtrAllocator Allocator;
+  InformationCache InfoCache(M, AG, Allocator, /* CGSCC */ &Functions);
+  if (runAttributorLightOnFunctions(InfoCache, Functions, AG, CGUpdater, FAM,
+                                    /* IsModulePass */ false)) {
+    PreservedAnalyses PA;
+    // We have not added or removed functions.
+    PA.preserve<FunctionAnalysisManagerCGSCCProxy>();
+    // We already invalidated all relevant function analyses above.
+    PA.preserveSet<AllAnalysesOn<Function>>();
+    return PA;
+  }
+  return PreservedAnalyses::all();
+}
 namespace llvm {
 
 template <> struct GraphTraits<AADepGraphNode *> {

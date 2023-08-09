@@ -93,7 +93,7 @@ registers:
   - { id: 2, class: gpr }
 # ALL: %0:gr16 = COPY $di
 # ALL: %1:gr16 = COPY $si
-# ALL: %2:gr16 = ADD16rr %0, %1, implicit-def $eflags
+# ALL: %2:gr16 = ADD16rr %0, %1, implicit-def dead $eflags
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi
@@ -118,7 +118,7 @@ registers:
   - { id: 2, class: gpr }
 # ALL: %0:gr8 = COPY $dil
 # ALL: %1:gr8 = COPY $sil
-# ALL: %2:gr8 = ADD8rr %0, %1, implicit-def $eflags
+# ALL: %2:gr8 = ADD8rr %0, %1, implicit-def dead $eflags
 body:             |
   bb.1 (%ir-block.0):
     liveins: $edi, $esi

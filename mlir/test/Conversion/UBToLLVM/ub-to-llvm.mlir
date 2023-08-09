@@ -1,5 +1,9 @@
 // RUN: mlir-opt -pass-pipeline="builtin.module(func.func(convert-ub-to-llvm))" %s -split-input-file | FileCheck %s
 
+// Same below, but using the `ConvertToLLVMPatternInterface` entry point
+// and the generic `convert-to-llvm` pass.
+// RUN: mlir-opt --convert-to-llvm --split-input-file %s | FileCheck %s
+
 // CHECK-LABEL: @check_poison
 func.func @check_poison() {
 // CHECK: {{.*}} = llvm.mlir.poison : i64

@@ -17,7 +17,6 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/ExtractAPI/TypedefUnderlyingTypeResolver.h"
 #include "clang/Index/USRGeneration.h"
-#include "clang/Parse/Parser.h"
 #include "llvm/ADT/StringSwitch.h"
 
 using namespace clang::extractapi;
@@ -103,7 +102,6 @@ DeclarationFragments DeclarationFragments::getExceptionSpecificationString(
     // FIXME: throw(int), get types of inner expression
     return Fragments;
   case ExceptionSpecificationType::EST_BasicNoexcept:
-
     return Fragments.append(" ", DeclarationFragments::FragmentKind::Text)
         .append("noexcept", DeclarationFragments::FragmentKind::Keyword);
   case ExceptionSpecificationType::EST_DependentNoexcept:
@@ -427,7 +425,8 @@ DeclarationFragments
 DeclarationFragmentsBuilder::getFragmentsForVar(const VarDecl *Var) {
   DeclarationFragments Fragments;
   if (Var->isConstexpr())
-    Fragments.append("constexpr ", DeclarationFragments::FragmentKind::Keyword);
+    Fragments.append("constexpr", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
 
   StorageClass SC = Var->getStorageClass();
   if (SC != SC_None)
@@ -499,9 +498,11 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
     llvm_unreachable("invalid for functions");
   }
   if (Func->isConsteval()) // if consteval, it is also constexpr
-    Fragments.append("consteval ", DeclarationFragments::FragmentKind::Keyword);
+    Fragments.append("consteval", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
   else if (Func->isConstexpr())
-    Fragments.append("constexpr ", DeclarationFragments::FragmentKind::Keyword);
+    Fragments.append("constexpr", DeclarationFragments::FragmentKind::Keyword)
+        .appendSpace();
 
   // FIXME: Is `after` actually needed here?
   DeclarationFragments After;
@@ -523,7 +524,6 @@ DeclarationFragmentsBuilder::getFragmentsForFunction(const FunctionDecl *Func) {
   Fragments.append(DeclarationFragments::getExceptionSpecificationString(
       Func->getExceptionSpecType()));
 
-  // FIXME: Handle exception specifiers: throw, noexcept
   return Fragments.append(";", DeclarationFragments::FragmentKind::Text);
 }
 
@@ -608,9 +608,8 @@ DeclarationFragmentsBuilder::getFragmentsForSpecialCXXMethod(
   DeclarationFragments Fragments;
   std::string Name;
   if (isa<CXXConstructorDecl>(Method)) {
-    auto *Constructor = dyn_cast<CXXConstructorDecl>(Method);
-    Name = cast<CXXRecordDecl>(Constructor->getDeclContext())->getName();
-    if (Constructor->isExplicit())
+    Name = Method->getNameAsString();
+    if (dyn_cast<CXXConstructorDecl>(Method)->isExplicit())
       Fragments.append("explicit", DeclarationFragments::FragmentKind::Keyword)
           .appendSpace();
   } else if (isa<CXXDestructorDecl>(Method))
@@ -636,8 +635,7 @@ DeclarationFragmentsBuilder::getFragmentsForSpecialCXXMethod(
 DeclarationFragments DeclarationFragmentsBuilder::getFragmentsForCXXMethod(
     const CXXMethodDecl *Method) {
   DeclarationFragments Fragments;
-  StringRef Name;
-  Name = Method->getName();
+  StringRef Name = Method->getName();
   if (Method->isStatic())
     Fragments.append("static", DeclarationFragments::FragmentKind::Keyword)
         .appendSpace();

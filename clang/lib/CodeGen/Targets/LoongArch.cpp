@@ -148,6 +148,13 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
   if (const ConstantArrayType *ATy = getContext().getAsConstantArrayType(Ty)) {
     uint64_t ArraySize = ATy->getSize().getZExtValue();
     QualType EltTy = ATy->getElementType();
+    // Non-zero-length arrays of empty records make the struct ineligible to be
+    // passed via FARs in C++.
+    if (const auto *RTy = EltTy->getAs<RecordType>()) {
+      if (ArraySize != 0 && isa<CXXRecordDecl>(RTy->getDecl()) &&
+          isEmptyRecord(getContext(), EltTy, true, true))
+        return false;
+    }
     CharUnits EltSize = getContext().getTypeSizeInChars(EltTy);
     for (uint64_t i = 0; i < ArraySize; ++i) {
       if (!detectFARsEligibleStructHelper(EltTy, CurOff, Field1Ty, Field1Off,
@@ -163,7 +170,7 @@ bool LoongArchABIInfo::detectFARsEligibleStructHelper(
     // copy constructor are not eligible for the FP calling convention.
     if (getRecordArgABI(Ty, CGT.getCXXABI()))
       return false;
-    if (isEmptyRecord(getContext(), Ty, true))
+    if (isEmptyRecord(getContext(), Ty, true, true))
       return true;
     const RecordDecl *RD = RTy->getDecl();
     // Unions aren't eligible unless they're empty (which is caught above).
@@ -221,6 +228,8 @@ bool LoongArchABIInfo::detectFARsEligibleStruct(
   NeededFARs = 0;
   if (!detectFARsEligibleStructHelper(Ty, CharUnits::Zero(), Field1Ty,
                                       Field1Off, Field2Ty, Field2Off))
+    return false;
+  if (!Field1Ty)
     return false;
   // Not really a candidate if we have a single int but no float.
   if (Field1Ty && !Field2Ty && !Field1Ty->isFloatingPointTy())

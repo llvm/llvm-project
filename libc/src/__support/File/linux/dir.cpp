@@ -19,9 +19,10 @@ namespace __llvm_libc {
 ErrorOr<int> platform_opendir(const char *name) {
   int open_flags = O_RDONLY | O_DIRECTORY | O_CLOEXEC;
 #ifdef SYS_open
-  int fd = __llvm_libc::syscall_impl(SYS_open, name, open_flags);
+  int fd = __llvm_libc::syscall_impl<int>(SYS_open, name, open_flags);
 #elif defined(SYS_openat)
-  int fd = __llvm_libc::syscall_impl(SYS_openat, AT_FDCWD, name, open_flags);
+  int fd =
+      __llvm_libc::syscall_impl<int>(SYS_openat, AT_FDCWD, name, open_flags);
 #else
 #error                                                                         \
     "SYS_open and SYS_openat syscalls not available to perform an open operation."
@@ -35,8 +36,8 @@ ErrorOr<int> platform_opendir(const char *name) {
 
 ErrorOr<size_t> platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer) {
 #ifdef SYS_getdents64
-  long size = __llvm_libc::syscall_impl(SYS_getdents64, fd, buffer.data(),
-                                        buffer.size());
+  long size = __llvm_libc::syscall_impl<long>(SYS_getdents64, fd, buffer.data(),
+                                              buffer.size());
 #else
 #error "getdents64 syscalls not available to perform a fetch dirents operation."
 #endif
@@ -48,7 +49,7 @@ ErrorOr<size_t> platform_fetch_dirents(int fd, cpp::span<uint8_t> buffer) {
 }
 
 int platform_closedir(int fd) {
-  long ret = __llvm_libc::syscall_impl(SYS_close, fd);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_close, fd);
   if (ret < 0) {
     return static_cast<int>(-ret);
   }

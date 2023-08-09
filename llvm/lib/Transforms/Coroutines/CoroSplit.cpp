@@ -811,7 +811,6 @@ Value *CoroCloner::deriveNewFramePointer() {
     auto *ActiveAsyncSuspend = cast<CoroSuspendAsyncInst>(ActiveSuspend);
     auto ContextIdx = ActiveAsyncSuspend->getStorageArgumentIndex() & 0xff;
     auto *CalleeContext = NewF->getArg(ContextIdx);
-    auto *FramePtrTy = Shape.FrameTy->getPointerTo();
     auto *ProjectionFunc =
         ActiveAsyncSuspend->getAsyncContextProjectionFunction();
     auto DbgLoc =
@@ -831,7 +830,7 @@ Value *CoroCloner::deriveNewFramePointer() {
     auto InlineRes = InlineFunction(*CallerContext, InlineInfo);
     assert(InlineRes.isSuccess());
     (void)InlineRes;
-    return Builder.CreateBitCast(FramePtrAddr, FramePtrTy);
+    return FramePtrAddr;
   }
   // In continuation-lowering, the argument is the opaque storage.
   case coro::ABI::Retcon:
@@ -841,12 +840,10 @@ Value *CoroCloner::deriveNewFramePointer() {
 
     // If the storage is inline, just bitcast to the storage to the frame type.
     if (Shape.RetconLowering.IsFrameInlineInStorage)
-      return Builder.CreateBitCast(NewStorage, FramePtrTy);
+      return NewStorage;
 
     // Otherwise, load the real frame from the opaque storage.
-    auto FramePtrPtr =
-      Builder.CreateBitCast(NewStorage, FramePtrTy->getPointerTo());
-    return Builder.CreateLoad(FramePtrTy, FramePtrPtr);
+    return Builder.CreateLoad(FramePtrTy, NewStorage);
   }
   }
   llvm_unreachable("bad ABI");
@@ -940,9 +937,22 @@ void CoroCloner::create() {
     // abstract specification, since the DWARF backend expects the
     // abstract specification to contain the linkage name and asserts
     // that they are identical.
-    if (!SP->getDeclaration() && SP->getUnit() &&
-        SP->getUnit()->getSourceLanguage() == dwarf::DW_LANG_Swift)
+    if (SP->getUnit() &&
+        SP->getUnit()->getSourceLanguage() == dwarf::DW_LANG_Swift) {
       SP->replaceLinkageName(MDString::get(Context, NewF->getName()));
+      if (auto *Decl = SP->getDeclaration()) {
+        auto *NewDecl = DISubprogram::get(
+            Decl->getContext(), Decl->getScope(), Decl->getName(),
+            NewF->getName(), Decl->getFile(), Decl->getLine(), Decl->getType(),
+            Decl->getScopeLine(), Decl->getContainingType(),
+            Decl->getVirtualIndex(), Decl->getThisAdjustment(),
+            Decl->getFlags(), Decl->getSPFlags(), Decl->getUnit(),
+            Decl->getTemplateParams(), nullptr, Decl->getRetainedNodes(),
+            Decl->getThrownTypes(), Decl->getAnnotations(),
+            Decl->getTargetFuncName());
+        SP->replaceDeclaration(NewDecl);
+      }
+    }
   }
 
   NewF->setLinkage(savedLinkage);
@@ -1829,9 +1839,7 @@ static void splitRetconCoroutine(Function &F, coro::Shape &Shape,
       Builder.CreateBitCast(RawFramePtr, Shape.CoroBegin->getType());
 
     // Stash the allocated frame pointer in the continuation storage.
-    auto Dest = Builder.CreateBitCast(Id->getStorage(),
-                                      RawFramePtr->getType()->getPointerTo());
-    Builder.CreateStore(RawFramePtr, Dest);
+    Builder.CreateStore(RawFramePtr, Id->getStorage());
   }
 
   // Map all uses of llvm.coro.begin to the allocated frame pointer.

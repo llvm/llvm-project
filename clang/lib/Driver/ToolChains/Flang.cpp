@@ -144,7 +144,9 @@ void Flang::addCodegenOptions(const ArgList &Args,
     CmdArgs.push_back("-fversion-loops-for-stride");
 
   Args.AddAllArgs(CmdArgs, {options::OPT_flang_experimental_hlfir,
-                            options::OPT_flang_experimental_polymorphism});
+                            options::OPT_flang_experimental_polymorphism,
+                            options::OPT_fno_ppc_native_vec_elem_order,
+                            options::OPT_fppc_native_vec_elem_order});
 }
 
 void Flang::addPicOptions(const ArgList &Args, ArgStringList &CmdArgs) const {

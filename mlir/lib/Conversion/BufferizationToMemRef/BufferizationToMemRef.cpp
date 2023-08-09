@@ -91,77 +91,100 @@ struct CloneOpConversion : public OpConversionPattern<bufferization::CloneOp> {
 class DeallocOpConversion
     : public OpConversionPattern<bufferization::DeallocOp> {
 
-  /// Lower a simple case avoiding the helper function. Ideally, static analysis
-  /// can provide enough aliasing information to split the dealloc operations up
-  /// into this simple case as much as possible before running this pass.
+  /// Lower a simple case without any retained values and a single memref to
+  /// avoiding the helper function. Ideally, static analysis can provide enough
+  /// aliasing information to split the dealloc operations up into this simple
+  /// case as much as possible before running this pass.
   ///
   /// Example:
   /// ```
-  /// %0 = bufferization.dealloc (%arg0 : memref<2xf32>) if (%arg1)
+  /// bufferization.dealloc (%arg0 : memref<2xf32>) if (%arg1)
   /// ```
   /// is lowered to
   /// ```
   /// scf.if %arg1 {
   ///   memref.dealloc %arg0 : memref<2xf32>
   /// }
-  /// %0 = arith.constant false
   /// ```
   LogicalResult
   rewriteOneMemrefNoRetainCase(bufferization::DeallocOp op, OpAdaptor adaptor,
                                ConversionPatternRewriter &rewriter) const {
-    rewriter.create<scf::IfOp>(op.getLoc(), adaptor.getConditions()[0],
-                               [&](OpBuilder &builder, Location loc) {
-                                 builder.create<memref::DeallocOp>(
-                                     loc, adaptor.getMemrefs()[0]);
-                                 builder.create<scf::YieldOp>(loc);
-                               });
-    rewriter.replaceOpWithNewOp<arith::ConstantOp>(op,
-                                                   rewriter.getBoolAttr(false));
+    assert(adaptor.getMemrefs().size() == 1 && "expected only one memref");
+    assert(adaptor.getRetained().empty() && "expected no retained memrefs");
+
+    rewriter.replaceOpWithNewOp<scf::IfOp>(
+        op, adaptor.getConditions()[0], [&](OpBuilder &builder, Location loc) {
+          builder.create<memref::DeallocOp>(loc, adaptor.getMemrefs()[0]);
+          builder.create<scf::YieldOp>(loc);
+        });
     return success();
   }
 
   /// Lowering that supports all features the dealloc operation has to offer. It
-  /// computes the base pointer of each memref (as an index), stores them in a
-  /// new memref and passes it to the helper function generated in
-  /// 'buildDeallocationHelperFunction'. The two return values are used as
-  /// condition for the scf if operation containing the memref deallocate and as
-  /// replacement for the original bufferization dealloc respectively.
+  /// computes the base pointer of each memref (as an index), stores it in a
+  /// new memref helper structure and passes it to the helper function generated
+  /// in 'buildDeallocationHelperFunction'. The results are stored in two lists
+  /// (represented as memrefs) of booleans passed as arguments. The first list
+  /// stores whether the corresponding condition should be deallocated, the
+  /// second list stores the ownership of the retained values which can be used
+  /// to replace the result values of the `bufferization.dealloc` operation.
   ///
   /// Example:
   /// ```
-  /// %0:2 = bufferization.dealloc (%arg0, %arg1 : memref<2xf32>, memref<5xf32>)
-  ///                           if (%arg3, %arg4) retain (%arg2 : memref<1xf32>)
+  /// %0:2 = bufferization.dealloc (%m0, %m1 : memref<2xf32>, memref<5xf32>)
+  ///                           if (%cond0, %cond1)
+  ///                       retain (%r0, %r1 : memref<1xf32>, memref<2xf32>)
   /// ```
   /// lowers to (simplified):
   /// ```
   /// %c0 = arith.constant 0 : index
   /// %c1 = arith.constant 1 : index
-  /// %alloc = memref.alloc() : memref<2xindex>
-  /// %alloc_0 = memref.alloc() : memref<1xindex>
-  /// %intptr = memref.extract_aligned_pointer_as_index %arg0
-  /// memref.store %intptr, %alloc[%c0] : memref<2xindex>
-  /// %intptr_1 = memref.extract_aligned_pointer_as_index %arg1
-  /// memref.store %intptr_1, %alloc[%c1] : memref<2xindex>
-  /// %intptr_2 = memref.extract_aligned_pointer_as_index %arg2
-  /// memref.store %intptr_2, %alloc_0[%c0] : memref<1xindex>
-  /// %cast = memref.cast %alloc : memref<2xindex> to memref<?xindex>
-  /// %cast_4 = memref.cast %alloc_0 : memref<1xindex> to memref<?xindex>
-  /// %0:2 = call @dealloc_helper(%cast, %cast_4, %c0)
-  /// %1 = arith.andi %0#0, %arg3 : i1
-  /// %2 = arith.andi %0#1, %arg3 : i1
-  /// scf.if %1 {
-  ///   memref.dealloc %arg0 : memref<2xf32>
+  /// %dealloc_base_pointer_list = memref.alloc() : memref<2xindex>
+  /// %cond_list = memref.alloc() : memref<2xi1>
+  /// %retain_base_pointer_list = memref.alloc() : memref<2xindex>
+  /// %m0_base_pointer = memref.extract_aligned_pointer_as_index %m0
+  /// memref.store %m0_base_pointer, %dealloc_base_pointer_list[%c0]
+  /// %m1_base_pointer = memref.extract_aligned_pointer_as_index %m1
+  /// memref.store %m1_base_pointer, %dealloc_base_pointer_list[%c1]
+  /// memref.store %cond0, %cond_list[%c0]
+  /// memref.store %cond1, %cond_list[%c1]
+  /// %r0_base_pointer = memref.extract_aligned_pointer_as_index %r0
+  /// memref.store %r0_base_pointer, %retain_base_pointer_list[%c0]
+  /// %r1_base_pointer = memref.extract_aligned_pointer_as_index %r1
+  /// memref.store %r1_base_pointer, %retain_base_pointer_list[%c1]
+  /// %dyn_dealloc_base_pointer_list = memref.cast %dealloc_base_pointer_list :
+  ///    memref<2xindex> to memref<?xindex>
+  /// %dyn_cond_list = memref.cast %cond_list : memref<2xi1> to memref<?xi1>
+  /// %dyn_retain_base_pointer_list = memref.cast %retain_base_pointer_list :
+  ///    memref<2xindex> to memref<?xindex>
+  /// %dealloc_cond_out = memref.alloc() : memref<2xi1>
+  /// %ownership_out = memref.alloc() : memref<2xi1>
+  /// %dyn_dealloc_cond_out = memref.cast %dealloc_cond_out :
+  ///    memref<2xi1> to memref<?xi1>
+  /// %dyn_ownership_out = memref.cast %ownership_out :
+  ///    memref<2xi1> to memref<?xi1>
+  /// call @dealloc_helper(%dyn_dealloc_base_pointer_list,
+  ///                      %dyn_retain_base_pointer_list,
+  ///                      %dyn_cond_list,
+  ///                      %dyn_dealloc_cond_out,
+  ///                      %dyn_ownership_out) : (...)
+  /// %m0_dealloc_cond = memref.load %dyn_dealloc_cond_out[%c0] : memref<2xi1>
+  /// scf.if %m0_dealloc_cond {
+  ///   memref.dealloc %m0 : memref<2xf32>
   /// }
-  /// %3:2 = call @dealloc_helper(%cast, %cast_4, %c1)
-  /// %4 = arith.andi %3#0, %arg4 : i1
-  /// %5 = arith.andi %3#1, %arg4 : i1
-  /// scf.if %4 {
-  ///   memref.dealloc %arg1 : memref<5xf32>
+  /// %m1_dealloc_cond = memref.load %dyn_dealloc_cond_out[%c1] : memref<2xi1>
+  /// scf.if %m1_dealloc_cond {
+  ///   memref.dealloc %m1 : memref<5xf32>
   /// }
-  /// memref.dealloc %alloc : memref<2xindex>
-  /// memref.dealloc %alloc_0 : memref<1xindex>
-  /// // replace %0#0 with %2
-  /// // replace %0#1 with %5
+  /// %r0_ownership = memref.load %dyn_ownership_out[%c0] : memref<2xi1>
+  /// %r1_ownership = memref.load %dyn_ownership_out[%c1] : memref<2xi1>
+  /// memref.dealloc %dealloc_base_pointer_list : memref<2xindex>
+  /// memref.dealloc %retain_base_pointer_list : memref<2xindex>
+  /// memref.dealloc %cond_list : memref<2xi1>
+  /// memref.dealloc %dealloc_cond_out : memref<2xi1>
+  /// memref.dealloc %ownership_out : memref<2xi1>
+  /// // replace %0#0 with %r0_ownership
+  /// // replace %0#1 with %r1_ownership
   /// ```
   LogicalResult rewriteGeneralCase(bufferization::DeallocOp op,
                                    OpAdaptor adaptor,
@@ -175,6 +198,9 @@ class DeallocOpConversion
     Value toDeallocMemref = rewriter.create<memref::AllocOp>(
         op.getLoc(), MemRefType::get({(int64_t)adaptor.getMemrefs().size()},
                                      rewriter.getIndexType()));
+    Value conditionMemref = rewriter.create<memref::AllocOp>(
+        op.getLoc(), MemRefType::get({(int64_t)adaptor.getConditions().size()},
+                                     rewriter.getI1Type()));
     Value toRetainMemref = rewriter.create<memref::AllocOp>(
         op.getLoc(), MemRefType::get({(int64_t)adaptor.getRetained().size()},
                                      rewriter.getIndexType()));
@@ -193,6 +219,11 @@ class DeallocOpConversion
       rewriter.create<memref::StoreOp>(op.getLoc(), memrefAsIdx,
                                        toDeallocMemref, getConstValue(i));
     }
+
+    for (auto [i, cond] : llvm::enumerate(adaptor.getConditions()))
+      rewriter.create<memref::StoreOp>(op.getLoc(), cond, conditionMemref,
+                                       getConstValue(i));
+
     for (auto [i, toRetain] : llvm::enumerate(adaptor.getRetained())) {
       Value memrefAsIdx =
           rewriter.create<memref::ExtractAlignedPointerAsIndexOp>(op.getLoc(),
@@ -208,22 +239,41 @@ class DeallocOpConversion
         op->getLoc(),
         MemRefType::get({ShapedType::kDynamic}, rewriter.getIndexType()),
         toDeallocMemref);
+    Value castedCondsMemref = rewriter.create<memref::CastOp>(
+        op->getLoc(),
+        MemRefType::get({ShapedType::kDynamic}, rewriter.getI1Type()),
+        conditionMemref);
     Value castedRetainMemref = rewriter.create<memref::CastOp>(
         op->getLoc(),
         MemRefType::get({ShapedType::kDynamic}, rewriter.getIndexType()),
         toRetainMemref);
 
-    SmallVector<Value> replacements;
+    Value deallocCondsMemref = rewriter.create<memref::AllocOp>(
+        op.getLoc(), MemRefType::get({(int64_t)adaptor.getMemrefs().size()},
+                                     rewriter.getI1Type()));
+    Value retainCondsMemref = rewriter.create<memref::AllocOp>(
+        op.getLoc(), MemRefType::get({(int64_t)adaptor.getRetained().size()},
+                                     rewriter.getI1Type()));
+
+    Value castedDeallocCondsMemref = rewriter.create<memref::CastOp>(
+        op->getLoc(),
+        MemRefType::get({ShapedType::kDynamic}, rewriter.getI1Type()),
+        deallocCondsMemref);
+    Value castedRetainCondsMemref = rewriter.create<memref::CastOp>(
+        op->getLoc(),
+        MemRefType::get({ShapedType::kDynamic}, rewriter.getI1Type()),
+        retainCondsMemref);
+
+    rewriter.create<func::CallOp>(
+        op.getLoc(), deallocHelperFunc,
+        SmallVector<Value>{castedDeallocMemref, castedRetainMemref,
+                           castedCondsMemref, castedDeallocCondsMemref,
+                           castedRetainCondsMemref});
+
     for (unsigned i = 0, e = adaptor.getMemrefs().size(); i < e; ++i) {
-      auto callOp = rewriter.create<func::CallOp>(
-          op.getLoc(), deallocHelperFunc,
-          SmallVector<Value>{castedDeallocMemref, castedRetainMemref,
-                             getConstValue(i)});
-      Value shouldDealloc = rewriter.create<arith::AndIOp>(
-          op.getLoc(), callOp.getResult(0), adaptor.getConditions()[i]);
-      Value ownership = rewriter.create<arith::AndIOp>(
-          op.getLoc(), callOp.getResult(1), adaptor.getConditions()[i]);
-      replacements.push_back(ownership);
+      Value idxValue = getConstValue(i);
+      Value shouldDealloc = rewriter.create<memref::LoadOp>(
+          op.getLoc(), deallocCondsMemref, idxValue);
       rewriter.create<scf::IfOp>(
           op.getLoc(), shouldDealloc, [&](OpBuilder &builder, Location loc) {
             builder.create<memref::DeallocOp>(loc, adaptor.getMemrefs()[i]);
@@ -231,10 +281,21 @@ class DeallocOpConversion
           });
     }
 
+    SmallVector<Value> replacements;
+    for (unsigned i = 0, e = adaptor.getRetained().size(); i < e; ++i) {
+      Value idxValue = getConstValue(i);
+      Value ownership = rewriter.create<memref::LoadOp>(
+          op.getLoc(), retainCondsMemref, idxValue);
+      replacements.push_back(ownership);
+    }
+
     // Deallocate above allocated memrefs again to avoid memory leaks.
     // Deallocation will not be run on code after this stage.
     rewriter.create<memref::DeallocOp>(op.getLoc(), toDeallocMemref);
     rewriter.create<memref::DeallocOp>(op.getLoc(), toRetainMemref);
+    rewriter.create<memref::DeallocOp>(op.getLoc(), conditionMemref);
+    rewriter.create<memref::DeallocOp>(op.getLoc(), deallocCondsMemref);
+    rewriter.create<memref::DeallocOp>(op.getLoc(), retainCondsMemref);
 
     rewriter.replaceOp(op, replacements);
     return success();
@@ -261,70 +322,95 @@ public:
   /// Build a helper function per compilation unit that can be called at
   /// bufferization dealloc sites to determine aliasing and ownership.
   ///
-  /// The generated function takes two memrefs of indices and one index value as
-  /// arguments and returns two boolean values:
-  ///   * The first memref argument A should contain the result of the
+  /// The generated function takes two memrefs of indices and three memrefs of
+  /// booleans as arguments:
+  ///   * The first argument A should contain the result of the
   ///   extract_aligned_pointer_as_index operation applied to the memrefs to be
   ///   deallocated
-  ///   * The second memref argument B should contain the result of the
+  ///   * The second argument B should contain the result of the
   ///   extract_aligned_pointer_as_index operation applied to the memrefs to be
   ///   retained
-  ///   * The index argument I represents the currently processed index of
-  ///   memref A and is needed because aliasing with all previously deallocated
-  ///   memrefs has to be checked to avoid double deallocation
-  ///   * The first result indicates whether the memref at position I should be
-  ///   deallocated
-  ///   * The second result provides the updated ownership value corresponding
-  ///   the the memref at position I
+  ///   * The third argument C should contain the conditions as passed directly
+  ///   to the deallocation operation.
+  ///   * The fourth argument D is used to pass results to the caller. Those
+  ///   represent the condition under which the memref at the corresponding
+  ///   position in A should be deallocated.
+  ///   * The fifth argument E is used to pass results to the caller. It
+  ///   provides the ownership value corresponding the the memref at the same
+  ///   position in B
   ///
-  /// This helper function is supposed to be called for each element in the list
-  /// of memrefs to be deallocated to determine the deallocation need and new
-  /// ownership indicator, but does not perform the deallocation itself.
-  ///
-  /// The first scf for loop in the body computes whether the memref at index I
-  /// aliases with any memref in the list of retained memrefs.
-  /// The second loop additionally checks whether one of the previously
-  /// deallocated memrefs aliases with the currently processed one.
+  /// This helper function is supposed to be called once for each
+  /// `bufferization.dealloc` operation to determine the deallocation need and
+  /// new ownership indicator for the retained values, but does not perform the
+  /// deallocation itself.
   ///
   /// Generated code:
   /// ```
-  /// func.func @dealloc_helper(%arg0: memref<?xindex>,
-  ///                           %arg1: memref<?xindex>,
-  ///                           %arg2: index) -> (i1, i1) {
+  /// func.func @dealloc_helper(
+  ///     %dyn_dealloc_base_pointer_list: memref<?xindex>,
+  ///     %dyn_retain_base_pointer_list: memref<?xindex>,
+  ///     %dyn_cond_list: memref<?xi1>,
+  ///     %dyn_dealloc_cond_out: memref<?xi1>,
+  ///     %dyn_ownership_out: memref<?xi1>) {
   ///   %c0 = arith.constant 0 : index
   ///   %c1 = arith.constant 1 : index
   ///   %true = arith.constant true
-  ///   %dim = memref.dim %arg1, %c0 : memref<?xindex>
-  ///   %0 = memref.load %arg0[%arg2] : memref<?xindex>
-  ///   %1 = scf.for %i = %c0 to %dim step %c1 iter_args(%arg4 = %true) -> (i1){
-  ///     %4 = memref.load %arg1[%i] : memref<?xindex>
-  ///     %5 = arith.cmpi ne, %4, %0 : index
-  ///     %6 = arith.andi %arg4, %5 : i1
-  ///     scf.yield %6 : i1
+  ///   %false = arith.constant false
+  ///   %num_dealloc_memrefs = memref.dim %dyn_dealloc_base_pointer_list, %c0
+  ///   %num_retain_memrefs = memref.dim %dyn_retain_base_pointer_list, %c0
+  ///   // Zero initialize result buffer.
+  ///   scf.for %i = %c0 to %num_retain_memrefs step %c1 {
+  ///     memref.store %false, %dyn_ownership_out[%i] : memref<?xi1>
   ///   }
-  ///   %2 = scf.for %i = %c0 to %arg2 step %c1 iter_args(%arg4 = %1) -> (i1) {
-  ///     %4 = memref.load %arg0[%i] : memref<?xindex>
-  ///     %5 = arith.cmpi ne, %4, %0 : index
-  ///     %6 = arith.andi %arg4, %5 : i1
-  ///     scf.yield %6 : i1
+  ///   scf.for %i = %c0 to %num_dealloc_memrefs step %c1 {
+  ///     %dealloc_bp = memref.load %dyn_dealloc_base_pointer_list[%i]
+  ///     %cond = memref.load %dyn_cond_list[%i]
+  ///     // Check for aliasing with retained memrefs.
+  ///     %does_not_alias_retained = scf.for %j = %c0 to %num_retain_memrefs
+  ///         step %c1 iter_args(%does_not_alias_aggregated = %true) -> (i1) {
+  ///       %retain_bp = memref.load %dyn_retain_base_pointer_list[%j]
+  ///       %does_alias = arith.cmpi eq, %retain_bp, %dealloc_bp : index
+  ///       scf.if %does_alias {
+  ///         %curr_ownership = memref.load %dyn_ownership_out[%j]
+  ///         %updated_ownership = arith.ori %curr_ownership, %cond : i1
+  ///         memref.store %updated_ownership, %dyn_ownership_out[%j]
+  ///       }
+  ///       %does_not_alias = arith.cmpi ne, %retain_bp, %dealloc_bp : index
+  ///       %updated_aggregate = arith.andi %does_not_alias_aggregated,
+  ///                                       %does_not_alias : i1
+  ///       scf.yield %updated_aggregate : i1
+  ///     }
+  ///     // Check for aliasing with dealloc memrefs in the list before the
+  ///     // current one, i.e.,
+  ///     // `fix i, forall j < i: check_aliasing(%dyn_dealloc_base_pointer[j],
+  ///     // %dyn_dealloc_base_pointer[i])`
+  ///     %does_not_alias_any = scf.for %j = %c0 to %i step %c1
+  ///        iter_args(%does_not_alias_agg = %does_not_alias_retained) -> (i1) {
+  ///       %prev_dealloc_bp = memref.load %dyn_dealloc_base_pointer_list[%j]
+  ///       %does_not_alias = arith.cmpi ne, %prev_dealloc_bp, %dealloc_bp
+  ///       %updated_alias_agg = arith.andi %does_not_alias_agg, %does_not_alias
+  ///       scf.yield %updated_alias_agg : i1
+  ///     }
+  ///     %dealloc_cond = arith.andi %does_not_alias_any, %cond : i1
+  ///     memref.store %dealloc_cond, %dyn_dealloc_cond_out[%i] : memref<?xi1>
   ///   }
-  ///   %3 = arith.xori %1, %true : i1
-  ///   return %2, %3 : i1, i1
+  ///   return
   /// }
   /// ```
   static func::FuncOp
   buildDeallocationHelperFunction(OpBuilder &builder, Location loc,
                                   SymbolTable &symbolTable) {
-    Type idxType = builder.getIndexType();
-    Type memrefArgType = MemRefType::get({ShapedType::kDynamic}, idxType);
-    SmallVector<Type> argTypes{memrefArgType, memrefArgType, idxType};
+    Type indexMemrefType =
+        MemRefType::get({ShapedType::kDynamic}, builder.getIndexType());
+    Type boolMemrefType =
+        MemRefType::get({ShapedType::kDynamic}, builder.getI1Type());
+    SmallVector<Type> argTypes{indexMemrefType, indexMemrefType, boolMemrefType,
+                               boolMemrefType, boolMemrefType};
     builder.clearInsertionPoint();
 
     // Generate the func operation itself.
     auto helperFuncOp = func::FuncOp::create(
-        loc, "dealloc_helper",
-        builder.getFunctionType(argTypes,
-                                {builder.getI1Type(), builder.getI1Type()}));
+        loc, "dealloc_helper", builder.getFunctionType(argTypes, {}));
     symbolTable.insert(helperFuncOp);
     auto &block = helperFuncOp.getFunctionBody().emplaceBlock();
     block.addArguments(argTypes, SmallVector<Location>(argTypes.size(), loc));
@@ -332,57 +418,101 @@ public:
     builder.setInsertionPointToStart(&block);
     Value toDeallocMemref = helperFuncOp.getArguments()[0];
     Value toRetainMemref = helperFuncOp.getArguments()[1];
-    Value idxArg = helperFuncOp.getArguments()[2];
+    Value conditionMemref = helperFuncOp.getArguments()[2];
+    Value deallocCondsMemref = helperFuncOp.getArguments()[3];
+    Value retainCondsMemref = helperFuncOp.getArguments()[4];
 
     // Insert some prerequisites.
     Value c0 = builder.create<arith::ConstantOp>(loc, builder.getIndexAttr(0));
     Value c1 = builder.create<arith::ConstantOp>(loc, builder.getIndexAttr(1));
     Value trueValue =
         builder.create<arith::ConstantOp>(loc, builder.getBoolAttr(true));
+    Value falseValue =
+        builder.create<arith::ConstantOp>(loc, builder.getBoolAttr(false));
+    Value toDeallocSize =
+        builder.create<memref::DimOp>(loc, toDeallocMemref, c0);
     Value toRetainSize = builder.create<memref::DimOp>(loc, toRetainMemref, c0);
-    Value toDealloc =
-        builder.create<memref::LoadOp>(loc, toDeallocMemref, idxArg);
 
-    // Build the first for loop that computes aliasing with retained memrefs.
-    Value noRetainAlias =
-        builder
-            .create<scf::ForOp>(
-                loc, c0, toRetainSize, c1, trueValue,
-                [&](OpBuilder &builder, Location loc, Value i,
-                    ValueRange iterArgs) {
-                  Value retainValue =
-                      builder.create<memref::LoadOp>(loc, toRetainMemref, i);
-                  Value doesntAlias = builder.create<arith::CmpIOp>(
-                      loc, arith::CmpIPredicate::ne, retainValue, toDealloc);
-                  Value yieldValue = builder.create<arith::AndIOp>(
-                      loc, iterArgs[0], doesntAlias);
-                  builder.create<scf::YieldOp>(loc, yieldValue);
-                })
-            .getResult(0);
+    builder.create<scf::ForOp>(
+        loc, c0, toRetainSize, c1, std::nullopt,
+        [&](OpBuilder &builder, Location loc, Value i, ValueRange iterArgs) {
+          builder.create<memref::StoreOp>(loc, falseValue, retainCondsMemref,
+                                          i);
+          builder.create<scf::YieldOp>(loc);
+        });
 
-    // Build the second for loop that adds aliasing with previously deallocated
-    // memrefs.
-    Value noAlias =
-        builder
-            .create<scf::ForOp>(
-                loc, c0, idxArg, c1, noRetainAlias,
-                [&](OpBuilder &builder, Location loc, Value i,
-                    ValueRange iterArgs) {
-                  Value prevDeallocValue =
-                      builder.create<memref::LoadOp>(loc, toDeallocMemref, i);
-                  Value doesntAlias = builder.create<arith::CmpIOp>(
-                      loc, arith::CmpIPredicate::ne, prevDeallocValue,
-                      toDealloc);
-                  Value yieldValue = builder.create<arith::AndIOp>(
-                      loc, iterArgs[0], doesntAlias);
-                  builder.create<scf::YieldOp>(loc, yieldValue);
-                })
-            .getResult(0);
+    builder.create<scf::ForOp>(
+        loc, c0, toDeallocSize, c1, std::nullopt,
+        [&](OpBuilder &builder, Location loc, Value outerIter,
+            ValueRange iterArgs) {
+          Value toDealloc =
+              builder.create<memref::LoadOp>(loc, toDeallocMemref, outerIter);
+          Value cond =
+              builder.create<memref::LoadOp>(loc, conditionMemref, outerIter);
 
-    Value ownership =
-        builder.create<arith::XOrIOp>(loc, noRetainAlias, trueValue);
-    builder.create<func::ReturnOp>(loc, SmallVector<Value>{noAlias, ownership});
+          // Build the first for loop that computes aliasing with retained
+          // memrefs.
+          Value noRetainAlias =
+              builder
+                  .create<scf::ForOp>(
+                      loc, c0, toRetainSize, c1, trueValue,
+                      [&](OpBuilder &builder, Location loc, Value i,
+                          ValueRange iterArgs) {
+                        Value retainValue = builder.create<memref::LoadOp>(
+                            loc, toRetainMemref, i);
+                        Value doesAlias = builder.create<arith::CmpIOp>(
+                            loc, arith::CmpIPredicate::eq, retainValue,
+                            toDealloc);
+                        builder.create<scf::IfOp>(
+                            loc, doesAlias,
+                            [&](OpBuilder &builder, Location loc) {
+                              Value retainCondValue =
+                                  builder.create<memref::LoadOp>(
+                                      loc, retainCondsMemref, i);
+                              Value aggregatedRetainCond =
+                                  builder.create<arith::OrIOp>(
+                                      loc, retainCondValue, cond);
+                              builder.create<memref::StoreOp>(
+                                  loc, aggregatedRetainCond, retainCondsMemref,
+                                  i);
+                              builder.create<scf::YieldOp>(loc);
+                            });
+                        Value doesntAlias = builder.create<arith::CmpIOp>(
+                            loc, arith::CmpIPredicate::ne, retainValue,
+                            toDealloc);
+                        Value yieldValue = builder.create<arith::AndIOp>(
+                            loc, iterArgs[0], doesntAlias);
+                        builder.create<scf::YieldOp>(loc, yieldValue);
+                      })
+                  .getResult(0);
 
+          // Build the second for loop that adds aliasing with previously
+          // deallocated memrefs.
+          Value noAlias =
+              builder
+                  .create<scf::ForOp>(
+                      loc, c0, outerIter, c1, noRetainAlias,
+                      [&](OpBuilder &builder, Location loc, Value i,
+                          ValueRange iterArgs) {
+                        Value prevDeallocValue = builder.create<memref::LoadOp>(
+                            loc, toDeallocMemref, i);
+                        Value doesntAlias = builder.create<arith::CmpIOp>(
+                            loc, arith::CmpIPredicate::ne, prevDeallocValue,
+                            toDealloc);
+                        Value yieldValue = builder.create<arith::AndIOp>(
+                            loc, iterArgs[0], doesntAlias);
+                        builder.create<scf::YieldOp>(loc, yieldValue);
+                      })
+                  .getResult(0);
+
+          Value shouldDealoc =
+              builder.create<arith::AndIOp>(loc, noAlias, cond);
+          builder.create<memref::StoreOp>(loc, shouldDealoc, deallocCondsMemref,
+                                          outerIter);
+          builder.create<scf::YieldOp>(loc);
+        });
+
+    builder.create<func::ReturnOp>(loc);
     return helperFuncOp;
   }
 

@@ -4894,6 +4894,8 @@ TEST_F(OpenMPIRBuilderTest, TargetEnterData) {
 
     CombinedInfo.BasePointers.emplace_back(Val1);
     CombinedInfo.Pointers.emplace_back(Val1);
+    CombinedInfo.DevicePointers.emplace_back(
+        llvm::OpenMPIRBuilder::DeviceInfoTy::None);
     CombinedInfo.Sizes.emplace_back(Builder.getInt64(4));
     CombinedInfo.Types.emplace_back(llvm::omp::OpenMPOffloadMappingFlags(1));
     uint32_t temp;
@@ -4951,6 +4953,8 @@ TEST_F(OpenMPIRBuilderTest, TargetExitData) {
 
     CombinedInfo.BasePointers.emplace_back(Val1);
     CombinedInfo.Pointers.emplace_back(Val1);
+    CombinedInfo.DevicePointers.emplace_back(
+        llvm::OpenMPIRBuilder::DeviceInfoTy::None);
     CombinedInfo.Sizes.emplace_back(Builder.getInt64(4));
     CombinedInfo.Types.emplace_back(llvm::omp::OpenMPOffloadMappingFlags(2));
     uint32_t temp;
@@ -4996,36 +5000,63 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
       Builder.CreateAlloca(Builder.getInt32Ty(), Builder.getInt64(1));
   ASSERT_NE(Val1, nullptr);
 
+  AllocaInst *Val2 = Builder.CreateAlloca(Builder.getPtrTy());
+  ASSERT_NE(Val2, nullptr);
+
+  AllocaInst *Val3 = Builder.CreateAlloca(Builder.getPtrTy());
+  ASSERT_NE(Val3, nullptr);
+
   IRBuilder<>::InsertPoint AllocaIP(&F->getEntryBlock(),
                                     F->getEntryBlock().getFirstInsertionPt());
 
+  using DeviceInfoTy = llvm::OpenMPIRBuilder::DeviceInfoTy;
   llvm::OpenMPIRBuilder::MapInfosTy CombinedInfo;
   using InsertPointTy = OpenMPIRBuilder::InsertPointTy;
   auto GenMapInfoCB =
       [&](InsertPointTy codeGenIP) -> llvm::OpenMPIRBuilder::MapInfosTy & {
     // Get map clause information.
     Builder.restoreIP(codeGenIP);
+    uint32_t temp;
 
     CombinedInfo.BasePointers.emplace_back(Val1);
     CombinedInfo.Pointers.emplace_back(Val1);
+    CombinedInfo.DevicePointers.emplace_back(DeviceInfoTy::None);
     CombinedInfo.Sizes.emplace_back(Builder.getInt64(4));
     CombinedInfo.Types.emplace_back(llvm::omp::OpenMPOffloadMappingFlags(3));
-    uint32_t temp;
+    CombinedInfo.Names.emplace_back(
+        OMPBuilder.getOrCreateSrcLocStr("unknown", temp));
+
+    CombinedInfo.BasePointers.emplace_back(Val2);
+    CombinedInfo.Pointers.emplace_back(Val2);
+    CombinedInfo.DevicePointers.emplace_back(DeviceInfoTy::Pointer);
+    CombinedInfo.Sizes.emplace_back(Builder.getInt64(8));
+    CombinedInfo.Types.emplace_back(llvm::omp::OpenMPOffloadMappingFlags(67));
+    CombinedInfo.Names.emplace_back(
+        OMPBuilder.getOrCreateSrcLocStr("unknown", temp));
+
+    CombinedInfo.BasePointers.emplace_back(Val3);
+    CombinedInfo.Pointers.emplace_back(Val3);
+    CombinedInfo.DevicePointers.emplace_back(DeviceInfoTy::Address);
+    CombinedInfo.Sizes.emplace_back(Builder.getInt64(8));
+    CombinedInfo.Types.emplace_back(llvm::omp::OpenMPOffloadMappingFlags(67));
     CombinedInfo.Names.emplace_back(
         OMPBuilder.getOrCreateSrcLocStr("unknown", temp));
     return CombinedInfo;
   };
 
   llvm::OpenMPIRBuilder::TargetDataInfo Info(
-      /*RequiresDevicePointerInfo=*/false,
+      /*RequiresDevicePointerInfo=*/true,
       /*SeparateBeginEndCalls=*/true);
 
   OMPBuilder.Config.setIsGPU(true);
 
-  auto BodyCB = [&](InsertPointTy CodeGenIP, int BodyGenType) {
-    if (BodyGenType == 3) {
+  using BodyGenTy = llvm::OpenMPIRBuilder::BodyGenTy;
+  auto BodyCB = [&](InsertPointTy CodeGenIP, BodyGenTy BodyGenType) {
+    if (BodyGenType == BodyGenTy::Priv) {
+      EXPECT_EQ(Info.DevicePtrInfoMap.size(), 2u);
       Builder.restoreIP(CodeGenIP);
-      CallInst *TargetDataCall = dyn_cast<CallInst>(&BB->back());
+      CallInst *TargetDataCall =
+          dyn_cast<CallInst>(BB->back().getPrevNode()->getPrevNode());
       EXPECT_NE(TargetDataCall, nullptr);
       EXPECT_EQ(TargetDataCall->arg_size(), 9U);
       EXPECT_EQ(TargetDataCall->getCalledFunction()->getName(),
@@ -5033,7 +5064,15 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
       EXPECT_TRUE(TargetDataCall->getOperand(1)->getType()->isIntegerTy(64));
       EXPECT_TRUE(TargetDataCall->getOperand(2)->getType()->isIntegerTy(32));
       EXPECT_TRUE(TargetDataCall->getOperand(8)->getType()->isPointerTy());
-      Builder.restoreIP(CodeGenIP);
+
+      LoadInst *LI = dyn_cast<LoadInst>(BB->back().getPrevNode());
+      EXPECT_NE(LI, nullptr);
+      StoreInst *SI = dyn_cast<StoreInst>(&BB->back());
+      EXPECT_NE(SI, nullptr);
+      EXPECT_EQ(SI->getValueOperand(), LI);
+      EXPECT_EQ(SI->getPointerOperand(), Info.DevicePtrInfoMap[Val2].second);
+      EXPECT_TRUE(isa<AllocaInst>(Info.DevicePtrInfoMap[Val2].second));
+      EXPECT_TRUE(isa<GetElementPtrInst>(Info.DevicePtrInfoMap[Val3].second));
       Builder.CreateStore(Builder.getInt32(99), Val1);
     }
     return Builder.saveIP();

@@ -73,6 +73,11 @@ def SparseTensorDimSliceAttr : SparseTensor_Attr<"SparseTensorDimSlice", []> {
     "int64_t" : $stride
   );
 
+  let builders = [
+    // The nop slice (i.e., that includes everything).
+    AttrBuilder<(ins), [{ return $_get($_ctxt, 0, kDynamic, 1); }]>
+  ];
+
   let extraClassDeclaration = [{
     void print(llvm::raw_ostream &os) const;
 

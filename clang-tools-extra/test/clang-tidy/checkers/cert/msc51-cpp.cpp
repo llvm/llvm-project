@@ -1,5 +1,5 @@
 // RUN: %check_clang_tidy %s cert-msc51-cpp %t -- \
-// RUN:     -config="{CheckOptions: [{key: cert-msc51-cpp.DisallowedSeedTypes, value: 'some_type,time_t'}]}"
+// RUN:     -config="{CheckOptions: {cert-msc51-cpp.DisallowedSeedTypes: 'some_type,time_t'}}"
 
 namespace std {
 

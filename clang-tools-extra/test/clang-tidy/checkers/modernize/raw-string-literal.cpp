@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy %s modernize-raw-string-literal %t -- -config="{CheckOptions: [{key: modernize-raw-string-literal.ReplaceShorterLiterals, value: true}]}"
+// RUN: %check_clang_tidy %s modernize-raw-string-literal %t -- -config="{CheckOptions: {modernize-raw-string-literal.ReplaceShorterLiterals: true}}"
 
 char const *const BackSlash("goink\\frob");
 // CHECK-MESSAGES: :[[@LINE-1]]:29: warning: escaped string literal can be written as a raw string literal [modernize-raw-string-literal]

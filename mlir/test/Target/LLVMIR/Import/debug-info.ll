@@ -353,6 +353,8 @@ declare !dbg !3 void @variadic_func()
 ; // -----
 
 define void @dbg_use_before_def(ptr %arg) {
+  ; CHECK: llvm.getelementptr
+  ; CHECK-NEXT: llvm.intr.dbg.value
   call void @llvm.dbg.value(metadata ptr %dbg_arg, metadata !7, metadata !DIExpression()), !dbg !9
   %dbg_arg = getelementptr double, ptr %arg, i64 16
   ret void
@@ -405,6 +407,67 @@ declare void @llvm.dbg.value(metadata, metadata, metadata)
 !6 = !DIDerivedType(tag: DW_TAG_member, name: "call_field", file: !2, baseType: !5)
 !7 = !DILocalVariable(scope: !8, name: "var", file: !2, type: !5);
 !8 = distinct !DISubprogram(name: "dbg_use_before_def", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!9 = !DILocation(line: 1, column: 2, scope: !8)
+
+; // -----
+
+declare i64 @callee()
+declare i32 @personality(...)
+
+; CHECK-LABEL: @dbg_broken_dominance_invoke
+define void @dbg_broken_dominance_invoke() personality ptr @personality {
+  %1 = invoke i64 @callee()
+          to label %b1 unwind label %b2
+b1:
+; CHECK: llvm.intr.dbg.value
+  call void @llvm.dbg.value(metadata i64 %1, metadata !7, metadata !DIExpression()), !dbg !9
+  ret void
+b2:
+  %2 = landingpad { ptr, i32 }
+          cleanup
+  ret void
+}
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!7 = !DILocalVariable(scope: !8, name: "var", file: !2);
+!8 = distinct !DISubprogram(name: "dbg_broken_dominance_invoke", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
+!9 = !DILocation(line: 1, column: 2, scope: !8)
+
+; // -----
+
+declare i64 @callee()
+declare i32 @personality(...)
+
+; CHECK-LABEL: @dbg_broken_dominance_invoke_reordered
+define void @dbg_broken_dominance_invoke_reordered() personality ptr @personality {
+  %1 = invoke i64 @callee()
+          to label %b2 unwind label %b1
+b1:
+; CHECK: landingpad
+; CHECK: llvm.intr.dbg.value
+  %2 = landingpad { ptr, i32 }
+          cleanup
+  call void @llvm.dbg.value(metadata i64 %1, metadata !7, metadata !DIExpression()), !dbg !9
+  ret void
+b2:
+  ret void
+}
+
+declare void @llvm.dbg.value(metadata, metadata, metadata)
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!7 = !DILocalVariable(scope: !8, name: "var", file: !2);
+!8 = distinct !DISubprogram(name: "dbg_broken_dominance_invoke", scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1)
 !9 = !DILocation(line: 1, column: 2, scope: !8)
 
 ; // -----
@@ -464,3 +527,24 @@ define void @noname_subprogram(ptr %arg) !dbg !8 {
 !1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
 !2 = !DIFile(filename: "debug-info.ll", directory: "/")
 !8 = distinct !DISubprogram(scope: !2, file: !2, spFlags: DISPFlagDefinition, unit: !1);
+
+; // -----
+
+; CHECK:      #[[MODULE:.+]] = #llvm.di_module<
+; CHECK-SAME: file = #{{.*}}, scope = #{{.*}}, name = "module", 
+; CHECK-SAME: configMacros = "bar", includePath = "/",
+; CHECK-SAME: apinotes = "/", line = 42, isDecl = true
+; CHECK-SAME: >
+; CHECK: #[[SUBPROGRAM:.+]] = #llvm.di_subprogram<compileUnit = #{{.*}}, scope = #[[MODULE]], name = "func_in_module"
+
+define void @func_in_module(ptr %arg) !dbg !8 {
+  ret void
+}
+
+!llvm.dbg.cu = !{!1}
+!llvm.module.flags = !{!0}
+!0 = !{i32 2, !"Debug Info Version", i32 3}
+!1 = distinct !DICompileUnit(language: DW_LANG_C, file: !2)
+!2 = !DIFile(filename: "debug-info.ll", directory: "/")
+!8 = distinct !DISubprogram(name: "func_in_module", scope: !10, file: !2, unit: !1);
+!10 = !DIModule(scope: !2, name: "module", configMacros: "bar", includePath: "/", apinotes: "/", file: !2, line: 42, isDecl: true)

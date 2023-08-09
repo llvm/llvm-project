@@ -120,12 +120,13 @@ bool SIInstrInfo::isReallyTriviallyReMaterializable(
     // There is difference to generic method which does not allow
     // rematerialization if there are virtual register uses. We allow this,
     // therefore this method includes SOP instructions as well.
-    return !MI.hasImplicitDef() &&
-           MI.getNumImplicitOperands() == MI.getDesc().implicit_uses().size() &&
-           !MI.mayRaiseFPException();
+    if (!MI.hasImplicitDef() &&
+        MI.getNumImplicitOperands() == MI.getDesc().implicit_uses().size() &&
+        !MI.mayRaiseFPException())
+      return true;
   }
 
-  return false;
+  return TargetInstrInfo::isReallyTriviallyReMaterializable(MI);
 }
 
 // Returns true if the scalar result of a VALU instruction depends on exec.
@@ -3732,13 +3733,7 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
 }
 
 bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
-  return Opcode == AMDGPU::DS_ORDERED_COUNT ||
-         Opcode == AMDGPU::DS_GWS_INIT ||
-         Opcode == AMDGPU::DS_GWS_SEMA_V ||
-         Opcode == AMDGPU::DS_GWS_SEMA_BR ||
-         Opcode == AMDGPU::DS_GWS_SEMA_P ||
-         Opcode == AMDGPU::DS_GWS_SEMA_RELEASE_ALL ||
-         Opcode == AMDGPU::DS_GWS_BARRIER;
+  return Opcode == AMDGPU::DS_ORDERED_COUNT || isGWS(Opcode);
 }
 
 bool SIInstrInfo::modifiesModeRegister(const MachineInstr &MI) {
@@ -3837,9 +3832,7 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
 bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
                                    uint8_t OperandType) const {
   assert(!MO.isReg() && "isInlineConstant called on register operand!");
-  if (!MO.isImm() ||
-      OperandType < AMDGPU::OPERAND_SRC_FIRST ||
-      OperandType > AMDGPU::OPERAND_SRC_LAST)
+  if (!MO.isImm())
     return false;
 
   // MachineOperand provides no way to tell the true operand size, since it only
@@ -3913,9 +3906,23 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   }
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
-    return false;
+  case AMDGPU::OPERAND_INPUT_MODS:
+  case MCOI::OPERAND_IMMEDIATE:
+    // Always embedded in the instruction for free.
+    return true;
+  case MCOI::OPERAND_UNKNOWN:
+  case MCOI::OPERAND_REGISTER:
+  case MCOI::OPERAND_PCREL:
+  case MCOI::OPERAND_GENERIC_0:
+  case MCOI::OPERAND_GENERIC_1:
+  case MCOI::OPERAND_GENERIC_2:
+  case MCOI::OPERAND_GENERIC_3:
+  case MCOI::OPERAND_GENERIC_4:
+  case MCOI::OPERAND_GENERIC_5:
+    // Just ignore anything else.
+    return true;
   default:
-    llvm_unreachable("invalid bitwidth");
+    llvm_unreachable("invalid operand type");
   }
 }
 

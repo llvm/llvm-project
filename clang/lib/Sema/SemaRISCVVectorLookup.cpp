@@ -133,6 +133,7 @@ static QualType RVVType2Qual(ASTContext &Context, const RVVType *Type) {
     }
     break;
   case Invalid:
+  case Undefined:
     llvm_unreachable("Unhandled type.");
   }
   if (Type->isVector()) {

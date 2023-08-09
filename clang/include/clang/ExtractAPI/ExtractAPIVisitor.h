@@ -692,6 +692,7 @@ void ExtractAPIVisitorBase<Derived>::recordSpecialCXXMethod(
     isConstructor = true;
     Name = CXXClassRecord->Name;
   } else if (isa<CXXDestructorDecl>(CXXSpecialMethod)) {
+    // Copy string to get name with '~'.
     Name = API.copyString(CXXSpecialMethod->getNameAsString());
   }
 

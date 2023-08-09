@@ -67,6 +67,11 @@ public:
   static constexpr char max() { return CHAR_MAX; }
   static constexpr char min() { return CHAR_MIN; }
 };
+template <> class numeric_limits<signed char> {
+public:
+  static constexpr signed char max() { return SCHAR_MAX; }
+  static constexpr signed char min() { return SCHAR_MIN; }
+};
 template <> class numeric_limits<unsigned char> {
 public:
   static constexpr unsigned char max() { return UCHAR_MAX; }

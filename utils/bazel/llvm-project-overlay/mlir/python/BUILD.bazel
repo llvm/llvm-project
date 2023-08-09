@@ -910,6 +910,25 @@ gentbl_filegroup(
 )
 
 gentbl_filegroup(
+    name = "TensorTransformOpsPyGen",
+    tbl_outs = [
+        (
+            [
+                "-gen-python-op-bindings",
+                "-bind-dialect=transform",
+                "-dialect-extension=tensor_transform",
+            ],
+            "mlir/dialects/_tensor_transform_ops_gen.py",
+        ),
+    ],
+    tblgen = "//mlir:mlir-tblgen",
+    td_file = "mlir/dialects/TensorTransformOps.td",
+    deps = [
+        "//mlir:TensorTransformOpsTdFiles",
+    ],
+)
+
+gentbl_filegroup(
     name = "VectorTransformEnumPyGen",
     tbl_outs = [
         (
@@ -956,6 +975,7 @@ filegroup(
         "mlir/dialects/_loop_transform_ops_ext.py",
         "mlir/dialects/_memref_transform_ops_ext.py",
         "mlir/dialects/_structured_transform_ops_ext.py",
+        "mlir/dialects/_tensor_transform_ops_ext.py",
         "mlir/dialects/_transform_ops_ext.py",
         "mlir/dialects/_transform_pdl_extension_ops_ext.py",
         ":BufferizationTransformOpsPyGen",
@@ -964,6 +984,7 @@ filegroup(
         ":MemRefTransformOpsPyGen",
         ":PDLTransformOpsPyGen",
         ":StructuredTransformOpsPyGen",
+        ":TensorTransformOpsPyGen",
         ":TransformEnumPyGen",
         ":TransformOpsPyGen",
         ":VectorTransformEnumPyGen",

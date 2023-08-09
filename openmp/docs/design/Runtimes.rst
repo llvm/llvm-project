@@ -1175,6 +1175,7 @@ There are several environment variables to change the behavior of the plugins:
 * ``LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS``
 * ``LIBOMPTARGET_AMDGPU_NUM_HSA_QUEUES``
 * ``LIBOMPTARGET_AMDGPU_HSA_QUEUE_SIZE``
+* ``LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING``
 * ``LIBOMPTARGET_AMDGPU_TEAMS_PER_CU``
 * ``LIBOMPTARGET_AMDGPU_MAX_ASYNC_COPY_BYTES``
 * ``LIBOMPTARGET_AMDGPU_NUM_INITIAL_HSA_SIGNALS``
@@ -1230,6 +1231,17 @@ This environment variable controls the size of each HSA queue in the AMDGPU
 plugin. The size is the number of AQL packets an HSA queue is expected to hold.
 It is also the number of AQL packets that can be pushed into each queue without
 waiting the driver to process them. The default value is ``512``.
+
+LIBOMPTARGET_AMDGPU_HSA_QUEUE_BUSY_TRACKING
+"""""""""""""""""""""""""""""""""""""""""""
+
+This environment variable controls if idle HSA queues will be preferentially
+assigned to streams, for example when they are requested for a kernel launch.
+Should all queues be considered busy, a new queue is initialized and returned,
+until we reach the set maximum. Otherwise, we will select the least utilized
+queue. If this is disabled, each time a stream is requested a new HSA queue
+will be initialized, regardless of their utilization. Additionally, queues will
+be selected using round robin selection. The default value is ``true``.
 
 .. _libomptarget_amdgpu_teams_per_cu:
 
@@ -1452,34 +1464,4 @@ to selectively enable and disable different features.  Currently, the following
 debugging features are supported.
 
     * Enable debugging assertions in the device. ``0x01``
-    * Enable OpenMP runtime function traces in the device. ``0x2``
     * Enable diagnosing common problems during offloading . ``0x4``
-
-.. code-block:: c++
-
-    void copy(double *X, double *Y) {
-    #pragma omp target teams distribute parallel for
-      for (std::size_t i = 0; i < N; ++i)
-        Y[i] = X[i];
-    }
-
-Compiling this code targeting ``nvptx64`` with debugging enabled will
-provide the following output from the device runtime library.
-
-.. code-block:: console
-
-    $ clang++ -fopenmp -fopenmp-targets=nvptx64 -fopenmp-target-debug=3
-    $ env LIBOMPTARGET_DEVICE_RTL_DEBUG=3 ./zaxpy
-
-.. code-block:: text
-
-    Kernel.cpp:70: Thread 0 Entering int32_t __kmpc_target_init()
-    Parallelism.cpp:196: Thread 0 Entering int32_t __kmpc_global_thread_num()
-    Mapping.cpp:239: Thread 0 Entering uint32_t __kmpc_get_hardware_num_threads_in_block()
-    Workshare.cpp:616: Thread 0 Entering void __kmpc_distribute_static_init_4()
-    Parallelism.cpp:85: Thread 0 Entering void __kmpc_parallel_51()
-      Parallelism.cpp:69: Thread 0 Entering <OpenMP Outlined Function>
-        Workshare.cpp:575: Thread 0 Entering void __kmpc_for_static_init_4()
-        Workshare.cpp:660: Thread 0 Entering void __kmpc_distribute_static_fini()
-    Workshare.cpp:660: Thread 0 Entering void __kmpc_distribute_static_fini()
-    Kernel.cpp:103: Thread 0 Entering void __kmpc_target_deinit()

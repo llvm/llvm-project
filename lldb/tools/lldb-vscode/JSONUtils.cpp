@@ -696,9 +696,17 @@ llvm::json::Value CreateStackFrame(lldb::SBFrame &frame) {
   int64_t frame_id = MakeVSCodeFrameID(frame);
   object.try_emplace("id", frame_id);
 
-  std::string frame_name = frame.GetDisplayFunctionName();
-  if (frame_name.empty())
-    frame_name = "<unknown>";
+  // `function_name` can be a nullptr, which throws an error when assigned to an
+  // `std::string`.
+  const char *function_name = frame.GetDisplayFunctionName();
+  std::string frame_name =
+      function_name == nullptr ? std::string() : function_name;
+  if (frame_name.empty()) {
+    // If the function name is unavailable, display the pc address as a 16-digit
+    // hex string, e.g. "0x0000000000012345"
+    llvm::raw_string_ostream os(frame_name);
+    os << llvm::format_hex(frame.GetPC(), 18);
+  }
   bool is_optimized = frame.GetFunction().GetIsOptimized();
   if (is_optimized)
     frame_name += " [opt]";

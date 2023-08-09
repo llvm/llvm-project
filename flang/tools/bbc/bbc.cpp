@@ -186,9 +186,18 @@ static llvm::cl::opt<bool> enablePolymorphic(
     llvm::cl::desc("enable polymorphic type lowering (experimental)"),
     llvm::cl::init(false));
 
+static llvm::cl::opt<bool> enableNoPPCNativeVecElemOrder(
+    "fno-ppc-native-vector-element-order",
+    llvm::cl::desc("no PowerPC native vector element order."),
+    llvm::cl::init(false));
+
 static llvm::cl::opt<bool> useHLFIR("hlfir",
                                     llvm::cl::desc("Lower to high level FIR"),
                                     llvm::cl::init(false));
+
+static llvm::cl::opt<bool> enableCUDA("fcuda",
+                                      llvm::cl::desc("enable CUDA Fortran"),
+                                      llvm::cl::init(false));
 
 #define FLANG_EXCLUDE_CODEGEN
 #include "flang/Tools/CLOptions.inc"
@@ -285,6 +294,7 @@ static mlir::LogicalResult convertFortranSourceToMLIR(
   // Use default lowering options for bbc.
   Fortran::lower::LoweringOptions loweringOptions{};
   loweringOptions.setPolymorphicTypeImpl(enablePolymorphic);
+  loweringOptions.setNoPPCNativeVecElemOrder(enableNoPPCNativeVecElemOrder);
   loweringOptions.setLowerToHighLevelFIR(useHLFIR || emitHLFIR);
   auto burnside = Fortran::lower::LoweringBridge::create(
       ctx, semanticsContext, defKinds, semanticsContext.intrinsics(),
@@ -410,6 +420,11 @@ int main(int argc, char **argv) {
   if (enableOpenACC) {
     options.features.Enable(Fortran::common::LanguageFeature::OpenACC);
     options.predefinitions.emplace_back("_OPENACC", "202211");
+  }
+
+  // enable parsing of CUDA Fortran
+  if (enableCUDA) {
+    options.features.Enable(Fortran::common::LanguageFeature::CUDA);
   }
 
   Fortran::common::IntrinsicTypeDefaultKinds defaultKinds;

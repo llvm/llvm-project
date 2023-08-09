@@ -621,10 +621,10 @@ constexpr FeatureBitset ImpliedFeaturesFMA = FeatureAVX;
 constexpr FeatureBitset ImpliedFeaturesGFNI = FeatureSSE2;
 constexpr FeatureBitset ImpliedFeaturesPCLMUL = FeatureSSE2;
 constexpr FeatureBitset ImpliedFeaturesSHA = FeatureSSE2;
-constexpr FeatureBitset ImpliedFeaturesVAES = FeatureAES | FeatureAVX;
+constexpr FeatureBitset ImpliedFeaturesVAES = FeatureAES | FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesVPCLMULQDQ = FeatureAVX | FeaturePCLMUL;
 constexpr FeatureBitset ImpliedFeaturesSM3 = FeatureAVX;
-constexpr FeatureBitset ImpliedFeaturesSM4 = FeatureAVX;
+constexpr FeatureBitset ImpliedFeaturesSM4 = FeatureAVX2;
 
 // AVX512 features.
 constexpr FeatureBitset ImpliedFeaturesAVX512CD = FeatureAVX512F;
@@ -668,7 +668,7 @@ constexpr FeatureBitset ImpliedFeaturesAVXVNNIINT16 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXVNNIINT8 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXIFMA = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVXNECONVERT = FeatureAVX2;
-constexpr FeatureBitset ImpliedFeaturesSHA512 = FeatureAVX;
+constexpr FeatureBitset ImpliedFeaturesSHA512 = FeatureAVX2;
 constexpr FeatureBitset ImpliedFeaturesAVX512FP16 =
     FeatureAVX512BW | FeatureAVX512DQ | FeatureAVX512VL;
 // Key Locker Features

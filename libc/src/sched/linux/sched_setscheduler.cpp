@@ -18,8 +18,8 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, sched_setscheduler,
                    (pid_t tid, int policy, const struct sched_param *param)) {
-  long ret =
-      __llvm_libc::syscall_impl(SYS_sched_setscheduler, tid, policy, param);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_sched_setscheduler, tid, policy,
+                                           param);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

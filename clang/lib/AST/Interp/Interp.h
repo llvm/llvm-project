@@ -1786,7 +1786,7 @@ inline bool Invalid(InterpState &S, CodePtr OpPC) {
 inline bool InvalidCast(InterpState &S, CodePtr OpPC, CastKind Kind) {
   const SourceLocation &Loc = S.Current->getLocation(OpPC);
   S.FFDiag(Loc, diag::note_constexpr_invalid_cast)
-      << static_cast<uint8_t>(Kind) << S.Current->getRange(OpPC);
+      << static_cast<unsigned>(Kind) << S.Current->getRange(OpPC);
   return false;
 }
 

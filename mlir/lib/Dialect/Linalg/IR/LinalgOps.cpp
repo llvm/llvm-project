@@ -730,12 +730,34 @@ struct FoldInsertPadIntoFill : public OpRewritePattern<tensor::InsertSliceOp> {
   }
 };
 
+/// Fold tensor.extract(linalg.fill(<input>)) into <input>
+struct FoldFillWithTensorExtract : public OpRewritePattern<tensor::ExtractOp> {
+public:
+  using OpRewritePattern<tensor::ExtractOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(tensor::ExtractOp extractOp,
+                                PatternRewriter &rewriter) const override {
+    // See if tensor input of tensor.extract op is the result of a linalg.fill op.
+    auto fillOp = extractOp.getTensor().getDefiningOp<linalg::FillOp>();
+    if (!fillOp)
+      return failure();
+
+    // Get scalar input operand of linalg.fill op.
+    Value extractedScalar = fillOp.getInputs()[0];
+
+    // Replace tensor.extract op with scalar value used to fill the tensor.
+    rewriter.replaceOp(extractOp, extractedScalar);
+    return success();
+  }
+};
+
 } // namespace
 
 void FillOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                          MLIRContext *context) {
   results
-      .add<FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
+      .add<FoldFillWithTensorExtract,
+           FoldFillWithPad, FoldFillWithTensorReshape<tensor::CollapseShapeOp>,
            FoldFillWithTensorReshape<tensor::ExpandShapeOp>,
            FoldInsertPadIntoFill>(context);
 }
@@ -1852,9 +1874,9 @@ ParseResult YieldOp::parse(OpAsmParser &parser, OperationState &result) {
 static LogicalResult verifyYield(linalg::YieldOp op, LinalgOp linalgOp) {
   if (op.getNumOperands() != linalgOp.getNumDpsInits())
     return op.emitOpError("expected number of yield values (")
-           << linalgOp.getNumDpsInits()
-           << ") to match the number of operands of the enclosing "
-           << "LinalgOp (" << op.getNumOperands() << ")";
+           << op.getNumOperands()
+           << ") to match the number of inits / outs operands of the enclosing "
+           << "LinalgOp (" << linalgOp.getNumDpsInits() << ")";
 
   for (OpOperand &opOperand : op->getOpOperands()) {
     OpOperand *outputOperand =
@@ -2470,7 +2492,8 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   // Step 1: Compute max along dim.
   Value outputReduce = b.create<tensor::EmptyOp>(loc, dims, elementType);
   Value neutralForMaxF =
-      arith::getIdentityValue(arith::AtomicRMWKind::maxf, elementType, b, loc);
+      arith::getIdentityValue(arith::AtomicRMWKind::maxf, elementType, b, loc,
+                              /*useOnlyFiniteValue=*/true);
   Value neutralForMaxFInit =
       b.create<linalg::FillOp>(loc, Value{neutralForMaxF}, outputReduce)
           .result();
@@ -2481,8 +2504,8 @@ FailureOr<SmallVector<Value>> SoftmaxOp::decomposeOperation(OpBuilder &b) {
   Value numerator = buildSubAndExpOp(b, loc, input, max, output, reductionDim);
 
   // Step 3: Compute sum along dim.
-  Value zero =
-      arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType, b, loc);
+  Value zero = arith::getIdentityValue(arith::AtomicRMWKind::addf, elementType,
+                                       b, loc, /*useOnlyFiniteValue=*/true);
   Value zeroInit =
       b.create<linalg::FillOp>(loc, Value{zero}, outputReduce).result();
   Value denominator =

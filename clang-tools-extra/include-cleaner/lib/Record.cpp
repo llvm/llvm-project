@@ -12,6 +12,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/DeclGroup.h"
 #include "clang/Basic/FileEntry.h"
+#include "clang/Basic/FileManager.h"
 #include "clang/Basic/LLVM.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Basic/SourceManager.h"
@@ -24,16 +25,21 @@
 #include "clang/Tooling/Inclusions/HeaderAnalysis.h"
 #include "clang/Tooling/Inclusions/StandardLibrary.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem/UniqueID.h"
 #include "llvm/Support/StringSaver.h"
 #include <algorithm>
 #include <assert.h>
 #include <memory>
 #include <optional>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -279,20 +285,6 @@ public:
 
     auto [CommentFID, CommentOffset] = SM.getDecomposedLoc(Range.getBegin());
     int CommentLine = SM.getLineNumber(CommentFID, CommentOffset);
-    auto Filename = SM.getBufferName(Range.getBegin());
-    // Record export pragma.
-    if (Pragma->startswith("export")) {
-      ExportStack.push_back({CommentLine, CommentFID, save(Filename), false});
-    } else if (Pragma->startswith("begin_exports")) {
-      ExportStack.push_back({CommentLine, CommentFID, save(Filename), true});
-    } else if (Pragma->startswith("end_exports")) {
-      // FIXME: be robust on unmatching cases. We should only pop the stack if
-      // the begin_exports and end_exports is in the same file.
-      if (!ExportStack.empty()) {
-        assert(ExportStack.back().Block);
-        ExportStack.pop_back();
-      }
-    }
 
     if (InMainFile) {
       if (Pragma->startswith("keep")) {
@@ -307,8 +299,10 @@ public:
 
     auto FE = SM.getFileEntryRefForID(CommentFID);
     if (!FE) {
-      // FIXME: Support IWYU pragmas in virtual files. Our mappings rely on
-      // "persistent" UniqueIDs and that is not the case for virtual files.
+      // This can only happen when the buffer was registered virtually into
+      // SourceManager and FileManager has no idea about it. In such a scenario,
+      // that file cannot be discovered by HeaderSearch, therefore no "explicit"
+      // includes for that file.
       return false;
     }
     auto CommentUID = FE->getUniqueID();
@@ -326,6 +320,20 @@ public:
     if (Pragma->consume_front("always_keep")) {
       Out->ShouldKeep.insert(CommentUID);
       return false;
+    }
+    auto Filename = FE->getName();
+    // Record export pragma.
+    if (Pragma->startswith("export")) {
+      ExportStack.push_back({CommentLine, CommentFID, save(Filename), false});
+    } else if (Pragma->startswith("begin_exports")) {
+      ExportStack.push_back({CommentLine, CommentFID, save(Filename), true});
+    } else if (Pragma->startswith("end_exports")) {
+      // FIXME: be robust on unmatching cases. We should only pop the stack if
+      // the begin_exports and end_exports is in the same file.
+      if (!ExportStack.empty()) {
+        assert(ExportStack.back().Block);
+        ExportStack.pop_back();
+      }
     }
     return false;
   }

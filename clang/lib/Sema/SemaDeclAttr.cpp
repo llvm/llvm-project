@@ -23,6 +23,7 @@
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/CharInfo.h"
+#include "clang/Basic/Cuda.h"
 #include "clang/Basic/DarwinSDKInfo.h"
 #include "clang/Basic/HLSLRuntime.h"
 #include "clang/Basic/LangOptions.h"
@@ -1992,8 +1993,12 @@ static void handleAliasAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::err_alias_not_supported_on_darwin);
     return;
   }
+
   if (S.Context.getTargetInfo().getTriple().isNVPTX()) {
-    S.Diag(AL.getLoc(), diag::err_alias_not_supported_on_nvptx);
+    CudaVersion Version =
+        ToCudaVersion(S.Context.getTargetInfo().getSDKVersion());
+    if (Version != CudaVersion::UNKNOWN && Version < CudaVersion::CUDA_100)
+      S.Diag(AL.getLoc(), diag::err_alias_not_supported_on_nvptx);
   }
 
   // Aliases should be on declarations, not definitions.
@@ -5348,9 +5353,6 @@ bool Sema::CheckCallingConvAttr(const ParsedAttr &Attrs, CallingConv &CC,
     break;
   case ParsedAttr::AT_AArch64SVEPcs:
     CC = CC_AArch64SVEPCS;
-    break;
-  case ParsedAttr::AT_ArmStreaming:
-    CC = CC_C; // FIXME: placeholder until real SME support is added.
     break;
   case ParsedAttr::AT_AMDGPUKernelCall:
     CC = CC_AMDGPUKernelCall;
@@ -8726,6 +8728,28 @@ static bool MustDelayAttributeArguments(const ParsedAttr &AL) {
   return false;
 }
 
+
+static void handleArmNewZaAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
+  if (auto *FPT = dyn_cast<FunctionProtoType>(D->getFunctionType())) {
+    if (FPT->getAArch64SMEAttributes() &
+        FunctionType::SME_PStateZASharedMask) {
+      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+          << AL << "'__arm_shared_za'" << true;
+      AL.setInvalid();
+    }
+    if (FPT->getAArch64SMEAttributes() &
+        FunctionType::SME_PStateZAPreservedMask) {
+      S.Diag(AL.getLoc(), diag::err_attributes_are_not_compatible)
+          << AL << "'__arm_preserves_za'" << true;
+      AL.setInvalid();
+    }
+    if (AL.isInvalid())
+      return;
+  }
+
+  handleSimpleAttribute<ArmNewZAAttr>(S, D, AL);
+}
+
 /// ProcessDeclAttribute - Apply the specific attribute to the specified decl if
 /// the attribute applies to decls.  If the attribute is a type attribute, just
 /// silently ignore it if a GNU attribute.
@@ -9479,6 +9503,14 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
 
   case ParsedAttr::AT_ArmBuiltinAlias:
     handleArmBuiltinAliasAttr(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_ArmLocallyStreaming:
+    handleSimpleAttribute<ArmLocallyStreamingAttr>(S, D, AL);
+    break;
+
+  case ParsedAttr::AT_ArmNewZA:
+    handleArmNewZaAttr(S, D, AL);
     break;
 
   case ParsedAttr::AT_AcquireHandle:

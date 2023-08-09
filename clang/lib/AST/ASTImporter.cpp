@@ -381,7 +381,8 @@ namespace clang {
     ExpectedType VisitIncompleteArrayType(const IncompleteArrayType *T);
     ExpectedType VisitVariableArrayType(const VariableArrayType *T);
     ExpectedType VisitDependentSizedArrayType(const DependentSizedArrayType *T);
-    // FIXME: DependentSizedExtVectorType
+    ExpectedType
+    VisitDependentSizedExtVectorType(const DependentSizedExtVectorType *T);
     ExpectedType VisitVectorType(const VectorType *T);
     ExpectedType VisitExtVectorType(const ExtVectorType *T);
     ExpectedType VisitFunctionNoProtoType(const FunctionNoProtoType *T);
@@ -615,6 +616,7 @@ namespace clang {
     ExpectedStmt VisitSourceLocExpr(SourceLocExpr *E);
     ExpectedStmt VisitVAArgExpr(VAArgExpr *E);
     ExpectedStmt VisitChooseExpr(ChooseExpr *E);
+    ExpectedStmt VisitConvertVectorExpr(ConvertVectorExpr *E);
     ExpectedStmt VisitShuffleVectorExpr(ShuffleVectorExpr *E);
     ExpectedStmt VisitGNUNullExpr(GNUNullExpr *E);
     ExpectedStmt VisitGenericSelectionExpr(GenericSelectionExpr *E);
@@ -1262,6 +1264,18 @@ ExpectedType ASTNodeImporter::VisitDependentSizedArrayType(
   return Importer.getToContext().getDependentSizedArrayType(
       ToElementType, ToSizeExpr, T->getSizeModifier(),
       T->getIndexTypeCVRQualifiers(), ToBracketsRange);
+}
+
+ExpectedType ASTNodeImporter::VisitDependentSizedExtVectorType(
+    const DependentSizedExtVectorType *T) {
+  Error Err = Error::success();
+  QualType ToElementType = importChecked(Err, T->getElementType());
+  Expr *ToSizeExpr = importChecked(Err, T->getSizeExpr());
+  SourceLocation ToAttrLoc = importChecked(Err, T->getAttributeLoc());
+  if (Err)
+    return std::move(Err);
+  return Importer.getToContext().getDependentSizedExtVectorType(
+      ToElementType, ToSizeExpr, ToAttrLoc);
 }
 
 ExpectedType ASTNodeImporter::VisitVectorType(const VectorType *T) {
@@ -7036,6 +7050,21 @@ ExpectedStmt ASTNodeImporter::VisitChooseExpr(ChooseExpr *E) {
   return new (Importer.getToContext())
       ChooseExpr(ToBuiltinLoc, ToCond, ToLHS, ToRHS, ToType, VK, OK,
                  ToRParenLoc, CondIsTrue);
+}
+
+ExpectedStmt ASTNodeImporter::VisitConvertVectorExpr(ConvertVectorExpr *E) {
+  Error Err = Error::success();
+  auto *ToSrcExpr = importChecked(Err, E->getSrcExpr());
+  auto ToRParenLoc = importChecked(Err, E->getRParenLoc());
+  auto ToBuiltinLoc = importChecked(Err, E->getBuiltinLoc());
+  auto ToType = importChecked(Err, E->getType());
+  auto *ToTSI = importChecked(Err, E->getTypeSourceInfo());
+  if (Err)
+    return std::move(Err);
+
+  return new (Importer.getToContext())
+      ConvertVectorExpr(ToSrcExpr, ToTSI, ToType, E->getValueKind(),
+                        E->getObjectKind(), ToBuiltinLoc, ToRParenLoc);
 }
 
 ExpectedStmt ASTNodeImporter::VisitShuffleVectorExpr(ShuffleVectorExpr *E) {

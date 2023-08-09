@@ -128,6 +128,19 @@ static void emitThumbRegPlusImmInReg(
     const ARMBaseRegisterInfo &MRI, unsigned MIFlags = MachineInstr::NoFlags) {
   MachineFunction &MF = *MBB.getParent();
   const ARMSubtarget &ST = MF.getSubtarget<ARMSubtarget>();
+
+  // Use a single sp-relative add if the immediate is small enough.
+  if (BaseReg == ARM::SP &&
+      (DestReg.isVirtual() || isARMLowRegister(DestReg)) && NumBytes >= 0 &&
+      NumBytes <= 1020 && (NumBytes % 4) == 0) {
+    BuildMI(MBB, MBBI, dl, TII.get(ARM::tADDrSPi), DestReg)
+        .addReg(ARM::SP)
+        .addImm(NumBytes / 4)
+        .add(predOps(ARMCC::AL))
+        .setMIFlags(MIFlags);
+    return;
+  }
+
   bool isHigh = !isARMLowRegister(DestReg) ||
                 (BaseReg != 0 && !isARMLowRegister(BaseReg));
   bool isSub = false;
@@ -422,19 +435,33 @@ bool ThumbRegisterInfo::rewriteFrameIndex(MachineBasicBlock::iterator II,
       return true;
     }
 
+    // The offset doesn't fit, but we may be able to put some of the offset into
+    // the ldr to simplify the generation of the rest of it.
     NumBits = 5;
     Mask = (1 << NumBits) - 1;
-
-    // If this is a thumb spill / restore, we will be using a constpool load to
-    // materialize the offset.
-    if (Opcode == ARM::tLDRspi || Opcode == ARM::tSTRspi) {
-      ImmOp.ChangeToImmediate(0);
-    } else {
-      // Otherwise, it didn't fit. Pull in what we can to simplify the immed.
-      ImmedOffset = ImmedOffset & Mask;
-      ImmOp.ChangeToImmediate(ImmedOffset);
-      Offset &= ~(Mask * Scale);
+    InstrOffs = 0;
+    auto &ST = MF.getSubtarget<ARMSubtarget>();
+    // If using the maximum ldr offset will put the rest into the range of a
+    // single sp-relative add then do so.
+    if (FrameReg == ARM::SP && Offset - (Mask * Scale) <= 1020) {
+      InstrOffs = Mask;
+    } else if (ST.genExecuteOnly()) {
+      // With execute-only the offset is generated either with movw+movt or an
+      // add+lsl sequence. If subtracting an offset will make the top half zero
+      // then that saves a movt or lsl+add. Otherwise if we don't have movw then
+      // we may be able to subtract a value such that it makes the bottom byte
+      // zero, saving an add.
+      unsigned BottomBits = (Offset / Scale) & Mask;
+      bool CanMakeBottomByteZero = ((Offset - BottomBits * Scale) & 0xff) == 0;
+      bool TopHalfZero = (Offset & 0xffff0000) == 0;
+      bool CanMakeTopHalfZero = ((Offset - Mask * Scale) & 0xffff0000) == 0;
+      if (!TopHalfZero && CanMakeTopHalfZero)
+        InstrOffs = Mask;
+      else if (!ST.useMovt() && CanMakeBottomByteZero)
+        InstrOffs = BottomBits;
     }
+    ImmOp.ChangeToImmediate(InstrOffs);
+    Offset -= InstrOffs * Scale;
   }
 
   return Offset == 0;

@@ -543,6 +543,53 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
+  vsprintf
+  SRCS
+    vsprintf.cpp
+  HDRS
+    vsprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+)
+
+add_entrypoint_object(
+  vsnprintf
+  SRCS
+    vsnprintf.cpp
+  HDRS
+    vsnprintf.h
+  DEPENDS
+    libc.src.stdio.printf_core.printf_main
+    libc.src.stdio.printf_core.writer
+)
+
+add_entrypoint_object(
+  vprintf
+  SRCS
+    vprintf.cpp
+  HDRS
+    vprintf.h
+  DEPENDS
+    ${printf_deps}
+  COMPILE_OPTIONS
+    ${printf_copts}
+)
+
+add_entrypoint_object(
+  vfprintf
+  SRCS
+    vfprintf.cpp
+  HDRS
+    vfprintf.h
+  DEPENDS
+    libc.src.__support.arg_list
+    libc.src.stdio.printf_core.vfprintf_internal
+  COMPILE_OPTIONS
+    ${printf_copts}
+)
+
+add_entrypoint_object(
   ftell
   SRCS
     ftell.cpp

@@ -15,7 +15,7 @@
 #include <__algorithm/pstl_transform.h>
 #include <__config>
 #include <__functional/identity.h>
-#include <__iterator/iterator_traits.h>
+#include <__iterator/concepts.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/is_constant_evaluated.h>
 #include <__type_traits/is_execution_policy.h>
@@ -67,7 +67,7 @@ copy_n(_ExecutionPolicy&& __policy, _ForwardIterator __first, _Size __n, _Forwar
   return std::__pstl_frontend_dispatch(
       _LIBCPP_PSTL_CUSTOMIZATION_POINT(__pstl_copy_n),
       [&__policy](_ForwardIterator __g_first, _Size __g_n, _ForwardOutIterator __g_result) {
-        if constexpr (__has_random_access_iterator_category<_ForwardIterator>::value)
+        if constexpr (__has_random_access_iterator_category_or_concept<_ForwardIterator>::value)
           return std::copy(__policy, __g_first, __g_first + __g_n, __g_result);
         else
           return std::copy_n(__g_first, __g_n, __g_result);

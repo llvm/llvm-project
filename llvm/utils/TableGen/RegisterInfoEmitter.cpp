@@ -146,8 +146,7 @@ void RegisterInfoEmitter::runEnums(raw_ostream &OS,
       OS << "namespace " << Namespace << " {\n";
     OS << "enum {\n";
     for (const auto &RC : RegisterClasses)
-      OS << "  " << RC.getName() << "RegClassID"
-         << " = " << RC.EnumValue << ",\n";
+      OS << "  " << RC.getIdName() << " = " << RC.EnumValue << ",\n";
     OS << "\n};\n";
     if (!Namespace.empty())
       OS << "} // end namespace " << Namespace << "\n\n";
@@ -1072,8 +1071,8 @@ RegisterInfoEmitter::runMCDesc(raw_ostream &OS, CodeGenTarget &Target,
       RegSize = RC.RSI.getSimple().RegSize;
     OS << "  { " << RCName << ", " << RCBitsName << ", "
        << RegClassStrings.get(RC.getName()) << ", " << RC.getOrder().size()
-       << ", " << RCBitsSize << ", " << RC.getQualifiedName() + "RegClassID"
-       << ", " << RegSize << ", " << RC.CopyCost << ", "
+       << ", " << RCBitsSize << ", " << RC.getQualifiedIdName() << ", "
+       << RegSize << ", " << RC.CopyCost << ", "
        << (RC.Allocatable ? "true" : "false") << " },\n";
   }
 
@@ -1621,8 +1620,7 @@ RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, CodeGenTarget &Target,
         }
 
         OS << "    "
-           << (BaseRC ? BaseRC->getQualifiedName() + "RegClassID"
-                      : "InvalidRegClassID")
+           << (BaseRC ? BaseRC->getQualifiedIdName() : "InvalidRegClassID")
            << ",  // " << Reg.getName() << "\n";
       }
       OS << "  };\n\n"

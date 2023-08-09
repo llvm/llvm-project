@@ -883,7 +883,7 @@ class CommandLineCompletionTestCase(TestBase):
 
     def test_ambiguous_command(self):
         """Test completing an ambiguous commands"""
-        self.complete_from_to("settings s", ['set', 'show'])
+        self.complete_from_to("settings s", ["set", "show"])
 
     def test_ambiguous_subcommand(self):
         """Test completing a subcommand of an ambiguous command"""

@@ -937,8 +937,8 @@ CmpInst::Predicate llvm::getMinMaxReductionPredicate(RecurKind RK) {
   }
 }
 
-Value *llvm::createSelectCmpOp(IRBuilderBase &Builder, Value *StartVal,
-                               RecurKind RK, Value *Left, Value *Right) {
+Value *llvm::createAnyOfOp(IRBuilderBase &Builder, Value *StartVal,
+                           RecurKind RK, Value *Left, Value *Right) {
   if (auto VTy = dyn_cast<VectorType>(Left->getType()))
     StartVal = Builder.CreateVectorSplat(VTy->getElementCount(), StartVal);
   Value *Cmp =
@@ -1028,14 +1028,14 @@ Value *llvm::getShuffleReduction(IRBuilderBase &Builder, Value *Src,
   return Builder.CreateExtractElement(TmpVec, Builder.getInt32(0));
 }
 
-Value *llvm::createSelectCmpTargetReduction(IRBuilderBase &Builder,
-                                            const TargetTransformInfo *TTI,
-                                            Value *Src,
-                                            const RecurrenceDescriptor &Desc,
-                                            PHINode *OrigPhi) {
-  assert(RecurrenceDescriptor::isSelectCmpRecurrenceKind(
-             Desc.getRecurrenceKind()) &&
-         "Unexpected reduction kind");
+Value *llvm::createAnyOfTargetReduction(IRBuilderBase &Builder,
+                                        const TargetTransformInfo *TTI,
+                                        Value *Src,
+                                        const RecurrenceDescriptor &Desc,
+                                        PHINode *OrigPhi) {
+  assert(
+      RecurrenceDescriptor::isAnyOfRecurrenceKind(Desc.getRecurrenceKind()) &&
+      "Unexpected reduction kind");
   Value *InitVal = Desc.getRecurrenceStartValue();
   Value *NewVal = nullptr;
 
@@ -1121,8 +1121,8 @@ Value *llvm::createTargetReduction(IRBuilderBase &B,
   B.setFastMathFlags(Desc.getFastMathFlags());
 
   RecurKind RK = Desc.getRecurrenceKind();
-  if (RecurrenceDescriptor::isSelectCmpRecurrenceKind(RK))
-    return createSelectCmpTargetReduction(B, TTI, Src, Desc, OrigPhi);
+  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK))
+    return createAnyOfTargetReduction(B, TTI, Src, Desc, OrigPhi);
 
   return createSimpleTargetReduction(B, TTI, Src, RK);
 }

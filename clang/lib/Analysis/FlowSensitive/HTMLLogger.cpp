@@ -166,15 +166,14 @@ public:
     this->CFG = &CFG;
     *OS << llvm::StringRef(HTMLLogger_html).split("<?INJECT?>").first;
 
-    if (const auto *D = CFG.getDecl()) {
-      const auto &SM = A.getASTContext().getSourceManager();
-      *OS << "<title>";
-      if (const auto *ND = dyn_cast<NamedDecl>(D))
-        *OS << ND->getNameAsString() << " at ";
-      *OS << SM.getFilename(D->getLocation()) << ":"
-          << SM.getSpellingLineNumber(D->getLocation());
-      *OS << "</title>\n";
-    };
+    const auto &D = CFG.getDecl();
+    const auto &SM = A.getASTContext().getSourceManager();
+    *OS << "<title>";
+    if (const auto *ND = dyn_cast<NamedDecl>(&D))
+      *OS << ND->getNameAsString() << " at ";
+    *OS << SM.getFilename(D.getLocation()) << ":"
+        << SM.getSpellingLineNumber(D.getLocation());
+    *OS << "</title>\n";
 
     *OS << "<style>" << HTMLLogger_css << "</style>\n";
     *OS << "<script>" << HTMLLogger_js << "</script>\n";
@@ -307,9 +306,7 @@ private:
   // tokens are associated with, and even which BB element (so that clicking
   // can select the right element).
   void writeCode() {
-    if (!CFG->getDecl())
-      return;
-    const auto &AST = CFG->getDecl()->getASTContext();
+    const auto &AST = CFG->getDecl().getASTContext();
     bool Invalid = false;
 
     // Extract the source code from the original file.
@@ -317,7 +314,7 @@ private:
     // indentation to worry about), but we need the boundaries of particular
     // AST nodes and the printer doesn't provide this.
     auto Range = clang::Lexer::makeFileCharRange(
-        CharSourceRange::getTokenRange(CFG->getDecl()->getSourceRange()),
+        CharSourceRange::getTokenRange(CFG->getDecl().getSourceRange()),
         AST.getSourceManager(), AST.getLangOpts());
     if (Range.isInvalid())
       return;

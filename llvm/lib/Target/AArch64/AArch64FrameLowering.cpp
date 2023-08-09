@@ -1908,6 +1908,7 @@ static void InsertReturnAddressAuth(MachineFunction &MF, MachineBasicBlock &MBB,
     return;
   const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
   const TargetInstrInfo *TII = Subtarget.getInstrInfo();
+  bool EmitAsyncCFI = MFI.needsAsyncDwarfUnwindInfo(MF);
 
   MachineBasicBlock::iterator MBBI = MBB.getFirstTerminator();
   DebugLoc DL;
@@ -1933,11 +1934,13 @@ static void InsertReturnAddressAuth(MachineFunction &MF, MachineBasicBlock &MBB,
         TII->get(MFI.shouldSignWithBKey() ? AArch64::AUTIBSP : AArch64::AUTIASP))
         .setMIFlag(MachineInstr::FrameDestroy);
 
-    unsigned CFIIndex =
-        MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-    BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-        .addCFIIndex(CFIIndex)
-        .setMIFlags(MachineInstr::FrameDestroy);
+    if (EmitAsyncCFI) {
+      unsigned CFIIndex =
+          MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
+      BuildMI(MBB, MBBI, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
+          .addCFIIndex(CFIIndex)
+          .setMIFlags(MachineInstr::FrameDestroy);
+    }
     if (NeedsWinCFI) {
       *HasWinCFI = true;
       BuildMI(MBB, MBBI, DL, TII->get(AArch64::SEH_PACSignLR))

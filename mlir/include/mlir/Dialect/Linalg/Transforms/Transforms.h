@@ -1423,9 +1423,6 @@ void populateConvertConv2DToImg2ColPatterns(RewritePatternSet &patterns);
 void populatePadOpVectorizationPatterns(RewritePatternSet &patterns,
                                         PatternBenefit baseBenefit = 1);
 
-void populateExtractOpVectorizationPatterns(RewritePatternSet &patterns,
-                                            PatternBenefit baseBenefit = 1);
-
 /// Populate patterns for splitting a `LinalgOp` with multiple statements within
 /// its payload into multiple `GenericOp` that have a single statement.
 /// The option `removeDeadArgsAndResults` adds patterns to remove dead arguments

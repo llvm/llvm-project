@@ -243,7 +243,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FCEIL, G_FABS, G_FSQRT, G_FFLOOR, G_FRINT,
+  getActionDefinitionsBuilder({G_FCEIL, G_FSQRT, G_FFLOOR, G_FRINT,
                                G_FMA, G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
                                G_FNEARBYINT, G_INTRINSIC_LRINT})
       // If we don't have full FP16 support, then scalarize the elements of
@@ -529,6 +529,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder(G_SEXT_INREG)
       .legalFor({s32, s64})
       .legalFor(PackedVectorAllTypeList)
+      .maxScalar(0, s64)
       .lower();
 
   // FP conversions
@@ -763,8 +764,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
         // to be the same size as the dest.
         if (DstTy != SrcTy)
           return false;
-        return llvm::is_contained({v2s32, v4s32, v2s64, v2p0, v16s8, v8s16},
-                                  DstTy);
+        return llvm::is_contained(
+            {v2s64, v2p0, v2s32, v4s32, v4s16, v16s8, v8s8, v8s16}, DstTy);
       })
       // G_SHUFFLE_VECTOR can have scalar sources (from 1 x s vectors), we
       // just want those lowered into G_BUILD_VECTOR
@@ -919,7 +920,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   // TODO: Vector types.
   getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
 
-  getActionDefinitionsBuilder({G_FMAXNUM, G_FMINNUM})
+  getActionDefinitionsBuilder(
+      {G_FABS, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM, G_FMINIMUM})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
       .legalIf([=](const LegalityQuery &Query) {
         const auto &Ty = Query.Types[0];
@@ -931,17 +933,6 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .clampNumElements(0, v2s32, v4s32)
       .clampNumElements(0, v2s64, v2s64)
       .moreElementsToNextPow2(0);
-
-  getActionDefinitionsBuilder({G_FMAXIMUM, G_FMINIMUM})
-      .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
-      .legalIf([=](const LegalityQuery &Query) {
-        const auto &Ty = Query.Types[0];
-        return (Ty == v8s16 || Ty == v4s16) && HasFP16;
-      })
-      .minScalar(0, MinFPScalar)
-      .clampNumElements(0, v4s16, v8s16)
-      .clampNumElements(0, v2s32, v4s32)
-      .clampNumElements(0, v2s64, v2s64);
 
   // TODO: Libcall support for s128.
   // TODO: s16 should be legal with full FP16 support.

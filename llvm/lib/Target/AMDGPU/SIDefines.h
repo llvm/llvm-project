@@ -161,6 +161,9 @@ enum : uint64_t {
 
   // Is never uniform.
   IsNeverUniform = UINT64_C(1) << 61,
+
+  // ds_gws_* instructions.
+  GWS = UINT64_C(1) << 62,
 };
 
 // v_cmp_class_* etc. use a 10-bit mask for what operation is checked.

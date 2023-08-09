@@ -2035,6 +2035,10 @@ def err_different_return_type_for_overriding_virtual_function : Error<
   "than the function it overrides}1,2">;
 def note_overridden_virtual_function : Note<
   "overridden virtual function is here">;
+def err_conflicting_overriding_attributes : Error<
+  "virtual function %0 has different attributes "
+  "%diff{($) than the function it overrides (which has $)|"
+  "than the function it overrides}1,2">;
 def err_conflicting_overriding_cc_attributes : Error<
   "virtual function %0 has different calling convention attributes "
   "%diff{($) than the function it overrides (which has calling convention $)|"
@@ -3621,6 +3625,16 @@ def err_attribute_vecreturn_only_vector_member : Error<
   "the vecreturn attribute can only be used on a class or structure with one member, which must be a vector">;
 def err_attribute_vecreturn_only_pod_record : Error<
   "the vecreturn attribute can only be used on a POD (plain old data) class or structure (i.e. no virtual functions)">;
+def err_sme_attr_mismatch : Error<
+  "function declared %0 was previously declared %1, which has different SME function attributes">;
+def err_sme_call_in_non_sme_target : Error<
+  "call to a streaming function requires 'sme'">;
+def err_sme_za_call_no_za_state : Error<
+  "call to a shared ZA function requires the caller to have ZA state">;
+def err_sme_definition_using_sm_in_non_sme_target : Error<
+  "function executed in streaming-SVE mode requires 'sme'">;
+def err_sme_definition_using_za_in_non_sme_target : Error<
+  "function using ZA state requires 'sme'">;
 def err_cconv_change : Error<
   "function declared '%0' here was previously declared "
   "%select{'%2'|without calling convention}1">;
@@ -6611,6 +6625,16 @@ def warn_atomic_member_access : Warning<
   InGroup<DiagGroup<"atomic-access">>, DefaultError;
 
 // Expressions.
+def err_using_placeholder_variable : Error<
+  "ambiguous reference to placeholder '_', which is defined multiple times">;
+def note_reference_placeholder : Note<
+  "placeholder declared here">;
+def ext_placeholder_var_definition : ExtWarn<
+  "placeholder variables are a C++2c extension">, InGroup<CXX26>;
+def warn_cxx23_placeholder_var_definition : Warning<
+  "placeholder variables are incompatible with C++ standards before C++2c">,
+  DefaultIgnore, InGroup<CXXPre26Compat>;
+
 def ext_sizeof_alignof_function_type : Extension<
   "invalid application of '%0' to a function type">, InGroup<PointerArith>;
 def ext_sizeof_alignof_void_type : Extension<
@@ -8648,8 +8672,8 @@ def warn_kern_is_inline : Warning<
 def err_variadic_device_fn : Error<
   "CUDA device code does not support variadic functions">;
 def err_va_arg_in_device : Error<
-  "CUDA device code does not support va_arg">;
-def err_alias_not_supported_on_nvptx : Error<"CUDA does not support aliases">;
+"CUDA device code does not support va_arg">;
+def err_alias_not_supported_on_nvptx : Error<"CUDA older than 10.0 does not support .alias">;
 def err_cuda_unattributed_constexpr_cannot_overload_device : Error<
   "constexpr function %0 without __host__ or __device__ attributes cannot "
   "overload __device__ function with same signature.  Add a __host__ "
@@ -11853,10 +11877,6 @@ def err_non_designated_init_used : Error<
 def err_cast_from_randomized_struct : Error<
   "casting from randomized structure pointer type %0 to %1">;
 
-// LoongArch-specific Diagnostics
-def err_loongarch_builtin_requires_la64 : Error<
-  "this builtin requires target: loongarch64">;
-
 // Unsafe buffer usage diagnostics.
 def warn_unsafe_buffer_variable : Warning<
   "%0 is an %select{unsafe pointer used for buffer access|unsafe buffer that "
@@ -11877,9 +11897,6 @@ def note_safe_buffer_usage_suggestions_disabled : Note<
 // -fsafe-buffer-usage-suggestions (i.e. lack of -Wunsafe-buffer-usage fixits).
 def note_safe_buffer_debug_mode : Note<"safe buffers debug: %0">;
 #endif
-
-def err_loongarch_builtin_requires_la32 : Error<
-  "this builtin requires target: loongarch32">;
 
 def err_builtin_pass_in_regs_non_class : Error<
   "argument %0 is not an unqualified class type">;

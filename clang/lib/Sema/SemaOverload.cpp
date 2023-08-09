@@ -1687,6 +1687,26 @@ bool Sema::IsFunctionConversion(QualType FromType, QualType ToType,
     Changed = true;
   }
 
+  // Drop the 'arm_preserves_za' if not present in the target type (we can do
+  // that because it is merely a hint).
+  if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
+    FunctionProtoType::ExtProtoInfo ExtInfo = FromFPT->getExtProtoInfo();
+    if (ExtInfo.AArch64SMEAttributes &
+        FunctionType::SME_PStateZAPreservedMask) {
+      unsigned ToFlags = 0;
+      if (const auto *ToFPT = dyn_cast<FunctionProtoType>(ToFn))
+        ToFlags = ToFPT->getExtProtoInfo().AArch64SMEAttributes;
+      if (!(ToFlags & FunctionType::SME_PStateZAPreservedMask)) {
+        ExtInfo.setArmSMEAttribute(FunctionType::SME_PStateZAPreservedMask,
+                                   false);
+        QualType QT = Context.getFunctionType(
+            FromFPT->getReturnType(), FromFPT->getParamTypes(), ExtInfo);
+        FromFn = QT->getAs<FunctionType>();
+        Changed = true;
+      }
+    }
+  }
+
   // Drop 'noexcept' if not present in target type.
   if (const auto *FromFPT = dyn_cast<FunctionProtoType>(FromFn)) {
     const auto *ToFPT = cast<FunctionProtoType>(ToFn);
@@ -9850,7 +9870,7 @@ getImplicitObjectParamType(ASTContext &Context, const FunctionDecl *F) {
 }
 
 static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
-                                   const FunctionDecl *F2, unsigned NumParams) {
+                                   const FunctionDecl *F2) {
   if (declaresSameEntity(F1, F2))
     return true;
 
@@ -9863,8 +9883,14 @@ static bool haveSameParameterTypes(ASTContext &Context, const FunctionDecl *F1,
     return F->getParamDecl(I++)->getType();
   };
 
+  unsigned F1NumParams = F1->getNumParams() + isa<CXXMethodDecl>(F1);
+  unsigned F2NumParams = F2->getNumParams() + isa<CXXMethodDecl>(F2);
+
+  if (F1NumParams != F2NumParams)
+    return false;
+
   unsigned I1 = 0, I2 = 0;
-  for (unsigned I = 0; I != NumParams; ++I) {
+  for (unsigned I = 0; I != F1NumParams; ++I) {
     QualType T1 = NextParam(F1, I1, I == 0);
     QualType T2 = NextParam(F2, I2, I == 0);
     assert(!T1.isNull() && !T2.isNull() && "Unexpected null param types");
@@ -10032,8 +10058,7 @@ bool clang::isBetterOverloadCandidate(
     case ImplicitConversionSequence::Worse:
       if (Cand1.Function && Cand2.Function &&
           Cand1.isReversed() != Cand2.isReversed() &&
-          haveSameParameterTypes(S.Context, Cand1.Function, Cand2.Function,
-                                 NumArgs)) {
+          haveSameParameterTypes(S.Context, Cand1.Function, Cand2.Function)) {
         // Work around large-scale breakage caused by considering reversed
         // forms of operator== in C++20:
         //
@@ -12745,6 +12770,13 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
   DeclAccessPair DAP;
   SmallVector<FunctionDecl *, 2> AmbiguousDecls;
 
+  // Return positive for better, negative for worse, 0 for equal preference.
+  auto CheckCUDAPreference = [&](FunctionDecl *FD1, FunctionDecl *FD2) {
+    FunctionDecl *Caller = getCurFunctionDecl(/*AllowLambda=*/true);
+    return static_cast<int>(IdentifyCUDAPreference(Caller, FD1)) -
+           static_cast<int>(IdentifyCUDAPreference(Caller, FD2));
+  };
+
   auto CheckMoreConstrained = [&](FunctionDecl *FD1,
                                   FunctionDecl *FD2) -> std::optional<bool> {
     if (FunctionDecl *MF = FD1->getInstantiatedFromMemberFunction())
@@ -12775,9 +12807,31 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
     if (!checkAddressOfFunctionIsAvailable(FD))
       continue;
 
+    // If we found a better result, update Result.
+    auto FoundBetter = [&]() {
+      IsResultAmbiguous = false;
+      DAP = I.getPair();
+      Result = FD;
+    };
+
     // We have more than one result - see if it is more constrained than the
     // previous one.
     if (Result) {
+      // Check CUDA preference first. If the candidates have differennt CUDA
+      // preference, choose the one with higher CUDA preference. Otherwise,
+      // choose the one with more constraints.
+      if (getLangOpts().CUDA) {
+        int PreferenceByCUDA = CheckCUDAPreference(FD, Result);
+        // FD has different preference than Result.
+        if (PreferenceByCUDA != 0) {
+          // FD is more preferable than Result.
+          if (PreferenceByCUDA > 0)
+            FoundBetter();
+          continue;
+        }
+      }
+      // FD has the same CUDA prefernece than Result. Continue check
+      // constraints.
       std::optional<bool> MoreConstrainedThanPrevious =
           CheckMoreConstrained(FD, Result);
       if (!MoreConstrainedThanPrevious) {
@@ -12789,9 +12843,7 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
         continue;
       // FD is more constrained - replace Result with it.
     }
-    IsResultAmbiguous = false;
-    DAP = I.getPair();
-    Result = FD;
+    FoundBetter();
   }
 
   if (IsResultAmbiguous)
@@ -12801,9 +12853,15 @@ Sema::resolveAddressOfSingleOverloadCandidate(Expr *E, DeclAccessPair &Pair) {
     SmallVector<const Expr *, 1> ResultAC;
     // We skipped over some ambiguous declarations which might be ambiguous with
     // the selected result.
-    for (FunctionDecl *Skipped : AmbiguousDecls)
+    for (FunctionDecl *Skipped : AmbiguousDecls) {
+      // If skipped candidate has different CUDA preference than the result,
+      // there is no ambiguity. Otherwise check whether they have different
+      // constraints.
+      if (getLangOpts().CUDA && CheckCUDAPreference(Skipped, Result) != 0)
+        continue;
       if (!CheckMoreConstrained(Skipped, Result))
         return nullptr;
+    }
     Pair = DAP;
   }
   return Result;
@@ -13997,6 +14055,10 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
         std::swap(Args[0], Args[1]);
 
       if (FnDecl) {
+
+        if (FnDecl->isInvalidDecl())
+          return ExprError();
+
         Expr *Base = nullptr;
         // We matched an overloaded operator. Build a call to that
         // operator.
@@ -14029,7 +14091,7 @@ ExprResult Sema::CreateOverloadedBinOp(SourceLocation OpLoc,
           llvm::SmallVector<FunctionDecl*, 4> AmbiguousWith;
           for (OverloadCandidate &Cand : CandidateSet) {
             if (Cand.Viable && Cand.Function && Cand.isReversed() &&
-                haveSameParameterTypes(Context, Cand.Function, FnDecl, 2)) {
+                haveSameParameterTypes(Context, Cand.Function, FnDecl)) {
               for (unsigned ArgIdx = 0; ArgIdx < 2; ++ArgIdx) {
                 if (CompareImplicitConversionSequences(
                         *this, OpLoc, Cand.Conversions[ArgIdx],

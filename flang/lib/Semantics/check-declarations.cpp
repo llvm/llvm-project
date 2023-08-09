@@ -1726,12 +1726,25 @@ void CheckHelper::CheckSpecifics(
       continue;
     }
     if (specific.attrs().test(Attr::INTRINSIC)) {
-      if (auto *msg{messages_.Say(specific.name(),
-              "Specific procedure '%s' of generic interface '%s' may not be INTRINSIC"_err_en_US,
-              specific.name(), generic.name())}) {
-        msg->Attach(generic.name(), "Definition of '%s'"_en_US, generic.name());
+      // GNU Fortran allows INTRINSIC procedures in generics.
+      auto intrinsic{context_.intrinsics().IsSpecificIntrinsicFunction(
+          specific.name().ToString())};
+      if (intrinsic && !intrinsic->isRestrictedSpecific) {
+        if (auto *msg{messages_.Say(specific.name(),
+                "Specific procedure '%s' of generic interface '%s' should not be INTRINSIC"_port_en_US,
+                specific.name(), generic.name())}) {
+          msg->Attach(
+              generic.name(), "Definition of '%s'"_en_US, generic.name());
+        }
+      } else {
+        if (auto *msg{messages_.Say(specific.name(),
+                "Procedure '%s' of generic interface '%s' is INTRINSIC but not an unrestricted specific intrinsic function"_port_en_US,
+                specific.name(), generic.name())}) {
+          msg->Attach(
+              generic.name(), "Definition of '%s'"_en_US, generic.name());
+        }
+        continue;
       }
-      continue;
     }
     if (IsStmtFunction(specific)) {
       if (auto *msg{messages_.Say(specific.name(),
@@ -2706,6 +2719,11 @@ void CheckHelper::CheckBindC(const Symbol &symbol) {
     if (IsOptional(symbol) && !symbol.attrs().test(Attr::VALUE)) {
       WarnIfNotInModuleFile(symbol.name(),
           "An interoperable procedure with an OPTIONAL dummy argument might not be portable"_port_en_US);
+    }
+    if (IsDescriptor(symbol) && IsPointer(symbol) &&
+        symbol.attrs().test(Attr::CONTIGUOUS)) {
+      messages_.Say(symbol.name(),
+          "An interoperable pointer must not be CONTIGUOUS"_err_en_US);
     }
   } else if (const auto *proc{symbol.detailsIf<ProcEntityDetails>()}) {
     if (!proc->procInterface() ||

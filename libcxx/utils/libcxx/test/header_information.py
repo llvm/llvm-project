@@ -45,7 +45,7 @@ lit_header_restrictions = {
     "locale.h": "// UNSUPPORTED: no-localization",
     "mutex": "// UNSUPPORTED: no-threads, c++03",
     "ostream": "// UNSUPPORTED: no-localization",
-    "print": "// UNSUPPORTED: availability-fp_to_chars-missing", # TODO PRINT investigate
+    "print": "// UNSUPPORTED: no-filesystem, c++03, c++11, c++14, c++17, c++20, availability-fp_to_chars-missing", # TODO PRINT investigate
     "regex": "// UNSUPPORTED: no-localization",
     "semaphore": "// UNSUPPORTED: no-threads, c++03, c++11, c++14, c++17",
     "shared_mutex": "// UNSUPPORTED: no-threads, c++03, c++11",
@@ -58,30 +58,6 @@ lit_header_restrictions = {
     "wchar.h": "// UNSUPPORTED: no-wide-characters",
     "wctype.h": "// UNSUPPORTED: no-wide-characters",
 }
-
-private_headers_still_public_in_modules = [
-    "__assert",
-    "__config",
-    "__config_site.in",
-    "__hash_table",
-    "__threading_support",
-    "__tree",
-    "__undef_macros",
-    "__verbose_abort",
-]
-
-# Headers that can't be included on their own. Most of these are conceptually
-# part of another header that were split out just for organization, but aren't
-# meant to be included by anything else.
-non_standalone_headers = frozenset((
-    # Alternate implementations for __algorithm/pstl_backends/cpu_backends/backend.h
-    "__algorithm/pstl_backends/cpu_backends/serial.h",
-    "__algorithm/pstl_backends/cpu_backends/thread.h",
-
-    # Alternate implementations for locale.
-    "__locale_dir/locale_base_api/bsd_locale_defaults.h",
-    "__locale_dir/locale_base_api/bsd_locale_fallbacks.h",
-))
 
 # This table was produced manually, by grepping the TeX source of the Standard's
 # library clauses for the string "#include". Each header's synopsis contains
@@ -148,9 +124,3 @@ experimental_headers = sorted(
     p.relative_to(include).as_posix() for p in include.glob("experimental/[a-z]*") if is_header(p)
 )
 public_headers = toplevel_headers + experimental_headers
-private_headers = sorted(
-    p.relative_to(include).as_posix() for p in include.rglob("*") if is_header(p)
-                                                                     and str(p.relative_to(include)).startswith("__")
-                                                                     and not p.name.startswith("pstl")
-                                                                     and str(p.relative_to(include)) not in non_standalone_headers
-)

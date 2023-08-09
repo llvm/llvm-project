@@ -50,9 +50,7 @@ using namespace symbolize;
 namespace {
 enum ID {
   OPT_INVALID = 0, // This is not an option ID.
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  OPT_##ID,
+#define OPTION(...) LLVM_MAKE_OPT_ID(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -65,13 +63,7 @@ enum ID {
 #undef PREFIX
 
 static constexpr opt::OptTable::Info InfoTable[] = {
-#define OPTION(PREFIX, NAME, ID, KIND, GROUP, ALIAS, ALIASARGS, FLAGS, PARAM,  \
-               HELPTEXT, METAVAR, VALUES)                                      \
-  {                                                                            \
-      PREFIX,      NAME,      HELPTEXT,                                        \
-      METAVAR,     OPT_##ID,  opt::Option::KIND##Class,                        \
-      PARAM,       FLAGS,     OPT_##GROUP,                                     \
-      OPT_##ALIAS, ALIASARGS, VALUES},
+#define OPTION(...) LLVM_CONSTRUCT_OPT_INFO(__VA_ARGS__),
 #include "Opts.inc"
 #undef OPTION
 };
@@ -135,11 +127,32 @@ static void enableDebuginfod(LLVMSymbolizer &Symbolizer,
   HTTPClient::initialize();
 }
 
+static StringRef getSpaceDelimitedWord(StringRef &Source) {
+  const char kDelimiters[] = " \n\r";
+  const char *Pos = Source.data();
+  StringRef Result;
+  Pos += strspn(Pos, kDelimiters);
+  if (*Pos == '"' || *Pos == '\'') {
+    char Quote = *Pos;
+    Pos++;
+    const char *End = strchr(Pos, Quote);
+    if (!End)
+      return StringRef();
+    Result = StringRef(Pos, End - Pos);
+    Pos = End + 1;
+  } else {
+    int NameLength = strcspn(Pos, kDelimiters);
+    Result = StringRef(Pos, NameLength);
+    Pos += NameLength;
+  }
+  Source = StringRef(Pos, Source.end() - Pos);
+  return Result;
+}
+
 static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
                          StringRef InputString, Command &Cmd,
                          std::string &ModuleName, object::BuildID &BuildID,
                          uint64_t &ModuleOffset) {
-  const char kDelimiters[] = " \n\r";
   ModuleName = "";
   if (InputString.consume_front("CODE ")) {
     Cmd = Command::Code;
@@ -152,7 +165,6 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
     Cmd = Command::Code;
   }
 
-  const char *Pos;
   // Skip delimiters and parse input filename (if needed).
   if (BinaryName.empty() && BuildID.empty()) {
     bool HasFilePrefix = false;
@@ -175,21 +187,9 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
     if (HasFilePrefix && HasBuildIDPrefix)
       return false;
 
-    Pos = InputString.data();
-    Pos += strspn(Pos, kDelimiters);
-    if (*Pos == '"' || *Pos == '\'') {
-      char Quote = *Pos;
-      Pos++;
-      const char *End = strchr(Pos, Quote);
-      if (!End)
-        return false;
-      ModuleName = std::string(Pos, End - Pos);
-      Pos = End + 1;
-    } else {
-      int NameLength = strcspn(Pos, kDelimiters);
-      ModuleName = std::string(Pos, NameLength);
-      Pos += NameLength;
-    }
+    ModuleName = getSpaceDelimitedWord(InputString);
+    if (ModuleName.empty())
+      return false;
     if (HasBuildIDPrefix) {
       BuildID = parseBuildID(ModuleName);
       if (BuildID.empty())
@@ -197,13 +197,13 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
       ModuleName.clear();
     }
   } else {
-    Pos = InputString.data();
     ModuleName = BinaryName.str();
   }
+
   // Skip delimiters and parse module offset.
-  Pos += strspn(Pos, kDelimiters);
-  int OffsetLength = strcspn(Pos, kDelimiters);
-  StringRef Offset(Pos, OffsetLength);
+  InputString = InputString.ltrim();
+  int OffsetLength = InputString.find_first_of(" \n\r");
+  StringRef Offset = InputString.substr(0, OffsetLength);
   // GNU addr2line assumes the offset is hexadecimal and allows a redundant
   // "0x" or "0X" prefix; do the same for compatibility.
   if (IsAddr2Line)

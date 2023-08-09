@@ -471,6 +471,26 @@ def LLVM_DISubprogramAttr : LLVM_Attr<"DISubprogram", "di_subprogram",
 }
 
 //===----------------------------------------------------------------------===//
+// DIModuleAttr
+//===----------------------------------------------------------------------===//
+
+def LLVM_DIModuleAttr : LLVM_Attr<"DIModule", "di_module",
+                                      /*traits=*/[], "DIScopeAttr"> {
+  let parameters = (ins
+    OptionalParameter<"DIFileAttr">:$file,
+    OptionalParameter<"DIScopeAttr">:$scope,
+    OptionalParameter<"StringAttr">:$name,
+    OptionalParameter<"StringAttr">:$configMacros,
+    OptionalParameter<"StringAttr">:$includePath,
+    OptionalParameter<"StringAttr">:$apinotes,
+    OptionalParameter<"unsigned">:$line,
+    OptionalParameter<"bool">:$isDecl
+  );
+
+  let assemblyFormat = "`<` struct(params) `>`";
+}
+
+//===----------------------------------------------------------------------===//
 // DINamespaceAttr
 //===----------------------------------------------------------------------===//
 

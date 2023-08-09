@@ -85,6 +85,11 @@ multiclass RVVOutOp1Op2BuiltinSet<string intrinsic_name, string type_range,
                                   list<list<string>> suffixes_prototypes>
     : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 1, 2]>;
 
+// IntrinsicTypes is output, op2 [-1, 2]
+multiclass RVVOutOp2BuiltinSet<string intrinsic_name, string type_range,
+                               list<list<string>> suffixes_prototypes>
+    : RVVBuiltinSet<intrinsic_name, type_range, suffixes_prototypes, [-1, 2]>;
+
 multiclass RVVSignedBinBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "csil",
                           [["vv", "v", "vvv"],
@@ -108,6 +113,14 @@ multiclass RVVUnsignedBinBuiltinSetRoundingMode
 multiclass RVVIntBinBuiltinSet
     : RVVSignedBinBuiltinSet,
       RVVUnsignedBinBuiltinSet;
+
+multiclass RVVInt64BinBuiltinSet
+    : RVVOutOp1BuiltinSet<NAME, "l",
+                          [["vv", "v", "vvv"],
+                           ["vx", "v", "vve"]]>,
+      RVVOutOp1BuiltinSet<NAME, "l",
+                          [["vv", "Uv", "UvUvUv"],
+                           ["vx", "Uv", "UvUvUe"]]>;
 
 multiclass RVVSlideOneBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "csil",
@@ -2817,4 +2830,95 @@ let HasMasked = false, HasVL = false, IRName = "" in {
       def : RVVBuiltin<"Uv" # T # "Uv", T # "Uv" # T # "UvKzUv", "csil">;
     }
   }
+}
+
+multiclass RVVOutBuiltinSetZvbb {
+  let OverloadedName = NAME in
+    defm "" : RVVOutBuiltinSet<NAME, "csil", [["v", "v", "vv"],
+                                              ["v", "Uv", "UvUv"]]>;
+}
+
+multiclass RVVOutBuiltinSetZvk<bit HasVV = 1, bit HasVS = 1> {
+  // vaesz only has 'vs' and vgmul only has 'vv' and they do not have ambiguous
+  // prototypes like other zvkned instructions (e.g. vaesdf), so we don't
+  // need to encode the operand mnemonics into its intrinsic function name.
+  if HasVV then {
+    defvar name = NAME # !if(!eq(NAME, "vgmul"), "", "_vv");
+    let OverloadedName = name in
+      defm "" : RVVOutBuiltinSet<NAME # "_vv", "i",
+                                 [["vv", "Uv", "UvUvUv"]]>;
+  }
+
+  if HasVS then {
+    foreach vs2_lmul = ["(SEFixedLog2LMUL:-1)", "(SEFixedLog2LMUL:0)",
+                        "(SEFixedLog2LMUL:1)", "(SEFixedLog2LMUL:2)",
+                        "(SEFixedLog2LMUL:3)"] in {
+    defvar name = NAME # !if(!eq(NAME, "vaesz"), "", "_vs");
+    let OverloadedName = name, IRName = NAME # "_vs", Name = NAME # "_vs",
+        IntrinsicTypes = [-1, 1] in
+      def NAME # vs2_lmul
+          : RVVBuiltin<vs2_lmul # "UvUv", "UvUv" # vs2_lmul # "Uv", "i">;
+    }
+  }
+}
+
+multiclass RVVOutOp2BuiltinSetVVZvk<string type_range = "i">
+    : RVVOutOp2BuiltinSet<NAME, type_range, [["vv", "Uv", "UvUvUvUv"]]>;
+
+multiclass RVVOutOp2BuiltinSetVIZvk<string type_range = "i">
+    : RVVOutOp2BuiltinSet<NAME, type_range, [["vi", "Uv", "UvUvUvKz"]]>;
+
+multiclass RVVSignedWidenBinBuiltinSetVwsll
+    : RVVWidenBuiltinSet<NAME, "csi",
+                         [["vv", "Uw", "UwUvUv"],
+                          ["vx", "Uw", "UwUvz"]]>;
+
+let UnMaskedPolicyScheme = HasPassthruOperand in {
+  // zvbb
+  defm vandn   : RVVUnsignedBinBuiltinSet;
+  defm vbrev   : RVVOutBuiltinSetZvbb;
+  defm vbrev8  : RVVOutBuiltinSetZvbb;
+  defm vrev8   : RVVOutBuiltinSetZvbb;
+  defm vclz    : RVVOutBuiltinSetZvbb;
+  defm vctz    : RVVOutBuiltinSetZvbb;
+  defm vcpopv  : RVVOutBuiltinSetZvbb;
+  defm vrol    : RVVUnsignedShiftBuiltinSet;
+  defm vror    : RVVUnsignedShiftBuiltinSet;
+  let OverloadedName = "vwsll" in
+  defm vwsll   : RVVSignedWidenBinBuiltinSetVwsll;
+
+  // zvbc
+  defm vclmul  : RVVInt64BinBuiltinSet;
+  defm vclmulh : RVVInt64BinBuiltinSet;
+}
+
+let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
+  // zvkg
+  defm vghsh   : RVVOutOp2BuiltinSetVVZvk;
+  defm vgmul   : RVVOutBuiltinSetZvk</*HasVV*/1, /*HasVS*/0>;
+
+  // zvkned
+  defm vaesdf  : RVVOutBuiltinSetZvk;
+  defm vaesdm  : RVVOutBuiltinSetZvk;
+  defm vaesef  : RVVOutBuiltinSetZvk;
+  defm vaesem  : RVVOutBuiltinSetZvk;
+  let UnMaskedPolicyScheme = HasPassthruOperand in
+  defm vaeskf1 : RVVOutOp1BuiltinSet<"vaeskf1", "i", [["vi", "Uv", "UvUvKz"]]>;
+  defm vaeskf2 : RVVOutOp2BuiltinSetVIZvk;
+  defm vaesz   : RVVOutBuiltinSetZvk</*HasVV*/0>;
+
+  // zvknha or zvknhb
+  defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"il">;
+  defm vsha2cl : RVVOutOp2BuiltinSetVVZvk<"il">;
+  defm vsha2ms : RVVOutOp2BuiltinSetVVZvk<"il">;
+
+  // zvksed
+  let UnMaskedPolicyScheme = HasPassthruOperand in
+  defm vsm4k   : RVVOutOp1BuiltinSet<"vsm4k", "i", [["vi", "Uv", "UvUvKz"]]>;
+  defm vsm4r   : RVVOutBuiltinSetZvk;
+
+  // zvksh
+  defm vsm3c   : RVVOutOp2BuiltinSetVIZvk;
+  let UnMaskedPolicyScheme = HasPassthruOperand in
+  defm vsm3me  : RVVOutOp1BuiltinSet<"vsm3me", "i", [["vv", "Uv", "UvUvUv"]]>;
 }

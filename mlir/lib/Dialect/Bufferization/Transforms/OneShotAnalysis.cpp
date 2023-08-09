@@ -183,7 +183,8 @@ void OneShotAnalysisState::createAliasInfoEntry(Value v) {
 // the IR.
 void OneShotAnalysisState::gatherYieldedTensors(Operation *op) {
   op->walk([&](Operation *returnOp) {
-    if (!isRegionReturnLike(returnOp) || !getOptions().isOpAllowed(returnOp))
+    if (!isa<RegionBranchTerminatorOpInterface>(returnOp) ||
+        !getOptions().isOpAllowed(returnOp))
       return WalkResult::advance();
 
     for (OpOperand &returnValOperand : returnOp->getOpOperands()) {
@@ -539,6 +540,22 @@ hasReadAfterWriteInterference(const DenseSet<OpOperand *> &usesRead,
           LLVM_DEBUG(llvm::dbgs() << "  no conflict: read and write are in "
                                      "mutually exclusive regions\n");
           continue;
+        }
+      }
+
+      // Two equivalent operands of the same op are not conflicting if the op
+      // bufferizes to element-wise access. I.e., all loads at a position happen
+      // before all stores to the same position.
+      if (conflictingWritingOp == readingOp &&
+          state.areEquivalentBufferizedValues(uRead->get(),
+                                              uConflictingWrite->get())) {
+        if (auto bufferizableOp = options.dynCastBufferizableOp(readingOp)) {
+          if (bufferizableOp.bufferizesToElementwiseAccess(state)) {
+            LLVM_DEBUG(
+                llvm::dbgs()
+                << "  no conflict: op bufferizes to element-wise access\n");
+            continue;
+          }
         }
       }
 
@@ -1043,7 +1060,7 @@ static LogicalResult assertNoAllocsReturned(Operation *op,
   LogicalResult status = success();
   DominanceInfo domInfo(op);
   op->walk([&](Operation *returnOp) {
-    if (!isRegionReturnLike(returnOp) ||
+    if (!isa<RegionBranchTerminatorOpInterface>(returnOp) ||
         !state.getOptions().isOpAllowed(returnOp))
       return WalkResult::advance();
 

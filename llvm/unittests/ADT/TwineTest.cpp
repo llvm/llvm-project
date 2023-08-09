@@ -30,6 +30,7 @@ TEST(TwineTest, Construction) {
   EXPECT_EQ("hi", Twine(StringRef("hi")).str());
   EXPECT_EQ("hi", Twine(StringRef(std::string("hi"))).str());
   EXPECT_EQ("hi", Twine(StringRef("hithere", 2)).str());
+  EXPECT_EQ("hi", Twine(StringLiteral("hi")).str());
   EXPECT_EQ("hi", Twine(SmallString<4>("hi")).str());
   EXPECT_EQ("hi", Twine(formatv("{0}", "hi")).str());
   EXPECT_EQ("hi", Twine(std::string_view("hi")).str());
@@ -96,12 +97,21 @@ TEST(TwineTest, toNullTerminatedStringRef) {
   EXPECT_EQ(0, *Twine("hello").toNullTerminatedStringRef(storage).end());
   EXPECT_EQ(0,
            *Twine(StringRef("hello")).toNullTerminatedStringRef(storage).end());
+  EXPECT_EQ(
+      0,
+      *Twine(StringLiteral("hello")).toNullTerminatedStringRef(storage).end());
   EXPECT_EQ(0, *Twine(SmallString<11>("hello"))
                     .toNullTerminatedStringRef(storage)
                     .end());
   EXPECT_EQ(0, *Twine(formatv("{0}{1}", "how", "dy"))
                     .toNullTerminatedStringRef(storage)
                     .end());
+}
+
+TEST(TwineTest, isSingleStringLiteral) {
+  EXPECT_TRUE(Twine(StringLiteral("hi")).isSingleStringLiteral());
+  EXPECT_FALSE(Twine("hi").isSingleStringLiteral());
+  EXPECT_FALSE(Twine(StringRef("hi")).isSingleStringLiteral());
 }
 
 TEST(TwineTest, LazyEvaluation) {

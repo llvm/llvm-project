@@ -166,8 +166,6 @@ using StatementSemanticsPass2 = SemanticsVisitor<AllocateChecker,
     MiscChecker, NamelistChecker, NullifyChecker, PurityChecker,
     ReturnStmtChecker, SelectRankConstructChecker, SelectTypeChecker,
     StopChecker>;
-using StatementSemanticsPass3 =
-    SemanticsVisitor<AccStructureChecker, OmpStructureChecker, CUDAChecker>;
 
 static bool PerformStatementSemantics(
     SemanticsContext &context, parser::Program &program) {
@@ -178,10 +176,14 @@ static bool PerformStatementSemantics(
   StatementSemanticsPass1{context}.Walk(program);
   StatementSemanticsPass2 pass2{context};
   pass2.Walk(program);
-  if (context.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC) ||
-      context.languageFeatures().IsEnabled(common::LanguageFeature::OpenMP) ||
-      context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
-    StatementSemanticsPass3{context}.Walk(program);
+  if (context.languageFeatures().IsEnabled(common::LanguageFeature::OpenACC)) {
+    SemanticsVisitor<AccStructureChecker>{context}.Walk(program);
+  }
+  if (context.languageFeatures().IsEnabled(common::LanguageFeature::OpenMP)) {
+    SemanticsVisitor<OmpStructureChecker>{context}.Walk(program);
+  }
+  if (context.languageFeatures().IsEnabled(common::LanguageFeature::CUDA)) {
+    SemanticsVisitor<CUDAChecker>{context}.Walk(program);
   }
   if (!context.AnyFatalError()) {
     pass2.CompileDataInitializationsIntoInitializers();

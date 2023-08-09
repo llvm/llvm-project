@@ -16,14 +16,8 @@
 #define LLVM_LIBC_FUNCTION_ATTR
 #endif
 
-// The NVPTX target does not support aliasing.
-#if defined(LIBC_COPT_PUBLIC_PACKAGING) && defined(LIBC_TARGET_ARCH_IS_NVPTX)
-#define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
-  LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
-      __##name##_impl__ __asm__(#name);                                        \
-  type __##name##_impl__ arglist
 // MacOS needs to be excluded because it does not support aliasing.
-#elif defined(LIBC_COPT_PUBLIC_PACKAGING) && (!defined(__APPLE__))
+#if defined(LIBC_COPT_PUBLIC_PACKAGING) && (!defined(__APPLE__))
 #define LLVM_LIBC_FUNCTION_IMPL(type, name, arglist)                           \
   LLVM_LIBC_FUNCTION_ATTR decltype(__llvm_libc::name)                          \
       __##name##_impl__ __asm__(#name);                                        \
@@ -39,7 +33,7 @@
 
 namespace __llvm_libc {
 namespace internal {
-constexpr bool same_string(char const *lhs, char const *rhs) {
+LIBC_INLINE constexpr bool same_string(char const *lhs, char const *rhs) {
   for (; *lhs || *rhs; ++lhs, ++rhs)
     if (*lhs != *rhs)
       return false;

@@ -148,4 +148,5 @@ add_clang_library(clangStaticAnalyzerCheckers
 
   DEPENDS
   omp_gen
+  ClangDriverOptions
   )

@@ -2387,6 +2387,10 @@ public:
   /// The allocator used to allocate memory, e.g. for `AbstractAttribute`s.
   BumpPtrAllocator &Allocator;
 
+  const SmallSetVector<Function *, 8> &getModifiedFunctions() {
+    return CGModifiedFunctions;
+  }
+
 private:
   /// This method will do fixpoint iteration until fixpoint or the
   /// maximum iteration count is reached.
@@ -3371,6 +3375,20 @@ struct AttributorPass : public PassInfoMixin<AttributorPass> {
   PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
 };
 struct AttributorCGSCCPass : public PassInfoMixin<AttributorCGSCCPass> {
+  PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
+                        LazyCallGraph &CG, CGSCCUpdateResult &UR);
+};
+
+/// A more lightweight version of the Attributor which only runs attribute
+/// inference but no simplifications.
+struct AttributorLightPass : public PassInfoMixin<AttributorLightPass> {
+  PreservedAnalyses run(Module &M, ModuleAnalysisManager &AM);
+};
+
+/// A more lightweight version of the Attributor which only runs attribute
+/// inference but no simplifications.
+struct AttributorLightCGSCCPass
+    : public PassInfoMixin<AttributorLightCGSCCPass> {
   PreservedAnalyses run(LazyCallGraph::SCC &C, CGSCCAnalysisManager &AM,
                         LazyCallGraph &CG, CGSCCUpdateResult &UR);
 };
@@ -5952,12 +5970,15 @@ struct AAPointerInfo : public AbstractAttribute {
   /// this function will perform reasoning to exclude write accesses that cannot
   /// affect the load even if they on the surface look as if they would. The
   /// flag \p HasBeenWrittenTo will be set to true if we know that \p I does not
-  /// read the intial value of the underlying memory.
+  /// read the initial value of the underlying memory. If \p SkipCB is given and
+  /// returns false for a potentially interfering access, that access is not
+  /// checked for actual interference.
   virtual bool forallInterferingAccesses(
       Attributor &A, const AbstractAttribute &QueryingAA, Instruction &I,
       bool FindInterferingWrites, bool FindInterferingReads,
       function_ref<bool(const Access &, bool)> CB, bool &HasBeenWrittenTo,
-      AA::RangeTy &Range) const = 0;
+      AA::RangeTy &Range,
+      function_ref<bool(const Access &)> SkipCB = nullptr) const = 0;
 
   /// This function should return true if the type of the \p AA is AAPointerInfo
   static bool classof(const AbstractAttribute *AA) {

@@ -1677,7 +1677,7 @@ class OperationLegalizer {
 public:
   using LegalizationAction = ConversionTarget::LegalizationAction;
 
-  OperationLegalizer(ConversionTarget &targetInfo,
+  OperationLegalizer(const ConversionTarget &targetInfo,
                      const FrozenRewritePatternSet &patterns);
 
   /// Returns true if the given operation is known to be illegal on the target.
@@ -1688,7 +1688,7 @@ public:
   LogicalResult legalize(Operation *op, ConversionPatternRewriter &rewriter);
 
   /// Returns the conversion target in use by the legalizer.
-  ConversionTarget &getTarget() { return target; }
+  const ConversionTarget &getTarget() { return target; }
 
 private:
   /// Attempt to legalize the given operation by folding it.
@@ -1766,14 +1766,14 @@ private:
   SmallPtrSet<const Pattern *, 8> appliedPatterns;
 
   /// The legalization information provided by the target.
-  ConversionTarget &target;
+  const ConversionTarget &target;
 
   /// The pattern applicator to use for conversions.
   PatternApplicator applicator;
 };
 } // namespace
 
-OperationLegalizer::OperationLegalizer(ConversionTarget &targetInfo,
+OperationLegalizer::OperationLegalizer(const ConversionTarget &targetInfo,
                                        const FrozenRewritePatternSet &patterns)
     : target(targetInfo), applicator(patterns) {
   // The set of patterns that can be applied to illegal operations to transform
@@ -2302,7 +2302,7 @@ enum OpConversionMode {
 // rewrite patterns. The conversion behaves differently depending on the
 // conversion mode.
 struct OperationConverter {
-  explicit OperationConverter(ConversionTarget &target,
+  explicit OperationConverter(const ConversionTarget &target,
                               const FrozenRewritePatternSet &patterns,
                               OpConversionMode mode,
                               DenseSet<Operation *> *trackedOps = nullptr)
@@ -2393,7 +2393,7 @@ LogicalResult OperationConverter::convertOperations(
     function_ref<void(Diagnostic &)> notifyCallback) {
   if (ops.empty())
     return success();
-  ConversionTarget &target = opLegalizer.getTarget();
+  const ConversionTarget &target = opLegalizer.getTarget();
 
   // Compute the set of operations and blocks to convert.
   SmallVector<Operation *> toConvert;
@@ -3366,7 +3366,7 @@ void mlir::registerConversionPDLFunctions(RewritePatternSet &patterns) {
 
 LogicalResult
 mlir::applyPartialConversion(ArrayRef<Operation *> ops,
-                             ConversionTarget &target,
+                             const ConversionTarget &target,
                              const FrozenRewritePatternSet &patterns,
                              DenseSet<Operation *> *unconvertedOps) {
   OperationConverter opConverter(target, patterns, OpConversionMode::Partial,
@@ -3374,7 +3374,7 @@ mlir::applyPartialConversion(ArrayRef<Operation *> ops,
   return opConverter.convertOperations(ops);
 }
 LogicalResult
-mlir::applyPartialConversion(Operation *op, ConversionTarget &target,
+mlir::applyPartialConversion(Operation *op, const ConversionTarget &target,
                              const FrozenRewritePatternSet &patterns,
                              DenseSet<Operation *> *unconvertedOps) {
   return applyPartialConversion(llvm::ArrayRef(op), target, patterns,
@@ -3385,13 +3385,13 @@ mlir::applyPartialConversion(Operation *op, ConversionTarget &target,
 // Full Conversion
 
 LogicalResult
-mlir::applyFullConversion(ArrayRef<Operation *> ops, ConversionTarget &target,
+mlir::applyFullConversion(ArrayRef<Operation *> ops, const ConversionTarget &target,
                           const FrozenRewritePatternSet &patterns) {
   OperationConverter opConverter(target, patterns, OpConversionMode::Full);
   return opConverter.convertOperations(ops);
 }
 LogicalResult
-mlir::applyFullConversion(Operation *op, ConversionTarget &target,
+mlir::applyFullConversion(Operation *op, const ConversionTarget &target,
                           const FrozenRewritePatternSet &patterns) {
   return applyFullConversion(llvm::ArrayRef(op), target, patterns);
 }

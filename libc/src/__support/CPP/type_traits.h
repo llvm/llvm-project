@@ -68,7 +68,8 @@ template <typename T> struct remove_cvref {
 template <typename T> using remove_cvref_t = typename remove_cvref<T>::type;
 
 namespace details {
-template <typename T, typename... Args> constexpr bool is_unqualified_any_of() {
+template <typename T, typename... Args>
+LIBC_INLINE constexpr bool is_unqualified_any_of() {
   return (... || is_same_v<remove_cv_t<T>, Args>);
 }
 } // namespace details
@@ -162,6 +163,25 @@ template <> struct make_unsigned<__int128_t> : type_identity<__uint128_t> {};
 template <> struct make_unsigned<__uint128_t> : type_identity<__uint128_t> {};
 #endif
 template <typename T> using make_unsigned_t = typename make_unsigned<T>::type;
+
+template <typename T> struct make_signed;
+template <> struct make_signed<char> : type_identity<char> {};
+template <> struct make_signed<signed char> : type_identity<char> {};
+template <> struct make_signed<short> : type_identity<short> {};
+template <> struct make_signed<int> : type_identity<int> {};
+template <> struct make_signed<long> : type_identity<long> {};
+template <> struct make_signed<long long> : type_identity<long long> {};
+template <> struct make_signed<unsigned char> : type_identity<char> {};
+template <> struct make_signed<unsigned short> : type_identity<short> {};
+template <> struct make_signed<unsigned int> : type_identity<int> {};
+template <> struct make_signed<unsigned long> : type_identity<long> {};
+template <>
+struct make_signed<unsigned long long> : type_identity<long long> {};
+#ifdef __SIZEOF_INT128__
+template <> struct make_signed<__int128_t> : type_identity<__int128_t> {};
+template <> struct make_signed<__uint128_t> : type_identity<__int128_t> {};
+#endif
+template <typename T> using make_signed_t = typename make_signed<T>::type;
 
 // Compile time type selection.
 template <bool B, typename T, typename F>
