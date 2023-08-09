@@ -43,7 +43,6 @@
 #include "llvm/IR/IntrinsicsARM.h"
 #include "llvm/IR/IntrinsicsBPF.h"
 #include "llvm/IR/IntrinsicsHexagon.h"
-#include "llvm/IR/IntrinsicsLoongArch.h"
 #include "llvm/IR/IntrinsicsNVPTX.h"
 #include "llvm/IR/IntrinsicsPowerPC.h"
 #include "llvm/IR/IntrinsicsR600.h"
@@ -5592,9 +5591,6 @@ static Value *EmitTargetArchBuiltinExpr(CodeGenFunction *CGF,
   case llvm::Triple::riscv32:
   case llvm::Triple::riscv64:
     return CGF->EmitRISCVBuiltinExpr(BuiltinID, E, ReturnValue);
-  case llvm::Triple::loongarch32:
-  case llvm::Triple::loongarch64:
-    return CGF->EmitLoongArchBuiltinExpr(BuiltinID, E);
   default:
     return nullptr;
   }
@@ -20357,130 +20353,4 @@ Value *CodeGenFunction::EmitRISCVBuiltinExpr(unsigned BuiltinID,
 
   llvm::Function *F = CGM.getIntrinsic(ID, IntrinsicTypes);
   return Builder.CreateCall(F, Ops, "");
-}
-
-Value *CodeGenFunction::EmitLoongArchBuiltinExpr(unsigned BuiltinID,
-                                                 const CallExpr *E) {
-  SmallVector<Value *, 4> Ops;
-
-  for (unsigned i = 0, e = E->getNumArgs(); i != e; i++)
-    Ops.push_back(EmitScalarExpr(E->getArg(i)));
-
-  Intrinsic::ID ID = Intrinsic::not_intrinsic;
-
-  switch (BuiltinID) {
-  default:
-    llvm_unreachable("unexpected builtin ID.");
-  case LoongArch::BI__builtin_loongarch_cacop_d:
-    ID = Intrinsic::loongarch_cacop_d;
-    break;
-  case LoongArch::BI__builtin_loongarch_cacop_w:
-    ID = Intrinsic::loongarch_cacop_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_dbar:
-    ID = Intrinsic::loongarch_dbar;
-    break;
-  case LoongArch::BI__builtin_loongarch_break:
-    ID = Intrinsic::loongarch_break;
-    break;
-  case LoongArch::BI__builtin_loongarch_ibar:
-    ID = Intrinsic::loongarch_ibar;
-    break;
-  case LoongArch::BI__builtin_loongarch_movfcsr2gr:
-    ID = Intrinsic::loongarch_movfcsr2gr;
-    break;
-  case LoongArch::BI__builtin_loongarch_movgr2fcsr:
-    ID = Intrinsic::loongarch_movgr2fcsr;
-    break;
-  case LoongArch::BI__builtin_loongarch_syscall:
-    ID = Intrinsic::loongarch_syscall;
-    break;
-  case LoongArch::BI__builtin_loongarch_crc_w_b_w:
-    ID = Intrinsic::loongarch_crc_w_b_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_crc_w_h_w:
-    ID = Intrinsic::loongarch_crc_w_h_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_crc_w_w_w:
-    ID = Intrinsic::loongarch_crc_w_w_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_crc_w_d_w:
-    ID = Intrinsic::loongarch_crc_w_d_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_crcc_w_b_w:
-    ID = Intrinsic::loongarch_crcc_w_b_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_crcc_w_h_w:
-    ID = Intrinsic::loongarch_crcc_w_h_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_crcc_w_w_w:
-    ID = Intrinsic::loongarch_crcc_w_w_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_crcc_w_d_w:
-    ID = Intrinsic::loongarch_crcc_w_d_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_csrrd_w:
-    ID = Intrinsic::loongarch_csrrd_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_csrwr_w:
-    ID = Intrinsic::loongarch_csrwr_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_csrxchg_w:
-    ID = Intrinsic::loongarch_csrxchg_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_csrrd_d:
-    ID = Intrinsic::loongarch_csrrd_d;
-    break;
-  case LoongArch::BI__builtin_loongarch_csrwr_d:
-    ID = Intrinsic::loongarch_csrwr_d;
-    break;
-  case LoongArch::BI__builtin_loongarch_csrxchg_d:
-    ID = Intrinsic::loongarch_csrxchg_d;
-    break;
-  case LoongArch::BI__builtin_loongarch_iocsrrd_b:
-    ID = Intrinsic::loongarch_iocsrrd_b;
-    break;
-  case LoongArch::BI__builtin_loongarch_iocsrrd_h:
-    ID = Intrinsic::loongarch_iocsrrd_h;
-    break;
-  case LoongArch::BI__builtin_loongarch_iocsrrd_w:
-    ID = Intrinsic::loongarch_iocsrrd_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_iocsrrd_d:
-    ID = Intrinsic::loongarch_iocsrrd_d;
-    break;
-  case LoongArch::BI__builtin_loongarch_iocsrwr_b:
-    ID = Intrinsic::loongarch_iocsrwr_b;
-    break;
-  case LoongArch::BI__builtin_loongarch_iocsrwr_h:
-    ID = Intrinsic::loongarch_iocsrwr_h;
-    break;
-  case LoongArch::BI__builtin_loongarch_iocsrwr_w:
-    ID = Intrinsic::loongarch_iocsrwr_w;
-    break;
-  case LoongArch::BI__builtin_loongarch_iocsrwr_d:
-    ID = Intrinsic::loongarch_iocsrwr_d;
-    break;
-  case LoongArch::BI__builtin_loongarch_cpucfg:
-    ID = Intrinsic::loongarch_cpucfg;
-    break;
-  case LoongArch::BI__builtin_loongarch_asrtle_d:
-    ID = Intrinsic::loongarch_asrtle_d;
-    break;
-  case LoongArch::BI__builtin_loongarch_asrtgt_d:
-    ID = Intrinsic::loongarch_asrtgt_d;
-    break;
-  case LoongArch::BI__builtin_loongarch_lddir_d:
-    ID = Intrinsic::loongarch_lddir_d;
-    break;
-  case LoongArch::BI__builtin_loongarch_ldpte_d:
-    ID = Intrinsic::loongarch_ldpte_d;
-    break;
-    // TODO: Support more Intrinsics.
-  }
-
-  assert(ID != Intrinsic::not_intrinsic);
-
-  llvm::Function *F = CGM.getIntrinsic(ID);
-  return Builder.CreateCall(F, Ops);
 }
