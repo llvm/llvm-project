@@ -14,6 +14,7 @@
 #define NVVMIR_OPS
 
 include "mlir/IR/EnumAttr.td"
+include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
 include "mlir/Dialect/LLVMIR/LLVMOpBase.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
 
@@ -1469,6 +1470,74 @@ def NVVM_WgmmaWaitGroupSyncOp : NVVM_Op<"wgmma.wait.group.sync.aligned",
   }];
   let extraClassDefinition = [{
     std::string $cppClass::getPtx() { return std::string("wgmma.wait_group.sync.aligned %0;"); }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM target attribute.
+//===----------------------------------------------------------------------===//
+
+def NVVM_TargettAttr : NVVM_Attr<"NVVMTarget", "target"> {
+  let description = [{
+    GPU target attribute for controlling compilation of NVIDIA targets. All
+    parameters decay into default values if not present.
+
+    Examples:
+
+    1. Target with default values.
+    ```
+      gpu.module @mymodule [#nvvm.target] attributes {...} {
+        ...
+      }
+    ```
+
+    2. Target with `sm_90` chip and fast math.
+    ```
+      gpu.module @mymodule [#nvvm.target<chip = "sm_90", flags = {fast}>] {
+        ...
+      }
+    ```
+  }];
+  let parameters = (ins
+    DefaultValuedParameter<"int", "2", "Optimization level to apply.">:$O,
+    StringRefParameter<"Target triple.", "\"nvptx64-nvidia-cuda\"">:$triple,
+    StringRefParameter<"Target chip.", "\"sm_50\"">:$chip,
+    StringRefParameter<"Target chip features.", "\"+ptx60\"">:$features,
+    OptionalParameter<"DictionaryAttr", "Target specific flags.">:$flags,
+    OptionalParameter<"ArrayAttr", "Files to link to the LLVM module.">:$link
+  );
+  let assemblyFormat = [{
+    (`<` struct($O, $triple, $chip, $features, $flags, $link)^ `>`)?
+  }];
+  let builders = [
+    AttrBuilder<(ins CArg<"int", "2">:$optLevel,
+                     CArg<"StringRef", "\"nvptx64-nvidia-cuda\"">:$triple,
+                     CArg<"StringRef", "\"sm_50\"">:$chip,
+                     CArg<"StringRef", "\"+ptx60\"">:$features,
+                     CArg<"DictionaryAttr", "nullptr">:$targetFlags,
+                     CArg<"ArrayAttr", "nullptr">:$linkFiles), [{
+      return Base::get($_ctxt, optLevel, triple, chip, features, targetFlags, linkFiles);
+    }]>
+  ];
+  let skipDefaultBuilders = 1;
+  let genVerifyDecl = 1;
+  let extraClassDeclaration = [{
+    bool hasFlag(StringRef flag) const;
+    bool hasFastMath() const;
+    bool hasFtz() const;
+  }];
+  let extraClassDefinition = [{
+    bool $cppClass::hasFlag(StringRef flag) const {
+      if (DictionaryAttr flags = getFlags())
+        return flags.get(flag) != nullptr;
+      return false;
+    }
+    bool $cppClass::hasFastMath() const {
+      return hasFlag("fast");
+    }
+    bool $cppClass::hasFtz() const {
+      return hasFlag("ftz");
+    }
   }];
 }
 

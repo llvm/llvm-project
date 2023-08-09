@@ -429,3 +429,12 @@ func.func @wgmma_wait_group_sync_aligned() {
   nvvm.wgmma.wait.group.sync.aligned 0
   return
 }
+
+// -----
+
+// Just check these don't emit errors.
+gpu.module @module_1 [#nvvm.target<chip = "sm_90", features = "+ptx70", link = ["my_device_lib.bc"], flags = {fast, ftz}>] {
+}
+
+gpu.module @module_2 [#nvvm.target<chip = "sm_90">, #nvvm.target<chip = "sm_80">, #nvvm.target<chip = "sm_70">] {
+}

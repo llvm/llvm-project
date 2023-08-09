@@ -156,7 +156,7 @@ We have not yet shipped an implementation of the Parallelism TS.
 The Coroutines TS was accepted for C++20.
 An implementation of the Coroutines TS was shipped in LLVM 5.0 in namespace ``std::experimental``,
 and C++20 Coroutines shipped in LLVM 14.0. The implementation of the Coroutines TS in ``std::experimental``
-will be removed in LLVM 16.0.
+has been removed in LLVM 17.0.
 
 `Networking TS <https://wg21.link/N4656>`__
 -------------------------------------------
