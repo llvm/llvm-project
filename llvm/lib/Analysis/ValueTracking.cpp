@@ -2137,6 +2137,12 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
       case Intrinsic::bitreverse:
       case Intrinsic::bswap:
         return isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Depth, Q);
+      case Intrinsic::fshr:
+      case Intrinsic::fshl:
+        // If Op0 == Op1, this is a rotate. is_pow2(rotate(x, y)) == is_pow2(x)
+        if (II->getArgOperand(0) == II->getArgOperand(1))
+          return isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Depth, Q);
+        break;
       default:
         break;
       }
