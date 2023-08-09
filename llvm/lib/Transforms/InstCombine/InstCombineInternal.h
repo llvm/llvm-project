@@ -540,6 +540,8 @@ public:
 
   Instruction *foldAddWithConstant(BinaryOperator &Add);
 
+  Instruction *foldSquareSumInts(BinaryOperator &I);
+
   /// Try to rotate an operation below a PHI node, using PHI nodes for
   /// its operands.
   Instruction *foldPHIArgOpIntoPHI(PHINode &PN);
