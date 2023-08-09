@@ -126,7 +126,6 @@ InsertPointAnalysis::computeLastInsertPoint(const LiveInterval &CurLI,
   // If the value leaving MBB was defined after the call in MBB, it can't
   // really be live-in to the landing pad.  This can happen if the landing pad
   // has a PHI, and this register is undef on the exceptional edge.
-  // <rdar://problem/10664933>
   if (!SlotIndex::isEarlierInstr(VNI->def, LIP.second) && VNI->def < MBBEnd)
     return LIP.first;
 
