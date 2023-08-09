@@ -63,7 +63,7 @@ public:
     llvm::sort(V);
   }
 
-  size_t blockToIndex(BasicBlock *BB) const {
+  size_t blockToIndex(BasicBlock const *BB) const {
     auto *I = llvm::lower_bound(V, BB);
     assert(I != V.end() && *I == BB && "BasicBlockNumberng: Unknown block");
     return I - V.begin();
@@ -112,10 +112,11 @@ class SuspendCrossingInfo {
   }
 
   /// Compute the BlockData for the current function in one iteration.
-  /// Returns whether the BlockData changes in this iteration.
   /// Initialize - Whether this is the first iteration, we can optimize
   /// the initial case a little bit by manual loop switch.
-  template <bool Initialize = false> bool computeBlockData();
+  /// Returns whether the BlockData changes in this iteration.
+  template <bool Initialize = false>
+  bool computeBlockData(const ReversePostOrderTraversal<Function *> &RPOT);
 
 public:
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -223,12 +224,14 @@ LLVM_DUMP_METHOD void SuspendCrossingInfo::dump() const {
 }
 #endif
 
-template <bool Initialize> bool SuspendCrossingInfo::computeBlockData() {
-  const size_t N = Mapping.size();
+template <bool Initialize>
+bool SuspendCrossingInfo::computeBlockData(
+    const ReversePostOrderTraversal<Function *> &RPOT) {
   bool Changed = false;
 
-  for (size_t I = 0; I < N; ++I) {
-    auto &B = Block[I];
+  for (const BasicBlock *BB : RPOT) {
+    auto BBNo = Mapping.blockToIndex(BB);
+    auto &B = Block[BBNo];
 
     // We don't need to count the predecessors when initialization.
     if constexpr (!Initialize)
@@ -261,7 +264,7 @@ template <bool Initialize> bool SuspendCrossingInfo::computeBlockData() {
     }
 
     if (B.Suspend) {
-      // If block S is a suspend block, it should kill all of the blocks it
+      // If block B is a suspend block, it should kill all of the blocks it
       // consumes.
       B.Kills |= B.Consumes;
     } else if (B.End) {
@@ -273,8 +276,8 @@ template <bool Initialize> bool SuspendCrossingInfo::computeBlockData() {
     } else {
       // This is reached when B block it not Suspend nor coro.end and it
       // need to make sure that it is not in the kill set.
-      B.KillLoop |= B.Kills[I];
-      B.Kills.reset(I);
+      B.KillLoop |= B.Kills[BBNo];
+      B.Kills.reset(BBNo);
     }
 
     if constexpr (!Initialize) {
@@ -282,9 +285,6 @@ template <bool Initialize> bool SuspendCrossingInfo::computeBlockData() {
       Changed |= B.Changed;
     }
   }
-
-  if constexpr (Initialize)
-    return true;
 
   return Changed;
 }
@@ -325,9 +325,11 @@ SuspendCrossingInfo::SuspendCrossingInfo(Function &F, coro::Shape &Shape)
       markSuspendBlock(Save);
   }
 
-  computeBlockData</*Initialize=*/true>();
-
-  while (computeBlockData())
+  // It is considered to be faster to use RPO traversal for forward-edges
+  // dataflow analysis.
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  computeBlockData</*Initialize=*/true>(RPOT);
+  while (computeBlockData</*Initialize*/ false>(RPOT))
     ;
 
   LLVM_DEBUG(dump());
