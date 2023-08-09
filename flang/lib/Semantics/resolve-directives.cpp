@@ -1370,7 +1370,7 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
     if (targetIt == dirContext_.rend()) {
       return;
     }
-    if (llvm::omp::parallelSet.test(targetIt->directive) ||
+    if (llvm::omp::allParallelSet.test(targetIt->directive) ||
         llvm::omp::taskGeneratingSet.test(targetIt->directive)) {
       break;
     }
@@ -1471,7 +1471,7 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
     return;
   }
   Symbol::Flag ivDSA;
-  if (!llvm::omp::simdSet.test(GetContext().directive)) {
+  if (!llvm::omp::allSimdSet.test(GetContext().directive)) {
     ivDSA = Symbol::Flag::OmpPrivate;
   } else if (level == 1) {
     ivDSA = Symbol::Flag::OmpLinear;
@@ -1866,7 +1866,7 @@ void OmpAttributeVisitor::ResolveOmpObject(
                       "clauses on a TARGET DATA construct"_err_en_US,
                       symbol->name());
                 }
-                if (llvm::omp::distributeSet.test(GetContext().directive) &&
+                if (llvm::omp::allDistributeSet.test(GetContext().directive) &&
                     (((ompFlag == Symbol::Flag::OmpFirstPrivate) &&
                          symbol->test(Symbol::Flag::OmpLastPrivate)) ||
                         ((ompFlag == Symbol::Flag::OmpLastPrivate) &&
