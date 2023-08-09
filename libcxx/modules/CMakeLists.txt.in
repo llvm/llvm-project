@@ -48,7 +48,7 @@ endif()
 add_library(std)
 target_sources(std
   PUBLIC FILE_SET cxx_modules TYPE CXX_MODULES FILES
-    @LIBCXX_SOURCES_MODULE_STD@
+    std.cppm
 )
 
 target_compile_definitions(std PRIVATE _LIBCPP_ENABLE_EXPERIMENTAL)

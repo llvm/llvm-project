@@ -222,14 +222,8 @@ void header_exportable_declarations::check(const clang::ast_matchers::MatchFinde
     if (is_reserved_name(name))
       return;
 
-    // For modules (std, std.compat) only take the declarations exported from the partitions.
-    // Making sure no declatations of headers are compared.
-    if (file_type_ == FileType::Module)
-      if (clang::Module* M = decl->getOwningModule(); M && M->Kind != clang::Module::ModulePartitionInterface)
-        return;
-
-    // For module partitions only take exported declarations.
-    if (file_type_ == FileType::ModulePartition)
+    // For modules only take the declarations exported.
+    if (file_type_ == FileType::ModulePartition || file_type_ == FileType::Module)
       if (decl->getModuleOwnershipKind() != clang::Decl::ModuleOwnershipKind::VisibleWhenImported)
         return;
 
