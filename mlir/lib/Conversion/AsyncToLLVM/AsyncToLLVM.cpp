@@ -8,6 +8,7 @@
 
 #include "mlir/Conversion/AsyncToLLVM/AsyncToLLVM.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/FuncToLLVM/ConvertFuncToLLVM.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
@@ -1250,4 +1251,33 @@ void mlir::populateAsyncStructuralTypeConversionsAndLegality(
 
   target.addDynamicallyLegalOp<AwaitOp, ExecuteOp, async::YieldOp>(
       [&](Operation *op) { return typeConverter.isLegal(op); });
+}
+
+//===----------------------------------------------------------------------===//
+// ConvertToLLVMPatternInterface implementation
+//===----------------------------------------------------------------------===//
+
+namespace {
+/// Implement the interface to convert MemRef to LLVM.
+struct AsyncToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<LLVM::LLVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, LLVMTypeConverter &typeConverter,
+      RewritePatternSet &patterns) const final {
+    populateAsyncStructuralTypeConversionsAndLegality(typeConverter, patterns,
+                                                      target);
+  }
+};
+} // namespace
+
+void mlir::registerConvertAsyncToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, AsyncDialect *dialect) {
+    dialect->addInterfaces<AsyncToLLVMDialectInterface>();
+  });
 }
