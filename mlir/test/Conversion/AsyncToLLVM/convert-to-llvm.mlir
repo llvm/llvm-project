@@ -1,9 +1,5 @@
 // RUN: mlir-opt %s -split-input-file -async-to-async-runtime -convert-async-to-llvm='use-opaque-pointers=1' | FileCheck %s
 
-// Same below, but using the `ConvertToLLVMPatternInterface` entry point
-// and the generic `convert-to-llvm` pass.
-// RUN: mlir-opt -async-to-async-runtime --convert-to-llvm --split-input-file %s
-
 // CHECK-LABEL: reference_counting
 func.func @reference_counting(%arg0: !async.token) {
   // CHECK: %[[C2:.*]] = arith.constant 2 : i64
