@@ -844,6 +844,8 @@ private:
     char AllowReciprocal : 1;
     char AllowContract : 1;
     char ApproxFunc : 1;
+
+    FastMathFlagsTy(const FastMathFlags &FMF);
   };
 
   OperationType OpType;
@@ -878,14 +880,7 @@ public:
       GEPFlags.IsInBounds = GEP->isInBounds();
     } else if (auto *Op = dyn_cast<FPMathOperator>(&I)) {
       OpType = OperationType::FPMathOp;
-      FastMathFlags FMF = Op->getFastMathFlags();
-      FMFs.AllowReassoc = FMF.allowReassoc();
-      FMFs.NoNaNs = FMF.noNaNs();
-      FMFs.NoInfs = FMF.noInfs();
-      FMFs.NoSignedZeros = FMF.noSignedZeros();
-      FMFs.AllowReciprocal = FMF.allowReciprocal();
-      FMFs.AllowContract = FMF.allowContract();
-      FMFs.ApproxFunc = FMF.approxFunc();
+      FMFs = Op->getFastMathFlags();
     }
   }
 
@@ -894,6 +889,12 @@ public:
                       WrapFlagsTy WrapFlags)
       : VPRecipeBase(SC, Operands), OpType(OperationType::OverflowingBinOp),
         WrapFlags(WrapFlags) {}
+
+  template <typename IterT>
+  VPRecipeWithIRFlags(const unsigned char SC, IterT Operands,
+                      FastMathFlags FMFs)
+      : VPRecipeBase(SC, Operands), OpType(OperationType::FPMathOp),
+        FMFs(FMFs) {}
 
   static inline bool classof(const VPRecipeBase *R) {
     return R->getVPDefID() == VPRecipeBase::VPInstructionSC ||
@@ -959,6 +960,9 @@ public:
     return GEPFlags.IsInBounds;
   }
 
+  /// Returns true if the recipe has fast-math flags.
+  bool hasFastMathFlags() const { return OpType == OperationType::FPMathOp; }
+
   FastMathFlags getFastMathFlags() const;
 
   bool hasNoUnsignedWrap() const {
@@ -1008,7 +1012,6 @@ public:
 private:
   typedef unsigned char OpcodeTy;
   OpcodeTy Opcode;
-  FastMathFlags FMF;
   DebugLoc DL;
 
   /// An optional name that can be used for the generated IR instruction.
@@ -1019,6 +1022,12 @@ private:
   /// In some cases an existing value is returned rather than a generated
   /// one.
   Value *generateInstruction(VPTransformState &State, unsigned Part);
+
+#if !defined(NDEBUG)
+  /// Return true if the VPInstruction is a floating point math operation, i.e.
+  /// has fast-math flags.
+  bool isFPMathOp() const;
+#endif
 
 protected:
   void setUnderlyingInstr(Instruction *I) { setUnderlyingValue(I); }
@@ -1037,6 +1046,9 @@ public:
                 WrapFlagsTy WrapFlags, DebugLoc DL = {}, const Twine &Name = "")
       : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, WrapFlags),
         VPValue(this), Opcode(Opcode), DL(DL), Name(Name.str()) {}
+
+  VPInstruction(unsigned Opcode, std::initializer_list<VPValue *> Operands,
+                FastMathFlags FMFs, DebugLoc DL = {}, const Twine &Name = "");
 
   VP_CLASSOF_IMPL(VPDef::VPInstructionSC)
 
@@ -1090,9 +1102,6 @@ public:
       return true;
     }
   }
-
-  /// Set the fast-math flags.
-  void setFastMathFlags(FastMathFlags FMFNew);
 
   /// Returns true if the recipe only uses the first lane of operand \p Op.
   bool onlyFirstLaneUsed(const VPValue *Op) const override {
