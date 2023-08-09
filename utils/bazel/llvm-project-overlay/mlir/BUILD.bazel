@@ -4053,6 +4053,7 @@ cc_library(
     name = "AllExtensions",
     hdrs = ["include/mlir/InitAllExtensions.h"],
     deps = [
+        ":ArithToLLVM",
         ":FuncExtensions",
         ":NVVMTarget",
         ":NVVMToLLVM",
