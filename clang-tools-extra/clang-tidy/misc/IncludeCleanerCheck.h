@@ -44,6 +44,8 @@ private:
   include_cleaner::PragmaIncludes RecordedPI;
   HeaderSearch *HS;
   std::vector<StringRef> IgnoreHeaders;
+  // Whether emit only one finding per usage of a symbol.
+  const bool DeduplicateFindings;
   llvm::SmallVector<llvm::Regex> IgnoreHeadersRegex;
   bool shouldIgnore(const include_cleaner::Header &H);
 };

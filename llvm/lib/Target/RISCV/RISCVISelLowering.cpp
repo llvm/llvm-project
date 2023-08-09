@@ -1058,13 +1058,21 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
 
         setOperationAction(IntegerVPOps, VT, Custom);
 
-        // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
-        // range of f32.
-        EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
-        if (isTypeLegal(FloatVT))
-          setOperationAction(
-              {ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
-              Custom);
+        if (Subtarget.hasStdExtZvbb()) {
+          setOperationAction({ISD::BITREVERSE, ISD::BSWAP, ISD::CTLZ,
+                              ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ,
+                              ISD::CTTZ_ZERO_UNDEF, ISD::CTPOP, ISD::ROTL,
+                              ISD::ROTR},
+                             VT, Custom);
+        } else {
+          // Lower CTLZ_ZERO_UNDEF and CTTZ_ZERO_UNDEF if element of VT in the
+          // range of f32.
+          EVT FloatVT = MVT::getVectorVT(MVT::f32, VT.getVectorElementCount());
+          if (isTypeLegal(FloatVT))
+            setOperationAction(
+                {ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF, ISD::CTTZ_ZERO_UNDEF}, VT,
+                Custom);
+        }
       }
 
       for (MVT VT : MVT::fp_fixedlen_vector_valuetypes()) {
@@ -3275,6 +3283,48 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
     }
   }
 
+  // For very small build_vectors, use a single scalar insert of a constant.
+  // TODO: Base this on constant rematerialization cost, not size.
+  const unsigned EltBitSize = VT.getScalarSizeInBits();
+  if (VT.getSizeInBits() <= 32 &&
+      ISD::isBuildVectorOfConstantSDNodes(Op.getNode())) {
+    MVT ViaIntVT = MVT::getIntegerVT(VT.getSizeInBits());
+    assert((ViaIntVT == MVT::i16 || ViaIntVT == MVT::i32) &&
+           "Unexpected sequence type");
+    // If we can use the original VL with the modified element type, this
+    // means we only have a VTYPE toggle, not a VL toggle.  TODO: Should this
+    // be moved into InsertVSETVLI?
+    unsigned ViaVecLen =
+      (Subtarget.getRealMinVLen() >= VT.getSizeInBits() * NumElts) ? NumElts : 1;
+    MVT ViaVecVT = MVT::getVectorVT(ViaIntVT, ViaVecLen);
+
+    uint64_t EltMask = maskTrailingOnes<uint64_t>(EltBitSize);
+    uint64_t SplatValue = 0;
+    // Construct the amalgamated value at this larger vector type.
+    for (const auto &OpIdx : enumerate(Op->op_values())) {
+      const auto &SeqV = OpIdx.value();
+      if (!SeqV.isUndef())
+        SplatValue |= ((cast<ConstantSDNode>(SeqV)->getZExtValue() & EltMask)
+                       << (OpIdx.index() * EltBitSize));
+    }
+
+    // On RV64, sign-extend from 32 to 64 bits where possible in order to
+    // achieve better constant materializion.
+    if (Subtarget.is64Bit() && ViaIntVT == MVT::i32)
+      SplatValue = SignExtend64<32>(SplatValue);
+
+    SDValue Vec = DAG.getNode(ISD::INSERT_VECTOR_ELT, DL, ViaVecVT,
+                              DAG.getUNDEF(ViaVecVT),
+                              DAG.getConstant(SplatValue, DL, XLenVT),
+                              DAG.getConstant(0, DL, XLenVT));
+    if (ViaVecLen != 1)
+      Vec = DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL,
+                        MVT::getVectorVT(ViaIntVT, 1), Vec,
+                        DAG.getConstant(0, DL, XLenVT));
+    return DAG.getBitcast(VT, Vec);
+  }
+
+
   // Attempt to detect "hidden" splats, which only reveal themselves as splats
   // when re-interpreted as a vector with a larger element type. For example,
   //   v4i16 = build_vector i16 0, i16 1, i16 0, i16 1
@@ -3283,7 +3333,6 @@ static SDValue lowerBuildVectorOfConstants(SDValue Op, SelectionDAG &DAG,
   // TODO: This optimization could also work on non-constant splats, but it
   // would require bit-manipulation instructions to construct the splat value.
   SmallVector<SDValue> Sequence;
-  unsigned EltBitSize = VT.getScalarSizeInBits();
   const auto *BV = cast<BuildVectorSDNode>(Op);
   if (VT.isInteger() && EltBitSize < 64 &&
       ISD::isBuildVectorOfConstantSDNodes(Op.getNode()) &&
@@ -4839,6 +4888,13 @@ static unsigned getRISCVVLOp(SDValue Op) {
   OP_CASE(SHL)
   OP_CASE(SRA)
   OP_CASE(SRL)
+  OP_CASE(ROTL)
+  OP_CASE(ROTR)
+  OP_CASE(BSWAP)
+  OP_CASE(CTTZ)
+  OP_CASE(CTLZ)
+  OP_CASE(CTPOP)
+  OP_CASE(BITREVERSE)
   OP_CASE(SADDSAT)
   OP_CASE(UADDSAT)
   OP_CASE(SSUBSAT)
@@ -4886,8 +4942,10 @@ static unsigned getRISCVVLOp(SDValue Op) {
   VP_CASE(CTLZ)       // VP_CTLZ
   VP_CASE(CTTZ)       // VP_CTTZ
   VP_CASE(CTPOP)      // VP_CTPOP
+  case ISD::CTLZ_ZERO_UNDEF:
   case ISD::VP_CTLZ_ZERO_UNDEF:
     return RISCVISD::CTLZ_VL;
+  case ISD::CTTZ_ZERO_UNDEF:
   case ISD::VP_CTTZ_ZERO_UNDEF:
     return RISCVISD::CTTZ_VL;
   case ISD::FMA:
@@ -4946,7 +5004,7 @@ static bool hasMergeOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    122 &&
+                    124 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -4970,7 +5028,7 @@ static bool hasMaskOp(unsigned Opcode) {
          Opcode <= RISCVISD::LAST_RISCV_STRICTFP_OPCODE &&
          "not a RISC-V target specific op");
   static_assert(RISCVISD::LAST_VL_VECTOR_OP - RISCVISD::FIRST_VL_VECTOR_OP ==
-                    122 &&
+                    124 &&
                 RISCVISD::LAST_RISCV_STRICTFP_OPCODE -
                         ISD::FIRST_TARGET_STRICTFP_OPCODE ==
                     21 &&
@@ -5022,6 +5080,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerShiftRightParts(Op, DAG, false);
   case ISD::ROTL:
   case ISD::ROTR:
+    if (Op.getValueType().isFixedLengthVector()) {
+      assert(Subtarget.hasStdExtZvbb());
+      return lowerToScalableOp(Op, DAG);
+    }
     assert(Subtarget.hasVendorXTHeadBb() &&
            !(Subtarget.hasStdExtZbb() || Subtarget.hasStdExtZbkb()) &&
            "Unexpected custom legalization");
@@ -5115,6 +5177,10 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return LowerIS_FPCLASS(Op, DAG);
   case ISD::BITREVERSE: {
     MVT VT = Op.getSimpleValueType();
+    if (VT.isFixedLengthVector()) {
+      assert(Subtarget.hasStdExtZvbb());
+      return lowerToScalableOp(Op, DAG);
+    }
     SDLoc DL(Op);
     assert(Subtarget.hasStdExtZbkb() && "Unexpected custom legalization");
     assert(Op.getOpcode() == ISD::BITREVERSE && "Unexpected opcode");
@@ -5627,6 +5693,8 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
   case ISD::SREM:
   case ISD::UDIV:
   case ISD::UREM:
+  case ISD::BSWAP:
+  case ISD::CTPOP:
     return lowerToScalableOp(Op, DAG);
   case ISD::SHL:
   case ISD::SRA:
@@ -5661,7 +5729,11 @@ SDValue RISCVTargetLowering::LowerOperation(SDValue Op,
     return lowerABS(Op, DAG);
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF:
+  case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
+    if (Subtarget.hasStdExtZvbb())
+      return lowerToScalableOp(Op, DAG);
+    assert(Op.getOpcode() != ISD::CTTZ);
     return lowerCTLZ_CTTZ_ZERO_UNDEF(Op, DAG);
   case ISD::VSELECT:
     return lowerFixedLengthVectorSelectToRVV(Op, DAG);
@@ -16413,6 +16485,8 @@ const char *RISCVTargetLowering::getTargetNodeName(unsigned Opcode) const {
   NODE_NAME_CASE(SREM_VL)
   NODE_NAME_CASE(SRA_VL)
   NODE_NAME_CASE(SRL_VL)
+  NODE_NAME_CASE(ROTL_VL)
+  NODE_NAME_CASE(ROTR_VL)
   NODE_NAME_CASE(SUB_VL)
   NODE_NAME_CASE(UDIV_VL)
   NODE_NAME_CASE(UREM_VL)

@@ -295,6 +295,9 @@ end
   by a line continuation in free form, the second quotation mark
   may appear at the beginning of the continuation line without an
   ampersand, althought one is required by the standard.
+* Unrestricted `INTRINSIC` functions are accepted for use in
+  `PROCEDURE` statements in generic interfaces, as in some other
+  compilers.
 
 ### Extensions supported when enabled by options
 

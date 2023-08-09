@@ -188,7 +188,7 @@ public:
 
   /// Determine if target triple slice exists in file.
   ///
-  /// \param Target the value to find.
+  /// \param Targ the value to find.
   bool hasTarget(const Target &Targ) const {
     return llvm::is_contained(Targets, Targ);
   }

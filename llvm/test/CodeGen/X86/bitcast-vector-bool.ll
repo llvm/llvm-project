@@ -289,7 +289,7 @@ define i1 @trunc_v16i8_cmp(<16 x i8> %a0) nounwind {
 define i2 @bitcast_v4i64_to_v2i2(<4 x i64> %a0) nounwind {
 ; SSE-LABEL: bitcast_v4i64_to_v2i2:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    packssdw %xmm1, %xmm0
+; SSE-NEXT:    shufps {{.*#+}} xmm0 = xmm0[1,3],xmm1[1,3]
 ; SSE-NEXT:    movmskps %xmm0, %eax
 ; SSE-NEXT:    movl %eax, %ecx
 ; SSE-NEXT:    shrb $2, %cl

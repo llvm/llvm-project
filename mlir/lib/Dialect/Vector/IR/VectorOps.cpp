@@ -313,18 +313,22 @@ MultiDimReductionOp::getShapeForUnroll() {
 
 LogicalResult MultiDimReductionOp::verify() {
   SmallVector<int64_t> targetShape;
+  SmallVector<bool> scalableDims;
   Type inferredReturnType;
+  auto sourceScalableDims = getSourceVectorType().getScalableDims();
   for (auto it : llvm::enumerate(getSourceVectorType().getShape()))
     if (!llvm::any_of(getReductionDims().getValue(), [&](Attribute attr) {
           return llvm::cast<IntegerAttr>(attr).getValue() == it.index();
-        }))
+        })) {
       targetShape.push_back(it.value());
+      scalableDims.push_back(sourceScalableDims[it.index()]);
+    }
   // TODO: update to also allow 0-d vectors when available.
   if (targetShape.empty())
     inferredReturnType = getSourceVectorType().getElementType();
   else
-    inferredReturnType =
-        VectorType::get(targetShape, getSourceVectorType().getElementType());
+    inferredReturnType = VectorType::get(
+        targetShape, getSourceVectorType().getElementType(), scalableDims);
   if (getType() != inferredReturnType)
     return emitOpError() << "destination type " << getType()
                          << " is incompatible with source type "

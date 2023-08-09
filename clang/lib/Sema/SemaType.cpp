@@ -128,7 +128,6 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_VectorCall:                                              \
   case ParsedAttr::AT_AArch64VectorPcs:                                        \
   case ParsedAttr::AT_AArch64SVEPcs:                                           \
-  case ParsedAttr::AT_ArmStreaming:                                            \
   case ParsedAttr::AT_AMDGPUKernelCall:                                        \
   case ParsedAttr::AT_MSABI:                                                   \
   case ParsedAttr::AT_SysVABI:                                                 \
@@ -143,6 +142,10 @@ static void diagnoseBadTypeAttribute(Sema &S, const ParsedAttr &attr,
   case ParsedAttr::AT_NoReturn:                                                \
   case ParsedAttr::AT_Regparm:                                                 \
   case ParsedAttr::AT_CmseNSCall:                                              \
+  case ParsedAttr::AT_ArmStreaming:                                            \
+  case ParsedAttr::AT_ArmStreamingCompatible:                                  \
+  case ParsedAttr::AT_ArmSharedZA:                                             \
+  case ParsedAttr::AT_ArmPreservesZA:                                          \
   case ParsedAttr::AT_AnyX86NoCallerSavedRegisters:                            \
   case ParsedAttr::AT_AnyX86NoCfCheck:                                         \
     CALLING_CONV_ATTRS_CASELIST
@@ -7772,6 +7775,26 @@ static Attr *getCCTypeAttr(ASTContext &Ctx, ParsedAttr &Attr) {
   llvm_unreachable("unexpected attribute kind!");
 }
 
+static bool checkMutualExclusion(TypeProcessingState &state,
+                                 const FunctionProtoType::ExtProtoInfo &EPI,
+                                 ParsedAttr &Attr,
+                                 AttributeCommonInfo::Kind OtherKind) {
+  auto OtherAttr = std::find_if(
+      state.getCurrentAttributes().begin(), state.getCurrentAttributes().end(),
+      [OtherKind](const ParsedAttr &A) { return A.getKind() == OtherKind; });
+  if (OtherAttr == state.getCurrentAttributes().end() || OtherAttr->isInvalid())
+    return false;
+
+  Sema &S = state.getSema();
+  S.Diag(Attr.getLoc(), diag::err_attributes_are_not_compatible)
+      << *OtherAttr << Attr
+      << (OtherAttr->isRegularKeywordAttribute() ||
+          Attr.isRegularKeywordAttribute());
+  S.Diag(OtherAttr->getLoc(), diag::note_conflicting_attribute);
+  Attr.setInvalid();
+  return true;
+}
+
 /// Process an individual function attribute.  Returns true to
 /// indicate that the attribute was handled, false if it wasn't.
 static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
@@ -7898,6 +7921,55 @@ static bool handleFunctionTypeAttr(TypeProcessingState &state, ParsedAttr &attr,
     FunctionType::ExtInfo EI =
       unwrapped.get()->getExtInfo().withRegParm(value);
     type = unwrapped.wrap(S, S.Context.adjustFunctionType(unwrapped.get(), EI));
+    return true;
+  }
+
+  if (attr.getKind() == ParsedAttr::AT_ArmStreaming ||
+      attr.getKind() == ParsedAttr::AT_ArmStreamingCompatible ||
+      attr.getKind() == ParsedAttr::AT_ArmSharedZA ||
+      attr.getKind() == ParsedAttr::AT_ArmPreservesZA){
+    if (S.CheckAttrTarget(attr) || S.CheckAttrNoArgs(attr))
+      return true;
+
+    if (!unwrapped.isFunctionType())
+      return false;
+
+    const auto *FnTy = unwrapped.get()->getAs<FunctionProtoType>();
+    if (!FnTy) {
+      // SME ACLE attributes are not supported on K&R-style unprototyped C
+      // functions.
+      S.Diag(attr.getLoc(), diag::warn_attribute_wrong_decl_type) <<
+        attr << attr.isRegularKeywordAttribute() << ExpectedFunctionWithProtoType;
+      attr.setInvalid();
+      return false;
+    }
+
+    FunctionProtoType::ExtProtoInfo EPI = FnTy->getExtProtoInfo();
+    switch (attr.getKind()) {
+    case ParsedAttr::AT_ArmStreaming:
+      if (checkMutualExclusion(state, EPI, attr,
+                               ParsedAttr::AT_ArmStreamingCompatible))
+        return true;
+      EPI.setArmSMEAttribute(FunctionType::SME_PStateSMEnabledMask);
+      break;
+    case ParsedAttr::AT_ArmStreamingCompatible:
+      if (checkMutualExclusion(state, EPI, attr, ParsedAttr::AT_ArmStreaming))
+        return true;
+      EPI.setArmSMEAttribute(FunctionType::SME_PStateSMCompatibleMask);
+      break;
+    case ParsedAttr::AT_ArmSharedZA:
+      EPI.setArmSMEAttribute(FunctionType::SME_PStateZASharedMask);
+      break;
+    case ParsedAttr::AT_ArmPreservesZA:
+      EPI.setArmSMEAttribute(FunctionType::SME_PStateZAPreservedMask);
+      break;
+    default:
+      llvm_unreachable("Unsupported attribute");
+    }
+
+    QualType newtype = S.Context.getFunctionType(FnTy->getReturnType(),
+                                                 FnTy->getParamTypes(), EPI);
+    type = unwrapped.wrap(S, newtype->getAs<FunctionType>());
     return true;
   }
 
