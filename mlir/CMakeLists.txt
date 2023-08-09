@@ -97,7 +97,7 @@ endif()
 
 # Build the CUDA conversions and run according tests if the NVPTX backend
 # is available
-if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD AND MLIR_ENABLE_EXECUTION_ENGINE)
+if ("NVPTX" IN_LIST LLVM_TARGETS_TO_BUILD)
   set(MLIR_ENABLE_CUDA_CONVERSIONS 1)
 else()
   set(MLIR_ENABLE_CUDA_CONVERSIONS 0)
@@ -118,6 +118,9 @@ set(MLIR_ENABLE_CUDA_RUNNER 0 CACHE BOOL "Enable building the mlir CUDA runner")
 set(MLIR_ENABLE_ROCM_RUNNER 0 CACHE BOOL "Enable building the mlir ROCm runner")
 set(MLIR_ENABLE_SPIRV_CPU_RUNNER 0 CACHE BOOL "Enable building the mlir SPIR-V cpu runner")
 set(MLIR_ENABLE_VULKAN_RUNNER 0 CACHE BOOL "Enable building the mlir Vulkan runner")
+set(MLIR_ENABLE_NVPTXCOMPILER 0 CACHE BOOL
+    "Statically link the nvptxlibrary instead of calling ptxas as a subprocess \
+    for compiling PTX to cubin")
 
 option(MLIR_INCLUDE_TESTS
        "Generate build targets for the MLIR unit tests."

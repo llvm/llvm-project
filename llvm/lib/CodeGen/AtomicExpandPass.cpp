@@ -918,9 +918,10 @@ AtomicRMWInst *AtomicExpand::widenPartwordAtomicRMW(AtomicRMWInst *AI) {
   else
     NewOperand = ValOperand_Shifted;
 
-  AtomicRMWInst *NewAI =
-      Builder.CreateAtomicRMW(Op, PMV.AlignedAddr, NewOperand,
-                              PMV.AlignedAddrAlignment, AI->getOrdering());
+  AtomicRMWInst *NewAI = Builder.CreateAtomicRMW(
+      Op, PMV.AlignedAddr, NewOperand, PMV.AlignedAddrAlignment,
+      AI->getOrdering(), AI->getSyncScopeID());
+  // TODO: Preserve metadata
 
   Value *FinalOldResult = extractMaskedValue(Builder, NewAI, PMV);
   AI->replaceAllUsesWith(FinalOldResult);

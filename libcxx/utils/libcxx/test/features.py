@@ -82,10 +82,6 @@ DEFAULT_FEATURES = [
         when=lambda cfg: hasCompileFlag(cfg, "-fdelayed-template-parsing"),
     ),
     Feature(
-        name="libcpp-no-coroutines",
-        when=lambda cfg: featureTestMacros(cfg).get("__cpp_impl_coroutine", 0) < 201902,
-    ),
-    Feature(
         name="has-fobjc-arc",
         when=lambda cfg: hasCompileFlag(cfg, "-xobjective-c++ -fobjc-arc")
         and sys.platform.lower().strip() == "darwin",

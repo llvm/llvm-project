@@ -17,6 +17,7 @@
 #include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -723,6 +724,7 @@ void NVVMDialect::initialize() {
   // registered.
   allowUnknownOperations();
   declarePromisedInterface<ConvertToLLVMPatternInterface>();
+  declarePromisedInterface<gpu::TargetAttrInterface>();
 }
 
 LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
@@ -758,6 +760,35 @@ LogicalResult NVVMDialect::verifyOperationAttribute(Operation *op,
              << "'" << attrName << "' attribute must be integer constant";
   }
 
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM target attribute.
+//===----------------------------------------------------------------------===//
+LogicalResult
+NVVMTargetAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                       int optLevel, StringRef triple, StringRef chip,
+                       StringRef features, DictionaryAttr flags,
+                       ArrayAttr files) {
+  if (optLevel < 0 || optLevel > 3) {
+    emitError() << "The optimization level must be a number between 0 and 3.";
+    return failure();
+  }
+  if (triple.empty()) {
+    emitError() << "The target triple cannot be empty.";
+    return failure();
+  }
+  if (chip.empty()) {
+    emitError() << "The target chip cannot be empty.";
+    return failure();
+  }
+  if (files && !llvm::all_of(files, [](::mlir::Attribute attr) {
+        return attr && mlir::isa<StringAttr>(attr);
+      })) {
+    emitError() << "All the elements in the `link` array must be strings.";
+    return failure();
+  }
   return success();
 }
 

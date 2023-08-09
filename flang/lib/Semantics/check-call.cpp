@@ -1252,95 +1252,91 @@ static void CheckAssociated(evaluate::ActualArguments &arguments,
             }
           }
         }
-        const auto *targetExpr{targetArg->UnwrapExpr()};
-        if (targetExpr && pointerSymbol) {
-          std::optional<characteristics::Procedure> pointerProc, targetProc;
-          const auto *targetProcDesignator{
-              evaluate::UnwrapExpr<evaluate::ProcedureDesignator>(*targetExpr)};
-          const Symbol *targetSymbol{GetLastSymbol(*targetExpr)};
-          bool isCall{false};
-          std::string targetName;
-          if (const auto *targetProcRef{// target is a function call
-                  std::get_if<evaluate::ProcedureRef>(&targetExpr->u)}) {
-            if (auto targetRefedChars{characteristics::Procedure::Characterize(
-                    *targetProcRef, context)}) {
-              targetProc = *targetRefedChars;
-              targetName = targetProcRef->proc().GetName() + "()";
-              isCall = true;
-            }
-          } else if (targetProcDesignator) {
-            targetProc = characteristics::Procedure::Characterize(
-                *targetProcDesignator, context);
-            targetName = targetProcDesignator->GetName();
-          } else if (targetSymbol) {
-            if (IsProcedure(*targetSymbol)) {
-              // proc that's not a call
-              targetProc = characteristics::Procedure::Characterize(
-                  *targetSymbol, context);
-            }
-            targetName = targetSymbol->name().ToString();
-          }
-          if (pointerSymbol && IsProcedure(*pointerSymbol)) {
-            pointerProc = characteristics::Procedure::Characterize(
-                *pointerSymbol, context);
-          }
-          if (pointerProc) {
-            if (targetProc) {
-              // procedure pointer and procedure target
-              std::string whyNot;
-              const evaluate::SpecificIntrinsic *specificIntrinsic{nullptr};
-              if (targetProcDesignator) {
-                specificIntrinsic =
-                    targetProcDesignator->GetSpecificIntrinsic();
+        if (const auto *targetExpr{targetArg->UnwrapExpr()};
+            targetExpr && pointerSymbol) {
+          if (IsProcedure(*pointerSymbol)) {
+            if (auto pointerProc{characteristics::Procedure::Characterize(
+                    *pointerSymbol, context)}) {
+              // Characterize the target procedure
+              std::optional<characteristics::Procedure> targetProc;
+              const auto *targetProcDesignator{
+                  evaluate::UnwrapExpr<evaluate::ProcedureDesignator>(
+                      *targetExpr)};
+              bool isCall{false};
+              std::string targetName;
+              if (IsProcedure(*targetExpr) ||
+                  IsNullProcedurePointer(*targetExpr)) {
+                if (const auto *targetProcRef{
+                        std::get_if<evaluate::ProcedureRef>(&targetExpr->u)}) {
+                  // target is a function call returning a procedure pointer
+                  targetProc = characteristics::Procedure::Characterize(
+                      *targetProcRef, context);
+                  isCall = true;
+                  targetName = targetProcRef->proc().GetName() + "()";
+                } else if (targetProcDesignator) {
+                  targetProc = characteristics::Procedure::Characterize(
+                      *targetProcDesignator, context);
+                  targetName = targetProcDesignator->GetName();
+                } else if (const Symbol * targSym{GetLastSymbol(*targetExpr)}) {
+                  targetProc = characteristics::Procedure::Characterize(
+                      *targSym, context);
+                  targetName = targSym->name().ToString();
+                }
               }
-              if (std::optional<parser::MessageFixedText> msg{
-                      CheckProcCompatibility(isCall, pointerProc, &*targetProc,
-                          specificIntrinsic, whyNot)}) {
-                msg->set_severity(parser::Severity::Warning);
+              if (targetProc) {
+                std::string whyNot;
+                const evaluate::SpecificIntrinsic *specificIntrinsic{
+                    targetProcDesignator
+                        ? targetProcDesignator->GetSpecificIntrinsic()
+                        : nullptr};
+                if (std::optional<parser::MessageFixedText> msg{
+                        CheckProcCompatibility(isCall, pointerProc,
+                            &*targetProc, specificIntrinsic, whyNot)}) {
+                  msg->set_severity(parser::Severity::Warning);
+                  evaluate::AttachDeclaration(
+                      context.messages().Say(std::move(*msg),
+                          "pointer '" + pointerSymbol->name().ToString() + "'",
+                          targetName, whyNot),
+                      *pointerSymbol);
+                }
+              } else if (!IsNullProcedurePointer(*targetExpr)) {
                 evaluate::AttachDeclaration(
-                    context.messages().Say(std::move(*msg),
-                        "pointer '" + pointerSymbol->name().ToString() + "'",
-                        targetName, whyNot),
+                    context.messages().Say(
+                        "POINTER= argument '%s' is a procedure pointer but the TARGET= argument '%s' is not a procedure or procedure pointer"_err_en_US,
+                        pointerSymbol->name(), targetExpr->AsFortran()),
                     *pointerSymbol);
               }
-            } else if (!IsNullProcedurePointer(*targetExpr)) {
-              // procedure pointer and object target
-              evaluate::AttachDeclaration(
-                  context.messages().Say(
-                      "POINTER= argument '%s' is a procedure pointer but the TARGET= argument '%s' is not a procedure or procedure pointer"_err_en_US,
-                      pointerSymbol->name(), targetName),
-                  *pointerSymbol);
             }
-          } else if (targetProc) {
-            // object pointer and procedure target
-            evaluate::AttachDeclaration(
-                context.messages().Say(
-                    "POINTER= argument '%s' is an object pointer but the TARGET= argument '%s' is a procedure designator"_err_en_US,
-                    pointerSymbol->name(), targetName),
-                *pointerSymbol);
-          } else if (targetSymbol) {
-            // object pointer and target
-            SymbolVector symbols{GetSymbolVector(*targetExpr)};
-            CHECK(!symbols.empty());
-            if (!evaluate::GetLastTarget(symbols)) {
-              parser::Message *msg{context.messages().Say(
-                  targetArg->sourceLocation(),
-                  "TARGET= argument '%s' must have either the POINTER or the TARGET attribute"_err_en_US,
-                  targetExpr->AsFortran())};
-              for (SymbolRef ref : symbols) {
-                msg = evaluate::AttachDeclaration(msg, *ref);
+          } else if (IsVariable(*targetExpr) || IsNullPointer(*targetExpr)) {
+            // Object pointer and target
+            if (ExtractDataRef(*targetExpr)) {
+              if (SymbolVector symbols{GetSymbolVector(*targetExpr)};
+                  !evaluate::GetLastTarget(symbols)) {
+                parser::Message *msg{context.messages().Say(
+                    targetArg->sourceLocation(),
+                    "TARGET= argument '%s' must have either the POINTER or the TARGET attribute"_err_en_US,
+                    targetExpr->AsFortran())};
+                for (SymbolRef ref : symbols) {
+                  msg = evaluate::AttachDeclaration(msg, *ref);
+                }
+              } else if (HasVectorSubscript(*targetExpr) ||
+                  ExtractCoarrayRef(*targetExpr)) {
+                context.messages().Say(targetArg->sourceLocation(),
+                    "TARGET= argument '%s' may not have a vector subscript or coindexing"_err_en_US,
+                    targetExpr->AsFortran());
               }
-            } else if (HasVectorSubscript(*targetExpr) ||
-                ExtractCoarrayRef(*targetExpr)) {
-              context.messages().Say(targetArg->sourceLocation(),
-                  "TARGET= argument '%s' may not have a vector subscript or coindexing"_err_en_US,
-                  targetExpr->AsFortran());
             }
             if (const auto pointerType{pointerArg->GetType()}) {
               if (const auto targetType{targetArg->GetType()}) {
                 ok = pointerType->IsTkCompatibleWith(*targetType);
               }
             }
+          } else {
+            evaluate::AttachDeclaration(
+                context.messages().Say(
+                    "POINTER= argument '%s' is an object pointer but the TARGET= argument '%s' is not a variable"_err_en_US,
+                    pointerSymbol->name(), targetExpr->AsFortran()),
+                *pointerSymbol);
           }
         }
       }

@@ -1335,10 +1335,10 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4095(ptr addrspace(1) inr
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
-  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 syncscope("agent") seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
@@ -1394,10 +1394,10 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_offset4294967296(ptr addrspace(
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
-  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 syncscope("agent") seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
@@ -1443,10 +1443,10 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4095(ptr addrspace(1) %pt
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
-  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 syncscope("agent") seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
@@ -1499,10 +1499,10 @@ define amdgpu_ps float @mubuf_atomicrmw_vgpr_ptr_offset4294967296(ptr addrspace(
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
-  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 syncscope("agent") seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
@@ -1559,10 +1559,10 @@ define amdgpu_ps float @mubuf_atomicrmw_sgpr_ptr_vgpr_offset(ptr addrspace(1) in
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 %voffset
-  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 seq_cst
+  %result = atomicrmw add ptr addrspace(1) %gep, i32 2 syncscope("agent") seq_cst
   %cast = bitcast i32 %result to float
   ret float %cast
 }
@@ -1611,10 +1611,10 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4095(ptr addrspace(1) inreg
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
-  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
@@ -1672,10 +1672,10 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_offset4294967296(ptr addrspace(1)
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
-  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
@@ -1722,10 +1722,10 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4095(ptr addrspace(1) %ptr,
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4095
-  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
@@ -1778,10 +1778,10 @@ define amdgpu_ps float @mubuf_cmpxchg_vgpr_ptr_offset4294967296(ptr addrspace(1)
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i64 4294967296
-  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
@@ -1839,10 +1839,10 @@ define amdgpu_ps float @mubuf_cmpxchg_sgpr_ptr_vgpr_offset(ptr addrspace(1) inre
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    ; return to shader part epilog
   %gep = getelementptr i32, ptr addrspace(1) %ptr, i32 %voffset
-  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in seq_cst seq_cst
+  %result.struct = cmpxchg ptr addrspace(1) %gep, i32 %old, i32 %in syncscope("agent") seq_cst seq_cst
   %result = extractvalue { i32, i1 } %result.struct, 0
   %cast = bitcast i32 %result to float
   ret float %cast
