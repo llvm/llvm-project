@@ -80,8 +80,8 @@ types::ID types::getPrecompiledType(ID Id) {
   return TY_INVALID;
 }
 
-const char *types::getTypeTempSuffix(ID Id, bool CLMode) {
-  if (CLMode) {
+const char *types::getTypeTempSuffix(ID Id, bool CLStyle) {
+  if (CLStyle) {
     switch (Id) {
     case TY_Object:
     case TY_LTO_BC:

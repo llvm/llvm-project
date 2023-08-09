@@ -8146,8 +8146,10 @@ class DXCJoinedOrSeparate<string name> : Option<["/", "-"], name,
 
 def dxc_no_stdinc : DXCFlag<"hlsl-no-stdinc">,
   HelpText<"HLSL only. Disables all standard includes containing non-native compiler types and functions.">;
-def Fo : DXCJoinedOrSeparate<"Fo">, Alias<o>,
+def dxc_Fo : DXCJoinedOrSeparate<"Fo">,
   HelpText<"Output object file">;
+def dxc_Fc : DXCJoinedOrSeparate<"Fc">,
+  HelpText<"Output assembly listing file">;
 def dxil_validator_version : Option<["/", "-"], "validator-version", KIND_SEPARATE>,
   Group<dxc_Group>, Flags<[NoXarchOption, HelpHidden]>,
   Visibility<[DXCOption, ClangOption, CC1Option]>,
