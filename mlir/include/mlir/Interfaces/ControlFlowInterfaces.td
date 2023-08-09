@@ -134,12 +134,12 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     InterfaceMethod<[{
         Returns the operands of this operation used as the entry arguments when
         entering the region at `index`, which was specified as a successor of
-        this operation by `getSuccessorRegions`, or the operands forwarded to
-        the operation's results when it branches back to itself. These operands
+        this operation by `getEntrySuccessorRegions`, or the operands forwarded
+        to the operation's results when it branches back to itself. These operands
         should correspond 1-1 with the successor inputs specified in
-        `getSuccessorRegions`.
+        `getEntrySuccessorRegions`.
       }],
-      "::mlir::OperandRange", "getSuccessorEntryOperands",
+      "::mlir::OperandRange", "getEntrySuccessorOperands",
       (ins "::std::optional<unsigned>":$index), [{}],
       /*defaultImplementation=*/[{
         auto operandEnd = this->getOperation()->operand_end();
@@ -147,23 +147,37 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       }]
     >,
     InterfaceMethod<[{
+        Returns the viable region successors that are branched to when first
+        executing the op.
+        Unlike `getSuccessorRegions`, this method also passes along the
+        constant operands of this op. Based on these, different region
+        successors can be determined.
+        `operands` contains an entry for every operand of the implementing
+        op with a null attribute if the operand has no constant value or
+        the corresponding attribute if it is a constant.
+
+        By default, simply dispatches to `getSuccessorRegions`.
+      }],
+      "void", "getEntrySuccessorRegions",
+      (ins "::llvm::ArrayRef<::mlir::Attribute>":$operands,
+           "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions),
+           [{}], [{
+        $_op.getSuccessorRegions(std::nullopt, regions);
+      }]
+    >,
+    InterfaceMethod<[{
         Returns the viable successors of a region at `index`, or the possible
         successors when branching from the parent op if `index` is None. These
-        are the regions that may be selected during the flow of control. If
-        `index` is None, `operands` is a set of optional attributes that
-        either correspond to a constant value for each operand of this
-        operation, or null if that operand is not a constant. If `index` is
-        valid, `operands` corresponds to the entry values of the region at
-        `index`. The parent operation, i.e. a null `index`, may specify itself
-        as successor, which indicates that the control flow may not enter any
-        region at all. This method allows for describing which
-        regions may be executed when entering an operation, and which regions
-        are executed after having executed another region of the parent op. The
-        successor region must be non-empty.
+        are the regions that may be selected during the flow of control. The
+        parent operation, i.e. a null `index`, may specify itself as successor,
+        which indicates that the control flow may not enter any region at all.
+        This method allows for describing which regions may be executed when
+        entering an operation, and which regions are executed after having
+        executed another region of the parent op. The successor region must be
+        non-empty.
       }],
       "void", "getSuccessorRegions",
       (ins "::std::optional<unsigned>":$index,
-           "::llvm::ArrayRef<::mlir::Attribute>":$operands,
            "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions)
     >,
     InterfaceMethod<[{
@@ -208,10 +222,6 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
   let verifyWithRegions = 1;
 
   let extraClassDeclaration = [{
-    /// Convenience helper in case none of the operands is known.
-    void getSuccessorRegions(std::optional<unsigned> index,
-                             SmallVectorImpl<RegionSuccessor> &regions);
-
     /// Return `true` if control flow originating from the given region may
     /// eventually branch back to the same region. (Maybe after passing through
     /// other regions.)
@@ -243,17 +253,26 @@ def RegionBranchTerminatorOpInterface :
       (ins "::std::optional<unsigned>":$index)
     >,
     InterfaceMethod<[{
-        Returns a range of operands that are semantically "returned" by passing
-        them to the region successor given by `index`.  If `index` is None, this
-        function returns the operands that are passed as a result to the parent
-        operation.
+        Returns the viable region successors that are branched to after this
+        terminator based on the given constant operands.
+
+        `operands` contains an entry for every operand of the
+        implementing op with a null attribute if the operand has no constant
+        value or the corresponding attribute if it is a constant.
+
+        Default implementation simply dispatches to the parent
+        `RegionBranchOpInterface`'s `getSuccessorRegions` implementation.
       }],
-      "::mlir::OperandRange", "getSuccessorOperands",
-      (ins "::std::optional<unsigned>":$index), [{}],
-      /*defaultImplementation=*/[{
-        return $_op.getMutableSuccessorOperands(index);
+      "void", "getSuccessorRegions",
+      (ins "::llvm::ArrayRef<::mlir::Attribute>":$operands,
+           "::llvm::SmallVectorImpl<::mlir::RegionSuccessor> &":$regions), [{}],
+      [{
+        ::mlir::Operation *op = $_op;
+        ::llvm::cast<::mlir::RegionBranchOpInterface>(op->getParentOp())
+          .getSuccessorRegions(op->getParentRegion()->getRegionNumber(),
+            regions);
       }]
-    >
+    >,
   ];
 
   let verify = [{
@@ -264,6 +283,16 @@ def RegionBranchTerminatorOpInterface :
     static_assert(ConcreteOp::template hasTrait<OpTrait::ZeroSuccessors>(),
                   "expected operation to have zero successors");
     return success();
+  }];
+
+  let extraClassDeclaration = [{
+    // Returns a range of operands that are semantically "returned" by passing
+    // them to the region successor given by `index`.  If `index` is None, this
+    // function returns the operands that are passed as a result to the parent
+    // operation.
+    ::mlir::OperandRange getSuccessorOperands(std::optional<unsigned> index) {
+      return getMutableSuccessorOperands(index);
+    }
   }];
 }
 

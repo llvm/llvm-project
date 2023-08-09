@@ -154,7 +154,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
 
   auto inputTypesFromParent =
       [&](std::optional<unsigned> regionNo) -> TypeRange {
-    return regionInterface.getSuccessorEntryOperands(regionNo).getTypes();
+    return regionInterface.getEntrySuccessorOperands(regionNo).getTypes();
   };
 
   // Verify types along control flow edges originating from the parent.
@@ -307,27 +307,6 @@ bool mlir::insideMutuallyExclusiveRegions(Operation *a, Operation *b) {
 bool RegionBranchOpInterface::isRepetitiveRegion(unsigned index) {
   Region *region = &getOperation()->getRegion(index);
   return isRegionReachable(region, region);
-}
-
-void RegionBranchOpInterface::getSuccessorRegions(
-    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
-  unsigned numInputs = 0;
-  if (index) {
-    // If the predecessor is a region, get the number of operands from an
-    // exiting terminator in the region.
-    for (Block &block : getOperation()->getRegion(*index)) {
-      Operation *terminator = block.getTerminator();
-      if (isa<RegionBranchTerminatorOpInterface>(terminator)) {
-        numInputs = terminator->getNumOperands();
-        break;
-      }
-    }
-  } else {
-    // Otherwise, use the number of parent operation operands.
-    numInputs = getOperation()->getNumOperands();
-  }
-  SmallVector<Attribute, 2> operands(numInputs, nullptr);
-  getSuccessorRegions(index, operands, regions);
 }
 
 Region *mlir::getEnclosingRepetitiveRegion(Operation *op) {

@@ -106,7 +106,7 @@ void BufferViewFlowAnalysis::build(Operation *op) {
         // Wire the entry region's successor arguments with the initial
         // successor inputs.
         registerDependencies(
-            regionInterface.getSuccessorEntryOperands(
+            regionInterface.getEntrySuccessorOperands(
                 entrySuccessor.isParent()
                     ? std::optional<unsigned>()
                     : entrySuccessor.getSuccessor()->getRegionNumber()),
