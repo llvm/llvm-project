@@ -16414,8 +16414,8 @@ static SDValue lowerV4X128Shuffle(const SDLoc &DL, MVT VT, ArrayRef<int> Mask,
 
   // Try to lower to vshuf64x2/vshuf32x4.
   SDValue Ops[2] = {DAG.getUNDEF(VT), DAG.getUNDEF(VT)};
-  unsigned PermMask = 0;
-  // Insure elements came from the same Op.
+  int PermMask[4] = {-1, -1, -1, -1};
+  // Ensure elements came from the same Op.
   for (int i = 0; i < 4; ++i) {
     assert(Widened128Mask[i] >= -1 && "Illegal shuffle sentinel value");
     if (Widened128Mask[i] < 0)
@@ -16428,13 +16428,11 @@ static SDValue lowerV4X128Shuffle(const SDLoc &DL, MVT VT, ArrayRef<int> Mask,
     else if (Ops[OpIndex] != Op)
       return SDValue();
 
-    // Convert the 128-bit shuffle mask selection values into 128-bit selection
-    // bits defined by a vshuf64x2 instruction's immediate control byte.
-    PermMask |= (Widened128Mask[i] % 4) << (i * 2);
+    PermMask[i] = Widened128Mask[i] % 4;
   }
 
   return DAG.getNode(X86ISD::SHUF128, DL, VT, Ops[0], Ops[1],
-                     DAG.getTargetConstant(PermMask, DL, MVT::i8));
+                     getV4X86ShuffleImm8ForMask(PermMask, DL, DAG));
 }
 
 /// Handle lowering of 8-lane 64-bit floating point shuffles.
@@ -37689,8 +37687,8 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
     auto MatchSHUF128 = [&](MVT ShuffleVT, const SDLoc &DL,
                             ArrayRef<int> ScaledMask, SDValue V1, SDValue V2,
                             SelectionDAG &DAG) {
-      unsigned PermMask = 0;
-      // Insure elements came from the same Op.
+      int PermMask[4] = {-1, -1, -1, -1};
+      // Ensure elements came from the same Op.
       SDValue Ops[2] = {DAG.getUNDEF(ShuffleVT), DAG.getUNDEF(ShuffleVT)};
       for (int i = 0; i < 4; ++i) {
         assert(ScaledMask[i] >= -1 && "Illegal shuffle sentinel value");
@@ -37704,16 +37702,13 @@ static SDValue combineX86ShuffleChain(ArrayRef<SDValue> Inputs, SDValue Root,
         else if (Ops[OpIndex] != Op)
           return SDValue();
 
-        // Convert the 128-bit shuffle mask selection values into 128-bit
-        // selection bits defined by a vshuf64x2 instruction's immediate control
-        // byte.
-        PermMask |= (ScaledMask[i] % 4) << (i * 2);
+        PermMask[i] = ScaledMask[i] % 4;
       }
 
       return DAG.getNode(X86ISD::SHUF128, DL, ShuffleVT,
                          CanonicalizeShuffleInput(ShuffleVT, Ops[0]),
                          CanonicalizeShuffleInput(ShuffleVT, Ops[1]),
-                         DAG.getTargetConstant(PermMask, DL, MVT::i8));
+                         getV4X86ShuffleImm8ForMask(PermMask, DL, DAG));
     };
 
     // FIXME: Is there a better way to do this? is256BitLaneRepeatedShuffleMask
