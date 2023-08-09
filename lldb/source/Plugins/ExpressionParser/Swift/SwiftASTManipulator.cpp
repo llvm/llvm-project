@@ -709,7 +709,7 @@ bool SwiftASTManipulator::FixupResultAfterTypeChecking(Status &error) {
           "Type of %zuth return value could not be determined.", i);
       return false;
     }
-    swift::Type its_type = the_decl->getType();
+    swift::Type its_type = the_decl->getTypeInContext();
     if (result_type.isNull()) {
       result_type = its_type;
     } else if (!its_type.getPointer()->isEqual(result_type)) {

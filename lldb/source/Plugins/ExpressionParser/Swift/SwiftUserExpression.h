@@ -54,8 +54,7 @@ public:
 
   class SwiftUserExpressionHelper : public ExpressionTypeSystemHelper {
   public:
-    SwiftUserExpressionHelper(Target &)
-        : ExpressionTypeSystemHelper(eKindSwiftHelper) {}
+    SwiftUserExpressionHelper(Target &) : ExpressionTypeSystemHelper() {}
 
     ~SwiftUserExpressionHelper() {}
   };

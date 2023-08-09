@@ -183,7 +183,7 @@ public:
   virtual CompilerType ConvertClangTypeToSwiftType(CompilerType clang_type) = 0;
 
   void DumpValue(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                 Stream *s, lldb::Format format, const DataExtractor &data,
+                 Stream &s, lldb::Format format, const DataExtractor &data,
                  lldb::offset_t data_offset, size_t data_byte_size,
                  uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
                  bool show_types, bool show_summary, bool verbose,
@@ -218,9 +218,6 @@ public:
                            bool &is_complex) override;
   bool IsIntegerType(lldb::opaque_compiler_type_t type,
                      bool &is_signed) override;
-  bool IsBooleanType(lldb::opaque_compiler_type_t type) override {
-    return false;
-  }
   bool IsScopedEnumerationType(lldb::opaque_compiler_type_t type) override {
     return false;
   }
@@ -304,7 +301,8 @@ public:
   /// Lookup a child given a name. This function will match base class names
   /// and member names in \p type only, not descendants.
   uint32_t GetIndexOfChildWithName(lldb::opaque_compiler_type_t type,
-                                   const char *name, ExecutionContext *exe_ctx,
+                                   llvm::StringRef name,
+                                   ExecutionContext *exe_ctx,
                                    bool omit_empty_base_classes) override;
 
   CompilerType
@@ -323,7 +321,7 @@ public:
 
   // TODO: This method appear unused. Should they be removed?
   void DumpSummary(lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx,
-                   Stream *s, const DataExtractor &data,
+                   Stream &s, const DataExtractor &data,
                    lldb::offset_t data_offset, size_t data_byte_size) override {
   }
   /// \}

@@ -49,11 +49,11 @@
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Verifier.h"
-#include "llvm/Support/Host.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/TargetSelect.h"
 #include "llvm/Support/raw_ostream.h"
+#include "llvm/TargetParser/Host.h"
 
 #include "clang/Basic/Module.h"
 #include "clang/Rewrite/Core/RewriteBuffer.h"
@@ -1557,19 +1557,18 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
     return false;
   }
 
-  auto &basic_blocks = lldb_expr_func->getBasicBlockList();
   // The entrypoint function should only have one basic block whith
   // materialization instructions and the call to the sink.
-  if (basic_blocks.size() != 1) {
+  if (lldb_expr_func->size() != 1) {
     log->Printf(
         "[RedirectCallFromSinkToTrampolineFunction] Could not set the call: "
         "entrypoint function has %zu basic blocks.",
-        basic_blocks.size());
+        lldb_expr_func->size());
     return false;
   }
 
-  auto &basic_block = basic_blocks.back();
-  if (basic_block.getInstList().size() == 0) {
+  auto &basic_block = lldb_expr_func->back();
+  if (basic_block.size() == 0) {
     log->Printf(
         "[RedirectCallFromSinkToTrampolineFunction] Could not set the call: "
         "basic block has no instructions.");
@@ -1626,7 +1625,7 @@ RedirectCallFromSinkToTrampolineFunction(llvm::Module &module,
     return false;
   }
 
-  auto &it = basic_block.getInstList().back();
+  auto &it = basic_block.back();
   // Initialize the builder from the last instruction since we want to place the
   // new call there.
   llvm::IRBuilder<> builder(&it);

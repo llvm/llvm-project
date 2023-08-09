@@ -90,7 +90,6 @@
 #include "lldb/Core/Progress.h"
 #include "lldb/Core/Section.h"
 #include "lldb/Core/StreamFile.h"
-#include "lldb/Core/ThreadSafeDenseMap.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/IRExecutionUnit.h"
 #include "lldb/Host/Host.h"
@@ -109,6 +108,7 @@
 #include "lldb/Utility/LLDBAssert.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Status.h"
+#include "lldb/Utility/ThreadSafeDenseMap.h"
 #include "lldb/Utility/Timer.h"
 #include "lldb/Utility/XcodeSDK.h"
 
@@ -1715,7 +1715,7 @@ static llvm::Optional<StringRef> GetDSYMBundle(Module &module) {
 }
 
 static std::string GetSDKPath(std::string m_description, XcodeSDK sdk) {
-  auto sdk_path_or_err = HostInfo::GetXcodeSDKPath(sdk);
+  auto sdk_path_or_err = HostInfo::GetSDKRoot(HostInfo::SDKOptions{sdk});
   if (!sdk_path_or_err) {
     Debugger::ReportError("Error while searching for SDK: " +
                           toString(sdk_path_or_err.takeError()));
@@ -2897,7 +2897,7 @@ swift::ASTContext *SwiftASTContext::GetASTContext() {
       GetLanguageOptions(), GetTypeCheckerOptions(), GetSILOptions(),
       GetSearchPathOptions(), GetClangImporterOptions(),
       GetSymbolGraphOptions(), GetSourceManager(), GetDiagnosticEngine(),
-      ReportModuleLoadingProgress));
+      /*OutputBackend=*/nullptr, ReportModuleLoadingProgress));
 
   if (getenv("LLDB_SWIFT_DUMP_DIAGS")) {
     // NOTE: leaking a swift::PrintingDiagnosticConsumer() here, but
@@ -4163,7 +4163,6 @@ static SwiftASTContext::TypeOrDecl DeclToTypeOrDecl(swift::ASTContext *ast,
     case swift::DeclKind::Module:
     case swift::DeclKind::Missing:
     case swift::DeclKind::MissingMember:
-    case swift::DeclKind::MacroExpansion:
       break;
 
     case swift::DeclKind::InfixOperator:
@@ -5209,7 +5208,8 @@ SwiftASTContext::GetTypeRefType(lldb::opaque_compiler_type_t type) {
 // Type Completion
 //----------------------------------------------------------------------
 
-ConstString SwiftASTContext::GetTypeName(opaque_compiler_type_t type) {
+ConstString SwiftASTContext::GetTypeName(opaque_compiler_type_t type,
+                                         bool BaseOnly) {
   VALID_OR_RETURN_CHECK_TYPE(
       type, ConstString("<invalid Swift context or opaque type>"));
   LLDB_SCOPED_TIMER();
@@ -5265,7 +5265,7 @@ ConstString SwiftASTContext::GetDisplayTypeName(opaque_compiler_type_t type,
   VALID_OR_RETURN_CHECK_TYPE(
       type, ConstString("<invalid Swift context or opaque type>"));
   LLDB_SCOPED_TIMER();
-  std::string type_name(GetTypeName(type).AsCString(""));
+  std::string type_name(GetTypeName(type, false).AsCString(""));
   if (type) {
     swift::Type swift_type(GetSwiftType(type));
     swift::PrintOptions print_options;
@@ -6922,7 +6922,7 @@ CompilerType SwiftASTContext::GetChildCompilerTypeAtIndex(
               continue;
 
             CompilerType child_type =
-                ToCompilerType(VD->getType().getPointer());
+                ToCompilerType(VD->getTypeInContext().getPointer());
             child_name = VD->getNameStr().str();
             if (!get_type_size(child_byte_size, child_type))
               return {};
@@ -7370,10 +7370,10 @@ CompilerType SwiftASTContext::GetUnboundGenericType(opaque_compiler_type_t type,
     auto *nominal_type_decl = unbound_generic_type->getDecl();
     swift::GenericSignature generic_sig =
         nominal_type_decl->getGenericSignature();
-    swift::TypeArrayView<swift::GenericTypeParamType> depView =
+    llvm::ArrayRef<swift::GenericTypeParamType *> params =
         generic_sig.getGenericParams();
-    swift::Type depTy = depView[idx];
-    return ToCompilerType({nominal_type_decl->mapTypeIntoContext(depTy)
+    swift::Type paramTy = params[idx];
+    return ToCompilerType({nominal_type_decl->mapTypeIntoContext(paramTy)
                                ->castTo<swift::ArchetypeType>()});
   }
 
@@ -7459,7 +7459,7 @@ LLVM_DUMP_METHOD void SwiftASTContext::dump(opaque_compiler_type_t type) const {
 #endif
 
 bool SwiftASTContext::DumpTypeValue(
-    opaque_compiler_type_t type, Stream *s, lldb::Format format,
+    opaque_compiler_type_t type, Stream &s, lldb::Format format,
     const lldb_private::DataExtractor &data, lldb::offset_t byte_offset,
     size_t byte_size, uint32_t bitfield_bit_size, uint32_t bitfield_bit_offset,
     ExecutionContextScope *exe_scope, bool is_base_class) {
@@ -7580,7 +7580,7 @@ bool SwiftASTContext::DumpTypeValue(
       byte_size = 4;
       break;
     }
-    return DumpDataExtractor(data, s, byte_offset, format, byte_size,
+    return DumpDataExtractor(data, &s, byte_offset, format, byte_size,
                              item_count, UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
   } break;
@@ -7594,7 +7594,7 @@ bool SwiftASTContext::DumpTypeValue(
   case swift::TypeKind::UnownedStorage:
   case swift::TypeKind::WeakStorage:
     return ToCompilerType(swift_can_type->getReferenceStorageReferent())
-        .DumpTypeValue(s, format, data, byte_offset, byte_size,
+        .DumpTypeValue(&s, format, data, byte_offset, byte_size,
                        bitfield_bit_size, bitfield_bit_offset, exe_scope,
                        is_base_class);
   case swift::TypeKind::Enum:
@@ -7603,17 +7603,17 @@ bool SwiftASTContext::DumpTypeValue(
     if (cached_enum_info) {
       auto enum_elem_info = cached_enum_info->GetElementFromData(data, true);
       if (enum_elem_info)
-        s->Printf("%s", enum_elem_info->name.GetCString());
+        s.Printf("%s", enum_elem_info->name.GetCString());
       else {
         lldb::offset_t ptr = 0;
         if (data.GetByteSize())
-          s->Printf("<invalid> (0x%" PRIx8 ")", data.GetU8(&ptr));
+          s.Printf("<invalid> (0x%" PRIx8 ")", data.GetU8(&ptr));
         else
-          s->Printf("<empty>");
+          s.Printf("<empty>");
       }
       return true;
     } else
-      s->Printf("<unknown type>");
+      s.Printf("<unknown type>");
   } break;
 
   case swift::TypeKind::Struct:
@@ -7622,7 +7622,7 @@ bool SwiftASTContext::DumpTypeValue(
 
   case swift::TypeKind::ExistentialMetatype:
   case swift::TypeKind::Metatype: {
-    return DumpDataExtractor(data, s, byte_offset, eFormatPointer, byte_size, 1,
+    return DumpDataExtractor(data, &s, byte_offset, eFormatPointer, byte_size, 1,
                              UINT32_MAX, LLDB_INVALID_ADDRESS,
                              bitfield_bit_size, bitfield_bit_offset, exe_scope);
   } break;
@@ -7751,14 +7751,14 @@ void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
                                           lldb::DescriptionLevel level,
                                           ExecutionContextScope *) {
   StreamFile s(stdout, false);
-  DumpTypeDescription(type, &s, level);
+  DumpTypeDescription(type, s, level);
 }
 
 void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
-                                          Stream *s,
+                                          Stream &s,
                                           lldb::DescriptionLevel level,
                                           ExecutionContextScope *) {
-  DumpTypeDescription(type, s, false, true, level);
+  DumpTypeDescription(type, &s, false, true, level);
 }
 
 void SwiftASTContext::DumpTypeDescription(opaque_compiler_type_t type,
@@ -8084,9 +8084,6 @@ static void DescribeFileUnit(Stream &s, swift::FileUnit *file_unit) {
         break;
       case swift::SourceFileKind::Interface:
         s.PutCString("Interface");
-        break;
-      case swift::SourceFileKind::MacroExpansion:
-        s.PutCString("MacroExpansion");
         break;
       }
     }

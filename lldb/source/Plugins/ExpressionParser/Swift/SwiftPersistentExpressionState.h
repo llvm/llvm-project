@@ -75,9 +75,8 @@ public:
   //------------------------------------------------------------------
   // llvm casting support
   //------------------------------------------------------------------
-  static bool classof(const PersistentExpressionState *pv) {
-    return pv->getKind() == PersistentExpressionState::eKindSwift;
-  }
+  // LLVM RTTI Support
+  static char ID;
 
   lldb::ExpressionVariableSP
   CreatePersistentVariable(const lldb::ValueObjectSP &valobj_sp) override;
