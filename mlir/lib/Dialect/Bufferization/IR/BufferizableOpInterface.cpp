@@ -690,7 +690,7 @@ bool AnalysisState::isTensorYielded(Value tensor) const {
       return true;
 
     // Check if the op is returning/yielding.
-    if (isRegionReturnLike(op))
+    if (isa<RegionBranchTerminatorOpInterface>(op))
       return true;
 
     // Add all aliasing OpResults to the worklist.

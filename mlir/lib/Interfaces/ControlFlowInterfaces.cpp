@@ -183,12 +183,13 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
 
     std::optional<OperandRange> regionReturnOperands;
     for (Block &block : region) {
-      Operation *terminator = block.getTerminator();
-      auto terminatorOperands =
-          getRegionBranchSuccessorOperands(terminator, regionNo);
-      if (!terminatorOperands)
+      auto terminator =
+          dyn_cast<RegionBranchTerminatorOpInterface>(block.getTerminator());
+      if (!terminator)
         continue;
 
+      OperandRange terminatorOperands =
+          terminator.getSuccessorOperands(regionNo);
       if (!regionReturnOperands) {
         regionReturnOperands = terminatorOperands;
         continue;
@@ -197,7 +198,7 @@ LogicalResult detail::verifyTypesAlongControlFlowEdges(Operation *op) {
       // Found more than one ReturnLike terminator. Make sure the operand types
       // match with the first one.
       if (!areTypesCompatible(regionReturnOperands->getTypes(),
-                              terminatorOperands->getTypes()))
+                              terminatorOperands.getTypes()))
         return op->emitOpError("Region #")
                << regionNo
                << " operands mismatch between return-like terminators";
@@ -316,7 +317,7 @@ void RegionBranchOpInterface::getSuccessorRegions(
     // exiting terminator in the region.
     for (Block &block : getOperation()->getRegion(*index)) {
       Operation *terminator = block.getTerminator();
-      if (getRegionBranchSuccessorOperands(terminator, *index)) {
+      if (isa<RegionBranchTerminatorOpInterface>(terminator)) {
         numInputs = terminator->getNumOperands();
         break;
       }
@@ -349,52 +350,4 @@ Region *mlir::getEnclosingRepetitiveRegion(Value value) {
     region = op->getParentRegion();
   }
   return nullptr;
-}
-
-//===----------------------------------------------------------------------===//
-// RegionBranchTerminatorOpInterface
-//===----------------------------------------------------------------------===//
-
-/// Returns true if the given operation is either annotated with the
-/// `ReturnLike` trait or implements the `RegionBranchTerminatorOpInterface`.
-bool mlir::isRegionReturnLike(Operation *operation) {
-  return dyn_cast<RegionBranchTerminatorOpInterface>(operation) ||
-         operation->hasTrait<OpTrait::ReturnLike>();
-}
-
-/// Returns the mutable operands that are passed to the region with the given
-/// `regionIndex`. If the operation does not implement the
-/// `RegionBranchTerminatorOpInterface` and is not marked as `ReturnLike`, the
-/// result will be `std::nullopt`. In all other cases, the resulting
-/// `OperandRange` represents all operands that are passed to the specified
-/// successor region. If `regionIndex` is `std::nullopt`, all operands that are
-/// passed to the parent operation will be returned.
-std::optional<MutableOperandRange>
-mlir::getMutableRegionBranchSuccessorOperands(
-    Operation *operation, std::optional<unsigned> regionIndex) {
-  // Try to query a RegionBranchTerminatorOpInterface to determine
-  // all successor operands that will be passed to the successor
-  // input arguments.
-  if (auto regionTerminatorInterface =
-          dyn_cast<RegionBranchTerminatorOpInterface>(operation))
-    return regionTerminatorInterface.getMutableSuccessorOperands(regionIndex);
-
-  // TODO: The ReturnLike trait should imply a default implementation of the
-  // RegionBranchTerminatorOpInterface. This would make this code significantly
-  // easier. Furthermore, this may even make this function obsolete.
-  if (operation->hasTrait<OpTrait::ReturnLike>())
-    return MutableOperandRange(operation);
-  return std::nullopt;
-}
-
-/// Returns the read only operands that are passed to the region with the given
-/// `regionIndex`. See `getMutableRegionBranchSuccessorOperands` for more
-/// information.
-std::optional<OperandRange>
-mlir::getRegionBranchSuccessorOperands(Operation *operation,
-                                       std::optional<unsigned> regionIndex) {
-  auto range = getMutableRegionBranchSuccessorOperands(operation, regionIndex);
-  if (range)
-    return range->operator OperandRange();
-  return std::nullopt;
 }
