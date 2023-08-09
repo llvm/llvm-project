@@ -2122,11 +2122,20 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
       return isKnownToBeAPowerOfTwo(U.get(), OrZero, NewDepth, RecQ);
     });
   }
+  case Instruction::Invoke:
   case Instruction::Call: {
-    Value *X, *Y;
-    if (match(I, m_MaxOrMin(m_Value(X), m_Value(Y))))
-      return isKnownToBeAPowerOfTwo(X, OrZero, Depth, Q) &&
-             isKnownToBeAPowerOfTwo(Y, OrZero, Depth, Q);
+    if (auto *II = dyn_cast<IntrinsicInst>(I)) {
+      switch (II->getIntrinsicID()) {
+      case Intrinsic::umax:
+      case Intrinsic::smax:
+      case Intrinsic::umin:
+      case Intrinsic::smin:
+        return isKnownToBeAPowerOfTwo(II->getArgOperand(1), OrZero, Depth, Q) &&
+               isKnownToBeAPowerOfTwo(II->getArgOperand(0), OrZero, Depth, Q);
+      default:
+        break;
+      }
+    }
     return false;
   }
   default:
