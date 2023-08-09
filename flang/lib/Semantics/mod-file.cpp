@@ -271,13 +271,6 @@ void ModFileWriter::PutSymbol(
               }
             } else {
               PutGeneric(symbol);
-              if (x.specific() && &x.specific()->owner() == &symbol.owner()) {
-                PutSymbol(typeBindings, *x.specific());
-              }
-              if (x.derivedType() &&
-                  &x.derivedType()->owner() == &symbol.owner()) {
-                PutSymbol(typeBindings, *x.derivedType());
-              }
             }
           },
           [&](const UseDetails &) { PutUse(symbol); },
@@ -583,21 +576,8 @@ void ModFileWriter::PutUseExtraAttr(
   }
 }
 
-// When a generic interface has the same name as a derived type
-// in the same scope, the generic shadows the derived type.
-// If the derived type were declared first, emit the generic
-// interface at the position of derived type's declaration.
-// (ReplaceName() is not used for this purpose because doing so
-// would confusingly position error messages pertaining to the generic
-// interface upon the derived type's declaration.)
 static inline SourceName NameInModuleFile(const Symbol &symbol) {
-  if (const auto *generic{symbol.detailsIf<GenericDetails>()}) {
-    if (const auto *derivedTypeOverload{generic->derivedType()}) {
-      if (derivedTypeOverload->name().begin() < symbol.name().begin()) {
-        return derivedTypeOverload->name();
-      }
-    }
-  } else if (const auto *use{symbol.detailsIf<UseDetails>()}) {
+  if (const auto *use{symbol.detailsIf<UseDetails>()}) {
     if (use->symbol().attrs().test(Attr::PRIVATE)) {
       // Avoid the use in sorting of names created to access private
       // specific procedures as a result of generic resolution;
@@ -609,10 +589,10 @@ static inline SourceName NameInModuleFile(const Symbol &symbol) {
 }
 
 // Collect the symbols of this scope sorted by their original order, not name.
-// Namelists are an exception: they are sorted after other symbols.
+// Generics and namelists are exceptions: they are sorted after other symbols.
 void CollectSymbols(
     const Scope &scope, SymbolVector &sorted, SymbolVector &uses) {
-  SymbolVector namelist;
+  SymbolVector namelist, generics;
   std::size_t commonSize{scope.commonBlocks().size()};
   auto symbols{scope.GetSymbols()};
   sorted.reserve(symbols.size() + commonSize);
@@ -620,6 +600,15 @@ void CollectSymbols(
     if (!symbol->test(Symbol::Flag::ParentComp)) {
       if (symbol->has<NamelistDetails>()) {
         namelist.push_back(symbol);
+      } else if (const auto *generic{symbol->detailsIf<GenericDetails>()}) {
+        if (generic->specific() &&
+            &generic->specific()->owner() == &symbol->owner()) {
+          sorted.push_back(*generic->specific());
+        } else if (generic->derivedType() &&
+            &generic->derivedType()->owner() == &symbol->owner()) {
+          sorted.push_back(*generic->derivedType());
+        }
+        generics.push_back(symbol);
       } else {
         sorted.push_back(symbol);
       }
@@ -630,9 +619,12 @@ void CollectSymbols(
   }
   // Sort most symbols by name: use of Symbol::ReplaceName ensures the source
   // location of a symbol's name is the first "real" use.
-  std::sort(sorted.begin(), sorted.end(), [](SymbolRef x, SymbolRef y) {
-    return NameInModuleFile(x).begin() < NameInModuleFile(y).begin();
-  });
+  auto sorter{[](SymbolRef x, SymbolRef y) {
+    return NameInModuleFile(*x).begin() < NameInModuleFile(*y).begin();
+  }};
+  std::sort(sorted.begin(), sorted.end(), sorter);
+  std::sort(generics.begin(), generics.end(), sorter);
+  sorted.insert(sorted.end(), generics.begin(), generics.end());
   sorted.insert(sorted.end(), namelist.begin(), namelist.end());
   for (const auto &pair : scope.commonBlocks()) {
     sorted.push_back(*pair.second);
