@@ -234,7 +234,7 @@ def IRDL_OperandsOp : IRDL_Op<"operands", [HasParent<"OperationOp">]> {
     and %3 is a variadic operand.
 
     When more than one operand is marked as optional or variadic, the operation
-    will expect a 'operand_segment_sizes' attribute that defines the number of
+    will expect a 'operandSegmentSizes' attribute that defines the number of
     operands in each segment.
   }];
 
@@ -280,7 +280,7 @@ def IRDL_ResultsOp : IRDL_Op<"results", [HasParent<"OperationOp">]> {
     and %3 is a variadic result.
 
     When more than one result is marked as optional or variadic, the operation
-    will expect a 'result_segment_sizes' attribute that defines the number of
+    will expect a 'resultSegmentSizes' attribute that defines the number of
     results in each segment.
   }];
 

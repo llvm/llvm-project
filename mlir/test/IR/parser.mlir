@@ -460,7 +460,7 @@ func.func @verbose_terminators() -> (i1, i17) {
 
 ^bb1(%x : i1, %y : i17):
 // CHECK:  cf.cond_br %{{.*}}, ^bb2(%{{.*}} : i17), ^bb3(%{{.*}}, %{{.*}} : i1, i17)
-  "cf.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operand_segment_sizes = array<i32: 1, 1, 2>} : (i1, i17, i1, i17) -> ()
+  "cf.cond_br"(%x, %y, %x, %y) [^bb2, ^bb3] {operandSegmentSizes = array<i32: 1, 1, 2>} : (i1, i17, i1, i17) -> ()
 
 ^bb2(%a : i17):
   %true = arith.constant true
