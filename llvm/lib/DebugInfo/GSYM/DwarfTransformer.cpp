@@ -221,13 +221,18 @@ static void parseInlineInfo(GsymCreator &Gsym, raw_ostream *Log, CUInfo &CUI,
         // Check that the inlined function is within the any of the range the
         // parent InlineInfo. If it isn't remove it!
         AddressRange InlineRange(Range.LowPC, Range.HighPC);
-        if (parent.Ranges.contains(InlineRange)) {
-          II.Ranges.insert(InlineRange);
-        } else if (Log) {
-          *Log << "error: inlined function DIE at " << HEX32(Die.getOffset())
-               << " has a range [" << HEX64(Range.LowPC) << " - "
-               << HEX64(Range.HighPC) << ") that isn't contained in any parent "
-               << "address ranges, this inline range will be removed.\n";
+        // Check for empty inline range in case inline function was outlined
+        // or has not code
+        if (!InlineRange.empty()) {
+          if (parent.Ranges.contains(InlineRange)) {
+            II.Ranges.insert(InlineRange);
+          } else if (Log) {
+            *Log << "error: inlined function DIE at " << HEX32(Die.getOffset())
+                 << " has a range [" << HEX64(Range.LowPC) << " - "
+                 << HEX64(Range.HighPC) << ") that isn't contained in any "
+                 << "parent address ranges, this inline range will be "
+                    "removed.\n";
+          }
         }
       }
     }
