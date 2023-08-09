@@ -188,6 +188,10 @@ Changes in existing checks
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``.
 
+- Improved :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance/faster-string-find>` check to properly escape
+  single quotes.
+
 - Improved :doc:`performanc-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
   match with the swap function signature, eliminating false-positives.
