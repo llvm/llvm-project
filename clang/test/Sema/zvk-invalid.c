@@ -1,3 +1,4 @@
+// REQUIRES: riscv-registered-target
 // RUN: %clang_cc1 -triple riscv64 -target-feature +v %s -fsyntax-only -verify
 
 #include <riscv_vector.h>
