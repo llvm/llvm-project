@@ -1,4 +1,4 @@
-// RUN: mlir-opt %s -lower-affine -convert-scf-to-cf -convert-vector-to-llvm="enable-arm-sve" -finalize-memref-to-llvm -convert-func-to-llvm -convert-arith-to-llvm -canonicalize | \
+// RUN: mlir-opt %s -lower-affine -convert-vector-to-scf -convert-scf-to-cf -convert-vector-to-llvm="enable-arm-sve" -finalize-memref-to-llvm -convert-func-to-llvm -convert-arith-to-llvm -canonicalize | \
 // RUN: %mcr_aarch64_cmd -e=entry -entry-point-result=void --march=aarch64 --mattr="+sve" -shared-libs=%mlir_lib_dir/libmlir_c_runner_utils%shlibext | \
 // RUN: FileCheck %s
 
