@@ -444,8 +444,6 @@ AArch64TargetMachine::getSubtargetImpl(const Function &F) const {
 
   assert((!StreamingSVEMode || I->hasSME()) &&
          "Expected SME to be available");
-  assert((!StreamingCompatibleSVEMode || I->hasSVEorSME()) &&
-         "Expected SVE or SME to be available");
 
   return I.get();
 }
