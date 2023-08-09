@@ -78,19 +78,21 @@ fir::factory::getLlvmSetRounding(fir::FirOpBuilder &builder) {
 }
 
 mlir::func::FuncOp fir::factory::getLlvmStackSave(fir::FirOpBuilder &builder) {
+  // FIXME: This should query the target alloca address space
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   auto funcTy =
       mlir::FunctionType::get(builder.getContext(), std::nullopt, {ptrTy});
-  return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.stacksave",
+  return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.stacksave.p0",
                                   funcTy);
 }
 
 mlir::func::FuncOp
 fir::factory::getLlvmStackRestore(fir::FirOpBuilder &builder) {
+  // FIXME: This should query the target alloca address space
   auto ptrTy = builder.getRefType(builder.getIntegerType(8));
   auto funcTy =
       mlir::FunctionType::get(builder.getContext(), {ptrTy}, std::nullopt);
-  return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.stackrestore",
+  return builder.addNamedFunction(builder.getUnknownLoc(), "llvm.stackrestore.p0",
                                   funcTy);
 }
 
