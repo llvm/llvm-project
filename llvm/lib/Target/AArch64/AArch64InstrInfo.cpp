@@ -4525,9 +4525,6 @@ MachineInstr *AArch64InstrInfo::foldMemoryOperandImpl(
   // register class, TargetInstrInfo::foldMemoryOperand() is going to try.
   //
   // To prevent that, we are going to constrain the %0 register class here.
-  //
-  // <rdar://problem/11522048>
-  //
   if (MI.isFullCopy()) {
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(1).getReg();
