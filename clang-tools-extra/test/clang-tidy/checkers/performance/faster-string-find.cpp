@@ -56,12 +56,20 @@ void StringFind() {
   // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
   // CHECK-FIXES: Str.find('a', 1);
 
-  // Doens't work with strings smaller or larger than 1 char.
+  // Doesn't work with strings smaller or larger than 1 char.
   Str.find("");
   Str.find("ab");
 
   // Doesn't do anything with the 3 argument overload.
   Str.find("a", 1, 1);
+
+  // Single quotes are escaped properly
+  Str.find("'");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
+  // CHECK-FIXES: Str.find('\'');
+  Str.find("\'");
+  // CHECK-MESSAGES: [[@LINE-1]]:12: warning: 'find' called with a string literal
+  // CHECK-FIXES: Str.find('\'');
 
   // Other methods that can also be replaced
   Str.rfind("a");

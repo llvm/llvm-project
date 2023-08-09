@@ -91,15 +91,14 @@ static void collectUnderlyingAddressValues(RegionBranchOpInterface branch,
   for (int i = 0, e = op->getNumRegions(); i != e; ++i) {
     if (std::optional<unsigned> operandIndex = getOperandIndexIfPred(i)) {
       for (Block &block : op->getRegion(i)) {
-        Operation *term = block.getTerminator();
         // Try to determine possible region-branch successor operands for the
         // current region.
-        auto successorOperands =
-            getRegionBranchSuccessorOperands(term, regionIndex);
-        if (successorOperands) {
-          collectUnderlyingAddressValues((*successorOperands)[*operandIndex],
-                                         maxDepth, visited, output);
-        } else if (term->getNumSuccessors()) {
+        if (auto term = dyn_cast<RegionBranchTerminatorOpInterface>(
+                block.getTerminator())) {
+          collectUnderlyingAddressValues(
+              term.getSuccessorOperands(regionIndex)[*operandIndex], maxDepth,
+              visited, output);
+        } else if (block.getNumSuccessors()) {
           // Otherwise, if this terminator may exit the region we can't make
           // any assumptions about which values get passed.
           output.push_back(inputValue);
