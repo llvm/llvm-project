@@ -95,17 +95,14 @@ struct LowerGpuOpsToGENXOpsPass
 
     LLVMTypeConverter converter(ctx, options);
     populateGpuMemorySpaceAttributeConversions(
-        converter, [](gpu::AddressSpace space) {
+        converter, [](gpu::AddressSpace space) -> unsigned {
           switch (space) {
           case gpu::AddressSpace::Global:
-            // TODO: use enumerations instead of hard coding the address space
-            // numbers:
-            //   return GENX::GENXMemorySpace::kGlobalMemorySpace
-            return 1;
+            return GENX::GENXDialect::kGlobalMemoryAddressSpace;
           case gpu::AddressSpace::Workgroup:
-            return 3;
+            return GENX::GENXDialect::kSharedMemoryAddressSpace;
           case gpu::AddressSpace::Private:
-            return 5;
+            return GENX::GENXDialect::kPrivateMemoryAddressSpace;
           }
           llvm_unreachable("unknown address space enum value");
           return 0;
@@ -154,21 +151,7 @@ static void populateOpPatterns(LLVMTypeConverter &converter,
 void mlir::populateGpuToGENXConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns) {
   populateWithGenerated(patterns);
-  // TODO: Add patterns
-  //  patterns
-  //    .add<GPUIndexIntrinsicOpLowering<gpu::ThreadIdOp, GENX::ThreadIdXOp,
-  //                                       GENX::ThreadIdYOp,
-  //                                       GENX::ThreadIdZOp>>(
-  //          converter)
-  //      .add<GPUIndexIntrinsicOpLowering<gpu::BlockIdOp, GENX::BlockIdXOp,
-  //                                       GENX::BlockIdYOp, GENX::BlockIdZOp>>(
-  //          converter)
-  //      .add<GPUIndexIntrinsicOpLowering<gpu::BlockDimOp, GENX::BlockDimXOp,
-  //                                       GENX::BlockDimYOp,
-  //                                       GENX::BlockDimZOp>,
-  //           GPUIndexIntrinsicOpLowering<gpu::GridDimOp, GENX::GridDimXOp,
-  //                                       GENX::GridDimYOp, GENX::GridDimZOp>>(
-  //          converter);
+  // TODO: add conversion patterns.
 }
 
 std::unique_ptr<OperationPass<gpu::GPUModuleOp>>
