@@ -379,7 +379,8 @@ define i16 @mul_is_pow2_or_zero(i16 %x, i16 %y, i16 %z) {
 ; CHECK-NEXT:    [[XP2:%.*]] = shl i16 4, [[X]]
 ; CHECK-NEXT:    [[ZP2:%.*]] = shl i16 2, [[Z]]
 ; CHECK-NEXT:    [[XX:%.*]] = mul i16 [[XP2]], [[ZP2]]
-; CHECK-NEXT:    [[R:%.*]] = urem i16 [[Y]], [[XX]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i16 [[XX]], -1
+; CHECK-NEXT:    [[R:%.*]] = and i16 [[TMP1]], [[Y]]
 ; CHECK-NEXT:    ret i16 [[R]]
 ;
   %xp2 = shl i16 4, %x
