@@ -82,6 +82,17 @@ static OmpDirectiveSet teamSet{Directive::OMPD_teams,
     Directive::OMPD_teams_distribute_parallel_do,
     Directive::OMPD_teams_distribute_parallel_do_simd,
     Directive::OMPD_teams_distribute_simd};
+static OmpDirectiveSet distributeSet{Directive::OMPD_distribute,
+    Directive::OMPD_distribute_parallel_do,
+    Directive::OMPD_distribute_parallel_do_simd,
+    Directive::OMPD_distribute_simd, Directive::OMPD_target_teams_distribute,
+    Directive::OMPD_target_teams_distribute_parallel_do,
+    Directive::OMPD_target_teams_distribute_parallel_do_simd,
+    Directive::OMPD_target_teams_distribute_simd,
+    Directive::OMPD_teams_distribute,
+    Directive::OMPD_teams_distribute_parallel_do,
+    Directive::OMPD_teams_distribute_parallel_do_simd,
+    Directive::OMPD_teams_distribute_simd};
 static OmpDirectiveSet taskGeneratingSet{
     OmpDirectiveSet{Directive::OMPD_task} | taskloopSet};
 static OmpDirectiveSet nestedOrderedErrSet{Directive::OMPD_critical,
