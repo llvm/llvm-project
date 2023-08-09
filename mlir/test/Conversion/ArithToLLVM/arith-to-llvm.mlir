@@ -75,28 +75,6 @@ func.func @ops(f32, f32, i32, i32, f64) -> (f32, i32) {
   return %0, %4 : f32, i32
 }
 
-// CHECK-LABEL: @float_pred_ops
-func.func @float_pred_ops(%arg0: f32) {
-  // CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 516 : i32}> : (f32) -> i1
-  arith.is_inf %arg0 : f32
-  // CHECK-NEXT: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<nnan>, kinds = 516 : i32}> : (f32) -> i1
-  arith.is_inf %arg0 fastmath <nnan> : f32
-  // CHECK-NEXT: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 3 : i32}> : (f32) -> i1
-  arith.is_nan %arg0 : f32
-  // CHECK-NEXT: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<ninf>, kinds = 3 : i32}> : (f32) -> i1
-  arith.is_nan %arg0 fastmath <ninf> : f32
-  return
-}
-
-// CHECK-LABEL: @vector_float_pred_ops
-func.func @vector_float_pred_ops(%arg0: vector<4xf32>) {
-  // CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 516 : i32}> : (vector<4xf32>) -> vector<4xi1>
-  arith.is_inf %arg0 : vector<4xf32>
-  // CHECK: "llvm.intr.is.fpclass"(%{{.*}}) <{fastmathFlags = #llvm.fastmath<none>, kinds = 3 : i32}> : (vector<4xf32>) -> vector<4xi1>
-  arith.is_nan %arg0 : vector<4xf32>
-  return
-}
-
 // Checking conversion of index types to integers using i1, assuming no target
 // system would have a 1-bit address space.  Otherwise, we would have had to
 // make this test dependent on the pointer size on the target system.
