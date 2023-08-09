@@ -221,6 +221,9 @@ enum NodeType : unsigned {
   SRSHR_I,
   URSHR_I,
 
+  // Vector narrowing shift by immediate (bottom)
+  RSHRNB_I,
+
   // Vector shift by constant and insert
   VSLI,
   VSRI,
