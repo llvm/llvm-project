@@ -51,6 +51,7 @@
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
 #include "llvm/Support/SHA1.h"
+#include "llvm/Support/ScopedDurationTimer.h"
 #include "llvm/Support/SmallVectorMemoryBuffer.h"
 #include "llvm/Support/ThreadPool.h"
 #include "llvm/Support/Threading.h"
@@ -485,8 +486,9 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-      bool Freestanding, const TargetMachineBuilder &TMBuilder)
-      : CAS(CAS), Cache(Cache) {
+      bool Freestanding, const TargetMachineBuilder &TMBuilder,
+      std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger)
+      : CAS(CAS), Cache(Cache), Logger(std::move(Logger)) {
     std::optional<std::string> Key =
         computeCacheKey(Index, ModuleID, ImportList, ExportList, ResolvedODR,
                         DefinedGVSummaries, OptLevel, Freestanding, TMBuilder);
@@ -517,14 +519,34 @@ public:
     if (!ID)
       return std::error_code();
 
-    auto MaybeKeyID = Cache.get(*ID);
-    if (!MaybeKeyID)
-      return errorToErrorCode(MaybeKeyID.takeError());
+    std::optional<cas::CASID> MaybeKeyID;
+    {
+      ScopedDurationTimer ScopedTime([&](double Seconds) {
+        if (Logger) {
+          Logger([&](raw_ostream &OS) {
+            OS << "LTO cache lookup '" << ID << "' in "
+               << llvm::format("%.6fs", Seconds) << "\n";
+          });
+        }
+      });
 
-    if (!*MaybeKeyID)
+      if (Error E = Cache.get(*ID, /*Globally=*/true).moveInto(MaybeKeyID))
+        return errorToErrorCode(std::move(E));
+    }
+
+    if (!MaybeKeyID)
       return std::error_code();
 
-    auto MaybeObject = CAS.getProxy(**MaybeKeyID);
+    ScopedDurationTimer ScopedTime([&](double Seconds) {
+      if (Logger) {
+        Logger([&](raw_ostream &OS) {
+          OS << "LTO cache load '" << ID << "' in "
+             << llvm::format("%.6fs", Seconds) << "\n";
+        });
+      }
+    });
+
+    auto MaybeObject = CAS.getProxy(*MaybeKeyID);
     if (!MaybeObject)
       return errorToErrorCode(MaybeObject.takeError());
 
@@ -536,11 +558,32 @@ public:
     if (!ID)
       return;
 
-    auto Proxy = CAS.createProxy(std::nullopt, OutputBuffer.getBuffer());
-    if (!Proxy)
-      report_fatal_error(Proxy.takeError());
+    std::optional<cas::ObjectProxy> Proxy;
+    {
+      ScopedDurationTimer ScopedTime([&](double Seconds) {
+        if (Logger) {
+          Logger([&](raw_ostream &OS) {
+            OS << "LTO cache save '" << ID << "' in "
+               << llvm::format("%.6fs", Seconds) << "\n";
+          });
+        }
+      });
 
-    if (auto Err = Cache.put(*ID, Proxy->getID()))
+      if (Error E = CAS.createProxy(std::nullopt, OutputBuffer.getBuffer())
+                        .moveInto(Proxy))
+        report_fatal_error(std::move(E));
+    }
+
+    ScopedDurationTimer ScopedTime([&](double Seconds) {
+      if (Logger) {
+        Logger([&](raw_ostream &OS) {
+          OS << "LTO cache update '" << ID << "' in "
+             << llvm::format("%.6fs", Seconds) << "\n";
+        });
+      }
+    });
+
+    if (auto Err = Cache.put(*ID, Proxy->getID(), /*Globally=*/true))
       report_fatal_error(std::move(Err));
   }
 
@@ -548,6 +591,7 @@ private:
   cas::ObjectStore &CAS;
   cas::ActionCache &Cache;
   std::optional<cas::CASID> ID;
+  std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger;
 };
 
 class RemoteModuleCacheEntry : public ModuleCacheEntry {
@@ -562,8 +606,10 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-      bool Freestanding, const TargetMachineBuilder &TMBuilder)
-      : Service(Service), OutputPath(OutputPath.str()) {
+      bool Freestanding, const TargetMachineBuilder &TMBuilder,
+      std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger)
+      : Service(Service), OutputPath(OutputPath.str()),
+        Logger(std::move(Logger)) {
     std::optional<std::string> Key =
         computeCacheKey(Index, ModuleID, ImportList, ExportList, ResolvedODR,
                         DefinedGVSummaries, OptLevel, Freestanding, TMBuilder);
@@ -582,21 +628,41 @@ public:
       return std::error_code();
 
     // Lookup the output value from KVDB.
-    auto GetResponse = Service.KVDB->getValueSync(ID);
-    if (!GetResponse)
-      return errorToErrorCode(GetResponse.takeError());
+    std::optional<cas::remote::KeyValueDBClient::ValueTy> GetResponse;
+    {
+      ScopedDurationTimer ScopedTime([&](double Seconds) {
+        if (Logger) {
+          Logger([&](raw_ostream &OS) {
+            OS << "LTO cache lookup '" << ID << "' in "
+               << llvm::format("%.6fs", Seconds) << "\n";
+          });
+        }
+      });
+
+      if (Error E = Service.KVDB->getValueSync(ID).moveInto(GetResponse))
+        return errorToErrorCode(std::move(E));
+    }
 
     // Cache Miss.
-    if (!*GetResponse)
+    if (!GetResponse)
       return std::error_code();
 
     // Malformed output. Error.
-    auto Result = (*GetResponse)->find("Output");
-    if (Result == (*GetResponse)->end())
+    auto Result = GetResponse->find("Output");
+    if (Result == GetResponse->end())
       return std::make_error_code(std::errc::message_size);
 
     if (DeterministicCheck)
       PresumedOutput = Result->getValue();
+
+    ScopedDurationTimer ScopedTime([&](double Seconds) {
+      if (Logger) {
+        Logger([&](raw_ostream &OS) {
+          OS << "LTO cache load '" << ID << "' in "
+             << llvm::format("%.6fs", Seconds) << "\n";
+        });
+      }
+    });
 
     // Request the output buffer.
     auto LoadResponse = Service.CASDB->loadSync(Result->getValue(), OutputPath);
@@ -620,9 +686,21 @@ public:
       cantFail(ModuleCacheEntry::writeObject(OutputBuffer, OutputPath));
 
     ProducedOutput = true;
-    auto SaveResponse = Service.CASDB->saveFileSync(OutputPath);
-    if (!SaveResponse)
-      report_fatal_error(SaveResponse.takeError());
+    std::optional<std::string> SaveResponse;
+    {
+      ScopedDurationTimer ScopedTime([&](double Seconds) {
+        if (Logger) {
+          Logger([&](raw_ostream &OS) {
+            OS << "LTO cache save '" << ID << "' in "
+               << llvm::format("%.6fs", Seconds) << "\n";
+          });
+        }
+      });
+
+      if (Error E =
+              Service.CASDB->saveFileSync(OutputPath).moveInto(SaveResponse))
+        report_fatal_error(std::move(E));
+    }
 
     // Only check determinism when the cache lookup succeeded before.
     if (DeterministicCheck && PresumedOutput) {
@@ -631,6 +709,15 @@ public:
             (Twine) "ThinLTO deterministic check failed: " + *PresumedOutput +
             " (expected) vs. " + *SaveResponse + " (actual)");
     }
+
+    ScopedDurationTimer ScopedTime([&](double Seconds) {
+      if (Logger) {
+        Logger([&](raw_ostream &OS) {
+          OS << "LTO cache update '" << ID << "' in "
+             << llvm::format("%.6fs", Seconds) << "\n";
+        });
+      }
+    });
 
     cas::remote::KeyValueDBClient::ValueTy CompResult;
     CompResult["Output"] = *SaveResponse;
@@ -662,6 +749,7 @@ private:
   std::string OutputPath;
   bool ProducedOutput = false;
   std::optional<std::string> PresumedOutput;
+  std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger;
 };
 
 static std::unique_ptr<MemoryBuffer>
@@ -872,7 +960,8 @@ std::unique_ptr<ModuleCacheEntry> ThinLTOCodeGenerator::createModuleCacheEntry(
     const FunctionImporter::ExportSetTy &ExportList,
     const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
     const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-    bool Freestanding, const TargetMachineBuilder &TMBuilder) {
+    bool Freestanding, const TargetMachineBuilder &TMBuilder,
+    std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger) {
   switch (CacheOptions.Type) {
   case CachingOptions::CacheType::CacheDirectory:
     return std::make_unique<FileModuleCacheEntry>(
@@ -882,12 +971,12 @@ std::unique_ptr<ModuleCacheEntry> ThinLTOCodeGenerator::createModuleCacheEntry(
     return std::make_unique<CASModuleCacheEntry>(
         *CacheOptions.CAS, *CacheOptions.Cache, Index, ModuleID, ImportList,
         ExportList, ResolvedODR, DefinedGVSummaries, OptLevel, Freestanding,
-        TMBuilder);
+        TMBuilder, std::move(Logger));
   case CachingOptions::CacheType::RemoteService:
     return std::make_unique<RemoteModuleCacheEntry>(
         *CacheOptions.Service, Index, ModuleID, OutputPath, ImportList,
         ExportList, ResolvedODR, DefinedGVSummaries, OptLevel, Freestanding,
-        TMBuilder);
+        TMBuilder, std::move(Logger));
   }
 }
 
@@ -1495,6 +1584,15 @@ void ThinLTOCodeGenerator::run() {
       auto &Mod = Modules[IndexCount];
       Pool.async([&](int count) {
         auto ModuleIdentifier = Mod->getName();
+        ScopedDurationTimer ScopedTime([&](double Seconds) {
+          if (CacheLogging) {
+            CacheLogOS.applyLocked([&](raw_ostream &OS) {
+              OS << "LTO processing '" << ModuleIdentifier << "' in "
+                 << llvm::format("%.6fs", Seconds) << "\n";
+            });
+          }
+        });
+
         auto &ExportList = ExportLists[ModuleIdentifier];
 
         auto &DefinedGVSummaries = ModuleToDefinedGVSummaries[ModuleIdentifier];
@@ -1507,7 +1605,11 @@ void ThinLTOCodeGenerator::run() {
         auto CacheEntry = createModuleCacheEntry(
             *Index, ModuleIdentifier, OutputPath, ImportLists[ModuleIdentifier],
             ExportList, ResolvedODR[ModuleIdentifier], DefinedGVSummaries,
-            OptLevel, Freestanding, TMBuilder);
+            OptLevel, Freestanding, TMBuilder,
+            [&CacheLogOS](llvm::function_ref<void(raw_ostream & OS)> Log) {
+              if (CacheLogging)
+                CacheLogOS.applyLocked(Log);
+            });
         auto CacheEntryPath = CacheEntry->getEntryPath();
 
         {
