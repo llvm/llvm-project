@@ -978,7 +978,17 @@ bool GIMatchTableExecutor::executeMatchTable(
                           << "], " << RegNum << ", " << RegFlags << ")\n");
       break;
     }
-
+    case GIR_SetImplicitDefDead: {
+      int64_t InsnID = MatchTable[CurrentIdx++];
+      int64_t OpIdx = MatchTable[CurrentIdx++];
+      DEBUG_WITH_TYPE(TgtExecutor::getName(),
+                      dbgs() << CurrentIdx << ": GIR_SetImplicitDefDead(OutMIs["
+                             << InsnID << "], OpIdx=" << OpIdx << ")\n");
+      MachineInstr *MI = OutMIs[InsnID];
+      assert(MI && "Modifying undefined instruction");
+      MI->getOperand(MI->getNumExplicitOperands() + OpIdx).setIsDead();
+      break;
+    }
     case GIR_AddTempRegister:
     case GIR_AddTempSubRegister: {
       int64_t InsnID = MatchTable[CurrentIdx++];
