@@ -1866,6 +1866,17 @@ void OmpAttributeVisitor::ResolveOmpObject(
                       "clauses on a TARGET DATA construct"_err_en_US,
                       symbol->name());
                 }
+                if (llvm::omp::distributeSet.test(GetContext().directive) &&
+                    (((ompFlag == Symbol::Flag::OmpFirstPrivate) &&
+                         symbol->test(Symbol::Flag::OmpLastPrivate)) ||
+                        ((ompFlag == Symbol::Flag::OmpLastPrivate) &&
+                            symbol->test(Symbol::Flag::OmpFirstPrivate)))) {
+                  context_.Say(designator.source,
+                      "Variable '%s' may not "
+                      "appear on both FIRSTPRIVATE and LASTPRIVATE "
+                      "clauses on a DISTRIBUTE construct"_err_en_US,
+                      symbol->name());
+                }
               }
             } else {
               // Array sections to be changed to substrings as needed
