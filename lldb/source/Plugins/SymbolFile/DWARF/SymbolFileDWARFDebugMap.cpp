@@ -22,9 +22,6 @@
 #include "lldb/Utility/StreamString.h"
 
 //#define DEBUG_OSO_DMAP // DO NOT CHECKIN WITH THIS NOT COMMENTED OUT
-#if defined(DEBUG_OSO_DMAP)
-#include "lldb/Core/StreamFile.h"
-#endif
 
 #include "lldb/Symbol/CompileUnit.h"
 #include "lldb/Symbol/LineTable.h"
