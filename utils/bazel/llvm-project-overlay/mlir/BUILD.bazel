@@ -2993,6 +2993,7 @@ cc_library(
         ":ArithDialect",
         ":ArithUtils",
         ":DialectUtils",
+        ":GPUCompilationAttrInterfacesIncGen",
         ":GPUDialect",
         ":IR",
         ":LinalgDialect",
@@ -3000,6 +3001,7 @@ cc_library(
         ":NVGPUDialect",
         ":NVGPUTransformOpsIncGen",
         ":NVGPUTransforms",
+        ":NVVMDialect",
         ":SCFDialect",
         ":SCFTransforms",
         ":Support",
@@ -4051,6 +4053,7 @@ cc_library(
     hdrs = ["include/mlir/InitAllExtensions.h"],
     deps = [
         ":FuncExtensions",
+        ":NVVMTarget",
         ":NVVMToLLVM",
     ],
 )
@@ -4567,6 +4570,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":FuncDialect",
+        ":GPUDialect",
         ":IR",
         ":LLVMDialect",
         ":LLVMPassIncGen",
@@ -4581,6 +4585,7 @@ cc_library(
 td_library(
     name = "GPUOpsTdFiles",
     srcs = [
+        "include/mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td",
         "include/mlir/Dialect/GPU/IR/GPUBase.td",
         "include/mlir/Dialect/GPU/IR/GPUOps.td",
         "include/mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td",
@@ -4616,6 +4621,27 @@ gentbl_cc_library(
     td_file = "include/mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td",
     deps = [
         ":GPUOpsTdFiles",
+        ":OpBaseTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "GPUCompilationAttrInterfacesIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-attr-interface-decls"],
+            "include/mlir/Dialect/GPU/IR/CompilationAttrInterfaces.h.inc",
+        ),
+        (
+            ["-gen-attr-interface-defs"],
+            "include/mlir/Dialect/GPU/IR/CompilationAttrInterfaces.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td",
+    deps = [
+        ":AttrTdFiles",
         ":OpBaseTdFiles",
     ],
 )
@@ -4703,6 +4729,7 @@ cc_library(
         ":ArithDialect",
         ":DLTIDialect",
         ":GPUBaseIncGen",
+        ":GPUCompilationAttrInterfacesIncGen",
         ":GPUOpsIncGen",
         ":IR",
         ":InferIntRangeInterface",
@@ -5421,6 +5448,7 @@ cc_library(
     deps = [
         ":ConvertToLLVM",
         ":DialectUtils",
+        ":GPUDialect",
         ":IR",
         ":LLVMDialect",
         ":NVVMOpsIncGen",
@@ -5432,11 +5460,52 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "TargetLLVM",
+    srcs = ["lib/Target/LLVM/ModuleToObject.cpp"],
+    hdrs = glob(["include/mlir/Target/LLVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":ExecutionEngineUtils",
+        ":IR",
+        ":LLVMToLLVMIRTranslation",
+        ":ToLLVMIRTranslation",
+        "//llvm:BitWriter",
+        "//llvm:Core",
+        "//llvm:IPO",
+        "//llvm:IRReader",
+        "//llvm:Linker",
+        "//llvm:MC",
+        "//llvm:Passes",
+        "//llvm:Support",
+        "//llvm:Target",
+        "//llvm:TargetParser",
+    ],
+)
+
+cc_library(
+    name = "NVVMTarget",
+    srcs = ["lib/Target/LLVM/NVVM/Target.cpp"],
+    hdrs = glob(["include/mlir/Target/LLVM/NVVM/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":GPUDialect",
+        ":GPUToLLVMIRTranslation",
+        ":LLVMToLLVMIRTranslation",
+        ":NVVMDialect",
+        ":NVVMToLLVMIRTranslation",
+        ":TargetLLVM",
+        ":ToLLVMIRTranslation",
+        "//llvm:Support",
+    ],
+)
+
 td_library(
     name = "NVVMOpsTdFiles",
     srcs = ["include/mlir/Dialect/LLVMIR/NVVMOps.td"],
     includes = ["include"],
     deps = [
+        ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
