@@ -3771,19 +3771,19 @@ void SwiftASTContext::RegisterSectionModules(
   llvm::Triple filter = GetTriple();
   auto parse_ast_section = [&](llvm::StringRef section_data_ref, size_t n,
                                size_t total) {
-    llvm::SmallVector<std::string, 4> swift_modules;
-    if (!swift::parseASTSection(*loader, section_data_ref, filter,
-                                swift_modules)) {
+    auto Result = swift::parseASTSection(*loader, section_data_ref, filter);
+    if (auto E = Result.takeError()) {
+      std::string error = toString(std::move(E));
       LOG_PRINTF(GetLog(LLDBLog::Types),
                  "failed to parse AST section %zu/%zu in image \"%s\" "
-                 "(filter=\"%s\").",
+                 "(filter=\"%s\"). %s",
                  n, total, module.GetFileSpec().GetFilename().GetCString(),
-                 filter.str().c_str());
+                 filter.str().c_str(), error.c_str());
       return;
     }
 
     // Collect the Swift module names referenced by the AST.
-    for (auto module_name : swift_modules) {
+    for (auto module_name : *Result) {
       module_names.push_back(module_name);
       LOG_PRINTF(GetLog(LLDBLog::Types),
                  "parsed module \"%s\" from Swift AST section %zu/%zu in "
