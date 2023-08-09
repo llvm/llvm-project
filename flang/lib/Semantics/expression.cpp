@@ -3584,7 +3584,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::Expr &expr) {
     if (expr.typedExpr) {
       return expr.typedExpr->v;
     }
-    if (!wasIterativelyAnalyzing && !context_.anyDefinedIntrinsicOperator()) {
+    if (!wasIterativelyAnalyzing) {
       iterativelyAnalyzingSubexpressions_ = true;
       result = IterativelyAnalyzeSubexpressions(expr);
     }
