@@ -124,6 +124,6 @@ Function Name  Available  RPC Required
 =============  =========  ============
 puts           |check|    |check|
 fputs          |check|    |check|
-fclose         |check|    |check|
-fopen          |check|    |check|
+fclose                    |check|
+fopen                     |check|
 =============  =========  ============
