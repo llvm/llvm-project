@@ -1181,18 +1181,8 @@ void DWARFRewriter::updateUnitDebugInfo(
           assert(Form != dwarf::DW_FORM_LLVM_addrx_offset &&
                  "DW_FORM_LLVM_addrx_offset is not supported");
           std::lock_guard<std::mutex> Lock(DWARFRewriterMutex);
-          if (Form == dwarf::DW_FORM_GNU_addr_index) {
-            // If there is no new address, storing old address.
-            // Re-using Index to make implementation easier.
-            // DW_FORM_GNU_addr_index is variable lenght encoding
-            // so we either have to create indices of same sizes, or use same
-            // index.
-            // TODO: We can now re-write .debug_info. This can be simplified to
-            // just getting a new index and creating a patch.
-            const uint64_t Index = *Result;
-            AddrWriter->addIndexAddress(NewAddress ? NewAddress : Address,
-                                        Index, Unit);
-          } else if (Form == dwarf::DW_FORM_addrx) {
+          if (Form == dwarf::DW_FORM_addrx ||
+              Form == dwarf::DW_FORM_GNU_addr_index) {
             const uint32_t Index = AddrWriter->getIndexFromAddress(
                 NewAddress ? NewAddress : Address, Unit);
             DIEBldr.replaceValue(Die, LowPCAttrInfo.getAttribute(),
