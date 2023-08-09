@@ -59,6 +59,7 @@
 
 #include <stdint.h>
 
+#include "src/__support/CPP/algorithm.h" // max
 #include "src/__support/CPP/array.h"
 #include "src/__support/CPP/bit.h"
 #include "src/__support/CPP/limits.h"
@@ -196,10 +197,7 @@ template <typename T, typename Fmt = radix::Dec> class IntegerToString {
       constexpr size_t BITS_PER_DIGIT = floor_log_2(Fmt::BASE);
       return ((sizeof(T) * 8 + (BITS_PER_DIGIT - 1)) / BITS_PER_DIGIT);
     };
-    constexpr auto max = [](size_t a, size_t b) -> size_t {
-      return a > b ? a : b;
-    };
-    constexpr size_t digit_size = max(max_digits(), Fmt::MIN_DIGITS);
+    constexpr size_t digit_size = cpp::max(max_digits(), Fmt::MIN_DIGITS);
     constexpr size_t sign_size = Fmt::BASE == 10 ? 1 : 0;
     constexpr size_t prefix_size = Fmt::PREFIX ? 2 : 0;
     return digit_size + sign_size + prefix_size;
