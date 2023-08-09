@@ -503,12 +503,11 @@ void VPlanTransforms::removeDeadRecipes(VPlan &Plan) {
 
 static VPValue *createScalarIVSteps(VPlan &Plan, const InductionDescriptor &ID,
                                     ScalarEvolution &SE, Instruction *TruncI,
-                                    Type *IVTy, VPValue *StartV) {
+                                    Type *IVTy, VPValue *StartV,
+                                    VPValue *Step) {
   VPBasicBlock *HeaderVPBB = Plan.getVectorLoopRegion()->getEntryBasicBlock();
   auto IP = HeaderVPBB->getFirstNonPhi();
   VPCanonicalIVPHIRecipe *CanonicalIV = Plan.getCanonicalIV();
-  VPValue *Step =
-      vputils::getOrCreateVPValueForSCEVExpr(Plan, ID.getStep(), SE);
   Type *TruncTy = TruncI ? TruncI->getType() : IVTy;
   VPValue *BaseIV = CanonicalIV;
   if (!CanonicalIV->isCanonical(ID.getKind(), StartV, Step, TruncTy)) {
@@ -535,9 +534,9 @@ void VPlanTransforms::optimizeInductions(VPlan &Plan, ScalarEvolution &SE) {
       continue;
 
     const InductionDescriptor &ID = WideIV->getInductionDescriptor();
-    VPValue *Steps = createScalarIVSteps(Plan, ID, SE, WideIV->getTruncInst(),
-                                         WideIV->getPHINode()->getType(),
-                                         WideIV->getStartValue());
+    VPValue *Steps = createScalarIVSteps(
+        Plan, ID, SE, WideIV->getTruncInst(), WideIV->getPHINode()->getType(),
+        WideIV->getStartValue(), WideIV->getStepValue());
 
     // Update scalar users of IV to use Step instead. Use SetVector to ensure
     // the list of users doesn't contain duplicates.
