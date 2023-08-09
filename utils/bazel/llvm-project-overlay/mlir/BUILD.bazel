@@ -10601,6 +10601,8 @@ cc_library(
         ":ControlFlowInterfaces",
         ":IR",
         ":LoopLikeInterface",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
         ":Pass",
         ":Rewrite",
         ":SideEffectInterfaces",

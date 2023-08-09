@@ -234,6 +234,25 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
   }];
 }
 
+def ApplyToLLVMConversionPatternsOp : Op<Transform_Dialect,
+    "apply_conversion_patterns.dialect_to_llvm",
+    [DeclareOpInterfaceMethods<ConversionPatternDescriptorOpInterface,
+                               ["verifyTypeConverter"]>]> {
+  let description = [{
+    Collects patterns that convert ops from the specified dialect to LLVM
+    dialect ops. These patterns require an "LLVMTypeConverter".
+
+    Note: Only dialects that implement the `ConvertToLLVMPatternInterface` are
+    supported. Any conversion target modifications by interface implementations
+    are currently ignored. The conversion target is fully specified by the
+    enclosing "apply_conversion_patterns" op.
+  }];
+
+  let arguments = (ins StrAttr:$dialect_name);
+  let assemblyFormat = "$dialect_name attr-dict";
+  let hasVerifier = 1;
+}
+
 def ApplyDeadCodeEliminationOp : TransformDialectOp<"apply_dce",
     [TransformOpInterface, TransformEachOpTrait,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
