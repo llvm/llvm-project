@@ -1012,7 +1012,7 @@ MutableOperandRange CallOp::getArgOperandsMutable() {
 /// debug-info-bearing function has a debug location attached to it. This
 /// mirrors an LLVM IR verifier.
 static LogicalResult verifyCallOpDebugInfo(CallOp callOp, LLVMFuncOp callee) {
-  if (callee.isDeclaration())
+  if (callee.isExternal())
     return success();
   auto parentFunc = callOp->getParentOfType<FunctionOpInterface>();
   if (!parentFunc)
