@@ -2036,6 +2036,8 @@ bool isKnownToBeAPowerOfTwo(const Value *V, bool OrZero, unsigned Depth,
   switch (I->getOpcode()) {
   case Instruction::ZExt:
     return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
+  case Instruction::Trunc:
+    return OrZero && isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
   case Instruction::Shl:
     if (OrZero || Q.IIQ.hasNoUnsignedWrap(I) || Q.IIQ.hasNoSignedWrap(I))
       return isKnownToBeAPowerOfTwo(I->getOperand(0), OrZero, Depth, Q);
