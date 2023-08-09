@@ -532,5 +532,36 @@ __attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
 uint64_t3 reversebits(uint64_t3);
 __attribute__((clang_builtin_alias(__builtin_elementwise_bitreverse)))
 uint64_t4 reversebits(uint64_t4);
+
+// pow builtins
+#ifdef __HLSL_ENABLE_16_BIT
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+half pow(half, half);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+half2 pow(half2, half2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+half3 pow(half3, half3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+half4 pow(half4, half4);
+#endif
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow))) float
+pow(float, float);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+float2 pow(float2, float2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+float3 pow(float3, float3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+float4 pow(float4, float4);
+
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow))) double
+pow(double, double);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+double2 pow(double2, double2);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+double3 pow(double3, double3);
+__attribute__((clang_builtin_alias(__builtin_elementwise_pow)))
+double4 pow(double4, double4);
+
 } // namespace hlsl
 #endif //_HLSL_HLSL_INTRINSICS_H_

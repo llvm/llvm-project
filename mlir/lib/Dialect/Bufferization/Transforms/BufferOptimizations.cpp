@@ -75,7 +75,8 @@ leavesAllocationScope(Region *parentRegion,
       // If there is at least one alias that leaves the parent region, we know
       // that this alias escapes the whole region and hence the associated
       // allocation leaves allocation scope.
-      if (isRegionReturnLike(use) && use->getParentRegion() == parentRegion)
+      if (isa<RegionBranchTerminatorOpInterface>(use) &&
+          use->getParentRegion() == parentRegion)
         return true;
     }
   }
