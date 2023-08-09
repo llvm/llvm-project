@@ -13,6 +13,8 @@
 #include "test/UnitTest/RoundingModeUtils.h"
 #include "test/UnitTest/Test.h"
 
+// TODO: Add a comment here explaining the printf format string.
+
 // #include <stdio.h>
 // namespace __llvm_libc {
 // using ::sprintf;
@@ -886,6 +888,8 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   double inf = __llvm_libc::fputil::FPBits<double>::inf().get_val();
   double nan = __llvm_libc::fputil::FPBits<double>::build_nan(1);
 
+  char big_buff[10000];
+
   written = __llvm_libc::sprintf(buff, "%f", 1.0);
   ASSERT_STREQ_LEN(written, buff, "1.000000");
 
@@ -957,8 +961,6 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
   ASSERT_STREQ_LEN(written, buff,
                    "99999999999999999996693535322073426194986990198284960792713"
                    "91541752018669482644324418977840117055488.000000");
-
-  char big_buff[10000];
 
   written = __llvm_libc::sprintf(big_buff, "%Lf", 1e1000L);
   ASSERT_STREQ_LEN(
@@ -1280,6 +1282,55 @@ TEST_F(LlvmLibcSPrintfTest, FloatDecimalConv) {
 
   written = __llvm_libc::sprintf(buff, "%.0f", 0x1.1000000000006p+3);
   ASSERT_STREQ_LEN(written, buff, "9");
+
+  // Most of these tests are checking rounding behavior when the precision is
+  // set. As an example, %.9f has a precision of 9, meaning it should be rounded
+  // to 9 digits after the decimal point. In this case, that means that it
+  // should be rounded up. Many of these tests have precisions divisible by 9
+  // since when printing the floating point numbers are broken up into "blocks"
+  // of 9 digits. They often also have a 5 after the end of what's printed,
+  // since in round to nearest mode, that requires checking additional digits.
+  written = __llvm_libc::sprintf(buff, "%.9f", 1.9999999999999514);
+  ASSERT_STREQ_LEN(written, buff, "2.000000000");
+
+  // The number continues after the literal because floating point numbers can't
+  // represent every value. The printed value is the closest value a double can
+  // represent, rounded to the requested precision.
+  written = __llvm_libc::sprintf(buff, "%.238f", 1.131959884853339E-72);
+  ASSERT_STREQ_LEN(
+      written, buff,
+      "0."
+      "000000000000000000000000000000000000000000000000000000000000000000000001"
+      "131959884853339045938639911360973972585316399767392273697826861241937664"
+      "824105639342441431495119762431744054912109728706985341609159156917030486"
+      "5110665559768676757812");
+
+  written = __llvm_libc::sprintf(buff, "%.36f", 9.9e-77);
+  ASSERT_STREQ_LEN(written, buff, "0.000000000000000000000000000000000000");
+
+  written = __llvm_libc::sprintf(big_buff, "%.1071f", 2.0226568751604562E-314);
+  ASSERT_STREQ_LEN(
+      written, big_buff,
+      "0."
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000000000000000000000000000000000000000000000000000"
+      "000000000000000000000000020226568751604561683387695750739190248658016786"
+      "876938365740768295004457513021760887468117675879956193821375945376632621"
+      "367998639317487303530427946024002091961988296562516210434394107910027236"
+      "308233439098296717697919471698168200340836487924061502604112643734560622"
+      "258525943451473162532620033398739382796482175564084902819878893430369431"
+      "907237673154867595954110791891883281880339550955455702452422857027182100"
+      "606009588295886640782228837851739241290179512817803196347460636150182981"
+      "085084829941917048152725177119574542042352896161225179181967347829576272"
+      "242480201291872969114441104973910102402751449901108484914924879541248714"
+      "939096548775588293353689592872854495101242645279589976452453829724479805"
+      "750016448075109469332839157162950982637994457036256790161132812");
+
+  // If no precision is specified it defaults to 6 for %f.
+  written = __llvm_libc::sprintf(buff, "%f", 2325885.4901960781);
+  ASSERT_STREQ_LEN(written, buff, "2325885.490196");
 
   // Subnormal Precision Tests
 
