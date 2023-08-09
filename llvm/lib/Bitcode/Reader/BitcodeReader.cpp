@@ -2065,6 +2065,8 @@ static Attribute::AttrKind getAttrFromCode(uint64_t Code) {
     return Attribute::Writable;
   case bitc::ATTR_KIND_CORO_ONLY_DESTROY_WHEN_COMPLETE:
     return Attribute::CoroDestroyOnlyWhenComplete;
+  case bitc::ATTR_KIND_DEAD_ON_UNWIND:
+    return Attribute::DeadOnUnwind;
   }
 }
 
