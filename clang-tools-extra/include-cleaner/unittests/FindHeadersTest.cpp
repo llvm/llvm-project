@@ -481,6 +481,55 @@ TEST_F(HeadersForSymbolTest, PublicOverPrivateWithoutUmbrella) {
               ElementsAre(physicalHeader("bar.h"), physicalHeader("foo.h")));
 }
 
+TEST_F(HeadersForSymbolTest, IWYUTransitiveExport) {
+  Inputs.Code = R"cpp(
+    #include "export1.h"
+  )cpp";
+  Inputs.ExtraFiles["export1.h"] = guard(R"cpp(
+    #include "export2.h" // IWYU pragma: export
+  )cpp");
+  Inputs.ExtraFiles["export2.h"] = guard(R"cpp(
+    #include "foo.h" // IWYU pragma: export
+  )cpp");
+  Inputs.ExtraFiles["foo.h"] = guard(R"cpp(
+    struct foo {};
+  )cpp");
+  buildAST();
+  EXPECT_THAT(headersForFoo(),
+              ElementsAre(physicalHeader("foo.h"), physicalHeader("export1.h"),
+                          physicalHeader("export2.h")));
+}
+
+TEST_F(HeadersForSymbolTest, IWYUTransitiveExportWithPrivate) {
+  Inputs.Code = R"cpp(
+    #include "export1.h"
+    void bar() { foo();}
+  )cpp";
+  Inputs.ExtraFiles["export1.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "public1.h"
+    #include "export2.h" // IWYU pragma: export
+    void foo();
+  )cpp");
+  Inputs.ExtraFiles["export2.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "public2.h"
+    #include "export3.h" // IWYU pragma: export
+  )cpp");
+  Inputs.ExtraFiles["export3.h"] = guard(R"cpp(
+    // IWYU pragma: private, include "public3.h"
+    #include "foo.h" // IWYU pragma: export
+  )cpp");
+  Inputs.ExtraFiles["foo.h"] = guard(R"cpp(
+    void foo();
+  )cpp");
+  buildAST();
+  EXPECT_THAT(headersForFoo(),
+              ElementsAre(physicalHeader("foo.h"),
+                                           Header(StringRef("\"public1.h\"")),
+                                           physicalHeader("export1.h"),
+                                           physicalHeader("export2.h"),
+                                           physicalHeader("export3.h")));
+}
+
 TEST_F(HeadersForSymbolTest, AmbiguousStdSymbols) {
   struct {
     llvm::StringRef Code;
