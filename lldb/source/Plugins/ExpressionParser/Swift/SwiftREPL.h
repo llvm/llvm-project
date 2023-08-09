@@ -31,6 +31,8 @@ class SwiftASTContextForExpressions;
 //----------------------------------------------------------------------
 class SwiftREPL : public REPL {
 public:
+  static char ID;
+
   SwiftREPL(Target &target);
   ~SwiftREPL();
 
@@ -52,7 +54,7 @@ protected:
 
   Status DoInitialization() override;
 
-  ConstString GetSourceFileBasename() override;
+  llvm::StringRef GetSourceFileBasename() override;
 
   const char *GetAutoIndentCharacters() override { return "}:"; }
 
@@ -70,11 +72,6 @@ protected:
 
   void CompleteCode(const std::string &current_code,
                     CompletionRequest &request) override;
-
-public:
-  static bool classof(const REPL *repl) {
-    return repl->getKind() == LLVMCastKind::eKindSwift;
-  }
 
 private:
   SwiftASTContextForExpressions *m_swift_ast = nullptr;

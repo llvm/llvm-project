@@ -12,6 +12,7 @@
 
 #include "SwiftLanguage.h"
 
+#include "lldb/Core/Debugger.h"
 #include "lldb/Core/PluginManager.h"
 #include "lldb/Core/ValueObject.h"
 #include "lldb/Core/ValueObjectVariable.h"
@@ -1137,9 +1138,9 @@ bool SwiftLanguage::IsSourceFile(llvm::StringRef file_path) const {
   return file_path.endswith(".swift");
 }
 
-std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
+std::vector<FormattersMatchCandidate> SwiftLanguage::GetPossibleFormattersMatches(
     ValueObject &valobj, lldb::DynamicValueType use_dynamic) {
-  std::vector<ConstString> result;
+  std::vector<FormattersMatchCandidate> result;
 
   if (use_dynamic == lldb::eNoDynamicValues)
     return result;
@@ -1176,7 +1177,9 @@ std::vector<ConstString> SwiftLanguage::GetPossibleFormattersMatches(
                                          address, value_type))
     return result;
   if (ConstString name = type_and_or_name.GetName())
-    result.push_back(name);
+    result.push_back(
+        {name, valobj.GetTargetSP()->GetDebugger().GetScriptInterpreter(),
+         TypeImpl(compiler_type), FormattersMatchCandidate::Flags{}});
   return result;
 }
 
@@ -1454,61 +1457,21 @@ const char *SwiftLanguage::GetLanguageSpecificTypeLookupHelp() {
          "print all types and declarations available in that module";
 }
 
-bool SwiftLanguage::GetFormatterPrefixSuffix(ValueObject &valobj,
-                                             ConstString type_hint,
-                                             std::string &prefix,
-                                             std::string &suffix) {
-  static ConstString g_NSNumberChar("NSNumber:char");
-  static ConstString g_NSNumberShort("NSNumber:short");
-  static ConstString g_NSNumberInt("NSNumber:int");
-  static ConstString g_NSNumberLong("NSNumber:long");
-  static ConstString g_NSNumberInt128("NSNumber:int128_t");
-  static ConstString g_NSNumberFloat("NSNumber:float");
-  static ConstString g_NSNumberDouble("NSNumber:double");
+std::pair<llvm::StringRef, llvm::StringRef>
+SwiftLanguage::GetFormatterPrefixSuffix(llvm::StringRef type_hint) {
+  static const llvm::StringMap<
+      std::pair<const llvm::StringRef, const llvm::StringRef>>
+      g_affix_map = {
+          {"NSNumber::char", {"UInt8(", ")"}},
+          {"NSNumber::short", {"Int16(", ")"}},
+          {"NSNumber::int", {"Int32(", ")"}},
+          {"NSNumber::long", {"Int64(", ")"}},
+          {"NSNumber::int128_t", {"Int128(", ")"}},
+          {"NSNumber::float", {"Float(", ")"}},
+          {"NSNumber::double", {"Double(", ")"}},
+      };
 
-  if (type_hint.IsEmpty())
-    return false;
-
-  prefix.clear();
-  suffix.clear();
-
-  if (type_hint == g_NSNumberChar) {
-    prefix = "UInt8(";
-    suffix = ")";
-    return true;
-  }
-  if (type_hint == g_NSNumberShort) {
-    prefix = "Int16(";
-    suffix = ")";
-    return true;
-  }
-  if (type_hint == g_NSNumberInt) {
-    prefix = "Int32(";
-    suffix = ")";
-    return true;
-  }
-  if (type_hint == g_NSNumberLong) {
-    prefix = "Int64(";
-    suffix = ")";
-    return true;
-  }
-  if (type_hint == g_NSNumberInt128) {
-    prefix = "Int128(";
-    suffix = ")";
-    return true;
-  }
-  if (type_hint == g_NSNumberFloat) {
-    prefix = "Float(";
-    suffix = ")";
-    return true;
-  }
-  if (type_hint == g_NSNumberDouble) {
-    prefix = "Double(";
-    suffix = ")";
-    return true;
-  }
-
-  return false;
+  return g_affix_map.lookup(type_hint);
 }
 
 DumpValueObjectOptions::DeclPrintingHelper

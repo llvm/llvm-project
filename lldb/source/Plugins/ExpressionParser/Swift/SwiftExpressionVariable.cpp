@@ -23,10 +23,12 @@
 
 using namespace lldb_private;
 
+char SwiftExpressionVariable::ID;
+
 SwiftExpressionVariable::SwiftExpressionVariable(
     ExecutionContextScope *exe_scope, lldb::ByteOrder byte_order,
     uint32_t addr_byte_size)
-    : ExpressionVariable(LLVMCastKind::eKindSwift) {
+    : ExpressionVariable() {
   m_swift_flags = EVSNone;
   m_frozen_sp =
       ValueObjectConstResult::Create(exe_scope, byte_order, addr_byte_size);
@@ -34,7 +36,7 @@ SwiftExpressionVariable::SwiftExpressionVariable(
 
 SwiftExpressionVariable::SwiftExpressionVariable(
     const lldb::ValueObjectSP &valobj_sp)
-    : ExpressionVariable(LLVMCastKind::eKindSwift) {
+    : ExpressionVariable() {
   m_swift_flags = EVSNone;
   m_frozen_sp = valobj_sp;
 }
@@ -43,7 +45,7 @@ SwiftExpressionVariable::SwiftExpressionVariable(
     ExecutionContextScope *exe_scope, ConstString name,
     const TypeFromUser &type, lldb::ByteOrder byte_order,
     uint32_t addr_byte_size)
-    : ExpressionVariable(LLVMCastKind::eKindSwift) {
+    : ExpressionVariable() {
   m_swift_flags = EVSNone;
   m_frozen_sp =
       ValueObjectConstResult::Create(exe_scope, byte_order, addr_byte_size);

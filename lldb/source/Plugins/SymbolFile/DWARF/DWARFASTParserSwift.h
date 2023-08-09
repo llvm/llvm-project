@@ -59,6 +59,14 @@ public:
   void EnsureAllDIEsInDeclContextHaveBeenParsed(
       lldb_private::CompilerDeclContext decl_context) override {}
 
+  // FIXME: What should this do?
+  lldb_private::ConstString
+  GetDIEClassTemplateParams(const DWARFDIE &die) override {
+    assert(false && "DWARFASTParserSwift::GetDIEClassTemplateParams has not "
+                    "yet been implemented");
+    return lldb_private::ConstString();
+  }
+
 protected:
   lldb_private::TypeSystemSwiftTypeRef &m_swift_typesystem;
 };

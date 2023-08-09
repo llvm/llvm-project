@@ -45,6 +45,8 @@
 #include "lldb/Utility/Timeout.h"
 #include "lldb/lldb-public.h"
 
+#include "llvm/ADT/Optional.h"
+
 namespace lldb_private {
 
 class ClangModulesDeclVendor;

@@ -39,11 +39,11 @@ public:
   Either(const Either<T1, T2> &rhs) {
     switch (rhs.m_selected) {
     case Selected::One:
-      m_t1 = rhs.GetAs<T1>().getValue();
+      m_t1 = rhs.GetAs<T1>().value();
       m_selected = Selected::One;
       break;
     case Selected::Two:
-      m_t2 = rhs.GetAs<T2>().getValue();
+      m_t2 = rhs.GetAs<T2>().value();
       m_selected = Selected::Two;
       break;
     }
@@ -102,11 +102,11 @@ public:
   Either<T1, T2> &operator=(const Either<T1, T2> &rhs) {
     switch (rhs.m_selected) {
     case Selected::One:
-      m_t1 = rhs.GetAs<T1>().getValue();
+      m_t1 = rhs.GetAs<T1>().value();
       m_selected = Selected::One;
       break;
     case Selected::Two:
-      m_t2 = rhs.GetAs<T2>().getValue();
+      m_t2 = rhs.GetAs<T2>().value();
       m_selected = Selected::Two;
       break;
     }

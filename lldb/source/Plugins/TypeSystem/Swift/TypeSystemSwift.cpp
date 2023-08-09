@@ -71,7 +71,7 @@ void TypeSystemSwift::Terminate() {
 /// \}
 
 void TypeSystemSwift::DumpValue(
-    lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream *s,
+    lldb::opaque_compiler_type_t type, ExecutionContext *exe_ctx, Stream &s,
     lldb::Format format, const DataExtractor &data, lldb::offset_t data_offset,
     size_t data_byte_size, uint32_t bitfield_bit_size,
     uint32_t bitfield_bit_offset, bool show_types, bool show_summary,
@@ -111,8 +111,8 @@ bool TypeSystemSwift::ShouldTreatScalarValueAsAddress(
 }
 
 uint32_t TypeSystemSwift::GetIndexOfChildWithName(
-    opaque_compiler_type_t type, const char *name, ExecutionContext *exe_ctx,
-    bool omit_empty_base_classes) {
+    opaque_compiler_type_t type, llvm::StringRef name,
+    ExecutionContext *exe_ctx, bool omit_empty_base_classes) {
   std::vector<uint32_t> child_indexes;
   size_t num_child_indexes = GetIndexOfChildMemberWithName(
       type, name, exe_ctx, omit_empty_base_classes, child_indexes);

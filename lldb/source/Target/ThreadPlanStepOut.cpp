@@ -579,7 +579,7 @@ void ThreadPlanStepOut::CalculateReturnValue() {
       ConstString name("swift_thrown_error");
 
       m_return_valobj_sp = swift_runtime->CalculateErrorValueObjectFromValue(
-          m_swift_error_return.getValue(), name, true);
+          m_swift_error_return.value(), name, true);
       // Even if we couldn't figure out what the error return was, we
       // were told there was an error, so don't show the user a false return value
       // instead.

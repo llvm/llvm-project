@@ -47,7 +47,7 @@ public:
 
   bool IsSourceFile(llvm::StringRef file_path) const override;
 
-  std::vector<ConstString>
+  std::vector<FormattersMatchCandidate>
   GetPossibleFormattersMatches(ValueObject &valobj,
                                lldb::DynamicValueType use_dynamic) override;
 
@@ -55,9 +55,8 @@ public:
 
   const char *GetLanguageSpecificTypeLookupHelp() override;
 
-  bool GetFormatterPrefixSuffix(ValueObject &valobj, ConstString type_hint,
-                                std::string &prefix,
-                                std::string &suffix) override;
+  std::pair<llvm::StringRef, llvm::StringRef>
+  GetFormatterPrefixSuffix(llvm::StringRef type_hint) override;
 
   DumpValueObjectOptions::DeclPrintingHelper GetDeclPrintingHelper() override;
 
@@ -89,7 +88,7 @@ public:
 
   bool SymbolNameFitsToLanguage(Mangled mangled) const override;
 
-  ConstString GetInstanceVariableName() override { return ConstString("self"); }
+  llvm::StringRef GetInstanceVariableName() override { return "self"; }
 
   //------------------------------------------------------------------
   // PluginInterface protocol
