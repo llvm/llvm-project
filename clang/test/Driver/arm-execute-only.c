@@ -1,4 +1,4 @@
-// RUN: %clang -c -fdriver-only -Werror --target=arm-arm-none-eabi \
+// RUN: %clang --sysroot=%S/Inputs -c -fdriver-only -Werror --target=arm-arm-none-eabi \
 // RUN:   -march=armv6-m -mexecute-only %s 2>&1 | count 0
 
 // RUN: not %clang -### -c --target=arm-arm-none-eabi -march=armv6 -mexecute-only %s 2>&1 |    \
