@@ -4983,7 +4983,6 @@ void ARMBaseInstrInfo::expandLoadStackGuardBase(MachineBasicBlock::iterator MI,
     }
 
     if (LoadImmOpc == ARM::tMOVi32imm) { // Thumb-1 execute-only
-      MachineFunction &MF = *MBB.getParent();
       Register CPSRSaveReg = ARM::R12; // Use R12 as scratch register
       auto APSREncoding =
           ARMSysReg::lookupMClassSysRegByName("apsr_nzcvq")->Encoding;
