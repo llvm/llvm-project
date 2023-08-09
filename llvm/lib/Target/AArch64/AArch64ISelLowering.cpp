@@ -17105,6 +17105,46 @@ static SDValue performSVEAndCombine(SDNode *N,
   return SDValue();
 }
 
+// Transform and(fcmp(a, b), fcmp(c, d)) into fccmp(fcmp(a, b), c, d)
+static SDValue performANDSETCCCombine(SDNode *N,
+                                      TargetLowering::DAGCombinerInfo &DCI) {
+
+  // This function performs an optimization on a specific pattern involving
+  // an AND operation and SETCC (Set Condition Code) node.
+
+  SDValue SetCC = N->getOperand(0);
+  EVT VT = N->getValueType(0);
+  SelectionDAG &DAG = DCI.DAG;
+
+  // Checks if the current node (N) is used by any SELECT instruction and
+  // returns an empty SDValue to avoid applying the optimization to prevent
+  // incorrect results
+  for (auto U : N->uses())
+    if (U->getOpcode() == ISD::SELECT)
+      return SDValue();
+
+  // Check if the operand is a SETCC node with floating-point comparison
+  if (SetCC.getOpcode() == ISD::SETCC &&
+      SetCC.getOperand(0).getValueType() == MVT::f32) {
+
+    SDValue Cmp;
+    AArch64CC::CondCode CC;
+
+    // Check if the DAG is after legalization and if we can emit the conjunction
+    if (!DCI.isBeforeLegalize() &&
+        (Cmp = emitConjunction(DAG, SDValue(N, 0), CC))) {
+
+      AArch64CC::CondCode InvertedCC = AArch64CC::getInvertedCondCode(CC);
+
+      SDLoc DL(N);
+      return DAG.getNode(AArch64ISD::CSINC, DL, VT, DAG.getConstant(0, DL, VT),
+                         DAG.getConstant(0, DL, VT),
+                         DAG.getConstant(InvertedCC, DL, MVT::i32), Cmp);
+    }
+  }
+  return SDValue();
+}
+
 static SDValue performANDCombine(SDNode *N,
                                  TargetLowering::DAGCombinerInfo &DCI) {
   SelectionDAG &DAG = DCI.DAG;
@@ -17113,6 +17153,9 @@ static SDValue performANDCombine(SDNode *N,
   EVT VT = N->getValueType(0);
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
+    return R;
+
+  if (SDValue R = performANDSETCCCombine(N,DCI))
     return R;
 
   if (!DAG.getTargetLoweringInfo().isTypeLegal(VT))
