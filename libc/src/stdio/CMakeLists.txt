@@ -13,7 +13,7 @@ function(add_stdio_entrypoint_object name)
       ${name}
       ALIAS
       DEPENDS
-        .${LIBC_TARGET_OS}.${name}
+        .generic_${name}
     )
   endif()
 endfunction(add_stdio_entrypoint_object)
