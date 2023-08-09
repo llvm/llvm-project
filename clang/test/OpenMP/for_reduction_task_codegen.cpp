@@ -84,7 +84,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    [[TMP11:%.*]] = sdiv exact i64 [[TMP10]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
 // CHECK1-NEXT:    [[TMP12:%.*]] = add nuw i64 [[TMP11]], 1
 // CHECK1-NEXT:    [[TMP13:%.*]] = mul nuw i64 [[TMP12]], ptrtoint (ptr getelementptr (i8, ptr null, i32 1) to i64)
-// CHECK1-NEXT:    [[TMP14:%.*]] = call ptr @llvm.stacksave()
+// CHECK1-NEXT:    [[TMP14:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK1-NEXT:    store ptr [[TMP14]], ptr [[SAVED_STACK]], align 8
 // CHECK1-NEXT:    [[VLA:%.*]] = alloca i8, i64 [[TMP12]], align 16
 // CHECK1-NEXT:    store i64 [[TMP12]], ptr [[__VLA_EXPR0]], align 8
@@ -302,7 +302,7 @@ int main(int argc, char **argv) {
 // CHECK1-NEXT:    br label [[DOTOMP_REDUCTION_DEFAULT]]
 // CHECK1:       .omp.reduction.default:
 // CHECK1-NEXT:    [[TMP104:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK1-NEXT:    call void @llvm.stackrestore(ptr [[TMP104]])
+// CHECK1-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP104]])
 // CHECK1-NEXT:    [[TMP105:%.*]] = load ptr, ptr [[DOTGLOBAL_TID__ADDR]], align 8
 // CHECK1-NEXT:    [[TMP106:%.*]] = load i32, ptr [[TMP105]], align 4
 // CHECK1-NEXT:    call void @__kmpc_barrier(ptr @[[GLOB4:[0-9]+]], i32 [[TMP106]])
