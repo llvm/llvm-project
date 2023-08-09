@@ -1123,46 +1123,31 @@ void DWARFRewriter::updateUnitDebugInfo(
                   DIEBldr.addValue(NewAttr, *Itr);
                   std::advance(Itr, 1);
                 }
-                PrevOffset = CurEndOffset;
-                continue;
-              }
-
-              const uint64_t Index = Expr.getRawOperand(0);
-              std::optional<object::SectionedAddress> EntryAddress =
-                  Unit.getAddrOffsetSectionItem(Index);
-              assert(EntryAddress && "Address is not found.");
-              assert(Index <= std::numeric_limits<uint32_t>::max() &&
-                     "Invalid Operand Index.");
-              if (Expr.getCode() == dwarf::DW_OP_addrx) {
-                const uint32_t Index = AddrWriter->getIndexFromAddress(
+              } else {
+                const uint64_t Index = Expr.getRawOperand(0);
+                std::optional<object::SectionedAddress> EntryAddress =
+                    Unit.getAddrOffsetSectionItem(Index);
+                assert(EntryAddress && "Address is not found.");
+                assert(Index <= std::numeric_limits<uint32_t>::max() &&
+                       "Invalid Operand Index.");
+                const uint32_t AddrIndex = AddrWriter->getIndexFromAddress(
                     EntryAddress->Address, Unit);
-                // update Index for DW_AT_location. The Size field is not stored
-                // in IR, we need to minus 1 in offset for each expr.
+                // update Index into .debug_address section for DW_AT_location.
+                // The Size field is not stored in IR, we need to minus 1 in
+                // offset for each expr.
                 SmallString<8> Tmp;
                 raw_svector_ostream OSE(Tmp);
-                encodeULEB128(Index, OSE);
+                encodeULEB128(AddrIndex, OSE);
 
                 DIEBldr.addValue(NewAttr, static_cast<dwarf::Attribute>(0),
                                  dwarf::DW_FORM_data1,
-                                 DIEInteger(dwarf::DW_OP_addrx));
+                                 DIEInteger(Expr.getCode()));
                 NewExprSize += 1;
                 for (uint8_t Byte : Tmp) {
                   DIEBldr.addValue(NewAttr, static_cast<dwarf::Attribute>(0),
                                    dwarf::DW_FORM_data1, DIEInteger(Byte));
                   NewExprSize += 1;
                 }
-              } else {
-                // TODO: Re-do this as DWARF5.
-                auto Itr = AttrLocValList->values().begin();
-                std::advance(Itr, PrevOffset);
-                uint32_t CopyNum = CurEndOffset - PrevOffset;
-                NewExprSize += CopyNum;
-                while (CopyNum--) {
-                  DIEBldr.addValue(NewAttr, *Itr);
-                  std::advance(Itr, 1);
-                }
-                AddrWriter->addIndexAddress(EntryAddress->Address,
-                                            static_cast<uint32_t>(Index), Unit);
               }
               PrevOffset = CurEndOffset;
             }
