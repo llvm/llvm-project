@@ -1365,7 +1365,7 @@ ParseResult ForallOp::parse(OpAsmParser &parser, OperationState &result) {
   result.addAttribute("staticLowerBound", staticLbs);
   result.addAttribute("staticUpperBound", staticUbs);
   result.addAttribute("staticStep", staticSteps);
-  result.addAttribute("operand_segment_sizes",
+  result.addAttribute("operandSegmentSizes",
                       parser.getBuilder().getDenseI32ArrayAttr(
                           {static_cast<int32_t>(dynamicLbs.size()),
                            static_cast<int32_t>(dynamicUbs.size()),
@@ -1400,7 +1400,7 @@ void ForallOp::build(
   result.addAttribute(getStaticStepAttrName(result.name),
                       b.getDenseI64ArrayAttr(staticSteps));
   result.addAttribute(
-      "operand_segment_sizes",
+      "operandSegmentSizes",
       b.getDenseI32ArrayAttr({static_cast<int32_t>(dynamicLbs.size()),
                               static_cast<int32_t>(dynamicUbs.size()),
                               static_cast<int32_t>(dynamicSteps.size()),
@@ -1601,7 +1601,7 @@ struct ForallOpSingleOrZeroIterationDimsFolder
                                       op.getOutputs(), std::nullopt, nullptr);
     newOp.getBodyRegion().getBlocks().clear();
     // The new loop needs to keep all attributes from the old one, except for
-    // "operand_segment_sizes" and static loop bound attributes which capture
+    // "operandSegmentSizes" and static loop bound attributes which capture
     // the outdated information of the old iteration domain.
     SmallVector<StringAttr> elidedAttrs{newOp.getOperandSegmentSizesAttrName(),
                                         newOp.getStaticLowerBoundAttrName(),
@@ -2833,7 +2833,7 @@ ParseResult ParallelOp::parse(OpAsmParser &parser, OperationState &result) {
   if (parser.parseRegion(*body, ivs))
     return failure();
 
-  // Set `operand_segment_sizes` attribute.
+  // Set `operandSegmentSizes` attribute.
   result.addAttribute(
       ParallelOp::getOperandSegmentSizeAttr(),
       builder.getDenseI32ArrayAttr({static_cast<int32_t>(lower.size()),

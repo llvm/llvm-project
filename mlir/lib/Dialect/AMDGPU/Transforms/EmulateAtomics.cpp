@@ -53,7 +53,7 @@ enum class DataArgAction : unsigned char {
 
 // Fix up the fact that, when we're migrating from a general bugffer atomic
 // to a load or to a CAS, the number of openrands, and thus the number of
-// entries needed in operand_segment_sizes, needs to change. We use this method
+// entries needed in operandSegmentSizes, needs to change. We use this method
 // because we'd like to preserve unknown attributes on the atomic instead of
 // discarding them.
 static void patchOperandSegmentSizes(ArrayRef<NamedAttribute> attrs,
@@ -61,7 +61,7 @@ static void patchOperandSegmentSizes(ArrayRef<NamedAttribute> attrs,
                                      DataArgAction action) {
   newAttrs.reserve(attrs.size());
   for (NamedAttribute attr : attrs) {
-    if (attr.getName().getValue() != "operand_segment_sizes") {
+    if (attr.getName().getValue() != "operandSegmentSizes") {
       newAttrs.push_back(attr);
       continue;
     }

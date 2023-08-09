@@ -141,7 +141,7 @@ def NS_AttrSizedOperandOp : NS_Op<"attr_sized_operands",
     Variadic<I32>:$b,
     I32:$c,
     Variadic<I32>:$d,
-    I32ElementsAttr:$operand_segment_sizes
+    I32ElementsAttr:$operandSegmentSizes
   );
 }
 
