@@ -9652,6 +9652,7 @@ cc_library(
         ":Analysis",
         ":ArithDialect",
         ":AsmParser",
+        ":BufferizationDialect",
         ":BufferizationTransforms",
         ":DialectUtils",
         ":FuncDialect",
