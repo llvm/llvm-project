@@ -206,6 +206,46 @@ static SmallVector<Value> unpackOperandVector(RewriterBase &rewriter,
   return result;
 }
 
+/// Returns whether mbarrier object has shared memory address space.
+static bool isMbarrierShared(nvgpu::MBarrierType barrierType) {
+  return (mlir::nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(
+      barrierType.getMemorySpace()));
+}
+
+/// Returns the memory space attribute of the mbarrier object.
+Attribute nvgpu::getMbarrierMemorySpace(MLIRContext *context,
+                                        nvgpu::MBarrierType barrierType) {
+  Attribute memorySpace = {};
+  if (isMbarrierShared(barrierType)) {
+    memorySpace =
+        IntegerAttr::get(IntegerType::get(context, 64),
+                         nvgpu::NVGPUDialect::kSharedMemoryAddressSpace);
+  }
+  return memorySpace;
+}
+
+/// Returns memref type of the mbarrier object. The type is defined in the
+/// MBarrierType.
+MemRefType nvgpu::getMBarrierMemrefType(MLIRContext *context,
+                                        nvgpu::MBarrierType barrierType) {
+  Attribute memorySpace = nvgpu::getMbarrierMemorySpace(context, barrierType);
+  MemRefLayoutAttrInterface layout;
+  return MemRefType::get({1}, IntegerType::get(context, 64), layout,
+                         memorySpace);
+}
+
+/// Returns the base pointer of the mbarrier object.
+static Value getMbarrierPtr(ConversionPatternRewriter &rewriter,
+                            LLVMTypeConverter &typeConverter,
+                            TypedValue<nvgpu::MBarrierType> barrier,
+                            Value barrierMemref) {
+  MemRefType memrefType =
+      nvgpu::getMBarrierMemrefType(rewriter.getContext(), barrier.getType());
+  MemRefDescriptor memRefDescriptor(barrierMemref);
+  return memRefDescriptor.bufferPtr(rewriter, barrier.getLoc(), typeConverter,
+                                    memrefType);
+}
+
 namespace {
 
 struct MmaLdMatrixOpToNVVM : public ConvertOpToLLVMPattern<nvgpu::LdMatrixOp> {
@@ -353,43 +393,6 @@ struct MmaSyncOptoNVVM : public ConvertOpToLLVMPattern<nvgpu::MmaSyncOp> {
   }
 };
 
-/// Returns whether mbarrier object has shared memory address space.
-static bool isMbarrierShared(nvgpu::MBarrierType barrierType) {
-  return (mlir::nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(
-      barrierType.getMemorySpace()));
-}
-
-/// Returns whether memory space attribute of the mbarrier object.
-static Attribute getMbarrierMemorySpace(RewriterBase &rewriter,
-                                        nvgpu::MBarrierType barrierType) {
-  Attribute memorySpace = {};
-  if (isMbarrierShared(barrierType)) {
-    memorySpace = rewriter.getI64IntegerAttr(
-        nvgpu::NVGPUDialect::kSharedMemoryAddressSpace);
-  }
-  return memorySpace;
-}
-
-/// Returns memref type of the mbarrier object. The type is defined in the
-/// MBarrierType.
-static MemRefType createMBarrierMemrefType(RewriterBase &rewriter,
-                                           nvgpu::MBarrierType barrierType) {
-  Attribute memorySpace = getMbarrierMemorySpace(rewriter, barrierType);
-  MemRefLayoutAttrInterface layout;
-  return MemRefType::get({1}, rewriter.getI64Type(), layout, memorySpace);
-}
-
-/// Returns the base pointer of the mbarrier object.
-static Value getMbarrierPtr(ConversionPatternRewriter &rewriter,
-                            LLVMTypeConverter &typeConverter,
-                            TypedValue<nvgpu::MBarrierType> barrier,
-                            Value barrierMemref) {
-  MemRefType memrefType = createMBarrierMemrefType(rewriter, barrier.getType());
-  MemRefDescriptor memRefDescriptor(barrierMemref);
-  return memRefDescriptor.bufferPtr(rewriter, barrier.getLoc(), typeConverter,
-                                    memrefType);
-}
-
 struct ConvertNVGPUToNVVMPass
     : public impl::ConvertNVGPUToNVVMPassBase<ConvertNVGPUToNVVMPass> {
   using Base::Base;
@@ -415,7 +418,8 @@ struct ConvertNVGPUToNVVMPass
       return converter.convertType(IntegerType::get(type.getContext(), 64));
     });
     converter.addConversion([&](nvgpu::MBarrierType type) -> Type {
-      return converter.convertType(createMBarrierMemrefType(rewriter, type));
+      return converter.convertType(
+          nvgpu::getMBarrierMemrefType(rewriter.getContext(), type));
     });
     converter.addConversion([&](nvgpu::TensorMapDescriptorType type) -> Type {
       return converter.getPointerType(type.getTensor().getElementType());
@@ -748,8 +752,8 @@ struct NVGPUMBarrierCreateLowering
   matchAndRewrite(nvgpu::MBarrierCreateOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Operation *funcOp = op->getParentOp();
-    MemRefType barrierType =
-        createMBarrierMemrefType(rewriter, op.getBarrier().getType());
+    MemRefType barrierType = nvgpu::getMBarrierMemrefType(
+        rewriter.getContext(), op.getBarrier().getType());
 
     memref::GlobalOp global;
     if (auto moduleOp = funcOp->getParentOfType<gpu::GPUModuleOp>())
