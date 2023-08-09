@@ -4051,6 +4051,57 @@ cc_library(
     ],
 )
 
+td_library(
+    name = "FuncTransformOpsTdFiles",
+    srcs = [
+        "include/mlir/Dialect/Func/TransformOps/FuncTransformOps.td",
+    ],
+    includes = ["include"],
+    deps = [
+        ":TransformDialectTdFiles",
+    ],
+)
+
+gentbl_cc_library(
+    name = "FuncTransformOpsIncGen",
+    strip_include_prefix = "include",
+    tbl_outs = [
+        (
+            ["-gen-op-decls"],
+            "include/mlir/Dialect/Func/TransformOps/FuncTransformOps.h.inc",
+        ),
+        (
+            ["-gen-op-defs"],
+            "include/mlir/Dialect/Func/TransformOps/FuncTransformOps.cpp.inc",
+        ),
+    ],
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/Func/TransformOps/FuncTransformOps.td",
+    deps = [
+        ":FuncTransformOpsTdFiles",
+    ],
+)
+
+cc_library(
+    name = "FuncTransformOps",
+    srcs = [
+        "lib/Dialect/Func/TransformOps/FuncTransformOps.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Dialect/Func/TransformOps/FuncTransformOps.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":FuncDialect",
+        ":FuncToLLVM",
+        ":FuncTransformOpsIncGen",
+        ":IR",
+        ":LLVMCommonConversion",
+        ":LLVMDialect",
+        ":TransformDialect",
+    ],
+)
+
 cc_library(
     name = "AllExtensions",
     hdrs = ["include/mlir/InitAllExtensions.h"],

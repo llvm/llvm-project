@@ -44,6 +44,13 @@ transform::MemrefToLLVMTypeConverterOp::getTypeConverter() {
   if (getIndexBitwidth() != kDeriveIndexBitwidthFromDataLayout)
     options.overrideIndexBitwidth(getIndexBitwidth());
 
+  // TODO: the following two options don't really make sense for
+  // memref_to_llvm_type_converter specifically but we should have a single
+  // to_llvm_type_converter.
+  if (getDataLayout().has_value())
+    options.dataLayout = llvm::DataLayout(getDataLayout().value());
+  options.useBarePtrCallConv = getUseBarePtrCallConv();
+
   return std::make_unique<LLVMTypeConverter>(getContext(), options);
 }
 
