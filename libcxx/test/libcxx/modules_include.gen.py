@@ -16,8 +16,9 @@ import sys
 sys.path.append(sys.argv[1])
 from libcxx.header_information import lit_header_restrictions, public_headers
 
+BLOCKLIT = '' # block Lit from interpreting a RUN/XFAIL/etc inside the generation script
+
 for header in public_headers:
-  BLOCKLIT = '' # block Lit from interpreting a RUN/XFAIL/etc inside the generation script
   print(f"""\
 //--- {header}.compile.pass.cpp
 // RUN{BLOCKLIT}: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
@@ -45,7 +46,7 @@ for header in public_headers:
 #include <{header}>
 """)
 
-print(f"""
+print(f"""\
 //--- __std_clang_module.compile.pass.mm
 // RUN{BLOCKLIT}: %{{cxx}} %s %{{flags}} %{{compile_flags}} -fmodules -fcxx-modules -fmodules-cache-path=%t -fsyntax-only
 
@@ -68,10 +69,6 @@ print(f"""
 // TODO: Investigate this failure
 // UNSUPPORTED{BLOCKLIT}: LIBCXX-FREEBSD-FIXME
 
-// Lit seems to compile this twice: once with the default flags and once with with
-// the flags specified in the RUN directive. Guard the first compile from failing.
-#if __has_feature(modules)
 @import std;
-#endif
 
 """)
