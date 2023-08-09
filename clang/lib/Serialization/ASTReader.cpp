@@ -2342,9 +2342,22 @@ InputFileInfo ASTReader::getInputFileInfo(ModuleFile &F, unsigned ID) {
   R.StoredTime = static_cast<time_t>(Record[2]);
   R.Overridden = static_cast<bool>(Record[3]);
   R.Transient = static_cast<bool>(Record[4]);
-  R.TopLevelModuleMap = static_cast<bool>(Record[5]);
-  R.Filename = std::string(Blob);
-  ResolveImportedPath(F, R.Filename);
+  R.TopLevel = static_cast<bool>(Record[5]);
+  R.ModuleMap = static_cast<bool>(Record[6]);
+  std::tie(R.FilenameAsRequested, R.Filename) = [&]() {
+    uint16_t AsRequestedLength = Record[7];
+
+    std::string NameAsRequested = Blob.substr(0, AsRequestedLength).str();
+    std::string Name = Blob.substr(AsRequestedLength).str();
+
+    ResolveImportedPath(F, NameAsRequested);
+    ResolveImportedPath(F, Name);
+
+    if (Name.empty())
+      Name = NameAsRequested;
+
+    return std::make_pair(std::move(NameAsRequested), std::move(Name));
+  }();
 
   Expected<llvm::BitstreamEntry> MaybeEntry = Cursor.advance();
   if (!MaybeEntry) // FIXME this drops errors on the floor.
@@ -2395,7 +2408,7 @@ InputFile ASTReader::getInputFile(ModuleFile &F, unsigned ID, bool Complain) {
   time_t StoredTime = FI.StoredTime;
   bool Overridden = FI.Overridden;
   bool Transient = FI.Transient;
-  StringRef Filename = FI.Filename;
+  StringRef Filename = FI.FilenameAsRequested;
   uint64_t StoredContentHash = FI.ContentHash;
 
   // For standard C++ modules, we don't need to check the inputs.
@@ -2742,9 +2755,9 @@ ASTReader::ReadControlBlock(ModuleFile &F,
         for (unsigned I = 0; I < N; ++I) {
           bool IsSystem = I >= NumUserInputs;
           InputFileInfo FI = getInputFileInfo(F, I + 1);
-          Listener->visitInputFile(FI.Filename, IsSystem, FI.Overridden,
-                                   F.Kind == MK_ExplicitModule ||
-                                   F.Kind == MK_PrebuiltModule);
+          Listener->visitInputFile(
+              FI.FilenameAsRequested, IsSystem, FI.Overridden,
+              F.Kind == MK_ExplicitModule || F.Kind == MK_PrebuiltModule);
         }
       }
 
@@ -9307,6 +9320,22 @@ void ASTReader::ReadComments() {
   }
 }
 
+void ASTReader::visitInputFileInfos(
+    serialization::ModuleFile &MF, bool IncludeSystem,
+    llvm::function_ref<void(const serialization::InputFileInfo &IFI,
+                            bool IsSystem)>
+        Visitor) {
+  unsigned NumUserInputs = MF.NumUserInputFiles;
+  unsigned NumInputs = MF.InputFilesLoaded.size();
+  assert(NumUserInputs <= NumInputs);
+  unsigned N = IncludeSystem ? NumInputs : NumUserInputs;
+  for (unsigned I = 0; I < N; ++I) {
+    bool IsSystem = I >= NumUserInputs;
+    InputFileInfo IFI = getInputFileInfo(MF, I+1);
+    Visitor(IFI, IsSystem);
+  }
+}
+
 void ASTReader::visitInputFiles(serialization::ModuleFile &MF,
                                 bool IncludeSystem, bool Complain,
                     llvm::function_ref<void(const serialization::InputFile &IF,
@@ -9328,7 +9357,7 @@ void ASTReader::visitTopLevelModuleMaps(
   unsigned NumInputs = MF.InputFilesLoaded.size();
   for (unsigned I = 0; I < NumInputs; ++I) {
     InputFileInfo IFI = getInputFileInfo(MF, I + 1);
-    if (IFI.TopLevelModuleMap)
+    if (IFI.TopLevel && IFI.ModuleMap)
       if (auto FE = getInputFile(MF, I + 1).getFile())
         Visitor(*FE);
   }
