@@ -11,6 +11,10 @@ extern "C" int printf(const char*,...);
 namespace ns1 { template<typename T> void tmplt(T &) {}}
 int arg_tmplt = 12; ns1::tmplt(arg_tmplt);
 
+namespace ns2 { template <typename T> struct S {}; }
+namespace ns3 { struct A { public: using S = int; }; }
+namespace ns3 { A::S f(A::S a); }
+
 // ParseStatementOrDeclaration returns multiple statements.
 #ifdef MS
 int g_bFlag = 1;
