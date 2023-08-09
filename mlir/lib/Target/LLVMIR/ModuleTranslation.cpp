@@ -1060,9 +1060,13 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
 LogicalResult ModuleTranslation::convertFunctions() {
   // Convert functions.
   for (auto function : getModuleBody(mlirModule).getOps<LLVMFuncOp>()) {
-    // Ignore external functions.
-    if (function.isExternal())
+    // Do not convert external functions, but do process dialect attributes
+    // attached to them.
+    if (function.isExternal()) {
+      if (failed(convertDialectAttributes(function)))
+        return failure();
       continue;
+    }
 
     if (failed(convertOneFunction(function)))
       return failure();
