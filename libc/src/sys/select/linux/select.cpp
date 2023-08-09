@@ -54,11 +54,11 @@ LLVM_LIBC_FUNCTION(int, select,
   }
   pselect6_sigset_t pss{nullptr, sizeof(sigset_t)};
 #if SYS_pselect6
-  long ret = __llvm_libc::syscall_impl(SYS_pselect6, nfds, read_set, write_set,
-                                       error_set, &ts, &pss);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_pselect6, nfds, read_set,
+                                           write_set, error_set, &ts, &pss);
 #elif defined(SYS_pselect6_time64)
-  long ret = __llvm_libc::syscall_impl(SYS_pselect6_time64, nfds, read_set,
-                                       write_set, error_set, &ts, &pss);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_pselect6_time64, nfds, read_set,
+                                           write_set, error_set, &ts, &pss);
 #else
 #error "SYS_pselect6 and SYS_pselect6_time64 syscalls not available."
 #endif

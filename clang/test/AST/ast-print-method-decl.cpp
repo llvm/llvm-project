@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -ast-print %s -o - -std=c++20 | FileCheck %s
+// RUN: %clang_cc1 -ast-print -triple i386-linux-gnu %s -o - -std=c++20 | FileCheck %s
 
 // CHECK: struct DelegatingCtor1 {
 struct DelegatingCtor1 {
@@ -80,6 +80,44 @@ struct CurlyCtorInit {
   // FIXME: Implicit this should not be output
   // CHECK-NEXT: CurlyCtorInit(int ****) : a({.x = 0}), i(this->a.x) {
   CurlyCtorInit(int ****) : a({.x = 0}), i(a.x) {
+  // CHECK-NEXT: }
+  }
+
+  // CHECK-NEXT: };
+};
+
+
+// CHECK: struct DefMethodsWithoutBody {
+struct DefMethodsWithoutBody {
+  // CHECK-NEXT: DefMethodsWithoutBody() = delete;
+  DefMethodsWithoutBody() = delete;
+
+  // CHECK-NEXT: DefMethodsWithoutBody() = default;
+  ~DefMethodsWithoutBody() = default;
+
+  // CHECK-NEXT: void m1() __attribute__((alias("X")));
+  void m1() __attribute__((alias("X")));
+
+  // CHECK-NEXT: };
+};
+
+
+// ---- Check that implict (non-written) constructor initializers are not output
+
+struct ImplicitCtorInit1 {
+  int a;
+};
+
+// CHECK: struct ImplicitCtorInit2 : ImplicitCtorInit1 {
+struct ImplicitCtorInit2 : ImplicitCtorInit1 {
+
+  // CHECK-NEXT: ImplicitCtorInit2(int *) {
+  ImplicitCtorInit2(int *) {
+  // CHECK-NEXT: }
+  }
+
+  // CHECK-NEXT: ImplicitCtorInit2(int **) : ImplicitCtorInit1() {
+  ImplicitCtorInit2(int **) : ImplicitCtorInit1() {
   // CHECK-NEXT: }
   }
 

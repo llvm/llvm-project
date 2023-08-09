@@ -19,7 +19,7 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, kill, (pid_t pid, int sig)) {
-  int ret = __llvm_libc::syscall_impl(SYS_kill, pid, sig);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_kill, pid, sig);
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
