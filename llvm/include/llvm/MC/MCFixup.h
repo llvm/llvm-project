@@ -24,7 +24,6 @@ enum MCFixupKind {
   FK_Data_2,      ///< A two-byte fixup.
   FK_Data_4,      ///< A four-byte fixup.
   FK_Data_8,      ///< A eight-byte fixup.
-  FK_Data_6b,     ///< A six-bits fixup.
   FK_PCRel_1,     ///< A one-byte pc relative fixup.
   FK_PCRel_2,     ///< A two-byte pc relative fixup.
   FK_PCRel_4,     ///< A four-byte pc relative fixup.
@@ -116,26 +115,6 @@ public:
     case 4:
       return IsPCRel ? FK_PCRel_4 : FK_Data_4;
     case 8:
-      return IsPCRel ? FK_PCRel_8 : FK_Data_8;
-    }
-  }
-
-  /// Return the generic fixup kind for a value with the given size in bits.
-  /// It is an error to pass an unsupported size.
-  static MCFixupKind getKindForSizeInBits(unsigned Size, bool IsPCRel) {
-    switch (Size) {
-    default:
-      llvm_unreachable("Invalid generic fixup size!");
-    case 6:
-      assert(!IsPCRel && "Invalid pc-relative fixup size!");
-      return FK_Data_6b;
-    case 8:
-      return IsPCRel ? FK_PCRel_1 : FK_Data_1;
-    case 16:
-      return IsPCRel ? FK_PCRel_2 : FK_Data_2;
-    case 32:
-      return IsPCRel ? FK_PCRel_4 : FK_Data_4;
-    case 64:
       return IsPCRel ? FK_PCRel_8 : FK_Data_8;
     }
   }
