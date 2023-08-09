@@ -178,7 +178,31 @@ void redecl_preserve_za(void) __arm_shared_za {}
 void redecl_nopreserve_za(void) __arm_shared_za;
 void redecl_nopreserve_za(void) __arm_shared_za __arm_preserves_za {}
 
+void non_za_definition(void (*shared_za_fn_ptr)(void) __arm_shared_za) {
+  sme_arm_new_za(); // OK
+  // expected-error@+2 {{call to a shared ZA function requires the caller to have ZA state}}
+  // expected-cpp-error@+1 {{call to a shared ZA function requires the caller to have ZA state}}
+  sme_arm_shared_za();
+  // expected-error@+2 {{call to a shared ZA function requires the caller to have ZA state}}
+  // expected-cpp-error@+1 {{call to a shared ZA function requires the caller to have ZA state}}
+  shared_za_fn_ptr();
+}
+
+void shared_za_definition(void (*shared_za_fn_ptr)(void) __arm_shared_za) __arm_shared_za {
+  sme_arm_shared_za(); // OK
+  shared_za_fn_ptr(); // OK
+}
+
+__arm_new_za void new_za_definition(void (*shared_za_fn_ptr)(void) __arm_shared_za) {
+  sme_arm_shared_za(); // OK
+  shared_za_fn_ptr(); // OK
+}
+
 #ifdef __cplusplus
+int shared_za_initializer(void) __arm_shared_za;
+// expected-cpp-error@+1 {{call to a shared ZA function requires the caller to have ZA state}}
+int global = shared_za_initializer();
+
 struct S {
   virtual void shared_za_memberfn(void) __arm_shared_za;
 };
