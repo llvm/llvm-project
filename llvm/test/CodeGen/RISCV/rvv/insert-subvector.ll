@@ -495,6 +495,18 @@ define void @insert_nxv8i64_nxv16i64_hi(<vscale x 8 x i64> %sv0, <vscale x 16 x 
   ret void
 }
 
+; We should be able to widen the <3 x i64> subvector to a <4 x i64> here because
+; we know that the minimum vscale is 2
+define <vscale x 2 x i64> @insert_nxv2i64_nxv3i64(<3 x i64> %sv) #0 {
+; CHECK-LABEL: insert_nxv2i64_nxv3i64:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    ret
+  %vec = call <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v3i64(<vscale x 2 x i64> undef, <3 x i64> %sv, i64 0)
+  ret <vscale x 2 x i64> %vec
+}
+
+attributes #0 = { vscale_range(2,1024) }
+
 declare <vscale x 4 x i1> @llvm.vector.insert.nxv1i1.nxv4i1(<vscale x 4 x i1>, <vscale x 1 x i1>, i64)
 declare <vscale x 32 x i1> @llvm.vector.insert.nxv8i1.nxv32i1(<vscale x 32 x i1>, <vscale x 8 x i1>, i64)
 
@@ -512,3 +524,5 @@ declare <vscale x 16 x i32> @llvm.vector.insert.nxv1i32.nxv16i32(<vscale x 16 x 
 declare <vscale x 16 x i32> @llvm.vector.insert.nxv2i32.nxv16i32(<vscale x 16 x i32>, <vscale x 2 x i32>, i64 %idx)
 declare <vscale x 16 x i32> @llvm.vector.insert.nxv4i32.nxv16i32(<vscale x 16 x i32>, <vscale x 4 x i32>, i64 %idx)
 declare <vscale x 16 x i32> @llvm.vector.insert.nxv8i32.nxv16i32(<vscale x 16 x i32>, <vscale x 8 x i32>, i64 %idx)
+
+declare <vscale x 2 x i64> @llvm.vector.insert.nxv2i64.v3i64(<vscale x 2 x i64>, <3 x i64>, i64 %idx)
