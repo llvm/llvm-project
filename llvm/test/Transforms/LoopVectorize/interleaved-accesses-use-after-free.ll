@@ -1,5 +1,6 @@
 ; REQUIRES: asserts
-; RUN: opt -passes=loop-vectorize -debug-only=loop-accesses,vectorutils -force-vector-width=4 -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -debug-only=loop-accesses -force-vector-width=4 -disable-output %s 2>&1 | FileCheck %s -check-prefix=LOOP-ACCESS
+; RUN: opt -passes=loop-vectorize -debug-only=vectorutils -force-vector-width=4 -disable-output %s 2>&1 | FileCheck %s
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"
 target triple = "x86_64-redhat-linux-gnu"
 
@@ -22,8 +23,8 @@ target triple = "x86_64-redhat-linux-gnu"
 %struct.bar.5 = type { i8 }
 %struct.baz = type { i64, %struct.pluto }
 
-; CHECK: LAA: Found a loop in test: bb4
-; CHECK: Too many dependences, stopped recording
+; LOOP-ACCESS: Too many dependences, stopped recording
+
 ; If no dependences are recorded because there are too many, LoopAccessAnalysis
 ; just conservatively returns true for any pair of instructions compared (even
 ; those belonging to the same store group). This tests make sure that we do not
