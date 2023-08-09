@@ -95,6 +95,10 @@ subroutine assoc()
     lvar = associated(realMatPtr, targetRealMat) ! ok
     !ERROR: missing mandatory 'pointer=' argument
     lVar = associated()
+    !ERROR: POINTER= argument 'intprocpointer1' is a procedure pointer but the TARGET= argument '(targetintvar1)' is not a procedure or procedure pointer
+    lvar = associated(intprocPointer1, (targetIntVar1))
+    !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument '(targetintvar1)' is not a variable
+    lvar = associated(intPointerVar1, (targetIntVar1))
     !ERROR: MOLD= argument to NULL() must be a pointer or allocatable
     lVar = associated(null(intVar))
     lVar = associated(null(intAllocVar)) !OK
@@ -164,7 +168,7 @@ subroutine assoc()
     !WARNING: Procedure pointer 'intprocpointer1' associated with incompatible procedure designator 'elementalproc': incompatible procedure attributes: Elemental
     !ERROR: Non-intrinsic ELEMENTAL procedure 'elementalproc' may not be passed as an actual argument
     lvar = associated(intProcPointer1, elementalProc)
-    !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument 'intfunc' is a procedure designator
+    !ERROR: POINTER= argument 'intpointervar1' is an object pointer but the TARGET= argument 'intfunc' is not a variable
     lvar = associated (intPointerVar1, intFunc)
     !ERROR: In assignment to object pointer 'intpointervar1', the target 'intfunc' is a procedure designator
     intPointerVar1 => intFunc
