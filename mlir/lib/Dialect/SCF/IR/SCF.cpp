@@ -283,6 +283,9 @@ void ExecuteRegionOp::getSuccessorRegions(
 
 MutableOperandRange
 ConditionOp::getMutableSuccessorOperands(std::optional<unsigned> index) {
+  assert((!index || index == getParentOp().getAfter().getRegionNumber()) &&
+         "condition op can only exit the loop or branch to the after"
+         "region");
   // Pass all operands except the condition to the successor region.
   return getArgsMutable();
 }

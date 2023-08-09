@@ -981,6 +981,37 @@ void AnyCondOp::getRegionInvocationBounds(
 }
 
 //===----------------------------------------------------------------------===//
+// LoopBlockOp
+//===----------------------------------------------------------------------===//
+
+void LoopBlockOp::getSuccessorRegions(
+    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
+  regions.emplace_back(&getBody(), getBody().getArguments());
+  if (!index)
+    return;
+
+  regions.emplace_back((*this)->getResults());
+}
+
+OperandRange
+LoopBlockOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
+  assert(index == 0);
+  return getInitMutable();
+}
+
+//===----------------------------------------------------------------------===//
+// LoopBlockTerminatorOp
+//===----------------------------------------------------------------------===//
+
+MutableOperandRange LoopBlockTerminatorOp::getMutableSuccessorOperands(
+    std::optional<unsigned> index) {
+  assert(!index || index == 0);
+  if (!index)
+    return getExitArgMutable();
+  return getNextIterArgMutable();
+}
+
+//===----------------------------------------------------------------------===//
 // SingleNoTerminatorCustomAsmOp
 //===----------------------------------------------------------------------===//
 
