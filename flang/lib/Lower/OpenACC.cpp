@@ -2386,8 +2386,7 @@ static void createRegisterFunc(mlir::OpBuilder &modBuilder,
           mlir::acc::DataClause::acc_update_device, addrOp.getType());
   llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
   llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
-  mlir::acc::UpdateOp updateOp = createSimpleOp<mlir::acc::UpdateOp>(
-      builder, loc, operands, operandSegments);
+  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
 
   builder.create<mlir::func::ReturnOp>(loc);
   modBuilder.setInsertionPointAfter(registerFuncOp);
