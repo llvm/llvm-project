@@ -279,14 +279,19 @@ public:
                 LargeBlock::Header **H, bool *Zeroed) EXCLUDES(Mutex) {
     const uptr PageSize = getPageSizeCached();
     const u32 MaxCount = atomic_load_relaxed(&MaxEntriesCount);
+    // 10% of the requested size proved to be the optimal choice for
+    // retrieving cached blocks after testing several options.
+    constexpr u32 FragmentedBytesDivisor = 10;
     bool Found = false;
     CachedBlock Entry;
-    uptr HeaderPos = 0;
+    uptr EntryHeaderPos = 0;
     {
       ScopedLock L(Mutex);
       CallsToRetrieve++;
       if (EntriesCount == 0)
         return false;
+      u32 OptimalFitIndex = 0;
+      uptr MinDiff = UINTPTR_MAX;
       for (u32 I = 0; I < MaxCount; I++) {
         if (!Entries[I].isValid())
           continue;
@@ -294,7 +299,7 @@ public:
         const uptr CommitSize = Entries[I].CommitSize;
         const uptr AllocPos =
             roundDown(CommitBase + CommitSize - Size, Alignment);
-        HeaderPos = AllocPos - HeadersSize;
+        const uptr HeaderPos = AllocPos - HeadersSize;
         if (HeaderPos > CommitBase + CommitSize)
           continue;
         if (HeaderPos < CommitBase ||
@@ -302,18 +307,36 @@ public:
           continue;
         }
         Found = true;
-        Entry = Entries[I];
-        Entries[I].invalidate();
+        const uptr Diff = HeaderPos - CommitBase;
+        // immediately use a cached block if it's size is close enough to the
+        // requested size.
+        const uptr MaxAllowedFragmentedBytes =
+            (CommitBase + CommitSize - HeaderPos) / FragmentedBytesDivisor;
+        if (Diff <= MaxAllowedFragmentedBytes) {
+          OptimalFitIndex = I;
+          EntryHeaderPos = HeaderPos;
+          break;
+        }
+        // keep track of the smallest cached block
+        // that is greater than (AllocSize + HeaderSize)
+        if (Diff > MinDiff)
+          continue;
+        OptimalFitIndex = I;
+        MinDiff = Diff;
+        EntryHeaderPos = HeaderPos;
+      }
+      if (Found) {
+        Entry = Entries[OptimalFitIndex];
+        Entries[OptimalFitIndex].invalidate();
         EntriesCount--;
         SuccessfulRetrieves++;
-        break;
       }
     }
     if (!Found)
       return false;
 
     *H = reinterpret_cast<LargeBlock::Header *>(
-        LargeBlock::addHeaderTag<Config>(HeaderPos));
+        LargeBlock::addHeaderTag<Config>(EntryHeaderPos));
     *Zeroed = Entry.Time == 0;
     if (useMemoryTagging<Config>(Options))
       Entry.MemMap.setMemoryPermission(Entry.CommitBase, Entry.CommitSize, 0);
