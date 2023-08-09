@@ -6581,40 +6581,147 @@ Requirements on Development Tools - Engineering Specification Documentation
   }];
 }
 
-def ArmSmeStreamingDocs : Documentation {
-  let Category = DocCatType;
+def DocCatArmSmeAttributes : DocumentationCategory<"AArch64 SME Attributes"> {
   let Content = [{
-.. Note:: This attribute has not been implemented yet, but once it is
-   implemented, it will behave as described below.
+Clang supports a number of AArch64-specific attributes to manage state
+added by the Scalable Matrix Extension (SME). This state includes the
+runtime mode that the processor is in (e.g. non-streaming or streaming)
+as well as the state of the ``ZA`` Matrix Storage.
 
-The ``__arm_streaming`` keyword is only available on AArch64 targets.
-It applies to function types and specifies that the function has a
-"streaming interface".  This means that:
+The attributes come in the form of type- and declaration attributes:
 
-* the function requires the Scalable Matrix Extension (SME)
+* The SME declaration attributes can appear anywhere that a standard
+  ``[[...]]`` declaration attribute can appear.
+
+* The SME type attributes apply only to prototyped functions and can appear
+  anywhere that a standard ``[[...]]`` type attribute can appear. The SME
+  type attributes do not apply to functions having a K&R-style
+  unprototyped function type.
+
+See `Arm C Language Extensions <https://github.com/ARM-software/acle>`_
+for more details about the features related to the SME extension.
+
+See `Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)
+<https://github.com/ARM-software/abi-aa>`_ for more details about
+streaming-interface functions and shared/private-ZA interface functions.
+  }];
+}
+
+def ArmSmeStreamingDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_streaming`` keyword applies to prototyped function types and specifies
+that the function has a "streaming interface".  This means that:
+
+* the function requires that the processor implements the Scalable Matrix
+  Extension (SME).
 
 * the function must be entered in streaming mode (that is, with PSTATE.SM
   set to 1)
 
 * the function must return in streaming mode
 
-* the function does not have a K&R-style unprototyped function type.
-
-See `Procedure Call Standard for the Arm® 64-bit Architecture (AArch64)
-<https://github.com/ARM-software/abi-aa>`_ for more details about
-streaming-interface functions.
-
 Clang manages PSTATE.SM automatically; it is not the source code's
-responsibility to do this.  For example, if a normal non-streaming
+responsibility to do this.  For example, if a non-streaming
 function calls an ``__arm_streaming`` function, Clang generates code
 that switches into streaming mode before calling the function and
 switches back to non-streaming mode on return.
+  }];
+}
 
-``__arm_streaming`` can appear anywhere that a standard ``[[...]]`` type
-attribute can appear.
+def ArmSmeStreamingCompatibleDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_streaming_compatible`` keyword applies to prototyped function types and
+specifies that the function has a “streaming compatible interface”.  This
+means that:
 
-See `Arm C Language Extensions <https://github.com/ARM-software/acle>`_
-for more details about this extension, and for other related SME features.
+* the function may be entered in either non-streaming mode (PSTATE.SM=0) or
+  in streaming mode (PSTATE.SM=1).
+
+* the function must return in the same mode as it was entered.
+
+* the code executed in the function is compatible with either mode.
+
+Clang manages PSTATE.SM automatically; it is not the source code's
+responsibility to do this.  Clang will ensure that the generated code in
+streaming-compatible functions is valid in either mode (PSTATE.SM=0 or
+PSTATE.SM=1). For example, if an ``__arm_streaming_compatible`` function calls a
+non-streaming function, Clang generates code to temporarily switch out of streaming
+mode before calling the function and switch back to streaming-mode on return if
+``PSTATE.SM`` is ``1`` on entry of the caller. If ``PSTATE.SM`` is ``0`` on
+entry to the ``__arm_streaming_compatible`` function, the call will be executed
+without changing modes.
+  }];
+}
+
+def ArmSmeSharedZADocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_shared_za`` keyword applies to prototyped function types and specifies
+that the function shares SME's matrix storage (ZA) with its caller.  This
+means that:
+
+* the function requires that the processor implements the Scalable Matrix
+  Extension (SME).
+
+* the function enters with ZA in an active state.
+
+* the function returns with ZA in an active state.
+  }];
+}
+
+def ArmSmePreservesZADocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_preserves_za`` keyword applies to prototyped function types and
+specifies that the function does not modify ZA state.
+  }];
+}
+
+
+def ArmSmeLocallyStreamingDocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_locally_streaming`` keyword applies to function declarations
+and specifies that all the statements in the function are executed in
+streaming mode. This means that:
+
+* the function requires that the target processor implements the Scalable Matrix
+  Extension (SME).
+
+* the program automatically puts the machine into streaming mode before
+  executing the statements and automatically restores the previous mode
+  afterwards.
+
+Clang manages PSTATE.SM automatically; it is not the source code's
+responsibility to do this.  For example, Clang will emit code to enable
+streaming mode at the start of the function, and disable streaming mode
+at the end of the function.
+  }];
+}
+
+def ArmSmeNewZADocs : Documentation {
+  let Category = DocCatArmSmeAttributes;
+  let Content = [{
+The ``__arm_new_za`` keyword applies to function declarations and specifies
+that the function will be set up with a fresh ZA context.
+
+This means that:
+
+* the function requires that the target processor implements the Scalable Matrix
+  Extension (SME).
+
+* the function will commit any lazily saved ZA data.
+
+* the function will create a new ZA context and enable PSTATE.ZA.
+
+* the function will disable PSTATE.ZA (by setting it to 0) before returning.
+
+For ``__arm_new_za`` functions Clang will set up the ZA context automatically
+on entry to the function, and disable it before returning. For example, if ZA is
+in a dormant state Clang will generate the code to commit a lazy-save and set up
+a new ZA state before executing user code.
   }];
 }
 

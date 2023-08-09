@@ -6592,6 +6592,13 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
       }
       return getBuildVector(VT, DL, Ops);
     }
+
+    if (N1.getOpcode() == ISD::SPLAT_VECTOR &&
+        isa<ConstantSDNode>(N1.getOperand(0)))
+      return getNode(
+          ISD::SPLAT_VECTOR, DL, VT,
+          SignExtendInReg(N1.getConstantOperandAPInt(0),
+                          N1.getOperand(0).getValueType()));
     break;
   }
   case ISD::FP_TO_SINT_SAT:

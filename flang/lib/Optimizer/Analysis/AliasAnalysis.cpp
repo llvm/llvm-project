@@ -16,8 +16,11 @@
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Debug.h"
 
 using namespace mlir;
+
+#define DEBUG_TYPE "fir-alias-analysis"
 
 //===----------------------------------------------------------------------===//
 // AliasAnalysis: alias
@@ -67,6 +70,12 @@ bool AliasAnalysis::Source::isRecordWithPointerComponent() const {
 AliasResult AliasAnalysis::alias(Value lhs, Value rhs) {
   auto lhsSrc = getSource(lhs);
   auto rhsSrc = getSource(rhs);
+  LLVM_DEBUG(llvm::dbgs() << "AliasAnalysis::alias\n";
+             llvm::dbgs() << "  lhs: " << lhs << "\n";
+             llvm::dbgs() << "  lhsSrc: " << lhsSrc << "\n";
+             llvm::dbgs() << "  rhs: " << rhs << "\n";
+             llvm::dbgs() << "  rhsSrc: " << rhsSrc << "\n";
+             llvm::dbgs() << "\n";);
 
   // Indirect case currently not handled. Conservatively assume
   // it aliases with everything

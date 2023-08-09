@@ -68,19 +68,16 @@ static FailureOr<TransferMask> getMaskOp(Operation *loadOp) {
           transferRead.getMask().getDefiningOp<vector::CreateMaskOp>())
     return TransferMask{maskOp, {}};
 
-  // Case 2: Mask is the result of a vector.extract(vector.create_mask). Only
-  // 2D -> 1D extracts are supported at the moment.
+  // Case 2: Mask is the result of a vector.extract(vector.create_mask).
   if (auto extractOp =
           transferRead.getMask().getDefiningOp<vector::ExtractOp>())
     if (auto maskOp =
             extractOp.getVector().getDefiningOp<vector::CreateMaskOp>())
-      if (extractOp.getPosition().size() == 1 &&
-          extractOp.getSourceVectorType().getRank() == 2)
-        return TransferMask{maskOp,
-                            SmallVector<int64_t>(extractOp.getPosition())};
+      return TransferMask{maskOp,
+                          SmallVector<int64_t>(extractOp.getPosition())};
 
   // All other cases: not supported.
-  return {};
+  return failure();
 }
 
 /// Build an SSA value that represents the number of read elements.
@@ -102,18 +99,27 @@ static Value buildNumReadElements(OpBuilder &b, Location loc,
 
   // vector.extract(vector.create_mask).
   // If extract_pos < num_ones, take number of elements from the least
-  // significant dimension.
-  assert(transferMask->createMaskOp.getVectorType().getRank() == 2 &&
-         "expected 2D mask");
-  assert(transferMask->extractPosition.size() == 1 &&
-         "expected 2D->1D extract");
-  Value cmp = b.create<arith::CmpIOp>(
-      loc, arith::CmpIPredicate::slt,
-      b.create<arith::ConstantIndexOp>(loc,
-                                       transferMask->extractPosition.front()),
-      transferMask->createMaskOp->getOperands().front());
+  // significant dimension. (Do this for all dimensions and bit-AND the
+  // conditions.)
+  assert(transferMask->createMaskOp.getVectorType().getRank() -
+                 transferMask->extractPosition.size() ==
+             1 &&
+         "expected N-D -> (N-1)-D extract");
+  Value cond;
+  // Note: There is one more `sz` than `pos`. The loop end with the last `pos`.
+  for (auto [pos, sz] : llvm::zip(transferMask->extractPosition,
+                                  transferMask->createMaskOp->getOperands())) {
+    Value cmp =
+        b.create<arith::CmpIOp>(loc, arith::CmpIPredicate::slt,
+                                b.create<arith::ConstantIndexOp>(loc, pos), sz);
+    if (!cond) {
+      cond = cmp;
+      continue;
+    }
+    cond = b.create<arith::AndIOp>(loc, cmp, cond);
+  }
   return b.create<arith::SelectOp>(
-      loc, cmp, transferMask->createMaskOp->getOperands().back(),
+      loc, cond, transferMask->createMaskOp->getOperands().back(),
       b.create<arith::ConstantIndexOp>(loc, 0));
 }
 

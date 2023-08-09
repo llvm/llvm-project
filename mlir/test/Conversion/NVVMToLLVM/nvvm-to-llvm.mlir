@@ -1,4 +1,7 @@
 // RUN: mlir-opt --convert-nvvm-to-llvm --split-input-file %s | FileCheck %s
+// Same below, but using the `ConvertToLLVMPatternInterface` entry point
+// and the generic `convert-to-llvm` pass.
+// RUN: mlir-opt --convert-to-llvm --split-input-file %s | FileCheck %s
 
 // CHECK-LABEL : @init_mbarrier_arrive_expect_tx
 llvm.func @init_mbarrier_arrive_expect_tx(%barrier : !llvm.ptr<3>, %txcount : i32) {
