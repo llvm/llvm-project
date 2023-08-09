@@ -18,15 +18,6 @@
 
 namespace __llvm_libc {
 
-namespace details {
-
-// Format T as uppercase hexadecimal number with leading zeros.
-template <typename T>
-using ZeroPaddedHexFmt = IntegerToString<
-    T, typename radix::Hex::WithWidth<(sizeof(T) * 2)>::WithPrefix::Uppercase>;
-
-} // namespace details
-
 // Converts the bits to a string in the following format:
 //    "0x<NNN...N> = S: N, E: 0xNNNN, M:0xNNN...N"
 // 1. N is a hexadecimal digit.
@@ -42,31 +33,36 @@ template <typename T> LIBC_INLINE cpp::string str(fputil::FPBits<T> x) {
   if (x.is_inf())
     return x.get_sign() ? "(-Infinity)" : "(+Infinity)";
 
-  const auto sign_char = [](bool sign) -> char { return sign ? '1' : '0'; };
+  auto zerofill = [](char *arr, size_t n) {
+    for (size_t i = 0; i < n; ++i)
+      arr[i] = '0';
+  };
 
-  cpp::string s;
+  cpp::string s("0x");
+  char bitsbuf[IntegerToString::hex_bufsize<UIntType>()];
+  zerofill(bitsbuf, sizeof(bitsbuf));
+  IntegerToString::hex(x.bits, bitsbuf, false);
+  s += cpp::string(bitsbuf, sizeof(bitsbuf));
 
-  const details::ZeroPaddedHexFmt<UIntType> bits(x.bits);
-  s += bits.view();
+  s += " = (";
+  s += cpp::string("S: ") + (x.get_sign() ? "1" : "0");
 
-  s += " = (S: ";
-  s += sign_char(x.get_sign());
-
-  s += ", E: ";
-  const details::ZeroPaddedHexFmt<uint16_t> exponent(x.get_unbiased_exponent());
-  s += exponent.view();
+  char expbuf[IntegerToString::hex_bufsize<uint16_t>()];
+  zerofill(expbuf, sizeof(expbuf));
+  IntegerToString::hex(x.get_unbiased_exponent(), expbuf, false);
+  s += cpp::string(", E: 0x") + cpp::string(expbuf, sizeof(expbuf));
 
   if constexpr (cpp::is_same_v<T, long double> &&
                 fputil::FloatProperties<long double>::MANTISSA_WIDTH == 63) {
-    s += ", I: ";
-    s += sign_char(x.get_implicit_bit());
+    s += cpp::string(", I: ") + (x.get_implicit_bit() ? "1" : "0");
   }
 
-  s += ", M: ";
-  const details::ZeroPaddedHexFmt<UIntType> mantissa(x.get_mantissa());
-  s += mantissa.view();
+  char mantbuf[IntegerToString::hex_bufsize<UIntType>()] = {'0'};
+  zerofill(mantbuf, sizeof(mantbuf));
+  IntegerToString::hex(x.get_mantissa(), mantbuf, false);
+  s += cpp::string(", M: 0x") + cpp::string(mantbuf, sizeof(mantbuf));
 
-  s += ')';
+  s += ")";
   return s;
 }
 

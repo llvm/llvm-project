@@ -195,8 +195,10 @@ LIBC_INLINE string operator+(const char *lhs, const string &rhs) {
 
 namespace internal {
 template <typename T> string to_dec_string(T value) {
-  const IntegerToString<T> buffer(value);
-  return buffer.view();
+  char dec_buf[IntegerToString::dec_bufsize<T>()];
+  auto maybe_string_view = IntegerToString::dec(value, dec_buf);
+  const auto &string_view = *maybe_string_view;
+  return string(string_view.data(), string_view.size());
 }
 } // namespace internal
 
