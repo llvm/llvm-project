@@ -251,7 +251,7 @@ define <4 x i32> @test_urem_odd_even_poweroftwo(<4 x i32> %X) nounwind {
 define <4 x i32> @test_urem_odd_one(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_odd_one:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #52429
+; CHECK-NEXT:    mov w8, #52429 // =0xcccd
 ; CHECK-NEXT:    movk w8, #52428, lsl #16
 ; CHECK-NEXT:    movi v2.4s, #1
 ; CHECK-NEXT:    dup v1.4s, w8
@@ -271,7 +271,7 @@ define <4 x i32> @test_urem_odd_one(<4 x i32> %X) nounwind {
 define <4 x i32> @test_urem_even_one(<4 x i32> %X) nounwind {
 ; CHECK-LABEL: test_urem_even_one:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov w8, #28087
+; CHECK-NEXT:    mov w8, #28087 // =0x6db7
 ; CHECK-NEXT:    movk w8, #46811, lsl #16
 ; CHECK-NEXT:    movi v3.4s, #1
 ; CHECK-NEXT:    dup v1.4s, w8
