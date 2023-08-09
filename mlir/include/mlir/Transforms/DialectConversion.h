@@ -37,6 +37,8 @@ class Value;
 /// registered using addConversion and addMaterialization, respectively.
 class TypeConverter {
 public:
+  virtual ~TypeConverter() = default;
+
   /// This class provides all of the information necessary to convert a type
   /// signature.
   class SignatureConversion {
