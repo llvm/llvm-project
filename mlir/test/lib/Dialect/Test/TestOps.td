@@ -2047,7 +2047,8 @@ def RegionIfYieldOp : TEST_Op<"region_if_yield",
 
 def RegionIfOp : TEST_Op<"region_if",
       [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-                                 ["getRegionInvocationBounds"]>,
+                                 ["getRegionInvocationBounds",
+                                  "getEntrySuccessorOperands"]>,
        SingleBlockImplicitTerminator<"RegionIfYieldOp">,
        RecursiveMemoryEffects]> {
   let description =[{
@@ -2071,8 +2072,6 @@ def RegionIfOp : TEST_Op<"region_if",
     ::mlir::Block::BlockArgListType getJoinArgs() {
       return getBody(2)->getArguments();
     }
-    ::mlir::OperandRange getSuccessorEntryOperands(
-        ::std::optional<unsigned> index);
   }];
   let hasCustomAssemblyFormat = 1;
 }
@@ -2824,7 +2823,7 @@ def TestStoreWithARegion : TEST_Op<"store_with_a_region",
 }
 
 def TestStoreWithARegionTerminator : TEST_Op<"store_with_a_region_terminator",
-    [DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>, Terminator, NoMemoryEffect]> {
+    [ReturnLike, Terminator, NoMemoryEffect]> {
   let assemblyFormat = "attr-dict";
 }
 
