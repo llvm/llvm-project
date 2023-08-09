@@ -1044,6 +1044,17 @@ TEST_P(ImportExpr, DependentSizedArrayType) {
                  has(fieldDecl(hasType(dependentSizedArrayType())))))));
 }
 
+TEST_P(ImportExpr, DependentSizedExtVectorType) {
+  MatchVerifier<Decl> Verifier;
+  testImport("template<typename T, int Size>"
+             "class declToImport {"
+             "  typedef T __attribute__((ext_vector_type(Size))) type;"
+             "};",
+             Lang_CXX03, "", Lang_CXX03, Verifier,
+             classTemplateDecl(has(cxxRecordDecl(
+                 has(typedefDecl(hasType(dependentSizedExtVectorType())))))));
+}
+
 TEST_P(ASTImporterOptionSpecificTestBase, ImportUsingPackDecl) {
   Decl *FromTU = getTuDecl(
       "struct A { int operator()() { return 1; } };"
@@ -1293,6 +1304,29 @@ TEST_P(ASTImporterOptionSpecificTestBase, ImportChooseExpr) {
   EXPECT_EQ(FromChooseExpr->isConditionTrue(), ToChooseExpr->isConditionTrue());
   EXPECT_EQ(FromChooseExpr->isConditionDependent(),
             ToChooseExpr->isConditionDependent());
+}
+
+TEST_P(ASTImporterOptionSpecificTestBase, ImportConvertVectorExpr) {
+  Decl *From, *To;
+  std::tie(From, To) = getImportedDecl(
+      "typedef double v4double __attribute__((__vector_size__(32)));"
+      "typedef float  v4float  __attribute__((__vector_size__(16)));"
+      "v4float vf;"
+      "void declToImport() { (void)__builtin_convertvector(vf, v4double); }",
+      Lang_CXX03, "", Lang_CXX03);
+
+  auto ToResults =
+      match(convertVectorExpr().bind("convert"), To->getASTContext());
+  auto FromResults =
+      match(convertVectorExpr().bind("convert"), From->getASTContext());
+
+  const ConvertVectorExpr *FromConvertVectorExpr =
+      selectFirst<ConvertVectorExpr>("convert", FromResults);
+  ASSERT_TRUE(FromConvertVectorExpr);
+
+  const ConvertVectorExpr *ToConvertVectorExpr =
+      selectFirst<ConvertVectorExpr>("convert", ToResults);
+  ASSERT_TRUE(ToConvertVectorExpr);
 }
 
 TEST_P(ASTImporterOptionSpecificTestBase, ImportGenericSelectionExpr) {

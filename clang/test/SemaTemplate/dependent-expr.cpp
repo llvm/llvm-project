@@ -43,9 +43,7 @@ namespace PR7198 {
 
 namespace PR7724 {
   template<typename OT> int myMethod()
-  { return 2 && sizeof(OT); } // expected-warning {{use of logical '&&' with constant operand}} \
-                              // expected-note {{use '&' for a bitwise operation}} \
-                              // expected-note {{remove constant to silence this warning}}
+  { return 2 && sizeof(OT); }
 }
 
 namespace test4 {

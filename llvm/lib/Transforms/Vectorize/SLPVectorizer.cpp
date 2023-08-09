@@ -4563,7 +4563,8 @@ bool BoUpSLP::canReorderOperands(
       // simply add to the list of gathered ops.
       // If there are reused scalars, process this node as a regular vectorize
       // node, just reorder reuses mask.
-      if (TE->State != TreeEntry::Vectorize && TE->ReuseShuffleIndices.empty())
+      if (TE->State != TreeEntry::Vectorize &&
+          TE->ReuseShuffleIndices.empty() && TE->ReorderIndices.empty())
         GatherOps.push_back(TE);
       continue;
     }
@@ -4792,7 +4793,9 @@ void BoUpSLP::reorderBottomToTop(bool IgnoreReorder) {
           continue;
         }
         // Gathers are processed separately.
-        if (TE->State != TreeEntry::Vectorize)
+        if (TE->State != TreeEntry::Vectorize &&
+            (TE->State != TreeEntry::ScatterVectorize ||
+             TE->ReorderIndices.empty()))
           continue;
         assert((BestOrder.size() == TE->ReorderIndices.size() ||
                 TE->ReorderIndices.empty()) &&

@@ -13,6 +13,7 @@
 
 #include "mlir/Conversion/NVVMToLLVM/NVVMToLLVM.h"
 
+#include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/Pattern.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -190,8 +191,29 @@ struct ConvertNVVMToLLVMPass
   }
 };
 
+/// Implement the interface to convert NNVM to LLVM.
+struct NVVMToLLVMDialectInterface : public ConvertToLLVMPatternInterface {
+  using ConvertToLLVMPatternInterface::ConvertToLLVMPatternInterface;
+  void loadDependentDialects(MLIRContext *context) const final {
+    context->loadDialect<NVVMDialect>();
+  }
+
+  /// Hook for derived dialect interface to provide conversion patterns
+  /// and mark dialect legal for the conversion target.
+  void populateConvertToLLVMConversionPatterns(
+      ConversionTarget &target, RewritePatternSet &patterns) const final {
+    populateNVVMToLLVMConversionPatterns(patterns);
+  }
+};
+
 } // namespace
 
 void mlir::populateNVVMToLLVMConversionPatterns(RewritePatternSet &patterns) {
   patterns.add<PtxLowering>(patterns.getContext());
+}
+
+void mlir::registerConvertNVVMToLLVMInterface(DialectRegistry &registry) {
+  registry.addExtension(+[](MLIRContext *ctx, NVVMDialect *dialect) {
+    dialect->addInterfaces<NVVMToLLVMDialectInterface>();
+  });
 }

@@ -118,6 +118,16 @@ public:
   /// Same as compose, provided for uniformity with applyDomain.
   void applyRange(const PresburgerRelation &rel);
 
+  /// Compute the symbolic integer lexmin of the relation, i.e. for every
+  /// assignment of the symbols and domain the lexicographically minimum value
+  /// attained by the range.
+  SymbolicLexOpt findSymbolicIntegerLexMin() const;
+
+  /// Compute the symbolic integer lexmax of the relation, i.e. for every
+  /// assignment of the symbols and domain the lexicographically maximum value
+  /// attained by the range.
+  SymbolicLexOpt findSymbolicIntegerLexMax() const;
+
   /// Return true if the set contains the given point, and false otherwise.
   bool containsPoint(ArrayRef<MPInt> point) const;
   bool containsPoint(ArrayRef<int64_t> point) const {

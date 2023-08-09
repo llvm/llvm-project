@@ -4619,15 +4619,27 @@ bool DeclarationVisitor::Pre(const parser::IntrinsicStmt &x) {
       Say(symbol.name(),
           "Symbol '%s' cannot have both EXTERNAL and INTRINSIC attributes"_err_en_US,
           symbol.name());
-    } else if (symbol.GetType()) {
-      // These warnings are worded so that they should make sense in either
-      // order.
-      Say(symbol.name(),
-          "Explicit type declaration ignored for intrinsic function '%s'"_warn_en_US,
-          symbol.name())
-          .Attach(name.source,
-              "INTRINSIC statement for explicitly-typed '%s'"_en_US,
-              name.source);
+    } else {
+      if (symbol.GetType()) {
+        // These warnings are worded so that they should make sense in either
+        // order.
+        Say(symbol.name(),
+            "Explicit type declaration ignored for intrinsic function '%s'"_warn_en_US,
+            symbol.name())
+            .Attach(name.source,
+                "INTRINSIC statement for explicitly-typed '%s'"_en_US,
+                name.source);
+      }
+      if (!symbol.test(Symbol::Flag::Function) &&
+          !symbol.test(Symbol::Flag::Subroutine)) {
+        if (context().intrinsics().IsIntrinsicFunction(
+                name.source.ToString())) {
+          symbol.set(Symbol::Flag::Function);
+        } else if (context().intrinsics().IsIntrinsicSubroutine(
+                       name.source.ToString())) {
+          symbol.set(Symbol::Flag::Subroutine);
+        }
+      }
     }
   }
   return false;

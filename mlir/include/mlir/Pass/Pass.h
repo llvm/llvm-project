@@ -180,8 +180,10 @@ protected:
   /// should not rely on any state accessible during the execution of a pass.
   /// For example, `getContext`/`getOperation`/`getAnalysis`/etc. should not be
   /// invoked within this hook.
-  /// Returns a LogicalResult to indicate failure, in which case the pass
-  /// pipeline won't execute.
+  /// This method is invoked after all dependent dialects for the pipeline are
+  /// loaded, and is not allowed to load any further dialects (override the
+  /// `getDependentDialects()` for this purpose instead). Returns a LogicalResult
+  /// to indicate failure, in which case the pass pipeline won't execute.
   virtual LogicalResult initialize(MLIRContext *context) { return success(); }
 
   /// Indicate if the current pass can be scheduled on the given operation type.

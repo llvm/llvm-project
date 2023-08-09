@@ -1659,9 +1659,13 @@ public:
       // use.
       return res;
     };
+    mlir::Value polymorphicMold;
+    if (fir::isPolymorphicType(*callContext.resultType))
+      polymorphicMold =
+          impl().getPolymorphicResultMold(loweredActuals, callContext);
     mlir::Value elemental =
         hlfir::genElementalOp(loc, builder, elementType, shape, typeParams,
-                              genKernel, !mustBeOrdered);
+                              genKernel, !mustBeOrdered, polymorphicMold);
     fir::FirOpBuilder *bldr = &builder;
     callContext.stmtCtx.attachCleanup(
         [=]() { bldr->create<hlfir::DestroyOp>(loc, elemental); });
@@ -1710,6 +1714,14 @@ public:
          "compute elemental function result length parameters in HLFIR");
   }
 
+  mlir::Value getPolymorphicResultMold(
+      Fortran::lower::PreparedActualArguments &loweredActuals,
+      CallContext &callContext) {
+    fir::emitFatalError(callContext.loc,
+                        "elemental function call with polymorphic result");
+    return {};
+  }
+
 private:
   Fortran::lower::CallerInterface &caller;
   mlir::FunctionType callSiteType;
@@ -1750,6 +1762,25 @@ public:
     // present.
     TODO(callContext.loc,
          "compute elemental character min/max function result length in HLFIR");
+  }
+
+  mlir::Value getPolymorphicResultMold(
+      Fortran::lower::PreparedActualArguments &loweredActuals,
+      CallContext &callContext) {
+    if (!intrinsic)
+      return {};
+
+    if (intrinsic->name == "merge") {
+      // MERGE seems to be the only elemental function that can produce
+      // polymorphic result. The MERGE's result is polymorphic iff
+      // both TSOURCE and FSOURCE are polymorphic, and they also must have
+      // the same declared and dynamic types. So any of them can be used
+      // for the mold.
+      assert(!loweredActuals.empty());
+      return loweredActuals.front()->getOriginalActual();
+    }
+
+    return {};
   }
 
 private:

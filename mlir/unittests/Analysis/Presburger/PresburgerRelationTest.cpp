@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 #include "mlir/Analysis/Presburger/PresburgerRelation.h"
 #include "Parser.h"
+#include "mlir/Analysis/Presburger/Simplex.h"
 
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
@@ -188,4 +189,110 @@ TEST(PresburgerRelationTest, inverse) {
 
     EXPECT_TRUE(rel.isEqual(inverseRel));
   }
+}
+
+TEST(IntegerRelationTest, symbolicLexOpt) {
+  PresburgerRelation rel1 = parsePresburgerRelationFromPresburgerSet(
+      {"(x, y)[N, M] : (x >= 0, y >= 0, N - 1 >= 0, M >= 0, M - 2 * N - 1>= 0, "
+       "2 * N - x >= 0, 2 * N - y >= 0)",
+       "(x, y)[N, M] : (x >= 0, y >= 0, N - 1 >= 0, M >= 0, M - 2 * N - 1>= 0, "
+       "x - N >= 0, M - x >= 0, y - 2 * N >= 0, M - y >= 0)"},
+      1);
+
+  SymbolicLexOpt lexmin1 = rel1.findSymbolicIntegerLexMin();
+
+  PWMAFunction expectedLexMin1 = parsePWMAF({
+      {"(x)[N, M] : (x >= 0, N - 1 >= 0, M >= 0, M - 2 * N - 1 >= 0, "
+       "2 * N - x >= 0)",
+       "(x)[N, M] -> (0)"},
+      {"(x)[N, M] : (x >= 0, N - 1 >= 0, M >= 0, M - 2 * N - 1 >= 0, "
+       "x - 2 * N- 1 >= 0, M - x >= 0)",
+       "(x)[N, M] -> (2 * N)"},
+  });
+
+  SymbolicLexOpt lexmax1 = rel1.findSymbolicIntegerLexMax();
+
+  PWMAFunction expectedLexMax1 = parsePWMAF({
+      {"(x)[N, M] : (x >= 0, N - 1 >= 0, M >= 0, M - 2 * N - 1 >= 0, "
+       "N - 1 - x  >= 0)",
+       "(x)[N, M] -> (2 * N)"},
+      {"(x)[N, M] : (x >= 0, N - 1 >= 0, M >= 0, M - 2 * N - 1 >= 0, "
+       "x - N >= 0, M - x >= 0)",
+       "(x)[N, M] -> (M)"},
+  });
+
+  EXPECT_TRUE(lexmin1.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmin1.lexopt.isEqual(expectedLexMin1));
+  EXPECT_TRUE(lexmax1.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax1.lexopt.isEqual(expectedLexMax1));
+
+  PresburgerRelation rel2 = parsePresburgerRelationFromPresburgerSet(
+      // x or y or z
+      // lexmin = (x, 0, 1 - x)
+      // lexmax = (x, 1, 1)
+      {"(x, y, z) : (x >= 0, y >= 0, z >= 0, 1 - x >= 0, 1 - y >= 0, "
+       "1 - z >= 0, x + y + z - 1 >= 0)",
+       // (x or y) and (y or z) and (z or x)
+       // lexmin = (x, 1 - x, 1)
+       // lexmax = (x, 1, 1)
+       "(x, y, z) : (x >= 0, y >= 0, z >= 0, 1 - x >= 0, 1 - y >= 0, "
+       "1 - z >= 0, x + y - 1 >= 0, y + z - 1 >= 0, z + x - 1 >= 0)",
+       // x => (not y) or (not z)
+       // lexmin = (x, 0, 0)
+       // lexmax = (x, 1, 1 - x)
+       "(x, y, z) : (x >= 0, y >= 0, z >= 0, 1 - x >= 0, 1 - y >= 0, "
+       "1 - z >= 0, 2 - x - y - z >= 0)"},
+      1);
+
+  SymbolicLexOpt lexmin2 = rel2.findSymbolicIntegerLexMin();
+
+  PWMAFunction expectedLexMin2 =
+      parsePWMAF({{"(x) : (x >= 0, 1 - x >= 0)", "(x) -> (0, 0)"}});
+
+  SymbolicLexOpt lexmax2 = rel2.findSymbolicIntegerLexMax();
+
+  PWMAFunction expectedLexMax2 =
+      parsePWMAF({{"(x) : (x >= 0, 1 - x >= 0)", "(x) -> (1, 1)"}});
+
+  EXPECT_TRUE(lexmin2.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmin2.lexopt.isEqual(expectedLexMin2));
+  EXPECT_TRUE(lexmax2.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax2.lexopt.isEqual(expectedLexMax2));
+
+  PresburgerRelation rel3 = parsePresburgerRelationFromPresburgerSet(
+      // (x => u or v or w) and (x or v) and (x or (not w))
+      // lexmin = (x, 0, 0, 1 - x)
+      // lexmax = (x, 1, 1 - x, x)
+      {"(x, u, v, w) : (x >= 0, u >= 0, v >= 0, w >= 0, 1 - x >= 0, "
+       "1 - u >= 0, 1 - v >= 0, 1 - w >= 0, -x + u + v + w >= 0, "
+       "x + v - 1 >= 0, x - w >= 0)",
+       // x => (u => (v => w)) and (x or (not v)) and (x or (not w))
+       // lexmin = (x, 0, 0, x)
+       // lexmax = (x, 1, x, x)
+       "(x, u, v, w) : (x >= 0, u >= 0, v >= 0, w >= 0, 1 - x >= 0, "
+       "1 - u >= 0, 1 - v >= 0, 1 - w >= 0, -x - u - v + w + 2 >= 0, "
+       "x - v >= 0, x - w >= 0)",
+       // (x or (u or (not v))) and ((not x) or ((not u) or w))
+       // and (x or (not v)) and (x or (not w))
+       // lexmin = (x, 0, 0, x)
+       // lexmax = (x, 1, x, x)
+       "(x, u, v, w) : (x >= 0, u >= 0, v >= 0, w >= 0, 1 - x >= 0, "
+       "1 - u >= 0, 1 - v >= 0, 1 - w >= 0, x + u - v >= 0, x - u + w >= 0, "
+       "x - v >= 0, x - w >= 0)"},
+      1);
+
+  SymbolicLexOpt lexmin3 = rel3.findSymbolicIntegerLexMin();
+
+  PWMAFunction expectedLexMin3 =
+      parsePWMAF({{"(x) : (x >= 0, 1 - x >= 0)", "(x) -> (0, 0, 0)"}});
+
+  SymbolicLexOpt lexmax3 = rel3.findSymbolicIntegerLexMax();
+
+  PWMAFunction expectedLexMax3 =
+      parsePWMAF({{"(x) : (x >= 0, 1 - x >= 0)", "(x) -> (1, 1, x)"}});
+
+  EXPECT_TRUE(lexmin3.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmin3.lexopt.isEqual(expectedLexMin3));
+  EXPECT_TRUE(lexmax3.unboundedDomain.isIntegerEmpty());
+  EXPECT_TRUE(lexmax3.lexopt.isEqual(expectedLexMax3));
 }

@@ -20136,6 +20136,13 @@ static SDValue matchTruncateWithPACK(unsigned &PackOpcode, EVT DstVT,
   if (DstVT == MVT::v2i8 && SrcVT == MVT::v2i64 && Subtarget.hasSSSE3())
     return SDValue();
 
+  // Prefer to lower v4i64 -> v4i32 as a shuffle unless we can cheaply
+  // split this for packing.
+  if (SrcVT == MVT::v4i64 && DstVT == MVT::v4i32 &&
+      !isFreeToSplitVector(In.getNode(), DAG) &&
+      (!Subtarget.hasAVX() || DAG.ComputeNumSignBits(In) != 64))
+    return SDValue();
+
   // Don't truncate AVX512 targets as multiple PACK nodes stages.
   if (Subtarget.hasAVX512() && NumStages > 1)
     return SDValue();
@@ -20200,13 +20207,6 @@ static SDValue LowerTruncateVecPackWithSignBits(MVT DstVT, SDValue In,
   MVT SrcSVT = SrcVT.getVectorElementType();
   if (!((SrcSVT == MVT::i16 || SrcSVT == MVT::i32 || SrcSVT == MVT::i64) &&
         (DstSVT == MVT::i8 || DstSVT == MVT::i16 || DstSVT == MVT::i32)))
-    return SDValue();
-
-  // Prefer to lower v4i64 -> v4i32 as a shuffle unless we can cheaply
-  // split this for packing.
-  if (SrcVT == MVT::v4i64 && DstVT == MVT::v4i32 &&
-      !isFreeToSplitVector(In.getNode(), DAG) &&
-      (!Subtarget.hasInt256() || DAG.ComputeNumSignBits(In) != 64))
     return SDValue();
 
   // If the upper half of the source is undef, then attempt to split and
@@ -54590,6 +54590,21 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         }
       }
       break;
+    case X86ISD::SHUF128: {
+      if (!IsSplat && NumOps == 2 && VT.is512BitVector()) {
+        unsigned Imm0 = Ops[0].getConstantOperandVal(2);
+        unsigned Imm1 = Ops[1].getConstantOperandVal(2);
+        unsigned Imm = ((Imm0 & 1) << 0) | ((Imm0 & 2) << 1) | 0x08 |
+                       ((Imm1 & 1) << 4) | ((Imm1 & 2) << 5) | 0x80;
+        SDValue LHS = concatSubVectors(Ops[0].getOperand(0),
+                                       Ops[0].getOperand(1), DAG, DL);
+        SDValue RHS = concatSubVectors(Ops[1].getOperand(0),
+                                       Ops[1].getOperand(1), DAG, DL);
+        return DAG.getNode(X86ISD::SHUF128, DL, VT, LHS, RHS,
+                           DAG.getTargetConstant(Imm, DL, MVT::i8));
+      }
+      break;
+    }
     case ISD::TRUNCATE:
       if (!IsSplat && NumOps == 2 && VT.is256BitVector()) {
         EVT SrcVT = Ops[0].getOperand(0).getValueType();
