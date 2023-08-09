@@ -10599,6 +10599,7 @@ cc_library(
         ":CallOpInterfaces",
         ":CastInterfaces",
         ":ControlFlowInterfaces",
+        ":ConvertToLLVM",
         ":IR",
         ":LoopLikeInterface",
         ":LLVMCommonConversion",
