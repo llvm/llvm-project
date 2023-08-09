@@ -93,11 +93,9 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   // `BranchOpInterface`, `RegionBranchTerminatorOpInterface` or return-like op.
   Operation *op = operand.getOwner();
   assert((isa<RegionBranchOpInterface>(op) || isa<BranchOpInterface>(op) ||
-          isa<RegionBranchTerminatorOpInterface>(op) ||
-          op->hasTrait<OpTrait::ReturnLike>()) &&
+          isa<RegionBranchTerminatorOpInterface>(op)) &&
          "expected the op to be `RegionBranchOpInterface`, "
-         "`BranchOpInterface`, `RegionBranchTerminatorOpInterface`, or "
-         "return-like");
+         "`BranchOpInterface` or `RegionBranchTerminatorOpInterface`");
 
   // The lattices of the non-forwarded branch operands don't get updated like
   // the forwarded branch operands or the non-branch operands. Thus they need
@@ -161,11 +159,10 @@ void LivenessAnalysis::visitBranchOperand(OpOperand &operand) {
   visitOperation(op, operandLiveness, resultsLiveness);
 
   // We also visit the parent op with the parent's results and this operand if
-  // `op` is a `RegionBranchTerminatorOpInterface` or return-like because its
-  // non-forwarded operand depends on not only its memory effects/results but
-  // also on those of its parent's.
-  if (!isa<RegionBranchTerminatorOpInterface>(op) &&
-      !op->hasTrait<OpTrait::ReturnLike>())
+  // `op` is a `RegionBranchTerminatorOpInterface` because its non-forwarded
+  // operand depends on not only its memory effects/results but also on those of
+  // its parent's.
+  if (!isa<RegionBranchTerminatorOpInterface>(op))
     return;
   Operation *parentOp = op->getParentOp();
   SmallVector<const Liveness *, 4> parentResultsLiveness;

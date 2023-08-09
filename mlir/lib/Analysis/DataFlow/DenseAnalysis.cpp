@@ -337,9 +337,8 @@ void AbstractDenseBackwardDataFlowAnalysis::visitBlock(Block *block) {
     // There may be a weird case where a terminator may be transferring control
     // either to the parent or to another block, so exit blocks and successors
     // are not mutually exclusive.
-    Operation *terminator = b->getTerminator();
-    return terminator && (terminator->hasTrait<OpTrait::ReturnLike>() ||
-                          isa<RegionBranchTerminatorOpInterface>(terminator));
+    return isa_and_nonnull<RegionBranchTerminatorOpInterface>(
+        b->getTerminator());
   };
   if (isExitBlock(block)) {
     // If this block is exiting from a callable, the successors of exiting from

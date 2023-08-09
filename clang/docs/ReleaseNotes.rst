@@ -123,6 +123,8 @@ Improvements to Clang's diagnostics
   template-specialization function calls.
 - Clang contexpr evaluator now displays notes as well as an error when a constructor
   of a base class is not called in the constructor of its derived class.
+- Clang no longer emits ``-Wmissing-variable-declarations`` for variables declared
+  with the ``register`` storage class.
 
 Bug Fixes in This Version
 -------------------------
