@@ -19,6 +19,7 @@
 #include "clang/Basic/OperatorKinds.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Parse/ParseDiagnostic.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
@@ -1031,7 +1032,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
 
     if (ParseAsExpression)
       AssertMessage = ParseConstantExpressionInExprEvalContext();
-    else if (isTokenStringLiteral())
+    else if (tokenIsLikeStringLiteral(Tok, getLangOpts()))
       AssertMessage = ParseUnevaluatedStringLiteralExpression();
     else {
       Diag(Tok, diag::err_expected_string_literal)

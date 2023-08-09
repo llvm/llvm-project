@@ -23,6 +23,7 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/Basic/PrettyStackTrace.h"
+#include "clang/Lex/LiteralSupport.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
@@ -1297,9 +1298,17 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
   case tok::kw_L__FUNCTION__:   // primary-expression: L__FUNCTION__ [MS]
   case tok::kw_L__FUNCSIG__:    // primary-expression: L__FUNCSIG__ [MS]
   case tok::kw___PRETTY_FUNCTION__:  // primary-expression: __P..Y_F..N__ [GNU]
-    Res = Actions.ActOnPredefinedExpr(Tok.getLocation(), SavedKind);
-    ConsumeToken();
-    break;
+    // Function local predefined macros are represented by PredefinedExpr except
+    // when Microsoft extensions are enabled and one of these macros is adjacent
+    // to a string literal or another one of these macros.
+    if (!(getLangOpts().MicrosoftExt &&
+          tokenIsLikeStringLiteral(Tok, getLangOpts()) &&
+          tokenIsLikeStringLiteral(NextToken(), getLangOpts()))) {
+      Res = Actions.ActOnPredefinedExpr(Tok.getLocation(), SavedKind);
+      ConsumeToken();
+      break;
+    }
+    [[fallthrough]]; // treat MS function local macros as concatenable strings
   case tok::string_literal:    // primary-expression: string-literal
   case tok::wide_string_literal:
   case tok::utf8_string_literal:
@@ -3267,16 +3276,18 @@ ExprResult Parser::ParseUnevaluatedStringLiteralExpression() {
 
 ExprResult Parser::ParseStringLiteralExpression(bool AllowUserDefinedLiteral,
                                                 bool Unevaluated) {
-  assert(isTokenStringLiteral() && "Not a string literal!");
+  assert(tokenIsLikeStringLiteral(Tok, getLangOpts()) &&
+         "Not a string-literal-like token!");
 
-  // String concat.  Note that keywords like __func__ and __FUNCTION__ are not
-  // considered to be strings for concatenation purposes.
+  // String concatenation.
+  // Note: some keywords like __FUNCTION__ are not considered to be strings
+  // for concatenation purposes, unless Microsoft extensions are enabled.
   SmallVector<Token, 4> StringToks;
 
   do {
     StringToks.push_back(Tok);
-    ConsumeStringToken();
-  } while (isTokenStringLiteral());
+    ConsumeAnyToken();
+  } while (tokenIsLikeStringLiteral(Tok, getLangOpts()));
 
   if (Unevaluated) {
     assert(!AllowUserDefinedLiteral && "UDL are always evaluated");

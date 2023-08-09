@@ -36,6 +36,15 @@ class LangOptions;
 /// Copy characters from Input to Buf, expanding any UCNs.
 void expandUCNs(SmallVectorImpl<char> &Buf, StringRef Input);
 
+/// Return true if the token corresponds to a function local predefined macro,
+/// which expands to a string literal, that can be concatenated with other
+/// string literals (only in Microsoft mode).
+bool isFunctionLocalStringLiteralMacro(tok::TokenKind K, const LangOptions &LO);
+
+/// Return true if the token is a string literal, or a function local
+/// predefined macro, which expands to a string literal.
+bool tokenIsLikeStringLiteral(const Token &Tok, const LangOptions &LO);
+
 /// NumericLiteralParser - This performs strict semantic analysis of the content
 /// of a ppnumber, classifying it as either integer, floating, or erroneous,
 /// determines the radix of the value and can convert it to a useful value.
