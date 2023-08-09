@@ -2648,6 +2648,8 @@ void Driver::BuildInputs(const ToolChain &TC, DerivedArgList &Args,
         if (memcmp(Value, "-", 2) == 0) {
           if (IsFlangMode()) {
             Ty = types::TY_Fortran;
+          } else if (IsDXCMode()) {
+            Ty = types::TY_HLSL;
           } else {
             // If running with -E, treat as a C input (this changes the
             // builtin macros, for example). This may be overridden by -ObjC
