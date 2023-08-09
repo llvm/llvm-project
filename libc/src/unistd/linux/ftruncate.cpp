@@ -20,12 +20,12 @@ namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, ftruncate, (int fd, off_t len)) {
 #ifdef SYS_ftruncate
-  int ret = __llvm_libc::syscall_impl(SYS_ftruncate, fd, len);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_ftruncate, fd, len);
 #elif defined(SYS_ftruncate64)
   // Same as ftruncate but can handle large offsets
   static_assert(sizeof(off_t) == 8);
-  int ret = __llvm_libc::syscall_impl(SYS_ftruncate64, fd, (long)len,
-                                      (long)(((uint64_t)(len)) >> 32));
+  int ret = __llvm_libc::syscall_impl<int>(SYS_ftruncate64, fd, (long)len,
+                                           (long)(((uint64_t)(len)) >> 32));
 #else
 #error "ftruncate and ftruncate64 syscalls not available."
 #endif

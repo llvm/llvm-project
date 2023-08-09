@@ -18,8 +18,8 @@
 namespace __llvm_libc {
 
 LLVM_LIBC_FUNCTION(int, execv, (const char *path, char *const argv[])) {
-  long ret =
-      __llvm_libc::syscall_impl(SYS_execve, path, argv, __llvm_libc::environ);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_execve, path, argv,
+                                           __llvm_libc::environ);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;

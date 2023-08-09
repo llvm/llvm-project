@@ -22,7 +22,7 @@ LLVM_LIBC_FUNCTION(pid_t, tcsendbreak, (int fd, int /* unused duration */)) {
   // POSIX leaves the behavior for non-zero duration implementation dependent.
   // Which means that the behavior can be the same as it is when duration is
   // zero. So, we just pass zero to the syscall.
-  long ret = __llvm_libc::syscall_impl(SYS_ioctl, fd, TCSBRK, 0);
+  int ret = __llvm_libc::syscall_impl<int>(SYS_ioctl, fd, TCSBRK, 0);
   if (ret < 0) {
     libc_errno = -ret;
     return -1;
