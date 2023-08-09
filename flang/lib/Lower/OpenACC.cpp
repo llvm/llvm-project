@@ -2556,27 +2556,24 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
   }
   builder.create<mlir::acc::DeclareEnterOp>(loc, dataClauseOperands);
 
-  if (!createEntryOperands.empty() || !copyEntryOperands.empty() ||
-      !copyoutEntryOperands.empty() || !deviceResidentEntryOperands.empty()) {
-    // Attach declare exit operation generation to function context.
-    fctCtx.attachCleanup([&builder, loc, dataClauseOperands,
-                          createEntryOperands, copyEntryOperands,
-                          copyoutEntryOperands, deviceResidentEntryOperands]() {
-      builder.create<mlir::acc::DeclareExitOp>(loc, dataClauseOperands);
-      genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
-          builder, createEntryOperands, /*structured=*/true,
-          /*implicit=*/false);
-      genDataExitOperations<mlir::acc::DeclareDeviceResidentOp,
-                            mlir::acc::DeleteOp>(
-          builder, deviceResidentEntryOperands, /*structured=*/true,
-          /*implicit=*/false);
-      genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
-          builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
-      genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
-          builder, copyoutEntryOperands, /*structured=*/true,
-          /*implicit=*/false);
-    });
-  }
+  // Attach declare exit operation generation to function context.
+  fctCtx.attachCleanup([&builder, loc, dataClauseOperands, createEntryOperands,
+                        copyEntryOperands, copyoutEntryOperands,
+                        deviceResidentEntryOperands]() {
+    builder.create<mlir::acc::DeclareExitOp>(loc, dataClauseOperands);
+    genDataExitOperations<mlir::acc::CreateOp, mlir::acc::DeleteOp>(
+        builder, createEntryOperands, /*structured=*/true,
+        /*implicit=*/false);
+    genDataExitOperations<mlir::acc::DeclareDeviceResidentOp,
+                          mlir::acc::DeleteOp>(
+        builder, deviceResidentEntryOperands, /*structured=*/true,
+        /*implicit=*/false);
+    genDataExitOperations<mlir::acc::CopyinOp, mlir::acc::CopyoutOp>(
+        builder, copyEntryOperands, /*structured=*/true, /*implicit=*/false);
+    genDataExitOperations<mlir::acc::CreateOp, mlir::acc::CopyoutOp>(
+        builder, copyoutEntryOperands, /*structured=*/true,
+        /*implicit=*/false);
+  });
 }
 
 static void
