@@ -232,6 +232,16 @@ public:
   PreservedAnalyses run(Function &, FunctionAnalysisManager &);
 };
 
+class AMDGPULowerKernelArgumentsPass
+    : public PassInfoMixin<AMDGPULowerKernelArgumentsPass> {
+private:
+  TargetMachine &TM;
+
+public:
+  AMDGPULowerKernelArgumentsPass(TargetMachine &TM) : TM(TM){};
+  PreservedAnalyses run(Function &, FunctionAnalysisManager &);
+};
+
 FunctionPass *createAMDGPUAnnotateUniformValues();
 
 ModulePass *createAMDGPUPrintfRuntimeBinding();
