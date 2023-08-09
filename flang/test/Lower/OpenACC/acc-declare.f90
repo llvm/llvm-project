@@ -133,7 +133,7 @@ module acc_declare
 ! CHECK: %[[PRESENT:.*]] = acc.present varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
 ! CHECK: acc.declare_enter dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
-! CHECK-NOT: acc.declare_exit
+! CHECK: acc.declare_exit dataOperands(%[[PRESENT]] : !fir.ref<!fir.array<100xi32>>)
 
   subroutine acc_declare_copyin()
     integer :: a(100), b(10), i
@@ -153,7 +153,7 @@ module acc_declare
 ! CHECK: %[[COPYIN_B:.*]] = acc.copyin varPtr(%[[B]] : !fir.ref<!fir.array<10xi32>>) bounds(%[[BOUND]]) -> !fir.ref<!fir.array<10xi32>> {dataClause = #acc<data_clause acc_copyin_readonly>, name = "b"}
 ! CHECK: acc.declare_enter dataOperands(%[[COPYIN_A]], %[[COPYIN_B]] : !fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<10xi32>>)
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
-! CHECK-NOT: acc.declare_exit
+! CHECK: acc.declare_exit dataOperands(%[[COPYIN_A]], %[[COPYIN_B]] : !fir.ref<!fir.array<100xi32>>, !fir.ref<!fir.array<10xi32>>)
 
   subroutine acc_declare_copyout()
     integer :: a(100), i
@@ -187,7 +187,7 @@ module acc_declare
 ! CHECK: %[[DEVICEPTR:.*]] = acc.deviceptr varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
 ! CHECK: acc.declare_enter dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
-! CHECK-NOT: acc.declare_exit
+! CHECK: acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<100xi32>>)
 
   subroutine acc_declare_link(a)
     integer :: a(100), i
@@ -203,7 +203,7 @@ module acc_declare
 ! CHECK: %[[LINK:.*]] = acc.declare_link varPtr(%[[ARG0]] : !fir.ref<!fir.array<100xi32>>) bounds(%{{.*}}) -> !fir.ref<!fir.array<100xi32>> {name = "a"}
 ! CHECK: acc.declare_enter dataOperands(%[[LINK]] : !fir.ref<!fir.array<100xi32>>)
 ! CHECK: %{{.*}}:2 = fir.do_loop %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} iter_args(%arg{{.*}} = %{{.*}}) -> (index, i32)
-! CHECK-NOT: acc.declare_exit
+! CHECK: acc.declare_exit dataOperands(%[[LINK]] : !fir.ref<!fir.array<100xi32>>)
 
   subroutine acc_declare_device_resident(a)
     integer :: a(100), i
