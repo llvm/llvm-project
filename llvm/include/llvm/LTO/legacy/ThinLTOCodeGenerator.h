@@ -175,7 +175,9 @@ public:
       const FunctionImporter::ExportSetTy &ExportList,
       const std::map<GlobalValue::GUID, GlobalValue::LinkageTypes> &ResolvedODR,
       const GVSummaryMapTy &DefinedGVSummaries, unsigned OptLevel,
-      bool Freestanding, const TargetMachineBuilder &TMBuilder);
+      bool Freestanding, const TargetMachineBuilder &TMBuilder,
+      std::function<void(llvm::function_ref<void(raw_ostream &OS)>)> Logger =
+          nullptr);
 
   /// Cache policy: interval (seconds) between two prunes of the cache. Set to a
   /// negative value to disable pruning. A value of 0 will force pruning to
