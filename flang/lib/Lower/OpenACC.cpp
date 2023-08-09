@@ -2531,13 +2531,13 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
       genDataOperandOperations<mlir::acc::DevicePtrOp>(
           devicePtrClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
-          /*structured=*/true, /*implicit=*/false);
+          /*structured=*/true, /*implicit=*/false, /*setDeclareAttr=*/true);
     } else if (const auto *linkClause =
                    std::get_if<Fortran::parser::AccClause::Link>(&clause.u)) {
       genDataOperandOperations<mlir::acc::DeclareLinkOp>(
           linkClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_declare_link,
-          /*structured=*/true, /*implicit=*/false);
+          /*structured=*/true, /*implicit=*/false, /*setDeclareAttr=*/true);
     } else if (const auto *deviceResidentClause =
                    std::get_if<Fortran::parser::AccClause::DeviceResident>(
                        &clause.u)) {
@@ -2546,7 +2546,7 @@ genDeclareInFunction(Fortran::lower::AbstractConverter &converter,
           deviceResidentClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands,
           mlir::acc::DataClause::acc_declare_device_resident,
-          /*structured=*/true, /*implicit=*/false);
+          /*structured=*/true, /*implicit=*/false, /*setDeclareAttr=*/true);
       deviceResidentEntryOperands.append(
           dataClauseOperands.begin() + crtDataStart, dataClauseOperands.end());
     } else {
