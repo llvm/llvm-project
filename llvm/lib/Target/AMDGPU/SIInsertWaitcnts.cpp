@@ -729,7 +729,7 @@ RegInterval WaitcntBrackets::getRegInterval(const MachineInstr *MI,
 
   RegInterval Result;
 
-  unsigned Reg = TRI->getEncodingValue(AMDGPU::getMCReg(Op.getReg(), *ST));
+  unsigned Reg = TRI->getHWRegIndex(AMDGPU::getMCReg(Op.getReg(), *ST));
 
   if (TRI->isVectorRegister(*MRI, Op.getReg())) {
     assert(Reg >= Encoding.VGPR0 && Reg <= Encoding.VGPRL);
@@ -881,7 +881,7 @@ void WaitcntBrackets::updateByEvent(const SIInstrInfo *TII,
           if (DefMO.isReg() && DefMO.isDef() &&
               TRI->isVGPR(*MRI, DefMO.getReg())) {
             setRegScore(
-                TRI->getEncodingValue(AMDGPU::getMCReg(DefMO.getReg(), *ST)),
+                TRI->getHWRegIndex(AMDGPU::getMCReg(DefMO.getReg(), *ST)),
                 EXP_CNT, CurrScore);
           }
         }
@@ -2613,9 +2613,9 @@ bool SIInsertWaitcnts::runOnMachineFunction(MachineFunction &MF) {
   assert(NumSGPRsMax <= SQ_MAX_PGM_SGPRS);
 
   RegisterEncoding Encoding = {};
-  Encoding.VGPR0 = TRI->getEncodingValue(AMDGPU::VGPR0);
+  Encoding.VGPR0 = TRI->getHWRegIndex(AMDGPU::VGPR0);
   Encoding.VGPRL = Encoding.VGPR0 + NumVGPRsMax - 1;
-  Encoding.SGPR0 = TRI->getEncodingValue(AMDGPU::SGPR0);
+  Encoding.SGPR0 = TRI->getHWRegIndex(AMDGPU::SGPR0);
   Encoding.SGPRL = Encoding.SGPR0 + NumSGPRsMax - 1;
 
   BlockInfos.clear();
