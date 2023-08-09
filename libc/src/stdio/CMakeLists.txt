@@ -8,16 +8,17 @@ function(add_stdio_entrypoint_object name)
       DEPENDS
         .${LIBC_TARGET_OS}.${name}
     )
-  elseif(TARGET libc.src.stdio.generic_${name})
+  elseif(TARGET libc.src.stdio.generic.${name})
     add_entrypoint_object(
       ${name}
       ALIAS
       DEPENDS
-        .generic_${name}
+        .generic.${name}
     )
   endif()
 endfunction(add_stdio_entrypoint_object)
 
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/generic)
 if(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
   add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/${LIBC_TARGET_OS})
 endif()
@@ -342,33 +343,6 @@ add_entrypoint_object(
 )
 
 add_entrypoint_object(
-  generic_fputs
-  SRCS
-    fputs.cpp
-  HDRS
-    fputs.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-
-add_entrypoint_object(
-  generic_puts
-  SRCS
-    puts.cpp
-  HDRS
-    puts.h
-  DEPENDS
-    libc.src.errno.errno
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
   fseek
   SRCS
     fseek.cpp
@@ -403,42 +377,6 @@ add_entrypoint_object(
     libc.include.stdio
     libc.src.__support.CPP.new
     libc.src.__support.File.file
-)
-
-add_entrypoint_object(
-  generic_stdin
-  SRCS
-    stdin.cpp
-  HDRS
-    stdin.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  generic_stdout
-  SRCS
-    stdout.cpp
-  HDRS
-    stdout.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
-)
-
-add_entrypoint_object(
-  generic_stderr
-  SRCS
-    stderr.cpp
-  HDRS
-    stderr.h
-  DEPENDS
-    libc.include.stdio
-    libc.src.__support.File.file
-    libc.src.__support.File.platform_file
 )
 
 add_entrypoint_object(
