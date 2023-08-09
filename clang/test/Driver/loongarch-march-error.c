@@ -1,7 +1,7 @@
 // RUN: not %clang --target=loongarch64 -march=loongarch -fsyntax-only %s 2>&1 | \
-// RUN:   FileCheck --check-prefix=LOONGARCH %s
-// LOONGARCH: error: invalid arch name '-march=loongarch'
-
+// RUN:   FileCheck -DCPU=loongarch %s
 // RUN: not %clang --target=loongarch64 -march=LA464 -fsyntax-only %s 2>&1 | \
-// RUN:   FileCheck --check-prefix=LA464-UPPER %s
-// LA464-UPPER: error: invalid arch name '-march=LA464'
+// RUN:   FileCheck -DCPU=LA464 %s
+
+// CHECK: error: unknown target CPU '[[CPU]]'
+// CHECK-NEXT: note: valid target CPU values are: {{.*}}
