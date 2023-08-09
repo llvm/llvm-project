@@ -1931,6 +1931,57 @@ public:
   }
 };
 
+/// This represents '#pragma omp scope' directive.
+/// \code
+/// #pragma omp scope private(a,b) nowait
+/// \endcode
+/// In this example directive '#pragma omp scope' has clauses 'private' with
+/// the variables 'a' and 'b' and nowait.
+///
+class OMPScopeDirective final : public OMPExecutableDirective {
+  friend class ASTStmtReader;
+  friend class OMPExecutableDirective;
+
+  /// Build directive with the given start and end location.
+  ///
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending location of the directive.
+  ///
+  OMPScopeDirective(SourceLocation StartLoc, SourceLocation EndLoc)
+      : OMPExecutableDirective(OMPScopeDirectiveClass, llvm::omp::OMPD_scope,
+                               StartLoc, EndLoc) {}
+
+  /// Build an empty directive.
+  ///
+  explicit OMPScopeDirective()
+      : OMPExecutableDirective(OMPScopeDirectiveClass, llvm::omp::OMPD_scope,
+                               SourceLocation(), SourceLocation()) {}
+
+public:
+  /// Creates directive.
+  ///
+  /// \param C AST context.
+  /// \param StartLoc Starting location of the directive kind.
+  /// \param EndLoc Ending Location of the directive.
+  /// \param AssociatedStmt Statement, associated with the directive.
+  ///
+  static OMPScopeDirective *Create(const ASTContext &C, SourceLocation StartLoc,
+                                   SourceLocation EndLoc,
+                                   ArrayRef<OMPClause *> Clauses,
+                                   Stmt *AssociatedStmt);
+
+  /// Creates an empty directive.
+  ///
+  /// \param C AST context.
+  ///
+  static OMPScopeDirective *CreateEmpty(const ASTContext &C,
+                                        unsigned NumClauses, EmptyShell);
+
+  static bool classof(const Stmt *T) {
+    return T->getStmtClass() == OMPScopeDirectiveClass;
+  }
+};
+
 /// This represents '#pragma omp single' directive.
 ///
 /// \code
