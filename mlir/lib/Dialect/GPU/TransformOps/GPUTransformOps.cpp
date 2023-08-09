@@ -8,11 +8,16 @@
 
 #include "mlir/Dialect/GPU/TransformOps/GPUTransformOps.h"
 
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
+#include "mlir/Conversion/GPUToNVVM/GPUToNVVMPass.h"
+#include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Affine/IR/AffineOps.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
 #include "mlir/Dialect/GPU/TransformOps/Utils.h"
+#include "mlir/Dialect/GPU/Transforms/Passes.h"
+#include "mlir/Dialect/LLVMIR/NVVMDialect.h"
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/Dialect/SCF/IR/DeviceMappingInterface.h"
 #include "mlir/Dialect/SCF/IR/SCF.h"
@@ -29,6 +34,7 @@
 #include "mlir/IR/OpDefinition.h"
 #include "mlir/IR/Visitors.h"
 #include "mlir/Support/LLVM.h"
+#include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
@@ -46,6 +52,85 @@ using namespace mlir::transform::gpu;
 #define DBGS() (llvm::dbgs() << '[' << DEBUG_TYPE << "] ")
 #define LDBG(X) LLVM_DEBUG(DBGS() << X << "\n")
 #define DBGS_ALIAS() (llvm::dbgs() << '[' << DEBUG_TYPE_ALIAS << "] ")
+
+//===----------------------------------------------------------------------===//
+// Apply...ConversionPatternsOp
+//===----------------------------------------------------------------------===//
+
+void transform::ApplyGPUToNVVMConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
+  // NVVM uses alloca in the default address space to represent private
+  // memory allocations, so drop private annotations. NVVM uses address
+  // space 3 for shared memory. NVVM uses the default address space to
+  // represent global memory.
+  // Used in populateGpuToNVVMConversionPatternsso attaching here for now.
+  // TODO: We should have a single to_nvvm_type_converter.
+  populateGpuMemorySpaceAttributeConversions(
+      llvmTypeConverter, [](AddressSpace space) -> unsigned {
+        switch (space) {
+        case AddressSpace::Global:
+          return static_cast<unsigned>(
+              NVVM::NVVMMemorySpace::kGlobalMemorySpace);
+        case AddressSpace::Workgroup:
+          return static_cast<unsigned>(
+              NVVM::NVVMMemorySpace::kSharedMemorySpace);
+        case AddressSpace::Private:
+          return 0;
+        }
+        llvm_unreachable("unknown address space enum value");
+        return 0;
+      });
+  // Used in GPUToNVVM/WmmaOpsToNvvm.cpp so attaching here for now.
+  // TODO: We should have a single to_nvvm_type_converter.
+  llvmTypeConverter.addConversion(
+      [&](MMAMatrixType type) -> Type { return convertMMAToLLVMType(type); });
+  populateGpuToNVVMConversionPatterns(llvmTypeConverter, patterns);
+}
+
+LogicalResult
+transform::ApplyGPUToNVVMConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() != "LLVMTypeConverter")
+    return emitOpError("expected LLVMTypeConverter");
+  return success();
+}
+
+void transform::ApplyGPUWwmaToNVVMConversionPatternsOp::populatePatterns(
+    TypeConverter &typeConverter, RewritePatternSet &patterns) {
+  auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
+  populateGpuWMMAToNVVMConversionPatterns(llvmTypeConverter, patterns);
+}
+
+LogicalResult
+transform::ApplyGPUWwmaToNVVMConversionPatternsOp::verifyTypeConverter(
+    transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() != "LLVMTypeConverter")
+    return emitOpError("expected LLVMTypeConverter");
+  return success();
+}
+
+void transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
+    populatePatterns(TypeConverter &typeConverter,
+                     RewritePatternSet &patterns) {
+  auto &llvmTypeConverter = static_cast<LLVMTypeConverter &>(typeConverter);
+  populateGpuSubgroupReduceOpLoweringPattern(llvmTypeConverter, patterns);
+}
+
+LogicalResult transform::ApplyGPUSubgroupReduceToNVVMConversionPatternsOp::
+    verifyTypeConverter(transform::TypeConverterBuilderOpInterface builder) {
+  if (builder.getTypeConverterType() != "LLVMTypeConverter")
+    return emitOpError("expected LLVMTypeConverter");
+  return success();
+}
+
+//===----------------------------------------------------------------------===//
+// Apply...PatternsOp
+//===----------------------------------------------------------------------===//s
+
+void ApplyGPURewritePatternsOp::populatePatterns(RewritePatternSet &patterns) {
+  populateGpuRewritePatterns(patterns);
+}
 
 //===----------------------------------------------------------------------===//
 // ApplyUnrollVectorsSubgroupMmaOp

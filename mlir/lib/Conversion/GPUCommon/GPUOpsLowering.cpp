@@ -7,6 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "GPUOpsLowering.h"
+
+#include "mlir/Conversion/GPUCommon/GPUCommonPass.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
