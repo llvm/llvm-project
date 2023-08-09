@@ -8,7 +8,7 @@
 # RUN:              --check %s %t/elf_reloc.o
 # RUN: llvm-mc --triple=powerpc64-unknown-linux-gnu --filetype=obj -o \
 # RUN:   %t/elf_reloc.o %s
-# RUN: not llvm-jitlink --noexec \
+# RUN: llvm-jitlink --noexec \
 # RUN:              --abs external_data=0xdeadbeef \
 # RUN:              --abs external_func=0xcafef00d \
 # RUN:              --abs external_func_notoc=0x88880000 \
