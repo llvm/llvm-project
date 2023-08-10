@@ -553,8 +553,10 @@ Status NativeRegisterContextLinux_arm64::ReadAllRegisterValues(
     dst += GetFPRSize();
   }
 
-  if (GetRegisterInfo().IsMTEEnabled())
+  if (GetRegisterInfo().IsMTEEnabled()) {
     ::memcpy(dst, GetMTEControl(), GetMTEControlSize());
+    dst += GetMTEControlSize();
+  }
 
   ::memcpy(dst, GetTLSTPIDR(), GetTLSTPIDRSize());
 
@@ -663,7 +665,16 @@ Status NativeRegisterContextLinux_arm64::WriteAllRegisterValues(
     ::memcpy(GetMTEControl(), src, GetMTEControlSize());
     m_mte_ctrl_is_valid = true;
     error = WriteMTEControl();
+    if (error.Fail())
+      return error;
+    src += GetMTEControlSize();
   }
+
+  // There is always a TLS set. It changes size based on system properties, it's
+  // not something an expression can change.
+  ::memcpy(GetTLSTPIDR(), src, GetTLSTPIDRSize());
+  m_tls_tpidr_is_valid = true;
+  error = WriteTLSTPIDR();
 
   return error;
 }

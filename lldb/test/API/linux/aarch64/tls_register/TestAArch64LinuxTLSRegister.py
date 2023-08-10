@@ -11,6 +11,15 @@ from lldbsuite.test import lldbutil
 class AArch64LinuxTLSRegister(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
+    def check_tpidr(self):
+        regs = self.thread().GetSelectedFrame().GetRegisters()
+        tls_regs = regs.GetFirstValueByName("Thread Local Storage Registers")
+        self.assertTrue(tls_regs.IsValid(), "No TLS registers found.")
+        tpidr = tls_regs.GetChildMemberWithName("tpidr")
+        self.assertTrue(tpidr.IsValid(), "No tpidr register found.")
+
+        self.assertEqual(tpidr.GetValueAsUnsigned(), 0x1122334455667788)
+
     @skipUnlessArch("aarch64")
     @skipUnlessPlatform(["linux"])
     def test_tls(self):
@@ -44,14 +53,11 @@ class AArch64LinuxTLSRegister(TestBase):
 
         # Since we can't predict what the value will be, the program has set
         # a target value for us to find.
+        self.check_tpidr()
 
-        regs = self.thread().GetSelectedFrame().GetRegisters()
-        tls_regs = regs.GetFirstValueByName("Thread Local Storage Registers")
-        self.assertTrue(tls_regs.IsValid(), "No TLS registers found.")
-        tpidr = tls_regs.GetChildMemberWithName("tpidr")
-        self.assertTrue(tpidr.IsValid(), "No tpidr register found.")
-
-        self.assertEqual(tpidr.GetValueAsUnsigned(), 0x1122334455667788)
+        # It should be saved/restored before/after an expression.
+        self.runCmd("expression expr_func()")
+        self.check_tpidr()
 
         # Set our own value for the program to find.
         self.expect("register write tpidr 0x{:x}".format(0x8877665544332211))
