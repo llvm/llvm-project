@@ -711,17 +711,23 @@ void SIFoldOperands::foldOperand(
         return;
     }
 
-    // A frame index will resolve to a positive constant, so it should always be
-    // safe to fold the addressing mode, even pre-GFX9.
-    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getIndex());
-
     const unsigned Opc = UseMI->getOpcode();
     if (TII->isFLATScratch(*UseMI) &&
         AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::vaddr) &&
         !AMDGPU::hasNamedOperand(Opc, AMDGPU::OpName::saddr)) {
       unsigned NewOpc = AMDGPU::getFlatScratchInstSSfromSV(Opc);
+      unsigned CPol =
+          TII->getNamedOperand(*UseMI, AMDGPU::OpName::cpol)->getImm();
+      if ((CPol & AMDGPU::CPol::SCAL) &&
+          !AMDGPU::supportsScaleOffset(*TII, NewOpc))
+        return;
+
       UseMI->setDesc(TII->get(NewOpc));
     }
+
+    // A frame index will resolve to a positive constant, so it should always be
+    // safe to fold the addressing mode, even pre-GFX9.
+    UseMI->getOperand(UseOpIdx).ChangeToFrameIndex(OpToFold.getIndex());
 
     return;
   }
