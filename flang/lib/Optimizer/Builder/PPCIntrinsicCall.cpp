@@ -1782,10 +1782,10 @@ void PPCIntrinsicLibrary::genVecStore(llvm::ArrayRef<fir::ExtendedValue> args) {
         fname = "llvm.ppc.altivec.stvewx";
         break;
       default:
-        assert("invalid element size");
+        assert(false && "invalid element size");
       }
     } else
-      assert("unknown type");
+      assert(false && "unknown type");
     break;
   }
   default:
@@ -1892,7 +1892,7 @@ void PPCIntrinsicLibrary::genVecXStore(
                                 addr);
     break;
   default:
-    assert("Invalid vector operation for generator");
+    assert(false && "Invalid vector operation for generator");
   }
   builder.create<fir::StoreOp>(loc, mlir::TypeRange{},
                                mlir::ValueRange{src, trg},
