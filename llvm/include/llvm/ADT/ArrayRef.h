@@ -508,70 +508,90 @@ namespace llvm {
   /// @{
   /// Construct an ArrayRef from a single element.
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+#endif // SWIFT_TARGET
   ArrayRef<T> makeArrayRef(const T &OneElt) {
     return OneElt;
   }
 
   /// Construct an ArrayRef from a pointer and length.
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+#endif // SWIFT_TARGET
   ArrayRef<T> makeArrayRef(const T *data, size_t length) {
     return ArrayRef<T>(data, length);
   }
 
   /// Construct an ArrayRef from a range.
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+#endif // SWIFT_TARGET
   ArrayRef<T> makeArrayRef(const T *begin, const T *end) {
     return ArrayRef<T>(begin, end);
   }
 
   /// Construct an ArrayRef from a SmallVector.
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+#endif // SWIFT_TARGET
   ArrayRef<T> makeArrayRef(const SmallVectorImpl<T> &Vec) {
     return Vec;
   }
 
   /// Construct an ArrayRef from a SmallVector.
   template <typename T, unsigned N>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+#endif // SWIFT_TARGET
   ArrayRef<T> makeArrayRef(const SmallVector<T, N> &Vec) {
     return Vec;
   }
 
   /// Construct an ArrayRef from a std::vector.
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+#endif // SWIFT_TARGET
   ArrayRef<T> makeArrayRef(const std::vector<T> &Vec) {
     return Vec;
   }
 
   /// Construct an ArrayRef from a std::array.
   template <typename T, std::size_t N>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+#endif // SWIFT_TARGET
   ArrayRef<T> makeArrayRef(const std::array<T, N> &Arr) {
     return Arr;
   }
 
   /// Construct an ArrayRef from an ArrayRef (no-op) (const)
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+#endif // SWIFT_TARGET
   ArrayRef<T> makeArrayRef(const ArrayRef<T> &Vec) {
     return Vec;
   }
 
   /// Construct an ArrayRef from an ArrayRef (no-op)
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+#endif // SWIFT_TARGET
   ArrayRef<T> &makeArrayRef(ArrayRef<T> &Vec) {
     return Vec;
   }
 
   /// Construct an ArrayRef from a C array.
   template <typename T, size_t N>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "ArrayRef")
+#endif // SWIFT_TARGET
   ArrayRef<T> makeArrayRef(const T (&Arr)[N]) {
     return ArrayRef<T>(Arr);
   }
@@ -608,56 +628,72 @@ namespace llvm {
 
   /// Construct a MutableArrayRef from a single element.
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
+#endif // SWIFT_TARGET
   MutableArrayRef<T> makeMutableArrayRef(T &OneElt) {
     return OneElt;
   }
 
   /// Construct a MutableArrayRef from a pointer and length.
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
+#endif // SWIFT_TARGET
   MutableArrayRef<T> makeMutableArrayRef(T *data, size_t length) {
     return MutableArrayRef<T>(data, length);
   }
 
   /// Construct a MutableArrayRef from a SmallVector.
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
+#endif // SWIFT_TARGET
   MutableArrayRef<T> makeMutableArrayRef(SmallVectorImpl<T> &Vec) {
     return Vec;
   }
 
   /// Construct a MutableArrayRef from a SmallVector.
   template <typename T, unsigned N>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
+#endif // SWIFT_TARGET
   MutableArrayRef<T> makeMutableArrayRef(SmallVector<T, N> &Vec) {
     return Vec;
   }
 
   /// Construct a MutableArrayRef from a std::vector.
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
+#endif // SWIFT_TARGET
   MutableArrayRef<T> makeMutableArrayRef(std::vector<T> &Vec) {
     return Vec;
   }
 
   /// Construct a MutableArrayRef from a std::array.
   template <typename T, std::size_t N>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
+#endif // SWIFT_TARGET
   MutableArrayRef<T> makeMutableArrayRef(std::array<T, N> &Arr) {
     return Arr;
   }
 
   /// Construct a MutableArrayRef from a MutableArrayRef (no-op) (const)
   template <typename T>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
+#endif // SWIFT_TARGET
   MutableArrayRef<T> makeMutableArrayRef(const MutableArrayRef<T> &Vec) {
     return Vec;
   }
 
   /// Construct a MutableArrayRef from a C array.
   template <typename T, size_t N>
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
   LLVM_DEPRECATED("Use deduction guide instead", "MutableArrayRef")
+#endif // SWIFT_TARGET
   MutableArrayRef<T> makeMutableArrayRef(T (&Arr)[N]) {
     return MutableArrayRef<T>(Arr);
   }

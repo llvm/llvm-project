@@ -22,9 +22,14 @@
 namespace llvm {
 /// A simple null object to allow implicit construction of std::optional<T>
 /// and similar types without having to spell out the specialization's name.
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
 LLVM_DEPRECATED("Use std::nullopt_t instead", "std::nullopt_t")
+#endif // SWIFT_TARGET
 typedef std::nullopt_t NoneType;
+
+#ifndef SWIFT_TARGET // radar://112153764 -- remove once swift transitions
 LLVM_DEPRECATED("Use std::nullopt instead.", "std::nullopt")
+#endif // SWIFT_TARGET
 inline constexpr std::nullopt_t None = std::nullopt;
 }
 
