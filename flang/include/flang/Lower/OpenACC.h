@@ -51,6 +51,8 @@ namespace pft {
 struct Evaluation;
 } // namespace pft
 
+static constexpr llvm::StringRef declarePostAllocSuffix =
+    "_acc_declare_update_desc_post_alloc";
 static constexpr llvm::StringRef declarePreDeallocSuffix =
     "_acc_declare_update_desc_pre_dealloc";
 static constexpr llvm::StringRef declarePostDeallocSuffix =
