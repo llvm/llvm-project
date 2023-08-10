@@ -869,57 +869,6 @@ struct DeallocRemoveDuplicateRetainedMemrefs
   }
 };
 
-/// Remove memrefs to be deallocated that are also present in the retained list
-/// since they will always alias and thus never actually be deallocated.
-/// Example:
-/// ```mlir
-/// %0 = bufferization.dealloc (%arg0 : ...) if (%arg1) retain (%arg0 : ...)
-/// ```
-/// is canonicalized to
-/// ```mlir
-/// %0 = bufferization.dealloc retain (%arg0 : ...)
-/// ```
-struct DeallocRemoveDeallocMemrefsContainedInRetained
-    : public OpRewritePattern<DeallocOp> {
-  using OpRewritePattern<DeallocOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(DeallocOp deallocOp,
-                                PatternRewriter &rewriter) const override {
-    // Unique memrefs to be deallocated.
-    DenseMap<Value, unsigned> retained;
-    for (auto [i, ret] : llvm::enumerate(deallocOp.getRetained()))
-      retained[ret] = i;
-
-    // There must not be any duplicates in the retain list anymore because we
-    // would miss updating one of the result values otherwise.
-    if (retained.size() != deallocOp.getRetained().size())
-      return failure();
-
-    SmallVector<Value> newMemrefs, newConditions;
-    for (auto [memref, cond] :
-         llvm::zip(deallocOp.getMemrefs(), deallocOp.getConditions())) {
-      if (retained.contains(memref)) {
-        rewriter.setInsertionPointAfter(deallocOp);
-        auto orOp = rewriter.create<arith::OrIOp>(
-            deallocOp.getLoc(),
-            deallocOp.getUpdatedConditions()[retained[memref]], cond);
-        rewriter.replaceAllUsesExcept(
-            deallocOp.getUpdatedConditions()[retained[memref]],
-            orOp.getResult(), orOp);
-        continue;
-      }
-
-      newMemrefs.push_back(memref);
-      newConditions.push_back(cond);
-    }
-
-    // Return failure if we don't change anything such that we don't run into an
-    // infinite loop of pattern applications.
-    return updateDeallocIfChanged(deallocOp, newMemrefs, newConditions,
-                                  rewriter);
-  }
-};
-
 /// Erase deallocation operations where the variadic list of memrefs to
 /// deallocate is empty. Example:
 /// ```mlir
@@ -1021,8 +970,7 @@ struct SkipExtractMetadataOfAlloc : public OpRewritePattern<DeallocOp> {
 void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                             MLIRContext *context) {
   results.add<DeallocRemoveDuplicateDeallocMemrefs,
-              DeallocRemoveDuplicateRetainedMemrefs,
-              DeallocRemoveDeallocMemrefsContainedInRetained, EraseEmptyDealloc,
+              DeallocRemoveDuplicateRetainedMemrefs, EraseEmptyDealloc,
               EraseAlwaysFalseDealloc, SkipExtractMetadataOfAlloc>(context);
 }
 
