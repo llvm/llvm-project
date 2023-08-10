@@ -177,6 +177,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AMDGPU.h"
+#include "AMDGPUTargetMachine.h"
 #include "Utils/AMDGPUBaseInfo.h"
 #include "Utils/AMDGPUMemoryUtils.h"
 #include "llvm/ADT/BitVector.h"
@@ -186,6 +187,7 @@
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Analysis/CallGraph.h"
+#include "llvm/CodeGen/TargetPassConfig.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/IRBuilder.h"
@@ -252,7 +254,8 @@ template <typename T> std::vector<T> sortByName(std::vector<T> &&V) {
   return {std::move(V)};
 }
 
-class AMDGPULowerModuleLDS : public ModulePass {
+class AMDGPULowerModuleLDS {
+  const AMDGPUTargetMachine &TM;
 
   static void
   removeLocalVarsFromUsedLists(Module &M,
@@ -326,11 +329,7 @@ class AMDGPULowerModuleLDS : public ModulePass {
   }
 
 public:
-  static char ID;
-
-  AMDGPULowerModuleLDS() : ModulePass(ID) {
-    initializeAMDGPULowerModuleLDSPass(*PassRegistry::getPassRegistry());
-  }
+  AMDGPULowerModuleLDS(const AMDGPUTargetMachine &TM_) : TM(TM_) {}
 
   using FunctionVariableMap = DenseMap<Function *, DenseSet<GlobalVariable *>>;
 
@@ -1089,7 +1088,7 @@ public:
     return KernelToCreatedDynamicLDS;
   }
 
-  bool runOnModule(Module &M) override {
+  bool runOnModule(Module &M) {
     CallGraph CG = CallGraph(M);
     bool Changed = superAlignLDSGlobals(M);
 
@@ -1241,6 +1240,7 @@ public:
         }
 
         if (Offset != 0) {
+          (void)TM; // TODO: Account for target maximum LDS
           std::string Buffer;
           raw_string_ostream SS{Buffer};
           SS << format("%u", Offset);
@@ -1530,21 +1530,51 @@ private:
   }
 };
 
+class AMDGPULowerModuleLDSLegacy : public ModulePass {
+public:
+  const AMDGPUTargetMachine *TM;
+  static char ID;
+
+  AMDGPULowerModuleLDSLegacy(const AMDGPUTargetMachine *TM_ = nullptr)
+      : ModulePass(ID), TM(TM_) {
+    initializeAMDGPULowerModuleLDSLegacyPass(*PassRegistry::getPassRegistry());
+  }
+
+  void getAnalysisUsage(AnalysisUsage &AU) const override {
+    if (!TM)
+      AU.addRequired<TargetPassConfig>();
+  }
+
+  bool runOnModule(Module &M) override {
+    if (!TM) {
+      auto &TPC = getAnalysis<TargetPassConfig>();
+      TM = &TPC.getTM<AMDGPUTargetMachine>();
+    }
+
+    return AMDGPULowerModuleLDS(*TM).runOnModule(M);
+  }
+};
+
 } // namespace
-char AMDGPULowerModuleLDS::ID = 0;
+char AMDGPULowerModuleLDSLegacy::ID = 0;
 
-char &llvm::AMDGPULowerModuleLDSID = AMDGPULowerModuleLDS::ID;
+char &llvm::AMDGPULowerModuleLDSLegacyPassID = AMDGPULowerModuleLDSLegacy::ID;
 
-INITIALIZE_PASS(AMDGPULowerModuleLDS, DEBUG_TYPE,
-                "Lower uses of LDS variables from non-kernel functions", false,
-                false)
+INITIALIZE_PASS_BEGIN(AMDGPULowerModuleLDSLegacy, DEBUG_TYPE,
+                      "Lower uses of LDS variables from non-kernel functions",
+                      false, false)
+INITIALIZE_PASS_DEPENDENCY(TargetPassConfig)
+INITIALIZE_PASS_END(AMDGPULowerModuleLDSLegacy, DEBUG_TYPE,
+                    "Lower uses of LDS variables from non-kernel functions",
+                    false, false)
 
-ModulePass *llvm::createAMDGPULowerModuleLDSPass() {
-  return new AMDGPULowerModuleLDS();
+ModulePass *
+llvm::createAMDGPULowerModuleLDSLegacyPass(const AMDGPUTargetMachine *TM) {
+  return new AMDGPULowerModuleLDSLegacy(TM);
 }
 
 PreservedAnalyses AMDGPULowerModuleLDSPass::run(Module &M,
                                                 ModuleAnalysisManager &) {
-  return AMDGPULowerModuleLDS().runOnModule(M) ? PreservedAnalyses::none()
-                                               : PreservedAnalyses::all();
+  return AMDGPULowerModuleLDS(TM).runOnModule(M) ? PreservedAnalyses::none()
+                                                 : PreservedAnalyses::all();
 }
