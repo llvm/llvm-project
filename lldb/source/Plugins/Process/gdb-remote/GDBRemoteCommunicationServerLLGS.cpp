@@ -631,7 +631,7 @@ static void WriteRegisterValueInHexFixedWidth(
   } else {
     // Zero-out any unreadable values.
     if (reg_info.byte_size > 0) {
-      std::basic_string<uint8_t> zeros(reg_info.byte_size, '\0');
+      std::vector<uint8_t> zeros(reg_info.byte_size, '\0');
       AppendHexValue(response, zeros.data(), zeros.size(), false);
     }
   }
