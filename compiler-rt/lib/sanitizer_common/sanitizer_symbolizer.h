@@ -20,7 +20,6 @@
 
 #include "sanitizer_common.h"
 #include "sanitizer_mutex.h"
-#include "sanitizer_vector.h"
 
 namespace __sanitizer {
 
@@ -153,6 +152,10 @@ class Symbolizer final {
   const LoadedModule *FindModuleForAddress(uptr address);
 
   void InvalidateModuleList();
+
+  // returns the list of modules if it was refreshed
+  // otherwise returns nullptr.
+  const ListOfModules *GetRefreshedListOfModules();
 
  private:
   // GetModuleNameAndOffsetForPC has to return a string to the caller.

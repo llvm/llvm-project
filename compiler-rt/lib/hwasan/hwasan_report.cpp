@@ -248,6 +248,44 @@ static void PrintStackAllocations(StackAllocationsRingBuffer *sa,
     if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
       RenderFrame(&frame_desc, " %F %L", 0, frame->info.address, &frame->info,
                   common_flags()->symbolize_vs_style,
+                  common_flags()->enable_symbolizer_markup,
+                  common_flags()->strip_path_prefix);
+      frame->ClearAll();
+    }
+    Printf("%s\n", frame_desc.data());
+    frame_desc.clear();
+  }
+}
+
+
+static void PrintStackAllocationsMarkup(StackAllocationsRingBuffer *sa) {
+  // For symbolizer markup it is just necessary to have dump stack
+  // frames for offline symbolization.
+
+  uptr frames = Min((uptr)flags()->stack_history_size, sa->size());
+  if (const ListOfModules *modules =
+          Symbolizer::GetOrInit()->GetRefreshedListOfModules()) {
+    InternalScopedString modules_res;
+    RenderModules(&modules_res, modules,
+                  /*symbolizer_markup=*/ true);
+    Printf("%s", modules_res.data());
+  }
+
+  InternalScopedString frame_desc;
+  Printf("Previously allocated frames:\n");
+  for (uptr i = 0; i < frames; i++) {
+    const uptr *record_addr = &(*sa)[i];
+    uptr record = *record_addr;
+    if (!record)
+      break;
+    uptr pc_mask = (1ULL << 48) - 1;
+    uptr pc = record & pc_mask;
+    frame_desc.append("  record_addr:0x%zx record:0x%zx",
+                      reinterpret_cast<uptr>(record_addr), record);
+    if (SymbolizedStack *frame = Symbolizer::GetOrInit()->SymbolizePC(pc)) {
+      RenderFrame(&frame_desc, "", 0, frame->info.address, &frame->info,
+                  common_flags()->symbolize_vs_style,
+                  /*symbolizer_markup=*/ true,
                   common_flags()->strip_path_prefix);
       frame->ClearAll();
     }
@@ -425,7 +463,11 @@ void PrintAddressDescription(
       auto *sa = (t == GetCurrentThread() && current_stack_allocations)
                      ? current_stack_allocations
                      : t->stack_allocations();
-      PrintStackAllocations(sa, addr_tag, untagged_addr);
+      if (common_flags()->enable_symbolizer_markup) {
+        PrintStackAllocations(sa, addr_tag, untagged_addr);
+      } else {
+        PrintStackAllocationsMarkup(sa);
+      }
       num_descriptions_printed++;
     }
   });

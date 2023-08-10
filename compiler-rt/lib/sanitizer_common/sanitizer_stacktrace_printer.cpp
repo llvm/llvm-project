@@ -14,7 +14,7 @@
 
 #include "sanitizer_file.h"
 #include "sanitizer_flags.h"
-#include "sanitizer_fuchsia.h"
+#include "sanitizer_symbolizer_markup.h"
 
 namespace __sanitizer {
 
@@ -143,7 +143,12 @@ static const char kDefaultFormat[] = "    #%n %p %F %L";
 
 void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
                  uptr address, const AddressInfo *info, bool vs_style,
-                 const char *strip_path_prefix) {
+                 bool symbolizer_markup, const char *strip_path_prefix) {
+  if (symbolizer_markup) {
+    RenderFrameMarkup(buffer, format, frame_no, address, info, vs_style,
+                      strip_path_prefix);
+    return;
+  }
   // info will be null in the case where symbolization is not needed for the
   // given format. This ensures that the code below will get a hard failure
   // rather than print incorrect information in case RenderNeedsSymbolization
@@ -250,7 +255,11 @@ void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
   }
 }
 
-bool RenderNeedsSymbolization(const char *format) {
+bool RenderNeedsSymbolization(const char *format, bool symbolizer_markup) {
+  if (symbolizer_markup) {
+    // Online symbolization is never needed for symbolizer markup.
+    return false;
+  }
   if (0 == internal_strcmp(format, "DEFAULT"))
     format = kDefaultFormat;
   for (const char *p = format; *p != '\0'; p++) {
@@ -274,7 +283,12 @@ bool RenderNeedsSymbolization(const char *format) {
 }
 
 void RenderData(InternalScopedString *buffer, const char *format,
-                const DataInfo *DI, const char *strip_path_prefix) {
+                const DataInfo *DI, bool symbolizer_markup,
+                const char *strip_path_prefix) {
+  if (symbolizer_markup) {
+    RenderDataMarkup(buffer, format, DI, strip_path_prefix);
+    return;
+  }
   for (const char *p = format; *p != '\0'; p++) {
     if (*p != '%') {
       buffer->append("%c", *p);
@@ -331,6 +345,15 @@ void RenderModuleLocation(InternalScopedString *buffer, const char *module,
     buffer->append(":%s", ModuleArchToString(arch));
   }
   buffer->append("+0x%zx)", offset);
+}
+
+void RenderModules(InternalScopedString *buffer, const ListOfModules *modules,
+                   bool symbolizer_markup) {
+  // Rendering all the modules is only needed for symbolizer markup
+  if (!symbolizer_markup)
+    return;
+
+  RenderModulesMarkup(buffer, modules);
 }
 
 } // namespace __sanitizer

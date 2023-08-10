@@ -50,9 +50,9 @@ const char *StripFunctionName(const char *function);
 //   %M - prints module basename and offset, if it is known, or PC.
 void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
                  uptr address, const AddressInfo *info, bool vs_style,
-                 const char *strip_path_prefix = "");
+                 bool symbolizer_markup, const char *strip_path_prefix = "");
 
-bool RenderNeedsSymbolization(const char *format);
+bool RenderNeedsSymbolization(const char *format, bool symbolizer_markup);
 
 void RenderSourceLocation(InternalScopedString *buffer, const char *file,
                           int line, int column, bool vs_style,
@@ -67,7 +67,11 @@ void RenderModuleLocation(InternalScopedString *buffer, const char *module,
 // Also accepts:
 //   %g - name of the global variable.
 void RenderData(InternalScopedString *buffer, const char *format,
-                const DataInfo *DI, const char *strip_path_prefix = "");
+                const DataInfo *DI, bool symbolizer_markup,
+                const char *strip_path_prefix = "");
+
+void RenderModules(InternalScopedString *buffer, const ListOfModules *modules,
+                   bool symbolizer_markup);
 
 }  // namespace __sanitizer
 

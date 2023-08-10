@@ -191,6 +191,7 @@ set(SANITIZER_IMPL_HEADERS
   sanitizer_symbolizer_internal.h
   sanitizer_symbolizer_libbacktrace.h
   sanitizer_symbolizer_mac.h
+  sanitizer_symbolizer_markup.h
   sanitizer_syscall_generic.inc
   sanitizer_syscall_linux_aarch64.inc
   sanitizer_syscall_linux_arm.inc

@@ -11,10 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_common.h"
+#include "sanitizer_flags.h"
 #include "sanitizer_placement_new.h"
 #include "sanitizer_stacktrace.h"
 #include "sanitizer_stacktrace_printer.h"
 #include "sanitizer_symbolizer.h"
+#include "sanitizer_symbolizer_markup.h"
 
 namespace __sanitizer {
 
@@ -26,10 +28,10 @@ class StackTraceTextPrinter {
                         InternalScopedString *output,
                         InternalScopedString *dedup_token)
       : stack_trace_fmt_(stack_trace_fmt),
-        frame_delimiter_(frame_delimiter),
-        output_(output),
         dedup_token_(dedup_token),
-        symbolize_(RenderNeedsSymbolization(stack_trace_fmt)) {}
+        symbolize_(RenderNeedsSymbolization(stack_trace_fmt, false)),
+        frame_delimiter_(frame_delimiter),
+        output_(output) {}
 
   bool ProcessAddressFrames(uptr pc) {
     SymbolizedStack *frames = symbolize_
@@ -43,6 +45,7 @@ class StackTraceTextPrinter {
       RenderFrame(output_, stack_trace_fmt_, frame_num_++, cur->info.address,
                   symbolize_ ? &cur->info : nullptr,
                   common_flags()->symbolize_vs_style,
+                  common_flags()->enable_symbolizer_markup,
                   common_flags()->strip_path_prefix);
 
       if (prev_len != output_->length())
@@ -69,12 +72,45 @@ class StackTraceTextPrinter {
   }
 
   const char *stack_trace_fmt_;
-  const char frame_delimiter_;
   int dedup_frames_ = common_flags()->dedup_token_length;
-  uptr frame_num_ = 0;
-  InternalScopedString *output_;
   InternalScopedString *dedup_token_;
   const bool symbolize_ = false;
+
+ protected:
+  uptr frame_num_ = 0;
+  const char frame_delimiter_;
+  InternalScopedString *output_;
+};
+
+class StackTraceMarkupPrinter : public StackTraceTextPrinter {
+ public:
+  StackTraceMarkupPrinter(InternalScopedString *output)
+      : StackTraceTextPrinter("", '\n', output, nullptr){};
+
+  bool ProcessAddressFrames(uptr pc) {
+    SymbolizedStack *frames = Symbolizer::GetOrInit()->SymbolizePC(pc);
+
+    if (!frames)
+      return false;
+
+    if (const ListOfModules *modules =
+            Symbolizer::GetOrInit()->GetRefreshedListOfModules()) {
+      RenderModulesMarkup(output_, modules);
+    }
+
+    for (SymbolizedStack *cur = frames; cur; cur = cur->next) {
+      uptr prev_len = output_->length();
+      RenderFrame(output_, "", frame_num_++, cur->info.address, nullptr,
+                  common_flags()->symbolize_vs_style,
+                  /*symbolizer_markup=*/true,
+                  common_flags()->strip_path_prefix);
+
+      if (prev_len != output_->length())
+        output_->append("%c", frame_delimiter_);
+    }
+    frames->ClearAll();
+    return true;
+  }
 };
 
 static void CopyStringToBuffer(const InternalScopedString &str, char *out_buf,
@@ -94,8 +130,11 @@ void StackTrace::PrintTo(InternalScopedString *output) const {
   CHECK(output);
 
   InternalScopedString dedup_token;
-  StackTraceTextPrinter printer(common_flags()->stack_trace_format, '\n',
-                                output, &dedup_token);
+  StackTraceTextPrinter printer =
+      common_flags()->enable_symbolizer_markup
+          ? StackTraceMarkupPrinter(output)
+          : StackTraceTextPrinter(common_flags()->stack_trace_format, '\n',
+                                  output, &dedup_token);
 
   if (trace == nullptr || size == 0) {
     output->append("    <empty stack>\n\n");
@@ -194,7 +233,11 @@ void __sanitizer_symbolize_pc(uptr pc, const char *fmt, char *out_buf,
   pc = StackTrace::GetPreviousInstructionPc(pc);
 
   InternalScopedString output;
-  StackTraceTextPrinter printer(fmt, '\0', &output, nullptr);
+  StackTraceTextPrinter printer =
+      common_flags()->enable_symbolizer_markup
+          ? StackTraceMarkupPrinter(&output)
+          : StackTraceTextPrinter(fmt, '\0', &output, nullptr);
+
   if (!printer.ProcessAddressFrames(pc)) {
     output.clear();
     output.append("<can't symbolize>");
@@ -210,7 +253,8 @@ void __sanitizer_symbolize_global(uptr data_addr, const char *fmt,
   DataInfo DI;
   if (!Symbolizer::GetOrInit()->SymbolizeData(data_addr, &DI)) return;
   InternalScopedString data_desc;
-  RenderData(&data_desc, fmt, &DI, common_flags()->strip_path_prefix);
+  RenderData(&data_desc, fmt, &DI, common_flags()->enable_symbolizer_markup,
+             common_flags()->strip_path_prefix);
   internal_strncpy(out_buf, data_desc.data(), out_buf_size);
   out_buf[out_buf_size - 1] = 0;
 }
