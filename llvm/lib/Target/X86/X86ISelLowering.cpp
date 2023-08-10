@@ -32059,21 +32059,19 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     unsigned WidenNumElts = WidenVT.getVectorNumElements();
     unsigned InBits = InVT.getSizeInBits();
 
-    if (128 % InBits == 0) {
-      // See if there are sufficient leading bits to perform a PACKUS/PACKSS.
-      unsigned PackOpcode;
-      if (SDValue Src =
-              matchTruncateWithPACK(PackOpcode, VT, In, dl, DAG, Subtarget)) {
-        SDValue WidenSrc =
-            widenSubVector(Src, false, Subtarget, DAG, dl,
-                           InEltVT.getSizeInBits() * WidenNumElts);
-        if (SDValue Res = truncateVectorWithPACK(PackOpcode, WidenVT, WidenSrc,
-                                                 dl, DAG, Subtarget)) {
-          Results.push_back(Res);
-          return;
-        }
+    // See if there are sufficient leading bits to perform a PACKUS/PACKSS.
+    unsigned PackOpcode;
+    if (SDValue Src =
+            matchTruncateWithPACK(PackOpcode, VT, In, dl, DAG, Subtarget)) {
+      if (SDValue Res = truncateVectorWithPACK(PackOpcode, VT, Src,
+                                               dl, DAG, Subtarget)) {
+        Res = widenSubVector(WidenVT, Res, false, Subtarget, DAG, dl);
+        Results.push_back(Res);
+        return;
       }
+    }
 
+    if (128 % InBits == 0) {
       // 128 bit and smaller inputs should avoid truncate all together and
       // just use a build_vector that will become a shuffle.
       // TODO: Widen and use a shuffle directly?
