@@ -612,7 +612,7 @@ to perform additional operations on certain scalar and vector types.
 
 Let ``T`` be one of the following types:
 
-* an integer type (as in C2x 6.2.5p19), but excluding enumerated types and _Bool
+* an integer type (as in C23 6.2.5p22), but excluding enumerated types and ``bool``
 * the standard floating types float or double
 * a half-precision floating point type, if one is supported on the target
 * a vector type.
@@ -1462,8 +1462,8 @@ Conditional ``explicit``               __cpp_conditional_explicit       C++20   
 ``static operator()``                  __cpp_static_call_operator       C++23         C++03
 -------------------------------------- -------------------------------- ------------- -------------
 Designated initializers (N494)                                          C99           C89
-Array & element qualification (N2607)                                   C2x           C89
-Attributes (N2335)                                                      C2x           C89
+Array & element qualification (N2607)                                   C23           C89
+Attributes (N2335)                                                      C23           C89
 ====================================== ================================ ============= =============
 
 Type Trait Primitives
@@ -3669,7 +3669,7 @@ A predefined typedef for the target-specific ``va_list`` type.
 
 A builtin function for the target-specific ``va_start`` function-like macro.
 The ``parameter-name`` argument is the name of the parameter preceding the
-ellipsis (``...``) in the function signature. Alternatively, in C2x mode or
+ellipsis (``...``) in the function signature. Alternatively, in C23 mode or
 later, it may be the integer literal ``0`` if there is no parameter preceding
 the ellipsis. This function initializes the given ``__builtin_va_list`` object.
 It is undefined behavior to call this function on an already initialized
