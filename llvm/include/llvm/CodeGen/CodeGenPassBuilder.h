@@ -579,7 +579,7 @@ void CodeGenPassBuilder<Derived>::addISelPasses(AddIRPass &addPass) const {
   if (TM.useEmulatedTLS())
     addPass(LowerEmuTLSPass());
 
-  addPass(PreISelIntrinsicLoweringPass());
+  addPass(PreISelIntrinsicLoweringPass(TM));
 
   derived().addIRPasses(addPass);
   derived().addCodeGenPrepare(addPass);
