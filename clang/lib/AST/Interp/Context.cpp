@@ -210,3 +210,24 @@ Context::getOverridingFunction(const CXXRecordDecl *DynamicDecl,
       "Couldn't find an overriding function in the class hierarchy?");
   return nullptr;
 }
+
+const Function *Context::getOrCreateFunction(const FunctionDecl *FD) {
+  assert(FD);
+  const Function *Func = P->getFunction(FD);
+  bool IsBeingCompiled = Func && !Func->isFullyCompiled();
+  bool WasNotDefined = Func && !Func->isConstexpr() && !Func->hasBody();
+
+  if (IsBeingCompiled)
+    return Func;
+
+  if (!Func || WasNotDefined) {
+    if (auto R = ByteCodeStmtGen<ByteCodeEmitter>(*this, *P).compileFunc(FD))
+      Func = *R;
+    else {
+      llvm::consumeError(R.takeError());
+      return nullptr;
+    }
+  }
+
+  return Func;
+}
