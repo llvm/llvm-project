@@ -136,7 +136,13 @@ std::string createTempFile(const Twine &Prefix, StringRef Suffix) {
 }
 
 ErrorOr<std::string> findClang(const char *Argv0, StringRef Triple) {
-  StringRef Parent = llvm::sys::path::parent_path(Argv0);
+  // This just needs to be some symbol in the binary.
+  void *P = (void*) (intptr_t) findClang;
+  std::string MainExecPath = llvm::sys::fs::getMainExecutable(Argv0, P);
+  if (MainExecPath.empty())
+    MainExecPath = Argv0;
+
+  StringRef Parent = llvm::sys::path::parent_path(MainExecPath);
   ErrorOr<std::string> Path = std::error_code();
   std::string TargetClang = (Triple + "-clang").str();
   std::string VersionedClang = ("clang-" + Twine(LLVM_VERSION_MAJOR)).str();
