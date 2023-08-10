@@ -219,76 +219,78 @@ public:
   /// conversion exists, success otherwise. If the new set of types is empty,
   /// the type is removed and any usages of the existing value are expected to
   /// be removed during conversion.
-  LogicalResult convertType(Type t, SmallVectorImpl<Type> &results);
+  LogicalResult convertType(Type t, SmallVectorImpl<Type> &results) const;
 
   /// This hook simplifies defining 1-1 type conversions. This function returns
   /// the type to convert to on success, and a null type on failure.
-  Type convertType(Type t);
+  Type convertType(Type t) const;
 
   /// Attempts a 1-1 type conversion, expecting the result type to be
   /// `TargetType`. Returns the converted type cast to `TargetType` on success,
   /// and a null type on conversion or cast failure.
-  template <typename TargetType>
-  TargetType convertType(Type t) {
+  template <typename TargetType> TargetType convertType(Type t) const {
     return dyn_cast_or_null<TargetType>(convertType(t));
   }
 
   /// Convert the given set of types, filling 'results' as necessary. This
   /// returns failure if the conversion of any of the types fails, success
   /// otherwise.
-  LogicalResult convertTypes(TypeRange types, SmallVectorImpl<Type> &results);
+  LogicalResult convertTypes(TypeRange types,
+                             SmallVectorImpl<Type> &results) const;
 
   /// Return true if the given type is legal for this type converter, i.e. the
   /// type converts to itself.
-  bool isLegal(Type type);
+  bool isLegal(Type type) const;
+
   /// Return true if all of the given types are legal for this type converter.
   template <typename RangeT>
   std::enable_if_t<!std::is_convertible<RangeT, Type>::value &&
                        !std::is_convertible<RangeT, Operation *>::value,
                    bool>
-  isLegal(RangeT &&range) {
+  isLegal(RangeT &&range) const {
     return llvm::all_of(range, [this](Type type) { return isLegal(type); });
   }
   /// Return true if the given operation has legal operand and result types.
-  bool isLegal(Operation *op);
+  bool isLegal(Operation *op) const;
 
   /// Return true if the types of block arguments within the region are legal.
-  bool isLegal(Region *region);
+  bool isLegal(Region *region) const;
 
   /// Return true if the inputs and outputs of the given function type are
   /// legal.
-  bool isSignatureLegal(FunctionType ty);
+  bool isSignatureLegal(FunctionType ty) const;
 
   /// This method allows for converting a specific argument of a signature. It
   /// takes as inputs the original argument input number, type.
   /// On success, it populates 'result' with any new mappings.
   LogicalResult convertSignatureArg(unsigned inputNo, Type type,
-                                    SignatureConversion &result);
+                                    SignatureConversion &result) const;
   LogicalResult convertSignatureArgs(TypeRange types,
                                      SignatureConversion &result,
-                                     unsigned origInputOffset = 0);
+                                     unsigned origInputOffset = 0) const;
 
   /// This function converts the type signature of the given block, by invoking
   /// 'convertSignatureArg' for each argument. This function should return a
   /// valid conversion for the signature on success, std::nullopt otherwise.
-  std::optional<SignatureConversion> convertBlockSignature(Block *block);
+  std::optional<SignatureConversion> convertBlockSignature(Block *block) const;
 
   /// Materialize a conversion from a set of types into one result type by
   /// generating a cast sequence of some kind. See the respective
   /// `add*Materialization` for more information on the context for these
   /// methods.
   Value materializeArgumentConversion(OpBuilder &builder, Location loc,
-                                      Type resultType, ValueRange inputs) {
+                                      Type resultType,
+                                      ValueRange inputs) const {
     return materializeConversion(argumentMaterializations, builder, loc,
                                  resultType, inputs);
   }
   Value materializeSourceConversion(OpBuilder &builder, Location loc,
-                                    Type resultType, ValueRange inputs) {
+                                    Type resultType, ValueRange inputs) const {
     return materializeConversion(sourceMaterializations, builder, loc,
                                  resultType, inputs);
   }
   Value materializeTargetConversion(OpBuilder &builder, Location loc,
-                                    Type resultType, ValueRange inputs) {
+                                    Type resultType, ValueRange inputs) const {
     return materializeConversion(targetMaterializations, builder, loc,
                                  resultType, inputs);
   }
@@ -297,7 +299,8 @@ public:
   /// the registered conversion functions. If no applicable conversion has been
   /// registered, return std::nullopt. Note that the empty attribute/`nullptr`
   /// is a valid return value for this function.
-  std::optional<Attribute> convertTypeAttribute(Type type, Attribute attr);
+  std::optional<Attribute> convertTypeAttribute(Type type,
+                                                Attribute attr) const;
 
 private:
   /// The signature of the callback used to convert a type. If the new set of
@@ -316,16 +319,17 @@ private:
 
   /// Attempt to materialize a conversion using one of the provided
   /// materialization functions.
-  Value materializeConversion(
-      MutableArrayRef<MaterializationCallbackFn> materializations,
-      OpBuilder &builder, Location loc, Type resultType, ValueRange inputs);
+  Value
+  materializeConversion(ArrayRef<MaterializationCallbackFn> materializations,
+                        OpBuilder &builder, Location loc, Type resultType,
+                        ValueRange inputs) const;
 
   /// Generate a wrapper for the given callback. This allows for accepting
   /// different callback forms, that all compose into a single version.
   /// With callback of form: `std::optional<Type>(T)`
   template <typename T, typename FnT>
   std::enable_if_t<std::is_invocable_v<FnT, T>, ConversionCallbackFn>
-  wrapCallback(FnT &&callback) {
+  wrapCallback(FnT &&callback) const {
     return wrapCallback<T>(
         [callback = std::forward<FnT>(callback)](
             T type, SmallVectorImpl<Type> &results, ArrayRef<Type>) {
@@ -343,7 +347,7 @@ private:
   template <typename T, typename FnT>
   std::enable_if_t<std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &>,
                    ConversionCallbackFn>
-  wrapCallback(FnT &&callback) {
+  wrapCallback(FnT &&callback) const {
     return wrapCallback<T>(
         [callback = std::forward<FnT>(callback)](
             T type, SmallVectorImpl<Type> &results, ArrayRef<Type>) {
@@ -356,7 +360,7 @@ private:
   std::enable_if_t<
       std::is_invocable_v<FnT, T, SmallVectorImpl<Type> &, ArrayRef<Type>>,
       ConversionCallbackFn>
-  wrapCallback(FnT &&callback) {
+  wrapCallback(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
                Type type, SmallVectorImpl<Type> &results,
                ArrayRef<Type> callStack) -> std::optional<LogicalResult> {
@@ -378,7 +382,7 @@ private:
   /// may take any subclass of `Type` and the wrapper will check for the target
   /// type to be of the expected class before calling the callback.
   template <typename T, typename FnT>
-  MaterializationCallbackFn wrapMaterialization(FnT &&callback) {
+  MaterializationCallbackFn wrapMaterialization(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
                OpBuilder &builder, Type resultType, ValueRange inputs,
                Location loc) -> std::optional<Value> {
@@ -394,7 +398,7 @@ private:
   /// callback.
   template <typename T, typename A, typename FnT>
   TypeAttributeConversionCallbackFn
-  wrapTypeAttributeConversion(FnT &&callback) {
+  wrapTypeAttributeConversion(FnT &&callback) const {
     return [callback = std::forward<FnT>(callback)](
                Type type, Attribute attr) -> AttributeConversionResult {
       if (T derivedType = dyn_cast<T>(type)) {
@@ -428,13 +432,13 @@ private:
   /// A set of cached conversions to avoid recomputing in the common case.
   /// Direct 1-1 conversions are the most common, so this cache stores the
   /// successful 1-1 conversions as well as all failed conversions.
-  DenseMap<Type, Type> cachedDirectConversions;
+  mutable DenseMap<Type, Type> cachedDirectConversions;
   /// This cache stores the successful 1->N conversions, where N != 1.
-  DenseMap<Type, SmallVector<Type, 2>> cachedMultiConversions;
+  mutable DenseMap<Type, SmallVector<Type, 2>> cachedMultiConversions;
 
   /// Stores the types that are being converted in the case when convertType
   /// is being called recursively to convert nested types.
-  SmallVector<Type, 2> conversionCallStack;
+  mutable SmallVector<Type, 2> conversionCallStack;
 };
 
 //===----------------------------------------------------------------------===//
