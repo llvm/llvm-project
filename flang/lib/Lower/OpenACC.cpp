@@ -2685,8 +2685,7 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *deviceResidentClause =
                    std::get_if<Fortran::parser::AccClause::DeviceResident>(
                        &clause.u)) {
-      genGlobalCtors<mlir::acc::DeclareDeviceResidentOp,
-                     mlir::acc::DeclareDeviceResidentOp>(
+      genGlobalCtors<mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeleteOp>(
           converter, modBuilder, deviceResidentClause->v,
           mlir::acc::DataClause::acc_declare_device_resident);
     } else if (const auto *linkClause =
