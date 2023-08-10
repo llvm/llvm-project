@@ -19,7 +19,7 @@
 # CHECK-NOT: DIVERGENT:  %15: %15:_(s32) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.waterfall.begin), %12:_(s32), %14:_(s32)
 # CHECK-NOT: DIVERGENT:  %16: %16:_(s32) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.waterfall.readfirstlane), %15:_(s32), %14:_(s32)
 # CHECK-NOT: DIVERGENT:  %17: %17:_(s32) = G_INTRINSIC_CONVERGENT intrinsic(@llvm.amdgcn.readlane), %13:_(s32), %16:_(s32)
-# CHECK-NOT: DIVERGENT:  %18: %18:_(s32) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.waterfall.end), %15:_(s32), %17:_(s32)
+# CHECK:     DIVERGENT:  %18: %18:_(s32) = G_INTRINSIC_CONVERGENT_W_SIDE_EFFECTS intrinsic(@llvm.amdgcn.waterfall.end), %15:_(s32), %17:_(s32)
 
 ---
 name:            test_waterfall_readlane

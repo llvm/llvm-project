@@ -398,6 +398,7 @@ def : SourceOfDivergence<int_amdgcn_wmma_f16_16x16x16_f16>;
 def : SourceOfDivergence<int_amdgcn_wmma_bf16_16x16x16_bf16>;
 def : SourceOfDivergence<int_amdgcn_wmma_i32_16x16x16_iu8>;
 def : SourceOfDivergence<int_amdgcn_wmma_i32_16x16x16_iu4>;
+def : SourceOfDivergence<int_amdgcn_waterfall_end>;
 
 // The dummy boolean output is divergent from the IR's perspective,
 // but the mask results are uniform. These produce a divergent and
