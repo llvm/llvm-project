@@ -816,19 +816,6 @@ def : Flag<["-"], "fno-ident">, Group<f_Group>, Alias<Qn>,
 def Qunused_arguments : Flag<["-"], "Qunused-arguments">, Flags<[NoXarchOption, CoreOption]>,
   HelpText<"Don't emit warning for unused driver arguments">;
 def Q : Flag<["-"], "Q">, IgnoredGCCCompat;
-def Rpass_EQ : Joined<["-"], "Rpass=">, Group<R_value_Group>, Flags<[CC1Option]>,
-  HelpText<"Report transformations performed by optimization passes whose "
-           "name matches the given POSIX regular expression">;
-def Rpass_missed_EQ : Joined<["-"], "Rpass-missed=">, Group<R_value_Group>,
-  Flags<[CC1Option]>,
-  HelpText<"Report missed transformations by optimization passes whose "
-           "name matches the given POSIX regular expression">;
-def Rpass_analysis_EQ : Joined<["-"], "Rpass-analysis=">, Group<R_value_Group>,
-  Flags<[CC1Option]>,
-  HelpText<"Report transformation analysis from optimization passes whose "
-           "name matches the given POSIX regular expression">;
-def R_Joined : Joined<["-"], "R">, Group<R_Group>, Flags<[CC1Option, CoreOption]>,
-  MetaVarName<"<remark>">, HelpText<"Enable the specified remark">;
 def S : Flag<["-"], "S">, Flags<[NoXarchOption,CC1Option,FlangOption,FC1Option]>, Group<Action_Group>,
   HelpText<"Only run preprocess and compilation steps">;
 def T : JoinedOrSeparate<["-"], "T">, Group<T_Group>,
@@ -2887,6 +2874,26 @@ def fno_openmp_target_debug : Flag<["-"], "fno-openmp-target-debug">;
 
 } // let Group = f_Group
 } // let Flags = [CC1Option, FC1Option, NoArgumentUnused]
+
+//===----------------------------------------------------------------------===//
+// Optimisation remark options
+//===----------------------------------------------------------------------===//
+
+let Flags = [CC1Option, FC1Option, FlangOption] in {
+
+def Rpass_EQ : Joined<["-"], "Rpass=">, Group<R_value_Group>,
+  HelpText<"Report transformations performed by optimization passes whose "
+           "name matches the given POSIX regular expression">;
+def Rpass_missed_EQ : Joined<["-"], "Rpass-missed=">, Group<R_value_Group>,
+  HelpText<"Report missed transformations by optimization passes whose "
+           "name matches the given POSIX regular expression">;
+def Rpass_analysis_EQ : Joined<["-"], "Rpass-analysis=">, Group<R_value_Group>,
+  HelpText<"Report transformation analysis from optimization passes whose "
+           "name matches the given POSIX regular expression">;
+def R_Joined : Joined<["-"], "R">, Group<R_Group>, Flags<[CoreOption]>,
+  MetaVarName<"<remark>">, HelpText<"Enable the specified remark">;
+
+} // let Flags = [CC1Option, FC1Option, FlangOption]
 
 let Flags = [CC1Option, FC1Option, NoArgumentUnused, HelpHidden] in {
 let Group = f_Group in {
