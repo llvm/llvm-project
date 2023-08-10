@@ -412,9 +412,9 @@ Ongoing Development Directions
 .. toctree::
    :hidden:
 
-   Proposals/VectorizationPlan
+   VectorizationPlan
 
-:doc:`Proposals/VectorizationPlan`
+:doc:`VectorizationPlan`
    Modeling the process and upgrading the infrastructure of LLVM's Loop Vectorizer.
 
 .. _slp-vectorizer:
