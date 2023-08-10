@@ -96,7 +96,7 @@ C Language Changes
   constant expressions.  This change is more consistent with the behavior of
   GCC.
 
-C2x Feature Support
+C23 Feature Support
 ^^^^^^^^^^^^^^^^^^^
 - Clang now accepts ``-std=c23`` and ``-std=gnu23`` as language standard modes,
   and the ``__STDC_VERSION__`` macro now expands to ``202311L`` instead of its
