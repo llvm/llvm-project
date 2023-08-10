@@ -26,6 +26,7 @@
 #include "clang/Basic/LangOptions.h"
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Format/Format.h"
+#include "clang/Lex/HeaderSearchOptions.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Tooling/Core/Replacement.h"
 #include "clang/Tooling/Inclusions/HeaderIncludes.h"
@@ -119,6 +120,8 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
     MainFileDecls.push_back(D);
   }
   llvm::DenseSet<include_cleaner::Symbol> SeenSymbols;
+  const DirectoryEntry *ResourceDir =
+      PP->getHeaderSearchInfo().getModuleMap().getBuiltinDir();
   // FIXME: Find a way to have less code duplication between include-cleaner
   // analysis implementation and the below code.
   walkUsed(MainFileDecls, RecordedPreprocessor.MacroReferences, &RecordedPI,
@@ -141,8 +144,11 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
              bool Satisfied = false;
              for (const include_cleaner::Header &H : Providers) {
                if (H.kind() == include_cleaner::Header::Physical &&
-                   H.physical() == MainFile)
+                   (H.physical() == MainFile ||
+                    H.physical()->getDir() == ResourceDir)) {
                  Satisfied = true;
+                 continue;
+               }
 
                for (const include_cleaner::Include *I :
                     RecordedPreprocessor.Includes.match(H)) {
@@ -159,7 +165,7 @@ void IncludeCleanerCheck::check(const MatchFinder::MatchResult &Result) {
   std::vector<const include_cleaner::Include *> Unused;
   for (const include_cleaner::Include &I :
        RecordedPreprocessor.Includes.all()) {
-    if (Used.contains(&I) || !I.Resolved)
+    if (Used.contains(&I) || !I.Resolved || I.Resolved->getDir() == ResourceDir)
       continue;
     if (RecordedPI.shouldKeep(*I.Resolved))
       continue;
