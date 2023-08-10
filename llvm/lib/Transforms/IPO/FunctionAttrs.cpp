@@ -110,6 +110,39 @@ using SCCNodeSet = SmallSetVector<Function *, 8>;
 
 } // end anonymous namespace
 
+static void addLocAccess(MemoryEffects &ME, const MemoryLocation &Loc,
+                         ModRefInfo MR, AAResults &AAR) {
+  // Ignore accesses to known-invariant or local memory.
+  MR &= AAR.getModRefInfoMask(Loc, /*IgnoreLocal=*/true);
+  if (isNoModRef(MR))
+    return;
+
+  const Value *UO = getUnderlyingObject(Loc.Ptr);
+  assert(!isa<AllocaInst>(UO) &&
+         "Should have been handled by getModRefInfoMask()");
+  if (isa<Argument>(UO)) {
+    ME |= MemoryEffects::argMemOnly(MR);
+    return;
+  }
+
+  // If it's not an identified object, it might be an argument.
+  if (!isIdentifiedObject(UO))
+    ME |= MemoryEffects::argMemOnly(MR);
+  ME |= MemoryEffects(IRMemLocation::Other, MR);
+}
+
+static void addArgLocs(MemoryEffects &ME, const CallBase *Call,
+                       ModRefInfo ArgMR, AAResults &AAR) {
+  for (const Value *Arg : Call->args()) {
+    if (!Arg->getType()->isPtrOrPtrVectorTy())
+      continue;
+
+    addLocAccess(ME,
+                 MemoryLocation::getBeforeOrAfter(Arg, Call->getAAMetadata()),
+                 ArgMR, AAR);
+  }
+}
+
 /// Returns the memory access attribute for function F using AAR for AA results,
 /// where SCCNodes is the current SCC.
 ///
@@ -135,25 +168,6 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
       F.getAttributes().hasAttrSomewhere(Attribute::Preallocated))
     ME |= MemoryEffects::argMemOnly(ModRefInfo::ModRef);
 
-  auto AddLocAccess = [&](const MemoryLocation &Loc, ModRefInfo MR) {
-    // Ignore accesses to known-invariant or local memory.
-    MR &= AAR.getModRefInfoMask(Loc, /*IgnoreLocal=*/true);
-    if (isNoModRef(MR))
-      return;
-
-    const Value *UO = getUnderlyingObject(Loc.Ptr);
-    assert(!isa<AllocaInst>(UO) &&
-           "Should have been handled by getModRefInfoMask()");
-    if (isa<Argument>(UO)) {
-      ME |= MemoryEffects::argMemOnly(MR);
-      return;
-    }
-
-    // If it's not an identified object, it might be an argument.
-    if (!isIdentifiedObject(UO))
-      ME |= MemoryEffects::argMemOnly(MR);
-    ME |= MemoryEffects(IRMemLocation::Other, MR);
-  };
   // Scan the function body for instructions that may read or write memory.
   for (Instruction &I : instructions(F)) {
     // Some instructions can be ignored even if they read or write memory.
@@ -190,15 +204,8 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
       // Check whether all pointer arguments point to local memory, and
       // ignore calls that only access local memory.
       ModRefInfo ArgMR = CallME.getModRef(IRMemLocation::ArgMem);
-      if (ArgMR != ModRefInfo::NoModRef) {
-        for (const Use &U : Call->args()) {
-          const Value *Arg = U;
-          if (!Arg->getType()->isPtrOrPtrVectorTy())
-            continue;
-
-          AddLocAccess(MemoryLocation::getBeforeOrAfter(Arg, I.getAAMetadata()), ArgMR);
-        }
-      }
+      if (ArgMR != ModRefInfo::NoModRef)
+        addArgLocs(ME, Call, ArgMR, AAR);
       continue;
     }
 
@@ -222,7 +229,7 @@ static MemoryEffects checkFunctionMemoryAccess(Function &F, bool ThisBody,
     if (I.isVolatile())
       ME |= MemoryEffects::inaccessibleMemOnly(MR);
 
-    AddLocAccess(*Loc, MR);
+    addLocAccess(ME, *Loc, MR, AAR);
   }
 
   return OrigME & ME;
