@@ -51,6 +51,11 @@ namespace pft {
 struct Evaluation;
 } // namespace pft
 
+static constexpr llvm::StringRef declarePreDeallocSuffix =
+    "_acc_declare_update_desc_pre_dealloc";
+static constexpr llvm::StringRef declarePostDeallocSuffix =
+    "_acc_declare_update_desc_post_dealloc";
+
 void genOpenACCConstruct(AbstractConverter &,
                          Fortran::semantics::SemanticsContext &,
                          pft::Evaluation &, const parser::OpenACCConstruct &);
