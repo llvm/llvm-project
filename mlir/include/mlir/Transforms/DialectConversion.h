@@ -523,24 +523,13 @@ public:
   void rewrite(Operation *op, ArrayRef<Value> operands,
                ConversionPatternRewriter &rewriter) const final {
     auto sourceOp = cast<SourceOp>(op);
-    rewrite(sourceOp,
-            OpAdaptor(operands, op->getDiscardableAttrDictionary(),
-                      sourceOp.getProperties()),
-            rewriter);
+    rewrite(sourceOp, OpAdaptor(operands, sourceOp), rewriter);
   }
   LogicalResult
   matchAndRewrite(Operation *op, ArrayRef<Value> operands,
                   ConversionPatternRewriter &rewriter) const final {
     auto sourceOp = cast<SourceOp>(op);
-    if constexpr (SourceOp::hasProperties())
-      return matchAndRewrite(sourceOp,
-                             OpAdaptor(operands,
-                                       op->getDiscardableAttrDictionary(),
-                                       sourceOp.getProperties()),
-                             rewriter);
-    return matchAndRewrite(
-        sourceOp, OpAdaptor(operands, op->getDiscardableAttrDictionary()),
-        rewriter);
+    return matchAndRewrite(sourceOp, OpAdaptor(operands, sourceOp), rewriter);
   }
 
   /// Rewrite and Match methods that operate on the SourceOp type. These must be
