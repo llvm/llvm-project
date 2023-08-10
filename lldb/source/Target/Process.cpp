@@ -1053,27 +1053,27 @@ const char *Process::GetExitDescription() {
   return nullptr;
 }
 
-bool Process::SetExitStatus(int status, const char *cstr) {
+bool Process::SetExitStatus(int status, llvm::StringRef exit_string) {
   // Use a mutex to protect setting the exit status.
   std::lock_guard<std::mutex> guard(m_exit_status_mutex);
 
   Log *log(GetLog(LLDBLog::State | LLDBLog::Process));
-  LLDB_LOGF(log, "(plugin = %s status=%i (0x%8.8x), description=%s%s%s)",
-           GetPluginName().data(), status, status, cstr ? "\"" : "",
-           cstr ? cstr : "NULL", cstr ? "\"" : "");
+  LLDB_LOG(log, "(plugin = {0} status = {1} ({1:x8}), description=\"{2}\")",
+           GetPluginName(), status, exit_string);
 
   // We were already in the exited state
   if (m_private_state.GetValue() == eStateExited) {
-    LLDB_LOGF(log,
-             "(plugin = %s) ignoring exit status because state was already set "
-             "to eStateExited",
-             GetPluginName().data());
+    LLDB_LOG(
+        log,
+        "(plugin = {0}) ignoring exit status because state was already set "
+        "to eStateExited",
+        GetPluginName());
     return false;
   }
 
   m_exit_status = status;
-  if (cstr)
-    m_exit_string = cstr;
+  if (!exit_string.empty())
+    m_exit_string = exit_string.str();
   else
     m_exit_string.clear();
 
