@@ -32,7 +32,8 @@ public:
   static FileSpec GetProgramFileSpec();
 
   static llvm::Expected<llvm::StringRef> GetSDKRoot(SDKOptions options) {
-    if (options.XcodeSDK && options.XcodeSDK->GetType() == XcodeSDK::Type::Linux)
+    if (options.XcodeSDKSelection &&
+        options.XcodeSDKSelection->GetType() == XcodeSDK::Type::Linux)
       return "/";
     return llvm::make_error<HostInfoError>("cannot determine SDK root");
   }
