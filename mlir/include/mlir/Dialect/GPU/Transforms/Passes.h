@@ -150,6 +150,12 @@ std::unique_ptr<Pass> createGpuSerializeToHsacoPass(StringRef triple,
                                                     StringRef features,
                                                     int optLevel);
 
+/// Collect a set of patterns to decompose memrefs ops.
+void populateGpuDecomposeMemrefsPatterns(RewritePatternSet &patterns);
+
+/// Pass decomposes memref ops inside `gpu.launch` body.
+std::unique_ptr<Pass> createGpuDecomposeMemrefsPass();
+
 /// Generate the code for registering passes.
 #define GEN_PASS_REGISTRATION
 #include "mlir/Dialect/GPU/Transforms/Passes.h.inc"
