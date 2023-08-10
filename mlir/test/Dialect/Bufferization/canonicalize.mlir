@@ -297,19 +297,16 @@ func.func @dealloc_canonicalize_duplicates(%arg0: memref<2xi32>, %arg1: i1, %arg
 
 // -----
 
-func.func @dealloc_canonicalize_retained_and_deallocated(%arg0: memref<2xi32>, %arg1: i1, %arg2: memref<2xi32>) -> (i1, i1) {
-  %0 = bufferization.dealloc (%arg0 : memref<2xi32>) if (%arg1) retain (%arg0 : memref<2xi32>)
-  %1 = bufferization.dealloc (%arg0, %arg2 : memref<2xi32>, memref<2xi32>) if (%arg1, %arg1) retain (%arg0 : memref<2xi32>)
+func.func @dealloc_erase_empty(%arg0: memref<2xi32>, %arg1: i1, %arg2: memref<2xi32>) -> i1 {
   bufferization.dealloc
-  bufferization.dealloc retain (%arg0 : memref<2xi32>)
-  return %0, %1 : i1, i1
+  %0 = bufferization.dealloc retain (%arg0 : memref<2xi32>)
+  return %0 : i1
 }
 
-// CHECK-LABEL: func @dealloc_canonicalize_retained_and_deallocated
+// CHECK-LABEL: func @dealloc_erase_empty
 //  CHECK-SAME: ([[ARG0:%.+]]: memref<2xi32>, [[ARG1:%.+]]: i1, [[ARG2:%.+]]: memref<2xi32>)
-//  CHECK-NEXT: [[V0:%.+]] = bufferization.dealloc ([[ARG2]] : memref<2xi32>) if ([[ARG1]]) retain ([[ARG0]] : memref<2xi32>)
-//  CHECK-NEXT: [[V1:%.+]] = arith.ori [[V0]], [[ARG1]]
-//  CHECK-NEXT: return [[ARG1]], [[V1]] :
+//  CHECK-NEXT: [[FALSE:%.+]] = arith.constant false
+//  CHECK-NEXT: return [[FALSE]] :
 
 // -----
 
