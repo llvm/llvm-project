@@ -693,7 +693,7 @@ Expected<bool> parseCoroSplitPassOptions(StringRef Params) {
 }
 
 Expected<bool> parsePostOrderFunctionAttrsPassOptions(StringRef Params) {
-  return parseSinglePassOption(Params, "skip-non-recursive",
+  return parseSinglePassOption(Params, "skip-non-recursive-function-attrs",
                                "PostOrderFunctionAttrs");
 }
 
