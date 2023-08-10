@@ -245,6 +245,8 @@ clang-format
 libclang
 --------
 
+- Exposed arguments of ``clang::annotate``.
+
 Static Analyzer
 ---------------
 
