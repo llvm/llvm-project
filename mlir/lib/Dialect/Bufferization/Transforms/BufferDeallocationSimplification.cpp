@@ -154,6 +154,78 @@ private:
   AliasAnalysis &aliasAnalysis;
 };
 
+/// Remove memrefs from the `retained` list which are guaranteed to not alias
+/// any memref in the `memrefs` list. The corresponding result value can be
+/// replaced with `false` in that case according to the operation description.
+///
+/// Example:
+/// ```mlir
+/// %0:2 = bufferization.dealloc (%m : memref<2xi32>) if (%cond)
+///                       retain (%r0, %r1 : memref<2xi32>, memref<2xi32>)
+/// return %0#0, %0#1
+/// ```
+/// can be canonicalized to the following given that `%r0` and `%r1` do not
+/// alias `%m`:
+/// ```mlir
+/// bufferization.dealloc (%m : memref<2xi32>) if (%cond)
+/// return %false, %false
+/// ```
+struct RemoveRetainedMemrefsGuaranteedToNotAlias
+    : public OpRewritePattern<DeallocOp> {
+  RemoveRetainedMemrefsGuaranteedToNotAlias(MLIRContext *context,
+                                            AliasAnalysis &aliasAnalysis)
+      : OpRewritePattern<DeallocOp>(context), aliasAnalysis(aliasAnalysis) {}
+
+  bool potentiallyAliasesMemref(DeallocOp deallocOp,
+                                Value retainedMemref) const {
+    for (auto memref : deallocOp.getMemrefs()) {
+      if (!aliasAnalysis.alias(memref, retainedMemref).isNo())
+        return true;
+    }
+    return false;
+  }
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> newRetainedMemrefs, replacements;
+    Value falseValue;
+    auto getOrCreateFalse = [&]() -> Value {
+      if (!falseValue)
+        falseValue = rewriter.create<arith::ConstantOp>(
+            deallocOp.getLoc(), rewriter.getBoolAttr(false));
+      return falseValue;
+    };
+
+    for (auto retainedMemref : deallocOp.getRetained()) {
+      if (potentiallyAliasesMemref(deallocOp, retainedMemref)) {
+        newRetainedMemrefs.push_back(retainedMemref);
+        replacements.push_back({});
+        continue;
+      }
+
+      replacements.push_back(getOrCreateFalse());
+    }
+
+    if (newRetainedMemrefs.size() == deallocOp.getRetained().size())
+      return failure();
+
+    auto newDeallocOp = rewriter.create<DeallocOp>(
+        deallocOp.getLoc(), deallocOp.getMemrefs(), deallocOp.getConditions(),
+        newRetainedMemrefs);
+    int i = 0;
+    for (auto &repl : replacements) {
+      if (!repl)
+        repl = newDeallocOp.getUpdatedConditions()[i++];
+    }
+
+    rewriter.replaceOp(deallocOp, replacements);
+    return success();
+  }
+
+private:
+  AliasAnalysis &aliasAnalysis;
+};
+
 } // namespace
 
 //===----------------------------------------------------------------------===//
@@ -171,8 +243,9 @@ struct BufferDeallocationSimplificationPass
   void runOnOperation() override {
     AliasAnalysis &aliasAnalysis = getAnalysis<AliasAnalysis>();
     RewritePatternSet patterns(&getContext());
-    patterns.add<DeallocRemoveDeallocMemrefsContainedInRetained>(&getContext(),
-                                                                 aliasAnalysis);
+    patterns.add<DeallocRemoveDeallocMemrefsContainedInRetained,
+                 RemoveRetainedMemrefsGuaranteedToNotAlias>(&getContext(),
+                                                            aliasAnalysis);
 
     if (failed(
             applyPatternsAndFoldGreedily(getOperation(), std::move(patterns))))
