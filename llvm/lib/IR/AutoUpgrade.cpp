@@ -1123,86 +1123,57 @@ static bool UpgradeIntrinsicFunction1(Function *F, Function *&NewFn) {
     }
     break;
 
-  case 'r':
-    if (Name == "riscv.aes32dsi" &&
-        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32dsi);
-      return true;
+  case 'r': {
+    if (Name.consume_front("riscv.")) {
+      Intrinsic::ID ID;
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .Case("aes32dsi", Intrinsic::riscv_aes32dsi)
+               .Case("aes32dsmi", Intrinsic::riscv_aes32dsmi)
+               .Case("aes32esi", Intrinsic::riscv_aes32esi)
+               .Case("aes32esmi", Intrinsic::riscv_aes32esmi)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        if (!F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other applicable upgrades.
+      }
+
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .StartsWith("sm4ks", Intrinsic::riscv_sm4ks)
+               .StartsWith("sm4ed", Intrinsic::riscv_sm4ed)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        if (!F->getFunctionType()->getParamType(2)->isIntegerTy(32) ||
+            F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other applicable upgrades.
+      }
+
+      ID = StringSwitch<Intrinsic::ID>(Name)
+               .StartsWith("sha256sig0", Intrinsic::riscv_sha256sig0)
+               .StartsWith("sha256sig1", Intrinsic::riscv_sha256sig1)
+               .StartsWith("sha256sum0", Intrinsic::riscv_sha256sum0)
+               .StartsWith("sha256sum1", Intrinsic::riscv_sha256sum1)
+               .StartsWith("sm3p0", Intrinsic::riscv_sm3p0)
+               .StartsWith("sm3p1", Intrinsic::riscv_sm3p1)
+               .Default(Intrinsic::not_intrinsic);
+      if (ID != Intrinsic::not_intrinsic) {
+        if (F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
+          rename(F);
+          NewFn = Intrinsic::getDeclaration(F->getParent(), ID);
+          return true;
+        }
+        break; // No other applicable upgrades.
+      }
+      break; // No other 'riscv.*' intrinsics
     }
-    if (Name == "riscv.aes32dsmi" &&
-        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32dsmi);
-      return true;
-    }
-    if (Name == "riscv.aes32esi" &&
-        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32esi);
-      return true;
-    }
-    if (Name == "riscv.aes32esmi" &&
-        !F->getFunctionType()->getParamType(2)->isIntegerTy(32)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_aes32esmi);
-      return true;
-    }
-    if (Name.startswith("riscv.sm4ks") &&
-        (!F->getFunctionType()->getParamType(2)->isIntegerTy(32) ||
-         F->getFunctionType()->getReturnType()->isIntegerTy(64))) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm4ks);
-      return true;
-    }
-    if (Name.startswith("riscv.sm4ed") &&
-        (!F->getFunctionType()->getParamType(2)->isIntegerTy(32) ||
-         F->getFunctionType()->getReturnType()->isIntegerTy(64))) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm4ed);
-      return true;
-    }
-    if (Name.startswith("riscv.sha256sig0") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::riscv_sha256sig0);
-      return true;
-    }
-    if (Name.startswith("riscv.sha256sig1") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::riscv_sha256sig1);
-      return true;
-    }
-    if (Name.startswith("riscv.sha256sum0") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::riscv_sha256sum0);
-      return true;
-    }
-    if (Name.startswith("riscv.sha256sum1") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(),
-                                        Intrinsic::riscv_sha256sum1);
-      return true;
-    }
-    if (Name.startswith("riscv.sm3p0") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm3p0);
-      return true;
-    }
-    if (Name.startswith("riscv.sm3p1") &&
-        F->getFunctionType()->getReturnType()->isIntegerTy(64)) {
-      rename(F);
-      NewFn = Intrinsic::getDeclaration(F->getParent(), Intrinsic::riscv_sm3p1);
-      return true;
-    }
-    break;
+  } break;
 
   case 's':
     if (Name == "stackprotectorcheck") {
