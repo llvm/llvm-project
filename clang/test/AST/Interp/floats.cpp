@@ -102,6 +102,38 @@ namespace compound {
     return a[1];
   }
   static_assert(ff() == 3, "");
+
+  constexpr float intPlusDouble() {
+   int a = 0;
+   a += 2.0;
+
+   return a;
+  }
+  static_assert(intPlusDouble() == 2, "");
+
+  constexpr double doublePlusInt() {
+   double a = 0.0;
+   a += 2;
+
+   return a;
+  }
+  static_assert(doublePlusInt() == 2, "");
+
+  constexpr float boolPlusDouble() {
+   bool a = 0;
+   a += 1.0;
+
+   return a;
+  }
+  static_assert(boolPlusDouble(), "");
+
+  constexpr bool doublePlusbool() {
+   double a = 0.0;
+   a += true;
+
+   return a;
+  }
+  static_assert(doublePlusbool() == 1.0, "");
 }
 
 namespace unary {
