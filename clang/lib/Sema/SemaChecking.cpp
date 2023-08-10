@@ -17146,7 +17146,7 @@ void Sema::CheckArrayAccess(const Expr *BaseExpr, const Expr *IndexExpr,
           ASTC.getTypeSizeInCharsIfKnown(EffectiveType);
       // PR50741 - If EffectiveType has unknown size (e.g., if it's a void
       // pointer) bounds-checking isn't meaningful.
-      if (!ElemCharUnits)
+      if (!ElemCharUnits || ElemCharUnits->isZero())
         return;
       llvm::APInt ElemBytes(index.getBitWidth(), ElemCharUnits->getQuantity());
       // If index has more active bits than address space, we already know
