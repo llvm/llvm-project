@@ -13744,7 +13744,7 @@ public:
         // Update LocalExternallyUsedValues for the scalar, replaced by
         // extractelement instructions.
         for (const std::pair<Value *, Value *> &Pair : ReplacedExternals) {
-          auto It = ExternallyUsedValues.find(Pair.first);
+          auto *It = ExternallyUsedValues.find(Pair.first);
           if (It == ExternallyUsedValues.end())
             continue;
           LocalExternallyUsedValues[Pair.second].append(It->second);
@@ -13758,7 +13758,8 @@ public:
         InstructionCost ReductionCost =
             getReductionCost(TTI, VL, IsCmpSelMinMax, ReduxWidth, RdxFMF);
         InstructionCost Cost = TreeCost + ReductionCost;
-        LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost << " for reduction\n");
+        LLVM_DEBUG(dbgs() << "SLP: Found cost = " << Cost
+                          << " for reduction\n");
         if (!Cost.isValid())
           return nullptr;
         if (Cost >= -SLPCostThreshold) {
