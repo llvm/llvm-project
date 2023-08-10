@@ -58,9 +58,7 @@ void test(void) {
   _Static_assert(1.0f, "this should not compile"); // expected-warning {{expression is not an integer constant expression; folding it to a constant is a GNU extension}}
 }
 
-// FIXME: This is using the placeholder date Clang produces for the macro in
-// C2x mode; switch to the correct value once it's been published.
-#if __STDC_VERSION__ < 202000L
+#if __STDC_VERSION__ < 202311L
 // The use of a _Static_assert in a K&R C function definition is prohibited per
 // 6.9.1p6 requiring each declaration to have a declarator (which a static
 // assertion does not have) and only declare identifiers from the identifier
