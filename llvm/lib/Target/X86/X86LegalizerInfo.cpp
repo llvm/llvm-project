@@ -528,6 +528,10 @@ X86LegalizerInfo::X86LegalizerInfo(const X86Subtarget &STI,
   // memory intrinsics
   getActionDefinitionsBuilder({G_MEMCPY, G_MEMMOVE, G_MEMSET}).libcall();
 
+  getActionDefinitionsBuilder({G_DYN_STACKALLOC,
+                               G_STACKSAVE,
+                               G_STACKRESTORE}).lower();
+
   // fp intrinsics
   getActionDefinitionsBuilder(G_INTRINSIC_ROUNDEVEN)
       .scalarize(0)

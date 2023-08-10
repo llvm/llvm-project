@@ -769,6 +769,12 @@ HANDLE_TARGET_OPCODE(G_JUMP_TABLE)
 /// Generic dynamic stack allocation.
 HANDLE_TARGET_OPCODE(G_DYN_STACKALLOC)
 
+/// Generic stack pointer save.
+HANDLE_TARGET_OPCODE(G_STACKSAVE)
+
+/// Generic stack pointer restore.
+HANDLE_TARGET_OPCODE(G_STACKRESTORE)
+
 /// Strict floating point instructions.
 HANDLE_TARGET_OPCODE(G_STRICT_FADD)
 HANDLE_TARGET_OPCODE(G_STRICT_FSUB)
