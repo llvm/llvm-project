@@ -95,6 +95,10 @@
 ! CHECK-NEXT: -print-effective-triple Print the effective target triple
 ! CHECK-NEXT: -print-target-triple    Print the normalized target triple
 ! CHECK-NEXT: -P                     Disable linemarker output in -E mode
+! CHECK-NEXT: -Rpass-analysis=<value> Report transformation analysis from optimization passes whose name matches the given POSIX regular expression
+! CHECK-NEXT: -Rpass-missed=<value>   Report missed transformations by optimization passes whose name matches the given POSIX regular expression
+! CHECK-NEXT: -Rpass=<value>          Report transformations performed by optimization passes whose name matches the given POSIX regular expression
+! CHECK-NEXT: -R<remark>              Enable the specified remark
 ! CHECK-NEXT: -save-temps=<value>    Save intermediate compilation results.
 ! CHECK-NEXT: -save-temps            Save intermediate compilation results
 ! CHECK-NEXT: -std=<value>           Language standard to compile for
