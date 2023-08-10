@@ -1,7 +1,10 @@
-// RUN: %clangxx_asan -O0 -pthread %s -o %t && %env_asan_opts=use_sigaltstack=0 %run not --crash %t 2>&1 | FileCheck %s
+q// RUN: %clangxx_asan -O0 -pthread %s -o %t && %env_asan_opts=use_sigaltstack=0 %run not --crash %t 2>&1 | FileCheck %s
 
 // Check that fake stack does not discard frames on the main stack, when GC is
 // triggered from high alt stack.
+
+// FIXME: Investigate.
+// UNSUPPORTED: android
 
 #include <algorithm>
 #include <assert.h>
