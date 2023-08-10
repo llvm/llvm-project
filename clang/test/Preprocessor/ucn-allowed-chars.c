@@ -53,8 +53,8 @@ extern char \u0D61; // C99, C11, C++03, C++11
 
 # endif
 #else
-# if __STDC_VERSION__ >= 201800L
-// C2X
+# if __STDC_VERSION__ >= 202311L
+// C23
 // expected-warning@8 {{using this character in an identifier is incompatible with C99}}
 // expected-error@10 {{character <U+0384> not allowed in an identifier}}
 // expected-error@12 {{character <U+FFFF> not allowed in an identifier}}

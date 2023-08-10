@@ -98,6 +98,10 @@ C Language Changes
 
 C2x Feature Support
 ^^^^^^^^^^^^^^^^^^^
+- Clang now accepts ``-std=c23`` and ``-std=gnu23`` as language standard modes,
+  and the ``__STDC_VERSION__`` macro now expands to ``202311L`` instead of its
+  previous placeholder value. Clang continues to accept ``-std=c2x`` and
+  ``-std=gnu2x`` as aliases for C23 and GNU C23, respectively.
 
 Non-comprehensive list of changes in this release
 -------------------------------------------------
