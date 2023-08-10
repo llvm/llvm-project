@@ -4968,7 +4968,7 @@ public:
   }
 
   /// Is this an initializer for an array of characters, initialized by a string
-  /// literal or an @encode?
+  /// literal or an \@encode?
   bool isStringLiteralInit() const;
 
   /// Is this a transparent initializer list (that is, an InitListExpr that is
