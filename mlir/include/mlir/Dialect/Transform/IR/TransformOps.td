@@ -201,7 +201,7 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
                        OptionalAttr<StrArrayAttr>:$illegal_ops,
                        OptionalAttr<StrArrayAttr>:$legal_dialects,
                        OptionalAttr<StrArrayAttr>:$illegal_dialects,
-                       UnitAttr:$partialConversion);
+                       UnitAttr:$partial_conversion);
   let results = (outs);
   let regions = (region
       MaxSizedRegion<1>:$patterns,
