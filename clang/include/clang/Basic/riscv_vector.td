@@ -2895,7 +2895,7 @@ let UnMaskedPolicyScheme = HasPassthruOperand in {
 let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
   // zvkg
   defm vghsh   : RVVOutOp2BuiltinSetVVZvk;
-  defm vgmul   : RVVOutBuiltinSetZvk</*HasVV*/1, /*HasVS*/0>;
+  defm vgmul   : RVVOutBuiltinSetZvk<HasVV=1, HasVS=0>;
 
   // zvkned
   defm vaesdf  : RVVOutBuiltinSetZvk;
@@ -2905,7 +2905,7 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
   let UnMaskedPolicyScheme = HasPassthruOperand in
   defm vaeskf1 : RVVOutOp1BuiltinSet<"vaeskf1", "i", [["vi", "Uv", "UvUvKz"]]>;
   defm vaeskf2 : RVVOutOp2BuiltinSetVIZvk;
-  defm vaesz   : RVVOutBuiltinSetZvk</*HasVV*/0>;
+  defm vaesz   : RVVOutBuiltinSetZvk<HasVV=0>;
 
   // zvknha or zvknhb
   defm vsha2ch : RVVOutOp2BuiltinSetVVZvk<"il">;
