@@ -559,3 +559,124 @@ exit:                                             ; preds = %for.body
   %add.lcssa = phi i32 [ %add, %for.body ]
   ret i32 %add.lcssa
 }
+
+; Make sure that if there are several reductions in the loop, the order of invariant stores sank outside of the loop is preserved
+; FIXME: This tests currently shows incorrect behavior and it will fixed in the following patch
+; See https://github.com/llvm/llvm-project/issues/64047
+define void @reduc_add_mul_store_same_ptr(ptr %dst, ptr readonly %src) {
+; CHECK-LABEL: define void @reduc_add_mul_store_same_ptr
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1:%.*]])
+; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst, align 4
+;
+entry:
+  br label %for.body
+
+for.body:
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.body ]
+  %mul = phi i32 [ 1, %entry ], [ %mul.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %0 = load i32, ptr %gep.src, align 4
+  %sum.next = add nsw i32 %sum, %0
+  store i32 %sum.next, ptr %dst, align 4
+  %mul.next = mul nsw i32 %mul, %0
+  store i32 %mul.next, ptr %dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @reduc_mul_add_store_same_ptr(ptr %dst, ptr readonly %src) {
+; CHECK-LABEL: define void @reduc_mul_add_store_same_ptr
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1:%.*]])
+; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst, align 4
+;
+entry:
+  br label %for.body
+
+for.body:
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.body ]
+  %mul = phi i32 [ 1, %entry ], [ %mul.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %0 = load i32, ptr %gep.src, align 4
+  %mul.next = mul nsw i32 %mul, %0
+  store i32 %mul.next, ptr %dst, align 4
+  %sum.next = add nsw i32 %sum, %0
+  store i32 %sum.next, ptr %dst, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+; Same as above but storing is done to two different pointers and they can be aliased
+; FIXME: This tests currently shows incorrect behavior and it will fixed in the following patch
+define void @reduc_add_mul_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonly %src) {
+; CHECK-LABEL: define void @reduc_add_mul_store_different_ptr
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1:%.*]])
+; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst2, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst1, align 4
+;
+entry:
+  br label %for.body
+
+for.body:
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.body ]
+  %mul = phi i32 [ 1, %entry ], [ %mul.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %0 = load i32, ptr %gep.src, align 4
+  %sum.next = add nsw i32 %sum, %0
+  store i32 %sum.next, ptr %dst1, align 4
+  %mul.next = mul nsw i32 %mul, %0
+  store i32 %mul.next, ptr %dst2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
+
+define void @reduc_mul_add_store_different_ptr(ptr %dst1, ptr %dst2, ptr readonly %src) {
+; CHECK-LABEL: define void @reduc_mul_add_store_different_ptr
+; CHECK:       middle.block:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.vector.reduce.mul.v4i32(<4 x i32> [[TMP1:%.*]])
+; CHECK-NEXT:    store i32 [[TMP2]], ptr %dst1, align 4
+; CHECK-NEXT:    [[TMP4:%.*]] = call i32 @llvm.vector.reduce.add.v4i32(<4 x i32> [[TMP3:%.*]])
+; CHECK-NEXT:    store i32 [[TMP4]], ptr %dst2, align 4
+;
+entry:
+  br label %for.body
+
+for.body:
+  %sum = phi i32 [ 0, %entry ], [ %sum.next, %for.body ]
+  %mul = phi i32 [ 1, %entry ], [ %mul.next, %for.body ]
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %for.body ]
+  %gep.src = getelementptr inbounds i32, ptr %src, i64 %iv
+  %0 = load i32, ptr %gep.src, align 4
+  %mul.next = mul nsw i32 %mul, %0
+  store i32 %mul.next, ptr %dst1, align 4
+  %sum.next = add nsw i32 %sum, %0
+  store i32 %sum.next, ptr %dst2, align 4
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond = icmp eq i64 %iv.next, 1000
+  br i1 %exitcond, label %exit, label %for.body
+
+exit:
+  ret void
+}
