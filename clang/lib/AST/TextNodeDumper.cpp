@@ -1541,7 +1541,64 @@ void TextNodeDumper::VisitFunctionProtoType(const FunctionProtoType *T) {
     OS << " &&";
     break;
   }
-  // FIXME: Exception specification.
+
+  switch (EPI.ExceptionSpec.Type) {
+  case EST_None:
+    break;
+  case EST_DynamicNone:
+    OS << " exceptionspec_dynamic_none";
+    break;
+  case EST_Dynamic:
+    OS << " exceptionspec_dynamic";
+    break;
+  case EST_MSAny:
+    OS << " exceptionspec_ms_any";
+    break;
+  case EST_NoThrow:
+    OS << " exceptionspec_nothrow";
+    break;
+  case EST_BasicNoexcept:
+    OS << " exceptionspec_basic_noexcept";
+    break;
+  case EST_DependentNoexcept:
+    OS << " exceptionspec_dependent_noexcept";
+    break;
+  case EST_NoexceptFalse:
+    OS << " exceptionspec_noexcept_false";
+    break;
+  case EST_NoexceptTrue:
+    OS << " exceptionspec_noexcept_true";
+    break;
+  case EST_Unevaluated:
+    OS << " exceptionspec_unevaluated";
+    break;
+  case EST_Uninstantiated:
+    OS << " exceptionspec_uninstantiated";
+    break;
+  case EST_Unparsed:
+    OS << " exceptionspec_unparsed";
+    break;
+  }
+  if (!EPI.ExceptionSpec.Exceptions.empty()) {
+    AddChild([=] {
+      OS << "Exceptions:";
+      for (unsigned I = 0, N = EPI.ExceptionSpec.Exceptions.size(); I != N;
+           ++I) {
+        if (I)
+          OS << ",";
+        dumpType(EPI.ExceptionSpec.Exceptions[I]);
+      }
+    });
+  }
+  if (EPI.ExceptionSpec.NoexceptExpr) {
+    AddChild([=] {
+      OS << "NoexceptExpr: ";
+      Visit(EPI.ExceptionSpec.NoexceptExpr);
+    });
+  }
+  dumpDeclRef(EPI.ExceptionSpec.SourceDecl, "ExceptionSourceDecl");
+  dumpDeclRef(EPI.ExceptionSpec.SourceTemplate, "ExceptionSourceTemplate");
+
   // FIXME: Consumed parameters.
   VisitFunctionType(T);
 }
