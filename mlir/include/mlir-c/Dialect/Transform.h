@@ -28,6 +28,14 @@ MLIR_CAPI_EXPORTED bool mlirTypeIsATransformAnyOpType(MlirType type);
 MLIR_CAPI_EXPORTED MlirType mlirTransformAnyOpTypeGet(MlirContext ctx);
 
 //===---------------------------------------------------------------------===//
+// AnyValueType
+//===---------------------------------------------------------------------===//
+
+MLIR_CAPI_EXPORTED bool mlirTypeIsATransformAnyValueType(MlirType type);
+
+MLIR_CAPI_EXPORTED MlirType mlirTransformAnyValueTypeGet(MlirContext ctx);
+
+//===---------------------------------------------------------------------===//
 // OperationType
 //===---------------------------------------------------------------------===//
 
