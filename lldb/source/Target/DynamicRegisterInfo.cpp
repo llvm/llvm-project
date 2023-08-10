@@ -7,8 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "lldb/Target/DynamicRegisterInfo.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/DataFormatters/FormatManager.h"
+#include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/OptionArgParser.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/LLDBLog.h"
