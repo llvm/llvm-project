@@ -384,7 +384,7 @@ private:
     // Determine the actual operand to introduce a clone for and rewire the
     // operand to point to the clone instead.
     auto operands =
-        regionInterface.getSuccessorEntryOperands(argRegion->getRegionNumber());
+        regionInterface.getEntrySuccessorOperands(argRegion->getRegionNumber());
     size_t operandIndex =
         llvm::find(it->getSuccessorInputs(), blockArg).getIndex() +
         operands.getBeginOperandIndex();

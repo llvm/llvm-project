@@ -2380,7 +2380,7 @@ void AffineForOp::getCanonicalizationPatterns(RewritePatternSet &results,
 /// induction variable. AffineForOp only has one region, so zero is the only
 /// valid value for `index`.
 OperandRange
-AffineForOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
+AffineForOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
   assert((!index || *index == 0) && "invalid region index");
 
   // The initial operands map to the loop arguments after the induction
@@ -2394,8 +2394,7 @@ AffineForOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
 /// correspond to a constant value for each operand, or null if that operand is
 /// not a constant.
 void AffineForOp::getSuccessorRegions(
-    std::optional<unsigned> index, ArrayRef<Attribute> operands,
-    SmallVectorImpl<RegionSuccessor> &regions) {
+    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
   assert((!index.has_value() || index.value() == 0) && "expected loop region");
   // The loop may typically branch back to its body or to the parent operation.
   // If the predecessor is the parent op and the trip count is known to be at
@@ -2860,8 +2859,7 @@ struct AlwaysTrueOrFalseIf : public OpRewritePattern<AffineIfOp> {
 /// AffineIfOp has two regions -- `then` and `else`. The flow of data should be
 /// as follows: AffineIfOp -> `then`/`else` -> AffineIfOp
 void AffineIfOp::getSuccessorRegions(
-    std::optional<unsigned> index, ArrayRef<Attribute> operands,
-    SmallVectorImpl<RegionSuccessor> &regions) {
+    std::optional<unsigned> index, SmallVectorImpl<RegionSuccessor> &regions) {
   // If the predecessor is an AffineIfOp, then branching into both `then` and
   // `else` region is valid.
   if (!index.has_value()) {

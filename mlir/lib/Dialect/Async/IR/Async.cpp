@@ -33,38 +33,13 @@ void AsyncDialect::initialize() {
 }
 
 //===----------------------------------------------------------------------===//
-// YieldOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult YieldOp::verify() {
-  // Get the underlying value types from async values returned from the
-  // parent `async.execute` operation.
-  auto executeOp = (*this)->getParentOfType<ExecuteOp>();
-  auto types =
-      llvm::map_range(executeOp.getBodyResults(), [](const OpResult &result) {
-        return llvm::cast<ValueType>(result.getType()).getValueType();
-      });
-
-  if (getOperandTypes() != types)
-    return emitOpError("operand types do not match the types returned from "
-                       "the parent ExecuteOp");
-
-  return success();
-}
-
-MutableOperandRange
-YieldOp::getMutableSuccessorOperands(std::optional<unsigned> index) {
-  return getOperandsMutable();
-}
-
-//===----------------------------------------------------------------------===//
 /// ExecuteOp
 //===----------------------------------------------------------------------===//
 
 constexpr char kOperandSegmentSizesAttr[] = "operandSegmentSizes";
 
 OperandRange
-ExecuteOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
+ExecuteOp::getEntrySuccessorOperands(std::optional<unsigned> index) {
   assert(index && *index == 0 && "invalid region index");
   return getBodyOperands();
 }
@@ -79,7 +54,6 @@ bool ExecuteOp::areTypesCompatible(Type lhs, Type rhs) {
 }
 
 void ExecuteOp::getSuccessorRegions(std::optional<unsigned> index,
-                                    ArrayRef<Attribute>,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
   // The `body` region branch back to the parent operation.
   if (index) {
