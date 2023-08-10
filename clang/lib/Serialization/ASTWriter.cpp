@@ -1327,8 +1327,7 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, ASTContext &Context,
 
     auto &Map = PP.getHeaderSearchInfo().getModuleMap();
     AddPath(WritingModule->PresumedModuleMapFile.empty()
-                ? Map.getModuleMapFileForUniquing(WritingModule)
-                      ->getNameAsRequested()
+                ? Map.getModuleMapFileForUniquing(WritingModule)->getName()
                 : StringRef(WritingModule->PresumedModuleMapFile),
             Record);
 
