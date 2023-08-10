@@ -147,9 +147,6 @@ Changes to the LLVM tools
 Changes to LLDB
 ---------------------------------
 
-* AArch64 Linux targets now provide access to the Thread Local Storage
-  register ``tpidr``.
-
 Changes to Sanitizers
 ---------------------
 * HWASan now defaults to detecting use-after-scope bugs.
