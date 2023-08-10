@@ -2386,7 +2386,7 @@ static Value *
 emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
                      Value *Step,
                      InductionDescriptor::InductionKind InductionKind,
-                     BinaryOperator *InductionBinOp) {
+                     const BinaryOperator *InductionBinOp) {
   Type *StepTy = Step->getType();
   Value *CastedIndex = StepTy->isIntegerTy()
                            ? B.CreateSExtOrTrunc(Index, StepTy)
@@ -9479,19 +9479,17 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
 
   // Fast-math-flags propagate from the original induction instruction.
   IRBuilder<>::FastMathFlagGuard FMFG(State.Builder);
-  if (IndDesc.getInductionBinOp() &&
-      isa<FPMathOperator>(IndDesc.getInductionBinOp()))
-    State.Builder.setFastMathFlags(
-        IndDesc.getInductionBinOp()->getFastMathFlags());
+  if (BinOp && isa<FPMathOperator>(BinOp))
+    State.Builder.setFastMathFlags(BinOp->getFastMathFlags());
 
   Value *Step = State.get(getStepValue(), VPIteration(0, 0));
   Value *CanonicalIV = State.get(getCanonicalIV(), VPIteration(0, 0));
-  Value *DerivedIV = emitTransformedIndex(
-      State.Builder, CanonicalIV, getStartValue()->getLiveInIRValue(), Step,
-      IndDesc.getKind(), IndDesc.getInductionBinOp());
+  Value *DerivedIV = emitTransformedIndex(State.Builder, CanonicalIV,
+                                          getStartValue()->getLiveInIRValue(),
+                                          Step, Kind, BinOp);
   DerivedIV->setName("offset.idx");
   if (ResultTy != DerivedIV->getType()) {
-    assert(Step->getType()->isIntegerTy() &&
+    assert(IsTruncated && Step->getType()->isIntegerTy() &&
            "Truncation requires an integer step");
     DerivedIV = State.Builder.CreateTrunc(DerivedIV, ResultTy);
   }
