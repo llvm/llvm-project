@@ -49,7 +49,7 @@ sure you don't forget anything:
 
   - Did you add it to ``include/module.modulemap.in``?
   - Did you add it to ``include/CMakeLists.txt``?
-  - If it's a public header, did you update ``utils/libcxx/test/header_information.py``?
+  - If it's a public header, did you update ``utils/libcxx/header_information.py``?
 
 - Did you add the relevant feature test macro(s) for your feature? Did you update the ``generate_feature_test_macro_components.py`` script with it?
 - Did you run the ``libcxx-generate-files`` target and verify its output?
