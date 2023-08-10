@@ -93,9 +93,6 @@ module attributes {gpu.container_module} {
   // CHECK: llvm.call @mgpuSpGEMMWorkEstimation
   // CHECK: llvm.call @mgpuMemAlloc
   // CHECK: llvm.call @mgpuSpGEMMWorkEstimation
-  // CHECK: llvm.call @mgpuSpGEMMEstimateMemory
-  // CHECK: llvm.call @mgpuMemAlloc
-  // CHECK: llvm.call @mgpuSpGEMMEstimateMemory
   // CHECK: llvm.call @mgpuMemAlloc
   // CHECK: llvm.call @mgpuSpGEMMCompute
   // CHECK: llvm.call @mgpuMemAlloc
@@ -130,19 +127,10 @@ module attributes {gpu.container_module} {
                               [%token8]{WORK_ESTIMATION} %spmatA, %spmatB,
                               %spmatC, %spgemmDesc, %bufferSz1,
                               %buf1: f32 into memref<?xi8>
-    %bufferSz3, %dummy, %token10 = gpu.spgemm_estimate_memory async [%token9]
-                                     %spmatA, %spmatB, %spmatC,
-                                     %spgemmDesc, %c0, %c0,
-                                     %alloc: f32 into memref<0xi8>
-    %buf3, %token11 = gpu.alloc async [%token10] (%bufferSz3) : memref<?xi8>
-    %bufferSz3_2, %bufferSz2, %token12 = gpu.spgemm_estimate_memory async
-                                          [%token11] %spmatA, %spmatB, %spmatC,
-                                          %spgemmDesc, %bufferSz3, %c0,
-                                          %buf3: f32 into memref<?xi8>
-    %buf2, %token13 = gpu.alloc async [%token12] (%bufferSz2) : memref<?xi8>
+    %buf2, %token13 = gpu.alloc async [%token9] (%bufferSz1_1) : memref<?xi8>
     %bufferSz2_2, %token14 = gpu.spgemm_work_estimation_or_compute async
                                [%token13]{COMPUTE} %spmatA, %spmatB, %spmatC,
-                               %spgemmDesc, %bufferSz2,
+                               %spgemmDesc, %bufferSz1_1,
                                %buf2: f32 into memref<?xi8>
     %rows, %cols, %nnz, %token15 = gpu.spgemm_get_size async [%token14] %spmatC
     %mem_columns, %token16 = gpu.alloc async [%token15] (%cols) : memref<?xi32>
