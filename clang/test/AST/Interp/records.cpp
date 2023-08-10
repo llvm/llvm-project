@@ -871,6 +871,35 @@ namespace VirtualFunctionPointers {
 };
 #endif
 
+#if __cplusplus < 202002L
+namespace VirtualFromBase {
+  struct S1 {
+    virtual int f() const;
+  };
+  struct S2 {
+    virtual int f();
+  };
+  template <typename T> struct X : T {
+    constexpr X() {}
+    double d = 0.0;
+    constexpr int f() { return sizeof(T); }
+  };
+
+  // Non-virtual f(), OK.
+  constexpr X<X<S1>> xxs1;
+  constexpr X<S1> *p = const_cast<X<X<S1>>*>(&xxs1);
+  static_assert(p->f() == sizeof(S1), "");
+
+  // Virtual f(), not OK.
+  constexpr X<X<S2>> xxs2;
+  constexpr X<S2> *q = const_cast<X<X<S2>>*>(&xxs2);
+  static_assert(q->f() == sizeof(X<S2>), ""); // ref-error {{not an integral constant expression}} \
+                                              // ref-note {{cannot evaluate call to virtual function}} \
+                                              // expected-error {{not an integral constant expression}} \
+                                              // expected-note {{cannot evaluate call to virtual function}}
+}
+#endif
+
 namespace CompositeDefaultArgs {
   struct Foo {
     int a;
