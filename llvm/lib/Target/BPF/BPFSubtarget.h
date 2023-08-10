@@ -57,7 +57,7 @@ protected:
   bool UseDwarfRIS;
 
   // whether cpu v4 insns are enabled.
-  bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol, HasStoreImm;
+  bool HasLdsx, HasMovsx, HasBswap, HasSdivSmod, HasGotol;
 
 public:
   // This constructor initializes the data members to match that
@@ -79,7 +79,6 @@ public:
   bool hasBswap() const { return HasBswap; }
   bool hasSdivSmod() const { return HasSdivSmod; }
   bool hasGotol() const { return HasGotol; }
-  bool hasStoreImm() const { return HasStoreImm; }
 
   const BPFInstrInfo *getInstrInfo() const override { return &InstrInfo; }
   const BPFFrameLowering *getFrameLowering() const override {
