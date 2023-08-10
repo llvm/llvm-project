@@ -54,6 +54,14 @@ end module
 ! CHECK:         acc.terminator
 ! CHECK:       }
 
+! CHECK-LABEL: acc.global_dtor @_QMacc_declare_device_resident_testEdata1_acc_dtor {
+! CHECK:         %[[GLOBAL_ADDR:.*]] = fir.address_of(@_QMacc_declare_device_resident_testEdata1) {acc.declare = #acc.declare<dataClause =  acc_declare_device_resident>} : !fir.ref<!fir.array<5000xi32>>
+! CHECK:         %[[DEVPTR:.*]] = acc.getdeviceptr varPtr(%[[GLOBAL_ADDR]] : !fir.ref<!fir.array<5000xi32>>)   -> !fir.ref<!fir.array<5000xi32>> {dataClause = #acc<data_clause acc_declare_device_resident>, name = "data1", structured = false}
+! CHECK:         acc.declare_exit dataOperands(%[[DEVICEPTR]] : !fir.ref<!fir.array<5000xi32>>)
+! CHECK:         acc.delete accPtr(%[[DEVICEPTR]] : !fir.ref<!fir.array<5000xi32>>)   {dataClause = #acc<data_clause acc_declare_device_resident>, name = "data1", structured = false}
+! CHECK:         acc.terminator
+! CHECK:       }
+
 module acc_declare_device_link_test
  integer, parameter :: n = 5000
  integer, dimension(n) :: data1
