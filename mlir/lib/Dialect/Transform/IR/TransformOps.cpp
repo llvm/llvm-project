@@ -612,9 +612,6 @@ LogicalResult transform::ApplyConversionPatternsOp::verify() {
       }
     }
   }
-  if (!getLegalOps() && !getIllegalOps() && !getLegalDialects() &&
-      !getIllegalDialects())
-    return emitOpError() << "conversion target is not specified";
   return success();
 }
 
