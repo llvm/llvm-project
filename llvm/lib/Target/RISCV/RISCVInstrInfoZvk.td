@@ -336,7 +336,7 @@ multiclass VPseudoUnaryV_V<LMULInfo m> {
     defvar suffix = "_V_" # m.MX;
     def suffix : VPseudoUnaryNoMask<m.vrclass, m.vrclass>;
     def suffix # "_MASK" : VPseudoUnaryMask<m.vrclass, m.vrclass>,
-                                            RISCVMaskedPseudo</*MaskOpIdx*/ 2>;
+                                            RISCVMaskedPseudo<MaskIdx=2>;
   }
 }
 
