@@ -1816,24 +1816,7 @@ Record *ByteCodeExprGen<Emitter>::getRecord(const RecordDecl *RD) {
 
 template <class Emitter>
 const Function *ByteCodeExprGen<Emitter>::getFunction(const FunctionDecl *FD) {
-  assert(FD);
-  const Function *Func = P.getFunction(FD);
-  bool IsBeingCompiled = Func && !Func->isFullyCompiled();
-  bool WasNotDefined = Func && !Func->isConstexpr() && !Func->hasBody();
-
-  if (IsBeingCompiled)
-    return Func;
-
-  if (!Func || WasNotDefined) {
-    if (auto R = ByteCodeStmtGen<ByteCodeEmitter>(Ctx, P).compileFunc(FD))
-      Func = *R;
-    else {
-      llvm::consumeError(R.takeError());
-      return nullptr;
-    }
-  }
-
-  return Func;
+  return Ctx.getOrCreateFunction(FD);
 }
 
 template <class Emitter>

@@ -1765,7 +1765,15 @@ inline bool CallVirt(InterpState &S, CodePtr OpPC, const Function *Func) {
       DynamicDecl, StaticDecl, InitialFunction);
 
   if (Overrider != InitialFunction) {
-    Func = S.P.getFunction(Overrider);
+    // DR1872: An instantiated virtual constexpr function can't be called in a
+    // constant expression (prior to C++20). We can still constant-fold such a
+    // call.
+    if (!S.getLangOpts().CPlusPlus20 && Overrider->isVirtual()) {
+      const Expr *E = S.Current->getExpr(OpPC);
+      S.CCEDiag(E, diag::note_constexpr_virtual_call) << E->getSourceRange();
+    }
+
+    Func = S.getContext().getOrCreateFunction(Overrider);
 
     const CXXRecordDecl *ThisFieldDecl =
         ThisPtr.getFieldDesc()->getType()->getAsCXXRecordDecl();
