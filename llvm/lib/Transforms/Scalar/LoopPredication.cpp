@@ -767,23 +767,14 @@ unsigned LoopPredication::widenChecks(SmallVectorImpl<Value *> &Checks,
   return NumWidened;
 }
 
-static SmallVector<Value *> extractChecksFromGuard(Instruction *Guard) {
+bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
+                                           SCEVExpander &Expander) {
   LLVM_DEBUG(dbgs() << "Processing guard:\n");
   LLVM_DEBUG(Guard->dump());
 
+  TotalConsidered++;
   SmallVector<Value *, 4> Checks;
   parseWidenableGuard(Guard, Checks);
-  LLVM_DEBUG(dbgs() << "Found checks:\n");
-  std::for_each(Checks.begin(), Checks.end(), [](const Value *Check) {
-    LLVM_DEBUG(dbgs() << *Check << "\n");
-  });
-  return Checks;
-}
-
-bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
-                                           SCEVExpander &Expander) {
-  TotalConsidered++;
-  auto Checks = extractChecksFromGuard(Guard);
   unsigned NumWidened = widenChecks(Checks, Expander, Guard);
   if (NumWidened == 0)
     return false;
@@ -808,6 +799,8 @@ bool LoopPredication::widenGuardConditions(IntrinsicInst *Guard,
 bool LoopPredication::widenWidenableBranchGuardConditions(
     BranchInst *BI, SCEVExpander &Expander) {
   assert(isGuardAsWidenableBranch(BI) && "Must be!");
+  LLVM_DEBUG(dbgs() << "Processing guard:\n");
+  LLVM_DEBUG(BI->dump());
 
   Value *Cond, *WC;
   BasicBlock *IfTrueBB, *IfFalseBB;
@@ -816,7 +809,8 @@ bool LoopPredication::widenWidenableBranchGuardConditions(
   (void)Parsed;
 
   TotalConsidered++;
-  auto Checks = extractChecksFromGuard(BI);
+  SmallVector<Value *, 4> Checks;
+  parseWidenableGuard(BI, Checks);
   // At the moment, our matching logic for wideable conditions implicitly
   // assumes we preserve the form: (br (and Cond, WC())).  FIXME
   Checks.push_back(WC);
