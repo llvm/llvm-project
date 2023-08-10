@@ -2346,22 +2346,30 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
   modBuilder.setInsertionPointAfter(declareGlobalOp);
 }
 
+static mlir::func::FuncOp createDeclareFunc(mlir::OpBuilder &modBuilder,
+                                            fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            llvm::StringRef funcName) {
+  auto funcTy = mlir::FunctionType::get(modBuilder.getContext(), {}, {});
+  auto funcOp = modBuilder.create<mlir::func::FuncOp>(loc, funcName, funcTy);
+  funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), {}, {});
+  builder.setInsertionPointToEnd(&funcOp.getRegion().back());
+  builder.create<mlir::func::ReturnOp>(loc);
+  builder.setInsertionPointToStart(&funcOp.getRegion().back());
+  return funcOp;
+}
+
 template <typename EntryOp>
-static void createRegisterFunc(mlir::OpBuilder &modBuilder,
-                               fir::FirOpBuilder &builder, mlir::Location loc,
-                               fir::GlobalOp &globalOp,
-                               mlir::acc::DataClause clause) {
+static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
+                                   fir::FirOpBuilder &builder,
+                                   mlir::Location loc, fir::GlobalOp &globalOp,
+                                   mlir::acc::DataClause clause) {
   std::stringstream registerFuncName;
   registerFuncName << globalOp.getSymName().str()
-                   << "_acc_declare_update_desc_post_alloc";
-  auto funcTy = mlir::FunctionType::get(modBuilder.getContext(), {}, {});
-  mlir::func::FuncOp registerFuncOp = modBuilder.create<mlir::func::FuncOp>(
-      loc, registerFuncName.str(), funcTy);
-  registerFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
-
-  builder.createBlock(&registerFuncOp.getRegion(),
-                      registerFuncOp.getRegion().end(), {}, {});
-  builder.setInsertionPointToEnd(&registerFuncOp.getRegion().back());
+                   << Fortran::lower::declarePostAllocSuffix.str();
+  auto registerFuncOp =
+      createDeclareFunc(modBuilder, builder, loc, registerFuncName.str());
 
   fir::AddrOfOp addrOp = builder.create<fir::AddrOfOp>(
       loc, fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
@@ -2387,23 +2395,7 @@ static void createRegisterFunc(mlir::OpBuilder &modBuilder,
   llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
   llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
   createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
-
-  builder.create<mlir::func::ReturnOp>(loc);
   modBuilder.setInsertionPointAfter(registerFuncOp);
-}
-
-static mlir::func::FuncOp createDeclareFunc(mlir::OpBuilder &modBuilder,
-                                            fir::FirOpBuilder &builder,
-                                            mlir::Location loc,
-                                            llvm::StringRef funcName) {
-  auto funcTy = mlir::FunctionType::get(modBuilder.getContext(), {}, {});
-  auto funcOp = modBuilder.create<mlir::func::FuncOp>(loc, funcName, funcTy);
-  funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
-  builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), {}, {});
-  builder.setInsertionPointToEnd(&funcOp.getRegion().back());
-  builder.create<mlir::func::ReturnOp>(loc);
-  builder.setInsertionPointToStart(&funcOp.getRegion().back());
-  return funcOp;
 }
 
 /// Action to be performed on deallocation are split in two distinct functions.
@@ -2500,7 +2492,7 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                                         mlir::acc::DeclareEnterOp, ExitOp>(
                       modBuilder, builder, operandLocation, globalOp, clause,
                       /*implicit=*/true);
-                  createRegisterFunc<EntryOp>(
+                  createDeclareAllocFunc<EntryOp>(
                       modBuilder, builder, operandLocation, globalOp, clause);
                   if constexpr (!std::is_same_v<EntryOp, ExitOp>)
                     createDeclareDeallocFunc<ExitOp>(
