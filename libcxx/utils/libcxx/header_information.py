@@ -136,7 +136,7 @@ def is_header(file):
         and file.name != "libcxx.imp"
     )
 
-libcxx_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))))
+libcxx_root = pathlib.Path(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 include = pathlib.Path(os.path.join(libcxx_root, "include"))
 test = pathlib.Path(os.path.join(libcxx_root, "test"))
 assert libcxx_root.exists()
