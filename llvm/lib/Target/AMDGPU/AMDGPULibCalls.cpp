@@ -65,12 +65,6 @@ private:
 
   /* Specialized optimizations */
 
-  // recip (half or native)
-  bool fold_recip(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // divide (half or native)
-  bool fold_divide(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
   // pow/powr/pown
   bool fold_pow(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
@@ -587,19 +581,6 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     case AMDGPULibFunc::EI_COS:
     case AMDGPULibFunc::EI_SIN:
       return fold_sincos(FPOp, B, FInfo);
-    case AMDGPULibFunc::EI_RECIP:
-      // skip vector function
-      assert((FInfo.getPrefix() == AMDGPULibFunc::NATIVE ||
-              FInfo.getPrefix() == AMDGPULibFunc::HALF) &&
-             "recip must be an either native or half function");
-      return (getVecSize(FInfo) != 1) ? false : fold_recip(CI, B, FInfo);
-
-    case AMDGPULibFunc::EI_DIVIDE:
-      // skip vector function
-      assert((FInfo.getPrefix() == AMDGPULibFunc::NATIVE ||
-              FInfo.getPrefix() == AMDGPULibFunc::HALF) &&
-             "divide must be an either native or half function");
-      return (getVecSize(FInfo) != 1) ? false : fold_divide(CI, B, FInfo);
     case AMDGPULibFunc::EI_FMA:
     case AMDGPULibFunc::EI_MAD:
     case AMDGPULibFunc::EI_NFMA:
@@ -684,45 +665,6 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
     }
   }
 
-  return false;
-}
-
-//  [native_]half_recip(c) ==> 1.0/c
-bool AMDGPULibCalls::fold_recip(CallInst *CI, IRBuilder<> &B,
-                                const FuncInfo &FInfo) {
-  Value *opr0 = CI->getArgOperand(0);
-  if (ConstantFP *CF = dyn_cast<ConstantFP>(opr0)) {
-    // Just create a normal div. Later, InstCombine will be able
-    // to compute the divide into a constant (avoid check float infinity
-    // or subnormal at this point).
-    Value *nval = B.CreateFDiv(ConstantFP::get(CF->getType(), 1.0),
-                               opr0,
-                               "recip2div");
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *nval << "\n");
-    replaceCall(CI, nval);
-    return true;
-  }
-  return false;
-}
-
-//  [native_]half_divide(x, c) ==> x/c
-bool AMDGPULibCalls::fold_divide(CallInst *CI, IRBuilder<> &B,
-                                 const FuncInfo &FInfo) {
-  Value *opr0 = CI->getArgOperand(0);
-  Value *opr1 = CI->getArgOperand(1);
-  ConstantFP *CF0 = dyn_cast<ConstantFP>(opr0);
-  ConstantFP *CF1 = dyn_cast<ConstantFP>(opr1);
-
-  if ((CF0 && CF1) ||  // both are constants
-      (CF1 && (getArgType(FInfo) == AMDGPULibFunc::F32)))
-      // CF1 is constant && f32 divide
-  {
-    Value *nval1 = B.CreateFDiv(ConstantFP::get(opr1->getType(), 1.0),
-                                opr1, "__div2recip");
-    Value *nval  = B.CreateFMul(opr0, nval1, "__div2mul");
-    replaceCall(CI, nval);
-    return true;
-  }
   return false;
 }
 
