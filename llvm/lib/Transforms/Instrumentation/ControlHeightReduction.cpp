@@ -1777,6 +1777,20 @@ void CHR::cloneScopeBlocks(CHRScope *Scope,
       BasicBlock *NewBB = CloneBasicBlock(BB, VMap, ".nonchr", &F);
       NewBlocks.push_back(NewBB);
       VMap[BB] = NewBB;
+
+      // Unreachable predecessors will not be cloned and will not have an edge
+      // to the cloned block. As such, also remove them from any phi nodes.
+      // To avoid iterator invalidation, first collect the dead predecessors
+      // from the first phi node, and then perform the actual removal.
+      if (auto *FirstPN = dyn_cast<PHINode>(NewBB->begin())) {
+        SmallVector<BasicBlock *> DeadPreds;
+        for (BasicBlock *Pred : FirstPN->blocks())
+          if (!DT.isReachableFromEntry(Pred))
+            DeadPreds.push_back(Pred);
+        for (PHINode &PN : make_early_inc_range(NewBB->phis()))
+          for (BasicBlock *Pred : DeadPreds)
+            PN.removeIncomingValue(Pred);
+      }
     }
 
   // Place the cloned blocks right after the original blocks (right before the
