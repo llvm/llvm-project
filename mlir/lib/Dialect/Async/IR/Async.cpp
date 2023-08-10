@@ -61,7 +61,7 @@ YieldOp::getMutableSuccessorOperands(std::optional<unsigned> index) {
 /// ExecuteOp
 //===----------------------------------------------------------------------===//
 
-constexpr char kOperandSegmentSizesAttr[] = "operand_segment_sizes";
+constexpr char kOperandSegmentSizesAttr[] = "operandSegmentSizes";
 
 OperandRange
 ExecuteOp::getSuccessorEntryOperands(std::optional<unsigned> index) {
@@ -100,7 +100,7 @@ void ExecuteOp::build(OpBuilder &builder, OperationState &result,
   result.addOperands(dependencies);
   result.addOperands(operands);
 
-  // Add derived `operand_segment_sizes` attribute based on parsed operands.
+  // Add derived `operandSegmentSizes` attribute based on parsed operands.
   int32_t numDependencies = dependencies.size();
   int32_t numOperands = operands.size();
   auto operandSegmentSizes =
@@ -208,7 +208,7 @@ ParseResult ExecuteOp::parse(OpAsmParser &parser, OperationState &result) {
 
   int32_t numOperands = valueArgs.size();
 
-  // Add derived `operand_segment_sizes` attribute based on parsed operands.
+  // Add derived `operandSegmentSizes` attribute based on parsed operands.
   auto operandSegmentSizes =
       parser.getBuilder().getDenseI32ArrayAttr({numDependencies, numOperands});
   result.addAttribute(kOperandSegmentSizesAttr, operandSegmentSizes);
