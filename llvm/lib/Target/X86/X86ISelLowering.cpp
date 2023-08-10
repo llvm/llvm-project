@@ -5646,17 +5646,28 @@ static bool getFauxShuffleMask(SDValue N, const APInt &DemandedElts,
     unsigned NumSubElts = SubVT.getVectorNumElements();
     if (!N->isOnlyUserOf(Sub.getNode()))
       return false;
+    SDValue SubBC = peekThroughBitcasts(Sub);
     uint64_t InsertIdx = N.getConstantOperandVal(2);
     // Handle INSERT_SUBVECTOR(SRC0, EXTRACT_SUBVECTOR(SRC1)).
-    if (Sub.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
-        Sub.getOperand(0).getValueType() == VT) {
-      uint64_t ExtractIdx = Sub.getConstantOperandVal(1);
-      for (int i = 0; i != (int)NumElts; ++i)
-        Mask.push_back(i);
+    if (SubBC.getOpcode() == ISD::EXTRACT_SUBVECTOR &&
+        SubBC.getOperand(0).getValueSizeInBits() == NumSizeInBits) {
+      uint64_t ExtractIdx = SubBC.getConstantOperandVal(1);
+      SDValue SubBCSrc = SubBC.getOperand(0);
+      unsigned NumSubSrcBCElts = SubBCSrc.getValueType().getVectorNumElements();
+      unsigned MaxElts = std::max(NumElts, NumSubSrcBCElts);
+      assert((MaxElts % NumElts) == 0 && (MaxElts % NumSubSrcBCElts) == 0 &&
+             "Subvector valuetype mismatch");
+      InsertIdx *= (MaxElts / NumElts);
+      ExtractIdx *= (MaxElts / NumSubSrcBCElts);
+      NumSubElts *= (MaxElts / NumElts);
+      bool SrcIsUndef = Src.isUndef();
+      for (int i = 0; i != (int)MaxElts; ++i)
+        Mask.push_back(SrcIsUndef ? SM_SentinelUndef : i);
       for (int i = 0; i != (int)NumSubElts; ++i)
-        Mask[InsertIdx + i] = NumElts + ExtractIdx + i;
-      Ops.push_back(Src);
-      Ops.push_back(Sub.getOperand(0));
+        Mask[InsertIdx + i] = (SrcIsUndef ? 0 : MaxElts) + ExtractIdx + i;
+      if (!SrcIsUndef)
+        Ops.push_back(Src);
+      Ops.push_back(SubBCSrc);
       return true;
     }
     // Handle INSERT_SUBVECTOR(SRC0, SHUFFLE(SRC1)).
