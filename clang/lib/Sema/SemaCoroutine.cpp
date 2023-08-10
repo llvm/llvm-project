@@ -318,7 +318,8 @@ static ExprResult buildMemberCall(Sema &S, Expr *Base, SourceLocation Loc,
     return ExprError();
   }
 
-  return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, Loc, nullptr);
+  auto EndLoc = Args.empty() ? Loc : Args.back()->getEndLoc();
+  return S.BuildCallExpr(nullptr, Result.get(), Loc, Args, EndLoc, nullptr);
 }
 
 // See if return type is coroutine-handle and if so, invoke builtin coro-resume
