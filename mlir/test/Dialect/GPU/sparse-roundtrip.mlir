@@ -55,72 +55,45 @@ module attributes {gpu.container_module} {
   }
 
   // CHECK-LABEL:     func @spgemm
-  // CHECK:      %{{.*}} = gpu.wait async
+  // CHECK:           %{{.*}} = gpu.wait async
   // CHECK:           %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xindex>
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xf64>
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.create_csr async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf64>
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.create_csr async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf64>
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.create_csr async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf64>
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.spgemm_create_descr async [%{{.*}}]
-  // CHECK:           %{{.*}} = memref.alloc() : memref<0xi8>
-  // CHECK:           %{{.*}} = arith.constant 0 : index
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.spgemm_work_estimation_or_compute async [%{{.*}}]{{{.*}}} %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 into memref<0xi8>
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xi8>
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.spgemm_work_estimation_or_compute async [%{{.*}}]{{{.*}}} %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 into memref<?xi8>
-  // CHECK:           %{{.*}}, %{{.*}}, %{{.*}} = gpu.spgemm_estimate_memory async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 into memref<0xi8>
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xi8>
-  // CHECK:           %{{.*}}, %{{.*}}, %{{.*}} = gpu.spgemm_estimate_memory async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 into memref<?xi8>
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xi8>
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.spgemm_work_estimation_or_compute async [%{{.*}}]{{{.*}}} %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 into memref<?xi8>
-  // CHECK:           %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} = gpu.spgemm_get_size async [%{{.*}}] %{{.*}}
-  // CHECK:           %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xi32>
   // CHECK:           %{{.*}}, %{{.*}} = gpu.alloc async [%{{.*}}] (%{{.*}}) : memref<?xf32>
-  // CHECK:           gpu.wait [%{{.*}}]
-  // CHECK:           gpu.spgemm_copy  %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
-  // CHECK:           gpu.destroy_sp_mat  %{{.*}}
-  // CHECK:           gpu.destroy_sp_mat  %{{.*}}
-  // CHECK:           gpu.destroy_sp_mat  %{{.*}}
+  // CHECK:           %{{.*}}, %{{.*}} = gpu.create_csr async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf32>
+  // CHECK:           %{{.*}}, %{{.*}} = gpu.create_csr async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf32>
+  // CHECK:           %{{.*}}, %{{.*}} = gpu.create_csr async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf32>
+  // CHECK:           %{{.*}}, %{{.*}} = gpu.spgemm_create_descr async [%{{.*}}]
+  // CHECK:           %{{.*}}, %{{.*}} = gpu.spgemm_work_estimation_or_compute async [%{{.*}}]{ WORK_ESTIMATION} %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 into memref<0xi8>
+  // CHECK:           %{{.*}}, %{{.*}} = gpu.spgemm_work_estimation_or_compute async [%{{.*}}]{ COMPUTE} %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32 into memref<0xi8>
+  // CHECK:           %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} = gpu.spgemm_get_size async [%{{.*}}] %{{.*}}
+  // CHECK            %{{.*}} = gpu.set_csr_pointers async [%{{.*}}] %{{.*}}, {{.*}}, {{.*}}, {{.*}} : memref<?xindex>, memref<?xindex>, memref<?xf32>
+  // CHECK:           %{{.*}} = gpu.spgemm_copy async [%{{.*}}] %{{.*}}, %{{.*}}, %{{.*}}, %{{.*}} : f32
+  // CHECK:           %{{.*}} = gpu.spgemm_destroy_descr async [%{{.*}}] %{{.*}}
+  // CHECK:           gpu.destroy_sp_mat %{{.*}}
+  // CHECK:           gpu.destroy_sp_mat %{{.*}}
+  // CHECK:           gpu.destroy_sp_mat %{{.*}}
   // CHECK:           return
   func.func @spgemm(%arg0: index) {
     %token0 = gpu.wait async
     %mem1, %token1 = gpu.alloc async [%token0] (%arg0) : memref<?xindex>
-    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf64>
-    %spmatA, %token3 = gpu.create_csr async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
-    %spmatB, %token4 = gpu.create_csr async [%token3] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
-    %spmatC, %token5 = gpu.create_csr async [%token4] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf64>
+    %mem2, %token2 = gpu.alloc async [%token1] (%arg0) : memref<?xf32>
+    %spmatA, %token3 = gpu.create_csr async [%token2] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf32>
+    %spmatB, %token4 = gpu.create_csr async [%token3] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf32>
+    %spmatC, %token5 = gpu.create_csr async [%token4] %arg0, %arg0, %arg0, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf32>
     %spgemmDesc, %token6 = gpu.spgemm_create_descr async [%token5]
-    // Used as nullptr
-    %alloc = memref.alloc() : memref<0xi8>
+    %alloc = memref.alloc() : memref<0xi8>  // nullptr
     %c0 = arith.constant 0 : index
     %bufferSz1, %token7 = gpu.spgemm_work_estimation_or_compute async
                             [%token6]{WORK_ESTIMATION}
-                            %spmatA{NON_TRANSPOSE}, %spmatB{NON_TRANSPOSE},
-                            %spmatC, %spgemmDesc, %c0,
-                            %alloc: f32 into memref<0xi8>
-    %buf1, %token8 = gpu.alloc async [%token7] (%bufferSz1) : memref<?xi8>
-    %bufferSz1_1, %token9 = gpu.spgemm_work_estimation_or_compute async
-                              [%token8]{WORK_ESTIMATION} %spmatA, %spmatB,
-                              %spmatC, %spgemmDesc, %bufferSz1,
-                              %buf1: f32 into memref<?xi8>
-    %bufferSz3, %dummy, %token10 = gpu.spgemm_estimate_memory async [%token9]
-                                     %spmatA, %spmatB, %spmatC,
-                                     %spgemmDesc, %c0, %c0,
-                                     %alloc: f32 into memref<0xi8>
-    %buf3, %token11 = gpu.alloc async [%token10] (%bufferSz3) : memref<?xi8>
-    %bufferSz3_2, %bufferSz2, %token12 = gpu.spgemm_estimate_memory async
-                                          [%token11] %spmatA, %spmatB, %spmatC,
-                                          %spgemmDesc, %bufferSz3, %c0,
-                                          %buf3: f32 into memref<?xi8>
-    %buf2, %token13 = gpu.alloc async [%token12] (%bufferSz2) : memref<?xi8>
-    %bufferSz2_2, %token14 = gpu.spgemm_work_estimation_or_compute async
-                               [%token13]{COMPUTE} %spmatA, %spmatB, %spmatC,
-                               %spgemmDesc, %bufferSz2,
-                               %buf2: f32 into memref<?xi8>
-    %rows, %cols, %nnz, %token15 = gpu.spgemm_get_size async [%token14] %spmatC
-    %mem_columns, %token16 = gpu.alloc async [%token15] (%cols) : memref<?xi32>
-    %mem_values, %token17 = gpu.alloc async [%token16] (%nnz) : memref<?xf32>
-    gpu.wait [%token17]
-    gpu.spgemm_copy %spmatA, %spmatB, %spmatC, %spgemmDesc: f32
+                            %spmatA, %spmatB, %spmatC,
+			    %spgemmDesc, %c0, %alloc: f32 into memref<0xi8>
+    %bufferSz2, %token8 = gpu.spgemm_work_estimation_or_compute async
+                               [%token7]{COMPUTE}
+			       %spmatA, %spmatB, %spmatC,
+                               %spgemmDesc, %c0, %alloc: f32 into memref<0xi8>
+    %rows, %cols, %nnz, %token9 = gpu.spgemm_get_size async [%token8] %spmatC
+    %token10 = gpu.set_csr_pointers async [%token8] %spmatC, %mem1, %mem1, %mem2 : memref<?xindex>, memref<?xindex>, memref<?xf32>
+    %token11 = gpu.spgemm_copy async [%token10] %spmatA, %spmatB, %spmatC, %spgemmDesc: f32
+    %token12 = gpu.spgemm_destroy_descr async [%token11] %spgemmDesc
     gpu.destroy_sp_mat %spmatA
     gpu.destroy_sp_mat %spmatB
     gpu.destroy_sp_mat %spmatC
