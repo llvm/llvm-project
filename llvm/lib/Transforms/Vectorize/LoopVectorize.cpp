@@ -2382,9 +2382,11 @@ static void buildScalarSteps(Value *ScalarIV, Value *Step,
 /// For pointer induction, returns StartValue[Index * StepValue].
 /// FIXME: The newly created binary instructions should contain nsw/nuw
 /// flags, which can be found from the original scalar operations.
-static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
-                                   Value *StartValue, Value *Step,
-                                   const InductionDescriptor &ID) {
+static Value *
+emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
+                     Value *Step,
+                     InductionDescriptor::InductionKind InductionKind,
+                     BinaryOperator *InductionBinOp) {
   Type *StepTy = Step->getType();
   Value *CastedIndex = StepTy->isIntegerTy()
                            ? B.CreateSExtOrTrunc(Index, StepTy)
@@ -2428,7 +2430,7 @@ static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
     return B.CreateMul(X, Y);
   };
 
-  switch (ID.getKind()) {
+  switch (InductionKind) {
   case InductionDescriptor::IK_IntInduction: {
     assert(!isa<VectorType>(Index->getType()) &&
            "Vector indices not supported for integer inductions yet");
@@ -2446,7 +2448,6 @@ static Value *emitTransformedIndex(IRBuilderBase &B, Value *Index,
     assert(!isa<VectorType>(Index->getType()) &&
            "Vector indices not supported for FP inductions yet");
     assert(Step->getType()->isFloatingPointTy() && "Expected FP Step value");
-    auto InductionBinOp = ID.getInductionBinOp();
     assert(InductionBinOp &&
            (InductionBinOp->getOpcode() == Instruction::FAdd ||
             InductionBinOp->getOpcode() == Instruction::FSub) &&
@@ -3118,15 +3119,16 @@ PHINode *InnerLoopVectorizer::createInductionResumeValue(
     if (II.getInductionBinOp() && isa<FPMathOperator>(II.getInductionBinOp()))
       B.setFastMathFlags(II.getInductionBinOp()->getFastMathFlags());
 
-    EndValue =
-        emitTransformedIndex(B, VectorTripCount, II.getStartValue(), Step, II);
+    EndValue = emitTransformedIndex(B, VectorTripCount, II.getStartValue(),
+                                    Step, II.getKind(), II.getInductionBinOp());
     EndValue->setName("ind.end");
 
     // Compute the end value for the additional bypass (if applicable).
     if (AdditionalBypass.first) {
       B.SetInsertPoint(&(*AdditionalBypass.first->getFirstInsertionPt()));
-      EndValueFromAdditionalBypass = emitTransformedIndex(
-          B, AdditionalBypass.second, II.getStartValue(), Step, II);
+      EndValueFromAdditionalBypass =
+          emitTransformedIndex(B, AdditionalBypass.second, II.getStartValue(),
+                               Step, II.getKind(), II.getInductionBinOp());
       EndValueFromAdditionalBypass->setName("ind.end");
     }
   }
@@ -3340,7 +3342,8 @@ void InnerLoopVectorizer::fixupIVUsers(PHINode *OrigPhi,
       Value *Step = StepVPV->isLiveIn() ? StepVPV->getLiveInIRValue()
                                         : State.get(StepVPV, {0, 0});
       Value *Escape =
-          emitTransformedIndex(B, CountMinusOne, II.getStartValue(), Step, II);
+          emitTransformedIndex(B, CountMinusOne, II.getStartValue(), Step,
+                               II.getKind(), II.getInductionBinOp());
       Escape->setName("ind.escape");
       MissingVals[UI] = Escape;
     }
@@ -9408,7 +9411,8 @@ void VPWidenPointerInductionRecipe::execute(VPTransformState &State) {
 
         Value *Step = State.get(getOperand(1), VPIteration(Part, Lane));
         Value *SclrGep = emitTransformedIndex(
-            State.Builder, GlobalIdx, IndDesc.getStartValue(), Step, IndDesc);
+            State.Builder, GlobalIdx, IndDesc.getStartValue(), Step,
+            IndDesc.getKind(), IndDesc.getInductionBinOp());
         SclrGep->setName("next.gep");
         State.set(this, SclrGep, VPIteration(Part, Lane));
       }
@@ -9482,9 +9486,9 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
 
   Value *Step = State.get(getStepValue(), VPIteration(0, 0));
   Value *CanonicalIV = State.get(getCanonicalIV(), VPIteration(0, 0));
-  Value *DerivedIV =
-      emitTransformedIndex(State.Builder, CanonicalIV,
-                           getStartValue()->getLiveInIRValue(), Step, IndDesc);
+  Value *DerivedIV = emitTransformedIndex(
+      State.Builder, CanonicalIV, getStartValue()->getLiveInIRValue(), Step,
+      IndDesc.getKind(), IndDesc.getInductionBinOp());
   DerivedIV->setName("offset.idx");
   if (ResultTy != DerivedIV->getType()) {
     assert(Step->getType()->isIntegerTy() &&
