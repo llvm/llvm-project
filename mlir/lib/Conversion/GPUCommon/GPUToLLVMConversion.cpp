@@ -302,15 +302,6 @@ protected:
        llvmPointerType /*a*/, llvmPointerType /*b*/, llvmPointerType /*c*/,
        llvmInt32Type /*ctp*/, llvmIntPtrType /*bs*/, llvmPointerType /*buf*/,
        llvmPointerType /*void *stream*/}};
-  FunctionCallBuilder createSpGEMMEstimateMemoryBuilder = {
-      "mgpuSpGEMMEstimateMemory",
-      llvmVoidType,
-      {llvmPointerType /*nbs3*/, llvmPointerType /*nbs2*/,
-       llvmPointerType /*s*/, llvmInt32Type /*ma*/, llvmInt32Type /*mb*/,
-       llvmPointerType /*a*/, llvmPointerType /*b*/, llvmPointerType /*c*/,
-       llvmInt32Type /*ctp*/, llvmFloat32Type /*chunk_fraction*/,
-       llvmIntPtrType /*bs3*/, llvmPointerType /*buf3*/, llvmIntPtrType /*bs2*/,
-       llvmPointerType /*void *stream*/}};
   FunctionCallBuilder createSpGEMMComputeBuilder = {
       "mgpuSpGEMMCompute",
       llvmIntPtrType,
@@ -329,7 +320,7 @@ protected:
       llvmPointerType,
       {llvmPointerType /*void *stream*/}};
   FunctionCallBuilder createSpGEMMDestroyDescrBuilder = {
-      "mgpuSpGEMMDestoryDescr",
+      "mgpuSpGEMMDestroyDescr",
       llvmVoidType,
       {llvmPointerType /*s*/, llvmPointerType /*void *stream*/}};
   FunctionCallBuilder createSpGEMMGetSizeBuilder = {
@@ -337,6 +328,12 @@ protected:
       llvmVoidType,
       {llvmPointerType /*mc*/, llvmPointerType /*rc*/, llvmPointerType /*cc*/,
        llvmPointerType /*nc*/, llvmPointerType /*void *stream*/}};
+  FunctionCallBuilder createSetCsrPointersBuilder = {
+      "mgpuSetCsrPointers",
+      llvmVoidType,
+      {llvmPointerType /*spmat*/, llvmPointerType /*pos*/,
+       llvmPointerType /*crd*/, llvmPointerType /*val*/,
+       llvmPointerType /*void *stream*/}};
 };
 
 /// A rewrite pattern to convert gpu.host_register operations into a GPU runtime
@@ -559,9 +556,9 @@ DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SDDMMOp)
 DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SpGEMMCreateDescrOp)
 DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SpGEMMDestroyDescrOp)
 DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SpGEMMWorkEstimationOrComputeOp)
-DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SpGEMMEstimateMemoryOp)
 DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SpGEMMCopyOp)
 DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SpGEMMGetSizeOp)
+DECLARE_CONVERT_OP_TO_GPU_RUNTIME_CALL_PATTERN(SetCsrPointersOp)
 
 } // namespace
 
@@ -1710,13 +1707,13 @@ LogicalResult
 ConvertSpGEMMDestroyDescrOpToGpuRuntimeCallPattern::matchAndRewrite(
     gpu::SpGEMMDestroyDescrOp op, OpAdaptor adaptor,
     ConversionPatternRewriter &rewriter) const {
-
   if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)) ||
       failed(isAsyncWithOneDependency(rewriter, op)))
     return failure();
   Location loc = op.getLoc();
   auto stream = adaptor.getAsyncDependencies().front();
-  createSpGEMMCopyBuilder.create(loc, rewriter, {adaptor.getDesc(), stream});
+  createSpGEMMDestroyDescrBuilder.create(loc, rewriter,
+                                         {adaptor.getDesc(), stream});
   rewriter.replaceOp(op, {stream});
   return success();
 }
@@ -1761,55 +1758,6 @@ ConvertSpGEMMWorkEstimationOrComputeOpToGpuRuntimeCallPattern::matchAndRewrite(
             .getResult();
   }
   rewriter.replaceOp(op, {bufferSizeNew, stream});
-  return success();
-}
-
-LogicalResult
-ConvertSpGEMMEstimateMemoryOpToGpuRuntimeCallPattern::matchAndRewrite(
-    gpu::SpGEMMEstimateMemoryOp op, OpAdaptor adaptor,
-    ConversionPatternRewriter &rewriter) const {
-  if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)) ||
-      failed(isAsyncWithOneDependency(rewriter, op)))
-    return failure();
-  Location loc = op.getLoc();
-  auto computeType = genConstInt32From(
-      rewriter, loc, getCuSparseDataTypeFrom(adaptor.getComputeType()));
-  auto modeA = genConstInt32From(rewriter, loc, adaptor.getModeA());
-  auto modeB = genConstInt32From(rewriter, loc, adaptor.getModeB());
-  auto stream = adaptor.getAsyncDependencies().front();
-  // TODO: support other chunk fraction
-  Value chunkFraction = genConstFloat32From(rewriter, loc, 1.0);
-  Value pBuf3 =
-      MemRefDescriptor(adaptor.getBuffer3()).allocatedPtr(rewriter, loc);
-  if (!getTypeConverter()->useOpaquePointers())
-    pBuf3 = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pBuf3);
-
-  auto two = rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
-                                               rewriter.getIndexAttr(2));
-  auto bufferSize = rewriter.create<LLVM::AllocaOp>(
-      loc, llvmInt64PointerType, llvmInt64Type, two, /*alignment=*/16);
-
-  auto bufferSizePtr2 = rewriter.create<LLVM::GEPOp>(
-      loc, llvmInt64PointerType, llvmInt64PointerType, bufferSize,
-      ValueRange{rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
-                                                   rewriter.getIndexAttr(0))});
-  auto bufferSizePtr3 = rewriter.create<LLVM::GEPOp>(
-      loc, llvmInt64PointerType, llvmInt64PointerType, bufferSize,
-      ValueRange{rewriter.create<LLVM::ConstantOp>(loc, getIndexType(),
-                                                   rewriter.getIndexAttr(1))});
-
-  createSpGEMMEstimateMemoryBuilder.create(
-      loc, rewriter,
-      {bufferSizePtr3, bufferSizePtr2, adaptor.getDesc(), modeA, modeB,
-       adaptor.getSpmatA(), adaptor.getSpmatB(), adaptor.getSpmatC(),
-       computeType, chunkFraction, adaptor.getBufferSz3(), pBuf3,
-       adaptor.getBufferSz2(), stream});
-  auto bufferSize2 =
-      rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, bufferSizePtr2);
-  auto bufferSize3 =
-      rewriter.create<LLVM::LoadOp>(loc, llvmInt64Type, bufferSizePtr3);
-
-  rewriter.replaceOp(op, {bufferSize3, bufferSize2, stream});
   return success();
 }
 
@@ -1869,6 +1817,31 @@ LogicalResult ConvertSpGEMMGetSizeOpToGpuRuntimeCallPattern::matchAndRewrite(
   return success();
 }
 
+LogicalResult ConvertSetCsrPointersOpToGpuRuntimeCallPattern::matchAndRewrite(
+    gpu::SetCsrPointersOp op, OpAdaptor adaptor,
+    ConversionPatternRewriter &rewriter) const {
+  if (failed(areAllLLVMTypes(op, adaptor.getOperands(), rewriter)) ||
+      failed(isAsyncWithOneDependency(rewriter, op)))
+    return failure();
+  Location loc = op.getLoc();
+  auto stream = adaptor.getAsyncDependencies().front();
+  Value pPos =
+      MemRefDescriptor(adaptor.getPositions()).allocatedPtr(rewriter, loc);
+  Value pCrd =
+      MemRefDescriptor(adaptor.getCoordinates()).allocatedPtr(rewriter, loc);
+  Value pVal =
+      MemRefDescriptor(adaptor.getValues()).allocatedPtr(rewriter, loc);
+  if (!getTypeConverter()->useOpaquePointers()) {
+    pPos = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pPos);
+    pCrd = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pCrd);
+    pVal = rewriter.create<LLVM::BitcastOp>(loc, llvmPointerType, pVal);
+  }
+  createSetCsrPointersBuilder.create(
+      loc, rewriter, {adaptor.getSpmat(), pPos, pCrd, pVal, stream});
+  rewriter.replaceOp(op, {stream});
+  return success();
+}
+
 void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns,
                                                StringRef gpuBinaryAnnotation,
@@ -1904,9 +1877,9 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                ConvertSpGEMMCreateDescrOpToGpuRuntimeCallPattern,
                ConvertSpGEMMDestroyDescrOpToGpuRuntimeCallPattern,
                ConvertSpGEMMWorkEstimationOrComputeOpToGpuRuntimeCallPattern,
-               ConvertSpGEMMEstimateMemoryOpToGpuRuntimeCallPattern,
                ConvertSpGEMMCopyOpToGpuRuntimeCallPattern,
-               ConvertSpGEMMGetSizeOpToGpuRuntimeCallPattern>(converter);
+               ConvertSpGEMMGetSizeOpToGpuRuntimeCallPattern,
+               ConvertSetCsrPointersOpToGpuRuntimeCallPattern>(converter);
   patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(
       converter, gpuBinaryAnnotation, kernelBarePtrCallConv);
   patterns.add<EraseGpuModuleOpPattern>(&converter.getContext());
