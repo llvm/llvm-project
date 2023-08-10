@@ -451,6 +451,11 @@ def IsolatedOneRegionOp : TEST_Op<"isolated_one_region_op", [IsolatedFromAbove]>
   }];
 }
 
+def IsolatedRegionsOp : TEST_Op<"isolated_regions", [IsolatedFromAbove]> {
+  let regions = (region VariadicRegion<AnyRegion>:$regions);
+  let assemblyFormat = "attr-dict-with-keyword $regions";
+}
+
 //===----------------------------------------------------------------------===//
 // NoTerminator Operation
 //===----------------------------------------------------------------------===//
