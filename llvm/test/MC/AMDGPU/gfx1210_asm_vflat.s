@@ -91,8 +91,20 @@ scratch_load_b32 v5, v2, off offset:32 scale_offset
 // GFX12-ERR-NEXT:{{^}}scratch_load_b32 v5, v2, off offset:32 scale_offset
 // GFX12-ERR-NEXT:{{^}}                                       ^
 
+scratch_load_b32 v5, v2, s1 offset:32 scale_offset
+// GFX1210: scratch_load_b32 v5, v2, s1 offset:32 scale_offset ; encoding: [0x01,0x00,0x05,0xed,0x05,0x00,0x03,0x00,0x02,0x20,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: scale_offset is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}scratch_load_b32 v5, v2, s1 offset:32 scale_offset
+// GFX12-ERR-NEXT:{{^}}                                      ^
+
 scratch_store_b32 v2, v5, off scale_offset
 // GFX1210: scratch_store_b32 v2, v5, off scale_offset ; encoding: [0x7c,0x80,0x06,0xed,0x00,0x00,0x83,0x02,0x02,0x00,0x00,0x00]
 // GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: scale_offset is not supported on this GPU
 // GFX12-ERR-NEXT:{{^}}scratch_store_b32 v2, v5, off scale_offset
 // GFX12-ERR-NEXT:{{^}}                              ^
+
+scratch_store_b32 v2, v5, s1 scale_offset
+// GFX1210: scratch_store_b32 v2, v5, s1 scale_offset ; encoding: [0x01,0x80,0x06,0xed,0x00,0x00,0x83,0x02,0x02,0x00,0x00,0x00]
+// GFX12-ERR: :[[@LINE-2]]:{{[0-9]+}}: error: scale_offset is not supported on this GPU
+// GFX12-ERR-NEXT:{{^}}scratch_store_b32 v2, v5, s1 scale_offset
+// GFX12-ERR-NEXT:{{^}}                             ^

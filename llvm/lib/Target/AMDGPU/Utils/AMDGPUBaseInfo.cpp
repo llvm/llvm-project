@@ -3160,9 +3160,9 @@ bool supportsScaleOffset(const MCInstrInfo &MII, unsigned Opcode) {
   if (!(TSFlags & SIInstrFlags::FLAT))
     return false;
 
-  if (TSFlags & SIInstrFlags::FlatScratch) // Only SV mode is supported.
-    return hasNamedOperand(Opcode, OpName::vaddr) &&
-           !hasNamedOperand(Opcode, OpName::saddr);
+  // Only SV and SVS modes are supported.
+  if (TSFlags & SIInstrFlags::FlatScratch)
+    return hasNamedOperand(Opcode, OpName::vaddr);
 
   if (TSFlags & SIInstrFlags::FlatGlobal) // Only GVS mode is supported.
     return hasNamedOperand(Opcode, OpName::vaddr) &&

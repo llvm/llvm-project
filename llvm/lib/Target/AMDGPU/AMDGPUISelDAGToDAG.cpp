@@ -1761,7 +1761,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     if (!LHS->isDivergent()) {
       // add (i64 sgpr), (zero_extend (i32 vgpr))
       RHS = Addr.getOperand(1);
-      ScaleOffset = SelectScaleOffset(N, RHS);
+      ScaleOffset = SelectScaleOffset(N, RHS, false /* IsSigned */);
       if (SDValue ZextRHS = matchZExtFromI32orI32(RHS)) {
         SAddr = LHS;
         VOffset = ZextRHS;
@@ -1771,7 +1771,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     RHS = Addr.getOperand(1);
     if (!SAddr && !RHS->isDivergent()) {
       // add (zero_extend (i32 vgpr)), (i64 sgpr)
-      ScaleOffset = SelectScaleOffset(N, LHS);
+      ScaleOffset = SelectScaleOffset(N, LHS, false /* IsSigned */);
       if (SDValue ZextLHS = matchZExtFromI32orI32(LHS)) {
         SAddr = RHS;
         VOffset = ZextLHS;
@@ -1929,7 +1929,8 @@ bool AMDGPUDAGToDAGISel::checkFlatScratchSVSSwizzleBug(
 
 bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
                                              SDValue &VAddr, SDValue &SAddr,
-                                             SDValue &Offset) const  {
+                                             SDValue &Offset,
+                                             SDValue &CPol) const  {
   int64_t ImmOffset = 0;
 
   SDValue LHS, RHS;
@@ -1959,6 +1960,7 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
         if (checkFlatScratchSVSSwizzleBug(VAddr, SAddr, SplitImmOffset))
           return false;
         Offset = CurDAG->getTargetConstant(SplitImmOffset, SDLoc(), MVT::i16);
+        CPol = CurDAG->getTargetConstant(0, SDLoc(), MVT::i32);
         return true;
       }
     }
@@ -1987,6 +1989,10 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
     return false;
   SAddr = SelectSAddrFI(CurDAG, SAddr);
   Offset = CurDAG->getTargetConstant(ImmOffset, SDLoc(), MVT::i16);
+
+  bool ScaleOffset = SelectScaleOffset(N, VAddr, true /* IsSigned */);
+  CPol = CurDAG->getTargetConstant(ScaleOffset ? AMDGPU::CPol::SCAL : 0,
+                                   SDLoc(), MVT::i32);
   return true;
 }
 
@@ -1994,7 +2000,8 @@ bool AMDGPUDAGToDAGISel::SelectScratchSVAddr(SDNode *N, SDValue Addr,
 // the load byte size. If it is update \p Offset to a pre-scaled value and
 // return true.
 bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N,
-                                           SDValue &Offset) const {
+                                           SDValue &Offset,
+                                           bool IsSigned) const {
   bool ScaleOffset = false;
   if (!Subtarget->hasScaleOffset() || !Offset)
     return false;
@@ -2003,15 +2010,21 @@ bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N,
       cast<MemSDNode>(N)->getMemoryVT().getFixedSizeInBits() / 8;
 
   SDValue Off = Offset;
-  if (Offset.getOpcode() == ISD::ZERO_EXTEND)
+  if ((Offset.getOpcode() == (IsSigned ? ISD::SIGN_EXTEND
+                                       : ISD::ZERO_EXTEND)) ||
+      (Offset.getOpcode() == ISD::ANY_EXTEND))
     Off = Off.getOperand(0);
 
   if (isPowerOf2_32(Size) && Off.getOpcode() == ISD::SHL) {
     if (auto *C = dyn_cast<ConstantSDNode>(Off.getOperand(1)))
       ScaleOffset = C->getZExtValue() == Log2_32(Size);
   } else if (Offset.getOpcode() == ISD::MUL ||
+             (IsSigned && Offset.getOpcode() == AMDGPUISD::MUL_I24) ||
+             Offset.getOpcode() == AMDGPUISD::MUL_U24 ||
              (Offset.isMachineOpcode() &&
-              Offset.getMachineOpcode() == AMDGPU::S_MUL_U64_U32_PSEUDO)) {
+              Offset.getMachineOpcode() ==
+                  (IsSigned ? AMDGPU::S_MUL_I64_I32_PSEUDO
+                            : AMDGPU::S_MUL_U64_U32_PSEUDO))) {
     if (auto *C = dyn_cast<ConstantSDNode>(Offset.getOperand(1)))
       ScaleOffset = C->getZExtValue() == Size;
   }
@@ -2035,7 +2048,7 @@ bool AMDGPUDAGToDAGISel::SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode,
   if (ScaleOffset) {
     assert(N && SOffset);
 
-    *ScaleOffset = SelectScaleOffset(N, ByteOffsetNode);
+    *ScaleOffset = SelectScaleOffset(N, ByteOffsetNode, false /* IsSigned */);
   }
 
   ConstantSDNode *C = dyn_cast<ConstantSDNode>(ByteOffsetNode);

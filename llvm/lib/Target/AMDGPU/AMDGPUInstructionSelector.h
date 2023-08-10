@@ -221,7 +221,8 @@ private:
   InstructionSelector::ComplexRendererFns
   selectVINTERPModsHi(MachineOperand &Root) const;
 
-  bool selectScaleOffset(MachineOperand &Root, Register &Offset) const;
+  bool selectScaleOffset(MachineOperand &Root, Register &Offset,
+                         bool IsSigned) const;
   bool selectSmrdOffset(MachineOperand &Root, Register &Base, Register *SOffset,
                         int64_t *Offset, bool *ScaleOffset) const;
   InstructionSelector::ComplexRendererFns

@@ -45,16 +45,6 @@ global_store_addtid_b32 v5, s[2:3] scale_offset
 // GFX1210-ERR-NEXT:{{^}}global_store_addtid_b32 v5, s[2:3] scale_offset
 // GFX1210-ERR-NEXT:{{^}}                                   ^
 
-scratch_load_b32 v5, v2, s1 offset:32 scale_offset
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: scale_offset is not supported for this instruction
-// GFX1210-ERR-NEXT:{{^}}scratch_load_b32 v5, v2, s1 offset:32 scale_offset
-// GFX1210-ERR-NEXT:{{^}}                                      ^
-
-scratch_load_b32 v5, v2, s1 scale_offset
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: scale_offset is not supported for this instruction
-// GFX1210-ERR-NEXT:{{^}}scratch_load_b32 v5, v2, s1 scale_offset
-// GFX1210-ERR-NEXT:{{^}}                            ^
-
 scratch_load_b32 v5, off, s1 scale_offset
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: scale_offset is not supported for this instruction
 // GFX1210-ERR-NEXT:{{^}}scratch_load_b32 v5, off, s1 scale_offset
@@ -64,8 +54,3 @@ scratch_load_b32 v5, off, off offset:32 scale_offset
 // GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: scale_offset is not supported for this instruction
 // GFX1210-ERR-NEXT:{{^}}scratch_load_b32 v5, off, off offset:32 scale_offset
 // GFX1210-ERR-NEXT:{{^}}                                        ^
-
-scratch_store_b32 v2, v5, s1 scale_offset
-// GFX1210-ERR: :[[@LINE-1]]:{{[0-9]+}}: error: scale_offset is not supported for this instruction
-// GFX1210-ERR-NEXT:{{^}}scratch_store_b32 v2, v5, s1 scale_offset
-// GFX1210-ERR-NEXT:{{^}}                             ^

@@ -3359,6 +3359,15 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
   return Register();
 }
 
+/// Match a sign extend from a 32-bit value to 64-bits.
+static Register matchSignExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
+  Register SExtSrc;
+  if (mi_match(Reg, MRI, m_GSExt(m_Reg(SExtSrc))))
+    return MRI.getType(SExtSrc) == LLT::scalar(32) ? SExtSrc : Register();
+
+  return Register();
+}
+
 /// Match a zero extend from a 32-bit value to 64-bits, or \p Reg itself if it
 /// is 32-bit.
 static Register matchZeroExtendFromS32OrS32(MachineRegisterInfo &MRI,
@@ -4445,7 +4454,8 @@ AMDGPUInstructionSelector::selectVINTERPModsHi(MachineOperand &Root) const {
 // is a multiple of the load byte size. If it is update \p Offset to a
 // pre-scaled value and return true.
 bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
-                                                  Register &Offset) const {
+                                                  Register &Offset,
+                                                  bool IsSigned) const {
   if (!Subtarget->hasScaleOffset())
     return false;
 
@@ -4453,7 +4463,8 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
   MachineMemOperand *MMO = *MI.memoperands_begin();
   uint64_t Size = MMO->getSize();
 
-  Register OffsetReg = matchZeroExtendFromS32(*MRI, Offset);
+  Register OffsetReg = IsSigned ? matchSignExtendFromS32(*MRI, Offset)
+                                : matchZeroExtendFromS32(*MRI, Offset);
   if (!OffsetReg)
     OffsetReg = Offset;
 
@@ -4468,12 +4479,17 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
                 m_GShl(m_Reg(Op0),
                        m_any_of(m_SpecificICst(Log2_64(Size)),
                                 m_Copy(m_SpecificICst(Log2_64(Size))))))) ||
-      mi_match(OffsetReg, *MRI, m_GMul(m_Reg(Op0), m_SpecificICst(Size))) ||
       mi_match(OffsetReg, *MRI,
-               m_BinOp(AMDGPU::S_MUL_U64, m_Reg(Op0), m_SpecificICst(Size))) ||
+               m_GMul(m_Reg(Op0), m_any_of(m_SpecificICst(Size),
+                                           m_Copy(m_SpecificICst(Size))))) ||
+      mi_match(OffsetReg, *MRI,
+               m_BinOp(IsSigned ? AMDGPU::S_MUL_I64_I32_PSEUDO
+                                : AMDGPU::S_MUL_U64,
+                       m_Reg(Op0), m_SpecificICst(Size))) ||
       // Match G_AMDGPU_MAD_U64_U32 offset, c, 0
       (mi_match(OffsetReg, *MRI, m_MInstr(Mul)) &&
-       Mul->getOpcode() == AMDGPU::G_AMDGPU_MAD_U64_U32 &&
+       Mul->getOpcode() == (IsSigned ? AMDGPU::G_AMDGPU_MAD_I64_I32
+                                     : AMDGPU::G_AMDGPU_MAD_U64_U32) &&
        mi_match(Mul->getOperand(4).getReg(), *MRI, m_ZeroInt()) &&
        mi_match(Mul->getOperand(3).getReg(), *MRI,
                   m_GTrunc(m_any_of(m_SpecificICst(Size),
@@ -4516,7 +4532,8 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
       if (GEPI2.SgprParts.size() == 2 && GEPI2.Imm == 0) {
         Register OffsetReg = GEPI2.SgprParts[1];
         if (ScaleOffset)
-          *ScaleOffset = selectScaleOffset(Root, OffsetReg);
+          *ScaleOffset = selectScaleOffset(Root, OffsetReg,
+                                           false /* IsSigned */);
         OffsetReg = matchZeroExtendFromS32OrS32(*MRI, OffsetReg);
         if (OffsetReg) {
           Base = GEPI2.SgprParts[0];
@@ -4552,7 +4569,7 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
   if (SOffset && GEPI.SgprParts.size() && GEPI.Imm == 0) {
     Register OffsetReg = GEPI.SgprParts[1];
     if (ScaleOffset)
-      *ScaleOffset = selectScaleOffset(Root, OffsetReg);
+      *ScaleOffset = selectScaleOffset(Root, OffsetReg, false /* IsSigned */);
     OffsetReg = matchZeroExtendFromS32OrS32(*MRI, OffsetReg);
     if (OffsetReg) {
       Base = GEPI.SgprParts[0];
@@ -4758,7 +4775,8 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
 
       // It's possible voffset is an SGPR here, but the copy to VGPR will be
       // inserted later.
-      bool ScaleOffset = selectScaleOffset(Root, PtrBaseOffset);
+      bool ScaleOffset = selectScaleOffset(Root, PtrBaseOffset,
+                                           false /* IsSigned */);
       if (Register VOffset =
               matchZeroExtendFromS32OrS32(*MRI, PtrBaseOffset)) {
         return {{[=](MachineInstrBuilder &MIB) { // saddr
@@ -4922,14 +4940,22 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
   if (checkFlatScratchSVSSwizzleBug(RHS, LHS, ImmOffset))
     return std::nullopt;
 
+  unsigned CPol = selectScaleOffset(Root, RHS, true /* IsSigned */) ?
+                      AMDGPU::CPol::SCAL : 0;
+
   if (LHSDef->MI->getOpcode() == AMDGPU::G_FRAME_INDEX) {
     int FI = LHSDef->MI->getOperand(1).getIndex();
     return {{
         [=](MachineInstrBuilder &MIB) { MIB.addReg(RHS); }, // vaddr
         [=](MachineInstrBuilder &MIB) { MIB.addFrameIndex(FI); }, // saddr
-        [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); } // offset
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); }, // offset
+        [=](MachineInstrBuilder &MIB) { MIB.addImm(CPol); } // cpol
     }};
   }
+
+  if (!isSGPR(LHS))
+    if (auto Def = getDefSrcRegIgnoringCopies(LHS, *MRI))
+      LHS = Def->Reg;
 
   if (!isSGPR(LHS))
     return std::nullopt;
@@ -4937,7 +4963,8 @@ AMDGPUInstructionSelector::selectScratchSVAddr(MachineOperand &Root) const {
   return {{
       [=](MachineInstrBuilder &MIB) { MIB.addReg(RHS); }, // vaddr
       [=](MachineInstrBuilder &MIB) { MIB.addReg(LHS); }, // saddr
-      [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); } // offset
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); }, // offset
+      [=](MachineInstrBuilder &MIB) { MIB.addImm(CPol); } // cpol
   }};
 }
 

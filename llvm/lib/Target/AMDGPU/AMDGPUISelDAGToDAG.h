@@ -201,7 +201,8 @@ private:
   bool checkFlatScratchSVSSwizzleBug(SDValue VAddr, SDValue SAddr,
                                      uint64_t ImmOffset) const;
   bool SelectScratchSVAddr(SDNode *N, SDValue Addr, SDValue &VAddr,
-                           SDValue &SAddr, SDValue &Offset) const;
+                           SDValue &SAddr, SDValue &Offset,
+                           SDValue &CPol) const;
 
   bool SelectSMRDOffset(SDNode *N, SDValue ByteOffsetNode, SDValue *SOffset,
                         SDValue *Offset, bool Imm32Only = false,
@@ -217,7 +218,7 @@ private:
                   bool *ScaleOffset = nullptr) const;
   bool SelectSMRDImm(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
   bool SelectSMRDImm32(SDValue Addr, SDValue &SBase, SDValue &Offset) const;
-  bool SelectScaleOffset(SDNode *N, SDValue &Offset) const;
+  bool SelectScaleOffset(SDNode *N, SDValue &Offset, bool IsSigned) const;
   bool SelectSMRDSgpr(SDNode *N, SDValue Addr, SDValue &SBase, SDValue &SOffset,
                       SDValue &CPol) const;
   bool SelectSMRDSgprImm(SDNode *N, SDValue Addr, SDValue &SBase,
