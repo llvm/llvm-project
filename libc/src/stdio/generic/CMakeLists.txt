@@ -1,7 +1,53 @@
-if(LIBC_TARGET_ARCHITECTURE_IS_GPU)
-  # The GPU build cannot use any generic implementations.
-  return()
-endif()
+add_entrypoint_object(
+  fopen
+  SRCS
+    fopen.cpp
+  HDRS
+    ../fopen.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fclose
+  SRCS
+    fclose.cpp
+  HDRS
+    ../fclose.h
+  DEPENDS
+    libc.include.stdio
+    libc.src.errno.errno
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fread_unlocked
+  SRCS
+    fread_unlocked.cpp
+  HDRS
+    ../fread_unlocked.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
+
+add_entrypoint_object(
+  fread
+  SRCS
+    fread.cpp
+  HDRS
+    ../fread.h
+  DEPENDS
+    libc.src.errno.errno
+    libc.include.stdio
+    libc.src.__support.File.file
+    libc.src.__support.File.platform_file
+)
 
 add_entrypoint_object(
   fputs

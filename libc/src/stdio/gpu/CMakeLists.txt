@@ -4,8 +4,39 @@ add_header_library(
     file.h
   DEPENDS
     libc.src.__support.common
-    libc.src.__support.CPP.string_view
-    libc.src.__support.RPC.rpc_client
+    .stdin
+    .stdout
+    .stderr
+)
+
+add_entrypoint_object(
+  fopen
+  SRCS
+    fopen.cpp
+  HDRS
+    ../fopen.h
+  DEPENDS
+    libc.include.stdio
+)
+
+add_entrypoint_object(
+  fclose
+  SRCS
+    fclose.cpp
+  HDRS
+    ../fclose.h
+  DEPENDS
+    libc.include.stdio
+)
+
+add_entrypoint_object(
+  fread
+  SRCS
+    fread.cpp
+  HDRS
+    ../fread.h
+  DEPENDS
+    libc.include.stdio
 )
 
 add_entrypoint_object(
