@@ -878,18 +878,21 @@ bool ByteCodeExprGen<Emitter>::VisitCharacterLiteral(
 template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
     const CompoundAssignOperator *E) {
-  assert(E->getType()->isFloatingType());
 
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
-  llvm::RoundingMode RM = getRoundingMode(E);
+  QualType LHSType = LHS->getType();
   QualType LHSComputationType = E->getComputationLHSType();
   QualType ResultType = E->getComputationResultType();
   std::optional<PrimType> LT = classify(LHSComputationType);
   std::optional<PrimType> RT = classify(ResultType);
 
+  assert(ResultType->isFloatingType());
+
   if (!LT || !RT)
     return false;
+
+  PrimType LHST = classifyPrim(LHSType);
 
   // C++17 onwards require that we evaluate the RHS first.
   // Compute RHS and save it in a temporary variable so we can
@@ -904,21 +907,19 @@ bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
   // First, visit LHS.
   if (!visit(LHS))
     return false;
-  if (!this->emitLoad(*LT, E))
+  if (!this->emitLoad(LHST, E))
     return false;
 
   // If necessary, convert LHS to its computation type.
-  if (LHS->getType() != LHSComputationType) {
-    const auto *TargetSemantics = &Ctx.getFloatSemantics(LHSComputationType);
-
-    if (!this->emitCastFP(TargetSemantics, RM, E))
-      return false;
-  }
+  if (!this->emitPrimCast(LHST, classifyPrim(LHSComputationType),
+                          LHSComputationType, E))
+    return false;
 
   // Now load RHS.
   if (!this->emitGetLocal(*RT, TempOffset, E))
     return false;
 
+  llvm::RoundingMode RM = getRoundingMode(E);
   switch (E->getOpcode()) {
   case BO_AddAssign:
     if (!this->emitAddf(RM, E))
@@ -940,17 +941,12 @@ bool ByteCodeExprGen<Emitter>::VisitFloatCompoundAssignOperator(
     return false;
   }
 
-  // If necessary, convert result to LHS's type.
-  if (LHS->getType() != ResultType) {
-    const auto *TargetSemantics = &Ctx.getFloatSemantics(LHS->getType());
-
-    if (!this->emitCastFP(TargetSemantics, RM, E))
-      return false;
-  }
+  if (!this->emitPrimCast(classifyPrim(ResultType), LHST, LHS->getType(), E))
+    return false;
 
   if (DiscardResult)
-    return this->emitStorePop(*LT, E);
-  return this->emitStore(*LT, E);
+    return this->emitStorePop(LHST, E);
+  return this->emitStore(LHST, E);
 }
 
 template <class Emitter>
@@ -992,14 +988,6 @@ template <class Emitter>
 bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
     const CompoundAssignOperator *E) {
 
-  // Handle floating point operations separately here, since they
-  // require special care.
-  if (E->getType()->isFloatingType())
-    return VisitFloatCompoundAssignOperator(E);
-
-  if (E->getType()->isPointerType())
-    return VisitPointerCompoundAssignOperator(E);
-
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
   std::optional<PrimType> LHSComputationT =
@@ -1010,6 +998,15 @@ bool ByteCodeExprGen<Emitter>::VisitCompoundAssignOperator(
 
   if (!LT || !RT || !ResultT || !LHSComputationT)
     return false;
+
+  // Handle floating point operations separately here, since they
+  // require special care.
+
+  if (ResultT == PT_Float || RT == PT_Float)
+    return VisitFloatCompoundAssignOperator(E);
+
+  if (E->getType()->isPointerType())
+    return VisitPointerCompoundAssignOperator(E);
 
   assert(!E->getType()->isPointerType() && "Handled above");
   assert(!E->getType()->isFloatingType() && "Handled above");
@@ -2381,6 +2378,39 @@ ByteCodeExprGen<Emitter>::collectBaseOffset(const RecordType *BaseType,
 
   assert(OffsetSum > 0);
   return OffsetSum;
+}
+
+/// Emit casts from a PrimType to another PrimType.
+template <class Emitter>
+bool ByteCodeExprGen<Emitter>::emitPrimCast(PrimType FromT, PrimType ToT,
+                                            QualType ToQT, const Expr *E) {
+
+  if (FromT == PT_Float) {
+    // Floating to floating.
+    if (ToT == PT_Float) {
+      const llvm::fltSemantics *ToSem = &Ctx.getFloatSemantics(ToQT);
+      return this->emitCastFP(ToSem, getRoundingMode(E), E);
+    }
+
+    // Float to integral.
+    if (isIntegralType(ToT) || ToT == PT_Bool)
+      return this->emitCastFloatingIntegral(ToT, E);
+  }
+
+  if (isIntegralType(FromT) || FromT == PT_Bool) {
+    // Integral to integral.
+    if (isIntegralType(ToT) || ToT == PT_Bool)
+      return FromT != ToT ? this->emitCast(FromT, ToT, E) : true;
+
+    if (ToT == PT_Float) {
+      // Integral to floating.
+      const llvm::fltSemantics *ToSem = &Ctx.getFloatSemantics(ToQT);
+      return this->emitCastIntegralFloating(FromT, ToSem, getRoundingMode(E),
+                                            E);
+    }
+  }
+
+  return false;
 }
 
 /// When calling this, we have a pointer of the local-to-destroy
