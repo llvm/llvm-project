@@ -229,12 +229,6 @@ computePermutationVector(int64_t permSize, ArrayRef<int64_t> positions,
 SmallVector<int64_t> getI64SubArray(ArrayAttr arrayAttr, unsigned dropFront = 0,
                                     unsigned dropBack = 0);
 
-/// Compute linear index from provided strides and indices, assuming strided
-/// layout.
-OpFoldResult computeLinearIndex(OpBuilder &builder, Location loc,
-                                OpFoldResult sourceOffset,
-                                ArrayRef<OpFoldResult> strides,
-                                ArrayRef<OpFoldResult> indices);
 } // namespace mlir
 
 #endif // MLIR_DIALECT_UTILS_INDEXINGUTILS_H
