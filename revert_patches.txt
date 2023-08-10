@@ -2,23 +2,18 @@ SROA breaks MIOpen
 Revert "[SROA] Create additional vector type candidates based on store and load slices"
 Revert "[SROA] Fix bug where CandidateTys is appended while being iterated"
 
-breaks rccl build:
-Revert "Implement P2361 Unevaluated string literals"
-
-Revert "[Clang] Implement P2741R3 - user-generated static_assert messages "
-Revert "[Clang] Fix crash in CIndex, when visiting a static_assert without message"
+Rana: HipCatch2 and olcTest conformance fails
 Revert "[AMDGPU] __builtin_amdgcn_read_exec_* should be implemented with llvm.amdgcn.ballot"
-Revert "[Clang] Handle static_assert messages with an expression started by a literal"
-Revert "[RemarkUtil] Refactor llvm-remarkutil to include size-diff "
-Revert "Enable concatenation of predefined identifiers "
-Revert "[FunctionAttrs] Unconditionally perform argument attribute inference in the first function-attrs pass"
-Revert "[clang][test] Fix LIT test failures for the following commit"
-Revert "[Clang] Produce a warning instead of an error in unevaluated strings before C++26 "
 
+missing executable in build:
+Revert "[RemarkUtil] Refactor llvm-remarkutil to include size-diff "
+
+Johannes: breakage
 Revert "[OpenMP] Disable early vectorization of loads/stores in the runtime " 
   asserts in  snap and MI-Teams
 
+Nicole and Saiyed:
 Revert " [OpenMP][DeviceRTL][AMDGPU] Support code object version 5"
 
 Revert "[Parser] Parse string literal arguments of 'avail"
-   needs Dave's restores to land
+
