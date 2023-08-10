@@ -292,7 +292,7 @@ ConditionOp::getMutableSuccessorOperands(std::optional<unsigned> index) {
 
 void ConditionOp::getSuccessorRegions(
     ArrayRef<Attribute> operands, SmallVectorImpl<RegionSuccessor> &regions) {
-  FoldAdaptor adaptor(operands);
+  FoldAdaptor adaptor(operands, *this);
 
   WhileOp whileOp = getParentOp();
 
@@ -2031,7 +2031,7 @@ void IfOp::getSuccessorRegions(std::optional<unsigned> index,
 
 void IfOp::getEntrySuccessorRegions(ArrayRef<Attribute> operands,
                                     SmallVectorImpl<RegionSuccessor> &regions) {
-  FoldAdaptor adaptor(operands);
+  FoldAdaptor adaptor(operands, *this);
   auto boolAttr = dyn_cast_or_null<BoolAttr>(adaptor.getCondition());
   if (!boolAttr || boolAttr.getValue())
     regions.emplace_back(&getThenRegion());
@@ -4039,7 +4039,7 @@ void IndexSwitchOp::getSuccessorRegions(
 void IndexSwitchOp::getEntrySuccessorRegions(
     ArrayRef<Attribute> operands,
     SmallVectorImpl<RegionSuccessor> &successors) {
-  FoldAdaptor adaptor(operands);
+  FoldAdaptor adaptor(operands, *this);
 
   // If a constant was not provided, all regions are possible successors.
   auto arg = dyn_cast_or_null<IntegerAttr>(adaptor.getArg());

@@ -1915,15 +1915,8 @@ private:
                        SmallVectorImpl<OpFoldResult> &results) {
     OpFoldResult result;
     if constexpr (has_fold_adaptor_single_result_v<ConcreteOpT>) {
-      if constexpr (hasProperties()) {
-        result = cast<ConcreteOpT>(op).fold(typename ConcreteOpT::FoldAdaptor(
-            operands, op->getDiscardableAttrDictionary(),
-            cast<ConcreteOpT>(op).getProperties(), op->getRegions()));
-      } else {
-        result = cast<ConcreteOpT>(op).fold(typename ConcreteOpT::FoldAdaptor(
-            operands, op->getDiscardableAttrDictionary(), {},
-            op->getRegions()));
-      }
+      result = cast<ConcreteOpT>(op).fold(
+          typename ConcreteOpT::FoldAdaptor(operands, cast<ConcreteOpT>(op)));
     } else {
       result = cast<ConcreteOpT>(op).fold(operands);
     }
@@ -1946,19 +1939,9 @@ private:
                                 SmallVectorImpl<OpFoldResult> &results) {
     auto result = LogicalResult::failure();
     if constexpr (has_fold_adaptor_v<ConcreteOpT>) {
-      if constexpr (hasProperties()) {
-        result = cast<ConcreteOpT>(op).fold(
-            typename ConcreteOpT::FoldAdaptor(
-                operands, op->getDiscardableAttrDictionary(),
-                cast<ConcreteOpT>(op).getProperties(), op->getRegions()),
-            results);
-      } else {
-        result = cast<ConcreteOpT>(op).fold(
-            typename ConcreteOpT::FoldAdaptor(
-                operands, op->getDiscardableAttrDictionary(), {},
-                op->getRegions()),
-            results);
-      }
+      result = cast<ConcreteOpT>(op).fold(
+          typename ConcreteOpT::FoldAdaptor(operands, cast<ConcreteOpT>(op)),
+          results);
     } else {
       result = cast<ConcreteOpT>(op).fold(operands, results);
     }
