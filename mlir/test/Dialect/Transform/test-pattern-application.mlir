@@ -310,19 +310,6 @@ transform.sequence failures(propagate) {
 transform.sequence failures(propagate) {
 ^bb1(%arg1: !transform.any_op):
   %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
-  // expected-error @below{{conversion target is not specified}}
-  transform.apply_conversion_patterns to %0 {
-    transform.apply_conversion_patterns.transform.test_conversion_patterns
-  } with type_converter {
-    transform.apply_conversion_patterns.transform.test_type_converter
-  } : !transform.any_op
-}
-
-// -----
-
-transform.sequence failures(propagate) {
-^bb1(%arg1: !transform.any_op):
-  %0 = transform.structured.match ops{["func.func"]} in %arg1 : (!transform.any_op) -> !transform.any_op
   // expected-error @below{{pattern descriptor does not specify type converter and apply_conversion_patterns op has no default type converter}}
   transform.apply_conversion_patterns to %0 {
     // expected-note @below{{pattern descriptor op}}

@@ -187,8 +187,7 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
     default type converter specify their own type converter.)
 
     The `legal_ops`, `illegal_ops`, `legal_dialects`, `illegal_dialects`
-    attributes specify the conversion target. At least one of those four
-    attributes must be specified.
+    attributes specify the conversion target.
 
     This transform consumes the `target` handle and modifies the payload. It
     does not produce any handles.
