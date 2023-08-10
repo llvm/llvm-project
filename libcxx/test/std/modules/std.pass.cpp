@@ -10,7 +10,8 @@
 // TODO MODULES fix c++26
 // XFAIL: c++26
 
-// REQUIRES: use_module_std
+// UNSUPPORTED: libcpp-has-no-std-modules
+// UNSUPPORTED: modules-build
 
 // A minimal test to validate import works.
 
