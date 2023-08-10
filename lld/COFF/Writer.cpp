@@ -1796,7 +1796,7 @@ void Writer::createGuardCFTables() {
   // Add the ehcont target table unless the user told us not to.
   if (config->guardCF & GuardCFLevel::EHCont)
     maybeAddRVATable(std::move(ehContTargets), "__guard_eh_cont_table",
-                     "__guard_eh_cont_count", true);
+                     "__guard_eh_cont_count");
 
   // Set __guard_flags, which will be used in the load config to indicate that
   // /guard:cf was enabled.
