@@ -944,7 +944,7 @@ void COFFDumper::printCOFFLoadConfig() {
   // RVA of each entry in the table. As of writing only a 1-byte extra flag
   // has been defined.
   uint32_t Stride = Tables.GuardFlags >> 28;
-  PrintExtraCB PrintExtra = Stride == 1 ? PrintGuardFlags : nullptr;
+  PrintExtraCB PrintExtra = Stride == 1 ? +PrintGuardFlags : nullptr;
 
   if (Tables.GuardFidTableVA) {
     ListScope LS(W, "GuardFidTable");
