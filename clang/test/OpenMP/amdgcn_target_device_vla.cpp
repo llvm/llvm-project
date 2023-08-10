@@ -186,7 +186,7 @@ int main() {
 // CHECK-NEXT:    [[DOTOMP_UB:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[DOTOMP_IV:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[N:%.*]] = alloca i32, align 4, addrspace(5)
-// CHECK-NEXT:    [[SAVED_STACK:%.*]] = alloca ptr, align 8, addrspace(5)
+// CHECK-NEXT:    [[SAVED_STACK:%.*]] = alloca ptr addrspace(5), align 4, addrspace(5)
 // CHECK-NEXT:    [[__VLA_EXPR0:%.*]] = alloca i64, align 8, addrspace(5)
 // CHECK-NEXT:    [[J:%.*]] = alloca i32, align 4, addrspace(5)
 // CHECK-NEXT:    [[J9:%.*]] = alloca i32, align 4, addrspace(5)
@@ -246,8 +246,8 @@ int main() {
 // CHECK-NEXT:    store i32 10, ptr [[N_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP15:%.*]] = load i32, ptr [[N_ASCAST]], align 4
 // CHECK-NEXT:    [[TMP16:%.*]] = zext i32 [[TMP15]] to i64
-// CHECK-NEXT:    [[TMP17:%.*]] = call ptr @llvm.stacksave()
-// CHECK-NEXT:    store ptr [[TMP17]], ptr [[SAVED_STACK_ASCAST]], align 8
+// CHECK-NEXT:    [[TMP17:%.*]] = call ptr addrspace(5) @llvm.stacksave.p5()
+// CHECK-NEXT:    store ptr addrspace(5) [[TMP17]], ptr [[SAVED_STACK_ASCAST]], align 4
 // CHECK-NEXT:    [[VLA3:%.*]] = alloca i32, i64 [[TMP16]], align 4, addrspace(5)
 // CHECK-NEXT:    [[VLA3_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[VLA3]] to ptr
 // CHECK-NEXT:    store i64 [[TMP16]], ptr [[__VLA_EXPR0_ASCAST]], align 8
@@ -301,8 +301,8 @@ int main() {
 // CHECK-NEXT:    store i32 [[INC19]], ptr [[J9_ASCAST]], align 4
 // CHECK-NEXT:    br label [[FOR_COND10]], !llvm.loop [[LOOP17:![0-9]+]]
 // CHECK:       for.end20:
-// CHECK-NEXT:    [[TMP32:%.*]] = load ptr, ptr [[SAVED_STACK_ASCAST]], align 8
-// CHECK-NEXT:    call void @llvm.stackrestore(ptr [[TMP32]])
+// CHECK-NEXT:    [[TMP32:%.*]] = load ptr addrspace(5), ptr [[SAVED_STACK_ASCAST]], align 4
+// CHECK-NEXT:    call void @llvm.stackrestore.p5(ptr addrspace(5) [[TMP32]])
 // CHECK-NEXT:    br label [[FOR_INC21:%.*]]
 // CHECK:       for.inc21:
 // CHECK-NEXT:    [[NVPTX_NUM_THREADS22:%.*]] = call i32 @__kmpc_get_hardware_num_threads_in_block()

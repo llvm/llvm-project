@@ -76,7 +76,7 @@ int main()
 // CHECK-NEXT:    store i32 100, ptr [[N]], align 4
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[N]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i32 [[TMP0]] to i64
-// CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave()
+// CHECK-NEXT:    [[TMP2:%.*]] = call ptr @llvm.stacksave.p0()
 // CHECK-NEXT:    store ptr [[TMP2]], ptr [[SAVED_STACK]], align 8
 // CHECK-NEXT:    [[VLA:%.*]] = alloca double, i64 [[TMP1]], align 16
 // CHECK-NEXT:    store i64 [[TMP1]], ptr [[__VLA_EXPR0]], align 8
@@ -491,7 +491,7 @@ int main()
 // CHECK-NEXT:    br label [[OMP_IF_END]]
 // CHECK:       omp_if.end:
 // CHECK-NEXT:    [[TMP175:%.*]] = load ptr, ptr [[SAVED_STACK]], align 8
-// CHECK-NEXT:    call void @llvm.stackrestore(ptr [[TMP175]])
+// CHECK-NEXT:    call void @llvm.stackrestore.p0(ptr [[TMP175]])
 // CHECK-NEXT:    [[TMP176:%.*]] = load i32, ptr [[RETVAL]], align 4
 // CHECK-NEXT:    ret i32 [[TMP176]]
 //
