@@ -1029,6 +1029,9 @@ public:
   // Scalar and global loads support scale_offset bit.
   bool hasScaleOffset() const { return GFX12_10Insts; }
 
+  // FLAT GLOBAL VOffset is signed
+  bool hasSignedGVSOffset() const { return GFX12_10Insts; }
+
   bool enableSIScheduler() const {
     return EnableSIScheduler;
   }

@@ -3340,19 +3340,19 @@ bool AMDGPUInstructionSelector::selectBufferLoadLds(MachineInstr &MI) const {
 }
 
 /// Match a zero extend from a 32-bit value to 64-bits.
-static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
+Register AMDGPUInstructionSelector::matchZeroExtendFromS32(Register Reg) const {
   Register ZExtSrc;
-  if (mi_match(Reg, MRI, m_GZExt(m_Reg(ZExtSrc))))
-    return MRI.getType(ZExtSrc) == LLT::scalar(32) ? ZExtSrc : Register();
+  if (mi_match(Reg, *MRI, m_GZExt(m_Reg(ZExtSrc))))
+    return MRI->getType(ZExtSrc) == LLT::scalar(32) ? ZExtSrc : Register();
 
   // Match legalized form %zext = G_MERGE_VALUES (s32 %x), (s32 0)
-  const MachineInstr *Def = getDefIgnoringCopies(Reg, MRI);
+  const MachineInstr *Def = getDefIgnoringCopies(Reg, *MRI);
   if (Def->getOpcode() != AMDGPU::G_MERGE_VALUES)
     return Register();
 
   assert(Def->getNumOperands() == 3 &&
-         MRI.getType(Def->getOperand(0).getReg()) == LLT::scalar(64));
-  if (mi_match(Def->getOperand(2).getReg(), MRI, m_ZeroInt())) {
+         MRI->getType(Def->getOperand(0).getReg()) == LLT::scalar(64));
+  if (mi_match(Def->getOperand(2).getReg(), *MRI, m_ZeroInt())) {
     return Def->getOperand(1).getReg();
   }
 
@@ -3360,20 +3360,52 @@ static Register matchZeroExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
 }
 
 /// Match a sign extend from a 32-bit value to 64-bits.
-static Register matchSignExtendFromS32(MachineRegisterInfo &MRI, Register Reg) {
+Register AMDGPUInstructionSelector::matchSignExtendFromS32(Register Reg) const {
   Register SExtSrc;
-  if (mi_match(Reg, MRI, m_GSExt(m_Reg(SExtSrc))))
-    return MRI.getType(SExtSrc) == LLT::scalar(32) ? SExtSrc : Register();
+  if (mi_match(Reg, *MRI, m_GSExt(m_Reg(SExtSrc))))
+    return MRI->getType(SExtSrc) == LLT::scalar(32) ? SExtSrc : Register();
+
+  // Match legalized form %sext = G_MERGE_VALUES (s32 %x), G_ASHR((S32 %x, 31))
+  const MachineInstr *Def = getDefIgnoringCopies(Reg, *MRI);
+  if (Def->getOpcode() != AMDGPU::G_MERGE_VALUES)
+    return Register();
+
+  assert(Def->getNumOperands() == 3 &&
+         MRI->getType(Def->getOperand(0).getReg()) == LLT::scalar(64));
+  if (mi_match(Def->getOperand(2).getReg(), *MRI,
+               m_GAShr(m_SpecificReg(Def->getOperand(1).getReg()),
+                       m_SpecificICst(31))))
+    return Def->getOperand(1).getReg();
+
+  if (KB->signBitIsZero(Reg))
+    return matchZeroExtendFromS32(Reg);
 
   return Register();
 }
 
 /// Match a zero extend from a 32-bit value to 64-bits, or \p Reg itself if it
 /// is 32-bit.
-static Register matchZeroExtendFromS32OrS32(MachineRegisterInfo &MRI,
-                                            Register Reg) {
-  return MRI.getType(Reg) == LLT::scalar(32)
-             ? Reg : matchZeroExtendFromS32(MRI, Reg);
+Register
+AMDGPUInstructionSelector::matchZeroExtendFromS32OrS32(Register Reg) const {
+  return MRI->getType(Reg) == LLT::scalar(32) ? Reg
+                                              : matchZeroExtendFromS32(Reg);
+}
+
+/// Match a sign extend from a 32-bit value to 64-bits, or \p Reg itself if it
+/// is 32-bit.
+Register
+AMDGPUInstructionSelector::matchSignExtendFromS32OrS32(Register Reg) const {
+  return MRI->getType(Reg) == LLT::scalar(32) ? Reg
+                                              : matchSignExtendFromS32(Reg);
+}
+
+Register
+AMDGPUInstructionSelector::matchExtendFromS32OrS32(Register Reg,
+                                                   bool IsSigned) const {
+  if (IsSigned)
+    return matchSignExtendFromS32OrS32(Reg);
+
+  return matchZeroExtendFromS32OrS32(Reg);
 }
 
 bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
@@ -3412,7 +3444,7 @@ bool AMDGPUInstructionSelector::selectGlobalLoadLds(MachineInstr &MI) const{
           getSrcRegIgnoringCopies(AddrDef->MI->getOperand(1).getReg(), *MRI);
       if (isSGPR(SAddr)) {
         Register PtrBaseOffset = AddrDef->MI->getOperand(2).getReg();
-        if (Register Off = matchZeroExtendFromS32(*MRI, PtrBaseOffset)) {
+        if (Register Off = matchZeroExtendFromS32(PtrBaseOffset)) {
           Addr = SAddr;
           VOffset = Off;
         }
@@ -4463,8 +4495,7 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
   MachineMemOperand *MMO = *MI.memoperands_begin();
   uint64_t Size = MMO->getSize();
 
-  Register OffsetReg = IsSigned ? matchSignExtendFromS32(*MRI, Offset)
-                                : matchZeroExtendFromS32(*MRI, Offset);
+  Register OffsetReg = matchExtendFromS32OrS32(Offset, IsSigned);
   if (!OffsetReg)
     OffsetReg = Offset;
 
@@ -4488,8 +4519,10 @@ bool AMDGPUInstructionSelector::selectScaleOffset(MachineOperand &Root,
                        m_Reg(Op0), m_SpecificICst(Size))) ||
       // Match G_AMDGPU_MAD_U64_U32 offset, c, 0
       (mi_match(OffsetReg, *MRI, m_MInstr(Mul)) &&
-       Mul->getOpcode() == (IsSigned ? AMDGPU::G_AMDGPU_MAD_I64_I32
-                                     : AMDGPU::G_AMDGPU_MAD_U64_U32) &&
+       (Mul->getOpcode() == (IsSigned ? AMDGPU::G_AMDGPU_MAD_I64_I32
+                                      : AMDGPU::G_AMDGPU_MAD_U64_U32) ||
+       (IsSigned && Mul->getOpcode() == AMDGPU::G_AMDGPU_MAD_U64_U32 &&
+        KB->signBitIsZero(Mul->getOperand(2).getReg()))) &&
        mi_match(Mul->getOperand(4).getReg(), *MRI, m_ZeroInt()) &&
        mi_match(Mul->getOperand(3).getReg(), *MRI,
                   m_GTrunc(m_any_of(m_SpecificICst(Size),
@@ -4534,7 +4567,7 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
         if (ScaleOffset)
           *ScaleOffset = selectScaleOffset(Root, OffsetReg,
                                            false /* IsSigned */);
-        OffsetReg = matchZeroExtendFromS32OrS32(*MRI, OffsetReg);
+        OffsetReg = matchZeroExtendFromS32OrS32(OffsetReg);
         if (OffsetReg) {
           Base = GEPI2.SgprParts[0];
           *SOffset = OffsetReg;
@@ -4570,7 +4603,7 @@ bool AMDGPUInstructionSelector::selectSmrdOffset(MachineOperand &Root,
     Register OffsetReg = GEPI.SgprParts[1];
     if (ScaleOffset)
       *ScaleOffset = selectScaleOffset(Root, OffsetReg, false /* IsSigned */);
-    OffsetReg = matchZeroExtendFromS32OrS32(*MRI, OffsetReg);
+    OffsetReg = matchZeroExtendFromS32OrS32(OffsetReg);
     if (OffsetReg) {
       Base = GEPI.SgprParts[0];
       *SOffset = OffsetReg;
@@ -4728,7 +4761,8 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
           std::tie(SplitImmOffset, RemainderOffset) = TII.splitFlatOffset(
               ConstOffset, AMDGPUAS::GLOBAL_ADDRESS, SIInstrFlags::FlatGlobal);
 
-          if (isUInt<32>(RemainderOffset)) {
+          if (Subtarget->hasSignedGVSOffset() ? isInt<32>(RemainderOffset)
+                                              : isUInt<32>(RemainderOffset)) {
             MachineInstr *MI = Root.getParent();
             MachineBasicBlock *MBB = MI->getParent();
             Register HighBits =
@@ -4776,9 +4810,10 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
       // It's possible voffset is an SGPR here, but the copy to VGPR will be
       // inserted later.
       bool ScaleOffset = selectScaleOffset(Root, PtrBaseOffset,
-                                           false /* IsSigned */);
+                                           Subtarget->hasSignedGVSOffset());
       if (Register VOffset =
-              matchZeroExtendFromS32OrS32(*MRI, PtrBaseOffset)) {
+              matchExtendFromS32OrS32(PtrBaseOffset,
+                                      Subtarget->hasSignedGVSOffset())) {
         return {{[=](MachineInstrBuilder &MIB) { // saddr
                    MIB.addReg(SAddr);
                  },

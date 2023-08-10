@@ -1685,13 +1685,17 @@ bool AMDGPUDAGToDAGISel::SelectScratchOffset(SDNode *N, SDValue Addr,
                               SIInstrFlags::FlatScratch);
 }
 
-// If this matches zero_extend i32:x, return x
+// If this matches *_extend i32:x, return x
 // Otherwise if the value is I32 returns x.
-static SDValue matchZExtFromI32orI32(SDValue Op) {
+static SDValue matchExtFromI32orI32(SDValue Op, bool IsSigned,
+                                    const SelectionDAG *DAG) {
   if (Op.getValueType() == MVT::i32)
     return Op;
 
-  if (Op.getOpcode() != ISD::ZERO_EXTEND)
+  if (Op.getOpcode() != (IsSigned ? ISD::SIGN_EXTEND : ISD::ZERO_EXTEND) &&
+      Op.getOpcode() != ISD::ANY_EXTEND &&
+      !(DAG->SignBitIsZero(Op) &&
+        Op.getOpcode() == (IsSigned ? ISD::ZERO_EXTEND : ISD::SIGN_EXTEND)))
     return SDValue();
 
   SDValue ExtSrc = Op.getOperand(0);
@@ -1699,6 +1703,7 @@ static SDValue matchZExtFromI32orI32(SDValue Op) {
 }
 
 // Match (64-bit SGPR base) + (zext vgpr offset) + sext(imm offset)
+// or (64-bit SGPR base) + (sext vgpr offset) + sext(imm offset)
 bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
                                            SDValue Addr,
                                            SDValue &SAddr,
@@ -1730,7 +1735,8 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
         std::tie(SplitImmOffset, RemainderOffset) = TII->splitFlatOffset(
             COffsetVal, AMDGPUAS::GLOBAL_ADDRESS, SIInstrFlags::FlatGlobal);
 
-        if (isUInt<32>(RemainderOffset)) {
+        if (Subtarget->hasSignedGVSOffset() ? isInt<32>(RemainderOffset)
+                                            : isUInt<32>(RemainderOffset)) {
           SDNode *VMov = CurDAG->getMachineNode(
               AMDGPU::V_MOV_B32_e32, SL, MVT::i32,
               CurDAG->getTargetConstant(RemainderOffset, SDLoc(), MVT::i32));
@@ -1759,22 +1765,26 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
     LHS = Addr.getOperand(0);
 
     if (!LHS->isDivergent()) {
-      // add (i64 sgpr), (zero_extend (i32 vgpr))
+      // add (i64 sgpr), (*_extend (i32 vgpr))
       RHS = Addr.getOperand(1);
-      ScaleOffset = SelectScaleOffset(N, RHS, false /* IsSigned */);
-      if (SDValue ZextRHS = matchZExtFromI32orI32(RHS)) {
+      ScaleOffset = SelectScaleOffset(N, RHS, Subtarget->hasSignedGVSOffset());
+      if (SDValue ExtRHS =
+              matchExtFromI32orI32(RHS, Subtarget->hasSignedGVSOffset(),
+                                   CurDAG)) {
         SAddr = LHS;
-        VOffset = ZextRHS;
+        VOffset = ExtRHS;
       }
     }
 
     RHS = Addr.getOperand(1);
     if (!SAddr && !RHS->isDivergent()) {
-      // add (zero_extend (i32 vgpr)), (i64 sgpr)
-      ScaleOffset = SelectScaleOffset(N, LHS, false /* IsSigned */);
-      if (SDValue ZextLHS = matchZExtFromI32orI32(LHS)) {
+      // add (*_extend (i32 vgpr)), (i64 sgpr)
+      ScaleOffset = SelectScaleOffset(N, LHS, Subtarget->hasSignedGVSOffset());
+      if (SDValue ExtLHS =
+              matchExtFromI32orI32(LHS, Subtarget->hasSignedGVSOffset(),
+                                   CurDAG)) {
         SAddr = RHS;
-        VOffset = ZextLHS;
+        VOffset = ExtLHS;
       }
     }
 
@@ -1785,7 +1795,11 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N,
   }
 
   if (Subtarget->hasScaleOffset() &&
-      Addr.getOpcode() == AMDGPUISD::MAD_U64_U32 &&
+      (Addr.getOpcode() == (Subtarget->hasSignedGVSOffset()
+                                ? AMDGPUISD::MAD_I64_I32
+                                : AMDGPUISD::MAD_U64_U32) ||
+       (Addr.getOpcode() == AMDGPUISD::MAD_U64_U32 &&
+        CurDAG->SignBitIsZero(Addr.getOperand(0)))) &&
       Addr.getOperand(0)->isDivergent() &&
       isa<ConstantSDNode>(Addr.getOperand(1)) &&
       !Addr.getOperand(2)->isDivergent()) {
@@ -2010,10 +2024,8 @@ bool AMDGPUDAGToDAGISel::SelectScaleOffset(SDNode *N,
       cast<MemSDNode>(N)->getMemoryVT().getFixedSizeInBits() / 8;
 
   SDValue Off = Offset;
-  if ((Offset.getOpcode() == (IsSigned ? ISD::SIGN_EXTEND
-                                       : ISD::ZERO_EXTEND)) ||
-      (Offset.getOpcode() == ISD::ANY_EXTEND))
-    Off = Off.getOperand(0);
+  if (SDValue Ext = matchExtFromI32orI32(Offset, IsSigned, CurDAG))
+    Off = Ext;
 
   if (isPowerOf2_32(Size) && Off.getOpcode() == ISD::SHL) {
     if (auto *C = dyn_cast<ConstantSDNode>(Off.getOperand(1)))

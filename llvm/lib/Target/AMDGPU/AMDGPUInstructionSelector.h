@@ -368,6 +368,20 @@ private:
   // shift amount operand's `ShAmtBits` bits is unneeded.
   bool isUnneededShiftMask(const MachineInstr &MI, unsigned ShAmtBits) const;
 
+  /// Match a zero extend from a 32-bit value to 64-bits.
+  Register matchZeroExtendFromS32(Register Reg) const;
+  /// Match a sign extend from a 32-bit value to 64-bits.
+  Register matchSignExtendFromS32(Register Reg) const;
+  /// Match a zero extend from a 32-bit value to 64-bits, or \p Reg itself if it
+  /// is 32-bit.
+  Register matchZeroExtendFromS32OrS32(Register Reg) const;
+  /// Match a sign extend from a 32-bit value to 64-bits, or \p Reg itself if it
+  /// is 32-bit.
+  Register matchSignExtendFromS32OrS32(Register Reg) const;
+  /// Match either sign or zero extend depending on the \p IsSigned from a
+  /// 32-bit value to 64-bits, or \p Reg itself if it is 32-bit.
+  Register matchExtendFromS32OrS32(Register Reg, bool IsSigned) const;
+
   const SIInstrInfo &TII;
   const SIRegisterInfo &TRI;
   const AMDGPURegisterBankInfo &RBI;
