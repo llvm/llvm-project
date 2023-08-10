@@ -606,11 +606,6 @@ static void AttemptToFoldSymbolOffsetDifference(
     return;
 
   auto FinalizeFolding = [&]() {
-    // Pointers to Thumb symbols need to have their low-bit set to allow
-    // for interworking.
-    if (Asm->isThumbFunc(&SA))
-      Addend |= 1;
-
     // If symbol is labeled as micromips, we set low-bit to ensure
     // correct offset in .gcc_except_table
     if (Asm->getBackend().isMicroMips(&SA))
