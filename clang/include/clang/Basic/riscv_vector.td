@@ -112,7 +112,7 @@ multiclass RVVIntBinBuiltinSet
 multiclass RVVSlideOneBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "csil",
                           [["vx", "v", "vve"],
-                           ["vx", "Uv", "UvUve"]]>;
+                           ["vx", "Uv", "UvUvUe"]]>;
 
 multiclass RVVSignedShiftBuiltinSet
     : RVVOutOp1BuiltinSet<NAME, "csil",
