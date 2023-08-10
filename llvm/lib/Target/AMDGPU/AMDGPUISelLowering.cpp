@@ -2474,7 +2474,18 @@ static bool valueIsKnownNeverF32Denorm(SDValue Src) {
   case ISD::FP_EXTEND:
     return Src.getOperand(0).getValueType() == MVT::f16;
   case ISD::FP16_TO_FP:
+  case ISD::FFREXP:
     return true;
+  case ISD::INTRINSIC_WO_CHAIN: {
+    unsigned IntrinsicID =
+        cast<ConstantSDNode>(Src.getOperand(0))->getZExtValue();
+    switch (IntrinsicID) {
+    case Intrinsic::amdgcn_frexp_mant:
+      return true;
+    default:
+      return false;
+    }
+  }
   default:
     return false;
   }

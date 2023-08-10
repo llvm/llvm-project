@@ -3025,9 +3025,30 @@ bool AMDGPULegalizerInfo::legalizeAtomicCmpXChg(
 /// Return true if it's known that \p Src can never be an f32 denormal value.
 static bool valueIsKnownNeverF32Denorm(const MachineRegisterInfo &MRI,
                                        Register Src) {
-  Register ExtSrc;
-  if (mi_match(Src, MRI, m_GFPExt(m_Reg(ExtSrc))))
-    return MRI.getType(ExtSrc) == LLT::scalar(16);
+  const MachineInstr *DefMI = MRI.getVRegDef(Src);
+  switch (DefMI->getOpcode()) {
+  case TargetOpcode::G_INTRINSIC: {
+    switch (cast<GIntrinsic>(DefMI)->getIntrinsicID()) {
+    case Intrinsic::amdgcn_frexp_mant:
+      return true;
+    default:
+      break;
+    }
+
+    break;
+  }
+  case TargetOpcode::G_FFREXP: {
+    if (DefMI->getOperand(0).getReg() == Src)
+      return true;
+    break;
+  }
+  case TargetOpcode::G_FPEXT: {
+    return MRI.getType(DefMI->getOperand(1).getReg()) == LLT::scalar(16);
+  }
+  default:
+    return false;
+  }
+
   return false;
 }
 
