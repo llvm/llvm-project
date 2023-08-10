@@ -3667,6 +3667,12 @@ struct AAKernelInfoFunction : AAKernelInfo {
         KernelConfigurationSimplifyCB =
             [&](const GlobalVariable &GV, const AbstractAttribute *AA,
                 bool &UsedAssumedInformation) -> std::optional<Constant *> {
+      if (!isAtFixpoint()) {
+        if (!AA)
+          return nullptr;
+        UsedAssumedInformation = true;
+        A.recordDependence(*this, *AA, DepClassTy::OPTIONAL);
+      }
       return KernelEnvC;
     };
 
