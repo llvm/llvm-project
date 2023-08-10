@@ -185,6 +185,8 @@ Miscellaneous Clang Crashes Fixed
   terminated. Clang should now also recover better when an @end is missing
   between blocks.
   `Issue 64065 <https://github.com/llvm/llvm-project/issues/64065>`_
+- Fixed a crash when check array access on zero-length element.
+  `Issue 64564 <https://github.com/llvm/llvm-project/issues/64564>`_
 
 Target Specific Changes
 -----------------------
