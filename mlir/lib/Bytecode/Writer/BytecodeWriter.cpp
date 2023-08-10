@@ -323,8 +323,8 @@ public:
   DialectWriter(int64_t bytecodeVersion, EncodingEmitter &emitter,
                 IRNumberingState &numberingState,
                 StringSectionBuilder &stringSection)
-      : emitter(emitter), numberingState(numberingState),
-        stringSection(stringSection) {}
+      : bytecodeVersion(bytecodeVersion), emitter(emitter),
+        numberingState(numberingState), stringSection(stringSection) {}
 
   //===--------------------------------------------------------------------===//
   // IR
