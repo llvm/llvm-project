@@ -174,7 +174,7 @@ bool validEndComment(const FormatToken *RBraceTok, StringRef NamespaceName,
                   llvm::Regex::IgnoreCase);
   static const llvm::Regex NamespaceMacroCommentPattern =
       llvm::Regex("^/[/*] *(end (of )?)? *(anonymous|unnamed)? *"
-                  "([a-zA-Z0-9_]+)\\(([a-zA-Z0-9:_]*)\\)\\.? *(\\*/)?$",
+                  "([a-zA-Z0-9_]+)\\(([a-zA-Z0-9:_]*|\".+\")\\)\\.? *(\\*/)?$",
                   llvm::Regex::IgnoreCase);
 
   SmallVector<StringRef, 8> Groups;
