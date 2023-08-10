@@ -411,6 +411,9 @@ Changes to LLDB
   server tells it. Including but not limited to, the size, where it is read from and
   the fields that the register contains.
 
+* AArch64 Linux targets now provide access to the Thread Local Storage
+  register ``tpidr``.
+
 Changes to Sanitizers
 ---------------------
 * For Darwin users that override weak symbols, note that the dynamic linker will
