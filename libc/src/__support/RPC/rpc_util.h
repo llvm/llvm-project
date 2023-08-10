@@ -11,7 +11,7 @@
 
 #include "src/__support/CPP/type_traits.h"
 #include "src/__support/GPU/utils.h"
-#include "src/__support/macros/attributes.h"
+#include "src/__support/macros/attributes.h" // LIBC_INLINE
 #include "src/__support/macros/properties/architectures.h"
 
 namespace __llvm_libc {
@@ -66,11 +66,6 @@ template <typename V> LIBC_INLINE V &lane_value(V *val, uint32_t id) {
   if constexpr (is_process_gpu())
     return *val;
   return val[id];
-}
-
-/// Helper to get the maximum value.
-template <typename T> LIBC_INLINE const T &max(const T &x, const T &y) {
-  return x < y ? y : x;
 }
 
 /// Advance the \p p by \p bytes.
