@@ -312,12 +312,20 @@ public:
     if (auto attrs = declareOp.getFortranAttrs())
       fortranAttrs =
           fir::FortranVariableFlagsAttr::get(rewriter.getContext(), *attrs);
-    auto firBase = rewriter
-                       .create<fir::DeclareOp>(
-                           loc, memref.getType(), memref, declareOp.getShape(),
-                           declareOp.getTypeparams(), declareOp.getUniqName(),
-                           fortranAttrs)
-                       .getResult();
+    auto firDeclareOp = rewriter.create<fir::DeclareOp>(
+        loc, memref.getType(), memref, declareOp.getShape(),
+        declareOp.getTypeparams(), declareOp.getUniqName(), fortranAttrs);
+
+    // Propagate other attributes from hlfir.declare to fir.declare.
+    // OpenACC's acc.declare is one example. Right now, the propagation
+    // is verbatim.
+    mlir::NamedAttrList elidedAttrs =
+        mlir::NamedAttrList{firDeclareOp->getAttrs()};
+    for (const mlir::NamedAttribute &attr : declareOp->getAttrs())
+      if (!elidedAttrs.get(attr.getName()))
+        firDeclareOp->setAttr(attr.getName(), attr.getValue());
+
+    auto firBase = firDeclareOp.getResult();
     mlir::Value hlfirBase;
     mlir::Type hlfirBaseType = declareOp.getBase().getType();
     if (hlfirBaseType.isa<fir::BaseBoxType>()) {
