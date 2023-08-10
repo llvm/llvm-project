@@ -269,3 +269,6 @@ COMMON_FLAG(bool, detect_write_exec, false,
 COMMON_FLAG(bool, test_only_emulate_no_memorymap, false,
             "TEST ONLY fail to read memory mappings to emulate sanitized "
             "\"init\"")
+COMMON_FLAG(bool, enable_symbolizer_markup, false,
+            "Use sanitizer symbolizer "
+            "markup, available only on Linux and Fuchsia.")

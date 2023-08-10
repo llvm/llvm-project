@@ -32,6 +32,7 @@
 #  include "sanitizer_symbolizer_internal.h"
 #  include "sanitizer_symbolizer_libbacktrace.h"
 #  include "sanitizer_symbolizer_mac.h"
+#  include "sanitizer_symbolizer_markup.h"
 
 // C++ demangling function, as required by Itanium C++ ABI. This is weak,
 // because we do not require a C++ ABI library to be linked to a program
@@ -468,6 +469,12 @@ static void ChooseSymbolizerTools(IntrusiveList<SymbolizerTool> *list,
                                   LowLevelAllocator *allocator) {
   if (!common_flags()->symbolize) {
     VReport(2, "Symbolizer is disabled.\n");
+    return;
+  }
+  if (common_flags()->enable_symbolizer_markup) {
+    VReport(2, "Using symbolizer markup.\n");
+    SymbolizerTool *tool = MarkupSymbolizer::get(allocator);
+    list->push_back(tool);
     return;
   }
   if (IsAllocatorOutOfMemory()) {

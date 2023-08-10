@@ -103,12 +103,22 @@ void PrintStack(const ReportStack *ent) {
     Printf("    [failed to restore the stack]\n\n");
     return;
   }
+
+  if (const ListOfModules *modules =
+          Symbolizer::GetOrInit()->GetRefreshedListOfModules()) {
+    InternalScopedString modules_res;
+    RenderModules(&modules_res, modules,
+                  common_flags()->enable_symbolizer_markup);
+    Printf("%s", modules_res.data());
+  }
+
   SymbolizedStack *frame = ent->frames;
   for (int i = 0; frame && frame->info.address; frame = frame->next, i++) {
     InternalScopedString res;
     RenderFrame(&res, common_flags()->stack_trace_format, i,
                 frame->info.address, &frame->info,
                 common_flags()->symbolize_vs_style,
+                common_flags()->enable_symbolizer_markup,
                 common_flags()->strip_path_prefix);
     Printf("%s\n", res.data());
   }

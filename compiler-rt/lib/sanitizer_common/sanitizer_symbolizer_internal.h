@@ -15,7 +15,6 @@
 
 #include "sanitizer_file.h"
 #include "sanitizer_symbolizer.h"
-#include "sanitizer_vector.h"
 
 namespace __sanitizer {
 

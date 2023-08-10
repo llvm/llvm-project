@@ -11,9 +11,12 @@
 //===----------------------------------------------------------------------===//
 
 #include "sanitizer_allocator_internal.h"
+#include "sanitizer_common.h"
+#include "sanitizer_flags.h"
 #include "sanitizer_internal_defs.h"
 #include "sanitizer_platform.h"
 #include "sanitizer_symbolizer_internal.h"
+#include "sanitizer_symbolizer_markup.h"
 
 namespace __sanitizer {
 
@@ -186,6 +189,15 @@ void Symbolizer::RefreshModules() {
   fallback_modules_.fallbackInit();
   RAW_CHECK(modules_.size() > 0);
   modules_fresh_ = true;
+}
+
+const ListOfModules *Symbolizer::GetRefreshedListOfModules() {
+  if (!modules_fresh_) {
+    RefreshModules();
+  }
+
+  CHECK(modules_fresh_);
+  return &modules_;
 }
 
 static const LoadedModule *SearchForModule(const ListOfModules &modules,

@@ -11,20 +11,140 @@
 // Implementation of offline markup symbolizer.
 //===----------------------------------------------------------------------===//
 
+#include "sanitizer_symbolizer_markup.h"
+
+#include "sanitizer_common.h"
+#include "sanitizer_libc.h"
 #include "sanitizer_platform.h"
-#if SANITIZER_SYMBOLIZER_MARKUP
-
-#if SANITIZER_FUCHSIA
+#include "sanitizer_stacktrace.h"
+#include "sanitizer_symbolizer.h"
 #include "sanitizer_symbolizer_fuchsia.h"
-#  endif
-
-#  include <limits.h>
-#  include <unwind.h>
-
-#  include "sanitizer_stacktrace.h"
-#  include "sanitizer_symbolizer.h"
 
 namespace __sanitizer {
+
+void RenderDataMarkup(InternalScopedString *buffer, const char *format,
+                      const DataInfo *DI, const char *strip_path_prefix) {
+  buffer->append(kFormatData, DI->start);
+}
+
+bool RenderNeedsSymbolizationMarkup(const char *format) { return false; }
+
+void RenderFrameMarkup(InternalScopedString *buffer, const char *format,
+                       int frame_no, uptr address, const AddressInfo *info,
+                       bool vs_style, const char *strip_path_prefix) {
+  CHECK(!RenderNeedsSymbolizationMarkup(format));
+  buffer->append(kFormatFrame, frame_no, address);
+}
+
+// Simplier view of a LoadedModule. It only holds information necessary to
+// identify unique modules.
+struct RenderedModule {
+  char *full_name;
+  u8 uuid[kModuleUUIDSize];  // BuildId
+  uptr base_address;
+};
+
+bool ModulesEq(const LoadedModule *module,
+               const RenderedModule *renderedModule) {
+  return module->base_address() == renderedModule->base_address &&
+         internal_memcmp(module->uuid(), renderedModule->uuid,
+                         module->uuid_size()) == 0 &&
+         internal_strcmp(module->full_name(), renderedModule->full_name) == 0;
+}
+
+bool ModuleHasBeenRendered(
+    const LoadedModule *module,
+    const InternalMmapVectorNoCtor<RenderedModule> *renderedModules) {
+  for (auto *it = renderedModules->begin(); it != renderedModules->end();
+       ++it) {
+    const auto &renderedModule = *it;
+    if (ModulesEq(module, &renderedModule)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+void RenderModulesMarkup(InternalScopedString *buffer,
+                         const ListOfModules *modules) {
+  // Keeps track of the modules that have been rendered.
+  static bool initialized = false;
+  static InternalMmapVectorNoCtor<RenderedModule> renderedModules;
+  if (!initialized) {
+    renderedModules.Initialize(modules->size());
+    initialized = true;
+  }
+
+  if (!renderedModules.size()) {
+    buffer->append("{{{reset}}}\n");
+  }
+
+  for (auto *moduleIt = modules->begin(); moduleIt != modules->end();
+       ++moduleIt) {
+    const LoadedModule &module = *moduleIt;
+
+    if (ModuleHasBeenRendered(&module, &renderedModules)) {
+      continue;
+    }
+
+    buffer->append("{{{module:%d:%s:elf:", renderedModules.size(),
+                   module.full_name());
+    for (uptr i = 0; i < module.uuid_size(); i++) {
+      buffer->append("%02x", module.uuid()[i]);
+    }
+    buffer->append("}}}\n");
+
+    const auto ranges = module.ranges();
+    for (const auto &range : ranges) {
+      buffer->append("{{{mmap:%p:%p:load:%d:r", range.beg,
+                     range.end - range.beg, renderedModules.size());
+      if (range.writable)
+        buffer->append("w");
+      if (range.executable)
+        buffer->append("x");
+
+      // module.base_address = dlpi_addr
+      // range.beg = dlpi_addr + p_vaddr
+      // relative address = p_vaddr = range.beg - module.base_address
+      buffer->append(":%p}}}\n", range.beg - module.base_address());
+    }
+
+    renderedModules.push_back({});
+    RenderedModule &curModule = renderedModules.back();
+    curModule.full_name = internal_strdup(module.full_name());
+    internal_memcpy(curModule.uuid, module.uuid(), module.uuid_size());
+    curModule.base_address = module.base_address();
+  }
+}
+
+MarkupSymbolizer *MarkupSymbolizer::get(LowLevelAllocator *alloc) {
+  return new (*alloc) MarkupSymbolizer();
+}
+
+bool MarkupSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
+  char buffer[kFormatFunctionMax];
+  internal_snprintf(buffer, sizeof(buffer), kFormatFunction, addr);
+  stack->info.function = internal_strdup(buffer);
+  return true;
+}
+
+bool MarkupSymbolizer::SymbolizeData(uptr addr, DataInfo *info) {
+  info->Clear();
+  info->start = addr;
+  return true;
+}
+
+// This is used by UBSan for type names, and by ASan for global variable names.
+// It's expected to return a static buffer that will be reused on each call.
+const char *MarkupSymbolizer::Demangle(const char *name) {
+  static char buffer[kFormatDemangleMax];
+  internal_snprintf(buffer, sizeof(buffer), kFormatDemangle, name);
+  return buffer;
+}
+
+#if SANITIZER_SYMBOLIZER_MARKUP
+#  include <limits.h>
+#  include <unwind.h>
 
 // This generic support for offline symbolizing is based on the
 // Fuchsia port.  We don't do any actual symbolization per se.
@@ -38,9 +158,9 @@ namespace __sanitizer {
 // This is used by UBSan for type names, and by ASan for global variable names.
 // It's expected to return a static buffer that will be reused on each call.
 const char *Symbolizer::Demangle(const char *name) {
-  static char buffer[kFormatDemangleMax];
-  internal_snprintf(buffer, sizeof(buffer), kFormatDemangle, name);
-  return buffer;
+  SymbolizerTool *markupSymbolizer = tools_.front();
+  CHECK(markupSymbolizer);
+  return markupSymbolizer->Demangle(name);
 }
 
 // This is used mostly for suppression matching.  Making it work
@@ -66,38 +186,45 @@ bool Symbolizer::SymbolizeFrame(uptr addr, FrameInfo *info) { return false; }
 // to render stack frames, but that should be changed to use
 // RenderStackFrame.
 SymbolizedStack *Symbolizer::SymbolizePC(uptr addr) {
+  SymbolizerTool *markupSymbolizer = tools_.front();
+  CHECK(markupSymbolizer);
+
   SymbolizedStack *s = SymbolizedStack::New(addr);
-  char buffer[kFormatFunctionMax];
-  internal_snprintf(buffer, sizeof(buffer), kFormatFunction, addr);
-  s->info.function = internal_strdup(buffer);
+  markupSymbolizer->SymbolizePC(addr, s);
   return s;
 }
 
 // Always claim we succeeded, so that RenderDataInfo will be called.
 bool Symbolizer::SymbolizeData(uptr addr, DataInfo *info) {
-  info->Clear();
-  info->start = addr;
-  return true;
+  SymbolizerTool *markupSymbolizer = tools_.front();
+  CHECK(markupSymbolizer);
+  return markupSymbolizer->SymbolizeData(addr, info);
 }
 
 // We ignore the format argument to __sanitizer_symbolize_global.
 void RenderData(InternalScopedString *buffer, const char *format,
-                const DataInfo *DI, const char *strip_path_prefix) {
-  buffer->append(kFormatData, DI->start);
+                const DataInfo *DI, bool symbolizer_markup,
+                const char *strip_path_prefix) {
+  RenderDataMarkup(buffer, format, DI, strip_path_prefix);
 }
 
-bool RenderNeedsSymbolization(const char *format) { return false; }
+bool RenderNeedsSymbolization(const char *format, bool symbolizer_markup) {
+  return RenderNeedsSymbolizationMarkup(format);
+}
 
 // We don't support the stack_trace_format flag at all.
 void RenderFrame(InternalScopedString *buffer, const char *format, int frame_no,
                  uptr address, const AddressInfo *info, bool vs_style,
                  const char *strip_path_prefix) {
-  CHECK(!RenderNeedsSymbolization(format));
-  buffer->append(kFormatFrame, frame_no, address);
+  RenderFrameMarkup(buffer, format, frame_no, address, info, vs_style,
+                    strip_path_prefix);
 }
 
 Symbolizer *Symbolizer::PlatformInit() {
-  return new (symbolizer_allocator_) Symbolizer({});
+  IntrusiveList<SymbolizerTool> tools;
+  SymbolizerTool *tool = MarkupSymbolizer::get(&symbolizer_allocator_);
+  tools.push_back(tool);
+  return new (symbolizer_allocator_) Symbolizer(tools);
 }
 
 void Symbolizer::LateInitialize() { Symbolizer::GetOrInit(); }
@@ -107,7 +234,7 @@ void ReportDeadlySignal(const SignalContext &sig, u32 tid,
                         UnwindSignalStackCallbackType unwind,
                         const void *unwind_context) {}
 
-#if SANITIZER_CAN_SLOW_UNWIND
+#  if SANITIZER_CAN_SLOW_UNWIND
 struct UnwindTraceArg {
   BufferedStackTrace *stack;
   u32 max_depth;
@@ -117,7 +244,8 @@ _Unwind_Reason_Code Unwind_Trace(struct _Unwind_Context *ctx, void *param) {
   UnwindTraceArg *arg = static_cast<UnwindTraceArg *>(param);
   CHECK_LT(arg->stack->size, arg->max_depth);
   uptr pc = _Unwind_GetIP(ctx);
-  if (pc < PAGE_SIZE) return _URC_NORMAL_STOP;
+  if (pc < PAGE_SIZE)
+    return _URC_NORMAL_STOP;
   arg->stack->trace_buffer[arg->stack->size++] = pc;
   return (arg->stack->size == arg->max_depth ? _URC_NORMAL_STOP
                                              : _URC_NO_REASON);
@@ -143,8 +271,8 @@ void BufferedStackTrace::UnwindSlow(uptr pc, void *context, u32 max_depth) {
   CHECK_GE(max_depth, 2);
   UNREACHABLE("signal context doesn't exist");
 }
-#endif  // SANITIZER_CAN_SLOW_UNWIND
-
-}  // namespace __sanitizer
+#  endif  // SANITIZER_CAN_SLOW_UNWIND
 
 #endif  // SANITIZER_SYMBOLIZER_MARKUP
+
+}  // namespace __sanitizer
