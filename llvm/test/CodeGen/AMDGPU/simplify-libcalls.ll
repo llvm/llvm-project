@@ -156,8 +156,10 @@ entry:
 
 declare float @_Z10half_recipf(float)
 
+; Do nothing, the underlying implementation will optimize correctly
+; after inlining.
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_native_divide
-; GCN: fmul fast float %tmp, 0x3FD5555560000000
+; GCN: %call = tail call fast float @_Z13native_divideff(float %tmp, float 3.000000e+00)
 define amdgpu_kernel void @test_native_divide(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -168,8 +170,10 @@ entry:
 
 declare float @_Z13native_divideff(float, float)
 
+; Do nothing, the optimization will naturally happen after inlining.
+
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_half_divide
-; GCN: fmul fast float %tmp, 0x3FD5555560000000
+; GCN: %call = tail call fast float @_Z11half_divideff(float %tmp, float 3.000000e+00)
 define amdgpu_kernel void @test_half_divide(ptr addrspace(1) nocapture %a) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -467,7 +471,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_fma_0x
-; GCN: store float %y, ptr addrspace(1) %a
+; GCN: %call = tail call fast float @_Z3fmafff(float 0.000000e+00, float %tmp, float %y)
 define amdgpu_kernel void @test_fma_0x(ptr addrspace(1) nocapture %a, float %y) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -479,7 +483,7 @@ entry:
 declare float @_Z3fmafff(float, float, float)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_fma_x0
-; GCN: store float %y, ptr addrspace(1) %a
+; GCN: %call = tail call fast float @_Z3fmafff(float %tmp, float 0.000000e+00, float %y)
 define amdgpu_kernel void @test_fma_x0(ptr addrspace(1) nocapture %a, float %y) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -489,7 +493,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_mad_0x
-; GCN: store float %y, ptr addrspace(1) %a
+; GCN: %call = tail call fast float @_Z3madfff(float 0.000000e+00, float %tmp, float %y)
 define amdgpu_kernel void @test_mad_0x(ptr addrspace(1) nocapture %a, float %y) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -501,7 +505,7 @@ entry:
 declare float @_Z3madfff(float, float, float)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_mad_x0
-; GCN: store float %y, ptr addrspace(1) %a
+; GCN: %call = tail call fast float @_Z3madfff(float %tmp, float 0.000000e+00, float %y)
 define amdgpu_kernel void @test_mad_x0(ptr addrspace(1) nocapture %a, float %y) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -511,7 +515,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_fma_x1y
-; GCN: %fmaadd = fadd fast float %tmp, %y
+; GCN: %call = tail call fast float @_Z3fmafff(float %tmp, float 1.000000e+00, float %y)
 define amdgpu_kernel void @test_fma_x1y(ptr addrspace(1) nocapture %a, float %y) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -521,7 +525,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_fma_1xy
-; GCN: %fmaadd = fadd fast float %tmp, %y
+; GCN: %call = tail call fast float @_Z3fmafff(float 1.000000e+00, float %tmp, float %y)
 define amdgpu_kernel void @test_fma_1xy(ptr addrspace(1) nocapture %a, float %y) {
 entry:
   %tmp = load float, ptr addrspace(1) %a, align 4
@@ -531,7 +535,7 @@ entry:
 }
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_fma_xy0
-; GCN: %fmamul = fmul fast float %tmp1, %tmp
+; GCN: %call = tail call fast float @_Z3fmafff(float %tmp, float %tmp1, float 0.000000e+00)
 define amdgpu_kernel void @test_fma_xy0(ptr addrspace(1) nocapture %a) {
 entry:
   %arrayidx = getelementptr inbounds float, ptr addrspace(1) %a, i64 1

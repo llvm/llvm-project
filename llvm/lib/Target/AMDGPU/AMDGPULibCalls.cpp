@@ -65,20 +65,11 @@ private:
 
   /* Specialized optimizations */
 
-  // recip (half or native)
-  bool fold_recip(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // divide (half or native)
-  bool fold_divide(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
-
   // pow/powr/pown
   bool fold_pow(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
 
   // rootn
   bool fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B, const FuncInfo &FInfo);
-
-  // fma/mad
-  bool fold_fma_mad(CallInst *CI, IRBuilder<> &B, const FuncInfo &FInfo);
 
   // -fuse-native for sincos
   bool sincosUseNative(CallInst *aCI, const FuncInfo &FInfo);
@@ -587,24 +578,6 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     case AMDGPULibFunc::EI_COS:
     case AMDGPULibFunc::EI_SIN:
       return fold_sincos(FPOp, B, FInfo);
-    case AMDGPULibFunc::EI_RECIP:
-      // skip vector function
-      assert((FInfo.getPrefix() == AMDGPULibFunc::NATIVE ||
-              FInfo.getPrefix() == AMDGPULibFunc::HALF) &&
-             "recip must be an either native or half function");
-      return (getVecSize(FInfo) != 1) ? false : fold_recip(CI, B, FInfo);
-
-    case AMDGPULibFunc::EI_DIVIDE:
-      // skip vector function
-      assert((FInfo.getPrefix() == AMDGPULibFunc::NATIVE ||
-              FInfo.getPrefix() == AMDGPULibFunc::HALF) &&
-             "divide must be an either native or half function");
-      return (getVecSize(FInfo) != 1) ? false : fold_divide(CI, B, FInfo);
-    case AMDGPULibFunc::EI_FMA:
-    case AMDGPULibFunc::EI_MAD:
-    case AMDGPULibFunc::EI_NFMA:
-      // skip vector function
-      return (getVecSize(FInfo) != 1) ? false : fold_fma_mad(CI, B, FInfo);
     default:
       break;
     }
@@ -684,45 +657,6 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
     }
   }
 
-  return false;
-}
-
-//  [native_]half_recip(c) ==> 1.0/c
-bool AMDGPULibCalls::fold_recip(CallInst *CI, IRBuilder<> &B,
-                                const FuncInfo &FInfo) {
-  Value *opr0 = CI->getArgOperand(0);
-  if (ConstantFP *CF = dyn_cast<ConstantFP>(opr0)) {
-    // Just create a normal div. Later, InstCombine will be able
-    // to compute the divide into a constant (avoid check float infinity
-    // or subnormal at this point).
-    Value *nval = B.CreateFDiv(ConstantFP::get(CF->getType(), 1.0),
-                               opr0,
-                               "recip2div");
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *nval << "\n");
-    replaceCall(CI, nval);
-    return true;
-  }
-  return false;
-}
-
-//  [native_]half_divide(x, c) ==> x/c
-bool AMDGPULibCalls::fold_divide(CallInst *CI, IRBuilder<> &B,
-                                 const FuncInfo &FInfo) {
-  Value *opr0 = CI->getArgOperand(0);
-  Value *opr1 = CI->getArgOperand(1);
-  ConstantFP *CF0 = dyn_cast<ConstantFP>(opr0);
-  ConstantFP *CF1 = dyn_cast<ConstantFP>(opr1);
-
-  if ((CF0 && CF1) ||  // both are constants
-      (CF1 && (getArgType(FInfo) == AMDGPULibFunc::F32)))
-      // CF1 is constant && f32 divide
-  {
-    Value *nval1 = B.CreateFDiv(ConstantFP::get(opr1->getType(), 1.0),
-                                opr1, "__div2recip");
-    Value *nval  = B.CreateFMul(opr0, nval1, "__div2mul");
-    replaceCall(CI, nval);
-    return true;
-  }
   return false;
 }
 
@@ -1071,50 +1005,6 @@ bool AMDGPULibCalls::fold_rootn(FPMathOperator *FPOp, IRBuilder<> &B,
       return true;
     }
   }
-  return false;
-}
-
-bool AMDGPULibCalls::fold_fma_mad(CallInst *CI, IRBuilder<> &B,
-                                  const FuncInfo &FInfo) {
-  Value *opr0 = CI->getArgOperand(0);
-  Value *opr1 = CI->getArgOperand(1);
-  Value *opr2 = CI->getArgOperand(2);
-
-  ConstantFP *CF0 = dyn_cast<ConstantFP>(opr0);
-  ConstantFP *CF1 = dyn_cast<ConstantFP>(opr1);
-  if ((CF0 && CF0->isZero()) || (CF1 && CF1->isZero())) {
-    // fma/mad(a, b, c) = c if a=0 || b=0
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr2 << "\n");
-    replaceCall(CI, opr2);
-    return true;
-  }
-  if (CF0 && CF0->isExactlyValue(1.0f)) {
-    // fma/mad(a, b, c) = b+c if a=1
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr1 << " + " << *opr2
-                      << "\n");
-    Value *nval = B.CreateFAdd(opr1, opr2, "fmaadd");
-    replaceCall(CI, nval);
-    return true;
-  }
-  if (CF1 && CF1->isExactlyValue(1.0f)) {
-    // fma/mad(a, b, c) = a+c if b=1
-    LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr0 << " + " << *opr2
-                      << "\n");
-    Value *nval = B.CreateFAdd(opr0, opr2, "fmaadd");
-    replaceCall(CI, nval);
-    return true;
-  }
-  if (ConstantFP *CF = dyn_cast<ConstantFP>(opr2)) {
-    if (CF->isZero()) {
-      // fma/mad(a, b, c) = a*b if c=0
-      LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *opr0 << " * "
-                        << *opr1 << "\n");
-      Value *nval = B.CreateFMul(opr0, opr1, "fmamul");
-      replaceCall(CI, nval);
-      return true;
-    }
-  }
-
   return false;
 }
 

@@ -21,7 +21,6 @@
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
 #include "lldb/Core/PluginManager.h"
-#include "lldb/Core/StreamFile.h"
 #include "lldb/Expression/DiagnosticManager.h"
 #include "lldb/Expression/DynamicCheckerFunctions.h"
 #include "lldb/Expression/UserExpression.h"
@@ -565,15 +564,6 @@ void Process::Finalize() {
   // Clear the last natural stop ID since it has a strong reference to this
   // process
   m_mod_id.SetStopEventForLastNaturalStopID(EventSP());
-  //#ifdef LLDB_CONFIGURATION_DEBUG
-  //    StreamFile s(stdout, false);
-  //    EventSP event_sp;
-  //    while (m_private_state_listener_sp->GetNextEvent(event_sp))
-  //    {
-  //        event_sp->Dump (&s);
-  //        s.EOL();
-  //    }
-  //#endif
   // We have to be very careful here as the m_private_state_listener might
   // contain events that have ProcessSP values in them which can keep this
   // process around forever. These events need to be cleared out.

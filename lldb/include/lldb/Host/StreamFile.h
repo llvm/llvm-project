@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLDB_CORE_STREAMFILE_H
-#define LLDB_CORE_STREAMFILE_H
+#ifndef LLDB_HOST_STREAMFILE_H
+#define LLDB_HOST_STREAMFILE_H
 
 #include "lldb/Host/File.h"
 #include "lldb/Utility/Stream.h"
@@ -54,4 +54,4 @@ private:
 
 } // namespace lldb_private
 
-#endif // LLDB_CORE_STREAMFILE_H
+#endif // LLDB_HOST_STREAMFILE_H
