@@ -54847,6 +54847,17 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       return getConstVector(EltBits, UndefElts, VT, DAG, DL);
   }
 
+  // If we're splatting a 128-bit subvector to 512-bits, use SHUF128 directly.
+  if (IsSplat && NumOps == 4 && VT.is512BitVector() &&
+      Subtarget.useAVX512Regs()) {
+    MVT ShuffleVT = VT.isFloatingPoint() ? MVT::v8f64 : MVT::v8i64;
+    SDValue Res = widenSubVector(Op0, false, Subtarget, DAG, DL, 512);
+    Res = DAG.getBitcast(ShuffleVT, Res);
+    Res = DAG.getNode(X86ISD::SHUF128, DL, ShuffleVT, Res, Res,
+                      getV4X86ShuffleImm8ForMask({0, 0, 0, 0}, DL, DAG));
+    return DAG.getBitcast(VT, Res);
+  }
+
   return SDValue();
 }
 
