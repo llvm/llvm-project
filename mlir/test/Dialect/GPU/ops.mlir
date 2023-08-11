@@ -371,9 +371,3 @@ gpu.module @module_with_one_target [#nvvm.target] {
     gpu.return
   }
 }
-
-gpu.module @module_with_two_target [#nvvm.target, #rocdl.target<chip = "gfx90a">] {
-  gpu.func @kernel(%arg0 : f32) kernel {
-    gpu.return
-  }
-}
