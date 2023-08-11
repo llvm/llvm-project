@@ -203,18 +203,21 @@ def GetTileID : ArmSME_Op<"get_tile_id"> {
 
 def ZeroOp : ArmSME_Op<"zero", [Pure]> {
   let summary = "Initialize the two-dimensional ZA array with 0s";
-  let results = (outs nxnxv16i8:$res);
+  let results = (outs SMETile:$res);
   let description = [{
     Initialise ZA with 0. This operation is convenient wrapper for the SME
     `zero` intrinsic and instruction. 
 
-    NOTE: At the moment it is assumed that the element type is `i8` and that
-    there's only one "virtual tile".
-
-    Example:
+    Example 1: Zero an 8-bit element ZA tile.
 
     ```mlir
     %0 = arm_sme.zero : vector<[16]x[16]xi8>
+    ```
+
+    Example 2: Zero a 64-bit element ZA tile.
+
+    ```mlir
+    %0 = arm_sme.zero : vector<[2]x[2]xi64>
     ```
   }];
   let extraClassDeclaration = [{
