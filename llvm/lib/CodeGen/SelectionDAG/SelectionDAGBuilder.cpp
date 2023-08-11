@@ -4156,6 +4156,18 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   assert(FuncInfo.MF->getFrameInfo().hasVarSizedObjects());
 }
 
+static const MDNode *getRangeMetadata(const Instruction &I) {
+  // If !noundef is not present, then !range violation results in a poison
+  // value rather than immediate undefined behavior. In theory, transferring
+  // these annotations to SDAG is fine, but in practice there are key SDAG
+  // transforms that are known not to be poison-safe, such as folding logical
+  // and/or to bitwise and/or. For now, only transfer !range if !noundef is
+  // also present.
+  if (!I.hasMetadata(LLVMContext::MD_noundef))
+    return nullptr;
+  return I.getMetadata(LLVMContext::MD_range);
+}
+
 void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
   if (I.isAtomic())
     return visitAtomicLoad(I);
@@ -4188,7 +4200,7 @@ void SelectionDAGBuilder::visitLoad(const LoadInst &I) {
 
   Align Alignment = I.getAlign();
   AAMDNodes AAInfo = I.getAAMetadata();
-  const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
+  const MDNode *Ranges = getRangeMetadata(I);
   bool isVolatile = I.isVolatile();
   MachineMemOperand::Flags MMOFlags =
       TLI.getLoadMemOperandFlags(I, DAG.getDataLayout(), AC, LibInfo);
@@ -4593,7 +4605,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
     Alignment = DAG.getEVTAlign(VT);
 
   AAMDNodes AAInfo = I.getAAMetadata();
-  const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
+  const MDNode *Ranges = getRangeMetadata(I);
 
   // Do not serialize masked loads of constant memory with anything.
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
@@ -4627,7 +4639,7 @@ void SelectionDAGBuilder::visitMaskedGather(const CallInst &I) {
                         ->getMaybeAlignValue()
                         .value_or(DAG.getEVTAlign(VT.getScalarType()));
 
-  const MDNode *Ranges = I.getMetadata(LLVMContext::MD_range);
+  const MDNode *Ranges = getRangeMetadata(I);
 
   SDValue Root = DAG.getRoot();
   SDValue Base;
@@ -7632,7 +7644,7 @@ void SelectionDAGBuilder::visitVPLoad(
   Value *PtrOperand = VPIntrin.getArgOperand(0);
   MaybeAlign Alignment = VPIntrin.getPointerAlignment();
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
-  const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
+  const MDNode *Ranges = getRangeMetadata(VPIntrin);
   SDValue LD;
   // Do not serialize variable-length loads of constant memory with
   // anything.
@@ -7659,7 +7671,7 @@ void SelectionDAGBuilder::visitVPGather(
   Value *PtrOperand = VPIntrin.getArgOperand(0);
   MaybeAlign Alignment = VPIntrin.getPointerAlignment();
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
-  const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
+  const MDNode *Ranges = getRangeMetadata(VPIntrin);
   SDValue LD;
   if (!Alignment)
     Alignment = DAG.getEVTAlign(VT.getScalarType());
@@ -7766,7 +7778,7 @@ void SelectionDAGBuilder::visitVPStridedLoad(
   if (!Alignment)
     Alignment = DAG.getEVTAlign(VT.getScalarType());
   AAMDNodes AAInfo = VPIntrin.getAAMetadata();
-  const MDNode *Ranges = VPIntrin.getMetadata(LLVMContext::MD_range);
+  const MDNode *Ranges = getRangeMetadata(VPIntrin);
   MemoryLocation ML = MemoryLocation::getAfter(PtrOperand, AAInfo);
   bool AddToChain = !AA || !AA->pointsToConstantMemory(ML);
   SDValue InChain = AddToChain ? DAG.getRoot() : DAG.getEntryNode();
@@ -9613,7 +9625,7 @@ void SelectionDAGBuilder::visitVACopy(const CallInst &I) {
 SDValue SelectionDAGBuilder::lowerRangeToAssertZExt(SelectionDAG &DAG,
                                                     const Instruction &I,
                                                     SDValue Op) {
-  const MDNode *Range = I.getMetadata(LLVMContext::MD_range);
+  const MDNode *Range = getRangeMetadata(I);
   if (!Range)
     return Op;
 
