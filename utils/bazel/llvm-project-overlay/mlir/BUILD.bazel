@@ -3453,6 +3453,7 @@ cc_library(
         ":ComplexToSPIRV",
         ":ComplexToStandard",
         ":ControlFlowToLLVM",
+        ":ControlFlowToSCF",
         ":ControlFlowToSPIRV",
         ":ConversionPassIncGen",
         ":ConvertToLLVM",
@@ -4851,12 +4852,14 @@ cc_library(
     includes = ["include"],
     local_defines = if_cuda_available(["MLIR_GPU_TO_CUBIN_PASS_ENABLE"]),
     deps = [
+        ":AffineDialect",
         ":AffineUtils",
         ":ArithDialect",
         ":AsmParser",
         ":AsyncDialect",
         ":ControlFlowDialect",
         ":DLTIDialect",
+        ":DialectUtils",
         ":ExecutionEngineUtils",
         ":FuncDialect",
         ":GPUDialect",
@@ -4987,11 +4990,15 @@ cc_library(
         ":ControlFlowDialect",
         ":DialectUtils",
         ":FuncDialect",
+        ":GPUCommonTransforms",
         ":GPUDialect",
+        ":GPUToNVVMTransforms",
         ":GPUTransformOpsIncGen",
         ":GPUTransforms",
         ":IR",
+        ":LLVMCommonConversion",
         ":MemRefDialect",
+        ":NVVMDialect",
         ":Parser",
         ":SCFDialect",
         ":SideEffectInterfaces",
@@ -7198,6 +7205,30 @@ cc_library(
 )
 
 cc_library(
+    name = "ControlFlowToSCF",
+    srcs = [
+        "lib/Conversion/ControlFlowToSCF/ControlFlowToSCF.cpp",
+    ],
+    hdrs = [
+        "include/mlir/Conversion/ControlFlowToSCF/ControlFlowToSCF.h",
+    ],
+    includes = ["include"],
+    deps = [
+        ":ArithDialect",
+        ":ControlFlowDialect",
+        ":ConversionPassIncGen",
+        ":FuncDialect",
+        ":LLVMDialect",
+        ":Pass",
+        ":SCFDialect",
+        ":Transforms",
+        ":UBDialect",
+        "//llvm:Core",
+        "//llvm:Support",
+    ],
+)
+
+cc_library(
     name = "ControlFlowToLLVM",
     srcs = [
         "lib/Conversion/ControlFlowToLLVM/ControlFlowToLLVM.cpp",
@@ -8143,6 +8174,7 @@ cc_library(
         ":FuncDialect",
         ":FuncToLLVM",
         ":FuncToSPIRV",
+        ":FuncTransformOps",
         ":FuncTransforms",
         ":FuncTransformsPassIncGen",
         ":GPUDialect",
