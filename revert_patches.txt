@@ -72,4 +72,5 @@ Revert "[X86] Workaround possible CPUID bug in Sandy Bridge."
 Revert "Enable concatenation of predefined identifiers "
 Revert "[FunctionAttrs] Unconditionally perform argument attribute inference in the first function-attrs pass"
 Revert "[clang][test] Fix LIT test failures for the following commit"
+Revert "[Clang] Produce a warning instead of an error in unevaluated strings before C++26 "
 
