@@ -997,6 +997,14 @@ struct GenericPluginTy {
   // Returns true if the system is equipped with a GFX90a
   virtual bool hasGfx90aDevice() { return false; }
 
+  virtual bool AreAllocationsForMapsOnApusDisabled() { return false; }
+
+  virtual bool IsNoMapsCheck() { return false; }
+
+  virtual bool IsFineGrainedMemoryEnabled() { return false; }
+
+  virtual void setUpEnv() {}
+
   /// Get the ELF code to recognize the binary image of this plugin.
   virtual uint16_t getMagicElfBits() const = 0;
 

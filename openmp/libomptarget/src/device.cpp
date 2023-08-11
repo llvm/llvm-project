@@ -366,7 +366,7 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       MESSAGE("device mapping required by 'present' map type modifier does not "
               "exist for host address " DPxMOD " (%" PRId64 " bytes)",
               DPxPTR(HstPtrBegin), Size);
-  } else if (((PM->RTLs.DisableAllocationsForMapsOnApus) ||
+  } else if (((RTL->are_allocations_for_maps_on_apus_disabled()) ||
               (PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)) &&
              (!HasCloseModifier)) {
     // If unified shared memory is active, implicitly mapped variables that
@@ -380,13 +380,13 @@ TargetPointerResultTy DeviceTy::getTargetPointer(
       // memory as coarse-grained. The usage of coarse-grained memory can be
       // overriden by setting the env-var OMPX_DISABLE_USM_MAPS=1.
       // This is not done for APUs.
-      if (!(PM->RTLs.IsAPUDevice || PM->RTLs.IsGfx90aDevice) &&
-          !PM->RTLs.EnableFineGrainedMemory && HstPtrBegin &&
+      if (!(RTL->has_apu_device() || RTL->has_gfx90a_device()) &&
+          RTL->is_fine_grained_memory_enabled() && HstPtrBegin &&
           RTL->set_coarse_grain_mem_region) {
         RTL->set_coarse_grain_mem_region(DeviceID, HstPtrBegin, Size);
       }
 
-      if (!PM->RTLs.NoUSMMapChecks) {
+      if (!RTL->is_no_maps_check()) {
         // even under unified_shared_memory need to check for correctness of
         // use of map clauses. Device pointer is same as host ptr in this case
         LR.TPR.setEntry(HDTTMap
@@ -558,7 +558,7 @@ DeviceTy::getTgtPtrBegin(void *HstPtrBegin, int64_t Size, bool UpdateRefCount,
          LR.TPR.getEntry()->holdRefCountToStr().c_str(), HoldRefCountAction);
     LR.TPR.TargetPointer = (void *)TP;
   } else if ((PM->RTLs.RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY) ||
-             (PM->RTLs.DisableAllocationsForMapsOnApus)) {
+             (RTL->are_allocations_for_maps_on_apus_disabled())) {
     // If the value isn't found in the mapping and unified shared memory
     // is on then it means we have stumbled upon a value which we need to
     // use directly from the host.
@@ -642,6 +642,11 @@ void DeviceTy::init() {
   // Make call to init_requires if it exists for this plugin.
   if (RTL->init_requires)
     RTL->init_requires(PM->RTLs.RequiresFlags);
+
+  // set_up_env() has a temporary dependency on RequiresFlags being set. This
+  // spot is the earliest possible call-site.
+  RTL->set_up_env();
+
   int32_t Ret = RTL->init_device(RTLDeviceID);
   DP("Initialization returned %d\n", Ret);
   if (Ret != OFFLOAD_SUCCESS)

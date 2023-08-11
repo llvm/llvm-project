@@ -115,21 +115,6 @@ void RTLsTy::loadRTLs() {
   }
 
   DP("Loading RTLs...\n");
-
-  // Parse environment variable OMPX_DISABLE_MAPS (if set)
-  if (const char *NoMapChecksStr = getenv("OMPX_DISABLE_MAPS"))
-    if (NoMapChecksStr)
-      NoUSMMapChecks = std::stoi(NoMapChecksStr);
-
-  // Parse environement variable OMPX_DISABLE_USM_MAPS (if set)
-  if (auto *disable_usm_maps{std::getenv("OMPX_DISABLE_USM_MAPS")}) {
-    auto Value{std::stoi(disable_usm_maps)};
-    if (Value > 0) {
-      EnableFineGrainedMemory = true;
-    }
-  }
-
-  DP("Loading RTLs...\n");
   BoolEnvar UseFirstGoodRTL("LIBOMPTARGET_USE_FIRST_GOOD_RTL", false);
 
   // Attempt to open all the plugins and, if they exist, check if the interface
@@ -146,46 +131,6 @@ void RTLsTy::loadRTLs() {
   }
 
   DP("RTLs loaded!\n");
-
-  // On APU systems (e.g., gfx940), running with
-  // OMPX_APU_MAPS=1, in default mode and HSA_XNACK=1 triggers
-  // disabling of most map clauses
-  // (except for declare target variables).
-  // Disabling means no device memory allocation
-  // and h2d or d2h memory copies are performed,
-  // but host thread allocated memory is used on
-  // devices. This behavior is reset if user app
-  // calls register requires later with unified_shared_memory flag
-
-  for (auto &RTL : PM->RTLs.AllRTLs) {
-    PM->RTLs.IsAPUDevice |= RTL.has_apu_device();
-    PM->RTLs.IsGfx90aDevice |= RTL.has_gfx90a_device();
-  }
-
-  auto *APUMaps = getenv("OMPX_APU_MAPS");
-  // TODO: Use ROCt API to query xnack status. (requires merge of SWDEV-405757)
-  auto *HSAXnack = getenv("HSA_XNACK");
-  auto APUMapsVal = 0;
-  auto HSAXnackVal = 0;
-  if (APUMaps && HSAXnack) {
-    APUMapsVal = std::stoi(APUMaps);
-    HSAXnackVal = std::stoi(HSAXnack);
-  }
-
-  if (PM->RTLs.IsAPUDevice || PM->RTLs.IsGfx90aDevice) {
-    // OMPX_APU_MAPS is a temporary env variable
-    // that should always be used with HSA_XNACK=1:
-    // error if it is not. Once this is made default behavior
-    // for USM=OFF, HSA_XNACK=1, then we can remove the error
-    // as the behavior is only triggered by HSA_XNACK value
-    if (APUMapsVal > 0 && HSAXnackVal == 0) {
-      FATAL_MESSAGE0(1, "OMPX_APU_MAPS behavior requires HSA_XNACK=1");
-    }
-    if (APUMapsVal > 0 && HSAXnackVal > 0)
-      DisableAllocationsForMapsOnApus = true;
-  } else if (APUMapsVal > 0 && HSAXnackVal > 0) {
-    FATAL_MESSAGE0(1, "OMPX_APU_MAPS and HSA_XNACK enabled on non-APU system");
-  }
 }
 
 bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
@@ -227,12 +172,6 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
   if (!(*((void **)&RTL.number_of_team_procs) =
             DynLibrary->getAddressOfSymbol("__tgt_rtl_number_of_team_procs")))
     ValidPlugin = false;
-  if (!(*((void **)&RTL.has_apu_device) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_has_apu_device")))
-    ValidPlugin = false;
-  if (!(*((void **)&RTL.has_gfx90a_device) =
-            DynLibrary->getAddressOfSymbol("__tgt_rtl_has_gfx90a_device")))
-    ValidPlugin = false;
   if (!(*((void **)&RTL.init_device) =
             DynLibrary->getAddressOfSymbol("__tgt_rtl_init_device")))
     ValidPlugin = false;
@@ -256,6 +195,9 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
     ValidPlugin = false;
   if (!(*((void **)&RTL.launch_kernel_sync) =
             DynLibrary->getAddressOfSymbol("__tgt_rtl_launch_kernel_sync")))
+    ValidPlugin = false;
+  if (!(*((void **)&RTL.set_up_env) =
+            DynLibrary->getAddressOfSymbol("__tgt_rtl_set_up_env")))
     ValidPlugin = false;
 
   // Invalid plugin
@@ -290,8 +232,6 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_submit_async");
   *((void **)&RTL.data_retrieve_async) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_retrieve_async");
-  *((void **)&RTL.launch_kernel_sync) =
-      DynLibrary->getAddressOfSymbol("__tgt_rtl_launch_kernel_sync");
   *((void **)&RTL.synchronize) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_synchronize");
   *((void **)&RTL.query_async) =
@@ -342,6 +282,18 @@ bool RTLsTy::attemptLoadRTL(const std::string &RTLName, RTLInfoTy &RTL) {
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_mapped");
   *((void **)&RTL.data_notify_unmapped) =
       DynLibrary->getAddressOfSymbol("__tgt_rtl_data_notify_unmapped");
+  *((void **)&RTL.has_apu_device) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_has_apu_device");
+  *((void **)&RTL.has_gfx90a_device) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_has_gfx90a_device");
+  *((void **)&RTL.are_allocations_for_maps_on_apus_disabled) =
+      DynLibrary->getAddressOfSymbol(
+          "__tgt_rtl_are_allocations_for_maps_on_apus_disabled");
+  *((void **)&RTL.is_no_maps_check) =
+      DynLibrary->getAddressOfSymbol("__tgt_rtl_is_no_maps_check");
+  *((void **)&RTL.is_fine_grained_memory_enabled) =
+      DynLibrary->getAddressOfSymbol(
+          "__tgt_rtl_is_fine_grained_memory_enabled");
 
   // Record Replay RTL
   *((void **)&RTL.activate_record_replay) =
@@ -448,16 +400,6 @@ static __tgt_image_info getImageInfo(__tgt_device_image *Image) {
   return __tgt_image_info{(*BinaryOrErr)->getArch().data()};
 }
 
-// Temp workaround due to the presence of OMPX_APU_MAPS
-// to enable unified shared memory mode for default programs
-// run with HSA_XNACK=1. Remove once the OMPX_APU_MAPS mode is
-// made default
-void RTLsTy::disableAPUMapsForUSM(int64_t RequiresFlags) {
-  // TODO: insert any other missing checks
-  if (RequiresFlags & OMP_REQ_UNIFIED_SHARED_MEMORY)
-    DisableAllocationsForMapsOnApus = false;
-}
-
 void RTLsTy::registerRequires(int64_t Flags) {
   // TODO: add more elaborate check.
   // Minimal check: only set requires flags if previous value
@@ -468,7 +410,6 @@ void RTLsTy::registerRequires(int64_t Flags) {
          "illegal undefined flag for requires directive!");
   if (RequiresFlags == OMP_REQ_UNDEFINED) {
     RequiresFlags = Flags;
-    disableAPUMapsForUSM(RequiresFlags);
     return;
   }
 
@@ -493,8 +434,6 @@ void RTLsTy::registerRequires(int64_t Flags) {
         1,
         "'#pragma omp requires unified_shared_memory' not used consistently!");
   }
-
-  disableAPUMapsForUSM(RequiresFlags);
 
   // TODO: insert any other missing checks
 

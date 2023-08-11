@@ -1522,6 +1522,18 @@ bool __tgt_rtl_has_apu_device() { return Plugin::get().hasAPUDevice(); }
 
 bool __tgt_rtl_has_gfx90a_device() { return Plugin::get().hasGfx90aDevice(); }
 
+bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled() {
+  return Plugin::get().AreAllocationsForMapsOnApusDisabled();
+}
+
+bool __tgt_rtl_is_no_maps_check() { return Plugin::get().IsNoMapsCheck(); }
+
+bool __tgt_rtl_is_fine_grained_memory_enabled() {
+  return Plugin::get().IsFineGrainedMemoryEnabled();
+}
+
+void __tgt_rtl_set_up_env() { Plugin::get().setUpEnv(); }
+
 int64_t __tgt_rtl_init_requires(int64_t RequiresFlags) {
   Plugin::get().setRequiresFlag(RequiresFlags);
   return RequiresFlags;

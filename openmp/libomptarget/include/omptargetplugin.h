@@ -40,6 +40,15 @@ bool __tgt_rtl_has_apu_device(void);
 // Returns true, if the system is equipped with an GFX90a
 bool __tgt_rtl_has_gfx90a_device(void);
 
+bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled(void);
+
+bool __tgt_rtl_is_no_maps_check(void);
+
+bool __tgt_rtl_is_fine_grained_memory_enabled(void);
+
+// Set up environement e.g. depending on the values of the env vars
+void __tgt_rtl_set_up_env(void);
+
 // Return an integer different from zero if the provided device image can be
 // supported by the runtime. The functionality is similar to comparing the
 // result of __tgt__rtl__load__binary to NULL. However, this is meant to be a

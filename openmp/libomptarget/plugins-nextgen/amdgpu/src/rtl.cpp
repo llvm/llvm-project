@@ -3496,6 +3496,8 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
     hasGfx90aDevice();
     hasAPUDevice();
 
+    readEnvVars();
+
     return NumDevices;
   }
 
@@ -3541,6 +3543,63 @@ struct AMDGPUPluginTy final : public GenericPluginTy {
 
     HasGFX90ADevice = checkForDeviceByGFXName("gfx90a");
     return HasGFX90ADevice;
+  }
+
+  bool AreAllocationsForMapsOnApusDisabled() override final {
+    return DisableAllocationsForMapsOnApus;
+  }
+
+  bool IsNoMapsCheck() override final { return NoUSMMapChecks; }
+
+  bool IsFineGrainedMemoryEnabled() override final {
+    return EnableFineGrainedMemory;
+  }
+
+  void readEnvVars() {
+    if (!Initialized)
+      FATAL_MESSAGE(1, "%s", "parseEnvVars was called on uninitialized plugin");
+
+    NoMapChecks = BoolEnvar("OMPX_DISABLE_MAPS", true);
+    DisableUsmMaps = BoolEnvar("OMPX_DISABLE_USM_MAPS", false);
+    APUMaps = BoolEnvar("OMPX_APU_MAPS", false);
+    HSAXnack = BoolEnvar("HSA_XNACK", false);
+  }
+
+  void setUpEnv() override final {
+
+    if (NoMapChecks.get() == false) {
+      NoUSMMapChecks = false;
+    }
+
+    if (DisableUsmMaps.get() == true) {
+      EnableFineGrainedMemory = true;
+    }
+
+    if (hasAPUDevice() || hasGfx90aDevice()) {
+      // OMPX_APU_MAPS is a temporary env variable
+      // that should always be used with HSA_XNACK=1:
+      // error if it is not. Once this is made default behavior
+      // for USM=OFF, HSA_XNACK=1, then we can remove the error
+      // as the behavior is only triggered by HSA_XNACK value
+      if ((APUMaps.get() == true) && (HSAXnack.get() == false)) {
+        FATAL_MESSAGE0(1, "OMPX_APU_MAPS behavior requires HSA_XNACK=1");
+      }
+
+      assert(!(Plugin::get().getRequiresFlags() & OMP_REQ_UNDEFINED));
+      // Last condition of the following if statement is a workaround due to
+      // the presence of OMPX_APU_MAPS to enable unified shared memory mode
+      // for default programs run with HSA_XNACK=1. Remove once the
+      // OMPX_APU_MAPS mode is made default. Formerly implemented in
+      // RTLsTy::disableAPUMapsForUSM
+
+      if ((APUMaps.get() == true) && (HSAXnack.get() == true) &&
+          !(Plugin::get().getRequiresFlags() & OMP_REQ_UNIFIED_SHARED_MEMORY)) {
+        DisableAllocationsForMapsOnApus = true;
+      }
+    } else if (APUMaps.get() == true && HSAXnack == true) {
+      FATAL_MESSAGE0(1,
+                     "OMPX_APU_MAPS and HSA_XNACK enabled on non-APU system");
+    }
   }
 
   /// Check whether the image is compatible with an AMDGPU device.
@@ -3656,8 +3715,8 @@ private:
         continue;
 
       if (GfxLookUpName.find_insensitive(GfxNameRef) != llvm::StringRef::npos) {
-        // Special handling for MI300. We will have to distinguish between an MI300A
-        // and X
+        // Special handling for MI300. We will have to distinguish between an
+        // MI300A and X
         if (CheckForMI300A) {
           uint32_t ChipID = 0;
           Status = hsa_agent_get_info(
@@ -3686,6 +3745,24 @@ private:
 
   /// Flag that shows if device is an APU device
   int16_t HasAPUDevice{-1};
+
+  BoolEnvar NoMapChecks;
+  BoolEnvar DisableUsmMaps;
+  BoolEnvar APUMaps;
+  BoolEnvar HSAXnack;
+
+  // Set by OMPX_APU_MAPS environment variable.
+  // If set, maps cause no copy operations. USM is used instead. Allocated
+  // memory remains coarse grained.
+  bool DisableAllocationsForMapsOnApus{false};
+
+  // Set by OMPX_DISABLE_MAPS environment variable.
+  // When active (default value), maps are ignored by the runtime
+  bool NoUSMMapChecks{true};
+
+  // Set by OMPX_DISABLE_USM_MAPS environment variable.
+  // If set, fine graned memory is used for maps instead of coarse grained.
+  bool EnableFineGrainedMemory{false};
 
   /// Arrays of the available GPU and CPU agents. These arrays of handles should
   /// not be here but in the AMDGPUDeviceTy structures directly. However, the

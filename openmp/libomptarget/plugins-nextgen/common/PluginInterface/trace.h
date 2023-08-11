@@ -320,6 +320,36 @@ bool __tgt_rtl_has_gfx90a_device() {
 #define __tgt_rtl_has_gfx90a_device(...)                                       \
   __tgt_rtl_has_gfx90a_device_impl(__VA_ARGS__)
 
+static bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled_impl();
+bool __tgt_rtl_are_allocations_for_maps_on_apus_disabled() {
+  auto t = detail::log<bool>(__func__);
+  bool r = __tgt_rtl_are_allocations_for_maps_on_apus_disabled_impl();
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_are_allocations_for_maps_on_apus_disabled(...)               \
+  __tgt_rtl_are_allocations_for_maps_on_apus_disabled_impl(__VA_ARGS__)
+
+static bool __tgt_rtl_is_fine_grained_memory_enabled_impl();
+bool __tgt_rtl_is_fine_grained_memory_enabled() {
+  auto t = detail::log<bool>(__func__);
+  bool r = __tgt_rtl_is_fine_grained_memory_enabled_impl();
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_is_fine_grained_memory_enabled(...)                          \
+  __tgt_rtl_is_fine_grained_memory_enabled_impl(__VA_ARGS__)
+
+static bool __tgt_rtl_is_no_maps_check_impl();
+bool __tgt_rtl_is_no_maps_check() {
+  auto t = detail::log<bool>(__func__);
+  bool r = __tgt_rtl_is_no_maps_check_impl();
+  t.res(r);
+  return r;
+}
+#define __tgt_rtl_is_no_maps_check(...)                                        \
+  __tgt_rtl_is_no_maps_check_impl(__VA_ARGS__)
+
 static int32_t __tgt_rtl_launch_kernel_sync_impl(int32_t device_id,
                                                  void *tgt_entry_ptr,
                                                  void **tgt_args,
