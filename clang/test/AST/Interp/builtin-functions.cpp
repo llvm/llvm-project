@@ -43,6 +43,9 @@ namespace nan {
 
   /// The current interpreter does not accept this, but it should.
   constexpr float NaN2 = __builtin_nans([](){return "0xAE98";}()); // ref-error {{must be initialized by a constant expression}}
+#if __cplusplus < 201703L
+  // expected-error@-2 {{must be initialized by a constant expression}}
+#endif
 
   constexpr double NaN3 = __builtin_nan("foo"); // expected-error {{must be initialized by a constant expression}} \
                                                 // ref-error {{must be initialized by a constant expression}}
