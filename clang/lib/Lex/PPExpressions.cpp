@@ -336,8 +336,8 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
     // to a library type may be more appropriate there.
     if (Literal.isBitInt)
       PP.Diag(PeekTok, PP.getLangOpts().C23
-                           ? diag::warn_c2x_compat_bitint_suffix
-                           : diag::ext_c2x_bitint_suffix);
+                           ? diag::warn_c23_compat_bitint_suffix
+                           : diag::ext_c23_bitint_suffix);
 
     // Parse the integer literal into Result.
     if (Literal.GetIntegerValue(Result.Val)) {

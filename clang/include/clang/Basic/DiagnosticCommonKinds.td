@@ -132,10 +132,10 @@ def warn_missing_type_specifier : Warning<
   InGroup<ImplicitInt>, DefaultIgnore;
 
 def ext_c_empty_initializer : Extension<
-  "use of an empty initializer is a C2x extension">, InGroup<C2x>;
-def warn_c2x_compat_empty_initializer : Warning<
-  "use of an empty initializer is incompatible with C standards before C2x">,
-  InGroup<CPre2xCompat>, DefaultIgnore;
+  "use of an empty initializer is a C23 extension">, InGroup<C23>;
+def warn_c23_compat_empty_initializer : Warning<
+  "use of an empty initializer is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 }
 
 let CategoryName = "Nullability Issue" in {
@@ -223,12 +223,12 @@ def err_cxx23_size_t_suffix: Error<
 def err_size_t_literal_too_large: Error<
   "%select{signed |}0'size_t' literal is out of range of possible "
   "%select{signed |}0'size_t' values">;
-def ext_c2x_bitint_suffix : ExtWarn<
-  "'_BitInt' suffix for literals is a C2x extension">,
-  InGroup<C2x>;
-def warn_c2x_compat_bitint_suffix : Warning<
-  "'_BitInt' suffix for literals is incompatible with C standards before C2x">,
-  InGroup<CPre2xCompat>, DefaultIgnore;
+def ext_c23_bitint_suffix : ExtWarn<
+  "'_BitInt' suffix for literals is a C23 extension">,
+  InGroup<C23>;
+def warn_c23_compat_bitint_suffix : Warning<
+  "'_BitInt' suffix for literals is incompatible with C standards before C23">,
+  InGroup<CPre23Compat>, DefaultIgnore;
 def err_integer_literal_too_large : Error<
   "integer literal is too large to be represented in any %select{signed |}0"
   "integer type">;

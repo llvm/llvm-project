@@ -30,7 +30,7 @@ void t10(){}
 void t11(){t10(1);} // expected-warning{{too many arguments}}
 
 // PR3208
-void t12(int) {}  // c2x-warning{{omitting the parameter name in a function definition is a C2x extension}}
+void t12(int) {}  // c2x-warning{{omitting the parameter name in a function definition is a C23 extension}}
 
 // PR2790
 void t13() {
@@ -81,7 +81,7 @@ fn_t t17;
 
 // PR4049
 unknown_type t18(void*) {   // expected-error {{unknown type name 'unknown_type'}} \
-                            // c2x-warning {{omitting the parameter name in a function definition is a C2x extension}}
+                            // c2x-warning {{omitting the parameter name in a function definition is a C23 extension}}
 }
 
 unknown_type t19(int* P) {   // expected-error {{unknown type name 'unknown_type'}}

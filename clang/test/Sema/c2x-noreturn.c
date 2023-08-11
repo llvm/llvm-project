@@ -33,7 +33,7 @@ _Noreturn void func1(void); // ok, using the function specifier
 
 // This is deprecated because it's only for compatibility with inclusion of the
 // <stdnoreturn.h> header where the noreturn macro expands to _Noreturn.
-[[_Noreturn]] void func3(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use '[[noreturn]]' instead}}
+[[_Noreturn]] void func3(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C23; use '[[noreturn]]' instead}}
 
 // Test the behavior of including <stdnoreturn.h>
 #include <stdnoreturn.h>
@@ -48,7 +48,7 @@ noreturn void func8(void);
 void noreturn func9(void);
 
 // Ensure that spelling the deprecated form of the attribute is still diagnosed.
-[[_Noreturn]] void func10(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use '[[noreturn]]' instead}}
+[[_Noreturn]] void func10(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C23; use '[[noreturn]]' instead}}
 
 // Test preprocessor functionality after including <stdnoreturn.h>.
 #if !__has_c_attribute(noreturn)
@@ -62,4 +62,4 @@ void noreturn func9(void);
 // Test that a macro which expands to _Noreturn is still diagnosed when it
 // doesn't come from a system header.
 #define NORETURN _Noreturn
-[[NORETURN]] void func11(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use '[[noreturn]]' instead}}
+[[NORETURN]] void func11(void); // all-warning {{the '[[_Noreturn]]' attribute spelling is deprecated in C23; use '[[noreturn]]' instead}}
