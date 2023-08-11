@@ -25,7 +25,6 @@
 #include "mlir/Conversion/UBToLLVM/UBToLLVM.h"
 #include "mlir/Dialect/Func/Extensions/AllExtensions.h"
 #include "mlir/Target/LLVM/NVVM/Target.h"
-#include "mlir/Target/LLVM/ROCDL/Target.h"
 
 #include <cstdlib>
 
@@ -48,7 +47,6 @@ inline void registerAllExtensions(DialectRegistry &registry) {
   registerConvertNVVMToLLVMInterface(registry);
   ub::registerConvertUBToLLVMInterface(registry);
   registerNVVMTarget(registry);
-  registerROCDLTarget(registry);
 }
 
 } // namespace mlir
