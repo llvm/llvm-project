@@ -92,7 +92,15 @@ TEST_CONSTEXPR_CXX20 bool test() {
 
 #else
 
+# if defined(__arm__) || defined(__aarch64__)
+#   ifdef __BIG_ENDIAN__
+  full_size();
+#   else
   half_size();
+#   endif
+# else
+  half_size();
+# endif
 
 #endif
 
