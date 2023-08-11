@@ -15,8 +15,6 @@
 
 using namespace mlir;
 
-static constexpr unsigned kMinNumElts = 16;
-
 /// Returns true if 'val' is a splat of zero, false otherwise.
 static bool isSplatZero(Type elemType, DenseElementsAttr val) {
   if (llvm::isa<FloatType>(elemType))
@@ -96,15 +94,7 @@ struct ConstantOpToArmSMELowering : public OpRewritePattern<arith::ConstantOp> {
   LogicalResult matchAndRewrite(arith::ConstantOp constantOp,
                                 PatternRewriter &rewriter) const final {
     auto vType = dyn_cast<VectorType>(constantOp.getType());
-    if (!vType)
-      return failure();
-    if (vType.getRank() != 2)
-      return failure();
-    if (vType.getShape() != ArrayRef<int64_t>({kMinNumElts, kMinNumElts}))
-      return failure();
-    if (vType.getElementType() != rewriter.getI8Type())
-      return failure();
-    if (vType.getScalableDims().size() != 2)
+    if (!vType || !arm_sme::isValidSMETileVectorType(vType))
       return failure();
 
     auto denseAttr = dyn_cast<DenseElementsAttr>(constantOp.getValueAttr());
