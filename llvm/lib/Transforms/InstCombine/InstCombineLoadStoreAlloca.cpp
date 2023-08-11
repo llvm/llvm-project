@@ -804,7 +804,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       return nullptr;
 
     const DataLayout &DL = IC.getDataLayout();
-    auto EltSize = DL.getTypeAllocSize(ET);
+    TypeSize EltSize = DL.getTypeAllocSize(ET);
     const auto Align = LI.getAlign();
 
     auto *Addr = LI.getPointerOperand();
@@ -812,7 +812,7 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
     auto *Zero = ConstantInt::get(IdxType, 0);
 
     Value *V = PoisonValue::get(T);
-    uint64_t Offset = 0;
+    TypeSize Offset = TypeSize::get(0, ET->isScalableTy());
     for (uint64_t i = 0; i < NumElements; i++) {
       Value *Indices[2] = {
         Zero,
@@ -820,9 +820,9 @@ static Instruction *unpackLoadToAggregate(InstCombinerImpl &IC, LoadInst &LI) {
       };
       auto *Ptr = IC.Builder.CreateInBoundsGEP(AT, Addr, ArrayRef(Indices),
                                                Name + ".elt");
+      auto EltAlign = commonAlignment(Align, Offset.getKnownMinValue());
       auto *L = IC.Builder.CreateAlignedLoad(AT->getElementType(), Ptr,
-                                             commonAlignment(Align, Offset),
-                                             Name + ".unpack");
+                                             EltAlign, Name + ".unpack");
       L->setAAMetadata(LI.getAAMetadata());
       V = IC.Builder.CreateInsertValue(V, L, i);
       Offset += EltSize;
@@ -957,7 +957,7 @@ static bool canReplaceGEPIdxWithZero(InstCombinerImpl &IC,
   Type *SourceElementType = GEPI->getSourceElementType();
   // Size information about scalable vectors is not available, so we cannot
   // deduce whether indexing at n is undefined behaviour or not. Bail out.
-  if (isa<ScalableVectorType>(SourceElementType))
+  if (SourceElementType->isScalableTy())
     return false;
 
   Type *AllocTy = GetElementPtrInst::getIndexedType(SourceElementType, Ops);
@@ -1323,7 +1323,7 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
       return false;
 
     const DataLayout &DL = IC.getDataLayout();
-    auto EltSize = DL.getTypeAllocSize(AT->getElementType());
+    TypeSize EltSize = DL.getTypeAllocSize(AT->getElementType());
     const auto Align = SI.getAlign();
 
     SmallString<16> EltName = V->getName();
@@ -1335,7 +1335,7 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
     auto *IdxType = Type::getInt64Ty(T->getContext());
     auto *Zero = ConstantInt::get(IdxType, 0);
 
-    uint64_t Offset = 0;
+    TypeSize Offset = TypeSize::get(0, AT->getElementType()->isScalableTy());
     for (uint64_t i = 0; i < NumElements; i++) {
       Value *Indices[2] = {
         Zero,
@@ -1344,7 +1344,7 @@ static bool unpackStoreToAggregate(InstCombinerImpl &IC, StoreInst &SI) {
       auto *Ptr =
           IC.Builder.CreateInBoundsGEP(AT, Addr, ArrayRef(Indices), AddrName);
       auto *Val = IC.Builder.CreateExtractValue(V, i, EltName);
-      auto EltAlign = commonAlignment(Align, Offset);
+      auto EltAlign = commonAlignment(Align, Offset.getKnownMinValue());
       Instruction *NS = IC.Builder.CreateAlignedStore(Val, Ptr, EltAlign);
       NS->setAAMetadata(SI.getAAMetadata());
       Offset += EltSize;

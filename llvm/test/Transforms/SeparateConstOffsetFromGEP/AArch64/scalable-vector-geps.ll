@@ -28,4 +28,41 @@ define ptr @test2(ptr %base, i64 %idx) {
   ret ptr %gep
 }
 
+; Index is implicitly multiplied by vscale and so not really constant.
+define ptr @test3(ptr %base, i64 %idx) #0 {
+; CHECK-LABEL: @test3(
+; CHECK-NEXT:    [[IDX_NEXT:%.*]] = add nuw nsw i64 [[IDX:%.*]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [8 x <vscale x 4 x float>], ptr [[BASE:%.*]], i64 [[IDX_NEXT]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %idx.next = add nuw nsw i64 %idx, 1
+  %gep = getelementptr [8 x <vscale x 4 x float>], ptr %base, i64 %idx.next
+  ret ptr %gep
+}
+
+; Indices are implicitly multiplied by vscale and so not really constant.
+define ptr @test4(ptr %base, i64 %idx) {
+; CHECK-LABEL: @test4(
+; CHECK-NEXT:    [[IDX_NEXT:%.*]] = add nuw nsw i64 [[IDX:%.*]], 1
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr [8 x <vscale x 4 x float>], ptr [[BASE:%.*]], i64 3, i64 [[IDX_NEXT]]
+; CHECK-NEXT:    ret ptr [[GEP]]
+;
+  %idx.next = add nuw nsw i64 %idx, 1
+  %gep = getelementptr [8 x <vscale x 4 x float>], ptr %base, i64 3, i64 %idx.next
+  ret ptr %gep
+}
+
+; Whilst the first two indices are not constant, the calculation of the third
+; index does contain a constant that can be extracted.
+define ptr @test5(ptr %base, i64 %idx) {
+; CHECK-LABEL: @test5(
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr [8 x <vscale x 4 x float>], ptr [[BASE:%.*]], i64 1, i64 3, i64 [[IDX:%.*]]
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr float, ptr [[TMP1]], i64 1
+; CHECK-NEXT:    ret ptr [[GEP2]]
+;
+  %idx.next = add nuw nsw i64 %idx, 1
+  %gep = getelementptr [8 x <vscale x 4 x float>], ptr %base, i64 1, i64 3, i64 %idx.next
+  ret ptr %gep
+}
+
 attributes #0 = { "target-features"="+sve" }
