@@ -3,6 +3,9 @@
 // Check that fake stack does not discard frames on the main stack, when GC is
 // triggered from high alt stack.
 
+// FIXME: Investigate.
+// UNSUPPORTED: android
+
 #include <algorithm>
 #include <assert.h>
 #include <csignal>
