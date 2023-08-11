@@ -1895,6 +1895,41 @@ bool CGOpenMPRuntime::emitDeclareTargetVarDefinition(const VarDecl *VD,
   return CGM.getLangOpts().OpenMPIsTargetDevice;
 }
 
+void CGOpenMPRuntime::emitDeclareTargetFunction(const FunctionDecl *FD,
+                                                llvm::GlobalValue *GV) {
+  std::optional<OMPDeclareTargetDeclAttr *> ActiveAttr =
+      OMPDeclareTargetDeclAttr::getActiveAttr(FD);
+
+  // We only need to handle active 'indirect' declare target functions.
+  if (!ActiveAttr || !(*ActiveAttr)->getIndirect())
+    return;
+
+  // Get a mangled name to store the new device global in.
+  llvm::TargetRegionEntryInfo EntryInfo = getEntryInfoFromPresumedLoc(
+      CGM, OMPBuilder, FD->getCanonicalDecl()->getBeginLoc(), FD->getName());
+  SmallString<128> Name;
+  OMPBuilder.OffloadInfoManager.getTargetRegionEntryFnName(Name, EntryInfo);
+
+  // We need to generate a new global to hold the address of the indirectly
+  // called device function. Doing this allows us to keep the visibility and
+  // linkage of the associated function unchanged while allowing the runtime to
+  // access its value.
+  llvm::GlobalValue *Addr = GV;
+  if (CGM.getLangOpts().OpenMPIsTargetDevice) {
+    Addr = new llvm::GlobalVariable(
+        CGM.getModule(), CGM.VoidPtrTy,
+        /*isConstant=*/true, llvm::GlobalValue::ExternalLinkage, GV, Name,
+        nullptr, llvm::GlobalValue::NotThreadLocal,
+        CGM.getModule().getDataLayout().getDefaultGlobalsAddressSpace());
+    Addr->setVisibility(llvm::GlobalValue::ProtectedVisibility);
+  }
+
+  OMPBuilder.OffloadInfoManager.registerDeviceGlobalVarEntryInfo(
+      Name, Addr, CGM.GetTargetTypeStoreSize(CGM.VoidPtrTy).getQuantity(),
+      llvm::OffloadEntriesInfoManager::OMPTargetGlobalVarEntryIndirect,
+      llvm::GlobalValue::WeakODRLinkage);
+}
+
 Address CGOpenMPRuntime::getAddrOfArtificialThreadPrivate(CodeGenFunction &CGF,
                                                           QualType VarType,
                                                           StringRef Name) {
