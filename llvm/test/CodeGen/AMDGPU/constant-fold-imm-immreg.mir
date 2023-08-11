@@ -790,3 +790,139 @@ body:             |
     S_ENDPGM 0, implicit %4
 
 ...
+
+---
+name:            constant_s_and_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_and_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_AND_B32_:%[0-9]+]]:sgpr_32 = S_AND_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_AND_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_s_and_b32_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_and_b32_implicit_def_scc_is_used
+    ; GCN: [[S_AND_B32_:%[0-9]+]]:sgpr_32 = S_AND_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[S_AND_B32_]], implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_AND_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit %2, implicit $scc
+
+...
+
+---
+name:            constant_s_and_b32_only_implicit_def_scc_is_dead
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_and_b32_only_implicit_def_scc_is_dead
+    ; GCN: S_ENDPGM 0, implicit undef $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_AND_B32 %0, %1, implicit-def dead $scc
+    S_ENDPGM 0, implicit undef $scc
+
+...
+
+---
+name:            constant_s_or_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_or_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_OR_B32_:%[0-9]+]]:sgpr_32 = S_OR_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_OR_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_s_xor_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_xor_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_XOR_B32_:%[0-9]+]]:sgpr_32 = S_XOR_B32 32, 15, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_MOV_B32 15
+    %2:sgpr_32 = S_XOR_B32 %0, %1, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_s_not_b32_only_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_s_not_b32_only_implicit_def_scc_is_used
+    ; GCN: [[S_NOT_B32_:%[0-9]+]]:sgpr_32 = S_NOT_B32 32, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:sgpr_32 = S_MOV_B32 32
+    %1:sgpr_32 = S_NOT_B32 %0, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+# Really really implicit operand
+---
+name:            constant_v_and_b32_implicit_def_scc_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_v_and_b32_implicit_def_scc_is_used
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    ; GCN-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 32, [[V_MOV_B32_e32_]], implicit $exec, implicit-def $scc
+    ; GCN-NEXT: S_ENDPGM 0, implicit $scc
+    %0:vgpr_32 = V_MOV_B32_e32 32, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    %2:vgpr_32 = V_AND_B32_e32 %0, %1, implicit $exec, implicit-def $scc
+    S_ENDPGM 0, implicit $scc
+
+...
+
+---
+name:            constant_v_and_b32_implicit_def_vreg_is_used
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_v_and_b32_implicit_def_vreg_is_used
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    ; GCN-NEXT: [[V_AND_B32_e32_:%[0-9]+]]:vgpr_32 = V_AND_B32_e32 32, [[V_MOV_B32_e32_]], implicit $exec, implicit-def %3
+    ; GCN-NEXT: S_ENDPGM 0, implicit %3
+    %0:vgpr_32 = V_MOV_B32_e32 32, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    %2:vgpr_32 = V_AND_B32_e32 %0, %1, implicit $exec, implicit-def %3:vgpr_32
+    S_ENDPGM 0, implicit %3
+
+...
+---
+name:            constant_v_and_b32_implicit_use
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    ; GCN-LABEL: name: constant_v_and_b32_implicit_use
+    ; GCN: [[V_MOV_B32_e32_:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    ; GCN-NEXT: S_ENDPGM 0, implicit [[V_MOV_B32_e32_]]
+    %0:vgpr_32 = V_MOV_B32_e32 32, implicit $exec
+    %1:vgpr_32 = V_MOV_B32_e32 15, implicit $exec
+    %2:vgpr_32 = V_MOV_B32_e32 24, implicit $exec
+    %3:vgpr_32 = V_AND_B32_e32 %0, %1, implicit $exec, implicit %2:vgpr_32
+    S_ENDPGM 0, implicit %3
+
+...
