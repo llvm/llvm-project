@@ -501,7 +501,7 @@ class Image:
 
 
 class Symbolicator:
-    def __init__(self, debugger=None, target=None, images=list()):
+    def __init__(self, debugger=None, target=None, images=None):
         """A class the represents the information needed to symbolicate
         addresses in a program.
 
@@ -510,7 +510,8 @@ class Symbolicator:
         """
         self.debugger = debugger
         self.target = target
-        self.images = images  # a list of images to be used when symbolicating
+        # a list of images to be used when symbolicating
+        self.images = images if images else list()
         self.addr_mask = 0xFFFFFFFFFFFFFFFF
 
     @classmethod
