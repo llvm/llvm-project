@@ -7182,7 +7182,7 @@ def _SLASH_Zc_wchar_t : CLFlag<"Zc:wchar_t">,
   HelpText<"Enable C++ builtin type wchar_t (default)">;
 def _SLASH_Zc_wchar_t_ : CLFlag<"Zc:wchar_t-">,
   HelpText<"Disable C++ builtin type wchar_t">;
-def _SLASH_Z7 : CLFlag<"Z7">,
+def _SLASH_Z7 : CLFlag<"Z7">, Alias<g_Flag>,
   HelpText<"Enable CodeView debug information in object files">;
 def _SLASH_ZH_MD5 : CLFlag<"ZH:MD5">,
   HelpText<"Use MD5 for file checksums in debug info (default)">,
@@ -7193,7 +7193,7 @@ def _SLASH_ZH_SHA1 : CLFlag<"ZH:SHA1">,
 def _SLASH_ZH_SHA_256 : CLFlag<"ZH:SHA_256">,
   HelpText<"Use SHA256 for file checksums in debug info">,
   Alias<gsrc_hash_EQ>, AliasArgs<["sha256"]>;
-def _SLASH_Zi : CLFlag<"Zi">, Alias<_SLASH_Z7>,
+def _SLASH_Zi : CLFlag<"Zi">, Alias<g_Flag>,
   HelpText<"Like /Z7">;
 def _SLASH_Zp : CLJoined<"Zp">,
   HelpText<"Set default maximum struct packing alignment">,
@@ -7261,9 +7261,9 @@ def _SLASH_GX_ : CLFlag<"GX-">,
 def _SLASH_imsvc : CLJoinedOrSeparate<"imsvc">,
   HelpText<"Add <dir> to system include search path, as if in %INCLUDE%">,
   MetaVarName<"<dir>">;
-def _SLASH_JMC : CLFlag<"JMC">,
+def _SLASH_JMC : CLFlag<"JMC">, Alias<fjmc>,
   HelpText<"Enable just-my-code debugging">;
-def _SLASH_JMC_ : CLFlag<"JMC-">,
+def _SLASH_JMC_ : CLFlag<"JMC-">, Alias<fno_jmc>,
   HelpText<"Disable just-my-code debugging (default)">;
 def _SLASH_LD : CLFlag<"LD">, HelpText<"Create DLL">;
 def _SLASH_LDd : CLFlag<"LDd">, HelpText<"Create debug DLL">;
