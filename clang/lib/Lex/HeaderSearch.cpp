@@ -177,7 +177,7 @@ std::string HeaderSearch::getCachedModuleFileName(Module *Module) {
   // *.modulemap file. In this case, just return an empty string.
   if (!ModuleMap)
     return {};
-  return getCachedModuleFileName(Module->Name, ModuleMap->getNameAsRequested());
+  return getCachedModuleFileName(Module->Name, ModuleMap->getName());
 }
 
 std::string HeaderSearch::getPrebuiltModuleFileName(StringRef ModuleName,
