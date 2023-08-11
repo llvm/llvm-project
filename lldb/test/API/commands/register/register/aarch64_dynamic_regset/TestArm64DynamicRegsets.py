@@ -120,3 +120,37 @@ class RegisterCommandsTestCase(TestBase):
                 )
                 self.expect("register read data_mask", substrs=["data_mask = 0x"])
                 self.expect("register read code_mask", substrs=["code_mask = 0x"])
+
+    @no_debug_info_test
+    @skipIf(archs=no_match(["aarch64"]))
+    @skipIf(oslist=no_match(["linux"]))
+    def test_aarch64_dynamic_regset_config_sme(self):
+        """Test AArch64 Dynamic Register sets configuration, but only SME
+           registers."""
+        if not self.isAArch64SME():
+            self.skipTest("SME must be present.")
+
+        self.build()
+        self.line = line_number("main.c", "// Set a break point here.")
+
+        exe = self.getBuildArtifact("a.out")
+        self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
+
+        lldbutil.run_break_set_by_file_and_line(
+            self, "main.c", self.line, num_expected_locations=1
+        )
+        self.runCmd("settings set target.run-args sme")
+        self.runCmd("run", RUN_SUCCEEDED)
+
+        self.expect(
+            "thread backtrace",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stop reason = breakpoint 1."],
+        )
+
+        register_sets = self.thread().GetSelectedFrame().GetRegisters()
+
+        ssve_registers = register_sets.GetFirstValueByName(
+            "Scalable Vector Extension Registers")
+        self.assertTrue(ssve_registers.IsValid())
+        self.sve_regs_read_dynamic(ssve_registers)
