@@ -30,8 +30,13 @@ static void removeVolatileInFunction(Oracle &O, Function &F) {
       if (CmpXChg->isVolatile() && !O.shouldKeep())
         CmpXChg->setVolatile(false);
     } else if (MemIntrinsic *MemIntrin = dyn_cast<MemIntrinsic>(&I)) {
-      if (MemIntrin->isVolatile() && !O.shouldKeep())
-        MemIntrin->setVolatile(ConstantInt::getFalse(Ctx));
+      if (MemIntrin->isVolatile() && !O.shouldKeep()) {
+        if (auto *MemTransfer = dyn_cast<MemTransferInst>(MemIntrin))
+          // Memcpy and friends have a bitflag argument.
+          MemTransfer->setVolatile(ConstantInt::get(Type::getInt8Ty(Ctx), 0));
+        else
+          MemIntrin->setVolatile(ConstantInt::getFalse(Ctx));
+      }
     }
   }
 }

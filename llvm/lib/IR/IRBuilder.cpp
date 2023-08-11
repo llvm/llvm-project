@@ -223,7 +223,7 @@ CallInst *IRBuilderBase::CreateMemTransferInst(
   assert((IntrID == Intrinsic::memcpy || IntrID == Intrinsic::memcpy_inline ||
           IntrID == Intrinsic::memmove) &&
          "Unexpected intrinsic ID");
-  Value *Ops[] = {Dst, Src, Size, getInt1(isVolatile)};
+  Value *Ops[] = {Dst, Src, Size, getInt8(isVolatile ? 3 : 0)};
   Type *Tys[] = { Dst->getType(), Src->getType(), Size->getType() };
   Module *M = BB->getParent()->getParent();
   Function *TheFn = Intrinsic::getDeclaration(M, IntrID, Tys);

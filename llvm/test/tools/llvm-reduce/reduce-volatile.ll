@@ -66,8 +66,8 @@ define { i32, i1 } @cmpxchg_volatile_drop(ptr %ptr, i32 %old, i32 %in) {
 }
 
 ; CHECK-LABEL: @memcpy_volatile_keep(
-; INTERESTING: i1 true
-; RESULT: call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %size, i1 true)
+; INTERESTING: i8 3
+; RESULT: call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %size, i8 3)
 define void @memcpy_volatile_keep(ptr %dst, ptr %src, i64 %size) {
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %size, i1 true)
   ret void
@@ -75,15 +75,15 @@ define void @memcpy_volatile_keep(ptr %dst, ptr %src, i64 %size) {
 
 ; CHECK-LABEL: @memcpy_volatile_drop(
 ; INTERESTING: llvm.memcpy
-; RESULT: call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %size, i1 false)
+; RESULT: call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %size, i8 0)
 define void @memcpy_volatile_drop(ptr %dst, ptr %src, i64 %size) {
   call void @llvm.memcpy.p0.p0.i64(ptr %dst, ptr %src, i64 %size, i1 true)
   ret void
 }
 
 ; CHECK-LABEL: @memcpy_inline_volatile_keep(
-; INTERESTING: i1 true
-; RESULT: call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 256, i1 true)
+; INTERESTING: i8 3
+; RESULT: call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 256, i8 3)
 define void @memcpy_inline_volatile_keep(ptr %dst, ptr %src) {
   call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 256, i1 true)
   ret void
@@ -91,15 +91,15 @@ define void @memcpy_inline_volatile_keep(ptr %dst, ptr %src) {
 
 ; CHECK-LABEL: @memcpy_inline_volatile_drop(
 ; INTERESTING: llvm.memcpy
-; RESULT: call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 256, i1 false)
+; RESULT: call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 256, i8 0)
 define void @memcpy_inline_volatile_drop(ptr %dst, ptr %src) {
   call void @llvm.memcpy.inline.p0.p0.i64(ptr %dst, ptr %src, i64 256, i1 true)
   ret void
 }
 
 ; CHECK-LABEL: @memmove_volatile_keep(
-; INTERESTING: i1 true
-; RESULT: call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 256, i1 true)
+; INTERESTING: i8 3
+; RESULT: call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 256, i8 3)
 define void @memmove_volatile_keep(ptr %dst, ptr %src) {
   call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 256, i1 true)
   ret void
@@ -107,7 +107,7 @@ define void @memmove_volatile_keep(ptr %dst, ptr %src) {
 
 ; CHECK-LABEL: @memmove_volatile_drop(
 ; INTERESTING: llvm.memmove
-; RESULT: call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 %size, i1 false)
+; RESULT: call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 %size, i8 0)
 define void @memmove_volatile_drop(ptr %dst, ptr %src, i64 %size) {
   call void @llvm.memmove.p0.p0.i64(ptr %dst, ptr %src, i64 %size, i1 true)
   ret void
