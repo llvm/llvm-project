@@ -483,7 +483,7 @@ def update_checks_list(clang_tidy_path):
 
     def format_link(doc_file):
         check_name, match = process_doc(doc_file)
-        if not match and check_name:
+        if not match and check_name and not check_name.startswith("clang-analyzer-"):
             return "   `%(check_name)s <%(module)s/%(check)s.html>`_,%(autofix)s\n" % {
                 "check_name": check_name,
                 "module": doc_file[0],
@@ -495,13 +495,13 @@ def update_checks_list(clang_tidy_path):
 
     def format_link_alias(doc_file):
         check_name, match = process_doc(doc_file)
-        if match and check_name:
+        if (match or (check_name.startswith("clang-analyzer-"))) and check_name:
             module = doc_file[0]
             check_file = doc_file[1].replace(".rst", "")
-            if match.group(1) == "https://clang.llvm.org/docs/analyzer/checkers":
+            if not match or match.group(1) == "https://clang.llvm.org/docs/analyzer/checkers":
                 title = "Clang Static Analyzer " + check_file
                 # Preserve the anchor in checkers.html from group 2.
-                target = match.group(1) + ".html" + match.group(2)
+                target = "" if not match else match.group(1) + ".html" + match.group(2)
                 autofix = ""
             else:
                 redirect_parts = re.search("^\.\./([^/]*)/([^/]*)$", match.group(1))
@@ -509,18 +509,30 @@ def update_checks_list(clang_tidy_path):
                 target = redirect_parts[1] + "/" + redirect_parts[2] + ".html"
                 autofix = has_auto_fix(title)
 
-            # The checker is just a redirect.
-            return (
-                "   `%(check_name)s <%(module)s/%(check_file)s.html>`_, `%(title)s <%(target)s>`_,%(autofix)s\n"
-                % {
-                    "check_name": check_name,
-                    "module": module,
-                    "check_file": check_file,
-                    "target": target,
-                    "title": title,
-                    "autofix": autofix,
-                }
-            )
+            if target:
+                # The checker is just a redirect.
+                return (
+                    "   `%(check_name)s <%(module)s/%(check_file)s.html>`_, `%(title)s <%(target)s>`_,%(autofix)s\n"
+                    % {
+                        "check_name": check_name,
+                        "module": module,
+                        "check_file": check_file,
+                        "target": target,
+                        "title": title,
+                        "autofix": autofix,
+                    })
+            else:
+                # The checker is just a alias without redirect.
+                return (
+                    "   `%(check_name)s <%(module)s/%(check_file)s.html>`_, %(title)s,%(autofix)s\n"
+                    % {
+                        "check_name": check_name,
+                        "module": module,
+                        "check_file": check_file,
+                        "target": target,
+                        "title": title,
+                        "autofix": autofix,
+                    })
         return ""
 
     checks = map(format_link, doc_files)
