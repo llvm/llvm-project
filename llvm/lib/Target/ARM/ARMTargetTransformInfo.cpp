@@ -205,6 +205,8 @@ ARMTTIImpl::instCombineIntrinsic(InstCombiner &IC, IntrinsicInst &II) const {
           ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0)),
           ConstantAsMetadata::get(ConstantInt::get(IntTy32, 0x10000))};
       II.setMetadata(LLVMContext::MD_range, MDNode::get(II.getContext(), M));
+      II.setMetadata(LLVMContext::MD_noundef,
+                     MDNode::get(II.getContext(), std::nullopt));
       return &II;
     }
     break;
