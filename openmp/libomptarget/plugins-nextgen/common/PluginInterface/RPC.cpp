@@ -59,8 +59,9 @@ Error RPCServerTy::initDevice(plugin::GenericDeviceTy &Device,
         *reinterpret_cast<plugin::GenericDeviceTy *>(Data);
     return Device.allocate(Size, nullptr, TARGET_ALLOC_HOST);
   };
-  // TODO: Allow the device to declare its requested port count.
-  if (rpc_status_t Err = rpc_server_init(DeviceId, RPC_MAXIMUM_PORT_COUNT,
+  uint64_t NumPorts =
+      std::min(Device.requestedRPCPortCount(), RPC_MAXIMUM_PORT_COUNT);
+  if (rpc_status_t Err = rpc_server_init(DeviceId, NumPorts,
                                          Device.getWarpSize(), Alloc, &Device))
     return plugin::Plugin::error(
         "Failed to initialize RPC server for device %d: %d", DeviceId, Err);
