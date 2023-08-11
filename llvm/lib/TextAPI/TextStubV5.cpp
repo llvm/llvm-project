@@ -547,11 +547,11 @@ Expected<PackedVersion> getPackedVersion(const Object *File, TBDKey Key) {
 Expected<TBDFlags> getFlags(const Object *File) {
   TBDFlags Flags = TBDFlags::None;
   const Array *Section = File->getArray(Keys[TBDKey::Flags]);
-  if (!Section)
+  if (!Section || Section->empty())
     return Flags;
 
   for (auto &Val : *Section) {
-    // TODO: Just take first for now.
+    // FIXME: Flags currently apply to all target triples.
     const auto *Obj = Val.getAsObject();
     if (!Obj)
       return make_error<JSONStubError>(getParseErrorMsg(TBDKey::Flags));
@@ -563,6 +563,7 @@ Expected<TBDFlags> getFlags(const Object *File) {
                   .Case("flat_namespace", TBDFlags::FlatNamespace)
                   .Case("not_app_extension_safe",
                         TBDFlags::NotApplicationExtensionSafe)
+                  .Case("sim_support", TBDFlags::SimulatorSupport)
                   .Default(TBDFlags::None);
           Flags |= TBDFlag;
         });
@@ -653,6 +654,7 @@ Expected<IFPtr> parseToInterfaceFile(const Object *File) {
   F->setTwoLevelNamespace(!(Flags & TBDFlags::FlatNamespace));
   F->setApplicationExtensionSafe(
       !(Flags & TBDFlags::NotApplicationExtensionSafe));
+  F->setSimulatorSupport((Flags & TBDFlags::SimulatorSupport));
   for (auto &T : Targets)
     F->addTarget(T);
   for (auto &[Lib, Targets] : Clients)
@@ -919,6 +921,8 @@ Array serializeFlags(const InterfaceFile *File) {
     Flags.emplace_back("flat_namespace");
   if (!File->isApplicationExtensionSafe())
     Flags.emplace_back("not_app_extension_safe");
+  if (File->hasSimulatorSupport())
+    Flags.emplace_back("sim_support");
   return serializeScalar(TBDKey::Attributes, std::move(Flags));
 }
 
