@@ -2863,7 +2863,7 @@ are created implicitly. The following spellings are accepted:
                       syntax and placement.
   ``CXX11``           Spelled with a C++-style ``[[attr]]`` syntax with an
                       optional vendor-specific namespace.
-  ``C2x``             Spelled with a C-style ``[[attr]]`` syntax with an
+  ``C23``             Spelled with a C-style ``[[attr]]`` syntax with an
                       optional vendor-specific namespace.
   ``Declspec``        Spelled with a Microsoft-style ``__declspec(attr)``
                       syntax.
@@ -2895,7 +2895,7 @@ are created implicitly. The following spellings are accepted:
 
 The C++ standard specifies that “any [non-standard attribute] that is not
 recognized by the implementation is ignored” (``[dcl.attr.grammar]``).
-The rule for C is similar. This makes ``CXX11`` and ``C2x`` spellings
+The rule for C is similar. This makes ``CXX11`` and ``C23`` spellings
 unsuitable for attributes that affect the type system, that change the
 binary interface of the code, or that have other similar semantic meaning.
 
