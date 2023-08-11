@@ -1470,20 +1470,21 @@ Value *SCEVExpander::FindValueInExprValueMap(const SCEV *S,
   if (isa<SCEVConstant>(S))
     return nullptr;
 
-  // Choose a Value from the set which dominates the InsertPt.
-  // InsertPt should be inside the Value's parent loop so as not to break
-  // the LCSSA form.
   for (Value *V : SE.getSCEVValues(S)) {
     Instruction *EntInst = dyn_cast<Instruction>(V);
     if (!EntInst)
       continue;
 
+    // Choose a Value from the set which dominates the InsertPt.
+    // InsertPt should be inside the Value's parent loop so as not to break
+    // the LCSSA form.
     assert(EntInst->getFunction() == InsertPt->getFunction());
-    if (S->getType() == V->getType() &&
-        SE.DT.dominates(EntInst, InsertPt) &&
-        (SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
-         SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
-      return V;
+    if (S->getType() != V->getType() || !SE.DT.dominates(EntInst, InsertPt) ||
+        !(SE.LI.getLoopFor(EntInst->getParent()) == nullptr ||
+          SE.LI.getLoopFor(EntInst->getParent())->contains(InsertPt)))
+      continue;
+
+    return V;
   }
   return nullptr;
 }
