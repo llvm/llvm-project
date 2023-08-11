@@ -121,6 +121,12 @@ module attributes {gpu.container_module} {
     }
   }
 
+  gpu.binary @binary_1 [#gpu.object<#nvvm.target, "">]
+
+  gpu.binary @binary_2 <#gpu.select_object<#nvvm.target<chip = "sm_90">>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
+
+  gpu.binary @binary_3 <#gpu.select_object<1>> [#gpu.object<#nvvm.target, "">, #gpu.object<#nvvm.target<chip = "sm_90">, "">]
+
   func.func private @two_value_generator() -> (f32, memref<?xf32, 1>)
 
   func.func @foo() {
@@ -149,6 +155,9 @@ module attributes {gpu.container_module} {
 
     // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) : i32 args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
     gpu.launch_func @kernels::@kernel_1 blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0) : i32 args(%0 : f32, %1 : memref<?xf32, 1>)
+
+    // CHECK: gpu.launch_func @binary_1::@kernel blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) : i32 args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
+    gpu.launch_func @binary_1::@kernel blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0) : i32 args(%0 : f32, %1 : memref<?xf32, 1>)
 
     // CHECK: %[[VALUES:.*]]:2 = call
     %values:2 = func.call @two_value_generator() : () -> (f32, memref<?xf32, 1>)

@@ -39,4 +39,29 @@ def GPU_ObjectAttr : GPU_Attr<"Object", "object"> {
 def GPUObjectArrayAttr :
   TypedArrayAttrBase<GPU_ObjectAttr, "an array of GPU object attributes">;
 
+//===----------------------------------------------------------------------===//
+// GPU offloading LLVM translation handler attributes.
+//===----------------------------------------------------------------------===//
+
+def GPU_SelectObjectAttr : GPU_Attr<"SelectObject", "select_object", [
+      OffloadingTranslationAttrTrait
+    ]> {
+  let description = [{
+    This GPU offloading handler selects a single GPU object for embedding. The
+    object is selected based on the `target` parameter, this parameter can be
+    either a number -i.e. selects the ith-target, or the target itself -i.e.
+    searches for the specified target in the object array.
+
+    The first object in a `gpu.binary` operation is selected if no target is
+    specified.
+  }];
+  let parameters = (ins
+    OptionalParameter<"Attribute", "Target to select for embedding.">:$target
+  );
+  let assemblyFormat = [{
+    (`<` $target^ `>`)?
+  }];
+  let genVerifyDecl = 1;
+}
+
 #endif // GPU_COMPILATION_ATTRS
