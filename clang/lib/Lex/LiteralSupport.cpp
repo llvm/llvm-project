@@ -689,14 +689,14 @@ static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
              IsError ? diag::err_ucn_escape_basic_scs
              : Features.CPlusPlus
                  ? diag::warn_cxx98_compat_literal_ucn_escape_basic_scs
-                 : diag::warn_c2x_compat_literal_ucn_escape_basic_scs)
+                 : diag::warn_c23_compat_literal_ucn_escape_basic_scs)
             << StringRef(&BasicSCSChar, 1);
       else
         Diag(Diags, Features, Loc, ThisTokBegin, UcnBegin, ThisTokBuf,
              IsError ? diag::err_ucn_control_character
              : Features.CPlusPlus
                  ? diag::warn_cxx98_compat_literal_ucn_control_character
-                 : diag::warn_c2x_compat_literal_ucn_control_character);
+                 : diag::warn_c23_compat_literal_ucn_control_character);
     }
     if (IsError)
       return false;

@@ -1076,7 +1076,7 @@ void Parser::DiagnoseLabelAtEndOfCompoundStatement() {
                   : diag::ext_cxx_label_end_of_compound_statement);
   } else {
     Diag(Tok, getLangOpts().C23
-                  ? diag::warn_c2x_compat_label_end_of_compound_statement
+                  ? diag::warn_c23_compat_label_end_of_compound_statement
                   : diag::ext_c_label_end_of_compound_statement);
   }
 }

@@ -1011,7 +1011,7 @@ ExprResult Parser::ParseCastExpression(CastParseKind ParseKind,
     if (getLangOpts().CPlusPlus)
       Diag(Tok, diag::warn_cxx98_compat_nullptr);
     else
-      Diag(Tok, getLangOpts().C23 ? diag::warn_c2x_compat_keyword
+      Diag(Tok, getLangOpts().C23 ? diag::warn_c23_compat_keyword
                                   : diag::ext_c_nullptr) << Tok.getName();
 
     Res = Actions.ActOnCXXNullPtrLiteral(ConsumeToken());
@@ -2502,7 +2502,7 @@ ExprResult Parser::ParseUnaryExprOrTypeTraitExpression() {
       OpTok.isOneOf(tok::kw_alignof, tok::kw__Alignof))
     Diag(OpTok, diag::warn_cxx98_compat_alignof);
   else if (getLangOpts().C23 && OpTok.is(tok::kw_alignof))
-    Diag(OpTok, diag::warn_c2x_compat_keyword) << OpTok.getName();
+    Diag(OpTok, diag::warn_c23_compat_keyword) << OpTok.getName();
 
   EnterExpressionEvaluationContext Unevaluated(
       Actions, Sema::ExpressionEvaluationContext::Unevaluated,

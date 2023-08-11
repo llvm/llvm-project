@@ -144,7 +144,9 @@ def MacroRedefined : DiagGroup<"macro-redefined">;
 def BuiltinMacroRedefined : DiagGroup<"builtin-macro-redefined">;
 def BuiltinRequiresHeader : DiagGroup<"builtin-requires-header">;
 def C99Compat : DiagGroup<"c99-compat">;
-def C2xCompat : DiagGroup<"c2x-compat">;
+def C23Compat : DiagGroup<"c23-compat">;
+def : DiagGroup<"c2x-compat", [C23Compat]>;
+
 def CXXCompat: DiagGroup<"c++-compat">;
 def ExternCCompat : DiagGroup<"extern-c-compat">;
 def KeywordCompat : DiagGroup<"keyword-compat">;
@@ -287,9 +289,11 @@ def : DiagGroup<"c++1z-compat-mangling", [CXX17CompatMangling]>;
 def NoexceptType : DiagGroup<"noexcept-type", [CXX17CompatMangling]>;
 
 // Warnings for C code which is not compatible with previous C standards.
-def CPre2xCompat : DiagGroup<"pre-c2x-compat">;
-def CPre2xCompatPedantic : DiagGroup<"pre-c2x-compat-pedantic",
-                                     [CPre2xCompat]>;
+def CPre23Compat : DiagGroup<"pre-c23-compat">;
+def CPre23CompatPedantic : DiagGroup<"pre-c23-compat-pedantic",
+                                     [CPre23Compat]>;
+def : DiagGroup<"pre-c2x-compat", [CPre23Compat]>;
+def : DiagGroup<"pre-c2x-compat-pedantic", [CPre23CompatPedantic]>;
 
 // Warnings for C++ code which is not compatible with previous C++ standards.
 def CXXPre14Compat : DiagGroup<"pre-c++14-compat">;
@@ -1143,8 +1147,10 @@ def C11 : DiagGroup<"c11-extensions">;
 // A warning group for warnings about using C99 features as extensions.
 def C99 : DiagGroup<"c99-extensions", [C99Designator]>;
 
-// A warning group for warnings about using C2x features as extensions.
-def C2x : DiagGroup<"c2x-extensions">;
+// A warning group for warnings about using C23 features as extensions.
+def C23 : DiagGroup<"c23-extensions">;
+
+def : DiagGroup<"c2x-extensions", [C23]>;
 
 // A warning group for warnings about GCC extensions.
 def GNU : DiagGroup<"gnu", [GNUAlignofExpression, GNUAnonymousStruct,

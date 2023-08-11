@@ -14,7 +14,7 @@ static int *p2 = (int []){2,x}; // expected-error {{initializer element is not a
 static long *p3 = (long []){2,"x"}; // expected-error {{incompatible pointer to integer conversion initializing 'long' with an expression of type 'char[2]'}}
 
 typedef struct { } cache_t; // expected-warning{{empty struct is a GNU extension}}
-static cache_t clo_I1_cache = ((cache_t) { } ); // expected-warning{{use of an empty initializer is a C2x extension}}
+static cache_t clo_I1_cache = ((cache_t) { } ); // expected-warning{{use of an empty initializer is a C23 extension}}
 
 typedef struct Test {int a;int b;} Test;
 static Test* ll = &(Test) {0,0};

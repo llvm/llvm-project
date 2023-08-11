@@ -300,9 +300,9 @@ def err_bad_parameter_name : Error<
   "%0 cannot be the name of a parameter">;
 def err_bad_parameter_name_template_id : Error<
   "parameter name cannot have template arguments">;
-def ext_parameter_name_omitted_c2x : ExtWarn<
-  "omitting the parameter name in a function definition is a C2x extension">,
-  InGroup<C2x>;
+def ext_parameter_name_omitted_c23 : ExtWarn<
+  "omitting the parameter name in a function definition is a C23 extension">,
+  InGroup<C23>;
 def err_anyx86_interrupt_attribute : Error<
   "%select{x86|x86-64}0 'interrupt' attribute only applies to functions that "
   "have %select{a 'void' return type|"
@@ -4182,7 +4182,7 @@ def warn_vector_mode_deprecated : Warning<
   "use the 'vector_size' attribute instead">,
   InGroup<DeprecatedAttributes>;
 def warn_deprecated_noreturn_spelling : Warning<
-  "the '[[_Noreturn]]' attribute spelling is deprecated in C2x; use "
+  "the '[[_Noreturn]]' attribute spelling is deprecated in C23; use "
   "'[[noreturn]]' instead">, InGroup<DeprecatedAttributes>;
 def err_complex_mode_vector_type : Error<
   "type of machine mode does not support base vector types">;
@@ -5715,7 +5715,7 @@ def note_sentinel_here : Note<
   "%select{function|method|block}0 has been explicitly marked sentinel here">;
 def warn_strict_uses_without_prototype : Warning<
   "passing arguments to %select{a function|%1}0 without a prototype is "
-  "deprecated in all versions of C and is not supported in C2x">,
+  "deprecated in all versions of C and is not supported in C23">,
   InGroup<DeprecatedNonPrototype>;
 def warn_missing_prototype : Warning<
   "no previous prototype for function %0">,
@@ -5730,8 +5730,8 @@ def warn_strict_prototypes : Extension<
   "%select{in all versions of C|}0">, InGroup<StrictPrototypes>;
 def warn_non_prototype_changes_behavior : Warning<
   "a function %select{declaration|definition}0 without a prototype is "
-  "deprecated in all versions of C %select{and is not supported in C2x|and is "
-  "treated as a zero-parameter prototype in C2x, conflicting with a "
+  "deprecated in all versions of C %select{and is not supported in C23|and is "
+  "treated as a zero-parameter prototype in C23, conflicting with a "
   "%select{previous|subsequent}2 %select{declaration|definition}3}1">,
   InGroup<DeprecatedNonPrototype>;
 def note_conflicting_prototype : Note<"conflicting prototype is here">;
@@ -9992,7 +9992,7 @@ def warn_second_arg_of_va_start_not_last_named_param : Warning<
   InGroup<Varargs>;
 def warn_c17_compat_ellipsis_only_parameter : Warning<
   "'...' as the only parameter of a function is incompatible with C standards "
-  "before C2x">, DefaultIgnore, InGroup<CPre2xCompat>;
+  "before C23">, DefaultIgnore, InGroup<CPre23Compat>;
 def warn_va_start_type_is_undefined : Warning<
   "passing %select{an object that undergoes default argument promotion|"
   "an object of reference type|a parameter declared with the 'register' "

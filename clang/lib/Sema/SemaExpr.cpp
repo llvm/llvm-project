@@ -4121,8 +4121,8 @@ ExprResult Sema::ActOnNumericConstant(const Token &Tok, Scope *UDLScope) {
     // type such as std::bit_int instead of returning a _BitInt.
     if (Literal.isBitInt && !getLangOpts().CPlusPlus)
       PP.Diag(Tok.getLocation(), getLangOpts().C23
-                                     ? diag::warn_c2x_compat_bitint_suffix
-                                     : diag::ext_c2x_bitint_suffix);
+                                     ? diag::warn_c23_compat_bitint_suffix
+                                     : diag::ext_c23_bitint_suffix);
 
     // Get the value in the widest-possible width. What is "widest" depends on
     // whether the literal is a bit-precise integer or not. For a bit-precise
@@ -16993,7 +16993,7 @@ void Sema::ActOnBlockArguments(SourceLocation CaretLoc, Declarator &ParamInfo,
           !Param->isInvalidDecl() && !getLangOpts().CPlusPlus) {
         // Diagnose this as an extension in C17 and earlier.
         if (!getLangOpts().C23)
-          Diag(Param->getLocation(), diag::ext_parameter_name_omitted_c2x);
+          Diag(Param->getLocation(), diag::ext_parameter_name_omitted_c23);
       }
       Params.push_back(Param);
     }
