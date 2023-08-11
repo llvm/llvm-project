@@ -2291,3 +2291,78 @@ join:
   %cmp = icmp slt i32 %13, 0
   ret i1 %cmp
 }
+
+define i1 @test(ptr noundef %val1, ptr noundef readonly %val2) {
+; CHECK-LABEL: @test(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[VAL1:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I]], label [[_Z3FOOPKC_EXIT:%.*]], label [[WHILE_COND_I:%.*]]
+; CHECK:       while.cond.i:
+; CHECK-NEXT:    [[TEST_0_I:%.*]] = phi ptr [ [[INCDEC_PTR_I:%.*]], [[WHILE_COND_I]] ], [ [[VAL1]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TEST_0_I]], align 1
+; CHECK-NEXT:    [[CMP1_NOT_I:%.*]] = icmp eq i8 [[TMP0]], 0
+; CHECK-NEXT:    [[INCDEC_PTR_I]] = getelementptr inbounds i8, ptr [[TEST_0_I]], i64 1
+; CHECK-NEXT:    br i1 [[CMP1_NOT_I]], label [[WHILE_END_I:%.*]], label [[WHILE_COND_I]]
+; CHECK:       while.end.i:
+; CHECK-NEXT:    [[SUB_PTR_LHS_CAST_I:%.*]] = ptrtoint ptr [[TEST_0_I]] to i64
+; CHECK-NEXT:    [[SUB_PTR_RHS_CAST_I:%.*]] = ptrtoint ptr [[VAL1]] to i64
+; CHECK-NEXT:    [[SUB_PTR_SUB_I:%.*]] = sub i64 [[SUB_PTR_LHS_CAST_I]], [[SUB_PTR_RHS_CAST_I]]
+; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT]]
+; CHECK:       _Z3fooPKc.exit:
+; CHECK-NEXT:    [[RETVAL_0_I:%.*]] = phi i64 [ [[SUB_PTR_SUB_I]], [[WHILE_END_I]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[CMP_I10:%.*]] = icmp eq ptr [[VAL2:%.*]], null
+; CHECK-NEXT:    br i1 [[CMP_I10]], label [[_Z3FOOPKC_EXIT20:%.*]], label [[WHILE_COND_I11:%.*]]
+; CHECK:       while.cond.i11:
+; CHECK-NEXT:    [[TEST_0_I12:%.*]] = phi ptr [ [[INCDEC_PTR_I14:%.*]], [[WHILE_COND_I11]] ], [ [[VAL2]], [[_Z3FOOPKC_EXIT]] ]
+; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[TEST_0_I12]], align 1
+; CHECK-NEXT:    [[CMP1_NOT_I13:%.*]] = icmp eq i8 [[TMP1]], 0
+; CHECK-NEXT:    [[INCDEC_PTR_I14]] = getelementptr inbounds i8, ptr [[TEST_0_I12]], i64 1
+; CHECK-NEXT:    br i1 [[CMP1_NOT_I13]], label [[WHILE_END_I15:%.*]], label [[WHILE_COND_I11]]
+; CHECK:       while.end.i15:
+; CHECK-NEXT:    [[TMP2:%.*]] = icmp ne ptr [[TEST_0_I12]], [[VAL2]]
+; CHECK-NEXT:    br label [[_Z3FOOPKC_EXIT20]]
+; CHECK:       _Z3fooPKc.exit20:
+; CHECK-NEXT:    [[RETVAL_0_I19:%.*]] = phi i1 [ [[TMP2]], [[WHILE_END_I15]] ], [ false, [[_Z3FOOPKC_EXIT]] ]
+; CHECK-NEXT:    [[TOBOOL:%.*]] = icmp ne i64 [[RETVAL_0_I]], 0
+; CHECK-NEXT:    [[AND9:%.*]] = and i1 [[TOBOOL]], [[RETVAL_0_I19]]
+; CHECK-NEXT:    ret i1 [[AND9]]
+;
+entry:
+  %cmp.i = icmp eq ptr %val1, null
+  br i1 %cmp.i, label %_Z3fooPKc.exit, label %while.cond.i
+
+while.cond.i:
+  %test.0.i = phi ptr [ %incdec.ptr.i, %while.cond.i ], [ %val1, %entry ]
+  %0 = load i8, ptr %test.0.i, align 1
+  %cmp1.not.i = icmp eq i8 %0, 0
+  %incdec.ptr.i = getelementptr inbounds i8, ptr %test.0.i, i64 1
+  br i1 %cmp1.not.i, label %while.end.i, label %while.cond.i
+
+while.end.i:
+  %sub.ptr.lhs.cast.i = ptrtoint ptr %test.0.i to i64
+  %sub.ptr.rhs.cast.i = ptrtoint ptr %val1 to i64
+  %sub.ptr.sub.i = sub i64 %sub.ptr.lhs.cast.i, %sub.ptr.rhs.cast.i
+  br label %_Z3fooPKc.exit
+
+_Z3fooPKc.exit:
+  %retval.0.i = phi i64 [ %sub.ptr.sub.i, %while.end.i ], [ 0, %entry ]
+  %cmp.i10 = icmp eq ptr %val2, null
+  br i1 %cmp.i10, label %_Z3fooPKc.exit20, label %while.cond.i11
+
+while.cond.i11:
+  %test.0.i12 = phi ptr [ %incdec.ptr.i14, %while.cond.i11 ], [ %val2, %_Z3fooPKc.exit ]
+  %1 = load i8, ptr %test.0.i12, align 1
+  %cmp1.not.i13 = icmp eq i8 %1, 0
+  %incdec.ptr.i14 = getelementptr inbounds i8, ptr %test.0.i12, i64 1
+  br i1 %cmp1.not.i13, label %while.end.i15, label %while.cond.i11
+
+while.end.i15:
+  %2 = icmp ne ptr %test.0.i12, %val2
+  br label %_Z3fooPKc.exit20
+
+_Z3fooPKc.exit20:
+  %retval.0.i19 = phi i1 [ %2, %while.end.i15 ], [ false, %_Z3fooPKc.exit ]
+  %tobool = icmp ne i64 %retval.0.i, 0
+  %and9 = and i1 %tobool, %retval.0.i19
+  ret i1 %and9
+}
