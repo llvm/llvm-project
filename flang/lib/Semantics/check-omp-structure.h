@@ -205,6 +205,11 @@ private:
   void CheckPredefinedAllocatorRestriction(
       const parser::CharBlock &source, const parser::Name &name);
   bool isPredefinedAllocator{false};
+
+  void CheckAllowedRequiresClause(llvmOmpClause clause);
+  bool deviceConstructFound_{false};
+  bool atomicDirectiveDefaultOrderFound_{false};
+
   void EnterDirectiveNest(const int index) { directiveNest_[index]++; }
   void ExitDirectiveNest(const int index) { directiveNest_[index]--; }
   int GetDirectiveNest(const int index) { return directiveNest_[index]; }
