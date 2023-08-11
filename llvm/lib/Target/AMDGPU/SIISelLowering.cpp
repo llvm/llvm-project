@@ -754,6 +754,8 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
                       MVT::i8, MVT::i128},
                      Custom);
 
+  setOperationAction(ISD::STACKSAVE, MVT::Other, Custom);
+
   setTargetDAGCombine({ISD::ADD,
                        ISD::UADDO_CARRY,
                        ISD::SUB,
@@ -3521,6 +3523,23 @@ SDValue SITargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op,
   return AMDGPUTargetLowering::LowerDYNAMIC_STACKALLOC(Op, DAG);
 }
 
+SDValue SITargetLowering::LowerSTACKSAVE(SDValue Op, SelectionDAG &DAG) const {
+  if (Op.getValueType() != MVT::i32)
+    return Op; // Defer to cannot select error.
+
+  Register SP = getStackPointerRegisterToSaveRestore();
+  SDLoc SL(Op);
+
+  SDValue CopyFromSP = DAG.getCopyFromReg(Op->getOperand(0), SL, SP, MVT::i32);
+
+  // Convert from wave uniform to swizzled vector address. This should protect
+  // from any edge cases where the stacksave result isn't directly used with
+  // stackrestore.
+  SDValue VectorAddress =
+      DAG.getNode(AMDGPUISD::WAVE_ADDRESS, SL, MVT::i32, CopyFromSP);
+  return DAG.getMergeValues({VectorAddress, CopyFromSP.getValue(1)}, SL);
+}
+
 Register SITargetLowering::getRegisterByName(const char* RegName, LLT VT,
                                              const MachineFunction &MF) const {
   Register Reg = StringSwitch<Register>(RegName)
@@ -5028,6 +5047,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return lowerXMUL_LOHI(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
     return LowerDYNAMIC_STACKALLOC(Op, DAG);
+  case ISD::STACKSAVE:
+    return LowerSTACKSAVE(Op, DAG);
   }
   return SDValue();
 }
