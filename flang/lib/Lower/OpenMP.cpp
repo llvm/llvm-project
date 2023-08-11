@@ -20,6 +20,7 @@
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/Todo.h"
+#include "flang/Optimizer/HLFIR/HLFIROps.h"
 #include "flang/Parser/parse-tree.h"
 #include "flang/Semantics/tools.h"
 #include "mlir/Dialect/OpenMP/OpenMPDialect.h"
@@ -1845,13 +1846,15 @@ static void threadPrivatizeVars(Fortran::lower::AbstractConverter &converter,
   firOpBuilder.setInsertionPointToStart(firOpBuilder.getAllocaBlock());
 
   // Get the original ThreadprivateOp corresponding to the symbol and use the
-  // symbol value from that opeartion to create one ThreadprivateOp copy
+  // symbol value from that operation to create one ThreadprivateOp copy
   // operation inside the parallel region.
   auto genThreadprivateOp = [&](Fortran::lower::SymbolRef sym) -> mlir::Value {
     mlir::Value symOriThreadprivateValue = converter.getSymbolAddress(sym);
     mlir::Operation *op = symOriThreadprivateValue.getDefiningOp();
+    if (auto declOp = mlir::dyn_cast<hlfir::DeclareOp>(op))
+      op = declOp.getMemref().getDefiningOp();
     assert(mlir::isa<mlir::omp::ThreadprivateOp>(op) &&
-           "The threadprivate operation not created");
+           "Threadprivate operation not created");
     mlir::Value symValue =
         mlir::dyn_cast<mlir::omp::ThreadprivateOp>(op).getSymAddr();
     return firOpBuilder.create<mlir::omp::ThreadprivateOp>(
