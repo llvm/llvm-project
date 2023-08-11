@@ -2293,7 +2293,7 @@ join:
 }
 
 define i1 @icmp_fold_into_phi_beyondBB(ptr noundef %val1, ptr noundef readonly %val2) {
-; CHECK-LABEL: @test(
+; CHECK-LABEL: @icmp_fold_into_phi_beyondBB(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[VAL1:%.*]], null
 ; CHECK-NEXT:    br i1 [[CMP_I]], label [[_Z3FOOPKC_EXIT:%.*]], label [[WHILE_COND_I:%.*]]
