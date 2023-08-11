@@ -36,9 +36,6 @@ public:
   ~system_error() _NOEXCEPT override;
 
   _LIBCPP_HIDE_FROM_ABI const error_code& code() const _NOEXCEPT { return __ec_; }
-
-private:
-  static string __init(const error_code&, string);
 };
 
 _LIBCPP_NORETURN _LIBCPP_EXPORTED_FROM_ABI void __throw_system_error(int __ev, const char* __what_arg);
