@@ -379,7 +379,7 @@ defset list<VTypeInfo> AllBFloatVectors = {
     }
     def VBF16M1:  VTypeInfo<vbfloat16m1_t,  vbool16_t, 16, VR, V_M1,  bf16, FPR16>;
   }
- 
+
   defset list<GroupVTypeInfo> GroupBFloatVectors = {
     def VBF16M2: GroupVTypeInfo<vbfloat16m2_t, vbfloat16m1_t, vbool8_t, 16,
                                 VRM2, V_M2, bf16, FPR16>;
@@ -524,7 +524,7 @@ defset list<VTypeInfoToWide> AllWidenableIntToFloatVectors = {
   def : VTypeInfoToWide<VI32M2, VF64M4>;
   def : VTypeInfoToWide<VI32M4, VF64M8>;
 }
- 
+
 defset list<VTypeInfoToWide> AllWidenableBFloatToFloatVectors = {
   def : VTypeInfoToWide<VBF16MF4, VF32MF2>;
   def : VTypeInfoToWide<VBF16MF2, VF32M1>;
@@ -3005,7 +3005,7 @@ multiclass VPseudoTernaryWithTailPolicyRoundingMode<VReg RetClass,
     defvar mx = MInfo.MX;
     let isCommutable = Commutable in
     def "_" # mx # "_E" # sew
-        : VPseudoTernaryNoMaskWithPolicyRoundingMode<RetClass, Op1Class, 
+        : VPseudoTernaryNoMaskWithPolicyRoundingMode<RetClass, Op1Class,
                                                      Op2Class, Constraint>;
     def "_" # mx # "_E" # sew # "_MASK"
         : VPseudoTernaryMaskPolicyRoundingMode<RetClass, Op1Class,
@@ -3225,19 +3225,19 @@ multiclass VPseudoVWMAC_VV_VF_BF_RM {
     defvar mx = m.MX;
     defvar WriteVFWMulAddV_MX = !cast<SchedWrite>("WriteVFWMulAddV_" # mx);
     defvar ReadVFWMulAddV_MX = !cast<SchedRead>("ReadVFWMulAddV_" # mx);
- 
+
     defm "" : VPseudoTernaryW_VV_RM<m>,
               Sched<[WriteVFWMulAddV_MX, ReadVFWMulAddV_MX,
                      ReadVFWMulAddV_MX, ReadVFWMulAddV_MX, ReadVMask]>;
   }
- 
+
   foreach f = BFPListW in {
     foreach m = f.MxListFW in {
       defvar mx = m.MX;
       defvar WriteVFWMulAddF_MX = !cast<SchedWrite>("WriteVFWMulAddF_" # mx);
       defvar ReadVFWMulAddV_MX = !cast<SchedRead>("ReadVFWMulAddV_" # mx);
       defvar ReadVFWMulAddF_MX = !cast<SchedRead>("ReadVFWMulAddF_" # mx);
- 
+
       defm "" : VPseudoTernaryW_VF_BF_RM<m, f>,
                 Sched<[WriteVFWMulAddF_MX, ReadVFWMulAddV_MX,
                        ReadVFWMulAddF_MX, ReadVFWMulAddV_MX, ReadVMask]>;
@@ -3335,7 +3335,7 @@ multiclass VPseudoVFRED_VS_RM {
     defvar mx = m.MX;
     foreach e = SchedSEWSet<mx, isF=1>.val in {
       defm _VS
-          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass, 
+          : VPseudoTernaryWithTailPolicyRoundingMode<V_M1.vrclass, m.vrclass,
                                                      V_M1.vrclass, m, e>,
             SchedReduction<"WriteVFRedV_From", "ReadVFRedV", mx, e>;
     }
@@ -5995,7 +5995,7 @@ foreach vti = AllIntegerVectors in {
                                                         GPR:$vl,
                                                         vti.Log2SEW,
                                                         (XLenVT timm:$policy))>;
-  
+
     // Match VSUB with a small immediate to vadd.vi by negating the immediate.
     def : Pat<(vti.Vector (int_riscv_vsub (vti.Vector (undef)),
                                           (vti.Vector vti.RegClass:$rs1),
@@ -6802,7 +6802,7 @@ foreach vti = AllVectors in {
                                              VLOpFrag)),
               (!cast<Instruction>("PseudoVMV_V_V_"#vti.LMul.MX)
                $passthru, $rs1, GPR:$vl, vti.Log2SEW, TU_MU)>;
-  
+
     // vmv.v.x/vmv.v.i are handled in RISCInstrVInstrInfoVVLPatterns.td
   }
 }
@@ -6885,7 +6885,7 @@ defm : VPatBinaryW_WV_WX_RM<"int_riscv_vfwsub_w", "PseudoVFWSUB",
 //===----------------------------------------------------------------------===//
 // 13.4. Vector Single-Width Floating-Point Multiply/Divide Instructions
 //===----------------------------------------------------------------------===//
-defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfmul", "PseudoVFMUL", 
+defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfmul", "PseudoVFMUL",
                             AllFloatVectors>;
 defm : VPatBinaryV_VV_VX_RM<"int_riscv_vfdiv", "PseudoVFDIV",
                             AllFloatVectors, isSEWAware=1>;
@@ -6920,9 +6920,9 @@ defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwnmacc", "PseudoVFWNMACC",
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmsac", "PseudoVFWMSAC",
                              AllWidenableFloatVectors>;
 defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwnmsac", "PseudoVFWNMSAC",
-                             AllWidenableFloatVectors>;                                                   
+                             AllWidenableFloatVectors>;
 let Predicates = [HasStdExtZvfbfwma] in
-defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmaccbf16", "PseudoVFWMACCBF16", 
+defm : VPatTernaryW_VV_VX_RM<"int_riscv_vfwmaccbf16", "PseudoVFWMACCBF16",
                               AllWidenableBFloatToFloatVectors>;
 
 //===----------------------------------------------------------------------===//
@@ -7028,7 +7028,7 @@ defm : VPatConversionWI_VF<"int_riscv_vfwcvt_rtz_x_f_v", "PseudoVFWCVT_RTZ_X_F">
 defm : VPatConversionWF_VI<"int_riscv_vfwcvt_f_xu_v", "PseudoVFWCVT_F_XU">;
 defm : VPatConversionWF_VI<"int_riscv_vfwcvt_f_x_v", "PseudoVFWCVT_F_X">;
 defm : VPatConversionWF_VF<"int_riscv_vfwcvt_f_f_v", "PseudoVFWCVT_F_F">;
-defm : VPatConversionWF_VF_BF<"int_riscv_vfwcvtbf16_f_f_v", 
+defm : VPatConversionWF_VF_BF<"int_riscv_vfwcvtbf16_f_f_v",
                               "PseudoVFWCVTBF16_F_F">;
 
 //===----------------------------------------------------------------------===//
@@ -7041,7 +7041,7 @@ defm : VPatConversionVI_WF<"int_riscv_vfncvt_rtz_x_f_w", "PseudoVFNCVT_RTZ_X_F">
 defm : VPatConversionVF_WI_RM <"int_riscv_vfncvt_f_xu_w", "PseudoVFNCVT_F_XU">;
 defm : VPatConversionVF_WI_RM <"int_riscv_vfncvt_f_x_w", "PseudoVFNCVT_F_X">;
 defm : VPatConversionVF_WF_RM<"int_riscv_vfncvt_f_f_w", "PseudoVFNCVT_F_F">;
-defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w", 
+defm : VPatConversionVF_WF_BF_RM<"int_riscv_vfncvtbf16_f_f_w",
                                  "PseudoVFNCVTBF16_F_F">;
 defm : VPatConversionVF_WF<"int_riscv_vfncvt_rod_f_f_w", "PseudoVFNCVT_ROD_F_F">;
 
