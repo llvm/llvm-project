@@ -3906,6 +3906,7 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   }
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
+    return false;
   case AMDGPU::OPERAND_INPUT_MODS:
   case MCOI::OPERAND_IMMEDIATE:
     // Always embedded in the instruction for free.
@@ -5264,9 +5265,8 @@ bool SIInstrInfo::isOperandLegal(const MachineInstr &MI, unsigned OpIdx,
             return false;
           SGPRsUsed.insert(SGPR);
         }
-      } else if (InstDesc.operands()[i].OperandType == AMDGPU::OPERAND_KIMM32 ||
-                 (AMDGPU::isSISrcOperand(InstDesc, i) &&
-                  !isInlineConstant(Op, InstDesc.operands()[i]))) {
+      } else if (AMDGPU::isSISrcOperand(InstDesc, i) &&
+                 !isInlineConstant(Op, InstDesc.operands()[i])) {
         if (!LiteralLimit--)
           return false;
         if (--ConstantBusLimit <= 0)

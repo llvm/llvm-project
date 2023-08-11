@@ -149,6 +149,7 @@ define float @v_mul_f32_vop3_src_mods_literal(float %x, float %y) {
 
 ; GFX9: codeLenInByte = 24
 ; GFX10: codeLenInByte = 20
+; GFX11: codeLenInByte = 20
 
 define float @v_mul_f32_vop2_frame_index(float %x) {
 ; GFX9-LABEL: v_mul_f32_vop2_frame_index:
