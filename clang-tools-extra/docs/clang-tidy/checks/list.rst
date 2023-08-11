@@ -200,6 +200,7 @@ Clang-Tidy Checks
    `cppcoreguidelines-missing-std-forward <cppcoreguidelines/missing-std-forward.html>`_,
    `cppcoreguidelines-narrowing-conversions <cppcoreguidelines/narrowing-conversions.html>`_,
    `cppcoreguidelines-no-malloc <cppcoreguidelines/no-malloc.html>`_,
+   `cppcoreguidelines-no-suspend-with-lock <cppcoreguidelines/no-suspend-with-lock.html>`_,
    `cppcoreguidelines-owning-memory <cppcoreguidelines/owning-memory.html>`_,
    `cppcoreguidelines-prefer-member-initializer <cppcoreguidelines/prefer-member-initializer.html>`_, "Yes"
    `cppcoreguidelines-pro-bounds-array-to-pointer-decay <cppcoreguidelines/pro-bounds-array-to-pointer-decay.html>`_,
