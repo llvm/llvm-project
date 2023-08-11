@@ -3803,7 +3803,9 @@ bool SIInstrInfo::isInlineConstant(const APInt &Imm) const {
 bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
                                    uint8_t OperandType) const {
   assert(!MO.isReg() && "isInlineConstant called on register operand!");
-  if (!MO.isImm())
+  if (!MO.isImm() ||
+      OperandType < AMDGPU::OPERAND_SRC_FIRST ||
+      OperandType > AMDGPU::OPERAND_SRC_LAST)
     return false;
 
   // MachineOperand provides no way to tell the true operand size, since it only
@@ -3878,23 +3880,9 @@ bool SIInstrInfo::isInlineConstant(const MachineOperand &MO,
   }
   case AMDGPU::OPERAND_KIMM32:
   case AMDGPU::OPERAND_KIMM16:
-  case AMDGPU::OPERAND_INPUT_MODS:
-  case MCOI::OPERAND_IMMEDIATE:
-    // Always embedded in the instruction for free.
-    return true;
-  case MCOI::OPERAND_UNKNOWN:
-  case MCOI::OPERAND_REGISTER:
-  case MCOI::OPERAND_PCREL:
-  case MCOI::OPERAND_GENERIC_0:
-  case MCOI::OPERAND_GENERIC_1:
-  case MCOI::OPERAND_GENERIC_2:
-  case MCOI::OPERAND_GENERIC_3:
-  case MCOI::OPERAND_GENERIC_4:
-  case MCOI::OPERAND_GENERIC_5:
-    // Just ignore anything else.
-    return true;
+    return false;
   default:
-    llvm_unreachable("invalid operand type");
+    llvm_unreachable("invalid bitwidth");
   }
 }
 
