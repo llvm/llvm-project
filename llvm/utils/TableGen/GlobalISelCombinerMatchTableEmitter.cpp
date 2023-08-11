@@ -1259,7 +1259,8 @@ private:
 };
 
 bool PatFragPattern::checkSemantics(ArrayRef<SMLoc> DiagLoc) {
-  InstructionPattern::checkSemantics(DiagLoc);
+  if (!InstructionPattern::checkSemantics(DiagLoc))
+    return false;
 
   for (const auto &[Idx, Op] : enumerate(Operands)) {
     switch (PF.getParam(Idx).Kind) {
