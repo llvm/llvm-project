@@ -549,8 +549,6 @@ class CrashLogParser:
     def __init__(self, debugger, path, options):
         self.path = os.path.expanduser(path)
         self.options = options
-        # List of DarwinImages sorted by their index.
-        self.images = list()
         self.crashlog = CrashLog(debugger, self.path, self.options.verbose)
 
     @abc.abstractmethod
@@ -645,7 +643,6 @@ class JSONCrashLogParser(CrashLogParser):
                 darwin_image.arch = json_image["arch"]
                 if path == self.crashlog.process_path:
                     self.crashlog.process_arch = darwin_image.arch
-            self.images.append(darwin_image)
             self.crashlog.images.append(darwin_image)
 
     def parse_main_image(self, json_data):
@@ -672,7 +669,7 @@ class JSONCrashLogParser(CrashLogParser):
                 location = 0
                 if "symbolLocation" in json_frame and json_frame["symbolLocation"]:
                     location = int(json_frame["symbolLocation"])
-                image = self.images[image_id]
+                image = self.crashlog.images[image_id]
                 image.symbols[symbol] = {
                     "name": symbol,
                     "type": "code",
@@ -780,7 +777,7 @@ class JSONCrashLogParser(CrashLogParser):
                 if frame_offset:
                     description += " + " + frame_offset
                     frame_offset_value = int(frame_offset, 0)
-                for image in self.images:
+                for image in self.crashlog.images:
                     if image.identifier == frame_img_name:
                         image.symbols[frame_symbol] = {
                             "name": frame_symbol,
@@ -828,6 +825,7 @@ class JSONCrashLogParser(CrashLogParser):
     def parse_errors(self, json_data):
         if "reportNotes" in json_data:
             self.crashlog.errors = json_data["reportNotes"]
+
 
 class TextCrashLogParser(CrashLogParser):
     parent_process_regex = re.compile(r"^Parent Process:\s*(.*)\[(\d+)\]")
@@ -887,7 +885,6 @@ class TextCrashLogParser(CrashLogParser):
         r"^Exception Codes:\s+(0x[0-9a-fA-F]+),\s*(0x[0-9a-fA-F]+)"
     )
     exception_extra_regex = re.compile(r"^Exception\s+.*:\s+(.*)")
-
 
     class CrashLogParseMode:
         NORMAL = 0
@@ -1209,7 +1206,6 @@ class TextCrashLogParser(CrashLogParser):
                         "address": symbol["address"] - int(img_lo, 0),
                     }
 
-            self.images.append(image)
             self.crashlog.images.append(image)
             return True
         else:
