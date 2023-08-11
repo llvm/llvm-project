@@ -147,9 +147,7 @@ static Cost estimateBasicBlocks(SmallVectorImpl<BasicBlock *> &WorkList,
 static Constant *findConstantFor(Value *V, ConstMap &KnownConstants) {
   if (auto *C = dyn_cast<Constant>(V))
     return C;
-  if (auto It = KnownConstants.find(V); It != KnownConstants.end())
-    return It->second;
-  return nullptr;
+  return KnownConstants.lookup(V);
 }
 
 Cost InstCostVisitor::getUserBonus(Instruction *User, Value *Use, Constant *C) {
