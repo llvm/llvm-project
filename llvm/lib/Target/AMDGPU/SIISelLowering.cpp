@@ -7459,9 +7459,6 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
 
     return emitRemovedIntrinsicError(DAG, DL, VT);
   }
-  case Intrinsic::amdgcn_ldexp:
-    return DAG.getNode(ISD::FLDEXP, DL, VT, Op.getOperand(1), Op.getOperand(2));
-
   case Intrinsic::amdgcn_fract:
     return DAG.getNode(AMDGPUISD::FRACT, DL, VT, Op.getOperand(1));
 
@@ -11619,7 +11616,6 @@ bool SITargetLowering::isCanonicalized(Register Reg, MachineFunction &MF,
     case Intrinsic::amdgcn_div_fmas:
     case Intrinsic::amdgcn_div_fixup:
     case Intrinsic::amdgcn_fract:
-    case Intrinsic::amdgcn_ldexp:
     case Intrinsic::amdgcn_cvt_pkrtz:
     case Intrinsic::amdgcn_cubeid:
     case Intrinsic::amdgcn_cubema:
