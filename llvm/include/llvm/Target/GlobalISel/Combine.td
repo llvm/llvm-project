@@ -160,12 +160,15 @@ def copy_prop : GICombineRule<
 // Fold (freeze (freeze x)) -> (freeze x).
 // Fold (fabs (fabs x)) -> (fabs x).
 // Fold (fcanonicalize (fcanonicalize x)) -> (fcanonicalize x).
+def idempotent_prop_frags : GICombinePatFrag<
+  (outs root:$dst, $src), (ins),
+  !foreach(op, [G_FREEZE, G_FABS, G_FCANONICALIZE],
+           (pattern (op $dst, $src), (op $src, $x)))>;
+
 def idempotent_prop : GICombineRule<
-   (defs root:$mi),
-   (match (wip_match_opcode G_FREEZE, G_FABS, G_FCANONICALIZE):$mi,
-          [{ return MRI.getVRegDef(${mi}->getOperand(1).getReg())->getOpcode() ==
-                    ${mi}->getOpcode(); }]),
-   (apply [{ Helper.replaceSingleDefInstWithOperand(*${mi}, 1); }])>;
+   (defs root:$dst),
+   (match (idempotent_prop_frags $dst, $src)),
+   (apply (COPY $dst, $src))>;
 
 
 def extending_loads : GICombineRule<

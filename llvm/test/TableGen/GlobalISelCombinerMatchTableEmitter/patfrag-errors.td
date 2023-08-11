@@ -257,6 +257,20 @@ def inconsistent_arg_type : GICombineRule<
   (match (TypedParams $dst, i64:$k):$broken),
   (apply (COPY $dst, (i32 0)))>;
 
+// CHECK: :[[@LINE+2]]:{{[0-9]+}}: error: all instructions that define root 'foo' in 'RootDefHasMultiDefs' can only have a single output operand
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Could not parse GICombinePatFrag 'RootDefHasMultiDefs'
+def RootDefHasMultiDefs: GICombinePatFrag<
+    (outs root:$foo),
+    (ins gi_imm:$cst),
+    [
+      (pattern (G_UNMERGE_VALUES $foo, $z, $y))
+    ]>;
+// CHECK: :[[@LINE+1]]:{{[0-9]+}}: error: Failed to parse pattern: '(RootDefHasMultiDefs ?:$root, (i32 10))'
+def root_def_has_multi_defs : GICombineRule<
+  (defs root:$root),
+  (match (RootDefHasMultiDefs $root, (i32 10))),
+  (apply (COPY $root, (i32 0)))>;
+
 // CHECK: error: Failed to parse one or more rules
 
 def MyCombiner: GICombinerHelper<"GenMyCombiner", [
@@ -278,5 +292,6 @@ def MyCombiner: GICombinerHelper<"GenMyCombiner", [
   expected_mo_namedimm,
   patfrag_in_apply,
   patfrag_cannot_be_root,
-  inconsistent_arg_type
+  inconsistent_arg_type,
+  root_def_has_multi_defs
 ]>;
