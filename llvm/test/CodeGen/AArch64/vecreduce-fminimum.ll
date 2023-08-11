@@ -8,11 +8,18 @@ declare double @llvm.vector.reduce.fminimum.v1f64(<1 x double> %a)
 declare fp128 @llvm.vector.reduce.fminimum.v1f128(<1 x fp128> %a)
 
 declare half @llvm.vector.reduce.fminimum.v4f16(<4 x half> %a)
+declare half @llvm.vector.reduce.fminimum.v8f16(<8 x half> %a)
+declare half @llvm.vector.reduce.fminimum.v16f16(<16 x half> %a)
+declare float @llvm.vector.reduce.fminimum.v2f32(<2 x float> %a)
+declare float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %a)
+declare float @llvm.vector.reduce.fminimum.v8f32(<8 x float> %a)
+declare float @llvm.vector.reduce.fminimum.v16f32(<16 x float> %a)
+declare double @llvm.vector.reduce.fminimum.v2f64(<2 x double> %a)
+declare double @llvm.vector.reduce.fminimum.v4f64(<4 x double> %a)
+
 declare half @llvm.vector.reduce.fminimum.v11f16(<11 x half> %a)
 declare float @llvm.vector.reduce.fminimum.v3f32(<3 x float> %a)
 declare fp128 @llvm.vector.reduce.fminimum.v2f128(<2 x fp128> %a)
-declare float @llvm.vector.reduce.fminimum.v16f32(<16 x float> %a)
-declare double @llvm.vector.reduce.fminimum.v2f64(<2 x double> %a)
 
 define half @test_v1f16(<1 x half> %a) nounwind {
 ; CHECK-LABEL: test_v1f16:
@@ -75,6 +82,201 @@ define half @test_v4f16(<4 x half> %a) nounwind {
 ; CHECK-FP-NEXT:    ret
   %b = call half @llvm.vector.reduce.fminimum.v4f16(<4 x half> %a)
   ret half %b
+}
+
+define half @test_v8f16(<8 x half> %a) nounwind {
+; CHECK-NOFP-LABEL: test_v8f16:
+; CHECK-NOFP:       // %bb.0:
+; CHECK-NOFP-NEXT:    mov h1, v0.h[1]
+; CHECK-NOFP-NEXT:    fcvt s2, h0
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmin s1, s2, s1
+; CHECK-NOFP-NEXT:    mov h2, v0.h[2]
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmin s1, s1, s2
+; CHECK-NOFP-NEXT:    mov h2, v0.h[3]
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmin s1, s1, s2
+; CHECK-NOFP-NEXT:    mov h2, v0.h[4]
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmin s1, s1, s2
+; CHECK-NOFP-NEXT:    mov h2, v0.h[5]
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmin s1, s1, s2
+; CHECK-NOFP-NEXT:    mov h2, v0.h[6]
+; CHECK-NOFP-NEXT:    mov h0, v0.h[7]
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fcvt s0, h0
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmin s1, s1, s2
+; CHECK-NOFP-NEXT:    fcvt h1, s1
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmin s0, s1, s0
+; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    ret
+;
+; CHECK-FP-LABEL: test_v8f16:
+; CHECK-FP:       // %bb.0:
+; CHECK-FP-NEXT:    fminv h0, v0.8h
+; CHECK-FP-NEXT:    ret
+  %b = call nnan half @llvm.vector.reduce.fminimum.v8f16(<8 x half> %a)
+  ret half %b
+}
+
+define half @test_v16f16(<16 x half> %a) nounwind {
+; CHECK-NOFP-LABEL: test_v16f16:
+; CHECK-NOFP:       // %bb.0:
+; CHECK-NOFP-NEXT:    mov h2, v1.h[1]
+; CHECK-NOFP-NEXT:    mov h3, v0.h[1]
+; CHECK-NOFP-NEXT:    fcvt s4, h1
+; CHECK-NOFP-NEXT:    fcvt s5, h0
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fcvt s3, h3
+; CHECK-NOFP-NEXT:    fmin s4, s5, s4
+; CHECK-NOFP-NEXT:    mov h5, v0.h[2]
+; CHECK-NOFP-NEXT:    fmin s2, s3, s2
+; CHECK-NOFP-NEXT:    mov h3, v1.h[2]
+; CHECK-NOFP-NEXT:    fcvt h4, s4
+; CHECK-NOFP-NEXT:    fcvt s5, h5
+; CHECK-NOFP-NEXT:    fcvt h2, s2
+; CHECK-NOFP-NEXT:    fcvt s3, h3
+; CHECK-NOFP-NEXT:    fcvt s4, h4
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fmin s3, s5, s3
+; CHECK-NOFP-NEXT:    mov h5, v0.h[3]
+; CHECK-NOFP-NEXT:    fmin s2, s4, s2
+; CHECK-NOFP-NEXT:    mov h4, v1.h[3]
+; CHECK-NOFP-NEXT:    fcvt h3, s3
+; CHECK-NOFP-NEXT:    fcvt s5, h5
+; CHECK-NOFP-NEXT:    fcvt h2, s2
+; CHECK-NOFP-NEXT:    fcvt s4, h4
+; CHECK-NOFP-NEXT:    fcvt s3, h3
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fmin s4, s5, s4
+; CHECK-NOFP-NEXT:    mov h5, v0.h[4]
+; CHECK-NOFP-NEXT:    fmin s2, s2, s3
+; CHECK-NOFP-NEXT:    mov h3, v1.h[4]
+; CHECK-NOFP-NEXT:    fcvt h4, s4
+; CHECK-NOFP-NEXT:    fcvt s5, h5
+; CHECK-NOFP-NEXT:    fcvt h2, s2
+; CHECK-NOFP-NEXT:    fcvt s3, h3
+; CHECK-NOFP-NEXT:    fcvt s4, h4
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fmin s3, s5, s3
+; CHECK-NOFP-NEXT:    mov h5, v0.h[5]
+; CHECK-NOFP-NEXT:    fmin s2, s2, s4
+; CHECK-NOFP-NEXT:    mov h4, v1.h[5]
+; CHECK-NOFP-NEXT:    fcvt h3, s3
+; CHECK-NOFP-NEXT:    fcvt s5, h5
+; CHECK-NOFP-NEXT:    fcvt h2, s2
+; CHECK-NOFP-NEXT:    fcvt s4, h4
+; CHECK-NOFP-NEXT:    fcvt s3, h3
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fmin s4, s5, s4
+; CHECK-NOFP-NEXT:    mov h5, v0.h[6]
+; CHECK-NOFP-NEXT:    mov h0, v0.h[7]
+; CHECK-NOFP-NEXT:    fmin s2, s2, s3
+; CHECK-NOFP-NEXT:    mov h3, v1.h[6]
+; CHECK-NOFP-NEXT:    fcvt h4, s4
+; CHECK-NOFP-NEXT:    fcvt s5, h5
+; CHECK-NOFP-NEXT:    mov h1, v1.h[7]
+; CHECK-NOFP-NEXT:    fcvt s0, h0
+; CHECK-NOFP-NEXT:    fcvt h2, s2
+; CHECK-NOFP-NEXT:    fcvt s3, h3
+; CHECK-NOFP-NEXT:    fcvt s4, h4
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fmin s3, s5, s3
+; CHECK-NOFP-NEXT:    fmin s0, s0, s1
+; CHECK-NOFP-NEXT:    fmin s2, s2, s4
+; CHECK-NOFP-NEXT:    fcvt h3, s3
+; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    fcvt h2, s2
+; CHECK-NOFP-NEXT:    fcvt s3, h3
+; CHECK-NOFP-NEXT:    fcvt s0, h0
+; CHECK-NOFP-NEXT:    fcvt s2, h2
+; CHECK-NOFP-NEXT:    fmin s2, s2, s3
+; CHECK-NOFP-NEXT:    fcvt h1, s2
+; CHECK-NOFP-NEXT:    fcvt s1, h1
+; CHECK-NOFP-NEXT:    fmin s0, s1, s0
+; CHECK-NOFP-NEXT:    fcvt h0, s0
+; CHECK-NOFP-NEXT:    ret
+;
+; CHECK-FP-LABEL: test_v16f16:
+; CHECK-FP:       // %bb.0:
+; CHECK-FP-NEXT:    fmin v0.8h, v0.8h, v1.8h
+; CHECK-FP-NEXT:    fminv h0, v0.8h
+; CHECK-FP-NEXT:    ret
+  %b = call nnan half @llvm.vector.reduce.fminimum.v16f16(<16 x half> %a)
+  ret half %b
+}
+
+define float @test_v2f32(<2 x float> %a) nounwind {
+; CHECK-LABEL: test_v2f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminp s0, v0.2s
+; CHECK-NEXT:    ret
+  %b = call nnan float @llvm.vector.reduce.fminimum.v2f32(<2 x float> %a)
+  ret float %b
+}
+
+define float @test_v4f32(<4 x float> %a) nounwind {
+; CHECK-LABEL: test_v4f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminv s0, v0.4s
+; CHECK-NEXT:    ret
+  %b = call nnan float @llvm.vector.reduce.fminimum.v4f32(<4 x float> %a)
+  ret float %b
+}
+
+define float @test_v8f32(<8 x float> %a) nounwind {
+; CHECK-LABEL: test_v8f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fminv s0, v0.4s
+; CHECK-NEXT:    ret
+  %b = call nnan float @llvm.vector.reduce.fminimum.v8f32(<8 x float> %a)
+  ret float %b
+}
+
+define float @test_v16f32(<16 x float> %a) nounwind {
+; CHECK-LABEL: test_v16f32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmin v1.4s, v1.4s, v3.4s
+; CHECK-NEXT:    fmin v0.4s, v0.4s, v2.4s
+; CHECK-NEXT:    fmin v0.4s, v0.4s, v1.4s
+; CHECK-NEXT:    fminv s0, v0.4s
+; CHECK-NEXT:    ret
+  %b = call nnan float @llvm.vector.reduce.fminimum.v16f32(<16 x float> %a)
+  ret float %b
+}
+
+define double @test_v2f64(<2 x double> %a) nounwind {
+; CHECK-LABEL: test_v2f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fminp d0, v0.2d
+; CHECK-NEXT:    ret
+  %b = call double @llvm.vector.reduce.fminimum.v2f64(<2 x double> %a)
+  ret double %b
+}
+
+define double @test_v4f64(<4 x double> %a) nounwind {
+; CHECK-LABEL: test_v4f64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    fmin v0.2d, v0.2d, v1.2d
+; CHECK-NEXT:    fminp d0, v0.2d
+; CHECK-NEXT:    ret
+  %b = call double @llvm.vector.reduce.fminimum.v4f64(<4 x double> %a)
+  ret double %b
 }
 
 define half @test_v11f16(<11 x half> %a) nounwind {
@@ -189,24 +391,3 @@ define float @test_v3f32_ninf(<3 x float> %a) nounwind {
 ;  %b = call fp128 @llvm.vector.reduce.fminimum.v2f128(<2 x fp128> %a)
 ;  ret fp128 %b
 ;}
-
-define float @test_v16f32(<16 x float> %a) nounwind {
-; CHECK-LABEL: test_v16f32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fmin v1.4s, v1.4s, v3.4s
-; CHECK-NEXT:    fmin v0.4s, v0.4s, v2.4s
-; CHECK-NEXT:    fmin v0.4s, v0.4s, v1.4s
-; CHECK-NEXT:    fminv s0, v0.4s
-; CHECK-NEXT:    ret
-  %b = call float @llvm.vector.reduce.fminimum.v16f32(<16 x float> %a)
-  ret float %b
-}
-
-define double @test_v2f64(<2 x double> %a) nounwind {
-; CHECK-LABEL: test_v2f64:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    fminp d0, v0.2d
-; CHECK-NEXT:    ret
-  %b = call double @llvm.vector.reduce.fminimum.v2f64(<2 x double> %a)
-  ret double %b
-}
