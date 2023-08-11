@@ -33,6 +33,7 @@
 #include "llvm/Analysis/GlobalsModRef.h"
 #include "llvm/Analysis/InstructionPrecedenceTracking.h"
 #include "llvm/Analysis/InstructionSimplify.h"
+#include "llvm/Analysis/Loads.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/MemoryBuiltins.h"
 #include "llvm/Analysis/MemoryDependenceAnalysis.h"
@@ -2443,7 +2444,8 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     // using the leader table is about compiling faster, not optimizing better).
     // The leader table only tracks basic blocks, not edges. Only add to if we
     // have the simple case where the edge dominates the end.
-    if (RootDominatesEnd && !isa<Instruction>(RHS))
+    if (RootDominatesEnd && !isa<Instruction>(RHS) &&
+        canReplacePointersIfEqual(LHS, RHS))
       addToLeaderTable(LVN, RHS, Root.getEnd());
 
     // Replace all occurrences of 'LHS' with 'RHS' everywhere in the scope.  As
@@ -2452,14 +2454,18 @@ bool GVNPass::propagateEquality(Value *LHS, Value *RHS,
     if (!LHS->hasOneUse()) {
       unsigned NumReplacements =
           DominatesByEdge
-              ? replaceDominatedUsesWith(LHS, RHS, *DT, Root)
-              : replaceDominatedUsesWith(LHS, RHS, *DT, Root.getStart());
+              ? replaceDominatedUsesWithIf(LHS, RHS, *DT, Root,
+                                           canReplacePointersInUseIfEqual)
+              : replaceDominatedUsesWithIf(LHS, RHS, *DT, Root.getStart(),
+                                           canReplacePointersInUseIfEqual);
 
-      Changed |= NumReplacements > 0;
-      NumGVNEqProp += NumReplacements;
-      // Cached information for anything that uses LHS will be invalid.
-      if (MD)
-        MD->invalidateCachedPointerInfo(LHS);
+      if (NumReplacements > 0) {
+        Changed = true;
+        NumGVNEqProp += NumReplacements;
+        // Cached information for anything that uses LHS will be invalid.
+        if (MD)
+          MD->invalidateCachedPointerInfo(LHS);
+      }
     }
 
     // Now try to deduce additional equalities from this one. For example, if

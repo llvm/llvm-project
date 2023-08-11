@@ -521,15 +521,16 @@ define i32 @test13(ptr %ptr1, ptr %ptr2) {
 ; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[PTR2:%.*]], i32 1
 ; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr i32, ptr [[PTR2]], i32 2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq ptr [[PTR1:%.*]], [[PTR2]]
-; CHECK-NEXT:    [[VAL2_PRE:%.*]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    br i1 [[CMP]], label [[IF:%.*]], label [[END:%.*]]
 ; CHECK:       if:
+; CHECK-NEXT:    [[VAL1:%.*]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    br label [[END]]
 ; CHECK:       end:
-; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr [ [[PTR2]], [[IF]] ], [ [[GEP1]], [[ENTRY:%.*]] ]
-; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[VAL2_PRE]], [[IF]] ], [ 0, [[ENTRY]] ]
+; CHECK-NEXT:    [[PHI1:%.*]] = phi ptr [ [[PTR1]], [[IF]] ], [ [[GEP1]], [[ENTRY:%.*]] ]
+; CHECK-NEXT:    [[PHI2:%.*]] = phi i32 [ [[VAL1]], [[IF]] ], [ 0, [[ENTRY]] ]
 ; CHECK-NEXT:    store i32 0, ptr [[PHI1]], align 4
-; CHECK-NEXT:    [[RET:%.*]] = add i32 [[PHI2]], [[VAL2_PRE]]
+; CHECK-NEXT:    [[VAL2:%.*]] = load i32, ptr [[GEP2]], align 4
+; CHECK-NEXT:    [[RET:%.*]] = add i32 [[PHI2]], [[VAL2]]
 ; CHECK-NEXT:    ret i32 [[RET]]
 ;
 entry:
@@ -574,7 +575,7 @@ define void @test14(ptr %ptr1, ptr noalias %ptr2) {
 ; CHECK:       if2:
 ; CHECK-NEXT:    br label [[LOOP_END]]
 ; CHECK:       loop.end:
-; CHECK-NEXT:    [[PHI3:%.*]] = phi ptr [ [[PTR2]], [[THEN]] ], [ [[PTR1]], [[IF2]] ]
+; CHECK-NEXT:    [[PHI3:%.*]] = phi ptr [ [[GEP2]], [[THEN]] ], [ [[PTR1]], [[IF2]] ]
 ; CHECK-NEXT:    [[VAL3]] = load i32, ptr [[GEP2]], align 4
 ; CHECK-NEXT:    store i32 [[VAL3]], ptr [[PHI3]], align 4
 ; CHECK-NEXT:    br i1 undef, label [[LOOP]], label [[IF1]]
@@ -609,3 +610,199 @@ loop.end:
   %gep3 = getelementptr inbounds i32, ptr %ptr1, i32 1
   br i1 undef, label %loop, label %if1
 }
+
+; Make sure that the call to use_ptr does not have %p1
+define void @single_phi1(ptr %p1) {
+; CHECK-LABEL: @single_phi1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr poison, align 8
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    switch i8 poison, label [[BB2:%.*]] [
+; CHECK-NEXT:    i8 0, label [[BB1]]
+; CHECK-NEXT:    i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    call void @use_bool(i1 [[CMP1]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p2 = load ptr, ptr poison, align 8
+  %cmp1 = icmp eq ptr %p2, %p1
+  br i1 %cmp1, label %bb4, label %bb1
+
+bb1:
+  switch i8 poison, label %bb2 [
+  i8 0, label %bb1
+  i8 1, label %bb3
+  ]
+
+bb2:
+  unreachable
+
+bb3:
+  br label %bb4
+
+bb4:
+  %phi1 = phi ptr [ %p2, %entry ], [ poison, %bb3 ]
+  %cmp2 = icmp eq ptr %phi1, %p1
+  call void @use_bool(i1 %cmp2)
+  call void @use_ptr(ptr %phi1)
+  ret void
+}
+
+define void @single_phi2(ptr %p1) {
+; CHECK-LABEL: @single_phi2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr poison, align 8
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    switch i8 poison, label [[BB2:%.*]] [
+; CHECK-NEXT:    i8 0, label [[BB1]]
+; CHECK-NEXT:    i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    call void @use_bool(i1 [[CMP1]])
+; CHECK-NEXT:    call void @use_ptr(ptr [[P2]])
+; CHECK-NEXT:    ret void
+;
+entry:
+  %p2 = load ptr, ptr poison, align 8
+  %cmp1 = icmp eq ptr %p2, %p1
+  br i1 %cmp1, label %bb4, label %bb1
+
+bb1:
+  switch i8 poison, label %bb2 [
+  i8 0, label %bb1
+  i8 1, label %bb3
+  ]
+
+bb2:
+  br label %bb4
+
+bb3:
+  br label %bb4
+
+bb4:
+  %phi1 = phi ptr [ %p2, %entry ], [ %p2, %bb2 ], [ poison, %bb3 ]
+  %cmp2 = icmp eq ptr %phi1, %p1
+  call void @use_bool(i1 %cmp2)
+  call void @use_ptr(ptr %phi1)
+  ret void
+}
+
+define void @multiple_phi1(ptr %p1) {
+; CHECK-LABEL: @multiple_phi1(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr poison, align 8
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    switch i8 poison, label [[BB2:%.*]] [
+; CHECK-NEXT:    i8 0, label [[BB1]]
+; CHECK-NEXT:    i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    unreachable
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    call void @use_bool(i1 [[CMP1]])
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    call void @use_ptr(ptr [[P2]])
+; CHECK-NEXT:    br label [[BB5]]
+;
+entry:
+  %p2 = load ptr, ptr poison, align 8
+  %cmp1 = icmp eq ptr %p2, %p1
+  br i1 %cmp1, label %bb4, label %bb1
+
+bb1:
+  switch i8 poison, label %bb2 [
+  i8 0, label %bb1
+  i8 1, label %bb3
+  ]
+
+bb2:
+  unreachable
+
+bb3:
+  br label %bb4
+
+bb4:
+  %phi1 = phi ptr [ %p2, %entry ], [ poison, %bb3 ]
+  %cmp2 = icmp eq ptr %phi1, %p1
+  call void @use_bool(i1 %cmp2)
+  br label %bb5
+
+bb5:
+  %phi2 = phi ptr [ poison, %bb5 ], [ %phi1, %bb4 ]
+  call void @use_ptr(ptr %phi2)
+  br label %bb5
+}
+
+define void @multiple_phi2(ptr %p1) {
+; CHECK-LABEL: @multiple_phi2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[P2:%.*]] = load ptr, ptr poison, align 8
+; CHECK-NEXT:    [[CMP1:%.*]] = icmp eq ptr [[P2]], [[P1:%.*]]
+; CHECK-NEXT:    br i1 [[CMP1]], label [[BB4:%.*]], label [[BB1:%.*]]
+; CHECK:       bb1:
+; CHECK-NEXT:    switch i8 poison, label [[BB2:%.*]] [
+; CHECK-NEXT:    i8 0, label [[BB1]]
+; CHECK-NEXT:    i8 1, label [[BB3:%.*]]
+; CHECK-NEXT:    ]
+; CHECK:       bb2:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb3:
+; CHECK-NEXT:    br label [[BB4]]
+; CHECK:       bb4:
+; CHECK-NEXT:    call void @use_bool(i1 [[CMP1]])
+; CHECK-NEXT:    br label [[BB5:%.*]]
+; CHECK:       bb5:
+; CHECK-NEXT:    call void @use_ptr(ptr [[P2]])
+; CHECK-NEXT:    br label [[BB5]]
+;
+entry:
+  %p2 = load ptr, ptr poison, align 8
+  %cmp1 = icmp eq ptr %p2, %p1
+  br i1 %cmp1, label %bb4, label %bb1
+
+bb1:
+  switch i8 poison, label %bb2 [
+  i8 0, label %bb1
+  i8 1, label %bb3
+  ]
+
+bb2:
+  br label %bb4
+
+bb3:
+  br label %bb4
+
+bb4:
+  %phi1 = phi ptr [ %p2, %entry ], [ %p2, %bb2 ], [ poison, %bb3 ]
+  %cmp2 = icmp eq ptr %phi1, %p1
+  call void @use_bool(i1 %cmp2)
+  br label %bb5
+
+bb5:
+  %phi2 = phi ptr [ poison, %bb5 ], [ %phi1, %bb4 ]
+  call void @use_ptr(ptr %phi2)
+  br label %bb5
+}
+
+declare void @use_bool(i1)
+declare void @use_ptr(ptr)
