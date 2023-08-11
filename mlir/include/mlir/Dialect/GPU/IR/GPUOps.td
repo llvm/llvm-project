@@ -16,6 +16,7 @@
 include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
+include "mlir/Dialect/GPU/IR/CompilationAttrs.td"
 include "mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td"
 include "mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td"
 include "mlir/IR/EnumAttr.td"
@@ -1064,6 +1065,46 @@ def GPU_ModuleEndOp : GPU_Op<"module_end", [
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
+      SymbolNameAttr:$sym_name,
+      OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler,
+      ConfinedAttr<GPUObjectArrayAttr, [ArrayMinCount<1>]>:$objects)
+    > {
+  let summary = "An Op for storing serialized GPU binary objects.";
+  let description = [{
+    GPU binaries provide a semantic mechanism for storing GPU objects,
+    e.g. the result of compiling a GPU module to an object file.
+
+    This operation has 3 arguments:
+     - The name of the binary.
+     - An optional attribute implementing the offloading LLVM translation interface.
+     - An array of GPU object attributes.
+
+    During translation into LLVM, the offloading attribute will be called
+    for translating GPU binary and launch operations into LLVM instructions. If
+    no attribute is provided, the default handler selects the first object from
+    the array and embeds it as a string.
+
+    Examples:
+    ```
+      gpu.binary @myobject [#gpu.object<...>, #gpu.object<...>]
+      gpu.binary @myobject <#foo.my_handler> [#gpu.object<...>, #gpu.object<...>]
+    ```
+  }];
+  let builders = [
+    OpBuilder<(ins "StringRef":$name,
+                   "Attribute":$offloadingHandler,
+                   "ArrayAttr":$objects)>,
+    OpBuilder<(ins "StringRef":$name,
+                   "Attribute":$offloadingHandler,
+                   "ArrayRef<Attribute>":$objects)>
+  ];
+  let skipDefaultBuilders = 1;
+  let assemblyFormat = [{
+    $sym_name (`<` $offloadingHandler ^ `>`)? attr-dict $objects
+  }];
 }
 
 def GPU_HostRegisterOp : GPU_Op<"host_register">,
