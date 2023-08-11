@@ -1091,9 +1091,9 @@ private:
     StmtExprBegin,
     /// A '}' ')' ending a statement-expression.
     StmtExprEnd,
-    /// A '[' '[' beginning a C++11 or C2x attribute.
+    /// A '[' '[' beginning a C++11 or C23 attribute.
     AttrBegin,
-    /// A ']' ']' ending a C++11 or C2x attribute.
+    /// A ']' ']' ending a C++11 or C23 attribute.
     AttrEnd,
     /// A '::' '*' forming a C++ pointer-to-member declaration.
     MemberPtr,
@@ -2766,7 +2766,7 @@ private:
   void DiagnoseProhibitedAttributes(const ParsedAttributesView &Attrs,
                                     SourceLocation FixItLoc);
 
-  // Forbid C++11 and C2x attributes that appear on certain syntactic locations
+  // Forbid C++11 and C23 attributes that appear on certain syntactic locations
   // which standard permits but we don't supported yet, for example, attributes
   // appertain to decl specifiers.
   // For the most cases we don't want to warn on unknown type attributes, but
@@ -2777,16 +2777,16 @@ private:
                                bool DiagnoseEmptyAttrs = false,
                                bool WarnOnUnknownAttrs = false);
 
-  /// Skip C++11 and C2x attributes and return the end location of the
+  /// Skip C++11 and C23 attributes and return the end location of the
   /// last one.
   /// \returns SourceLocation() if there are no attributes.
   SourceLocation SkipCXX11Attributes();
 
-  /// Diagnose and skip C++11 and C2x attributes that appear in syntactic
+  /// Diagnose and skip C++11 and C23 attributes that appear in syntactic
   /// locations where attributes are not allowed.
   void DiagnoseAndSkipCXX11Attributes();
 
-  /// Emit warnings for C++11 and C2x attributes that are in a position that
+  /// Emit warnings for C++11 and C23 attributes that are in a position that
   /// clang accepts as an extension.
   void DiagnoseCXX11AttributeExtension(ParsedAttributes &Attrs);
 
@@ -2908,7 +2908,7 @@ private:
     ReplayOpenMPAttributeTokens(OpenMPTokens);
   }
   void ParseCXX11Attributes(ParsedAttributes &attrs);
-  /// Parses a C++11 (or C2x)-style attribute argument list. Returns true
+  /// Parses a C++11 (or C23)-style attribute argument list. Returns true
   /// if this results in adding an attribute to the ParsedAttributes list.
   bool ParseCXX11AttributeArgs(IdentifierInfo *AttrName,
                                SourceLocation AttrNameLoc,

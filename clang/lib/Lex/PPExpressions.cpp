@@ -331,11 +331,11 @@ static bool EvaluateValue(PPValue &Result, Token &PeekTok, DefinedTracker &DT,
                                  : diag::ext_cxx23_size_t_suffix
                            : diag::err_cxx23_size_t_suffix);
 
-    // 'wb/uwb' literals are a C2x feature. We explicitly do not support the
+    // 'wb/uwb' literals are a C23 feature. We explicitly do not support the
     // suffix in C++ as an extension because a library-based UDL that resolves
     // to a library type may be more appropriate there.
     if (Literal.isBitInt)
-      PP.Diag(PeekTok, PP.getLangOpts().C2x
+      PP.Diag(PeekTok, PP.getLangOpts().C23
                            ? diag::warn_c2x_compat_bitint_suffix
                            : diag::ext_c2x_bitint_suffix);
 
