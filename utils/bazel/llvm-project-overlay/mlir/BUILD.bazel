@@ -4651,6 +4651,7 @@ td_library(
     name = "GPUOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td",
+        "include/mlir/Dialect/GPU/IR/CompilationAttrs.td",
         "include/mlir/Dialect/GPU/IR/GPUBase.td",
         "include/mlir/Dialect/GPU/IR/GPUOps.td",
         "include/mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td",
