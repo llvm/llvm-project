@@ -517,6 +517,17 @@ define float @freeze_fptrunc_round(double %arg0) {
   ret float %freeze
 }
 
+define float @freeze_ldexp(float %arg0, i32 noundef %arg1) {
+; CHECK-LABEL: @freeze_ldexp(
+; CHECK-NEXT:    [[ARG0_FR:%.*]] = freeze float [[ARG0:%.*]]
+; CHECK-NEXT:    [[OP:%.*]] = call float @llvm.ldexp.f32.i32(float [[ARG0_FR]], i32 [[ARG1:%.*]])
+; CHECK-NEXT:    ret float [[OP]]
+;
+  %op = call float @llvm.ldexp.f32.i32(float %arg0, i32 %arg1)
+  %freeze = freeze float %op
+  ret float %freeze
+}
+
 declare float @llvm.fma.f32(float, float, float)
 declare float @llvm.fmuladd.f32(float, float, float)
 declare float @llvm.sqrt.f32(float)
@@ -550,3 +561,4 @@ declare float @llvm.minimum.f32(float, float)
 declare float @llvm.maximum.f32(float, float)
 declare i1 @llvm.is.fpclass.f32(float, i32 immarg)
 declare float @llvm.fptrunc.round.f32.f64(double, metadata)
+declare float @llvm.ldexp.f32.i32(float, i32)
