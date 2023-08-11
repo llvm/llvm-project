@@ -74,6 +74,8 @@ LLVM 18
 ABI Affecting Changes
 ---------------------
 
+- The symbol of a non-visible function part of ``std::system_error`` was removed.
+  This is not a breaking change as the private function ``__init`` was never referenced internally outside of the dylib
 
 Build System Changes
 --------------------
