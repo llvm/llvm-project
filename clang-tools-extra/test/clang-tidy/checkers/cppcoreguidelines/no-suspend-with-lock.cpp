@@ -1,4 +1,4 @@
-// RUN: %check_clang_tidy -std=c++20 %s cppcoreguidelines-no-suspend-with-lock %t -- -- -fno-delayed-template-parsing
+// RUN: %check_clang_tidy -std=c++20 %s cppcoreguidelines-no-suspend-with-lock %t -- -- -fno-delayed-template-parsing -fexceptions
 
 // NOLINTBEGIN
 namespace std {
