@@ -164,8 +164,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
   // TagDecl's are not necessarily unique, instead use the (clang) type
   // connected to the decl.
   const auto *key = Context.getTagDeclType(RD).getTypePtr();
-
-  mlir::cir::StructType &entry = recordDeclTypes[key];
+  mlir::cir::StructType entry = recordDeclTypes[key];
 
   // Handle forward decl / incomplete types.
   if (!entry) {
@@ -174,6 +173,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
     entry = mlir::cir::StructType::get(
         &getMLIRContext(), {}, identifier, /*body=*/false, /**packed=*/false,
         mlir::cir::ASTRecordDeclAttr::get(&getMLIRContext(), RD));
+    recordDeclTypes[key] = entry;
   }
 
   RD = RD->getDefinition();
@@ -202,6 +202,7 @@ mlir::Type CIRGenTypes::convertRecordDeclType(const clang::RecordDecl *RD) {
 
   // Layout fields.
   std::unique_ptr<CIRGenRecordLayout> Layout = computeRecordLayout(RD, &entry);
+  recordDeclTypes[key] = entry;
   CIRGenRecordLayouts[key] = std::move(Layout);
 
   // We're done laying out this struct.
