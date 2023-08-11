@@ -626,3 +626,17 @@ module {
   gpu.module @gpu_funcs [1] {
   }
 }
+
+// -----
+
+module {
+  // expected-error @+1 {{'gpu.binary' op attribute 'objects' failed to satisfy constraint: an array of GPU object attributes with at least 1 elements}}
+  gpu.binary @binary []
+}
+
+// -----
+
+module {
+  // expected-error @+1 {{'gpu.binary' op attribute 'offloadingHandler' failed to satisfy constraint: any attribute with the `OffloadingTranslationAttrTrait` trait.}}
+  gpu.binary @binary <1> [#gpu.object<#nvvm.target, "">]
+}
