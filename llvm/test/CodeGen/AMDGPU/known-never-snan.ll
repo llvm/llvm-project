@@ -516,7 +516,7 @@ define float @v_test_known_not_snan_ldexp_input_fmed3_r_i_i_f32(float %a, i32 %b
 ; GCN-NEXT:    v_ldexp_f32 v0, v0, v1
 ; GCN-NEXT:    v_med3_f32 v0, v0, 2.0, 4.0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %known.not.snan = call float @llvm.amdgcn.ldexp.f32(float %a, i32 %b)
+  %known.not.snan = call float @llvm.ldexp.f32.i32(float %a, i32 %b)
   %max = call float @llvm.maxnum.f32(float %known.not.snan, float 2.0)
   %med = call float @llvm.minnum.f32(float %max, float 4.0)
   ret float %med
@@ -658,7 +658,7 @@ declare float @llvm.maxnum.f32(float, float) #1
 declare float @llvm.copysign.f32(float, float) #1
 declare float @llvm.fma.f32(float, float, float) #1
 declare float @llvm.fmuladd.f32(float, float, float) #1
-declare float @llvm.amdgcn.ldexp.f32(float, i32) #1
+declare float @llvm.ldexp.f32.i32(float, i32) #1
 declare float @llvm.amdgcn.fmul.legacy(float, float) #1
 declare float @llvm.amdgcn.fmed3.f32(float, float, float) #1
 declare float @llvm.amdgcn.frexp.mant.f32(float) #1
