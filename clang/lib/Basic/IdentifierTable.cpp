@@ -915,7 +915,7 @@ IdentifierTable::getFutureCompatDiagKind(const IdentifierInfo &II,
     if ((Flags & KEYC99) == KEYC99)
       return diag::warn_c99_keyword;
     if ((Flags & KEYC23) == KEYC23)
-      return diag::warn_c2x_keyword;
+      return diag::warn_c23_keyword;
   }
 
   llvm_unreachable(

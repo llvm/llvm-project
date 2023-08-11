@@ -60,9 +60,9 @@ void testConstraintOnRegionOffsetStack(int *values, int length, int i) {
 }
 
 int buffer[10];
-void b(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a subsequent definition}}
+void b(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition}}
 void missingPrototypeCallsiteMatchingArgsAndParams() {
-  // expected-warning@+1 {{passing arguments to 'b' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+  // expected-warning@+1 {{passing arguments to 'b' without a prototype is deprecated in all versions of C and is not supported in C23}}
   b(&buffer);
 }
 void b(int *c) { // expected-note {{conflicting prototype is here}}
@@ -70,9 +70,9 @@ void b(int *c) { // expected-note {{conflicting prototype is here}}
   *c = 42; // no-crash
 }
 
-void c(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a subsequent definition}}
+void c(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition}}
 void missingPrototypeCallsiteMismatchingArgsAndParams() {
-  // expected-warning@+1 {{passing arguments to 'c' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+  // expected-warning@+1 {{passing arguments to 'c' without a prototype is deprecated in all versions of C and is not supported in C23}}
   c(&buffer, &buffer);
 }
 void c(int *c) { // expected-note {{conflicting prototype is here}}

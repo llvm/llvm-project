@@ -17,13 +17,13 @@ struct S {
   int a;
 };
 
-struct S s = {};     /* c2x-warning {{use of an empty initializer is incompatible with C standards before C2x}}
-                        c2x-ext-warning {{use of an empty initializer is a C2x extension}}
+struct S s = {};     /* c2x-warning {{use of an empty initializer is incompatible with C standards before C23}}
+                        c2x-ext-warning {{use of an empty initializer is a C23 extension}}
                       */
 
 void func(void) {
-  struct S s2 = {};  /* c2x-warning {{use of an empty initializer is incompatible with C standards before C2x}}
-                        c2x-ext-warning {{use of an empty initializer is a C2x extension}}
+  struct S s2 = {};  /* c2x-warning {{use of an empty initializer is incompatible with C standards before C23}}
+                        c2x-ext-warning {{use of an empty initializer is a C23 extension}}
                       */
   (void)s2;
 }

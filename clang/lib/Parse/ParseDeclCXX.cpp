@@ -973,7 +973,7 @@ Decl *Parser::ParseStaticAssertDeclaration(SourceLocation &DeclEnd) {
   if (Tok.is(tok::kw_static_assert)) {
     if (!getLangOpts().CPlusPlus) {
       if (getLangOpts().C23)
-        Diag(Tok, diag::warn_c2x_compat_keyword) << Tok.getName();
+        Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
       else
         Diag(Tok, diag::ext_ms_static_assert) << FixItHint::CreateReplacement(
             Tok.getLocation(), "_Static_assert");
@@ -4505,7 +4505,7 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
                                                   SourceLocation *EndLoc) {
   if (Tok.is(tok::kw_alignas)) {
     if (getLangOpts().C23)
-      Diag(Tok, diag::warn_c2x_compat_keyword) << Tok.getName();
+      Diag(Tok, diag::warn_c23_compat_keyword) << Tok.getName();
     else
       Diag(Tok.getLocation(), diag::warn_cxx98_compat_alignas);
     ParseAlignmentSpecifier(Attrs, EndLoc);
@@ -4528,8 +4528,8 @@ void Parser::ParseCXX11AttributeSpecifierInternal(ParsedAttributes &Attrs,
     Diag(OpenLoc, getLangOpts().CPlusPlus11 ? diag::warn_cxx98_compat_attribute
                                             : diag::warn_ext_cxx11_attributes);
   } else {
-    Diag(OpenLoc, getLangOpts().C23 ? diag::warn_pre_c2x_compat_attributes
-                                    : diag::warn_ext_c2x_attributes);
+    Diag(OpenLoc, getLangOpts().C23 ? diag::warn_pre_c23_compat_attributes
+                                    : diag::warn_ext_c23_attributes);
   }
 
   ConsumeBracket();
