@@ -48,6 +48,7 @@ enum class VecOp {
   St,
   Ste,
   Stxv,
+  Stxvp,
   Sub,
   Xor,
   Xst,

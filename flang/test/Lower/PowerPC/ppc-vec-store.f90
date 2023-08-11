@@ -1204,4 +1204,3 @@ subroutine vec_xstw4_test_vi4i4vai4(arg1, arg2, arg3, i)
 ! CHECK: %[[trg:.*]] = getelementptr i8, ptr %[[elem]], i32 %[[arg2]]
 ! CHECK: store <4 x i32> %[[arg1]], ptr %[[trg]], align 1
 end subroutine vec_xstw4_test_vi4i4vai4
-
