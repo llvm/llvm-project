@@ -24,19 +24,8 @@ define i1 @expand_strcmp_s0(ptr %C) {
 
 define i1 @expand_strcmp_eq_s1(ptr %C) {
 ; CHECK-LABEL: @expand_strcmp_eq_s1(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i32 [[TMP2]], 48
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[STRCMP_EXPAND_SUB_IS_ZERO:%.*]], label [[STRCMP_EXPAND_SUB_JOIN:%.*]]
-; CHECK:       strcmp_expand_sub_is_zero:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    br label [[STRCMP_EXPAND_SUB_JOIN]]
-; CHECK:       strcmp_expand_sub_join:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP7]], [[STRCMP_EXPAND_SUB_IS_ZERO]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %call = call i32 @strcmp(ptr %C, ptr @s1)
@@ -46,19 +35,8 @@ define i1 @expand_strcmp_eq_s1(ptr %C) {
 
 define i1 @expand_strcmp_eq_s1_commuted(ptr %C) {
 ; CHECK-LABEL: @expand_strcmp_eq_s1_commuted(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i32 [[TMP2]], 48
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[STRCMP_EXPAND_SUB_IS_ZERO:%.*]], label [[STRCMP_EXPAND_SUB_JOIN:%.*]]
-; CHECK:       strcmp_expand_sub_is_zero:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    br label [[STRCMP_EXPAND_SUB_JOIN]]
-; CHECK:       strcmp_expand_sub_join:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP7]], [[STRCMP_EXPAND_SUB_IS_ZERO]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[TMP8]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr @s1, ptr [[C:%.*]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[CALL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %call = call i32 @strcmp(ptr @s1, ptr %C)
@@ -68,19 +46,8 @@ define i1 @expand_strcmp_eq_s1_commuted(ptr %C) {
 
 define i1 @expand_strcmp_ne_s1(ptr %C) {
 ; CHECK-LABEL: @expand_strcmp_ne_s1(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i32 [[TMP2]], 48
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[STRCMP_EXPAND_SUB_IS_ZERO:%.*]], label [[STRCMP_EXPAND_SUB_JOIN:%.*]]
-; CHECK:       strcmp_expand_sub_is_zero:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    br label [[STRCMP_EXPAND_SUB_JOIN]]
-; CHECK:       strcmp_expand_sub_join:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP7]], [[STRCMP_EXPAND_SUB_IS_ZERO]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[TMP8]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[CALL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %call = call i32 @strcmp(ptr %C, ptr @s1)
@@ -90,19 +57,8 @@ define i1 @expand_strcmp_ne_s1(ptr %C) {
 
 define i1 @expand_strcmp_sgt_s1(ptr %C) {
 ; CHECK-LABEL: @expand_strcmp_sgt_s1(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i32 [[TMP2]], 48
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[STRCMP_EXPAND_SUB_IS_ZERO:%.*]], label [[STRCMP_EXPAND_SUB_JOIN:%.*]]
-; CHECK:       strcmp_expand_sub_is_zero:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    br label [[STRCMP_EXPAND_SUB_JOIN]]
-; CHECK:       strcmp_expand_sub_join:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP7]], [[STRCMP_EXPAND_SUB_IS_ZERO]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[TMP8]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[CALL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %call = call i32 @strcmp(ptr %C, ptr @s1)
@@ -112,19 +68,8 @@ define i1 @expand_strcmp_sgt_s1(ptr %C) {
 
 define i1 @expand_strcmp_sge_s1(ptr %C) {
 ; CHECK-LABEL: @expand_strcmp_sge_s1(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i32 [[TMP2]], 48
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[STRCMP_EXPAND_SUB_IS_ZERO:%.*]], label [[STRCMP_EXPAND_SUB_JOIN:%.*]]
-; CHECK:       strcmp_expand_sub_is_zero:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    br label [[STRCMP_EXPAND_SUB_JOIN]]
-; CHECK:       strcmp_expand_sub_join:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP7]], [[STRCMP_EXPAND_SUB_IS_ZERO]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[TMP8]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sge i32 [[CALL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %call = call i32 @strcmp(ptr %C, ptr @s1)
@@ -134,19 +79,8 @@ define i1 @expand_strcmp_sge_s1(ptr %C) {
 
 define i1 @expand_strcmp_slt_s1(ptr %C) {
 ; CHECK-LABEL: @expand_strcmp_slt_s1(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i32 [[TMP2]], 48
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[STRCMP_EXPAND_SUB_IS_ZERO:%.*]], label [[STRCMP_EXPAND_SUB_JOIN:%.*]]
-; CHECK:       strcmp_expand_sub_is_zero:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    br label [[STRCMP_EXPAND_SUB_JOIN]]
-; CHECK:       strcmp_expand_sub_join:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP7]], [[STRCMP_EXPAND_SUB_IS_ZERO]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[TMP8]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i32 [[CALL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %call = call i32 @strcmp(ptr %C, ptr @s1)
@@ -156,19 +90,8 @@ define i1 @expand_strcmp_slt_s1(ptr %C) {
 
 define i1 @expand_strcmp_sle_s1(ptr %C) {
 ; CHECK-LABEL: @expand_strcmp_sle_s1(
-; CHECK-NEXT:    [[TMP1:%.*]] = load i8, ptr [[C:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP1]] to i32
-; CHECK-NEXT:    [[TMP3:%.*]] = sub nsw i32 [[TMP2]], 48
-; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i32 [[TMP3]], 0
-; CHECK-NEXT:    br i1 [[TMP4]], label [[STRCMP_EXPAND_SUB_IS_ZERO:%.*]], label [[STRCMP_EXPAND_SUB_JOIN:%.*]]
-; CHECK:       strcmp_expand_sub_is_zero:
-; CHECK-NEXT:    [[TMP5:%.*]] = getelementptr inbounds i8, ptr [[C]], i64 1
-; CHECK-NEXT:    [[TMP6:%.*]] = load i8, ptr [[TMP5]], align 1
-; CHECK-NEXT:    [[TMP7:%.*]] = zext i8 [[TMP6]] to i32
-; CHECK-NEXT:    br label [[STRCMP_EXPAND_SUB_JOIN]]
-; CHECK:       strcmp_expand_sub_join:
-; CHECK-NEXT:    [[TMP8:%.*]] = phi i32 [ [[TMP3]], [[TMP0:%.*]] ], [ [[TMP7]], [[STRCMP_EXPAND_SUB_IS_ZERO]] ]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[TMP8]], 0
+; CHECK-NEXT:    [[CALL:%.*]] = call i32 @strcmp(ptr [[C:%.*]], ptr @s1)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sle i32 [[CALL]], 0
 ; CHECK-NEXT:    ret i1 [[CMP]]
 ;
   %call = call i32 @strcmp(ptr %C, ptr @s1)
