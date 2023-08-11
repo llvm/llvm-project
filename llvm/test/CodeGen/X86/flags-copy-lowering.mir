@@ -43,18 +43,6 @@
     ret void
   }
 
-  define void @test_adcx(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
-  define void @test_adox(i64 %a, i64 %b) {
-  entry:
-    call void @foo()
-    ret void
-  }
-
   define void @test_rcl(i64 %a, i64 %b) {
   entry:
     call void @foo()
@@ -368,84 +356,6 @@ body:             |
   ; CHECK-NEXT:    %4:gr64 = SBB64ri32 %2, 42, implicit-def $eflags, implicit killed $eflags
   ; CHECK-NEXT:    %5:gr64 = SBB64ri32 %4, 42, implicit-def{{( dead)?}} $eflags, implicit{{( killed)?}} $eflags
     MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %5
-
-    RET 0
-
-...
----
-name:            test_adcx
-# CHECK-LABEL: name: test_adcx
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
-body:             |
-  bb.0:
-    liveins: $rdi, $rsi
-
-    %0:gr64 = COPY $rdi
-    %1:gr64 = COPY $rsi
-    %2:gr64 = ADD64rr %0, %1, implicit-def $eflags
-    %3:gr64 = COPY $eflags
-  ; CHECK-NOT:    COPY{{( killed)?}} $eflags
-  ; CHECK:        %[[E_REG:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
-  ; CHECK-NEXT:   %[[CF_REG:[^:]*]]:gr8 = SETCCr 2, implicit $eflags
-  ; CHECK-NOT:    COPY{{( killed)?}} $eflags
-
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-
-    $eflags = COPY %3
-    %4:gr64 = CMOV64rr %0, %1, 4, implicit $eflags
-    %5:gr64 = MOV64ri32 42
-    %6:gr64 = ADCX64rr %2, %5, implicit-def $eflags, implicit $eflags
-  ; CHECK-NOT:     $eflags =
-  ; CHECK:         TEST8rr %[[E_REG]], %[[E_REG]], implicit-def $eflags
-  ; CHECK-NEXT:    %4:gr64 = CMOV64rr %0, %1, 5, implicit killed $eflags
-  ; CHECK-NEXT:    %5:gr64 = MOV64ri32 42
-  ; CHECK-NEXT:    dead %{{[^:]*}}:gr8 = ADD8ri %[[CF_REG]], 255, implicit-def $eflags
-  ; CHECK-NEXT:    %6:gr64 = ADCX64rr %2, %5, implicit-def{{( dead)?}} $eflags, implicit killed $eflags
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %4
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %6
-
-    RET 0
-
-...
----
-name:            test_adox
-# CHECK-LABEL: name: test_adox
-liveins:
-  - { reg: '$rdi', virtual-reg: '%0' }
-  - { reg: '$rsi', virtual-reg: '%1' }
-body:             |
-  bb.0:
-    liveins: $rdi, $rsi
-
-    %0:gr64 = COPY $rdi
-    %1:gr64 = COPY $rsi
-    %2:gr64 = ADD64rr %0, %1, implicit-def $eflags
-    %3:gr64 = COPY $eflags
-  ; CHECK-NOT:    COPY{{( killed)?}} $eflags
-  ; CHECK:        %[[E_REG:[^:]*]]:gr8 = SETCCr 4, implicit $eflags
-  ; CHECK-NEXT:   %[[OF_REG:[^:]*]]:gr8 = SETCCr 0, implicit $eflags
-  ; CHECK-NOT:    COPY{{( killed)?}} $eflags
-
-    ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-    CALL64pcrel32 @foo, csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax
-    ADJCALLSTACKUP64 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-
-    $eflags = COPY %3
-    %4:gr64 = CMOV64rr %0, %1, 4, implicit $eflags
-    %5:gr64 = MOV64ri32 42
-    %6:gr64 = ADOX64rr %2, %5, implicit-def $eflags, implicit $eflags
-  ; CHECK-NOT:     $eflags =
-  ; CHECK:         TEST8rr %[[E_REG]], %[[E_REG]], implicit-def $eflags
-  ; CHECK-NEXT:    %4:gr64 = CMOV64rr %0, %1, 5, implicit killed $eflags
-  ; CHECK-NEXT:    %5:gr64 = MOV64ri32 42
-  ; CHECK-NEXT:    dead %{{[^:]*}}:gr8 = ADD8ri %[[OF_REG]], 127, implicit-def $eflags
-  ; CHECK-NEXT:    %6:gr64 = ADOX64rr %2, %5, implicit-def{{( dead)?}} $eflags, implicit killed $eflags
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %4
-    MOV64mr $rsp, 1, $noreg, -16, $noreg, killed %6
 
     RET 0
 
