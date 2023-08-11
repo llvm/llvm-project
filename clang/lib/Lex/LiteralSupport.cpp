@@ -675,13 +675,13 @@ static bool ProcessUCNEscape(const char *ThisTokBegin, const char *&ThisTokBuf,
     return false;
   }
 
-  // C2x and C++11 allow UCNs that refer to control characters
+  // C23 and C++11 allow UCNs that refer to control characters
   // and basic source characters inside character and string literals
   if (UcnVal < 0xa0 &&
       // $, @, ` are allowed in all language modes
       (UcnVal != 0x24 && UcnVal != 0x40 && UcnVal != 0x60)) {
     bool IsError =
-        (!(Features.CPlusPlus11 || Features.C2x) || !in_char_string_literal);
+        (!(Features.CPlusPlus11 || Features.C23) || !in_char_string_literal);
     if (Diags) {
       char BasicSCSChar = UcnVal;
       if (UcnVal >= 0x20 && UcnVal < 0x7f)
