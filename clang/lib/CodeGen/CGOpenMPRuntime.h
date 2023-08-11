@@ -1088,6 +1088,13 @@ public:
                                               llvm::GlobalVariable *Addr,
                                               bool PerformInit);
 
+  /// Emit code for handling declare target functions in the runtime.
+  /// \param FD Declare target function.
+  /// \param Addr Address of the global \a FD.
+  /// \param PerformInit true if initialization expression is not constant.
+  virtual void emitDeclareTargetFunction(const FunctionDecl *FD,
+                                         llvm::GlobalValue *GV);
+
   /// Creates artificial threadprivate variable with name \p Name and type \p
   /// VarType.
   /// \param VarType Type of the artificial threadprivate variable.
