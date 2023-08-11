@@ -23,6 +23,7 @@
 #include "llvm/Option/Option.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/InitLLVM.h"
+#include "llvm/Support/LLVMDriver.h"
 #include "llvm/Support/ThreadPool.h"
 
 using namespace llvm;
@@ -119,7 +120,7 @@ static void parseArgs(int argc, char **argv) {
   HostInterface = Args.getLastArgValue(OPT_host_interface, "0.0.0.0");
 }
 
-int main(int argc, char **argv) {
+int llvm_debuginfod_main(int argc, char **argv, const llvm::ToolContext &) {
   InitLLVM X(argc, argv);
   HTTPClient::initialize();
   parseArgs(argc, argv);
