@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64InstrInfo.h"
+#include "AArch64FrameLowering.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -7679,6 +7680,23 @@ AArch64InstrInfo::getOutliningCandidateInfo(
                                     NumBytesToCreateFrame, FrameID);
 }
 
+void AArch64InstrInfo::mergeOutliningCandidateAttributes(
+    Function &F, std::vector<outliner::Candidate> &Candidates) const {
+  // If a bunch of candidates reach this point they must agree on their return
+  // address signing. It is therefore enough to just consider the signing
+  // behaviour of one of them
+  const auto &CFn = Candidates.front().getMF()->getFunction();
+
+  // Since all candidates belong to the same module, just copy the
+  // function-level attributes of an arbitrary function.
+  if (CFn.hasFnAttribute("sign-return-address"))
+    F.addFnAttr(CFn.getFnAttribute("sign-return-address"));
+  if (CFn.hasFnAttribute("sign-return-address-key"))
+    F.addFnAttr(CFn.getFnAttribute("sign-return-address-key"));
+
+  AArch64GenInstrInfo::mergeOutliningCandidateAttributes(F, Candidates);
+}
+
 bool AArch64InstrInfo::isFunctionSafeToOutlineFrom(
     MachineFunction &MF, bool OutlineFromLinkOnceODRs) const {
   const Function &F = MF.getFunction();
@@ -7991,65 +8009,15 @@ void AArch64InstrInfo::fixupPostOutline(MachineBasicBlock &MBB) const {
 }
 
 static void signOutlinedFunction(MachineFunction &MF, MachineBasicBlock &MBB,
-                                 bool ShouldSignReturnAddr,
-                                 bool ShouldSignReturnAddrWithBKey) {
-  if (ShouldSignReturnAddr) {
-    MachineBasicBlock::iterator MBBPAC = MBB.begin();
-    MachineBasicBlock::iterator MBBAUT = MBB.getFirstTerminator();
-    const AArch64Subtarget &Subtarget = MF.getSubtarget<AArch64Subtarget>();
-    const TargetInstrInfo *TII = Subtarget.getInstrInfo();
-    DebugLoc DL;
+                                 bool ShouldSignReturnAddr) {
+  if (!ShouldSignReturnAddr)
+    return;
 
-    if (MBBAUT != MBB.end())
-      DL = MBBAUT->getDebugLoc();
+  AArch64FrameLowering::signLR(MF, MBB, MBB.begin(),
+                               /*NeedsWinCFI=*/false, /*HasWinCFI=*/nullptr);
 
-    // At the very beginning of the basic block we insert the following
-    // depending on the key type
-    //
-    // a_key:                   b_key:
-    //    PACIASP                   EMITBKEY
-    //    CFI_INSTRUCTION           PACIBSP
-    //                              CFI_INSTRUCTION
-    if (ShouldSignReturnAddrWithBKey) {
-      BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::EMITBKEY))
-          .setMIFlag(MachineInstr::FrameSetup);
-    }
-
-    BuildMI(MBB, MBBPAC, DebugLoc(),
-            TII->get(ShouldSignReturnAddrWithBKey ? AArch64::PACIBSP
-                                                  : AArch64::PACIASP))
-        .setMIFlag(MachineInstr::FrameSetup);
-
-    if (MF.getInfo<AArch64FunctionInfo>()->needsDwarfUnwindInfo(MF)) {
-      unsigned CFIIndex =
-          MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-      BuildMI(MBB, MBBPAC, DebugLoc(), TII->get(AArch64::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndex)
-          .setMIFlags(MachineInstr::FrameSetup);
-    }
-
-    // If v8.3a features are available we can replace a RET instruction by
-    // RETAA or RETAB and omit the AUT instructions. In this case the
-    // DW_CFA_AARCH64_negate_ra_state can't be emitted.
-    if (Subtarget.hasPAuth() && MBBAUT != MBB.end() &&
-        MBBAUT->getOpcode() == AArch64::RET) {
-      BuildMI(MBB, MBBAUT, DL,
-              TII->get(ShouldSignReturnAddrWithBKey ? AArch64::RETAB
-                                                    : AArch64::RETAA))
-          .copyImplicitOps(*MBBAUT);
-      MBB.erase(MBBAUT);
-    } else {
-      BuildMI(MBB, MBBAUT, DL,
-              TII->get(ShouldSignReturnAddrWithBKey ? AArch64::AUTIBSP
-                                                    : AArch64::AUTIASP))
-          .setMIFlag(MachineInstr::FrameDestroy);
-      unsigned CFIIndexAuth =
-          MF.addFrameInst(MCCFIInstruction::createNegateRAState(nullptr));
-      BuildMI(MBB, MBBAUT, DL, TII->get(TargetOpcode::CFI_INSTRUCTION))
-          .addCFIIndex(CFIIndexAuth)
-          .setMIFlags(MachineInstr::FrameDestroy);
-    }
-  }
+  AArch64FrameLowering::authenticateLR(MF, MBB, /*NeedsWinCFI=*/false,
+                                       /*HasWinCFI=*/nullptr);
 }
 
 void AArch64InstrInfo::buildOutlinedFrame(
@@ -8149,20 +8117,12 @@ void AArch64InstrInfo::buildOutlinedFrame(
     Et = MBB.insert(Et, LDRXpost);
   }
 
-  // If a bunch of candidates reach this point they must agree on their return
-  // address signing. It is therefore enough to just consider the signing
-  // behaviour of one of them
-  const auto &MFI = *OF.Candidates.front().getMF()->getInfo<AArch64FunctionInfo>();
-  bool ShouldSignReturnAddr = MFI.shouldSignReturnAddress(!IsLeafFunction);
-
-  // a_key is the default
-  bool ShouldSignReturnAddrWithBKey = MFI.shouldSignWithBKey();
+  bool ShouldSignReturnAddr = FI->shouldSignReturnAddress(!IsLeafFunction);
 
   // If this is a tail call outlined function, then there's already a return.
   if (OF.FrameConstructionID == MachineOutlinerTailCall ||
       OF.FrameConstructionID == MachineOutlinerThunk) {
-    signOutlinedFunction(MF, MBB, ShouldSignReturnAddr,
-                         ShouldSignReturnAddrWithBKey);
+    signOutlinedFunction(MF, MBB, ShouldSignReturnAddr);
     return;
   }
 
@@ -8176,8 +8136,7 @@ void AArch64InstrInfo::buildOutlinedFrame(
                           .addReg(AArch64::LR);
   MBB.insert(MBB.end(), ret);
 
-  signOutlinedFunction(MF, MBB, ShouldSignReturnAddr,
-                       ShouldSignReturnAddrWithBKey);
+  signOutlinedFunction(MF, MBB, ShouldSignReturnAddr);
 
   FI->setOutliningStyle("Function");
 
