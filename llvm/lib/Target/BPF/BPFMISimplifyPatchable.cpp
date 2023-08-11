@@ -93,11 +93,35 @@ void BPFMISimplifyPatchable::initialize(MachineFunction &MFParm) {
   LLVM_DEBUG(dbgs() << "*** BPF simplify patchable insts pass ***\n\n");
 }
 
+static bool isST(unsigned Opcode) {
+  return Opcode == BPF::STB_imm || Opcode == BPF::STH_imm ||
+         Opcode == BPF::STW_imm || Opcode == BPF::STD_imm;
+}
+
+static bool isSTX32(unsigned Opcode) {
+  return Opcode == BPF::STB32 || Opcode == BPF::STH32 || Opcode == BPF::STW32;
+}
+
+static bool isSTX64(unsigned Opcode) {
+  return Opcode == BPF::STB || Opcode == BPF::STH || Opcode == BPF::STW ||
+         Opcode == BPF::STD;
+}
+
+static bool isLDX32(unsigned Opcode) {
+  return Opcode == BPF::LDB32 || Opcode == BPF::LDH32 || Opcode == BPF::LDW32;
+}
+
+static bool isLDX64(unsigned Opcode) {
+  return Opcode == BPF::LDB || Opcode == BPF::LDH || Opcode == BPF::LDW ||
+         Opcode == BPF::LDD;
+}
+
+static bool isLDSX(unsigned Opcode) {
+  return Opcode == BPF::LDBSX || Opcode == BPF::LDHSX || Opcode == BPF::LDWSX;
+}
+
 bool BPFMISimplifyPatchable::isLoadInst(unsigned Opcode) {
-  return Opcode == BPF::LDD || Opcode == BPF::LDW || Opcode == BPF::LDH ||
-         Opcode == BPF::LDB || Opcode == BPF::LDW32 || Opcode == BPF::LDH32 ||
-         Opcode == BPF::LDB32 || Opcode == BPF::LDWSX || Opcode == BPF::LDHSX ||
-         Opcode == BPF::LDBSX;
+  return isLDX32(Opcode) || isLDX64(Opcode) || isLDSX(Opcode);
 }
 
 void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
@@ -118,14 +142,9 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
     MachineInstr *DefInst = MO.getParent();
     unsigned Opcode = DefInst->getOpcode();
     unsigned COREOp;
-    if (Opcode == BPF::LDB || Opcode == BPF::LDH || Opcode == BPF::LDW ||
-        Opcode == BPF::LDD || Opcode == BPF::STB || Opcode == BPF::STH ||
-        Opcode == BPF::STW || Opcode == BPF::STD || Opcode == BPF::LDWSX ||
-        Opcode == BPF::LDHSX || Opcode == BPF::LDBSX)
+    if (isLDX64(Opcode) || isLDSX(Opcode) || isSTX64(Opcode) || isST(Opcode))
       COREOp = BPF::CORE_MEM;
-    else if (Opcode == BPF::LDB32 || Opcode == BPF::LDH32 ||
-             Opcode == BPF::LDW32 || Opcode == BPF::STB32 ||
-             Opcode == BPF::STH32 || Opcode == BPF::STW32)
+    else if (isLDX32(Opcode) || isSTX32(Opcode))
       COREOp = BPF::CORE_ALU32_MEM;
     else
       continue;
@@ -138,9 +157,7 @@ void BPFMISimplifyPatchable::checkADDrr(MachineRegisterInfo *MRI,
     // Reject the form:
     //   %1 = ADD_rr %2, %3
     //   *(type *)(%2 + 0) = %1
-    if (Opcode == BPF::STB || Opcode == BPF::STH || Opcode == BPF::STW ||
-        Opcode == BPF::STD || Opcode == BPF::STB32 || Opcode == BPF::STH32 ||
-        Opcode == BPF::STW32) {
+    if (isSTX64(Opcode) || isSTX32(Opcode)) {
       const MachineOperand &Opnd = DefInst->getOperand(0);
       if (Opnd.isReg() && Opnd.getReg() == MO.getReg())
         continue;
