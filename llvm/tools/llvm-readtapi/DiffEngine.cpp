@@ -363,6 +363,13 @@ DiffEngine::findDifferences(const InterfaceFile *IFLHS,
                               rhs, IFRHS->isApplicationExtensionSafe()),
                           "Application Extension Safe"));
 
+  if (IFLHS->hasSimulatorSupport() != IFRHS->hasSimulatorSupport())
+    Output.push_back(recordDifferences(DiffScalarVal<bool, AD_Diff_Scalar_Bool>(
+                                           lhs, IFLHS->hasSimulatorSupport()),
+                                       DiffScalarVal<bool, AD_Diff_Scalar_Bool>(
+                                           rhs, IFRHS->hasSimulatorSupport()),
+                                       "Simulator Support"));
+
   if (IFLHS->reexportedLibraries() != IFRHS->reexportedLibraries())
     Output.push_back(recordDifferences(IFLHS->reexportedLibraries(),
                                        IFRHS->reexportedLibraries(),
