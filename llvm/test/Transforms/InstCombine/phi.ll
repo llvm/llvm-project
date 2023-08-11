@@ -2292,7 +2292,7 @@ join:
   ret i1 %cmp
 }
 
-define i1 @test(ptr noundef %val1, ptr noundef readonly %val2) {
+define i1 @icmp_fold_into_phi_beyondBB(ptr noundef %val1, ptr noundef readonly %val2) {
 ; CHECK-LABEL: @test(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP_I:%.*]] = icmp eq ptr [[VAL1:%.*]], null
