@@ -3150,7 +3150,7 @@ ChangeStatus AAExecutionDomainFunction::updateImpl(Attributor &A) {
           if (EDAA && EDAA->getState().isValidState()) {
             const auto &CalleeED = EDAA->getFunctionExecutionDomain();
             ED.IsReachedFromAlignedBarrierOnly =
-                    CalleeED.IsReachedFromAlignedBarrierOnly;
+                CalleeED.IsReachedFromAlignedBarrierOnly;
             AlignedBarrierLastInBlock = ED.IsReachedFromAlignedBarrierOnly;
             if (IsNoSync || !CalleeED.IsReachedFromAlignedBarrierOnly)
               ED.EncounteredNonLocalSideEffect |=
@@ -4820,6 +4820,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       return;
     }
 
+    const unsigned int NonWrapperFunctionArgNo = 5;
     const unsigned int WrapperFunctionArgNo = 6;
     RuntimeFunction RF = It->getSecond();
     switch (RF) {
@@ -4899,9 +4900,13 @@ struct AAKernelInfoCallSite : AAKernelInfo {
     case OMPRTL___kmpc_target_deinit:
       KernelDeinitCB = &CB;
       break;
-    case OMPRTL___kmpc_parallel_51:
-      if (auto *ParallelRegion = dyn_cast<Function>(
-              CB.getArgOperand(WrapperFunctionArgNo)->stripPointerCasts())) {
+    case OMPRTL___kmpc_parallel_51: {
+      auto *ParallelRegionOp =
+          CB.getArgOperand(WrapperFunctionArgNo)->stripPointerCasts();
+      if (isa<ConstantPointerNull>(ParallelRegionOp))
+        ParallelRegionOp =
+            CB.getArgOperand(NonWrapperFunctionArgNo)->stripPointerCasts();
+      if (auto *ParallelRegion = dyn_cast<Function>(ParallelRegionOp)) {
         ReachedKnownParallelRegions.insert(ParallelRegion);
         /// Check nested parallelism
         auto *FnAA = A.getAAFor<AAKernelInfo>(
@@ -4916,6 +4921,7 @@ struct AAKernelInfoCallSite : AAKernelInfo {
       // worst.
       ReachedUnknownParallelRegions.insert(&CB);
       break;
+    }
     case OMPRTL___kmpc_omp_task:
       // We do not look into tasks right now, just give up.
       SPMDCompatibilityTracker.indicatePessimisticFixpoint();
