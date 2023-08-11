@@ -2,6 +2,7 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,64
 // RUN: %clang_cc1 -triple aarch64_be-linux-gnu -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,64
 // RUN: %clang_cc1 -triple arm-none-eabi -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,ARM,32
+// RUN: %clang_cc1 -triple apple-macosx-x86_64 -emit-llvm -o - %s -fsanitize=function -fno-sanitize-recover=all | FileCheck %s --check-prefixes=CHECK,64
 
 // CHECK: define{{.*}} void @_Z3funv() #0 !func_sanitize ![[FUNCSAN:.*]] {
 void fun() {}
