@@ -66,7 +66,7 @@
 
 #define CHAR_BIT  __CHAR_BIT__
 
-/* C2x 5.2.4.2.1 */
+/* C23 5.2.4.2.1 */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
 #define BOOL_WIDTH   __BOOL_WIDTH__
 #define CHAR_WIDTH   CHAR_BIT

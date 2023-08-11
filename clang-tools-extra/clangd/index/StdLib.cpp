@@ -59,7 +59,7 @@ LangStandard::Kind standardFromOpts(const LangOptions &LO) {
       return LangStandard::lang_cxx11;
     return LangStandard::lang_cxx98;
   }
-  if (LO.C2x)
+  if (LO.C23)
     return LangStandard::lang_c23;
   // C17 has no new features, so treat {C11,C17} as C17.
   if (LO.C11)

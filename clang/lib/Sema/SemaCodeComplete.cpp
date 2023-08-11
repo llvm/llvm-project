@@ -2673,7 +2673,7 @@ static void AddOrdinaryNameResults(Sema::ParserCompletionContext CCC, Scope *S,
       Results.AddResult(Result(Builder.TakeString()));
     }
 
-    if (SemaRef.getLangOpts().C2x) {
+    if (SemaRef.getLangOpts().C23) {
       // nullptr
       Builder.AddResultTypeChunk("nullptr_t");
       Builder.AddTypedTextChunk("nullptr");
@@ -4533,7 +4533,7 @@ void Sema::CodeCompleteAttribute(AttributeCommonInfo::Syntax Syntax,
   }
   bool SyntaxSupportsGuards = Syntax == AttributeCommonInfo::AS_GNU ||
                               Syntax == AttributeCommonInfo::AS_CXX11 ||
-                              Syntax == AttributeCommonInfo::AS_C2x;
+                              Syntax == AttributeCommonInfo::AS_C23;
 
   llvm::DenseSet<llvm::StringRef> FoundScopes;
   auto AddCompletions = [&](const ParsedAttrInfo &A) {
@@ -4547,7 +4547,7 @@ void Sema::CodeCompleteAttribute(AttributeCommonInfo::Syntax Syntax,
       llvm::StringRef Name = S.NormalizedFullName;
       llvm::StringRef Scope;
       if ((Syntax == AttributeCommonInfo::AS_CXX11 ||
-           Syntax == AttributeCommonInfo::AS_C2x)) {
+           Syntax == AttributeCommonInfo::AS_C23)) {
         std::tie(Scope, Name) = Name.split("::");
         if (Name.empty()) // oops, unscoped
           std::swap(Name, Scope);

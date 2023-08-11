@@ -2111,7 +2111,7 @@ bool Parser::TryAnnotateTypeOrScopeTokenAfterScopeSpec(
     }
 
     if (!getLangOpts().CPlusPlus) {
-      // If we're in C, the only place we can have :: tokens is C2x
+      // If we're in C, the only place we can have :: tokens is C23
       // attribute which is parsed elsewhere. If the identifier is not a type,
       // then it can't be scope either, just early exit.
       return false;
