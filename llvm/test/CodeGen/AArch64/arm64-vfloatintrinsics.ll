@@ -22,7 +22,8 @@ define %v4f16 @test_v4f16.sqrt(%v4f16 %a) {
   ; CHECK-FP16:           fsqrt.4h
   ; CHECK-FP16-NEXT:      ret
   ; GISEL-LABEL:          test_v4f16.sqrt:
-  ; GISEL-NOFP16-COUNT-4: fsqrt s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-NOFP16:         fcvt
+  ; GISEL-NOFP16:         fsqrt.4s
   ; GISEL-FP16-NOT:       fcvt
   ; GISEL-FP16:           fsqrt.4h
   ; GISEL-FP16-NEXT:      ret
@@ -292,7 +293,8 @@ define %v8f16 @test_v8f16.sqrt(%v8f16 %a) {
   ; CHECK-FP16:           fsqrt.8h
   ; CHECK-FP16-NEXT:      ret
   ; GISEL-LABEL:          test_v8f16.sqrt:
-  ; GISEL-NOFP16-COUNT-8: fsqrt s{{[0-9]+}}, s{{[0-9]+}}
+  ; GISEL-NOFP16:         fcvt
+  ; GISEL-NOFP16-COUNT-2: fsqrt.4s
   ; GISEL-FP16-NOT:       fcvt
   ; GISEL-FP16:           fsqrt.8h
   ; GISEL-FP16-NEXT:      ret
