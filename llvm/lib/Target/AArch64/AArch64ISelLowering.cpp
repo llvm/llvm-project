@@ -20700,8 +20700,9 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
 
   SmallVector<SDValue, 16> MaskConstants;
   if (VecVT == MVT::v16i8) {
-    // v16i8 is a special case, as we need to split it into two halves and
-    // combine, perform the mask+addition twice, and then combine them.
+    // v16i8 is a special case, as we have 16 entries but only 8 positional bits
+    // per entry. We split it into two halves, apply the mask, zip the halves to
+    // create 8x 16-bit values, and the perform the vector reduce.
     for (unsigned Half = 0; Half < 2; ++Half) {
       for (unsigned MaskBit = 1; MaskBit <= 128; MaskBit *= 2) {
         MaskConstants.push_back(DAG.getConstant(MaskBit, DL, MVT::i32));
@@ -20711,25 +20712,13 @@ static SDValue vectorToScalarBitmask(SDNode *N, SelectionDAG &DAG) {
     SDValue RepresentativeBits =
         DAG.getNode(ISD::AND, DL, VecVT, ComparisonResult, Mask);
 
-    EVT HalfVT = VecVT.getHalfNumVectorElementsVT(*DAG.getContext());
-    unsigned NumElementsInHalf = HalfVT.getVectorNumElements();
-
-    SDValue LowHalf =
-        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, RepresentativeBits,
-                    DAG.getConstant(0, DL, MVT::i64));
-    SDValue HighHalf =
-        DAG.getNode(ISD::EXTRACT_SUBVECTOR, DL, HalfVT, RepresentativeBits,
-                    DAG.getConstant(NumElementsInHalf, DL, MVT::i64));
-
-    SDValue ReducedLowBits =
-        DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i16, LowHalf);
-    SDValue ReducedHighBits =
-        DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i16, HighHalf);
-
-    SDValue ShiftedHighBits =
-        DAG.getNode(ISD::SHL, DL, MVT::i16, ReducedHighBits,
-                    DAG.getConstant(NumElementsInHalf, DL, MVT::i32));
-    return DAG.getNode(ISD::OR, DL, MVT::i16, ShiftedHighBits, ReducedLowBits);
+    SDValue UpperRepresentativeBits =
+        DAG.getNode(AArch64ISD::EXT, DL, VecVT, RepresentativeBits,
+                    RepresentativeBits, DAG.getConstant(8, DL, MVT::i32));
+    SDValue Zipped = DAG.getNode(AArch64ISD::ZIP1, DL, VecVT,
+                                 RepresentativeBits, UpperRepresentativeBits);
+    Zipped = DAG.getNode(ISD::BITCAST, DL, MVT::v8i16, Zipped);
+    return DAG.getNode(ISD::VECREDUCE_ADD, DL, MVT::i16, Zipped);
   }
 
   // All other vector sizes.
