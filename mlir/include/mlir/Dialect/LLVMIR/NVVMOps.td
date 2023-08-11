@@ -1497,7 +1497,7 @@ def WGMMAScaleOutAttr : EnumAttr<NVVM_Dialect, WGMMAScaleOut, "wgmma_scale_out">
   let assemblyFormat = "`<` $value `>`";
 }
 
-def NVVM_WgmmaMmaSyncOp : NVVM_Op<"wgmma.mma_async", 
+def NVVM_WgmmaMmaAsyncOp : NVVM_Op<"wgmma.mma_async", 
               [DeclareOpInterfaceMethods<BasicPtxBuilderOpInterface>,
                 PredOpTrait<"input struct and result struct must be the same type",
                   TCresIsSameAsOpBase<0, 0>>,]> 
