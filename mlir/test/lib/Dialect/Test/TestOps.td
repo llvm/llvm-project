@@ -2834,6 +2834,21 @@ def TestCallAndStoreOp : TEST_Op<"call_and_store",
     "`:` functional-type(operands, results)";
 }
 
+def TestCallOnDeviceOp : TEST_Op<"call_on_device",
+    [DeclareOpInterfaceMethods<CallOpInterface>]> {
+  let arguments = (ins
+    SymbolRefAttr:$callee,
+    Variadic<AnyType>:$forwarded_operands,
+    AnyType:$non_forwarded_device_operand
+  );
+  let results = (outs
+    Variadic<AnyType>:$results
+  );
+  let assemblyFormat =
+    "$callee `(` $forwarded_operands `)` `,` $non_forwarded_device_operand "
+    "attr-dict `:` functional-type(operands, results)";
+}
+
 def TestStoreWithARegion : TEST_Op<"store_with_a_region",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface>,
      SingleBlock]> {

@@ -412,18 +412,33 @@ void AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
     return;
   }
 
-  // For function calls, connect the arguments of the entry blocks
-  // to the operands of the call op.
+  // For function calls, connect the arguments of the entry blocks to the
+  // operands of the call op that are forwarded to these arguments.
   if (auto call = dyn_cast<CallOpInterface>(op)) {
     Operation *callableOp = call.resolveCallable(&symbolTable);
     if (auto callable = dyn_cast_or_null<CallableOpInterface>(callableOp)) {
+      // Not all operands of a call op forward to arguments. Such operands are
+      // stored in `unaccounted`.
+      BitVector unaccounted(op->getNumOperands(), true);
+
+      OperandRange argOperands = call.getArgOperands();
+      MutableArrayRef<OpOperand> argOpOperands =
+          operandsToOpOperands(argOperands);
       Region *region = callable.getCallableRegion();
       if (region && !region->empty()) {
         Block &block = region->front();
-        for (auto [blockArg, operand] :
-             llvm::zip(block.getArguments(), operandLattices)) {
-          meet(operand, *getLatticeElementFor(op, blockArg));
+        for (auto [blockArg, argOpOperand] :
+             llvm::zip(block.getArguments(), argOpOperands)) {
+          meet(getLatticeElement(argOpOperand.get()),
+               *getLatticeElementFor(op, blockArg));
+          unaccounted.reset(argOpOperand.getOperandNumber());
         }
+      }
+      // Handle the operands of the call op that aren't forwarded to any
+      // arguments.
+      for (int index : unaccounted.set_bits()) {
+        OpOperand &opOperand = op->getOpOperand(index);
+        visitCallOperand(opOperand);
       }
       return;
     }
