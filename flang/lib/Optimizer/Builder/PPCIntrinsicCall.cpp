@@ -223,6 +223,11 @@ static constexpr IntrinsicHandler ppcHandlers[]{
          &PI::genVecXStore<VecOp::Stxv>),
      {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
      /*isElemental=*/false},
+    {"__ppc_vec_stxvp",
+     static_cast<IntrinsicLibrary::SubroutineGenerator>(
+         &PI::genVecStore<VecOp::Stxvp>),
+     {{{"arg1", asValue}, {"arg2", asValue}, {"arg3", asAddr}}},
+     /*isElemental=*/false},
     {"__ppc_vec_sub",
      static_cast<IntrinsicLibrary::ExtendedGenerator>(
          &PI::genVecAddAndMulSubXor<VecOp::Sub>),
@@ -1788,6 +1793,11 @@ void PPCIntrinsicLibrary::genVecStore(llvm::ArrayRef<fir::ExtendedValue> args) {
       assert(false && "unknown type");
     break;
   }
+  case VecOp::Stxvp:
+    // __vector_pair type
+    stTy = mlir::VectorType::get(256, mlir::IntegerType::get(context, 1));
+    fname = "llvm.ppc.vsx.stxvp";
+    break;
   default:
     llvm_unreachable("invalid vector operation for generator");
   }
@@ -1798,11 +1808,18 @@ void PPCIntrinsicLibrary::genVecStore(llvm::ArrayRef<fir::ExtendedValue> args) {
 
   llvm::SmallVector<mlir::Value, 4> biArgs;
 
-  mlir::Value newArg1;
+  if (vop == VecOp::Stxvp) {
+    biArgs.push_back(argBases[0]);
+    biArgs.push_back(addr);
+    builder.create<fir::CallOp>(loc, funcOp, biArgs);
+    return;
+  }
+
   auto vecTyInfo{getVecTypeFromFirType(argBases[0].getType())};
   auto cnv{builder.createConvert(loc, vecTyInfo.toMlirVectorType(context),
                                  argBases[0])};
 
+  mlir::Value newArg1{nullptr};
   if (stTy != arg1TyInfo.toMlirVectorType(context))
     newArg1 = builder.create<mlir::vector::BitCastOp>(loc, stTy, cnv);
   else
