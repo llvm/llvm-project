@@ -531,6 +531,9 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
 
   Kinds |= Default;
 
+  if (TC.getTriple().isOSDarwin() && !TC.getTriple().isX86())
+    Kinds &= ~SanitizerKind::Function;
+
   // We disable the vptr sanitizer if it was enabled by group expansion but RTTI
   // is disabled.
   if ((Kinds & SanitizerKind::Vptr) && (RTTIMode == ToolChain::RM_Disabled)) {
