@@ -13812,6 +13812,10 @@ On entry to a function:
 9.  All other registers are unspecified.
 10. Any necessary ``s_waitcnt`` has been performed to ensure memory is available
     to the function.
+11: Use pass-by-reference (byref) in stead of pass-by-value (byval) for struct
+    arguments in C ABI. Callee is responsible for allocating stack memory and
+    copying the value of the struct if modified. Note that the backend still
+    supports byval for struct arguments.
 
 On exit from a function:
 

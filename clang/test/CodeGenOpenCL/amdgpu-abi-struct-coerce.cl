@@ -448,11 +448,11 @@ flexible_array func_flexible_array_ret()
 // CHECK: define{{.*}} void @func_reg_state_lo(<4 x i32> noundef %arg0, <4 x i32> noundef %arg1, <4 x i32> noundef %arg2, i32 noundef %arg3, i32 %s.coerce0, float %s.coerce1, i32 %s.coerce2)
 void func_reg_state_lo(int4 arg0, int4 arg1, int4 arg2, int arg3, struct_arg_t s) { }
 
-// CHECK: define{{.*}} void @func_reg_state_hi(<4 x i32> noundef %arg0, <4 x i32> noundef %arg1, <4 x i32> noundef %arg2, i32 noundef %arg3, i32 noundef %arg4, ptr addrspace(5) nocapture noundef readnone byval(%struct.struct_arg) align 4 %s)
+// CHECK: define{{.*}} void @func_reg_state_hi(<4 x i32> noundef %arg0, <4 x i32> noundef %arg1, <4 x i32> noundef %arg2, i32 noundef %arg3, i32 noundef %arg4, ptr addrspace(5) nocapture noundef readnone byref(%struct.struct_arg) align 4 %{{.*}})
 void func_reg_state_hi(int4 arg0, int4 arg1, int4 arg2, int arg3, int arg4, struct_arg_t s) { }
 
 // XXX - Why don't the inner structs flatten?
-// CHECK: define{{.*}} void @func_reg_state_num_regs_nested_struct(<4 x i32> noundef %arg0, i32 noundef %arg1, i32 %arg2.coerce0, %struct.nested %arg2.coerce1, i32 %arg3.coerce0, %struct.nested %arg3.coerce1, ptr addrspace(5) nocapture noundef readnone byval(%struct.num_regs_nested_struct) align 8 %arg4)
+// CHECK: define{{.*}} void @func_reg_state_num_regs_nested_struct(<4 x i32> noundef %arg0, i32 noundef %arg1, i32 %arg2.coerce0, %struct.nested %arg2.coerce1, i32 %arg3.coerce0, %struct.nested %arg3.coerce1, ptr addrspace(5) nocapture noundef readnone byref(%struct.num_regs_nested_struct) align 8 %{{.*}})
 void func_reg_state_num_regs_nested_struct(int4 arg0, int arg1, num_regs_nested_struct arg2, num_regs_nested_struct arg3, num_regs_nested_struct arg4) { }
 
 // CHECK: define{{.*}} void @func_double_nested_struct_arg(<4 x i32> noundef %arg0, i32 noundef %arg1, i32 %arg2.coerce0, %struct.double_nested %arg2.coerce1, i16 %arg2.coerce2)
@@ -467,7 +467,7 @@ double_nested_struct func_double_nested_struct_ret(int4 arg0, int arg1) {
 // CHECK: define{{.*}} void @func_large_struct_padding_arg_direct(i8 %arg.coerce0, i32 %arg.coerce1, i8 %arg.coerce2, i32 %arg.coerce3, i8 %arg.coerce4, i8 %arg.coerce5, i16 %arg.coerce6, i16 %arg.coerce7, [3 x i8] %arg.coerce8, i64 %arg.coerce9, i32 %arg.coerce10, i8 %arg.coerce11, i32 %arg.coerce12, i16 %arg.coerce13, i8 %arg.coerce14)
 void func_large_struct_padding_arg_direct(large_struct_padding arg) { }
 
-// CHECK: define{{.*}} void @func_large_struct_padding_arg_store(ptr addrspace(1) nocapture noundef writeonly %out, ptr addrspace(5) nocapture noundef readonly byval(%struct.large_struct_padding) align 8 %arg)
+// CHECK: define{{.*}} void @func_large_struct_padding_arg_store(ptr addrspace(1) nocapture noundef writeonly %out, ptr addrspace(5) nocapture noundef readonly byref(%struct.large_struct_padding) align 8 %{{.*}})
 void func_large_struct_padding_arg_store(global large_struct_padding* out, large_struct_padding arg) {
   *out = arg;
 }
@@ -485,7 +485,7 @@ void v3i32_pair_reg_count(int3_pair *arg0, int3_pair arg1, int3 arg2, int3_pair 
 void v4i16_reg_count(short4 arg0, short4 arg1, short4 arg2, short4 arg3,
                      short4 arg4, short4 arg5, struct_4regs arg6) { }
 
-// CHECK: define{{.*}} void @v4i16_pair_reg_count_over(<4 x i16> noundef %arg0, <4 x i16> noundef %arg1, <4 x i16> noundef %arg2, <4 x i16> noundef %arg3, <4 x i16> noundef %arg4, <4 x i16> noundef %arg5, <4 x i16> noundef %arg6, ptr addrspace(5) nocapture noundef readnone byval(%struct.struct_4regs) align 4 %arg7)
+// CHECK: define{{.*}} void @v4i16_pair_reg_count_over(<4 x i16> noundef %arg0, <4 x i16> noundef %arg1, <4 x i16> noundef %arg2, <4 x i16> noundef %arg3, <4 x i16> noundef %arg4, <4 x i16> noundef %arg5, <4 x i16> noundef %arg6, ptr addrspace(5) nocapture noundef readnone byref(%struct.struct_4regs) align 4 %{{.*}})
 void v4i16_pair_reg_count_over(short4 arg0, short4 arg1, short4 arg2, short4 arg3,
                                short4 arg4, short4 arg5, short4 arg6, struct_4regs arg7) { }
 
@@ -493,7 +493,7 @@ void v4i16_pair_reg_count_over(short4 arg0, short4 arg1, short4 arg2, short4 arg
 void v3i16_reg_count(short3 arg0, short3 arg1, short3 arg2, short3 arg3,
                      short3 arg4, short3 arg5, struct_4regs arg6) { }
 
-// CHECK: define{{.*}} void @v3i16_reg_count_over(<3 x i16> noundef %arg0, <3 x i16> noundef %arg1, <3 x i16> noundef %arg2, <3 x i16> noundef %arg3, <3 x i16> noundef %arg4, <3 x i16> noundef %arg5, <3 x i16> noundef %arg6, ptr addrspace(5) nocapture noundef readnone byval(%struct.struct_4regs) align 4 %arg7)
+// CHECK: define{{.*}} void @v3i16_reg_count_over(<3 x i16> noundef %arg0, <3 x i16> noundef %arg1, <3 x i16> noundef %arg2, <3 x i16> noundef %arg3, <3 x i16> noundef %arg4, <3 x i16> noundef %arg5, <3 x i16> noundef %arg6, ptr addrspace(5) nocapture noundef readnone byref(%struct.struct_4regs) align 4 %{{.*}})
 void v3i16_reg_count_over(short3 arg0, short3 arg1, short3 arg2, short3 arg3,
                           short3 arg4, short3 arg5, short3 arg6, struct_4regs arg7) { }
 
@@ -503,7 +503,7 @@ void v2i16_reg_count(short2 arg0, short2 arg1, short2 arg2, short2 arg3,
                      short2 arg8, short2 arg9, short2 arg10, short2 arg11,
                      struct_4regs arg13) { }
 
-// CHECK: define{{.*}} void @v2i16_reg_count_over(<2 x i16> noundef %arg0, <2 x i16> noundef %arg1, <2 x i16> noundef %arg2, <2 x i16> noundef %arg3, <2 x i16> noundef %arg4, <2 x i16> noundef %arg5, <2 x i16> noundef %arg6, <2 x i16> noundef %arg7, <2 x i16> noundef %arg8, <2 x i16> noundef %arg9, <2 x i16> noundef %arg10, <2 x i16> noundef %arg11, <2 x i16> noundef %arg12, ptr addrspace(5) nocapture noundef readnone byval(%struct.struct_4regs) align 4 %arg13)
+// CHECK: define{{.*}} void @v2i16_reg_count_over(<2 x i16> noundef %arg0, <2 x i16> noundef %arg1, <2 x i16> noundef %arg2, <2 x i16> noundef %arg3, <2 x i16> noundef %arg4, <2 x i16> noundef %arg5, <2 x i16> noundef %arg6, <2 x i16> noundef %arg7, <2 x i16> noundef %arg8, <2 x i16> noundef %arg9, <2 x i16> noundef %arg10, <2 x i16> noundef %arg11, <2 x i16> noundef %arg12, ptr addrspace(5) nocapture noundef readnone byref(%struct.struct_4regs) align 4 %{{.*}})
 void v2i16_reg_count_over(short2 arg0, short2 arg1, short2 arg2, short2 arg3,
                           short2 arg4, short2 arg5, short2 arg6, short2 arg7,
                           short2 arg8, short2 arg9, short2 arg10, short2 arg11,
@@ -513,7 +513,7 @@ void v2i16_reg_count_over(short2 arg0, short2 arg1, short2 arg2, short2 arg3,
 void v2i8_reg_count(char2 arg0, char2 arg1, char2 arg2, char2 arg3,
                     char2 arg4, char2 arg5, struct_4regs arg6) { }
 
-// CHECK: define{{.*}} void @v2i8_reg_count_over(<2 x i8> noundef %arg0, <2 x i8> noundef %arg1, <2 x i8> noundef %arg2, <2 x i8> noundef %arg3, <2 x i8> noundef %arg4, <2 x i8> noundef %arg5, i32 noundef %arg6, ptr addrspace(5) nocapture noundef readnone byval(%struct.struct_4regs) align 4 %arg7)
+// CHECK: define{{.*}} void @v2i8_reg_count_over(<2 x i8> noundef %arg0, <2 x i8> noundef %arg1, <2 x i8> noundef %arg2, <2 x i8> noundef %arg3, <2 x i8> noundef %arg4, <2 x i8> noundef %arg5, i32 noundef %arg6, ptr addrspace(5) nocapture noundef readnone byref(%struct.struct_4regs) align 4 %{{.*}})
 void v2i8_reg_count_over(char2 arg0, char2 arg1, char2 arg2, char2 arg3,
                          char2 arg4, char2 arg5, int arg6, struct_4regs arg7) { }
 
