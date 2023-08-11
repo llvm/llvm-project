@@ -326,12 +326,22 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
             LaunchFuncOp::getKernelAttrName(launchOp->getName())))
       return success();
 
-    // Check that `launch_func` refers to a well-formed GPU kernel module.
-    StringAttr kernelModuleName = launchOp.getKernelModuleName();
-    auto kernelModule = module.lookupSymbol<GPUModuleOp>(kernelModuleName);
+    // Check that `launch_func` refers to a well-formed GPU kernel container.
+    StringAttr kernelContainerName = launchOp.getKernelModuleName();
+    Operation *kernelContainer = module.lookupSymbol(kernelContainerName);
+    if (!kernelContainer)
+      return launchOp.emitOpError()
+             << "kernel container '" << kernelContainerName.getValue()
+             << "' is undefined";
+
+    // If the container is a GPU binary op return success.
+    if (isa<BinaryOp>(kernelContainer))
+      return success();
+
+    auto kernelModule = dyn_cast<GPUModuleOp>(kernelContainer);
     if (!kernelModule)
       return launchOp.emitOpError()
-             << "kernel module '" << kernelModuleName.getValue()
+             << "kernel module '" << kernelContainerName.getValue()
              << "' is undefined";
 
     // Check that `launch_func` refers to a well-formed kernel function.
@@ -988,13 +998,45 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   auto kernelSymbol =
       SymbolRefAttr::get(kernelModule.getNameAttr(),
                          {SymbolRefAttr::get(kernelFunc.getNameAttr())});
-  result.addAttribute(getKernelAttrName(result.name), kernelSymbol);
-  SmallVector<int32_t, 9> segmentSizes(9, 1);
-  segmentSizes.front() = asyncDependencies.size();
-  segmentSizes[segmentSizes.size() - 2] = dynamicSharedMemorySize ? 1 : 0;
-  segmentSizes.back() = static_cast<int32_t>(kernelOperands.size());
-  result.addAttribute(getOperandSegmentSizeAttr(),
-                      builder.getDenseI32ArrayAttr(segmentSizes));
+
+  Properties &prop = result.getOrAddProperties<Properties>();
+  prop.kernel = kernelSymbol;
+  size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
+  // Initialize the segment sizes to 1.
+  for (auto &sz : prop.operandSegmentSizes)
+    sz = 1;
+  prop.operandSegmentSizes[0] = asyncDependencies.size();
+  prop.operandSegmentSizes[segmentSizesLen - 3] =
+      dynamicSharedMemorySize ? 1 : 0;
+  prop.operandSegmentSizes[segmentSizesLen - 2] =
+      static_cast<int32_t>(kernelOperands.size());
+  prop.operandSegmentSizes[segmentSizesLen - 1] = 0;
+}
+
+void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
+                         SymbolRefAttr kernel, KernelDim3 gridSize,
+                         KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
+                         ValueRange kernelOperands, Value asyncObject) {
+  // Add grid and block sizes as op operands, followed by the data operands.
+  result.addOperands({gridSize.x, gridSize.y, gridSize.z, getBlockSize.x,
+                      getBlockSize.y, getBlockSize.z});
+  if (dynamicSharedMemorySize)
+    result.addOperands(dynamicSharedMemorySize);
+  result.addOperands(kernelOperands);
+  if (asyncObject)
+    result.addOperands(asyncObject);
+  Properties &prop = result.getOrAddProperties<Properties>();
+  prop.kernel = kernel;
+  size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
+  // Initialize the segment sizes to 1.
+  for (auto &sz : prop.operandSegmentSizes)
+    sz = 1;
+  prop.operandSegmentSizes[0] = 0;
+  prop.operandSegmentSizes[segmentSizesLen - 3] =
+      dynamicSharedMemorySize ? 1 : 0;
+  prop.operandSegmentSizes[segmentSizesLen - 2] =
+      static_cast<int32_t>(kernelOperands.size());
+  prop.operandSegmentSizes[segmentSizesLen - 1] = asyncObject ? 1 : 0;
 }
 
 StringAttr LaunchFuncOp::getKernelModuleName() {
@@ -1035,6 +1077,22 @@ LogicalResult LaunchFuncOp::verify() {
                        "' attribute");
 
   return success();
+}
+
+static ParseResult parseLaunchDimType(OpAsmParser &parser, Type &dimTy) {
+  if (succeeded(parser.parseOptionalColon())) {
+    if (parser.parseType(dimTy))
+      return failure();
+  } else {
+    dimTy = IndexType::get(parser.getContext());
+  }
+  return success();
+}
+
+static void printLaunchDimType(OpAsmPrinter &printer, Operation *op,
+                               Type dimTy) {
+  if (!dimTy.isIndex())
+    printer << ": " << dimTy;
 }
 
 static ParseResult parseLaunchFuncOperands(
