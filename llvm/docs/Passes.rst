@@ -1,32 +1,3 @@
-..
-    If Passes.html is up to date, the following "one-liner" should print
-    an empty diff.
-
-    egrep -e '^<tr><td><a href="#.*">-.*</a></td><td>.*</td></tr>$' \
-          -e '^  <a name=".*">.*</a>$' < Passes.html >html; \
-    perl >help <<'EOT' && diff -u help html; rm -f help html
-    open HTML, "<Passes.html" or die "open: Passes.html: $!\n";
-    while (<HTML>) {
-      m:^<tr><td><a href="#(.*)">-.*</a></td><td>.*</td></tr>$: or next;
-      $order{$1} = sprintf("%03d", 1 + int %order);
-    }
-    open HELP, "../Release/bin/opt -help|" or die "open: opt -help: $!\n";
-    while (<HELP>) {
-      m:^    -([^ ]+) +- (.*)$: or next;
-      my $o = $order{$1};
-      $o = "000" unless defined $o;
-      push @x, "$o<tr><td><a href=\"#$1\">-$1</a></td><td>$2</td></tr>\n";
-      push @y, "$o  <a name=\"$1\">-$1: $2</a>\n";
-    }
-    @x = map { s/^\d\d\d//; $_ } sort @x;
-    @y = map { s/^\d\d\d//; $_ } sort @y;
-    print @x, @y;
-    EOT
-
-    This (real) one-liner can also be helpful when converting comments to HTML:
-
-    perl -e '$/ = undef; for (split(/\n/, <>)) { s:^ *///? ?::; print "  <p>\n" if !$on && $_ =~ /\S/; print "  </p>\n" if $on && $_ =~ /^\s*$/; print "  $_\n"; $on = ($_ =~ /\S/); } print "  </p>\n" if $on'
-
 ====================================
 LLVM's Analysis and Transform Passes
 ====================================
