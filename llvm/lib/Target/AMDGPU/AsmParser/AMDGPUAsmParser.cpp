@@ -1381,6 +1381,8 @@ public:
 
   bool hasG16() const { return AMDGPU::hasG16(getSTI()); }
 
+  bool hasGDS() const { return AMDGPU::hasGDS(getSTI()); }
+
   bool isSI() const {
     return AMDGPU::isSI(getSTI());
   }
@@ -1640,6 +1642,7 @@ private:
   bool validateAGPRLdSt(const MCInst &Inst) const;
   bool validateVGPRAlign(const MCInst &Inst) const;
   bool validateBLGP(const MCInst &Inst, const OperandVector &Operands);
+  bool validateDS(const MCInst &Inst, const OperandVector &Operands);
   bool validateGWS(const MCInst &Inst, const OperandVector &Operands);
   bool validateDivScale(const MCInst &Inst);
   bool validateWaitCnt(const MCInst &Inst, const OperandVector &Operands);
@@ -4405,6 +4408,29 @@ bool AMDGPUAsmParser::validateWaitCnt(const MCInst &Inst,
   return false;
 }
 
+bool AMDGPUAsmParser::validateDS(const MCInst &Inst,
+                                 const OperandVector &Operands) {
+  uint64_t TSFlags = MII.get(Inst.getOpcode()).TSFlags;
+  if ((TSFlags & SIInstrFlags::DS) == 0)
+    return true;
+  if (TSFlags & SIInstrFlags::GWS)
+    return validateGWS(Inst, Operands);
+  // Only validate GDS for non-GWS instructions.
+  if (hasGDS())
+    return true;
+  int GDSIdx =
+      AMDGPU::getNamedOperandIdx(Inst.getOpcode(), AMDGPU::OpName::gds);
+  if (GDSIdx < 0)
+    return true;
+  unsigned GDS = Inst.getOperand(GDSIdx).getImm();
+  if (GDS) {
+    SMLoc S = getImmLoc(AMDGPUOperand::ImmTyGDS, Operands);
+    Error(S, "gds modifier is not supported on this GPU");
+    return false;
+  }
+  return true;
+}
+
 // gfx90a has an undocumented limitation:
 // DS_GWS opcodes must use even aligned registers.
 bool AMDGPUAsmParser::validateGWS(const MCInst &Inst,
@@ -4613,7 +4639,7 @@ bool AMDGPUAsmParser::validateInstruction(const MCInst &Inst,
       "invalid register class: vgpr tuples must be 64 bit aligned");
     return false;
   }
-  if (!validateGWS(Inst, Operands)) {
+  if (!validateDS(Inst, Operands)) {
     return false;
   }
 
