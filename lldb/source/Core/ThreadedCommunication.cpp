@@ -61,11 +61,6 @@ ThreadedCommunication::~ThreadedCommunication() {
            this, GetBroadcasterName());
 }
 
-void ThreadedCommunication::Clear() {
-  SetReadThreadBytesReceivedCallback(nullptr, nullptr);
-  StopReadThread(nullptr);
-  Communication::Clear();
-}
 
 ConnectionStatus ThreadedCommunication::Disconnect(Status *error_ptr) {
   assert((!m_read_thread_enabled || m_read_thread_did_exit) &&
@@ -77,6 +72,7 @@ size_t ThreadedCommunication::Read(void *dst, size_t dst_len,
                                    const Timeout<std::micro> &timeout,
                                    ConnectionStatus &status,
                                    Status *error_ptr) {
+  std::shared_lock guard(m_connection_mutex);
   Log *log = GetLog(LLDBLog::Communication);
   LLDB_LOG(
       log,
@@ -152,7 +148,7 @@ size_t ThreadedCommunication::Read(void *dst, size_t dst_len,
 
   // We aren't using a read thread, just read the data synchronously in this
   // thread.
-  return Communication::Read(dst, dst_len, timeout, status, error_ptr);
+  return Communication::ReadUnlocked(dst, dst_len, timeout, status, error_ptr);
 }
 
 bool ThreadedCommunication::StartReadThread(Status *error_ptr) {
@@ -273,46 +269,50 @@ lldb::thread_result_t ThreadedCommunication::ReadThread() {
   ConnectionStatus status = eConnectionStatusSuccess;
   bool done = false;
   bool disconnect = false;
-  while (!done && m_read_thread_enabled) {
-    size_t bytes_read = ReadFromConnection(
-        buf, sizeof(buf), std::chrono::seconds(5), status, &error);
-    if (bytes_read > 0 || status == eConnectionStatusEndOfFile)
-      AppendBytesToCache(buf, bytes_read, true, status);
 
-    switch (status) {
-    case eConnectionStatusSuccess:
-      break;
+  {
+    std::shared_lock guard(m_connection_mutex);
+    while (!done && m_read_thread_enabled) {
+      size_t bytes_read = ReadUnlocked(buf, sizeof(buf),
+                                       std::chrono::seconds(5), status, &error);
+      if (bytes_read > 0 || status == eConnectionStatusEndOfFile)
+        AppendBytesToCache(buf, bytes_read, true, status);
 
-    case eConnectionStatusEndOfFile:
-      done = true;
-      disconnect = GetCloseOnEOF();
-      break;
-    case eConnectionStatusError: // Check GetError() for details
-      if (error.GetType() == eErrorTypePOSIX && error.GetError() == EIO) {
-        // EIO on a pipe is usually caused by remote shutdown
-        disconnect = GetCloseOnEOF();
+      switch (status) {
+      case eConnectionStatusSuccess:
+        break;
+
+      case eConnectionStatusEndOfFile:
         done = true;
+        disconnect = GetCloseOnEOF();
+        break;
+      case eConnectionStatusError: // Check GetError() for details
+        if (error.GetType() == eErrorTypePOSIX && error.GetError() == EIO) {
+          // EIO on a pipe is usually caused by remote shutdown
+          disconnect = GetCloseOnEOF();
+          done = true;
+        }
+        if (error.Fail())
+          LLDB_LOG(log, "error: {0}, status = {1}", error,
+                   ThreadedCommunication::ConnectionStatusAsString(status));
+        break;
+      case eConnectionStatusInterrupted: // Synchronization signal from
+                                         // SynchronizeWithReadThread()
+        // The connection returns eConnectionStatusInterrupted only when there
+        // is no input pending to be read, so we can signal that.
+        BroadcastEvent(eBroadcastBitNoMorePendingInput);
+        break;
+      case eConnectionStatusNoConnection:   // No connection
+      case eConnectionStatusLostConnection: // Lost connection while connected
+                                            // to a valid connection
+        done = true;
+        [[fallthrough]];
+      case eConnectionStatusTimedOut: // Request timed out
+        if (error.Fail())
+          LLDB_LOG(log, "error: {0}, status = {1}", error,
+                   ThreadedCommunication::ConnectionStatusAsString(status));
+        break;
       }
-      if (error.Fail())
-        LLDB_LOG(log, "error: {0}, status = {1}", error,
-                 ThreadedCommunication::ConnectionStatusAsString(status));
-      break;
-    case eConnectionStatusInterrupted: // Synchronization signal from
-                                       // SynchronizeWithReadThread()
-      // The connection returns eConnectionStatusInterrupted only when there is
-      // no input pending to be read, so we can signal that.
-      BroadcastEvent(eBroadcastBitNoMorePendingInput);
-      break;
-    case eConnectionStatusNoConnection:   // No connection
-    case eConnectionStatusLostConnection: // Lost connection while connected to
-                                          // a valid connection
-      done = true;
-      [[fallthrough]];
-    case eConnectionStatusTimedOut: // Request timed out
-      if (error.Fail())
-        LLDB_LOG(log, "error: {0}, status = {1}", error,
-                 ThreadedCommunication::ConnectionStatusAsString(status));
-      break;
     }
   }
   m_pass_status = status;
@@ -361,8 +361,12 @@ void ThreadedCommunication::SynchronizeWithReadThread() {
   if (!m_read_thread_enabled || m_read_thread_did_exit)
     return;
 
-  // Notify the read thread.
-  m_connection_sp->InterruptRead();
+  {
+    // Notify the read thread.
+    std::shared_lock guard(m_connection_mutex);
+    if (m_connection_sp)
+    m_connection_sp->InterruptRead();
+  }
 
   // Wait for the synchronization event.
   EventSP event_sp;

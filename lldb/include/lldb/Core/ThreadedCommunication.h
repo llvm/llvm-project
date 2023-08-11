@@ -97,8 +97,6 @@ public:
   /// The destructor is virtual since this class gets subclassed.
   ~ThreadedCommunication() override;
 
-  void Clear() override;
-
   /// Disconnect the communications connection if one is currently connected.
   ///
   /// \return
