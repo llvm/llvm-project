@@ -248,7 +248,7 @@ uint32_t File::GetPermissions(Status &error) const {
 }
 
 bool NativeFile::IsValid() const {
-  std::scoped_lock lock(m_descriptor_mutex, m_stream_mutex);
+  std::scoped_lock<std::mutex, std::mutex> lock(m_descriptor_mutex, m_stream_mutex);
   return DescriptorIsValidUnlocked() || StreamIsValidUnlocked();
 }
 
@@ -313,7 +313,7 @@ FILE *NativeFile::GetStream() {
 }
 
 Status NativeFile::Close() {
-  std::scoped_lock lock(m_descriptor_mutex, m_stream_mutex);
+  std::scoped_lock<std::mutex, std::mutex> lock(m_descriptor_mutex, m_stream_mutex);
 
   Status error;
 
