@@ -2,7 +2,7 @@
 
 // Same below, but using the `ConvertToLLVMPatternInterface` entry point
 // and the generic `convert-to-llvm` pass.
-// RUN: mlir-opt --convert-to-llvm --split-input-file %s | FileCheck %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=cf" --split-input-file %s | FileCheck %s
 
 func.func @main() {
   %a = arith.constant 0 : i1
