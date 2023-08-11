@@ -54601,8 +54601,8 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         unsigned Imm1 = Ops[1].getConstantOperandVal(2);
         // TODO: Handle zero'd subvectors.
         if ((Imm0 & 0x88) == 0 && (Imm1 & 0x88) == 0) {
-          int Mask[4] = {(Imm0 & 0x03), ((Imm0 >> 4) & 0x3), (Imm1 & 0x03),
-                         ((Imm1 >> 4) & 0x3)};
+          int Mask[4] = {(int)(Imm0 & 0x03), (int)((Imm0 >> 4) & 0x3), (int)(Imm1 & 0x03),
+                         (int)((Imm1 >> 4) & 0x3)};
           MVT ShuffleVT = EltSizeInBits >= 32 ? VT : MVT::v8i64;
           SDValue LHS = concatSubVectors(Ops[0].getOperand(0),
                                          Ops[0].getOperand(1), DAG, DL);
