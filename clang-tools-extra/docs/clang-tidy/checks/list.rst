@@ -421,7 +421,7 @@ Clang-Tidy Checks
    `clang-analyzer-cplusplus.Move <clang-analyzer/cplusplus.Move.html>`_, Clang Static Analyzer cplusplus.Move,
    `clang-analyzer-cplusplus.NewDelete <clang-analyzer/cplusplus.NewDelete.html>`_, `Clang Static Analyzer cplusplus.NewDelete <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-newdelete>`_,
    `clang-analyzer-cplusplus.NewDeleteLeaks <clang-analyzer/cplusplus.NewDeleteLeaks.html>`_, `Clang Static Analyzer cplusplus.NewDeleteLeaks <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-newdeleteleaks>`_,
-   `clang-analyzer-cplusplus.PlacementNew <clang-analyzer/cplusplus.PlacementNew.html>`_, Clang Static Analyzer cplusplus.PlacementNew,
+   `clang-analyzer-cplusplus.PlacementNew <clang-analyzer/cplusplus.PlacementNew.html>`_, `Clang Static Analyzer cplusplus.PlacementNew <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-placementnew>`_,
    `clang-analyzer-cplusplus.PureVirtualCall <clang-analyzer/cplusplus.PureVirtualCall.html>`_, Clang Static Analyzer cplusplus.PureVirtualCall,
    `clang-analyzer-cplusplus.StringChecker <clang-analyzer/cplusplus.StringChecker.html>`_, `Clang Static Analyzer cplusplus.StringChecker <https://clang.llvm.org/docs/analyzer/checkers.html#cplusplus-stringchecker>`_,
    `clang-analyzer-deadcode.DeadStores <clang-analyzer/deadcode.DeadStores.html>`_, `Clang Static Analyzer deadcode.DeadStores <https://clang.llvm.org/docs/analyzer/checkers.html#deadcode-deadstores>`_,
