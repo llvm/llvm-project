@@ -36,6 +36,7 @@ void mlir::registerGPUDialectTranslation(DialectRegistry &registry) {
   registry.addExtension(+[](MLIRContext *ctx, gpu::GPUDialect *dialect) {
     dialect->addInterfaces<GPUDialectLLVMIRTranslationInterface>();
   });
+  gpu::registerOffloadingLLVMTranslationInterfacesExternalModels(registry);
 }
 
 void mlir::registerGPUDialectTranslation(MLIRContext &context) {

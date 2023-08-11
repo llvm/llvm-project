@@ -1093,15 +1093,19 @@ def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
      - An optional attribute implementing the offloading LLVM translation interface.
      - An array of GPU object attributes.
 
-    During translation into LLVM, the offloading attribute will be called
-    for translating GPU binary and launch operations into LLVM instructions. If
-    no attribute is provided, the default handler selects the first object from
-    the array and embeds it as a string.
+    During translation, the offloading attribute will be called for translating
+    GPU `binary` and `launch_func` operations. The default offloading handler is:
+    `#gpu.select_object`, this handler selects the first object from the array
+    and embeds it as a string.
 
     Examples:
     ```
+      // Selects the first object.
       gpu.binary @myobject [#gpu.object<...>, #gpu.object<...>]
+      // Uses the `#foo.my_handler` for handling the binary during translation.
       gpu.binary @myobject <#foo.my_handler> [#gpu.object<...>, #gpu.object<...>]
+      // Selects the object with the `#rocdl.target` target attribute.
+      gpu.binary @myobject <#gpu.select_object<#rocdl.target>> [#gpu.object<...>, #gpu.object<#rocdl.target, ...>]
     ```
   }];
   let builders = [
@@ -1114,7 +1118,7 @@ def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
   ];
   let skipDefaultBuilders = 1;
   let assemblyFormat = [{
-    $sym_name (`<` $offloadingHandler ^ `>`)? attr-dict $objects
+    $sym_name custom<OffloadingHandler>($offloadingHandler) attr-dict $objects
   }];
 }
 
