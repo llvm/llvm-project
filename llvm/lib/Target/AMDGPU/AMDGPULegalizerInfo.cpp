@@ -843,6 +843,11 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
   getActionDefinitionsBuilder(G_DYN_STACKALLOC)
     .legalFor({{PrivatePtr, S32}});
 
+  getActionDefinitionsBuilder(G_STACKSAVE)
+    .customFor({PrivatePtr});
+  getActionDefinitionsBuilder(G_STACKRESTORE)
+    .legalFor({PrivatePtr});
+
   getActionDefinitionsBuilder(G_GLOBAL_VALUE)
     .customIf(typeIsNot(0, PrivatePtr));
 
@@ -2037,6 +2042,8 @@ bool AMDGPULegalizerInfo::legalizeCustom(LegalizerHelper &Helper,
     return legalizeCTLZ_CTTZ(MI, MRI, B);
   case TargetOpcode::G_INTRINSIC_FPTRUNC_ROUND:
     return legalizeFPTruncRound(MI, B);
+  case TargetOpcode::G_STACKSAVE:
+    return legalizeStackSave(MI, B);
   default:
     return false;
   }
@@ -6513,6 +6520,16 @@ bool AMDGPULegalizerInfo::legalizeFPTruncRound(MachineInstr &MI,
 
   MI.eraseFromParent();
 
+  return true;
+}
+
+bool AMDGPULegalizerInfo::legalizeStackSave(MachineInstr &MI,
+                                            MachineIRBuilder &B) const {
+  const SITargetLowering *TLI = ST.getTargetLowering();
+  Register StackPtr = TLI->getStackPointerRegisterToSaveRestore();
+  Register DstReg = MI.getOperand(0).getReg();
+  B.buildInstr(AMDGPU::G_AMDGPU_WAVE_ADDRESS, {DstReg}, {StackPtr});
+  MI.eraseFromParent();
   return true;
 }
 

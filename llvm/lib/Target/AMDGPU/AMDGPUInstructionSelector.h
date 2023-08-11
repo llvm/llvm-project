@@ -147,6 +147,7 @@ private:
   bool selectBVHIntrinsic(MachineInstr &I) const;
   bool selectSMFMACIntrin(MachineInstr &I) const;
   bool selectWaveAddress(MachineInstr &I) const;
+  bool selectStackRestore(MachineInstr &MI) const;
 
   std::pair<Register, unsigned> selectVOP3ModsImpl(MachineOperand &Root,
                                                    bool IsCanonicalizing = true,

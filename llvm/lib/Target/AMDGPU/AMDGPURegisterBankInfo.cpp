@@ -3212,6 +3212,11 @@ void AMDGPURegisterBankInfo::applyMappingImpl(
   case AMDGPU::G_DYN_STACKALLOC:
     applyMappingDynStackAlloc(B, OpdMapper, MI);
     return;
+  case AMDGPU::G_STACKRESTORE: {
+    applyDefaultMapping(OpdMapper);
+    constrainOpWithReadfirstlane(B, MI, 0);
+    return;
+  }
   case AMDGPU::G_SBFX:
     applyMappingBFE(B, OpdMapper, /*Signed*/ true);
     return;
