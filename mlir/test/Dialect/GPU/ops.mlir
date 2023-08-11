@@ -128,8 +128,10 @@ module attributes {gpu.container_module} {
     %1 = "op"() : () -> (memref<?xf32, 1>)
     // CHECK: %{{.*}} = arith.constant 8
     %cst = arith.constant 8 : index
+    %cstI64 = arith.constant 8 : i64
     %c0 = arith.constant 0 : i32
     %t0 = gpu.wait async
+    %lowStream = llvm.mlir.null : !llvm.ptr
 
     // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
     gpu.launch_func @kernels::@kernel_1 blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst) args(%0 : f32, %1 : memref<?xf32, 1>)
@@ -141,6 +143,12 @@ module attributes {gpu.container_module} {
 
     // CHECK: %{{.*}} = gpu.launch_func async [%{{.*}}] @kernels::@kernel_2 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}})
     %t1 = gpu.launch_func async [%t0] @kernels::@kernel_2  blocks in (%cst, %cst, %cst) threads in (%cst, %cst, %cst)
+
+    // CHECK: gpu.launch_func <%{{.*}} : !llvm.ptr> @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) : i64 args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
+    gpu.launch_func <%lowStream : !llvm.ptr> @kernels::@kernel_1 blocks in (%cstI64, %cstI64, %cstI64) threads in (%cstI64, %cstI64, %cstI64) : i64 args(%0 : f32, %1 : memref<?xf32, 1>)
+
+    // CHECK: gpu.launch_func @kernels::@kernel_1 blocks in (%{{.*}}, %{{.*}}, %{{.*}}) threads in (%{{.*}}, %{{.*}}, %{{.*}}) : i32 args(%{{.*}} : f32, %{{.*}} : memref<?xf32, 1>)
+    gpu.launch_func @kernels::@kernel_1 blocks in (%c0, %c0, %c0) threads in (%c0, %c0, %c0) : i32 args(%0 : f32, %1 : memref<?xf32, 1>)
 
     // CHECK: %[[VALUES:.*]]:2 = call
     %values:2 = func.call @two_value_generator() : () -> (f32, memref<?xf32, 1>)
