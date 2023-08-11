@@ -70,3 +70,6 @@ Revert "[Clang] Handle static_assert messages with an expression started by a li
 Revert "[RemarkUtil] Refactor llvm-remarkutil to include size-diff "
 Revert "[X86] Workaround possible CPUID bug in Sandy Bridge."
 Revert "Enable concatenation of predefined identifiers "
+Revert "[FunctionAttrs] Unconditionally perform argument attribute inference in the first function-attrs pass"
+Revert "[clang][test] Fix LIT test failures for the following commit"
+

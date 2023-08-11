@@ -1666,10 +1666,10 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
         llvm::interleaveComma(op.getOperands(), body, interleaveFn);
         body << formatv("}), "
                         "result.getOrAddProperties<{0}::Properties>()."
-                        "odsOperandSegmentSizes.begin());\n",
+                        "operandSegmentSizes.begin());\n",
                         op.getCppClassName());
       } else {
-        body << "  result.addAttribute(\"operand_segment_sizes\", "
+        body << "  result.addAttribute(\"operandSegmentSizes\", "
              << "parser.getBuilder().getDenseI32ArrayAttr({";
         llvm::interleaveComma(op.getOperands(), body, interleaveFn);
         body << "}));\n";
@@ -1710,10 +1710,10 @@ void OperationFormat::genParserVariadicSegmentResolution(Operator &op,
       llvm::interleaveComma(op.getResults(), body, interleaveFn);
       body << formatv("}), "
                       "result.getOrAddProperties<{0}::Properties>()."
-                      "odsResultSegmentSizes.begin());\n",
+                      "resultSegmentSizes.begin());\n",
                       op.getCppClassName());
     } else {
-      body << "  result.addAttribute(\"result_segment_sizes\", "
+      body << "  result.addAttribute(\"resultSegmentSizes\", "
            << "parser.getBuilder().getDenseI32ArrayAttr({";
       llvm::interleaveComma(op.getResults(), body, interleaveFn);
       body << "}));\n";
@@ -1767,10 +1767,10 @@ static void genAttrDictPrinter(OperationFormat &fmt, Operator &op,
   // Elide the variadic segment size attributes if necessary.
   if (!fmt.allOperands &&
       op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments"))
-    body << "  elidedAttrs.push_back(\"operand_segment_sizes\");\n";
+    body << "  elidedAttrs.push_back(\"operandSegmentSizes\");\n";
   if (!fmt.allResultTypes &&
       op.getTrait("::mlir::OpTrait::AttrSizedResultSegments"))
-    body << "  elidedAttrs.push_back(\"result_segment_sizes\");\n";
+    body << "  elidedAttrs.push_back(\"resultSegmentSizes\");\n";
   for (const StringRef key : fmt.inferredAttributes.keys())
     body << "  elidedAttrs.push_back(\"" << key << "\");\n";
   for (const NamedAttribute *attr : fmt.usedAttributes)
