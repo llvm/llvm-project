@@ -153,7 +153,7 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
                          StringRef InputString, Command &Cmd,
                          std::string &ModuleName, object::BuildID &BuildID,
                          uint64_t &ModuleOffset) {
-  ModuleName = "";
+  ModuleName = BinaryName;
   if (InputString.consume_front("CODE ")) {
     Cmd = Command::Code;
   } else if (InputString.consume_front("DATA ")) {
@@ -165,39 +165,51 @@ static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
     Cmd = Command::Code;
   }
 
-  // Skip delimiters and parse input filename (if needed).
-  if (BinaryName.empty() && BuildID.empty()) {
-    bool HasFilePrefix = false;
-    bool HasBuildIDPrefix = false;
-    while (true) {
-      if (InputString.consume_front("FILE:")) {
-        if (HasFilePrefix)
-          return false;
-        HasFilePrefix = true;
-        continue;
-      }
-      if (InputString.consume_front("BUILDID:")) {
-        if (HasBuildIDPrefix)
-          return false;
-        HasBuildIDPrefix = true;
-        continue;
-      }
-      break;
+  // Parse optional input file specification.
+  bool HasFilePrefix = false;
+  bool HasBuildIDPrefix = false;
+  while (!InputString.empty()) {
+    InputString = InputString.ltrim();
+    if (InputString.consume_front("FILE:")) {
+      if (HasFilePrefix || HasBuildIDPrefix)
+        // Input file specification prefix has already been seen.
+        return false;
+      HasFilePrefix = true;
+      continue;
     }
-    if (HasFilePrefix && HasBuildIDPrefix)
-      return false;
+    if (InputString.consume_front("BUILDID:")) {
+      if (HasBuildIDPrefix || HasFilePrefix)
+        // Input file specification prefix has already been seen.
+        return false;
+      HasBuildIDPrefix = true;
+      continue;
+    }
+    break;
+  }
 
-    ModuleName = getSpaceDelimitedWord(InputString);
-    if (ModuleName.empty())
+  if (HasBuildIDPrefix || HasFilePrefix) {
+    if (!BinaryName.empty() || !BuildID.empty())
+      // Input file has already been specified on the command line.
+      return false;
+    StringRef Name = getSpaceDelimitedWord(InputString);
+    if (Name.empty())
+      // Wrong name for module file.
       return false;
     if (HasBuildIDPrefix) {
-      BuildID = parseBuildID(ModuleName);
+      BuildID = parseBuildID(Name);
       if (BuildID.empty())
+        // Wrong format of BuildID hash.
         return false;
-      ModuleName.clear();
+    } else {
+      ModuleName = Name;
     }
-  } else {
-    ModuleName = BinaryName.str();
+  } else if (BinaryName.empty() && BuildID.empty()) {
+    // No input file has been specified. If the input string contains at least
+    // two items, assume that the first item is a file name.
+    ModuleName = getSpaceDelimitedWord(InputString);
+    if (ModuleName.empty() || InputString.empty())
+      // No input filename has been specified.
+      return false;
   }
 
   // Skip delimiters and parse module offset.
