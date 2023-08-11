@@ -666,6 +666,10 @@ void AMDGPUTargetMachine::registerPassBuilderCallbacks(PassBuilder &PB) {
           PM.addPass(AMDGPUCodeGenPreparePass(*this));
           return true;
         }
+        if (PassName == "amdgpu-lower-kernel-arguments") {
+          PM.addPass(AMDGPULowerKernelArgumentsPass(*this));
+          return true;
+        }
         return false;
       });
 
