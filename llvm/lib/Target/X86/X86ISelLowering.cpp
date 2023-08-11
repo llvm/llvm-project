@@ -54477,7 +54477,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
     case X86ISD::UNPCKH:
     case X86ISD::UNPCKL: {
       // Don't concatenate build_vector patterns.
-      if (!IsSplat && VT.getScalarSizeInBits() >= 32 &&
+      if (!IsSplat && EltSizeInBits >= 32 &&
           ((VT.is256BitVector() && Subtarget.hasInt256()) ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
           none_of(Ops, [](SDValue Op) {
@@ -54502,7 +54502,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
       }
       [[fallthrough]];
     case X86ISD::VPERMILPI:
-      if (!IsSplat && VT.getScalarSizeInBits() == 32 &&
+      if (!IsSplat && EltSizeInBits == 32 &&
           (VT.is256BitVector() ||
            (VT.is512BitVector() && Subtarget.useAVX512Regs())) &&
           all_of(Ops, [&Op0](SDValue Op) {
