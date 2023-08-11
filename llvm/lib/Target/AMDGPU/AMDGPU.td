@@ -1862,6 +1862,9 @@ def HasGDS : Predicate<"Subtarget->hasGDS()">;
 
 def HasGWS : Predicate<"Subtarget->hasGWS()">;
 
+def HasCvtFP8VOP1Bug : Predicate<"Subtarget->hasCvtFP8VOP1Bug()">;
+def HasNoCvtFP8VOP1Bug : Predicate<"!Subtarget->hasCvtFP8VOP1Bug()">;
+
 // Include AMDGPU TD files
 include "SISchedule.td"
 include "GCNProcessors.td"
