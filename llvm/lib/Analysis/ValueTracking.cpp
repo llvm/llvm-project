@@ -6582,6 +6582,7 @@ static bool canCreateUndefOrPoison(const Operator *Op, bool PoisonOnly,
       case Intrinsic::maximum:
       case Intrinsic::is_fpclass:
       case Intrinsic::ldexp:
+      case Intrinsic::frexp:
         return false;
       case Intrinsic::lround:
       case Intrinsic::llround:
