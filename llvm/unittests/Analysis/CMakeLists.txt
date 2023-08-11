@@ -64,6 +64,8 @@ add_llvm_unittest_with_input_files(AnalysisTests
   ${ANALYSIS_TEST_SOURCES}
   )
 
+add_dependencies(AnalysisTests intrinsics_gen)
+
 target_link_libraries(AnalysisTests PRIVATE LLVMTestingSupport)
 
 # On AIX, enable run-time linking to allow symbols from the plugins shared
