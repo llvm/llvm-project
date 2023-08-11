@@ -473,60 +473,6 @@ void CXXPattern::print(raw_ostream &OS, bool PrintName) const {
 
 //===- InstructionPattern ---------------------------------------------===//
 
-/// Base class for CodeGenInstructionPattern & PatFragPattern, which handles all
-/// the boilerplate for patterns that have a list of operands for some (pseudo)
-/// instruction.
-class InstructionPattern : public Pattern {
-public:
-  class Operand;
-
-  virtual ~InstructionPattern();
-
-  static bool classof(const Pattern *P) {
-    return P->getKind() == K_CodeGenInstruction || P->getKind() == K_PatFrag;
-  }
-
-  template <typename... Ty> void addOperand(Ty &&...Init) {
-    Operands.emplace_back(std::forward<Ty>(Init)...);
-  }
-
-  auto &operands() { return Operands; }
-  const auto &operands() const { return Operands; }
-  unsigned operands_size() const { return Operands.size(); }
-  Operand &getOperand(unsigned K) { return Operands[K]; }
-  const Operand &getOperand(unsigned K) const { return Operands[K]; }
-
-  auto named_operands() {
-    return make_filter_range(Operands,
-                             [&](auto &O) { return O.isNamedOperand(); });
-  }
-
-  auto named_operands() const {
-    return make_filter_range(Operands,
-                             [&](auto &O) { return O.isNamedOperand(); });
-  }
-
-  virtual bool isVariadic() const { return false; }
-  virtual unsigned getNumInstOperands() const = 0;
-  virtual unsigned getNumInstDefs() const = 0;
-
-  bool hasAllDefs() const { return operands_size() >= getNumInstDefs(); }
-
-  virtual StringRef getInstName() const = 0;
-
-  void reportUnreachable(ArrayRef<SMLoc> Locs) const;
-  virtual bool checkSemantics(ArrayRef<SMLoc> Loc);
-
-  void print(raw_ostream &OS, bool PrintName = true) const override;
-
-protected:
-  InstructionPattern(unsigned K, StringRef Name) : Pattern(K, Name) {}
-
-  // std::vector is used here because we can instantiate it using a forward
-  // declaration.
-  std::vector<Operand> Operands;
-};
-
 /// An operand for an InstructionPattern.
 ///
 /// Operands are composed of three elements:
@@ -539,16 +485,16 @@ protected:
 ///   0:$x -> V=int(0), Name='x'
 ///   $x -> Name='x'
 ///   i32:$x -> Name='x', Type = i32
-class InstructionPattern::Operand {
+class InstructionOperand {
 public:
   using IntImmTy = int64_t;
 
-  Operand(IntImmTy Imm, StringRef Name, const Record *Type)
+  InstructionOperand(IntImmTy Imm, StringRef Name, const Record *Type)
       : Value(Imm), Name(insertStrRef(Name)), Type(Type) {
     assert(!Type || Type->isSubClassOf("ValueType"));
   }
 
-  Operand(StringRef Name, const Record *Type)
+  InstructionOperand(StringRef Name, const Record *Type)
       : Name(insertStrRef(Name)), Type(Type) {}
 
   bool isNamedImmediate() const { return hasImmValue() && isNamedOperand(); }
@@ -562,8 +508,8 @@ public:
     return Name;
   }
 
-  Operand withNewName(StringRef NewName) const {
-    Operand Result = *this;
+  InstructionOperand withNewName(StringRef NewName) const {
+    InstructionOperand Result = *this;
     Result.Name = insertStrRef(NewName);
     return Result;
   }
@@ -614,7 +560,55 @@ private:
   bool Def = false;
 };
 
-InstructionPattern::~InstructionPattern() = default;
+/// Base class for CodeGenInstructionPattern & PatFragPattern, which handles all
+/// the boilerplate for patterns that have a list of operands for some (pseudo)
+/// instruction.
+class InstructionPattern : public Pattern {
+public:
+  virtual ~InstructionPattern() = default;
+
+  static bool classof(const Pattern *P) {
+    return P->getKind() == K_CodeGenInstruction || P->getKind() == K_PatFrag;
+  }
+
+  template <typename... Ty> void addOperand(Ty &&...Init) {
+    Operands.emplace_back(std::forward<Ty>(Init)...);
+  }
+
+  auto &operands() { return Operands; }
+  const auto &operands() const { return Operands; }
+  unsigned operands_size() const { return Operands.size(); }
+  InstructionOperand &getOperand(unsigned K) { return Operands[K]; }
+  const InstructionOperand &getOperand(unsigned K) const { return Operands[K]; }
+
+  auto named_operands() {
+    return make_filter_range(Operands,
+                             [&](auto &O) { return O.isNamedOperand(); });
+  }
+
+  auto named_operands() const {
+    return make_filter_range(Operands,
+                             [&](auto &O) { return O.isNamedOperand(); });
+  }
+
+  virtual bool isVariadic() const { return false; }
+  virtual unsigned getNumInstOperands() const = 0;
+  virtual unsigned getNumInstDefs() const = 0;
+
+  bool hasAllDefs() const { return operands_size() >= getNumInstDefs(); }
+
+  virtual StringRef getInstName() const = 0;
+
+  void reportUnreachable(ArrayRef<SMLoc> Locs) const;
+  virtual bool checkSemantics(ArrayRef<SMLoc> Loc);
+
+  void print(raw_ostream &OS, bool PrintName = true) const override;
+
+protected:
+  InstructionPattern(unsigned K, StringRef Name) : Pattern(K, Name) {}
+
+  SmallVector<InstructionOperand, 4> Operands;
+};
 
 void InstructionPattern::reportUnreachable(ArrayRef<SMLoc> Locs) const {
   PrintError(Locs, "pattern '" + getName() + "' ('" + getInstName() +
@@ -1516,16 +1510,16 @@ private:
                                      DenseSet<const Pattern *> &SeenPats,
                                      StringMap<unsigned> &OperandToTempRegID);
 
-  bool
-  emitCodeGenInstructionApplyImmOperand(RuleMatcher &M, BuildMIAction &DstMI,
-                                        const CodeGenInstructionPattern &P,
-                                        const InstructionPattern::Operand &O);
+  bool emitCodeGenInstructionApplyImmOperand(RuleMatcher &M,
+                                             BuildMIAction &DstMI,
+                                             const CodeGenInstructionPattern &P,
+                                             const InstructionOperand &O);
 
   // Recursively visits CodeGenInstructionPattern from P to build up the
   // RuleMatcher/InstructionMatcher. May create new InstructionMatchers as
   // needed.
-  using OperandMapperFnRef = function_ref<InstructionPattern::Operand(
-      const InstructionPattern::Operand &)>;
+  using OperandMapperFnRef =
+      function_ref<InstructionOperand(const InstructionOperand &)>;
   using OperandDefLookupFn =
       function_ref<const InstructionPattern *(StringRef)>;
   bool emitCodeGenInstructionMatchPattern(
@@ -2582,7 +2576,7 @@ bool CombineRuleBuilder::emitPatFragMatchPattern(
 
   // Map parameter names to the actual argument.
   const auto OperandMapper =
-      [&](const InstructionPattern::Operand &O) -> InstructionPattern::Operand {
+      [&](const InstructionOperand &O) -> InstructionOperand {
     if (!O.isNamedOperand())
       return O;
 
@@ -2855,7 +2849,7 @@ bool CombineRuleBuilder::emitCodeGenInstructionApplyPattern(
 
 bool CombineRuleBuilder::emitCodeGenInstructionApplyImmOperand(
     RuleMatcher &M, BuildMIAction &DstMI, const CodeGenInstructionPattern &P,
-    const InstructionPattern::Operand &O) {
+    const InstructionOperand &O) {
   // If we have a type, we implicitly emit a G_CONSTANT, except for G_CONSTANT
   // itself where we emit a CImm.
   //
