@@ -54603,7 +54603,7 @@ static SDValue combineConcatVectorOps(const SDLoc &DL, MVT VT,
         if ((Imm0 & 0x88) == 0 && (Imm1 & 0x88) == 0) {
           int Mask[4] = {(int)(Imm0 & 0x03), (int)((Imm0 >> 4) & 0x3), (int)(Imm1 & 0x03),
                          (int)((Imm1 >> 4) & 0x3)};
-          MVT ShuffleVT = EltSizeInBits >= 32 ? VT : MVT::v8i64;
+          MVT ShuffleVT = VT.isFloatingPoint() ? MVT::v8f64 : MVT::v8i64;
           SDValue LHS = concatSubVectors(Ops[0].getOperand(0),
                                          Ops[0].getOperand(1), DAG, DL);
           SDValue RHS = concatSubVectors(Ops[1].getOperand(0),
