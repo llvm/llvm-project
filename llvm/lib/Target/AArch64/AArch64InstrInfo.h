@@ -295,6 +295,8 @@ public:
                                    bool OutlineFromLinkOnceODRs) const override;
   std::optional<outliner::OutlinedFunction> getOutliningCandidateInfo(
       std::vector<outliner::Candidate> &RepeatedSequenceLocs) const override;
+  void mergeOutliningCandidateAttributes(
+      Function &F, std::vector<outliner::Candidate> &Candidates) const override;
   outliner::InstrType
   getOutliningTypeImpl(MachineBasicBlock::iterator &MIT, unsigned Flags) const override;
   SmallVector<
