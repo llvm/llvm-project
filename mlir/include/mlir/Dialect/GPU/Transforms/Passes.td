@@ -55,4 +55,31 @@ def GpuDecomposeMemrefsPass : Pass<"gpu-decompose-memrefs"> {
   ];
 }
 
+def GpuModuleToBinaryPass
+    : Pass<"gpu-module-to-binary", ""> {
+  let summary = "Transforms a GPU module into a GPU binary.";
+  let description = [{
+    This pass searches for all nested GPU modules and serializes the module
+    using the target attributes attached to the module, producing a GPU binary
+    with an object for every target.
+
+    The `format` argument can have the following values:
+    1. `offloading`, `llvm`: producing an offloading representation.
+    2. `assembly`, `isa`: producing assembly code.
+    3. `binary`, `bin`: producing binaries.
+  }];
+  let options = [
+    Option<"offloadingHandler", "handler", "Attribute", "nullptr",
+           "Offloading handler to be attached to the resulting binary op.">,
+    Option<"toolkitPath", "toolkit", "std::string", [{""}],
+           "Toolkit path.">,
+    ListOption<"linkFiles", "l", "std::string",
+           "Extra files to link to.">,
+    Option<"cmdOptions", "opts", "std::string", [{""}],
+           "Command line options to pass to the tools.">,
+    Option<"compilationTarget", "format", "std::string", [{"bin"}],
+           "The target representation of the compilation process.">
+  ];
+}
+
 #endif // MLIR_DIALECT_GPU_PASSES

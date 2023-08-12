@@ -70,6 +70,13 @@ inline void populateGpuRewritePatterns(RewritePatternSet &patterns) {
 }
 
 namespace gpu {
+/// Searches for all GPU modules in `op` and transforms them into GPU binary
+/// operations. The resulting `gpu.binary` has `handler` as its offloading
+/// handler attribute.
+LogicalResult transformGpuModulesToBinaries(
+    Operation *op, OffloadingLLVMTranslationAttrInterface handler = nullptr,
+    const gpu::TargetOptions &options = {});
+
 /// Base pass class to serialize kernel functions through LLVM into
 /// user-specified IR and add the resulting blob as module attribute.
 class SerializeToBlobPass : public OperationPass<gpu::GPUModuleOp> {
