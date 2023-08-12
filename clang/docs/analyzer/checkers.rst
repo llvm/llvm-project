@@ -2375,8 +2375,8 @@ The malicious data is injected at the taint source (e.g. ``getenv()`` call)
 which is then propagated through function calls and being used as arguments of
 sensitive operations, also called as taint sinks (e.g. ``system()`` call).
 
-One can defend agains this type of vulnerability by always checking and
-santizing the potentially malicious, untrusted user input.
+One can defend against this type of vulnerability by always checking and
+sanitizing the potentially malicious, untrusted user input.
 
 The goal of the checker is to discover and show to the user these potential
 taint source-sink pairs and the propagation call chain.
@@ -2438,7 +2438,7 @@ Unfortunately, the checker cannot discover automatically that the programmer
 have performed data sanitation, so it still emits the warning.
 
 One can get rid of this superflous warning by telling by specifying the
-sanitation functions in the taint configuation file (see
+sanitation functions in the taint configuration file (see
 :doc:`user-docs/TaintAnalysisConfiguration`).
 
 .. code-block:: YAML
