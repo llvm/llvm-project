@@ -4686,7 +4686,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       break;
     }
     case Intrinsic::exp:
-    case Intrinsic::exp2: {
+    case Intrinsic::exp2:
+    case Intrinsic::exp10: {
       Known.knownNot(fcNegative);
       if ((InterestedClasses & fcNan) == fcNone)
         break;
