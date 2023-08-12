@@ -51,8 +51,8 @@ constexpr bool equal(const T (&a)[N], const T (&b)[N]) {
   return true;
 }
 
-#define ASSERT_EQ(X, Y) static_assert(equal(X, Y))
-#define ASSERT_EQ_TY(X, Y) static_assert(is_same<decltype((X)[0]), decltype((Y)[0])>)
+#define ASSERT_EQ(X, Y) static_assert(equal(X, Y), "")
+#define ASSERT_EQ_TY(X, Y) static_assert(is_same<decltype((X)[0]), decltype((Y)[0])>, "")
 
 #define _WIDE(s) L##s
 #define WIDE(s)  _WIDE(s)
@@ -158,7 +158,7 @@ constexpr size_t operator""_len(const char*, size_t len) {
 }
 
 void test_udliteral() {
-  static_assert(__FUNCTION__ ""_len == 14); // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
+  static_assert(__FUNCTION__ ""_len == 14, ""); // expected-warning{{expansion of predefined identifier '__FUNCTION__' to a string literal is a Microsoft extension}}
 }
 
 void test_static_assert() {
