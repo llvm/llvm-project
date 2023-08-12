@@ -135,7 +135,7 @@ declare <16 x float> @_Z3sinDv16_f(<16 x float>)
 declare <16 x float> @_Z3cosDv16_f(<16 x float>)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_native_recip
-; GCN: store float 0x3FD5555560000000, ptr addrspace(1) %a
+; GCN: %call = tail call fast float @_Z12native_recipf(float 3.000000e+00)
 define amdgpu_kernel void @test_native_recip(ptr addrspace(1) nocapture %a) {
 entry:
   %call = call fast float @_Z12native_recipf(float 3.000000e+00)
@@ -146,7 +146,7 @@ entry:
 declare float @_Z12native_recipf(float)
 
 ; GCN-LABEL: {{^}}define amdgpu_kernel void @test_half_recip
-; GCN: store float 0x3FD5555560000000, ptr addrspace(1) %a
+;  GCN: %call = tail call fast float @_Z10half_recipf(float 3.000000e+00)
 define amdgpu_kernel void @test_half_recip(ptr addrspace(1) nocapture %a) {
 entry:
   %call = call fast float @_Z10half_recipf(float 3.000000e+00)

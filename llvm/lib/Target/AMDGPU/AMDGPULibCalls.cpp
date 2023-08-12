@@ -1437,15 +1437,7 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
     Res0 = tan(MATH_PI * opr0);
     return true;
 
-  case AMDGPULibFunc::EI_RECIP:
-    Res0 = 1.0 / opr0;
-    return true;
-
   // two-arg functions
-  case AMDGPULibFunc::EI_DIVIDE:
-    Res0 = opr0 / opr1;
-    return true;
-
   case AMDGPULibFunc::EI_POW:
   case AMDGPULibFunc::EI_POWR:
     Res0 = pow(opr0, opr1);
