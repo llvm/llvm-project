@@ -7857,7 +7857,10 @@ cc_library(
 
 cc_library(
     name = "GPUToLLVMIRTranslation",
-    srcs = ["lib/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.cpp"],
+    srcs = [
+        "lib/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.cpp",
+        "lib/Target/LLVMIR/Dialect/GPU/SelectObjectAttr.cpp",
+    ],
     hdrs = ["include/mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"],
     includes = ["include"],
     deps = [
