@@ -118,7 +118,7 @@ _Static_assert(sizeof(dr315.c + dr315.d) == sizeof(int), "");
 /* WG14 DR316: yes
  * Unprototyped function types
  */
-void dr316_1(a) int a; {}  /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C2x}} */
+void dr316_1(a) int a; {}  /* expected-warning {{a function definition without a prototype is deprecated in all versions of C and is not supported in C23}} */
 void (*dr316_1_ptr)(int, int, int) = dr316_1;
 
 /* WG14 DR317: yes
@@ -134,7 +134,7 @@ void dr317_1() {}  /* expected-warning {{a function declaration without a protot
 void dr317_2(void) {
   if (0)
     dr317_1(1); /* expected-warning {{too many arguments in call to 'dr317_1'}}
-                   expected-warning {{passing arguments to 'dr317_1' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+                   expected-warning {{passing arguments to 'dr317_1' without a prototype is deprecated in all versions of C and is not supported in C23}}
                  */
 }
 #endif /* __STDC_VERSION__ < 202311L */

@@ -22,7 +22,7 @@ __attribute__((nonnull(1,3)));
 extern void func4 (void (^block1)(), void (^block2)()) __attribute__((nonnull(1)))
 __attribute__((nonnull(2)));
 
-void func6(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C2x, conflicting with a subsequent definition}}
+void func6(); // expected-warning {{a function declaration without a prototype is deprecated in all versions of C and is treated as a zero-parameter prototype in C23, conflicting with a subsequent definition}}
 void func7();
 
 void
@@ -41,8 +41,8 @@ foo (int i1, int i2, int i3, void (^cp1)(), void (^cp2)(), void (^cp3)())
   func4(0, cp1); // expected-warning {{null passed to a callee that requires a non-null argument}}
   func4(cp1, 0); // expected-warning {{null passed to a callee that requires a non-null argument}}
   
-  func6((NSObject*) 0); // expected-warning {{passing arguments to 'func6' without a prototype is deprecated in all versions of C and is not supported in C2x}}
-  func7((NSObject*) 0); // expected-warning {{passing arguments to 'func7' without a prototype is deprecated in all versions of C and is not supported in C2x}}
+  func6((NSObject*) 0); // expected-warning {{passing arguments to 'func6' without a prototype is deprecated in all versions of C and is not supported in C23}}
+  func7((NSObject*) 0); // expected-warning {{passing arguments to 'func7' without a prototype is deprecated in all versions of C and is not supported in C23}}
 }
 
 void func5(int) NONNULL_ATTR; //  no warning

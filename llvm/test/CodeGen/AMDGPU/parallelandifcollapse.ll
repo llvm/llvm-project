@@ -1,4 +1,4 @@
-; RUN: llc -march=r600 -mcpu=redwood -mattr=-promote-alloca -amdgpu-sroa=0 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -march=r600 -mcpu=redwood -mattr=-promote-alloca -verify-machineinstrs < %s | FileCheck %s
 ;
 ; CFG flattening should use parallel-and mode to generate branch conditions and
 ; then merge if-regions with the same bodies.

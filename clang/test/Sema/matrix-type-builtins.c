@@ -8,17 +8,17 @@ typedef unsigned ix3x3 __attribute__((matrix_type(3, 3)));
 // Verify that we can use the [[]] spelling of the attribute.
 // We intentionally use the same type alias name to check that both versions
 // define the same type.
-typedef float [[clang::matrix_type(5, 10)]] sx5x10_t; // expected-warning {{[[]] attributes are a C2x extension}}
-typedef int [[clang::matrix_type(3, 2)]] ix3x2_t; // expected-warning {{[[]] attributes are a C2x extension}}
-[[clang::matrix_type(5, 10)]] typedef float sx5x10_t; // expected-warning {{[[]] attributes are a C2x extension}}
+typedef float [[clang::matrix_type(5, 10)]] sx5x10_t; // expected-warning {{[[]] attributes are a C23 extension}}
+typedef int [[clang::matrix_type(3, 2)]] ix3x2_t; // expected-warning {{[[]] attributes are a C23 extension}}
+[[clang::matrix_type(5, 10)]] typedef float sx5x10_t; // expected-warning {{[[]] attributes are a C23 extension}}
 // expected-warning@-1 {{applying attribute 'matrix_type' to a declaration is deprecated; apply it to the type instead}}
-[[clang::matrix_type(3, 2)]] typedef int ix3x2_t; // expected-warning {{[[]] attributes are a C2x extension}}
+[[clang::matrix_type(3, 2)]] typedef int ix3x2_t; // expected-warning {{[[]] attributes are a C23 extension}}
 // expected-warning@-1 {{applying attribute 'matrix_type' to a declaration is deprecated; apply it to the type instead}}
 
 // Attribute may not be used outside typedefs.
-[[clang::matrix_type(3, 2)]] int ix3x2_var; // expected-warning {{[[]] attributes are a C2x extension}}
+[[clang::matrix_type(3, 2)]] int ix3x2_var; // expected-warning {{[[]] attributes are a C23 extension}}
 // expected-error@-1 {{'matrix_type' attribute only applies to typedefs}}
-int [[clang::matrix_type(3, 2)]] ix3x2_var; // expected-warning {{[[]] attributes are a C2x extension}}
+int [[clang::matrix_type(3, 2)]] ix3x2_var; // expected-warning {{[[]] attributes are a C23 extension}}
 // expected-error@-1 {{'matrix_type' attribute only applies to typedefs}}
 
 void transpose(sx5x10_t a, ix3x2_t b, dx3x3 c, int *d, int e) {

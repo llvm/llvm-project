@@ -4155,7 +4155,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
     // If we are merging two functions where only one of them has a prototype,
     // we may have enough information to decide to issue a diagnostic that the
-    // function without a protoype will change behavior in C2x. This handles
+    // function without a protoype will change behavior in C23. This handles
     // cases like:
     //   void i(); void i(int j);
     //   void i(int j); void i();
@@ -4176,7 +4176,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
 
       if (WithProto->getNumParams() != 0) {
         if (WithoutProto->getBuiltinID() == 0 && !WithoutProto->isImplicit()) {
-          // The one without the prototype will be changing behavior in C2x, so
+          // The one without the prototype will be changing behavior in C23, so
           // warn about that one so long as it's a user-visible declaration.
           bool IsWithoutProtoADef = false, IsWithProtoADef = false;
           if (WithoutProto == New)
@@ -4194,7 +4194,7 @@ bool Sema::MergeFunctionDecl(FunctionDecl *New, NamedDecl *&OldD, Scope *S,
           // when the new declaration is a definition without a prototype, the
           // old declaration with a prototype is not the cause of the issue,
           // and that does not need to be noted because the one with a
-          // prototype will not change behavior in C2x.
+          // prototype will not change behavior in C23.
           if (WithProto->getBuiltinID() == 0 && !WithProto->isImplicit() &&
               !IsWithoutProtoADef)
             Diag(WithProto->getLocation(), diag::note_conflicting_prototype);
@@ -15837,7 +15837,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         (void)FindPossiblePrototype(FD, PossiblePrototype);
 
       // If the function being defined does not have a prototype, then we may
-      // need to diagnose it as changing behavior in C2x because we now know
+      // need to diagnose it as changing behavior in C23 because we now know
       // whether the function accepts arguments or not. This only handles the
       // case where the definition has no prototype but does have parameters
       // and either there is no previous potential prototype, or the previous
@@ -15852,7 +15852,7 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
           (!PossiblePrototype || (!PossiblePrototype->hasWrittenPrototype() &&
                                   !PossiblePrototype->isImplicit()))) {
         // The function definition has parameters, so this will change behavior
-        // in C2x. If there is a possible prototype, it comes before the
+        // in C23. If there is a possible prototype, it comes before the
         // function definition.
         // FIXME: The declaration may have already been diagnosed as being
         // deprecated in GetFullTypeForDeclarator() if it had no arguments, but
@@ -15869,14 +15869,14 @@ Decl *Sema::ActOnFinishFunctionBody(Decl *dcl, Stmt *Body,
         // warn about it being deprecated (because the diagnostic is not
         // enabled), warn now that it is deprecated and changes behavior.
 
-        // This K&R C function definition definitely changes behavior in C2x,
+        // This K&R C function definition definitely changes behavior in C23,
         // so diagnose it.
         Diag(FD->getLocation(), diag::warn_non_prototype_changes_behavior)
-            << /*definition*/ 1 << /* not supported in C2x */ 0;
+            << /*definition*/ 1 << /* not supported in C23 */ 0;
 
         // If we have a possible prototype for the function which is a user-
         // visible declaration, we already tested that it has no prototype.
-        // This will change behavior in C2x. This gets a warning rather than a
+        // This will change behavior in C23. This gets a warning rather than a
         // note because it's the same behavior-changing problem as with the
         // definition.
         if (PossiblePrototype)
@@ -16104,7 +16104,7 @@ void Sema::ActOnFinishDelayedAttribute(Scope *S, Decl *D,
 /// call, forming a call to an implicitly defined function (per C99 6.5.1p2).
 NamedDecl *Sema::ImplicitlyDefineFunction(SourceLocation Loc,
                                           IdentifierInfo &II, Scope *S) {
-  // It is not valid to implicitly define a function in C2x.
+  // It is not valid to implicitly define a function in C23.
   assert(LangOpts.implicitFunctionsAllowed() &&
          "Implicit function declarations aren't allowed in this language mode");
 

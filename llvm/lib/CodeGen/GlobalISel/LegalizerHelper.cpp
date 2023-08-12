@@ -4889,6 +4889,7 @@ LegalizerHelper::moreElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case TargetOpcode::G_FREEZE:
   case TargetOpcode::G_FNEG:
   case TargetOpcode::G_FABS:
+  case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_BSWAP:
   case TargetOpcode::G_FCANONICALIZE:
   case TargetOpcode::G_SEXT_INREG:

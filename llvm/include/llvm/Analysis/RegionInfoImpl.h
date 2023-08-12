@@ -655,11 +655,7 @@ typename Tr::RegionT *RegionInfoBase<Tr>::createRegion(BlockT *entry,
       new RegionT(entry, exit, static_cast<RegionInfoT *>(this), DT);
   BBtoRegion.insert({entry, region});
 
-#ifdef EXPENSIVE_CHECKS
   region->verifyRegion();
-#else
-  LLVM_DEBUG(region->verifyRegion());
-#endif
 
   updateStatistics(region);
   return region;

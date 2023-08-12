@@ -243,8 +243,8 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
 
   getActionDefinitionsBuilder(G_FREM).libcallFor({s32, s64});
 
-  getActionDefinitionsBuilder({G_FCEIL, G_FSQRT, G_FFLOOR, G_FRINT,
-                               G_FMA, G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
+  getActionDefinitionsBuilder({G_FCEIL, G_FFLOOR, G_FRINT, G_FMA,
+                               G_INTRINSIC_TRUNC, G_INTRINSIC_ROUND,
                                G_FNEARBYINT, G_INTRINSIC_LRINT})
       // If we don't have full FP16 support, then scalarize the elements of
       // vectors containing fp16 types.
@@ -924,7 +924,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
   getActionDefinitionsBuilder({G_SADDSAT, G_SSUBSAT}).lowerIf(isScalar(0));
 
   getActionDefinitionsBuilder(
-      {G_FABS, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM, G_FMINIMUM})
+      {G_FABS, G_FSQRT, G_FMAXNUM, G_FMINNUM, G_FMAXIMUM, G_FMINIMUM})
       .legalFor({MinFPScalar, s32, s64, v2s32, v4s32, v2s64})
       .legalIf([=](const LegalityQuery &Query) {
         const auto &Ty = Query.Types[0];

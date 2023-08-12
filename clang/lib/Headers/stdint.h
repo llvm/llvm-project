@@ -884,7 +884,7 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 #define PTRDIFF_MAX   __PTRDIFF_MAX__
 #define    SIZE_MAX      __SIZE_MAX__
 
-/* C2x 7.20.2.4 Width of integer types capable of holding object pointers. */
+/* C23 7.22.2.4 Width of integer types capable of holding object pointers. */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
 /* NB: The C standard requires that these be the same value, but the compiler
    exposes separate internal width macros. */
@@ -903,7 +903,7 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 #define  INTMAX_MAX   __INTMAX_MAX__
 #define UINTMAX_MAX  __UINTMAX_MAX__
 
-/* C2x 7.20.2.5 Width of greatest-width integer types. */
+/* C23 7.22.2.5 Width of greatest-width integer types. */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
 /* NB: The C standard requires that these be the same value, but the compiler
    exposes separate internal width macros. */
@@ -937,7 +937,7 @@ typedef __UINTMAX_TYPE__ uintmax_t;
 #define  INTMAX_C(v) __int_c(v,  __INTMAX_C_SUFFIX__)
 #define UINTMAX_C(v) __int_c(v, __UINTMAX_C_SUFFIX__)
 
-/* C2x 7.20.3.x Width of other integer types. */
+/* C23 7.22.3.x Width of other integer types. */
 #if defined(__STDC_VERSION__) && __STDC_VERSION__ >= 202311L
 #define PTRDIFF_WIDTH    __PTRDIFF_WIDTH__
 #define SIG_ATOMIC_WIDTH __SIG_ATOMIC_WIDTH__

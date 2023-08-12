@@ -5098,6 +5098,15 @@ void AMDGPUInstructionSelector::renderFrameIndex(MachineInstrBuilder &MIB,
   MIB.addFrameIndex(MI.getOperand(1).getIndex());
 }
 
+void AMDGPUInstructionSelector::renderFPPow2ToExponent(MachineInstrBuilder &MIB,
+                                                       const MachineInstr &MI,
+                                                       int OpIdx) const {
+  const APFloat &APF = MI.getOperand(1).getFPImm()->getValueAPF();
+  int ExpVal = APF.getExactLog2();
+  assert(ExpVal != INT_MIN);
+  MIB.addImm(ExpVal);
+}
+
 bool AMDGPUInstructionSelector::isInlineImmediate16(int64_t Imm) const {
   return AMDGPU::isInlinableLiteral16(Imm, STI.hasInv2PiInlineImm());
 }

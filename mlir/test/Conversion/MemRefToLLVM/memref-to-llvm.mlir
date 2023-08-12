@@ -5,7 +5,7 @@
 // and the generic `convert-to-llvm` pass. This produces slightly different IR
 // because the conversion target is set up differently. Only one test case is
 // checked.
-// RUN: mlir-opt --convert-to-llvm --split-input-file %s | FileCheck --check-prefix=CHECK-INTERFACE %s
+// RUN: mlir-opt --convert-to-llvm="filter-dialects=memref" --split-input-file %s | FileCheck --check-prefix=CHECK-INTERFACE %s
 
 // CHECK-LABEL: func @view(
 // CHECK: %[[ARG0F:.*]]: index, %[[ARG1F:.*]]: index, %[[ARG2F:.*]]: index

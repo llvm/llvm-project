@@ -438,7 +438,7 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   //      value is, are implementation-defined.
   // (Removed in C++20.)
   if (!LangOpts.CPlusPlus) {
-    if (LangOpts.C2x)
+    if (LangOpts.C23)
       Builder.defineMacro("__STDC_VERSION__", "202311L");
     else if (LangOpts.C17)
       Builder.defineMacro("__STDC_VERSION__", "201710L");
