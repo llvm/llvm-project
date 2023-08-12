@@ -757,10 +757,11 @@ LogicalResult DeallocOp::verify() {
 }
 
 static LogicalResult updateDeallocIfChanged(DeallocOp deallocOp,
-                                            ArrayRef<Value> memrefs,
-                                            ArrayRef<Value> conditions,
+                                            ValueRange memrefs,
+                                            ValueRange conditions,
                                             PatternRewriter &rewriter) {
-  if (deallocOp.getMemrefs() == memrefs)
+  if (deallocOp.getMemrefs() == memrefs &&
+      deallocOp.getConditions() == conditions)
     return failure();
 
   rewriter.updateRootInPlace(deallocOp, [&]() {
@@ -972,6 +973,49 @@ struct EraseAlwaysFalseDealloc : public OpRewritePattern<DeallocOp> {
   }
 };
 
+/// The `memref.extract_strided_metadata` is often inserted to get the base
+/// memref if the operand is not already guaranteed to be the result of a memref
+/// allocation operation. This canonicalization pattern removes this extraction
+/// operation if the operand is now produced by an allocation operation (e.g.,
+/// due to other canonicalizations simplifying the IR).
+///
+/// Example:
+/// ```mlir
+/// %alloc = memref.alloc() : memref<2xi32>
+/// %base_memref, %offset, %size, %stride = memref.extract_strided_metadata
+///   %alloc : memref<2xi32> -> memref<i32>, index, index, index
+/// bufferization.dealloc (%base_memref : memref<i32>) if (%cond)
+/// ```
+/// is canonicalized to
+/// ```mlir
+/// %alloc = memref.alloc() : memref<2xi32>
+/// bufferization.dealloc (%alloc : memref<2xi32>) if (%cond)
+/// ```
+struct SkipExtractMetadataOfAlloc : public OpRewritePattern<DeallocOp> {
+  using OpRewritePattern<DeallocOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(DeallocOp deallocOp,
+                                PatternRewriter &rewriter) const override {
+    SmallVector<Value> newMemrefs(
+        llvm::map_range(deallocOp.getMemrefs(), [&](Value memref) {
+          auto extractStridedOp =
+              memref.getDefiningOp<memref::ExtractStridedMetadataOp>();
+          if (!extractStridedOp)
+            return memref;
+          Value allocMemref = extractStridedOp.getOperand();
+          auto allocOp = allocMemref.getDefiningOp<MemoryEffectOpInterface>();
+          if (!allocOp)
+            return memref;
+          if (allocOp.getEffectOnValue<MemoryEffects::Allocate>(allocMemref))
+            return allocMemref;
+          return memref;
+        }));
+
+    return updateDeallocIfChanged(deallocOp, newMemrefs,
+                                  deallocOp.getConditions(), rewriter);
+  }
+};
+
 } // anonymous namespace
 
 void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
@@ -979,7 +1023,7 @@ void DeallocOp::getCanonicalizationPatterns(RewritePatternSet &results,
   results.add<DeallocRemoveDuplicateDeallocMemrefs,
               DeallocRemoveDuplicateRetainedMemrefs,
               DeallocRemoveDeallocMemrefsContainedInRetained, EraseEmptyDealloc,
-              EraseAlwaysFalseDealloc>(context);
+              EraseAlwaysFalseDealloc, SkipExtractMetadataOfAlloc>(context);
 }
 
 //===----------------------------------------------------------------------===//

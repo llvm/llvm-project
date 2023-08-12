@@ -1331,7 +1331,7 @@ struct HasParent {
 /// relationship is not always known statically. For such cases, we need
 /// a per-op-instance specification to divide the operands into logical groups
 /// or segments. This can be modeled by attributes. The attribute will be named
-/// as `operand_segment_sizes`.
+/// as `operandSegmentSizes`.
 ///
 /// This trait verifies the attribute for specifying operand segments has
 /// the correct type (1D vector) and values (non-negative), etc.
@@ -1339,9 +1339,7 @@ template <typename ConcreteType>
 class AttrSizedOperandSegments
     : public TraitBase<ConcreteType, AttrSizedOperandSegments> {
 public:
-  static StringRef getOperandSegmentSizeAttr() {
-    return "operand_segment_sizes";
-  }
+  static StringRef getOperandSegmentSizeAttr() { return "operandSegmentSizes"; }
 
   static LogicalResult verifyTrait(Operation *op) {
     return ::mlir::OpTrait::impl::verifyOperandSizeAttr(
@@ -1354,7 +1352,7 @@ template <typename ConcreteType>
 class AttrSizedResultSegments
     : public TraitBase<ConcreteType, AttrSizedResultSegments> {
 public:
-  static StringRef getResultSegmentSizeAttr() { return "result_segment_sizes"; }
+  static StringRef getResultSegmentSizeAttr() { return "resultSegmentSizes"; }
 
   static LogicalResult verifyTrait(Operation *op) {
     return ::mlir::OpTrait::impl::verifyResultSizeAttr(

@@ -257,7 +257,7 @@ func.func @nomerge(%arg0: i32, %i: i32) {
 func.func @mismatch_dominance() -> i32 {
   // CHECK: %[[RES:.*]] = "test.producing_br"()
   %0 = "test.producing_br"()[^bb1, ^bb2] {
-        operand_segment_sizes = array<i32: 0, 0>
+        operandSegmentSizes = array<i32: 0, 0>
 	} : () -> i32
 
 ^bb1:

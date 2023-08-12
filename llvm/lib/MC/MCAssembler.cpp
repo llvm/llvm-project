@@ -1009,8 +1009,11 @@ bool MCAssembler::relaxLEB(MCAsmLayout &Layout, MCLEBFragment &LF) {
   uint64_t OldSize = LF.getContents().size();
   int64_t Value;
   bool Abs = LF.getValue().evaluateKnownAbsolute(Value, Layout);
-  if (!Abs)
-    report_fatal_error("sleb128 and uleb128 expressions must be absolute");
+  if (!Abs) {
+    getContext().reportError(LF.getValue().getLoc(),
+                             Twine(LF.isSigned() ? ".s" : ".u") +
+                                 "leb128 expression is not absolute");
+  }
   SmallString<8> &Data = LF.getContents();
   Data.clear();
   raw_svector_ostream OSE(Data);
