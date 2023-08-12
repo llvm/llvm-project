@@ -27,7 +27,7 @@ declare <16 x half> @_Z4fabsDv16_Dh(<16 x half>)
 define float @test_fabs_f32(float %arg) {
 ; CHECK-LABEL: define float @test_fabs_f32
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call float @_Z4fabsf(float [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call float @llvm.fabs.f32(float [[ARG]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %fabs = tail call float @_Z4fabsf(float %arg)
@@ -37,7 +37,7 @@ define float @test_fabs_f32(float %arg) {
 define <2 x float> @test_fabs_v2f32(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_fabs_v2f32
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x float> @llvm.fabs.v2f32(<2 x float> [[ARG]])
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %fabs = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> %arg)
@@ -47,7 +47,7 @@ define <2 x float> @test_fabs_v2f32(<2 x float> %arg) {
 define <3 x float> @test_fabs_v3f32(<3 x float> %arg) {
 ; CHECK-LABEL: define <3 x float> @test_fabs_v3f32
 ; CHECK-SAME: (<3 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <3 x float> @_Z4fabsDv3_f(<3 x float> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <3 x float> @llvm.fabs.v3f32(<3 x float> [[ARG]])
 ; CHECK-NEXT:    ret <3 x float> [[FABS]]
 ;
   %fabs = tail call <3 x float> @_Z4fabsDv3_f(<3 x float> %arg)
@@ -57,7 +57,7 @@ define <3 x float> @test_fabs_v3f32(<3 x float> %arg) {
 define <4 x float> @test_fabs_v4f32(<4 x float> %arg) {
 ; CHECK-LABEL: define <4 x float> @test_fabs_v4f32
 ; CHECK-SAME: (<4 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <4 x float> @_Z4fabsDv4_f(<4 x float> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <4 x float> @llvm.fabs.v4f32(<4 x float> [[ARG]])
 ; CHECK-NEXT:    ret <4 x float> [[FABS]]
 ;
   %fabs = tail call <4 x float> @_Z4fabsDv4_f(<4 x float> %arg)
@@ -67,7 +67,7 @@ define <4 x float> @test_fabs_v4f32(<4 x float> %arg) {
 define <8 x float> @test_fabs_v8f32(<8 x float> %arg) {
 ; CHECK-LABEL: define <8 x float> @test_fabs_v8f32
 ; CHECK-SAME: (<8 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <8 x float> @_Z4fabsDv8_f(<8 x float> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <8 x float> @llvm.fabs.v8f32(<8 x float> [[ARG]])
 ; CHECK-NEXT:    ret <8 x float> [[FABS]]
 ;
   %fabs = tail call <8 x float> @_Z4fabsDv8_f(<8 x float> %arg)
@@ -77,7 +77,7 @@ define <8 x float> @test_fabs_v8f32(<8 x float> %arg) {
 define <16 x float> @test_fabs_v16f32(<16 x float> %arg) {
 ; CHECK-LABEL: define <16 x float> @test_fabs_v16f32
 ; CHECK-SAME: (<16 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <16 x float> @_Z4fabsDv16_f(<16 x float> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <16 x float> @llvm.fabs.v16f32(<16 x float> [[ARG]])
 ; CHECK-NEXT:    ret <16 x float> [[FABS]]
 ;
   %fabs = tail call <16 x float> @_Z4fabsDv16_f(<16 x float> %arg)
@@ -87,7 +87,7 @@ define <16 x float> @test_fabs_v16f32(<16 x float> %arg) {
 define double @test_fabs_f64(double %arg) {
 ; CHECK-LABEL: define double @test_fabs_f64
 ; CHECK-SAME: (double [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call double @_Z4fabsd(double [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call double @llvm.fabs.f64(double [[ARG]])
 ; CHECK-NEXT:    ret double [[FABS]]
 ;
   %fabs = tail call double @_Z4fabsd(double %arg)
@@ -97,7 +97,7 @@ define double @test_fabs_f64(double %arg) {
 define <2 x double> @test_fabs_v2f64(<2 x double> %arg) {
 ; CHECK-LABEL: define <2 x double> @test_fabs_v2f64
 ; CHECK-SAME: (<2 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x double> @_Z4fabsDv2_d(<2 x double> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x double> @llvm.fabs.v2f64(<2 x double> [[ARG]])
 ; CHECK-NEXT:    ret <2 x double> [[FABS]]
 ;
   %fabs = tail call <2 x double> @_Z4fabsDv2_d(<2 x double> %arg)
@@ -107,7 +107,7 @@ define <2 x double> @test_fabs_v2f64(<2 x double> %arg) {
 define <3 x double> @test_fabs_v3f64(<3 x double> %arg) {
 ; CHECK-LABEL: define <3 x double> @test_fabs_v3f64
 ; CHECK-SAME: (<3 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <3 x double> @_Z4fabsDv3_d(<3 x double> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <3 x double> @llvm.fabs.v3f64(<3 x double> [[ARG]])
 ; CHECK-NEXT:    ret <3 x double> [[FABS]]
 ;
   %fabs = tail call <3 x double> @_Z4fabsDv3_d(<3 x double> %arg)
@@ -117,7 +117,7 @@ define <3 x double> @test_fabs_v3f64(<3 x double> %arg) {
 define <4 x double> @test_fabs_v4f64(<4 x double> %arg) {
 ; CHECK-LABEL: define <4 x double> @test_fabs_v4f64
 ; CHECK-SAME: (<4 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <4 x double> @_Z4fabsDv4_d(<4 x double> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <4 x double> @llvm.fabs.v4f64(<4 x double> [[ARG]])
 ; CHECK-NEXT:    ret <4 x double> [[FABS]]
 ;
   %fabs = tail call <4 x double> @_Z4fabsDv4_d(<4 x double> %arg)
@@ -127,7 +127,7 @@ define <4 x double> @test_fabs_v4f64(<4 x double> %arg) {
 define <8 x double> @test_fabs_v8f64(<8 x double> %arg) {
 ; CHECK-LABEL: define <8 x double> @test_fabs_v8f64
 ; CHECK-SAME: (<8 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <8 x double> @_Z4fabsDv8_d(<8 x double> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <8 x double> @llvm.fabs.v8f64(<8 x double> [[ARG]])
 ; CHECK-NEXT:    ret <8 x double> [[FABS]]
 ;
   %fabs = tail call <8 x double> @_Z4fabsDv8_d(<8 x double> %arg)
@@ -137,7 +137,7 @@ define <8 x double> @test_fabs_v8f64(<8 x double> %arg) {
 define <16 x double> @test_fabs_v16f64(<16 x double> %arg) {
 ; CHECK-LABEL: define <16 x double> @test_fabs_v16f64
 ; CHECK-SAME: (<16 x double> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <16 x double> @_Z4fabsDv16_d(<16 x double> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <16 x double> @llvm.fabs.v16f64(<16 x double> [[ARG]])
 ; CHECK-NEXT:    ret <16 x double> [[FABS]]
 ;
   %fabs = tail call <16 x double> @_Z4fabsDv16_d(<16 x double> %arg)
@@ -147,7 +147,7 @@ define <16 x double> @test_fabs_v16f64(<16 x double> %arg) {
 define half @test_fabs_f16(half %arg) {
 ; CHECK-LABEL: define half @test_fabs_f16
 ; CHECK-SAME: (half [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call half @_Z4fabsDh(half [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call half @llvm.fabs.f16(half [[ARG]])
 ; CHECK-NEXT:    ret half [[FABS]]
 ;
   %fabs = tail call half @_Z4fabsDh(half %arg)
@@ -157,7 +157,7 @@ define half @test_fabs_f16(half %arg) {
 define <2 x half> @test_fabs_v2f16(<2 x half> %arg) {
 ; CHECK-LABEL: define <2 x half> @test_fabs_v2f16
 ; CHECK-SAME: (<2 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x half> @_Z4fabsDv2_Dh(<2 x half> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x half> @llvm.fabs.v2f16(<2 x half> [[ARG]])
 ; CHECK-NEXT:    ret <2 x half> [[FABS]]
 ;
   %fabs = tail call <2 x half> @_Z4fabsDv2_Dh(<2 x half> %arg)
@@ -167,7 +167,7 @@ define <2 x half> @test_fabs_v2f16(<2 x half> %arg) {
 define <3 x half> @test_fabs_v3f16(<3 x half> %arg) {
 ; CHECK-LABEL: define <3 x half> @test_fabs_v3f16
 ; CHECK-SAME: (<3 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <3 x half> @_Z4fabsDv3_Dh(<3 x half> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <3 x half> @llvm.fabs.v3f16(<3 x half> [[ARG]])
 ; CHECK-NEXT:    ret <3 x half> [[FABS]]
 ;
   %fabs = tail call <3 x half> @_Z4fabsDv3_Dh(<3 x half> %arg)
@@ -177,7 +177,7 @@ define <3 x half> @test_fabs_v3f16(<3 x half> %arg) {
 define <4 x half> @test_fabs_v4f16(<4 x half> %arg) {
 ; CHECK-LABEL: define <4 x half> @test_fabs_v4f16
 ; CHECK-SAME: (<4 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <4 x half> @_Z4fabsDv4_Dh(<4 x half> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <4 x half> @llvm.fabs.v4f16(<4 x half> [[ARG]])
 ; CHECK-NEXT:    ret <4 x half> [[FABS]]
 ;
   %fabs = tail call <4 x half> @_Z4fabsDv4_Dh(<4 x half> %arg)
@@ -187,7 +187,7 @@ define <4 x half> @test_fabs_v4f16(<4 x half> %arg) {
 define <8 x half> @test_fabs_v8f16(<8 x half> %arg) {
 ; CHECK-LABEL: define <8 x half> @test_fabs_v8f16
 ; CHECK-SAME: (<8 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <8 x half> @_Z4fabsDv8_Dh(<8 x half> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <8 x half> @llvm.fabs.v8f16(<8 x half> [[ARG]])
 ; CHECK-NEXT:    ret <8 x half> [[FABS]]
 ;
   %fabs = tail call <8 x half> @_Z4fabsDv8_Dh(<8 x half> %arg)
@@ -197,7 +197,7 @@ define <8 x half> @test_fabs_v8f16(<8 x half> %arg) {
 define <16 x half> @test_fabs_v16f16(<16 x half> %arg) {
 ; CHECK-LABEL: define <16 x half> @test_fabs_v16f16
 ; CHECK-SAME: (<16 x half> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <16 x half> @_Z4fabsDv16_Dh(<16 x half> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <16 x half> @llvm.fabs.v16f16(<16 x half> [[ARG]])
 ; CHECK-NEXT:    ret <16 x half> [[FABS]]
 ;
   %fabs = tail call <16 x half> @_Z4fabsDv16_Dh(<16 x half> %arg)
@@ -207,7 +207,7 @@ define <16 x half> @test_fabs_v16f16(<16 x half> %arg) {
 define float @test_fabs_f32_nobuiltin_callsite(float %arg) {
 ; CHECK-LABEL: define float @test_fabs_f32_nobuiltin_callsite
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call float @_Z4fabsf(float [[ARG]]) #[[ATTR3:[0-9]+]]
+; CHECK-NEXT:    [[FABS:%.*]] = tail call float @_Z4fabsf(float [[ARG]]) #[[ATTR4:[0-9]+]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %fabs = tail call float @_Z4fabsf(float %arg) #0
@@ -217,7 +217,7 @@ define float @test_fabs_f32_nobuiltin_callsite(float %arg) {
 define <2 x float> @test_fabs_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_fabs_v2f32_nobuiltin_callsite
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> [[ARG]]) #[[ATTR3]]
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %fabs = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> %arg) #0
@@ -228,7 +228,7 @@ define <2 x float> @test_fabs_v2f32_nobuiltin_callsite(<2 x float> %arg) {
 define float @test_fabs_f32_nobuiltins(float %arg) #1 {
 ; CHECK-LABEL: define float @test_fabs_f32_nobuiltins
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call float @_Z4fabsf(float [[ARG]]) #[[ATTR3]]
+; CHECK-NEXT:    [[FABS:%.*]] = tail call float @_Z4fabsf(float [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %fabs = tail call float @_Z4fabsf(float %arg) #0
@@ -238,7 +238,7 @@ define float @test_fabs_f32_nobuiltins(float %arg) #1 {
 define <2 x float> @test_fabs_v2f32_nobuiltins(<2 x float> %arg) #1 {
 ; CHECK-LABEL: define <2 x float> @test_fabs_v2f32_nobuiltins
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> [[ARG]]) #[[ATTR3]]
+; CHECK-NEXT:    [[FABS:%.*]] = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> [[ARG]]) #[[ATTR4]]
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %fabs = tail call <2 x float> @_Z4fabsDv2_f(<2 x float> %arg) #0
@@ -248,7 +248,7 @@ define <2 x float> @test_fabs_v2f32_nobuiltins(<2 x float> %arg) #1 {
 define float @test_fabs_f32_preserve_flags(float %arg) {
 ; CHECK-LABEL: define float @test_fabs_f32_preserve_flags
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan ninf float @_Z4fabsf(float [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan ninf float @llvm.fabs.f32(float [[ARG]])
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %fabs = tail call nnan ninf float @_Z4fabsf(float %arg)
@@ -258,7 +258,7 @@ define float @test_fabs_f32_preserve_flags(float %arg) {
 define <2 x float> @test_fabs_v2f32_preserve_flags(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_fabs_v2f32_preserve_flags
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan nsz contract <2 x float> @_Z4fabsDv2_f(<2 x float> [[ARG]])
+; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan nsz contract <2 x float> @llvm.fabs.v2f32(<2 x float> [[ARG]])
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %fabs = tail call contract nsz nnan <2 x float> @_Z4fabsDv2_f(<2 x float> %arg)
@@ -268,7 +268,7 @@ define <2 x float> @test_fabs_v2f32_preserve_flags(<2 x float> %arg) {
 define float @test_fabs_f32_preserve_flags_md(float %arg) {
 ; CHECK-LABEL: define float @test_fabs_f32_preserve_flags_md
 ; CHECK-SAME: (float [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan ninf float @_Z4fabsf(float [[ARG]]), !foo !0
+; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan ninf float @llvm.fabs.f32(float [[ARG]]), !foo !0
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %fabs = tail call nnan ninf float @_Z4fabsf(float %arg), !foo !0
@@ -278,7 +278,7 @@ define float @test_fabs_f32_preserve_flags_md(float %arg) {
 define <2 x float> @test_fabs_v2f32_preserve_flags_md(<2 x float> %arg) {
 ; CHECK-LABEL: define <2 x float> @test_fabs_v2f32_preserve_flags_md
 ; CHECK-SAME: (<2 x float> [[ARG:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan nsz contract <2 x float> @_Z4fabsDv2_f(<2 x float> [[ARG]]), !foo !0
+; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan nsz contract <2 x float> @llvm.fabs.v2f32(<2 x float> [[ARG]]), !foo !0
 ; CHECK-NEXT:    ret <2 x float> [[FABS]]
 ;
   %fabs = tail call contract nsz nnan <2 x float> @_Z4fabsDv2_f(<2 x float> %arg), !foo !0
@@ -312,7 +312,7 @@ define double @test_libm_fabs_f64(double %arg) {
 define float @test_fabs_f32_strictfp(float %arg) #3 {
 ; CHECK-LABEL: define float @test_fabs_f32_strictfp
 ; CHECK-SAME: (float [[ARG:%.*]]) #[[ATTR2:[0-9]+]] {
-; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan float @_Z4fabsf(float [[ARG]]) #[[ATTR2]]
+; CHECK-NEXT:    [[FABS:%.*]] = tail call nnan float @llvm.fabs.f32(float [[ARG]]) #[[ATTR2]]
 ; CHECK-NEXT:    ret float [[FABS]]
 ;
   %fabs = tail call nnan float @_Z4fabsf(float %arg) #3
