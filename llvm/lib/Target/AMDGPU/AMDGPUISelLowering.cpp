@@ -2760,14 +2760,40 @@ SDValue AMDGPUTargetLowering::lowerFEXP2(SDValue Op, SelectionDAG &DAG) const {
   return DAG.getNode(ISD::FMUL, SL, VT, Exp2, ResultScale, Flags);
 }
 
-SDValue AMDGPUTargetLowering::lowerFEXPUnsafe(SDValue Op, const SDLoc &SL,
+SDValue AMDGPUTargetLowering::lowerFEXPUnsafe(SDValue X, const SDLoc &SL,
                                               SelectionDAG &DAG,
                                               SDNodeFlags Flags) const {
-  // exp2(M_LOG2E_F * f);
-  EVT VT = Op.getValueType();
-  const SDValue K = DAG.getConstantFP(numbers::log2e, SL, VT);
-  SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, Op, K, Flags);
-  return DAG.getNode(VT == MVT::f32 ? AMDGPUISD::EXP : ISD::FEXP2, SL, VT, Mul,
+  EVT VT = X.getValueType();
+  const SDValue Log2E = DAG.getConstantFP(numbers::log2e, SL, VT);
+
+  if (VT != MVT::f32 || !needsDenormHandlingF32(DAG, X, Flags)) {
+    // exp2(M_LOG2E_F * f);
+    SDValue Mul = DAG.getNode(ISD::FMUL, SL, VT, X, Log2E, Flags);
+    return DAG.getNode(VT == MVT::f32 ? AMDGPUISD::EXP : ISD::FEXP2, SL, VT,
+                       Mul, Flags);
+  }
+
+  EVT SetCCVT = getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+
+  SDValue Threshold = DAG.getConstantFP(-0x1.5d58a0p+6f, SL, VT);
+  SDValue NeedsScaling = DAG.getSetCC(SL, SetCCVT, X, Threshold, ISD::SETOLT);
+
+  SDValue ScaleOffset = DAG.getConstantFP(0x1.0p+6f, SL, VT);
+
+  SDValue ScaledX = DAG.getNode(ISD::FADD, SL, VT, X, ScaleOffset, Flags);
+
+  SDValue AdjustedX =
+      DAG.getNode(ISD::SELECT, SL, VT, NeedsScaling, ScaledX, X);
+
+  SDValue ExpInput = DAG.getNode(ISD::FMUL, SL, VT, AdjustedX, Log2E, Flags);
+
+  SDValue Exp2 = DAG.getNode(AMDGPUISD::EXP, SL, VT, ExpInput, Flags);
+
+  SDValue ResultScaleFactor = DAG.getConstantFP(0x1.969d48p-93f, SL, VT);
+  SDValue AdjustedResult =
+      DAG.getNode(ISD::FMUL, SL, VT, Exp2, ResultScaleFactor, Flags);
+
+  return DAG.getNode(ISD::SELECT, SL, VT, NeedsScaling, AdjustedResult, Exp2,
                      Flags);
 }
 
@@ -2800,7 +2826,7 @@ SDValue AMDGPUTargetLowering::lowerFEXP(SDValue Op, SelectionDAG &DAG) const {
 
   // TODO: Interpret allowApproxFunc as ignoring DAZ. This is currently copying
   // library behavior. Also, is known-not-daz source sufficient?
-  if (allowApproxFunc(DAG, Flags) && !needsDenormHandlingF32(DAG, X, Flags)) {
+  if (allowApproxFunc(DAG, Flags)) {
     assert(!IsExp10 && "todo exp10 support");
     return lowerFEXPUnsafe(X, SL, DAG, Flags);
   }
