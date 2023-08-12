@@ -647,6 +647,50 @@ correspond to multiple actual values.
 
 [TODO]
 
+#### Match variadic operand
+
+Use the `variadic` DAG node to match a variadic operand with a fixed number of
+actual sub-operands.
+
+For example, assume that `ConcatenateOp` is an operation with a variadic
+operand:
+
+```tablegen
+def ConcatenateOp : TEST_Op<"concatenate"> {
+  let arguments = (ins
+    Variadic<AnyTensor>:$inputs,
+    I32Attr:$axis
+  );
+
+  let results = (outs
+    AnyTensor$output
+  );
+}
+```
+
+We can match `ConcatenateOp` with exactly 2 actual operands with:
+
+```tablegen
+def : Pat<(ConcatenateOp (variadic $input0, $input1), $axis),
+          ...>;
+```
+
+The variadic sub-operands can be sub-DAGs to be matched:
+
+```tablegen
+def : Pat<(ConcatenateOp (variadic (SomeOp $a), (AnotherOp $b, $c)), $axis),
+          (OtherOp $a, $b, $c)>;
+```
+
+The variadic DAG can be bound to a symbol, which refers to the full
+`operand_range`:
+
+```tablegen
+def : Pat<(ConcatenateOp (variadic:$inputs $input0, $input1),
+                         ConstantAttr<I32Attr, "0">),
+          (VStackOp $inputs)>;
+```
+
 ### Supplying additional constraints
 
 Constraints can be placed on op arguments when matching. But sometimes we need
