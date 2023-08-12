@@ -1743,6 +1743,22 @@ let hasSideEffects = 1 in {
 }
 }
 
+// Section A.11 - DONE and RETRY
+// Section A.47 - SAVED and RESTORED
+let Predicates = [HasV9], rs1 = 0, rs2 = 0 in {
+  let rd = 0 in
+    def DONE : F3_1<2, 0b111110, (outs), (ins), "done", []>;
+
+  let rd = 1 in
+    def RETRY : F3_1<2, 0b111110, (outs), (ins), "retry", []>;
+
+  let rd = 0 in
+    def SAVED : F3_1<2, 0b110001, (outs), (ins), "saved", []>;
+
+  let rd = 1 in
+    def RESTORED : F3_1<2, 0b110001, (outs), (ins), "restored", []>;
+}
+
 // Section A.42 - Prefetch Data
 let Predicates = [HasV9] in {
   def PREFETCHr : F3_1<3, 0b101101,
