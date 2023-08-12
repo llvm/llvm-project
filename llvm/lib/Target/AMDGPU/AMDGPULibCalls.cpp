@@ -1425,10 +1425,6 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
     Res0 = sin(MATH_PI * opr0);
     return true;
 
-  case AMDGPULibFunc::EI_SQRT:
-    Res0 = sqrt(opr0);
-    return true;
-
   case AMDGPULibFunc::EI_TAN:
     Res0 = tan(opr0);
     return true;
