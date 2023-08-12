@@ -52,11 +52,13 @@ add_mlir_dialect_library(MLIRGPUTransforms
   Transforms/KernelOutlining.cpp
   Transforms/MemoryPromotion.cpp
   Transforms/ModuleToBinary.cpp
+  Transforms/NVVMAttachTarget.cpp
   Transforms/ParallelLoopMapper.cpp
   Transforms/SerializeToBlob.cpp
   Transforms/SerializeToCubin.cpp
   Transforms/SerializeToHsaco.cpp
   Transforms/ShuffleRewriter.cpp
+  Transforms/ROCDLAttachTarget.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/GPU

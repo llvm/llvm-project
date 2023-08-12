@@ -82,4 +82,109 @@ def GpuModuleToBinaryPass
   ];
 }
 
+def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
+  let summary = "Attaches an NVVM target attribute to a GPU Module.";
+  let description = [{
+    This pass searches for all GPU Modules in the immediate regions and attaches
+    an NVVM target if the module matches the name specified by the `module` argument.
+
+    Example:
+    ```
+    // File: in.mlir:
+    gpu.module @nvvm_module_1 {...}
+    gpu.module @nvvm_module_2 {...}
+    gpu.module @rocdl_module_1 {...}
+    // mlir-opt --nvvm-attach-target="module=nvvm.* chip=sm_90" in.mlir
+    gpu.module @nvvm_module_1 [#nvvm.target<chip = "sm_90">] {...}
+    gpu.module @nvvm_module_2 [#nvvm.target<chip = "sm_90">] {...}
+    gpu.module @rocdl_module_1 {...}
+    ```
+  }];
+  let options = [
+    Option<"moduleMatcher", "module", "std::string",
+           /*default=*/ [{""}],
+           "Regex used to identify the modules to attach the target to.">,
+    Option<"triple", "triple", "std::string",
+           /*default=*/ "\"nvptx64-nvidia-cuda\"",
+           "Target triple.">,
+    Option<"chip", "chip", "std::string",
+           /*default=*/"\"sm_50\"",
+           "Target chip.">,
+    Option<"features", "features", "std::string",
+           /*default=*/"\"+ptx60\"",
+           "Target features.">,
+    Option<"optLevel", "O", "unsigned",
+           /*default=*/"2",
+           "Optimization level.">,
+    Option<"fastFlag", "fast", "bool",
+           /*default=*/"false",
+           "Enable fast math mode.">,
+    Option<"ftzFlag", "ftz", "bool",
+           /*default=*/"false",
+           "Enable flush to zero for denormals.">,
+    ListOption<"linkLibs", "l", "std::string",
+           "Extra bitcode libraries paths to link to.">,
+  ];
+}
+
+def GpuROCDLAttachTarget: Pass<"rocdl-attach-target", ""> {
+  let summary = "Attaches a ROCDL target attribute to a GPU Module.";
+  let description = [{
+    This pass searches for all GPU Modules in the immediate regions and attaches
+    a ROCDL target if the module matches the name specified by the `module` argument.
+
+    Example:
+    ```
+    // File: in.mlir:
+    gpu.module @nvvm_module_1 {...}
+    gpu.module @nvvm_module_2 {...}
+    gpu.module @rocdl_module_1 {...}
+    // mlir-opt --nvvm-attach-target="module=rocdl.* chip=gfx90a" in.mlir
+    gpu.module @nvvm_module_1 {...}
+    gpu.module @nvvm_module_2 {...}
+    gpu.module @rocdl_module_1 [#rocdl.target<chip = "gfx90a">] {...}
+    ```
+  }];
+  let options = [
+    Option<"moduleMatcher", "module", "std::string",
+           /*default=*/ [{""}],
+           "Regex used to identify the modules to attach the target to.">,
+    Option<"triple", "triple", "std::string",
+           /*default=*/ "\"amdgcn-amd-amdhsa\"",
+           "Target triple.">,
+    Option<"chip", "chip", "std::string",
+           /*default=*/"\"gfx900\"",
+           "Target chip.">,
+    Option<"features", "features", "std::string",
+           /*default=*/"\"\"",
+           "Target features.">,
+    Option<"abiVersion", "abi", "std::string",
+           /*default=*/"\"400\"",
+           "Optimization level.">,
+    Option<"optLevel", "O", "unsigned",
+           /*default=*/"2",
+           "Optimization level.">,
+    Option<"wave64Flag", "wave64", "bool",
+           /*default=*/"true",
+           "Use Wave64 mode.">,
+    Option<"fastFlag", "fast", "bool",
+           /*default=*/"false",
+           "Enable fast relaxed math opt.">,
+    Option<"dazFlag", "daz", "bool",
+           /*default=*/"false",
+           "Enable denormals are zero opt.">,
+    Option<"finiteOnlyFlag", "finite-only", "bool",
+           /*default=*/"false",
+           "Enable finite only opt.">,
+    Option<"unsafeMathFlag", "unsafe-math", "bool",
+           /*default=*/"false",
+           "Enable unsafe math opt.">,
+    Option<"correctSqrtFlag", "correct-sqrt", "bool",
+           /*default=*/"true",
+           "Enable correct rounded sqrt.">,
+    ListOption<"linkLibs", "l", "std::string",
+           "Extra bitcode libraries paths to link to.">,
+  ];
+}
+
 #endif // MLIR_DIALECT_GPU_PASSES
