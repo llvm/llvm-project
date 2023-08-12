@@ -2918,6 +2918,14 @@ def fno_openmp_target_xteam_reduction : Flag<["-"], "fno-openmp-target-xteam-red
   Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
   HelpText<"Do not use the cross-team reduction code generation technique">,
   MarshallingInfoFlag<LangOpts<"OpenMPTargetXteamReduction">>;
+def fopenmp_target_fast_reduction : Flag<["-"], "fopenmp-target-fast-reduction">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
+  HelpText<"Use the fast reduction code generation technique if possible">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetFastReduction">>;
+def fno_openmp_target_fast_reduction : Flag<["-"], "fno-openmp-target-fast-reduction">, Group<f_Group>, 
+  Flags<[CC1Option, NoArgumentUnused, HelpHidden]>, 
+  HelpText<"Do not use the fast reduction code generation technique">,
+  MarshallingInfoFlag<LangOpts<"OpenMPTargetFastReduction">>;
 def fopenmp_force_usm : Flag<["-"], "fopenmp-force-usm">, Group<f_Group>, Flags<[CC1Option, NoArgumentUnused, HelpHidden]>;
 
 //===----------------------------------------------------------------------===//

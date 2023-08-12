@@ -3965,7 +3965,8 @@ CGOpenMPRuntimeGPU::getXteamRedFunctionPtrs(CodeGenFunction &CGF,
 llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
     CodeGenFunction &CGF, llvm::Value *Val, llvm::Value *SumPtr,
     llvm::Value *DTeamVals, llvm::Value *DTeamsDonePtr,
-    llvm::Value *ThreadStartIndex, llvm::Value *NumTeams, int BlockSize) {
+    llvm::Value *ThreadStartIndex, llvm::Value *NumTeams, int BlockSize,
+    bool IsFast) {
   // TODO handle more types
   llvm::Type *SumType = Val->getType();
   assert(
@@ -4027,27 +4028,37 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
         case 64:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
-                  CGM.getModule(), OMPRTL___kmpc_xteamr_ui_1x64),
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ui_1x64_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ui_1x64),
               Args);
         case 128:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
-                  CGM.getModule(), OMPRTL___kmpc_xteamr_ui_2x64),
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ui_2x64_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ui_2x64),
               Args);
         case 256:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
-                  CGM.getModule(), OMPRTL___kmpc_xteamr_ui_4x64),
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ui_4x64_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ui_4x64),
               Args);
         case 512:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
-                  CGM.getModule(), OMPRTL___kmpc_xteamr_ui_8x64),
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ui_8x64_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ui_8x64),
               Args);
         case 1024:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
-                  CGM.getModule(), OMPRTL___kmpc_xteamr_ui_16x64),
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ui_16x64_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ui_16x64),
               Args);
         }
       }
@@ -4086,27 +4097,37 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
         case 64:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
-                  CGM.getModule(), OMPRTL___kmpc_xteamr_ul_1x64),
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ul_1x64_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ul_1x64),
               Args);
         case 128:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
-                  CGM.getModule(), OMPRTL___kmpc_xteamr_ul_2x64),
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ul_2x64_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ul_2x64),
               Args);
         case 256:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
-                  CGM.getModule(), OMPRTL___kmpc_xteamr_ul_4x64),
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ul_4x64_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ul_4x64),
               Args);
         case 512:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
-                  CGM.getModule(), OMPRTL___kmpc_xteamr_ul_8x64),
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ul_8x64_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ul_8x64),
               Args);
         case 1024:
           return CGF.EmitRuntimeCall(
               OMPBuilder.getOrCreateRuntimeFunction(
-                  CGM.getModule(), OMPRTL___kmpc_xteamr_ul_16x64),
+                  CGM.getModule(), IsFast
+                                       ? OMPRTL___kmpc_xteamr_ul_16x64_fast_sum
+                                       : OMPRTL___kmpc_xteamr_ul_16x64),
               Args);
         }
       }
@@ -4145,28 +4166,33 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
       switch (BlockSize) {
       case 64:
         return CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                  OMPRTL___kmpc_xteamr_f_1x64),
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_f_1x64_fast_sum
+                                        : OMPRTL___kmpc_xteamr_f_1x64),
             Args);
       case 128:
         return CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                  OMPRTL___kmpc_xteamr_f_2x64),
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_f_2x64_fast_sum
+                                        : OMPRTL___kmpc_xteamr_f_2x64),
             Args);
       case 256:
         return CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                  OMPRTL___kmpc_xteamr_f_4x64),
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_f_4x64_fast_sum
+                                        : OMPRTL___kmpc_xteamr_f_4x64),
             Args);
       case 512:
         return CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                  OMPRTL___kmpc_xteamr_f_8x64),
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_f_8x64_fast_sum
+                                        : OMPRTL___kmpc_xteamr_f_8x64),
             Args);
       case 1024:
         return CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                  OMPRTL___kmpc_xteamr_f_16x64),
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_f_16x64_fast_sum
+                                        : OMPRTL___kmpc_xteamr_f_16x64),
             Args);
       }
     }
@@ -4204,28 +4230,33 @@ llvm::Value *CGOpenMPRuntimeGPU::getXteamRedSum(
       switch (BlockSize) {
       case 64:
         return CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                  OMPRTL___kmpc_xteamr_d_1x64),
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_d_1x64_fast_sum
+                                        : OMPRTL___kmpc_xteamr_d_1x64),
             Args);
       case 128:
         return CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                  OMPRTL___kmpc_xteamr_d_2x64),
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_d_2x64_fast_sum
+                                        : OMPRTL___kmpc_xteamr_d_2x64),
             Args);
       case 256:
         return CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                  OMPRTL___kmpc_xteamr_d_4x64),
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_d_4x64_fast_sum
+                                        : OMPRTL___kmpc_xteamr_d_4x64),
             Args);
       case 512:
         return CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                  OMPRTL___kmpc_xteamr_d_8x64),
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_d_8x64_fast_sum
+                                        : OMPRTL___kmpc_xteamr_d_8x64),
             Args);
       case 1024:
         return CGF.EmitRuntimeCall(
-            OMPBuilder.getOrCreateRuntimeFunction(CGM.getModule(),
-                                                  OMPRTL___kmpc_xteamr_d_16x64),
+            OMPBuilder.getOrCreateRuntimeFunction(
+                CGM.getModule(), IsFast ? OMPRTL___kmpc_xteamr_d_16x64_fast_sum
+                                        : OMPRTL___kmpc_xteamr_d_16x64),
             Args);
       }
     }

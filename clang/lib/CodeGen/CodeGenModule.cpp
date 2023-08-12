@@ -8595,12 +8595,12 @@ CodeGenModule::checkAndSetXteamRedKernel(const OMPExecutableDirective &D) {
     addOptKernelNestMap(NestDirs);
 
     // Create a map from the ForStmt, some of the info will be populated later
-    XteamRedKernels.insert(
-        std::make_pair(FStmt, XteamRedKernelInfo(/*ThreadStartIndex=*/nullptr,
-                                                 /*NumTeams=*/nullptr,
-                                                 /*BlockSize=*/0, NestDirs,
-                                                 RedVarMapPair.second.first,
-                                                 RedVarMapPair.second.second)));
+    XteamRedKernels.insert(std::make_pair(
+        FStmt, XteamRedKernelInfo(
+                   /*ThreadStartIndex=*/nullptr,
+                   /*NumTeams=*/nullptr,
+                   /*BlockSize=*/0, NestDirs, RedVarMapPair.second.first,
+                   RedVarMapPair.second.second, isFastXteamSumReduction())));
 
     // The blocksize has to be computed after adding this kernel to the metadata
     // above, since the computation below depends on that metadata. Compute

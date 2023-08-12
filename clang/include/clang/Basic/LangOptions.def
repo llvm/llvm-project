@@ -257,6 +257,7 @@ LANGOPT(OpenMPTargetIgnoreEnvVars , 1, 0, "Generate code assuming that device re
 LANGOPT(OpenMPTargetBigJumpLoop , 1, 1, "Use big jump loop code generation technique.")
 LANGOPT(OpenMPTargetNoLoop , 1, 1, "Use no-loop code generation technique.")
 LANGOPT(OpenMPTargetXteamReduction , 1, 1, "Use cross-team code generation technique.")
+LANGOPT(OpenMPTargetFastReduction , 1, 0, "Use fast reduction code generation technique.")
 LANGOPT(OpenMPOptimisticCollapse  , 1, 0, "Use at most 32 bits to represent the collapsed loop nest counter.")
 LANGOPT(OpenMPThreadSubscription  , 1, 0, "Assume work-shared loops do not have more iterations than participating threads.")
 LANGOPT(OpenMPTeamSubscription  , 1, 0, "Assume distributed loops do not have more iterations than participating teams.")

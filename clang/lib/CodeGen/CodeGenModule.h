@@ -374,9 +374,10 @@ public:
   struct XteamRedKernelInfo {
     XteamRedKernelInfo(llvm::Value *TSI, llvm::Value *NT, int BlkSz,
                        OptKernelNestDirectives Dirs, XteamRedVarMap RVM,
-                       XteamRedVarVecTy RVV)
+                       XteamRedVarVecTy RVV, bool F)
         : ThreadStartIndex{TSI}, NumTeams{NT}, BlockSize{BlkSz},
-          XteamNestDirs{Dirs}, XteamRedVars{RVM}, XteamOrderedRedVar{RVV} {}
+          XteamNestDirs{Dirs}, XteamRedVars{RVM}, XteamOrderedRedVar{RVV},
+          IsFast{F} {}
 
     /// Start index of every thread used in device codegen.
     llvm::Value *ThreadStartIndex;
@@ -391,6 +392,8 @@ public:
     XteamRedVarMap XteamRedVars;
     /// Vector of reduction variables in the same order they appear in the AST
     XteamRedVarVecTy XteamOrderedRedVar;
+    /// Can a fast-atomic-based-version be generated?
+    bool IsFast;
   };
   using XteamRedKernelMap = llvm::DenseMap<const Stmt *, XteamRedKernelInfo>;
 
@@ -1720,6 +1723,10 @@ public:
     return nest_itr->second;
   }
 
+  bool isFastXteamSumReduction() {
+    return getLangOpts().OpenMPTargetFastReduction;
+  }
+
   /// If we are able to generate a NoLoop kernel for this directive, return
   /// true, otherwise return false. If successful, a map is created from the
   /// top-level statement to the intermediate statements. For a combined
@@ -1834,6 +1841,11 @@ public:
   llvm::Value *getXteamRedNumTeams(const Stmt *S) {
     assert(isXteamRedKernel(S));
     return XteamRedKernels.find(S)->second.NumTeams;
+  }
+
+  bool isXteamRedFast(const Stmt *S) {
+    assert(isXteamRedKernel(S));
+    return XteamRedKernels.find(S)->second.IsFast;
   }
 
   /// Given a ForStmt for which Xteam codegen will be done, update the metadata.

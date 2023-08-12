@@ -167,7 +167,8 @@ public:
                               llvm::Value *SumPtr, llvm::Value *DTeamVals,
                               llvm::Value *DTeamsDonePtr,
                               llvm::Value *ThreadStartIndex,
-                              llvm::Value *NumTeams, int BlockSize);
+                              llvm::Value *NumTeams, int BlockSize,
+                              bool IsFast);
 
   /// Returns whether the current architecture supports fast FP atomics
   bool supportFastFPAtomics() override;

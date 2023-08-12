@@ -682,6 +682,11 @@ uint32_t atomic::inc(uint32_t *Addr, uint32_t V, atomic::OrderingTy Ordering,
   return impl::atomicInc(Addr, V, Ordering, MemScope);
 }
 
+template <typename Ty>
+Ty atomic::add(Ty *Address, Ty Val, atomic::OrderingTy Ordering) {
+  return impl::atomicAdd(Address, Val, Ordering);
+}
+
 void unsetCriticalLock(omp_lock_t *Lock) { impl::unsetLock(Lock); }
 
 void setCriticalLock(omp_lock_t *Lock) { impl::setLock(Lock); }

@@ -6386,6 +6386,12 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       else
         CmdArgs.push_back("-fno-openmp-target-xteam-reduction");
 
+      if (Args.hasFlag(options::OPT_fopenmp_target_fast_reduction,
+                       options::OPT_fno_openmp_target_fast_reduction, false))
+        CmdArgs.push_back("-fopenmp-target-fast-reduction");
+      else
+        CmdArgs.push_back("-fno-openmp-target-fast-reduction");
+
       // When in OpenMP offloading mode with NVPTX target, forward
       // cuda-mode flag
       if (Args.hasFlag(options::OPT_fopenmp_cuda_mode,

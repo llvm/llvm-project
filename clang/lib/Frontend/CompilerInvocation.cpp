@@ -3427,6 +3427,11 @@ void CompilerInvocation::GenerateLangArgs(const LangOptions &Opts,
   else
     GenerateArg(Consumer, OPT_fno_openmp_target_xteam_reduction);
 
+  if (Opts.OpenMPTargetFastReduction)
+    GenerateArg(Consumer, OPT_fopenmp_target_fast_reduction);
+  else
+    GenerateArg(Consumer, OPT_fno_openmp_target_fast_reduction);
+
   if (Opts.OpenMPThreadSubscription)
     GenerateArg(Consumer, OPT_fopenmp_assume_threads_oversubscription);
 
@@ -3889,6 +3894,10 @@ bool CompilerInvocation::ParseLangArgs(LangOptions &Opts, ArgList &Args,
   Opts.OpenMPTargetXteamReduction =
       Args.hasFlag(options::OPT_fopenmp_target_xteam_reduction,
                    options::OPT_fno_openmp_target_xteam_reduction, true);
+
+  Opts.OpenMPTargetFastReduction =
+      Args.hasFlag(options::OPT_fopenmp_target_fast_reduction,
+                   options::OPT_fno_openmp_target_fast_reduction, false);
 
   // Set the value of the debugging flag used in the new offloading device RTL.
   // Set either by a specific value or to a default if not specified.

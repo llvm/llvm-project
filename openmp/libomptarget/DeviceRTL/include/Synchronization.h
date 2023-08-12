@@ -83,6 +83,8 @@ enum MemScopeTy {
 uint32_t inc(uint32_t *Addr, uint32_t V, OrderingTy Ordering,
              MemScopeTy MemScope = MemScopeTy::all);
 
+template <typename Ty> Ty add(Ty *Address, Ty Val, atomic::OrderingTy Ordering);
+
 /// Atomically perform <op> on \p V and \p *Addr with \p Ordering semantics. The
 /// result is stored in \p *Addr;
 /// {

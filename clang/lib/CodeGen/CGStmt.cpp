@@ -461,6 +461,7 @@ void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt,
   llvm::Value *NumTeams = CGM.getXteamRedNumTeams(FStmt);
   assert(NumTeams && "Number of teams cannot be null");
 
+  bool IsFast = CGM.isXteamRedFast(FStmt);
   auto XteamOrdVars = CGM.getXteamOrderedRedVar(FStmt);
   // Always emit calls to Xteam device functions in the same order as
   // user-specified reduction variables.
@@ -484,7 +485,7 @@ void CodeGenFunction::EmitXteamRedSum(const ForStmt *FStmt,
     // Pass in OrigRedVarAddr.getPointer to kmpc_xteam_sum
     RT.getXteamRedSum(*this, Builder.CreateLoad(RVI.RedVarAddr),
                       OrigRedVarAddr.getPointer(), DTeamVals, DTeamsDonePtr,
-                      ThreadStartIdx, NumTeams, BlockSize);
+                      ThreadStartIdx, NumTeams, BlockSize, IsFast);
   }
 }
 
