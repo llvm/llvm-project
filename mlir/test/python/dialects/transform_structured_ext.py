@@ -322,17 +322,22 @@ def testPad():
         structured.PadOp(
             sequence.bodyTarget,
             padding_values=[FloatAttr.get_f32(42.0)],
-            padding_dimensions=[1],
-            transpose_paddings=[[1, 0]],
+            padding_dimensions=Attribute.parse("[1]"),
+            pad_to_multiple_of=[128],
+            pack_paddings=[0],
+            transpose_paddings=[[1, Attribute.parse("0")], Attribute.parse("[0, 1]")],
+            copy_back_op="linalg.copy",
         )
         transform.YieldOp()
     # CHECK-LABEL: TEST: testPad
     # CHECK: transform.sequence
     # CHECK: transform.structured.pad
-    # CHECK-DAG: padding_values = [4.200000e+01 : f32]
+    # CHECK-DAG: copy_back_op = "linalg.copy"
+    # CHECK-DAG: pack_paddings = [0]
+    # CHECK-DAG: pad_to_multiple_of = [128]
     # CHECK-DAG: padding_dimensions = [1]
-    # CHECK-DAG: transpose_paddings = {{\[}}[1, 0]]
-    # (pack_paddings has default values)
+    # CHECK-DAG: padding_values = [4.200000e+01 : f32]
+    # CHECK-DAG: transpose_paddings = {{\[}}[1, 0], [0, 1]]
 
 
 @run
