@@ -396,6 +396,9 @@ class Image:
 
     def add_module(self, target, obj_dir=None):
         """Add the Image described in this object to "target" and load the sections if "load" is True."""
+        if not self.path and self.uuid == uuid.UUID(int=0):
+            return "error: invalid image"
+
         if target:
             # Try and find using UUID only first so that paths need not match
             # up
