@@ -272,6 +272,19 @@ def RegionBranchTerminatorOpInterface :
 //===----------------------------------------------------------------------===//
 
 // Op is "return-like".
-def ReturnLike : NativeOpTrait<"ReturnLike">;
+def ReturnLike : TraitList<[
+    DeclareOpInterfaceMethods<RegionBranchTerminatorOpInterface>,
+    NativeOpTrait<
+        /*name=*/"ReturnLike",
+        /*traits=*/[],
+        /*extraOpDeclaration=*/"",
+        /*extraOpDefinition=*/[{
+          ::mlir::MutableOperandRange $cppClass::getMutableSuccessorOperands(
+            ::std::optional<unsigned> index) {
+            return ::mlir::MutableOperandRange(*this);
+          }
+        }]
+    >
+]>;
 
 #endif // MLIR_INTERFACES_CONTROLFLOWINTERFACES

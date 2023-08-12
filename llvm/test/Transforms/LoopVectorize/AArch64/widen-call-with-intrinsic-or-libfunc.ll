@@ -23,8 +23,8 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>) (using library function: __simd_sin_v2f64)
 ; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%s>, ir<%gep.dst>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
-; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]> vp<[[VTC]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block
@@ -50,8 +50,8 @@ target triple = "arm64-apple-ios"
 ; CHECK-NEXT:     WIDEN-CALL ir<%s> = call @llvm.sin.f64(ir<%conv>) (using vector intrinsic)
 ; CHECK-NEXT:     REPLICATE ir<%gep.dst> = getelementptr inbounds ir<%dst>, vp<[[STEPS]]>
 ; CHECK-NEXT:     REPLICATE store ir<%s>, ir<%gep.dst>
-; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF +(nuw)  vp<[[CAN_IV]]>
-; CHECK-NEXT:     EMIT branch-on-count  vp<[[CAN_IV_NEXT]]> vp<[[VTC]]>
+; CHECK-NEXT:     EMIT vp<[[CAN_IV_NEXT:%.+]]> = VF * UF + nuw vp<[[CAN_IV]]>
+; CHECK-NEXT:     EMIT branch-on-count vp<[[CAN_IV_NEXT]]>, vp<[[VTC]]>
 ; CHECK-NEXT:   No successors
 ; CHECK-NEXT: }
 ; CHECK-NEXT: Successor(s): middle.block

@@ -1397,6 +1397,13 @@ bool CSKYTargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
     // unchanged on sub targets with MULT32, since not sure it is better.
     if (!Subtarget.hasE2() && (-1 - Imm).isPowerOf2())
       return true;
+    // Break (MULT x, imm) to ([IXH32|IXW32|IXD32] (LSLI32 x, i0), x) when
+    // imm=(1<<i0)+[2|4|8] and imm has to be composed via a MOVIH32/ORI32 pair.
+    if (Imm.ugt(0xffff) && ((Imm - 2).isPowerOf2() || (Imm - 4).isPowerOf2()) &&
+        Subtarget.hasE2())
+      return true;
+    if (Imm.ugt(0xffff) && (Imm - 8).isPowerOf2() && Subtarget.has2E3())
+      return true;
   }
 
   return false;

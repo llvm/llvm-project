@@ -230,6 +230,15 @@ FastMathFlags VPRecipeWithIRFlags::getFastMathFlags() const {
   return Res;
 }
 
+VPInstruction::VPInstruction(unsigned Opcode,
+                             std::initializer_list<VPValue *> Operands,
+                             FastMathFlags FMFs, DebugLoc DL, const Twine &Name)
+    : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, FMFs),
+      VPValue(this), Opcode(Opcode), DL(DL), Name(Name.str()) {
+  // Make sure the VPInstruction is a floating-point operation.
+  assert(isFPMathOp() && "this op can't take fast-math flags");
+}
+
 Value *VPInstruction::generateInstruction(VPTransformState &State,
                                           unsigned Part) {
   IRBuilderBase &Builder = State.Builder;
@@ -299,23 +308,20 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     Value *Zero = ConstantInt::get(ScalarTC->getType(), 0);
     return Builder.CreateSelect(Cmp, Sub, Zero);
   }
-  case VPInstruction::CanonicalIVIncrement:
-  case VPInstruction::CanonicalIVIncrementNUW: {
+  case VPInstruction::CanonicalIVIncrement: {
     if (Part == 0) {
-      bool IsNUW = getOpcode() == VPInstruction::CanonicalIVIncrementNUW;
       auto *Phi = State.get(getOperand(0), 0);
       // The loop step is equal to the vectorization factor (num of SIMD
       // elements) times the unroll factor (num of SIMD instructions).
       Value *Step =
           createStepForVF(Builder, Phi->getType(), State.VF, State.UF);
-      return Builder.CreateAdd(Phi, Step, Name, IsNUW, false);
+      return Builder.CreateAdd(Phi, Step, Name, hasNoUnsignedWrap(),
+                               hasNoSignedWrap());
     }
     return State.get(this, 0);
   }
 
-  case VPInstruction::CanonicalIVIncrementForPart:
-  case VPInstruction::CanonicalIVIncrementForPartNUW: {
-    bool IsNUW = getOpcode() == VPInstruction::CanonicalIVIncrementForPartNUW;
+  case VPInstruction::CanonicalIVIncrementForPart: {
     auto *IV = State.get(getOperand(0), VPIteration(0, 0));
     if (Part == 0)
       return IV;
@@ -323,7 +329,8 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
     // The canonical IV is incremented by the vectorization factor (num of SIMD
     // elements) times the unroll part.
     Value *Step = createStepForVF(Builder, IV->getType(), State.VF, Part);
-    return Builder.CreateAdd(IV, Step, Name, IsNUW, false);
+    return Builder.CreateAdd(IV, Step, Name, hasNoUnsignedWrap(),
+                             hasNoSignedWrap());
   }
   case VPInstruction::BranchOnCond: {
     if (Part != 0)
@@ -375,10 +382,24 @@ Value *VPInstruction::generateInstruction(VPTransformState &State,
   }
 }
 
+#if !defined(NDEBUG)
+bool VPInstruction::isFPMathOp() const {
+  // Inspired by FPMathOperator::classof. Notable differences are that we don't
+  // support Call, PHI and Select opcodes here yet.
+  return Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
+         Opcode == Instruction::FNeg || Opcode == Instruction::FSub ||
+         Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
+         Opcode == Instruction::FCmp;
+}
+#endif
+
 void VPInstruction::execute(VPTransformState &State) {
   assert(!State.Instance && "VPInstruction executing an Instance");
   IRBuilderBase::FastMathFlagGuard FMFGuard(State.Builder);
-  State.Builder.setFastMathFlags(FMF);
+  assert(hasFastMathFlags() == isFPMathOp() &&
+         "Recipe not a FPMathOp but has fast-math flags?");
+  if (hasFastMathFlags())
+    State.Builder.setFastMathFlags(getFastMathFlags());
   for (unsigned Part = 0; Part < State.UF; ++Part) {
     Value *GeneratedValue = generateInstruction(State, Part);
     if (!hasResult())
@@ -423,10 +444,7 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     O << "first-order splice";
     break;
   case VPInstruction::CanonicalIVIncrement:
-    O << "VF * UF + ";
-    break;
-  case VPInstruction::CanonicalIVIncrementNUW:
-    O << "VF * UF +(nuw) ";
+    O << "VF * UF +";
     break;
   case VPInstruction::BranchOnCond:
     O << "branch-on-cond";
@@ -435,24 +453,17 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
     O << "TC > VF ? TC - VF : 0";
     break;
   case VPInstruction::CanonicalIVIncrementForPart:
-    O << "VF * Part + ";
-    break;
-  case VPInstruction::CanonicalIVIncrementForPartNUW:
-    O << "VF * Part +(nuw) ";
+    O << "VF * Part +";
     break;
   case VPInstruction::BranchOnCount:
-    O << "branch-on-count ";
+    O << "branch-on-count";
     break;
   default:
     O << Instruction::getOpcodeName(getOpcode());
   }
 
-  O << FMF;
-
-  for (const VPValue *Operand : operands()) {
-    O << " ";
-    Operand->printAsOperand(O, SlotTracker);
-  }
+  printFlags(O);
+  printOperands(O, SlotTracker);
 
   if (DL) {
     O << ", !dbg ";
@@ -460,16 +471,6 @@ void VPInstruction::print(raw_ostream &O, const Twine &Indent,
   }
 }
 #endif
-
-void VPInstruction::setFastMathFlags(FastMathFlags FMFNew) {
-  // Make sure the VPInstruction is a floating-point operation.
-  assert((Opcode == Instruction::FAdd || Opcode == Instruction::FMul ||
-          Opcode == Instruction::FNeg || Opcode == Instruction::FSub ||
-          Opcode == Instruction::FDiv || Opcode == Instruction::FRem ||
-          Opcode == Instruction::FCmp) &&
-         "this op can't take fast-math flags");
-  FMF = FMFNew;
-}
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
@@ -587,6 +588,17 @@ void VPWidenSelectRecipe::execute(VPTransformState &State) {
   }
 }
 
+VPRecipeWithIRFlags::FastMathFlagsTy::FastMathFlagsTy(
+    const FastMathFlags &FMF) {
+  AllowReassoc = FMF.allowReassoc();
+  NoNaNs = FMF.noNaNs();
+  NoInfs = FMF.noInfs();
+  NoSignedZeros = FMF.noSignedZeros();
+  AllowReciprocal = FMF.allowReciprocal();
+  AllowContract = FMF.allowContract();
+  ApproxFunc = FMF.approxFunc();
+}
+
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
   switch (OpType) {
@@ -610,7 +622,8 @@ void VPRecipeWithIRFlags::printFlags(raw_ostream &O) const {
   case OperationType::Other:
     break;
   }
-  O << " ";
+  if (getNumOperands() > 0)
+    O << " ";
 }
 #endif
 

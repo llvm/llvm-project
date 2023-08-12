@@ -183,7 +183,8 @@ void OneShotAnalysisState::createAliasInfoEntry(Value v) {
 // the IR.
 void OneShotAnalysisState::gatherYieldedTensors(Operation *op) {
   op->walk([&](Operation *returnOp) {
-    if (!isRegionReturnLike(returnOp) || !getOptions().isOpAllowed(returnOp))
+    if (!isa<RegionBranchTerminatorOpInterface>(returnOp) ||
+        !getOptions().isOpAllowed(returnOp))
       return WalkResult::advance();
 
     for (OpOperand &returnValOperand : returnOp->getOpOperands()) {
@@ -1059,7 +1060,7 @@ static LogicalResult assertNoAllocsReturned(Operation *op,
   LogicalResult status = success();
   DominanceInfo domInfo(op);
   op->walk([&](Operation *returnOp) {
-    if (!isRegionReturnLike(returnOp) ||
+    if (!isa<RegionBranchTerminatorOpInterface>(returnOp) ||
         !state.getOptions().isOpAllowed(returnOp))
       return WalkResult::advance();
 

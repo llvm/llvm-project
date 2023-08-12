@@ -21,21 +21,21 @@ namespace __llvm_libc {
 LLVM_LIBC_FUNCTION(int, clock_gettime,
                    (clockid_t clockid, struct timespec *tp)) {
 #if SYS_clock_gettime
-  long ret_val =
-      __llvm_libc::syscall_impl(SYS_clock_gettime, static_cast<long>(clockid),
-                                reinterpret_cast<long>(tp));
+  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime,
+                                           static_cast<long>(clockid),
+                                           reinterpret_cast<long>(tp));
 #elif defined(SYS_clock_gettime64)
-  long ret_val =
-      __llvm_libc::syscall_impl(SYS_clock_gettime64, static_cast<long>(clockid),
-                                reinterpret_cast<long>(tp));
+  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime64,
+                                           static_cast<long>(clockid),
+                                           reinterpret_cast<long>(tp));
 #else
 #error "SYS_clock_gettime and SYS_clock_gettime64 syscalls not available."
 #endif
 
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
-  if (ret_val < 0) {
-    libc_errno = -ret_val;
+  if (ret < 0) {
+    libc_errno = -ret;
     return -1;
   }
 

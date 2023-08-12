@@ -58,11 +58,11 @@ define amdgpu_kernel void @atomic_add_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_add_u64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile add ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile add ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -138,14 +138,14 @@ define amdgpu_kernel void @atomic_add_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile add ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile add ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -223,12 +223,12 @@ define amdgpu_kernel void @atomic_add_i64_addr64_offset(ptr addrspace(1) %out, i
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_add_u64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile add ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile add ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -313,7 +313,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64_offset(ptr addrspace(1) %ou
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -321,7 +321,7 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile add ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile add ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -384,10 +384,10 @@ define amdgpu_kernel void @atomic_add_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_add_u64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile add ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile add ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -463,13 +463,13 @@ define amdgpu_kernel void @atomic_add_i64_ret(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile add ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile add ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -545,11 +545,11 @@ define amdgpu_kernel void @atomic_add_i64_addr64(ptr addrspace(1) %out, i64 %in,
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_add_u64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile add ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile add ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -632,14 +632,14 @@ define amdgpu_kernel void @atomic_add_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile add ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile add ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -698,11 +698,11 @@ define amdgpu_kernel void @atomic_and_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_and_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -778,14 +778,14 @@ define amdgpu_kernel void @atomic_and_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -863,12 +863,12 @@ define amdgpu_kernel void @atomic_and_i64_addr64_offset(ptr addrspace(1) %out, i
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_and_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -953,7 +953,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64_offset(ptr addrspace(1) %ou
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -961,7 +961,7 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1024,10 +1024,10 @@ define amdgpu_kernel void @atomic_and_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_and_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -1103,13 +1103,13 @@ define amdgpu_kernel void @atomic_and_i64_ret(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1185,11 +1185,11 @@ define amdgpu_kernel void @atomic_and_i64_addr64(ptr addrspace(1) %out, i64 %in,
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_and_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -1272,14 +1272,14 @@ define amdgpu_kernel void @atomic_and_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile and ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile and ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1338,11 +1338,11 @@ define amdgpu_kernel void @atomic_sub_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_sub_u64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -1418,14 +1418,14 @@ define amdgpu_kernel void @atomic_sub_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1503,12 +1503,12 @@ define amdgpu_kernel void @atomic_sub_i64_addr64_offset(ptr addrspace(1) %out, i
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_sub_u64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -1593,7 +1593,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr addrspace(1) %ou
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -1601,7 +1601,7 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1664,10 +1664,10 @@ define amdgpu_kernel void @atomic_sub_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_sub_u64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -1743,13 +1743,13 @@ define amdgpu_kernel void @atomic_sub_i64_ret(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -1825,11 +1825,11 @@ define amdgpu_kernel void @atomic_sub_i64_addr64(ptr addrspace(1) %out, i64 %in,
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_sub_u64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -1912,14 +1912,14 @@ define amdgpu_kernel void @atomic_sub_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile sub ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4394,11 +4394,11 @@ define amdgpu_kernel void @atomic_or_i64_offset(ptr addrspace(1) %out, i64 %in) 
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_or_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -4474,14 +4474,14 @@ define amdgpu_kernel void @atomic_or_i64_ret_offset(ptr addrspace(1) %out, ptr a
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4559,12 +4559,12 @@ define amdgpu_kernel void @atomic_or_i64_addr64_offset(ptr addrspace(1) %out, i6
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_or_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -4649,7 +4649,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64_offset(ptr addrspace(1) %out
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -4657,7 +4657,7 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64_offset(ptr addrspace(1) %out
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4720,10 +4720,10 @@ define amdgpu_kernel void @atomic_or_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_or_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -4799,13 +4799,13 @@ define amdgpu_kernel void @atomic_or_i64_ret(ptr addrspace(1) %out, ptr addrspac
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -4881,11 +4881,11 @@ define amdgpu_kernel void @atomic_or_i64_addr64(ptr addrspace(1) %out, i64 %in, 
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_or_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -4968,14 +4968,14 @@ define amdgpu_kernel void @atomic_or_i64_ret_addr64(ptr addrspace(1) %out, ptr a
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile or ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile or ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -5034,11 +5034,11 @@ define amdgpu_kernel void @atomic_xchg_i64_offset(ptr addrspace(1) %out, i64 %in
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_swap_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -5100,7 +5100,7 @@ define amdgpu_kernel void @atomic_xchg_f64_offset(ptr addrspace(1) %out, double 
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr double, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, double %in seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, double %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -5162,7 +5162,7 @@ define amdgpu_kernel void @atomic_xchg_pointer_offset(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr ptr, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, ptr %in seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, ptr %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -5238,14 +5238,14 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_offset(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -5323,12 +5323,12 @@ define amdgpu_kernel void @atomic_xchg_i64_addr64_offset(ptr addrspace(1) %out, 
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_swap_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -5413,7 +5413,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64_offset(ptr addrspace(1) %o
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -5421,7 +5421,7 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64_offset(ptr addrspace(1) %o
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -5484,10 +5484,10 @@ define amdgpu_kernel void @atomic_xchg_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_swap_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -5563,13 +5563,13 @@ define amdgpu_kernel void @atomic_xchg_i64_ret(ptr addrspace(1) %out, ptr addrsp
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -5645,11 +5645,11 @@ define amdgpu_kernel void @atomic_xchg_i64_addr64(ptr addrspace(1) %out, i64 %in
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_swap_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -5732,14 +5732,14 @@ define amdgpu_kernel void @atomic_xchg_i64_ret_addr64(ptr addrspace(1) %out, ptr
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xchg ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -5798,11 +5798,11 @@ define amdgpu_kernel void @atomic_xor_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_xor_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -5878,14 +5878,14 @@ define amdgpu_kernel void @atomic_xor_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -5963,12 +5963,12 @@ define amdgpu_kernel void @atomic_xor_i64_addr64_offset(ptr addrspace(1) %out, i
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_xor_b64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -6053,7 +6053,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64_offset(ptr addrspace(1) %ou
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -6061,7 +6061,7 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64_offset(ptr addrspace(1) %ou
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -6124,10 +6124,10 @@ define amdgpu_kernel void @atomic_xor_i64(ptr addrspace(1) %out, i64 %in) {
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_xor_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -6203,13 +6203,13 @@ define amdgpu_kernel void @atomic_xor_i64_ret(ptr addrspace(1) %out, ptr addrspa
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %out, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %out, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -6285,11 +6285,11 @@ define amdgpu_kernel void @atomic_xor_i64_addr64(ptr addrspace(1) %out, i64 %in,
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_xor_b64 v2, v[0:1], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -6372,14 +6372,14 @@ define amdgpu_kernel void @atomic_xor_i64_ret_addr64(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %ptr, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile xor ptr addrspace(1) %ptr, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -6454,11 +6454,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_offset(ptr addrspace(1) %out, i64 
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v4, v[0:3], s[4:5] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %val = cmpxchg volatile ptr addrspace(1) %gep, i64 %old, i64 %in seq_cst seq_cst
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   ret void
 }
 
@@ -6534,11 +6534,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_soffset(ptr addrspace(1) %out, i64
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v4, v[0:3], s[4:5] offset:72000
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 9000
-  %val = cmpxchg volatile ptr addrspace(1) %gep, i64 %old, i64 %in seq_cst seq_cst
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   ret void
 }
 
@@ -6616,14 +6616,14 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_offset(ptr addrspace(1) %out, 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v4, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %val = cmpxchg volatile ptr addrspace(1) %gep, i64 %old, i64 %in seq_cst seq_cst
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   %extract0 = extractvalue { i64, i1 } %val, 0
   store i64 %extract0, ptr addrspace(1) %out2
   ret void
@@ -6705,12 +6705,12 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64_offset(ptr addrspace(1) %ou
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v4, v[0:3], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %val = cmpxchg volatile ptr addrspace(1) %gep, i64 %old, i64 %in seq_cst seq_cst
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   ret void
 }
 
@@ -6807,7 +6807,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr addrspace(1)
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v4, v[0:1], s[6:7]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
@@ -6815,7 +6815,7 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64_offset(ptr addrspace(1)
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %val = cmpxchg volatile ptr addrspace(1) %gep, i64 %old, i64 %in seq_cst seq_cst
+  %val = cmpxchg volatile ptr addrspace(1) %gep, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   %extract0 = extractvalue { i64, i1 } %val, 0
   store i64 %extract0, ptr addrspace(1) %out2
   ret void
@@ -6891,10 +6891,10 @@ define amdgpu_kernel void @atomic_cmpxchg_i64(ptr addrspace(1) %out, i64 %in, i6
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v4, v[0:3], s[4:5]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %val = cmpxchg volatile ptr addrspace(1) %out, i64 %old, i64 %in seq_cst seq_cst
+  %val = cmpxchg volatile ptr addrspace(1) %out, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   ret void
 }
 
@@ -6972,13 +6972,13 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret(ptr addrspace(1) %out, ptr add
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v4, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %val = cmpxchg volatile ptr addrspace(1) %out, i64 %old, i64 %in seq_cst seq_cst
+  %val = cmpxchg volatile ptr addrspace(1) %out, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   %extract0 = extractvalue { i64, i1 } %val, 0
   store i64 %extract0, ptr addrspace(1) %out2
   ret void
@@ -7058,11 +7058,11 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_addr64(ptr addrspace(1) %out, i64 
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_cmpswap_b64 v4, v[0:3], s[0:1]
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %val = cmpxchg volatile ptr addrspace(1) %ptr, i64 %old, i64 %in seq_cst seq_cst
+  %val = cmpxchg volatile ptr addrspace(1) %ptr, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   ret void
 }
 
@@ -7157,14 +7157,14 @@ define amdgpu_kernel void @atomic_cmpxchg_i64_ret_addr64(ptr addrspace(1) %out, 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v4, v[0:1], s[6:7]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
-  %val = cmpxchg volatile ptr addrspace(1) %ptr, i64 %old, i64 %in seq_cst seq_cst
+  %val = cmpxchg volatile ptr addrspace(1) %ptr, i64 %old, i64 %in syncscope("agent") seq_cst seq_cst
   %extract0 = extractvalue { i64, i1 } %val, 0
   store i64 %extract0, ptr addrspace(1) %out2
   ret void
@@ -7377,13 +7377,13 @@ define amdgpu_kernel void @atomic_load_i64(ptr addrspace(1) %in, ptr addrspace(1
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
-  %val = load atomic i64, ptr addrspace(1) %in seq_cst, align 8
+  %val = load atomic i64, ptr addrspace(1) %in syncscope("agent") seq_cst, align 8
   store i64 %val, ptr addrspace(1) %out
   ret void
 }
@@ -8060,11 +8060,11 @@ define amdgpu_kernel void @atomic_inc_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_inc_u64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -8140,14 +8140,14 @@ define amdgpu_kernel void @atomic_inc_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -8225,12 +8225,12 @@ define amdgpu_kernel void @atomic_inc_i64_incr64_offset(ptr addrspace(1) %out, i
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_inc_u64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile uinc_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -8288,11 +8288,11 @@ define amdgpu_kernel void @atomic_dec_i64_offset(ptr addrspace(1) %out, i64 %in)
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_dec_u64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }
 
@@ -8368,14 +8368,14 @@ define amdgpu_kernel void @atomic_dec_i64_ret_offset(ptr addrspace(1) %out, ptr 
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_loadcnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    global_store_b64 v2, v[0:1], s[2:3]
 ; GFX12-NEXT:    s_nop 0
 ; GFX12-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; GFX12-NEXT:    s_endpgm
 entry:
   %gep = getelementptr i64, ptr addrspace(1) %out, i64 4
-  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   store i64 %tmp0, ptr addrspace(1) %out2
   ret void
 }
@@ -8453,11 +8453,11 @@ define amdgpu_kernel void @atomic_dec_i64_decr64_offset(ptr addrspace(1) %out, i
 ; GFX12-NEXT:    s_wait_storecnt 0x0
 ; GFX12-NEXT:    global_atomic_dec_u64 v2, v[0:1], s[0:1] offset:32
 ; GFX12-NEXT:    s_wait_storecnt 0x0
-; GFX12-NEXT:    global_inv scope:SCOPE_SYS
+; GFX12-NEXT:    global_inv scope:SCOPE_DEV
 ; GFX12-NEXT:    s_endpgm
 entry:
   %ptr = getelementptr i64, ptr addrspace(1) %out, i64 %index
   %gep = getelementptr i64, ptr addrspace(1) %ptr, i64 4
-  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in seq_cst
+  %tmp0 = atomicrmw volatile udec_wrap ptr addrspace(1) %gep, i64 %in syncscope("agent") seq_cst
   ret void
 }

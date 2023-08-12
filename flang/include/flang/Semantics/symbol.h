@@ -707,6 +707,9 @@ public:
         },
         details_);
   }
+  bool HasLocalLocality() const {
+    return test(Flag::LocalityLocal) || test(Flag::LocalityLocalInit);
+  }
 
   bool operator==(const Symbol &that) const { return this == &that; }
   bool operator!=(const Symbol &that) const { return !(*this == that); }

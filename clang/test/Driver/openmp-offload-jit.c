@@ -36,9 +36,10 @@
 // PHASES-JIT-NEXT: 13: clang-linker-wrapper, {12}, image, (host-openmp)
 
 // Check that we add the `--embed-bitcode` flag to the linker wrapper.
-// RUN: not %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
-// RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -fopenmp-target-jit %s 2>&1 \
-// RUN: | FileCheck -check-prefix=LINKER %s
+// RUN: %clang -### --target=x86_64-unknown-linux-gnu -fopenmp=libomp \
+// RUN:   --cuda-path=%S/Inputs/CUDA_111/usr/local/cuda \
+// RUN:   -fopenmp-targets=nvptx64-nvidia-cuda -Xopenmp-target -march=sm_52 \
+// RUN:   -fopenmp-target-jit %s 2>&1 | FileCheck -check-prefix=LINKER %s
 // LINKER: clang-linker-wrapper"{{.*}}"--embed-bitcode"
 
 // Check for incompatible combinations

@@ -914,8 +914,9 @@ struct NVGPUTmaAsyncLoadOpLowering
   LogicalResult
   matchAndRewrite(nvgpu::TmaAsyncLoadOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    auto dest = rewriter.create<LLVM::ExtractValueOp>(op->getLoc(),
-                                                      adaptor.getDst(), 1);
+    auto srcMemrefType = cast<MemRefType>(op.getDst().getType());
+    Value dest = getStridedElementPtr(op->getLoc(), srcMemrefType,
+                                      adaptor.getDst(), {}, rewriter);
     Value barrier = getMbarrierPtr(rewriter, *getTypeConverter(),
                                    op.getBarrier(), adaptor.getBarrier());
 

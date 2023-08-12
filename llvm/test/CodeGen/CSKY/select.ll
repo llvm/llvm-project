@@ -8163,9 +8163,7 @@ entry:
 define i32 @select_bit_test_eq_0(i32 %0) {
 ; CHECK-LABEL: select_bit_test_eq_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movih32 a1, 2
-; CHECK-NEXT:    and16 a0, a1
-; CHECK-NEXT:    cmpnei16 a0, 0
+; CHECK-NEXT:    btsti16 a0, 17
 ; CHECK-NEXT:    movi16 a0, 23
 ; CHECK-NEXT:    movi16 a1, 1
 ; CHECK-NEXT:    movf32 a0, a1
@@ -8204,9 +8202,7 @@ define i32 @select_bit_test_eq_0(i32 %0) {
 define i32 @select_bit_test_ne_0(i32 %0) {
 ; CHECK-LABEL: select_bit_test_ne_0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movih32 a1, 2
-; CHECK-NEXT:    and16 a0, a1
-; CHECK-NEXT:    cmpnei16 a0, 0
+; CHECK-NEXT:    btsti16 a0, 17
 ; CHECK-NEXT:    movi16 a0, 34
 ; CHECK-NEXT:    movi16 a1, 5
 ; CHECK-NEXT:    movt32 a0, a1
@@ -8247,9 +8243,7 @@ define i32 @select_bit_test_ne_0(i32 %0) {
 define i32 @select_bit_test_eq_mask(i32 %0) {
 ; CHECK-LABEL: select_bit_test_eq_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movih32 a1, 2
-; CHECK-NEXT:    and16 a0, a1
-; CHECK-NEXT:    cmpnei16 a0, 0
+; CHECK-NEXT:    btsti16 a0, 17
 ; CHECK-NEXT:    movi16 a0, 5
 ; CHECK-NEXT:    movi16 a1, 34
 ; CHECK-NEXT:    movt32 a0, a1
@@ -8290,9 +8284,7 @@ define i32 @select_bit_test_eq_mask(i32 %0) {
 define i32 @select_bit_test_ne_mask(i32 %0) {
 ; CHECK-LABEL: select_bit_test_ne_mask:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movih32 a1, 2
-; CHECK-NEXT:    and16 a0, a1
-; CHECK-NEXT:    cmpnei16 a0, 0
+; CHECK-NEXT:    btsti16 a0, 17
 ; CHECK-NEXT:    movi16 a0, 34
 ; CHECK-NEXT:    movi16 a1, 5
 ; CHECK-NEXT:    movt32 a0, a1

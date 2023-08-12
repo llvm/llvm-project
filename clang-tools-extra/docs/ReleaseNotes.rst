@@ -180,9 +180,17 @@ Changes in existing checks
   <clang-tidy/checks/llvm/namespace-comment>` check to provide fixes for
   ``inline`` namespaces in the same format as :program:`clang-format`.
 
+- Improved :doc:`misc-include-cleaner
+  <clang-tidy/checks/misc/include-cleaner>` check by adding option
+  `DeduplicateFindings` to output one finding per symbol occurence.
+
 - Improved :doc:`modernize-loop-convert
   <clang-tidy/checks/modernize/loop-convert>` to support for-loops with
   iterators initialized by free functions like ``begin``, ``end``, or ``size``.
+
+- Improved :doc:`performance-faster-string-find
+  <clang-tidy/checks/performance/faster-string-find>` check to properly escape
+  single quotes.
 
 - Improved :doc:`performanc-noexcept-swap
   <clang-tidy/checks/performance/noexcept-swap>` check to enforce a stricter
@@ -191,6 +199,11 @@ Changes in existing checks
 - Improved :doc:`readability-identifier-naming
   <clang-tidy/checks/readability/identifier-naming>` check to emit proper
   warnings when a type forward declaration precedes its definition.
+
+- Improved :doc:`readability-implicit-bool-conversion
+  <clang-tidy/checks/readability/implicit-bool-conversion>` check to take
+  do-while loops into account for the `AllowIntegerConditions` and
+  `AllowPointerConditions` options.
 
 Removed checks
 ^^^^^^^^^^^^^^

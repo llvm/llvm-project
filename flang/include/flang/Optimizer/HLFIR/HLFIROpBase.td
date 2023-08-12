@@ -149,6 +149,11 @@ def IsFortranLogicalArrayPred
 def AnyFortranLogicalArrayObject : Type<IsFortranLogicalArrayPred,
     "any array-like object containing logicals">;
 
+def IsPolymorphicObjectPred
+        : CPred<"::hlfir::isPolymorphicObject($_self)">;
+def AnyPolymorphicObject : Type<IsPolymorphicObjectPred,
+    "any polymorphic object">;
+
 def hlfir_CharExtremumPredicateAttr : I32EnumAttr<
     "CharExtremumPredicate", "",
     [

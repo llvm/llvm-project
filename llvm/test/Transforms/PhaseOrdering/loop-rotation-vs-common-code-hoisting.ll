@@ -51,8 +51,8 @@ define void @_Z4loopi(i32 %width) {
 ; HOIST-NEXT:    br label [[FOR_COND:%.*]]
 ; HOIST:       for.cond:
 ; HOIST-NEXT:    [[I_0:%.*]] = phi i32 [ [[INC:%.*]], [[FOR_BODY:%.*]] ], [ 0, [[FOR_COND_PREHEADER]] ]
-; HOIST-NEXT:    tail call void @f0()
 ; HOIST-NEXT:    [[EXITCOND_NOT:%.*]] = icmp eq i32 [[I_0]], [[SUB]]
+; HOIST-NEXT:    tail call void @f0()
 ; HOIST-NEXT:    br i1 [[EXITCOND_NOT]], label [[FOR_COND_CLEANUP:%.*]], label [[FOR_BODY]]
 ; HOIST:       for.cond.cleanup:
 ; HOIST-NEXT:    tail call void @f2()

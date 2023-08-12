@@ -1036,10 +1036,17 @@ void hlfir::AsExprOp::build(mlir::OpBuilder &builder,
 void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
                                mlir::OperationState &odsState,
                                mlir::Type resultType, mlir::Value shape,
-                               mlir::ValueRange typeparams, bool isUnordered) {
+                               mlir::Value mold, mlir::ValueRange typeparams,
+                               bool isUnordered) {
   odsState.addOperands(shape);
+  if (mold)
+    odsState.addOperands(mold);
   odsState.addOperands(typeparams);
   odsState.addTypes(resultType);
+  odsState.addAttribute(
+      getOperandSegmentSizesAttrName(odsState.name),
+      builder.getDenseI32ArrayAttr({/*shape=*/1, (mold ? 1 : 0),
+                                    static_cast<int32_t>(typeparams.size())}));
   if (isUnordered)
     odsState.addAttribute(getUnorderedAttrName(odsState.name),
                           isUnordered ? builder.getUnitAttr() : nullptr);
@@ -1055,6 +1062,16 @@ void hlfir::ElementalOp::build(mlir::OpBuilder &builder,
 
 mlir::Value hlfir::ElementalOp::getElementEntity() {
   return mlir::cast<hlfir::YieldElementOp>(getBody()->back()).getElementValue();
+}
+
+mlir::LogicalResult hlfir::ElementalOp::verify() {
+  mlir::Value mold = getMold();
+  hlfir::ExprType resultType = mlir::cast<hlfir::ExprType>(getType());
+  if (!!mold != resultType.isPolymorphic())
+    return emitOpError("result must be polymorphic when mold is present "
+                       "and vice versa");
+
+  return mlir::success();
 }
 
 //===----------------------------------------------------------------------===//

@@ -23,11 +23,11 @@ LLVM_LIBC_FUNCTION(int, gettimeofday,
     return 0;
   struct timespec tp;
 #if SYS_clock_gettime
-  long ret_val = __llvm_libc::syscall_impl(SYS_clock_gettime,
+  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime,
                                            static_cast<long>(CLOCK_REALTIME),
                                            reinterpret_cast<long>(&tp));
 #elif defined(SYS_clock_gettime64)
-  long ret_val = __llvm_libc::syscall_impl(SYS_clock_gettime64,
+  int ret = __llvm_libc::syscall_impl<int>(SYS_clock_gettime64,
                                            static_cast<long>(CLOCK_REALTIME),
                                            reinterpret_cast<long>(&tp));
 #else
@@ -35,12 +35,12 @@ LLVM_LIBC_FUNCTION(int, gettimeofday,
 #endif
   // A negative return value indicates an error with the magnitude of the
   // value being the error code.
-  if (ret_val < 0) {
-    libc_errno = -ret_val;
+  if (ret < 0) {
+    libc_errno = -ret;
     return -1;
   }
   tv->tv_sec = tp.tv_sec;
-  tv->tv_usec = tp.tv_nsec / 1000;
+  tv->tv_usec = static_cast<suseconds_t>(tp.tv_nsec / 1000);
   return 0;
 }
 

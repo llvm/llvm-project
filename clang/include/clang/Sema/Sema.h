@@ -7086,6 +7086,16 @@ public:
                                  NestedNameSpecInfo &IdInfo,
                                  bool EnteringContext);
 
+  /// The kind of conversion to check for. Either all attributes must match exactly,
+  /// or the converted type may add/drop '__arm_preserves_za'.
+  enum class AArch64SMECallConversionKind {
+    MatchExactly,
+    MayAddPreservesZA,
+    MayDropPreservesZA,
+  };
+  bool IsInvalidSMECallConversion(QualType FromType, QualType ToType,
+                                  AArch64SMECallConversionKind C);
+
   /// The parser has parsed a nested-name-specifier
   /// 'template[opt] template-name < template-args >::'.
   ///
@@ -12728,8 +12738,6 @@ public:
   QualType CheckBitwiseOperands( // C99 6.5.[10...12]
       ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
       BinaryOperatorKind Opc);
-  void diagnoseLogicalInsteadOfBitwise(Expr *Op1, Expr *Op2, SourceLocation Loc,
-                                       BinaryOperatorKind Opc);
   QualType CheckLogicalOperands( // C99 6.5.[13,14]
     ExprResult &LHS, ExprResult &RHS, SourceLocation Loc,
     BinaryOperatorKind Opc);
