@@ -4117,6 +4117,7 @@ cc_library(
         ":MemRefToLLVM",
         ":NVVMTarget",
         ":NVVMToLLVM",
+        ":ROCDLTarget",
         ":UBToLLVM",
     ],
 )
@@ -5694,6 +5695,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/LLVMIR/ROCDLDialect.h"],
     includes = ["include"],
     deps = [
+        ":GPUDialect",
         ":IR",
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
@@ -5704,11 +5706,34 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "ROCDLTarget",
+    srcs = ["lib/Target/LLVM/ROCDL/Target.cpp"],
+    hdrs = glob(["include/mlir/Target/LLVM/ROCDL/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":GPUDialect",
+        ":GPUToLLVMIRTranslation",
+        ":LLVMToLLVMIRTranslation",
+        ":ROCDLDialect",
+        ":ROCDLToLLVMIRTranslation",
+        ":Support",
+        ":TargetLLVM",
+        ":ToLLVMIRTranslation",
+        "//llvm:Core",
+        "//llvm:MC",
+        "//llvm:MCParser",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
 td_library(
     name = "ROCDLOpsTdFiles",
     srcs = ["include/mlir/Dialect/LLVMIR/ROCDLOps.td"],
     includes = ["include"],
     deps = [
+        ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -5740,6 +5765,20 @@ gentbl_cc_library(
                 "-dialect=rocdl",
             ],
             "include/mlir/Dialect/LLVMIR/ROCDLOpsDialect.cpp.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=rocdl",
+            ],
+            "include/mlir/Dialect/LLVMIR/ROCDLOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=rocdl",
+            ],
+            "include/mlir/Dialect/LLVMIR/ROCDLOpsAttributes.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
