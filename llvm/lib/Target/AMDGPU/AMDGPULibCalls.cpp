@@ -585,8 +585,7 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
 
     // Specialized optimizations for each function call.
     //
-    // TODO: Handle other simple intrinsic wrappers. Sqrt, ldexp, log, rounding
-    // intrinsics.
+    // TODO: Handle other simple intrinsic wrappers. Sqrt, ldexp log.
     //
     // TODO: Handle native functions
     switch (FInfo.getId()) {
@@ -618,6 +617,21 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
     case AMDGPULibFunc::EI_COPYSIGN:
       return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::copysign, true,
                                                   true, true);
+    case AMDGPULibFunc::EI_FLOOR:
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::floor, true,
+                                                  true);
+    case AMDGPULibFunc::EI_CEIL:
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::ceil, true,
+                                                  true);
+    case AMDGPULibFunc::EI_TRUNC:
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::trunc, true,
+                                                  true);
+    case AMDGPULibFunc::EI_RINT:
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::rint, true,
+                                                  true);
+    case AMDGPULibFunc::EI_ROUND:
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::round, true,
+                                                  true);
     case AMDGPULibFunc::EI_POW:
     case AMDGPULibFunc::EI_POWR:
     case AMDGPULibFunc::EI_POWN:
