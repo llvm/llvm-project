@@ -576,6 +576,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FLOG10, VT, Action);
     setOperationAction(ISD::FEXP, VT, Action);
     setOperationAction(ISD::FEXP2, VT, Action);
+    setOperationAction(ISD::FEXP10, VT, Action);
     setOperationAction(ISD::FCEIL, VT, Action);
     setOperationAction(ISD::FFLOOR, VT, Action);
     setOperationAction(ISD::FNEARBYINT, VT, Action);
@@ -888,6 +889,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
   setOperationAction(ISD::FLOG10, MVT::f80, Expand);
   setOperationAction(ISD::FEXP, MVT::f80, Expand);
   setOperationAction(ISD::FEXP2, MVT::f80, Expand);
+  setOperationAction(ISD::FEXP10, MVT::f80, Expand);
   setOperationAction(ISD::FMINNUM, MVT::f80, Expand);
   setOperationAction(ISD::FMAXNUM, MVT::f80, Expand);
 
@@ -906,6 +908,7 @@ X86TargetLowering::X86TargetLowering(const X86TargetMachine &TM,
     setOperationAction(ISD::FLOG10,    VT, Expand);
     setOperationAction(ISD::FEXP,      VT, Expand);
     setOperationAction(ISD::FEXP2,     VT, Expand);
+    setOperationAction(ISD::FEXP10,    VT, Expand);
   }
 
   // First set operation action for all vector types to either promote
