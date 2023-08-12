@@ -21343,8 +21343,8 @@ static SDValue LowerToTLSExecModel(GlobalAddressSDNode *GA, SelectionDAG &DAG,
   SDLoc dl(GA);
 
   // Get the Thread Pointer, which is %gs:0 (32-bit) or %fs:0 (64-bit).
-  Value *Ptr = Constant::getNullValue(Type::getInt8PtrTy(*DAG.getContext(),
-                                                         is64Bit ? 257 : 256));
+  Value *Ptr = Constant::getNullValue(
+      PointerType::get(*DAG.getContext(), is64Bit ? 257 : 256));
 
   SDValue ThreadPointer =
       DAG.getLoad(PtrVT, dl, DAG.getEntryNode(), DAG.getIntPtrConstant(0, dl),
@@ -28887,7 +28887,7 @@ SDValue X86TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
       SDLoc dl(Op);
       EVT PtrVT = getPointerTy(DAG.getDataLayout());
       // Get the Thread Pointer, which is %gs:0 (32-bit) or %fs:0 (64-bit).
-      Value *Ptr = Constant::getNullValue(Type::getInt8PtrTy(
+      Value *Ptr = Constant::getNullValue(PointerType::get(
           *DAG.getContext(), Subtarget.is64Bit() ? X86AS::FS : X86AS::GS));
       return DAG.getLoad(PtrVT, dl, DAG.getEntryNode(),
                          DAG.getIntPtrConstant(0, dl), MachinePointerInfo(Ptr));
@@ -34842,21 +34842,19 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     unsigned WidenNumElts = WidenVT.getVectorNumElements();
     unsigned InBits = InVT.getSizeInBits();
 
-    if (128 % InBits == 0) {
-      // See if there are sufficient leading bits to perform a PACKUS/PACKSS.
-      unsigned PackOpcode;
-      if (SDValue Src =
-              matchTruncateWithPACK(PackOpcode, VT, In, dl, DAG, Subtarget)) {
-        SDValue WidenSrc =
-            widenSubVector(Src, false, Subtarget, DAG, dl,
-                           InEltVT.getSizeInBits() * WidenNumElts);
-        if (SDValue Res = truncateVectorWithPACK(PackOpcode, WidenVT, WidenSrc,
-                                                 dl, DAG, Subtarget)) {
-          Results.push_back(Res);
-          return;
-        }
+    // See if there are sufficient leading bits to perform a PACKUS/PACKSS.
+    unsigned PackOpcode;
+    if (SDValue Src =
+            matchTruncateWithPACK(PackOpcode, VT, In, dl, DAG, Subtarget)) {
+      if (SDValue Res = truncateVectorWithPACK(PackOpcode, VT, Src,
+                                               dl, DAG, Subtarget)) {
+        Res = widenSubVector(WidenVT, Res, false, Subtarget, DAG, dl);
+        Results.push_back(Res);
+        return;
       }
+    }
 
+    if (128 % InBits == 0) {
       // 128 bit and smaller inputs should avoid truncate all together and
       // just use a build_vector that will become a shuffle.
       // TODO: Widen and use a shuffle directly?

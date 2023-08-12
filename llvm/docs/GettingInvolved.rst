@@ -407,7 +407,6 @@ can be better.
    BugpointRedesign
    Proposals/TestSuite
    Proposals/VariableNames
-   Proposals/VectorizationPlan
    Proposals/VectorPredication
 
 :doc:`Proposals/GitHubMove`
@@ -421,9 +420,6 @@ can be better.
 
 :doc:`Proposals/VariableNames`
    Proposal to change the variable names coding standard.
-
-:doc:`Proposals/VectorizationPlan`
-   Proposal to model the process and upgrade the infrastructure of LLVM's Loop Vectorizer.
 
 :doc:`Proposals/VectorPredication`
    Proposal for predicated vector instructions in LLVM.

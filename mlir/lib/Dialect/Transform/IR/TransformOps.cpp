@@ -9,6 +9,7 @@
 #include "mlir/Dialect/Transform/IR/TransformOps.h"
 
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
+#include "mlir/Conversion/LLVMCommon/ConversionTarget.h"
 #include "mlir/Conversion/LLVMCommon/TypeConverter.h"
 #include "mlir/Dialect/Transform/IR/MatchInterfaces.h"
 #include "mlir/Dialect/Transform/IR/TransformAttrs.h"
@@ -498,7 +499,7 @@ DiagnosedSilenceableFailure transform::ApplyConversionPatternsOp::apply(
     defaultTypeConverter = typeConverterBuilder.getTypeConverter();
 
   // Configure conversion target.
-  ConversionTarget conversionTarget(*ctx);
+  ConversionTarget conversionTarget(*getContext());
   if (getLegalOps())
     for (Attribute attr : cast<ArrayAttr>(*getLegalOps()))
       conversionTarget.addLegalOp(

@@ -1330,3 +1330,51 @@ define <vscale x 16 x i64> @fshl_v16i64(<vscale x 16 x i64> %a, <vscale x 16 x i
   %res = call <vscale x 16 x i64> @llvm.vp.fshl.nxv16i64(<vscale x 16 x i64> %a, <vscale x 16 x i64> %b, <vscale x 16 x i64> %c, <vscale x 16 x i1> %m, i32 %evl)
   ret <vscale x 16 x i64> %res
 }
+
+; Test promotion.
+declare <vscale x 1 x i9> @llvm.vp.fshr.nxv1i9(<vscale x 1 x i9>, <vscale x 1 x i9>, <vscale x 1 x i9>, <vscale x 1 x i1>, i32)
+define <vscale x 1 x i9> @fshr_v1i9(<vscale x 1 x i9> %a, <vscale x 1 x i9> %b, <vscale x 1 x i9> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: fshr_v1i9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 511
+; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vand.vx v10, v10, a1
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsll.vi v9, v9, 7, v0.t
+; CHECK-NEXT:    li a0, 9
+; CHECK-NEXT:    vremu.vx v10, v10, a0, v0.t
+; CHECK-NEXT:    vadd.vi v10, v10, 7, v0.t
+; CHECK-NEXT:    vand.vi v11, v10, 15, v0.t
+; CHECK-NEXT:    vsrl.vv v9, v9, v11, v0.t
+; CHECK-NEXT:    vsll.vi v8, v8, 1, v0.t
+; CHECK-NEXT:    vnot.v v10, v10, v0.t
+; CHECK-NEXT:    vand.vi v10, v10, 15, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i9> @llvm.vp.fshr.nxv1i9(<vscale x 1 x i9> %a, <vscale x 1 x i9> %b, <vscale x 1 x i9> %c, <vscale x 1 x i1> %m, i32 %evl)
+  ret <vscale x 1 x i9> %res
+}
+
+declare <vscale x 1 x i9> @llvm.vp.fshl.nxv1i9(<vscale x 1 x i9>, <vscale x 1 x i9>, <vscale x 1 x i9>, <vscale x 1 x i1>, i32)
+define <vscale x 1 x i9> @fshl_v1i9(<vscale x 1 x i9> %a, <vscale x 1 x i9> %b, <vscale x 1 x i9> %c, <vscale x 1 x i1> %m, i32 zeroext %evl) {
+; CHECK-LABEL: fshl_v1i9:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    li a1, 511
+; CHECK-NEXT:    vsetvli a2, zero, e16, mf4, ta, ma
+; CHECK-NEXT:    vand.vx v10, v10, a1
+; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
+; CHECK-NEXT:    vsll.vi v9, v9, 7, v0.t
+; CHECK-NEXT:    vsrl.vi v9, v9, 1, v0.t
+; CHECK-NEXT:    li a0, 9
+; CHECK-NEXT:    vremu.vx v10, v10, a0, v0.t
+; CHECK-NEXT:    vnot.v v11, v10, v0.t
+; CHECK-NEXT:    vand.vi v11, v11, 15, v0.t
+; CHECK-NEXT:    vsrl.vv v9, v9, v11, v0.t
+; CHECK-NEXT:    vand.vi v10, v10, 15, v0.t
+; CHECK-NEXT:    vsll.vv v8, v8, v10, v0.t
+; CHECK-NEXT:    vor.vv v8, v8, v9, v0.t
+; CHECK-NEXT:    ret
+  %res = call <vscale x 1 x i9> @llvm.vp.fshl.nxv1i9(<vscale x 1 x i9> %a, <vscale x 1 x i9> %b, <vscale x 1 x i9> %c, <vscale x 1 x i1> %m, i32 %evl)
+  ret <vscale x 1 x i9> %res
+}

@@ -1376,6 +1376,22 @@ TEST_F(ShortNamespaceLinesTest, MultipleUnwrappedLine) {
                                     "int k;\n"
                                     "}\n",
                                     Style));
+
+  // The namespace body has 5 unwrapped/annotated lines.
+  const std::string NestedLambdas{"namespace foo {\n"
+                                  "auto bar = [] {\n" // line 1
+                                  "  int i;\n"        // line 2
+                                  "  return [] {\n"   // line 3
+                                  "      int j;"      // line 4
+                                  "      return 0;\n" // line 5
+                                  "  };\n"            // part of line 3
+                                  "};\n"              // part of line 1
+                                  "}"};
+  Style.ShortNamespaceLines = 4;
+  EXPECT_EQ(NestedLambdas + " // namespace foo",
+            fixNamespaceEndComments(NestedLambdas, Style));
+  ++Style.ShortNamespaceLines;
+  EXPECT_EQ(NestedLambdas, fixNamespaceEndComments(NestedLambdas, Style));
 }
 
 TEST_F(ShortNamespaceLinesTest, NamespaceAlias) {

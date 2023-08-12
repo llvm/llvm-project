@@ -20,4 +20,8 @@ add_mlir_dialect_library(MLIRGPUTransformOps
   MLIRTransformDialect
   MLIRVectorDialect
   MLIRVectorTransforms
+
+  # ConversionPatterns
+  MLIRNVGPUToNVVM
+  MLIRGPUToNVVMTransforms
   )  

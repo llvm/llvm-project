@@ -89,7 +89,7 @@ Using in external projects
 Users need to be able to build their own BMI files.
 
 .. note:: The requirements for users to build their own BMI files will remain
-   true for the forseeable future. For now this needs to be done manually.
+   true for the foreseeable future. For now this needs to be done manually.
    Once libc++'s implementation is more mature we will reach out to build
    system vendors, with the goal that building the BMI files is done by
    the build system.

@@ -1561,6 +1561,7 @@ def GPU_SubgroupMmaElementwiseOp : GPU_Op<"subgroup_mma_elementwise",
 // Operation on sparse matrices, called from the host
 // (currently lowers to cuSparse for CUDA only, no ROCM lowering).
 //
+
 def GPU_CreateDnTensorOp : GPU_Op<"create_dn_tensor", [GPU_AsyncOpInterface, AttrSizedOperandSegments]> {
   let summary = "Create dense tensor operation";
   let description = [{
@@ -2234,9 +2235,9 @@ def GPU_SpGEMMWorkEstimationOrComputeOp : GPU_Op<"spgemm_work_estimation_or_comp
     Example:
 
     ```mlir
-    %bufferSz, %token = gpu.spgemm_work_estimation_or_compute async [%dep]{COMPUTE}
+    %bufferSz, %token = gpu.spgemm_work_estimation_or_compute async [%dep] {COMPUTE}
                           %desc, %spmatA{NON_TRANSPOSE}, %spmatB{NON_TRANSPOSE},
-                          %spmatC, ALG2, %spgemmDesc, %c0, %alloc: f32 into
+                          %spmatC, %spgemmDesc, %c0, %alloc: f32 into
                           memref<0xi8>
     ```
 
@@ -2283,69 +2284,11 @@ def GPU_SpGEMMWorkEstimationOrComputeOp : GPU_Op<"spgemm_work_estimation_or_comp
   }];
 }
 
-def GPU_SpGEMMEstimateMemoryOp : GPU_Op<"spgemm_estimate_memory", [GPU_AsyncOpInterface]> {
-  let summary = "SpGEMM estimate memory operation";
-  let description = [{
-    The `gpu.spgemm_estimate_memory` is used for both determining the buffer
-    size and performing the actual computation.
-
-    If the `async` keyword is present, the op is executed asynchronously (i.e.
-    it does not block until the execution has finished on the device). In
-    that case, it returns a `!gpu.async.token` in addition to the environment.
-
-    Example:
-
-    ```mlir
-    %bufferSz3, %dummy, %token = gpu.spgemm_estimate_memory async [%dep] %spmatA, %spmatB, %spmatC, ALG2, %spgemmDesc, %c0, %c0, %alloc: f32 into memref<0xi8>
-    ```
-  }];
-
-  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
-                       GPU_SparseSpGEMMOpHandle:$desc,
-                       GPU_TransposeModeAttr:$modeA,
-                       GPU_TransposeModeAttr:$modeB,
-                       GPU_SparseSpMatHandle:$spmatA,
-                       GPU_SparseSpMatHandle:$spmatB,
-                       GPU_SparseSpMatHandle:$spmatC,
-                       TypeAttr:$computeType,
-                       Index:$bufferSz3,
-                       AnyMemRef:$buffer3,
-                       Index:$bufferSz2);
-  let results = (outs Index:$bufferSz3New,
-                      Index:$bufferSz2New,
-                      Optional<GPU_AsyncToken>:$asyncToken);
-
-  let builders = [OpBuilder<(ins
-    "Type":$bufferSz3New,
-    "Type":$bufferSz2New,
-    "Type":$asyncToken,
-    "ValueRange":$asyncDependencies,
-    "Value":$desc,
-    "Value":$spmatA,
-    "Value":$spmatB,
-    "Value":$spmatC,
-    "Type":$computeType,
-    "Value":$bufferSz3,
-    "Value":$buffer3,
-    "Value":$bufferSz2), [{
-  auto modeA = gpu::TransposeMode::NON_TRANSPOSE;
-  auto modeB = gpu::TransposeMode::NON_TRANSPOSE;
-  return build($_builder, $_state, bufferSz3New, bufferSz2New, asyncToken,
-               asyncDependencies, desc, modeA, modeB, spmatA, spmatB, spmatC,
-               computeType, bufferSz3, buffer3, bufferSz2);}]>
-  ];
-
-  let assemblyFormat = [{
-    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
-    $spmatA (`{` $modeA^ `}`)? `,` $spmatB (`{` $modeB^ `}`)? `,` $spmatC `,` $desc `,` $bufferSz3 `,` $bufferSz2 `,` $buffer3 attr-dict `:` $computeType `into` type($buffer3)
-  }];
-}
-
 def GPU_SpGEMMCopyOp : GPU_Op<"spgemm_copy", [GPU_AsyncOpInterface]> {
   let summary = "SpGEMM copy operation";
   let description = [{
-    The `gpu.spgemm_copy` operation copies a sparse matrix, e.g., the result of
-    the SpGEMM computation.
+    The `gpu.spgemm_copy` operation copies the sparse matrix result of
+    a SpGEMM computation.
 
     If the `async` keyword is present, the op is executed asynchronously (i.e.
     it does not block until the execution has finished on the device). In
@@ -2354,7 +2297,7 @@ def GPU_SpGEMMCopyOp : GPU_Op<"spgemm_copy", [GPU_AsyncOpInterface]> {
     Example:
 
     ```mlir
-    gpu.spgemm_copy %spmatA, %spmatB, %spmatC, ALG2, %spgemmDesc: f32
+    gpu.spgemm_copy %spmatA, %spmatB, %spmatC, %spgemmDesc: f32
     ```
 
     The matrix arguments can also be associated with one of the following
@@ -2419,6 +2362,39 @@ def GPU_SpGEMMGetSizeOp : GPU_Op<"spgemm_get_size", [GPU_AsyncOpInterface]> {
   let assemblyFormat = [{
     custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
     $spmat attr-dict
+  }];
+}
+
+def GPU_SetCsrPointersOp : GPU_Op<"set_csr_pointers", [GPU_AsyncOpInterface]> {
+  let summary = "SpGEMM get size operation";
+  let description = [{
+    The `gpu.set_csr_pointers` assigns the given positions, coordinates,
+    and values buffer that reside on the device directly to the given sparse
+    matrix descriptor in csr format.
+
+    If the `async` keyword is present, the op is executed asynchronously (i.e.
+    it does not block until the execution has finished on the device). In
+    that case, it returns a `!gpu.async.token` in addition to the environment.
+
+    Example:
+
+    ```mlir
+    %token = gpu.set_csr_pointers async [%dep] %positions, %coordinates, %values
+          : memref<?xf32>, memref<?xindex>, memref<?xindex>
+    ```
+  }];
+
+  let arguments = (ins Variadic<GPU_AsyncToken>:$asyncDependencies,
+                       Arg<GPU_SparseSpMatHandle>:$spmat,
+                       AnyMemRef:$positions,
+                       AnyMemRef:$coordinates,
+		       AnyMemRef:$values);
+  let results = (outs Optional<GPU_AsyncToken>:$asyncToken);
+
+  let assemblyFormat = [{
+    custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+      $spmat `,` $positions `,` $coordinates `,` $values attr-dict
+        `:` type($positions) `,` type($coordinates) `,` type($values)
   }];
 }
 

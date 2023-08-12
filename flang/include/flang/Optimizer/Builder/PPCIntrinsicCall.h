@@ -29,9 +29,13 @@ enum class VecOp {
   Convert,
   Ctf,
   Cvf,
-  Nmadd,
+  Mergeh,
+  Mergel,
   Msub,
   Mul,
+  Nmadd,
+  Perm,
+  Permi,
   Sel,
   Sl,
   Sld,
@@ -41,8 +45,15 @@ enum class VecOp {
   Sr,
   Srl,
   Sro,
+  St,
+  Ste,
+  Stxv,
   Sub,
-  Xor
+  Xor,
+  Xst,
+  Xst_be,
+  Xstd2,
+  Xstw4
 };
 
 /// Enums used to templatize and share lowering of PowerPC MMA intrinsics.
@@ -167,6 +178,20 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
   fir::ExtendedValue genVecAnyCompare(mlir::Type resultType,
                                       llvm::ArrayRef<fir::ExtendedValue> args);
 
+  fir::ExtendedValue genVecExtract(mlir::Type resultType,
+                                   llvm::ArrayRef<fir::ExtendedValue> args);
+
+  fir::ExtendedValue genVecInsert(mlir::Type resultType,
+                                  llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
+  fir::ExtendedValue genVecMerge(mlir::Type resultType,
+                                 llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
+  fir::ExtendedValue genVecPerm(mlir::Type resultType,
+                                llvm::ArrayRef<fir::ExtendedValue> args);
+
   template <VecOp>
   fir::ExtendedValue genVecNmaddMsub(mlir::Type resultType,
                                      llvm::ArrayRef<fir::ExtendedValue> args);
@@ -177,6 +202,12 @@ struct PPCIntrinsicLibrary : IntrinsicLibrary {
 
   fir::ExtendedValue genVecSel(mlir::Type resultType,
                                llvm::ArrayRef<fir::ExtendedValue> args);
+
+  template <VecOp>
+  void genVecStore(llvm::ArrayRef<fir::ExtendedValue>);
+
+  template <VecOp>
+  void genVecXStore(llvm::ArrayRef<fir::ExtendedValue>);
 };
 
 const IntrinsicHandler *findPPCIntrinsicHandler(llvm::StringRef name);

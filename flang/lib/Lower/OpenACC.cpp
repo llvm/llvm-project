@@ -2346,22 +2346,30 @@ static void createDeclareGlobalOp(mlir::OpBuilder &modBuilder,
   modBuilder.setInsertionPointAfter(declareGlobalOp);
 }
 
+static mlir::func::FuncOp createDeclareFunc(mlir::OpBuilder &modBuilder,
+                                            fir::FirOpBuilder &builder,
+                                            mlir::Location loc,
+                                            llvm::StringRef funcName) {
+  auto funcTy = mlir::FunctionType::get(modBuilder.getContext(), {}, {});
+  auto funcOp = modBuilder.create<mlir::func::FuncOp>(loc, funcName, funcTy);
+  funcOp.setVisibility(mlir::SymbolTable::Visibility::Private);
+  builder.createBlock(&funcOp.getRegion(), funcOp.getRegion().end(), {}, {});
+  builder.setInsertionPointToEnd(&funcOp.getRegion().back());
+  builder.create<mlir::func::ReturnOp>(loc);
+  builder.setInsertionPointToStart(&funcOp.getRegion().back());
+  return funcOp;
+}
+
 template <typename EntryOp>
-static void createRegisterFunc(mlir::OpBuilder &modBuilder,
-                               fir::FirOpBuilder &builder, mlir::Location loc,
-                               fir::GlobalOp &globalOp,
-                               mlir::acc::DataClause clause) {
+static void createDeclareAllocFunc(mlir::OpBuilder &modBuilder,
+                                   fir::FirOpBuilder &builder,
+                                   mlir::Location loc, fir::GlobalOp &globalOp,
+                                   mlir::acc::DataClause clause) {
   std::stringstream registerFuncName;
   registerFuncName << globalOp.getSymName().str()
-                   << "_acc_declare_update_desc_post_alloc";
-  auto funcTy = mlir::FunctionType::get(modBuilder.getContext(), {}, {});
-  mlir::func::FuncOp registerFuncOp = modBuilder.create<mlir::func::FuncOp>(
-      loc, registerFuncName.str(), funcTy);
-  registerFuncOp.setVisibility(mlir::SymbolTable::Visibility::Private);
-
-  builder.createBlock(&registerFuncOp.getRegion(),
-                      registerFuncOp.getRegion().end(), {}, {});
-  builder.setInsertionPointToEnd(&registerFuncOp.getRegion().back());
+                   << Fortran::lower::declarePostAllocSuffix.str();
+  auto registerFuncOp =
+      createDeclareFunc(modBuilder, builder, loc, registerFuncName.str());
 
   fir::AddrOfOp addrOp = builder.create<fir::AddrOfOp>(
       loc, fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
@@ -2387,9 +2395,73 @@ static void createRegisterFunc(mlir::OpBuilder &modBuilder,
   llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
   llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
   createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
-
-  builder.create<mlir::func::ReturnOp>(loc);
   modBuilder.setInsertionPointAfter(registerFuncOp);
+}
+
+/// Action to be performed on deallocation are split in two distinct functions.
+/// - Pre deallocation function includes all the action to be performed before
+///   the actual deallocation is done on the host side.
+/// - Post deallocation function includes update to the descriptor.
+template <typename ExitOp>
+static void createDeclareDeallocFunc(mlir::OpBuilder &modBuilder,
+                                     fir::FirOpBuilder &builder,
+                                     mlir::Location loc,
+                                     fir::GlobalOp &globalOp,
+                                     mlir::acc::DataClause clause) {
+
+  // Generate the pre dealloc function.
+  std::stringstream preDeallocFuncName;
+  preDeallocFuncName << globalOp.getSymName().str()
+                     << Fortran::lower::declarePreDeallocSuffix.str();
+  auto preDeallocOp =
+      createDeclareFunc(modBuilder, builder, loc, preDeallocFuncName.str());
+  fir::AddrOfOp addrOp = builder.create<fir::AddrOfOp>(
+      loc, fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
+  auto loadOp = builder.create<fir::LoadOp>(loc, addrOp.getResult());
+  fir::BoxAddrOp boxAddrOp = builder.create<fir::BoxAddrOp>(loc, loadOp);
+  addDeclareAttr(builder, boxAddrOp.getOperation(), clause);
+
+  std::stringstream asFortran;
+  asFortran << Fortran::lower::mangle::demangleName(globalOp.getSymName());
+  llvm::SmallVector<mlir::Value> bounds;
+  mlir::acc::GetDevicePtrOp entryOp =
+      createDataEntryOp<mlir::acc::GetDevicePtrOp>(
+          builder, loc, boxAddrOp.getResult(), asFortran, bounds,
+          /*structured=*/false, /*implicit=*/false, clause,
+          boxAddrOp.getType());
+
+  builder.create<mlir::acc::DeclareExitOp>(
+      loc, mlir::ValueRange(entryOp.getAccPtr()));
+
+  mlir::Value varPtr;
+  if constexpr (std::is_same_v<ExitOp, mlir::acc::CopyoutOp> ||
+                std::is_same_v<ExitOp, mlir::acc::UpdateHostOp>)
+    varPtr = entryOp.getVarPtr();
+  builder.create<ExitOp>(entryOp.getLoc(), entryOp.getAccPtr(), varPtr,
+                         entryOp.getBounds(), entryOp.getDataClause(),
+                         /*structured=*/false, /*implicit=*/false,
+                         builder.getStringAttr(*entryOp.getName()));
+
+  // Generate the post dealloc function.
+  modBuilder.setInsertionPointAfter(preDeallocOp);
+  std::stringstream postDeallocFuncName;
+  postDeallocFuncName << globalOp.getSymName().str()
+                      << Fortran::lower::declarePostDeallocSuffix.str();
+  auto postDeallocOp =
+      createDeclareFunc(modBuilder, builder, loc, postDeallocFuncName.str());
+
+  addrOp = builder.create<fir::AddrOfOp>(
+      loc, fir::ReferenceType::get(globalOp.getType()), globalOp.getSymbol());
+  asFortran << "_desc";
+  mlir::acc::UpdateDeviceOp updateDeviceOp =
+      createDataEntryOp<mlir::acc::UpdateDeviceOp>(
+          builder, loc, addrOp, asFortran, bounds,
+          /*structured=*/false, /*implicit=*/true,
+          mlir::acc::DataClause::acc_update_device, addrOp.getType());
+  llvm::SmallVector<int32_t> operandSegments{0, 0, 0, 0, 0, 1};
+  llvm::SmallVector<mlir::Value> operands{updateDeviceOp.getResult()};
+  createSimpleOp<mlir::acc::UpdateOp>(builder, loc, operands, operandSegments);
+  modBuilder.setInsertionPointAfter(postDeallocOp);
 }
 
 template <typename EntryOp, typename ExitOp>
@@ -2420,8 +2492,11 @@ static void genGlobalCtors(Fortran::lower::AbstractConverter &converter,
                                         mlir::acc::DeclareEnterOp, ExitOp>(
                       modBuilder, builder, operandLocation, globalOp, clause,
                       /*implicit=*/true);
-                  createRegisterFunc<EntryOp>(
+                  createDeclareAllocFunc<EntryOp>(
                       modBuilder, builder, operandLocation, globalOp, clause);
+                  if constexpr (!std::is_same_v<EntryOp, ExitOp>)
+                    createDeclareDeallocFunc<ExitOp>(
+                        modBuilder, builder, operandLocation, globalOp, clause);
                 } else {
                   createDeclareGlobalOp<mlir::acc::GlobalConstructorOp, EntryOp,
                                         mlir::acc::DeclareEnterOp, ExitOp>(
@@ -2602,8 +2677,7 @@ genDeclareInModule(Fortran::lower::AbstractConverter &converter,
     } else if (const auto *deviceResidentClause =
                    std::get_if<Fortran::parser::AccClause::DeviceResident>(
                        &clause.u)) {
-      genGlobalCtors<mlir::acc::DeclareDeviceResidentOp,
-                     mlir::acc::DeclareDeviceResidentOp>(
+      genGlobalCtors<mlir::acc::DeclareDeviceResidentOp, mlir::acc::DeleteOp>(
           converter, modBuilder, deviceResidentClause->v,
           mlir::acc::DataClause::acc_declare_device_resident);
     } else if (const auto *linkClause =

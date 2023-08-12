@@ -1010,6 +1010,7 @@ define void @atomic_store_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32IA-TSO-LABEL: atomic_store_i8_seq_cst:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    sb a1, 0(a0)
+; RV32IA-TSO-NEXT:    fence rw, rw
 ; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_store_i8_seq_cst:
@@ -1031,6 +1032,7 @@ define void @atomic_store_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-TSO-LABEL: atomic_store_i8_seq_cst:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    sb a1, 0(a0)
+; RV64IA-TSO-NEXT:    fence rw, rw
 ; RV64IA-TSO-NEXT:    ret
 ;
 ; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i8_seq_cst:
@@ -1043,6 +1045,7 @@ define void @atomic_store_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i8_seq_cst:
 ; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
 ; RV32IA-TSO-TRAILING-FENCE-NEXT:    sb a1, 0(a0)
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
 ;
 ; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i8_seq_cst:
@@ -1055,6 +1058,7 @@ define void @atomic_store_i8_seq_cst(ptr %a, i8 %b) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i8_seq_cst:
 ; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    sb a1, 0(a0)
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
   store atomic i8 %b, ptr %a seq_cst, align 1
   ret void
@@ -1216,6 +1220,7 @@ define void @atomic_store_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32IA-TSO-LABEL: atomic_store_i16_seq_cst:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    sh a1, 0(a0)
+; RV32IA-TSO-NEXT:    fence rw, rw
 ; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_store_i16_seq_cst:
@@ -1237,6 +1242,7 @@ define void @atomic_store_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-LABEL: atomic_store_i16_seq_cst:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    sh a1, 0(a0)
+; RV64IA-TSO-NEXT:    fence rw, rw
 ; RV64IA-TSO-NEXT:    ret
 ;
 ; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i16_seq_cst:
@@ -1249,6 +1255,7 @@ define void @atomic_store_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i16_seq_cst:
 ; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
 ; RV32IA-TSO-TRAILING-FENCE-NEXT:    sh a1, 0(a0)
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
 ;
 ; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i16_seq_cst:
@@ -1261,6 +1268,7 @@ define void @atomic_store_i16_seq_cst(ptr %a, i16 %b) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i16_seq_cst:
 ; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    sh a1, 0(a0)
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
   store atomic i16 %b, ptr %a seq_cst, align 2
   ret void
@@ -1422,6 +1430,7 @@ define void @atomic_store_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32IA-TSO-LABEL: atomic_store_i32_seq_cst:
 ; RV32IA-TSO:       # %bb.0:
 ; RV32IA-TSO-NEXT:    sw a1, 0(a0)
+; RV32IA-TSO-NEXT:    fence rw, rw
 ; RV32IA-TSO-NEXT:    ret
 ;
 ; RV64I-LABEL: atomic_store_i32_seq_cst:
@@ -1443,6 +1452,7 @@ define void @atomic_store_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64IA-TSO-LABEL: atomic_store_i32_seq_cst:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    sw a1, 0(a0)
+; RV64IA-TSO-NEXT:    fence rw, rw
 ; RV64IA-TSO-NEXT:    ret
 ;
 ; RV32IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i32_seq_cst:
@@ -1455,6 +1465,7 @@ define void @atomic_store_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV32IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i32_seq_cst:
 ; RV32IA-TSO-TRAILING-FENCE:       # %bb.0:
 ; RV32IA-TSO-TRAILING-FENCE-NEXT:    sw a1, 0(a0)
+; RV32IA-TSO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV32IA-TSO-TRAILING-FENCE-NEXT:    ret
 ;
 ; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i32_seq_cst:
@@ -1467,6 +1478,7 @@ define void @atomic_store_i32_seq_cst(ptr %a, i32 %b) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i32_seq_cst:
 ; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    sw a1, 0(a0)
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
   store atomic i32 %b, ptr %a seq_cst, align 4
   ret void
@@ -1646,6 +1658,7 @@ define void @atomic_store_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64IA-TSO-LABEL: atomic_store_i64_seq_cst:
 ; RV64IA-TSO:       # %bb.0:
 ; RV64IA-TSO-NEXT:    sd a1, 0(a0)
+; RV64IA-TSO-NEXT:    fence rw, rw
 ; RV64IA-TSO-NEXT:    ret
 ;
 ; RV64IA-WMO-TRAILING-FENCE-LABEL: atomic_store_i64_seq_cst:
@@ -1658,6 +1671,7 @@ define void @atomic_store_i64_seq_cst(ptr %a, i64 %b) nounwind {
 ; RV64IA-TSO-TRAILING-FENCE-LABEL: atomic_store_i64_seq_cst:
 ; RV64IA-TSO-TRAILING-FENCE:       # %bb.0:
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    sd a1, 0(a0)
+; RV64IA-TSO-TRAILING-FENCE-NEXT:    fence rw, rw
 ; RV64IA-TSO-TRAILING-FENCE-NEXT:    ret
   store atomic i64 %b, ptr %a seq_cst, align 8
   ret void
