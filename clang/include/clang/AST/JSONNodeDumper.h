@@ -210,6 +210,8 @@ public:
 
   void VisitAliasAttr(const AliasAttr *AA);
   void VisitCleanupAttr(const CleanupAttr *CA);
+  void VisitDeprecatedAttr(const DeprecatedAttr *DA);
+  void VisitUnavailableAttr(const UnavailableAttr *UA);
 
   void VisitTypedefType(const TypedefType *TT);
   void VisitUsingType(const UsingType *TT);
