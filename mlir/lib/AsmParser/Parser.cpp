@@ -1101,7 +1101,11 @@ Value OperationParser::createForwardRefPlaceholder(SMLoc loc, Type type) {
 ///
 ParseResult OperationParser::parseOperation() {
   auto loc = getToken().getLoc();
-  unsigned locLine = state.lex.getLineNumber();
+  auto &sourceMgr = getSourceMgr();
+  unsigned mainFileID = sourceMgr.getMainFileID();
+  auto &bufferInfo = sourceMgr.getBufferInfo(mainFileID);
+  unsigned locLine = bufferInfo.getLineNumber(loc.getPointer());
+
   state.operandLocs_.push_back(OperandLocationList());
 
   SmallVector<ResultRecord, 1> resultIDs;
@@ -2764,14 +2768,16 @@ ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
       destOps.splice(destOps.end(), parsedOps, parsedOps.begin(),
                      parsedOps.end());
 
-      // ...
+      // Collect the blockarg definitions for the entire module.
       size_t blockDefCount = 0;
 
       for (auto &blockDef : state.asmState->getBlockDefs()) {
         blockDefCount++;
+        (void)blockDef);
       }
 
       // Block Count | Block1 | Block1 ArgCount | Arg1 | Arg2... | Block2 | ...
+      // where each arg is a triple {start offset; end offset; line number }.
       SmallVector<Attribute> blockArgs;
       blockArgs.push_back(
           builder.getIntegerAttr(builder.getIntegerType(64, false), blockDefCount));
@@ -2788,6 +2794,14 @@ ParseResult TopLevelOperationParser::parse(Block *topLevelBlock,
           blockArgs.push_back(builder.getIntegerAttr(
               builder.getIntegerType(64, false),
               blockArg.loc.End.getPointer() - state.lex.getBufferBegin()));
+
+          auto &sourceMgr = getSourceMgr();
+          unsigned mainFileID = sourceMgr.getMainFileID();
+          auto &bufferInfo = sourceMgr.getBufferInfo(mainFileID);
+          unsigned locLine = bufferInfo.getLineNumber(blockArg.loc.Start.getPointer());
+          blockArgs.push_back(builder.getIntegerAttr(
+              builder.getIntegerType(64, false),
+              locLine));
         }
       }
 

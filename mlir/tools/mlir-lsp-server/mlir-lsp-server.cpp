@@ -33,6 +33,11 @@
 using namespace mlir;
 using namespace llvm;
 
+#define DEBUG_TYPE "irx"
+
+#undef LLVM_DEBUG
+#define LLVM_DEBUG(x) x
+
 int IndentLevel = 0;
 
 llvm::raw_ostream &printIndent() {
@@ -55,7 +60,7 @@ public:
 
 IndentAdjustor pushIndent() { return IndentAdjustor(); }
 
-typedef std::unordered_map<int64_t, std::vector<std::pair<int64_t, int64_t>>>
+typedef std::unordered_map<int64_t, std::vector<std::tuple<int64_t, int64_t, int64_t>>>
     BlockArgsMap;
 void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
                     nlohmann::json &j);
@@ -164,8 +169,9 @@ void printBlock(Block &block, BlockArgsMap &blockArgsMap, nlohmann::json &j) {
       nlohmann::json sourcej{{"Id", (int64_t)blockArg.getAsOpaquePointer()},
                              {"Uses", usesj},
                              {"LineNumber", 0},
-                             {"StartOffset", entry->second[index].first},
-                             {"EndOffset", entry->second[index].second}};
+                             {"StartOffset", std::get<0>(entry->second[index])},
+                             {"EndOffset", std::get<1>(entry->second[index])},
+                                {"LineNumber", std::get<2>(entry->second[index])}};
       blockj["Arguments"].push_back({
           {"Argument",sourcej},
           { "IncomingValues", incomingj}
@@ -224,7 +230,7 @@ void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
 
   if (auto lineAttr = op->getAttrOfType<IntegerAttr>("irx_line")) {
     lineNumber = lineAttr.getUInt();
-    opj["LineNumber"] = lineAttr.getUInt();
+    opj["LineNumber"] = lineNumber;
   }
 
   opj["Sources"] = nlohmann::json::array();
@@ -239,7 +245,7 @@ void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
         {"Id", (int64_t)&sourceOp},
         {"DefinitionId",
          defOp ? (int64_t)defOp : (int64_t)sourceOp.get().getAsOpaquePointer()},
-        {"LineNumber", 0}};
+        {"LineNumber", lineNumber}}; //? TODO: Use actual line number of source
 
     if (sourceAttr) {
       sourcej["StartOffset"] =
@@ -282,6 +288,7 @@ void printOperation(Operation *op, BlockArgsMap &blockArgsMap,
           resultsAttr[2 * index].cast<IntegerAttr>().getUInt();
       resultj["EndOffset"] =
           resultsAttr[2 * index + 1].cast<IntegerAttr>().getUInt();
+      resultj["LineNumber"] = lineNumber; //? TODO: Use actual line number of result
     }
 
     opj["Results"].push_back(resultj);
@@ -341,11 +348,69 @@ void buildBlockArgsMap(ArrayAttr &blockArgs, BlockArgsMap &blockArgsMap) {
 
     auto &argsVector = blockArgsMap[blockAttr.getUInt()];
 
-    for (int i = 0; i < argCountAttr.getUInt(); i++, index += 2) {
+    for (int i = 0; i < argCountAttr.getUInt(); i++, index += 3) {
       auto startOffsetAttr = blockArgs[index].dyn_cast<IntegerAttr>();
       auto endOffsetAttr = blockArgs[index + 1].dyn_cast<IntegerAttr>();
+      auto lineNumberAttr = blockArgs[index + 2].dyn_cast<IntegerAttr>();
       argsVector.push_back(
-          std::make_pair(startOffsetAttr.getUInt(), endOffsetAttr.getUInt()));
+          std::make_tuple(startOffsetAttr.getUInt(), endOffsetAttr.getUInt(),
+              lineNumberAttr.getUInt()));
+    }
+  }
+}
+
+void printNestedFunctions(Operation *op, nlohmann::json &j,
+                          std::vector<ModuleOp *>& parentModules,
+                          BlockArgsMap& blockArgsMap) {
+  auto blocksAttr = op->getAttrOfType<ArrayAttr>("irx_blockargs");
+
+  if (blocksAttr) {
+    LLVM_DEBUG(printIndent() << "Found blockargs"
+                             << "\n");
+    buildBlockArgsMap(blocksAttr, blockArgsMap);
+  }
+
+  if(auto funcOp = dyn_cast_or_null<func::FuncOp>(op)) {
+    LLVM_DEBUG(printIndent() << "Found func " << funcOp->getName() << ": " << funcOp.getSymName() << "\n");
+
+    nlohmann::json funcj;
+    funcj["ParentModules"] = nlohmann::json::array();
+
+    for (auto parentMod : parentModules) {
+      LLVM_DEBUG(printIndent()
+                 << "- parent mod: " << parentMod->getName() << "\n");
+      auto moduleName = parentMod->getName();
+      if (moduleName.has_value()) {
+        funcj["ParentModules"].push_back(moduleName.value().str());
+      } else {
+        funcj["ParentModules"].push_back("");
+      }
+    }
+
+    funcj["Opcode"] = op->getName().getStringRef().str();
+    funcj["Name"] = funcOp.getSymName().str();
+    funcj["Regions"] = nlohmann::json::array();
+
+    printRegion(funcOp.getRegion(), blockArgsMap, funcj);
+    j["Functions"].push_back(funcj);
+
+  } else {
+    auto moduleOp = dyn_cast_or_null<ModuleOp>(op);
+
+    if (moduleOp) {
+      parentModules.push_back(&moduleOp);
+    }
+
+    for (auto& region : op->getRegions()) {
+      for (auto& block : region.getBlocks()) {
+        for (auto& blockOp : block.getOperations()) {
+          printNestedFunctions(&blockOp, j, parentModules, blockArgsMap);
+        }
+      }
+    }
+
+    if (moduleOp) {
+      parentModules.pop_back();
     }
   }
 }
@@ -402,25 +467,9 @@ int main(int argc, char **argv) {
 
   for (Operation &op : parsedIR) {
     nlohmann::json funcj;
-
-    funcj["Opcode"] = op.getName().getStringRef().data();
-    funcj["Name"] = "Unknown";
-    funcj["Regions"] = nlohmann::json::array();
-
-    auto blocksAttr = op.getAttrOfType<ArrayAttr>("irx_blockargs");
+    std::vector<ModuleOp *> parentModules;
     BlockArgsMap blockArgsMap;
-
-    if (blocksAttr) {
-      buildBlockArgsMap(blocksAttr, blockArgsMap);
-    }
-
-    for (auto &region : op.getRegions()) {
-      printRegion(region, blockArgsMap, funcj);
-    }
-
-    // llvm::outs() << "\n-----------------\n";
-
-    j["Functions"].push_back(funcj);
+    printNestedFunctions(&op, j, parentModules, blockArgsMap);
   }
 
   // printIndent() << "\nJSON:\n" << j.dump();
