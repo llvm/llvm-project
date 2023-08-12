@@ -193,6 +193,10 @@ Target Specific Changes
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
+- Use pass-by-reference (byref) in stead of pass-by-value (byval) for struct
+  arguments in C ABI. Callee is responsible for allocating stack memory and
+  copying the value of the struct if modified. Note that AMDGPU backend still
+  supports byval for struct arguments.
 
 X86 Support
 ^^^^^^^^^^^
