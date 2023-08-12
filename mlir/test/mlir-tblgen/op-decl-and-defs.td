@@ -57,6 +57,7 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // CHECK: namespace detail {
 // CHECK: class AOpGenericAdaptorBase {
 // CHECK: public:
+// CHECK:   AOpGenericAdaptorBase(AOp{{[[:space:]]}}
 // CHECK:   ::mlir::IntegerAttr getAttr1Attr();
 // CHECK:   uint32_t getAttr1();
 // CHECK:   ::mlir::FloatAttr getSomeAttr2Attr();
@@ -127,6 +128,14 @@ def NS_AOp : NS_Op<"a_op", [IsolatedFromAbove, IsolatedFromAbove]> {
 // DEFS-LABEL: NS::AOp definitions
 
 // DEFS: AOpGenericAdaptorBase::AOpGenericAdaptorBase(::mlir::DictionaryAttr attrs, const ::mlir::EmptyProperties &properties, ::mlir::RegionRange regions) : odsAttrs(attrs), odsRegions(regions)
+
+// Check that `getAttrDictionary()` is used when not using properties.
+
+// DEFS: AOpGenericAdaptorBase::AOpGenericAdaptorBase(AOp op)
+// DEFS-SAME: op->getAttrDictionary()
+// DEFS-SAME: p.getProperties()
+// DEFS-SAME: op->getRegions()
+
 // DEFS: ::mlir::RegionRange AOpGenericAdaptorBase::getSomeRegions()
 // DEFS-NEXT: return odsRegions.drop_front(1);
 // DEFS: ::mlir::RegionRange AOpGenericAdaptorBase::getRegions()
@@ -329,6 +338,17 @@ def NS_MOp : NS_Op<"op_with_single_result_and_fold_adaptor_fold", []> {
 
 // CHECK-LABEL: class MOp :
 // CHECK: ::mlir::OpFoldResult fold(FoldAdaptor adaptor);
+
+def NS_NOp : NS_Op<"op_with_properties", []> {
+  let arguments = (ins Property<"unsigned">:$value);
+}
+
+// Check that `getDiscardableAttrDictionary()` is used with properties.
+
+// DEFS: NOpGenericAdaptorBase::NOpGenericAdaptorBase(NOp op) : NOpGenericAdaptorBase(
+// DEFS-SAME: op->getDiscardableAttrDictionary()
+// DEFS-SAME: op.getProperties()
+// DEFS-SAME: op->getRegions()
 
 // Test that type defs have the proper namespaces when used as a constraint.
 // ---

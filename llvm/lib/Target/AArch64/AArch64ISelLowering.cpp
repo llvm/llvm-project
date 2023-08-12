@@ -1337,6 +1337,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::AVGFLOORU, VT, Custom);
       setOperationAction(ISD::AVGCEILS, VT, Custom);
       setOperationAction(ISD::AVGCEILU, VT, Custom);
+
+      if (!Subtarget->isLittleEndian())
+        setOperationAction(ISD::BITCAST, VT, Expand);
     }
 
     // Illegal unpacked integer vector types.
@@ -1486,6 +1489,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setCondCodeAction(ISD::SETUGT, VT, Expand);
       setCondCodeAction(ISD::SETUEQ, VT, Expand);
       setCondCodeAction(ISD::SETONE, VT, Expand);
+
+      if (!Subtarget->isLittleEndian())
+        setOperationAction(ISD::BITCAST, VT, Expand);
     }
 
     for (auto VT : {MVT::nxv2bf16, MVT::nxv4bf16, MVT::nxv8bf16}) {
@@ -1495,6 +1501,9 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::MLOAD, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Custom);
       setOperationAction(ISD::SPLAT_VECTOR, VT, Legal);
+
+      if (!Subtarget->isLittleEndian())
+        setOperationAction(ISD::BITCAST, VT, Expand);
     }
 
     setOperationAction(ISD::INTRINSIC_WO_CHAIN, MVT::i8, Custom);

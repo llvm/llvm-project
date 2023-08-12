@@ -3961,6 +3961,35 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     }
   }
 
+  // Create constructors constructing the adaptor from an instance of the op.
+  // This takes the attributes, properties and regions from the op instance
+  // and the value range from the parameter.
+  {
+    // Base class is in the cpp file and can simply access the members of the op
+    // class to initialize the template independent fields.
+    auto *constructor = genericAdaptorBase.addConstructor(
+        MethodParameter(op.getCppClassName(), "op"));
+    constructor->addMemberInitializer(
+        genericAdaptorBase.getClassName(),
+        llvm::Twine(!useProperties ? "op->getAttrDictionary()"
+                                   : "op->getDiscardableAttrDictionary()") +
+            ", op.getProperties(), op->getRegions()");
+
+    // Generic adaptor is templated and therefore defined inline in the header.
+    // We cannot use the Op class here as it is an incomplete type (we have a
+    // circular reference between the two).
+    // Use a template trick to make the constructor be instantiated at call site
+    // when the op class is complete.
+    constructor = genericAdaptor.addConstructor(
+        MethodParameter("RangeT", "values"), MethodParameter("LateInst", "op"));
+    constructor->addTemplateParam("LateInst = " + op.getCppClassName());
+    constructor->addTemplateParam(
+        "= std::enable_if_t<std::is_same_v<LateInst, " + op.getCppClassName() +
+        ">>");
+    constructor->addMemberInitializer("Base", "op");
+    constructor->addMemberInitializer("odsOperands", "values");
+  }
+
   std::string sizeAttrInit;
   if (op.getTrait("::mlir::OpTrait::AttrSizedOperandSegments")) {
     if (op.getDialect().usePropertiesForAttributes())
@@ -4074,9 +4103,8 @@ OpOperandAdaptorEmitter::OpOperandAdaptorEmitter(
     // Constructor taking the Op as single parameter.
     auto *constructor =
         adaptor.addConstructor(MethodParameter(op.getCppClassName(), "op"));
-    constructor->addMemberInitializer(
-        adaptor.getClassName(), "op->getOperands(), op->getAttrDictionary(), "
-                                "op.getProperties(), op->getRegions()");
+    constructor->addMemberInitializer(genericAdaptorClassName,
+                                      "op->getOperands(), op");
   }
 
   // Add verification function.
