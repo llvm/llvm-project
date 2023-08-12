@@ -266,8 +266,56 @@ private:
     case ELF::R_PPC64_ADDR32:
       Kind = ppc64::Pointer32;
       break;
+    case ELF::R_PPC64_ADDR16:
+      Kind = ppc64::Pointer16;
+      break;
+    case ELF::R_PPC64_ADDR16_DS:
+      Kind = ppc64::Pointer16DS;
+      break;
+    case ELF::R_PPC64_ADDR16_HA:
+      Kind = ppc64::Pointer16HA;
+      break;
+    case ELF::R_PPC64_ADDR16_HI:
+      Kind = ppc64::Pointer16HI;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGH:
+      Kind = ppc64::Pointer16HIGH;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGHA:
+      Kind = ppc64::Pointer16HIGHA;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGHER:
+      Kind = ppc64::Pointer16HIGHER;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGHERA:
+      Kind = ppc64::Pointer16HIGHERA;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGHEST:
+      Kind = ppc64::Pointer16HIGHEST;
+      break;
+    case ELF::R_PPC64_ADDR16_HIGHESTA:
+      Kind = ppc64::Pointer16HIGHESTA;
+      break;
+    case ELF::R_PPC64_ADDR16_LO:
+      Kind = ppc64::Pointer16LO;
+      break;
+    case ELF::R_PPC64_ADDR16_LO_DS:
+      Kind = ppc64::Pointer16LODS;
+      break;
+    case ELF::R_PPC64_ADDR14:
+      Kind = ppc64::Pointer14;
+      break;
+    case ELF::R_PPC64_TOC:
+      Kind = ppc64::TOC;
+      break;
+    case ELF::R_PPC64_TOC16:
+      Kind = ppc64::TOCDelta16;
+      break;
     case ELF::R_PPC64_TOC16_HA:
       Kind = ppc64::TOCDelta16HA;
+      break;
+    case ELF::R_PPC64_TOC16_HI:
+      Kind = ppc64::TOCDelta16HI;
       break;
     case ELF::R_PPC64_TOC16_DS:
       Kind = ppc64::TOCDelta16DS;
@@ -283,6 +331,9 @@ private:
       break;
     case ELF::R_PPC64_REL16_HA:
       Kind = ppc64::Delta16HA;
+      break;
+    case ELF::R_PPC64_REL16_HI:
+      Kind = ppc64::Delta16HI;
       break;
     case ELF::R_PPC64_REL16_LO:
       Kind = ppc64::Delta16LO;
