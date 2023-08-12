@@ -43,7 +43,7 @@ static const MachineMemOperand::Flags MONoClobber =
 
 /// Utility to store machine instructions worklist.
 struct SIInstrWorklist {
-  SIInstrWorklist() : InstrList() {}
+  SIInstrWorklist() = default;
 
   void insert(MachineInstr *MI);
 
