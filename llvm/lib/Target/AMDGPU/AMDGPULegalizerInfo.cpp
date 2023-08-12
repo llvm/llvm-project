@@ -3304,20 +3304,42 @@ bool AMDGPULegalizerInfo::legalizeFExp2(MachineInstr &MI,
 }
 
 bool AMDGPULegalizerInfo::legalizeFExpUnsafe(MachineIRBuilder &B, Register Dst,
-                                             Register Src,
-                                             unsigned Flags) const {
+                                             Register X, unsigned Flags) const {
   LLT Ty = B.getMRI()->getType(Dst);
-  auto K = B.buildFConstant(Ty, numbers::log2e);
-  auto Mul = B.buildFMul(Ty, Src, K, Flags);
+  LLT F32 = LLT::scalar(32);
 
-  if (Ty == LLT::scalar(32)) {
-    B.buildIntrinsic(Intrinsic::amdgcn_exp2, ArrayRef<Register>{Dst})
+  if (Ty != F32 || !needsDenormHandlingF32(B.getMF(), X, Flags)) {
+    auto Log2E = B.buildFConstant(Ty, numbers::log2e);
+    auto Mul = B.buildFMul(Ty, X, Log2E, Flags);
+
+    if (Ty == F32) {
+      B.buildIntrinsic(Intrinsic::amdgcn_exp2, ArrayRef<Register>{Dst})
         .addUse(Mul.getReg(0))
         .setMIFlags(Flags);
-  } else {
-    B.buildFExp2(Dst, Mul.getReg(0), Flags);
+    } else {
+      B.buildFExp2(Dst, Mul.getReg(0), Flags);
+    }
+
+    return true;
   }
 
+  auto Threshold = B.buildFConstant(Ty, -0x1.5d58a0p+6f);
+  auto NeedsScaling =
+      B.buildFCmp(CmpInst::FCMP_OLT, LLT::scalar(1), X, Threshold, Flags);
+  auto ScaleOffset = B.buildFConstant(Ty, 0x1.0p+6f);
+  auto ScaledX = B.buildFAdd(Ty, X, ScaleOffset, Flags);
+  auto AdjustedX = B.buildSelect(Ty, NeedsScaling, ScaledX, X, Flags);
+
+  auto Log2E = B.buildFConstant(Ty, numbers::log2e);
+  auto ExpInput = B.buildFMul(Ty, AdjustedX, Log2E, Flags);
+
+  auto Exp2 = B.buildIntrinsic(Intrinsic::amdgcn_exp2, {Ty})
+    .addUse(ExpInput.getReg(0))
+    .setMIFlags(Flags);
+
+  auto ResultScaleFactor = B.buildFConstant(Ty, 0x1.969d48p-93f);
+  auto AdjustedResult = B.buildFMul(Ty, Exp2, ResultScaleFactor, Flags);
+  B.buildSelect(Dst, NeedsScaling, AdjustedResult, Exp2, Flags);
   return true;
 }
 
@@ -3358,7 +3380,7 @@ bool AMDGPULegalizerInfo::legalizeFExp(MachineInstr &MI,
 
   // TODO: Interpret allowApproxFunc as ignoring DAZ. This is currently copying
   // library behavior. Also, is known-not-daz source sufficient?
-  if (allowApproxFunc(MF, Flags) && !needsDenormHandlingF32(MF, X, Flags)) {
+  if (allowApproxFunc(MF, Flags)) {
     legalizeFExpUnsafe(B, Dst, X, Flags);
     MI.eraseFromParent();
     return true;
