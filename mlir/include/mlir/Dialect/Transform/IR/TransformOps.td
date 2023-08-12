@@ -25,7 +25,7 @@ include "mlir/Dialect/Transform/IR/TransformInterfaces.td"
 
 def AlternativesOp : TransformDialectOp<"alternatives",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getSuccessorEntryOperands", "getSuccessorRegions",
+        ["getEntrySuccessorOperands", "getSuccessorRegions",
          "getRegionInvocationBounds"]>,
      DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
@@ -187,8 +187,7 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
     default type converter specify their own type converter.)
 
     The `legal_ops`, `illegal_ops`, `legal_dialects`, `illegal_dialects`
-    attributes specify the conversion target. At least one of those four
-    attributes must be specified.
+    attributes specify the conversion target.
 
     This transform consumes the `target` handle and modifies the payload. It
     does not produce any handles.
@@ -201,7 +200,7 @@ def ApplyConversionPatternsOp : TransformDialectOp<"apply_conversion_patterns",
                        OptionalAttr<StrArrayAttr>:$illegal_ops,
                        OptionalAttr<StrArrayAttr>:$legal_dialects,
                        OptionalAttr<StrArrayAttr>:$illegal_dialects,
-                       UnitAttr:$partialConversion);
+                       UnitAttr:$partial_conversion);
   let results = (outs);
   let regions = (region
       MaxSizedRegion<1>:$patterns,
@@ -507,7 +506,7 @@ def ForeachOp : TransformDialectOp<"foreach",
     [DeclareOpInterfaceMethods<TransformOpInterface>,
      DeclareOpInterfaceMethods<MemoryEffectsOpInterface>,
      DeclareOpInterfaceMethods<RegionBranchOpInterface, [
-         "getSuccessorRegions", "getSuccessorEntryOperands"]>,
+         "getSuccessorRegions", "getEntrySuccessorOperands"]>,
      SingleBlockImplicitTerminator<"::mlir::transform::YieldOp">
     ]> {
   let summary = "Executes the body for each payload op";
@@ -1016,7 +1015,7 @@ def SelectOp : TransformDialectOp<"select",
 
 def SequenceOp : TransformDialectOp<"sequence",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getSuccessorEntryOperands", "getSuccessorRegions",
+        ["getEntrySuccessorOperands", "getSuccessorRegions",
          "getRegionInvocationBounds"]>,
      MatchOpInterface,
      DeclareOpInterfaceMethods<TransformOpInterface>,

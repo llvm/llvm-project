@@ -308,10 +308,10 @@ let TargetPrefix = "riscv" in {
 
   multiclass RISCVUnaryAAUnMaskedZvk<bit HasVV = 1, bit HasVS = 1> {
     if HasVV then
-      def "int_riscv_" # NAME # "_vv" : RISCVUnaryAAUnMaskedZvk</*IsVS*/0>;
+      def "int_riscv_" # NAME # "_vv" : RISCVUnaryAAUnMaskedZvk<IsVS=0>;
 
     if HasVS then
-      def "int_riscv_" # NAME # "_vs" : RISCVUnaryAAUnMaskedZvk</*IsVS*/1>;
+      def "int_riscv_" # NAME # "_vs" : RISCVUnaryAAUnMaskedZvk<IsVS=1>;
   }
   // For destination vector type is the same as first source vector (with mask).
   // Input: (vector_in, vector_in, mask, vl, policy)
@@ -1848,16 +1848,16 @@ let TargetPrefix = "riscv" in {
 
   // Zvkg
   def int_riscv_vghsh    : RISCVBinaryAAXUnMaskedZvk;
-  def int_riscv_vgmul_vv : RISCVUnaryAAUnMaskedZvk</*IsVS*/0>;
+  def int_riscv_vgmul_vv : RISCVUnaryAAUnMaskedZvk<IsVS=0>;
 
   // Zvkned
   defm vaesdf            : RISCVUnaryAAUnMaskedZvk;
   defm vaesdm            : RISCVUnaryAAUnMaskedZvk;
   defm vaesef            : RISCVUnaryAAUnMaskedZvk;
   defm vaesem            : RISCVUnaryAAUnMaskedZvk;
-  def int_riscv_vaeskf1  : RISCVBinaryAAXUnMasked</*IsVI*/1>;
-  def int_riscv_vaeskf2  : RISCVBinaryAAXUnMaskedZvk</*IsVI*/1>;
-  defm vaesz             : RISCVUnaryAAUnMaskedZvk</*HasVV*/0>;
+  def int_riscv_vaeskf1  : RISCVBinaryAAXUnMasked<IsVI=1>;
+  def int_riscv_vaeskf2  : RISCVBinaryAAXUnMaskedZvk<IsVI=1>;
+  defm vaesz             : RISCVUnaryAAUnMaskedZvk<HasVV=0>;
 
   // Zvknha or Zvknhb
   def int_riscv_vsha2ch  : RISCVBinaryAAXUnMaskedZvk;
@@ -1865,11 +1865,11 @@ let TargetPrefix = "riscv" in {
   def int_riscv_vsha2ms  : RISCVBinaryAAXUnMaskedZvk;
 
   // Zvksed
-  def int_riscv_vsm4k    : RISCVBinaryAAXUnMasked</*IsVI*/1>;
+  def int_riscv_vsm4k    : RISCVBinaryAAXUnMasked<IsVI=1>;
   defm vsm4r             : RISCVUnaryAAUnMaskedZvk;
 
   // Zvksh
-  def int_riscv_vsm3c    : RISCVBinaryAAXUnMaskedZvk</*IsVI*/1>;
+  def int_riscv_vsm3c    : RISCVBinaryAAXUnMaskedZvk<IsVI=1>;
   def int_riscv_vsm3me   : RISCVBinaryAAXUnMasked;
 } // TargetPrefix = "riscv"
 

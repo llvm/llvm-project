@@ -2143,15 +2143,20 @@ class VPDerivedIVRecipe : public VPRecipeBase, public VPValue {
   /// induction and in this case it will get truncated to ResultTy.
   Type *ResultTy;
 
+  bool IsTruncated;
+
   /// Induction descriptor for the induction the canonical IV is transformed to.
-  const InductionDescriptor &IndDesc;
+  const InductionDescriptor::InductionKind Kind;
+  const BinaryOperator *BinOp;
 
 public:
   VPDerivedIVRecipe(const InductionDescriptor &IndDesc, VPValue *Start,
                     VPCanonicalIVPHIRecipe *CanonicalIV, VPValue *Step,
                     Type *ResultTy)
       : VPRecipeBase(VPDef::VPDerivedIVSC, {Start, CanonicalIV, Step}),
-        VPValue(this), ResultTy(ResultTy), IndDesc(IndDesc) {}
+        VPValue(this), ResultTy(ResultTy),
+        IsTruncated(IndDesc.getStep()->getType() != ResultTy),
+        Kind(IndDesc.getKind()), BinOp(IndDesc.getInductionBinOp()) {}
 
   ~VPDerivedIVRecipe() override = default;
 
