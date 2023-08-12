@@ -6409,6 +6409,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
   case Intrinsic::fabs:
   case Intrinsic::sin:
   case Intrinsic::cos:
+  case Intrinsic::exp10:
   case Intrinsic::floor:
   case Intrinsic::ceil:
   case Intrinsic::trunc:
@@ -6424,6 +6425,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     case Intrinsic::fabs:      Opcode = ISD::FABS;       break;
     case Intrinsic::sin:       Opcode = ISD::FSIN;       break;
     case Intrinsic::cos:       Opcode = ISD::FCOS;       break;
+    case Intrinsic::exp10:     Opcode = ISD::FEXP10;     break;
     case Intrinsic::floor:     Opcode = ISD::FFLOOR;     break;
     case Intrinsic::ceil:      Opcode = ISD::FCEIL;      break;
     case Intrinsic::trunc:     Opcode = ISD::FTRUNC;     break;
@@ -8714,6 +8716,12 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
       case LibFunc_exp2f:
       case LibFunc_exp2l:
         if (visitUnaryFloatCall(I, ISD::FEXP2))
+          return;
+        break;
+      case LibFunc_exp10:
+      case LibFunc_exp10f:
+      case LibFunc_exp10l:
+        if (visitUnaryFloatCall(I, ISD::FEXP10))
           return;
         break;
       case LibFunc_ldexp:
