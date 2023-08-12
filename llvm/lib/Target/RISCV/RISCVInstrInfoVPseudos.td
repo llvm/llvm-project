@@ -115,16 +115,9 @@ class PseudoToVInst<string PseudoInst> {
                         ["_E32", ""],
                         ["_E16", ""],
                         ["_E8", ""],
-                        ["_F64", "_F"],
-                        ["_F32", "_F"],
-                        ["_F16", "_F"],
-                        ["_VF64", "_VF"],
-                        ["_VF32", "_VF"],
-                        ["_VF16", "_VF"],
-                        ["_VBF16", "_VF"],
-                        ["_WF64", "_WF"],
-                        ["_WF32", "_WF"],
-                        ["_WF16", "_WF"],
+                        ["FPR64", "F"],
+                        ["FPR32", "F"],
+                        ["FPR16", "F"],
                         ["_TU", ""],
                         ["_TIED", ""],
                         ["_MASK", ""],
@@ -205,15 +198,7 @@ class MxSet<int eew> {
 
 class FPR_Info<int sew> {
   RegisterClass fprclass = !cast<RegisterClass>("FPR" # sew);
-  string FX = "F" # sew;
-  int SEW = sew;
-  list<LMULInfo> MxList = MxSet<sew>.m;
-  list<LMULInfo> MxListFW = !if(!eq(sew, 64), [], !listremove(MxList, [V_M8]));
-}
-
-class BFPR_Info<int sew> {
-  RegisterClass fprclass = !cast<RegisterClass>("FPR" # sew);
-  string FX = "BF" # sew;
+  string FX = "FPR" # sew;
   int SEW = sew;
   list<LMULInfo> MxList = MxSet<sew>.m;
   list<LMULInfo> MxListFW = !if(!eq(sew, 64), [], !listremove(MxList, [V_M8]));
@@ -223,7 +208,8 @@ def SCALAR_F16 : FPR_Info<16>;
 def SCALAR_F32 : FPR_Info<32>;
 def SCALAR_F64 : FPR_Info<64>;
 
-def SCALAR_BF16 : BFPR_Info<16>;
+// BF16 uses the same register class as F16.
+def SCALAR_BF16 : FPR_Info<16>;
 
 defvar FPList = [SCALAR_F16, SCALAR_F32, SCALAR_F64];
 
@@ -286,10 +272,10 @@ class VTypeInfo<ValueType Vec, ValueType Mas, int Sew, VReg Reg, LMULInfo M,
   OutPatFrag AVL = VLMax;
 
   string ScalarSuffix = !cond(!eq(Scal, XLenVT) : "X",
-                              !eq(Scal, f16) : "F16",
-                              !eq(Scal, bf16) : "BF16",
-                              !eq(Scal, f32) : "F32",
-                              !eq(Scal, f64) : "F64");
+                              !eq(Scal, f16) : "FPR16",
+                              !eq(Scal, bf16) : "FPR16",
+                              !eq(Scal, f32) : "FPR32",
+                              !eq(Scal, f64) : "FPR64");
 }
 
 class GroupVTypeInfo<ValueType Vec, ValueType VecM1, ValueType Mas, int Sew,
@@ -3103,12 +3089,6 @@ multiclass VPseudoTernaryW_VF_RM<LMULInfo m, FPR_Info f> {
                                                           m.vrclass, m, constraint>;
 }
 
-multiclass VPseudoTernaryW_VF_BF_RM<LMULInfo m, BFPR_Info f> {
-  defvar constraint = "@earlyclobber $rd";
-  defm "_V" # f.FX : VPseudoTernaryWithPolicyRoundingMode<m.wvrclass, f.fprclass,
-                                                          m.vrclass, m, constraint>;
-}
-
 multiclass VPseudoVSLDVWithPolicy<VReg RetClass,
                                   RegisterClass Op1Class,
                                   DAGOperand Op2Class,
@@ -3238,7 +3218,7 @@ multiclass VPseudoVWMAC_VV_VF_BF_RM {
       defvar ReadVFWMulAddV_MX = !cast<SchedRead>("ReadVFWMulAddV_" # mx);
       defvar ReadVFWMulAddF_MX = !cast<SchedRead>("ReadVFWMulAddF_" # mx);
 
-      defm "" : VPseudoTernaryW_VF_BF_RM<m, f>,
+      defm "" : VPseudoTernaryW_VF_RM<m, f>,
                 Sched<[WriteVFWMulAddF_MX, ReadVFWMulAddV_MX,
                        ReadVFWMulAddF_MX, ReadVFWMulAddV_MX, ReadVMask]>;
     }
