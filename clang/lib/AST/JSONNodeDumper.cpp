@@ -534,6 +534,10 @@ void JSONNodeDumper::VisitAliasAttr(const AliasAttr *AA) {
   JOS.attribute("aliasee", AA->getAliasee());
 }
 
+void JSONNodeDumper::VisitCleanupAttr(const CleanupAttr *CA) {
+  JOS.attribute("cleanup_function", createBareDeclRef(CA->getFunctionDecl()));
+}
+
 void JSONNodeDumper::VisitTypedefType(const TypedefType *TT) {
   JOS.attribute("decl", createBareDeclRef(TT->getDecl()));
   if (!TT->typeMatchesDecl())
