@@ -13,6 +13,7 @@ def run(f):
         with InsertionPoint(module.body):
             print("\nTEST:", f.__name__)
             f()
+        module.operation.verify()
         print(module)
     return f
 
