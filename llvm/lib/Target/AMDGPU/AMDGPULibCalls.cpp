@@ -99,6 +99,17 @@ private:
   // Get a scalar native builtin single argument FP function
   FunctionCallee getNativeFunction(Module *M, const FuncInfo &FInfo);
 
+  /// Substitute a call to a known libcall with an intrinsic call. If \p
+  /// AllowMinSize is true, allow the replacement in a minsize function.
+  bool shouldReplaceLibcallWithIntrinsic(const CallInst *CI,
+                                         bool AllowMinSizeF32 = false,
+                                         bool AllowF64 = false);
+  void replaceLibCallWithSimpleIntrinsic(CallInst *CI, Intrinsic::ID IntrID);
+
+  bool tryReplaceLibcallWithSimpleIntrinsic(CallInst *CI, Intrinsic::ID IntrID,
+                                            bool AllowMinSizeF32 = false,
+                                            bool AllowF64 = false);
+
 protected:
   bool isUnsafeMath(const FPMathOperator *FPOp) const;
 
@@ -567,10 +578,38 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
       return true;
 
     // Copy fast flags from the original call.
-    B.setFastMathFlags(FPOp->getFastMathFlags());
+    FastMathFlags FMF = FPOp->getFastMathFlags();
+    B.setFastMathFlags(FMF);
 
-    // Specialized optimizations for each function call
+    // Specialized optimizations for each function call.
+    //
+    // TODO: Handle other simple intrinsic wrappers. Sqrt, copysign, fabs,
+    // ldexp, log, rounding intrinsics.
+    //
+    // TODO: Handle native functions
     switch (FInfo.getId()) {
+    case AMDGPULibFunc::EI_EXP:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::exp,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_EXP2:
+      if (FMF.none())
+        return false;
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::exp2,
+                                                  FMF.approxFunc());
+    case AMDGPULibFunc::EI_FMIN:
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::minnum, true,
+                                                  true);
+    case AMDGPULibFunc::EI_FMAX:
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::maxnum, true,
+                                                  true);
+    case AMDGPULibFunc::EI_FMA:
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::fma, true,
+                                                  true);
+    case AMDGPULibFunc::EI_MAD:
+      return tryReplaceLibcallWithSimpleIntrinsic(CI, Intrinsic::fmuladd, true,
+                                                  true);
     case AMDGPULibFunc::EI_POW:
     case AMDGPULibFunc::EI_POWR:
     case AMDGPULibFunc::EI_POWN:
@@ -1020,6 +1059,50 @@ FunctionCallee AMDGPULibCalls::getNativeFunction(Module *M,
   FuncInfo nf = FInfo;
   nf.setPrefix(AMDGPULibFunc::NATIVE);
   return getFunction(M, nf);
+}
+
+// Some library calls are just wrappers around llvm intrinsics, but compiled
+// conservatively. Preserve the flags from the original call site by
+// substituting them with direct calls with all the flags.
+bool AMDGPULibCalls::shouldReplaceLibcallWithIntrinsic(const CallInst *CI,
+                                                       bool AllowMinSizeF32,
+                                                       bool AllowF64) {
+  Type *FltTy = CI->getType()->getScalarType();
+  const bool IsF32 = FltTy->isFloatTy();
+
+  // f64 intrinsics aren't implemented for most operations.
+  if (!IsF32 && !FltTy->isHalfTy() && (!AllowF64 || !FltTy->isDoubleTy()))
+    return false;
+
+  // We're implicitly inlining by replacing the libcall with the intrinsic, so
+  // don't do it for noinline call sites.
+  if (CI->isNoInline())
+    return false;
+
+  const Function *ParentF = CI->getFunction();
+  // TODO: Handle strictfp
+  if (ParentF->hasFnAttribute(Attribute::StrictFP))
+    return false;
+
+  if (IsF32 && !AllowMinSizeF32 && ParentF->hasMinSize())
+    return false;
+  return true;
+}
+
+void AMDGPULibCalls::replaceLibCallWithSimpleIntrinsic(CallInst *CI,
+                                                       Intrinsic::ID IntrID) {
+  CI->setCalledFunction(
+      Intrinsic::getDeclaration(CI->getModule(), IntrID, {CI->getType()}));
+}
+
+bool AMDGPULibCalls::tryReplaceLibcallWithSimpleIntrinsic(CallInst *CI,
+                                                          Intrinsic::ID IntrID,
+                                                          bool AllowMinSizeF32,
+                                                          bool AllowF64) {
+  if (!shouldReplaceLibcallWithIntrinsic(CI, AllowMinSizeF32, AllowF64))
+    return false;
+  replaceLibCallWithSimpleIntrinsic(CI, IntrID);
+  return true;
 }
 
 // fold sqrt -> native_sqrt (x)
