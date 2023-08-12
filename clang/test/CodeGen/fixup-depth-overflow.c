@@ -24,3 +24,5 @@ L1:
 
 // CHECK-LABEL: define {{(dso_local )?}}void @f
 // CHECK-NOT: cleanup
+// CHECK: {{^!0 = }}
+// We might see 'cleanup' as part of a pathname or versioning in metadata

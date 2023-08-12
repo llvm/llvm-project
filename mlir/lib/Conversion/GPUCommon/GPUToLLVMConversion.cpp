@@ -450,10 +450,12 @@ class ConvertLaunchFuncOpToGpuRuntimeCallPattern
 public:
   ConvertLaunchFuncOpToGpuRuntimeCallPattern(LLVMTypeConverter &typeConverter,
                                              StringRef gpuBinaryAnnotation,
-                                             bool kernelBarePtrCallConv)
+                                             bool kernelBarePtrCallConv,
+                                             SymbolTable *cachedModuleTable)
       : ConvertOpToGpuRuntimeCallPattern<gpu::LaunchFuncOp>(typeConverter),
         gpuBinaryAnnotation(gpuBinaryAnnotation),
-        kernelBarePtrCallConv(kernelBarePtrCallConv) {}
+        kernelBarePtrCallConv(kernelBarePtrCallConv),
+        cachedModuleTable(cachedModuleTable) {}
 
 private:
   Value generateParamsArray(gpu::LaunchFuncOp launchOp, OpAdaptor adaptor,
@@ -467,6 +469,7 @@ private:
 
   llvm::SmallString<32> gpuBinaryAnnotation;
   bool kernelBarePtrCallConv;
+  SymbolTable *cachedModuleTable;
 };
 
 class EraseGpuModuleOpPattern : public OpRewritePattern<gpu::GPUModuleOp> {
@@ -571,7 +574,23 @@ void GpuToLLVMConversionPass::runOnOperation() {
   RewritePatternSet patterns(&getContext());
   LLVMConversionTarget target(getContext());
 
-  target.addIllegalDialect<gpu::GPUDialect>();
+  SymbolTable symbolTable = SymbolTable(getOperation());
+  // Preserve GPU modules if they have target attributes.
+  target.addDynamicallyLegalOp<gpu::GPUModuleOp>(
+      [](gpu::GPUModuleOp module) -> bool {
+        return module.getTargetsAttr() != nullptr;
+      });
+  // Accept as legal LaunchFuncOps if they refer to GPU Modules with targets and
+  // the operands have been lowered.
+  target.addDynamicallyLegalOp<gpu::LaunchFuncOp>(
+      [&](gpu::LaunchFuncOp op) -> bool {
+        auto module =
+            symbolTable.lookup<gpu::GPUModuleOp>(op.getKernelModuleName());
+        return converter.isLegal(op->getOperandTypes()) &&
+               converter.isLegal(op->getResultTypes()) &&
+               (module && module.getTargetsAttr() &&
+                module.getTargetsAttr().size());
+      });
 
   mlir::arith::populateArithToLLVMConversionPatterns(converter, patterns);
   mlir::cf::populateControlFlowToLLVMConversionPatterns(converter, patterns);
@@ -581,7 +600,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   populateAsyncStructuralTypeConversionsAndLegality(converter, patterns,
                                                     target);
   populateGpuToLLVMConversionPatterns(converter, patterns, gpuBinaryAnnotation,
-                                      kernelBarePtrCallConv);
+                                      kernelBarePtrCallConv, &symbolTable);
 
   if (failed(
           applyPartialConversion(getOperation(), target, std::move(patterns))))
@@ -1069,9 +1088,57 @@ LogicalResult ConvertLaunchFuncOpToGpuRuntimeCallPattern::matchAndRewrite(
 
   // Create an LLVM global with CUBIN extracted from the kernel annotation and
   // obtain a pointer to the first byte in it.
-  auto kernelModule = SymbolTable::lookupNearestSymbolFrom<gpu::GPUModuleOp>(
-      launchOp, launchOp.getKernelModuleName());
+  gpu::GPUModuleOp kernelModule;
+  if (cachedModuleTable)
+    kernelModule = cachedModuleTable->lookup<gpu::GPUModuleOp>(
+        launchOp.getKernelModuleName());
+  else
+    kernelModule = SymbolTable::lookupNearestSymbolFrom<gpu::GPUModuleOp>(
+        launchOp, launchOp.getKernelModuleName());
   assert(kernelModule && "expected a kernel module");
+
+  // If the module has Targets then just update the op operands.
+  if (ArrayAttr targets = kernelModule.getTargetsAttr()) {
+    Value stream = Value();
+    if (adaptor.getAsyncDependencies().size())
+      stream = adaptor.getAsyncDependencies().front();
+    // If the async keyword is present and there are no dependencies, then a
+    // stream must be created to pass to subsequent operations.
+    else if (launchOp.getAsyncToken())
+      stream = streamCreateCallBuilder.create(loc, rewriter, {}).getResult();
+
+    // Lower the kernel operands to match kernel parameters.
+    SmallVector<Value, 4> arguments;
+    if (kernelBarePtrCallConv) {
+      // Hack the bare pointer value on just for the argument promotion
+      LLVMTypeConverter *converter = getTypeConverter();
+      LowerToLLVMOptions options = converter->getOptions();
+      LowerToLLVMOptions overrideToMatchKernelOpts = options;
+      overrideToMatchKernelOpts.useBarePtrCallConv = true;
+      converter->dangerousSetOptions(overrideToMatchKernelOpts);
+      arguments =
+          converter->promoteOperands(loc, launchOp.getKernelOperands(),
+                                     adaptor.getKernelOperands(), rewriter);
+      converter->dangerousSetOptions(options);
+    } else {
+      arguments = getTypeConverter()->promoteOperands(
+          loc, launchOp.getKernelOperands(), adaptor.getKernelOperands(),
+          rewriter);
+    }
+
+    rewriter.create<gpu::LaunchFuncOp>(
+        launchOp.getLoc(), launchOp.getKernelAttr(),
+        gpu::KernelDim3{adaptor.getGridSizeX(), adaptor.getGridSizeY(),
+                        adaptor.getGridSizeZ()},
+        gpu::KernelDim3{adaptor.getBlockSizeX(), adaptor.getBlockSizeY(),
+                        adaptor.getBlockSizeZ()},
+        adaptor.getDynamicSharedMemorySize(), arguments, stream);
+    if (launchOp.getAsyncToken())
+      rewriter.replaceOp(launchOp, {stream});
+    else
+      rewriter.eraseOp(launchOp);
+    return success();
+  }
 
   auto binaryAttr =
       kernelModule->getAttrOfType<StringAttr>(gpuBinaryAnnotation);
@@ -1845,7 +1912,8 @@ LogicalResult ConvertSetCsrPointersOpToGpuRuntimeCallPattern::matchAndRewrite(
 void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                                                RewritePatternSet &patterns,
                                                StringRef gpuBinaryAnnotation,
-                                               bool kernelBarePtrCallConv) {
+                                               bool kernelBarePtrCallConv,
+                                               SymbolTable *cachedModuleTable) {
   addOpaquePointerConversion<gpu::AsyncTokenType>(converter);
   addOpaquePointerConversion<gpu::SparseDnTensorHandleType>(converter);
   addOpaquePointerConversion<gpu::SparseSpMatHandleType>(converter);
@@ -1881,6 +1949,6 @@ void mlir::populateGpuToLLVMConversionPatterns(LLVMTypeConverter &converter,
                ConvertSpGEMMGetSizeOpToGpuRuntimeCallPattern,
                ConvertSetCsrPointersOpToGpuRuntimeCallPattern>(converter);
   patterns.add<ConvertLaunchFuncOpToGpuRuntimeCallPattern>(
-      converter, gpuBinaryAnnotation, kernelBarePtrCallConv);
+      converter, gpuBinaryAnnotation, kernelBarePtrCallConv, cachedModuleTable);
   patterns.add<EraseGpuModuleOpPattern>(&converter.getContext());
 }

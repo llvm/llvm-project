@@ -21,7 +21,7 @@
 import sys
 
 sys.path.append(sys.argv[1])
-from libcxx.test.header_information import toplevel_headers
+from libcxx.header_information import toplevel_headers
 
 BLOCKLIT = (
     ""  # block Lit from interpreting a RUN/XFAIL/etc inside the generation script

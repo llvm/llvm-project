@@ -2316,6 +2316,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
     GridValues.GV_Default_Num_Teams = ComputeUnits * OMPX_DefaultTeamsPerCU;
     NumComputeUnits = ComputeUnits;
 
+    uint32_t WavesPerCU = 0;
+    if (auto Err =
+            getDeviceAttr(HSA_AMD_AGENT_INFO_MAX_WAVES_PER_CU, WavesPerCU))
+      return Err;
+    HardwareParallelism = ComputeUnits * WavesPerCU;
+
     // Get maximum size of any device queues and maximum number of queues.
     uint32_t MaxQueueSize;
     if (auto Err = getDeviceAttr(HSA_AGENT_INFO_QUEUE_MAX_SIZE, MaxQueueSize))
@@ -2478,6 +2484,12 @@ struct AMDGPUDeviceTy : public GenericDeviceTy, AMDGenericDeviceTy {
   /// availible.
   bool shouldSetupRPCServer() const override {
     return libomptargetSupportsRPC();
+  }
+
+  /// AMDGPU returns the product of the number of compute units and the waves
+  /// per compute unit.
+  uint64_t requestedRPCPortCount() const override  {
+    return HardwareParallelism;
   }
 
   /// Get the stream of the asynchronous info sructure or get a new one.
@@ -3231,6 +3243,9 @@ private:
 
   /// The frequency of the steady clock inside the device.
   uint64_t ClockFrequency;
+
+  /// The total number of concurrent work items that can be running on the GPU.
+  uint64_t HardwareParallelism;
 
   /// Reference to the host device.
   AMDHostDeviceTy &HostDevice;

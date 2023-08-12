@@ -708,7 +708,7 @@ LogicalResult NVVM::LdMatrixOp::verify() {
   return success();
 }
 
-LogicalResult NVVM::WgmmaMmaSyncOp::verify() {
+LogicalResult NVVM::WgmmaMmaAsyncOp::verify() {
   Value outValue = getResults();
   auto stype = dyn_cast<LLVM::LLVMStructType>(outValue.getType());
   if (!stype)
@@ -889,7 +889,7 @@ LogicalResult NVVM::WgmmaMmaSyncOp::verify() {
   return success();
 }
 
-std::string NVVM::WgmmaMmaSyncOp::getPtx() {
+std::string NVVM::WgmmaMmaAsyncOp::getPtx() {
 
   int m = getShape().getM(), n = getShape().getN(), k = getShape().getK();
   bool isF16 = getTypeA() == mlir::NVVM::MMATypes::f16 ||
@@ -952,7 +952,7 @@ std::string NVVM::WgmmaMmaSyncOp::getPtx() {
   return ptx;
 }
 
-void NVVM::WgmmaMmaSyncOp::getAsmValues(
+void NVVM::WgmmaMmaAsyncOp::getAsmValues(
     RewriterBase &rewriter,
     llvm::SmallVectorImpl<std::pair<mlir::Value, mlir::NVVM::PTXRegisterMod>>
         &asmValues) {

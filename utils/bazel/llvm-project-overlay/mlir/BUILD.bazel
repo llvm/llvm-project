@@ -4117,6 +4117,7 @@ cc_library(
         ":MemRefToLLVM",
         ":NVVMTarget",
         ":NVVMToLLVM",
+        ":ROCDLTarget",
         ":UBToLLVM",
     ],
 )
@@ -4651,6 +4652,7 @@ td_library(
     name = "GPUOpsTdFiles",
     srcs = [
         "include/mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td",
+        "include/mlir/Dialect/GPU/IR/CompilationAttrs.td",
         "include/mlir/Dialect/GPU/IR/GPUBase.td",
         "include/mlir/Dialect/GPU/IR/GPUOps.td",
         "include/mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td",
@@ -4870,7 +4872,11 @@ cc_library(
         ":IndexDialect",
         ":LLVMToLLVMIRTranslation",
         ":MemRefDialect",
+        ":NVVMDialect",
+        ":NVVMTarget",
         ":Pass",
+        ":ROCDLDialect",
+        ":ROCDLTarget",
         ":ROCDLToLLVMIRTranslation",
         ":SCFDialect",
         ":SerializeToCubin_stub",
@@ -5693,6 +5699,7 @@ cc_library(
     hdrs = ["include/mlir/Dialect/LLVMIR/ROCDLDialect.h"],
     includes = ["include"],
     deps = [
+        ":GPUDialect",
         ":IR",
         ":LLVMDialect",
         ":ROCDLOpsIncGen",
@@ -5703,11 +5710,34 @@ cc_library(
     ],
 )
 
+cc_library(
+    name = "ROCDLTarget",
+    srcs = ["lib/Target/LLVM/ROCDL/Target.cpp"],
+    hdrs = glob(["include/mlir/Target/LLVM/ROCDL/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":GPUDialect",
+        ":GPUToLLVMIRTranslation",
+        ":LLVMToLLVMIRTranslation",
+        ":ROCDLDialect",
+        ":ROCDLToLLVMIRTranslation",
+        ":Support",
+        ":TargetLLVM",
+        ":ToLLVMIRTranslation",
+        "//llvm:Core",
+        "//llvm:MC",
+        "//llvm:MCParser",
+        "//llvm:Support",
+        "//llvm:TargetParser",
+    ],
+)
+
 td_library(
     name = "ROCDLOpsTdFiles",
     srcs = ["include/mlir/Dialect/LLVMIR/ROCDLOps.td"],
     includes = ["include"],
     deps = [
+        ":GPUOpsTdFiles",
         ":LLVMOpsTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
@@ -5739,6 +5769,20 @@ gentbl_cc_library(
                 "-dialect=rocdl",
             ],
             "include/mlir/Dialect/LLVMIR/ROCDLOpsDialect.cpp.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-decls",
+                "-attrdefs-dialect=rocdl",
+            ],
+            "include/mlir/Dialect/LLVMIR/ROCDLOpsAttributes.h.inc",
+        ),
+        (
+            [
+                "-gen-attrdef-defs",
+                "-attrdefs-dialect=rocdl",
+            ],
+            "include/mlir/Dialect/LLVMIR/ROCDLOpsAttributes.cpp.inc",
         ),
     ],
     tblgen = ":mlir-tblgen",
@@ -7813,7 +7857,10 @@ cc_library(
 
 cc_library(
     name = "GPUToLLVMIRTranslation",
-    srcs = ["lib/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.cpp"],
+    srcs = [
+        "lib/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.cpp",
+        "lib/Target/LLVMIR/Dialect/GPU/SelectObjectAttr.cpp",
+    ],
     hdrs = ["include/mlir/Target/LLVMIR/Dialect/GPU/GPUToLLVMIRTranslation.h"],
     includes = ["include"],
     deps = [
@@ -7952,6 +7999,8 @@ cc_library(
         ":DLTIDialect",
         ":FuncDialect",
         ":IR",
+        ":NVVMTarget",
+        ":ROCDLTarget",
         ":ToLLVMIRTranslation",
         ":TranslateLib",
         "//llvm:Core",

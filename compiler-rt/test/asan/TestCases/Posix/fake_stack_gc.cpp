@@ -33,7 +33,7 @@ static void Handler(int signo) {
   // Trigger GC and create a lot of frame to reuse "Thread" frame if it was
   // discarded.
   for (int i = 0; i < 1000; ++i)
-    Fn<1000>();
+    Fn<100>();
   // If we discarder and reused "Thread" frame, the next line will crash with
   // false report.
   *on_thread = 10;

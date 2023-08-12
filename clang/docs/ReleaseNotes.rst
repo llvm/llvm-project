@@ -240,12 +240,18 @@ Miscellaneous Clang Crashes Fixed
   terminated. Clang should now also recover better when an @end is missing
   between blocks.
   `Issue 64065 <https://github.com/llvm/llvm-project/issues/64065>`_
+- Fixed a crash when check array access on zero-length element.
+  `Issue 64564 <https://github.com/llvm/llvm-project/issues/64564>`_
 
 Target Specific Changes
 -----------------------
 
 AMDGPU Support
 ^^^^^^^^^^^^^^
+- Use pass-by-reference (byref) in stead of pass-by-value (byval) for struct
+  arguments in C ABI. Callee is responsible for allocating stack memory and
+  copying the value of the struct if modified. Note that AMDGPU backend still
+  supports byval for struct arguments.
 
 X86 Support
 ^^^^^^^^^^^
@@ -292,6 +298,7 @@ Floating Point Support in Clang
 - Add ``__builtin_set_flt_rounds`` builtin for X86, x86_64, Arm and AArch64 only.
 - Add ``__builtin_elementwise_pow`` builtin for floating point types only.
 - Add ``__builtin_elementwise_bitreverse`` builtin for integer types only.
+- Add ``__builtin_elementwise_sqrt`` builtin for floating point types only.
 
 AST Matchers
 ------------
@@ -303,6 +310,8 @@ clang-format
 
 libclang
 --------
+
+- Exposed arguments of ``clang::annotate``.
 
 Static Analyzer
 ---------------

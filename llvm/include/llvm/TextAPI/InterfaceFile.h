@@ -254,6 +254,12 @@ public:
   /// Check if the library is application extension safe.
   bool isApplicationExtensionSafe() const { return IsAppExtensionSafe; }
 
+  /// Check if the library has simulator support.
+  bool hasSimulatorSupport() const { return HasSimSupport; }
+
+  /// Specify if the library has simulator support.
+  void setSimulatorSupport(bool V = true) { HasSimSupport = V; }
+
   /// Set the Objective-C constraint.
   void setObjCConstraint(ObjCConstraintType Constraint) {
     ObjcConstraint = Constraint;
@@ -451,6 +457,7 @@ private:
   uint8_t SwiftABIVersion{0};
   bool IsTwoLevelNamespace{false};
   bool IsAppExtensionSafe{false};
+  bool HasSimSupport{false};
   ObjCConstraintType ObjcConstraint = ObjCConstraintType::None;
   std::vector<std::pair<Target, std::string>> ParentUmbrellas;
   std::vector<InterfaceFileRef> AllowableClients;

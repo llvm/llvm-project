@@ -505,8 +505,8 @@ enum Rounding {
 const unsigned RoundingBitsPos = 22;
 
 // Registers used to pass function arguments.
-const ArrayRef<MCPhysReg> getGPRArgRegs();
-const ArrayRef<MCPhysReg> getFPRArgRegs();
+ArrayRef<MCPhysReg> getGPRArgRegs();
+ArrayRef<MCPhysReg> getFPRArgRegs();
 
 } // namespace AArch64
 

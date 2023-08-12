@@ -326,12 +326,22 @@ LogicalResult GPUDialect::verifyOperationAttribute(Operation *op,
             LaunchFuncOp::getKernelAttrName(launchOp->getName())))
       return success();
 
-    // Check that `launch_func` refers to a well-formed GPU kernel module.
-    StringAttr kernelModuleName = launchOp.getKernelModuleName();
-    auto kernelModule = module.lookupSymbol<GPUModuleOp>(kernelModuleName);
+    // Check that `launch_func` refers to a well-formed GPU kernel container.
+    StringAttr kernelContainerName = launchOp.getKernelModuleName();
+    Operation *kernelContainer = module.lookupSymbol(kernelContainerName);
+    if (!kernelContainer)
+      return launchOp.emitOpError()
+             << "kernel container '" << kernelContainerName.getValue()
+             << "' is undefined";
+
+    // If the container is a GPU binary op return success.
+    if (isa<BinaryOp>(kernelContainer))
+      return success();
+
+    auto kernelModule = dyn_cast<GPUModuleOp>(kernelContainer);
     if (!kernelModule)
       return launchOp.emitOpError()
-             << "kernel module '" << kernelModuleName.getValue()
+             << "kernel module '" << kernelContainerName.getValue()
              << "' is undefined";
 
     // Check that `launch_func` refers to a well-formed kernel function.
@@ -988,13 +998,45 @@ void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
   auto kernelSymbol =
       SymbolRefAttr::get(kernelModule.getNameAttr(),
                          {SymbolRefAttr::get(kernelFunc.getNameAttr())});
-  result.addAttribute(getKernelAttrName(result.name), kernelSymbol);
-  SmallVector<int32_t, 9> segmentSizes(9, 1);
-  segmentSizes.front() = asyncDependencies.size();
-  segmentSizes[segmentSizes.size() - 2] = dynamicSharedMemorySize ? 1 : 0;
-  segmentSizes.back() = static_cast<int32_t>(kernelOperands.size());
-  result.addAttribute(getOperandSegmentSizeAttr(),
-                      builder.getDenseI32ArrayAttr(segmentSizes));
+
+  Properties &prop = result.getOrAddProperties<Properties>();
+  prop.kernel = kernelSymbol;
+  size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
+  // Initialize the segment sizes to 1.
+  for (auto &sz : prop.operandSegmentSizes)
+    sz = 1;
+  prop.operandSegmentSizes[0] = asyncDependencies.size();
+  prop.operandSegmentSizes[segmentSizesLen - 3] =
+      dynamicSharedMemorySize ? 1 : 0;
+  prop.operandSegmentSizes[segmentSizesLen - 2] =
+      static_cast<int32_t>(kernelOperands.size());
+  prop.operandSegmentSizes[segmentSizesLen - 1] = 0;
+}
+
+void LaunchFuncOp::build(OpBuilder &builder, OperationState &result,
+                         SymbolRefAttr kernel, KernelDim3 gridSize,
+                         KernelDim3 getBlockSize, Value dynamicSharedMemorySize,
+                         ValueRange kernelOperands, Value asyncObject) {
+  // Add grid and block sizes as op operands, followed by the data operands.
+  result.addOperands({gridSize.x, gridSize.y, gridSize.z, getBlockSize.x,
+                      getBlockSize.y, getBlockSize.z});
+  if (dynamicSharedMemorySize)
+    result.addOperands(dynamicSharedMemorySize);
+  result.addOperands(kernelOperands);
+  if (asyncObject)
+    result.addOperands(asyncObject);
+  Properties &prop = result.getOrAddProperties<Properties>();
+  prop.kernel = kernel;
+  size_t segmentSizesLen = std::size(prop.operandSegmentSizes);
+  // Initialize the segment sizes to 1.
+  for (auto &sz : prop.operandSegmentSizes)
+    sz = 1;
+  prop.operandSegmentSizes[0] = 0;
+  prop.operandSegmentSizes[segmentSizesLen - 3] =
+      dynamicSharedMemorySize ? 1 : 0;
+  prop.operandSegmentSizes[segmentSizesLen - 2] =
+      static_cast<int32_t>(kernelOperands.size());
+  prop.operandSegmentSizes[segmentSizesLen - 1] = asyncObject ? 1 : 0;
 }
 
 StringAttr LaunchFuncOp::getKernelModuleName() {
@@ -1035,6 +1077,22 @@ LogicalResult LaunchFuncOp::verify() {
                        "' attribute");
 
   return success();
+}
+
+static ParseResult parseLaunchDimType(OpAsmParser &parser, Type &dimTy) {
+  if (succeeded(parser.parseOptionalColon())) {
+    if (parser.parseType(dimTy))
+      return failure();
+  } else {
+    dimTy = IndexType::get(parser.getContext());
+  }
+  return success();
+}
+
+static void printLaunchDimType(OpAsmPrinter &printer, Operation *op,
+                               Type dimTy) {
+  if (!dimTy.isIndex())
+    printer << ": " << dimTy;
 }
 
 static ParseResult parseLaunchFuncOperands(
@@ -1586,6 +1644,46 @@ void GPUModuleOp::setTargets(ArrayRef<TargetAttrInterface> targets) {
 }
 
 //===----------------------------------------------------------------------===//
+// GPUBinaryOp
+//===----------------------------------------------------------------------===//
+void BinaryOp::build(OpBuilder &builder, OperationState &result, StringRef name,
+                     Attribute offloadingHandler, ArrayAttr objects) {
+  auto &properties = result.getOrAddProperties<Properties>();
+  result.attributes.push_back(builder.getNamedAttr(
+      SymbolTable::getSymbolAttrName(), builder.getStringAttr(name)));
+  properties.objects = objects;
+  if (offloadingHandler)
+    properties.offloadingHandler = offloadingHandler;
+  else
+    properties.offloadingHandler = builder.getAttr<SelectObjectAttr>(nullptr);
+}
+
+void BinaryOp::build(OpBuilder &builder, OperationState &result, StringRef name,
+                     Attribute offloadingHandler, ArrayRef<Attribute> objects) {
+  build(builder, result, name, offloadingHandler,
+        objects.size() > 0 ? builder.getArrayAttr(objects) : ArrayAttr());
+}
+
+static ParseResult parseOffloadingHandler(OpAsmParser &parser,
+                                          Attribute &offloadingHandler) {
+  if (succeeded(parser.parseOptionalLess())) {
+    if (parser.parseAttribute(offloadingHandler))
+      return failure();
+    if (parser.parseGreater())
+      return failure();
+  }
+  if (!offloadingHandler)
+    offloadingHandler = parser.getBuilder().getAttr<SelectObjectAttr>(nullptr);
+  return success();
+}
+
+static void printOffloadingHandler(OpAsmPrinter &printer, Operation *op,
+                                   Attribute offloadingHandler) {
+  if (offloadingHandler != SelectObjectAttr::get(op->getContext(), nullptr))
+    printer << '<' << offloadingHandler << '>';
+}
+
+//===----------------------------------------------------------------------===//
 // GPUMemcpyOp
 //===----------------------------------------------------------------------===//
 
@@ -1854,6 +1952,27 @@ struct SimplifyDimOfAllocOp : public OpRewritePattern<memref::DimOp> {
 void AllocOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                           MLIRContext *context) {
   results.add<SimplifyDimOfAllocOp>(context);
+}
+
+//===----------------------------------------------------------------------===//
+// GPU select object attribute
+//===----------------------------------------------------------------------===//
+
+LogicalResult
+gpu::SelectObjectAttr::verify(function_ref<InFlightDiagnostic()> emitError,
+                              Attribute target) {
+  // Check `target`, it can be null, an integer attr or a GPU Target attribute.
+  if (target) {
+    if (auto intAttr = mlir::dyn_cast<IntegerAttr>(target)) {
+      if (intAttr.getInt() < 0) {
+        return emitError() << "The object index must be positive.";
+      }
+    } else if (!(::mlir::isa<TargetAttrInterface>(target))) {
+      return emitError()
+             << "The target attribute must be a GPU Target attribute.";
+    }
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

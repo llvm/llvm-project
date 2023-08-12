@@ -2557,17 +2557,35 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
   return nullptr;
 }
 
-static Instruction *hoistFNegAboveFMulFDiv(Value *FNegOp,
-                                           Instruction &FMFSource,
-                                           InstCombiner::BuilderTy &Builder) {
+Instruction *InstCombinerImpl::hoistFNegAboveFMulFDiv(Value *FNegOp,
+                                                      Instruction &FMFSource) {
   Value *X, *Y;
-  if (match(FNegOp, m_FMul(m_Value(X), m_Value(Y))))
-    return BinaryOperator::CreateFMulFMF(Builder.CreateFNegFMF(X, &FMFSource),
-                                         Y, &FMFSource);
+  if (match(FNegOp, m_FMul(m_Value(X), m_Value(Y)))) {
+    return cast<Instruction>(Builder.CreateFMulFMF(
+        Builder.CreateFNegFMF(X, &FMFSource), Y, &FMFSource));
+  }
 
-  if (match(FNegOp, m_FDiv(m_Value(X), m_Value(Y))))
-    return BinaryOperator::CreateFDivFMF(Builder.CreateFNegFMF(X, &FMFSource),
-                                         Y, &FMFSource);
+  if (match(FNegOp, m_FDiv(m_Value(X), m_Value(Y)))) {
+    return cast<Instruction>(Builder.CreateFDivFMF(
+        Builder.CreateFNegFMF(X, &FMFSource), Y, &FMFSource));
+  }
+
+  if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(FNegOp)) {
+    // Make sure to preserve flags and metadata on the call.
+    if (II->getIntrinsicID() == Intrinsic::ldexp) {
+      FastMathFlags FMF = FMFSource.getFastMathFlags();
+      FMF |= II->getFastMathFlags();
+
+      IRBuilder<>::FastMathFlagGuard FMFGuard(Builder);
+      Builder.setFastMathFlags(FMF);
+
+      CallInst *New = Builder.CreateCall(
+          II->getCalledFunction(),
+          {Builder.CreateFNeg(II->getArgOperand(0)), II->getArgOperand(1)});
+      New->copyMetadata(*II);
+      return New;
+    }
+  }
 
   return nullptr;
 }
@@ -2593,8 +2611,8 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
   if (!match(Op, m_OneUse(m_Value(OneUse))))
     return nullptr;
 
-  if (Instruction *R = hoistFNegAboveFMulFDiv(OneUse, I, Builder))
-    return R;
+  if (Instruction *R = hoistFNegAboveFMulFDiv(OneUse, I))
+    return replaceInstUsesWith(I, R);
 
   // Try to eliminate fneg if at least 1 arm of the select is negated.
   Value *Cond;

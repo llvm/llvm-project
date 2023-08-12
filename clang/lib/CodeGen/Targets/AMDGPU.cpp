@@ -248,6 +248,12 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty,
         return ABIArgInfo::getDirect();
       }
     }
+
+    // Use pass-by-reference in stead of pass-by-value for struct arguments in
+    // function ABI.
+    return ABIArgInfo::getIndirectAliased(
+        getContext().getTypeAlignInChars(Ty),
+        getContext().getTargetAddressSpace(LangAS::opencl_private));
   }
 
   // Otherwise just do the default thing.

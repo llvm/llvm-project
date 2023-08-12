@@ -2530,7 +2530,8 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
     case Builtin::BI__builtin_sqrtf:
     case Builtin::BI__builtin_sqrtf16:
     case Builtin::BI__builtin_sqrtl:
-    case Builtin::BI__builtin_sqrtf128: {
+    case Builtin::BI__builtin_sqrtf128:
+    case Builtin::BI__builtin_elementwise_sqrt: {
       llvm::Value *Call = emitUnaryMaybeConstrainedFPBuiltin(
           *this, E, Intrinsic::sqrt, Intrinsic::experimental_constrained_sqrt);
       SetSqrtFPAccuracy(Call);

@@ -16,6 +16,7 @@
 include "mlir/Dialect/DLTI/DLTIBase.td"
 include "mlir/Dialect/GPU/IR/GPUBase.td"
 include "mlir/Dialect/GPU/IR/CompilationAttrInterfaces.td"
+include "mlir/Dialect/GPU/IR/CompilationAttrs.td"
 include "mlir/Dialect/GPU/IR/ParallelLoopMapperAttr.td"
 include "mlir/Dialect/GPU/TransformOps/GPUDeviceMappingAttr.td"
 include "mlir/IR/EnumAttr.td"
@@ -430,14 +431,19 @@ def GPU_GPUFuncOp : GPU_Op<"func", [
   let hasVerifier = 1;
 }
 
-def GPU_LaunchFuncOp : GPU_Op<"launch_func",
-                              [GPU_AsyncOpInterface, AttrSizedOperandSegments]>,
+def LaunchIndx : AnyTypeOf<[Index, I32, I64]>;
+
+def GPU_LaunchFuncOp :GPU_Op<"launch_func", [
+      GPU_AsyncOpInterface, AttrSizedOperandSegments,
+      AllTypesMatch<["gridSizeX", "gridSizeY", "gridSizeZ", "blockSizeX",
+                     "blockSizeY", "blockSizeZ"]>]>,
     Arguments<(ins Variadic<GPU_AsyncToken>:$asyncDependencies,
                SymbolRefAttr:$kernel,
-               Index:$gridSizeX, Index:$gridSizeY, Index:$gridSizeZ,
-               Index:$blockSizeX, Index:$blockSizeY, Index:$blockSizeZ,
+               LaunchIndx:$gridSizeX, LaunchIndx:$gridSizeY, LaunchIndx:$gridSizeZ,
+               LaunchIndx:$blockSizeX, LaunchIndx:$blockSizeY, LaunchIndx:$blockSizeZ,
                Optional<I32>:$dynamicSharedMemorySize,
-               Variadic<AnyType>:$kernelOperands)>,
+               Variadic<AnyType>:$kernelOperands,
+               Optional<AnyType>:$asyncObject)>,
     Results<(outs Optional<GPU_AsyncToken>:$asyncToken)> {
   let summary = "Launches a function as a GPU kernel";
 
@@ -528,7 +534,11 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
       "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
       "ValueRange":$kernelOperands,
       CArg<"Type", "nullptr">:$asyncTokenType,
-      CArg<"ValueRange", "{}">:$asyncDependencies)>
+      CArg<"ValueRange", "{}">:$asyncDependencies)>,
+    OpBuilder<(ins "SymbolRefAttr":$kernel, "KernelDim3":$gridSize,
+      "KernelDim3":$blockSize, "Value":$dynamicSharedMemorySize,
+      "ValueRange":$kernelOperands,
+      CArg<"Value", "nullptr">:$asyncObject)>
   ];
 
   let extraClassDeclaration = [{
@@ -558,9 +568,11 @@ def GPU_LaunchFuncOp : GPU_Op<"launch_func",
 
   let assemblyFormat = [{
       custom<AsyncDependencies>(type($asyncToken), $asyncDependencies)
+      (`<` $asyncObject^ `:` type($asyncObject) `>`)?
       $kernel
-      `blocks` `in` ` ` `(`$gridSizeX`,` $gridSizeY`,` $gridSizeZ`)`
-      `threads` `in` ` ` `(`$blockSizeX`,` $blockSizeY`,` $blockSizeZ`)`
+      `blocks` `in` ` ` `(` $gridSizeX `,` $gridSizeY `,` $gridSizeZ `)`
+      `threads` `in` ` ` `(` $blockSizeX `,` $blockSizeY `,` $blockSizeZ `)`
+      custom<LaunchDimType>(type($gridSizeX))
       (`dynamic_shared_memory_size` $dynamicSharedMemorySize^)?
       custom<LaunchFuncOperands>($kernelOperands, type($kernelOperands)) attr-dict
   }];
@@ -1064,6 +1076,50 @@ def GPU_ModuleEndOp : GPU_Op<"module_end", [
   }];
 
   let assemblyFormat = "attr-dict";
+}
+
+def GPU_BinaryOp : GPU_Op<"binary", [Symbol]>, Arguments<(ins
+      SymbolNameAttr:$sym_name,
+      OptionalAttr<OffloadingTranslationAttr>:$offloadingHandler,
+      ConfinedAttr<GPUObjectArrayAttr, [ArrayMinCount<1>]>:$objects)
+    > {
+  let summary = "An Op for storing serialized GPU binary objects.";
+  let description = [{
+    GPU binaries provide a semantic mechanism for storing GPU objects,
+    e.g. the result of compiling a GPU module to an object file.
+
+    This operation has 3 arguments:
+     - The name of the binary.
+     - An optional attribute implementing the offloading LLVM translation interface.
+     - An array of GPU object attributes.
+
+    During translation, the offloading attribute will be called for translating
+    GPU `binary` and `launch_func` operations. The default offloading handler is:
+    `#gpu.select_object`, this handler selects the first object from the array
+    and embeds it as a string.
+
+    Examples:
+    ```
+      // Selects the first object.
+      gpu.binary @myobject [#gpu.object<...>, #gpu.object<...>]
+      // Uses the `#foo.my_handler` for handling the binary during translation.
+      gpu.binary @myobject <#foo.my_handler> [#gpu.object<...>, #gpu.object<...>]
+      // Selects the object with the `#rocdl.target` target attribute.
+      gpu.binary @myobject <#gpu.select_object<#rocdl.target>> [#gpu.object<...>, #gpu.object<#rocdl.target, ...>]
+    ```
+  }];
+  let builders = [
+    OpBuilder<(ins "StringRef":$name,
+                   "Attribute":$offloadingHandler,
+                   "ArrayAttr":$objects)>,
+    OpBuilder<(ins "StringRef":$name,
+                   "Attribute":$offloadingHandler,
+                   "ArrayRef<Attribute>":$objects)>
+  ];
+  let skipDefaultBuilders = 1;
+  let assemblyFormat = [{
+    $sym_name custom<OffloadingHandler>($offloadingHandler) attr-dict $objects
+  }];
 }
 
 def GPU_HostRegisterOp : GPU_Op<"host_register">,

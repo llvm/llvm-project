@@ -148,9 +148,9 @@ static const MCPhysReg FPRArgRegs[] = {AArch64::Q0, AArch64::Q1, AArch64::Q2,
                                        AArch64::Q3, AArch64::Q4, AArch64::Q5,
                                        AArch64::Q6, AArch64::Q7};
 
-const ArrayRef<MCPhysReg> llvm::AArch64::getGPRArgRegs() { return GPRArgRegs; }
+ArrayRef<MCPhysReg> llvm::AArch64::getGPRArgRegs() { return GPRArgRegs; }
 
-const ArrayRef<MCPhysReg> llvm::AArch64::getFPRArgRegs() { return FPRArgRegs; }
+ArrayRef<MCPhysReg> llvm::AArch64::getFPRArgRegs() { return FPRArgRegs; }
 
 static inline EVT getPackedSVEVectorVT(EVT VT) {
   switch (VT.getSimpleVT().SimpleTy) {
@@ -9987,19 +9987,31 @@ const char *AArch64TargetLowering::LowerXConstraint(EVT ConstraintVT) const {
   return "r";
 }
 
-enum PredicateConstraint {
-  Upl,
-  Upa,
-  Invalid
-};
+enum PredicateConstraint { Uph, Upl, Upa, Invalid };
 
 static PredicateConstraint parsePredicateConstraint(StringRef Constraint) {
-  PredicateConstraint P = PredicateConstraint::Invalid;
-  if (Constraint == "Upa")
-    P = PredicateConstraint::Upa;
-  if (Constraint == "Upl")
-    P = PredicateConstraint::Upl;
-  return P;
+  return StringSwitch<PredicateConstraint>(Constraint)
+      .Case("Uph", PredicateConstraint::Uph)
+      .Case("Upl", PredicateConstraint::Upl)
+      .Case("Upa", PredicateConstraint::Upa)
+      .Default(PredicateConstraint::Invalid);
+}
+
+static const TargetRegisterClass *
+getPredicateRegisterClass(PredicateConstraint Constraint, EVT VT) {
+  if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1)
+    return nullptr;
+
+  switch (Constraint) {
+  default:
+    return nullptr;
+  case PredicateConstraint::Uph:
+    return &AArch64::PPR_p8to15RegClass;
+  case PredicateConstraint::Upl:
+    return &AArch64::PPR_3bRegClass;
+  case PredicateConstraint::Upa:
+    return &AArch64::PPRRegClass;
+  }
 }
 
 // The set of cc code supported is from
@@ -10191,13 +10203,8 @@ AArch64TargetLowering::getRegForInlineAsmConstraint(
     }
   } else {
     PredicateConstraint PC = parsePredicateConstraint(Constraint);
-    if (PC != PredicateConstraint::Invalid) {
-      if (!VT.isScalableVector() || VT.getVectorElementType() != MVT::i1)
-        return std::make_pair(0U, nullptr);
-      bool restricted = (PC == PredicateConstraint::Upl);
-      return restricted ? std::make_pair(0U, &AArch64::PPR_3bRegClass)
-                        : std::make_pair(0U, &AArch64::PPRRegClass);
-    }
+    if (const TargetRegisterClass *RegClass = getPredicateRegisterClass(PC, VT))
+      return std::make_pair(0U, RegClass);
   }
   if (StringRef("{cc}").equals_insensitive(Constraint) ||
       parseConstraintCode(Constraint) != AArch64CC::Invalid)
@@ -15519,15 +15526,15 @@ bool AArch64TargetLowering::isLegalAddressingMode(const DataLayout &DL,
   if (!AM.HasBaseReg)
     return false;
 
-  // FIXME: Update this method to support scalable addressing modes.
-  if (Ty->isScalableTargetExtTy())
-    return AM.HasBaseReg && !AM.BaseOffs && !AM.Scale;
+  if (Ty->isScalableTy()) {
+    if (isa<ScalableVectorType>(Ty)) {
+      uint64_t VecElemNumBytes =
+          DL.getTypeSizeInBits(cast<VectorType>(Ty)->getElementType()) / 8;
+      return AM.HasBaseReg && !AM.BaseOffs &&
+             (AM.Scale == 0 || (uint64_t)AM.Scale == VecElemNumBytes);
+    }
 
-  if (isa<ScalableVectorType>(Ty)) {
-    uint64_t VecElemNumBytes =
-        DL.getTypeSizeInBits(cast<VectorType>(Ty)->getElementType()) / 8;
-    return AM.HasBaseReg && !AM.BaseOffs &&
-           (AM.Scale == 0 || (uint64_t)AM.Scale == VecElemNumBytes);
+    return AM.HasBaseReg && !AM.BaseOffs && !AM.Scale;
   }
 
   // check reg + imm case:

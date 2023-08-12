@@ -104,7 +104,7 @@ struct StructMultipleElements {
 // CHECK: %tmp = alloca %struct.StructEmpty, align 1, addrspace(5)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %tmp),
 __device__ void Test_Func_StructEmpty(StructEmpty) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z21Test_Kern_StructEmpty11StructEmpty(ptr addrspace(4) byref(%struct.StructEmpty) align 1 %0)
+// CHECK: define dso_local amdgpu_kernel void @_Z21Test_Kern_StructEmpty11StructEmpty(ptr addrspace(4) noundef byref(%struct.StructEmpty) align 1 %0)
 // CHECK: %coerce = alloca %struct.StructEmpty, align 1, addrspace(5)
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 1 %{{.+}}, ptr addrspace(4) align 1 %{{.+}}, i64 1, i1 false)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %coerce),
@@ -187,7 +187,7 @@ __global__ void Test_Kern_StructNoCopyNoMove(StructNoCopyNoMove) {}
 // CHECK-NOT: {{.*}}memcpy{{.*}}
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_Struct2Bytes(StructNBytes<2>) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct2Bytes12StructNBytesILj2EE(ptr addrspace(4) byref(%struct.StructNBytes) align 1 %0)
+// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct2Bytes12StructNBytesILj2EE(ptr addrspace(4) noundef byref(%struct.StructNBytes) align 1 %0)
 // CHECK: %coerce = alloca %struct.StructNBytes, align 1, addrspace(5)
 // CHECK-NOT: store
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 1 %{{.+}}, ptr addrspace(4) align 1 %{{.+}}, i64 2, i1 false)
@@ -202,7 +202,7 @@ __global__ void Test_Kern_Struct2Bytes(StructNBytes<2>) {}
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %{{.+}}, ptr align 4 %{{.+}}, i64 3, i1 false)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_Struct3Bytes(StructNBytes<3>) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct3Bytes12StructNBytesILj3EE(ptr addrspace(4) byref(%struct.StructNBytes.0) align 1 %0)
+// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct3Bytes12StructNBytesILj3EE(ptr addrspace(4) noundef byref(%struct.StructNBytes.0) align 1 %0)
 // CHECK: %coerce = alloca %struct.StructNBytes.0, align 1, addrspace(5)
 // CHECK-NOT: store
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 1 %{{.+}}, ptr addrspace(4) align 1 %{{.+}}, i64 3, i1 false)
@@ -214,7 +214,7 @@ __global__ void Test_Kern_Struct3Bytes(StructNBytes<3>) {}
 // CHECK-NOT: {{.*}}memcpy{{.*}}
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_Struct4Bytes(StructNBytes<4>) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct4Bytes12StructNBytesILj4EE(ptr addrspace(4) byref(%struct.StructNBytes.1) align 1 %0)
+// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct4Bytes12StructNBytesILj4EE(ptr addrspace(4) noundef byref(%struct.StructNBytes.1) align 1 %0)
 // CHECK: %coerce = alloca %struct.StructNBytes.1, align 1, addrspace(5)
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 1 %{{.+}}, ptr addrspace(4) align 1 %{{.+}}, i64 4, i1 false)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %coerce),
@@ -225,7 +225,7 @@ __global__ void Test_Kern_Struct4Bytes(StructNBytes<4>) {}
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %{{.+}}, ptr align 4 %{{.+}}, i64 5, i1 false)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_Struct5Bytes(StructNBytes<5>) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct5Bytes12StructNBytesILj5EE(ptr addrspace(4) byref(%struct.StructNBytes.2) align 1 %0)
+// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct5Bytes12StructNBytesILj5EE(ptr addrspace(4) noundef byref(%struct.StructNBytes.2) align 1 %0)
 // CHECK: %coerce = alloca %struct.StructNBytes.2, align 1, addrspace(5)
 // CHECK-NOT: store
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 1 %{{.+}}, ptr addrspace(4) align 1 %{{.+}}, i64 5, i1 false)
@@ -237,7 +237,7 @@ __global__ void Test_Kern_Struct5Bytes(StructNBytes<5>) {}
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %{{.+}}, ptr align 4 %{{.+}}, i64 6, i1 false)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_Struct6Bytes(StructNBytes<6>) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct6Bytes12StructNBytesILj6EE(ptr addrspace(4) byref(%struct.StructNBytes.3) align 1 %0)
+// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct6Bytes12StructNBytesILj6EE(ptr addrspace(4) noundef byref(%struct.StructNBytes.3) align 1 %0)
 // CHECK: %coerce = alloca %struct.StructNBytes.3, align 1, addrspace(5)
 // CHECK-NOT: store
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 1 %{{.+}}, ptr addrspace(4) align 1 %{{.+}}, i64 6, i1 false)
@@ -249,7 +249,7 @@ __global__ void Test_Kern_Struct6Bytes(StructNBytes<6>) {}
 // CHECK: call void @llvm.memcpy.p0.p0.i64(ptr align 1 %{{.+}}, ptr align 4 %{{.+}}, i64 7, i1 false)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_Struct7Bytes(StructNBytes<7>) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct7Bytes12StructNBytesILj7EE(ptr addrspace(4) byref(%struct.StructNBytes.4) align 1 %0)
+// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct7Bytes12StructNBytesILj7EE(ptr addrspace(4) noundef byref(%struct.StructNBytes.4) align 1 %0)
 // CHECK: %coerce = alloca %struct.StructNBytes.4, align 1, addrspace(5)
 // CHECK-NOT: store
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 1 %{{.+}}, ptr addrspace(4) align 1 %{{.+}}, i64 7, i1 false)
@@ -261,7 +261,7 @@ __global__ void Test_Kern_Struct7Bytes(StructNBytes<7>) {}
 // CHECK-NOT: {{.*}}memcpy{{.*}}
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_Struct8Bytes(StructNBytes<8>) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct8Bytes12StructNBytesILj8EE(ptr addrspace(4) byref(%struct.StructNBytes.5) align 1 %0)
+// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct8Bytes12StructNBytesILj8EE(ptr addrspace(4) noundef byref(%struct.StructNBytes.5) align 1 %0)
 // CHECK: %coerce = alloca %struct.StructNBytes.5, align 1, addrspace(5)
 // CHECK-NOT: store
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 1 %{{.+}}, ptr addrspace(4) align 1 %{{.+}}, i64 8, i1 false)
@@ -274,17 +274,15 @@ __global__ void Test_Kern_Struct8Bytes(StructNBytes<8>) {}
 // CHECK-NOT: {{.*}}memcpy{{.*}}
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_Struct9Bytes(StructNBytes<9>) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct9Bytes12StructNBytesILj9EE(ptr addrspace(4) byref(%struct.StructNBytes.6) align 1 %0)
+// CHECK: define dso_local amdgpu_kernel void @_Z22Test_Kern_Struct9Bytes12StructNBytesILj9EE(ptr addrspace(4) noundef byref(%struct.StructNBytes.6) align 1 %0)
 // CHECK: %coerce = alloca %struct.StructNBytes.6, align 1, addrspace(5)
 // CHECK-NOT: store
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 1 %{{.+}}, ptr addrspace(4) align 1 %{{.+}}, i64 9, i1 false)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %coerce),
 __global__ void Test_Kern_Struct9Bytes(StructNBytes<9>) {}
-// CHECK: define dso_local void @_Z23Test_Func_Struct64Bytes12StructNBytesILj64EE(ptr addrspace(5) noundef byval(%struct.StructNBytes.7) align 1 %0)
-// CHECK-NOT: alloca
-// CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %0),
+// CHECK: define dso_local void @_Z23Test_Func_Struct64Bytes12StructNBytesILj64EE(ptr addrspace(5) noundef byref(%struct.StructNBytes.7) align 1 %0)
 __device__ void Test_Func_Struct64Bytes(StructNBytes<64>) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z23Test_Kern_Struct64Bytes12StructNBytesILj64EE(ptr addrspace(4) byref(%struct.StructNBytes.7) align 1 %0)
+// CHECK: define dso_local amdgpu_kernel void @_Z23Test_Kern_Struct64Bytes12StructNBytesILj64EE(ptr addrspace(4) noundef byref(%struct.StructNBytes.7) align 1 %0)
 // CHECK: %coerce = alloca %struct.StructNBytes.7, align 1, addrspace(5)
 // CHECK-NOT: store
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 1 %{{.+}}, ptr addrspace(4) align 1 %{{.+}}, i64 64, i1 false)
@@ -502,7 +500,7 @@ __global__ void Test_Kern_StructSinglePointerElement(StructSinglePointerElement)
 // CHECK: store ptr
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_StructPointerElements(StructPointerElements) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z31Test_Kern_StructPointerElements21StructPointerElements(ptr addrspace(4) byref(%struct.StructPointerElements) align 8 %{{.+}})
+// CHECK: define dso_local amdgpu_kernel void @_Z31Test_Kern_StructPointerElements21StructPointerElements(ptr addrspace(4) noundef byref(%struct.StructPointerElements) align 8 %{{.+}})
 // CHECK: %coerce = alloca %struct.StructPointerElements, align 8, addrspace(5)
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 8 %{{.+}}, ptr addrspace(4) align 8 %{{.+}}, i64 16, i1 false)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %coerce),
@@ -514,16 +512,14 @@ __global__ void Test_Kern_StructPointerElements(StructPointerElements) {}
 // CHECK-NOT: {{.*}}memcpy{{.*}}
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %[[#ALLOCA]]),
 __device__ void Test_Func_ParamRegLimitExpandedStruct(int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int32_t, StructMultipleElements) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z37Test_Kern_ParamRegLimitExpandedStructlllllli22StructMultipleElements(i64 noundef %0, i64 noundef %1, i64 noundef %2, i64 noundef %3, i64 noundef %4, i64 noundef %5, i32 noundef %6, ptr addrspace(4) byref(%struct.StructMultipleElements) align 8 %7)
+// CHECK: define dso_local amdgpu_kernel void @_Z37Test_Kern_ParamRegLimitExpandedStructlllllli22StructMultipleElements(i64 noundef %0, i64 noundef %1, i64 noundef %2, i64 noundef %3, i64 noundef %4, i64 noundef %5, i32 noundef %6, ptr addrspace(4) noundef byref(%struct.StructMultipleElements) align 8 %7)
 // CHECK: %coerce = alloca %struct.StructMultipleElements, align 8, addrspace(5)
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 8 %{{.+}}, ptr addrspace(4) align 8 %{{.+}}, i64 16, i1 false)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %coerce),
 __global__ void Test_Kern_ParamRegLimitExpandedStruct(int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int32_t, StructMultipleElements) {}
-// CHECK: define dso_local void @_Z39Test_Func_ParamRegLimitUnexpandedStructlllllll22StructMultipleElements(i64 noundef %0, i64 noundef %1, i64 noundef %2, i64 noundef %3, i64 noundef %4, i64 noundef %5, i64 noundef %6, ptr addrspace(5) noundef byval(%struct.StructMultipleElements) align 8 %7)
-// CHECK-NOT: {{.*}}memcpy{{.*}}
-// CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %7),
+// CHECK: define dso_local void @_Z39Test_Func_ParamRegLimitUnexpandedStructlllllll22StructMultipleElements(i64 noundef %0, i64 noundef %1, i64 noundef %2, i64 noundef %3, i64 noundef %4, i64 noundef %5, i64 noundef %6, ptr addrspace(5) noundef byref(%struct.StructMultipleElements) align 8 %7)
 __device__ void Test_Func_ParamRegLimitUnexpandedStruct(int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, int64_t, StructMultipleElements) {}
-// CHECK: define dso_local amdgpu_kernel void @_Z39Test_Kern_ParamRegLimitUnexpandedStructlllllll22StructMultipleElements(i64 noundef %0, i64 noundef %1, i64 noundef %2, i64 noundef %3, i64 noundef %4, i64 noundef %5, i64 noundef %6, ptr addrspace(4) byref(%struct.StructMultipleElements) align 8 %7)
+// CHECK: define dso_local amdgpu_kernel void @_Z39Test_Kern_ParamRegLimitUnexpandedStructlllllll22StructMultipleElements(i64 noundef %0, i64 noundef %1, i64 noundef %2, i64 noundef %3, i64 noundef %4, i64 noundef %5, i64 noundef %6, ptr addrspace(4) noundef byref(%struct.StructMultipleElements) align 8 %7)
 // CHECK: %coerce = alloca %struct.StructMultipleElements, align 8, addrspace(5)
 // CHECK: call void @llvm.memcpy.p0.p4.i64(ptr align 8 %{{.+}}, ptr addrspace(4) align 8 %{{.+}}, i64 16, i1 false)
 // CHECK: call void @llvm.dbg.def(metadata !{{[0-9]+}}, metadata ptr addrspace(5) %coerce),

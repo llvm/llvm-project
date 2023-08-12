@@ -109,6 +109,12 @@ int __llvm_profile_merge_from_buffer(const char *ProfileData,
         "Instead, merge raw profiles using the llvm-profdata tool.");
     return 1;
   }
+  if (__llvm_profile_get_version() & VARIANT_MASK_TEMPORAL_PROF) {
+    PROF_ERR("%s\n",
+             "Temporal profiles do not support profile merging at runtime. "
+             "Instead, merge raw profiles using the llvm-profdata tool.");
+    return 1;
+  }
 
   __llvm_profile_data *SrcDataStart, *SrcDataEnd, *SrcData, *DstData;
   __llvm_profile_header *Header = (__llvm_profile_header *)ProfileData;
