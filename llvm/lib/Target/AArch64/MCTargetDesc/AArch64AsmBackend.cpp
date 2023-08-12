@@ -314,6 +314,13 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
     return (Value >> 2) & 0x3fff;
   case AArch64::fixup_aarch64_pcrel_branch26:
   case AArch64::fixup_aarch64_pcrel_call26:
+    if (TheTriple.isOSBinFormatCOFF() && !IsResolved && SignedValue != 0) {
+      // MSVC link.exe and lld do not support this relocation type
+      // with a non-zero offset
+      Ctx.reportError(Fixup.getLoc(),
+                      "cannot perform a PC-relative fixup with a non-zero "
+                      "symbol offset");
+    }
     // Signed 28-bit immediate
     if (!isInt<28>(SignedValue))
       Ctx.reportError(Fixup.getLoc(), "fixup value out of range");
