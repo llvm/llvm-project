@@ -25,7 +25,7 @@ declare <16 x half> @_Z5ldexpDv16_DhDv16_i(<16 x half>, <16 x i32>)
 define float @test_ldexp_f32(float %x, i32 %y) {
 ; CHECK-LABEL: define float @test_ldexp_f32
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call float @_Z5ldexpfi(float [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
   %ldexp = tail call float @_Z5ldexpfi(float %x, i32 %y)
@@ -35,7 +35,7 @@ define float @test_ldexp_f32(float %x, i32 %y) {
 define float @test_ldexp_f32_fast(float %x, i32 %y) {
 ; CHECK-LABEL: define float @test_ldexp_f32_fast
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call fast float @_Z5ldexpfi(float [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call fast float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
   %ldexp = tail call fast float @_Z5ldexpfi(float %x, i32 %y)
@@ -45,7 +45,7 @@ define float @test_ldexp_f32_fast(float %x, i32 %y) {
 define <2 x float> @test_ldexp_v2f32(<2 x float> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x float> @test_ldexp_v2f32
 ; CHECK-SAME: (<2 x float> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <2 x float> @_Z5ldexpDv2_fDv2_i(<2 x float> [[X]], <2 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> [[X]], <2 x i32> [[Y]])
 ; CHECK-NEXT:    ret <2 x float> [[LDEXP]]
 ;
   %ldexp = tail call <2 x float> @_Z5ldexpDv2_fDv2_i(<2 x float> %x, <2 x i32> %y)
@@ -55,7 +55,7 @@ define <2 x float> @test_ldexp_v2f32(<2 x float> %x, <2 x i32> %y) {
 define <3 x float> @test_ldexp_v3f32(<3 x float> %x, <3 x i32> %y) {
 ; CHECK-LABEL: define <3 x float> @test_ldexp_v3f32
 ; CHECK-SAME: (<3 x float> [[X:%.*]], <3 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <3 x float> @_Z5ldexpDv3_fDv3_i(<3 x float> [[X]], <3 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <3 x float> @llvm.ldexp.v3f32.v3i32(<3 x float> [[X]], <3 x i32> [[Y]])
 ; CHECK-NEXT:    ret <3 x float> [[LDEXP]]
 ;
   %ldexp = tail call <3 x float> @_Z5ldexpDv3_fDv3_i(<3 x float> %x, <3 x i32> %y)
@@ -65,7 +65,7 @@ define <3 x float> @test_ldexp_v3f32(<3 x float> %x, <3 x i32> %y) {
 define <4 x float> @test_ldexp_v4f32(<4 x float> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x float> @test_ldexp_v4f32
 ; CHECK-SAME: (<4 x float> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <4 x float> @_Z5ldexpDv4_fDv4_i(<4 x float> [[X]], <4 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <4 x float> @llvm.ldexp.v4f32.v4i32(<4 x float> [[X]], <4 x i32> [[Y]])
 ; CHECK-NEXT:    ret <4 x float> [[LDEXP]]
 ;
   %ldexp = tail call <4 x float> @_Z5ldexpDv4_fDv4_i(<4 x float> %x, <4 x i32> %y)
@@ -75,7 +75,7 @@ define <4 x float> @test_ldexp_v4f32(<4 x float> %x, <4 x i32> %y) {
 define <8 x float> @test_ldexp_v8f32(<8 x float> %x, <8 x i32> %y) {
 ; CHECK-LABEL: define <8 x float> @test_ldexp_v8f32
 ; CHECK-SAME: (<8 x float> [[X:%.*]], <8 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <8 x float> @_Z5ldexpDv8_fDv8_i(<8 x float> [[X]], <8 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <8 x float> @llvm.ldexp.v8f32.v8i32(<8 x float> [[X]], <8 x i32> [[Y]])
 ; CHECK-NEXT:    ret <8 x float> [[LDEXP]]
 ;
   %ldexp = tail call <8 x float> @_Z5ldexpDv8_fDv8_i(<8 x float> %x, <8 x i32> %y)
@@ -85,7 +85,7 @@ define <8 x float> @test_ldexp_v8f32(<8 x float> %x, <8 x i32> %y) {
 define <16 x float> @test_ldexp_v16f32(<16 x float> %x, <16 x i32> %y) {
 ; CHECK-LABEL: define <16 x float> @test_ldexp_v16f32
 ; CHECK-SAME: (<16 x float> [[X:%.*]], <16 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <16 x float> @_Z5ldexpDv16_fDv16_i(<16 x float> [[X]], <16 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <16 x float> @llvm.ldexp.v16f32.v16i32(<16 x float> [[X]], <16 x i32> [[Y]])
 ; CHECK-NEXT:    ret <16 x float> [[LDEXP]]
 ;
   %ldexp = tail call <16 x float> @_Z5ldexpDv16_fDv16_i(<16 x float> %x, <16 x i32> %y)
@@ -95,7 +95,7 @@ define <16 x float> @test_ldexp_v16f32(<16 x float> %x, <16 x i32> %y) {
 define double @test_ldexp_f64(double %x, i32 %y) {
 ; CHECK-LABEL: define double @test_ldexp_f64
 ; CHECK-SAME: (double [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call double @_Z5ldexpdi(double [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call double @llvm.ldexp.f64.i32(double [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret double [[LDEXP]]
 ;
   %ldexp = tail call double @_Z5ldexpdi(double %x, i32 %y)
@@ -105,7 +105,7 @@ define double @test_ldexp_f64(double %x, i32 %y) {
 define <2 x double> @test_ldexp_v2f64(<2 x double> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x double> @test_ldexp_v2f64
 ; CHECK-SAME: (<2 x double> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <2 x double> @_Z5ldexpDv2_dDv2_i(<2 x double> [[X]], <2 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <2 x double> @llvm.ldexp.v2f64.v2i32(<2 x double> [[X]], <2 x i32> [[Y]])
 ; CHECK-NEXT:    ret <2 x double> [[LDEXP]]
 ;
   %ldexp = tail call <2 x double> @_Z5ldexpDv2_dDv2_i(<2 x double> %x, <2 x i32> %y)
@@ -115,7 +115,7 @@ define <2 x double> @test_ldexp_v2f64(<2 x double> %x, <2 x i32> %y) {
 define <3 x double> @test_ldexp_v3f64(<3 x double> %x, <3 x i32> %y) {
 ; CHECK-LABEL: define <3 x double> @test_ldexp_v3f64
 ; CHECK-SAME: (<3 x double> [[X:%.*]], <3 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <3 x double> @_Z5ldexpDv3_dDv3_i(<3 x double> [[X]], <3 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <3 x double> @llvm.ldexp.v3f64.v3i32(<3 x double> [[X]], <3 x i32> [[Y]])
 ; CHECK-NEXT:    ret <3 x double> [[LDEXP]]
 ;
   %ldexp = tail call <3 x double> @_Z5ldexpDv3_dDv3_i(<3 x double> %x, <3 x i32> %y)
@@ -125,7 +125,7 @@ define <3 x double> @test_ldexp_v3f64(<3 x double> %x, <3 x i32> %y) {
 define <4 x double> @test_ldexp_v4f64(<4 x double> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x double> @test_ldexp_v4f64
 ; CHECK-SAME: (<4 x double> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <4 x double> @_Z5ldexpDv4_dDv4_i(<4 x double> [[X]], <4 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <4 x double> @llvm.ldexp.v4f64.v4i32(<4 x double> [[X]], <4 x i32> [[Y]])
 ; CHECK-NEXT:    ret <4 x double> [[LDEXP]]
 ;
   %ldexp = tail call <4 x double> @_Z5ldexpDv4_dDv4_i(<4 x double> %x, <4 x i32> %y)
@@ -135,7 +135,7 @@ define <4 x double> @test_ldexp_v4f64(<4 x double> %x, <4 x i32> %y) {
 define <8 x double> @test_ldexp_v8f64(<8 x double> %x, <8 x i32> %y) {
 ; CHECK-LABEL: define <8 x double> @test_ldexp_v8f64
 ; CHECK-SAME: (<8 x double> [[X:%.*]], <8 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <8 x double> @_Z5ldexpDv8_dDv8_i(<8 x double> [[X]], <8 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <8 x double> @llvm.ldexp.v8f64.v8i32(<8 x double> [[X]], <8 x i32> [[Y]])
 ; CHECK-NEXT:    ret <8 x double> [[LDEXP]]
 ;
   %ldexp = tail call <8 x double> @_Z5ldexpDv8_dDv8_i(<8 x double> %x, <8 x i32> %y)
@@ -145,7 +145,7 @@ define <8 x double> @test_ldexp_v8f64(<8 x double> %x, <8 x i32> %y) {
 define <16 x double> @test_ldexp_v16f64(<16 x double> %x, <16 x i32> %y) {
 ; CHECK-LABEL: define <16 x double> @test_ldexp_v16f64
 ; CHECK-SAME: (<16 x double> [[X:%.*]], <16 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <16 x double> @_Z5ldexpDv16_dDv16_i(<16 x double> [[X]], <16 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <16 x double> @llvm.ldexp.v16f64.v16i32(<16 x double> [[X]], <16 x i32> [[Y]])
 ; CHECK-NEXT:    ret <16 x double> [[LDEXP]]
 ;
   %ldexp = tail call <16 x double> @_Z5ldexpDv16_dDv16_i(<16 x double> %x, <16 x i32> %y)
@@ -155,7 +155,7 @@ define <16 x double> @test_ldexp_v16f64(<16 x double> %x, <16 x i32> %y) {
 define half @test_ldexp_f16(half %x, i32 %y) {
 ; CHECK-LABEL: define half @test_ldexp_f16
 ; CHECK-SAME: (half [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call half @_Z5ldexpDhi(half [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call half @llvm.ldexp.f16.i32(half [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret half [[LDEXP]]
 ;
   %ldexp = tail call half @_Z5ldexpDhi(half %x, i32 %y)
@@ -165,7 +165,7 @@ define half @test_ldexp_f16(half %x, i32 %y) {
 define <2 x half> @test_ldexp_v2f16(<2 x half> %x, <2 x i32> %y) {
 ; CHECK-LABEL: define <2 x half> @test_ldexp_v2f16
 ; CHECK-SAME: (<2 x half> [[X:%.*]], <2 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <2 x half> @_Z5ldexpDv2_DhDv2_i(<2 x half> [[X]], <2 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> [[X]], <2 x i32> [[Y]])
 ; CHECK-NEXT:    ret <2 x half> [[LDEXP]]
 ;
   %ldexp = tail call <2 x half> @_Z5ldexpDv2_DhDv2_i(<2 x half> %x, <2 x i32> %y)
@@ -175,7 +175,7 @@ define <2 x half> @test_ldexp_v2f16(<2 x half> %x, <2 x i32> %y) {
 define <3 x half> @test_ldexp_v3f16(<3 x half> %x, <3 x i32> %y) {
 ; CHECK-LABEL: define <3 x half> @test_ldexp_v3f16
 ; CHECK-SAME: (<3 x half> [[X:%.*]], <3 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <3 x half> @_Z5ldexpDv3_DhDv3_i(<3 x half> [[X]], <3 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <3 x half> @llvm.ldexp.v3f16.v3i32(<3 x half> [[X]], <3 x i32> [[Y]])
 ; CHECK-NEXT:    ret <3 x half> [[LDEXP]]
 ;
   %ldexp = tail call <3 x half> @_Z5ldexpDv3_DhDv3_i(<3 x half> %x, <3 x i32> %y)
@@ -185,7 +185,7 @@ define <3 x half> @test_ldexp_v3f16(<3 x half> %x, <3 x i32> %y) {
 define <4 x half> @test_ldexp_v4f16(<4 x half> %x, <4 x i32> %y) {
 ; CHECK-LABEL: define <4 x half> @test_ldexp_v4f16
 ; CHECK-SAME: (<4 x half> [[X:%.*]], <4 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <4 x half> @_Z5ldexpDv4_DhDv4_i(<4 x half> [[X]], <4 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <4 x half> @llvm.ldexp.v4f16.v4i32(<4 x half> [[X]], <4 x i32> [[Y]])
 ; CHECK-NEXT:    ret <4 x half> [[LDEXP]]
 ;
   %ldexp = tail call <4 x half> @_Z5ldexpDv4_DhDv4_i(<4 x half> %x, <4 x i32> %y)
@@ -195,7 +195,7 @@ define <4 x half> @test_ldexp_v4f16(<4 x half> %x, <4 x i32> %y) {
 define <8 x half> @test_ldexp_v8f16(<8 x half> %x, <8 x i32> %y) {
 ; CHECK-LABEL: define <8 x half> @test_ldexp_v8f16
 ; CHECK-SAME: (<8 x half> [[X:%.*]], <8 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <8 x half> @_Z5ldexpDv8_DhDv8_i(<8 x half> [[X]], <8 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <8 x half> @llvm.ldexp.v8f16.v8i32(<8 x half> [[X]], <8 x i32> [[Y]])
 ; CHECK-NEXT:    ret <8 x half> [[LDEXP]]
 ;
   %ldexp = tail call <8 x half> @_Z5ldexpDv8_DhDv8_i(<8 x half> %x, <8 x i32> %y)
@@ -205,7 +205,7 @@ define <8 x half> @test_ldexp_v8f16(<8 x half> %x, <8 x i32> %y) {
 define <16 x half> @test_ldexp_v16f16(<16 x half> %x, <16 x i32> %y) {
 ; CHECK-LABEL: define <16 x half> @test_ldexp_v16f16
 ; CHECK-SAME: (<16 x half> [[X:%.*]], <16 x i32> [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <16 x half> @_Z5ldexpDv16_DhDv16_i(<16 x half> [[X]], <16 x i32> [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call <16 x half> @llvm.ldexp.v16f16.v16i32(<16 x half> [[X]], <16 x i32> [[Y]])
 ; CHECK-NEXT:    ret <16 x half> [[LDEXP]]
 ;
   %ldexp = tail call <16 x half> @_Z5ldexpDv16_DhDv16_i(<16 x half> %x, <16 x i32> %y)
@@ -215,7 +215,7 @@ define <16 x half> @test_ldexp_v16f16(<16 x half> %x, <16 x i32> %y) {
 define float @test_ldexp_f32_minsize(float %x, i32 %y) #3 {
 ; CHECK-LABEL: define float @test_ldexp_f32_minsize
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) #[[ATTR0:[0-9]+]] {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call float @_Z5ldexpfi(float [[X]], i32 [[Y]])
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call float @llvm.ldexp.f32.i32(float [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
   %ldexp = tail call float @_Z5ldexpfi(float %x, i32 %y)
@@ -225,7 +225,7 @@ define float @test_ldexp_f32_minsize(float %x, i32 %y) #3 {
 define float @test_ldexp_f32_nobuiltin(float %x, i32 %y) {
 ; CHECK-LABEL: define float @test_ldexp_f32_nobuiltin
 ; CHECK-SAME: (float [[X:%.*]], i32 [[Y:%.*]]) {
-; CHECK-NEXT:    [[LDEXP:%.*]] = tail call float @_Z5ldexpfi(float [[X]], i32 [[Y]]) #[[ATTR2:[0-9]+]]
+; CHECK-NEXT:    [[LDEXP:%.*]] = tail call float @_Z5ldexpfi(float [[X]], i32 [[Y]]) #[[ATTR3:[0-9]+]]
 ; CHECK-NEXT:    ret float [[LDEXP]]
 ;
   %ldexp = tail call float @_Z5ldexpfi(float %x, i32 %y) #0
