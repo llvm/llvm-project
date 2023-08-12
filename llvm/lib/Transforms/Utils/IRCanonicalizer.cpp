@@ -28,6 +28,7 @@
 #include "llvm/PassRegistry.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Transforms/Utils.h"
+#include "llvm/Transforms/Utils/IRCanonicalizer.h"
 #include <algorithm>
 #include <vector>
 
@@ -37,10 +38,8 @@ using namespace llvm;
 
 namespace {
 /// IRCanonicalizer aims to transform LLVM IR into canonical form.
-class IRCanonicalizer : public FunctionPass {
+class IRCanonicalizer {
 public:
-  static char ID;
-
   /// \name Canonicalizer flags.
   /// @{
   /// Preserves original order of instructions.
@@ -53,10 +52,7 @@ public:
   static cl::opt<bool> ReorderOperands;
   /// @}
 
-  /// Constructor for the IRCanonicalizer.
-  IRCanonicalizer() : FunctionPass(ID) {}
-
-  bool runOnFunction(Function &F) override;
+  bool runOnFunction(Function &F);
 
 private:
   // Random constant for hashing, so the state isn't zero.
@@ -93,11 +89,6 @@ private:
   /// @}
 };
 } // namespace
-
-char IRCanonicalizer::ID = 0;
-static RegisterPass<IRCanonicalizer> X("canon", "Canonicalize the IR",
-                                       false /* Only looks at CFG */,
-                                       false /* Analysis Pass */);
 
 cl::opt<bool> IRCanonicalizer::PreserveOrder(
     "preserve-order", cl::Hidden,
@@ -629,4 +620,11 @@ SetVector<int> IRCanonicalizer::getOutputFootprint(
 
   // Return to the used instruction.
   return Outputs;
+}
+
+PreservedAnalyses IRCanonicalizerPass::run(Function &F,
+                                           FunctionAnalysisManager &AM) {
+  errs() << F.getName() << "\n";
+  IRCanonicalizer{}.runOnFunction(F);
+  return PreservedAnalyses::all();
 }
