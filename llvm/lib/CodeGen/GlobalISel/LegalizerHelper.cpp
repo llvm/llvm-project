@@ -525,6 +525,8 @@ static RTLIB::Libcall getRTLibDesc(unsigned Opcode, unsigned Size) {
     RTLIBCASE(EXP_F);
   case TargetOpcode::G_FEXP2:
     RTLIBCASE(EXP2_F);
+  case TargetOpcode::G_FEXP10:
+    RTLIBCASE(EXP10_F);
   case TargetOpcode::G_FREM:
     RTLIBCASE(REM_F);
   case TargetOpcode::G_FPOW:
@@ -830,6 +832,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_FLDEXP:
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FEXP10:
   case TargetOpcode::G_FCEIL:
   case TargetOpcode::G_FFLOOR:
   case TargetOpcode::G_FMINNUM:
@@ -2545,6 +2548,7 @@ LegalizerHelper::widenScalar(MachineInstr &MI, unsigned TypeIdx, LLT WideTy) {
   case TargetOpcode::G_FSQRT:
   case TargetOpcode::G_FEXP:
   case TargetOpcode::G_FEXP2:
+  case TargetOpcode::G_FEXP10:
   case TargetOpcode::G_FPOW:
   case TargetOpcode::G_INTRINSIC_TRUNC:
   case TargetOpcode::G_INTRINSIC_ROUND:
@@ -4214,6 +4218,7 @@ LegalizerHelper::fewerElementsVector(MachineInstr &MI, unsigned TypeIdx,
   case G_FPOW:
   case G_FEXP:
   case G_FEXP2:
+  case G_FEXP10:
   case G_FLOG:
   case G_FLOG2:
   case G_FLOG10:

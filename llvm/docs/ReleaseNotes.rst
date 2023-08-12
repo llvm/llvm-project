@@ -58,6 +58,8 @@ Changes to the LLVM IR
   * ``and``
   * ``or``
 
+* Added `llvm.exp10` intrinsic.
+
 Changes to LLVM infrastructure
 ------------------------------
 

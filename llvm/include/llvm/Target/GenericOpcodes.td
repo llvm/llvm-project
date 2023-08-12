@@ -914,6 +914,13 @@ def G_FEXP2 : GenericInstruction {
   let hasSideEffects = false;
 }
 
+// Floating point base-10 exponential of a value.
+def G_FEXP10 : GenericInstruction {
+  let OutOperandList = (outs type0:$dst);
+  let InOperandList = (ins type0:$src1);
+  let hasSideEffects = false;
+}
+
 // Floating point base-e logarithm of a value.
 def G_FLOG : GenericInstruction {
   let OutOperandList = (outs type0:$dst);

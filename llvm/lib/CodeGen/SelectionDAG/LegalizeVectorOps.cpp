@@ -392,6 +392,7 @@ SDValue VectorLegalizer::LegalizeOp(SDValue Op) {
   case ISD::FLOG10:
   case ISD::FEXP:
   case ISD::FEXP2:
+  case ISD::FEXP10:
   case ISD::FCEIL:
   case ISD::FTRUNC:
   case ISD::FRINT:
