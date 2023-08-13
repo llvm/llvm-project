@@ -6154,6 +6154,12 @@ static Value *simplifyUnaryIntrinsic(Function *F, Value *Op0,
         match(Op0, m_Intrinsic<Intrinsic::log2>(m_Value(X))))
       return X;
     break;
+  case Intrinsic::exp10:
+    // exp10(log10(x)) -> x
+    if (Q.CxtI->hasAllowReassoc() &&
+        match(Op0, m_Intrinsic<Intrinsic::log10>(m_Value(X))))
+      return X;
+    break;
   case Intrinsic::log:
     // log(exp(x)) -> x
     if (Q.CxtI->hasAllowReassoc() &&
