@@ -615,8 +615,8 @@ class InternalDriverOpt : Group<internal_driver_Group>,
   Flags<[NoXarchOption, HelpHidden]>;
 def driver_mode : Joined<["--"], "driver-mode=">, Group<internal_driver_Group>,
   Flags<[NoXarchOption, HelpHidden]>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
-  HelpText<"Set the driver mode to either 'gcc', 'g++', 'cpp', or 'cl'">;
+  Visibility<[ClangOption, FlangOption, CLOption, DXCOption]>,
+  HelpText<"Set the driver mode to either 'gcc', 'g++', 'cpp', 'cl' or 'flang'">;
 def rsp_quoting : Joined<["--"], "rsp-quoting=">, Group<internal_driver_Group>,
   Flags<[NoXarchOption, HelpHidden]>,
   Visibility<[ClangOption, CLOption, DXCOption]>,
@@ -630,7 +630,9 @@ class InternalDebugOpt : Group<internal_debug_Group>,
   Visibility<[ClangOption, CLOption, DXCOption]>;
 def ccc_install_dir : Separate<["-"], "ccc-install-dir">, InternalDebugOpt,
   HelpText<"Simulate installation in the given directory">;
-def ccc_print_phases : Flag<["-"], "ccc-print-phases">, InternalDebugOpt,
+def ccc_print_phases : Flag<["-"], "ccc-print-phases">,
+  Flags<[NoXarchOption, HelpHidden]>, Visibility<[ClangOption, CLOption, DXCOption,
+  FlangOption]>,
   HelpText<"Dump list of actions to perform">;
 def ccc_print_bindings : Flag<["-"], "ccc-print-bindings">, InternalDebugOpt,
   HelpText<"Show bindings of tools to actions">;
@@ -849,15 +851,15 @@ def MV : Flag<["-"], "MV">, Group<M_Group>, Visibility<[ClangOption, CC1Option]>
     Normalizer<"makeFlagToValueNormalizer(DependencyOutputFormat::NMake)">;
 def Mach : Flag<["-"], "Mach">, Group<Link_Group>;
 def O0 : Flag<["-"], "O0">, Group<O_Group>, Flags<[HelpHidden]>,
-  Visibility<[ClangOption, CC1Option, FC1Option]>;
+  Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>;
 def O4 : Flag<["-"], "O4">, Group<O_Group>, Flags<[HelpHidden]>,
-  Visibility<[ClangOption, CC1Option, FC1Option]>;
+  Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>;
 def ObjCXX : Flag<["-"], "ObjC++">, Flags<[NoXarchOption]>,
   HelpText<"Treat source input files as Objective-C++ inputs">;
 def ObjC : Flag<["-"], "ObjC">, Flags<[NoXarchOption]>,
   HelpText<"Treat source input files as Objective-C inputs">;
 def O : Joined<["-"], "O">, Group<O_Group>,
-  Visibility<[ClangOption, CC1Option, FC1Option]>;
+  Visibility<[ClangOption, CC1Option, FC1Option, FlangOption]>;
 def O_flag : Flag<["-"], "O">, Visibility<[ClangOption, CC1Option, FC1Option]>,
   Alias<O>, AliasArgs<["1"]>;
 def Ofast : Joined<["-"], "Ofast">, Group<O_Group>,
@@ -893,7 +895,7 @@ def Wa_COMMA : CommaJoined<["-"], "Wa,">,
   HelpText<"Pass the comma separated arguments in <arg> to the assembler">,
   MetaVarName<"<arg>">;
 def Wall : Flag<["-"], "Wall">, Group<W_Group>, Flags<[HelpHidden]>,
-  Visibility<[ClangOption, CC1Option]>;
+  Visibility<[ClangOption, CC1Option, FlangOption]>;
 def WCL4 : Flag<["-"], "WCL4">, Group<W_Group>, Flags<[HelpHidden]>,
   Visibility<[ClangOption, CC1Option]>;
 def Wsystem_headers : Flag<["-"], "Wsystem-headers">, Group<W_Group>,
@@ -1095,12 +1097,14 @@ defm convergent_functions : BoolFOption<"convergent-functions",
 // Common offloading options
 let Group = offload_Group in {
 def offload_arch_EQ : Joined<["--"], "offload-arch=">, Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify an offloading device architecture for CUDA, HIP, or OpenMP. (e.g. sm_35). "
            "If 'native' is used the compiler will detect locally installed architectures. "
            "For HIP offloading, the device architecture can be followed by target ID features "
            "delimited by a colon (e.g. gfx908:xnack+:sramecc-). May be specified more than once.">;
 def no_offload_arch_EQ : Joined<["--"], "no-offload-arch=">,
   Flags<[NoXarchOption]>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Remove CUDA/HIP offloading device architecture (e.g. sm_35, gfx906) from the list of devices to compile for. "
            "'all' resets the list to its default value.">;
 
@@ -1999,7 +2003,7 @@ defm fast_math : BoolFOption<"fast-math",
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FC1Option, FlangOption],
           "Allow aggressive, lossy floating-point optimizations",
           [cl_fast_relaxed_math.KeyPath]>,
-  NegFlag<SetFalse>>;
+  NegFlag<SetFalse, [], [ClangOption, CC1Option, FC1Option, FlangOption]>>;
 defm math_errno : BoolFOption<"math-errno",
   LangOpts<"MathErrno">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option],
@@ -2356,8 +2360,8 @@ def funsafe_math_optimizations : Flag<["-"], "funsafe-math-optimizations">,
   ImpliedByAnyOf<[cl_unsafe_math_optimizations.KeyPath, ffast_math.KeyPath]>;
 def fno_unsafe_math_optimizations : Flag<["-"], "fno-unsafe-math-optimizations">,
   Group<f_Group>;
-def fassociative_math : Flag<["-"], "fassociative-math">, Group<f_Group>;
-def fno_associative_math : Flag<["-"], "fno-associative-math">, Group<f_Group>;
+def fassociative_math : Flag<["-"], "fassociative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
+def fno_associative_math : Flag<["-"], "fno-associative-math">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 defm reciprocal_math : BoolFOption<"reciprocal-math",
   LangOpts<"AllowRecip">, DefaultFalse,
   PosFlag<SetTrue, [], [ClangOption, CC1Option, FC1Option, FlangOption],
@@ -2385,14 +2389,16 @@ defm signed_zeros : BoolFOption<"signed-zeros",
             [cl_no_signed_zeros.KeyPath, funsafe_math_optimizations.KeyPath]>,
   PosFlag<SetFalse>>;
 def fhonor_nans : Flag<["-"], "fhonor-nans">, Group<f_Group>,
+  Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify that floating-point optimizations are not allowed that "
            "assume arguments and results are not NANs.">;
-def fno_honor_nans : Flag<["-"], "fno-honor-nans">, Group<f_Group>;
+def fno_honor_nans : Flag<["-"], "fno-honor-nans">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 def fhonor_infinities : Flag<["-"], "fhonor-infinities">,
-  Group<f_Group>,
+  Group<f_Group>, Visibility<[ClangOption, FlangOption]>,
   HelpText<"Specify that floating-point optimizations are not allowed that "
            "assume arguments and results are not +-inf.">;
-def fno_honor_infinities : Flag<["-"], "fno-honor-infinities">, Group<f_Group>;
+def fno_honor_infinities : Flag<["-"], "fno-honor-infinities">,
+  Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 // This option was originally misspelt "infinites" [sic].
 def : Flag<["-"], "fhonor-infinites">, Alias<fhonor_infinities>;
 def : Flag<["-"], "fno-honor-infinites">, Alias<fno_honor_infinities>;
@@ -2682,9 +2688,9 @@ def flto_EQ : Joined<["-"], "flto=">,
   Visibility<[ClangOption, CLOption, CC1Option, FC1Option, FlangOption]>,
   Group<f_Group>,
   HelpText<"Set LTO mode">, Values<"thin,full">;
-def flto_EQ_jobserver : Flag<["-"], "flto=jobserver">, Group<f_Group>,
+def flto_EQ_jobserver : Flag<["-"], "flto=jobserver">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
-def flto_EQ_auto : Flag<["-"], "flto=auto">, Group<f_Group>,
+def flto_EQ_auto : Flag<["-"], "flto=auto">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>,
   Alias<flto_EQ>, AliasArgs<["full"]>, HelpText<"Enable LTO in 'full' mode">;
 def flto : Flag<["-"], "flto">,
   Visibility<[ClangOption, CLOption, CC1Option, FC1Option, FlangOption]>,
@@ -2696,7 +2702,7 @@ defm unified_lto : BoolFOption<"unified-lto",
   NegFlag<SetFalse, [], [ClangOption], "Use distinct LTO pipelines">,
   BothFlags<[], [ClangOption, CC1Option], "">>;
 def fno_lto : Flag<["-"], "fno-lto">,
-  Visibility<[ClangOption, CLOption, CC1Option]>, Group<f_Group>,
+  Visibility<[ClangOption, CLOption, DXCOption, CC1Option, FlangOption]>, Group<f_Group>,
   HelpText<"Disable LTO mode (default)">;
 def foffload_lto_EQ : Joined<["-"], "foffload-lto=">,
   Visibility<[ClangOption, CLOption]>, Group<f_Group>,
@@ -3207,7 +3213,7 @@ def fopenmp_use_tls : Flag<["-"], "fopenmp-use-tls">, Group<f_Group>,
 def fnoopenmp_use_tls : Flag<["-"], "fnoopenmp-use-tls">, Group<f_Group>,
   Flags<[NoArgumentUnused, HelpHidden]>, Visibility<[ClangOption, CC1Option]>;
 def fopenmp_targets_EQ : CommaJoined<["-"], "fopenmp-targets=">,
-  Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option]>,
+  Flags<[NoXarchOption]>, Visibility<[ClangOption, CC1Option, FlangOption]>,
   HelpText<"Specify comma-separated list of triples OpenMP offloading targets to be supported">;
 def fopenmp_relocatable_target : Flag<["-"], "fopenmp-relocatable-target">,
   Group<f_Group>, Flags<[NoArgumentUnused, HelpHidden]>,
@@ -3239,7 +3245,7 @@ def fopenmp_cuda_teams_reduction_recs_num_EQ : Joined<["-"], "fopenmp-cuda-teams
 //===----------------------------------------------------------------------===//
 
 let Flags = [NoArgumentUnused] in {
-let Visibility = [ClangOption, CC1Option, FC1Option] in {
+let Visibility = [ClangOption, CC1Option, FC1Option, FlangOption] in {
 let Group = f_Group in {
 
 def fopenmp_target_debug : Flag<["-"], "fopenmp-target-debug">,
@@ -3272,7 +3278,7 @@ def R_Joined : Joined<["-"], "R">, Group<R_Group>,
 } // let Visibility = [ClangOption, CC1Option, FC1Option, FlangOption]
 
 let Flags = [NoArgumentUnused, HelpHidden] in {
-let Visibility = [ClangOption, CC1Option, FC1Option] in {
+let Visibility = [ClangOption, CC1Option, FC1Option, FlangOption] in {
 let Group = f_Group in {
 
 def fopenmp_target_debug_EQ : Joined<["-"], "fopenmp-target-debug=">;
@@ -3363,8 +3369,8 @@ def fpcc_struct_return : Flag<["-"], "fpcc-struct-return">, Group<f_Group>,
 def fpch_preprocess : Flag<["-"], "fpch-preprocess">, Group<f_Group>;
 def fpic : Flag<["-"], "fpic">, Group<f_Group>;
 def fno_pic : Flag<["-"], "fno-pic">, Group<f_Group>;
-def fpie : Flag<["-"], "fpie">, Group<f_Group>;
-def fno_pie : Flag<["-"], "fno-pie">, Group<f_Group>;
+def fpie : Flag<["-"], "fpie">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
+def fno_pie : Flag<["-"], "fno-pie">, Visibility<[ClangOption, FlangOption]>, Group<f_Group>;
 defm pic_data_is_text_relative : SimpleMFlag<"pic-data-is-text-relative",
      "Assume", "Don't assume", " data segments are relative to text segment">;
 def fdirect_access_external_data : Flag<["-"], "fdirect-access-external-data">, Group<f_Group>,
@@ -3928,13 +3934,13 @@ def gline_tables_only : Flag<["-"], "gline-tables-only">, Group<gN_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Emit debug line number tables only">;
 def gline_directives_only : Flag<["-"], "gline-directives-only">, Group<gN_Group>,
-  Visibility<[ClangOption, CLOption, DXCOption]>,
+  Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"Emit debug line info directives only">;
 def gmlt : Flag<["-"], "gmlt">, Alias<gline_tables_only>;
-def g0 : Flag<["-"], "g0">, Group<gN_Group>;
-def g1 : Flag<["-"], "g1">, Group<gN_Group>, Alias<gline_tables_only>;
-def g2 : Flag<["-"], "g2">, Group<gN_Group>;
-def g3 : Flag<["-"], "g3">, Group<gN_Group>;
+def g0 : Flag<["-"], "g0">, Group<gN_Group>, Visibility<[ClangOption, FlangOption]>;
+def g1 : Flag<["-"], "g1">, Group<gN_Group>, Visibility<[ClangOption, FlangOption]>, Alias<gline_tables_only>;
+def g2 : Flag<["-"], "g2">, Group<gN_Group>, Visibility<[ClangOption, FlangOption]>;
+def g3 : Flag<["-"], "g3">, Group<gN_Group>, Visibility<[ClangOption, FlangOption]>;
 def ggdb : Flag<["-"], "ggdb">, Group<gTune_Group>;
 def ggdb0 : Flag<["-"], "ggdb0">, Group<ggdbN_Group>;
 def ggdb1 : Flag<["-"], "ggdb1">, Group<ggdbN_Group>;
@@ -4217,7 +4223,7 @@ def mwatchos_simulator_version_min_EQ : Joined<["-"], "mwatchos-simulator-versio
 def mwatchsimulator_version_min_EQ : Joined<["-"], "mwatchsimulator-version-min=">, Alias<mwatchos_simulator_version_min_EQ>;
 } // let Flags = [TargetSpecific]
 def march_EQ : Joined<["-"], "march=">, Group<m_Group>,
-  Flags<[TargetSpecific]>, Visibility<[ClangOption, CLOption]>,
+  Flags<[TargetSpecific]>, Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>,
   HelpText<"For a list of available architectures for the target use '-mcpu=help'">;
 def masm_EQ : Joined<["-"], "masm=">, Group<m_Group>, Flags<[NoXarchOption]>;
 def inline_asm_EQ : Joined<["-"], "inline-asm=">, Group<m_Group>,
@@ -4246,8 +4252,6 @@ def mthreads : Joined<["-"], "mthreads">, Group<m_Group>;
 def mguard_EQ : Joined<["-"], "mguard=">, Group<m_Group>,
   HelpText<"Enable or disable Control Flow Guard checks and guard tables emission">,
   Values<"none,cf,cf-nochecks">;
-def mcpu_EQ : Joined<["-"], "mcpu=">, Group<m_Group>,
-  HelpText<"For a list of available CPUs for the target use '-mcpu=help'">;
 def mmcu_EQ : Joined<["-"], "mmcu=">, Group<m_Group>;
 def msim : Flag<["-"], "msim">, Group<m_Group>;
 def mdynamic_no_pic : Joined<["-"], "mdynamic-no-pic">, Group<m_Group>;
@@ -5032,8 +5036,8 @@ def nodriverkitlib : Flag<["-"], "nodriverkitlib">;
 def nofixprebinding : Flag<["-"], "nofixprebinding">;
 def nolibc : Flag<["-"], "nolibc">;
 def nomultidefs : Flag<["-"], "nomultidefs">;
-def nopie : Flag<["-"], "nopie">;
-def no_pie : Flag<["-"], "no-pie">, Alias<nopie>;
+def nopie : Flag<["-"], "nopie">, Visibility<[ClangOption, FlangOption]>;
+def no_pie : Flag<["-"], "no-pie">, Visibility<[ClangOption, FlangOption]>, Alias<nopie>;
 def noprebind : Flag<["-"], "noprebind">;
 def noprofilelib : Flag<["-"], "noprofilelib">;
 def noseglinkedit : Flag<["-"], "noseglinkedit">;
@@ -5392,8 +5396,6 @@ def _for_linker_EQ : Joined<["--"], "for-linker=">, Alias<Xlinker>;
 def _for_linker : Separate<["--"], "for-linker">, Alias<Xlinker>;
 def _force_link_EQ : Joined<["--"], "force-link=">, Alias<u>;
 def _force_link : Separate<["--"], "force-link">, Alias<u>;
-def _help_hidden : Flag<["--"], "help-hidden">,
-  HelpText<"Display help for hidden options">;
 def _imacros_EQ : Joined<["--"], "imacros=">, Alias<imacros>;
 def _include_barrier : Flag<["--"], "include-barrier">, Alias<I_>;
 def _include_directory_after_EQ : Joined<["--"], "include-directory-after=">, Alias<idirafter>;
@@ -5449,8 +5451,6 @@ def _version : Flag<["--"], "version">,
 def _signed_char : Flag<["--"], "signed-char">, Alias<fsigned_char>;
 def _std : Separate<["--"], "std">, Alias<std_EQ>;
 def _stdlib : Separate<["--"], "stdlib">, Alias<stdlib_EQ>;
-def _sysroot_EQ : Joined<["--"], "sysroot=">;
-def _sysroot : Separate<["--"], "sysroot">, Alias<_sysroot_EQ>;
 def _target_help : Flag<["--"], "target-help">;
 def _trace_includes : Flag<["--"], "trace-includes">, Alias<H>;
 def _undefine_macro_EQ : Joined<["--"], "undefine-macro=">, Alias<U>;
@@ -5462,6 +5462,24 @@ def _warn__EQ : Joined<["--"], "warn-=">, Alias<W_Joined>;
 def _warn_ : Joined<["--"], "warn-">, Alias<W_Joined>;
 def _write_dependencies : Flag<["--"], "write-dependencies">, Alias<MD>;
 def _write_user_dependencies : Flag<["--"], "write-user-dependencies">, Alias<MMD>;
+
+def _help_hidden : Flag<["--"], "help-hidden">,
+  Visibility<[ClangOption, FlangOption]>,
+  HelpText<"Display help for hidden options">;
+def _sysroot_EQ : Joined<["--"], "sysroot=">, Visibility<[ClangOption, FlangOption]>;
+def _sysroot : Separate<["--"], "sysroot">, Alias<_sysroot_EQ>;
+
+//===----------------------------------------------------------------------===//
+// Target Options (clang + flang-new)
+//===----------------------------------------------------------------------===//
+let Flags = [TargetSpecific] in {
+let Visibility = [ClangOption, FlangOption] in {
+
+def mcpu_EQ : Joined<["-"], "mcpu=">, Group<m_Group>,
+  HelpText<"For a list of available CPUs for the target use '-mcpu=help'">;
+
+} // let Vis = [Default, FlangOption]
+} // let Flags = [TargetSpecific]
 
 // Hexagon feature flags.
 let Flags = [TargetSpecific] in {
@@ -5810,7 +5828,7 @@ def mno_vzeroupper : Flag<["-"], "mno-vzeroupper">, Group<m_x86_Features_Group>;
 // style of double-dash and equals-joined flags.
 def target_legacy_spelling : Separate<["-"], "target">,
                              Alias<target>,
-                             Visibility<[ClangOption, CLOption, DXCOption]>;
+                             Visibility<[ClangOption, CLOption, DXCOption, FlangOption]>;
 
 // Special internal option to handle -Xlinker --no-demangle.
 def Z_Xlinker__no_demangle : Flag<["-"], "Z-Xlinker-no-demangle">,
@@ -5835,7 +5853,8 @@ multiclass BooleanFFlag<string name> {
 }
 
 multiclass FlangIgnoredDiagOpt<string name> {
-  def unsupported_warning_w#NAME : Flag<["-", "--"], "W"#name>, Group<flang_ignored_w_Group>;
+  def unsupported_warning_w#NAME : Flag<["-", "--"], "W"#name>,
+    Visibility<[FlangOption]>, Group<flang_ignored_w_Group>;
 }
 
 defm : BooleanFFlag<"keep-inline-functions">, Group<clang_ignored_gcc_optimization_f_Group>;
