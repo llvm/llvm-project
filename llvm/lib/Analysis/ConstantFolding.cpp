@@ -1542,6 +1542,7 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::log10:
   case Intrinsic::exp:
   case Intrinsic::exp2:
+  case Intrinsic::exp10:
   case Intrinsic::sqrt:
   case Intrinsic::sin:
   case Intrinsic::cos:
@@ -2200,6 +2201,9 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       case Intrinsic::exp2:
         // Fold exp2(x) as pow(2, x), in case the host lacks a C99 library.
         return ConstantFoldBinaryFP(pow, APFloat(2.0), APF, Ty);
+      case Intrinsic::exp10:
+        // Fold exp10(x) as pow(10, x), in case the host lacks a C99 library.
+        return ConstantFoldBinaryFP(pow, APFloat(10.0), APF, Ty);
       case Intrinsic::sin:
         return ConstantFoldFP(sin, APF, Ty);
       case Intrinsic::cos:
