@@ -10,6 +10,7 @@ unittest("ObjectTests") {
   ]
   sources = [
     "ArchiveTest.cpp",
+    "COFFObjectFileTest.cpp",
     "DXContainerTest.cpp",
     "ELFObjectFileTest.cpp",
     "ELFTest.cpp",
