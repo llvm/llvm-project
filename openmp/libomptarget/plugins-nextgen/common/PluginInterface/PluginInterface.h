@@ -1001,7 +1001,7 @@ protected:
 
 private:
   /// Number of devices available for the plugin.
-  int32_t NumDevices;
+  int32_t NumDevices = 0;
 
   /// Array of pointers to the devices. Initially, they are all set to nullptr.
   /// Once a device is initialized, the pointer is stored in the position given
