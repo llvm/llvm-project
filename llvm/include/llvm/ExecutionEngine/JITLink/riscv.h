@@ -110,25 +110,25 @@ enum EdgeKind_riscv : Edge::Kind {
   /// 8 bits label addition
   ///
   /// Fixup expression
-  ///   Fixup <- (Target - *{1}Fixup + Addend)
+  ///   Fixup <- (Target + *{1}Fixup + Addend)
   R_RISCV_ADD8,
 
   /// 16 bits label addition
   ///
   /// Fixup expression
-  ///   Fixup <- (Target - *{2}Fixup + Addend)
+  ///   Fixup <- (Target + *{2}Fixup + Addend)
   R_RISCV_ADD16,
 
   /// 32 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target - *{4}Fixup + Addend)
+  ///   Fixup <- (Target + *{4}Fixup + Addend)
   R_RISCV_ADD32,
 
   /// 64 bits label addition
   ///
   /// Fixup expression:
-  ///   Fixup <- (Target - *{8}Fixup + Addend)
+  ///   Fixup <- (Target + *{8}Fixup + Addend)
   R_RISCV_ADD64,
 
   /// 8 bits label subtraction

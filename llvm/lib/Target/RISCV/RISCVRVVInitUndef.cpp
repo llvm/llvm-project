@@ -34,6 +34,7 @@
 
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/DetectDeadLanes.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 using namespace llvm;

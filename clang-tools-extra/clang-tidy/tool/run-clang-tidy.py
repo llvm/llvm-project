@@ -389,6 +389,8 @@ def main():
         clang_apply_replacements_binary = find_binary(
             args.clang_apply_replacements_binary, "clang-apply-replacements", build_path
         )
+
+    if args.fix or (yaml and args.export_fixes):
         tmpdir = tempfile.mkdtemp()
 
     try:

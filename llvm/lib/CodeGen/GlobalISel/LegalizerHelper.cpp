@@ -4428,73 +4428,22 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorShuffle(
   return Legalized;
 }
 
-static unsigned getScalarOpcForReduction(unsigned Opc) {
-  unsigned ScalarOpc;
-  switch (Opc) {
-  case TargetOpcode::G_VECREDUCE_FADD:
-    ScalarOpc = TargetOpcode::G_FADD;
-    break;
-  case TargetOpcode::G_VECREDUCE_FMUL:
-    ScalarOpc = TargetOpcode::G_FMUL;
-    break;
-  case TargetOpcode::G_VECREDUCE_FMAX:
-    ScalarOpc = TargetOpcode::G_FMAXNUM;
-    break;
-  case TargetOpcode::G_VECREDUCE_FMIN:
-    ScalarOpc = TargetOpcode::G_FMINNUM;
-    break;
-  case TargetOpcode::G_VECREDUCE_ADD:
-    ScalarOpc = TargetOpcode::G_ADD;
-    break;
-  case TargetOpcode::G_VECREDUCE_MUL:
-    ScalarOpc = TargetOpcode::G_MUL;
-    break;
-  case TargetOpcode::G_VECREDUCE_AND:
-    ScalarOpc = TargetOpcode::G_AND;
-    break;
-  case TargetOpcode::G_VECREDUCE_OR:
-    ScalarOpc = TargetOpcode::G_OR;
-    break;
-  case TargetOpcode::G_VECREDUCE_XOR:
-    ScalarOpc = TargetOpcode::G_XOR;
-    break;
-  case TargetOpcode::G_VECREDUCE_SMAX:
-    ScalarOpc = TargetOpcode::G_SMAX;
-    break;
-  case TargetOpcode::G_VECREDUCE_SMIN:
-    ScalarOpc = TargetOpcode::G_SMIN;
-    break;
-  case TargetOpcode::G_VECREDUCE_UMAX:
-    ScalarOpc = TargetOpcode::G_UMAX;
-    break;
-  case TargetOpcode::G_VECREDUCE_UMIN:
-    ScalarOpc = TargetOpcode::G_UMIN;
-    break;
-  default:
-    llvm_unreachable("Unhandled reduction");
-  }
-  return ScalarOpc;
-}
-
 LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
     MachineInstr &MI, unsigned int TypeIdx, LLT NarrowTy) {
-  unsigned Opc = MI.getOpcode();
-  assert(Opc != TargetOpcode::G_VECREDUCE_SEQ_FADD &&
-         Opc != TargetOpcode::G_VECREDUCE_SEQ_FMUL &&
-         "Sequential reductions not expected");
+  auto &RdxMI = cast<GVecReduce>(MI);
 
   if (TypeIdx != 1)
     return UnableToLegalize;
 
   // The semantics of the normal non-sequential reductions allow us to freely
   // re-associate the operation.
-  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  auto [DstReg, DstTy, SrcReg, SrcTy] = RdxMI.getFirst2RegLLTs();
 
   if (NarrowTy.isVector() &&
       (SrcTy.getNumElements() % NarrowTy.getNumElements() != 0))
     return UnableToLegalize;
 
-  unsigned ScalarOpc = getScalarOpcForReduction(Opc);
+  unsigned ScalarOpc = RdxMI.getScalarOpcForReduction();
   SmallVector<Register> SplitSrcs;
   // If NarrowTy is a scalar then we're being asked to scalarize.
   const unsigned NumParts =
@@ -4539,9 +4488,9 @@ LegalizerHelper::LegalizeResult LegalizerHelper::fewerElementsVectorReductions(
   SmallVector<Register> PartialReductions;
   for (unsigned Part = 0; Part < NumParts; ++Part) {
     PartialReductions.push_back(
-        MIRBuilder.buildInstr(Opc, {DstTy}, {SplitSrcs[Part]}).getReg(0));
+        MIRBuilder.buildInstr(RdxMI.getOpcode(), {DstTy}, {SplitSrcs[Part]})
+            .getReg(0));
   }
-
 
   // If the types involved are powers of 2, we can generate intermediate vector
   // ops, before generating a final reduction operation.
