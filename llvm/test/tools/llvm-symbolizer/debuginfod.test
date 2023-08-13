@@ -39,9 +39,9 @@ RUN:   FileCheck %s --check-prefix=FOUND
 
 # Passing BUILDID twice is a syntax error.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
-RUN:   "BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" 2>&1| \
+RUN:   "BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
 RUN:   FileCheck %s --check-prefix=BUILDIDBUILDID
-BUILDIDBUILDID: llvm-symbolizer{{.*}}: error: 'BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d': duplicate input file specification prefix
+BUILDIDBUILDID: BUILDID:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
 
 # CODE should work preceding build ID.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
@@ -63,16 +63,16 @@ NOTHINGFOUND-NEXT: ??:0:0
 # BUILDID shouldn't be parsed if --obj is given, just like regular filenames.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
 RUN:   --obj=%t/addr.exe \
-RUN:   "BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" 2>&1 | \
+RUN:   "BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
 RUN:   FileCheck %s --check-prefix=BUILDIDIGNORED
-BUILDIDIGNORED: llvm-symbolizer{{.*}}: error: 'BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d': input file is already specified
+BUILDIDIGNORED: BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
 
 # Providing both BUILDID and FILE is a syntax error.
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
-RUN:   "BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" 2>&1 | \
+RUN:   "BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
 RUN:   FileCheck %s --check-prefix=BUILDIDFILE
-BUILDIDFILE: llvm-symbolizer{{.*}}: error: 'BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d': duplicate input file specification prefix
+BUILDIDFILE: BUILDID:FILE:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
 RUN: env DEBUGINFOD_CACHE_PATH=%t llvm-symbolizer \
-RUN:   "FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" 2>&1 | \
+RUN:   "FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d" | \
 RUN:   FileCheck %s --check-prefix=FILEBUILDID
-FILEBUILDID: llvm-symbolizer{{.*}}: error: 'FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d': duplicate input file specification prefix
+FILEBUILDID: FILE:BUILDID:127da749021c1fc1a58cba734a1f542cbe2b7ce4 0x40054d
