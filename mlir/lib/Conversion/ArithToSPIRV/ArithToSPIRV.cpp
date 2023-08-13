@@ -20,6 +20,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 #include <memory>
 
@@ -106,6 +107,22 @@ static bool isBoolScalarOrVector(Type type) {
     return vecType.getElementType().isInteger(1);
 
   return false;
+}
+
+/// Creates a scalar/vector integer constant.
+static Value getScalarOrVectorConstInt(Type type, uint64_t value,
+                                       OpBuilder &builder, Location loc) {
+  if (auto vectorType = dyn_cast<VectorType>(type)) {
+    Attribute element = IntegerAttr::get(vectorType.getElementType(), value);
+    auto attr = SplatElementsAttr::get(vectorType, element);
+    return builder.create<spirv::ConstantOp>(loc, vectorType, attr);
+  }
+
+  if (auto intType = dyn_cast<IntegerType>(type))
+    return builder.create<spirv::ConstantOp>(
+        loc, type, builder.getIntegerAttr(type, value));
+
+  return nullptr;
 }
 
 /// Returns true if scalar/vector type `a` and `b` have the same number of
@@ -525,6 +542,53 @@ struct ExtSII1Pattern final : public OpConversionPattern<arith::ExtSIOp> {
   }
 };
 
+/// Converts arith.extsi to spirv.Select if the type of source is neither i1 nor
+/// vector of i1.
+struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ExtSIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = adaptor.getIn().getType();
+    if (isBoolScalarOrVector(srcType))
+      return failure();
+
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    if (dstType == srcType) {
+      // We can have the same source and destination type due to type emulation.
+      // Perform bit shifting to make sure we have the proper leading set bits.
+
+      unsigned srcBW =
+          getElementTypeOrSelf(op.getIn().getType()).getIntOrFloatBitWidth();
+      unsigned dstBW =
+          getElementTypeOrSelf(op.getType()).getIntOrFloatBitWidth();
+      assert(srcBW < dstBW);
+      Value shiftSize = getScalarOrVectorConstInt(dstType, dstBW - srcBW,
+                                                  rewriter, op.getLoc());
+
+      // First shift left to sequeeze out all leading bits beyond the original
+      // bitwidth. Here we need to use the original source and result type's
+      // bitwidth.
+      auto shiftLOp = rewriter.create<spirv::ShiftLeftLogicalOp>(
+          op.getLoc(), dstType, adaptor.getIn(), shiftSize);
+
+      // Then we perform arithmetic right shift to make sure we have the right
+      // sign bits for negative values.
+      rewriter.replaceOpWithNewOp<spirv::ShiftRightArithmeticOp>(
+          op, dstType, shiftLOp, shiftSize);
+    } else {
+      rewriter.replaceOpWithNewOp<spirv::SConvertOp>(op, dstType,
+                                                     adaptor.getOperands());
+    }
+
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // ExtUIOp
 //===----------------------------------------------------------------------===//
@@ -550,6 +614,42 @@ struct ExtUII1Pattern final : public OpConversionPattern<arith::ExtUIOp> {
     Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
     rewriter.replaceOpWithNewOp<spirv::SelectOp>(
         op, dstType, adaptor.getOperands().front(), one, zero);
+    return success();
+  }
+};
+
+/// Converts arith.extui for cases where the type of source is neither i1 nor
+/// vector of i1.
+struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::ExtUIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = adaptor.getIn().getType();
+    if (isBoolScalarOrVector(srcType))
+      return failure();
+
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    if (dstType == srcType) {
+      // We can have the same source and destination type due to type emulation.
+      // Perform bit masking to make sure we don't pollute downstream consumers
+      // with unwanted bits. Here we need to use the original source type's
+      // bitwidth.
+      unsigned bitwidth =
+          getElementTypeOrSelf(op.getIn().getType()).getIntOrFloatBitWidth();
+      Value mask = getScalarOrVectorConstInt(
+          dstType, llvm::maskTrailingOnes<uint64_t>(bitwidth), rewriter,
+          op.getLoc());
+      rewriter.replaceOpWithNewOp<spirv::BitwiseAndOp>(op, dstType,
+                                                       adaptor.getIn(), mask);
+    } else {
+      rewriter.replaceOpWithNewOp<spirv::UConvertOp>(op, dstType,
+                                                     adaptor.getOperands());
+    }
     return success();
   }
 };
@@ -584,6 +684,41 @@ struct TruncII1Pattern final : public OpConversionPattern<arith::TruncIOp> {
     Value zero = spirv::ConstantOp::getZero(dstType, loc, rewriter);
     Value one = spirv::ConstantOp::getOne(dstType, loc, rewriter);
     rewriter.replaceOpWithNewOp<spirv::SelectOp>(op, dstType, isOne, one, zero);
+    return success();
+  }
+};
+
+/// Converts arith.trunci for cases where the type of result is neither i1
+/// nor vector of i1.
+struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
+  using OpConversionPattern::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(arith::TruncIOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Type srcType = adaptor.getIn().getType();
+    Type dstType = getTypeConverter()->convertType(op.getType());
+    if (!dstType)
+      return getTypeConversionFailure(rewriter, op);
+
+    if (isBoolScalarOrVector(dstType))
+      return failure();
+
+    if (dstType == srcType) {
+      // We can have the same source and destination type due to type emulation.
+      // Perform bit masking to make sure we don't pollute downstream consumers
+      // with unwanted bits. Here we need to use the original result type's
+      // bitwidth.
+      unsigned bw = getElementTypeOrSelf(op.getType()).getIntOrFloatBitWidth();
+      Value mask = getScalarOrVectorConstInt(
+          dstType, llvm::maskTrailingOnes<uint64_t>(bw), rewriter, op.getLoc());
+      rewriter.replaceOpWithNewOp<spirv::BitwiseAndOp>(op, dstType,
+                                                       adaptor.getIn(), mask);
+    } else {
+      // Given this is truncation, either SConvertOp or UConvertOp works.
+      rewriter.replaceOpWithNewOp<spirv::SConvertOp>(op, dstType,
+                                                     adaptor.getOperands());
+    }
     return success();
   }
 };
@@ -981,10 +1116,10 @@ void mlir::arith::populateArithToSPIRVPatterns(
     spirv::ElementwiseOpPattern<arith::MulFOp, spirv::FMulOp>,
     spirv::ElementwiseOpPattern<arith::DivFOp, spirv::FDivOp>,
     spirv::ElementwiseOpPattern<arith::RemFOp, spirv::FRemOp>,
-    TypeCastingOpPattern<arith::ExtUIOp, spirv::UConvertOp>, ExtUII1Pattern,
-    TypeCastingOpPattern<arith::ExtSIOp, spirv::SConvertOp>, ExtSII1Pattern,
+    ExtUIPattern, ExtUII1Pattern,
+    ExtSIPattern, ExtSII1Pattern,
     TypeCastingOpPattern<arith::ExtFOp, spirv::FConvertOp>,
-    TypeCastingOpPattern<arith::TruncIOp, spirv::SConvertOp>, TruncII1Pattern,
+    TruncIPattern, TruncII1Pattern,
     TypeCastingOpPattern<arith::TruncFOp, spirv::FConvertOp>,
     TypeCastingOpPattern<arith::UIToFPOp, spirv::ConvertUToFOp>, UIToFPI1Pattern,
     TypeCastingOpPattern<arith::SIToFPOp, spirv::ConvertSToFOp>,
