@@ -69,6 +69,8 @@ def u64imm   : Operand<i64> {
   let PrintMethod = "printImm64Operand";
 }
 
+def gpr_or_imm : Operand<i64>;
+
 def i64immSExt32 : PatLeaf<(i64 imm),
                 [{return isInt<32>(N->getSExtValue()); }]>;
 def i32immSExt32 : PatLeaf<(i32 imm),
@@ -476,16 +478,19 @@ class LOADi64<BPFWidthModifer SizeOp, BPFModeModifer ModOp, string OpcodeStr, Pa
     : LOAD<SizeOp, ModOp, OpcodeStr, [(set i64:$dst, (OpNode ADDRri:$addr))]>;
 
 let isCodeGenOnly = 1 in {
-  def CORE_MEM : TYPE_LD_ST<BPF_MEM.Value, BPF_W.Value,
-                            (outs GPR:$dst),
-                            (ins u64imm:$opcode, GPR:$src, u64imm:$offset),
-                            "$dst = core_mem($opcode, $src, $offset)",
-                            []>;
-  def CORE_ALU32_MEM : TYPE_LD_ST<BPF_MEM.Value, BPF_W.Value,
-                                  (outs GPR32:$dst),
-                                  (ins u64imm:$opcode, GPR:$src, u64imm:$offset),
-                                  "$dst = core_alu32_mem($opcode, $src, $offset)",
-                                  []>;
+  class CORE_LD<RegisterClass RegClass, string Sz>
+                : TYPE_LD_ST<BPF_MEM.Value, BPF_W.Value,
+                             (outs RegClass:$dst),
+                             (ins u64imm:$opcode, GPR:$src, u64imm:$offset),
+                             "$dst = core_ld"#Sz#"($opcode, $src, $offset)",
+                             []>;
+  def CORE_LD64 : CORE_LD<GPR, "64">;
+  def CORE_LD32 : CORE_LD<GPR32, "32">;
+  def CORE_ST   : TYPE_LD_ST<BPF_MEM.Value, BPF_W.Value,
+                             (outs),
+                             (ins gpr_or_imm:$src, u64imm:$opcode, GPR:$ptr, u64imm:$offset),
+                             "core_st($src, $opcode, $ptr, $offset)",
+                             []>;
   let Constraints = "$dst = $src" in {
     def CORE_SHIFT : ALU_RR<BPF_ALU64, BPF_LSH, 0,
                              (outs GPR:$dst),
