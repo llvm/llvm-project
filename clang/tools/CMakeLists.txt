@@ -51,3 +51,4 @@ add_clang_subdirectory(libclang)
 
 add_clang_subdirectory(amdgpu-arch)
 add_clang_subdirectory(nvptx-arch)
+add_clang_subdirectory(fdump-class-extents)
