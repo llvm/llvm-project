@@ -32,7 +32,6 @@
 #include "llvm/Support/COM.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Debug.h"
-#include "llvm/Support/Errc.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/InitLLVM.h"
 #include "llvm/Support/Path.h"
@@ -79,10 +78,10 @@ public:
 
 static std::string ToolName;
 
-static void printError(const ErrorInfoBase &EI, StringRef AuxInfo) {
+static void printError(const ErrorInfoBase &EI, StringRef Path) {
   WithColor::error(errs(), ToolName);
-  if (!AuxInfo.empty())
-    errs() << "'" << AuxInfo << "': ";
+  if (!EI.isA<FileError>())
+    errs() << "'" << Path << "': ";
   EI.log(errs());
   errs() << '\n';
 }
@@ -150,14 +149,10 @@ static StringRef getSpaceDelimitedWord(StringRef &Source) {
   return Result;
 }
 
-static Error makeStringError(StringRef Msg) {
-  return make_error<StringError>(Msg, inconvertibleErrorCode());
-}
-
-static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
-                          StringRef InputString, Command &Cmd,
-                          std::string &ModuleName, object::BuildID &BuildID,
-                          uint64_t &ModuleOffset) {
+static bool parseCommand(StringRef BinaryName, bool IsAddr2Line,
+                         StringRef InputString, Command &Cmd,
+                         std::string &ModuleName, object::BuildID &BuildID,
+                         uint64_t &ModuleOffset) {
   ModuleName = BinaryName;
   if (InputString.consume_front("CODE ")) {
     Cmd = Command::Code;
@@ -177,13 +172,15 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
     InputString = InputString.ltrim();
     if (InputString.consume_front("FILE:")) {
       if (HasFilePrefix || HasBuildIDPrefix)
-        return makeStringError("duplicate input file specification prefix");
+        // Input file specification prefix has already been seen.
+        return false;
       HasFilePrefix = true;
       continue;
     }
     if (InputString.consume_front("BUILDID:")) {
       if (HasBuildIDPrefix || HasFilePrefix)
-        return makeStringError("duplicate input file specification prefix");
+        // Input file specification prefix has already been seen.
+        return false;
       HasBuildIDPrefix = true;
       continue;
     }
@@ -192,14 +189,17 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
 
   if (HasBuildIDPrefix || HasFilePrefix) {
     if (!BinaryName.empty() || !BuildID.empty())
-      return makeStringError("input file is already specified");
+      // Input file has already been specified on the command line.
+      return false;
     StringRef Name = getSpaceDelimitedWord(InputString);
     if (Name.empty())
-      return makeStringError("input file name is incorrect");
+      // Wrong name for module file.
+      return false;
     if (HasBuildIDPrefix) {
       BuildID = parseBuildID(Name);
       if (BuildID.empty())
-        return makeStringError("wrong format of build-id");
+        // Wrong format of BuildID hash.
+        return false;
     } else {
       ModuleName = Name;
     }
@@ -209,7 +209,7 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
     ModuleName = getSpaceDelimitedWord(InputString);
     if (ModuleName.empty() || InputString.empty())
       // No input filename has been specified.
-      return makeStringError("no input filename is specified");
+      return false;
   }
 
   // Skip delimiters and parse module offset.
@@ -220,14 +220,7 @@ static Error parseCommand(StringRef BinaryName, bool IsAddr2Line,
   // "0x" or "0X" prefix; do the same for compatibility.
   if (IsAddr2Line)
     Offset.consume_front("0x") || Offset.consume_front("0X");
-
-  // If the input is not a valid module offset, it is not an error, but its
-  // lookup does not make sense. Return error of different kind to distinguish
-  // from error or success.
-  if (Offset.getAsInteger(IsAddr2Line ? 16 : 0, ModuleOffset))
-    return errorCodeToError(errc::invalid_argument);
-
-  return Error::success();
+  return !Offset.getAsInteger(IsAddr2Line ? 16 : 0, ModuleOffset);
 }
 
 template <typename T>
@@ -282,16 +275,9 @@ static void symbolizeInput(const opt::InputArgList &Args,
   std::string ModuleName;
   object::BuildID BuildID(IncomingBuildID.begin(), IncomingBuildID.end());
   uint64_t Offset = 0;
-  if (Error E = parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
-                             StringRef(InputString), Cmd, ModuleName, BuildID,
-                             Offset)) {
-    handleAllErrors(
-        std::move(E),
-        [&](const StringError &EI) { printError(EI, InputString); },
-        [&](const ECError &EI) {
-          Request SymRequest = {ModuleName, std::nullopt};
-          Printer.print(SymRequest, DILineInfo());
-        });
+  if (!parseCommand(Args.getLastArgValue(OPT_obj_EQ), IsAddr2Line,
+                    StringRef(InputString), Cmd, ModuleName, BuildID, Offset)) {
+    Printer.printInvalidCommand({ModuleName, std::nullopt}, InputString);
     return;
   }
   bool ShouldInline = Args.hasFlag(OPT_inlines, OPT_no_inlines, !IsAddr2Line);
