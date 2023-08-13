@@ -159,7 +159,7 @@ SerializeGPUModuleBase::loadBitcodeFiles(llvm::Module &module,
   if (failed(loadBitcodeFilesFromList(module.getContext(), targetMachine,
                                       fileList, bcFiles, true)))
     return std::nullopt;
-  return bcFiles;
+  return std::move(bcFiles);
 }
 
 LogicalResult
