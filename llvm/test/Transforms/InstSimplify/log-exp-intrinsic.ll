@@ -194,9 +194,7 @@ define double @exp2_log2_exp2_log2_reassoc(double %a) {
 
 define double @log10_reassoc_exp10_strict(double %a) {
 ; CHECK-LABEL: @log10_reassoc_exp10_strict(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.exp10.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc double @llvm.log10.f64(double [[TMP1]])
-; CHECK-NEXT:    ret double [[TMP2]]
+; CHECK-NEXT:    ret double [[A:%.*]]
 ;
   %1 = call double @llvm.exp10.f64(double %a)
   %2 = call reassoc double @llvm.log10.f64(double %1)
@@ -231,11 +229,7 @@ define double @log10_exp10_log10_exp10(double %a) {
 
 define double @log10_exp10_log10_exp10_reassoc(double %a) {
 ; CHECK-LABEL: @log10_exp10_log10_exp10_reassoc(
-; CHECK-NEXT:    [[TMP1:%.*]] = call double @llvm.exp10.f64(double [[A:%.*]])
-; CHECK-NEXT:    [[TMP2:%.*]] = call reassoc double @llvm.log10.f64(double [[TMP1]])
-; CHECK-NEXT:    [[TMP3:%.*]] = call double @llvm.exp10.f64(double [[TMP2]])
-; CHECK-NEXT:    [[TMP4:%.*]] = call reassoc double @llvm.log10.f64(double [[TMP3]])
-; CHECK-NEXT:    ret double [[TMP4]]
+; CHECK-NEXT:    ret double [[A:%.*]]
 ;
   %1 = call double @llvm.exp10.f64(double %a)
   %2 = call reassoc double @llvm.log10.f64(double %1)
