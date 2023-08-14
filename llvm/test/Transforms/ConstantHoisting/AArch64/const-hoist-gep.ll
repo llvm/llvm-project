@@ -22,11 +22,14 @@ define dso_local void @zot() {
 ; CHECK-NEXT:    [[CONST:%.*]] = bitcast ptr getelementptr inbounds ([[TMP0:%.*]], ptr @global, i32 0, i32 4, i32 0, i32 0) to ptr
 ; CHECK-NEXT:    store i32 undef, ptr [[CONST]], align 4
 ; CHECK-NEXT:    [[MAT_GEP:%.*]] = getelementptr i8, ptr [[CONST]], i32 4
-; CHECK-NEXT:    store i32 undef, ptr [[MAT_GEP]], align 4
+; CHECK-NEXT:    [[MAT_BITCAST:%.*]] = bitcast ptr [[MAT_GEP]] to ptr
+; CHECK-NEXT:    store i32 undef, ptr [[MAT_BITCAST]], align 4
 ; CHECK-NEXT:    [[MAT_GEP1:%.*]] = getelementptr i8, ptr [[CONST]], i32 160
-; CHECK-NEXT:    store i32 undef, ptr [[MAT_GEP1]], align 4
-; CHECK-NEXT:    [[MAT_GEP2:%.*]] = getelementptr i8, ptr [[CONST]], i32 164
-; CHECK-NEXT:    store i32 undef, ptr [[MAT_GEP2]], align 4
+; CHECK-NEXT:    [[MAT_BITCAST2:%.*]] = bitcast ptr [[MAT_GEP1]] to ptr
+; CHECK-NEXT:    store i32 undef, ptr [[MAT_BITCAST2]], align 4
+; CHECK-NEXT:    [[MAT_GEP3:%.*]] = getelementptr i8, ptr [[CONST]], i32 164
+; CHECK-NEXT:    [[MAT_BITCAST4:%.*]] = bitcast ptr [[MAT_GEP3]] to ptr
+; CHECK-NEXT:    store i32 undef, ptr [[MAT_BITCAST4]], align 4
 ; CHECK-NEXT:    ret void
 ;
 bb:
