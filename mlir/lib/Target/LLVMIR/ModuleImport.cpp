@@ -1750,6 +1750,18 @@ LogicalResult ModuleImport::processFunction(llvm::Function *func) {
   return success();
 }
 
+/// Checks if `dbgIntr` is a kill location that holds metadata instead of an SSA
+/// value.
+static bool isMetadataKillLocation(llvm::DbgVariableIntrinsic *dbgIntr) {
+  if (!dbgIntr->isKillLocation())
+    return false;
+  llvm::Value *value = dbgIntr->getArgOperand(0);
+  auto *nodeAsVal = dyn_cast<llvm::MetadataAsValue>(value);
+  if (!nodeAsVal)
+    return false;
+  return !isa<llvm::ValueAsMetadata>(nodeAsVal->getMetadata());
+}
+
 LogicalResult
 ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
                                     DominanceInfo &domInfo) {
@@ -1763,9 +1775,15 @@ ModuleImport::processDebugIntrinsic(llvm::DbgVariableIntrinsic *dbgIntr,
   // TODO: Support debug intrinsics that evaluate a debug expression.
   if (dbgIntr->hasArgList() || dbgIntr->getExpression()->getNumElements() != 0)
     return emitUnsupportedWarning();
+  // Kill locations can have metadata nodes as location operand. This
+  // cannot be converted to poison as the type cannot be reconstructed.
+  // TODO: find a way to support this case.
+  if (isMetadataKillLocation(dbgIntr))
+    return emitUnsupportedWarning();
   FailureOr<Value> argOperand = convertMetadataValue(dbgIntr->getArgOperand(0));
   if (failed(argOperand))
-    return failure();
+    return emitError(loc) << "failed to convert a debug intrinsic operand: "
+                          << diag(*dbgIntr);
 
   // Ensure that the debug instrinsic is inserted right after its operand is
   // defined. Otherwise, the operand might not necessarily dominate the
