@@ -84,6 +84,40 @@ def _get_int_int_array_attr(
     return ArrayAttr.get(values)
 
 
+class BufferizeToAllocationOp:
+    """Specialization for BufferizeToAllocationOp class."""
+
+    def __init__(
+        self,
+        target: Union[Operation, OpView, Value],
+        *,
+        memory_space: Optional[int | str | Attribute] = None,
+        memcpy_op: Optional[str] = None,
+        alloc_op: Optional[str] = None,
+        bufferize_destination_only: Optional[bool] = None,
+        loc=None,
+        ip=None,
+    ):
+        # No other types are allowed, so hard-code those here.
+        allocated_buffer_type = transform.AnyValueType.get()
+        new_ops_type = transform.AnyOpType.get()
+
+        if isinstance(memory_space, int):
+            memory_space = str(memory_space)
+        if isinstance(memory_space, str):
+            memory_space = Attribute.parse(memory_space)
+
+        super().__init__(
+            allocated_buffer_type,
+            new_ops_type,
+            target,
+            memory_space=memory_space,
+            memcpy_op=memcpy_op,
+            alloc_op=alloc_op,
+            bufferize_destination_only=bufferize_destination_only,
+        )
+
+
 class DecomposeOp:
     """Specialization for DecomposeOp class."""
 
