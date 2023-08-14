@@ -14697,11 +14697,11 @@ static bool compareCmp(Value *V, Value *V2, TargetLibraryInfo &TLI,
   if (BasePred1 > BasePred2)
     return false;
   // Compare operands.
-  bool LEPreds = Pred1 <= Pred2;
-  bool GEPreds = Pred1 >= Pred2;
+  bool CI1Preds = Pred1 == BasePred1;
+  bool CI2Preds = Pred2 == BasePred1;
   for (int I = 0, E = CI1->getNumOperands(); I < E; ++I) {
-    auto *Op1 = CI1->getOperand(LEPreds ? I : E - I - 1);
-    auto *Op2 = CI2->getOperand(GEPreds ? I : E - I - 1);
+    auto *Op1 = CI1->getOperand(CI1Preds ? I : E - I - 1);
+    auto *Op2 = CI2->getOperand(CI2Preds ? I : E - I - 1);
     if (Op1->getValueID() < Op2->getValueID())
       return !IsCompatibility;
     if (Op1->getValueID() > Op2->getValueID())
